@@ -8,10 +8,17 @@ network request and opens no raster. Writes:
   reports/COAST-SEAFLOOR-INVENTORY.md     the same rows, the ranked gap list and a summary
 
 Every figure carries a label:
-  MEASURED   copied or summed from pixel/cell counts already recorded in a repo catalog
+  MEASURED   copied or summed from pixel/cell counts already recorded in a repo catalog for
+             exactly the quantity named
   ESTIMATED  derived with a stated assumption (for example assigning a raster or reach to a
-             sector by its bounding-box latitude)
+             sector by its bounding box, or using a 0-100 m reference band for 0-300 ft)
   UNKNOWN    the repo has no catalog figure for it; never filled by guessing
+
+Three facts are kept apart for the 0-300 ft band of every sector:
+  1. finest grid available at any depth (catalogued or opened, depth band not necessarily known);
+  2. best tier with CONFIRMED shallow cells (a catalog records cells in 0-300 ft, 25-200 ft or the
+     seafloor ledger's 0-100 m band for that grid in that sector). No area threshold is applied;
+  3. extent: km2 of such cells, reported per evidence family and never summed across families.
 
 Run from the repository root:  python3 research/scripts/inventory_coast_seafloor.py
 Add --check to fail when the committed outputs differ from a fresh build.
@@ -22,6 +29,7 @@ import argparse
 import glob
 import hashlib
 import json
+import math
 import re
 import sys
 from collections import defaultdict
@@ -32,14 +40,15 @@ OUT_JSON = ROOT / 'catalog/coast-seafloor-inventory.json'
 OUT_MD = ROOT / 'reports/COAST-SEAFLOOR-INVENTORY.md'
 FT_300_M = 91.44
 TIER_ORDER = ['2 m', '5 m', '10 m', 'coarser', 'none']
-# A sector's tier is the finest class with at least this much read shallow area, so one
-# harbour survey does not label a whole sector. Judgment threshold: tier labels are ESTIMATED.
-MIN_TIER_KM2 = 5.0
+TIER_RES = {'2 m': 2.0, '5 m': 5.0, '10 m': 10.0}
+# NOAA variable-resolution BAG refinements are recorded only as "1-4 m", per file, not per cell.
+VR_RANGE_M = (1.0, 4.0)
 
 INPUTS = {
     'sectors': 'catalog/coastal-sectors.json',
     'readiness': 'dist/data/california-atlas-readiness.json',
     'ledger': 'dist/data/seafloor-ledger.json',
+    'reaches': 'catalog/reaches.json',
     'usgs_bathy': 'dist/data/usgs-depth-datum-ledger.json',
     'usgs_meta': 'dist/data/usgs-ds781-metadata-review.json',
     'usgs_char': 'dist/data/usgs-ds781-native-character-review.json',
@@ -55,18 +64,6 @@ INPUTS = {
 CSUMB_GLOB = 'catalog/csumb-*native-sources.json'
 DS3091_GLOB = 'dist/data/cdfw-predicted-hard-*.geojson'
 USGS_HARD_GLOB = 'dist/data/usgs-hard-context-*.geojson'
-
-# Central seafloor-ledger planning regions (catalog/seafloor-scope.json) and the browse
-# sector each one starts in. Used only when a reach has no located CSUMB survey.
-REGION_DEFAULT_SECTOR = {
-    'santa-cruz-monterey-bay': 'pigeon-monterey',
-    'monterey-point-sur': 'monterey-sur',
-    'big-sur-coast': 'big-sur',
-    'south-big-sur-san-simeon': 'sur-san-simeon',
-    'cambria-san-simeon': 'cambria-morro',
-    'morro-bay': 'morro-conception',
-    'point-arguello-conception': 'morro-conception',
-}
 
 # Candidate sources a better 0-300 ft grid may come from, by family. Named in the gap list.
 # Only the cited repo document is evidence; availability for a given sector is unverified.
@@ -115,13 +112,142 @@ def tier_of(res_m):
     return 'coarser'
 
 
-def sector_for_lat(lat, sectors):
-    for s in sectors:
-        lo, hi = s['latitude']
-        if lo <= lat < hi:
-            return s['id']
-    return None
+# ---------------------------------------------------------------- geometry helpers
 
+def albers_3310_to_lonlat(x, y):
+    """Inverse EPSG:3310 (NAD83 California Albers, GRS80), Snyder 1987 eq. 14-18 and 3-16."""
+    a, f = 6378137.0, 1 / 298.257222101
+    e2 = 2 * f - f * f
+    e = math.sqrt(e2)
+
+    def m(phi):
+        return math.cos(phi) / math.sqrt(1 - e2 * math.sin(phi) ** 2)
+
+    def q(phi):
+        s = math.sin(phi)
+        return (1 - e2) * (s / (1 - e2 * s * s) - (1 / (2 * e)) * math.log((1 - e * s) / (1 + e * s)))
+
+    p1, p2, p0, lon0 = map(math.radians, (34.0, 40.5, 0.0, -120.0))
+    n = (m(p1) ** 2 - m(p2) ** 2) / (q(p2) - q(p1))
+    c = m(p1) ** 2 + n * q(p1)
+    rho0 = a * math.sqrt(c - n * q(p0)) / n
+    yy = y + 4000000.0
+    rho = math.hypot(x, rho0 - yy)
+    theta = math.atan2(x, rho0 - yy)
+    qq = (c - (rho * n / a) ** 2) / n
+    phi = math.asin(max(-1.0, min(1.0, qq / 2)))
+    for _ in range(20):
+        s = math.sin(phi)
+        d = ((1 - e2 * s * s) ** 2 / (2 * math.cos(phi))) * (
+            qq / (1 - e2) - s / (1 - e2 * s * s) + (1 / (2 * e)) * math.log((1 - e * s) / (1 + e * s)))
+        phi += d
+        if abs(d) < 1e-12:
+            break
+    return math.degrees(lon0 + theta / n), math.degrees(phi)
+
+
+def bbox_3310_to_wgs84(b):
+    pts = [albers_3310_to_lonlat(x, y) for x in (b[0], b[2]) for y in (b[1], b[3])]
+    return [min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts)]
+
+
+def in_bounds(lon, lat, b):
+    return b[0] <= lon <= b[2] and b[1] <= lat < b[3]
+
+
+def sector_of_bbox(bbox, bounds):
+    """Sector whose box holds the bbox centre, plus every sector box the bbox overlaps with positive area."""
+    cx, cy = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
+    home = next((sid for sid, b in bounds.items() if in_bounds(cx, cy, b)), None)
+    touching = [sid for sid, b in bounds.items()
+                if bbox[0] < b[2] and bbox[2] > b[0] and bbox[1] < b[3] and bbox[3] > b[1]]
+    return home, touching
+
+
+def polygon_centroid(geom):
+    ring = geom['coordinates'][0] if geom['type'] == 'Polygon' else geom['coordinates'][0][0]
+    xs = [p[0] for p in ring]
+    ys = [p[1] for p in ring]
+    return sum(xs) / len(xs), sum(ys) / len(ys)
+
+
+# ---------------------------------------------------------------- pure classification rules
+
+def classify_shallow(evidence):
+    """Separate best-available resolution, confirmed shallow tier and extent for one sector.
+
+    Each evidence item: {'resolution_m': float | None, 'resolution_range_m': (lo, hi) | None,
+    'depth': 'confirmed' | 'unrecorded' | 'none-shallow', 'family': str, ...}.
+    - 'confirmed': a catalog records cells of this grid in the 0-300 ft (or 25-200 ft, or ledger
+      0-100 m) band inside this sector;
+    - 'unrecorded': grid opened/catalogued but its depth band is not recorded in the repo;
+    - 'none-shallow': a catalog records zero 0-300 ft cells.
+    No area threshold: one confirmed fine cell set makes that tier available; extent is reported apart.
+    """
+    def finest(items):
+        vals = []
+        for e in items:
+            if e.get('resolution_m'):
+                vals.append(float(e['resolution_m']))
+            elif e.get('resolution_range_m'):
+                vals.append(float(e['resolution_range_m'][0]))
+        return min(vals, default=None)
+
+    confirmed = [e for e in evidence if e['depth'] == 'confirmed']
+    definite = [e for e in confirmed if e.get('resolution_m')]
+    ranged = [e for e in confirmed if not e.get('resolution_m') and e.get('resolution_range_m')]
+    best_definite = min((float(e['resolution_m']) for e in definite), default=None)
+    tier = tier_of(best_definite)
+    uncertain = False
+    if ranged:
+        hi = min(float(e['resolution_range_m'][1]) for e in ranged)
+        lo = min(float(e['resolution_range_m'][0]) for e in ranged)
+        ranged_floor = tier_of(hi)  # class the ranged evidence certainly reaches
+        if TIER_ORDER.index(ranged_floor) < TIER_ORDER.index(tier):
+            tier = ranged_floor
+        # Uncertain when the ranged cells could be finer than the tier we can prove.
+        if TIER_ORDER.index(tier_of(lo)) < TIER_ORDER.index(tier):
+            uncertain = True
+    finest_any = finest(evidence)
+    finer_unconfirmed = [e for e in evidence if e['depth'] == 'unrecorded' and e.get('resolution_m')
+                         and TIER_ORDER.index(tier_of(e['resolution_m'])) < TIER_ORDER.index(tier)]
+    tier_sources = [e for e in confirmed if (e.get('resolution_m') and tier_of(e['resolution_m']) == tier)
+                    or (not e.get('resolution_m') and e.get('resolution_range_m')
+                        and tier_of(e['resolution_range_m'][1]) == tier)]
+    return {
+        'tier': tier,
+        'tier_uncertain': uncertain,
+        'best_confirmed_resolution_m': best_definite if tier_of(best_definite) == tier else None,
+        'finest_any_depth_m': finest_any,
+        'finer_grids_depth_unrecorded': finer_unconfirmed,
+        'tier_sources': tier_sources,
+    }
+
+
+def ledger_tier_proxy(reaches, tier_res):
+    """Reach-level share of the provisional 0-100 m band covered by grids at tier_res or finer.
+
+    reaches: [{'band_km2', 'selected_km2', 'resolutions_m': [...], 'crosses': bool}]. The ledger
+    records one selected footprint per reach, not per grid, so:
+      low  = reaches whose every used grid is <= tier_res  (their footprint is entirely at the tier)
+      high = reaches with at least one used grid <= tier_res (footprint may include coarser grids)
+    Reaches that cross a sector line are left out of both numerator and denominator.
+    Returns None when no non-crossing reach band exists.
+    """
+    kept = [r for r in reaches if not r['crosses']]
+    band = sum(r['band_km2'] for r in kept)
+    excluded = sum(r['band_km2'] for r in reaches if r['crosses'])
+    if band <= 0:
+        return None
+    low = sum(r['selected_km2'] for r in kept
+              if r['resolutions_m'] and all(x <= tier_res for x in r['resolutions_m']))
+    high = sum(r['selected_km2'] for r in kept if any(x <= tier_res for x in r['resolutions_m']))
+    return {'low_pct': 100.0 * low / band, 'high_pct': 100.0 * high / band, 'low_km2': low, 'high_km2': high,
+            'band_km2': band, 'excluded_crossing_band_km2': excluded,
+            'reaches_used': len(kept), 'reaches_crossing': len(reaches) - len(kept)}
+
+
+# ---------------------------------------------------------------- source parsing
 
 def csumb_resolution(src):
     res = src.get('resolution_m', src.get('resolution'))
@@ -130,11 +256,11 @@ def csumb_resolution(src):
     if isinstance(res, (int, float)):
         return float(res)
     member = src.get('archive_member') or src.get('bathymetry_grid') or ''
-    m = re.search(r'(\d+)m(?:bathy|bthy)', member)
-    return float(m.group(1)) if m else None
+    mm = re.search(r'(\d+)m(?:bathy|bthy)', member)
+    return float(mm.group(1)) if mm else None
 
 
-def csumb_date(src):
+def csumb_acq(src):
     dates = [d for d in (src.get('acquisition_dates') or []) if d]
     if dates:
         return f'{min(dates)[:4]}-{max(dates)[:4]}' if min(dates)[:4] != max(dates)[:4] else min(dates)[:4]
@@ -145,8 +271,7 @@ def csumb_date(src):
 
 def csumb_name(src):
     member = src.get('archive_member') or src.get('bathymetry_grid') or ''
-    survey = src.get('name') or src.get('survey_id') or src.get('block') or member.split('/')[0]
-    return survey
+    return src.get('name') or src.get('survey_id') or src.get('block') or member.split('/')[0]
 
 
 def usgs_name(title, res_m):
@@ -157,16 +282,31 @@ def usgs_name(title, res_m):
     return f'USGS state-waters {round(res_m, 1):g} m bathymetry, {t}'
 
 
-def polygon_centroid(geom):
-    ring = geom['coordinates'][0] if geom['type'] == 'Polygon' else geom['coordinates'][0][0]
-    xs = [p[0] for p in ring]
-    ys = [p[1] for p in ring]
-    return sum(xs) / len(xs), sum(ys) / len(ys)
+def year_span(values):
+    ys = sorted({str(v)[:4] for v in values if v})
+    if not ys:
+        return None
+    return ys[0] if ys[0] == ys[-1] else f'{ys[0]}-{ys[-1]}'
 
 
-def in_bounds(lon, lat, b):
-    return b[0] <= lon <= b[2] and b[1] <= lat < b[3]
+def date_figs(entries, release_basis, acq_basis):
+    """Explicit release date (publication) and, separately, acquisition/survey dates."""
+    rel = [e.get('release_date') for e in entries]
+    known = [r for r in rel if r]
+    n = len(entries)
+    if not known:
+        release = fig(None, 'UNKNOWN', f'no release/publication date recorded for these {n} grid(s); {release_basis}')
+    else:
+        span = year_span(known)
+        release = fig(span if len(known) == n else f'{span} for {len(known)} of {n} grids; rest UNKNOWN', 'MEASURED',
+                      f'publication date recorded for {len(known)} of {n} grid(s) in {INPUTS["usgs_meta"]}'
+                      + ('' if len(known) == n else '; the others have no recorded release date (UNKNOWN)'))
+    acq = [e.get('acquisition') for e in entries if e.get('acquisition')]
+    acquisition = fig(year_span(acq), 'MEASURED', acq_basis) if acq else fig(None, 'UNKNOWN', acq_basis)
+    return release, acquisition
 
+
+# ---------------------------------------------------------------- build
 
 def build():
     data = {k: load(v) for k, v in INPUTS.items()}
@@ -177,12 +317,7 @@ def build():
     input_files = sorted([*INPUTS.values(), *glob.glob(CSUMB_GLOB, root_dir=ROOT),
                           *glob.glob(DS3091_GLOB, root_dir=ROOT), *glob.glob(USGS_HARD_GLOB, root_dir=ROOT)])
 
-    rows = {sid: {'shallow_sources': []} for sid in ids}
-    survey_year = {}
-    for sv in data['surveys']['surveys']:
-        y = sv.get('year')
-        if isinstance(y, int) or (isinstance(y, str) and y.isdigit()):
-            survey_year[sv['id']] = int(y)
+    survey_cat = {sv['id']: sv for sv in data['surveys']['surveys']}
     sv_all = data['surveys']['surveys']
     statewide_surveys = {
         'entries': fig(len(sv_all), 'MEASURED', 'catalog/surveys.json surveys[]'),
@@ -193,149 +328,174 @@ def build():
         'usable_status': fig(sum(1 for x in sv_all if x.get('status') == 'usable'), 'MEASURED', 'status == usable'),
         'note': 'catalog/surveys.json carries no sector or footprint field, so these counts are statewide only.',
     }
+    # Publication dates of USGS DS 781 releases, joined by archive URL (dist/data/usgs-ds781-metadata-review.json).
+    pubdate = {r['archive_url']: r.get('publication_date') for r in data['usgs_meta']['records'] if r.get('publication_date')}
 
-    # 1. CSUMB native grids recorded with hashes (downloaded) in catalog/csumb-*native-sources.json.
-    csumb_lat = {}
+    evidence = defaultdict(list)
+
+    # 1. CSUMB native grids recorded in catalog/csumb-*native-sources.json.
     csumb_by_sector = defaultdict(list)
     for rel in sorted(glob.glob(CSUMB_GLOB, root_dir=ROOT)):
         for src in load(rel).get('sources', []):
             res = csumb_resolution(src)
             b = src.get('bounds_wgs84')
-            sid = None
+            sid, touching, basis = None, [], None
             if b:
-                lat = (b[1] + b[3]) / 2
-                sid = sector_for_lat(lat, sectors)
-                if src.get('id'):
-                    csumb_lat[src['id']] = lat
-            entry = {
+                sid, touching = sector_of_bbox(b, bounds)
+                basis = 'bounding-box centre in the sector box'
+            if sid is None:
+                survey = src.get('survey_id')
+                hits = [x for x in ids if survey and survey in (readiness[x].get('csumb_catalog_survey_lead_ids') or [])]
+                if hits:
+                    sid, touching = hits[0], hits
+                    basis = 'readiness CSUMB survey-lead mapping (first listed sector)'
+            if not sid:
+                continue
+            px = src.get('nominal_0_300ft_pixels')
+            depth = 'unrecorded' if px is None else ('confirmed' if px > 0 else 'none-shallow')
+            e = {
                 'family': 'CSUMB',
                 'name': f'CSUMB {csumb_name(src)} {rnd(res, 0) if res else "?"} m native grid',
                 'id': src.get('id'),
                 'resolution_m': res,
-                'date': csumb_date(src),
-                'date_kind': 'acquisition',
+                'depth': depth,
+                'release_date': None,
+                'acquisition': csumb_acq(src),
                 'read': bool(src.get('sha256') or src.get('archive_sha256')),
-                'pixels_0_300ft': src.get('nominal_0_300ft_pixels'),
+                'pixels_0_300ft': px,
+                'extent_km2': px * res * res / 1e6 if px and res else None,
                 'depth_max_m': src.get('depth_max_m'),
+                'crosses_sector_line': len(touching) > 1,
                 'catalog': rel,
-                'sector_basis': 'bounding-box centre latitude' if sid else None,
+                'sector_basis': basis,
             }
-            if sid is None:
-                # Grid without bounds: use the readiness catalog-lead mapping of its survey id.
-                survey = src.get('survey_id')
-                hits = [x for x in ids if survey and survey in (readiness[x].get('csumb_catalog_survey_lead_ids') or [])]
-                if hits:
-                    sid = hits[0]
-                    entry['sector_basis'] = 'readiness CSUMB survey-lead mapping (first listed sector)'
-            if sid:
-                csumb_by_sector[sid].append(entry)
+            csumb_by_sector[sid].append(e)
+            evidence[sid].append(e)
 
-    # 2. Central seafloor ledger: native coverage against the provisional BlueTopo 0-100 m reference band.
-    ledger = data['ledger']
-    reach_sector = {}
-    by_sector_ledger = defaultdict(lambda: {'band': 0.0, 'tier1': 0.0, 'selected': 0.0, 'tier2': 0.0,
-                                            'reaches': 0, 'assessed': 0, 'unassessed': 0, 'held': 0,
-                                            'habitat_polygons': 0, 'surveys': set(), 'basis': set()})
-    for r in ledger['reaches']:
-        lats = [csumb_lat[s] for s in r.get('surveys_used', []) if s in csumb_lat]
-        if lats:
-            lats.sort()
-            sid = sector_for_lat(lats[len(lats) // 2], sectors) or REGION_DEFAULT_SECTOR[r['region']]
-            basis = 'median CSUMB survey latitude'
-        else:
-            sid = REGION_DEFAULT_SECTOR[r['region']]
-            basis = 'planning-region start sector'
-        reach_sector[r['id']] = sid
-        agg = by_sector_ledger[sid]
-        agg['band'] += r['band_km2']
-        agg['tier1'] += r['tier1_km2']
-        agg['tier2'] += r.get('tier2_km2') or 0.0
-        agg['selected'] += r.get('selected_valid_km2') or 0.0
-        agg['reaches'] += 1
-        agg['assessed'] += r['status'] == 'habitat-screened'
-        agg['held'] += r['status'] == 'habitat-held-for-screen'
-        agg['unassessed'] += r['status'] == 'unassessed'
-        agg['habitat_polygons'] += r.get('habitat_count') or 0
-        agg['surveys'].update(r.get('surveys_used', []))
-        agg['basis'].add(basis)
+    # 2. Central seafloor ledger reaches, placed by their EPSG:3310 bounds (catalog/reaches.json).
+    reach_geo = {r['id']: r for r in data['reaches']['reaches']}
+    ledger_reaches = defaultdict(list)
+    ledger_ctx = defaultdict(lambda: {'band': 0.0, 'tier1': 0.0, 'selected': 0.0, 'tier2': 0.0, 'reaches': 0,
+                                      'assessed': 0, 'unassessed': 0, 'held': 0, 'habitat_polygons': 0,
+                                      'surveys': set(), 'crossing': []})
+    for r in data['ledger']['reaches']:
+        bb = bbox_3310_to_wgs84(reach_geo[r['id']]['bounds_3310'])
+        sid, touching = sector_of_bbox(bb, bounds)
+        if sid is None:
+            continue
+        used = r.get('surveys_used', [])
+        res_list = [float(survey_cat[x]['resolution_m']) for x in used
+                    if x in survey_cat and isinstance(survey_cat[x].get('resolution_m'), (int, float))]
+        crosses = len(touching) > 1
+        ledger_reaches[sid].append({'id': r['id'], 'band_km2': r['band_km2'], 'selected_km2': r.get('selected_valid_km2') or 0.0,
+                                    'resolutions_m': res_list, 'crosses': crosses, 'touching': touching})
+        c = ledger_ctx[sid]
+        c['band'] += r['band_km2']
+        c['tier1'] += r['tier1_km2']
+        c['tier2'] += r.get('tier2_km2') or 0.0
+        c['selected'] += r.get('selected_valid_km2') or 0.0
+        c['reaches'] += 1
+        c['assessed'] += r['status'] == 'habitat-screened'
+        c['held'] += r['status'] == 'habitat-held-for-screen'
+        c['unassessed'] += r['status'] == 'unassessed'
+        c['habitat_polygons'] += r.get('habitat_count') or 0
+        c['surveys'].update(used)
+        if crosses:
+            c['crossing'].append(r['id'])
+        if (r.get('selected_valid_km2') or 0) > 0:
+            for x in used:
+                sv = survey_cat.get(x, {})
+                res = sv.get('resolution_m') if isinstance(sv.get('resolution_m'), (int, float)) else None
+                evidence[sid].append({
+                    'family': 'Seafloor ledger', 'id': x, 'name': sv.get('title') or x,
+                    'resolution_m': float(res) if res else None, 'depth': 'confirmed',
+                    'release_date': pubdate.get(sv.get('url')),
+                    'acquisition': sv.get('year') if isinstance(sv.get('year'), int) else None,
+                    'read': True, 'crosses_sector_line': crosses, 'reach': r['id'],
+                    'catalog': INPUTS['ledger'], 'sector_basis': 'reach bounds centre in the sector box'})
 
-    # 3. USGS DS 781 / DOI original bathymetry grids opened in the depth-datum ledger.
-    pubdate = {r['archive_url']: r.get('publication_date') for r in data['usgs_meta']['records']}
+    # 3. USGS DS 781 / DOI original bathymetry grids opened in the depth-datum ledger. Their 0-300 ft
+    # pixels are not recorded, so they are depth-unrecorded evidence unless the seafloor ledger used them.
+    ledger_urls = {survey_cat[x].get('url') for c in ledger_ctx.values() for x in c['surveys'] if x in survey_cat}
+    usgs_by_sector = defaultdict(list)
     usgs_sources = data['usgs_bathy']['sources']
-    for sid in ids:
-        for idx in next(s for s in data['usgs_bathy']['sectors'] if s['sector_id'] == sid)['intersecting_source_indices']:
-            src = usgs_sources[idx]
-            b = src['raster_bounds_wgs84']
-            cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
-            # One sector per raster, by bbox centre inside the readiness sector box (latitude bands
-            # alone misplace the east-west Santa Barbara Channel coast).
-            if not in_bounds(cx, cy, bounds[sid]):
+    seen_usgs = set()
+    for sec in data['usgs_bathy']['sectors']:
+        for idx in sec['intersecting_source_indices']:
+            if idx in seen_usgs:
                 continue
-            res = src['native_resolution_m'][0]
-            rows[sid]['shallow_sources'].append({
-                'family': 'USGS DS781',
-                'name': usgs_name(src['title'], res),
-                'id': src['id'],
-                'resolution_m': res,
-                'date': pubdate.get(src['archive_url']),
-                'date_kind': 'publication',
-                'read': True,
-                'pixels_0_300ft': None,
-                'valid_pixels_all_depths': src['valid_native_pixels'],
-                'slug': src['archive_url'].rsplit('/', 1)[-1].lower().replace('_', '-').replace('.', '-'),
-                'catalog': INPUTS['usgs_bathy'],
-                'sector_basis': 'raster bbox centre inside the sector box',
-            })
+            src = usgs_sources[idx]
+            sid, touching = sector_of_bbox(src['raster_bounds_wgs84'], bounds)
+            if sid is None:
+                continue
+            seen_usgs.add(idx)
+            res = float(src['native_resolution_m'][0])
+            e = {
+                'family': 'USGS DS781', 'name': usgs_name(src['title'], res), 'id': src['id'],
+                'resolution_m': res, 'depth': 'unrecorded',
+                'release_date': pubdate.get(src['archive_url']), 'acquisition': None, 'read': True,
+                'valid_area_all_depths_km2': src['valid_native_pixels'] * res * float(src['native_resolution_m'][1]) / 1e6,
+                'in_seafloor_ledger': src['archive_url'] in ledger_urls,
+                'crosses_sector_line': len(touching) > 1,
+                'catalog': INPUTS['usgs_bathy'], 'sector_basis': 'raster bbox centre in the sector box',
+            }
+            usgs_by_sector[sid].append(e)
+            evidence[sid].append(e)
     usgs_unavailable = data['usgs_bathy'].get('unavailable_original_grids', [])
 
-    # 4. NOAA original regular BAGs (<=4 m) opened with per-sector measured and 25-200 ft eligible cells.
+    # 4. NOAA original regular BAGs (<=4 m), with per-sector 25-200 ft depth/uncertainty-eligible cells.
     noaa_reg = defaultdict(list)
     for f in data['noaa_regular']['files']:
         if f.get('status') != 'ok':
             continue
         res = f['native_resolution_m']
         for sid, c in (f.get('sectors') or {}).items():
-            noaa_reg[sid].append({
-                'family': 'NOAA BAG',
-                'name': f"NOAA {f['survey_id']} {rnd(res[0], 1):g} m BAG",
-                'id': f['bag_url'].rsplit('/', 1)[-1],
-                'survey_id': f['survey_id'],
+            elig = c['depth_uncertainty_eligible_cells']
+            e = {
+                'family': 'NOAA BAG', 'name': f"NOAA {f['survey_id']} {rnd(res[0], 1):g} m BAG",
+                'id': f['bag_url'].rsplit('/', 1)[-1], 'survey_id': f['survey_id'],
                 'resolution_m': float(res[0]),
-                'date': (f.get('survey_dates') or [None])[-1][:10] if f.get('survey_dates') else None,
-                'date_kind': 'survey end',
-                'read': True,
-                'measured_cells': c['measured_native_cells'],
-                'eligible_25_200ft_cells': c['depth_uncertainty_eligible_cells'],
-                'eligible_area_km2': c['depth_uncertainty_eligible_cells'] * res[0] * res[1] / 1e6,
-                'catalog': INPUTS['noaa_regular'],
-            })
-    noaa_vr = {s['sector_id']: s for s in data['noaa_vr']['sectors']}
-    vr_dates = defaultdict(list)
-    for f in data['noaa_vr']['files']:
-        for sid in (f.get('sectors') or {}):
-            vr_dates[sid].append((f['survey_id'], (f.get('survey_dates') or [None])[-1]))
+                'depth': 'confirmed' if elig > 0 else 'unrecorded',
+                'release_date': None, 'acquisition': year_span(f.get('survey_dates') or []), 'read': True,
+                'measured_cells': c['measured_native_cells'], 'eligible_25_200ft_cells': elig,
+                'extent_km2': elig * res[0] * res[1] / 1e6,
+                'crosses_sector_line': False, 'catalog': INPUTS['noaa_regular'],
+                'sector_basis': 'per-sector cell counts in the review',
+            }
+            noaa_reg[sid].append(e)
+            evidence[sid].append(e)
 
-    # 5. Habitat: USGS character rasters, display hard-context outlines, CDFW ds3091 patches.
+    # 5. NOAA variable-resolution BAGs: per-sector eligible cells, refinement spacing only "1-4 m".
+    noaa_vr = {s['sector_id']: s for s in data['noaa_vr']['sectors']}
+    for f in data['noaa_vr']['files']:
+        for sid, c in (f.get('sectors') or {}).items():
+            if c.get('depth_uncertainty_eligible_cells', 0) > 0:
+                evidence[sid].append({
+                    'family': 'NOAA VR BAG', 'name': f"NOAA {f['survey_id']} VR BAG (1-4 m refinements)",
+                    'id': f['bag_url'].rsplit('/', 1)[-1], 'resolution_m': None, 'resolution_range_m': VR_RANGE_M,
+                    'depth': 'confirmed', 'release_date': None, 'acquisition': year_span(f.get('survey_dates') or []),
+                    'read': True, 'eligible_25_200ft_cells': c['depth_uncertainty_eligible_cells'],
+                    'crosses_sector_line': False, 'catalog': INPUTS['noaa_vr'],
+                    'sector_basis': 'per-sector cell counts in the review'})
+
+    # 6. Habitat: USGS character rasters, display hard-context outlines, CDFW ds3091 patches.
     char = {s['sector_id']: s for s in data['usgs_char']['sectors']}
     char_products = data['usgs_char']['products']
-    ds3091 = defaultdict(int)
-    for rel in sorted(glob.glob(DS3091_GLOB, root_dir=ROOT)):
-        for feat in load(rel)['features']:
-            lon, lat = polygon_centroid(feat['geometry'])
-            for sid in ids:
-                if in_bounds(lon, lat, bounds[sid]):
-                    ds3091[sid] += 1
-                    break
-    usgs_hard = defaultdict(int)
-    for rel in sorted(glob.glob(USGS_HARD_GLOB, root_dir=ROOT)):
-        for feat in load(rel)['features']:
-            lon, lat = polygon_centroid(feat['geometry'])
-            for sid in ids:
-                if in_bounds(lon, lat, bounds[sid]):
-                    usgs_hard[sid] += 1
-                    break
 
-    # 6. Fishing/dive use proxy: home ports whose match point lies in the sector band.
+    def count_features(pattern):
+        out = defaultdict(int)
+        for rel in sorted(glob.glob(pattern, root_dir=ROOT)):
+            for feat in load(rel)['features']:
+                lon, lat = polygon_centroid(feat['geometry'])
+                for sid in ids:
+                    if in_bounds(lon, lat, bounds[sid]):
+                        out[sid] += 1
+                        break
+        return out
+    ds3091 = count_features(DS3091_GLOB)
+    usgs_hard = count_features(USGS_HARD_GLOB)
+
+    # 7. Fishing/dive use proxy: home ports whose match point lies in the sector box.
     ports = defaultdict(list)
     for p in data['ports']['ports']:
         lat, lon = p['match']
@@ -354,245 +514,46 @@ def build():
         rd = readiness[sid]
         row = {'order': order, 'id': sid, 'name': s['name'], 'coast': s['coast'],
                'latitude': [round(x, 4) for x in s['latitude']]}
-
-        # --- shallow sources (0-300 ft) ---
-        shallow = []
-        cs = [e for e in csumb_by_sector[sid] if e['pixels_0_300ft']]
-        for e in cs:
-            shallow.append(e)
-        shallow.extend(rows[sid]['shallow_sources'])
-        reg = [e for e in noaa_reg.get(sid, []) if e['eligible_25_200ft_cells'] > 0]
-        shallow.extend(reg)
-        vr = noaa_vr.get(sid, {})
-        vr_eligible = vr.get('depth_uncertainty_eligible_cells', 0)
-        agg = by_sector_ledger.get(sid)
-        if agg and agg['tier1'] > 0:
-            shallow.append({'family': 'Seafloor ledger', 'name': 'Central seafloor ledger native sources '
-                            '(CSUMB, USGS, PG&E/CSUMB and NOAA grids)', 'resolution_m': 2.0,
-                            'read': True, 'date': None, 'date_kind': None, 'catalog': INPUTS['ledger']})
-
-        finest_res = min((e['resolution_m'] for e in shallow if e.get('resolution_m')), default=None)
-        if finest_res is None and vr_eligible > 0:
-            finest_res = 4.0
-        # Shallow area read per tier (km2). Overlaps are not deduplicated.
-        area = defaultdict(float)
-        area_basis = defaultdict(list)
-        if agg and agg['selected'] > 0:
-            # The ledger already joins the sector's CSUMB, USGS and NOAA grids; adding them again would double count.
-            area['2 m'] += agg['selected']
-            area_basis['2 m'].append(f'seafloor ledger selected native footprint {agg["selected"]:.1f} km2 (M)')
-        else:
-            for e in cs:
-                a = e['pixels_0_300ft'] * e['resolution_m'] ** 2 / 1e6
-                area[tier_of(e['resolution_m'])] += a
-            for t in TIER_ORDER:
-                if area[t]:
-                    area_basis[t].append(f'CSUMB nominal 0-300 ft pixels {area[t]:.1f} km2 (M)')
-            for e in reg:
-                area[tier_of(e['resolution_m'])] += e['eligible_area_km2']
-            for t in ('2 m', '5 m'):
-                a = sum(e['eligible_area_km2'] for e in reg if tier_of(e['resolution_m']) == t)
-                if a:
-                    area_basis[t].append(f'NOAA regular BAG 25-200 ft eligible cells {a:.1f} km2 (M)')
-            usgs_area = 0.0
-            for e in rows[sid]['shallow_sources']:
-                a = e['valid_pixels_all_depths'] * e['resolution_m'] ** 2 / 1e6
-                usgs_area += a
-                area[tier_of(e['resolution_m'])] += a
-            if usgs_area:
-                area_basis['2 m'].append(f'USGS DS781 valid pixels x cell area {usgs_area:.1f} km2, all depths, whole raster (E)')
-            if vr_eligible:
-                area['5 m'] += vr_eligible / 1e6
-                area_basis['5 m'].append(f'NOAA VR BAG eligible cells x 1 m2 lower bound {vr_eligible / 1e6:.1f} km2 (E)')
-        present = [t for t in TIER_ORDER[:-1] if area[t] > 0]
-        tier = next((t for t in present if area[t] >= MIN_TIER_KM2), present[0] if present else tier_of(finest_res))
-        patch_only = tier not in [t for t in present if area[t] >= MIN_TIER_KM2]
-        not_in_ledger = []
-        if agg:
-            ledger_ids = {x for a in by_sector_ledger.values() for x in a['surveys']}
-            for e in rows[sid]['shallow_sources']:
-                if not any(x.startswith(e['slug']) for x in ledger_ids):
-                    not_in_ledger.append((e['name'], e['valid_pixels_all_depths'] * e['resolution_m'] ** 2 / 1e6))
-        tier_res = {'2 m': 2.0, '5 m': 5.0, '10 m': 10.0}.get(tier)
-        best_res = min((e['resolution_m'] for e in shallow if e.get('resolution_m') and tier_of(e['resolution_m']) == tier),
-                       default=tier_res if tier != 'none' else None)
-        vr_only = tier == '5 m' and bool(vr_eligible) and not any(tier_of(e.get('resolution_m')) == '5 m' for e in shallow)
-        if vr_only:
-            best_res = 4.0
-        # Preferred source family when several share the best tier.
-        pref = ['Seafloor ledger', 'CSUMB', 'USGS DS781', 'NOAA BAG']
-        best_family = None
-        for fam in pref:
-            if any(e['family'] == fam and tier_of(e.get('resolution_m')) == tier for e in shallow):
-                best_family = fam
-                break
-        fam_entries = [e for e in shallow if e['family'] == best_family and tier_of(e.get('resolution_m')) == tier]
-        if best_family == 'Seafloor ledger':
-            years = sorted({str(survey_year[x]) for x in agg['surveys'] if survey_year.get(x)})
-            best_source = {
-                'name': 'CSUMB/USGS California Seafloor Mapping Program native grids (read through the central seafloor ledger)',
-                'family': 'CSUMB/CSMP',
-                'date': fig(f'{years[0]}-{years[-1]}' if len(years) > 1 else (years[0] if years else None),
-                            'MEASURED' if years else 'UNKNOWN',
-                            'acquisition years recorded in catalog/surveys.json for the ledger surveys used in this sector '
-                            f'({sum(1 for x in agg["surveys"] if survey_year.get(x))} of {len(agg["surveys"])} have a year); '
-                            'release dates are not recorded'),
-                'surveys_used': sorted(agg['surveys']),
-            }
-        elif best_family:
-            dates = sorted({e['date'] for e in fam_entries if e.get('date')})
-            names = sorted({e['name'] for e in fam_entries})
-            kind = fam_entries[0]['date_kind']
-            best_source = {
-                'name': '; '.join(names[:4]) + (f' (+{len(names) - 4} more)' if len(names) > 4 else ''),
-                'family': best_family,
-                'date': fig(f'{dates[0]}' + (f' to {dates[-1]}' if dates[-1] != dates[0] else '') if dates else None,
-                            'MEASURED' if dates else 'UNKNOWN', f'{kind} date recorded in {fam_entries[0]["catalog"]}'),
-            }
-        elif vr_eligible > 0:
-            survs = sorted(set(vr.get('survey_ids_with_eligible_cells', [])))
-            best_source = {
-                'name': 'NOAA variable-resolution BAGs ' + ', '.join(survs) + ' (1-4 m refinements)',
-                'family': 'NOAA VR BAG',
-                'date': fig(None, 'UNKNOWN', 'per-sector VR survey dates are listed per file only'),
-            }
-        else:
-            best_source = None
-
-        # Coverage percent of the 0-300 ft area.
-        if agg and agg['band'] > 0 and agg['tier1'] > 0:
-            pct = 100.0 * agg['selected'] / agg['band']
-            coverage = fig(round(pct), 'MEASURED',
-                           f'selected native footprint {agg["selected"]:.1f} km2 / provisional BlueTopo 0-100 m reference band '
-                           f'{agg["band"]:.1f} km2 from dist/data/seafloor-ledger.json; reach-to-sector assignment by '
-                           f'{" and ".join(sorted(agg["basis"]))} (ESTIMATED where a planning region crosses the sector line)')
-            tier1_pct = fig(round(100.0 * agg['tier1'] / agg['band']), 'MEASURED',
-                            'tier-1 cell share (250 m cells at least 25% covered by one usable original source)')
-        else:
-            coverage = fig(None, 'UNKNOWN', 'no 0-300 ft reference area for this sector exists in the repo; '
-                           'the seafloor ledger covers only Pigeon Point to Point Conception')
-            tier1_pct = None
-
-        reg_area_2m = sum(e['eligible_area_km2'] for e in reg if e['resolution_m'] <= 2.0)
-        reg_area_all = sum(e['eligible_area_km2'] for e in reg)
-        cs_area = sum((e['pixels_0_300ft'] or 0) * (e['resolution_m'] or 0) ** 2 / 1e6 for e in cs
-                      if e['resolution_m'] and e['resolution_m'] <= 2.0)
-        shallow_block = {
-            'best_tier': tier,
-            'best_tier_label': 'ESTIMATED',
-            'best_tier_basis': f'finest class with at least {MIN_TIER_KM2:g} km2 of read shallow area in the sector',
-            'best_resolution_m': fig(rnd(best_res, 2), ('ESTIMATED' if vr_only else 'MEASURED') if best_res else 'UNKNOWN',
-                                     'finest native grid spacing among read sources of the best tier'
-                                     + ('' if tier != '5 m' or not vr_eligible else
-                                        '; VR BAG refinements are recorded only as 1-4 m')),
-            'finest_resolution_anywhere_m': fig(rnd(finest_res, 2), 'MEASURED' if finest_res else 'UNKNOWN',
-                                                'finest grid with any recorded cells in the sector, however small'),
-            'area_read_by_tier_km2': {t: fig(round(area[t], 1), 'ESTIMATED' if any('(E)' in b for b in area_basis[t]) else 'MEASURED',
-                                             '; '.join(area_basis[t]))
-                                      for t in ('2 m', '5 m') if area[t]},
-            'patch_only': patch_only,
-            'usgs_ds781_opened_not_in_ledger': fig(
-                [n for n, _ in not_in_ledger], 'ESTIMATED',
-                f'opened DS781 grids whose archive is not among the seafloor-ledger surveys; about '
-                f'{sum(a for _, a in not_in_ledger):.0f} km2 of valid pixels (all depths, whole rasters)') if not_in_ledger else None,
-            'best_source': best_source,
-            'coverage_pct_of_0_300ft': coverage,
-            'tier1_cell_pct': tier1_pct,
-            'csumb_2m_0_300ft_km2': fig(round(cs_area, 1), 'MEASURED',
-                                       'sum of nominal_0_300ft_pixels x 4 m2 for 2 m CSUMB grids centred in the sector; '
-                                       'overlapping blocks are not deduplicated') if cs_area else None,
-            'noaa_bag_25_200ft_km2_at_2m_or_finer': fig(round(reg_area_2m, 1), 'MEASURED',
-                                                        'sum of 25-200 ft depth/uncertainty-eligible cells x cell area for '
-                                                        'regular BAGs <=2 m in dist/data/noaa-regular-native-depth-review.json; '
-                                                        'overlapping surveys are not deduplicated') if reg else None,
-            'noaa_bag_25_200ft_km2_all_regular': fig(round(reg_area_all, 1), 'MEASURED',
-                                                     'same, all regular BAGs <=4 m') if reg else None,
-            'noaa_vr_25_200ft_cells': fig(vr_eligible, 'MEASURED',
-                                          'depth/uncertainty-eligible VR BAG refinement cells (1-4 m, area not computable '
-                                          'without per-cell spacing)') if vr_eligible else None,
-            'usgs_ds781_2m_grids_opened': fig(len(rows[sid]['shallow_sources']), 'ESTIMATED',
-                                              'DS781 bathymetry rasters opened in dist/data/usgs-depth-datum-ledger.json whose '
-                                              'bbox centre lies in this sector box; 0-300 ft pixels not recorded'),
-            'sources': [{k: v for k, v in e.items() if k in ('family', 'name', 'resolution_m', 'date', 'date_kind',
-                                                              'pixels_0_300ft', 'eligible_25_200ft_cells', 'sector_basis')}
-                        for e in sorted(shallow, key=lambda e: (e.get('resolution_m') or 99, e['name']))][:12],
-            'source_count': len(shallow),
-        }
-        row['shallow_0_300ft'] = shallow_block
-
-        # --- deeper than 300 ft ---
-        deep = []
-        for e in csumb_by_sector[sid]:
-            if e.get('depth_max_m') and e['depth_max_m'] > FT_300_M:
-                deep.append({'name': e['name'], 'resolution_m': e['resolution_m'], 'date': e['date'],
-                             'basis': f'depth_max_m {e["depth_max_m"]:.0f} in {e["catalog"]}', 'label': 'MEASURED'})
-        if sid in em300['sector_ids']:
-            deep.append({'name': em300['name'], 'resolution_m': float(em300['spatial']['resolution_m']), 'date': '1998',
-                         'basis': 'catalog/candidates/usgs-monterey-1998-em300-original.json (canyon/shelf survey; '
-                                  'depth band not tabulated)', 'label': 'ESTIMATED'})
-        if sid in caldig['sector_ids']:
-            deep.append({'name': caldig['name'], 'resolution_m': float(caldig['spatial']['resolution_m']), 'date': None,
-                         'basis': 'catalog/candidates/usgs-caldig-v2.json (offshore deep-water release; mapping held '
-                                  'in research/receipts/coast-c1-m2-held.json)', 'label': 'ESTIMATED'})
-        if sid == 'big-sur':
-            deep.append({'name': 'CSUMB BSS_Block13 5 m native grid', 'resolution_m': 5.0, 'date': '2011',
-                         'basis': 'catalog/csumb-bss-native-sources.json: no valid cell shallower than 78.32 m NAVD88; '
-                                  'deeper extent not tabulated', 'label': 'ESTIMATED'})
-        deep.sort(key=lambda d: d['resolution_m'])
-        tile = bluetopo.get(bt_tile.get(sid))
-        if deep:
-            d0 = deep[0]
-            deep_block = {
-                'best_tier': tier_of(d0['resolution_m']),
-                'best_resolution_m': fig(d0['resolution_m'], d0['label'], d0['basis']),
-                'best_source': d0['name'],
-                'sources': deep,
-            }
-        else:
-            deep_block = {
-                'best_tier': 'coarser',
-                'best_resolution_m': fig(float(gebco['spatial']['resolution_m']), 'MEASURED',
-                                         'GEBCO_2026 grid spacing from catalog/candidates/gebco-2026-grid.json; no native grid '
-                                         'with a recorded depth beyond 300 ft is catalogued for this sector (NOAA BAG reviews '
-                                         'tabulate only 25-200 ft cells, so finer deep cells in read BAGs are UNKNOWN)'),
-                'best_source': f'Statewide fallback only: {gebco["name"]} ({float(gebco["spatial"]["resolution_m"]):.0f} m)',
-                'sources': [],
-            }
-        if tile:
-            deep_block['compilation_context'] = (
-                f'NOAA BlueTopo tile {tile["tile"]} at {tile["resolution_m"][0]:g} m (compilation; one sampled tile, '
-                f'{tile["counts"]["measured_contributor_pixels"]:,} measured-contributor pixels; not a native survey grid)')
-        row['deeper_than_300ft'] = deep_block
+        ev = evidence[sid]
+        cls = classify_shallow(ev)
+        tier = cls['tier']
+        row['shallow_0_300ft'] = shallow_block(sid, cls, ev, ledger_reaches[sid], ledger_ctx.get(sid))
+        row['deeper_than_300ft'] = deep_block(sid, csumb_by_sector[sid], em300, caldig, gebco,
+                                              bluetopo.get(bt_tile.get(sid)))
 
         # --- review status ---
-        n_reg_files = len({e['id'] for e in noaa_reg.get(sid, [])})
-        n_vr_files = vr.get('source_files_with_eligible_cells', 0)
+        n_reg = len({e['id'] for e in noaa_reg.get(sid, [])})
+        n_vr = noaa_vr.get(sid, {}).get('source_files_with_eligible_cells', 0)
         n_cs = len(csumb_by_sector[sid])
-        n_usgs = len(rows[sid]['shallow_sources'])
-        read_total = n_reg_files + n_vr_files + n_cs + n_usgs
-        if agg and agg['tier1'] > 0:
-            status = 'reviewed-coverage-measured'
+        n_usgs = len(usgs_by_sector[sid])
+        read_total = n_reg + n_vr + n_cs + n_usgs
+        ctx = ledger_ctx.get(sid)
+        if ctx and ctx['tier1'] > 0:
+            status = 'ledger-assessed'
         elif read_total:
             status = 'partly-reviewed'
         else:
             status = 'catalogued-only'
         unread = []
-        if rd['original_bag_bbox_leads'] > n_reg_files + n_vr_files:
-            unread.append(f'{rd["original_bag_bbox_leads"]} NOAA BAG bbox leads vs {n_reg_files + n_vr_files} BAG files read '
+        if rd['original_bag_bbox_leads'] > n_reg + n_vr:
+            unread.append(f'{rd["original_bag_bbox_leads"]} NOAA BAG bbox leads vs {n_reg + n_vr} BAG files read '
                           'with cells in the sector (bounded <=100 MB audit)')
         ds_links = sum(m['bathymetry_product_links'] for m in rd['usgs_ds781_map_area_leads'])
         if ds_links > n_usgs:
             unread.append(f'{ds_links} USGS DS781 bathymetry product links vs {n_usgs} opened grids assigned here')
+        unrec = [e for e in usgs_by_sector[sid] if not e['in_seafloor_ledger']]
+        if unrec:
+            unread.append(f'{len(unrec)} opened USGS DS781 grid(s) without a recorded 0-300 ft pixel count')
         for u in usgs_unavailable:
-            if any(k.lower() in u['archive_url'].lower() for k in ('pointconception',)) and sid == 'conception-ventura':
+            if 'pointconception' in u['archive_url'].lower() and sid == 'conception-ventura':
                 unread.append('USGS Offshore Point Conception bathymetry archive exceeded the download bound')
-        if agg and agg['unassessed']:
-            unread.append(f'{agg["unassessed"]} of {agg["reaches"]} seafloor-ledger reaches unassessed (no native source attached)')
-        if agg and agg['held']:
-            unread.append(f'{agg["held"]} seafloor-ledger reaches held for the spatial screen')
-        n_ledger = len(agg['surveys']) if agg else 0
-        files_basis = (f'CSUMB grids {n_cs}, USGS DS781 grids {n_usgs} (ESTIMATED assignment), NOAA regular BAGs '
-                       f'{n_reg_files}, NOAA VR BAGs {n_vr_files}')
+        if ctx and ctx['unassessed']:
+            unread.append(f'{ctx["unassessed"]} of {ctx["reaches"]} seafloor-ledger reaches unassessed (no native source attached)')
+        if ctx and ctx['held']:
+            unread.append(f'{ctx["held"]} seafloor-ledger reaches held for the spatial screen')
+        n_ledger = len(ctx['surveys']) if ctx else 0
+        files_basis = (f'CSUMB grids {n_cs}, USGS DS781 grids {n_usgs} (bbox-centre assignment), NOAA regular BAGs '
+                       f'{n_reg}, NOAA VR BAGs {n_vr}')
         if n_ledger:
             files_basis += (f'; seafloor-ledger surveys used {n_ledger}. Value is the larger of the two counts because '
                             'the catalogs use different ids for the same file')
@@ -624,16 +585,16 @@ def build():
                                               'sector bounds (assignment ESTIMATED; bands may include offshore islands)'),
             },
         }
-        if agg:
+        if ctx:
             hab['usgs_csumb_classes']['csumb_terrain_habitat'] = {
-                'ledger_reaches_habitat_screened': fig(agg['assessed'], 'MEASURED', INPUTS['ledger']),
-                'ledger_reaches_total': fig(agg['reaches'], 'MEASURED', INPUTS['ledger']),
-                'graded_physical_habitat_polygons': fig(agg['habitat_polygons'], 'MEASURED', INPUTS['ledger']),
-                'screened_habitat_km2': fig(round(agg['tier2'], 1), 'MEASURED', 'tier-2 km2 in the seafloor ledger'),
+                'ledger_reaches_habitat_screened': fig(ctx['assessed'], 'MEASURED', INPUTS['ledger']),
+                'ledger_reaches_total': fig(ctx['reaches'], 'MEASURED', INPUTS['ledger']),
+                'graded_physical_habitat_polygons': fig(ctx['habitat_polygons'], 'MEASURED', INPUTS['ledger']),
+                'screened_habitat_km2': fig(round(ctx['tier2'], 1), 'MEASURED', 'tier-2 km2 in the seafloor ledger'),
             }
-        if hab['usgs_csumb_classes']['usgs_character_rasters_opened']['value'] or (agg and agg['habitat_polygons']):
+        if hab['usgs_csumb_classes']['usgs_character_rasters_opened']['value'] or (ctx and ctx['habitat_polygons']):
             hab['summary'] = 'native classes read' + (' (USGS character)' if ch.get('opened_native_rasters') else '') + \
-                (' + CSUMB/ledger terrain habitat' if agg and agg['habitat_polygons'] else '') + '; CDFW ds3091 context'
+                (' + CSUMB/ledger terrain habitat' if ctx and ctx['habitat_polygons'] else '') + '; CDFW ds3091 context'
         elif prods:
             hab['summary'] = 'USGS character catalogued, not opened; CDFW ds3091 context only'
         else:
@@ -649,27 +610,43 @@ def build():
     summary = summarize(out_rows)
     summary['statewide_survey_catalog'] = statewide_surveys
     return {
-        'schema_version': 1,
+        'schema_version': 2,
         'id': 'coast-seafloor-inventory',
         'task': 'COAST-INVENTORY-1',
         'scope': 'California outer-coast browse sectors (catalog/coastal-sectors.json), north to south. Bays and offshore '
                  'islands need their own packages and are not inventoried here.',
         'generator': 'research/scripts/inventory_coast_seafloor.py',
         'labels': {
-            'MEASURED': 'copied or summed from pixel/cell counts already recorded in a repo catalog',
-            'ESTIMATED': 'derived with a stated assumption, usually assigning a raster or reach to a sector by latitude',
+            'MEASURED': 'copied or summed from pixel/cell counts already recorded in a repo catalog for exactly the quantity named',
+            'ESTIMATED': 'derived with a stated assumption (sector assignment by bounding box, 0-100 m band standing in for '
+                         '0-300 ft, reach-level rather than grid-level footprints)',
             'UNKNOWN': 'no catalog figure exists in the repo; not filled by guessing',
         },
         'tiers': {
-            '2 m': 'native grid spacing <= 2 m', '5 m': '> 2 m and <= 5 m (includes VR BAG 1-4 m refinements recorded only as <= 4 m)',
-            '10 m': '> 5 m and <= 10 m', 'coarser': '> 10 m or compilation only', 'none': 'no native grid with recorded cells',
+            '2 m': 'native grid spacing <= 2 m', '5 m': '> 2 m and <= 5 m (also NOAA VR BAG refinements, recorded only as 1-4 m)',
+            '10 m': '> 5 m and <= 10 m', 'coarser': '> 10 m or compilation only', 'none': 'no grid with confirmed 0-300 ft cells',
+        },
+        'definitions': {
+            'best_tier': 'finest tier among grids with CONFIRMED shallow cells in the sector: CSUMB nominal_0_300ft_pixels > 0, '
+                         'NOAA BAG 25-200 ft eligible cells > 0, or a seafloor-ledger reach with a selected native footprint '
+                         'in the 0-100 m band. No minimum area. Grids whose depth band is not recorded (most opened USGS DS781 '
+                         'rasters) do not set the tier; they are listed as finer_grids_depth_unrecorded.',
+            'tier_uncertain': 'true when the tier rests on NOAA VR BAG cells whose spacing is recorded only as 1-4 m, so the '
+                              'true class may be 2 m',
+            'coverage_pct_at_best_tier': 'ESTIMATED reach-level range from the seafloor ledger (low = reaches using only grids at '
+                                         'the tier or finer; high = reaches using any such grid) over the provisional '
+                                         'BlueTopo 0-100 m band of reaches wholly inside the sector; UNKNOWN elsewhere',
+            'release_date': 'publication/release date of the grid; acquisition_dates is a separate field',
         },
         'limits': [
             'Grid spacing is not sounding accuracy; no source here is qualified as an MLLW fishing depth.',
-            'Coverage percentages exist only where dist/data/seafloor-ledger.json supplies a 0-300 ft reference area '
-            '(provisional BlueTopo 0-100 m band, about 0-328 ft).',
+            'No repo catalog records a 0-300 ft reference area outside the seafloor ledger (Pigeon Point to Point Conception), '
+            'and the ledger band is 0-100 m (about 0-328 ft), so every coverage share is ESTIMATED or UNKNOWN, never MEASURED.',
+            'The seafloor ledger records one selected native footprint per reach, not per grid, so coverage at a given resolution '
+            'is a low-high range.',
             'NOAA counts come from bounded audits (files <= 100 MB); larger or failed files are open items, not zeros.',
-            'Overlapping surveys are not deduplicated in any km2 sum below.',
+            'Extent figures are per evidence family and are never summed across families; overlapping surveys within a '
+            'family are not deduplicated.',
             'This inventory changes no map layer, target, score or export.',
         ],
         'inputs': [{'path': p, 'sha256': sha256(p)} for p in input_files],
@@ -679,36 +656,216 @@ def build():
     }
 
 
+def shallow_block(sid, cls, ev, reaches, ctx):
+    tier = cls['tier']
+    ts = cls['tier_sources']
+    # Best source: preferred family among confirmed sources of the best tier.
+    best_source = None
+    for fam in ('Seafloor ledger', 'CSUMB', 'NOAA BAG', 'NOAA VR BAG'):
+        ents = [e for e in ts if e['family'] == fam]
+        if not ents:
+            continue
+        uniq = {e['id']: e for e in ents}.values()
+        uniq = sorted(uniq, key=lambda e: (e.get('resolution_m') or 9, e['name']))
+        names = list(dict.fromkeys(e['name'] for e in uniq))
+        if fam == 'Seafloor ledger':
+            fams = defaultdict(int)
+            for e in uniq:
+                i = e['id']
+                fams['NOAA BAG' if i.startswith('h1') else 'USGS DS781' if i.startswith('bathymetry-') else
+                     'USGS 1998' if i.startswith('usgs-') else 'CSUMB/CSMP'] += 1
+            label = (f'Seafloor-ledger native grids at {tier} or finer: '
+                     + ', '.join(f'{k} {v}' for k, v in sorted(fams.items())))
+        else:
+            label = '; '.join(names[:4]) + (f' (+{len(names) - 4} more)' if len(names) > 4 else '')
+        release, acq = date_figs(
+            list(uniq),
+            'CSUMB and NOAA catalogs record acquisition/survey dates only' if fam != 'Seafloor ledger'
+            else 'catalog/surveys.json records acquisition years only; DS781 publication dates joined by archive URL',
+            {'Seafloor ledger': 'acquisition year in catalog/surveys.json', 'CSUMB': 'acquisition_dates in the CSUMB catalog',
+             'NOAA BAG': 'survey_dates in ' + INPUTS['noaa_regular'],
+             'NOAA VR BAG': 'survey_dates in ' + INPUTS['noaa_vr']}[fam])
+        best_source = {'name': label, 'family': fam, 'grids': len(uniq), 'grid_ids': sorted(e['id'] for e in uniq),
+                       'release_date': release, 'acquisition_dates': acq}
+        break
+
+    # Coverage at the best tier: ledger reach-level range only.
+    proxy = ledger_tier_proxy(reaches, TIER_RES[tier]) if reaches and tier in TIER_RES else None
+    if proxy and proxy['high_km2'] > 0:
+        lo, hi = round(proxy['low_pct']), round(proxy['high_pct'])
+        coverage = fig({'low': lo, 'high': hi}, 'ESTIMATED',
+                       f'seafloor-ledger selected native footprint in {proxy["reaches_used"]} reach(es) wholly inside the sector: '
+                       f'{proxy["low_km2"]:.1f} km2 from reaches using only grids <= {TIER_RES[tier]:g} m, '
+                       f'{proxy["high_km2"]:.1f} km2 from reaches using any such grid, over the provisional BlueTopo 0-100 m '
+                       f'band {proxy["band_km2"]:.1f} km2 (0-100 m is about 0-328 ft, not 0-300 ft)'
+                       + (f'; {proxy["reaches_crossing"]} reach(es) crossing a sector line left out '
+                          f'({proxy["excluded_crossing_band_km2"]:.1f} km2 of band)' if proxy['reaches_crossing'] else ''))
+    elif reaches and tier in TIER_RES:
+        coverage = fig(None, 'UNKNOWN', 'every seafloor-ledger reach placed in this sector crosses a sector line or has no '
+                       f'selected footprint at {tier}; no compatible reference area')
+    else:
+        coverage = fig(None, 'UNKNOWN', 'no 0-300 ft reference area for this sector exists in the repo (the seafloor ledger '
+                       'covers only Pigeon Point to Point Conception); pixel counts cannot be turned into a share')
+
+    ledger_context = None
+    if ctx and ctx['band'] > 0:
+        ledger_context = {
+            'all_resolution_footprint_pct_of_0_100m_band': fig(
+                round(100.0 * ctx['selected'] / ctx['band']), 'ESTIMATED',
+                f'selected native footprint of ALL resolutions {ctx["selected"]:.1f} km2 / provisional BlueTopo 0-100 m band '
+                f'{ctx["band"]:.1f} km2 for the {ctx["reaches"]} reach(es) whose bounds centre is in the sector box '
+                f'({len(ctx["crossing"])} of them cross a sector line); context only, not coverage at the best tier'),
+            'tier1_cell_pct_of_0_100m_band': fig(round(100.0 * ctx['tier1'] / ctx['band']), 'ESTIMATED',
+                                                 'tier-1 250 m cells at least 25% covered by one usable original source, same reaches'),
+            'reaches_crossing_sector_line': ctx['crossing'],
+        }
+
+    conf = [e for e in ev if e['depth'] == 'confirmed']
+
+    def ext(fam, pred, basis):
+        items = {e['id']: e for e in conf if e['family'] == fam and pred(e) and e.get('extent_km2')}.values()
+        if not items:
+            return None
+        total = sum(e['extent_km2'] for e in items)
+        crossing = sum(1 for e in items if e.get('crosses_sector_line'))
+        return fig(round(total, 1 if total >= 1 else 2), 'ESTIMATED' if crossing else 'MEASURED',
+                   basis + (f'; {crossing} grid(s) cross a sector line and are counted whole in their centre sector'
+                            if crossing else '') + '; overlaps within the family are not deduplicated')
+
+    extent = {
+        'csumb_2m_0_300ft_km2': ext('CSUMB', lambda e: e['resolution_m'] and e['resolution_m'] <= 2,
+                                    'CSUMB nominal_0_300ft_pixels x cell area, grids <= 2 m centred in the sector'),
+        'csumb_5m_0_300ft_km2': ext('CSUMB', lambda e: e['resolution_m'] and 2 < e['resolution_m'] <= 5,
+                                    'CSUMB nominal_0_300ft_pixels x cell area, grids > 2 m and <= 5 m centred in the sector'),
+        'noaa_bag_2m_25_200ft_km2': ext('NOAA BAG', lambda e: e['resolution_m'] <= 2,
+                                        'NOAA regular BAG 25-200 ft depth/uncertainty-eligible cells x cell area, grids <= 2 m '
+                                        '(a lower bound for 0-300 ft)'),
+        'noaa_bag_5m_25_200ft_km2': ext('NOAA BAG', lambda e: 2 < e['resolution_m'] <= 5,
+                                        'same, regular BAGs > 2 m and <= 4 m'),
+        'ledger_tier_footprint_km2': (fig({'low': round(proxy['low_km2'], 1), 'high': round(proxy['high_km2'], 1)}, 'ESTIMATED',
+                                          f'seafloor-ledger reach footprints at <= {TIER_RES[tier]:g} m (0-100 m band, reaches '
+                                          'wholly inside the sector)') if proxy and proxy['high_km2'] > 0 else None),
+        'noaa_vr_25_200ft_cells': (fig(sum(e['eligible_25_200ft_cells'] for e in conf if e['family'] == 'NOAA VR BAG'),
+                                       'MEASURED', 'NOAA VR BAG 25-200 ft eligible refinement cells; area UNKNOWN because '
+                                       'cell spacing is recorded only as 1-4 m')
+                                   if any(e['family'] == 'NOAA VR BAG' for e in conf) else None),
+    }
+    extent = {k: v for k, v in extent.items() if v is not None}
+
+    unrec = cls['finer_grids_depth_unrecorded']
+    usgs_open = [e for e in ev if e['family'] == 'USGS DS781']
+    finest_any = cls['finest_any_depth_m']
+    tier_basis_fams = sorted({e['family'] for e in ts})
+    return {
+        'best_tier': tier,
+        'best_tier_label': 'ESTIMATED',
+        'best_tier_basis': ('finest tier with confirmed shallow cells; no area threshold; evidence: '
+                            + (', '.join(tier_basis_fams) if tier_basis_fams else 'none')
+                            + ('; sector assignment by bounding box' if any(e.get('crosses_sector_line') for e in ts) else '')),
+        'tier_uncertain': cls['tier_uncertain'],
+        'best_confirmed_resolution_m': (fig(rnd(cls['best_confirmed_resolution_m'], 2), 'MEASURED',
+                                            'finest native spacing among confirmed-shallow grids of the best tier')
+                                        if cls['best_confirmed_resolution_m'] else
+                                        fig(None, 'UNKNOWN', 'best tier rests on NOAA VR BAG refinements recorded only as 1-4 m'
+                                            if cls['tier_uncertain'] or tier == '5 m' else 'no confirmed-shallow grid')),
+        'finest_grid_any_depth_m': (fig(rnd(finest_any, 2), 'MEASURED', 'finest native spacing of any catalogued or opened grid '
+                                        'placed in the sector, whatever its depth band (VR BAGs counted at their 1 m lower end)')
+                                    if finest_any else fig(None, 'UNKNOWN', 'no native grid placed in the sector')),
+        'finer_grids_depth_unrecorded': [
+            {'name': e['name'], 'family': e['family'], 'resolution_m': e['resolution_m'],
+             'valid_area_all_depths_km2': fig(round(e['valid_area_all_depths_km2'], 1), 'MEASURED' if not e['crosses_sector_line']
+                                              else 'ESTIMATED', 'valid pixels x cell area over the WHOLE raster, all depths; '
+                                              'not a shallow area') if e.get('valid_area_all_depths_km2') else None}
+            for e in sorted(unrec, key=lambda e: e['name'])],
+        'best_source': best_source,
+        'coverage_pct_at_best_tier': coverage,
+        'extent_confirmed_shallow': extent,
+        'seafloor_ledger_context': ledger_context,
+        'usgs_ds781_grids_opened': fig(len(usgs_open), 'ESTIMATED',
+                                       'DS781 rasters opened in dist/data/usgs-depth-datum-ledger.json whose bbox centre lies in '
+                                       'this sector box; 0-300 ft pixels not recorded') if usgs_open else None,
+        'sources': [{k: v for k, v in e.items() if k in ('family', 'name', 'resolution_m', 'resolution_range_m', 'depth',
+                                                          'release_date', 'acquisition', 'pixels_0_300ft',
+                                                          'eligible_25_200ft_cells', 'crosses_sector_line')}
+                    for e in sorted({(e['family'], e['id']): e for e in ev}.values(),
+                                    key=lambda e: (e.get('resolution_m') or (e.get('resolution_range_m') or (99,))[0],
+                                                   e['name']))][:15],
+        'source_count': len({(e['family'], e['id']) for e in ev}),
+    }
+
+
+def deep_block(sid, csumb, em300, caldig, gebco, tile):
+    deep = []
+    for e in csumb:
+        if e.get('depth_max_m') and e['depth_max_m'] > FT_300_M:
+            deep.append({'name': e['name'], 'resolution_m': e['resolution_m'], 'acquisition': e['acquisition'],
+                         'basis': f'depth_max_m {e["depth_max_m"]:.0f} in {e["catalog"]}', 'label': 'MEASURED'})
+    if sid in em300['sector_ids']:
+        deep.append({'name': em300['name'], 'resolution_m': float(em300['spatial']['resolution_m']), 'acquisition': '1998',
+                     'basis': 'catalog/candidates/usgs-monterey-1998-em300-original.json (canyon/shelf survey; '
+                              'depth band not tabulated)', 'label': 'ESTIMATED'})
+    if sid in caldig['sector_ids']:
+        deep.append({'name': caldig['name'], 'resolution_m': float(caldig['spatial']['resolution_m']), 'acquisition': None,
+                     'basis': 'catalog/candidates/usgs-caldig-v2.json (offshore deep-water release; mapping held '
+                              'in research/receipts/coast-c1-m2-held.json)', 'label': 'ESTIMATED'})
+    if sid == 'big-sur':
+        deep.append({'name': 'CSUMB BSS_Block13 5 m native grid', 'resolution_m': 5.0, 'acquisition': '2011',
+                     'basis': 'catalog/csumb-bss-native-sources.json: no valid cell shallower than 78.32 m NAVD88; '
+                              'deeper extent not tabulated', 'label': 'ESTIMATED'})
+    deep.sort(key=lambda d: d['resolution_m'])
+    if deep:
+        d0 = deep[0]
+        block = {'best_tier': tier_of(d0['resolution_m']),
+                 'best_resolution_m': fig(d0['resolution_m'], d0['label'], d0['basis']),
+                 'best_source': d0['name'], 'sources': deep}
+    else:
+        block = {
+            'best_tier': 'coarser',
+            'best_resolution_m': fig(float(gebco['spatial']['resolution_m']), 'MEASURED',
+                                     'GEBCO_2026 grid spacing from catalog/candidates/gebco-2026-grid.json; no native grid '
+                                     'with a recorded depth beyond 300 ft is catalogued for this sector (NOAA BAG reviews '
+                                     'tabulate only 25-200 ft cells, so finer deep cells in read BAGs are UNKNOWN)'),
+            'best_source': f'Statewide fallback only: {gebco["name"]} ({float(gebco["spatial"]["resolution_m"]):.0f} m)',
+            'sources': []}
+    if tile:
+        block['compilation_context'] = (
+            f'NOAA BlueTopo tile {tile["tile"]} at {tile["resolution_m"][0]:g} m (compilation; one sampled tile, '
+            f'{tile["counts"]["measured_contributor_pixels"]:,} measured-contributor pixels; not a native survey grid)')
+    return block
+
+
 def rank_gaps(rows):
     gaps = []
     for r in rows:
         sh = r['shallow_0_300ft']
-        cov = sh['coverage_pct_of_0_300ft']
+        cov = sh['coverage_pct_at_best_tier']
         tier = sh['best_tier']
-        extra = ''
-        if sh.get('usgs_ds781_opened_not_in_ledger'):
-            extra = ('; opened but not yet in the ledger: '
-                     + ', '.join(n.split(', ', 1)[-1] for n in sh['usgs_ds781_opened_not_in_ledger']['value']))
+        ext2 = sum((sh['extent_confirmed_shallow'].get(k) or {}).get('value') or 0
+                   for k in ('csumb_2m_0_300ft_km2', 'noaa_bag_2m_25_200ft_km2'))
+        unrec = [g for g in sh['finer_grids_depth_unrecorded'] if g['resolution_m'] and g['resolution_m'] <= 2]
+        unrec_note = f'; {len(unrec)} opened 2 m grid(s) with unrecorded depth band' if unrec else ''
         if tier != '2 m':
-            severity, why = 3, f'no 2 m shallow grid read beyond small patches (best {tier})'
-        elif sh['patch_only']:
-            severity, why = 3, f'2 m grids read only in patches under {MIN_TIER_KM2:g} km2'
+            severity = 3
+            why = f'no confirmed 2 m shallow grid (best confirmed {tier}{", true class may be 2 m" if sh["tier_uncertain"] else ""})' + unrec_note
         elif cov['label'] == 'UNKNOWN':
-            severity, why = 2, '2 m grids read in part of the sector; 0-300 ft coverage UNKNOWN'
-        elif cov['value'] < 60:
-            severity, why = 2, f'2 m coverage {cov["value"]}% of the 0-300 ft reference band{extra}'
-        elif cov['value'] < 90:
-            severity, why = 1, f'2 m coverage {cov["value"]}% of the 0-300 ft reference band{extra}'
+            severity = 2
+            why = ('2 m confirmed in part of the sector; coverage UNKNOWN; confirmed 2 m extent '
+                   f'{ext2:.{1 if ext2 >= 1 else 2}f} km2 (CSUMB + NOAA BAG, not deduplicated)') + unrec_note
+        elif cov['value']['low'] < 60:
+            severity = 2
+            why = f'2 m coverage {cov["value"]["low"]}-{cov["value"]["high"]}% of the 0-100 m reference band (E)'
+        elif cov['value']['low'] < 90:
+            severity = 1
+            why = f'2 m coverage {cov["value"]["low"]}-{cov["value"]["high"]}% of the 0-100 m reference band (E)'
         else:
             continue
-        ports = r['use_proxy']['home_ports']['value']
         cands, action = candidates_for(r)
         gaps.append({'sector_id': r['id'], 'name': r['name'], 'severity': severity, 'why': why,
-                     'home_ports': ports, 'home_port_names': r['use_proxy']['home_port_names'],
-                     'candidate_sources': cands, 'action': action})
-    # Severity first, then use proxy (home ports), then north-to-south order.
+                     'home_ports': r['use_proxy']['home_ports']['value'], 'home_port_names': r['use_proxy']['home_port_names'],
+                     'confirmed_2m_extent_km2': round(ext2, 1 if ext2 >= 1 else 2), 'candidate_sources': cands, 'action': action})
+    # Severity, then use proxy (home ports), then smaller confirmed 2 m extent, then north to south.
     order = {r['id']: r['order'] for r in rows}
-    gaps.sort(key=lambda g: (-g['severity'], -g['home_ports'], order[g['sector_id']]))
+    gaps.sort(key=lambda g: (-g['severity'], -g['home_ports'], g['confirmed_2m_extent_km2'], order[g['sector_id']]))
     for i, g in enumerate(gaps, 1):
         g['rank'] = i
         g['rank_label'] = 'ESTIMATED'
@@ -718,44 +875,51 @@ def rank_gaps(rows):
 def candidates_for(r):
     sid, coast = r['id'], r['coast']
     sh = r['shallow_0_300ft']
-    c = []
+    unrec = any(g['resolution_m'] and g['resolution_m'] <= 2 for g in sh['finer_grids_depth_unrecorded'])
+    pre = ('measure first: count 0-300 ft pixels in the already-opened DS781 2 m grids (no download); ' if unrec else '')
     if coast == 'central':
         if sid == 'pigeon-monterey':
-            c += ['ds781', 'lidar', 'csmp']
-            action = ('download: attach the catalogued USGS Offshore Santa Cruz, Scott Creek, Pigeon Point and Aptos 2 m grids '
-                      'to the unassessed ledger reaches r01-r10, then rerun the ledger')
+            c = ['ds781', 'lidar', 'csmp']
+            action = pre + ('download: attach the catalogued USGS Offshore Santa Cruz, Scott Creek, Pigeon Point and Aptos 2 m '
+                            'grids to the unassessed ledger reaches r01-r10, then rerun the ledger')
         else:
-            c += ['csmp', 'noaa', 'opc']
-            action = ('download: read remaining catalogued CSUMB/NOAA grids into the ledger; request CSUMB/OPC for any '
-                      'block missing from NCEI; survey only where no block exists')
-    elif sh['best_tier'] != '2 m' or sh['patch_only']:
-        c += ['csmp', 'ds781', 'noaa', 'lidar', 'opc']
-        action = ('request: ask CSUMB Seafloor Mapping Lab / OPC whether CSMP state-waters 2 m grids exist for this reach; '
-                  'download any NOAA BAG >100 MB not yet read; survey if neither exists')
+            c = ['csmp', 'noaa', 'opc']
+            action = pre + ('download: read remaining catalogued CSUMB/NOAA grids into the ledger; request CSUMB/OPC for any '
+                            'block missing from NCEI; survey only where no block exists')
+    elif sh['best_tier'] != '2 m':
+        c = ['csmp', 'ds781', 'noaa', 'lidar', 'opc']
+        action = pre + ('request: ask CSUMB Seafloor Mapping Lab / OPC whether CSMP state-waters 2 m grids exist for this '
+                        'reach; download any NOAA BAG >100 MB not yet read; survey if neither exists')
     else:
-        c += ['ds781', 'noaa', 'csmp']
-        action = ('download: open the catalogued but unread DS781 bathymetry and NOAA BAG files, then build a 0-300 ft '
-                  'reference area (extend the seafloor ledger) so coverage can be MEASURED')
+        c = ['ds781', 'noaa', 'csmp']
+        action = pre + ('download: open the catalogued but unread DS781 bathymetry and NOAA BAG files, then build a 0-300 ft '
+                        'reference area (extend the seafloor ledger) so coverage can be estimated')
     return [{'family': k, 'name': CANDIDATE_FAMILIES[k][0], 'evidence': CANDIDATE_FAMILIES[k][1]} for k in c], action
 
 
 def summarize(rows):
     tiers = {t: [r['id'] for r in rows if r['shallow_0_300ft']['best_tier'] == t] for t in TIER_ORDER}
+    any_depth = {t: [r['id'] for r in rows if tier_of(r['shallow_0_300ft']['finest_grid_any_depth_m']['value']) == t]
+                 for t in TIER_ORDER}
     deep = {t: [r['id'] for r in rows if r['deeper_than_300ft']['best_tier'] == t] for t in TIER_ORDER}
     status = defaultdict(list)
     for r in rows:
         status[r['review']['status']].append(r['id'])
-    measured_cov = [r for r in rows if r['shallow_0_300ft']['coverage_pct_of_0_300ft']['label'] == 'MEASURED']
+    est_cov = [r for r in rows if r['shallow_0_300ft']['coverage_pct_at_best_tier']['label'] == 'ESTIMATED']
     return {
         'sector_count': fig(len(rows), 'MEASURED', 'catalog/coastal-sectors.json'),
-        'shallow_tier_counts': {t: fig(len(v), 'ESTIMATED', f'count of sectors whose best_tier is {t}; best_tier uses the '
-                                       f'{MIN_TIER_KM2:g} km2 threshold') for t, v in tiers.items()},
+        'shallow_tier_counts': {t: fig(len(v), 'ESTIMATED', f'sectors whose best confirmed-shallow tier is {t} (no area '
+                                       'threshold; sector assignment by bounding box)') for t, v in tiers.items()},
         'shallow_tier_sectors': tiers,
+        'tier_uncertain_sectors': [r['id'] for r in rows if r['shallow_0_300ft']['tier_uncertain']],
+        'finest_grid_any_depth_counts': {t: fig(len(v), 'ESTIMATED', 'sectors by finest catalogued/opened grid at any depth')
+                                         for t, v in any_depth.items()},
         'deep_tier_counts': {t: fig(len(v), 'ESTIMATED', 'count of sectors by best deeper-than-300 ft tier; several deep '
                                     'sources have no tabulated depth band') for t, v in deep.items()},
         'review_status_counts': {k: fig(len(v), 'MEASURED', 'review.status per sector') for k, v in sorted(status.items())},
         'review_status_sectors': dict(sorted(status.items())),
-        'coverage_measured_sectors': fig(len(measured_cov), 'MEASURED', 'sectors with a ledger 0-300 ft reference area'),
+        'coverage_estimated_sectors': fig(len(est_cov), 'MEASURED', 'sectors with an ESTIMATED ledger coverage range'),
+        'coverage_measured_sectors': fig(0, 'MEASURED', 'no sector has a measured 0-300 ft reference area in the repo'),
         'fully_reviewed_sectors': fig(0, 'MEASURED', 'every sector still lists unread catalogued leads or unassessed reaches '
                                       'in review.unread_or_open_items'),
     }
@@ -769,11 +933,17 @@ def fmt(f, suffix=''):
     if f['label'] == 'UNKNOWN':
         return 'UNKNOWN'
     v = f['value']
-    if isinstance(v, float):
+    if isinstance(v, dict) and 'low' in v:
+        v = f'{v["low"]:g}' if v['low'] == v['high'] else f'{v["low"]:g}-{v["high"]:g}'
+    elif isinstance(v, float):
         v = f'{v:g}'
     elif isinstance(v, int):
         v = f'{v:,}'
     return f'{v}{suffix} ({f["label"][0]})'
+
+
+def tier_text(sh):
+    return sh['best_tier'] + (' (VR 1-4 m; may be 2 m)' if sh['tier_uncertain'] else '')
 
 
 def render_md(inv):
@@ -781,9 +951,26 @@ def render_md(inv):
     rows = inv['sectors']
     L = []
     t = s['shallow_tier_counts']
+    a = s['finest_grid_any_depth_counts']
     st = s['review_status_counts']
-    patch_n = sum(1 for r in rows if r['shallow_0_300ft']['patch_only'])
     sw = s['statewide_survey_catalog']
+    unc = s['tier_uncertain_sectors']
+    names = {r['id']: r['name'] for r in rows}
+
+    def n(k):
+        return st.get(k, {'value': 0})['value']
+
+    unknown_ext = []
+    for r in rows:
+        sh = r['shallow_0_300ft']
+        if sh['coverage_pct_at_best_tier']['label'] != 'UNKNOWN':
+            continue
+        figs = [sh['extent_confirmed_shallow'][k] for k in ('csumb_2m_0_300ft_km2', 'noaa_bag_2m_25_200ft_km2')
+                if k in sh['extent_confirmed_shallow']]
+        total = sum(f['value'] for f in figs)
+        unknown_ext.append((r['name'], round(total, 1 if total >= 1 else 2),
+                            'E' if len(figs) > 1 or any(f['label'] == 'ESTIMATED' for f in figs) else 'M'))
+    unknown_ext.sort(key=lambda x: x[1])
     L += ['# California coast seafloor inventory (COAST-INVENTORY-1)', '',
           f'Generated by `{inv["generator"]}` from repository catalogs only (no downloads). '
           'Machine-readable copy: `catalog/coast-seafloor-inventory.json`. Labels: **M** = MEASURED from catalog '
@@ -791,22 +978,31 @@ def render_md(inv):
           '## Summary for G', '',
           f'- **Is the inventory complete?** Yes for the list: all {s["sector_count"]["value"]} outer-coast sectors in '
           '`catalog/coastal-sectors.json` have a row (M). Bays and offshore islands are outside these sectors and are not covered.',
-          f'- **Best shallow (0-300 ft) detail by sector:** 2 m: {t["2 m"]["value"]} · 5 m: {t["5 m"]["value"]} · '
-          f'10 m: {t["10 m"]["value"]} · coarser: {t["coarser"]["value"]} · none: {t["none"]["value"]} '
-          f'(E: a sector\'s tier is the finest grid class with at least {MIN_TIER_KM2:g} km2 read). '
-          + (f'Of the 2 m sectors, {patch_n} {"has" if patch_n == 1 else "have"} 2 m only in small patches '
-             f'({", ".join(r["name"] for r in rows if r["shallow_0_300ft"]["patch_only"])}). ' if patch_n else '')
-          + 'Having a 2 m tier means 2 m grids exist for part of the sector, not that the whole sector is mapped at 2 m.',
-          f'- **Has it all been reviewed? No.** {st.get("reviewed-coverage-measured", {"value": 0})["value"]} sectors '
-          'have native grids read **and** a measured share of the 0-300 ft seabed; '
-          f'{st.get("partly-reviewed", {"value": 0})["value"]} have some native grids read but no way yet to say what share '
-          f'they cover; {st.get("catalogued-only", {"value": 0})["value"]} are catalogued only. '
-          f'Fully reviewed (every catalogued lead read): {s["fully_reviewed_sectors"]["value"]} (M).',
-          f'- **Where we know coverage (M):** ' + '; '.join(
-              f'{r["name"]} {r["shallow_0_300ft"]["coverage_pct_of_0_300ft"]["value"]}%' for r in rows
-              if r['shallow_0_300ft']['coverage_pct_of_0_300ft']['label'] == 'MEASURED') + '.',
-          '- **Elsewhere coverage is UNKNOWN**, not zero: the repo has no 0-300 ft reference area outside Pigeon Point to '
-          'Point Conception, so pixel counts there cannot be turned into a percentage.',
+          f'- **Best shallow (0-300 ft) detail we can confirm, by sector (E):** 2 m: {t["2 m"]["value"]} · 5 m: {t["5 m"]["value"]} · '
+          f'10 m: {t["10 m"]["value"]} · coarser: {t["coarser"]["value"]} · none: {t["none"]["value"]}. '
+          '"Confirm" means a catalog records cells of that grid in shallow water in that sector; any amount counts. '
+          + (f'For {", ".join(names[x] for x in unc)} the tier rests on NOAA grids recorded only as 1-4 m, so it may really be 2 m. '
+             if unc else '')
+          + 'A 2 m tier means 2 m grids exist for part of the sector, not that the whole sector is mapped at 2 m.',
+          f'- **Counting every grid we hold, whatever its depth (E):** 2 m: {a["2 m"]["value"]} · 5 m: {a["5 m"]["value"]} · '
+          f'10 m: {a["10 m"]["value"]} · coarser: {a["coarser"]["value"]} · none: {a["none"]["value"]}. '
+          + ('The difference is opened grids (mostly USGS state-waters 2 m) whose shallow pixels were never counted.'
+             if any(a[k]['value'] != t[k]['value'] for k in TIER_ORDER) else
+             'Same counts as above: the opened USGS state-waters 2 m grids whose shallow pixels were never counted do not '
+             'change any sector\'s tier.'),
+          f'- **Has it all been reviewed? No.** {n("ledger-assessed")} sectors have native grids read **and** assessed reach by '
+          f'reach in the seafloor ledger; {n("partly-reviewed")} have some native grids read but no reference area to say what '
+          f'share they cover; {n("catalogued-only")} are catalogued only. Fully reviewed (every catalogued lead read): '
+          f'{s["fully_reviewed_sectors"]["value"]} (M).',
+          '- **How much of the shallow seabed is covered at the best tier (E, low-high):** ' + '; '.join(
+              f'{r["name"]} {fmt(r["shallow_0_300ft"]["coverage_pct_at_best_tier"], "%")}' for r in rows
+              if r['shallow_0_300ft']['coverage_pct_at_best_tier']['label'] == 'ESTIMATED') + '. '
+          'Ranges, not exact figures: the ledger records one footprint per 10 km reach, not per grid, and its reference band is '
+          '0-100 m (about 0-328 ft). No sector has a MEASURED 0-300 ft share.',
+          '- **Elsewhere coverage is UNKNOWN**, not zero: the repo has no shallow reference area outside Pigeon Point to '
+          'Point Conception, so pixel counts there cannot be turned into a percentage. What we can say is how much confirmed '
+          '2 m shallow grid exists there (km2, lower bound from NOAA 25-200 ft cells, overlaps not removed): '
+          + '; '.join(f'{nm} {v:g} ({lab})' for nm, v, lab in unknown_ext) + '.',
           f'- **Deeper than 300 ft:** best native tier by sector (E): ' + ' · '.join(
               f'{k}: {v["value"]}' for k, v in s['deep_tier_counts'].items()) +
           '. "Coarser" means only the statewide GEBCO grid (463 m) is catalogued for deep water there; BlueTopo compilation tiles exist '
@@ -814,6 +1010,8 @@ def render_md(inv):
           '- **Habitat classes:** CDFW ds3091 predicted hard/soft is decoded for all 19 sectors (context only). USGS/CSUMB '
           'native classes are read in ' + str(sum(1 for r in rows if r['habitat']['summary'].startswith('native classes read'))) +
           ' sectors (M).',
+          '- **Release dates:** USGS state-waters releases carry publication dates; CSUMB and NOAA catalogs record only '
+          'acquisition or survey dates, so their release dates are UNKNOWN and shown apart from acquisition dates.',
           f'- **Statewide source catalog (M):** `catalog/surveys.json` lists {sw["entries"]["value"]} survey files; '
           f'{sw["native_inspected"]["value"]} were opened at native resolution, {sw["catalog_or_metadata_only"]["value"]} are '
           f'catalogue or metadata only, {sw["usable_status"]["value"]} are marked usable. It has no sector field, so the '
@@ -822,49 +1020,52 @@ def render_md(inv):
           '- Nothing here is a fishing target; grid spacing is not depth accuracy, and no source is yet MLLW-qualified.', '']
 
     L += ['## Sector table (north to south)', '',
-          '| # | Sector | Best 0-300 ft | Source (date) | % of 0-300 ft covered | Deeper than 300 ft | Review status | Habitat classes |',
-          '|---|---|---|---|---|---|---|---|']
+          '| # | Sector | Best confirmed 0-300 ft | Finest grid, any depth | Best source | Release date | Acquired | '
+          '% of shallow band at best tier | Deeper than 300 ft | Review status | Habitat classes |',
+          '|---|---|---|---|---|---|---|---|---|---|---|']
     for r in rows:
         sh = r['shallow_0_300ft']
         bs = sh['best_source']
-        src = '-' if not bs else f'{bs["name"]} ({fmt(bs["date"])})'
         dp = r['deeper_than_300ft']
         deep = f'{dp["best_tier"]}: {fmt(dp["best_resolution_m"], " m")}'
         if not dp['sources']:
             deep += ' GEBCO only; native UNKNOWN'
         rv = r['review']
         hab = r['habitat']
-        best = f'{sh["best_tier"]}{" (patches only)" if sh["patch_only"] else ""}, finest {fmt(sh["best_resolution_m"], " m")}'
-        L.append(f'| {r["order"]} | {r["name"]} | {best} | {src} | '
-                 f'{fmt(sh["coverage_pct_of_0_300ft"], "%")} | {deep} | {rv["status"]}, {fmt(rv["native_files_read"])} files read | '
+        best = f'{tier_text(sh)}, finest {fmt(sh["best_confirmed_resolution_m"], " m")}'
+        L.append(f'| {r["order"]} | {r["name"]} | {best} | {fmt(sh["finest_grid_any_depth_m"], " m")} | '
+                 f'{bs["name"] if bs else "-"} | {fmt(bs["release_date"]) if bs else "-"} | '
+                 f'{fmt(bs["acquisition_dates"]) if bs else "-"} | {fmt(sh["coverage_pct_at_best_tier"], "%")} | {deep} | '
+                 f'{rv["status"]}, {fmt(rv["native_files_read"])} files read | '
                  f'{hab["summary"]}; ds3091 patches {fmt(hab["cdfw_ds3091"]["predicted_hard_patches"])} |')
-    L += ['', 'Status key: `reviewed-coverage-measured` = native grids read and a 0-300 ft share measured in the seafloor ledger; '
-          '`partly-reviewed` = some native grids read, share UNKNOWN; `catalogued-only` = leads listed, nothing read.', '']
+    L += ['', 'Status key: `ledger-assessed` = native grids read and assessed reach by reach against the seafloor ledger\'s '
+          'provisional 0-100 m band (share ESTIMATED); `partly-reviewed` = some native grids read, share UNKNOWN; '
+          '`catalogued-only` = leads listed, nothing read.', '']
 
     L += ['## Sector detail', '']
     for r in rows:
         sh, dp, rv, hab = r['shallow_0_300ft'], r['deeper_than_300ft'], r['review'], r['habitat']
         L.append(f'### {r["order"]}. {r["name"]} (`{r["id"]}`, lat {r["latitude"][0]}-{r["latitude"][1]})')
         L.append('')
-        L.append(f'- 0-300 ft: best **{sh["best_tier"]}**{" (patches only)" if sh["patch_only"] else ""} (E); finest grid '
-                 f'anywhere {fmt(sh["finest_resolution_anywhere_m"], " m")}; {sh["source_count"]} read sources with cells in the sector.')
-        for t, f in sh['area_read_by_tier_km2'].items():
-            L.append(f'  - Read area at {t}: {fmt(f, " km2")} - {f["basis"]}.')
-        if sh.get('usgs_ds781_opened_not_in_ledger'):
-            f = sh['usgs_ds781_opened_not_in_ledger']
-            L.append(f'  - Opened but not yet in the seafloor ledger (E): {", ".join(f["value"])}; {f["basis"]}.')
-        if sh['coverage_pct_of_0_300ft']['label'] == 'MEASURED':
-            L.append(f'  - Coverage {fmt(sh["coverage_pct_of_0_300ft"], "%")}: {sh["coverage_pct_of_0_300ft"]["basis"]}. '
-                     f'Tier-1 cell share {fmt(sh["tier1_cell_pct"], "%")}.')
-        else:
-            L.append('  - Coverage UNKNOWN: ' + sh['coverage_pct_of_0_300ft']['basis'] + '.')
-        for k, label in (('csumb_2m_0_300ft_km2', 'CSUMB 2 m nominal 0-300 ft area'),
-                         ('noaa_bag_25_200ft_km2_at_2m_or_finer', 'NOAA BAG <=2 m eligible 25-200 ft area'),
-                         ('noaa_bag_25_200ft_km2_all_regular', 'NOAA BAG <=4 m eligible 25-200 ft area'),
-                         ('noaa_vr_25_200ft_cells', 'NOAA VR eligible 25-200 ft cells'),
-                         ('usgs_ds781_2m_grids_opened', 'USGS DS781 2 m grids opened')):
-            if sh.get(k):
-                L.append(f'  - {label}: {fmt(sh[k], " km2" if "km2" in k else "")}')
+        L.append(f'- 0-300 ft: best confirmed **{tier_text(sh)}** (E; {sh["best_tier_basis"]}); finest grid at any depth '
+                 f'{fmt(sh["finest_grid_any_depth_m"], " m")}; {sh["source_count"]} grids placed in the sector.')
+        bs = sh['best_source']
+        if bs:
+            L.append(f'  - Best source: {bs["name"]}; release date {fmt(bs["release_date"])} ({bs["release_date"]["basis"]}); '
+                     f'acquired {fmt(bs["acquisition_dates"])} ({bs["acquisition_dates"]["basis"]}).')
+        for g in sh['finer_grids_depth_unrecorded']:
+            va = g['valid_area_all_depths_km2']
+            L.append(f'  - Finer grid, depth band not recorded: {g["name"]}'
+                     + (f' ({fmt(va, " km2")} valid area over the whole raster, all depths)' if va else '') + '.')
+        for k, f in sh['extent_confirmed_shallow'].items():
+            L.append(f'  - Extent `{k}`: {fmt(f)} - {f["basis"]}.')
+        cov = sh['coverage_pct_at_best_tier']
+        L.append(f'  - Coverage at best tier {fmt(cov, "%")}: {cov["basis"]}.')
+        lc = sh['seafloor_ledger_context']
+        if lc:
+            L.append(f'  - Ledger context (all resolutions): footprint {fmt(lc["all_resolution_footprint_pct_of_0_100m_band"], "%")} '
+                     f'of the 0-100 m band; tier-1 cells {fmt(lc["tier1_cell_pct_of_0_100m_band"], "%")}; '
+                     f'{lc["all_resolution_footprint_pct_of_0_100m_band"]["basis"]}.')
         L.append(f'- Deeper than 300 ft: **{dp["best_tier"]}** - {dp["best_source"]}'
                  + (f'; {dp["compilation_context"]}' if dp.get('compilation_context') else '') + '.')
         L.append(f'- Review: `{rv["status"]}`; {rv["native_files_read"]["basis"]}.')
@@ -883,10 +1084,11 @@ def render_md(inv):
         L.append('')
 
     L += ['## Gap list, ranked by value for fishing and dive use', '',
-          'Ranking (ESTIMATED): severity first (3 = no 2 m shallow grid read; 2 = 2 m read but coverage UNKNOWN or under 60%; '
-          '1 = 60-89%), then the number of SkipperCast home ports in the sector (`dist/data/home-ports.json`) as the use proxy, '
-          'then north to south. Candidate sources are named from repo evidence; whether each one covers the sector is unverified '
-          'until its files are read.', '',
+          'Ranking (ESTIMATED): severity first (3 = no confirmed 2 m shallow grid; 2 = 2 m confirmed but coverage UNKNOWN or '
+          'its low estimate under 60%; 1 = low estimate 60-89%), then the number of SkipperCast home ports in the sector '
+          '(`dist/data/home-ports.json`) as the use proxy, then the smaller confirmed 2 m extent, then north to south. '
+          'Candidate sources are named from repo evidence; whether each one covers the sector is unverified until its files '
+          'are read.', '',
           '| Rank | Sector | Why | Home ports | Candidate sources | What to do |', '|---|---|---|---|---|---|']
     for g in inv['gap_list']:
         cands = '; '.join(c['name'].split(' (')[0] for c in g['candidate_sources'])
@@ -895,6 +1097,8 @@ def render_md(inv):
     L += ['', 'Candidate source evidence in the repo:', '']
     for k, (name, ev) in CANDIDATE_FAMILIES.items():
         L.append(f'- {name}: `{ev}`')
+    L += ['', '## Definitions', '']
+    L += [f'- `{k}`: {v}' for k, v in inv['definitions'].items()]
     L += ['', '## Limits', '']
     L += [f'- {x}' for x in inv['limits']]
     L += ['', '## Inputs', '', 'Every input file and its SHA-256 is listed in `catalog/coast-seafloor-inventory.json` (`inputs`). '
@@ -921,6 +1125,8 @@ def main(argv=None):
     OUT_MD.write_text(md, encoding='utf-8')
     s = inv['summary']
     print('tiers', {k: v['value'] for k, v in s['shallow_tier_counts'].items()})
+    print('any-depth', {k: v['value'] for k, v in s['finest_grid_any_depth_counts'].items()})
+    print('uncertain', s['tier_uncertain_sectors'])
     print('status', {k: v['value'] for k, v in s['review_status_counts'].items()})
     return 0
 
