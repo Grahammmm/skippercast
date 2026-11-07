@@ -10,9 +10,11 @@
   "UNKNOWN": "Not determinable from the repo or the small public fetches."
  },
  "method": {
-  "stations": "Part A covers every station in catalog/station-locations.json (39) plus the two alternates reviewed and rejected in catalog/station-failover.json (46259, 46286). Variables for NDBC/CDIP stations: any non-missing value in the NDBC realtime2 file over its newest 48 h. CO-OPS: the mdapi sensors list; prediction-only stations report tides only. Currents flags come from NDBC activestations.xml.",
+  "stations": "Part A covers every station in catalog/station-locations.json (39) plus the two alternates reviewed and rejected in catalog/station-failover.json (46259, 46286). Variables for NDBC/CDIP stations: any non-missing value in the NDBC realtime2 file over its newest 48 h. CO-OPS: the mdapi sensors list; prediction-only stations report tides only. Currents: NDBC realtime2 .adcp surface-current rows where the file exists (MEASURED), otherwise the NDBC activestations.xml flag (ESTIMATED).",
   "last_good": "catalog/feed-health.json holds feed-level age limits (conditions 3 h, data 36 h, sst-fronts 48 h), not per-station times. last_good_in_published_feeds is the newest sample_at / last_success_at for the station across the published region feeds (conditions and data branches) read on 2026-11-07.",
-  "gaps": "A hand-entered outer-coast line of 62 headlands and harbors, densified every 2 km (750 points, about 1442 km). A coast point is covered for a variable when a station reporting it lies within 25 nmi (46.3 km). A gap stretch is a run of uncovered points inside one sector at least 4 km long. Pass 1 uses inventory stations only; pass 2 adds every active NDBC-listed station in the California box (NDBC, CDIP, CeNCOOS, SCCOOS, NERRS, CO-OPS relays), CO-OPS water-level stations and CO-OPS tide-prediction stations. Candidates are pass-2 stations that would cover part of a stretch. Distance alone is not comparable exposure: every candidate needs the exposure review used in catalog/station-failover.json before it serves a region."
+  "gaps": "A hand-entered outer-coast line of 62 headlands and harbors, densified every 2 km (750 points, about 1442 km). A coast point is covered for a variable when a station reporting it lies within 25 nmi (46.3 km). A gap stretch is a run of uncovered points inside one sector at least 4 km long. Pass 1 uses inventory stations only; pass 2 adds every active NDBC-listed station in the California box (NDBC, CDIP, CeNCOOS, SCCOOS, NERRS, CO-OPS relays), CO-OPS water-level stations and CO-OPS tide-prediction stations. Candidates are pass-2 stations that would cover part of a stretch. Distance alone is not comparable exposure: every candidate needs the exposure review used in catalog/station-failover.json before it serves a region.",
+  "identity": "Physical stations are canonicalised across providers before any comparison. An NDBC listing whose name carries the 7-digit CO-OPS id of an inventory station (for example PRYC1 = CO-OPS 9415020 Point Reyes), or that names itself the site of an inventory buoy, is the same physical station: it is recorded under that inventory station as provider_aliases (an alternate access path) and is never a candidate. Coverage uses the inventory coordinates; the 0.0-0.48 km offsets between the two provider listings are listing precision, not new coverage (ESTIMATED). CO-OPS water-level stations relayed by NDBC are merged into one public-network record. A public station within 0.5 km of an inventory station that already reports a variable adds no coverage for that variable (none occurred in this run). Candidate endpoints listed within 0.1 km of each other count as one physical site.",
+  "currents": "Currents for NDBC/CDIP stations are MEASURED when the NDBC realtime2 .adcp file of the station had surface-current rows at retrieval, otherwise ESTIMATED from the activestations flag. The app ingests no point currents today: pipeline/collect.py schedules only realtime2 .txt/.spec and pipeline.parsers.ndbc reads no current columns, so a current candidate needs a new adapter (stated in each refresh_plan)."
  },
  "counts": {
   "inventory_stations": 41,
@@ -23,7 +25,7 @@
   "inventory_in_published_feeds": 33,
   "inventory_configured_not_in_feeds": 6,
   "inventory_not_used": 2,
-  "public_stations_checked_beyond_inventory": 250,
+  "public_stations_checked_beyond_inventory": 240,
   "layers_listed": 19,
   "layers_used": 14,
   "layer_themes": 15,
@@ -44,7 +46,19 @@
    "currents": 14,
    "tides": 0
   },
-  "candidate_stations_named": 47,
+  "candidate_stations_named": 46,
+  "candidate_physical_sites": 45,
+  "candidate_sites_with_two_listings": [
+   {
+    "keys": [
+     "ndbc:LJAC1",
+     "ndbc:LJPC1"
+    ],
+    "label": "ESTIMATED",
+    "note": "listed at the same coordinates (within 0.1 km): separate instruments of different owners on one structure, counted once as a site"
+   }
+  ],
+  "provider_aliases_of_inventory_stations": 10,
   "coast_length_km_estimated": 1442
  },
  "stations": [
@@ -251,7 +265,21 @@
     }
    ],
    "app_fetch": "NDBC realtime2 .txt (+ .spec for nearshore role): live loop every 30 min (live-conditions.yml) and daily (daily-data.yml)",
-   "notes": []
+   "notes": [],
+   "provider_aliases": [
+    {
+     "key": "ndbc:1801589",
+     "name": "SD 1073 - 24 NM SSW of San Francisco, CA (Site of 46012)",
+     "owner": "NDBC",
+     "lat": 37.356,
+     "lon": -122.881,
+     "basis": "NDBC listing names itself the site of 46012",
+     "label": "MEASURED",
+     "coordinate_offset_km": 0.0,
+     "coordinate_offset_label": "ESTIMATED",
+     "treatment": "Same physical station as this inventory record: an alternate access path, not a station to add. Coverage uses the inventory coordinates; the offset between the two provider listings is listing precision, not new coverage."
+    }
+   ]
   },
   {
    "key": "ndbc:46013",
@@ -1883,8 +1911,10 @@
     },
     "currents": {
      "reported": true,
-     "label": "ESTIMATED",
-     "basis": "NDBC activestations currents=\"y\" (ADCP file not read)"
+     "label": "MEASURED",
+     "basis": "NDBC realtime2 46213.adcp: 1056 surface-current rows (bin 1, 1 m), newest 2026-11-07T12:00:00Z",
+     "ingested_by_app": false,
+     "ingest_note": "collect.py schedules only realtime2 .txt/.spec and pipeline.parsers.ndbc reads no current columns, so the app does not ingest this today"
     },
     "tides": {
      "reported": false,
@@ -2347,8 +2377,10 @@
     },
     "currents": {
      "reported": true,
-     "label": "ESTIMATED",
-     "basis": "NDBC activestations currents=\"y\" (ADCP file not read)"
+     "label": "MEASURED",
+     "basis": "NDBC realtime2 46236.adcp: 2019 surface-current rows (bin 1, 1 m), newest 2026-11-07T14:00:00Z",
+     "ingested_by_app": false,
+     "ingest_note": "collect.py schedules only realtime2 .txt/.spec and pipeline.parsers.ndbc reads no current columns, so the app does not ingest this today"
     },
     "tides": {
      "reported": false,
@@ -2841,7 +2873,21 @@
     }
    ],
    "app_fetch": "CO-OPS hi/lo predictions, 8 days ahead: daily (daily-data.yml) and coast report in the live loop",
-   "notes": []
+   "notes": [],
+   "provider_aliases": [
+    {
+     "key": "ndbc:SDBC1",
+     "name": "9410170 - San Diego, CA",
+     "owner": "NOS",
+     "lat": 32.714,
+     "lon": -117.174,
+     "basis": "NDBC relay of CO-OPS 9410170 (name carries the CO-OPS id)",
+     "label": "MEASURED",
+     "coordinate_offset_km": 0.3,
+     "coordinate_offset_label": "ESTIMATED",
+     "treatment": "Same physical station as this inventory record: an alternate access path, not a station to add. Coverage uses the inventory coordinates; the offset between the two provider listings is listing precision, not new coverage."
+    }
+   ]
   },
   {
    "key": "coops:9410660",
@@ -2965,7 +3011,21 @@
     }
    ],
    "app_fetch": "CO-OPS hi/lo predictions, 8 days ahead: daily (daily-data.yml) and coast report in the live loop",
-   "notes": []
+   "notes": [],
+   "provider_aliases": [
+    {
+     "key": "ndbc:OHBC1",
+     "name": "9410660 - Los Angeles, CA",
+     "owner": "NOS",
+     "lat": 33.72,
+     "lon": -118.273,
+     "basis": "NDBC relay of CO-OPS 9410660 (name carries the CO-OPS id)",
+     "label": "MEASURED",
+     "coordinate_offset_km": 0.09,
+     "coordinate_offset_label": "ESTIMATED",
+     "treatment": "Same physical station as this inventory record: an alternate access path, not a station to add. Coverage uses the inventory coordinates; the offset between the two provider listings is listing precision, not new coverage."
+    }
+   ]
   },
   {
    "key": "coops:9410680",
@@ -3220,7 +3280,21 @@
     }
    ],
    "app_fetch": "CO-OPS hi/lo predictions, 8 days ahead: daily (daily-data.yml) and coast report in the live loop",
-   "notes": []
+   "notes": [],
+   "provider_aliases": [
+    {
+     "key": "ndbc:NTBC1",
+     "name": "9411340 - Santa Barbara, CA ",
+     "owner": "NOS",
+     "lat": 34.405,
+     "lon": -119.692,
+     "basis": "NDBC relay of CO-OPS 9411340 (name carries the CO-OPS id)",
+     "label": "MEASURED",
+     "coordinate_offset_km": 0.06,
+     "coordinate_offset_label": "ESTIMATED",
+     "treatment": "Same physical station as this inventory record: an alternate access path, not a station to add. Coverage uses the inventory coordinates; the offset between the two provider listings is listing precision, not new coverage."
+    }
+   ]
   },
   {
    "key": "coops:9412110",
@@ -3320,7 +3394,21 @@
     }
    ],
    "app_fetch": "CO-OPS hi/lo predictions, 8 days ahead: daily (daily-data.yml) and coast report in the live loop",
-   "notes": []
+   "notes": [],
+   "provider_aliases": [
+    {
+     "key": "ndbc:PSLC1",
+     "name": "9412110 - Port San Luis, CA",
+     "owner": "NOS",
+     "lat": 35.169,
+     "lon": -120.754,
+     "basis": "NDBC relay of CO-OPS 9412110 (name carries the CO-OPS id)",
+     "label": "MEASURED",
+     "coordinate_offset_km": 0.02,
+     "coordinate_offset_label": "ESTIMATED",
+     "treatment": "Same physical station as this inventory record: an alternate access path, not a station to add. Coverage uses the inventory coordinates; the offset between the two provider listings is listing precision, not new coverage."
+    }
+   ]
   },
   {
    "key": "coops:9412553",
@@ -3522,7 +3610,21 @@
     }
    ],
    "app_fetch": "CO-OPS hi/lo predictions, 8 days ahead: daily (daily-data.yml) and coast report in the live loop",
-   "notes": []
+   "notes": [],
+   "provider_aliases": [
+    {
+     "key": "ndbc:MEYC1",
+     "name": "9413450 - Monterey, CA",
+     "owner": "NOS",
+     "lat": 36.605,
+     "lon": -121.889,
+     "basis": "NDBC relay of CO-OPS 9413450 (name carries the CO-OPS id)",
+     "label": "MEASURED",
+     "coordinate_offset_km": 0.48,
+     "coordinate_offset_label": "ESTIMATED",
+     "treatment": "Same physical station as this inventory record: an alternate access path, not a station to add. Coverage uses the inventory coordinates; the offset between the two provider listings is listing precision, not new coverage."
+    }
+   ]
   },
   {
    "key": "coops:9413745",
@@ -3788,7 +3890,21 @@
     }
    ],
    "app_fetch": "CO-OPS hi/lo predictions, 8 days ahead: daily (daily-data.yml) and coast report in the live loop",
-   "notes": []
+   "notes": [],
+   "provider_aliases": [
+    {
+     "key": "ndbc:PRYC1",
+     "name": "9415020 - Point Reyes, CA",
+     "owner": "NOS",
+     "lat": 37.996,
+     "lon": -122.977,
+     "basis": "NDBC relay of CO-OPS 9415020 (name carries the CO-OPS id)",
+     "label": "MEASURED",
+     "coordinate_offset_km": 0.36,
+     "coordinate_offset_label": "ESTIMATED",
+     "treatment": "Same physical station as this inventory record: an alternate access path, not a station to add. Coverage uses the inventory coordinates; the offset between the two provider listings is listing precision, not new coverage."
+    }
+   ]
   },
   {
    "key": "coops:9415625",
@@ -3969,7 +4085,21 @@
     }
    ],
    "app_fetch": "CO-OPS hi/lo predictions, 8 days ahead: daily (daily-data.yml) and coast report in the live loop",
-   "notes": []
+   "notes": [],
+   "provider_aliases": [
+    {
+     "key": "ndbc:ANVC1",
+     "name": "9416841 - Arena Cove, CA",
+     "owner": "NOS",
+     "lat": 38.915,
+     "lon": -123.711,
+     "basis": "NDBC relay of CO-OPS 9416841 (name carries the CO-OPS id)",
+     "label": "MEASURED",
+     "coordinate_offset_km": 0.05,
+     "coordinate_offset_label": "ESTIMATED",
+     "treatment": "Same physical station as this inventory record: an alternate access path, not a station to add. Coverage uses the inventory coordinates; the offset between the two provider listings is listing precision, not new coverage."
+    }
+   ]
   },
   {
    "key": "coops:9417426",
@@ -4245,7 +4375,21 @@
     }
    ],
    "app_fetch": "CO-OPS hi/lo predictions, 8 days ahead: daily (daily-data.yml) and coast report in the live loop",
-   "notes": []
+   "notes": [],
+   "provider_aliases": [
+    {
+     "key": "ndbc:HBYC1",
+     "name": "9418767 - North Spit, CA",
+     "owner": "NOS",
+     "lat": 40.767,
+     "lon": -124.217,
+     "basis": "NDBC relay of CO-OPS 9418767 (name carries the CO-OPS id)",
+     "label": "MEASURED",
+     "coordinate_offset_km": 0.03,
+     "coordinate_offset_label": "ESTIMATED",
+     "treatment": "Same physical station as this inventory record: an alternate access path, not a station to add. Coverage uses the inventory coordinates; the offset between the two provider listings is listing precision, not new coverage."
+    }
+   ]
   },
   {
    "key": "coops:9419059",
@@ -4435,7 +4579,21 @@
     }
    ],
    "app_fetch": "CO-OPS hi/lo predictions, 8 days ahead: daily (daily-data.yml) and coast report in the live loop",
-   "notes": []
+   "notes": [],
+   "provider_aliases": [
+    {
+     "key": "ndbc:CECC1",
+     "name": "9419750 - Crescent City, CA",
+     "owner": "NOS",
+     "lat": 41.746,
+     "lon": -124.184,
+     "basis": "NDBC relay of CO-OPS 9419750 (name carries the CO-OPS id)",
+     "label": "MEASURED",
+     "coordinate_offset_km": 0.05,
+     "coordinate_offset_label": "ESTIMATED",
+     "treatment": "Same physical station as this inventory record: an alternate access path, not a station to add. Coverage uses the inventory coordinates; the offset between the two provider listings is listing precision, not new coverage."
+    }
+   ]
   },
   {
    "key": "ndbc:46259",
@@ -5905,17 +6063,6 @@
         "variable_label": "MEASURED",
         "distance_to_coast_nmi": 0.5,
         "refresh_plan": "Same NDBC realtime2 adapter as existing buoys: add to the region stations block, live loop every 30 min, feed-freshness.yml watches it."
-       },
-       {
-        "key": "ndbc:PRYC1",
-        "name": "9415020 - Point Reyes, CA",
-        "owner": "NOS",
-        "lat": 37.996,
-        "lon": -122.977,
-        "covers_pct_of_stretch": 6,
-        "variable_label": "MEASURED",
-        "distance_to_coast_nmi": 0.5,
-        "refresh_plan": "CO-OPS 9415020 (NDBC relay PRYC1): CO-OPS datagetter in the live loop every 30 min; feed-freshness.yml watches it."
        }
       ],
       "uncovered_even_with_all_public_stations_pct": 0
@@ -8344,9 +8491,9 @@
         "lat": 34.022,
         "lon": -118.578,
         "covers_pct_of_stretch": 8,
-        "variable_label": "ESTIMATED",
+        "variable_label": "MEASURED",
         "distance_to_coast_nmi": 0.9,
-        "refresh_plan": "CDIP buoy via NDBC realtime2 (or CDIP THREDDS): add to region stations, live loop every 30 min, feed-freshness.yml watches it."
+        "refresh_plan": "Current-capable product needed; the existing buoy path does not carry it (collect.py reads only realtime2 .txt/.spec and pipeline.parsers.ndbc has no current fields). Product: NDBC realtime2 46268.adcp, surface current bin 1 at 1 m (MEASURED present: 1766 rows, newest 2026-11-07T14:00:00Z, nominal 30 min spacing with gaps); alternate CDIP THREDDS 103p1_rt.nc acmSpeed/acmDirection (MEASURED in the DAS metadata; the cdip-mop source entry allows only the MOP_alongshore path, so this needs a catalog/sources.json review). Needs a new .adcp parser and a collect.py job (new adapter, proposed cadence: every live cycle, 30 min; freshness: stale after 2 h, mirroring the buoy limit, added to feed-freshness.yml checks). Exposure review first: a 1 m nearshore point current is not the HF-radar field."
        }
       ],
       "uncovered_even_with_all_public_stations_pct": 92
@@ -8378,9 +8525,9 @@
         "lat": 34.022,
         "lon": -118.578,
         "covers_pct_of_stretch": 100,
-        "variable_label": "ESTIMATED",
+        "variable_label": "MEASURED",
         "distance_to_coast_nmi": 0.9,
-        "refresh_plan": "CDIP buoy via NDBC realtime2 (or CDIP THREDDS): add to region stations, live loop every 30 min, feed-freshness.yml watches it."
+        "refresh_plan": "Current-capable product needed; the existing buoy path does not carry it (collect.py reads only realtime2 .txt/.spec and pipeline.parsers.ndbc has no current fields). Product: NDBC realtime2 46268.adcp, surface current bin 1 at 1 m (MEASURED present: 1766 rows, newest 2026-11-07T14:00:00Z, nominal 30 min spacing with gaps); alternate CDIP THREDDS 103p1_rt.nc acmSpeed/acmDirection (MEASURED in the DAS metadata; the cdip-mop source entry allows only the MOP_alongshore path, so this needs a catalog/sources.json review). Needs a new .adcp parser and a collect.py job (new adapter, proposed cadence: every live cycle, 30 min; freshness: stale after 2 h, mirroring the buoy limit, added to feed-freshness.yml checks). Exposure review first: a 1 m nearshore point current is not the HF-radar field."
        }
       ],
       "uncovered_even_with_all_public_stations_pct": 0
@@ -8412,9 +8559,9 @@
         "lat": 34.022,
         "lon": -118.578,
         "covers_pct_of_stretch": 90,
-        "variable_label": "ESTIMATED",
+        "variable_label": "MEASURED",
         "distance_to_coast_nmi": 0.9,
-        "refresh_plan": "CDIP buoy via NDBC realtime2 (or CDIP THREDDS): add to region stations, live loop every 30 min, feed-freshness.yml watches it."
+        "refresh_plan": "Current-capable product needed; the existing buoy path does not carry it (collect.py reads only realtime2 .txt/.spec and pipeline.parsers.ndbc has no current fields). Product: NDBC realtime2 46268.adcp, surface current bin 1 at 1 m (MEASURED present: 1766 rows, newest 2026-11-07T14:00:00Z, nominal 30 min spacing with gaps); alternate CDIP THREDDS 103p1_rt.nc acmSpeed/acmDirection (MEASURED in the DAS metadata; the cdip-mop source entry allows only the MOP_alongshore path, so this needs a catalog/sources.json review). Needs a new .adcp parser and a collect.py job (new adapter, proposed cadence: every live cycle, 30 min; freshness: stale after 2 h, mirroring the buoy limit, added to feed-freshness.yml checks). Exposure review first: a 1 m nearshore point current is not the HF-radar field."
        }
       ],
       "uncovered_even_with_all_public_stations_pct": 10
@@ -8446,9 +8593,9 @@
         "lat": 33.336,
         "lon": -117.659,
         "covers_pct_of_stretch": 63,
-        "variable_label": "ESTIMATED",
+        "variable_label": "MEASURED",
         "distance_to_coast_nmi": 4.8,
-        "refresh_plan": "CDIP buoy via NDBC realtime2 (or CDIP THREDDS): add to region stations, live loop every 30 min, feed-freshness.yml watches it."
+        "refresh_plan": "Current-capable product needed; the existing buoy path does not carry it (collect.py reads only realtime2 .txt/.spec and pipeline.parsers.ndbc has no current fields). Product: NDBC realtime2 46277.adcp, surface current bin 1 at 1 m (MEASURED present: 1982 rows, newest 2026-11-07T14:00:00Z, nominal 30 min spacing with gaps); alternate CDIP THREDDS 271p1_rt.nc acmSpeed/acmDirection (MEASURED in the DAS metadata; the cdip-mop source entry allows only the MOP_alongshore path, so this needs a catalog/sources.json review). Needs a new .adcp parser and a collect.py job (new adapter, proposed cadence: every live cycle, 30 min; freshness: stale after 2 h, mirroring the buoy limit, added to feed-freshness.yml checks). Exposure review first: a 1 m nearshore point current is not the HF-radar field."
        },
        {
         "key": "ndbc:46275",
@@ -8457,9 +8604,9 @@
         "lat": 33.291,
         "lon": -117.501,
         "covers_pct_of_stretch": 40,
-        "variable_label": "ESTIMATED",
+        "variable_label": "MEASURED",
         "distance_to_coast_nmi": 0.6,
-        "refresh_plan": "CDIP buoy via NDBC realtime2 (or CDIP THREDDS): add to region stations, live loop every 30 min, feed-freshness.yml watches it."
+        "refresh_plan": "Current-capable product needed; the existing buoy path does not carry it (collect.py reads only realtime2 .txt/.spec and pipeline.parsers.ndbc has no current fields). Product: NDBC realtime2 46275.adcp, surface current bin 1 at 1 m (MEASURED present: 1955 rows, newest 2026-11-07T14:00:00Z, nominal 30 min spacing with gaps); alternate CDIP THREDDS 264p1_rt.nc acmSpeed/acmDirection (MEASURED in the DAS metadata; the cdip-mop source entry allows only the MOP_alongshore path, so this needs a catalog/sources.json review). Needs a new .adcp parser and a collect.py job (new adapter, proposed cadence: every live cycle, 30 min; freshness: stale after 2 h, mirroring the buoy limit, added to feed-freshness.yml checks). Exposure review first: a 1 m nearshore point current is not the HF-radar field."
        }
       ],
       "uncovered_even_with_all_public_stations_pct": 37
@@ -8491,9 +8638,9 @@
         "lat": 33.291,
         "lon": -117.501,
         "covers_pct_of_stretch": 84,
-        "variable_label": "ESTIMATED",
+        "variable_label": "MEASURED",
         "distance_to_coast_nmi": 0.6,
-        "refresh_plan": "CDIP buoy via NDBC realtime2 (or CDIP THREDDS): add to region stations, live loop every 30 min, feed-freshness.yml watches it."
+        "refresh_plan": "Current-capable product needed; the existing buoy path does not carry it (collect.py reads only realtime2 .txt/.spec and pipeline.parsers.ndbc has no current fields). Product: NDBC realtime2 46275.adcp, surface current bin 1 at 1 m (MEASURED present: 1955 rows, newest 2026-11-07T14:00:00Z, nominal 30 min spacing with gaps); alternate CDIP THREDDS 264p1_rt.nc acmSpeed/acmDirection (MEASURED in the DAS metadata; the cdip-mop source entry allows only the MOP_alongshore path, so this needs a catalog/sources.json review). Needs a new .adcp parser and a collect.py job (new adapter, proposed cadence: every live cycle, 30 min; freshness: stale after 2 h, mirroring the buoy limit, added to feed-freshness.yml checks). Exposure review first: a 1 m nearshore point current is not the HF-radar field."
        },
        {
         "key": "ndbc:46277",
@@ -8502,9 +8649,9 @@
         "lat": 33.336,
         "lon": -117.659,
         "covers_pct_of_stretch": 68,
-        "variable_label": "ESTIMATED",
+        "variable_label": "MEASURED",
         "distance_to_coast_nmi": 4.8,
-        "refresh_plan": "CDIP buoy via NDBC realtime2 (or CDIP THREDDS): add to region stations, live loop every 30 min, feed-freshness.yml watches it."
+        "refresh_plan": "Current-capable product needed; the existing buoy path does not carry it (collect.py reads only realtime2 .txt/.spec and pipeline.parsers.ndbc has no current fields). Product: NDBC realtime2 46277.adcp, surface current bin 1 at 1 m (MEASURED present: 1982 rows, newest 2026-11-07T14:00:00Z, nominal 30 min spacing with gaps); alternate CDIP THREDDS 271p1_rt.nc acmSpeed/acmDirection (MEASURED in the DAS metadata; the cdip-mop source entry allows only the MOP_alongshore path, so this needs a catalog/sources.json review). Needs a new .adcp parser and a collect.py job (new adapter, proposed cadence: every live cycle, 30 min; freshness: stale after 2 h, mirroring the buoy limit, added to feed-freshness.yml checks). Exposure review first: a 1 m nearshore point current is not the HF-radar field."
        }
       ],
       "uncovered_even_with_all_public_stations_pct": 16
@@ -8991,34 +9138,6 @@
   }
  },
  "public_network_checked": [
-  {
-   "key": "ndbc:1801589",
-   "name": "SD 1073 - 24 NM SSW of San Francisco, CA (Site of 46012)",
-   "owner": "NDBC",
-   "provider": "ndbc-listed",
-   "lat": 37.356,
-   "lon": -122.881,
-   "has": {
-    "water_temp": false,
-    "air_temp": false,
-    "wind": false,
-    "waves": false,
-    "currents": false,
-    "tides": false
-   },
-   "labels": {
-    "water_temp": "ESTIMATED",
-    "air_temp": "ESTIMATED",
-    "wind": "ESTIMATED",
-    "waves": "ESTIMATED",
-    "currents": "ESTIMATED",
-    "tides": "ESTIMATED"
-   },
-   "nearest_sector": "reyes-pigeon",
-   "distance_to_coast_nmi": 19.7,
-   "coops_id": null,
-   "provider_newest": null
-  },
   {
    "key": "ndbc:46047",
    "name": "TANNER BANK - 121 NM West of San Diego, CA",
@@ -9515,7 +9634,7 @@
     "air_temp": "MEASURED",
     "wind": "MEASURED",
     "waves": "MEASURED",
-    "currents": "ESTIMATED",
+    "currents": "MEASURED",
     "tides": "MEASURED"
    },
    "nearest_sector": "ventura-los-angeles",
@@ -9599,7 +9718,7 @@
     "air_temp": "MEASURED",
     "wind": "MEASURED",
     "waves": "MEASURED",
-    "currents": "ESTIMATED",
+    "currents": "MEASURED",
     "tides": "MEASURED"
    },
    "nearest_sector": "orange-san-diego",
@@ -9627,7 +9746,7 @@
     "air_temp": "MEASURED",
     "wind": "MEASURED",
     "waves": "MEASURED",
-    "currents": "ESTIMATED",
+    "currents": "MEASURED",
     "tides": "MEASURED"
    },
    "nearest_sector": "orange-san-diego",
@@ -9720,34 +9839,6 @@
    "provider_newest": "2026-11-07T13:30Z"
   },
   {
-   "key": "ndbc:ANVC1",
-   "name": "9416841 - Arena Cove, CA",
-   "owner": "NOS",
-   "provider": "ndbc-listed",
-   "lat": 38.915,
-   "lon": -123.711,
-   "has": {
-    "water_temp": true,
-    "air_temp": true,
-    "wind": true,
-    "waves": false,
-    "currents": false,
-    "tides": true
-   },
-   "labels": {
-    "water_temp": "MEASURED",
-    "air_temp": "MEASURED",
-    "wind": "MEASURED",
-    "waves": "MEASURED",
-    "currents": "ESTIMATED",
-    "tides": "ESTIMATED"
-   },
-   "nearest_sector": "arena-bodega",
-   "distance_to_coast_nmi": 0.6,
-   "coops_id": "9416841",
-   "provider_newest": "2026-11-07T13:30Z"
-  },
-  {
    "key": "ndbc:BAXC1",
    "name": "9410691 - Los Angeles Badger Avenue Bridge",
    "owner": "NOAA NOS PORTS",
@@ -9802,34 +9893,6 @@
    "distance_to_coast_nmi": 0.5,
    "coops_id": null,
    "provider_newest": "2026-11-07T12:56Z"
-  },
-  {
-   "key": "ndbc:CECC1",
-   "name": "9419750 - Crescent City, CA",
-   "owner": "NOS",
-   "provider": "ndbc-listed",
-   "lat": 41.746,
-   "lon": -124.184,
-   "has": {
-    "water_temp": true,
-    "air_temp": true,
-    "wind": true,
-    "waves": false,
-    "currents": false,
-    "tides": true
-   },
-   "labels": {
-    "water_temp": "MEASURED",
-    "air_temp": "MEASURED",
-    "wind": "MEASURED",
-    "waves": "MEASURED",
-    "currents": "ESTIMATED",
-    "tides": "ESTIMATED"
-   },
-   "nearest_sector": "del-norte",
-   "distance_to_coast_nmi": 0.7,
-   "coops_id": "9419750",
-   "provider_newest": "2026-11-07T13:30Z"
   },
   {
    "key": "ndbc:CPXC1",
@@ -10196,34 +10259,6 @@
    "provider_newest": "2026-11-07T13:45Z"
   },
   {
-   "key": "ndbc:HBYC1",
-   "name": "9418767 - North Spit, CA",
-   "owner": "NOS",
-   "provider": "ndbc-listed",
-   "lat": 40.767,
-   "lon": -124.217,
-   "has": {
-    "water_temp": true,
-    "air_temp": false,
-    "wind": false,
-    "waves": false,
-    "currents": false,
-    "tides": true
-   },
-   "labels": {
-    "water_temp": "MEASURED",
-    "air_temp": "MEASURED",
-    "wind": "MEASURED",
-    "waves": "MEASURED",
-    "currents": "ESTIMATED",
-    "tides": "ESTIMATED"
-   },
-   "nearest_sector": "humboldt-cape",
-   "distance_to_coast_nmi": 1.1,
-   "coops_id": "9418767",
-   "provider_newest": "2026-11-07T13:36Z"
-  },
-  {
    "key": "ndbc:ICAC1",
    "name": "9410840 - Santa Monica Pier",
    "owner": "NOS",
@@ -10362,34 +10397,6 @@
    "distance_to_coast_nmi": 0.5,
    "coops_id": null,
    "provider_newest": "2026-11-07T13:40Z"
-  },
-  {
-   "key": "ndbc:MEYC1",
-   "name": "9413450 - Monterey, CA",
-   "owner": "NOS",
-   "provider": "ndbc-listed",
-   "lat": 36.605,
-   "lon": -121.889,
-   "has": {
-    "water_temp": true,
-    "air_temp": false,
-    "wind": false,
-    "waves": false,
-    "currents": false,
-    "tides": true
-   },
-   "labels": {
-    "water_temp": "MEASURED",
-    "air_temp": "MEASURED",
-    "wind": "MEASURED",
-    "waves": "MEASURED",
-    "currents": "ESTIMATED",
-    "tides": "ESTIMATED"
-   },
-   "nearest_sector": "pigeon-monterey",
-   "distance_to_coast_nmi": 0.3,
-   "coops_id": "9413450",
-   "provider_newest": "2026-11-07T13:36Z"
   },
   {
    "key": "ndbc:MLSC1",
@@ -10532,34 +10539,6 @@
    "provider_newest": null
   },
   {
-   "key": "ndbc:NTBC1",
-   "name": "9411340 - Santa Barbara, CA ",
-   "owner": "NOS",
-   "provider": "ndbc-listed",
-   "lat": 34.405,
-   "lon": -119.692,
-   "has": {
-    "water_temp": false,
-    "air_temp": true,
-    "wind": true,
-    "waves": false,
-    "currents": false,
-    "tides": true
-   },
-   "labels": {
-    "water_temp": "MEASURED",
-    "air_temp": "MEASURED",
-    "wind": "MEASURED",
-    "waves": "MEASURED",
-    "currents": "ESTIMATED",
-    "tides": "ESTIMATED"
-   },
-   "nearest_sector": "conception-ventura",
-   "distance_to_coast_nmi": 0.3,
-   "coops_id": "9411340",
-   "provider_newest": "2026-11-07T13:36Z"
-  },
-  {
    "key": "ndbc:OBXC1",
    "name": "9414797 - Oakland Berth 38, CA",
    "owner": "NOAA NOS PORTS",
@@ -10586,34 +10565,6 @@
    "distance_to_coast_nmi": 6.6,
    "coops_id": "9414797",
    "provider_newest": "2026-11-07T13:30Z"
-  },
-  {
-   "key": "ndbc:OHBC1",
-   "name": "9410660 - Los Angeles, CA",
-   "owner": "NOS",
-   "provider": "ndbc-listed",
-   "lat": 33.72,
-   "lon": -118.273,
-   "has": {
-    "water_temp": false,
-    "air_temp": false,
-    "wind": false,
-    "waves": false,
-    "currents": false,
-    "tides": true
-   },
-   "labels": {
-    "water_temp": "MEASURED",
-    "air_temp": "MEASURED",
-    "wind": "MEASURED",
-    "waves": "MEASURED",
-    "currents": "ESTIMATED",
-    "tides": "ESTIMATED"
-   },
-   "nearest_sector": "los-angeles-orange",
-   "distance_to_coast_nmi": 0.6,
-   "coops_id": "9410660",
-   "provider_newest": "2026-11-07T13:48Z"
   },
   {
    "key": "ndbc:OKXC1",
@@ -10812,34 +10763,6 @@
    "provider_newest": "2026-11-07T13:48Z"
   },
   {
-   "key": "ndbc:PRYC1",
-   "name": "9415020 - Point Reyes, CA",
-   "owner": "NOS",
-   "provider": "ndbc-listed",
-   "lat": 37.996,
-   "lon": -122.977,
-   "has": {
-    "water_temp": true,
-    "air_temp": false,
-    "wind": false,
-    "waves": false,
-    "currents": false,
-    "tides": true
-   },
-   "labels": {
-    "water_temp": "MEASURED",
-    "air_temp": "MEASURED",
-    "wind": "MEASURED",
-    "waves": "MEASURED",
-    "currents": "ESTIMATED",
-    "tides": "ESTIMATED"
-   },
-   "nearest_sector": "bodega-reyes",
-   "distance_to_coast_nmi": 0.5,
-   "coops_id": "9415020",
-   "provider_newest": "2026-11-07T13:48Z"
-  },
-  {
    "key": "ndbc:PSBC1",
    "name": "9415115 - Pittsburg (Suisun Bay), CA",
    "owner": "NOAA NOS PORTS",
@@ -10865,34 +10788,6 @@
    "nearest_sector": "reyes-pigeon",
    "distance_to_coast_nmi": 31.3,
    "coops_id": "9415115",
-   "provider_newest": "2026-11-07T13:48Z"
-  },
-  {
-   "key": "ndbc:PSLC1",
-   "name": "9412110 - Port San Luis, CA",
-   "owner": "NOS",
-   "provider": "ndbc-listed",
-   "lat": 35.169,
-   "lon": -120.754,
-   "has": {
-    "water_temp": true,
-    "air_temp": false,
-    "wind": false,
-    "waves": false,
-    "currents": false,
-    "tides": true
-   },
-   "labels": {
-    "water_temp": "MEASURED",
-    "air_temp": "MEASURED",
-    "wind": "MEASURED",
-    "waves": "MEASURED",
-    "currents": "ESTIMATED",
-    "tides": "ESTIMATED"
-   },
-   "nearest_sector": "morro-conception",
-   "distance_to_coast_nmi": 0.6,
-   "coops_id": "9412110",
    "provider_newest": "2026-11-07T13:48Z"
   },
   {
@@ -11146,34 +11041,6 @@
    "distance_to_coast_nmi": 10.6,
    "coops_id": null,
    "provider_newest": null
-  },
-  {
-   "key": "ndbc:SDBC1",
-   "name": "9410170 - San Diego, CA",
-   "owner": "NOS",
-   "provider": "ndbc-listed",
-   "lat": 32.714,
-   "lon": -117.174,
-   "has": {
-    "water_temp": true,
-    "air_temp": false,
-    "wind": false,
-    "waves": false,
-    "currents": false,
-    "tides": true
-   },
-   "labels": {
-    "water_temp": "MEASURED",
-    "air_temp": "MEASURED",
-    "wind": "MEASURED",
-    "waves": "MEASURED",
-    "currents": "ESTIMATED",
-    "tides": "ESTIMATED"
-   },
-   "nearest_sector": "san-diego-border",
-   "distance_to_coast_nmi": 3.7,
-   "coops_id": "9410170",
-   "provider_newest": "2026-11-07T13:48Z"
   },
   {
    "key": "ndbc:SFXC1",
@@ -17279,6 +17146,111 @@
    "retrieved_at": "2026-11-07T14:25:54+00:00",
    "bytes": 2042754,
    "sha256": "8d09fc8cc9281f029ca1833b9dd5a39517efb87a8cae2dfeda577bb74f304a65",
+   "error": null
+  },
+  {
+   "url": "https://www.ndbc.noaa.gov/data/realtime2/46268.adcp",
+   "retrieved_at": "2026-11-07T14:44:36+00:00",
+   "bytes": 62564,
+   "sha256": "7a13e84fb1cffea024b7fc6c5b9ee36dffbdcc3338c0c85ca2b815a463937b3d",
+   "error": null
+  },
+  {
+   "url": "https://www.ndbc.noaa.gov/data/realtime2/46268.ocean",
+   "retrieved_at": "2026-11-07T14:44:37+00:00",
+   "bytes": null,
+   "sha256": null,
+   "error": "HTTPError: HTTP Error 404: Not Found"
+  },
+  {
+   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/103p1_rt.nc.das",
+   "retrieved_at": "2026-11-07T14:44:37+00:00",
+   "bytes": 50508,
+   "sha256": "f6744e477086024d6464c7cfc61bc821c67c6df6a2e5d847d380f6b8af0db046",
+   "error": null
+  },
+  {
+   "url": "https://www.ndbc.noaa.gov/data/realtime2/46275.adcp",
+   "retrieved_at": "2026-11-07T14:44:38+00:00",
+   "bytes": 69179,
+   "sha256": "98909319822660e4ad5072515db136d6c94383957c21833d1c4a052d5cf57ce6",
+   "error": null
+  },
+  {
+   "url": "https://www.ndbc.noaa.gov/data/realtime2/46275.ocean",
+   "retrieved_at": "2026-11-07T14:44:39+00:00",
+   "bytes": null,
+   "sha256": null,
+   "error": "HTTPError: HTTP Error 404: Not Found"
+  },
+  {
+   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/264p1_rt.nc.das",
+   "retrieved_at": "2026-11-07T14:44:39+00:00",
+   "bytes": 50517,
+   "sha256": "af6f1c1cc425a9e70f1e5e7adbfd542194ba75235b913f9ecf8ebec4e9a37010",
+   "error": null
+  },
+  {
+   "url": "https://www.ndbc.noaa.gov/data/realtime2/46277.adcp",
+   "retrieved_at": "2026-11-07T14:44:40+00:00",
+   "bytes": 70124,
+   "sha256": "1726820c0d87a8b3b6debf31da27d8ede6a586f167369f885056224972364517",
+   "error": null
+  },
+  {
+   "url": "https://www.ndbc.noaa.gov/data/realtime2/46277.ocean",
+   "retrieved_at": "2026-11-07T14:44:40+00:00",
+   "bytes": null,
+   "sha256": null,
+   "error": "HTTPError: HTTP Error 404: Not Found"
+  },
+  {
+   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/271p1_rt.nc.das",
+   "retrieved_at": "2026-11-07T14:44:40+00:00",
+   "bytes": 50514,
+   "sha256": "7bbfa62bee35d9eca34aea7c518ccfa0b84633dbfe9afcaaf32c7a5db9d47320",
+   "error": null
+  },
+  {
+   "url": "https://www.ndbc.noaa.gov/data/realtime2/46213.adcp",
+   "retrieved_at": "2026-11-07T14:44:41+00:00",
+   "bytes": 37714,
+   "sha256": "6ddf137ff1b5e4debf90e800b896835f6d9d11af53194693bbdd551e8366e162",
+   "error": null
+  },
+  {
+   "url": "https://www.ndbc.noaa.gov/data/realtime2/46213.ocean",
+   "retrieved_at": "2026-11-07T14:44:42+00:00",
+   "bytes": null,
+   "sha256": null,
+   "error": "HTTPError: HTTP Error 404: Not Found"
+  },
+  {
+   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/094p1_rt.nc.das",
+   "retrieved_at": "2026-11-07T14:44:42+00:00",
+   "bytes": 50500,
+   "sha256": "ef3df04d84a8faf25a63453c9312b112bbe78d6d8a93fee55aa963db4421f033",
+   "error": null
+  },
+  {
+   "url": "https://www.ndbc.noaa.gov/data/realtime2/46236.adcp",
+   "retrieved_at": "2026-11-07T14:44:43+00:00",
+   "bytes": 71419,
+   "sha256": "f5caa622722765819cc2faa18f4766327e0718787dcdc9bb2178153009596541",
+   "error": null
+  },
+  {
+   "url": "https://www.ndbc.noaa.gov/data/realtime2/46236.ocean",
+   "retrieved_at": "2026-11-07T14:44:43+00:00",
+   "bytes": null,
+   "sha256": null,
+   "error": "HTTPError: HTTP Error 404: Not Found"
+  },
+  {
+   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/156p1_rt.nc.das",
+   "retrieved_at": "2026-11-07T14:44:43+00:00",
+   "bytes": 50526,
+   "sha256": "899b0e25f02ff7c4f79fbc3c509c5383cd89355337f02c44cf39bf86266e527c",
    "error": null
   },
   {
