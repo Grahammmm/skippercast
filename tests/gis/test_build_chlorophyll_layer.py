@@ -48,6 +48,16 @@ class RenderTest(unittest.TestCase):
         self.assertEqual(rgba[row, col].tolist(), [0, 0, 0, 0])
         self.assertTrue((rgba[..., 3] > 0).any())
 
+    def test_isolated_missing_cell_stays_transparent(self):
+        values = np.full((2, 2), 0.5)
+        values[0, 0] = np.nan
+        lats, lons = np.array([35.0, 36.0]), np.array([-122.0, -121.0])
+        rgba = cl.render(lats, lons, values, BOUNDS, px_m=20000)
+        h, w = rgba.shape[:2]
+        # pixel nearest the missing node (fractional index ~0.4 from it, other three neighbours valid)
+        self.assertEqual(rgba[int(h * .6), int(w * .4)].tolist(), [0, 0, 0, 0])
+        self.assertGreater(rgba[int(h * .2), int(w * .8)][3], 0)
+
     def test_cells_are_placed_by_web_mercator_position(self):
         lats, lons = axes()
         values = np.full((len(lats), len(lons)), np.nan)

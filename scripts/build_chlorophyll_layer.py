@@ -110,7 +110,12 @@ def render(lats, lons, values, bounds, px_m=400.0):
     num = ndimage.map_coordinates(logv * valid, coords, order=1, mode='constant', cval=0.0).reshape(height, width)
     den = ndimage.map_coordinates(valid.astype(float), coords, order=1, mode='constant', cval=0.0).reshape(height, width)
     # Only where at least half the surrounding weight is real retrieval; the edge fades over a quarter.
-    ok = den >= .5
+    # The source cell under each pixel (nearest grid node) must itself hold a retrieval, so colour
+    # interpolation can never paint inside a missing cell.
+    ni = np.clip(np.rint(fi), 0, len(lats) - 1).astype(int)
+    nj = np.clip(np.rint(fj), 0, len(lons) - 1).astype(int)
+    inside = ((fi >= 0) & (fi <= len(lats) - 1))[:, None] & ((fj >= 0) & (fj <= len(lons) - 1))[None, :]
+    ok = (den >= .5) & valid[np.ix_(ni, nj)] & inside
     mean_log = np.where(ok, num / np.where(den > 0, den, 1), 0)
     position = (mean_log - math.log10(VMIN)) / (math.log10(VMAX) - math.log10(VMIN))
     rgba = np.zeros((height, width, 4), dtype=np.uint8)
