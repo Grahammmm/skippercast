@@ -6,8 +6,8 @@
 
 Writes `var/seafloor/tiles/morro-bay-seafloor-deep-medium.pmtiles` (override with `--output`), zooms 8-13,
 256 px web-mercator PNG tiles, and prints the file size, zoom range and tile count. Medium relief
-is the default. A native manifest adds 2 m or 5 m projected metre grids at nominal depths 0-300 ft,
-feathered across 40 m of overlap; z14-15 is emitted only on tiles containing native 2 m support.
+is the default. A native manifest adds <=2 m or 5 m projected metre grids at nominal depths 0-300 ft,
+feathered across 40 m of overlap; z14-15 is emitted only on tiles containing native <=2 m support.
 Native manifest entries require id, path, resolution_m, source_file and archive_sha256. Datum and
 uncertainty limitations remain: this renderer does not vertically reconcile the surveys.
 
@@ -413,12 +413,12 @@ def load_native_manifest(path):
     for source in sources:
         with rasterio.open(source['path']) as ds:
             resolution = float(source['resolution_m'])
-            if (resolution not in (2.0, 5.0) or ds.count != 1 or not ds.crs.is_projected
+            if (not (0 < resolution <= 2.0 or resolution == 5.0) or ds.count != 1 or not ds.crs.is_projected
                     or not math.isclose(ds.crs.linear_units_factor[1], 1.0)
                     or not np.allclose(ds.res, resolution, atol=0.01)):
-                raise ValueError('native grid must be a single-band 2 m or 5 m projected metre grid')
+                raise ValueError('native grid must be a single-band <=2 m or 5 m projected metre grid')
             source['bounds'] = transform_bounds(ds.crs, 'EPSG:4326', *ds.bounds, densify_pts=21)
-    # Coarser native first; 2 m wins overlaps. Stable source IDs settle equal-resolution ties.
+    # Coarser native first; finer grids win. Stable source IDs settle equal-resolution ties.
     return sorted(sources, key=lambda s: (-s['resolution_m'], s['id']))
 
 
@@ -439,7 +439,7 @@ def tiered_windows(elevation, src_transform, src_crs, bounds, z, sources, pad):
     if z > MAXZOOM:
         candidates = set()
         for source in sources:
-            if source['resolution_m'] == 2:
+            if source['resolution_m'] <= 2:
                 xs, ys = tile_range(source['bounds'], z)
                 candidates.update((x, y) for x in xs for y in ys)
     else:
@@ -457,7 +457,7 @@ def tiered_windows(elevation, src_transform, src_crs, bounds, z, sources, pad):
                 continue
             native, _ = warp_native(source, z, x, y, halo)
             window, valid = feather_tier(window, native, ground)
-            if source['resolution_m'] == 2:
+            if source['resolution_m'] <= 2:
                 fine_support |= valid
         core = (slice(halo, -halo), slice(halo, -halo))
         if z > MAXZOOM and not fine_support[core].any():
@@ -538,7 +538,8 @@ def output_for(variant, directory=None):
     return directory / DEFAULT_OUTPUT.name if variant == 'base' else directory / variant / DEFAULT_OUTPUT.name
 
 
-def build(source, output, minzoom=MINZOOM, maxzoom=MAXZOOM, log=print, variant='medium', native_sources=None):
+def build(source, output, minzoom=MINZOOM, maxzoom=MAXZOOM, log=print, variant='medium', native_sources=None,
+          label='Morro Bay'):
     import rasterio
     from rasterio.warp import transform_bounds
     enhance = ENHANCE[variant]
@@ -566,23 +567,27 @@ def build(source, output, minzoom=MINZOOM, maxzoom=MAXZOOM, log=print, variant='
         log(f'zoom {z}: {len(windows)} tiles')
     centre = ((bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2)
     metadata = {
-        'name': 'SkipperCast Morro Bay seafloor (Deep)' + ('' if variant == 'base' else f', relief {variant}'),
+        'name': f'SkipperCast {label} seafloor (Deep)' + ('' if variant == 'base' else f', relief {variant}'),
         'description': 'Styled raster of the 10 m Morro Bay survey: cmocean deep ramp, nonlinear depth stretch and '
                        'four-direction hillshade. Transparent = no survey. Mixed vertical references; '
                        'research preview, NOT FOR NAVIGATION.',
         'attribution': 'USGS California Seafloor Mapping Program and other public surveys (via SkipperCast); colours: cmocean',
         'type': 'baselayer', 'format': 'png', 'version': '1', 'relief_variant': variant,
         'relief_settings': enhance,
-        'native_sources': [{k: s[k] for k in ('id', 'resolution_m', 'source_file', 'archive_sha256')}
+        'native_sources': [{k: s[k] for k in ('id', 'resolution_m', 'source_file', 'archive_sha256',
+                                           'survey_id', 'survey_dates', 'vertical_datum', 'source_url',
+                                           'depth_semantics', 'release_date') if k in s}
                            for s in native_sources],
         'shallow_limit_m': SHALLOW_M, 'feather_m': FEATHER_M if native_sources else 0,
         'minzoom': minzoom, 'maxzoom': maxzoom, 'bounds': [round(v, 6) for v in bounds],
         'center': [round(centre[0], 6), round(centre[1], 6), 10],
     }
     if native_sources:
-        metadata['description'] = ('2 m/5 m native shallow surveys where supplied, 10 m background elsewhere; '
-                                   '40 m elevation overlap feather. Transparent = no survey. Mixed vertical '
-                                   'references, not datum-corrected; research preview, NOT FOR NAVIGATION.')
+        metadata['attribution'] = ('Survey sources: ' + ', '.join(s.get('survey_id', s['id']) for s in native_sources)
+                                   + '; background where supplied; colours: cmocean')
+        metadata['description'] = ('Native <=2 m/5 m shallow surveys where supplied, background where supplied; '
+                                   '40 m elevation overlap feather. Transparent = no survey. Vertical '
+                                   'references as supplied, not datum-corrected; research preview, NOT FOR NAVIGATION.')
     write_pmtiles(output, tiles, metadata=metadata, bounds=bounds, minzoom=minzoom, maxzoom=maxzoom,
                   center=(10, centre[0], centre[1]))
     size = Path(output).stat().st_size
@@ -595,6 +600,7 @@ def main(argv=None):
     parser.add_argument('--source', required=True, help='elevation GeoTIFF (EPSG:3310, metres, positive up)')
     parser.add_argument('--output', default=None, help='archive path (one variant only; default var/seafloor/tiles/...)')
     parser.add_argument('--native-manifest', help='local JSON list of native grid paths and source provenance')
+    parser.add_argument('--label', default='Morro Bay', help='survey sector name in archive metadata')
     parser.add_argument('--variant', default='medium', choices=[*ENHANCE, 'all'],
                         help='relief enhancement: base (MAPSTYLE-1 look), mild, medium, strong, or all four')
     parser.add_argument('--minzoom', type=int, default=MINZOOM)
@@ -602,7 +608,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     native_sources = load_native_manifest(args.native_manifest) if args.native_manifest else []
     if args.maxzoom is None:
-        args.maxzoom = 15 if any(s['resolution_m'] == 2 for s in native_sources) else MAXZOOM
+        args.maxzoom = 15 if any(s['resolution_m'] <= 2 for s in native_sources) else MAXZOOM
     if not Path(args.source).is_file():
         print(f'build_bathy_tiles: source not found: {args.source}', file=sys.stderr)
         return 2
@@ -614,7 +620,7 @@ def main(argv=None):
         return 2
     for variant in (ENHANCE if args.variant == 'all' else [args.variant]):
         build(args.source, Path(args.output) if args.output else output_for(variant), args.minzoom, args.maxzoom,
-              variant=variant, native_sources=native_sources)
+              variant=variant, native_sources=native_sources, label=args.label)
     return 0
 
 

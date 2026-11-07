@@ -409,6 +409,40 @@ class NativeTierTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 bt.load_native_manifest(manifest)
 
+    def test_finer_native_sector_build_keeps_survey_provenance_at_z15(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root / 'base.tif'
+            write_survey(base, size=120, west_nodata=0)
+            fine = root / 'fine.tif'
+            with rasterio.open(fine, 'w', driver='GTiff', width=300, height=300, count=1,
+                               dtype='float32', crs='EPSG:3310', nodata=NODATA,
+                               transform=from_origin(-121800, -288200, 1, 1)) as ds:
+                ds.write(np.full((300, 300), -25, 'float32'), 1)
+            provenance = {'survey_id': 'SYNTHETIC', 'survey_dates': ['2008-11-18', '2008-11-23'],
+                          'vertical_datum': 'nominal MLLW; realization unknown',
+                          'source_url': 'https://example.test/synthetic.bag',
+                          'depth_semantics': 'positive-up elevation metres',
+                          'release_date': None}
+            entry = {'id': 'synthetic-1m', 'path': str(fine), 'resolution_m': 1,
+                     'source_file': 'synthetic.bag', 'archive_sha256': 'b' * 64, **provenance}
+            manifest = root / 'native.json'
+            manifest.write_text(json.dumps([entry]))
+            output = root / 'deep.pmtiles'
+            self.assertEqual(bt.main(['--source', str(base), '--output', str(output),
+                                      '--native-manifest', str(manifest), '--label', 'Del Norte coast']), 0)
+            header, metadata, tiles, _ = read_archive(output)
+            self.assertEqual(header['maxzoom'], 15)
+            self.assertTrue(any(tid >= sum(4 ** i for i in range(15)) for tid in tiles))
+            self.assertIn('SYNTHETIC', metadata['attribution'])
+            self.assertEqual(metadata['relief_variant'], 'medium')
+            self.assertIn('Del Norte coast', metadata['name'])
+            self.assertNotIn('Morro', metadata['description'])
+            self.assertIn('NOT FOR NAVIGATION', metadata['description'])
+            for key, value in provenance.items():
+                self.assertEqual(metadata['native_sources'][0][key], value)
+            self.assertNotIn(str(root), json.dumps(metadata))
+
     def test_native_build_defaults_to_medium_and_writes_z15_with_provenance(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

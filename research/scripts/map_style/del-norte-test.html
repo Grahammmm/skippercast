@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Del Norte native bathymetry — private research preview</title>
+<link rel="stylesheet" href="/node_modules/maplibre-gl/dist/maplibre-gl.css">
+<style>
+html,body,#map{margin:0;height:100%;font:14px/1.4 system-ui}#note{position:absolute;bottom:8px;left:8px;right:8px;background:#fffffff0;padding:10px;z-index:2}b{color:#8a1c1c}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="note"><b>PRIVATE RESEARCH PREVIEW — NOT FOR NAVIGATION.</b>
+<div>Del Norte coast, inventory sector 1. Medium relief. Tan = no survey, not shallow water.</div>
+<div id="provenance">Loading retained survey provenance…</div>
+<div>Nominal 0–91.44 m below MLLW only; not tide-corrected. Static survey, not current depth. No uncertainty qualification. Hard-bottom classification and numeric depth at cursor are not supplied by this first slice.</div>
+</div>
+<script src="/node_modules/pmtiles/dist/pmtiles.js"></script>
+<script type="module">
+import * as maplibregl from '/node_modules/maplibre-gl/dist/maplibre-gl.mjs';
+maplibregl.setWorkerUrl('/node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs');
+maplibregl.addProtocol('pmtiles', new window.pmtiles.Protocol().tile);
+const url = new URL('/var/seafloor/bathy-del-norte/medium/morro-bay-seafloor-deep.pmtiles', location.href).href;
+try {
+  const archive = new window.pmtiles.PMTiles(url);
+  const [header, meta] = await Promise.all([archive.getHeader(), archive.getMetadata()]);
+  const provenance = document.getElementById('provenance');
+  provenance.textContent = meta.native_sources.map(s => `${s.survey_id}, native ${s.resolution_m} m; acquired ${s.survey_dates.join(' to ')}; ${s.vertical_datum}; release date ${s.release_date || 'unknown'}. `).join('');
+  const link = document.createElement('a');
+  link.href = meta.native_sources[0].source_url;
+  link.textContent = 'Original NOAA BAG';
+  provenance.append(link);
+  const map = new maplibregl.Map({container:'map', attributionControl:true, renderWorldCopies:false,
+    bounds:[header.minLon,header.minLat,header.maxLon,header.maxLat], fitBoundsOptions:{padding:30,animate:false},
+    style:{version:8,sources:{depth:{type:'raster',url:'pmtiles://'+url,tileSize:256,attribution:'NOAA F00562 (2008); cmocean colours'}},
+      layers:[{id:'no-survey',type:'background',paint:{'background-color':'#d9d2c0'}},
+        {id:'depth',type:'raster',source:'depth',paint:{'raster-fade-duration':0}}]}});
+  window.__map = map;
+  map.on('idle', () => {window.__idle = true;});
+  map.on('error', e => {window.__error = String(e.error);});
+} catch (error) {
+  document.getElementById('provenance').textContent = 'Private survey unavailable — build the retained source slice first. No fallback data.';
+  window.__error = String(error);
+}
+</script>
+</body>
+</html>
