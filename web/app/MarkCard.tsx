@@ -55,6 +55,9 @@ import {markDistanceLine, routeAfterPaint, straightDistance, type MarkDistance a
 import {mapFocusTarget} from './map-focus.ts';
 import {MarkForecast} from '../brief/MarkForecast.tsx';
 import type {LatLon} from '../brief/mark-forecast.ts';
+import {PrivateMapLog} from './PrivateMapLog.tsx';
+import {regionalForecast} from '../brief/Brief.tsx';
+import {zone} from './region-info.ts';
 
 export type Mark = ChartMark;
 export {RulesLine};
@@ -268,6 +271,7 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
       ) : null}
       <RulesLine mark={selected} />
       {place ? <MarkForecast place={place} /> : null}
+      {!privateSaved && stateRegion.value ? <PrivateMapLog key={`${stateRegion.value}:${selected.id}`} mark={selected} region={stateRegion.value} forecast={regionalForecast.value} tz={zone()} /> : null}
       {privateSaved ? null : <div class="app-mark-actions">
         <Button size="sm" icon={added ? 'check' : 'plus'} disabled={!spot && !where} onClick={() => { if (spot) void addToTrip(spot); else if (where) void addPlaceToTrip(where); }}>
           {added ? t('mark.added', lang) : target && target.canonical_habitat !== true ? t('mark.research', lang) : t('mark.add', lang)}</Button>
