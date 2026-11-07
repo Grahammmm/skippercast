@@ -13,10 +13,10 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[3]
-# layers.py sst(2): turbo(linspace(.04,.96,13)), 52..66 F boundaries.
-COLOURS = ['#3b2f80', '#4664da', '#4196ff', '#20c7df', '#1fe9af',
-           '#5dfc6f', '#a1fd3d', '#d4e735', '#f7c13a', '#fe9029',
-           '#ed5510', '#cc2b04', '#9b0f01']
+# layers.py sst(2): turbo(linspace(.04,.96,14)), 15 boundaries at 52..66 F.
+COLOURS = ['#3b2f80', '#4661d6', '#448ffe', '#28bceb', '#18e0bd',
+           '#3ff68a', '#84ff51', '#bcf534', '#e5d938', '#fcb336',
+           '#fb8122', '#ea4e0d', '#ca2a04', '#9b0f01']
 BREAK_F_PER_KM = 1.2
 
 
@@ -96,7 +96,7 @@ def build(folder, now):
     polygons = []
     for key, (lat, lon, temp, gradient) in sorted(cells.items()):
         f = temp * 1.8 + 32
-        band = max(0, min(12, math.floor(f - 52)))
+        band = max(0, min(13, math.floor(f - 52)))
         w, s, e, n = max(west, lon - dx / 2), max(south, lat - dy / 2), min(east, lon + dx / 2), min(north, lat + dy / 2)
         polygons.append(feature({'type': 'Polygon', 'coordinates': [[[w, s], [e, s], [e, n], [w, n], [w, s]]]},
                                 {'temperature_f': round(f, 3), 'colour': COLOURS[band]}))

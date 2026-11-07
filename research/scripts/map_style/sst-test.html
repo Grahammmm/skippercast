@@ -13,8 +13,8 @@ html,body {margin:0;height:100%;font:13px/1.4 system-ui,sans-serif;color:#172a3a
 h1 {font-size:16px;margin:0 0 6px} p {margin:6px 0}
 #ramp {display:flex;height:14px} #ramp span {flex:1}
 #ticks {position:relative;height:20px} #ticks span {position:absolute;transform:translateX(-50%)}
-#ticks span:first-child {left:0;transform:none} #ticks span:nth-child(2) {left:30.77%}
-#ticks span:nth-child(3) {left:61.54%} #ticks span:last-child {right:0;transform:none}
+#ticks span:first-child {left:0;transform:none} #ticks span:nth-child(2) {left:calc(100% * 4 / 14)}
+#ticks span:nth-child(3) {left:calc(100% * 8 / 14)} #ticks span:last-child {left:calc(100% * 12 / 14)}
 #status {font-weight:bold}
 .warning {color:#8a1c1c} #sample {min-height:1.4em}
 </style>
@@ -27,8 +27,8 @@ h1 {font-size:16px;margin:0 0 6px} p {margin:6px 0}
 <p id="status" role="status">Loading private analysis…</p>
 <p id="time"></p>
 <div id="ramp" aria-hidden="true"></div>
-<div id="ticks"><span>&lt;53°F</span><span>56°F</span><span>60°F</span><span>≥65°F</span></div>
-<p>White/black line: strong break ≥1.2°F/km. End colours saturate outside 52–66°F.</p>
+<div id="ticks"><span>52°F</span><span>56°F</span><span>60°F</span><span>64°F</span></div>
+<p>White/black line: strong break ≥1.2°F/km. 14 bands from 52 to 66°F; below 52°F and at/above 66°F use the end colours.</p>
 <p id="coverage"></p>
 <p id="range"></p>
 <p>Native cells, not fine-scale measurements. Transparent = no SST cell; tan base = no seafloor survey. Surface analysis, not bottom temperature.</p>

@@ -39,10 +39,12 @@ The underlying analysis may already interpolate observations. It is surface-only
 not bottom temperature, habitat, or fish presence; error support is not a confidence
 interval. Attribute NOAA CoastWatch / GHRSST.
 
-`layers.py::sst(2)` supplies the exact 13 turbo colours sampled at 0.04–0.96,
-52–66°F boundaries, 0.82 fill opacity and white/black strong-break symbol. Source
+`layers.py::sst(2)` supplies the exact 14 turbo colours sampled at 0.04–0.96,
+15 boundaries at 52, 53, …, 66°F, 0.82 fill opacity and white/black strong-break symbol. Source
 Celsius values convert to Fahrenheit without smoothing or upsampling. Colours are
-1°F bands; the endpoint colours saturate (<53°F and ≥65°F share the end bins).
+14 one-degree bands; values below 52°F share the 52–53°F colour and values
+at/above 66°F share the 65–66°F colour (end bins: <53°F and ≥65°F).
+The reference legend ticks are 52/56/60/64°F at 0, 4/14, 8/14 and 12/14 of its width.
 Click a cell for its actual Fahrenheit value, including out-of-ramp values.
 
 Unlike the illustrative study's smoothed synthetic 10 m temperature field, break

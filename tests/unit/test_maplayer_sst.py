@@ -45,14 +45,30 @@ def test_native_cells_units_band_edges_and_missing_support(tmp_path):
     fixture(tmp_path)
     result = sst.build(tmp_path, NOW)
     features = result['cells']['features']
+    assert len(result['colours']) == 14
     assert result['valid_cells'] == 3
     assert [p['properties']['temperature_f'] for p in features] == [50, 59, 68]
-    assert [p['properties']['colour'] for p in features] == [sst.COLOURS[0], sst.COLOURS[7], sst.COLOURS[-1]]
+    assert [p['properties']['colour'] for p in features] == [sst.COLOURS[0], sst.COLOURS[7], sst.COLOURS[13]]
     ring = features[0]['geometry']['coordinates'][0]
     assert ring[1][0] - ring[0][0] == pytest.approx(.05)
     assert ring[2][1] - ring[1][1] == pytest.approx(.05)
     assert result['breaks']['features'] == []  # fourth corner is missing, no bridged front
     assert result['data_time'] == TIME and not result['stale']
+
+
+@pytest.mark.parametrize(('fahrenheit', 'band'), [
+    (50, 0), (52, 0), (52.999, 0), (53, 1), (56, 4), (60, 8),
+    (64, 12), (64.5, 12), (64.999, 12), (65, 13), (65.999, 13),
+    (66, 13), (68, 13),
+])
+def test_reference_band_boundaries(tmp_path, fahrenheit, band):
+    fixture(tmp_path, [[35.025, -121.075, (fahrenheit - 32) / 1.8, 0]])
+    result = sst.build(tmp_path, NOW)
+    properties = result['cells']['features'][0]['properties']
+    assert properties['temperature_f'] == pytest.approx(fahrenheit)
+    assert properties['colour'] == sst.COLOURS[band]
+    if fahrenheit == 64.5:
+        assert properties['colour'] != sst.COLOURS[-1]
 
 
 def test_strong_break_threshold_converts_celsius_per_km(tmp_path):
