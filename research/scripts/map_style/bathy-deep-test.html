@@ -99,8 +99,10 @@ map.on('load', async () => {
     const doc = await loadCurrentsDoc(fetch, dataUrl);
     overlay = addCurrents(map, doc, {visible: q.get('currents') !== 'off'});
     box.checked = q.get('currents') !== 'off';
-    line.innerHTML = '<b>Surface currents, not for navigation.</b> ' + freshnessText(doc) + '. Near-surface flow only; '
-      + 'colour = spin (red counter-clockwise, blue clockwise); lines follow the flow; no colour = no radar vector.';
+    const label = document.createElement('b');
+    label.textContent = 'Surface currents, not for navigation.';
+    line.replaceChildren(label, document.createTextNode(' ' + freshnessText(doc) + '. Near-surface flow only; '
+      + 'colour = spin (red counter-clockwise, blue clockwise); lines follow the flow; no colour = no radar vector.'));
     window.__currents = doc.sample_at;
   } catch (e) {
     failed = true;

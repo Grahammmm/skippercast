@@ -99,9 +99,12 @@ test('missing or invalid currents data keeps its status visible and draws nothin
   assert.equal(statusHidden(false, true), false);
   await assert.rejects(loadCurrentsDoc(async () => ({ok: false, status: 404, json: async () => ({})}), '/x'), /404/);
   await assert.rejects(loadCurrentsDoc(async () => ({ok: true, json: async () => ({foo: 1})}), '/x'), /invalid/);
-  const good = {lats: [1], lons: [2], u: [[0]], v: [[0]]};
+  const good = {lats: [1], lons: [2], u: [[0]], v: [[0]], sample_at: '2026-11-07T14:00:00Z', resolution_km: 6, valid_cells: 1, total_cells: 1};
+  const evil = {...good, sample_at: '<img src=x onerror=alert(1)>'};
+  await assert.rejects(loadCurrentsDoc(async () => ({ok: true, json: async () => evil}), '/x'), /sample_at/);
   assert.equal(await loadCurrentsDoc(async () => ({ok: true, json: async () => good}), '/x'), good);
   const page = readFileSync(new URL('../research/scripts/map_style/bathy-deep-test.html', import.meta.url), 'utf8');
   assert.match(page, /statusHidden\(failed, box\.checked\)/);
   assert.match(page, /failed = true;/);
+  assert.doesNotMatch(page, /line\.innerHTML/);
 });

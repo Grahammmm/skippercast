@@ -214,5 +214,7 @@ export async function loadCurrentsDoc(fetchFn, url) {
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const doc = await res.json();
   if (!doc || !Array.isArray(doc.lats) || !Array.isArray(doc.lons) || !doc.u || !doc.v) throw new Error('invalid currents data');
+  if (typeof doc.sample_at !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(doc.sample_at) || Number.isNaN(Date.parse(doc.sample_at))) throw new Error('invalid sample_at');
+  for (const k of ['resolution_km', 'valid_cells', 'total_cells']) if (!Number.isFinite(doc[k])) throw new Error('invalid ' + k);
   return doc;
 }
