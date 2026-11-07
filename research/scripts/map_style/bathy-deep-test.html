@@ -14,11 +14,32 @@
   #note b { color: #8a1c1c; }
   #picker { position: absolute; right: 8px; top: 8px; z-index: 2; padding: 4px 8px; background: rgba(255,255,255,.85);
             border-radius: 3px; color: #222; }
+  /* MAPLAYER-TIDE-1: tide overlay (tide-layer.js) */
+  #tidebox { position: absolute; right: 8px; top: 44px; z-index: 3; max-width: 25em; padding: 6px 8px;
+             background: rgba(255,255,255,.9); border-radius: 3px; color: #14304f; }
+  #tidebox[hidden] { display: none; }
+  #tidebox input[type=range] { width: 100%; }
+  #tidebox .warn { color: #8a1c1c; font-weight: 600; }
+  #tidebox .fresh { font-size: 12px; }
+  .tide-mark { display: flex; align-items: center; gap: 4px; pointer-events: auto; }
+  .tide-arrow { filter: drop-shadow(0 0 1px rgba(10,37,64,.7)); line-height: 0; }
+  .tide-label { background: rgba(255,255,255,.85); border-radius: 3px; padding: 1px 4px; font-size: 11px;
+                line-height: 1.25; color: #10243a; white-space: nowrap; }
+  .tide-label b { display: block; }
+  .tide-label span { display: block; }
 </style>
 </head>
 <body>
 <div id="map"></div>
 <div id="picker"><label>Relief <select id="variant"></select></label></div>
+<div id="tidebox" hidden>
+  <label><input type="checkbox" id="tideon" checked> <b>Tide layer</b> (water level at tide stations)</label>
+  <div id="tidetime"></div>
+  <label>Time <input type="range" id="tideslider" min="-12" max="72" step="1" value="0"></label>
+  <div class="fresh" id="tidefresh"></div>
+  <div class="warn">Prediction, not an observation. Rising or falling water, not current direction or speed. NOT FOR NAVIGATION.</div>
+  <div class="fresh"><span style="color:#2e9e5b">Green &#9650; rising (flood)</span> · <span style="color:#d6452d">red &#9660; falling (ebb)</span> · grey near high or low. Arrow size follows the rate.</div>
+</div>
 <div id="note"><b>Research preview. Not for navigation.</b> Morro–Avila surveys; native coverage varies, mixed vertical references.
   Tan = no survey. <span id="readout"></span></div>
 <script src="/node_modules/pmtiles/dist/pmtiles.js"></script>
@@ -77,6 +98,39 @@ map.on('move', show);
 map.on('idle', () => { show(); window.__idle = true; });
 map.on('error', (e) => { window.__error = String(e.error && e.error.message || e.error); });
 window.__map = map;
+
+// MAPLAYER-TIDE-1: toggleable tide overlay. Open with tide=1. Data: var/tide/tide-layer-<name>.json from
+// scripts/build_tide_layer.py (private, git-ignored). tidedata=<url> picks another file (another sector),
+// t=<ISO time> pins the time shown (default: now), tideslider moves it -12..+72 h from there.
+if (q.get('tide')) {
+  const {addTideLayer, fmtPT, fmtPTDay} = await import('./tide-layer.js');
+  const url = q.get('tidedata') || '/var/tide/tide-layer-central-coast.json';
+  const box = document.getElementById('tidebox');
+  try {
+    const data = await (await fetch(url)).json();
+    const base = q.get('t') ? Date.parse(q.get('t')) : Date.now();
+    const layer = addTideLayer(map, maplibregl, data);
+    const ends = Math.min(...data.stations.map((s) => Date.parse(s.extremes[s.extremes.length - 1].t)));
+    const slider = document.getElementById('tideslider');
+    const when = () => base + (+slider.value) * 3600e3;
+    const upd = () => {
+      layer.setTime(when());
+      document.getElementById('tidetime').textContent = 'Showing ' + fmtPTDay(when()) +
+        (when() > ends ? ' (past the predictions)' : '');
+    };
+    slider.oninput = upd;
+    document.getElementById('tideon').onchange = (e) => layer.setVisible(e.target.checked);
+    document.getElementById('tidefresh').textContent = 'Data: ' + data.source.name + ', ' + data.stations.length +
+      ' stations, fetched ' + fmtPTDay(Date.parse(data.fetched_at)) +
+      '; predictions run to ' + fmtPTDay(ends) + '. Heights are feet above MLLW.';
+    upd();
+    box.hidden = false;
+    window.__tide = layer;
+  } catch (err) {
+    box.hidden = false;
+    box.textContent = 'Tide layer failed to load (' + err + '). Build it with scripts/build_tide_layer.py.';
+  }
+}
 </script>
 </body>
 </html>
