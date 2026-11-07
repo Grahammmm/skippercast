@@ -1,5 +1,5 @@
 // SCFEAT-CATCH-1: this store is deliberately separate from the account catch API.
-// No network, geolocation, URL state or telemetry. A blank means no catch recorded.
+// No network, device-position reads, URL state or telemetry. A blank means no catch recorded.
 import type {ConditionsForecast} from './conditions.ts';
 import {markForecast, type MarkForecast, type MarkReading} from './brief/mark-forecast.ts';
 

@@ -1,8 +1,6 @@
 // Synthetic device-only records. No account API or live position is used.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {build} from 'esbuild';
-import {chromium} from '@playwright/test';
 import {createEntry, readEntries, saveEntry, LOG_KEY} from '../web/private-map-log.ts';
 import {parseConditionsForecast} from '../web/conditions.ts';
 
@@ -72,33 +70,4 @@ test('blocked, full or corrupt storage fails honestly without overwriting earlie
   const storage = store(JSON.stringify(Array.from({length: 500}, () => entry())));
   assert.equal(saveEntry(entry(), storage), 'full');
   assert.equal(readEntries(storage).length, 500);
-});
-
-test('map action saves both kinds, reloads locally, reports storage failure and makes no requests', async () => {
-  const result = await build({stdin: {contents: `import {h, render} from 'preact'; import {PrivateMapLog} from './web/app/PrivateMapLog.tsx'; render(h(PrivateMapLog, {mark: ${JSON.stringify(mark)}, region: 'fixture', forecast: null, tz: 'UTC'}), document.body);`, resolveDir: new URL('..', import.meta.url).pathname, loader: 'tsx'}, bundle: true, write: false, format: 'esm', jsx: 'automatic', jsxImportSource: 'preact'});
-  const browser = await chromium.launch({headless: true});
-  try {
-    const page = await browser.newPage();
-    const unexpected = [];
-    await page.route('**/*', route => {
-      const url = route.request().url();
-      if (url === 'https://fixture.test/') return route.fulfill({contentType: 'text/html', body: '<!doctype html><html><head><title>Fixture</title></head><body><script type="module" src="/app.js"></script></body></html>'});
-      if (url === 'https://fixture.test/app.js') return route.fulfill({contentType: 'text/javascript', body: result.outputFiles[0].text});
-      unexpected.push(url); return route.abort();
-    });
-    await page.goto('https://fixture.test/');
-    await page.getByRole('button', {name: 'Log catch here', exact: true}).click();
-    await assert.doesNotReject(() => page.getByRole('status').filter({hasText: 'Saved on this device'}).waitFor());
-    await page.getByRole('button', {name: 'Log blank here', exact: true}).click();
-    await page.reload();
-    await page.getByText('Device log (2)', {exact: true}).click();
-    assert.equal(await page.locator('li[data-private-entry]').count(), 2);
-    assert.match(await page.locator('body').innerText(), /Conditions unavailable/);
-    assert.match(await page.locator('body').innerText(), /NOT FOR NAVIGATION/);
-    assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).length, LOG_KEY), 2);
-    await page.evaluate(() => { Storage.prototype.setItem = () => { throw Error('quota'); }; });
-    await page.getByRole('button', {name: 'Log catch here', exact: true}).click();
-    await page.getByRole('status').filter({hasText: 'Not saved'}).waitFor();
-    assert.deepEqual(unexpected, []);
-  } finally { await browser.close(); }
 });

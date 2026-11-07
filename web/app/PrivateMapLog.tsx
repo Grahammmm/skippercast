@@ -26,7 +26,7 @@ export function PrivateMapLog({mark, region, forecast, tz}: {
       <Button size="sm" onClick={() => save('catch')}>Log catch here</Button>
       <Button size="sm" onClick={() => save('blank')}>Log blank here</Button>
     </div>
-    <p role="status">{status}</p>
+    <p role={status ? 'status' : undefined}>{status}</p>
     <p>Only in this browser on this device; never uploaded or added to your account. Clearing site data loses these entries. Shared-device users can read them. NOT FOR NAVIGATION.</p>
     <details><summary>Device log ({entries?.length ?? 'unavailable'})</summary>
       <p>Conditions are model snapshots at capture time, not on-water observations. Wind and seas use the named regional forecast point. Gaps stay unavailable. <a href="/sources">Forecast sources</a></p>
