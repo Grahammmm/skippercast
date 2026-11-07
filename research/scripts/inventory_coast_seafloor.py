@@ -286,7 +286,8 @@ def usgs_name(title, res_m):
 
 
 def year_span(values):
-    ys = sorted({str(v)[:4] for v in values if v})
+    # every 4-digit year in each value, so an already-normalized 'YYYY-YYYY' range keeps both endpoints
+    ys = sorted({y for v in values if v for y in re.findall(r'(?<!\d)(?:19|20)\d{2}', str(v))})
     if not ys:
         return None
     return ys[0] if ys[0] == ys[-1] else f'{ys[0]}-{ys[-1]}'

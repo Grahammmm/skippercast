@@ -614,7 +614,7 @@
             "basis": "no release/publication date recorded for these 1 grid(s); CSUMB and NOAA catalogs record acquisition/survey dates only"
           },
           "acquisition_dates": {
-            "value": "2008",
+            "value": "2008-2009",
             "label": "MEASURED",
             "basis": "survey_dates in dist/data/noaa-regular-native-depth-review.json"
           }
@@ -765,7 +765,7 @@
             "basis": "no release/publication date recorded for these 5 grid(s); CSUMB and NOAA catalogs record acquisition/survey dates only"
           },
           "acquisition_dates": {
-            "value": "2008-2021",
+            "value": "2008-2022",
             "label": "MEASURED",
             "basis": "survey_dates in dist/data/noaa-regular-native-depth-review.json"
           }
@@ -995,7 +995,7 @@
             "basis": "no release/publication date recorded for these 1 grid(s); CSUMB and NOAA catalogs record acquisition/survey dates only"
           },
           "acquisition_dates": {
-            "value": "2008",
+            "value": "2008-2009",
             "label": "MEASURED",
             "basis": "survey_dates in dist/data/noaa-regular-native-depth-review.json"
           }

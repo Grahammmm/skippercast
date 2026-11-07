@@ -89,3 +89,19 @@ class TierToleranceTest(unittest.TestCase):
         self.assertEqual(tier_of(2.01), '5 m')
         out = classify_shallow([grid(2.000000000000003, 'confirmed', 'USGS SB')])
         self.assertEqual(out['tier'], '2 m')
+
+
+class AcquisitionRangeAggregationTest(unittest.TestCase):
+    def test_year_span_keeps_range_endpoints(self):
+        from research.scripts.inventory_coast_seafloor import year_span
+        self.assertEqual(year_span(['2008-2009']), '2008-2009')  # NOAA H11971: 2008-12-09 .. 2009-10-16
+        self.assertEqual(year_span(['2008-12-09', '2009-10-16']), '2008-2009')
+        self.assertEqual(year_span(['2008-2009', '2021-2022']), '2008-2022')
+        self.assertEqual(year_span(['2010', '2010']), '2010')
+        self.assertIsNone(year_span([None, '']))
+
+    def test_date_figs_aggregates_normalized_ranges(self):
+        from research.scripts.inventory_coast_seafloor import date_figs
+        entries = [{'release_date': None, 'acquisition': '2008-2009'}, {'release_date': None, 'acquisition': '2022'}]
+        _, acq = date_figs(entries, 'rb', 'ab')
+        self.assertEqual(acq['value'], '2008-2022')
