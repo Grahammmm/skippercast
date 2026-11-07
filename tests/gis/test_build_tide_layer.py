@@ -1,4 +1,5 @@
 """MAPLAYER-TIDE-1: tide layer builder: sector selection, CO-OPS parsing, private output. No network."""
+import argparse
 import datetime as dt
 import json
 from pathlib import Path
@@ -98,6 +99,21 @@ class BuildTests(unittest.TestCase):
         btl.write_private({'k': 1}, target)
         self.assertEqual(json.loads(target.read_text()), {'k': 1})
         self.assertFalse(target.with_suffix('.part').exists())
+
+    def test_northern_sector_gets_wide_default_longitude(self):
+        listing = {'stations': [{'id': '9419750', 'name': 'Crescent City', 'lat': 41.74561, 'lng': -124.18439, 'type': 'R'}]}
+        self.assertEqual(btl.default_lon(['del-norte']), btl.CALIFORNIA_LON)
+        self.assertEqual(btl.default_lon(btl.CENTRAL_COAST.split(',')), btl.DEFAULT_LON)
+        def fetch(url):
+            return listing if url == btl.STATIONS_URL else GOOD
+        doc = btl.build(self.sectors, ['del-norte'], 'north', self.now, 8, fetch=fetch, pause=0)
+        self.assertEqual([s['id'] for s in doc['stations']], ['9419750'])
+
+    def test_name_must_be_publication_guard_shape(self):
+        self.assertEqual(btl.layer_name('south-coast-2'), 'south-coast-2')
+        for bad in ('Central_Coast', 'a/b', ''):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                btl.layer_name(bad)
 
 
 if __name__ == '__main__':

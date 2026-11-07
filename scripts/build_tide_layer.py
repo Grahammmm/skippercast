@@ -27,6 +27,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 from pathlib import Path
 import sys
 import time
@@ -37,7 +38,9 @@ ROOT = Path(__file__).resolve().parent.parent
 STATIONS_URL = 'https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions'
 DATA_URL = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter'
 CENTRAL_COAST = 'pigeon-monterey,monterey-sur,big-sur,sur-san-simeon,cambria-morro,morro-conception'
-DEFAULT_LON = (-123.0, -119.4)
+DEFAULT_LON = (-123.0, -119.4)      # central coast (the default sectors)
+CALIFORNIA_LON = (-125.0, -117.0)   # any sector outside the central coast: whole California outer coast
+NAME_RE = re.compile(r'^[a-z0-9-]+$')   # same shape scripts/client-build.mjs keeps unpublished
 APPLICATION = 'skippercast-maplayer-tide-1'
 SCHEMA = 'skippercast.tide-layer.v1'
 LABELS = {
@@ -55,6 +58,17 @@ def sector_bounds(sectors_file, ids):
     if missing:
         raise SystemExit('unknown sector id(s): ' + ', '.join(missing))
     return [(i, by_id[i]['latitude'][0], by_id[i]['latitude'][1]) for i in ids]
+
+
+def default_lon(ids):
+    """Longitude window for the chosen sectors: central-coast bounds only when every sector is central."""
+    return DEFAULT_LON if set(ids) <= set(CENTRAL_COAST.split(',')) else CALIFORNIA_LON
+
+
+def layer_name(value):
+    if not NAME_RE.match(value):
+        raise argparse.ArgumentTypeError('--name must be lowercase letters, digits and hyphens only')
+    return value
 
 
 def select_stations(stations, bands, lon_range=DEFAULT_LON):
@@ -110,7 +124,8 @@ def predictions_url(station_id, begin, end):
     return DATA_URL + '?' + urllib.parse.urlencode(q)
 
 
-def build(sectors_file, ids, name, now, days, fetch=http_json, lon_range=DEFAULT_LON, pause=0.2):
+def build(sectors_file, ids, name, now, days, fetch=http_json, lon_range=None, pause=0.2):
+    lon_range = lon_range or default_lon(ids)
     bands = sector_bounds(sectors_file, ids)
     listing = fetch(STATIONS_URL)
     chosen = select_stations(listing['stations'], bands, lon_range)
@@ -150,13 +165,18 @@ def write_private(doc, out_path):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
-    ap.add_argument('--name', default='central-coast')
+    ap.add_argument('--name', default='central-coast', type=layer_name, help='lowercase letters, digits, hyphens')
     ap.add_argument('--sectors', default=CENTRAL_COAST, help='ids from catalog/coastal-sectors.json')
+    ap.add_argument('--lon-min', type=float, help='override the longitude window (west edge)')
+    ap.add_argument('--lon-max', type=float, help='override the longitude window (east edge)')
     ap.add_argument('--days', type=int, default=8, help='days ahead (the app fetches 8)')
     ap.add_argument('--output', help='default var/tide/tide-layer-<name>.json')
     args = ap.parse_args(argv)
     now = dt.datetime.now(dt.timezone.utc).replace(second=0, microsecond=0)
-    doc = build(ROOT / 'catalog' / 'coastal-sectors.json', args.sectors.split(','), args.name, now, args.days)
+    ids = args.sectors.split(',')
+    lon = default_lon(ids)
+    lon = (lon[0] if args.lon_min is None else args.lon_min, lon[1] if args.lon_max is None else args.lon_max)
+    doc = build(ROOT / 'catalog' / 'coastal-sectors.json', ids, args.name, now, args.days, lon_range=lon)
     out = args.output or ROOT / 'var' / 'tide' / f'tide-layer-{args.name}.json'
     write_private(doc, out)
     print(f'{len(doc["stations"])} stations, {len(doc["failed"])} failed -> {out}')
