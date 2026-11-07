@@ -264,5 +264,101 @@ class BuildTests(unittest.TestCase):
             self.assertEqual(bt.main(['--source', str(path), '--minzoom', '9', '--maxzoom', '3']), 2)
 
 
+class EnhancementTests(unittest.TestCase):
+    SIZE = bt.TILE + 2 * bt.ENHANCED_PAD
+
+    def ridged_window(self, nodata_cols=0):
+        yy, xx = np.mgrid[0:self.SIZE, 0:self.SIZE].astype('float64')
+        depth = 25 + 0.04 * xx + 1.5 * np.sin(xx / 6.0) * np.exp(-((yy - 128) / 60) ** 2)
+        window = (-depth).astype('float32')
+        window[:, :nodata_cols] = NODATA
+        return window, window == NODATA
+
+    def render(self, variant, window, invalid):
+        tiles = bt.render_zoom({(3, 4): (window, invalid, 15.0)}, 13, bt.ENHANCE[variant])
+        return decode_png(tiles[(13, 3, 4)])
+
+    def test_variants_step_up_and_base_is_the_default_look(self):
+        keys = ('ve_boost', 'gain_boost', 'unsharp', 'light2', 'curv', 'ev')
+        for key in keys:
+            values = [bt.ENHANCE[v][key] for v in ('base', 'mild', 'medium', 'strong')]
+            self.assertEqual(values, sorted(values), key)
+            self.assertEqual(values[0], 0)
+        self.assertIs(bt.ENHANCE['base'], bt.BASE_ENHANCE)
+        self.assertEqual(bt.pad_for(bt.ENHANCE['base']), bt.PAD)
+        self.assertGreater(bt.pad_for(bt.ENHANCE['mild']), bt.PAD)
+        self.assertEqual(bt.style_for_zoom(13), bt.style_for_zoom(13, bt.BASE_ENHANCE))
+        # the boost on vertical exaggeration and shading is a shelf-zoom effect: none at the canyon zoom
+        self.assertEqual(bt.style_for_zoom(11, bt.ENHANCE['strong'])['ve'], bt.style_for_zoom(11)['ve'])
+        self.assertGreater(bt.style_for_zoom(13, bt.ENHANCE['strong'])['ve'], bt.style_for_zoom(13)['ve'])
+        self.assertEqual(bt.lights_for(bt.ENHANCE['base']), bt.LIGHTS)
+        self.assertAlmostEqual(sum(w for _, w in bt.lights_for(bt.ENHANCE['strong'])), 1.0)
+
+    def test_stronger_variants_show_more_relief_and_keep_nodata_clear(self):
+        window, invalid = self.ridged_window(nodata_cols=40)
+        spread = {}
+        for variant in bt.ENHANCE:
+            pixels = self.render(variant, window, invalid)
+            self.assertTrue((pixels[:, :28, 3] == 0).all())     # no survey stays transparent
+            self.assertTrue((pixels[:, 40:, 3] == 255).all())
+            spread[variant] = pixels[100:150, 60:200, :3].astype(float).sum(axis=2).std()
+        self.assertLess(spread['base'], spread['medium'])
+        self.assertLess(spread['medium'], spread['strong'])
+        self.assertNotEqual(spread['mild'], spread['base'])   # (mild's opposite light can cancel a one-sided test pattern)
+
+    def test_the_boost_does_not_draw_a_ridge_along_the_survey_edge(self):
+        from scipy import ndimage
+        window, invalid = self.ridged_window(nodata_cols=60)
+        intensity = np.random.default_rng(3).random(window.shape)
+        boosted = bt.local_contrast(intensity, invalid, 15.0, bt.ENHANCE['strong'])
+        near_edge = ndimage.binary_dilation(invalid, iterations=1) & ~invalid
+        self.assertTrue(near_edge.any())
+        self.assertTrue(np.allclose(boosted[near_edge], intensity[near_edge]))   # untouched at the edge
+        self.assertFalse(np.allclose(boosted[:, 200:], intensity[:, 200:]))      # but working inside the survey
+        # bounded: no cell moves by more than amount * clip
+        limit = bt.ENHANCE['strong']['unsharp'] * bt.ENHANCE['strong']['clip']
+        self.assertLessEqual(np.abs(boosted - intensity).max(), limit + 1e-9)
+
+    def test_adjacent_tiles_match_across_their_shared_edge(self):
+        # one surface cut into two tile windows 256 px apart: the enhanced shading must agree at the seam
+        yy, xx = np.mgrid[0:self.SIZE, 0:self.SIZE + 256].astype('float64')
+        surface = (-(25 + 0.03 * xx + 2.0 * np.sin(xx / 5.0 + yy / 9.0))).astype('float32')
+        left, right = surface[:, :self.SIZE], surface[:, 256:256 + self.SIZE]
+        no_mask = np.zeros(left.shape, bool)
+        tiles = bt.render_zoom({(0, 0): (left, no_mask, 15.0), (1, 0): (right, no_mask, 15.0)}, 13, bt.ENHANCE['strong'])
+        a, b = decode_png(tiles[(13, 0, 0)]), decode_png(tiles[(13, 1, 0)])
+        # columns just inside each tile around the seam are neighbours of one another on the source surface
+        step_across = np.abs(a[:, -1, :3].astype(int) - b[:, 0, :3].astype(int)).mean()
+        step_within = np.abs(a[:, -2, :3].astype(int) - a[:, -1, :3].astype(int)).mean()
+        self.assertLess(step_across, step_within * 1.6 + 2)
+
+    def test_outputs_are_named_so_the_public_build_guard_catches_them(self):
+        names = {v: bt.output_for(v).name for v in bt.ENHANCE}
+        self.assertEqual(names['base'], 'morro-bay-seafloor-deep.pmtiles')
+        self.assertEqual(names['strong'], 'morro-bay-seafloor-deep.pmtiles')
+        self.assertEqual(bt.output_for('strong').parent.name, 'strong')
+        self.assertEqual(bt.output_for('mild').parent, bt.DEFAULT_OUTPUT.parent / 'mild')
+        self.assertEqual(bt.output_for('mild').parent.parts[-4:], ('var', 'seafloor', 'tiles', 'mild'))
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'elevation.tif'
+            write_survey(source)
+            self.assertEqual(bt.main(['--source', str(source), '--variant', 'all', '--output', str(Path(directory) / 'x')]), 2)
+
+    def test_enhanced_build_is_repeatable_and_records_its_settings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'elevation.tif'
+            write_survey(source)
+            first, second = (Path(directory) / n for n in ('a.pmtiles', 'b.pmtiles'))
+            bt.build(source, first, 12, 12, log=lambda *_: None, variant='medium')
+            bt.build(source, second, 12, 12, log=lambda *_: None, variant='medium')
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+            _, metadata, by_id, _ = read_archive(first)
+            self.assertEqual(metadata['relief_variant'], 'medium')
+            self.assertEqual(metadata['relief_settings'], bt.ENHANCE['medium'])
+            self.assertTrue(by_id)
+            for png in by_id.values():
+                self.assertEqual(decode_png(png).shape, (256, 256, 4))
+
+
 if __name__ == '__main__':
     unittest.main()
