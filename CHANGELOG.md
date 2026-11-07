@@ -3,6 +3,8 @@
 ## Unreleased
 
 - SCFEAT-LEGALPACK-1: the trip planner now links directly to the offline save dialog. Each saved region has a cache-checked legal checklist with included/missing files, saved and source dates, rule effective windows, official source links and stale/unknown-date warnings. Presence is not legal clearance; NOT FOR NAVIGATION.
+- SCFEAT-CATCH-1: selected map marks with a visible position offer one-tap catch or blank (no catch) entries in a separate private device log. Entries keep the selected position, capture time and already-loaded model conditions with sources, clocks and explicit gaps. Nothing is uploaded or added to an account; clearing browser site data loses the log. No live GPS, species/count inference or export. NOT FOR NAVIGATION.
+
 - SCFEAT-ROUTE-1: the trip planner can download a separate GPX route through 2–12 selected stops, avoiding current protected-area polygons and their 70 m planning margin on the existing shoreline water screen. The route carries boundary-check time, sources and NOT FOR NAVIGATION warnings; a missing route is withheld, never replaced by a straight line. No live position or passage clearance.
 
 - MAPSTYLE-1: `scripts/build_bathy_tiles.py` turns the 10 m Morro Bay survey raster into styled "Deep" seafloor base tiles (cmocean deep colours, nonlinear depth stretch, four-direction hillshade) as a local PMTiles archive, zooms 8-13, with no-survey cells fully transparent; `research/scripts/map_style/bathy-deep-test.html` shows it as the base layer of a MapLibre test page. Nothing in the app map changes and the archive is not committed.
