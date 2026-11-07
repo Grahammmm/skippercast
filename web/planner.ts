@@ -28,6 +28,7 @@ import {track} from './telemetry.ts';
 import {ensureLandWater, landWater as landWaterState, loadLandWaterLines, withheldNote, type LandWaterLines, type LandWaterModel, type Place} from './land-water.ts';
 import {ROUTE_BUDGET, type RouteFn} from './ranking.ts';
 import {waterRoute, type RouteFailure} from './route.ts';
+import {buildProtectedRoute, type RouteScreen} from './protected-route.ts';
 import {coordinates, region as activeRegion} from './state.ts';
 import {checkGpx} from './gpx-check.ts';
 import {placeRefused, screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
@@ -502,6 +503,31 @@ export function createPlanner(deps: PlannerDeps) {
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
+  const routing = signal(false), routeStatus = signal('');
+  async function exportRouteFile(): Promise<File> {
+    const key = fileKey();
+    // Retain all existing consent, publication, whole-reef and export guards.
+    await exportFile('gpx');
+    await landWater(region.id, selected());
+    const context = await routeContext(region.id);
+    if (disposed || key !== fileKey()) throw Error('Plan changed while routing. Try again.');
+    buildExport(request());
+    const stops = selected();
+    // The optional launch is stored last by the legacy waypoint export, but is
+    // the starting stop for this separate route. The remaining selection keeps its order.
+    if (launchPoint().length && stops.length) stops.unshift(stops.pop()!);
+    const r = buildProtectedRoute({...context, screen: screen as RouteScreen, stops,
+      title: `${draft.value.name} · ${draft.value.date || today}`, now: now()});
+    routeStatus.value = `Boundary check: ${r.checkedAt} · ${r.nm.toFixed(1)} nm planning route. NOT FOR NAVIGATION.`;
+    return new File([r.gpx], `SkipperCast-${region.id}-${draft.value.date || today}-planning-route.gpx`, {type:'application/gpx+xml'});
+  }
+  async function deliverRoute(): Promise<void> {
+    if (disposed || routing.value) return;
+    routing.value = true; routeStatus.value = '';
+    try { const file = await exportRouteFile(); if (!disposed) save(file); }
+    catch (error) { if (!disposed) routeStatus.value = (error as Error).message; }
+    finally { routing.value = false; }
+  }
   const preparing = signal(false);
   let prepared: {file: File; key: string; at: number; hash?: string} | null = null, pending: Promise<void> | null = null, disposed = false, attempted = '';
   const fileKey = (): string => JSON.stringify([draft.value, tick.value, allowResearch.value, contourTracks.value, contourFile.value, filtersDirty.value, restorePending.value, launch.value, activeRegion.value]);
@@ -691,6 +717,7 @@ export function createPlanner(deps: PlannerDeps) {
     alertStatus, alertBusy, alertSaved, alertIsSaved: (body: unknown): boolean => alertSavedKeys.value.includes(JSON.stringify(body)), setAlertOpen, alertPreview, saveAlert,
     setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
+    routing, routeStatus, exportRouteFile, deliverRoute,
     /** For tests and a region change: stop drawing the ranked set. */
     dispose: () => { disposed = true; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); stopAlert(); resetAlert(); },
   };
