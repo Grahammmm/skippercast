@@ -62,7 +62,7 @@ test('copyStatic never publishes the local-only seafloor Deep archive, its .part
   const out = await mkdtemp(join(tmpdir(), 'sc-static-out-'));
   try {
     await mkdir(join(src, 'tiles'));
-    for (const name of ['morro-bay-seafloor-deep.pmtiles', 'morro-bay-seafloor-deep.part', 'tide-layer-central-coast.json', 'tide-layer-central-coast.part', 'tide-layer-Central_Coast.json', 'tide-layer-Central_Coast.part', 'ok.pmtiles']) await writeFile(join(src, 'tiles', name), 'x');
+    for (const name of ['morro-bay-seafloor-deep.pmtiles', 'morro-bay-seafloor-deep.part', 'morro-bay-seafloor-deep-mild.pmtiles', 'morro-bay-seafloor-deep-strong.part', 'tide-layer-central-coast.json', 'tide-layer-central-coast.part', 'tide-layer-Central_Coast.json', 'tide-layer-Central_Coast.part', 'ok.pmtiles']) await writeFile(join(src, 'tiles', name), 'x');
     await copyStatic(src, out);
     assert.deepEqual(await readdir(join(out, 'tiles')), ['ok.pmtiles']);
   } finally {
