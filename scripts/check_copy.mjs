@@ -306,6 +306,7 @@ export function catalogueProblems(root = ROOT) {
 export const COVERAGE_ROOTS = ['web/app', 'web/brief', 'web/landing'];
 export const NOT_COVERED = {
   'web/app/PrivateMapLog.tsx': 'SCFEAT-CATCH-1 bounded device-only first slice; English entry controls and stored snapshot text, Spanish deferred',
+  'web/app/PreviewLayers.tsx': 'MAPLIVE-1 owner-only private map previews; admin-only research wording marked lang="en", outside the Spanish scope like the admin views (#1512)',
   'web/app/App.tsx': 'composition and region loading; no visible text of its own',
   'web/app/CoastMarkup.tsx': 'renders the coast package\'s chart markup, whose labels are drawn in packages/coast; deferred, not translated here',
   'web/app/Desktop.tsx': 'desktop layout composition; its only literals are the Brief and Fleet pane aria-labels, deferred',

@@ -17,7 +17,7 @@ import type {Presentation} from '../coast-context.ts';
 import {createAerial} from '../map/aerial.ts';
 import {createCharterGrounds} from '../map/charter-grounds.ts';
 import {createShore} from '../map/shore.ts';
-import {chartFailed, createChart} from '../map/chart.ts';
+import {chartFailed, createChart, unavailable} from '../map/chart.ts';
 import {createCommercialAis} from '../map/commercial-ais.ts';
 import {createDepthContours} from '../map/depth-contours.ts';
 import {createClouds} from '../map/clouds.ts';
@@ -30,6 +30,7 @@ import {createFronts} from '../map/fronts.ts';
 import {createWaterTemp} from '../map/sst.ts';
 import {createChlorophyll} from '../map/chlorophyll.ts';
 import {createSwell} from '../map/swell.ts';
+import {createPreviewLayers} from '../map/preview-layers.ts';
 import {createStations} from '../map/stations.ts';
 import {dailyFeed} from '../brief/Brief.tsx';
 import {createWind} from '../map/wind.ts';
@@ -118,7 +119,8 @@ export function MapStage({children, clock}: {children?: ComponentChildren; clock
           engine => createStations({engine, zone, feed: () => dailyFeed.value}),
           engine => createAerial({engine, offer: () => currentRegionInfo()?.aerial ?? null}), engine => createDepthContours({engine, host: chartHost.current!}),
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
-          engine => createReach({engine, host: chartHost.current!})]})]});
+          engine => createReach({engine, host: chartHost.current!}),
+          engine => createPreviewLayers({engine, failures: {list: unavailable, clear: layer => { unavailable.value = unavailable.peek().filter(l => l !== layer); }}})]})]});
     return () => stage.destroy();
   }, [clock]);
   const shown = shownPresentation.value, lang = language.value;
