@@ -18,7 +18,8 @@
 </head>
 <body>
 <div id="map"></div>
-<div id="picker"><label>Relief <select id="variant"></select></label></div>
+<div id="picker"><label>Relief <select id="variant"></select></label>
+  <div id="layers"><label><input type="checkbox" id="currents-on"> Surface currents (HF radar)</label></div></div>
 <div id="note"><b>Research preview. Not for navigation.</b> Morro Bay 10 m survey; mixed vertical references.
   Tan = no survey. <span id="readout"></span></div>
 <script src="/node_modules/pmtiles/dist/pmtiles.js"></script>
@@ -77,6 +78,38 @@ map.on('move', show);
 map.on('idle', () => { show(); window.__idle = true; });
 map.on('error', (e) => { window.__error = String(e.error && e.error.message || e.error); });
 window.__map = map;
+
+// MAPLAYER-CURRENT-1: surface currents (style "current 5": vorticity tint + streamlines) from real HF-radar data.
+// Data: python research/scripts/map_style/fetch_hfr_currents.py --sector central-coast  ->  var/currents/hfr-central-coast-6km.json
+// Options: currents=on|off (default on), current_data=<url of another sector's json>.
+// The data time is always written in the note; if the file is missing the page says so and draws nothing.
+import {addCurrents, freshnessText} from './currents-layer.js';
+const box = document.getElementById('currents-on');
+const note = document.getElementById('note');
+const line = document.createElement('div');
+note.appendChild(line);
+const dataUrl = q.get('current_data') || '/var/currents/hfr-central-coast-6km.json';
+let overlay = null;
+const paintLine = () => {
+  line.hidden = !box.checked;
+};
+map.on('load', async () => {
+  try {
+    const doc = await (await fetch(dataUrl)).json();
+    overlay = addCurrents(map, doc, {visible: q.get('currents') !== 'off'});
+    box.checked = q.get('currents') !== 'off';
+    line.innerHTML = '<b>Surface currents, not for navigation.</b> ' + freshnessText(doc) + '. Near-surface flow only; '
+      + 'colour = spin (red counter-clockwise, blue clockwise); lines follow the flow; no colour = no radar vector.';
+    window.__currents = doc.sample_at;
+  } catch (e) {
+    line.textContent = 'Surface currents: data file not found (' + dataUrl + '). Run research/scripts/map_style/fetch_hfr_currents.py.';
+    box.disabled = true;
+    window.__error = String(e);
+  }
+  paintLine();
+  window.__currentsReady = true;
+});
+box.onchange = () => { if (overlay) overlay.setVisible(box.checked); paintLine(); };
 </script>
 </body>
 </html>
