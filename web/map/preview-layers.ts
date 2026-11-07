@@ -117,10 +117,12 @@ const setStatus = (id: PreviewId, status: PreviewStatus | null): void => {
 export function createPreviewLayers(o: {
   engine: ReadonlySignal<Engine | null>; fetchFn?: typeof fetch; now?: () => Date; page?: () => string;
   loaders?: Readonly<Record<PreviewId, PreviewLoader>>; access?: () => boolean;
+  /** Registry layers the Chart marked unavailable (web/map/chart.ts `unavailable`), and how to forget one. A source that fails after attach (a missing image, an unreadable archive) arrives here. */
+  failures?: {readonly list: ReadonlySignal<readonly string[]>; clear(layer: string): void};
 }) {
   const {fetchFn = (...args: Parameters<typeof fetch>) => fetch(...args), now = () => new Date(), page = () => location.href,
     loaders = PREVIEW_LOADERS, access = () => previewAccess()} = o;
-  const live = new Map<PreviewId, {engine: Engine; abort: AbortController; handle: PreviewHandle | null}>();
+  const live = new Map<PreviewId, {engine: Engine; abort: AbortController; handle: PreviewHandle | null; failed: boolean}>();
   const stop = (id: PreviewId): void => {
     const item = live.get(id);
     if (!item) return;
@@ -129,9 +131,18 @@ export function createPreviewLayers(o: {
     try { item.handle?.destroy(); } catch { /* the map may already be gone */ }
     setStatus(id, null);
   };
+  const FAILED = 'the map could not load this layer\'s image or tiles';
+  /** A source failed after the layer reported ready: draw nothing and read unavailable, not ready. */
+  function fail(id: PreviewId, item: {handle: PreviewHandle | null; failed: boolean}): void {
+    item.failed = true;
+    try { item.handle?.destroy(); } catch { /* the map may already be gone */ }
+    item.handle = null;
+    setStatus(id, {state: 'unavailable', text: `Unavailable: ${FAILED}. Nothing is drawn.`});
+  }
   async function start(id: PreviewId, engine: Engine): Promise<void> {
-    const abort = new AbortController(), item = {engine, abort, handle: null as PreviewHandle | null};
+    const abort = new AbortController(), item = {engine, abort, handle: null as PreviewHandle | null, failed: false};
     live.set(id, item);
+    o.failures?.clear(`preview-${id}`);
     const report = (status: PreviewStatus): void => { if (live.get(id) === item) setStatus(id, status); };
     report({state: 'loading', text: 'Loading…'});
     try {
@@ -140,6 +151,7 @@ export function createPreviewLayers(o: {
       const handle = await attach({engine, fetchFn, now, url: path => new URL(path, page()).href, signal: abort.signal, report});
       if (abort.signal.aborted) { handle?.destroy(); return; }
       item.handle = handle;
+      if (item.failed) fail(id, item);
     } catch (error) {
       if (!abort.signal.aborted) report({state: 'unavailable', text: `Unavailable: ${error instanceof Error ? error.message : 'could not load'}. Nothing is drawn.`});
     }
@@ -150,7 +162,11 @@ export function createPreviewLayers(o: {
     if (!e || !open) return;
     for (const id of on) if (!live.has(id)) void start(id, e);
   });
+  const watch = o.failures ? effect(() => {
+    const bad = o.failures!.list.value;
+    for (const [id, item] of live) if (!item.failed && bad.includes(`preview-${id}`)) fail(id, item);
+  }) : () => {};
   return {
-    destroy() { dispose(); for (const id of [...live.keys()]) stop(id); },
+    destroy() { dispose(); watch(); for (const id of [...live.keys()]) stop(id); },
   };
 }

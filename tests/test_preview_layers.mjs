@@ -191,3 +191,34 @@ test('the one /api/session read sets the admin flag, and any later non-admin ans
   assert.equal(P.previewAccess(), false);
   asSession({state: 'loading'});
 });
+
+test('the chlorophyll ramp ends are the file\'s own scale', async () => {
+  const doc = {bounds: [-121, 35, -120, 36], sample_at: new Date(Date.now() - 3600e3).toISOString(), max_age_hours: 96, style: {legend: [[0.05, '#112233'], [0.5, '#336699'], [15, '#ffee00']]}};
+  const reports = [];
+  const attach = await P.PREVIEW_LOADERS.chlorophyll();
+  const handle = await attach({engine: fakeEngine(), fetchFn: async () => new Response(JSON.stringify(doc)), now: () => new Date(), url: p => new URL(p, 'https://x.test/').href, signal: new AbortController().signal, report: s => reports.push(s)});
+  assert.deepEqual([reports.at(-1).ramp.low, reports.at(-1).ramp.high], ['0.05 mg/m³', '15+']);
+  handle.destroy();
+});
+
+test('a source that fails after the layer reported ready reads unavailable and draws nothing', async () => {
+  fresh(); asSession(admin);
+  const engine = fakeEngine(), failed = signal([]), cleared = [];
+  const loaders = Object.fromEntries(P.PREVIEW_IDS.map(id => [id, async () => async ctx => {
+    ctx.engine.setOverlay(`preview-${id}`, {}); ctx.report({state: 'ready', text: 'ok'});
+    return {destroy() { ctx.engine.setOverlay(`preview-${id}`, null); }};
+  }]));
+  const layer = P.createPreviewLayers({engine: signal(engine), loaders, failures: {list: failed, clear: l => { cleared.push(l); failed.value = failed.value.filter(x => x !== l); }}});
+  P.previewOn.value = ['chlorophyll', 'seafloor'];
+  await tick();
+  assert.equal(P.previewStatus.value.chlorophyll.state, 'ready');
+  failed.value = ['preview-chlorophyll'];
+  assert.equal(P.previewStatus.value.chlorophyll.state, 'unavailable');
+  assert.equal(P.previewStatus.value.seafloor.state, 'ready', 'only the failing layer changes');
+  assert.deepEqual(engine.calls.at(-1), ['preview-chlorophyll', 'remove']);
+  assert.deepEqual(cleared.sort(), ['preview-chlorophyll', 'preview-seafloor']);
+  P.previewOn.value = ['seafloor']; await tick();
+  P.previewOn.value = ['seafloor', 'chlorophyll']; await tick();
+  assert.equal(P.previewStatus.value.chlorophyll.state, 'ready', 'switching it off and on tries again');
+  layer.destroy(); fresh(); asSession({state: 'loading'});
+});

@@ -221,8 +221,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC0452-05: MapStage accepts the shared clock and keys its stage effect on
   // that clock's identity. BODY09 never mounts MapStage; the Reports catch path,
   // paint, backdrop, assertions and thresholds remain unchanged. Rebind MapStage.tsx.
-  // MAPLIVE-1: MapStage.tsx only adds one more Chart layer (createPreviewLayers); no class, colour or paint change, and BODY09 never mounts MapStage.
-  "web/app/MapStage.tsx": "9a01830da6f227cf6608a271ee0f61dd4f7e4d749965715a69794db71bb8dffa",
+  // MAPLIVE-1: MapStage.tsx only adds one more Chart layer (createPreviewLayers, passing the Chart unavailable list); no class, colour or paint change, and BODY09 never mounts MapStage.
+  "web/app/MapStage.tsx": "5ab4d95d39768d31fc0851cb0967ddd322bf63b0bdaf1d9801a023e745112a1c",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.

@@ -10,7 +10,8 @@ interface ChlDoc {bounds: [number, number, number, number]; sample_at: string; m
 export function readChlorophyll(raw: unknown): ChlDoc {
   const d = raw as Partial<ChlDoc> | null;
   if (!d || !Array.isArray(d.bounds) || d.bounds.length !== 4 || !d.bounds.every(Number.isFinite) || typeof d.sample_at !== 'string'
-    || !(Number(d.max_age_hours) > 0) || !Array.isArray(d.style?.legend) || d.style.legend.length < 2) throw new Error('chlorophyll file is not valid');
+    || !(Number(d.max_age_hours) > 0) || !Array.isArray(d.style?.legend) || d.style.legend.length < 2
+    || !d.style.legend.every(stop => Array.isArray(stop) && Number.isFinite(stop[0]) && stop[0] > 0 && typeof stop[1] === 'string')) throw new Error('chlorophyll file is not valid');
   return d as ChlDoc;
 }
 
@@ -26,7 +27,9 @@ export const attach: PreviewAttach = async ctx => {
   const d = readChlorophyll(await getJson(ctx, PREVIEW_DATA.chlorophyll));
   if (ctx.signal.aborted) return null;
   const usable = () => freshWithin(d.sample_at, d.max_age_hours, ctx.now());
-  const ramp = {colours: d.style.legend.map(stop => stop[1]), low: '0.01 mg/m³', high: '100+'};
+  // The end labels are the file's own scale (build_chlorophyll_layer.py VMIN to VMAX); values outside it are drawn at the end colours.
+  const values = d.style.legend.map(stop => stop[0]);
+  const ramp = {colours: d.style.legend.map(stop => stop[1]), low: `${Math.min(...values)} mg/m³`, high: `${Math.max(...values)}+`};
   if (!usable()) {
     ctx.report({state: 'stale', dataTime: d.sample_at, text: `Sample ${utc(d.sample_at)} is older than its ${d.max_age_hours} h limit or not valid. Withheld.`});
     return null;
