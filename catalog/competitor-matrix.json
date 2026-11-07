@@ -374,7 +374,7 @@
      "tier": "free",
      "source": "layers",
      "note": "NOAA NCEP wind arrows, hourly over the 7-day dock",
-     "resolution": "UNVERIFIED delivered resolution (sources disagree, not resolved here): legend basis (catalog/app/strings.json) says GFS native ~13 km tiles; layer inventory gives a 0.25 degree grid (GFS 0.25 / IFS 0.25), labelled ESTIMATED from model ids. The map draws a regional sampling grid whose step the legend prints; headlands and harbors are not resolved (web/map/wind.ts)",
+     "resolution": "Three different resolutions, none verified as the delivered one. (1) Native model: legend basis (catalog/app/strings.json) says GFS 'native approximately 13 km forecast tiles' (a legend claim, not checked against the data); (2) delivered grid: layer inventory identifies 0.25 degree grids (GFS 0.25 / IFS 0.25), labelled ESTIMATED from model ids, which is coarser than 13 km and conflicts with (1) - UNRESOLVED discrepancy, so no delivered resolution is stated as verified; (3) sampling: the map draws a regional forecast-grid sampling step that the legend prints at runtime (web/map/wind.ts), not a model resolution. Headlands and harbors are not resolved",
      "cadence": "Update frequency: GFS runs 6-hourly, ECMWF 12-hourly (inventory, MEASURED); forecast tiles republished at the start of each live cycle (30 min loop) and in the daily job. Age gates (not a frequency) disagree: wind.ts withholds runs older than 36 h or retrievals older than 6 h; inventory lists an 18 h app limit (36 h in intelligence)",
      "coverage": "Whole coast; coarse fields miss headland and harbor effects (inventory, ESTIMATED)",
      "attr_source": "inventory"
