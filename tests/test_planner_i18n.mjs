@@ -161,3 +161,17 @@ test('planner_es_margin_is_inclusive: protected-area warnings say "{n} m o menos
     assert.ok(!/a \{n\} m de /.test(es), `${id} must not read as an exact distance`);
   }
 });
+
+
+test('route download UI keeps its warning, sources and busy/blocked state', () => {
+  const {p}=mk();
+  try {
+    ui.language.value='en';
+    assert.match(page(p),/NOT FOR NAVIGATION/);
+    assert.match(page(p),/wildlife.ca.gov/);assert.match(page(p),/fisheries.noaa.gov/);
+    assert.match(page(p),/id="export-route" disabled/);
+    p.routing.value=true;
+    assert.match(page(p),/Preparing planning route/);
+    ui.language.value='es';assert.match(page(p),/NO USAR PARA NAVEGAR/);
+  } finally {ui.language.value='en';p.dispose();}
+});
