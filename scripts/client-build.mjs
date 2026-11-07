@@ -37,7 +37,7 @@ export function hashName(name, buildId) {
 
 // Local-only build output of scripts/build_bathy_tiles.py (rights under review): never published,
 // even if someone points --output into dist/.
-const PRIVATE_OUTPUT = /(?:^|\/)morro-bay-seafloor-deep\.(?:pmtiles|part)$/;
+const PRIVATE_OUTPUT = /(?:^|\/)morro-bay-seafloor-deep(?:-[a-z]+)?\.(?:pmtiles|part)$/;
 
 /** Copy dist's static files (everything but module sources, build output and dot-entries). */
 export async function copyStatic(src, out, {only} = {}) {
