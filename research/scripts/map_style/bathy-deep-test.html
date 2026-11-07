@@ -135,38 +135,6 @@ map.on('idle', () => { show(); window.__idle = true; });
 map.on('error', (e) => { window.__error = String(e.error && e.error.message || e.error); });
 window.__map = map;
 
-// MAPLAYER-TIDE-1: toggleable tide overlay. Open with tide=1. Data: var/tide/tide-layer-<name>.json from
-// scripts/build_tide_layer.py (private, git-ignored). tidedata=<url> picks another file (another sector),
-// t=<ISO time> pins the time shown (default: now), tideslider moves it -12..+72 h from there.
-if (q.get('tide')) {
-  const {addTideLayer, fmtPT, fmtPTDay} = await import('./tide-layer.js');
-  const url = q.get('tidedata') || '/var/tide/tide-layer-central-coast.json';
-  const box = document.getElementById('tidebox');
-  try {
-    const data = await (await fetch(url)).json();
-    const base = q.get('t') ? Date.parse(q.get('t')) : Date.now();
-    const layer = addTideLayer(map, maplibregl, data);
-    const ends = Math.min(...data.stations.map((s) => Date.parse(s.extremes[s.extremes.length - 1].t)));
-    const slider = document.getElementById('tideslider');
-    const when = () => base + (+slider.value) * 3600e3;
-    const upd = () => {
-      layer.setTime(when());
-      document.getElementById('tidetime').textContent = 'Showing ' + fmtPTDay(when()) +
-        (when() > ends ? ' (past the predictions)' : '');
-    };
-    slider.oninput = upd;
-    document.getElementById('tideon').onchange = (e) => layer.setVisible(e.target.checked);
-    document.getElementById('tidefresh').textContent = 'Data: ' + data.source.name + ', ' + data.stations.length +
-      ' stations, fetched ' + fmtPTDay(Date.parse(data.fetched_at)) +
-      '; predictions run to ' + fmtPTDay(ends) + '. Heights are feet above MLLW.';
-    upd();
-    box.hidden = false;
-    window.__tide = layer;
-  } catch (err) {
-    box.hidden = false;
-    box.textContent = 'Tide layer failed to load (' + err + '). Build it with scripts/build_tide_layer.py.';
-  }
-}
 // MAPLAYER-CURRENT-1: surface currents (style "current 5": vorticity tint + streamlines) from real HF-radar data.
 // Data: python research/scripts/map_style/fetch_hfr_currents.py --sector central-coast  ->  var/currents/hfr-central-coast-6km.json
 // Options: currents=on|off (default on), current_data=<url of another sector's json>.
@@ -223,6 +191,40 @@ if (chl) {
   document.getElementById('chl-ticks').innerHTML = [0.1, 0.3, 1, 3, 10]
     .map(v => `<span style="left:${(100 * (Math.log10(v) - lo) / (hi - lo)).toFixed(1)}%">${v}</span>`).join('');
   window.__chl = chl;
+}
+// Kept last: its top-level awaits (import, fetch) must not delay registering the currents map-load
+// handler above, or a slow tide response lets map load fire first and currents never initialize.
+// MAPLAYER-TIDE-1: toggleable tide overlay. Open with tide=1. Data: var/tide/tide-layer-<name>.json from
+// scripts/build_tide_layer.py (private, git-ignored). tidedata=<url> picks another file (another sector),
+// t=<ISO time> pins the time shown (default: now), tideslider moves it -12..+72 h from there.
+if (q.get('tide')) {
+  const {addTideLayer, fmtPT, fmtPTDay} = await import('./tide-layer.js');
+  const url = q.get('tidedata') || '/var/tide/tide-layer-central-coast.json';
+  const box = document.getElementById('tidebox');
+  try {
+    const data = await (await fetch(url)).json();
+    const base = q.get('t') ? Date.parse(q.get('t')) : Date.now();
+    const layer = addTideLayer(map, maplibregl, data);
+    const ends = Math.min(...data.stations.map((s) => Date.parse(s.extremes[s.extremes.length - 1].t)));
+    const slider = document.getElementById('tideslider');
+    const when = () => base + (+slider.value) * 3600e3;
+    const upd = () => {
+      layer.setTime(when());
+      document.getElementById('tidetime').textContent = 'Showing ' + fmtPTDay(when()) +
+        (when() > ends ? ' (past the predictions)' : '');
+    };
+    slider.oninput = upd;
+    document.getElementById('tideon').onchange = (e) => layer.setVisible(e.target.checked);
+    document.getElementById('tidefresh').textContent = 'Data: ' + data.source.name + ', ' + data.stations.length +
+      ' stations, fetched ' + fmtPTDay(Date.parse(data.fetched_at)) +
+      '; predictions run to ' + fmtPTDay(ends) + '. Heights are feet above MLLW.';
+    upd();
+    box.hidden = false;
+    window.__tide = layer;
+  } catch (err) {
+    box.hidden = false;
+    box.textContent = 'Tide layer failed to load (' + err + '). Build it with scripts/build_tide_layer.py.';
+  }
 }
 </script>
 </body>
