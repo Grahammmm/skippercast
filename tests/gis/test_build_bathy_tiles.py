@@ -1,0 +1,268 @@
+"""Seafloor "Deep" base tiles: colour ramp, nodata transparency and a readable PMTiles v3 archive."""
+import gzip
+import hashlib
+import json
+from pathlib import Path
+import struct
+import tempfile
+import unittest
+import zlib
+
+import numpy as np
+import rasterio
+from rasterio.transform import from_origin
+
+from scripts import build_bathy_tiles as bt
+
+NODATA = -999999.0
+
+
+def varints(data, pos, count):
+    out = []
+    for _ in range(count):
+        value = shift = 0
+        while True:
+            byte = data[pos]
+            pos += 1
+            value |= (byte & 0x7f) << shift
+            shift += 7
+            if not byte & 0x80:
+                break
+        out.append(value)
+    return out, pos
+
+
+def read_archive(path):
+    """Minimal independent PMTiles v3 reader: header, metadata and {(z, x, y): png bytes}."""
+    data = Path(path).read_bytes()
+    assert data[:8] == b'PMTiles\x03' and len(data) > 127
+    root_offset, root_length, meta_offset, meta_length, leaf_offset, leaf_length, data_offset, data_length = \
+        struct.unpack_from('<QQQQQQQQ', data, 8)
+    tiles_addressed = struct.unpack_from('<Q', data, 72)[0]
+    header = {'clustered': data[96], 'internal': data[97], 'tile_compression': data[98], 'tile_type': data[99],
+              'minzoom': data[100], 'maxzoom': data[101], 'leaf_length': leaf_length,
+              'bounds': [v / 1e7 for v in struct.unpack_from('<iiii', data, 102)], 'addressed': tiles_addressed}
+    metadata = json.loads(gzip.decompress(data[meta_offset:meta_offset + meta_length]))
+    directory = gzip.decompress(data[root_offset:root_offset + root_length])
+    (count,), pos = varints(directory, 0, 1)
+    deltas, pos = varints(directory, pos, count)
+    runs, pos = varints(directory, pos, count)
+    lengths, pos = varints(directory, pos, count)
+    offsets, pos = varints(directory, pos, count)
+    assert pos == len(directory)
+    ids, last = [], 0
+    for d in deltas:
+        last += d
+        ids.append(last)
+    tiles, expected = {}, 0
+    for i in range(count):
+        offset = expected if offsets[i] == 0 else offsets[i] - 1
+        expected = offset + lengths[i]
+        for k in range(runs[i]):
+            tiles[ids[i] + k] = data[data_offset + offset:data_offset + offset + lengths[i]]
+    return header, metadata, tiles, data_length
+
+
+def zxy_by_id(z, x, y):
+    return bt.tile_id(z, x, y)
+
+
+def decode_png(png):
+    """Tiny PNG decoder for 8-bit RGB/RGBA (filters 0-2 only, which is all the builder writes)."""
+    assert png[:8] == b'\x89PNG\r\n\x1a\n'
+    pos, idat, ihdr = 8, b'', None
+    while pos < len(png):
+        (length,) = struct.unpack_from('>I', png, pos)
+        kind = png[pos + 4:pos + 8]
+        body = png[pos + 8:pos + 8 + length]
+        (crc,) = struct.unpack_from('>I', png, pos + 8 + length)
+        assert crc == zlib.crc32(kind + body) & 0xffffffff
+        if kind == b'IHDR':
+            ihdr = struct.unpack('>IIBBBBB', body)
+        elif kind == b'IDAT':
+            idat += body
+        pos += 12 + length
+    width, height, depth, colour = ihdr[:4]
+    assert depth == 8 and colour in (2, 6)
+    bpp = 3 if colour == 2 else 4
+    raw = zlib.decompress(idat)
+    stride = width * bpp
+    rows = np.zeros((height, stride), dtype=np.uint8)
+    for y in range(height):
+        kind = raw[y * (stride + 1)]
+        line = np.frombuffer(raw, dtype=np.uint8, count=stride, offset=y * (stride + 1) + 1).astype(np.int32)
+        if kind == 1:
+            for i in range(bpp, stride):
+                line[i] = (line[i] + line[i - bpp]) & 255
+        elif kind == 2 and y:
+            line = (line + rows[y - 1]) & 255
+        else:
+            assert kind in (0, 1, 2)
+        rows[y] = line
+    pixels = rows.reshape(height, width, bpp)
+    if bpp == 3:
+        pixels = np.concatenate([pixels, np.full((height, width, 1), 255, np.uint8)], axis=-1)
+    return pixels
+
+
+def write_survey(path, size=300, west_nodata=100):
+    """A small EPSG:3310 raster off Morro Bay: sloping shelf with a ridge, west part not surveyed."""
+    yy, xx = np.mgrid[0:size, 0:size].astype('float64')
+    depth = 30 + 0.5 * xx + 12 * np.sin(yy / 18.0) + 25 * np.exp(-(((xx - 200) / 20) ** 2 + ((yy - 150) / 30) ** 2))
+    elevation = (-depth).astype('float32')
+    elevation[:, :west_nodata] = NODATA
+    with rasterio.open(path, 'w', driver='GTiff', width=size, height=size, count=1, dtype='float32',
+                       crs='EPSG:3310', transform=from_origin(-122000, -288000, 10, 10), nodata=NODATA) as ds:
+        ds.write(elevation, 1)
+    return elevation
+
+
+class RampTests(unittest.TestCase):
+    def test_ramp_is_cmocean_deep(self):
+        lut = bt.deep_lut()
+        self.assertEqual(lut.shape, (256, 3))
+        self.assertEqual(lut[0].tolist(), [253, 254, 204])      # cmocean deep, shallow end
+        self.assertEqual(lut[128].tolist(), [72, 142, 158])
+        self.assertEqual(lut[255].tolist(), [40, 26, 44])        # deep end
+        self.assertEqual(bt.deep_colour(np.array([1.0]))[0].tolist(), (lut[255] / 255.0).tolist())
+
+    def test_depth_stretch_matches_the_study_breakpoints(self):
+        canyon = bt.style_for_zoom(11)['bp']
+        position = bt.ramp_position(np.array([-30.0, -60.0, -250.0, -1600.0, -4000.0, 5.0]), canyon)
+        np.testing.assert_allclose(position, [0.0, 0.0, 0.22, 1.0, 1.0, 0.0])
+        near = bt.style_for_zoom(13)['bp']
+        np.testing.assert_allclose(bt.ramp_position(np.array([-10.0, -35.0, -140.0]), near), [0.22, 0.58, 1.0])
+
+    def test_style_follows_zoom(self):
+        self.assertEqual(bt.style_for_zoom(8), bt.style_for_zoom(11))
+        self.assertEqual(bt.style_for_zoom(11)['bp'], bt.CANYON['bp'])
+        self.assertEqual(bt.style_for_zoom(11)['ve'], 2.2)
+        self.assertEqual(bt.style_for_zoom(13)['bp'], bt.NEARSHORE['bp'])
+        self.assertEqual(bt.style_for_zoom(15)['ve'], 6.0)
+        mid = bt.style_for_zoom(12)
+        self.assertEqual(mid['bp'][1], (250.0 + 10.0) / 2)
+        self.assertAlmostEqual(mid['ve'], 4.1)
+
+    def test_lit_slopes_are_brighter_than_shaded_slopes(self):
+        _, columns = np.mgrid[0:40, 0:40]
+        ramp = (-100.0 + 2.0 * columns).astype('float64')       # rises toward the east
+        west_light = bt.raw_intensity(ramp, 10.0, 3.0, 270.0)   # the slope faces west, so a western sun lights it
+        east_light = bt.raw_intensity(ramp, 10.0, 3.0, 90.0)
+        self.assertGreater(west_light[20, 20], east_light[20, 20])
+        flat = bt.raw_intensity(np.zeros((8, 8)), 10.0, 3.0, 315.0)
+        np.testing.assert_allclose(flat, np.sin(np.radians(bt.ALTITUDE)))
+        self.assertEqual(bt.rescale(np.array([0.5, 0.5]), 0.5, 0.5).tolist(), [0.5, 0.5])
+
+    def test_fill_keeps_the_mask_and_never_invents_a_different_valid_depth(self):
+        elevation = np.full((6, 6), -50.0)
+        elevation[:, :3] = NODATA
+        invalid = elevation == NODATA
+        filled = bt.fill_nodata(elevation.astype('float32'), invalid)
+        self.assertTrue((filled == -50.0).all())                 # nearest valid value only
+        self.assertEqual(invalid.sum(), 18)
+
+
+class ArchiveTests(unittest.TestCase):
+    def test_tile_ids_follow_the_hilbert_order_of_the_spec(self):
+        self.assertEqual([bt.tile_id(0, 0, 0), bt.tile_id(1, 0, 0), bt.tile_id(1, 0, 1), bt.tile_id(1, 1, 1),
+                          bt.tile_id(1, 1, 0)], [0, 1, 2, 3, 4])
+        self.assertEqual(bt.tile_id(2, 0, 0), 5)
+        self.assertEqual(sorted(bt.tile_id(3, x, y) for x in range(8) for y in range(8)), list(range(21, 85)))
+
+    def test_png_round_trips_and_uses_rgb_only_when_opaque(self):
+        rng = np.random.default_rng(3)
+        rgba = rng.integers(0, 256, (16, 20, 4), dtype=np.uint8)
+        rgba[..., 3] = 255
+        opaque = bt.encode_png(rgba)
+        self.assertEqual(opaque[25], 2)                           # IHDR colour type 2 = RGB
+        np.testing.assert_array_equal(decode_png(opaque), rgba)
+        rgba[3, 4, 3] = 0
+        clear = bt.encode_png(rgba)
+        self.assertEqual(clear[25], 6)
+        np.testing.assert_array_equal(decode_png(clear), rgba)
+        self.assertEqual(bt.encode_png(rgba), clear)
+
+    def test_archive_directory_deduplicates_and_reads_back(self):
+        tiles = {(2, 0, 0): b'AAAA', (2, 1, 0): b'BBBBBB', (2, 0, 1): b'AAAA', (2, 1, 1): b'AAAA'}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'a.pmtiles'
+            bt.write_pmtiles(path, tiles, metadata={'name': 'x'}, bounds=(-122.0, 35.0, -121.0, 36.0),
+                             minzoom=2, maxzoom=2, center=(2, -121.5, 35.5))
+            header, metadata, by_id, _ = read_archive(path)
+        self.assertEqual((header['minzoom'], header['maxzoom'], header['tile_type'], header['clustered']), (2, 2, 2, 1))
+        self.assertEqual(header['bounds'], [-122.0, 35.0, -121.0, 36.0])
+        self.assertEqual(metadata, {'name': 'x'})
+        self.assertEqual({k: by_id[zxy_by_id(*k)] for k in tiles}, tiles)
+
+
+class BuildTests(unittest.TestCase):
+    @classmethod
+    def build_once(cls, directory, name='deep.pmtiles', minzoom=11, maxzoom=13):
+        source = Path(directory) / 'elevation.tif'
+        if not source.exists():
+            write_survey(source)
+        output = Path(directory) / name
+        bt.build(source, output, minzoom, maxzoom, log=lambda *_: None)
+        return output
+
+    def test_unsurveyed_cells_are_transparent_and_surveyed_cells_are_not(self):
+        with tempfile.TemporaryDirectory() as directory:
+            header, metadata, by_id, _ = read_archive(self.build_once(directory))
+            self.assertEqual((header['minzoom'], header['maxzoom']), (11, 13))
+            self.assertEqual(metadata['format'], 'png')
+            self.assertEqual(metadata['type'], 'baselayer')
+            self.assertIn('NOT FOR NAVIGATION', metadata['description'])
+            self.assertNotIn('/home', json.dumps(metadata))
+            west, south, east, north = header['bounds']
+            self.assertTrue(-121.5 < west < east < -121.2 and 35.3 < south < north < 35.5, header["bounds"])
+            self.assertTrue(by_id)
+            seen_clear = seen_opaque = False
+            for png in by_id.values():
+                pixels = decode_png(png)
+                self.assertEqual(pixels.shape, (256, 256, 4))
+                alpha = pixels[..., 3]
+                self.assertTrue(set(np.unique(alpha)) <= {0, 255})  # a cell is surveyed or it is not; no fake blend
+                self.assertTrue((pixels[alpha == 0][:, :3] == 0).all())
+                seen_clear |= bool((alpha == 0).any())
+                seen_opaque |= bool((alpha == 255).any())
+            self.assertTrue(seen_clear and seen_opaque)
+
+    def test_a_flat_bottom_is_the_plain_ramp_colour_and_nodata_stays_clear(self):
+        size = bt.TILE + 2 * bt.PAD
+        window = np.full((size, size), -35.0, dtype='float32')
+        window[:, :size // 2] = NODATA
+        invalid = window == NODATA
+        tiles = bt.render_zoom({(5, 6): (window, invalid, 15.0)}, 13)
+        pixels = decode_png(tiles[(13, 5, 6)])
+        wanted = bt.deep_lut()[int(0.58 * 256)]                     # 35 m is the 0.58 breakpoint of the nearshore stretch
+        east = pixels[:, -1]
+        self.assertTrue((east[:, 3] == 255).all())
+        self.assertLessEqual(np.abs(east[:, :3].astype(int) - wanted.astype(int)).max(), 1)
+        self.assertTrue((pixels[:, 0, 3] == 0).all())
+
+    def test_deeper_water_is_darker_in_the_ramp(self):
+        window = np.tile(np.linspace(-5.0, -130.0, bt.TILE + 2 * bt.PAD, dtype='float32'), (bt.TILE + 2 * bt.PAD, 1))
+        tile = decode_png(bt.render_zoom({(0, 0): (window, window == NODATA, 15.0)}, 13)[(13, 0, 0)])
+        brightness = tile[128, :, :3].astype(float).sum(axis=1)
+        self.assertGreater(brightness[:20].mean(), brightness[-20:].mean() + 150)
+
+    def test_build_is_byte_for_byte_repeatable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            first = self.build_once(directory, 'a.pmtiles', 12, 12).read_bytes()
+            second = self.build_once(directory, 'b.pmtiles', 12, 12).read_bytes()
+        self.assertEqual(hashlib.sha256(first).digest(), hashlib.sha256(second).digest())
+
+    def test_wrong_crs_or_missing_source_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'wrong.tif'
+            with rasterio.open(path, 'w', driver='GTiff', width=4, height=4, count=1, dtype='float32',
+                               crs='EPSG:4326', transform=from_origin(-121, 35, 0.001, 0.001)) as ds:
+                ds.write(np.full((1, 4, 4), -5, 'float32'))
+            with self.assertRaises(ValueError):
+                bt.build(path, Path(directory) / 'x.pmtiles', 12, 12, log=lambda *_: None)
+            self.assertEqual(bt.main(['--source', str(Path(directory) / 'missing.tif')]), 2)
+            self.assertEqual(bt.main(['--source', str(path), '--minzoom', '9', '--maxzoom', '3']), 2)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -36,6 +36,8 @@ Whether each source may be used in a paid product is tracked separately in the [
 
 The app bundles MapLibre GL JS 6.16.0 and PMTiles 4.5.0, each under its BSD 3-Clause license, preserved in [MAPLIBRE-LICENSE.txt](dist/vendor/MAPLIBRE-LICENSE.txt) and [PMTILES-LICENSE.txt](dist/vendor/PMTILES-LICENSE.txt). Exact downloaded asset hashes are recorded in [the vendor manifest](scripts/web-vendor-sha256.json). The SkipperCast license does not replace their terms.
 
+The seafloor base tiles built by `scripts/build_bathy_tiles.py` embed the cmocean `deep` colour table (cmocean 4.0.3, Copyright (c) 2015 Kristen M. Thyng, MIT License; Thyng et al. 2016, "True colors of oceanography", Oceanography 29(3)). The full licence text sits beside the table in that script.
+
 The v2 pages self-host two typefaces under `web/fonts/` (Latin subsets of the variable fonts, as served by Google Fonts), both under the [SIL Open Font License 1.1](https://openfontlicense.org/) with no Reserved Font Name: DM Sans, Copyright 2014 The DM Sans Project Authors ([DM-SANS-OFL.txt](web/fonts/DM-SANS-OFL.txt)), and JetBrains Mono, Copyright 2020 The JetBrains Mono Project Authors ([JETBRAINS-MONO-OFL.txt](web/fonts/JETBRAINS-MONO-OFL.txt)). The font files' hashes are in the vendor manifest; no font is requested from Google at runtime.
 
 The v2 chart basemap's label glyphs under `dist/basemap/glyphs/dm-sans-medium/` are signed-distance-field renderings of DM Sans at weight 500, generated from the font file above by `scripts/basemap/build_glyphs.py`. As a Modified Version of DM Sans they stay under the SIL Open Font License 1.1 ([DM-SANS-OFL.txt](dist/basemap/glyphs/DM-SANS-OFL.txt)); their hashes are in the vendor manifest.

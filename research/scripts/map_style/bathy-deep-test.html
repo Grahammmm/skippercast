@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seafloor "Deep" base tiles: MapLibre test</title>
+<link rel="stylesheet" href="/node_modules/maplibre-gl/dist/maplibre-gl.css">
+<style>
+  html, body { margin: 0; height: 100%; font: 13px/1.4 system-ui, sans-serif; }
+  #map { position: absolute; inset: 0; }
+  /* The page behind the transparent tiles. Tan = no survey, never a made-up depth. */
+  #note { position: absolute; left: 8px; bottom: 8px; z-index: 2; max-width: 34em; padding: 4px 8px;
+          background: rgba(255,255,255,.85); border-radius: 3px; color: #222; }
+  #note b { color: #8a1c1c; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="note"><b>Research preview. Not for navigation.</b> Morro Bay 10 m survey; mixed vertical references.
+  Tan = no survey. <span id="readout"></span></div>
+<script src="/node_modules/pmtiles/dist/pmtiles.js"></script>
+<script type="module">
+// Test page for dist/tiles/morro-bay-seafloor-deep.pmtiles (scripts/build_bathy_tiles.py).
+// Serve the repository root with range support: python research/scripts/map_style/serve_range.py 18771
+// Then open /research/scripts/map_style/bathy-deep-test.html?view=canyons  (or nearshore, full).
+// Options: tiles=<url of the archive>, bg=checker (checkerboard behind the tiles, to see transparency),
+//          zoom=<z>&lon=<lon>&lat=<lat> (a free view; overrides view).
+import * as maplibregl from '/node_modules/maplibre-gl/dist/maplibre-gl.mjs';
+const {Protocol} = window.pmtiles;   // the bundled build; the ESM build needs a bundler for fflate
+
+const q = new URLSearchParams(location.search);
+const archive = q.get('tiles') || '/dist/tiles/morro-bay-seafloor-deep.pmtiles';
+// lon/lat boxes (W, S, E, N) of the two crops that bathy.py of the map style study renders
+// (columns/rows of the 10 m raster: canyons 0..8000 x 2800..10163; nearshore 7500..10800 x 3300..8300).
+const VIEWS = {
+  canyons: [-121.9664, 34.9348, -121.0733, 35.6092],
+  nearshore: [-121.1371, 35.1135, -120.7683, 35.5667],
+  full: [-121.95, 34.95, -120.55, 35.85],
+};
+const TAN = '#d9d2c0';   // the study's "no survey" colour
+
+maplibregl.setWorkerUrl('/node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs');
+maplibregl.addProtocol('pmtiles', new Protocol().tile);
+
+const layers = [{id: 'no-survey', type: 'background', paint: {'background-color': TAN}}];
+if (q.get('bg') === 'checker') layers.length = 0;
+layers.push({id: 'seafloor-deep', type: 'raster', source: 'deep', paint: {'raster-fade-duration': 0}});
+
+const map = new maplibregl.Map({
+  container: 'map', fadeDuration: 0, attributionControl: {compact: true}, renderWorldCopies: false,
+  style: {version: 8, sources: {deep: {type: 'raster', url: 'pmtiles://' + new URL(archive, location.href).href, tileSize: 256}}, layers},
+  bounds: VIEWS[q.get('view')] || VIEWS.full,
+  fitBoundsOptions: {padding: 0, animate: false}, interactive: true, maxPitch: 0,
+});
+if (q.get('bg') === 'checker') {
+  document.getElementById('map').style.background =
+    'repeating-conic-gradient(#bbb 0% 25%, #eee 0% 50%) 0 0 / 16px 16px';
+}
+if (q.get('zoom')) map.jumpTo({zoom: +q.get('zoom'), center: [+q.get('lon'), +q.get('lat')]});
+const readout = document.getElementById('readout');
+const show = () => { readout.textContent = 'zoom ' + map.getZoom().toFixed(2); };
+map.on('move', show);
+map.on('idle', () => { show(); window.__idle = true; });
+map.on('error', (e) => { window.__error = String(e.error && e.error.message || e.error); });
+window.__map = map;
+</script>
+</body>
+</html>

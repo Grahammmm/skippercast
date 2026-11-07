@@ -13,6 +13,8 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 IGNORED = {".git", ".venv", "var", "__pycache__", ".ruff_cache", ".pytest_cache", "build", "node_modules", ".wrangler", "test-results", "playwright-report"}
+# Gitignored local build output (scripts/build_bathy_tiles.py); it never reaches CI or a commit.
+LOCAL_BUILD_OUTPUTS = {"dist/tiles/morro-bay-seafloor-deep.pmtiles", "dist/tiles/morro-bay-seafloor-deep.part"}
 PATTERNS = {
     "private home path": re.compile(r"/(?:Users|home)/[A-Za-z0-9_.-]+/"),
     "private tailnet address": re.compile(r"\b100\.(?:6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.\d+\.\d+\b"),
@@ -159,6 +161,8 @@ def main():
         if relative.parts[:2] in {("dist","client"),("dist","server")}:
             continue
         if not path.is_file() or set(relative.parts) & IGNORED or any(p.endswith(".egg-info") for p in relative.parts):
+            continue
+        if relative.as_posix() in LOCAL_BUILD_OUTPUTS:
             continue
         if path.name in {"state.json", "config.json"} or path.suffix in {".pem", ".key"}:
             errors.append(f"{relative}: forbidden private/runtime filename")
