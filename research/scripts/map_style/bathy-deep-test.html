@@ -36,7 +36,7 @@ const q = new URLSearchParams(location.search);
 // base is the MAPSTYLE-1 look. A dropdown in the corner switches it (it reloads with ?variant=...).
 const VARIANTS = ['base', 'mild', 'medium', 'strong'];
 const variant = VARIANTS.includes(q.get('variant')) ? q.get('variant') : 'medium';
-const archive = q.get('tiles') || '/var/seafloor/tiles/morro-bay-seafloor-deep' + (variant === 'base' ? '' : '-' + variant) + '.pmtiles';
+const archive = q.get('tiles') || '/var/seafloor/tiles/' + (variant === 'base' ? '' : variant + '/') + 'morro-bay-seafloor-deep.pmtiles';
 const picker = document.getElementById('variant');
 picker.innerHTML = VARIANTS.map((v) => `<option${v === variant ? ' selected' : ''}>${v}</option>`).join('');
 if (q.get('picker') === 'off') document.getElementById('picker').hidden = true;   // clean screenshots
