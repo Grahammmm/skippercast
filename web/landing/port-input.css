@@ -99,6 +99,10 @@
 }
 /* Measured model gaps beside the verdict. */
 .app-verdict-models { margin: var(--space-2) 0; color: var(--text); font-size: var(--text-13); }
+.app-verdict-skill { margin: var(--space-2) 0; color: var(--muted); font-size: var(--text-13); }
+/* The app's phone sheet keeps the headline, tiles and hour slider in view at peek and half; the skill line shows once expanded.
+   Scoped to .app-sheet (the brief's sheet), not .ui-sheet, whose rules in this file belong to the first-run card (BL-SC-2). */
+.app-sheet:not([data-detent="full"]) .app-verdict-skill { display: none; }
 .app-verdict-models-detail { color: var(--muted); font-size: var(--text-13); }
 .app-verdict-models-detail summary { cursor: pointer; min-height: var(--touch-min); }
 .app-verdict-models-detail summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
