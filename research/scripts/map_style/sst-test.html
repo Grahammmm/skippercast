@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>MAPLAYER-SST-1 — private water temperature preview</title>
+<link rel="stylesheet" href="/node_modules/maplibre-gl/dist/maplibre-gl.css">
+<style>
+html,body {margin:0;height:100%;font:13px/1.4 system-ui,sans-serif;color:#172a3a}
+#map {position:absolute;inset:0}
+#panel {position:absolute;top:12px;left:12px;z-index:2;max-width:440px;background:#fffffff0;padding:12px;border-radius:6px;box-shadow:0 1px 6px #0004}
+h1 {font-size:16px;margin:0 0 6px} p {margin:6px 0}
+#ramp {display:flex;height:14px} #ramp span {flex:1}
+#ticks {position:relative;height:20px} #ticks span {position:absolute;transform:translateX(-50%)}
+#ticks span:first-child {left:0;transform:none} #ticks span:nth-child(2) {left:30.77%}
+#ticks span:nth-child(3) {left:61.54%} #ticks span:last-child {right:0;transform:none}
+#status {font-weight:bold}
+.warning {color:#8a1c1c} #sample {min-height:1.4em}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<section id="panel">
+<h1>Water temperature 2 · Morro Bay</h1>
+<label><input id="toggle" type="checkbox" disabled> Satellite SST analysis · 1°F bands</label>
+<p id="status" role="status">Loading private analysis…</p>
+<p id="time"></p>
+<div id="ramp" aria-hidden="true"></div>
+<div id="ticks"><span>&lt;53°F</span><span>56°F</span><span>60°F</span><span>≥65°F</span></div>
+<p>White/black line: strong break ≥1.2°F/km. End colours saturate outside 52–66°F.</p>
+<p id="coverage"></p>
+<p>Native cells, not fine-scale measurements. Transparent = no SST cell; tan base = no seafloor survey. Surface analysis, not bottom temperature.</p>
+<p id="sample">Click a coloured cell for its analysis value.</p>
+<p class="warning"><b>RESEARCH PREVIEW · NOT FOR NAVIGATION</b></p>
+<p>NOAA CoastWatch / GHRSST · medium seafloor base (10 m survey; mixed vertical references). No live app changes.</p>
+<span id="zoom"></span>
+</section>
+<script src="/node_modules/pmtiles/dist/pmtiles.js"></script>
+<script type="module">
+import * as maplibregl from '/node_modules/maplibre-gl/dist/maplibre-gl.mjs';
+const q = new URLSearchParams(location.search);
+const ids = ['sst-bands', 'sst-break-halo', 'sst-break'];
+maplibregl.setWorkerUrl('/node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs');
+maplibregl.addProtocol('pmtiles', new window.pmtiles.Protocol().tile);
+const map = new maplibregl.Map({container:'map',renderWorldCopies:false,maxPitch:0,fadeDuration:0,
+  center:[+(q.get('lon') || -121.12), +(q.get('lat') || 35.35)],zoom:+(q.get('zoom') || 9.5),
+  attributionControl:{compact:true},
+  style:{version:8,sources:{base:{type:'raster',tileSize:256,
+    url:'pmtiles://' + new URL('/var/seafloor/tiles/morro-bay-seafloor-deep-medium.pmtiles',location.href).href}},
+    layers:[{id:'no-survey',type:'background',paint:{'background-color':'#d9d2c0'}},
+      {id:'medium-seafloor',type:'raster',source:'base',paint:{'raster-fade-duration':0}}]}});
+window.__map = map;
+map.on('error', e => {window.__error = String(e.error?.message || e.error);});
+map.on('idle', () => {window.__idle = true;});
+const toggle = document.getElementById('toggle');
+const status = document.getElementById('status');
+let data;
+function visibility() {
+  for (const id of ids) if (map.getLayer(id)) map.setLayoutProperty(id,'visibility',toggle.checked ? 'visible' : 'none');
+}
+function freshness() {
+  const age = (Date.now() - Date.parse(data.data_time)) / 3600000;
+  const usable = Number.isFinite(age) && age >= 0 && age <= data.max_age_hours;
+  status.textContent = usable ? `Analysis age ${age.toFixed(1)} h · not live observations` : 'STALE / invalid analysis time — overlay hidden';
+  status.className = usable ? '' : 'warning';
+  toggle.disabled = !usable;
+  if (!usable) {toggle.checked = false; visibility();}
+  window.__sstFresh = usable;
+}
+toggle.addEventListener('change', visibility);
+map.on('move', () => {document.getElementById('zoom').textContent = `Zoom ${map.getZoom().toFixed(2)}`;});
+map.on('load', async () => {
+  try {
+    const response = await fetch('/var/maplayer-sst-1/sst-preview.json', {cache:'no-store'});
+    if (!response.ok) throw new Error(`private SST file: HTTP ${response.status}`);
+    data = await response.json();
+    document.getElementById('time').textContent = `DATA TIME: ${data.data_time} · ${data.source_id}`;
+    document.getElementById('coverage').textContent = `${data.valid_cells} cells displayed after region clipping (source: ${data.source_valid_cells}/${data.total_cells} valid); ${data.resolution_degrees.join('° × ')}° (~5 km). ${data.breaks.features.length} strong-break segments; zero means none resolved, not no fronts at sea.`;
+    for (const colour of data.colours) {
+      const swatch = document.createElement('span'); swatch.style.backgroundColor = colour;
+      document.getElementById('ramp').append(swatch);
+    }
+    map.addSource('sst-cells',{type:'geojson',data:data.cells,attribution:'NOAA CoastWatch / GHRSST'});
+    map.addSource('sst-breaks',{type:'geojson',data:data.breaks});
+    map.addLayer({id:ids[0],type:'fill',source:'sst-cells',paint:{'fill-color':['get','colour'],'fill-opacity':.82,'fill-antialias':false}});
+    map.addLayer({id:ids[1],type:'line',source:'sst-breaks',paint:{'line-color':'white','line-width':2.4}});
+    map.addLayer({id:ids[2],type:'line',source:'sst-breaks',paint:{'line-color':'#101010','line-width':.5}});
+    toggle.checked = true; freshness(); visibility();
+    setInterval(freshness,60000);
+    map.on('click', ids[0], e => {document.getElementById('sample').textContent = `${e.features[0].properties.temperature_f.toFixed(1)}°F · ${data.data_time}`;});
+    window.__sstLoaded = true;
+  } catch (error) {
+    status.textContent = `SST unavailable — ${error.message}`; status.className = 'warning';
+    window.__sstError = String(error); toggle.checked = false; toggle.disabled = true;
+  }
+});
+</script>
+</body>
+</html>
