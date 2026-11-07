@@ -1,7 +1,7 @@
 {
  "sources": [
   {
-   "file": "reports/perf/raw/live-desktop.json.gz",
+   "file": "reports/perf/raw/live-desktop.json",
    "base": "https://skippercast.com",
    "chromium": "156.0.8078.4",
    "startedAt": "2026-11-07T21:57:00.021Z",
@@ -22,7 +22,7 @@
    ]
   },
   {
-   "file": "reports/perf/raw/live-phone.json.gz",
+   "file": "reports/perf/raw/live-phone.json",
    "base": "https://skippercast.com",
    "chromium": "156.0.8078.4",
    "startedAt": "2026-11-07T22:17:08.355Z",
@@ -43,7 +43,7 @@
    ]
   },
   {
-   "file": "reports/perf/raw/live-phone-wifi.json.gz",
+   "file": "reports/perf/raw/live-phone-wifi.json",
    "base": "https://skippercast.com",
    "chromium": "156.0.8078.4",
    "startedAt": "2026-11-07T22:25:58.117Z",
@@ -66,7 +66,7 @@
    ]
   },
   {
-   "file": "reports/perf/raw/layers-main-desktop.json.gz",
+   "file": "reports/perf/raw/layers-main-desktop.json",
    "base": "http://127.0.0.1:18772",
    "chromium": "156.0.8078.4",
    "startedAt": "2026-11-07T21:57:50.025Z",
@@ -89,7 +89,7 @@
    ]
   },
   {
-   "file": "reports/perf/raw/layers-main-phone.json.gz",
+   "file": "reports/perf/raw/layers-main-phone.json",
    "base": "http://127.0.0.1:18772",
    "chromium": "156.0.8078.4",
    "startedAt": "2026-11-07T22:14:18.602Z",
@@ -112,7 +112,7 @@
    ]
   },
   {
-   "file": "reports/perf/raw/layers-relief-desktop.json.gz",
+   "file": "reports/perf/raw/layers-relief-desktop.json",
    "base": "http://127.0.0.1:18781",
    "chromium": "156.0.8078.4",
    "startedAt": "2026-11-07T21:53:51.837Z",
@@ -135,7 +135,7 @@
    ]
   },
   {
-   "file": "reports/perf/raw/layers-relief-phone.json.gz",
+   "file": "reports/perf/raw/layers-relief-phone.json",
    "base": "http://127.0.0.1:18781",
    "chromium": "156.0.8078.4",
    "startedAt": "2026-11-07T21:59:07.791Z",
@@ -165,6 +165,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 271,
+   "layerDataStartMs_all": [
+    271,
+    238,
+    278
+   ],
+   "layerDataEndMs": 712,
+   "layerDataEndMs_all": [
+    879,
+    665,
+    712
+   ],
    "fcpMs": 164,
    "fcpMs_all": [
     164,
@@ -189,8 +201,8 @@
     348,
     503
    ],
-   "mapUsableMs": 13590,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 13590,
+   "canvasQuietMs_all": [
     14297,
     13521,
     13590
@@ -370,6 +382,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 152,
+   "layerDataStartMs_all": [
+    156,
+    129,
+    152
+   ],
+   "layerDataEndMs": 432,
+   "layerDataEndMs_all": [
+    432,
+    426,
+    854
+   ],
    "fcpMs": 68,
    "fcpMs_all": [
     152,
@@ -394,8 +418,8 @@
     290,
     324
    ],
-   "mapUsableMs": 13299,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 13299,
+   "canvasQuietMs_all": [
     13299,
     13119,
     13613
@@ -575,6 +599,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 3380,
+   "layerDataStartMs_all": [
+    3424,
+    3337,
+    3380
+   ],
+   "layerDataEndMs": 20806,
+   "layerDataEndMs_all": [
+    20249,
+    20806,
+    21001
+   ],
    "fcpMs": 1680,
    "fcpMs_all": [
     1740,
@@ -599,8 +635,8 @@
     9208,
     9285
    ],
-   "mapUsableMs": 9427,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 9427,
+   "canvasQuietMs_all": [
     9791,
     9365,
     9427
@@ -780,6 +816,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 569,
+   "layerDataStartMs_all": [
+    586,
+    557,
+    569
+   ],
+   "layerDataEndMs": 8944,
+   "layerDataEndMs_all": [
+    8944,
+    8788,
+    9293
+   ],
    "fcpMs": 256,
    "fcpMs_all": [
     236,
@@ -804,8 +852,8 @@
     866,
     1041
    ],
-   "mapUsableMs": 3123,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 3123,
+   "canvasQuietMs_all": [
     4765,
     3092,
     3123
@@ -985,6 +1033,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 656,
+   "layerDataStartMs_all": [
+    664,
+    654,
+    656
+   ],
+   "layerDataEndMs": 1189,
+   "layerDataEndMs_all": [
+    1152,
+    1243,
+    1189
+   ],
    "fcpMs": 372,
    "fcpMs_all": [
     372,
@@ -1009,8 +1069,8 @@
     1289,
     1074
    ],
-   "mapUsableMs": 16371,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 16371,
+   "canvasQuietMs_all": [
     16371,
     16070,
     16824
@@ -1190,6 +1250,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 412,
+   "layerDataStartMs_all": [
+    412,
+    451,
+    399
+   ],
+   "layerDataEndMs": 917,
+   "layerDataEndMs_all": [
+    917,
+    1028,
+    915
+   ],
    "fcpMs": 128,
    "fcpMs_all": [
     116,
@@ -1214,8 +1286,8 @@
     900,
     836
    ],
-   "mapUsableMs": 16031,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 16031,
+   "canvasQuietMs_all": [
     15931,
     28073,
     16031
@@ -1395,6 +1467,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 392,
+   "layerDataStartMs_all": [
+    392,
+    361,
+    662
+   ],
+   "layerDataEndMs": 934,
+   "layerDataEndMs_all": [
+    934,
+    861,
+    1252
+   ],
    "fcpMs": 156,
    "fcpMs_all": [
     152,
@@ -1419,8 +1503,8 @@
     371,
     681
    ],
-   "mapUsableMs": 1430,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 1430,
+   "canvasQuietMs_all": [
     1547,
     1430,
     681
@@ -1600,6 +1684,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 164,
+   "layerDataStartMs_all": [
+    164,
+    167,
+    152
+   ],
+   "layerDataEndMs": 494,
+   "layerDataEndMs_all": [
+    494,
+    584,
+    457
+   ],
    "fcpMs": 64,
    "fcpMs_all": [
     52,
@@ -1624,8 +1720,8 @@
     189,
     190
    ],
-   "mapUsableMs": 927,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 927,
+   "canvasQuietMs_all": [
     985,
     927,
     911
@@ -1805,6 +1901,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 3506,
+   "layerDataStartMs_all": [
+    3506,
+    3661,
+    3365
+   ],
+   "layerDataEndMs": 9321,
+   "layerDataEndMs_all": [
+    9219,
+    9539,
+    9321
+   ],
    "fcpMs": 864,
    "fcpMs_all": [
     900,
@@ -1829,8 +1937,8 @@
     6325,
     6236
    ],
-   "mapUsableMs": 6325,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 6325,
+   "canvasQuietMs_all": [
     6352,
     6325,
     6236
@@ -2010,6 +2118,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 676,
+   "layerDataStartMs_all": [
+    694,
+    676,
+    650
+   ],
+   "layerDataEndMs": 3469,
+   "layerDataEndMs_all": [
+    3497,
+    3469,
+    3445
+   ],
    "fcpMs": 212,
    "fcpMs_all": [
     300,
@@ -2034,8 +2154,8 @@
     710,
     685
    ],
-   "mapUsableMs": 710,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 710,
+   "canvasQuietMs_all": [
     734,
     710,
     685
@@ -2215,6 +2335,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 20,
    "fcpMs_all": [
     24,
@@ -2239,8 +2371,8 @@
     63,
     83
    ],
-   "mapUsableMs": 360,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 360,
+   "canvasQuietMs_all": [
     372,
     305,
     360
@@ -2281,17 +2413,17 @@
     10101880,
     10354876
    ],
-   "requestCount": 44,
+   "requestCount": 43,
    "requestCount_all": [
-    45,
     44,
-    44
+    43,
+    43
    ],
-   "bytesTotal": 3859823,
+   "bytesTotal": 3584646,
    "bytesTotal_all": [
-    3860365,
-    3859823,
-    3859823
+    3585188,
+    3584646,
+    3584646
    ],
    "requestsBeforeFcp": 6,
    "requestsBeforeFcp_all": [
@@ -2325,7 +2457,7 @@
     "tiles": 2139454,
     "fonts": 0,
     "images": 0,
-    "other": 483477
+    "other": 208300
    },
    "requestsByKind": {
     "html": 1,
@@ -2335,7 +2467,7 @@
     "tiles": 33,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 33,
    "pmtilesBytes": 2139454,
@@ -2348,13 +2480,6 @@
      "bytes": 1079110,
      "startMs": 12,
      "endMs": 16
-    },
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 357,
-     "endMs": 378
     },
     {
      "url": "http://127.0.0.1:18781/var/chlorophyll/central-coast/chlorophyll.png",
@@ -2411,6 +2536,13 @@
      "bytes": 91395,
      "startMs": 220,
      "endMs": 223
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 89958,
+     "startMs": 151,
+     "endMs": 157
     }
    ]
   },
@@ -2420,6 +2552,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 12,
    "fcpMs_all": [
     12,
@@ -2444,8 +2588,8 @@
     86,
     104
    ],
-   "mapUsableMs": 278,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 278,
+   "canvasQuietMs_all": [
     280,
     278,
     250
@@ -2486,17 +2630,17 @@
     6246260,
     6239404
    ],
-   "requestCount": 44,
+   "requestCount": 43,
    "requestCount_all": [
-    44,
-    44,
-    44
+    43,
+    43,
+    43
    ],
-   "bytesTotal": 2414631,
+   "bytesTotal": 2139454,
    "bytesTotal_all": [
-    2414631,
-    2414631,
-    2414631
+    2139454,
+    2139454,
+    2139454
    ],
    "requestsBeforeFcp": 7,
    "requestsBeforeFcp_all": [
@@ -2530,7 +2674,7 @@
     "tiles": 2139454,
     "fonts": 0,
     "images": 0,
-    "other": 275177
+    "other": 0
    },
    "requestsByKind": {
     "html": 1,
@@ -2540,20 +2684,13 @@
     "tiles": 33,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 33,
    "pmtilesBytes": 2139454,
    "habitatExportLoaded": 0,
    "medianRun": 2,
    "heaviest": [
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 274,
-     "endMs": 293
-    },
     {
      "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
      "kind": "tiles",
@@ -2616,6 +2753,13 @@
      "bytes": 88231,
      "startMs": 90,
      "endMs": 94
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 87287,
+     "startMs": 90,
+     "endMs": 95
     }
    ]
   },
@@ -2625,6 +2769,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 848,
    "fcpMs_all": [
     848,
@@ -2649,8 +2805,8 @@
     6556,
     6706
    ],
-   "mapUsableMs": 6690,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 6690,
+   "canvasQuietMs_all": [
     6621,
     6690,
     7212
@@ -2691,17 +2847,17 @@
     7336620,
     8405644
    ],
-   "requestCount": 29,
+   "requestCount": 28,
    "requestCount_all": [
-    30,
     29,
-    29
+    28,
+    28
    ],
-   "bytesTotal": 2939340,
+   "bytesTotal": 2664163,
    "bytesTotal_all": [
-    2939882,
-    2939340,
-    2939340
+    2664705,
+    2664163,
+    2664163
    ],
    "requestsBeforeFcp": 3,
    "requestsBeforeFcp_all": [
@@ -2735,7 +2891,7 @@
     "tiles": 1218971,
     "fonts": 0,
     "images": 0,
-    "other": 483477
+    "other": 208300
    },
    "requestsByKind": {
     "html": 1,
@@ -2745,7 +2901,7 @@
     "tiles": 18,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 18,
    "pmtilesBytes": 1218971,
@@ -2758,13 +2914,6 @@
      "bytes": 1079110,
      "startMs": 853,
      "endMs": 6238
-    },
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 15906,
-     "endMs": 15965
     },
     {
      "url": "http://127.0.0.1:18781/var/chlorophyll/central-coast/chlorophyll.png",
@@ -2821,6 +2970,13 @@
      "bytes": 87287,
      "startMs": 6916,
      "endMs": 10035
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 84210,
+     "startMs": 6918,
+     "endMs": 13153
     }
    ]
   },
@@ -2830,6 +2986,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 32,
    "fcpMs_all": [
     32,
@@ -2854,8 +3022,8 @@
     218,
     212
    ],
-   "mapUsableMs": 273,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 273,
+   "canvasQuietMs_all": [
     273,
     275,
     268
@@ -2896,17 +3064,17 @@
     8727412,
     11837928
    ],
-   "requestCount": 29,
+   "requestCount": 28,
    "requestCount_all": [
-    29,
-    29,
-    29
+    28,
+    28,
+    28
    ],
-   "bytesTotal": 1494148,
+   "bytesTotal": 1218971,
    "bytesTotal_all": [
-    1494148,
-    1494148,
-    1494148
+    1218971,
+    1218971,
+    1218971
    ],
    "requestsBeforeFcp": 6,
    "requestsBeforeFcp_all": [
@@ -2940,7 +3108,7 @@
     "tiles": 1218971,
     "fonts": 0,
     "images": 0,
-    "other": 275177
+    "other": 0
    },
    "requestsByKind": {
     "html": 1,
@@ -2950,20 +3118,13 @@
     "tiles": 18,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 18,
    "pmtilesBytes": 1218971,
    "habitatExportLoaded": 0,
    "medianRun": 1,
    "heaviest": [
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 6522,
-     "endMs": 6581
-    },
     {
      "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
      "kind": "tiles",
@@ -3026,6 +3187,13 @@
      "bytes": 77951,
      "startMs": 339,
      "endMs": 3328
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 71946,
+     "startMs": 339,
+     "endMs": 3013
     }
    ]
   },
@@ -3035,6 +3203,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 24,
    "fcpMs_all": [
     16,
@@ -3059,8 +3239,8 @@
     78,
     108
    ],
-   "mapUsableMs": 334,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 334,
+   "canvasQuietMs_all": [
     283,
     334,
     340
@@ -3101,17 +3281,17 @@
     9882956,
     9822940
    ],
-   "requestCount": 46,
+   "requestCount": 45,
    "requestCount_all": [
-    46,
-    46,
-    46
+    45,
+    45,
+    45
    ],
-   "bytesTotal": 3900180,
+   "bytesTotal": 3625003,
    "bytesTotal_all": [
-    3900180,
-    3900180,
-    3900180
+    3625003,
+    3625003,
+    3625003
    ],
    "requestsBeforeFcp": 6,
    "requestsBeforeFcp_all": [
@@ -3145,7 +3325,7 @@
     "tiles": 2179811,
     "fonts": 0,
     "images": 0,
-    "other": 483477
+    "other": 208300
    },
    "requestsByKind": {
     "html": 1,
@@ -3155,7 +3335,7 @@
     "tiles": 35,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 35,
    "pmtilesBytes": 2179811,
@@ -3168,13 +3348,6 @@
      "bytes": 1079110,
      "startMs": 14,
      "endMs": 19
-    },
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 331,
-     "endMs": 351
     },
     {
      "url": "http://127.0.0.1:18781/var/chlorophyll/central-coast/chlorophyll.png",
@@ -3231,6 +3404,13 @@
      "bytes": 92286,
      "startMs": 211,
      "endMs": 214
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 90932,
+     "startMs": 142,
+     "endMs": 151
     }
    ]
   },
@@ -3240,6 +3420,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 16,
    "fcpMs_all": [
     16,
@@ -3264,8 +3456,8 @@
     111,
     110
    ],
-   "mapUsableMs": 284,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 284,
+   "canvasQuietMs_all": [
     284,
     287,
     267
@@ -3306,17 +3498,17 @@
     6255176,
     6252920
    ],
-   "requestCount": 46,
+   "requestCount": 45,
    "requestCount_all": [
-    46,
-    46,
-    46
+    45,
+    45,
+    45
    ],
-   "bytesTotal": 2454988,
+   "bytesTotal": 2179811,
    "bytesTotal_all": [
-    2454988,
-    2454988,
-    2454988
+    2179811,
+    2179811,
+    2179811
    ],
    "requestsBeforeFcp": 7,
    "requestsBeforeFcp_all": [
@@ -3350,7 +3542,7 @@
     "tiles": 2179811,
     "fonts": 0,
     "images": 0,
-    "other": 275177
+    "other": 0
    },
    "requestsByKind": {
     "html": 1,
@@ -3360,20 +3552,13 @@
     "tiles": 35,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 35,
    "pmtilesBytes": 2179811,
    "habitatExportLoaded": 0,
    "medianRun": 1,
    "heaviest": [
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 281,
-     "endMs": 302
-    },
     {
      "url": "http://127.0.0.1:18781/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles",
      "kind": "tiles",
@@ -3436,6 +3621,13 @@
      "bytes": 89167,
      "startMs": 57,
      "endMs": 60
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 88143,
+     "startMs": 57,
+     "endMs": 61
     }
    ]
   },
@@ -3445,6 +3637,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 848,
    "fcpMs_all": [
     856,
@@ -3469,8 +3673,8 @@
     6555,
     6628
    ],
-   "mapUsableMs": 6681,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 6681,
+   "canvasQuietMs_all": [
     6674,
     6688,
     6681
@@ -3511,17 +3715,17 @@
     10011556,
     8388584
    ],
-   "requestCount": 29,
+   "requestCount": 28,
    "requestCount_all": [
-    29,
-    29,
-    29
+    28,
+    28,
+    28
    ],
-   "bytesTotal": 2950024,
+   "bytesTotal": 2674847,
    "bytesTotal_all": [
-    2950024,
-    2950024,
-    2950024
+    2674847,
+    2674847,
+    2674847
    ],
    "requestsBeforeFcp": 5,
    "requestsBeforeFcp_all": [
@@ -3555,7 +3759,7 @@
     "tiles": 1229655,
     "fonts": 0,
     "images": 0,
-    "other": 483477
+    "other": 208300
    },
    "requestsByKind": {
     "html": 1,
@@ -3565,7 +3769,7 @@
     "tiles": 18,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 18,
    "pmtilesBytes": 1229655,
@@ -3578,13 +3782,6 @@
      "bytes": 1079110,
      "startMs": 848,
      "endMs": 6231
-    },
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 15971,
-     "endMs": 16029
     },
     {
      "url": "http://127.0.0.1:18781/var/chlorophyll/central-coast/chlorophyll.png",
@@ -3641,6 +3838,13 @@
      "bytes": 88143,
      "startMs": 6902,
      "endMs": 10028
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 84764,
+     "startMs": 6903,
+     "endMs": 13204
     }
    ]
   },
@@ -3650,6 +3854,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 32,
    "fcpMs_all": [
     32,
@@ -3674,8 +3890,8 @@
     210,
     229
    ],
-   "mapUsableMs": 229,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 229,
+   "canvasQuietMs_all": [
     279,
     210,
     229
@@ -3716,17 +3932,17 @@
     14167988,
     8610560
    ],
-   "requestCount": 29,
+   "requestCount": 28,
    "requestCount_all": [
-    29,
-    29,
-    29
+    28,
+    28,
+    28
    ],
-   "bytesTotal": 1504832,
+   "bytesTotal": 1229655,
    "bytesTotal_all": [
-    1504832,
-    1504832,
-    1504832
+    1229655,
+    1229655,
+    1229655
    ],
    "requestsBeforeFcp": 6,
    "requestsBeforeFcp_all": [
@@ -3760,7 +3976,7 @@
     "tiles": 1229655,
     "fonts": 0,
     "images": 0,
-    "other": 275177
+    "other": 0
    },
    "requestsByKind": {
     "html": 1,
@@ -3770,20 +3986,13 @@
     "tiles": 18,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 18,
    "pmtilesBytes": 1229655,
    "habitatExportLoaded": 0,
    "medianRun": 3,
    "heaviest": [
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 6602,
-     "endMs": 6660
-    },
     {
      "url": "http://127.0.0.1:18781/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles",
      "kind": "tiles",
@@ -3846,6 +4055,13 @@
      "bytes": 78835,
      "startMs": 348,
      "endMs": 3355
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 72641,
+     "startMs": 348,
+     "endMs": 3061
     }
    ]
   },
@@ -3855,6 +4071,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 28,
    "fcpMs_all": [
     20,
@@ -3879,8 +4107,8 @@
     56,
     162
    ],
-   "mapUsableMs": 303,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 303,
+   "canvasQuietMs_all": [
     303,
     296,
     596
@@ -3921,17 +4149,17 @@
     8657032,
     9976216
    ],
-   "requestCount": 31,
+   "requestCount": 30,
    "requestCount_all": [
-    31,
-    31,
-    31
+    30,
+    30,
+    30
    ],
-   "bytesTotal": 2773824,
+   "bytesTotal": 2498647,
    "bytesTotal_all": [
-    2773824,
-    2773824,
-    2773824
+    2498647,
+    2498647,
+    2498647
    ],
    "requestsBeforeFcp": 6,
    "requestsBeforeFcp_all": [
@@ -3965,7 +4193,7 @@
     "tiles": 1053455,
     "fonts": 0,
     "images": 0,
-    "other": 483477
+    "other": 208300
    },
    "requestsByKind": {
     "html": 1,
@@ -3975,7 +4203,7 @@
     "tiles": 20,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 20,
    "pmtilesBytes": 1053455,
@@ -3988,13 +4216,6 @@
      "bytes": 1079110,
      "startMs": 12,
      "endMs": 16
-    },
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 300,
-     "endMs": 319
     },
     {
      "url": "http://127.0.0.1:18781/var/chlorophyll/central-coast/chlorophyll.png",
@@ -4051,6 +4272,13 @@
      "bytes": 70149,
      "startMs": 133,
      "endMs": 137
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 66715,
+     "startMs": 133,
+     "endMs": 136
     }
    ]
   },
@@ -4060,6 +4288,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 20,
    "fcpMs_all": [
     20,
@@ -4084,8 +4324,8 @@
     102,
     152
    ],
-   "mapUsableMs": 235,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 235,
+   "canvasQuietMs_all": [
     235,
     215,
     654
@@ -4126,17 +4366,17 @@
     6197940,
     12950388
    ],
-   "requestCount": 31,
+   "requestCount": 30,
    "requestCount_all": [
-    31,
-    31,
-    31
+    30,
+    30,
+    30
    ],
-   "bytesTotal": 1328632,
+   "bytesTotal": 1053455,
    "bytesTotal_all": [
-    1328632,
-    1328632,
-    1328632
+    1053455,
+    1053455,
+    1053455
    ],
    "requestsBeforeFcp": 7,
    "requestsBeforeFcp_all": [
@@ -4170,7 +4410,7 @@
     "tiles": 1053455,
     "fonts": 0,
     "images": 0,
-    "other": 275177
+    "other": 0
    },
    "requestsByKind": {
     "html": 1,
@@ -4180,20 +4420,13 @@
     "tiles": 20,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 20,
    "pmtilesBytes": 1053455,
    "habitatExportLoaded": 0,
    "medianRun": 1,
    "heaviest": [
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 232,
-     "endMs": 250
-    },
     {
      "url": "http://127.0.0.1:18781/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles",
      "kind": "tiles",
@@ -4256,6 +4489,13 @@
      "bytes": 51255,
      "startMs": 57,
      "endMs": 60
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 49164,
+     "startMs": 56,
+     "endMs": 59
     }
    ]
   },
@@ -4265,6 +4505,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 856,
    "fcpMs_all": [
     864,
@@ -4289,8 +4541,8 @@
     6617,
     6625
    ],
-   "mapUsableMs": 6629,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 6629,
+   "canvasQuietMs_all": [
     6629,
     6617,
     6676
@@ -4331,17 +4583,17 @@
     8542324,
     8242720
    ],
-   "requestCount": 22,
+   "requestCount": 21,
    "requestCount_all": [
-    22,
-    22,
-    22
+    21,
+    21,
+    21
    ],
-   "bytesTotal": 2333444,
+   "bytesTotal": 2058267,
    "bytesTotal_all": [
-    2333444,
-    2333444,
-    2333444
+    2058267,
+    2058267,
+    2058267
    ],
    "requestsBeforeFcp": 5,
    "requestsBeforeFcp_all": [
@@ -4375,7 +4627,7 @@
     "tiles": 613075,
     "fonts": 0,
     "images": 0,
-    "other": 483477
+    "other": 208300
    },
    "requestsByKind": {
     "html": 1,
@@ -4385,7 +4637,7 @@
     "tiles": 11,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 11,
    "pmtilesBytes": 613075,
@@ -4398,13 +4650,6 @@
      "bytes": 1079110,
      "startMs": 849,
      "endMs": 6236
-    },
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 12503,
-     "endMs": 12560
     },
     {
      "url": "http://127.0.0.1:18781/var/chlorophyll/central-coast/chlorophyll.png",
@@ -4461,6 +4706,13 @@
      "bytes": 51255,
      "startMs": 6908,
      "endMs": 8560
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 49164,
+     "startMs": 6907,
+     "endMs": 8159
     }
    ]
   },
@@ -4470,6 +4722,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 32,
    "fcpMs_all": [
     28,
@@ -4494,8 +4758,8 @@
     224,
     218
    ],
-   "mapUsableMs": 263,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 263,
+   "canvasQuietMs_all": [
     263,
     281,
     218
@@ -4536,17 +4800,17 @@
     11619744,
     11052756
    ],
-   "requestCount": 22,
+   "requestCount": 21,
    "requestCount_all": [
-    22,
-    22,
-    22
+    21,
+    21,
+    21
    ],
-   "bytesTotal": 888252,
+   "bytesTotal": 613075,
    "bytesTotal_all": [
-    888252,
-    888252,
-    888252
+    613075,
+    613075,
+    613075
    ],
    "requestsBeforeFcp": 6,
    "requestsBeforeFcp_all": [
@@ -4580,7 +4844,7 @@
     "tiles": 613075,
     "fonts": 0,
     "images": 0,
-    "other": 275177
+    "other": 0
    },
    "requestsByKind": {
     "html": 1,
@@ -4590,20 +4854,13 @@
     "tiles": 11,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 11,
    "pmtilesBytes": 613075,
    "habitatExportLoaded": 0,
    "medianRun": 1,
    "heaviest": [
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 3631,
-     "endMs": 3689
-    },
     {
      "url": "http://127.0.0.1:18781/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles",
      "kind": "tiles",
@@ -4666,6 +4923,13 @@
      "bytes": 40852,
      "startMs": 333,
      "endMs": 2469
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 16637,
+     "startMs": 90,
+     "endMs": 324
     }
    ]
   },
@@ -4675,6 +4939,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 20,
    "fcpMs_all": [
     32,
@@ -4699,8 +4975,8 @@
     106,
     81
    ],
-   "mapUsableMs": 365,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 365,
+   "canvasQuietMs_all": [
     372,
     359,
     365
@@ -4741,17 +5017,17 @@
     10260072,
     8080768
    ],
-   "requestCount": 44,
+   "requestCount": 43,
    "requestCount_all": [
-    44,
-    44,
-    44
+    43,
+    43,
+    43
    ],
-   "bytesTotal": 3859823,
+   "bytesTotal": 3584646,
    "bytesTotal_all": [
-    3859823,
-    3859823,
-    3859823
+    3584646,
+    3584646,
+    3584646
    ],
    "requestsBeforeFcp": 6,
    "requestsBeforeFcp_all": [
@@ -4785,7 +5061,7 @@
     "tiles": 2139454,
     "fonts": 0,
     "images": 0,
-    "other": 483477
+    "other": 208300
    },
    "requestsByKind": {
     "html": 1,
@@ -4795,7 +5071,7 @@
     "tiles": 33,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 33,
    "pmtilesBytes": 2139454,
@@ -4808,13 +5084,6 @@
      "bytes": 1079110,
      "startMs": 13,
      "endMs": 17
-    },
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 363,
-     "endMs": 385
     },
     {
      "url": "http://127.0.0.1:18781/var/chlorophyll/central-coast/chlorophyll.png",
@@ -4871,6 +5140,13 @@
      "bytes": 91395,
      "startMs": 209,
      "endMs": 215
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 89958,
+     "startMs": 149,
+     "endMs": 157
     }
    ]
   },
@@ -4880,6 +5156,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 24,
    "fcpMs_all": [
     24,
@@ -4904,8 +5192,8 @@
     107,
     73
    ],
-   "mapUsableMs": 294,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 294,
+   "canvasQuietMs_all": [
     323,
     258,
     294
@@ -4946,17 +5234,17 @@
     6267692,
     6264280
    ],
-   "requestCount": 44,
+   "requestCount": 43,
    "requestCount_all": [
-    44,
-    44,
-    44
+    43,
+    43,
+    43
    ],
-   "bytesTotal": 2414631,
+   "bytesTotal": 2139454,
    "bytesTotal_all": [
-    2414631,
-    2414631,
-    2414631
+    2139454,
+    2139454,
+    2139454
    ],
    "requestsBeforeFcp": 7,
    "requestsBeforeFcp_all": [
@@ -4990,7 +5278,7 @@
     "tiles": 2139454,
     "fonts": 0,
     "images": 0,
-    "other": 275177
+    "other": 0
    },
    "requestsByKind": {
     "html": 1,
@@ -5000,20 +5288,13 @@
     "tiles": 33,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 33,
    "pmtilesBytes": 2139454,
    "habitatExportLoaded": 0,
    "medianRun": 3,
    "heaviest": [
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 291,
-     "endMs": 312
-    },
     {
      "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
      "kind": "tiles",
@@ -5076,6 +5357,13 @@
      "bytes": 88231,
      "startMs": 88,
      "endMs": 93
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 87287,
+     "startMs": 88,
+     "endMs": 93
     }
    ]
   },
@@ -5085,6 +5373,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 856,
    "fcpMs_all": [
     856,
@@ -5109,8 +5409,8 @@
     6780,
     6630
    ],
-   "mapUsableMs": 6681,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 6681,
+   "canvasQuietMs_all": [
     6676,
     7255,
     6681
@@ -5151,17 +5451,17 @@
     9798388,
     8515920
    ],
-   "requestCount": 29,
+   "requestCount": 28,
    "requestCount_all": [
-    29,
-    29,
-    29
+    28,
+    28,
+    28
    ],
-   "bytesTotal": 2939340,
+   "bytesTotal": 2664163,
    "bytesTotal_all": [
-    2939340,
-    2939340,
-    2939340
+    2664163,
+    2664163,
+    2664163
    ],
    "requestsBeforeFcp": 5,
    "requestsBeforeFcp_all": [
@@ -5195,7 +5495,7 @@
     "tiles": 1218971,
     "fonts": 0,
     "images": 0,
-    "other": 483477
+    "other": 208300
    },
    "requestsByKind": {
     "html": 1,
@@ -5205,7 +5505,7 @@
     "tiles": 18,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 18,
    "pmtilesBytes": 1218971,
@@ -5218,13 +5518,6 @@
      "bytes": 1079110,
      "startMs": 846,
      "endMs": 6229
-    },
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 15906,
-     "endMs": 15970
     },
     {
      "url": "http://127.0.0.1:18781/var/chlorophyll/central-coast/chlorophyll.png",
@@ -5281,6 +5574,13 @@
      "bytes": 87287,
      "startMs": 6901,
      "endMs": 10021
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 84210,
+     "startMs": 6902,
+     "endMs": 13132
     }
    ]
   },
@@ -5290,6 +5590,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 36,
    "fcpMs_all": [
     36,
@@ -5314,8 +5626,8 @@
     217,
     199
    ],
-   "mapUsableMs": 353,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 353,
+   "canvasQuietMs_all": [
     361,
     353,
     321
@@ -5356,17 +5668,17 @@
     12096468,
     8674208
    ],
-   "requestCount": 29,
+   "requestCount": 28,
    "requestCount_all": [
-    29,
-    29,
-    29
+    28,
+    28,
+    28
    ],
-   "bytesTotal": 1494148,
+   "bytesTotal": 1218971,
    "bytesTotal_all": [
-    1494148,
-    1494148,
-    1494148
+    1218971,
+    1218971,
+    1218971
    ],
    "requestsBeforeFcp": 6,
    "requestsBeforeFcp_all": [
@@ -5400,7 +5712,7 @@
     "tiles": 1218971,
     "fonts": 0,
     "images": 0,
-    "other": 275177
+    "other": 0
    },
    "requestsByKind": {
     "html": 1,
@@ -5410,20 +5722,13 @@
     "tiles": 18,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 18,
    "pmtilesBytes": 1218971,
    "habitatExportLoaded": 0,
    "medianRun": 2,
    "heaviest": [
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 6610,
-     "endMs": 6676
-    },
     {
      "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
      "kind": "tiles",
@@ -5486,6 +5791,13 @@
      "bytes": 77951,
      "startMs": 404,
      "endMs": 3392
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 71946,
+     "startMs": 404,
+     "endMs": 3063
     }
    ]
   },
@@ -5495,6 +5807,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 28,
    "fcpMs_all": [
     32,
@@ -5519,8 +5843,8 @@
     75,
     99
    ],
-   "mapUsableMs": 432,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 432,
+   "canvasQuietMs_all": [
     432,
     477,
     392
@@ -5561,17 +5885,17 @@
     9725192,
     9819668
    ],
-   "requestCount": 44,
+   "requestCount": 43,
    "requestCount_all": [
-    44,
-    44,
-    44
+    43,
+    43,
+    43
    ],
-   "bytesTotal": 3859823,
+   "bytesTotal": 3584646,
    "bytesTotal_all": [
-    3859823,
-    3859823,
-    3859823
+    3584646,
+    3584646,
+    3584646
    ],
    "requestsBeforeFcp": 6,
    "requestsBeforeFcp_all": [
@@ -5579,11 +5903,11 @@
     6,
     6
    ],
-   "requestsBeforeLcp": 44,
+   "requestsBeforeLcp": 43,
    "requestsBeforeLcp_all": [
-    44,
-    44,
-    44
+    43,
+    43,
+    43
    ],
    "clientRedirectMs": 0,
    "clientRedirectMs_all": [
@@ -5605,7 +5929,7 @@
     "tiles": 2139454,
     "fonts": 0,
     "images": 0,
-    "other": 483477
+    "other": 208300
    },
    "requestsByKind": {
     "html": 1,
@@ -5615,7 +5939,7 @@
     "tiles": 33,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 33,
    "pmtilesBytes": 2139454,
@@ -5628,13 +5952,6 @@
      "bytes": 1079110,
      "startMs": 10,
      "endMs": 13
-    },
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 299,
-     "endMs": 319
     },
     {
      "url": "http://127.0.0.1:18781/var/chlorophyll/central-coast/chlorophyll.png",
@@ -5691,6 +6008,13 @@
      "bytes": 91395,
      "startMs": 167,
      "endMs": 170
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 89958,
+     "startMs": 85,
+     "endMs": 93
     }
    ]
   },
@@ -5700,6 +6024,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 24,
    "fcpMs_all": [
     32,
@@ -5724,8 +6060,8 @@
     106,
     115
    ],
-   "mapUsableMs": 381,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 381,
+   "canvasQuietMs_all": [
     381,
     367,
     396
@@ -5766,17 +6102,17 @@
     8563008,
     8577012
    ],
-   "requestCount": 44,
+   "requestCount": 43,
    "requestCount_all": [
-    44,
-    44,
-    44
+    43,
+    43,
+    43
    ],
-   "bytesTotal": 2414631,
+   "bytesTotal": 2139454,
    "bytesTotal_all": [
-    2414631,
-    2414631,
-    2414631
+    2139454,
+    2139454,
+    2139454
    ],
    "requestsBeforeFcp": 7,
    "requestsBeforeFcp_all": [
@@ -5784,11 +6120,11 @@
     7,
     7
    ],
-   "requestsBeforeLcp": 44,
+   "requestsBeforeLcp": 43,
    "requestsBeforeLcp_all": [
-    44,
-    44,
-    44
+    43,
+    43,
+    43
    ],
    "clientRedirectMs": 0,
    "clientRedirectMs_all": [
@@ -5810,7 +6146,7 @@
     "tiles": 2139454,
     "fonts": 0,
     "images": 0,
-    "other": 275177
+    "other": 0
    },
    "requestsByKind": {
     "html": 1,
@@ -5820,20 +6156,13 @@
     "tiles": 33,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 33,
    "pmtilesBytes": 2139454,
    "habitatExportLoaded": 0,
    "medianRun": 1,
    "heaviest": [
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 270,
-     "endMs": 289
-    },
     {
      "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
      "kind": "tiles",
@@ -5896,6 +6225,13 @@
      "bytes": 88231,
      "startMs": 103,
      "endMs": 107
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 87287,
+     "startMs": 103,
+     "endMs": 108
     }
    ]
   },
@@ -5905,6 +6241,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 844,
    "fcpMs_all": [
     860,
@@ -5929,8 +6277,8 @@
     6562,
     6533
    ],
-   "mapUsableMs": 6697,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 6697,
+   "canvasQuietMs_all": [
     7106,
     6697,
     6668
@@ -5971,17 +6319,17 @@
     9238384,
     8826584
    ],
-   "requestCount": 29,
+   "requestCount": 28,
    "requestCount_all": [
-    29,
-    29,
-    29
+    28,
+    28,
+    28
    ],
-   "bytesTotal": 2939340,
+   "bytesTotal": 2664163,
    "bytesTotal_all": [
-    2939340,
-    2939340,
-    2939340
+    2664163,
+    2664163,
+    2664163
    ],
    "requestsBeforeFcp": 5,
    "requestsBeforeFcp_all": [
@@ -5989,11 +6337,11 @@
     5,
     5
    ],
-   "requestsBeforeLcp": 29,
+   "requestsBeforeLcp": 28,
    "requestsBeforeLcp_all": [
-    29,
-    29,
-    29
+    28,
+    28,
+    28
    ],
    "clientRedirectMs": 0,
    "clientRedirectMs_all": [
@@ -6015,7 +6363,7 @@
     "tiles": 1218971,
     "fonts": 0,
     "images": 0,
-    "other": 483477
+    "other": 208300
    },
    "requestsByKind": {
     "html": 1,
@@ -6025,7 +6373,7 @@
     "tiles": 18,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 18,
    "pmtilesBytes": 1218971,
@@ -6038,13 +6386,6 @@
      "bytes": 1079110,
      "startMs": 841,
      "endMs": 6225
-    },
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 15908,
-     "endMs": 15969
     },
     {
      "url": "http://127.0.0.1:18781/var/chlorophyll/central-coast/chlorophyll.png",
@@ -6101,6 +6442,13 @@
      "bytes": 87287,
      "startMs": 6919,
      "endMs": 10051
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 84210,
+     "startMs": 6920,
+     "endMs": 13140
     }
    ]
   },
@@ -6110,6 +6458,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 32,
    "fcpMs_all": [
     32,
@@ -6134,8 +6494,8 @@
     216,
     211
    ],
-   "mapUsableMs": 221,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 221,
+   "canvasQuietMs_all": [
     221,
     271,
     211
@@ -6176,17 +6536,17 @@
     6926764,
     10129520
    ],
-   "requestCount": 29,
+   "requestCount": 28,
    "requestCount_all": [
-    29,
-    29,
-    29
+    28,
+    28,
+    28
    ],
-   "bytesTotal": 1494148,
+   "bytesTotal": 1218971,
    "bytesTotal_all": [
-    1494148,
-    1494148,
-    1494148
+    1218971,
+    1218971,
+    1218971
    ],
    "requestsBeforeFcp": 6,
    "requestsBeforeFcp_all": [
@@ -6194,11 +6554,11 @@
     6,
     6
    ],
-   "requestsBeforeLcp": 29,
+   "requestsBeforeLcp": 28,
    "requestsBeforeLcp_all": [
-    29,
-    29,
-    29
+    28,
+    28,
+    28
    ],
    "clientRedirectMs": 0,
    "clientRedirectMs_all": [
@@ -6220,7 +6580,7 @@
     "tiles": 1218971,
     "fonts": 0,
     "images": 0,
-    "other": 275177
+    "other": 0
    },
    "requestsByKind": {
     "html": 1,
@@ -6230,20 +6590,13 @@
     "tiles": 18,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 18,
    "pmtilesBytes": 1218971,
    "habitatExportLoaded": 0,
    "medianRun": 1,
    "heaviest": [
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 6530,
-     "endMs": 6588
-    },
     {
      "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
      "kind": "tiles",
@@ -6306,6 +6659,13 @@
      "bytes": 77951,
      "startMs": 344,
      "endMs": 3332
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 71946,
+     "startMs": 343,
+     "endMs": 3032
     }
    ]
   },
@@ -6315,6 +6675,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 255,
+   "layerDataStartMs_all": [
+    255,
+    234,
+    260
+   ],
+   "layerDataEndMs": 278,
+   "layerDataEndMs_all": [
+    278,
+    251,
+    281
+   ],
    "fcpMs": 28,
    "fcpMs_all": [
     28,
@@ -6339,8 +6711,8 @@
     101,
     65
    ],
-   "mapUsableMs": 101,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 101,
+   "canvasQuietMs_all": [
     109,
     101,
     65
@@ -6381,11 +6753,11 @@
     22228316,
     22898576
    ],
-   "requestCount": 40,
+   "requestCount": 39,
    "requestCount_all": [
-    40,
-    40,
-    40
+    39,
+    39,
+    39
    ],
    "bytesTotal": 5606017,
    "bytesTotal_all": [
@@ -6399,11 +6771,11 @@
     4,
     4
    ],
-   "requestsBeforeLcp": 40,
+   "requestsBeforeLcp": 39,
    "requestsBeforeLcp_all": [
-    40,
-    40,
-    40
+    39,
+    39,
+    39
    ],
    "clientRedirectMs": 0,
    "clientRedirectMs_all": [
@@ -6434,7 +6806,7 @@
     "json": 1,
     "tiles": 33,
     "fonts": 0,
-    "images": 1,
+    "images": 0,
     "other": 0
    },
    "pmtilesRangeRequests": 33,
@@ -6520,6 +6892,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 184,
+   "layerDataStartMs_all": [
+    186,
+    184,
+    134
+   ],
+   "layerDataEndMs": 207,
+   "layerDataEndMs_all": [
+    208,
+    207,
+    160
+   ],
    "fcpMs": 36,
    "fcpMs_all": [
     36,
@@ -6544,8 +6928,8 @@
     85,
     94
    ],
-   "mapUsableMs": 85,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 85,
+   "canvasQuietMs_all": [
     71,
     85,
     94
@@ -6586,11 +6970,11 @@
     8252604,
     8280840
    ],
-   "requestCount": 40,
+   "requestCount": 39,
    "requestCount_all": [
-    40,
-    40,
-    40
+    39,
+    39,
+    39
    ],
    "bytesTotal": 4416244,
    "bytesTotal_all": [
@@ -6604,11 +6988,11 @@
     6,
     6
    ],
-   "requestsBeforeLcp": 40,
+   "requestsBeforeLcp": 39,
    "requestsBeforeLcp_all": [
-    40,
-    40,
-    40
+    39,
+    39,
+    39
    ],
    "clientRedirectMs": 0,
    "clientRedirectMs_all": [
@@ -6639,7 +7023,7 @@
     "json": 1,
     "tiles": 33,
     "fonts": 0,
-    "images": 1,
+    "images": 0,
     "other": 0
    },
    "pmtilesRangeRequests": 33,
@@ -6725,6 +7109,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 14071,
+   "layerDataStartMs_all": [
+    14080,
+    14064,
+    14071
+   ],
+   "layerDataEndMs": 25527,
+   "layerDataEndMs_all": [
+    25541,
+    25526,
+    25527
+   ],
    "fcpMs": 864,
    "fcpMs_all": [
     860,
@@ -6749,8 +7145,8 @@
     6294,
     6290
    ],
-   "mapUsableMs": 6375,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 6375,
+   "canvasQuietMs_all": [
     6375,
     6429,
     6368
@@ -6791,11 +7187,11 @@
     8339152,
     8343684
    ],
-   "requestCount": 25,
+   "requestCount": 24,
    "requestCount_all": [
-    25,
-    25,
-    25
+    24,
+    24,
+    24
    ],
    "bytesTotal": 4685534,
    "bytesTotal_all": [
@@ -6809,11 +7205,11 @@
     4,
     4
    ],
-   "requestsBeforeLcp": 25,
+   "requestsBeforeLcp": 24,
    "requestsBeforeLcp_all": [
-    25,
-    25,
-    25
+    24,
+    24,
+    24
    ],
    "clientRedirectMs": 0,
    "clientRedirectMs_all": [
@@ -6844,7 +7240,7 @@
     "json": 1,
     "tiles": 18,
     "fonts": 0,
-    "images": 1,
+    "images": 0,
     "other": 0
    },
    "pmtilesRangeRequests": 18,
@@ -6930,6 +7326,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 6255,
+   "layerDataStartMs_all": [
+    6242,
+    6259,
+    6255
+   ],
+   "layerDataEndMs": 17267,
+   "layerDataEndMs_all": [
+    17253,
+    17269,
+    17267
+   ],
    "fcpMs": 32,
    "fcpMs_all": [
     32,
@@ -6954,8 +7362,8 @@
     139,
     212
    ],
-   "mapUsableMs": 268,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 268,
+   "canvasQuietMs_all": [
     203,
     274,
     268
@@ -6996,11 +7404,11 @@
     17450612,
     17943696
    ],
-   "requestCount": 25,
+   "requestCount": 24,
    "requestCount_all": [
-    25,
-    25,
-    25
+    24,
+    24,
+    24
    ],
    "bytesTotal": 3495761,
    "bytesTotal_all": [
@@ -7014,11 +7422,11 @@
     4,
     4
    ],
-   "requestsBeforeLcp": 25,
+   "requestsBeforeLcp": 24,
    "requestsBeforeLcp_all": [
-    25,
-    25,
-    25
+    24,
+    24,
+    24
    ],
    "clientRedirectMs": 0,
    "clientRedirectMs_all": [
@@ -7049,7 +7457,7 @@
     "json": 1,
     "tiles": 18,
     "fonts": 0,
-    "images": 1,
+    "images": 0,
     "other": 0
    },
    "pmtilesRangeRequests": 18,
@@ -7135,6 +7543,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 24,
    "fcpMs_all": [
     24,
@@ -7159,8 +7579,8 @@
     55,
     73
    ],
-   "mapUsableMs": 351,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 351,
+   "canvasQuietMs_all": [
     353,
     351,
     351
@@ -7201,17 +7621,17 @@
     10045924,
     9374716
    ],
-   "requestCount": 46,
+   "requestCount": 45,
    "requestCount_all": [
-    46,
-    46,
-    46
+    45,
+    45,
+    45
    ],
-   "bytesTotal": 3928369,
+   "bytesTotal": 3653192,
    "bytesTotal_all": [
-    3928369,
-    3928369,
-    3928369
+    3653192,
+    3653192,
+    3653192
    ],
    "requestsBeforeFcp": 6,
    "requestsBeforeFcp_all": [
@@ -7245,7 +7665,7 @@
     "tiles": 2139454,
     "fonts": 0,
     "images": 0,
-    "other": 483477
+    "other": 208300
    },
    "requestsByKind": {
     "html": 1,
@@ -7255,7 +7675,7 @@
     "tiles": 33,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 33,
    "pmtilesBytes": 2139454,
@@ -7268,13 +7688,6 @@
      "bytes": 1079110,
      "startMs": 13,
      "endMs": 16
-    },
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 349,
-     "endMs": 369
     },
     {
      "url": "http://127.0.0.1:18781/var/chlorophyll/central-coast/chlorophyll.png",
@@ -7331,6 +7744,13 @@
      "bytes": 91395,
      "startMs": 213,
      "endMs": 216
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 89958,
+     "startMs": 146,
+     "endMs": 156
     }
    ]
   },
@@ -7340,6 +7760,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 20,
    "fcpMs_all": [
     20,
@@ -7364,8 +7796,8 @@
     82,
     118
    ],
-   "mapUsableMs": 259,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 259,
+   "canvasQuietMs_all": [
     259,
     275,
     256
@@ -7406,17 +7838,17 @@
     6513544,
     6549608
    ],
-   "requestCount": 46,
+   "requestCount": 45,
    "requestCount_all": [
-    46,
-    46,
-    46
+    45,
+    45,
+    45
    ],
-   "bytesTotal": 2414631,
+   "bytesTotal": 2139454,
    "bytesTotal_all": [
-    2414631,
-    2414631,
-    2414631
+    2139454,
+    2139454,
+    2139454
    ],
    "requestsBeforeFcp": 7,
    "requestsBeforeFcp_all": [
@@ -7450,7 +7882,7 @@
     "tiles": 2139454,
     "fonts": 0,
     "images": 0,
-    "other": 275177
+    "other": 0
    },
    "requestsByKind": {
     "html": 1,
@@ -7460,20 +7892,13 @@
     "tiles": 33,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 33,
    "pmtilesBytes": 2139454,
    "habitatExportLoaded": 0,
    "medianRun": 1,
    "heaviest": [
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 257,
-     "endMs": 275
-    },
     {
      "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
      "kind": "tiles",
@@ -7536,6 +7961,13 @@
      "bytes": 88231,
      "startMs": 98,
      "endMs": 101
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 87287,
+     "startMs": 98,
+     "endMs": 102
     }
    ]
   },
@@ -7545,6 +7977,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 856,
    "fcpMs_all": [
     856,
@@ -7569,8 +8013,8 @@
     6645,
     6542
    ],
-   "mapUsableMs": 6671,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 6671,
+   "canvasQuietMs_all": [
     6630,
     6700,
     6671
@@ -7611,17 +8055,17 @@
     8603708,
     7514620
    ],
-   "requestCount": 31,
+   "requestCount": 30,
    "requestCount_all": [
-    31,
-    31,
-    31
+    30,
+    30,
+    30
    ],
-   "bytesTotal": 3007886,
+   "bytesTotal": 2732709,
    "bytesTotal_all": [
-    3007886,
-    3007886,
-    3007886
+    2732709,
+    2732709,
+    2732709
    ],
    "requestsBeforeFcp": 5,
    "requestsBeforeFcp_all": [
@@ -7655,7 +8099,7 @@
     "tiles": 1218971,
     "fonts": 0,
     "images": 0,
-    "other": 483477
+    "other": 208300
    },
    "requestsByKind": {
     "html": 1,
@@ -7665,7 +8109,7 @@
     "tiles": 18,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 18,
    "pmtilesBytes": 1218971,
@@ -7678,13 +8122,6 @@
      "bytes": 1079110,
      "startMs": 844,
      "endMs": 6229
-    },
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 16241,
-     "endMs": 16298
     },
     {
      "url": "http://127.0.0.1:18781/var/chlorophyll/central-coast/chlorophyll.png",
@@ -7741,6 +8178,13 @@
      "bytes": 87287,
      "startMs": 6936,
      "endMs": 10942
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 84210,
+     "startMs": 6937,
+     "endMs": 13446
     }
    ]
   },
@@ -7750,6 +8194,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 32,
    "fcpMs_all": [
     32,
@@ -7774,8 +8230,8 @@
     225,
     212
    ],
-   "mapUsableMs": 281,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 281,
+   "canvasQuietMs_all": [
     284,
     281,
     268
@@ -7816,17 +8272,17 @@
     7750920,
     5787816
    ],
-   "requestCount": 31,
+   "requestCount": 30,
    "requestCount_all": [
-    31,
-    31,
-    31
+    30,
+    30,
+    30
    ],
-   "bytesTotal": 1494148,
+   "bytesTotal": 1218971,
    "bytesTotal_all": [
-    1494148,
-    1494148,
-    1494148
+    1218971,
+    1218971,
+    1218971
    ],
    "requestsBeforeFcp": 6,
    "requestsBeforeFcp_all": [
@@ -7860,7 +8316,7 @@
     "tiles": 1218971,
     "fonts": 0,
     "images": 0,
-    "other": 275177
+    "other": 0
    },
    "requestsByKind": {
     "html": 1,
@@ -7870,20 +8326,13 @@
     "tiles": 18,
     "fonts": 0,
     "images": 0,
-    "other": 2
+    "other": 1
    },
    "pmtilesRangeRequests": 18,
    "pmtilesBytes": 1218971,
    "habitatExportLoaded": 0,
    "medianRun": 2,
    "heaviest": [
-    {
-     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4QAAANICAYAAACfZC\u2026[366926 chars]",
-     "kind": "other",
-     "bytes": 275177,
-     "startMs": 6591,
-     "endMs": 6652
-    },
     {
      "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
      "kind": "tiles",
@@ -7946,6 +8395,13 @@
      "bytes": 77951,
      "startMs": 376,
      "endMs": 3380
+    },
+    {
+     "url": "http://127.0.0.1:18781/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles",
+     "kind": "tiles",
+     "bytes": 71946,
+     "startMs": 375,
+     "endMs": 3065
     }
    ]
   },
@@ -7955,6 +8411,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 24,
    "fcpMs_all": [
     24,
@@ -7979,8 +8447,8 @@
     76,
     105
    ],
-   "mapUsableMs": 78,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 78,
+   "canvasQuietMs_all": [
     78,
     76,
     105
@@ -8021,11 +8489,11 @@
     63111776,
     35981408
    ],
-   "requestCount": 41,
+   "requestCount": 40,
    "requestCount_all": [
-    42,
     41,
-    41
+    40,
+    40
    ],
    "bytesTotal": 3335792,
    "bytesTotal_all": [
@@ -8074,7 +8542,7 @@
     "json": 1,
     "tiles": 33,
     "fonts": 0,
-    "images": 1,
+    "images": 0,
     "other": 0
    },
    "pmtilesRangeRequests": 33,
@@ -8160,6 +8628,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 36,
    "fcpMs_all": [
     36,
@@ -8184,8 +8664,8 @@
     75,
     75
    ],
-   "mapUsableMs": 75,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 75,
+   "canvasQuietMs_all": [
     77,
     75,
     75
@@ -8226,11 +8706,11 @@
     57589968,
     54665888
    ],
-   "requestCount": 41,
+   "requestCount": 40,
    "requestCount_all": [
-    41,
-    41,
-    41
+    40,
+    40,
+    40
    ],
    "bytesTotal": 2143319,
    "bytesTotal_all": [
@@ -8238,17 +8718,17 @@
     2143319,
     2143319
    ],
-   "requestsBeforeFcp": 8,
+   "requestsBeforeFcp": 7,
    "requestsBeforeFcp_all": [
-    8,
-    8,
-    8
+    7,
+    7,
+    7
    ],
-   "requestsBeforeLcp": 8,
+   "requestsBeforeLcp": 7,
    "requestsBeforeLcp_all": [
-    8,
-    8,
-    8
+    7,
+    7,
+    7
    ],
    "clientRedirectMs": 0,
    "clientRedirectMs_all": [
@@ -8279,7 +8759,7 @@
     "json": 1,
     "tiles": 33,
     "fonts": 0,
-    "images": 1,
+    "images": 0,
     "other": 0
    },
    "pmtilesRangeRequests": 33,
@@ -8365,6 +8845,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 844,
    "fcpMs_all": [
     844,
@@ -8389,8 +8881,8 @@
     6314,
     6293
    ],
-   "mapUsableMs": 6429,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 6429,
+   "canvasQuietMs_all": [
     6380,
     6448,
     6429
@@ -8431,11 +8923,11 @@
     47249096,
     11384540
    ],
-   "requestCount": 26,
+   "requestCount": 25,
    "requestCount_all": [
-    27,
     26,
-    26
+    25,
+    25
    ],
    "bytesTotal": 2415309,
    "bytesTotal_all": [
@@ -8484,7 +8976,7 @@
     "json": 1,
     "tiles": 18,
     "fonts": 0,
-    "images": 1,
+    "images": 0,
     "other": 0
    },
    "pmtilesRangeRequests": 18,
@@ -8570,6 +9062,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": null,
+   "layerDataStartMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerDataEndMs": null,
+   "layerDataEndMs_all": [
+    null,
+    null,
+    null
+   ],
    "fcpMs": 124,
    "fcpMs_all": [
     132,
@@ -8594,8 +9098,8 @@
     205,
     195
    ],
-   "mapUsableMs": 211,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 211,
+   "canvasQuietMs_all": [
     211,
     260,
     195
@@ -8636,11 +9140,11 @@
     27448116,
     23538900
    ],
-   "requestCount": 26,
+   "requestCount": 25,
    "requestCount_all": [
-    26,
-    26,
-    26
+    25,
+    25,
+    25
    ],
    "bytesTotal": 1222836,
    "bytesTotal_all": [
@@ -8648,17 +9152,17 @@
     1222836,
     1222836
    ],
-   "requestsBeforeFcp": 8,
+   "requestsBeforeFcp": 7,
    "requestsBeforeFcp_all": [
-    8,
-    8,
-    8
+    7,
+    7,
+    7
    ],
-   "requestsBeforeLcp": 8,
+   "requestsBeforeLcp": 7,
    "requestsBeforeLcp_all": [
-    8,
-    8,
-    8
+    7,
+    7,
+    7
    ],
    "clientRedirectMs": 0,
    "clientRedirectMs_all": [
@@ -8689,7 +9193,7 @@
     "json": 1,
     "tiles": 18,
     "fonts": 0,
-    "images": 1,
+    "images": 0,
     "other": 0
    },
    "pmtilesRangeRequests": 18,
@@ -8775,6 +9279,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 260,
+   "layerDataStartMs_all": [
+    230,
+    260,
+    441
+   ],
+   "layerDataEndMs": 619,
+   "layerDataEndMs_all": [
+    405,
+    619,
+    627
+   ],
    "fcpMs": 188,
    "fcpMs_all": [
     136,
@@ -8799,8 +9315,8 @@
     504,
     621
    ],
-   "mapUsableMs": 12766,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 12766,
+   "canvasQuietMs_all": [
     12766,
     12389,
     13294
@@ -8980,6 +9496,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 143,
+   "layerDataStartMs_all": [
+    149,
+    134,
+    143
+   ],
+   "layerDataEndMs": 276,
+   "layerDataEndMs_all": [
+    255,
+    452,
+    276
+   ],
    "fcpMs": 60,
    "fcpMs_all": [
     60,
@@ -9004,8 +9532,8 @@
     322,
     311
    ],
-   "mapUsableMs": 12635,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 12635,
+   "canvasQuietMs_all": [
     12640,
     12107,
     12635
@@ -9185,6 +9713,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 3597,
+   "layerDataStartMs_all": [
+    3655,
+    3546,
+    3597
+   ],
+   "layerDataEndMs": 7775,
+   "layerDataEndMs_all": [
+    7893,
+    7677,
+    7775
+   ],
    "fcpMs": 1860,
    "fcpMs_all": [
     1880,
@@ -9209,8 +9749,8 @@
     9653,
     9725
    ],
-   "mapUsableMs": 10510,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 10510,
+   "canvasQuietMs_all": [
     10220,
     10510,
     11171
@@ -9390,6 +9930,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 687,
+   "layerDataStartMs_all": [
+    687,
+    711,
+    627
+   ],
+   "layerDataEndMs": 3441,
+   "layerDataEndMs_all": [
+    3441,
+    3467,
+    3292
+   ],
    "fcpMs": 268,
    "fcpMs_all": [
     268,
@@ -9414,8 +9966,8 @@
     1069,
     984
    ],
-   "mapUsableMs": 3677,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 3677,
+   "canvasQuietMs_all": [
     3629,
     3713,
     3677
@@ -9595,6 +10147,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 480,
+   "layerDataStartMs_all": [
+    401,
+    480,
+    502
+   ],
+   "layerDataEndMs": 957,
+   "layerDataEndMs_all": [
+    957,
+    902,
+    1015
+   ],
    "fcpMs": 308,
    "fcpMs_all": [
     296,
@@ -9619,8 +10183,8 @@
     629,
     656
    ],
-   "mapUsableMs": 13048,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 13048,
+   "canvasQuietMs_all": [
     12991,
     13317,
     13048
@@ -9800,6 +10364,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 148,
+   "layerDataStartMs_all": [
+    147,
+    148,
+    150
+   ],
+   "layerDataEndMs": 567,
+   "layerDataEndMs_all": [
+    567,
+    491,
+    580
+   ],
    "fcpMs": 76,
    "fcpMs_all": [
     148,
@@ -9824,8 +10400,8 @@
     309,
     338
    ],
-   "mapUsableMs": 12581,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 12581,
+   "canvasQuietMs_all": [
     12581,
     12665,
     12485
@@ -10005,6 +10581,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 3531,
+   "layerDataStartMs_all": [
+    3499,
+    3647,
+    3531
+   ],
+   "layerDataEndMs": 16544,
+   "layerDataEndMs_all": [
+    16512,
+    16609,
+    16544
+   ],
    "fcpMs": 1856,
    "fcpMs_all": [
     1844,
@@ -10029,8 +10617,8 @@
     9507,
     9456
    ],
-   "mapUsableMs": 9665,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 9665,
+   "canvasQuietMs_all": [
     9571,
     9665,
     9936
@@ -10210,6 +10798,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 607,
+   "layerDataStartMs_all": [
+    607,
+    649,
+    605
+   ],
+   "layerDataEndMs": 5052,
+   "layerDataEndMs_all": [
+    5052,
+    4993,
+    5158
+   ],
    "fcpMs": 244,
    "fcpMs_all": [
     232,
@@ -10234,8 +10834,8 @@
     990,
     1092
    ],
-   "mapUsableMs": 3783,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 3783,
+   "canvasQuietMs_all": [
     3783,
     3717,
     3825
@@ -10415,6 +11015,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 303,
+   "layerDataStartMs_all": [
+    227,
+    619,
+    303
+   ],
+   "layerDataEndMs": 496,
+   "layerDataEndMs_all": [
+    473,
+    909,
+    496
+   ],
    "fcpMs": 176,
    "fcpMs_all": [
     168,
@@ -10439,8 +11051,8 @@
     925,
     618
    ],
-   "mapUsableMs": 13221,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 13221,
+   "canvasQuietMs_all": [
     12721,
     14459,
     13221
@@ -10620,6 +11232,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 132,
+   "layerDataStartMs_all": [
+    130,
+    144,
+    132
+   ],
+   "layerDataEndMs": 375,
+   "layerDataEndMs_all": [
+    432,
+    324,
+    375
+   ],
    "fcpMs": 64,
    "fcpMs_all": [
     52,
@@ -10644,8 +11268,8 @@
     332,
     318
    ],
-   "mapUsableMs": 12511,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 12511,
+   "canvasQuietMs_all": [
     12511,
     12942,
     12460
@@ -10825,6 +11449,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 3438,
+   "layerDataStartMs_all": [
+    3307,
+    3438,
+    3453
+   ],
+   "layerDataEndMs": 7454,
+   "layerDataEndMs_all": [
+    7325,
+    7454,
+    7476
+   ],
    "fcpMs": 1728,
    "fcpMs_all": [
     1612,
@@ -10849,8 +11485,8 @@
     9291,
     9325
    ],
-   "mapUsableMs": 9452,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 9452,
+   "canvasQuietMs_all": [
     9332,
     9452,
     9482
@@ -11030,6 +11666,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 589,
+   "layerDataStartMs_all": [
+    567,
+    589,
+    1897
+   ],
+   "layerDataEndMs": 3091,
+   "layerDataEndMs_all": [
+    2982,
+    3091,
+    4528
+   ],
    "fcpMs": 440,
    "fcpMs_all": [
     228,
@@ -11054,8 +11702,8 @@
     906,
     2349
    ],
-   "mapUsableMs": 3279,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 3279,
+   "canvasQuietMs_all": [
     3137,
     3279,
     4700
@@ -11235,6 +11883,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 357,
+   "layerDataStartMs_all": [
+    357,
+    284,
+    619
+   ],
+   "layerDataEndMs": 652,
+   "layerDataEndMs_all": [
+    652,
+    431,
+    842
+   ],
    "fcpMs": 272,
    "fcpMs_all": [
     272,
@@ -11259,8 +11919,8 @@
     398,
     804
    ],
-   "mapUsableMs": 13645,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 13645,
+   "canvasQuietMs_all": [
     13645,
     13315,
     13829
@@ -11440,6 +12100,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 146,
+   "layerDataStartMs_all": [
+    150,
+    146,
+    127
+   ],
+   "layerDataEndMs": 270,
+   "layerDataEndMs_all": [
+    289,
+    264,
+    270
+   ],
    "fcpMs": 56,
    "fcpMs_all": [
     52,
@@ -11464,8 +12136,8 @@
     349,
     319
    ],
-   "mapUsableMs": 13757,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 13757,
+   "canvasQuietMs_all": [
     13988,
     13757,
     13287
@@ -11645,6 +12317,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 3609,
+   "layerDataStartMs_all": [
+    3636,
+    3609,
+    3487
+   ],
+   "layerDataEndMs": 7635,
+   "layerDataEndMs_all": [
+    7684,
+    7635,
+    7554
+   ],
    "fcpMs": 1916,
    "fcpMs_all": [
     1916,
@@ -11669,8 +12353,8 @@
     9561,
     9430
    ],
-   "mapUsableMs": 10041,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 10041,
+   "canvasQuietMs_all": [
     12990,
     10041,
     9940
@@ -11850,6 +12534,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 629,
+   "layerDataStartMs_all": [
+    733,
+    629,
+    587
+   ],
+   "layerDataEndMs": 3514,
+   "layerDataEndMs_all": [
+    3719,
+    3514,
+    3488
+   ],
    "fcpMs": 288,
    "fcpMs_all": [
     332,
@@ -11874,8 +12570,8 @@
     988,
     915
    ],
-   "mapUsableMs": 3773,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 3773,
+   "canvasQuietMs_all": [
     3903,
     3773,
     3685
@@ -12055,6 +12751,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 333,
+   "layerDataStartMs_all": [
+    380,
+    333,
+    236
+   ],
+   "layerDataEndMs": 513,
+   "layerDataEndMs_all": [
+    555,
+    513,
+    375
+   ],
    "fcpMs": 176,
    "fcpMs_all": [
     280,
@@ -12079,8 +12787,8 @@
     563,
     407
    ],
-   "mapUsableMs": 12950,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 12950,
+   "canvasQuietMs_all": [
     12763,
     12972,
     12950
@@ -12260,6 +12968,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 128,
+   "layerDataStartMs_all": [
+    147,
+    128,
+    124
+   ],
+   "layerDataEndMs": 257,
+   "layerDataEndMs_all": [
+    257,
+    261,
+    226
+   ],
    "fcpMs": 64,
    "fcpMs_all": [
     64,
@@ -12284,8 +13004,8 @@
     329,
     322
    ],
-   "mapUsableMs": 12780,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 12780,
+   "canvasQuietMs_all": [
     12780,
     12246,
     12931
@@ -12465,6 +13185,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 3509,
+   "layerDataStartMs_all": [
+    3509,
+    3341,
+    3630
+   ],
+   "layerDataEndMs": 7517,
+   "layerDataEndMs_all": [
+    7517,
+    7388,
+    7618
+   ],
    "fcpMs": 1840,
    "fcpMs_all": [
     1840,
@@ -12489,8 +13221,8 @@
     9317,
     9503
    ],
-   "mapUsableMs": 9855,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 9855,
+   "canvasQuietMs_all": [
     9855,
     9927,
     9677
@@ -12670,6 +13402,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 679,
+   "layerDataStartMs_all": [
+    633,
+    715,
+    679
+   ],
+   "layerDataEndMs": 3359,
+   "layerDataEndMs_all": [
+    3226,
+    3359,
+    3470
+   ],
    "fcpMs": 288,
    "fcpMs_all": [
     248,
@@ -12694,8 +13438,8 @@
     1386,
     1097
    ],
-   "mapUsableMs": 4027,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 4027,
+   "canvasQuietMs_all": [
     3638,
     4172,
     4027
@@ -12875,6 +13619,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 381,
+   "layerDataStartMs_all": [
+    381,
+    430,
+    330
+   ],
+   "layerDataEndMs": 595,
+   "layerDataEndMs_all": [
+    682,
+    595,
+    529
+   ],
    "fcpMs": 272,
    "fcpMs_all": [
     272,
@@ -12899,8 +13655,8 @@
     699,
     517
    ],
-   "mapUsableMs": 13329,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 13329,
+   "canvasQuietMs_all": [
     12798,
     13329,
     13465
@@ -13080,6 +13836,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 159,
+   "layerDataStartMs_all": [
+    141,
+    164,
+    159
+   ],
+   "layerDataEndMs": 304,
+   "layerDataEndMs_all": [
+    323,
+    289,
+    304
+   ],
    "fcpMs": 56,
    "fcpMs_all": [
     52,
@@ -13104,8 +13872,8 @@
     287,
     281
    ],
-   "mapUsableMs": 12903,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 12903,
+   "canvasQuietMs_all": [
     12533,
     12903,
     12922
@@ -13285,6 +14053,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 3508,
+   "layerDataStartMs_all": [
+    3587,
+    3508,
+    3315
+   ],
+   "layerDataEndMs": 7610,
+   "layerDataEndMs_all": [
+    7633,
+    7610,
+    7346
+   ],
    "fcpMs": 1836,
    "fcpMs_all": [
     2036,
@@ -13309,8 +14089,8 @@
     9394,
     9212
    ],
-   "mapUsableMs": 9565,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 9565,
+   "canvasQuietMs_all": [
     9683,
     9565,
     9384
@@ -13490,6 +14270,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 607,
+   "layerDataStartMs_all": [
+    607,
+    606,
+    607
+   ],
+   "layerDataEndMs": 3133,
+   "layerDataEndMs_all": [
+    3068,
+    3133,
+    3184
+   ],
    "fcpMs": 248,
    "fcpMs_all": [
     264,
@@ -13514,8 +14306,8 @@
     1078,
     947
    ],
-   "mapUsableMs": 3600,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 3600,
+   "canvasQuietMs_all": [
     3584,
     3656,
     3600
@@ -13695,6 +14487,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 446,
+   "layerDataStartMs_all": [
+    489,
+    345,
+    446
+   ],
+   "layerDataEndMs": 647,
+   "layerDataEndMs_all": [
+    674,
+    647,
+    635
+   ],
    "fcpMs": 352,
    "fcpMs_all": [
     352,
@@ -13719,8 +14523,8 @@
     453,
     672
    ],
-   "mapUsableMs": 13236,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 13236,
+   "canvasQuietMs_all": [
     13461,
     13107,
     13236
@@ -13900,6 +14704,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 143,
+   "layerDataStartMs_all": [
+    146,
+    143,
+    137
+   ],
+   "layerDataEndMs": 286,
+   "layerDataEndMs_all": [
+    286,
+    399,
+    260
+   ],
    "fcpMs": 132,
    "fcpMs_all": [
     132,
@@ -13924,8 +14740,8 @@
     301,
     322
    ],
-   "mapUsableMs": 12568,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 12568,
+   "canvasQuietMs_all": [
     12755,
     12491,
     12568
@@ -14105,6 +14921,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 3554,
+   "layerDataStartMs_all": [
+    3554,
+    3551,
+    3694
+   ],
+   "layerDataEndMs": 7582,
+   "layerDataEndMs_all": [
+    7582,
+    7575,
+    7721
+   ],
    "fcpMs": 1844,
    "fcpMs_all": [
     1844,
@@ -14129,8 +14957,8 @@
     9572,
     9844
    ],
-   "mapUsableMs": 15759,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 15759,
+   "canvasQuietMs_all": [
     10060,
     15759,
     16369
@@ -14310,6 +15138,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 689,
+   "layerDataStartMs_all": [
+    660,
+    689,
+    771
+   ],
+   "layerDataEndMs": 3064,
+   "layerDataEndMs_all": [
+    2778,
+    3164,
+    3064
+   ],
    "fcpMs": 320,
    "fcpMs_all": [
     292,
@@ -14334,8 +15174,8 @@
     1316,
     1494
    ],
-   "mapUsableMs": 4271,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 4271,
+   "canvasQuietMs_all": [
     3968,
     4273,
     4271
@@ -14515,6 +15355,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 832,
+   "layerDataStartMs_all": [
+    832,
+    375,
+    893
+   ],
+   "layerDataEndMs": 1171,
+   "layerDataEndMs_all": [
+    1341,
+    1091,
+    1171
+   ],
    "fcpMs": 812,
    "fcpMs_all": [
     812,
@@ -14539,8 +15391,8 @@
     533,
     997
    ],
-   "mapUsableMs": 14518,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 14518,
+   "canvasQuietMs_all": [
     14518,
     13637,
     19813
@@ -14720,6 +15572,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 236,
+   "layerDataStartMs_all": [
+    452,
+    236,
+    221
+   ],
+   "layerDataEndMs": 540,
+   "layerDataEndMs_all": [
+    837,
+    540,
+    499
+   ],
    "fcpMs": 223,
    "fcpMs_all": [
     413,
@@ -14744,8 +15608,8 @@
     437,
     334
    ],
-   "mapUsableMs": 13636,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 13636,
+   "canvasQuietMs_all": [
     14523,
     13636,
     13380
@@ -14925,6 +15789,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 3766,
+   "layerDataStartMs_all": [
+    3756,
+    3789,
+    3766
+   ],
+   "layerDataEndMs": 21250,
+   "layerDataEndMs_all": [
+    21163,
+    21287,
+    21250
+   ],
    "fcpMs": 3373,
    "fcpMs_all": [
     3373,
@@ -14949,8 +15825,8 @@
     9660,
     9625
    ],
-   "mapUsableMs": 9776,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 9776,
+   "canvasQuietMs_all": [
     9774,
     9818,
     9776
@@ -15130,6 +16006,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 913,
+   "layerDataStartMs_all": [
+    913,
+    922,
+    913
+   ],
+   "layerDataEndMs": 9465,
+   "layerDataEndMs_all": [
+    9465,
+    10605,
+    9166
+   ],
    "fcpMs": 677,
    "fcpMs_all": [
     677,
@@ -15154,8 +16042,8 @@
     1221,
     1219
    ],
-   "mapUsableMs": 3370,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 3370,
+   "canvasQuietMs_all": [
     4762,
     2893,
     3370
@@ -15335,6 +16223,18 @@
    "pass": "cold",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 975,
+   "layerDataStartMs_all": [
+    750,
+    975,
+    975
+   ],
+   "layerDataEndMs": 1465,
+   "layerDataEndMs_all": [
+    1078,
+    1465,
+    1536
+   ],
    "fcpMs": 816,
    "fcpMs_all": [
     589,
@@ -15359,8 +16259,8 @@
     1374,
     1330
    ],
-   "mapUsableMs": 16611,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 16611,
+   "canvasQuietMs_all": [
     16611,
     16653,
     16356
@@ -15540,6 +16440,18 @@
    "pass": "warm",
    "runs": 3,
    "settledAll": true,
+   "layerDataStartMs": 622,
+   "layerDataStartMs_all": [
+    623,
+    621,
+    622
+   ],
+   "layerDataEndMs": 1145,
+   "layerDataEndMs_all": [
+    1123,
+    1145,
+    1155
+   ],
    "fcpMs": 434,
    "fcpMs_all": [
     430,
@@ -15564,8 +16476,8 @@
     952,
     969
    ],
-   "mapUsableMs": 16174,
-   "mapUsableMs_all": [
+   "canvasQuietMs": 16174,
+   "canvasQuietMs_all": [
     15875,
     16174,
     16481

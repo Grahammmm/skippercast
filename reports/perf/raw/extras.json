@@ -15,7 +15,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 585.0,
+  "scriptMs": 11480,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 19639,
   "domNodes": 1752
@@ -36,7 +38,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 581.9,
+  "scriptMs": 11255,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 19603,
   "domNodes": 1749
@@ -57,7 +61,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 22.5,
+  "scriptMs": 1634,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 72361,
   "domNodes": 961
@@ -78,7 +84,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 29.3,
+  "scriptMs": 2043,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 69802,
   "domNodes": 962
@@ -99,7 +107,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 1892.7,
+  "scriptMs": 23166,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 12265,
   "domNodes": 897
@@ -120,7 +130,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 1936.8,
+  "scriptMs": 23483,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 12070,
   "domNodes": 897
@@ -140,7 +152,9 @@
    "api.tidesandcurrents.noaa.gov",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 14.9,
+  "scriptMs": 158,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 27,
   "settledMs": 10620,
   "domNodes": 567
@@ -160,7 +174,9 @@
    "api.tidesandcurrents.noaa.gov",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 15.5,
+  "scriptMs": 152,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 27,
   "settledMs": 9817,
   "domNodes": 567
@@ -180,7 +196,9 @@
    "api.tidesandcurrents.noaa.gov",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 18.4,
+  "scriptMs": 347,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 27,
   "settledMs": 18807,
   "domNodes": 534
@@ -200,7 +218,9 @@
    "api.tidesandcurrents.noaa.gov",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 25.5,
+  "scriptMs": 324,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 27,
   "settledMs": 12701,
   "domNodes": 534
@@ -217,7 +237,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 6.7,
+  "scriptMs": 44,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 6,
   "settledMs": 6529,
   "domNodes": 187
@@ -234,7 +256,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 4.1,
+  "scriptMs": 27,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 7,
   "settledMs": 6526,
   "domNodes": 167
@@ -251,7 +275,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 6.5,
+  "scriptMs": 144,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 3,
   "settledMs": 22219,
   "domNodes": 188
@@ -268,7 +294,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 7.6,
+  "scriptMs": 97,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 6,
   "settledMs": 12788,
   "domNodes": 169
@@ -285,7 +313,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 5.7,
+  "scriptMs": 37,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 6,
   "settledMs": 6525,
   "domNodes": 187
@@ -302,7 +332,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 4.3,
+  "scriptMs": 28,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 7,
   "settledMs": 6526,
   "domNodes": 167
@@ -319,7 +351,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 6.7,
+  "scriptMs": 148,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 5,
   "settledMs": 22218,
   "domNodes": 188
@@ -336,7 +370,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 7.5,
+  "scriptMs": 96,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 6,
   "settledMs": 12791,
   "domNodes": 169
@@ -353,7 +389,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 5.4,
+  "scriptMs": 35,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 6,
   "settledMs": 6522,
   "domNodes": 187
@@ -370,7 +408,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 3.8,
+  "scriptMs": 24,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 7,
   "settledMs": 6274,
   "domNodes": 167
@@ -387,7 +427,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 6.8,
+  "scriptMs": 128,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 5,
   "settledMs": 18713,
   "domNodes": 188
@@ -404,7 +446,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 7.8,
+  "scriptMs": 76,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 6,
   "settledMs": 9781,
   "domNodes": 169
@@ -421,7 +465,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 6.4,
+  "scriptMs": 42,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 6,
   "settledMs": 6523,
   "domNodes": 187
@@ -438,7 +484,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 4.6,
+  "scriptMs": 30,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 7,
   "settledMs": 6524,
   "domNodes": 167
@@ -455,7 +503,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 7.6,
+  "scriptMs": 169,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 5,
   "settledMs": 22220,
   "domNodes": 188
@@ -472,7 +522,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 9.0,
+  "scriptMs": 115,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 6,
   "settledMs": 12790,
   "domNodes": 169
@@ -489,7 +541,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 8.6,
+  "scriptMs": 56,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 6,
   "settledMs": 6523,
   "domNodes": 187
@@ -506,7 +560,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 6.1,
+  "scriptMs": 40,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 7,
   "settledMs": 6524,
   "domNodes": 167
@@ -523,7 +579,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 9.3,
+  "scriptMs": 207,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 5,
   "settledMs": 22212,
   "domNodes": 188
@@ -540,7 +598,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 10.0,
+  "scriptMs": 128,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 6,
   "settledMs": 12789,
   "domNodes": 169
@@ -557,7 +617,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 9.4,
+  "scriptMs": 61,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 4,
   "settledMs": 6524,
   "domNodes": 141
@@ -574,7 +636,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 6.1,
+  "scriptMs": 40,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 6,
   "settledMs": 6274,
   "domNodes": 116
@@ -591,7 +655,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 6.5,
+  "scriptMs": 206,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 4,
   "settledMs": 31982,
   "domNodes": 116
@@ -608,7 +674,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 5.9,
+  "scriptMs": 140,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 4,
   "settledMs": 23559,
   "domNodes": 123
@@ -625,7 +693,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 6.0,
+  "scriptMs": 39,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 6,
   "settledMs": 6526,
   "domNodes": 520
@@ -642,7 +712,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 3.8,
+  "scriptMs": 25,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 7,
   "settledMs": 6522,
   "domNodes": 308
@@ -659,7 +731,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 6.9,
+  "scriptMs": 155,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 5,
   "settledMs": 22471,
   "domNodes": 521
@@ -676,7 +750,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 7.4,
+  "scriptMs": 95,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 6,
   "settledMs": 12792,
   "domNodes": 308
@@ -693,7 +769,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 580.2,
+  "scriptMs": 3639,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 5,
   "settledMs": 6276,
   "domNodes": 96
@@ -710,7 +788,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 632.4,
+  "scriptMs": 3968,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 8,
   "settledMs": 6273,
   "domNodes": 96
@@ -727,7 +807,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 220.0,
+  "scriptMs": 4501,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 5,
   "settledMs": 20465,
   "domNodes": 96
@@ -744,7 +826,9 @@
   "thirdPartyRequests": 0,
   "thirdPartyBytes": 0,
   "thirdPartyHosts": [],
-  "scriptMsPerSecond": 326.3,
+  "scriptMs": 4090,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 8,
   "settledMs": 12540,
   "domNodes": 100
@@ -765,7 +849,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 514.1,
+  "scriptMs": 11082,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 21650,
   "domNodes": 1672
@@ -786,7 +872,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 510.4,
+  "scriptMs": 11152,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 21851,
   "domNodes": 1672
@@ -807,7 +895,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 23.8,
+  "scriptMs": 1730,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 66,
   "settledMs": 72671,
   "domNodes": 967
@@ -828,7 +918,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 20.8,
+  "scriptMs": 1451,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 66,
   "settledMs": 69822,
   "domNodes": 967
@@ -849,7 +941,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 515.0,
+  "scriptMs": 11343,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 22157,
   "domNodes": 1685
@@ -870,7 +964,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 518.0,
+  "scriptMs": 11226,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 21854,
   "domNodes": 1685
@@ -891,7 +987,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 31.9,
+  "scriptMs": 2312,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 66,
   "settledMs": 72615,
   "domNodes": 967
@@ -912,7 +1010,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 30.5,
+  "scriptMs": 2128,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 66,
   "settledMs": 69801,
   "domNodes": 967
@@ -933,7 +1033,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 565.7,
+  "scriptMs": 11231,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 20905,
   "domNodes": 1623
@@ -954,7 +1056,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 515.0,
+  "scriptMs": 11147,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 21599,
   "domNodes": 1623
@@ -975,7 +1079,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 15.8,
+  "scriptMs": 1144,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 72328,
   "domNodes": 959
@@ -996,7 +1102,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 15.3,
+  "scriptMs": 1085,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 66,
   "settledMs": 69809,
   "domNodes": 959
@@ -1017,7 +1125,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 576.1,
+  "scriptMs": 11410,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 19938,
   "domNodes": 1689
@@ -1038,7 +1148,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 591.2,
+  "scriptMs": 11772,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 19845,
   "domNodes": 1686
@@ -1059,7 +1171,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 22.5,
+  "scriptMs": 1639,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 66,
   "settledMs": 72710,
   "domNodes": 965
@@ -1080,7 +1194,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 21.9,
+  "scriptMs": 1531,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 66,
   "settledMs": 69813,
   "domNodes": 965
@@ -1101,7 +1217,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 505.2,
+  "scriptMs": 11169,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 22129,
   "domNodes": 1693
@@ -1122,7 +1240,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 510.5,
+  "scriptMs": 11107,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 21855,
   "domNodes": 1693
@@ -1143,7 +1263,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 21.8,
+  "scriptMs": 1584,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 66,
   "settledMs": 72575,
   "domNodes": 967
@@ -1164,7 +1286,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 22.2,
+  "scriptMs": 1558,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 66,
   "settledMs": 70056,
   "domNodes": 967
@@ -1185,7 +1309,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 511.7,
+  "scriptMs": 11536,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 21899,
   "domNodes": 1696
@@ -1206,7 +1332,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 520.3,
+  "scriptMs": 11503,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 22098,
   "domNodes": 1692
@@ -1227,7 +1355,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 20.5,
+  "scriptMs": 1481,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 66,
   "settledMs": 72586,
   "domNodes": 967
@@ -1248,7 +1378,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 17.4,
+  "scriptMs": 1212,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 66,
   "settledMs": 69800,
   "domNodes": 967
@@ -1269,7 +1401,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 520.8,
+  "scriptMs": 11517,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 63,
   "settledMs": 22160,
   "domNodes": 1646
@@ -1290,7 +1424,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 514.8,
+  "scriptMs": 11125,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 73,
   "settledMs": 21847,
   "domNodes": 1646
@@ -1311,7 +1447,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 23.8,
+  "scriptMs": 1725,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 66,
   "settledMs": 72604,
   "domNodes": 965
@@ -1332,7 +1470,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 26.9,
+  "scriptMs": 1880,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 66,
   "settledMs": 69869,
   "domNodes": 965
@@ -1353,7 +1493,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 579.8,
+  "scriptMs": 11707,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 139,
   "settledMs": 20340,
   "domNodes": 1752
@@ -1374,7 +1516,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 571.7,
+  "scriptMs": 11343,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 139,
   "settledMs": 19839,
   "domNodes": 1749
@@ -1395,7 +1539,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 23.3,
+  "scriptMs": 1697,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 129,
   "settledMs": 72817,
   "domNodes": 961
@@ -1416,7 +1562,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 23.7,
+  "scriptMs": 1661,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 130,
   "settledMs": 70043,
   "domNodes": 961
@@ -1437,7 +1585,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 1809.0,
+  "scriptMs": 22931,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 130,
   "settledMs": 12540,
   "domNodes": 897
@@ -1458,7 +1608,9 @@
    "services2.arcgis.com",
    "static.cloudflareinsights.com"
   ],
-  "scriptMsPerSecond": 1908.7,
+  "scriptMs": 23047,
+  "metricsWindowS": null,
+  "scriptShareOfWindow": null,
   "requestsBeforeFcp": 130,
   "settledMs": 12075,
   "domNodes": 897

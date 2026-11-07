@@ -69,13 +69,29 @@ research `layer-tide` page. Anything about the in-app private layers beyond this
 * **Metrics:**
   * *FCP* first contentful paint; *LCP* largest contentful paint (PerformanceObserver).
   * *Brief shown*: the brief panel (`aside.app-brief, .app-sheet-brief`) holds more than 80 characters including a digit.
-  * *Map usable*: a map canvas larger than 150×150 px is on screen, then the first moment followed by 1 s with no long
-    task (a TTI-style definition).
-  * *TBT*: sum of (long task − 50 ms) between FCP and map usable.
+  * *Map canvas*: a canvas larger than 150×150 px is on screen. It says nothing about whether any style, tile or layer
+    data has loaded.
+  * *Canvas quiet (proxy)*: the first moment after the map canvas that is followed by 1 s with no long task (a TTI-style
+    definition applied to the canvas). **This is a proxy for responsiveness, not "map usable".** It never checks that the
+    map style, tiles or layer data are loaded or that a tap would be answered. Content/interaction readiness
+    (`contentReadyMs`) is **not measured** in this baseline. The only content checks that exist are *brief shown* (live
+    pages) and, for the SST test page, *layer data finished* (the end of the large data request in the waterfall,
+    A.7). Earlier drafts called the proxy "map usable"; every figure labelled "map usable" there is this proxy.
+  * *TBT to proxy*: sum of (long task − 50 ms) between FCP and the canvas-quiet proxy. Long tasks after the proxy are
+    not counted, so on a page whose data arrives later (slow-4G phone, SST) it understates blocking.
   * *CLS*: sum of layout-shift values without recent input.
   * *Requests / bytes*: every request the CDP Network domain saw, bytes = encoded (wire) length; for a stream the page
     cancels, the bytes that arrived.
-  * *JS main-thread*: CDP `Performance.getMetrics` ScriptDuration over the load; *heap* = JSHeapUsedSize at the end.
+  * *JS main-thread*: CDP `Performance.getMetrics` ScriptDuration accumulated over the load; *heap* = JSHeapUsedSize at
+    the end. **No duty cycle (script time per second) is reported.** In the runs in this baseline the counters were read
+    after `page.evaluate`, which waits for a busy main thread, so the counter window is longer than the network-settle
+    window (`settledMs`): phone-wifi brief cold has 23.09–23.57 s of script against 12.20–12.29 s of settle time, and the
+    canvas-quiet proxy is later than `settledMs` (16.1–16.8 s). `measure.mjs` now reads the counters at the settle
+    instant and records `metricsWindowS` (the CDP monotonic clock over the same window); the runs here pre-date that, and
+    ScriptDuration under CPU throttling is not validated either, so script time is reported as an accumulated total only.
+  * *Requests / bytes exclude inline `data:`/`blob:` URLs* (not network transfers). Earlier tables included them: the
+    three local `layer-base-medium` desktop cold runs counted a 275,177-byte inline PNG in 3.86 MB; the network total is
+    3.58 MB. Tables and heaviest-request lists below were regenerated from the raw requests with those excluded.
   * *Requests before first useful pixel*: requests started at or before LCP (also before FCP in `raw/extras.json`).
 * **Pages (live site, public read only):**
   * `landing` = `/` (no saved state).
@@ -142,7 +158,12 @@ Raw numbers: `reports/perf/raw/` — `live-desktop.json`, `live-phone.json`, `li
 "15 MB export loaded" counts the runs in which the reef export was requested (on phone slow 4G it is requested every
 time but aborted at 60 s; see A.6).
 
-| page | profile | pass | FCP | LCP | brief shown | map usable | TBT | CLS | longest task | JS script time | JS heap | requests | bytes | req. ≤ LCP | PMTiles req / bytes | export loaded |
+**Read "canvas quiet (proxy)" and "TBT to proxy" with A.1 in mind:** they are not time-to-usable. Example: on the
+local SST page (A.7) the phone reaches the proxy at 6.4 s, but the SST data request runs 14.1 → 25.5 s, so the layer
+is not shown until ~25.5 s (LCP 25.7 s). `contentReadyMs` is not measured. The "brief shown" column is the one content
+check for the live pages.
+
+| page | profile | pass | FCP | LCP | brief shown | canvas quiet (proxy) | TBT to proxy | CLS | longest task | JS script time | JS heap | requests | bytes | req. ≤ LCP | PMTiles req / bytes | export loaded |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | landing | desktop | cold | 156 ms | 156 ms | – | 1.43 s | 80 ms | 0.056 | 162 ms | 158 ms | 19.66 MB | 121 | 1.60 MB | 27 | 8 / 128 KB | 0/3 |
 | landing | desktop | warm | 64 ms | 64 ms | – | 927 ms | 138 ms | 0.056 | 188 ms | 152 ms | 17.60 MB | 121 | 504 KB | 27 | 8 / 81 KB | 0/3 |
@@ -195,8 +216,8 @@ site was redeployed while it was being measured: landing, brief, map-home and `l
 `seafloor`) loaded `app.fe397e7c4f.js` (3 more JS requests, 66 vs 63; same 312 KB MapLibre, same reef export). Desktop
 and phone-on-Wi-Fi are entirely on `d390f02cdc`. `python3 reports/perf/builds.py reports/perf/raw/live-*.json`
 prints the build per run. The two builds differ by under 1 % in bytes and the headline numbers (reef export,
-requests, map usable ~9.4 to 10.5 s) agree, so no conclusion changes, but compare those six phone rows with care.
-**`live-layer-water-temp` on the phone is unstable:** map usable 10.1 s, 15.8 s and 16.4 s in its three cold runs
+requests, canvas quiet ~9.4 to 10.5 s) agree, so no conclusion changes, but compare those six phone rows with care.
+**`live-layer-water-temp` on the phone is unstable:** canvas quiet (proxy) 10.1 s, 15.8 s and 16.4 s in its three cold runs
 (TBT 0.8 s, 1.7 s, 3.5 s) against 9.3 to 12.9 s for every other layer; the reported median (15.76 s) is the middle of
 a bimodal result. The cause is not established here (the same layer on desktop is normal at 13.2 s), so it is **not**
 ranked as a root cause; re-run it alone before acting on it.
@@ -254,57 +275,59 @@ Chromium reports as type "Other" (all `.js` together: 62 requests / 767 KB on th
 | live-layer-seafloor | phone | cold | 4 KB (1) | 774 KB (66) | 40 KB (8) | 531 KB (18) | 10.92 MB (24) | 71 KB (2) | 0 B (0) | 586 KB (14) |
 | live-layer-seafloor | phone | warm | 4 KB (1) | 0 B (66) | 0 B (8) | 265 KB (18) | 12.28 MB (24) | 0 B (2) | 0 B (0) | 2 KB (14) |
 
-### A.5 Live site: cache, third parties, main-thread duty (medians of 3)
+### A.5 Live site: cache, third parties, script time (medians of 3)
 
+The earlier "script ms per s" duty-cycle column is withdrawn (A.1: the CPU-counter window and the settle window differ);
+script time and the settle window are shown side by side instead, and must not be divided.
 `network req/bytes` = requests that were not answered from the browser cache. On a **warm** pass that is what the
 cache headers fail to keep. `no-store` = bytes of responses marked `Cache-Control: no-store`.
 
-| page | profile | pass | network req / bytes | no-store req / bytes | third-party req / bytes | req. ≤ FCP | script ms per s observed | observed window |
+| page | profile | pass | network req / bytes | no-store req / bytes | third-party req / bytes | req. ≤ FCP | JS script time | network-settle window (not the CPU-counter window) |
 |---|---|---|---|---|---|---|---|---|
-| landing | desktop | cold | 95 / 1.60 MB | 4 / 417 KB | 2 / 769 B | 27 | 14.9 | 10.62 s |
-| landing | desktop | warm | 18 / 504 KB | 4 / 416 KB | 2 / 769 B | 27 | 15.5 | 9.82 s |
-| landing | phone | cold | 92 / 1.60 MB | 4 / 418 KB | 2 / 776 B | 27 | 18.4 | 18.81 s |
-| landing | phone | warm | 17 / 549 KB | 4 / 418 KB | 2 / 774 B | 27 | 25.5 | 12.70 s |
-| brief | desktop | cold | 134 / 19.44 MB | 19 / 17.04 MB | 18 / 992 KB | 63 | 585.0 | 19.64 s |
-| brief | desktop | warm | 40 / 17.08 MB | 19 / 17.03 MB | 18 / 0 B | 63 | 581.9 | 19.60 s |
-| brief | phone | cold | 129 / 12.88 MB | 21 / 10.88 MB | 15 / 672 KB | 63 | 22.5 | 72.36 s |
-| brief | phone | warm | 45 / 12.55 MB | 22 / 12.37 MB | 15 / 97 KB | 63 | 29.3 | 69.80 s |
-| brief | phone-wifi | cold | 131 / 19.25 MB | 21 / 17.25 MB | 15 / 672 KB | 63 | 1892.7 | 12.27 s |
-| brief | phone-wifi | warm | 41 / 17.30 MB | 21 / 17.27 MB | 15 / 0 B | 63 | 1936.8 | 12.07 s |
-| map-home | desktop | cold | 200 / 19.44 MB | 21 / 17.05 MB | 19 / 992 KB | 139 | 579.8 | 20.34 s |
-| map-home | desktop | warm | 44 / 17.09 MB | 21 / 17.05 MB | 19 / 0 B | 139 | 571.7 | 19.84 s |
-| map-home | phone | cold | 195 / 12.87 MB | 23 / 10.87 MB | 16 / 672 KB | 129 | 23.3 | 72.82 s |
-| map-home | phone | warm | 49 / 12.55 MB | 24 / 12.36 MB | 16 / 97 KB | 130 | 23.7 | 70.04 s |
-| map-home | phone-wifi | cold | 197 / 19.27 MB | 23 / 17.27 MB | 16 / 672 KB | 130 | 1809.0 | 12.54 s |
-| map-home | phone-wifi | warm | 45 / 16.70 MB | 23 / 16.67 MB | 16 / 0 B | 130 | 1908.7 | 12.07 s |
-| live-layer-none | desktop | cold | 122 / 17.96 MB | 7 / 15.57 MB | 18 / 992 KB | 63 | 565.7 | 20.91 s |
-| live-layer-none | desktop | warm | 28 / 15.61 MB | 7 / 15.56 MB | 18 / 0 B | 63 | 515.0 | 21.60 s |
-| live-layer-none | phone | cold | 114 / 12.89 MB | 6 / 10.89 MB | 15 / 672 KB | 63 | 15.8 | 72.33 s |
-| live-layer-none | phone | warm | 30 / 12.56 MB | 7 / 12.37 MB | 15 / 97 KB | 66 | 15.3 | 69.81 s |
-| live-layer-swell | desktop | cold | 124 / 17.97 MB | 7 / 15.57 MB | 18 / 992 KB | 63 | 511.7 | 21.90 s |
-| live-layer-swell | desktop | warm | 28 / 15.62 MB | 7 / 15.57 MB | 18 / 0 B | 63 | 520.3 | 22.10 s |
-| live-layer-swell | phone | cold | 118 / 12.89 MB | 6 / 10.89 MB | 15 / 672 KB | 66 | 20.5 | 72.59 s |
-| live-layer-swell | phone | warm | 30 / 12.55 MB | 7 / 12.36 MB | 15 / 97 KB | 66 | 17.4 | 69.80 s |
-| live-layer-currents | desktop | cold | 123 / 18.19 MB | 8 / 15.84 MB | 18 / 992 KB | 63 | 515.0 | 22.16 s |
-| live-layer-currents | desktop | warm | 29 / 15.87 MB | 8 / 15.83 MB | 18 / 0 B | 63 | 518.0 | 21.85 s |
-| live-layer-currents | phone | cold | 118 / 12.90 MB | 7 / 10.89 MB | 15 / 672 KB | 66 | 31.9 | 72.61 s |
-| live-layer-currents | phone | warm | 31 / 12.56 MB | 8 / 12.38 MB | 15 / 97 KB | 66 | 30.5 | 69.80 s |
-| live-layer-stations | desktop | cold | 122 / 17.97 MB | 7 / 15.57 MB | 18 / 992 KB | 63 | 505.2 | 22.13 s |
-| live-layer-stations | desktop | warm | 28 / 15.62 MB | 7 / 15.57 MB | 18 / 0 B | 63 | 510.5 | 21.86 s |
-| live-layer-stations | phone | cold | 117 / 12.89 MB | 6 / 10.88 MB | 15 / 672 KB | 66 | 21.8 | 72.58 s |
-| live-layer-stations | phone | warm | 30 / 12.55 MB | 7 / 12.36 MB | 15 / 97 KB | 66 | 22.2 | 70.06 s |
-| live-layer-water-temp | desktop | cold | 122 / 17.96 MB | 7 / 15.56 MB | 18 / 992 KB | 63 | 520.8 | 22.16 s |
-| live-layer-water-temp | desktop | warm | 28 / 15.61 MB | 7 / 15.57 MB | 18 / 0 B | 73 | 514.8 | 21.85 s |
-| live-layer-water-temp | phone | cold | 117 / 12.90 MB | 6 / 10.89 MB | 15 / 672 KB | 66 | 23.8 | 72.60 s |
-| live-layer-water-temp | phone | warm | 30 / 12.55 MB | 7 / 12.37 MB | 15 / 97 KB | 66 | 26.9 | 69.87 s |
-| live-layer-chlorophyll | desktop | cold | 131 / 17.97 MB | 7 / 15.55 MB | 18 / 992 KB | 63 | 514.1 | 21.65 s |
-| live-layer-chlorophyll | desktop | warm | 28 / 15.61 MB | 7 / 15.57 MB | 18 / 0 B | 63 | 510.4 | 21.85 s |
-| live-layer-chlorophyll | phone | cold | 126 / 12.88 MB | 6 / 10.86 MB | 15 / 672 KB | 66 | 23.8 | 72.67 s |
-| live-layer-chlorophyll | phone | warm | 31 / 12.53 MB | 7 / 12.34 MB | 15 / 97 KB | 66 | 20.8 | 69.82 s |
-| live-layer-seafloor | desktop | cold | 133 / 19.13 MB | 18 / 16.77 MB | 18 / 992 KB | 63 | 576.1 | 19.94 s |
-| live-layer-seafloor | desktop | warm | 39 / 16.81 MB | 18 / 16.77 MB | 18 / 0 B | 63 | 591.2 | 19.84 s |
-| live-layer-seafloor | phone | cold | 131 / 12.92 MB | 20 / 10.92 MB | 15 / 672 KB | 66 | 22.5 | 72.71 s |
-| live-layer-seafloor | phone | warm | 44 / 12.55 MB | 21 / 12.36 MB | 15 / 97 KB | 66 | 21.9 | 69.81 s |
+| landing | desktop | cold | 95 / 1.60 MB | 4 / 417 KB | 2 / 769 B | 27 | 158 ms | 10.62 s |
+| landing | desktop | warm | 18 / 504 KB | 4 / 416 KB | 2 / 769 B | 27 | 152 ms | 9.82 s |
+| landing | phone | cold | 92 / 1.60 MB | 4 / 418 KB | 2 / 776 B | 27 | 347 ms | 18.81 s |
+| landing | phone | warm | 17 / 549 KB | 4 / 418 KB | 2 / 774 B | 27 | 324 ms | 12.70 s |
+| brief | desktop | cold | 134 / 19.44 MB | 19 / 17.04 MB | 18 / 992 KB | 63 | 11.48 s | 19.64 s |
+| brief | desktop | warm | 40 / 17.08 MB | 19 / 17.03 MB | 18 / 0 B | 63 | 11.26 s | 19.60 s |
+| brief | phone | cold | 129 / 12.88 MB | 21 / 10.88 MB | 15 / 672 KB | 63 | 1.63 s | 72.36 s |
+| brief | phone | warm | 45 / 12.55 MB | 22 / 12.37 MB | 15 / 97 KB | 63 | 2.04 s | 69.80 s |
+| brief | phone-wifi | cold | 131 / 19.25 MB | 21 / 17.25 MB | 15 / 672 KB | 63 | 23.17 s | 12.27 s |
+| brief | phone-wifi | warm | 41 / 17.30 MB | 21 / 17.27 MB | 15 / 0 B | 63 | 23.48 s | 12.07 s |
+| map-home | desktop | cold | 200 / 19.44 MB | 21 / 17.05 MB | 19 / 992 KB | 139 | 11.71 s | 20.34 s |
+| map-home | desktop | warm | 44 / 17.09 MB | 21 / 17.05 MB | 19 / 0 B | 139 | 11.34 s | 19.84 s |
+| map-home | phone | cold | 195 / 12.87 MB | 23 / 10.87 MB | 16 / 672 KB | 129 | 1.70 s | 72.82 s |
+| map-home | phone | warm | 49 / 12.55 MB | 24 / 12.36 MB | 16 / 97 KB | 130 | 1.66 s | 70.04 s |
+| map-home | phone-wifi | cold | 197 / 19.27 MB | 23 / 17.27 MB | 16 / 672 KB | 130 | 22.93 s | 12.54 s |
+| map-home | phone-wifi | warm | 45 / 16.70 MB | 23 / 16.67 MB | 16 / 0 B | 130 | 23.05 s | 12.07 s |
+| live-layer-none | desktop | cold | 122 / 17.96 MB | 7 / 15.57 MB | 18 / 992 KB | 63 | 11.23 s | 20.91 s |
+| live-layer-none | desktop | warm | 28 / 15.61 MB | 7 / 15.56 MB | 18 / 0 B | 63 | 11.15 s | 21.60 s |
+| live-layer-none | phone | cold | 114 / 12.89 MB | 6 / 10.89 MB | 15 / 672 KB | 63 | 1.14 s | 72.33 s |
+| live-layer-none | phone | warm | 30 / 12.56 MB | 7 / 12.37 MB | 15 / 97 KB | 66 | 1.08 s | 69.81 s |
+| live-layer-swell | desktop | cold | 124 / 17.97 MB | 7 / 15.57 MB | 18 / 992 KB | 63 | 11.54 s | 21.90 s |
+| live-layer-swell | desktop | warm | 28 / 15.62 MB | 7 / 15.57 MB | 18 / 0 B | 63 | 11.50 s | 22.10 s |
+| live-layer-swell | phone | cold | 118 / 12.89 MB | 6 / 10.89 MB | 15 / 672 KB | 66 | 1.48 s | 72.59 s |
+| live-layer-swell | phone | warm | 30 / 12.55 MB | 7 / 12.36 MB | 15 / 97 KB | 66 | 1.21 s | 69.80 s |
+| live-layer-currents | desktop | cold | 123 / 18.19 MB | 8 / 15.84 MB | 18 / 992 KB | 63 | 11.34 s | 22.16 s |
+| live-layer-currents | desktop | warm | 29 / 15.87 MB | 8 / 15.83 MB | 18 / 0 B | 63 | 11.23 s | 21.85 s |
+| live-layer-currents | phone | cold | 118 / 12.90 MB | 7 / 10.89 MB | 15 / 672 KB | 66 | 2.31 s | 72.61 s |
+| live-layer-currents | phone | warm | 31 / 12.56 MB | 8 / 12.38 MB | 15 / 97 KB | 66 | 2.13 s | 69.80 s |
+| live-layer-stations | desktop | cold | 122 / 17.97 MB | 7 / 15.57 MB | 18 / 992 KB | 63 | 11.17 s | 22.13 s |
+| live-layer-stations | desktop | warm | 28 / 15.62 MB | 7 / 15.57 MB | 18 / 0 B | 63 | 11.11 s | 21.86 s |
+| live-layer-stations | phone | cold | 117 / 12.89 MB | 6 / 10.88 MB | 15 / 672 KB | 66 | 1.58 s | 72.58 s |
+| live-layer-stations | phone | warm | 30 / 12.55 MB | 7 / 12.36 MB | 15 / 97 KB | 66 | 1.56 s | 70.06 s |
+| live-layer-water-temp | desktop | cold | 122 / 17.96 MB | 7 / 15.56 MB | 18 / 992 KB | 63 | 11.52 s | 22.16 s |
+| live-layer-water-temp | desktop | warm | 28 / 15.61 MB | 7 / 15.57 MB | 18 / 0 B | 73 | 11.12 s | 21.85 s |
+| live-layer-water-temp | phone | cold | 117 / 12.90 MB | 6 / 10.89 MB | 15 / 672 KB | 66 | 1.73 s | 72.60 s |
+| live-layer-water-temp | phone | warm | 30 / 12.55 MB | 7 / 12.37 MB | 15 / 97 KB | 66 | 1.88 s | 69.87 s |
+| live-layer-chlorophyll | desktop | cold | 131 / 17.97 MB | 7 / 15.55 MB | 18 / 992 KB | 63 | 11.08 s | 21.65 s |
+| live-layer-chlorophyll | desktop | warm | 28 / 15.61 MB | 7 / 15.57 MB | 18 / 0 B | 63 | 11.15 s | 21.85 s |
+| live-layer-chlorophyll | phone | cold | 126 / 12.88 MB | 6 / 10.86 MB | 15 / 672 KB | 66 | 1.73 s | 72.67 s |
+| live-layer-chlorophyll | phone | warm | 31 / 12.53 MB | 7 / 12.34 MB | 15 / 97 KB | 66 | 1.45 s | 69.82 s |
+| live-layer-seafloor | desktop | cold | 133 / 19.13 MB | 18 / 16.77 MB | 18 / 992 KB | 63 | 11.41 s | 19.94 s |
+| live-layer-seafloor | desktop | warm | 39 / 16.81 MB | 18 / 16.77 MB | 18 / 0 B | 63 | 11.77 s | 19.84 s |
+| live-layer-seafloor | phone | cold | 131 / 12.92 MB | 20 / 10.92 MB | 15 / 672 KB | 66 | 1.64 s | 72.71 s |
+| live-layer-seafloor | phone | warm | 44 / 12.55 MB | 21 / 12.36 MB | 15 / 97 KB | 66 | 1.53 s | 69.81 s |
 
 ### A.6 The 10 heaviest requests (the median run)
 
@@ -643,30 +666,30 @@ cache headers fail to keep. `no-store` = bytes of responses marked `Cache-Contro
 | # | bytes | type | start → end | URL |
 |---|---|---|---|---|
 | 1 | 1.08 MB | js | 12 → 16 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.mjs` |
-| 2 | 275 KB | other | 357 → 378 ms | `data: URL (inline image)` |
-| 3 | 208 KB | other | 71 → 73 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
-| 4 | 97 KB | tiles | 203 → 207 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 5 | 96 KB | tiles | 221 → 224 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 6 | 95 KB | tiles | 150 → 156 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 7 | 94 KB | tiles | 150 → 152 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 8 | 94 KB | tiles | 151 → 158 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 9 | 93 KB | tiles | 150 → 155 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 10 | 91 KB | tiles | 220 → 223 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 2 | 208 KB | other | 71 → 73 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
+| 3 | 97 KB | tiles | 203 → 207 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 4 | 96 KB | tiles | 221 → 224 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 5 | 95 KB | tiles | 150 → 156 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 6 | 94 KB | tiles | 150 → 152 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 7 | 94 KB | tiles | 151 → 158 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 8 | 93 KB | tiles | 150 → 155 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 9 | 91 KB | tiles | 220 → 223 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 10 | 90 KB | tiles | 151 → 157 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
 
 **layer-base-medium · phone · cold** (run 2):
 
 | # | bytes | type | start → end | URL |
 |---|---|---|---|---|
 | 1 | 1.08 MB | js | 853 → 6238 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.mjs` |
-| 2 | 275 KB | other | 15906 → 15965 ms | `data: URL (inline image)` |
-| 3 | 208 KB | other | 6505 → 11566 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
-| 4 | 95 KB | tiles | 6918 → 13704 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 5 | 94 KB | tiles | 6915 → 9427 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 6 | 94 KB | tiles | 6918 → 14448 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 7 | 93 KB | tiles | 6916 → 12710 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 8 | 90 KB | tiles | 6918 → 14134 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 9 | 88 KB | tiles | 6915 → 9835 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 10 | 87 KB | tiles | 6916 → 10035 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 2 | 208 KB | other | 6505 → 11566 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
+| 3 | 95 KB | tiles | 6918 → 13704 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 4 | 94 KB | tiles | 6915 → 9427 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 5 | 94 KB | tiles | 6918 → 14448 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 6 | 93 KB | tiles | 6916 → 12710 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 7 | 90 KB | tiles | 6918 → 14134 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 8 | 88 KB | tiles | 6915 → 9835 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 9 | 87 KB | tiles | 6916 → 10035 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 10 | 84 KB | tiles | 6918 → 13153 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
 
 **layer-wind · desktop · cold** (run 1):
 
@@ -703,60 +726,60 @@ cache headers fail to keep. `no-store` = bytes of responses marked `Cache-Contro
 | # | bytes | type | start → end | URL |
 |---|---|---|---|---|
 | 1 | 1.08 MB | js | 10 → 13 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.mjs` |
-| 2 | 275 KB | other | 299 → 319 ms | `data: URL (inline image)` |
-| 3 | 208 KB | other | 61 → 63 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
-| 4 | 97 KB | tiles | 151 → 154 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 5 | 96 KB | tiles | 167 → 172 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 6 | 95 KB | tiles | 85 → 92 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 7 | 94 KB | tiles | 85 → 87 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 8 | 94 KB | tiles | 85 → 93 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 9 | 93 KB | tiles | 85 → 91 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 10 | 91 KB | tiles | 167 → 170 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 2 | 208 KB | other | 61 → 63 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
+| 3 | 97 KB | tiles | 151 → 154 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 4 | 96 KB | tiles | 167 → 172 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 5 | 95 KB | tiles | 85 → 92 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 6 | 94 KB | tiles | 85 → 87 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 7 | 94 KB | tiles | 85 → 93 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 8 | 93 KB | tiles | 85 → 91 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 9 | 91 KB | tiles | 167 → 170 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 10 | 90 KB | tiles | 85 → 93 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
 
 **layer-current · phone · cold** (run 2):
 
 | # | bytes | type | start → end | URL |
 |---|---|---|---|---|
 | 1 | 1.08 MB | js | 841 → 6225 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.mjs` |
-| 2 | 275 KB | other | 15908 → 15969 ms | `data: URL (inline image)` |
-| 3 | 208 KB | other | 6512 → 11567 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
-| 4 | 95 KB | tiles | 6921 → 13734 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 5 | 94 KB | tiles | 6918 → 9429 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 6 | 94 KB | tiles | 6921 → 14449 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 7 | 93 KB | tiles | 6920 → 12726 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 8 | 90 KB | tiles | 6921 → 14121 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 9 | 88 KB | tiles | 6919 → 9851 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 10 | 87 KB | tiles | 6919 → 10051 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 2 | 208 KB | other | 6512 → 11567 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
+| 3 | 95 KB | tiles | 6921 → 13734 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 4 | 94 KB | tiles | 6918 → 9429 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 5 | 94 KB | tiles | 6921 → 14449 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 6 | 93 KB | tiles | 6920 → 12726 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 7 | 90 KB | tiles | 6921 → 14121 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 8 | 88 KB | tiles | 6919 → 9851 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 9 | 87 KB | tiles | 6919 → 10051 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 10 | 84 KB | tiles | 6920 → 13140 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
 
 **layer-tide · desktop · cold** (run 2):
 
 | # | bytes | type | start → end | URL |
 |---|---|---|---|---|
 | 1 | 1.08 MB | js | 13 → 16 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.mjs` |
-| 2 | 275 KB | other | 349 → 369 ms | `data: URL (inline image)` |
-| 3 | 208 KB | other | 71 → 72 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
-| 4 | 97 KB | tiles | 196 → 199 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 5 | 96 KB | tiles | 213 → 217 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 6 | 95 KB | tiles | 146 → 155 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 7 | 94 KB | tiles | 145 → 148 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 8 | 94 KB | tiles | 146 → 156 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 9 | 93 KB | tiles | 146 → 153 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 10 | 91 KB | tiles | 213 → 216 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 2 | 208 KB | other | 71 → 72 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
+| 3 | 97 KB | tiles | 196 → 199 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 4 | 96 KB | tiles | 213 → 217 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 5 | 95 KB | tiles | 146 → 155 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 6 | 94 KB | tiles | 145 → 148 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 7 | 94 KB | tiles | 146 → 156 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 8 | 93 KB | tiles | 146 → 153 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 9 | 91 KB | tiles | 213 → 216 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 10 | 90 KB | tiles | 146 → 156 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
 
 **layer-tide · phone · cold** (run 3):
 
 | # | bytes | type | start → end | URL |
 |---|---|---|---|---|
 | 1 | 1.08 MB | js | 844 → 6229 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.mjs` |
-| 2 | 275 KB | other | 16241 → 16298 ms | `data: URL (inline image)` |
-| 3 | 208 KB | other | 6489 → 11829 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
-| 4 | 95 KB | tiles | 6937 → 13817 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 5 | 94 KB | tiles | 6935 → 9590 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 6 | 94 KB | tiles | 6938 → 14576 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 7 | 93 KB | tiles | 6937 → 13409 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 8 | 90 KB | tiles | 6938 → 14247 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 9 | 88 KB | tiles | 6936 → 9891 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 10 | 87 KB | tiles | 6936 → 10942 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 2 | 208 KB | other | 6489 → 11829 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
+| 3 | 95 KB | tiles | 6937 → 13817 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 4 | 94 KB | tiles | 6935 → 9590 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 5 | 94 KB | tiles | 6938 → 14576 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 6 | 93 KB | tiles | 6937 → 13409 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 7 | 90 KB | tiles | 6938 → 14247 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 8 | 88 KB | tiles | 6936 → 9891 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 9 | 87 KB | tiles | 6936 → 10942 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 10 | 84 KB | tiles | 6937 → 13446 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
 
 **layer-sst · desktop · cold** (run 2):
 
@@ -793,200 +816,204 @@ cache headers fail to keep. `no-store` = bytes of responses marked `Cache-Contro
 | # | bytes | type | start → end | URL |
 |---|---|---|---|---|
 | 1 | 1.08 MB | js | 13 → 17 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.mjs` |
-| 2 | 275 KB | other | 363 → 385 ms | `data: URL (inline image)` |
-| 3 | 208 KB | other | 69 → 71 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
-| 4 | 97 KB | tiles | 208 → 211 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 5 | 96 KB | tiles | 211 → 216 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 6 | 95 KB | tiles | 149 → 156 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 7 | 94 KB | tiles | 148 → 151 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 8 | 94 KB | tiles | 149 → 158 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 9 | 93 KB | tiles | 149 → 155 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 10 | 91 KB | tiles | 209 → 215 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 2 | 208 KB | other | 69 → 71 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
+| 3 | 97 KB | tiles | 208 → 211 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 4 | 96 KB | tiles | 211 → 216 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 5 | 95 KB | tiles | 149 → 156 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 6 | 94 KB | tiles | 148 → 151 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 7 | 94 KB | tiles | 149 → 158 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 8 | 93 KB | tiles | 149 → 155 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 9 | 91 KB | tiles | 209 → 215 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 10 | 90 KB | tiles | 149 → 157 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
 
 **layer-chlorophyll · phone · cold** (run 3):
 
 | # | bytes | type | start → end | URL |
 |---|---|---|---|---|
 | 1 | 1.08 MB | js | 846 → 6229 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.mjs` |
-| 2 | 275 KB | other | 15906 → 15970 ms | `data: URL (inline image)` |
-| 3 | 208 KB | other | 6494 → 11558 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
-| 4 | 95 KB | tiles | 6902 → 13690 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 5 | 94 KB | tiles | 6900 → 9412 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 6 | 94 KB | tiles | 6903 → 14447 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 7 | 93 KB | tiles | 6902 → 12688 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 8 | 90 KB | tiles | 6902 → 14119 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 9 | 88 KB | tiles | 6901 → 9813 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
-| 10 | 87 KB | tiles | 6901 → 10021 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 2 | 208 KB | other | 6494 → 11558 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
+| 3 | 95 KB | tiles | 6902 → 13690 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 4 | 94 KB | tiles | 6900 → 9412 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 5 | 94 KB | tiles | 6903 → 14447 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 6 | 93 KB | tiles | 6902 → 12688 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 7 | 90 KB | tiles | 6902 → 14119 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 8 | 88 KB | tiles | 6901 → 9813 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 9 | 87 KB | tiles | 6901 → 10021 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
+| 10 | 84 KB | tiles | 6902 → 13132 ms | `/var/seafloor/tiles/medium/morro-bay-seafloor-deep.pmtiles` |
 
 **layer-bathy-2m · desktop · cold** (run 2):
 
 | # | bytes | type | start → end | URL |
 |---|---|---|---|---|
 | 1 | 1.08 MB | js | 14 → 19 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.mjs` |
-| 2 | 275 KB | other | 331 → 351 ms | `data: URL (inline image)` |
-| 3 | 208 KB | other | 66 → 68 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
-| 4 | 98 KB | tiles | 194 → 198 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 5 | 97 KB | tiles | 221 → 223 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 6 | 95 KB | tiles | 142 → 150 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 7 | 95 KB | tiles | 141 → 144 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 8 | 95 KB | tiles | 142 → 152 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 9 | 94 KB | tiles | 142 → 148 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 10 | 92 KB | tiles | 211 → 214 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 2 | 208 KB | other | 66 → 68 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
+| 3 | 98 KB | tiles | 194 → 198 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 4 | 97 KB | tiles | 221 → 223 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 5 | 95 KB | tiles | 142 → 150 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 6 | 95 KB | tiles | 141 → 144 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 7 | 95 KB | tiles | 142 → 152 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 8 | 94 KB | tiles | 142 → 148 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 9 | 92 KB | tiles | 211 → 214 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 10 | 91 KB | tiles | 142 → 151 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
 
 **layer-bathy-2m · phone · cold** (run 3):
 
 | # | bytes | type | start → end | URL |
 |---|---|---|---|---|
 | 1 | 1.08 MB | js | 848 → 6231 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.mjs` |
-| 2 | 275 KB | other | 15971 → 16029 ms | `data: URL (inline image)` |
-| 3 | 208 KB | other | 6494 → 11537 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
-| 4 | 95 KB | tiles | 6903 → 13804 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 5 | 95 KB | tiles | 6901 → 9449 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 6 | 95 KB | tiles | 6903 → 14463 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 7 | 94 KB | tiles | 6903 → 12796 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 8 | 91 KB | tiles | 6903 → 14133 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 9 | 89 KB | tiles | 6901 → 9871 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 10 | 88 KB | tiles | 6902 → 10028 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 2 | 208 KB | other | 6494 → 11537 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
+| 3 | 95 KB | tiles | 6903 → 13804 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 4 | 95 KB | tiles | 6901 → 9449 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 5 | 95 KB | tiles | 6903 → 14463 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 6 | 94 KB | tiles | 6903 → 12796 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 7 | 91 KB | tiles | 6903 → 14133 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 8 | 89 KB | tiles | 6901 → 9871 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 9 | 88 KB | tiles | 6902 → 10028 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 10 | 85 KB | tiles | 6903 → 13204 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
 
 **layer-bathy-2m-z12 · desktop · cold** (run 1):
 
 | # | bytes | type | start → end | URL |
 |---|---|---|---|---|
 | 1 | 1.08 MB | js | 12 → 16 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.mjs` |
-| 2 | 275 KB | other | 300 → 319 ms | `data: URL (inline image)` |
-| 3 | 208 KB | other | 54 → 55 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
-| 4 | 132 KB | tiles | 185 → 187 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 5 | 126 KB | tiles | 134 → 139 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 6 | 93 KB | tiles | 135 → 141 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 7 | 87 KB | tiles | 134 → 140 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 8 | 83 KB | css | 3 → 7 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.css` |
-| 9 | 75 KB | tiles | 133 → 137 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 10 | 70 KB | tiles | 133 → 137 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 2 | 208 KB | other | 54 → 55 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
+| 3 | 132 KB | tiles | 185 → 187 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 4 | 126 KB | tiles | 134 → 139 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 5 | 93 KB | tiles | 135 → 141 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 6 | 87 KB | tiles | 134 → 140 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 7 | 83 KB | css | 3 → 7 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.css` |
+| 8 | 75 KB | tiles | 133 → 137 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 9 | 70 KB | tiles | 133 → 137 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 10 | 67 KB | tiles | 133 → 136 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
 
 **layer-bathy-2m-z12 · phone · cold** (run 1):
 
 | # | bytes | type | start → end | URL |
 |---|---|---|---|---|
 | 1 | 1.08 MB | js | 849 → 6236 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.mjs` |
-| 2 | 275 KB | other | 12503 → 12560 ms | `data: URL (inline image)` |
-| 3 | 208 KB | other | 6496 → 11170 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
-| 4 | 126 KB | tiles | 6910 → 11907 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 5 | 83 KB | css | 174 → 828 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.css` |
-| 6 | 75 KB | tiles | 6909 → 10291 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 7 | 70 KB | tiles | 6909 → 10549 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 8 | 67 KB | tiles | 6909 → 9418 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 9 | 66 KB | tiles | 6910 → 11471 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
-| 10 | 51 KB | tiles | 6908 → 8560 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 2 | 208 KB | other | 6496 → 11170 ms | `/var/chlorophyll/central-coast/chlorophyll.png` |
+| 3 | 126 KB | tiles | 6910 → 11907 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 4 | 83 KB | css | 174 → 828 ms | `/node_modules/maplibre-gl/dist/maplibre-gl.css` |
+| 5 | 75 KB | tiles | 6909 → 10291 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 6 | 70 KB | tiles | 6909 → 10549 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 7 | 67 KB | tiles | 6909 → 9418 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 8 | 66 KB | tiles | 6910 → 11471 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 9 | 51 KB | tiles | 6908 → 8560 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
+| 10 | 49 KB | tiles | 6907 → 8159 ms | `/var/seafloor/tiles-2m/morro-bay-seafloor-deep.pmtiles` |
 
 ### A.7 Private layers (local test pages, medians of 3)
 
 Served without compression or cache headers (see A.1): bytes are upper bounds, warm passes re-fetch tiles, and the
 1.08 MB `maplibre-gl.mjs` here is the uncompressed module (the live site ships a 312 KB compressed build).
+Request and byte columns exclude the inline `data:` URLs (the 275 KB inline PNG on `layer-base-medium`; see A.1).
+"Canvas quiet (proxy)" is not layer readiness: on `layer-sst` the phone reaches it at 6.38 s but the 2.28 MB SST grid
+is requested at 14.07 s and finishes at 25.53 s (median of 3 cold runs: 14.07 → 25.53 s; runs 14.06–14.08 →
+25.53–25.54 s); `layer-wind`, `layer-current`, `layer-tide`, `layer-chlorophyll` readiness is likewise not measured.
 
-| page | profile | pass | FCP | LCP | map usable | TBT | CLS | longest task | JS script time | JS heap | requests | bytes | req. ≤ LCP | PMTiles req / bytes |
+| page | profile | pass | FCP | LCP | canvas quiet (proxy) | TBT to proxy | CLS | longest task | JS script time | JS heap | requests | bytes | req. ≤ LCP | PMTiles req / bytes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| layer-base-medium | desktop | cold | 20 ms | 20 ms | 360 ms | 22 ms | 0.000 | 72 ms | 44 ms | 10.10 MB | 44 | 3.86 MB | 6 | 33 / 2.14 MB |
-| layer-base-medium | desktop | warm | 12 ms | 12 ms | 278 ms | 13 ms | 0.000 | 63 ms | 27 ms | 6.24 MB | 44 | 2.41 MB | 7 | 33 / 2.14 MB |
-| layer-base-medium | phone | cold | 848 ms | 848 ms | 6.69 s | 49 ms | 0.000 | 235 ms | 144 ms | 8.36 MB | 29 | 2.94 MB | 3 | 18 / 1.22 MB |
-| layer-base-medium | phone | warm | 32 ms | 32 ms | 273 ms | 23 ms | 0.000 | 241 ms | 97 ms | 11.84 MB | 29 | 1.49 MB | 6 | 18 / 1.22 MB |
-| layer-wind | desktop | cold | 24 ms | 24 ms | 78 ms | 0 ms | 0.006 | 0 ms | 3.64 s | 38.92 MB | 41 | 3.34 MB | 5 | 33 / 2.14 MB |
-| layer-wind | desktop | warm | 36 ms | 36 ms | 75 ms | 0 ms | 0.006 | 0 ms | 3.97 s | 54.67 MB | 41 | 2.14 MB | 8 | 33 / 2.14 MB |
-| layer-wind | phone | cold | 844 ms | 844 ms | 6.43 s | 45 ms | 0.038 | 150 ms | 4.50 s | 26.84 MB | 26 | 2.42 MB | 5 | 18 / 1.22 MB |
-| layer-wind | phone | warm | 124 ms | 124 ms | 211 ms | 23 ms | 0.015 | 136 ms | 4.09 s | 27.45 MB | 26 | 1.22 MB | 8 | 18 / 1.22 MB |
-| layer-current | desktop | cold | 28 ms | 328 ms | 432 ms | 31 ms | 0.002 | 72 ms | 56 ms | 9.82 MB | 44 | 3.86 MB | 44 | 33 / 2.14 MB |
-| layer-current | desktop | warm | 24 ms | 292 ms | 381 ms | 31 ms | 0.002 | 69 ms | 40 ms | 8.58 MB | 44 | 2.41 MB | 44 | 33 / 2.14 MB |
-| layer-current | phone | cold | 844 ms | 15.97 s | 6.70 s | 50 ms | 0.016 | 235 ms | 207 ms | 9.24 MB | 29 | 2.94 MB | 29 | 18 / 1.22 MB |
-| layer-current | phone | warm | 32 ms | 6.62 s | 221 ms | 21 ms | 0.016 | 250 ms | 128 ms | 6.97 MB | 29 | 1.49 MB | 29 | 18 / 1.22 MB |
-| layer-tide | desktop | cold | 24 ms | 168 ms | 351 ms | 23 ms | 0.000 | 73 ms | 39 ms | 10.01 MB | 46 | 3.93 MB | 28 | 33 / 2.14 MB |
-| layer-tide | desktop | warm | 20 ms | 120 ms | 259 ms | 10 ms | 0.000 | 60 ms | 25 ms | 6.52 MB | 46 | 2.41 MB | 28 | 33 / 2.14 MB |
-| layer-tide | phone | cold | 856 ms | 856 ms | 6.67 s | 45 ms | 0.000 | 241 ms | 155 ms | 7.51 MB | 31 | 3.01 MB | 5 | 18 / 1.22 MB |
-| layer-tide | phone | warm | 32 ms | 32 ms | 281 ms | 24 ms | 0.000 | 239 ms | 95 ms | 5.80 MB | 31 | 1.49 MB | 6 | 18 / 1.22 MB |
-| layer-sst | desktop | cold | 28 ms | 352 ms | 101 ms | 0 ms | 0.007 | 0 ms | 61 ms | 22.66 MB | 40 | 5.61 MB | 40 | 33 / 2.14 MB |
-| layer-sst | desktop | warm | 36 ms | 272 ms | 85 ms | 0 ms | 0.007 | 0 ms | 40 ms | 8.28 MB | 40 | 4.42 MB | 40 | 33 / 2.14 MB |
-| layer-sst | phone | cold | 864 ms | 25.74 s | 6.38 s | 48 ms | 0.034 | 99 ms | 206 ms | 8.34 MB | 25 | 4.69 MB | 25 | 18 / 1.22 MB |
-| layer-sst | phone | warm | 32 ms | 17.52 s | 268 ms | 31 ms | 0.034 | 145 ms | 140 ms | 17.94 MB | 25 | 3.50 MB | 25 | 18 / 1.22 MB |
-| layer-chlorophyll | desktop | cold | 20 ms | 20 ms | 365 ms | 21 ms | 0.000 | 71 ms | 42 ms | 9.11 MB | 44 | 3.86 MB | 6 | 33 / 2.14 MB |
-| layer-chlorophyll | desktop | warm | 24 ms | 24 ms | 294 ms | 19 ms | 0.000 | 69 ms | 30 ms | 6.26 MB | 44 | 2.41 MB | 7 | 33 / 2.14 MB |
-| layer-chlorophyll | phone | cold | 856 ms | 856 ms | 6.68 s | 51 ms | 0.000 | 242 ms | 169 ms | 9.80 MB | 29 | 2.94 MB | 5 | 18 / 1.22 MB |
-| layer-chlorophyll | phone | warm | 36 ms | 36 ms | 353 ms | 33 ms | 0.000 | 235 ms | 115 ms | 12.10 MB | 29 | 1.49 MB | 6 | 18 / 1.22 MB |
-| layer-bathy-2m | desktop | cold | 24 ms | 24 ms | 334 ms | 11 ms | 0.000 | 61 ms | 37 ms | 9.88 MB | 46 | 3.90 MB | 6 | 35 / 2.18 MB |
-| layer-bathy-2m | desktop | warm | 16 ms | 16 ms | 284 ms | 20 ms | 0.000 | 70 ms | 28 ms | 6.25 MB | 46 | 2.45 MB | 7 | 35 / 2.18 MB |
-| layer-bathy-2m | phone | cold | 848 ms | 848 ms | 6.68 s | 52 ms | 0.000 | 243 ms | 148 ms | 8.39 MB | 29 | 2.95 MB | 5 | 18 / 1.23 MB |
-| layer-bathy-2m | phone | warm | 32 ms | 32 ms | 229 ms | 29 ms | 0.000 | 234 ms | 96 ms | 8.71 MB | 29 | 1.50 MB | 6 | 18 / 1.23 MB |
-| layer-bathy-2m-z12 | desktop | cold | 28 ms | 28 ms | 303 ms | 21 ms | 0.000 | 71 ms | 35 ms | 8.74 MB | 31 | 2.77 MB | 6 | 20 / 1.05 MB |
-| layer-bathy-2m-z12 | desktop | warm | 20 ms | 20 ms | 235 ms | 19 ms | 0.000 | 69 ms | 24 ms | 6.20 MB | 31 | 1.33 MB | 7 | 20 / 1.05 MB |
-| layer-bathy-2m-z12 | phone | cold | 856 ms | 856 ms | 6.63 s | 48 ms | 0.000 | 235 ms | 128 ms | 8.54 MB | 22 | 2.33 MB | 5 | 11 / 613 KB |
-| layer-bathy-2m-z12 | phone | warm | 32 ms | 32 ms | 263 ms | 23 ms | 0.000 | 237 ms | 76 ms | 11.05 MB | 22 | 888 KB | 6 | 11 / 613 KB |
+| layer-base-medium | desktop | cold | 20 ms | 20 ms | 360 ms | 22 ms | 0.000 | 72 ms | 44 ms | 10.10 MB | 43 | 3.58 MB | 6 | 33 / 2.14 MB |
+| layer-base-medium | desktop | warm | 12 ms | 12 ms | 278 ms | 13 ms | 0.000 | 63 ms | 27 ms | 6.24 MB | 43 | 2.14 MB | 7 | 33 / 2.14 MB |
+| layer-base-medium | phone | cold | 848 ms | 848 ms | 6.69 s | 49 ms | 0.000 | 235 ms | 144 ms | 8.36 MB | 28 | 2.66 MB | 3 | 18 / 1.22 MB |
+| layer-base-medium | phone | warm | 32 ms | 32 ms | 273 ms | 23 ms | 0.000 | 241 ms | 97 ms | 11.84 MB | 28 | 1.22 MB | 6 | 18 / 1.22 MB |
+| layer-wind | desktop | cold | 24 ms | 24 ms | 78 ms | 0 ms | 0.006 | 0 ms | 3.64 s | 38.92 MB | 40 | 3.34 MB | 5 | 33 / 2.14 MB |
+| layer-wind | desktop | warm | 36 ms | 36 ms | 75 ms | 0 ms | 0.006 | 0 ms | 3.97 s | 54.67 MB | 40 | 2.14 MB | 7 | 33 / 2.14 MB |
+| layer-wind | phone | cold | 844 ms | 844 ms | 6.43 s | 45 ms | 0.038 | 150 ms | 4.50 s | 26.84 MB | 25 | 2.42 MB | 5 | 18 / 1.22 MB |
+| layer-wind | phone | warm | 124 ms | 124 ms | 211 ms | 23 ms | 0.015 | 136 ms | 4.09 s | 27.45 MB | 25 | 1.22 MB | 7 | 18 / 1.22 MB |
+| layer-current | desktop | cold | 28 ms | 328 ms | 432 ms | 31 ms | 0.002 | 72 ms | 56 ms | 9.82 MB | 43 | 3.58 MB | 43 | 33 / 2.14 MB |
+| layer-current | desktop | warm | 24 ms | 292 ms | 381 ms | 31 ms | 0.002 | 69 ms | 40 ms | 8.58 MB | 43 | 2.14 MB | 43 | 33 / 2.14 MB |
+| layer-current | phone | cold | 844 ms | 15.97 s | 6.70 s | 50 ms | 0.016 | 235 ms | 207 ms | 9.24 MB | 28 | 2.66 MB | 28 | 18 / 1.22 MB |
+| layer-current | phone | warm | 32 ms | 6.62 s | 221 ms | 21 ms | 0.016 | 250 ms | 128 ms | 6.97 MB | 28 | 1.22 MB | 28 | 18 / 1.22 MB |
+| layer-tide | desktop | cold | 24 ms | 168 ms | 351 ms | 23 ms | 0.000 | 73 ms | 39 ms | 10.01 MB | 45 | 3.65 MB | 28 | 33 / 2.14 MB |
+| layer-tide | desktop | warm | 20 ms | 120 ms | 259 ms | 10 ms | 0.000 | 60 ms | 25 ms | 6.52 MB | 45 | 2.14 MB | 28 | 33 / 2.14 MB |
+| layer-tide | phone | cold | 856 ms | 856 ms | 6.67 s | 45 ms | 0.000 | 241 ms | 155 ms | 7.51 MB | 30 | 2.73 MB | 5 | 18 / 1.22 MB |
+| layer-tide | phone | warm | 32 ms | 32 ms | 281 ms | 24 ms | 0.000 | 239 ms | 95 ms | 5.80 MB | 30 | 1.22 MB | 6 | 18 / 1.22 MB |
+| layer-sst | desktop | cold | 28 ms | 352 ms | 101 ms | 0 ms | 0.007 | 0 ms | 61 ms | 22.66 MB | 39 | 5.61 MB | 39 | 33 / 2.14 MB |
+| layer-sst | desktop | warm | 36 ms | 272 ms | 85 ms | 0 ms | 0.007 | 0 ms | 40 ms | 8.28 MB | 39 | 4.42 MB | 39 | 33 / 2.14 MB |
+| layer-sst | phone | cold | 864 ms | 25.74 s | 6.38 s | 48 ms | 0.034 | 99 ms | 206 ms | 8.34 MB | 24 | 4.69 MB | 24 | 18 / 1.22 MB |
+| layer-sst | phone | warm | 32 ms | 17.52 s | 268 ms | 31 ms | 0.034 | 145 ms | 140 ms | 17.94 MB | 24 | 3.50 MB | 24 | 18 / 1.22 MB |
+| layer-chlorophyll | desktop | cold | 20 ms | 20 ms | 365 ms | 21 ms | 0.000 | 71 ms | 42 ms | 9.11 MB | 43 | 3.58 MB | 6 | 33 / 2.14 MB |
+| layer-chlorophyll | desktop | warm | 24 ms | 24 ms | 294 ms | 19 ms | 0.000 | 69 ms | 30 ms | 6.26 MB | 43 | 2.14 MB | 7 | 33 / 2.14 MB |
+| layer-chlorophyll | phone | cold | 856 ms | 856 ms | 6.68 s | 51 ms | 0.000 | 242 ms | 169 ms | 9.80 MB | 28 | 2.66 MB | 5 | 18 / 1.22 MB |
+| layer-chlorophyll | phone | warm | 36 ms | 36 ms | 353 ms | 33 ms | 0.000 | 235 ms | 115 ms | 12.10 MB | 28 | 1.22 MB | 6 | 18 / 1.22 MB |
+| layer-bathy-2m | desktop | cold | 24 ms | 24 ms | 334 ms | 11 ms | 0.000 | 61 ms | 37 ms | 9.88 MB | 45 | 3.63 MB | 6 | 35 / 2.18 MB |
+| layer-bathy-2m | desktop | warm | 16 ms | 16 ms | 284 ms | 20 ms | 0.000 | 70 ms | 28 ms | 6.25 MB | 45 | 2.18 MB | 7 | 35 / 2.18 MB |
+| layer-bathy-2m | phone | cold | 848 ms | 848 ms | 6.68 s | 52 ms | 0.000 | 243 ms | 148 ms | 8.39 MB | 28 | 2.67 MB | 5 | 18 / 1.23 MB |
+| layer-bathy-2m | phone | warm | 32 ms | 32 ms | 229 ms | 29 ms | 0.000 | 234 ms | 96 ms | 8.71 MB | 28 | 1.23 MB | 6 | 18 / 1.23 MB |
+| layer-bathy-2m-z12 | desktop | cold | 28 ms | 28 ms | 303 ms | 21 ms | 0.000 | 71 ms | 35 ms | 8.74 MB | 30 | 2.50 MB | 6 | 20 / 1.05 MB |
+| layer-bathy-2m-z12 | desktop | warm | 20 ms | 20 ms | 235 ms | 19 ms | 0.000 | 69 ms | 24 ms | 6.20 MB | 30 | 1.05 MB | 7 | 20 / 1.05 MB |
+| layer-bathy-2m-z12 | phone | cold | 856 ms | 856 ms | 6.63 s | 48 ms | 0.000 | 235 ms | 128 ms | 8.54 MB | 21 | 2.06 MB | 5 | 11 / 613 KB |
+| layer-bathy-2m-z12 | phone | warm | 32 ms | 32 ms | 263 ms | 23 ms | 0.000 | 237 ms | 76 ms | 11.05 MB | 21 | 613 KB | 6 | 11 / 613 KB |
 
 | page | profile | pass | html | js | css | json | tiles | fonts | images | other |
 |---|---|---|---|---|---|---|---|---|---|---|
-| layer-base-medium | desktop | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 483 KB (2) |
-| layer-base-medium | desktop | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 275 KB (2) |
-| layer-base-medium | phone | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 483 KB (2) |
-| layer-base-medium | phone | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 275 KB (2) |
-| layer-wind | desktop | cold | 5 KB (1) | 1.10 MB (4) | 83 KB (1) | 4 KB (1) | 2.14 MB (33) | 0 B (0) | 0 B (1) | 0 B (0) |
-| layer-wind | desktop | warm | 0 B (1) | 0 B (4) | 0 B (1) | 4 KB (1) | 2.14 MB (33) | 0 B (0) | 0 B (1) | 0 B (0) |
-| layer-wind | phone | cold | 5 KB (1) | 1.10 MB (4) | 83 KB (1) | 4 KB (1) | 1.22 MB (18) | 0 B (0) | 0 B (1) | 0 B (0) |
-| layer-wind | phone | warm | 0 B (1) | 0 B (4) | 0 B (1) | 4 KB (1) | 1.22 MB (18) | 0 B (0) | 0 B (1) | 0 B (0) |
-| layer-current | desktop | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 483 KB (2) |
-| layer-current | desktop | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 275 KB (2) |
-| layer-current | phone | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 483 KB (2) |
-| layer-current | phone | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 275 KB (2) |
-| layer-tide | desktop | cold | 14 KB (1) | 1.12 MB (6) | 83 KB (1) | 86 KB (3) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 483 KB (2) |
-| layer-tide | desktop | warm | 0 B (1) | 0 B (6) | 0 B (1) | 0 B (3) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 275 KB (2) |
-| layer-tide | phone | cold | 14 KB (1) | 1.12 MB (6) | 83 KB (1) | 86 KB (3) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 483 KB (2) |
-| layer-tide | phone | warm | 0 B (1) | 0 B (6) | 0 B (1) | 0 B (3) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 275 KB (2) |
-| layer-sst | desktop | cold | 7 KB (1) | 1.10 MB (3) | 83 KB (1) | 2.28 MB (1) | 2.14 MB (33) | 0 B (0) | 0 B (1) | 0 B (0) |
-| layer-sst | desktop | warm | 0 B (1) | 0 B (3) | 0 B (1) | 2.28 MB (1) | 2.14 MB (33) | 0 B (0) | 0 B (1) | 0 B (0) |
-| layer-sst | phone | cold | 7 KB (1) | 1.10 MB (3) | 83 KB (1) | 2.28 MB (1) | 1.22 MB (18) | 0 B (0) | 0 B (1) | 0 B (0) |
-| layer-sst | phone | warm | 0 B (1) | 0 B (3) | 0 B (1) | 2.28 MB (1) | 1.22 MB (18) | 0 B (0) | 0 B (1) | 0 B (0) |
-| layer-chlorophyll | desktop | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 483 KB (2) |
-| layer-chlorophyll | desktop | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 275 KB (2) |
-| layer-chlorophyll | phone | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 483 KB (2) |
-| layer-chlorophyll | phone | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 275 KB (2) |
-| layer-bathy-2m | desktop | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 2.18 MB (35) | 0 B (0) | 0 B (0) | 483 KB (2) |
-| layer-bathy-2m | desktop | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 2.18 MB (35) | 0 B (0) | 0 B (0) | 275 KB (2) |
-| layer-bathy-2m | phone | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 1.23 MB (18) | 0 B (0) | 0 B (0) | 483 KB (2) |
-| layer-bathy-2m | phone | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 1.23 MB (18) | 0 B (0) | 0 B (0) | 275 KB (2) |
-| layer-bathy-2m-z12 | desktop | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 1.05 MB (20) | 0 B (0) | 0 B (0) | 483 KB (2) |
-| layer-bathy-2m-z12 | desktop | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 1.05 MB (20) | 0 B (0) | 0 B (0) | 275 KB (2) |
-| layer-bathy-2m-z12 | phone | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 613 KB (11) | 0 B (0) | 0 B (0) | 483 KB (2) |
-| layer-bathy-2m-z12 | phone | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 613 KB (11) | 0 B (0) | 0 B (0) | 275 KB (2) |
+| layer-base-medium | desktop | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 208 KB (1) |
+| layer-base-medium | desktop | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 0 B (1) |
+| layer-base-medium | phone | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 208 KB (1) |
+| layer-base-medium | phone | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 0 B (1) |
+| layer-wind | desktop | cold | 5 KB (1) | 1.10 MB (4) | 83 KB (1) | 4 KB (1) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 0 B (0) |
+| layer-wind | desktop | warm | 0 B (1) | 0 B (4) | 0 B (1) | 4 KB (1) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 0 B (0) |
+| layer-wind | phone | cold | 5 KB (1) | 1.10 MB (4) | 83 KB (1) | 4 KB (1) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 0 B (0) |
+| layer-wind | phone | warm | 0 B (1) | 0 B (4) | 0 B (1) | 4 KB (1) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 0 B (0) |
+| layer-current | desktop | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 208 KB (1) |
+| layer-current | desktop | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 0 B (1) |
+| layer-current | phone | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 208 KB (1) |
+| layer-current | phone | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 0 B (1) |
+| layer-tide | desktop | cold | 14 KB (1) | 1.12 MB (6) | 83 KB (1) | 86 KB (3) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 208 KB (1) |
+| layer-tide | desktop | warm | 0 B (1) | 0 B (6) | 0 B (1) | 0 B (3) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 0 B (1) |
+| layer-tide | phone | cold | 14 KB (1) | 1.12 MB (6) | 83 KB (1) | 86 KB (3) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 208 KB (1) |
+| layer-tide | phone | warm | 0 B (1) | 0 B (6) | 0 B (1) | 0 B (3) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 0 B (1) |
+| layer-sst | desktop | cold | 7 KB (1) | 1.10 MB (3) | 83 KB (1) | 2.28 MB (1) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 0 B (0) |
+| layer-sst | desktop | warm | 0 B (1) | 0 B (3) | 0 B (1) | 2.28 MB (1) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 0 B (0) |
+| layer-sst | phone | cold | 7 KB (1) | 1.10 MB (3) | 83 KB (1) | 2.28 MB (1) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 0 B (0) |
+| layer-sst | phone | warm | 0 B (1) | 0 B (3) | 0 B (1) | 2.28 MB (1) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 0 B (0) |
+| layer-chlorophyll | desktop | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 208 KB (1) |
+| layer-chlorophyll | desktop | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 2.14 MB (33) | 0 B (0) | 0 B (0) | 0 B (1) |
+| layer-chlorophyll | phone | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 208 KB (1) |
+| layer-chlorophyll | phone | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 1.22 MB (18) | 0 B (0) | 0 B (0) | 0 B (1) |
+| layer-bathy-2m | desktop | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 2.18 MB (35) | 0 B (0) | 0 B (0) | 208 KB (1) |
+| layer-bathy-2m | desktop | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 2.18 MB (35) | 0 B (0) | 0 B (0) | 0 B (1) |
+| layer-bathy-2m | phone | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 1.23 MB (18) | 0 B (0) | 0 B (0) | 208 KB (1) |
+| layer-bathy-2m | phone | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 1.23 MB (18) | 0 B (0) | 0 B (0) | 0 B (1) |
+| layer-bathy-2m-z12 | desktop | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 1.05 MB (20) | 0 B (0) | 0 B (0) | 208 KB (1) |
+| layer-bathy-2m-z12 | desktop | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 1.05 MB (20) | 0 B (0) | 0 B (0) | 0 B (1) |
+| layer-bathy-2m-z12 | phone | cold | 14 KB (1) | 1.12 MB (5) | 83 KB (1) | 24 KB (2) | 613 KB (11) | 0 B (0) | 0 B (0) | 208 KB (1) |
+| layer-bathy-2m-z12 | phone | warm | 0 B (1) | 0 B (5) | 0 B (1) | 0 B (2) | 613 KB (11) | 0 B (0) | 0 B (0) | 0 B (1) |
 
-| page | profile | pass | network req / bytes | no-store req / bytes | third-party req / bytes | req. ≤ FCP | script ms per s observed | observed window |
+| page | profile | pass | network req / bytes | no-store req / bytes | third-party req / bytes | req. ≤ FCP | JS script time | network-settle window (not the CPU-counter window) |
 |---|---|---|---|---|---|---|---|---|
-| layer-base-medium | desktop | cold | 43 / 3.58 MB | 0 / 0 B | 0 / 0 B | 6 | 6.7 | 6.53 s |
-| layer-base-medium | desktop | warm | 39 / 2.14 MB | 0 / 0 B | 0 / 0 B | 7 | 4.1 | 6.53 s |
-| layer-base-medium | phone | cold | 28 / 2.66 MB | 0 / 0 B | 0 / 0 B | 3 | 6.5 | 22.22 s |
-| layer-base-medium | phone | warm | 24 / 1.22 MB | 0 / 0 B | 0 / 0 B | 6 | 7.6 | 12.79 s |
-| layer-wind | desktop | cold | 40 / 3.34 MB | 0 / 0 B | 0 / 0 B | 5 | 580.2 | 6.28 s |
-| layer-wind | desktop | warm | 39 / 2.14 MB | 0 / 0 B | 0 / 0 B | 8 | 632.4 | 6.27 s |
-| layer-wind | phone | cold | 25 / 2.42 MB | 0 / 0 B | 0 / 0 B | 5 | 220.0 | 20.46 s |
-| layer-wind | phone | warm | 24 / 1.22 MB | 0 / 0 B | 0 / 0 B | 8 | 326.3 | 12.54 s |
-| layer-current | desktop | cold | 43 / 3.58 MB | 0 / 0 B | 0 / 0 B | 6 | 8.6 | 6.52 s |
-| layer-current | desktop | warm | 39 / 2.14 MB | 0 / 0 B | 0 / 0 B | 7 | 6.1 | 6.52 s |
-| layer-current | phone | cold | 28 / 2.66 MB | 0 / 0 B | 0 / 0 B | 5 | 9.3 | 22.21 s |
-| layer-current | phone | warm | 24 / 1.22 MB | 0 / 0 B | 0 / 0 B | 6 | 10.0 | 12.79 s |
-| layer-tide | desktop | cold | 45 / 3.65 MB | 0 / 0 B | 0 / 0 B | 6 | 6.0 | 6.53 s |
-| layer-tide | desktop | warm | 40 / 2.14 MB | 0 / 0 B | 0 / 0 B | 7 | 3.8 | 6.52 s |
-| layer-tide | phone | cold | 30 / 2.73 MB | 0 / 0 B | 0 / 0 B | 5 | 6.9 | 22.47 s |
-| layer-tide | phone | warm | 25 / 1.22 MB | 0 / 0 B | 0 / 0 B | 6 | 7.4 | 12.79 s |
-| layer-sst | desktop | cold | 39 / 5.61 MB | 0 / 0 B | 0 / 0 B | 4 | 9.4 | 6.52 s |
-| layer-sst | desktop | warm | 38 / 4.42 MB | 0 / 0 B | 0 / 0 B | 6 | 6.1 | 6.27 s |
-| layer-sst | phone | cold | 24 / 4.69 MB | 0 / 0 B | 0 / 0 B | 4 | 6.5 | 31.98 s |
-| layer-sst | phone | warm | 23 / 3.50 MB | 0 / 0 B | 0 / 0 B | 4 | 5.9 | 23.56 s |
-| layer-chlorophyll | desktop | cold | 43 / 3.58 MB | 0 / 0 B | 0 / 0 B | 6 | 6.4 | 6.52 s |
-| layer-chlorophyll | desktop | warm | 39 / 2.14 MB | 0 / 0 B | 0 / 0 B | 7 | 4.6 | 6.52 s |
-| layer-chlorophyll | phone | cold | 28 / 2.66 MB | 0 / 0 B | 0 / 0 B | 5 | 7.6 | 22.22 s |
-| layer-chlorophyll | phone | warm | 24 / 1.22 MB | 0 / 0 B | 0 / 0 B | 6 | 9.0 | 12.79 s |
-| layer-bathy-2m | desktop | cold | 45 / 3.63 MB | 0 / 0 B | 0 / 0 B | 6 | 5.7 | 6.53 s |
-| layer-bathy-2m | desktop | warm | 41 / 2.18 MB | 0 / 0 B | 0 / 0 B | 7 | 4.3 | 6.53 s |
-| layer-bathy-2m | phone | cold | 28 / 2.67 MB | 0 / 0 B | 0 / 0 B | 5 | 6.7 | 22.22 s |
-| layer-bathy-2m | phone | warm | 24 / 1.23 MB | 0 / 0 B | 0 / 0 B | 6 | 7.5 | 12.79 s |
-| layer-bathy-2m-z12 | desktop | cold | 30 / 2.50 MB | 0 / 0 B | 0 / 0 B | 6 | 5.4 | 6.52 s |
-| layer-bathy-2m-z12 | desktop | warm | 26 / 1.05 MB | 0 / 0 B | 0 / 0 B | 7 | 3.8 | 6.27 s |
-| layer-bathy-2m-z12 | phone | cold | 21 / 2.06 MB | 0 / 0 B | 0 / 0 B | 5 | 6.8 | 18.71 s |
-| layer-bathy-2m-z12 | phone | warm | 17 / 613 KB | 0 / 0 B | 0 / 0 B | 6 | 7.8 | 9.78 s |
+| layer-base-medium | desktop | cold | 43 / 3.58 MB | 0 / 0 B | 0 / 0 B | 6 | 44 ms | 6.53 s |
+| layer-base-medium | desktop | warm | 39 / 2.14 MB | 0 / 0 B | 0 / 0 B | 7 | 27 ms | 6.53 s |
+| layer-base-medium | phone | cold | 28 / 2.66 MB | 0 / 0 B | 0 / 0 B | 3 | 144 ms | 22.22 s |
+| layer-base-medium | phone | warm | 24 / 1.22 MB | 0 / 0 B | 0 / 0 B | 6 | 97 ms | 12.79 s |
+| layer-wind | desktop | cold | 40 / 3.34 MB | 0 / 0 B | 0 / 0 B | 5 | 3.64 s | 6.28 s |
+| layer-wind | desktop | warm | 39 / 2.14 MB | 0 / 0 B | 0 / 0 B | 8 | 3.97 s | 6.27 s |
+| layer-wind | phone | cold | 25 / 2.42 MB | 0 / 0 B | 0 / 0 B | 5 | 4.50 s | 20.46 s |
+| layer-wind | phone | warm | 24 / 1.22 MB | 0 / 0 B | 0 / 0 B | 8 | 4.09 s | 12.54 s |
+| layer-current | desktop | cold | 43 / 3.58 MB | 0 / 0 B | 0 / 0 B | 6 | 56 ms | 6.52 s |
+| layer-current | desktop | warm | 39 / 2.14 MB | 0 / 0 B | 0 / 0 B | 7 | 40 ms | 6.52 s |
+| layer-current | phone | cold | 28 / 2.66 MB | 0 / 0 B | 0 / 0 B | 5 | 207 ms | 22.21 s |
+| layer-current | phone | warm | 24 / 1.22 MB | 0 / 0 B | 0 / 0 B | 6 | 128 ms | 12.79 s |
+| layer-tide | desktop | cold | 45 / 3.65 MB | 0 / 0 B | 0 / 0 B | 6 | 39 ms | 6.53 s |
+| layer-tide | desktop | warm | 40 / 2.14 MB | 0 / 0 B | 0 / 0 B | 7 | 25 ms | 6.52 s |
+| layer-tide | phone | cold | 30 / 2.73 MB | 0 / 0 B | 0 / 0 B | 5 | 155 ms | 22.47 s |
+| layer-tide | phone | warm | 25 / 1.22 MB | 0 / 0 B | 0 / 0 B | 6 | 95 ms | 12.79 s |
+| layer-sst | desktop | cold | 39 / 5.61 MB | 0 / 0 B | 0 / 0 B | 4 | 61 ms | 6.52 s |
+| layer-sst | desktop | warm | 38 / 4.42 MB | 0 / 0 B | 0 / 0 B | 6 | 40 ms | 6.27 s |
+| layer-sst | phone | cold | 24 / 4.69 MB | 0 / 0 B | 0 / 0 B | 4 | 206 ms | 31.98 s |
+| layer-sst | phone | warm | 23 / 3.50 MB | 0 / 0 B | 0 / 0 B | 4 | 140 ms | 23.56 s |
+| layer-chlorophyll | desktop | cold | 43 / 3.58 MB | 0 / 0 B | 0 / 0 B | 6 | 42 ms | 6.52 s |
+| layer-chlorophyll | desktop | warm | 39 / 2.14 MB | 0 / 0 B | 0 / 0 B | 7 | 30 ms | 6.52 s |
+| layer-chlorophyll | phone | cold | 28 / 2.66 MB | 0 / 0 B | 0 / 0 B | 5 | 169 ms | 22.22 s |
+| layer-chlorophyll | phone | warm | 24 / 1.22 MB | 0 / 0 B | 0 / 0 B | 6 | 115 ms | 12.79 s |
+| layer-bathy-2m | desktop | cold | 45 / 3.63 MB | 0 / 0 B | 0 / 0 B | 6 | 37 ms | 6.53 s |
+| layer-bathy-2m | desktop | warm | 41 / 2.18 MB | 0 / 0 B | 0 / 0 B | 7 | 28 ms | 6.53 s |
+| layer-bathy-2m | phone | cold | 28 / 2.67 MB | 0 / 0 B | 0 / 0 B | 5 | 148 ms | 22.22 s |
+| layer-bathy-2m | phone | warm | 24 / 1.23 MB | 0 / 0 B | 0 / 0 B | 6 | 96 ms | 12.79 s |
+| layer-bathy-2m-z12 | desktop | cold | 30 / 2.50 MB | 0 / 0 B | 0 / 0 B | 6 | 35 ms | 6.52 s |
+| layer-bathy-2m-z12 | desktop | warm | 26 / 1.05 MB | 0 / 0 B | 0 / 0 B | 7 | 24 ms | 6.27 s |
+| layer-bathy-2m-z12 | phone | cold | 21 / 2.06 MB | 0 / 0 B | 0 / 0 B | 5 | 128 ms | 18.71 s |
+| layer-bathy-2m-z12 | phone | warm | 17 / 613 KB | 0 / 0 B | 0 / 0 B | 6 | 76 ms | 9.78 s |
 
 ### A.8 Payload sizes: the daily feed, the brief and the other data the first screen reads
 
@@ -1080,11 +1107,13 @@ Ranked by measured cost to the user.
     440 →     712      269.3 KB  json   /api/coast/ocean
     503   ── map canvas ──
    1235 →    2620      609.0 KB  tiles  /feeds/tiles/seafloor/seafloor-morro-bay.pmtiles
-  13590   ── map usable ──
+  13590   ── canvas quiet (proxy) ──
   requests=135 bytes=19.44 MB tbt=11631 longest task=3216 script=11476 ms
   ```
-* It is **79 %** of a cold desktop brief's 19.4 MB and **99.7 %** of what a warm desktop brief still fetches
-  (17.03 MB of 17.08 MB network bytes are `no-store`, A.5).
+* It is **79 %** of a cold desktop brief's 19.4 MB (15.42 of 19.44 MB) and **~90 %** of what a warm desktop brief still
+  fetches (15.41 of 17.08 MB network bytes, medians of 3). The other `no-store` responses (seafloor tiles 1.21 MB, the
+  ocean feed, reports) make **all** `no-store` traffic 17.03 of 17.08 MB = 99.7 % of the warm brief (A.5): that 99.7 %
+  describes `no-store` traffic as a whole, not the export.
 * **Phone, slow 4G:** the export starts at ~3.3 s and is aborted by the 60 s timeout at ~63 s **in every run, cold
   and warm**, after 9.0 MB (cold) / 10.5 MB (warm) arrived. The reef ranking therefore never appears on a slow phone
   connection, while each visit costs ~9–10.5 MB of the user's data. It also shares the 1.6 Mbit/s link with
@@ -1096,10 +1125,11 @@ Ranked by measured cost to the user.
    3383 →    9121      312.1 KB  js     /assets/maplibre-gl.4f81424288.js
    9196 →   21001      270.6 KB  json   /api/coast/ocean
    9285   ── map canvas ──
-   9427   ── map usable ──
+   9427   ── canvas quiet (proxy) ──
   11781 →   25342      609.0 KB  tiles  /feeds/tiles/seafloor/seafloor-morro-bay.pmtiles
   ```
-  The landing (same map, no export) reaches map usable at 6.3 s on the same phone profile.
+  The landing (same map, no export) has its map canvas on screen at 6.3 s on the same phone profile, against 9.3 s on
+  the brief (canvas shown, not content-ready).
 * Memory: the desktop brief ends with a **300–615 MB** JS heap (53.6 MB of JSON parsed into ~1.1 M coordinate
   arrays) against ~18 MB on the landing; on a phone that completes the download this is a tab-kill risk (ESTIMATED).
 
@@ -1109,11 +1139,13 @@ Ranked by measured cost to the user.
   `geo-screen.js`**, called from the planner/ranking chunk (`depth-contours.*.js` Tn/Nn ← `app.js` gu) through the
   protected-area screen (`protected-areas.js` `geometryAllowed` / `pointAllowed`, `web/map/ranked.ts:81-82`).
 * Long tasks, desktop brief (`raw/diag-brief-desktop.json`): **3.30 s, 2.66 s, 2.93 s, 2.77 s** (4 tasks, ~11.7 s);
-  TBT 11.6 s; the page does not respond to taps for ~13 s after the map appears (map usable 13.6 s, canvas 0.5 s).
+  TBT 11.6 s to the canvas-quiet proxy: the main thread is blocked by long tasks from the first screen until 13.6 s
+  (canvas on screen 0.5 s). Tap response itself was not measured.
 * The same on every live layer view (TBT 11.0–12.0 s desktop): the cost is independent of which layer is on.
-* Phone CPU on fast network (`phone-wifi`): brief cold: map usable **16.37 s**, TBT **13.98 s**, longest task 13.08 s, JS script time 23.17 s, heap 346 MB, 19.3 MB transferred; map-home cold: map usable 16.61 s, TBT 13.99 s. A phone on good Wi-Fi gets the reef data and then freezes.
+* Phone CPU on fast network (`phone-wifi`): brief cold: canvas on screen 1.07 s, canvas-quiet proxy **16.37 s**, TBT **13.98 s**, longest task 13.08 s, JS script time 23.17 s (accumulated; not a duty cycle, A.1), heap 346 MB, 19.3 MB transferred; map-home cold: canvas-quiet 16.61 s, TBT 13.99 s. A phone on good Wi-Fi gets the reef data and then freezes.
 * On slow 4G the screen never runs (B1), which is why the phone TBT looks small (0.3–0.5 s): a slow phone is "fast"
-  only because the feature fails.
+  only because the feature fails. The window also ends at the canvas-quiet proxy (9.4 s), before the data would arrive,
+  so that figure says nothing about blocking after it.
 
 ### B3. The first screen is rendered by JavaScript; nothing useful paints before ~60 modules load
 
@@ -1159,9 +1191,13 @@ Ranked by measured cost to the user.
 ### B8. Private-layer test pages: late, uncompressed data and a continuously running particle loop
 
 * SST: the 2.28 MB uncompressed grid is fetched only after the map has loaded (phone cold 14.1 → 25.5 s), so
-  **LCP is 25.7 s cold / 17.5 s warm on the phone**; gzip would make it 149 KB.
+  **LCP is 25.7 s cold / 17.5 s warm on the phone** and the layer is not visible before ~25.5 s, although the
+  canvas-quiet proxy says 6.4 s; gzip would make it 149 KB (MEASURED size; the time saving is ESTIMATED).
 * Currents: LCP 16.0 s cold / 6.6 s warm on the phone (the current overlay paints after the tiles).
-* Wind particles: the animation loop keeps the main thread busy **58 % of the time on desktop** (580 ms of script per second observed) and 22 % on the throttled phone, against 0.4–1 % for the static layers; heap 39–55 MB desktop vs 6–10 MB for the static layers.
+* Wind particles: the animation loop accumulates **3.6–4.1 s of script on desktop** (6.3 s network-settle window,
+  6.2–6.5 s of total task time) and 4.5 s on the throttled phone (20.5 s window), against 40–70 ms (desktop) and
+  0.2 s (phone) for the SST page; heap 39–55 MB desktop vs 6–10 MB for the static layers. These are accumulated
+  totals; a per-second duty cycle is **not** claimed (A.1: window mismatch, unvalidated ScriptDuration under throttling).
 * Raster seafloor tiles are PNG at 68–89 KB median; the zoom-9.5 view costs 18–33 range requests / 1.2–2.1 MB.
   WebP q0.8 would be 8–11 % of those bytes (A.9).
 * These pages are not published; this is what the layers would cost if shipped as they stand.
@@ -1191,7 +1227,7 @@ Each entry: **what** · why (cause) · expected gain · effort · risk · visibl
   layer that the map already draws. Keep the full export for the GPX/trip export path only, fetched on demand.
 * Why: B1, B2, B6 (outlines travel twice).
 * Gain: MEASURED bytes **15.4 MB → 0.34 MB per brief/map view (−98 %)** (A.8, "targets only"). ESTIMATED time:
-  phone slow 4G map usable ~9.4 s → ~6.3 s (the landing's figure, same map without the export) and the reef
+  phone slow 4G map canvas ~9.3 s → ~6.3 s (the landing's figure, same map without the export) and the reef
   ranking appears instead of timing out; desktop heap 300–600 MB → ~20–40 MB.
 * Effort M (publisher + loader + verify), risk M (the publication's integrity and expiry checks must cover the
   new file; ranking output must be byte-identical for equal inputs — testable).
@@ -1204,8 +1240,10 @@ Each entry: **what** · why (cause) · expected gain · effort · risk · visibl
   protected areas and the outlines) and publish the result with the target; keep the run-time screen only as a
   cheap point-in-polygon check on the few ranked marks shown (or behind a manifest hash check).
 * Why: B2 (9.3 s self time in `geo-screen`, 4 long tasks of ~3 s).
-* Gain: ESTIMATED **TBT −11 s desktop**, map usable 13.6 s → ~1.5 s desktop (the landing's 1.43 s); on the
-  phone CPU on Wi-Fi the same ~4× larger saving (B2's phone-wifi line).
+* Gain: MEASURED current cost: desktop TBT 11.6 s and 4 long tasks (~11.7 s); phone CPU on Wi-Fi TBT 14.0 s (B2's
+  phone-wifi line; ~1.2× the desktop figure, script time ~2×). ESTIMATED future gain: desktop TBT −11 s and the
+  canvas-quiet proxy 13.6 s → ~1.5 s (the landing's 1.43 s); on the phone CPU the saving is of the same order as its
+  14.0 s TBT, not several times larger. Not a measurement of the changed site.
 * Effort M, risk M–H: this is a safety screen (#489); the publish-time result must be verified to match the
   run-time result on every target before the run-time path is relaxed (a parity test over the full export).
 * Visible: no (faster, same marks). Decision: **needs G** (publication content, and it relaxes a run-time
@@ -1213,7 +1251,7 @@ Each entry: **what** · why (cause) · expected gain · effort · risk · visibl
 
 **P3. If the screen must stay in the browser: move it to a Web Worker and simplify the geometry first.**
 * What: run `geo-screen` in a worker over a pre-simplified copy; yield between targets; start it at idle after
-  the map is usable.
+  the map canvas is shown (content readiness is not measured here).
 * Why: B2. Gain: ESTIMATED main-thread TBT −11 s (moved off thread; total CPU unchanged unless simplified;
   with 5 m thinning, vertices 1.09 M → 0.44 M, ~−60 % CPU ESTIMATED). Effort M, risk M (worker bundling,
   identical results). Visible: no. Decision: **safe-to-build-now** (client code only).
@@ -1229,17 +1267,22 @@ Each entry: **what** · why (cause) · expected gain · effort · risk · visibl
 * What: version the URL by content hash from the manifest (`…/habitat-export.<sha>.geojson.gz`) and serve it
   `public, max-age=<until expires_at>, immutable`; the manifest (small, `no-store`) remains the gate. Same for the
   seafloor PMTiles and the ledger.
-* Why: B1, B5 (a warm visit re-downloads 17 MB). Gain: MEASURED warm desktop brief network 17.1 MB → ~0.05 MB
-  of the export's share; ESTIMATED warm phone map usable 3.1 s → ~2.5 s and ~12 MB less data per repeat visit.
+* Why: B1, B5 (a warm visit re-downloads 17 MB). Gain: MEASURED current cost, warm desktop brief (medians of 3): 17.08 MB
+  from the network, of which the export is 15.41 MB, the seafloor PMTiles + manifest + ledger 1.21 MB (the files this
+  proposal covers: 16.62 MB together) and ~0.46 MB other traffic (ocean feed, reports, region JSON) that P5 does not
+  touch. ESTIMATED future gain: if those 16.62 MB became cacheable, the warm brief would re-fetch ~0.5 MB plus the
+  small manifest revalidations; that is arithmetic on the measured bytes, not a demonstrated saving (browser cache
+  behaviour of range requests on the PMTiles was not tested). ESTIMATED warm phone canvas-quiet proxy 3.1 s → ~2.5 s
+  and up to ~12 MB less data per repeat visit.
 * Effort M, risk M (expiry semantics: a stale object must never be served after `expires_at`; the manifest
   check makes that hold). Visible: no. Decision: **needs G** (cache policy of published feeds; Cloudflare edge
   behaviour).
 
-**P6. Load the reef data only when it is needed, after the map is usable.**
-* What: start `loadReefPublication` at `requestIdleCallback` after map usable, or when the user opens ranking /
+**P6. Load the reef data only when it is needed, after the map canvas is on screen.**
+* What: start `loadReefPublication` at `requestIdleCallback` once the map canvas is shown, or when the user opens ranking /
   trip / the seafloor layer — not in parallel with `maplibre-gl.js` and the tiles.
 * Why: B1 (on the phone it holds the link for 60 s and delays maplibre to 9.1 s and `coast/ocean` to 21 s).
-* Gain: ESTIMATED phone map usable 9.4 s → ~6.3 s even before P1; on Save-Data/2G skip it entirely.
+* Gain: ESTIMATED phone map canvas 9.3 s → ~6.3 s even before P1; on Save-Data/2G skip it entirely.
   Effort S, risk L. Visible: ranking marks arrive a moment later. Decision: **safe-to-build-now**.
 
 **P7. Replace the fixed 60 s timeout with progress-aware loading and a clear message.**
@@ -1400,7 +1443,7 @@ No change needed beyond P19. Any Cloudflare setting change (Tiered Cache, Cache 
   0.5–0.75× device pixel ratio (the phone profile is 2.625×); pause on `visibilitychange` (hidden tab) and when
   the map is off-screen (IntersectionObserver) or being dragged; reduce trail overdraw (fewer, shorter trails at
   wide zoom); share one WebGL context with MapLibre (custom layer) instead of a second canvas, to stay under
-  mobile WebGL context limits. Why: B8 (wind duty cycle). Gain: ESTIMATED −50 % main-thread script time and
+  mobile WebGL context limits. Why: B8 (wind script time). Gain: ESTIMATED −50 % main-thread script time and
   battery for the wind layer. Effort M, risk L. Visible: slightly smoother/lower-res particles.
   Decision: **safe-to-build-now** (private layer code).
 
@@ -1409,7 +1452,7 @@ No change needed beyond P19. Any Cloudflare setting change (Tiered Cache, Cache 
 **P30. Remember the home ground and warm it at idle.**
 * What: after the first screen is usable, at idle, fetch the home port's brief part, the default-zoom tiles
   (the 17–18 range requests above) and enabled layer data; prefetch a region on hover/near-viewport of its link;
-  `<link rel="prefetch">` the next likely route. Why: B3/B5. Gain: ESTIMATED repeat-visit phone map usable
+  `<link rel="prefetch">` the next likely route. Why: B3/B5. Gain: ESTIMATED repeat-visit phone canvas-quiet proxy
   3.1 s → ~1.5 s once P5/P19 make the data cacheable. Effort M, risk L (respect Save-Data and metered
   connections). Visible: no. Decision: **safe-to-build-now**, but only useful after P5/P19.
 
@@ -1443,7 +1486,7 @@ risk L, visible yes, **safe-to-build-now** as a review card.
   per R12 ("never add a new workflow without operator OK").
 
 **P35. Real-user timing without personal data.**
-* What: extend the existing `/api/telemetry` beacon (204, `no-store`) with LCP, INP, CLS, map-usable time,
+* What: extend the existing `/api/telemetry` beacon (204, `no-store`) with LCP, INP, CLS, a real content-ready time (the baseline measured only a canvas proxy),
   effective connection type and region id, rounded and with no user id, IP or location beyond the region; or
   rely on Cloudflare Web Analytics (already loaded) for Core Web Vitals.
 * Why: emulation is not real devices (E). Gain: true field numbers. Effort S, risk L–M (privacy text must
@@ -1460,8 +1503,8 @@ risk L, visible yes, **safe-to-build-now** as a review card.
 **Top 5 causes**
 
 1. Every brief and map view downloads a 15.4 MB reef file (53.6 MB unpacked), again on every visit because it is marked never-cache.
-2. When that file arrives, checking every reef outline against protected areas freezes the page for about 11.5 s (13.6 s until the desktop map responds).
-3. On a slow phone connection the reef file never finishes: the app gives up after 60 s, having used 9–10.5 MB of data, and it slows the map code and other data behind it (map usable 9.4 s vs 6.3 s on the landing).
+2. When that file arrives, checking every reef outline against protected areas freezes the page for about 11.5 s (long tasks keep the main thread blocked until 13.6 s on desktop; tap response was not measured).
+3. On a slow phone connection the reef file never finishes: the app gives up after 60 s, having used 9–10.5 MB of data, and it slows the map code and other data behind it (map canvas on screen at 9.3 s vs 6.3 s on the landing).
 4. The map page is drawn entirely by JavaScript (about 60 modules), so nothing useful shows until they load; on desktop the brief header then jumps the page (layout shift 0.67–0.76).
 5. Other data is also never cached or barely cached (ocean data 1.5 MB unpacked, reports, seafloor tiles, region files), and seafloor tiles at wide zoom reach 0.4–1.1 MB each, so even a repeat visit moves 12–17 MB.
 
@@ -1493,4 +1536,13 @@ risk L, visible yes, **safe-to-build-now** as a review card.
 * The phone live-site passes ran in sequential batches. A duplicate phone process overlapped the phone map-home runs for
   about two minutes before it was stopped; the third map-home run's values match runs 1 and 2 and were kept, and the
   phone-on-Wi-Fi pass was repeated alone afterwards. Group run counts are in `raw/summary.json` (`runs`).
-* "ESTIMATED" gains are arithmetic on measured bytes and timings, not a measurement of the changed site.
+* "ESTIMATED" gains are arithmetic on measured bytes and timings, not a measurement of the changed site. In section C a
+  gain labelled MEASURED is a current cost or size observed here (or a size trial); every time or traffic saving that
+  depends on a change not yet made is ESTIMATED.
+* Content/interaction readiness was **not measured** (no check that map style, tiles or layer data are drawn, no tap
+  test). The canvas-quiet proxy and TBT to that proxy are the only responsiveness figures; see A.1.
+* Script time is an accumulated total; the earlier per-second duty-cycle figures were withdrawn (counter window longer
+  than the settle window; ScriptDuration under CPU throttling unvalidated).
+* Corrected after review of PR #1767 (head 18b31a97): inline `data:` URLs removed from request/byte/heaviest figures
+  (3.86 → 3.58 MB for the local base-medium desktop cold runs); the readiness proxy relabelled; B1/P2/P5 figures
+  restated as above.

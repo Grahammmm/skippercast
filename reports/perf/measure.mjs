@@ -124,6 +124,10 @@ async function load(page, cdp, url, spec) {
   }
   const settledMs = Date.now() - t0;
   const settled = settledMs < CAP;
+  // CPU counters are read here, at the settle instant, so they cover the same window as settledMs. (Before the PR-1767
+  // fix they were read after page.evaluate, which queues behind a busy main thread, so scriptMs could span far more
+  // time than settledMs.) metricsWindowS is the CDP monotonic 'Timestamp' difference over the exact counter window.
+  const after = await cdp.send('Performance.getMetrics');
   cdp.off('Network.requestWillBeSent', touch); cdp.off('Network.loadingFinished', touch); cdp.off('Network.dataReceived', touch);
   const inPage = await page.evaluate(() => {
     const P = window.__perf || {};
@@ -133,10 +137,12 @@ async function load(page, cdp, url, spec) {
     return {timeOrigin: performance.timeOrigin, fcp: fcp ? fcp.startTime : null, lcp: P.lcp || null, lcpEl: P.lcpEl, cls: P.cls ?? null, longtasks: P.longtasks || [],
       canvasAt: P.canvasAt, readyAt: P.readyAt, url: location.href, domContentLoaded: nav ? nav.domContentLoadedEventEnd : null, loadEvent: nav ? nav.loadEventEnd : null, mem};
   });
-  const after = await cdp.send('Performance.getMetrics');
   for (const off of offs) off();
   const m = (list, n) => (list.metrics.find(x => x.name === n) || {}).value || 0;
-  const all = [...reqs.values()];
+  // data: and blob: URLs are inline resources, not network transfers: count them apart, never in requests/bytes/heaviest.
+  const isInline = r => /^(data|blob):/i.test(r.url);
+  const inline = [...reqs.values()].filter(isInline);
+  const all = [...reqs.values()].filter(r => !isInline(r));
   // Times relative to the start of the first document request (includes a client-side redirect to the saved home).
   const firstDoc = all.filter(r => r.type === 'Document').sort((a, b) => a.start - b.start)[0];
   const tStart = firstDoc ? firstDoc.start : Math.min(...all.map(r => r.start));
@@ -144,14 +150,17 @@ async function load(page, cdp, url, spec) {
   const docOffset = Math.max(0, inPage.timeOrigin - wallStart); // ms from first navigation to the final document's time origin
   const rel = x => x === null || x === undefined ? null : Math.round(x + docOffset);
   const lt = inPage.longtasks;
-  // Map usable: a visible map canvas, then the first moment with 1 s free of long tasks (a TTI-style definition).
+  // canvasQuiet is a PROXY only: a visible map canvas larger than 150x150, then the first moment with 1 s free of long
+  // tasks. It does not check that any map style, tile or layer data has loaded, so it is NOT "map usable". Content
+  // readiness (layer data drawn, first tap answered) is not measured by this script: contentReadyMs is always null,
+  // and the reports derive "layer data finished" from the request waterfall instead.
   let usable = null;
   if (inPage.canvasAt !== null) {
     let t = inPage.canvasAt;
     for (const [s, d] of [...lt].sort((a, b) => a[0] - b[0])) { if (s + d <= t) continue; if (s < t + 1000) t = Math.max(t, s + d); else break; }
     usable = t;
   }
-  const tbtEnd = usable ?? (settledMs - docOffset);
+  const tbtEnd = usable ?? (settledMs - docOffset);   // TBT is summed up to the canvasQuiet proxy
   const tbt = inPage.fcp === null ? null : lt.reduce((sum, [s, d]) => (s >= inPage.fcp && s < tbtEnd) ? sum + Math.max(0, d - 50) : sum, 0);
   const requests = all.map(r => ({url: r.url, type: r.type, kind: kindOf(r), status: r.status ?? null, bytes: r.bytes ?? null, fromCache: !!r.fromCache, range: r.range, encoding: r.encoding ?? null,
     cacheControl: r.cacheControl ?? null, cfCache: r.cfCache ?? null, protocol: r.protocol ?? null, failed: r.failed ?? null,
@@ -164,8 +173,9 @@ async function load(page, cdp, url, spec) {
   return {
     url, finalUrl: inPage.url, settled, settledMs,
     fcpMs: rel(inPage.fcp), lcpMs: lcpRel, lcpElement: inPage.lcpEl, cls: inPage.cls === null ? null : +inPage.cls.toFixed(4),
-    mapCanvasMs: rel(inPage.canvasAt), mapUsableMs: rel(usable), readyMs: rel(inPage.readyAt), domContentLoadedMs: rel(inPage.domContentLoaded), loadMs: rel(inPage.loadEvent),
+    mapCanvasMs: rel(inPage.canvasAt), canvasQuietMs: rel(usable), contentReadyMs: null, readyMs: rel(inPage.readyAt), domContentLoadedMs: rel(inPage.domContentLoaded), loadMs: rel(inPage.loadEvent),
     clientRedirectMs: Math.round(docOffset), tbtMs: tbt === null ? null : Math.round(tbt), longTasks: lt.length, longestTaskMs: lt.length ? Math.round(Math.max(...lt.map(x => x[1]))) : 0,
+    metricsWindowS: +(m(after, 'Timestamp') - m(before, 'Timestamp')).toFixed(3), inlineDataUrls: {count: inline.length, bytes: inline.reduce((s, r) => s + (r.bytes || 0), 0)},
     scriptMs: Math.round((m(after, 'ScriptDuration') - m(before, 'ScriptDuration')) * 1000), taskMs: Math.round((m(after, 'TaskDuration') - m(before, 'TaskDuration')) * 1000),
     layoutMs: Math.round((m(after, 'LayoutDuration') - m(before, 'LayoutDuration')) * 1000), styleMs: Math.round((m(after, 'RecalcStyleDuration') - m(before, 'RecalcStyleDuration')) * 1000),
     jsHeapUsedBytes: m(after, 'JSHeapUsedSize'), jsHeapTotalBytes: m(after, 'JSHeapTotalSize'), domNodes: m(after, 'Nodes'),
@@ -203,7 +213,7 @@ async function main() {
       catch (err) { r = {error: String(err && err.message || err)}; }
       out.results.push({page: spec.id, profile: prof, pass, run, ...r});
       mkdirSync(dirname(OUT), {recursive: true}); writeFileSync(OUT, JSON.stringify(out, null, 1));   // progress survives a crash
-      console.log(`${prof} ${spec.id} ${pass} #${run}: fcp=${r.fcpMs} lcp=${r.lcpMs} usable=${r.mapUsableMs} ready=${r.readyMs} tbt=${r.tbtMs} cls=${r.cls} req=${r.requestCount} bytes=${r.bytesTotal} settled=${r.settled}${r.error ? ' ERROR ' + r.error : ''}`);
+      console.log(`${prof} ${spec.id} ${pass} #${run}: fcp=${r.fcpMs} lcp=${r.lcpMs} canvasQuiet=${r.canvasQuietMs} ready=${r.readyMs} tbt=${r.tbtMs} cls=${r.cls} req=${r.requestCount} bytes=${r.bytesTotal} settled=${r.settled}${r.error ? ' ERROR ' + r.error : ''}`);
       if (pass === 'cold') await page.goto('about:blank');
     }
     await context.close();
