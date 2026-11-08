@@ -75,7 +75,10 @@ test('slow link: a 3g connection and a measured slow first request each get the 
   assert.ok(measuredBytesPerSecond(slow) < SLOW_BYTES_PER_S);
   assert.deepEqual(linkVerdict({effectiveType: '4g'}, slow), {slow: true, why: 'slow-measured'});
   assert.deepEqual(linkVerdict({effectiveType: '4g'}, [{bytes: 312_000, start: 280, end: 350}, {bytes: 270_000, start: 360, end: 680}]), {slow: false});
-  assert.equal(measuredBytesPerSecond([{bytes: 312_000, start: 0, end: 9000}]), null, 'one request is too little to judge');
+  assert.ok(measuredBytesPerSecond([{bytes: 312_000, start: 0, end: 9000}]) < SLOW_BYTES_PER_S, 'one big slow first request is enough to judge');
+  assert.deepEqual(linkVerdict(undefined, [{bytes: 312_000, start: 0, end: 9000}]), {slow: true, why: 'slow-measured'});
+  assert.deepEqual(linkVerdict(undefined, [{bytes: 312_000, start: 0, end: 300}]), {slow: false}, 'the same request on a fast link is fine');
+  assert.equal(measuredBytesPerSecond([{bytes: 60_000, start: 0, end: 9000}]), null, 'one small request is too little to judge');
   assert.equal(measuredBytesPerSecond([{bytes: 5000, start: 0, end: 9000}, {bytes: 5000, start: 0, end: 9000}]), null, 'small files say nothing about the link');
   const entries = [{name: 'https://x.test/a.js', transferSize: 300_000, startTime: 10, responseEnd: 5000}, {name: 'https://x.test/b.json', transferSize: 0, startTime: 10, responseEnd: 20},
     {name: 'https://other.test/c', transferSize: 900_000, startTime: 10, responseEnd: 20}];
@@ -133,6 +136,35 @@ test("the map's own first-idle signal (or the chart failing to start) releases t
   assert.equal(loaded, 0, 'the real signal has not fired');
   markMapIdle(); await done;
   assert.equal(loaded, 1);
+});
+
+test('one measured slow first request: offer only, zero export fetches until the tap', async () => {
+  const s = setup({link: linkVerdict(undefined, [{bytes: 312_000, start: 0, end: 9000}])});
+  const done = requestReefPublication('morro-bay', s.deps); s.map.go(); s.idle.go(); await done;
+  assert.equal(s.calls.fetch, 0);
+  assert.equal(reefPublication.value.state, 'offer'); assert.equal(reefPublication.value.why, 'slow-measured');
+  await acceptReefLoad('morro-bay', s.loader);
+  assert.equal(s.calls.fetch, 1);
+});
+
+test('Save-Data / 3g: the offer shows without waiting for a map paint (terrain-first visits never mount Chart)', async () => {
+  const s = setup({link: {slow: true, why: 'save-data'}});
+  await requestReefPublication('morro-bay', s.deps); // the map gate is never released
+  assert.equal(s.calls.fetch, 0);
+  assert.equal(reefPublication.value.state, 'offer');
+});
+
+test('an older region load still running cannot overwrite a newer deferred request', async () => {
+  const { loadReefPublication } = await import('../web/ranking.ts');
+  const s = setup(), old = gate();
+  const a = loadReefPublication('morro-bay', async () => { await old.p; return {targets: [], areas: [], publication: {}}; });
+  const b = requestReefPublication('santa-barbara', s.deps);
+  await tick();
+  old.go(); await a;
+  assert.deepEqual({...reefPublication.value}, {state: 'deferred', region: 'santa-barbara'}, 'the stale Morro Bay answer is dropped');
+  s.map.go(); s.idle.go(); await b;
+  assert.equal(s.calls.fetch, 1, 'Santa Barbara still loads');
+  assert.equal(reefPublication.value.region, 'santa-barbara');
 });
 
 test('a region switch while the old region is still loading: the old answer does not overwrite the new deferred state, and the new region still loads', async () => {

@@ -7,6 +7,7 @@ import {createHash} from 'node:crypto';
 import type {Page} from '@playwright/test';
 import {test, expect} from './fixtures.ts';
 import {stubLiveFeeds} from '../scripts/measure_startup.mjs';
+import {syntheticTerrain} from './terrain-keyboard-fixture.ts';
 
 const EXPORT = '**/feeds/tiles/seafloor/regions/morro-bay/habitat-export.geojson.gz';
 const PUBLISHED_BYTES = 15_414_929;
@@ -85,5 +86,29 @@ test('export failing: the brief and map still work, the page says the ranking di
   const before = seen.requests;
   await note.getByRole('button', {name: 'Try again'}).click();
   await expect.poll(() => seen.requests).toBe(before + 1);
+  expect(pageErrors).toEqual([]);
+});
+
+// Terrain-first visit (?presentation=2d): Chart is never mounted, so its idle frame never comes.
+test('terrain-first, Save-Data: the offer is reachable without visiting Chart, and nothing is downloaded until the tap', async ({page, pageErrors, v2, isMobile}) => {
+  await page.addInitScript(() => Object.defineProperty(navigator, 'connection', {value: {saveData: true, effectiveType: '4g'}, configurable: true}));
+  const seen = await stubExport(page, 'ok');
+  (await syntheticTerrain(page)).release();
+  await v2.open('app', {region: 'morro-bay', profile: 'boat', presentation: '2d'});
+  await expect.poll(() => page.locator('.app-terrain').evaluate(el => el.shadowRoot?.getElementById('scene')?.dataset.perspective)).toBe('2d');
+  await openFull(page, isMobile);
+  const where = brief(page, isMobile), button = where.getByRole('button', {name: 'Load fishing spots (about 15 MB) on Wi-Fi'});
+  await expect(button).toBeVisible();
+  expect(seen.requests, 'no silent export request').toBe(0);
+  await button.click();
+  await expect.poll(() => seen.requests).toBe(1);
+  expect(pageErrors).toEqual([]);
+});
+
+test('terrain-first, fast link: the export loads by itself once the terrain has drawn', async ({page, pageErrors, v2}) => {
+  const seen = await stubExport(page, 'ok');
+  (await syntheticTerrain(page)).release();
+  await v2.open('app', {region: 'morro-bay', profile: 'boat', presentation: '2d'});
+  await expect.poll(() => seen.requests).toBe(1);
   expect(pageErrors).toEqual([]);
 });

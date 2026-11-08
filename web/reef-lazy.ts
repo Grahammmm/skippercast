@@ -19,14 +19,14 @@ export type LinkVerdict = {readonly slow: false} | {readonly slow: true; readonl
 const SLOW_TYPES = new Set(['slow-2g', '2g', '3g']);
 /** Below this the link is slow: 150 KB/s, about 1.2 Mbit/s (Lighthouse's slow 4G, 1.6 Mbit/s, measures ~100 KB/s with shared requests). */
 export const SLOW_BYTES_PER_S = 150_000;
-/** Only downloads this big say anything about the link, and at least this much in all. */
+/** A single finished download this big, spread over the span it took, is enough to judge by. Only downloads this big say anything about the link, and at least this much in all. */
 const MIN_ENTRY_BYTES = 20_000, MIN_TOTAL_BYTES = 100_000;
 
 /** Throughput of the page's own first downloads: bytes over the wall-clock span they covered; null when there is too little to judge. */
 export function measuredBytesPerSecond(timings: readonly Timing[]): number | null {
   const t = timings.filter(x => x.bytes >= MIN_ENTRY_BYTES && x.end > x.start);
   const total = t.reduce((n, x) => n + x.bytes, 0);
-  if (t.length < 2 || total < MIN_TOTAL_BYTES) return null;
+  if (t.length < 1 || total < MIN_TOTAL_BYTES) return null;
   const span = Math.max(...t.map(x => x.end)) - Math.min(...t.map(x => x.start));
   return span > 0 ? total / (span / 1000) : null;
 }
@@ -88,13 +88,18 @@ export async function requestReefPublication(region: string, given: Partial<Lazy
   const deps: LazyDeps = {...DEFAULTS, ...given};
   const was = reefPublication.peek();
   if (was.region === region && was.state !== 'idle') return;
-  supersedeReefLoads(); // a load of the region left behind that is still running must not overwrite this one
+  supersedeReefLoads(); // a load of an older region still running must not overwrite this request
   reefPublication.value = {state: 'deferred', region};
   const mine = reefPublication.peek();
-  await deps.mapIdle();
-  await deps.idle();
-  if (reefPublication.peek() !== mine) return; // another region, or the user's own tap, took over
-  const verdict = deps.link();
+  // Save-Data or a 2g/3g type is known at once, so the offer does not wait for a map that may never mount (a terrain-first visit
+  // never starts Chart); the measured throughput needs the page's own first downloads, so it is read again after the first paint.
+  let verdict = deps.link();
+  if (!verdict.slow) {
+    await deps.mapIdle();
+    await deps.idle();
+    if (reefPublication.peek() !== mine) return; // another region, or the user's own tap, took over
+    verdict = deps.link();
+  }
   if (!verdict.slow) { await deps.load(region); return; }
   const bytes = await deps.size(region);
   if (reefPublication.peek() !== mine) return;
