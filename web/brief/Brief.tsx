@@ -111,11 +111,12 @@ export function showSavedBrief(id: string, now = Date.now()): boolean {
   dailyFeed.value = entry.daily.data;
   if (entry.forecast) regionalForecast.value = entry.forecast.data;
   publishSaved();
-  setTimeout(() => {
+  const settle = setTimeout(() => {
     if (held.region !== id) return;
     for (const part of [held.daily, held.forecast]) if (part?.saved) part.failed = true;
     publishSaved();
-  }, SAVED_SETTLE_MS);
+  }, SAVED_SETTLE_MS) as unknown as {unref?: () => void};
+  settle.unref?.(); // Node tests must not wait for it; browsers have no unref
   return true;
 }
 
