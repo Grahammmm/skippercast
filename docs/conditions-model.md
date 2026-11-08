@@ -171,6 +171,8 @@ harbor-patrol check line, and an alert update is sent when a note appears,
 changes or clears. This is a regional screening estimate, not a live or
 official bar report.
 
+The Boat brief's entrance current line (SC-TIDAL-1, `packages/coast/src/entrance-current.ts`) reads the same `barHours` estimate for the hour and adds flood, ebb or slack from the tide predictions (slack is a 30-minute window either side of each predicted high or low) and a second opinion from the NOAA WCOFS forecast point's surface current: a flow of at least 0.5 kn within 45 degrees of the entrance's seaward bearing reads the hour as an ebb when the tide says otherwise, and the band becomes the worse of the two. Old or missing tide or swell holds the band at Unknown (which ranks above Caution); a hazardous hour stays hazardous.
+
 ## Model agreement
 
 The Boat brief shows two separate outputs: the worst-hour comfort score and

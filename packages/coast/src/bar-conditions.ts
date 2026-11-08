@@ -123,10 +123,10 @@ export function entranceFor(countyId: string | undefined, areaId: string | undef
   return county && areaId && Object.hasOwn(county, areaId) ? county[areaId]! : null;
 }
 
-/** Ebb or flood from the high and low events either side of `at`, and whether it is mid-ebb. */
-export function barTide(at: number, events: readonly TideEvent[]): BarTide {
-  const unknown: BarTide = {stage: null, midEbb: false, fraction: null};
-  if (!Number.isFinite(at)) return unknown;
+/** The high or low either side of `at`, as epoch ms and type; null when `at` is not a time or the bracket is unknown or conflicting. */
+export type TideBracket = {previous: {at: number; type: 'H' | 'L'}; next: {at: number; type: 'H' | 'L'}};
+export function tideBracket(at: number, events: readonly TideEvent[]): TideBracket | null {
+  if (!Number.isFinite(at)) return null;
   // Keep a conflicting timestamp as an unknown boundary, rather than dropping
   // it and inventing a wider bracket. Exact same-type duplicates can collapse.
   const groups = new Map<number, 'H' | 'L' | null>();
@@ -140,9 +140,17 @@ export function barTide(at: number, events: readonly TideEvent[]): BarTide {
   }
   const sorted = [...groups].sort(([a], [b]) => a - b);
   const previous = [...sorted].reverse().find(([time]) => time <= at), next = sorted.find(([time]) => time > at);
-  if (!previous || !next || previous[1] === null || next[1] === null || previous[1] === next[1]) return unknown;
-  const fraction = (at - previous[0]) / (next[0] - previous[0]);
-  const stage = previous[1] === 'H' ? 'ebb' : 'flood';
+  if (!previous || !next || previous[1] === null || next[1] === null || previous[1] === next[1]) return null;
+  return {previous: {at: previous[0], type: previous[1]}, next: {at: next[0], type: next[1]}};
+}
+
+/** Ebb or flood from the high and low events either side of `at`, and whether it is mid-ebb. */
+export function barTide(at: number, events: readonly TideEvent[]): BarTide {
+  const bracket = tideBracket(at, events);
+  if (!bracket) return {stage: null, midEbb: false, fraction: null};
+  const {previous, next} = bracket;
+  const fraction = (at - previous.at) / (next.at - previous.at);
+  const stage = previous.type === 'H' ? 'ebb' : 'flood';
   return {stage, midEbb: stage === 'ebb' && fraction >= BAR.midEbb.from && fraction <= BAR.midEbb.to, fraction: round(fraction, 2)};
 }
 
