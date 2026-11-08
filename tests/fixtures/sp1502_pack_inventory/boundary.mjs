@@ -25,3 +25,5 @@ export const savePack = async () => {
 export const KEEP_WORDS = {agreed: '', already: '', refused: '', unavailable: ''};
 export const storageLine = async () => null, estimateWords = () => '';
 export const savePackKept = async save => ({meta: await save(), keep: 'unavailable'});
+// SC-GPSOFFLINE-1: the position check is its own component (tests/test_position_check.mjs); these tests render the offline section only.
+export const PositionCheck = () => null;

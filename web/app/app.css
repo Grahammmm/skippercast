@@ -91,7 +91,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-pick .app-fit { grid-column: 2; justify-self: start; }
 .app-pick-reason { grid-column: 2; color: var(--muted); font-size: var(--text-13); }
 .app-fit { padding: 0 var(--space-2); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--mint) 14%, var(--panel-2)); color: var(--mint); }
-.app-empty, .app-caveat { margin: 0; color: var(--muted); font-size: var(--text-13); }
+.app-empty, .app-caveat, .app-reef-text { margin: 0; color: var(--muted); font-size: var(--text-13); }
 .app-deck { margin: 0; color: var(--text); font-size: var(--text-15); line-height: var(--leading-body); }
 .app-window { margin: 0; font-size: var(--text-13); }
 /* Roadmap P2: the Boat brief's fishing time and return, under the lower-exposure line. */
@@ -466,3 +466,29 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-preview-ramp { display: block; flex-basis: 100%; height: 8px; border-radius: 2px; }
 .app-preview-ends { display: flex; flex-basis: 100%; justify-content: space-between; font-size: var(--text-11); color: var(--muted); }
 .app-legend-preview[data-state="stale"] .app-legend-note[role="status"], .app-legend-preview[data-state="unavailable"] .app-legend-note[role="status"] { font-weight: 600; }
+
+/* SC-PERF-INSTANT-1: the saved brief's "Last updated" line; amber when past the brief's own freshness limit, so it never reads calmer than live data. */
+.app-saved { margin: var(--space-2) 0; color: var(--muted); font-size: var(--text-13); }
+.app-saved[data-stale="true"] { color: var(--amber); font-weight: var(--weight-semibold); }
+
+/* SC-PERF-JUMP-1 (PERF-BASELINE-1 P10): reserve the space the late-arriving header parts fill, so the desktop shell does not move (CLS 0.85 -> about 0.11).
+   The chat entry would otherwise wrap onto two lines (62 px) when the session read opens it, making the masthead 18 px taller; the place name gains its
+   coordinates when the region info lands; the target menu gains options and widens, which re-wraps the command bar. */
+.app-masthead [data-advisor-entry] { white-space: nowrap; }
+/* On a wide desktop the masthead stays one row: a transient item ("Loading region…", the chat entry) would otherwise push it onto a second row for a moment and
+   move the whole page 57 px down and back. The place name keeps the width its coordinates need, and gives way (ellipsis) before the row wraps. Under 1,280 px
+   the row is wider than the window, so it keeps wrapping there (a no-wrap row would scroll the page sideways at 1,024 px). */
+@media (min-width: 1024px) {
+  .app-target label select { min-width: 22rem; max-width: 100%; }
+  .app-masthead { min-height: 61px; }
+}
+@media (min-width: 1280px) {
+  .app-masthead { flex-wrap: nowrap; }
+  .app-masthead > .app-location { flex: 0 1 15.75rem; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .app-masthead > * { flex-shrink: 0; }
+  .app-masthead > .app-location, .app-masthead > .app-degraded { flex-shrink: 1; }
+}
+/* The desktop legend is bottom-anchored and grows upward as the reef, currents and rules rows land (324 px to about 510 px), moving every row in it;
+   it starts at about its settled height, and still shrinks and scrolls on a short map. */
+/* Only while no selected-mark card shares the column: with a card open the legend must shrink and scroll beside it, not push below the map's clipped edge. */
+.app-chrome-left:not(:has(> .app-mark)) > .app-legend { min-height: min(32rem, 90%); }

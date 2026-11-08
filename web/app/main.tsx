@@ -15,7 +15,7 @@ import {loadLaunch, loadReach, loadSpear} from '../reach.ts';
 import {startTrip} from '../trip.ts';
 import {App, bindStartupFreshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
 import {loadPlans, regionPlans} from '../species.ts';
-import {bindBriefReport, currentBrief, dailyFeed, ensureRegionalForecast, loadDailyFeed} from '../brief/Brief.tsx';
+import {bindBriefReport, currentBrief, ensureRegionalForecast, enableSavedBrief, noteRegionInfo, loadDailyFeed, needsDailyLoad, showSavedBrief} from '../brief/Brief.tsx';
 import {regionPlace} from '../map/currents.ts';
 import {initTelemetry} from '../telemetry.ts';
 import {installDegradedWatch} from '../degraded.ts';
@@ -29,6 +29,7 @@ startURLSync();
 // Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
 initTelemetry({views: true});
 // #542: the user's own comfort limits, and the cruise speed for run times, kept on this device.
+enableSavedBrief();
 loadLimits();
 loadCruise();
 followStoredLimits();
@@ -50,12 +51,13 @@ effect(() => {
   const id = region.value;
   if (id && regionInfo.peek()?.id !== id) void loadRegion(id);
   if (id && regionPlans.peek()?.region !== id) void loadPlans(id);
-  if (id && dailyFeed.peek()?.region_id !== id) void loadDailyFeed(id);
+  if (id) showSavedBrief(id);   // the last brief kept on this device, at once; the reads below replace it
+  if (id && needsDailyLoad(id)) void loadDailyFeed(id);
 });
 // The brief's Wind and Swell tiles (#542): the region's forecast at the point nearest its centre, once the region's centre is known.
 effect(() => {
   const id = region.value, info = regionInfo.value;
-  if (id && info?.id === id) void ensureRegionalForecast(id, info.center);
+  if (id && info?.id === id) { void ensureRegionalForecast(id, info.center); noteRegionInfo(id); }
 });
 // The brief's coast report where the region binds one, whichever layers are on: the same place the
 // Swell and Water temp layers ask for (web/app/MapStage.tsx), so the client requests it once.

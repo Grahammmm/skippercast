@@ -14,6 +14,9 @@ async function boundedBytes(stream,limit,expected){
   const bytes=new Uint8Array(length);let offset=0;
   for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}return bytes;
 }
+// SC-PERF-PROTCHECK-1: the publisher's protected-area verdict for a reef (geo-screen.js `screenPlace`'s answer, computed once at publish time).
+// Anything of another shape is dropped, so the browser runs the screen itself.
+const validVerdict=v=>!!v&&typeof v.inside==='boolean'&&typeof v.screened==='boolean'&&(v.name===null||typeof v.name==='string')&&(v.distanceM===null||Number.isFinite(v.distanceM));
 export async function loadReefTrip(region,{fetchImpl=globalThis.fetch,now=Date.now()}={}) {
   const gate=await loadManifest(region,fetchImpl,now);
   if(gate.state!=='ready')throw Error(gate.reason);
@@ -60,8 +63,10 @@ export async function loadReefTrip(region,{fetchImpl=globalThis.fetch,now=Date.n
       source_rights:rights,
       evidence_status:c?`${c.percent}% habitat evidence index (${c.version}); not catch probability.`:'Evidence confidence unavailable.',
       ais_status:'No charter AIS confirmation implied.'};
+    if(validVerdict(p.protected_place))t.protected_place=p.protected_place;
     targets.push(t);areas.push({id:p.id,geometry:f.geometry,target_ids:[p.id],area_ha:p.area_ha,
       extent_note:`Canonical screened reef boundary; nominal ${Math.round(p.depth_min_ft)}-${Math.round(p.depth_max_ft)} ft. ${t.evidence_status}${sourceNote?' '+sourceNote:''}`});
   }
-  return {targets,areas,drifts:[],publication:{...m,verified_at:new Date().toISOString()},source_validation_date:m.built_at};
+  const print=data.protected_screen?.fingerprint;
+  return {targets,areas,drifts:[],...(typeof print==='string'?{protected_fingerprint:print}:{}),publication:{...m,verified_at:new Date().toISOString()},source_validation_date:m.built_at};
 }
