@@ -18,6 +18,12 @@ its budget and the share used, then PASS or FAIL. A failing group also lists its
 | App page styles | 67,003 | 71,000 | 6.0% |
 | Largest single built script, style or font (any page, loaded now or later) | 1,094,203 | 1,150,000 | 5.1% |
 | Brief data files in the repo (`protected-areas.geojson`, `land-water-lines.json`, `seafloor-ledger.json`) | 951,224 | 1,050,000 | 10.4% |
+| Per-region startup data, biggest single file (`atlas-marks.json`, `search-plan-index.json`, `regulations-startup.json` in every region) | 222,047 | 240,000 | 8.1% |
+| Biggest file of any kind in the served site outside `assets/` (data, tiles, pages; catches a file no list names) | 6,444,161 | 6,800,000 | 5.5% |
+
+The last row is a safety net: the largest file today is `survey-habitat.geojson` for Southern California, loaded on
+demand. A 15 MB file anywhere in the site fails it. If a glob in the budget file matches nothing, the check fails
+rather than passing silently.
 
 Scripts loaded on demand are not first-load; the largest-file budget still covers every built file. Sizes are
 uncompressed bytes of the built output, so they differ from the compressed network sizes in PERF-BASELINE-1.

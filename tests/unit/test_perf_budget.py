@@ -47,6 +47,40 @@ def budget(js=200, css=40, largest=1000, data=300):
     }}
 
 
+def startup_budget(each=300, anyfile=1000):
+    return {"budgets": {
+        "startup": entry(each, kind="largest_matching", label="Startup data", globs=["dist/client/regions/*/atlas-marks.json"]),
+        "any": entry(anyfile, kind="largest_matching", label="Any site file", globs=["dist/client/**/*"], exclude=["dist/client/assets/"]),
+    }}
+
+
+def test_oversized_startup_file_not_on_any_list_fails(tree, tmp_path):
+    marks = tree / "dist/client/regions/morro-bay/atlas-marks.json"
+    marks.parent.mkdir(parents=True)
+    marks.write_bytes(b"m" * 200)
+    assert run(tree, startup_budget(), tmp_path).returncode == 0
+    marks.write_bytes(b"m" * 5000)  # the 15 MB regression, scaled down
+    r = run(tree, startup_budget(), tmp_path)
+    assert r.returncode == 1 and "OVER BUDGET: Startup data" in r.stdout and "atlas-marks.json" in r.stdout
+    # A data file no list names is caught by the catch-all.
+    marks.write_bytes(b"m" * 200)
+    other = tree / "dist/client/data/new-thing.json"
+    other.parent.mkdir(parents=True)
+    other.write_bytes(b"o" * 5000)
+    r = run(tree, startup_budget(), tmp_path)
+    assert r.returncode == 1 and "OVER BUDGET: Any site file" in r.stdout and "new-thing.json" in r.stdout
+    # Raising the catch-all needs a reason, like every other budget.
+    b = startup_budget(anyfile=6000)
+    b["budgets"]["any"]["history"].append({"max_bytes": 6000, "reason": "new data file"})
+    b["budgets"]["any"]["max_bytes"] = 6000
+    assert run(tree, b, tmp_path).returncode == 0
+
+
+def test_no_matching_files_is_an_error_not_a_pass(tree, tmp_path):
+    r = run(tree, startup_budget(), tmp_path)
+    assert r.returncode != 0
+
+
 def run(tree, b, tmp_path):
     f = tmp_path / "budget.json"
     f.write_text(json.dumps(b))

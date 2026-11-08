@@ -7,7 +7,10 @@
       "entry": "landing.html",
       "max_bytes": 445000,
       "history": [
-        {"max_bytes": 445000, "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 421,933 bytes on main 771d317133 (stated figure: landing page entry plus the scripts it imports at once) plus 5.5% headroom. PERF-BASELINE-1 A.4: landing cold 527 KB on the wire, 53 script requests, which also includes the map engine loaded on demand."}
+        {
+          "max_bytes": 445000,
+          "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 421,933 bytes on main 771d317133 (stated figure: landing page entry plus the scripts it imports at once) plus 5.5% headroom. PERF-BASELINE-1 A.4: landing cold 527 KB on the wire, 53 script requests, which also includes the map engine loaded on demand."
+        }
       ]
     },
     "landing_css": {
@@ -16,7 +19,10 @@
       "entry": "landing.html",
       "max_bytes": 26000,
       "history": [
-        {"max_bytes": 26000, "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 24,339 bytes plus 6.8% headroom. PERF-BASELINE-1 A.4: landing css 18 KB on the wire."}
+        {
+          "max_bytes": 26000,
+          "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 24,339 bytes plus 6.8% headroom. PERF-BASELINE-1 A.4: landing css 18 KB on the wire."
+        }
       ]
     },
     "app_js": {
@@ -25,7 +31,10 @@
       "entry": "app.html",
       "max_bytes": 1160000,
       "history": [
-        {"max_bytes": 1160000, "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 1,104,511 bytes plus 5.0% headroom. PERF-BASELINE-1 A.4: brief cold 767 KB of script on the wire, 63 script requests."}
+        {
+          "max_bytes": 1160000,
+          "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 1,104,511 bytes plus 5.0% headroom. PERF-BASELINE-1 A.4: brief cold 767 KB of script on the wire, 63 script requests."
+        }
       ]
     },
     "app_css": {
@@ -34,7 +43,10 @@
       "entry": "app.html",
       "max_bytes": 71000,
       "history": [
-        {"max_bytes": 71000, "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 67,003 bytes plus 6.0% headroom. PERF-BASELINE-1 A.4: brief css 40 KB on the wire."}
+        {
+          "max_bytes": 71000,
+          "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 67,003 bytes plus 6.0% headroom. PERF-BASELINE-1 A.4: brief css 40 KB on the wire."
+        }
       ]
     },
     "largest_built_file": {
@@ -42,7 +54,10 @@
       "kind": "largest_built_file",
       "max_bytes": 1150000,
       "history": [
-        {"max_bytes": 1150000, "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 1,094,203 bytes (the map engine) plus 5.1% headroom. Stops one big blob being bundled in anywhere, loaded now or on demand."}
+        {
+          "max_bytes": 1150000,
+          "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 1,094,203 bytes (the map engine) plus 5.1% headroom. Stops one big blob being bundled in anywhere, loaded now or on demand."
+        }
       ]
     },
     "brief_data": {
@@ -55,7 +70,43 @@
       ],
       "max_bytes": 1050000,
       "history": [
-        {"max_bytes": 1050000, "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 951,224 bytes (protected-areas.geojson 277,333; land-water-lines.json 278,928; seafloor-ledger.json 394,963; the files PERF-BASELINE-1 A.8 lists as read by the brief and the map) plus 10.4% headroom, because a data refresh may grow them. The 15.4 MB reef export is far outside this budget."}
+        {
+          "max_bytes": 1050000,
+          "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 951,224 bytes (protected-areas.geojson 277,333; land-water-lines.json 278,928; seafloor-ledger.json 394,963; the files PERF-BASELINE-1 A.8 lists as read by the brief and the map) plus 10.4% headroom, because a data refresh may grow them. The 15.4 MB reef export is far outside this budget."
+        }
+      ]
+    },
+    "startup_data_each": {
+      "label": "Per-region startup data, biggest file (atlas marks, search-plan index, regulations)",
+      "kind": "largest_matching",
+      "globs": [
+        "dist/client/regions/*/atlas-marks.json",
+        "dist/client/regions/*/search-plan-index.json",
+        "dist/client/regions/*/regulations-startup.json"
+      ],
+      "max_bytes": 240000,
+      "history": [
+        {
+          "max_bytes": 240000,
+          "reason": "Initial budget (SC-PERF-BUDGET-1). Biggest is regions/morro-bay/atlas-marks.json at 222,047 bytes (web/map/marks.ts loads it at startup; web/startup-forms.ts lists it) plus 8.1% headroom. search-plan-index.json peaks at 43,064 and regulations-startup.json at 39,434. Budget applies per file."
+        }
+      ]
+    },
+    "any_site_file": {
+      "label": "Biggest file of any kind in the served site (data, tiles, pages)",
+      "kind": "largest_matching",
+      "globs": [
+        "dist/client/**/*"
+      ],
+      "exclude": [
+        "dist/client/assets/"
+      ],
+      "max_bytes": 6800000,
+      "history": [
+        {
+          "max_bytes": 6800000,
+          "reason": "Initial budget (SC-PERF-BUDGET-1). Catch-all so a startup or data file left off the lists above cannot reach 15 MB unnoticed. Biggest today is regions/southern-california/survey-habitat.geojson at 6,444,161 bytes (loaded on demand, not at startup) plus 5.5% headroom; scripts and styles in assets/ have their own budgets."
+        }
       ]
     }
   }

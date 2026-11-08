@@ -11,8 +11,11 @@ downloaded and nothing is timed. Two kinds of file are measured:
   scripts it imports straight away, and its stylesheets (read from dist/client/.vite/manifest.json).
   Scripts loaded later on demand (dynamic import) are not first-load and are not counted here, but the
   "largest single built file" budget still covers every file Vite emits.
-* Brief data files: the committed data files the brief and the map read on every load
-  (PERF-BASELINE-1 section A.8). They are measured exactly as committed, never changed.
+* Brief data files: the data files the brief and the map read on every load (PERF-BASELINE-1 section A.8).
+  Three named files are summed. The per-region startup files (atlas marks, search-plan index, regulations
+  startup) are each held to a single-file budget, and a catch-all budget caps the biggest file of any kind
+  anywhere in the served site (dist/client) outside assets/, so no data file can grow unnoticed.
+  Everything is measured exactly as built, never changed.
 
 Budgets live in scripts/perf-budget.json. To raise one in a pull request, add a new entry at the END of that
 budget's "history" list with the new "max_bytes" and a "reason", and set the budget's "max_bytes" to the same
@@ -84,6 +87,16 @@ def measure(root: Path, budget: dict) -> dict[str, dict]:
             files = sorted(((p.name, p.stat().st_size) for p in (root / ASSETS).iterdir() if p.is_file()),
                            key=lambda x: -x[1])
             total = files[0][1] if files else 0
+            files = files[:3]
+        elif kind == "largest_matching":
+            # Biggest single file matching any glob (relative to the root), minus files under "exclude" folders.
+            skip = tuple(spec.get("exclude", []))
+            found = {p for g in spec["globs"] for p in root.glob(g) if p.is_file()}
+            files = sorted(((str(p.relative_to(root)), p.stat().st_size) for p in found
+                            if not str(p.relative_to(root)).startswith(skip)), key=lambda x: -x[1])
+            if not files:
+                raise ValueError(f"{name}: no files match {spec['globs']}; build output or budget globs are wrong")
+            total = files[0][1]
             files = files[:3]
         else:
             raise ValueError(f"{name}: unknown kind {kind!r}")
