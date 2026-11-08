@@ -110,7 +110,11 @@ async function rankBest(page: Page, gate: {hold: boolean; release: () => void; s
   await expect(page.locator('#export-date')).toHaveValue(today);
 }
 
-test('the ranked export runs in v2: best reefs, complete outlines, a restored plan, and changed data require reranking', async ({page, pageErrors, v2, isMobile}, info) => {
+// SC-E2E-REEF-WAIT-1: one case did the ranking, axe, the download, a reload, the Chart pins and the changed-data check in one
+// 60 s budget. Green it used 17-26 s; on a loaded CI runner every step ran about twice as slow, the test timed out inside the
+// pin loop (main, 2026-11-07 20:55 and 2026-11-08 00:15 UTC) and the loop's own 30 s never got to run. It is split at the reload,
+// as SC2222-09 split the terrain case; the pin loop still waits on the app's `data-ranked-drawn`, with no added retry or timeout.
+test('the ranked export runs in v2: best reefs, complete outlines and a downloaded GPX', async ({page, pageErrors, v2, isMobile}, info) => {
   const reefs = await rankedReefs(page);
   await v2.open('app', {...AREA, diagnostics: '1'});
   await openPlan(page, isMobile);
@@ -136,6 +140,16 @@ test('the ranked export runs in v2: best reefs, complete outlines, a restored pl
   await page.locator('#export-search').fill('test-reef');
   await expect(page.locator('#export-spot-list [data-spot]')).toHaveCount(20);
   await page.locator('#export-spot-list [data-spot]').first().check();
+  expect(pageErrors).toEqual([]);
+});
+
+test('the ranked plan survives a reload, shows its reefs as Chart pins, and changed data require reranking', async ({page, pageErrors, v2, isMobile}) => {
+  const reefs = await rankedReefs(page);
+  await v2.open('app', {...AREA, diagnostics: '1'});
+  await openPlan(page, isMobile);
+  // The planner opens ready (SCJ-8): its 20 best reefs are chosen and saved once the reef file has loaded, which these two say.
+  await expect(page.locator('#export-selection-count')).toHaveText('20 selected');
+  await expect(page.locator('#export-scope-status')).toContainText('20 distinct reef spots');
   // The plan follows #export: a reload reopens it and restores the ranked reefs from the current publication.
   await page.reload();
   await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeVisible();
