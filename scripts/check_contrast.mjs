@@ -410,7 +410,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // stay, and no backing, opacity, token or threshold changed.
   // SC1352-06 shows the saved-spots status in the page’s language through the same Status wrapper (copy only, no paint); the same note text role stays, and no backing, opacity, token or threshold changed.
   // SC1352-07 shows the evidence layers' status lines (charter grounds, commercial AIS, temperature fronts) and the fronts basis in the page's language through the same Status wrapper (copy only, no paint); the same note text roles stay, and two lines were added above the cited rows.
-  "legendTsx": "b1eb2cb8d53df28041ade55287f4c006b4fb1921e77e633c54e1319506ca1a3b"
+  // SCFEAT-FRESH-1 adds an "Updates: cadence" line under each drawn layer row and the protected-areas row, using the existing app-legend-note text role (copy only); no backing, opacity, token or threshold changed.
+  "legendTsx": "8123b609f7925f58446bf58a5ab640e231380cc533537244cf4e9588b82f43c2"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
