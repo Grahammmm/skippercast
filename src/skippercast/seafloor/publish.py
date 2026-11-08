@@ -21,6 +21,7 @@ from .run import run
 from .rights import feature_rights, deployment_use
 from .screen import input_identity, load_snapshot
 from .search_areas import published_contract
+from .slim import SLIM_FILE, write_slim
 from .classified_habitat import stage as classified_stage, publication_features
 from .source_scope import (GOVERNMENT, processing_scope, scoped_manifest,
                            validate_dependencies, validate_receipt)
@@ -268,6 +269,9 @@ def build(region, *, root=REPO, tool=None, now=None):
     raw_export.unlink()
     if len(export_bytes) > 128*1024*1024 or export.stat().st_size > 32*1024*1024:
         raise ValueError('Canonical reef export exceeds browser limits; partition this region')
+    # SC-PERF-REEFDIET-1: the brief's slim file (attributes + verdicts, no outlines); absent when there are no verdicts to carry.
+    slim_fields = write_slim(folder, region=region, expires_at=expires.isoformat(), export_sha256=sha256(export),
+                             protected=protected, export_features=exports)
     selected = [r for r in ledger['reaches'] if r['region'] == region]
     atomic_json(folder/'ledger.json', {'region': region, 'reaches': selected, 'reference': ledger['reference']})
     manifest = {'schema_version': 1, 'region': region, 'status': 'ready' if layers['habitat'] else 'held',
@@ -282,6 +286,7 @@ def build(region, *, root=REPO, tool=None, now=None):
                 'export_sha256': sha256(export),
                 'export_bytes': export.stat().st_size,
                 'export_decoded_bytes': len(export_bytes),
+                **slim_fields,
                 'source_attribution': credits,
                 'source_use_notice': 'Retain source-specific terms and credits; mixed data do not become public-domain.',
                 'reach_inputs': {key: value['input_hash'] for key, value in receipts.items()},
@@ -331,7 +336,12 @@ def publish_bundle(s3, bucket, folder, *, now=None):
     export = folder/export_name
     if sha256(export) != manifest.get('export_sha256'):
         raise ValueError('Publication export changed')
-    allowed = {archive.name, 'ledger.json', 'manifest.json', export.name}
+    slim_name = manifest.get('slim_file')
+    if slim_name is not None:
+        if slim_name != SLIM_FILE or not re.fullmatch('[a-f0-9]{64}', manifest.get('slim_sha256') or '') \
+                or sha256(folder/slim_name) != manifest['slim_sha256']:
+            raise ValueError('Publication slim reef file changed')
+    allowed = {archive.name, 'ledger.json', 'manifest.json', export.name} | ({slim_name} if slim_name else set())
     if {p.name for p in folder.iterdir()} != allowed:
         raise ValueError('Unexpected file in public bundle')
     sync(s3, bucket, folder, f'tiles/seafloor/regions/{region}')
@@ -348,6 +358,13 @@ def publish_bundle(s3, bucket, folder, *, now=None):
         import hashlib
         if hashlib.sha256(stream.read()).hexdigest() != manifest['export_sha256']:
             raise ValueError('R2 export read-back failed; alias remains held')
+    if slim_name:
+        slim_key = f'tiles/seafloor/regions/{region}/{slim_name}'
+        s3.put_object(Bucket=bucket, Key=slim_key, Body=(folder/slim_name).read_bytes(), ContentType='application/gzip',
+                      CacheControl='no-store', Metadata={'sha256': manifest['slim_sha256']})
+        with s3.get_object(Bucket=bucket, Key=slim_key)['Body'] as stream:
+            if hashlib.sha256(stream.read()).hexdigest() != manifest['slim_sha256']:
+                raise ValueError('R2 slim reef file read-back failed; alias remains held')
     key = f'tiles/seafloor/{archive.name}'
     with archive.open('rb') as stream:
         s3.put_object(Bucket=bucket, Key=key, Body=stream, ContentType='application/octet-stream',

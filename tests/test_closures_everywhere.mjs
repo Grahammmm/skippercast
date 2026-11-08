@@ -313,7 +313,7 @@ test('the listed Boat picks (the list and the run line read them) keep each pick
 // The enumeration is derived from each module's exports: a new exported function must be named here as carrying a verdict or as not naming a place.
 const CARRIES = new Set(['atlasPicks', 'habitatPicks', 'ranking', 'routedPicks', 'tripLegs', 'placeWaypoint', 'checkGpx', 'reachRing', 'createPlanner',
   'currentRanking', 'boatPicks', 'listedBoatPicks', 'screenLine']);
-const NO_PLACE = new Set(['harborOrigin', 'loadTerrainHabitat', 'loadReefPublication', 'recheckReefPublication', 'cancelWaypointPlacement', 'beginWaypointPlacement',
+const NO_PLACE = new Set(['harborOrigin', 'loadTerrainHabitat', 'loadReefPublication', 'recheckReefPublication', 'settleReefPublication', 'cancelWaypointPlacement', 'beginWaypointPlacement',
   'loadContourFile', 'nextFriday', 'planFit', 'parseReach', 'parseStoredReach', 'loadReach', 'saveReach', 'reachFor', 'nmText', 'parseSpearDepth', 'parseShoreSwim',
   'parseStoredSpear', 'loadSpear', 'saveSpear', 'shoreSwimLimit', 'parseStoredLaunch', 'loadLaunch', 'saveLaunch', 'isReachProfile', 'routeAfterPaint', 'choosePick',
   // Only aggregates confidence percentages; it neither names nor returns a place.
