@@ -301,7 +301,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1352-05: the Stations note and nearshore-ring words show in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only this source.
   // SC1352-06: MapStage shows its labels and reasons in the page’s language and the legend’s saved-spots note does too (copy only); BODY09 never mounts MapStage. check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only MapStage.tsx and this source.
   // SC1352-07: the evidence layers' status lines and the fronts basis show in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash, line citations and a comment. Rebind only this source.
-  "scripts/check_contrast.mjs": "1480d6b58ce216c50812adb0cdb66937dca3cdcb35856c4ac90fb3f2615bd640",
+  // SCFEAT-FRESH-1: the Legend adds an "Updates: cadence" line per drawn layer (existing app-legend-note text role, copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. BODY09 mounts Reports, not the Legend. Rebind only this source.
+  // Rebound from the final bytes of scripts/check_contrast.mjs (SCFEAT-FRESH-1 Legend.tsx surface-hash rebind only).
+  "scripts/check_contrast.mjs": "5c37f8751d8a37a51bd4853d2cb16f193372889c27769a197027fac4da893e80",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
