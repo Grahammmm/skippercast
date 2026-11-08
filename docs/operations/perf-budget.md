@@ -31,7 +31,7 @@ Not measured: live data answers (`/api/...`) and the reef export, which are publ
 
 ### The slim reef file (SC-PERF-REEFDIET-1)
 
-The brief reads `habitat-slim.geojson.gz` (each reef's attributes and its publish-time protected-area verdict, no
+The brief reads the slim file (`habitat-slim-<sha16>.geojson.gz`, named by its own hash; each reef's attributes and its publish-time protected-area verdict, no
 outlines) instead of the 15.4 MB `habitat-export.geojson.gz`, which stays for the planner, the map and GPX export. It
 is published, not in the repo, so this check cannot measure it; the publisher enforces its budget instead
 (`SLIM_MAX_BYTES` in `src/skippercast/seafloor/slim.py`: 450,000 gzip bytes; tested in

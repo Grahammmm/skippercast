@@ -2,7 +2,7 @@
 """SC-PERF-REEFDIET-1: build the full export (with publish-time verdicts) and the slim file from a real habitat export, the way publish.build does.
 
 Usage: reef_slim_build.py <habitat-export.geojson.gz> <out-dir> [--region morro-bay]
-Writes <out-dir>/habitat-export.geojson.gz, habitat-slim.geojson.gz and manifest.json (the fields the loader reads); prints sizes.
+Writes <out-dir>/habitat-export.geojson.gz, the slim file (habitat-slim-<sha16>.geojson.gz) and manifest.json (the fields the loader reads); prints sizes.
 Used by scripts/reef_slim_parity.mjs and by the size / load measurements in the pull request.
 """
 import argparse

@@ -22,7 +22,7 @@ from .run import run
 from .rights import feature_rights, deployment_use
 from .screen import input_identity, load_snapshot
 from .search_areas import published_contract
-from .slim import SLIM_FILE, write_slim
+from .slim import slim_file, write_slim
 from .classified_habitat import stage as classified_stage, publication_features
 from .source_scope import (GOVERNMENT, processing_scope, scoped_manifest,
                            validate_dependencies, validate_receipt)
@@ -308,77 +308,65 @@ def credentials():
     return client(token, account), os.environ.get('R2_BUCKET', 'skippercast-feeds')
 
 
-def _snapshot(s3, bucket, keys):
-    """Current bytes and headers of each key (None when absent), so a failed slim publication can put them back."""
-    saved = {}
-    for key in keys:
-        try:
-            got = s3.get_object(Bucket=bucket, Key=key)
-        except s3.exceptions.NoSuchKey:
-            saved[key] = None
-            continue
-        with got['Body'] as stream:
-            saved[key] = (stream.read(), got.get('ContentType'), got.get('CacheControl'), got.get('Metadata'))
-    return saved
+# The fields the Worker gate (server/feeds.ts) and the browser loader check for the full export and the archive. When the live
+# ready manifest already carries the new bundle's values, those objects are served and verified, and only the slim file is new.
+SERVED_FIELDS = ('region', 'status', 'expires_at', 'archive', 'archive_sha256', 'archive_bytes', 'ledger_sha256',
+                 'export_file', 'export_sha256', 'export_bytes', 'export_decoded_bytes')
+SLIM_MANIFEST_FIELDS = ('slim_file', 'slim_sha256', 'slim_bytes', 'slim_decoded_bytes')
 
 
-def _unchanged(s3, bucket, key, old):
-    """True only when the key reads back exactly as snapshotted (bytes and sha256 metadata); any doubt is False."""
+def _stored(s3, bucket, key, sha):
+    """True when the key holds bytes with this sha256 and the sha256 metadata the Worker gate serves on; False when absent."""
     try:
         got = s3.get_object(Bucket=bucket, Key=key)
-        with got['Body'] as stream:
-            return old is not None and stream.read() == old[0] and (got.get('Metadata') or None) == (old[3] or None)
-    except Exception:
+    except s3.exceptions.NoSuchKey:
         return False
+    with got['Body'] as stream:
+        body = stream.read()
+    return hashlib.sha256(body).hexdigest() == sha and (got.get('Metadata') or {}).get('sha256') == sha
 
 
-def _rollback(s3, bucket, saved, control, skip=(), verify=()):
-    """Put the previous release's objects back, and only then its ready alias, so a mismatched ready state is never served."""
-    for key, old in saved.items():
-        if key in skip or key == control:
-            continue
-        if old is None:
-            s3.delete_objects(Bucket=bucket, Delete={'Objects': [{'Key': key}], 'Quiet': True})
-            continue
-        body, content_type, cache, meta = old
-        extra = {name: value for name, value in (('ContentType', content_type), ('CacheControl', cache), ('Metadata', meta)) if value}
-        s3.put_object(Bucket=bucket, Key=key, Body=body, **extra)
-        if key in verify:
-            with s3.get_object(Bucket=bucket, Key=key)['Body'] as stream:
-                if stream.read() != body:
-                    raise ValueError(f'Could not prove {key} was restored; ready alias stays held')
-    old = saved[control]
-    if old is None:
-        s3.delete_objects(Bucket=bucket, Delete={'Objects': [{'Key': control}], 'Quiet': True})
-    else:
-        s3.put_object(Bucket=bucket, Key=control, Body=old[0], **{n: v for n, v in (('ContentType', old[1]), ('CacheControl', old[2]), ('Metadata', old[3])) if v})
+def _stage_slim(s3, bucket, key, body, sha):
+    """Upload the slim file to its content-addressed key and prove it reads back, before any live object is written.
+
+    No live manifest names a new key, so a failed, partial or unacknowledged PUT here changes nothing that is served.
+    A key that already holds the verified bytes (a retry, or the live file itself) is not rewritten.
+    """
+    if _stored(s3, bucket, key, sha):
+        return
+    s3.put_object(Bucket=bucket, Key=key, Body=body, ContentType='application/gzip', CacheControl='no-store',
+                  Metadata={'sha256': sha})
+    if not _stored(s3, bucket, key, sha):
+        raise ValueError('R2 slim reef file read-back failed; previous release left live')
 
 
-class _Guarded:
-    """Forwards every call to the client except writes or deletes of the protected keys, which are silently dropped."""
-
-    def __init__(self, s3, keys):
-        self._s3, self._keys = s3, set(keys)
-
-    def __getattr__(self, name):
-        return getattr(self._s3, name)
-
-    def put_object(self, **kwargs):
-        if kwargs.get('Key') not in self._keys:
-            return self._s3.put_object(**kwargs)
-
-    def delete_objects(self, **kwargs):
-        objects = [o for o in kwargs['Delete']['Objects'] if o['Key'] not in self._keys]
-        if objects:
-            return self._s3.delete_objects(**{**kwargs, 'Delete': {**kwargs['Delete'], 'Objects': objects}})
+def _live(s3, bucket, control):
+    """The live publication manifest and its ETag; (None, None) when absent or unreadable (then it is not a ready release)."""
+    try:
+        got = s3.get_object(Bucket=bucket, Key=control)
+        with got['Body'] as stream:
+            live = json.loads(stream.read())
+        return (live, got.get('ETag')) if isinstance(live, dict) else (None, None)
+    except s3.exceptions.NoSuchKey:
+        return None, None
+    except ValueError:
+        return None, None
 
 
 def publish_bundle(s3, bucket, folder, *, now=None):
     """Isolated sync prefix avoids deleting other map layers or regions.
 
     A ready bundle whose screen expired by ``now`` (default: the current time) is refused.
+
+    SC-PERF-REEFDIET-1 slim file: it is written to an immutable content-addressed key (habitat-slim-<sha16>.geojson.gz) and
+    read back before any live object or the live manifest is touched, so a slim PUT, read-back or checksum failure leaves the
+    previous ready release served. When the live ready manifest already serves this bundle's export, archive and ledger, the
+    only live write is ONE manifest PUT that adds the new slim fields: no hold, no sync, no rewrite of the full export and no
+    delete. A failure of that PUT leaves the previous manifest (one small object; R2 PUTs are atomic). Otherwise (the full
+    export changed) the existing held publication below runs, after the slim file is already verified. Publication never
+    deletes a slim object; older ones stay until a separate cleanup.
     """
-    from scripts.publish_r2 import INDEX, sync
+    from scripts.publish_r2 import sync
     folder = Path(folder)
     manifest = read_json(folder/'manifest.json')
     if manifest.get('source_scope') is not None:
@@ -404,38 +392,33 @@ def publish_bundle(s3, bucket, folder, *, now=None):
         raise ValueError('Publication export changed')
     slim_name = manifest.get('slim_file')
     if slim_name is not None:
-        if slim_name != SLIM_FILE or not re.fullmatch('[a-f0-9]{64}', manifest.get('slim_sha256') or '') \
-                or sha256(folder/slim_name) != manifest['slim_sha256']:
+        slim_sha = manifest.get('slim_sha256') or ''
+        if not re.fullmatch('[a-f0-9]{64}', slim_sha) or slim_name != slim_file(slim_sha) \
+                or sha256(folder/slim_name) != slim_sha:
             raise ValueError('Publication slim reef file changed')
     allowed = {archive.name, 'ledger.json', 'manifest.json', export.name} | ({slim_name} if slim_name else set())
     if {p.name for p in folder.iterdir()} != allowed:
         raise ValueError('Unexpected file in public bundle')
-    if slim_name:
-        # A slim PUT/GET/checksum failure must leave the previous ready release live: prove the new slim bytes can be stored and
-        # read back at a staging key before sync() or the hold touches any live object.
-        import hashlib
-        stage = f'tiles/seafloor/staging/{region}-{slim_name}'
-        s3.put_object(Bucket=bucket, Key=stage, Body=(folder/slim_name).read_bytes(), ContentType='application/gzip',
-                      CacheControl='no-store', Metadata={'sha256': manifest['slim_sha256']})
-        with s3.get_object(Bucket=bucket, Key=stage)['Body'] as stream:
-            if hashlib.sha256(stream.read()).hexdigest() != manifest['slim_sha256']:
-                raise ValueError('R2 slim reef file read-back failed; previous release left live')
     control = f'tiles/seafloor/manifest-{region}.json'
     prefix = f'tiles/seafloor/regions/{region}'
-    slim_key = f'{prefix}/{slim_name}' if slim_name else None
-    restore = _snapshot(s3, bucket, [control, f'{prefix}/{INDEX}'] + [f'{prefix}/{n}' for n in sorted(allowed - {archive.name})]) if slim_name else None
-    # sync() must not touch the live slim key at all (no PUT that would drop its sha256 metadata, no delete): the slim file is
-    # left out of the synced folder and writes/deletes of that key are filtered out, so the previous slim bytes AND metadata stay
-    # intact until the one explicit PUT below.
+    if slim_name:
+        _stage_slim(s3, bucket, f'{prefix}/{slim_name}', (folder/slim_name).read_bytes(), manifest['slim_sha256'])
+        live, etag = _live(s3, bucket, control)
+        if manifest['status'] == 'ready' and live and live.get('status') == 'ready' \
+                and all(live.get(name) == manifest.get(name) for name in SERVED_FIELDS):
+            switched = {**{k: v for k, v in live.items() if k not in SLIM_MANIFEST_FIELDS},
+                        **{k: manifest[k] for k in SLIM_MANIFEST_FIELDS}}
+            # IfMatch: a release another publisher committed since the read above is never silently replaced.
+            s3.put_object(Bucket=bucket, Key=control, Body=json.dumps(switched).encode(), ContentType='application/json',
+                          CacheControl='no-store', **({'IfMatch': etag} if etag else {}))
+            return f'tiles/seafloor/{archive.name}'
+    # The slim file is left out of the synced folder: sync() uploads without sha256 metadata, so it must never write the
+    # content-addressed slim key a live manifest may already name, and it never learns that key, so it never deletes it.
     with tempfile.TemporaryDirectory() as staged:
         for path in folder.iterdir():
             if path.name != slim_name:
                 os.symlink(path.resolve(), Path(staged)/path.name)
-        try:
-            sync(_Guarded(s3, {slim_key}) if slim_key else s3, bucket, staged, prefix)
-        except Exception:
-            if restore: _rollback(s3, bucket, restore, control, skip={slim_key})
-            raise
+        sync(s3, bucket, staged, prefix)
     # Stable URL is gated by a separate manifest in the Worker. Write a hold
     # before changing the alias, then promote only after archive read-back.
     s3.put_object(Bucket=bucket, Key=control, Body=json.dumps({'status': 'updating'}).encode(),
@@ -448,19 +431,6 @@ def publish_bundle(s3, bucket, folder, *, now=None):
         import hashlib
         if hashlib.sha256(stream.read()).hexdigest() != manifest['export_sha256']:
             raise ValueError('R2 export read-back failed; alias remains held')
-    if slim_name:
-        try:
-            s3.put_object(Bucket=bucket, Key=slim_key, Body=(folder/slim_name).read_bytes(), ContentType='application/gzip',
-                          CacheControl='no-store', Metadata={'sha256': manifest['slim_sha256']})
-            with s3.get_object(Bucket=bucket, Key=slim_key)['Body'] as stream:
-                if hashlib.sha256(stream.read()).hexdigest() != manifest['slim_sha256']:
-                    raise ValueError('R2 slim reef file read-back failed; previous release restored')
-        except Exception:
-            # An exception does not prove the PUT did not commit (a lost acknowledgment commits the new object). Leave the slim key
-            # alone only when it is read back byte-identical to the previous one; otherwise (changed or unreadable) put the previous
-            # bytes back and read them back before the ready alias is promoted. If that cannot be proved, the alias stays held.
-            _rollback(s3, bucket, restore, control, skip={slim_key} if _unchanged(s3, bucket, slim_key, restore[slim_key]) else set(), verify={slim_key})
-            raise
     key = f'tiles/seafloor/{archive.name}'
     with archive.open('rb') as stream:
         s3.put_object(Bucket=bucket, Key=key, Body=stream, ContentType='application/octet-stream',

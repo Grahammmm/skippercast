@@ -170,9 +170,9 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
   let expectedHash: string | undefined;
   if (seafloor && (key.endsWith('.pmtiles') || key.endsWith('.geojson') || key.endsWith('.geojson.gz'))) {
     const exporting = !key.endsWith('.pmtiles');
-    const slim = key.endsWith('/habitat-slim.geojson.gz');   // SC-PERF-REEFDIET-1: the brief's slim reef file, gated on the same manifest
+    const slim = /\/habitat-slim-[a-f0-9]{16}\.geojson\.gz$/.test(key);   // SC-PERF-REEFDIET-1: the brief's slim reef file (content-addressed name), gated on the same manifest
     const match = exporting
-      ? /^tiles\/seafloor\/regions\/([a-z0-9-]+)\/(?:habitat-export\.geojson(?:\.gz)?|habitat-slim\.geojson\.gz)$/.exec(key)
+      ? /^tiles\/seafloor\/regions\/([a-z0-9-]+)\/(?:habitat-export\.geojson(?:\.gz)?|habitat-slim-[a-f0-9]{16}\.geojson\.gz)$/.exec(key)
       : /^tiles\/seafloor\/seafloor-([a-z0-9-]+)\.pmtiles$/.exec(key);
     if (!match || !bucket) return new Response('Not found', {status: 404});
     let manifest: ExternalJSON;

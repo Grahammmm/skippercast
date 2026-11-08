@@ -4,7 +4,7 @@
 // PerformanceObserver and an input-responsiveness probe (a timer every 50 ms, lag = how late it fired).
 // This loads the page's real loader (dist/reef-trip-data.js) against a local copy of the published files; it is NOT the whole app page
 // (the slim file is unpublished, so a live page cannot request it). Node timings are a different measurement and are not mixed in here.
-// Usage: node scripts/reef_slim_browser.mjs <dir with manifest.json + habitat-export.geojson.gz + habitat-slim.geojson.gz> [--runs 3] [--out file.json]
+// Usage: node scripts/reef_slim_browser.mjs <dir with manifest.json + habitat-export.geojson.gz + habitat-slim-<sha16>.geojson.gz> [--runs 3] [--out file.json]
 import {createServer} from 'node:http';
 import {readFileSync, writeFileSync, existsSync} from 'node:fs';
 import {extname, join, normalize} from 'node:path';

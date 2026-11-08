@@ -17,7 +17,7 @@ async function boundedBytes(stream,limit,expected){
 // SC-PERF-PROTCHECK-1: the publisher's protected-area verdict for a reef (geo-screen.js `screenPlace`'s answer, computed once at publish time).
 // Anything of another shape is dropped, so the browser runs the screen itself.
 const validVerdict=v=>!!v&&typeof v.inside==='boolean'&&typeof v.screened==='boolean'&&(v.name===null||typeof v.name==='string')&&(v.distanceM===null||Number.isFinite(v.distanceM));
-// SC-PERF-REEFDIET-1: `slim` reads the publisher's attribute-only file (habitat-slim.geojson.gz: no outlines, every reef with its verdict) instead of the
+// SC-PERF-REEFDIET-1: `slim` reads the publisher's attribute-only file (habitat-slim-<sha16>.geojson.gz, named by its own hash: no outlines, every reef with its verdict) instead of the
 // full export, for the brief and its ranking. It throws when the manifest names no slim file or the file is not usable; `loadReefTripBrief` then loads the full export.
 // The planner, map and GPX export call `loadReefTrip` without it and keep the outlines.
 export async function loadReefTrip(region,{fetchImpl=globalThis.fetch,now=Date.now(),slim=false}={}) {
@@ -26,7 +26,7 @@ export async function loadReefTrip(region,{fetchImpl=globalThis.fetch,now=Date.n
   const m=gate.manifest;
   if(!['habitat-export.geojson','habitat-export.geojson.gz'].includes(m.export_file)||!/^[a-f0-9]{64}$/.test(m.export_sha256||''))throw Error('Ranked reef export is awaiting the next seafloor publication.');
   const file=slim?m.slim_file:m.export_file,sha=slim?m.slim_sha256:m.export_sha256,size=slim?m.slim_bytes:m.export_bytes,decodedSize=slim?m.slim_decoded_bytes:m.export_decoded_bytes;
-  if(slim&&(file!=='habitat-slim.geojson.gz'||!/^[a-f0-9]{64}$/.test(sha||'')))throw Error('Slim reef file is not published.');
+  if(slim&&(!/^[a-f0-9]{64}$/.test(sha||'')||file!==`habitat-slim-${sha.slice(0,16)}.geojson.gz`))throw Error('Slim reef file is not published.');
   const compressed=file.endsWith('.gz');
   if(!Number.isInteger(size)||size<=0||size>MAX_TRANSFER
       ||(compressed&&(!Number.isInteger(decodedSize)||decodedSize<=0||decodedSize>MAX_DECODED)))throw Error('Reef export size is unavailable or too large.');

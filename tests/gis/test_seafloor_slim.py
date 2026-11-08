@@ -1,8 +1,11 @@
 """SC-PERF-REEFDIET-1: the slim reef file the brief reads (attributes + verdicts, no outlines), its size budget and its publication."""
+from datetime import datetime
 import gzip
 import hashlib
+import io
 import json
 from pathlib import Path
+import re
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -53,8 +56,9 @@ class SlimFileTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             fields = slim.write_slim(tmp, region='morro-bay', expires_at='2030-01-01T00:00:00+00:00', export_sha256='a'*64,
                                      protected={'fingerprint': 'ps2-x', 'version': 2}, export_features=[feature(1), feature(2)])
-            path = Path(tmp)/'habitat-slim.geojson.gz'
-            self.assertEqual(fields['slim_file'], path.name)
+            path = Path(tmp)/fields['slim_file']
+            self.assertEqual(fields['slim_file'], f'habitat-slim-{sha256(path)[:16]}.geojson.gz')
+            self.assertTrue(slim.SLIM_NAME.fullmatch(fields['slim_file']))
             self.assertEqual(fields['slim_sha256'], sha256(path))
             self.assertEqual(fields['slim_bytes'], path.stat().st_size)
             data = json.loads(gzip.decompress(path.read_bytes()))
@@ -64,6 +68,7 @@ class SlimFileTests(unittest.TestCase):
 
     def test_no_verdicts_means_no_slim_file(self):
         with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp)/'habitat-slim-0123456789abcdef.geojson.gz').write_bytes(b'an earlier build')
             self.assertEqual(slim.write_slim(tmp, region='morro-bay', expires_at='x', export_sha256='a'*64, protected=None,
                                              export_features=[feature(1)]), {})
             self.assertEqual(list(Path(tmp).iterdir()), [])
@@ -78,43 +83,124 @@ class SlimFileTests(unittest.TestCase):
             self.assertEqual(list(Path(tmp).iterdir()), [])
 
 
-def slim_bundle(root):
+def slim_bundle(root, reefs=(1,)):
     folder, manifest = bundle(root)
     fields = slim.write_slim(folder, region='morro-bay', expires_at=manifest['expires_at'], export_sha256=manifest['export_sha256'],
-                             protected={'fingerprint': 'ps2-x'}, export_features=[feature(1)])
+                             protected={'fingerprint': 'ps2-x'}, export_features=[feature(i) for i in reefs])
     manifest.update(fields)
     atomic_json(folder/'manifest.json', manifest)
     return folder, manifest
 
 
+class PreconditionFailed(Exception):
+    pass
+
+
+class R2(Bucket):
+    """The publication tests' bucket, plus what R2 also does: object metadata and an ETag on GET, conditional PUT (IfMatch),
+    and a record of every delete."""
+
+    def __init__(self):
+        super().__init__()
+        self.deleted, self.log = [], []
+
+    def etag(self, key):
+        return '"' + hashlib.md5(self.objects[key]).hexdigest() + '"'
+
+    def get_object(self, *, Bucket, Key):
+        self.log.append(('get', Key))
+        got = super().get_object(Bucket=Bucket, Key=Key)
+        return {**got, 'Metadata': dict(self.metadata.get(Key, {}).get('Metadata') or {}), 'ETag': self.etag(Key)}
+
+    def put_object(self, *, Bucket, Key, Body, IfMatch=None, **kwargs):
+        if IfMatch is not None and (Key not in self.objects or self.etag(Key) != IfMatch):
+            raise PreconditionFailed(Key)
+        self.log.append(('put', Key))
+        return super().put_object(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
+
+    def delete_objects(self, *, Bucket, Delete):
+        self.deleted += [item['Key'] for item in Delete['Objects']]
+        return super().delete_objects(Bucket=Bucket, Delete=Delete)
+
+
+CONTROL = 'tiles/seafloor/manifest-morro-bay.json'
+PREFIX = 'tiles/seafloor/regions/morro-bay/'
+ARCHIVE = 'tiles/seafloor/seafloor-morro-bay.pmtiles'
+
+
+def serve(s3, key, now=NOW):
+    """(status, bytes) that server/feeds.ts serveFeed answers for a seafloor export, slim file or archive on this bucket:
+    the live manifest must be ready, unexpired, for this region and name this file, and the object's sha256 metadata must
+    be the manifest's hash for it."""
+    export = re.fullmatch(r'tiles/seafloor/regions/([a-z0-9-]+)/(habitat-export\.geojson(?:\.gz)?|habitat-slim-[a-f0-9]{16}\.geojson\.gz)', key)
+    archive = re.fullmatch(r'tiles/seafloor/seafloor-([a-z0-9-]+)\.pmtiles', key)
+    if not export and not archive:
+        return 404, None
+    region = (export or archive).group(1)
+    is_slim = bool(export) and export.group(2).startswith('habitat-slim-')
+    try:
+        manifest = json.loads(s3.objects[f'tiles/seafloor/manifest-{region}.json'])
+    except (KeyError, ValueError):
+        manifest = {}
+    expected = manifest.get('slim_sha256' if is_slim else 'export_sha256' if export else 'archive_sha256')
+    named = not export or manifest.get('slim_file' if is_slim else 'export_file') == export.group(2)
+    try:
+        live = datetime.fromisoformat(manifest['expires_at']) > now
+    except (KeyError, TypeError, ValueError):
+        live = False
+    if manifest.get('status') != 'ready' or manifest.get('region') != region or not named or not live \
+            or not re.fullmatch('[a-f0-9]{64}', expected or ''):
+        return 503, None
+    if key not in s3.objects:
+        return 404, None
+    if (s3.metadata[key].get('Metadata') or {}).get('sha256') != expected:
+        return 503, None
+    return 200, s3.objects[key]
+
+
+def read_back_before_manifest(s3, key):
+    """The key was PUT, then read back, and only after that was the live manifest written (R2.log order)."""
+    put = s3.log.index(('put', key))
+    return s3.log.index(('get', key), put) < s3.log.index(('put', CONTROL), put)
+
+
 class SlimPublicationTests(unittest.TestCase):
-    def test_slim_file_is_uploaded_with_the_exports_headers_and_read_back_before_the_alias(self):
+    def test_first_publication_serves_the_slim_file_at_its_content_addressed_key(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder, manifest = slim_bundle(tmp)
-            s3 = Bucket()
+            s3 = R2()
             publish.publish_bundle(s3, 'b', folder, now=NOW)
-            key = 'tiles/seafloor/regions/morro-bay/habitat-slim.geojson.gz'
-            self.assertEqual(s3.objects[key], (folder/'habitat-slim.geojson.gz').read_bytes())
+            key = PREFIX + manifest['slim_file']
+            self.assertEqual(manifest['slim_file'], f"habitat-slim-{manifest['slim_sha256'][:16]}.geojson.gz")
+            self.assertEqual(s3.objects[key], (folder/manifest['slim_file']).read_bytes())
             self.assertEqual(s3.metadata[key]['CacheControl'], 'no-store')
             self.assertEqual(s3.metadata[key]['ContentType'], 'application/gzip')
             self.assertEqual(s3.metadata[key]['Metadata']['sha256'], manifest['slim_sha256'])
-            export_key = 'tiles/seafloor/regions/morro-bay/habitat-export.geojson'
-            self.assertEqual(s3.metadata[export_key]['CacheControl'], s3.metadata[key]['CacheControl'])
-            self.assertIn(key, s3.gets)
-            control = 'tiles/seafloor/manifest-morro-bay.json'
-            self.assertLess(s3.puts.index(key), len(s3.puts) - 1 - s3.puts[::-1].index(control))
-            self.assertEqual(json.loads(s3.objects[control])['slim_sha256'], manifest['slim_sha256'])
+            self.assertEqual(s3.metadata[PREFIX + 'habitat-export.geojson']['CacheControl'], s3.metadata[key]['CacheControl'])
+            self.assertEqual(s3.puts[0], key)                        # uploaded before anything else
+            self.assertEqual(s3.puts.count(key), 1)                  # and never again by sync()
+            self.assertTrue(read_back_before_manifest(s3, key))
+            self.assertEqual(json.loads(s3.objects[CONTROL])['slim_file'], manifest['slim_file'])
+            for served in (key, PREFIX + 'habitat-export.geojson', ARCHIVE):
+                self.assertEqual(serve(s3, served)[0], 200, served)
+            self.assertNotIn(manifest['slim_file'], json.loads(s3.objects[PREFIX + '.r2-sync.json']))
+            self.assertEqual(s3.deleted, [])
 
     def test_changed_or_unlisted_slim_file_never_uploads(self):
-        for case in ('changed', 'name', 'unlisted-extra', 'hash-missing'):
+        for case in ('changed', 'path', 'name-not-its-hash', 'old-fixed-name', 'unlisted-extra', 'hash-missing'):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as tmp:
                 folder, manifest = slim_bundle(tmp)
-                if case == 'changed': (folder/'habitat-slim.geojson.gz').write_bytes(b'corrupt')
-                if case == 'name': manifest['slim_file'] = '../habitat-slim.geojson.gz'
+                name = manifest['slim_file']
+                if case == 'changed': (folder/name).write_bytes(b'corrupt')
+                if case == 'path': manifest['slim_file'] = '../' + name
+                other = {'name-not-its-hash': 'habitat-slim-0000000000000000.geojson.gz', 'old-fixed-name': 'habitat-slim.geojson.gz'}.get(case)
+                if other:
+                    (folder/name).rename(folder/other)
+                    manifest['slim_file'] = other
                 if case == 'unlisted-extra': (folder/'other.geojson.gz').write_bytes(b'x')
                 if case == 'hash-missing': del manifest['slim_sha256']
                 atomic_json(folder/'manifest.json', manifest)
-                s3 = Bucket()
+                s3 = R2()
                 with self.assertRaises(ValueError):
                     publish.publish_bundle(s3, 'b', folder, now=NOW)
                 self.assertEqual(s3.puts, [])
@@ -122,210 +208,174 @@ class SlimPublicationTests(unittest.TestCase):
     def test_a_slim_file_the_manifest_does_not_name_is_an_unexpected_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder, manifest = bundle(tmp)
-            (folder/'habitat-slim.geojson.gz').write_bytes(b'x')
-            s3 = Bucket()
+            (folder/'habitat-slim-0123456789abcdef.geojson.gz').write_bytes(b'x')
+            s3 = R2()
             with self.assertRaisesRegex(ValueError, 'Unexpected file'):
                 publish.publish_bundle(s3, 'b', folder, now=NOW)
             self.assertEqual(s3.puts, [])
 
-    def live_release(self, tmp):
-        """A bucket that already serves a ready release (alias manifest, export, archive, slim file), plus the new bundle."""
+    def live_release(self, tmp, *, export_changed=False):
+        """A bucket serving a READY release (manifest, export, archive, slim file), and the next bundle: same export,
+        archive and ledger with a new slim file (or, with export_changed, a new full export too)."""
         old_folder, old_manifest = slim_bundle(tmp)
-        s3 = Bucket()
+        s3 = R2()
         publish.publish_bundle(s3, 'b', old_folder, now=NOW)
-        live = dict(s3.objects)
+        self.assertEqual(serve(s3, PREFIX + old_manifest['slim_file'])[0], 200)
         new_folder = Path(tmp)/'next'
         new_folder.mkdir()
         for path in old_folder.iterdir():
-            (new_folder/path.name).write_bytes(path.read_bytes())
-        (new_folder/'habitat-slim.geojson.gz').write_bytes(gzip.compress(b'{"changed": true}', mtime=0))
-        manifest = json.loads((new_folder/'manifest.json').read_text())
-        manifest['slim_sha256'] = sha256(new_folder/'habitat-slim.geojson.gz')
+            if path.name != old_manifest['slim_file']:
+                (new_folder/path.name).write_bytes(path.read_bytes())
+        manifest = dict(old_manifest)
+        if export_changed:
+            atomic_json(new_folder/'habitat-export.geojson', {'region': 'morro-bay', 'features': [], 'changed': True})
+            manifest['export_sha256'] = sha256(new_folder/'habitat-export.geojson')
+        manifest.update(slim.write_slim(new_folder, region='morro-bay', expires_at=manifest['expires_at'],
+                                        export_sha256=manifest['export_sha256'], protected={'fingerprint': 'ps2-x'},
+                                        export_features=[feature(1), feature(2)]))
+        self.assertNotEqual(manifest['slim_file'], old_manifest['slim_file'])
         atomic_json(new_folder/'manifest.json', manifest)
-        s3.puts.clear()
+        live = {'objects': dict(s3.objects), 'metadata': {k: dict(v) for k, v in s3.metadata.items()},
+                'manifest': old_manifest, 'new': manifest}
+        s3.puts.clear(); s3.gets.clear()
         return s3, live, new_folder
 
-    def test_corrupt_slim_readback_leaves_the_previous_ready_release_live(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            s3, live, folder = self.live_release(tmp)
-            real = s3.get_object
-            def corrupt(*, Bucket, Key):
-                got = real(Bucket=Bucket, Key=Key)
-                if Key.endswith('habitat-slim.geojson.gz'):
-                    import io
-                    got = {'Body': io.BytesIO(b'bad read-back')}
-                return got
-            s3.get_object = corrupt
-            with self.assertRaisesRegex(ValueError, 'slim reef file read-back'):
-                publish.publish_bundle(s3, 'b', folder, now=NOW)
-            control = 'tiles/seafloor/manifest-morro-bay.json'
-            self.assertEqual(json.loads(s3.objects[control])['status'], 'ready')
-            for key, value in live.items():
-                if '/staging/' in key: continue  # scratch key, not served
-                self.assertEqual(s3.objects[key], value, key)
-            self.assertNotIn(control, s3.puts)
+    def assert_previous_release_served(self, s3, live):
+        old, new = live['manifest'], live['new']
+        self.assertEqual(s3.objects[CONTROL], live['objects'][CONTROL])          # the very same manifest bytes
+        self.assertEqual(json.loads(s3.objects[CONTROL])['status'], 'ready')
+        self.assertEqual(serve(s3, PREFIX + 'habitat-export.geojson'), (200, live['objects'][PREFIX + 'habitat-export.geojson']))
+        self.assertEqual(serve(s3, PREFIX + old['slim_file']), (200, live['objects'][PREFIX + old['slim_file']]))
+        self.assertEqual(serve(s3, ARCHIVE), (200, live['objects'][ARCHIVE]))
+        self.assertEqual(serve(s3, PREFIX + new['slim_file'])[0], 503)          # staged, never named, never served
+        self.assertEqual(s3.deleted, [])
+        for key, value in live['objects'].items():                              # nothing deleted or rewritten
+            self.assertEqual(s3.objects.get(key), value, key)
+            self.assertEqual(s3.metadata.get(key), live['metadata'][key], key)
 
-    def test_failed_slim_upload_leaves_the_previous_ready_release_live(self):
+    def failing(self, s3, live, step):
+        """Make one publication step fail the way R2 can: the new slim PUT (rejected, or committed with the reply lost), its
+        read-back (an error, wrong bytes, missing sha256 metadata), or the one manifest write."""
+        new_key = PREFIX + live['new']['slim_file']
+        real_put, real_get = s3.put_object, s3.get_object
+
+        def put(**kwargs):
+            if kwargs['Key'] == new_key and step == 'slim PUT rejected':
+                raise OSError('R2 PUT failed')
+            if kwargs['Key'] == new_key and step == 'slim PUT metadata lost':
+                kwargs = {k: v for k, v in kwargs.items() if k != 'Metadata'}
+            if kwargs['Key'] == CONTROL and step == 'manifest write':
+                raise OSError('R2 PUT failed')
+            result = real_put(**kwargs)
+            if kwargs['Key'] == new_key and step == 'slim PUT committed, reply lost':
+                raise TimeoutError('PUT committed; response lost')
+            return result
+
+        def get(*, Bucket, Key):
+            got = real_get(Bucket=Bucket, Key=Key)
+            if Key == new_key and Key in s3.puts:
+                if step == 'slim read-back error':
+                    raise OSError('R2 GET failed')
+                if step == 'slim checksum':
+                    got = {**got, 'Body': io.BytesIO(b'bad read-back')}
+            return got
+        s3.put_object, s3.get_object = put, get
+
+    STEPS = ('slim PUT rejected', 'slim PUT committed, reply lost', 'slim PUT metadata lost', 'slim read-back error',
+             'slim checksum', 'manifest write')
+
+    def test_a_failed_step_leaves_the_previous_ready_release_served(self):
+        for export_changed in (False, True):
+            for step in self.STEPS:
+                if export_changed and step == 'manifest write':
+                    continue   # with a changed full export the existing held publication follows; not a slim step
+                with self.subTest(step=step, export_changed=export_changed), tempfile.TemporaryDirectory() as tmp:
+                    s3, live, folder = self.live_release(tmp, export_changed=export_changed)
+                    self.failing(s3, live, step)
+                    with self.assertRaises(Exception):
+                        publish.publish_bundle(s3, 'b', folder, now=NOW)
+                    if step != 'manifest write':
+                        self.assertNotIn(CONTROL, s3.puts)       # no hold, no status=updating, no restore
+                    self.assertEqual([k for k in s3.puts if k != PREFIX + live['new']['slim_file'] and k != CONTROL], [])
+                    self.assert_previous_release_served(s3, live)
+
+    def test_a_retry_after_a_failure_publishes_and_reuses_the_verified_object(self):
         with tempfile.TemporaryDirectory() as tmp:
             s3, live, folder = self.live_release(tmp)
-            real = s3.put_object
-            def fail(*, Bucket, Key, Body, **kwargs):
-                if Key.endswith('habitat-slim.geojson.gz'):
-                    raise OSError('R2 PUT failed')
-                return real(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
-            s3.put_object = fail
+            self.failing(s3, live, 'manifest write')
             with self.assertRaises(OSError):
                 publish.publish_bundle(s3, 'b', folder, now=NOW)
-            self.assertEqual(json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['status'], 'ready')
-            for key, value in live.items():
-                if '/staging/' in key: continue  # scratch key, not served
-                self.assertEqual(s3.objects[key], value, key)
+            del s3.put_object, s3.get_object       # the failure is over
+            s3.puts.clear()
+            publish.publish_bundle(s3, 'b', folder, now=NOW)
+            self.assertEqual(s3.puts, [CONTROL])                    # the verified slim object is not uploaded again
+            self.assertEqual(serve(s3, PREFIX + live['new']['slim_file'])[0], 200)
 
-    LIVE = 'tiles/seafloor/regions/morro-bay/habitat-slim.geojson.gz'
-
-    def assert_previous_release_live(self, s3, live):
-        self.assertEqual(json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['status'], 'ready')
-        for key, value in live.items():
-            if '/staging/' in key: continue  # scratch key, not served
-            self.assertEqual(s3.objects[key], value, key)
-
-    def test_persistent_failure_writing_the_live_slim_key_after_staging_passed_keeps_the_previous_release(self):
+    def test_a_successful_publish_writes_one_manifest_and_keeps_the_old_objects(self):
         with tempfile.TemporaryDirectory() as tmp:
             s3, live, folder = self.live_release(tmp)
-            real, attempts = s3.put_object, []
-            def fail(*, Bucket, Key, Body, **kwargs):
-                if Key == self.LIVE:
-                    attempts.append(Key)
-                    raise OSError('R2 PUT failed')
-                return real(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
-            s3.put_object = fail
-            with self.assertRaises(OSError):
-                publish.publish_bundle(s3, 'b', folder, now=NOW)
-            self.assertEqual(len(attempts), 1)   # the failing key is never rewritten, not even by a rollback
-            self.assertIn('tiles/seafloor/staging/morro-bay-habitat-slim.geojson.gz', s3.objects)   # staging passed
-            s3.put_object = real
-            self.assert_previous_release_live(s3, live)
-            self.assertEqual(s3.metadata[self.LIVE]['Metadata']['sha256'], json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['slim_sha256'])
+            old, new = live['manifest'], live['new']
+            publish.publish_bundle(s3, 'b', folder, now=NOW)
+            self.assertEqual(s3.puts, [PREFIX + new['slim_file'], CONTROL])   # no sync, no hold, no export or archive rewrite
+            switched = json.loads(s3.objects[CONTROL])
+            self.assertEqual(switched, {**json.loads(live['objects'][CONTROL]), **{k: new[k] for k in publish.SLIM_MANIFEST_FIELDS}})
+            self.assertEqual(serve(s3, PREFIX + new['slim_file']), (200, (folder/new['slim_file']).read_bytes()))
+            self.assertEqual(serve(s3, PREFIX + 'habitat-export.geojson'), (200, live['objects'][PREFIX + 'habitat-export.geojson']))
+            self.assertEqual(serve(s3, ARCHIVE)[0], 200)
+            self.assertEqual(s3.deleted, [])
+            for key, value in live['objects'].items():
+                if key != CONTROL:
+                    self.assertEqual(s3.objects[key], value, key)   # old objects, the old slim file included, still exist
+            self.assertIn(PREFIX + old['slim_file'], s3.objects)
 
-    def test_a_slim_put_that_commits_and_then_raises_is_undone_before_the_alias_goes_back(self):
+    def test_a_publish_interrupted_at_any_write_leaves_a_servable_site(self):
         with tempfile.TemporaryDirectory() as tmp:
             s3, live, folder = self.live_release(tmp)
-            real = s3.put_object
-            def lost_ack(**kwargs):
+            real, states = s3.put_object, []
+
+            def servable():
+                named = json.loads(s3.objects[CONTROL])
+                return [serve(s3, PREFIX + 'habitat-export.geojson')[0], serve(s3, PREFIX + named['slim_file'])[0], serve(s3, ARCHIVE)[0]]
+
+            def put(**kwargs):
+                states.append(servable())          # interrupted just before this write
                 result = real(**kwargs)
-                if kwargs['Key'] == self.LIVE and kwargs['Body'] != live[self.LIVE]:
-                    raise TimeoutError('PUT committed; response lost')
+                states.append(servable())          # interrupted just after it
                 return result
-            s3.put_object = lost_ack
-            with self.assertRaises(TimeoutError):
-                publish.publish_bundle(s3, 'b', folder, now=NOW)
-            s3.put_object = real
-            self.assert_previous_release_live(s3, live)
-            alias = json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])
-            self.assertEqual(hashlib.sha256(s3.objects[self.LIVE]).hexdigest(), alias['slim_sha256'])
+            s3.put_object = put
+            publish.publish_bundle(s3, 'b', folder, now=NOW)
+            self.assertEqual(len(states), 4)
+            self.assertTrue(all(state == [200, 200, 200] for state in states), states)
 
-    def test_when_the_previous_slim_object_cannot_be_restored_the_alias_stays_held(self):
+    def test_a_release_committed_by_someone_else_meanwhile_is_not_replaced(self):
         with tempfile.TemporaryDirectory() as tmp:
             s3, live, folder = self.live_release(tmp)
-            real = s3.put_object
-            def lost_ack_and_no_restore(**kwargs):
-                if kwargs['Key'] == self.LIVE and kwargs['Body'] == live[self.LIVE]:
-                    raise OSError('restore failed')
-                result = real(**kwargs)
-                if kwargs['Key'] == self.LIVE:
-                    raise TimeoutError('PUT committed; response lost')
-                return result
-            s3.put_object = lost_ack_and_no_restore
-            with self.assertRaises(OSError):
-                publish.publish_bundle(s3, 'b', folder, now=NOW)
-            s3.put_object = real
-            alias = json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])
-            self.assertNotEqual(alias.get('status'), 'ready')   # never a ready manifest whose slim hash does not match the object
+            real, theirs = s3.get_object, json.dumps({**live['manifest'], 'built_at': 'another publisher'}).encode()
 
-    def test_sync_never_rewrites_or_deletes_the_live_slim_key_so_its_metadata_survives_a_later_put_failure(self):
-        for stale_index in ('missing', 'other-hash'):
-            with self.subTest(stale_index=stale_index), tempfile.TemporaryDirectory() as tmp:
-                s3, live, folder = self.live_release(tmp)
-                index_key = 'tiles/seafloor/regions/morro-bay/.r2-sync.json'
-                index = json.loads(s3.objects[index_key])
-                index.pop('habitat-slim.geojson.gz', None)
-                if stale_index == 'other-hash':
-                    index['habitat-slim.geojson.gz'] = 'f' * 64
-                s3.objects[index_key] = live[index_key] = json.dumps(index).encode()
-                real, attempts = s3.put_object, []
-                def fail(*, Bucket, Key, Body, **kwargs):
-                    if Key == self.LIVE:
-                        attempts.append(kwargs.get('Metadata'))
-                        raise OSError('R2 PUT failed')
-                    return real(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
-                s3.put_object = fail
-                with self.assertRaises(OSError):
-                    publish.publish_bundle(s3, 'b', folder, now=NOW)
-                s3.put_object = real
-                self.assertEqual(len(attempts), 1)   # only the explicit PUT of the new file: sync never wrote the previous bytes
-                self.assertEqual(attempts[0]['sha256'], json.loads((folder/'manifest.json').read_text())['slim_sha256'])
-                self.assert_previous_release_live(s3, live)
-                self.assertEqual(s3.metadata[self.LIVE]['Metadata']['sha256'],
-                                 json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['slim_sha256'])
-
-    def test_the_alias_goes_back_only_after_the_previous_objects(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            s3, live, folder = self.live_release(tmp)
-            real = s3.put_object
-            def fail(*, Bucket, Key, Body, **kwargs):
-                if Key == self.LIVE: raise OSError('R2 PUT failed')
-                return real(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
-            s3.put_object = fail
-            with self.assertRaises(OSError):
-                publish.publish_bundle(s3, 'b', folder, now=NOW)
-            control = 'tiles/seafloor/manifest-morro-bay.json'
-            self.assertEqual(s3.puts[-1], control)
-            self.assertEqual(json.loads(s3.objects[control])['status'], 'ready')
-
-    def test_corrupt_read_back_of_the_live_slim_key_after_staging_passed_restores_the_previous_release(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            s3, live, folder = self.live_release(tmp)
-            real = s3.get_object
-            def corrupt(*, Bucket, Key):
+            def get(*, Bucket, Key):
                 got = real(Bucket=Bucket, Key=Key)
-                if Key == self.LIVE and s3.objects[Key] != live[Key]:
-                    import io
-                    got = {'Body': io.BytesIO(b'bad read-back')}
+                if Key == CONTROL:
+                    s3.objects[CONTROL] = theirs      # committed between our read and our write
                 return got
-            s3.get_object = corrupt
-            with self.assertRaisesRegex(ValueError, 'slim reef file read-back'):
+            s3.get_object = get
+            with self.assertRaises(PreconditionFailed):
                 publish.publish_bundle(s3, 'b', folder, now=NOW)
-            s3.get_object = real
-            self.assert_previous_release_live(s3, live)
+            self.assertEqual(s3.objects[CONTROL], theirs)
 
-    def test_every_ready_alias_write_during_rollback_matches_the_objects_then_served(self):
+    def test_with_a_changed_full_export_the_slim_file_is_verified_before_the_held_publication(self):
         with tempfile.TemporaryDirectory() as tmp:
-            s3, live, folder = self.live_release(tmp)
-            manifest = json.loads((folder/'manifest.json').read_text())
-            export = folder/manifest['export_file']
-            export.write_bytes(b'{"type": "FeatureCollection", "features": [], "changed": true}')
-            manifest['export_sha256'] = sha256(export)
-            atomic_json(folder/'manifest.json', manifest)
-            control = 'tiles/seafloor/manifest-morro-bay.json'
-            seen, real_put, real_get = [], s3.put_object, s3.get_object
-            def put(*, Bucket, Key, Body, **kwargs):
-                if Key == control and json.loads(Body).get('status') == 'ready':
-                    # at the moment the old ready alias is written, every object must already be the previous release's
-                    seen.append({k: s3.objects[k] == v for k, v in live.items() if '/staging/' not in k and k != control})
-                return real_put(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
-            def corrupt(*, Bucket, Key):
-                got = real_get(Bucket=Bucket, Key=Key)
-                if Key == self.LIVE and s3.objects[Key] != live[Key]:
-                    import io
-                    got = {'Body': io.BytesIO(b'bad read-back')}
-                return got
-            s3.put_object, s3.get_object = put, corrupt
-            with self.assertRaisesRegex(ValueError, 'slim reef file read-back'):
-                publish.publish_bundle(s3, 'b', folder, now=NOW)
-            s3.put_object, s3.get_object = real_put, real_get
-            self.assertEqual(len(seen), 1)
-            self.assertTrue(all(seen[0].values()), seen[0])
-            self.assert_previous_release_live(s3, live)
+            s3, live, folder = self.live_release(tmp, export_changed=True)
+            new = live['new']
+            publish.publish_bundle(s3, 'b', folder, now=NOW)
+            new_key = PREFIX + new['slim_file']
+            self.assertEqual(s3.puts[0], new_key)
+            self.assertEqual(s3.puts.count(new_key), 1)              # sync() never writes it (it would drop the sha256 metadata)
+            self.assertTrue(read_back_before_manifest(s3, new_key))
+            self.assertEqual(json.loads(s3.objects[CONTROL]), new)
+            for key in (new_key, PREFIX + 'habitat-export.geojson', ARCHIVE):
+                self.assertEqual(serve(s3, key)[0], 200, key)
+            self.assertIn(PREFIX + live['manifest']['slim_file'], s3.objects)   # the old slim object is kept
+            self.assertEqual(s3.deleted, [])
 
 
 class BuildTests(unittest.TestCase):
@@ -353,7 +403,7 @@ class BuildTests(unittest.TestCase):
                     full = json.loads(gzip.decompress((folder/manifest['export_file']).read_bytes()))
                     if not verdicts:
                         self.assertNotIn('slim_file', manifest)
-                        self.assertFalse((folder/'habitat-slim.geojson.gz').exists())
+                        self.assertEqual(list(folder.glob('habitat-slim*')), [])
                         continue
                     path = folder/manifest['slim_file']
                     self.assertEqual(manifest['slim_sha256'], sha256(path))

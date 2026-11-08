@@ -51,8 +51,8 @@ async function publication({feats = features(), fingerprint = plannerScreen().fi
   const slimRaw = Buffer.from(JSON.stringify(slimDoc)), slimGz = gzipSync(slimRaw, {mtime: 0});
   const manifest = {region: 'morro-bay', status: 'ready', archive_sha256: 'a'.repeat(64), expires_at: expires, built_at: new Date().toISOString(),
     export_file: 'habitat-export.geojson.gz', export_sha256: fullSha, export_bytes: full.length, export_decoded_bytes: JSON.stringify(doc).length,
-    slim_file: 'habitat-slim.geojson.gz', slim_sha256: await sha(slimGz), slim_bytes: slimGz.length, slim_decoded_bytes: slimRaw.length};
-  const files = {'habitat-export.geojson.gz': full, 'habitat-slim.geojson.gz': slimGz};
+    slim_file: `habitat-slim-${(await sha(slimGz)).slice(0, 16)}.geojson.gz`, slim_sha256: await sha(slimGz), slim_bytes: slimGz.length, slim_decoded_bytes: slimRaw.length};
+  const files = {'habitat-export.geojson.gz': full, [manifest.slim_file]: slimGz};
   change({manifest, files, slimDoc});
   const asked = [];
   const fetchImpl = async url => { const name = String(url).split('/').at(-1); asked.push(name); return String(url).includes('manifest-') ? new Response(JSON.stringify(manifest)) : new Response(files[name]); };
@@ -105,9 +105,11 @@ test('every listed property is needed: without it the slim load fails or differs
 test('any unusable slim file falls back to the full export (outlines, run-time check)', async () => {
   const breaks = {
     'no slim file in the manifest': ({manifest}) => { for (const k of ['slim_file', 'slim_sha256', 'slim_bytes', 'slim_decoded_bytes']) delete manifest[k]; },
-    'slim bytes changed': ({files}) => { files['habitat-slim.geojson.gz'] = Buffer.from(files['habitat-slim.geojson.gz']); files['habitat-slim.geojson.gz'][20] ^= 1; },
+    'slim bytes changed': ({manifest, files}) => { const n = manifest.slim_file; files[n] = Buffer.from(files[n]); files[n][20] ^= 1; },
     'slim hash is not the file\'s': ({manifest}) => { manifest.slim_sha256 = 'f'.repeat(64); },
     'slim file name is not the published one': ({manifest}) => { manifest.slim_file = 'other.geojson.gz'; },
+    'slim file name is not its own hash': ({manifest, files}) => { files['habitat-slim-0000000000000000.geojson.gz'] = files[manifest.slim_file]; manifest.slim_file = 'habitat-slim-0000000000000000.geojson.gz'; },
+    'the old fixed slim name': ({manifest, files}) => { files['habitat-slim.geojson.gz'] = files[manifest.slim_file]; manifest.slim_file = 'habitat-slim.geojson.gz'; },
   };
   for (const [name, change] of Object.entries(breaks)) {
     const p = await publication({change}), got = await loadReefTripBrief('morro-bay', p.opts);
@@ -118,9 +120,9 @@ test('any unusable slim file falls back to the full export (outlines, run-time c
   assert.equal(a.slim, undefined, 'one reef without a verdict'); assert.equal(a.areas.length, CASES.reefs.length);
   // A slim file made for another export (its `slim_of` is not this export's hash), served under a manifest that names its bytes.
   const other = await publication({feats: features().slice(1)}), here = await publication();
-  const swapped = {...here.manifest, slim_sha256: other.manifest.slim_sha256, slim_bytes: other.manifest.slim_bytes, slim_decoded_bytes: other.manifest.slim_decoded_bytes};
+  const swapped = {...here.manifest, slim_file: other.manifest.slim_file, slim_sha256: other.manifest.slim_sha256, slim_bytes: other.manifest.slim_bytes, slim_decoded_bytes: other.manifest.slim_decoded_bytes};
   const b = await loadReefTripBrief('morro-bay', {fetchImpl: async url => String(url).includes('manifest-') ? new Response(JSON.stringify(swapped))
-    : new Response(String(url).endsWith('slim.geojson.gz') ? other.files['habitat-slim.geojson.gz'] : here.files['habitat-export.geojson.gz'])});
+    : new Response(String(url).endsWith(other.manifest.slim_file) ? other.files[other.manifest.slim_file] : here.files['habitat-export.geojson.gz'])});
   assert.equal(b.slim, undefined, 'a slim file made for another export'); assert.equal(b.areas.length, CASES.reefs.length);
 });
 
@@ -176,9 +178,9 @@ test('a screen holding other boundary data: the slim file is not used; the full 
 });
 
 test('the feed serves the slim file under the manifest\'s gate, with the export\'s headers', async () => {
-  const p = await publication(), base = '/feeds/tiles/seafloor/regions/morro-bay/', path = base + 'habitat-slim.geojson.gz';
+  const p = await publication(), base = '/feeds/tiles/seafloor/regions/morro-bay/', path = base + p.manifest.slim_file;
   const make = (manifest, digest) => ({async get(key) { return key.endsWith('manifest-morro-bay.json') ? {json: async () => manifest}
-    : {body: new Blob([p.files['habitat-slim.geojson.gz']]).stream(), size: p.manifest.slim_bytes, httpEtag: '"s"', customMetadata: {sha256: digest}}; }});
+    : {body: new Blob([p.files[p.manifest.slim_file]]).stream(), size: p.manifest.slim_bytes, httpEtag: '"s"', customMetadata: {sha256: digest}}; }});
   try {
     useBucket({FEEDS: make(p.manifest, p.manifest.slim_sha256)});
     const r = await serveFeed(new Request('https://s' + path), path);
@@ -191,9 +193,33 @@ test('the feed serves the slim file under the manifest\'s gate, with the export\
     }
     useBucket({FEEDS: make(p.manifest, 'd'.repeat(64))});   // object written for another revision
     assert.equal((await serveFeed(new Request('https://s' + path), path)).status, 503);
-    const stray = base + 'habitat-slim.geojson';
     useBucket({FEEDS: make(p.manifest, p.manifest.slim_sha256)});
-    assert.equal((await serveFeed(new Request('https://s' + stray), stray)).status, 404);
+    for (const stray of [base + 'habitat-slim.geojson', base + 'habitat-slim.geojson.gz', base + 'habitat-slim-ABC.geojson.gz'])
+      assert.equal((await serveFeed(new Request('https://s' + stray), stray)).status, 404, stray);
+    // Another content-addressed slim object (an earlier or a staged one) is not served: only the file the live manifest names.
+    const staged = base + 'habitat-slim-0123456789abcdef.geojson.gz';
+    assert.equal((await serveFeed(new Request('https://s' + staged), staged)).status, 503);
+  } finally { useBucket({}); }
+});
+
+test('during and after a slim publication the Worker serves a whole release: the staged file only once the manifest names it', async () => {
+  const old = await publication(), next = await publication({feats: features().slice(1).concat(features()[0])});
+  const base = 'tiles/seafloor/regions/morro-bay/', oldSlim = old.manifest.slim_file, newSlim = next.manifest.slim_file;
+  assert.notEqual(oldSlim, newSlim);
+  const switched = {...old.manifest, slim_file: newSlim, slim_sha256: next.manifest.slim_sha256, slim_bytes: next.manifest.slim_bytes, slim_decoded_bytes: next.manifest.slim_decoded_bytes};
+  const objects = {[base + 'habitat-export.geojson.gz']: [old.files['habitat-export.geojson.gz'], old.manifest.export_sha256],
+    [base + oldSlim]: [old.files[oldSlim], old.manifest.slim_sha256], [base + newSlim]: [next.files[newSlim], next.manifest.slim_sha256]};
+  const bucketFor = manifest => ({async get(key) {
+    if (key === 'tiles/seafloor/manifest-morro-bay.json') return {json: async () => manifest};
+    const [bytes, digest] = objects[key] ?? [];
+    return bytes ? {body: new Blob([bytes]).stream(), size: bytes.length, httpEtag: '"e"', customMetadata: {sha256: digest}} : null;
+  }});
+  const status = async name => (await serveFeed(new Request('https://s/feeds/' + base + name), '/feeds/' + base + name)).status;
+  try {
+    useBucket({FEEDS: bucketFor(old.manifest)});   // staged and read back; the live manifest is untouched
+    assert.deepEqual([await status('habitat-export.geojson.gz'), await status(oldSlim), await status(newSlim)], [200, 200, 503]);
+    useBucket({FEEDS: bucketFor(switched)});       // the one manifest write
+    assert.deepEqual([await status('habitat-export.geojson.gz'), await status(newSlim), await status(oldSlim)], [200, 200, 503]);
   } finally { useBucket({}); }
 });
 
@@ -213,6 +239,6 @@ test('default wiring: the angler\'s explicit load (Load on Wi-Fi, Try again) fet
     assert.equal(reefPublication.value.state, 'ready');
     assert.equal(reefPublication.value.loaded.slim, true);
     assert.ok(!pub.asked.includes('habitat-export.geojson.gz'), `full export was fetched: ${pub.asked}`);
-    assert.ok(pub.asked.includes('habitat-slim.geojson.gz'));
+    assert.ok(pub.asked.includes(pub.manifest.slim_file));
   } finally { globalThis.fetch = realFetch; reefPublication.value = {state: 'idle'}; }
 });
