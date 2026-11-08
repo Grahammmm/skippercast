@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import tempfile
 
 from pyproj import Transformer
 from shapely.geometry import mapping, shape
@@ -321,14 +322,22 @@ def _snapshot(s3, bucket, keys):
     return saved
 
 
-def _restore(s3, bucket, saved):
+def _rollback(s3, bucket, saved, control, skip=()):
+    """Put the previous release's objects back, and only then its ready alias, so a mismatched ready state is never served."""
     for key, old in saved.items():
+        if key in skip:
+            continue
         if old is None:
             s3.delete_objects(Bucket=bucket, Delete={'Objects': [{'Key': key}], 'Quiet': True})
             continue
         body, content_type, cache, meta = old
         extra = {name: value for name, value in (('ContentType', content_type), ('CacheControl', cache), ('Metadata', meta)) if value}
         s3.put_object(Bucket=bucket, Key=key, Body=body, **extra)
+    old = saved[control]
+    if old is None:
+        s3.delete_objects(Bucket=bucket, Delete={'Objects': [{'Key': control}], 'Quiet': True})
+    else:
+        s3.put_object(Bucket=bucket, Key=control, Body=old[0], **{n: v for n, v in (('ContentType', old[1]), ('CacheControl', old[2]), ('Metadata', old[3])) if v})
 
 
 def publish_bundle(s3, bucket, folder, *, now=None):
@@ -379,13 +388,22 @@ def publish_bundle(s3, bucket, folder, *, now=None):
             if hashlib.sha256(stream.read()).hexdigest() != manifest['slim_sha256']:
                 raise ValueError('R2 slim reef file read-back failed; previous release left live')
     control = f'tiles/seafloor/manifest-{region}.json'
-    restore = _snapshot(s3, bucket, [control, f'tiles/seafloor/regions/{region}/{INDEX}'] + [
-        f'tiles/seafloor/regions/{region}/{n}' for n in sorted(allowed - {archive.name})]) if slim_name else None
-    try:
-        sync(s3, bucket, folder, f'tiles/seafloor/regions/{region}')
-    except Exception:
-        if restore: _restore(s3, bucket, restore)
-        raise
+    prefix = f'tiles/seafloor/regions/{region}'
+    slim_key = f'{prefix}/{slim_name}' if slim_name else None
+    restore = _snapshot(s3, bucket, [control, f'{prefix}/{INDEX}'] + [f'{prefix}/{n}' for n in sorted(allowed - {archive.name})]) if slim_name else None
+    # sync() never writes the live slim key: it gets only an unchanged copy of the previous slim bytes (or none), so a failure while
+    # writing the new slim file cannot depend on a rewrite of that same key to put the previous release back.
+    with tempfile.TemporaryDirectory() as staged:
+        for path in folder.iterdir():
+            if path.name != slim_name:
+                os.symlink(path.resolve(), Path(staged)/path.name)
+        if slim_name and restore[slim_key] is not None:
+            (Path(staged)/slim_name).write_bytes(restore[slim_key][0])
+        try:
+            sync(s3, bucket, staged, prefix)
+        except Exception:
+            if restore: _rollback(s3, bucket, restore, control, skip={slim_key})
+            raise
     # Stable URL is gated by a separate manifest in the Worker. Write a hold
     # before changing the alias, then promote only after archive read-back.
     s3.put_object(Bucket=bucket, Key=control, Body=json.dumps({'status': 'updating'}).encode(),
@@ -399,16 +417,17 @@ def publish_bundle(s3, bucket, folder, *, now=None):
         if hashlib.sha256(stream.read()).hexdigest() != manifest['export_sha256']:
             raise ValueError('R2 export read-back failed; alias remains held')
     if slim_name:
-        slim_key = f'tiles/seafloor/regions/{region}/{slim_name}'
+        written = False
         try:
             s3.put_object(Bucket=bucket, Key=slim_key, Body=(folder/slim_name).read_bytes(), ContentType='application/gzip',
                           CacheControl='no-store', Metadata={'sha256': manifest['slim_sha256']})
+            written = True
             with s3.get_object(Bucket=bucket, Key=slim_key)['Body'] as stream:
                 if hashlib.sha256(stream.read()).hexdigest() != manifest['slim_sha256']:
                     raise ValueError('R2 slim reef file read-back failed; previous release restored')
         except Exception:
-            # Put the previous ready release back (objects and alias) rather than leaving every seafloor feed held.
-            _restore(s3, bucket, restore)
+            # A failed PUT leaves the previous slim object untouched, so only a completed write has to be put back.
+            _rollback(s3, bucket, restore, control, skip=set() if written else {slim_key})
             raise
     key = f'tiles/seafloor/{archive.name}'
     with archive.open('rb') as stream:

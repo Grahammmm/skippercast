@@ -189,23 +189,37 @@ class SlimPublicationTests(unittest.TestCase):
             if '/staging/' in key: continue  # scratch key, not served
             self.assertEqual(s3.objects[key], value, key)
 
-    def test_failure_writing_the_live_slim_key_after_staging_passed_restores_the_previous_release(self):
-        for stage in ('sync', 'final-put'):
-            with self.subTest(stage=stage), tempfile.TemporaryDirectory() as tmp:
-                s3, live, folder = self.live_release(tmp)
-                real, seen = s3.put_object, []
-                def fail(*, Bucket, Key, Body, **kwargs):
-                    if Key == self.LIVE:
-                        seen.append(Key)
-                        if len(seen) == (1 if stage == 'sync' else 2):
-                            raise OSError('R2 PUT failed')
-                    return real(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
-                s3.put_object = fail
-                with self.assertRaises(OSError):
-                    publish.publish_bundle(s3, 'b', folder, now=NOW)
-                self.assertGreaterEqual(len(seen), 1 if stage == 'sync' else 2)
-                s3.put_object = real
-                self.assert_previous_release_live(s3, live)
+    def test_persistent_failure_writing_the_live_slim_key_after_staging_passed_keeps_the_previous_release(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            s3, live, folder = self.live_release(tmp)
+            real, attempts = s3.put_object, []
+            def fail(*, Bucket, Key, Body, **kwargs):
+                if Key == self.LIVE:
+                    attempts.append(Key)
+                    raise OSError('R2 PUT failed')
+                return real(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
+            s3.put_object = fail
+            with self.assertRaises(OSError):
+                publish.publish_bundle(s3, 'b', folder, now=NOW)
+            self.assertEqual(len(attempts), 1)   # the failing key is never rewritten, not even by a rollback
+            self.assertIn('tiles/seafloor/staging/morro-bay-habitat-slim.geojson.gz', s3.objects)   # staging passed
+            s3.put_object = real
+            self.assert_previous_release_live(s3, live)
+            self.assertEqual(s3.metadata[self.LIVE]['Metadata']['sha256'], json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['slim_sha256'])
+
+    def test_the_alias_goes_back_only_after_the_previous_objects(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            s3, live, folder = self.live_release(tmp)
+            real = s3.put_object
+            def fail(*, Bucket, Key, Body, **kwargs):
+                if Key == self.LIVE: raise OSError('R2 PUT failed')
+                return real(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
+            s3.put_object = fail
+            with self.assertRaises(OSError):
+                publish.publish_bundle(s3, 'b', folder, now=NOW)
+            control = 'tiles/seafloor/manifest-morro-bay.json'
+            self.assertEqual(s3.puts[-1], control)
+            self.assertEqual(json.loads(s3.objects[control])['status'], 'ready')
 
     def test_corrupt_read_back_of_the_live_slim_key_after_staging_passed_restores_the_previous_release(self):
         with tempfile.TemporaryDirectory() as tmp:
