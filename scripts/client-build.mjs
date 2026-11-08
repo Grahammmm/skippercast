@@ -35,9 +35,10 @@ export function hashName(name, buildId) {
   return `${name.slice(0, dot)}.${buildId}${name.slice(dot)}`;
 }
 
-// Local-only build output of scripts/build_bathy_tiles.py (rights under review): never published,
+// Local-only build output of scripts/build_bathy_tiles.py (rights under review) and of
+// scripts/build_tide_layer.py (MAPLAYER-TIDE-1 test-page data): never published,
 // even if someone points --output into dist/.
-const PRIVATE_OUTPUT = /(?:^|\/)morro-bay-seafloor-deep(?:-[a-z]+)?\.(?:pmtiles|part)$/;
+const PRIVATE_OUTPUT = /(?:^|\/)(?:morro-bay-seafloor-deep(?:-[a-z]+)?\.(?:pmtiles|part)|tide-layer-[^/]*\.(?:json|part))$/;
 
 /** Copy dist's static files (everything but module sources, build output and dot-entries). */
 export async function copyStatic(src, out, {only} = {}) {

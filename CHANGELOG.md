@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SCFEAT-BATHY2M-EXPAND-1: private Del Norte bathymetry test page uses the retained NOAA F00562 1 m survey with medium relief, survey dates and nominal MLLW provenance. No public tiles, hard-bottom inference or navigation-qualified depths.
+
 - SC-GPSOFFLINE-1: the trip planner has a "Check my position" button. Only when tapped it reads the device position once with the browser's location feature (no tracking, no background use, no notifications) and says "You are inside / near / outside <area name>" with the distance to the nearest closure and the position accuracy, using the planner's own protected-area check and the boundary files the offline legal pack saved, so it works with no signal. It says plainly when no legal files are saved, when the position is unavailable, denied or low accuracy, and that official CDFW rules govern. The position is never sent or stored. NOT FOR NAVIGATION.
 
 - SCFEAT-LEGALPACK-1: the trip planner now links directly to the offline save dialog. Each saved region has a cache-checked legal checklist with included/missing files, saved and source dates, rule effective windows, official source links and stale/unknown-date warnings (the protected-area boundary file's own source check date is shown and warns when old, unknown or in the future, however recently the file was saved). Presence is not legal clearance; NOT FOR NAVIGATION.
