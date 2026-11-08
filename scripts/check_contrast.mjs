@@ -387,7 +387,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // scrolling legend does not clip them; the popover keeps its existing ui.css paint, and legend text paint and backing are unchanged.
   // SC2207-11 only appends a scoped .app-first-answer* block at the end of app.css (opaque --panel, token text roles); no existing rule or
   // legend paint changed, and the cited line numbers above are unmoved.
-  "appCss": "a991ae3707630d1057b89fd316948f1904261e44e0d82db0e1f3ed036a26cb14",
+  // SC-PERF-JUMP-1 only appends layout rules at the end of app.css (a masthead min-height and no-wrap row on the desktop, a minimum width on the target menu,
+  // a minimum height on the desktop legend); no colour, opacity, backing or text paint changed, and the cited line numbers above are unmoved.
+  "appCss": "183a53c593a805e68420260549ad656ea47b10714aa4b99ab62690a6c55290e3",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
