@@ -103,3 +103,27 @@ test('readings for only one variable never read \"clear\": partial, while a know
   const swellHit = evaluatePortAlert(LIMITS, forecast([hourAt(0, {windKnots: null, swellFt: 9})]), NOW);
   assert.equal(swellHit.state, 'alert');
 });
+
+test('intermittent missing readings inside the window never read "clear"; known exceedances still alert', () => {
+  const hours48 = over => Array.from({length: WINDOW_HOURS}, (_, i) => hourAt(i, over(i)));
+  // 48 calm wind hours, swell missing for the first 47 and calm only in the last hour.
+  const gapSwell = forecast(hours48(i => (i < WINDOW_HOURS - 1 ? {swellFt: null} : {})));
+  const a = evaluatePortAlert(LIMITS, gapSwell, NOW);
+  assert.equal(a.state, 'partial');
+  assert.equal(a.notification, null);
+  assert.equal(a.hoursChecked, WINDOW_HOURS);
+  // The same for wind, and for gaps spread over different hours of the two variables.
+  assert.equal(evaluatePortAlert(LIMITS, forecast(hours48(i => (i === 5 ? {windKnots: null} : {}))), NOW).state, 'partial');
+  assert.equal(evaluatePortAlert(LIMITS, forecast(hours48(i => (i === 3 ? {windKnots: null} : i === 9 ? {swellFt: null} : {}))), NOW).state, 'partial');
+  // An hour with no reading at all in the window is a gap too.
+  assert.equal(evaluatePortAlert(LIMITS, forecast(hours48(i => (i === 7 ? {windKnots: null, swellFt: null} : {}))), NOW).state, 'partial');
+  // Gaps outside the window do not matter.
+  const outside = forecast([hourAt(-2, {swellFt: null}), hourAt(0), hourAt(1), hourAt(WINDOW_HOURS + 1, {windKnots: null})]);
+  assert.equal(evaluatePortAlert(LIMITS, outside, NOW).state, 'clear');
+  // A known exceedance alerts despite gaps elsewhere.
+  const hit = evaluatePortAlert(LIMITS, forecast(hours48(i => (i === 10 ? {windKnots: 20} : i < 40 ? {swellFt: null} : {}))), NOW);
+  assert.equal(hit.state, 'alert');
+  assert.equal(hit.exceedances[0].kind, 'wind');
+  // Complete data stays clear.
+  assert.equal(evaluatePortAlert(LIMITS, forecast(hours48(() => ({}))), NOW).state, 'clear');
+});
