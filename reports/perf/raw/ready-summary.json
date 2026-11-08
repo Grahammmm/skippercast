@@ -1,0 +1,9296 @@
+{
+ "runs": [
+  {
+   "page": "layer-wind",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 419,
+   "settledMs": 6524,
+   "firstFrameMs": -3,
+   "paintedMs": 220,
+   "finalPaint": [
+    0.378,
+    15
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 37,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 220,
+   "maxInputDelayMs": 33,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 220,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.581,
+   "scriptMs": 4161,
+   "windowMs": 7158,
+   "layer": {
+    "requests": 1,
+    "bytes": 3865,
+    "doneMs": 257,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 255,
+    "examples": [
+     "wind-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-wind",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 372,
+   "settledMs": 6267,
+   "firstFrameMs": 40,
+   "paintedMs": 207,
+   "finalPaint": [
+    0.363,
+    15
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 7,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1030,
+   "maxInputDelayMs": 28,
+   "inputProbes": 6,
+   "quietAfterPaintMs": 207,
+   "fcpMs": 40,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.632,
+   "scriptMs": 4518,
+   "windowMs": 7155,
+   "layer": {
+    "requests": 1,
+    "bytes": 3865,
+    "doneMs": 244,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 242,
+    "examples": [
+     "wind-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-wind",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 435,
+   "settledMs": 6272,
+   "firstFrameMs": -2,
+   "paintedMs": 216,
+   "finalPaint": [
+    0.37,
+    15
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 14,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 216,
+   "maxInputDelayMs": 29,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 216,
+   "fcpMs": 32,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.567,
+   "scriptMs": 4056,
+   "windowMs": 7150,
+   "layer": {
+    "requests": 1,
+    "bytes": 3865,
+    "doneMs": 253,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 252,
+    "examples": [
+     "wind-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-sst",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 30,
+   "settledMs": 6525,
+   "firstFrameMs": -2,
+   "paintedMs": 200,
+   "finalPaint": [
+    0.295,
+    12
+   ],
+   "animated": false,
+   "completeMs": 467,
+   "responseMs": 48,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 200,
+   "maxInputDelayMs": 7,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 200,
+   "fcpMs": 28,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.008,
+   "scriptMs": 56,
+   "windowMs": 7032,
+   "layer": {
+    "requests": 1,
+    "bytes": 2276790,
+    "doneMs": 239,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 219,
+    "examples": [
+     "sst-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-sst",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 31,
+   "settledMs": 6521,
+   "firstFrameMs": 43,
+   "paintedMs": 209,
+   "finalPaint": [
+    0.295,
+    12
+   ],
+   "animated": false,
+   "completeMs": 492,
+   "responseMs": 41,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1013,
+   "maxInputDelayMs": 1,
+   "inputProbes": 6,
+   "quietAfterPaintMs": 209,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 64,
+   "windowMs": 7029,
+   "layer": {
+    "requests": 1,
+    "bytes": 2276790,
+    "doneMs": 262,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 245,
+    "examples": [
+     "sst-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-sst",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 28,
+   "settledMs": 6523,
+   "firstFrameMs": 42,
+   "paintedMs": 208,
+   "finalPaint": [
+    0.295,
+    12
+   ],
+   "animated": false,
+   "completeMs": 458,
+   "responseMs": 41,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1013,
+   "maxInputDelayMs": 1,
+   "inputProbes": 6,
+   "quietAfterPaintMs": 208,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.008,
+   "scriptMs": 55,
+   "windowMs": 7029,
+   "layer": {
+    "requests": 1,
+    "bytes": 2276790,
+    "doneMs": 233,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 211,
+    "examples": [
+     "sst-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-wind",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 784,
+   "settledMs": 20717,
+   "firstFrameMs": -3,
+   "paintedMs": 854,
+   "finalPaint": [
+    0.363,
+    16
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 150,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1847,
+   "maxInputDelayMs": 672,
+   "inputProbes": 75,
+   "quietAfterPaintMs": 854,
+   "fcpMs": 844,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.614,
+   "scriptMs": 74339,
+   "windowMs": 121003,
+   "layer": {
+    "requests": 1,
+    "bytes": 3865,
+    "doneMs": 14490,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 14140,
+    "examples": [
+     "wind-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-wind",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 792,
+   "settledMs": 20466,
+   "firstFrameMs": -2,
+   "paintedMs": 872,
+   "finalPaint": [
+    0.364,
+    17
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 143,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1863,
+   "maxInputDelayMs": 688,
+   "inputProbes": 77,
+   "quietAfterPaintMs": 872,
+   "fcpMs": 860,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.616,
+   "scriptMs": 74954,
+   "windowMs": 121703,
+   "layer": {
+    "requests": 1,
+    "bytes": 3865,
+    "doneMs": 14369,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 14177,
+    "examples": [
+     "wind-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-wind",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 766,
+   "settledMs": 20460,
+   "firstFrameMs": 16,
+   "paintedMs": 866,
+   "finalPaint": [
+    0.363,
+    17
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 153,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1858,
+   "maxInputDelayMs": 676,
+   "inputProbes": 76,
+   "quietAfterPaintMs": 866,
+   "fcpMs": 856,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.621,
+   "scriptMs": 75614,
+   "windowMs": 121743,
+   "layer": {
+    "requests": 1,
+    "bytes": 3865,
+    "doneMs": 14276,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 14085,
+    "examples": [
+     "wind-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-sst",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 65,
+   "settledMs": 31998,
+   "firstFrameMs": -3,
+   "paintedMs": 8471,
+   "finalPaint": [
+    0.32,
+    18
+   ],
+   "animated": false,
+   "completeMs": 26003,
+   "responseMs": 130,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8471,
+   "maxInputDelayMs": 685,
+   "inputProbes": 31,
+   "quietAfterPaintMs": 8471,
+   "fcpMs": 852,
+   "tbtMs": 143,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.013,
+   "scriptMs": 415,
+   "windowMs": 32463,
+   "layer": {
+    "requests": 1,
+    "bytes": 2276790,
+    "doneMs": 25546,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 14092,
+    "examples": [
+     "sst-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-sst",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 65,
+   "settledMs": 31995,
+   "firstFrameMs": -3,
+   "paintedMs": 8460,
+   "finalPaint": [
+    0.32,
+    18
+   ],
+   "animated": false,
+   "completeMs": 25943,
+   "responseMs": 132,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8460,
+   "maxInputDelayMs": 690,
+   "inputProbes": 31,
+   "quietAfterPaintMs": 8460,
+   "fcpMs": 860,
+   "tbtMs": 62,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.011,
+   "scriptMs": 361,
+   "windowMs": 32471,
+   "layer": {
+    "requests": 1,
+    "bytes": 2276790,
+    "doneMs": 25531,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 14086,
+    "examples": [
+     "sst-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-sst",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 65,
+   "settledMs": 31989,
+   "firstFrameMs": 12,
+   "paintedMs": 8445,
+   "finalPaint": [
+    0.32,
+    18
+   ],
+   "animated": false,
+   "completeMs": 26011,
+   "responseMs": 127,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8445,
+   "maxInputDelayMs": 687,
+   "inputProbes": 31,
+   "quietAfterPaintMs": 8445,
+   "fcpMs": 868,
+   "tbtMs": 76,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.011,
+   "scriptMs": 364,
+   "windowMs": 32457,
+   "layer": {
+    "requests": 1,
+    "bytes": 2276790,
+    "doneMs": 25532,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 14078,
+    "examples": [
+     "sst-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 31,
+   "settledMs": 6528,
+   "firstFrameMs": 40,
+   "paintedMs": 256,
+   "finalPaint": [
+    0.399,
+    19
+   ],
+   "animated": false,
+   "completeMs": 306,
+   "responseMs": 23,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 256,
+   "maxInputDelayMs": 9,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 370,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 44,
+   "windowMs": 7031,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 32,
+   "settledMs": 6526,
+   "firstFrameMs": 35,
+   "paintedMs": 235,
+   "finalPaint": [
+    0.399,
+    19
+   ],
+   "animated": false,
+   "completeMs": 318,
+   "responseMs": 22,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 235,
+   "maxInputDelayMs": 6,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 364,
+   "fcpMs": 32,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 42,
+   "windowMs": 7028,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 31,
+   "settledMs": 6528,
+   "firstFrameMs": 44,
+   "paintedMs": 211,
+   "finalPaint": [
+    0.399,
+    19
+   ],
+   "animated": false,
+   "completeMs": 244,
+   "responseMs": 32,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 211,
+   "maxInputDelayMs": 5,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 292,
+   "fcpMs": 40,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.005,
+   "scriptMs": 37,
+   "windowMs": 7027,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 31,
+   "settledMs": 6521,
+   "firstFrameMs": 44,
+   "paintedMs": 194,
+   "finalPaint": [
+    0.294,
+    17
+   ],
+   "animated": false,
+   "completeMs": 311,
+   "responseMs": 26,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 194,
+   "maxInputDelayMs": 5,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 370,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 42,
+   "windowMs": 7030,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.378
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 31,
+   "settledMs": 6528,
+   "firstFrameMs": 12,
+   "paintedMs": 179,
+   "finalPaint": [
+    0.294,
+    17
+   ],
+   "animated": false,
+   "completeMs": 296,
+   "responseMs": 44,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1011,
+   "maxInputDelayMs": 1,
+   "inputProbes": 6,
+   "quietAfterPaintMs": 362,
+   "fcpMs": 28,
+   "tbtMs": 25,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 40,
+   "windowMs": 7027,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.378
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 28,
+   "settledMs": 6525,
+   "firstFrameMs": 36,
+   "paintedMs": 203,
+   "finalPaint": [
+    0.294,
+    17
+   ],
+   "animated": false,
+   "completeMs": 303,
+   "responseMs": 48,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 203,
+   "maxInputDelayMs": 4,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 404,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.007,
+   "scriptMs": 50,
+   "windowMs": 7035,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.378
+  },
+  {
+   "page": "layer-current",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 31,
+   "settledMs": 6523,
+   "firstFrameMs": 39,
+   "paintedMs": 222,
+   "finalPaint": [
+    0.328,
+    18
+   ],
+   "animated": false,
+   "completeMs": 472,
+   "responseMs": 54,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 222,
+   "maxInputDelayMs": 6,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 456,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 62,
+   "windowMs": 7031,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.414
+  },
+  {
+   "page": "layer-current",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 30,
+   "settledMs": 6526,
+   "firstFrameMs": 14,
+   "paintedMs": 231,
+   "finalPaint": [
+    0.328,
+    18
+   ],
+   "animated": false,
+   "completeMs": 447,
+   "responseMs": 47,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 231,
+   "maxInputDelayMs": 7,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 443,
+   "fcpMs": 28,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 61,
+   "windowMs": 7030,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.414
+  },
+  {
+   "page": "layer-current",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 28,
+   "settledMs": 6525,
+   "firstFrameMs": 23,
+   "paintedMs": 223,
+   "finalPaint": [
+    0.328,
+    18
+   ],
+   "animated": false,
+   "completeMs": 473,
+   "responseMs": 40,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 223,
+   "maxInputDelayMs": 4,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 466,
+   "fcpMs": 24,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 62,
+   "windowMs": 7028,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.414
+  },
+  {
+   "page": "layer-tide",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 32,
+   "settledMs": 6526,
+   "firstFrameMs": 37,
+   "paintedMs": 237,
+   "finalPaint": [
+    0.347,
+    19
+   ],
+   "animated": false,
+   "completeMs": 287,
+   "responseMs": 37,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 237,
+   "maxInputDelayMs": 3,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 347,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.005,
+   "scriptMs": 38,
+   "windowMs": 7029,
+   "layer": {
+    "requests": 2,
+    "bytes": 68546,
+    "doneMs": 113,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 54,
+    "examples": [
+     "tide-layer-central-coast.json",
+     "tide-layer.js"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.046
+  },
+  {
+   "page": "layer-tide",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 33,
+   "settledMs": 6520,
+   "firstFrameMs": -2,
+   "paintedMs": 246,
+   "finalPaint": [
+    0.347,
+    19
+   ],
+   "animated": false,
+   "completeMs": 312,
+   "responseMs": 24,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 246,
+   "maxInputDelayMs": 6,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 358,
+   "fcpMs": 28,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.005,
+   "scriptMs": 36,
+   "windowMs": 7035,
+   "layer": {
+    "requests": 2,
+    "bytes": 68546,
+    "doneMs": 115,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 59,
+    "examples": [
+     "tide-layer-central-coast.json",
+     "tide-layer.js"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.046
+  },
+  {
+   "page": "layer-tide",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 33,
+   "settledMs": 6520,
+   "firstFrameMs": -2,
+   "paintedMs": 229,
+   "finalPaint": [
+    0.347,
+    19
+   ],
+   "animated": false,
+   "completeMs": 296,
+   "responseMs": 39,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 229,
+   "maxInputDelayMs": 7,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 360,
+   "fcpMs": 28,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 39,
+   "windowMs": 7038,
+   "layer": {
+    "requests": 2,
+    "bytes": 68546,
+    "doneMs": 118,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 61,
+    "examples": [
+     "tide-layer-central-coast.json",
+     "tide-layer.js"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.046
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 30,
+   "settledMs": 6525,
+   "firstFrameMs": 39,
+   "paintedMs": 239,
+   "finalPaint": [
+    0.387,
+    20
+   ],
+   "animated": false,
+   "completeMs": 289,
+   "responseMs": 19,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 239,
+   "maxInputDelayMs": 6,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 354,
+   "fcpMs": 32,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 43,
+   "windowMs": 7032,
+   "layer": {
+    "requests": 35,
+    "bytes": 2179811,
+    "doneMs": 250,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 67,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.007
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 30,
+   "settledMs": 6525,
+   "firstFrameMs": 44,
+   "paintedMs": 228,
+   "finalPaint": [
+    0.387,
+    20
+   ],
+   "animated": false,
+   "completeMs": 294,
+   "responseMs": 41,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 228,
+   "maxInputDelayMs": 5,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 357,
+   "fcpMs": 40,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 42,
+   "windowMs": 7032,
+   "layer": {
+    "requests": 35,
+    "bytes": 2179811,
+    "doneMs": 252,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 64,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.007
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 33,
+   "settledMs": 6527,
+   "firstFrameMs": -2,
+   "paintedMs": 232,
+   "finalPaint": [
+    0.387,
+    20
+   ],
+   "animated": false,
+   "completeMs": 315,
+   "responseMs": 47,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 232,
+   "maxInputDelayMs": 5,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 374,
+   "fcpMs": 32,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 40,
+   "windowMs": 7031,
+   "layer": {
+    "requests": 35,
+    "bytes": 2179811,
+    "doneMs": 252,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 67,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.007
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 29,
+   "settledMs": 6524,
+   "firstFrameMs": 43,
+   "paintedMs": 243,
+   "finalPaint": [
+    0.597,
+    10
+   ],
+   "animated": false,
+   "completeMs": 260,
+   "responseMs": 22,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 243,
+   "maxInputDelayMs": 19,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 336,
+   "fcpMs": 40,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 45,
+   "windowMs": 7050,
+   "layer": {
+    "requests": 20,
+    "bytes": 1053455,
+    "doneMs": 204,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 72,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 31,
+   "settledMs": 6523,
+   "firstFrameMs": 12,
+   "paintedMs": 228,
+   "finalPaint": [
+    0.597,
+    10
+   ],
+   "animated": false,
+   "completeMs": 262,
+   "responseMs": 27,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 228,
+   "maxInputDelayMs": 5,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 321,
+   "fcpMs": 28,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 39,
+   "windowMs": 7034,
+   "layer": {
+    "requests": 20,
+    "bytes": 1053455,
+    "doneMs": 201,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 65,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 29,
+   "settledMs": 6525,
+   "firstFrameMs": 39,
+   "paintedMs": 222,
+   "finalPaint": [
+    0.597,
+    10
+   ],
+   "animated": false,
+   "completeMs": 255,
+   "responseMs": 21,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 222,
+   "maxInputDelayMs": 5,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 315,
+   "fcpMs": 32,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 39,
+   "windowMs": 7031,
+   "layer": {
+    "requests": 20,
+    "bytes": 1053455,
+    "doneMs": 196,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 69,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 58,
+   "settledMs": 22216,
+   "firstFrameMs": -2,
+   "paintedMs": 8958,
+   "finalPaint": [
+    0.172,
+    25
+   ],
+   "animated": false,
+   "completeMs": 14741,
+   "responseMs": 117,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8958,
+   "maxInputDelayMs": 688,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8958,
+   "fcpMs": 864,
+   "tbtMs": 49,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.008,
+   "scriptMs": 182,
+   "windowMs": 22317,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 58,
+   "settledMs": 22220,
+   "firstFrameMs": 21,
+   "paintedMs": 8937,
+   "finalPaint": [
+    0.172,
+    25
+   ],
+   "animated": false,
+   "completeMs": 14704,
+   "responseMs": 113,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8937,
+   "maxInputDelayMs": 683,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8937,
+   "fcpMs": 856,
+   "tbtMs": 40,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.008,
+   "scriptMs": 181,
+   "windowMs": 22297,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 58,
+   "settledMs": 22220,
+   "firstFrameMs": -2,
+   "paintedMs": 8945,
+   "finalPaint": [
+    0.172,
+    25
+   ],
+   "animated": false,
+   "completeMs": 14711,
+   "responseMs": 115,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8945,
+   "maxInputDelayMs": 676,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8945,
+   "fcpMs": 852,
+   "tbtMs": 47,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.008,
+   "scriptMs": 180,
+   "windowMs": 22268,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 59,
+   "settledMs": 22219,
+   "firstFrameMs": 13,
+   "paintedMs": 8929,
+   "finalPaint": [
+    0.245,
+    18
+   ],
+   "animated": false,
+   "completeMs": 14512,
+   "responseMs": 114,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8929,
+   "maxInputDelayMs": 680,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8929,
+   "fcpMs": 848,
+   "tbtMs": 55,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 206,
+   "windowMs": 22324,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.363
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 58,
+   "settledMs": 22226,
+   "firstFrameMs": 16,
+   "paintedMs": 8965,
+   "finalPaint": [
+    0.245,
+    18
+   ],
+   "animated": false,
+   "completeMs": 14482,
+   "responseMs": 114,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8965,
+   "maxInputDelayMs": 687,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8965,
+   "fcpMs": 860,
+   "tbtMs": 54,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 203,
+   "windowMs": 22290,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.363
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 59,
+   "settledMs": 22221,
+   "firstFrameMs": 19,
+   "paintedMs": 8952,
+   "finalPaint": [
+    0.245,
+    18
+   ],
+   "animated": false,
+   "completeMs": 14485,
+   "responseMs": 115,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8952,
+   "maxInputDelayMs": 686,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8952,
+   "fcpMs": 856,
+   "tbtMs": 53,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.01,
+   "scriptMs": 225,
+   "windowMs": 22326,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.363
+  },
+  {
+   "page": "layer-current",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 59,
+   "settledMs": 22212,
+   "firstFrameMs": 15,
+   "paintedMs": 8965,
+   "finalPaint": [
+    0.155,
+    22
+   ],
+   "animated": false,
+   "completeMs": 16281,
+   "responseMs": 114,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8965,
+   "maxInputDelayMs": 681,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8965,
+   "fcpMs": 856,
+   "tbtMs": 49,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.011,
+   "scriptMs": 245,
+   "windowMs": 22408,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.388
+  },
+  {
+   "page": "layer-current",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 59,
+   "settledMs": 22231,
+   "firstFrameMs": -2,
+   "paintedMs": 8981,
+   "finalPaint": [
+    0.155,
+    22
+   ],
+   "animated": false,
+   "completeMs": 16281,
+   "responseMs": 115,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8981,
+   "maxInputDelayMs": 690,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8981,
+   "fcpMs": 856,
+   "tbtMs": 67,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.012,
+   "scriptMs": 259,
+   "windowMs": 22423,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.388
+  },
+  {
+   "page": "layer-current",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 59,
+   "settledMs": 22218,
+   "firstFrameMs": 21,
+   "paintedMs": 8954,
+   "finalPaint": [
+    0.155,
+    22
+   ],
+   "animated": false,
+   "completeMs": 16304,
+   "responseMs": 131,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8954,
+   "maxInputDelayMs": 683,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8954,
+   "fcpMs": 860,
+   "tbtMs": 51,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.012,
+   "scriptMs": 259,
+   "windowMs": 22445,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.388
+  },
+  {
+   "page": "layer-tide",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 60,
+   "settledMs": 22467,
+   "firstFrameMs": 19,
+   "paintedMs": 8352,
+   "finalPaint": [
+    0.127,
+    25
+   ],
+   "animated": false,
+   "completeMs": 15302,
+   "responseMs": 112,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8352,
+   "maxInputDelayMs": 687,
+   "inputProbes": 22,
+   "quietAfterPaintMs": 8352,
+   "fcpMs": 860,
+   "tbtMs": 62,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 204,
+   "windowMs": 23477,
+   "layer": {
+    "requests": 2,
+    "bytes": 68546,
+    "doneMs": 8296,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6483,
+    "examples": [
+     "tide-layer-central-coast.json",
+     "tide-layer.js"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.124
+  },
+  {
+   "page": "layer-tide",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 60,
+   "settledMs": 22469,
+   "firstFrameMs": -2,
+   "paintedMs": 8424,
+   "finalPaint": [
+    0.127,
+    25
+   ],
+   "animated": false,
+   "completeMs": 15291,
+   "responseMs": 115,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8424,
+   "maxInputDelayMs": 680,
+   "inputProbes": 22,
+   "quietAfterPaintMs": 8424,
+   "fcpMs": 848,
+   "tbtMs": 52,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.008,
+   "scriptMs": 197,
+   "windowMs": 23465,
+   "layer": {
+    "requests": 2,
+    "bytes": 68546,
+    "doneMs": 8360,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6484,
+    "examples": [
+     "tide-layer-central-coast.json",
+     "tide-layer.js"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.124
+  },
+  {
+   "page": "layer-tide",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 59,
+   "settledMs": 22465,
+   "firstFrameMs": -3,
+   "paintedMs": 8376,
+   "finalPaint": [
+    0.127,
+    25
+   ],
+   "animated": false,
+   "completeMs": 15309,
+   "responseMs": 114,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8376,
+   "maxInputDelayMs": 680,
+   "inputProbes": 22,
+   "quietAfterPaintMs": 8376,
+   "fcpMs": 848,
+   "tbtMs": 52,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 207,
+   "windowMs": 23486,
+   "layer": {
+    "requests": 2,
+    "bytes": 68546,
+    "doneMs": 8308,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6489,
+    "examples": [
+     "tide-layer-central-coast.json",
+     "tide-layer.js"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.124
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 58,
+   "settledMs": 22216,
+   "firstFrameMs": -3,
+   "paintedMs": 9002,
+   "finalPaint": [
+    0.172,
+    25
+   ],
+   "animated": false,
+   "completeMs": 14818,
+   "responseMs": 117,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 9002,
+   "maxInputDelayMs": 681,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 9002,
+   "fcpMs": 848,
+   "tbtMs": 60,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.01,
+   "scriptMs": 220,
+   "windowMs": 22377,
+   "layer": {
+    "requests": 18,
+    "bytes": 1229655,
+    "doneMs": 15384,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6503,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.0
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 58,
+   "settledMs": 22218,
+   "firstFrameMs": -3,
+   "paintedMs": 8980,
+   "finalPaint": [
+    0.172,
+    25
+   ],
+   "animated": false,
+   "completeMs": 14796,
+   "responseMs": 114,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8980,
+   "maxInputDelayMs": 679,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8980,
+   "fcpMs": 848,
+   "tbtMs": 55,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 204,
+   "windowMs": 22338,
+   "layer": {
+    "requests": 18,
+    "bytes": 1229655,
+    "doneMs": 15377,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6495,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.0
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 57,
+   "settledMs": 22213,
+   "firstFrameMs": -2,
+   "paintedMs": 8990,
+   "finalPaint": [
+    0.172,
+    25
+   ],
+   "animated": false,
+   "completeMs": 14790,
+   "responseMs": 115,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8990,
+   "maxInputDelayMs": 688,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8990,
+   "fcpMs": 864,
+   "tbtMs": 52,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 200,
+   "windowMs": 22314,
+   "layer": {
+    "requests": 18,
+    "bytes": 1229655,
+    "doneMs": 15378,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6500,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.0
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 48,
+   "settledMs": 18710,
+   "firstFrameMs": -2,
+   "paintedMs": 8227,
+   "finalPaint": [
+    0.386,
+    12
+   ],
+   "animated": false,
+   "completeMs": 11527,
+   "responseMs": 114,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8227,
+   "maxInputDelayMs": 679,
+   "inputProbes": 18,
+   "quietAfterPaintMs": 8227,
+   "fcpMs": 848,
+   "tbtMs": 51,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 175,
+   "windowMs": 19319,
+   "layer": {
+    "requests": 11,
+    "bytes": 613075,
+    "doneMs": 11923,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6507,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 48,
+   "settledMs": 18707,
+   "firstFrameMs": -2,
+   "paintedMs": 8225,
+   "finalPaint": [
+    0.386,
+    12
+   ],
+   "animated": false,
+   "completeMs": 11525,
+   "responseMs": 116,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8225,
+   "maxInputDelayMs": 680,
+   "inputProbes": 18,
+   "quietAfterPaintMs": 8225,
+   "fcpMs": 848,
+   "tbtMs": 51,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 182,
+   "windowMs": 19316,
+   "layer": {
+    "requests": 11,
+    "bytes": 613075,
+    "doneMs": 11916,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6499,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 48,
+   "settledMs": 18716,
+   "firstFrameMs": -2,
+   "paintedMs": 8211,
+   "finalPaint": [
+    0.386,
+    12
+   ],
+   "animated": false,
+   "completeMs": 11544,
+   "responseMs": 117,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8211,
+   "maxInputDelayMs": 685,
+   "inputProbes": 18,
+   "quietAfterPaintMs": 8211,
+   "fcpMs": 868,
+   "tbtMs": 53,
+   "tbtWindowOpen": false,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.01,
+   "scriptMs": 192,
+   "windowMs": 19335,
+   "layer": {
+    "requests": 11,
+    "bytes": 613075,
+    "doneMs": 11916,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6501,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 225,
+   "settledMs": 21353,
+   "firstFrameMs": -4,
+   "paintedMs": 524,
+   "finalPaint": [
+    0.259,
+    13
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 270,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 16543,
+   "maxInputDelayMs": 3286,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 15688,
+   "fcpMs": 435,
+   "tbtMs": 13370,
+   "tbtWindowOpen": false,
+   "briefShownMs": 504,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.599,
+   "scriptMs": 12952,
+   "windowMs": 21616,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 231,
+   "settledMs": 20912,
+   "firstFrameMs": 19,
+   "paintedMs": 236,
+   "finalPaint": [
+    0.259,
+    13
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 156,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 16073,
+   "maxInputDelayMs": 2882,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 15206,
+   "fcpMs": 196,
+   "tbtMs": 13170,
+   "tbtWindowOpen": false,
+   "briefShownMs": 316,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.605,
+   "scriptMs": 12791,
+   "windowMs": 21141,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 239,
+   "settledMs": 20637,
+   "firstFrameMs": 9,
+   "paintedMs": 276,
+   "finalPaint": [
+    0.259,
+    13
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 274,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15576,
+   "maxInputDelayMs": 2769,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 14691,
+   "fcpMs": 156,
+   "tbtMs": 12728,
+   "tbtWindowOpen": false,
+   "briefShownMs": 228,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.606,
+   "scriptMs": 12518,
+   "windowMs": 20650,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 240,
+   "settledMs": 21240,
+   "firstFrameMs": -2,
+   "paintedMs": 290,
+   "finalPaint": [
+    0.286,
+    14
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 90,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 16424,
+   "maxInputDelayMs": 2943,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 15555,
+   "fcpMs": 442,
+   "tbtMs": 13450,
+   "tbtWindowOpen": false,
+   "briefShownMs": 492,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.607,
+   "scriptMs": 13049,
+   "windowMs": 21495,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 237,
+   "settledMs": 20888,
+   "firstFrameMs": -3,
+   "paintedMs": 237,
+   "finalPaint": [
+    0.287,
+    14
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 107,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 16087,
+   "maxInputDelayMs": 3021,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 15210,
+   "fcpMs": 333,
+   "tbtMs": 13107,
+   "tbtWindowOpen": false,
+   "briefShownMs": 382,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.607,
+   "scriptMs": 12846,
+   "windowMs": 21159,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 244,
+   "settledMs": 21643,
+   "firstFrameMs": 16,
+   "paintedMs": 283,
+   "finalPaint": [
+    0.274,
+    11
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 106,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 17166,
+   "maxInputDelayMs": 3371,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 16224,
+   "fcpMs": 374,
+   "tbtMs": 14044,
+   "tbtWindowOpen": false,
+   "briefShownMs": 419,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.614,
+   "scriptMs": 13648,
+   "windowMs": 22241,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "live-layer-none",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 49,
+   "settledMs": 22091,
+   "firstFrameMs": 20,
+   "paintedMs": 554,
+   "finalPaint": [
+    0.262,
+    9
+   ],
+   "animated": false,
+   "completeMs": 1720,
+   "responseMs": 44,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 17343,
+   "maxInputDelayMs": 3508,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 16339,
+   "fcpMs": 364,
+   "tbtMs": 14267,
+   "tbtWindowOpen": false,
+   "briefShownMs": 584,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.635,
+   "scriptMs": 14194,
+   "windowMs": 22355,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "live-layer-none",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 53,
+   "settledMs": 21169,
+   "firstFrameMs": 11,
+   "paintedMs": 361,
+   "finalPaint": [
+    0.262,
+    9
+   ],
+   "animated": false,
+   "completeMs": 1311,
+   "responseMs": 39,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 16491,
+   "maxInputDelayMs": 3300,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 15487,
+   "fcpMs": 288,
+   "tbtMs": 13570,
+   "tbtWindowOpen": false,
+   "briefShownMs": 347,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.633,
+   "scriptMs": 13602,
+   "windowMs": 21505,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "live-layer-none",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 51,
+   "settledMs": 21162,
+   "firstFrameMs": 22,
+   "paintedMs": 388,
+   "finalPaint": [
+    0.262,
+    9
+   ],
+   "animated": false,
+   "completeMs": 1055,
+   "responseMs": 47,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 16339,
+   "maxInputDelayMs": 2969,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 15334,
+   "fcpMs": 200,
+   "tbtMs": 13600,
+   "tbtWindowOpen": false,
+   "briefShownMs": 427,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.637,
+   "scriptMs": 13594,
+   "windowMs": 21351,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "live-layer-swell",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 49,
+   "settledMs": 21121,
+   "firstFrameMs": -2,
+   "paintedMs": 222,
+   "finalPaint": [
+    0.26,
+    10
+   ],
+   "animated": false,
+   "completeMs": 1255,
+   "responseMs": 42,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 16275,
+   "maxInputDelayMs": 3254,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 15271,
+   "fcpMs": 140,
+   "tbtMs": 13588,
+   "tbtWindowOpen": false,
+   "briefShownMs": 201,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.634,
+   "scriptMs": 13498,
+   "windowMs": 21289,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.058
+  },
+  {
+   "page": "live-layer-swell",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 49,
+   "settledMs": 20870,
+   "firstFrameMs": 22,
+   "paintedMs": 238,
+   "finalPaint": [
+    0.26,
+    10
+   ],
+   "animated": false,
+   "completeMs": 755,
+   "responseMs": 40,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15865,
+   "maxInputDelayMs": 3231,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 14860,
+   "fcpMs": 132,
+   "tbtMs": 13278,
+   "tbtWindowOpen": false,
+   "briefShownMs": 212,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.633,
+   "scriptMs": 13223,
+   "windowMs": 20878,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.058
+  },
+  {
+   "page": "live-layer-swell",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 49,
+   "settledMs": 20755,
+   "firstFrameMs": 18,
+   "paintedMs": 385,
+   "finalPaint": [
+    0.26,
+    10
+   ],
+   "animated": false,
+   "completeMs": 1151,
+   "responseMs": 43,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 16008,
+   "maxInputDelayMs": 3174,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 15003,
+   "fcpMs": 272,
+   "tbtMs": 13129,
+   "tbtWindowOpen": false,
+   "briefShownMs": 360,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.621,
+   "scriptMs": 13061,
+   "windowMs": 21019,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.058
+  },
+  {
+   "page": "live-layer-currents",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 289,
+   "settledMs": 19880,
+   "firstFrameMs": 23,
+   "paintedMs": 256,
+   "finalPaint": [
+    0.274,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 43,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 14725,
+   "maxInputDelayMs": 2672,
+   "inputProbes": 11,
+   "quietAfterPaintMs": 13706,
+   "fcpMs": 168,
+   "tbtMs": 12036,
+   "tbtWindowOpen": false,
+   "briefShownMs": 278,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.583,
+   "scriptMs": 12126,
+   "windowMs": 20810,
+   "layer": {
+    "requests": 1,
+    "bytes": 244956,
+    "doneMs": 787,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 433,
+    "examples": [
+     "ocean"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.018
+  },
+  {
+   "page": "live-layer-currents",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 270,
+   "settledMs": 19874,
+   "firstFrameMs": 21,
+   "paintedMs": 255,
+   "finalPaint": [
+    0.274,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 58,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 14806,
+   "maxInputDelayMs": 2707,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 13794,
+   "fcpMs": 159,
+   "tbtMs": 12093,
+   "tbtWindowOpen": false,
+   "briefShownMs": 233,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.614,
+   "scriptMs": 12208,
+   "windowMs": 19877,
+   "layer": {
+    "requests": 1,
+    "bytes": 244961,
+    "doneMs": 903,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 346,
+    "examples": [
+     "ocean"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.018
+  },
+  {
+   "page": "live-layer-currents",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 286,
+   "settledMs": 20010,
+   "firstFrameMs": 24,
+   "paintedMs": 374,
+   "finalPaint": [
+    0.275,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 42,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 14711,
+   "maxInputDelayMs": 2439,
+   "inputProbes": 11,
+   "quietAfterPaintMs": 13694,
+   "fcpMs": 276,
+   "tbtMs": 12005,
+   "tbtWindowOpen": false,
+   "briefShownMs": 355,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.582,
+   "scriptMs": 12103,
+   "windowMs": 20793,
+   "layer": {
+    "requests": 1,
+    "bytes": 244691,
+    "doneMs": 639,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 462,
+    "examples": [
+     "ocean"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.018
+  },
+  {
+   "page": "live-layer-stations",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 49,
+   "settledMs": 20260,
+   "firstFrameMs": 23,
+   "paintedMs": 389,
+   "finalPaint": [
+    0.284,
+    9
+   ],
+   "animated": false,
+   "completeMs": 1189,
+   "responseMs": 32,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 14921,
+   "maxInputDelayMs": 2842,
+   "inputProbes": 11,
+   "quietAfterPaintMs": 13917,
+   "fcpMs": 300,
+   "tbtMs": 11971,
+   "tbtWindowOpen": false,
+   "briefShownMs": 367,
+   "messages": [
+    "Stale or unavailable"
+   ],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.571,
+   "scriptMs": 11949,
+   "windowMs": 20935,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.037
+  },
+  {
+   "page": "live-layer-stations",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 54,
+   "settledMs": 20009,
+   "firstFrameMs": -2,
+   "paintedMs": 352,
+   "finalPaint": [
+    0.284,
+    9
+   ],
+   "animated": false,
+   "completeMs": 1019,
+   "responseMs": 32,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 14684,
+   "maxInputDelayMs": 2679,
+   "inputProbes": 11,
+   "quietAfterPaintMs": 13680,
+   "fcpMs": 296,
+   "tbtMs": 11924,
+   "tbtWindowOpen": false,
+   "briefShownMs": 342,
+   "messages": [
+    "Stale or unavailable"
+   ],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.575,
+   "scriptMs": 11901,
+   "windowMs": 20700,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.037
+  },
+  {
+   "page": "live-layer-stations",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 55,
+   "settledMs": 19643,
+   "firstFrameMs": 23,
+   "paintedMs": 240,
+   "finalPaint": [
+    0.284,
+    9
+   ],
+   "animated": false,
+   "completeMs": 923,
+   "responseMs": 46,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 14319,
+   "maxInputDelayMs": 2512,
+   "inputProbes": 11,
+   "quietAfterPaintMs": 13315,
+   "fcpMs": 184,
+   "tbtMs": 11687,
+   "tbtWindowOpen": false,
+   "briefShownMs": 227,
+   "messages": [
+    "Stale or unavailable"
+   ],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.576,
+   "scriptMs": 11722,
+   "windowMs": 20338,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.037
+  },
+  {
+   "page": "live-layer-water-temp",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 52,
+   "settledMs": 20923,
+   "firstFrameMs": 11,
+   "paintedMs": 277,
+   "finalPaint": [
+    0.309,
+    14
+   ],
+   "animated": false,
+   "completeMs": 944,
+   "responseMs": 42,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 16418,
+   "maxInputDelayMs": 3245,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 15413,
+   "fcpMs": 187,
+   "tbtMs": 13596,
+   "tbtWindowOpen": false,
+   "briefShownMs": 251,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.636,
+   "scriptMs": 13633,
+   "windowMs": 21434,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.222
+  },
+  {
+   "page": "live-layer-water-temp",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 53,
+   "settledMs": 20921,
+   "firstFrameMs": 20,
+   "paintedMs": 286,
+   "finalPaint": [
+    0.309,
+    14
+   ],
+   "animated": false,
+   "completeMs": 1003,
+   "responseMs": 37,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15809,
+   "maxInputDelayMs": 3229,
+   "inputProbes": 11,
+   "quietAfterPaintMs": 14804,
+   "fcpMs": 192,
+   "tbtMs": 12972,
+   "tbtWindowOpen": false,
+   "briefShownMs": 264,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.595,
+   "scriptMs": 12978,
+   "windowMs": 21828,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.222
+  },
+  {
+   "page": "live-layer-water-temp",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 55,
+   "settledMs": 20052,
+   "firstFrameMs": 19,
+   "paintedMs": 435,
+   "finalPaint": [
+    0.309,
+    14
+   ],
+   "animated": false,
+   "completeMs": 1002,
+   "responseMs": 41,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 14958,
+   "maxInputDelayMs": 2712,
+   "inputProbes": 11,
+   "quietAfterPaintMs": 13954,
+   "fcpMs": 360,
+   "tbtMs": 12087,
+   "tbtWindowOpen": false,
+   "briefShownMs": 452,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.577,
+   "scriptMs": 12103,
+   "windowMs": 20973,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.222
+  },
+  {
+   "page": "live-layer-chlorophyll",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 65,
+   "settledMs": 21913,
+   "firstFrameMs": 21,
+   "paintedMs": 538,
+   "finalPaint": [
+    0.343,
+    12
+   ],
+   "animated": false,
+   "completeMs": 1871,
+   "responseMs": 45,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1430,
+   "maxInputDelayMs": 3379,
+   "inputProbes": 12,
+   "quietAfterPaintMs": 1746,
+   "fcpMs": 448,
+   "tbtMs": 108,
+   "tbtWindowOpen": false,
+   "briefShownMs": 513,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.531,
+   "scriptMs": 12018,
+   "windowMs": 22637,
+   "layer": {
+    "requests": 9,
+    "bytes": 23927,
+    "doneMs": 1779,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 517,
+    "examples": [
+     "chlorophyll-observation--242-69-a022c31d15763719.json",
+     "chlorophyll-observation--242-70-61e1ab2f12129fdf.json",
+     "chlorophyll-observation--243-69-bc8d0af1519d077f.json",
+     "chlorophyll-observation--243-70-f975ffa73006f62c.json"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.277
+  },
+  {
+   "page": "live-layer-chlorophyll",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 58,
+   "settledMs": 20596,
+   "firstFrameMs": 23,
+   "paintedMs": 523,
+   "finalPaint": [
+    0.342,
+    12
+   ],
+   "animated": false,
+   "completeMs": 1290,
+   "responseMs": 53,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15199,
+   "maxInputDelayMs": 3031,
+   "inputProbes": 11,
+   "quietAfterPaintMs": 14195,
+   "fcpMs": 416,
+   "tbtMs": 11979,
+   "tbtWindowOpen": false,
+   "briefShownMs": 500,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.566,
+   "scriptMs": 12000,
+   "windowMs": 21214,
+   "layer": {
+    "requests": 9,
+    "bytes": 24095,
+    "doneMs": 1165,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 503,
+    "examples": [
+     "chlorophyll-observation--242-69-a022c31d15763719.json",
+     "chlorophyll-observation--242-70-61e1ab2f12129fdf.json",
+     "chlorophyll-observation--243-69-bc8d0af1519d077f.json",
+     "chlorophyll-observation--243-70-f975ffa73006f62c.json"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.277
+  },
+  {
+   "page": "live-layer-chlorophyll",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 54,
+   "settledMs": 20047,
+   "firstFrameMs": -2,
+   "paintedMs": 583,
+   "finalPaint": [
+    0.343,
+    12
+   ],
+   "animated": false,
+   "completeMs": 1150,
+   "responseMs": 48,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 14875,
+   "maxInputDelayMs": 2715,
+   "inputProbes": 11,
+   "quietAfterPaintMs": 13872,
+   "fcpMs": 320,
+   "tbtMs": 11835,
+   "tbtWindowOpen": false,
+   "briefShownMs": 570,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.57,
+   "scriptMs": 11914,
+   "windowMs": 20895,
+   "layer": {
+    "requests": 9,
+    "bytes": 24132,
+    "doneMs": 814,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 573,
+    "examples": [
+     "chlorophyll-observation--242-69-a022c31d15763719.json",
+     "chlorophyll-observation--242-70-61e1ab2f12129fdf.json",
+     "chlorophyll-observation--243-69-bc8d0af1519d077f.json",
+     "chlorophyll-observation--243-70-f975ffa73006f62c.json"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.277
+  },
+  {
+   "page": "live-layer-seafloor",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 55,
+   "settledMs": 20170,
+   "firstFrameMs": -1,
+   "paintedMs": 281,
+   "finalPaint": [
+    0.255,
+    14
+   ],
+   "animated": false,
+   "completeMs": 14097,
+   "responseMs": 59,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15002,
+   "maxInputDelayMs": 2635,
+   "inputProbes": 11,
+   "quietAfterPaintMs": 14086,
+   "fcpMs": 192,
+   "tbtMs": 12081,
+   "tbtWindowOpen": false,
+   "briefShownMs": 255,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.561,
+   "scriptMs": 11781,
+   "windowMs": 21017,
+   "layer": {
+    "requests": 10,
+    "bytes": 1200308,
+    "doneMs": 3274,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 775,
+    "examples": [
+     "ledger.json",
+     "seafloor-morro-bay.pmtiles"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.074
+  },
+  {
+   "page": "live-layer-seafloor",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 54,
+   "settledMs": 20702,
+   "firstFrameMs": 23,
+   "paintedMs": 373,
+   "finalPaint": [
+    0.255,
+    14
+   ],
+   "animated": false,
+   "completeMs": 14823,
+   "responseMs": 60,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15728,
+   "maxInputDelayMs": 2701,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 14818,
+   "fcpMs": 268,
+   "tbtMs": 12797,
+   "tbtWindowOpen": false,
+   "briefShownMs": 362,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.603,
+   "scriptMs": 12505,
+   "windowMs": 20743,
+   "layer": {
+    "requests": 10,
+    "bytes": 1200245,
+    "doneMs": 6478,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 689,
+    "examples": [
+     "ledger.json",
+     "seafloor-morro-bay.pmtiles"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.074
+  },
+  {
+   "page": "live-layer-seafloor",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 54,
+   "settledMs": 20662,
+   "firstFrameMs": 21,
+   "paintedMs": 305,
+   "finalPaint": [
+    0.255,
+    14
+   ],
+   "animated": false,
+   "completeMs": 21687,
+   "responseMs": 148,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1205,
+   "maxInputDelayMs": 4434,
+   "inputProbes": 8,
+   "quietAfterPaintMs": 21675,
+   "fcpMs": 216,
+   "tbtMs": 126,
+   "tbtWindowOpen": false,
+   "briefShownMs": 294,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.74,
+   "scriptMs": 18088,
+   "windowMs": 24430,
+   "layer": {
+    "requests": 10,
+    "bytes": 1200201,
+    "doneMs": 2852,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 589,
+    "examples": [
+     "ledger.json",
+     "seafloor-morro-bay.pmtiles"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.074
+  },
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 244,
+   "settledMs": 20668,
+   "firstFrameMs": 16,
+   "paintedMs": 566,
+   "finalPaint": [
+    0.259,
+    13
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 87,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15849,
+   "maxInputDelayMs": 2684,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 14950,
+   "fcpMs": 492,
+   "tbtMs": 12652,
+   "tbtWindowOpen": false,
+   "briefShownMs": 565,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.595,
+   "scriptMs": 12439,
+   "windowMs": 20922,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "warm",
+   "run": 1,
+   "frames": 270,
+   "settledMs": 19847,
+   "firstFrameMs": 18,
+   "paintedMs": 168,
+   "finalPaint": [
+    0.259,
+    13
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 90,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 14703,
+   "maxInputDelayMs": 2402,
+   "inputProbes": 11,
+   "quietAfterPaintMs": 13788,
+   "fcpMs": 172,
+   "tbtMs": 12109,
+   "tbtWindowOpen": false,
+   "briefShownMs": 158,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.573,
+   "scriptMs": 11917,
+   "windowMs": 20788,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 237,
+   "settledMs": 20302,
+   "firstFrameMs": -2,
+   "paintedMs": 409,
+   "finalPaint": [
+    0.259,
+    13
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 69,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15409,
+   "maxInputDelayMs": 2584,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 14523,
+   "fcpMs": 332,
+   "tbtMs": 12410,
+   "tbtWindowOpen": false,
+   "briefShownMs": 391,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.596,
+   "scriptMs": 12214,
+   "windowMs": 20484,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "warm",
+   "run": 2,
+   "frames": 240,
+   "settledMs": 20095,
+   "firstFrameMs": 1,
+   "paintedMs": 130,
+   "finalPaint": [
+    0.259,
+    14
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 89,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15330,
+   "maxInputDelayMs": 2593,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 14431,
+   "fcpMs": 76,
+   "tbtMs": 12678,
+   "tbtWindowOpen": false,
+   "briefShownMs": 159,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.613,
+   "scriptMs": 12503,
+   "windowMs": 20405,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 247,
+   "settledMs": 20918,
+   "firstFrameMs": -1,
+   "paintedMs": 447,
+   "finalPaint": [
+    0.258,
+    14
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 90,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 16014,
+   "maxInputDelayMs": 3183,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 15083,
+   "fcpMs": 208,
+   "tbtMs": 12669,
+   "tbtWindowOpen": false,
+   "briefShownMs": 440,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.589,
+   "scriptMs": 12428,
+   "windowMs": 21085,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "warm",
+   "run": 3,
+   "frames": 246,
+   "settledMs": 20611,
+   "firstFrameMs": 6,
+   "paintedMs": 172,
+   "finalPaint": [
+    0.258,
+    13
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 91,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15741,
+   "maxInputDelayMs": 3099,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 14822,
+   "fcpMs": 96,
+   "tbtMs": 12704,
+   "tbtWindowOpen": false,
+   "briefShownMs": 195,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.599,
+   "scriptMs": 12455,
+   "windowMs": 20796,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 268,
+   "settledMs": 20383,
+   "firstFrameMs": 26,
+   "paintedMs": 243,
+   "finalPaint": [
+    0.287,
+    14
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 91,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15311,
+   "maxInputDelayMs": 2844,
+   "inputProbes": 11,
+   "quietAfterPaintMs": 14406,
+   "fcpMs": 331,
+   "tbtMs": 12234,
+   "tbtWindowOpen": false,
+   "briefShownMs": 384,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.562,
+   "scriptMs": 12028,
+   "windowMs": 21397,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "desktop",
+   "pass": "warm",
+   "run": 1,
+   "frames": 247,
+   "settledMs": 21094,
+   "firstFrameMs": 14,
+   "paintedMs": 147,
+   "finalPaint": [
+    0.287,
+    14
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 92,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 16465,
+   "maxInputDelayMs": 3015,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 15606,
+   "fcpMs": 242,
+   "tbtMs": 13570,
+   "tbtWindowOpen": false,
+   "briefShownMs": 319,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.615,
+   "scriptMs": 13252,
+   "windowMs": 21534,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 247,
+   "settledMs": 20628,
+   "firstFrameMs": 19,
+   "paintedMs": 219,
+   "finalPaint": [
+    0.286,
+    14
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 92,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15720,
+   "maxInputDelayMs": 2872,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 14805,
+   "fcpMs": 325,
+   "tbtMs": 12644,
+   "tbtWindowOpen": false,
+   "briefShownMs": 367,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.594,
+   "scriptMs": 12354,
+   "windowMs": 20790,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "desktop",
+   "pass": "warm",
+   "run": 2,
+   "frames": 246,
+   "settledMs": 20177,
+   "firstFrameMs": 14,
+   "paintedMs": 114,
+   "finalPaint": [
+    0.287,
+    14
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 75,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15365,
+   "maxInputDelayMs": 2606,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 14450,
+   "fcpMs": 202,
+   "tbtMs": 12588,
+   "tbtWindowOpen": false,
+   "briefShownMs": 315,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.606,
+   "scriptMs": 12393,
+   "windowMs": 20434,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 246,
+   "settledMs": 20621,
+   "firstFrameMs": -2,
+   "paintedMs": 526,
+   "finalPaint": [
+    0.286,
+    14
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 77,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15676,
+   "maxInputDelayMs": 3049,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 14792,
+   "fcpMs": 610,
+   "tbtMs": 12192,
+   "tbtWindowOpen": false,
+   "briefShownMs": 661,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.577,
+   "scriptMs": 11965,
+   "windowMs": 20746,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "desktop",
+   "pass": "warm",
+   "run": 3,
+   "frames": 275,
+   "settledMs": 20839,
+   "firstFrameMs": 18,
+   "paintedMs": 151,
+   "finalPaint": [
+    0.286,
+    14
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 107,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 15770,
+   "maxInputDelayMs": 3320,
+   "inputProbes": 11,
+   "quietAfterPaintMs": 14857,
+   "fcpMs": 247,
+   "tbtMs": 12407,
+   "tbtWindowOpen": false,
+   "briefShownMs": 330,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.558,
+   "scriptMs": 12189,
+   "windowMs": 21855,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "brief",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 1067,
+   "settledMs": 72881,
+   "firstFrameMs": -9,
+   "paintedMs": 3331,
+   "finalPaint": [
+    0.288,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 25,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3331,
+   "maxInputDelayMs": 1714,
+   "inputProbes": 67,
+   "quietAfterPaintMs": 3798,
+   "fcpMs": 1926,
+   "tbtMs": 183,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3346,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.037,
+   "scriptMs": 2676,
+   "windowMs": 73154,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "brief",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 1061,
+   "settledMs": 72629,
+   "firstFrameMs": -2,
+   "paintedMs": 3232,
+   "finalPaint": [
+    0.288,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 33,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3232,
+   "maxInputDelayMs": 1626,
+   "inputProbes": 67,
+   "quietAfterPaintMs": 4166,
+   "fcpMs": 1836,
+   "tbtMs": 124,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3220,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.032,
+   "scriptMs": 2328,
+   "windowMs": 72915,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "brief",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 1054,
+   "settledMs": 72608,
+   "firstFrameMs": 14,
+   "paintedMs": 3247,
+   "finalPaint": [
+    0.288,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 31,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3247,
+   "maxInputDelayMs": 1966,
+   "inputProbes": 67,
+   "quietAfterPaintMs": 3728,
+   "fcpMs": 1836,
+   "tbtMs": 134,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3230,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.033,
+   "scriptMs": 2442,
+   "windowMs": 73115,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 1072,
+   "settledMs": 72889,
+   "firstFrameMs": -3,
+   "paintedMs": 3649,
+   "finalPaint": [
+    0.309,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 34,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3903,
+   "maxInputDelayMs": 946,
+   "inputProbes": 66,
+   "quietAfterPaintMs": 4166,
+   "fcpMs": 3553,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3675,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.029,
+   "scriptMs": 2153,
+   "windowMs": 73134,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 1077,
+   "settledMs": 73146,
+   "firstFrameMs": -2,
+   "paintedMs": 3093,
+   "finalPaint": [
+    0.311,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 30,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3887,
+   "maxInputDelayMs": 1374,
+   "inputProbes": 66,
+   "quietAfterPaintMs": 4235,
+   "fcpMs": 3834,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3882,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.03,
+   "scriptMs": 2213,
+   "windowMs": 73399,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 1080,
+   "settledMs": 72988,
+   "firstFrameMs": -2,
+   "paintedMs": 3695,
+   "finalPaint": [
+    0.309,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 12,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 4013,
+   "maxInputDelayMs": 1035,
+   "inputProbes": 66,
+   "quietAfterPaintMs": 3695,
+   "fcpMs": 3594,
+   "tbtMs": 13,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3710,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.028,
+   "scriptMs": 2051,
+   "windowMs": 73406,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "live-layer-none",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 57,
+   "settledMs": 72896,
+   "firstFrameMs": 20,
+   "paintedMs": 3253,
+   "finalPaint": [
+    0.419,
+    8
+   ],
+   "animated": false,
+   "completeMs": 15453,
+   "responseMs": 126,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3253,
+   "maxInputDelayMs": 1636,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 3759,
+   "fcpMs": 1908,
+   "tbtMs": 100,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3254,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.016,
+   "scriptMs": 1157,
+   "windowMs": 73510,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "live-layer-none",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 60,
+   "settledMs": 72622,
+   "firstFrameMs": 18,
+   "paintedMs": 3218,
+   "finalPaint": [
+    0.419,
+    8
+   ],
+   "animated": false,
+   "completeMs": 15318,
+   "responseMs": 130,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3218,
+   "maxInputDelayMs": 1638,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 3720,
+   "fcpMs": 1876,
+   "tbtMs": 102,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3213,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.016,
+   "scriptMs": 1160,
+   "windowMs": 73289,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "live-layer-none",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 57,
+   "settledMs": 72594,
+   "firstFrameMs": -2,
+   "paintedMs": 3245,
+   "finalPaint": [
+    0.419,
+    8
+   ],
+   "animated": false,
+   "completeMs": 15412,
+   "responseMs": 128,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3245,
+   "maxInputDelayMs": 1640,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 3721,
+   "fcpMs": 1864,
+   "tbtMs": 111,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3233,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.015,
+   "scriptMs": 1118,
+   "windowMs": 73483,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "live-layer-swell",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 57,
+   "settledMs": 72584,
+   "firstFrameMs": -2,
+   "paintedMs": 3078,
+   "finalPaint": [
+    0.374,
+    8
+   ],
+   "animated": false,
+   "completeMs": 15294,
+   "responseMs": 130,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3078,
+   "maxInputDelayMs": 1453,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 3078,
+   "fcpMs": 1668,
+   "tbtMs": 113,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3074,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.016,
+   "scriptMs": 1203,
+   "windowMs": 73348,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.021
+  },
+  {
+   "page": "live-layer-swell",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 60,
+   "settledMs": 72573,
+   "firstFrameMs": -2,
+   "paintedMs": 3189,
+   "finalPaint": [
+    0.374,
+    8
+   ],
+   "animated": false,
+   "completeMs": 15406,
+   "responseMs": 127,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3189,
+   "maxInputDelayMs": 1622,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 3752,
+   "fcpMs": 1828,
+   "tbtMs": 98,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3182,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.017,
+   "scriptMs": 1216,
+   "windowMs": 73464,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.021
+  },
+  {
+   "page": "live-layer-swell",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 60,
+   "settledMs": 72687,
+   "firstFrameMs": -2,
+   "paintedMs": 3304,
+   "finalPaint": [
+    0.374,
+    8
+   ],
+   "animated": false,
+   "completeMs": 15503,
+   "responseMs": 130,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3304,
+   "maxInputDelayMs": 1639,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 4309,
+   "fcpMs": 1960,
+   "tbtMs": 96,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3300,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.016,
+   "scriptMs": 1195,
+   "windowMs": 73576,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.021
+  },
+  {
+   "page": "live-layer-currents",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 1268,
+   "settledMs": 72569,
+   "firstFrameMs": -2,
+   "paintedMs": 3212,
+   "finalPaint": [
+    0.355,
+    9
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 33,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3212,
+   "maxInputDelayMs": 1623,
+   "inputProbes": 69,
+   "quietAfterPaintMs": 3728,
+   "fcpMs": 1832,
+   "tbtMs": 101,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3199,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.029,
+   "scriptMs": 2118,
+   "windowMs": 72994,
+   "layer": {
+    "requests": 1,
+    "bytes": 245697,
+    "doneMs": 16272,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 9298,
+    "examples": [
+     "ocean"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.019
+  },
+  {
+   "page": "live-layer-currents",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 1268,
+   "settledMs": 72585,
+   "firstFrameMs": -2,
+   "paintedMs": 3045,
+   "finalPaint": [
+    0.355,
+    9
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 36,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3045,
+   "maxInputDelayMs": 1437,
+   "inputProbes": 69,
+   "quietAfterPaintMs": 3045,
+   "fcpMs": 1668,
+   "tbtMs": 98,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3040,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.031,
+   "scriptMs": 2264,
+   "windowMs": 72744,
+   "layer": {
+    "requests": 1,
+    "bytes": 245854,
+    "doneMs": 16028,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 9079,
+    "examples": [
+     "ocean"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.019
+  },
+  {
+   "page": "live-layer-currents",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 1267,
+   "settledMs": 72559,
+   "firstFrameMs": 15,
+   "paintedMs": 3198,
+   "finalPaint": [
+    0.355,
+    9
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 14,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3198,
+   "maxInputDelayMs": 1635,
+   "inputProbes": 69,
+   "quietAfterPaintMs": 3887,
+   "fcpMs": 1856,
+   "tbtMs": 97,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3195,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.028,
+   "scriptMs": 2030,
+   "windowMs": 73020,
+   "layer": {
+    "requests": 1,
+    "bytes": 245770,
+    "doneMs": 16244,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 9245,
+    "examples": [
+     "ocean"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.019
+  },
+  {
+   "page": "live-layer-stations",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 60,
+   "settledMs": 72338,
+   "firstFrameMs": -2,
+   "paintedMs": 3048,
+   "finalPaint": [
+    0.419,
+    8
+   ],
+   "animated": false,
+   "completeMs": 15347,
+   "responseMs": 130,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3048,
+   "maxInputDelayMs": 1410,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 3571,
+   "fcpMs": 1636,
+   "tbtMs": 97,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3044,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.016,
+   "scriptMs": 1158,
+   "windowMs": 72852,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.0
+  },
+  {
+   "page": "live-layer-stations",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 58,
+   "settledMs": 72568,
+   "firstFrameMs": 19,
+   "paintedMs": 3185,
+   "finalPaint": [
+    0.419,
+    8
+   ],
+   "animated": false,
+   "completeMs": 15302,
+   "responseMs": 132,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3185,
+   "maxInputDelayMs": 1630,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 3718,
+   "fcpMs": 1840,
+   "tbtMs": 94,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3184,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.017,
+   "scriptMs": 1220,
+   "windowMs": 73023,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.0
+  },
+  {
+   "page": "live-layer-stations",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 56,
+   "settledMs": 72469,
+   "firstFrameMs": 17,
+   "paintedMs": 3150,
+   "finalPaint": [
+    0.419,
+    8
+   ],
+   "animated": false,
+   "completeMs": 15416,
+   "responseMs": 127,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3150,
+   "maxInputDelayMs": 1444,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 3150,
+   "fcpMs": 1788,
+   "tbtMs": 97,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3150,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.015,
+   "scriptMs": 1132,
+   "windowMs": 73423,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.0
+  },
+  {
+   "page": "live-layer-water-temp",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 57,
+   "settledMs": 72728,
+   "firstFrameMs": 20,
+   "paintedMs": 3337,
+   "finalPaint": [
+    0.24,
+    11
+   ],
+   "animated": false,
+   "completeMs": 15519,
+   "responseMs": 147,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3337,
+   "maxInputDelayMs": 1628,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 3843,
+   "fcpMs": 1976,
+   "tbtMs": 97,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3330,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.016,
+   "scriptMs": 1150,
+   "windowMs": 73591,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.532
+  },
+  {
+   "page": "live-layer-water-temp",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 62,
+   "settledMs": 72791,
+   "firstFrameMs": 17,
+   "paintedMs": 3417,
+   "finalPaint": [
+    0.24,
+    11
+   ],
+   "animated": false,
+   "completeMs": 15566,
+   "responseMs": 145,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3417,
+   "maxInputDelayMs": 1632,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 4377,
+   "fcpMs": 2056,
+   "tbtMs": 98,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3403,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.016,
+   "scriptMs": 1162,
+   "windowMs": 73672,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.532
+  },
+  {
+   "page": "live-layer-water-temp",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 57,
+   "settledMs": 72562,
+   "firstFrameMs": 17,
+   "paintedMs": 3184,
+   "finalPaint": [
+    0.24,
+    11
+   ],
+   "animated": false,
+   "completeMs": 15383,
+   "responseMs": 143,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3184,
+   "maxInputDelayMs": 1631,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 4052,
+   "fcpMs": 1840,
+   "tbtMs": 101,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3185,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.016,
+   "scriptMs": 1170,
+   "windowMs": 73457,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.532
+  },
+  {
+   "page": "live-layer-chlorophyll",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 60,
+   "settledMs": 72685,
+   "firstFrameMs": 20,
+   "paintedMs": 3287,
+   "finalPaint": [
+    0.28,
+    7
+   ],
+   "animated": false,
+   "completeMs": 15653,
+   "responseMs": 131,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3287,
+   "maxInputDelayMs": 1629,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 3287,
+   "fcpMs": 1944,
+   "tbtMs": 94,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3284,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.015,
+   "scriptMs": 1128,
+   "windowMs": 73190,
+   "layer": {
+    "requests": 9,
+    "bytes": 23950,
+    "doneMs": 5095,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 3293,
+    "examples": [
+     "chlorophyll-observation--242-69-a022c31d15763719.json",
+     "chlorophyll-observation--242-70-61e1ab2f12129fdf.json",
+     "chlorophyll-observation--243-69-bc8d0af1519d077f.json",
+     "chlorophyll-observation--243-70-f975ffa73006f62c.json"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.56
+  },
+  {
+   "page": "live-layer-chlorophyll",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 58,
+   "settledMs": 72749,
+   "firstFrameMs": -2,
+   "paintedMs": 3373,
+   "finalPaint": [
+    0.28,
+    7
+   ],
+   "animated": false,
+   "completeMs": 15706,
+   "responseMs": 129,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3373,
+   "maxInputDelayMs": 1631,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 3857,
+   "fcpMs": 2012,
+   "tbtMs": 102,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3362,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.016,
+   "scriptMs": 1146,
+   "windowMs": 73313,
+   "layer": {
+    "requests": 9,
+    "bytes": 24117,
+    "doneMs": 4971,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 3371,
+    "examples": [
+     "chlorophyll-observation--242-69-a022c31d15763719.json",
+     "chlorophyll-observation--242-70-61e1ab2f12129fdf.json",
+     "chlorophyll-observation--243-69-bc8d0af1519d077f.json",
+     "chlorophyll-observation--243-70-f975ffa73006f62c.json"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.56
+  },
+  {
+   "page": "live-layer-chlorophyll",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 59,
+   "settledMs": 72572,
+   "firstFrameMs": -2,
+   "paintedMs": 3185,
+   "finalPaint": [
+    0.28,
+    7
+   ],
+   "animated": false,
+   "completeMs": 15585,
+   "responseMs": 127,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3185,
+   "maxInputDelayMs": 1622,
+   "inputProbes": 70,
+   "quietAfterPaintMs": 3803,
+   "fcpMs": 1824,
+   "tbtMs": 103,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3186,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.015,
+   "scriptMs": 1133,
+   "windowMs": 73092,
+   "layer": {
+    "requests": 9,
+    "bytes": 24158,
+    "doneMs": 4455,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 3194,
+    "examples": [
+     "chlorophyll-observation--242-69-a022c31d15763719.json",
+     "chlorophyll-observation--242-70-61e1ab2f12129fdf.json",
+     "chlorophyll-observation--243-69-bc8d0af1519d077f.json",
+     "chlorophyll-observation--243-70-f975ffa73006f62c.json"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.56
+  },
+  {
+   "page": "live-layer-seafloor",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 65,
+   "settledMs": 72693,
+   "firstFrameMs": 20,
+   "paintedMs": 3303,
+   "finalPaint": [
+    0.343,
+    9
+   ],
+   "animated": false,
+   "completeMs": 27052,
+   "responseMs": 199,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3303,
+   "maxInputDelayMs": 1627,
+   "inputProbes": 69,
+   "quietAfterPaintMs": 4256,
+   "fcpMs": 1944,
+   "tbtMs": 97,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3299,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.017,
+   "scriptMs": 1273,
+   "windowMs": 72991,
+   "layer": {
+    "requests": 13,
+    "bytes": 1423197,
+    "doneMs": 24395,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 9640,
+    "examples": [
+     "ledger.json",
+     "seafloor-morro-bay.pmtiles"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.056
+  },
+  {
+   "page": "live-layer-seafloor",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 65,
+   "settledMs": 72627,
+   "firstFrameMs": -2,
+   "paintedMs": 3260,
+   "finalPaint": [
+    0.343,
+    9
+   ],
+   "animated": false,
+   "completeMs": 27176,
+   "responseMs": 176,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3260,
+   "maxInputDelayMs": 1726,
+   "inputProbes": 68,
+   "quietAfterPaintMs": 4256,
+   "fcpMs": 1868,
+   "tbtMs": 104,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3259,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.017,
+   "scriptMs": 1254,
+   "windowMs": 73083,
+   "layer": {
+    "requests": 13,
+    "bytes": 1423114,
+    "doneMs": 24252,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 9596,
+    "examples": [
+     "ledger.json",
+     "seafloor-morro-bay.pmtiles"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.056
+  },
+  {
+   "page": "live-layer-seafloor",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 70,
+   "settledMs": 72908,
+   "firstFrameMs": 22,
+   "paintedMs": 3289,
+   "finalPaint": [
+    0.343,
+    9
+   ],
+   "animated": false,
+   "completeMs": 26921,
+   "responseMs": 200,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 3289,
+   "maxInputDelayMs": 1643,
+   "inputProbes": 69,
+   "quietAfterPaintMs": 3795,
+   "fcpMs": 1928,
+   "tbtMs": 107,
+   "tbtWindowOpen": false,
+   "briefShownMs": 3286,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.017,
+   "scriptMs": 1279,
+   "windowMs": 73844,
+   "layer": {
+    "requests": 13,
+    "bytes": 1423291,
+    "doneMs": 24275,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 9611,
+    "examples": [
+     "ledger.json",
+     "seafloor-morro-bay.pmtiles"
+    ]
+   },
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.056
+  },
+  {
+   "page": "brief",
+   "profile": "phone-wifi",
+   "pass": "cold",
+   "run": 1,
+   "frames": 144,
+   "settledMs": 12621,
+   "firstFrameMs": -3,
+   "paintedMs": 428,
+   "finalPaint": [
+    0.289,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 36,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 57773,
+   "maxInputDelayMs": 24878,
+   "inputProbes": 8,
+   "quietAfterPaintMs": 56708,
+   "fcpMs": 199,
+   "tbtMs": 53164,
+   "tbtWindowOpen": false,
+   "briefShownMs": 423,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.825,
+   "scriptMs": 49359,
+   "windowMs": 59829,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "brief",
+   "profile": "phone-wifi",
+   "pass": "cold",
+   "run": 2,
+   "frames": 133,
+   "settledMs": 12283,
+   "firstFrameMs": 22,
+   "paintedMs": 838,
+   "finalPaint": [
+    0.287,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 15,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 838,
+   "maxInputDelayMs": 13291,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 57058,
+   "fcpMs": 612,
+   "tbtMs": 105,
+   "tbtWindowOpen": false,
+   "briefShownMs": 822,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.825,
+   "scriptMs": 49262,
+   "windowMs": 59694,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "brief",
+   "profile": "phone-wifi",
+   "pass": "cold",
+   "run": 3,
+   "frames": 136,
+   "settledMs": 12370,
+   "firstFrameMs": -2,
+   "paintedMs": 448,
+   "finalPaint": [
+    0.288,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 31,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 57383,
+   "maxInputDelayMs": 13296,
+   "inputProbes": 10,
+   "quietAfterPaintMs": 56285,
+   "fcpMs": 204,
+   "tbtMs": 52891,
+   "tbtWindowOpen": false,
+   "briefShownMs": 445,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.825,
+   "scriptMs": 49061,
+   "windowMs": 59438,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "phone-wifi",
+   "pass": "cold",
+   "run": 1,
+   "frames": 157,
+   "settledMs": 13690,
+   "firstFrameMs": 12,
+   "paintedMs": 746,
+   "finalPaint": [
+    0.31,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 17,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 58546,
+   "maxInputDelayMs": 24710,
+   "inputProbes": 8,
+   "quietAfterPaintMs": 57510,
+   "fcpMs": 1051,
+   "tbtMs": 52959,
+   "tbtWindowOpen": false,
+   "briefShownMs": 1163,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.81,
+   "scriptMs": 49060,
+   "windowMs": 60603,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "phone-wifi",
+   "pass": "cold",
+   "run": 2,
+   "frames": 138,
+   "settledMs": 12988,
+   "firstFrameMs": -2,
+   "paintedMs": 522,
+   "finalPaint": [
+    0.31,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 14,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 56540,
+   "maxInputDelayMs": 25166,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 55490,
+   "fcpMs": 675,
+   "tbtMs": 51523,
+   "tbtWindowOpen": false,
+   "briefShownMs": 787,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.815,
+   "scriptMs": 47779,
+   "windowMs": 58595,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "phone-wifi",
+   "pass": "cold",
+   "run": 3,
+   "frames": 141,
+   "settledMs": 12396,
+   "firstFrameMs": 21,
+   "paintedMs": 437,
+   "finalPaint": [
+    0.31,
+    10
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 38,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 57766,
+   "maxInputDelayMs": 24403,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 56671,
+   "fcpMs": 591,
+   "tbtMs": 52830,
+   "tbtWindowOpen": false,
+   "briefShownMs": 712,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.819,
+   "scriptMs": 49016,
+   "windowMs": 59821,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  }
+ ],
+ "groups": [
+  {
+   "page": "layer-wind",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    -3,
+    40,
+    -2
+   ],
+   "fcpMs": 36,
+   "fcpMs_all": [
+    36,
+    40,
+    32
+   ],
+   "paintedMs": 216,
+   "paintedMs_all": [
+    220,
+    207,
+    216
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null
+   ],
+   "usableMs": 220,
+   "usableMs_all": [
+    220,
+    1030,
+    216
+   ],
+   "quietAfterPaintMs": 216,
+   "quietAfterPaintMs_all": [
+    220,
+    207,
+    216
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 14,
+   "responseMs_all": [
+    37,
+    7,
+    14
+   ],
+   "maxInputDelayMs": 29,
+   "maxInputDelayMs_all": [
+    33,
+    28,
+    29
+   ],
+   "dutyCycle": 0.581,
+   "dutyCycle_all": [
+    0.581,
+    0.632,
+    0.567
+   ],
+   "scriptMs": 4161,
+   "scriptMs_all": [
+    4161,
+    4518,
+    4056
+   ],
+   "windowMs": 7155,
+   "windowMs_all": [
+    7158,
+    7155,
+    7150
+   ],
+   "settledMs": 6272,
+   "settledMs_all": [
+    6524,
+    6267,
+    6272
+   ],
+   "animated": 3,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 253,
+   "layerDoneMs_all": [
+    257,
+    244,
+    253
+   ],
+   "layerRequests": 1,
+   "layerBytes": 3865,
+   "layerFailed": 0,
+   "layerExamples": [
+    "wind-preview.json"
+   ],
+   "layerReference": null,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-sst",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 42,
+   "firstFrameMs_all": [
+    -2,
+    43,
+    42
+   ],
+   "fcpMs": 36,
+   "fcpMs_all": [
+    28,
+    36,
+    36
+   ],
+   "paintedMs": 208,
+   "paintedMs_all": [
+    200,
+    209,
+    208
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 467,
+   "completeMs_all": [
+    467,
+    492,
+    458
+   ],
+   "usableMs": 1013,
+   "usableMs_all": [
+    200,
+    1013,
+    1013
+   ],
+   "quietAfterPaintMs": 208,
+   "quietAfterPaintMs_all": [
+    200,
+    209,
+    208
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 41,
+   "responseMs_all": [
+    48,
+    41,
+    41
+   ],
+   "maxInputDelayMs": 1,
+   "maxInputDelayMs_all": [
+    7,
+    1,
+    1
+   ],
+   "dutyCycle": 0.008,
+   "dutyCycle_all": [
+    0.008,
+    0.009,
+    0.008
+   ],
+   "scriptMs": 56,
+   "scriptMs_all": [
+    56,
+    64,
+    55
+   ],
+   "windowMs": 7029,
+   "windowMs_all": [
+    7032,
+    7029,
+    7029
+   ],
+   "settledMs": 6523,
+   "settledMs_all": [
+    6525,
+    6521,
+    6523
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 239,
+   "layerDoneMs_all": [
+    239,
+    262,
+    233
+   ],
+   "layerRequests": 1,
+   "layerBytes": 2276790,
+   "layerFailed": 0,
+   "layerExamples": [
+    "sst-preview.json"
+   ],
+   "layerReference": null,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-wind",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    -3,
+    -2,
+    16
+   ],
+   "fcpMs": 856,
+   "fcpMs_all": [
+    844,
+    860,
+    856
+   ],
+   "paintedMs": 866,
+   "paintedMs_all": [
+    854,
+    872,
+    866
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null
+   ],
+   "usableMs": 1858,
+   "usableMs_all": [
+    1847,
+    1863,
+    1858
+   ],
+   "quietAfterPaintMs": 866,
+   "quietAfterPaintMs_all": [
+    854,
+    872,
+    866
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 150,
+   "responseMs_all": [
+    150,
+    143,
+    153
+   ],
+   "maxInputDelayMs": 676,
+   "maxInputDelayMs_all": [
+    672,
+    688,
+    676
+   ],
+   "dutyCycle": 0.616,
+   "dutyCycle_all": [
+    0.614,
+    0.616,
+    0.621
+   ],
+   "scriptMs": 74954,
+   "scriptMs_all": [
+    74339,
+    74954,
+    75614
+   ],
+   "windowMs": 121703,
+   "windowMs_all": [
+    121003,
+    121703,
+    121743
+   ],
+   "settledMs": 20466,
+   "settledMs_all": [
+    20717,
+    20466,
+    20460
+   ],
+   "animated": 3,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 14369,
+   "layerDoneMs_all": [
+    14490,
+    14369,
+    14276
+   ],
+   "layerRequests": 1,
+   "layerBytes": 3865,
+   "layerFailed": 0,
+   "layerExamples": [
+    "wind-preview.json"
+   ],
+   "layerReference": null,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-sst",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -3,
+   "firstFrameMs_all": [
+    -3,
+    -3,
+    12
+   ],
+   "fcpMs": 860,
+   "fcpMs_all": [
+    852,
+    860,
+    868
+   ],
+   "paintedMs": 8460,
+   "paintedMs_all": [
+    8471,
+    8460,
+    8445
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 26003,
+   "completeMs_all": [
+    26003,
+    25943,
+    26011
+   ],
+   "usableMs": 8460,
+   "usableMs_all": [
+    8471,
+    8460,
+    8445
+   ],
+   "quietAfterPaintMs": 8460,
+   "quietAfterPaintMs_all": [
+    8471,
+    8460,
+    8445
+   ],
+   "tbtMs": 76,
+   "tbtMs_all": [
+    143,
+    62,
+    76
+   ],
+   "responseMs": 130,
+   "responseMs_all": [
+    130,
+    132,
+    127
+   ],
+   "maxInputDelayMs": 687,
+   "maxInputDelayMs_all": [
+    685,
+    690,
+    687
+   ],
+   "dutyCycle": 0.011,
+   "dutyCycle_all": [
+    0.013,
+    0.011,
+    0.011
+   ],
+   "scriptMs": 364,
+   "scriptMs_all": [
+    415,
+    361,
+    364
+   ],
+   "windowMs": 32463,
+   "windowMs_all": [
+    32463,
+    32471,
+    32457
+   ],
+   "settledMs": 31995,
+   "settledMs_all": [
+    31998,
+    31995,
+    31989
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 25532,
+   "layerDoneMs_all": [
+    25546,
+    25531,
+    25532
+   ],
+   "layerRequests": 1,
+   "layerBytes": 2276790,
+   "layerFailed": 0,
+   "layerExamples": [
+    "sst-preview.json"
+   ],
+   "layerReference": null,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 40,
+   "firstFrameMs_all": [
+    40,
+    35,
+    44
+   ],
+   "fcpMs": 36,
+   "fcpMs_all": [
+    36,
+    32,
+    40
+   ],
+   "paintedMs": 235,
+   "paintedMs_all": [
+    256,
+    235,
+    211
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 306,
+   "completeMs_all": [
+    306,
+    318,
+    244
+   ],
+   "usableMs": 235,
+   "usableMs_all": [
+    256,
+    235,
+    211
+   ],
+   "quietAfterPaintMs": 364,
+   "quietAfterPaintMs_all": [
+    370,
+    364,
+    292
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 23,
+   "responseMs_all": [
+    23,
+    22,
+    32
+   ],
+   "maxInputDelayMs": 6,
+   "maxInputDelayMs_all": [
+    9,
+    6,
+    5
+   ],
+   "dutyCycle": 0.006,
+   "dutyCycle_all": [
+    0.006,
+    0.006,
+    0.005
+   ],
+   "scriptMs": 42,
+   "scriptMs_all": [
+    44,
+    42,
+    37
+   ],
+   "windowMs": 7028,
+   "windowMs_all": [
+    7031,
+    7028,
+    7027
+   ],
+   "settledMs": 6528,
+   "settledMs_all": [
+    6528,
+    6526,
+    6528
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 36,
+   "firstFrameMs_all": [
+    44,
+    12,
+    36
+   ],
+   "fcpMs": 36,
+   "fcpMs_all": [
+    36,
+    28,
+    36
+   ],
+   "paintedMs": 194,
+   "paintedMs_all": [
+    194,
+    179,
+    203
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 303,
+   "completeMs_all": [
+    311,
+    296,
+    303
+   ],
+   "usableMs": 203,
+   "usableMs_all": [
+    194,
+    1011,
+    203
+   ],
+   "quietAfterPaintMs": 370,
+   "quietAfterPaintMs_all": [
+    370,
+    362,
+    404
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    25,
+    0
+   ],
+   "responseMs": 44,
+   "responseMs_all": [
+    26,
+    44,
+    48
+   ],
+   "maxInputDelayMs": 4,
+   "maxInputDelayMs_all": [
+    5,
+    1,
+    4
+   ],
+   "dutyCycle": 0.006,
+   "dutyCycle_all": [
+    0.006,
+    0.006,
+    0.007
+   ],
+   "scriptMs": 42,
+   "scriptMs_all": [
+    42,
+    40,
+    50
+   ],
+   "windowMs": 7030,
+   "windowMs_all": [
+    7030,
+    7027,
+    7035
+   ],
+   "settledMs": 6525,
+   "settledMs_all": [
+    6521,
+    6528,
+    6525
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.378,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-current",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 23,
+   "firstFrameMs_all": [
+    39,
+    14,
+    23
+   ],
+   "fcpMs": 28,
+   "fcpMs_all": [
+    36,
+    28,
+    24
+   ],
+   "paintedMs": 223,
+   "paintedMs_all": [
+    222,
+    231,
+    223
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 472,
+   "completeMs_all": [
+    472,
+    447,
+    473
+   ],
+   "usableMs": 223,
+   "usableMs_all": [
+    222,
+    231,
+    223
+   ],
+   "quietAfterPaintMs": 456,
+   "quietAfterPaintMs_all": [
+    456,
+    443,
+    466
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 47,
+   "responseMs_all": [
+    54,
+    47,
+    40
+   ],
+   "maxInputDelayMs": 6,
+   "maxInputDelayMs_all": [
+    6,
+    7,
+    4
+   ],
+   "dutyCycle": 0.009,
+   "dutyCycle_all": [
+    0.009,
+    0.009,
+    0.009
+   ],
+   "scriptMs": 62,
+   "scriptMs_all": [
+    62,
+    61,
+    62
+   ],
+   "windowMs": 7030,
+   "windowMs_all": [
+    7031,
+    7030,
+    7028
+   ],
+   "settledMs": 6525,
+   "settledMs_all": [
+    6523,
+    6526,
+    6525
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.414,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-tide",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    37,
+    -2,
+    -2
+   ],
+   "fcpMs": 28,
+   "fcpMs_all": [
+    36,
+    28,
+    28
+   ],
+   "paintedMs": 237,
+   "paintedMs_all": [
+    237,
+    246,
+    229
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 296,
+   "completeMs_all": [
+    287,
+    312,
+    296
+   ],
+   "usableMs": 237,
+   "usableMs_all": [
+    237,
+    246,
+    229
+   ],
+   "quietAfterPaintMs": 358,
+   "quietAfterPaintMs_all": [
+    347,
+    358,
+    360
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 37,
+   "responseMs_all": [
+    37,
+    24,
+    39
+   ],
+   "maxInputDelayMs": 6,
+   "maxInputDelayMs_all": [
+    3,
+    6,
+    7
+   ],
+   "dutyCycle": 0.005,
+   "dutyCycle_all": [
+    0.005,
+    0.005,
+    0.006
+   ],
+   "scriptMs": 38,
+   "scriptMs_all": [
+    38,
+    36,
+    39
+   ],
+   "windowMs": 7035,
+   "windowMs_all": [
+    7029,
+    7035,
+    7038
+   ],
+   "settledMs": 6520,
+   "settledMs_all": [
+    6526,
+    6520,
+    6520
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 115,
+   "layerDoneMs_all": [
+    113,
+    115,
+    118
+   ],
+   "layerRequests": 2,
+   "layerBytes": 68546,
+   "layerFailed": 0,
+   "layerExamples": [
+    "tide-layer-central-coast.json",
+    "tide-layer.js"
+   ],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.046,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 39,
+   "firstFrameMs_all": [
+    39,
+    44,
+    -2
+   ],
+   "fcpMs": 32,
+   "fcpMs_all": [
+    32,
+    40,
+    32
+   ],
+   "paintedMs": 232,
+   "paintedMs_all": [
+    239,
+    228,
+    232
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 294,
+   "completeMs_all": [
+    289,
+    294,
+    315
+   ],
+   "usableMs": 232,
+   "usableMs_all": [
+    239,
+    228,
+    232
+   ],
+   "quietAfterPaintMs": 357,
+   "quietAfterPaintMs_all": [
+    354,
+    357,
+    374
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 41,
+   "responseMs_all": [
+    19,
+    41,
+    47
+   ],
+   "maxInputDelayMs": 5,
+   "maxInputDelayMs_all": [
+    6,
+    5,
+    5
+   ],
+   "dutyCycle": 0.006,
+   "dutyCycle_all": [
+    0.006,
+    0.006,
+    0.006
+   ],
+   "scriptMs": 42,
+   "scriptMs_all": [
+    43,
+    42,
+    40
+   ],
+   "windowMs": 7032,
+   "windowMs_all": [
+    7032,
+    7032,
+    7031
+   ],
+   "settledMs": 6525,
+   "settledMs_all": [
+    6525,
+    6525,
+    6527
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 252,
+   "layerDoneMs_all": [
+    250,
+    252,
+    252
+   ],
+   "layerRequests": 35,
+   "layerBytes": 2179811,
+   "layerFailed": 0,
+   "layerExamples": [
+    "morro-bay-seafloor-deep.pmtiles"
+   ],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.007,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 39,
+   "firstFrameMs_all": [
+    43,
+    12,
+    39
+   ],
+   "fcpMs": 32,
+   "fcpMs_all": [
+    40,
+    28,
+    32
+   ],
+   "paintedMs": 228,
+   "paintedMs_all": [
+    243,
+    228,
+    222
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 260,
+   "completeMs_all": [
+    260,
+    262,
+    255
+   ],
+   "usableMs": 228,
+   "usableMs_all": [
+    243,
+    228,
+    222
+   ],
+   "quietAfterPaintMs": 321,
+   "quietAfterPaintMs_all": [
+    336,
+    321,
+    315
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 22,
+   "responseMs_all": [
+    22,
+    27,
+    21
+   ],
+   "maxInputDelayMs": 5,
+   "maxInputDelayMs_all": [
+    19,
+    5,
+    5
+   ],
+   "dutyCycle": 0.006,
+   "dutyCycle_all": [
+    0.006,
+    0.006,
+    0.006
+   ],
+   "scriptMs": 39,
+   "scriptMs_all": [
+    45,
+    39,
+    39
+   ],
+   "windowMs": 7034,
+   "windowMs_all": [
+    7050,
+    7034,
+    7031
+   ],
+   "settledMs": 6524,
+   "settledMs_all": [
+    6524,
+    6523,
+    6525
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 201,
+   "layerDoneMs_all": [
+    204,
+    201,
+    196
+   ],
+   "layerRequests": 20,
+   "layerBytes": 1053455,
+   "layerFailed": 0,
+   "layerExamples": [
+    "morro-bay-seafloor-deep.pmtiles"
+   ],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    -2,
+    21,
+    -2
+   ],
+   "fcpMs": 856,
+   "fcpMs_all": [
+    864,
+    856,
+    852
+   ],
+   "paintedMs": 8945,
+   "paintedMs_all": [
+    8958,
+    8937,
+    8945
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 14711,
+   "completeMs_all": [
+    14741,
+    14704,
+    14711
+   ],
+   "usableMs": 8945,
+   "usableMs_all": [
+    8958,
+    8937,
+    8945
+   ],
+   "quietAfterPaintMs": 8945,
+   "quietAfterPaintMs_all": [
+    8958,
+    8937,
+    8945
+   ],
+   "tbtMs": 47,
+   "tbtMs_all": [
+    49,
+    40,
+    47
+   ],
+   "responseMs": 115,
+   "responseMs_all": [
+    117,
+    113,
+    115
+   ],
+   "maxInputDelayMs": 683,
+   "maxInputDelayMs_all": [
+    688,
+    683,
+    676
+   ],
+   "dutyCycle": 0.008,
+   "dutyCycle_all": [
+    0.008,
+    0.008,
+    0.008
+   ],
+   "scriptMs": 181,
+   "scriptMs_all": [
+    182,
+    181,
+    180
+   ],
+   "windowMs": 22297,
+   "windowMs_all": [
+    22317,
+    22297,
+    22268
+   ],
+   "settledMs": 22220,
+   "settledMs_all": [
+    22216,
+    22220,
+    22220
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 16,
+   "firstFrameMs_all": [
+    13,
+    16,
+    19
+   ],
+   "fcpMs": 856,
+   "fcpMs_all": [
+    848,
+    860,
+    856
+   ],
+   "paintedMs": 8952,
+   "paintedMs_all": [
+    8929,
+    8965,
+    8952
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 14485,
+   "completeMs_all": [
+    14512,
+    14482,
+    14485
+   ],
+   "usableMs": 8952,
+   "usableMs_all": [
+    8929,
+    8965,
+    8952
+   ],
+   "quietAfterPaintMs": 8952,
+   "quietAfterPaintMs_all": [
+    8929,
+    8965,
+    8952
+   ],
+   "tbtMs": 54,
+   "tbtMs_all": [
+    55,
+    54,
+    53
+   ],
+   "responseMs": 114,
+   "responseMs_all": [
+    114,
+    114,
+    115
+   ],
+   "maxInputDelayMs": 686,
+   "maxInputDelayMs_all": [
+    680,
+    687,
+    686
+   ],
+   "dutyCycle": 0.009,
+   "dutyCycle_all": [
+    0.009,
+    0.009,
+    0.01
+   ],
+   "scriptMs": 206,
+   "scriptMs_all": [
+    206,
+    203,
+    225
+   ],
+   "windowMs": 22324,
+   "windowMs_all": [
+    22324,
+    22290,
+    22326
+   ],
+   "settledMs": 22221,
+   "settledMs_all": [
+    22219,
+    22226,
+    22221
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.363,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-current",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 15,
+   "firstFrameMs_all": [
+    15,
+    -2,
+    21
+   ],
+   "fcpMs": 856,
+   "fcpMs_all": [
+    856,
+    856,
+    860
+   ],
+   "paintedMs": 8965,
+   "paintedMs_all": [
+    8965,
+    8981,
+    8954
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 16281,
+   "completeMs_all": [
+    16281,
+    16281,
+    16304
+   ],
+   "usableMs": 8965,
+   "usableMs_all": [
+    8965,
+    8981,
+    8954
+   ],
+   "quietAfterPaintMs": 8965,
+   "quietAfterPaintMs_all": [
+    8965,
+    8981,
+    8954
+   ],
+   "tbtMs": 51,
+   "tbtMs_all": [
+    49,
+    67,
+    51
+   ],
+   "responseMs": 115,
+   "responseMs_all": [
+    114,
+    115,
+    131
+   ],
+   "maxInputDelayMs": 683,
+   "maxInputDelayMs_all": [
+    681,
+    690,
+    683
+   ],
+   "dutyCycle": 0.012,
+   "dutyCycle_all": [
+    0.011,
+    0.012,
+    0.012
+   ],
+   "scriptMs": 259,
+   "scriptMs_all": [
+    245,
+    259,
+    259
+   ],
+   "windowMs": 22423,
+   "windowMs_all": [
+    22408,
+    22423,
+    22445
+   ],
+   "settledMs": 22218,
+   "settledMs_all": [
+    22212,
+    22231,
+    22218
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.388,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-tide",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    19,
+    -2,
+    -3
+   ],
+   "fcpMs": 848,
+   "fcpMs_all": [
+    860,
+    848,
+    848
+   ],
+   "paintedMs": 8376,
+   "paintedMs_all": [
+    8352,
+    8424,
+    8376
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 15302,
+   "completeMs_all": [
+    15302,
+    15291,
+    15309
+   ],
+   "usableMs": 8376,
+   "usableMs_all": [
+    8352,
+    8424,
+    8376
+   ],
+   "quietAfterPaintMs": 8376,
+   "quietAfterPaintMs_all": [
+    8352,
+    8424,
+    8376
+   ],
+   "tbtMs": 52,
+   "tbtMs_all": [
+    62,
+    52,
+    52
+   ],
+   "responseMs": 114,
+   "responseMs_all": [
+    112,
+    115,
+    114
+   ],
+   "maxInputDelayMs": 680,
+   "maxInputDelayMs_all": [
+    687,
+    680,
+    680
+   ],
+   "dutyCycle": 0.009,
+   "dutyCycle_all": [
+    0.009,
+    0.008,
+    0.009
+   ],
+   "scriptMs": 204,
+   "scriptMs_all": [
+    204,
+    197,
+    207
+   ],
+   "windowMs": 23477,
+   "windowMs_all": [
+    23477,
+    23465,
+    23486
+   ],
+   "settledMs": 22467,
+   "settledMs_all": [
+    22467,
+    22469,
+    22465
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 8308,
+   "layerDoneMs_all": [
+    8296,
+    8360,
+    8308
+   ],
+   "layerRequests": 2,
+   "layerBytes": 68546,
+   "layerFailed": 0,
+   "layerExamples": [
+    "tide-layer-central-coast.json",
+    "tide-layer.js"
+   ],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.124,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -3,
+   "firstFrameMs_all": [
+    -3,
+    -3,
+    -2
+   ],
+   "fcpMs": 848,
+   "fcpMs_all": [
+    848,
+    848,
+    864
+   ],
+   "paintedMs": 8990,
+   "paintedMs_all": [
+    9002,
+    8980,
+    8990
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 14796,
+   "completeMs_all": [
+    14818,
+    14796,
+    14790
+   ],
+   "usableMs": 8990,
+   "usableMs_all": [
+    9002,
+    8980,
+    8990
+   ],
+   "quietAfterPaintMs": 8990,
+   "quietAfterPaintMs_all": [
+    9002,
+    8980,
+    8990
+   ],
+   "tbtMs": 55,
+   "tbtMs_all": [
+    60,
+    55,
+    52
+   ],
+   "responseMs": 115,
+   "responseMs_all": [
+    117,
+    114,
+    115
+   ],
+   "maxInputDelayMs": 681,
+   "maxInputDelayMs_all": [
+    681,
+    679,
+    688
+   ],
+   "dutyCycle": 0.009,
+   "dutyCycle_all": [
+    0.01,
+    0.009,
+    0.009
+   ],
+   "scriptMs": 204,
+   "scriptMs_all": [
+    220,
+    204,
+    200
+   ],
+   "windowMs": 22338,
+   "windowMs_all": [
+    22377,
+    22338,
+    22314
+   ],
+   "settledMs": 22216,
+   "settledMs_all": [
+    22216,
+    22218,
+    22213
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 15378,
+   "layerDoneMs_all": [
+    15384,
+    15377,
+    15378
+   ],
+   "layerRequests": 18,
+   "layerBytes": 1229655,
+   "layerFailed": 0,
+   "layerExamples": [
+    "morro-bay-seafloor-deep.pmtiles"
+   ],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.0,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    -2,
+    -2,
+    -2
+   ],
+   "fcpMs": 848,
+   "fcpMs_all": [
+    848,
+    848,
+    868
+   ],
+   "paintedMs": 8225,
+   "paintedMs_all": [
+    8227,
+    8225,
+    8211
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 11527,
+   "completeMs_all": [
+    11527,
+    11525,
+    11544
+   ],
+   "usableMs": 8225,
+   "usableMs_all": [
+    8227,
+    8225,
+    8211
+   ],
+   "quietAfterPaintMs": 8225,
+   "quietAfterPaintMs_all": [
+    8227,
+    8225,
+    8211
+   ],
+   "tbtMs": 51,
+   "tbtMs_all": [
+    51,
+    51,
+    53
+   ],
+   "responseMs": 116,
+   "responseMs_all": [
+    114,
+    116,
+    117
+   ],
+   "maxInputDelayMs": 680,
+   "maxInputDelayMs_all": [
+    679,
+    680,
+    685
+   ],
+   "dutyCycle": 0.009,
+   "dutyCycle_all": [
+    0.009,
+    0.009,
+    0.01
+   ],
+   "scriptMs": 182,
+   "scriptMs_all": [
+    175,
+    182,
+    192
+   ],
+   "windowMs": 19319,
+   "windowMs_all": [
+    19319,
+    19316,
+    19335
+   ],
+   "settledMs": 18710,
+   "settledMs_all": [
+    18710,
+    18707,
+    18716
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 11916,
+   "layerDoneMs_all": [
+    11923,
+    11916,
+    11916
+   ],
+   "layerRequests": 11,
+   "layerBytes": 613075,
+   "layerFailed": 0,
+   "layerExamples": [
+    "morro-bay-seafloor-deep.pmtiles"
+   ],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 6,
+   "ok": 6,
+   "statuses": {
+    "ok": 6
+   },
+   "firstFrameMs": 4.0,
+   "firstFrameMs_all": [
+    -4,
+    19,
+    9,
+    16,
+    -2,
+    -1
+   ],
+   "fcpMs": 270,
+   "fcpMs_all": [
+    435,
+    196,
+    156,
+    492,
+    332,
+    208
+   ],
+   "paintedMs": 428,
+   "paintedMs_all": [
+    524,
+    236,
+    276,
+    566,
+    409,
+    447
+   ],
+   "briefShownMs": 416,
+   "briefShownMs_all": [
+    504,
+    316,
+    228,
+    565,
+    391,
+    440
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "usableMs": 15932,
+   "usableMs_all": [
+    16543,
+    16073,
+    15576,
+    15849,
+    15409,
+    16014
+   ],
+   "quietAfterPaintMs": 15016,
+   "quietAfterPaintMs_all": [
+    15688,
+    15206,
+    14691,
+    14950,
+    14523,
+    15083
+   ],
+   "tbtMs": 12698,
+   "tbtMs_all": [
+    13370,
+    13170,
+    12728,
+    12652,
+    12410,
+    12669
+   ],
+   "responseMs": 123,
+   "responseMs_all": [
+    270,
+    156,
+    274,
+    87,
+    69,
+    90
+   ],
+   "maxInputDelayMs": 2826,
+   "maxInputDelayMs_all": [
+    3286,
+    2882,
+    2769,
+    2684,
+    2584,
+    3183
+   ],
+   "dutyCycle": 0.597,
+   "dutyCycle_all": [
+    0.599,
+    0.605,
+    0.606,
+    0.595,
+    0.596,
+    0.589
+   ],
+   "scriptMs": 12478,
+   "scriptMs_all": [
+    12952,
+    12791,
+    12518,
+    12439,
+    12214,
+    12428
+   ],
+   "windowMs": 21004,
+   "windowMs_all": [
+    21616,
+    21141,
+    20650,
+    20922,
+    20484,
+    21085
+   ],
+   "settledMs": 20790,
+   "settledMs_all": [
+    21353,
+    20912,
+    20637,
+    20668,
+    20302,
+    20918
+   ],
+   "animated": 6,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 6,
+   "ok": 6,
+   "statuses": {
+    "ok": 6
+   },
+   "firstFrameMs": 7.0,
+   "firstFrameMs_all": [
+    -2,
+    -3,
+    16,
+    26,
+    19,
+    -2
+   ],
+   "fcpMs": 354,
+   "fcpMs_all": [
+    442,
+    333,
+    374,
+    331,
+    325,
+    610
+   ],
+   "paintedMs": 263,
+   "paintedMs_all": [
+    290,
+    237,
+    283,
+    243,
+    219,
+    526
+   ],
+   "briefShownMs": 402,
+   "briefShownMs_all": [
+    492,
+    382,
+    419,
+    384,
+    367,
+    661
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "usableMs": 15904,
+   "usableMs_all": [
+    16424,
+    16087,
+    17166,
+    15311,
+    15720,
+    15676
+   ],
+   "quietAfterPaintMs": 15008,
+   "quietAfterPaintMs_all": [
+    15555,
+    15210,
+    16224,
+    14406,
+    14805,
+    14792
+   ],
+   "tbtMs": 12876,
+   "tbtMs_all": [
+    13450,
+    13107,
+    14044,
+    12234,
+    12644,
+    12192
+   ],
+   "responseMs": 92,
+   "responseMs_all": [
+    90,
+    107,
+    106,
+    91,
+    92,
+    77
+   ],
+   "maxInputDelayMs": 2982,
+   "maxInputDelayMs_all": [
+    2943,
+    3021,
+    3371,
+    2844,
+    2872,
+    3049
+   ],
+   "dutyCycle": 0.601,
+   "dutyCycle_all": [
+    0.607,
+    0.607,
+    0.614,
+    0.562,
+    0.594,
+    0.577
+   ],
+   "scriptMs": 12600,
+   "scriptMs_all": [
+    13049,
+    12846,
+    13648,
+    12028,
+    12354,
+    11965
+   ],
+   "windowMs": 21278,
+   "windowMs_all": [
+    21495,
+    21159,
+    22241,
+    21397,
+    20790,
+    20746
+   ],
+   "settledMs": 20758,
+   "settledMs_all": [
+    21240,
+    20888,
+    21643,
+    20383,
+    20628,
+    20621
+   ],
+   "animated": 6,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-none",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 20,
+   "firstFrameMs_all": [
+    20,
+    11,
+    22
+   ],
+   "fcpMs": 288,
+   "fcpMs_all": [
+    364,
+    288,
+    200
+   ],
+   "paintedMs": 388,
+   "paintedMs_all": [
+    554,
+    361,
+    388
+   ],
+   "briefShownMs": 427,
+   "briefShownMs_all": [
+    584,
+    347,
+    427
+   ],
+   "completeMs": 1311,
+   "completeMs_all": [
+    1720,
+    1311,
+    1055
+   ],
+   "usableMs": 16491,
+   "usableMs_all": [
+    17343,
+    16491,
+    16339
+   ],
+   "quietAfterPaintMs": 15487,
+   "quietAfterPaintMs_all": [
+    16339,
+    15487,
+    15334
+   ],
+   "tbtMs": 13600,
+   "tbtMs_all": [
+    14267,
+    13570,
+    13600
+   ],
+   "responseMs": 44,
+   "responseMs_all": [
+    44,
+    39,
+    47
+   ],
+   "maxInputDelayMs": 3300,
+   "maxInputDelayMs_all": [
+    3508,
+    3300,
+    2969
+   ],
+   "dutyCycle": 0.635,
+   "dutyCycle_all": [
+    0.635,
+    0.633,
+    0.637
+   ],
+   "scriptMs": 13602,
+   "scriptMs_all": [
+    14194,
+    13602,
+    13594
+   ],
+   "windowMs": 21505,
+   "windowMs_all": [
+    22355,
+    21505,
+    21351
+   ],
+   "settledMs": 21169,
+   "settledMs_all": [
+    22091,
+    21169,
+    21162
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-swell",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 18,
+   "firstFrameMs_all": [
+    -2,
+    22,
+    18
+   ],
+   "fcpMs": 140,
+   "fcpMs_all": [
+    140,
+    132,
+    272
+   ],
+   "paintedMs": 238,
+   "paintedMs_all": [
+    222,
+    238,
+    385
+   ],
+   "briefShownMs": 212,
+   "briefShownMs_all": [
+    201,
+    212,
+    360
+   ],
+   "completeMs": 1151,
+   "completeMs_all": [
+    1255,
+    755,
+    1151
+   ],
+   "usableMs": 16008,
+   "usableMs_all": [
+    16275,
+    15865,
+    16008
+   ],
+   "quietAfterPaintMs": 15003,
+   "quietAfterPaintMs_all": [
+    15271,
+    14860,
+    15003
+   ],
+   "tbtMs": 13278,
+   "tbtMs_all": [
+    13588,
+    13278,
+    13129
+   ],
+   "responseMs": 42,
+   "responseMs_all": [
+    42,
+    40,
+    43
+   ],
+   "maxInputDelayMs": 3231,
+   "maxInputDelayMs_all": [
+    3254,
+    3231,
+    3174
+   ],
+   "dutyCycle": 0.633,
+   "dutyCycle_all": [
+    0.634,
+    0.633,
+    0.621
+   ],
+   "scriptMs": 13223,
+   "scriptMs_all": [
+    13498,
+    13223,
+    13061
+   ],
+   "windowMs": 21019,
+   "windowMs_all": [
+    21289,
+    20878,
+    21019
+   ],
+   "settledMs": 20870,
+   "settledMs_all": [
+    21121,
+    20870,
+    20755
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.058,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-currents",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 23,
+   "firstFrameMs_all": [
+    23,
+    21,
+    24
+   ],
+   "fcpMs": 168,
+   "fcpMs_all": [
+    168,
+    159,
+    276
+   ],
+   "paintedMs": 256,
+   "paintedMs_all": [
+    256,
+    255,
+    374
+   ],
+   "briefShownMs": 278,
+   "briefShownMs_all": [
+    278,
+    233,
+    355
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null
+   ],
+   "usableMs": 14725,
+   "usableMs_all": [
+    14725,
+    14806,
+    14711
+   ],
+   "quietAfterPaintMs": 13706,
+   "quietAfterPaintMs_all": [
+    13706,
+    13794,
+    13694
+   ],
+   "tbtMs": 12036,
+   "tbtMs_all": [
+    12036,
+    12093,
+    12005
+   ],
+   "responseMs": 43,
+   "responseMs_all": [
+    43,
+    58,
+    42
+   ],
+   "maxInputDelayMs": 2672,
+   "maxInputDelayMs_all": [
+    2672,
+    2707,
+    2439
+   ],
+   "dutyCycle": 0.583,
+   "dutyCycle_all": [
+    0.583,
+    0.614,
+    0.582
+   ],
+   "scriptMs": 12126,
+   "scriptMs_all": [
+    12126,
+    12208,
+    12103
+   ],
+   "windowMs": 20793,
+   "windowMs_all": [
+    20810,
+    19877,
+    20793
+   ],
+   "settledMs": 19880,
+   "settledMs_all": [
+    19880,
+    19874,
+    20010
+   ],
+   "animated": 3,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 787,
+   "layerDoneMs_all": [
+    787,
+    903,
+    639
+   ],
+   "layerRequests": 1,
+   "layerBytes": 244956,
+   "layerFailed": 0,
+   "layerExamples": [
+    "ocean"
+   ],
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.018,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-stations",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 23,
+   "firstFrameMs_all": [
+    23,
+    -2,
+    23
+   ],
+   "fcpMs": 296,
+   "fcpMs_all": [
+    300,
+    296,
+    184
+   ],
+   "paintedMs": 352,
+   "paintedMs_all": [
+    389,
+    352,
+    240
+   ],
+   "briefShownMs": 342,
+   "briefShownMs_all": [
+    367,
+    342,
+    227
+   ],
+   "completeMs": 1019,
+   "completeMs_all": [
+    1189,
+    1019,
+    923
+   ],
+   "usableMs": 14684,
+   "usableMs_all": [
+    14921,
+    14684,
+    14319
+   ],
+   "quietAfterPaintMs": 13680,
+   "quietAfterPaintMs_all": [
+    13917,
+    13680,
+    13315
+   ],
+   "tbtMs": 11924,
+   "tbtMs_all": [
+    11971,
+    11924,
+    11687
+   ],
+   "responseMs": 32,
+   "responseMs_all": [
+    32,
+    32,
+    46
+   ],
+   "maxInputDelayMs": 2679,
+   "maxInputDelayMs_all": [
+    2842,
+    2679,
+    2512
+   ],
+   "dutyCycle": 0.575,
+   "dutyCycle_all": [
+    0.571,
+    0.575,
+    0.576
+   ],
+   "scriptMs": 11901,
+   "scriptMs_all": [
+    11949,
+    11901,
+    11722
+   ],
+   "windowMs": 20700,
+   "windowMs_all": [
+    20935,
+    20700,
+    20338
+   ],
+   "settledMs": 20009,
+   "settledMs_all": [
+    20260,
+    20009,
+    19643
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.037,
+   "messages": [
+    "Stale or unavailable"
+   ],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-water-temp",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 19,
+   "firstFrameMs_all": [
+    11,
+    20,
+    19
+   ],
+   "fcpMs": 192,
+   "fcpMs_all": [
+    187,
+    192,
+    360
+   ],
+   "paintedMs": 286,
+   "paintedMs_all": [
+    277,
+    286,
+    435
+   ],
+   "briefShownMs": 264,
+   "briefShownMs_all": [
+    251,
+    264,
+    452
+   ],
+   "completeMs": 1002,
+   "completeMs_all": [
+    944,
+    1003,
+    1002
+   ],
+   "usableMs": 15809,
+   "usableMs_all": [
+    16418,
+    15809,
+    14958
+   ],
+   "quietAfterPaintMs": 14804,
+   "quietAfterPaintMs_all": [
+    15413,
+    14804,
+    13954
+   ],
+   "tbtMs": 12972,
+   "tbtMs_all": [
+    13596,
+    12972,
+    12087
+   ],
+   "responseMs": 41,
+   "responseMs_all": [
+    42,
+    37,
+    41
+   ],
+   "maxInputDelayMs": 3229,
+   "maxInputDelayMs_all": [
+    3245,
+    3229,
+    2712
+   ],
+   "dutyCycle": 0.595,
+   "dutyCycle_all": [
+    0.636,
+    0.595,
+    0.577
+   ],
+   "scriptMs": 12978,
+   "scriptMs_all": [
+    13633,
+    12978,
+    12103
+   ],
+   "windowMs": 21434,
+   "windowMs_all": [
+    21434,
+    21828,
+    20973
+   ],
+   "settledMs": 20921,
+   "settledMs_all": [
+    20923,
+    20921,
+    20052
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.222,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-chlorophyll",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 21,
+   "firstFrameMs_all": [
+    21,
+    23,
+    -2
+   ],
+   "fcpMs": 416,
+   "fcpMs_all": [
+    448,
+    416,
+    320
+   ],
+   "paintedMs": 538,
+   "paintedMs_all": [
+    538,
+    523,
+    583
+   ],
+   "briefShownMs": 513,
+   "briefShownMs_all": [
+    513,
+    500,
+    570
+   ],
+   "completeMs": 1290,
+   "completeMs_all": [
+    1871,
+    1290,
+    1150
+   ],
+   "usableMs": 14875,
+   "usableMs_all": [
+    1430,
+    15199,
+    14875
+   ],
+   "quietAfterPaintMs": 13872,
+   "quietAfterPaintMs_all": [
+    1746,
+    14195,
+    13872
+   ],
+   "tbtMs": 11835,
+   "tbtMs_all": [
+    108,
+    11979,
+    11835
+   ],
+   "responseMs": 48,
+   "responseMs_all": [
+    45,
+    53,
+    48
+   ],
+   "maxInputDelayMs": 3031,
+   "maxInputDelayMs_all": [
+    3379,
+    3031,
+    2715
+   ],
+   "dutyCycle": 0.566,
+   "dutyCycle_all": [
+    0.531,
+    0.566,
+    0.57
+   ],
+   "scriptMs": 12000,
+   "scriptMs_all": [
+    12018,
+    12000,
+    11914
+   ],
+   "windowMs": 21214,
+   "windowMs_all": [
+    22637,
+    21214,
+    20895
+   ],
+   "settledMs": 20596,
+   "settledMs_all": [
+    21913,
+    20596,
+    20047
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 1165,
+   "layerDoneMs_all": [
+    1779,
+    1165,
+    814
+   ],
+   "layerRequests": 9,
+   "layerBytes": 24095,
+   "layerFailed": 0,
+   "layerExamples": [
+    "chlorophyll-observation--242-69-a022c31d15763719.json",
+    "chlorophyll-observation--242-70-61e1ab2f12129fdf.json",
+    "chlorophyll-observation--243-69-bc8d0af1519d077f.json",
+    "chlorophyll-observation--243-70-f975ffa73006f62c.json"
+   ],
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.277,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-seafloor",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 21,
+   "firstFrameMs_all": [
+    -1,
+    23,
+    21
+   ],
+   "fcpMs": 216,
+   "fcpMs_all": [
+    192,
+    268,
+    216
+   ],
+   "paintedMs": 305,
+   "paintedMs_all": [
+    281,
+    373,
+    305
+   ],
+   "briefShownMs": 294,
+   "briefShownMs_all": [
+    255,
+    362,
+    294
+   ],
+   "completeMs": 14823,
+   "completeMs_all": [
+    14097,
+    14823,
+    21687
+   ],
+   "usableMs": 15002,
+   "usableMs_all": [
+    15002,
+    15728,
+    1205
+   ],
+   "quietAfterPaintMs": 14818,
+   "quietAfterPaintMs_all": [
+    14086,
+    14818,
+    21675
+   ],
+   "tbtMs": 12081,
+   "tbtMs_all": [
+    12081,
+    12797,
+    126
+   ],
+   "responseMs": 60,
+   "responseMs_all": [
+    59,
+    60,
+    148
+   ],
+   "maxInputDelayMs": 2701,
+   "maxInputDelayMs_all": [
+    2635,
+    2701,
+    4434
+   ],
+   "dutyCycle": 0.603,
+   "dutyCycle_all": [
+    0.561,
+    0.603,
+    0.74
+   ],
+   "scriptMs": 12505,
+   "scriptMs_all": [
+    11781,
+    12505,
+    18088
+   ],
+   "windowMs": 21017,
+   "windowMs_all": [
+    21017,
+    20743,
+    24430
+   ],
+   "settledMs": 20662,
+   "settledMs_all": [
+    20170,
+    20702,
+    20662
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 3274,
+   "layerDoneMs_all": [
+    3274,
+    6478,
+    2852
+   ],
+   "layerRequests": 10,
+   "layerBytes": 1200245,
+   "layerFailed": 0,
+   "layerExamples": [
+    "ledger.json",
+    "seafloor-morro-bay.pmtiles"
+   ],
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.074,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "warm",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 6,
+   "firstFrameMs_all": [
+    18,
+    1,
+    6
+   ],
+   "fcpMs": 96,
+   "fcpMs_all": [
+    172,
+    76,
+    96
+   ],
+   "paintedMs": 168,
+   "paintedMs_all": [
+    168,
+    130,
+    172
+   ],
+   "briefShownMs": 159,
+   "briefShownMs_all": [
+    158,
+    159,
+    195
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null
+   ],
+   "usableMs": 15330,
+   "usableMs_all": [
+    14703,
+    15330,
+    15741
+   ],
+   "quietAfterPaintMs": 14431,
+   "quietAfterPaintMs_all": [
+    13788,
+    14431,
+    14822
+   ],
+   "tbtMs": 12678,
+   "tbtMs_all": [
+    12109,
+    12678,
+    12704
+   ],
+   "responseMs": 90,
+   "responseMs_all": [
+    90,
+    89,
+    91
+   ],
+   "maxInputDelayMs": 2593,
+   "maxInputDelayMs_all": [
+    2402,
+    2593,
+    3099
+   ],
+   "dutyCycle": 0.599,
+   "dutyCycle_all": [
+    0.573,
+    0.613,
+    0.599
+   ],
+   "scriptMs": 12455,
+   "scriptMs_all": [
+    11917,
+    12503,
+    12455
+   ],
+   "windowMs": 20788,
+   "windowMs_all": [
+    20788,
+    20405,
+    20796
+   ],
+   "settledMs": 20095,
+   "settledMs_all": [
+    19847,
+    20095,
+    20611
+   ],
+   "animated": 3,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "desktop",
+   "pass": "warm",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 14,
+   "firstFrameMs_all": [
+    14,
+    14,
+    18
+   ],
+   "fcpMs": 242,
+   "fcpMs_all": [
+    242,
+    202,
+    247
+   ],
+   "paintedMs": 147,
+   "paintedMs_all": [
+    147,
+    114,
+    151
+   ],
+   "briefShownMs": 319,
+   "briefShownMs_all": [
+    319,
+    315,
+    330
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null
+   ],
+   "usableMs": 15770,
+   "usableMs_all": [
+    16465,
+    15365,
+    15770
+   ],
+   "quietAfterPaintMs": 14857,
+   "quietAfterPaintMs_all": [
+    15606,
+    14450,
+    14857
+   ],
+   "tbtMs": 12588,
+   "tbtMs_all": [
+    13570,
+    12588,
+    12407
+   ],
+   "responseMs": 92,
+   "responseMs_all": [
+    92,
+    75,
+    107
+   ],
+   "maxInputDelayMs": 3015,
+   "maxInputDelayMs_all": [
+    3015,
+    2606,
+    3320
+   ],
+   "dutyCycle": 0.606,
+   "dutyCycle_all": [
+    0.615,
+    0.606,
+    0.558
+   ],
+   "scriptMs": 12393,
+   "scriptMs_all": [
+    13252,
+    12393,
+    12189
+   ],
+   "windowMs": 21534,
+   "windowMs_all": [
+    21534,
+    20434,
+    21855
+   ],
+   "settledMs": 20839,
+   "settledMs_all": [
+    21094,
+    20177,
+    20839
+   ],
+   "animated": 3,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "brief",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    -9,
+    -2,
+    14
+   ],
+   "fcpMs": 1836,
+   "fcpMs_all": [
+    1926,
+    1836,
+    1836
+   ],
+   "paintedMs": 3247,
+   "paintedMs_all": [
+    3331,
+    3232,
+    3247
+   ],
+   "briefShownMs": 3230,
+   "briefShownMs_all": [
+    3346,
+    3220,
+    3230
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null
+   ],
+   "usableMs": 3247,
+   "usableMs_all": [
+    3331,
+    3232,
+    3247
+   ],
+   "quietAfterPaintMs": 3798,
+   "quietAfterPaintMs_all": [
+    3798,
+    4166,
+    3728
+   ],
+   "tbtMs": 134,
+   "tbtMs_all": [
+    183,
+    124,
+    134
+   ],
+   "responseMs": 31,
+   "responseMs_all": [
+    25,
+    33,
+    31
+   ],
+   "maxInputDelayMs": 1714,
+   "maxInputDelayMs_all": [
+    1714,
+    1626,
+    1966
+   ],
+   "dutyCycle": 0.033,
+   "dutyCycle_all": [
+    0.037,
+    0.032,
+    0.033
+   ],
+   "scriptMs": 2442,
+   "scriptMs_all": [
+    2676,
+    2328,
+    2442
+   ],
+   "windowMs": 73115,
+   "windowMs_all": [
+    73154,
+    72915,
+    73115
+   ],
+   "settledMs": 72629,
+   "settledMs_all": [
+    72881,
+    72629,
+    72608
+   ],
+   "animated": 3,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    -3,
+    -2,
+    -2
+   ],
+   "fcpMs": 3594,
+   "fcpMs_all": [
+    3553,
+    3834,
+    3594
+   ],
+   "paintedMs": 3649,
+   "paintedMs_all": [
+    3649,
+    3093,
+    3695
+   ],
+   "briefShownMs": 3710,
+   "briefShownMs_all": [
+    3675,
+    3882,
+    3710
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null
+   ],
+   "usableMs": 3903,
+   "usableMs_all": [
+    3903,
+    3887,
+    4013
+   ],
+   "quietAfterPaintMs": 4166,
+   "quietAfterPaintMs_all": [
+    4166,
+    4235,
+    3695
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    13
+   ],
+   "responseMs": 30,
+   "responseMs_all": [
+    34,
+    30,
+    12
+   ],
+   "maxInputDelayMs": 1035,
+   "maxInputDelayMs_all": [
+    946,
+    1374,
+    1035
+   ],
+   "dutyCycle": 0.029,
+   "dutyCycle_all": [
+    0.029,
+    0.03,
+    0.028
+   ],
+   "scriptMs": 2153,
+   "scriptMs_all": [
+    2153,
+    2213,
+    2051
+   ],
+   "windowMs": 73399,
+   "windowMs_all": [
+    73134,
+    73399,
+    73406
+   ],
+   "settledMs": 72988,
+   "settledMs_all": [
+    72889,
+    73146,
+    72988
+   ],
+   "animated": 3,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-none",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 18,
+   "firstFrameMs_all": [
+    20,
+    18,
+    -2
+   ],
+   "fcpMs": 1876,
+   "fcpMs_all": [
+    1908,
+    1876,
+    1864
+   ],
+   "paintedMs": 3245,
+   "paintedMs_all": [
+    3253,
+    3218,
+    3245
+   ],
+   "briefShownMs": 3233,
+   "briefShownMs_all": [
+    3254,
+    3213,
+    3233
+   ],
+   "completeMs": 15412,
+   "completeMs_all": [
+    15453,
+    15318,
+    15412
+   ],
+   "usableMs": 3245,
+   "usableMs_all": [
+    3253,
+    3218,
+    3245
+   ],
+   "quietAfterPaintMs": 3721,
+   "quietAfterPaintMs_all": [
+    3759,
+    3720,
+    3721
+   ],
+   "tbtMs": 102,
+   "tbtMs_all": [
+    100,
+    102,
+    111
+   ],
+   "responseMs": 128,
+   "responseMs_all": [
+    126,
+    130,
+    128
+   ],
+   "maxInputDelayMs": 1638,
+   "maxInputDelayMs_all": [
+    1636,
+    1638,
+    1640
+   ],
+   "dutyCycle": 0.016,
+   "dutyCycle_all": [
+    0.016,
+    0.016,
+    0.015
+   ],
+   "scriptMs": 1157,
+   "scriptMs_all": [
+    1157,
+    1160,
+    1118
+   ],
+   "windowMs": 73483,
+   "windowMs_all": [
+    73510,
+    73289,
+    73483
+   ],
+   "settledMs": 72622,
+   "settledMs_all": [
+    72896,
+    72622,
+    72594
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-swell",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    -2,
+    -2,
+    -2
+   ],
+   "fcpMs": 1828,
+   "fcpMs_all": [
+    1668,
+    1828,
+    1960
+   ],
+   "paintedMs": 3189,
+   "paintedMs_all": [
+    3078,
+    3189,
+    3304
+   ],
+   "briefShownMs": 3182,
+   "briefShownMs_all": [
+    3074,
+    3182,
+    3300
+   ],
+   "completeMs": 15406,
+   "completeMs_all": [
+    15294,
+    15406,
+    15503
+   ],
+   "usableMs": 3189,
+   "usableMs_all": [
+    3078,
+    3189,
+    3304
+   ],
+   "quietAfterPaintMs": 3752,
+   "quietAfterPaintMs_all": [
+    3078,
+    3752,
+    4309
+   ],
+   "tbtMs": 98,
+   "tbtMs_all": [
+    113,
+    98,
+    96
+   ],
+   "responseMs": 130,
+   "responseMs_all": [
+    130,
+    127,
+    130
+   ],
+   "maxInputDelayMs": 1622,
+   "maxInputDelayMs_all": [
+    1453,
+    1622,
+    1639
+   ],
+   "dutyCycle": 0.016,
+   "dutyCycle_all": [
+    0.016,
+    0.017,
+    0.016
+   ],
+   "scriptMs": 1203,
+   "scriptMs_all": [
+    1203,
+    1216,
+    1195
+   ],
+   "windowMs": 73464,
+   "windowMs_all": [
+    73348,
+    73464,
+    73576
+   ],
+   "settledMs": 72584,
+   "settledMs_all": [
+    72584,
+    72573,
+    72687
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.021,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-currents",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    -2,
+    -2,
+    15
+   ],
+   "fcpMs": 1832,
+   "fcpMs_all": [
+    1832,
+    1668,
+    1856
+   ],
+   "paintedMs": 3198,
+   "paintedMs_all": [
+    3212,
+    3045,
+    3198
+   ],
+   "briefShownMs": 3195,
+   "briefShownMs_all": [
+    3199,
+    3040,
+    3195
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null
+   ],
+   "usableMs": 3198,
+   "usableMs_all": [
+    3212,
+    3045,
+    3198
+   ],
+   "quietAfterPaintMs": 3728,
+   "quietAfterPaintMs_all": [
+    3728,
+    3045,
+    3887
+   ],
+   "tbtMs": 98,
+   "tbtMs_all": [
+    101,
+    98,
+    97
+   ],
+   "responseMs": 33,
+   "responseMs_all": [
+    33,
+    36,
+    14
+   ],
+   "maxInputDelayMs": 1623,
+   "maxInputDelayMs_all": [
+    1623,
+    1437,
+    1635
+   ],
+   "dutyCycle": 0.029,
+   "dutyCycle_all": [
+    0.029,
+    0.031,
+    0.028
+   ],
+   "scriptMs": 2118,
+   "scriptMs_all": [
+    2118,
+    2264,
+    2030
+   ],
+   "windowMs": 72994,
+   "windowMs_all": [
+    72994,
+    72744,
+    73020
+   ],
+   "settledMs": 72569,
+   "settledMs_all": [
+    72569,
+    72585,
+    72559
+   ],
+   "animated": 3,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 16244,
+   "layerDoneMs_all": [
+    16272,
+    16028,
+    16244
+   ],
+   "layerRequests": 1,
+   "layerBytes": 245770,
+   "layerFailed": 0,
+   "layerExamples": [
+    "ocean"
+   ],
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.019,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-stations",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 17,
+   "firstFrameMs_all": [
+    -2,
+    19,
+    17
+   ],
+   "fcpMs": 1788,
+   "fcpMs_all": [
+    1636,
+    1840,
+    1788
+   ],
+   "paintedMs": 3150,
+   "paintedMs_all": [
+    3048,
+    3185,
+    3150
+   ],
+   "briefShownMs": 3150,
+   "briefShownMs_all": [
+    3044,
+    3184,
+    3150
+   ],
+   "completeMs": 15347,
+   "completeMs_all": [
+    15347,
+    15302,
+    15416
+   ],
+   "usableMs": 3150,
+   "usableMs_all": [
+    3048,
+    3185,
+    3150
+   ],
+   "quietAfterPaintMs": 3571,
+   "quietAfterPaintMs_all": [
+    3571,
+    3718,
+    3150
+   ],
+   "tbtMs": 97,
+   "tbtMs_all": [
+    97,
+    94,
+    97
+   ],
+   "responseMs": 130,
+   "responseMs_all": [
+    130,
+    132,
+    127
+   ],
+   "maxInputDelayMs": 1444,
+   "maxInputDelayMs_all": [
+    1410,
+    1630,
+    1444
+   ],
+   "dutyCycle": 0.016,
+   "dutyCycle_all": [
+    0.016,
+    0.017,
+    0.015
+   ],
+   "scriptMs": 1158,
+   "scriptMs_all": [
+    1158,
+    1220,
+    1132
+   ],
+   "windowMs": 73023,
+   "windowMs_all": [
+    72852,
+    73023,
+    73423
+   ],
+   "settledMs": 72469,
+   "settledMs_all": [
+    72338,
+    72568,
+    72469
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.0,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-water-temp",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 17,
+   "firstFrameMs_all": [
+    20,
+    17,
+    17
+   ],
+   "fcpMs": 1976,
+   "fcpMs_all": [
+    1976,
+    2056,
+    1840
+   ],
+   "paintedMs": 3337,
+   "paintedMs_all": [
+    3337,
+    3417,
+    3184
+   ],
+   "briefShownMs": 3330,
+   "briefShownMs_all": [
+    3330,
+    3403,
+    3185
+   ],
+   "completeMs": 15519,
+   "completeMs_all": [
+    15519,
+    15566,
+    15383
+   ],
+   "usableMs": 3337,
+   "usableMs_all": [
+    3337,
+    3417,
+    3184
+   ],
+   "quietAfterPaintMs": 4052,
+   "quietAfterPaintMs_all": [
+    3843,
+    4377,
+    4052
+   ],
+   "tbtMs": 98,
+   "tbtMs_all": [
+    97,
+    98,
+    101
+   ],
+   "responseMs": 145,
+   "responseMs_all": [
+    147,
+    145,
+    143
+   ],
+   "maxInputDelayMs": 1631,
+   "maxInputDelayMs_all": [
+    1628,
+    1632,
+    1631
+   ],
+   "dutyCycle": 0.016,
+   "dutyCycle_all": [
+    0.016,
+    0.016,
+    0.016
+   ],
+   "scriptMs": 1162,
+   "scriptMs_all": [
+    1150,
+    1162,
+    1170
+   ],
+   "windowMs": 73591,
+   "windowMs_all": [
+    73591,
+    73672,
+    73457
+   ],
+   "settledMs": 72728,
+   "settledMs_all": [
+    72728,
+    72791,
+    72562
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.532,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-chlorophyll",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    20,
+    -2,
+    -2
+   ],
+   "fcpMs": 1944,
+   "fcpMs_all": [
+    1944,
+    2012,
+    1824
+   ],
+   "paintedMs": 3287,
+   "paintedMs_all": [
+    3287,
+    3373,
+    3185
+   ],
+   "briefShownMs": 3284,
+   "briefShownMs_all": [
+    3284,
+    3362,
+    3186
+   ],
+   "completeMs": 15653,
+   "completeMs_all": [
+    15653,
+    15706,
+    15585
+   ],
+   "usableMs": 3287,
+   "usableMs_all": [
+    3287,
+    3373,
+    3185
+   ],
+   "quietAfterPaintMs": 3803,
+   "quietAfterPaintMs_all": [
+    3287,
+    3857,
+    3803
+   ],
+   "tbtMs": 102,
+   "tbtMs_all": [
+    94,
+    102,
+    103
+   ],
+   "responseMs": 129,
+   "responseMs_all": [
+    131,
+    129,
+    127
+   ],
+   "maxInputDelayMs": 1629,
+   "maxInputDelayMs_all": [
+    1629,
+    1631,
+    1622
+   ],
+   "dutyCycle": 0.015,
+   "dutyCycle_all": [
+    0.015,
+    0.016,
+    0.015
+   ],
+   "scriptMs": 1133,
+   "scriptMs_all": [
+    1128,
+    1146,
+    1133
+   ],
+   "windowMs": 73190,
+   "windowMs_all": [
+    73190,
+    73313,
+    73092
+   ],
+   "settledMs": 72685,
+   "settledMs_all": [
+    72685,
+    72749,
+    72572
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 4971,
+   "layerDoneMs_all": [
+    5095,
+    4971,
+    4455
+   ],
+   "layerRequests": 9,
+   "layerBytes": 24117,
+   "layerFailed": 0,
+   "layerExamples": [
+    "chlorophyll-observation--242-69-a022c31d15763719.json",
+    "chlorophyll-observation--242-70-61e1ab2f12129fdf.json",
+    "chlorophyll-observation--243-69-bc8d0af1519d077f.json",
+    "chlorophyll-observation--243-70-f975ffa73006f62c.json"
+   ],
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.56,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "live-layer-seafloor",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 20,
+   "firstFrameMs_all": [
+    20,
+    -2,
+    22
+   ],
+   "fcpMs": 1928,
+   "fcpMs_all": [
+    1944,
+    1868,
+    1928
+   ],
+   "paintedMs": 3289,
+   "paintedMs_all": [
+    3303,
+    3260,
+    3289
+   ],
+   "briefShownMs": 3286,
+   "briefShownMs_all": [
+    3299,
+    3259,
+    3286
+   ],
+   "completeMs": 27052,
+   "completeMs_all": [
+    27052,
+    27176,
+    26921
+   ],
+   "usableMs": 3289,
+   "usableMs_all": [
+    3303,
+    3260,
+    3289
+   ],
+   "quietAfterPaintMs": 4256,
+   "quietAfterPaintMs_all": [
+    4256,
+    4256,
+    3795
+   ],
+   "tbtMs": 104,
+   "tbtMs_all": [
+    97,
+    104,
+    107
+   ],
+   "responseMs": 199,
+   "responseMs_all": [
+    199,
+    176,
+    200
+   ],
+   "maxInputDelayMs": 1643,
+   "maxInputDelayMs_all": [
+    1627,
+    1726,
+    1643
+   ],
+   "dutyCycle": 0.017,
+   "dutyCycle_all": [
+    0.017,
+    0.017,
+    0.017
+   ],
+   "scriptMs": 1273,
+   "scriptMs_all": [
+    1273,
+    1254,
+    1279
+   ],
+   "windowMs": 73083,
+   "windowMs_all": [
+    72991,
+    73083,
+    73844
+   ],
+   "settledMs": 72693,
+   "settledMs_all": [
+    72693,
+    72627,
+    72908
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 24275,
+   "layerDoneMs_all": [
+    24395,
+    24252,
+    24275
+   ],
+   "layerRequests": 13,
+   "layerBytes": 1423197,
+   "layerFailed": 0,
+   "layerExamples": [
+    "ledger.json",
+    "seafloor-morro-bay.pmtiles"
+   ],
+   "layerReference": "live-layer-none",
+   "layerVisibleDiff": 0.056,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "brief",
+   "profile": "phone-wifi",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    -3,
+    22,
+    -2
+   ],
+   "fcpMs": 204,
+   "fcpMs_all": [
+    199,
+    612,
+    204
+   ],
+   "paintedMs": 448,
+   "paintedMs_all": [
+    428,
+    838,
+    448
+   ],
+   "briefShownMs": 445,
+   "briefShownMs_all": [
+    423,
+    822,
+    445
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null
+   ],
+   "usableMs": 57383,
+   "usableMs_all": [
+    57773,
+    838,
+    57383
+   ],
+   "quietAfterPaintMs": 56708,
+   "quietAfterPaintMs_all": [
+    56708,
+    57058,
+    56285
+   ],
+   "tbtMs": 52891,
+   "tbtMs_all": [
+    53164,
+    105,
+    52891
+   ],
+   "responseMs": 31,
+   "responseMs_all": [
+    36,
+    15,
+    31
+   ],
+   "maxInputDelayMs": 13296,
+   "maxInputDelayMs_all": [
+    24878,
+    13291,
+    13296
+   ],
+   "dutyCycle": 0.825,
+   "dutyCycle_all": [
+    0.825,
+    0.825,
+    0.825
+   ],
+   "scriptMs": 49262,
+   "scriptMs_all": [
+    49359,
+    49262,
+    49061
+   ],
+   "windowMs": 59694,
+   "windowMs_all": [
+    59829,
+    59694,
+    59438
+   ],
+   "settledMs": 12370,
+   "settledMs_all": [
+    12621,
+    12283,
+    12370
+   ],
+   "animated": 3,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "phone-wifi",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 12,
+   "firstFrameMs_all": [
+    12,
+    -2,
+    21
+   ],
+   "fcpMs": 675,
+   "fcpMs_all": [
+    1051,
+    675,
+    591
+   ],
+   "paintedMs": 522,
+   "paintedMs_all": [
+    746,
+    522,
+    437
+   ],
+   "briefShownMs": 787,
+   "briefShownMs_all": [
+    1163,
+    787,
+    712
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null
+   ],
+   "usableMs": 57766,
+   "usableMs_all": [
+    58546,
+    56540,
+    57766
+   ],
+   "quietAfterPaintMs": 56671,
+   "quietAfterPaintMs_all": [
+    57510,
+    55490,
+    56671
+   ],
+   "tbtMs": 52830,
+   "tbtMs_all": [
+    52959,
+    51523,
+    52830
+   ],
+   "responseMs": 17,
+   "responseMs_all": [
+    17,
+    14,
+    38
+   ],
+   "maxInputDelayMs": 24710,
+   "maxInputDelayMs_all": [
+    24710,
+    25166,
+    24403
+   ],
+   "dutyCycle": 0.815,
+   "dutyCycle_all": [
+    0.81,
+    0.815,
+    0.819
+   ],
+   "scriptMs": 49016,
+   "scriptMs_all": [
+    49060,
+    47779,
+    49016
+   ],
+   "windowMs": 59821,
+   "windowMs_all": [
+    60603,
+    58595,
+    59821
+   ],
+   "settledMs": 12988,
+   "settledMs_all": [
+    13690,
+    12988,
+    12396
+   ],
+   "animated": 3,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  }
+ ]
+}
