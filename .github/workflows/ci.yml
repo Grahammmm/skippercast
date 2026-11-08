@@ -293,6 +293,13 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Type-check the Worker (tsc --noEmit, strict)
         run: pnpm typecheck
+      # Size budget (SC-PERF-BUDGET-1): file sizes only, no network, no timing. Raising a budget
+      # needs a written reason in scripts/perf-budget.json (docs/operations/perf-budget.md).
+      - name: Size budget (first-load files and brief data)
+        if: matrix.python == '3.13'
+        run: |
+          pnpm build
+          python scripts/check_perf_budget.py
       - name: Forecast handling and GPX checks
         if: needs.changes.outputs.web != 'false'
         run: |
