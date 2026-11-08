@@ -19,7 +19,7 @@ async function load() {
   if (!href) {
     const out = join(await mkdtemp(join(tmpdir(), 'brief-saved-')), 'brief.mjs');
     await build({
-      stdin: {resolveDir: ROOT, loader: 'ts', contents: `export * from './web/brief/Brief.tsx'; export * from './web/brief/saved-brief.ts'; export {regionInfo} from './web/app/region-info.ts';`},
+      stdin: {resolveDir: ROOT, loader: 'ts', contents: `export * from './web/brief/Brief.tsx'; export * from './web/brief/saved-brief.ts'; export {regionInfo} from './web/app/region-info.ts'; export {region} from './web/state.ts';`},
       bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
       plugins: rendererPlugins,
     });
@@ -165,4 +165,23 @@ test('saved region metadata is validated; a bad one is dropped and the brief wai
   m.enableSavedBrief(store);
   m.showSavedBrief(ID);
   assert.equal(m.currentBrief(new Date()), null, 'no usable metadata: no brief until region.json arrives');
+});
+
+test('region switch: the restored brief of region A is withdrawn when B is selected and B region.json is delayed or failed', async () => {
+  const first = await load(), store = memory();
+  first.enableSavedBrief(store);
+  first.regionInfo.value = INFO;
+  await first.loadDailyFeed(ID, feedServer());
+  const m = await load();
+  m.enableSavedBrief(store);
+  m.region.value = ID;
+  assert.equal(m.showSavedBrief(ID), true);
+  assert.equal(m.shownRegion().id, ID);
+  assert.ok(m.currentBrief(new Date()), 'A shows while A is selected');
+  m.region.value = 'other-region';        // B selected; its region.json never publishes regionInfo
+  assert.equal(m.shownRegion(), null, 'A metadata does not stand in for B');
+  assert.equal(m.currentBrief(new Date()), null, 'A brief is not shown under B');
+  assert.equal(m.savedBrief.value, null, 'A saved status is withdrawn');
+  assert.equal(m.dailyFeed.value, null);
+  m.region.value = null;
 });

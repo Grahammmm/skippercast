@@ -23,7 +23,7 @@ import type {CoastReportContext} from '../../packages/coast/src/state/report-bin
 import {briefForecast, loadConditionsForecast, type ConditionsForecast} from '../conditions.ts';
 import {feedPath} from '../landing/readings.ts';
 import {PROFILE_TABLE, type Profile} from '../profile.ts';
-import {day, hour, hourParam, parseHour, port, profile, species} from '../state.ts';
+import {day, hour, hourParam, parseHour, port, profile, region, species} from '../state.ts';
 import {dockTime, horizonDays} from '../hour.ts';
 import {loadRegs, regsData, regulationState, ruleSummary} from '../regs.ts';
 import {useEffect} from 'preact/hooks';
@@ -84,7 +84,22 @@ export const savedBrief = signal<{at: number; state: SavedState} | null>(null);
  */
 export const savedRegion = signal<RegionInfo | null>(null);
 /** The region the brief is built for: the real one once read, else the one restored from the device. */
-export const shownRegion = (): RegionInfo | null => regionInfo.value ?? savedRegion.value;
+export const shownRegion = (): RegionInfo | null => {
+  const id = region.value, real = regionInfo.value, saved = savedRegion.value;
+  if (real) return real;
+  return saved && (!id || saved.id === id) ? saved : null;
+};
+// Selecting another region withdraws the restored brief of the old one: its metadata, feeds and "last updated" line must not
+// stand in for the new selection while the new region.json is delayed or fails.
+effect(() => {
+  const id = region.value;
+  if (!id || held.region === null || held.region === id) return;
+  if (held.daily?.saved) dailyFeed.value = null;
+  if (held.forecast?.saved) regionalForecast.value = null;
+  held.region = null; held.daily = held.forecast = null;
+  savedRegion.value = null;
+  savedBrief.value = null;
+});
 
 /** Turn on keeping and showing the last brief on this device; `store` is the browser's by default, null when there is none. */
 export function enableSavedBrief(store: SavedStore | null = browserStore()): void { savedStore = store; }
