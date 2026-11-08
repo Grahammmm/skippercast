@@ -9,6 +9,7 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {formatBytes, relativeTime} from '../../dist/offline-core.js';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
+import {PositionCheck} from './PositionCheck.tsx';
 import {region} from '../state.ts';
 import {
   KEEP_WORDS, canSaveCoastal, closeTrip, deleteCoastal, estimateWords, listPacks, loadPlanner, offlineOpen, plannerView, readCoastal, saveCoastal, savePack, savePackKept, storageLine, tripError, tripOpen, tripReady,
@@ -82,6 +83,7 @@ function TripDialog() {
       {tripReady.value ? null : <p role="status">{error ? loadFailed(error, lang) : t('trip.loading', lang)}</p>}
       {error ? <Button size="sm" onClick={() => void loadPlanner()}>{t('trip.retry', lang)}</Button> : null}
       {planner ? <planner.View model={planner.model} open={open} /> : null}
+      <PositionCheck />
       <Button icon="download" disabled={!region.value} onClick={() => { closeTrip(); offlineOpen.value = true; }}>{t('trip.legal.open', lang)}</Button>
     </dialog>
   );
