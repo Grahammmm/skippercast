@@ -235,7 +235,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // Reports catch sheet never mounts (FirstAnswerLine renders only in the desktop App shell); check_contrast.mjs changes only the appCss
   // surface hash and its comment, with contrast(), pairs, thresholds and line citations untouched. Both rebound from the final bytes.
   // MAPLIVE-1: app.css appends only a scoped .app-preview-head / .app-legend-preview / .app-preview-* block for the owner-only previews; the Reports catch sheet never mounts it. Rebound from the final bytes.
-  "web/app/app.css": "a991ae3707630d1057b89fd316948f1904261e44e0d82db0e1f3ed036a26cb14",
+  // SC-PERF-INSTANT-1: app.css appends only a scoped .app-saved 'Last updated' line rule; the Reports catch sheet never mounts it. Rebound from the final bytes.
+  "web/app/app.css": "eb35c2dbc4484c9ba474fdd514679204f48ec1e7d8e4955fffd9425cb776786e",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
