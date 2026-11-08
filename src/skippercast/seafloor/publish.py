@@ -340,6 +340,25 @@ def _rollback(s3, bucket, saved, control, skip=()):
         s3.put_object(Bucket=bucket, Key=control, Body=old[0], **{n: v for n, v in (('ContentType', old[1]), ('CacheControl', old[2]), ('Metadata', old[3])) if v})
 
 
+class _Guarded:
+    """Forwards every call to the client except writes or deletes of the protected keys, which are silently dropped."""
+
+    def __init__(self, s3, keys):
+        self._s3, self._keys = s3, set(keys)
+
+    def __getattr__(self, name):
+        return getattr(self._s3, name)
+
+    def put_object(self, **kwargs):
+        if kwargs.get('Key') not in self._keys:
+            return self._s3.put_object(**kwargs)
+
+    def delete_objects(self, **kwargs):
+        objects = [o for o in kwargs['Delete']['Objects'] if o['Key'] not in self._keys]
+        if objects:
+            return self._s3.delete_objects(**{**kwargs, 'Delete': {**kwargs['Delete'], 'Objects': objects}})
+
+
 def publish_bundle(s3, bucket, folder, *, now=None):
     """Isolated sync prefix avoids deleting other map layers or regions.
 
@@ -391,16 +410,15 @@ def publish_bundle(s3, bucket, folder, *, now=None):
     prefix = f'tiles/seafloor/regions/{region}'
     slim_key = f'{prefix}/{slim_name}' if slim_name else None
     restore = _snapshot(s3, bucket, [control, f'{prefix}/{INDEX}'] + [f'{prefix}/{n}' for n in sorted(allowed - {archive.name})]) if slim_name else None
-    # sync() never writes the live slim key: it gets only an unchanged copy of the previous slim bytes (or none), so a failure while
-    # writing the new slim file cannot depend on a rewrite of that same key to put the previous release back.
+    # sync() must not touch the live slim key at all (no PUT that would drop its sha256 metadata, no delete): the slim file is
+    # left out of the synced folder and writes/deletes of that key are filtered out, so the previous slim bytes AND metadata stay
+    # intact until the one explicit PUT below.
     with tempfile.TemporaryDirectory() as staged:
         for path in folder.iterdir():
             if path.name != slim_name:
                 os.symlink(path.resolve(), Path(staged)/path.name)
-        if slim_name and restore[slim_key] is not None:
-            (Path(staged)/slim_name).write_bytes(restore[slim_key][0])
         try:
-            sync(s3, bucket, staged, prefix)
+            sync(_Guarded(s3, {slim_key}) if slim_key else s3, bucket, staged, prefix)
         except Exception:
             if restore: _rollback(s3, bucket, restore, control, skip={slim_key})
             raise

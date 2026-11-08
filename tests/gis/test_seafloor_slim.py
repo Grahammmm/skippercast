@@ -207,6 +207,32 @@ class SlimPublicationTests(unittest.TestCase):
             self.assert_previous_release_live(s3, live)
             self.assertEqual(s3.metadata[self.LIVE]['Metadata']['sha256'], json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['slim_sha256'])
 
+    def test_sync_never_rewrites_or_deletes_the_live_slim_key_so_its_metadata_survives_a_later_put_failure(self):
+        for stale_index in ('missing', 'other-hash'):
+            with self.subTest(stale_index=stale_index), tempfile.TemporaryDirectory() as tmp:
+                s3, live, folder = self.live_release(tmp)
+                index_key = 'tiles/seafloor/regions/morro-bay/.r2-sync.json'
+                index = json.loads(s3.objects[index_key])
+                index.pop('habitat-slim.geojson.gz', None)
+                if stale_index == 'other-hash':
+                    index['habitat-slim.geojson.gz'] = 'f' * 64
+                s3.objects[index_key] = live[index_key] = json.dumps(index).encode()
+                real, attempts = s3.put_object, []
+                def fail(*, Bucket, Key, Body, **kwargs):
+                    if Key == self.LIVE:
+                        attempts.append(kwargs.get('Metadata'))
+                        raise OSError('R2 PUT failed')
+                    return real(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
+                s3.put_object = fail
+                with self.assertRaises(OSError):
+                    publish.publish_bundle(s3, 'b', folder, now=NOW)
+                s3.put_object = real
+                self.assertEqual(len(attempts), 1)   # only the explicit PUT of the new file: sync never wrote the previous bytes
+                self.assertEqual(attempts[0]['sha256'], json.loads((folder/'manifest.json').read_text())['slim_sha256'])
+                self.assert_previous_release_live(s3, live)
+                self.assertEqual(s3.metadata[self.LIVE]['Metadata']['sha256'],
+                                 json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['slim_sha256'])
+
     def test_the_alias_goes_back_only_after_the_previous_objects(self):
         with tempfile.TemporaryDirectory() as tmp:
             s3, live, folder = self.live_release(tmp)
