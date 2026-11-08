@@ -14,7 +14,7 @@
 // Usage:
 //   node reports/perf/readiness.mjs --base https://skippercast.com --pages live --profiles desktop,phone --runs 3 --out reports/perf/raw/ready-live.json --frames /tmp/frames
 //   node reports/perf/readiness.mjs --probe-blank   # self-test: a blank canvas must NOT be reported painted/usable
-import {writeFileSync, mkdirSync} from 'node:fs';
+import {writeFileSync, mkdirSync, readdirSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {chromium} from '@playwright/test';
 
@@ -24,6 +24,9 @@ const BASE = arg('base', 'https://skippercast.com');
 const RUNS = +arg('runs', '3');
 const OUT = arg('out', 'reports/perf/raw/ready.json');
 const FRAMES = arg('frames', 'reports/perf/frames');
+// Every acquisition has its own frame namespace (the batch label, default: the --out file name), so a later batch can never overwrite
+// the frames of an earlier one (round 1b: six cold runs of ready-live-desktop.json lost their frames to ready-live-desktop-warm.json).
+const BATCH = arg('batch', OUT.split('/').pop().replace(/\.json$/, ''));
 const CAP = +arg('cap-ms', '90000');
 const QUIET = +arg('quiet-ms', '3000');
 const PROFILE_NAMES = arg('profiles', 'phone,desktop').split(',');
@@ -113,6 +116,7 @@ async function load(browser, P, spec, pass, ctxHolder, id) {
   ];
   const frames = [];
   const dir = join(FRAMES, id); mkdirSync(dir, {recursive: true});
+  if (readdirSync(dir).length) throw new Error(`frame directory ${dir} is not empty: refusing to overwrite earlier evidence`);
   const onFrame = async e => {
     const n = frames.length; frames.push({n, t: e.metadata.timestamp, recv: Date.now()});
     writeFileSync(join(dir, String(n).padStart(4, '0') + '.jpg'), Buffer.from(e.data, 'base64'));
@@ -247,7 +251,7 @@ async function main() {
     if (P.net) await cdp.send('Network.emulateNetworkConditions', P.net);
     if (P.cpu > 1) await cdp.send('Emulation.setCPUThrottlingRate', {rate: P.cpu});
     for (const pass of PASSES) {
-      let r; const id = `${prof}-${spec.id}-${pass}-${run}`;
+      let r; const id = `${BATCH}.${prof}-${spec.id}-${pass}-${run}`;
       try { r = await load(browser, P, spec, pass, {page, cdp, context}, id); } catch (err) { r = {error: String(err && err.message || err), id}; }
       out.results.push({page: spec.id, profile: prof, pass, run, ...r});
       mkdirSync(dirname(OUT), {recursive: true}); writeFileSync(OUT, JSON.stringify(out));

@@ -1,31 +1,36 @@
 #!/usr/bin/env python3
-"""PERF-BASELINE-1 readiness analysis (round 2): decides from screencast pixels, requests and the interaction probe
+"""PERF-BASELINE-1 readiness analysis (round 1b): decides from screencast pixels, requests and the interaction probe
 when the map is painted, visually complete, responsive and (for an enabled layer) when the layer's data arrived.
 
 Usage:
-  python3 reports/perf/analyse.py explore <ready.json> <frames-dir> <run-id>     # print per-frame metrics for one run
-  python3 reports/perf/analyse.py blank <frames-dir>/blank                         # self-test: a flat canvas must not be painted
+  python3 reports/perf/analyse.py explore <ready.json> <frames-dir> <run-id>     # per-run decision for one run
+  python3 reports/perf/analyse.py controls <frames-dir>                            # self-tests on synthetic loading-overlay / delayed-map controls
   python3 reports/perf/analyse.py all <frames-dir> <out.json> <ready.json>...      # per-run decisions -> out.json
-Criteria (all from pixels of the largest canvas, cropped from the screencast frames):
-  painted     the crop is not a flat fill: its most common 4-bit colour covers <= 80% of the area and at least two other
-              colours each cover >= 1%; a blank or single-colour canvas is never painted. Must stay true for the next 2 frames.
+Criteria (from the pixels of the largest canvas, cropped from the screencast frames; the screencast also contains the page's
+own overlays, so a crop is NOT map evidence by itself):
+  map content the pixels of the settled picture (last frame before the drag probe) that are textured, reappear shifted by
+              one common ~60 px translation after the drag probe panned the map (rigid motion), and were stable before it. Overlays
+              (legend, panels, loading text, attribution, controls) do not translate with a map drag and animated particles are
+              unstable, so neither is ever map content. Needs >= 1 % of the canvas, else the
+              run has NO map-content evidence: painted, complete and usable are then "not established", never a time.
+  painted     the first frame in which >= 50 % of the map-content pixels already show their final value, for 3 frames in a row.
   complete    the first frame after which no frame differs from the final frame (before the interaction probe) in more than
-              1% of the crop's pixels (per-pixel gray difference > 24/255). Animated layers (wind) never settle: reported
-              as null with animated=true.
+              1% of the crop's pixels (per-pixel gray difference > 24/255); never earlier than painted. Animated layers never
+              settle: reported as null with animated=true.
   responsive  the interaction probe: a 60 px drag after the load settled; the delay until the crop differs from the
               pre-drag frame in more than 0.5% of its pixels. No such frame within 5 s is a failure (null).
   layerDone   the time the last response arrived of the requests that the layer-off reference page does not make
               (live pages) or that match a per-page data pattern (test pages); a failed/4xx/5xx request is a failure.
+Evidence integrity: a run is analysed only if its frame directory holds exactly its frames, written when the run recorded
+them (file time within 5 s of the frame's receive time). A run whose frame directory was overwritten by a later acquisition
+is reported as status=superseded-frames-overwritten and excluded from every median (its raw receipt is kept).
 """
 import json
 import statistics
 import sys
 from collections import Counter
 from pathlib import Path
-from PIL import Image, ImageChops, ImageOps
-
-PAINT_TOP, PAINT_OTHERS = 0.80, 2
-
+from PIL import Image, ImageChops, ImageFilter
 
 def crop_of(frame_path, canvas, viewport):
     im = Image.open(frame_path).convert('RGB')
@@ -35,13 +40,49 @@ def crop_of(frame_path, canvas, viewport):
     return im.crop((x0, y0, x1, y1))
 
 
-def painted(im):
-    small = ImageOps.posterize(im.resize((max(1, im.width // 2), max(1, im.height // 2))), 4)   # 4 bits per channel
-    cols = sorted(small.getcolors(maxcolors=1 << 20), reverse=True)
-    total = sum(n for n, _ in cols)
-    top = cols[0][0] / total
-    others = sum(1 for n, _ in cols[1:] if n / total >= 0.01)
-    return top <= PAINT_TOP and others >= PAINT_OTHERS, round(top, 3), others
+def _gray(im):
+    return im.convert('L')
+
+
+def drag_mask(a, b, c, scale, thr=24, tex=12):
+    """Pixels of frame `a` (the settled picture just before the drag probe) that are MAP, not overlaid page UI.
+
+    The probe pans the map 60 CSS px to the right. A pixel is map content when (1) it is textured (not a flat fill),
+    (2) the same picture value is found displaced to the right in `b` (the picture after the drag) by one common shift
+    close to 60 px * scale (a rigid translation: only the map moves like that), (3) it differs from `b` at the same
+    place (it really moved) and (4) it was stable before the drag (`c` = an earlier settled frame), so animated
+    particles do not count. Overlays (legend, panels, loading text, attribution, controls) do not translate with a map
+    drag and are never in the mask, however large or colourful they are. Returns (mask, fraction of the crop, shift in px)."""
+    ga = _gray(a)
+    gb = _gray(b.resize(a.size))
+    unstable = ImageChops.difference(ga, _gray(c.resize(a.size))).point(lambda v: 0 if v > thr else 255)
+    t = ImageChops.subtract(ga.filter(ImageFilter.MaxFilter(3)), ga.filter(ImageFilter.MinFilter(3))).point(lambda v: 255 if v > tex else 0)
+    moved = ImageChops.difference(ga, gb).point(lambda v: 255 if v > thr else 0)
+    base = ImageChops.multiply(ImageChops.multiply(t, unstable), moved)
+    best = (0, None, 0)
+    lo, hi = max(2, int(scale * 60 * 0.4)), int(scale * 60 * 2.5) + 1
+    for dx in range(lo, hi):
+        shifted = ImageChops.offset(gb, dx, 0)
+        same = ImageChops.difference(ga, shifted).point(lambda v: 255 if v <= thr else 0)
+        m = ImageChops.multiply(base, same)
+        # the columns that wrapped around in the offset are not evidence
+        m.paste(0, (0, 0, dx, a.height)); m.paste(0, (a.width - 1, 0, a.width, a.height))
+        n = sum(m.histogram()[255:])
+        if n > best[0]:
+            best = (n, m, dx)
+    if best[1] is None:
+        return None, 0.0, 0
+    return best[1], best[0] / max(1, a.width * a.height), best[2]
+
+
+def mask_match(cur, final, mask, thr=24):
+    """Share of the map-content pixels (mask) that already show their final value in frame `cur`."""
+    same = ImageChops.difference(_gray(cur), _gray(final.resize(cur.size) if final.size != cur.size else final)).point(lambda v: 255 if v <= thr else 0)
+    return sum(ImageChops.multiply(same, mask).histogram()[255:]) / max(1, sum(mask.histogram()[255:]))
+
+
+MASK_MIN_FRAC = 0.01      # map content must cover >= 1 % of the canvas, else there is no evidence the map drew anything
+PAINT_MATCH = 0.5         # painted = at least half of the map-content pixels show their final value, for 3 frames in a row
 
 
 def diff_frac(a, b, thr=24):
@@ -72,22 +113,37 @@ def decide(run, fdir):
     crops = [(f['ms'], crop_of(f['path'], canvas, run['viewport'])) for f in frames]
     pre = [(ms, c) for ms, c in crops if ms < probe_ms]
     res['firstFrameMs'] = round(frames[0]['ms'])
-    # painted
+    # painted: from MAP pixels only. The map-content mask comes from the drag probe (what moved with the map), so legends, panels,
+    # loading text and controls laid over the canvas can never make a blank map look painted.
     pt = None
+    post = [c for ms, c in crops if probe_ms <= ms < probe_ms + 5000]
+    res['evidence'] = None
+    mask = None
+    if pre and post and run['probe'].get('done'):
+        final_ = pre[-1][1]
+        early = [c for ms, c in pre if ms <= pre[-1][0] - 1500]
+        mask, mfrac, dx = drag_mask(final_, post[-1], early[-1] if early else final_, final_.width / canvas['w'])
+        res['mapContentFrac'] = round(mfrac, 3)
+        res['dragShiftPx'] = dx
+        res['evidence'] = 'map-content' if mfrac >= MASK_MIN_FRAC else 'none'
+        if mfrac < MASK_MIN_FRAC:
+            mask = None
+    else:
+        res['evidence'] = 'no-drag-probe'
     flags = {}
     def flag(i):
         if i not in flags:
-            flags[i] = painted(pre[i][1])[0]
+            flags[i] = mask_match(pre[i][1], pre[-1][1], mask) >= PAINT_MATCH
         return flags[i]
-    for i, (ms, c) in enumerate(pre):
-        if flag(i) and all(flag(j) for j in range(i, min(len(pre), i + 3))):
-            pt = ms; break
+    if mask is not None:
+        for i, (ms, c) in enumerate(pre):
+            if flag(i) and all(flag(j) for j in range(i, min(len(pre), i + 3))):
+                pt = ms; break
     res['paintedMs'] = None if pt is None else round(pt)
-    res['finalPaint'] = painted(pre[-1][1])[1:] if pre else None
     res['_final'] = pre[-1][1] if pre else None
     res['_probeMs'] = probe_ms
-    # visually complete (relative to the last frame before the probe)
-    if pre:
+    # visually complete (relative to the last frame before the probe); only meaningful once map content was shown
+    if pre and pt is not None:
         final = pre[-1][1]
         bad = [ms for ms, c in pre if diff_frac(final, c) > 0.01]
         # a static picture produces no screencast frames; 10 or more frames in the last 2 s before the probe is continuous repainting (particles)
@@ -98,6 +154,11 @@ def decide(run, fdir):
         if not animated and bad:
             later = [ms for ms, _ in pre if ms > max(bad)]
             res['completeMs'] = round(later[0]) if later else round(max(bad))
+        if res['completeMs'] is not None:
+            res['completeMs'] = max(res['completeMs'], res['paintedMs'])
+    else:
+        res['animated'] = None
+        res['completeMs'] = None
     # responsive: first frame after the drag that differs from the last frame before it
     pr = run['probe']
     resp = None
@@ -147,7 +208,7 @@ def decide(run, fdir):
     res['briefShownMs'] = None if run['readyAt'] is None else round(run['readyAt'] + off)
     res['messages'] = run.get('messages', [])
     res['pageErrors'] = run.get('pageErrors', [])
-    res['status'] = 'never-painted' if pt is None else 'not-responsive-within-window' if usable is None else 'interaction-failed' if res['interactionFailed'] else 'ok'
+    res['status'] = 'no-map-content-evidence' if res['evidence'] != 'map-content' else 'never-painted' if pt is None else 'not-responsive-within-window' if usable is None else 'interaction-failed' if res['interactionFailed'] else 'ok'
     c = run.get('cpu') or {}
     res['dutyCycle'] = None if not c.get('windowS') else round(c['scriptS'] / c['windowS'], 3)
     res['scriptMs'] = round(c.get('scriptS', 0) * 1000)
@@ -194,6 +255,21 @@ def med(vals):
     return None if m == float('inf') else round(m, 3) if m < 10 else round(m)
 
 
+def frame_integrity(run, fdir):
+    """None when the frames on disk are the ones this run recorded, else the reason they are not."""
+    d = Path(fdir) / run['id']
+    if not d.is_dir():
+        return 'frame directory missing'
+    n = len(list(d.glob('*.jpg')))
+    if n != len(run['frames']):
+        return f"{n} frames on disk, {len(run['frames'])} recorded"
+    for f in (run['frames'][0], run['frames'][-1]):
+        p = d / f"{f['n']:04d}.jpg"
+        if not p.exists() or 'recv' not in f or abs(p.stat().st_mtime * 1000 - f['recv']) > 5000:
+            return 'frame file written at a different time than recorded'
+    return None
+
+
 def run_all(fdir, out, paths):
     runs = []
     for path in paths:
@@ -201,10 +277,19 @@ def run_all(fdir, out, paths):
         for r in doc['results']:
             if 'error' in r:
                 runs.append({'page': r['page'], 'profile': r['profile'], 'pass': r['pass'], 'run': r['run'], 'status': 'error', 'error': r['error']}); continue
+            bad = frame_integrity(r, fdir) if r.get('frames') else None
+            if bad:
+                runs.append({'page': r['page'], 'profile': r['profile'], 'pass': r['pass'], 'run': r['run'], 'id': r['id'], 'status': 'superseded-frames-overwritten',
+                             'reason': bad, 'receipt': Path(path).name, 'wallStartMs': r['wallStartMs']}); continue
             d = decide(r, fdir)
+            d['id'] = r['id']
             d['_req'] = r.get('requests')
             d['_raw'] = r
             runs.append(d)
+    seen = Counter(d['id'] for d in runs if d.get('id') and d.get('status') != 'superseded-frames-overwritten')
+    dup = [k for k, v in seen.items() if v > 1]
+    if dup:
+        raise SystemExit(f'duplicate run ids with intact frames (ambiguous evidence): {dup}')
     # reference paths per (profile, pass)
     refs = {}
     refimg = {}
@@ -229,6 +314,8 @@ def run_all(fdir, out, paths):
     # summary per (page, profile, pass)
     groups = {}
     for d in runs:
+        if d.get('status') == 'superseded-frames-overwritten':
+            continue
         groups.setdefault((d['page'], d['profile'], d['pass']), []).append(d)
     summary = []
     for (page, prof, pas), rs in groups.items():
@@ -238,6 +325,7 @@ def run_all(fdir, out, paths):
                   'dutyCycle', 'scriptMs', 'windowMs', 'settledMs', 'freeFromMs', 'longTaskTotalMs'):
             row[m] = med([r.get(m) for r in rs])
             row[m + '_all'] = [r.get(m) for r in rs]
+        row['evidence'] = sum(1 for r in rs if r.get('evidence') == 'map-content')
         row['animated'] = sum(1 for r in rs if r.get('animated'))
         row['mapCovered'] = sum(1 for r in rs if r.get('mapCovered'))
         row['interactionFailed'] = sum(1 for r in rs if r.get('interactionFailed'))
@@ -264,11 +352,9 @@ def run_all(fdir, out, paths):
 
 def main():
     cmd = sys.argv[1]
-    if cmd == 'blank':
-        d = Path(sys.argv[2]); meta = json.loads((d / 'blank.json').read_text())
-        for f in meta['frames']:
-            im = crop_of(d / f"{f['n']:04d}.jpg", meta['canvas'], meta['viewport'])
-            print('blank frame', f['n'], 'painted=', painted(im))
+    if cmd == 'controls':
+        import controls
+        controls.run(sys.argv[2])
     elif cmd == 'explore':
         doc = json.loads(Path(sys.argv[2]).read_text())
         run = next(r for r in doc['results'] if r['id'] == sys.argv[4])
@@ -279,4 +365,5 @@ def main():
         run_all(sys.argv[2], sys.argv[3], sys.argv[4:])
 
 
-main()
+if __name__ == '__main__':
+    main()

@@ -1,5 +1,6 @@
 #!/bin/sh
 # PERF-BASELINE-1 round 2: readiness runs (screencast frames + input-delay probes + a drag probe), one load at a time, never in parallel.
+# Frame directories are namespaced by batch (--batch, default = the --out file name): ids look like ready-live-desktop.desktop-brief-cold-1.
 # Run from the repository root with the two local servers up (see run-layers.sh). FRAMES is scratch space (frames are not committed).
 set -e
 FRAMES=${FRAMES:-/tmp/perf-frames}
