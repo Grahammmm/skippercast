@@ -19,7 +19,7 @@ async function load() {
   if (!href) {
     const out = join(await mkdtemp(join(tmpdir(), 'brief-saved-')), 'brief.mjs');
     await build({
-      stdin: {resolveDir: ROOT, loader: 'ts', contents: `export * from './web/brief/Brief.tsx'; export * from './web/brief/saved-brief.ts';`},
+      stdin: {resolveDir: ROOT, loader: 'ts', contents: `export * from './web/brief/Brief.tsx'; export * from './web/brief/saved-brief.ts'; export {regionInfo} from './web/app/region-info.ts';`},
       bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
       plugins: rendererPlugins,
     });
@@ -117,4 +117,52 @@ test('storage unavailable: no store, a throwing store and a full store change no
   }
   const m = await load(); // never enabled: nothing is read or written
   assert.equal(m.showSavedBrief(ID), false);
+});
+
+const INFO = {id: ID, name: 'Monterey to Point Sur', center: [36.5, -121.95], timezone: 'America/Los_Angeles'};
+
+test('fresh page, region.json never read: the saved brief renders from the saved region metadata', async () => {
+  const first = await load(), store = memory();
+  first.enableSavedBrief(store);
+  first.regionInfo.value = INFO;          // the first visit had read region.json
+  await first.loadDailyFeed(ID, feedServer());
+  const saved = JSON.parse(store.m.get(first.SAVED_BRIEF_KEY));
+  assert.deepEqual(saved.region_info, {name: INFO.name, center: INFO.center, timezone: INFO.timezone}, 'only name, centre and zone are kept');
+  const m = await load();                  // a fresh page: regionInfo is null and region.json is stalled or failed
+  m.enableSavedBrief(store);
+  assert.equal(m.regionInfo.value, null);
+  assert.equal(m.currentBrief(new Date()), null, 'nothing to show before the saved brief is restored');
+  assert.equal(m.showSavedBrief(ID), true);
+  assert.equal(m.regionInfo.value, null, 'the real region is not faked');
+  const brief = m.currentBrief(new Date());
+  assert.ok(brief, 'the brief is rebuilt with no region.json read');
+  assert.ok(brief.tiles.length > 0);
+  assert.equal(m.shownRegion().timezone, 'America/Los_Angeles');
+});
+
+test('region file read after the daily feed: its metadata is added to the saved brief', async () => {
+  const first = await load(), store = memory();
+  first.enableSavedBrief(store);
+  await first.loadDailyFeed(ID, feedServer());   // region.json not read yet
+  assert.equal(JSON.parse(store.m.get(first.SAVED_BRIEF_KEY)).region_info, undefined);
+  first.regionInfo.value = INFO;
+  first.noteRegionInfo(ID);
+  assert.equal(JSON.parse(store.m.get(first.SAVED_BRIEF_KEY)).region_info.name, INFO.name);
+  const m = await load();
+  m.enableSavedBrief(store);
+  m.showSavedBrief(ID);
+  assert.ok(m.currentBrief(new Date()));
+});
+
+test('saved region metadata is validated; a bad one is dropped and the brief waits for region.json as before', async () => {
+  const m = await load(), store = memory(), now = Date.now();
+  const daily = {at: now - HOUR, data: {...montereyDaily, region_id: ID}};
+  for (const bad of [{name: 5, center: INFO.center, timezone: 'UTC'}, {name: 'x', center: [999, 0], timezone: 'UTC'}, {name: 'x', center: INFO.center, timezone: 'Not/AZone'}]) {
+    store.setItem(m.SAVED_BRIEF_KEY, JSON.stringify({v: 1, region: ID, region_info: bad, daily, forecast: null}));
+    const entry = m.readSaved(store, ID, now);
+    assert.ok(entry && entry.region_info === undefined);
+  }
+  m.enableSavedBrief(store);
+  m.showSavedBrief(ID);
+  assert.equal(m.currentBrief(new Date()), null, 'no usable metadata: no brief until region.json arrives');
 });

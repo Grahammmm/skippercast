@@ -49,7 +49,7 @@ import {DEFAULT_ZONE} from '../zone.ts';
 import {dailyPartPath} from '../../dist/offline-core.js';
 import './brief-print.css';
 import {validDailyPart} from '../map/habitat.ts';
-import {browserStore, displayedForecast, readSaved, savedLine, writeSaved, type SavedState, type SavedStore} from './saved-brief.ts';
+import {browserStore, displayedForecast, displayedRegion, readSaved, savedLine, writeSaved, type SavedRegion, type SavedState, type SavedStore} from './saved-brief.ts';
 
 export type {BriefModel};
 
@@ -78,6 +78,14 @@ export const SAVED_SETTLE_MS = 20_000;
 /** Set while any part on screen is the saved one: the oldest saved part's fetch time and whether the update is running or failed; null otherwise. */
 export const savedBrief = signal<{at: number; state: SavedState} | null>(null);
 
+/**
+ * The minimal region metadata (id, name, centre, zone) restored from the saved brief. The brief cannot be rebuilt without it, and
+ * regions/<id>/region.json is a network read, so on a fresh page it stands in until that read publishes regionInfo, which then wins.
+ */
+export const savedRegion = signal<RegionInfo | null>(null);
+/** The region the brief is built for: the real one once read, else the one restored from the device. */
+export const shownRegion = (): RegionInfo | null => regionInfo.value ?? savedRegion.value;
+
 /** Turn on keeping and showing the last brief on this device; `store` is the browser's by default, null when there is none. */
 export function enableSavedBrief(store: SavedStore | null = browserStore()): void { savedStore = store; }
 
@@ -93,8 +101,14 @@ function markFresh(part: 'daily' | 'forecast', id: string): void {
 function persistSaved(id: string): void {
   const feed = dailyFeed.peek(), forecast = regionalForecast.peek();
   if (!savedStore || held.region !== id || !held.daily || feed?.region_id !== id) return;
+  const info = regionInfo.peek(), shown = savedRegion.peek();
+  const region: SavedRegion | null = info?.id === id ? displayedRegion(info) : shown?.id === id ? displayedRegion(shown) : null;
   writeSaved(savedStore, id, {at: held.daily.at, data: feed},
-    held.forecast && forecast?.region === id ? {at: held.forecast.at, data: displayedForecast(forecast)} : null);
+    held.forecast && forecast?.region === id ? {at: held.forecast.at, data: displayedForecast(forecast)} : null, region);
+}
+/** Once the region's own metadata has been read, keep it with the saved brief (the daily feed may have been saved before it arrived). */
+export function noteRegionInfo(id: string): void {
+  if (regionInfo.peek()?.id === id && savedRegion.peek()?.id !== id) persistSaved(id);
 }
 
 /**
@@ -105,6 +119,7 @@ export function showSavedBrief(id: string, now = Date.now()): boolean {
   if (savedStore === undefined || dailyFeed.peek()) return false;
   const entry = readSaved(savedStore, id, now);
   if (!entry?.daily) return false;
+  if (entry.region_info && !regionInfo.peek()) savedRegion.value = {id, ...entry.region_info};
   held.region = id;
   held.daily = {at: entry.daily.at, saved: true, failed: false};
   held.forecast = entry.forecast ? {at: entry.forecast.at, saved: true, failed: false} : null;
@@ -293,12 +308,12 @@ export function briefFrom({info, feed, forecast = null, coast, profile: p, hour:
 /** The brief the shell shows now, read from the signals so a component re-renders when they change. `at` defaults to the dock's hour. */
 export function currentBrief(now: Date, at: string | null = hour.value): BriefModel | null {
   const report = coastReport.value, binding = coastBinding.value;
-  const brief = briefFrom({info: regionInfo.value, feed: dailyFeed.value, forecast: regionalForecast.value, coast: report && binding ? {report: report.data, areaId: binding.areaId} : null, profile: profile.value, hour: at,
+  const brief = briefFrom({info: shownRegion(), feed: dailyFeed.value, forecast: regionalForecast.value, coast: report && binding ? {report: report.data, areaId: binding.areaId} : null, profile: profile.value, hour: at,
     limits: hasOwnLimits(profile.value) ? limitsFor(profile.value) : null}, now);
   const chosen = tideSelection.choice.value, config = tideSelection.region.value;
-  if (!brief || !chosen || !config || config.id !== regionInfo.value?.id || chosen === config.station) return brief;
+  if (!brief || !chosen || !config || config.id !== shownRegion()?.id || chosen === config.station) return brief;
   const station = tideSelection.stations.value.find(s => s.id === chosen) ?? {id: chosen, name: chosen};
-  return withTideSelection(brief, station, tideSelection.reading.value, regionInfo.value.timezone, now, at);
+  return withTideSelection(brief, station, tideSelection.reading.value, shownRegion()!.timezone, now, at);
 }
 
 /**
@@ -322,7 +337,7 @@ export function leadHour(hourValue: string | null, dayValue: string | null, now:
 export function SavedLine({now}: {now: Date}) {
   const s = savedBrief.value;
   if (!s) return null;
-  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, lang = language.value;
+  const tz = shownRegion()?.timezone ?? DEFAULT_ZONE, lang = language.value;
   const stale = !!leadBrief(now)?.tiles.some(tile => tile.state === 'stale' || tile.lastGood);
   const line = savedLine(s.at, now.getTime(), s.state, stale, tz, lang);
   return <p class="app-saved ui-mono" role="status" data-saved={s.state} data-stale={line.amber ? 'true' : undefined}>{line.text}</p>;
@@ -330,12 +345,12 @@ export function SavedLine({now}: {now: Date}) {
 
 /** The brief the lead answers from: the dock's brief once a time is chosen, else tomorrow's. */
 export function leadBrief(now: Date): BriefModel | null {
-  return currentBrief(now, leadHour(hour.value, day.value, now, regionInfo.value?.timezone ?? DEFAULT_ZONE));
+  return currentBrief(now, leadHour(hour.value, day.value, now, shownRegion()?.timezone ?? DEFAULT_ZONE));
 }
 
 /** The day ("YYYY-MM-DD") the lead answers for: its brief's date, else the day of its hour. */
 export function leadDate(now: Date, brief: BriefModel | null = leadBrief(now)): string {
-  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, at = leadHour(hour.value, day.value, now, tz);
+  const tz = shownRegion()?.timezone ?? DEFAULT_ZONE, at = leadHour(hour.value, day.value, now, tz);
   return brief?.date ?? dateKey(at ? new Date(at) : now, tz);
 }
 
@@ -357,7 +372,7 @@ const storedBoat = (): SavedBoatLike => (savedBoat() as {boat?: SavedBoatLike} |
 
 /** The day verdict for the brief shown now: the regional forecast only when it is this region's, rated for the saved boat (MYB-2); its reason sentences are in `lang` (the page's by default). */
 export function currentVerdict(brief: BriefModel | null, now: Date, lang: Language = language.value): BriefVerdict | null {
-  const info = regionInfo.value, forecast = regionalForecast.value;
+  const info = shownRegion(), forecast = regionalForecast.value;
   void boatSaved.value;   // a boat saved on first use (boat-entry.ts) re-rates the verdict on screen
   return briefVerdict(brief, info && forecast?.region === info.id ? forecast : null, now, info?.timezone ?? DEFAULT_ZONE, activeBoatFactors() as BoatFactors, lang);
 }
@@ -381,7 +396,7 @@ export const PROVISIONAL_BASIS = t('brief.provisional.basis');
  * here; before the registry loads the state reads "Check rules", never open.
  */
 export function LeadRules({date, now}: {date: string; now: Date}) {
-  const rules = regionInfo.value?.rules, lang = language.value;
+  const rules = shownRegion()?.rules, lang = language.value;
   useEffect(() => { if (rules) void loadRegs(rules); }, [rules?.id]);
   if (!rules) return null;
   const loaded = regsData.value, data = loaded?.region === rules.id ? loaded.data : null;
@@ -399,7 +414,7 @@ export function LeadRules({date, now}: {date: string; now: Date}) {
 /** SCFEAT-SKILL-1: measured forecast skill under the model-disagreement line (web/brief/skill.ts); UNKNOWN when history is short. */
 function SkillLine({now, lang}: {now: Date; lang: Language}) {
   useEffect(() => { loadSkill(); }, []);
-  const file = skillFile.value, id = regionInfo.value?.id;
+  const file = skillFile.value, id = shownRegion()?.id;
   if (file === undefined || !id) return null;
   const s = skillSummary(file, id, now.getTime());
   return <p class="app-verdict-skill ui-mono" data-skill={s.state}>{skillLine(s, lang)}</p>;
@@ -412,7 +427,7 @@ function SkillLine({now, lang}: {now: Date; lang: Language}) {
  * the day after tomorrow) says so in the verdict line itself. Before there is a brief, the waiting headline.
  */
 export function Verdict({now}: {now: Date}) {
-  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, brief = leadBrief(now), date = leadDate(now, brief), lang = language.value;
+  const tz = shownRegion()?.timezone ?? DEFAULT_ZONE, brief = leadBrief(now), date = leadDate(now, brief), lang = language.value;
   const v = currentVerdict(brief, now), rulesLine = <LeadRules date={date} now={now} />;
   if (!v) return <><Headline brief={brief} />{rulesLine}</>;
   const when = leadDayText(date, now, tz, lang);
@@ -469,7 +484,7 @@ const clock = (iso: string | number, tz: string, lang: Language = 'en') => new I
 /** The quietest window the model screened, labelled lower exposure; none is said plainly. */
 export function LowerExposure({brief}: {brief: BriefModel | null}) {
   if (!brief) return null;
-  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, w = brief.windows[0], lang = language.value;
+  const tz = shownRegion()?.timezone ?? DEFAULT_ZONE, w = brief.windows[0], lang = language.value;
   // The safety caveat stays visible; a window the user's looser limits decided adds that note after it.
   const own = w?.reasons.find(reason => reason.startsWith('Using your limits')), caveat = w?.reasons.find(reason => reason !== own);
   return (
@@ -550,9 +565,9 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 
 /** The button (screen only) and the print-only block: where and when, the printed-at time, the no-update line. */
 export function PrintBrief({now}: {now: Date}) {
-  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, lang = language.value;
+  const tz = shownRegion()?.timezone ?? DEFAULT_ZONE, lang = language.value;
   const at = leadHour(hour.value, day.value, now, tz), date = leadDate(now), when = at ? new Date(at) : now;
-  const place = [regionInfo.value?.name, port.value ? port.value.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null, PROFILE_TABLE[profile.value].label].filter(Boolean).join(' · ');
+  const place = [shownRegion()?.name, port.value ? port.value.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null, PROFILE_TABLE[profile.value].label].filter(Boolean).join(' · ');
   return (
     <>
       <Button class="app-print-button" onClick={() => window.print()}>{t('brief.print', lang)}</Button>

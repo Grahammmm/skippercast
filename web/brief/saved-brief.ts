@@ -13,6 +13,7 @@ import type {ConditionsForecast} from '../conditions.ts';
 import type {RegionalDailyFeed} from './types.ts';
 import {RUN_STALE_MS} from './verdict.ts';
 import {localeOf, t, type Language} from '../i18n.ts';
+import {validZone} from '../zone.ts';
 
 export const SAVED_BRIEF_KEY = 'skippercast-lastbrief-v1';
 /** A saved part dated further ahead than this (a device clock that moved back) is not trusted. */
@@ -21,9 +22,13 @@ const FUTURE_MS = 10 * 60_000;
 export interface SavedStore {getItem(key: string): string | null; setItem(key: string, value: string): void}
 /** A part of the brief with the epoch ms this device fetched it. */
 export interface SavedPart<T> {readonly at: number; readonly data: T}
+/** The region metadata the brief is built from (name, centre, zone): without it a saved brief cannot be rebuilt before region.json is read. */
+export interface SavedRegion {readonly name: string; readonly center: readonly [number, number]; readonly timezone: string}
 export interface SavedBrief {
   readonly v: 1;
   readonly region: string;
+  /** Absent when the region's own file had not been read when the brief was saved; the brief then waits for it as before. */
+  readonly region_info?: SavedRegion;
   readonly daily: SavedPart<RegionalDailyFeed> | null;
   readonly forecast: SavedPart<ConditionsForecast> | null;
 }
@@ -38,11 +43,17 @@ const finiteTime = (v: unknown, now: number): v is number => typeof v === 'numbe
 /** The forecast as the brief reads it: the chosen point's model runs, not the whole multi-point feed. */
 export const displayedForecast = (f: ConditionsForecast): ConditionsForecast => ({region: f.region, retrieved: f.retrieved, point: f.point, models: f.models});
 
+/** Only the region fields the brief reads. */
+export const displayedRegion = (r: SavedRegion): SavedRegion => ({name: r.name, center: [r.center[0], r.center[1]], timezone: r.timezone});
+
+const validCenter = (c: unknown): c is [number, number] => Array.isArray(c) && c.length === 2
+  && typeof c[0] === 'number' && typeof c[1] === 'number' && Number.isFinite(c[0]) && Number.isFinite(c[1]) && Math.abs(c[0]) <= 90 && Math.abs(c[1]) <= 180;
+
 /** Keep the entry for `region`; a part not given is dropped. Returns false (and keeps nothing new) when the store refuses. */
-export function writeSaved(store: SavedStore | null, region: string, daily: SavedPart<RegionalDailyFeed> | null, forecast: SavedPart<ConditionsForecast> | null): boolean {
+export function writeSaved(store: SavedStore | null, region: string, daily: SavedPart<RegionalDailyFeed> | null, forecast: SavedPart<ConditionsForecast> | null, info: SavedRegion | null = null): boolean {
   if (!store || !daily) return false;
   try {
-    const entry: SavedBrief = {v: 1, region, daily, forecast: forecast ? {at: forecast.at, data: displayedForecast(forecast.data)} : null};
+    const entry: SavedBrief = {v: 1, region, ...info ? {region_info: displayedRegion(info)} : {}, daily, forecast: forecast ? {at: forecast.at, data: displayedForecast(forecast.data)} : null};
     store.setItem(SAVED_BRIEF_KEY, JSON.stringify(entry));
     return true;
   } catch { return false; }
@@ -62,7 +73,9 @@ export function readSaved(store: SavedStore | null, region: string, now: number)
     const fc = f?.data as Partial<ConditionsForecast> | undefined;
     const forecast = f && finiteTime(f.at, now) && fc?.region === region && typeof fc.retrieved === 'number' && Number.isFinite(fc.retrieved) && fc.models && typeof fc.models === 'object' && fc.point
       ? {at: f.at, data: fc as ConditionsForecast} : null;
-    return {v: 1, region, daily: {at: d.at, data: d.data}, forecast};
+    const ri = e.region_info as Partial<SavedRegion> | undefined;
+    const region_info = ri && typeof ri.name === 'string' && validCenter(ri.center) && validZone(ri.timezone) ? displayedRegion(ri as SavedRegion) : undefined;
+    return {v: 1, region, ...region_info ? {region_info} : {}, daily: {at: d.at, data: d.data}, forecast};
   } catch { return null; }
 }
 

@@ -102,7 +102,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
           </div>
           <DegradedNotice />
           <Guard name="saved-brief"><SavedLine now={now} /></Guard>
-      <Guard name="verdict"><Verdict now={now} /></Guard>
+          <Guard name="verdict"><Verdict now={now} /></Guard>
           {apart ? dockHead : null}
         </>
       )}

@@ -15,7 +15,7 @@ import {loadLaunch, loadReach, loadSpear} from '../reach.ts';
 import {startTrip} from '../trip.ts';
 import {App, bindStartupFreshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
 import {loadPlans, regionPlans} from '../species.ts';
-import {bindBriefReport, currentBrief, ensureRegionalForecast, enableSavedBrief, loadDailyFeed, needsDailyLoad, showSavedBrief} from '../brief/Brief.tsx';
+import {bindBriefReport, currentBrief, ensureRegionalForecast, enableSavedBrief, noteRegionInfo, loadDailyFeed, needsDailyLoad, showSavedBrief} from '../brief/Brief.tsx';
 import {regionPlace} from '../map/currents.ts';
 import {initTelemetry} from '../telemetry.ts';
 import {installDegradedWatch} from '../degraded.ts';
@@ -57,7 +57,7 @@ effect(() => {
 // The brief's Wind and Swell tiles (#542): the region's forecast at the point nearest its centre, once the region's centre is known.
 effect(() => {
   const id = region.value, info = regionInfo.value;
-  if (id && info?.id === id) void ensureRegionalForecast(id, info.center);
+  if (id && info?.id === id) { void ensureRegionalForecast(id, info.center); noteRegionInfo(id); }
 });
 // The brief's coast report where the region binds one, whichever layers are on: the same place the
 // Swell and Water temp layers ask for (web/app/MapStage.tsx), so the client requests it once.
