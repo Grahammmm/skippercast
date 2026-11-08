@@ -9,6 +9,7 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {formatBytes, relativeTime} from '../../dist/offline-core.js';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
+import {PositionCheck} from './PositionCheck.tsx';
 import {region} from '../state.ts';
 import {
   KEEP_WORDS, canSaveCoastal, closeTrip, deleteCoastal, estimateWords, listPacks, loadPlanner, offlineOpen, plannerView, readCoastal, saveCoastal, savePack, savePackKept, storageLine, tripError, tripOpen, tripReady,
@@ -82,6 +83,7 @@ function TripDialog() {
       {tripReady.value ? null : <p role="status">{error ? loadFailed(error, lang) : t('trip.loading', lang)}</p>}
       {error ? <Button size="sm" onClick={() => void loadPlanner()}>{t('trip.retry', lang)}</Button> : null}
       {planner ? <planner.View model={planner.model} open={open} /> : null}
+      <PositionCheck />
       <Button icon="download" disabled={!region.value} onClick={() => { closeTrip(); offlineOpen.value = true; }}>{t('trip.legal.open', lang)}</Button>
     </dialog>
   );
@@ -98,6 +100,7 @@ export function LegalChecklist({meta, lang}: {meta: PackMeta; lang: Language}) {
     <ul>{legal?.items.map(item => <li key={item.id}>
       <strong>{t(LEGAL_PARTS[item.id]!, lang)}: {t(item.saved ? 'trip.legal.saved' : 'trip.legal.missing', lang)}</strong>
       <p>{t('trip.legal.dates', lang, {saved: item.saved_at ?? unknown, generated: item.generated_at ?? unknown, reviewed: item.reviewed_at ?? unknown, from: item.valid_from ?? unknown, through: item.valid_through ?? unknown})}</p>
+      {item.id === 'areas' ? <p>{t('trip.legal.checked', lang, {checked: item.checked_at ?? unknown})}</p> : null}
       {item.sources.map((url, i) => <a key={url} href={url} target="_blank" rel="noopener noreferrer">{t('trip.legal.source', lang, {n: i + 1})} · {new URL(url).hostname} </a>)}
     </li>)}</ul>
   </details>;
