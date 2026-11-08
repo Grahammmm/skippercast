@@ -235,7 +235,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // Reports catch sheet never mounts (FirstAnswerLine renders only in the desktop App shell); check_contrast.mjs changes only the appCss
   // surface hash and its comment, with contrast(), pairs, thresholds and line citations untouched. Both rebound from the final bytes.
   // MAPLIVE-1: app.css appends only a scoped .app-preview-head / .app-legend-preview / .app-preview-* block for the owner-only previews; the Reports catch sheet never mounts it. Rebound from the final bytes.
-  "web/app/app.css": "a991ae3707630d1057b89fd316948f1904261e44e0d82db0e1f3ed036a26cb14",
+  // SC-PERF-JUMP-1: app.css appends only layout rules (masthead, target menu width, desktop legend minimum height); no paint; the Reports catch sheet mounts none of them. Rebound from the final bytes.
+  "web/app/app.css": "d3271afa55ce5c04b9a075ba0f81a14fa545950662ef90e077aa97466c8c1523",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -298,7 +299,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1352-06: MapStage shows its labels and reasons in the page’s language and the legend’s saved-spots note does too (copy only); BODY09 never mounts MapStage. check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only MapStage.tsx and this source.
   // SC1352-07: the evidence layers' status lines and the fronts basis show in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash, line citations and a comment. Rebind only this source.
   // SCFEAT-FRESH-1: the Legend adds an "Updates: cadence" line per drawn layer (existing app-legend-note text role, copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. BODY09 mounts Reports, not the Legend. Rebind only this source.
-  "scripts/check_contrast.mjs": "2763ffa27cdfe47a2408dff4cd6ba81404d9df77dead43f8f77f4425a10b9c66",
+  // Rebound from the merged bytes (SCFEAT-FRESH-1 Legend.tsx rebind + SC-PERF-JUMP-1 appCss rebind).
+  "scripts/check_contrast.mjs": "0ebaeb575dbb7582e7ffccdd0de169482f49140bfe6310646188173b4fc8784a",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
