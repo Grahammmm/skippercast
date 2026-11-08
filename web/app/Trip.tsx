@@ -100,6 +100,7 @@ export function LegalChecklist({meta, lang}: {meta: PackMeta; lang: Language}) {
     <ul>{legal?.items.map(item => <li key={item.id}>
       <strong>{t(LEGAL_PARTS[item.id]!, lang)}: {t(item.saved ? 'trip.legal.saved' : 'trip.legal.missing', lang)}</strong>
       <p>{t('trip.legal.dates', lang, {saved: item.saved_at ?? unknown, generated: item.generated_at ?? unknown, reviewed: item.reviewed_at ?? unknown, from: item.valid_from ?? unknown, through: item.valid_through ?? unknown})}</p>
+      {item.id === 'areas' ? <p>{t('trip.legal.checked', lang, {checked: item.checked_at ?? unknown})}</p> : null}
       {item.sources.map((url, i) => <a key={url} href={url} target="_blank" rel="noopener noreferrer">{t('trip.legal.source', lang, {n: i + 1})} · {new URL(url).hostname} </a>)}
     </li>)}</ul>
   </details>;

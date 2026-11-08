@@ -11,7 +11,7 @@ function fixture() {
     new Response(JSON.stringify(data), {headers: {'X-SC-Saved-At': saved}}));
   put('/regions/test/region.json', {id: 'test', assets: {regulations: 'data/rules.json', protected_areas: 'data/areas.json'}});
   put('/data/rules.json', {schema_version: 1, valid_from: '2026-01-01', valid_through: '2026-12-31', reviewed_at: '2026-10-01', sources: {rules: {url: 'https://wildlife.ca.gov/Fishing/Ocean'}}});
-  put('/data/areas.json', {type: 'FeatureCollection', features: []});
+  put('/data/areas.json', {type: 'FeatureCollection', checked_at: at, features: []});
   for (const part of ['regulations', 'mpa-boundaries', 'additional-closures']) put(`/api/daily?region=test&part=${part}`,
     {schema_version: 1, region_id: 'test', part, generated_at: at, ...(part === 'regulations' ? {regulations: {checks: {rules: {status: 'unchanged', source_status: 'ok', data_retrieved_at: at}}}} : {sources: {source: {status: 'ok', checked_at: at}}})});
   return {entries, put, cache: {match: async path => entries.get(new URL(path, origin).href)?.clone()}};
@@ -27,6 +27,21 @@ test('legal inventory reads actual cached parts, dates and official source links
   assert.equal(result.items[0].reviewed_at, '2026-10-01');
   assert.deepEqual(result.items[0].sources, ['https://wildlife.ca.gov/Fishing/Ocean']);
   assert.equal(result.stale, false);
+  assert.equal(result.items[1].checked_at, at);
+});
+
+test('a freshly saved boundary file with an old, undated, unreadable or future source check date still warns', async () => {
+  for (const checked_at of ['2026-09-21T21:16:23.947180+00:00', '2026-11-05T12:00:00Z', '2026-11-08T12:00:00Z', 'not a date', 42, null, undefined]) {
+    const {cache, put} = fixture();
+    put('/data/areas.json', {type: 'FeatureCollection', ...(checked_at === undefined ? {} : {checked_at}), features: []});
+    const result = await inspectLegalPack(cache, 'test', origin, now);
+    const areas = result.items.find(item => item.id === 'areas');
+    assert.equal(areas.saved, true, String(checked_at));
+    assert.equal(areas.saved_at, at, String(checked_at));
+    assert.equal(areas.stale, true, String(checked_at));
+    assert.equal(areas.checked_at, typeof checked_at === 'string' ? checked_at : null, String(checked_at));
+    assert.equal(result.stale, true, String(checked_at));
+  }
 });
 
 test('evicted, corrupt and wrong-region parts are missing even if pack metadata claimed success', async () => {
