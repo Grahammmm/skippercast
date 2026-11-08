@@ -12,7 +12,9 @@ test('map catch and blank persist locally without account writes; quota failure 
   const log = page.getByRole('region', {name: 'Private device log', exact: true});
   await expect(log.getByRole('button', {name: 'Log catch here'})).toBeVisible();
   const writes: string[] = [];
-  page.on('request', request => { if (request.method() !== 'GET') writes.push(request.url()); });
+  // The page's anonymous funnel beacon (web/telemetry.ts) is sent when its 10 s flush timer fires, or on 'pagehide' (the reload below).
+  // A runner slow enough to cross 10 s inside this window posts it: main failed twice in a row that way (2026-11-07 21:03, 2026-11-08 00:24 UTC). It is no account write.
+  page.on('request', request => { if (request.method() !== 'GET' && new URL(request.url()).pathname !== '/api/telemetry') writes.push(request.url()); });
   const before = await page.evaluate(() => ({href: location.href, history: history.length}));
   await log.getByRole('button', {name: 'Log catch here'}).click();
   await expect(log.getByRole('status')).toHaveText('Saved on this device only.');
