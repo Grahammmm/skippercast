@@ -467,6 +467,10 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-preview-ends { display: flex; flex-basis: 100%; justify-content: space-between; font-size: var(--text-11); color: var(--muted); }
 .app-legend-preview[data-state="stale"] .app-legend-note[role="status"], .app-legend-preview[data-state="unavailable"] .app-legend-note[role="status"] { font-weight: 600; }
 
+/* SC-PERF-INSTANT-1: the saved brief's "Last updated" line; amber when past the brief's own freshness limit, so it never reads calmer than live data. */
+.app-saved { margin: var(--space-2) 0; color: var(--muted); font-size: var(--text-13); }
+.app-saved[data-stale="true"] { color: var(--amber); font-weight: var(--weight-semibold); }
+
 /* SC-PERF-JUMP-1 (PERF-BASELINE-1 P10): reserve the space the late-arriving header parts fill, so the desktop shell does not move (CLS 0.85 -> about 0.11).
    The chat entry would otherwise wrap onto two lines (62 px) when the session read opens it, making the masthead 18 px taller; the place name gains its
    coordinates when the region info lands; the target menu gains options and widens, which re-wraps the command bar. */

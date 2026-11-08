@@ -226,7 +226,9 @@ export async function loadTerrainHabitat(loader: Loader = () => import('./map/co
 }
 
 /** A target as `loadReefTrip` publishes it (the fields read here). */
-export interface PublishedReef {readonly id: string; readonly latitude: number; readonly longitude: number; readonly neighborhood_depth_ft: readonly number[]; readonly terrain_interpretation?: string}
+export interface PublishedReef {readonly id: string; readonly latitude: number; readonly longitude: number; readonly neighborhood_depth_ft: readonly number[]; readonly terrain_interpretation?: string;
+  /** SC-PERF-PROTCHECK-1: the verdict the publisher computed for this reef (valid only with the publication's `protected_fingerprint`). */
+  readonly protected_place?: PlaceVerdict}
 type Ranked = PublishedReef & {readonly name: string; readonly trip_fit: number};
 /** The planner's seafloor habitat-export publication as the brief holds it, for one region. */
 export type ReefPublication = {readonly state: 'idle' | 'loading' | 'unavailable'; readonly region?: string;
@@ -236,7 +238,7 @@ export type ReefPublication = {readonly state: 'idle' | 'loading' | 'unavailable
   | {readonly state: 'deferred'; readonly region: string}
   /** SC-PERF-LAZY-1: Save-Data or a slow link; nothing is fetched until the angler asks. `bytes` is the published size when known. */
   | {readonly state: 'offer'; readonly region: string; readonly bytes: number | null; readonly why: 'save-data' | 'slow-type' | 'slow-measured'}
-  | {readonly state: 'ready'; readonly region: string; readonly loaded: {readonly targets: readonly PublishedReef[]; readonly areas: readonly {id: string; geometry: unknown}[]; readonly publication: {export_sha256?: string} & Record<string, unknown>}};
+  | {readonly state: 'ready'; readonly region: string; readonly loaded: {readonly targets: readonly PublishedReef[]; readonly areas: readonly {id: string; geometry: unknown}[]; readonly protected_fingerprint?: string; readonly publication: {export_sha256?: string} & Record<string, unknown>}};
 export const reefPublication = signal<ReefPublication>({state: 'idle'});
 type ReefLoader = (region: string) => Promise<unknown>;
 /** The manifest gate as dist/seafloor-data.js `loadManifest` returns it (the fields read here). */
@@ -299,7 +301,7 @@ export async function recheckReefPublication(region: string, gate: ReefGate = r 
 const rankSpots = bestSpots as unknown as (atlas: unknown, screen: unknown, o: Record<string, unknown>) => Ranked[];
 /** SCJ-2b: the trip planner's protected-area screen (web/trip.ts `protectedScreen`), declared here so this file does not import trip.ts. */
 export type PlannerScreenState = {readonly state: 'idle' | 'loading' | 'failed'} | {readonly state: 'loaded'; readonly region?: string;
-  readonly screen: {ready(): boolean; pointAllowed(p: {latitude: number; longitude: number}): boolean; geometryAllowed(g: unknown): boolean}};
+  readonly screen: {ready(): boolean; pointAllowed(p: {latitude: number; longitude: number}): boolean; geometryAllowed(g: unknown): boolean; fingerprint?(): string | null}};
 type ReadyScreen = Extract<PlannerScreenState, {state: 'loaded'}>['screen'];
 /** The publication list's line while the planner's screen has loaded but is not current (failed, never checked, or past 36 h). */
 export const SCREEN_NOT_CURRENT = 'Protected-area check not current · fishing places withheld';
@@ -311,6 +313,10 @@ function publicationScreened(loaded: Extract<ReefPublication, {state: 'ready'}>[
   let pending = false;
   const watched: Place = p => { const at = place(p); pending ||= at.state === 'unknown' && at.reason === 'pending'; return at; };
   const stats = {withheld: 0};
+  // SC-PERF-PROTCHECK-1: the verdict computed at publish time (src/skippercast/seafloor/protected_screen.py) stands in for `screenPlace` only while this
+  // screen holds exactly the boundary data it was computed against; any other screen (or an export without verdicts) runs `screenPlace` as before.
+  // Fallback removal: once no cached export without `protected_fingerprint` can reach a browser (every region republished and the old files past `expires_at` + the cache lifetime).
+  const stored = typeof loaded.protected_fingerprint === 'string' && screen.fingerprint?.() === loaded.protected_fingerprint;
   // RF1050-16: malformed depth bands are dropped before the 50-candidate cap so they cannot starve a valid place; the cached publication is not touched.
   const maxDepth = Math.min(limitFt, 300);
   const eligible = {...loaded, targets: loaded.targets.filter(t => validDepthPair(t?.neighborhood_depth_ft, maxDepth))};
@@ -320,7 +326,7 @@ function publicationScreened(loaded: Extract<ReefPublication, {state: 'ready'}>[
     const species = speciesPart(coast);
     return {id: t.id, kind: 'reef', name: t.name, distance: yd === null ? distance(nm) : swimText(yd), nm, depth: band(lo, hi),
       fit: label ? fitLine(label, t.trip_fit) : 'Screened reef habitat', reason: t.terrain_interpretation ?? 'Surveyed reef terrain.', at: {latitude: t.latitude, longitude: t.longitude},
-      screen: screenPlace(screen, {latitude: t.latitude, longitude: t.longitude, geometries: areasOf(loaded, t)}),
+      screen: (stored ? t.protected_place : undefined) ?? screenPlace(screen, {latitude: t.latitude, longitude: t.longitude, geometries: areasOf(loaded, t)}),
       copy: {...swimCopy(yd), fit: label && species ? [cp('mark.layer.habitat.fit', {species, n: t.trip_fit})] : [rp('fit.screened')],
         ...(t.terrain_interpretation === undefined ? {reason: [rp('reason.surveyed')]} : {})}};
   })};
