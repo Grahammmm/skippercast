@@ -72,7 +72,7 @@
 .app-trip .pos-check h3 { margin: 0 0 var(--space-2); font-size: var(--text-22); }
 .app-trip .pos-check p { color: var(--text); }
 .app-trip .pos-check .pos-note, .app-trip .pos-check .pos-small { color: var(--muted); font-size: var(--text-15); }
-.app-trip .pos-check .pos-button { width: 100%; min-height: calc(var(--touch-min) + var(--space-3)); font-size: var(--text-22); }
+.app-trip .pos-check .pos-button { width: 100%; min-height: calc(var(--touch-min) + var(--space-3)); border-color: var(--mint); background: var(--mint); color: var(--bg); font-size: var(--text-22); font-weight: var(--weight-semibold); }
 .app-trip .pos-check .pos-result { margin-top: var(--space-3); }
 .app-trip .pos-check .pos-verdict { margin: var(--space-2) 0; padding: var(--space-2) var(--space-3); border-left: var(--space-2) solid var(--mint); background: var(--panel); font: var(--weight-semibold) var(--text-28) / var(--leading-heading) var(--font-sans); }
 .app-trip .pos-check .pos-verdict[data-where="near"] { border-left-color: var(--amber); }
