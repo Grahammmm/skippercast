@@ -29,7 +29,8 @@ import {depthLimitFt, PROFILE_TABLE} from '../profile.ts';
 import {isReachProfile, nmText, reachFor, shoreSwimLimit, spearPlan} from '../reach.ts';
 import {loadShoreLines, shoreLines} from '../shore-distance.ts';
 import {landWater, loadLandWater, loadLandWaterLines, placeFor, type LandWaterState} from '../land-water.ts';
-import {loadReefPublication, ranking, recheckReefPublication, reefPublication, regionLoad, routedPicks, ROUTE_BUDGET, TOP, type Pick, type Ranking, type RoutedPick, type RouteFn} from '../ranking.ts';
+import {ranking, recheckReefPublication, reefPublication, regionLoad, routedPicks, ROUTE_BUDGET, TOP, type Pick, type Ranking, type RoutedPick, type RouteFn} from '../ranking.ts';
+import {acceptReefLoad, offerMegabytes, requestReefPublication} from '../reef-lazy.ts';
 import {waterRoute, type Route, type RouteFailure} from '../route.ts';
 import {fitCamera} from '../map/ranked.ts';
 import {cameraParam} from '../map/stage.ts';
@@ -247,6 +248,34 @@ function Why({pick}: {pick: Pick}) {
   );
 }
 
+/**
+ * SC-PERF-LAZY-1: says plainly when the reef ranking is not loaded and why the list above is the shorter one. On Save-Data or a slow link
+ * it holds the one button that fetches it; if the fetch failed it offers to try again. Nothing shows while it loads or once it has.
+ */
+function ReefNote({id, lang}: {id: string | null; lang: Language}) {
+  const pub = reefPublication.value;
+  if (!id || pub.region !== id) return null;
+  if (pub.state === 'offer') {
+    const mb = offerMegabytes(pub.bytes);
+    return (
+      <div class="app-reef-note" data-reef="offer" data-why={pub.why}>
+        <p class="app-reef-text">{t('reef.offer.note', lang)}</p>
+        <Button size="sm" onClick={() => { void acceptReefLoad(id); }}>{mb === null ? t('reef.offer.buttonNoSize', lang) : t('reef.offer.button', lang, {mb})}</Button>
+      </div>
+    );
+  }
+  // A rejected publication (`rejected` set: held, expired or superseded) is withheld on purpose; only a failed fetch says "try again".
+  if (pub.state === 'unavailable' && pub.rejected === undefined) {
+    return (
+      <div class="app-reef-note" data-reef="unavailable">
+        <p class="app-reef-text">{t('reef.unavailable.note', lang)}</p>
+        <Button size="sm" onClick={() => { void acceptReefLoad(id); }}>{t('reef.retry', lang)}</Button>
+      </div>
+    );
+  }
+  return null;
+}
+
 export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   const boat = profile.value === 'boat', kayak = profile.value === 'kayak', water = boat || kayak, r = given ?? currentRanking(Date.now(), water ? ROUTE_BUDGET : undefined), id = region.value, speed = cruiseSpeed.value, lang = language.value;
   // SC1322-10: Boat (and, SC2207-05, Kayak from its launch) list by water where routed; other profiles keep the ranking's picks as they are. The render uses
@@ -263,8 +292,9 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   // minute, as the planner checks its plan, so a held, unavailable or superseded publication stops ranking.
   useEffect(() => {
     if (!id) return;
+    // SC-PERF-LAZY-1: the 15 MB export is requested after the map's first paint, and only offered on Save-Data or a slow link.
     const was = reefPublication.peek();
-    void (was.state !== 'idle' && was.region === id ? recheckReefPublication(id) : loadReefPublication(id));
+    void (was.state !== 'idle' && was.region === id ? recheckReefPublication(id) : requestReefPublication(id));
     const timer = setInterval(() => { void recheckReefPublication(id); }, 60000);
     return () => clearInterval(timer);
   }, [id]);
@@ -305,6 +335,7 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
           ))}
         </ol>
       ) : <EmptyOrPlan empty={rankingEmpty(r, lang)} />}
+      <ReefNote id={id} lang={lang} />
       <RangeControl measured={r.harbor} />
     </section>
   );
