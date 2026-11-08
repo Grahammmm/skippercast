@@ -33,13 +33,13 @@ def rows(order):
 
 
 def main_table(order, live):
-    out = ['| page | profile | pass | FCP | LCP | ' + ('brief shown | ' if live else '') + 'canvas + quiet thread (proxy) | TBT to proxy | CLS | longest task | JS script time | JS heap | requests | bytes | req. ≤ LCP | PMTiles req / bytes' + (' | export loaded' if live else '') + ' |',
+    out = ['| page | profile | pass | FCP | LCP | ' + ('brief shown | ' if live else '') + 'canvas quiet (proxy) | TBT to proxy | CLS | longest task | JS script time | JS heap | requests | bytes | req. ≤ LCP | PMTiles req / bytes' + (' | export loaded' if live else '') + ' |',
            '|' + '---|' * (16 if live else 14)]
     for g in rows(order):
         cells = [g['page'], g['profile'], g['pass'], ms(g['fcpMs']), ms(g['lcpMs'])]
         if live:
             cells.append(ms(g['readyMs']))
-        cells += [ms(g['mapUsableMs']), ms(g['tbtMs']), f"{g['cls']:.3f}" if g['cls'] is not None else '–', ms(g['longestTaskMs']), ms(g['scriptMs']),
+        cells += [ms(g['canvasQuietMs']), ms(g['tbtMs']), f"{g['cls']:.3f}" if g['cls'] is not None else '–', ms(g['longestTaskMs']), ms(g['scriptMs']),
                   b(g['jsHeapUsedBytes']), str(g['requestCount']), b(g['bytesTotal']), str(g['requestsBeforeLcp']), f"{g['pmtilesRangeRequests']} / {b(g['pmtilesBytes'])}"]
         if live:
             cells.append(f"{g['habitatExportLoaded']}/{g['runs']}")
@@ -55,14 +55,14 @@ def kinds_table(order):
 
 
 def extras_table(order):
-    out = ['| page | profile | pass | network req / bytes | no-store req / bytes | third-party req / bytes | req. ≤ FCP | observed window (network quiet) |',
-           '|---|---|---|---|---|---|---|---|']
+    out = ['| page | profile | pass | network req / bytes | no-store req / bytes | third-party req / bytes | req. ≤ FCP | JS script time | network-settle window (not the CPU-counter window) |',
+           '|---|---|---|---|---|---|---|---|---|']
     for g in rows(order):
         e = E.get((g['page'], g['profile'], g['pass']))
         if not e:
             continue
         out.append(f"| {g['page']} | {g['profile']} | {g['pass']} | {int(e['warmNetworkRequests'])} / {b(e['warmNetworkBytes'])} | {int(e['noStoreRequests'])} / {b(e['noStoreBytes'])} | "
-                   f"{int(e['thirdPartyRequests'])} / {b(e['thirdPartyBytes'])} | {e['requestsBeforeFcp']} | {ms(e['settledMs'])} |")
+                   f"{int(e['thirdPartyRequests'])} / {b(e['thirdPartyBytes'])} | {e['requestsBeforeFcp']} | {ms(e['scriptMs'])} | {ms(e['settledMs'])} |")
     return '\n'.join(out)
 
 

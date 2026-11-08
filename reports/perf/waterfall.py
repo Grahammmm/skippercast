@@ -14,7 +14,9 @@ for q in r['requests']:
         if '?' in q['url'] and 'skippercast.com' in q['url']:
             u += '?' + q['url'].split('?')[1][:40]
         rows.append((q['startMs'], f"{q['startMs']:>7} → {q['endMs'] if q['endMs'] is not None else '…':>7}  {(q['bytes'] or 0)/1e3:>9.1f} KB  {q['kind']:6s} {u[:95]}{'  [' + q['failed'] + ']' if q['failed'] else ''}"))
-for name, key in [('FCP', 'fcpMs'), ('LCP', 'lcpMs'), ('brief shown', 'readyMs'), ('map canvas', 'mapCanvasMs'), ('map usable', 'mapUsableMs')]:
+for name, key in [('FCP', 'fcpMs'), ('LCP', 'lcpMs'), ('brief shown', 'readyMs'), ('map canvas', 'mapCanvasMs'), ('canvas quiet (proxy, not map usable)', 'canvasQuietMs')]:
+    if r.get(key) is None and key == 'canvasQuietMs':
+        key = 'mapUsableMs'
     if r.get(key) is not None:
         rows.append((r[key], f"{r[key]:>7}   ── {name} ──"))
 for _, line in sorted(rows, key=lambda x: x[0]):

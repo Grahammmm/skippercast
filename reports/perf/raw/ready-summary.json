@@ -1,2136 +1,6 @@
 {
  "runs": [
   {
-   "page": "layer-wind",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 1,
-   "frames": 419,
-   "settledMs": 6524,
-   "firstFrameMs": -3,
-   "paintedMs": 220,
-   "finalPaint": [
-    0.378,
-    15
-   ],
-   "animated": true,
-   "completeMs": null,
-   "responseMs": 37,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 220,
-   "maxInputDelayMs": 33,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 220,
-   "fcpMs": 36,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.581,
-   "scriptMs": 4161,
-   "windowMs": 7158,
-   "layer": {
-    "requests": 1,
-    "bytes": 3865,
-    "doneMs": 257,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 255,
-    "examples": [
-     "wind-preview.json"
-    ]
-   },
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-wind",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 2,
-   "frames": 372,
-   "settledMs": 6267,
-   "firstFrameMs": 40,
-   "paintedMs": 207,
-   "finalPaint": [
-    0.363,
-    15
-   ],
-   "animated": true,
-   "completeMs": null,
-   "responseMs": 7,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 1030,
-   "maxInputDelayMs": 28,
-   "inputProbes": 6,
-   "quietAfterPaintMs": 207,
-   "fcpMs": 40,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.632,
-   "scriptMs": 4518,
-   "windowMs": 7155,
-   "layer": {
-    "requests": 1,
-    "bytes": 3865,
-    "doneMs": 244,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 242,
-    "examples": [
-     "wind-preview.json"
-    ]
-   },
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-wind",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 3,
-   "frames": 435,
-   "settledMs": 6272,
-   "firstFrameMs": -2,
-   "paintedMs": 216,
-   "finalPaint": [
-    0.37,
-    15
-   ],
-   "animated": true,
-   "completeMs": null,
-   "responseMs": 14,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 216,
-   "maxInputDelayMs": 29,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 216,
-   "fcpMs": 32,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.567,
-   "scriptMs": 4056,
-   "windowMs": 7150,
-   "layer": {
-    "requests": 1,
-    "bytes": 3865,
-    "doneMs": 253,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 252,
-    "examples": [
-     "wind-preview.json"
-    ]
-   },
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-sst",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 1,
-   "frames": 30,
-   "settledMs": 6525,
-   "firstFrameMs": -2,
-   "paintedMs": 200,
-   "finalPaint": [
-    0.295,
-    12
-   ],
-   "animated": false,
-   "completeMs": 467,
-   "responseMs": 48,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 200,
-   "maxInputDelayMs": 7,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 200,
-   "fcpMs": 28,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.008,
-   "scriptMs": 56,
-   "windowMs": 7032,
-   "layer": {
-    "requests": 1,
-    "bytes": 2276790,
-    "doneMs": 239,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 219,
-    "examples": [
-     "sst-preview.json"
-    ]
-   },
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-sst",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 2,
-   "frames": 31,
-   "settledMs": 6521,
-   "firstFrameMs": 43,
-   "paintedMs": 209,
-   "finalPaint": [
-    0.295,
-    12
-   ],
-   "animated": false,
-   "completeMs": 492,
-   "responseMs": 41,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 1013,
-   "maxInputDelayMs": 1,
-   "inputProbes": 6,
-   "quietAfterPaintMs": 209,
-   "fcpMs": 36,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.009,
-   "scriptMs": 64,
-   "windowMs": 7029,
-   "layer": {
-    "requests": 1,
-    "bytes": 2276790,
-    "doneMs": 262,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 245,
-    "examples": [
-     "sst-preview.json"
-    ]
-   },
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-sst",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 3,
-   "frames": 28,
-   "settledMs": 6523,
-   "firstFrameMs": 42,
-   "paintedMs": 208,
-   "finalPaint": [
-    0.295,
-    12
-   ],
-   "animated": false,
-   "completeMs": 458,
-   "responseMs": 41,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 1013,
-   "maxInputDelayMs": 1,
-   "inputProbes": 6,
-   "quietAfterPaintMs": 208,
-   "fcpMs": 36,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.008,
-   "scriptMs": 55,
-   "windowMs": 7029,
-   "layer": {
-    "requests": 1,
-    "bytes": 2276790,
-    "doneMs": 233,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 211,
-    "examples": [
-     "sst-preview.json"
-    ]
-   },
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-wind",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 1,
-   "frames": 784,
-   "settledMs": 20717,
-   "firstFrameMs": -3,
-   "paintedMs": 854,
-   "finalPaint": [
-    0.363,
-    16
-   ],
-   "animated": true,
-   "completeMs": null,
-   "responseMs": 150,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 1847,
-   "maxInputDelayMs": 672,
-   "inputProbes": 75,
-   "quietAfterPaintMs": 854,
-   "fcpMs": 844,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.614,
-   "scriptMs": 74339,
-   "windowMs": 121003,
-   "layer": {
-    "requests": 1,
-    "bytes": 3865,
-    "doneMs": 14490,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 14140,
-    "examples": [
-     "wind-preview.json"
-    ]
-   },
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-wind",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 2,
-   "frames": 792,
-   "settledMs": 20466,
-   "firstFrameMs": -2,
-   "paintedMs": 872,
-   "finalPaint": [
-    0.364,
-    17
-   ],
-   "animated": true,
-   "completeMs": null,
-   "responseMs": 143,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 1863,
-   "maxInputDelayMs": 688,
-   "inputProbes": 77,
-   "quietAfterPaintMs": 872,
-   "fcpMs": 860,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.616,
-   "scriptMs": 74954,
-   "windowMs": 121703,
-   "layer": {
-    "requests": 1,
-    "bytes": 3865,
-    "doneMs": 14369,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 14177,
-    "examples": [
-     "wind-preview.json"
-    ]
-   },
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-wind",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 3,
-   "frames": 766,
-   "settledMs": 20460,
-   "firstFrameMs": 16,
-   "paintedMs": 866,
-   "finalPaint": [
-    0.363,
-    17
-   ],
-   "animated": true,
-   "completeMs": null,
-   "responseMs": 153,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 1858,
-   "maxInputDelayMs": 676,
-   "inputProbes": 76,
-   "quietAfterPaintMs": 866,
-   "fcpMs": 856,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.621,
-   "scriptMs": 75614,
-   "windowMs": 121743,
-   "layer": {
-    "requests": 1,
-    "bytes": 3865,
-    "doneMs": 14276,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 14085,
-    "examples": [
-     "wind-preview.json"
-    ]
-   },
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-sst",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 1,
-   "frames": 65,
-   "settledMs": 31998,
-   "firstFrameMs": -3,
-   "paintedMs": 8471,
-   "finalPaint": [
-    0.32,
-    18
-   ],
-   "animated": false,
-   "completeMs": 26003,
-   "responseMs": 130,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8471,
-   "maxInputDelayMs": 685,
-   "inputProbes": 31,
-   "quietAfterPaintMs": 8471,
-   "fcpMs": 852,
-   "tbtMs": 143,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.013,
-   "scriptMs": 415,
-   "windowMs": 32463,
-   "layer": {
-    "requests": 1,
-    "bytes": 2276790,
-    "doneMs": 25546,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 14092,
-    "examples": [
-     "sst-preview.json"
-    ]
-   },
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-sst",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 2,
-   "frames": 65,
-   "settledMs": 31995,
-   "firstFrameMs": -3,
-   "paintedMs": 8460,
-   "finalPaint": [
-    0.32,
-    18
-   ],
-   "animated": false,
-   "completeMs": 25943,
-   "responseMs": 132,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8460,
-   "maxInputDelayMs": 690,
-   "inputProbes": 31,
-   "quietAfterPaintMs": 8460,
-   "fcpMs": 860,
-   "tbtMs": 62,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.011,
-   "scriptMs": 361,
-   "windowMs": 32471,
-   "layer": {
-    "requests": 1,
-    "bytes": 2276790,
-    "doneMs": 25531,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 14086,
-    "examples": [
-     "sst-preview.json"
-    ]
-   },
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-sst",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 3,
-   "frames": 65,
-   "settledMs": 31989,
-   "firstFrameMs": 12,
-   "paintedMs": 8445,
-   "finalPaint": [
-    0.32,
-    18
-   ],
-   "animated": false,
-   "completeMs": 26011,
-   "responseMs": 127,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8445,
-   "maxInputDelayMs": 687,
-   "inputProbes": 31,
-   "quietAfterPaintMs": 8445,
-   "fcpMs": 868,
-   "tbtMs": 76,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.011,
-   "scriptMs": 364,
-   "windowMs": 32457,
-   "layer": {
-    "requests": 1,
-    "bytes": 2276790,
-    "doneMs": 25532,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 14078,
-    "examples": [
-     "sst-preview.json"
-    ]
-   },
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-base-medium",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 1,
-   "frames": 31,
-   "settledMs": 6528,
-   "firstFrameMs": 40,
-   "paintedMs": 256,
-   "finalPaint": [
-    0.399,
-    19
-   ],
-   "animated": false,
-   "completeMs": 306,
-   "responseMs": 23,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 256,
-   "maxInputDelayMs": 9,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 370,
-   "fcpMs": 36,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.006,
-   "scriptMs": 44,
-   "windowMs": 7031,
-   "layer": null,
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-base-medium",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 2,
-   "frames": 32,
-   "settledMs": 6526,
-   "firstFrameMs": 35,
-   "paintedMs": 235,
-   "finalPaint": [
-    0.399,
-    19
-   ],
-   "animated": false,
-   "completeMs": 318,
-   "responseMs": 22,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 235,
-   "maxInputDelayMs": 6,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 364,
-   "fcpMs": 32,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.006,
-   "scriptMs": 42,
-   "windowMs": 7028,
-   "layer": null,
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-base-medium",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 3,
-   "frames": 31,
-   "settledMs": 6528,
-   "firstFrameMs": 44,
-   "paintedMs": 211,
-   "finalPaint": [
-    0.399,
-    19
-   ],
-   "animated": false,
-   "completeMs": 244,
-   "responseMs": 32,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 211,
-   "maxInputDelayMs": 5,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 292,
-   "fcpMs": 40,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.005,
-   "scriptMs": 37,
-   "windowMs": 7027,
-   "layer": null,
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-chlorophyll",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 1,
-   "frames": 31,
-   "settledMs": 6521,
-   "firstFrameMs": 44,
-   "paintedMs": 194,
-   "finalPaint": [
-    0.294,
-    17
-   ],
-   "animated": false,
-   "completeMs": 311,
-   "responseMs": 26,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 194,
-   "maxInputDelayMs": 5,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 370,
-   "fcpMs": 36,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.006,
-   "scriptMs": 42,
-   "windowMs": 7030,
-   "layer": {
-    "requests": 0,
-    "bytes": 0,
-    "doneMs": null,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": null,
-    "examples": []
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.378
-  },
-  {
-   "page": "layer-chlorophyll",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 2,
-   "frames": 31,
-   "settledMs": 6528,
-   "firstFrameMs": 12,
-   "paintedMs": 179,
-   "finalPaint": [
-    0.294,
-    17
-   ],
-   "animated": false,
-   "completeMs": 296,
-   "responseMs": 44,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 1011,
-   "maxInputDelayMs": 1,
-   "inputProbes": 6,
-   "quietAfterPaintMs": 362,
-   "fcpMs": 28,
-   "tbtMs": 25,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.006,
-   "scriptMs": 40,
-   "windowMs": 7027,
-   "layer": {
-    "requests": 0,
-    "bytes": 0,
-    "doneMs": null,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": null,
-    "examples": []
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.378
-  },
-  {
-   "page": "layer-chlorophyll",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 3,
-   "frames": 28,
-   "settledMs": 6525,
-   "firstFrameMs": 36,
-   "paintedMs": 203,
-   "finalPaint": [
-    0.294,
-    17
-   ],
-   "animated": false,
-   "completeMs": 303,
-   "responseMs": 48,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 203,
-   "maxInputDelayMs": 4,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 404,
-   "fcpMs": 36,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.007,
-   "scriptMs": 50,
-   "windowMs": 7035,
-   "layer": {
-    "requests": 0,
-    "bytes": 0,
-    "doneMs": null,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": null,
-    "examples": []
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.378
-  },
-  {
-   "page": "layer-current",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 1,
-   "frames": 31,
-   "settledMs": 6523,
-   "firstFrameMs": 39,
-   "paintedMs": 222,
-   "finalPaint": [
-    0.328,
-    18
-   ],
-   "animated": false,
-   "completeMs": 472,
-   "responseMs": 54,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 222,
-   "maxInputDelayMs": 6,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 456,
-   "fcpMs": 36,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.009,
-   "scriptMs": 62,
-   "windowMs": 7031,
-   "layer": {
-    "requests": 0,
-    "bytes": 0,
-    "doneMs": null,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": null,
-    "examples": []
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.414
-  },
-  {
-   "page": "layer-current",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 2,
-   "frames": 30,
-   "settledMs": 6526,
-   "firstFrameMs": 14,
-   "paintedMs": 231,
-   "finalPaint": [
-    0.328,
-    18
-   ],
-   "animated": false,
-   "completeMs": 447,
-   "responseMs": 47,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 231,
-   "maxInputDelayMs": 7,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 443,
-   "fcpMs": 28,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.009,
-   "scriptMs": 61,
-   "windowMs": 7030,
-   "layer": {
-    "requests": 0,
-    "bytes": 0,
-    "doneMs": null,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": null,
-    "examples": []
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.414
-  },
-  {
-   "page": "layer-current",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 3,
-   "frames": 28,
-   "settledMs": 6525,
-   "firstFrameMs": 23,
-   "paintedMs": 223,
-   "finalPaint": [
-    0.328,
-    18
-   ],
-   "animated": false,
-   "completeMs": 473,
-   "responseMs": 40,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 223,
-   "maxInputDelayMs": 4,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 466,
-   "fcpMs": 24,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.009,
-   "scriptMs": 62,
-   "windowMs": 7028,
-   "layer": {
-    "requests": 0,
-    "bytes": 0,
-    "doneMs": null,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": null,
-    "examples": []
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.414
-  },
-  {
-   "page": "layer-tide",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 1,
-   "frames": 32,
-   "settledMs": 6526,
-   "firstFrameMs": 37,
-   "paintedMs": 237,
-   "finalPaint": [
-    0.347,
-    19
-   ],
-   "animated": false,
-   "completeMs": 287,
-   "responseMs": 37,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 237,
-   "maxInputDelayMs": 3,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 347,
-   "fcpMs": 36,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.005,
-   "scriptMs": 38,
-   "windowMs": 7029,
-   "layer": {
-    "requests": 2,
-    "bytes": 68546,
-    "doneMs": 113,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 54,
-    "examples": [
-     "tide-layer-central-coast.json",
-     "tide-layer.js"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.046
-  },
-  {
-   "page": "layer-tide",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 2,
-   "frames": 33,
-   "settledMs": 6520,
-   "firstFrameMs": -2,
-   "paintedMs": 246,
-   "finalPaint": [
-    0.347,
-    19
-   ],
-   "animated": false,
-   "completeMs": 312,
-   "responseMs": 24,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 246,
-   "maxInputDelayMs": 6,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 358,
-   "fcpMs": 28,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.005,
-   "scriptMs": 36,
-   "windowMs": 7035,
-   "layer": {
-    "requests": 2,
-    "bytes": 68546,
-    "doneMs": 115,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 59,
-    "examples": [
-     "tide-layer-central-coast.json",
-     "tide-layer.js"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.046
-  },
-  {
-   "page": "layer-tide",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 3,
-   "frames": 33,
-   "settledMs": 6520,
-   "firstFrameMs": -2,
-   "paintedMs": 229,
-   "finalPaint": [
-    0.347,
-    19
-   ],
-   "animated": false,
-   "completeMs": 296,
-   "responseMs": 39,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 229,
-   "maxInputDelayMs": 7,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 360,
-   "fcpMs": 28,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.006,
-   "scriptMs": 39,
-   "windowMs": 7038,
-   "layer": {
-    "requests": 2,
-    "bytes": 68546,
-    "doneMs": 118,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 61,
-    "examples": [
-     "tide-layer-central-coast.json",
-     "tide-layer.js"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.046
-  },
-  {
-   "page": "layer-bathy-2m",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 1,
-   "frames": 30,
-   "settledMs": 6525,
-   "firstFrameMs": 39,
-   "paintedMs": 239,
-   "finalPaint": [
-    0.387,
-    20
-   ],
-   "animated": false,
-   "completeMs": 289,
-   "responseMs": 19,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 239,
-   "maxInputDelayMs": 6,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 354,
-   "fcpMs": 32,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.006,
-   "scriptMs": 43,
-   "windowMs": 7032,
-   "layer": {
-    "requests": 35,
-    "bytes": 2179811,
-    "doneMs": 250,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 67,
-    "examples": [
-     "morro-bay-seafloor-deep.pmtiles"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.007
-  },
-  {
-   "page": "layer-bathy-2m",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 2,
-   "frames": 30,
-   "settledMs": 6525,
-   "firstFrameMs": 44,
-   "paintedMs": 228,
-   "finalPaint": [
-    0.387,
-    20
-   ],
-   "animated": false,
-   "completeMs": 294,
-   "responseMs": 41,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 228,
-   "maxInputDelayMs": 5,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 357,
-   "fcpMs": 40,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.006,
-   "scriptMs": 42,
-   "windowMs": 7032,
-   "layer": {
-    "requests": 35,
-    "bytes": 2179811,
-    "doneMs": 252,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 64,
-    "examples": [
-     "morro-bay-seafloor-deep.pmtiles"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.007
-  },
-  {
-   "page": "layer-bathy-2m",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 3,
-   "frames": 33,
-   "settledMs": 6527,
-   "firstFrameMs": -2,
-   "paintedMs": 232,
-   "finalPaint": [
-    0.387,
-    20
-   ],
-   "animated": false,
-   "completeMs": 315,
-   "responseMs": 47,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 232,
-   "maxInputDelayMs": 5,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 374,
-   "fcpMs": 32,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.006,
-   "scriptMs": 40,
-   "windowMs": 7031,
-   "layer": {
-    "requests": 35,
-    "bytes": 2179811,
-    "doneMs": 252,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 67,
-    "examples": [
-     "morro-bay-seafloor-deep.pmtiles"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.007
-  },
-  {
-   "page": "layer-bathy-2m-z12",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 1,
-   "frames": 29,
-   "settledMs": 6524,
-   "firstFrameMs": 43,
-   "paintedMs": 243,
-   "finalPaint": [
-    0.597,
-    10
-   ],
-   "animated": false,
-   "completeMs": 260,
-   "responseMs": 22,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 243,
-   "maxInputDelayMs": 19,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 336,
-   "fcpMs": 40,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.006,
-   "scriptMs": 45,
-   "windowMs": 7050,
-   "layer": {
-    "requests": 20,
-    "bytes": 1053455,
-    "doneMs": 204,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 72,
-    "examples": [
-     "morro-bay-seafloor-deep.pmtiles"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-bathy-2m-z12",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 2,
-   "frames": 31,
-   "settledMs": 6523,
-   "firstFrameMs": 12,
-   "paintedMs": 228,
-   "finalPaint": [
-    0.597,
-    10
-   ],
-   "animated": false,
-   "completeMs": 262,
-   "responseMs": 27,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 228,
-   "maxInputDelayMs": 5,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 321,
-   "fcpMs": 28,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.006,
-   "scriptMs": 39,
-   "windowMs": 7034,
-   "layer": {
-    "requests": 20,
-    "bytes": 1053455,
-    "doneMs": 201,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 65,
-    "examples": [
-     "morro-bay-seafloor-deep.pmtiles"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-bathy-2m-z12",
-   "profile": "desktop",
-   "pass": "cold",
-   "run": 3,
-   "frames": 29,
-   "settledMs": 6525,
-   "firstFrameMs": 39,
-   "paintedMs": 222,
-   "finalPaint": [
-    0.597,
-    10
-   ],
-   "animated": false,
-   "completeMs": 255,
-   "responseMs": 21,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 222,
-   "maxInputDelayMs": 5,
-   "inputProbes": 7,
-   "quietAfterPaintMs": 315,
-   "fcpMs": 32,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.006,
-   "scriptMs": 39,
-   "windowMs": 7031,
-   "layer": {
-    "requests": 20,
-    "bytes": 1053455,
-    "doneMs": 196,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 69,
-    "examples": [
-     "morro-bay-seafloor-deep.pmtiles"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-base-medium",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 1,
-   "frames": 58,
-   "settledMs": 22216,
-   "firstFrameMs": -2,
-   "paintedMs": 8958,
-   "finalPaint": [
-    0.172,
-    25
-   ],
-   "animated": false,
-   "completeMs": 14741,
-   "responseMs": 117,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8958,
-   "maxInputDelayMs": 688,
-   "inputProbes": 21,
-   "quietAfterPaintMs": 8958,
-   "fcpMs": 864,
-   "tbtMs": 49,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.008,
-   "scriptMs": 182,
-   "windowMs": 22317,
-   "layer": null,
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-base-medium",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 2,
-   "frames": 58,
-   "settledMs": 22220,
-   "firstFrameMs": 21,
-   "paintedMs": 8937,
-   "finalPaint": [
-    0.172,
-    25
-   ],
-   "animated": false,
-   "completeMs": 14704,
-   "responseMs": 113,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8937,
-   "maxInputDelayMs": 683,
-   "inputProbes": 21,
-   "quietAfterPaintMs": 8937,
-   "fcpMs": 856,
-   "tbtMs": 40,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.008,
-   "scriptMs": 181,
-   "windowMs": 22297,
-   "layer": null,
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-base-medium",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 3,
-   "frames": 58,
-   "settledMs": 22220,
-   "firstFrameMs": -2,
-   "paintedMs": 8945,
-   "finalPaint": [
-    0.172,
-    25
-   ],
-   "animated": false,
-   "completeMs": 14711,
-   "responseMs": 115,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8945,
-   "maxInputDelayMs": 676,
-   "inputProbes": 21,
-   "quietAfterPaintMs": 8945,
-   "fcpMs": 852,
-   "tbtMs": 47,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.008,
-   "scriptMs": 180,
-   "windowMs": 22268,
-   "layer": null,
-   "layerReference": null,
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-chlorophyll",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 1,
-   "frames": 59,
-   "settledMs": 22219,
-   "firstFrameMs": 13,
-   "paintedMs": 8929,
-   "finalPaint": [
-    0.245,
-    18
-   ],
-   "animated": false,
-   "completeMs": 14512,
-   "responseMs": 114,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8929,
-   "maxInputDelayMs": 680,
-   "inputProbes": 21,
-   "quietAfterPaintMs": 8929,
-   "fcpMs": 848,
-   "tbtMs": 55,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.009,
-   "scriptMs": 206,
-   "windowMs": 22324,
-   "layer": {
-    "requests": 0,
-    "bytes": 0,
-    "doneMs": null,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": null,
-    "examples": []
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.363
-  },
-  {
-   "page": "layer-chlorophyll",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 2,
-   "frames": 58,
-   "settledMs": 22226,
-   "firstFrameMs": 16,
-   "paintedMs": 8965,
-   "finalPaint": [
-    0.245,
-    18
-   ],
-   "animated": false,
-   "completeMs": 14482,
-   "responseMs": 114,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8965,
-   "maxInputDelayMs": 687,
-   "inputProbes": 21,
-   "quietAfterPaintMs": 8965,
-   "fcpMs": 860,
-   "tbtMs": 54,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.009,
-   "scriptMs": 203,
-   "windowMs": 22290,
-   "layer": {
-    "requests": 0,
-    "bytes": 0,
-    "doneMs": null,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": null,
-    "examples": []
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.363
-  },
-  {
-   "page": "layer-chlorophyll",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 3,
-   "frames": 59,
-   "settledMs": 22221,
-   "firstFrameMs": 19,
-   "paintedMs": 8952,
-   "finalPaint": [
-    0.245,
-    18
-   ],
-   "animated": false,
-   "completeMs": 14485,
-   "responseMs": 115,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8952,
-   "maxInputDelayMs": 686,
-   "inputProbes": 21,
-   "quietAfterPaintMs": 8952,
-   "fcpMs": 856,
-   "tbtMs": 53,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.01,
-   "scriptMs": 225,
-   "windowMs": 22326,
-   "layer": {
-    "requests": 0,
-    "bytes": 0,
-    "doneMs": null,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": null,
-    "examples": []
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.363
-  },
-  {
-   "page": "layer-current",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 1,
-   "frames": 59,
-   "settledMs": 22212,
-   "firstFrameMs": 15,
-   "paintedMs": 8965,
-   "finalPaint": [
-    0.155,
-    22
-   ],
-   "animated": false,
-   "completeMs": 16281,
-   "responseMs": 114,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8965,
-   "maxInputDelayMs": 681,
-   "inputProbes": 21,
-   "quietAfterPaintMs": 8965,
-   "fcpMs": 856,
-   "tbtMs": 49,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.011,
-   "scriptMs": 245,
-   "windowMs": 22408,
-   "layer": {
-    "requests": 0,
-    "bytes": 0,
-    "doneMs": null,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": null,
-    "examples": []
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.388
-  },
-  {
-   "page": "layer-current",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 2,
-   "frames": 59,
-   "settledMs": 22231,
-   "firstFrameMs": -2,
-   "paintedMs": 8981,
-   "finalPaint": [
-    0.155,
-    22
-   ],
-   "animated": false,
-   "completeMs": 16281,
-   "responseMs": 115,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8981,
-   "maxInputDelayMs": 690,
-   "inputProbes": 21,
-   "quietAfterPaintMs": 8981,
-   "fcpMs": 856,
-   "tbtMs": 67,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.012,
-   "scriptMs": 259,
-   "windowMs": 22423,
-   "layer": {
-    "requests": 0,
-    "bytes": 0,
-    "doneMs": null,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": null,
-    "examples": []
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.388
-  },
-  {
-   "page": "layer-current",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 3,
-   "frames": 59,
-   "settledMs": 22218,
-   "firstFrameMs": 21,
-   "paintedMs": 8954,
-   "finalPaint": [
-    0.155,
-    22
-   ],
-   "animated": false,
-   "completeMs": 16304,
-   "responseMs": 131,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8954,
-   "maxInputDelayMs": 683,
-   "inputProbes": 21,
-   "quietAfterPaintMs": 8954,
-   "fcpMs": 860,
-   "tbtMs": 51,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.012,
-   "scriptMs": 259,
-   "windowMs": 22445,
-   "layer": {
-    "requests": 0,
-    "bytes": 0,
-    "doneMs": null,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": null,
-    "examples": []
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.388
-  },
-  {
-   "page": "layer-tide",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 1,
-   "frames": 60,
-   "settledMs": 22467,
-   "firstFrameMs": 19,
-   "paintedMs": 8352,
-   "finalPaint": [
-    0.127,
-    25
-   ],
-   "animated": false,
-   "completeMs": 15302,
-   "responseMs": 112,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8352,
-   "maxInputDelayMs": 687,
-   "inputProbes": 22,
-   "quietAfterPaintMs": 8352,
-   "fcpMs": 860,
-   "tbtMs": 62,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.009,
-   "scriptMs": 204,
-   "windowMs": 23477,
-   "layer": {
-    "requests": 2,
-    "bytes": 68546,
-    "doneMs": 8296,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 6483,
-    "examples": [
-     "tide-layer-central-coast.json",
-     "tide-layer.js"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.124
-  },
-  {
-   "page": "layer-tide",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 2,
-   "frames": 60,
-   "settledMs": 22469,
-   "firstFrameMs": -2,
-   "paintedMs": 8424,
-   "finalPaint": [
-    0.127,
-    25
-   ],
-   "animated": false,
-   "completeMs": 15291,
-   "responseMs": 115,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8424,
-   "maxInputDelayMs": 680,
-   "inputProbes": 22,
-   "quietAfterPaintMs": 8424,
-   "fcpMs": 848,
-   "tbtMs": 52,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.008,
-   "scriptMs": 197,
-   "windowMs": 23465,
-   "layer": {
-    "requests": 2,
-    "bytes": 68546,
-    "doneMs": 8360,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 6484,
-    "examples": [
-     "tide-layer-central-coast.json",
-     "tide-layer.js"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.124
-  },
-  {
-   "page": "layer-tide",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 3,
-   "frames": 59,
-   "settledMs": 22465,
-   "firstFrameMs": -3,
-   "paintedMs": 8376,
-   "finalPaint": [
-    0.127,
-    25
-   ],
-   "animated": false,
-   "completeMs": 15309,
-   "responseMs": 114,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8376,
-   "maxInputDelayMs": 680,
-   "inputProbes": 22,
-   "quietAfterPaintMs": 8376,
-   "fcpMs": 848,
-   "tbtMs": 52,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.009,
-   "scriptMs": 207,
-   "windowMs": 23486,
-   "layer": {
-    "requests": 2,
-    "bytes": 68546,
-    "doneMs": 8308,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 6489,
-    "examples": [
-     "tide-layer-central-coast.json",
-     "tide-layer.js"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.124
-  },
-  {
-   "page": "layer-bathy-2m",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 1,
-   "frames": 58,
-   "settledMs": 22216,
-   "firstFrameMs": -3,
-   "paintedMs": 9002,
-   "finalPaint": [
-    0.172,
-    25
-   ],
-   "animated": false,
-   "completeMs": 14818,
-   "responseMs": 117,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 9002,
-   "maxInputDelayMs": 681,
-   "inputProbes": 21,
-   "quietAfterPaintMs": 9002,
-   "fcpMs": 848,
-   "tbtMs": 60,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.01,
-   "scriptMs": 220,
-   "windowMs": 22377,
-   "layer": {
-    "requests": 18,
-    "bytes": 1229655,
-    "doneMs": 15384,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 6503,
-    "examples": [
-     "morro-bay-seafloor-deep.pmtiles"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.0
-  },
-  {
-   "page": "layer-bathy-2m",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 2,
-   "frames": 58,
-   "settledMs": 22218,
-   "firstFrameMs": -3,
-   "paintedMs": 8980,
-   "finalPaint": [
-    0.172,
-    25
-   ],
-   "animated": false,
-   "completeMs": 14796,
-   "responseMs": 114,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8980,
-   "maxInputDelayMs": 679,
-   "inputProbes": 21,
-   "quietAfterPaintMs": 8980,
-   "fcpMs": 848,
-   "tbtMs": 55,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.009,
-   "scriptMs": 204,
-   "windowMs": 22338,
-   "layer": {
-    "requests": 18,
-    "bytes": 1229655,
-    "doneMs": 15377,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 6495,
-    "examples": [
-     "morro-bay-seafloor-deep.pmtiles"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.0
-  },
-  {
-   "page": "layer-bathy-2m",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 3,
-   "frames": 57,
-   "settledMs": 22213,
-   "firstFrameMs": -2,
-   "paintedMs": 8990,
-   "finalPaint": [
-    0.172,
-    25
-   ],
-   "animated": false,
-   "completeMs": 14790,
-   "responseMs": 115,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8990,
-   "maxInputDelayMs": 688,
-   "inputProbes": 21,
-   "quietAfterPaintMs": 8990,
-   "fcpMs": 864,
-   "tbtMs": 52,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.009,
-   "scriptMs": 200,
-   "windowMs": 22314,
-   "layer": {
-    "requests": 18,
-    "bytes": 1229655,
-    "doneMs": 15378,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 6500,
-    "examples": [
-     "morro-bay-seafloor-deep.pmtiles"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.0
-  },
-  {
-   "page": "layer-bathy-2m-z12",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 1,
-   "frames": 48,
-   "settledMs": 18710,
-   "firstFrameMs": -2,
-   "paintedMs": 8227,
-   "finalPaint": [
-    0.386,
-    12
-   ],
-   "animated": false,
-   "completeMs": 11527,
-   "responseMs": 114,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8227,
-   "maxInputDelayMs": 679,
-   "inputProbes": 18,
-   "quietAfterPaintMs": 8227,
-   "fcpMs": 848,
-   "tbtMs": 51,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.009,
-   "scriptMs": 175,
-   "windowMs": 19319,
-   "layer": {
-    "requests": 11,
-    "bytes": 613075,
-    "doneMs": 11923,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 6507,
-    "examples": [
-     "morro-bay-seafloor-deep.pmtiles"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-bathy-2m-z12",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 2,
-   "frames": 48,
-   "settledMs": 18707,
-   "firstFrameMs": -2,
-   "paintedMs": 8225,
-   "finalPaint": [
-    0.386,
-    12
-   ],
-   "animated": false,
-   "completeMs": 11525,
-   "responseMs": 116,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8225,
-   "maxInputDelayMs": 680,
-   "inputProbes": 18,
-   "quietAfterPaintMs": 8225,
-   "fcpMs": 848,
-   "tbtMs": 51,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.009,
-   "scriptMs": 182,
-   "windowMs": 19316,
-   "layer": {
-    "requests": 11,
-    "bytes": 613075,
-    "doneMs": 11916,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 6499,
-    "examples": [
-     "morro-bay-seafloor-deep.pmtiles"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": null
-  },
-  {
-   "page": "layer-bathy-2m-z12",
-   "profile": "phone",
-   "pass": "cold",
-   "run": 3,
-   "frames": 48,
-   "settledMs": 18716,
-   "firstFrameMs": -2,
-   "paintedMs": 8211,
-   "finalPaint": [
-    0.386,
-    12
-   ],
-   "animated": false,
-   "completeMs": 11544,
-   "responseMs": 117,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 8211,
-   "maxInputDelayMs": 685,
-   "inputProbes": 18,
-   "quietAfterPaintMs": 8211,
-   "fcpMs": 868,
-   "tbtMs": 53,
-   "tbtWindowOpen": false,
-   "briefShownMs": null,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.01,
-   "scriptMs": 192,
-   "windowMs": 19335,
-   "layer": {
-    "requests": 11,
-    "bytes": 613075,
-    "doneMs": 11916,
-    "failed": 0,
-    "stillOpen": 0,
-    "firstStartMs": 6501,
-    "examples": [
-     "morro-bay-seafloor-deep.pmtiles"
-    ]
-   },
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": null
-  },
-  {
    "page": "brief",
    "profile": "desktop",
    "pass": "cold",
@@ -2155,6 +25,9 @@
    "fcpMs": 435,
    "tbtMs": 13370,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15534,
+   "freeFromMs": 15534,
+   "longTaskTotalMs": 14322,
    "briefShownMs": 504,
    "messages": [],
    "pageErrors": [],
@@ -2191,6 +64,9 @@
    "fcpMs": 196,
    "tbtMs": 13170,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15059,
+   "freeFromMs": 15059,
+   "longTaskTotalMs": 13970,
    "briefShownMs": 316,
    "messages": [],
    "pageErrors": [],
@@ -2227,6 +103,9 @@
    "fcpMs": 156,
    "tbtMs": 12728,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14572,
+   "freeFromMs": 14572,
+   "longTaskTotalMs": 13378,
    "briefShownMs": 228,
    "messages": [],
    "pageErrors": [],
@@ -2263,6 +142,9 @@
    "fcpMs": 442,
    "tbtMs": 13450,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15413,
+   "freeFromMs": 15413,
+   "longTaskTotalMs": 14250,
    "briefShownMs": 492,
    "messages": [],
    "pageErrors": [],
@@ -2299,6 +181,9 @@
    "fcpMs": 333,
    "tbtMs": 13107,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15083,
+   "freeFromMs": 15083,
+   "longTaskTotalMs": 13907,
    "briefShownMs": 382,
    "messages": [],
    "pageErrors": [],
@@ -2335,6 +220,9 @@
    "fcpMs": 374,
    "tbtMs": 14044,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 16148,
+   "freeFromMs": 16148,
+   "longTaskTotalMs": 14794,
    "briefShownMs": 419,
    "messages": [],
    "pageErrors": [],
@@ -2371,6 +259,9 @@
    "fcpMs": 364,
    "tbtMs": 14267,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 16339,
+   "freeFromMs": 16339,
+   "longTaskTotalMs": 14917,
    "briefShownMs": 584,
    "messages": [],
    "pageErrors": [],
@@ -2407,6 +298,9 @@
    "fcpMs": 288,
    "tbtMs": 13570,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15487,
+   "freeFromMs": 15487,
+   "longTaskTotalMs": 14174,
    "briefShownMs": 347,
    "messages": [],
    "pageErrors": [],
@@ -2443,6 +337,9 @@
    "fcpMs": 200,
    "tbtMs": 13600,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15334,
+   "freeFromMs": 15334,
+   "longTaskTotalMs": 14100,
    "briefShownMs": 427,
    "messages": [],
    "pageErrors": [],
@@ -2479,6 +376,9 @@
    "fcpMs": 140,
    "tbtMs": 13588,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15271,
+   "freeFromMs": 15271,
+   "longTaskTotalMs": 14441,
    "briefShownMs": 201,
    "messages": [],
    "pageErrors": [],
@@ -2523,6 +423,9 @@
    "fcpMs": 132,
    "tbtMs": 13278,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14860,
+   "freeFromMs": 14860,
+   "longTaskTotalMs": 13878,
    "briefShownMs": 212,
    "messages": [],
    "pageErrors": [],
@@ -2567,6 +470,9 @@
    "fcpMs": 272,
    "tbtMs": 13129,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15003,
+   "freeFromMs": 15003,
+   "longTaskTotalMs": 13829,
    "briefShownMs": 360,
    "messages": [],
    "pageErrors": [],
@@ -2611,6 +517,9 @@
    "fcpMs": 168,
    "tbtMs": 12036,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 13706,
+   "freeFromMs": 13706,
+   "longTaskTotalMs": 12586,
    "briefShownMs": 278,
    "messages": [],
    "pageErrors": [],
@@ -2657,6 +566,9 @@
    "fcpMs": 159,
    "tbtMs": 12093,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 13794,
+   "freeFromMs": 13794,
+   "longTaskTotalMs": 12693,
    "briefShownMs": 233,
    "messages": [],
    "pageErrors": [],
@@ -2703,6 +615,9 @@
    "fcpMs": 276,
    "tbtMs": 12005,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 13694,
+   "freeFromMs": 13694,
+   "longTaskTotalMs": 12505,
    "briefShownMs": 355,
    "messages": [],
    "pageErrors": [],
@@ -2749,6 +664,9 @@
    "fcpMs": 300,
    "tbtMs": 11971,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 13917,
+   "freeFromMs": 13917,
+   "longTaskTotalMs": 12521,
    "briefShownMs": 367,
    "messages": [
     "Stale or unavailable"
@@ -2795,6 +713,9 @@
    "fcpMs": 296,
    "tbtMs": 11924,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 13680,
+   "freeFromMs": 13680,
+   "longTaskTotalMs": 12474,
    "briefShownMs": 342,
    "messages": [
     "Stale or unavailable"
@@ -2841,6 +762,9 @@
    "fcpMs": 184,
    "tbtMs": 11687,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 13315,
+   "freeFromMs": 13315,
+   "longTaskTotalMs": 12187,
    "briefShownMs": 227,
    "messages": [
     "Stale or unavailable"
@@ -2887,6 +811,9 @@
    "fcpMs": 187,
    "tbtMs": 13596,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15413,
+   "freeFromMs": 15413,
+   "longTaskTotalMs": 14196,
    "briefShownMs": 251,
    "messages": [],
    "pageErrors": [],
@@ -2931,6 +858,9 @@
    "fcpMs": 192,
    "tbtMs": 12972,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14804,
+   "freeFromMs": 14804,
+   "longTaskTotalMs": 13572,
    "briefShownMs": 264,
    "messages": [],
    "pageErrors": [],
@@ -2975,6 +905,9 @@
    "fcpMs": 360,
    "tbtMs": 12087,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 13954,
+   "freeFromMs": 13954,
+   "longTaskTotalMs": 12637,
    "briefShownMs": 452,
    "messages": [],
    "pageErrors": [],
@@ -3019,6 +952,9 @@
    "fcpMs": 448,
    "tbtMs": 108,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15614,
+   "freeFromMs": 15614,
+   "longTaskTotalMs": 12530,
    "briefShownMs": 513,
    "messages": [],
    "pageErrors": [],
@@ -3068,6 +1004,9 @@
    "fcpMs": 416,
    "tbtMs": 11979,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14195,
+   "freeFromMs": 14195,
+   "longTaskTotalMs": 12429,
    "briefShownMs": 500,
    "messages": [],
    "pageErrors": [],
@@ -3117,6 +1056,9 @@
    "fcpMs": 320,
    "tbtMs": 11835,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 13872,
+   "freeFromMs": 13872,
+   "longTaskTotalMs": 12335,
    "briefShownMs": 570,
    "messages": [],
    "pageErrors": [],
@@ -3166,6 +1108,9 @@
    "fcpMs": 192,
    "tbtMs": 12081,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 13998,
+   "freeFromMs": 13998,
+   "longTaskTotalMs": 12831,
    "briefShownMs": 255,
    "messages": [],
    "pageErrors": [],
@@ -3213,6 +1158,9 @@
    "fcpMs": 268,
    "tbtMs": 12797,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14724,
+   "freeFromMs": 14724,
+   "longTaskTotalMs": 13497,
    "briefShownMs": 362,
    "messages": [],
    "pageErrors": [],
@@ -3260,6 +1208,9 @@
    "fcpMs": 216,
    "tbtMs": 126,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 21414,
+   "freeFromMs": 21414,
+   "longTaskTotalMs": 19667,
    "briefShownMs": 294,
    "messages": [],
    "pageErrors": [],
@@ -3307,6 +1258,9 @@
    "fcpMs": 492,
    "tbtMs": 12652,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14845,
+   "freeFromMs": 14845,
+   "longTaskTotalMs": 13352,
    "briefShownMs": 565,
    "messages": [],
    "pageErrors": [],
@@ -3343,6 +1297,9 @@
    "fcpMs": 172,
    "tbtMs": 12109,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 13693,
+   "freeFromMs": 13693,
+   "longTaskTotalMs": 12759,
    "briefShownMs": 158,
    "messages": [],
    "pageErrors": [],
@@ -3379,6 +1336,9 @@
    "fcpMs": 332,
    "tbtMs": 12410,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14400,
+   "freeFromMs": 14400,
+   "longTaskTotalMs": 13111,
    "briefShownMs": 391,
    "messages": [],
    "pageErrors": [],
@@ -3415,6 +1375,9 @@
    "fcpMs": 76,
    "tbtMs": 12678,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14314,
+   "freeFromMs": 14314,
+   "longTaskTotalMs": 13428,
    "briefShownMs": 159,
    "messages": [],
    "pageErrors": [],
@@ -3451,6 +1414,9 @@
    "fcpMs": 208,
    "tbtMs": 12669,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15003,
+   "freeFromMs": 15003,
+   "longTaskTotalMs": 13469,
    "briefShownMs": 440,
    "messages": [],
    "pageErrors": [],
@@ -3487,6 +1453,9 @@
    "fcpMs": 96,
    "tbtMs": 12704,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14726,
+   "freeFromMs": 14726,
+   "longTaskTotalMs": 13354,
    "briefShownMs": 195,
    "messages": [],
    "pageErrors": [],
@@ -3523,6 +1492,9 @@
    "fcpMs": 331,
    "tbtMs": 12234,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14309,
+   "freeFromMs": 14309,
+   "longTaskTotalMs": 12884,
    "briefShownMs": 384,
    "messages": [],
    "pageErrors": [],
@@ -3559,6 +1531,9 @@
    "fcpMs": 242,
    "tbtMs": 13570,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15457,
+   "freeFromMs": 15457,
+   "longTaskTotalMs": 14320,
    "briefShownMs": 319,
    "messages": [],
    "pageErrors": [],
@@ -3595,6 +1570,9 @@
    "fcpMs": 325,
    "tbtMs": 12644,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14706,
+   "freeFromMs": 14706,
+   "longTaskTotalMs": 13394,
    "briefShownMs": 367,
    "messages": [],
    "pageErrors": [],
@@ -3631,6 +1609,9 @@
    "fcpMs": 202,
    "tbtMs": 12588,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14346,
+   "freeFromMs": 14346,
+   "longTaskTotalMs": 13238,
    "briefShownMs": 315,
    "messages": [],
    "pageErrors": [],
@@ -3667,6 +1648,9 @@
    "fcpMs": 610,
    "tbtMs": 12192,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14672,
+   "freeFromMs": 14672,
+   "longTaskTotalMs": 12842,
    "briefShownMs": 661,
    "messages": [],
    "pageErrors": [],
@@ -3703,6 +1687,9 @@
    "fcpMs": 247,
    "tbtMs": 12407,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 14756,
+   "freeFromMs": 14756,
+   "longTaskTotalMs": 13107,
    "briefShownMs": 330,
    "messages": [],
    "pageErrors": [],
@@ -3739,6 +1726,9 @@
    "fcpMs": 1926,
    "tbtMs": 183,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 63653,
+   "freeFromMs": 63653,
+   "longTaskTotalMs": 6696,
    "briefShownMs": 3346,
    "messages": [],
    "pageErrors": [],
@@ -3775,6 +1765,9 @@
    "fcpMs": 1836,
    "tbtMs": 124,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 63427,
+   "freeFromMs": 63427,
+   "longTaskTotalMs": 4719,
    "briefShownMs": 3220,
    "messages": [],
    "pageErrors": [],
@@ -3811,6 +1804,9 @@
    "fcpMs": 1836,
    "tbtMs": 134,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 63474,
+   "freeFromMs": 63474,
+   "longTaskTotalMs": 5363,
    "briefShownMs": 3230,
    "messages": [],
    "pageErrors": [],
@@ -3847,6 +1843,9 @@
    "fcpMs": 3553,
    "tbtMs": 0,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 27618,
+   "freeFromMs": 27618,
+   "longTaskTotalMs": 4640,
    "briefShownMs": 3675,
    "messages": [],
    "pageErrors": [],
@@ -3883,6 +1882,9 @@
    "fcpMs": 3834,
    "tbtMs": 0,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 27875,
+   "freeFromMs": 27875,
+   "longTaskTotalMs": 4578,
    "briefShownMs": 3882,
    "messages": [],
    "pageErrors": [],
@@ -3919,6 +1921,9 @@
    "fcpMs": 3594,
    "tbtMs": 13,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 28699,
+   "freeFromMs": 28699,
+   "longTaskTotalMs": 4419,
    "briefShownMs": 3710,
    "messages": [],
    "pageErrors": [],
@@ -3955,6 +1960,9 @@
    "fcpMs": 1908,
    "tbtMs": 100,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15440,
+   "freeFromMs": 15440,
+   "longTaskTotalMs": 1658,
    "briefShownMs": 3254,
    "messages": [],
    "pageErrors": [],
@@ -3991,6 +1999,9 @@
    "fcpMs": 1876,
    "tbtMs": 102,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 3218,
+   "longTaskTotalMs": 1654,
    "briefShownMs": 3213,
    "messages": [],
    "pageErrors": [],
@@ -4027,6 +2038,9 @@
    "fcpMs": 1864,
    "tbtMs": 111,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15406,
+   "freeFromMs": 15406,
+   "longTaskTotalMs": 1572,
    "briefShownMs": 3233,
    "messages": [],
    "pageErrors": [],
@@ -4063,6 +2077,9 @@
    "fcpMs": 1668,
    "tbtMs": 113,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15291,
+   "freeFromMs": 15291,
+   "longTaskTotalMs": 2019,
    "briefShownMs": 3074,
    "messages": [],
    "pageErrors": [],
@@ -4107,6 +2124,9 @@
    "fcpMs": 1828,
    "tbtMs": 98,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 3189,
+   "longTaskTotalMs": 2004,
    "briefShownMs": 3182,
    "messages": [],
    "pageErrors": [],
@@ -4151,6 +2171,9 @@
    "fcpMs": 1960,
    "tbtMs": 96,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15499,
+   "freeFromMs": 15499,
+   "longTaskTotalMs": 2075,
    "briefShownMs": 3300,
    "messages": [],
    "pageErrors": [],
@@ -4195,6 +2218,9 @@
    "fcpMs": 1832,
    "tbtMs": 101,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 16618,
+   "freeFromMs": 16618,
+   "longTaskTotalMs": 1965,
    "briefShownMs": 3199,
    "messages": [],
    "pageErrors": [],
@@ -4241,6 +2267,9 @@
    "fcpMs": 1668,
    "tbtMs": 98,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 16446,
+   "freeFromMs": 16446,
+   "longTaskTotalMs": 2049,
    "briefShownMs": 3040,
    "messages": [],
    "pageErrors": [],
@@ -4287,6 +2316,9 @@
    "fcpMs": 1856,
    "tbtMs": 97,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 16399,
+   "freeFromMs": 16399,
+   "longTaskTotalMs": 1869,
    "briefShownMs": 3195,
    "messages": [],
    "pageErrors": [],
@@ -4333,6 +2365,9 @@
    "fcpMs": 1636,
    "tbtMs": 97,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15336,
+   "freeFromMs": 15336,
+   "longTaskTotalMs": 1914,
    "briefShownMs": 3044,
    "messages": [],
    "pageErrors": [],
@@ -4377,6 +2412,9 @@
    "fcpMs": 1840,
    "tbtMs": 94,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 3185,
+   "longTaskTotalMs": 1914,
    "briefShownMs": 3184,
    "messages": [],
    "pageErrors": [],
@@ -4421,6 +2459,9 @@
    "fcpMs": 1788,
    "tbtMs": 97,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15400,
+   "freeFromMs": 15400,
+   "longTaskTotalMs": 1676,
    "briefShownMs": 3150,
    "messages": [],
    "pageErrors": [],
@@ -4465,6 +2506,9 @@
    "fcpMs": 1976,
    "tbtMs": 97,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15510,
+   "freeFromMs": 15510,
+   "longTaskTotalMs": 1943,
    "briefShownMs": 3330,
    "messages": [],
    "pageErrors": [],
@@ -4509,6 +2553,9 @@
    "fcpMs": 2056,
    "tbtMs": 98,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15565,
+   "freeFromMs": 15565,
+   "longTaskTotalMs": 1877,
    "briefShownMs": 3403,
    "messages": [],
    "pageErrors": [],
@@ -4553,6 +2600,9 @@
    "fcpMs": 1840,
    "tbtMs": 101,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15378,
+   "freeFromMs": 15378,
+   "longTaskTotalMs": 1805,
    "briefShownMs": 3185,
    "messages": [],
    "pageErrors": [],
@@ -4597,6 +2647,9 @@
    "fcpMs": 1944,
    "tbtMs": 94,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15652,
+   "freeFromMs": 15652,
+   "longTaskTotalMs": 1662,
    "briefShownMs": 3284,
    "messages": [],
    "pageErrors": [],
@@ -4646,6 +2699,9 @@
    "fcpMs": 2012,
    "tbtMs": 102,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 3373,
+   "longTaskTotalMs": 1620,
    "briefShownMs": 3362,
    "messages": [],
    "pageErrors": [],
@@ -4695,6 +2751,9 @@
    "fcpMs": 1824,
    "tbtMs": 103,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15573,
+   "freeFromMs": 15573,
+   "longTaskTotalMs": 1660,
    "briefShownMs": 3186,
    "messages": [],
    "pageErrors": [],
@@ -4744,6 +2803,9 @@
    "fcpMs": 1944,
    "tbtMs": 97,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 26201,
+   "freeFromMs": 26201,
+   "longTaskTotalMs": 4228,
    "briefShownMs": 3299,
    "messages": [],
    "pageErrors": [],
@@ -4791,6 +2853,9 @@
    "fcpMs": 1868,
    "tbtMs": 104,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 26315,
+   "freeFromMs": 26315,
+   "longTaskTotalMs": 4420,
    "briefShownMs": 3259,
    "messages": [],
    "pageErrors": [],
@@ -4838,6 +2903,9 @@
    "fcpMs": 1928,
    "tbtMs": 107,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 26067,
+   "freeFromMs": 26067,
+   "longTaskTotalMs": 4200,
    "briefShownMs": 3286,
    "messages": [],
    "pageErrors": [],
@@ -4885,6 +2953,9 @@
    "fcpMs": 199,
    "tbtMs": 53164,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 56708,
+   "freeFromMs": 56708,
+   "longTaskTotalMs": 55214,
    "briefShownMs": 423,
    "messages": [],
    "pageErrors": [],
@@ -4921,6 +2992,9 @@
    "fcpMs": 612,
    "tbtMs": 105,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 56525,
+   "freeFromMs": 56525,
+   "longTaskTotalMs": 54946,
    "briefShownMs": 822,
    "messages": [],
    "pageErrors": [],
@@ -4957,6 +3031,9 @@
    "fcpMs": 204,
    "tbtMs": 52891,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 56285,
+   "freeFromMs": 56285,
+   "longTaskTotalMs": 54741,
    "briefShownMs": 445,
    "messages": [],
    "pageErrors": [],
@@ -4993,6 +3070,9 @@
    "fcpMs": 1051,
    "tbtMs": 52959,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 57510,
+   "freeFromMs": 57510,
+   "longTaskTotalMs": 55009,
    "briefShownMs": 1163,
    "messages": [],
    "pageErrors": [],
@@ -5029,6 +3109,9 @@
    "fcpMs": 675,
    "tbtMs": 51523,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 55490,
+   "freeFromMs": 55490,
+   "longTaskTotalMs": 53433,
    "briefShownMs": 787,
    "messages": [],
    "pageErrors": [],
@@ -5065,6 +3148,9 @@
    "fcpMs": 591,
    "tbtMs": 52830,
    "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 56671,
+   "freeFromMs": 56671,
+   "longTaskTotalMs": 54796,
    "briefShownMs": 712,
    "messages": [],
    "pageErrors": [],
@@ -5075,1785 +3161,2283 @@
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-wind",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 419,
+   "settledMs": 6524,
+   "firstFrameMs": -3,
+   "paintedMs": 220,
+   "finalPaint": [
+    0.378,
+    15
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 37,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 220,
+   "maxInputDelayMs": 33,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 220,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 220,
+   "longTaskTotalMs": 0,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.581,
+   "scriptMs": 4161,
+   "windowMs": 7158,
+   "layer": {
+    "requests": 1,
+    "bytes": 3865,
+    "doneMs": 257,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 255,
+    "examples": [
+     "wind-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-wind",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 372,
+   "settledMs": 6267,
+   "firstFrameMs": 40,
+   "paintedMs": 207,
+   "finalPaint": [
+    0.363,
+    15
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 7,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1030,
+   "maxInputDelayMs": 28,
+   "inputProbes": 6,
+   "quietAfterPaintMs": 207,
+   "fcpMs": 40,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 207,
+   "longTaskTotalMs": 0,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.632,
+   "scriptMs": 4518,
+   "windowMs": 7155,
+   "layer": {
+    "requests": 1,
+    "bytes": 3865,
+    "doneMs": 244,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 242,
+    "examples": [
+     "wind-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-wind",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 435,
+   "settledMs": 6272,
+   "firstFrameMs": -2,
+   "paintedMs": 216,
+   "finalPaint": [
+    0.37,
+    15
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 14,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 216,
+   "maxInputDelayMs": 29,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 216,
+   "fcpMs": 32,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 216,
+   "longTaskTotalMs": 0,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.567,
+   "scriptMs": 4056,
+   "windowMs": 7150,
+   "layer": {
+    "requests": 1,
+    "bytes": 3865,
+    "doneMs": 253,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 252,
+    "examples": [
+     "wind-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-sst",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 30,
+   "settledMs": 6525,
+   "firstFrameMs": -2,
+   "paintedMs": 200,
+   "finalPaint": [
+    0.295,
+    12
+   ],
+   "animated": false,
+   "completeMs": 467,
+   "responseMs": 48,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 200,
+   "maxInputDelayMs": 7,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 200,
+   "fcpMs": 28,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 200,
+   "longTaskTotalMs": 0,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.008,
+   "scriptMs": 56,
+   "windowMs": 7032,
+   "layer": {
+    "requests": 1,
+    "bytes": 2276790,
+    "doneMs": 239,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 219,
+    "examples": [
+     "sst-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-sst",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 31,
+   "settledMs": 6521,
+   "firstFrameMs": 43,
+   "paintedMs": 209,
+   "finalPaint": [
+    0.295,
+    12
+   ],
+   "animated": false,
+   "completeMs": 492,
+   "responseMs": 41,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1013,
+   "maxInputDelayMs": 1,
+   "inputProbes": 6,
+   "quietAfterPaintMs": 209,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 209,
+   "longTaskTotalMs": 0,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 64,
+   "windowMs": 7029,
+   "layer": {
+    "requests": 1,
+    "bytes": 2276790,
+    "doneMs": 262,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 245,
+    "examples": [
+     "sst-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-sst",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 28,
+   "settledMs": 6523,
+   "firstFrameMs": 42,
+   "paintedMs": 208,
+   "finalPaint": [
+    0.295,
+    12
+   ],
+   "animated": false,
+   "completeMs": 458,
+   "responseMs": 41,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1013,
+   "maxInputDelayMs": 1,
+   "inputProbes": 6,
+   "quietAfterPaintMs": 208,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 208,
+   "longTaskTotalMs": 0,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.008,
+   "scriptMs": 55,
+   "windowMs": 7029,
+   "layer": {
+    "requests": 1,
+    "bytes": 2276790,
+    "doneMs": 233,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 211,
+    "examples": [
+     "sst-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-wind",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 784,
+   "settledMs": 20717,
+   "firstFrameMs": -3,
+   "paintedMs": 854,
+   "finalPaint": [
+    0.363,
+    16
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 150,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1847,
+   "maxInputDelayMs": 672,
+   "inputProbes": 75,
+   "quietAfterPaintMs": 854,
+   "fcpMs": 844,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 120196,
+   "freeFromMs": 120196,
+   "longTaskTotalMs": 105796,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.614,
+   "scriptMs": 74339,
+   "windowMs": 121003,
+   "layer": {
+    "requests": 1,
+    "bytes": 3865,
+    "doneMs": 14490,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 14140,
+    "examples": [
+     "wind-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-wind",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 792,
+   "settledMs": 20466,
+   "firstFrameMs": -2,
+   "paintedMs": 872,
+   "finalPaint": [
+    0.364,
+    17
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 143,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1863,
+   "maxInputDelayMs": 688,
+   "inputProbes": 77,
+   "quietAfterPaintMs": 872,
+   "fcpMs": 860,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 80176,
+   "freeFromMs": 80176,
+   "longTaskTotalMs": 106670,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.616,
+   "scriptMs": 74954,
+   "windowMs": 121703,
+   "layer": {
+    "requests": 1,
+    "bytes": 3865,
+    "doneMs": 14369,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 14177,
+    "examples": [
+     "wind-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-wind",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 766,
+   "settledMs": 20460,
+   "firstFrameMs": 16,
+   "paintedMs": 866,
+   "finalPaint": [
+    0.363,
+    17
+   ],
+   "animated": true,
+   "completeMs": null,
+   "responseMs": 153,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1858,
+   "maxInputDelayMs": 676,
+   "inputProbes": 76,
+   "quietAfterPaintMs": 866,
+   "fcpMs": 856,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 117487,
+   "freeFromMs": 117487,
+   "longTaskTotalMs": 106810,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.621,
+   "scriptMs": 75614,
+   "windowMs": 121743,
+   "layer": {
+    "requests": 1,
+    "bytes": 3865,
+    "doneMs": 14276,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 14085,
+    "examples": [
+     "wind-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-sst",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 65,
+   "settledMs": 31998,
+   "firstFrameMs": -3,
+   "paintedMs": 8471,
+   "finalPaint": [
+    0.32,
+    18
+   ],
+   "animated": false,
+   "completeMs": 26003,
+   "responseMs": 130,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8471,
+   "maxInputDelayMs": 685,
+   "inputProbes": 31,
+   "quietAfterPaintMs": 8471,
+   "fcpMs": 852,
+   "tbtMs": 143,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 8471,
+   "longTaskTotalMs": 1104,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.013,
+   "scriptMs": 415,
+   "windowMs": 32463,
+   "layer": {
+    "requests": 1,
+    "bytes": 2276790,
+    "doneMs": 25546,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 14092,
+    "examples": [
+     "sst-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-sst",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 65,
+   "settledMs": 31995,
+   "firstFrameMs": -3,
+   "paintedMs": 8460,
+   "finalPaint": [
+    0.32,
+    18
+   ],
+   "animated": false,
+   "completeMs": 25943,
+   "responseMs": 132,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8460,
+   "maxInputDelayMs": 690,
+   "inputProbes": 31,
+   "quietAfterPaintMs": 8460,
+   "fcpMs": 860,
+   "tbtMs": 62,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 8460,
+   "longTaskTotalMs": 813,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.011,
+   "scriptMs": 361,
+   "windowMs": 32471,
+   "layer": {
+    "requests": 1,
+    "bytes": 2276790,
+    "doneMs": 25531,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 14086,
+    "examples": [
+     "sst-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-sst",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 65,
+   "settledMs": 31989,
+   "firstFrameMs": 12,
+   "paintedMs": 8445,
+   "finalPaint": [
+    0.32,
+    18
+   ],
+   "animated": false,
+   "completeMs": 26011,
+   "responseMs": 127,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8445,
+   "maxInputDelayMs": 687,
+   "inputProbes": 31,
+   "quietAfterPaintMs": 8445,
+   "fcpMs": 868,
+   "tbtMs": 76,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 8445,
+   "longTaskTotalMs": 994,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.011,
+   "scriptMs": 364,
+   "windowMs": 32457,
+   "layer": {
+    "requests": 1,
+    "bytes": 2276790,
+    "doneMs": 25532,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 14078,
+    "examples": [
+     "sst-preview.json"
+    ]
+   },
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 31,
+   "settledMs": 6528,
+   "firstFrameMs": 40,
+   "paintedMs": 256,
+   "finalPaint": [
+    0.399,
+    19
+   ],
+   "animated": false,
+   "completeMs": 306,
+   "responseMs": 23,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 256,
+   "maxInputDelayMs": 9,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 370,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 256,
+   "longTaskTotalMs": 78,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 44,
+   "windowMs": 7031,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 32,
+   "settledMs": 6526,
+   "firstFrameMs": 35,
+   "paintedMs": 235,
+   "finalPaint": [
+    0.399,
+    19
+   ],
+   "animated": false,
+   "completeMs": 318,
+   "responseMs": 22,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 235,
+   "maxInputDelayMs": 6,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 364,
+   "fcpMs": 32,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 235,
+   "longTaskTotalMs": 62,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 42,
+   "windowMs": 7028,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 31,
+   "settledMs": 6528,
+   "firstFrameMs": 44,
+   "paintedMs": 211,
+   "finalPaint": [
+    0.399,
+    19
+   ],
+   "animated": false,
+   "completeMs": 244,
+   "responseMs": 32,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 211,
+   "maxInputDelayMs": 5,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 292,
+   "fcpMs": 40,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 211,
+   "longTaskTotalMs": 62,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.005,
+   "scriptMs": 37,
+   "windowMs": 7027,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 31,
+   "settledMs": 6521,
+   "firstFrameMs": 44,
+   "paintedMs": 194,
+   "finalPaint": [
+    0.294,
+    17
+   ],
+   "animated": false,
+   "completeMs": 311,
+   "responseMs": 26,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 194,
+   "maxInputDelayMs": 5,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 370,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 194,
+   "longTaskTotalMs": 75,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 42,
+   "windowMs": 7030,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.378
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 31,
+   "settledMs": 6528,
+   "firstFrameMs": 12,
+   "paintedMs": 179,
+   "finalPaint": [
+    0.294,
+    17
+   ],
+   "animated": false,
+   "completeMs": 296,
+   "responseMs": 44,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 1011,
+   "maxInputDelayMs": 1,
+   "inputProbes": 6,
+   "quietAfterPaintMs": 362,
+   "fcpMs": 28,
+   "tbtMs": 25,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 179,
+   "longTaskTotalMs": 75,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 40,
+   "windowMs": 7027,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.378
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 28,
+   "settledMs": 6525,
+   "firstFrameMs": 36,
+   "paintedMs": 203,
+   "finalPaint": [
+    0.294,
+    17
+   ],
+   "animated": false,
+   "completeMs": 303,
+   "responseMs": 48,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 203,
+   "maxInputDelayMs": 4,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 404,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 203,
+   "longTaskTotalMs": 80,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.007,
+   "scriptMs": 50,
+   "windowMs": 7035,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.378
+  },
+  {
+   "page": "layer-current",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 31,
+   "settledMs": 6523,
+   "firstFrameMs": 39,
+   "paintedMs": 222,
+   "finalPaint": [
+    0.328,
+    18
+   ],
+   "animated": false,
+   "completeMs": 472,
+   "responseMs": 54,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 222,
+   "maxInputDelayMs": 6,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 456,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 222,
+   "longTaskTotalMs": 140,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 62,
+   "windowMs": 7031,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.414
+  },
+  {
+   "page": "layer-current",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 30,
+   "settledMs": 6526,
+   "firstFrameMs": 14,
+   "paintedMs": 231,
+   "finalPaint": [
+    0.328,
+    18
+   ],
+   "animated": false,
+   "completeMs": 447,
+   "responseMs": 47,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 231,
+   "maxInputDelayMs": 7,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 443,
+   "fcpMs": 28,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 231,
+   "longTaskTotalMs": 132,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 61,
+   "windowMs": 7030,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.414
+  },
+  {
+   "page": "layer-current",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 28,
+   "settledMs": 6525,
+   "firstFrameMs": 23,
+   "paintedMs": 223,
+   "finalPaint": [
+    0.328,
+    18
+   ],
+   "animated": false,
+   "completeMs": 473,
+   "responseMs": 40,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 223,
+   "maxInputDelayMs": 4,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 466,
+   "fcpMs": 24,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 223,
+   "longTaskTotalMs": 146,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 62,
+   "windowMs": 7028,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.414
+  },
+  {
+   "page": "layer-tide",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 32,
+   "settledMs": 6526,
+   "firstFrameMs": 37,
+   "paintedMs": 237,
+   "finalPaint": [
+    0.347,
+    19
+   ],
+   "animated": false,
+   "completeMs": 287,
+   "responseMs": 37,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 237,
+   "maxInputDelayMs": 3,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 347,
+   "fcpMs": 36,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 237,
+   "longTaskTotalMs": 73,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.005,
+   "scriptMs": 38,
+   "windowMs": 7029,
+   "layer": {
+    "requests": 2,
+    "bytes": 68546,
+    "doneMs": 113,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 54,
+    "examples": [
+     "tide-layer-central-coast.json",
+     "tide-layer.js"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.046
+  },
+  {
+   "page": "layer-tide",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 33,
+   "settledMs": 6520,
+   "firstFrameMs": -2,
+   "paintedMs": 246,
+   "finalPaint": [
+    0.347,
+    19
+   ],
+   "animated": false,
+   "completeMs": 312,
+   "responseMs": 24,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 246,
+   "maxInputDelayMs": 6,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 358,
+   "fcpMs": 28,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 246,
+   "longTaskTotalMs": 63,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.005,
+   "scriptMs": 36,
+   "windowMs": 7035,
+   "layer": {
+    "requests": 2,
+    "bytes": 68546,
+    "doneMs": 115,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 59,
+    "examples": [
+     "tide-layer-central-coast.json",
+     "tide-layer.js"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.046
+  },
+  {
+   "page": "layer-tide",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 33,
+   "settledMs": 6520,
+   "firstFrameMs": -2,
+   "paintedMs": 229,
+   "finalPaint": [
+    0.347,
+    19
+   ],
+   "animated": false,
+   "completeMs": 296,
+   "responseMs": 39,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 229,
+   "maxInputDelayMs": 7,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 360,
+   "fcpMs": 28,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 229,
+   "longTaskTotalMs": 76,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 39,
+   "windowMs": 7038,
+   "layer": {
+    "requests": 2,
+    "bytes": 68546,
+    "doneMs": 118,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 61,
+    "examples": [
+     "tide-layer-central-coast.json",
+     "tide-layer.js"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.046
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 30,
+   "settledMs": 6525,
+   "firstFrameMs": 39,
+   "paintedMs": 239,
+   "finalPaint": [
+    0.387,
+    20
+   ],
+   "animated": false,
+   "completeMs": 289,
+   "responseMs": 19,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 239,
+   "maxInputDelayMs": 6,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 354,
+   "fcpMs": 32,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 239,
+   "longTaskTotalMs": 78,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 43,
+   "windowMs": 7032,
+   "layer": {
+    "requests": 35,
+    "bytes": 2179811,
+    "doneMs": 250,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 67,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.007
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 30,
+   "settledMs": 6525,
+   "firstFrameMs": 44,
+   "paintedMs": 228,
+   "finalPaint": [
+    0.387,
+    20
+   ],
+   "animated": false,
+   "completeMs": 294,
+   "responseMs": 41,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 228,
+   "maxInputDelayMs": 5,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 357,
+   "fcpMs": 40,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 228,
+   "longTaskTotalMs": 74,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 42,
+   "windowMs": 7032,
+   "layer": {
+    "requests": 35,
+    "bytes": 2179811,
+    "doneMs": 252,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 64,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.007
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 33,
+   "settledMs": 6527,
+   "firstFrameMs": -2,
+   "paintedMs": 232,
+   "finalPaint": [
+    0.387,
+    20
+   ],
+   "animated": false,
+   "completeMs": 315,
+   "responseMs": 47,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 232,
+   "maxInputDelayMs": 5,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 374,
+   "fcpMs": 32,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 232,
+   "longTaskTotalMs": 75,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 40,
+   "windowMs": 7031,
+   "layer": {
+    "requests": 35,
+    "bytes": 2179811,
+    "doneMs": 252,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 67,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.007
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 1,
+   "frames": 29,
+   "settledMs": 6524,
+   "firstFrameMs": 43,
+   "paintedMs": 243,
+   "finalPaint": [
+    0.597,
+    10
+   ],
+   "animated": false,
+   "completeMs": 260,
+   "responseMs": 22,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 243,
+   "maxInputDelayMs": 19,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 336,
+   "fcpMs": 40,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 243,
+   "longTaskTotalMs": 75,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 45,
+   "windowMs": 7050,
+   "layer": {
+    "requests": 20,
+    "bytes": 1053455,
+    "doneMs": 204,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 72,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 2,
+   "frames": 31,
+   "settledMs": 6523,
+   "firstFrameMs": 12,
+   "paintedMs": 228,
+   "finalPaint": [
+    0.597,
+    10
+   ],
+   "animated": false,
+   "completeMs": 262,
+   "responseMs": 27,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 228,
+   "maxInputDelayMs": 5,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 321,
+   "fcpMs": 28,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 228,
+   "longTaskTotalMs": 74,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 39,
+   "windowMs": 7034,
+   "layer": {
+    "requests": 20,
+    "bytes": 1053455,
+    "doneMs": 201,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 65,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "desktop",
+   "pass": "cold",
+   "run": 3,
+   "frames": 29,
+   "settledMs": 6525,
+   "firstFrameMs": 39,
+   "paintedMs": 222,
+   "finalPaint": [
+    0.597,
+    10
+   ],
+   "animated": false,
+   "completeMs": 255,
+   "responseMs": 21,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 222,
+   "maxInputDelayMs": 5,
+   "inputProbes": 7,
+   "quietAfterPaintMs": 315,
+   "fcpMs": 32,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 222,
+   "longTaskTotalMs": 74,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.006,
+   "scriptMs": 39,
+   "windowMs": 7031,
+   "layer": {
+    "requests": 20,
+    "bytes": 1053455,
+    "doneMs": 196,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 69,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 58,
+   "settledMs": 22216,
+   "firstFrameMs": -2,
+   "paintedMs": 8958,
+   "finalPaint": [
+    0.172,
+    25
+   ],
+   "animated": false,
+   "completeMs": 14741,
+   "responseMs": 117,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8958,
+   "maxInputDelayMs": 688,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8958,
+   "fcpMs": 864,
+   "tbtMs": 49,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15924,
+   "freeFromMs": 15924,
+   "longTaskTotalMs": 382,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.008,
+   "scriptMs": 182,
+   "windowMs": 22317,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 58,
+   "settledMs": 22220,
+   "firstFrameMs": 21,
+   "paintedMs": 8937,
+   "finalPaint": [
+    0.172,
+    25
+   ],
+   "animated": false,
+   "completeMs": 14704,
+   "responseMs": 113,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8937,
+   "maxInputDelayMs": 683,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8937,
+   "fcpMs": 856,
+   "tbtMs": 40,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15919,
+   "freeFromMs": 15919,
+   "longTaskTotalMs": 379,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.008,
+   "scriptMs": 181,
+   "windowMs": 22297,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 58,
+   "settledMs": 22220,
+   "firstFrameMs": -2,
+   "paintedMs": 8945,
+   "finalPaint": [
+    0.172,
+    25
+   ],
+   "animated": false,
+   "completeMs": 14711,
+   "responseMs": 115,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8945,
+   "maxInputDelayMs": 676,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8945,
+   "fcpMs": 852,
+   "tbtMs": 47,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15911,
+   "freeFromMs": 15911,
+   "longTaskTotalMs": 435,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.008,
+   "scriptMs": 180,
+   "windowMs": 22268,
+   "layer": null,
+   "layerReference": null,
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 59,
+   "settledMs": 22219,
+   "firstFrameMs": 13,
+   "paintedMs": 8929,
+   "finalPaint": [
+    0.245,
+    18
+   ],
+   "animated": false,
+   "completeMs": 14512,
+   "responseMs": 114,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8929,
+   "maxInputDelayMs": 680,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8929,
+   "fcpMs": 848,
+   "tbtMs": 55,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15940,
+   "freeFromMs": 15940,
+   "longTaskTotalMs": 513,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 206,
+   "windowMs": 22324,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.363
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 58,
+   "settledMs": 22226,
+   "firstFrameMs": 16,
+   "paintedMs": 8965,
+   "finalPaint": [
+    0.245,
+    18
+   ],
+   "animated": false,
+   "completeMs": 14482,
+   "responseMs": 114,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8965,
+   "maxInputDelayMs": 687,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8965,
+   "fcpMs": 860,
+   "tbtMs": 54,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15926,
+   "freeFromMs": 15926,
+   "longTaskTotalMs": 550,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 203,
+   "windowMs": 22290,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.363
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 59,
+   "settledMs": 22221,
+   "firstFrameMs": 19,
+   "paintedMs": 8952,
+   "finalPaint": [
+    0.245,
+    18
+   ],
+   "animated": false,
+   "completeMs": 14485,
+   "responseMs": 115,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8952,
+   "maxInputDelayMs": 686,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8952,
+   "fcpMs": 856,
+   "tbtMs": 53,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15947,
+   "freeFromMs": 15947,
+   "longTaskTotalMs": 573,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.01,
+   "scriptMs": 225,
+   "windowMs": 22326,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.363
+  },
+  {
+   "page": "layer-current",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 59,
+   "settledMs": 22212,
+   "firstFrameMs": 15,
+   "paintedMs": 8965,
+   "finalPaint": [
+    0.155,
+    22
+   ],
+   "animated": false,
+   "completeMs": 16281,
+   "responseMs": 114,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8965,
+   "maxInputDelayMs": 681,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8965,
+   "fcpMs": 856,
+   "tbtMs": 49,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15953,
+   "freeFromMs": 15953,
+   "longTaskTotalMs": 565,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.011,
+   "scriptMs": 245,
+   "windowMs": 22408,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.388
+  },
+  {
+   "page": "layer-current",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 59,
+   "settledMs": 22231,
+   "firstFrameMs": -2,
+   "paintedMs": 8981,
+   "finalPaint": [
+    0.155,
+    22
+   ],
+   "animated": false,
+   "completeMs": 16281,
+   "responseMs": 115,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8981,
+   "maxInputDelayMs": 690,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8981,
+   "fcpMs": 856,
+   "tbtMs": 67,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15957,
+   "freeFromMs": 15957,
+   "longTaskTotalMs": 624,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.012,
+   "scriptMs": 259,
+   "windowMs": 22423,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.388
+  },
+  {
+   "page": "layer-current",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 59,
+   "settledMs": 22218,
+   "firstFrameMs": 21,
+   "paintedMs": 8954,
+   "finalPaint": [
+    0.155,
+    22
+   ],
+   "animated": false,
+   "completeMs": 16304,
+   "responseMs": 131,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8954,
+   "maxInputDelayMs": 683,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8954,
+   "fcpMs": 860,
+   "tbtMs": 51,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 15949,
+   "freeFromMs": 15949,
+   "longTaskTotalMs": 800,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.012,
+   "scriptMs": 259,
+   "windowMs": 22445,
+   "layer": {
+    "requests": 0,
+    "bytes": 0,
+    "doneMs": null,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": null,
+    "examples": []
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.388
+  },
+  {
+   "page": "layer-tide",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 60,
+   "settledMs": 22467,
+   "firstFrameMs": 19,
+   "paintedMs": 8352,
+   "finalPaint": [
+    0.127,
+    25
+   ],
+   "animated": false,
+   "completeMs": 15302,
+   "responseMs": 112,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8352,
+   "maxInputDelayMs": 687,
+   "inputProbes": 22,
+   "quietAfterPaintMs": 8352,
+   "fcpMs": 860,
+   "tbtMs": 62,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 16274,
+   "freeFromMs": 16274,
+   "longTaskTotalMs": 464,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 204,
+   "windowMs": 23477,
+   "layer": {
+    "requests": 2,
+    "bytes": 68546,
+    "doneMs": 8296,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6483,
+    "examples": [
+     "tide-layer-central-coast.json",
+     "tide-layer.js"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.124
+  },
+  {
+   "page": "layer-tide",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 60,
+   "settledMs": 22469,
+   "firstFrameMs": -2,
+   "paintedMs": 8424,
+   "finalPaint": [
+    0.127,
+    25
+   ],
+   "animated": false,
+   "completeMs": 15291,
+   "responseMs": 115,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8424,
+   "maxInputDelayMs": 680,
+   "inputProbes": 22,
+   "quietAfterPaintMs": 8424,
+   "fcpMs": 848,
+   "tbtMs": 52,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 16259,
+   "freeFromMs": 16259,
+   "longTaskTotalMs": 446,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.008,
+   "scriptMs": 197,
+   "windowMs": 23465,
+   "layer": {
+    "requests": 2,
+    "bytes": 68546,
+    "doneMs": 8360,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6484,
+    "examples": [
+     "tide-layer-central-coast.json",
+     "tide-layer.js"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.124
+  },
+  {
+   "page": "layer-tide",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 59,
+   "settledMs": 22465,
+   "firstFrameMs": -3,
+   "paintedMs": 8376,
+   "finalPaint": [
+    0.127,
+    25
+   ],
+   "animated": false,
+   "completeMs": 15309,
+   "responseMs": 114,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8376,
+   "maxInputDelayMs": 680,
+   "inputProbes": 22,
+   "quietAfterPaintMs": 8376,
+   "fcpMs": 848,
+   "tbtMs": 52,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 16288,
+   "freeFromMs": 16288,
+   "longTaskTotalMs": 457,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 207,
+   "windowMs": 23486,
+   "layer": {
+    "requests": 2,
+    "bytes": 68546,
+    "doneMs": 8308,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6489,
+    "examples": [
+     "tide-layer-central-coast.json",
+     "tide-layer.js"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.124
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 58,
+   "settledMs": 22216,
+   "firstFrameMs": -3,
+   "paintedMs": 9002,
+   "finalPaint": [
+    0.172,
+    25
+   ],
+   "animated": false,
+   "completeMs": 14818,
+   "responseMs": 117,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 9002,
+   "maxInputDelayMs": 681,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 9002,
+   "fcpMs": 848,
+   "tbtMs": 60,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 16020,
+   "freeFromMs": 16020,
+   "longTaskTotalMs": 472,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.01,
+   "scriptMs": 220,
+   "windowMs": 22377,
+   "layer": {
+    "requests": 18,
+    "bytes": 1229655,
+    "doneMs": 15384,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6503,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.0
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 58,
+   "settledMs": 22218,
+   "firstFrameMs": -3,
+   "paintedMs": 8980,
+   "finalPaint": [
+    0.172,
+    25
+   ],
+   "animated": false,
+   "completeMs": 14796,
+   "responseMs": 114,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8980,
+   "maxInputDelayMs": 679,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8980,
+   "fcpMs": 848,
+   "tbtMs": 55,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 16006,
+   "freeFromMs": 16006,
+   "longTaskTotalMs": 561,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 204,
+   "windowMs": 22338,
+   "layer": {
+    "requests": 18,
+    "bytes": 1229655,
+    "doneMs": 15377,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6495,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.0
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 57,
+   "settledMs": 22213,
+   "firstFrameMs": -2,
+   "paintedMs": 8990,
+   "finalPaint": [
+    0.172,
+    25
+   ],
+   "animated": false,
+   "completeMs": 14790,
+   "responseMs": 115,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8990,
+   "maxInputDelayMs": 688,
+   "inputProbes": 21,
+   "quietAfterPaintMs": 8990,
+   "fcpMs": 864,
+   "tbtMs": 52,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 16011,
+   "freeFromMs": 16011,
+   "longTaskTotalMs": 454,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 200,
+   "windowMs": 22314,
+   "layer": {
+    "requests": 18,
+    "bytes": 1229655,
+    "doneMs": 15378,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6500,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.0
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 1,
+   "frames": 48,
+   "settledMs": 18710,
+   "firstFrameMs": -2,
+   "paintedMs": 8227,
+   "finalPaint": [
+    0.386,
+    12
+   ],
+   "animated": false,
+   "completeMs": 11527,
+   "responseMs": 114,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8227,
+   "maxInputDelayMs": 679,
+   "inputProbes": 18,
+   "quietAfterPaintMs": 8227,
+   "fcpMs": 848,
+   "tbtMs": 51,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 12555,
+   "freeFromMs": 12555,
+   "longTaskTotalMs": 508,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 175,
+   "windowMs": 19319,
+   "layer": {
+    "requests": 11,
+    "bytes": 613075,
+    "doneMs": 11923,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6507,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 2,
+   "frames": 48,
+   "settledMs": 18707,
+   "firstFrameMs": -2,
+   "paintedMs": 8225,
+   "finalPaint": [
+    0.386,
+    12
+   ],
+   "animated": false,
+   "completeMs": 11525,
+   "responseMs": 116,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8225,
+   "maxInputDelayMs": 680,
+   "inputProbes": 18,
+   "quietAfterPaintMs": 8225,
+   "fcpMs": 848,
+   "tbtMs": 51,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 12543,
+   "freeFromMs": 12543,
+   "longTaskTotalMs": 404,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.009,
+   "scriptMs": 182,
+   "windowMs": 19316,
+   "layer": {
+    "requests": 11,
+    "bytes": 613075,
+    "doneMs": 11916,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6499,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "phone",
+   "pass": "cold",
+   "run": 3,
+   "frames": 48,
+   "settledMs": 18716,
+   "firstFrameMs": -2,
+   "paintedMs": 8211,
+   "finalPaint": [
+    0.386,
+    12
+   ],
+   "animated": false,
+   "completeMs": 11544,
+   "responseMs": 117,
+   "interactionFailed": false,
+   "mapCovered": false,
+   "usableMs": 8211,
+   "maxInputDelayMs": 685,
+   "inputProbes": 18,
+   "quietAfterPaintMs": 8211,
+   "fcpMs": 868,
+   "tbtMs": 53,
+   "tbtWindowOpen": false,
+   "lastLongTaskEndMs": 12567,
+   "freeFromMs": 12567,
+   "longTaskTotalMs": 429,
+   "briefShownMs": null,
+   "messages": [],
+   "pageErrors": [],
+   "status": "ok",
+   "dutyCycle": 0.01,
+   "scriptMs": 192,
+   "windowMs": 19335,
+   "layer": {
+    "requests": 11,
+    "bytes": 613075,
+    "doneMs": 11916,
+    "failed": 0,
+    "stillOpen": 0,
+    "firstStartMs": 6501,
+    "examples": [
+     "morro-bay-seafloor-deep.pmtiles"
+    ]
+   },
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null
   }
  ],
  "groups": [
-  {
-   "page": "layer-wind",
-   "profile": "desktop",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": -2,
-   "firstFrameMs_all": [
-    -3,
-    40,
-    -2
-   ],
-   "fcpMs": 36,
-   "fcpMs_all": [
-    36,
-    40,
-    32
-   ],
-   "paintedMs": 216,
-   "paintedMs_all": [
-    220,
-    207,
-    216
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null
-   ],
-   "usableMs": 220,
-   "usableMs_all": [
-    220,
-    1030,
-    216
-   ],
-   "quietAfterPaintMs": 216,
-   "quietAfterPaintMs_all": [
-    220,
-    207,
-    216
-   ],
-   "tbtMs": 0,
-   "tbtMs_all": [
-    0,
-    0,
-    0
-   ],
-   "responseMs": 14,
-   "responseMs_all": [
-    37,
-    7,
-    14
-   ],
-   "maxInputDelayMs": 29,
-   "maxInputDelayMs_all": [
-    33,
-    28,
-    29
-   ],
-   "dutyCycle": 0.581,
-   "dutyCycle_all": [
-    0.581,
-    0.632,
-    0.567
-   ],
-   "scriptMs": 4161,
-   "scriptMs_all": [
-    4161,
-    4518,
-    4056
-   ],
-   "windowMs": 7155,
-   "windowMs_all": [
-    7158,
-    7155,
-    7150
-   ],
-   "settledMs": 6272,
-   "settledMs_all": [
-    6524,
-    6267,
-    6272
-   ],
-   "animated": 3,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": 253,
-   "layerDoneMs_all": [
-    257,
-    244,
-    253
-   ],
-   "layerRequests": 1,
-   "layerBytes": 3865,
-   "layerFailed": 0,
-   "layerExamples": [
-    "wind-preview.json"
-   ],
-   "layerReference": null,
-   "layerVisibleDiff": null,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-sst",
-   "profile": "desktop",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": 42,
-   "firstFrameMs_all": [
-    -2,
-    43,
-    42
-   ],
-   "fcpMs": 36,
-   "fcpMs_all": [
-    28,
-    36,
-    36
-   ],
-   "paintedMs": 208,
-   "paintedMs_all": [
-    200,
-    209,
-    208
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 467,
-   "completeMs_all": [
-    467,
-    492,
-    458
-   ],
-   "usableMs": 1013,
-   "usableMs_all": [
-    200,
-    1013,
-    1013
-   ],
-   "quietAfterPaintMs": 208,
-   "quietAfterPaintMs_all": [
-    200,
-    209,
-    208
-   ],
-   "tbtMs": 0,
-   "tbtMs_all": [
-    0,
-    0,
-    0
-   ],
-   "responseMs": 41,
-   "responseMs_all": [
-    48,
-    41,
-    41
-   ],
-   "maxInputDelayMs": 1,
-   "maxInputDelayMs_all": [
-    7,
-    1,
-    1
-   ],
-   "dutyCycle": 0.008,
-   "dutyCycle_all": [
-    0.008,
-    0.009,
-    0.008
-   ],
-   "scriptMs": 56,
-   "scriptMs_all": [
-    56,
-    64,
-    55
-   ],
-   "windowMs": 7029,
-   "windowMs_all": [
-    7032,
-    7029,
-    7029
-   ],
-   "settledMs": 6523,
-   "settledMs_all": [
-    6525,
-    6521,
-    6523
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": 239,
-   "layerDoneMs_all": [
-    239,
-    262,
-    233
-   ],
-   "layerRequests": 1,
-   "layerBytes": 2276790,
-   "layerFailed": 0,
-   "layerExamples": [
-    "sst-preview.json"
-   ],
-   "layerReference": null,
-   "layerVisibleDiff": null,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-wind",
-   "profile": "phone",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": -2,
-   "firstFrameMs_all": [
-    -3,
-    -2,
-    16
-   ],
-   "fcpMs": 856,
-   "fcpMs_all": [
-    844,
-    860,
-    856
-   ],
-   "paintedMs": 866,
-   "paintedMs_all": [
-    854,
-    872,
-    866
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null
-   ],
-   "usableMs": 1858,
-   "usableMs_all": [
-    1847,
-    1863,
-    1858
-   ],
-   "quietAfterPaintMs": 866,
-   "quietAfterPaintMs_all": [
-    854,
-    872,
-    866
-   ],
-   "tbtMs": 0,
-   "tbtMs_all": [
-    0,
-    0,
-    0
-   ],
-   "responseMs": 150,
-   "responseMs_all": [
-    150,
-    143,
-    153
-   ],
-   "maxInputDelayMs": 676,
-   "maxInputDelayMs_all": [
-    672,
-    688,
-    676
-   ],
-   "dutyCycle": 0.616,
-   "dutyCycle_all": [
-    0.614,
-    0.616,
-    0.621
-   ],
-   "scriptMs": 74954,
-   "scriptMs_all": [
-    74339,
-    74954,
-    75614
-   ],
-   "windowMs": 121703,
-   "windowMs_all": [
-    121003,
-    121703,
-    121743
-   ],
-   "settledMs": 20466,
-   "settledMs_all": [
-    20717,
-    20466,
-    20460
-   ],
-   "animated": 3,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": 14369,
-   "layerDoneMs_all": [
-    14490,
-    14369,
-    14276
-   ],
-   "layerRequests": 1,
-   "layerBytes": 3865,
-   "layerFailed": 0,
-   "layerExamples": [
-    "wind-preview.json"
-   ],
-   "layerReference": null,
-   "layerVisibleDiff": null,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-sst",
-   "profile": "phone",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": -3,
-   "firstFrameMs_all": [
-    -3,
-    -3,
-    12
-   ],
-   "fcpMs": 860,
-   "fcpMs_all": [
-    852,
-    860,
-    868
-   ],
-   "paintedMs": 8460,
-   "paintedMs_all": [
-    8471,
-    8460,
-    8445
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 26003,
-   "completeMs_all": [
-    26003,
-    25943,
-    26011
-   ],
-   "usableMs": 8460,
-   "usableMs_all": [
-    8471,
-    8460,
-    8445
-   ],
-   "quietAfterPaintMs": 8460,
-   "quietAfterPaintMs_all": [
-    8471,
-    8460,
-    8445
-   ],
-   "tbtMs": 76,
-   "tbtMs_all": [
-    143,
-    62,
-    76
-   ],
-   "responseMs": 130,
-   "responseMs_all": [
-    130,
-    132,
-    127
-   ],
-   "maxInputDelayMs": 687,
-   "maxInputDelayMs_all": [
-    685,
-    690,
-    687
-   ],
-   "dutyCycle": 0.011,
-   "dutyCycle_all": [
-    0.013,
-    0.011,
-    0.011
-   ],
-   "scriptMs": 364,
-   "scriptMs_all": [
-    415,
-    361,
-    364
-   ],
-   "windowMs": 32463,
-   "windowMs_all": [
-    32463,
-    32471,
-    32457
-   ],
-   "settledMs": 31995,
-   "settledMs_all": [
-    31998,
-    31995,
-    31989
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": 25532,
-   "layerDoneMs_all": [
-    25546,
-    25531,
-    25532
-   ],
-   "layerRequests": 1,
-   "layerBytes": 2276790,
-   "layerFailed": 0,
-   "layerExamples": [
-    "sst-preview.json"
-   ],
-   "layerReference": null,
-   "layerVisibleDiff": null,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-base-medium",
-   "profile": "desktop",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": 40,
-   "firstFrameMs_all": [
-    40,
-    35,
-    44
-   ],
-   "fcpMs": 36,
-   "fcpMs_all": [
-    36,
-    32,
-    40
-   ],
-   "paintedMs": 235,
-   "paintedMs_all": [
-    256,
-    235,
-    211
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 306,
-   "completeMs_all": [
-    306,
-    318,
-    244
-   ],
-   "usableMs": 235,
-   "usableMs_all": [
-    256,
-    235,
-    211
-   ],
-   "quietAfterPaintMs": 364,
-   "quietAfterPaintMs_all": [
-    370,
-    364,
-    292
-   ],
-   "tbtMs": 0,
-   "tbtMs_all": [
-    0,
-    0,
-    0
-   ],
-   "responseMs": 23,
-   "responseMs_all": [
-    23,
-    22,
-    32
-   ],
-   "maxInputDelayMs": 6,
-   "maxInputDelayMs_all": [
-    9,
-    6,
-    5
-   ],
-   "dutyCycle": 0.006,
-   "dutyCycle_all": [
-    0.006,
-    0.006,
-    0.005
-   ],
-   "scriptMs": 42,
-   "scriptMs_all": [
-    44,
-    42,
-    37
-   ],
-   "windowMs": 7028,
-   "windowMs_all": [
-    7031,
-    7028,
-    7027
-   ],
-   "settledMs": 6528,
-   "settledMs_all": [
-    6528,
-    6526,
-    6528
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerVisibleDiff": null,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-chlorophyll",
-   "profile": "desktop",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": 36,
-   "firstFrameMs_all": [
-    44,
-    12,
-    36
-   ],
-   "fcpMs": 36,
-   "fcpMs_all": [
-    36,
-    28,
-    36
-   ],
-   "paintedMs": 194,
-   "paintedMs_all": [
-    194,
-    179,
-    203
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 303,
-   "completeMs_all": [
-    311,
-    296,
-    303
-   ],
-   "usableMs": 203,
-   "usableMs_all": [
-    194,
-    1011,
-    203
-   ],
-   "quietAfterPaintMs": 370,
-   "quietAfterPaintMs_all": [
-    370,
-    362,
-    404
-   ],
-   "tbtMs": 0,
-   "tbtMs_all": [
-    0,
-    25,
-    0
-   ],
-   "responseMs": 44,
-   "responseMs_all": [
-    26,
-    44,
-    48
-   ],
-   "maxInputDelayMs": 4,
-   "maxInputDelayMs_all": [
-    5,
-    1,
-    4
-   ],
-   "dutyCycle": 0.006,
-   "dutyCycle_all": [
-    0.006,
-    0.006,
-    0.007
-   ],
-   "scriptMs": 42,
-   "scriptMs_all": [
-    42,
-    40,
-    50
-   ],
-   "windowMs": 7030,
-   "windowMs_all": [
-    7030,
-    7027,
-    7035
-   ],
-   "settledMs": 6525,
-   "settledMs_all": [
-    6521,
-    6528,
-    6525
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": null,
-   "layerDoneMs_all": [
-    null,
-    null,
-    null
-   ],
-   "layerRequests": 0,
-   "layerBytes": 0,
-   "layerFailed": 0,
-   "layerExamples": [],
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.378,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-current",
-   "profile": "desktop",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": 23,
-   "firstFrameMs_all": [
-    39,
-    14,
-    23
-   ],
-   "fcpMs": 28,
-   "fcpMs_all": [
-    36,
-    28,
-    24
-   ],
-   "paintedMs": 223,
-   "paintedMs_all": [
-    222,
-    231,
-    223
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 472,
-   "completeMs_all": [
-    472,
-    447,
-    473
-   ],
-   "usableMs": 223,
-   "usableMs_all": [
-    222,
-    231,
-    223
-   ],
-   "quietAfterPaintMs": 456,
-   "quietAfterPaintMs_all": [
-    456,
-    443,
-    466
-   ],
-   "tbtMs": 0,
-   "tbtMs_all": [
-    0,
-    0,
-    0
-   ],
-   "responseMs": 47,
-   "responseMs_all": [
-    54,
-    47,
-    40
-   ],
-   "maxInputDelayMs": 6,
-   "maxInputDelayMs_all": [
-    6,
-    7,
-    4
-   ],
-   "dutyCycle": 0.009,
-   "dutyCycle_all": [
-    0.009,
-    0.009,
-    0.009
-   ],
-   "scriptMs": 62,
-   "scriptMs_all": [
-    62,
-    61,
-    62
-   ],
-   "windowMs": 7030,
-   "windowMs_all": [
-    7031,
-    7030,
-    7028
-   ],
-   "settledMs": 6525,
-   "settledMs_all": [
-    6523,
-    6526,
-    6525
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": null,
-   "layerDoneMs_all": [
-    null,
-    null,
-    null
-   ],
-   "layerRequests": 0,
-   "layerBytes": 0,
-   "layerFailed": 0,
-   "layerExamples": [],
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.414,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-tide",
-   "profile": "desktop",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": -2,
-   "firstFrameMs_all": [
-    37,
-    -2,
-    -2
-   ],
-   "fcpMs": 28,
-   "fcpMs_all": [
-    36,
-    28,
-    28
-   ],
-   "paintedMs": 237,
-   "paintedMs_all": [
-    237,
-    246,
-    229
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 296,
-   "completeMs_all": [
-    287,
-    312,
-    296
-   ],
-   "usableMs": 237,
-   "usableMs_all": [
-    237,
-    246,
-    229
-   ],
-   "quietAfterPaintMs": 358,
-   "quietAfterPaintMs_all": [
-    347,
-    358,
-    360
-   ],
-   "tbtMs": 0,
-   "tbtMs_all": [
-    0,
-    0,
-    0
-   ],
-   "responseMs": 37,
-   "responseMs_all": [
-    37,
-    24,
-    39
-   ],
-   "maxInputDelayMs": 6,
-   "maxInputDelayMs_all": [
-    3,
-    6,
-    7
-   ],
-   "dutyCycle": 0.005,
-   "dutyCycle_all": [
-    0.005,
-    0.005,
-    0.006
-   ],
-   "scriptMs": 38,
-   "scriptMs_all": [
-    38,
-    36,
-    39
-   ],
-   "windowMs": 7035,
-   "windowMs_all": [
-    7029,
-    7035,
-    7038
-   ],
-   "settledMs": 6520,
-   "settledMs_all": [
-    6526,
-    6520,
-    6520
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": 115,
-   "layerDoneMs_all": [
-    113,
-    115,
-    118
-   ],
-   "layerRequests": 2,
-   "layerBytes": 68546,
-   "layerFailed": 0,
-   "layerExamples": [
-    "tide-layer-central-coast.json",
-    "tide-layer.js"
-   ],
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.046,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-bathy-2m",
-   "profile": "desktop",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": 39,
-   "firstFrameMs_all": [
-    39,
-    44,
-    -2
-   ],
-   "fcpMs": 32,
-   "fcpMs_all": [
-    32,
-    40,
-    32
-   ],
-   "paintedMs": 232,
-   "paintedMs_all": [
-    239,
-    228,
-    232
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 294,
-   "completeMs_all": [
-    289,
-    294,
-    315
-   ],
-   "usableMs": 232,
-   "usableMs_all": [
-    239,
-    228,
-    232
-   ],
-   "quietAfterPaintMs": 357,
-   "quietAfterPaintMs_all": [
-    354,
-    357,
-    374
-   ],
-   "tbtMs": 0,
-   "tbtMs_all": [
-    0,
-    0,
-    0
-   ],
-   "responseMs": 41,
-   "responseMs_all": [
-    19,
-    41,
-    47
-   ],
-   "maxInputDelayMs": 5,
-   "maxInputDelayMs_all": [
-    6,
-    5,
-    5
-   ],
-   "dutyCycle": 0.006,
-   "dutyCycle_all": [
-    0.006,
-    0.006,
-    0.006
-   ],
-   "scriptMs": 42,
-   "scriptMs_all": [
-    43,
-    42,
-    40
-   ],
-   "windowMs": 7032,
-   "windowMs_all": [
-    7032,
-    7032,
-    7031
-   ],
-   "settledMs": 6525,
-   "settledMs_all": [
-    6525,
-    6525,
-    6527
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": 252,
-   "layerDoneMs_all": [
-    250,
-    252,
-    252
-   ],
-   "layerRequests": 35,
-   "layerBytes": 2179811,
-   "layerFailed": 0,
-   "layerExamples": [
-    "morro-bay-seafloor-deep.pmtiles"
-   ],
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.007,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-bathy-2m-z12",
-   "profile": "desktop",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": 39,
-   "firstFrameMs_all": [
-    43,
-    12,
-    39
-   ],
-   "fcpMs": 32,
-   "fcpMs_all": [
-    40,
-    28,
-    32
-   ],
-   "paintedMs": 228,
-   "paintedMs_all": [
-    243,
-    228,
-    222
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 260,
-   "completeMs_all": [
-    260,
-    262,
-    255
-   ],
-   "usableMs": 228,
-   "usableMs_all": [
-    243,
-    228,
-    222
-   ],
-   "quietAfterPaintMs": 321,
-   "quietAfterPaintMs_all": [
-    336,
-    321,
-    315
-   ],
-   "tbtMs": 0,
-   "tbtMs_all": [
-    0,
-    0,
-    0
-   ],
-   "responseMs": 22,
-   "responseMs_all": [
-    22,
-    27,
-    21
-   ],
-   "maxInputDelayMs": 5,
-   "maxInputDelayMs_all": [
-    19,
-    5,
-    5
-   ],
-   "dutyCycle": 0.006,
-   "dutyCycle_all": [
-    0.006,
-    0.006,
-    0.006
-   ],
-   "scriptMs": 39,
-   "scriptMs_all": [
-    45,
-    39,
-    39
-   ],
-   "windowMs": 7034,
-   "windowMs_all": [
-    7050,
-    7034,
-    7031
-   ],
-   "settledMs": 6524,
-   "settledMs_all": [
-    6524,
-    6523,
-    6525
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": 201,
-   "layerDoneMs_all": [
-    204,
-    201,
-    196
-   ],
-   "layerRequests": 20,
-   "layerBytes": 1053455,
-   "layerFailed": 0,
-   "layerExamples": [
-    "morro-bay-seafloor-deep.pmtiles"
-   ],
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": null,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-base-medium",
-   "profile": "phone",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": -2,
-   "firstFrameMs_all": [
-    -2,
-    21,
-    -2
-   ],
-   "fcpMs": 856,
-   "fcpMs_all": [
-    864,
-    856,
-    852
-   ],
-   "paintedMs": 8945,
-   "paintedMs_all": [
-    8958,
-    8937,
-    8945
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 14711,
-   "completeMs_all": [
-    14741,
-    14704,
-    14711
-   ],
-   "usableMs": 8945,
-   "usableMs_all": [
-    8958,
-    8937,
-    8945
-   ],
-   "quietAfterPaintMs": 8945,
-   "quietAfterPaintMs_all": [
-    8958,
-    8937,
-    8945
-   ],
-   "tbtMs": 47,
-   "tbtMs_all": [
-    49,
-    40,
-    47
-   ],
-   "responseMs": 115,
-   "responseMs_all": [
-    117,
-    113,
-    115
-   ],
-   "maxInputDelayMs": 683,
-   "maxInputDelayMs_all": [
-    688,
-    683,
-    676
-   ],
-   "dutyCycle": 0.008,
-   "dutyCycle_all": [
-    0.008,
-    0.008,
-    0.008
-   ],
-   "scriptMs": 181,
-   "scriptMs_all": [
-    182,
-    181,
-    180
-   ],
-   "windowMs": 22297,
-   "windowMs_all": [
-    22317,
-    22297,
-    22268
-   ],
-   "settledMs": 22220,
-   "settledMs_all": [
-    22216,
-    22220,
-    22220
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerVisibleDiff": null,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-chlorophyll",
-   "profile": "phone",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": 16,
-   "firstFrameMs_all": [
-    13,
-    16,
-    19
-   ],
-   "fcpMs": 856,
-   "fcpMs_all": [
-    848,
-    860,
-    856
-   ],
-   "paintedMs": 8952,
-   "paintedMs_all": [
-    8929,
-    8965,
-    8952
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 14485,
-   "completeMs_all": [
-    14512,
-    14482,
-    14485
-   ],
-   "usableMs": 8952,
-   "usableMs_all": [
-    8929,
-    8965,
-    8952
-   ],
-   "quietAfterPaintMs": 8952,
-   "quietAfterPaintMs_all": [
-    8929,
-    8965,
-    8952
-   ],
-   "tbtMs": 54,
-   "tbtMs_all": [
-    55,
-    54,
-    53
-   ],
-   "responseMs": 114,
-   "responseMs_all": [
-    114,
-    114,
-    115
-   ],
-   "maxInputDelayMs": 686,
-   "maxInputDelayMs_all": [
-    680,
-    687,
-    686
-   ],
-   "dutyCycle": 0.009,
-   "dutyCycle_all": [
-    0.009,
-    0.009,
-    0.01
-   ],
-   "scriptMs": 206,
-   "scriptMs_all": [
-    206,
-    203,
-    225
-   ],
-   "windowMs": 22324,
-   "windowMs_all": [
-    22324,
-    22290,
-    22326
-   ],
-   "settledMs": 22221,
-   "settledMs_all": [
-    22219,
-    22226,
-    22221
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": null,
-   "layerDoneMs_all": [
-    null,
-    null,
-    null
-   ],
-   "layerRequests": 0,
-   "layerBytes": 0,
-   "layerFailed": 0,
-   "layerExamples": [],
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.363,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-current",
-   "profile": "phone",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": 15,
-   "firstFrameMs_all": [
-    15,
-    -2,
-    21
-   ],
-   "fcpMs": 856,
-   "fcpMs_all": [
-    856,
-    856,
-    860
-   ],
-   "paintedMs": 8965,
-   "paintedMs_all": [
-    8965,
-    8981,
-    8954
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 16281,
-   "completeMs_all": [
-    16281,
-    16281,
-    16304
-   ],
-   "usableMs": 8965,
-   "usableMs_all": [
-    8965,
-    8981,
-    8954
-   ],
-   "quietAfterPaintMs": 8965,
-   "quietAfterPaintMs_all": [
-    8965,
-    8981,
-    8954
-   ],
-   "tbtMs": 51,
-   "tbtMs_all": [
-    49,
-    67,
-    51
-   ],
-   "responseMs": 115,
-   "responseMs_all": [
-    114,
-    115,
-    131
-   ],
-   "maxInputDelayMs": 683,
-   "maxInputDelayMs_all": [
-    681,
-    690,
-    683
-   ],
-   "dutyCycle": 0.012,
-   "dutyCycle_all": [
-    0.011,
-    0.012,
-    0.012
-   ],
-   "scriptMs": 259,
-   "scriptMs_all": [
-    245,
-    259,
-    259
-   ],
-   "windowMs": 22423,
-   "windowMs_all": [
-    22408,
-    22423,
-    22445
-   ],
-   "settledMs": 22218,
-   "settledMs_all": [
-    22212,
-    22231,
-    22218
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": null,
-   "layerDoneMs_all": [
-    null,
-    null,
-    null
-   ],
-   "layerRequests": 0,
-   "layerBytes": 0,
-   "layerFailed": 0,
-   "layerExamples": [],
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.388,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-tide",
-   "profile": "phone",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": -2,
-   "firstFrameMs_all": [
-    19,
-    -2,
-    -3
-   ],
-   "fcpMs": 848,
-   "fcpMs_all": [
-    860,
-    848,
-    848
-   ],
-   "paintedMs": 8376,
-   "paintedMs_all": [
-    8352,
-    8424,
-    8376
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 15302,
-   "completeMs_all": [
-    15302,
-    15291,
-    15309
-   ],
-   "usableMs": 8376,
-   "usableMs_all": [
-    8352,
-    8424,
-    8376
-   ],
-   "quietAfterPaintMs": 8376,
-   "quietAfterPaintMs_all": [
-    8352,
-    8424,
-    8376
-   ],
-   "tbtMs": 52,
-   "tbtMs_all": [
-    62,
-    52,
-    52
-   ],
-   "responseMs": 114,
-   "responseMs_all": [
-    112,
-    115,
-    114
-   ],
-   "maxInputDelayMs": 680,
-   "maxInputDelayMs_all": [
-    687,
-    680,
-    680
-   ],
-   "dutyCycle": 0.009,
-   "dutyCycle_all": [
-    0.009,
-    0.008,
-    0.009
-   ],
-   "scriptMs": 204,
-   "scriptMs_all": [
-    204,
-    197,
-    207
-   ],
-   "windowMs": 23477,
-   "windowMs_all": [
-    23477,
-    23465,
-    23486
-   ],
-   "settledMs": 22467,
-   "settledMs_all": [
-    22467,
-    22469,
-    22465
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": 8308,
-   "layerDoneMs_all": [
-    8296,
-    8360,
-    8308
-   ],
-   "layerRequests": 2,
-   "layerBytes": 68546,
-   "layerFailed": 0,
-   "layerExamples": [
-    "tide-layer-central-coast.json",
-    "tide-layer.js"
-   ],
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.124,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-bathy-2m",
-   "profile": "phone",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": -3,
-   "firstFrameMs_all": [
-    -3,
-    -3,
-    -2
-   ],
-   "fcpMs": 848,
-   "fcpMs_all": [
-    848,
-    848,
-    864
-   ],
-   "paintedMs": 8990,
-   "paintedMs_all": [
-    9002,
-    8980,
-    8990
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 14796,
-   "completeMs_all": [
-    14818,
-    14796,
-    14790
-   ],
-   "usableMs": 8990,
-   "usableMs_all": [
-    9002,
-    8980,
-    8990
-   ],
-   "quietAfterPaintMs": 8990,
-   "quietAfterPaintMs_all": [
-    9002,
-    8980,
-    8990
-   ],
-   "tbtMs": 55,
-   "tbtMs_all": [
-    60,
-    55,
-    52
-   ],
-   "responseMs": 115,
-   "responseMs_all": [
-    117,
-    114,
-    115
-   ],
-   "maxInputDelayMs": 681,
-   "maxInputDelayMs_all": [
-    681,
-    679,
-    688
-   ],
-   "dutyCycle": 0.009,
-   "dutyCycle_all": [
-    0.01,
-    0.009,
-    0.009
-   ],
-   "scriptMs": 204,
-   "scriptMs_all": [
-    220,
-    204,
-    200
-   ],
-   "windowMs": 22338,
-   "windowMs_all": [
-    22377,
-    22338,
-    22314
-   ],
-   "settledMs": 22216,
-   "settledMs_all": [
-    22216,
-    22218,
-    22213
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": 15378,
-   "layerDoneMs_all": [
-    15384,
-    15377,
-    15378
-   ],
-   "layerRequests": 18,
-   "layerBytes": 1229655,
-   "layerFailed": 0,
-   "layerExamples": [
-    "morro-bay-seafloor-deep.pmtiles"
-   ],
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.0,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "layer-bathy-2m-z12",
-   "profile": "phone",
-   "pass": "cold",
-   "runs": 3,
-   "ok": 3,
-   "statuses": {
-    "ok": 3
-   },
-   "firstFrameMs": -2,
-   "firstFrameMs_all": [
-    -2,
-    -2,
-    -2
-   ],
-   "fcpMs": 848,
-   "fcpMs_all": [
-    848,
-    848,
-    868
-   ],
-   "paintedMs": 8225,
-   "paintedMs_all": [
-    8227,
-    8225,
-    8211
-   ],
-   "briefShownMs": null,
-   "briefShownMs_all": [
-    null,
-    null,
-    null
-   ],
-   "completeMs": 11527,
-   "completeMs_all": [
-    11527,
-    11525,
-    11544
-   ],
-   "usableMs": 8225,
-   "usableMs_all": [
-    8227,
-    8225,
-    8211
-   ],
-   "quietAfterPaintMs": 8225,
-   "quietAfterPaintMs_all": [
-    8227,
-    8225,
-    8211
-   ],
-   "tbtMs": 51,
-   "tbtMs_all": [
-    51,
-    51,
-    53
-   ],
-   "responseMs": 116,
-   "responseMs_all": [
-    114,
-    116,
-    117
-   ],
-   "maxInputDelayMs": 680,
-   "maxInputDelayMs_all": [
-    679,
-    680,
-    685
-   ],
-   "dutyCycle": 0.009,
-   "dutyCycle_all": [
-    0.009,
-    0.009,
-    0.01
-   ],
-   "scriptMs": 182,
-   "scriptMs_all": [
-    175,
-    182,
-    192
-   ],
-   "windowMs": 19319,
-   "windowMs_all": [
-    19319,
-    19316,
-    19335
-   ],
-   "settledMs": 18710,
-   "settledMs_all": [
-    18710,
-    18707,
-    18716
-   ],
-   "animated": 0,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerDoneMs": 11916,
-   "layerDoneMs_all": [
-    11923,
-    11916,
-    11916
-   ],
-   "layerRequests": 11,
-   "layerBytes": 613075,
-   "layerFailed": 0,
-   "layerExamples": [
-    "morro-bay-seafloor-deep.pmtiles"
-   ],
-   "layerReference": "layer-base-medium",
-   "layerVisibleDiff": null,
-   "messages": [],
-   "pageErrors": []
-  },
   {
    "page": "brief",
    "profile": "desktop",
@@ -6988,6 +5572,24 @@
     20668,
     20302,
     20918
+   ],
+   "freeFromMs": 14924,
+   "freeFromMs_all": [
+    15534,
+    15059,
+    14572,
+    14845,
+    14400,
+    15003
+   ],
+   "longTaskTotalMs": 13424,
+   "longTaskTotalMs_all": [
+    14322,
+    13970,
+    13378,
+    13352,
+    13111,
+    13469
    ],
    "animated": 6,
    "mapCovered": 0,
@@ -7131,6 +5733,24 @@
     20628,
     20621
    ],
+   "freeFromMs": 14894,
+   "freeFromMs_all": [
+    15413,
+    15083,
+    16148,
+    14309,
+    14706,
+    14672
+   ],
+   "longTaskTotalMs": 13650,
+   "longTaskTotalMs_all": [
+    14250,
+    13907,
+    14794,
+    12884,
+    13394,
+    12842
+   ],
    "animated": 6,
    "mapCovered": 0,
    "interactionFailed": 0,
@@ -7231,6 +5851,18 @@
     21169,
     21162
    ],
+   "freeFromMs": 15487,
+   "freeFromMs_all": [
+    16339,
+    15487,
+    15334
+   ],
+   "longTaskTotalMs": 14174,
+   "longTaskTotalMs_all": [
+    14917,
+    14174,
+    14100
+   ],
    "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
@@ -7330,6 +5962,18 @@
     21121,
     20870,
     20755
+   ],
+   "freeFromMs": 15003,
+   "freeFromMs_all": [
+    15271,
+    14860,
+    15003
+   ],
+   "longTaskTotalMs": 13878,
+   "longTaskTotalMs_all": [
+    14441,
+    13878,
+    13829
    ],
    "animated": 0,
    "mapCovered": 0,
@@ -7441,6 +6085,18 @@
     19880,
     19874,
     20010
+   ],
+   "freeFromMs": 13706,
+   "freeFromMs_all": [
+    13706,
+    13794,
+    13694
+   ],
+   "longTaskTotalMs": 12586,
+   "longTaskTotalMs_all": [
+    12586,
+    12693,
+    12505
    ],
    "animated": 3,
    "mapCovered": 0,
@@ -7555,6 +6211,18 @@
     20009,
     19643
    ],
+   "freeFromMs": 13680,
+   "freeFromMs_all": [
+    13917,
+    13680,
+    13315
+   ],
+   "longTaskTotalMs": 12474,
+   "longTaskTotalMs_all": [
+    12521,
+    12474,
+    12187
+   ],
    "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
@@ -7668,6 +6336,18 @@
     20921,
     20052
    ],
+   "freeFromMs": 14804,
+   "freeFromMs_all": [
+    15413,
+    14804,
+    13954
+   ],
+   "longTaskTotalMs": 13572,
+   "longTaskTotalMs_all": [
+    14196,
+    13572,
+    12637
+   ],
    "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
@@ -7778,6 +6458,18 @@
     21913,
     20596,
     20047
+   ],
+   "freeFromMs": 14195,
+   "freeFromMs_all": [
+    15614,
+    14195,
+    13872
+   ],
+   "longTaskTotalMs": 12429,
+   "longTaskTotalMs_all": [
+    12530,
+    12429,
+    12335
    ],
    "animated": 0,
    "mapCovered": 0,
@@ -7895,6 +6587,18 @@
     20702,
     20662
    ],
+   "freeFromMs": 14724,
+   "freeFromMs_all": [
+    13998,
+    14724,
+    21414
+   ],
+   "longTaskTotalMs": 13497,
+   "longTaskTotalMs_all": [
+    12831,
+    13497,
+    19667
+   ],
    "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
@@ -8009,6 +6713,18 @@
     20095,
     20611
    ],
+   "freeFromMs": 14314,
+   "freeFromMs_all": [
+    13693,
+    14314,
+    14726
+   ],
+   "longTaskTotalMs": 13354,
+   "longTaskTotalMs_all": [
+    12759,
+    13428,
+    13354
+   ],
    "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
@@ -8108,6 +6824,18 @@
     21094,
     20177,
     20839
+   ],
+   "freeFromMs": 14756,
+   "freeFromMs_all": [
+    15457,
+    14346,
+    14756
+   ],
+   "longTaskTotalMs": 13238,
+   "longTaskTotalMs_all": [
+    14320,
+    13238,
+    13107
    ],
    "animated": 3,
    "mapCovered": 0,
@@ -8209,6 +6937,18 @@
     72629,
     72608
    ],
+   "freeFromMs": 63474,
+   "freeFromMs_all": [
+    63653,
+    63427,
+    63474
+   ],
+   "longTaskTotalMs": 5363,
+   "longTaskTotalMs_all": [
+    6696,
+    4719,
+    5363
+   ],
    "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
@@ -8308,6 +7048,18 @@
     72889,
     73146,
     72988
+   ],
+   "freeFromMs": 27875,
+   "freeFromMs_all": [
+    27618,
+    27875,
+    28699
+   ],
+   "longTaskTotalMs": 4578,
+   "longTaskTotalMs_all": [
+    4640,
+    4578,
+    4419
    ],
    "animated": 3,
    "mapCovered": 0,
@@ -8409,6 +7161,18 @@
     72622,
     72594
    ],
+   "freeFromMs": 15406,
+   "freeFromMs_all": [
+    15440,
+    3218,
+    15406
+   ],
+   "longTaskTotalMs": 1654,
+   "longTaskTotalMs_all": [
+    1658,
+    1654,
+    1572
+   ],
    "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
@@ -8508,6 +7272,18 @@
     72584,
     72573,
     72687
+   ],
+   "freeFromMs": 15291,
+   "freeFromMs_all": [
+    15291,
+    3189,
+    15499
+   ],
+   "longTaskTotalMs": 2019,
+   "longTaskTotalMs_all": [
+    2019,
+    2004,
+    2075
    ],
    "animated": 0,
    "mapCovered": 0,
@@ -8619,6 +7395,18 @@
     72569,
     72585,
     72559
+   ],
+   "freeFromMs": 16446,
+   "freeFromMs_all": [
+    16618,
+    16446,
+    16399
+   ],
+   "longTaskTotalMs": 1965,
+   "longTaskTotalMs_all": [
+    1965,
+    2049,
+    1869
    ],
    "animated": 3,
    "mapCovered": 0,
@@ -8733,6 +7521,18 @@
     72568,
     72469
    ],
+   "freeFromMs": 15336,
+   "freeFromMs_all": [
+    15336,
+    3185,
+    15400
+   ],
+   "longTaskTotalMs": 1914,
+   "longTaskTotalMs_all": [
+    1914,
+    1914,
+    1676
+   ],
    "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
@@ -8844,6 +7644,18 @@
     72791,
     72562
    ],
+   "freeFromMs": 15510,
+   "freeFromMs_all": [
+    15510,
+    15565,
+    15378
+   ],
+   "longTaskTotalMs": 1877,
+   "longTaskTotalMs_all": [
+    1943,
+    1877,
+    1805
+   ],
    "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
@@ -8954,6 +7766,18 @@
     72685,
     72749,
     72572
+   ],
+   "freeFromMs": 15573,
+   "freeFromMs_all": [
+    15652,
+    3373,
+    15573
+   ],
+   "longTaskTotalMs": 1660,
+   "longTaskTotalMs_all": [
+    1662,
+    1620,
+    1660
    ],
    "animated": 0,
    "mapCovered": 0,
@@ -9071,6 +7895,18 @@
     72627,
     72908
    ],
+   "freeFromMs": 26201,
+   "freeFromMs_all": [
+    26201,
+    26315,
+    26067
+   ],
+   "longTaskTotalMs": 4228,
+   "longTaskTotalMs_all": [
+    4228,
+    4420,
+    4200
+   ],
    "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
@@ -9185,6 +8021,18 @@
     12283,
     12370
    ],
+   "freeFromMs": 56525,
+   "freeFromMs_all": [
+    56708,
+    56525,
+    56285
+   ],
+   "longTaskTotalMs": 54946,
+   "longTaskTotalMs_all": [
+    55214,
+    54946,
+    54741
+   ],
    "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
@@ -9285,9 +8133,1989 @@
     12988,
     12396
    ],
+   "freeFromMs": 56671,
+   "freeFromMs_all": [
+    57510,
+    55490,
+    56671
+   ],
+   "longTaskTotalMs": 54796,
+   "longTaskTotalMs_all": [
+    55009,
+    53433,
+    54796
+   ],
    "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-wind",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    -3,
+    40,
+    -2
+   ],
+   "fcpMs": 36,
+   "fcpMs_all": [
+    36,
+    40,
+    32
+   ],
+   "paintedMs": 216,
+   "paintedMs_all": [
+    220,
+    207,
+    216
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null
+   ],
+   "usableMs": 220,
+   "usableMs_all": [
+    220,
+    1030,
+    216
+   ],
+   "quietAfterPaintMs": 216,
+   "quietAfterPaintMs_all": [
+    220,
+    207,
+    216
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 14,
+   "responseMs_all": [
+    37,
+    7,
+    14
+   ],
+   "maxInputDelayMs": 29,
+   "maxInputDelayMs_all": [
+    33,
+    28,
+    29
+   ],
+   "dutyCycle": 0.581,
+   "dutyCycle_all": [
+    0.581,
+    0.632,
+    0.567
+   ],
+   "scriptMs": 4161,
+   "scriptMs_all": [
+    4161,
+    4518,
+    4056
+   ],
+   "windowMs": 7155,
+   "windowMs_all": [
+    7158,
+    7155,
+    7150
+   ],
+   "settledMs": 6272,
+   "settledMs_all": [
+    6524,
+    6267,
+    6272
+   ],
+   "freeFromMs": 216,
+   "freeFromMs_all": [
+    220,
+    207,
+    216
+   ],
+   "longTaskTotalMs": 0,
+   "longTaskTotalMs_all": [
+    0,
+    0,
+    0
+   ],
+   "animated": 3,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 253,
+   "layerDoneMs_all": [
+    257,
+    244,
+    253
+   ],
+   "layerRequests": 1,
+   "layerBytes": 3865,
+   "layerFailed": 0,
+   "layerExamples": [
+    "wind-preview.json"
+   ],
+   "layerReference": null,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-sst",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 42,
+   "firstFrameMs_all": [
+    -2,
+    43,
+    42
+   ],
+   "fcpMs": 36,
+   "fcpMs_all": [
+    28,
+    36,
+    36
+   ],
+   "paintedMs": 208,
+   "paintedMs_all": [
+    200,
+    209,
+    208
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 467,
+   "completeMs_all": [
+    467,
+    492,
+    458
+   ],
+   "usableMs": 1013,
+   "usableMs_all": [
+    200,
+    1013,
+    1013
+   ],
+   "quietAfterPaintMs": 208,
+   "quietAfterPaintMs_all": [
+    200,
+    209,
+    208
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 41,
+   "responseMs_all": [
+    48,
+    41,
+    41
+   ],
+   "maxInputDelayMs": 1,
+   "maxInputDelayMs_all": [
+    7,
+    1,
+    1
+   ],
+   "dutyCycle": 0.008,
+   "dutyCycle_all": [
+    0.008,
+    0.009,
+    0.008
+   ],
+   "scriptMs": 56,
+   "scriptMs_all": [
+    56,
+    64,
+    55
+   ],
+   "windowMs": 7029,
+   "windowMs_all": [
+    7032,
+    7029,
+    7029
+   ],
+   "settledMs": 6523,
+   "settledMs_all": [
+    6525,
+    6521,
+    6523
+   ],
+   "freeFromMs": 208,
+   "freeFromMs_all": [
+    200,
+    209,
+    208
+   ],
+   "longTaskTotalMs": 0,
+   "longTaskTotalMs_all": [
+    0,
+    0,
+    0
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 239,
+   "layerDoneMs_all": [
+    239,
+    262,
+    233
+   ],
+   "layerRequests": 1,
+   "layerBytes": 2276790,
+   "layerFailed": 0,
+   "layerExamples": [
+    "sst-preview.json"
+   ],
+   "layerReference": null,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-wind",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    -3,
+    -2,
+    16
+   ],
+   "fcpMs": 856,
+   "fcpMs_all": [
+    844,
+    860,
+    856
+   ],
+   "paintedMs": 866,
+   "paintedMs_all": [
+    854,
+    872,
+    866
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": null,
+   "completeMs_all": [
+    null,
+    null,
+    null
+   ],
+   "usableMs": 1858,
+   "usableMs_all": [
+    1847,
+    1863,
+    1858
+   ],
+   "quietAfterPaintMs": 866,
+   "quietAfterPaintMs_all": [
+    854,
+    872,
+    866
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 150,
+   "responseMs_all": [
+    150,
+    143,
+    153
+   ],
+   "maxInputDelayMs": 676,
+   "maxInputDelayMs_all": [
+    672,
+    688,
+    676
+   ],
+   "dutyCycle": 0.616,
+   "dutyCycle_all": [
+    0.614,
+    0.616,
+    0.621
+   ],
+   "scriptMs": 74954,
+   "scriptMs_all": [
+    74339,
+    74954,
+    75614
+   ],
+   "windowMs": 121703,
+   "windowMs_all": [
+    121003,
+    121703,
+    121743
+   ],
+   "settledMs": 20466,
+   "settledMs_all": [
+    20717,
+    20466,
+    20460
+   ],
+   "freeFromMs": 117487,
+   "freeFromMs_all": [
+    120196,
+    80176,
+    117487
+   ],
+   "longTaskTotalMs": 106670,
+   "longTaskTotalMs_all": [
+    105796,
+    106670,
+    106810
+   ],
+   "animated": 3,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 14369,
+   "layerDoneMs_all": [
+    14490,
+    14369,
+    14276
+   ],
+   "layerRequests": 1,
+   "layerBytes": 3865,
+   "layerFailed": 0,
+   "layerExamples": [
+    "wind-preview.json"
+   ],
+   "layerReference": null,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-sst",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -3,
+   "firstFrameMs_all": [
+    -3,
+    -3,
+    12
+   ],
+   "fcpMs": 860,
+   "fcpMs_all": [
+    852,
+    860,
+    868
+   ],
+   "paintedMs": 8460,
+   "paintedMs_all": [
+    8471,
+    8460,
+    8445
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 26003,
+   "completeMs_all": [
+    26003,
+    25943,
+    26011
+   ],
+   "usableMs": 8460,
+   "usableMs_all": [
+    8471,
+    8460,
+    8445
+   ],
+   "quietAfterPaintMs": 8460,
+   "quietAfterPaintMs_all": [
+    8471,
+    8460,
+    8445
+   ],
+   "tbtMs": 76,
+   "tbtMs_all": [
+    143,
+    62,
+    76
+   ],
+   "responseMs": 130,
+   "responseMs_all": [
+    130,
+    132,
+    127
+   ],
+   "maxInputDelayMs": 687,
+   "maxInputDelayMs_all": [
+    685,
+    690,
+    687
+   ],
+   "dutyCycle": 0.011,
+   "dutyCycle_all": [
+    0.013,
+    0.011,
+    0.011
+   ],
+   "scriptMs": 364,
+   "scriptMs_all": [
+    415,
+    361,
+    364
+   ],
+   "windowMs": 32463,
+   "windowMs_all": [
+    32463,
+    32471,
+    32457
+   ],
+   "settledMs": 31995,
+   "settledMs_all": [
+    31998,
+    31995,
+    31989
+   ],
+   "freeFromMs": 8460,
+   "freeFromMs_all": [
+    8471,
+    8460,
+    8445
+   ],
+   "longTaskTotalMs": 994,
+   "longTaskTotalMs_all": [
+    1104,
+    813,
+    994
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 25532,
+   "layerDoneMs_all": [
+    25546,
+    25531,
+    25532
+   ],
+   "layerRequests": 1,
+   "layerBytes": 2276790,
+   "layerFailed": 0,
+   "layerExamples": [
+    "sst-preview.json"
+   ],
+   "layerReference": null,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 40,
+   "firstFrameMs_all": [
+    40,
+    35,
+    44
+   ],
+   "fcpMs": 36,
+   "fcpMs_all": [
+    36,
+    32,
+    40
+   ],
+   "paintedMs": 235,
+   "paintedMs_all": [
+    256,
+    235,
+    211
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 306,
+   "completeMs_all": [
+    306,
+    318,
+    244
+   ],
+   "usableMs": 235,
+   "usableMs_all": [
+    256,
+    235,
+    211
+   ],
+   "quietAfterPaintMs": 364,
+   "quietAfterPaintMs_all": [
+    370,
+    364,
+    292
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 23,
+   "responseMs_all": [
+    23,
+    22,
+    32
+   ],
+   "maxInputDelayMs": 6,
+   "maxInputDelayMs_all": [
+    9,
+    6,
+    5
+   ],
+   "dutyCycle": 0.006,
+   "dutyCycle_all": [
+    0.006,
+    0.006,
+    0.005
+   ],
+   "scriptMs": 42,
+   "scriptMs_all": [
+    44,
+    42,
+    37
+   ],
+   "windowMs": 7028,
+   "windowMs_all": [
+    7031,
+    7028,
+    7027
+   ],
+   "settledMs": 6528,
+   "settledMs_all": [
+    6528,
+    6526,
+    6528
+   ],
+   "freeFromMs": 235,
+   "freeFromMs_all": [
+    256,
+    235,
+    211
+   ],
+   "longTaskTotalMs": 62,
+   "longTaskTotalMs_all": [
+    78,
+    62,
+    62
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 36,
+   "firstFrameMs_all": [
+    44,
+    12,
+    36
+   ],
+   "fcpMs": 36,
+   "fcpMs_all": [
+    36,
+    28,
+    36
+   ],
+   "paintedMs": 194,
+   "paintedMs_all": [
+    194,
+    179,
+    203
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 303,
+   "completeMs_all": [
+    311,
+    296,
+    303
+   ],
+   "usableMs": 203,
+   "usableMs_all": [
+    194,
+    1011,
+    203
+   ],
+   "quietAfterPaintMs": 370,
+   "quietAfterPaintMs_all": [
+    370,
+    362,
+    404
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    25,
+    0
+   ],
+   "responseMs": 44,
+   "responseMs_all": [
+    26,
+    44,
+    48
+   ],
+   "maxInputDelayMs": 4,
+   "maxInputDelayMs_all": [
+    5,
+    1,
+    4
+   ],
+   "dutyCycle": 0.006,
+   "dutyCycle_all": [
+    0.006,
+    0.006,
+    0.007
+   ],
+   "scriptMs": 42,
+   "scriptMs_all": [
+    42,
+    40,
+    50
+   ],
+   "windowMs": 7030,
+   "windowMs_all": [
+    7030,
+    7027,
+    7035
+   ],
+   "settledMs": 6525,
+   "settledMs_all": [
+    6521,
+    6528,
+    6525
+   ],
+   "freeFromMs": 194,
+   "freeFromMs_all": [
+    194,
+    179,
+    203
+   ],
+   "longTaskTotalMs": 75,
+   "longTaskTotalMs_all": [
+    75,
+    75,
+    80
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.378,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-current",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 23,
+   "firstFrameMs_all": [
+    39,
+    14,
+    23
+   ],
+   "fcpMs": 28,
+   "fcpMs_all": [
+    36,
+    28,
+    24
+   ],
+   "paintedMs": 223,
+   "paintedMs_all": [
+    222,
+    231,
+    223
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 472,
+   "completeMs_all": [
+    472,
+    447,
+    473
+   ],
+   "usableMs": 223,
+   "usableMs_all": [
+    222,
+    231,
+    223
+   ],
+   "quietAfterPaintMs": 456,
+   "quietAfterPaintMs_all": [
+    456,
+    443,
+    466
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 47,
+   "responseMs_all": [
+    54,
+    47,
+    40
+   ],
+   "maxInputDelayMs": 6,
+   "maxInputDelayMs_all": [
+    6,
+    7,
+    4
+   ],
+   "dutyCycle": 0.009,
+   "dutyCycle_all": [
+    0.009,
+    0.009,
+    0.009
+   ],
+   "scriptMs": 62,
+   "scriptMs_all": [
+    62,
+    61,
+    62
+   ],
+   "windowMs": 7030,
+   "windowMs_all": [
+    7031,
+    7030,
+    7028
+   ],
+   "settledMs": 6525,
+   "settledMs_all": [
+    6523,
+    6526,
+    6525
+   ],
+   "freeFromMs": 223,
+   "freeFromMs_all": [
+    222,
+    231,
+    223
+   ],
+   "longTaskTotalMs": 140,
+   "longTaskTotalMs_all": [
+    140,
+    132,
+    146
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.414,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-tide",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    37,
+    -2,
+    -2
+   ],
+   "fcpMs": 28,
+   "fcpMs_all": [
+    36,
+    28,
+    28
+   ],
+   "paintedMs": 237,
+   "paintedMs_all": [
+    237,
+    246,
+    229
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 296,
+   "completeMs_all": [
+    287,
+    312,
+    296
+   ],
+   "usableMs": 237,
+   "usableMs_all": [
+    237,
+    246,
+    229
+   ],
+   "quietAfterPaintMs": 358,
+   "quietAfterPaintMs_all": [
+    347,
+    358,
+    360
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 37,
+   "responseMs_all": [
+    37,
+    24,
+    39
+   ],
+   "maxInputDelayMs": 6,
+   "maxInputDelayMs_all": [
+    3,
+    6,
+    7
+   ],
+   "dutyCycle": 0.005,
+   "dutyCycle_all": [
+    0.005,
+    0.005,
+    0.006
+   ],
+   "scriptMs": 38,
+   "scriptMs_all": [
+    38,
+    36,
+    39
+   ],
+   "windowMs": 7035,
+   "windowMs_all": [
+    7029,
+    7035,
+    7038
+   ],
+   "settledMs": 6520,
+   "settledMs_all": [
+    6526,
+    6520,
+    6520
+   ],
+   "freeFromMs": 237,
+   "freeFromMs_all": [
+    237,
+    246,
+    229
+   ],
+   "longTaskTotalMs": 73,
+   "longTaskTotalMs_all": [
+    73,
+    63,
+    76
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 115,
+   "layerDoneMs_all": [
+    113,
+    115,
+    118
+   ],
+   "layerRequests": 2,
+   "layerBytes": 68546,
+   "layerFailed": 0,
+   "layerExamples": [
+    "tide-layer-central-coast.json",
+    "tide-layer.js"
+   ],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.046,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 39,
+   "firstFrameMs_all": [
+    39,
+    44,
+    -2
+   ],
+   "fcpMs": 32,
+   "fcpMs_all": [
+    32,
+    40,
+    32
+   ],
+   "paintedMs": 232,
+   "paintedMs_all": [
+    239,
+    228,
+    232
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 294,
+   "completeMs_all": [
+    289,
+    294,
+    315
+   ],
+   "usableMs": 232,
+   "usableMs_all": [
+    239,
+    228,
+    232
+   ],
+   "quietAfterPaintMs": 357,
+   "quietAfterPaintMs_all": [
+    354,
+    357,
+    374
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 41,
+   "responseMs_all": [
+    19,
+    41,
+    47
+   ],
+   "maxInputDelayMs": 5,
+   "maxInputDelayMs_all": [
+    6,
+    5,
+    5
+   ],
+   "dutyCycle": 0.006,
+   "dutyCycle_all": [
+    0.006,
+    0.006,
+    0.006
+   ],
+   "scriptMs": 42,
+   "scriptMs_all": [
+    43,
+    42,
+    40
+   ],
+   "windowMs": 7032,
+   "windowMs_all": [
+    7032,
+    7032,
+    7031
+   ],
+   "settledMs": 6525,
+   "settledMs_all": [
+    6525,
+    6525,
+    6527
+   ],
+   "freeFromMs": 232,
+   "freeFromMs_all": [
+    239,
+    228,
+    232
+   ],
+   "longTaskTotalMs": 75,
+   "longTaskTotalMs_all": [
+    78,
+    74,
+    75
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 252,
+   "layerDoneMs_all": [
+    250,
+    252,
+    252
+   ],
+   "layerRequests": 35,
+   "layerBytes": 2179811,
+   "layerFailed": 0,
+   "layerExamples": [
+    "morro-bay-seafloor-deep.pmtiles"
+   ],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.007,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 39,
+   "firstFrameMs_all": [
+    43,
+    12,
+    39
+   ],
+   "fcpMs": 32,
+   "fcpMs_all": [
+    40,
+    28,
+    32
+   ],
+   "paintedMs": 228,
+   "paintedMs_all": [
+    243,
+    228,
+    222
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 260,
+   "completeMs_all": [
+    260,
+    262,
+    255
+   ],
+   "usableMs": 228,
+   "usableMs_all": [
+    243,
+    228,
+    222
+   ],
+   "quietAfterPaintMs": 321,
+   "quietAfterPaintMs_all": [
+    336,
+    321,
+    315
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "responseMs": 22,
+   "responseMs_all": [
+    22,
+    27,
+    21
+   ],
+   "maxInputDelayMs": 5,
+   "maxInputDelayMs_all": [
+    19,
+    5,
+    5
+   ],
+   "dutyCycle": 0.006,
+   "dutyCycle_all": [
+    0.006,
+    0.006,
+    0.006
+   ],
+   "scriptMs": 39,
+   "scriptMs_all": [
+    45,
+    39,
+    39
+   ],
+   "windowMs": 7034,
+   "windowMs_all": [
+    7050,
+    7034,
+    7031
+   ],
+   "settledMs": 6524,
+   "settledMs_all": [
+    6524,
+    6523,
+    6525
+   ],
+   "freeFromMs": 228,
+   "freeFromMs_all": [
+    243,
+    228,
+    222
+   ],
+   "longTaskTotalMs": 74,
+   "longTaskTotalMs_all": [
+    75,
+    74,
+    74
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 201,
+   "layerDoneMs_all": [
+    204,
+    201,
+    196
+   ],
+   "layerRequests": 20,
+   "layerBytes": 1053455,
+   "layerFailed": 0,
+   "layerExamples": [
+    "morro-bay-seafloor-deep.pmtiles"
+   ],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-base-medium",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    -2,
+    21,
+    -2
+   ],
+   "fcpMs": 856,
+   "fcpMs_all": [
+    864,
+    856,
+    852
+   ],
+   "paintedMs": 8945,
+   "paintedMs_all": [
+    8958,
+    8937,
+    8945
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 14711,
+   "completeMs_all": [
+    14741,
+    14704,
+    14711
+   ],
+   "usableMs": 8945,
+   "usableMs_all": [
+    8958,
+    8937,
+    8945
+   ],
+   "quietAfterPaintMs": 8945,
+   "quietAfterPaintMs_all": [
+    8958,
+    8937,
+    8945
+   ],
+   "tbtMs": 47,
+   "tbtMs_all": [
+    49,
+    40,
+    47
+   ],
+   "responseMs": 115,
+   "responseMs_all": [
+    117,
+    113,
+    115
+   ],
+   "maxInputDelayMs": 683,
+   "maxInputDelayMs_all": [
+    688,
+    683,
+    676
+   ],
+   "dutyCycle": 0.008,
+   "dutyCycle_all": [
+    0.008,
+    0.008,
+    0.008
+   ],
+   "scriptMs": 181,
+   "scriptMs_all": [
+    182,
+    181,
+    180
+   ],
+   "windowMs": 22297,
+   "windowMs_all": [
+    22317,
+    22297,
+    22268
+   ],
+   "settledMs": 22220,
+   "settledMs_all": [
+    22216,
+    22220,
+    22220
+   ],
+   "freeFromMs": 15919,
+   "freeFromMs_all": [
+    15924,
+    15919,
+    15911
+   ],
+   "longTaskTotalMs": 382,
+   "longTaskTotalMs_all": [
+    382,
+    379,
+    435
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-chlorophyll",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 16,
+   "firstFrameMs_all": [
+    13,
+    16,
+    19
+   ],
+   "fcpMs": 856,
+   "fcpMs_all": [
+    848,
+    860,
+    856
+   ],
+   "paintedMs": 8952,
+   "paintedMs_all": [
+    8929,
+    8965,
+    8952
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 14485,
+   "completeMs_all": [
+    14512,
+    14482,
+    14485
+   ],
+   "usableMs": 8952,
+   "usableMs_all": [
+    8929,
+    8965,
+    8952
+   ],
+   "quietAfterPaintMs": 8952,
+   "quietAfterPaintMs_all": [
+    8929,
+    8965,
+    8952
+   ],
+   "tbtMs": 54,
+   "tbtMs_all": [
+    55,
+    54,
+    53
+   ],
+   "responseMs": 114,
+   "responseMs_all": [
+    114,
+    114,
+    115
+   ],
+   "maxInputDelayMs": 686,
+   "maxInputDelayMs_all": [
+    680,
+    687,
+    686
+   ],
+   "dutyCycle": 0.009,
+   "dutyCycle_all": [
+    0.009,
+    0.009,
+    0.01
+   ],
+   "scriptMs": 206,
+   "scriptMs_all": [
+    206,
+    203,
+    225
+   ],
+   "windowMs": 22324,
+   "windowMs_all": [
+    22324,
+    22290,
+    22326
+   ],
+   "settledMs": 22221,
+   "settledMs_all": [
+    22219,
+    22226,
+    22221
+   ],
+   "freeFromMs": 15940,
+   "freeFromMs_all": [
+    15940,
+    15926,
+    15947
+   ],
+   "longTaskTotalMs": 550,
+   "longTaskTotalMs_all": [
+    513,
+    550,
+    573
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.363,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-current",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 15,
+   "firstFrameMs_all": [
+    15,
+    -2,
+    21
+   ],
+   "fcpMs": 856,
+   "fcpMs_all": [
+    856,
+    856,
+    860
+   ],
+   "paintedMs": 8965,
+   "paintedMs_all": [
+    8965,
+    8981,
+    8954
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 16281,
+   "completeMs_all": [
+    16281,
+    16281,
+    16304
+   ],
+   "usableMs": 8965,
+   "usableMs_all": [
+    8965,
+    8981,
+    8954
+   ],
+   "quietAfterPaintMs": 8965,
+   "quietAfterPaintMs_all": [
+    8965,
+    8981,
+    8954
+   ],
+   "tbtMs": 51,
+   "tbtMs_all": [
+    49,
+    67,
+    51
+   ],
+   "responseMs": 115,
+   "responseMs_all": [
+    114,
+    115,
+    131
+   ],
+   "maxInputDelayMs": 683,
+   "maxInputDelayMs_all": [
+    681,
+    690,
+    683
+   ],
+   "dutyCycle": 0.012,
+   "dutyCycle_all": [
+    0.011,
+    0.012,
+    0.012
+   ],
+   "scriptMs": 259,
+   "scriptMs_all": [
+    245,
+    259,
+    259
+   ],
+   "windowMs": 22423,
+   "windowMs_all": [
+    22408,
+    22423,
+    22445
+   ],
+   "settledMs": 22218,
+   "settledMs_all": [
+    22212,
+    22231,
+    22218
+   ],
+   "freeFromMs": 15953,
+   "freeFromMs_all": [
+    15953,
+    15957,
+    15949
+   ],
+   "longTaskTotalMs": 624,
+   "longTaskTotalMs_all": [
+    565,
+    624,
+    800
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": null,
+   "layerDoneMs_all": [
+    null,
+    null,
+    null
+   ],
+   "layerRequests": 0,
+   "layerBytes": 0,
+   "layerFailed": 0,
+   "layerExamples": [],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.388,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-tide",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    19,
+    -2,
+    -3
+   ],
+   "fcpMs": 848,
+   "fcpMs_all": [
+    860,
+    848,
+    848
+   ],
+   "paintedMs": 8376,
+   "paintedMs_all": [
+    8352,
+    8424,
+    8376
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 15302,
+   "completeMs_all": [
+    15302,
+    15291,
+    15309
+   ],
+   "usableMs": 8376,
+   "usableMs_all": [
+    8352,
+    8424,
+    8376
+   ],
+   "quietAfterPaintMs": 8376,
+   "quietAfterPaintMs_all": [
+    8352,
+    8424,
+    8376
+   ],
+   "tbtMs": 52,
+   "tbtMs_all": [
+    62,
+    52,
+    52
+   ],
+   "responseMs": 114,
+   "responseMs_all": [
+    112,
+    115,
+    114
+   ],
+   "maxInputDelayMs": 680,
+   "maxInputDelayMs_all": [
+    687,
+    680,
+    680
+   ],
+   "dutyCycle": 0.009,
+   "dutyCycle_all": [
+    0.009,
+    0.008,
+    0.009
+   ],
+   "scriptMs": 204,
+   "scriptMs_all": [
+    204,
+    197,
+    207
+   ],
+   "windowMs": 23477,
+   "windowMs_all": [
+    23477,
+    23465,
+    23486
+   ],
+   "settledMs": 22467,
+   "settledMs_all": [
+    22467,
+    22469,
+    22465
+   ],
+   "freeFromMs": 16274,
+   "freeFromMs_all": [
+    16274,
+    16259,
+    16288
+   ],
+   "longTaskTotalMs": 457,
+   "longTaskTotalMs_all": [
+    464,
+    446,
+    457
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 8308,
+   "layerDoneMs_all": [
+    8296,
+    8360,
+    8308
+   ],
+   "layerRequests": 2,
+   "layerBytes": 68546,
+   "layerFailed": 0,
+   "layerExamples": [
+    "tide-layer-central-coast.json",
+    "tide-layer.js"
+   ],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.124,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-bathy-2m",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -3,
+   "firstFrameMs_all": [
+    -3,
+    -3,
+    -2
+   ],
+   "fcpMs": 848,
+   "fcpMs_all": [
+    848,
+    848,
+    864
+   ],
+   "paintedMs": 8990,
+   "paintedMs_all": [
+    9002,
+    8980,
+    8990
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 14796,
+   "completeMs_all": [
+    14818,
+    14796,
+    14790
+   ],
+   "usableMs": 8990,
+   "usableMs_all": [
+    9002,
+    8980,
+    8990
+   ],
+   "quietAfterPaintMs": 8990,
+   "quietAfterPaintMs_all": [
+    9002,
+    8980,
+    8990
+   ],
+   "tbtMs": 55,
+   "tbtMs_all": [
+    60,
+    55,
+    52
+   ],
+   "responseMs": 115,
+   "responseMs_all": [
+    117,
+    114,
+    115
+   ],
+   "maxInputDelayMs": 681,
+   "maxInputDelayMs_all": [
+    681,
+    679,
+    688
+   ],
+   "dutyCycle": 0.009,
+   "dutyCycle_all": [
+    0.01,
+    0.009,
+    0.009
+   ],
+   "scriptMs": 204,
+   "scriptMs_all": [
+    220,
+    204,
+    200
+   ],
+   "windowMs": 22338,
+   "windowMs_all": [
+    22377,
+    22338,
+    22314
+   ],
+   "settledMs": 22216,
+   "settledMs_all": [
+    22216,
+    22218,
+    22213
+   ],
+   "freeFromMs": 16011,
+   "freeFromMs_all": [
+    16020,
+    16006,
+    16011
+   ],
+   "longTaskTotalMs": 472,
+   "longTaskTotalMs_all": [
+    472,
+    561,
+    454
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 15378,
+   "layerDoneMs_all": [
+    15384,
+    15377,
+    15378
+   ],
+   "layerRequests": 18,
+   "layerBytes": 1229655,
+   "layerFailed": 0,
+   "layerExamples": [
+    "morro-bay-seafloor-deep.pmtiles"
+   ],
+   "layerReference": "layer-base-medium",
+   "layerVisibleDiff": 0.0,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "layer-bathy-2m-z12",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -2,
+   "firstFrameMs_all": [
+    -2,
+    -2,
+    -2
+   ],
+   "fcpMs": 848,
+   "fcpMs_all": [
+    848,
+    848,
+    868
+   ],
+   "paintedMs": 8225,
+   "paintedMs_all": [
+    8227,
+    8225,
+    8211
+   ],
+   "briefShownMs": null,
+   "briefShownMs_all": [
+    null,
+    null,
+    null
+   ],
+   "completeMs": 11527,
+   "completeMs_all": [
+    11527,
+    11525,
+    11544
+   ],
+   "usableMs": 8225,
+   "usableMs_all": [
+    8227,
+    8225,
+    8211
+   ],
+   "quietAfterPaintMs": 8225,
+   "quietAfterPaintMs_all": [
+    8227,
+    8225,
+    8211
+   ],
+   "tbtMs": 51,
+   "tbtMs_all": [
+    51,
+    51,
+    53
+   ],
+   "responseMs": 116,
+   "responseMs_all": [
+    114,
+    116,
+    117
+   ],
+   "maxInputDelayMs": 680,
+   "maxInputDelayMs_all": [
+    679,
+    680,
+    685
+   ],
+   "dutyCycle": 0.009,
+   "dutyCycle_all": [
+    0.009,
+    0.009,
+    0.01
+   ],
+   "scriptMs": 182,
+   "scriptMs_all": [
+    175,
+    182,
+    192
+   ],
+   "windowMs": 19319,
+   "windowMs_all": [
+    19319,
+    19316,
+    19335
+   ],
+   "settledMs": 18710,
+   "settledMs_all": [
+    18710,
+    18707,
+    18716
+   ],
+   "freeFromMs": 12555,
+   "freeFromMs_all": [
+    12555,
+    12543,
+    12567
+   ],
+   "longTaskTotalMs": 429,
+   "longTaskTotalMs_all": [
+    508,
+    404,
+    429
+   ],
+   "animated": 0,
+   "mapCovered": 0,
+   "interactionFailed": 0,
+   "layerDoneMs": 11916,
+   "layerDoneMs_all": [
+    11923,
+    11916,
+    11916
+   ],
+   "layerRequests": 11,
+   "layerBytes": 613075,
+   "layerFailed": 0,
+   "layerExamples": [
+    "morro-bay-seafloor-deep.pmtiles"
+   ],
+   "layerReference": "layer-base-medium",
    "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []

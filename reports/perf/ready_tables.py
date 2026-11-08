@@ -26,12 +26,12 @@ def rows(order):
 
 
 def timing(order):
-    out = ['| page | profile | pass | runs ok | FCP | map painted | brief shown | map visually complete | **map usable** (painted + input ≤ 200 ms) | max input delay | TBT to usable | drag response |',
-           '|---|---|---|---|---|---|---|---|---|---|---|---|']
+    out = ['| page | profile | pass | runs ok | FCP | map painted | brief shown | map visually complete | **map usable** (painted + input ≤ 200 ms) | no freeze (long task ≥ 200 ms) after | long-task time | max input delay | TBT to usable | drag response |',
+           '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|']
     for g in rows(order):
         comp = 'animated' if g['animated'] >= 2 else ms(g['completeMs'])
         out.append(f"| {g['page']} | {g['profile']} | {g['pass']} | {g['ok']}/{g['runs']} | {ms(g['fcpMs'], '–')} | {ms(g['paintedMs'])} | {ms(g['briefShownMs'], '–')} | {comp} | **{ms(g['usableMs'])}** | "
-                   f"{ms(g['maxInputDelayMs'], '–')} | {ms(g['tbtMs'], '–')}{'*' if any(g.get('tbtMs_all', [])) and g['usableMs'] is None else ''} | {ms(g['responseMs'], 'no response')} |")
+                   f"{ms(g['freeFromMs'])} | {ms(g['longTaskTotalMs'], '–')} | {ms(g['maxInputDelayMs'], '–')} | {ms(g['tbtMs'], '–')}{'*' if any(g.get('tbtMs_all', [])) and g['usableMs'] is None else ''} | {ms(g['responseMs'], 'no response')} |")
     return '\n'.join(out)
 
 

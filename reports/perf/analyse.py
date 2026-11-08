@@ -136,6 +136,14 @@ def decide(run, fdir):
     tbt_end = usable if usable is not None else run['settledMs']
     res['tbtMs'] = None if fcp is None else round(sum(max(0, d - 50) for s_, d in lt if s_ >= fcp and s_ < tbt_end))
     res['tbtWindowOpen'] = usable is None
+    # "usable" above is the FIRST moment the page answers input; it can fire before the heavy work starts (e.g. 1.2 s on one seafloor
+    # run whose first 3.9 s freeze began at 2.2 s). freeFrom = painted, or the end of the last long task of 200 ms or more before the drag probe if later:
+    # from then on no freeze of that length blocked the main thread in the observation window.
+    pre_lt = [(s_, d) for s_, d in lt if s_ < probe_ms]
+    last_end = max((s_ + d for s_, d in pre_lt if d >= 200), default=None)
+    res['lastLongTaskEndMs'] = None if last_end is None else round(last_end)
+    res['freeFromMs'] = None if pt is None else round(max(pt, last_end or 0))
+    res['longTaskTotalMs'] = round(sum(d for _, d in pre_lt))
     res['briefShownMs'] = None if run['readyAt'] is None else round(run['readyAt'] + off)
     res['messages'] = run.get('messages', [])
     res['pageErrors'] = run.get('pageErrors', [])
@@ -227,7 +235,7 @@ def run_all(fdir, out, paths):
         row = {'page': page, 'profile': prof, 'pass': pas, 'runs': len(rs), 'ok': sum(1 for r in rs if r.get('status') == 'ok'),
                'statuses': dict(Counter(r.get('status') for r in rs))}
         for m in ('firstFrameMs', 'fcpMs', 'paintedMs', 'briefShownMs', 'completeMs', 'usableMs', 'quietAfterPaintMs', 'tbtMs', 'responseMs', 'maxInputDelayMs',
-                  'dutyCycle', 'scriptMs', 'windowMs', 'settledMs'):
+                  'dutyCycle', 'scriptMs', 'windowMs', 'settledMs', 'freeFromMs', 'longTaskTotalMs'):
             row[m] = med([r.get(m) for r in rs])
             row[m + '_all'] = [r.get(m) for r in rs]
         row['animated'] = sum(1 for r in rs if r.get('animated'))
