@@ -41,6 +41,7 @@ import {
   appView, current, day, habitat, hour, layers, navigate, parseHour, presentation, profile, region, selection, setParams, species,
   stagePresentation, UNSUPPORTED, view, withParams, type AppView, type CurrentChoice,
 } from '../state.ts';
+import {markMapIdle} from '../map-ready.ts';
 import {C2_ENABLED, C2_RELEASES} from './c2-releases.ts';
 import type {C2View} from './terrain.js';
 
@@ -448,6 +449,7 @@ export function createStage(options: StageOptions): Stage {
       if (alive) fail(error);
     } finally {
       mounting = false;
+      markMapIdle(); // SC-PERF-LAZY-1: a terrain presentation never mounts the Chart, so its mount attempt releases the reef export too
       if (again) { again = false; if (shownPresentation.peek() !== 'chart') void mount(); }
     }
   }
