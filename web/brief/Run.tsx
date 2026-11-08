@@ -27,6 +27,7 @@ import {loadRegs, regsData, regulationState, ruleSummary, openingAt} from '../re
 import {fishingHours, type FishingHours} from './fishing-hours.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 import {entranceWindow} from '../../packages/coast/src/entrance-window.ts';
+import {EntranceCurrent} from './EntranceCurrent.tsx';
 import {language, localeOf, num, t, type Language, type StringId} from '../i18n.ts';
 
 /**
@@ -202,6 +203,7 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   return (
     <section class="app-run" aria-label={t('run.aria', lang)} data-state={state.kind}>
       <EntranceLine brief={brief} tz={tz} />
+      <EntranceCurrent brief={brief} tz={tz} now={now} />
       <p class="app-run-lead"><span class="ui-eyebrow">{t('run.fishing', lang)}</span> {lead}</p>
       {text.times ? <p class="app-run-times ui-mono">{text.times}{brief.sunrise && brief.sunset ? t('run.daylight', lang, {start: clock(brief.sunrise, tz, lang), end: clock(brief.sunset, tz, lang)}) : ''}</p> : null}
       {verdict ? <p class="app-run-hours" data-kind={result!.kind}>{note ? <>{said(note, lang)}{t('run.bar.check', lang)}</> : ''}{verdict}{' '}
