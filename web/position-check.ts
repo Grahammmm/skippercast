@@ -29,22 +29,29 @@ export function readPosition(geolocation: Pick<Geolocation, 'getCurrentPosition'
 
 /** What the planner's protected-area screen (dist/protected-areas.js) exposes to this check. */
 export type HeldScreen = {
-  heldBoundaries?(): {current: boolean; checked_at: string | null; features: readonly {properties?: {NAME?: string; FULLNAME?: string}; geometry: unknown}[]} | null;
+  heldBoundaries?(): {current: boolean; missing?: readonly string[]; clock?: Clock; checked_at: string | null; features: readonly {properties?: {NAME?: string; FULLNAME?: string}; geometry: unknown}[]} | null;
   coversGeometry?(geometry: unknown): boolean;
 };
+/** How the held boundaries' check times read now: within the 36-hour window, past it, dated in the future, or no readable date. */
+export type Clock = 'ok' | 'old' | 'future' | 'unknown';
 
 export type Reading =
   /** No boundary data on this device (nothing saved and no connection, or the screen could not load). Never "clear". */
   | {kind: 'no-boundaries'}
   /** The position lies outside the area the boundary file was asked for: not checked, never "clear". */
   | {kind: 'not-covered'; fix: Fix}
+  /** Some configured boundary layer is not on this device, and nothing held puts the position inside or near a closure: "outside" and "nearest closure" would be claims about data we lack. */
+  | {kind: 'incomplete'; fix: Fix; missing: readonly string[]; clock: Clock; checkedAt: string | null}
   | {kind: 'checked'; fix: Fix; where: 'inside' | 'near' | 'outside'; name: string | null; distanceM: number | null;
-    lowAccuracy: boolean; /** The saved boundaries are older than the screen's 36-hour freshness window. */ stale: boolean; checkedAt: string | null};
+    lowAccuracy: boolean; /** Not current: a layer is missing, or the check times are old, in the future or unreadable. */ stale: boolean;
+    /** Configured layers not on this device (so a closer or further closure may exist); empty when the data is whole. */ missing: readonly string[];
+    clock: Clock; checkedAt: string | null};
 
 /**
  * inside: the point touches or lies in a closure. near: it is within the planning margin (geo-screen PLANNING_MARGIN_M) of one, counting the
  * reported accuracy as extra margin so a fix that could be across the line is never called outside. outside: otherwise.
  * `distanceM` is geo-screen's metres to the nearest closure (null when none is within its 20 km search).
+ * With a layer missing, inside and near still stand (a closure we hold is a closure), but outside is refused (`incomplete`).
  */
 export function readingFor(fix: Fix, screen: HeldScreen | null | undefined): Reading {
   const held = screen?.heldBoundaries?.();
@@ -57,8 +64,10 @@ export function readingFor(fix: Fix, screen: HeldScreen | null | undefined): Rea
   if (!verdict.screened) return {kind: 'not-covered', fix};
   const reach = PLANNING_MARGIN_M + (fix.accuracyM ?? 0);
   const where = verdict.inside ? 'inside' : verdict.distanceM !== null && verdict.distanceM <= reach ? 'near' : 'outside';
+  const missing = held.missing ?? [], clock = held.clock ?? (held.current ? 'ok' : 'old');
+  if (missing.length && where === 'outside') return {kind: 'incomplete', fix, missing, clock, checkedAt: held.checked_at};
   return {kind: 'checked', fix, where, name: verdict.name, distanceM: verdict.distanceM, lowAccuracy: fix.accuracyM === null || fix.accuracyM > LOW_ACCURACY_M,
-    stale: !held.current, checkedAt: held.checked_at};
+    stale: !held.current, missing, clock, checkedAt: held.checked_at};
 }
 
 export type PositionResult = {located: {ok: false; reason: 'unsupported' | 'denied' | 'unavailable'}} | {located: {ok: true; fix: Fix}; reading: Reading};

@@ -269,7 +269,7 @@ const html = (state, pack = 'saved', lang = 'en') => view.render(view.h(view.Pos
 const text = markup => markup.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ');
 const done = result => ({phase: 'done', result});
 const checked = (where, extra = {}) => done({located: {ok: true, fix: fixOf(OUTSIDE, 8)}, reading: {kind: 'checked', fix: fixOf(OUTSIDE, 8), where, name: 'Point Buchon State Marine Reserve', distanceM: 1234.5,
-  lowAccuracy: false, stale: false, checkedAt: FRESH, ...extra}});
+  lowAccuracy: false, stale: false, missing: [], clock: 'ok', checkedAt: FRESH, ...extra}});
 
 test('the screen says inside / near / outside <area name>, the distance, the accuracy and the official-rules link', () => {
   const inside = text(html(checked('inside', {distanceM: 0})));
@@ -295,12 +295,12 @@ test('far from every closure, low accuracy, stale boundaries: each is said plain
   assert.match(text(html(checked('outside', {name: null, distanceM: null}))), /You are outside every closed area we checked.*more than 10\.8 nmi \(20\.0 km\) away/);
   const low = text(html(checked('outside', {lowAccuracy: true, fix: fixOf(OUTSIDE, 250)})));
   assert.match(low, /Low accuracy/);
-  const unknownAccuracy = text(html(done({located: {ok: true, fix: fixOf(OUTSIDE, null)}, reading: {kind: 'checked', fix: fixOf(OUTSIDE, null), where: 'outside', name: 'X', distanceM: 900, lowAccuracy: true, stale: false, checkedAt: FRESH}})));
+  const unknownAccuracy = text(html(done({located: {ok: true, fix: fixOf(OUTSIDE, null)}, reading: {kind: 'checked', fix: fixOf(OUTSIDE, null), where: 'outside', name: 'X', distanceM: 900, lowAccuracy: true, stale: false, missing: [], clock: 'ok', checkedAt: FRESH}})));
   assert.match(unknownAccuracy, /Position accuracy: not reported by this device/);
-  const shown = text(html(done({located: {ok: true, fix: fixOf(OUTSIDE, 250)}, reading: {kind: 'checked', fix: fixOf(OUTSIDE, 250), where: 'outside', name: 'X', distanceM: 900, lowAccuracy: true, stale: false, checkedAt: FRESH}})));
+  const shown = text(html(done({located: {ok: true, fix: fixOf(OUTSIDE, 250)}, reading: {kind: 'checked', fix: fixOf(OUTSIDE, 250), where: 'outside', name: 'X', distanceM: 900, lowAccuracy: true, stale: false, missing: [], clock: 'ok', checkedAt: FRESH}})));
   assert.match(shown, /Position accuracy: ±250 m \(820 ft\)/);
   assert.match(shown, /Low accuracy\. Your real position may be well away/);
-  assert.match(text(html(checked('outside', {stale: true, checkedAt: OLD}))), new RegExp(`last checked ${OLD.slice(0, 10)}, more than 36 hours ago`));
+  assert.match(text(html(checked('outside', {stale: true, clock: 'old', checkedAt: OLD}))), new RegExp(`last checked ${OLD.slice(0, 10)}, more than 36 hours ago`));
   assert.match(text(html(checked('outside'))), new RegExp(`Boundaries last checked ${FRESH.slice(0, 10)}`));
 });
 

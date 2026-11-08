@@ -4,7 +4,7 @@ import {Button} from '../ui/Button.tsx';
 import {t, type Language} from '../i18n.ts';
 import {FT_PER_M, M_PER_NMI} from '../units.ts';
 import {PLANNING_MARGIN_M} from '../../dist/geo-screen.js';
-import type {PackState, PositionResult} from '../position-check.ts';
+import type {Clock, PackState, PositionResult} from '../position-check.ts';
 
 /** The page that holds CDFW's MPA rules and maps (the same place the planner's boundary popups link to). */
 export const OFFICIAL_RULES_URL = 'https://wildlife.ca.gov/Conservation/Marine/MPAs';
@@ -18,6 +18,20 @@ export function distanceText(metres: number): string {
 }
 
 const day = (iso: string | null, lang: Language): string => iso && Number.isFinite(Date.parse(iso)) ? iso.slice(0, 10) : t('trip.pos.unknownDate', lang);
+
+/** The datasets a boundary screen can be missing, named for the angler (a literal key each, so the string checks see them). */
+function layerNames(ids: readonly string[], lang: Language): string {
+  return ids.map(id => id === 'closures' ? t('trip.pos.layerClosures', lang) : id).join(', ');
+}
+
+/** How current the held boundaries are, said honestly: fresh, past the 36-hour window, dated in the future, or no readable date. */
+function clockNote(clock: Clock, checkedAt: string | null, lang: Language) {
+  const date = day(checkedAt, lang);
+  return clock === 'old' ? <p class="pos-warn">{t('trip.pos.stale', lang, {date})}</p>
+    : clock === 'future' ? <p class="pos-warn">{t('trip.pos.dateFuture', lang, {date})}</p>
+    : clock === 'unknown' ? <p class="pos-warn">{t('trip.pos.dateUnknown', lang)}</p>
+    : <p class="pos-line pos-small">{t('trip.pos.checkedOn', lang, {date})}</p>;
+}
 
 export function PositionView({state, pack, onCheck, lang}: {state: PositionState; pack: PackState; onCheck: () => void; lang: Language}) {
   const busy = state.phase === 'reading', done = state.phase === 'done' ? state.result : null;
@@ -38,14 +52,20 @@ export function PositionView({state, pack, onCheck, lang}: {state: PositionState
         {refusal ? <p class="pos-warn">{t(refusal === 'denied' ? 'trip.pos.denied' : refusal === 'unsupported' ? 'trip.pos.unsupported' : 'trip.pos.unavailable', lang)}</p> : null}
         {reading?.kind === 'no-boundaries' ? <p class="pos-warn">{t('trip.pos.noBoundaries', lang)}</p> : null}
         {reading?.kind === 'not-covered' ? <p class="pos-warn">{t('trip.pos.notCovered', lang)}</p> : null}
+        {reading?.kind === 'incomplete' ? <>
+          <p class="pos-verdict" data-where="unknown">{t('trip.pos.incompleteHeadline', lang)}</p>
+          <p class="pos-warn">{t('trip.pos.incomplete', lang, {layers: layerNames(reading.missing, lang)})}</p>
+          {clockNote(reading.clock, reading.checkedAt, lang)}
+        </> : null}
         {checked && headline ? <>
           <p class="pos-verdict" data-where={checked.where}>{headline}</p>
           {checked.where === 'inside' ? <p class="pos-line">{t('trip.pos.onBoundary', lang)}</p>
-            : checked.distanceM !== null ? <p class="pos-line">{t('trip.pos.distance', lang, {distance: distanceText(checked.distanceM)})}</p>
+            : checked.distanceM !== null ? <p class="pos-line">{t(checked.missing.length ? 'trip.pos.distanceScoped' : 'trip.pos.distance', lang, {distance: distanceText(checked.distanceM)})}</p>
             : <p class="pos-line">{t('trip.pos.distanceFar', lang, {distance: distanceText(20000)})}</p>}
           <p class="pos-line">{checked.fix.accuracyM === null ? t('trip.pos.accuracyUnknown', lang) : t('trip.pos.accuracy', lang, {distance: distanceText(checked.fix.accuracyM)})}</p>
           {checked.lowAccuracy ? <p class="pos-warn">{t('trip.pos.lowAccuracy', lang)}</p> : null}
-          {checked.stale ? <p class="pos-warn">{t('trip.pos.stale', lang, {date: day(checked.checkedAt, lang)})}</p> : <p class="pos-line pos-small">{t('trip.pos.checkedOn', lang, {date: day(checked.checkedAt, lang)})}</p>}
+          {checked.missing.length ? <p class="pos-warn">{t('trip.pos.incompleteNear', lang, {layers: layerNames(checked.missing, lang)})}</p> : null}
+          {clockNote(checked.clock, checked.checkedAt, lang)}
           <p class="pos-small">{t('trip.pos.margin', lang, {distance: distanceText(PLANNING_MARGIN_M)})}</p>
         </> : null}
         {fix && !checked ? <p class="pos-line">{fix.accuracyM === null ? t('trip.pos.accuracyUnknown', lang) : t('trip.pos.accuracy', lang, {distance: distanceText(fix.accuracyM)})}</p> : null}
