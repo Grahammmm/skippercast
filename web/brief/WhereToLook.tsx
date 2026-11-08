@@ -259,7 +259,7 @@ function ReefNote({id, lang}: {id: string | null; lang: Language}) {
     const mb = offerMegabytes(pub.bytes);
     return (
       <div class="app-reef-note" data-reef="offer" data-why={pub.why}>
-        <p class="app-empty">{t('reef.offer.note', lang)}</p>
+        <p class="app-reef-text">{t('reef.offer.note', lang)}</p>
         <Button size="sm" onClick={() => { void acceptReefLoad(id); }}>{mb === null ? t('reef.offer.buttonNoSize', lang) : t('reef.offer.button', lang, {mb})}</Button>
       </div>
     );
@@ -268,7 +268,7 @@ function ReefNote({id, lang}: {id: string | null; lang: Language}) {
   if (pub.state === 'unavailable' && pub.rejected === undefined) {
     return (
       <div class="app-reef-note" data-reef="unavailable">
-        <p class="app-empty">{t('reef.unavailable.note', lang)}</p>
+        <p class="app-reef-text">{t('reef.unavailable.note', lang)}</p>
         <Button size="sm" onClick={() => { void acceptReefLoad(id); }}>{t('reef.retry', lang)}</Button>
       </div>
     );
