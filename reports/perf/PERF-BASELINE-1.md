@@ -9,7 +9,10 @@ Authorship: the measuring script, the measurements and the first draft are opus-
 (Claude Sonnet) did not re-measure; it waited for the still-running measurement job to finish, regenerated the
 medians and the live tables (A.3 to A.6) from the final raw files (the phone rows of the seven live layer pages had
 been partial in the draft), and independently re-checked the headline facts against the live site on 2026-11-07
-(see A.0). Measured 2026-11-07 between 21:35 UTC and 23:23 UTC against the live site (skippercast.com, build
+(see A.0). Round 1b (t_db153234, sonnet-coder, this PR) adds the **measured responsiveness** runs (page answers input, freezes; A.1b, A.3b, A.5b, A.7b), made
+2026-11-07 between 16:04 and 17:13 PST (raw files `raw/ready-*.json`), and restates B2, B8, P1, P2, P6, D and E with
+them. **Whether and when the map itself is drawn (painted, visually complete) stays UNMEASURED** (A.1b); two review
+rounds on PR #1768 removed the pixel-based figures. The A.3 to A.7 tables are unchanged. Measured 2026-11-07 between 21:35 UTC and 23:23 UTC against the live site (skippercast.com, build
 `app.d390f02cdc.js`, origin/main `7b99b6db`) and against local research test pages.
 
 ---
@@ -25,6 +28,16 @@ the reef ranking never appears. Everything else (the code, the brief data, the b
 already well cached and compressed. A handful of smaller problems add up: a large layout jump as the brief header
 arrives on desktop, more data also sent `no-store`, seafloor tiles over 1 MB at wide zoom, a 2.3 MB uncompressed
 temperature grid in the test pages, and a page that shows nothing until all its JavaScript has run.
+
+**Measured responsiveness (round 1b, A.3b).** When the map itself is drawn is **not measured**: the screencast cannot tell
+map pixels from the page's own overlays, so every earlier "painted at 0.15 to 0.54 s" figure is withdrawn (A.1b). What is
+measured does not depend on pixels. On a desktop the browser shows first content after 0.1 to 0.4 s, but the page does
+not stay free of freezes until **14.7 to 16.5 s** (median of 3, every live page): the reef file arrives after ~1 s and
+four freezes of 2.7 to 3.9 s follow, with input waiting up to 2.6 to 3.3 s. A repeat visit is no better (15.3 to 15.8 s).
+On the emulated phone on slow 4G the page first answers input at 2.8 to 4.0 s, only because the heavy work has not started
+(the reef file never finishes), and 200 ms-plus freezes still occur until 15 to 16 s (26 to 28 s with the seafloor layer or
+the returning map, 63 s on `brief`). On the emulated phone CPU (4× slowdown) with fast network the freeze lasts about **55 s** (free of freezes only
+at 57 s). Phone figures are emulation (E).
 
 Top 5 causes and top 10 proposals are at the end of this report (§D).
 
@@ -73,10 +86,11 @@ research `layer-tide` page. Anything about the in-app private layers beyond this
     data has loaded.
   * *Canvas quiet (proxy)*: the first moment after the map canvas that is followed by 1 s with no long task (a TTI-style
     definition applied to the canvas). **This is a proxy for responsiveness, not "map usable".** It never checks that the
-    map style, tiles or layer data are loaded or that a tap would be answered. Content/interaction readiness
-    (`contentReadyMs`) is **not measured** in this baseline. The only content checks that exist are *brief shown* (live
-    pages) and, for the SST test page, *layer data finished* (the end of the large data request in the waterfall,
-    A.7). Earlier drafts called the proxy "map usable"; every figure labelled "map usable" there is this proxy.
+    map style, tiles or layer data are loaded or that a tap would be answered. Content readiness
+    (`contentReadyMs`) is **not measured in the A.3 to A.7 runs**; round 1b (A.1b, A.3b, A.7b) measures when the page
+    answers input, and map content readiness stays UNMEASURED. The only content checks in A.3 to A.7 are *brief shown* (live pages) and, for the SST test page, *layer data
+    finished* (the end of the large data request in the waterfall, A.7). Earlier drafts called the proxy "map usable";
+    every figure labelled "map usable" there is this proxy.
   * *TBT to proxy*: sum of (long task − 50 ms) between FCP and the canvas-quiet proxy. Long tasks after the proxy are
     not counted, so on a page whose data arrives later (slow-4G phone, SST) it understates blocking.
   * *CLS*: sum of layout-shift values without recent input.
@@ -117,6 +131,91 @@ research `layer-tide` page. Anything about the in-app private layers beyond this
   `webp_trial.mjs` re-encodes 40 sampled PNG tiles with Chromium's encoder. **CPU attribution:** `profile.mjs`
   and `diag.mjs` (desktop, unthrottled, sampled profiler + layout-shift sources).
 
+### A.1b What round 1b measures, and what it does not (second review round)
+
+Review of the first version found that its "map usable" was a false-ready proxy (a blank canvas reported usable at 61 ms,
+and on the real phone runs it fired at 9.4 s before the seafloor tiles had been requested). It is now named as a proxy
+(A.3, A.7). Round 1b added `reports/perf/readiness.mjs` + `analyse.py` (3 runs per group, cold only except the brief and
+the returning-visitor map, which also run warm; a CDP screencast and a once-a-second input probe add CPU, so these
+timings are somewhat later than A.3's and **the two sets are never mixed in one column**). Review of PR #1768 then
+returned two defects, both fixed here:
+
+1. **Pixels cannot establish that the map is drawn.** The first version cropped the screencast frame by the canvas
+   rectangle, but that rectangle also holds the page's own overlays (legend, panels, loading text, controls). The retained
+   phone wind-test frame at 0.85 s is a legend and "Loading private wind field..." over a flat dark-grey map, and was read as
+   *painted* at 0.85 s and *usable* at 1.85 s. A second attempt separated map from overlay by the one thing only the map
+   does: translate rigidly by the 60 px drag probe. It failed its own check (`reports/perf/shift_diag.py`, run on retained
+   frames): the best common shift disagreed with the drag (expected 30 px in the half-resolution desktop frames; the plain
+   layer-off page matched at 28 to 32 px, the seafloor page at 19 to 21 px; phone: expected 60 px, plain page 53 to 57 px,
+   seafloor 27 to 31 px), and even at the best shift only about 10 to 16 % of the moving textured pixels matched, so the
+   pan is not one rigid shift of the whole picture. Its output was implausible in places (a wind page "painted" at 36 ms,
+   phone rows at 6 to 11 s against 3 s in the first version) and I could not validate it by eye on one frame per
+   group within the effort allowed for it. **It was dropped. Map painted, map visually complete, "map usable" in the
+   earlier sense (painted + input) and "layer visibly differs from layer-off" are UNMEASURED: no table holds a time or
+   a share for them, and every earlier figure of that kind (for example "painted after 0.15 to 0.54 s", "paints at 3.2 s")
+   is withdrawn.** Measuring them needs the harness to record the map on its own (for example the map library's own
+   idle/loaded event, if the app exposes the map object, or the canvas's drawing buffer instead of a screenshot), which
+   is a new measurement run and is **not done here** (E).
+2. **Frames of six runs were overwritten.** The desktop `brief` and `map-home-returning` cold runs were repeated in a
+   second batch (`raw/ready-live-desktop-warm.json`) into the same frame directories, so the first batch's six runs
+   (`raw/ready-live-desktop.json`) pair their timestamps with later images. `readiness.mjs` now names each frame directory
+   by batch (`--batch`, default the output file name) and refuses a non-empty directory. `analyse.py` analyses a run only
+   if its directory holds exactly its recorded frames, written when the run recorded them (file time within 5 s of the
+   frame's receive time); otherwise the run is `superseded-frames-overwritten`, kept as a raw receipt and excluded from
+   every median (`raw/ready-summary.json`), and a duplicate id with intact frames aborts the analysis. The cold desktop rows
+   of those two pages are therefore the **intact later three runs**, not the pooled six of the first version.
+
+What is measured (none of it uses pixels, apart from the repaint check at the end):
+
+* **Input delay**: once a second from navigation start a harmless pointer event (mouse move on desktop, touch tap on
+  the phone, top-left corner) is sent; a page-side capture listener records how long it waited behind the main thread
+  (event time stamp to handler). The harness keeps probing after the network is quiet until two probes in a row are
+  answered within 200 ms (the "good" bound of INP) or the cap is reached. Probes before the browser's first contentful paint
+  are not counted.
+* **First answers input**: the first time two consecutive probes were answered within 200 ms. It says the page answers
+  input, **not** that the map is drawn, and it can be early: it can fire before the heavy work starts (one desktop
+  seafloor run: 1.2 s, its first 3.9 s freeze began at 2.2 s; one phone-wifi brief run: 1.8 s, freeze from 3.3 s).
+* **No freeze after (the headline)**: the later of that moment and the end of the last long task of 200 ms or more before the
+  drag probe: from then on nothing blocked the main thread for that long in the observation window. Medians of 3 absorb a
+  single early run (per-run values: `raw/ready-summary.json`). **TBT to no-freeze**: the sum of (long task − 50 ms)
+  from FCP to that point (to the end of the window when never reached, flagged `*`).
+* **FCP** is the browser's own first contentful paint: any content, not the map.
+* **Repaint after drag**: after the load settles, a 60 px drag at a point that `elementFromPoint` says is the map (not a
+  dialog, panel or control); response = first frame whose canvas rectangle differs from the pre-drag frame in more than
+  0.5 % of its pixels. Because the rectangle includes overlays this says only that something repainted. No response within
+  5 s is a failure (`interaction-failed`); no free point on the map is `map covered`.
+* **Layer data arrived** (requests, not pixels): for a live layer page, the requests that the layer-off page
+  (`layers=none`, same profile and pass) does not make; for the local pages, the layer-off page `layer-base-medium`, or
+  the layer's own data files for wind and SST (no layer-off page exists). The time the last one finished and whether any
+  failed or stayed open. It does not say the layer is drawn.
+* **Failure states** are recorded per run: `not-responsive-within-window`, `interaction-failed`, `no-map-canvas`, a
+  harness error, visible error/unavailable text, page errors, failed layer requests. A median is "not reached" when two of
+  three runs did not reach the state.
+* **First-visit dialog**: the A.3 pages carry only the "first run done" flag, so the first-visit "How do you fish?"
+  dialog (profile choice) is open in the middle of the map on `brief` and `live-layer-*`; the harness drags at an
+  uncovered point. `map-home-returning` is a saved home port **and** a saved profile (`skippercast-profile-v1=boat`),
+  as a returning visitor has it: no dialog, and the Boat default layers (seafloor, currents) are on.
+* **Script share of the window** (A.5b): ScriptDuration and CDP's own `Timestamp` metric are read at the same two
+  instants, so the ratio is script time ÷ the same window. The first version divided ScriptDuration by `settledMs`
+  (when the network had been quiet 3 s) while reading the counters only after the page's main-thread backlog had drained
+  (23.1–23.6 s of script over a "12.2 s window", 190 %). That column stays withdrawn. The new ratio is on one clock;
+  ScriptDuration under CPU throttling is still unvalidated, so the phone figures are emulation, not a real phone (E).
+* **A.3 phone-wifi rows are superseded for blocking.** The A.3 harness stopped observing when the network had been
+  quiet (12.3 s) and read the counters soon after: script 23.2 s, canvas-quiet proxy 16.4 s, TBT 14.0 s. The readiness
+  runs observe until the page answers input: four freezes of 11 to 14 s (starting at 3.2 to 3.4, 17.2 to 17.6, 31 to
+  32 and 44.6 to 45.1 s), script 49.3 s, long-task time 54.9 s, no freeze until 57.4 s. That matches the desktop structure ×4 (four freezes of ~3 s
+  each, 12.5 s script, CPU slowdown 4×). The readiness harness itself adds CPU (screencast, a probe per second): on
+  desktop script time is 12.5 s against 11.5 s in A.3 (+9 %). It cannot be separated on the throttled CPU, so the
+  phone-wifi figures are an upper bound on the harness-free time.
+* **Controls** (`python3 reports/perf/analyse.py controls <frames>`, built from retained real frames, nothing invented):
+  A. the loading overlay (bright panel with changing "loading" text) over a map that never draws; B. the same overlay
+  until 4.0 s, then the real frames (a delayed map); C. the real run; D. the retained phone wind-test run; E. an overwritten
+  original receipt is rejected while the later receipt of the same id is accepted; F. the committed summary holds no
+  painted, complete or layer-visible-difference value. For A to D the analysis must report painted and complete as null with
+  evidence `unmeasured`, so neither the overlay nor a legend can produce a readiness time; the output is in the PR.
+* **What is not checked.** Whether the map, the layer or the reef ranking itself is drawn or correct (the live pages have no
+  stable text to match); on the phone on slow 4G only the outcome of the export request is recorded (A.3b).
+
 ### A.2 Exact commands (repeatable)
 
 From the repository root, with `npm ci` done (Playwright's Chromium at
@@ -130,6 +229,12 @@ python3 research/scripts/map_style/serve_range.py 18772            # in checkout
 python3 research/scripts/map_style/serve_range.py 18781            # in checkout B (claude/mapstyle-2-relief)
 python3 reports/perf/wind_fixture.py                               # checkout A: the synthetic wind grid
 sh reports/perf/run-layers.sh
+# readiness runs (screencast frames are scratch, not committed; the two servers above must be up)
+FRAMES=/tmp/perf-frames sh reports/perf/run-ready.sh
+python3 reports/perf/analyse.py all /tmp/perf-frames reports/perf/raw/ready-summary.json reports/perf/raw/ready-live-*.json reports/perf/raw/ready-layers-*.json   # decisions + medians
+python3 reports/perf/analyse.py controls /tmp/perf-frames   # controls A to F of A.1b
+python3 reports/perf/shift_diag.py reports/perf/raw/ready-live-desktop.json /tmp/perf-frames desktop-live-layer-none-cold-1   # the failed drag-shift check of A.1b
+python3 reports/perf/apply_tables.py reports/perf/PERF-BASELINE-1.md --readiness-only   # fills the tables of A.3b, A.5b, A.7b
 # medians and tables
 python3 reports/perf/compact_raw.py reports/perf/raw/live-*.json reports/perf/raw/layers-*.json  
 python3 reports/perf/summarize.py reports/perf/raw/live-*.json reports/perf/raw/layers-*.json > tables.md
@@ -148,6 +253,8 @@ python3 reports/perf/waterfall.py reports/perf/raw/live-phone.json brief phone c
 ```
 
 Raw numbers: `reports/perf/raw/` — `live-desktop.json`, `live-phone.json`, `live-phone-wifi.json`,
+`ready-live-{desktop,desktop-warm,phone,phone-wifi}.json`, `ready-layers-{relief,main}-{desktop,phone}.json` and their
+analysis `ready-summary.json` (per-run decisions and medians; screencast frames are not committed),
 `layers-{relief,main}-{desktop,phone}.json` (every request of every run; inline `data:` URLs cut to 64 characters; plain JSON because the repository check refuses binary files),
 `summary.json` (medians of 3 for all 76 groups), `extras.json`,
 `feed-sizes.tsv`, `pmtiles-sizes.json`, `export-anatomy.json`, `webp-trial.jsonl`, `compress-sizes.txt`,
@@ -222,6 +329,120 @@ requests, canvas quiet ~9.4 to 10.5 s) agree, so no conclusion changes, but comp
 a bimodal result. The cause is not established here (the same layer on desktop is normal at 13.2 s), so it is **not**
 ranked as a root cause; re-run it alone before acting on it.
 
+### A.3b Live site: measured responsiveness (medians of 3)
+
+Readiness harness (A.1b): screencast + input probe, so timings are somewhat later than A.3's and **are not mixed with
+them**. **Map painted, map visually complete and "layer visibly differs" are UNMEASURED (A.1b) and are not in the tables.**
+What is measured: when the page first answers input, when the last freeze of 200 ms or more ends (bold), and the request
+facts. Every row is the median of 3 runs. The desktop cold rows of `brief` and `map-home-returning` are the intact later
+three runs; the original six had overwritten frames and are excluded (A.1b). A run that never reached a state counts as
+infinitely late: a median is "not reached" when two of three runs did not. "Brief shown" is the A.3 brief-panel check
+(same definition). `*` after a TBT: the window ended before the page was free of freezes.
+
+| page | profile | pass | runs by outcome | FCP (any content) | brief shown | first answers input (2 probes in a row ≤ 200 ms) | **no freeze (long task ≥ 200 ms) after** | long-task time | max input delay | TBT to no-freeze | repaint after drag |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| brief | desktop | cold | 3/3 | 332 ms | 440 ms | 15.85 s | **15.85 s** | 13.35 s | 2.68 s | 12.65 s | 87 ms |
+| brief | desktop | warm | 3/3 | 96 ms | 159 ms | 15.33 s | **15.33 s** | 13.35 s | 2.59 s | 12.68 s | 90 ms |
+| brief | phone | cold | 3/3 | 1.84 s | 3.23 s | 2.84 s | **63.47 s** | 5.36 s | 1.71 s | 3.47 s | 31 ms |
+| brief | phone-wifi | cold | 3/3 | 204 ms | 445 ms | 57.38 s | **57.38 s** | 54.95 s | 13.30 s | 52.89 s | 31 ms |
+| map-home-returning | desktop | cold | 3/3 | 331 ms | 384 ms | 15.68 s | **15.68 s** | 12.88 s | 2.87 s | 12.23 s | 91 ms |
+| map-home-returning | desktop | warm | 3/3 | 242 ms | 319 ms | 15.77 s | **15.77 s** | 13.24 s | 3.02 s | 12.59 s | 92 ms |
+| map-home-returning | phone | cold | 3/3 | 3.59 s | 3.71 s | 3.90 s | **27.88 s** | 4.58 s | 1.03 s | 2.58 s | 30 ms |
+| map-home-returning | phone-wifi | cold | 3/3 | 675 ms | 787 ms | 57.77 s | **57.77 s** | 54.80 s | 24.71 s | 52.83 s | 17 ms |
+| live-layer-none | desktop | cold | 3/3 | 288 ms | 427 ms | 16.49 s | **16.49 s** | 14.17 s | 3.30 s | 13.60 s | 44 ms |
+| live-layer-none | phone | cold | 3/3 | 1.88 s | 3.23 s | 2.88 s | **15.41 s** | 1.65 s | 1.64 s | 619 ms | 128 ms |
+| live-layer-swell | desktop | cold | 3/3 | 140 ms | 212 ms | 16.01 s | **16.01 s** | 13.88 s | 3.23 s | 13.28 s | 42 ms |
+| live-layer-swell | phone | cold | 3/3 | 1.83 s | 3.18 s | 2.83 s | **15.29 s** | 2.02 s | 1.62 s | 781 ms | 130 ms |
+| live-layer-currents | desktop | cold | 3/3 | 168 ms | 278 ms | 14.72 s | **14.72 s** | 12.59 s | 2.67 s | 12.04 s | 43 ms |
+| live-layer-currents | phone | cold | 3/3 | 1.83 s | 3.19 s | 2.83 s | **16.45 s** | 1.97 s | 1.62 s | 657 ms | 33 ms |
+| live-layer-stations | desktop | cold | 3/3 | 296 ms | 342 ms | 14.68 s | **14.68 s** | 12.47 s | 2.68 s | 11.92 s | 32 ms |
+| live-layer-stations | phone | cold | 3/3 | 1.79 s | 3.15 s | 2.79 s | **15.34 s** | 1.91 s | 1.44 s | 722 ms | 130 ms |
+| live-layer-water-temp | desktop | cold | 3/3 | 192 ms | 264 ms | 15.81 s | **15.81 s** | 13.57 s | 3.23 s | 12.97 s | 41 ms |
+| live-layer-water-temp | phone | cold | 3/3 | 1.98 s | 3.33 s | 2.98 s | **15.51 s** | 1.88 s | 1.63 s | 763 ms | 145 ms |
+| live-layer-chlorophyll | desktop | cold | 3/3 | 416 ms | 513 ms | 14.88 s | **15.20 s** | 12.43 s | 3.03 s | 11.98 s | 48 ms |
+| live-layer-chlorophyll | phone | cold | 3/3 | 1.94 s | 3.28 s | 2.94 s | **15.57 s** | 1.66 s | 1.63 s | 604 ms | 129 ms |
+| live-layer-seafloor | desktop | cold | 3/3 | 216 ms | 294 ms | 15.00 s | **15.73 s** | 13.50 s | 2.70 s | 12.80 s | 60 ms |
+| live-layer-seafloor | phone | cold | 3/3 | 1.93 s | 3.29 s | 2.93 s | **26.20 s** | 4.23 s | 1.64 s | 2.50 s | 199 ms |
+
+What the numbers say (every figure is measured here; page-level cost ESTIMATES for a real phone are not made). None of it
+says when the map is drawn (UNMEASURED):
+
+* **Desktop.** The browser shows first content (FCP) after 0.14 to 0.42 s, yet the page is free of freezes only after
+  **14.7 to 16.5 s** (cold, every live page). In between the reef file arrives (wire 0.9 to 1.9 s after the first request),
+  then four long tasks of 2.7 to 3.9 s run back to back (first one starts 1.4 to 2.2 s): long-task time 12.4 to 14.2 s,
+  input waits up to **2.6 to 3.3 s**, TBT 11.9 to 13.6 s. Once they end a 60 px drag repaints the canvas within 32 to 92 ms.
+  Whether the map is already drawn before the freeze is not known from these runs.
+* **A repeat visit does not help.** Warm desktop `brief` and `map-home-returning`: free of freezes at 15.3 s and 15.8 s
+  (cold: 15.8 s and 15.7 s). The reef file is `no-store` and the cost is CPU, not download (B1, B2).
+* **Layer data.** With the seafloor layer on, its data (ledger, PMTiles ranges, 10 requests, 1.20 MB) has fully arrived at
+  3.27 s on desktop, but the freezes end at 15.7 s; whether the layer is drawn in between is UNMEASURED. The currents
+  layer (one 245 KB request, 0.79 s) and chlorophyll (nine small ones, 1.2 s) are in early; swell, stations and water temp
+  make no request of their own (table 2).
+* **Phone on slow 4G.** The page first answers input at 2.8 to 4.0 s, because the heavy work never starts: in the six
+  `brief` and `live-layer-seafloor` runs checked, the reef export transfers 9.0 to 9.4 MB and is aborted at 63.6 to 63.9 s
+  (the 60 s timeout). So "first answers input" means the page answers taps, **not** that the map is drawn or that the reef
+  ranking exists (the export never completes, so it cannot). Long-task time stays at 1.7 to 5.4 s in total (against 12 to
+  14 s on desktop), but 200 ms-plus tasks continue until 15.3 to 16.5 s (seafloor **26.2 s**, its data arrives at 24.3 s;
+  13 requests, 1.42 MB; `map-home-returning` 27.9 s; `brief` 63.5 s, which coincides with the export aborted at ~63.7 s).
+  Max input delay is 1.0 to 1.7 s.
+* **Phone CPU (4× slowdown) on a fast network.** FCP 0.2 to 0.7 s; free of freezes only at **57.4 to 57.8 s**: four
+  freezes of 11 to 14 s, input delay up to 13.3 s (`brief`) or 24.7 s (`map-home-returning`), TBT 52.8 to 52.9 s. The A.3 row
+  for this profile stopped observing at 12.3 s and reported TBT 14.0 s (A.1b). One `brief` run first answered input at
+  1.8 s, before the first freeze, so only the median is quoted.
+* **The proxy and the measurement disagree on the phone.** A.3's canvas-quiet proxy (13.6 s desktop, 9.4 s phone on
+  slow 4G, 16.4 s phone on Wi-Fi) is in the right region on desktop (the harness adds ~9 % CPU, and the proxy needs a
+  further 1 s of quiet), but on the phone on slow 4G it fired long before the seafloor data (24 s) and on the Wi-Fi phone
+  in the middle of the freeze (free of freezes at 57 s).
+* **Failures.** No run was unresponsive within its window, no drag went unrepainted, the drag always found an uncovered
+  point on the map, and no page errors were logged (table 3). The first-visit "How do you fish?" dialog (profile not
+  chosen yet) is open over part of the map on `brief` and the `live-layer-*` pages (A.1b); `map-home-returning` has a
+  saved profile and no dialog. At least one desktop Stations run showed the text "Stale or unavailable" (not investigated).
+
+Layer-specific requests (next table): on the live site swell, stations and water-temp make no request of their own (the data
+is already in the page), currents one (245 KB, 0.79 s desktop / 16.2 s phone), chlorophyll nine small ones (24 KB,
+1.17 s / 5.0 s), seafloor ten to thirteen (1.2 to 1.4 MB). Whether a layer is visibly drawn is UNMEASURED (A.1b).
+
+| page | profile | layer-specific requests | their bytes | layer data fully arrived | requests failed | notes |
+|---|---|---|---|---|---|---|
+| live-layer-swell | desktop | 0 | 0 B | – | 0 | data is inline in the page (no request) |
+| live-layer-swell | phone | 0 | 0 B | – | 0 | data is inline in the page (no request) |
+| live-layer-currents | desktop | 1 | 245 KB | 787 ms | 0 | ocean |
+| live-layer-currents | phone | 1 | 246 KB | 16.24 s | 0 | ocean |
+| live-layer-stations | desktop | 0 | 0 B | – | 0 | data is inline in the page (no request) |
+| live-layer-stations | phone | 0 | 0 B | – | 0 | data is inline in the page (no request) |
+| live-layer-water-temp | desktop | 0 | 0 B | – | 0 | data is inline in the page (no request) |
+| live-layer-water-temp | phone | 0 | 0 B | – | 0 | data is inline in the page (no request) |
+| live-layer-chlorophyll | desktop | 9 | 24 KB | 1.17 s | 0 | chlorophyll-observation--242-69-a022c31d15763719.json, chlorophyll-observation--242-70-61e1ab2f12129fdf.json |
+| live-layer-chlorophyll | phone | 9 | 24 KB | 4.97 s | 0 | chlorophyll-observation--242-69-a022c31d15763719.json, chlorophyll-observation--242-70-61e1ab2f12129fdf.json |
+| live-layer-seafloor | desktop | 10 | 1.20 MB | 3.27 s | 0 | ledger.json, seafloor-morro-bay.pmtiles |
+| live-layer-seafloor | phone | 13 | 1.42 MB | 24.27 s | 0 | ledger.json, seafloor-morro-bay.pmtiles |
+
+Outcome of every group (table 3):
+
+| page | profile | pass | runs by outcome | interaction probe failed | map covered by a dialog | visible error text | page errors |
+|---|---|---|---|---|---|---|---|
+| brief | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| brief | desktop | warm | ok 3 | 0/3 | 0/3 | – | 0 |
+| brief | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| brief | phone-wifi | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| map-home-returning | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| map-home-returning | desktop | warm | ok 3 | 0/3 | 0/3 | – | 0 |
+| map-home-returning | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| map-home-returning | phone-wifi | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| live-layer-none | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| live-layer-none | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| live-layer-swell | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| live-layer-swell | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| live-layer-currents | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| live-layer-currents | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| live-layer-stations | desktop | cold | ok 3 | 0/3 | 0/3 | Stale or unavailable | 0 |
+| live-layer-stations | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| live-layer-water-temp | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| live-layer-water-temp | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| live-layer-chlorophyll | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| live-layer-chlorophyll | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| live-layer-seafloor | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| live-layer-seafloor | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
 ### A.4 Live site: bytes (requests) by type (medians of 3)
 
 `tiles` includes the PMTiles range requests, the map glyphs and the reef export (it lives under `/feeds/tiles/`);
@@ -328,6 +549,42 @@ cache headers fail to keep. `no-store` = bytes of responses marked `Cache-Contro
 | live-layer-seafloor | desktop | warm | 39 / 16.81 MB | 18 / 16.77 MB | 18 / 0 B | 63 | 11.77 s | 19.84 s |
 | live-layer-seafloor | phone | cold | 131 / 12.92 MB | 20 / 10.92 MB | 15 / 672 KB | 66 | 1.64 s | 72.71 s |
 | live-layer-seafloor | phone | warm | 44 / 12.55 MB | 21 / 12.36 MB | 15 / 97 KB | 66 | 1.53 s | 69.81 s |
+
+### A.5b Live site: script share of the observation window (readiness runs)
+
+One clock: ScriptDuration and CDP's own monotonic `Timestamp` were read at the same two instants (A.1b). **Emulation
+only** (ScriptDuration under CPU throttling is unvalidated); do not read the phone rows as a real phone's duty cycle.
+
+| page | profile | pass | script time | observation window (same clock) | duty cycle (script / window) |
+|---|---|---|---|---|---|
+| brief | desktop | cold | 12.43 s | 20.92 s | 60 % |
+| brief | desktop | warm | 12.46 s | 20.79 s | 60 % |
+| brief | phone | cold | 2.44 s | 73.11 s | 3 % |
+| brief | phone-wifi | cold | 49.26 s | 59.69 s | 82 % |
+| map-home-returning | desktop | cold | 12.03 s | 20.79 s | 58 % |
+| map-home-returning | desktop | warm | 12.39 s | 21.53 s | 61 % |
+| map-home-returning | phone | cold | 2.15 s | 73.40 s | 3 % |
+| map-home-returning | phone-wifi | cold | 49.02 s | 59.82 s | 82 % |
+| live-layer-none | desktop | cold | 13.60 s | 21.50 s | 64 % |
+| live-layer-none | phone | cold | 1.16 s | 73.48 s | 2 % |
+| live-layer-swell | desktop | cold | 13.22 s | 21.02 s | 63 % |
+| live-layer-swell | phone | cold | 1.20 s | 73.46 s | 2 % |
+| live-layer-currents | desktop | cold | 12.13 s | 20.79 s | 58 % |
+| live-layer-currents | phone | cold | 2.12 s | 72.99 s | 3 % |
+| live-layer-stations | desktop | cold | 11.90 s | 20.70 s | 57 % |
+| live-layer-stations | phone | cold | 1.16 s | 73.02 s | 2 % |
+| live-layer-water-temp | desktop | cold | 12.98 s | 21.43 s | 60 % |
+| live-layer-water-temp | phone | cold | 1.16 s | 73.59 s | 2 % |
+| live-layer-chlorophyll | desktop | cold | 12.00 s | 21.21 s | 57 % |
+| live-layer-chlorophyll | phone | cold | 1.13 s | 73.19 s | 2 % |
+| live-layer-seafloor | desktop | cold | 12.51 s | 21.02 s | 60 % |
+| live-layer-seafloor | phone | cold | 1.27 s | 73.08 s | 2 % |
+
+* Desktop: **57 to 64 %** of the 21 s window is script time (11.9 to 13.6 s), the same on every live page, warm or cold.
+  The cost is the reef screen, independent of the layer (B2).
+* Phone CPU on fast network: **82 %** (49 s of script in a 60 s window).
+* Phone on slow 4G: **2 to 3 %** (1.2 to 2.4 s of script in a 73 s window): the page is idle because it waits for a file
+  that never completes (B1). The low figure is a symptom, not good performance.
 
 ### A.6 The 10 heaviest requests (the median run)
 
@@ -1015,6 +1272,107 @@ is requested at 14.07 s and finishes at 25.53 s (median of 3 cold runs: 14.07 �
 | layer-bathy-2m-z12 | phone | cold | 21 / 2.06 MB | 0 / 0 B | 0 / 0 B | 5 | 128 ms | 18.71 s |
 | layer-bathy-2m-z12 | phone | warm | 17 / 613 KB | 0 / 0 B | 0 / 0 B | 6 | 76 ms | 9.78 s |
 
+### A.7b Private layers: measured responsiveness (local test pages, medians of 3)
+
+Local servers without compression or cache headers (A.7); synthetic wind grid, 2026-09-20 SST. Same harness and
+definitions as A.3b (2 s network-quiet window, cap 120 s); map painted, visually complete and "layer visibly differs" are
+UNMEASURED (A.1b). `layer-bathy-2m-z12` is the harbour view; the others are zoom 9.5. The probe sends one event per second,
+so about 1.0 s on desktop is the earliest "first answers input" it can report.
+
+| page | profile | pass | runs by outcome | FCP (any content) | brief shown | first answers input (2 probes in a row ≤ 200 ms) | **no freeze (long task ≥ 200 ms) after** | long-task time | max input delay | TBT to no-freeze | repaint after drag |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| layer-base-medium | desktop | cold | 3/3 | 36 ms | – | 1.01 s | **1.01 s** | 62 ms | 6 ms | 12 ms | 23 ms |
+| layer-base-medium | phone | cold | 3/3 | 856 ms | – | 1.86 s | **15.92 s** | 382 ms | 683 ms | 232 ms | 115 ms |
+| layer-wind | desktop | cold | 3/3 | 36 ms | – | 1.03 s | **1.03 s** | 0 ms | 29 ms | 0 ms | 14 ms |
+| layer-wind | phone | cold | 3/3 | 856 ms | – | 1.86 s | **117.49 s** | 106.67 s | 676 ms | 70.23 s | 150 ms |
+| layer-current | desktop | cold | 3/3 | 28 ms | – | 1.01 s | **1.01 s** | 140 ms | 6 ms | 40 ms | 47 ms |
+| layer-current | phone | cold | 3/3 | 856 ms | – | 1.86 s | **15.95 s** | 624 ms | 683 ms | 269 ms | 115 ms |
+| layer-tide | desktop | cold | 3/3 | 28 ms | – | 1.02 s | **1.02 s** | 73 ms | 6 ms | 23 ms | 37 ms |
+| layer-tide | phone | cold | 3/3 | 848 ms | – | 1.86 s | **16.27 s** | 457 ms | 680 ms | 257 ms | 114 ms |
+| layer-sst | desktop | cold | 3/3 | 36 ms | – | 1.01 s | **1.01 s** | 0 ms | 1 ms | 0 ms | 41 ms |
+| layer-sst | phone | cold | 3/3 | 860 ms | – | 1.87 s | **1.87 s** | 994 ms | 687 ms | 0 ms | 130 ms |
+| layer-chlorophyll | desktop | cold | 3/3 | 36 ms | – | 1.02 s | **1.02 s** | 75 ms | 4 ms | 25 ms | 44 ms |
+| layer-chlorophyll | phone | cold | 3/3 | 856 ms | – | 1.86 s | **15.94 s** | 550 ms | 686 ms | 263 ms | 114 ms |
+| layer-bathy-2m | desktop | cold | 3/3 | 32 ms | – | 1.01 s | **1.01 s** | 75 ms | 5 ms | 25 ms | 41 ms |
+| layer-bathy-2m | phone | cold | 3/3 | 848 ms | – | 1.86 s | **16.01 s** | 472 ms | 681 ms | 261 ms | 115 ms |
+| layer-bathy-2m-z12 | desktop | cold | 3/3 | 32 ms | – | 1.02 s | **1.02 s** | 74 ms | 5 ms | 24 ms | 22 ms |
+| layer-bathy-2m-z12 | phone | cold | 3/3 | 848 ms | – | 1.87 s | **12.55 s** | 429 ms | 680 ms | 258 ms | 116 ms |
+
+* **Desktop.** Every page first answers input at about 1.0 s (the first probe pair) with no long task of 200 ms or more
+  in the window (FCP 28 to 36 ms). The wind page animates and uses **58 %** of the main thread (script-share table below),
+  but input waits at most 29 ms.
+* **Phone (4× CPU, slow 4G).** First answers input at 1.9 s (FCP 0.85 s); on the static pages a 200 ms-plus task still
+  runs until 12.6 to 16.3 s (SST: none after 1.9 s, 1.0 s of long tasks in total). **SST**: the 2.28 MB grid takes until
+  **25.5 s** to arrive; when it is drawn is UNMEASURED. Wind: its 4 KB file arrives at 14.4 s; the particle loop keeps the
+  main thread busy for 106.7 s of long tasks in the 122 s window (**62 %** script share, input waits up to 0.68 s).
+* **Layer data timing.** Tide data (69 KB) arrives at 0.1 s desktop / 8.3 s phone. The 2 m shallow archive: desktop
+  35 requests / 2.18 MB at zoom 9.5 and 20 requests / 1.05 MB at the harbour zoom, all in by 0.25 s; phone 18 requests /
+  1.23 MB (in by 15.4 s) and 11 requests / 0.61 MB (11.9 s). Current and chlorophyll draw from data inlined in the page
+  (no request). Whether any of these layers is visibly drawn is UNMEASURED. No failed requests; no page errors.
+* The wind phone row is a poor guide to a real phone: the synthetic grid is 17×13 and particle counts follow the real
+  crop (ESTIMATED).
+
+
+Layer data per page (requests the layer-off page `layer-base-medium` does not make; wind and SST by their own data file):
+
+| page | profile | layer-specific requests | their bytes | layer data fully arrived | requests failed | notes |
+|---|---|---|---|---|---|---|
+| layer-wind | desktop | 1 | 4 KB | 253 ms | 0 | wind-preview.json |
+| layer-wind | phone | 1 | 4 KB | 14.37 s | 0 | wind-preview.json |
+| layer-current | desktop | 0 | 0 B | – | 0 | data is inline in the page (no request) |
+| layer-current | phone | 0 | 0 B | – | 0 | data is inline in the page (no request) |
+| layer-tide | desktop | 2 | 69 KB | 115 ms | 0 | tide-layer-central-coast.json, tide-layer.js |
+| layer-tide | phone | 2 | 69 KB | 8.31 s | 0 | tide-layer-central-coast.json, tide-layer.js |
+| layer-sst | desktop | 1 | 2.28 MB | 239 ms | 0 | sst-preview.json |
+| layer-sst | phone | 1 | 2.28 MB | 25.53 s | 0 | sst-preview.json |
+| layer-chlorophyll | desktop | 0 | 0 B | – | 0 | data is inline in the page (no request) |
+| layer-chlorophyll | phone | 0 | 0 B | – | 0 | data is inline in the page (no request) |
+| layer-bathy-2m | desktop | 35 | 2.18 MB | 252 ms | 0 | morro-bay-seafloor-deep.pmtiles |
+| layer-bathy-2m | phone | 18 | 1.23 MB | 15.38 s | 0 | morro-bay-seafloor-deep.pmtiles |
+| layer-bathy-2m-z12 | desktop | 20 | 1.05 MB | 201 ms | 0 | morro-bay-seafloor-deep.pmtiles |
+| layer-bathy-2m-z12 | phone | 11 | 613 KB | 11.92 s | 0 | morro-bay-seafloor-deep.pmtiles |
+
+Script share of the observation window (one clock, emulation; A.5b):
+
+| page | profile | pass | script time | observation window (same clock) | duty cycle (script / window) |
+|---|---|---|---|---|---|
+| layer-base-medium | desktop | cold | 42 ms | 7.03 s | 1 % |
+| layer-base-medium | phone | cold | 181 ms | 22.30 s | 1 % |
+| layer-wind | desktop | cold | 4.16 s | 7.16 s | 58 % |
+| layer-wind | phone | cold | 74.95 s | 121.70 s | 62 % |
+| layer-current | desktop | cold | 62 ms | 7.03 s | 1 % |
+| layer-current | phone | cold | 259 ms | 22.42 s | 1 % |
+| layer-tide | desktop | cold | 38 ms | 7.04 s | 0 % |
+| layer-tide | phone | cold | 204 ms | 23.48 s | 1 % |
+| layer-sst | desktop | cold | 56 ms | 7.03 s | 1 % |
+| layer-sst | phone | cold | 364 ms | 32.46 s | 1 % |
+| layer-chlorophyll | desktop | cold | 42 ms | 7.03 s | 1 % |
+| layer-chlorophyll | phone | cold | 206 ms | 22.32 s | 1 % |
+| layer-bathy-2m | desktop | cold | 42 ms | 7.03 s | 1 % |
+| layer-bathy-2m | phone | cold | 204 ms | 22.34 s | 1 % |
+| layer-bathy-2m-z12 | desktop | cold | 39 ms | 7.03 s | 1 % |
+| layer-bathy-2m-z12 | phone | cold | 182 ms | 19.32 s | 1 % |
+
+Outcome of every group:
+
+| page | profile | pass | runs by outcome | interaction probe failed | map covered by a dialog | visible error text | page errors |
+|---|---|---|---|---|---|---|---|
+| layer-base-medium | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-base-medium | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-wind | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-wind | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-current | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-current | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-tide | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-tide | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-sst | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-sst | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-chlorophyll | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-chlorophyll | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-bathy-2m | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-bathy-2m | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-bathy-2m-z12 | desktop | cold | ok 3 | 0/3 | 0/3 | – | 0 |
+| layer-bathy-2m-z12 | phone | cold | ok 3 | 0/3 | 0/3 | – | 0 |
 ### A.8 Payload sizes: the daily feed, the brief and the other data the first screen reads
 
 Measured 2026-11-07 with `feed_sizes.sh` (`raw/feed-sizes.tsv`). The daily feed is already split into parts
@@ -1143,6 +1501,12 @@ Ranked by measured cost to the user.
   (canvas on screen 0.5 s). Tap response itself was not measured.
 * The same on every live layer view (TBT 11.0–12.0 s desktop): the cost is independent of which layer is on.
 * Phone CPU on fast network (`phone-wifi`): brief cold: canvas on screen 1.07 s, canvas-quiet proxy **16.37 s**, TBT **13.98 s**, longest task 13.08 s, JS script time 23.17 s (accumulated; not a duty cycle, A.1), heap 346 MB, 19.3 MB transferred; map-home cold: canvas-quiet 16.61 s, TBT 13.99 s. A phone on good Wi-Fi gets the reef data and then freezes.
+* **Measured responsiveness (A.3b).** Desktop: the page is free of freezes only after 14.7 to 16.5 s (median of 3,
+  every live page), input delayed up to 2.6 to 3.3 s, long-task time 12.4 to 14.2 s; whether the map is drawn before
+  that is UNMEASURED (A.1b). The A.3 phone-wifi line above is a truncated window (it stopped at
+  the network-quiet point, 12.3 s); run to completion the phone CPU shows four freezes of 11 to 14 s, script 49.3 s,
+  long-task time 54.9 s, free of freezes at 57.4 s (emulation, 4× CPU slowdown: an ESTIMATE for a real phone, which may
+  be better or worse). Script share of the window: 57 to 64 % desktop, 82 % phone on Wi-Fi (A.5b).
 * On slow 4G the screen never runs (B1), which is why the phone TBT looks small (0.3–0.5 s): a slow phone is "fast"
   only because the feature fails. The window also ends at the canvas-quiet proxy (9.4 s), before the data would arrive,
   so that figure says nothing about blocking after it.
@@ -1193,11 +1557,14 @@ Ranked by measured cost to the user.
 * SST: the 2.28 MB uncompressed grid is fetched only after the map has loaded (phone cold 14.1 → 25.5 s), so
   **LCP is 25.7 s cold / 17.5 s warm on the phone** and the layer is not visible before ~25.5 s, although the
   canvas-quiet proxy says 6.4 s; gzip would make it 149 KB (MEASURED size; the time saving is ESTIMATED).
+* **Measured responsiveness (A.7b).** SST on the emulated phone: the page first answers input at 1.9 s, the data is fully
+  in at 25.5 s (when it is drawn: UNMEASURED); desktop data in at 0.24 s. Wind: continuous animation, script share of the window 58 % desktop and
+  62 % phone, input waits up to 29 ms desktop / 0.68 s phone; the 17×13 synthetic grid underestimates a real crop.
 * Currents: LCP 16.0 s cold / 6.6 s warm on the phone (the current overlay paints after the tiles).
 * Wind particles: the animation loop accumulates **3.6–4.1 s of script on desktop** (6.3 s network-settle window,
   6.2–6.5 s of total task time) and 4.5 s on the throttled phone (20.5 s window), against 40–70 ms (desktop) and
   0.2 s (phone) for the SST page; heap 39–55 MB desktop vs 6–10 MB for the static layers. These are accumulated
-  totals; a per-second duty cycle is **not** claimed (A.1: window mismatch, unvalidated ScriptDuration under throttling).
+  totals in A.5 and A.7; the script share of a consistent window is in A.5b / A.7b (unvalidated ScriptDuration under throttling).
 * Raster seafloor tiles are PNG at 68–89 KB median; the zoom-9.5 view costs 18–33 range requests / 1.2–2.1 MB.
   WebP q0.8 would be 8–11 % of those bytes (A.9).
 * These pages are not published; this is what the layers would cost if shipped as they stand.
@@ -1229,6 +1596,10 @@ Each entry: **what** · why (cause) · expected gain · effort · risk · visibl
 * Gain: MEASURED bytes **15.4 MB → 0.34 MB per brief/map view (−98 %)** (A.8, "targets only"). ESTIMATED time:
   phone slow 4G map canvas ~9.3 s → ~6.3 s (the landing's figure, same map without the export) and the reef
   ranking appears instead of timing out; desktop heap 300–600 MB → ~20–40 MB.
+* Measured baseline for the responsiveness gain (A.3b): desktop free of freezes only at 14.7 to 16.5 s, phone on slow 4G:
+  the ranking never appears (export aborted at ~63.7 s). ESTIMATED after P1: the freezes are the browser-side screen
+  (B2), so desktop is free of freezes within a second or two of first content only if the screen result is published
+  with the targets (that is P2); not a measurement of the changed site. Map content readiness is UNMEASURED (A.1b).
 * Effort M (publisher + loader + verify), risk M (the publication's integrity and expiry checks must cover the
   new file; ranking output must be byte-identical for equal inputs — testable).
 * Visible: yes, positively (ranking now appears on slow phones); same content otherwise.
@@ -1244,6 +1615,10 @@ Each entry: **what** · why (cause) · expected gain · effort · risk · visibl
   phone-wifi line; ~1.2× the desktop figure, script time ~2×). ESTIMATED future gain: desktop TBT −11 s and the
   canvas-quiet proxy 13.6 s → ~1.5 s (the landing's 1.43 s); on the phone CPU the saving is of the same order as its
   14.0 s TBT, not several times larger. Not a measurement of the changed site.
+* Measured baseline for the responsiveness gain (A.3b, A.5b): desktop **free of freezes only at 14.7 to 16.5 s**, input
+  delayed up to 2.6 to 3.3 s, script 57 to 64 % of the window; phone CPU on Wi-Fi free of freezes at 57 s (emulated).
+  ESTIMATED: free of freezes within a second or two of first content on desktop, and about the landing's figure on a
+  slow-4G phone (map canvas ~6.3 s), once the screen is not run in the browser. Not a measurement of the changed site.
 * Effort M, risk M–H: this is a safety screen (#489); the publish-time result must be verified to match the
   run-time result on every target before the run-time path is relaxed (a parity test over the full export).
 * Visible: no (faster, same marks). Decision: **needs G** (publication content, and it relaxes a run-time
@@ -1283,6 +1658,9 @@ Each entry: **what** · why (cause) · expected gain · effort · risk · visibl
   trip / the seafloor layer — not in parallel with `maplibre-gl.js` and the tiles.
 * Why: B1 (on the phone it holds the link for 60 s and delays maplibre to 9.1 s and `coast/ocean` to 21 s).
 * Gain: ESTIMATED phone map canvas 9.3 s → ~6.3 s even before P1; on Save-Data/2G skip it entirely.
+  Caution from A.3b: on desktop first content (FCP) shows after 0.14 to 0.42 s already, and the 11 to 14 s of freezing is
+  the screen itself. Starting the load later moves the freeze to after the first screen (so the map answers taps first) but
+  does not remove it; P2 or P3 is what removes it.
   Effort S, risk L. Visible: ranking marks arrive a moment later. Decision: **safe-to-build-now**.
 
 **P7. Replace the fixed 60 s timeout with progress-aware loading and a clear message.**
@@ -1503,7 +1881,7 @@ risk L, visible yes, **safe-to-build-now** as a review card.
 **Top 5 causes**
 
 1. Every brief and map view downloads a 15.4 MB reef file (53.6 MB unpacked), again on every visit because it is marked never-cache.
-2. When that file arrives, checking every reef outline against protected areas freezes the page for about 11.5 s (long tasks keep the main thread blocked until 13.6 s on desktop; tap response was not measured).
+2. When that file arrives, checking every reef outline against protected areas freezes the page for about 11.5 s of script (measured: desktop shows first content at 0.1 to 0.4 s but is free of freezes only after 14.7 to 16.5 s, with taps waiting up to 3 s; whether the map itself is drawn earlier is not measured; an emulated 4× slower phone CPU on fast network is blocked for about 55 s).
 3. On a slow phone connection the reef file never finishes: the app gives up after 60 s, having used 9–10.5 MB of data, and it slows the map code and other data behind it (map canvas on screen at 9.3 s vs 6.3 s on the landing).
 4. The map page is drawn entirely by JavaScript (about 60 modules), so nothing useful shows until they load; on desktop the brief header then jumps the page (layout shift 0.67–0.76).
 5. Other data is also never cached or barely cached (ocean data 1.5 MB unpacked, reports, seafloor tiles, region files), and seafloor tiles at wide zoom reach 0.4–1.1 MB each, so even a repeat visit moves 12–17 MB.
@@ -1539,10 +1917,21 @@ risk L, visible yes, **safe-to-build-now** as a review card.
 * "ESTIMATED" gains are arithmetic on measured bytes and timings, not a measurement of the changed site. In section C a
   gain labelled MEASURED is a current cost or size observed here (or a size trial); every time or traffic saving that
   depends on a change not yet made is ESTIMATED.
-* Content/interaction readiness was **not measured** (no check that map style, tiles or layer data are drawn, no tap
-  test). The canvas-quiet proxy and TBT to that proxy are the only responsiveness figures; see A.1.
-* Script time is an accumulated total; the earlier per-second duty-cycle figures were withdrawn (counter window longer
-  than the settle window; ScriptDuration under CPU throttling unvalidated).
+* Round 1b measures only responsiveness, with the harness of A.1b: a pointer event once a second, long tasks, requests
+  and a drag after the load. **Whether the map, a layer or the brief is drawn is not measured** (painted, visually
+  complete and "layer visibly differs" are UNMEASURED, A.1b), and neither is whether the reef ranking or any brief text is
+  correct, that a layer's colours are right, or a tap on a feature. The readiness runs add CPU (+9 % script time on desktop,
+  unknown on the throttled phone), so phone-wifi figures are an upper bound. The canvas-quiet proxy of A.3 remains a proxy.
+* "First answers input" is the first moment two probes in a row are answered within 200 ms and can be early; the headline
+  is "no freeze after" (A.1b). Medians of 3 are quoted. Six original cold desktop runs (`brief`, `map-home-returning`) have
+  overwritten frames and are excluded; their raw receipts are kept (A.1b).
+* The 4× CPU slowdown and 1.6 Mbit/s network are emulation of a phone on this host; the 55 s freeze and 82 % script
+  share on the phone profile are ESTIMATES for a real phone. Script time is an accumulated total; ScriptDuration under CPU
+  throttling is unvalidated, and the A.5 columns remain side by side, not divided (A.5b uses its own clock).
 * Corrected after review of PR #1767 (head 18b31a97): inline `data:` URLs removed from request/byte/heaviest figures
   (3.86 → 3.58 MB for the local base-medium desktop cold runs); the readiness proxy relabelled; B1/P2/P5 figures
   restated as above.
+* Round 1b (PR #1768 for t_db153234, second review round): measured responsiveness added (A.1b, A.3b, A.5b, A.7b); B2, B8,
+  P1, P2, P6, D, E restated. Painted / visually complete / layer-visible-difference withdrawn as UNMEASURED; overwritten-frame
+  runs excluded.
+  No product code changed; raw readiness JSON in `raw/ready-*.json`.
