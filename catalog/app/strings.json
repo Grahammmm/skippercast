@@ -331,6 +331,11 @@
     "tile.gap.failedCheckClock": {"en": "{label}: latest check failed; {clock}.", "es": "{label}: la última revisión falló; {clock}."},
 
     "where.title": {"en": "Where to look", "es": "Dónde buscar"},
+    "reef.offer.note": {"en": "Fishing-spot ranking is not loaded: this link looks slow or data saving is on. The places above come from the built-in list only.", "es": "El ranking de lugares de pesca no está cargado: este enlace parece lento o el ahorro de datos está activo. Los lugares de arriba salen solo de la lista incluida."},
+    "reef.offer.button": {"en": "Load fishing spots (about {mb} MB) on Wi-Fi", "es": "Cargar lugares de pesca (unos {mb} MB) con Wi-Fi"},
+    "reef.offer.buttonNoSize": {"en": "Load fishing spots on Wi-Fi", "es": "Cargar lugares de pesca con Wi-Fi"},
+    "reef.unavailable.note": {"en": "Fishing-spot ranking could not be loaded right now. The places above come from the built-in list only.", "es": "No se pudo cargar el ranking de lugares de pesca ahora. Los lugares de arriba salen solo de la lista incluida."},
+    "reef.retry": {"en": "Try again", "es": "Intentar de nuevo"},
     "where.screen.unchecked": {"en": "Protected areas not checked", "es": "Áreas protegidas sin revisar"},
     "where.screen.inside": {"en": "Inside {name}", "es": "Dentro de {name}"},
     "where.screen.near": {"en": "{m} m from {name}", "es": "A {m} m de {name}"},
