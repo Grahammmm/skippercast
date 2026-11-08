@@ -7,8 +7,9 @@ import {boundaryFingerprint, geometryCoveredByBounds, screenPlace} from '../dist
 import {ranking} from '../web/ranking.ts';
 
 const CASES = JSON.parse(readFileSync(new URL('./fixtures/protected_screen_cases.json', import.meta.url), 'utf8'));
+const nameOf = f => f.properties?.FULLNAME || f.properties?.NAME || null;
 const screen = (features = CASES.boundary, bounds = CASES.bounds) => ({ready: () => true, coversGeometry: g => geometryCoveredByBounds(g, bounds),
-  exportExclusions: () => ({checked_at: 'x', features}), fingerprint: () => boundaryFingerprint(features.map(f => f.geometry), bounds)});
+  exportExclusions: () => ({checked_at: 'x', features}), fingerprint: () => boundaryFingerprint(features.map(f => f.geometry), bounds, features.map(nameOf))});
 
 test('the fixture answers are what the browser code gives', () => {
   const s = screen();
@@ -17,11 +18,18 @@ test('the fixture answers are what the browser code gives', () => {
 });
 
 test('the fingerprint changes with any change to the boundary data or the envelope', () => {
-  const geoms = CASES.boundary.map(f => structuredClone(f.geometry)), base = boundaryFingerprint(geoms, CASES.bounds);
+  const geoms = CASES.boundary.map(f => structuredClone(f.geometry)), base = boundaryFingerprint(geoms, CASES.bounds, CASES.boundary.map(nameOf));
   geoms[0].coordinates[0][0][0] += 1e-9;
-  assert.notEqual(boundaryFingerprint(geoms, CASES.bounds), base);
-  assert.notEqual(boundaryFingerprint(geoms.slice(1), CASES.bounds), base);
-  assert.notEqual(boundaryFingerprint(CASES.boundary.map(f => f.geometry), [-121.9, 34.95, -120.55, 35.86]), base);
+  assert.notEqual(boundaryFingerprint(geoms, CASES.bounds, CASES.boundary.map(nameOf)), base);
+  assert.notEqual(boundaryFingerprint(geoms.slice(1), CASES.bounds, CASES.boundary.slice(1).map(nameOf)), base);
+  assert.notEqual(boundaryFingerprint(CASES.boundary.map(f => f.geometry), [-121.9, 34.95, -120.55, 35.86], CASES.boundary.map(nameOf)), base);
+});
+
+test('a metadata-only refresh (same coordinates, new closure name) changes the fingerprint', () => {
+  const geoms = CASES.boundary.map(f => f.geometry), names = CASES.boundary.map(nameOf), base = boundaryFingerprint(geoms, CASES.bounds, names);
+  assert.equal(boundaryFingerprint(geoms, CASES.bounds, [...names]), base);
+  assert.notEqual(boundaryFingerprint(geoms, CASES.bounds, [`${names[0]} (renamed)`, ...names.slice(1)]), base);
+  assert.notEqual(boundaryFingerprint(geoms, CASES.bounds, [null, ...names.slice(1)]), base);
 });
 
 // The brief's list (web/ranking.ts publicationScreened): the stored verdict is shown only for a screen holding the data it was computed against.

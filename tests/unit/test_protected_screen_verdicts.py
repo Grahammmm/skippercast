@@ -22,17 +22,30 @@ def test_each_reef_gets_the_browsers_verdict():
     assert got == CASES['expected']
 
 
+def _names():
+    return [ps.feature_name(f) for f in CASES['boundary']]
+
+
 def test_fingerprint_is_the_browsers_hash():
-    assert ps.fingerprint([f['geometry'] for f in CASES['boundary']], CASES['bounds']) == CASES['fingerprint']
+    assert ps.fingerprint([f['geometry'] for f in CASES['boundary']], CASES['bounds'], _names()) == CASES['fingerprint']
+
+
+def test_fingerprint_changes_when_only_a_closure_name_changes():
+    geoms = [f['geometry'] for f in CASES['boundary']]
+    base = ps.fingerprint(geoms, CASES['bounds'], _names())
+    assert ps.fingerprint(geoms, CASES['bounds'], _names()) == base
+    assert ps.fingerprint(geoms, CASES['bounds'], [_names()[0] + ' (renamed)', *_names()[1:]]) != base
+    assert ps.fingerprint(geoms, CASES['bounds'], [None, *_names()[1:]]) != base
+    assert ps.fingerprint(geoms, CASES['bounds'], ['\U0001F41F', *_names()[1:]]) != ps.fingerprint(geoms, CASES['bounds'], ['\ufffd', *_names()[1:]])
 
 
 def test_fingerprint_changes_with_any_boundary_change():
     geoms = [json.loads(json.dumps(f['geometry'])) for f in CASES['boundary']]
-    base = ps.fingerprint(geoms, CASES['bounds'])
+    base = ps.fingerprint(geoms, CASES['bounds'], _names())
     geoms[0]['coordinates'][0][0][0] += 1e-9
-    assert ps.fingerprint(geoms, CASES['bounds']) != base
-    assert ps.fingerprint(geoms[:-1], CASES['bounds']) != base
-    assert ps.fingerprint([f['geometry'] for f in CASES['boundary']], [-121.9, 34.95, -120.55, 35.86]) != base
+    assert ps.fingerprint(geoms, CASES['bounds'], _names()) != base
+    assert ps.fingerprint(geoms[:-1], CASES['bounds'], _names()[:-1]) != base
+    assert ps.fingerprint([f['geometry'] for f in CASES['boundary']], [-121.9, 34.95, -120.55, 35.86], _names()) != base
 
 
 def test_stamp_adds_a_verdict_to_every_feature_and_a_fingerprint(tmp_path):

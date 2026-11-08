@@ -54,7 +54,7 @@ def main():
         for part in pool.map(_chunk, parts):
             ours.update(part)
     elapsed = time.time() - t0
-    fp = ps.fingerprint([f['geometry'] for f in boundary], bounds)
+    fp = ps.fingerprint([f['geometry'] for f in boundary], bounds, [ps.feature_name(f) for f in boundary])
     diffs = [(rid, ours[rid], oracle['verdicts'].get(rid)) for rid, *_ in reefs if ours[rid] != oracle['verdicts'].get(rid)]
     inside = sum(v['inside'] for v in ours.values())
     unscreened = sum(not v['screened'] for v in ours.values())

@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 
 PLANNING_MARGIN_M = 70
-VERSION = 1
+VERSION = 2
 FAR_M = 20000
 GEOMETRY_DEPTH = {'Point': 0, 'MultiPoint': 1, 'LineString': 1, 'MultiLineString': 2, 'Polygon': 2, 'MultiPolygon': 3}
 CELLS = 2_000_000          # pairwise cells per numpy block
@@ -245,7 +245,7 @@ def screen_place(closures, bounds, geometries, longitude, latitude):
 
 # ---- the boundary fingerprint (same words, same hash as dist/geo-screen.js `boundaryFingerprint`) ----
 
-def _words(geometries, bounds):
+def _words(geometries, bounds, names=()):
     out = [float(VERSION), float(PLANNING_MARGIN_M), *[float(v) for v in bounds], float(len(geometries))]
 
     def walk(c):
@@ -255,14 +255,21 @@ def _words(geometries, bounds):
             out.extend((0.0, float(len(c or []))))
             for child in c or []:
                 walk(child)
-    for g in geometries:
+    for i, g in enumerate(geometries):
+        name = names[i] if i < len(names) else None
+        if name is None:
+            out.append(-1.0)
+        else:
+            units = struct.unpack('<%dH' % (len(name.encode('utf-16-le')) // 2), name.encode('utf-16-le'))   # UTF-16 code units, as JS charCodeAt
+            out.append(float(len(units)))
+            out.extend(float(u) for u in units)
         out.append(float(sum(map(ord, g.get('type') or ''))))
         walk(g.get('coordinates'))
     return out
 
 
-def fingerprint(geometries, bounds):
-    doubles = _words(geometries, bounds)
+def fingerprint(geometries, bounds, names=()):
+    doubles = _words(geometries, bounds, names)
     data = struct.pack('<%dd' % len(doubles), *doubles)
     n = len(data) // 4
     h1, h2 = 0x811c9dc5, 0x01000193
@@ -292,9 +299,15 @@ def load_screen(root, region):
     return bounds, features, files
 
 
+def feature_name(f):
+    """The closure name a verdict is shown under (the browser's FULLNAME || NAME || null)."""
+    p = f.get('properties') or {}
+    return p.get('FULLNAME') or p.get('NAME') or None
+
+
 def verdicts(boundary, bounds, reefs):
     """{reef id: verdict} for `reefs` ([(id, outline geometry, longitude, latitude)]) against `boundary` (GeoJSON features)."""
-    closures = [(f['properties'].get('FULLNAME') or f['properties'].get('NAME') or None, Shape(f['geometry'])) for f in boundary]
+    closures = [(feature_name(f), Shape(f['geometry'])) for f in boundary]
     return {rid: screen_place(closures, bounds, [geometry], lon, lat) for rid, geometry, lon, lat in reefs}
 
 
@@ -321,5 +334,5 @@ def stamp(root, region, export_features):
                 by_id.update(part)
     for f in export_features:
         f['properties']['protected_place'] = by_id[f['properties']['id']]
-    return {'version': VERSION, 'fingerprint': fingerprint([f['geometry'] for f in boundary], bounds),
+    return {'version': VERSION, 'fingerprint': fingerprint([f['geometry'] for f in boundary], bounds, [feature_name(f) for f in boundary]),
             'margin_m': PLANNING_MARGIN_M, 'bounds': bounds, 'boundary_features': len(boundary), 'boundary_files': files}
