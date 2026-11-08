@@ -956,6 +956,7 @@
     "legend.windStamp": {"en": "NOAA NCEP · GFS · {stamp}", "es": "NOAA NCEP · GFS · {stamp}"},
     "legend.fresh.line": {"en": "Updates: {cadence}", "es": "Actualización: {cadence}"},
     "legend.fresh.limit": {"en": " · age limit {limit}", "es": " · límite de antigüedad {limit}"},
+    "legend.fresh.limit.currents": {"en": " · radar observation at most 6 h old; forecast run at most 36 h old", "es": " · observación de radar de hasta 6 h; ejecución del pronóstico de hasta 36 h"},
     "legend.fresh.gate": {"en": " · run at most {run} h old, retrieved within {retrieved} h", "es": " · ejecución de hasta {run} h, obtenida hace menos de {retrieved} h"},
     "legend.fresh.daily": {"en": "daily", "es": "diaria"},
     "legend.fresh.hourly": {"en": "hourly", "es": "cada hora"},

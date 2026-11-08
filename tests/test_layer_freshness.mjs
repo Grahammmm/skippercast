@@ -96,3 +96,11 @@ test('swell states the gates forecastTime actually applies, not an invented age 
     assert.equal(draw(1, g.retrievedHours + 1, n), null, 'retrieval past the limit is withheld');
   } finally { await rm(dir, {recursive: true, force: true}); }
 });
+
+test('currents do not publish one age limit for both sources', async () => {
+  const {m, dir} = await load();
+  try {
+    assert.equal(m.cadenceLine('currents', 'en'), 'Updates: hourly · radar observation at most 6 h old; forecast run at most 36 h old');
+    assert.match(m.cadenceLine('currents', 'es'), /6 h.*36 h/);
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});

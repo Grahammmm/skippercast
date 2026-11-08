@@ -20,12 +20,14 @@ export interface LayerFreshness {
   forecastGate?: {runHours: number; retrievedHours: number};
   /** Whether the inventory update_cadence text must contain limitHours (test). */
   checkInventoryLimit?: boolean;
+  /** Own wording for the limit when one number would misstate it (currents: HF radar and WCOFS gate differently). */
+  limitKey?: StringId;
 }
 
 /** Keyed by the legend rail entry id; 'mpas' is the protected-areas rule row. */
 export const LAYER_FRESHNESS: Readonly<Record<string, LayerFreshness>> = {
   'seafloor': {cadence: 'legend.fresh.dated', limitHours: null, inventory: []},
-  'currents': {cadence: 'legend.fresh.hourly', limitHours: 6, inventory: ['hfr-6km'], checkInventoryLimit: true},
+  'currents': {cadence: 'legend.fresh.hourly', limitHours: 6, limitKey: 'legend.fresh.limit.currents', inventory: ['hfr-6km'], checkInventoryLimit: true},
   'water-temp': {cadence: 'legend.fresh.daily', limitHours: 72, inventory: ['sst-noaa-blended'], checkInventoryLimit: true},
   'sst-contrast': {cadence: 'legend.fresh.daily', limitHours: 72, inventory: ['sst-noaa-blended'], checkInventoryLimit: true},
   'sst-fronts': {cadence: 'legend.fresh.habitat', limitHours: 48, inventory: ['sst-fronts'], checkInventoryLimit: true},
@@ -45,6 +47,7 @@ export function cadenceLine(id: string, lang: Language = 'en'): string {
   if (!f) return '';
   const line = t('legend.fresh.line', lang, {cadence: t(f.cadence, lang)});
   if (f.forecastGate) return `${line}${t('legend.fresh.gate', lang, {run: String(f.forecastGate.runHours), retrieved: String(f.forecastGate.retrievedHours)})}`;
+  if (f.limitKey) return `${line}${t(f.limitKey, lang)}`;
   const limit = f.limitHours !== null ? `${f.limitHours} h` : f.limitMinutes !== undefined ? `${f.limitMinutes} min` : '';
   return limit ? `${line}${t('legend.fresh.limit', lang, {limit})}` : line;
 }
