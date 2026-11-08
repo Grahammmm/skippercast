@@ -43,12 +43,29 @@ import {PROFILE_TABLE, terrainDepthLimitFt, type Profile} from './profile.ts';
 import {LAND_WATER_BASIS, NO_LAND_WATER, keepWater, withheldNote, type LandWaterLines, type LandWaterModel, type Place} from './land-water.ts';
 import {waterRoute, type Route, type RouteFailure, type RoutePoint} from './route.ts';
 import type {HabitatFeature} from './map/coast-ranking.js';
-import {CHECKING, SCREEN_NOTES, fitLine, markAreas, markFit, markShown, withheld, type AtlasTarget, type MarkData, type MarkScreen} from './map/habitat.ts';
+import {CHECKING, SCREEN_NOTES, fitLine, markAreas, markFit, markFitCopy, markShown, withheld, type AtlasTarget, type MarkData, type MarkScreen} from './map/habitat.ts';
+import {cp, type CopyVar, type MarkCopyPart} from './mark-copy.ts';
+import type {StringId} from './i18n.ts';
 
 /** How many places the brief lists (§ 10). */
 export const TOP = 4;
 
 export type PickKind = 'spot' | 'habitat' | 'reef';
+/**
+ * SC1137-05: display-only catalogue parts for the words this file writes (never for a published name or sentence). A Spanish page resolves
+ * them at render (web/brief/ranking-copy.ts); English, and any pick or list built without them, shows the plain fields below.
+ */
+type Parts = readonly MarkCopyPart[];
+export interface PickCopy {readonly name?: Parts; readonly fit?: Parts; readonly reason?: Parts; readonly distance?: Parts}
+export interface RankingCopy {readonly label?: Parts; readonly about?: Parts; readonly basis?: Parts; readonly empty?: Parts}
+type RankKey = `source.${RankingSource}` | `about.${RankingSource}` | `basis.${RankingSource}`
+  | 'basis.from' | 'basis.noOrigin' | 'basis.ranged' | 'basis.swum' | 'basis.swimOff' | 'basis.water' | 'basis.fish' | 'basis.homePort' | 'withheld.one' | 'withheld.many'
+  | 'within' | 'within.reach' | 'within.shore'
+  | 'empty.pending' | 'empty.missing' | 'empty.shore' | 'empty.homePort' | 'empty.loadingPublication' | 'empty.mapLoading' | 'empty.screenNotCurrent'
+  | `empty.${RankingSource}.${'other' | 'none'}`
+  | 'name.reefHabitat' | 'fit.screened' | `species.${'lingcod' | 'rockfish-reef' | 'gopher-rockfish' | 'cabezon-shallow-reef'}` | 'swim'
+  | 'reason.terrain' | 'reason.terrainGraded' | 'reason.surveyed' | 'reason.relief' | 'reason.nearby';
+const rp = (key: RankKey, vars?: Readonly<Record<string, CopyVar>>): MarkCopyPart => cp(`ranking.${key}` as StringId, vars);
 /** One "where to look" row: the selection it makes, then what the row shows. */
 export interface Pick {
   readonly id: string; readonly kind: PickKind; readonly name: string;
@@ -59,6 +76,7 @@ export interface Pick {
   readonly at: {readonly latitude: number; readonly longitude: number};
   /** BF-closures-everywhere: the protected-area verdict for this place (dist/geo-screen.js `screenPlace`); a pick never exists without one. */
   readonly screen: PlaceVerdict;
+  readonly copy?: PickCopy;
 }
 export type RankingSource = 'terrain' | 'atlas' | 'publication';
 /** One source's list: its label and basis sentence (§ 12), its picks, and what to say when it has none. */
@@ -72,19 +90,22 @@ export interface Ranking {readonly source: RankingSource | null; readonly label:
   /** Places that passed every other filter but are not confirmed water (web/land-water.ts), withheld. */
   readonly withheld?: number;
   /** Some place waits on the land/water lines file; the list shows once it loads. */
-  readonly pending?: boolean}
+  readonly pending?: boolean;
+  /** SC1137-05: the label, basis and empty line as catalogue parts for a Spanish page; absent, the plain fields are shown. */
+  readonly copy?: RankingCopy}
 
 /**
  * Where a run distance starts: a named harbor or launch from published data, never the device's position.
  * "Use my location" (web/ports.ts `locatePort`) only suggests the nearest listed port; tests/test_ranking.mjs
  * fails if any other web/ file reads the device position.
  */
-export interface Origin {readonly latitude: number; readonly longitude: number; readonly name: string}
+export interface Origin {readonly latitude: number; readonly longitude: number; readonly name: string;
+  /** The harbor is published without a name, so `name` is the generated fallback (a Spanish page says it in Spanish). */ readonly unnamed?: true}
 /** The region's harbor (region.json `harbor`), the port distances are measured from. */
 export function harborOrigin(data: MarkData | null): Origin | null {
   const h = (data?.region as {harbor?: {name?: unknown; latitude?: unknown; longitude?: unknown}} | undefined)?.harbor;
   return h && typeof h.latitude === 'number' && typeof h.longitude === 'number' && Number.isFinite(h.latitude) && Number.isFinite(h.longitude)
-    ? {latitude: h.latitude, longitude: h.longitude, name: typeof h.name === 'string' ? h.name : 'the harbor'} : null;
+    ? {latitude: h.latitude, longitude: h.longitude, name: typeof h.name === 'string' ? h.name : 'the harbor', ...(typeof h.name === 'string' ? {} : {unnamed: true as const})} : null;
 }
 
 const miles = (origin: Origin | null, p: {latitude: number; longitude: number}): number | null => origin ? distanceNm(origin, p) : null;
@@ -109,7 +130,18 @@ export const KEEP_ALL: Keep = Object.freeze({maxNm: null, shore: null});
 /** Yards from shore, rounded to 25 for display, when the shore filter applies; else null. */
 const swim = (keep: Keep, p: {latitude: number; longitude: number}): number | null => keep.shore ? yardsFromShore(p, keep.shore.lines) : null;
 const kept = (keep: Keep, nm: number | null, yd: number | null): boolean => inside(nm, keep.maxNm) && (!keep.shore || (yd !== null && yd <= keep.shore.maxYd));
-const swimText = (yd: number): string => `~${Math.max(25, Math.round(yd / 25) * 25)} yd from shore`;
+const swimYd = (yd: number): number => Math.max(25, Math.round(yd / 25) * 25);
+const swimText = (yd: number): string => `~${swimYd(yd)} yd from shore`;
+const swimCopy = (yd: number | null): Pick['copy'] => yd === null ? {} : {distance: [rp('swim', {yd: swimYd(yd)})]};
+/** The coast species' name as a catalogue part (the four with a fit field), else null. */
+const speciesPart = (coast: string): MarkCopyPart | null => speciesOptions.some(s => s.id === coast && s.field) ? rp(`species.${coast}` as RankKey) : null;
+/** The generated relief or nearby-habitat reason of dist/species-fit.js as parts, only where the numbers rebuild the very same English sentence. */
+function speciesReasonCopy(t: AtlasTarget, species: 'lingcod' | 'rockfish', reason: string): Parts | undefined {
+  const m = t.metrics, pct = Math.round(Number(m?.rugose_or_bedrock_fraction_210m) * 100);
+  const v = species === 'lingcod' ? Number(m?.relief_210m_m).toFixed(1) : Number(m?.rough_habitat_within_250m_ha).toFixed(1);
+  return species === 'lingcod' ? (`${v} m local relief; ${pct}% mapped rough cover.` === reason ? [rp('reason.relief', {m: v, pct})] : undefined)
+    : (`${v} ha nearby rough habitat; ${pct}% mapped rough cover.` === reason ? [rp('reason.nearby', {ha: v, pct})] : undefined);
+}
 
 /** Picks after the land/water check: the water ones, and how many others were withheld or wait on the lines file. */
 export interface Screened {readonly picks: Pick[]; readonly withheld: number; readonly pending: boolean}
@@ -132,9 +164,12 @@ function atlasScreened(data: MarkData | null, screen: MarkScreen, target: string
       : target === 'rockfish' || target === 'rockfish-reef' || target === 'gopher-rockfish' ? 'rockfish' : null;
     const reason = species ? speciesFit(t, species)?.reason : null;
     const nm = miles(origin, t), yd = swim(keep, t);
+    // SC1137-05: the generated words as parts; a published terrain_interpretation is never given any.
+    const reasonParts = reason && species ? speciesReasonCopy(t, species, reason) : reason ? undefined : t.terrain_interpretation === undefined ? [rp('reason.surveyed')] : undefined;
     return {id: t.id, kind: 'spot', name: t.label, distance: yd === null ? distance(nm) : swimText(yd), nm, at: {latitude: t.latitude, longitude: t.longitude}, depth: band(lo, hi),
       screen: screenPlace(screen, {latitude: t.latitude, longitude: t.longitude, geometries: markAreas(t, data?.atlas)}),
-      fit: fit?.line ?? 'Habitat fit unrated for this target', reason: reason ?? t.terrain_interpretation ?? 'Surveyed reef terrain.'};
+      fit: fit?.line ?? 'Habitat fit unrated for this target', reason: reason ?? t.terrain_interpretation ?? 'Surveyed reef terrain.',
+      copy: {...swimCopy(yd), fit: fit ? markFitCopy(target, fit.n) : [cp('mark.layer.habitat.fitUnrated')], ...(reasonParts ? {reason: reasonParts} : {})}};
   })};
 }
 
@@ -164,9 +199,12 @@ function habitatScreened(ranked: readonly HabitatFeature[], screen: MarkScreen, 
   return {withheld: held, pending, picks: onWater.slice(0, keep.top ?? TOP).map(({f}) => {
     const p = f.properties, id = String(f.id ?? p.id), n = field ? Number(p[field]) : NaN;
     const at = {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}, nm = miles(origin, at), yd = swim(keep, at);
+    const species = speciesPart(coast), rated = !!label && n >= 1 && n <= 3;
     return {id, kind: 'habitat', name: 'Reef habitat', distance: yd === null ? distance(nm) : swimText(yd), nm, at, screen: screenPlace(screen, {...at, geometry: f.geometry}),
       depth: band(p.depth_min_ft, p.depth_max_ft), fit: label && n >= 1 && n <= 3 ? fitLine(label, n) : 'Screened reef habitat',
-      reason: `Terrain score ${p.terrain_score}/100${p.terrain_grade ? ` · grade ${p.terrain_grade}` : ''}.`};
+      reason: `Terrain score ${p.terrain_score}/100${p.terrain_grade ? ` · grade ${p.terrain_grade}` : ''}.`,
+      copy: {...swimCopy(yd), name: [rp('name.reefHabitat')], fit: rated && species ? [cp('mark.layer.habitat.fit', {species, n})] : [rp('fit.screened')],
+        reason: [p.terrain_grade ? rp('reason.terrainGraded', {score: String(p.terrain_score), grade: String(p.terrain_grade)}) : rp('reason.terrain', {score: String(p.terrain_score)})]}};
   })};
 }
 
@@ -188,13 +226,19 @@ export async function loadTerrainHabitat(loader: Loader = () => import('./map/co
 }
 
 /** A target as `loadReefTrip` publishes it (the fields read here). */
-export interface PublishedReef {readonly id: string; readonly latitude: number; readonly longitude: number; readonly neighborhood_depth_ft: readonly number[]; readonly terrain_interpretation?: string}
+export interface PublishedReef {readonly id: string; readonly latitude: number; readonly longitude: number; readonly neighborhood_depth_ft: readonly number[]; readonly terrain_interpretation?: string;
+  /** SC-PERF-PROTCHECK-1: the verdict the publisher computed for this reef (valid only with the publication's `protected_fingerprint`). */
+  readonly protected_place?: PlaceVerdict}
 type Ranked = PublishedReef & {readonly name: string; readonly trip_fit: number};
 /** The planner's seafloor habitat-export publication as the brief holds it, for one region. */
 export type ReefPublication = {readonly state: 'idle' | 'loading' | 'unavailable'; readonly region?: string;
     /** The export hash the planner's gate rejected (held, unavailable or superseded); set only by `recheckReefPublication`. */
     readonly rejected?: string}
-  | {readonly state: 'ready'; readonly region: string; readonly loaded: {readonly targets: readonly PublishedReef[]; readonly areas: readonly {id: string; geometry: unknown}[]; readonly publication: {export_sha256?: string} & Record<string, unknown>}};
+  /** SC-PERF-LAZY-1: not asked for yet; it starts after the map's first paint (web/reef-lazy.ts). */
+  | {readonly state: 'deferred'; readonly region: string}
+  /** SC-PERF-LAZY-1: Save-Data or a slow link; nothing is fetched until the angler asks. `bytes` is the published size when known. */
+  | {readonly state: 'offer'; readonly region: string; readonly bytes: number | null; readonly why: 'save-data' | 'slow-type' | 'slow-measured'}
+  | {readonly state: 'ready'; readonly region: string; readonly loaded: {readonly targets: readonly PublishedReef[]; readonly areas: readonly {id: string; geometry: unknown}[]; readonly protected_fingerprint?: string; readonly publication: {export_sha256?: string} & Record<string, unknown>}};
 export const reefPublication = signal<ReefPublication>({state: 'idle'});
 type ReefLoader = (region: string) => Promise<unknown>;
 /** The manifest gate as dist/seafloor-data.js `loadManifest` returns it (the fields read here). */
@@ -215,10 +259,20 @@ async function startLoad(region: string, loader: ReefLoader): Promise<void> {
   if (mine === generation) reefPublication.value = next;
 }
 
+/** A region was newly deferred: a load already running for another region (or this one) must not write over the deferred state. */
+export function supersedeReefLoads(): void { generation++; }
+
 /** Load the region's publication once (another region starts again); a failure leaves the list above in place. */
 export async function loadReefPublication(region: string, loader: ReefLoader = loadReefTrip): Promise<void> {
   const was = reefPublication.peek();
-  if (was.state !== 'idle' && was.region === region) return;
+  if (was.state !== 'idle' && was.state !== 'deferred' && was.state !== 'offer' && was.region === region) return;
+  await startLoad(region, loader);
+}
+
+/** Fetch the region's publication now, whatever state it is in (the angler's "Load … on Wi-Fi" or "Try again"); a load already running is left alone. */
+export async function reloadReefPublication(region: string, loader: ReefLoader = loadReefTrip): Promise<void> {
+  const was = reefPublication.peek();
+  if (was.state === 'loading' && was.region === region) return;
   await startLoad(region, loader);
 }
 
@@ -247,27 +301,34 @@ export async function recheckReefPublication(region: string, gate: ReefGate = r 
 const rankSpots = bestSpots as unknown as (atlas: unknown, screen: unknown, o: Record<string, unknown>) => Ranked[];
 /** SCJ-2b: the trip planner's protected-area screen (web/trip.ts `protectedScreen`), declared here so this file does not import trip.ts. */
 export type PlannerScreenState = {readonly state: 'idle' | 'loading' | 'failed'} | {readonly state: 'loaded'; readonly region?: string;
-  readonly screen: {ready(): boolean; pointAllowed(p: {latitude: number; longitude: number}): boolean; geometryAllowed(g: unknown): boolean}};
+  readonly screen: {ready(): boolean; pointAllowed(p: {latitude: number; longitude: number}): boolean; geometryAllowed(g: unknown): boolean; fingerprint?(): string | null}};
 type ReadyScreen = Extract<PlannerScreenState, {state: 'loaded'}>['screen'];
 /** The publication list's line while the planner's screen has loaded but is not current (failed, never checked, or past 36 h). */
 export const SCREEN_NOT_CURRENT = 'Protected-area check not current · fishing places withheld';
 
 /** The planner's ranking of the publication (`bestSpots`, same filters, the planner's screen), then Spear's swim, as picks. */
-function publicationScreened(loaded: Extract<ReefPublication, {state: 'ready'}>['loaded'], screen: ReadyScreen, species: string, label: string | null,
+function publicationScreened(loaded: Extract<ReefPublication, {state: 'ready'}>['loaded'], screen: ReadyScreen, species: string, label: string | null, coast: string,
   limitFt: number, origin: Origin | null, keep: Keep, place: Place): Screened {
   if (!screen.ready() || !(limitFt > 0)) return {picks: [], withheld: 0, pending: false};
   let pending = false;
   const watched: Place = p => { const at = place(p); pending ||= at.state === 'unknown' && at.reason === 'pending'; return at; };
   const stats = {withheld: 0};
+  // SC-PERF-PROTCHECK-1: the verdict computed at publish time (src/skippercast/seafloor/protected_screen.py) stands in for `screenPlace` only while this
+  // screen holds exactly the boundary data it was computed against; any other screen (or an export without verdicts) runs `screenPlace` as before.
+  // Fallback removal: once no cached export without `protected_fingerprint` can reach a browser (every region republished and the old files past `expires_at` + the cache lifetime).
+  const stored = typeof loaded.protected_fingerprint === 'string' && screen.fingerprint?.() === loaded.protected_fingerprint;
   // RF1050-16: malformed depth bands are dropped before the 50-candidate cap so they cannot starve a valid place; the cached publication is not touched.
   const maxDepth = Math.min(limitFt, 300);
   const eligible = {...loaded, targets: loaded.targets.filter(t => validDepthPair(t?.neighborhood_depth_ft, maxDepth))};
   const ranked = rankSpots(eligible, screen, {species, count: 50, maxDepth, origin, maxDistanceNm: keep.maxNm ?? Infinity, place: watched, stats});
   return {withheld: stats.withheld, pending, picks: ranked.filter(t => kept(keep, miles(origin, t), swim(keep, t))).slice(0, keep.top ?? TOP).map(t => {
     const [lo, hi] = t.neighborhood_depth_ft as [number, number], nm = miles(origin, t), yd = swim(keep, t);
+    const species = speciesPart(coast);
     return {id: t.id, kind: 'reef', name: t.name, distance: yd === null ? distance(nm) : swimText(yd), nm, depth: band(lo, hi),
       fit: label ? fitLine(label, t.trip_fit) : 'Screened reef habitat', reason: t.terrain_interpretation ?? 'Surveyed reef terrain.', at: {latitude: t.latitude, longitude: t.longitude},
-      screen: screenPlace(screen, {latitude: t.latitude, longitude: t.longitude, geometries: areasOf(loaded, t)})};
+      screen: (stored ? t.protected_place : undefined) ?? screenPlace(screen, {latitude: t.latitude, longitude: t.longitude, geometries: areasOf(loaded, t)}),
+      copy: {...swimCopy(yd), fit: label && species ? [cp('mark.layer.habitat.fit', {species, n: t.trip_fit})] : [rp('fit.screened')],
+        ...(t.terrain_interpretation === undefined ? {reason: [rp('reason.surveyed')]} : {})}};
   })};
 }
 /** The reef areas a published place lies in (its `area_ids` in the publication's `areas`). */
@@ -309,6 +370,7 @@ const ATLAS_BASIS = 'Survey reef atlas marks that pass the current protected-are
   + 'Depths are the nominal range near each mark in the survey\'s own vertical reference; distances are straight-line from';
 const TERRAIN_BASIS = 'Reviewed coastal terrain habitat that passes the current protected-area and closure check, ordered by species fit, then the physical terrain score. '
   + 'Depths are nominal; distances are straight-line from';
+const CHECKING_NOTE: StringId = 'mark.layer.habitat.screen.checking';
 const PUBLICATION_BASIS = 'Places from the seafloor reef publication the trip planner uses, ranked as the planner ranks them: species fit, then habitat evidence confidence, then the terrain score, '
   + 'kept only where they pass the planner\'s current protected-area check. Depths are the nominal range near each place; distances are straight-line from';
 
@@ -327,37 +389,53 @@ export function ranking(i: RankingInputs): Ranking {
   // Without a harbor or launch position no distance is measured, and the basis says so rather than naming one.
   const from = `${origin ? ` ${harbor}.` : ' the region\'s harbor, which has no published position here, so no distance is shown.'}${ranged}${swum} ${LAND_WATER_BASIS} A ranked place is a place to look; fish presence is unverified.`;
   const place = i.place ?? NO_LAND_WATER;
+  // SC1137-05: the same sentences as catalogue parts, built from the same numbers and flags (the English strings above are what English shows).
+  const harborVar: CopyVar = origin?.unnamed ? cp('where.harbor') : harbor;
+  const fromCopy: MarkCopyPart[] = [origin ? rp('basis.from', {harbor: harborVar}) : rp('basis.noOrigin'),
+    ...(reach === null ? [] : [rp('basis.ranged', {nm: Number(reach.toFixed(1))})]),
+    ...(shore ? [rp('basis.swum', {yd: shore.maxYd})] : i.shore ? [rp('basis.swimOff')] : []), ' ', rp('basis.water'), ' ', rp('basis.fish')];
+  const withinCopy = rp('within', {ft: limit, reach: reach === null ? '' : rp('within.reach', {nm: Number(reach.toFixed(1)), harbor: harborVar}), shore: shore ? rp('within.shore', {yd: shore.maxYd}) : ''});
+  const withheldCopy = (n: number): MarkCopyPart => rp(n === 1 ? 'withheld.one' : 'withheld.many', {n});
+  const headCopy = (source: RankingSource): RankingCopy => ({label: [rp(`source.${source}`)], about: [rp(`about.${source}`)], basis: [rp(`basis.${source}`), ...fromCopy]});
   /** The basis, the list and the empty line once the land/water check has run. */
-  const checked = (s: Screened, basis: string, empty: string) => ({
-    basis: s.withheld ? `${basis} ${withheldNote(s.withheld)}` : basis,
-    picks: s.pending ? [] : s.picks,
-    empty: s.pending ? 'Checking land and water for these places…' : s.withheld && !s.picks.length ? `${withheldNote(s.withheld)} ${empty}` : empty,
-    ...(s.withheld ? {withheld: s.withheld} : {}), ...(s.pending ? {pending: true} : {}),
-  });
+  const checked = (s: Screened, source: RankingSource, basis: string, empty: string, emptyCopy: Parts | undefined) => {
+    const head = headCopy(source), parts = s.pending ? [rp('empty.pending')] : emptyCopy ? (s.withheld && !s.picks.length ? [withheldCopy(s.withheld), ' ', ...emptyCopy] : emptyCopy) : undefined;
+    return {
+      basis: s.withheld ? `${basis} ${withheldNote(s.withheld)}` : basis,
+      picks: s.pending ? [] : s.picks,
+      empty: s.pending ? 'Checking land and water for these places…' : s.withheld && !s.picks.length ? `${withheldNote(s.withheld)} ${empty}` : empty,
+      ...(s.withheld ? {withheld: s.withheld} : {}), ...(s.pending ? {pending: true} : {}),
+      copy: {...head, ...(s.withheld ? {basis: [...head.basis!, ' ', withheldCopy(s.withheld)]} : {}), ...(parts ? {empty: parts} : {})} as RankingCopy,
+    };
+  };
   const within = `within ${limit} ft${reach === null ? '' : ` and ${Number(reach.toFixed(1))} nm of ${harbor}`}${shore ? ` and ${shore.maxYd} yd of shore` : ''}`;
   const extra = {...(origin ? {harbor: origin.name, origin: {latitude: origin.latitude, longitude: origin.longitude}} : {}), ...(reach === null ? {} : {reach})};
+  const bare = (empty: string, key: 'empty.missing' | 'empty.shore' | 'empty.loadingPublication' | 'empty.mapLoading') =>
+    ({source: null, label: '', basis: '', picks: [], empty, copy: {empty: [rp(key)]}} as Ranking);
   // A region that does not exist has nothing to rank for any profile, Shore included.
-  if (i.missing) return {source: null, label: '', basis: '', picks: [], empty: 'No ranked places: this region does not exist.'};
+  if (i.missing) return bare('No ranked places: this region does not exist.', 'empty.missing');
   if (PROFILE_TABLE[i.profile].whereToLook === 'shore-runs')
-    return {source: null, label: '', basis: '', picks: [], empty: 'Shore runs and their review status show on the Chart.'};
+    return bare('Shore runs and their review status show on the Chart.', 'empty.shore');
   if (i.originPending) { // SCJ-2c: no harbour-based numbers that change under the user once the port lands.
     const r = ranking({...i, originPending: false, reachNm: null}); // only its source and label are kept
-    return {source: r.source, label: r.label, basis: r.source ? 'Distances run from your home port, which is still loading.' : '', picks: [], empty: 'Finding your home port…'};
+    return {source: r.source, label: r.label, basis: r.source ? 'Distances run from your home port, which is still loading.' : '', picks: [], empty: 'Finding your home port…',
+      copy: {...(r.copy?.label ? {label: r.copy.label} : {}), ...(r.copy?.about ? {about: r.copy.about} : {}), ...(r.source ? {basis: [rp('basis.homePort')]} : {}), empty: [rp('empty.homePort')]}};
   }
   const pub = i.publication, plannerSpecies = Object.hasOwn(PLANNER_SPECIES, i.coast) ? PLANNER_SPECIES[i.coast] : undefined;
   if (pub && i.region && plannerSpecies) {
-    if (pub.region !== i.region || pub.state === 'idle' || pub.state === 'loading')
-      return {source: null, label: '', basis: '', picks: [], empty: 'Loading ranked reef places…'};
+    if (pub.region !== i.region || pub.state === 'idle' || pub.state === 'loading' || pub.state === 'deferred')
+      return bare('Loading ranked reef places…', 'empty.loadingPublication');
     if (pub.state === 'ready' && manifestState(pub.loaded.publication, i.region, i.now).state === 'ready') {
       const ps = i.plannerScreen, head = {source: 'publication' as const, label: 'Seafloor reef publication', basis: PUBLICATION_BASIS + from, picks: [], ...extra};
+      const lead = headCopy('publication'), notCurrent = {...lead, empty: [rp('empty.screenNotCurrent')]};
       // Until the planner's screen has loaded for this region nothing is shown; one that is not current withholds every place.
       if (ps?.state !== 'loaded' || ps.region !== undefined && ps.region !== i.region)
-        return {...head, empty: ps?.state === 'failed' ? SCREEN_NOT_CURRENT : SCREEN_NOTES.checking};
-      if (!ps.screen.ready()) return {...head, empty: SCREEN_NOT_CURRENT};
-      const s = publicationScreened(pub.loaded, ps.screen, plannerSpecies, speciesLabel(i.coast), limit, origin, keep, place);
+        return ps?.state === 'failed' ? {...head, empty: SCREEN_NOT_CURRENT, copy: notCurrent} : {...head, empty: SCREEN_NOTES.checking, copy: {...lead, empty: [cp(CHECKING_NOTE)]}};
+      if (!ps.screen.ready()) return {...head, empty: SCREEN_NOT_CURRENT, copy: notCurrent};
+      const s = publicationScreened(pub.loaded, ps.screen, plannerSpecies, speciesLabel(i.coast), i.coast, limit, origin, keep, place);
       const empty = s.withheld ? `No other ranked reef places ${within} for this target.`
         : `No ranked reef places pass the current protected-area check ${within} for this target.`;
-      return {source: 'publication', label: 'Seafloor reef publication', ...checked(s, PUBLICATION_BASIS + from, empty), ...extra};
+      return {source: 'publication', label: 'Seafloor reef publication', ...checked(s, 'publication', PUBLICATION_BASIS + from, empty, [rp(s.withheld ? 'empty.publication.other' : 'empty.publication.none', {within: withinCopy})]), ...extra};
     }
   }
   const t = i.terrain, field = speciesOptions.find(s => s.id === i.coast);
@@ -366,13 +444,15 @@ export function ranking(i: RankingInputs): Ranking {
     const s = habitatScreened(t.rank(t.features, field.field, i.now), screen, i.region, i.coast, limit, origin, keep, place);
     const empty = screen.status !== 'ready' ? screen.note : s.withheld ? `No other reviewed terrain habitat ${within} for this target.`
       : `No reviewed terrain habitat passes the current protected-area and closure check ${within} for this target.`;
-    return {source: 'terrain', label: 'Reviewed terrain habitat', ...checked(s, TERRAIN_BASIS + from, empty), ...extra};
+    const emptyCopy = screen.status !== 'ready' ? screen.noteCopy : [rp(s.withheld ? 'empty.terrain.other' : 'empty.terrain.none', {within: withinCopy})];
+    return {source: 'terrain', label: 'Reviewed terrain habitat', ...checked(s, 'terrain', TERRAIN_BASIS + from, empty, emptyCopy), ...extra};
   }
-  if (!i.data) return {source: null, label: '', basis: '', picks: [], empty: 'Ranked places load with the map.'};
+  if (!i.data) return bare('Ranked places load with the map.', 'empty.mapLoading');
   const s = atlasScreened(i.data, i.screen, i.target, limit, origin, keep, place);
   const empty = i.screen.status !== 'ready' ? i.screen.note : s.withheld ? `No other surveyed reef marks ${within} for this target.`
     : `No surveyed reef marks ${within} for this target.`;
-  return {source: 'atlas', label: 'Survey reef atlas', ...checked(s, ATLAS_BASIS + from, empty), ...extra};
+  const emptyCopy = i.screen.status !== 'ready' ? i.screen.noteCopy : [rp(s.withheld ? 'empty.atlas.other' : 'empty.atlas.none', {within: withinCopy})];
+  return {source: 'atlas', label: 'Survey reef atlas', ...checked(s, 'atlas', ATLAS_BASIS + from, empty, emptyCopy), ...extra};
 }
 
 /** SC1322-10: the most water routes one Boat list computes; picks past it keep their straight line. */

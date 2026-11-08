@@ -313,13 +313,13 @@ test('the listed Boat picks (the list and the run line read them) keep each pick
 // The enumeration is derived from each module's exports: a new exported function must be named here as carrying a verdict or as not naming a place.
 const CARRIES = new Set(['atlasPicks', 'habitatPicks', 'ranking', 'routedPicks', 'tripLegs', 'placeWaypoint', 'checkGpx', 'reachRing', 'createPlanner',
   'currentRanking', 'boatPicks', 'listedBoatPicks', 'screenLine']);
-const NO_PLACE = new Set(['harborOrigin', 'loadTerrainHabitat', 'loadReefPublication', 'recheckReefPublication', 'cancelWaypointPlacement', 'beginWaypointPlacement',
+const NO_PLACE = new Set(['harborOrigin', 'loadTerrainHabitat', 'loadReefPublication', 'recheckReefPublication', 'reloadReefPublication', 'supersedeReefLoads', 'cancelWaypointPlacement', 'beginWaypointPlacement',
   'loadContourFile', 'nextFriday', 'planFit', 'parseReach', 'parseStoredReach', 'loadReach', 'saveReach', 'reachFor', 'nmText', 'parseSpearDepth', 'parseShoreSwim',
   'parseStoredSpear', 'loadSpear', 'saveSpear', 'shoreSwimLimit', 'parseStoredLaunch', 'loadLaunch', 'saveLaunch', 'isReachProfile', 'routeAfterPaint', 'choosePick',
   // Only aggregates confidence percentages; it neither names nor returns a place.
   'sharedConfidence', 'pickRun', 'routeWhyText',
   // Only words a verdict it is handed (a refused placement's status, a leg's line); it screens nothing and names no place of its own.
-  'verdictLine', 'diveText', 'WhereToLook']);
+  'verdictLine', 'verdictParts', 'diveText', 'WhereToLook']);
 test('every exported function of the owned modules either carries a screen verdict or is listed as naming no place', () => {
   const fns = (mod, names = Object.keys(mod)) => names.filter(k => typeof mod[k] === 'function');
   const tsx = readFileSync(new URL('../web/brief/WhereToLook.tsx', import.meta.url), 'utf8');

@@ -127,7 +127,7 @@ normalize one to the other. Do not convert between units.
 The line under each brief tile reading is said from structured parts by
 `web/brief/tile-copy.ts`; the model's English line stays for other readers.
 Station, buoy, site and datum names are never translated. Catalogue IDs:
-`tile.detail.*`, `tile.clock.*`, `tile.gap.*`, `tide.unavailable`, `tide.noCurve`.
+`tile.detail.*`, `tile.clock.*`, `tile.gap.*`, `tide.unavailable`, `tide.noCurve`; the map's station and ring cards use `map.station.*` and `map.nearshore.*`; the map stage's toggle, terrain buttons and terrain reasons use `stage.*` (`Chart` is `Carta`; `Los gráficos costeros no están disponibles. La carta, los pronósticos y las herramientas de viaje siguen funcionando.` and `Aún no hay terreno costero revisado que cubra esta región.` keep every clause), and the private saved-spots row and cards use `savedSpots.*` (`A saved position, not a recommendation. Check current rules before you fish.` is `Una posición guardada, no una recomendación. Revisa el reglamento vigente antes de pescar.`; `No protected-area overlap found in this check.` is `No se encontró superposición con áreas protegidas en esta comprobación.`, a result of this check and never legal clearance), with the protected-area verdict lines still `where.screen.*` (`high event` / `low event` are `evento de pleamar` / `evento de bajamar`).
 
 | English | Spanish | Catalogue ID | Meaning kept |
 | --- | --- | --- | --- |
@@ -139,11 +139,52 @@ Station, buoy, site and datum names are never translated. Catalogue IDs:
 | `ebb` / `flood` / `mid-ebb` | `vaciante` / `creciente` / `mitad de la vaciante` | `tile.detail.ebb`, `.flood`, `.midEbb` | tide stage |
 | `Rising` / `Falling` / `Turning` | `Subiendo` / `Bajando` / `Cambiando` | `tile.detail.rising`, `.falling`, `.turning` | trend |
 | `next high` / `next low` | `próxima pleamar` / `próxima bajamar` | `tile.detail.nextHigh`, `.nextLow` | |
+| rule-of-thumb model, not a sea-keeping calculation | `modelo empírico` ... `no un cálculo de navegabilidad` | `brief.boat.note` | `empírico` is this heuristic, not a validated sea-keeping calculation; `navegabilidad` does not certify seaworthiness |
+| Saved regions are unchanged | `Las regiones guardadas no han cambiado` | `tidePack.unavailable`, `tidePack.notLive` | only the two refusals before anything is stored; not a claim about a storage failure |
+| Life stage / What to search for / How to fish it / Timing / When conditions change / Caution / Confirm on the day | `Etapa de vida` / `Qué buscar` / `Cómo pescarlo` / `Cuándo pescar` / `Cuando cambian las condiciones` / `Precaución` / `Confirmar ese día` | `where.searchPlan.*` | labels only; the reviewed plan text is not translated |
 | surf, seas small / moderate / large / heavy | `pequeño` / `moderado` / `grande` / `muy intenso` | `tile.detail.band.small`, `.moderate`, `.large`, `.heavy` | in `oleaje en la costa {band}` and `oleaje {band}` |
 | surge low / moderate / strong / heavy | `leve` / `moderado` / `fuerte` / `muy intenso` | `tile.detail.band.low`, `.moderate`, `.strong`, `.heavy` | in `vaivén del agua {band}` |
 | kayak wind light / moderate / fresh / strong | `leve` / `moderado` / `fresco` / `fuerte` | `tile.detail.band.light`, `.moderate`, `.fresh`, `.strong` | |
 | onshore / offshore / cross-shore | `hacia la costa` / `hacia mar adentro` / `paralelo a la costa` | `tile.detail.side.*` | |
 | `(offshore estimate)` | `(estimación mar adentro)` | `tile.detail.offshoreEstimate` | not an exact launch reading |
+
+### Mark forecast block (SC1137-04)
+
+The mark card's forecast rows, gap reasons, source lines and basis are said from the catalogue by
+`web/brief/MarkForecast.tsx` and `web/brief/mark-forecast.ts` (explicit `lang`, English default).
+Model, family and forecast-point names, grid degrees and `kt` / `ft` / `s` / `km` tokens stay as published.
+Catalogue IDs: `markForecast.*`.
+
+| English | Spanish | Catalogue ID | Meaning kept |
+| --- | --- | --- | --- |
+| run (model run) | `corrida` | `markForecast.gate.*`, `markForecast.src.run` | the model run, not the forecast |
+| not values at this mark or at a model cell | `no valores en esta marca ni en una celda del modelo` | `markForecast.basis` | point values, not the mark's or a cell's |
+| never averaged | `nunca se promedian` | `markForecast.basis` | two families, two rows |
+| leaves a gap | `deja un hueco` | `markForecast.basis` | a gap is not filled |
+| Gap: {reason}. | `Faltante: {reason}.` | `markForecast.gapLine` | |
+| about {km} km / unstated | `aproximadamente {km} km` / `no indicada` | `markForecast.gridAbout`, `markForecast.unstated` | grid spacing as stated |
+| from / gusts / toward {n}° true | `desde` / `ráfagas de` / `hacia {n}° verdadero` | `markForecast.from`, `.gusts`, `.towardTrue` | direction wind comes from vs. current goes toward |
+| within 1.5 grid lengths | `a menos de {km} km (1.5 longitudes de malla)` | `markForecast.gap.noCell` | both failure clauses stay |
+
+### Where to look ranking words (SC1137-05)
+
+The list's source labels, basis, empty lines, fit and generated reasons are said from the catalogue by
+`web/brief/ranking-copy.ts` from parts `web/ranking.ts` and `web/area-reasons.ts` attach (display only; English and every
+export read the plain fields). Published names, `terrain_interpretation` and source titles stay as published.
+Catalogue IDs: `ranking.*`; the fit line reuses `mark.layer.habitat.fit`, `.fitUnrated` and the screen notes `mark.layer.habitat.screen.*`.
+
+| English | Spanish | Catalogue ID | Meaning kept |
+| --- | --- | --- | --- |
+| distances are straight-line from | `las distancias son en línea recta desde` | `ranking.basis.publication`, `.terrain`, `.atlas` | a straight line, not a route |
+| not applied / not a swim route | `no es una ruta para nadar` / `No se aplica tu límite de nado` | `ranking.basis.swum`, `ranking.basis.swimOff` | the distance is approximate; the limit may be off |
+| the shoreline is not a navigation boundary | `la línea costera no es un límite de navegación` | `ranking.basis.water` | land/water check; 25 m and tiles stay |
+| fish presence is unverified | `la presencia de peces no está verificada` | `ranking.basis.fish` | a place to look, not a catch probability |
+| spots withheld: land/water not confirmed | `lugares omitidos: no se ha confirmado si son tierra o agua` | `ranking.withheld.one`, `.many` | withheld is never "clear" |
+| Protected-area check not current | `La revisión de áreas protegidas no está actualizada · se omiten los lugares de pesca` | `ranking.empty.screenNotCurrent` | every place withheld |
+| Passed the protected-area check with {m} m clearance | `Pasó la revisión de áreas protegidas con {m} m de separación` | `ranking.reason.clearance` | dated evidence, not a current safety authorization |
+| within {ft} ft ... yd of shore | `dentro de {ft} ft ... y {yd} yd de la costa` | `ranking.within`, `.within.reach`, `.within.shore` | the thresholds in the empty line |
+
+The Where to look sentences say "omitido" for a withheld place (the spec's wording); the map's screen notes say "retenido". Both mean withheld.
 
 ## 2. Observed divergences
 

@@ -33,6 +33,7 @@ import {LAYERS, drapeStyle, terrainLayers, type TerrainLayer} from './layers.ts'
 import type {Palette} from './palette.ts';
 import {coastTarget, hasCoastTerrain, type CurrentLayer, type Presentation} from '../coast-context.ts';
 import {appClock, createHourClock, type HourClock} from '../clock.ts';
+import {t} from '../i18n.ts';
 import {dockTime} from '../hour.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt, type Profile} from '../profile.ts';
 import {DEFAULT_ZONE} from '../zone.ts'; // the zone the dock reads days in until the region's own arrives
@@ -40,6 +41,7 @@ import {
   appView, current, day, habitat, hour, layers, navigate, parseHour, presentation, profile, region, selection, setParams, species,
   stagePresentation, UNSUPPORTED, view, withParams, type AppView, type CurrentChoice,
 } from '../state.ts';
+import {markMapIdle} from '../map-ready.ts';
 import {C2_ENABLED, C2_RELEASES} from './c2-releases.ts';
 import type {C2View} from './terrain.js';
 
@@ -60,6 +62,11 @@ export const HOME_ZOOM = 12;
 /** v1's wording (dist/coast-workspace.js). */
 export const UNAVAILABLE = 'Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable.';
 export const NO_TERRAIN = 'No reviewed coastal terrain covers this region yet.';
+/** SC1352-06: a blocked reason in `lang`. Only the two known reasons translate; any other text passes through intact. */
+export function terrainReason(raw: string | null, lang: string): string {
+  if (raw === null || lang !== 'es') return raw ?? '';
+  return raw === UNAVAILABLE ? t('stage.unavailable', lang) : raw === NO_TERRAIN ? t('stage.noTerrain', lang) : raw;
+}
 /** v1's status for an unlisted ?current= (dist/coastal-current-control.js, #402). */
 export const UNSUPPORTED_CURRENT = 'Unsupported surface-current source. Choose a listed source.';
 
@@ -442,6 +449,7 @@ export function createStage(options: StageOptions): Stage {
       if (alive) fail(error);
     } finally {
       mounting = false;
+      markMapIdle(); // SC-PERF-LAZY-1: a terrain presentation never mounts the Chart, so its mount attempt releases the reef export too
       if (again) { again = false; if (shownPresentation.peek() !== 'chart') void mount(); }
     }
   }

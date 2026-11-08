@@ -48,3 +48,18 @@ export function resolveMarkCopy(mark: ChartMark, lang: string): MarkDisplay {
     terms: (mark.terms ?? []).map((_, i) => lang === 'es' && mark.copyTerms?.[i] ? join(mark.copyTerms[i]!, lang) : undefined),
   };
 }
+
+// SC1352-05: Spanish display forms for station and ring readings, formatted when the descriptor is built (a
+// language change only picks the descriptor; nothing is refetched). Exactly one decimal, as the English toFixed(1).
+const esOne = new Intl.NumberFormat('es', {minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false});
+export const esDecimal = (n: number): string => esOne.format(n);
+/** SC1352-07: `n` with exactly `digits` decimals in Spanish (the English toFixed(digits)); the same rounding rule as `esDecimal`. */
+export const esFixed = (n: number, digits: number): string => new Intl.NumberFormat('es', {minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false}).format(n);
+/** An instant as a Spanish date and clock time in `tz` (a midnight boundary stays visible); the raw text when it is not an instant or the zone is unknown. */
+export function esStamp(at: unknown, tz: string, zoneName = false): string {
+  const ms = typeof at === 'string' || typeof at === 'number' ? Date.parse(String(at)) : NaN;
+  if (!Number.isFinite(ms)) return String(at);
+  try {
+    return new Intl.DateTimeFormat('es', {timeZone: tz, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, ...(zoneName ? {timeZoneName: 'short'} : {})}).format(new Date(ms));
+  } catch { return String(at); }
+}

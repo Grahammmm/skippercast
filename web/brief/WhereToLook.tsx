@@ -29,7 +29,8 @@ import {depthLimitFt, PROFILE_TABLE} from '../profile.ts';
 import {isReachProfile, nmText, reachFor, shoreSwimLimit, spearPlan} from '../reach.ts';
 import {loadShoreLines, shoreLines} from '../shore-distance.ts';
 import {landWater, loadLandWater, loadLandWaterLines, placeFor, type LandWaterState} from '../land-water.ts';
-import {loadReefPublication, ranking, recheckReefPublication, reefPublication, regionLoad, routedPicks, ROUTE_BUDGET, TOP, type Pick, type Ranking, type RoutedPick, type RouteFn} from '../ranking.ts';
+import {ranking, recheckReefPublication, reefPublication, regionLoad, routedPicks, ROUTE_BUDGET, TOP, type Pick, type Ranking, type RoutedPick, type RouteFn} from '../ranking.ts';
+import {acceptReefLoad, offerMegabytes, requestReefPublication} from '../reef-lazy.ts';
 import {waterRoute, type Route, type RouteFailure} from '../route.ts';
 import {fitCamera} from '../map/ranked.ts';
 import {cameraParam} from '../map/stage.ts';
@@ -37,10 +38,12 @@ import {habitat, navigate, profile, region, selection, setParams, species} from 
 import {loadProtectedScreen, protectedScreen} from '../trip.ts';
 import {durationText, runMinutes} from './run.ts';
 import {regionCoverage, regionPlans, targetState} from '../species.ts';
-import {planFor, noPlanText} from '../search-plan.ts';
+import {planFor} from '../search-plan.ts';
+import {missingSearchPlanText, searchPlanLabel} from './remaining-copy.ts';
 import {regionInfo} from '../app/region-info.ts';
 import {NO_REASONS, reasonsFor, targetEvidence} from '../area-reasons.ts';
 import {language, t, type Language, type StringId} from '../i18n.ts';
+import {pickDistance, pickFit, pickName, pickReason, rankingAbout, rankingBasis, rankingEmpty, rankingLabel, reasonText} from './ranking-copy.ts';
 
 export type {Pick, Ranking};
 
@@ -209,12 +212,12 @@ function EmptyOrPlan({empty}: {empty: string}) {
   const plans = loaded && loaded.region === id ? loaded.plans : null;
   if (!plans || targetState(target, p, plans, regionCoverage(id)) !== 'plan') return <p class="app-empty">{empty}</p>;
   const plan = planFor(target, loaded, id), info = regionInfo.value, lang = language.value;
-  if (!plan) return <p class="app-empty">{empty} {noPlanText(info?.id === id ? info.name : null)}</p>;
+  if (!plan) return <p class="app-empty">{empty} {missingSearchPlanText(info?.id === id ? info.name : null, lang)}</p>;
   return (
     <div data-plan={plan.id}>
       <h3 class="ui-eyebrow">{t('where.plan', lang)}</h3>
       <ul class="app-picks">
-        {plan.items.map((item, i) => <li key={i} data-field={item.field}>{item.label}: {item.text}</li>)}
+        {plan.items.map((item, i) => <li key={i} data-field={item.field}>{searchPlanLabel(item, lang)}: {item.text}</li>)}
       </ul>
       {plan.basis ? <p data-field="tactics_basis">{plan.basis}</p> : null}
       {plan.links.length ? (
@@ -234,14 +237,43 @@ function Why({pick}: {pick: Pick}) {
   const data = markData.value, pub = reefPublication.value;
   const found = pick.kind === 'spot' ? data?.atlas?.targets.find(t => t.id === pick.id) : pick.kind === 'reef' && pub.state === 'ready' ? pub.loaded.targets.find(t => t.id === pick.id) : undefined;
   const reasons = found ? reasonsFor(pick.id, targetEvidence(found, pick.kind === 'spot' ? data?.atlas : null, data?.region.source_names), Date.now()) : [];
-  if (!reasons.length) return <p class="app-empty app-pick-why" data-why="none">{NO_REASONS}</p>;
+  const lang = language.value;
+  if (!reasons.length) return <p class="app-empty app-pick-why" data-why="none">{lang === 'es' ? t('ranking.noReasons', lang) : NO_REASONS}</p>;
   return (
-    <ul class="app-pick-why" data-why="reasons" aria-label={t('where.why', language.value)}>
+    <ul class="app-pick-why" data-why="reasons" aria-label={t('where.why', lang)}>
       {reasons.map((x, i) => (
-        <li key={i}><span class="ui-mono">{x.date}</span> {x.text} · {x.sourceURL ? <a href={x.sourceURL} target="_blank" rel="noopener noreferrer">{x.source}</a> : x.source}</li>
+        <li key={i}><span class="ui-mono">{x.date}</span> {reasonText(x, lang)} · {x.sourceURL ? <a href={x.sourceURL} target="_blank" rel="noopener noreferrer">{x.source}</a> : x.source}</li>
       ))}
     </ul>
   );
+}
+
+/**
+ * SC-PERF-LAZY-1: says plainly when the reef ranking is not loaded and why the list above is the shorter one. On Save-Data or a slow link
+ * it holds the one button that fetches it; if the fetch failed it offers to try again. Nothing shows while it loads or once it has.
+ */
+function ReefNote({id, lang}: {id: string | null; lang: Language}) {
+  const pub = reefPublication.value;
+  if (!id || pub.region !== id) return null;
+  if (pub.state === 'offer') {
+    const mb = offerMegabytes(pub.bytes);
+    return (
+      <div class="app-reef-note" data-reef="offer" data-why={pub.why}>
+        <p class="app-reef-text">{t('reef.offer.note', lang)}</p>
+        <Button size="sm" onClick={() => { void acceptReefLoad(id); }}>{mb === null ? t('reef.offer.buttonNoSize', lang) : t('reef.offer.button', lang, {mb})}</Button>
+      </div>
+    );
+  }
+  // A rejected publication (`rejected` set: held, expired or superseded) is withheld on purpose; only a failed fetch says "try again".
+  if (pub.state === 'unavailable' && pub.rejected === undefined) {
+    return (
+      <div class="app-reef-note" data-reef="unavailable">
+        <p class="app-reef-text">{t('reef.unavailable.note', lang)}</p>
+        <Button size="sm" onClick={() => { void acceptReefLoad(id); }}>{t('reef.retry', lang)}</Button>
+      </div>
+    );
+  }
+  return null;
 }
 
 export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
@@ -260,8 +292,9 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   // minute, as the planner checks its plan, so a held, unavailable or superseded publication stops ranking.
   useEffect(() => {
     if (!id) return;
+    // SC-PERF-LAZY-1: the 15 MB export is requested after the map's first paint, and only offered on Save-Data or a slow link.
     const was = reefPublication.peek();
-    void (was.state !== 'idle' && was.region === id ? recheckReefPublication(id) : loadReefPublication(id));
+    void (was.state !== 'idle' && was.region === id ? recheckReefPublication(id) : requestReefPublication(id));
     const timer = setInterval(() => { void recheckReefPublication(id); }, 60000);
     return () => clearInterval(timer);
   }, [id]);
@@ -283,8 +316,8 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
     <section class="app-where" data-source={r.source ?? undefined}>
       <div class="app-where-head">
         <h2 class="ui-eyebrow">{t('where.title', lang)}</h2>
-        {r.source ? <span class="app-where-source ui-mono">{r.label}</span> : null}
-        {r.source ? <Popover iconOnly summary={t('where.about', lang, {label: r.label.toLowerCase()})} align="end">{r.basis}</Popover> : null}
+        {r.source ? <span class="app-where-source ui-mono">{rankingLabel(r, lang)}</span> : null}
+        {r.source ? <Popover iconOnly summary={rankingAbout(r, lang)} align="end">{rankingBasis(r, lang)}</Popover> : null}
       </div>
       {picks.length ? (
         <ol class="app-picks">
@@ -292,16 +325,17 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
             <li key={pick.id} data-mark={pick.id}>
               <button type="button" class="app-pick" aria-pressed={selected(pick)} onClick={() => choosePick(pick)}>
                 <span class="app-pick-rank ui-mono">{i + 1}</span>
-                <span>{pick.name} <span class="ui-mono">{water ? distanceLabel(pick, lang) : pick.distance} · {pick.depth}{boat ? pickRun(pick.nm, speed, pick.basis, lang) : ''}</span>{kayak && routeWhyText(pick, lang) ? <span class="app-pick-route-why" data-route-why={pick.why ?? 'not-computed'}> · {routeWhyText(pick, lang)}</span> : null}</span>
-                <span class="app-fit ui-eyebrow">{pick.fit}</span>
-                <span class="app-pick-reason">{pick.reason}</span>
+                <span>{pickName(pick, lang)} <span class="ui-mono">{water ? distanceLabel(pick, lang) : pickDistance(pick, lang)} · {pick.depth}{boat ? pickRun(pick.nm, speed, pick.basis, lang) : ''}</span>{kayak && routeWhyText(pick, lang) ? <span class="app-pick-route-why" data-route-why={pick.why ?? 'not-computed'}> · {routeWhyText(pick, lang)}</span> : null}</span>
+                <span class="app-fit ui-eyebrow">{pickFit(pick, lang)}</span>
+                <span class="app-pick-reason">{pickReason(pick, lang)}</span>
                 {screenLine(pick.screen, lang) && <span class="app-pick-reason">{screenLine(pick.screen, lang)}</span>}
               </button>
               {selected(pick) ? <Why pick={pick} /> : null}
             </li>
           ))}
         </ol>
-      ) : <EmptyOrPlan empty={r.empty} />}
+      ) : <EmptyOrPlan empty={rankingEmpty(r, lang)} />}
+      <ReefNote id={id} lang={lang} />
       <RangeControl measured={r.harbor} />
     </section>
   );

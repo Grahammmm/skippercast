@@ -47,7 +47,8 @@ async function load() {
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
       export {MarkCard, clearSelection, currentMark, placeholderMark, readingCard, terrainCard} from './web/app/MarkCard.tsx';
       export {chartMark} from './web/map/chart.ts';
-      export {PresentationToggle} from './web/app/MapStage.tsx';
+      export {PresentationToggle, TerrainControls, PRESENTATIONS} from './web/app/MapStage.tsx';
+      export {terrainActions, terrainFailed, terrainReason, UNAVAILABLE, NO_TERRAIN} from './web/map/stage.ts';
       export {beginWaypointPlacement, cancelWaypointPlacement, placeWaypoint, placementRefused} from './web/waypoint-placement.ts';
       export {Legend, RankedRow} from './web/app/Legend.tsx';
       export {rankedSpots} from './web/map/ranked.ts';
@@ -974,4 +975,62 @@ test('SC1952-06: the armed Chart status shows a refusal as text, keeps the instr
     assert.doesNotMatch(status(), /Tap the Chart|Inside/, 'cancel clears the status and the refusal');
     assert.equal(got.length, 0, 'no refused tap completed');
   } finally { cancelWaypointPlacement(); }
+});
+
+test('map_chrome_es_unavailable_and_placement: the toggle, groups, terrain buttons, terrain reasons and the placement prompt read Spanish, and English comes back byte for byte', async () => {
+  const {PresentationToggle, TerrainControls, PRESENTATIONS, terrainActions, terrainFailed, terrainReason, UNAVAILABLE, NO_TERRAIN, beginWaypointPlacement, cancelWaypointPlacement, placeWaypoint,
+    language, setLanguage, render, h, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  const none = {getItem: () => null, setItem() {}};
+  const calls = [];
+  const actions = {zoom: d => calls.push(['zoom', d]), reset: () => calls.push(['reset']), top: () => calls.push(['top']), sources() {}};
+  const both = () => render(h(PresentationToggle, {})) + '\n' + render(h(TerrainControls, {}));
+  try {
+    assert.deepEqual(PRESENTATIONS.map(p => [p.value, p.label]), [['chart', 'Chart'], ['2d', '2D'], ['3d', '3D']], 'the compatibility list stays English with stable values');
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=2d`);
+    terrainActions.value = actions;
+    const en = both();
+    for (const word of ['aria-label="Map presentation"', '>Chart</button>', 'aria-label="Terrain view"', 'aria-label="Zoom in"', 'aria-label="Zoom out"', 'aria-label="Reset map view"', 'aria-label="View from above"']) assert.ok(en.includes(word), `en: ${word}`);
+    setLanguage('es', {storage: none, doc: null});
+    const es = both();
+    for (const word of ['aria-label="Presentación del mapa"', '>Carta</button>', '>2D</button>', '>3D</button>', 'aria-label="Vista del terreno"', 'aria-label="Acercar"', 'aria-label="Alejar"', 'aria-label="Restablecer la vista del mapa"', 'aria-label="Vista desde arriba"']) assert.ok(es.includes(word), `es: ${word}`);
+    assert.ok(!/Zoom in|Map presentation|>Chart</.test(es), 'no English chrome left in Spanish');
+    setLanguage('en', {storage: none, doc: null});
+    assert.ok(both() === en, 'English output returns identically after a round trip');
+    assert.equal(calls.length, 0, 'a language change presses no control');
+    // No renderer actions: no terrain controls at all.
+    terrainActions.value = null;
+    assert.equal(render(h(TerrainControls, {})), '');
+
+    // The reasons: unreviewed terrain, a renderer failure, and an unknown future reason that stays literal.
+    terrainActions.value = actions;
+    state.syncFromURL(`${ORIGIN}?region=another-region&presentation=chart`);
+    setLanguage('es', {storage: none, doc: null});
+    let html = render(h(PresentationToggle, {}));
+    assert.ok(html.includes('>Aún no hay terreno costero revisado que cubra esta región.</p>'), html);
+    assert.equal((html.match(/disabled/g) ?? []).length, 2, '2D and 3D stay disabled');
+    assert.equal((html.match(/aria-describedby="app-stage-note"/g) ?? []).length, 2);
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart`);
+    terrainFailed.value = true;
+    assert.ok(render(h(PresentationToggle, {})).includes('>Los gráficos costeros no están disponibles. La carta, los pronósticos y las herramientas de viaje siguen funcionando.</p>'));
+    setLanguage('en', {storage: none, doc: null});
+    assert.ok(render(h(PresentationToggle, {})).includes(`>${UNAVAILABLE}</p>`));
+    terrainFailed.value = false;
+    assert.equal(terrainReason(NO_TERRAIN, 'en'), NO_TERRAIN);
+    assert.equal(terrainReason('Some future reason.', 'es'), 'Some future reason.', 'an unknown reason passes through intact');
+    assert.equal(terrainReason(null, 'es'), '');
+
+    // Placement: the prompt, Cancel and the shared verdict read Spanish; the callbacks are the same.
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart`);
+    const got = [];
+    beginWaypointPlacement('morro-bay', at => got.push(at));
+    setLanguage('es', {storage: none, doc: null});
+    assert.match(render(h(PresentationToggle, {})), /Toca la Carta para colocar tu punto de ruta\. <button[^>]*>Cancelar punto de ruta<\/button>/);
+    placeWaypoint('morro-bay', {lat: 35, lon: -121.2}, null);
+    assert.match(render(h(PresentationToggle, {})), /Toca la Carta para colocar tu punto de ruta\. Áreas protegidas sin revisar\. <button/);
+    setLanguage('en', {storage: none, doc: null});
+    assert.match(render(h(PresentationToggle, {})), /Tap the Chart to place your waypoint\. Protected areas not checked\. <button[^>]*>Cancel waypoint<\/button>/);
+    assert.equal(got.length, 0, 'the language change completed no placement');
+    cancelWaypointPlacement();
+  } finally { cancelWaypointPlacement(); terrainActions.value = null; terrainFailed.value = false; setLanguage('en', {storage: none, doc: null}); }
 });

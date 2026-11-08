@@ -63,16 +63,16 @@ async function harness(t, responses) {
       b.onResolve({filter: /.*/}, args => {
         if (args.importer !== resolve(root, 'web/app/Trip.tsx')) return;
         if (args.path === 'preact/hooks') return {path: resolve(fixtures, 'runtime.mjs')};
-        if (['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-ocean-lines.ts', '../trip-forecast-end.ts', './App.tsx'].includes(args.path))
+        if (['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-ocean-lines.ts', '../trip-forecast-end.ts', './App.tsx', './PositionCheck.tsx'].includes(args.path))
           return {path: resolve(fixtures, 'boundary.mjs')};
-        if (['../../dist/offline-core.js', 'preact/jsx-runtime', '../i18n.ts'].includes(args.path)) return;   // SC0707-10: the real catalogue reader, nothing else
+        if (['../../dist/offline-core.js', 'preact/jsx-runtime', '../i18n.ts', '../brief/remaining-copy.ts'].includes(args.path)) return;   // SC0707-10: the real catalogue reader, nothing else
         throw new Error(`unadmitted product import: ${args.path}`);
       });
     }}],
   });
   for (const input of Object.keys(result.metafile.inputs)) {
     const path = resolve(root, input);
-    assert.ok(path === resolve(root, 'web/app/Trip.tsx') || path === resolve(root, 'dist/offline-core.js') || path === resolve(root, 'web/i18n.ts') || path === resolve(root, 'web/i18n-core.ts') || path === resolve(root, 'catalog/app/strings.json') ||
+    assert.ok(path === resolve(root, 'web/app/Trip.tsx') || path === resolve(root, 'dist/offline-core.js') || path === resolve(root, 'web/i18n.ts') || path === resolve(root, 'web/brief/remaining-copy.ts') || path === resolve(root, 'web/i18n-core.ts') || path === resolve(root, 'catalog/app/strings.json') ||
       path.startsWith(fixtures + '/') || /[/]node_modules[/](?:.*[/])?(?:@?preact|preact-render-to-string|signals-core|signals)[/]/.test(path),
     `unadmitted import graph input: ${input}`);
   }
@@ -91,6 +91,23 @@ async function harness(t, responses) {
   const refresh = async () => { action('Save Fixture Harbor for offline')(); return settle(); };
   return {render, settle, refresh, action, runtime: m.runtime};
 }
+
+test('legal checklist renders missing files, dates, stale warning and source links offline', async t => {
+  const sample = structuredClone(packs);
+  sample[0].meta.legal = {complete: false, stale: true, items: [
+    {id: 'rules', saved: true, saved_at: '2026-11-07T10:00:00Z', generated_at: null, reviewed_at: '2026-10-01', valid_from: '2026-01-01', valid_through: '2026-12-31', sources: ['https://wildlife.ca.gov/Fishing/Ocean']},
+    {id: 'additional-closures', saved: false, sources: []},
+  ]};
+  const h = await harness(t, [success(sample)]);
+  h.render();
+  const html = await h.settle();
+  assert.match(html, /Legal files missing/);
+  assert.match(html, /<summary>[^<]*Stale or unknown dates/);
+  assert.match(html, /Additional closures: Missing or unreadable/);
+  assert.match(html, /2026-01-01 – 2026-12-31/);
+  assert.match(html, /href="https:\/\/wildlife.ca.gov\/Fishing\/Ocean"/);
+  assert.match(html, /NOT FOR NAVIGATION/);
+});
 
 test('primary regression', async t => {
   const h = await harness(t, [rejected]);

@@ -1,6 +1,6 @@
 import { getRegion, assetURL, acceptsFeed } from "./region.js";
 import { fetchJSON } from "./forecast.js";
-import { closureHits, geometryCoveredByBounds, pointGeometry, pointInGeometry } from "./geo-screen.js";
+import { boundaryFingerprint, closureHits, geometryCoveredByBounds, pointGeometry, pointInGeometry } from "./geo-screen.js";
 import { esc } from "./marine-charts.js";
 import {revisionCache} from './map-response.js';
 import {loadDailyPart} from './daily-feed.js';
@@ -57,9 +57,29 @@ export async function initProtectedAreas(map, onChange, readJSON=fetchJSON) {
   const revision=()=>`${checked}|${extraChecked}|${freshEnough()}`;
   // SC-LAUNCH-1: whole geometries, boundary-inclusive, with the 70 m planning margin in metres (geo-screen.js).
   const allowedGeometry=revisionCache(revision,g=>!closureHits([g],[...data.features,...(extra?.features||[])]).length);
+  // SC-PERF-PROTCHECK-1: a hash of the boundary data this screen holds right now (null when it holds none or is not bound to its region),
+  // so flags the publisher computed against the same data can replace the per-reef check (spot-ranking.js). Recomputed only when `data` or `extra` change.
+  let printOf=null, printed=null;
+  const fingerprint=()=>{
+    if(!data||!bound())return null;
+    if(!printed||printed[0]!==data||printed[1]!==extra){printOf=boundaryFingerprint([...data.features,...(extra?.features||[])].map(f=>f.geometry),bounds,[...data.features,...(extra?.features||[])].map(f=>f.properties?.FULLNAME||f.properties?.NAME||null));printed=[data,extra];}
+    return printOf;
+  };
   const screen={
     ready:()=>current(),
+    fingerprint,
     coversGeometry:covers,
+    // SC-GPSOFFLINE-1: the boundary data this screen holds right now, current or not (null when it holds none or is not bound to its region), so a live-position
+    // check can still use the saved boundaries offline and say how old they are. It only reads; every verdict still comes from geo-screen.js `screenPlace`.
+    heldBoundaries:()=>{
+      if(!data||!bound())return null;
+      // `missing`: configured layers this screen holds nothing for (absent or unreadable file), so a verdict from the rest is partial. `clock`: how the
+      // held layers' check times read now ('ok', 'old' past the 36 h window, 'future' beyond the 5 min clock allowance, 'unknown' unparseable or cleared).
+      const heldTimes=[checked,...(extra?[extraChecked]:[])], times=heldTimes.filter(v=>Number.isFinite(Date.parse(v)));
+      const clockOf=v=>{const age=Date.now()-Date.parse(v);return !Number.isFinite(age)?'unknown':age<-300000?'future':age>36*3600000?'old':'ok';};
+      const clocks=heldTimes.map(clockOf), clock=['unknown','future','old'].find(c=>clocks.includes(c))||'ok';
+      return {current:current(),missing:assetURL('closures')&&!extra?['closures']:[],clock,checked_at:times.length?new Date(Math.min(...times.map(v=>Date.parse(v)))).toISOString():null,features:[...data.features,...(extra?.features||[])]};
+    },
     revision:()=>`${checked}|${extraChecked}|${freshEnough()}`,
     exportExclusions:()=>current()?{checked_at:extra?new Date(Math.min(Date.parse(checked),Date.parse(extraChecked))).toISOString():checked,features:[...data.features,...(extra?.features||[])]}:null,
     inspect(p){

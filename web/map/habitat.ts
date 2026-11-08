@@ -72,6 +72,9 @@ export function markFit(t: AtlasTarget, target: string): {n: number; line: strin
 /** The species a target's fit names ("lingcod and rockfish") as catalogue-ready parts, or null where no screen rates it. */
 const fitSpecies = (target: string): CopyVar[] | null => SCREENS[target]?.flatMap((x, i): CopyVar[] => i ? [{id: AND}, x] : [x]) ?? null;
 
+/** SC1137-05: the fit wording `markFit` rates, as catalogue parts for the Where to look list (display only). */
+export const markFitCopy = (target: string, n: number): MarkCopyPart[] => [cp(hid('fit'), {species: fitSpecies(target) ?? [], n})];
+
 /** dist/species.js `matchesSpecies` for the target's family: reef and rockfish show every mark, lingcod its rough relief. */
 export function markShown(t: AtlasTarget, target: string): boolean {
   if (habitatFamily(target) !== 'reef') return false;

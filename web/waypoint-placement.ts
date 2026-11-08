@@ -1,6 +1,8 @@
 // One explicitly armed Chart click; no storage, account writes or geographic inference.
 import {signal} from '@preact/signals';
 import {placeRefused, screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
+import {t} from './i18n.ts';
+import type {CopyVar, MarkCopyPart} from './mark-copy.ts';
 
 export const waypointPlacement = signal<string | null>(null);
 export type Placed = {latitude: number; longitude: number; screen: PlaceVerdict};
@@ -14,11 +16,19 @@ export function beginWaypointPlacement(region: string, pick: NonNullable<typeof 
   waypointPlacement.value = region;
 }
 /** BF-closures-everywhere: the plain-text line a refused verdict adds (rendered as a text child, so a closure's name is never markup); null when it is not refused. */
-export function verdictLine(v: PlaceVerdict): string | null {
+export function verdictLine(v: PlaceVerdict, lang = 'en'): string | null {
   if (!placeRefused(v)) return null;
-  if (!v.screened) return 'Protected areas not checked';
-  if (v.inside) return `Inside ${v.name ?? 'a protected area'}`;
-  return `${Math.round(v.distanceM ?? 0)} m from ${v.name ?? 'a protected area'}`;
+  const area = v.name ?? t('where.screen.area', lang);
+  if (!v.screened) return t('where.screen.unchecked', lang);
+  if (v.inside) return t('where.screen.inside', lang, {name: area});
+  return t('where.screen.near', lang, {m: Math.round(v.distanceM ?? 0), name: area});
+}
+/** SC1352-06: the same line as catalogue parts, for a card whose language is chosen at render; null when it is not refused. */
+export function verdictParts(v: PlaceVerdict): MarkCopyPart[] | null {
+  if (!placeRefused(v)) return null;
+  const name: CopyVar = v.name ?? {id: 'where.screen.area'};
+  if (!v.screened) return [{id: 'where.screen.unchecked'}];
+  return v.inside ? [{id: 'where.screen.inside', vars: {name}}] : [{id: 'where.screen.near', vars: {m: Math.round(v.distanceM ?? 0), name}}];
 }
 /**
  * True when this click was consumed by an armed placement in the same region. `screen` is the Chart's current-region protected-area screen

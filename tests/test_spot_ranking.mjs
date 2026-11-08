@@ -199,3 +199,13 @@ test('SC2207-04 callback answers: null rejects, metadata is kept, invalid answer
  for(const bad of [{nm:NaN,basis:'water'},{nm:Infinity,basis:'water'},{nm:-1,basis:'water'},{nm:'3',basis:'water'},{nm:3,basis:'air'},{nm:3},{basis:'water'},undefined,'water'])
   assert.throws(()=>run(bad),/^Error: Invalid trip distance\.$/,String(JSON.stringify(bad)));
 });
+test('SC-PERF-PROTCHECK-1: the publish-time verdicts and boundary fingerprint reach the loaded publication; a malformed verdict is dropped',async()=>{
+ const verdict={inside:false,name:'Some SMR',distanceM:812.3,screened:true};
+ const f=await fixture(d=>{d.protected_screen={fingerprint:'ps1-aaaaaaaaaaaaaaaa-10'};d.features[0].properties.protected_place=verdict;});
+ const atlas=await loadReefTrip('morro-bay',{fetchImpl:f.fetchImpl});
+ assert.equal(atlas.protected_fingerprint,'ps1-aaaaaaaaaaaaaaaa-10');assert.deepEqual(atlas.targets[0].protected_place,verdict);
+ const bad=await fixture(d=>{d.protected_screen={fingerprint:'ps1-aaaaaaaaaaaaaaaa-10'};d.features[0].properties.protected_place={inside:'no',name:7};});
+ assert.equal((await loadReefTrip('morro-bay',{fetchImpl:bad.fetchImpl})).targets[0].protected_place,undefined);
+ const old=await loadReefTrip('morro-bay',{fetchImpl:(await fixture()).fetchImpl});   // an export from before this change
+ assert.equal(old.protected_fingerprint,undefined);assert.equal(old.targets[0].protected_place,undefined);
+});

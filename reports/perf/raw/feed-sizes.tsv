@@ -1,0 +1,12 @@
+url	status	wire_bytes_zstd_br_gzip	decoded_bytes	content_encoding	cache_control
+/api/daily?region=morro-bay	400	76	76		no-store
+/api/daily?region=morro-bay&part=brief	200	18641	227699	zstd	public, max-age=14400, s-maxage=300
+/api/daily?region=morro-bay&part=regulations	200	10134	40894	zstd	public, max-age=14400, s-maxage=300
+/api/daily?region=morro-bay&part=mpa-boundaries	200	100512	278578	zstd	public, max-age=14400, s-maxage=300
+/api/daily?region=morro-bay&part=additional-closures	200	143	167	zstd	public, max-age=14400, s-maxage=300
+/api/forecast?region=morro-bay	200	88211	708615	zstd	public, max-age=14400, s-maxage=300
+/api/coast/report	200	141025	664271	zstd	no-store
+/api/coast/ocean	200	269419	1516763	zstd	no-store
+/data/protected-areas.geojson	200	100118	277333	zstd	public, max-age=0, must-revalidate
+/regions/morro-bay/land-water-lines.json	200	73001	278928	zstd	public, max-age=0, must-revalidate
+/feeds/tiles/seafloor/regions/morro-bay/ledger.json	200	20246	137142	zstd	no-store

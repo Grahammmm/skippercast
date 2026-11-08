@@ -387,7 +387,11 @@ export const SURFACE_SOURCE_SHA256 = {
   // scrolling legend does not clip them; the popover keeps its existing ui.css paint, and legend text paint and backing are unchanged.
   // SC2207-11 only appends a scoped .app-first-answer* block at the end of app.css (opaque --panel, token text roles); no existing rule or
   // legend paint changed, and the cited line numbers above are unmoved.
-  "appCss": "b1592e490fc050131a7ff30d8ac8a1975e5a540288d84360755875336f986cc6",
+  // SC-PERF-INSTANT-1 only appends a scoped .app-saved block at the end of app.css (token text roles on the brief, not the legend glass);
+  // no legend paint or backing changed and the cited line numbers above are unmoved.
+  // SC-PERF-JUMP-1 only appends layout rules at the end of app.css (a masthead min-height and no-wrap row on the desktop, a minimum width on the target menu,
+  // a minimum height on the desktop legend); no colour, opacity, backing or text paint changed, and the cited line numbers above are unmoved.
+  "appCss": "b8ab39b0a4a75d552124700f5d65112aa9acb4e1a39e0cddb2f88b686b5d70af",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
@@ -406,7 +410,11 @@ export const SURFACE_SOURCE_SHA256 = {
   // backing, opacity, token or threshold changed, and the Depth row's citation moved one line.
   // SC1352-04 resolves the protected-areas row's note and basis detail in the page's language through the same Status wrapper (copy only, no paint);
   // the note and basis keep their app-mpa-note and popover text roles, and no backing, opacity, token or threshold changed.
-  "legendTsx": "6380ced79c00ed2d08185178af2967638d82b76a6941b79f75cd9f3faf703ada"
+  // SC1352-05 shows the Stations note and the nearshore-ring summary and basis in the page's language (copy only, no paint); the same text roles
+  // stay, and no backing, opacity, token or threshold changed.
+  // SC1352-06 shows the saved-spots status in the page’s language through the same Status wrapper (copy only, no paint); the same note text role stays, and no backing, opacity, token or threshold changed.
+  // SC1352-07 shows the evidence layers' status lines (charter grounds, commercial AIS, temperature fronts) and the fronts basis in the page's language through the same Status wrapper (copy only, no paint); the same note text roles stay, and two lines were added above the cited rows.
+  "legendTsx": "b1eb2cb8d53df28041ade55287f4c006b4fb1921e77e633c54e1319506ca1a3b"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
@@ -427,8 +435,8 @@ export function checkSurfaceSource(sources) {
         ['legend-labels', 'muted', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:858-868,2678-2684; bridge:21,27'],
         ['sheen-text', 'text', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,26'],
         ['sheen-muted', 'muted', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,27'],
-        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,176,216,230; Legend.tsx:376'],
-        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:176,197,245; Legend.tsx:107,241,376'],
+        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,176,216,230; Legend.tsx:378'],
+        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:176,197,245; Legend.tsx:109,243,378'],
       ]) {
         const foreground = resolve(role);
         results.push({theme, id, binding, foreground, surface,

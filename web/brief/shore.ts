@@ -13,6 +13,8 @@
 //
 // Erasable syntax only: tests/test_shore.mjs imports it by type stripping.
 
+import type {StringId} from '../i18n.ts';
+import {cp, type MarkCopyPart} from '../mark-copy.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 
 /** The official CDFW regional rules map (the link packages/coast's methods page gives). */
@@ -182,4 +184,56 @@ export function shoreGuidance(target: string, substrate: string = 'sand'): Shore
 /** Runs in rank order: highest priority first, then by name. */
 export function rankRuns<T extends {readonly status: ShoreStatus; readonly name: string}>(runs: readonly T[]): T[] {
   return [...runs].sort((a, b) => b.status.priority - a.status.priority || a.name.localeCompare(b.name));
+}
+
+// SC1352-08: display-only wording for the card. Everything above stays the English decision and API; these
+// helpers build catalogue parts from the SAME inputs, never from the translated or English label text, and
+// the card resolves them in the page's language at render.
+const sid = (key: string): StringId => `mark.layer.shore.${key}` as StringId;
+const STATUS_ID: Readonly<Record<ShoreLabel, string>> = {Blocked: 'status.blocked', Hold: 'status.hold', 'No surf model': 'status.noModel', Current: 'status.current'};
+/** The catalogue part for a canonical status label; null for any other value (a legacy or hand-built label stays as it is). */
+export const shoreLabelCopy = (label: string): MarkCopyPart | null => Object.hasOwn(STATUS_ID, label) ? cp(sid(STATUS_ID[label as ShoreLabel])) : null;
+
+export interface ShoreStatusCopy {readonly reasons: readonly MarkCopyPart[]}
+/**
+ * The reasons of `status` as catalogue parts, joined by the card with "; ". Rebuilt from the inputs `shoreStatus` was
+ * given, in its order; null when the inputs do not reproduce the status (then the reasons stay as written).
+ */
+export function shoreStatusCopy({inside, alertCheck = true, alerts = [], notices = []}: Pick<ShoreInputs, 'inside' | 'alertCheck' | 'alerts' | 'notices'>, status: ShoreStatus): ShoreStatusCopy | null {
+  let reasons: MarkCopyPart[];
+  if (status.label === 'Blocked') reasons = [cp(sid('reason.inside'), {areas: (inside ?? []).join('; ')})];
+  else if (status.label === 'Hold') {
+    reasons = [
+      ...(inside ? [] : [cp(sid('reason.mpaNotCurrent'))]), ...(alertCheck ? [] : [cp(sid('reason.alertNotCurrent'))]),
+      ...alerts.map(event => cp(sid('reason.alert'), {event})), ...notices.map(name => cp(sid('reason.notice'), {name})),
+    ];
+  } else if (status.label === 'No surf model') reasons = [cp(sid('reason.noSample'))];
+  else if (status.label === 'Current') reasons = [cp(sid('reason.current'))];
+  else return null;
+  return reasons.length === status.reasons.length ? {reasons} : null;
+}
+
+const esDay = (s: string | null, timeZone: string): string => typeof s === 'string' && Number.isFinite(Date.parse(s))
+  ? new Date(s).toLocaleDateString('es', {month: 'short', day: 'numeric', year: 'numeric', timeZone}) : '';
+const untilCopy = (expires: string | null, now: number, tz: string): MarkCopyPart =>
+  typeof expires === 'string' && Number.isFinite(Date.parse(expires)) ? cp(sid(time(expires) > now ? 'review.until' : 'review.expired'), {date: esDay(expires, tz)}) : cp(sid('review.unknown'));
+const dayCopy = (s: string | null, tz: string): MarkCopyPart | string => esDay(s, tz) || cp(sid('review.dateUnknown'));
+
+/** `shoreReviewLines` as catalogue parts: the same pairs, order, expiry comparison and zone; the dates in Spanish. */
+export function shoreReviewCopy(run: ShoreRunClocks, now = Date.now(), tz: string = DEFAULT_ZONE): MarkCopyPart[] {
+  const none = (a: string | null, b: string | null): boolean => a === null && b === null;
+  return [
+    ...(none(run.accessReviewedAt, run.accessReviewExpiresAt) ? [cp(sid('review.accessNone'))] : [cp(sid('review.access'), {date: dayCopy(run.accessReviewedAt, tz), until: untilCopy(run.accessReviewExpiresAt, now, tz)})]),
+    ' · ',
+    ...(none(run.legalReviewedAt, run.legalReviewExpiresAt) ? [cp(sid('review.rulesNone'))] : [cp(sid('review.rules'), {date: dayCopy(run.legalReviewedAt, tz), until: untilCopy(run.legalReviewExpiresAt, now, tz)})]),
+    ' · ',
+    ...(none(run.checkedAt, run.reviewExpiresAt) ? [cp(sid('review.sourceNone'))] : [cp(sid('review.source'), {until: untilCopy(run.reviewExpiresAt, now, tz)})]),
+  ];
+}
+
+/** `shoreGuidance`'s text and link label as catalogue parts: the same seven lead branches, then the unverified statement and the checks. */
+export function shoreGuidanceCopy(target: string, substrate: string = 'sand'): {readonly text: readonly MarkCopyPart[]; readonly label: readonly MarkCopyPart[]} {
+  const lead = substrate === 'rocky' ? (target === 'surfperch' ? 'lead.rockySurfperch' : target === 'halibut' ? 'lead.rockyHalibut' : 'lead.rocky')
+    : substrate !== 'sand' ? 'lead.unknown' : target === 'surfperch' ? 'lead.sandySurfperch' : target === 'halibut' ? 'lead.sandyHalibut' : 'lead.sandy';
+  return {text: [cp(sid(lead)), ' ', cp(sid('unverified')), ' ', cp(sid('checks'))], label: [cp(sid('regsLabel'))]};
 }

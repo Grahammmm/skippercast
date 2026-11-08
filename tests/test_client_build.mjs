@@ -10,7 +10,7 @@ import {mkdtemp, mkdir, readdir, readFile, rm, writeFile} from 'node:fs/promises
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {promisify} from 'node:util';
-import {buildClient, hashName} from '../scripts/client-build.mjs';
+import {buildClient, copyStatic, hashName} from '../scripts/client-build.mjs';
 import {BUILD_PLACEHOLDER} from '../scripts/precache.mjs';
 import {dropMaplibreLogo, MAPLIBRE_CSS, STATIC_REF} from '../vite.config.mjs';
 
@@ -55,6 +55,20 @@ const built = async (options) => {
 
 test('hashName inserts the build id before the extension', () => {
   assert.equal(hashName('index.html', 'abc1234567'), 'index.abc1234567.html');
+});
+
+test('copyStatic never publishes the local-only seafloor Deep archive or its .part file', async () => {
+  const src = await mkdtemp(join(tmpdir(), 'sc-static-src-'));
+  const out = await mkdtemp(join(tmpdir(), 'sc-static-out-'));
+  try {
+    await mkdir(join(src, 'tiles'));
+    for (const name of ['morro-bay-seafloor-deep.pmtiles', 'morro-bay-seafloor-deep.part', 'morro-bay-seafloor-deep-mild.pmtiles', 'morro-bay-seafloor-deep-strong.part', 'ok.pmtiles']) await writeFile(join(src, 'tiles', name), 'x');
+    await copyStatic(src, out);
+    assert.deepEqual(await readdir(join(out, 'tiles')), ['ok.pmtiles']);
+  } finally {
+    await rm(src, {recursive: true, force: true});
+    await rm(out, {recursive: true, force: true});
+  }
 });
 
 test('the build hashes scripts and styles, renames pages and keeps sw.js, vendor files and data stable', async () => {

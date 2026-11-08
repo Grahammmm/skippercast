@@ -18,7 +18,9 @@
 import type * as MapLibre from 'maplibre-gl';
 import type {NearshoreHour, NearshoreSite} from '../../packages/coast/src/enrichment-types.ts';
 import type {Report} from '../../packages/coast/src/types.ts';
+import {t} from '../i18n.ts';
 import {compass} from '../landing/readings.ts';
+import {cp, esDecimal, esStamp, type MarkCopyPart} from '../mark-copy.ts';
 import type {ChartMark} from './coastline.ts';
 import {freshNearshore, nearshoreAt, nearshoreSampleLabel} from './nearshore-model.js';
 import type {Palette} from './palette.ts';
@@ -43,7 +45,8 @@ export interface Rings {
   readonly collection: {type: 'FeatureCollection'; features: {type: 'Feature'; properties: {id: string; radius: number}; geometry: {type: 'Point'; coordinates: [number, number]}}[]};
 }
 
-const age = (ms: number): string => { const h = Math.floor(Math.max(0, ms) / HOUR); return h < 1 ? 'under 1 h' : `${h} h`; };
+const age = (ms: number, lang = 'en'): string => { const h = Math.floor(Math.max(0, ms) / HOUR); return lang === 'es' ? h < 1 ? t('map.status.common.underHour', lang) : t('map.status.common.hours', lang, {n: h}) : h < 1 ? 'under 1 h' : `${h} h`; };
+const MULTIPLE = 'multiple nearshore models';
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 export const ringRadius = (ft: number): number => RING_BASE + RING_PER_FT * Math.min(Math.max(ft, 0), RING_MAX_FT);
 
@@ -65,7 +68,7 @@ export function nearshoreRings(report: Report | null, areaId: string | null, at:
   if (!rings.length) return null;
   return {
     key: rings.map(r => `${r.site.id}|${r.site.issuedAt}|${r.site.fetchedAt}|${r.hour.at}`).join(','), rings,
-    product: rings.every(r => r.product === rings[0]!.product) ? rings[0]!.product : 'multiple nearshore models',
+    product: rings.every(r => r.product === rings[0]!.product) ? rings[0]!.product : MULTIPLE,
     collection: {type: 'FeatureCollection', features: rings.map(r => ({type: 'Feature', properties: {id: r.site.id, radius: ringRadius(r.waveFt)},
       geometry: {type: 'Point', coordinates: [r.site.lon, r.site.lat]}}))},
   };
@@ -83,15 +86,18 @@ export function ringLayer(p: Palette): MapLibre.LayerSpecification {
 }
 
 /** One sentence or two: the product, what a ring is, its window and its scale. */
-export function ringBasis(product: string): string {
+export function ringBasis(product: string, lang = 'en'): string {
+  if (lang === 'es') return t('map.nearshore.basis', lang, {product: product === MULTIPLE ? t('map.nearshore.multiple', lang) : product, base: RING_BASE, perFt: RING_PER_FT, maxFt: RING_MAX_FT});
   return `${product} nearshore model sites from the bound coast report: modelled significant wave height at each site, the sample nearest the selected hour within 90 minutes, `
     + `drawn while the model was issued under 48 hours ago and retrieved under 3 hours ago. Model output, not a buoy observation and not breakers at a beach. `
     + `Ring radius ${RING_BASE} px plus ${RING_PER_FT} px per foot; ${RING_MAX_FT} ft and above draw alike.`;
 }
 
 /** The legend's line for the drawn rings. */
-export function ringSummary(r: Rings, now: Date): string {
+export function ringSummary(r: Rings, now: Date, lang = 'en'): string {
   const issued = r.rings.map(x => Date.parse(x.site.issuedAt ?? '')).filter(Number.isFinite);
+  if (lang === 'es') return t('map.nearshore.summary', lang, {count: t(r.rings.length === 1 ? 'map.nearshore.sites.one' : 'map.nearshore.sites.other', lang, {n: r.rings.length}),
+    product: r.product === MULTIPLE ? t('map.nearshore.multiple', lang) : r.product, run: issued.length ? t('map.nearshore.issuedAgo', lang, {age: age(now.getTime() - Math.max(...issued), lang)}) : '', base: RING_BASE, perFt: RING_PER_FT});
   const run = issued.length ? ` · issued ${age(now.getTime() - Math.max(...issued))} ago` : '';
   return `${r.rings.length} nearshore model site${r.rings.length === 1 ? '' : 's'} · ${r.product}${run} · ring ${RING_BASE} px + ${RING_PER_FT} px per ft`;
 }
@@ -106,11 +112,23 @@ export function ringMark(r: Rings, id: unknown, now: Date, tz: string): ChartMar
   const label = nearshoreSampleLabel(site, hour, tz), prefix = `${site.name} · `;
   // Keep the shared time/cadence formatting, but validate its name prefix before stripping it.
   if (!label.startsWith(prefix)) throw new Error('Nearshore sample label is missing its site prefix');
+  // SC1352-05: Spanish parts rebuilt from the same raw facts; the English strings below are untouched.
+  const minutes = site.temporalResolutionMinutes, sample = esStamp(hour.at, tz, true);
+  const cadence = finite(minutes) && minutes > 0 ? minutes % 60 === 0 ? `${minutes / 60} h` : `${minutes} min` : null;
+  const copy: Partial<Record<'kind' | 'reading' | 'source' | 'basis', MarkCopyPart[]>> = {
+    kind: [cp('map.nearshore.kind', {product})],
+    reading: [`${esDecimal(ring.waveFt)} ft${finite(hour.periodS) ? ` · ${esDecimal(hour.periodS)} s` : ''}`, ...(finite(hour.directionDeg) ? [cp('map.nearshore.from', {compass: compass(hour.directionDeg), deg: Math.round(hour.directionDeg)})] : [])],
+    source: [`${product} · `, cadence ? cp('map.nearshore.sample', {time: sample, cadence}) : cp('map.nearshore.sampleNoCadence', {time: sample}),
+      ...(site.issuedAt ? [cp('map.nearshore.issuedAgo', {age: age(now.getTime() - Date.parse(site.issuedAt), 'es')})] : [])],
+    basis: [cp('map.nearshore.basisPrefix', {issued: esStamp(site.issuedAt, tz), retrieved: esStamp(site.fetchedAt, tz)}), ' ',
+      cp('map.nearshore.basis', {product, base: RING_BASE, perFt: RING_PER_FT, maxFt: RING_MAX_FT}),
+      ...(finite(site.waterDepthM) ? [cp('map.nearshore.depth', {depth: site.waterDepthM, datum: String(site.depthDatum)})] : [])],
+  };
   return {
     id: `nearshore:${site.id}|${hour.at}`, name: site.name, kind: `${product} model site`,
     reading: `${ring.waveFt.toFixed(1)} ft${finite(hour.periodS) ? ` · ${hour.periodS.toFixed(1)} s` : ''}${from}`,
     source: `${product} · ${label.slice(prefix.length)}${issued}`,
     basis: `Model issued ${site.issuedAt}; retrieved ${site.fetchedAt}. ${ringBasis(product)}${depth}`,
-    provider: {href: site.url, label: `${product} model site`},
+    provider: {href: site.url, label: `${product} model site`}, copy,
   };
 }

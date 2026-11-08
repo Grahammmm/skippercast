@@ -55,12 +55,12 @@ test('drawShore reads palette.shoreLine (once in the viewer) and no longer palet
  assert.match(source,/terrain_grade==='A'\?this\.palette\.gradeA:/,'grade-A habitat outlines keep gradeA');
  assert.equal(source.match(HEX),null);
 });
-test('series SVG keeps v1 colours as var(--coast-…) fallbacks in style, never in attributes',()=>{
+test('series SVG keeps v1 colour roles as var(--coast-…) in style, never in attributes',()=>{
  const points=[{at:'2026-10-06T12:00:00Z',value:1},{at:'2026-10-06T15:00:00Z',value:2}];
- const svg=chart([{label:'Tide',unit:'ft',color:'var(--coast-amber,#eabd76)',points}],'2026-10-06T10:00:00Z','2026-10-06T18:00:00Z','2026-10-06T13:00:00Z','America/Los_Angeles',
+ const svg=chart([{label:'Tide',unit:'ft',color:'var(--coast-amber)',points}],'2026-10-06T10:00:00Z','2026-10-06T18:00:00Z','2026-10-06T13:00:00Z','America/Los_Angeles',
   {sunrise:'2026-10-06T11:00:00Z',sunset:'2026-10-06T17:00:00Z',windows:[{start:'2026-10-06T12:00:00Z',end:'2026-10-06T14:00:00Z'}]});
  assert.doesNotMatch(svg,/\s(?:fill|stroke)="(?!none")/);
- const fallbacks=[...svg.matchAll(/style="(fill|stroke):var\(--coast-([\w-]+),(#[0-9a-f]+)\)"/g)].map(m=>`${m[1]} ${m[2]} ${m[3]}`);
- assert.deepEqual([...new Set(fallbacks)].sort(),['fill amber #eabd76','fill mint #58e8b8','fill night #030d17','fill text #e3f7ff',
-  'stroke amber #eabd76','stroke muted #86abc2','stroke text #e3f7ff']);
+ const roles=[...svg.matchAll(/style="(fill|stroke):var\(--coast-([\w-]+)\)"/g)].map(m=>`${m[1]} ${m[2]}`);
+ assert.deepEqual([...new Set(roles)].sort(),['fill amber','fill mint','fill night','fill text',
+  'stroke amber','stroke muted','stroke text']);
 });

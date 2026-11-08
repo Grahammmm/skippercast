@@ -1,0 +1,1105 @@
+{
+ "url": "https://skippercast.com/map?region=morro-bay&ui=v2",
+ "results": [
+  {
+   "run": 1,
+   "cls": 0.7511,
+   "shifts": [
+    {
+     "t": 297,
+     "v": 0.6147,
+     "src": [
+      {
+       "node": "main.app-main",
+       "from": [
+        330,
+        611
+       ],
+       "to": [
+        355,
+        586
+       ]
+      },
+      {
+       "node": "section.app-first-answer",
+       "from": [
+        160,
+        170
+       ],
+       "to": [
+        185,
+        170
+       ]
+      },
+      {
+       "node": "div.app-area",
+       "from": [
+        74,
+        45
+       ],
+       "to": [
+        131,
+        45
+       ]
+      },
+      {
+       "node": "section.app-where",
+       "from": [
+        809,
+        72
+       ],
+       "to": [
+        0,
+        0
+       ]
+      },
+      {
+       "node": "nav",
+       "from": [
+        8,
+        44
+       ],
+       "to": [
+        8,
+        44
+       ]
+      }
+     ]
+    },
+    {
+     "t": 410,
+     "v": 0.0448,
+     "src": [
+      {
+       "node": "section.app-legend",
+       "from": [
+        504,
+        378
+       ],
+       "to": [
+        484,
+        397
+       ]
+      },
+      {
+       "node": "div.app-tiles.app-tiles--dense",
+       "from": [
+        577,
+        363
+       ],
+       "to": [
+        784,
+        156
+       ]
+      },
+      {
+       "node": "p.app-verdict-rules",
+       "from": [
+        432,
+        105
+       ],
+       "to": [
+        639,
+        105
+       ]
+      },
+      {
+       "node": "p.app-verdict-limit",
+       "from": [
+        406,
+        23
+       ],
+       "to": [
+        433,
+        45
+       ]
+      },
+      {
+       "node": "span.ui-eyebrow",
+       "from": [
+        549,
+        17
+       ],
+       "to": [
+        756,
+        17
+       ]
+      }
+     ]
+    },
+    {
+     "t": 553,
+     "v": 0.0201,
+     "src": [
+      {
+       "node": "section.app-legend",
+       "from": [
+        435,
+        446
+       ],
+       "to": [
+        355,
+        527
+       ]
+      },
+      {
+       "node": "div.maplibregl-ctrl-bottom-right",
+       "from": [
+        610,
+        182
+       ],
+       "to": [
+        594,
+        199
+       ]
+      }
+     ]
+    },
+    {
+     "t": 7776,
+     "v": 0.019,
+     "src": [
+      {
+       "node": "li.app-legend-depth-contours",
+       "from": [
+        602,
+        134
+       ],
+       "to": [
+        0,
+        0
+       ]
+      },
+      {
+       "node": "li.app-legend-mpa",
+       "from": [
+        740,
+        107
+       ],
+       "to": [
+        0,
+        0
+       ]
+      },
+      {
+       "node": "li.app-legend-saved-spots",
+       "from": [
+        527,
+        72
+       ],
+       "to": [
+        827,
+        20
+       ]
+      },
+      {
+       "node": "li.app-legend-currents",
+       "from": [
+        479,
+        44
+       ],
+       "to": [
+        779,
+        44
+       ]
+      },
+      {
+       "node": "p.app-legend-note",
+       "from": [
+        458,
+        17
+       ],
+       "to": [
+        726,
+        50
+       ]
+      }
+     ]
+    },
+    {
+     "t": 260,
+     "v": 0.0149,
+     "src": [
+      {
+       "node": "body",
+       "from": [
+        20,
+        88
+       ],
+       "to": [
+        0,
+        940
+       ]
+      }
+     ]
+    },
+    {
+     "t": 315,
+     "v": 0.0139,
+     "src": [
+      {
+       "node": "div.app-tiles.app-tiles--dense",
+       "from": [
+        574,
+        146
+       ],
+       "to": [
+        558,
+        365
+       ]
+      },
+      {
+       "node": "figure.app-spark",
+       "from": [
+        860,
+        80
+       ],
+       "to": [
+        0,
+        0
+       ]
+      },
+      {
+       "node": "details.app-details",
+       "from": [
+        788,
+        60
+       ],
+       "to": [
+        0,
+        0
+       ]
+      },
+      {
+       "node": "div.app-tide-station",
+       "from": [
+        732,
+        44
+       ],
+       "to": [
+        934,
+        6
+       ]
+      },
+      {
+       "node": "span.ui-eyebrow",
+       "from": [
+        546,
+        17
+       ],
+       "to": [
+        529,
+        17
+       ]
+      }
+     ]
+    },
+    {
+     "t": 347,
+     "v": 0.008,
+     "src": [
+      {
+       "node": "div.app-tiles.app-tiles--dense",
+       "from": [
+        558,
+        365
+       ],
+       "to": [
+        577,
+        363
+       ]
+      },
+      {
+       "node": "#text",
+       "from": [
+        271,
+        17
+       ],
+       "to": [
+        271,
+        17
+       ]
+      },
+      {
+       "node": "#text",
+       "from": [
+        434,
+        57
+       ],
+       "to": [
+        434,
+        57
+       ]
+      },
+      {
+       "node": "span.ui-eyebrow",
+       "from": [
+        529,
+        17
+       ],
+       "to": [
+        549,
+        17
+       ]
+      },
+      {
+       "node": "a",
+       "from": [
+        473,
+        44
+       ],
+       "to": [
+        493,
+        44
+       ]
+      }
+     ]
+    },
+    {
+     "t": 1086,
+     "v": 0.0074,
+     "src": [
+      {
+       "node": "li.app-legend-depth-contours",
+       "from": [
+        627,
+        134
+       ],
+       "to": [
+        602,
+        134
+       ]
+      },
+      {
+       "node": "li.app-legend-mpa",
+       "from": [
+        765,
+        83
+       ],
+       "to": [
+        740,
+        107
+       ]
+      },
+      {
+       "node": "li.app-legend-saved-spots",
+       "from": [
+        551,
+        72
+       ],
+       "to": [
+        527,
+        72
+       ]
+      },
+      {
+       "node": "label.app-rail-source",
+       "from": [
+        597,
+        4
+       ],
+       "to": [
+        580,
+        21
+       ]
+      },
+      {
+       "node": "summary.ui-popover-summary.ui-eyebrow",
+       "from": [
+        479,
+        44
+       ],
+       "to": [
+        479,
+        44
+       ]
+      }
+     ]
+    }
+   ],
+   "longTasks": [
+    [
+     670,
+     102
+    ],
+    [
+     777,
+     82
+    ],
+    [
+     894,
+     54
+    ],
+    [
+     988,
+     59
+    ],
+    [
+     1107,
+     83
+    ],
+    [
+     1331,
+     3302
+    ],
+    [
+     4636,
+     2664
+    ],
+    [
+     7374,
+     54
+    ],
+    [
+     7443,
+     331
+    ],
+    [
+     7798,
+     2930
+    ],
+    [
+     10806,
+     60
+    ],
+    [
+     10866,
+     51
+    ],
+    [
+     10918,
+     113
+    ],
+    [
+     11032,
+     2774
+    ],
+    [
+     13842,
+     66
+    ]
+   ],
+   "hotCallers": [
+    {
+     "k": "geo-screen <- (anon) depth-contours.6b1fe0a4c0.js:2:31528 <- Tn depth-contours.6b1fe0a4c0.js:2:31075 <- Nn depth-contours.6b1fe0a4c0.js:2:33082",
+     "ms": 9147
+    },
+    {
+     "k": "maplibre-gl <- ",
+     "ms": 462
+    },
+    {
+     "k": "depth-contours <- ",
+     "ms": 180
+    },
+    {
+     "k": "gpx <- ft depth-contours.6b1fe0a4c0.js:2:11278",
+     "ms": 175
+    },
+    {
+     "k": "gpx <- Tn depth-contours.6b1fe0a4c0.js:2:31075 <- Nn depth-contours.6b1fe0a4c0.js:2:33082 <- gu app.d390f02cdc.js:8:16614",
+     "ms": 160
+    },
+    {
+     "k": "geo-screen <- A protected-areas.7b2be921cb.js:1:2469 <- geometryAllowed protected-areas.7b2be921cb.js:1:5814 <- (anon) gpx.1ceb352fa8.js:1:2498",
+     "ms": 145
+    },
+    {
+     "k": "depth-contours <- (anon) app.d390f02cdc.js:8:17537 <- vu app.d390f02cdc.js:8:17258 <- o app.d390f02cdc.js:8:18358",
+     "ms": 119
+    },
+    {
+     "k": "depth-contours <- (anon) trip.c91134dfb7.js:2:37422",
+     "ms": 94
+    },
+    {
+     "k": "geo-screen <- ft depth-contours.6b1fe0a4c0.js:2:11278",
+     "ms": 53
+    },
+    {
+     "k": "geo-screen <- pointAllowed protected-areas.7b2be921cb.js:1:5686 <- (anon) gpx.1ceb352fa8.js:1:2258 <- c gpx.1ceb352fa8.js:1:1716",
+     "ms": 42
+    },
+    {
+     "k": "geo-screen <- (anon) protected-areas.7b2be921cb.js:1:4456 <- (anon) protected-areas.7b2be921cb.js:1:282 <- geometryAllowed protected-areas.7b2be921cb.js:1:5814",
+     "ms": 34
+    },
+    {
+     "k": "gpx <- nn depth-contours.6b1fe0a4c0.js:2:22558 <- (anon) app.d390f02cdc.js:8:17537 <- Pn depth-contours.6b1fe0a4c0.js:2:37951",
+     "ms": 24
+    },
+    {
+     "k": "depth-contours <- gu app.d390f02cdc.js:8:16614 <- Pu app.d390f02cdc.js:8:22000 <- ae signals.module.a854bd533b.js:1:9706",
+     "ms": 22
+    },
+    {
+     "k": "depth-contours <- gu app.d390f02cdc.js:8:16614 <- td app.d390f02cdc.js:8:31092 <- ae signals.module.a854bd533b.js:1:9706",
+     "ms": 17
+    },
+    {
+     "k": "depth-contours <- ri trip.c91134dfb7.js:2:25031 <- (anon) trip.c91134dfb7.js:2:36090 <- pe trip.c91134dfb7.js:2:35029",
+     "ms": 16
+    }
+   ]
+  },
+  {
+   "run": 2,
+   "cls": 0.7269,
+   "shifts": [
+    {
+     "t": 295,
+     "v": 0.601,
+     "src": [
+      {
+       "node": "main.app-main",
+       "from": [
+        330,
+        611
+       ],
+       "to": [
+        355,
+        586
+       ]
+      },
+      {
+       "node": "section.app-first-answer",
+       "from": [
+        160,
+        170
+       ],
+       "to": [
+        185,
+        170
+       ]
+      },
+      {
+       "node": "div.app-area",
+       "from": [
+        74,
+        45
+       ],
+       "to": [
+        131,
+        45
+       ]
+      },
+      {
+       "node": "output.app-window.ui-mono",
+       "from": [
+        131,
+        20
+       ],
+       "to": [
+        144,
+        20
+       ]
+      }
+     ]
+    },
+    {
+     "t": 717,
+     "v": 0.029,
+     "src": [
+      {
+       "node": "section.app-legend",
+       "from": [
+        435,
+        446
+       ],
+       "to": [
+        355,
+        527
+       ]
+      },
+      {
+       "node": "div.app-tiles.app-tiles--dense",
+       "from": [
+        686,
+        254
+       ],
+       "to": [
+        784,
+        156
+       ]
+      },
+      {
+       "node": "div.maplibregl-ctrl-bottom-right",
+       "from": [
+        610,
+        182
+       ],
+       "to": [
+        594,
+        199
+       ]
+      },
+      {
+       "node": "p.app-verdict-rules",
+       "from": [
+        541,
+        105
+       ],
+       "to": [
+        639,
+        105
+       ]
+      },
+      {
+       "node": "span.ui-eyebrow",
+       "from": [
+        658,
+        17
+       ],
+       "to": [
+        756,
+        17
+       ]
+      }
+     ]
+    },
+    {
+     "t": 563,
+     "v": 0.0231,
+     "src": [
+      {
+       "node": "div.app-tiles.app-tiles--dense",
+       "from": [
+        594,
+        146
+       ],
+       "to": [
+        686,
+        254
+       ]
+      },
+      {
+       "node": "figure.app-spark",
+       "from": [
+        880,
+        61
+       ],
+       "to": [
+        0,
+        0
+       ]
+      },
+      {
+       "node": "details.app-details",
+       "from": [
+        808,
+        60
+       ],
+       "to": [
+        0,
+        0
+       ]
+      },
+      {
+       "node": "div.app-tide-station",
+       "from": [
+        752,
+        44
+       ],
+       "to": [
+        0,
+        0
+       ]
+      },
+      {
+       "node": "span.ui-eyebrow",
+       "from": [
+        565,
+        17
+       ],
+       "to": [
+        658,
+        17
+       ]
+      }
+     ]
+    },
+    {
+     "t": 7546,
+     "v": 0.019,
+     "src": [
+      {
+       "node": "li.app-legend-depth-contours",
+       "from": [
+        602,
+        134
+       ],
+       "to": [
+        0,
+        0
+       ]
+      },
+      {
+       "node": "li.app-legend-mpa",
+       "from": [
+        740,
+        107
+       ],
+       "to": [
+        0,
+        0
+       ]
+      },
+      {
+       "node": "li.app-legend-saved-spots",
+       "from": [
+        527,
+        72
+       ],
+       "to": [
+        827,
+        20
+       ]
+      },
+      {
+       "node": "li.app-legend-currents",
+       "from": [
+        479,
+        44
+       ],
+       "to": [
+        779,
+        44
+       ]
+      },
+      {
+       "node": "p.app-legend-note",
+       "from": [
+        458,
+        17
+       ],
+       "to": [
+        726,
+        50
+       ]
+      }
+     ]
+    },
+    {
+     "t": 276,
+     "v": 0.0149,
+     "src": [
+      {
+       "node": "body",
+       "from": [
+        20,
+        88
+       ],
+       "to": [
+        0,
+        940
+       ]
+      }
+     ]
+    },
+    {
+     "t": 377,
+     "v": 0.014,
+     "src": [
+      {
+       "node": "div.app-tiles.app-tiles--dense",
+       "from": [
+        477,
+        146
+       ],
+       "to": [
+        574,
+        146
+       ]
+      },
+      {
+       "node": "figure.app-spark",
+       "from": [
+        707,
+        90
+       ],
+       "to": [
+        860,
+        80
+       ]
+      },
+      {
+       "node": "details.app-details",
+       "from": [
+        635,
+        60
+       ],
+       "to": [
+        788,
+        60
+       ]
+      },
+      {
+       "node": "section.app-where",
+       "from": [
+        809,
+        72
+       ],
+       "to": [
+        0,
+        0
+       ]
+      },
+      {
+       "node": "nav",
+       "from": [
+        8,
+        44
+       ],
+       "to": [
+        8,
+        44
+       ]
+      }
+     ]
+    },
+    {
+     "t": 644,
+     "v": 0.0076,
+     "src": [
+      {
+       "node": "section.app-legend",
+       "from": [
+        484,
+        397
+       ],
+       "to": [
+        435,
+        446
+       ]
+      },
+      {
+       "node": "span.ui-rail-text",
+       "from": [
+        534,
+        17
+       ],
+       "to": [
+        530,
+        54
+       ]
+      },
+      {
+       "node": "label.app-rail-source",
+       "from": [
+        570,
+        32
+       ],
+       "to": [
+        597,
+        4
+       ]
+      },
+      {
+       "node": "div.ui-tile-source",
+       "from": [
+        796,
+        66
+       ],
+       "to": [
+        779,
+        99
+       ]
+      },
+      {
+       "node": "div.app-account",
+       "from": [
+        8,
+        44
+       ],
+       "to": [
+        8,
+        44
+       ]
+      }
+     ]
+    },
+    {
+     "t": 1051,
+     "v": 0.0074,
+     "src": [
+      {
+       "node": "li.app-legend-depth-contours",
+       "from": [
+        627,
+        134
+       ],
+       "to": [
+        602,
+        134
+       ]
+      },
+      {
+       "node": "li.app-legend-mpa",
+       "from": [
+        765,
+        83
+       ],
+       "to": [
+        740,
+        107
+       ]
+      },
+      {
+       "node": "li.app-legend-saved-spots",
+       "from": [
+        551,
+        72
+       ],
+       "to": [
+        527,
+        72
+       ]
+      },
+      {
+       "node": "label.app-rail-source",
+       "from": [
+        597,
+        4
+       ],
+       "to": [
+        580,
+        21
+       ]
+      },
+      {
+       "node": "summary.ui-popover-summary.ui-eyebrow",
+       "from": [
+        479,
+        44
+       ],
+       "to": [
+        479,
+        44
+       ]
+      }
+     ]
+    }
+   ],
+   "longTasks": [
+    [
+     497,
+     63
+    ],
+    [
+     843,
+     118
+    ],
+    [
+     1064,
+     82
+    ],
+    [
+     1315,
+     3240
+    ],
+    [
+     4559,
+     2509
+    ],
+    [
+     7076,
+     53
+    ],
+    [
+     7194,
+     54
+    ],
+    [
+     7248,
+     297
+    ],
+    [
+     7564,
+     2871
+    ],
+    [
+     10515,
+     63
+    ],
+    [
+     10580,
+     53
+    ],
+    [
+     10633,
+     92
+    ],
+    [
+     10726,
+     2723
+    ],
+    [
+     13484,
+     64
+    ]
+   ],
+   "hotCallers": [
+    {
+     "k": "geo-screen <- (anon) depth-contours.6b1fe0a4c0.js:2:31528 <- Tn depth-contours.6b1fe0a4c0.js:2:31075 <- Nn depth-contours.6b1fe0a4c0.js:2:33082",
+     "ms": 8936
+    },
+    {
+     "k": "maplibre-gl <- ",
+     "ms": 433
+    },
+    {
+     "k": "gpx <- Tn depth-contours.6b1fe0a4c0.js:2:31075 <- Nn depth-contours.6b1fe0a4c0.js:2:33082 <- gu app.d390f02cdc.js:8:16614",
+     "ms": 170
+    },
+    {
+     "k": "depth-contours <- ",
+     "ms": 159
+    },
+    {
+     "k": "geo-screen <- A protected-areas.7b2be921cb.js:1:2469 <- geometryAllowed protected-areas.7b2be921cb.js:1:5814 <- (anon) gpx.1ceb352fa8.js:1:2498",
+     "ms": 150
+    },
+    {
+     "k": "gpx <- ft depth-contours.6b1fe0a4c0.js:2:11278",
+     "ms": 145
+    },
+    {
+     "k": "depth-contours <- (anon) app.d390f02cdc.js:8:17537 <- vu app.d390f02cdc.js:8:17258 <- o app.d390f02cdc.js:8:18358",
+     "ms": 131
+    },
+    {
+     "k": "depth-contours <- (anon) trip.c91134dfb7.js:2:37422",
+     "ms": 94
+    },
+    {
+     "k": "geo-screen <- ft depth-contours.6b1fe0a4c0.js:2:11278",
+     "ms": 60
+    },
+    {
+     "k": "geo-screen <- pointAllowed protected-areas.7b2be921cb.js:1:5686 <- (anon) gpx.1ceb352fa8.js:1:2258 <- c gpx.1ceb352fa8.js:1:1716",
+     "ms": 38
+    },
+    {
+     "k": "geo-screen <- (anon) protected-areas.7b2be921cb.js:1:4456 <- (anon) protected-areas.7b2be921cb.js:1:282 <- geometryAllowed protected-areas.7b2be921cb.js:1:5814",
+     "ms": 24
+    },
+    {
+     "k": "depth-contours <- gu app.d390f02cdc.js:8:16614 <- td app.d390f02cdc.js:8:31092 <- ae signals.module.a854bd533b.js:1:9706",
+     "ms": 19
+    },
+    {
+     "k": "gpx <- nn depth-contours.6b1fe0a4c0.js:2:22558 <- (anon) app.d390f02cdc.js:8:17537 <- Pn depth-contours.6b1fe0a4c0.js:2:37951",
+     "ms": 18
+    },
+    {
+     "k": "depth-contours <- gu app.d390f02cdc.js:8:16614 <- Pu app.d390f02cdc.js:8:22000 <- ae signals.module.a854bd533b.js:1:9706",
+     "ms": 17
+    },
+    {
+     "k": "depth-contours <- ri trip.c91134dfb7.js:2:25031 <- (anon) trip.c91134dfb7.js:2:36090 <- pe trip.c91134dfb7.js:2:35029",
+     "ms": 14
+    }
+   ]
+  }
+ ]
+}

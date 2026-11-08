@@ -49,7 +49,7 @@ import {EnglishDetail} from './EnglishDetail.tsx';
 import {targetLabel} from '../species.ts';
 import {PlanLink} from './PlanView.tsx';
 import {chartFailed, chartMark, retryMpas, unavailable} from '../map/chart.ts';
-import {NOTES, groundsState} from '../map/charter-grounds.ts';
+import {NOTES, NOTE_COPY, groundsState} from '../map/charter-grounds.ts';
 import {cloudHeld, cloudStamp} from '../map/clouds.ts';
 import {statusText, type StatusPart} from '../map/status-copy.ts';
 import {AIS_CREDIT, aisOn, aisState} from '../map/commercial-ais.ts';
@@ -78,6 +78,7 @@ import {retrySavedSpots, savedSpotsOn, savedSpotsStatus, setSavedSpotsOn} from '
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {railEntries, railOn} from './rail.ts';
+import {PreviewLegendRows} from './PreviewLayers.tsx';
 
 /** A basis popover body: English shows the producer's own basis as it is; Spanish leads with the registry sentence in Spanish, then the producer's full basis unchanged (labelled English) unless it is the registry's own English sentence. */
 /** SC1352-02: a status the producer wrote in English, in the page's language when it attached catalogue parts; otherwise labelled English. */
@@ -86,13 +87,15 @@ function Status({lang, raw, parts}: {lang: Language; raw: string; parts?: readon
   return r.translated ? <>{r.text}</> : <EnglishDetail lang={lang}>{raw}</EnglishDetail>;
 }
 
-function Basis({lang, id, runtime, extra}: {lang: Language; id: string; runtime: string; extra?: string}) {
+function Basis({lang, id, runtime, extra, extraEs, copy}: {lang: Language; id: string; runtime: string; extra?: string; extraEs?: string; copy?: readonly StatusPart[]}) {
   if (lang !== 'es') return <>{runtime}{extra ? <> {extra}</> : null}</>;
+  const full = statusText(runtime, copy, lang);
+  if (full.translated) return <p>{full.text}</p>;
   const same = runtime === layerCopy(id, 'en').basis;
   return <>
     <p>{layerCopy(id, lang).basis}</p>
     {!same && runtime ? <p><EnglishDetail lang={lang}>{runtime}</EnglishDetail></p> : null}
-    {extra ? <p><EnglishDetail lang={lang}>{extra}</EnglishDetail></p> : null}
+    {extraEs ? <p>{extraEs}</p> : extra ? <p><EnglishDetail lang={lang}>{extra}</EnglishDetail></p> : null}
   </>;
 }
 
@@ -228,10 +231,10 @@ function FrontsRow() {
   return (
     <li class="app-legend-sst-fronts">
       {layerCopy('sst-fronts', lang).label}
-      <Popover iconOnly summary={t('legend.bs.fronts', lang)}><Basis lang={lang} id="sst-fronts" runtime={s.basis} /></Popover>
+      <Popover iconOnly summary={t('legend.bs.fronts', lang)}><Basis lang={lang} id="sst-fronts" runtime={s.basis} copy={s.copy?.basis} /></Popover>
       {d ? <p class="app-legend-note" data-band="sst-fronts">{t('legend.band', lang)}</p> : null}
-      {d ? <p class="app-legend-note ui-mono" data-stamp="sst-fronts"><EnglishDetail lang={lang}>{`${d.product} · ${s.note}`}</EnglishDetail></p> : null}
-      {s.reason ? <p class="app-legend-note" data-reason="sst-fronts"><EnglishDetail lang={lang}>{s.reason}</EnglishDetail></p> : null}
+      {d ? <p class="app-legend-note ui-mono" data-stamp="sst-fronts"><Status lang={lang} raw={`${d.product} · ${s.note}`} parts={s.copy?.stamp} /></p> : null}
+      {s.reason ? <p class="app-legend-note" data-reason="sst-fronts"><Status lang={lang} raw={s.reason} parts={s.copy?.reason} /></p> : null}
     </li>
   );
 }
@@ -256,13 +259,13 @@ function SwellRow() {
   return (
     <li class="app-legend-swell">
       {f ? <span class="app-swatch" data-layer="swell" aria-hidden="true"></span> : null}{layerCopy('swell', lang).label}
-      <Popover iconOnly summary={t('legend.bs.swell', lang)}><Basis lang={lang} id="swell" runtime={s.basis} extra={r ? ringBasis(r.product) : undefined} /></Popover>
+      <Popover iconOnly summary={t('legend.bs.swell', lang)}><Basis lang={lang} id="swell" runtime={s.basis} extra={r ? ringBasis(r.product) : undefined} extraEs={r ? ringBasis(r.product, 'es') : undefined} /></Popover>
       <Segmented label={layerCopy('swell', lang).label} value={swellPartition.value} onChange={v => { swellPartition.value = v; }}
         options={[{value: 'primary', label: t('legend.swell.primary', lang)}, {value: 'wind', label: t('legend.swell.wind', lang)}, {value: 'secondary', label: t('legend.swell.secondary', lang)}]} />
       {f ? <p class="app-legend-note app-legend-range ui-mono" data-range="swell"><EnglishDetail lang={lang}>{frameSummary(f)}</EnglishDetail></p> : null}
       {f ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="swell">{HEIGHT_SCALE[0]} ft<span class="app-swatch" data-layer="swell" aria-hidden="true"></span><span class="app-visually-hidden">{t('legend.to', lang)}</span>{HEIGHT_SCALE[1]}+ ft</p> : null}
       {f ? <p class="app-legend-note ui-mono" data-stamp="swell"><Status lang={lang} raw={t('legend.swell.stamp', 'en', {name: WAVE_MODEL.name, stamp: f.stamp})} parts={s.copy?.stamp} /></p> : null}
-      {r ? <p class="app-legend-note ui-mono" data-nearshore="swell"><span class="app-ring" aria-hidden="true"></span><EnglishDetail lang={lang}>{ringSummary(r, new Date())}</EnglishDetail></p> : null}
+      {r ? <p class="app-legend-note ui-mono" data-nearshore="swell"><span class="app-ring" aria-hidden="true"></span>{ringSummary(r, new Date(), lang)}</p> : null}
       {fieldReason ? <p class="app-legend-note" data-reason="swell"><Status lang={lang} raw={fieldReason} parts={reasonParts} /></p> : null}
     </li>
   );
@@ -308,12 +311,12 @@ function FleetRow() {
       {g.drawn ? <span class="app-swatch" data-layer="charter-grounds" aria-hidden="true"></span> : null}{layerCopy('charter-grounds', lang).label}
       <Popover iconOnly summary={t('legend.bs.charter', lang)}>{layerCopy('charter-grounds', lang).basis}{audit ? ` ${t('legend.fleet.checked', lang, {date: audit})}` : ''}</Popover>
       {g.drawn ? <p class="app-legend-note ui-mono" data-stamp="charter-grounds">{t(g.drawn === 1 ? 'legend.fleet.one' : 'legend.fleet.many', lang, {n: g.drawn})}</p> : null}
-      {g.note || !g.drawn ? <p class="app-legend-note" data-reason="charter-grounds"><EnglishDetail lang={lang}>{g.note || NOTES.loading}</EnglishDetail></p> : null}
+      {g.note || !g.drawn ? <p class="app-legend-note" data-reason="charter-grounds"><Status lang={lang} raw={g.note || NOTES.loading} parts={g.note ? g.copy?.note : NOTE_COPY.loading} /></p> : null}
       {coarseNote('charter-grounds', lang)}
       {ais ? <>
         <p class="app-legend-note app-legend-sub">{a.drawn && chart ? <span class="app-swatch" data-layer="commercial-ais" aria-hidden="true"></span> : null}{layerCopy('commercial-ais', lang).label}
           <Popover iconOnly summary={t('legend.bs.ais', lang)}>{layerCopy('commercial-ais', lang).basis} <EnglishDetail lang={lang}>{AIS_CREDIT}</EnglishDetail></Popover></p>
-        {!chart ? <p class="app-legend-note" data-reason="commercial-ais">{chartOnly(lang)}</p> : a.note ? <p class="app-legend-note" data-reason="commercial-ais"><EnglishDetail lang={lang}>{a.note}</EnglishDetail></p> : null}
+        {!chart ? <p class="app-legend-note" data-reason="commercial-ais">{chartOnly(lang)}</p> : a.note ? <p class="app-legend-note" data-reason="commercial-ais"><Status lang={lang} raw={a.note} parts={a.copy?.note} /></p> : null}
       </> : null}
       {activityAccess.value ? ACTIVITY.filter(name => activityOn.value.includes(name)).map(name => {
         const entry = layerCopy(ACTIVITY_ENTRY[name], lang);
@@ -343,7 +346,7 @@ export function SavedSpotsRow() {
     <li class="app-legend-saved-spots">
       <label><input type="checkbox" style={{width: '24px', height: '24px'}} checked={savedSpotsOn.value} disabled={!status.canToggle} onChange={e => setSavedSpotsOn(e.currentTarget.checked)} /> {entry.label}</label>
       <Popover iconOnly summary={t('legend.bs.saved', lang)}><p>{entry.basis}</p></Popover>
-      <p class="app-legend-note" data-reason="saved-spots" role="status"><EnglishDetail lang={lang}>{status.text}</EnglishDetail></p>
+      <p class="app-legend-note" data-reason="saved-spots" role="status"><Status lang={lang} raw={status.text} parts={status.copy} /></p>
       {status.retry ? <Button variant="quiet" onClick={retrySavedSpots}>{t('legend.tryAgain', lang)}</Button> : null}
     </li>
   );
@@ -393,9 +396,9 @@ function StationsRow() {
   const s = stationState.value, rings = nearshoreState.value, lang = language.value, entry = layerCopy('stations', lang);
   return <li class="app-legend-stations">{entry.label}
     <Popover iconOnly summary={t('legend.bs.stations', lang)}>{entry.basis}<p>{layerEntry('stations').attribution}</p></Popover>
-    <p class="app-legend-note"><EnglishDetail lang={lang}>{s.note}</EnglishDetail></p>
+    <p class="app-legend-note"><Status lang={lang} raw={s.note} parts={s.copy} /></p>
     <ul>{entry.legend.map(row => <li key={row.label}><span class="app-key" aria-hidden="true" style={{background: `var(--${row.swatch})`}} />{row.label}</li>)}</ul>
-    <p class="app-legend-note">{rings ? <EnglishDetail lang={lang}>{ringSummary(rings, new Date())}</EnglishDetail> : t('legend.ringsUnavailable', lang)}</p>
+    <p class="app-legend-note">{rings ? ringSummary(rings, new Date(), lang) : t('legend.ringsUnavailable', lang)}</p>
     <details><summary>{t('legend.stationList', lang)}</summary><ul>{s.pins.map(pin => <li key={pin.key}><Button variant="quiet" onClick={() => { chartMark.value = pin.mark; }}>{pin.mark.name}{pin.location ? '' : t('legend.locationUnavailable', lang)}</Button></li>)}</ul></details>
   </li>;
 }
@@ -424,6 +427,7 @@ export function Legend() {
           : e.id === 'fleet' ? <FleetRow key={e.id} />
           : e.id === 'stations' ? <StationsRow key={e.id} />
           : <PlainRow key={e.id} id={e.id} label={e.label} reason={t('rail.notDrawn', lang)} />)}
+        <PreviewLegendRows />
         <RankedRow />
         <SavedSpotsRow />
         <ShoreRow />
@@ -431,7 +435,7 @@ export function Legend() {
         <DepthContoursRow />
         <MpaRow />
       </ul>
-      {unavailable.value.filter(id => id !== 'mpas').map(id => <p key={id} class="app-empty" data-unavailable={id}>{t('rail.unavailable', lang, {label: layerCopy(id, lang).label})}</p>)}
+      {unavailable.value.filter(id => id !== 'mpas' && !id.startsWith('preview-')).map(id => <p key={id} class="app-empty" data-unavailable={id}>{t('rail.unavailable', lang, {label: layerCopy(id, lang).label})}</p>)}
     </section>
   );
 }

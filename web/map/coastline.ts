@@ -9,7 +9,8 @@
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type stripping.
 import type {Palette} from './palette.ts';
-import type {MarkCopyFields, MarkCopyPart} from '../mark-copy.ts';
+import type {StringId} from '../i18n.ts';
+import {cp, joinParts, type MarkCopyFields, type MarkCopyPart} from '../mark-copy.ts';
 import {COASTLINE_SOURCE, layerEntry} from './layers.ts';
 import {ZOOM_OFFSET} from './engine.ts';
 import {chartFileListed} from '../chart-files.ts';
@@ -80,6 +81,9 @@ export interface ChartMark {
   readonly copyTerms?: readonly (readonly MarkCopyPart[])[];
 }
 
+const CID = (key: string): StringId => `mark.layer.coastline.${key}` as StringId;
+/** A stated accuracy in Spanish (decimal comma), with every digit the source gave. */
+const esMetres = new Intl.NumberFormat('es', {maximumFractionDigits: 6, useGrouping: false});
 const text = (value: unknown): string => typeof value === 'string' ? value.trim() : typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -105,6 +109,7 @@ export function coastlineMark(properties: Record<string, unknown> | null | undef
   if (!validCalendarDate(date)) return null;
   const [kind, line] = text(p.ATTRIBUTE).split('.', 2).map(s => s.trim());
   const method = text(p.DATA_SOURC), accuracy = Number(text(p.HOR_ACC));
+  const kindText = [line || kind, line ? kind : ''].filter(Boolean).join(' · '), accuracyOn = Number.isFinite(accuracy) && accuracy > 0;
   return {
     id: `coastline:${text(p.SOURCE_ID) || text(p.source_tile) || date}`,
     name: 'Shoreline',
@@ -112,5 +117,13 @@ export function coastlineMark(properties: Record<string, unknown> | null | undef
     reading: [method, Number.isFinite(accuracy) && accuracy > 0 ? `±${accuracy} m stated` : ''].filter(Boolean).join(' · ') || 'Accuracy not stated',
     source: `NOAA NGS CUSP · source date ${date}`,
     basis: layerEntry('coastline').basis,
+    // SC1352-08: display wording only; the ATTRIBUTE kind/line and DATA_SOURC stay as published, in the same order.
+    copy: {
+      name: [cp(CID('name'))],
+      ...(kindText ? {} : {kind: [cp(CID('segment'))]}),
+      reading: accuracyOn || method ? joinParts([method, accuracyOn && [cp(CID('accuracy'), {n: esMetres.format(accuracy)})]], ' · ') : [cp(CID('noAccuracy'))],
+      source: [cp(CID('source'), {date})],
+      basis: [cp('layer.coastline.basis')],
+    },
   };
 }

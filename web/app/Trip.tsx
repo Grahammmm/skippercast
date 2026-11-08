@@ -9,12 +9,14 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {formatBytes, relativeTime} from '../../dist/offline-core.js';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
+import {PositionCheck} from './PositionCheck.tsx';
 import {region} from '../state.ts';
 import {
   KEEP_WORDS, canSaveCoastal, closeTrip, deleteCoastal, estimateWords, listPacks, loadPlanner, offlineOpen, plannerView, readCoastal, saveCoastal, savePack, savePackKept, storageLine, tripError, tripOpen, tripReady,
   type PackMeta, type Progress,
 } from '../trip.ts';
 import {oceanLines} from '../trip-ocean-lines.ts';
+import {tidePackMessage} from '../brief/remaining-copy.ts';
 import {forecastEndLine} from '../trip-forecast-end.ts';
 import {language, localeOf, t, type Language, type StringId} from '../i18n.ts';
 import {regionInfo, zone} from './App.tsx';
@@ -24,7 +26,7 @@ const PRODUCTS: Readonly<Record<string, StringId>> = {'/api/coast/report': 'trip
 
 /** A status line kept as its catalogue id and variables (and an English tail the store supplies), never as translated text. */
 type Status = {id: StringId; vars?: Readonly<Record<string, string | number>>; missing?: number; tail?: string} | null;
-const statusText = (s: Status, lang: Language): string => !s ? '' : t(s.id, lang, {...s.vars, ...(s.missing === undefined ? {} : {missing: s.missing ? t('trip.status.missing', lang, {n: s.missing}) : ''})}) + (s.tail ?? '');
+const statusText = (s: Status, lang: Language): string => !s ? '' : t(s.id, lang, {...s.vars, ...(s.id === 'trip.status.failed' && typeof s.vars?.detail === 'string' ? {detail: tidePackMessage(s.vars.detail, lang)} : {}), ...(s.missing === undefined ? {} : {missing: s.missing ? t('trip.status.missing', lang, {n: s.missing}) : ''})}) + (s.tail ?? '');
 
 /** "Oct 9, 3:42 PM PDT" in the region's zone ("9 oct, 3:42 p. m. PDT" in Spanish). */
 export const stamp = (iso: string, timeZone = zone(), lang: Language = 'en'): string =>
@@ -81,8 +83,26 @@ function TripDialog() {
       {tripReady.value ? null : <p role="status">{error ? loadFailed(error, lang) : t('trip.loading', lang)}</p>}
       {error ? <Button size="sm" onClick={() => void loadPlanner()}>{t('trip.retry', lang)}</Button> : null}
       {planner ? <planner.View model={planner.model} open={open} /> : null}
+      <PositionCheck />
+      <Button icon="download" disabled={!region.value} onClick={() => { closeTrip(); offlineOpen.value = true; }}>{t('trip.legal.open', lang)}</Button>
     </dialog>
   );
+}
+
+const LEGAL_PARTS: Readonly<Record<string, StringId>> = {rules: 'trip.legal.rules', areas: 'trip.legal.areas', regulations: 'trip.legal.regulations', 'mpa-boundaries': 'trip.legal.mpa-boundaries', 'additional-closures': 'trip.legal.additional-closures'};
+
+export function LegalChecklist({meta, lang}: {meta: PackMeta; lang: Language}) {
+  const legal = meta.legal, unknown = t('trip.legal.unknown', lang);
+  return <details>
+    <summary>{t('trip.legal.heading', lang)}: {t(legal?.complete ? 'trip.legal.complete' : 'trip.legal.incomplete', lang)}{!legal || legal.stale ? ` · ${t('trip.legal.stale', lang)}` : ''}</summary>
+    {!legal || legal.stale ? <p role="status">{t('trip.legal.stale', lang)}</p> : null}
+    <p>{t('trip.legal.note', lang)}</p>
+    <ul>{legal?.items.map(item => <li key={item.id}>
+      <strong>{t(LEGAL_PARTS[item.id]!, lang)}: {t(item.saved ? 'trip.legal.saved' : 'trip.legal.missing', lang)}</strong>
+      <p>{t('trip.legal.dates', lang, {saved: item.saved_at ?? unknown, generated: item.generated_at ?? unknown, reviewed: item.reviewed_at ?? unknown, from: item.valid_from ?? unknown, through: item.valid_through ?? unknown})}</p>
+      {item.sources.map((url, i) => <a key={url} href={url} target="_blank" rel="noopener noreferrer">{t('trip.legal.source', lang, {n: i + 1})} · {new URL(url).hostname} </a>)}
+    </li>)}</ul>
+  </details>;
 }
 
 function ChartPack() {
@@ -108,7 +128,11 @@ function ChartPack() {
       if (request === refreshId.current) setInventoryState('error');
     }
   };
-  useEffect(() => { void refresh(); return () => { ++refreshId.current; }; }, []);
+  useEffect(() => {
+    void refresh();
+    const timer = setInterval(() => { void refresh(); }, 60000);
+    return () => { clearInterval(timer); ++refreshId.current; };
+  }, []);
   const save = async () => {
     if (!id || busy) return;
     if (!navigator.onLine) { setStatus({id: 'trip.status.offline'}); return; }
@@ -148,7 +172,7 @@ function ChartPack() {
           return (
           <li key={cache}>
             <div><strong>{meta.region_name}</strong><span class="ui-mono">{t('trip.saved', lang)} <Saved iso={meta.saved_at} lang={lang} /> · {formatBytes(meta.bytes)}</span><span>{packTiles(meta, lang)}</span><span>{forecastEndLine(meta, new Date(), zone())}</span>
-              {ocean ? <><span>{t('tripOcean.water', lang, {line: ocean.water})}</span><span>{t('tripOcean.currents', lang, {line: ocean.currents})}</span></> : null}</div>
+              {ocean ? <><span>{t('tripOcean.water', lang, {line: ocean.water})}</span><span>{t('tripOcean.currents', lang, {line: ocean.currents})}</span></> : null}<LegalChecklist meta={meta} lang={lang} /></div>
             <Button size="sm" disabled={!!busy} onClick={() => void remove(cache)} aria-label={t('trip.deleteAria', lang, {name: meta.region_name})}>{t('trip.delete', lang)}</Button>
           </li>
           );
