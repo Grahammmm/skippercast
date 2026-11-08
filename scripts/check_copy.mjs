@@ -257,12 +257,12 @@ export function lintFile(path, source) {
 
 /** The string catalogue (catalog/app/strings.json, en + es) and the files whose user-visible words all come from it. To cover a surface: add its ids, replace its literals with t(id, lang), list its file here. */
 export const CATALOGUE = 'catalog/app/strings.json';
-export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/FirstAnswerLine.tsx', 'web/app/RulesCard.tsx', 'web/brief/verdict-copy.ts', 'web/brief/WhereToLook.tsx', 'web/brief/ranking-copy.ts', 'web/brief/Run.tsx', 'web/app/LanguageChoice.tsx', 'web/brief/Tiles.tsx', 'web/brief/tile-copy.ts', 'web/brief/TideStationControl.tsx', 'web/brief/TideSpark.tsx', 'web/brief/tide-copy.ts', 'web/brief/MarkForecast.tsx', 'web/brief/remaining-copy.ts', 'web/ui/Guard.tsx', 'web/ui/Popover.tsx', 'web/degraded-notice.tsx', 'web/degraded.ts', 'web/app/MapStage.tsx',
+export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/FirstAnswerLine.tsx', 'web/app/RulesCard.tsx', 'web/brief/verdict-copy.ts', 'web/brief/WhereToLook.tsx', 'web/brief/ranking-copy.ts', 'web/brief/Run.tsx', 'web/brief/EntranceCurrent.tsx', 'web/app/LanguageChoice.tsx', 'web/brief/Tiles.tsx', 'web/brief/tile-copy.ts', 'web/brief/TideStationControl.tsx', 'web/brief/TideSpark.tsx', 'web/brief/tide-copy.ts', 'web/brief/MarkForecast.tsx', 'web/brief/remaining-copy.ts', 'web/ui/Guard.tsx', 'web/ui/Popover.tsx', 'web/degraded-notice.tsx', 'web/degraded.ts', 'web/app/MapStage.tsx',
   'web/landing/main.tsx', 'web/landing/copy.ts', 'web/landing/Landing.tsx', 'web/landing/PortInput.tsx', 'web/landing/ProfileStep.tsx', 'web/landing/Readout.tsx', 'web/landing/readings.ts', 'web/landing/live-verdict.ts', 'web/app/FirstRun.tsx', 'web/app/LimitsPanel.tsx',
   'web/app/Masthead.tsx', 'web/app/Mobile.tsx', 'web/app/CommandBar.tsx', 'web/app/AccountMenu.tsx',
   'web/app/TimeDock.tsx', 'web/ui/Dock.tsx', 'web/season.ts', 'web/app/SeasonStrip.tsx',
   'web/map/layers.ts', 'web/app/rail.ts', 'web/app/LayerRail.tsx', 'web/app/Legend.tsx',
-  'web/app/Planner.tsx', 'web/app/Trip.tsx', 'web/trip-ocean-lines.ts', 'web/planner-copy.ts',
+  'web/app/Planner.tsx', 'web/app/Trip.tsx', 'web/app/PositionCheck.tsx', 'web/app/PositionView.tsx', 'web/position-check.ts', 'web/trip-ocean-lines.ts', 'web/planner-copy.ts',
   'web/app/views/Conditions.tsx', 'web/app/views/HourlyTable.tsx', 'web/app/views/History.tsx', 'web/model-disagreement.ts', 'web/view-copy.ts',
   'web/app/MarkCard.tsx', 'web/saved-spots.ts', 'web/mark-copy.ts', 'web/map/status-copy.ts',
   'web/app/PlanView.tsx', 'web/plan.ts', 'web/app/ControlsTour.tsx', 'web/tour.ts', 'web/app/Presets.tsx', 'web/app/presets.ts',

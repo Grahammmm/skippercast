@@ -239,7 +239,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC-PERF-LAZY-1: app.css only adds the .app-reef-text selector to the existing muted 13px .app-empty/.app-caveat rule for the deferred-reef note; the Reports catch sheet never mounts it, and contrast() is untouched. Rebound from the final bytes.
   // SC-PERF-LAZY-1: check_contrast.mjs changes only its appCss source hash; contrast() is untouched. Rebound.
   // SC-PERF-JUMP-1: app.css appends only layout rules (masthead, target menu width, desktop legend minimum height); no paint; the Reports catch sheet mounts none of them. Rebound from the final bytes.
-  "web/app/app.css": "b8ab39b0a4a75d552124700f5d65112aa9acb4e1a39e0cddb2f88b686b5d70af",
+  "web/app/app.css": "3b1482c3c8e08bab1fa64f855bd892047217279b837cf989d448332f884c315e",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -301,7 +301,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1352-05: the Stations note and nearshore-ring words show in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only this source.
   // SC1352-06: MapStage shows its labels and reasons in the page’s language and the legend’s saved-spots note does too (copy only); BODY09 never mounts MapStage. check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only MapStage.tsx and this source.
   // SC1352-07: the evidence layers' status lines and the fronts basis show in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash, line citations and a comment. Rebind only this source.
-  "scripts/check_contrast.mjs": "1480d6b58ce216c50812adb0cdb66937dca3cdcb35856c4ac90fb3f2615bd640",
+  // SC-TIDAL-1: app.css only appends a scoped .app-entrance* block (token text roles in the Boat brief's run line); check_contrast.mjs rebinds only the
+  // appCss surface hash and its comment. BODY09 mounts Reports/CatchCards, never the run line or the legend; contrast(), catch paint, backing,
+  // assertions and thresholds are unchanged. Rebind only these two sources.
+  "scripts/check_contrast.mjs": "60c85fc854ccf72a68f04936e3c62941a31a34d0ffa89c3922ad254bd12fa763",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still

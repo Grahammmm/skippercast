@@ -114,7 +114,9 @@ export type BarTide = {stage: 'ebb' | 'flood' | null; midEbb: boolean; fraction:
 export type BarSwell = {heightFt: number | null; periodS: number | null; basis: 'nearshore' | 'offshore' | null;
   /** The longest period carrying at least BAR.longPeriod.minFt, or null. */
   longPeriodS: number | null};
-export type BarHour = {at: string; band: BarBand; tide: BarTide; swell: BarSwell; windAgainst: boolean; reasons: string[]};
+/** The hour's wind as read, so a caller that re-reads the hour at another tide phase can ask the wind-against-ebb question again. */
+export type BarWind = {windKnots: number | null; windDirectionDeg: number | null};
+export type BarHour = {at: string; band: BarBand; tide: BarTide; swell: BarSwell; windAgainst: boolean; reasons: string[]; wind?: BarWind};
 
 /** The regulated entrance for this county and area, or null. */
 export function entranceFor(countyId: string | undefined, areaId: string | undefined): Entrance | null {
@@ -123,10 +125,10 @@ export function entranceFor(countyId: string | undefined, areaId: string | undef
   return county && areaId && Object.hasOwn(county, areaId) ? county[areaId]! : null;
 }
 
-/** Ebb or flood from the high and low events either side of `at`, and whether it is mid-ebb. */
-export function barTide(at: number, events: readonly TideEvent[]): BarTide {
-  const unknown: BarTide = {stage: null, midEbb: false, fraction: null};
-  if (!Number.isFinite(at)) return unknown;
+/** The high or low either side of `at`, as epoch ms and type; null when `at` is not a time or the bracket is unknown or conflicting. */
+export type TideBracket = {previous: {at: number; type: 'H' | 'L'}; next: {at: number; type: 'H' | 'L'}};
+export function tideBracket(at: number, events: readonly TideEvent[]): TideBracket | null {
+  if (!Number.isFinite(at)) return null;
   // Keep a conflicting timestamp as an unknown boundary, rather than dropping
   // it and inventing a wider bracket. Exact same-type duplicates can collapse.
   const groups = new Map<number, 'H' | 'L' | null>();
@@ -140,9 +142,17 @@ export function barTide(at: number, events: readonly TideEvent[]): BarTide {
   }
   const sorted = [...groups].sort(([a], [b]) => a - b);
   const previous = [...sorted].reverse().find(([time]) => time <= at), next = sorted.find(([time]) => time > at);
-  if (!previous || !next || previous[1] === null || next[1] === null || previous[1] === next[1]) return unknown;
-  const fraction = (at - previous[0]) / (next[0] - previous[0]);
-  const stage = previous[1] === 'H' ? 'ebb' : 'flood';
+  if (!previous || !next || previous[1] === null || next[1] === null || previous[1] === next[1]) return null;
+  return {previous: {at: previous[0], type: previous[1]}, next: {at: next[0], type: next[1]}};
+}
+
+/** Ebb or flood from the high and low events either side of `at`, and whether it is mid-ebb. */
+export function barTide(at: number, events: readonly TideEvent[]): BarTide {
+  const bracket = tideBracket(at, events);
+  if (!bracket) return {stage: null, midEbb: false, fraction: null};
+  const {previous, next} = bracket;
+  const fraction = (at - previous.at) / (next.at - previous.at);
+  const stage = previous.type === 'H' ? 'ebb' : 'flood';
   return {stage, midEbb: stage === 'ebb' && fraction >= BAR.midEbb.from && fraction <= BAR.midEbb.to, fraction: round(fraction, 2)};
 }
 
@@ -211,7 +221,8 @@ export function barHours(input: BarInputs): BarHour[] {
     const tide = barTide(at, input.tideEvents);
     const swell = barSwell(hour, input.site ? nearshoreAt(input.site, hour.at) : undefined);
     const against = windAgainstEbb(hour, tide, input.entrance.seawardDeg);
-    return {at: hour.at, tide, swell, windAgainst: against, ...barBand(tide, swell, against)};
+    return {at: hour.at, tide, swell, windAgainst: against, ...barBand(tide, swell, against),
+      wind: {windKnots: finite(hour.windKnots) ? hour.windKnots : null, windDirectionDeg: finite(hour.windDirectionDeg) ? hour.windDirectionDeg : null}};
   });
 }
 

@@ -492,3 +492,13 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
    it starts at about its settled height, and still shrinks and scrolls on a short map. */
 /* Only while no selected-mark card shares the column: with a card open the legend must shrink and scroll beside it, not push below the map's clipped edge. */
 .app-chrome-left:not(:has(> .app-mark)) > .app-legend { min-height: min(32rem, 90%); }
+/* SC-TIDAL-1: the entrance current and bar caution, inside the Boat run line. Phone first: one column, long words wrap, nothing sets a width. */
+.app-entrance { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-1); width: 100%; min-width: 0; padding-block: var(--space-2); border-block: 1px solid var(--line); }
+.app-entrance p { margin: 0; font-size: var(--text-13); line-height: var(--leading-body); overflow-wrap: anywhere; }
+.app-entrance-title { color: var(--muted); }
+.app-entrance-timing { color: var(--text); }
+.app-entrance-turns, .app-entrance-wcofs, .app-entrance-foot { color: var(--muted); }
+.app-entrance-caution { color: var(--text); font-weight: 600; }
+.app-entrance-caution[data-band="Caution"], .app-entrance-caution[data-band="Unknown"] { color: var(--amber); }
+.app-entrance-caution[data-band="Hazardous"] { color: var(--coral); }
+.app-entrance-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
