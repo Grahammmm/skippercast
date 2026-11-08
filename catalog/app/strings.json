@@ -963,6 +963,7 @@
     "legend.fresh.limit": {"en": " · age limit {limit}", "es": " · límite de antigüedad {limit}"},
     "legend.fresh.limit.currents": {"en": " · radar observation at most 6 h old; forecast run at most 36 h old", "es": " · observación de radar de hasta 6 h; ejecución del pronóstico de hasta 36 h"},
     "legend.fresh.gate": {"en": " · run at most {run} h old, retrieved within {retrieved} h", "es": " · ejecución de hasta {run} h, obtenida hace menos de {retrieved} h"},
+    "legend.fresh.stale": {"en": " · observations labelled stale after {observation} h, tide predictions after {prediction} h; last-good values stay shown with their original times", "es": " · observaciones marcadas como desactualizadas tras {observation} h, predicciones de marea tras {prediction} h; los últimos valores buenos se siguen mostrando con su hora original"},
     "legend.fresh.daily": {"en": "daily", "es": "diaria"},
     "legend.fresh.hourly": {"en": "hourly", "es": "cada hora"},
     "legend.fresh.habitat": {"en": "with each habitat refresh", "es": "con cada actualización del hábitat"},
