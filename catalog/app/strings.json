@@ -2330,6 +2330,7 @@
     "trip.legal.unknown": {"en": "Unknown", "es": "Desconocido"},
     "trip.legal.dates": {"en": "Saved: {saved} · Feed assembled: {generated} · Rules reviewed: {reviewed} · Effective window: {from} – {through}", "es": "Guardado: {saved} · Fuente compilada: {generated} · Reglas revisadas: {reviewed} · Vigencia: {from} – {through}"},
     "trip.legal.source": {"en": "Source {n}", "es": "Fuente {n}"},
+    "trip.legal.checked": {"en": "Boundary file source checked: {checked}", "es": "Archivo de límites verificado en la fuente: {checked}"},
     "trip.pos.heading": {"en": "Check my position", "es": "Revisar mi posición"},
     "trip.pos.button": {"en": "Check my position", "es": "Revisar mi posición"},
     "trip.pos.again": {"en": "Check again", "es": "Revisar otra vez"},
