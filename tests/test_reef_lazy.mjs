@@ -134,3 +134,28 @@ test("the map's own first-idle signal (or the chart failing to start) releases t
   markMapIdle(); await done;
   assert.equal(loaded, 1);
 });
+
+test('a region switch while the old region is still loading: the old answer does not overwrite the new deferred state, and the new region still loads', async () => {
+  const s = setup();
+  const slow = gate();
+  const published = {targets: [], areas: [], publication: {export_sha256: 'c'.repeat(64)}};
+  const { loadReefPublication } = await import('../web/ranking.ts');
+  const a = requestReefPublication('morro-bay', {...s.deps, mapIdle: async () => {}, idle: async () => {},
+    load: async region => { await loadReefPublication(region, async () => { await slow.p; return published; }); }});
+  await tick(); await tick();
+  assert.equal(reefPublication.value.state, 'loading');
+  const b = requestReefPublication('santa-barbara', s.deps);
+  await tick();
+  slow.go(); await a;
+  assert.deepEqual({...reefPublication.value}, {state: 'deferred', region: 'santa-barbara'}, "A's late answer must not replace B's deferred state");
+  s.map.go(); s.idle.go(); await b;
+  assert.equal(reefPublication.value.state, 'ready');
+  assert.equal(reefPublication.value.region, 'santa-barbara');
+});
+
+test('a 2d or 3d presentation never mounts the Chart, so the terrain stage releases the first-idle signal itself', () => {
+  const stage = readFileSync(new URL('../web/map/stage.ts', import.meta.url), 'utf8');
+  assert.match(stage, /import \{markMapIdle\} from '\.\.\/map-ready\.ts'/);
+  const mount = stage.slice(stage.indexOf('async function mount()'));
+  assert.match(mount.slice(0, mount.indexOf('const visibility')), /finally \{[^}]*markMapIdle\(\)/s);
+});

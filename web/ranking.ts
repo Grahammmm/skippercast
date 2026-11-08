@@ -257,6 +257,9 @@ async function startLoad(region: string, loader: ReefLoader): Promise<void> {
   if (mine === generation) reefPublication.value = next;
 }
 
+/** A region was newly deferred: a load already running for another region (or this one) must not write over the deferred state. */
+export function supersedeReefLoads(): void { generation++; }
+
 /** Load the region's publication once (another region starts again); a failure leaves the list above in place. */
 export async function loadReefPublication(region: string, loader: ReefLoader = loadReefTrip): Promise<void> {
   const was = reefPublication.peek();

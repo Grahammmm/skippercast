@@ -5,7 +5,7 @@
 // Planner: web/planner.ts loads its own copy when the user opens a plan, so that path is already on demand.
 import {mapFirstIdle, markMapIdle} from './map-ready.ts';
 import {loadManifest} from '../dist/seafloor-data.js';
-import {loadReefPublication, reefPublication, reloadReefPublication} from './ranking.ts';
+import {loadReefPublication, reefPublication, reloadReefPublication, supersedeReefLoads} from './ranking.ts';
 
 export {mapFirstIdle, markMapIdle};
 
@@ -88,6 +88,7 @@ export async function requestReefPublication(region: string, given: Partial<Lazy
   const deps: LazyDeps = {...DEFAULTS, ...given};
   const was = reefPublication.peek();
   if (was.region === region && was.state !== 'idle') return;
+  supersedeReefLoads(); // a load of the region left behind that is still running must not overwrite this one
   reefPublication.value = {state: 'deferred', region};
   const mine = reefPublication.peek();
   await deps.mapIdle();
