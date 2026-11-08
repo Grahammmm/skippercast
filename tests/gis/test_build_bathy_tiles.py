@@ -468,6 +468,56 @@ class NativeTierTests(unittest.TestCase):
             self.assertNotIn(str(root), json.dumps(metadata))
             self.assertEqual(metadata['shallow_limit_m'], 91.44)
 
+    def _mixed_native(self, root, west_valid):
+        """2 m native grid: optional shallow -60 m block on the west; elsewhere alternating land (+40)
+        and deep (-140) columns whose plain average (-50) would look like valid shallow water."""
+        cols = np.arange(300)
+        grid = np.where(cols % 2 == 0, 40.0, -140.0)[None, :].repeat(300, axis=0)
+        if west_valid:
+            grid[:, :100] = -60
+        path = root / 'mixed.tif'
+        with rasterio.open(path, 'w', driver='GTiff', width=300, height=300, count=1, dtype='float32',
+                           crs='EPSG:3310', nodata=NODATA,
+                           transform=from_origin(-121800, -288200, 2, 2)) as ds:
+            ds.write(grid.astype('float32'), 1)
+        manifest = root / 'native.json'
+        manifest.write_text(json.dumps([{'id': 'mixed-2m', 'path': str(path), 'resolution_m': 2,
+                                         'source_file': 'mixed.tif', 'archive_sha256': 'c' * 64}]))
+        return bt.load_native_manifest(manifest)
+
+    def test_native_depth_gate_precedes_averaging_in_warp_native(self):
+        with tempfile.TemporaryDirectory() as directory:
+            sources = self._mixed_native(Path(directory), west_valid=True)
+            xs, ys = bt.tile_range(sources[0]['bounds'], 15)
+            seen = set()
+            for x in xs:
+                for y in ys:
+                    warped, _ = bt.warp_native(sources[0], 15, x, y, 8)
+                    seen.update(np.unique(warped[np.isfinite(warped)]).tolist())
+            # Land and deep cells never average into a shallow-looking pixel (-50 is the unmasked mean).
+            self.assertTrue(seen)
+            for value in seen:
+                self.assertTrue(value == NODATA or abs(value + 60) < 1e-3, value)
+            self.assertIn(-60.0, {round(v, 3) for v in seen})
+
+    def test_mixed_land_deep_native_gives_no_z15_support_or_relief_through_tiered_windows(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            coarse_transform = from_origin(-121800, -288200, 10, 10)
+            coarse = np.full((60, 60), -100, dtype='float32')
+            for west_valid in (False, True):
+                sources = self._mixed_native(root, west_valid)
+                windows = bt.tiered_windows(coarse, coarse_transform, 'EPSG:3310',
+                                            sources[0]['bounds'], 15, sources, bt.PAD)
+                if not west_valid:
+                    self.assertEqual(windows, {})  # nothing shallow-valid: no z15 tile at all
+                    continue
+                self.assertTrue(windows)  # the genuinely shallow-valid block still qualifies z15
+                for window, invalid, _ in windows.values():
+                    cells = window[~invalid]
+                    # coarse -100 blended toward the true -60 native value only: never the -50 land/deep mean
+                    self.assertTrue(np.all((cells >= -100 - 1e-3) & (cells <= -60 + 1e-3)))
+
     def test_same_surface_has_no_tier_edge_ridge_or_tile_join(self):
         size = 320
         yy, xx = np.mgrid[:size, :size + 256]

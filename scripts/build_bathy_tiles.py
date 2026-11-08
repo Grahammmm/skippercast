@@ -422,13 +422,44 @@ def load_native_manifest(path):
     return sorted(sources, key=lambda s: (-s['resolution_m'], s['id']))
 
 
+def mask_native(values, nodata=None):
+    """Native cells outside the shallow-only contract (finite, not nodata, 0 to -300 ft) become NODATA.
+
+    Applied to the source cells BEFORE area averaging, so land, deep water and nodata cells can never
+    average into an apparently valid shallow pixel (nor feed relief or z14-15 native support).
+    """
+    values = np.asarray(values, dtype=np.float32)
+    keep = np.isfinite(values) & (values != NODATA) & (values <= 0) & (values >= -SHALLOW_M)
+    if nodata is not None and np.isfinite(nodata):
+        keep &= values != np.float32(nodata)
+    return np.where(keep, values, np.float32(NODATA)).astype(np.float32)
+
+
 def warp_native(source, z, x, y, pad):
     import rasterio
-    from rasterio.warp import Resampling, reproject
+    from rasterio.transform import array_bounds
+    from rasterio.warp import Resampling, reproject, transform_bounds
+    from rasterio.windows import Window, from_bounds
     transform, ground = tile_grid(z, x, y, pad)
-    dest = np.full((TILE + 2 * pad, TILE + 2 * pad), NODATA, dtype=np.float32)
+    size = TILE + 2 * pad
+    dest = np.full((size, size), NODATA, dtype=np.float32)
     with rasterio.open(source['path']) as ds:
-        reproject(rasterio.band(ds, 1), dest, dst_transform=transform, dst_crs='EPSG:3857',
+        # Read only the source cells under this padded tile (plus an averaging margin), mask them
+        # to the shallow contract, then average: the mask must precede Resampling.average.
+        west, south, east, north = array_bounds(size, size, transform)
+        sw, ss, se, sn = transform_bounds('EPSG:3857', ds.crs, west, south, east, north, densify_pts=21)
+        margin = math.ceil(transform.a / max(abs(ds.res[0]), 1e-9)) + 2
+        window = from_bounds(sw, ss, se, sn, transform=ds.transform)
+        col0, row0 = math.floor(window.col_off) - margin, math.floor(window.row_off) - margin
+        col1 = math.ceil(window.col_off + window.width) + margin
+        row1 = math.ceil(window.row_off + window.height) + margin
+        col0, row0, col1, row1 = max(col0, 0), max(row0, 0), min(col1, ds.width), min(row1, ds.height)
+        if col1 <= col0 or row1 <= row0:
+            return dest, ground
+        window = Window(col0, row0, col1 - col0, row1 - row0)
+        values = mask_native(ds.read(1, window=window), ds.nodata)
+        reproject(values, dest, src_transform=ds.window_transform(window), src_crs=ds.crs,
+                  src_nodata=NODATA, dst_transform=transform, dst_crs='EPSG:3857',
                   dst_nodata=NODATA, resampling=Resampling.average, init_dest_nodata=True)
     return dest, ground
 
