@@ -466,3 +466,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-preview-ramp { display: block; flex-basis: 100%; height: 8px; border-radius: 2px; }
 .app-preview-ends { display: flex; flex-basis: 100%; justify-content: space-between; font-size: var(--text-11); color: var(--muted); }
 .app-legend-preview[data-state="stale"] .app-legend-note[role="status"], .app-legend-preview[data-state="unavailable"] .app-legend-note[role="status"] { font-weight: 600; }
+
+/* SC-PERF-INSTANT-1: the saved brief's "Last updated" line; amber when past the brief's own freshness limit, so it never reads calmer than live data. */
+.app-saved { margin: var(--space-2) 0; color: var(--muted); font-size: var(--text-13); }
+.app-saved[data-stale="true"] { color: var(--amber); font-weight: var(--weight-semibold); }

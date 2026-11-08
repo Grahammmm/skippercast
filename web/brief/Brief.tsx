@@ -49,6 +49,7 @@ import {DEFAULT_ZONE} from '../zone.ts';
 import {dailyPartPath} from '../../dist/offline-core.js';
 import './brief-print.css';
 import {validDailyPart} from '../map/habitat.ts';
+import {browserStore, displayedForecast, readSaved, savedLine, writeSaved, type SavedState, type SavedStore} from './saved-brief.ts';
 
 export type {BriefModel};
 
@@ -65,6 +66,61 @@ export const dailyFeedPath = (id: string): string => `/feeds/data/regions/${enco
 export const feedGaps = signal<readonly string[]>([]);
 
 let feedLoad = 0;
+
+// SC-PERF-INSTANT-1: the last brief that loaded, kept on this device (web/brief/saved-brief.ts) and shown at once on the
+// next visit while the feeds are read again. `held` says which parts on screen are still the saved ones and when each was
+// fetched; the brief is rebuilt from them, so the stale rules apply as to live data. Off until the app calls enableSavedBrief.
+interface HeldPart {at: number; saved: boolean; failed: boolean}
+const held: {region: string | null; daily: HeldPart | null; forecast: HeldPart | null} = {region: null, daily: null, forecast: null};
+let savedStore: SavedStore | null | undefined;
+/** After this long a saved brief that has not been replaced says the update failed (a weak signal can hang a read). */
+export const SAVED_SETTLE_MS = 20_000;
+/** Set while any part on screen is the saved one: the oldest saved part's fetch time and whether the update is running or failed; null otherwise. */
+export const savedBrief = signal<{at: number; state: SavedState} | null>(null);
+
+/** Turn on keeping and showing the last brief on this device; `store` is the browser's by default, null when there is none. */
+export function enableSavedBrief(store: SavedStore | null = browserStore()): void { savedStore = store; }
+
+function publishSaved(): void {
+  const parts = [held.daily, held.forecast].filter((p): p is HeldPart => !!p?.saved);
+  savedBrief.value = parts.length ? {at: Math.min(...parts.map(p => p.at)), state: parts.some(p => p.failed) ? 'failed' : 'updating'} : null;
+}
+function markFresh(part: 'daily' | 'forecast', id: string): void {
+  if (held.region !== id) { held.region = id; held.daily = held.forecast = null; }
+  held[part] = {at: Date.now(), saved: false, failed: false};
+  publishSaved();
+}
+function persistSaved(id: string): void {
+  const feed = dailyFeed.peek(), forecast = regionalForecast.peek();
+  if (!savedStore || held.region !== id || !held.daily || feed?.region_id !== id) return;
+  writeSaved(savedStore, id, {at: held.daily.at, data: feed},
+    held.forecast && forecast?.region === id ? {at: held.forecast.at, data: displayedForecast(forecast)} : null);
+}
+
+/**
+ * Show the saved brief for `id` before anything is read, when this device has one for that region and nothing is on screen yet.
+ * Returns whether it did; the caller then reads the feeds as usual (needsDailyLoad) and they replace it.
+ */
+export function showSavedBrief(id: string, now = Date.now()): boolean {
+  if (savedStore === undefined || dailyFeed.peek()) return false;
+  const entry = readSaved(savedStore, id, now);
+  if (!entry?.daily) return false;
+  held.region = id;
+  held.daily = {at: entry.daily.at, saved: true, failed: false};
+  held.forecast = entry.forecast ? {at: entry.forecast.at, saved: true, failed: false} : null;
+  dailyFeed.value = entry.daily.data;
+  if (entry.forecast) regionalForecast.value = entry.forecast.data;
+  publishSaved();
+  setTimeout(() => {
+    if (held.region !== id) return;
+    for (const part of [held.daily, held.forecast]) if (part?.saved) part.failed = true;
+    publishSaved();
+  }, SAVED_SETTLE_MS);
+  return true;
+}
+
+/** True when region `id` has no daily feed on screen yet, or only the saved one that has not been replaced. */
+export const needsDailyLoad = (id: string): boolean => dailyFeed.peek()?.region_id !== id || (held.region === id && !!held.daily?.saved && !dailyPending);
 
 export const FEED_GAP = {both: t('brief.gap.both'), daily: t('brief.gap.daily').replace(/\.$/, ''), conditions: t('brief.gap.conditions')} as const;
 
@@ -127,12 +183,18 @@ async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean): P
   // A later load (another region) owns the feed and its gap lines; this one only returns what it read.
   if (load !== feedLoad) return mergeFeeds(daily, conditions);
   dailyPending = false;
+  // A saved daily feed on screen stands in for a daily read that failed (shown as such), never for a fresh one.
+  const savedDaily = !daily && held.region === id && held.daily?.saved && dailyFeed.peek()?.region_id === id ? dailyFeed.peek() : null;
+  if (savedDaily) { held.daily!.failed = true; publishSaved(); }
+  if (savedDaily && !conditions) return savedDaily;
   // A refresh that read neither keeps the feed and gap lines shown (readings carry their own times) and its old
   // read time, so the next visible page tries again.
   if (refresh && !daily && !conditions) return dailyFeed.peek();
-  dailyLoadedAt = Date.now();
-  feedGaps.value = !daily && !conditions ? [FEED_GAP.both] : !daily ? [dailyGap(conditions!)] : !conditions ? [FEED_GAP.conditions] : [];
-  dailyFeed.value = mergeFeeds(daily, conditions);
+  const base = daily ?? savedDaily;
+  dailyLoadedAt = daily ? Date.now() : 0;
+  feedGaps.value = !base && !conditions ? [FEED_GAP.both] : !base ? [dailyGap(conditions!)] : !conditions ? [FEED_GAP.conditions] : [];
+  dailyFeed.value = mergeFeeds(base, conditions);
+  if (daily) { markFresh('daily', id); persistSaved(id); }
   return dailyFeed.peek();
 }
 
@@ -169,9 +231,16 @@ export function ensureRegionalForecast(id: string, near: readonly [number, numbe
   return loadConditionsForecast(id, near, fetchFn, page).then(f => {
     if (forecastKey !== key) return regionalForecast.peek();
     forecastPending = false;
+    if (!f && held.region === id && held.forecast?.saved && regionalForecast.peek()?.region === id) {
+      // The saved forecast stays on screen, said to be the saved one; read again on the next call or visible page.
+      held.forecast.failed = true; publishSaved();
+      forecastKey = null; forecastLoadedAt = 0;
+      return regionalForecast.peek();
+    }
     regionalForecast.value = f;
     forecastLoadedAt = Date.now();
     if (!f) forecastKey = null; // a failed load is tried again on the next call
+    else { markFresh('forecast', id); persistSaved(id); }
     return f;
   });
 }
@@ -242,6 +311,20 @@ export function leadHour(hourValue: string | null, dayValue: string | null, now:
   if (dayValue && dayValue === days[0]?.day) return null;
   const named = days.slice(1).find(d => d.day === dayValue) ?? days[1];
   return named ? hourParam(dockTime(named.day, null, now, tz, days).at / 1000) : null;
+}
+
+/**
+ * SC-PERF-INSTANT-1: while any part of the brief on screen is still the saved one, when this device fetched it and whether it
+ * is updating or the update failed. Amber when that is past the brief's own limit (verdict.ts RUN_STALE_MS) or a reading on
+ * screen is stale; the brief itself, rebuilt from the saved inputs, labels its aged readings as it does for live data.
+ */
+export function SavedLine({now}: {now: Date}) {
+  const s = savedBrief.value;
+  if (!s) return null;
+  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, lang = language.value;
+  const stale = !!leadBrief(now)?.tiles.some(tile => tile.state === 'stale' || tile.lastGood);
+  const line = savedLine(s.at, now.getTime(), s.state, stale, tz, lang);
+  return <p class="app-saved ui-mono" role="status" data-saved={s.state} data-stale={line.amber ? 'true' : undefined}>{line.text}</p>;
 }
 
 /** The brief the lead answers from: the dock's brief once a time is chosen, else tomorrow's. */
