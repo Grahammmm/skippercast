@@ -344,6 +344,16 @@ def publish_bundle(s3, bucket, folder, *, now=None):
     allowed = {archive.name, 'ledger.json', 'manifest.json', export.name} | ({slim_name} if slim_name else set())
     if {p.name for p in folder.iterdir()} != allowed:
         raise ValueError('Unexpected file in public bundle')
+    if slim_name:
+        # A slim PUT/GET/checksum failure must leave the previous ready release live: prove the new slim bytes can be stored and
+        # read back at a staging key before sync() or the hold touches any live object.
+        import hashlib
+        stage = f'tiles/seafloor/staging/{region}-{slim_name}'
+        s3.put_object(Bucket=bucket, Key=stage, Body=(folder/slim_name).read_bytes(), ContentType='application/gzip',
+                      CacheControl='no-store', Metadata={'sha256': manifest['slim_sha256']})
+        with s3.get_object(Bucket=bucket, Key=stage)['Body'] as stream:
+            if hashlib.sha256(stream.read()).hexdigest() != manifest['slim_sha256']:
+                raise ValueError('R2 slim reef file read-back failed; previous release left live')
     sync(s3, bucket, folder, f'tiles/seafloor/regions/{region}')
     # Stable URL is gated by a separate manifest in the Worker. Write a hold
     # before changing the alias, then promote only after archive read-back.

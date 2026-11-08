@@ -128,10 +128,26 @@ class SlimPublicationTests(unittest.TestCase):
                 publish.publish_bundle(s3, 'b', folder, now=NOW)
             self.assertEqual(s3.puts, [])
 
-    def test_corrupt_slim_readback_keeps_alias_held(self):
+    def live_release(self, tmp):
+        """A bucket that already serves a ready release (alias manifest, export, archive, slim file), plus the new bundle."""
+        old_folder, old_manifest = slim_bundle(tmp)
+        s3 = Bucket()
+        publish.publish_bundle(s3, 'b', old_folder, now=NOW)
+        live = dict(s3.objects)
+        new_folder = Path(tmp)/'next'
+        new_folder.mkdir()
+        for path in old_folder.iterdir():
+            (new_folder/path.name).write_bytes(path.read_bytes())
+        (new_folder/'habitat-slim.geojson.gz').write_bytes(gzip.compress(b'{"changed": true}', mtime=0))
+        manifest = json.loads((new_folder/'manifest.json').read_text())
+        manifest['slim_sha256'] = sha256(new_folder/'habitat-slim.geojson.gz')
+        atomic_json(new_folder/'manifest.json', manifest)
+        s3.puts.clear()
+        return s3, live, new_folder
+
+    def test_corrupt_slim_readback_leaves_the_previous_ready_release_live(self):
         with tempfile.TemporaryDirectory() as tmp:
-            folder, _ = slim_bundle(tmp)
-            s3 = Bucket()
+            s3, live, folder = self.live_release(tmp)
             real = s3.get_object
             def corrupt(*, Bucket, Key):
                 got = real(Bucket=Bucket, Key=Key)
@@ -142,7 +158,28 @@ class SlimPublicationTests(unittest.TestCase):
             s3.get_object = corrupt
             with self.assertRaisesRegex(ValueError, 'slim reef file read-back'):
                 publish.publish_bundle(s3, 'b', folder, now=NOW)
-            self.assertEqual(json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['status'], 'updating')
+            control = 'tiles/seafloor/manifest-morro-bay.json'
+            self.assertEqual(json.loads(s3.objects[control])['status'], 'ready')
+            for key, value in live.items():
+                if '/staging/' in key: continue  # scratch key, not served
+                self.assertEqual(s3.objects[key], value, key)
+            self.assertNotIn(control, s3.puts)
+
+    def test_failed_slim_upload_leaves_the_previous_ready_release_live(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            s3, live, folder = self.live_release(tmp)
+            real = s3.put_object
+            def fail(*, Bucket, Key, Body, **kwargs):
+                if Key.endswith('habitat-slim.geojson.gz'):
+                    raise OSError('R2 PUT failed')
+                return real(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
+            s3.put_object = fail
+            with self.assertRaises(OSError):
+                publish.publish_bundle(s3, 'b', folder, now=NOW)
+            self.assertEqual(json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['status'], 'ready')
+            for key, value in live.items():
+                if '/staging/' in key: continue  # scratch key, not served
+                self.assertEqual(s3.objects[key], value, key)
 
 
 class BuildTests(unittest.TestCase):
