@@ -114,7 +114,9 @@ export type BarTide = {stage: 'ebb' | 'flood' | null; midEbb: boolean; fraction:
 export type BarSwell = {heightFt: number | null; periodS: number | null; basis: 'nearshore' | 'offshore' | null;
   /** The longest period carrying at least BAR.longPeriod.minFt, or null. */
   longPeriodS: number | null};
-export type BarHour = {at: string; band: BarBand; tide: BarTide; swell: BarSwell; windAgainst: boolean; reasons: string[]};
+/** The hour's wind as read, so a caller that re-reads the hour at another tide phase can ask the wind-against-ebb question again. */
+export type BarWind = {windKnots: number | null; windDirectionDeg: number | null};
+export type BarHour = {at: string; band: BarBand; tide: BarTide; swell: BarSwell; windAgainst: boolean; reasons: string[]; wind?: BarWind};
 
 /** The regulated entrance for this county and area, or null. */
 export function entranceFor(countyId: string | undefined, areaId: string | undefined): Entrance | null {
@@ -219,7 +221,8 @@ export function barHours(input: BarInputs): BarHour[] {
     const tide = barTide(at, input.tideEvents);
     const swell = barSwell(hour, input.site ? nearshoreAt(input.site, hour.at) : undefined);
     const against = windAgainstEbb(hour, tide, input.entrance.seawardDeg);
-    return {at: hour.at, tide, swell, windAgainst: against, ...barBand(tide, swell, against)};
+    return {at: hour.at, tide, swell, windAgainst: against, ...barBand(tide, swell, against),
+      wind: {windKnots: finite(hour.windKnots) ? hour.windKnots : null, windDirectionDeg: finite(hour.windDirectionDeg) ? hour.windDirectionDeg : null}};
   });
 }
 

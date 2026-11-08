@@ -24,12 +24,14 @@ const MORRO = entranceFor('morro-bay', 'morro-bay'), HUMBOLDT = entranceFor('hum
 assert.equal(MORRO.seawardDeg, 260);
 assert.equal(HUMBOLDT.seawardDeg, null);
 
-const hoursAt = (events, waveFt, {entrance = MORRO, from = 0, count = 14, wavePeriodS = 10} = {}) =>
-  barHours({entrance, tideEvents: events, hours: Array.from({length: count}, (_, i) => ({at: iso(T0 + (from + i) * HOUR), waveFt, wavePeriodS, windKnots: 0, windDirectionDeg: 0}))});
+// A readable WCOFS sample that says nothing about the entrance (too weak to count): the neutral source state for tests that are not about WCOFS.
+const WEAK = {kind: 'weak', speedKn: 0.2, towardDeg: 0, validAt: 0};
+const hoursAt = (events, waveFt, {entrance = MORRO, from = 0, count = 14, wavePeriodS = 10, windKnots = 0, windDirectionDeg = 0} = {}) =>
+  barHours({entrance, tideEvents: events, hours: Array.from({length: count}, (_, i) => ({at: iso(T0 + (from + i) * HOUR), waveFt, wavePeriodS, windKnots, windDirectionDeg}))});
 const hourOf = (hs, ms) => hs.find(h => Date.parse(h.at) <= ms && ms < Date.parse(h.at) + HOUR) ?? null;
 const read = (ms, o = {}) => {
-  const {events = EVENTS, wave = 2, tideFresh = true, swellFresh = true, offshore = {kind: 'missing', reason: 'none'}, entrance = MORRO} = o;
-  return entranceReading({at: ms, entrance, tideEvents: events, tideFresh, swellFresh, barHour: hourOf(hoursAt(events, wave, {entrance}), ms), offshore});
+  const {events = EVENTS, wave = 2, tideFresh = true, swellFresh = true, offshore = WEAK, entrance = MORRO, wind = {}} = o;
+  return entranceReading({at: ms, entrance, tideEvents: events, tideFresh, swellFresh, barHour: hourOf(hoursAt(events, wave, {entrance, ...wind}), ms), offshore});
 };
 
 test('timing: flood between a low and the next high, with the turn and its slack window', () => {
@@ -207,6 +209,93 @@ test('words, stale data: old tide and old swell say so and never read as no bar 
   const old = view(brief({wave: 1}), forecast({issuedAgeH: 40}));
   assert.match(old.wcofs, /unavailable for this hour \(older than the app allows or outside its hours\); the timing uses the tide predictions only\./);
   assert.equal(old.band, 'No bar flag');
+});
+
+// ---- review round 1 (PR #1778): the caution is re-read at the real instant, with its wind, and never relaxes as a source ages ----
+const SHIFTED = EVENTS.map(e => ({...e, at: iso(Date.parse(e.at) + 5 * MIN)}));
+const OUT = {kind: 'out', speedKn: 1.2, towardDeg: 260, validAt: 0};
+const MISSING = {kind: 'missing', reason: 'old'};
+
+test('caution is recomputed at the actual instant: a turn inside the hour is not read from the hour before it', () => {
+  // Low 12:05, high 18:05 (the floored 18:00 hour is flood), 18:40 is 35 minutes past the high: ebbing, outside the slack window.
+  const ms = at(6, 40), r = read(ms, {events: SHIFTED, wave: 3});
+  assert.equal(r.timing.phase, 'ebb');
+  assert.equal(hourOf(hoursAt(SHIFTED, 3), ms).band, 'No bar flag');
+  assert.deepEqual([r.band, r.flow], ['Caution', 'ebb']);
+  const v = view(brief({events: SHIFTED, wave: 3}), forecast({toward: 80}), {now: new Date(ms)});
+  assert.match(v.timing, /^Ebbing/);
+  assert.match(v.caution, /^Ebb with 3 ft at 10 s swell: bar caution \(estimate\)\.$/);
+  // The mid-ebb boundary inside an hour: 25% of 18:05 to 00:05 is 19:35; at 19:40 the 19:00 hour is not mid-ebb, the instant is.
+  const mid = read(at(7, 40), {events: SHIFTED, wave: 6});
+  assert.equal(hourOf(hoursAt(SHIFTED, 6), at(7, 40)).band, 'Caution');
+  assert.equal(mid.band, 'Hazardous');
+  // And the other way round: never calmer than the hour's own band (a flood instant just after the low, inside an ebb hour).
+  const after = read(at(12, 10), {events: SHIFTED, wave: 3});
+  assert.equal(hourOf(hoursAt(SHIFTED, 3), at(12, 10)).band, 'Caution');
+  assert.equal(after.band, 'Caution');
+});
+
+test('stale swell keeps a Hazardous reading in words, with the stale warning beside it, in English and Spanish', () => {
+  const now = new Date(at(9, 10));
+  for (const lang of ['en', 'es']) {
+    const v = view(brief({wave: 6, swell: 'stale'}), forecast({toward: 80}), {now, lang});
+    assert.equal(v.band, 'Hazardous');
+    assert.ok(v.reading.why.includes('swell-stale'));
+    if (lang === 'en') {
+      assert.match(v.caution, /^Ebb with 6 ft at 10 s swell: bar hazardous \(estimate\)\. The swell forecast is older than the app allows, so treat this as a minimum\.$/);
+      assert.doesNotMatch(v.caution, /bar unknown/);
+    } else {
+      assert.match(v.caution, /^Vaciante con oleaje de 6 ft a 10 s: condiciones peligrosas en la barra \(estimación\)\. El pronóstico de oleaje es más antiguo de lo que permite la app/);
+    }
+  }
+  // A stale swell without a hazard still reads unknown.
+  assert.match(view(brief({wave: 3, swell: 'stale'}), forecast({toward: 80}), {now}).caution, /^Bar unknown \(estimate\): the swell forecast is older than the app allows\.$/);
+});
+
+test('an aging WCOFS run never makes the caution calmer: a lost cross-check reads as a possible ebb, not as no hazard', () => {
+  const fresh = view(brief({wave: 3}), forecast({toward: 255, kn: 1.2, issuedAgeH: 10})), aged = view(brief({wave: 3}), forecast({toward: 255, kn: 1.2, issuedAgeH: 40}));
+  assert.equal(fresh.band, 'Caution');
+  assert.deepEqual([aged.band, aged.reading.why], ['Caution', ['wcofs-missing']]);
+  assert.match(aged.wcofs, /unavailable for this hour/);
+  assert.match(aged.why, /^The WCOFS forecast is unavailable, so an ebb cannot be ruled out and this hour is also read as an ebb\.$/);
+  assert.match(aged.caution, /bar caution \(estimate\)/);
+  assert.match(view(brief({wave: 3}), forecast({toward: 255, issuedAgeH: 40}), {lang: 'es'}).why, /^El pronóstico WCOFS no está disponible/);
+  // No hazard to carry: a small swell stays No bar flag, and no explanation is added.
+  const small = view(brief({wave: 1}), forecast({issuedAgeH: 40}));
+  assert.deepEqual([small.band, small.reading.why, small.why], ['No bar flag', [], '']);
+  // Every source state of the same hour: a missing cross-check is never calmer than any readable one, at an entrance with a bearing.
+  const states = [OUT, {kind: 'in', speedKn: 1, towardDeg: 80, validAt: 0}, {kind: 'across', speedKn: 1, towardDeg: 170, validAt: 0}, {kind: 'weak', speedKn: 0.2, towardDeg: 0, validAt: 0}];
+  for (const wave of [0.5, 2, 3, 5, 7, 11]) for (const h of [1, 3, 5, 7, 9, 11]) {
+    const gone = read(at(h), {wave, offshore: MISSING});
+    for (const s of states) assert.ok(BAR_RANK[gone.band] >= BAR_RANK[read(at(h), {wave, offshore: s}).band], `${wave} ft at +${h} h vs ${s.kind}`);
+  }
+  // An entrance with no vetted bearing is never compared, fresh or old: the same reading either way.
+  const fh = view(brief({wave: 3, entrance: HUMBOLDT}), forecast({issuedAgeH: 10})), oh = view(brief({wave: 3, entrance: HUMBOLDT}), forecast({issuedAgeH: 40}));
+  assert.deepEqual([oh.band, oh.reading.why], [fh.band, fh.reading.why]);
+});
+
+test('an assumed ebb keeps the opposing-wind driver: wind blowing in against the ebb is a caution even with a small swell', () => {
+  const wind = {windKnots: 15, windDirectionDeg: 260};
+  const flood = read(at(3), {wave: 1, wind, offshore: OUT});
+  assert.deepEqual([flood.timing.phase, flood.ebbAssumed, flood.band], ['flood', true, 'Caution']);
+  assert.equal(read(at(3), {wave: 1, wind: {windKnots: 15, windDirectionDeg: 80}, offshore: OUT}).band, 'No bar flag');
+  assert.equal(read(at(3), {wave: 1, wind: {windKnots: 5, windDirectionDeg: 260}, offshore: OUT}).band, 'No bar flag');
+  assert.equal(read(at(3), {wave: 1, wind}).band, 'No bar flag', 'a flood with nothing running out is not an ebb');
+  // The same through the view; a lost cross-check also keeps the wind driver.
+  const b = brief({wave: 1}), brf = {...b, bar: {...b.bar, hours: hoursAt(EVENTS, 1, {windKnots: 15, windDirectionDeg: 260})}};
+  assert.equal(view(brf, forecast({toward: 255})).band, 'Caution');
+  assert.equal(view(brf, forecast({toward: 255, issuedAgeH: 40})).band, 'Caution');
+  assert.equal(view(brf, forecast({toward: 75})).band, 'No bar flag');
+});
+
+test('near slack the hour is also read as an ebb, because the harbor current can turn later than the tide', () => {
+  const before = read(at(5, 40), {wave: 3});
+  assert.deepEqual([before.timing.phase, before.band, before.why, before.flow], ['slack', 'Caution', ['slack-ebb'], null]);
+  assert.deepEqual([read(at(5, 40), {wave: 2}).band, read(at(5, 40), {wave: 2}).why], ['No bar flag', []]);
+  const v = view(brief({wave: 3}), forecast({toward: 80}), {now: new Date(at(5, 40))});
+  assert.match(v.why, /^Near slack the harbor's current can already be ebbing, so this hour is also read as an ebb\.$/);
+  assert.match(v.caution, /^Near slack with 3 ft at 10 s swell: bar caution \(estimate\)\.$/);
+  assert.match(view(brief({wave: 3}), forecast({toward: 80}), {now: new Date(at(5, 40)), lang: 'es'}).why, /^Cerca de la marea parada la corriente del puerto/);
 });
 
 test('words, missing data: no tide events, no swell, no forecast, no hourly readings', () => {

@@ -6,16 +6,19 @@
 //   A harbor's own current can lag the station's tide by an unknown time, so the turn is shown as a window of
 //   CURRENT.slackMin minutes either side of the predicted high or low, never as a minute.
 // - The NOAA WCOFS surface-current forecast at the region's forecast point (about 4 km, offshore of the entrance, so it
-//   cannot see the channel). It is used only as a second opinion: when it runs clearly out of the entrance while the
-//   tide says flood or slack, the entrance is read as a possible ebb, so the bar caution is never calmer than the
-//   worse source (bar-conditions.ts BAR_RANK). A bearing-less entrance cannot be compared and says so.
+//   cannot see the channel). It is used only as a second opinion: when it runs clearly out of the entrance while the tide
+//   says flood or slack, the entrance is read as a possible ebb, so the bar caution is never calmer than the worse source
+//   (bar-conditions.ts BAR_RANK). When it cannot be read at an entrance where it could have been compared, an ebb cannot be
+//   ruled out either, so an aging or missing forecast never makes the caution calmer. A bearing-less entrance cannot be
+//   compared and says so.
 //
-// The caution reuses bar-conditions.ts bands unchanged (swell height and period, tide stage, wind against the ebb). Stale
-// or missing tide or swell data read Unknown (which ranks above Caution), never No bar flag. Nothing here says a bar is safe.
+// The caution reuses bar-conditions.ts bands unchanged (swell height and period, tide stage, wind against the ebb), read
+// again at the tide phase of the instant itself. Stale or missing tide or swell data read Unknown (which ranks above
+// Caution), never No bar flag, and a Hazardous reading stays Hazardous. Nothing here says a bar is safe.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
-import {BAR_RANK, barBand, tideBracket} from './bar-conditions.ts';
-import type {BarBand, BarHour, Entrance} from './bar-conditions.ts';
+import {BAR_RANK, barBand, barTide, tideBracket, windAgainstEbb} from './bar-conditions.ts';
+import type {BarBand, BarHour, BarTide, Entrance} from './bar-conditions.ts';
 import type {TideEvent} from './types.ts';
 
 const MIN = 60_000;
@@ -94,11 +97,11 @@ export function offshoreFlow(sample: OffshoreSample | null | undefined, entrance
   return {kind: off <= withinDeg ? 'out' : off >= 180 - withinDeg ? 'in' : 'across', ...base};
 }
 
-export type CautionWhy = 'tide-stale' | 'tide-missing' | 'swell-stale' | 'swell-missing' | 'wcofs-ebb';
+export type CautionWhy = 'tide-stale' | 'tide-missing' | 'swell-stale' | 'swell-missing' | 'wcofs-ebb' | 'wcofs-missing' | 'slack-ebb';
 export type EntranceReading = {
   timing: EntranceTiming;
   offshore: OffshoreFlow;
-  /** The worse of the sources: the bar band at this hour, held at Unknown when a driver is old or missing, raised when WCOFS runs out of the entrance. */
+  /** The worse of the sources: the bar band at this instant, held at Unknown when a driver is old or missing, raised when an ebb cannot be ruled out. */
   band: BarBand;
   /** Why the band is not simply the bar hour's own, in the order they apply; empty when it is. */
   why: CautionWhy[];
@@ -118,7 +121,7 @@ export type ReadingInput = {
   tideFresh: boolean;
   /** The swell forecast is current (the brief's swell tile is fresh). */
   swellFresh: boolean;
-  /** The bar reading for this hour, from bar-conditions.ts barHours; null when the hour has none. */
+  /** The bar reading for the hour that holds `at`, from bar-conditions.ts barHours; null when the hour has none. */
   barHour: BarHour | null;
   offshore: OffshoreFlow;
 };
@@ -126,13 +129,22 @@ export type ReadingInput = {
 /** The worse (higher-ranked) of two bands. */
 export const worseBand = (a: BarBand, b: BarBand): BarBand => BAR_RANK[b] > BAR_RANK[a] ? b : a;
 
+/** An ebb of unknown strength: the stage is ebb, mid-ebb is not claimed. */
+const ASSUMED_EBB: BarTide = {stage: 'ebb', midEbb: false, fraction: null};
+
 /**
- * The entrance reading for one hour. Never calmer than its worst source: an old or missing tide or swell holds the band at
- * Unknown (a Hazardous bar hour stays Hazardous), and a WCOFS flow out of the entrance is read as an ebb even when the
- * tide says flood or slack.
+ * The entrance reading at one instant. Never calmer than its worst source:
+ * - the bar hour's own band is kept, and the hour's swell and wind are read again at the tide phase of `at` itself (the
+ *   bar hour is the whole hour holding `at`, so a turn inside the hour would otherwise be missed);
+ * - an old or missing tide or swell holds the band at Unknown (a Hazardous reading stays Hazardous);
+ * - the hour is also read as an ebb, with its wind, when WCOFS runs out of the entrance while the tide says flood, slack or
+ *   nothing, when WCOFS cannot be read at an entrance where it could have been compared (a lost cross-check never reads as
+ *   no hazard, so an aging run cannot make the caution calmer), and near slack (the harbor's current can turn later than the
+ *   station's tide).
  */
 export function entranceReading(input: ReadingInput): EntranceReading {
-  const {at, entrance, tideEvents, tideFresh, swellFresh, barHour, offshore} = input;
+  const {at, entrance, tideFresh, swellFresh, barHour, offshore} = input;
+  const tideEvents = Array.isArray(input.tideEvents) ? input.tideEvents : [];
   const timing = entranceTiming(at, tideEvents, tideFresh);
   const why: CautionWhy[] = [];
   let band: BarBand = barHour ? barHour.band : 'Unknown';
@@ -142,11 +154,20 @@ export function entranceReading(input: ReadingInput): EntranceReading {
   const tideFlow: Flow | null = timing.state === 'ok' && timing.phase !== 'slack' ? timing.phase : null;
   const tideEbb = timing.state === 'ok' && timing.phase === 'ebb';
   const ebbAssumed = offshore.kind === 'out' && !tideEbb;
-  if (ebbAssumed && barHour && barHour.swell.heightFt !== null) {
-    const asEbb = barBand({stage: 'ebb', midEbb: false, fraction: null}, barHour.swell, false).band;
-    band = worseBand(band, asEbb);
-    why.push('wcofs-ebb');
+  if (barHour && barHour.swell.heightFt !== null) {
+    // The same swell and wind at the tide phase of this instant (even when the tide data is old: a worse band is only kept).
+    const now = barTide(at, tideEvents);
+    band = worseBand(band, barBand(now, barHour.swell, windAgainstEbb(barHour.wind, now, entrance.seawardDeg)).band);
+    if (!tideEbb) {
+      const asEbb = barBand(ASSUMED_EBB, barHour.swell, windAgainstEbb(barHour.wind, ASSUMED_EBB, entrance.seawardDeg)).band;
+      const raises = BAR_RANK[asEbb] > BAR_RANK[band];
+      if (ebbAssumed) why.push('wcofs-ebb');
+      else if (offshore.kind === 'missing' && entrance.seawardDeg !== null && raises) why.push('wcofs-missing');
+      else if (timing.state === 'ok' && timing.phase === 'slack' && raises) why.push('slack-ebb');
+      if (ebbAssumed || why.includes('wcofs-missing') || why.includes('slack-ebb')) band = worseBand(band, asEbb);
+    }
   }
   return {timing, offshore, band, why, ebbAssumed, flow: tideEbb || ebbAssumed ? 'ebb' : tideFlow,
     swellFt: barHour?.swell.heightFt ?? null, periodS: barHour?.swell.periodS ?? null};
 }
+

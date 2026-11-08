@@ -103,10 +103,13 @@ export function entranceCurrentView({brief, forecast, region, tz, now, lang = 'e
   const swellText = reading.swellFt === null ? '' : reading.periodS === null ? t('entrance.swell', lang, {height: num(reading.swellFt, lang, 1)})
     : t('entrance.swell.period', lang, {height: num(reading.swellFt, lang, 1), period: num(reading.periodS, lang, 0)});
   const band = t(BAND_ID[reading.band], lang);
-  const caution = reading.why.includes('swell-stale') ? t('entrance.caution.staleSwell', lang)
+  // A retained Hazardous reading stays in words beside the stale warning (stale data never reads calmer than the worst source).
+  const flowText = t(reading.flow === 'ebb' ? 'entrance.caution.ebb' : reading.flow === 'flood' ? 'entrance.caution.flood' : tm.state === 'ok' ? 'entrance.caution.slack' : 'entrance.caution.unknown', lang, {swell: swellText, band});
+  const caution = reading.why.includes('swell-stale') ? (swellText && reading.band === 'Hazardous' ? `${flowText} ${t('entrance.caution.staleNote', lang)}` : t('entrance.caution.staleSwell', lang))
     : reading.why.includes('swell-missing') || !swellText ? t('entrance.caution.noSwell', lang)
-    : t(reading.flow === 'ebb' ? 'entrance.caution.ebb' : reading.flow === 'flood' ? 'entrance.caution.flood' : tm.state === 'ok' ? 'entrance.caution.slack' : 'entrance.caution.unknown', lang, {swell: swellText, band});
-  const why = reading.why.includes('wcofs-ebb') ? t('entrance.why.wcofsEbb', lang) : '';
+    : flowText;
+  const whyId = reading.why.includes('wcofs-ebb') ? 'entrance.why.wcofsEbb' : reading.why.includes('wcofs-missing') ? 'entrance.why.wcofsMissing' : reading.why.includes('slack-ebb') ? 'entrance.why.slackEbb' : null;
+  const why = whyId ? t(whyId, lang) : '';
 
   const kn = offshore.kind === 'missing' ? '' : num(offshore.speedKn, lang, 1), deg = offshore.kind === 'missing' ? '' : num(Math.round(offshore.towardDeg), lang, 0);
   const wcofs = offshore.kind === 'missing' ? t('entrance.wcofs.missing', lang, {why: t(`entrance.gap.${read.gap ?? 'none'}` as const, lang)})
