@@ -22,6 +22,7 @@
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
+import {markMapIdle} from '../map-ready.ts';
 import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {appView, base, habitat, region, selection, setParams, view} from '../state.ts';
@@ -227,6 +228,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
           chartMark.value = chartPick(layer, properties, clickMark(other, at, [p => seafloor?.cellAt(p) ?? null, fieldReading]), at);
         },
         onIdle: () => {
+          markMapIdle(); // SC-PERF-LAZY-1: the reef export may start now
           if (!painted) { posterDone(); flyIfFirst(e); try { performance.mark('skippercast-chart-idle'); } catch { /* no timing API */ } }
           else flyAsked = true;
           if (diagnostics) {
@@ -258,7 +260,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     } catch (error) {
       console.error('Chart unavailable', error);
       posterDone();
-      if (alive) chartFailed.value = true;
+      if (alive) { chartFailed.value = true; markMapIdle(); }
     } finally {
       mounting = false;
     }

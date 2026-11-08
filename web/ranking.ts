@@ -234,6 +234,10 @@ type Ranked = PublishedReef & {readonly name: string; readonly trip_fit: number}
 export type ReefPublication = {readonly state: 'idle' | 'loading' | 'unavailable'; readonly region?: string;
     /** The export hash the planner's gate rejected (held, unavailable or superseded); set only by `recheckReefPublication`. */
     readonly rejected?: string}
+  /** SC-PERF-LAZY-1: not asked for yet; it starts after the map's first paint (web/reef-lazy.ts). */
+  | {readonly state: 'deferred'; readonly region: string}
+  /** SC-PERF-LAZY-1: Save-Data or a slow link; nothing is fetched until the angler asks. `bytes` is the published size when known. */
+  | {readonly state: 'offer'; readonly region: string; readonly bytes: number | null; readonly why: 'save-data' | 'slow-type' | 'slow-measured'}
   | {readonly state: 'ready'; readonly region: string; readonly loaded: {readonly targets: readonly PublishedReef[]; readonly areas: readonly {id: string; geometry: unknown}[]; readonly protected_fingerprint?: string; readonly publication: {export_sha256?: string} & Record<string, unknown>}};
 export const reefPublication = signal<ReefPublication>({state: 'idle'});
 type ReefLoader = (region: string) => Promise<unknown>;
@@ -255,10 +259,20 @@ async function startLoad(region: string, loader: ReefLoader): Promise<void> {
   if (mine === generation) reefPublication.value = next;
 }
 
+/** A region was newly deferred: a load already running for another region (or this one) must not write over the deferred state. */
+export function supersedeReefLoads(): void { generation++; }
+
 /** Load the region's publication once (another region starts again); a failure leaves the list above in place. */
 export async function loadReefPublication(region: string, loader: ReefLoader = loadReefTrip): Promise<void> {
   const was = reefPublication.peek();
-  if (was.state !== 'idle' && was.region === region) return;
+  if (was.state !== 'idle' && was.state !== 'deferred' && was.state !== 'offer' && was.region === region) return;
+  await startLoad(region, loader);
+}
+
+/** Fetch the region's publication now, whatever state it is in (the angler's "Load … on Wi-Fi" or "Try again"); a load already running is left alone. */
+export async function reloadReefPublication(region: string, loader: ReefLoader = loadReefTrip): Promise<void> {
+  const was = reefPublication.peek();
+  if (was.state === 'loading' && was.region === region) return;
   await startLoad(region, loader);
 }
 
@@ -409,7 +423,7 @@ export function ranking(i: RankingInputs): Ranking {
   }
   const pub = i.publication, plannerSpecies = Object.hasOwn(PLANNER_SPECIES, i.coast) ? PLANNER_SPECIES[i.coast] : undefined;
   if (pub && i.region && plannerSpecies) {
-    if (pub.region !== i.region || pub.state === 'idle' || pub.state === 'loading')
+    if (pub.region !== i.region || pub.state === 'idle' || pub.state === 'loading' || pub.state === 'deferred')
       return bare('Loading ranked reef places…', 'empty.loadingPublication');
     if (pub.state === 'ready' && manifestState(pub.loaded.publication, i.region, i.now).state === 'ready') {
       const ps = i.plannerScreen, head = {source: 'publication' as const, label: 'Seafloor reef publication', basis: PUBLICATION_BASIS + from, picks: [], ...extra};
