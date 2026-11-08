@@ -26,26 +26,24 @@ def rows(order):
 
 
 def timing(order):
-    out = ['| page | profile | pass | runs ok | FCP | map painted | brief shown | map visually complete | **map usable** (painted + input ≤ 200 ms) | no freeze (long task ≥ 200 ms) after | long-task time | max input delay | TBT to usable | drag response |',
-           '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|']
+    out = ['| page | profile | pass | runs by outcome | FCP (any content) | brief shown | first answers input (2 probes in a row ≤ 200 ms) | **no freeze (long task ≥ 200 ms) after** | long-task time | max input delay | TBT to no-freeze | repaint after drag |',
+           '|---|---|---|---|---|---|---|---|---|---|---|---|']
     for g in rows(order):
-        comp = 'animated' if g['animated'] >= 2 else ms(g['completeMs'])
-        out.append(f"| {g['page']} | {g['profile']} | {g['pass']} | {g['ok']}/{g['runs']} | {ms(g['fcpMs'], '–')} | {ms(g['paintedMs'])} | {ms(g['briefShownMs'], '–')} | {comp} | **{ms(g['usableMs'])}** | "
-                   f"{ms(g['freeFromMs'])} | {ms(g['longTaskTotalMs'], '–')} | {ms(g['maxInputDelayMs'], '–')} | {ms(g['tbtMs'], '–')}{'*' if any(g.get('tbtMs_all', [])) and g['usableMs'] is None else ''} | {ms(g['responseMs'], 'no response')} |")
+        out.append(f"| {g['page']} | {g['profile']} | {g['pass']} | {g['ok']}/{g['runs']} | {ms(g['fcpMs'], '–')} | {ms(g['briefShownMs'], '–')} | {ms(g['inputOkMs'])} | "
+                   f"**{ms(g['freeFromMs'])}** | {ms(g['longTaskTotalMs'], '–')} | {ms(g['maxInputDelayMs'], '–')} | {ms(g['tbtMs'], '–')}{'*' if any(g.get('tbtMs_all', [])) and g['freeFromMs'] is None else ''} | {ms(g['responseMs'], 'no repaint')} |")
     return '\n'.join(out)
 
 
 def layers(order):
-    out = ['| page | profile | layer-specific requests | their bytes | layer data fully arrived | layer visibly differs from layer-off | requests failed | notes |',
-           '|---|---|---|---|---|---|---|---|']
+    out = ['| page | profile | layer-specific requests | their bytes | layer data fully arrived | requests failed | notes |',
+           '|---|---|---|---|---|---|---|']
     for g in rows(order):
         if g['pass'] != 'cold' or 'layerReference' not in g:
             continue
-        diff = '–' if g['layerVisibleDiff'] is None else f"{g['layerVisibleDiff'] * 100:.0f} % of pixels"
         nb = g['layerBytes']
         size = f'{nb / 1e6:.2f} MB' if nb >= 1e6 else f'{nb / 1e3:.0f} KB' if nb >= 1e3 else f'{int(nb)} B'
         note = ', '.join(g['layerExamples'][:2]) if g['layerExamples'] else 'data is inline in the page (no request)'
-        out.append(f"| {g['page']} | {g['profile']} | {int(g['layerRequests'])} | {size} | {ms(g['layerDoneMs'], '–' if not g['layerRequests'] else 'not reached')} | {diff} | {g['layerFailed']} | {note} |")
+        out.append(f"| {g['page']} | {g['profile']} | {int(g['layerRequests'])} | {size} | {ms(g['layerDoneMs'], '–' if not g['layerRequests'] else 'not reached')} | {g['layerFailed']} | {note} |")
     return '\n'.join(out)
 
 

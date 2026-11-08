@@ -6,20 +6,20 @@ Usage:
   python3 reports/perf/analyse.py explore <ready.json> <frames-dir> <run-id>     # per-run decision for one run
   python3 reports/perf/analyse.py controls <frames-dir>                            # self-tests on synthetic loading-overlay / delayed-map controls
   python3 reports/perf/analyse.py all <frames-dir> <out.json> <ready.json>...      # per-run decisions -> out.json
-Criteria (from the pixels of the largest canvas, cropped from the screencast frames; the screencast also contains the page's
-own overlays, so a crop is NOT map evidence by itself):
-  map content the pixels of the settled picture (last frame before the drag probe) that are textured, reappear shifted by
-              one common ~60 px translation after the drag probe panned the map (rigid motion), and were stable before it. Overlays
-              (legend, panels, loading text, attribution, controls) do not translate with a map drag and animated particles are
-              unstable, so neither is ever map content. Needs >= 1 % of the canvas, else the
-              run has NO map-content evidence: painted, complete and usable are then "not established", never a time.
-  painted     the first frame in which >= 50 % of the map-content pixels already show their final value, for 3 frames in a row.
-  complete    the first frame after which no frame differs from the final frame (before the interaction probe) in more than
-              1% of the crop's pixels (per-pixel gray difference > 24/255); never earlier than painted. Animated layers never
-              settle: reported as null with animated=true.
-  responsive  the interaction probe: a 60 px drag after the load settled; the delay until the crop differs from the
-              pre-drag frame in more than 0.5% of its pixels. No such frame within 5 s is a failure (null).
-  layerDone   the time the last response arrived of the requests that the layer-off reference page does not make
+Criteria. Map CONTENT readiness (painted, visually complete) is UNMEASURED and is never reported as a time:
+  the screencast frame holds the page's own overlays (legend, panels, loading text, controls) as well as the map canvas, so a
+  crop of the canvas rectangle is not map evidence, and the one attempt to separate the two (a rigid-translation mask from the
+  drag probe) gave shifts that disagree between runs of the same page (A.1b), so it was dropped. paintedMs, completeMs and
+  layerVisibleDiff are therefore always null here.
+  FCP        the browser's own first contentful paint (any content, not the map).
+  inputOk    the first time at or after FCP (first frame if no FCP) that two consecutive input-probe events (1 per second) both
+              waited <= 200 ms behind the main thread. It says the page answers input; it does NOT say the map is drawn.
+  freeFrom   the HEADLINE: inputOk, or the end of the last long task of 200 ms or more before the drag probe if later: from then on no
+              freeze of that length blocked the main thread inside the observation window. inputOk alone can be early (before heavy
+              work starts); the median of 3 is quoted.
+  response   the interaction probe: a 60 px drag after the load settled; the delay until the canvas rectangle differs from the
+              pre-drag frame in more than 0.5% of its pixels (any repaint, including overlays). None within 5 s is a failure.
+  layerDone  the time the last response arrived of the requests that the layer-off reference page does not make
               (live pages) or that match a per-page data pattern (test pages); a failed/4xx/5xx request is a failure.
 Evidence integrity: a run is analysed only if its frame directory holds exactly its frames, written when the run recorded
 them (file time within 5 s of the frame's receive time). A run whose frame directory was overwritten by a later acquisition
@@ -42,47 +42,6 @@ def crop_of(frame_path, canvas, viewport):
 
 def _gray(im):
     return im.convert('L')
-
-
-def drag_mask(a, b, c, scale, thr=24, tex=12):
-    """Pixels of frame `a` (the settled picture just before the drag probe) that are MAP, not overlaid page UI.
-
-    The probe pans the map 60 CSS px to the right. A pixel is map content when (1) it is textured (not a flat fill),
-    (2) the same picture value is found displaced to the right in `b` (the picture after the drag) by one common shift
-    close to 60 px * scale (a rigid translation: only the map moves like that), (3) it differs from `b` at the same
-    place (it really moved) and (4) it was stable before the drag (`c` = an earlier settled frame), so animated
-    particles do not count. Overlays (legend, panels, loading text, attribution, controls) do not translate with a map
-    drag and are never in the mask, however large or colourful they are. Returns (mask, fraction of the crop, shift in px)."""
-    ga = _gray(a)
-    gb = _gray(b.resize(a.size))
-    unstable = ImageChops.difference(ga, _gray(c.resize(a.size))).point(lambda v: 0 if v > thr else 255)
-    t = ImageChops.subtract(ga.filter(ImageFilter.MaxFilter(3)), ga.filter(ImageFilter.MinFilter(3))).point(lambda v: 255 if v > tex else 0)
-    moved = ImageChops.difference(ga, gb).point(lambda v: 255 if v > thr else 0)
-    base = ImageChops.multiply(ImageChops.multiply(t, unstable), moved)
-    best = (0, None, 0)
-    lo, hi = max(2, int(scale * 60 * 0.4)), int(scale * 60 * 2.5) + 1
-    for dx in range(lo, hi):
-        shifted = ImageChops.offset(gb, dx, 0)
-        same = ImageChops.difference(ga, shifted).point(lambda v: 255 if v <= thr else 0)
-        m = ImageChops.multiply(base, same)
-        # the columns that wrapped around in the offset are not evidence
-        m.paste(0, (0, 0, dx, a.height)); m.paste(0, (a.width - 1, 0, a.width, a.height))
-        n = sum(m.histogram()[255:])
-        if n > best[0]:
-            best = (n, m, dx)
-    if best[1] is None:
-        return None, 0.0, 0
-    return best[1], best[0] / max(1, a.width * a.height), best[2]
-
-
-def mask_match(cur, final, mask, thr=24):
-    """Share of the map-content pixels (mask) that already show their final value in frame `cur`."""
-    same = ImageChops.difference(_gray(cur), _gray(final.resize(cur.size) if final.size != cur.size else final)).point(lambda v: 255 if v <= thr else 0)
-    return sum(ImageChops.multiply(same, mask).histogram()[255:]) / max(1, sum(mask.histogram()[255:]))
-
-
-MASK_MIN_FRAC = 0.01      # map content must cover >= 1 % of the canvas, else there is no evidence the map drew anything
-PAINT_MATCH = 0.5         # painted = at least half of the map-content pixels show their final value, for 3 frames in a row
 
 
 def diff_frac(a, b, thr=24):
@@ -113,52 +72,13 @@ def decide(run, fdir):
     crops = [(f['ms'], crop_of(f['path'], canvas, run['viewport'])) for f in frames]
     pre = [(ms, c) for ms, c in crops if ms < probe_ms]
     res['firstFrameMs'] = round(frames[0]['ms'])
-    # painted: from MAP pixels only. The map-content mask comes from the drag probe (what moved with the map), so legends, panels,
-    # loading text and controls laid over the canvas can never make a blank map look painted.
-    pt = None
-    post = [c for ms, c in crops if probe_ms <= ms < probe_ms + 5000]
-    res['evidence'] = None
-    mask = None
-    if pre and post and run['probe'].get('done'):
-        final_ = pre[-1][1]
-        early = [c for ms, c in pre if ms <= pre[-1][0] - 1500]
-        mask, mfrac, dx = drag_mask(final_, post[-1], early[-1] if early else final_, final_.width / canvas['w'])
-        res['mapContentFrac'] = round(mfrac, 3)
-        res['dragShiftPx'] = dx
-        res['evidence'] = 'map-content' if mfrac >= MASK_MIN_FRAC else 'none'
-        if mfrac < MASK_MIN_FRAC:
-            mask = None
-    else:
-        res['evidence'] = 'no-drag-probe'
-    flags = {}
-    def flag(i):
-        if i not in flags:
-            flags[i] = mask_match(pre[i][1], pre[-1][1], mask) >= PAINT_MATCH
-        return flags[i]
-    if mask is not None:
-        for i, (ms, c) in enumerate(pre):
-            if flag(i) and all(flag(j) for j in range(i, min(len(pre), i + 3))):
-                pt = ms; break
-    res['paintedMs'] = None if pt is None else round(pt)
+    # content readiness is NOT measured (see the module docstring): never a time from crop pixels
+    res['evidence'] = 'unmeasured'
+    res['paintedMs'] = None
+    res['completeMs'] = None
+    res['animated'] = None
     res['_final'] = pre[-1][1] if pre else None
     res['_probeMs'] = probe_ms
-    # visually complete (relative to the last frame before the probe); only meaningful once map content was shown
-    if pre and pt is not None:
-        final = pre[-1][1]
-        bad = [ms for ms, c in pre if diff_frac(final, c) > 0.01]
-        # a static picture produces no screencast frames; 10 or more frames in the last 2 s before the probe is continuous repainting (particles)
-        animated = sum(1 for ms, _ in pre if ms > probe_ms - 2000) >= 10
-        res['animated'] = animated
-        res['completeMs'] = None if animated else round(max(bad) if bad else pre[0][0])
-        # first frame after complete: the time of the first frame at which diff vs final stays <= 1%
-        if not animated and bad:
-            later = [ms for ms, _ in pre if ms > max(bad)]
-            res['completeMs'] = round(later[0]) if later else round(max(bad))
-        if res['completeMs'] is not None:
-            res['completeMs'] = max(res['completeMs'], res['paintedMs'])
-    else:
-        res['animated'] = None
-        res['completeMs'] = None
     # responsive: first frame after the drag that differs from the last frame before it
     pr = run['probe']
     resp = None
@@ -170,45 +90,34 @@ def decide(run, fdir):
     res['responseMs'] = None if resp is None else round(resp)
     res['interactionFailed'] = bool(pr.get('done')) and resp is None
     res['mapCovered'] = bool(pr.get('covered'))
-    # usable = painted AND the page answers input: two consecutive probe events (1 per second) both wait <= 200 ms behind the main thread
-    lt = sorted((s_ + off, d) for s_, d in run['longtasks'])
-    delays = sorted((t + off, d) for t, d in run.get('inputDelays', []))
-    usable = None
-    if pt is not None:
-        for i in range(len(delays) - 1):
-            if delays[i][0] >= pt - 1000 and delays[i][1] <= 200 and delays[i + 1][1] <= 200:
-                usable = max(pt, delays[i][0]); break
-    res['usableMs'] = None if usable is None else round(usable)
-    res['maxInputDelayMs'] = round(max((d for _, d in delays), default=0))
-    res['inputProbes'] = len(delays)
-    # secondary, main-thread-only criterion (the A.3 definition re-anchored on the painted frame): 1 s with no long task after painted
-    t = pt
-    if t is not None:
-        for s_, d in lt:
-            if s_ + d <= t:
-                continue
-            if s_ < t + 1000:
-                t = max(t, s_ + d)
-            else:
-                break
-    res['quietAfterPaintMs'] = None if pt is None else round(t)
     fcp = None if run['fcp'] is None else run['fcp'] + off
     res['fcpMs'] = None if fcp is None else round(fcp)
-    tbt_end = usable if usable is not None else run['settledMs']
-    res['tbtMs'] = None if fcp is None else round(sum(max(0, d - 50) for s_, d in lt if s_ >= fcp and s_ < tbt_end))
-    res['tbtWindowOpen'] = usable is None
-    # "usable" above is the FIRST moment the page answers input; it can fire before the heavy work starts (e.g. 1.2 s on one seafloor
-    # run whose first 3.9 s freeze began at 2.2 s). freeFrom = painted, or the end of the last long task of 200 ms or more before the drag probe if later:
-    # from then on no freeze of that length blocked the main thread in the observation window.
+    gate = fcp if fcp is not None else frames[0]['ms']
+    # inputOk = the page answers input: two consecutive probe events (1 per second) both wait <= 200 ms behind the main thread
+    lt = sorted((s_ + off, d) for s_, d in run['longtasks'])
+    delays = sorted((t + off, d) for t, d in run.get('inputDelays', []))
+    ok = None
+    for i in range(len(delays) - 1):
+        if delays[i][0] >= gate and delays[i][1] <= 200 and delays[i + 1][1] <= 200:
+            ok = delays[i][0]; break
+    res['inputOkMs'] = None if ok is None else round(ok)
+    res['maxInputDelayMs'] = round(max((d for _, d in delays), default=0))
+    res['inputProbes'] = len(delays)
+    # inputOk can fire before the heavy work starts (e.g. 1.2 s on one seafloor run whose first 3.9 s freeze began at 2.2 s).
+    # freeFrom = inputOk, or the end of the last long task of 200 ms or more before the drag probe if later.
     pre_lt = [(s_, d) for s_, d in lt if s_ < probe_ms]
     last_end = max((s_ + d for s_, d in pre_lt if d >= 200), default=None)
     res['lastLongTaskEndMs'] = None if last_end is None else round(last_end)
-    res['freeFromMs'] = None if pt is None else round(max(pt, last_end or 0))
+    res['freeFromMs'] = None if ok is None else round(max(ok, last_end or 0))
+    # TBT (long-task time over 50 ms) from FCP up to freeFrom (up to the end of the observation window when the page never answered)
+    tbt_end = max(ok, last_end or 0) if ok is not None else run['settledMs']
+    res['tbtMs'] = None if fcp is None else round(sum(max(0, d - 50) for s_, d in lt if s_ >= fcp and s_ < tbt_end))
+    res['tbtWindowOpen'] = ok is None
     res['longTaskTotalMs'] = round(sum(d for _, d in pre_lt))
     res['briefShownMs'] = None if run['readyAt'] is None else round(run['readyAt'] + off)
     res['messages'] = run.get('messages', [])
     res['pageErrors'] = run.get('pageErrors', [])
-    res['status'] = 'no-map-content-evidence' if res['evidence'] != 'map-content' else 'never-painted' if pt is None else 'not-responsive-within-window' if usable is None else 'interaction-failed' if res['interactionFailed'] else 'ok'
+    res['status'] = 'not-responsive-within-window' if ok is None else 'interaction-failed' if res['interactionFailed'] else 'ok'
     c = run.get('cpu') or {}
     res['dutyCycle'] = None if not c.get('windowS') else round(c['scriptS'] / c['windowS'], 3)
     res['scriptMs'] = round(c.get('scriptS', 0) * 1000)
@@ -219,7 +128,6 @@ def decide(run, fdir):
 LIVE_REF = 'live-layer-none'
 RELIEF_REF = 'layer-base-medium'
 PATTERN = {'layer-wind': r'maplayer-wind-1', 'layer-sst': r'maplayer-sst-1'}
-NO_VISIBLE_DIFF = {'live-layer-none', 'layer-base-medium', 'layer-bathy-2m-z12', 'brief', 'map-home-returning', 'map-home', 'layer-wind', 'layer-sst'}
 
 
 def path_of(u):
@@ -292,14 +200,11 @@ def run_all(fdir, out, paths):
         raise SystemExit(f'duplicate run ids with intact frames (ambiguous evidence): {dup}')
     # reference paths per (profile, pass)
     refs = {}
-    refimg = {}
     for d in runs:
         if '_raw' not in d:
             continue
         if d['page'] in (LIVE_REF, RELIEF_REF):
             refs.setdefault((d['profile'], d['pass'], d['page']), set()).update(path_of(q['url']) for q in d['_req'] if not q.get('data'))
-            if d['run'] == 1 and d.get('_final') is not None:
-                refimg[(d['profile'], d['pass'], d['page'])] = d['_final']
     for d in runs:
         if '_raw' not in d:
             continue
@@ -308,9 +213,7 @@ def run_all(fdir, out, paths):
         ref_paths = refs.get((d['profile'], d['pass'], refname)) if refname else None
         d['layer'] = layer_info(d['_raw'], ref_paths if page not in (LIVE_REF, RELIEF_REF) else None, PATTERN.get(page), d['_probeMs']) if (refname or page in PATTERN) and page not in (LIVE_REF, RELIEF_REF) else None
         d['layerReference'] = refname if page not in (LIVE_REF, RELIEF_REF) else None
-        d['layerVisibleDiff'] = None
-        if page not in NO_VISIBLE_DIFF and refname and d.get('_final') is not None and (d['profile'], d['pass'], refname) in refimg:
-            d['layerVisibleDiff'] = round(diff_frac(d['_final'], refimg[(d['profile'], d['pass'], refname)]), 3)
+        d['layerVisibleDiff'] = None            # UNMEASURED: a pixel comparison of two crops would include overlay differences
     # summary per (page, profile, pass)
     groups = {}
     for d in runs:
@@ -321,12 +224,10 @@ def run_all(fdir, out, paths):
     for (page, prof, pas), rs in groups.items():
         row = {'page': page, 'profile': prof, 'pass': pas, 'runs': len(rs), 'ok': sum(1 for r in rs if r.get('status') == 'ok'),
                'statuses': dict(Counter(r.get('status') for r in rs))}
-        for m in ('firstFrameMs', 'fcpMs', 'paintedMs', 'briefShownMs', 'completeMs', 'usableMs', 'quietAfterPaintMs', 'tbtMs', 'responseMs', 'maxInputDelayMs',
+        for m in ('firstFrameMs', 'fcpMs', 'briefShownMs', 'inputOkMs', 'tbtMs', 'responseMs', 'maxInputDelayMs',
                   'dutyCycle', 'scriptMs', 'windowMs', 'settledMs', 'freeFromMs', 'longTaskTotalMs'):
             row[m] = med([r.get(m) for r in rs])
             row[m + '_all'] = [r.get(m) for r in rs]
-        row['evidence'] = sum(1 for r in rs if r.get('evidence') == 'map-content')
-        row['animated'] = sum(1 for r in rs if r.get('animated'))
         row['mapCovered'] = sum(1 for r in rs if r.get('mapCovered'))
         row['interactionFailed'] = sum(1 for r in rs if r.get('interactionFailed'))
         L = [r.get('layer') for r in rs]
@@ -338,8 +239,6 @@ def run_all(fdir, out, paths):
             row['layerFailed'] = sum(x['failed'] for x in L if x)
             row['layerExamples'] = next((x['examples'] for x in L if x), [])
             row['layerReference'] = rs[0].get('layerReference')
-        v = [r.get('layerVisibleDiff') for r in rs if r.get('layerVisibleDiff') is not None]
-        row['layerVisibleDiff'] = med(v) if v else None
         row['messages'] = sorted({m for r in rs for m in r.get('messages', [])})[:6]
         row['pageErrors'] = sorted({m for r in rs for m in r.get('pageErrors', [])})[:4]
         summary.append(row)

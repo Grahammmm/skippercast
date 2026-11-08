@@ -5,234 +5,66 @@
    "profile": "desktop",
    "pass": "cold",
    "run": 1,
-   "frames": 225,
-   "settledMs": 21353,
-   "firstFrameMs": -4,
-   "paintedMs": 524,
-   "finalPaint": [
-    0.259,
-    13
-   ],
-   "animated": true,
-   "completeMs": null,
-   "responseMs": 270,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 16543,
-   "maxInputDelayMs": 3286,
-   "inputProbes": 10,
-   "quietAfterPaintMs": 15688,
-   "fcpMs": 435,
-   "tbtMs": 13370,
-   "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 15534,
-   "freeFromMs": 15534,
-   "longTaskTotalMs": 14322,
-   "briefShownMs": 504,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.599,
-   "scriptMs": 12952,
-   "windowMs": 21616,
-   "layer": null,
-   "layerReference": null,
-   "layerVisibleDiff": null
+   "id": "desktop-brief-cold-1",
+   "status": "superseded-frames-overwritten",
+   "reason": "244 frames on disk, 225 recorded",
+   "receipt": "ready-live-desktop.json",
+   "wallStartMs": 1794095519959.4988
   },
   {
    "page": "brief",
    "profile": "desktop",
    "pass": "cold",
    "run": 2,
-   "frames": 231,
-   "settledMs": 20912,
-   "firstFrameMs": 19,
-   "paintedMs": 236,
-   "finalPaint": [
-    0.259,
-    13
-   ],
-   "animated": true,
-   "completeMs": null,
-   "responseMs": 156,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 16073,
-   "maxInputDelayMs": 2882,
-   "inputProbes": 10,
-   "quietAfterPaintMs": 15206,
-   "fcpMs": 196,
-   "tbtMs": 13170,
-   "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 15059,
-   "freeFromMs": 15059,
-   "longTaskTotalMs": 13970,
-   "briefShownMs": 316,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.605,
-   "scriptMs": 12791,
-   "windowMs": 21141,
-   "layer": null,
-   "layerReference": null,
-   "layerVisibleDiff": null
+   "id": "desktop-brief-cold-2",
+   "status": "superseded-frames-overwritten",
+   "reason": "237 frames on disk, 231 recorded",
+   "receipt": "ready-live-desktop.json",
+   "wallStartMs": 1794095547346.875
   },
   {
    "page": "brief",
    "profile": "desktop",
    "pass": "cold",
    "run": 3,
-   "frames": 239,
-   "settledMs": 20637,
-   "firstFrameMs": 9,
-   "paintedMs": 276,
-   "finalPaint": [
-    0.259,
-    13
-   ],
-   "animated": true,
-   "completeMs": null,
-   "responseMs": 274,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 15576,
-   "maxInputDelayMs": 2769,
-   "inputProbes": 10,
-   "quietAfterPaintMs": 14691,
-   "fcpMs": 156,
-   "tbtMs": 12728,
-   "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14572,
-   "freeFromMs": 14572,
-   "longTaskTotalMs": 13378,
-   "briefShownMs": 228,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.606,
-   "scriptMs": 12518,
-   "windowMs": 20650,
-   "layer": null,
-   "layerReference": null,
-   "layerVisibleDiff": null
+   "id": "desktop-brief-cold-3",
+   "status": "superseded-frames-overwritten",
+   "reason": "247 frames on disk, 239 recorded",
+   "receipt": "ready-live-desktop.json",
+   "wallStartMs": 1794095574155.318
   },
   {
    "page": "map-home-returning",
    "profile": "desktop",
    "pass": "cold",
    "run": 1,
-   "frames": 240,
-   "settledMs": 21240,
-   "firstFrameMs": -2,
-   "paintedMs": 290,
-   "finalPaint": [
-    0.286,
-    14
-   ],
-   "animated": true,
-   "completeMs": null,
-   "responseMs": 90,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 16424,
-   "maxInputDelayMs": 2943,
-   "inputProbes": 10,
-   "quietAfterPaintMs": 15555,
-   "fcpMs": 442,
-   "tbtMs": 13450,
-   "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 15413,
-   "freeFromMs": 15413,
-   "longTaskTotalMs": 14250,
-   "briefShownMs": 492,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.607,
-   "scriptMs": 13049,
-   "windowMs": 21495,
-   "layer": null,
-   "layerReference": null,
-   "layerVisibleDiff": null
+   "id": "desktop-map-home-returning-cold-1",
+   "status": "superseded-frames-overwritten",
+   "reason": "268 frames on disk, 240 recorded",
+   "receipt": "ready-live-desktop.json",
+   "wallStartMs": 1794095600490.217
   },
   {
    "page": "map-home-returning",
    "profile": "desktop",
    "pass": "cold",
    "run": 2,
-   "frames": 237,
-   "settledMs": 20888,
-   "firstFrameMs": -3,
-   "paintedMs": 237,
-   "finalPaint": [
-    0.287,
-    14
-   ],
-   "animated": true,
-   "completeMs": null,
-   "responseMs": 107,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 16087,
-   "maxInputDelayMs": 3021,
-   "inputProbes": 10,
-   "quietAfterPaintMs": 15210,
-   "fcpMs": 333,
-   "tbtMs": 13107,
-   "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 15083,
-   "freeFromMs": 15083,
-   "longTaskTotalMs": 13907,
-   "briefShownMs": 382,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.607,
-   "scriptMs": 12846,
-   "windowMs": 21159,
-   "layer": null,
-   "layerReference": null,
-   "layerVisibleDiff": null
+   "id": "desktop-map-home-returning-cold-2",
+   "status": "superseded-frames-overwritten",
+   "reason": "247 frames on disk, 237 recorded",
+   "receipt": "ready-live-desktop.json",
+   "wallStartMs": 1794095627675.2778
   },
   {
    "page": "map-home-returning",
    "profile": "desktop",
    "pass": "cold",
    "run": 3,
-   "frames": 244,
-   "settledMs": 21643,
-   "firstFrameMs": 16,
-   "paintedMs": 283,
-   "finalPaint": [
-    0.274,
-    11
-   ],
-   "animated": true,
-   "completeMs": null,
-   "responseMs": 106,
-   "interactionFailed": false,
-   "mapCovered": false,
-   "usableMs": 17166,
-   "maxInputDelayMs": 3371,
-   "inputProbes": 10,
-   "quietAfterPaintMs": 16224,
-   "fcpMs": 374,
-   "tbtMs": 14044,
-   "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 16148,
-   "freeFromMs": 16148,
-   "longTaskTotalMs": 14794,
-   "briefShownMs": 419,
-   "messages": [],
-   "pageErrors": [],
-   "status": "ok",
-   "dutyCycle": 0.614,
-   "scriptMs": 13648,
-   "windowMs": 22241,
-   "layer": null,
-   "layerReference": null,
-   "layerVisibleDiff": null
+   "id": "desktop-map-home-returning-cold-3",
+   "status": "superseded-frames-overwritten",
+   "reason": "246 frames on disk, 244 recorded",
+   "receipt": "ready-live-desktop.json",
+   "wallStartMs": 1794095654561.706
   },
   {
    "page": "live-layer-none",
@@ -242,25 +74,21 @@
    "frames": 49,
    "settledMs": 22091,
    "firstFrameMs": 20,
-   "paintedMs": 554,
-   "finalPaint": [
-    0.262,
-    9
-   ],
-   "animated": false,
-   "completeMs": 1720,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 44,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 17343,
+   "fcpMs": 364,
+   "inputOkMs": 17343,
    "maxInputDelayMs": 3508,
    "inputProbes": 10,
-   "quietAfterPaintMs": 16339,
-   "fcpMs": 364,
+   "lastLongTaskEndMs": 16339,
+   "freeFromMs": 17343,
    "tbtMs": 14267,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 16339,
-   "freeFromMs": 16339,
    "longTaskTotalMs": 14917,
    "briefShownMs": 584,
    "messages": [],
@@ -269,6 +97,7 @@
    "dutyCycle": 0.635,
    "scriptMs": 14194,
    "windowMs": 22355,
+   "id": "desktop-live-layer-none-cold-1",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -281,25 +110,21 @@
    "frames": 53,
    "settledMs": 21169,
    "firstFrameMs": 11,
-   "paintedMs": 361,
-   "finalPaint": [
-    0.262,
-    9
-   ],
-   "animated": false,
-   "completeMs": 1311,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 39,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 16491,
+   "fcpMs": 288,
+   "inputOkMs": 16491,
    "maxInputDelayMs": 3300,
    "inputProbes": 10,
-   "quietAfterPaintMs": 15487,
-   "fcpMs": 288,
+   "lastLongTaskEndMs": 15487,
+   "freeFromMs": 16491,
    "tbtMs": 13570,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 15487,
-   "freeFromMs": 15487,
    "longTaskTotalMs": 14174,
    "briefShownMs": 347,
    "messages": [],
@@ -308,6 +133,7 @@
    "dutyCycle": 0.633,
    "scriptMs": 13602,
    "windowMs": 21505,
+   "id": "desktop-live-layer-none-cold-2",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -320,25 +146,21 @@
    "frames": 51,
    "settledMs": 21162,
    "firstFrameMs": 22,
-   "paintedMs": 388,
-   "finalPaint": [
-    0.262,
-    9
-   ],
-   "animated": false,
-   "completeMs": 1055,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 47,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 16339,
+   "fcpMs": 200,
+   "inputOkMs": 16339,
    "maxInputDelayMs": 2969,
    "inputProbes": 10,
-   "quietAfterPaintMs": 15334,
-   "fcpMs": 200,
+   "lastLongTaskEndMs": 15334,
+   "freeFromMs": 16339,
    "tbtMs": 13600,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 15334,
-   "freeFromMs": 15334,
    "longTaskTotalMs": 14100,
    "briefShownMs": 427,
    "messages": [],
@@ -347,6 +169,7 @@
    "dutyCycle": 0.637,
    "scriptMs": 13594,
    "windowMs": 21351,
+   "id": "desktop-live-layer-none-cold-3",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -359,25 +182,21 @@
    "frames": 49,
    "settledMs": 21121,
    "firstFrameMs": -2,
-   "paintedMs": 222,
-   "finalPaint": [
-    0.26,
-    10
-   ],
-   "animated": false,
-   "completeMs": 1255,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 42,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 16275,
+   "fcpMs": 140,
+   "inputOkMs": 16275,
    "maxInputDelayMs": 3254,
    "inputProbes": 10,
-   "quietAfterPaintMs": 15271,
-   "fcpMs": 140,
+   "lastLongTaskEndMs": 15271,
+   "freeFromMs": 16275,
    "tbtMs": 13588,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 15271,
-   "freeFromMs": 15271,
    "longTaskTotalMs": 14441,
    "briefShownMs": 201,
    "messages": [],
@@ -386,6 +205,7 @@
    "dutyCycle": 0.634,
    "scriptMs": 13498,
    "windowMs": 21289,
+   "id": "desktop-live-layer-swell-cold-1",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -396,7 +216,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.058
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-swell",
@@ -406,25 +226,21 @@
    "frames": 49,
    "settledMs": 20870,
    "firstFrameMs": 22,
-   "paintedMs": 238,
-   "finalPaint": [
-    0.26,
-    10
-   ],
-   "animated": false,
-   "completeMs": 755,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 40,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15865,
+   "fcpMs": 132,
+   "inputOkMs": 15865,
    "maxInputDelayMs": 3231,
    "inputProbes": 10,
-   "quietAfterPaintMs": 14860,
-   "fcpMs": 132,
+   "lastLongTaskEndMs": 14860,
+   "freeFromMs": 15865,
    "tbtMs": 13278,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14860,
-   "freeFromMs": 14860,
    "longTaskTotalMs": 13878,
    "briefShownMs": 212,
    "messages": [],
@@ -433,6 +249,7 @@
    "dutyCycle": 0.633,
    "scriptMs": 13223,
    "windowMs": 20878,
+   "id": "desktop-live-layer-swell-cold-2",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -443,7 +260,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.058
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-swell",
@@ -453,25 +270,21 @@
    "frames": 49,
    "settledMs": 20755,
    "firstFrameMs": 18,
-   "paintedMs": 385,
-   "finalPaint": [
-    0.26,
-    10
-   ],
-   "animated": false,
-   "completeMs": 1151,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 43,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 16008,
+   "fcpMs": 272,
+   "inputOkMs": 16008,
    "maxInputDelayMs": 3174,
    "inputProbes": 10,
-   "quietAfterPaintMs": 15003,
-   "fcpMs": 272,
+   "lastLongTaskEndMs": 15003,
+   "freeFromMs": 16008,
    "tbtMs": 13129,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 15003,
-   "freeFromMs": 15003,
    "longTaskTotalMs": 13829,
    "briefShownMs": 360,
    "messages": [],
@@ -480,6 +293,7 @@
    "dutyCycle": 0.621,
    "scriptMs": 13061,
    "windowMs": 21019,
+   "id": "desktop-live-layer-swell-cold-3",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -490,7 +304,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.058
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-currents",
@@ -500,25 +314,21 @@
    "frames": 289,
    "settledMs": 19880,
    "firstFrameMs": 23,
-   "paintedMs": 256,
-   "finalPaint": [
-    0.274,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 43,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 14725,
+   "fcpMs": 168,
+   "inputOkMs": 14725,
    "maxInputDelayMs": 2672,
    "inputProbes": 11,
-   "quietAfterPaintMs": 13706,
-   "fcpMs": 168,
+   "lastLongTaskEndMs": 13706,
+   "freeFromMs": 14725,
    "tbtMs": 12036,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 13706,
-   "freeFromMs": 13706,
    "longTaskTotalMs": 12586,
    "briefShownMs": 278,
    "messages": [],
@@ -527,6 +337,7 @@
    "dutyCycle": 0.583,
    "scriptMs": 12126,
    "windowMs": 20810,
+   "id": "desktop-live-layer-currents-cold-1",
    "layer": {
     "requests": 1,
     "bytes": 244956,
@@ -539,7 +350,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.018
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-currents",
@@ -549,25 +360,21 @@
    "frames": 270,
    "settledMs": 19874,
    "firstFrameMs": 21,
-   "paintedMs": 255,
-   "finalPaint": [
-    0.274,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 58,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 14806,
+   "fcpMs": 159,
+   "inputOkMs": 14806,
    "maxInputDelayMs": 2707,
    "inputProbes": 10,
-   "quietAfterPaintMs": 13794,
-   "fcpMs": 159,
+   "lastLongTaskEndMs": 13794,
+   "freeFromMs": 14806,
    "tbtMs": 12093,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 13794,
-   "freeFromMs": 13794,
    "longTaskTotalMs": 12693,
    "briefShownMs": 233,
    "messages": [],
@@ -576,6 +383,7 @@
    "dutyCycle": 0.614,
    "scriptMs": 12208,
    "windowMs": 19877,
+   "id": "desktop-live-layer-currents-cold-2",
    "layer": {
     "requests": 1,
     "bytes": 244961,
@@ -588,7 +396,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.018
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-currents",
@@ -598,25 +406,21 @@
    "frames": 286,
    "settledMs": 20010,
    "firstFrameMs": 24,
-   "paintedMs": 374,
-   "finalPaint": [
-    0.275,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 42,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 14711,
+   "fcpMs": 276,
+   "inputOkMs": 14711,
    "maxInputDelayMs": 2439,
    "inputProbes": 11,
-   "quietAfterPaintMs": 13694,
-   "fcpMs": 276,
+   "lastLongTaskEndMs": 13694,
+   "freeFromMs": 14711,
    "tbtMs": 12005,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 13694,
-   "freeFromMs": 13694,
    "longTaskTotalMs": 12505,
    "briefShownMs": 355,
    "messages": [],
@@ -625,6 +429,7 @@
    "dutyCycle": 0.582,
    "scriptMs": 12103,
    "windowMs": 20793,
+   "id": "desktop-live-layer-currents-cold-3",
    "layer": {
     "requests": 1,
     "bytes": 244691,
@@ -637,7 +442,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.018
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-stations",
@@ -647,25 +452,21 @@
    "frames": 49,
    "settledMs": 20260,
    "firstFrameMs": 23,
-   "paintedMs": 389,
-   "finalPaint": [
-    0.284,
-    9
-   ],
-   "animated": false,
-   "completeMs": 1189,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 32,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 14921,
+   "fcpMs": 300,
+   "inputOkMs": 14921,
    "maxInputDelayMs": 2842,
    "inputProbes": 11,
-   "quietAfterPaintMs": 13917,
-   "fcpMs": 300,
+   "lastLongTaskEndMs": 13917,
+   "freeFromMs": 14921,
    "tbtMs": 11971,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 13917,
-   "freeFromMs": 13917,
    "longTaskTotalMs": 12521,
    "briefShownMs": 367,
    "messages": [
@@ -676,6 +477,7 @@
    "dutyCycle": 0.571,
    "scriptMs": 11949,
    "windowMs": 20935,
+   "id": "desktop-live-layer-stations-cold-1",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -686,7 +488,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.037
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-stations",
@@ -696,25 +498,21 @@
    "frames": 54,
    "settledMs": 20009,
    "firstFrameMs": -2,
-   "paintedMs": 352,
-   "finalPaint": [
-    0.284,
-    9
-   ],
-   "animated": false,
-   "completeMs": 1019,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 32,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 14684,
+   "fcpMs": 296,
+   "inputOkMs": 14684,
    "maxInputDelayMs": 2679,
    "inputProbes": 11,
-   "quietAfterPaintMs": 13680,
-   "fcpMs": 296,
+   "lastLongTaskEndMs": 13680,
+   "freeFromMs": 14684,
    "tbtMs": 11924,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 13680,
-   "freeFromMs": 13680,
    "longTaskTotalMs": 12474,
    "briefShownMs": 342,
    "messages": [
@@ -725,6 +523,7 @@
    "dutyCycle": 0.575,
    "scriptMs": 11901,
    "windowMs": 20700,
+   "id": "desktop-live-layer-stations-cold-2",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -735,7 +534,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.037
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-stations",
@@ -745,25 +544,21 @@
    "frames": 55,
    "settledMs": 19643,
    "firstFrameMs": 23,
-   "paintedMs": 240,
-   "finalPaint": [
-    0.284,
-    9
-   ],
-   "animated": false,
-   "completeMs": 923,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 46,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 14319,
+   "fcpMs": 184,
+   "inputOkMs": 14319,
    "maxInputDelayMs": 2512,
    "inputProbes": 11,
-   "quietAfterPaintMs": 13315,
-   "fcpMs": 184,
+   "lastLongTaskEndMs": 13315,
+   "freeFromMs": 14319,
    "tbtMs": 11687,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 13315,
-   "freeFromMs": 13315,
    "longTaskTotalMs": 12187,
    "briefShownMs": 227,
    "messages": [
@@ -774,6 +569,7 @@
    "dutyCycle": 0.576,
    "scriptMs": 11722,
    "windowMs": 20338,
+   "id": "desktop-live-layer-stations-cold-3",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -784,7 +580,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.037
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-water-temp",
@@ -794,25 +590,21 @@
    "frames": 52,
    "settledMs": 20923,
    "firstFrameMs": 11,
-   "paintedMs": 277,
-   "finalPaint": [
-    0.309,
-    14
-   ],
-   "animated": false,
-   "completeMs": 944,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 42,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 16418,
+   "fcpMs": 187,
+   "inputOkMs": 16418,
    "maxInputDelayMs": 3245,
    "inputProbes": 10,
-   "quietAfterPaintMs": 15413,
-   "fcpMs": 187,
+   "lastLongTaskEndMs": 15413,
+   "freeFromMs": 16418,
    "tbtMs": 13596,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 15413,
-   "freeFromMs": 15413,
    "longTaskTotalMs": 14196,
    "briefShownMs": 251,
    "messages": [],
@@ -821,6 +613,7 @@
    "dutyCycle": 0.636,
    "scriptMs": 13633,
    "windowMs": 21434,
+   "id": "desktop-live-layer-water-temp-cold-1",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -831,7 +624,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.222
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-water-temp",
@@ -841,25 +634,21 @@
    "frames": 53,
    "settledMs": 20921,
    "firstFrameMs": 20,
-   "paintedMs": 286,
-   "finalPaint": [
-    0.309,
-    14
-   ],
-   "animated": false,
-   "completeMs": 1003,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 37,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15809,
+   "fcpMs": 192,
+   "inputOkMs": 15809,
    "maxInputDelayMs": 3229,
    "inputProbes": 11,
-   "quietAfterPaintMs": 14804,
-   "fcpMs": 192,
+   "lastLongTaskEndMs": 14804,
+   "freeFromMs": 15809,
    "tbtMs": 12972,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14804,
-   "freeFromMs": 14804,
    "longTaskTotalMs": 13572,
    "briefShownMs": 264,
    "messages": [],
@@ -868,6 +657,7 @@
    "dutyCycle": 0.595,
    "scriptMs": 12978,
    "windowMs": 21828,
+   "id": "desktop-live-layer-water-temp-cold-2",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -878,7 +668,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.222
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-water-temp",
@@ -888,25 +678,21 @@
    "frames": 55,
    "settledMs": 20052,
    "firstFrameMs": 19,
-   "paintedMs": 435,
-   "finalPaint": [
-    0.309,
-    14
-   ],
-   "animated": false,
-   "completeMs": 1002,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 41,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 14958,
+   "fcpMs": 360,
+   "inputOkMs": 14958,
    "maxInputDelayMs": 2712,
    "inputProbes": 11,
-   "quietAfterPaintMs": 13954,
-   "fcpMs": 360,
+   "lastLongTaskEndMs": 13954,
+   "freeFromMs": 14958,
    "tbtMs": 12087,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 13954,
-   "freeFromMs": 13954,
    "longTaskTotalMs": 12637,
    "briefShownMs": 452,
    "messages": [],
@@ -915,6 +701,7 @@
    "dutyCycle": 0.577,
    "scriptMs": 12103,
    "windowMs": 20973,
+   "id": "desktop-live-layer-water-temp-cold-3",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -925,7 +712,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.222
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-chlorophyll",
@@ -935,25 +722,21 @@
    "frames": 65,
    "settledMs": 21913,
    "firstFrameMs": 21,
-   "paintedMs": 538,
-   "finalPaint": [
-    0.343,
-    12
-   ],
-   "animated": false,
-   "completeMs": 1871,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 45,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 1430,
+   "fcpMs": 448,
+   "inputOkMs": 1430,
    "maxInputDelayMs": 3379,
    "inputProbes": 12,
-   "quietAfterPaintMs": 1746,
-   "fcpMs": 448,
-   "tbtMs": 108,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15614,
    "freeFromMs": 15614,
+   "tbtMs": 12030,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 12530,
    "briefShownMs": 513,
    "messages": [],
@@ -962,6 +745,7 @@
    "dutyCycle": 0.531,
    "scriptMs": 12018,
    "windowMs": 22637,
+   "id": "desktop-live-layer-chlorophyll-cold-1",
    "layer": {
     "requests": 9,
     "bytes": 23927,
@@ -977,7 +761,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.277
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-chlorophyll",
@@ -987,25 +771,21 @@
    "frames": 58,
    "settledMs": 20596,
    "firstFrameMs": 23,
-   "paintedMs": 523,
-   "finalPaint": [
-    0.342,
-    12
-   ],
-   "animated": false,
-   "completeMs": 1290,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 53,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15199,
+   "fcpMs": 416,
+   "inputOkMs": 15199,
    "maxInputDelayMs": 3031,
    "inputProbes": 11,
-   "quietAfterPaintMs": 14195,
-   "fcpMs": 416,
+   "lastLongTaskEndMs": 14195,
+   "freeFromMs": 15199,
    "tbtMs": 11979,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14195,
-   "freeFromMs": 14195,
    "longTaskTotalMs": 12429,
    "briefShownMs": 500,
    "messages": [],
@@ -1014,6 +794,7 @@
    "dutyCycle": 0.566,
    "scriptMs": 12000,
    "windowMs": 21214,
+   "id": "desktop-live-layer-chlorophyll-cold-2",
    "layer": {
     "requests": 9,
     "bytes": 24095,
@@ -1029,7 +810,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.277
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-chlorophyll",
@@ -1039,25 +820,21 @@
    "frames": 54,
    "settledMs": 20047,
    "firstFrameMs": -2,
-   "paintedMs": 583,
-   "finalPaint": [
-    0.343,
-    12
-   ],
-   "animated": false,
-   "completeMs": 1150,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 48,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 14875,
+   "fcpMs": 320,
+   "inputOkMs": 14875,
    "maxInputDelayMs": 2715,
    "inputProbes": 11,
-   "quietAfterPaintMs": 13872,
-   "fcpMs": 320,
+   "lastLongTaskEndMs": 13872,
+   "freeFromMs": 14875,
    "tbtMs": 11835,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 13872,
-   "freeFromMs": 13872,
    "longTaskTotalMs": 12335,
    "briefShownMs": 570,
    "messages": [],
@@ -1066,6 +843,7 @@
    "dutyCycle": 0.57,
    "scriptMs": 11914,
    "windowMs": 20895,
+   "id": "desktop-live-layer-chlorophyll-cold-3",
    "layer": {
     "requests": 9,
     "bytes": 24132,
@@ -1081,7 +859,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.277
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-seafloor",
@@ -1091,25 +869,21 @@
    "frames": 55,
    "settledMs": 20170,
    "firstFrameMs": -1,
-   "paintedMs": 281,
-   "finalPaint": [
-    0.255,
-    14
-   ],
-   "animated": false,
-   "completeMs": 14097,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 59,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15002,
+   "fcpMs": 192,
+   "inputOkMs": 15002,
    "maxInputDelayMs": 2635,
    "inputProbes": 11,
-   "quietAfterPaintMs": 14086,
-   "fcpMs": 192,
+   "lastLongTaskEndMs": 13998,
+   "freeFromMs": 15002,
    "tbtMs": 12081,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 13998,
-   "freeFromMs": 13998,
    "longTaskTotalMs": 12831,
    "briefShownMs": 255,
    "messages": [],
@@ -1118,6 +892,7 @@
    "dutyCycle": 0.561,
    "scriptMs": 11781,
    "windowMs": 21017,
+   "id": "desktop-live-layer-seafloor-cold-1",
    "layer": {
     "requests": 10,
     "bytes": 1200308,
@@ -1131,7 +906,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.074
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-seafloor",
@@ -1141,25 +916,21 @@
    "frames": 54,
    "settledMs": 20702,
    "firstFrameMs": 23,
-   "paintedMs": 373,
-   "finalPaint": [
-    0.255,
-    14
-   ],
-   "animated": false,
-   "completeMs": 14823,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 60,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15728,
+   "fcpMs": 268,
+   "inputOkMs": 15728,
    "maxInputDelayMs": 2701,
    "inputProbes": 10,
-   "quietAfterPaintMs": 14818,
-   "fcpMs": 268,
+   "lastLongTaskEndMs": 14724,
+   "freeFromMs": 15728,
    "tbtMs": 12797,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14724,
-   "freeFromMs": 14724,
    "longTaskTotalMs": 13497,
    "briefShownMs": 362,
    "messages": [],
@@ -1168,6 +939,7 @@
    "dutyCycle": 0.603,
    "scriptMs": 12505,
    "windowMs": 20743,
+   "id": "desktop-live-layer-seafloor-cold-2",
    "layer": {
     "requests": 10,
     "bytes": 1200245,
@@ -1181,7 +953,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.074
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-seafloor",
@@ -1191,25 +963,21 @@
    "frames": 54,
    "settledMs": 20662,
    "firstFrameMs": 21,
-   "paintedMs": 305,
-   "finalPaint": [
-    0.255,
-    14
-   ],
-   "animated": false,
-   "completeMs": 21687,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 148,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 1205,
+   "fcpMs": 216,
+   "inputOkMs": 1205,
    "maxInputDelayMs": 4434,
    "inputProbes": 8,
-   "quietAfterPaintMs": 21675,
-   "fcpMs": 216,
-   "tbtMs": 126,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 21414,
    "freeFromMs": 21414,
+   "tbtMs": 18660,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 19667,
    "briefShownMs": 294,
    "messages": [],
@@ -1218,6 +986,7 @@
    "dutyCycle": 0.74,
    "scriptMs": 18088,
    "windowMs": 24430,
+   "id": "desktop-live-layer-seafloor-cold-3",
    "layer": {
     "requests": 10,
     "bytes": 1200201,
@@ -1231,7 +1000,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.074
+   "layerVisibleDiff": null
   },
   {
    "page": "brief",
@@ -1241,25 +1010,21 @@
    "frames": 244,
    "settledMs": 20668,
    "firstFrameMs": 16,
-   "paintedMs": 566,
-   "finalPaint": [
-    0.259,
-    13
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 87,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15849,
+   "fcpMs": 492,
+   "inputOkMs": 15849,
    "maxInputDelayMs": 2684,
    "inputProbes": 10,
-   "quietAfterPaintMs": 14950,
-   "fcpMs": 492,
+   "lastLongTaskEndMs": 14845,
+   "freeFromMs": 15849,
    "tbtMs": 12652,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14845,
-   "freeFromMs": 14845,
    "longTaskTotalMs": 13352,
    "briefShownMs": 565,
    "messages": [],
@@ -1268,6 +1033,7 @@
    "dutyCycle": 0.595,
    "scriptMs": 12439,
    "windowMs": 20922,
+   "id": "desktop-brief-cold-1",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1280,25 +1046,21 @@
    "frames": 270,
    "settledMs": 19847,
    "firstFrameMs": 18,
-   "paintedMs": 168,
-   "finalPaint": [
-    0.259,
-    13
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 90,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 14703,
+   "fcpMs": 172,
+   "inputOkMs": 14703,
    "maxInputDelayMs": 2402,
    "inputProbes": 11,
-   "quietAfterPaintMs": 13788,
-   "fcpMs": 172,
+   "lastLongTaskEndMs": 13693,
+   "freeFromMs": 14703,
    "tbtMs": 12109,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 13693,
-   "freeFromMs": 13693,
    "longTaskTotalMs": 12759,
    "briefShownMs": 158,
    "messages": [],
@@ -1307,6 +1069,7 @@
    "dutyCycle": 0.573,
    "scriptMs": 11917,
    "windowMs": 20788,
+   "id": "desktop-brief-warm-1",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1319,25 +1082,21 @@
    "frames": 237,
    "settledMs": 20302,
    "firstFrameMs": -2,
-   "paintedMs": 409,
-   "finalPaint": [
-    0.259,
-    13
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 69,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15409,
+   "fcpMs": 332,
+   "inputOkMs": 15409,
    "maxInputDelayMs": 2584,
    "inputProbes": 10,
-   "quietAfterPaintMs": 14523,
-   "fcpMs": 332,
+   "lastLongTaskEndMs": 14400,
+   "freeFromMs": 15409,
    "tbtMs": 12410,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14400,
-   "freeFromMs": 14400,
    "longTaskTotalMs": 13111,
    "briefShownMs": 391,
    "messages": [],
@@ -1346,6 +1105,7 @@
    "dutyCycle": 0.596,
    "scriptMs": 12214,
    "windowMs": 20484,
+   "id": "desktop-brief-cold-2",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1358,25 +1118,21 @@
    "frames": 240,
    "settledMs": 20095,
    "firstFrameMs": 1,
-   "paintedMs": 130,
-   "finalPaint": [
-    0.259,
-    14
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 89,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15330,
+   "fcpMs": 76,
+   "inputOkMs": 15330,
    "maxInputDelayMs": 2593,
    "inputProbes": 10,
-   "quietAfterPaintMs": 14431,
-   "fcpMs": 76,
+   "lastLongTaskEndMs": 14314,
+   "freeFromMs": 15330,
    "tbtMs": 12678,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14314,
-   "freeFromMs": 14314,
    "longTaskTotalMs": 13428,
    "briefShownMs": 159,
    "messages": [],
@@ -1385,6 +1141,7 @@
    "dutyCycle": 0.613,
    "scriptMs": 12503,
    "windowMs": 20405,
+   "id": "desktop-brief-warm-2",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1397,25 +1154,21 @@
    "frames": 247,
    "settledMs": 20918,
    "firstFrameMs": -1,
-   "paintedMs": 447,
-   "finalPaint": [
-    0.258,
-    14
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 90,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 16014,
+   "fcpMs": 208,
+   "inputOkMs": 16014,
    "maxInputDelayMs": 3183,
    "inputProbes": 10,
-   "quietAfterPaintMs": 15083,
-   "fcpMs": 208,
+   "lastLongTaskEndMs": 15003,
+   "freeFromMs": 16014,
    "tbtMs": 12669,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 15003,
-   "freeFromMs": 15003,
    "longTaskTotalMs": 13469,
    "briefShownMs": 440,
    "messages": [],
@@ -1424,6 +1177,7 @@
    "dutyCycle": 0.589,
    "scriptMs": 12428,
    "windowMs": 21085,
+   "id": "desktop-brief-cold-3",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1436,25 +1190,21 @@
    "frames": 246,
    "settledMs": 20611,
    "firstFrameMs": 6,
-   "paintedMs": 172,
-   "finalPaint": [
-    0.258,
-    13
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 91,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15741,
+   "fcpMs": 96,
+   "inputOkMs": 15741,
    "maxInputDelayMs": 3099,
    "inputProbes": 10,
-   "quietAfterPaintMs": 14822,
-   "fcpMs": 96,
+   "lastLongTaskEndMs": 14726,
+   "freeFromMs": 15741,
    "tbtMs": 12704,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14726,
-   "freeFromMs": 14726,
    "longTaskTotalMs": 13354,
    "briefShownMs": 195,
    "messages": [],
@@ -1463,6 +1213,7 @@
    "dutyCycle": 0.599,
    "scriptMs": 12455,
    "windowMs": 20796,
+   "id": "desktop-brief-warm-3",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1475,25 +1226,21 @@
    "frames": 268,
    "settledMs": 20383,
    "firstFrameMs": 26,
-   "paintedMs": 243,
-   "finalPaint": [
-    0.287,
-    14
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 91,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15311,
+   "fcpMs": 331,
+   "inputOkMs": 15311,
    "maxInputDelayMs": 2844,
    "inputProbes": 11,
-   "quietAfterPaintMs": 14406,
-   "fcpMs": 331,
+   "lastLongTaskEndMs": 14309,
+   "freeFromMs": 15311,
    "tbtMs": 12234,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14309,
-   "freeFromMs": 14309,
    "longTaskTotalMs": 12884,
    "briefShownMs": 384,
    "messages": [],
@@ -1502,6 +1249,7 @@
    "dutyCycle": 0.562,
    "scriptMs": 12028,
    "windowMs": 21397,
+   "id": "desktop-map-home-returning-cold-1",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1514,25 +1262,21 @@
    "frames": 247,
    "settledMs": 21094,
    "firstFrameMs": 14,
-   "paintedMs": 147,
-   "finalPaint": [
-    0.287,
-    14
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 92,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 16465,
+   "fcpMs": 242,
+   "inputOkMs": 16465,
    "maxInputDelayMs": 3015,
    "inputProbes": 10,
-   "quietAfterPaintMs": 15606,
-   "fcpMs": 242,
+   "lastLongTaskEndMs": 15457,
+   "freeFromMs": 16465,
    "tbtMs": 13570,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 15457,
-   "freeFromMs": 15457,
    "longTaskTotalMs": 14320,
    "briefShownMs": 319,
    "messages": [],
@@ -1541,6 +1285,7 @@
    "dutyCycle": 0.615,
    "scriptMs": 13252,
    "windowMs": 21534,
+   "id": "desktop-map-home-returning-warm-1",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1553,25 +1298,21 @@
    "frames": 247,
    "settledMs": 20628,
    "firstFrameMs": 19,
-   "paintedMs": 219,
-   "finalPaint": [
-    0.286,
-    14
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 92,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15720,
+   "fcpMs": 325,
+   "inputOkMs": 15720,
    "maxInputDelayMs": 2872,
    "inputProbes": 10,
-   "quietAfterPaintMs": 14805,
-   "fcpMs": 325,
+   "lastLongTaskEndMs": 14706,
+   "freeFromMs": 15720,
    "tbtMs": 12644,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14706,
-   "freeFromMs": 14706,
    "longTaskTotalMs": 13394,
    "briefShownMs": 367,
    "messages": [],
@@ -1580,6 +1321,7 @@
    "dutyCycle": 0.594,
    "scriptMs": 12354,
    "windowMs": 20790,
+   "id": "desktop-map-home-returning-cold-2",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1592,25 +1334,21 @@
    "frames": 246,
    "settledMs": 20177,
    "firstFrameMs": 14,
-   "paintedMs": 114,
-   "finalPaint": [
-    0.287,
-    14
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 75,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15365,
+   "fcpMs": 202,
+   "inputOkMs": 15365,
    "maxInputDelayMs": 2606,
    "inputProbes": 10,
-   "quietAfterPaintMs": 14450,
-   "fcpMs": 202,
+   "lastLongTaskEndMs": 14346,
+   "freeFromMs": 15365,
    "tbtMs": 12588,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14346,
-   "freeFromMs": 14346,
    "longTaskTotalMs": 13238,
    "briefShownMs": 315,
    "messages": [],
@@ -1619,6 +1357,7 @@
    "dutyCycle": 0.606,
    "scriptMs": 12393,
    "windowMs": 20434,
+   "id": "desktop-map-home-returning-warm-2",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1631,25 +1370,21 @@
    "frames": 246,
    "settledMs": 20621,
    "firstFrameMs": -2,
-   "paintedMs": 526,
-   "finalPaint": [
-    0.286,
-    14
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 77,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15676,
+   "fcpMs": 610,
+   "inputOkMs": 15676,
    "maxInputDelayMs": 3049,
    "inputProbes": 10,
-   "quietAfterPaintMs": 14792,
-   "fcpMs": 610,
+   "lastLongTaskEndMs": 14672,
+   "freeFromMs": 15676,
    "tbtMs": 12192,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14672,
-   "freeFromMs": 14672,
    "longTaskTotalMs": 12842,
    "briefShownMs": 661,
    "messages": [],
@@ -1658,6 +1393,7 @@
    "dutyCycle": 0.577,
    "scriptMs": 11965,
    "windowMs": 20746,
+   "id": "desktop-map-home-returning-cold-3",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1670,25 +1406,21 @@
    "frames": 275,
    "settledMs": 20839,
    "firstFrameMs": 18,
-   "paintedMs": 151,
-   "finalPaint": [
-    0.286,
-    14
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 107,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 15770,
+   "fcpMs": 247,
+   "inputOkMs": 15770,
    "maxInputDelayMs": 3320,
    "inputProbes": 11,
-   "quietAfterPaintMs": 14857,
-   "fcpMs": 247,
+   "lastLongTaskEndMs": 14756,
+   "freeFromMs": 15770,
    "tbtMs": 12407,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 14756,
-   "freeFromMs": 14756,
    "longTaskTotalMs": 13107,
    "briefShownMs": 330,
    "messages": [],
@@ -1697,6 +1429,7 @@
    "dutyCycle": 0.558,
    "scriptMs": 12189,
    "windowMs": 21855,
+   "id": "desktop-map-home-returning-warm-3",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1709,25 +1442,21 @@
    "frames": 1067,
    "settledMs": 72881,
    "firstFrameMs": -9,
-   "paintedMs": 3331,
-   "finalPaint": [
-    0.288,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 25,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3331,
+   "fcpMs": 1926,
+   "inputOkMs": 2941,
    "maxInputDelayMs": 1714,
    "inputProbes": 67,
-   "quietAfterPaintMs": 3798,
-   "fcpMs": 1926,
-   "tbtMs": 183,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 63653,
    "freeFromMs": 63653,
+   "tbtMs": 4267,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 6696,
    "briefShownMs": 3346,
    "messages": [],
@@ -1736,6 +1465,7 @@
    "dutyCycle": 0.037,
    "scriptMs": 2676,
    "windowMs": 73154,
+   "id": "phone-brief-cold-1",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1748,25 +1478,21 @@
    "frames": 1061,
    "settledMs": 72629,
    "firstFrameMs": -2,
-   "paintedMs": 3232,
-   "finalPaint": [
-    0.288,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 33,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3232,
+   "fcpMs": 1836,
+   "inputOkMs": 2838,
    "maxInputDelayMs": 1626,
    "inputProbes": 67,
-   "quietAfterPaintMs": 4166,
-   "fcpMs": 1836,
-   "tbtMs": 124,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 63427,
    "freeFromMs": 63427,
+   "tbtMs": 3135,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 4719,
    "briefShownMs": 3220,
    "messages": [],
@@ -1775,6 +1501,7 @@
    "dutyCycle": 0.032,
    "scriptMs": 2328,
    "windowMs": 72915,
+   "id": "phone-brief-cold-2",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1787,25 +1514,21 @@
    "frames": 1054,
    "settledMs": 72608,
    "firstFrameMs": 14,
-   "paintedMs": 3247,
-   "finalPaint": [
-    0.288,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 31,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3247,
+   "fcpMs": 1836,
+   "inputOkMs": 2835,
    "maxInputDelayMs": 1966,
    "inputProbes": 67,
-   "quietAfterPaintMs": 3728,
-   "fcpMs": 1836,
-   "tbtMs": 134,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 63474,
    "freeFromMs": 63474,
+   "tbtMs": 3474,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 5363,
    "briefShownMs": 3230,
    "messages": [],
@@ -1814,6 +1537,7 @@
    "dutyCycle": 0.033,
    "scriptMs": 2442,
    "windowMs": 73115,
+   "id": "phone-brief-cold-3",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1826,25 +1550,21 @@
    "frames": 1072,
    "settledMs": 72889,
    "firstFrameMs": -3,
-   "paintedMs": 3649,
-   "finalPaint": [
-    0.309,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 34,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3903,
+   "fcpMs": 3553,
+   "inputOkMs": 3903,
    "maxInputDelayMs": 946,
    "inputProbes": 66,
-   "quietAfterPaintMs": 4166,
-   "fcpMs": 3553,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 27618,
    "freeFromMs": 27618,
+   "tbtMs": 2570,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 4640,
    "briefShownMs": 3675,
    "messages": [],
@@ -1853,6 +1573,7 @@
    "dutyCycle": 0.029,
    "scriptMs": 2153,
    "windowMs": 73134,
+   "id": "phone-map-home-returning-cold-1",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1865,25 +1586,21 @@
    "frames": 1077,
    "settledMs": 73146,
    "firstFrameMs": -2,
-   "paintedMs": 3093,
-   "finalPaint": [
-    0.311,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 30,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3887,
+   "fcpMs": 3834,
+   "inputOkMs": 3887,
    "maxInputDelayMs": 1374,
    "inputProbes": 66,
-   "quietAfterPaintMs": 4235,
-   "fcpMs": 3834,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 27875,
    "freeFromMs": 27875,
+   "tbtMs": 2577,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 4578,
    "briefShownMs": 3882,
    "messages": [],
@@ -1892,6 +1609,7 @@
    "dutyCycle": 0.03,
    "scriptMs": 2213,
    "windowMs": 73399,
+   "id": "phone-map-home-returning-cold-2",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1904,25 +1622,21 @@
    "frames": 1080,
    "settledMs": 72988,
    "firstFrameMs": -2,
-   "paintedMs": 3695,
-   "finalPaint": [
-    0.309,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 12,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 4013,
+   "fcpMs": 3594,
+   "inputOkMs": 4013,
    "maxInputDelayMs": 1035,
    "inputProbes": 66,
-   "quietAfterPaintMs": 3695,
-   "fcpMs": 3594,
-   "tbtMs": 13,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 28699,
    "freeFromMs": 28699,
+   "tbtMs": 2816,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 4419,
    "briefShownMs": 3710,
    "messages": [],
@@ -1931,6 +1645,7 @@
    "dutyCycle": 0.028,
    "scriptMs": 2051,
    "windowMs": 73406,
+   "id": "phone-map-home-returning-cold-3",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1943,25 +1658,21 @@
    "frames": 57,
    "settledMs": 72896,
    "firstFrameMs": 20,
-   "paintedMs": 3253,
-   "finalPaint": [
-    0.419,
-    8
-   ],
-   "animated": false,
-   "completeMs": 15453,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 126,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3253,
+   "fcpMs": 1908,
+   "inputOkMs": 2912,
    "maxInputDelayMs": 1636,
    "inputProbes": 70,
-   "quietAfterPaintMs": 3759,
-   "fcpMs": 1908,
-   "tbtMs": 100,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15440,
    "freeFromMs": 15440,
+   "tbtMs": 638,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1658,
    "briefShownMs": 3254,
    "messages": [],
@@ -1970,6 +1681,7 @@
    "dutyCycle": 0.016,
    "scriptMs": 1157,
    "windowMs": 73510,
+   "id": "phone-live-layer-none-cold-1",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -1982,25 +1694,21 @@
    "frames": 60,
    "settledMs": 72622,
    "firstFrameMs": 18,
-   "paintedMs": 3218,
-   "finalPaint": [
-    0.419,
-    8
-   ],
-   "animated": false,
-   "completeMs": 15318,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 130,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3218,
+   "fcpMs": 1876,
+   "inputOkMs": 2877,
    "maxInputDelayMs": 1638,
    "inputProbes": 70,
-   "quietAfterPaintMs": 3720,
-   "fcpMs": 1876,
-   "tbtMs": 102,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 3218,
+   "freeFromMs": 2877,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1654,
    "briefShownMs": 3213,
    "messages": [],
@@ -2009,6 +1717,7 @@
    "dutyCycle": 0.016,
    "scriptMs": 1160,
    "windowMs": 73289,
+   "id": "phone-live-layer-none-cold-2",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -2021,25 +1730,21 @@
    "frames": 57,
    "settledMs": 72594,
    "firstFrameMs": -2,
-   "paintedMs": 3245,
-   "finalPaint": [
-    0.419,
-    8
-   ],
-   "animated": false,
-   "completeMs": 15412,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 128,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3245,
+   "fcpMs": 1864,
+   "inputOkMs": 2870,
    "maxInputDelayMs": 1640,
    "inputProbes": 70,
-   "quietAfterPaintMs": 3721,
-   "fcpMs": 1864,
-   "tbtMs": 111,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15406,
    "freeFromMs": 15406,
+   "tbtMs": 619,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1572,
    "briefShownMs": 3233,
    "messages": [],
@@ -2048,6 +1753,7 @@
    "dutyCycle": 0.015,
    "scriptMs": 1118,
    "windowMs": 73483,
+   "id": "phone-live-layer-none-cold-3",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -2060,25 +1766,21 @@
    "frames": 57,
    "settledMs": 72584,
    "firstFrameMs": -2,
-   "paintedMs": 3078,
-   "finalPaint": [
-    0.374,
-    8
-   ],
-   "animated": false,
-   "completeMs": 15294,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 130,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3078,
+   "fcpMs": 1668,
+   "inputOkMs": 2671,
    "maxInputDelayMs": 1453,
    "inputProbes": 70,
-   "quietAfterPaintMs": 3078,
-   "fcpMs": 1668,
-   "tbtMs": 113,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15291,
    "freeFromMs": 15291,
+   "tbtMs": 852,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 2019,
    "briefShownMs": 3074,
    "messages": [],
@@ -2087,6 +1789,7 @@
    "dutyCycle": 0.016,
    "scriptMs": 1203,
    "windowMs": 73348,
+   "id": "phone-live-layer-swell-cold-1",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -2097,7 +1800,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.021
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-swell",
@@ -2107,25 +1810,21 @@
    "frames": 60,
    "settledMs": 72573,
    "firstFrameMs": -2,
-   "paintedMs": 3189,
-   "finalPaint": [
-    0.374,
-    8
-   ],
-   "animated": false,
-   "completeMs": 15406,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 127,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3189,
+   "fcpMs": 1828,
+   "inputOkMs": 2833,
    "maxInputDelayMs": 1622,
    "inputProbes": 70,
-   "quietAfterPaintMs": 3752,
-   "fcpMs": 1828,
-   "tbtMs": 98,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 3189,
+   "freeFromMs": 2833,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 2004,
    "briefShownMs": 3182,
    "messages": [],
@@ -2134,6 +1833,7 @@
    "dutyCycle": 0.017,
    "scriptMs": 1216,
    "windowMs": 73464,
+   "id": "phone-live-layer-swell-cold-2",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -2144,7 +1844,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.021
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-swell",
@@ -2154,25 +1854,21 @@
    "frames": 60,
    "settledMs": 72687,
    "firstFrameMs": -2,
-   "paintedMs": 3304,
-   "finalPaint": [
-    0.374,
-    8
-   ],
-   "animated": false,
-   "completeMs": 15503,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 130,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3304,
+   "fcpMs": 1960,
+   "inputOkMs": 2962,
    "maxInputDelayMs": 1639,
    "inputProbes": 70,
-   "quietAfterPaintMs": 4309,
-   "fcpMs": 1960,
-   "tbtMs": 96,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15499,
    "freeFromMs": 15499,
+   "tbtMs": 781,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 2075,
    "briefShownMs": 3300,
    "messages": [],
@@ -2181,6 +1877,7 @@
    "dutyCycle": 0.016,
    "scriptMs": 1195,
    "windowMs": 73576,
+   "id": "phone-live-layer-swell-cold-3",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -2191,7 +1888,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.021
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-currents",
@@ -2201,25 +1898,21 @@
    "frames": 1268,
    "settledMs": 72569,
    "firstFrameMs": -2,
-   "paintedMs": 3212,
-   "finalPaint": [
-    0.355,
-    9
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 33,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3212,
+   "fcpMs": 1832,
+   "inputOkMs": 2835,
    "maxInputDelayMs": 1623,
    "inputProbes": 69,
-   "quietAfterPaintMs": 3728,
-   "fcpMs": 1832,
-   "tbtMs": 101,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 16618,
    "freeFromMs": 16618,
+   "tbtMs": 657,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1965,
    "briefShownMs": 3199,
    "messages": [],
@@ -2228,6 +1921,7 @@
    "dutyCycle": 0.029,
    "scriptMs": 2118,
    "windowMs": 72994,
+   "id": "phone-live-layer-currents-cold-1",
    "layer": {
     "requests": 1,
     "bytes": 245697,
@@ -2240,7 +1934,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.019
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-currents",
@@ -2250,25 +1944,21 @@
    "frames": 1268,
    "settledMs": 72585,
    "firstFrameMs": -2,
-   "paintedMs": 3045,
-   "finalPaint": [
-    0.355,
-    9
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 36,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3045,
+   "fcpMs": 1668,
+   "inputOkMs": 2671,
    "maxInputDelayMs": 1437,
    "inputProbes": 69,
-   "quietAfterPaintMs": 3045,
-   "fcpMs": 1668,
-   "tbtMs": 98,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 16446,
    "freeFromMs": 16446,
+   "tbtMs": 698,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 2049,
    "briefShownMs": 3040,
    "messages": [],
@@ -2277,6 +1967,7 @@
    "dutyCycle": 0.031,
    "scriptMs": 2264,
    "windowMs": 72744,
+   "id": "phone-live-layer-currents-cold-2",
    "layer": {
     "requests": 1,
     "bytes": 245854,
@@ -2289,7 +1980,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.019
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-currents",
@@ -2299,25 +1990,21 @@
    "frames": 1267,
    "settledMs": 72559,
    "firstFrameMs": 15,
-   "paintedMs": 3198,
-   "finalPaint": [
-    0.355,
-    9
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 14,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3198,
+   "fcpMs": 1856,
+   "inputOkMs": 2857,
    "maxInputDelayMs": 1635,
    "inputProbes": 69,
-   "quietAfterPaintMs": 3887,
-   "fcpMs": 1856,
-   "tbtMs": 97,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 16399,
    "freeFromMs": 16399,
+   "tbtMs": 580,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1869,
    "briefShownMs": 3195,
    "messages": [],
@@ -2326,6 +2013,7 @@
    "dutyCycle": 0.028,
    "scriptMs": 2030,
    "windowMs": 73020,
+   "id": "phone-live-layer-currents-cold-3",
    "layer": {
     "requests": 1,
     "bytes": 245770,
@@ -2338,7 +2026,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.019
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-stations",
@@ -2348,25 +2036,21 @@
    "frames": 60,
    "settledMs": 72338,
    "firstFrameMs": -2,
-   "paintedMs": 3048,
-   "finalPaint": [
-    0.419,
-    8
-   ],
-   "animated": false,
-   "completeMs": 15347,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 130,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3048,
+   "fcpMs": 1636,
+   "inputOkMs": 2639,
    "maxInputDelayMs": 1410,
    "inputProbes": 70,
-   "quietAfterPaintMs": 3571,
-   "fcpMs": 1636,
-   "tbtMs": 97,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15336,
    "freeFromMs": 15336,
+   "tbtMs": 724,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1914,
    "briefShownMs": 3044,
    "messages": [],
@@ -2375,6 +2059,7 @@
    "dutyCycle": 0.016,
    "scriptMs": 1158,
    "windowMs": 72852,
+   "id": "phone-live-layer-stations-cold-1",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -2385,7 +2070,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.0
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-stations",
@@ -2395,25 +2080,21 @@
    "frames": 58,
    "settledMs": 72568,
    "firstFrameMs": 19,
-   "paintedMs": 3185,
-   "finalPaint": [
-    0.419,
-    8
-   ],
-   "animated": false,
-   "completeMs": 15302,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 132,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3185,
+   "fcpMs": 1840,
+   "inputOkMs": 2844,
    "maxInputDelayMs": 1630,
    "inputProbes": 70,
-   "quietAfterPaintMs": 3718,
-   "fcpMs": 1840,
-   "tbtMs": 94,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 3185,
+   "freeFromMs": 2844,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1914,
    "briefShownMs": 3184,
    "messages": [],
@@ -2422,6 +2103,7 @@
    "dutyCycle": 0.017,
    "scriptMs": 1220,
    "windowMs": 73023,
+   "id": "phone-live-layer-stations-cold-2",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -2432,7 +2114,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.0
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-stations",
@@ -2442,25 +2124,21 @@
    "frames": 56,
    "settledMs": 72469,
    "firstFrameMs": 17,
-   "paintedMs": 3150,
-   "finalPaint": [
-    0.419,
-    8
-   ],
-   "animated": false,
-   "completeMs": 15416,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 127,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3150,
+   "fcpMs": 1788,
+   "inputOkMs": 2792,
    "maxInputDelayMs": 1444,
    "inputProbes": 70,
-   "quietAfterPaintMs": 3150,
-   "fcpMs": 1788,
-   "tbtMs": 97,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15400,
    "freeFromMs": 15400,
+   "tbtMs": 722,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1676,
    "briefShownMs": 3150,
    "messages": [],
@@ -2469,6 +2147,7 @@
    "dutyCycle": 0.015,
    "scriptMs": 1132,
    "windowMs": 73423,
+   "id": "phone-live-layer-stations-cold-3",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -2479,7 +2158,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.0
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-water-temp",
@@ -2489,25 +2168,21 @@
    "frames": 57,
    "settledMs": 72728,
    "firstFrameMs": 20,
-   "paintedMs": 3337,
-   "finalPaint": [
-    0.24,
-    11
-   ],
-   "animated": false,
-   "completeMs": 15519,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 147,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3337,
+   "fcpMs": 1976,
+   "inputOkMs": 2979,
    "maxInputDelayMs": 1628,
    "inputProbes": 70,
-   "quietAfterPaintMs": 3843,
-   "fcpMs": 1976,
-   "tbtMs": 97,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15510,
    "freeFromMs": 15510,
+   "tbtMs": 763,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1943,
    "briefShownMs": 3330,
    "messages": [],
@@ -2516,6 +2191,7 @@
    "dutyCycle": 0.016,
    "scriptMs": 1150,
    "windowMs": 73591,
+   "id": "phone-live-layer-water-temp-cold-1",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -2526,7 +2202,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.532
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-water-temp",
@@ -2536,25 +2212,21 @@
    "frames": 62,
    "settledMs": 72791,
    "firstFrameMs": 17,
-   "paintedMs": 3417,
-   "finalPaint": [
-    0.24,
-    11
-   ],
-   "animated": false,
-   "completeMs": 15566,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 145,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3417,
+   "fcpMs": 2056,
+   "inputOkMs": 3056,
    "maxInputDelayMs": 1632,
    "inputProbes": 70,
-   "quietAfterPaintMs": 4377,
-   "fcpMs": 2056,
-   "tbtMs": 98,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15565,
    "freeFromMs": 15565,
+   "tbtMs": 746,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1877,
    "briefShownMs": 3403,
    "messages": [],
@@ -2563,6 +2235,7 @@
    "dutyCycle": 0.016,
    "scriptMs": 1162,
    "windowMs": 73672,
+   "id": "phone-live-layer-water-temp-cold-2",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -2573,7 +2246,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.532
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-water-temp",
@@ -2583,25 +2256,21 @@
    "frames": 57,
    "settledMs": 72562,
    "firstFrameMs": 17,
-   "paintedMs": 3184,
-   "finalPaint": [
-    0.24,
-    11
-   ],
-   "animated": false,
-   "completeMs": 15383,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 143,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3184,
+   "fcpMs": 1840,
+   "inputOkMs": 2840,
    "maxInputDelayMs": 1631,
    "inputProbes": 70,
-   "quietAfterPaintMs": 4052,
-   "fcpMs": 1840,
-   "tbtMs": 101,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15378,
    "freeFromMs": 15378,
+   "tbtMs": 778,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1805,
    "briefShownMs": 3185,
    "messages": [],
@@ -2610,6 +2279,7 @@
    "dutyCycle": 0.016,
    "scriptMs": 1170,
    "windowMs": 73457,
+   "id": "phone-live-layer-water-temp-cold-3",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -2620,7 +2290,7 @@
     "examples": []
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.532
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-chlorophyll",
@@ -2630,25 +2300,21 @@
    "frames": 60,
    "settledMs": 72685,
    "firstFrameMs": 20,
-   "paintedMs": 3287,
-   "finalPaint": [
-    0.28,
-    7
-   ],
-   "animated": false,
-   "completeMs": 15653,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 131,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3287,
+   "fcpMs": 1944,
+   "inputOkMs": 2944,
    "maxInputDelayMs": 1629,
    "inputProbes": 70,
-   "quietAfterPaintMs": 3287,
-   "fcpMs": 1944,
-   "tbtMs": 94,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15652,
    "freeFromMs": 15652,
+   "tbtMs": 604,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1662,
    "briefShownMs": 3284,
    "messages": [],
@@ -2657,6 +2323,7 @@
    "dutyCycle": 0.015,
    "scriptMs": 1128,
    "windowMs": 73190,
+   "id": "phone-live-layer-chlorophyll-cold-1",
    "layer": {
     "requests": 9,
     "bytes": 23950,
@@ -2672,7 +2339,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.56
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-chlorophyll",
@@ -2682,25 +2349,21 @@
    "frames": 58,
    "settledMs": 72749,
    "firstFrameMs": -2,
-   "paintedMs": 3373,
-   "finalPaint": [
-    0.28,
-    7
-   ],
-   "animated": false,
-   "completeMs": 15706,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 129,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3373,
+   "fcpMs": 2012,
+   "inputOkMs": 3015,
    "maxInputDelayMs": 1631,
    "inputProbes": 70,
-   "quietAfterPaintMs": 3857,
-   "fcpMs": 2012,
-   "tbtMs": 102,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 3373,
+   "freeFromMs": 3015,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1620,
    "briefShownMs": 3362,
    "messages": [],
@@ -2709,6 +2372,7 @@
    "dutyCycle": 0.016,
    "scriptMs": 1146,
    "windowMs": 73313,
+   "id": "phone-live-layer-chlorophyll-cold-2",
    "layer": {
     "requests": 9,
     "bytes": 24117,
@@ -2724,7 +2388,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.56
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-chlorophyll",
@@ -2734,25 +2398,21 @@
    "frames": 59,
    "settledMs": 72572,
    "firstFrameMs": -2,
-   "paintedMs": 3185,
-   "finalPaint": [
-    0.28,
-    7
-   ],
-   "animated": false,
-   "completeMs": 15585,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 127,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3185,
+   "fcpMs": 1824,
+   "inputOkMs": 2824,
    "maxInputDelayMs": 1622,
    "inputProbes": 70,
-   "quietAfterPaintMs": 3803,
-   "fcpMs": 1824,
-   "tbtMs": 103,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15573,
    "freeFromMs": 15573,
+   "tbtMs": 649,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1660,
    "briefShownMs": 3186,
    "messages": [],
@@ -2761,6 +2421,7 @@
    "dutyCycle": 0.015,
    "scriptMs": 1133,
    "windowMs": 73092,
+   "id": "phone-live-layer-chlorophyll-cold-3",
    "layer": {
     "requests": 9,
     "bytes": 24158,
@@ -2776,7 +2437,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.56
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-seafloor",
@@ -2786,25 +2447,21 @@
    "frames": 65,
    "settledMs": 72693,
    "firstFrameMs": 20,
-   "paintedMs": 3303,
-   "finalPaint": [
-    0.343,
-    9
-   ],
-   "animated": false,
-   "completeMs": 27052,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 199,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3303,
+   "fcpMs": 1944,
+   "inputOkMs": 2945,
    "maxInputDelayMs": 1627,
    "inputProbes": 69,
-   "quietAfterPaintMs": 4256,
-   "fcpMs": 1944,
-   "tbtMs": 97,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 26201,
    "freeFromMs": 26201,
+   "tbtMs": 2503,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 4228,
    "briefShownMs": 3299,
    "messages": [],
@@ -2813,6 +2470,7 @@
    "dutyCycle": 0.017,
    "scriptMs": 1273,
    "windowMs": 72991,
+   "id": "phone-live-layer-seafloor-cold-1",
    "layer": {
     "requests": 13,
     "bytes": 1423197,
@@ -2826,7 +2484,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.056
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-seafloor",
@@ -2836,25 +2494,21 @@
    "frames": 65,
    "settledMs": 72627,
    "firstFrameMs": -2,
-   "paintedMs": 3260,
-   "finalPaint": [
-    0.343,
-    9
-   ],
-   "animated": false,
-   "completeMs": 27176,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 176,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3260,
+   "fcpMs": 1868,
+   "inputOkMs": 2868,
    "maxInputDelayMs": 1726,
    "inputProbes": 68,
-   "quietAfterPaintMs": 4256,
-   "fcpMs": 1868,
-   "tbtMs": 104,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 26315,
    "freeFromMs": 26315,
+   "tbtMs": 2686,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 4420,
    "briefShownMs": 3259,
    "messages": [],
@@ -2863,6 +2517,7 @@
    "dutyCycle": 0.017,
    "scriptMs": 1254,
    "windowMs": 73083,
+   "id": "phone-live-layer-seafloor-cold-2",
    "layer": {
     "requests": 13,
     "bytes": 1423114,
@@ -2876,7 +2531,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.056
+   "layerVisibleDiff": null
   },
   {
    "page": "live-layer-seafloor",
@@ -2886,25 +2541,21 @@
    "frames": 70,
    "settledMs": 72908,
    "firstFrameMs": 22,
-   "paintedMs": 3289,
-   "finalPaint": [
-    0.343,
-    9
-   ],
-   "animated": false,
-   "completeMs": 26921,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 200,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 3289,
+   "fcpMs": 1928,
+   "inputOkMs": 2931,
    "maxInputDelayMs": 1643,
    "inputProbes": 69,
-   "quietAfterPaintMs": 3795,
-   "fcpMs": 1928,
-   "tbtMs": 107,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 26067,
    "freeFromMs": 26067,
+   "tbtMs": 2437,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 4200,
    "briefShownMs": 3286,
    "messages": [],
@@ -2913,6 +2564,7 @@
    "dutyCycle": 0.017,
    "scriptMs": 1279,
    "windowMs": 73844,
+   "id": "phone-live-layer-seafloor-cold-3",
    "layer": {
     "requests": 13,
     "bytes": 1423291,
@@ -2926,7 +2578,7 @@
     ]
    },
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.056
+   "layerVisibleDiff": null
   },
   {
    "page": "brief",
@@ -2936,25 +2588,21 @@
    "frames": 144,
    "settledMs": 12621,
    "firstFrameMs": -3,
-   "paintedMs": 428,
-   "finalPaint": [
-    0.289,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 36,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 57773,
+   "fcpMs": 199,
+   "inputOkMs": 57773,
    "maxInputDelayMs": 24878,
    "inputProbes": 8,
-   "quietAfterPaintMs": 56708,
-   "fcpMs": 199,
+   "lastLongTaskEndMs": 56708,
+   "freeFromMs": 57773,
    "tbtMs": 53164,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 56708,
-   "freeFromMs": 56708,
    "longTaskTotalMs": 55214,
    "briefShownMs": 423,
    "messages": [],
@@ -2963,6 +2611,7 @@
    "dutyCycle": 0.825,
    "scriptMs": 49359,
    "windowMs": 59829,
+   "id": "phone-wifi-brief-cold-1",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -2975,25 +2624,21 @@
    "frames": 133,
    "settledMs": 12283,
    "firstFrameMs": 22,
-   "paintedMs": 838,
-   "finalPaint": [
-    0.287,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 15,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 838,
+   "fcpMs": 612,
+   "inputOkMs": 1789,
    "maxInputDelayMs": 13291,
    "inputProbes": 10,
-   "quietAfterPaintMs": 57058,
-   "fcpMs": 612,
-   "tbtMs": 105,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 56525,
    "freeFromMs": 56525,
+   "tbtMs": 52877,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 54946,
    "briefShownMs": 822,
    "messages": [],
@@ -3002,6 +2647,7 @@
    "dutyCycle": 0.825,
    "scriptMs": 49262,
    "windowMs": 59694,
+   "id": "phone-wifi-brief-cold-2",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -3014,25 +2660,21 @@
    "frames": 136,
    "settledMs": 12370,
    "firstFrameMs": -2,
-   "paintedMs": 448,
-   "finalPaint": [
-    0.288,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 31,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 57383,
+   "fcpMs": 204,
+   "inputOkMs": 57383,
    "maxInputDelayMs": 13296,
    "inputProbes": 10,
-   "quietAfterPaintMs": 56285,
-   "fcpMs": 204,
+   "lastLongTaskEndMs": 56285,
+   "freeFromMs": 57383,
    "tbtMs": 52891,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 56285,
-   "freeFromMs": 56285,
    "longTaskTotalMs": 54741,
    "briefShownMs": 445,
    "messages": [],
@@ -3041,6 +2683,7 @@
    "dutyCycle": 0.825,
    "scriptMs": 49061,
    "windowMs": 59438,
+   "id": "phone-wifi-brief-cold-3",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -3053,25 +2696,21 @@
    "frames": 157,
    "settledMs": 13690,
    "firstFrameMs": 12,
-   "paintedMs": 746,
-   "finalPaint": [
-    0.31,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 17,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 58546,
+   "fcpMs": 1051,
+   "inputOkMs": 58546,
    "maxInputDelayMs": 24710,
    "inputProbes": 8,
-   "quietAfterPaintMs": 57510,
-   "fcpMs": 1051,
+   "lastLongTaskEndMs": 57510,
+   "freeFromMs": 58546,
    "tbtMs": 52959,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 57510,
-   "freeFromMs": 57510,
    "longTaskTotalMs": 55009,
    "briefShownMs": 1163,
    "messages": [],
@@ -3080,6 +2719,7 @@
    "dutyCycle": 0.81,
    "scriptMs": 49060,
    "windowMs": 60603,
+   "id": "phone-wifi-map-home-returning-cold-1",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -3092,25 +2732,21 @@
    "frames": 138,
    "settledMs": 12988,
    "firstFrameMs": -2,
-   "paintedMs": 522,
-   "finalPaint": [
-    0.31,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 14,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 56540,
+   "fcpMs": 675,
+   "inputOkMs": 56540,
    "maxInputDelayMs": 25166,
    "inputProbes": 7,
-   "quietAfterPaintMs": 55490,
-   "fcpMs": 675,
+   "lastLongTaskEndMs": 55490,
+   "freeFromMs": 56540,
    "tbtMs": 51523,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 55490,
-   "freeFromMs": 55490,
    "longTaskTotalMs": 53433,
    "briefShownMs": 787,
    "messages": [],
@@ -3119,6 +2755,7 @@
    "dutyCycle": 0.815,
    "scriptMs": 47779,
    "windowMs": 58595,
+   "id": "phone-wifi-map-home-returning-cold-2",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -3131,25 +2768,21 @@
    "frames": 141,
    "settledMs": 12396,
    "firstFrameMs": 21,
-   "paintedMs": 437,
-   "finalPaint": [
-    0.31,
-    10
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 38,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 57766,
+   "fcpMs": 591,
+   "inputOkMs": 57766,
    "maxInputDelayMs": 24403,
    "inputProbes": 7,
-   "quietAfterPaintMs": 56671,
-   "fcpMs": 591,
+   "lastLongTaskEndMs": 56671,
+   "freeFromMs": 57766,
    "tbtMs": 52830,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": 56671,
-   "freeFromMs": 56671,
    "longTaskTotalMs": 54796,
    "briefShownMs": 712,
    "messages": [],
@@ -3158,6 +2791,7 @@
    "dutyCycle": 0.819,
    "scriptMs": 49016,
    "windowMs": 59821,
+   "id": "phone-wifi-map-home-returning-cold-3",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -3170,25 +2804,21 @@
    "frames": 419,
    "settledMs": 6524,
    "firstFrameMs": -3,
-   "paintedMs": 220,
-   "finalPaint": [
-    0.378,
-    15
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 37,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 220,
+   "fcpMs": 36,
+   "inputOkMs": 1030,
    "maxInputDelayMs": 33,
    "inputProbes": 7,
-   "quietAfterPaintMs": 220,
-   "fcpMs": 36,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 1030,
    "tbtMs": 0,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": null,
-   "freeFromMs": 220,
    "longTaskTotalMs": 0,
    "briefShownMs": null,
    "messages": [],
@@ -3197,6 +2827,7 @@
    "dutyCycle": 0.581,
    "scriptMs": 4161,
    "windowMs": 7158,
+   "id": "desktop-layer-wind-cold-1",
    "layer": {
     "requests": 1,
     "bytes": 3865,
@@ -3219,25 +2850,21 @@
    "frames": 372,
    "settledMs": 6267,
    "firstFrameMs": 40,
-   "paintedMs": 207,
-   "finalPaint": [
-    0.363,
-    15
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 7,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 1030,
+   "fcpMs": 40,
+   "inputOkMs": 1030,
    "maxInputDelayMs": 28,
    "inputProbes": 6,
-   "quietAfterPaintMs": 207,
-   "fcpMs": 40,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 1030,
    "tbtMs": 0,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": null,
-   "freeFromMs": 207,
    "longTaskTotalMs": 0,
    "briefShownMs": null,
    "messages": [],
@@ -3246,6 +2873,7 @@
    "dutyCycle": 0.632,
    "scriptMs": 4518,
    "windowMs": 7155,
+   "id": "desktop-layer-wind-cold-2",
    "layer": {
     "requests": 1,
     "bytes": 3865,
@@ -3268,25 +2896,21 @@
    "frames": 435,
    "settledMs": 6272,
    "firstFrameMs": -2,
-   "paintedMs": 216,
-   "finalPaint": [
-    0.37,
-    15
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 14,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 216,
+   "fcpMs": 32,
+   "inputOkMs": 1044,
    "maxInputDelayMs": 29,
    "inputProbes": 7,
-   "quietAfterPaintMs": 216,
-   "fcpMs": 32,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 1044,
    "tbtMs": 0,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": null,
-   "freeFromMs": 216,
    "longTaskTotalMs": 0,
    "briefShownMs": null,
    "messages": [],
@@ -3295,6 +2919,7 @@
    "dutyCycle": 0.567,
    "scriptMs": 4056,
    "windowMs": 7150,
+   "id": "desktop-layer-wind-cold-3",
    "layer": {
     "requests": 1,
     "bytes": 3865,
@@ -3317,25 +2942,21 @@
    "frames": 30,
    "settledMs": 6525,
    "firstFrameMs": -2,
-   "paintedMs": 200,
-   "finalPaint": [
-    0.295,
-    12
-   ],
-   "animated": false,
-   "completeMs": 467,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 48,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 200,
+   "fcpMs": 28,
+   "inputOkMs": 1015,
    "maxInputDelayMs": 7,
    "inputProbes": 7,
-   "quietAfterPaintMs": 200,
-   "fcpMs": 28,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 1015,
    "tbtMs": 0,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": null,
-   "freeFromMs": 200,
    "longTaskTotalMs": 0,
    "briefShownMs": null,
    "messages": [],
@@ -3344,6 +2965,7 @@
    "dutyCycle": 0.008,
    "scriptMs": 56,
    "windowMs": 7032,
+   "id": "desktop-layer-sst-cold-1",
    "layer": {
     "requests": 1,
     "bytes": 2276790,
@@ -3366,25 +2988,21 @@
    "frames": 31,
    "settledMs": 6521,
    "firstFrameMs": 43,
-   "paintedMs": 209,
-   "finalPaint": [
-    0.295,
-    12
-   ],
-   "animated": false,
-   "completeMs": 492,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 41,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 1013,
+   "fcpMs": 36,
+   "inputOkMs": 1013,
    "maxInputDelayMs": 1,
    "inputProbes": 6,
-   "quietAfterPaintMs": 209,
-   "fcpMs": 36,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 1013,
    "tbtMs": 0,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": null,
-   "freeFromMs": 209,
    "longTaskTotalMs": 0,
    "briefShownMs": null,
    "messages": [],
@@ -3393,6 +3011,7 @@
    "dutyCycle": 0.009,
    "scriptMs": 64,
    "windowMs": 7029,
+   "id": "desktop-layer-sst-cold-2",
    "layer": {
     "requests": 1,
     "bytes": 2276790,
@@ -3415,25 +3034,21 @@
    "frames": 28,
    "settledMs": 6523,
    "firstFrameMs": 42,
-   "paintedMs": 208,
-   "finalPaint": [
-    0.295,
-    12
-   ],
-   "animated": false,
-   "completeMs": 458,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 41,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 1013,
+   "fcpMs": 36,
+   "inputOkMs": 1013,
    "maxInputDelayMs": 1,
    "inputProbes": 6,
-   "quietAfterPaintMs": 208,
-   "fcpMs": 36,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 1013,
    "tbtMs": 0,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": null,
-   "freeFromMs": 208,
    "longTaskTotalMs": 0,
    "briefShownMs": null,
    "messages": [],
@@ -3442,6 +3057,7 @@
    "dutyCycle": 0.008,
    "scriptMs": 55,
    "windowMs": 7029,
+   "id": "desktop-layer-sst-cold-3",
    "layer": {
     "requests": 1,
     "bytes": 2276790,
@@ -3464,25 +3080,21 @@
    "frames": 784,
    "settledMs": 20717,
    "firstFrameMs": -3,
-   "paintedMs": 854,
-   "finalPaint": [
-    0.363,
-    16
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 150,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 1847,
+   "fcpMs": 844,
+   "inputOkMs": 1847,
    "maxInputDelayMs": 672,
    "inputProbes": 75,
-   "quietAfterPaintMs": 854,
-   "fcpMs": 844,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 120196,
    "freeFromMs": 120196,
+   "tbtMs": 70727,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 105796,
    "briefShownMs": null,
    "messages": [],
@@ -3491,6 +3103,7 @@
    "dutyCycle": 0.614,
    "scriptMs": 74339,
    "windowMs": 121003,
+   "id": "phone-layer-wind-cold-1",
    "layer": {
     "requests": 1,
     "bytes": 3865,
@@ -3513,25 +3126,21 @@
    "frames": 792,
    "settledMs": 20466,
    "firstFrameMs": -2,
-   "paintedMs": 872,
-   "finalPaint": [
-    0.364,
-    17
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 143,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 1863,
+   "fcpMs": 860,
+   "inputOkMs": 1863,
    "maxInputDelayMs": 688,
    "inputProbes": 77,
-   "quietAfterPaintMs": 872,
-   "fcpMs": 860,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 80176,
    "freeFromMs": 80176,
+   "tbtMs": 44540,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 106670,
    "briefShownMs": null,
    "messages": [],
@@ -3540,6 +3149,7 @@
    "dutyCycle": 0.616,
    "scriptMs": 74954,
    "windowMs": 121703,
+   "id": "phone-layer-wind-cold-2",
    "layer": {
     "requests": 1,
     "bytes": 3865,
@@ -3562,25 +3172,21 @@
    "frames": 766,
    "settledMs": 20460,
    "firstFrameMs": 16,
-   "paintedMs": 866,
-   "finalPaint": [
-    0.363,
-    17
-   ],
-   "animated": true,
+   "evidence": "unmeasured",
+   "paintedMs": null,
    "completeMs": null,
+   "animated": null,
    "responseMs": 153,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 1858,
+   "fcpMs": 856,
+   "inputOkMs": 1858,
    "maxInputDelayMs": 676,
    "inputProbes": 76,
-   "quietAfterPaintMs": 866,
-   "fcpMs": 856,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 117487,
    "freeFromMs": 117487,
+   "tbtMs": 70229,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 106810,
    "briefShownMs": null,
    "messages": [],
@@ -3589,6 +3195,7 @@
    "dutyCycle": 0.621,
    "scriptMs": 75614,
    "windowMs": 121743,
+   "id": "phone-layer-wind-cold-3",
    "layer": {
     "requests": 1,
     "bytes": 3865,
@@ -3611,25 +3218,21 @@
    "frames": 65,
    "settledMs": 31998,
    "firstFrameMs": -3,
-   "paintedMs": 8471,
-   "finalPaint": [
-    0.32,
-    18
-   ],
-   "animated": false,
-   "completeMs": 26003,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 130,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8471,
+   "fcpMs": 852,
+   "inputOkMs": 1865,
    "maxInputDelayMs": 685,
    "inputProbes": 31,
-   "quietAfterPaintMs": 8471,
-   "fcpMs": 852,
-   "tbtMs": 143,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 8471,
+   "freeFromMs": 1865,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 1104,
    "briefShownMs": null,
    "messages": [],
@@ -3638,6 +3241,7 @@
    "dutyCycle": 0.013,
    "scriptMs": 415,
    "windowMs": 32463,
+   "id": "phone-layer-sst-cold-1",
    "layer": {
     "requests": 1,
     "bytes": 2276790,
@@ -3660,25 +3264,21 @@
    "frames": 65,
    "settledMs": 31995,
    "firstFrameMs": -3,
-   "paintedMs": 8460,
-   "finalPaint": [
-    0.32,
-    18
-   ],
-   "animated": false,
-   "completeMs": 25943,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 132,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8460,
+   "fcpMs": 860,
+   "inputOkMs": 1869,
    "maxInputDelayMs": 690,
    "inputProbes": 31,
-   "quietAfterPaintMs": 8460,
-   "fcpMs": 860,
-   "tbtMs": 62,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 8460,
+   "freeFromMs": 1869,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 813,
    "briefShownMs": null,
    "messages": [],
@@ -3687,6 +3287,7 @@
    "dutyCycle": 0.011,
    "scriptMs": 361,
    "windowMs": 32471,
+   "id": "phone-layer-sst-cold-2",
    "layer": {
     "requests": 1,
     "bytes": 2276790,
@@ -3709,25 +3310,21 @@
    "frames": 65,
    "settledMs": 31989,
    "firstFrameMs": 12,
-   "paintedMs": 8445,
-   "finalPaint": [
-    0.32,
-    18
-   ],
-   "animated": false,
-   "completeMs": 26011,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 127,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8445,
+   "fcpMs": 868,
+   "inputOkMs": 1868,
    "maxInputDelayMs": 687,
    "inputProbes": 31,
-   "quietAfterPaintMs": 8445,
-   "fcpMs": 868,
-   "tbtMs": 76,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 8445,
+   "freeFromMs": 1868,
+   "tbtMs": 0,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 994,
    "briefShownMs": null,
    "messages": [],
@@ -3736,6 +3333,7 @@
    "dutyCycle": 0.011,
    "scriptMs": 364,
    "windowMs": 32457,
+   "id": "phone-layer-sst-cold-3",
    "layer": {
     "requests": 1,
     "bytes": 2276790,
@@ -3758,25 +3356,21 @@
    "frames": 31,
    "settledMs": 6528,
    "firstFrameMs": 40,
-   "paintedMs": 256,
-   "finalPaint": [
-    0.399,
-    19
-   ],
-   "animated": false,
-   "completeMs": 306,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 23,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 256,
+   "fcpMs": 36,
+   "inputOkMs": 1019,
    "maxInputDelayMs": 9,
    "inputProbes": 7,
-   "quietAfterPaintMs": 370,
-   "fcpMs": 36,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 256,
+   "freeFromMs": 1019,
+   "tbtMs": 28,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 78,
    "briefShownMs": null,
    "messages": [],
@@ -3785,6 +3379,7 @@
    "dutyCycle": 0.006,
    "scriptMs": 44,
    "windowMs": 7031,
+   "id": "desktop-layer-base-medium-cold-1",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -3797,25 +3392,21 @@
    "frames": 32,
    "settledMs": 6526,
    "firstFrameMs": 35,
-   "paintedMs": 235,
-   "finalPaint": [
-    0.399,
-    19
-   ],
-   "animated": false,
-   "completeMs": 318,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 22,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 235,
+   "fcpMs": 32,
+   "inputOkMs": 1014,
    "maxInputDelayMs": 6,
    "inputProbes": 7,
-   "quietAfterPaintMs": 364,
-   "fcpMs": 32,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 235,
+   "freeFromMs": 1014,
+   "tbtMs": 12,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 62,
    "briefShownMs": null,
    "messages": [],
@@ -3824,6 +3415,7 @@
    "dutyCycle": 0.006,
    "scriptMs": 42,
    "windowMs": 7028,
+   "id": "desktop-layer-base-medium-cold-2",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -3836,25 +3428,21 @@
    "frames": 31,
    "settledMs": 6528,
    "firstFrameMs": 44,
-   "paintedMs": 211,
-   "finalPaint": [
-    0.399,
-    19
-   ],
-   "animated": false,
-   "completeMs": 244,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 32,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 211,
+   "fcpMs": 40,
+   "inputOkMs": 1015,
    "maxInputDelayMs": 5,
    "inputProbes": 7,
-   "quietAfterPaintMs": 292,
-   "fcpMs": 40,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 211,
+   "freeFromMs": 1015,
+   "tbtMs": 12,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 62,
    "briefShownMs": null,
    "messages": [],
@@ -3863,6 +3451,7 @@
    "dutyCycle": 0.005,
    "scriptMs": 37,
    "windowMs": 7027,
+   "id": "desktop-layer-base-medium-cold-3",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -3875,25 +3464,21 @@
    "frames": 31,
    "settledMs": 6521,
    "firstFrameMs": 44,
-   "paintedMs": 194,
-   "finalPaint": [
-    0.294,
-    17
-   ],
-   "animated": false,
-   "completeMs": 311,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 26,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 194,
+   "fcpMs": 36,
+   "inputOkMs": 1016,
    "maxInputDelayMs": 5,
    "inputProbes": 7,
-   "quietAfterPaintMs": 370,
-   "fcpMs": 36,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 194,
+   "freeFromMs": 1016,
+   "tbtMs": 25,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 75,
    "briefShownMs": null,
    "messages": [],
@@ -3902,6 +3487,7 @@
    "dutyCycle": 0.006,
    "scriptMs": 42,
    "windowMs": 7030,
+   "id": "desktop-layer-chlorophyll-cold-1",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -3912,7 +3498,7 @@
     "examples": []
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.378
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-chlorophyll",
@@ -3922,25 +3508,21 @@
    "frames": 31,
    "settledMs": 6528,
    "firstFrameMs": 12,
-   "paintedMs": 179,
-   "finalPaint": [
-    0.294,
-    17
-   ],
-   "animated": false,
-   "completeMs": 296,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 44,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 1011,
+   "fcpMs": 28,
+   "inputOkMs": 1011,
    "maxInputDelayMs": 1,
    "inputProbes": 6,
-   "quietAfterPaintMs": 362,
-   "fcpMs": 28,
+   "lastLongTaskEndMs": null,
+   "freeFromMs": 1011,
    "tbtMs": 25,
    "tbtWindowOpen": false,
-   "lastLongTaskEndMs": null,
-   "freeFromMs": 179,
    "longTaskTotalMs": 75,
    "briefShownMs": null,
    "messages": [],
@@ -3949,6 +3531,7 @@
    "dutyCycle": 0.006,
    "scriptMs": 40,
    "windowMs": 7027,
+   "id": "desktop-layer-chlorophyll-cold-2",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -3959,7 +3542,7 @@
     "examples": []
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.378
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-chlorophyll",
@@ -3969,25 +3552,21 @@
    "frames": 28,
    "settledMs": 6525,
    "firstFrameMs": 36,
-   "paintedMs": 203,
-   "finalPaint": [
-    0.294,
-    17
-   ],
-   "animated": false,
-   "completeMs": 303,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 48,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 203,
+   "fcpMs": 36,
+   "inputOkMs": 1017,
    "maxInputDelayMs": 4,
    "inputProbes": 7,
-   "quietAfterPaintMs": 404,
-   "fcpMs": 36,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 203,
+   "freeFromMs": 1017,
+   "tbtMs": 30,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 80,
    "briefShownMs": null,
    "messages": [],
@@ -3996,6 +3575,7 @@
    "dutyCycle": 0.007,
    "scriptMs": 50,
    "windowMs": 7035,
+   "id": "desktop-layer-chlorophyll-cold-3",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -4006,7 +3586,7 @@
     "examples": []
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.378
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-current",
@@ -4016,25 +3596,21 @@
    "frames": 31,
    "settledMs": 6523,
    "firstFrameMs": 39,
-   "paintedMs": 222,
-   "finalPaint": [
-    0.328,
-    18
-   ],
-   "animated": false,
-   "completeMs": 472,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 54,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 222,
+   "fcpMs": 36,
+   "inputOkMs": 1015,
    "maxInputDelayMs": 6,
    "inputProbes": 7,
-   "quietAfterPaintMs": 456,
-   "fcpMs": 36,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 222,
+   "freeFromMs": 1015,
+   "tbtMs": 40,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 140,
    "briefShownMs": null,
    "messages": [],
@@ -4043,6 +3619,7 @@
    "dutyCycle": 0.009,
    "scriptMs": 62,
    "windowMs": 7031,
+   "id": "desktop-layer-current-cold-1",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -4053,7 +3630,7 @@
     "examples": []
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.414
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-current",
@@ -4063,25 +3640,21 @@
    "frames": 30,
    "settledMs": 6526,
    "firstFrameMs": 14,
-   "paintedMs": 231,
-   "finalPaint": [
-    0.328,
-    18
-   ],
-   "animated": false,
-   "completeMs": 447,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 47,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 231,
+   "fcpMs": 28,
+   "inputOkMs": 1015,
    "maxInputDelayMs": 7,
    "inputProbes": 7,
-   "quietAfterPaintMs": 443,
-   "fcpMs": 28,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 231,
+   "freeFromMs": 1015,
+   "tbtMs": 32,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 132,
    "briefShownMs": null,
    "messages": [],
@@ -4090,6 +3663,7 @@
    "dutyCycle": 0.009,
    "scriptMs": 61,
    "windowMs": 7030,
+   "id": "desktop-layer-current-cold-2",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -4100,7 +3674,7 @@
     "examples": []
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.414
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-current",
@@ -4110,25 +3684,21 @@
    "frames": 28,
    "settledMs": 6525,
    "firstFrameMs": 23,
-   "paintedMs": 223,
-   "finalPaint": [
-    0.328,
-    18
-   ],
-   "animated": false,
-   "completeMs": 473,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 40,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 223,
+   "fcpMs": 24,
+   "inputOkMs": 1013,
    "maxInputDelayMs": 4,
    "inputProbes": 7,
-   "quietAfterPaintMs": 466,
-   "fcpMs": 24,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 223,
+   "freeFromMs": 1013,
+   "tbtMs": 46,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 146,
    "briefShownMs": null,
    "messages": [],
@@ -4137,6 +3707,7 @@
    "dutyCycle": 0.009,
    "scriptMs": 62,
    "windowMs": 7028,
+   "id": "desktop-layer-current-cold-3",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -4147,7 +3718,7 @@
     "examples": []
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.414
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-tide",
@@ -4157,25 +3728,21 @@
    "frames": 32,
    "settledMs": 6526,
    "firstFrameMs": 37,
-   "paintedMs": 237,
-   "finalPaint": [
-    0.347,
-    19
-   ],
-   "animated": false,
-   "completeMs": 287,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 37,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 237,
+   "fcpMs": 36,
+   "inputOkMs": 1014,
    "maxInputDelayMs": 3,
    "inputProbes": 7,
-   "quietAfterPaintMs": 347,
-   "fcpMs": 36,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 237,
+   "freeFromMs": 1014,
+   "tbtMs": 23,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 73,
    "briefShownMs": null,
    "messages": [],
@@ -4184,6 +3751,7 @@
    "dutyCycle": 0.005,
    "scriptMs": 38,
    "windowMs": 7029,
+   "id": "desktop-layer-tide-cold-1",
    "layer": {
     "requests": 2,
     "bytes": 68546,
@@ -4197,7 +3765,7 @@
     ]
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.046
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-tide",
@@ -4207,25 +3775,21 @@
    "frames": 33,
    "settledMs": 6520,
    "firstFrameMs": -2,
-   "paintedMs": 246,
-   "finalPaint": [
-    0.347,
-    19
-   ],
-   "animated": false,
-   "completeMs": 312,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 24,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 246,
+   "fcpMs": 28,
+   "inputOkMs": 1017,
    "maxInputDelayMs": 6,
    "inputProbes": 7,
-   "quietAfterPaintMs": 358,
-   "fcpMs": 28,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 246,
+   "freeFromMs": 1017,
+   "tbtMs": 13,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 63,
    "briefShownMs": null,
    "messages": [],
@@ -4234,6 +3798,7 @@
    "dutyCycle": 0.005,
    "scriptMs": 36,
    "windowMs": 7035,
+   "id": "desktop-layer-tide-cold-2",
    "layer": {
     "requests": 2,
     "bytes": 68546,
@@ -4247,7 +3812,7 @@
     ]
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.046
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-tide",
@@ -4257,25 +3822,21 @@
    "frames": 33,
    "settledMs": 6520,
    "firstFrameMs": -2,
-   "paintedMs": 229,
-   "finalPaint": [
-    0.347,
-    19
-   ],
-   "animated": false,
-   "completeMs": 296,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 39,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 229,
+   "fcpMs": 28,
+   "inputOkMs": 1018,
    "maxInputDelayMs": 7,
    "inputProbes": 7,
-   "quietAfterPaintMs": 360,
-   "fcpMs": 28,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 229,
+   "freeFromMs": 1018,
+   "tbtMs": 26,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 76,
    "briefShownMs": null,
    "messages": [],
@@ -4284,6 +3845,7 @@
    "dutyCycle": 0.006,
    "scriptMs": 39,
    "windowMs": 7038,
+   "id": "desktop-layer-tide-cold-3",
    "layer": {
     "requests": 2,
     "bytes": 68546,
@@ -4297,7 +3859,7 @@
     ]
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.046
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-bathy-2m",
@@ -4307,25 +3869,21 @@
    "frames": 30,
    "settledMs": 6525,
    "firstFrameMs": 39,
-   "paintedMs": 239,
-   "finalPaint": [
-    0.387,
-    20
-   ],
-   "animated": false,
-   "completeMs": 289,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 19,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 239,
+   "fcpMs": 32,
+   "inputOkMs": 1015,
    "maxInputDelayMs": 6,
    "inputProbes": 7,
-   "quietAfterPaintMs": 354,
-   "fcpMs": 32,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 239,
+   "freeFromMs": 1015,
+   "tbtMs": 28,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 78,
    "briefShownMs": null,
    "messages": [],
@@ -4334,6 +3892,7 @@
    "dutyCycle": 0.006,
    "scriptMs": 43,
    "windowMs": 7032,
+   "id": "desktop-layer-bathy-2m-cold-1",
    "layer": {
     "requests": 35,
     "bytes": 2179811,
@@ -4346,7 +3905,7 @@
     ]
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.007
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-bathy-2m",
@@ -4356,25 +3915,21 @@
    "frames": 30,
    "settledMs": 6525,
    "firstFrameMs": 44,
-   "paintedMs": 228,
-   "finalPaint": [
-    0.387,
-    20
-   ],
-   "animated": false,
-   "completeMs": 294,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 41,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 228,
+   "fcpMs": 40,
+   "inputOkMs": 1016,
    "maxInputDelayMs": 5,
    "inputProbes": 7,
-   "quietAfterPaintMs": 357,
-   "fcpMs": 40,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 228,
+   "freeFromMs": 1016,
+   "tbtMs": 24,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 74,
    "briefShownMs": null,
    "messages": [],
@@ -4383,6 +3938,7 @@
    "dutyCycle": 0.006,
    "scriptMs": 42,
    "windowMs": 7032,
+   "id": "desktop-layer-bathy-2m-cold-2",
    "layer": {
     "requests": 35,
     "bytes": 2179811,
@@ -4395,7 +3951,7 @@
     ]
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.007
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-bathy-2m",
@@ -4405,25 +3961,21 @@
    "frames": 33,
    "settledMs": 6527,
    "firstFrameMs": -2,
-   "paintedMs": 232,
-   "finalPaint": [
-    0.387,
-    20
-   ],
-   "animated": false,
-   "completeMs": 315,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 47,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 232,
+   "fcpMs": 32,
+   "inputOkMs": 1015,
    "maxInputDelayMs": 5,
    "inputProbes": 7,
-   "quietAfterPaintMs": 374,
-   "fcpMs": 32,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 232,
+   "freeFromMs": 1015,
+   "tbtMs": 25,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 75,
    "briefShownMs": null,
    "messages": [],
@@ -4432,6 +3984,7 @@
    "dutyCycle": 0.006,
    "scriptMs": 40,
    "windowMs": 7031,
+   "id": "desktop-layer-bathy-2m-cold-3",
    "layer": {
     "requests": 35,
     "bytes": 2179811,
@@ -4444,7 +3997,7 @@
     ]
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.007
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-bathy-2m-z12",
@@ -4454,25 +4007,21 @@
    "frames": 29,
    "settledMs": 6524,
    "firstFrameMs": 43,
-   "paintedMs": 243,
-   "finalPaint": [
-    0.597,
-    10
-   ],
-   "animated": false,
-   "completeMs": 260,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 22,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 243,
+   "fcpMs": 40,
+   "inputOkMs": 1031,
    "maxInputDelayMs": 19,
    "inputProbes": 7,
-   "quietAfterPaintMs": 336,
-   "fcpMs": 40,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 243,
+   "freeFromMs": 1031,
+   "tbtMs": 25,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 75,
    "briefShownMs": null,
    "messages": [],
@@ -4481,6 +4030,7 @@
    "dutyCycle": 0.006,
    "scriptMs": 45,
    "windowMs": 7050,
+   "id": "desktop-layer-bathy-2m-z12-cold-1",
    "layer": {
     "requests": 20,
     "bytes": 1053455,
@@ -4503,25 +4053,21 @@
    "frames": 31,
    "settledMs": 6523,
    "firstFrameMs": 12,
-   "paintedMs": 228,
-   "finalPaint": [
-    0.597,
-    10
-   ],
-   "animated": false,
-   "completeMs": 262,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 27,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 228,
+   "fcpMs": 28,
+   "inputOkMs": 1018,
    "maxInputDelayMs": 5,
    "inputProbes": 7,
-   "quietAfterPaintMs": 321,
-   "fcpMs": 28,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 228,
+   "freeFromMs": 1018,
+   "tbtMs": 24,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 74,
    "briefShownMs": null,
    "messages": [],
@@ -4530,6 +4076,7 @@
    "dutyCycle": 0.006,
    "scriptMs": 39,
    "windowMs": 7034,
+   "id": "desktop-layer-bathy-2m-z12-cold-2",
    "layer": {
     "requests": 20,
     "bytes": 1053455,
@@ -4552,25 +4099,21 @@
    "frames": 29,
    "settledMs": 6525,
    "firstFrameMs": 39,
-   "paintedMs": 222,
-   "finalPaint": [
-    0.597,
-    10
-   ],
-   "animated": false,
-   "completeMs": 255,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 21,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 222,
+   "fcpMs": 32,
+   "inputOkMs": 1015,
    "maxInputDelayMs": 5,
    "inputProbes": 7,
-   "quietAfterPaintMs": 315,
-   "fcpMs": 32,
-   "tbtMs": 0,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": null,
-   "freeFromMs": 222,
+   "freeFromMs": 1015,
+   "tbtMs": 24,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 74,
    "briefShownMs": null,
    "messages": [],
@@ -4579,6 +4122,7 @@
    "dutyCycle": 0.006,
    "scriptMs": 39,
    "windowMs": 7031,
+   "id": "desktop-layer-bathy-2m-z12-cold-3",
    "layer": {
     "requests": 20,
     "bytes": 1053455,
@@ -4601,25 +4145,21 @@
    "frames": 58,
    "settledMs": 22216,
    "firstFrameMs": -2,
-   "paintedMs": 8958,
-   "finalPaint": [
-    0.172,
-    25
-   ],
-   "animated": false,
-   "completeMs": 14741,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 117,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8958,
+   "fcpMs": 864,
+   "inputOkMs": 1868,
    "maxInputDelayMs": 688,
    "inputProbes": 21,
-   "quietAfterPaintMs": 8958,
-   "fcpMs": 864,
-   "tbtMs": 49,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15924,
    "freeFromMs": 15924,
+   "tbtMs": 232,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 382,
    "briefShownMs": null,
    "messages": [],
@@ -4628,6 +4168,7 @@
    "dutyCycle": 0.008,
    "scriptMs": 182,
    "windowMs": 22317,
+   "id": "phone-layer-base-medium-cold-1",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -4640,25 +4181,21 @@
    "frames": 58,
    "settledMs": 22220,
    "firstFrameMs": 21,
-   "paintedMs": 8937,
-   "finalPaint": [
-    0.172,
-    25
-   ],
-   "animated": false,
-   "completeMs": 14704,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 113,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8937,
+   "fcpMs": 856,
+   "inputOkMs": 1862,
    "maxInputDelayMs": 683,
    "inputProbes": 21,
-   "quietAfterPaintMs": 8937,
-   "fcpMs": 856,
-   "tbtMs": 40,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15919,
    "freeFromMs": 15919,
+   "tbtMs": 229,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 379,
    "briefShownMs": null,
    "messages": [],
@@ -4667,6 +4204,7 @@
    "dutyCycle": 0.008,
    "scriptMs": 181,
    "windowMs": 22297,
+   "id": "phone-layer-base-medium-cold-2",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -4679,25 +4217,21 @@
    "frames": 58,
    "settledMs": 22220,
    "firstFrameMs": -2,
-   "paintedMs": 8945,
-   "finalPaint": [
-    0.172,
-    25
-   ],
-   "animated": false,
-   "completeMs": 14711,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 115,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8945,
+   "fcpMs": 852,
+   "inputOkMs": 1853,
    "maxInputDelayMs": 676,
    "inputProbes": 21,
-   "quietAfterPaintMs": 8945,
-   "fcpMs": 852,
-   "tbtMs": 47,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15911,
    "freeFromMs": 15911,
+   "tbtMs": 235,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 435,
    "briefShownMs": null,
    "messages": [],
@@ -4706,6 +4240,7 @@
    "dutyCycle": 0.008,
    "scriptMs": 180,
    "windowMs": 22268,
+   "id": "phone-layer-base-medium-cold-3",
    "layer": null,
    "layerReference": null,
    "layerVisibleDiff": null
@@ -4718,25 +4253,21 @@
    "frames": 59,
    "settledMs": 22219,
    "firstFrameMs": 13,
-   "paintedMs": 8929,
-   "finalPaint": [
-    0.245,
-    18
-   ],
-   "animated": false,
-   "completeMs": 14512,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 114,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8929,
+   "fcpMs": 848,
+   "inputOkMs": 1851,
    "maxInputDelayMs": 680,
    "inputProbes": 21,
-   "quietAfterPaintMs": 8929,
-   "fcpMs": 848,
-   "tbtMs": 55,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15940,
    "freeFromMs": 15940,
+   "tbtMs": 263,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 513,
    "briefShownMs": null,
    "messages": [],
@@ -4745,6 +4276,7 @@
    "dutyCycle": 0.009,
    "scriptMs": 206,
    "windowMs": 22324,
+   "id": "phone-layer-chlorophyll-cold-1",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -4755,7 +4287,7 @@
     "examples": []
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.363
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-chlorophyll",
@@ -4765,25 +4297,21 @@
    "frames": 58,
    "settledMs": 22226,
    "firstFrameMs": 16,
-   "paintedMs": 8965,
-   "finalPaint": [
-    0.245,
-    18
-   ],
-   "animated": false,
-   "completeMs": 14482,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 114,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8965,
+   "fcpMs": 860,
+   "inputOkMs": 1872,
    "maxInputDelayMs": 687,
    "inputProbes": 21,
-   "quietAfterPaintMs": 8965,
-   "fcpMs": 860,
-   "tbtMs": 54,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15926,
    "freeFromMs": 15926,
+   "tbtMs": 250,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 550,
    "briefShownMs": null,
    "messages": [],
@@ -4792,6 +4320,7 @@
    "dutyCycle": 0.009,
    "scriptMs": 203,
    "windowMs": 22290,
+   "id": "phone-layer-chlorophyll-cold-2",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -4802,7 +4331,7 @@
     "examples": []
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.363
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-chlorophyll",
@@ -4812,25 +4341,21 @@
    "frames": 59,
    "settledMs": 22221,
    "firstFrameMs": 19,
-   "paintedMs": 8952,
-   "finalPaint": [
-    0.245,
-    18
-   ],
-   "animated": false,
-   "completeMs": 14485,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 115,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8952,
+   "fcpMs": 856,
+   "inputOkMs": 1861,
    "maxInputDelayMs": 686,
    "inputProbes": 21,
-   "quietAfterPaintMs": 8952,
-   "fcpMs": 856,
-   "tbtMs": 53,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15947,
    "freeFromMs": 15947,
+   "tbtMs": 273,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 573,
    "briefShownMs": null,
    "messages": [],
@@ -4839,6 +4364,7 @@
    "dutyCycle": 0.01,
    "scriptMs": 225,
    "windowMs": 22326,
+   "id": "phone-layer-chlorophyll-cold-3",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -4849,7 +4375,7 @@
     "examples": []
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.363
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-current",
@@ -4859,25 +4385,21 @@
    "frames": 59,
    "settledMs": 22212,
    "firstFrameMs": 15,
-   "paintedMs": 8965,
-   "finalPaint": [
-    0.155,
-    22
-   ],
-   "animated": false,
-   "completeMs": 16281,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 114,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8965,
+   "fcpMs": 856,
+   "inputOkMs": 1858,
    "maxInputDelayMs": 681,
    "inputProbes": 21,
-   "quietAfterPaintMs": 8965,
-   "fcpMs": 856,
-   "tbtMs": 49,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15953,
    "freeFromMs": 15953,
+   "tbtMs": 258,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 565,
    "briefShownMs": null,
    "messages": [],
@@ -4886,6 +4408,7 @@
    "dutyCycle": 0.011,
    "scriptMs": 245,
    "windowMs": 22408,
+   "id": "phone-layer-current-cold-1",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -4896,7 +4419,7 @@
     "examples": []
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.388
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-current",
@@ -4906,25 +4429,21 @@
    "frames": 59,
    "settledMs": 22231,
    "firstFrameMs": -2,
-   "paintedMs": 8981,
-   "finalPaint": [
-    0.155,
-    22
-   ],
-   "animated": false,
-   "completeMs": 16281,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 115,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8981,
+   "fcpMs": 856,
+   "inputOkMs": 1872,
    "maxInputDelayMs": 690,
    "inputProbes": 21,
-   "quietAfterPaintMs": 8981,
-   "fcpMs": 856,
-   "tbtMs": 67,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15957,
    "freeFromMs": 15957,
+   "tbtMs": 273,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 624,
    "briefShownMs": null,
    "messages": [],
@@ -4933,6 +4452,7 @@
    "dutyCycle": 0.012,
    "scriptMs": 259,
    "windowMs": 22423,
+   "id": "phone-layer-current-cold-2",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -4943,7 +4463,7 @@
     "examples": []
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.388
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-current",
@@ -4953,25 +4473,21 @@
    "frames": 59,
    "settledMs": 22218,
    "firstFrameMs": 21,
-   "paintedMs": 8954,
-   "finalPaint": [
-    0.155,
-    22
-   ],
-   "animated": false,
-   "completeMs": 16304,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 131,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8954,
+   "fcpMs": 860,
+   "inputOkMs": 1861,
    "maxInputDelayMs": 683,
    "inputProbes": 21,
-   "quietAfterPaintMs": 8954,
-   "fcpMs": 860,
-   "tbtMs": 51,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 15949,
    "freeFromMs": 15949,
+   "tbtMs": 269,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 800,
    "briefShownMs": null,
    "messages": [],
@@ -4980,6 +4496,7 @@
    "dutyCycle": 0.012,
    "scriptMs": 259,
    "windowMs": 22445,
+   "id": "phone-layer-current-cold-3",
    "layer": {
     "requests": 0,
     "bytes": 0,
@@ -4990,7 +4507,7 @@
     "examples": []
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.388
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-tide",
@@ -5000,25 +4517,21 @@
    "frames": 60,
    "settledMs": 22467,
    "firstFrameMs": 19,
-   "paintedMs": 8352,
-   "finalPaint": [
-    0.127,
-    25
-   ],
-   "animated": false,
-   "completeMs": 15302,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 112,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8352,
+   "fcpMs": 860,
+   "inputOkMs": 1860,
    "maxInputDelayMs": 687,
    "inputProbes": 22,
-   "quietAfterPaintMs": 8352,
-   "fcpMs": 860,
-   "tbtMs": 62,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 16274,
    "freeFromMs": 16274,
+   "tbtMs": 264,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 464,
    "briefShownMs": null,
    "messages": [],
@@ -5027,6 +4540,7 @@
    "dutyCycle": 0.009,
    "scriptMs": 204,
    "windowMs": 23477,
+   "id": "phone-layer-tide-cold-1",
    "layer": {
     "requests": 2,
     "bytes": 68546,
@@ -5040,7 +4554,7 @@
     ]
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.124
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-tide",
@@ -5050,25 +4564,21 @@
    "frames": 60,
    "settledMs": 22469,
    "firstFrameMs": -2,
-   "paintedMs": 8424,
-   "finalPaint": [
-    0.127,
-    25
-   ],
-   "animated": false,
-   "completeMs": 15291,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 115,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8424,
+   "fcpMs": 848,
+   "inputOkMs": 1864,
    "maxInputDelayMs": 680,
    "inputProbes": 22,
-   "quietAfterPaintMs": 8424,
-   "fcpMs": 848,
-   "tbtMs": 52,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 16259,
    "freeFromMs": 16259,
+   "tbtMs": 246,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 446,
    "briefShownMs": null,
    "messages": [],
@@ -5077,6 +4587,7 @@
    "dutyCycle": 0.008,
    "scriptMs": 197,
    "windowMs": 23465,
+   "id": "phone-layer-tide-cold-2",
    "layer": {
     "requests": 2,
     "bytes": 68546,
@@ -5090,7 +4601,7 @@
     ]
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.124
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-tide",
@@ -5100,25 +4611,21 @@
    "frames": 59,
    "settledMs": 22465,
    "firstFrameMs": -3,
-   "paintedMs": 8376,
-   "finalPaint": [
-    0.127,
-    25
-   ],
-   "animated": false,
-   "completeMs": 15309,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 114,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8376,
+   "fcpMs": 848,
+   "inputOkMs": 1853,
    "maxInputDelayMs": 680,
    "inputProbes": 22,
-   "quietAfterPaintMs": 8376,
-   "fcpMs": 848,
-   "tbtMs": 52,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 16288,
    "freeFromMs": 16288,
+   "tbtMs": 257,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 457,
    "briefShownMs": null,
    "messages": [],
@@ -5127,6 +4634,7 @@
    "dutyCycle": 0.009,
    "scriptMs": 207,
    "windowMs": 23486,
+   "id": "phone-layer-tide-cold-3",
    "layer": {
     "requests": 2,
     "bytes": 68546,
@@ -5140,7 +4648,7 @@
     ]
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.124
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-bathy-2m",
@@ -5150,25 +4658,21 @@
    "frames": 58,
    "settledMs": 22216,
    "firstFrameMs": -3,
-   "paintedMs": 9002,
-   "finalPaint": [
-    0.172,
-    25
-   ],
-   "animated": false,
-   "completeMs": 14818,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 117,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 9002,
+   "fcpMs": 848,
+   "inputOkMs": 1858,
    "maxInputDelayMs": 681,
    "inputProbes": 21,
-   "quietAfterPaintMs": 9002,
-   "fcpMs": 848,
-   "tbtMs": 60,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 16020,
    "freeFromMs": 16020,
+   "tbtMs": 272,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 472,
    "briefShownMs": null,
    "messages": [],
@@ -5177,6 +4681,7 @@
    "dutyCycle": 0.01,
    "scriptMs": 220,
    "windowMs": 22377,
+   "id": "phone-layer-bathy-2m-cold-1",
    "layer": {
     "requests": 18,
     "bytes": 1229655,
@@ -5189,7 +4694,7 @@
     ]
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.0
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-bathy-2m",
@@ -5199,25 +4704,21 @@
    "frames": 58,
    "settledMs": 22218,
    "firstFrameMs": -3,
-   "paintedMs": 8980,
-   "finalPaint": [
-    0.172,
-    25
-   ],
-   "animated": false,
-   "completeMs": 14796,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 114,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8980,
+   "fcpMs": 848,
+   "inputOkMs": 1852,
    "maxInputDelayMs": 679,
    "inputProbes": 21,
-   "quietAfterPaintMs": 8980,
-   "fcpMs": 848,
-   "tbtMs": 55,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 16006,
    "freeFromMs": 16006,
+   "tbtMs": 261,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 561,
    "briefShownMs": null,
    "messages": [],
@@ -5226,6 +4727,7 @@
    "dutyCycle": 0.009,
    "scriptMs": 204,
    "windowMs": 22338,
+   "id": "phone-layer-bathy-2m-cold-2",
    "layer": {
     "requests": 18,
     "bytes": 1229655,
@@ -5238,7 +4740,7 @@
     ]
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.0
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-bathy-2m",
@@ -5248,25 +4750,21 @@
    "frames": 57,
    "settledMs": 22213,
    "firstFrameMs": -2,
-   "paintedMs": 8990,
-   "finalPaint": [
-    0.172,
-    25
-   ],
-   "animated": false,
-   "completeMs": 14790,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 115,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8990,
+   "fcpMs": 864,
+   "inputOkMs": 1863,
    "maxInputDelayMs": 688,
    "inputProbes": 21,
-   "quietAfterPaintMs": 8990,
-   "fcpMs": 864,
-   "tbtMs": 52,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 16011,
    "freeFromMs": 16011,
+   "tbtMs": 254,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 454,
    "briefShownMs": null,
    "messages": [],
@@ -5275,6 +4773,7 @@
    "dutyCycle": 0.009,
    "scriptMs": 200,
    "windowMs": 22314,
+   "id": "phone-layer-bathy-2m-cold-3",
    "layer": {
     "requests": 18,
     "bytes": 1229655,
@@ -5287,7 +4786,7 @@
     ]
    },
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.0
+   "layerVisibleDiff": null
   },
   {
    "page": "layer-bathy-2m-z12",
@@ -5297,25 +4796,21 @@
    "frames": 48,
    "settledMs": 18710,
    "firstFrameMs": -2,
-   "paintedMs": 8227,
-   "finalPaint": [
-    0.386,
-    12
-   ],
-   "animated": false,
-   "completeMs": 11527,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 114,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8227,
+   "fcpMs": 848,
+   "inputOkMs": 1855,
    "maxInputDelayMs": 679,
    "inputProbes": 18,
-   "quietAfterPaintMs": 8227,
-   "fcpMs": 848,
-   "tbtMs": 51,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 12555,
    "freeFromMs": 12555,
+   "tbtMs": 258,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 508,
    "briefShownMs": null,
    "messages": [],
@@ -5324,6 +4819,7 @@
    "dutyCycle": 0.009,
    "scriptMs": 175,
    "windowMs": 19319,
+   "id": "phone-layer-bathy-2m-z12-cold-1",
    "layer": {
     "requests": 11,
     "bytes": 613075,
@@ -5346,25 +4842,21 @@
    "frames": 48,
    "settledMs": 18707,
    "firstFrameMs": -2,
-   "paintedMs": 8225,
-   "finalPaint": [
-    0.386,
-    12
-   ],
-   "animated": false,
-   "completeMs": 11525,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 116,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8225,
+   "fcpMs": 848,
+   "inputOkMs": 1866,
    "maxInputDelayMs": 680,
    "inputProbes": 18,
-   "quietAfterPaintMs": 8225,
-   "fcpMs": 848,
-   "tbtMs": 51,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 12543,
    "freeFromMs": 12543,
+   "tbtMs": 254,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 404,
    "briefShownMs": null,
    "messages": [],
@@ -5373,6 +4865,7 @@
    "dutyCycle": 0.009,
    "scriptMs": 182,
    "windowMs": 19316,
+   "id": "phone-layer-bathy-2m-z12-cold-2",
    "layer": {
     "requests": 11,
     "bytes": 613075,
@@ -5395,25 +4888,21 @@
    "frames": 48,
    "settledMs": 18716,
    "firstFrameMs": -2,
-   "paintedMs": 8211,
-   "finalPaint": [
-    0.386,
-    12
-   ],
-   "animated": false,
-   "completeMs": 11544,
+   "evidence": "unmeasured",
+   "paintedMs": null,
+   "completeMs": null,
+   "animated": null,
    "responseMs": 117,
    "interactionFailed": false,
    "mapCovered": false,
-   "usableMs": 8211,
+   "fcpMs": 868,
+   "inputOkMs": 1868,
    "maxInputDelayMs": 685,
    "inputProbes": 18,
-   "quietAfterPaintMs": 8211,
-   "fcpMs": 868,
-   "tbtMs": 53,
-   "tbtWindowOpen": false,
    "lastLongTaskEndMs": 12567,
    "freeFromMs": 12567,
+   "tbtMs": 279,
+   "tbtWindowOpen": false,
    "longTaskTotalMs": 429,
    "briefShownMs": null,
    "messages": [],
@@ -5422,6 +4911,7 @@
    "dutyCycle": 0.01,
    "scriptMs": 192,
    "windowMs": 19335,
+   "id": "phone-layer-bathy-2m-z12-cold-3",
    "layer": {
     "requests": 11,
     "bytes": 613075,
@@ -5438,326 +4928,6 @@
   }
  ],
  "groups": [
-  {
-   "page": "brief",
-   "profile": "desktop",
-   "pass": "cold",
-   "runs": 6,
-   "ok": 6,
-   "statuses": {
-    "ok": 6
-   },
-   "firstFrameMs": 4.0,
-   "firstFrameMs_all": [
-    -4,
-    19,
-    9,
-    16,
-    -2,
-    -1
-   ],
-   "fcpMs": 270,
-   "fcpMs_all": [
-    435,
-    196,
-    156,
-    492,
-    332,
-    208
-   ],
-   "paintedMs": 428,
-   "paintedMs_all": [
-    524,
-    236,
-    276,
-    566,
-    409,
-    447
-   ],
-   "briefShownMs": 416,
-   "briefShownMs_all": [
-    504,
-    316,
-    228,
-    565,
-    391,
-    440
-   ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null,
-    null,
-    null,
-    null
-   ],
-   "usableMs": 15932,
-   "usableMs_all": [
-    16543,
-    16073,
-    15576,
-    15849,
-    15409,
-    16014
-   ],
-   "quietAfterPaintMs": 15016,
-   "quietAfterPaintMs_all": [
-    15688,
-    15206,
-    14691,
-    14950,
-    14523,
-    15083
-   ],
-   "tbtMs": 12698,
-   "tbtMs_all": [
-    13370,
-    13170,
-    12728,
-    12652,
-    12410,
-    12669
-   ],
-   "responseMs": 123,
-   "responseMs_all": [
-    270,
-    156,
-    274,
-    87,
-    69,
-    90
-   ],
-   "maxInputDelayMs": 2826,
-   "maxInputDelayMs_all": [
-    3286,
-    2882,
-    2769,
-    2684,
-    2584,
-    3183
-   ],
-   "dutyCycle": 0.597,
-   "dutyCycle_all": [
-    0.599,
-    0.605,
-    0.606,
-    0.595,
-    0.596,
-    0.589
-   ],
-   "scriptMs": 12478,
-   "scriptMs_all": [
-    12952,
-    12791,
-    12518,
-    12439,
-    12214,
-    12428
-   ],
-   "windowMs": 21004,
-   "windowMs_all": [
-    21616,
-    21141,
-    20650,
-    20922,
-    20484,
-    21085
-   ],
-   "settledMs": 20790,
-   "settledMs_all": [
-    21353,
-    20912,
-    20637,
-    20668,
-    20302,
-    20918
-   ],
-   "freeFromMs": 14924,
-   "freeFromMs_all": [
-    15534,
-    15059,
-    14572,
-    14845,
-    14400,
-    15003
-   ],
-   "longTaskTotalMs": 13424,
-   "longTaskTotalMs_all": [
-    14322,
-    13970,
-    13378,
-    13352,
-    13111,
-    13469
-   ],
-   "animated": 6,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerVisibleDiff": null,
-   "messages": [],
-   "pageErrors": []
-  },
-  {
-   "page": "map-home-returning",
-   "profile": "desktop",
-   "pass": "cold",
-   "runs": 6,
-   "ok": 6,
-   "statuses": {
-    "ok": 6
-   },
-   "firstFrameMs": 7.0,
-   "firstFrameMs_all": [
-    -2,
-    -3,
-    16,
-    26,
-    19,
-    -2
-   ],
-   "fcpMs": 354,
-   "fcpMs_all": [
-    442,
-    333,
-    374,
-    331,
-    325,
-    610
-   ],
-   "paintedMs": 263,
-   "paintedMs_all": [
-    290,
-    237,
-    283,
-    243,
-    219,
-    526
-   ],
-   "briefShownMs": 402,
-   "briefShownMs_all": [
-    492,
-    382,
-    419,
-    384,
-    367,
-    661
-   ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null,
-    null,
-    null,
-    null
-   ],
-   "usableMs": 15904,
-   "usableMs_all": [
-    16424,
-    16087,
-    17166,
-    15311,
-    15720,
-    15676
-   ],
-   "quietAfterPaintMs": 15008,
-   "quietAfterPaintMs_all": [
-    15555,
-    15210,
-    16224,
-    14406,
-    14805,
-    14792
-   ],
-   "tbtMs": 12876,
-   "tbtMs_all": [
-    13450,
-    13107,
-    14044,
-    12234,
-    12644,
-    12192
-   ],
-   "responseMs": 92,
-   "responseMs_all": [
-    90,
-    107,
-    106,
-    91,
-    92,
-    77
-   ],
-   "maxInputDelayMs": 2982,
-   "maxInputDelayMs_all": [
-    2943,
-    3021,
-    3371,
-    2844,
-    2872,
-    3049
-   ],
-   "dutyCycle": 0.601,
-   "dutyCycle_all": [
-    0.607,
-    0.607,
-    0.614,
-    0.562,
-    0.594,
-    0.577
-   ],
-   "scriptMs": 12600,
-   "scriptMs_all": [
-    13049,
-    12846,
-    13648,
-    12028,
-    12354,
-    11965
-   ],
-   "windowMs": 21278,
-   "windowMs_all": [
-    21495,
-    21159,
-    22241,
-    21397,
-    20790,
-    20746
-   ],
-   "settledMs": 20758,
-   "settledMs_all": [
-    21240,
-    20888,
-    21643,
-    20383,
-    20628,
-    20621
-   ],
-   "freeFromMs": 14894,
-   "freeFromMs_all": [
-    15413,
-    15083,
-    16148,
-    14309,
-    14706,
-    14672
-   ],
-   "longTaskTotalMs": 13650,
-   "longTaskTotalMs_all": [
-    14250,
-    13907,
-    14794,
-    12884,
-    13394,
-    12842
-   ],
-   "animated": 6,
-   "mapCovered": 0,
-   "interactionFailed": 0,
-   "layerVisibleDiff": null,
-   "messages": [],
-   "pageErrors": []
-  },
   {
    "page": "live-layer-none",
    "profile": "desktop",
@@ -5779,35 +4949,17 @@
     288,
     200
    ],
-   "paintedMs": 388,
-   "paintedMs_all": [
-    554,
-    361,
-    388
-   ],
    "briefShownMs": 427,
    "briefShownMs_all": [
     584,
     347,
     427
    ],
-   "completeMs": 1311,
-   "completeMs_all": [
-    1720,
-    1311,
-    1055
-   ],
-   "usableMs": 16491,
-   "usableMs_all": [
+   "inputOkMs": 16491,
+   "inputOkMs_all": [
     17343,
     16491,
     16339
-   ],
-   "quietAfterPaintMs": 15487,
-   "quietAfterPaintMs_all": [
-    16339,
-    15487,
-    15334
    ],
    "tbtMs": 13600,
    "tbtMs_all": [
@@ -5851,11 +5003,11 @@
     21169,
     21162
    ],
-   "freeFromMs": 15487,
+   "freeFromMs": 16491,
    "freeFromMs_all": [
-    16339,
-    15487,
-    15334
+    17343,
+    16491,
+    16339
    ],
    "longTaskTotalMs": 14174,
    "longTaskTotalMs_all": [
@@ -5863,10 +5015,8 @@
     14174,
     14100
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -5891,35 +5041,17 @@
     132,
     272
    ],
-   "paintedMs": 238,
-   "paintedMs_all": [
-    222,
-    238,
-    385
-   ],
    "briefShownMs": 212,
    "briefShownMs_all": [
     201,
     212,
     360
    ],
-   "completeMs": 1151,
-   "completeMs_all": [
-    1255,
-    755,
-    1151
-   ],
-   "usableMs": 16008,
-   "usableMs_all": [
+   "inputOkMs": 16008,
+   "inputOkMs_all": [
     16275,
     15865,
     16008
-   ],
-   "quietAfterPaintMs": 15003,
-   "quietAfterPaintMs_all": [
-    15271,
-    14860,
-    15003
    ],
    "tbtMs": 13278,
    "tbtMs_all": [
@@ -5963,11 +5095,11 @@
     20870,
     20755
    ],
-   "freeFromMs": 15003,
+   "freeFromMs": 16008,
    "freeFromMs_all": [
-    15271,
-    14860,
-    15003
+    16275,
+    15865,
+    16008
    ],
    "longTaskTotalMs": 13878,
    "longTaskTotalMs_all": [
@@ -5975,7 +5107,6 @@
     13878,
     13829
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": null,
@@ -5989,7 +5120,6 @@
    "layerFailed": 0,
    "layerExamples": [],
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.058,
    "messages": [],
    "pageErrors": []
   },
@@ -6014,35 +5144,17 @@
     159,
     276
    ],
-   "paintedMs": 256,
-   "paintedMs_all": [
-    256,
-    255,
-    374
-   ],
    "briefShownMs": 278,
    "briefShownMs_all": [
     278,
     233,
     355
    ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null
-   ],
-   "usableMs": 14725,
-   "usableMs_all": [
+   "inputOkMs": 14725,
+   "inputOkMs_all": [
     14725,
     14806,
     14711
-   ],
-   "quietAfterPaintMs": 13706,
-   "quietAfterPaintMs_all": [
-    13706,
-    13794,
-    13694
    ],
    "tbtMs": 12036,
    "tbtMs_all": [
@@ -6086,11 +5198,11 @@
     19874,
     20010
    ],
-   "freeFromMs": 13706,
+   "freeFromMs": 14725,
    "freeFromMs_all": [
-    13706,
-    13794,
-    13694
+    14725,
+    14806,
+    14711
    ],
    "longTaskTotalMs": 12586,
    "longTaskTotalMs_all": [
@@ -6098,7 +5210,6 @@
     12693,
     12505
    ],
-   "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 787,
@@ -6114,7 +5225,6 @@
     "ocean"
    ],
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.018,
    "messages": [],
    "pageErrors": []
   },
@@ -6139,35 +5249,17 @@
     296,
     184
    ],
-   "paintedMs": 352,
-   "paintedMs_all": [
-    389,
-    352,
-    240
-   ],
    "briefShownMs": 342,
    "briefShownMs_all": [
     367,
     342,
     227
    ],
-   "completeMs": 1019,
-   "completeMs_all": [
-    1189,
-    1019,
-    923
-   ],
-   "usableMs": 14684,
-   "usableMs_all": [
+   "inputOkMs": 14684,
+   "inputOkMs_all": [
     14921,
     14684,
     14319
-   ],
-   "quietAfterPaintMs": 13680,
-   "quietAfterPaintMs_all": [
-    13917,
-    13680,
-    13315
    ],
    "tbtMs": 11924,
    "tbtMs_all": [
@@ -6211,11 +5303,11 @@
     20009,
     19643
    ],
-   "freeFromMs": 13680,
+   "freeFromMs": 14684,
    "freeFromMs_all": [
-    13917,
-    13680,
-    13315
+    14921,
+    14684,
+    14319
    ],
    "longTaskTotalMs": 12474,
    "longTaskTotalMs_all": [
@@ -6223,7 +5315,6 @@
     12474,
     12187
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": null,
@@ -6237,7 +5328,6 @@
    "layerFailed": 0,
    "layerExamples": [],
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.037,
    "messages": [
     "Stale or unavailable"
    ],
@@ -6264,35 +5354,17 @@
     192,
     360
    ],
-   "paintedMs": 286,
-   "paintedMs_all": [
-    277,
-    286,
-    435
-   ],
    "briefShownMs": 264,
    "briefShownMs_all": [
     251,
     264,
     452
    ],
-   "completeMs": 1002,
-   "completeMs_all": [
-    944,
-    1003,
-    1002
-   ],
-   "usableMs": 15809,
-   "usableMs_all": [
+   "inputOkMs": 15809,
+   "inputOkMs_all": [
     16418,
     15809,
     14958
-   ],
-   "quietAfterPaintMs": 14804,
-   "quietAfterPaintMs_all": [
-    15413,
-    14804,
-    13954
    ],
    "tbtMs": 12972,
    "tbtMs_all": [
@@ -6336,11 +5408,11 @@
     20921,
     20052
    ],
-   "freeFromMs": 14804,
+   "freeFromMs": 15809,
    "freeFromMs_all": [
-    15413,
-    14804,
-    13954
+    16418,
+    15809,
+    14958
    ],
    "longTaskTotalMs": 13572,
    "longTaskTotalMs_all": [
@@ -6348,7 +5420,6 @@
     13572,
     12637
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": null,
@@ -6362,7 +5433,6 @@
    "layerFailed": 0,
    "layerExamples": [],
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.222,
    "messages": [],
    "pageErrors": []
   },
@@ -6387,39 +5457,21 @@
     416,
     320
    ],
-   "paintedMs": 538,
-   "paintedMs_all": [
-    538,
-    523,
-    583
-   ],
    "briefShownMs": 513,
    "briefShownMs_all": [
     513,
     500,
     570
    ],
-   "completeMs": 1290,
-   "completeMs_all": [
-    1871,
-    1290,
-    1150
-   ],
-   "usableMs": 14875,
-   "usableMs_all": [
+   "inputOkMs": 14875,
+   "inputOkMs_all": [
     1430,
     15199,
     14875
    ],
-   "quietAfterPaintMs": 13872,
-   "quietAfterPaintMs_all": [
-    1746,
-    14195,
-    13872
-   ],
-   "tbtMs": 11835,
+   "tbtMs": 11979,
    "tbtMs_all": [
-    108,
+    12030,
     11979,
     11835
    ],
@@ -6459,11 +5511,11 @@
     20596,
     20047
    ],
-   "freeFromMs": 14195,
+   "freeFromMs": 15199,
    "freeFromMs_all": [
     15614,
-    14195,
-    13872
+    15199,
+    14875
    ],
    "longTaskTotalMs": 12429,
    "longTaskTotalMs_all": [
@@ -6471,7 +5523,6 @@
     12429,
     12335
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 1165,
@@ -6490,7 +5541,6 @@
     "chlorophyll-observation--243-70-f975ffa73006f62c.json"
    ],
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.277,
    "messages": [],
    "pageErrors": []
   },
@@ -6515,41 +5565,23 @@
     268,
     216
    ],
-   "paintedMs": 305,
-   "paintedMs_all": [
-    281,
-    373,
-    305
-   ],
    "briefShownMs": 294,
    "briefShownMs_all": [
     255,
     362,
     294
    ],
-   "completeMs": 14823,
-   "completeMs_all": [
-    14097,
-    14823,
-    21687
-   ],
-   "usableMs": 15002,
-   "usableMs_all": [
+   "inputOkMs": 15002,
+   "inputOkMs_all": [
     15002,
     15728,
     1205
    ],
-   "quietAfterPaintMs": 14818,
-   "quietAfterPaintMs_all": [
-    14086,
-    14818,
-    21675
-   ],
-   "tbtMs": 12081,
+   "tbtMs": 12797,
    "tbtMs_all": [
     12081,
     12797,
-    126
+    18660
    ],
    "responseMs": 60,
    "responseMs_all": [
@@ -6587,10 +5619,10 @@
     20702,
     20662
    ],
-   "freeFromMs": 14724,
+   "freeFromMs": 15728,
    "freeFromMs_all": [
-    13998,
-    14724,
+    15002,
+    15728,
     21414
    ],
    "longTaskTotalMs": 13497,
@@ -6599,7 +5631,6 @@
     13497,
     19667
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 3274,
@@ -6616,7 +5647,98 @@
     "seafloor-morro-bay.pmtiles"
    ],
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.074,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": -1,
+   "firstFrameMs_all": [
+    16,
+    -2,
+    -1
+   ],
+   "fcpMs": 332,
+   "fcpMs_all": [
+    492,
+    332,
+    208
+   ],
+   "briefShownMs": 440,
+   "briefShownMs_all": [
+    565,
+    391,
+    440
+   ],
+   "inputOkMs": 15849,
+   "inputOkMs_all": [
+    15849,
+    15409,
+    16014
+   ],
+   "tbtMs": 12652,
+   "tbtMs_all": [
+    12652,
+    12410,
+    12669
+   ],
+   "responseMs": 87,
+   "responseMs_all": [
+    87,
+    69,
+    90
+   ],
+   "maxInputDelayMs": 2684,
+   "maxInputDelayMs_all": [
+    2684,
+    2584,
+    3183
+   ],
+   "dutyCycle": 0.595,
+   "dutyCycle_all": [
+    0.595,
+    0.596,
+    0.589
+   ],
+   "scriptMs": 12428,
+   "scriptMs_all": [
+    12439,
+    12214,
+    12428
+   ],
+   "windowMs": 20922,
+   "windowMs_all": [
+    20922,
+    20484,
+    21085
+   ],
+   "settledMs": 20668,
+   "settledMs_all": [
+    20668,
+    20302,
+    20918
+   ],
+   "freeFromMs": 15849,
+   "freeFromMs_all": [
+    15849,
+    15409,
+    16014
+   ],
+   "longTaskTotalMs": 13352,
+   "longTaskTotalMs_all": [
+    13352,
+    13111,
+    13469
+   ],
+   "mapCovered": 0,
+   "interactionFailed": 0,
    "messages": [],
    "pageErrors": []
   },
@@ -6641,35 +5763,17 @@
     76,
     96
    ],
-   "paintedMs": 168,
-   "paintedMs_all": [
-    168,
-    130,
-    172
-   ],
    "briefShownMs": 159,
    "briefShownMs_all": [
     158,
     159,
     195
    ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null
-   ],
-   "usableMs": 15330,
-   "usableMs_all": [
+   "inputOkMs": 15330,
+   "inputOkMs_all": [
     14703,
     15330,
     15741
-   ],
-   "quietAfterPaintMs": 14431,
-   "quietAfterPaintMs_all": [
-    13788,
-    14431,
-    14822
    ],
    "tbtMs": 12678,
    "tbtMs_all": [
@@ -6713,11 +5817,11 @@
     20095,
     20611
    ],
-   "freeFromMs": 14314,
+   "freeFromMs": 15330,
    "freeFromMs_all": [
-    13693,
-    14314,
-    14726
+    14703,
+    15330,
+    15741
    ],
    "longTaskTotalMs": 13354,
    "longTaskTotalMs_all": [
@@ -6725,10 +5829,100 @@
     13428,
     13354
    ],
-   "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
-   "layerVisibleDiff": null,
+   "messages": [],
+   "pageErrors": []
+  },
+  {
+   "page": "map-home-returning",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "ok": 3,
+   "statuses": {
+    "ok": 3
+   },
+   "firstFrameMs": 19,
+   "firstFrameMs_all": [
+    26,
+    19,
+    -2
+   ],
+   "fcpMs": 331,
+   "fcpMs_all": [
+    331,
+    325,
+    610
+   ],
+   "briefShownMs": 384,
+   "briefShownMs_all": [
+    384,
+    367,
+    661
+   ],
+   "inputOkMs": 15676,
+   "inputOkMs_all": [
+    15311,
+    15720,
+    15676
+   ],
+   "tbtMs": 12234,
+   "tbtMs_all": [
+    12234,
+    12644,
+    12192
+   ],
+   "responseMs": 91,
+   "responseMs_all": [
+    91,
+    92,
+    77
+   ],
+   "maxInputDelayMs": 2872,
+   "maxInputDelayMs_all": [
+    2844,
+    2872,
+    3049
+   ],
+   "dutyCycle": 0.577,
+   "dutyCycle_all": [
+    0.562,
+    0.594,
+    0.577
+   ],
+   "scriptMs": 12028,
+   "scriptMs_all": [
+    12028,
+    12354,
+    11965
+   ],
+   "windowMs": 20790,
+   "windowMs_all": [
+    21397,
+    20790,
+    20746
+   ],
+   "settledMs": 20621,
+   "settledMs_all": [
+    20383,
+    20628,
+    20621
+   ],
+   "freeFromMs": 15676,
+   "freeFromMs_all": [
+    15311,
+    15720,
+    15676
+   ],
+   "longTaskTotalMs": 12884,
+   "longTaskTotalMs_all": [
+    12884,
+    13394,
+    12842
+   ],
+   "mapCovered": 0,
+   "interactionFailed": 0,
    "messages": [],
    "pageErrors": []
   },
@@ -6753,35 +5947,17 @@
     202,
     247
    ],
-   "paintedMs": 147,
-   "paintedMs_all": [
-    147,
-    114,
-    151
-   ],
    "briefShownMs": 319,
    "briefShownMs_all": [
     319,
     315,
     330
    ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null
-   ],
-   "usableMs": 15770,
-   "usableMs_all": [
+   "inputOkMs": 15770,
+   "inputOkMs_all": [
     16465,
     15365,
     15770
-   ],
-   "quietAfterPaintMs": 14857,
-   "quietAfterPaintMs_all": [
-    15606,
-    14450,
-    14857
    ],
    "tbtMs": 12588,
    "tbtMs_all": [
@@ -6825,11 +6001,11 @@
     20177,
     20839
    ],
-   "freeFromMs": 14756,
+   "freeFromMs": 15770,
    "freeFromMs_all": [
-    15457,
-    14346,
-    14756
+    16465,
+    15365,
+    15770
    ],
    "longTaskTotalMs": 13238,
    "longTaskTotalMs_all": [
@@ -6837,10 +6013,8 @@
     13238,
     13107
    ],
-   "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -6865,41 +6039,23 @@
     1836,
     1836
    ],
-   "paintedMs": 3247,
-   "paintedMs_all": [
-    3331,
-    3232,
-    3247
-   ],
    "briefShownMs": 3230,
    "briefShownMs_all": [
     3346,
     3220,
     3230
    ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null
+   "inputOkMs": 2838,
+   "inputOkMs_all": [
+    2941,
+    2838,
+    2835
    ],
-   "usableMs": 3247,
-   "usableMs_all": [
-    3331,
-    3232,
-    3247
-   ],
-   "quietAfterPaintMs": 3798,
-   "quietAfterPaintMs_all": [
-    3798,
-    4166,
-    3728
-   ],
-   "tbtMs": 134,
+   "tbtMs": 3474,
    "tbtMs_all": [
-    183,
-    124,
-    134
+    4267,
+    3135,
+    3474
    ],
    "responseMs": 31,
    "responseMs_all": [
@@ -6949,10 +6105,8 @@
     4719,
     5363
    ],
-   "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -6977,41 +6131,23 @@
     3834,
     3594
    ],
-   "paintedMs": 3649,
-   "paintedMs_all": [
-    3649,
-    3093,
-    3695
-   ],
    "briefShownMs": 3710,
    "briefShownMs_all": [
     3675,
     3882,
     3710
    ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null
-   ],
-   "usableMs": 3903,
-   "usableMs_all": [
+   "inputOkMs": 3903,
+   "inputOkMs_all": [
     3903,
     3887,
     4013
    ],
-   "quietAfterPaintMs": 4166,
-   "quietAfterPaintMs_all": [
-    4166,
-    4235,
-    3695
-   ],
-   "tbtMs": 0,
+   "tbtMs": 2577,
    "tbtMs_all": [
-    0,
-    0,
-    13
+    2570,
+    2577,
+    2816
    ],
    "responseMs": 30,
    "responseMs_all": [
@@ -7061,10 +6197,8 @@
     4578,
     4419
    ],
-   "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -7089,41 +6223,23 @@
     1876,
     1864
    ],
-   "paintedMs": 3245,
-   "paintedMs_all": [
-    3253,
-    3218,
-    3245
-   ],
    "briefShownMs": 3233,
    "briefShownMs_all": [
     3254,
     3213,
     3233
    ],
-   "completeMs": 15412,
-   "completeMs_all": [
-    15453,
-    15318,
-    15412
+   "inputOkMs": 2877,
+   "inputOkMs_all": [
+    2912,
+    2877,
+    2870
    ],
-   "usableMs": 3245,
-   "usableMs_all": [
-    3253,
-    3218,
-    3245
-   ],
-   "quietAfterPaintMs": 3721,
-   "quietAfterPaintMs_all": [
-    3759,
-    3720,
-    3721
-   ],
-   "tbtMs": 102,
+   "tbtMs": 619,
    "tbtMs_all": [
-    100,
-    102,
-    111
+    638,
+    0,
+    619
    ],
    "responseMs": 128,
    "responseMs_all": [
@@ -7164,7 +6280,7 @@
    "freeFromMs": 15406,
    "freeFromMs_all": [
     15440,
-    3218,
+    2877,
     15406
    ],
    "longTaskTotalMs": 1654,
@@ -7173,10 +6289,8 @@
     1654,
     1572
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -7201,41 +6315,23 @@
     1828,
     1960
    ],
-   "paintedMs": 3189,
-   "paintedMs_all": [
-    3078,
-    3189,
-    3304
-   ],
    "briefShownMs": 3182,
    "briefShownMs_all": [
     3074,
     3182,
     3300
    ],
-   "completeMs": 15406,
-   "completeMs_all": [
-    15294,
-    15406,
-    15503
+   "inputOkMs": 2833,
+   "inputOkMs_all": [
+    2671,
+    2833,
+    2962
    ],
-   "usableMs": 3189,
-   "usableMs_all": [
-    3078,
-    3189,
-    3304
-   ],
-   "quietAfterPaintMs": 3752,
-   "quietAfterPaintMs_all": [
-    3078,
-    3752,
-    4309
-   ],
-   "tbtMs": 98,
+   "tbtMs": 781,
    "tbtMs_all": [
-    113,
-    98,
-    96
+    852,
+    0,
+    781
    ],
    "responseMs": 130,
    "responseMs_all": [
@@ -7276,7 +6372,7 @@
    "freeFromMs": 15291,
    "freeFromMs_all": [
     15291,
-    3189,
+    2833,
     15499
    ],
    "longTaskTotalMs": 2019,
@@ -7285,7 +6381,6 @@
     2004,
     2075
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": null,
@@ -7299,7 +6394,6 @@
    "layerFailed": 0,
    "layerExamples": [],
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.021,
    "messages": [],
    "pageErrors": []
   },
@@ -7324,41 +6418,23 @@
     1668,
     1856
    ],
-   "paintedMs": 3198,
-   "paintedMs_all": [
-    3212,
-    3045,
-    3198
-   ],
    "briefShownMs": 3195,
    "briefShownMs_all": [
     3199,
     3040,
     3195
    ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null
+   "inputOkMs": 2835,
+   "inputOkMs_all": [
+    2835,
+    2671,
+    2857
    ],
-   "usableMs": 3198,
-   "usableMs_all": [
-    3212,
-    3045,
-    3198
-   ],
-   "quietAfterPaintMs": 3728,
-   "quietAfterPaintMs_all": [
-    3728,
-    3045,
-    3887
-   ],
-   "tbtMs": 98,
+   "tbtMs": 657,
    "tbtMs_all": [
-    101,
-    98,
-    97
+    657,
+    698,
+    580
    ],
    "responseMs": 33,
    "responseMs_all": [
@@ -7408,7 +6484,6 @@
     2049,
     1869
    ],
-   "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 16244,
@@ -7424,7 +6499,6 @@
     "ocean"
    ],
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.019,
    "messages": [],
    "pageErrors": []
   },
@@ -7449,41 +6523,23 @@
     1840,
     1788
    ],
-   "paintedMs": 3150,
-   "paintedMs_all": [
-    3048,
-    3185,
-    3150
-   ],
    "briefShownMs": 3150,
    "briefShownMs_all": [
     3044,
     3184,
     3150
    ],
-   "completeMs": 15347,
-   "completeMs_all": [
-    15347,
-    15302,
-    15416
+   "inputOkMs": 2792,
+   "inputOkMs_all": [
+    2639,
+    2844,
+    2792
    ],
-   "usableMs": 3150,
-   "usableMs_all": [
-    3048,
-    3185,
-    3150
-   ],
-   "quietAfterPaintMs": 3571,
-   "quietAfterPaintMs_all": [
-    3571,
-    3718,
-    3150
-   ],
-   "tbtMs": 97,
+   "tbtMs": 722,
    "tbtMs_all": [
-    97,
-    94,
-    97
+    724,
+    0,
+    722
    ],
    "responseMs": 130,
    "responseMs_all": [
@@ -7524,7 +6580,7 @@
    "freeFromMs": 15336,
    "freeFromMs_all": [
     15336,
-    3185,
+    2844,
     15400
    ],
    "longTaskTotalMs": 1914,
@@ -7533,7 +6589,6 @@
     1914,
     1676
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": null,
@@ -7547,7 +6602,6 @@
    "layerFailed": 0,
    "layerExamples": [],
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.0,
    "messages": [],
    "pageErrors": []
   },
@@ -7572,41 +6626,23 @@
     2056,
     1840
    ],
-   "paintedMs": 3337,
-   "paintedMs_all": [
-    3337,
-    3417,
-    3184
-   ],
    "briefShownMs": 3330,
    "briefShownMs_all": [
     3330,
     3403,
     3185
    ],
-   "completeMs": 15519,
-   "completeMs_all": [
-    15519,
-    15566,
-    15383
+   "inputOkMs": 2979,
+   "inputOkMs_all": [
+    2979,
+    3056,
+    2840
    ],
-   "usableMs": 3337,
-   "usableMs_all": [
-    3337,
-    3417,
-    3184
-   ],
-   "quietAfterPaintMs": 4052,
-   "quietAfterPaintMs_all": [
-    3843,
-    4377,
-    4052
-   ],
-   "tbtMs": 98,
+   "tbtMs": 763,
    "tbtMs_all": [
-    97,
-    98,
-    101
+    763,
+    746,
+    778
    ],
    "responseMs": 145,
    "responseMs_all": [
@@ -7656,7 +6692,6 @@
     1877,
     1805
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": null,
@@ -7670,7 +6705,6 @@
    "layerFailed": 0,
    "layerExamples": [],
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.532,
    "messages": [],
    "pageErrors": []
   },
@@ -7695,41 +6729,23 @@
     2012,
     1824
    ],
-   "paintedMs": 3287,
-   "paintedMs_all": [
-    3287,
-    3373,
-    3185
-   ],
    "briefShownMs": 3284,
    "briefShownMs_all": [
     3284,
     3362,
     3186
    ],
-   "completeMs": 15653,
-   "completeMs_all": [
-    15653,
-    15706,
-    15585
+   "inputOkMs": 2944,
+   "inputOkMs_all": [
+    2944,
+    3015,
+    2824
    ],
-   "usableMs": 3287,
-   "usableMs_all": [
-    3287,
-    3373,
-    3185
-   ],
-   "quietAfterPaintMs": 3803,
-   "quietAfterPaintMs_all": [
-    3287,
-    3857,
-    3803
-   ],
-   "tbtMs": 102,
+   "tbtMs": 604,
    "tbtMs_all": [
-    94,
-    102,
-    103
+    604,
+    0,
+    649
    ],
    "responseMs": 129,
    "responseMs_all": [
@@ -7770,7 +6786,7 @@
    "freeFromMs": 15573,
    "freeFromMs_all": [
     15652,
-    3373,
+    3015,
     15573
    ],
    "longTaskTotalMs": 1660,
@@ -7779,7 +6795,6 @@
     1620,
     1660
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 4971,
@@ -7798,7 +6813,6 @@
     "chlorophyll-observation--243-70-f975ffa73006f62c.json"
    ],
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.56,
    "messages": [],
    "pageErrors": []
   },
@@ -7823,41 +6837,23 @@
     1868,
     1928
    ],
-   "paintedMs": 3289,
-   "paintedMs_all": [
-    3303,
-    3260,
-    3289
-   ],
    "briefShownMs": 3286,
    "briefShownMs_all": [
     3299,
     3259,
     3286
    ],
-   "completeMs": 27052,
-   "completeMs_all": [
-    27052,
-    27176,
-    26921
+   "inputOkMs": 2931,
+   "inputOkMs_all": [
+    2945,
+    2868,
+    2931
    ],
-   "usableMs": 3289,
-   "usableMs_all": [
-    3303,
-    3260,
-    3289
-   ],
-   "quietAfterPaintMs": 4256,
-   "quietAfterPaintMs_all": [
-    4256,
-    4256,
-    3795
-   ],
-   "tbtMs": 104,
+   "tbtMs": 2503,
    "tbtMs_all": [
-    97,
-    104,
-    107
+    2503,
+    2686,
+    2437
    ],
    "responseMs": 199,
    "responseMs_all": [
@@ -7907,7 +6903,6 @@
     4420,
     4200
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 24275,
@@ -7924,7 +6919,6 @@
     "seafloor-morro-bay.pmtiles"
    ],
    "layerReference": "live-layer-none",
-   "layerVisibleDiff": 0.056,
    "messages": [],
    "pageErrors": []
   },
@@ -7949,40 +6943,22 @@
     612,
     204
    ],
-   "paintedMs": 448,
-   "paintedMs_all": [
-    428,
-    838,
-    448
-   ],
    "briefShownMs": 445,
    "briefShownMs_all": [
     423,
     822,
     445
    ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null
-   ],
-   "usableMs": 57383,
-   "usableMs_all": [
+   "inputOkMs": 57383,
+   "inputOkMs_all": [
     57773,
-    838,
+    1789,
     57383
-   ],
-   "quietAfterPaintMs": 56708,
-   "quietAfterPaintMs_all": [
-    56708,
-    57058,
-    56285
    ],
    "tbtMs": 52891,
    "tbtMs_all": [
     53164,
-    105,
+    52877,
     52891
    ],
    "responseMs": 31,
@@ -8021,11 +6997,11 @@
     12283,
     12370
    ],
-   "freeFromMs": 56525,
+   "freeFromMs": 57383,
    "freeFromMs_all": [
-    56708,
+    57773,
     56525,
-    56285
+    57383
    ],
    "longTaskTotalMs": 54946,
    "longTaskTotalMs_all": [
@@ -8033,10 +7009,8 @@
     54946,
     54741
    ],
-   "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -8061,35 +7035,17 @@
     675,
     591
    ],
-   "paintedMs": 522,
-   "paintedMs_all": [
-    746,
-    522,
-    437
-   ],
    "briefShownMs": 787,
    "briefShownMs_all": [
     1163,
     787,
     712
    ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null
-   ],
-   "usableMs": 57766,
-   "usableMs_all": [
+   "inputOkMs": 57766,
+   "inputOkMs_all": [
     58546,
     56540,
     57766
-   ],
-   "quietAfterPaintMs": 56671,
-   "quietAfterPaintMs_all": [
-    57510,
-    55490,
-    56671
    ],
    "tbtMs": 52830,
    "tbtMs_all": [
@@ -8133,11 +7089,11 @@
     12988,
     12396
    ],
-   "freeFromMs": 56671,
+   "freeFromMs": 57766,
    "freeFromMs_all": [
-    57510,
-    55490,
-    56671
+    58546,
+    56540,
+    57766
    ],
    "longTaskTotalMs": 54796,
    "longTaskTotalMs_all": [
@@ -8145,10 +7101,8 @@
     53433,
     54796
    ],
-   "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -8173,35 +7127,17 @@
     40,
     32
    ],
-   "paintedMs": 216,
-   "paintedMs_all": [
-    220,
-    207,
-    216
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null
-   ],
-   "usableMs": 220,
-   "usableMs_all": [
-    220,
+   "inputOkMs": 1030,
+   "inputOkMs_all": [
     1030,
-    216
-   ],
-   "quietAfterPaintMs": 216,
-   "quietAfterPaintMs_all": [
-    220,
-    207,
-    216
+    1030,
+    1044
    ],
    "tbtMs": 0,
    "tbtMs_all": [
@@ -8245,11 +7181,11 @@
     6267,
     6272
    ],
-   "freeFromMs": 216,
+   "freeFromMs": 1030,
    "freeFromMs_all": [
-    220,
-    207,
-    216
+    1030,
+    1030,
+    1044
    ],
    "longTaskTotalMs": 0,
    "longTaskTotalMs_all": [
@@ -8257,7 +7193,6 @@
     0,
     0
    ],
-   "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 253,
@@ -8273,7 +7208,6 @@
     "wind-preview.json"
    ],
    "layerReference": null,
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -8298,35 +7232,17 @@
     36,
     36
    ],
-   "paintedMs": 208,
-   "paintedMs_all": [
-    200,
-    209,
-    208
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 467,
-   "completeMs_all": [
-    467,
-    492,
-    458
-   ],
-   "usableMs": 1013,
-   "usableMs_all": [
-    200,
+   "inputOkMs": 1013,
+   "inputOkMs_all": [
+    1015,
     1013,
     1013
-   ],
-   "quietAfterPaintMs": 208,
-   "quietAfterPaintMs_all": [
-    200,
-    209,
-    208
    ],
    "tbtMs": 0,
    "tbtMs_all": [
@@ -8370,11 +7286,11 @@
     6521,
     6523
    ],
-   "freeFromMs": 208,
+   "freeFromMs": 1013,
    "freeFromMs_all": [
-    200,
-    209,
-    208
+    1015,
+    1013,
+    1013
    ],
    "longTaskTotalMs": 0,
    "longTaskTotalMs_all": [
@@ -8382,7 +7298,6 @@
     0,
     0
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 239,
@@ -8398,7 +7313,6 @@
     "sst-preview.json"
    ],
    "layerReference": null,
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -8423,41 +7337,23 @@
     860,
     856
    ],
-   "paintedMs": 866,
-   "paintedMs_all": [
-    854,
-    872,
-    866
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": null,
-   "completeMs_all": [
-    null,
-    null,
-    null
-   ],
-   "usableMs": 1858,
-   "usableMs_all": [
+   "inputOkMs": 1858,
+   "inputOkMs_all": [
     1847,
     1863,
     1858
    ],
-   "quietAfterPaintMs": 866,
-   "quietAfterPaintMs_all": [
-    854,
-    872,
-    866
-   ],
-   "tbtMs": 0,
+   "tbtMs": 70229,
    "tbtMs_all": [
-    0,
-    0,
-    0
+    70727,
+    44540,
+    70229
    ],
    "responseMs": 150,
    "responseMs_all": [
@@ -8507,7 +7403,6 @@
     106670,
     106810
    ],
-   "animated": 3,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 14369,
@@ -8523,7 +7418,6 @@
     "wind-preview.json"
    ],
    "layerReference": null,
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -8548,41 +7442,23 @@
     860,
     868
    ],
-   "paintedMs": 8460,
-   "paintedMs_all": [
-    8471,
-    8460,
-    8445
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 26003,
-   "completeMs_all": [
-    26003,
-    25943,
-    26011
+   "inputOkMs": 1868,
+   "inputOkMs_all": [
+    1865,
+    1869,
+    1868
    ],
-   "usableMs": 8460,
-   "usableMs_all": [
-    8471,
-    8460,
-    8445
-   ],
-   "quietAfterPaintMs": 8460,
-   "quietAfterPaintMs_all": [
-    8471,
-    8460,
-    8445
-   ],
-   "tbtMs": 76,
+   "tbtMs": 0,
    "tbtMs_all": [
-    143,
-    62,
-    76
+    0,
+    0,
+    0
    ],
    "responseMs": 130,
    "responseMs_all": [
@@ -8620,11 +7496,11 @@
     31995,
     31989
    ],
-   "freeFromMs": 8460,
+   "freeFromMs": 1868,
    "freeFromMs_all": [
-    8471,
-    8460,
-    8445
+    1865,
+    1869,
+    1868
    ],
    "longTaskTotalMs": 994,
    "longTaskTotalMs_all": [
@@ -8632,7 +7508,6 @@
     813,
     994
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 25532,
@@ -8648,7 +7523,6 @@
     "sst-preview.json"
    ],
    "layerReference": null,
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -8673,41 +7547,23 @@
     32,
     40
    ],
-   "paintedMs": 235,
-   "paintedMs_all": [
-    256,
-    235,
-    211
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 306,
-   "completeMs_all": [
-    306,
-    318,
-    244
+   "inputOkMs": 1015,
+   "inputOkMs_all": [
+    1019,
+    1014,
+    1015
    ],
-   "usableMs": 235,
-   "usableMs_all": [
-    256,
-    235,
-    211
-   ],
-   "quietAfterPaintMs": 364,
-   "quietAfterPaintMs_all": [
-    370,
-    364,
-    292
-   ],
-   "tbtMs": 0,
+   "tbtMs": 12,
    "tbtMs_all": [
-    0,
-    0,
-    0
+    28,
+    12,
+    12
    ],
    "responseMs": 23,
    "responseMs_all": [
@@ -8745,11 +7601,11 @@
     6526,
     6528
    ],
-   "freeFromMs": 235,
+   "freeFromMs": 1015,
    "freeFromMs_all": [
-    256,
-    235,
-    211
+    1019,
+    1014,
+    1015
    ],
    "longTaskTotalMs": 62,
    "longTaskTotalMs_all": [
@@ -8757,10 +7613,8 @@
     62,
     62
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -8785,41 +7639,23 @@
     28,
     36
    ],
-   "paintedMs": 194,
-   "paintedMs_all": [
-    194,
-    179,
-    203
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 303,
-   "completeMs_all": [
-    311,
-    296,
-    303
-   ],
-   "usableMs": 203,
-   "usableMs_all": [
-    194,
+   "inputOkMs": 1016,
+   "inputOkMs_all": [
+    1016,
     1011,
-    203
+    1017
    ],
-   "quietAfterPaintMs": 370,
-   "quietAfterPaintMs_all": [
-    370,
-    362,
-    404
-   ],
-   "tbtMs": 0,
+   "tbtMs": 25,
    "tbtMs_all": [
-    0,
     25,
-    0
+    25,
+    30
    ],
    "responseMs": 44,
    "responseMs_all": [
@@ -8857,11 +7693,11 @@
     6528,
     6525
    ],
-   "freeFromMs": 194,
+   "freeFromMs": 1016,
    "freeFromMs_all": [
-    194,
-    179,
-    203
+    1016,
+    1011,
+    1017
    ],
    "longTaskTotalMs": 75,
    "longTaskTotalMs_all": [
@@ -8869,7 +7705,6 @@
     75,
     80
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": null,
@@ -8883,7 +7718,6 @@
    "layerFailed": 0,
    "layerExamples": [],
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.378,
    "messages": [],
    "pageErrors": []
   },
@@ -8908,41 +7742,23 @@
     28,
     24
    ],
-   "paintedMs": 223,
-   "paintedMs_all": [
-    222,
-    231,
-    223
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 472,
-   "completeMs_all": [
-    472,
-    447,
-    473
+   "inputOkMs": 1015,
+   "inputOkMs_all": [
+    1015,
+    1015,
+    1013
    ],
-   "usableMs": 223,
-   "usableMs_all": [
-    222,
-    231,
-    223
-   ],
-   "quietAfterPaintMs": 456,
-   "quietAfterPaintMs_all": [
-    456,
-    443,
-    466
-   ],
-   "tbtMs": 0,
+   "tbtMs": 40,
    "tbtMs_all": [
-    0,
-    0,
-    0
+    40,
+    32,
+    46
    ],
    "responseMs": 47,
    "responseMs_all": [
@@ -8980,11 +7796,11 @@
     6526,
     6525
    ],
-   "freeFromMs": 223,
+   "freeFromMs": 1015,
    "freeFromMs_all": [
-    222,
-    231,
-    223
+    1015,
+    1015,
+    1013
    ],
    "longTaskTotalMs": 140,
    "longTaskTotalMs_all": [
@@ -8992,7 +7808,6 @@
     132,
     146
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": null,
@@ -9006,7 +7821,6 @@
    "layerFailed": 0,
    "layerExamples": [],
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.414,
    "messages": [],
    "pageErrors": []
   },
@@ -9031,41 +7845,23 @@
     28,
     28
    ],
-   "paintedMs": 237,
-   "paintedMs_all": [
-    237,
-    246,
-    229
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 296,
-   "completeMs_all": [
-    287,
-    312,
-    296
+   "inputOkMs": 1017,
+   "inputOkMs_all": [
+    1014,
+    1017,
+    1018
    ],
-   "usableMs": 237,
-   "usableMs_all": [
-    237,
-    246,
-    229
-   ],
-   "quietAfterPaintMs": 358,
-   "quietAfterPaintMs_all": [
-    347,
-    358,
-    360
-   ],
-   "tbtMs": 0,
+   "tbtMs": 23,
    "tbtMs_all": [
-    0,
-    0,
-    0
+    23,
+    13,
+    26
    ],
    "responseMs": 37,
    "responseMs_all": [
@@ -9103,11 +7899,11 @@
     6520,
     6520
    ],
-   "freeFromMs": 237,
+   "freeFromMs": 1017,
    "freeFromMs_all": [
-    237,
-    246,
-    229
+    1014,
+    1017,
+    1018
    ],
    "longTaskTotalMs": 73,
    "longTaskTotalMs_all": [
@@ -9115,7 +7911,6 @@
     63,
     76
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 115,
@@ -9132,7 +7927,6 @@
     "tide-layer.js"
    ],
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.046,
    "messages": [],
    "pageErrors": []
   },
@@ -9157,41 +7951,23 @@
     40,
     32
    ],
-   "paintedMs": 232,
-   "paintedMs_all": [
-    239,
-    228,
-    232
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 294,
-   "completeMs_all": [
-    289,
-    294,
-    315
+   "inputOkMs": 1015,
+   "inputOkMs_all": [
+    1015,
+    1016,
+    1015
    ],
-   "usableMs": 232,
-   "usableMs_all": [
-    239,
-    228,
-    232
-   ],
-   "quietAfterPaintMs": 357,
-   "quietAfterPaintMs_all": [
-    354,
-    357,
-    374
-   ],
-   "tbtMs": 0,
+   "tbtMs": 25,
    "tbtMs_all": [
-    0,
-    0,
-    0
+    28,
+    24,
+    25
    ],
    "responseMs": 41,
    "responseMs_all": [
@@ -9229,11 +8005,11 @@
     6525,
     6527
    ],
-   "freeFromMs": 232,
+   "freeFromMs": 1015,
    "freeFromMs_all": [
-    239,
-    228,
-    232
+    1015,
+    1016,
+    1015
    ],
    "longTaskTotalMs": 75,
    "longTaskTotalMs_all": [
@@ -9241,7 +8017,6 @@
     74,
     75
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 252,
@@ -9257,7 +8032,6 @@
     "morro-bay-seafloor-deep.pmtiles"
    ],
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.007,
    "messages": [],
    "pageErrors": []
   },
@@ -9282,41 +8056,23 @@
     28,
     32
    ],
-   "paintedMs": 228,
-   "paintedMs_all": [
-    243,
-    228,
-    222
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 260,
-   "completeMs_all": [
-    260,
-    262,
-    255
+   "inputOkMs": 1018,
+   "inputOkMs_all": [
+    1031,
+    1018,
+    1015
    ],
-   "usableMs": 228,
-   "usableMs_all": [
-    243,
-    228,
-    222
-   ],
-   "quietAfterPaintMs": 321,
-   "quietAfterPaintMs_all": [
-    336,
-    321,
-    315
-   ],
-   "tbtMs": 0,
+   "tbtMs": 24,
    "tbtMs_all": [
-    0,
-    0,
-    0
+    25,
+    24,
+    24
    ],
    "responseMs": 22,
    "responseMs_all": [
@@ -9354,11 +8110,11 @@
     6523,
     6525
    ],
-   "freeFromMs": 228,
+   "freeFromMs": 1018,
    "freeFromMs_all": [
-    243,
-    228,
-    222
+    1031,
+    1018,
+    1015
    ],
    "longTaskTotalMs": 74,
    "longTaskTotalMs_all": [
@@ -9366,7 +8122,6 @@
     74,
     74
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 201,
@@ -9382,7 +8137,6 @@
     "morro-bay-seafloor-deep.pmtiles"
    ],
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -9407,41 +8161,23 @@
     856,
     852
    ],
-   "paintedMs": 8945,
-   "paintedMs_all": [
-    8958,
-    8937,
-    8945
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 14711,
-   "completeMs_all": [
-    14741,
-    14704,
-    14711
+   "inputOkMs": 1862,
+   "inputOkMs_all": [
+    1868,
+    1862,
+    1853
    ],
-   "usableMs": 8945,
-   "usableMs_all": [
-    8958,
-    8937,
-    8945
-   ],
-   "quietAfterPaintMs": 8945,
-   "quietAfterPaintMs_all": [
-    8958,
-    8937,
-    8945
-   ],
-   "tbtMs": 47,
+   "tbtMs": 232,
    "tbtMs_all": [
-    49,
-    40,
-    47
+    232,
+    229,
+    235
    ],
    "responseMs": 115,
    "responseMs_all": [
@@ -9491,10 +8227,8 @@
     379,
     435
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   },
@@ -9519,41 +8253,23 @@
     860,
     856
    ],
-   "paintedMs": 8952,
-   "paintedMs_all": [
-    8929,
-    8965,
-    8952
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 14485,
-   "completeMs_all": [
-    14512,
-    14482,
-    14485
+   "inputOkMs": 1861,
+   "inputOkMs_all": [
+    1851,
+    1872,
+    1861
    ],
-   "usableMs": 8952,
-   "usableMs_all": [
-    8929,
-    8965,
-    8952
-   ],
-   "quietAfterPaintMs": 8952,
-   "quietAfterPaintMs_all": [
-    8929,
-    8965,
-    8952
-   ],
-   "tbtMs": 54,
+   "tbtMs": 263,
    "tbtMs_all": [
-    55,
-    54,
-    53
+    263,
+    250,
+    273
    ],
    "responseMs": 114,
    "responseMs_all": [
@@ -9603,7 +8319,6 @@
     550,
     573
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": null,
@@ -9617,7 +8332,6 @@
    "layerFailed": 0,
    "layerExamples": [],
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.363,
    "messages": [],
    "pageErrors": []
   },
@@ -9642,41 +8356,23 @@
     856,
     860
    ],
-   "paintedMs": 8965,
-   "paintedMs_all": [
-    8965,
-    8981,
-    8954
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 16281,
-   "completeMs_all": [
-    16281,
-    16281,
-    16304
+   "inputOkMs": 1861,
+   "inputOkMs_all": [
+    1858,
+    1872,
+    1861
    ],
-   "usableMs": 8965,
-   "usableMs_all": [
-    8965,
-    8981,
-    8954
-   ],
-   "quietAfterPaintMs": 8965,
-   "quietAfterPaintMs_all": [
-    8965,
-    8981,
-    8954
-   ],
-   "tbtMs": 51,
+   "tbtMs": 269,
    "tbtMs_all": [
-    49,
-    67,
-    51
+    258,
+    273,
+    269
    ],
    "responseMs": 115,
    "responseMs_all": [
@@ -9726,7 +8422,6 @@
     624,
     800
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": null,
@@ -9740,7 +8435,6 @@
    "layerFailed": 0,
    "layerExamples": [],
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.388,
    "messages": [],
    "pageErrors": []
   },
@@ -9765,41 +8459,23 @@
     848,
     848
    ],
-   "paintedMs": 8376,
-   "paintedMs_all": [
-    8352,
-    8424,
-    8376
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 15302,
-   "completeMs_all": [
-    15302,
-    15291,
-    15309
+   "inputOkMs": 1860,
+   "inputOkMs_all": [
+    1860,
+    1864,
+    1853
    ],
-   "usableMs": 8376,
-   "usableMs_all": [
-    8352,
-    8424,
-    8376
-   ],
-   "quietAfterPaintMs": 8376,
-   "quietAfterPaintMs_all": [
-    8352,
-    8424,
-    8376
-   ],
-   "tbtMs": 52,
+   "tbtMs": 257,
    "tbtMs_all": [
-    62,
-    52,
-    52
+    264,
+    246,
+    257
    ],
    "responseMs": 114,
    "responseMs_all": [
@@ -9849,7 +8525,6 @@
     446,
     457
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 8308,
@@ -9866,7 +8541,6 @@
     "tide-layer.js"
    ],
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.124,
    "messages": [],
    "pageErrors": []
   },
@@ -9891,41 +8565,23 @@
     848,
     864
    ],
-   "paintedMs": 8990,
-   "paintedMs_all": [
-    9002,
-    8980,
-    8990
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 14796,
-   "completeMs_all": [
-    14818,
-    14796,
-    14790
+   "inputOkMs": 1858,
+   "inputOkMs_all": [
+    1858,
+    1852,
+    1863
    ],
-   "usableMs": 8990,
-   "usableMs_all": [
-    9002,
-    8980,
-    8990
-   ],
-   "quietAfterPaintMs": 8990,
-   "quietAfterPaintMs_all": [
-    9002,
-    8980,
-    8990
-   ],
-   "tbtMs": 55,
+   "tbtMs": 261,
    "tbtMs_all": [
-    60,
-    55,
-    52
+    272,
+    261,
+    254
    ],
    "responseMs": 115,
    "responseMs_all": [
@@ -9975,7 +8631,6 @@
     561,
     454
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 15378,
@@ -9991,7 +8646,6 @@
     "morro-bay-seafloor-deep.pmtiles"
    ],
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": 0.0,
    "messages": [],
    "pageErrors": []
   },
@@ -10016,41 +8670,23 @@
     848,
     868
    ],
-   "paintedMs": 8225,
-   "paintedMs_all": [
-    8227,
-    8225,
-    8211
-   ],
    "briefShownMs": null,
    "briefShownMs_all": [
     null,
     null,
     null
    ],
-   "completeMs": 11527,
-   "completeMs_all": [
-    11527,
-    11525,
-    11544
+   "inputOkMs": 1866,
+   "inputOkMs_all": [
+    1855,
+    1866,
+    1868
    ],
-   "usableMs": 8225,
-   "usableMs_all": [
-    8227,
-    8225,
-    8211
-   ],
-   "quietAfterPaintMs": 8225,
-   "quietAfterPaintMs_all": [
-    8227,
-    8225,
-    8211
-   ],
-   "tbtMs": 51,
+   "tbtMs": 258,
    "tbtMs_all": [
-    51,
-    51,
-    53
+    258,
+    254,
+    279
    ],
    "responseMs": 116,
    "responseMs_all": [
@@ -10100,7 +8736,6 @@
     404,
     429
    ],
-   "animated": 0,
    "mapCovered": 0,
    "interactionFailed": 0,
    "layerDoneMs": 11916,
@@ -10116,7 +8751,6 @@
     "morro-bay-seafloor-deep.pmtiles"
    ],
    "layerReference": "layer-base-medium",
-   "layerVisibleDiff": null,
    "messages": [],
    "pageErrors": []
   }
