@@ -235,8 +235,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // Reports catch sheet never mounts (FirstAnswerLine renders only in the desktop App shell); check_contrast.mjs changes only the appCss
   // surface hash and its comment, with contrast(), pairs, thresholds and line citations untouched. Both rebound from the final bytes.
   // MAPLIVE-1: app.css appends only a scoped .app-preview-head / .app-legend-preview / .app-preview-* block for the owner-only previews; the Reports catch sheet never mounts it. Rebound from the final bytes.
+  // SC-PERF-INSTANT-1: app.css appends only a scoped .app-saved 'Last updated' line rule; the Reports catch sheet never mounts it. Rebound from the final bytes.
   // SC-PERF-JUMP-1: app.css appends only layout rules (masthead, target menu width, desktop legend minimum height); no paint; the Reports catch sheet mounts none of them. Rebound from the final bytes.
-  "web/app/app.css": "d3271afa55ce5c04b9a075ba0f81a14fa545950662ef90e077aa97466c8c1523",
+  "web/app/app.css": "da82bf3d54607fbd67375a64b7e369ecec06b0ff8c8ed5707f3616ded28fdcf3",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -300,7 +301,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1352-07: the evidence layers' status lines and the fronts basis show in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash, line citations and a comment. Rebind only this source.
   // SCFEAT-FRESH-1: the Legend adds an "Updates: cadence" line per drawn layer (existing app-legend-note text role, copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. BODY09 mounts Reports, not the Legend. Rebind only this source.
   // Rebound from the merged bytes (SCFEAT-FRESH-1 Legend.tsx rebind + SC-PERF-JUMP-1 appCss rebind).
-  "scripts/check_contrast.mjs": "0ebaeb575dbb7582e7ffccdd0de169482f49140bfe6310646188173b4fc8784a",
+  "scripts/check_contrast.mjs": "2b2401b5c793fd38248a6af2747ca5f04f3e565da949b5b30e8033e064264535",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
