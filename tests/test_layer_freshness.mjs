@@ -18,6 +18,7 @@ async function load() {
   await build({stdin: {resolveDir: root, loader: 'ts', contents: `
     export * from './web/map/freshness.ts';
     export {forecastTime} from './web/map/frames.ts';
+    export {stationPins, STATION_BASIS, STATION_OBSERVATION_STALE_HOURS, STATION_PREDICTION_STALE_HOURS} from './web/map/station-model.ts';
     export {Legend} from './web/app/Legend.tsx';
     export * as state from './web/state.ts';
     export {render} from 'preact-render-to-string';
@@ -51,7 +52,8 @@ test('age limits match feed-health.json and the layer inventory', async () => {
     const inv = await json('catalog/layer-inventory.json');
     const byId = Object.fromEntries(inv.layers.map(l => [l.id, l]));
     assert.equal(m.LAYER_FRESHNESS['sst-fronts'].limitHours, health.feeds['sst-fronts'].max_age_hours);
-    assert.equal(m.LAYER_FRESHNESS['stations'].limitHours, health.feeds.conditions.max_age_hours);
+    // Stations is not gated by the conditions-feed watchdog limit: pins keep stale readings (see the station test below).
+    assert.equal(m.LAYER_FRESHNESS['stations'].limitHours, null);
     for (const [id, f] of Object.entries(m.LAYER_FRESHNESS)) {
       for (const inventoryId of f.inventory) {
         const layer = byId[inventoryId];
@@ -102,5 +104,42 @@ test('currents do not publish one age limit for both sources', async () => {
   try {
     assert.equal(m.cadenceLine('currents', 'en'), 'Updates: hourly · radar observation at most 6 h old; forecast run at most 36 h old');
     assert.match(m.cadenceLine('currents', 'es'), /6 h.*36 h/);
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});
+
+test('stations state the stale thresholds the pins apply, not the conditions-feed watchdog limit', async () => {
+  const {m, dir} = await load();
+  try {
+    const stations = await json('catalog/station-locations.json');
+    const g = m.LAYER_FRESHNESS.stations.staleGate;
+    assert.deepEqual(g, {observationHours: 3, predictionHours: 36});
+    assert.equal(g.observationHours, m.STATION_OBSERVATION_STALE_HOURS);
+    assert.equal(g.predictionHours, m.STATION_PREDICTION_STALE_HOURS);
+    assert.equal(m.cadenceLine('stations', 'en'), 'Updates: every live update · observations labelled stale after 3 h, tide predictions after 36 h; last-good values stay shown with their original times');
+    assert.ok(!/age limit/.test(m.cadenceLine('stations', 'en')), 'no universal withholding limit is claimed');
+    assert.match(m.cadenceLine('stations', 'es'), /^Actualización: .*3 h.*36 h/);
+    assert.ok(m.STATION_BASIS.includes(`observations older than ${g.observationHours} hours`) && m.STATION_BASIS.includes(`predictions retrieved over ${g.predictionHours} hours ago`), 'the station basis states the same numbers');
+    // Behaviour at the published numbers (web/map/station-model.ts), whatever the conditions feed's own limit is.
+    const H = 3600e3, now = new Date('2026-11-07T12:00:00Z');
+    const ago = h => new Date(+now - h * H).toISOString();
+    const region = {id: 'fixture', stations: {tide: '9412553', offshore_buoy: '46054'}};
+    const buoy = h => ({id: 'buoy', kind: 'observation', name: 'Buoy', url: 'https://example.test', checked_at: ago(0), status: 'ok', station: '46054',
+      data: {station: '46054', units: {WTMP: 'degC'}, observations: [{time: ago(h), WTMP: 10}]}});
+    const tide = h => ({id: 'tides', kind: 'prediction', name: 'Tide', url: 'https://example.test', checked_at: ago(h), status: 'ok', station: '9412553',
+      data: {station: '9412553', units: 'ft', datum: 'MLLW', note: 'n', coverage_start: ago(5), coverage_end: ago(-5),
+        predictions: [{time: ago(5), height_ft: -0.4, type: 'L'}, {time: ago(-0.2), height_ft: 4, type: 'H'}, {time: ago(-5), height_ft: 2, type: 'L'}]}});
+    const pin = (sources, key) => m.stationPins({region, catalog: stations, feed: {region_id: 'fixture', sources}, now, at: now, zone: 'America/Los_Angeles'}).find(p => p.key === key);
+    const obsAt = h => pin([buoy(h), tide(1)], 'ndbc:46054'), tideAt = h => pin([buoy(1), tide(h)], 'coops:9412553');
+    assert.equal(obsAt(g.observationHours).stale, false, 'an observation exactly at the limit is fresh');
+    const late = obsAt(g.observationHours + 1);
+    assert.equal(late.stale, true, 'an older observation is labelled stale');
+    assert.match(late.mark.reading, /Water 50\.0 °F · .* · stale/, 'the stale value is retained, not withheld');
+    assert.ok(late.mark.reading.includes(ago(g.observationHours + 1)), 'the original observation time is retained');
+    assert.equal(tideAt(g.predictionHours).stale, false, 'a prediction retrieved exactly at the limit is fresh');
+    assert.equal(tideAt(g.observationHours + 1).stale, false, 'the 3 h observation limit does not apply to predictions');
+    const old = tideAt(g.predictionHours + 1);
+    assert.equal(old.stale, true, 'an older prediction retrieval is labelled stale');
+    assert.match(old.mark.reading, /Tide .*ft MLLW/, 'the stale prediction value is retained');
+    assert.ok(old.mark.reading.includes(ago(g.predictionHours + 1)), 'the original retrieval time is retained');
   } finally { await rm(dir, {recursive: true, force: true}); }
 });

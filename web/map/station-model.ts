@@ -24,6 +24,9 @@ export const activeTideChoice = (regionId: string, tideChoice: TideChoice | null
   tideChoice && tideChoice.regionId === regionId && tideChoice.chosen && tideChoice.chosen !== tideChoice.defaultStation ? tideChoice.chosen : null;
 export const STATION_BASIS = 'NOAA NDBC buoy observations and CO-OPS tide predictions at station point locations (no grid), including CDIP/Scripps buoys served by NDBC. Locations remain visible; observations older than 3 hours and predictions retrieved over 36 hours ago are labelled stale, with last-good values and original times retained. Missing or invalid clocks are unavailable. CDIP MOP model sites use the bound report only: samples within 90 minutes of the selected hour, withheld after 48 hours from issue or 3 hours from retrieval. Model sites are not observing buoys. Choosing a different tide station in the Brief labels the region-default CO-OPS pin and keeps every pin on its own values; a chosen station not drawn here is named in the layer note, and the chosen reading is never shown against another pin.';
 const HOUR = 3_600_000;
+// The stale thresholds the pins apply. web/map/freshness.ts publishes these same numbers in the legend.
+export const STATION_OBSERVATION_STALE_HOURS = 3;
+export const STATION_PREDICTION_STALE_HOURS = 36;
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 export const stationClock = (v: unknown): number => typeof v === 'string' && /(?:Z|[+-]\d\d:\d\d)$/.test(v) ? Date.parse(v) : NaN;
 export function readingState(at: unknown, now: number, limit: number, retained = false): 'fresh' | 'stale' | 'unavailable' {
@@ -79,11 +82,11 @@ function observations(id: string, sources: RegionalSource[], report: Report | nu
     }
     for (const o of report?.observations ?? []) if (o.stationId === id && finite(o[v.field]))
       samples.push({at: o.observedAt, value: o[v.field]!, retained: report!.sources.some(s => s.kind === 'observation' && s.url === o.url && s.outcome !== 'ok')});
-    const sample = samples.filter(s => readingState(s.at, now, 3 * HOUR) !== 'unavailable')
+    const sample = samples.filter(s => readingState(s.at, now, STATION_OBSERVATION_STALE_HOURS * HOUR) !== 'unavailable')
       .sort((a, b) => stationClock(b.at) - stationClock(a.at) || Number(a.retained) - Number(b.retained))[0];
     const label = cp(`map.station.label.${v.lid}`);
     if (!sample) { copy.push([cp('map.station.obs.unavailable', {label})]); return `${v.label}: unavailable`; }
-    const st = readingState(sample.at, now, 3 * HOUR, sample.retained);
+    const st = readingState(sample.at, now, STATION_OBSERVATION_STALE_HOURS * HOUR, sample.retained);
     stale ||= st === 'stale';
     copy.push([cp('map.station.obs.reading', {label, value: esDecimal(sample.value), unit: v.unit, time: esStamp(sample.at, zone), state: state(st), lastGood: sample.retained ? cp('map.station.lastGood') : ''})]);
     return `${v.label} ${sample.value.toFixed(1)} ${v.unit} · ${sample.at} · ${st}${sample.retained ? ' / last good' : ''}`;
@@ -109,13 +112,13 @@ function predictions(id: string, sources: RegionalSource[], report: Report | nul
         noteCopy: [cp('map.station.tide.oldestClock'), ` ${county.tideStation.note}`]});
     }
   }
-  const product = products.filter(p => readingState(p.fetched, now, 36 * HOUR) !== 'unavailable')
+  const product = products.filter(p => readingState(p.fetched, now, STATION_PREDICTION_STALE_HOURS * HOUR) !== 'unavailable')
     .sort((a, b) => stationClock(b.fetched) - stationClock(a.fetched))[0];
   if (!product) return {text: 'Tide prediction unavailable; no valid retrieval clock or data.', stale: true, copy: [cp('map.station.tide.noClock')]};
   const points = product.points.filter(p => finite(p.value) && finite(stationClock(p.at))).sort((a, b) => stationClock(a.at) - stationClock(b.at));
   const start = stationClock(product.start) || stationClock(points[0]?.at), end = stationClock(product.end) || stationClock(points.at(-1)?.at);
   const coverage = finite(start) && finite(end) ? `coverage ${new Date(start).toISOString()} – ${new Date(end).toISOString()}` : 'coverage unavailable';
-  const st = readingState(product.fetched, now, 36 * HOUR, product.retained);
+  const st = readingState(product.fetched, now, STATION_PREDICTION_STALE_HOURS * HOUR, product.retained);
   const stamp = `retrieved ${product.fetched} · ${st}${product.retained ? ' / last good' : ''} · ${coverage}. ${product.note}`;
   const stampCopy: MarkCopyPart = cp('map.station.tide.stamp', {time: esStamp(product.fetched, zone), state: state(st), lastGood: product.retained ? cp('map.station.lastGood') : '',
     coverage: finite(start) && finite(end) ? cp('map.station.tide.coverage', {start: esStamp(new Date(start).toISOString(), zone), end: esStamp(new Date(end).toISOString(), zone)}) : cp('map.station.tide.coverageNone'),
