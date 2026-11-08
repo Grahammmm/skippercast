@@ -57,12 +57,12 @@ test('hashName inserts the build id before the extension', () => {
   assert.equal(hashName('index.html', 'abc1234567'), 'index.abc1234567.html');
 });
 
-test('copyStatic never publishes the local-only seafloor Deep archive or its .part file', async () => {
+test('copyStatic never publishes the local-only seafloor Deep archive, its .part file or the tide layer data', async () => {
   const src = await mkdtemp(join(tmpdir(), 'sc-static-src-'));
   const out = await mkdtemp(join(tmpdir(), 'sc-static-out-'));
   try {
     await mkdir(join(src, 'tiles'));
-    for (const name of ['morro-bay-seafloor-deep.pmtiles', 'morro-bay-seafloor-deep.part', 'morro-bay-seafloor-deep-mild.pmtiles', 'morro-bay-seafloor-deep-strong.part', 'ok.pmtiles']) await writeFile(join(src, 'tiles', name), 'x');
+    for (const name of ['morro-bay-seafloor-deep.pmtiles', 'morro-bay-seafloor-deep.part', 'morro-bay-seafloor-deep-mild.pmtiles', 'morro-bay-seafloor-deep-strong.part', 'tide-layer-central-coast.json', 'tide-layer-central-coast.part', 'tide-layer-Central_Coast.json', 'tide-layer-Central_Coast.part', 'ok.pmtiles']) await writeFile(join(src, 'tiles', name), 'x');
     await copyStatic(src, out);
     assert.deepEqual(await readdir(join(out, 'tiles')), ['ok.pmtiles']);
   } finally {

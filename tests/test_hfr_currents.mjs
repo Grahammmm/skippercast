@@ -108,3 +108,42 @@ test('missing or invalid currents data keeps its status visible and draws nothin
   assert.match(page, /failed = true;/);
   assert.doesNotMatch(page, /line\.innerHTML/);
 });
+
+// Regression: the page's tide block awaits an import and a fetch; the currents map-load handler must already be
+// registered by then, or a slow tide response lets map load fire first and currents never initialize.
+test('currents initialize on map load even when the tide layer is slow to load (success, failure, and no tide)', async () => {
+  const page = readFileSync(new URL('../research/scripts/map_style/bathy-deep-test.html', import.meta.url), 'utf8');
+  const source = page.match(/<script type="module">([\s\S]*?)<\/script>/)[1]
+    .replace(/^import .*;.*$/gm, '')
+    .replace("await import('./tide-layer.js')", '__tide');
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  async function probe(search, tideFails) {
+    let currentLoads = 0;
+    const handlers = {};
+    const elements = new Map();
+    const el = () => ({style: {}, value: 0, hidden: true, appendChild() {}, replaceChildren() {}, addEventListener() {}});
+    const document = {getElementById(id) { if (!elements.has(id)) elements.set(id, el()); return elements.get(id); }, createElement: el, createTextNode: t => t};
+    class MapStub {
+      constructor() { setTimeout(() => { for (const f of handlers.load || []) f(); }, 0); }
+      on(name, fn) { (handlers[name] ||= []).push(fn); }
+      getZoom() { return 10; }
+    }
+    const window = {pmtiles: {Protocol: class { tile() {} }}};
+    const fetch = async url => {
+      if (url.includes('chlorophyll')) return {ok: false};
+      await new Promise(resolve => setTimeout(resolve, 30));
+      if (tideFails) throw new Error('tide down');
+      return {json: async () => ({stations: [{extremes: [{t: '2026-11-07T20:00Z'}]}], source: {name: 'fixture'}, fetched_at: '2026-11-07T00:00Z'})};
+    };
+    const __tide = {addTideLayer: () => ({setTime() {}, setVisible() {}}), fmtPT() { return ''; }, fmtPTDay() { return ''; }};
+    await new AsyncFunction('maplibregl', 'window', 'document', 'location', 'fetch', '__tide', 'addCurrents', 'freshnessText', 'loadCurrentsDoc', 'statusHidden', source)(
+      {Map: MapStub, setWorkerUrl() {}, addProtocol() {}}, window, document,
+      {search, href: 'http://fixture.test/research/scripts/map_style/bathy-deep-test.html'}, fetch, __tide,
+      () => ({setVisible() {}}), () => 'fixture time', async () => { currentLoads++; return {sample_at: '2026-11-07T00:00Z'}; }, () => false);
+    await new Promise(resolve => setTimeout(resolve, 60));
+    return {currentLoads, ready: window.__currentsReady === true};
+  }
+  assert.deepEqual(await probe('', false), {currentLoads: 1, ready: true});
+  assert.deepEqual(await probe('?tide=1', false), {currentLoads: 1, ready: true});
+  assert.deepEqual(await probe('?tide=1', true), {currentLoads: 1, ready: true});
+});

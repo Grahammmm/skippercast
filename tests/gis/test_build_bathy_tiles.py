@@ -335,9 +335,10 @@ class EnhancementTests(unittest.TestCase):
     def test_outputs_are_named_so_the_public_build_guard_catches_them(self):
         names = {v: bt.output_for(v).name for v in bt.ENHANCE}
         self.assertEqual(names['base'], 'morro-bay-seafloor-deep.pmtiles')
-        self.assertEqual(names['strong'], 'morro-bay-seafloor-deep-strong.pmtiles')
-        self.assertEqual(bt.output_for('mild').parent, bt.DEFAULT_OUTPUT.parent)
-        self.assertEqual(bt.output_for('mild').parent.parts[-3:], ('var', 'seafloor', 'tiles'))
+        self.assertEqual(names['strong'], 'morro-bay-seafloor-deep.pmtiles')
+        self.assertEqual(bt.output_for('strong').parent.name, 'strong')
+        self.assertEqual(bt.output_for('mild').parent, bt.DEFAULT_OUTPUT.parent / 'mild')
+        self.assertEqual(bt.output_for('mild').parent.parts[-4:], ('var', 'seafloor', 'tiles', 'mild'))
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / 'elevation.tif'
             write_survey(source)
@@ -357,6 +358,178 @@ class EnhancementTests(unittest.TestCase):
             self.assertTrue(by_id)
             for png in by_id.values():
                 self.assertEqual(decode_png(png).shape, (256, 256, 4))
+
+
+class NativeTierTests(unittest.TestCase):
+    def test_feather_is_monotonic_without_a_false_ridge_and_keeps_holes(self):
+        coarse = np.full((120, 160), -30, dtype='float32')
+        native = np.full(coarse.shape, NODATA, dtype='float32')
+        native[10:110, 40:120] = -25
+        blended, support = bt.feather_tier(coarse, native, 2)
+        self.assertTrue(support[60, 80])
+        self.assertEqual(blended[60, 40], -30)
+        self.assertEqual(blended[60, 80], -25)
+        self.assertTrue((np.diff(blended[60, :80]) >= 0).all())
+        self.assertGreaterEqual(float(blended.min()), -30)
+        self.assertLessEqual(float(blended.max()), -25)
+        coarse[:, :50] = NODATA
+        blended, _ = bt.feather_tier(coarse, native, 2)
+        self.assertEqual(blended[60, 45], -25)  # native-only surveyed support retained
+        self.assertEqual(blended[60, 5], NODATA)  # no manufactured support
+
+    def test_native_is_used_only_for_nominal_zero_to_300ft(self):
+        coarse = np.full((80, 120), -100, dtype='float32')
+        native = np.full_like(coarse, -50)
+        native[:, :20] = -100
+        native[:, -20:] = 1
+        blended, support = bt.feather_tier(coarse, native, 2)
+        self.assertFalse(support[:, :20].any())
+        self.assertFalse(support[:, -20:].any())
+        self.assertTrue((blended[:, :20] == -100).all())
+        self.assertTrue((blended[:, -20:] == -100).all())
+        self.assertEqual(blended[40, 60], -50)
+
+    def test_native_manifest_checks_spacing_and_orders_five_before_two(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sources = []
+            for res in (2, 5, 10):
+                path = root / f'{res}.tif'
+                with rasterio.open(path, 'w', driver='GTiff', width=40, height=40, count=1,
+                                   dtype='float32', crs='EPSG:3310', nodata=NODATA,
+                                   transform=from_origin(-122000, -288000, res, res)) as ds:
+                    ds.write(np.full((1, 40, 40), -25, 'float32'))
+                sources.append({'id': str(res), 'path': str(path), 'resolution_m': res,
+                                'source_file': f'{res}.tif', 'archive_sha256': 'a' * 64})
+            manifest = root / 'native.json'
+            manifest.write_text(json.dumps(sources[:2]))
+            loaded = bt.load_native_manifest(manifest)
+            self.assertEqual([s['resolution_m'] for s in loaded], [5, 2])
+            manifest.write_text(json.dumps(sources))
+            with self.assertRaises(ValueError):
+                bt.load_native_manifest(manifest)
+
+    def test_finer_native_sector_build_keeps_survey_provenance_at_z15(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root / 'base.tif'
+            write_survey(base, size=120, west_nodata=0)
+            fine = root / 'fine.tif'
+            with rasterio.open(fine, 'w', driver='GTiff', width=300, height=300, count=1,
+                               dtype='float32', crs='EPSG:3310', nodata=NODATA,
+                               transform=from_origin(-121800, -288200, 1, 1)) as ds:
+                ds.write(np.full((300, 300), -25, 'float32'), 1)
+            provenance = {'survey_id': 'SYNTHETIC', 'survey_dates': ['2008-11-18', '2008-11-23'],
+                          'vertical_datum': 'nominal MLLW; realization unknown',
+                          'source_url': 'https://example.test/synthetic.bag',
+                          'depth_semantics': 'positive-up elevation metres',
+                          'release_date': None}
+            entry = {'id': 'synthetic-1m', 'path': str(fine), 'resolution_m': 1,
+                     'source_file': 'synthetic.bag', 'archive_sha256': 'b' * 64, **provenance}
+            manifest = root / 'native.json'
+            manifest.write_text(json.dumps([entry]))
+            output = root / 'deep.pmtiles'
+            self.assertEqual(bt.main(['--source', str(base), '--output', str(output),
+                                      '--native-manifest', str(manifest), '--label', 'Del Norte coast']), 0)
+            header, metadata, tiles, _ = read_archive(output)
+            self.assertEqual(header['maxzoom'], 15)
+            self.assertTrue(any(tid >= sum(4 ** i for i in range(15)) for tid in tiles))
+            self.assertIn('SYNTHETIC', metadata['attribution'])
+            self.assertEqual(metadata['relief_variant'], 'medium')
+            self.assertIn('Del Norte coast', metadata['name'])
+            self.assertNotIn('Morro', metadata['description'])
+            self.assertIn('NOT FOR NAVIGATION', metadata['description'])
+            for key, value in provenance.items():
+                self.assertEqual(metadata['native_sources'][0][key], value)
+            self.assertNotIn(str(root), json.dumps(metadata))
+
+    def test_native_build_defaults_to_medium_and_writes_z15_with_provenance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root / 'base.tif'
+            write_survey(base, size=120, west_nodata=0)
+            fine = root / 'fine.tif'
+            yy, xx = np.mgrid[0:300, 0:300]
+            with rasterio.open(fine, 'w', driver='GTiff', width=300, height=300, count=1,
+                               dtype='float32', crs='EPSG:3310', nodata=NODATA,
+                               transform=from_origin(-121800, -288200, 2, 2)) as ds:
+                ds.write((-(25 + 2 * np.sin(xx / 6) + 0.01 * yy)).astype('float32'), 1)
+            manifest = root / 'native.json'
+            manifest.write_text(json.dumps([{'id': 'synthetic-2m', 'path': str(fine), 'resolution_m': 2,
+                                             'source_file': 'synthetic.tif', 'archive_sha256': 'b' * 64}]))
+            output = root / 'deep.pmtiles'
+            bt.build(base, output, 13, 15, log=lambda *_: None,
+                     native_sources=bt.load_native_manifest(manifest))
+            header, metadata, tiles, _ = read_archive(output)
+            self.assertEqual(metadata['relief_variant'], 'medium')
+            self.assertEqual(header['maxzoom'], 15)
+            self.assertTrue(any(tid >= sum(4 ** i for i in range(15)) for tid in tiles))
+            self.assertEqual(metadata['native_sources'][0]['archive_sha256'], 'b' * 64)
+            self.assertNotIn(str(root), json.dumps(metadata))
+            self.assertEqual(metadata['shallow_limit_m'], 91.44)
+
+    def _mixed_native(self, root, west_valid):
+        """2 m native grid: optional shallow -60 m block on the west; elsewhere alternating land (+40)
+        and deep (-140) columns whose plain average (-50) would look like valid shallow water."""
+        cols = np.arange(300)
+        grid = np.where(cols % 2 == 0, 40.0, -140.0)[None, :].repeat(300, axis=0)
+        if west_valid:
+            grid[:, :100] = -60
+        path = root / 'mixed.tif'
+        with rasterio.open(path, 'w', driver='GTiff', width=300, height=300, count=1, dtype='float32',
+                           crs='EPSG:3310', nodata=NODATA,
+                           transform=from_origin(-121800, -288200, 2, 2)) as ds:
+            ds.write(grid.astype('float32'), 1)
+        manifest = root / 'native.json'
+        manifest.write_text(json.dumps([{'id': 'mixed-2m', 'path': str(path), 'resolution_m': 2,
+                                         'source_file': 'mixed.tif', 'archive_sha256': 'c' * 64}]))
+        return bt.load_native_manifest(manifest)
+
+    def test_native_depth_gate_precedes_averaging_in_warp_native(self):
+        with tempfile.TemporaryDirectory() as directory:
+            sources = self._mixed_native(Path(directory), west_valid=True)
+            xs, ys = bt.tile_range(sources[0]['bounds'], 15)
+            seen = set()
+            for x in xs:
+                for y in ys:
+                    warped, _ = bt.warp_native(sources[0], 15, x, y, 8)
+                    seen.update(np.unique(warped[np.isfinite(warped)]).tolist())
+            # Land and deep cells never average into a shallow-looking pixel (-50 is the unmasked mean).
+            self.assertTrue(seen)
+            for value in seen:
+                self.assertTrue(value == NODATA or abs(value + 60) < 1e-3, value)
+            self.assertIn(-60.0, {round(v, 3) for v in seen})
+
+    def test_mixed_land_deep_native_gives_no_z15_support_or_relief_through_tiered_windows(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            coarse_transform = from_origin(-121800, -288200, 10, 10)
+            coarse = np.full((60, 60), -100, dtype='float32')
+            for west_valid in (False, True):
+                sources = self._mixed_native(root, west_valid)
+                windows = bt.tiered_windows(coarse, coarse_transform, 'EPSG:3310',
+                                            sources[0]['bounds'], 15, sources, bt.PAD)
+                if not west_valid:
+                    self.assertEqual(windows, {})  # nothing shallow-valid: no z15 tile at all
+                    continue
+                self.assertTrue(windows)  # the genuinely shallow-valid block still qualifies z15
+                for window, invalid, _ in windows.values():
+                    cells = window[~invalid]
+                    # coarse -100 blended toward the true -60 native value only: never the -50 land/deep mean
+                    self.assertTrue(np.all((cells >= -100 - 1e-3) & (cells <= -60 + 1e-3)))
+
+    def test_same_surface_has_no_tier_edge_ridge_or_tile_join(self):
+        size = 320
+        yy, xx = np.mgrid[:size, :size + 256]
+        surface = (-30 - .003 * xx - .005 * yy).astype('float32')
+        native = surface.copy()
+        native[:, :150] = NODATA
+        native[:, 480:] = NODATA
+        left, _ = bt.feather_tier(surface[:, :size], native[:, :size], 4)
+        right, _ = bt.feather_tier(surface[:, 256:], native[:, 256:], 4)
+        np.testing.assert_allclose(left[:, 256:], right[:, :64], atol=1e-5)
+        np.testing.assert_allclose(left, surface[:, :size], atol=1e-5)
+        self.assertLess(float(np.abs(bt.ridge_signal(left, left == NODATA)[20:-20, 20:-20]).max()), 1e-4)
 
 
 if __name__ == '__main__':
