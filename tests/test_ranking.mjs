@@ -396,8 +396,12 @@ test('run origin: only the port chooser reads the device position, and it hands 
   for (const name of readdirSync(join(ROOT, 'dist'))) if (/\.m?js$/.test(name)) files.push(join(ROOT, 'dist', name));
   const DEVICE_READ = /\bgeolocation\b|getCurrentPosition|watchPosition|\.coords\b/;
   const readers = files.filter(f => DEVICE_READ.test(readFileSync(f, 'utf8'))).map(f => f.slice(ROOT.length)).sort();
-  assert.deepEqual(readers, ['dist/home-port.js', 'web/landing/PortInput.tsx', 'web/ports.ts'],
+  assert.deepEqual(readers, ['dist/home-port.js', 'web/landing/PortInput.tsx', 'web/ports.ts', 'web/position-check.ts'],
     'a new reader of the device position must not feed a run distance; review it and extend this list only if it suggests a listed port');
+  // SC-GPSOFFLINE-1: web/position-check.ts reads the position once, on a tap, to screen it against the protected areas. It is imported only by its own
+  // two screens, so no ranking, brief, planner, reach or port code can take a run distance from it.
+  const importers = files.filter(f => /from\s+['"][^'"]*position-check(?:\.ts)?['"]/.test(readFileSync(f, 'utf8'))).map(f => f.slice(ROOT.length)).sort();
+  assert.deepEqual(importers, ['web/app/PositionCheck.tsx', 'web/app/PositionView.tsx']);
   // Each reader turns the fix straight into the nearest listed port; PortInput only passes geolocation to locatePort.
   for (const f of ['dist/home-port.js', 'web/ports.ts']) {
     const text = readFileSync(join(ROOT, f), 'utf8');
