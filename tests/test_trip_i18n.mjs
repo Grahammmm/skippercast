@@ -57,7 +57,7 @@ async function load(responses) {
         if (args.importer.endsWith('web/trip-ocean-lines.ts') && args.path === './map/currents.ts') return {path: resolve(root, 'tests/fixtures/trip_i18n/currents.mjs')};
         if (args.importer !== trip) return;
         if (args.path === 'preact/hooks') return {path: resolve(fixtures, 'runtime.mjs')};
-        if (['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-forecast-end.ts', './App.tsx'].includes(args.path)) return {path: resolve(fixtures, 'boundary.mjs')};
+        if (['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-forecast-end.ts', './App.tsx', './PositionCheck.tsx'].includes(args.path)) return {path: resolve(fixtures, 'boundary.mjs')};
       });
     }}],
   });
