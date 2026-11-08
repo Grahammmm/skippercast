@@ -33,7 +33,7 @@ def rows(order):
 
 
 def main_table(order, live):
-    out = ['| page | profile | pass | FCP | LCP | ' + ('brief shown | ' if live else '') + 'map usable | TBT | CLS | longest task | JS script time | JS heap | requests | bytes | req. ≤ LCP | PMTiles req / bytes' + (' | export loaded' if live else '') + ' |',
+    out = ['| page | profile | pass | FCP | LCP | ' + ('brief shown | ' if live else '') + 'canvas + quiet thread (proxy) | TBT to proxy | CLS | longest task | JS script time | JS heap | requests | bytes | req. ≤ LCP | PMTiles req / bytes' + (' | export loaded' if live else '') + ' |',
            '|' + '---|' * (16 if live else 14)]
     for g in rows(order):
         cells = [g['page'], g['profile'], g['pass'], ms(g['fcpMs']), ms(g['lcpMs'])]
@@ -55,14 +55,14 @@ def kinds_table(order):
 
 
 def extras_table(order):
-    out = ['| page | profile | pass | network req / bytes | no-store req / bytes | third-party req / bytes | req. ≤ FCP | script ms per s observed | observed window |',
-           '|---|---|---|---|---|---|---|---|---|']
+    out = ['| page | profile | pass | network req / bytes | no-store req / bytes | third-party req / bytes | req. ≤ FCP | observed window (network quiet) |',
+           '|---|---|---|---|---|---|---|---|']
     for g in rows(order):
         e = E.get((g['page'], g['profile'], g['pass']))
         if not e:
             continue
         out.append(f"| {g['page']} | {g['profile']} | {g['pass']} | {int(e['warmNetworkRequests'])} / {b(e['warmNetworkBytes'])} | {int(e['noStoreRequests'])} / {b(e['noStoreBytes'])} | "
-                   f"{int(e['thirdPartyRequests'])} / {b(e['thirdPartyBytes'])} | {e['requestsBeforeFcp']} | {e['scriptMsPerSecond']} | {ms(e['settledMs'])} |")
+                   f"{int(e['thirdPartyRequests'])} / {b(e['thirdPartyBytes'])} | {e['requestsBeforeFcp']} | {ms(e['settledMs'])} |")
     return '\n'.join(out)
 
 
@@ -77,7 +77,7 @@ def heaviest(order):
         out.append('|---|---|---|---|---|')
         for i, h in enumerate(g['heaviest'], 1):
             u = h['url']
-            u = u.split('?')[0] + ('?…' if '?' in u else '') if not u.startswith('data:') else 'data: URL (inline image)'
+            u = u.split('?')[0] + ('?…' if '?' in u else '')
             u = u.replace('https://skippercast.com', '').replace('http://127.0.0.1:18772', '').replace('http://127.0.0.1:18781', '')
             out.append(f"| {i} | {b(h['bytes'])} | {h['kind']} | {h['startMs']} → {h['endMs'] if h['endMs'] is not None else '…'} ms | `{u[:110]}` |")
         out.append('')

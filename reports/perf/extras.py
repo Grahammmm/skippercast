@@ -6,8 +6,10 @@ Usage: python3 reports/perf/extras.py <raw.json> ... > reports/perf/raw/extras.j
   browser cache), and their bytes; on a warm pass this is what cache headers fail to keep local.
 - noStoreBytes: bytes of responses sent with Cache-Control no-store.
 - thirdPartyRequests / thirdPartyBytes: requests to hosts other than skippercast.com and the local test server.
-- scriptMsPerSecond: JS main-thread script time divided by the observed window (settledMs) - a duty cycle,
-  meaningful for the animated layers (wind particles).
+- (round 2) the former scriptMsPerSecond (ScriptDuration / settledMs) is WITHDRAWN: settledMs is when the network went
+  quiet, but CDP's metrics were read after the page's backlog of main-thread work had drained, so the ratio could exceed
+  100% (phone-Wi-Fi brief: ~23 s of script over a 12.2 s "window"). The duty cycle is re-measured in readiness.mjs, which
+  reads ScriptDuration and CDP's own `Timestamp` metric at the same two instants.
 - requestsBeforeFcp: requests started before the first contentful paint.
 """
 import gzip
@@ -39,7 +41,6 @@ for path in sys.argv[1:]:
             'noStoreRequests': len(nostore), 'noStoreBytes': sum(q['bytes'] or 0 for q in nostore),
             'thirdPartyRequests': len(third), 'thirdPartyBytes': sum(q['bytes'] or 0 for q in third),
             'thirdPartyHosts': sorted({urlparse(q['url']).hostname for q in third}),
-            'scriptMsPerSecond': round(r['scriptMs'] / (r['settledMs'] / 1000), 1) if r.get('settledMs') else None,
             'requestsBeforeFcp': r.get('requestsBeforeFcp'), 'settledMs': r.get('settledMs'), 'domNodes': r.get('domNodes'),
         })
 out = []
