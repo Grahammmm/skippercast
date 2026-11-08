@@ -482,4 +482,5 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 }
 /* The desktop legend is bottom-anchored and grows upward as the reef, currents and rules rows land (324 px to about 510 px), moving every row in it;
    it starts at about its settled height, and still shrinks and scrolls on a short map. */
-.app-chrome-left > .app-legend { min-height: min(32rem, 90%); }
+/* Only while no selected-mark card shares the column: with a card open the legend must shrink and scroll beside it, not push below the map's clipped edge. */
+.app-chrome-left:not(:has(> .app-mark)) > .app-legend { min-height: min(32rem, 90%); }

@@ -33,3 +33,24 @@ test('the shell and legend reserve their space, so the map page does not jump wh
   expect(shell, 'layout shift that touches the masthead or the command bar').toBeLessThanOrEqual(SHELL_SHIFT_LIMIT);
   expect(total, 'total layout shift of the page load').toBeLessThanOrEqual(TOTAL_LIMIT[info.project.name as 'phone' | 'laptop']);
 });
+
+test('the legend reserve gives way to a selected-mark card on a short-ish desktop map', async ({page, v2}, info) => {
+  test.skip(info.project.name !== 'laptop', 'the reserve applies to the desktop column only');
+  await page.setViewportSize({width: 1280, height: 800});
+  await v2.open('app', {region: 'morro-bay'});
+  await expect(page.locator('.app-legend-mpa')).toBeVisible();
+  // Stand in for the selected-mark card: same class and place in the column as the real one.
+  await page.locator('.app-chrome-left').evaluate(col => {
+    const card = document.createElement('section');
+    card.className = 'app-mark';
+    card.textContent = 'Selected mark';
+    col.insertBefore(card, col.firstChild);
+  });
+  const box = await page.evaluate(() => {
+    const col = document.querySelector('.app-chrome-left')!.getBoundingClientRect();
+    const legend = document.querySelector('.app-chrome-left > .app-legend')!.getBoundingClientRect();
+    return {column: col.height, legend: legend.height};
+  });
+  // The 90% reserve would make the legend about 335 px of a 372 px column and push it far below the map's clipped edge; beside a card it keeps only its small minimum.
+  expect(box.legend, 'the legend shrinks beside the selected card instead of keeping its loading reserve').toBeLessThan(box.column * 0.4);
+});
