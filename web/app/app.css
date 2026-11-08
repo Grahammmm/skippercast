@@ -471,11 +471,15 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
    The chat entry would otherwise wrap onto two lines (62 px) when the session read opens it, making the masthead 18 px taller; the place name gains its
    coordinates when the region info lands; the target menu gains options and widens, which re-wraps the command bar. */
 .app-masthead [data-advisor-entry] { white-space: nowrap; }
-/* On the desktop the masthead stays one row: a transient item ("Loading region…", the chat entry) would otherwise push it onto a second row for a moment and
-   move the whole page 57 px down and back. The place name keeps the width its coordinates need, and gives way (ellipsis) before the row wraps. */
+/* On a wide desktop the masthead stays one row: a transient item ("Loading region…", the chat entry) would otherwise push it onto a second row for a moment and
+   move the whole page 57 px down and back. The place name keeps the width its coordinates need, and gives way (ellipsis) before the row wraps. Under 1,280 px
+   the row is wider than the window, so it keeps wrapping there (a no-wrap row would scroll the page sideways at 1,024 px). */
 @media (min-width: 1024px) {
   .app-target label select { min-width: 22rem; max-width: 100%; }
-  .app-masthead { flex-wrap: nowrap; min-height: 61px; }
+  .app-masthead { min-height: 61px; }
+}
+@media (min-width: 1280px) {
+  .app-masthead { flex-wrap: nowrap; }
   .app-masthead > .app-location { flex: 0 1 15.75rem; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .app-masthead > * { flex-shrink: 0; }
   .app-masthead > .app-location, .app-masthead > .app-degraded { flex-shrink: 1; }
