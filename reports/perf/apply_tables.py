@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """PERF-BASELINE-1: regenerate the generated tables of the report from raw/summary.json, raw/extras.json and raw/ready-summary.json.
 
-Usage: python3 reports/perf/apply_tables.py <report.md>
+Usage: python3 reports/perf/apply_tables.py <report.md> [--readiness-only]
+(--readiness-only fills only the tables of A.3b, A.5b, A.7b and leaves A.3 to A.7 as they are.)
 Replaces, in place: A.3, A.4, A.5 (first table of each), A.6 (whole body), A.7 (its three tables), and the tables of the
 readiness sections A.3b, A.5b, A.7b when those headings exist (each of their tables, in order).
 """
@@ -46,15 +47,16 @@ def replace_tables(heading, new_tables):
     print(f'{heading}: replaced {len(new_tables)} table(s)')
 
 
-replace_tables('### A.3 ', [gen('make_tables', 'live-main')])
-replace_tables('### A.4 ', [gen('make_tables', 'live-kinds')])
-replace_tables('### A.5 ', [gen('make_tables', 'live-extras')])
-replace_tables('### A.7 ', [gen('make_tables', 'layers-main'), gen('make_tables', 'layers-kinds'), gen('make_tables', 'layers-extras')])
-# A.6: the heaviest-request lists are one body
-start, end = section('### A.6 ')
-body = ['', 'Network requests only: inline `data:` URLs never crossed the link and are not ranked (A.1).', ''] + gen('make_tables', 'heaviest') + ['']
-lines[start + 1:end] = body
-print('### A.6: body replaced')
+if '--readiness-only' not in sys.argv[2:]:
+    replace_tables('### A.3 ', [gen('make_tables', 'live-main')])
+    replace_tables('### A.4 ', [gen('make_tables', 'live-kinds')])
+    replace_tables('### A.5 ', [gen('make_tables', 'live-extras')])
+    replace_tables('### A.7 ', [gen('make_tables', 'layers-main'), gen('make_tables', 'layers-kinds'), gen('make_tables', 'layers-extras')])
+    # A.6: the heaviest-request lists are one body
+    start, end = section('### A.6 ')
+    body = ['', 'Network requests only: inline `data:` URLs never crossed the link and are not ranked (A.1).', ''] + gen('make_tables', 'heaviest') + ['']
+    lines[start + 1:end] = body
+    print('### A.6: body replaced')
 for heading, sections in (('### A.3b ', ['live', 'live-layerdata', 'status-live']), ('### A.5b ', ['duty-live']), ('### A.7b ', ['layers', 'layers-layerdata', 'duty-layers', 'status-layers'])):
     if any(l.startswith(heading) for l in lines):
         replace_tables(heading, [gen('ready_tables', s) for s in sections])
