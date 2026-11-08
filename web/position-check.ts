@@ -34,7 +34,7 @@ export type HeldScreen = {
 };
 
 export type Reading =
-  /** No boundary data on this device (nothing saved and no connection, or the screen could not load). Never "clear". */
+  /** No complete boundary data on this device (nothing saved and no connection, the screen could not load, or a required additional-closure file is missing). Never "clear". */
   | {kind: 'no-boundaries'}
   /** The position lies outside the area the boundary file was asked for: not checked, never "clear". */
   | {kind: 'not-covered'; fix: Fix}

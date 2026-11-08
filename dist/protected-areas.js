@@ -72,7 +72,9 @@ export async function initProtectedAreas(map, onChange, readJSON=fetchJSON) {
     // SC-GPSOFFLINE-1: the boundary data this screen holds right now, current or not (null when it holds none or is not bound to its region), so a live-position
     // check can still use the saved boundaries offline and say how old they are. It only reads; every verdict still comes from geo-screen.js `screenPlace`.
     heldBoundaries:()=>{
-      if(!data||!bound())return null;
+      // A region that requires additional closures (assetURL("closures")) is incomplete until they have loaded: expose nothing rather than an MPA-only set,
+      // so a missing groundfish file is "no boundaries", never an "outside" verdict. Complete-but-old data is still returned, flagged by `current`.
+      if(!data||!bound()||(assetURL("closures")&&!extra))return null;
       const times=[checked,...(extra?[extraChecked]:[])].filter(v=>Number.isFinite(Date.parse(v)));
       return {current:current(),checked_at:times.length?new Date(Math.min(...times.map(v=>Date.parse(v)))).toISOString():null,features:[...data.features,...(extra?.features||[])]};
     },

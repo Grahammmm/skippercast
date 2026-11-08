@@ -12,7 +12,7 @@ import test from 'node:test';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {PLANNING_MARGIN_M, pointGeometry, pointInGeometry, screenPlace} from '../dist/geo-screen.js';
-import {assetURL} from '../dist/region.js';
+import {assetURL, getRegion, setRegion} from '../dist/region.js';
 import {initProtectedAreas} from '../dist/protected-areas.js';
 import {LOW_ACCURACY_M, POSITION_OPTIONS, checkPosition, packState, readPosition, readingFor} from '../web/position-check.ts';
 import {STRINGS} from '../web/i18n.ts';
@@ -52,8 +52,9 @@ function geolocation(answer) {
 }
 const fixAnswer = (p, accuracy = 8) => ({latitude: p.latitude, longitude: p.longitude, accuracy});
 
+const CLOSURES_URL = 'regions/test-region/groundfish-exclusions.geojson';
 /** Every way a page can send something out, recorded; and the page's storage, which must stay untouched. */
-function sandbox({online = true, checkedAt = FRESH} = {}) {
+function sandbox({online = true, checkedAt = FRESH, closures = null} = {}) {
   const saved = {};
   const names = ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'Image', 'document', 'localStorage', 'sessionStorage', 'indexedDB', 'caches', 'navigator'];
   for (const n of names) saved[n] = Object.getOwnPropertyDescriptor(globalThis, n);
@@ -65,6 +66,7 @@ function sandbox({online = true, checkedAt = FRESH} = {}) {
     const url = typeof input === 'string' ? input : input?.url ?? String(input);
     out('fetch', url, init?.method ?? 'GET', init?.body ?? '', init?.headers ?? {});
     if (url === assetURL('protected_areas')) return new Response(JSON.stringify({...mpas, checked_at: checkedAt}), {headers: {'content-type': 'application/json'}});
+    if (closures && url === CLOSURES_URL) return new Response(JSON.stringify({...closures, checked_at: checkedAt}), {headers: {'content-type': 'application/json'}});
     if (online && url.startsWith('https://services2.arcgis.com/')) return new Response(JSON.stringify(mpas), {headers: {'content-type': 'application/json'}});
     throw new TypeError('Failed to fetch');
   });
@@ -179,6 +181,30 @@ test('no boundary data: not checked, never clear; and a position outside the bou
     assert.equal(readingFor(fixOf(OUTSIDE), {heldBoundaries: () => ({current: true, checked_at: FRESH, features: []})}).kind, 'no-boundaries');
     assert.equal((await checkPosition(loadScreen, geolocation(fixAnswer(OFF_MAP)))).reading.kind, 'not-covered');
   } finally { box.restore(); }
+});
+
+test('a region whose additional-closure file is missing offline is incomplete: no boundaries, never an outside verdict', async () => {
+  const original = getRegion(), requires = {...original, assets: {...original.assets, closures: CLOSURES_URL}};
+  const closure = {type: 'Feature', properties: {NAME: 'Test groundfish area', Type: 'GEA'}, geometry: pointGeometry(OUTSIDE.longitude, OUTSIDE.latitude)};
+  const served = {type: 'FeatureCollection', region_id: original.id, features: [{...closure, geometry: {type: 'Polygon', coordinates: [[[OUTSIDE.longitude - 0.001, OUTSIDE.latitude - 0.001], [OUTSIDE.longitude + 0.001, OUTSIDE.latitude - 0.001], [OUTSIDE.longitude + 0.001, OUTSIDE.latitude + 0.001], [OUTSIDE.longitude - 0.001, OUTSIDE.latitude + 0.001], [OUTSIDE.longitude - 0.001, OUTSIDE.latitude - 0.001]]]}}]};
+  setRegion(requires);
+  try {
+    const box = sandbox({online: false});
+    try {
+      const screen = await loadScreen();
+      assert.equal(screen.heldBoundaries(), null, 'MPAs alone are not a complete set when the region requires the closure file');
+      const missing = (await checkPosition(loadScreen, geolocation(fixAnswer(OUTSIDE)))).reading;
+      assert.equal(missing.kind, 'no-boundaries');
+      assert.notEqual(missing.where, 'outside');
+    } finally { box.restore(); }
+    const loaded = sandbox({online: false, closures: served});
+    try {
+      const reading = (await checkPosition(loadScreen, geolocation(fixAnswer(OUTSIDE)))).reading;
+      assert.equal(reading.kind, 'checked', 'with the closure file saved the same position is screened');
+      assert.equal(reading.where, 'inside', 'and the saved groundfish closure is honoured');
+      assert.equal(reading.name, 'Test groundfish area');
+    } finally { loaded.restore(); }
+  } finally { setRegion(original); }
 });
 
 test('no pack: the saved-pack state is read from the legal inventory, and unreadable is not claimed either way', () => {
