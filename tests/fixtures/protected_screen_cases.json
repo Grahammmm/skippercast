@@ -1,0 +1,579 @@
+{
+ "note": "SC-PERF-PROTCHECK-1. `expected` and `fingerprint` come from dist/geo-screen.js (screenPlace, boundaryFingerprint); tests/unit/test_protected_screen_verdicts.py and tests/test_protected_verdicts.mjs both check against them.",
+ "bounds": [
+  -121.9,
+  34.95,
+  -120.55,
+  35.85
+ ],
+ "boundary": [
+  {
+   "type": "Feature",
+   "properties": {
+    "NAME": "A",
+    "FULLNAME": "Area A SMR"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -121,
+       35.2
+      ],
+      [
+       -120.9,
+       35.2
+      ],
+      [
+       -120.9,
+       35.3
+      ],
+      [
+       -121,
+       35.3
+      ],
+      [
+       -121,
+       35.2
+      ]
+     ],
+     [
+      [
+       -120.97,
+       35.23
+      ],
+      [
+       -120.97,
+       35.27
+      ],
+      [
+       -120.93,
+       35.27
+      ],
+      [
+       -120.93,
+       35.23
+      ],
+      [
+       -120.97,
+       35.23
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "NAME": "B"
+   },
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        -121.52,
+        35.48
+       ],
+       [
+        -121.48,
+        35.48
+       ],
+       [
+        -121.5,
+        35.52
+       ],
+       [
+        -121.52,
+        35.48
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        -121.3,
+        35.6
+       ],
+       [
+        -121.28,
+        35.6
+       ],
+       [
+        -121.28,
+        35.62
+       ],
+       [
+        -121.3,
+        35.62
+       ],
+       [
+        -121.3,
+        35.6
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "NAME": "C",
+    "Type": "GEA"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -120.7,
+       35
+      ],
+      [
+       -120.6,
+       35
+      ],
+      [
+       -120.6,
+       35.05
+      ],
+      [
+       -120.7,
+       35.05
+      ],
+      [
+       -120.7,
+       35
+      ]
+     ]
+    ]
+   }
+  }
+ ],
+ "reefs": [
+  {
+   "id": "inside-body",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -120.992,
+       35.208
+      ],
+      [
+       -120.988,
+       35.208
+      ],
+      [
+       -120.988,
+       35.212
+      ],
+      [
+       -120.992,
+       35.212
+      ],
+      [
+       -120.992,
+       35.208
+      ]
+     ]
+    ]
+   },
+   "longitude": -120.99000000000001,
+   "latitude": 35.21
+  },
+  {
+   "id": "inside-hole",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -120.952,
+       35.248
+      ],
+      [
+       -120.948,
+       35.248
+      ],
+      [
+       -120.948,
+       35.252
+      ],
+      [
+       -120.952,
+       35.252
+      ],
+      [
+       -120.952,
+       35.248
+      ]
+     ]
+    ]
+   },
+   "longitude": -120.94999999999999,
+   "latitude": 35.25
+  },
+  {
+   "id": "touching-edge",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -121.002,
+       35.248
+      ],
+      [
+       -120.998,
+       35.248
+      ],
+      [
+       -120.998,
+       35.252
+      ],
+      [
+       -121.002,
+       35.252
+      ],
+      [
+       -121.002,
+       35.248
+      ]
+     ]
+    ]
+   },
+   "longitude": -121,
+   "latitude": 35.25
+  },
+  {
+   "id": "about-45m-east",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -120.8995,
+       35.248
+      ],
+      [
+       -120.8975,
+       35.248
+      ],
+      [
+       -120.8975,
+       35.252
+      ],
+      [
+       -120.8995,
+       35.252
+      ],
+      [
+       -120.8995,
+       35.248
+      ]
+     ]
+    ]
+   },
+   "longitude": -120.8985,
+   "latitude": 35.25
+  },
+  {
+   "id": "few-km-away",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -120.85,
+       35.248
+      ],
+      [
+       -120.846,
+       35.248
+      ],
+      [
+       -120.846,
+       35.252
+      ],
+      [
+       -120.85,
+       35.252
+      ],
+      [
+       -120.85,
+       35.248
+      ]
+     ]
+    ]
+   },
+   "longitude": -120.848,
+   "latitude": 35.25
+  },
+  {
+   "id": "farther-than-20km",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -121.7,
+       35.1
+      ],
+      [
+       -121.696,
+       35.1
+      ],
+      [
+       -121.696,
+       35.104
+      ],
+      [
+       -121.7,
+       35.104
+      ],
+      [
+       -121.7,
+       35.1
+      ]
+     ]
+    ]
+   },
+   "longitude": -121.69800000000001,
+   "latitude": 35.102000000000004
+  },
+  {
+   "id": "outside-envelope",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -122.504,
+       35.198
+      ],
+      [
+       -122.5,
+       35.198
+      ],
+      [
+       -122.5,
+       35.202
+      ],
+      [
+       -122.504,
+       35.202
+      ],
+      [
+       -122.504,
+       35.198
+      ]
+     ]
+    ]
+   },
+   "longitude": -122.50200000000001,
+   "latitude": 35.2
+  },
+  {
+   "id": "bar-crossing-triangle-edges",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -121.53,
+       35.499
+      ],
+      [
+       -121.47,
+       35.499
+      ],
+      [
+       -121.47,
+       35.5005
+      ],
+      [
+       -121.53,
+       35.5005
+      ],
+      [
+       -121.53,
+       35.499
+      ]
+     ]
+    ]
+   },
+   "longitude": -121.5,
+   "latitude": 35.499750000000006
+  },
+  {
+   "id": "point-on-corner",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -121.001,
+       35.199
+      ],
+      [
+       -120.999,
+       35.199
+      ],
+      [
+       -120.999,
+       35.201
+      ],
+      [
+       -121.001,
+       35.201
+      ],
+      [
+       -121.001,
+       35.199
+      ]
+     ]
+    ]
+   },
+   "longitude": -121,
+   "latitude": 35.2
+  },
+  {
+   "id": "near-envelope-edge",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -120.553,
+       35.3
+      ],
+      [
+       -120.551,
+       35.3
+      ],
+      [
+       -120.551,
+       35.302
+      ],
+      [
+       -120.553,
+       35.302
+      ],
+      [
+       -120.553,
+       35.3
+      ]
+     ]
+    ]
+   },
+   "longitude": -120.55199999999999,
+   "latitude": 35.301
+  },
+  {
+   "id": "beside-geaarea",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -120.66,
+       35.052
+      ],
+      [
+       -120.658,
+       35.052
+      ],
+      [
+       -120.658,
+       35.054
+      ],
+      [
+       -120.66,
+       35.054
+      ],
+      [
+       -120.66,
+       35.052
+      ]
+     ]
+    ]
+   },
+   "longitude": -120.65899999999999,
+   "latitude": 35.053
+  }
+ ],
+ "expected": {
+  "inside-body": {
+   "inside": true,
+   "name": "Area A SMR",
+   "distanceM": 0,
+   "screened": true
+  },
+  "inside-hole": {
+   "inside": false,
+   "name": "Area A SMR",
+   "distanceM": 1638.7,
+   "screened": true
+  },
+  "touching-edge": {
+   "inside": true,
+   "name": "Area A SMR",
+   "distanceM": 0,
+   "screened": true
+  },
+  "about-45m-east": {
+   "inside": false,
+   "name": "Area A SMR",
+   "distanceM": 45.5,
+   "screened": true
+  },
+  "few-km-away": {
+   "inside": false,
+   "name": "Area A SMR",
+   "distanceM": 4551.9,
+   "screened": true
+  },
+  "farther-than-20km": {
+   "inside": false,
+   "name": null,
+   "distanceM": null,
+   "screened": true
+  },
+  "outside-envelope": {
+   "inside": false,
+   "name": null,
+   "distanceM": null,
+   "screened": false
+  },
+  "bar-crossing-triangle-edges": {
+   "inside": true,
+   "name": "B",
+   "distanceM": 0,
+   "screened": true
+  },
+  "point-on-corner": {
+   "inside": true,
+   "name": "Area A SMR",
+   "distanceM": 0,
+   "screened": true
+  },
+  "near-envelope-edge": {
+   "inside": false,
+   "name": null,
+   "distanceM": null,
+   "screened": true
+  },
+  "beside-geaarea": {
+   "inside": false,
+   "name": "C",
+   "distanceM": 221.9,
+   "screened": true
+  }
+ },
+ "fingerprint": "ps1-f67e473e56691fb7-204"
+}

@@ -16,6 +16,7 @@ from shapely.ops import transform
 from skippercast.platform.contracts import REPO, atomic_json, read_json
 from .coverage import cell_geometry
 from .io import sha256
+from .protected_screen import stamp as stamp_protected
 from .run import run
 from .rights import feature_rights, deployment_use
 from .screen import input_identity, load_snapshot
@@ -250,8 +251,12 @@ def build(region, *, root=REPO, tool=None, now=None):
                          'basis': 'Interior reference point; spot depth not separately sampled'}
         p['source_urls'] = [sources[s]['url'] for s in p.get('source_ids', []) if s in sources]
         exports.append({'type': 'Feature', 'geometry': f['geometry'], 'properties': p})
+    # SC-PERF-PROTCHECK-1: the protected-area check the browser would run per reef, done once here (None when the region ships no
+    # boundary screen: the browser then runs its own check, as before).
+    protected = stamp_protected(root, region, exports)
     atomic_json(folder/'habitat-export.geojson', {'type': 'FeatureCollection', 'schema_version': 1,
                 'region': region, 'expires_at': expires.isoformat(), 'features': exports,
+                **({'protected_screen': protected} if protected else {}),
                 **scope_fields,
                 'geometry_basis': 'Canonical screened habitat boundaries; not a navigation route'})
     # Transport compression preserves every native coordinate, hole and part.

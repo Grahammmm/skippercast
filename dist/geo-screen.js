@@ -203,3 +203,30 @@ export function screenPlace(s, place) {
 }
 /** True when an output must not hand the place over as clear: not checked, inside a closure, or within the planning margin of one. */
 export const placeRefused = v => !v.screened || v.inside || (v.distanceM !== null && v.distanceM <= PLANNING_MARGIN_M);
+// SC-PERF-PROTCHECK-1: a hash of the exact boundary data a screen holds (plus the envelope it covers and the margin), so a flag the
+// publisher computed against the same data can stand in for the check. The same float64 word stream and hash as
+// src/skippercast/seafloor/protected_screen.py `fingerprint`; change both together (tests/unit/test_protected_screen_flags.py).
+// Not a security hash: it keys a cache, and the export-time check (trip-export.js) still runs the full screen on every picked spot.
+export const FINGERPRINT_VERSION = 1;
+export function boundaryFingerprint(geometries, bounds) {
+  const out = [FINGERPRINT_VERSION, PLANNING_MARGIN_M, ...bounds, geometries.length];
+  const walk = c => {
+    if (typeof c?.[0] === 'number') out.push(1, c[0], c[1]);
+    else { const kids = c || []; out.push(0, kids.length); for (const child of kids) walk(child); }
+  };
+  for (const g of geometries) {
+    let code = 0;
+    for (const ch of g?.type || '') code += ch.charCodeAt(0);
+    out.push(code); walk(g?.coordinates);
+  }
+  const view = new DataView(new ArrayBuffer(out.length * 8));
+  out.forEach((v, i) => view.setFloat64(i * 8, v, true));
+  let h1 = 0x811c9dc5, h2 = 0x01000193;
+  for (let i = 0; i < out.length * 2; i++) {
+    const w = view.getUint32(i * 4, true);
+    h1 = Math.imul(h1 ^ w, 16777619) >>> 0;
+    h2 = Math.imul(h2 ^ w, 2246822519) >>> 0; h2 = (h2 ^ (h2 >>> 15)) >>> 0;
+  }
+  const hex = n => n.toString(16).padStart(8, '0');
+  return `ps${FINGERPRINT_VERSION}-${hex(h1)}${hex(h2)}-${out.length * 2}`;
+}
