@@ -389,7 +389,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // legend paint changed, and the cited line numbers above are unmoved.
   // SC-PERF-JUMP-1 only appends layout rules at the end of app.css (a masthead min-height and no-wrap row on the desktop, a minimum width on the target menu,
   // a minimum height on the desktop legend); no colour, opacity, backing or text paint changed, and the cited line numbers above are unmoved.
-  "appCss": "d1a1b04f1454ed212bdcec6adb7be96a281d96128d768547857be9ae20371a0b",
+  "appCss": "d3271afa55ce5c04b9a075ba0f81a14fa545950662ef90e077aa97466c8c1523",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
