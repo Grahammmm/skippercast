@@ -92,6 +92,23 @@ async function harness(t, responses) {
   return {render, settle, refresh, action, runtime: m.runtime};
 }
 
+test('legal checklist renders missing files, dates, stale warning and source links offline', async t => {
+  const sample = structuredClone(packs);
+  sample[0].meta.legal = {complete: false, stale: true, items: [
+    {id: 'rules', saved: true, saved_at: '2026-11-07T10:00:00Z', generated_at: null, reviewed_at: '2026-10-01', valid_from: '2026-01-01', valid_through: '2026-12-31', sources: ['https://wildlife.ca.gov/Fishing/Ocean']},
+    {id: 'additional-closures', saved: false, sources: []},
+  ]};
+  const h = await harness(t, [success(sample)]);
+  h.render();
+  const html = await h.settle();
+  assert.match(html, /Legal files missing/);
+  assert.match(html, /<summary>[^<]*Stale or unknown dates/);
+  assert.match(html, /Additional closures: Missing or unreadable/);
+  assert.match(html, /2026-01-01 – 2026-12-31/);
+  assert.match(html, /href="https:\/\/wildlife.ca.gov\/Fishing\/Ocean"/);
+  assert.match(html, /NOT FOR NAVIGATION/);
+});
+
 test('primary regression', async t => {
   const h = await harness(t, [rejected]);
   h.render();
