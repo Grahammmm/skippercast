@@ -69,8 +69,9 @@ const whenIdle = (): Promise<void> => new Promise(resolve => {
 });
 const manifestSize = async (region: string): Promise<number | null> => {
   try {
-    const g = await loadManifest(region) as {state?: string; manifest?: {export_bytes?: unknown} | null};
-    const n = g.manifest?.export_bytes;
+    const g = await loadManifest(region) as {state?: string; manifest?: {export_bytes?: unknown; slim_file?: unknown; slim_bytes?: unknown} | null};
+    // The brief loads the slim file when the release has one, so that is the size the angler is offered.
+    const n = typeof g.manifest?.slim_file === 'string' && typeof g.manifest.slim_bytes === 'number' ? g.manifest.slim_bytes : g.manifest?.export_bytes;
     return typeof n === 'number' && Number.isInteger(n) && n > 0 ? n : null;
   } catch { return null; }
 };

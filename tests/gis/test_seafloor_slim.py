@@ -207,6 +207,41 @@ class SlimPublicationTests(unittest.TestCase):
             self.assert_previous_release_live(s3, live)
             self.assertEqual(s3.metadata[self.LIVE]['Metadata']['sha256'], json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['slim_sha256'])
 
+    def test_a_slim_put_that_commits_and_then_raises_is_undone_before_the_alias_goes_back(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            s3, live, folder = self.live_release(tmp)
+            real = s3.put_object
+            def lost_ack(**kwargs):
+                result = real(**kwargs)
+                if kwargs['Key'] == self.LIVE and kwargs['Body'] != live[self.LIVE]:
+                    raise TimeoutError('PUT committed; response lost')
+                return result
+            s3.put_object = lost_ack
+            with self.assertRaises(TimeoutError):
+                publish.publish_bundle(s3, 'b', folder, now=NOW)
+            s3.put_object = real
+            self.assert_previous_release_live(s3, live)
+            alias = json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])
+            self.assertEqual(hashlib.sha256(s3.objects[self.LIVE]).hexdigest(), alias['slim_sha256'])
+
+    def test_when_the_previous_slim_object_cannot_be_restored_the_alias_stays_held(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            s3, live, folder = self.live_release(tmp)
+            real = s3.put_object
+            def lost_ack_and_no_restore(**kwargs):
+                if kwargs['Key'] == self.LIVE and kwargs['Body'] == live[self.LIVE]:
+                    raise OSError('restore failed')
+                result = real(**kwargs)
+                if kwargs['Key'] == self.LIVE:
+                    raise TimeoutError('PUT committed; response lost')
+                return result
+            s3.put_object = lost_ack_and_no_restore
+            with self.assertRaises(OSError):
+                publish.publish_bundle(s3, 'b', folder, now=NOW)
+            s3.put_object = real
+            alias = json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])
+            self.assertNotEqual(alias.get('status'), 'ready')   # never a ready manifest whose slim hash does not match the object
+
     def test_sync_never_rewrites_or_deletes_the_live_slim_key_so_its_metadata_survives_a_later_put_failure(self):
         for stale_index in ('missing', 'other-hash'):
             with self.subTest(stale_index=stale_index), tempfile.TemporaryDirectory() as tmp:

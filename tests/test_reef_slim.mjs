@@ -196,3 +196,23 @@ test('the feed serves the slim file under the manifest\'s gate, with the export\
     assert.equal((await serveFeed(new Request('https://s' + stray), stray)).status, 404);
   } finally { useBucket({}); }
 });
+
+test('default wiring: the angler\'s explicit load (Load on Wi-Fi, Try again) fetches the slim file, and the offer quotes its size', async () => {
+  const { acceptReefLoad, requestReefPublication } = await import('../web/reef-lazy.ts');
+  const { loadReefPublication } = await import('../web/ranking.ts');
+  const pub = await publication();
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = pub.fetchImpl;
+  try {
+    reefPublication.value = {state: 'idle'};
+    await requestReefPublication('morro-bay', {link: () => ({slow: true, why: 'save-data'})});
+    assert.equal(reefPublication.value.state, 'offer');
+    assert.equal(reefPublication.value.bytes, pub.manifest.slim_bytes, 'the offer quotes the file that will be fetched');
+    pub.asked.length = 0;
+    await acceptReefLoad('morro-bay');   // production defaults, no injected loader
+    assert.equal(reefPublication.value.state, 'ready');
+    assert.equal(reefPublication.value.loaded.slim, true);
+    assert.ok(!pub.asked.includes('habitat-export.geojson.gz'), `full export was fetched: ${pub.asked}`);
+    assert.ok(pub.asked.includes('habitat-slim.geojson.gz'));
+  } finally { globalThis.fetch = realFetch; reefPublication.value = {state: 'idle'}; }
+});

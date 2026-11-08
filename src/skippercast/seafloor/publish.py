@@ -322,7 +322,17 @@ def _snapshot(s3, bucket, keys):
     return saved
 
 
-def _rollback(s3, bucket, saved, control, skip=()):
+def _unchanged(s3, bucket, key, old):
+    """True only when the key reads back exactly as snapshotted (bytes and sha256 metadata); any doubt is False."""
+    try:
+        got = s3.get_object(Bucket=bucket, Key=key)
+        with got['Body'] as stream:
+            return old is not None and stream.read() == old[0] and (got.get('Metadata') or None) == (old[3] or None)
+    except Exception:
+        return False
+
+
+def _rollback(s3, bucket, saved, control, skip=(), verify=()):
     """Put the previous release's objects back, and only then its ready alias, so a mismatched ready state is never served."""
     for key, old in saved.items():
         if key in skip or key == control:
@@ -333,6 +343,10 @@ def _rollback(s3, bucket, saved, control, skip=()):
         body, content_type, cache, meta = old
         extra = {name: value for name, value in (('ContentType', content_type), ('CacheControl', cache), ('Metadata', meta)) if value}
         s3.put_object(Bucket=bucket, Key=key, Body=body, **extra)
+        if key in verify:
+            with s3.get_object(Bucket=bucket, Key=key)['Body'] as stream:
+                if stream.read() != body:
+                    raise ValueError(f'Could not prove {key} was restored; ready alias stays held')
     old = saved[control]
     if old is None:
         s3.delete_objects(Bucket=bucket, Delete={'Objects': [{'Key': control}], 'Quiet': True})
@@ -435,17 +449,17 @@ def publish_bundle(s3, bucket, folder, *, now=None):
         if hashlib.sha256(stream.read()).hexdigest() != manifest['export_sha256']:
             raise ValueError('R2 export read-back failed; alias remains held')
     if slim_name:
-        written = False
         try:
             s3.put_object(Bucket=bucket, Key=slim_key, Body=(folder/slim_name).read_bytes(), ContentType='application/gzip',
                           CacheControl='no-store', Metadata={'sha256': manifest['slim_sha256']})
-            written = True
             with s3.get_object(Bucket=bucket, Key=slim_key)['Body'] as stream:
                 if hashlib.sha256(stream.read()).hexdigest() != manifest['slim_sha256']:
                     raise ValueError('R2 slim reef file read-back failed; previous release restored')
         except Exception:
-            # A failed PUT leaves the previous slim object untouched, so only a completed write has to be put back.
-            _rollback(s3, bucket, restore, control, skip=set() if written else {slim_key})
+            # An exception does not prove the PUT did not commit (a lost acknowledgment commits the new object). Leave the slim key
+            # alone only when it is read back byte-identical to the previous one; otherwise (changed or unreadable) put the previous
+            # bytes back and read them back before the ready alias is promoted. If that cannot be proved, the alias stays held.
+            _rollback(s3, bucket, restore, control, skip={slim_key} if _unchanged(s3, bucket, slim_key, restore[slim_key]) else set(), verify={slim_key})
             raise
     key = f'tiles/seafloor/{archive.name}'
     with archive.open('rb') as stream:

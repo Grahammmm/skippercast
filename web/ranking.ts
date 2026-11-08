@@ -270,7 +270,7 @@ export async function loadReefPublication(region: string, loader: ReefLoader = l
 }
 
 /** Fetch the region's publication now, whatever state it is in (the angler's "Load … on Wi-Fi" or "Try again"); a load already running is left alone. */
-export async function reloadReefPublication(region: string, loader: ReefLoader = loadReefTrip): Promise<void> {
+export async function reloadReefPublication(region: string, loader: ReefLoader = loadReefTripBrief): Promise<void> {
   const was = reefPublication.peek();
   if (was.state === 'loading' && was.region === region) return;
   await startLoad(region, loader);
