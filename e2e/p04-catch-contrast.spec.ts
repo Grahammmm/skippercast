@@ -236,7 +236,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // surface hash and its comment, with contrast(), pairs, thresholds and line citations untouched. Both rebound from the final bytes.
   // MAPLIVE-1: app.css appends only a scoped .app-preview-head / .app-legend-preview / .app-preview-* block for the owner-only previews; the Reports catch sheet never mounts it. Rebound from the final bytes.
   // SC-PERF-JUMP-1: app.css appends only layout rules (masthead, target menu width, desktop legend minimum height); no paint; the Reports catch sheet mounts none of them. Rebound from the final bytes.
-  "web/app/app.css": "d1a1b04f1454ed212bdcec6adb7be96a281d96128d768547857be9ae20371a0b",
+  "web/app/app.css": "d3271afa55ce5c04b9a075ba0f81a14fa545950662ef90e077aa97466c8c1523",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
