@@ -69,6 +69,13 @@ export async function initProtectedAreas(map, onChange, readJSON=fetchJSON) {
     ready:()=>current(),
     fingerprint,
     coversGeometry:covers,
+    // SC-GPSOFFLINE-1: the boundary data this screen holds right now, current or not (null when it holds none or is not bound to its region), so a live-position
+    // check can still use the saved boundaries offline and say how old they are. It only reads; every verdict still comes from geo-screen.js `screenPlace`.
+    heldBoundaries:()=>{
+      if(!data||!bound())return null;
+      const times=[checked,...(extra?[extraChecked]:[])].filter(v=>Number.isFinite(Date.parse(v)));
+      return {current:current(),checked_at:times.length?new Date(Math.min(...times.map(v=>Date.parse(v)))).toISOString():null,features:[...data.features,...(extra?.features||[])]};
+    },
     revision:()=>`${checked}|${extraChecked}|${freshEnough()}`,
     exportExclusions:()=>current()?{checked_at:extra?new Date(Math.min(Date.parse(checked),Date.parse(extraChecked))).toISOString():checked,features:[...data.features,...(extra?.features||[])]}:null,
     inspect(p){

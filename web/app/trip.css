@@ -65,3 +65,18 @@
 .app-mark-forecast dt { color: var(--muted); }
 .app-mark-forecast dd { margin: 0; }
 .app-mark-forecast-source { grid-column: 2; color: var(--muted); font-size: var(--text-11); }
+
+/* SC-GPSOFFLINE-1: the position check (web/app/PositionView.tsx). Phone first, readable in sunlight: 18 px text, a 28 px answer line, a thick edge
+   colour on the answer that never carries meaning alone (the words say inside / near / outside), text on the panel in the full-contrast text colour. */
+.app-trip .pos-check { margin: var(--space-4) 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel-2); font-size: var(--text-18); }
+.app-trip .pos-check h3 { margin: 0 0 var(--space-2); font-size: var(--text-22); }
+.app-trip .pos-check p { color: var(--text); }
+.app-trip .pos-check .pos-note, .app-trip .pos-check .pos-small { color: var(--muted); font-size: var(--text-15); }
+.app-trip .pos-check .pos-button { width: 100%; min-height: calc(var(--touch-min) + var(--space-3)); font-size: var(--text-22); }
+.app-trip .pos-check .pos-result { margin-top: var(--space-3); }
+.app-trip .pos-check .pos-verdict { margin: var(--space-2) 0; padding: var(--space-2) var(--space-3); border-left: var(--space-2) solid var(--mint); background: var(--panel); font: var(--weight-semibold) var(--text-28) / var(--leading-heading) var(--font-sans); }
+.app-trip .pos-check .pos-verdict[data-where="near"] { border-left-color: var(--amber); }
+.app-trip .pos-check .pos-verdict[data-where="inside"] { border-left-color: var(--coral); }
+.app-trip .pos-check .pos-warn { padding: var(--space-2) var(--space-3); border-left: var(--space-2) solid var(--amber); background: var(--panel); }
+.app-trip .pos-check .pos-official { margin-bottom: 0; font-weight: var(--weight-semibold); }
+.app-trip .pos-check .pos-official a { display: inline-block; min-height: var(--touch-min); line-height: var(--touch-min); }
