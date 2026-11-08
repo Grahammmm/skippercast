@@ -325,7 +325,7 @@ def _snapshot(s3, bucket, keys):
 def _rollback(s3, bucket, saved, control, skip=()):
     """Put the previous release's objects back, and only then its ready alias, so a mismatched ready state is never served."""
     for key, old in saved.items():
-        if key in skip:
+        if key in skip or key == control:
             continue
         if old is None:
             s3.delete_objects(Bucket=bucket, Delete={'Objects': [{'Key': key}], 'Quiet': True})

@@ -237,6 +237,35 @@ class SlimPublicationTests(unittest.TestCase):
             s3.get_object = real
             self.assert_previous_release_live(s3, live)
 
+    def test_every_ready_alias_write_during_rollback_matches_the_objects_then_served(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            s3, live, folder = self.live_release(tmp)
+            manifest = json.loads((folder/'manifest.json').read_text())
+            export = folder/manifest['export_file']
+            export.write_bytes(b'{"type": "FeatureCollection", "features": [], "changed": true}')
+            manifest['export_sha256'] = sha256(export)
+            atomic_json(folder/'manifest.json', manifest)
+            control = 'tiles/seafloor/manifest-morro-bay.json'
+            seen, real_put, real_get = [], s3.put_object, s3.get_object
+            def put(*, Bucket, Key, Body, **kwargs):
+                if Key == control and json.loads(Body).get('status') == 'ready':
+                    # at the moment the old ready alias is written, every object must already be the previous release's
+                    seen.append({k: s3.objects[k] == v for k, v in live.items() if '/staging/' not in k and k != control})
+                return real_put(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
+            def corrupt(*, Bucket, Key):
+                got = real_get(Bucket=Bucket, Key=Key)
+                if Key == self.LIVE and s3.objects[Key] != live[Key]:
+                    import io
+                    got = {'Body': io.BytesIO(b'bad read-back')}
+                return got
+            s3.put_object, s3.get_object = put, corrupt
+            with self.assertRaisesRegex(ValueError, 'slim reef file read-back'):
+                publish.publish_bundle(s3, 'b', folder, now=NOW)
+            s3.put_object, s3.get_object = real_put, real_get
+            self.assertEqual(len(seen), 1)
+            self.assertTrue(all(seen[0].values()), seen[0])
+            self.assert_previous_release_live(s3, live)
+
 
 class BuildTests(unittest.TestCase):
     def test_build_writes_the_slim_file_beside_the_full_export_when_verdicts_exist(self):
