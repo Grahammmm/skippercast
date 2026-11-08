@@ -307,12 +307,36 @@ def credentials():
     return client(token, account), os.environ.get('R2_BUCKET', 'skippercast-feeds')
 
 
+def _snapshot(s3, bucket, keys):
+    """Current bytes and headers of each key (None when absent), so a failed slim publication can put them back."""
+    saved = {}
+    for key in keys:
+        try:
+            got = s3.get_object(Bucket=bucket, Key=key)
+        except s3.exceptions.NoSuchKey:
+            saved[key] = None
+            continue
+        with got['Body'] as stream:
+            saved[key] = (stream.read(), got.get('ContentType'), got.get('CacheControl'), got.get('Metadata'))
+    return saved
+
+
+def _restore(s3, bucket, saved):
+    for key, old in saved.items():
+        if old is None:
+            s3.delete_objects(Bucket=bucket, Delete={'Objects': [{'Key': key}], 'Quiet': True})
+            continue
+        body, content_type, cache, meta = old
+        extra = {name: value for name, value in (('ContentType', content_type), ('CacheControl', cache), ('Metadata', meta)) if value}
+        s3.put_object(Bucket=bucket, Key=key, Body=body, **extra)
+
+
 def publish_bundle(s3, bucket, folder, *, now=None):
     """Isolated sync prefix avoids deleting other map layers or regions.
 
     A ready bundle whose screen expired by ``now`` (default: the current time) is refused.
     """
-    from scripts.publish_r2 import sync
+    from scripts.publish_r2 import INDEX, sync
     folder = Path(folder)
     manifest = read_json(folder/'manifest.json')
     if manifest.get('source_scope') is not None:
@@ -354,10 +378,16 @@ def publish_bundle(s3, bucket, folder, *, now=None):
         with s3.get_object(Bucket=bucket, Key=stage)['Body'] as stream:
             if hashlib.sha256(stream.read()).hexdigest() != manifest['slim_sha256']:
                 raise ValueError('R2 slim reef file read-back failed; previous release left live')
-    sync(s3, bucket, folder, f'tiles/seafloor/regions/{region}')
+    control = f'tiles/seafloor/manifest-{region}.json'
+    restore = _snapshot(s3, bucket, [control, f'tiles/seafloor/regions/{region}/{INDEX}'] + [
+        f'tiles/seafloor/regions/{region}/{n}' for n in sorted(allowed - {archive.name})]) if slim_name else None
+    try:
+        sync(s3, bucket, folder, f'tiles/seafloor/regions/{region}')
+    except Exception:
+        if restore: _restore(s3, bucket, restore)
+        raise
     # Stable URL is gated by a separate manifest in the Worker. Write a hold
     # before changing the alias, then promote only after archive read-back.
-    control = f'tiles/seafloor/manifest-{region}.json'
     s3.put_object(Bucket=bucket, Key=control, Body=json.dumps({'status': 'updating'}).encode(),
                   ContentType='application/json', CacheControl='no-store')
     export_key = f'tiles/seafloor/regions/{region}/{export.name}'
@@ -370,11 +400,16 @@ def publish_bundle(s3, bucket, folder, *, now=None):
             raise ValueError('R2 export read-back failed; alias remains held')
     if slim_name:
         slim_key = f'tiles/seafloor/regions/{region}/{slim_name}'
-        s3.put_object(Bucket=bucket, Key=slim_key, Body=(folder/slim_name).read_bytes(), ContentType='application/gzip',
-                      CacheControl='no-store', Metadata={'sha256': manifest['slim_sha256']})
-        with s3.get_object(Bucket=bucket, Key=slim_key)['Body'] as stream:
-            if hashlib.sha256(stream.read()).hexdigest() != manifest['slim_sha256']:
-                raise ValueError('R2 slim reef file read-back failed; alias remains held')
+        try:
+            s3.put_object(Bucket=bucket, Key=slim_key, Body=(folder/slim_name).read_bytes(), ContentType='application/gzip',
+                          CacheControl='no-store', Metadata={'sha256': manifest['slim_sha256']})
+            with s3.get_object(Bucket=bucket, Key=slim_key)['Body'] as stream:
+                if hashlib.sha256(stream.read()).hexdigest() != manifest['slim_sha256']:
+                    raise ValueError('R2 slim reef file read-back failed; previous release restored')
+        except Exception:
+            # Put the previous ready release back (objects and alias) rather than leaving every seafloor feed held.
+            _restore(s3, bucket, restore)
+            raise
     key = f'tiles/seafloor/{archive.name}'
     with archive.open('rb') as stream:
         s3.put_object(Bucket=bucket, Key=key, Body=stream, ContentType='application/octet-stream',

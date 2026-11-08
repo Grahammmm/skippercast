@@ -181,6 +181,48 @@ class SlimPublicationTests(unittest.TestCase):
                 if '/staging/' in key: continue  # scratch key, not served
                 self.assertEqual(s3.objects[key], value, key)
 
+    LIVE = 'tiles/seafloor/regions/morro-bay/habitat-slim.geojson.gz'
+
+    def assert_previous_release_live(self, s3, live):
+        self.assertEqual(json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['status'], 'ready')
+        for key, value in live.items():
+            if '/staging/' in key: continue  # scratch key, not served
+            self.assertEqual(s3.objects[key], value, key)
+
+    def test_failure_writing_the_live_slim_key_after_staging_passed_restores_the_previous_release(self):
+        for stage in ('sync', 'final-put'):
+            with self.subTest(stage=stage), tempfile.TemporaryDirectory() as tmp:
+                s3, live, folder = self.live_release(tmp)
+                real, seen = s3.put_object, []
+                def fail(*, Bucket, Key, Body, **kwargs):
+                    if Key == self.LIVE:
+                        seen.append(Key)
+                        if len(seen) == (1 if stage == 'sync' else 2):
+                            raise OSError('R2 PUT failed')
+                    return real(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
+                s3.put_object = fail
+                with self.assertRaises(OSError):
+                    publish.publish_bundle(s3, 'b', folder, now=NOW)
+                self.assertGreaterEqual(len(seen), 1 if stage == 'sync' else 2)
+                s3.put_object = real
+                self.assert_previous_release_live(s3, live)
+
+    def test_corrupt_read_back_of_the_live_slim_key_after_staging_passed_restores_the_previous_release(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            s3, live, folder = self.live_release(tmp)
+            real = s3.get_object
+            def corrupt(*, Bucket, Key):
+                got = real(Bucket=Bucket, Key=Key)
+                if Key == self.LIVE and s3.objects[Key] != live[Key]:
+                    import io
+                    got = {'Body': io.BytesIO(b'bad read-back')}
+                return got
+            s3.get_object = corrupt
+            with self.assertRaisesRegex(ValueError, 'slim reef file read-back'):
+                publish.publish_bundle(s3, 'b', folder, now=NOW)
+            s3.get_object = real
+            self.assert_previous_release_live(s3, live)
+
 
 class BuildTests(unittest.TestCase):
     def test_build_writes_the_slim_file_beside_the_full_export_when_verdicts_exist(self):
