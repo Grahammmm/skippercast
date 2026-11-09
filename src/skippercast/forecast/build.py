@@ -114,11 +114,16 @@ def convert(model, name, cube, times):
     if how == 'fraction':
         return cube * 100.0
     if how == 'accumulated_m':          # total since initialization -> mean mm/h over the preceding interval
+        # A cell stays missing (NaN) unless the accumulations it depends on are finite: a missing or nonfinite
+        # initial value is not "no rain yet", and an interval needs both of its endpoints.
+        finite = np.isfinite(cube)
         rate = np.full_like(cube, np.nan)
-        rate[0] = 0.0
+        rate[0] = np.where(finite[0], 0.0, np.nan)
         for t in range(1, len(times)):
             hours = (times[t] - times[t - 1]) / 3600
-            rate[t] = np.maximum(cube[t] - cube[t - 1], 0) * 1000.0 / hours
+            step = np.full(cube[t].shape, np.nan)
+            np.subtract(cube[t], cube[t - 1], out=step, where=finite[t] & finite[t - 1])
+            rate[t] = np.maximum(step, 0) * 1000.0 / hours
         return rate
     return cube
 
