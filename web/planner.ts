@@ -34,7 +34,7 @@ import {checkGpx} from './gpx-check.ts';
 import {placeRefused, screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
 import {session} from './account.ts';
 import {verdictLine} from './waypoint-placement.ts';
-import {launchPoints, loadLaunchPoints} from './launches.ts';
+import {launchPoints, loadLaunchPoints, type LaunchPoint} from './launches.ts';
 import {launchChoice} from './reach.ts';
 import {assessContours, depthContoursURL, NOTES} from './map/depth-contours.ts';
 import {chartFileListed} from './chart-files.ts';
@@ -231,7 +231,13 @@ export function createPlanner(deps: PlannerDeps) {
     draft.value = next;
     try { if (!storage) throw Error('no storage'); storage.setItem(draftKey(region.id), JSON.stringify(next)); storageNote.value = STORAGE_OK; } catch { storageNote.value = STORAGE_OFF; }
   };
-  const launch = computed(() => launchPoints.value?.region === region.id ? launchPoints.value.points.find(p => p.id === (launchChoice.value[region.id] ?? draft.value.launchId)) ?? launchPoints.value.points[0] : undefined);
+  // An included launch resolves to exactly the explicit current choice, else the saved id: never the first listed point (RF0814-7).
+  // Only the unchecked optional control keeps the first-point default.
+  const launch = computed(() => {
+    const list: readonly LaunchPoint[] = launchPoints.value?.region === region.id ? launchPoints.value.points : [], found = list.find(p => p.id === (launchChoice.value[region.id] ?? draft.value.launchId));
+    return draft.value.launchId ? found : found ?? list[0];
+  });
+  const launchUnresolved = (): boolean => !!draft.value.launchId && !launch.value;
   const launchPoint = (): UserWaypoint[] => draft.value.launchId && launch.value ? userWaypoints([{...launch.value, id: `user:launch-${launch.value.id.replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}`, name: `Launch · ${launch.value.name}`.slice(0, 80), category: 'other'}]) as UserWaypoint[] : [];
   const exportDraft = (): Draft => { const d = draft.value, l = launchPoint(); return {...d, ids: [...d.ids, ...l.map(p => p.id)], userWaypoints: [...(d.userWaypoints ?? []), ...l]}; };
   function setLaunch(on: boolean): void { revision++; persist({...draft.value, launchId: on ? launch.value?.id : undefined}); }
@@ -246,6 +252,7 @@ export function createPlanner(deps: PlannerDeps) {
   /** The export contract's request for the draft; throws what blocks an export. */
   function request(d: Draft = exportDraft()) {
     if (activeRegion.value && activeRegion.value !== region.id) throw Error('Region changed. Open the planner again before exporting.');
+    if (launchUnresolved()) throw Error('Included launch ramp is unavailable. Uncheck it or choose a listed launch before exporting.');
     if (restorePending.value) throw Error('Saved ranked plan needs current reef data. Restore it or select Best available again.');
     if (filtersDirty.value) throw Error('Trip filters changed. Select Best available again before exporting.');
     if (d.layers.exclusions && d.avoidScope === 'map' && !map.getSize().x) throw Error('Open the map to choose its coverage first, or choose Whole selected region for protected-area outlines.');
