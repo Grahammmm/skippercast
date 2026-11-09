@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF0814-7: the trip planner's GPX, offline notes and planning-route exports now refuse, with "Included launch ramp is unavailable", when the included launch ramp is no longer in the published list (list replaced, empty, unavailable or for another region) instead of silently exporting the first listed ramp or leaving the checked launch out. The ramp checkbox stays visible, checked and enabled (showing "—") so it can be unchecked; a valid current ramp choice is still followed exactly and nothing saved is changed.
+
 - RF0824-5: saved trip plans enforce the 16,384-byte plan cap in UTF-8 bytes on create and edit, so names and notes in non-ASCII text can no longer slip a larger plan past the limit; over-cap plans are refused with "plan too large" and nothing is saved.
 
 - RF0844-9: the advisor rules editor refuses a species label or source name that is empty once control characters are removed (it was saved as an active, reviewed rule with blank text); a refused create or edit changes no rule and does not bump the pages version. Visible text with embedded controls is still accepted, cleaned as before.
