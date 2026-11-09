@@ -29,6 +29,16 @@ Scripts loaded on demand are not first-load; the largest-file budget still cover
 uncompressed bytes of the built output, so they differ from the compressed network sizes in PERF-BASELINE-1.
 Not measured: live data answers (`/api/...`) and the reef export, which are published outside this repository.
 
+### The slim reef file (SC-PERF-REEFDIET-1)
+
+The brief reads the slim file (`habitat-slim-<sha16>.geojson.gz`, named by its own hash; each reef's attributes and its publish-time protected-area verdict, no
+outlines) instead of the 15.4 MB `habitat-export.geojson.gz`, which stays for the planner, the map and GPX export. It
+is published, not in the repo, so this check cannot measure it; the publisher enforces its budget instead
+(`SLIM_MAX_BYTES` in `src/skippercast/seafloor/slim.py`: 450,000 gzip bytes; tested in
+`tests/gis/test_seafloor_slim.py`). Reason: the real morro-bay export (3,064 reefs) gives 363,453 bytes, so the budget
+leaves 23.8% headroom for more reefs or longer credit text, and stops the file growing back toward the full export
+unnoticed. Raise it in a pull request with a reason, as above.
+
 ## Raising a budget (in a pull request, with a reason)
 
 Open `scripts/perf-budget.json`. For the group that is over, add an entry at the END of its `history` list with the new

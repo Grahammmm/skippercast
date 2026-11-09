@@ -170,17 +170,18 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
   let expectedHash: string | undefined;
   if (seafloor && (key.endsWith('.pmtiles') || key.endsWith('.geojson') || key.endsWith('.geojson.gz'))) {
     const exporting = !key.endsWith('.pmtiles');
+    const slim = /\/habitat-slim-[a-f0-9]{16}\.geojson\.gz$/.test(key);   // SC-PERF-REEFDIET-1: the brief's slim reef file (content-addressed name), gated on the same manifest
     const match = exporting
-      ? /^tiles\/seafloor\/regions\/([a-z0-9-]+)\/habitat-export\.geojson(?:\.gz)?$/.exec(key)
+      ? /^tiles\/seafloor\/regions\/([a-z0-9-]+)\/(?:habitat-export\.geojson(?:\.gz)?|habitat-slim-[a-f0-9]{16}\.geojson\.gz)$/.exec(key)
       : /^tiles\/seafloor\/seafloor-([a-z0-9-]+)\.pmtiles$/.exec(key);
     if (!match || !bucket) return new Response('Not found', {status: 404});
     let manifest: ExternalJSON;
     try { manifest = await (await bucket.get(`tiles/seafloor/manifest-${match[1]}.json`))?.json(); }
     catch { manifest = null; }
     publication = manifest;
-    expectedHash = exporting ? manifest?.export_sha256 : manifest?.archive_sha256;
+    expectedHash = slim ? manifest?.slim_sha256 : exporting ? manifest?.export_sha256 : manifest?.archive_sha256;
     const expires = Date.parse(manifest?.expires_at);
-    if (manifest?.status !== 'ready' || manifest?.region !== match[1] || (exporting && manifest?.export_file !== key.split('/').at(-1)) || !Number.isFinite(expires) || expires <= Date.now() || !/^[a-f0-9]{64}$/.test(expectedHash || '')) {
+    if (manifest?.status !== 'ready' || manifest?.region !== match[1] || (exporting && (slim ? manifest?.slim_file : manifest?.export_file) !== key.split('/').at(-1)) || !Number.isFinite(expires) || expires <= Date.now() || !/^[a-f0-9]{64}$/.test(expectedHash || '')) {
       return new Response('Seafloor screening unavailable or expired', {status: 503, headers: {'Cache-Control': 'no-store'}});
     }
   }

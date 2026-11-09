@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import tempfile
 
 from pyproj import Transformer
 from shapely.geometry import mapping, shape
@@ -21,6 +22,7 @@ from .run import run
 from .rights import feature_rights, deployment_use
 from .screen import input_identity, load_snapshot
 from .search_areas import published_contract
+from .slim import slim_file, write_slim
 from .classified_habitat import stage as classified_stage, publication_features
 from .source_scope import (GOVERNMENT, processing_scope, scoped_manifest,
                            validate_dependencies, validate_receipt)
@@ -268,6 +270,9 @@ def build(region, *, root=REPO, tool=None, now=None):
     raw_export.unlink()
     if len(export_bytes) > 128*1024*1024 or export.stat().st_size > 32*1024*1024:
         raise ValueError('Canonical reef export exceeds browser limits; partition this region')
+    # SC-PERF-REEFDIET-1: the brief's slim file (attributes + verdicts, no outlines); absent when there are no verdicts to carry.
+    slim_fields = write_slim(folder, region=region, expires_at=expires.isoformat(), export_sha256=sha256(export),
+                             protected=protected, export_features=exports)
     selected = [r for r in ledger['reaches'] if r['region'] == region]
     atomic_json(folder/'ledger.json', {'region': region, 'reaches': selected, 'reference': ledger['reference']})
     manifest = {'schema_version': 1, 'region': region, 'status': 'ready' if layers['habitat'] else 'held',
@@ -282,6 +287,7 @@ def build(region, *, root=REPO, tool=None, now=None):
                 'export_sha256': sha256(export),
                 'export_bytes': export.stat().st_size,
                 'export_decoded_bytes': len(export_bytes),
+                **slim_fields,
                 'source_attribution': credits,
                 'source_use_notice': 'Retain source-specific terms and credits; mixed data do not become public-domain.',
                 'reach_inputs': {key: value['input_hash'] for key, value in receipts.items()},
@@ -302,10 +308,63 @@ def credentials():
     return client(token, account), os.environ.get('R2_BUCKET', 'skippercast-feeds')
 
 
+# The fields the Worker gate (server/feeds.ts) and the browser loader check for the full export and the archive. When the live
+# ready manifest already carries the new bundle's values, those objects are served and verified, and only the slim file is new.
+SERVED_FIELDS = ('region', 'status', 'expires_at', 'archive', 'archive_sha256', 'archive_bytes', 'ledger_sha256',
+                 'export_file', 'export_sha256', 'export_bytes', 'export_decoded_bytes')
+SLIM_MANIFEST_FIELDS = ('slim_file', 'slim_sha256', 'slim_bytes', 'slim_decoded_bytes')
+
+
+def _stored(s3, bucket, key, sha):
+    """True when the key holds bytes with this sha256 and the sha256 metadata the Worker gate serves on; False when absent."""
+    try:
+        got = s3.get_object(Bucket=bucket, Key=key)
+    except s3.exceptions.NoSuchKey:
+        return False
+    with got['Body'] as stream:
+        body = stream.read()
+    return hashlib.sha256(body).hexdigest() == sha and (got.get('Metadata') or {}).get('sha256') == sha
+
+
+def _stage_slim(s3, bucket, key, body, sha):
+    """Upload the slim file to its content-addressed key and prove it reads back, before any live object is written.
+
+    No live manifest names a new key, so a failed, partial or unacknowledged PUT here changes nothing that is served.
+    A key that already holds the verified bytes (a retry, or the live file itself) is not rewritten.
+    """
+    if _stored(s3, bucket, key, sha):
+        return
+    s3.put_object(Bucket=bucket, Key=key, Body=body, ContentType='application/gzip', CacheControl='no-store',
+                  Metadata={'sha256': sha})
+    if not _stored(s3, bucket, key, sha):
+        raise ValueError('R2 slim reef file read-back failed; previous release left live')
+
+
+def _live(s3, bucket, control):
+    """The live publication manifest and its ETag; (None, None) when absent or unreadable (then it is not a ready release)."""
+    try:
+        got = s3.get_object(Bucket=bucket, Key=control)
+        with got['Body'] as stream:
+            live = json.loads(stream.read())
+        return (live, got.get('ETag')) if isinstance(live, dict) else (None, None)
+    except s3.exceptions.NoSuchKey:
+        return None, None
+    except ValueError:
+        return None, None
+
+
 def publish_bundle(s3, bucket, folder, *, now=None):
     """Isolated sync prefix avoids deleting other map layers or regions.
 
     A ready bundle whose screen expired by ``now`` (default: the current time) is refused.
+
+    SC-PERF-REEFDIET-1 slim file: it is written to an immutable content-addressed key (habitat-slim-<sha16>.geojson.gz) and
+    read back before any live object or the live manifest is touched, so a slim PUT, read-back or checksum failure leaves the
+    previous ready release served. When the live ready manifest already serves this bundle's export, archive and ledger, the
+    only live write is ONE manifest PUT that adds the new slim fields: no hold, no sync, no rewrite of the full export and no
+    delete. A failure of that PUT leaves the previous manifest (one small object; R2 PUTs are atomic). Otherwise (the full
+    export changed) the existing held publication below runs, after the slim file is already verified. Publication never
+    deletes a slim object; older ones stay until a separate cleanup.
     """
     from scripts.publish_r2 import sync
     folder = Path(folder)
@@ -331,13 +390,37 @@ def publish_bundle(s3, bucket, folder, *, now=None):
     export = folder/export_name
     if sha256(export) != manifest.get('export_sha256'):
         raise ValueError('Publication export changed')
-    allowed = {archive.name, 'ledger.json', 'manifest.json', export.name}
+    slim_name = manifest.get('slim_file')
+    if slim_name is not None:
+        slim_sha = manifest.get('slim_sha256') or ''
+        if not re.fullmatch('[a-f0-9]{64}', slim_sha) or slim_name != slim_file(slim_sha) \
+                or sha256(folder/slim_name) != slim_sha:
+            raise ValueError('Publication slim reef file changed')
+    allowed = {archive.name, 'ledger.json', 'manifest.json', export.name} | ({slim_name} if slim_name else set())
     if {p.name for p in folder.iterdir()} != allowed:
         raise ValueError('Unexpected file in public bundle')
-    sync(s3, bucket, folder, f'tiles/seafloor/regions/{region}')
+    control = f'tiles/seafloor/manifest-{region}.json'
+    prefix = f'tiles/seafloor/regions/{region}'
+    if slim_name:
+        _stage_slim(s3, bucket, f'{prefix}/{slim_name}', (folder/slim_name).read_bytes(), manifest['slim_sha256'])
+        live, etag = _live(s3, bucket, control)
+        if manifest['status'] == 'ready' and live and live.get('status') == 'ready' \
+                and all(live.get(name) == manifest.get(name) for name in SERVED_FIELDS):
+            switched = {**{k: v for k, v in live.items() if k not in SLIM_MANIFEST_FIELDS},
+                        **{k: manifest[k] for k in SLIM_MANIFEST_FIELDS}}
+            # IfMatch: a release another publisher committed since the read above is never silently replaced.
+            s3.put_object(Bucket=bucket, Key=control, Body=json.dumps(switched).encode(), ContentType='application/json',
+                          CacheControl='no-store', **({'IfMatch': etag} if etag else {}))
+            return f'tiles/seafloor/{archive.name}'
+    # The slim file is left out of the synced folder: sync() uploads without sha256 metadata, so it must never write the
+    # content-addressed slim key a live manifest may already name, and it never learns that key, so it never deletes it.
+    with tempfile.TemporaryDirectory() as staged:
+        for path in folder.iterdir():
+            if path.name != slim_name:
+                os.symlink(path.resolve(), Path(staged)/path.name)
+        sync(s3, bucket, staged, prefix)
     # Stable URL is gated by a separate manifest in the Worker. Write a hold
     # before changing the alias, then promote only after archive read-back.
-    control = f'tiles/seafloor/manifest-{region}.json'
     s3.put_object(Bucket=bucket, Key=control, Body=json.dumps({'status': 'updating'}).encode(),
                   ContentType='application/json', CacheControl='no-store')
     export_key = f'tiles/seafloor/regions/{region}/{export.name}'

@@ -32,8 +32,8 @@
 // through); until that screen has loaded the list shows the checking line, and a screen not current withholds every place.
 import {signal} from '@preact/signals';
 import {bestSpots, distanceNm} from '../dist/spot-ranking.js';
-import {screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
-import {loadReefTrip} from '../dist/reef-trip-data.js';
+import {placeRefused, screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
+import {loadReefTrip, loadReefTripBrief} from '../dist/reef-trip-data.js';
 import {loadManifest, manifestState} from '../dist/seafloor-data.js';
 import {speciesFit} from '../dist/species-fit.js';
 import {speciesOptions} from '../packages/coast/src/habitat-types.ts';
@@ -238,7 +238,7 @@ export type ReefPublication = {readonly state: 'idle' | 'loading' | 'unavailable
   | {readonly state: 'deferred'; readonly region: string}
   /** SC-PERF-LAZY-1: Save-Data or a slow link; nothing is fetched until the angler asks. `bytes` is the published size when known. */
   | {readonly state: 'offer'; readonly region: string; readonly bytes: number | null; readonly why: 'save-data' | 'slow-type' | 'slow-measured'}
-  | {readonly state: 'ready'; readonly region: string; readonly loaded: {readonly targets: readonly PublishedReef[]; readonly areas: readonly {id: string; geometry: unknown}[]; readonly protected_fingerprint?: string; readonly publication: {export_sha256?: string} & Record<string, unknown>}};
+  | {readonly state: 'ready'; readonly region: string; readonly loaded: {readonly targets: readonly PublishedReef[]; readonly areas: readonly {id: string; geometry: unknown}[]; readonly protected_fingerprint?: string; readonly slim?: boolean; readonly publication: {export_sha256?: string} & Record<string, unknown>}};
 export const reefPublication = signal<ReefPublication>({state: 'idle'});
 type ReefLoader = (region: string) => Promise<unknown>;
 /** The manifest gate as dist/seafloor-data.js `loadManifest` returns it (the fields read here). */
@@ -263,14 +263,14 @@ async function startLoad(region: string, loader: ReefLoader): Promise<void> {
 export function supersedeReefLoads(): void { generation++; }
 
 /** Load the region's publication once (another region starts again); a failure leaves the list above in place. */
-export async function loadReefPublication(region: string, loader: ReefLoader = loadReefTrip): Promise<void> {
+export async function loadReefPublication(region: string, loader: ReefLoader = loadReefTripBrief): Promise<void> {
   const was = reefPublication.peek();
   if (was.state !== 'idle' && was.state !== 'deferred' && was.state !== 'offer' && was.region === region) return;
   await startLoad(region, loader);
 }
 
 /** Fetch the region's publication now, whatever state it is in (the angler's "Load … on Wi-Fi" or "Try again"); a load already running is left alone. */
-export async function reloadReefPublication(region: string, loader: ReefLoader = loadReefTrip): Promise<void> {
+export async function reloadReefPublication(region: string, loader: ReefLoader = loadReefTripBrief): Promise<void> {
   const was = reefPublication.peek();
   if (was.state === 'loading' && was.region === region) return;
   await startLoad(region, loader);
@@ -283,7 +283,7 @@ export async function reloadReefPublication(region: string, loader: ReefLoader =
  * verification, a rejected publication returns only through a fresh `loadReefTrip` once the manifest is ready again
  * (a superseded one reloads at once). A load or another check started meanwhile wins.
  */
-export async function recheckReefPublication(region: string, gate: ReefGate = r => loadManifest(r), loader: ReefLoader = loadReefTrip): Promise<void> {
+export async function recheckReefPublication(region: string, gate: ReefGate = r => loadManifest(r), loader: ReefLoader = loadReefTripBrief): Promise<void> {
   const was = reefPublication.peek();
   const held = was.state === 'ready' ? was.loaded.publication.export_sha256 : was.state === 'unavailable' ? was.rejected : undefined;
   if (was.region !== region || !held) return;
@@ -297,6 +297,27 @@ export async function recheckReefPublication(region: string, gate: ReefGate = r 
   } else if (!live) return;
   await startLoad(region, loader);
 }
+
+/**
+ * SC-PERF-REEFDIET-1: the brief loads the slim reef file (no outlines, every reef with its publish-time verdict). It is valid only while the planner's
+ * screen holds exactly the boundary data the verdicts were computed against; any other screen needs the outlines, so the full export is loaded instead
+ * (the old check). Fallback removal: with the slim fallback of SC-PERF-PROTCHECK-1, once no cached export without `protected_fingerprint` can reach a browser.
+ */
+const slimStale = (loaded: {slim?: boolean; protected_fingerprint?: string}, screen: ReadyScreen): boolean =>
+  loaded.slim === true && (typeof loaded.protected_fingerprint !== 'string' || screen.fingerprint?.() !== loaded.protected_fingerprint);
+/** Reload the full export when the held publication is the slim one and the screen no longer matches it (called when the screen loads or refreshes). */
+export async function settleReefPublication(region: string, plannerScreen: PlannerScreenState | undefined, loader: ReefLoader = loadReefTrip): Promise<void> {
+  const was = reefPublication.peek();
+  if (was.state !== 'ready' || was.region !== region || plannerScreen?.state !== 'loaded' || plannerScreen.region !== undefined && plannerScreen.region !== region) return;
+  if (!plannerScreen.screen.ready() || !slimStale(was.loaded, plannerScreen.screen)) return;
+  await startLoad(region, loader);
+}
+/** What `bestSpots` reads of the screen and the outlines, answered from the stored verdicts: a reef passes when its verdict is not refused (`placeRefused`). */
+const verdictScreen = (screen: ReadyScreen) => ({
+  ready: () => screen.ready(),
+  pointAllowed: (t: {protected_place?: PlaceVerdict}) => t.protected_place !== undefined && !placeRefused(t.protected_place),
+  geometryAllowed: () => true,
+});
 
 const rankSpots = bestSpots as unknown as (atlas: unknown, screen: unknown, o: Record<string, unknown>) => Ranked[];
 /** SCJ-2b: the trip planner's protected-area screen (web/trip.ts `protectedScreen`), declared here so this file does not import trip.ts. */
@@ -317,10 +338,13 @@ function publicationScreened(loaded: Extract<ReefPublication, {state: 'ready'}>[
   // screen holds exactly the boundary data it was computed against; any other screen (or an export without verdicts) runs `screenPlace` as before.
   // Fallback removal: once no cached export without `protected_fingerprint` can reach a browser (every region republished and the old files past `expires_at` + the cache lifetime).
   const stored = typeof loaded.protected_fingerprint === 'string' && screen.fingerprint?.() === loaded.protected_fingerprint;
+  // The slim publication has no outlines: each reef stands as its own area, and the stored verdict is the whole outline-and-point check.
+  const slim = loaded.slim === true && stored;
   // RF1050-16: malformed depth bands are dropped before the 50-candidate cap so they cannot starve a valid place; the cached publication is not touched.
   const maxDepth = Math.min(limitFt, 300);
-  const eligible = {...loaded, targets: loaded.targets.filter(t => validDepthPair(t?.neighborhood_depth_ft, maxDepth))};
-  const ranked = rankSpots(eligible, screen, {species, count: 50, maxDepth, origin, maxDistanceNm: keep.maxNm ?? Infinity, place: watched, stats});
+  const eligible = {...loaded, targets: loaded.targets.filter(t => validDepthPair(t?.neighborhood_depth_ft, maxDepth)),
+    ...(slim ? {areas: loaded.targets.map(t => ({id: t.id, geometry: null}))} : {})};
+  const ranked = rankSpots(eligible, slim ? verdictScreen(screen) : screen, {species, count: 50, maxDepth, origin, maxDistanceNm: keep.maxNm ?? Infinity, place: watched, stats});
   return {withheld: stats.withheld, pending, picks: ranked.filter(t => kept(keep, miles(origin, t), swim(keep, t))).slice(0, keep.top ?? TOP).map(t => {
     const [lo, hi] = t.neighborhood_depth_ft as [number, number], nm = miles(origin, t), yd = swim(keep, t);
     const species = speciesPart(coast);
@@ -432,6 +456,7 @@ export function ranking(i: RankingInputs): Ranking {
       if (ps?.state !== 'loaded' || ps.region !== undefined && ps.region !== i.region)
         return ps?.state === 'failed' ? {...head, empty: SCREEN_NOT_CURRENT, copy: notCurrent} : {...head, empty: SCREEN_NOTES.checking, copy: {...lead, empty: [cp(CHECKING_NOTE)]}};
       if (!ps.screen.ready()) return {...head, empty: SCREEN_NOT_CURRENT, copy: notCurrent};
+      if (slimStale(pub.loaded, ps.screen)) return bare('Loading ranked reef places…', 'empty.loadingPublication');
       const s = publicationScreened(pub.loaded, ps.screen, plannerSpecies, speciesLabel(i.coast), i.coast, limit, origin, keep, place);
       const empty = s.withheld ? `No other ranked reef places ${within} for this target.`
         : `No ranked reef places pass the current protected-area check ${within} for this target.`;

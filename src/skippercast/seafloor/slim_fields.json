@@ -1,0 +1,10 @@
+{
+  "_comment": "SC-PERF-REEFDIET-1: the habitat-export feature properties that dist/reef-trip-data.js `loadReefTrip` reads when it builds a brief target (and that dist/spot-ranking.js `evidenceConfidence` reads from them). The slim file carries these and no outline. tests/test_reef_slim.mjs fails when the loader reads a property that is not listed here; tests/gis/test_seafloor_slim.py fails when the publisher writes one that is.",
+  "properties": [
+    "region", "tier", "status", "exportable", "screen", "id", "waypoint",
+    "terrain", "depth_min_ft", "depth_max_ft", "vertical_datum", "fit",
+    "resolution_m", "source_urls", "source_year", "area_ha", "source_rights",
+    "source_ids", "metric_support_fraction", "substrate", "independent_evidence",
+    "interpolation_mask", "protected_place"
+  ]
+}

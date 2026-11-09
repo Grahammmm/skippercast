@@ -29,7 +29,7 @@ import {depthLimitFt, PROFILE_TABLE} from '../profile.ts';
 import {isReachProfile, nmText, reachFor, shoreSwimLimit, spearPlan} from '../reach.ts';
 import {loadShoreLines, shoreLines} from '../shore-distance.ts';
 import {landWater, loadLandWater, loadLandWaterLines, placeFor, type LandWaterState} from '../land-water.ts';
-import {ranking, recheckReefPublication, reefPublication, regionLoad, routedPicks, ROUTE_BUDGET, TOP, type Pick, type Ranking, type RoutedPick, type RouteFn} from '../ranking.ts';
+import {ranking, recheckReefPublication, reefPublication, regionLoad, routedPicks, ROUTE_BUDGET, settleReefPublication, TOP, type Pick, type Ranking, type RoutedPick, type RouteFn} from '../ranking.ts';
 import {acceptReefLoad, offerMegabytes, requestReefPublication} from '../reef-lazy.ts';
 import {waterRoute, type Route, type RouteFailure} from '../route.ts';
 import {fitCamera} from '../map/ranked.ts';
@@ -298,6 +298,9 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
     const timer = setInterval(() => { void recheckReefPublication(id); }, 60000);
     return () => clearInterval(timer);
   }, [id]);
+  // SC-PERF-REEFDIET-1: the slim reef file is good only for the boundary data its verdicts were computed against; when the screen holds other data
+  // (or loads late), the full export is loaded instead. A cheap guard each render; it loads at most once per publication.
+  useEffect(() => { if (id) void settleReefPublication(id, protectedScreen.peek()); });
   // SCJ-2b: the planner's protected-area screen, which admits the publication's places, loads with the brief.
   useEffect(() => { if (id) void loadProtectedScreen(id); }, [id]);
   useEffect(() => {
