@@ -4,6 +4,8 @@
 
 - RF0834-5: the AIS matcher keeps an established watched row (and its entry in the listener's `watch.json`) when the processor has no statics for an MMSI the same single active registry vessel still holds, whether positions remain or the processor state was rebuilt. Retention needs the stored row's vessel to be that owner, no rejection and a row that passes the watched gate; no row, fact or review is invented, and an unheard, candidate, rejected, reassigned, duplicated or excluded binding gains nothing.
 
+- RF0804-8: the "Check my position" answer no longer reads "outside" for a closure inside a wide reported position accuracy. When the position accuracy plus the 70 m planning margin reaches the planner screen's 20 km search bound, the nearest held closure is measured again without that bound, so a closure within the accuracy radius is "near" (with the low-accuracy warning) instead of being skipped. A precise position far from every closure, inside-a-closure, missing-layer, stale-data and not-covered answers are unchanged. Nothing is sent or stored. NOT FOR NAVIGATION.
+
 - RF0824-7: CDIP nearshore ingestion refuses changed or malformed numeric quality-flag mappings, retaining only eligible recent last-good records with their original clocks; canonical quality masks remain unchanged.
 
 - SCFEAT-BATHY2M-EXPAND-1: private Del Norte bathymetry test page uses the retained NOAA F00562 1 m survey with medium relief, survey dates and nominal MLLW provenance. No public tiles, hard-bottom inference or navigation-qualified depths.
