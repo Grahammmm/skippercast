@@ -137,6 +137,60 @@ class CsvErrorTests(_Base):
             self.assertNotIn(SECRET, str(caught.exception))
 
 
+class QuotingTests(_Base):
+    def test_unterminated_quoted_field_is_named_error(self):
+        for column_set, header in (("cdfw-cpfv-v1", "Vessel Name,FG Number"),
+                                   ("scout-candidates-v1", "Port ID,Boat,Operator,Class,Landing,Website,Evidence URLs")):
+            for tail in ("\n", ""):
+                data = f'{header}\n"{SECRET},FG1\nTest Example,FG2{tail}'.encode()
+                with self.assertRaises(FileImportError) as caught:
+                    read_rows(data, column_set)
+                message = str(caught.exception)
+                self.assertRegex(message, rf"^{column_set}: CSV unreadable near line \d+$")
+                self.assertNotIn(SECRET, message)
+
+    def test_junk_after_closing_quote_is_named_error(self):
+        data = f'Vessel Name,FG Number\n"{SECRET}"junk,FG1\n'.encode()
+        with self.assertRaises(FileImportError) as caught:
+            read_rows(data, "cdfw-cpfv-v1")
+        self.assertEqual(str(caught.exception), "cdfw-cpfv-v1: CSV unreadable near line 2")
+        self.assertNotIn(SECRET, str(caught.exception))
+        with self.assertRaises(FileImportError) as caught:  # malformed header
+            read_rows(b'"Vessel Name"x,FG Number\nSea Example,FG1\n', "cdfw-cpfv-v1")
+        self.assertEqual(str(caught.exception), "cdfw-cpfv-v1: CSV unreadable near line 1")
+
+    def test_valid_quoted_fields_round_trip(self):
+        data = ('\ufeff"Vessel Name","FG Number"\r\n"Sea, Example","FG1"\r\n"Say ""Hi"" Boat",FG2\r\n'
+                '"Multi\nLine",FG3\r\n').encode()
+        self.assertEqual(read_rows(data, "cdfw-cpfv-v1"),
+                         [{"vessel_name": "Sea, Example", "fg_number": "FG1"},
+                          {"vessel_name": 'Say "Hi" Boat', "fg_number": "FG2"},
+                          {"vessel_name": "Multi\nLine", "fg_number": "FG3"}])
+
+    def test_malformed_later_row_emits_no_partial_candidates(self):
+        self.path.write_bytes(b'Vessel Name,FG Number\nSea Example,FG1\n"Bad Boat"junk,FG2\n')
+        adapter = FileImport()
+        self.assertEqual(self.refused(adapter), "cdfw-cpfv-v1: CSV unreadable near line 3")
+        report = adapter.report["cpra-cpfv"]
+        self.assertEqual((report["rows"], report["candidates"]), (0, 0))
+
+    def test_quoted_csv_error_isolated_to_import_binding(self):
+        self.path.write_bytes(f'Vessel Name,FG Number\n"{SECRET}"junk,FG1\n'.encode())
+        site = SimpleNamespace(id="operator-site", adapter="operator-site", enabled=True)
+        sources = (site, self.binding)
+        region = SimpleNamespace(sources=sources, enabled_sources=lambda: sources,
+                                 binding=lambda ident: next(b for b in sources if b.id == ident))
+        ctx = RunContext(region=region, net=None, run_dir=self.fleet_run.dir, clock=lambda: NOW)
+        counts = enrich.enrich_code(ctx, None, vessels=[{"vessel_id": "v-1", "name": "Sea Example"}],
+                                    adapters={"operator-site": _FakeSite()})
+        report = json.loads((self.fleet_run.dir / "enrich-code.json").read_text())
+        self.assertEqual(report["bindings"]["cpra-cpfv"],
+                         {"status": "failed", "error": "cdfw-cpfv-v1: CSV unreadable near line 2"})
+        self.assertEqual(report["bindings"]["operator-site"], {"status": "ok"})
+        self.assertNotIn(SECRET, json.dumps(report))
+        self.assertEqual((counts["facts"], counts["imported"]), (1, 0))
+
+
 class TodayTests(_Base):
     def test_missing_file_is_skipped_with_todays_reason(self):
         adapter = FileImport()

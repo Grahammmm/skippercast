@@ -152,7 +152,7 @@ def read_rows(data: bytes, column_set: str) -> list[dict[str, str]]:
     if "\x00" in text:  # the csv module accepts NUL since Python 3.11; a licence list never has one
         line = text.count("\n", 0, text.index("\x00")) + 1
         raise FileImportError(f"{column_set}: CSV unreadable near line {line}")
-    reader = csv.DictReader(io.StringIO(text))
+    reader = csv.DictReader(io.StringIO(text), strict=True)  # strict: an unclosed quote or junk after a closing one is an error
     aliases = {alias: canonical for canonical, names in COLUMN_SETS[column_set].items() for alias in names}
     mapping = {}
     try:
