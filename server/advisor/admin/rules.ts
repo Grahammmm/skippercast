@@ -103,6 +103,7 @@ export function ruleFields(input: unknown, jurisdiction: string, {create = false
       if (empty) { if (key === 'species_label' || key === 'source_name') return {error: `${key} is required`}; fields[key as Content] = null; continue; }
       if (typeof raw !== 'string') return {error: `${key} must be text`};
       const v = raw.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').trim();
+      if (!v && (key === 'species_label' || key === 'source_name')) return {error: `${key} is required`};   // control-only text is blank once cleaned
       if (Array.from(v).length > TEXT[key]!) return {error: `${key} is at most ${TEXT[key]} characters`};
       fields[key as Content] = v;
     } else if (key in NUMBER) {
