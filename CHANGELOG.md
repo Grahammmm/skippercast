@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF0824-5: saved trip plans enforce the 16,384-byte plan cap in UTF-8 bytes on create and edit, so names and notes in non-ASCII text can no longer slip a larger plan past the limit; over-cap plans are refused with "plan too large" and nothing is saved.
+
 - RF0824-7: CDIP nearshore ingestion refuses changed or malformed numeric quality-flag mappings, retaining only eligible recent last-good records with their original clocks; canonical quality masks remain unchanged.
 
 - SCFEAT-BATHY2M-EXPAND-1: private Del Norte bathymetry test page uses the retained NOAA F00562 1 m survey with medium relief, survey dates and nominal MLLW provenance. No public tiles, hard-bottom inference or navigation-qualified depths.
