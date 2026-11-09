@@ -103,6 +103,29 @@ def regrid(grid, lats, lons, target_lats, target_lons, nearest=False):
     return np.stack([np.interp(target_lats, lats, along[:, i]) for i in range(along.shape[1])], axis=1)
 
 
+DIRECTION_FIELDS = ('wave_direction', 'wind_wave_direction', 'swell_wave_direction', 'secondary_swell_wave_direction')
+
+
+def regrid_direction(grid, lats, lons, target_lats, target_lons):
+    """Bilinear resampling of compass bearings in degrees (FROM convention), so 359 and 1 meet at north.
+
+    Sine and cosine of each valid bearing are resampled with `regrid`; the bearing is recovered with atan2.
+    Non-finite or outside-0..360 source values are missing, and so is any result whose components are
+    missing or cancel (opposite bearings), never a bearing invented from the remaining neighbours.
+    """
+    grid = np.asarray(grid, dtype=float)
+    valid = np.isfinite(grid) & (grid >= 0) & (grid <= 360)
+    radians = np.radians(np.where(valid, grid, np.nan))
+    sin = regrid(np.sin(radians), lats, lons, target_lats, target_lons)
+    cos = regrid(np.cos(radians), lats, lons, target_lats, target_lons)
+    usable = np.isfinite(sin) & np.isfinite(cos)
+    sin, cos = np.where(usable, sin, 0.0), np.where(usable, cos, 0.0)
+    usable &= np.hypot(sin, cos) > 1e-12
+    bearing = np.round(np.degrees(np.arctan2(sin, cos)), 9) % 360  # rounding keeps float dust at north from reading 359.99999…
+    bearing = np.where(bearing >= 360, 0.0, bearing)
+    return np.where(usable, bearing, np.nan)
+
+
 # ---- per-model build -----------------------------------------------------------
 
 def convert(model, name, cube, times):
@@ -179,7 +202,11 @@ def fetch_model(model, cycle, workers=16, log=log_err):
     for step_fields in results.values():  # put every field on the reference grid
         for name, (grid, glats, glons) in list(step_fields.items()):
             if grid.shape != shape or not np.allclose(glats, lats) or not np.allclose(glons, lons):
-                step_fields[name] = (regrid(grid, glats, glons, lats, lons, nearest=name == mask_key), lats, lons)
+                if name in DIRECTION_FIELDS:
+                    resampled = regrid_direction(grid, glats, glons, lats, lons)
+                else:
+                    resampled = regrid(grid, glats, glons, lats, lons, nearest=name == mask_key)
+                step_fields[name] = (resampled, lats, lons)
     times = [int(cycle.timestamp()) + 3600 * step for step in model.steps]
     cubes = {}
     for f in model.fields:
