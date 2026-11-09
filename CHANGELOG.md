@@ -4,6 +4,8 @@
 
 - RF0844-7: the GEFS wind-ensemble build now checks each decoded wind-component and gust field's latitude and longitude axes against the GFS land mask before sampling any sea-cell index, and fails the build when a field sits on displaced cells even if its dimensions match (it previously published that wind under the mask's coordinates with a false zero-distance receipt). A failed build keeps the previous generation as before; matching grids, receipts and missing-member handling are unchanged.
 
+- RF0844-9: the advisor rules editor refuses a species label or source name that is empty once control characters are removed (it was saved as an active, reviewed rule with blank text); a refused create or edit changes no rule and does not bump the pages version. Visible text with embedded controls is still accepted, cleaned as before.
+
 - RF0854-6: regular-grid GRIB decoding preserves longitude/value identity for westward-scanned columns, normalizing coordinates and columns together; positive-i grids and latitude handling are unchanged.
 
 - RF0804-8: the "Check my position" answer no longer reads "outside" for a closure inside a wide reported position accuracy. When the position accuracy plus the 70 m planning margin reaches the planner screen's 20 km search bound, the nearest held closure is measured again without that bound, so a closure within the accuracy radius is "near" (with the low-accuracy warning) instead of being skipped. A precise position far from every closure, inside-a-closure, missing-layer, stale-data and not-covered answers are unchanged. Nothing is sent or stored. NOT FOR NAVIGATION.
