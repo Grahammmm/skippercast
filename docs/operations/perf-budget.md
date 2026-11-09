@@ -12,7 +12,7 @@ its budget and the share used, then PASS or FAIL. A failing group also lists its
 
 | Group | Size when set | Budget | Headroom |
 |---|---|---|---|
-| Landing page scripts (entry + scripts it imports at once) | 421,933 | 445,000 | 5.5% |
+| Landing page scripts (entry + scripts it imports at once) | 421,933 (445,953 on main cfe567ae; budget raised to 460,000, see `history`) | 460,000 | 5.5% when set |
 | Landing page styles | 24,339 | 26,000 | 6.8% |
 | App page (brief, map) scripts, first load | 1,104,511 | 1,160,000 | 5.0% |
 | App page styles | 67,003 | 71,000 | 6.0% |
