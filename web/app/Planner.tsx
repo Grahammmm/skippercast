@@ -243,7 +243,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
       <details class="export-card" id="export-layers">
         <summary><span>{t('planner.layers', lang)}</span><strong id="export-layer-count">{t('planner.layers.count', lang, {n: Object.values(d.layers).filter(Boolean).length + (m.contourTracks.value ? 1 : 0)})}</strong></summary>
         <div class="export-card-body export-checks">
-          {m.launch.value ? <label class="export-check"><input type="checkbox" checked={!!d.launchId} onChange={e => m.setLaunch(e.currentTarget.checked)} /><span>{t('planner.layers.launch', lang, {name: m.launch.value.name})}</span></label> : null}
+          {m.launch.value || d.launchId ? <label class="export-check"><input type="checkbox" checked={!!d.launchId} onChange={e => m.setLaunch(e.currentTarget.checked)} /><span>{t('planner.layers.launch', lang, {name: m.launch.value?.name ?? '—'})}</span></label> : null}
           {LAYERS.map(([id, name, description]) => (
             <label key={id} class="export-check"><input type="checkbox" data-layer={id} checked={d.layers[id]} onChange={e => m.setLayer(id, e.currentTarget.checked)} />
               <span><strong>{t(name, lang)}</strong><small>{t(description, lang)}</small></span></label>
