@@ -5,7 +5,7 @@
 // privacy line, "Explore the coast", and "Forget saved home" when v1, v2 or
 // /coast holds one (FE-83). It never opens on its own: the map
 // is never blocked. Styles: web/landing/port-input.css.
-import {useEffect, useId, useRef, useState} from 'preact/hooks';
+import {useEffect, useId, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import type {ComponentChildren} from 'preact';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {forgetHome, hasSavedHome, listPorts, locatePort, type CookieJar, type HomeStorage, type Port} from '../ports.ts';
@@ -44,21 +44,33 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
   const list = ports ?? [];
   const matches = nearest && !query ? [nearest] : listPorts(list, query, showAll);
 
+  const attempt = useRef(0);
+  const live = useRef(false);
+  const invalidate = () => { attempt.current++; };
+  // Layout cleanup closes the old context before any pending answer can resume.
+  useLayoutEffect(() => {
+    live.current = true;
+    return () => { live.current = false; invalidate(); };
+  }, [ports, geolocation]);
+  const choose = (port: Port) => { invalidate(); onChoose(port); };
+  const explore = () => { invalidate(); onExplore(); };
   const findNearby = async () => {
+    const mine = ++attempt.current;
     setFeedback(COPY.finding);
     const found = await locatePort(list, geolocation);
+    if (!live.current || mine !== attempt.current) return;
     if (found.ok) { setNearest(found.port); setQuery(''); setFeedback(COPY.found(found.port)); }
     else { setFeedback(COPY[found.reason]); input.current?.focus(); }
   };
   useEffect(() => { if (autoFocus) input.current?.focus(); }, [autoFocus]);
-  useEffect(() => { if (locate && ports) void findNearby(); }, [locate, ports]);
+  useEffect(() => { if (locate && ports) void findNearby(); }, [locate, ports, geolocation]);
 
   return (
-    <form class="port-input" onSubmit={event => { event.preventDefault(); if (matches[0]) onChoose(matches[0]); }}>
+    <form class="port-input" onSubmit={event => { event.preventDefault(); if (matches[0]) choose(matches[0]); }}>
       <label class="port-input-label" for={id}>{label}</label>
       <div class="port-input-row">
         <input ref={input} id={id} type="search" autocomplete="off" autofocus={autoFocus} placeholder={COPY.placeholder} value={query} aria-describedby={`${id}-note`}
-          onInput={event => { setQuery((event.currentTarget as HTMLInputElement).value); setNearest(null); setFeedback(''); }} />
+          onInput={event => { invalidate(); setQuery((event.currentTarget as HTMLInputElement).value); setNearest(null); setFeedback(''); }} />
         <Button type="submit" variant="primary" icon="arrow" disabled={!matches[0]}>{t('landing.port.go', lang)}</Button>
       </div>
       <div class="port-input-results" aria-live="polite">
@@ -68,7 +80,7 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
         <ul class="port-input-list">
           {matches.map(port => (
             <li key={port.id}>
-              <button type="button" class="port-input-option" data-port={port.id} onClick={() => onChoose(port)}>
+              <button type="button" class="port-input-option" data-port={port.id} onClick={() => choose(port)}>
                 <strong>{port.name}</strong><span>{COPY.detail(port)}</span>
               </button>
             </li>
@@ -79,7 +91,7 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
       <p class="port-input-feedback" role="status">{feedback}</p>
       <div class="port-input-actions">
         <Button icon="target" onClick={findNearby} disabled={!ports}>{t('landing.port.locate', lang)}</Button>
-        <Button icon="map" onClick={onExplore}>{t('landing.port.explore', lang)}</Button>
+        <Button icon="map" onClick={explore}>{t('landing.port.explore', lang)}</Button>
       </div>
       {saved ? <Button variant="quiet" size="sm" class="port-input-forget" onClick={forget}>{COPY.forget}</Button> : null}
       <p id={`${id}-note`} class="port-input-note">{COPY.privacy}</p>
