@@ -80,7 +80,7 @@ for (const outcome of ['north', 'failure', 'none', 'unsupported']) {
     const outside = new Element('button'); outside.focus(); const before = m.snapshot();
     if (outcome !== 'unsupported') await m.resolve(0, outcome);
     assert.equal(m.snapshot().query, 'South'); assert.equal(m.snapshot().ids, south.id);
-    assert.equal(m.snapshot().feedback, before.feedback); assert.equal(document.activeElement, outside);
+    assert.equal(m.snapshot().feedback, before.feedback); assert.ok(document.activeElement === outside, 'obsolete answer preserves outside focus');
     await m.submit(); assert.equal(m.chosen.length, 1); assert.equal(m.chosen[0], south);
     await m.unmount();
   });
@@ -96,7 +96,7 @@ for (const old of ['north', 'failure', 'none']) for (const order of ['old-first'
     await m.resolve(1, 'south'); const before = m.snapshot();
     if (order === 'new-first') await m.resolve(0, old);
     assert.equal(m.snapshot().ids, south.id); assert.equal(m.snapshot().feedback, before.feedback);
-    assert.equal(document.activeElement, outside); assert.equal(m.chosen.length, 0);
+    assert.ok(document.activeElement === outside, 'obsolete answer preserves outside focus'); assert.equal(m.chosen.length, 0);
     // A duplicate device callback cannot publish a second result.
     await m.resolve(1, 'north'); assert.equal(m.snapshot().ids, south.id);
     await m.unmount();
@@ -105,9 +105,9 @@ for (const old of ['north', 'failure', 'none']) for (const order of ['old-first'
 test('current failure, none, unsupported and explicit retry retain ordinary controls', async () => {
   const m = mount(); await m.update({}); await m.type('South'); await m.click('Use my location');
   await m.resolve(0, 'failure'); assert.equal(m.snapshot().query, 'South');
-  assert.match(m.snapshot().feedback, /unavailable/); assert.equal(document.activeElement, m.input());
+  assert.match(m.snapshot().feedback, /unavailable/); assert.ok(document.activeElement === m.input(), 'current failure focuses search');
   await m.click('Use my location'); await m.resolve(1, 'none'); assert.match(m.snapshot().feedback, /No listed port/);
-  await m.update({geolocation: null}); await m.click('Use my location'); assert.match(m.snapshot().feedback, /support/);
+  await m.update({geolocation: null}); await m.click('Use my location'); assert.equal(m.snapshot().feedback, 'Location is unavailable. Search for a port instead.');
   await m.update({geolocation: geo()}); await m.click('Use my location'); await m.resolve(0, 'north');
   assert.equal(m.snapshot().query, ''); assert.equal(m.snapshot().ids, north.id); assert.equal(m.chosen.length, 0);
   await m.submit(); assert.equal(m.chosen[0], north); await m.unmount();
@@ -116,7 +116,7 @@ for (const boundary of ['option', 'submit', 'explore', 'unmount', 'ports', 'geol
   for (const outcome of ['north', 'failure']) test(`${boundary} discards late ${outcome}`, async () => {
     const m = mount(); await m.update({}); await m.type('South'); await m.click('Use my location');
     const old = m.geolocation;
-    if (boundary === 'option') await m.click('South fixtureSouth Fixture');
+    if (boundary === 'option') await act(() => fire(all(m.root, n => n.attrs['data-port'] === south.id)[0], 'click'));
     else if (boundary === 'submit') await m.submit();
     else if (boundary === 'explore') await m.click('Explore the coast');
     else if (boundary === 'unmount') { await m.unmount(); await m.update({}); }
@@ -125,7 +125,7 @@ for (const boundary of ['option', 'submit', 'explore', 'unmount', 'ports', 'geol
     const outside = new Element('button'); outside.focus(); const before = m.snapshot();
     await act(() => answer(old, 0, outcome));
     assert.equal(m.snapshot().query, before.query); assert.equal(m.snapshot().ids, before.ids);
-    assert.equal(m.snapshot().feedback, before.feedback); assert.equal(document.activeElement, outside);
+    assert.equal(m.snapshot().feedback, before.feedback); assert.ok(document.activeElement === outside, 'obsolete answer preserves outside focus');
     assert.equal(m.chosen.length, ['option', 'submit'].includes(boundary) ? 1 : 0);
     if (m.chosen.length) assert.equal(m.chosen[0], south);
     assert.equal(m.explored.length, boundary === 'explore' ? 1 : 0); await m.unmount();
