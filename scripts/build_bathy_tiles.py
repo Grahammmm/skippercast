@@ -457,7 +457,12 @@ def warp_native(source, z, x, y, pad):
         if col1 <= col0 or row1 <= row0:
             return dest, ground
         window = Window(col0, row0, col1 - col0, row1 - row0)
-        values = mask_native(ds.read(1, window=window), ds.nodata)
+        values = ds.read(1, window=window)
+        # GDAL validity mask (same window): a zero byte is NODATA whatever the stored number or
+        # ds.nodata (possibly None) says, so a masked shallow-looking cell cannot average in or
+        # qualify z14-15 native support.
+        values = np.where(ds.read_masks(1, window=window) == 0, np.float32(NODATA), values)
+        values = mask_native(values, ds.nodata)
         reproject(values, dest, src_transform=ds.window_transform(window), src_crs=ds.crs,
                   src_nodata=NODATA, dst_transform=transform, dst_crs='EPSG:3857',
                   dst_nodata=NODATA, resampling=Resampling.average, init_dest_nodata=True)

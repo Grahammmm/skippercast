@@ -63,7 +63,7 @@ test('the compact peek row keeps the card markup and only peek-scoped rules', as
   const html = await shell(true);
   assert.match(html, /class="ui-sheet[^"]*" data-detent="peek"/);
   const card = html.slice(html.indexOf('<section class="app-firstrun"'));
-  for (const part of [/class="ui-eyebrow"/, /<h2 id="first-run-title">/, /<p>The profile sets/, /Keep Boat for now/]) assert.match(card, part);
+  for (const part of [/class="ui-eyebrow"/, /<h2 id="first-run-title" tabindex="-1">/, /<p>The profile sets/, /Keep Boat for now/]) assert.match(card, part);
   assert.equal((card.match(/<small>/g) || []).length, 4);
   const css = readFileSync(join(root, 'web/landing/port-input.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   const rules = [...css.matchAll(/([^{}]+)\{/g)].map(m => m[1].trim()).filter(sel => /\.ui-sheet/.test(sel));

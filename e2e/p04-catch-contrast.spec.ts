@@ -179,7 +179,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC0452-05: App resolves the shared hour clock and passes it to the layouts;
   // BODY09 mounts Reports/CatchCards, not App. No catch markup, paint, styles,
   // source data, contrast(), assertions or thresholds change. Rebind App.tsx.
-  "web/app/App.tsx": "ed1fc3113742c765fa104a97da743f18018026cbf453fa4c078378c4193d08f0",
+  // RF0753-2 (first-run keyboard): App.tsx changes only <FirstRun /> to <FirstRun focusOnOpen /> on the desktop shell, which
+  // moves focus to the card's heading (FirstRun.tsx). BODY09 mounts Reports/CatchCards, never App or FirstRun; no CSS, token,
+  // class or catch markup change; contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
+  "web/app/App.tsx": "ae91937e607c033488a0b2d84eeea283e9b444b6a8241f8233da5d531c70d55c",
   // SC-LAUNCH-4 (#1267, cost ceiling): Masthead.tsx imports web/degraded.ts (a signal and pure helpers, no top-level
   // side effect) and adds DegradedNotice after FreshnessDot. It renders nothing unless a response carries
   // X-SC-Degraded: cost-ceiling, which no BODY09 fixture does; when shown it reuses the existing .app-limits-note
