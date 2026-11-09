@@ -30,8 +30,11 @@ function closeOnEscape(event: KeyboardEvent) {
   const details = event.currentTarget as HTMLDetailsElement;
   if (event.key !== 'Escape' || event.defaultPrevented || !details.open) return;
   const summary = Array.from(details.children as ArrayLike<Element>).find(child => child.tagName === 'SUMMARY') as HTMLElement | undefined;
+  // A handler inside the disclosure that already moved focus out of it (the share link field returns to its Share button) keeps that focus.
+  const active = details.ownerDocument?.activeElement;
+  const movedOut = !!active && active !== details.ownerDocument.body && !details.contains(active);
   details.open = false;
-  summary?.focus();
+  if (!movedOut) summary?.focus();
   event.preventDefault();
   event.stopPropagation();
 }

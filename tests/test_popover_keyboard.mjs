@@ -140,3 +140,21 @@ test('nested_disclosure_escape_only_closes_innermost', () => {
   press(outer.summary, 'Escape');
   assert.equal(dialog.escapes, 1);
 });
+
+test('escape_keeps_focus_an_inner_handler_already_moved_out', () => {
+  const dialog = fresh();
+  const a = disclosure(dialog, 'a');
+  const elsewhere = node('BUTTON', dialog, {name: 'elsewhere'});
+  const doc = {body: node('BODY', null, {name: 'body'}), activeElement: elsewhere};
+  a.details.ownerDocument = doc;
+  a.details.contains = n => { for (let x = n; x; x = x.parentNode) if (x === a.details) return true; return false; };
+  press(a.link, 'Escape');
+  assert.equal(a.details.open, false, 'the disclosure still closes');
+  assert.equal(calls.filter(c => c[0] === 'focus').length, 0, 'focus stays where the inner handler put it');
+  assert.equal(dialog.escapes, 0);
+
+  doc.activeElement = a.link;
+  a.details.open = true;
+  press(a.link, 'Escape');
+  assert.equal(focus.current, a.summary, 'focus still inside goes back to the summary');
+});
