@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF0854-7: the operator lead score's "AIS seen in the last 30 days" part is bounded by the scoring instant: a watched vessel's sighting dated after "now" no longer earns the AIS points (it was counted as seen), while a sighting exactly at now or exactly 30 days earlier still counts. A watched operator with no qualifying sighting scores a known zero, and an operator with no watched vessel stays missing. Read-time only; weights, other parts and stored watch records are unchanged.
+
 - RF0844-9: the advisor rules editor refuses a species label or source name that is empty once control characters are removed (it was saved as an active, reviewed rule with blank text); a refused create or edit changes no rule and does not bump the pages version. Visible text with embedded controls is still accepted, cleaned as before.
 
 - RF0854-6: regular-grid GRIB decoding preserves longitude/value identity for westward-scanned columns, normalizing coordinates and columns together; positive-i grids and latitude handling are unchanged.
