@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF0854-8: the admin fleet operator list ranks every matching operator (do-not-contact last, then lead score, then name, then id) before applying its 500-row cap, so a high-scoring operator outside the first 500 by name is no longer left out. Matching operators are read in bounded pages by id with every filter applied to each page; `truncated` still means more than 500 matched, and the endpoint, filters, response fields and score model are unchanged.
+
 - RF0814-7: the trip planner's GPX, offline notes and planning-route exports now refuse, with "Included launch ramp is unavailable", when the included launch ramp is no longer in the published list (list replaced, empty, unavailable or for another region) instead of silently exporting the first listed ramp or leaving the checked launch out. The ramp checkbox stays visible, checked and enabled (showing "—") so it can be unchecked; a valid current ramp choice is still followed exactly and nothing saved is changed.
 
 - RF0824-5: saved trip plans enforce the 16,384-byte plan cap in UTF-8 bytes on create and edit, so names and notes in non-ASCII text can no longer slip a larger plan past the limit; over-cap plans are refused with "plan too large" and nothing is saved.
