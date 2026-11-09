@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- RF0824-5: saved trip plans enforce the 16,384-byte plan cap in UTF-8 bytes on create and edit, so names and notes in non-ASCII text can no longer slip a larger plan past the limit; over-cap plans are refused with "plan too large" and nothing is saved.
+
+- RF0844-9: the advisor rules editor refuses a species label or source name that is empty once control characters are removed (it was saved as an active, reviewed rule with blank text); a refused create or edit changes no rule and does not bump the pages version. Visible text with embedded controls is still accepted, cleaned as before.
+
 - RF0854-5: the WCOFS surface-current reader refuses a forecast frame whose latitude, longitude, mask, U or V array does not hold exactly the requested grid's cell count, or whose time array is not one value, even when every array is equally short, long or empty. The source reports failed (or retained, keeping the prior data and its original clocks) instead of ok or missing; a complete all-dry grid still reports missing.
 
 - RF0854-6: regular-grid GRIB decoding preserves longitude/value identity for westward-scanned columns, normalizing coordinates and columns together; positive-i grids and latitude handling are unchanged.
