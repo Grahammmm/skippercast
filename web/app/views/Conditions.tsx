@@ -18,6 +18,7 @@ import {language, localeOf, num, t, type Language} from '../../i18n.ts';
 import {profile, region, species} from '../../state.ts';
 import {loadRegs, regsData} from '../../regs.ts';
 import {SeasonStrip} from '../SeasonStrip.tsx';
+import {PortAlert} from '../PortAlert.tsx';
 import {regionInfo, zone} from '../App.tsx';
 import {CoastMarkup} from '../CoastMarkup.tsx';
 import {HourlyTable} from './HourlyTable.tsx';
@@ -68,6 +69,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
       </header>
       {disagree.length ? <><link rel="stylesheet" href={disagreeStyles} />
         <ul class="app-conditions-disagree" aria-label={t('conditions.disagree.aria', lang)}>{disagree.map(d => <li key={d.date}>{sentence(d, now, tz, lang)}</li>)}</ul></> : null}
+      <PortAlert now={now} tz={tz} />
       <dl class="app-conditions-now" aria-label={t('conditions.now.aria', lang, {time: timeText(selected, tz, true, lang)})}>
         {readingsAt(rows, selected).map(r => <div key={r.label}><dt class="ui-eyebrow">{r.label}</dt><dd class="ui-mono">{value(r.value, r.unit, lang)}</dd></div>)}
       </dl>
