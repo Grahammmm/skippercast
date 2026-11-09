@@ -106,6 +106,8 @@ def ndbc(body, station, spectral=False):
     if len(lines) < 3 or not lines[0].startswith("#YY"):
         raise ValueError("NDBC table header missing")
     keys, units = lines[0].lstrip("#").split(), lines[1].lstrip("#").split()
+    if keys[:5] != ["YY", "MM", "DD", "hh", "mm"] or units[:5] != ["yr", "mo", "dy", "hr", "mn"]:
+        raise ValueError("NDBC timestamp fields or units changed")
     required = {"WVHT", "SwH", "SwP", "WWH", "WWP"} if spectral else {"WVHT", "DPD", "WTMP", "WSPD"}
     if not required.issubset(keys):
         raise ValueError("NDBC columns changed")
