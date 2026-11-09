@@ -190,3 +190,69 @@ test('trip_export_hash_string_roundtrip_and_repair',async()=>{
     assert.equal(sql.prepare('SELECT plan FROM trips WHERE id=?').get(id).plan,null);
   }finally{sql.close();}
 });
+
+// RF0824-5: the 16,384-byte plan cap is measured in UTF-8 bytes of the normalized JSON.
+const planBytes=p=>Buffer.byteLength(JSON.stringify(p));
+const cjkPlan=()=>({spots:Array.from({length:PLAN_LIMITS.spots},(_,i)=>({...spot('s'+i,i),name:'海'.repeat(80),notes:'海'.repeat(280)})),legs:Array.from({length:PLAN_LIMITS.legs},()=>({from:'海'.repeat(80),to:'海'.repeat(80),nm:1,minutes:1})),window:{depart:null,return_by:null,hours:[]},exports:[]});
+// A legal plan whose normalized JSON is exactly `target` bytes, with quotes, backslashes and multibyte text.
+function planOfBytes(target){
+  const p=cjkPlan();p.spots[0].notes='"\\'+'é'.repeat(20)+p.spots[0].notes.slice(0,200);
+  while(planBytes(p)>target){const s=p.spots.reduce((a,b)=>b.notes.length>a.notes.length?b:a);s.notes=s.notes.slice(0,-1);}
+  while(planBytes(p)<target){const s=p.spots.find(x=>x.notes.length<280);s.notes+='a';}
+  assert.equal(planBytes(p),target,'fixture is exactly the target size');return p;
+}
+const bigRequest=plan=>({...alert,plan});
+test('trip_plan_utf8_not_utf16',()=>{
+  const cjk=cjkPlan();assert.ok(planBytes(cjk)>PLAN_LIMITS.bytes&&JSON.stringify(cjk).length<=PLAN_LIMITS.bytes,'fixture exceeds in bytes only');
+  assert.ok(Buffer.byteLength(JSON.stringify(bigRequest(cjk)))<PLAN_LIMITS.body);
+  assert.throws(()=>validateTripPlan({plan:cjk},region,'reef'),{message:'plan too large'});
+  const twin=JSON.parse(JSON.stringify(cjk).replaceAll('海','a'));
+  assert.ok(planBytes(twin)<=PLAN_LIMITS.bytes);assert.ok(validateTripPlan({plan:twin},region,'reef').plan);
+  const small=validateTripPlan({plan:{...plan,spots:[{...spot('a',0),name:'Café 🎣',notes:'海 é'}]}},region,'reef').plan.spots[0];
+  assert.equal(small.name,'Café 🎣');assert.equal(small.notes,'海 é');
+});
+test('trip_plan_exact_normalized_byte_boundary',()=>{
+  for(const [delta,ok] of [[-1,true],[0,true],[1,false]]){
+    const p=planOfBytes(PLAN_LIMITS.bytes+delta);
+    if(ok)assert.equal(planBytes(validateTripPlan({plan:p},region,'reef').plan),PLAN_LIMITS.bytes+delta);
+    else assert.throws(()=>validateTripPlan({plan:p},region,'reef'),{message:'plan too large'});
+  }
+});
+test('trip_plan_size_after_normalization',()=>{
+  const raw={spots:[{...spot('a',0),notes:'海'.repeat(5000),name:'  x  '}]};
+  assert.ok(Buffer.byteLength(JSON.stringify(bigRequest(raw)))<PLAN_LIMITS.body);
+  const got=validateTripPlan({plan:raw},region,'reef').plan;assert.equal(got.spots[0].notes.length,280);assert.equal(got.spots[0].name,'x');
+  assert.equal(validateTripPlan({},region,'reef').plan,null);assert.equal(validateTripPlan({plan:null},region,'reef').plan,null);
+});
+test('trip_post_patch_utf8_overflow_never_write',async()=>{
+  const {sql,adapter}=database(),env={DB:adapter};
+  const snap=id=>JSON.stringify(sql.prepare('SELECT * FROM trips WHERE id=?').get(id));
+  const count=()=>sql.prepare('SELECT COUNT(*) AS n FROM trips').get().n;
+  try{
+    const created=await worker.fetch(request('trips',{owner:'alice',method:'POST',body:{...alert,plan}}),env);
+    assert.equal(created.status,201);const {id}=await created.json();
+    sql.prepare('UPDATE trips SET updated_at=? WHERE id=?').run('2020-01-01T00:00:00.000Z',id);
+    const before=snap(id),cjk=cjkPlan();
+    assert.ok(Buffer.byteLength(JSON.stringify(bigRequest(cjk)))<PLAN_LIMITS.body);
+    const post=await worker.fetch(request('trips',{owner:'alice',method:'POST',body:bigRequest(cjk)}),env);
+    assert.equal(post.status,400);assert.equal((await post.json()).error,'plan too large');
+    const patch=await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id,status:'done',plan:cjk}}),env);
+    assert.equal(patch.status,400);assert.equal((await patch.json()).error,'plan too large');
+    assert.equal(count(),1,'no trip row was inserted');assert.equal(snap(id),before,'the stored row, updated_at included, is unchanged');
+    const ok=await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id,plan:planOfBytes(PLAN_LIMITS.bytes)}}),env);assert.equal(ok.status,200);
+    const again=await worker.fetch(request('trips',{owner:'alice',method:'POST',body:bigRequest(plan)}),env);assert.equal(again.status,201);
+  }finally{sql.close();}
+});
+test('trip_utf8_cap_preserves_owner_and_body_limits',async()=>{
+  const {sql,adapter}=database(),env={DB:adapter};
+  try{
+    const cjk=cjkPlan();
+    for(const id of ['missing-id','00000000-0000-4000-8000-000000000000']){
+      const r=await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id,plan:cjk}}),env);assert.equal(r.status,404);
+    }
+    const anon=await worker.fetch(request('trips',{method:'POST',body:bigRequest(plan)}),env);assert.ok(anon.status===401||anon.status===403,'anonymous cannot save: '+anon.status);
+    const huge=await worker.fetch(request('trips',{owner:'alice',method:'POST',body:{...bigRequest(plan),pad:'海'.repeat(9000)}}),env);
+    assert.ok(huge.status===413||huge.status===400,'over-body request refused: '+huge.status);assert.notEqual((await huge.json()).error,'plan too large');
+    assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM trips').get().n,0);
+  }finally{sql.close();}
+});
