@@ -144,3 +144,33 @@ test('intermittent missing readings inside the window never read "clear"; known 
   // Complete data stays clear.
   assert.equal(evaluatePortAlert(LIMITS, forecast(hours48(() => ({}))), NOW).state, 'clear');
 });
+
+test('negative wind or swell is a missing coverage slot', () => {
+  for (const key of ['windKnots', 'swellFt']) for (const i of [0, 20, WINDOW_HOURS - 1]) {
+    const r = evaluatePortAlert(LIMITS, forecast(full(n => n === i ? {[key]: -1} : {})), NOW);
+    assert.equal(r.state, 'partial', `${key} at ${i}`);
+    assert.equal(r.notification, null);
+    assert.ok(r.peak.windKt >= 0 && r.peak.swellFt >= 0, 'peaks are never negative');
+  }
+});
+
+test('all negative readings are no-data', () => {
+  const r = evaluatePortAlert(LIMITS, forecast(full(() => ({windKnots: -1, swellFt: -2}))), NOW);
+  assert.equal(r.state, 'no-data');
+  assert.equal(r.hoursChecked, 0);
+  assert.deepEqual(r.exceedances, []);
+  assert.deepEqual(r.peak, {windKt: null, swellFt: null});
+  assert.equal(r.notification, null);
+  const one = evaluatePortAlert(LIMITS, forecast(full(() => ({windKnots: -3}))), NOW);
+  assert.equal(one.state, 'partial', 'one wholly negative variable leaves the other valid');
+  assert.equal(one.peak.windKt, null);
+});
+
+test('zero remains calm and a valid hit survives negative data', () => {
+  assert.equal(evaluatePortAlert(LIMITS, forecast(full(i => ({windKnots: i % 2 ? 0 : -0, swellFt: 0}))), NOW).state, 'clear');
+  const hit = evaluatePortAlert(LIMITS, forecast(full(i => i === 5 ? {windKnots: 15, swellFt: -1} : i === 9 ? {windKnots: -4} : {})), NOW);
+  assert.equal(hit.state, 'alert');
+  assert.equal(hit.exceedances[0].kind, 'wind');
+  for (const bad of [NaN, Infinity, '9', undefined])
+    assert.equal(evaluatePortAlert(LIMITS, forecast(full(i => i === 3 ? {windKnots: bad} : {})), NOW).state, 'partial', String(bad));
+});
