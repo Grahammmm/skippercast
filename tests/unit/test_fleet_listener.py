@@ -19,6 +19,7 @@ import unittest
 from unittest import mock
 
 from skippercast.fleet.ais import listener as listener_module
+from skippercast.fleet.ais import watch as watch_module
 from skippercast.fleet.ais import ws
 from skippercast.fleet.ais.listener import Geofence, Listener, Settings, backoff_ceiling, build_listener
 from skippercast.fleet.ais.sources.aisstream import AisstreamError, AisstreamSource
@@ -434,6 +435,101 @@ class HeartbeatTest(unittest.TestCase):
 
 
 class WatchTest(unittest.TestCase):
+    @staticmethod
+    def stat_failure(path, error):
+        real_stat = Path.stat
+
+        def stat(candidate, *args, **kwargs):
+            if candidate == path:
+                raise error
+            return real_stat(candidate, *args, **kwargs)
+
+        return mock.patch.object(Path, 'stat', stat)
+
+    def test_stat_error_keeps_last_watch_and_counts_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'watch.json'
+            write_watch(path, 'CA', [WATCHED])
+            watch = WatchFile(path, 'CA')
+            self.assertTrue(watch.poll())
+            current = watch.current
+            for count, error in enumerate((PermissionError(13, 'private detail', str(path)),
+                                           OSError(5, 'private detail', str(path))), 1):
+                with self.subTest(error=type(error).__name__), self.stat_failure(path, error):
+                    self.assertFalse(watch.poll())
+                    self.assertIs(watch.current, current)
+                    self.assertTrue(watch._loaded)
+                    self.assertEqual(watch.errors, count)
+                    self.assertEqual(watch.last_error,
+                                     f'watch.json metadata cannot be read: {type(error).__name__}')
+
+    def test_initial_stat_error_recovers_without_replacement(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'watch.json'
+            write_watch(path, 'CA', [WATCHED])
+            stamp = path.stat()
+            watch = WatchFile(path, 'CA')
+            current = watch.current
+            with self.stat_failure(path, PermissionError('private detail')):
+                self.assertFalse(watch.poll())
+                self.assertIs(watch.current, current)
+                self.assertFalse(watch._loaded)
+                self.assertEqual(watch.errors, 1)
+            self.assertTrue(watch.poll())
+            self.assertEqual(watch.current.watched, {WATCHED})
+            self.assertTrue(watch._loaded)
+            self.assertIsNone(watch.last_error)
+            self.assertEqual(path.stat(), stamp)
+
+    def test_stat_error_retries_unchanged_good_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'watch.json'
+            write_watch(path, 'CA', [WATCHED])
+            stamp = path.stat()
+            watch = WatchFile(path, 'CA')
+            self.assertTrue(watch.poll())
+            current = watch.current
+            with self.stat_failure(path, PermissionError('private detail')):
+                for count in (1, 2):
+                    self.assertFalse(watch.poll())
+                    self.assertEqual(watch.errors, count)
+                    self.assertIs(watch.current, current)
+            with mock.patch.object(watch_module, 'read_watch', wraps=read_watch) as read:
+                self.assertFalse(watch.poll())
+                read.assert_called_once_with(path, 'CA')
+                self.assertFalse(watch.poll())
+                self.assertEqual(read.call_count, 1)
+            self.assertIsNone(watch.last_error)
+            self.assertEqual(watch.errors, 2)
+            self.assertEqual(path.stat(), stamp)
+
+    def test_reload_watch_stat_error_keeps_routing_and_heartbeat(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            listener = make_listener(tmp, source=FakeSource('aisstream'), mmsi_filter=True)
+            current = listener.watch.current
+            with self.stat_failure(listener.watch.path, PermissionError('private detail')):
+                with self.assertLogs(listener_module.log, level='WARNING') as logs:
+                    self.assertFalse(listener.reload_watch())
+                self.assertTrue(all(record.exc_info is None for record in logs.records))
+                self.assertNotIn('private detail', '\n'.join(logs.output))
+                self.assertIs(listener.watch.current, current)
+                self.assertTrue(all(not state.resubscribe.is_set() for state in listener.states.values()))
+                self.assertEqual(listener.accept(position(lat=34.5, lon=-121.5)), 'positions')
+                self.assertIsNone(listener.accept(position(mmsi=OTHER, lat=34.5, lon=-121.5)))
+                listener.clock.now += 60
+                listener.write_heartbeat()
+                beat = json.loads(listener.heartbeat_path.read_text())
+                self.assertEqual(beat['watch_errors'], 1)
+                self.assertEqual(beat['watch_size'], 1)
+            self.assertFalse(listener.reload_watch())
+            self.assertIsNone(listener.watch.last_error)
+            self.assertTrue(all(not state.resubscribe.is_set() for state in listener.states.values()))
+            write_watch(listener.watch.path, 'CA', [OTHER])
+            self.assertTrue(listener.reload_watch())
+            self.assertTrue(all(state.resubscribe.is_set() for state in listener.states.values()))
+            self.assertEqual(listener.accept(position(mmsi=OTHER, lat=34.5, lon=-121.5)), 'positions')
+            self.assertIsNone(listener.accept(position(lat=34.5, lon=-121.5)))
+
     def test_format_round_trip_and_rejections(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'watch.json'
