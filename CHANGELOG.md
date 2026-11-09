@@ -4,6 +4,14 @@
 
 - RF0814-9: the admin fleet map's Activity type filter now also narrows the returned track segments, so a mixed-mode trip no longer draws fishing modes that were not selected; trip eligibility, paging, events and heat are unchanged.
 
+- RF0824-5: saved trip plans enforce the 16,384-byte plan cap in UTF-8 bytes on create and edit, so names and notes in non-ASCII text can no longer slip a larger plan past the limit; over-cap plans are refused with "plan too large" and nothing is saved.
+
+- RF0844-9: the advisor rules editor refuses a species label or source name that is empty once control characters are removed (it was saved as an active, reviewed rule with blank text); a refused create or edit changes no rule and does not bump the pages version. Visible text with embedded controls is still accepted, cleaned as before.
+
+- RF0854-5: the WCOFS surface-current reader refuses a forecast frame whose latitude, longitude, mask, U or V array does not hold exactly the requested grid's cell count, or whose time array is not one value, even when every array is equally short, long or empty. The source reports failed (or retained, keeping the prior data and its original clocks) instead of ok or missing; a complete all-dry grid still reports missing.
+
+- RF0854-6: regular-grid GRIB decoding preserves longitude/value identity for westward-scanned columns, normalizing coordinates and columns together; positive-i grids and latitude handling are unchanged.
+
 - RF0804-8: the "Check my position" answer no longer reads "outside" for a closure inside a wide reported position accuracy. When the position accuracy plus the 70 m planning margin reaches the planner screen's 20 km search bound, the nearest held closure is measured again without that bound, so a closure within the accuracy radius is "near" (with the low-accuracy warning) instead of being skipped. A precise position far from every closure, inside-a-closure, missing-layer, stale-data and not-covered answers are unchanged. Nothing is sent or stored. NOT FOR NAVIGATION.
 
 - RF0824-7: CDIP nearshore ingestion refuses changed or malformed numeric quality-flag mappings, retaining only eligible recent last-good records with their original clocks; canonical quality masks remain unchanged.
