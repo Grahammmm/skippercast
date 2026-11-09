@@ -7,6 +7,8 @@ import {freshnessLabel, loadRegs, regsData, regulationState, ruleSummary, verifi
 import {currentRegionInfo, zone} from './App.tsx';
 import {language, t} from '../i18n.ts';
 import {dockState} from './TimeDock.tsx';
+import {Button} from '../ui/Button.tsx';
+import {openTrip} from '../trip.ts';
 import './plan.css';
 
 export function PlanLink() {
@@ -55,7 +57,10 @@ export function PlanView({now = new Date()}: {now?: Date} = {}) {
       <h3>{t('plan.evidence', lang)}</h3><p>{result.evidence.basis}</p>
       {result.evidence.links.length ? <ul>{result.evidence.links.map((l, i) => <li key={i}><a href={l.href} target="_blank" rel="noopener" aria-label={t('plan.newTab', lang, {title: l.title})}>{l.title}</a></li>)}</ul> : null}
       {result.reviewedAt ? <p>{t('plan.reviewed', lang, {date: result.reviewedAt})}</p> : null}
-    </> : <p>{result.kind === 'loading' ? copy.loading : result.kind === 'unknown' ? <>{copy.unknown} {result.id}</> : result.reason}</p>}
+    </> : result.kind === 'unknown' ? <>
+      <p>{copy.unknown}</p>
+      <p><Button size="sm" variant="quiet" icon="pin" disabled={!region.value} onClick={() => openTrip()} data-plan-open-trip="">{t('accountMenu.trip', lang)}</Button></p>
+    </> : <p>{result.kind === 'loading' ? copy.loading : result.reason}</p>}
     <h3>{t('plan.rules', lang)}</h3><TargetRules now={now} />
     <p><a href="/sources">{t('plan.built', lang)}</a></p>
   </section>;
