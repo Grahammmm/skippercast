@@ -237,7 +237,8 @@ export function createPlanner(deps: PlannerDeps) {
     const list: readonly LaunchPoint[] = launchPoints.value?.region === region.id ? launchPoints.value.points : [], found = list.find(p => p.id === (launchChoice.value[region.id] ?? draft.value.launchId));
     return draft.value.launchId ? found : found ?? list[0];
   });
-  const launchUnresolved = (): boolean => !!draft.value.launchId && !launch.value;
+  // Untracked: the counts depend on exportKey (id and resolved point), never on a plan name or date keystroke.
+  const launchUnresolved = (): boolean => untracked(() => !!draft.value.launchId && !launch.value);
   const launchPoint = (): UserWaypoint[] => draft.value.launchId && launch.value ? userWaypoints([{...launch.value, id: `user:launch-${launch.value.id.replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}`, name: `Launch · ${launch.value.name}`.slice(0, 80), category: 'other'}]) as UserWaypoint[] : [];
   const exportDraft = (): Draft => { const d = draft.value, l = launchPoint(); return {...d, ids: [...d.ids, ...l.map(p => p.id)], userWaypoints: [...(d.userWaypoints ?? []), ...l]}; };
   function setLaunch(on: boolean): void { revision++; persist({...draft.value, launchId: on ? launch.value?.id : undefined}); }
