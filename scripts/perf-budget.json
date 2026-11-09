@@ -13,7 +13,7 @@
         },
         {
           "max_bytes": 460000,
-          "reason": "Main itself now builds the landing first-load scripts at 445,953 bytes (main cfe567ae, build 6aad80f4ca), 953 bytes over the 445,000 budget, so every pull request failed this check regardless of its diff. Almost all of it is the shared strings chunk (326.3 KB, assets/strings.*.js), which grew as copy was added by merged work; this PR (build_bathy_tiles.py only) changes no script. New budget is the measured size plus 3.1% headroom."
+          "reason": "Raised 445,000 to 460,000 (3.2% over the 445,953 measured on main 6aad80f4ca). The shared English and Spanish string catalogue (SC0707-05 landing translation, SC0452-08 language choice) grew assets/strings.js, which the landing page loads at once, so main already measured 445,953 and failed this check before the plan-view change in this pull request (which does not touch the landing page). The catalogue is the product's Spanish support; the budget keeps a small headroom so further growth is still flagged."
         }
       ]
     },
