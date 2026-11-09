@@ -111,7 +111,10 @@ class WebSocket:
                 raise ProtocolError(f"frame of {length} bytes is over the {self._max_size}-byte limit")
             payload = await self._reader.readexactly(length) if length else b""
         except asyncio.IncompleteReadError:
+            # The peer is gone: no close frame to send or drain, but release the transport now
+            # (marking _closed first would make the later close() a no-op).
             self._closed = True
+            self._writer.close()
             raise ConnectionClosed(None, "stream ended") from None
         return bool(first & 0x80), opcode, payload
 
