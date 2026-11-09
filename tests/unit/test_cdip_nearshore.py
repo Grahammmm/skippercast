@@ -153,6 +153,88 @@ class ParseTests(TestCase):
             parse(text=with_array("waveFlagPrimary", [3] * 8))
 
 
+class FlagMappingTests(TestCase):
+    @staticmethod
+    def changed(block, declaration):
+        vector = "1, 2, 3, 4, 9" if block == "Primary" else "0, 1, 2"
+        return DAS.replace(f"Byte flag_values {vector};", declaration)
+
+    def test_primary_flag_values_change_refuses_before_samples(self):
+        das = self.changed("Primary", "Byte flag_values 4, 2, 3, 1, 9;")
+        with self.assertRaisesRegex(ValueError, "CDIP quality flag contract changed"):
+            parse(das=das)
+
+    def test_secondary_flag_values_change_refuses_before_samples(self):
+        for vector in ("1, 0, 2", "2, 1, 0"):
+            with self.subTest(vector), self.assertRaisesRegex(ValueError, "CDIP quality flag contract changed"):
+                parse(das=self.changed("Secondary", f"Byte flag_values {vector};"))
+
+    def test_flag_values_missing_malformed_or_ambiguous_refuses(self):
+        for block, vector in (("Primary", "1, 2, 3, 4, 9"), ("Secondary", "0, 1, 2")):
+            canonical = f"Byte flag_values {vector};"
+            tokens = vector.split(", ")
+            invalid = ["", f"Float32 flag_values {vector};", f'String flag_values "{vector}";',
+                       canonical + canonical, canonical + " Int16 flag_values 9;",
+                       f"Byte flag_values {vector}", f"Byte flag_values {vector},;",
+                       f"Byte flag_values {vector}, 9;", f"Byte flag_values {', '.join(tokens[:-1])};",
+                       f"Byte flag_values {', '.join(reversed(tokens))};",
+                       f"Byte flag_values {', '.join([tokens[0]] * len(tokens))};",
+                       canonical.replace(tokens[-1] + ";", "oops;"),
+                       canonical.replace(tokens[-1] + ";", tokens[-1] + ".5;"),
+                       canonical.replace(tokens[-1] + ";", tokens[-1] + ".0;")]
+            for declaration in invalid:
+                with self.subTest(block=block, declaration=declaration), \
+                        self.assertRaisesRegex(ValueError, "CDIP quality flag contract changed"):
+                    parse(das=self.changed(block, declaration))
+
+    def test_integral_types_and_whitespace_keep_exact_canonical_output(self):
+        expected = parse()
+        for kind in ("Byte", "Int16", "Int32"):
+            das = DAS.replace("Byte flag_values", kind + "\tflag_values\n  ")
+            das = das.replace("1, 2, 3, 4, 9;", "1 ,\n 2, 3 , 4, 9 ;")
+            with self.subTest(kind=kind):
+                self.assertEqual(parse(das=das), expected)
+
+    def test_canonical_flag_mapping_preserves_quality_masks(self):
+        text = with_array("waveFlagPrimary", [1, 1, 4, 9, 1, 1, 1, 1])
+        text = with_array("waveFlagSecondary", [0, 0, 0, 0, 1, 2, 0, 0], text=text)
+        hours = parse(text=text)["hours"]
+        for hour in hours[1:4]:
+            self.assertEqual(tuple(hour[k] for k in ("waveFt", "periodS", "directionDeg")),
+                             (None, None, None))
+        self.assertIsNotNone(hours[0]["waveFt"])
+        self.assertIsNotNone(hours[4]["waveFt"])
+        self.assertEqual((hours[4]["periodS"], hours[4]["directionDeg"]), (None, None))
+
+    def test_changed_flag_mapping_collect_retains_only_recent_good_record(self):
+        for block, vector in (("Primary", "4, 2, 3, 1, 9"), ("Secondary", "1, 0, 2")):
+            das = self.changed(block, f"Byte flag_values {vector};")
+            for age in (None, timedelta(hours=1), timedelta(hours=3), timedelta(hours=4)):
+                prior = None if age is None else {"region_id": "morro-bay", "nearshore": [
+                    {**parse(), "fetchedAt": cdip.iso(NOW - age)}]}
+                original = json.dumps(prior, sort_keys=True)
+                session = FakeSession({**routes(BINDING), cdip.das_url("SL345"): das.encode()})
+                with self.subTest(block=block, age=age):
+                    feed = cdip.collect("morro-bay", [BINDING], NOW, prior, session=session)
+                    self.assertEqual(feed["sources"][0]["outcome"], "error")
+                    self.assertIn("CDIP quality flag contract changed", feed["sources"][0]["error"])
+                    self.assertEqual(feed["health"], {"status": "degraded", "issues": ["cdip-SL345"]})
+                    if age == timedelta(hours=1):
+                        assert prior is not None
+                        self.assertEqual(feed["nearshore"][0], prior["nearshore"][0])
+                    else:
+                        self.assertEqual(feed["nearshore"][0]["availability"], "error")
+                        self.assertEqual(feed["nearshore"][0]["hours"], [])
+                    self.assertEqual(json.dumps(prior, sort_keys=True), original)
+                    self.assertEqual([url for _, url, _ in session.calls],
+                                     [cdip.das_url("SL345"), cdip.data_url("SL345")])
+                    recovered = cdip.collect("morro-bay", [BINDING], NOW, feed,
+                                             session=FakeSession(routes(BINDING)))
+                    self.assertEqual(recovered["sources"][0]["outcome"], "ok")
+                    self.assertEqual(recovered["health"]["status"], "ok")
+                    self.assertEqual(recovered["nearshore"][0]["hours"], parse()["hours"])
+
+
 class OutputShapeTests(TestCase):
     def test_feed_records_match_packages_coast_types(self):
         feed = cdip.collect("morro-bay", [BINDING, PISMO], NOW, session=FakeSession(routes(BINDING)))

@@ -88,7 +88,8 @@ export function evaluatePortAlert(limits: Thresholds, forecast: RegionalForecast
     const t = Date.parse(h.at);
     if (!Number.isFinite(t) || t < start || t >= end) continue;
     const slot = Math.floor((t - start) / HOUR_MS);
-    const wind = finite(h.windKnots) ? h.windKnots : null, swell = finite(h.swellFt) ? h.swellFt : null;
+    // A negative wind or swell reading is impossible: missing evidence, exactly like null (zero stays a valid calm reading).
+    const wind = finite(h.windKnots) && h.windKnots >= 0 ? h.windKnots : null, swell = finite(h.swellFt) && h.swellFt >= 0 ? h.swellFt : null;
     if (wind !== null) windSlots.add(slot);
     if (swell !== null) swellSlots.add(slot);
     if (wind === null && swell === null) continue;
