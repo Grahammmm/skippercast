@@ -31,6 +31,7 @@ class Element {
   }
   appendChild(child) { return this.insertBefore(child, null); }
   removeChild(child) { this.childNodes.splice(this.childNodes.indexOf(child), 1); child.parentNode = null; return child; }
+  remove() { this.parentNode?.removeChild(this); }
   setAttribute(key, value) { this.attrs[key] = String(value); }
   removeAttribute(key) { delete this.attrs[key]; }
   addEventListener(type, fn) { this.on[type] = fn; }
