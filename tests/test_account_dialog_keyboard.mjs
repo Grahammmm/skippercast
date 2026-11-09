@@ -28,6 +28,8 @@ class El {
   fire(type, event) { for (const fn of this.listeners[type] ?? []) fn(event); }
   // Only the shapes openAccount writes: h1#id, input#id, button#id.
   set innerHTML(html) {
+    for (const gone of this.children) gone.parentElement = null;   // a removed node is no longer in the card, as in a browser
+    if (this.contains(document.activeElement) && document.activeElement !== this) document.activeElement = document.body;   // and loses focus
     this.children = [];
     if (!this.classes.has("account-scrim")) for (const m of String(html).matchAll(/<(h1|input|button)\b[^>]*?id="([^"]+)"/g)) this.append(new El(m[1], m[2]));
     if (this.classes.has('account-scrim')) {
@@ -43,18 +45,20 @@ document.activeElement = document.body;
 globalThis.document = document;
 globalThis.location = {hash: '', pathname: '/', search: ''};
 globalThis.history = {replaceState() {}};
-globalThis.fetch = () => new Promise(() => {});   // the session request never settles: the dialog stays on "checking"
+let sessionReply = () => new Promise(() => {});   // default: the session request never settles, so the dialog stays on "checking"
+globalThis.fetch = (...args) => sessionReply(...args);
 
 const {openAccount, dialogFocusables, keepFocusIn} = await import('../dist/account.js');
 
 const tab = (shiftKey = false) => ({key: 'Tab', shiftKey, prevented: false, preventDefault() { this.prevented = true; }});
 const key = k => ({key: k, prevented: false, preventDefault() { this.prevented = true; }});
 
-async function opened() {
+async function opened(settled = false) {
   const trigger = document.body.append(new El('button', 'masthead-account')); trigger.focus();
-  openAccount({});   // not awaited: the pending session request keeps it open
+  const pending = openAccount({});   // the default pending session request keeps it open
+  if (settled) await pending;
   const scrim = document.body.children.find(c => c.classes.has('account-scrim'));
-  return {trigger, scrim, card: scrim.querySelector('.account-card')};
+  return {trigger, scrim, card: scrim.querySelector('.account-card'), pending};
 }
 
 test('focus_moves_into_the_card_on_open', async () => {
@@ -126,3 +130,29 @@ test('no_focusables_is_safe', () => {
   assert.equal(keepFocusIn(root, e, document.body), true);
   assert.ok(e.prevented); assert.equal(document.activeElement, title);
 });
+
+// A resolved session response repaints the card and removes the focused title: focus must land on the new title
+// (a connected element in the card), so Tab stays trapped and Escape still reaches the scrim.
+const reply = body => () => Promise.resolve({ok: true, status: 200, json: async () => body, text: async () => JSON.stringify(body)});
+for (const [name, fetchImpl, expected] of [
+  ['sign_in_disabled', reply({signIn: false}), 'account-title'],
+  ['offline', () => Promise.reject(new Error('offline')), 'account-title'],
+]) {
+  test(`resolved_session_${name}_keeps_focus_in_the_card_so_tab_and_escape_work`, async () => {
+    sessionReply = fetchImpl;
+    try {
+      const {trigger, scrim, card} = await opened(true);
+      const body = card.querySelector('#account-body');
+      assert.ok(body.contains(document.activeElement), 'focus is inside the repainted body, not on document.body');
+      assert.equal(document.activeElement.id, expected);
+      assert.notEqual(document.activeElement, document.body);
+      const e = tab();
+      scrim.fire('keydown', e);   // no focusables in the card body other than close: Tab must wrap, not escape
+      assert.ok(card.contains(document.activeElement), 'Tab keeps focus in the card');
+      const esc = key('Escape');
+      scrim.fire('keydown', esc);
+      assert.ok(scrim.removed && esc.prevented);
+      assert.equal(document.activeElement, trigger);
+    } finally { sessionReply = () => new Promise(() => {}); }
+  });
+}

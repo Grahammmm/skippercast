@@ -579,14 +579,14 @@ export async function openAccount(options = {}) {
   document.body.append(scrim);
   document.body.classList.add('choosing-home-port');
   const $ = sel => scrim.querySelector(sel), body = $('#account-body');
-  // F-23: focus moves into the card now, onto its title, and again after a repaint replaces the title, unless focus
-  // is on a field inside the card (the person may be typing).
+  // F-23: focus moves into the card now, onto its title, and again after a repaint replaces it. A repaint removes the
+  // element that had focus (the title included), so focus is left alone only if the focused element survived inside
+  // the card; otherwise it goes to the new title, so Tab and Escape keep reaching the scrim listener.
   const focusTitle = () => { const title = $('#account-title'); if (title) { title.tabIndex = -1; title.focus(); } };
   const paint = html => {
     const active = document.activeElement;
-    const inField = active && active !== body && active !== document.body && body.contains(active);
     body.innerHTML = html;
-    if (!inField) focusTitle();
+    if (!(active && active !== document.body && active !== body && body.contains(active))) focusTitle();
   };
   focusTitle();
   const status = message => { const el = $('#account-status'); if (el) el.textContent = message; };

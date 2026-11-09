@@ -5,11 +5,15 @@
       "label": "Landing page scripts (first load)",
       "kind": "first_load_js",
       "entry": "landing.html",
-      "max_bytes": 445000,
+      "max_bytes": 468000,
       "history": [
         {
           "max_bytes": 445000,
           "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 421,933 bytes on main 771d317133 (stated figure: landing page entry plus the scripts it imports at once) plus 5.5% headroom. PERF-BASELINE-1 A.4: landing cold 527 KB on the wire, 53 script requests, which also includes the map engine loaded on demand."
+        },
+        {
+          "max_bytes": 468000,
+          "reason": "Landing first-load scripts measure 445,953 bytes on main cfe567aef5 and on PR #1788 (the account dialog change adds nothing to the landing bundle; main itself is 953 bytes over the 445,000 budget). Growth came from the shared English and Spanish landing catalogue (SC0707-05) and landing copy. Raised to 468,000 (about 5% headroom over 445,953) so the check measures new growth again; shrinking the shared strings catalogue is the follow-up."
         }
       ]
     },
