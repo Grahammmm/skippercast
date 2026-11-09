@@ -29,7 +29,7 @@ let ui;
 async function components() {
   if (ui) return ui;
   const out = join(mkdtempSync(join(tmpdir(), 'handoff-')), 'ui.mjs');
-  await build({stdin: {resolveDir: root, loader: 'ts', contents: `export {MarkCard} from './web/app/MarkCard.tsx'; export {Planner} from './web/app/Planner.tsx'; export {chartPick, markData, SURVEY_PICK} from './web/map/marks.ts'; export * as state from './web/state.ts'; export {h} from 'preact'; export {render} from 'preact-render-to-string';`}, bundle: true, platform: 'node', format: 'esm', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+  await build({stdin: {resolveDir: root, loader: 'ts', contents: `export {MarkCard} from './web/app/MarkCard.tsx'; export {Planner} from './web/app/Planner.tsx'; export {chartPick, markData, SURVEY_PICK} from './web/map/marks.ts'; export * as state from './web/state.ts'; export {language} from './web/i18n.ts'; export {h} from 'preact'; export {render} from 'preact-render-to-string';`}, bundle: true, platform: 'node', format: 'esm', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
   return ui = await import(pathToFileURL(out).href);
 }
 const sample = readFileSync(new URL('./fixtures/gpx/handoff-sample.gpx', import.meta.url), 'utf8');
@@ -100,7 +100,7 @@ test('launch defaults off, follows chosen ramp, persists, counts in GPX/notes; a
   assert.equal(JSON.parse([...store.values()][0]).launchId, 'one');
   const restore = harness({storage: {getItem: () => [...store.values()][0], setItem() {}}}).p;
   assert.equal(restore.draft.value.launchId, 'one'); restore.dispose();
-  const u = await components(); launchPoints.value = {region: region.id, points: []};
+  const u = await components(); p.setLaunch(false); launchPoints.value = {region: region.id, points: []};
   assert.equal(p.launch.value, undefined); assert.doesNotMatch(u.render(u.h(u.Planner, {model: p, open: false})), /Include launch ramp/);
   p.dispose(); launchPoints.value = null; launchChoice.value = {};
 });
@@ -135,4 +135,80 @@ test('prepared share is synchronous, failures download, cancel does not, absent 
     activeRegion.value = 'another-region'; await p.deliver('share'); assert.equal(shares, before); assert.match(p.actionStatus.value, /Region changed/); activeRegion.value = null;
     p.dispose(); await p.deliver('gpx');
   } finally { p.dispose(); globalThis.document = oldDoc; globalThis.setTimeout = oldTimeout; if (oldNav) Object.defineProperty(globalThis, 'navigator', oldNav); else delete globalThis.navigator; activeRegion.value = null; }
+});
+// RF0814-7: an included launch is the exact resolved facility or the export refuses; never list[0], never silently dropped.
+const REFUSED = /Included launch ramp is unavailable\. Uncheck it or choose a listed launch before exporting\./;
+const facility = (id, name, i) => ({id, name, latitude: .1 + i / 10, longitude: .1});
+const saved = facility('saved', 'Saved Ramp', 0), other = facility('other', 'Unselected Ramp', 1);
+function included() {
+  launchPoints.value = {region: region.id, points: [saved, other]}; launchChoice.value = {};
+  const h = harness(); h.p.addPlace(place); h.p.setLaunch(true);
+  assert.equal(h.p.draft.value.launchId, 'saved'); assert.equal(h.p.summary.value.counts.waypoints, 2);
+  assert.match(h.store.size ? [...h.store.values()][0] : '', /"launchId":"saved"/);
+  return h;
+}
+const reset = () => { launchPoints.value = null; launchChoice.value = {}; };
+test('included_launch_missing_never_substitutes', async () => {
+  const {p, store} = included();
+  try {
+    launchPoints.value = {region: region.id, points: [other]};
+    assert.equal(p.summary.value.ok, false); assert.match(p.summary.value.message, REFUSED);
+    for (const kind of ['gpx', 'notes']) await assert.rejects(p.exportFile(kind), REFUSED);
+    assert.equal(p.draft.value.launchId, 'saved'); assert.match([...store.values()].at(-1), /"launchId":"saved"/);
+    assert.equal(p.launch.value, undefined);
+    assert.equal(p.draft.value.ids.length, 1);
+  } finally { p.dispose(); reset(); }
+});
+test('included_launch_unavailable_is_clearable', async () => {
+  const u = await components();
+  try {
+    for (const [label, list] of [['null', null], ['empty', {region: region.id, points: []}], ['wrong region', {region: 'elsewhere', points: [other]}]]) {
+      const {p} = included(); launchPoints.value = list;
+      try {
+        await assert.rejects(p.exportFile('gpx'), REFUSED, label);
+        for (const [lang, text] of [['en', 'Include launch ramp: —'], ['es', 'Incluir rampa de salida: —']]) {
+          u.language.value = lang;
+          const html = u.render(u.h(u.Planner, {model: p, open: false})), box = html.match(/<label class="export-check"><input type="checkbox" checked([^>]*)><span>(Include launch ramp|Incluir rampa de salida)[^<]*<\/span>/);
+          assert.ok(box, `${label}/${lang}: checked launch checkbox stays rendered`); assert.ok(!/disabled/.test(box[0]), 'enabled'); assert.ok(html.includes(text), `${label}/${lang}: dash label`);
+          assert.ok(!html.includes('Unselected Ramp') && !html.includes('>saved<'), 'no unrelated facility name or raw id');
+        }
+        const ids = [...p.draft.value.ids]; p.setLaunch(false);
+        assert.equal(p.draft.value.launchId, undefined); assert.deepEqual([...p.draft.value.ids], ids); assert.equal(p.summary.value.counts.waypoints, 1);
+        assert.equal(checkGpx(await (await p.exportFile('gpx')).text(), {waypoints: 1}).ok, true);
+      } finally { p.dispose(); u.language.value = 'en'; }
+    }
+  } finally { reset(); u.language.value = 'en'; }
+});
+test('included_launch_restore_and_valid_override', async () => {
+  const {p} = included();
+  try {
+    launchPoints.value = {region: region.id, points: [other]}; assert.equal(p.summary.value.ok, false);
+    launchPoints.value = {region: region.id, points: [saved, other]}; assert.equal(p.summary.value.ok, true);
+    assert.match(await (await p.exportFile('gpx')).text(), /<name>Launch · Saved Ramp<\/name>/);
+    launchChoice.value = {[region.id]: 'other'};
+    const gpx = await (await p.exportFile('gpx')).text(); assert.match(gpx, /lat="0.2" lon="0.1"><name>Launch · Unselected Ramp/); assert.doesNotMatch(gpx, /Saved Ramp/);
+    assert.equal(p.draft.value.launchId, 'saved');
+    launchChoice.value = {[region.id]: 'gone'};
+    assert.equal(p.summary.value.ok, false); await assert.rejects(p.exportFile('gpx'), REFUSED); await assert.rejects(p.exportFile('notes'), REFUSED);
+    assert.equal(p.draft.value.launchId, 'saved'); assert.equal(p.launch.value, undefined);
+  } finally { p.dispose(); reset(); }
+});
+test('included_launch_prepared_file_cannot_escape', async () => {
+  const oldDoc = globalThis.document, oldNav = Object.getOwnPropertyDescriptor(globalThis, 'navigator'), oldTimeout = globalThis.setTimeout;
+  let downloads = 0, shares = 0;
+  globalThis.document = {createElement: () => ({click() {downloads++;}, remove() {}}), body: {append() {}}};
+  globalThis.setTimeout = (fn, ms, ...args) => ms === 60000 ? {unref() {}} : oldTimeout(fn, ms, ...args);
+  Object.defineProperty(globalThis, 'navigator', {configurable: true, value: {canShare: () => true, share() {shares++; return Promise.resolve();}}});
+  const {p} = included();
+  try {
+    await settle(); await settle();
+    await p.deliver('gpx'); assert.equal(downloads, 1, 'valid prepared file is delivered');
+    launchPoints.value = {region: region.id, points: [other]};
+    for (const kind of ['gpx', 'share', 'notes', 'route']) { await (kind === 'route' ? p.deliverRoute() : p.deliver(kind)); assert.equal(downloads, 1, kind); assert.equal(shares, 0, kind); }
+    assert.match(p.actionStatus.value, REFUSED);
+    launchPoints.value = {region: region.id, points: [saved, other]}; await settle(); await settle();
+    await p.deliver('gpx'); assert.equal(downloads, 1, 'the dropped file is prepared again, not reused'); await p.deliver('gpx'); assert.equal(downloads, 2); assert.equal(p.summary.value.counts.waypoints, 2);
+    assert.match(await (await p.exportFile('gpx')).text(), /<name>Launch · Saved Ramp<\/name>/);
+    launchChoice.value = {[region.id]: 'other'}; await p.deliver('share'); assert.equal(shares, 0, 'a changed valid choice never reuses the file prepared for the old one');
+  } finally { p.dispose(); reset(); globalThis.document = oldDoc; globalThis.setTimeout = oldTimeout; if (oldNav) Object.defineProperty(globalThis, 'navigator', oldNav); else delete globalThis.navigator; }
 });
