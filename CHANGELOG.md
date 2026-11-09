@@ -3,6 +3,7 @@
 ## Unreleased
 
 - RF0844-8: fleet trip labels (admin form and agent label import) refuse a start or end time written on a day that is not on the calendar, such as February 30, 2026-02-29 or April 31, with the existing "must be ISO UTC times" error, instead of silently rolling it into the next month and saving it against the trip; a refused admin label saves nothing and a refused agent import keeps every existing label. Valid days, leap days and accepted time precision are unchanged.
+- RF0814-7: the trip planner's GPX, offline notes and planning-route exports now refuse, with "Included launch ramp is unavailable", when the included launch ramp is no longer in the published list (list replaced, empty, unavailable or for another region) instead of silently exporting the first listed ramp or leaving the checked launch out. The ramp checkbox stays visible, checked and enabled (showing "—") so it can be unchecked; a valid current ramp choice is still followed exactly and nothing saved is changed.
 
 - RF0824-5: saved trip plans enforce the 16,384-byte plan cap in UTF-8 bytes on create and edit, so names and notes in non-ASCII text can no longer slip a larger plan past the limit; over-cap plans are refused with "plan too large" and nothing is saved.
 
