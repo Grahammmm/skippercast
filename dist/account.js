@@ -536,6 +536,35 @@ function signedInHTML(session, passkeys, t) {
       <button type="button" id="account-delete">${esc(t('account.del.button'))}</button></details>`;
 }
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
+/** The enabled, visible focusable elements inside `root`, in DOM order; a closed <details> hides all but its summary. */
+export function dialogFocusables(root) {
+  return [...root.querySelectorAll(FOCUSABLE)].filter(el => {
+    if (el.disabled) return false;
+    for (let node = el; node && node !== root; node = node.parentElement) {
+      if (node.hasAttribute?.('hidden')) return false;
+      const parent = node.parentElement;
+      if (parent && parent.tagName === 'DETAILS' && !parent.open && node.tagName !== 'SUMMARY') return false;
+    }
+    return true;
+  });
+}
+/** Keeps Tab and Shift+Tab inside `root`: wraps at either end, or pulls focus back in from outside. True when it moved focus. */
+export function keepFocusIn(root, event, active) {
+  if (event.key !== 'Tab') return false;
+  const items = dialogFocusables(root);
+  if (!items.length) {
+    event.preventDefault();
+    const title = root.querySelector('#account-title');
+    title?.focus?.();
+    return true;
+  }
+  const first = items[0], last = items[items.length - 1], inside = items.includes(active);
+  if (event.shiftKey && (active === first || !inside)) { event.preventDefault(); last.focus(); return true; }
+  if (!event.shiftKey && (active === last || !inside)) { event.preventDefault(); first.focus(); return true; }
+  return false;
+}
+
 let open = null;
 /** Opens the dialog. `options` is {lang, strings} from web/account-copy.ts, read once here: this dialog keeps them for its life. */
 export async function openAccount(options = {}) {
@@ -550,6 +579,16 @@ export async function openAccount(options = {}) {
   document.body.append(scrim);
   document.body.classList.add('choosing-home-port');
   const $ = sel => scrim.querySelector(sel), body = $('#account-body');
+  // F-23: focus moves into the card now, onto its title, and again after a repaint replaces the title, unless focus
+  // is on a field inside the card (the person may be typing).
+  const focusTitle = () => { const title = $('#account-title'); if (title) { title.tabIndex = -1; title.focus(); } };
+  const paint = html => {
+    const active = document.activeElement;
+    const inField = active && active !== body && active !== document.body && body.contains(active);
+    body.innerHTML = html;
+    if (!inField) focusTitle();
+  };
+  focusTitle();
   const status = message => { const el = $('#account-status'); if (el) el.textContent = message; };
   const self = open = {close};   // this dialog; a close or a newer dialog replaces it
 
@@ -565,15 +604,19 @@ export async function openAccount(options = {}) {
     previous?.focus?.();
   }
   $('.home-port-close').addEventListener('click', close);
-  scrim.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); close(); } });
+  scrim.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); close(); }
+    else keepFocusIn($('.account-card'), event, document.activeElement);
+  });
+  scrim.addEventListener('click', event => { if (event.target === scrim) close(); });
 
   let session;
   try { session = await api('session'); }
-  catch { body.innerHTML = `<h1 id="account-title">${esc(t('account.title'))}</h1><p class="home-port-intro">${esc(t('account.offline'))}</p>`; return; }
-  if (!session.signIn) { body.innerHTML = `<h1 id="account-title">${esc(t('account.title'))}</h1><p class="home-port-intro">${esc(t('account.disabled'))}</p>`; return; }
+  catch { paint(`<h1 id="account-title">${esc(t('account.title'))}</h1><p class="home-port-intro">${esc(t('account.offline'))}</p>`); return; }
+  if (!session.signIn) { paint(`<h1 id="account-title">${esc(t('account.title'))}</h1><p class="home-port-intro">${esc(t('account.disabled'))}</p>`); return; }
 
   if (!session.signedIn) {
-    body.innerHTML = signedOutHTML(t);
+    paint(signedOutHTML(t));
     const buttons = [$('#account-create'), $('#account-signin')];
     const busy = on => buttons.forEach(b => { b.disabled = on; });
     // Without the native API there is nothing to load: say so now. Otherwise the library loads when a ceremony starts
@@ -636,7 +679,7 @@ export async function openAccount(options = {}) {
   const render = async () => {
     let passkeys = [];
     try { passkeys = (await api('auth/passkeys')).passkeys; } catch (error) { status(passkeyMessage(error, t)); }
-    body.innerHTML = signedInHTML(session, passkeys, t);
+    paint(signedInHTML(session, passkeys, t));
     const list = $('#log-list'), tripSelect = $('#log-trip'), older = $('#log-older'), retry = $('#log-retry'), logStatus = $('#log-status');
     // Saved trips (one read per render, independent of the log, passkeys and spots): they label the Trip choice and date the entries.
     // SC0922-03: the log is read a page at a time. `entries` holds every page shown so far in server order, `nextCursor` where the
