@@ -76,6 +76,8 @@ import {currentStatus, shownPresentation, terrainCoarsened, terrainCoverage, ter
 import {drawnSpots} from '../map/ranked.ts';
 import {retrySavedSpots, savedSpotsOn, savedSpotsStatus, setSavedSpotsOn} from '../map/saved-spots.ts';
 import {Segmented} from '../ui/Chip.tsx';
+import {Fragment} from 'preact';
+import {cadenceLine} from '../map/freshness.ts';
 import {Popover} from '../ui/Popover.tsx';
 import {railEntries, railOn} from './rail.ts';
 import {PreviewLegendRows} from './PreviewLayers.tsx';
@@ -413,6 +415,19 @@ function ShoreRow() {
   return note ? <li class="app-legend-shore"><p class="app-legend-note" data-reason="shore-runs"><EnglishDetail lang={lang}>{note}</EnglishDetail></p></li> : null;
 }
 
+/** SCFEAT-FRESH-1: the layer's update cadence and age limit, one wording for every row (web/map/freshness.ts). */
+const Cadence = ({id, lang}: {id: string; lang: Language}) => <li class="app-legend-cadence" data-cadence={id}><p class="app-legend-note">{cadenceLine(id, lang)}</p></li>;
+
+function legendRow(e: ReturnType<typeof railEntries>[number], shown: ReturnType<typeof shownPresentation.peek>, lang: Language) {
+  return !drawsIn(e.id, shown) ? <PlainRow key={e.id} id={e.id} label={e.label} reason={chartOnly(lang)} />
+    : e.id === 'seafloor' ? shown === 'chart' ? <SeafloorRow key={e.id} /> : <TerrainSeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
+    : e.id === 'sst-contrast' ? <ContrastRow key={e.id} /> : e.id === 'sst-fronts' ? <FrontsRow key={e.id} /> : e.id === 'chlorophyll' ? <ChlorophyllRow key={e.id} />
+    : e.id === 'swell' ? <><SwellRow key={e.id} /><WindRow /></> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
+    : e.id === 'fleet' ? <FleetRow key={e.id} />
+    : e.id === 'stations' ? <StationsRow key={e.id} />
+    : <PlainRow key={e.id} id={e.id} label={e.label} reason={t('rail.notDrawn', lang)} />;
+}
+
 export function Legend() {
   const shown = shownPresentation.value, lang = language.value;
   const on = railEntries(lang).filter(e => railOn(e.id, layers.value, current.value));
@@ -420,13 +435,7 @@ export function Legend() {
     <section class="app-legend" aria-label={t('legend.title', lang)}>
       <span class="ui-eyebrow">{t('legend.title', lang)}</span>
       <ul>
-        {on.map(e => !drawsIn(e.id, shown) ? <PlainRow key={e.id} id={e.id} label={e.label} reason={chartOnly(lang)} />
-          : e.id === 'seafloor' ? shown === 'chart' ? <SeafloorRow key={e.id} /> : <TerrainSeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
-          : e.id === 'sst-contrast' ? <ContrastRow key={e.id} /> : e.id === 'sst-fronts' ? <FrontsRow key={e.id} /> : e.id === 'chlorophyll' ? <ChlorophyllRow key={e.id} />
-          : e.id === 'swell' ? <><SwellRow key={e.id} /><WindRow /></> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
-          : e.id === 'fleet' ? <FleetRow key={e.id} />
-          : e.id === 'stations' ? <StationsRow key={e.id} />
-          : <PlainRow key={e.id} id={e.id} label={e.label} reason={t('rail.notDrawn', lang)} />)}
+        {on.map(e => <Fragment key={e.id}>{legendRow(e, shown, lang)}{drawsIn(e.id, shown) ? <Cadence id={e.id} lang={lang} /> : null}</Fragment>)}
         <PreviewLegendRows />
         <RankedRow />
         <SavedSpotsRow />
@@ -434,8 +443,10 @@ export function Legend() {
         <DensityRow />
         <DepthContoursRow />
         <MpaRow />
+        <Cadence id="mpas" lang={lang} />
       </ul>
       {unavailable.value.filter(id => id !== 'mpas' && !id.startsWith('preview-')).map(id => <p key={id} class="app-empty" data-unavailable={id}>{t('rail.unavailable', lang, {label: layerCopy(id, lang).label})}</p>)}
     </section>
   );
 }
+
