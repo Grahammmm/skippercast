@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF0814-7: the trip planner's GPX, offline notes and planning-route exports now refuse, with "Included launch ramp is unavailable", when the included launch ramp is no longer in the published list (list replaced, empty, unavailable or for another region) instead of silently exporting the first listed ramp or leaving the checked launch out. The ramp checkbox stays visible, checked and enabled (showing "—") so it can be unchecked; a valid current ramp choice is still followed exactly and nothing saved is changed.
+
 - RF0804-7: the trip planner's position check forgets its reading when the region changes while the dialog is open, and a slow answer for the old region no longer appears in the new one; closing or leaving the dialog also drops a pending answer. Nothing new is read, sent or stored (`web/app/PositionCheck.tsx`).
 
 - RF0824-5: saved trip plans enforce the 16,384-byte plan cap in UTF-8 bytes on create and edit, so names and notes in non-ASCII text can no longer slip a larger plan past the limit; over-cap plans are refused with "plan too large" and nothing is saved.
