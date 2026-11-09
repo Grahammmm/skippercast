@@ -33,11 +33,15 @@
       "label": "App page (brief, map) scripts (first load)",
       "kind": "first_load_js",
       "entry": "app.html",
-      "max_bytes": 1160000,
+      "max_bytes": 1165000,
       "history": [
         {
           "max_bytes": 1160000,
           "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 1,104,511 bytes plus 5.0% headroom. PERF-BASELINE-1 A.4: brief cold 767 KB of script on the wire, 63 script requests."
+        },
+        {
+          "max_bytes": 1165000,
+          "reason": "Raised 1,160,000 to 1,165,000 (0.4% over the 1,160,146 measured on this pull request). Main already sat just under the old budget (1,132.7 KB of 1,132.8 KB), so the Escape key handler that RF0834-7 adds to web/ui/Popover.tsx (closes an open basis disclosure and returns focus to its summary, a keyboard-accessibility fix, about 0.3 KB minified) crosses it by 146 bytes. Trimming the handler saved only 59 bytes, which is not enough, so the budget moves instead; the remaining headroom is under 0.5%, so further growth is still flagged."
         }
       ]
     },
