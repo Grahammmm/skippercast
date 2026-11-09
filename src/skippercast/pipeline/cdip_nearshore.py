@@ -146,6 +146,19 @@ def _number(block, name):
     return value if math.isfinite(value) else None
 
 
+def _flag_values(block):
+    """Read one integral DAS flag vector; ambiguous or malformed declarations refuse."""
+    declarations = [part for part in re.findall(r"[^;]*;|[^;]+$", block)
+                    if re.search(r"\bflag_values\b", part)]
+    if len(declarations) != 1:
+        return None
+    match = re.fullmatch(r"\s*(?:Byte|Int16|Int32)\s+flag_values\s+"
+                         r"([+-]?[0-9]+(?:\s*,\s*[+-]?[0-9]+)*)\s*;\s*", declarations[0])
+    if not match:
+        return None
+    return tuple(int(token) for token in match.group(1).split(","))
+
+
 def _value(token):
     if token.startswith('"'):
         return json.loads(token)
@@ -212,8 +225,11 @@ def parse_site(das, ascii_text, binding, fetched_at, now):
         if name == "waveDp" and _string(block, "standard_name") != "sea_surface_wave_from_direction":
             raise ValueError("CDIP direction convention changed")
         checks[name] = _range(block)
-    if (_string(_block(das, "waveFlagPrimary"), "flag_meanings") != PRIMARY_MEANINGS
-            or _string(_block(das, "waveFlagSecondary"), "flag_meanings") != SECONDARY_MEANINGS):
+    primary, secondary = (_block(das, key) for key in ("waveFlagPrimary", "waveFlagSecondary"))
+    if (_string(primary, "flag_meanings") != PRIMARY_MEANINGS
+            or _string(secondary, "flag_meanings") != SECONDARY_MEANINGS
+            or _flag_values(primary) != (1, 2, 3, 4, 9)
+            or _flag_values(secondary) != (0, 1, 2)):
         raise ValueError("CDIP quality flag contract changed")
     times = data.get("waveTime")
     if not times or len(times) > MAX_SAMPLES:
