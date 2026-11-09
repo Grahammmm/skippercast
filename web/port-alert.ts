@@ -70,7 +70,7 @@ export function clearThresholds(storage: PortAlertStorage | null = browserStorag
  * Compares the thresholds with the forecast's hours from the current whole hour to WINDOW_HOURS ahead.
  * A reading at or above its threshold is an exceedance. Old data never reads clear or alerts: a run older than
  * MAX_RUN_AGE_HOURS, a retrieval older than MAX_FETCH_AGE_HOURS or an unreadable clock is "stale"; no forecast or
- * no reading in the window is "no-data"; a missing wind or swell reading in any window hour (the whole variable, or only some hours) with no exceedance is "partial", never "clear".
+ * no reading in the window is "no-data"; a missing wind or swell reading in any of the WINDOW_HOURS window hours (the whole variable, some hours, or hours the forecast does not list at all) with no exceedance is "partial", never "clear".
  */
 export function evaluatePortAlert(limits: Thresholds, forecast: RegionalForecast | null, now: number = Date.now()): PortAlert {
   const base = {exceedances: [], peak: {windKt: null, swellFt: null}, hoursChecked: 0, source: forecast?.label ?? null, issuedAt: forecast?.issuedAt ?? null, fetchedAt: forecast?.fetchedAt ?? null, notification: null};
@@ -80,14 +80,17 @@ export function evaluatePortAlert(limits: Thresholds, forecast: RegionalForecast
   const start = Math.floor(now / HOUR_MS) * HOUR_MS, end = start + WINDOW_HOURS * HOUR_MS;
   const exceedances: Exceedance[] = [], peak: PortAlert['peak'] = {windKt: null, swellFt: null};
   const seen = new Set<string>();
-  let hoursChecked = 0, windMissing = 0, swellMissing = 0;
+  // Window slots (whole hours from `start`) that have a reading, per variable. Coverage is judged against the advertised
+  // WINDOW_HOURS slots, so an hour the forecast leaves out entirely is a gap just like an hour with a null reading.
+  const windSlots = new Set<number>(), swellSlots = new Set<number>();
+  let hoursChecked = 0;
   for (const h of forecast.hours) {
     const t = Date.parse(h.at);
     if (!Number.isFinite(t) || t < start || t >= end) continue;
+    const slot = Math.floor((t - start) / HOUR_MS);
     const wind = finite(h.windKnots) ? h.windKnots : null, swell = finite(h.swellFt) ? h.swellFt : null;
-    // A window hour without a reading for a variable is a gap in that variable, even when other hours have readings.
-    if (wind === null) windMissing++;
-    if (swell === null) swellMissing++;
+    if (wind !== null) windSlots.add(slot);
+    if (swell !== null) swellSlots.add(slot);
     if (wind === null && swell === null) continue;
     hoursChecked++;
     if (wind !== null) {
@@ -101,8 +104,8 @@ export function evaluatePortAlert(limits: Thresholds, forecast: RegionalForecast
   }
   if (!hoursChecked) return {state: 'no-data', ...base};
   const found = {...base, exceedances, peak, hoursChecked};
-  // A known exceedance still alerts. "Clear" needs a reading for BOTH variables in EVERY window hour that was checked: any gap means unknown hours, not evidence of calm.
-  if (!exceedances.length) return {state: windMissing || swellMissing ? 'partial' : 'clear', ...found};
+  // A known exceedance still alerts. "Clear" needs a reading for BOTH variables in EVERY one of the WINDOW_HOURS hours: a short forecast, an absent hour or a null reading is an unknown hour, not evidence of calm.
+  if (!exceedances.length) return {state: windSlots.size < WINDOW_HOURS || swellSlots.size < WINDOW_HOURS ? 'partial' : 'clear', ...found};
   const parts = exceedances.map(e => e.kind === 'wind' ? `wind ${e.value} kt (your limit ${limits.windKt} kt)` : `swell ${e.value} ft (your limit ${limits.swellFt} ft)`);
   return {state: 'alert', ...found, notification: {tag: 'port-alert', title: `${exceedances.map(e => e.kind === 'wind' ? 'Wind' : 'Swell').join(' and ')} forecast above your limit`, body: `Forecast ${parts.join('; ')} within ${WINDOW_HOURS} h. Model forecast for planning, not for navigation.`}};
 }

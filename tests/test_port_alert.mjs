@@ -12,6 +12,8 @@ const hourAt = (h, over = {}) => ({at: new Date(Date.parse('2026-11-07T18:00:00Z
 const forecast = (hours, over = {}) => ({label: 'NOAA GFS model · morro-bay', url: '/sources', issuedAt: '2026-11-07T12:00:00Z', fetchedAt: '2026-11-07T17:30:00Z', hours, ...over});
 const store = () => { const m = new Map(); return {getItem: k => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k)}; };
 const LIMITS = {windKt: 15, swellFt: 6};
+// A forecast with a reading for every hour of the 48 h window (the only kind that can read "clear"); `over(i)` adjusts hour i.
+const full = (over = () => ({})) => Array.from({length: WINDOW_HOURS}, (_, i) => hourAt(i, over(i)));
 
 test('thresholds parse only when both are finite and inside the allowed ranges', () => {
   assert.deepEqual(parseThresholds(JSON.stringify(LIMITS)), LIMITS);
@@ -42,14 +44,14 @@ test('no forecast, or no hour with a reading in the window, is "no-data": never 
   assert.equal(evaluatePortAlert(LIMITS, forecast([hourAt(-30), hourAt(WINDOW_HOURS + 5)]), NOW).state, 'no-data', 'only hours inside the window count');
 });
 
-test('calm hours inside the window are "clear" and carry the source and both clocks', () => {
-  const r = evaluatePortAlert(LIMITS, forecast([hourAt(0), hourAt(1), hourAt(2)]), NOW);
+test('calm hours across the whole window are "clear" and carry the source and both clocks', () => {
+  const r = evaluatePortAlert(LIMITS, forecast(full()), NOW);
   assert.equal(r.state, 'clear');
   assert.deepEqual(r.exceedances, []);
   assert.equal(r.source, 'NOAA GFS model · morro-bay');
   assert.equal(r.issuedAt, '2026-11-07T12:00:00Z');
   assert.equal(r.fetchedAt, '2026-11-07T17:30:00Z');
-  assert.equal(r.hoursChecked, 3);
+  assert.equal(r.hoursChecked, WINDOW_HOURS);
   assert.equal(r.notification, null);
 });
 
@@ -65,9 +67,9 @@ test('a wind or swell reading at or above its threshold is an "alert" with the f
 });
 
 test('hours before the current hour or past the window are ignored', () => {
-  const r = evaluatePortAlert(LIMITS, forecast([hourAt(-3, {windKnots: 40}), hourAt(WINDOW_HOURS + 2, {windKnots: 40}), hourAt(1)]), NOW);
+  const r = evaluatePortAlert(LIMITS, forecast([hourAt(-3, {windKnots: 40}), hourAt(WINDOW_HOURS + 2, {windKnots: 40}), ...full()]), NOW);
   assert.equal(r.state, 'clear');
-  assert.equal(r.hoursChecked, 1);
+  assert.equal(r.hoursChecked, WINDOW_HOURS);
 });
 
 test('a model run older than 36 h or a feed fetched more than 6 h ago is "stale": old data never reads clear or alerts', () => {
@@ -118,8 +120,23 @@ test('intermittent missing readings inside the window never read "clear"; known 
   // An hour with no reading at all in the window is a gap too.
   assert.equal(evaluatePortAlert(LIMITS, forecast(hours48(i => (i === 7 ? {windKnots: null, swellFt: null} : {}))), NOW).state, 'partial');
   // Gaps outside the window do not matter.
-  const outside = forecast([hourAt(-2, {swellFt: null}), hourAt(0), hourAt(1), hourAt(WINDOW_HOURS + 1, {windKnots: null})]);
+  const outside = forecast([hourAt(-2, {swellFt: null}), ...full(), hourAt(WINDOW_HOURS + 1, {windKnots: null})]);
   assert.equal(evaluatePortAlert(LIMITS, outside, NOW).state, 'clear');
+  // Hours the forecast does not list at all are gaps too: a truncated forecast (only a calm first hour, or only the first 12 h) is partial, never "clear".
+  const one = evaluatePortAlert(LIMITS, forecast([hourAt(0)]), NOW);
+  assert.equal(one.state, 'partial');
+  assert.equal(one.hoursChecked, 1);
+  assert.equal(one.notification, null);
+  assert.equal(evaluatePortAlert(LIMITS, forecast(full().slice(0, 12)), NOW).state, 'partial');
+  assert.equal(evaluatePortAlert(LIMITS, forecast(full().slice(-1)), NOW).state, 'partial', 'only the last hour of the window');
+  // A removed interior timestamp (the hour is absent, not null) is partial, as is a window that ends one hour early.
+  assert.equal(evaluatePortAlert(LIMITS, forecast(full().filter((_, i) => i !== 20)), NOW).state, 'partial');
+  assert.equal(evaluatePortAlert(LIMITS, forecast(full().slice(0, WINDOW_HOURS - 1)), NOW).state, 'partial');
+  // An hour listed twice does not stand in for an absent one.
+  assert.equal(evaluatePortAlert(LIMITS, forecast([...full().filter((_, i) => i !== 20), hourAt(19)]), NOW).state, 'partial');
+  // Truncated or gappy forecasts still alert on a known exceedance.
+  assert.equal(evaluatePortAlert(LIMITS, forecast([hourAt(0), hourAt(1, {windKnots: 20})]), NOW).state, 'alert');
+  assert.equal(evaluatePortAlert(LIMITS, forecast(full().filter((_, i) => i !== 20).map((h, i) => (i === 30 ? {...h, swellFt: 9} : h))), NOW).state, 'alert');
   // A known exceedance alerts despite gaps elsewhere.
   const hit = evaluatePortAlert(LIMITS, forecast(hours48(i => (i === 10 ? {windKnots: 20} : i < 40 ? {swellFt: null} : {}))), NOW);
   assert.equal(hit.state, 'alert');
