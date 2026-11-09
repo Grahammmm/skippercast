@@ -398,7 +398,7 @@ test('first run shows once: due without a stored profile, never with ?profile= i
   assert.equal(firstRunDue(href + '&profile=skiff', storage), true, 'an unknown profile value does not count');
   const html = render(h(FirstRun, {href, storage}));
   assert.match(html, /<section class="app-firstrun" role="dialog" aria-labelledby="first-run-title"/);
-  assert.match(html, /<h2 id="first-run-title">How do you fish\?<\/h2>/);
+  assert.match(html, /<h2 id="first-run-title" tabindex="-1">How do you fish\?<\/h2>/);
   assert.deepEqual([...html.matchAll(/data-profile="([a-z]+)"/g)].map(m => m[1]), ['boat', 'shore', 'spear', 'kayak']);
   for (const p of ['boat', 'shore', 'spear', 'kayak']) assert.ok(html.includes(PROFILE_NOTES[p]), `${p} note`);
   assert.doesNotMatch(html, /aria-modal/, 'never modal: the map is not blocked');

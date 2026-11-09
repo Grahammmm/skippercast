@@ -92,6 +92,9 @@ async function ui() {
     export {regionPlans, regionUnavailable, loadPlans} from './web/species.ts';
     export {regsData, regulationState} from './web/regs.ts';
     export * as state from './web/state.ts';
+    export {language} from './web/i18n.ts';
+    export {tripOpen} from './web/trip.ts';
+    export {options} from 'preact';
     export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
     bundle:true,format:'esm',platform:'node',outfile:out,logLevel:'silent',jsx:'automatic',jsxImportSource:'preact',plugins:rendererPlugins});
   module = await import(pathToFileURL(out).href); return module;
@@ -207,4 +210,71 @@ test('plan review date is retained by index load without accepting another regio
   assert.equal(m.regionPlans.value.reviewedAt,INDEX.reviewed_at);
   await m.loadPlans('other',async()=>({ok:true,json:async()=>INDEX}));
   assert.equal(m.regionPlans.value.region,'morro-bay');
+});
+test('unknown_target_shows_message_and_planner_button_without_raw_id', async () => {
+  const m = await ui();
+  for (const id of ['lingcod', 'rockfish']) {
+    setup(m, id);
+    const html = htmlOf(m, m.PlanView);
+    assert.match(html, /<p>No plan is available for this target\.<\/p>/);
+    assert.match(html, /<button[^>]*data-plan-open-trip(?:="")?[^>]*>.*Trip plan and GPX<\/button>/);
+    assert.doesNotMatch(html.replace(/<h2\b[^>]*>.*?<\/h2>/, ''), new RegExp(`\\b${id}\\b`));
+    assert.equal((html.match(/data-plan-open-trip/g) ?? []).length, 1);
+  }
+});
+test('unknown_button_disabled_without_region', async () => {
+  const m = await ui(); setup(m, '__proto__');
+  m.state.region.value = null;
+  m.regionPlans.value = {region: null, plans: PLANS};
+  assert.match(htmlOf(m, m.PlanView), /<button[^>]*disabled[^>]*data-plan-open-trip(?:="")?/);
+  setup(m, 'lingcod');
+  const button = htmlOf(m, m.PlanView).match(/<button[^>]*data-plan-open-trip(?:="")?[^>]*>/)?.[0];
+  assert.ok(button); assert.doesNotMatch(button, /disabled/);
+});
+test('markup_id_is_never_echoed_in_the_body', async () => {
+  const m = await ui(); setup(m, '<img onerror>');
+  const html = htmlOf(m, m.PlanView);
+  assert.doesNotMatch(html, /<img/); assert.match(html, /&lt;img/);
+  assert.match(html, /<h2[^>]*>&lt;img onerror(?:&gt;|>)<\/h2>/);
+});
+test('spanish_uses_existing_strings', async () => {
+  const m = await ui(); setup(m, 'lingcod');
+  try {
+    m.language.value = 'es';
+    const html = htmlOf(m, m.PlanView);
+    assert.match(html, /No hay un plan disponible para esta especie objetivo\./);
+    assert.match(html, /Plan de viaje y GPX/);
+    assert.doesNotMatch(html, /Trip plan and GPX/);
+  } finally { m.language.value = 'en'; }
+});
+test('unresearched_and_withheld_unchanged; stale region stays loading', async () => {
+  const m = await ui(); setup(m, 'lobster');
+  let html = htmlOf(m, m.PlanView);
+  assert.ok(plain(html).includes(UNAVAILABLE.lobster)); assert.doesNotMatch(html, /data-plan-open-trip/);
+  setup(m, 'reef');
+  m.regionPlans.value = {region: 'morro-bay', plans: {reef: {...PLANS.reef, numeric_bite_model: true}}};
+  html = htmlOf(m, m.PlanView);
+  assert.match(html, /This plan carries a numeric model/); assert.doesNotMatch(html, /data-plan-open-trip/);
+  m.state.region.value = 'other';
+  html = htmlOf(m, m.PlanView);
+  assert.match(html, /Loading this region/); assert.doesNotMatch(html, /data-plan-open-trip/);
+});
+test('unknown action reopens the existing trip dialog, including repeated opens', async () => {
+  const m = await ui(); setup(m, 'lingcod');
+  const prior = m.options.vnode, location = globalThis.location;
+  let open;
+  try {
+    m.options.vnode = vnode => {
+      prior?.(vnode);
+      if (vnode.props['data-plan-open-trip'] === '' && typeof vnode.type === 'function') open = vnode.props.onClick;
+    };
+    htmlOf(m, m.PlanView);
+    assert.equal(typeof open, 'function');
+    globalThis.location = {hash: '#export'};
+    for (let i = 0; i < 2; i++) {
+      m.tripOpen.value = false;
+      open();
+      assert.equal(m.tripOpen.value, true);
+    }
+  } finally { m.options.vnode = prior; globalThis.location = location; m.tripOpen.value = false; }
 });

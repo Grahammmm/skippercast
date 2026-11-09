@@ -146,7 +146,7 @@ export function App({now: fixedNow, clock}: {now?: Date; clock?: HourClock} = {}
           <CommandBar now={now} />
           <FirstAnswerLine now={now} />
           <Desktop now={now} clock={clock} />
-          <FirstRun />
+          <FirstRun focusOnOpen />
         </div>
       )}
       <Trip />
