@@ -4,6 +4,8 @@
 
 - RF0834-6: the USCG PSIX registry adapter no longer builds an official number by deleting the non-digits from a workbook value. Only a value that is already 5 to 8 plain digits becomes the document-number key and fact; anything else (letters, signs, decimals, exponent forms) leaves that one key out so it cannot attach facts to the wrong vessel, while the name, call sign and other facts are kept.
 
+- RF0844-9: the advisor rules editor refuses a species label or source name that is empty once control characters are removed (it was saved as an active, reviewed rule with blank text); a refused create or edit changes no rule and does not bump the pages version. Visible text with embedded controls is still accepted, cleaned as before.
+
 - RF0854-6: regular-grid GRIB decoding preserves longitude/value identity for westward-scanned columns, normalizing coordinates and columns together; positive-i grids and latitude handling are unchanged.
 
 - RF0804-8: the "Check my position" answer no longer reads "outside" for a closure inside a wide reported position accuracy. When the position accuracy plus the 70 m planning margin reaches the planner screen's 20 km search bound, the nearest held closure is measured again without that bound, so a closure within the accuracy radius is "near" (with the low-accuracy warning) instead of being skipped. A precise position far from every closure, inside-a-closure, missing-layer, stale-data and not-covered answers are unchanged. Nothing is sent or stored. NOT FOR NAVIGATION.
