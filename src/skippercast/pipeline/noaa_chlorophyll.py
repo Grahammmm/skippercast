@@ -32,7 +32,10 @@ def recent_files(client, max_age_hours=MAX_AGE_HOURS):
         match = FILENAME.fullmatch(path.rsplit("/", 1)[-1])
         if not match:
             continue
-        day = datetime.strptime("-".join(match.groups()), "%Y-%j").replace(tzinfo=timezone.utc)
+        year, ordinal = (int(g) for g in match.groups())
+        day = datetime(year, 1, 1, tzinfo=timezone.utc) + timedelta(days=ordinal - 1)
+        if ordinal < 1 or day.year != year:  # day 000 or an ordinal past the year's end rolls into another year
+            continue
         if day <= client.now:
             found.append((day, path))
     if not found:
