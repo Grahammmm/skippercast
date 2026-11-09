@@ -86,9 +86,16 @@ export function BoatEntry({storage, focus = false, onDone}: {storage?: StoreStor
   );
 }
 
-export function FirstRun({href, storage, cookies}: {href?: string; storage?: StoreStorage | null; cookies?: CookieJar | null} = {}) {
+/**
+ * `focusOnOpen` moves focus to the card's heading when it opens (desktop), so the next Tab
+ * reaches the profile buttons. Never a trap and never modal (D11); the phone leaves it off,
+ * since its sheet expands when a first-run element takes focus (Mobile.tsx).
+ */
+export function FirstRun({href, storage, cookies, focusOnOpen = false}: {href?: string; storage?: StoreStorage | null; cookies?: CookieJar | null; focusOnOpen?: boolean} = {}) {
   const at = href ?? (typeof location === 'undefined' ? 'https://skippercast.com/map' : location.href);
   const [due, setDue] = useState(() => firstRunDue(at, storage, cookies));
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (focusOnOpen && due) heading.current?.focus({preventScroll: true}); }, [due]);
   // A home saved on /coast already chose the mode: apply it (the address names none) rather than ask again.
   useEffect(() => { const saved = savedFirstRun(at, storage, cookies); if (saved) setParams({profile: saved}); }, []);
   // The boat fields: 'chosen' when Boat was chosen here (focus follows), 'carried' when the landing's Boat choice opened this page.
@@ -112,10 +119,16 @@ export function FirstRun({href, storage, cookies}: {href?: string; storage?: Sto
   }
   // The choice finishes the card as before; choosing Boat then asks for the boat (SC-LANDING-ORDER). "Keep Boat for now" asks nothing more.
   const choose = (p: Profile, keep = false) => { setDue(false); setParams(p === DEFAULT_PROFILE ? {profile: p} : {profile: p, target: null}); if (p === 'boat' && !keep) setAsk('chosen'); };
+  // Escape inside the card is "Keep Boat for now".
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+    event.preventDefault();
+    choose(DEFAULT_PROFILE, true);
+  };
   return (
-    <section class="app-firstrun" role="dialog" aria-labelledby="first-run-title" data-first-run="">
+    <section class="app-firstrun" role="dialog" aria-labelledby="first-run-title" data-first-run="" onKeyDown={onKeyDown}>
       <span class="ui-eyebrow">{t('firstRun.eyebrow', lang)}</span>
-      <h2 id="first-run-title">{t('firstRun.title', lang)}</h2>
+      <h2 id="first-run-title" ref={heading} tabIndex={-1}>{t('firstRun.title', lang)}</h2>
       <p>{t('firstRun.intro', lang)}</p>
       <div class="app-firstrun-options">
         {PROFILES.map(p => (
