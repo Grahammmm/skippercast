@@ -3,6 +3,10 @@
 ## Unreleased
 
 - RF0834-9: the forecast build keeps missing or nonfinite accumulated precipitation (ECMWF IFS) missing through its conversion to mm/hour instead of publishing dry zeros. An absent, bitmap-missing, rejected-sentinel or infinite first accumulation is no longer stored as 0 mm/h, and an interval whose start or end accumulation is not finite (including either infinity) is stored as missing rather than as no rain; only intervals that depend on the bad value are affected. Valid initial zeros, finite decreases (clamped to zero) and uneven step intervals are unchanged. No forecast data is rebuilt or republished by this change.
+- RF0824-5: saved trip plans enforce the 16,384-byte plan cap in UTF-8 bytes on create and edit, so names and notes in non-ASCII text can no longer slip a larger plan past the limit; over-cap plans are refused with "plan too large" and nothing is saved.
+
+- RF0844-9: the advisor rules editor refuses a species label or source name that is empty once control characters are removed (it was saved as an active, reviewed rule with blank text); a refused create or edit changes no rule and does not bump the pages version. Visible text with embedded controls is still accepted, cleaned as before.
+
 - RF0854-6: regular-grid GRIB decoding preserves longitude/value identity for westward-scanned columns, normalizing coordinates and columns together; positive-i grids and latitude handling are unchanged.
 
 - RF0804-8: the "Check my position" answer no longer reads "outside" for a closure inside a wide reported position accuracy. When the position accuracy plus the 70 m planning margin reaches the planner screen's 20 km search bound, the nearest held closure is measured again without that bound, so a closure within the accuracy radius is "near" (with the low-accuracy warning) instead of being skipped. A precise position far from every closure, inside-a-closure, missing-layer, stale-data and not-covered answers are unchanged. Nothing is sent or stored. NOT FOR NAVIGATION.

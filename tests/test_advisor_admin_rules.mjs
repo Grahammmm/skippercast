@@ -25,7 +25,7 @@ const {context} = await import('../server/middleware/context.ts');
 const {requireUser} = await import('../server/middleware/auth.ts');
 const {onError} = await import('../server/middleware/error.ts');
 const {adminRoutes} = await import('../server/routes/admin.ts');
-const {reviewDue, validSeason, ruleId, watchRuleSources, changedSources, changeRef, CHANGE_PREFIX, LAST_WATCH_KEY, JURISDICTIONS} = await import('../server/advisor/admin/rules.ts');
+const {reviewDue, validSeason, ruleId, ruleFields, watchRuleSources, changedSources, changeRef, CHANGE_PREFIX, LAST_WATCH_KEY, JURISDICTIONS} = await import('../server/advisor/admin/rules.ts');
 const {lookupRules} = await import('../server/advisor/answers/rules.ts');
 const {reviewId} = await import('../server/advisor/contacts.ts');
 const {PAGES_VERSION_KEY} = await import('../server/advisor/intake/reports.ts');
@@ -187,6 +187,65 @@ dbTest('edit: content fields only; reviewed_at now, review_due, status active, u
   assert.equal((await call(worker, env, 'POST', `/api/admin/rules/${id}/retire`, {})).status, 200);
   assert.equal(version(sql), v2, 'retiring twice changes nothing');
   for (const path of [`/api/admin/rules/${'f'.repeat(32)}`, '/api/admin/rules/not-an-id/retire']) assert.equal((await call(worker, env, 'POST', path, {})).status, 404, path);
+});
+
+// ---- required text after control-character cleanup (RF0844-9) ------------------------------
+
+const CONTROL_ONLY = ['\u0000', '\u0001', '\u007f', '\u0000\u0001\u007f', ' \u0000 \n\u0001 ', '\u0000 \u0001'];
+const rulesTable = sql => JSON.stringify(sql.prepare('SELECT * FROM advisor_rules ORDER BY id').all());
+
+test('rule_required_text_checked_after_cleanup: control-only required text is refused by name; ordinary blanks and types are unchanged', () => {
+  for (const key of ['species_label', 'source_name']) {
+    for (const text of CONTROL_ONLY) assert.deepEqual(ruleFields({[key]: text}, 'california-central'), {error: `${key} is required`}, JSON.stringify(text));
+    for (const raw of ['', '   ', null]) assert.deepEqual(ruleFields({[key]: raw}, 'california-central'), {error: `${key} is required`});
+    assert.deepEqual(ruleFields({[key]: 5}, 'california-central'), {error: `${key} must be text`});
+  }
+  // Optional text still cleans to empty and is stored as given (not a required field).
+  assert.deepEqual(ruleFields({bag_notes: '\u0000'}, 'california-central'), {fields: {bag_notes: ''}});
+  assert.deepEqual(ruleFields({bag_notes: ''}, 'california-central'), {fields: {bag_notes: null}});
+});
+
+test('rule_cleaned_visible_text_survives: visible text with embedded controls is cleaned, not refused; length limits are unchanged', () => {
+  assert.deepEqual(ruleFields({source_name: 'CD\u0000FW\u0001', species_label: ' \u0007Café 🐟 '}, 'california-central'), {fields: {source_name: 'CDFW', species_label: 'Café 🐟'}});
+  assert.deepEqual(ruleFields({species_label: '🐟'.repeat(80)}, 'california-central').fields?.species_label, '🐟'.repeat(80));
+  assert.match(ruleFields({species_label: '🐟'.repeat(81)}, 'california-central').error, /species_label is at most 80/);
+  assert.match(ruleFields({species_label: `${'a'.repeat(80)}\u0000`}, 'california-central').fields?.species_label, /^a{80}$/);
+});
+
+dbTest('rule_create_cleaned_empty_never_activates: no rule row and no pages-version bump; a valid neighbour is created active and reviewed', async () => {
+  const {sql, env, worker} = setup();
+  const base = {jurisdiction: 'california-central', region: '*', species_key: 'other', species_label: 'Pacific sanddab', bag_limit: 10, source_name: 'CDFW Central Region', source_url: CDFW};
+  const table = rulesTable(sql), v0 = version(sql);
+  for (const key of ['species_label', 'source_name']) for (const text of CONTROL_ONLY) {
+    const r = await call(worker, env, 'POST', '/api/admin/rules', {...base, [key]: text});
+    assert.equal(r.status, 400, `${key} ${JSON.stringify(text)}`);
+    assert.equal(r.body.error, `${key} is required`);
+  }
+  assert.equal(rulesTable(sql), table, 'no rule row added or changed');
+  assert.equal(version(sql), v0, 'pages version unchanged');
+  const made = await call(worker, env, 'POST', '/api/admin/rules', {...base, source_name: 'CD\u0000FW'});
+  assert.equal(made.status, 200, JSON.stringify(made.body));
+  assert.deepEqual([made.body.rule.status, made.body.rule.reviewed_at, made.body.rule.source_name], ['active', iso(T0), 'CDFW']);
+  assert.ok(version(sql) > v0);
+});
+
+dbTest('rule_edit_cleaned_empty_is_atomic: the whole edit is refused and the row and version are untouched; a later valid edit succeeds', async () => {
+  const {sql, env, worker} = setup();
+  const id = lingcodId(), path = `/api/admin/rules/${id}`;
+  const row0 = rowOf(sql, id), table = rulesTable(sql), v0 = version(sql);
+  for (const key of ['species_label', 'source_name']) for (const text of CONTROL_ONLY) {
+    const r = await call(worker, env, 'POST', path, {[key]: text, bag_notes: 'must not apply'});
+    assert.equal(r.status, 400, `${key} ${JSON.stringify(text)}`);
+    assert.equal(r.body.error, `${key} is required`);
+  }
+  assert.deepEqual(rowOf(sql, id), row0, 'full row incl. status, review stamps and updated_by/at unchanged');
+  assert.equal(rulesTable(sql), table);
+  assert.equal(version(sql), v0, 'pages version unchanged');
+  const ok = await call(worker, env, 'POST', path, {source_name: 'CDFW\u0000 Central', bag_notes: null});
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  const row = rowOf(sql, id);
+  assert.deepEqual([row.source_name, row.bag_notes, row.status, row.reviewed_at], ['CDFW Central', null, 'active', iso(T0)]);
+  assert.ok(version(sql) > v0);
 });
 
 // ---- the change-watch --------------------------------------------------------------------
