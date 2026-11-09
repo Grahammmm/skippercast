@@ -126,7 +126,7 @@ export function ShareControl() {
     if (details) details.open = true; input?.focus(); input?.select();
   }, [manual]);
   useEffect(() => () => clearTimeout(timer.current), []);
-  const dismiss = (event: KeyboardEvent) => { if (event.key === 'Escape') { setManual(null); wrap.current?.querySelector('button')?.focus(); } };
+  const dismiss = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); setManual(null); wrap.current?.querySelector('button')?.focus(); } };
   return (
     <span class="app-share" ref={wrap}>
       <IconButton icon="arrow" label={t('command.share', lang)} onClick={() => void press()} />
