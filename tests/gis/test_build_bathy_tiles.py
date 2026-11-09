@@ -518,6 +518,69 @@ class NativeTierTests(unittest.TestCase):
                     # coarse -100 blended toward the true -60 native value only: never the -50 land/deep mean
                     self.assertTrue(np.all((cells >= -100 - 1e-3) & (cells <= -60 + 1e-3)))
 
+    def _masked_native(self, root, grid, valid, nodata=None):
+        """2 m native grid with an explicit GDAL validity mask (255 valid / 0 invalid)."""
+        path = root / f"masked-{len(list(root.glob('masked-*.tif')))}.tif"
+        with rasterio.open(path, 'w', driver='GTiff', width=300, height=300, count=1, dtype='float32',
+                           crs='EPSG:3310', nodata=nodata,
+                           transform=from_origin(-121800, -288200, 2, 2)) as ds:
+            ds.write(grid.astype('float32'), 1)
+            ds.write_mask(np.where(valid, 255, 0).astype('uint8'))
+        manifest = root / f'{path.stem}.json'
+        manifest.write_text(json.dumps([{'id': path.stem, 'path': str(path), 'resolution_m': 2,
+                                         'source_file': path.name, 'archive_sha256': 'd' * 64}]))
+        return bt.load_native_manifest(manifest)
+
+    def _warped_values(self, source, pad=8):
+        xs, ys = bt.tile_range(source['bounds'], 15)
+        seen = set()
+        for x in xs:
+            for y in ys:
+                warped, _ = bt.warp_native(source, 15, x, y, pad)
+                seen.update(np.unique(warped[np.isfinite(warped)]).tolist())
+        return seen
+
+    def test_all_masked_native_has_no_warp_support(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            grid = np.full((300, 300), -25.0)
+            masked = self._masked_native(root, grid, np.zeros((300, 300), bool))[0]
+            with rasterio.open(masked['path']) as ds:
+                self.assertIsNone(ds.nodata)
+                self.assertFalse(ds.read_masks(1).any())
+            self.assertEqual(self._warped_values(masked), {NODATA})
+            control = self._masked_native(root, grid, np.ones((300, 300), bool))[0]
+            self.assertIn(-25.0, {round(v, 3) for v in self._warped_values(control)})
+
+    def test_masked_native_cannot_qualify_z15(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            coarse = np.full((60, 60), -100, dtype='float32')
+            coarse_transform = from_origin(-121800, -288200, 10, 10)
+            grid = np.full((300, 300), -25.0)
+            for valid, expect_tiles in ((False, False), (True, True)):
+                sources = self._masked_native(root, grid, np.full((300, 300), valid))
+                windows = bt.tiered_windows(coarse, coarse_transform, 'EPSG:3310',
+                                            sources[0]['bounds'], 15, sources, bt.PAD)
+                self.assertEqual(bool(windows), expect_tiles)
+
+    def test_native_mask_precedes_averaging(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cols = np.arange(300)[None, :].repeat(300, axis=0)
+            grid = np.where(cols % 2 == 0, -60.0, -25.0)  # masked -25 columns would average to ~-42
+            valid = cols % 2 == 0
+            grid[:, 200:] = 40.0   # valid but land: excluded by the depth rule
+            valid[:, 200:] = True
+            grid[:, 100:150] = -7777.0  # finite nodata sentinel on valid-mask cells (nodata variant)
+            valid[:, 100:150] = True
+            for nodata in (None, -7777.0):
+                source = self._masked_native(root, grid, valid, nodata)[0]
+                seen = self._warped_values(source)
+                self.assertIn(-60.0, {round(v, 3) for v in seen})  # partial mask: valid cells survive
+                for value in seen:
+                    self.assertTrue(value == NODATA or abs(value + 60) < 1e-3, (nodata, value))
+
     def test_same_surface_has_no_tier_edge_ridge_or_tile_join(self):
         size = 320
         yy, xx = np.mgrid[:size, :size + 256]
