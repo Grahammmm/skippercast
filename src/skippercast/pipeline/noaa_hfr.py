@@ -6,7 +6,22 @@ import math
 from urllib.parse import urlencode
 from xml.etree import ElementTree
 
+import numpy as np
 from scipy.io import netcdf_file
+
+
+def _numeric_values(variable):
+    """Mask declared numeric sentinels in the stored domain before qualification."""
+    raw = variable[:].copy()
+    missing = np.zeros(raw.shape, dtype=bool)
+    for attr in ("_FillValue", "missing_value"):
+        markers = np.asarray(getattr(variable, attr, []))
+        if markers.ndim <= 1 and markers.dtype.kind in "iuf":
+            for marker in markers.reshape(-1):
+                missing |= raw == marker
+    values = raw.astype(float)
+    values[missing] = np.nan
+    return values
 
 HOST = "https://dods.ndbc.noaa.gov"
 DATASET = "hfradar_uswc_6km"
@@ -71,7 +86,7 @@ def read_subset(body, bounds, expected_time, resolution):
         west, south, east, north = bounds["longitude"][0], bounds["latitude"][0], bounds["longitude"][1], bounds["latitude"][1]
         if not (-180 <= west < east <= 180 and -80 <= south < north <= 80):
             raise ValueError("Invalid NOAA HFRNet regional bounds")
-        arrays = [x[:].copy() for x in (u, v, n, hdop)]
+        arrays = [_numeric_values(x) for x in (u, v, n, hdop)]
         rows = []
         for i, y in enumerate(lat):
             for j, x in enumerate(lon):
