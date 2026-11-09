@@ -105,6 +105,29 @@ test('feed_unmodified_since_second_boundary', () => withWorld({}, async ({gets, 
   assert.equal(gets.length, 4); assert.deepEqual(cancelled, []);
 }));
 
+test('feed_if_unmodified_since_ignores_non_http_dates', () => withWorld({}, async ({gets, cancelled}) => {
+  // Object uploaded 2026-11-09: each of these would be a (wrong) 412 if Date.parse's leniency were trusted.
+  const invalid = ['2020-01-01', '2020-01-01T00:00:00Z', 'Jan 1 2020', '1/1/2020', '2020', 'Mon, 09 Nov 2020', 'Mon, 31 Feb 2020 10:00:00 GMT',
+    'Mon, 09 Nov 2020 25:00:00 GMT', 'Mon, 09 Nov 2020 10:00:00 PST', 'Mon, 09 Nov 2020 10:00:00', '1577836800', ''];
+  for (const value of invalid) {
+    const r = await serve({'If-Unmodified-Since': value});
+    assert.equal(r.status, 200, JSON.stringify(value)); assert.equal(await r.text(), BODY);
+    assert.deepEqual(gets.at(-1).onlyIf, [], `${JSON.stringify(value)} is not forwarded`);
+  }
+  // The two obsolete HTTP-date forms are still dates (here far before the upload, so 412); a later date passes.
+  for (const value of ['Sunday, 06-Nov-94 08:49:37 GMT', 'Sun Nov  6 08:49:37 1994']) await assert412(await serve({'If-Unmodified-Since': value}));
+  for (const value of ['Tuesday, 09-Nov-49 12:00:01 GMT', 'Mon Nov  9 12:00:01 2026']) assert.equal((await serve({'If-Unmodified-Since': value})).status, 200, value);
+  assert.deepEqual(cancelled.length, 0);
+}));
+
+test('feed_if_match_tag_with_illegal_characters_fails', () => withWorld({}, async ({gets}) => {
+  for (const value of ['"current", "bad tag"', '"bad tag", "current"', '"current" "bad"', '"cur\trent"', '"current", "a"b"', '"current",, "x"', '"current"x', ' W/ "current"']) {
+    await assert412(await serve({'If-Match': value}));
+  }
+  assert.equal(gets.length, 8, 'one object get per request');
+  for (const value of ['"current", "tag-ok~!#"', ' "current" ', '"current",']) assert.equal((await serve({'If-Match': value})).status, 200, value);
+}));
+
 test('feed_failed_precondition_with_defensive_body_cancels_the_stream_without_refetch', () => withWorld({bodyOnFail: true}, async ({gets, cancelled}) => {
   await assert412(await serve({'If-Match': '"old"'}));
   await assert412(await serve({'If-Unmodified-Since': EARLIER}));
