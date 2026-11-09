@@ -148,7 +148,13 @@ class WatchFile:
 
     def poll(self) -> bool:
         """Reload if the file changed; True when the watched set changed."""
-        stamp = self._signature()
+        try:
+            stamp = self._signature()
+        except OSError as error:
+            self.errors += 1
+            self.last_error = f"watch.json metadata cannot be read: {type(error).__name__}"
+            self._stamp = None   # retry even an unchanged file after metadata recovers
+            return False
         if stamp == self._stamp and (self._stamp is not None or self._loaded):
             return False
         if stamp is None and self._loaded:
