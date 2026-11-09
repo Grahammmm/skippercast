@@ -81,7 +81,10 @@ def parse_time_utc(text: str) -> int:
         raise MalformedMessage("MetaData.time_utc is not a timestamp")
     year, month, day, hour, minute, second, fraction, sign, off_h, off_m = match.groups()
     micro = int((fraction or "0").ljust(6, "0")[:6])
-    moment = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), micro, timezone.utc)
+    try:
+        moment = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), micro, timezone.utc)
+    except ValueError:
+        raise MalformedMessage("MetaData.time_utc is not a timestamp") from None
     millis = int(moment.timestamp()) * 1000 + micro // 1000
     if sign:
         offset = (int(off_h) * 60 + int(off_m)) * 60_000
@@ -173,7 +176,10 @@ def _meta(meta: dict, key: str):
 
 def _envelope(raw) -> dict:
     if isinstance(raw, (bytes, bytearray)):
-        raw = raw.decode("utf-8", errors="strict")
+        try:
+            raw = raw.decode("utf-8", errors="strict")
+        except UnicodeDecodeError:
+            raise MalformedMessage("not UTF-8") from None
     if isinstance(raw, str):
         try:
             raw = json.loads(raw)
@@ -200,7 +206,8 @@ def normalise(raw, received_at: int | None = None, clock: Callable[[], datetime]
     kind = envelope.get("MessageType")
     if kind not in MESSAGE_TYPES:
         return []
-    body = (envelope.get("Message") or {}).get(kind)
+    message = envelope.get("Message")
+    body = message.get(kind) if isinstance(message, dict) else None
     meta = envelope.get("MetaData") or {}
     if not isinstance(body, dict) or not isinstance(meta, dict):
         raise MalformedMessage(f"{kind}: missing Message.{kind} or MetaData")
