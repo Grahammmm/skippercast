@@ -12,8 +12,8 @@ const IDLE: PositionState = {phase: 'idle'};
 
 export function PositionCheck() {
   // Retained state is tagged with the region that requested it, so a reading never shows in another region, even for the render before effects run.
-  const [held, setHeld] = useState<{id: string; state: PositionState}>({id: '', state: IDLE});
-  const [packed, setPacked] = useState<{id: string; pack: PackState}>({id: '', pack: 'unknown'});
+  const [held, setHeld] = useState<{id: string | null; state: PositionState}>({id: '', state: IDLE});
+  const [packed, setPacked] = useState<{id: string | null; pack: PackState}>({id: '', pack: 'unknown'});
   const run = useRef(0), open = tripOpen.value, id = region.value;
   const now = useRef({open, id});
   now.current = {open, id};
