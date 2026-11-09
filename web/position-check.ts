@@ -3,7 +3,7 @@
 // worked out on this device from the boundary data the planner's own screen already holds (dist/protected-areas.js, the same data the
 // offline legal pack saves), and every verdict comes from geo-screen.js `screenPlace`, the screen the planner uses. Nothing is stored or sent.
 // Erasable syntax only: Node tests import this file by type stripping.
-import {PLANNING_MARGIN_M, screenPlace} from '../dist/geo-screen.js';
+import {PLANNING_MARGIN_M, distanceM, pointGeometry, screenPlace} from '../dist/geo-screen.js';
 
 /** A fix this page can use: a finite WGS84 position and the accuracy radius the device reported (null when it reported none). */
 export type Fix = {latitude: number; longitude: number; accuracyM: number | null};
@@ -47,6 +47,19 @@ export type Reading =
     /** Configured layers not on this device (so a closer or further closure may exist); empty when the data is whole. */ missing: readonly string[];
     clock: Clock; checkedAt: string | null};
 
+/** geo-screen's search bound (its FAR_M, not exported): a closure whose box is further than this from the place is not measured there. */
+const SEARCH_BOUND_M = 20000;
+/** The nearest held closure to the fix with no search bound: the minimum finite distance (the first of equal ones), its name and metres to a tenth. */
+function nearestHeld(fix: Fix, features: readonly {properties?: {NAME?: string; FULLNAME?: string}; geometry: unknown}[]): {name: string | null; distanceM: number} | null {
+  const point = pointGeometry(fix.longitude, fix.latitude);
+  let best: {name: string | null; d: number} | null = null;
+  for (const f of features) {
+    const d = distanceM(point, f.geometry);
+    if (d !== null && Number.isFinite(d) && (!best || d < best.d)) best = {name: f.properties?.FULLNAME || f.properties?.NAME || null, d};
+  }
+  return best && {name: best.name, distanceM: Math.round(best.d * 10) / 10};
+}
+
 /**
  * inside: the point touches or lies in a closure. near: it is within the planning margin (geo-screen PLANNING_MARGIN_M) of one, counting the
  * reported accuracy as extra margin so a fix that could be across the line is never called outside. outside: otherwise.
@@ -63,10 +76,14 @@ export function readingFor(fix: Fix, screen: HeldScreen | null | undefined): Rea
   }, {latitude: fix.latitude, longitude: fix.longitude});
   if (!verdict.screened) return {kind: 'not-covered', fix};
   const reach = PLANNING_MARGIN_M + (fix.accuracyM ?? 0);
-  const where = verdict.inside ? 'inside' : verdict.distanceM !== null && verdict.distanceM <= reach ? 'near' : 'outside';
+  // A reach that touches geo-screen's 20 km search bound would be cut short by it (a closer closure can sit past the bound, or beside a farther
+  // one it did measure), so the nearest closure is measured again over every held feature, with the same helper, rounding and name fallback.
+  const near = reach >= SEARCH_BOUND_M ? nearestHeld(fix, held.features) : null;
+  const inside = verdict.inside || near?.distanceM === 0, name = near ? near.name : verdict.name, metres = near ? near.distanceM : verdict.distanceM;
+  const where = inside ? 'inside' : metres !== null && metres <= reach ? 'near' : 'outside';
   const missing = held.missing ?? [], clock = held.clock ?? (held.current ? 'ok' : 'old');
   if (missing.length && where === 'outside') return {kind: 'incomplete', fix, missing, clock, checkedAt: held.checked_at};
-  return {kind: 'checked', fix, where, name: verdict.name, distanceM: verdict.distanceM, lowAccuracy: fix.accuracyM === null || fix.accuracyM > LOW_ACCURACY_M,
+  return {kind: 'checked', fix, where, name, distanceM: metres, lowAccuracy: fix.accuracyM === null || fix.accuracyM > LOW_ACCURACY_M,
     stale: !held.current, missing, clock, checkedAt: held.checked_at};
 }
 
