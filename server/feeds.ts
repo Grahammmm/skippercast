@@ -149,6 +149,39 @@ function edgeFill(cache: Cache, request: Request, key: string, logicalKey: strin
   };
 }
 
+const POSITIVE = ['If-Match', 'If-Unmodified-Since'];
+const ETAG_LIST = /\s*(W\/)?("[^"]*")\s*(?:,|$)/y;
+/** If-Match precondition over a strong ETag: `*` or a legal list holding an equal strong tag. Malformed lists fail. */
+function ifMatchHolds(header: string, httpEtag: string | undefined): boolean {
+  if (header.trim() === '*') return true;
+  if (!httpEtag || httpEtag.startsWith('W/')) return false;
+  let found = false, end = 0;
+  ETAG_LIST.lastIndex = 0;
+  for (let m = ETAG_LIST.exec(header); m; m = ETAG_LIST.exec(header)) {
+    end = ETAG_LIST.lastIndex;
+    if (!m[1] && m[2] === httpEtag) found = true;
+    if (end >= header.length) break;
+  }
+  return end === header.length && found;
+}
+/** Conditional headers for the one R2 get: standard precedence, and an invalid If-Unmodified-Since date is dropped (ignored). */
+function conditionalHeaders(request: Request): Headers {
+  const out = new Headers(), get = (name: string) => request.headers.get(name);
+  const match = get('If-Match'), unmodified = get('If-Unmodified-Since'), none = get('If-None-Match'), modified = get('If-Modified-Since');
+  if (match !== null) out.set('If-Match', match);
+  else if (unmodified !== null && Number.isFinite(Date.parse(unmodified))) out.set('If-Unmodified-Since', unmodified);
+  if (none !== null) out.set('If-None-Match', none);
+  else if (modified !== null) out.set('If-Modified-Since', modified);
+  return out;
+}
+/** True when If-Match (or, without it, a valid If-Unmodified-Since) fails against the object R2 returned. */
+function positiveFails(conditional: Headers, object: {httpEtag?: string; uploaded?: Date}): boolean {
+  const match = conditional.get('If-Match'), unmodified = conditional.get('If-Unmodified-Since');
+  if (match !== null) return !ifMatchHolds(match, object.httpEtag);
+  if (unmodified === null || !(object.uploaded instanceof Date)) return false;
+  return Math.floor(object.uploaded.getTime() / 1000) > Math.floor(Date.parse(unmodified) / 1000);
+}
+
 /**
  * GET /feeds/<branch>/<path>: R2 first (edge-cached, with Range and ETag), then
  * the GitHub branch through the fetch cache. Returns null when the path is not a feed.
@@ -158,7 +191,9 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
   if (!logicalKey) return null;
   const selected = bucket;
   // A non-seafloor edge-cache hit answers before any R2 read; seafloor stays resolve-first and uncached.
-  const edge: {cache: Cache | null; hit?: Response} = selected && !logicalKey.startsWith('tiles/seafloor/') ? await edgeLookup(request, logicalKey, build) : {cache: null};
+  // If-Match / If-Unmodified-Since need the current object's metadata, so they never use the edge cache.
+  const positive = POSITIVE.some(name => request.headers.has(name));
+  const edge: {cache: Cache | null; hit?: Response} = selected && !positive && !logicalKey.startsWith('tiles/seafloor/') ? await edgeLookup(request, logicalKey, build) : {cache: null};
   if (edge.hit) return edge.hit;
   const target = await resolver(selected)(logicalKey);
   if (target.missing) return new Response('Not found', {status: 404, headers: {'Cache-Control': 'no-store'}});
@@ -192,7 +227,8 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
   if (selected) {
     // Seafloor archives are gated on a live publication receipt and never cached.
     const fill = edge.cache && !seafloor ? edgeFill(edge.cache, request, key, logicalKey, headers, ctx, build, selected) : undefined;
-    const object = await selected.get(key, {range: request.headers, onlyIf: request.headers}) as R2Object | R2ObjectBody | null;
+    const conditional = conditionalHeaders(request);
+    const object = await selected.get(key, {range: request.headers, onlyIf: conditional}) as R2Object | R2ObjectBody | null;
     if (object) {
       if (publication && object.customMetadata?.sha256 !== expectedHash) {
         return new Response('Seafloor archive revision unavailable', {status: 503, headers});
@@ -200,6 +236,12 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
       headers.set('ETag', object.httpEtag);
       headers.set('X-Feed-Source', 'r2');
       headers.set('Accept-Ranges', 'bytes');
+      if (positiveFails(conditional, object)) {
+        // A failed If-Match / If-Unmodified-Since is 412, never 304 (the caller's copy is not "current"); never cached.
+        if ('body' in object) await (object.body as ReadableStream | null)?.cancel().catch(() => {});
+        headers.set('Cache-Control', 'no-store');
+        return new Response(null, {status: 412, headers});
+      }
       if (edge.cache) headers.set('X-SC-Cache', 'miss');
       if (!('body' in object)) return new Response(null, {status: 304, headers});
       if (object.range && request.headers.has('Range')) {
