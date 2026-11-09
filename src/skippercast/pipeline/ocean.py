@@ -127,6 +127,11 @@ def wcofs(client, region, now):
         fh=int(re.search(r'\.f(\d+)',filename)[1])
         if fh>72 or fh%3:continue
         a=dap(client,base+filename,query);cells=[]
+        # Equal-length but wrong-size arrays are a transport fault, not a masked grid: check each against n.
+        sizes={k:len(a[k]) for k in ('Latitude','Longitude','mask','u_eastward','v_northward','time')}
+        for k in ('Latitude','Longitude','mask','u_eastward','v_northward'):
+            if sizes[k]!=n:raise ValueError(f'WCOFS {k} has {sizes[k]} values for {n} requested cells: {filename}')
+        if sizes['time']!=1:raise ValueError(f'WCOFS time has {sizes["time"]} values, expected 1: {filename}')
         for lat,lon,mask,u,v in zip(a['Latitude'],a['Longitude'],a['mask'],a['u_eastward'],a['v_northward'],strict=True):
             vec=vector(u,v)
             if mask==1 and vec:cells.append([round(lat,6),round(lon,6),*vec])
