@@ -141,7 +141,7 @@ class PipelineTests(unittest.TestCase):
         r = source("a", "A", "observation", "https://example.org", 6, lambda c: previous["data"], now)
         self.assertEqual(r["status"], "stale")
 
-    def _spectral_source(self, body, previous=None):
+    def _spectral_source(self, body, previous=None, now=None):
         """Run the real spectral parser through source() with an injected client; no network."""
         class Injected:
             def __init__(self, now):
@@ -156,11 +156,38 @@ class PipelineTests(unittest.TestCase):
                       "https://www.ndbc.noaa.gov/data/realtime2/46028.spec", 6,
                       lambda c: parsers.ndbc(c.get("https://www.ndbc.noaa.gov/data/realtime2/46028.spec"),
                                              "46028", True),
-                      datetime(2026, 9, 21, 16, 0, tzinfo=timezone.utc), previous, client_factory=Injected)
+                      now or datetime(2026, 9, 21, 16, 0, tzinfo=timezone.utc), previous, client_factory=Injected)
 
     SPECTRAL = ("#YY MM DD hh mm WVHT SwH SwP WWH WWP SwD WWD STEEPNESS APD MWD\n"
                 "#yr mo dy hr mn m m {swp} m sec - - - sec degT\n"
                 "2026 09 21 15 00 1.5 1.2 10.0 0.3 5.0 W NW SWELL 6.0 270\n")
+
+    def test_bad_ndbc_timestamp_header_fails_source(self):
+        body = self.SPECTRAL.format(swp="sec").replace("DD hh", "hh DD").replace("dy hr", "hr dy")
+        # Declared Sept 19 21:00 would be misread as Sept 21 19:00, falsely fresh.
+        body = body.replace("2026 09 21 15 00", "2026 09 21 19 00")
+        r = self._spectral_source(body, now=datetime(2026, 9, 21, 20, tzinfo=timezone.utc))
+        self.assertEqual(r["status"], "failed")
+        self.assertIsNone(r["data"])
+        self.assertNotIn("last_success_at", r)
+        self.assertNotIn("data_retrieved_at", r)
+        self.assertEqual(r["issue"], "ValueError: NDBC timestamp fields or units changed")
+        self.assertEqual(len(r["requests"]), 1)
+
+    def test_bad_ndbc_timestamp_header_retains_previous_dates(self):
+        previous = {"data": {"station": "46028", "sample_at": "2026-09-19T21:00:00Z", "observations": []},
+                    "last_success_at": "2026-09-19T21:05:00Z", "data_retrieved_at": "2026-09-19T21:05:00Z"}
+        before = copy.deepcopy(previous)
+        body = self.SPECTRAL.format(swp="sec").replace("DD hh", "hh DD").replace("dy hr", "hr dy")
+        body = body.replace("2026 09 21 15 00", "2026 09 21 19 00")
+        r = self._spectral_source(body, previous, now=datetime(2026, 9, 21, 20, tzinfo=timezone.utc))
+        self.assertEqual(r["status"], "retained")
+        self.assertEqual(r["issue"], "ValueError: NDBC timestamp fields or units changed")
+        self.assertEqual(r["data"], before["data"])
+        self.assertEqual(r["last_success_at"], before["last_success_at"])
+        self.assertEqual(r["data_retrieved_at"], before["data_retrieved_at"])
+        self.assertEqual(len(r["requests"]), 1)
+        self.assertEqual(previous, before)
 
     def test_bad_spectral_units_fail_source(self):
         r = self._spectral_source(self.SPECTRAL.format(swp="min"))

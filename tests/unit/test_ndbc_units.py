@@ -42,6 +42,34 @@ class NdbcUnitsTests(unittest.TestCase):
         self.assertTrue(str(raised.exception).startswith("Unexpected NDBC units"), raised.exception)
         self.assertIn(named, str(raised.exception))
 
+    def test_timestamp_names_and_units_are_canonical(self):
+        cases = (
+            ("#YY MM hh DD mm", "#yr mo hr dy mn"),
+            ("#YY MM DD hh minute", "#yr mo dy hr mn"),
+            ("#YY MM DD hh mm", "#yr mo dy hr sec"),
+            ("#YY MM DD hh mm", "#yr mo hr dy mn"),
+            ("#YY MM DD hh", "#yr mo dy hr"),
+        )
+        for spectral, body in ((False, table()), (True, spec_table())):
+            lines = body.splitlines()
+            for names, units in cases:
+                with self.subTest(spectral=spectral, names=names, units=units):
+                    changed = "\n".join((
+                        names + " " + " ".join(lines[0].split()[5:]),
+                        units + " " + " ".join(lines[1].split()[5:]),
+                        "2026 09 07 05 20 " + " ".join(lines[2].split()[5:]),
+                    ))
+                    with self.assertRaisesRegex(ValueError, "^NDBC timestamp fields or units changed$"):
+                        parsers.ndbc(changed, "46028", spectral)
+
+    def test_timestamp_prefix_whitespace_preserves_output(self):
+        for spectral, body in ((False, table()), (True, spec_table())):
+            with self.subTest(spectral=spectral):
+                canonical = parsers.ndbc(body, "46028", spectral)
+                spaced = body.replace("#YY  MM DD hh mm", "#YY\t MM  DD\thh mm")
+                spaced = spaced.replace("#yr  mo dy hr mn", "#yr\t mo  dy\thr mn")
+                self.assertEqual(parsers.ndbc(spaced, "46028", spectral), canonical)
+
     def test_real_units_line_parses(self):
         result = parsers.ndbc(table(), "46028")
         obs = result["observations"][0]
