@@ -3,6 +3,7 @@
 ## Unreleased
 
 - RF0854-6: regular-grid GRIB decoding preserves longitude/value identity for westward-scanned columns, normalizing coordinates and columns together; positive-i grids and latitude handling are unchanged.
+- RF0824-7: CDIP nearshore ingestion refuses changed or malformed numeric quality-flag mappings, retaining only eligible recent last-good records with their original clocks; canonical quality masks remain unchanged.
 
 - SCFEAT-BATHY2M-EXPAND-1: private Del Norte bathymetry test page uses the retained NOAA F00562 1 m survey with medium relief, survey dates and nominal MLLW provenance. No public tiles, hard-bottom inference or navigation-qualified depths.
 
