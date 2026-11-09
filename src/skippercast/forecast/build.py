@@ -53,6 +53,7 @@ def decode(message):
         lat2 = eccodes.codes_get(handle, 'latitudeOfLastGridPointInDegrees')
         lon1 = eccodes.codes_get(handle, 'longitudeOfFirstGridPointInDegrees')
         lon2 = eccodes.codes_get(handle, 'longitudeOfLastGridPointInDegrees')
+        negative_i = eccodes.codes_get(handle, 'iScansNegatively')
         missing = eccodes.codes_get(handle, 'missingValue')
         values = eccodes.codes_get_values(handle).astype(np.float64)
         if eccodes.codes_get(handle, 'bitmapPresent'):
@@ -72,9 +73,12 @@ def decode(message):
         lats = np.linspace(lat1, lat2, nj)
     if lats[0] > lats[-1]:
         grid, lats = grid[::-1], lats[::-1]
-    span = (lon2 - lon1) % 360 or 360
+    direction = -1 if negative_i else 1
+    span = (direction * (lon2 - lon1)) % 360 or 360
     step = span / (ni - 1) if span != 360 else 360 / ni
-    lons = (lon1 + step * np.arange(ni) + 180) % 360 - 180
+    lons = (lon1 + direction * step * np.arange(ni) + 180) % 360 - 180
+    if negative_i:
+        grid, lons = grid[:, ::-1], lons[::-1]
     return grid, lats, lons
 
 
