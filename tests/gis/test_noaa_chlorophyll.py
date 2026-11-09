@@ -5,6 +5,7 @@ from io import BytesIO
 import json
 import re
 import unittest
+from xml.etree import ElementTree
 
 from scipy.io import netcdf_file
 
@@ -136,6 +137,76 @@ class NoaaChlorophyllWalkBackTests(unittest.TestCase):
         source = next(s for s in sources["sources"] if s["id"] == "noaa-viirs-merged-chlorophyll")
         self.assertEqual(MAX_AGE_HOURS, source["request"]["max_age_hours"])
         self.assertEqual(MAX_FILES, 3)
+
+
+DIR = "chlociVIIRSnpp-n20GlobalDailyWW00/V{}_D1_NPP-N20_WW00_chloci.nc"
+
+
+class CatalogClient:
+    """Catalog of explicit VIIRS stems (e.g. "2024366"); binary reads reuse the Oct 2026 fixtures."""
+
+    def __init__(self, now, stems):
+        self.now, self.stems, self.urls = now, stems, []
+
+    def get(self, url, as_binary=False):
+        self.urls.append(url)
+        if url == CATALOG:
+            return "<catalog>" + "".join(f'<dataset urlPath="{DIR.format(s)}"/>' for s in self.stems) + "</catalog>"
+        day = re.search(r"V2026(\d{3})_", url).group(1)
+        return (FIXTURES / f"morro-bay-V2026{day}.nc").read_bytes()
+
+
+def paths(client):
+    return [p for _, p in recent_files(client)]
+
+
+class NoaaChlorophyllOrdinalDateTests(unittest.TestCase):
+    def test_catalog_bad_ordinal_keeps_valid_siblings(self):
+        valid = DIR.format("2026300")
+        for stems in (("2026000", "2026367", "2026999", "2026300"), ("2026300", "2026000", "2026367", "2026999"),
+                      ("2026367", "2026300", "2026000")):
+            with self.subTest(stems=stems):
+                client = CatalogClient(at(30), stems)
+                found = recent_files(client)
+                self.assertEqual([p for _, p in found], [valid])
+                self.assertEqual(found[0][0], datetime(2026, 10, 27, tzinfo=timezone.utc))
+                self.assertEqual(client.urls, [CATALOG])
+
+    def test_catalog_nonleap_366_is_not_next_year(self):
+        now = datetime(2027, 1, 2, tzinfo=timezone.utc)
+        found = recent_files(CatalogClient(now, ("2026366", "2026365")))
+        self.assertEqual([(d.date().isoformat(), p) for d, p in found], [("2026-12-31", DIR.format("2026365"))])
+
+    def test_catalog_leap_366_and_year_edges(self):
+        now = datetime(2025, 1, 2, tzinfo=timezone.utc)
+        found = recent_files(CatalogClient(now, ("2024366", "2024365", "2024001", "2025001", "2025002", "2025003")))
+        self.assertEqual([d.date().isoformat() for d, _ in found], ["2025-01-02", "2025-01-01", "2024-12-31"])
+        self.assertEqual(found[2][1], DIR.format("2024366"))
+        self.assertEqual(paths(CatalogClient(datetime(2025, 1, 1, tzinfo=timezone.utc), ("2024366", "2024366"))),
+                         [DIR.format("2024366")])
+
+    def test_catalog_all_invalid_has_existing_named_error(self):
+        for stems in (("2026000", "2026367"), ("2026000", "2026999", "2026366")):
+            with self.subTest(stems=stems), self.assertRaisesRegex(ValueError, "No dated NOAA VIIRS chlorophyll file"):
+                recent_files(CatalogClient(at(30), stems))
+        with self.assertRaisesRegex(ValueError, "No dated NOAA VIIRS chlorophyll file"):
+            recent_files(CatalogClient(at(30), ("2026000", "2026367", "2026310")))
+
+    def test_fetch_invalid_catalog_siblings_never_requested(self):
+        client = CatalogClient(at(30), ("2026000", "2026300", "2026367", "2026999"))
+        data = fetch(client, BOUNDS)
+        self.assertEqual((data["dataset"], data["valid_cells"], data["sample_at"]), (FULL.format("300"), 353, "2026-10-27T12:00:00Z"))
+        self.assertEqual(len(client.urls), 2)
+        self.assertEqual(client.urls[0], CATALOG)
+        self.assertIn("V2026300_", client.urls[1])
+        self.assertFalse([u for u in client.urls if re.search(r"V2026(000|367|999)_", u)])
+
+    def test_malformed_catalog_xml_still_propagates(self):
+        class Bad(CatalogClient):
+            def get(self, url, as_binary=False):
+                return "<catalog><dataset"
+        with self.assertRaises(ElementTree.ParseError):
+            recent_files(Bad(at(30), ()))
 
 
 if __name__ == "__main__":

@@ -4,6 +4,8 @@
 
 - RF0814-7: the trip planner's GPX, offline notes and planning-route exports now refuse, with "Included launch ramp is unavailable", when the included launch ramp is no longer in the published list (list replaced, empty, unavailable or for another region) instead of silently exporting the first listed ramp or leaving the checked launch out. The ramp checkbox stays visible, checked and enabled (showing "—") so it can be unchecked; a valid current ramp choice is still followed exactly and nothing saved is changed.
 
+- RF0804-8: the "Check my position" answer no longer reads "outside" for a closure inside a wide reported position accuracy. When the position accuracy plus the 70 m planning margin reaches the planner screen's 20 km search bound, the nearest held closure is measured again without that bound, so a closure within the accuracy radius is "near" (with the low-accuracy warning) instead of being skipped. A precise position far from every closure, inside-a-closure, missing-layer, stale-data and not-covered answers are unchanged. Nothing is sent or stored. NOT FOR NAVIGATION.
+
 - RF0824-7: CDIP nearshore ingestion refuses changed or malformed numeric quality-flag mappings, retaining only eligible recent last-good records with their original clocks; canonical quality masks remain unchanged.
 
 - SCFEAT-BATHY2M-EXPAND-1: private Del Norte bathymetry test page uses the retained NOAA F00562 1 m survey with medium relief, survey dates and nominal MLLW provenance. No public tiles, hard-bottom inference or navigation-qualified depths.
