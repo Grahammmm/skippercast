@@ -242,7 +242,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC-PERF-LAZY-1: app.css only adds the .app-reef-text selector to the existing muted 13px .app-empty/.app-caveat rule for the deferred-reef note; the Reports catch sheet never mounts it, and contrast() is untouched. Rebound from the final bytes.
   // SC-PERF-LAZY-1: check_contrast.mjs changes only its appCss source hash; contrast() is untouched. Rebound.
   // SC-PERF-JUMP-1: app.css appends only layout rules (masthead, target menu width, desktop legend minimum height); no paint; the Reports catch sheet mounts none of them. Rebound from the final bytes.
-  "web/app/app.css": "3b1482c3c8e08bab1fa64f855bd892047217279b837cf989d448332f884c315e",
+  // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
+  "web/app/app.css": "82c33886f084c96378d09a2fe1d9148d0c7f6f7a59b8cc4bc336f149ea1e11c2",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
