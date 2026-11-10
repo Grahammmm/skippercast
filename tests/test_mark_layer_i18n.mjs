@@ -2,6 +2,7 @@
 // depth-contours.ts) follow the card's language at render. Each card carries catalogue parts (`copy`, `copyTerms`); English is the
 // producer's own text, byte for byte, and published prose (terrain_interpretation, limitations, derivation, credits, rights, names)
 // is carried verbatim. Synthetic marks and the committed region files only; no network.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {mkdtemp} from 'node:fs/promises';
@@ -10,7 +11,7 @@ import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import {STRINGS} from '../web/i18n.ts';
 import {copyText, resolveMarkCopy} from '../web/mark-copy.ts';
 import {admitCell, admitHabitat, cellMark, seafloorMark} from '../web/map/seafloor.ts';
@@ -338,7 +339,7 @@ test('card_renders_in_the_language: MarkCard shows the Spanish words, English re
       export {language} from './web/i18n.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
   const {MarkCard, language, render, h} = await import(pathToFileURL(out).href);
   const cards = {...contourCards(), ...habitatCards(), ...seafloorCards()};

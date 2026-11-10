@@ -1,5 +1,6 @@
 // BF-closures-everywhere: every output that names a place (ranked spot, leg, waypoint, GPX point, reach area, where-to-look row)
 // passes the ONE protected-area screen (dist/geo-screen.js screenPlace) and carries its verdict. Unchecked is never "clear".
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -9,7 +10,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import {screenPlace, placeRefused, distanceM, geometryCoveredByBounds, PLANNING_MARGIN_M} from '../dist/geo-screen.js';
 import * as ranking from '../web/ranking.ts';
 import * as legs from '../web/trip-legs.ts';
@@ -276,7 +277,7 @@ test('rows are routed with their verdict, and the row line is plain text (a clos
   // SC0452-10: the lines come from the catalogue in both languages; run them, not the English source.
   const out = join(await mkdtemp(join(tmpdir(), 'closures-line-')), 'line.mjs');
   await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: "export {screenLine} from './web/brief/WhereToLook.tsx'; export {render} from 'preact-render-to-string'; export {h} from 'preact';"},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   const {screenLine, render, h} = await import(pathToFileURL(out).href);
   const verdict = (extra) => ({inside: false, name: NAME, distanceM: null, screened: true, ...extra});
   const lines = {
@@ -296,7 +297,7 @@ test('rows are routed with their verdict, and the row line is plain text (a clos
 test('the listed Boat picks (the list and the run line read them) keep each pick\'s screen verdict unchanged, routed or not', async () => {
   const out = join(await mkdtemp(join(tmpdir(), 'closures-where-')), 'where.mjs');
   await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: "export {listedBoatPicks} from './web/brief/WhereToLook.tsx';"},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   const {listedBoatPicks} = await import(pathToFileURL(out).href);
   const verdicts = [{inside: false, name: null, distanceM: null, screened: true}, {inside: false, name: NAME, distanceM: 40, screened: true}, {inside: false, name: null, distanceM: null, screened: false}];
   const origin = {latitude: 35.37, longitude: -120.86};

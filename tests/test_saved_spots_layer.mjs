@@ -3,6 +3,7 @@
 // signed out or a failed read draws nothing and says why; a confirmed save (or an account write) reads the list again;
 // nothing private enters the address, a feed, an export or the event. Synthetic rows and areas only; the screen is the real
 // initProtectedAreas over an offline answer; no network.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {mkdtemp} from 'node:fs/promises';
@@ -11,7 +12,7 @@ import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import {initProtectedAreas} from '../dist/protected-areas.js';
 import {setRegion} from '../dist/region.js';
 
@@ -42,7 +43,7 @@ async function components() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: rendererPlugins,
+    plugins: preparedRendererPlugins,
   });
   ui = await import(pathToFileURL(out).href);
   return ui;

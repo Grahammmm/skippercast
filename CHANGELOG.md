@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- SC1407-10 (#1762 M5): the map's first screen no longer loads the trip planner, offline pack, basemap-range and coastal-snapshot code. `web/trip.ts` keeps the trip signals, the `#export` dialog, the draft's ids and the shared protected-area screen, and loads the rest from the new `web/trip-runtime.ts` on first use; a pack or coastal call made before it arrives waits for it, and a cancelled save writes nothing. The app page's first-load script budget is lowered from 1,180,000 to 1,166,000 bytes. Planner, pack and export behaviour are unchanged.
+- SC1407-10 (#1762 M5): the map's first screen no longer loads the trip planner, offline pack, basemap-range and coastal-snapshot code. `web/trip.ts` keeps the trip signals, the `#export` dialog, the draft's ids and the shared protected-area screen, and loads the rest from the new `web/trip-runtime.ts` on first use; a pack or coastal call made before it arrives waits for it, and a cancelled save writes nothing. The app page's first-load script budget is lowered from 1,064,000 to 1,059,000 bytes. Planner, pack and export behaviour are unchanged.
+
+- SC1407-09: English pages no longer download the Spanish catalogue. The app and the landing ship English only and load the Spanish table only when the page is Spanish (a link, a stored choice or the browser's language), waiting for it before their first translated render; a switch to Spanish applies once the table arrives, and a failed load keeps English and says so once beside the language choice (the landing offers a link that reloads in Spanish). First-load scripts drop about 158 KB raw on both pages, and their budgets are lowered to match.
 
 - SC1407-04: the brief's date, hour and weekday text, the verdict's morning window and the rules and plan cards' day now reuse one date formatter per locale, zone and pattern from a shared cache (at most 64 kept) instead of building a new one on every call; every printed date and hour is unchanged, and a zone the browser rejects still fails as before.
 

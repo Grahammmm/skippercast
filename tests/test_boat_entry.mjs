@@ -12,6 +12,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
+import {preparedCatalogue} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 let mod;
@@ -31,7 +32,7 @@ async function load() {
       export {BOAT_KEY, savedBoat, boatFactors} from './dist/boat-handling.js';
       export {render} from 'preact-render-to-string';
       export {h, render as renderDOM, options} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: [preparedCatalogue],
   });
   mod = await import(pathToFileURL(out).href);
   return mod;

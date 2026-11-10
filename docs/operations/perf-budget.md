@@ -12,9 +12,9 @@ its budget and the share used, then PASS or FAIL. A failing group also lists its
 
 | Group | Size when set | Budget | Headroom |
 |---|---|---|---|
-| Landing page scripts (entry + scripts it imports at once) | 421,933 | 460,000 (raised from 445,000; see history in `scripts/perf-budget.json`) | 5.5% at first |
+| Landing page scripts (entry + scripts it imports at once) | 421,933 | 304,000 (lowered by SC1407-09 from 460,000; see history in `scripts/perf-budget.json`) | 5.5% at first |
 | Landing page styles | 24,339 | 26,000 | 6.8% |
-| App page (brief, map) scripts, first load | 1,104,511 | 1,166,000 (lowered from 1,180,000 by SC1407-10; see history in `scripts/perf-budget.json`) | 5.0% at first |
+| App page (brief, map) scripts, first load | 1,104,511 | 1,059,000 (lowered by SC1407-09 from 1,180,000 and by SC1407-10 to 1,059,000; see history in `scripts/perf-budget.json`) | 5.0% at first |
 | App page styles | 67,003 | 71,000 | 6.0% |
 | Largest single built script, style or font (any page, loaded now or later) | 1,094,203 | 1,150,000 | 5.1% |
 | Brief data files in the repo (`protected-areas.geojson`, `land-water-lines.json`, `seafloor-ledger.json`) | 951,224 | 1,050,000 | 10.4% |
@@ -39,16 +39,25 @@ is published, not in the repo, so this check cannot measure it; the publisher en
 leaves 23.8% headroom for more reefs or longer credit text, and stops the file growing back toward the full export
 unnoticed. Raise it in a pull request with a reason, as above.
 
+### English first loads without the Spanish table (SC1407-09, #1762 M5)
+
+`web/i18n.ts` and the landing's `web/landing/i18n.ts` no longer import the bilingual `catalog/app/strings.json`: they read
+English tables generated from it (`scripts/build_landing_strings.mjs`, run before every client build), and the Spanish
+table (`web/strings.es.generated.json`) is a separate chunk that `web/i18n-catalogue.ts` loads only for a Spanish page or
+a switch to Spanish. Vite manifest static closures on main a5005eb05 against this change: landing.html 447,318 to 289,476
+bytes, app.html 1,169,280 to 1,011,409. The two ceilings were lowered to the new size plus 5%, rounded up to 1,000 bytes
+(304,000 and 1,064,000). The install precache and the landing's app warm-up leave the Spanish chunk out; a saved offline
+trip pack keeps it, so Spanish still opens offline.
+
 ### The trip planner and offline pack load on first use (SC1407-10, #1762 M5)
 
 `/map`'s first screen imports `web/trip.ts` for the trip signals, the `#export` dialog, the draft's ids and the shared
 protected-area screen. The planner, the offline pack, the basemap ranges and the coastal snapshots are
 `web/trip-runtime.ts`, which `web/trip.ts` loads with one dynamic import when the dialog opens, a pack or coastal call is
 made, or the planner's ranked set arrives; a call made earlier waits for it. `tests/test_client_build.mjs` checks the real
-build's manifest: nothing of it is in `app.html`'s static imports, and the offline pack still lists it. Measured on main
-07621807 (after SC1407-06): 1,170,570 bytes before, 1,165,767 after this branch merged with it (4,803 bytes less); the old
-58 KB trip chunk mostly held map and tide modules the first screen still loads, so the saving is the trip code itself. The
-app budget is lowered from 1,180,000 to 1,166,000, which leaves 233 bytes of headroom.
+build's manifest: nothing of it is in `app.html`'s static imports, and the offline pack still lists it. Measured with this branch merged with main 1deba4ec (SC1407-09 included): the app's first load is 1,007,939 bytes. The
+old 58 KB trip chunk mostly held map and tide modules the first screen still loads, so the saving is the trip code itself.
+The app budget is lowered from 1,064,000 to 1,059,000 (measured + 5%, rounded up to 1,000 bytes).
 
 ### Protected-area verdicts reused across hour steps (SC1407-02)
 
