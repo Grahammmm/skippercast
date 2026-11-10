@@ -20,7 +20,7 @@ const dir = await mkdtemp(join(tmpdir(), 'planner-rules-')), out = join(dir, 'ui
 await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
     export {PlanRules, planRuleLine, ruleSpecies, CHECK_RULES, NOT_LEGAL_ADVICE} from './web/app/PlanRules.tsx';
     export {regsData} from './web/regs.ts';
-    export {language} from './web/i18n.ts';
+    export {language, t} from './web/i18n.ts';
     export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
   bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: [rendererPlugin, preparedCatalogue, hookStub]});
 const m = await import(pathToFileURL(out).href);
@@ -194,4 +194,38 @@ test('plan_rules_official_english_and_escape: official wording and links stay En
   assert.doesNotMatch(bad, /<img|<b>/, 'registry text is escaped, never markup');
   assert.match(bad, /&lt;b>\{name}&lt;\/b> per person daily|&lt;b&gt;\{name\}&lt;\/b&gt; per person daily/);
   assert.match(bad, /aria-label="Reglas oficiales para &lt;img src=x onerror=alert\(1\)>\{date\}|aria-label="Reglas oficiales para &lt;img src=x onerror=alert\(1\)&gt;\{date\}/, 'braces in a name are not filled');
+});
+
+// RF1925-3: the combined reef plan shows an identical unconfirmed reading once, with both species and both official links.
+test('reef_missing_rules_one_notice_two_links: no registry groups the two unconfirmed species into one notice', () => {
+  for (const lang of ['en', 'es']) {
+    m.language.value = lang;
+    try {
+      {
+        const out = html(data(), 'reef', '2026-10-14', null), t = text(out);
+        assert.equal((out.match(/class="plan-rule"/g) ?? []).length, 1, lang);
+        assert.equal((out.match(/app-mark-regs-badge/g) ?? []).length, 1, lang);
+        assert.equal(t.split(m.t('planRules.check', lang)).length - 1, 1, `${lang}: one caution`);
+        assert.equal((out.match(/class="export-note"/g) ?? []).length, 2, `${lang}: one freshness line and the one legal note`);
+        assert.match(out, /<strong>lingcod, rockfish<\/strong>/);
+        assert.equal(hrefs(out).length, 2, lang);
+        assert.doesNotMatch(out, /data-status="open"/);
+      }
+    } finally { m.language.value = 'en'; }
+  }
+});
+
+test('only_identical_unknowns_group: differing readings stay separate, with one caution; confirmed species stay distinct', () => {
+  const mixed = data();
+  mixed.species.lingcod.windows = [{start: '2026-04-01', end: '2026-10-01'}];
+  for (const [d, label] of [[mixed, 'closed beside open']]) {
+    const lines = ['lingcod', 'rockfish'].map(s => m.planRuleLine(d, s, '2026-10-14', MORRO, NOW));
+    const out = html(d, 'reef');
+    assert.equal((out.match(/class="plan-rule"/g) ?? []).length, 2, label);
+    assert.equal(hrefs(out).length, 2, label);
+    assert.equal(text(out).split(m.CHECK_RULES).length - 1, lines.some(l => l.kind === 'check') ? 1 : 0, label);
+  }
+  assert.equal((html(data(), 'reef').match(/class="plan-rule"/g) ?? []).length, 2);
+  assert.doesNotMatch(text(html(data(), 'reef')), new RegExp(m.CHECK_RULES));
+  assert.equal((html(data(), 'lingcod', '2026-10-14', null).match(/class="plan-rule"/g) ?? []).length, 1);
 });
