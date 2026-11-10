@@ -61,7 +61,7 @@
       "label": "App page (brief, map) styles (first load)",
       "kind": "first_load_css",
       "entry": "app.html",
-      "max_bytes": 72000,
+      "max_bytes": 73000,
       "history": [
         {
           "max_bytes": 71000,
@@ -70,6 +70,10 @@
         {
           "max_bytes": 72000,
           "reason": "SC1722-06: the phone dialogs and the Limits save actions stay inside the viewport (max-height, scroll and a sticky action row in web/app/app.css and trip.css), which takes the app first-load styles to 71,068 bytes on the merged build, over the 71,000 budget; the budget moves up 1,000 bytes (1.3% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 73000,
+          "reason": "Raised 72,000 to 73,000 (RF1935-4). The rule that keeps the focused phone target search visible in short viewports (hide the tabs, drop the sheet transform, let the sheet body scroll, in web/app/app.css) takes the app first-load styles to 72,262 bytes on this branch merged with main 6f584b488, 262 bytes over the 72,000 budget; the budget moves up 1,000 bytes (1.0% headroom over that build), no more."
         }
       ]
     },
