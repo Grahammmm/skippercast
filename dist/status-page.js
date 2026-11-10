@@ -203,9 +203,9 @@ const hours = value => (value < 1 ? `${Math.round(value * 60)} min` : `${value <
 export function renderRows(rows) {
   const groups = [...new Set(rows.map(r => r.group))];
   return groups.map(group => `<h2>${text(group)}</h2>
-<table class="evidence-table status-table"><thead><tr><th scope="col">Data</th><th scope="col">Last successful publish (UTC)</th><th scope="col">Expected within</th><th scope="col">Status</th></tr></thead><tbody>
+<div class="forecast-table-wrap" role="region" tabindex="0" aria-label="${text(group)} data table"><table class="evidence-table status-table"><thead><tr><th scope="col">Data</th><th scope="col">Last successful publish (UTC)</th><th scope="col">Expected within</th><th scope="col">Status</th></tr></thead><tbody>
 ${rows.filter(r => r.group === group).map(r => `<tr class="status-${r.state}"><th scope="row">${text(r.name)}</th><td>${r.lastSuccess ? `<time datetime="${text(r.lastSuccess)}">${text(r.lastSuccess.slice(0, 16).replace('T', ' '))}</time>${r.ageHours === null ? '' : ` (${hours(r.ageHours)} ago)`}` : 'none'}</td><td>${hours(r.expectedHours)}</td><td>${text(STATES[r.state])}${r.note ? ` · ${text(r.note)}` : ''}</td></tr>`).join('\n')}
-</tbody></table>`).join('\n');
+</tbody></table></div>`).join('\n');
 }
 
 /** The not-shown section. */
