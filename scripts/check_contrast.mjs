@@ -405,7 +405,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // RF1925-1: masthead minimum-width only; legend paint and backing unchanged.
   // SC1722-01 only appends a scoped .app-forecast-failed* block at the end of app.css (token text roles on the brief, not the legend glass);
   // no legend paint or backing changed and the cited line numbers above are unmoved.
-  "appCss": "af24d8752fbcd34dce0aa2931561c2b53fe8892a2b8aff3066629174bc9f2ce8",
+  "appCss": "174c49b7e791610078a1744eed010246883899891ddd3dfc2c46de685a19f3b7",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.

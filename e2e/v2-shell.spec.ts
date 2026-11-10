@@ -549,8 +549,9 @@ for (const lang of ['en', 'es']) {
   test(`SC1922-04 preview disclosure visible and bounded, ${lang}`, async ({page, pageErrors, v2, isMobile}) => {
     let reads = 0;
     await page.route('**/data/home-ports.json', async route => { reads++; await route.continue(); });
-    for (const viewport of isMobile ? ['narrow', 'phone'] as const : ['laptop'] as const) {
-      await v2.open('app', {region: 'monterey-point-sur', lang, profile: 'shore'}, viewport);
+    for (const size of isMobile ? [{width: 320, height: 640}, {width: 390, height: 844}] : [{width: 1280, height: 800}]) {
+      await page.setViewportSize(size);
+      await v2.open('app', {region: 'monterey-point-sur', lang, profile: 'shore'});
       const group = page.locator('.app-location-preview');
       await expect(group.locator('.app-region-preview-label')).toHaveText(label);
       await expect(group.locator('.app-region-preview-reason')).toHaveText(reason);
@@ -590,12 +591,13 @@ for (const lang of ['en', 'es']) {
     expect(reads).toBe(1);
     expect(pageErrors).toEqual([]);
   });
-  test(`SC1922-04 conditions direct link reads once without Where to look, ${lang}`, async ({page, pageErrors, v2}) => {
+  test(`SC1922-04 conditions direct link reads once without opening a chooser, ${lang}`, async ({page, pageErrors, v2, isMobile}) => {
     let reads = 0;
     await page.route('**/data/home-ports.json', async route => { reads++; await route.continue(); });
     await v2.open('app', {region: 'monterey-point-sur', lang, view: 'conditions', profile: 'shore'});
     await expect(page.locator('.app-region-preview-label')).toHaveText(label);
-    await expect(page.locator('.app-where')).toHaveCount(0);
+    // Desktop retains its brief beside Conditions; phone replaces the sheet content.
+    await expect(page.locator('.app-where')).toHaveCount(isMobile ? 0 : 1);
     expect(reads).toBe(1);
     expect(pageErrors).toEqual([]);
   });

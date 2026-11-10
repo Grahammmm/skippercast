@@ -261,7 +261,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
   // RF1925-1: masthead minimum-width only; Reports paint and contrast proof unchanged.
   // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
-  "web/app/app.css": "af24d8752fbcd34dce0aa2931561c2b53fe8892a2b8aff3066629174bc9f2ce8",
+  "web/app/app.css": "174c49b7e791610078a1744eed010246883899891ddd3dfc2c46de685a19f3b7",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -332,7 +332,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // assertions and thresholds are unchanged. Rebind only these two sources.
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
   // RF1925-1: only appCss pin and applicability comment change.
-  "scripts/check_contrast.mjs": "d0d8d987eb778b310faaae4c378098edf5b3f2605dc1ae2aacf4af445afdb881",
+  "scripts/check_contrast.mjs": "4127b801cbf51996b6e40c0850fd8b413500485176653348937dbfb805da1ee8",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still

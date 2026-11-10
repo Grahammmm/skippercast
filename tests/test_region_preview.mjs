@@ -84,3 +84,23 @@ test('failed real directory validation: 503, rejected, malformed, aborted, expir
     assert.equal(calls, 1);
   }
 });
+
+
+test('preview adds only the disclosure to populated ranking; active/failed/unknown markup is identical', () => {
+  at('monterey-point-sur');
+  const pick = {id: 'synthetic', kind: 'spot', name: 'Synthetic reef', distance: '2 nm', depth: '40 ft', fit: 'Screened', reason: 'Synthetic evidence', nm: 2, at: {latitude: 36, longitude: -122}, screen: {status: 'allowed', reasons: []}};
+  const ranking = {source: null, label: '', basis: '', empty: 'Synthetic empty state', picks: [pick]};
+  for (const lang of ['en', 'es', 'en']) {
+    s.language.value = lang;
+    s.regionPorts.value = null;
+    const baseline = s.render(s.h(s.WhereToLook, {ranking}));
+    for (const state of [{...ready('monterey-point-sur'), state: 'failed'}, {...ready('monterey-point-sur'), list: directory.ports.map(p => ({...p, status: 'active'}))}]) {
+      s.regionPorts.value = state;
+      assert.ok(s.render(s.h(s.WhereToLook, {ranking})) === baseline, 'failed/active preserve every existing row and screening word');
+    }
+    s.regionPorts.value = ready('monterey-point-sur');
+    const preview = s.render(s.h(s.WhereToLook, {ranking}));
+    assert.ok(preview.replace(/<p class="app-region-preview-reason">[^<]*<\/p>/, '') === baseline, 'only coverage copy changes, not picks/order/reasons');
+    assert.ok(preview.indexOf(s.t('shell.regionPreview.reason', lang)) < preview.indexOf('<h2'));
+  }
+});
