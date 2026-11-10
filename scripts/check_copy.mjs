@@ -367,7 +367,7 @@ export function copyFiles(root = ROOT) {
     for (const entry of readdirSync(join(root, dir), {withFileTypes: true}).sort((a, b) => a.name.localeCompare(b.name))) {
       const path = `${dir}/${entry.name}`;
       if (entry.isDirectory()) walk(path);
-      else if (/\.tsx?$/.test(entry.name) && !entry.name.endsWith('.d.ts')) list.push(path);
+      else if ((/\.tsx?$/.test(entry.name) && !entry.name.endsWith('.d.ts')) || entry.name.endsWith('.html')) list.push(path); // SC1722-05: web/404.html too
     }
   };
   walk('web');
