@@ -11,6 +11,10 @@ import {Button, IconButton} from '../ui/Button.tsx';
 import {forgetHome, hasSavedHome, listPorts, locatePort, type CookieJar, type HomeStorage, type Port} from '../ports.ts';
 import {language, t} from './i18n.ts';
 import {portCopy} from './copy.ts';
+import {Icon} from '../ui/icons.tsx';
+import type {Located} from '../ports.ts';
+
+type Feedback = null | {kind: 'found'; port: Port} | {kind: 'finding' | 'forgotten' | 'empty' | Extract<Located, {ok: false}>['reason']};
 
 export type PortInputProps = {
   /** The directory; null while it loads, and an empty list when it failed. */
@@ -36,10 +40,12 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
   const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState<Feedback>(null);
+  const feedbackText = feedback?.kind === 'found' ? COPY.found(feedback.port) : feedback ? COPY[feedback.kind] : '';
+  const failed = feedback && ['denied', 'unavailable', 'timedOut', 'unsupported'].includes(feedback.kind);
   const [saved, setSaved] = useState(() => hasSavedHome(storage, cookies));
   // One forget for v1, v2 and /coast (FE-83); this visit keeps its address.
-  const forget = () => { forgetHome(storage, cookies); setSaved(false); setFeedback(COPY.forgotten); };
+  const forget = () => { forgetHome(storage, cookies); setSaved(false); setFeedback({kind: 'forgotten'}); };
   const [nearest, setNearest] = useState<Port | null>(null);
   const list = ports ?? [];
   const matches = nearest && !query ? [nearest] : listPorts(list, query, showAll);
@@ -56,11 +62,11 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
   const explore = () => { invalidate(); onExplore(); };
   const findNearby = async () => {
     const mine = ++attempt.current;
-    setFeedback(COPY.finding);
+    setFeedback({kind: 'finding'});
     const found = await locatePort(list, geolocation);
     if (!live.current || mine !== attempt.current) return;
-    if (found.ok) { setNearest(found.port); setQuery(''); setFeedback(COPY.found(found.port)); }
-    else { setFeedback(COPY[found.reason]); input.current?.focus(); }
+    if (found.ok) { setNearest(found.port); setQuery(''); setFeedback({kind: 'found', port: found.port}); }
+    else { setFeedback({kind: found.reason}); input.current?.focus(); }
   };
   useEffect(() => { if (autoFocus) input.current?.focus(); }, [autoFocus]);
   useEffect(() => { if (locate && ports) void findNearby(); }, [locate, ports, geolocation]);
@@ -70,7 +76,7 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
       <label class="port-input-label" for={id}>{label}</label>
       <div class="port-input-row">
         <input ref={input} id={id} type="search" autocomplete="off" autofocus={autoFocus} placeholder={COPY.placeholder} value={query} aria-describedby={`${id}-note`}
-          onInput={event => { invalidate(); setQuery((event.currentTarget as HTMLInputElement).value); setNearest(null); setFeedback(''); }} />
+          onInput={event => { invalidate(); setQuery((event.currentTarget as HTMLInputElement).value); setNearest(null); setFeedback(null); }} />
         <Button type="submit" variant="primary" icon="arrow" disabled={!matches[0]}>{t('landing.port.go', lang)}</Button>
       </div>
       <div class="port-input-results" aria-live="polite">
@@ -88,7 +94,7 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
         </ul>
         {ports && !query && !nearest && !showAll ? <Button variant="quiet" size="sm" onClick={() => setShowAll(true)}>{t('landing.port.all', lang, {n: ports.length})}</Button> : null}
       </div>
-      <p class="port-input-feedback" role="status">{feedback}</p>
+      <p class={`port-input-feedback${failed ? ' port-input-feedback--error' : ''}`} role="status" aria-live="polite" aria-atomic="true">{failed ? <Icon name="info" /> : null}<span>{feedbackText}</span></p>
       <div class="port-input-actions">
         <Button icon="target" onClick={findNearby} disabled={!ports}>{t('landing.port.locate', lang)}</Button>
         <Button icon="map" onClick={explore}>{t('landing.port.explore', lang)}</Button>
