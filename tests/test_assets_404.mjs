@@ -60,7 +60,7 @@ test('the page is small, static and links back to /map and /', () => {
 });
 
 test('unknown_page_get_is_branded_but_still_404', async () => {
-  for (const path of ['/nope', '/old/link', '/old/link.html', '/old/link/', '/nope?x=1&y=<b>', '/apiary', '/Nope']) await assertBranded(await call(path, {headers: HTML}), path);
+  for (const path of ['/nope', '/old/link', '/old/link.html', '/old.release.html', '/old.release.v2.html', '/old/link/', '/nope?x=1&y=<b>', '/apiary', '/Nope']) await assertBranded(await call(path, {headers: HTML}), path);
   const page = await (await call('/nope?q=zzzmarker', {headers: HTML})).text();
   assert.ok(!page.includes('zzzmarker') && !page.includes('/nope'), 'nothing from the request is reflected');
 });
@@ -76,13 +76,14 @@ test('accept_is_explicit_and_positive', async () => {
 
 test('resource_misses_never_get_html', async () => {
   const roots = ['/api', '/feeds', '/coast-data', '/data', '/regions', '/tiles', '/basemap', '/assets', '/vendor', '/downloads', '/icons', '/.well-known'];
-  for (const path of ['/missing.js', '/x/app.css', '/data.json', '/x.geojson', '/a.pmtiles', '/logo.png', '/font.woff2', '/x.zip', '/page.HTML', '/page.html.js', '/sw.map']) await assertUntouched(await call(path, {headers: HTML}), path);
+  for (const path of ['/missing.js', '/x/app.css', '/data.json', '/x.geojson', '/a.pmtiles', '/logo.png', '/font.woff2', '/x.zip', '/page.HTML', '/page.html.js', '/old.release.js', '/old.release.html.map', '/old.release.HTML', '/sw.map']) await assertUntouched(await call(path, {headers: HTML}), path);
   // Reserved namespaces: through the assets handler's own check (the app answers /api and /feeds itself earlier).
   for (const root of roots) for (const path of [root, `${root}/`, `${root}/x`, `${root}/x/y.html`, `${root}/x/`]) assert.equal(isPagePath(path), false, path);
   for (const path of ['/data/nope', '/tiles/1/2/3', '/regions/x/region.json', '/assets/x', '/downloads/y', '/vendor/z', '/basemap/b', '/icons/i', '/coast-data/c', '/.well-known/w']) await assertNotPage(await call(path, {headers: HTML}), path);
   for (const path of ['/apiary', '/dataset', '/tilesx', '/assetsx/y']) assert.equal(isPagePath(path), true, path);
   for (const path of ['/a%2eb', '/a%2Fb', '/a%5cb', '/x%2e%2e/y', '/a%00']) { assert.equal(isPagePath(path), false, path); await assertUntouched(await call(path, {headers: HTML}), path); }
   assert.equal(isPagePath('/'), true); assert.equal(isPagePath('/a.b/c'), true, 'a dot in an earlier segment is a page path'); assert.equal(isPagePath('/a.b/c.js'), false);
+  assert.equal(isPagePath('/old.release.html'), true, 'a multi-dot .html name is a page path'); assert.equal(isPagePath('/old.release.html.js'), false);
 });
 
 test('head_and_other_methods_do_not_synthesize', async () => {

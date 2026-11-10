@@ -68,12 +68,12 @@ export function acceptsHtml(accept: string | null): boolean {
   return found;
 }
 
-/** A page path: its last nonempty segment has no dot or ends in lowercase .html, outside the resource roots. */
+/** A page path: its last nonempty segment has no dot or ends in lowercase .html (multi-dot names such as old.release.html included), outside the resource roots. */
 export function isPagePath(path: string): boolean {
   if (/%(?:2e|2f|5c|00)/i.test(path)) return false; // encoded dots, separators and NUL: ambiguous, fail closed
   if (RESOURCE_ROOTS.some(root => path === root || path.startsWith(`${root}/`))) return false;
   const last = path.split('/').filter(Boolean).pop() ?? '';
-  return !last.includes('.') || (last.endsWith('.html') && last.indexOf('.') === last.length - 5);
+  return !last.includes('.') || last.endsWith('.html');
 }
 
 /** The ASSETS answer for an unmapped path, or the branded 404 page for a browser's unknown page link. */
