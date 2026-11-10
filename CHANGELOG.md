@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC1407-11: the brief's forecast-skill line now speaks for the hour the brief answers for: it reads the 24, 48 or 72 h-ahead scores by that hour's lead from now (the publisher's half-open buckets, so exactly 24 h ahead reads the 48 h scores) and names the lead, says no measured skill is published 72 h or more ahead, and keeps "not enough buoy history yet" when that lead is thin instead of showing another lead's figure. The line links to the full scorecard at /skill. English and Spanish.
+
 - RF0844-8: fleet trip labels (admin form and agent label import) refuse a start or end time written on a day that is not on the calendar, such as February 30, 2026-02-29 or April 31, with the existing "must be ISO UTC times" error, instead of silently rolling it into the next month and saving it against the trip; a refused admin label saves nothing and a refused agent import keeps every existing label. Valid days, leap days and accepted time precision are unchanged.
 
 - RF0844-7: the GEFS wind-ensemble build now checks each decoded wind-component and gust field's latitude and longitude axes against the GFS land mask before sampling any sea-cell index, and fails the build when a field sits on displaced cells even if its dimensions match (it previously published that wind under the mask's coordinates with a false zero-distance receipt). A failed build keeps the previous generation as before; matching grids, receipts and missing-member handling are unchanged.

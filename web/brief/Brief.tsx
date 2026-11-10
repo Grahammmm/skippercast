@@ -426,13 +426,16 @@ export function LeadRules({date, now}: {date: string; now: Date}) {
   );
 }
 
-/** SCFEAT-SKILL-1: measured forecast skill under the model-disagreement line (web/brief/skill.ts); UNKNOWN when history is short. */
-function SkillLine({now, lang}: {now: Date; lang: Language}) {
+/**
+ * SCFEAT-SKILL-1: measured forecast skill under the model-disagreement line (web/brief/skill.ts); UNKNOWN when history is short.
+ * SC1407-11: for the lead of the hour `at` the brief answers for (24/48/72 h ahead of now), with a link to the full /skill scorecard.
+ */
+function SkillLine({now, at, lang}: {now: Date; at: number; lang: Language}) {
   useEffect(() => { loadSkill(); }, []);
   const file = skillFile.value, id = shownRegion()?.id;
   if (file === undefined || !id) return null;
-  const s = skillSummary(file, id, now.getTime());
-  return <p class="app-verdict-skill ui-mono" data-skill={s.state}>{skillLine(s, lang)}</p>;
+  const s = skillSummary(file, id, now.getTime(), at);
+  return <p class="app-verdict-skill ui-mono" data-skill={s.state}>{skillLine(s, lang)} <a href="/skill">{t('brief.skill.link', lang)}</a></p>;
 }
 
 /**
@@ -454,6 +457,7 @@ export function Verdict({now}: {now: Date}) {
     : a.state === 'partial' ? t('brief.models.partial', lang, {n: a.compared, total: a.hours}) : t('brief.models.one', lang);
   const modelHour = a?.state === 'differ' && regionalForecast.value ? feedReader(regionalForecast.value, now).read(a.worst!.ms) : null;
   const boat = v.basis === 'comfort-score' ? storedBoat() : null, rangeNote = boat && boatRangeNote(boat.loa_ft) ? t('brief.boat.note', lang) : null;
+  const leadAt = leadHour(hour.value, day.value, now, tz), skillAt = leadAt ? Date.parse(leadAt) : now.getTime();
   return (
     <div class="app-verdict" data-verdict={v.verdict} data-provisional={provisional ? 'true' : undefined}>
       <div class="app-verdict-head">
@@ -464,7 +468,7 @@ export function Verdict({now}: {now: Date}) {
       {rangeNote ? <p class="app-verdict-boat-note">{rangeNote}</p> : null}
       {models ? <p class="app-verdict-models ui-mono" data-agreement={a!.state}>{models}</p> : null}
       {modelHour ? <details class="app-verdict-models-detail"><summary>{t('brief.models.detail', lang)}</summary>{t('brief.models.readings', lang, {w1: gap(modelHour.wind!), w2: gap(modelHour.other_wind!), s1: gap(modelHour.sea!), s2: gap(modelHour.other_sea!)})}</details> : null}
-      <SkillLine now={now} lang={lang} />
+      <SkillLine now={now} at={skillAt} lang={lang} />
       {rulesLine}
     </div>
   );
