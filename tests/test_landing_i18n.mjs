@@ -294,9 +294,9 @@ function forecastFeed(now, ageH = 6) {
     models: {gfs_global: {meta, data: [0, 1].map(() => series({wind_speed_10m: [t => 4 + 3 * day(t), 'kn'], wind_gusts_10m: [t => 8 + 4 * day(t), 'kn'], wind_direction_10m: [300, '°'], temperature_2m: [60, '°F'], cloud_cover: [30, '%']}))},
       ncep_gfswave016: {meta, data: [0, 1].map(() => series({wave_height: [t => 2 + day(t), 'ft'], wave_period: [12, 's']}))}}};
 }
-const feeds = (now, {missing = [], ageH = 6} = {}) => async url => {
+const feeds = (now, {missing = [], ageH = 6, noModels = false} = {}) => async url => {
   const path = new URL(String(url), PAGE).pathname;
-  const body = missing.some(x => path.includes(x)) ? null : path.endsWith('/region.json') ? REGION : path === '/feeds/data/regions/morro-bay/latest.json' ? DAILY : path === '/api/forecast' ? forecastFeed(now, ageH) : null;
+  const body = missing.some(x => path.includes(x)) ? null : path.endsWith('/region.json') ? REGION : path === '/feeds/data/regions/morro-bay/latest.json' ? DAILY : path === '/api/forecast' ? (noModels ? {...forecastFeed(now, ageH), models: {}} : forecastFeed(now, ageH)) : null;
   return body ? {ok: true, status: 200, json: async () => body} : {ok: false, status: 404, json: async () => ({}), body: null};
 };
 async function onDevice(entries, fn) {
@@ -320,7 +320,7 @@ async function appLimit(m, now, lang, opts) {
 test('spanish_live_reason_parity: the verdict word, day, boat and reason in Spanish, the reason the app\'s own; English unchanged; scoring invariant', async () => {
   const m = await load();
   const run = (entries, opts, lang, now = NOW) => onDevice(entries, () => lang === undefined ? m.loadLandingVerdict(feeds(now, opts), now, PAGE) : m.loadLandingVerdict(feeds(now, opts), now, PAGE, lang));
-  const cases = {rated: {}, noForecast: {missing: ['/api/forecast']}, stale: {ageH: 30}};
+  const cases = {rated: {}, noForecast: {noModels: true}, stale: {ageH: 30}};
   for (const [name, opts] of Object.entries(cases)) {
     const en = await run(new Map(), opts), explicit = await run(new Map(), opts, 'en'), es = await run(new Map(), opts, 'es');
     assert.deepEqual(explicit, en, `${name}: explicit English is the default`);
@@ -333,7 +333,7 @@ test('spanish_live_reason_parity: the verdict word, day, boat and reason in Span
     assert.doesNotMatch(es.sentence, /\b(?:Wind of|Seas|forecast|marine alert)\b/, `${name}: no English reason fragments`);
     assert.equal(es.boatName, 'barco de referencia de 23 ft'); assert.equal(en.boatName, 'reference 23 ft boat'); assert.equal(m.REFERENCE_BOAT_LABEL, 'reference 23 ft boat');
   }
-  assert.equal((await run(new Map(), cases.noForecast, 'es')).verdict, 'unknown', 'no forecast reads Unknown, never a calmer word');
+  assert.equal((await run(new Map(), cases.noForecast, 'es')).verdict, 'unknown', 'a loaded forecast with no usable hours reads Unknown, never a calmer word (a failed read is no verdict: tests/test_landing_verdict.mjs)');
   assert.notEqual((await run(new Map(), cases.stale, 'es')).verdict, 'comfortable', 'a stale run holds');
   // Saved boats: a custom name stays literal; the no-name forms and the model caveat follow the language.
   const named = await run(boatEntry({name: 'Wren <b>', loa_ft: 31}), {}, 'es');
