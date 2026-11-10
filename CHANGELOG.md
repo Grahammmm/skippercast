@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF1635-5: survey inventories now refuse cyclic derivation before loading or promotion; valid shared-parent lineages remain accepted and rejected promotion leaves the catalog unchanged.
+
 - RF1345-7: the AIS port-coverage report opens exactly the requested processor `state.sqlite`, read-only, even when its path contains `?`, `#`, `%` or other URI characters; it no longer creates a stray file, reads a lookalike database or reports coverage unknown for such a path. Counts, the window and unknown-state output are unchanged.
 
 - SC1407-03: the time dock's 169-hour horizon is built once per UTC hour and region zone instead of on every read by the dock, map, brief and share link (#1762 R2); the shared copy is frozen. Days, hours, DST change days, the selected hour and links are unchanged (`web/hour.ts`).
