@@ -25,7 +25,7 @@ async function components() {
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {MarkCard, SaveSpotAction} from './web/app/MarkCard.tsx';
-      export {SAVE_WORDS, boundName, saveMarkSpot, spotCandidate} from './web/saved-spots.ts';
+      export {SAVE_WORDS, boundName, saveMarkSpot, screenMarkPosition, spotCandidate} from './web/saved-spots.ts';
       export {session} from './web/account.ts';
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string';
@@ -221,6 +221,53 @@ test('late_save_cannot_answer_another_card_or_account: a sign out, another accou
   await s.run(mark(CLEAR.lat, CLEAR.lon), {fetchFn: api.fetchFn});
   await s.run(mark(east(200).lat, east(200).lon), {fetchFn: api.fetchFn});
   assert.deepEqual(api.calls.map(c => JSON.parse(c.init.body).lon), [CLEAR.lon, east(200).lon]);
+});
+
+test('screen_mark_position_matches_save_rule: the account-free helper and the save agree on every point and screen state', async () => {
+  const {screenMarkPosition, saveMarkSpot, SAVE_WORDS} = await components();
+  const screen = await realScreen(), ok = {state: 'loaded', region: 'morro-bay', screen};
+  const WORDS = {inside: 'Inside a protected area. Not saved.', margin: SAVE_WORDS.margin, notChecked: SAVE_WORDS.notChecked};
+  const cases = [
+    ['clear', mark(CLEAR.lat, CLEAR.lon), ok, 'morro-bay', null],
+    ['80 m outside', mark(east(80).lat, east(80).lon), ok, 'morro-bay', null],
+    ['inside', mark(CY, CX), ok, 'morro-bay', 'inside'],
+    ['on the boundary', mark(CY, CX + HALF), ok, 'morro-bay', 'inside'],
+    ['30 m outside', mark(east(30).lat, east(30).lon), ok, 'morro-bay', 'margin'],
+    ['60 m outside', mark(east(60).lat, east(60).lon), ok, 'morro-bay', 'margin'],
+    ['outside coverage', mark(36.5, -120.0), ok, 'morro-bay', 'notChecked'],
+    ['the search halo', mark(35.3, -120.55 - 30 / M_LON), ok, 'morro-bay', 'notChecked'],
+    ['failed', mark(CLEAR.lat, CLEAR.lon), {state: 'failed'}, 'morro-bay', 'notChecked'],
+    ['loading', mark(CLEAR.lat, CLEAR.lon), {state: 'loading'}, 'morro-bay', 'notChecked'],
+    ['wrong region', mark(CLEAR.lat, CLEAR.lon), {state: 'loaded', region: 'other-region', screen}, 'morro-bay', 'notChecked'],
+    ['legacy screen', mark(CLEAR.lat, CLEAR.lon), {state: 'loaded', region: 'morro-bay', screen: {ready: () => true, pointAllowed: () => true, geometryAllowed: () => true}}, 'morro-bay', 'notChecked'],
+    ['throwing coverage', mark(CLEAR.lat, CLEAR.lon), {state: 'loaded', region: 'morro-bay', screen: {coversGeometry: () => { throw new Error('boom'); }}}, 'morro-bay', 'notChecked'],
+    ['stale', mark(CLEAR.lat, CLEAR.lon), {state: 'loaded', region: 'morro-bay', screen: await realScreen(new Date(Date.now() - 40 * 3600000).toISOString())}, 'morro-bay', 'notChecked'],
+    ['no region', mark(CLEAR.lat, CLEAR.lon), ok, null, 'notChecked'],
+  ];
+  for (const [label, m, loadedScreen, region, reason] of cases) {
+    const answer = screenMarkPosition(m, region, loadedScreen);
+    const api = spy(created);
+    const saved = await saveMarkSpot(m, {session: () => SIGNED_IN, region: () => region, loadScreen: async () => loadedScreen, fetchFn: api.fetchFn});
+    if (reason === null) {
+      assert.deepEqual(answer, {allowed: true, region, candidate: {name: 'Synthetic mark', lat: m.position.latitude, lon: m.position.longitude, note: null}}, label);
+      assert.equal(saved.state, 'saved', `${label}: the save agrees`);
+    } else {
+      assert.deepEqual(answer, {allowed: false, reason}, label);
+      assert.deepEqual(saved, {state: 'refused', message: WORDS[reason]}, `${label}: the save agrees`);
+      assert.equal(api.calls.length, 0, `${label}: never posted`);
+    }
+  }
+  // Candidate refusals come first, and a withheld card's point is never in the answer.
+  assert.deepEqual(screenMarkPosition(mark(35.3, -121.0, {id: 'geology:u'}), 'morro-bay', ok), {allowed: false, reason: 'context'});
+  assert.deepEqual(screenMarkPosition(mark(NaN, -121.0), 'morro-bay', ok), {allowed: false, reason: 'noPosition'});
+  const withheld = screenMarkPosition(mark(CLEAR.lat, CLEAR.lon, {withheld: true, reading: 'Withheld.'}), 'morro-bay', ok);
+  assert.deepEqual(withheld, {allowed: false, reason: 'withheld'});
+  // Signed out: the helper still allows a clear mark (copy needs no account) while the save is refused without loading anything.
+  let loads = 0;
+  const out = await saveMarkSpot(mark(CLEAR.lat, CLEAR.lon), {session: () => ({state: 'signed-out'}), region: () => 'morro-bay', loadScreen: async () => { loads++; return ok; }});
+  assert.deepEqual(out, {state: 'failed', message: SAVE_WORDS.signIn});
+  assert.equal(loads, 0);
+  assert.equal(screenMarkPosition(mark(CLEAR.lat, CLEAR.lon), 'morro-bay', ok).allowed, true);
 });
 
 test('save_spot_preserves_address_and_privacy: the save code has no address, history, share, storage, console, error-reporting or measurement path', async () => {

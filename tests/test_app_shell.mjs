@@ -882,7 +882,7 @@ test('FE-80: in 2D and 3D a terrain reading is the card, with the renderer\'s la
     terrainReading.value = reading;
     assert.deepEqual(currentMark.value, readingCard(reading));
     const html = render(h(MarkCard, {}));
-    assert.match(html, /<h2 tabindex="-1">39 ft depth<\/h2>.*<p class="app-mark-kind">ORIGINAL SURVEY SAMPLE<\/p><p class="ui-mono">35\.37000° N, 120\.86000° W<\/p><p class="app-mark-source ui-mono">USGS survey · 2008-05-01 · 2 m display spacing\. Nominal\. Original spacing 2 m\. Vertical references have not been reconciled\.<\/p>/s);
+    assert.match(html, /<h2 tabindex="-1">39 ft depth<\/h2>.*<p class="app-mark-kind">ORIGINAL SURVEY SAMPLE<\/p><p class="ui-mono">35\.37000° N, 120\.86000° W<\/p><p class="app-mark-copy" role="status">Protected areas not checked for this position: outside coverage or check unavailable\.<\/p><p class="app-mark-source ui-mono">USGS survey · 2008-05-01 · 2 m display spacing\. Nominal\. Original spacing 2 m\. Vertical references have not been reconciled\.<\/p>/s);
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&habitat=reef:r1`);
     assert.deepEqual(currentMark.value, terrainCard(reef), 'the Chart has no terrain reading');
   } finally { terrainMark.value = null; terrainReading.value = null; }
