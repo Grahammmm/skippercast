@@ -1,5 +1,6 @@
 // SC1352-08: the shore-run, ranked trip-spot and shoreline cards read Spanish where they are shown. The decisions
 // (status label, reasons, priority, counters, access pins) stay on the English values; English is byte-identical.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';

@@ -23,7 +23,7 @@ import {Readout} from './Readout.tsx';
 import type {LandingVerdict} from './live-verdict.ts';
 import {degraded} from '../degraded.ts';
 import {DegradedNotice} from '../degraded-notice.tsx';
-import {language, t} from './i18n.ts';
+import {catalogueFailed, language, spanishHref, t} from './i18n.ts';
 
 /** The nav (§ 7): Fleet and Reports open the app's views (Reports, FE-52), How it's built the sources page (Q16). */
 export const NAV = [
@@ -34,7 +34,7 @@ export const NAV = [
 /** NAV's labels in the page language, in NAV's order (NAV itself keeps the English metadata). */
 const NAV_IDS = ['landing.link.fleet', 'landing.link.reports', 'landing.link.sources'] as const;
 
-export function LandingHead(_props: {href: string}) {
+export function LandingHead({href}: {href: string}) {
   const lang = language.value;
   return (
     <header class="landing-head">
@@ -45,6 +45,8 @@ export function LandingHead(_props: {href: string}) {
           <li><a href="/map#account">{t('landing.link.signin', lang)}</a></li>
         </ul>
       </nav>
+      {/* SC1407-09: only after a failed Spanish load; the retry reloads this address with lang=es, so every part reads Spanish together. */}
+      {catalogueFailed.value && <p role="status">{t('language.loadFailed', lang)} <a href={spanishHref(href)} lang="es">{t('language.retrySpanish', lang)}</a></p>}
     </header>
   );
 }

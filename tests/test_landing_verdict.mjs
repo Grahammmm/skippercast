@@ -11,7 +11,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins, rendererPlugins} from './helpers/esbuild-url.mjs';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -37,7 +37,7 @@ async function load() {
       export {BOAT_MODEL_NOTE} from './web/boat-range.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
   return (mod = await import(pathToFileURL(out).href));
 }

@@ -5,12 +5,12 @@
 // when a ceremony starts: app.html does not load it for map page views.
 const RETURN_KEY = 'skippercast-account-return';
 import {coordinateFormat, formatCoordinate, formatCoordinates, parseCoordinate} from './coordinates.js';
-import catalog from '../catalog/app/strings.json' with {type: 'json'};
+import english from '../web/strings.en.generated.json' with {type: 'json'};
 
 // SC0922-14: this module is imported on demand and cannot call web/i18n.ts t(), so openAccount({lang, strings}) receives the
 // resolved language and the finished `account.*` catalogue values (web/account-copy.ts). Without them every string is the English
-// value in the same catalogue, so there is one English table.
-const DEFAULTS = catalog.strings;
+// value in the same catalogue, so there is one English table (SC1407-09: the generated English projection web/i18n.ts reads too).
+const DEFAULTS = english;
 const holes = text => [...new Set([...text.matchAll(/\{(\w+)\}/g)].map(m => m[1]))].sort().join(',');
 /**
  * One dialog's copy reader: `t(id, vars)` fills `{name}` variables (plain text; callers escape at HTML sinks). An injected value is used

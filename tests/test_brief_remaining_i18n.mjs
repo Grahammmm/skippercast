@@ -1,5 +1,6 @@
 // SC1607-09: the plan-only search plan's labels and no-plan sentence, the saved-boat caveat on the brief and the landing, and the two
 // selected-tide save refusals read the chosen language where they are shown; every raw English producer keeps its English input.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdtemp} from 'node:fs/promises';
@@ -7,6 +8,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
+import {preparedCatalogue} from './helpers/esbuild-url.mjs';
 import {missingSearchPlanText, searchPlanLabel, tidePackMessage} from '../web/brief/remaining-copy.ts';
 import {noPlanText, planFor} from '../web/search-plan.ts';
 import {BOAT_MODEL_NOTE, boatRangeNote} from '../web/boat-range.ts';
@@ -35,7 +37,7 @@ async function loadView() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: [{name: 'renderers', setup: b => b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}))}],
+    plugins: [preparedCatalogue, {name: 'renderers', setup: b => b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}))}],
   });
   view = await import(pathToFileURL(out).href);
   return view;

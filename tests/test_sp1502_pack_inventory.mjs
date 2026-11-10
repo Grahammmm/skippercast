@@ -6,6 +6,7 @@ import {resolve, dirname, relative, join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
+import {preparedCatalogue} from './helpers/esbuild-url.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const fixtures = resolve(root, 'tests/fixtures/sp1502_pack_inventory');
@@ -68,11 +69,11 @@ async function harness(t, responses) {
         if (['../../dist/offline-core.js', 'preact/jsx-runtime', '../i18n.ts', '../brief/remaining-copy.ts'].includes(args.path)) return;   // SC0707-10: the real catalogue reader, nothing else
         throw new Error(`unadmitted product import: ${args.path}`);
       });
-    }}],
+    }}, preparedCatalogue],
   });
   for (const input of Object.keys(result.metafile.inputs)) {
     const path = resolve(root, input);
-    assert.ok(path === resolve(root, 'web/app/Trip.tsx') || path === resolve(root, 'dist/offline-core.js') || path === resolve(root, 'web/i18n.ts') || path === resolve(root, 'web/brief/remaining-copy.ts') || path === resolve(root, 'web/i18n-core.ts') || path === resolve(root, 'catalog/app/strings.json') ||
+    assert.ok(path === resolve(root, 'web/app/Trip.tsx') || path === resolve(root, 'dist/offline-core.js') || path === resolve(root, 'web/i18n.ts') || path === resolve(root, 'web/brief/remaining-copy.ts') || path === resolve(root, 'web/i18n-core.ts') || path === resolve(root, 'web/i18n-catalogue.ts') || path === resolve(root, 'web/strings.en.generated.json') || path === resolve(root, 'web/strings.es.generated.json') ||
       path.startsWith(fixtures + '/') || /[/]node_modules[/](?:.*[/])?(?:@?preact|preact-render-to-string|signals-core|signals)[/]/.test(path),
     `unadmitted import graph input: ${input}`);
   }

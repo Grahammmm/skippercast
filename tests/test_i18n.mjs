@@ -1,6 +1,7 @@
 // BF-spanish-app: one string catalogue (catalog/app/strings.json) read by web/i18n.ts, the language chosen from
 // preference, then Accept-Language, then English, and the first answer, the brief and the rules card rendered
 // from it. Components are bundled with esbuild and rendered to strings, as tests/test_first_answer.mjs does.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdtemp, mkdir, readFile, writeFile} from 'node:fs/promises';
@@ -8,7 +9,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 import catalogue from '../catalog/app/strings.json' with {type: 'json'};
 import {LANGUAGES, LANGUAGE_KEY, acceptedLanguage, initLanguage, language, localeOf, lookup, num, resolveLanguage, setLanguage, supported, t} from '../web/i18n.ts';
@@ -240,7 +241,7 @@ async function load() {
       export {hour, day, species, profile} from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
   return (mod = await import(pathToFileURL(out).href));
 }
@@ -292,7 +293,7 @@ async function loadWR() {
       export {profile, region, selection, habitat, species} from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
   return (wr = await import(pathToFileURL(out).href));
 }

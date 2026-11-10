@@ -8,7 +8,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const ORIGIN = 'https://s.test/map';
@@ -32,7 +32,7 @@ async function load() {
     export * as state from './web/state.ts';
     export {render} from 'preact-render-to-string';
     export {h} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   shell = await import(pathToFileURL(out).href);
   return shell;
 }
