@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF1915-9: the offline rights-delta comparator now removes a report it just created when the write, fsync or close fails, so a torn or unsynced file no longer blocks a retry under the write-once name. A pre-existing output is never touched, and a path replaced meanwhile is preserved; if cleanup cannot finish the tool exits 4 with a fixed "incomplete report may remain" or "replacement preserved" message. Successful report bytes, mode and comparison results are unchanged.
+
 - RF1915-6: trip checks refuse publication identifiers over 200 UTF-16 code units before reading job state or queuing owners, rather than truncating distinct identifiers into the same stored marker. Accepted identifiers remain unchanged.
 
 - RF1915-5: the spear reading's 48-hour swell look-back now walks its 48 fixed hourly slots instead of the nearshore model's declared sample spacing, so an enormous or non-finite `temporalResolutionMinutes` can no longer hold the daily brief in a loop. Coverage, energy maxima, the 36-hour clarity gate and every ordinary verdict are unchanged.
