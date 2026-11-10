@@ -363,22 +363,32 @@ export function registerOffline(): void {
   navigator.serviceWorker.register('/sw.js').catch((error: Error) => console.warn('SkipperCast service worker not registered:', error.message));
 }
 
-/** From main.tsx: the dialog follows `#export`, the ranked set draws on and moves the Chart, and a saved pack keeps the worker current. */
-export function startTrip(): void {
-  const sync = () => { tripOpen.value = location.hash === TRIP_HASH; if (tripOpen.peek()) void loadPlanner(); };
-  addEventListener('hashchange', sync);
-  addEventListener('storage', refreshIds);
-  sync();
-  region.subscribe(refreshIds);
-  document.addEventListener('skippercast:trip-ranked', event => {
+/**
+ * From main.tsx: the dialog follows `#export`, the ranked set draws on and moves the Chart, and a saved pack keeps the worker current.
+ * The dialog opens only with a region (SC2252-15): a regionless /map#export (the app shortcut) stays closed while main.tsx's home
+ * resolution replaces the address, and opens when a region arrives. Returns a function that undoes the start (tests).
+ */
+export function startTrip(): () => void {
+  const sync = () => { tripOpen.value = location.hash === TRIP_HASH && !!region.peek(); if (tripOpen.peek()) void loadPlanner(); };
+  const onRanked = (event: Event) => {
     const detail = (event as CustomEvent<RankedPlan | null>).detail;
     ranked = detail?.targets ? detail : NO_PLAN;
     drawRanked();
     const at = detail?.fit ? fitCamera(ranked.targets) : null;
     if (at) go({view: cameraParam(at)});
-  });
+  };
+  addEventListener('hashchange', sync);
+  addEventListener('storage', refreshIds);
+  const stops = [region.subscribe(sync), region.subscribe(refreshIds)];
+  document.addEventListener('skippercast:trip-ranked', onRanked);
   document.addEventListener('skippercast:boundaries', drawRanked);
-  region.subscribe(drawRanked);
-  setInterval(() => { void recheckRanked(); }, 60000);
+  stops.push(region.subscribe(drawRanked));
+  const timer = setInterval(() => { void recheckRanked(); }, 60000);
   void globalThis.caches?.keys().then(names => { if (names.some(n => n.startsWith('sc-pack-') || n.startsWith('sc-coastal-'))) registerOffline(); }, () => {});
+  return () => {
+    removeEventListener('hashchange', sync); removeEventListener('storage', refreshIds);
+    document.removeEventListener('skippercast:trip-ranked', onRanked); document.removeEventListener('skippercast:boundaries', drawRanked);
+    for (const stop of stops) stop();
+    clearInterval(timer);
+  };
 }

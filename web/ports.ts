@@ -104,11 +104,17 @@ export function currentPort(ports: readonly Port[], region: string | null, saved
   return linkedPort(ports, region, linkedId) ?? inRegion.find(port => port.id === savedId) ?? inRegion[0] ?? null;
 }
 
-/** The app with `params` replacing the area keys; unrelated parameters and exact #account intent stay. */
+/** Exact fragments a home resolution keeps: the account dialog and the trip planner (SC2252-15's app shortcut). */
+const KEPT_HASHES: readonly string[] = ['#account', '#export'];
+/**
+ * The app with `params` replacing the area keys; unrelated parameters, an exact #account or #export and one
+ * exact view=conditions (SC2252-15's app shortcut) stay. A camera view, any other or a repeated view is dropped.
+ */
 function appURL(href: string, params: Record<string, string | undefined>): string {
-  const url = new URL(href);
-  url.pathname = '/map'; url.hash = url.hash === '#account' ? '#account' : '';
+  const url = new URL(href), views = url.searchParams.getAll('view');
+  url.pathname = '/map'; url.hash = KEPT_HASHES.includes(url.hash) ? url.hash : '';
   for (const key of AREA_KEYS) url.searchParams.delete(key);
+  if (views.length === 1 && views[0] === 'conditions') url.searchParams.set('view', 'conditions');
   for (const [key, value] of Object.entries(params)) if (value) url.searchParams.set(key, value);
   return url.href;
 }

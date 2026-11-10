@@ -4,7 +4,15 @@
 
 - RF0844-8: fleet trip labels (admin form and agent label import) refuse a start or end time written on a day that is not on the calendar, such as February 30, 2026-02-29 or April 31, with the existing "must be ISO UTC times" error, instead of silently rolling it into the next month and saving it against the trip; a refused admin label saves nothing and a refused agent import keeps every existing label. Valid days, leap days and accepted time precision are unchanged.
 
+- RF0814-8: a depth-contour file whose review expiry is an impossible calendar date (such as 2026-11-31 or 2027-02-29) now fails the existing contour check instead of drawing and exporting; real dates keep drawing through their last day and are withheld the next day.
+
+- RF0844-6: SST front extraction preserves native grid origins and coordinates, so half-offset grids no longer falsely conflict; true overlapping-measurement conflicts still refuse publication.
+
+- RF0814-9: the admin fleet map's Activity type filter now also narrows the returned track segments, so a mixed-mode trip no longer draws fishing modes that were not selected; trip eligibility, paging, events and heat are unchanged.
+
 - RF0834-5: the AIS matcher keeps an established watched row (and its entry in the listener's `watch.json`) when the processor has no statics for an MMSI the same single active registry vessel still holds, whether positions remain or the processor state was rebuilt. Retention needs the stored row's vessel to be that owner, no rejection and a row that passes the watched gate; no row, fact or review is invented, and an unheard, candidate, rejected, reassigned, duplicated or excluded binding gains nothing.
+
+- RF0854-9: AIS validation sync refuses a malformed or non-progressing labels response (wrong region, missing trips or next, a non-object or badly-identified trip, an out-of-order, repeated, backward or skipping cursor) with a one-line error naming only the page number, before anything is written. The last labels snapshot, the raw-position copies (which may be the only positions left after retention) and earlier reports are kept; a valid, complete, empty response still removes unlabelled copies.
 
 - RF0814-7: the trip planner's GPX, offline notes and planning-route exports now refuse, with "Included launch ramp is unavailable", when the included launch ramp is no longer in the published list (list replaced, empty, unavailable or for another region) instead of silently exporting the first listed ramp or leaving the checked launch out. The ramp checkbox stays visible, checked and enabled (showing "—") so it can be unchecked; a valid current ramp choice is still followed exactly and nothing saved is changed.
 
