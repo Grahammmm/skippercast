@@ -48,7 +48,9 @@ command. Future survey runs will reuse cell IDs `3310:<x-index>:<y-index>`.
 ### What the denominator measures
 
 [NOAA BlueTopo](https://nauticalcharts.noaa.gov/data/bluetopo.html) is a compilation,
-not an independent original survey. We pin the 2026-09-24 tile scheme by SHA-256
+not an independent original survey. We pin the 2026-11-09 tile scheme by SHA-256
+(re-pinned from the 2026-09-24 scheme, whose object NOAA removed; retrieval
+record: `docs/seafloor-bluetopo-scheme-repin.md`)
 and select all 252 tile footprints intersecting the configured search box.
 Per-tile delivered dates, URLs and publisher checksums are in the ledger.
 Four bounded workers read elevation overviews at approximately 32 m spacing;
