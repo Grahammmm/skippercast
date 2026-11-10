@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- SC1407-13: the planner's plan-date rules card and the landing's layer dots now follow the page language. In Spanish the card's heading, badges, closed line, check-the-rules line, freshness, link labels and legal note are Spanish; the registry's reason, bag and size wording, species names and official links stay as published in English, marked `lang="en"`, and the card says so. Stale, overdue, unknown, not-reviewed or location-dependent rules still read "check the official rules", never open. The dots and their navigation name come from the landing's first-paint catalogue slice, equal to the map rail's labels; links, order and English output are unchanged. Both files are now checked by the copy lint's catalogue coverage.
 - RF1915-6: trip checks refuse publication identifiers over 200 UTF-16 code units before reading job state or queuing owners, rather than truncating distinct identifiers into the same stored marker. Accepted identifiers remain unchanged.
 
 - RF1915-5: the spear reading's 48-hour swell look-back now walks its 48 fixed hourly slots instead of the nearshore model's declared sample spacing, so an enormous or non-finite `temporalResolutionMinutes` can no longer hold the daily brief in a loop. Coverage, energy maxima, the 36-hour clarity gate and every ordinary verdict are unchanged.
