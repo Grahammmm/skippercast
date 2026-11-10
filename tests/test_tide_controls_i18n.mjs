@@ -140,9 +140,9 @@ test('spark_locale_and_empty_matrix: label, aria, High/Low and clock follow the 
   m.language.value = 'es';
   const es = m.render(m.h(m.TideSpark, {brief, now}));
   assert.match(es, /^<figure class="app-spark" aria-label="Curva de marea">/);
-  assert.match(es, /<li>(Pleamar|Bajamar) <span class="ui-mono">\d{1,2}:\d\d · \d+\.\d ft MLLW<\/span><\/li>/);
+  assert.match(es, /<li>(Pleamar|Bajamar) <span class="ui-mono">\d{1,2}:\d\d · \d+,\d ft MLLW<\/span><\/li>/);
   assert.ok(!/>(High|Low) </.test(es));
-  const heights = h => [...h.matchAll(/(\d+\.\d) ft MLLW/g)].map(x => x[1]).join();
+  const heights = h => [...h.matchAll(/(\d+[.,]\d) ft MLLW/g)].map(x => x[1].replace(',', '.')).join();
   assert.equal(heights(es), heights(en), 'same heights and datum');
   // empty states
   const none = sparkBrief({tides: [], tideEvents: []}), noCurve = sparkBrief({tides: []});
