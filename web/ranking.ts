@@ -45,6 +45,7 @@ import {waterRoute, type Route, type RouteFailure, type RoutePoint} from './rout
 import type {HabitatFeature} from './map/coast-ranking.js';
 import {CHECKING, SCREEN_NOTES, fitLine, markAreas, markFit, markFitCopy, markShown, withheld, type AtlasTarget, type MarkData, type MarkScreen} from './map/habitat.ts';
 import {cp, type CopyVar, type MarkCopyPart} from './mark-copy.ts';
+import {placeVerdicts} from './place-verdict-cache.ts';
 import type {StringId} from './i18n.ts';
 
 /** How many places the brief lists (§ 10). */
@@ -167,7 +168,8 @@ function atlasScreened(data: MarkData | null, screen: MarkScreen, target: string
     // SC1137-05: the generated words as parts; a published terrain_interpretation is never given any.
     const reasonParts = reason && species ? speciesReasonCopy(t, species, reason) : reason ? undefined : t.terrain_interpretation === undefined ? [rp('reason.surveyed')] : undefined;
     return {id: t.id, kind: 'spot', name: t.label, distance: yd === null ? distance(nm) : swimText(yd), nm, at: {latitude: t.latitude, longitude: t.longitude}, depth: band(lo, hi),
-      screen: screenPlace(screen, {latitude: t.latitude, longitude: t.longitude, geometries: markAreas(t, data?.atlas)}),
+      // SC1407-02: reused for the same mark, areas and screen revision (web/place-verdict-cache.ts), so an hour step does not screen again.
+      screen: placeVerdicts.verdict(data?.region?.id ?? null, screen, {latitude: t.latitude, longitude: t.longitude, geometries: markAreas(t, data?.atlas)}, `atlas:${t.id}`),
       fit: fit?.line ?? 'Habitat fit unrated for this target', reason: reason ?? t.terrain_interpretation ?? 'Surveyed reef terrain.',
       copy: {...swimCopy(yd), fit: fit ? markFitCopy(target, fit.n) : [cp('mark.layer.habitat.fitUnrated')], ...(reasonParts ? {reason: reasonParts} : {})}};
   })};
