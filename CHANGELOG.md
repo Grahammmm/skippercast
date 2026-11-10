@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF1635-5: survey inventories now refuse cyclic derivation before loading or promotion; valid shared-parent lineages remain accepted and rejected promotion leaves the catalog unchanged.
+
 - SC1407-09: English pages no longer download the Spanish catalogue. The app and the landing ship English only and load the Spanish table only when the page is Spanish (a link, a stored choice or the browser's language), waiting for it before their first translated render; a switch to Spanish applies once the table arrives, and a failed load keeps English and says so once beside the language choice (the landing offers a link that reloads in Spanish). First-load scripts drop about 158 KB raw on both pages, and their budgets are lowered to match.
 
 - SC1407-04: the brief's date, hour and weekday text, the verdict's morning window and the rules and plan cards' day now reuse one date formatter per locale, zone and pattern from a shared cache (at most 64 kept) instead of building a new one on every call; every printed date and hour is unchanged, and a zone the browser rejects still fails as before.
