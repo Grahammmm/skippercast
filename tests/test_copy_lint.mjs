@@ -8,7 +8,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import util from 'node:util';
 import {
-  BASELINE, COVERED, NOT_COVERED, compare, copyFiles, coverageProblems, formatBaseline, grown, htmlUnits, lint, lintFile, literals, readBaseline, sentences, tally, unitFindings,
+  BASELINE, COVERED, NOT_COVERED, catalogueProblems, compare, copyFiles, coverageProblems, formatBaseline, grown, htmlUnits, lint, lintFile, literals, readBaseline, sentences, tally, unitFindings,
 } from '../scripts/check_copy.mjs';
 
 const SCRIPT = new URL('../scripts/check_copy.mjs', import.meta.url).pathname;
@@ -358,6 +358,13 @@ test('coverage: a listed file passes; bad reasons, overlap, duplicates and odd p
 test('coverage: the repository lists classify every screen exactly once, with a reason for each exception', () => {
   assert.deepEqual(coverageProblems(), []);
   for (const [path, reason] of Object.entries(NOT_COVERED)) assert.ok(!COVERED.includes(path) && reason.trim(), path);
+});
+
+test('coverage_is_real_not_exempt: the private device log is covered once, not exempt, and has no bare prose or missing id', () => {
+  const path = 'web/app/PrivateMapLog.tsx';
+  assert.equal(COVERED.filter(p => p === path).length, 1);
+  assert.ok(!Object.hasOwn(NOT_COVERED, path));
+  assert.deepEqual(catalogueProblems().filter(p => p.includes(path) || p.includes('privateMapLog.')), []);
 });
 
 test('coverage CLI: an unlisted screen fails with and without a catalogue, in every mode; lists and baseline are never rewritten', () => {
