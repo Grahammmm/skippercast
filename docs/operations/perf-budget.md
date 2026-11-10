@@ -62,6 +62,18 @@ counted offline in instrumented copies of the old and new module (same verdicts)
 One local Node run took 1,742 ms before and 363 ms after (counters included; a sample, not a gate, and not a re-measure of
 the phone load in #1762). Not profiled further: `geometryIntersects`, unchanged, still runs first on every measured pair.
 
+### One live protected-area read per load (SC1407-06, #1762)
+
+Not a size budget: a note on the run-time boundary check. The map's mark screen (`web/map/marks.ts`) and the planner's
+screen (`dist/protected-areas.js` `refresh`) both ask the live CDFW ds582 query for the region's envelope on a `/map`
+load. `dist/live-mpa.js` lets them share a read only while it is in flight: two callers of the exact same query URL get
+one request and one parsed answer; any other URL (bounds, fields, output, parameter order) is its own read. A settled
+read is forgotten at once (answer, HTTP or transport error, 20 s timeout, broken JSON), so a later `refresh()` always
+asks again and no finished answer is kept or replayed. Each screen still runs its own checks (`validMpas` with the
+region's minimum, `validMPAs` and the provider-error refusal) and its own daily-feed fallback. The checked time both
+screens record is when the response arrived (before its body is parsed), never when a screen consumed it. Committed
+static files keep their own share (`web/shared-fetch.ts`), unchanged. No timing was measured for this change.
+
 ## Raising a budget (in a pull request, with a reason)
 
 Open `scripts/perf-budget.json`. For the group that is over, add an entry at the END of its `history` list with the new
