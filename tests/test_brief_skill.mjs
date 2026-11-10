@@ -79,20 +79,24 @@ test('the brief shows the skill line under the model line, UNKNOWN on thin histo
   m.skillFile.value = file([row()], {generated_at: '2026-10-12T03:00:00Z'});
   const ok = html(); assert.match(ok, /data-skill="known"[^>]*>Forecast skill 24 h ahead, last 30 days: wind 82%/);
   assert.ok(ok.indexOf('app-verdict-models') < ok.indexOf('app-verdict-skill'));
-  assert.match(ok, /app-verdict-skill[^<]*<a href="\/skill">Scorecard<\/a><\/p>/);
+  assert.match(ok, /app-verdict-skill[^<]*<a href="\/skill">Details<\/a><\/p>/);
   m.skillFile.value = file([], {generated_at: '2026-10-12T03:00:00Z'});
-  assert.match(html(), /data-skill="unknown"[^>]*>Forecast skill 24 h ahead: UNKNOWN[^<]*<a href="\/skill">Scorecard<\/a>/);
+  assert.match(html(), /data-skill="unknown"[^>]*>Forecast skill 24 h ahead: UNKNOWN[^<]*<a href="\/skill">Details<\/a>/);
   // SC1407-11: the dock's chosen hour sets the lead (measured from now), and the link shows in every state and language.
   m.skillFile.value = file([row(), row({lead_hours: 48, within: 35}), row({lead_hours: 72, within: 20})], {generated_at: '2026-10-12T03:00:00Z'});
   for (const [hour, lead, pct] of [['2026-10-14T15:00Z', 48, 70], ['2026-10-15T15:00Z', 72, 40]]) {
     m.hour.value = hour;
-    assert.match(html(), new RegExp(`data-skill="known"[^>]*>Forecast skill ${lead} h ahead, last 30 days: wind ${pct}%[^<]*<a href="/skill">Scorecard</a>`));
+    assert.match(html(), new RegExp(`data-skill="known"[^>]*>Forecast skill ${lead} h ahead, last 30 days: wind ${pct}%[^<]*<a href="/skill">Details</a>`));
   }
   m.hour.value = '2026-10-16T15:00Z';
-  const far = html(); assert.match(far, /data-skill="unavailable"[^>]*>Forecast skill: UNKNOWN\. No measured skill is published 72 h or more ahead[^<]*<a href="\/skill">Scorecard<\/a>/);
+  const far = html(); assert.match(far, /data-skill="unavailable"[^>]*>Forecast skill: UNKNOWN\. The scorecard could not be read, is out of date or lacks this hour\. Not for navigation\. <a href="\/skill">Details<\/a>/);
   assert.doesNotMatch(far.slice(far.indexOf('app-verdict-skill')), /\d+%/);
+  // The hour before now (11:00 at 12:00) has no published lead: unavailable, never the 24 h figure (82%).
+  m.hour.value = '2026-10-13T11:00Z';
+  const past = html(); assert.match(past, /data-skill="unavailable"/);
+  assert.doesNotMatch(past.slice(past.indexOf('app-verdict-skill')), /\d+%|24 h/);
   m.language.value = 'es'; m.hour.value = '2026-10-14T15:00Z';
-  assert.match(html(), /Acierto del pronóstico a 48 h, últimos 30 días: viento 70%[^<]*<a href="\/skill">Tabla de aciertos<\/a>/);
+  assert.match(html(), /Acierto del pronóstico a 48 h, últimos 30 días: viento 70%[^<]*<a href="\/skill">Detalles<\/a>/);
   m.language.value = 'en';
 });
 
@@ -105,13 +109,19 @@ test('the lead uses the publisher\'s half-open buckets: exactly 24 h is 48 h ahe
   for (const [delta, lead] of cases) {
     assert.equal(skillLead(NOW + delta, NOW), lead, `delta ${delta / M} min`);
     const s = skillSummary(leads, 'morro-bay', NOW, NOW + delta);
-    if (lead === null) { assert.ok(util.isDeepStrictEqual(s, {state: 'unavailable', reason: 'range'}), `delta ${delta / M} min`); continue; }
+    if (lead === null) { assert.ok(util.isDeepStrictEqual(s, {state: 'unavailable'}), `delta ${delta / M} min`); continue; }
     assert.equal(s.state, 'known'); assert.equal(s.lead, lead); assert.equal(s.parts[0].pct, pct[lead]);
     assert.match(skillLine(s, 'en'), new RegExp(`^Forecast skill ${lead} h ahead, last 30 days: wind ${pct[lead]}%`));
     assert.match(skillLine(s, 'es'), new RegExp(`^Acierto del pronóstico a ${lead} h,`));
   }
-  assert.equal(skillLead(NaN, NOW), null); assert.equal(skillLead(Infinity, NOW), null); assert.equal(skillLead(NOW - 2 * H, NOW), null);
-  for (const at of [NaN, NOW - 2 * H]) assert.equal(skillSummary(leads, 'morro-bay', NOW, at).reason, 'invalid');
+  assert.equal(skillLead(NaN, NOW), null); assert.equal(skillLead(Infinity, NOW), null);
+  // A past instant has no published lead: never a 24 h fallback, even just before now (the publisher has no such bucket).
+  for (const back of [1, 30 * M, H - 1, H, 2 * H]) assert.equal(skillLead(NOW - back, NOW), null, `${back} ms before now`);
+  for (const at of [NaN, NOW - 1, NOW - 30 * M, NOW - H, NOW - 2 * H]) {
+    const s = skillSummary(leads, 'morro-bay', NOW, at);
+    assert.ok(util.isDeepStrictEqual(s, {state: 'unavailable'}), `at ${at - NOW} ms`);
+    assert.doesNotMatch(skillLine(s, 'en'), /%|24 h/);
+  }
   assert.equal(skillSummary(leads, 'morro-bay', NOW).lead, 24, 'without a chosen hour the lead is 24 h, as before');
 });
 
@@ -127,10 +137,11 @@ test('a lead with too few pairs says not enough history, never borrowing the 24 
   assert.equal(s.lead, 48); assert.equal(s.parts[0].window, 7); assert.equal(s.parts[0].pct, 100);
 });
 
-test('past 72 h the line says no skill is measured that far ahead, with no figure, in both languages', () => {
-  const s = skillSummary(leads, 'morro-bay', NOW, NOW + 80 * H);
-  assert.match(skillLine(s, 'en'), /No measured skill is published 72 h or more ahead\. Not for navigation\./);
-  assert.match(skillLine(s, 'es'), /No se publica acierto medido a 72 h o más\. No apto para navegar\./);
-  for (const lang of ['en', 'es']) assert.doesNotMatch(skillLine(s, lang), /%|publi[a-z]+ 20/);
-  assert.match(skillLine(skillSummary(leads, 'morro-bay', NOW, NOW - 2 * H), 'en'), /^Forecast skill: UNKNOWN for this hour\. Not for navigation\.$/);
+test('72 h or more ahead, or a past hour, says UNKNOWN for that hour with no figure, in both languages', () => {
+  for (const at of [NOW + 80 * H, NOW + 72 * H, NOW - 30 * M]) {
+    const s = skillSummary(leads, 'morro-bay', NOW, at);
+    assert.match(skillLine(s, 'en'), /^Forecast skill: UNKNOWN\. The scorecard could not be read, is out of date or lacks this hour\. Not for navigation\.$/);
+    assert.match(skillLine(s, 'es'), /^Acierto del pronóstico: DESCONOCIDO\. No se pudo leer la tabla, está desactualizada o no cubre esta hora\. No apto para navegar\.$/);
+    for (const lang of ['en', 'es']) assert.doesNotMatch(skillLine(s, lang), /%|publi[a-z]+ 20|\b24 h/);
+  }
 });

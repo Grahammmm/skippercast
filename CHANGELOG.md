@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- SC1407-11: the brief's forecast-skill line now speaks for the hour the brief answers for: it reads the 24, 48 or 72 h-ahead scores by that hour's lead from now (the publisher's half-open buckets, so exactly 24 h ahead reads the 48 h scores) and names the lead, says no measured skill is published 72 h or more ahead, and keeps "not enough buoy history yet" when that lead is thin instead of showing another lead's figure. The line links to the full scorecard at /skill. English and Spanish.
+- SC1407-11: the brief's forecast-skill line now speaks for the hour the brief answers for: it reads the 24, 48 or 72 h-ahead scores by that hour's lead from now (the publisher's half-open buckets, so exactly 24 h ahead reads the 48 h scores) and names the lead, reads UNKNOWN for an hour 72 h or more ahead or already past (no published score, never a 24 h fallback), and keeps "not enough buoy history yet" when that lead is thin instead of showing another lead's figure. The line links to the full scorecard at /skill. English and Spanish.
+
+- RF0854-7: the operator lead score's "AIS seen in the last 30 days" part is bounded by the scoring instant: a watched vessel's sighting dated after "now" no longer earns the AIS points (it was counted as seen), while a sighting exactly at now or exactly 30 days earlier still counts. A watched operator with no qualifying sighting scores a known zero, and an operator with no watched vessel stays missing. Read-time only; weights, other parts and stored watch records are unchanged.
 
 - RF0854-8: the admin fleet operator list ranks every matching operator (do-not-contact last, then lead score, then name, then id) before applying its 500-row cap, so a high-scoring operator outside the first 500 by name is no longer left out. Matching operators are read in bounded pages by id with every filter applied to each page; `truncated` still means more than 500 matched, and the endpoint, filters, response fields and score model are unchanged.
 
