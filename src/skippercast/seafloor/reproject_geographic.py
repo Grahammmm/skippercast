@@ -177,7 +177,8 @@ def _strip(dataset, params, inverse, r0, r1, nearest_only):
     jlo = max(0, int(min(jc[inside].min(), j0[inside].min())))
     jhi = min(dataset.height - 1, int(max(jc[inside].max(), j0[inside].max() + 1)))
     block = dataset.read(1, window=Window(0, jlo, dataset.width, jhi - jlo + 1), masked=True)
-    data = block.filled(np.nan).astype('float64')
+    # Convert to float before filling: an integer masked array cannot be filled with NaN.
+    data = block.astype('float64').filled(np.nan)
     good = ~np.ma.getmaskarray(block) & np.isfinite(data)
 
     def take(array, i, j):
