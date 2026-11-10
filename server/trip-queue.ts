@@ -27,13 +27,15 @@ export const OWNER_PAGE = 500;      // owners read from D1 per query
 // regional feeds the checks read belong to the same cycle.
 export const SETTLE_MS = 2 * 60000;
 export const STATE_KEY = 'trip_checks.publication';
+const MAX_PUBLICATION_LENGTH = 200;
 
 /** A stable id for one live-conditions publication, or null when the feed is unreadable. */
 export function publicationMarker(feed: ExternalJSON): string | null {
   const done = feed?.completed_at || feed?.generated_at;
   if (typeof done !== 'string' || !Number.isFinite(Date.parse(done))) return null;
   const run = typeof feed?.run_id === 'string' ? feed.run_id : '';
-  return `${run}@${done}`.slice(0, 200);
+  if (run.length + 1 + done.length > MAX_PUBLICATION_LENGTH) return null;
+  return `${run}@${done}`;
 }
 
 /** Send one message per owner with due trips, in bounded pages and batches. */

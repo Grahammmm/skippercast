@@ -18,7 +18,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app select:focus-visible, .app-mobile select:focus-visible, .app-target-search:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* Masthead */
-.app-masthead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); background: var(--panel); }
+.app-masthead { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); background: var(--panel); }
 .app-brand { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--space-5); color: var(--text); font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); text-decoration: none; }
 .app-brand .icon { color: var(--mint); }
 .app-location { color: var(--muted); text-transform: uppercase; letter-spacing: var(--tracking-eyebrow); }
@@ -26,7 +26,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-views a { display: inline-flex; align-items: center; min-height: var(--touch-min); padding: 0 var(--space-3); border-radius: var(--radius-md); color: var(--muted); font-weight: var(--weight-medium); text-decoration: none; }
 .app-views a:hover { color: var(--text); background: var(--panel-2); }
 .app-views a[aria-current="page"] { color: var(--text); box-shadow: inset 0 -2px 0 var(--mint); }
-.app-views a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-fresh { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); }
 .app-fresh-dot { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--muted); }
 .app-fresh[data-state="ok"] .app-fresh-dot { background: var(--mint); }
@@ -317,13 +316,19 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 
 /* The sheet sits on the tab bar and stops under the top strip's first row at full; its detents are ui.css's, offset by the tabs. */
 .app-sheet {
-  --sheet-peek: 176px; bottom: var(--app-tabs);
+  --sheet-peek: 176px; bottom: var(--app-tabs); --sheet-hidden-offset: calc(100vh - var(--app-tabs) - var(--app-strip) - var(--sheet-peek));
   height: calc(100vh - var(--app-tabs) - var(--app-strip)); height: calc(100dvh - var(--app-tabs) - var(--app-strip));
   transform: translateY(calc(100vh - var(--app-tabs) - var(--app-strip) - var(--sheet-peek))); transform: translateY(calc(100dvh - var(--app-tabs) - var(--app-strip) - var(--sheet-peek)));
 }
 .app-sheet--mark { --sheet-peek: 220px; }
-.app-sheet[data-detent="half"] { transform: translateY(calc(50vh - var(--app-tabs) - var(--app-strip))); transform: translateY(calc(50dvh - var(--app-tabs) - var(--app-strip))); }
+.app-sheet[data-detent="half"] { transform: translateY(calc(50vh - var(--app-tabs) - var(--app-strip))); transform: translateY(calc(50dvh - var(--app-tabs) - var(--app-strip))); --sheet-hidden-offset: calc(50vh - var(--app-tabs) - var(--app-strip)); }
 .app-sheet[data-detent="full"] { transform: translateY(0); }
+/* ui.css pads the sheet body's end by --sheet-hidden-offset: the app's own offsets, as its transforms above (dvh where supported). */
+@supports (height: 1dvh) {
+  .app-sheet { --sheet-hidden-offset: calc(100dvh - var(--app-tabs) - var(--app-strip) - var(--sheet-peek)); }
+  .app-sheet[data-detent="half"] { --sheet-hidden-offset: calc(50dvh - var(--app-tabs) - var(--app-strip)); }
+  .app-sheet[data-detent="full"] { --sheet-hidden-offset: 0px; }
+}
 .app-sheet-hour { display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4) var(--space-2); }
 .app-sheet-brief, .app-sheet-layers { display: flex; flex-direction: column; gap: var(--space-3); }
 .app-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--space-5); }
@@ -382,7 +387,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-fleet-form > .app-fleet-check, .app-fleet-form > .app-empty, .app-fleet-actions { grid-column: 1 / -1; }
 .app-fleet-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; color: var(--muted); font-size: var(--text-11); }
 .app-fleet-field input { min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-13); }
-.app-fleet-field input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-fleet-field input:focus-visible, .app-fleet-check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-fleet-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .app-fleet-how summary { display: flex; align-items: center; min-height: var(--touch-min); cursor: pointer; color: var(--blue); }
 .app-fleet-how summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -424,7 +429,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-mobile-page { position: absolute; left: 0; right: 0; top: calc(var(--app-strip) + var(--touch-min) + var(--space-3)); bottom: var(--app-tabs); z-index: var(--z-map-chrome); overflow: auto; border-top: 1px solid var(--line); background: var(--bg); }
 
 /* Your limits (#542): the profile's comfort limits form in its own modal dialog (the port dialog's look) */
-.app-limits-dialog { width: min(480px, calc(100% - var(--space-6))); max-height: calc(100% - var(--space-6)); padding: var(--space-4) var(--space-5) var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3); }
+.app-limits-dialog { box-sizing: border-box; width: min(480px, calc(100% - var(--space-6))); max-height: calc(100% - var(--space-6)); overflow: auto; padding: var(--space-4) var(--space-5) var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3); }
 .app-limits-dialog::backdrop { background: color-mix(in srgb, var(--bg-deep) 70%, transparent); }
 .app-limits-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
 .app-limits-head h2 { flex: 1; margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
@@ -437,6 +442,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-limits-field input:focus-visible, .app-limits-field select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-limits-hint { grid-column: 1 / -1; color: var(--muted); font-size: var(--text-11); }
 .app-limits-note { color: var(--muted); font-size: var(--text-13); }
+.app-limits-dialog .app-limits-actions { position: sticky; bottom: 0; z-index: 1; padding-block: var(--space-2); background: var(--panel); }
 .app-limits-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .app-limits-trigger[data-own="true"] { color: var(--mint); }
 
@@ -455,7 +461,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-first-answer-reason { margin: 0; color: var(--text); font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans); }
 .app-first-answer-rules { margin: 0; color: var(--muted); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans); }
 .app-first-answer-rules a { color: var(--blue); text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
-.app-first-answer-rules a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.app-first-answer-rules a:focus-visible { border-radius: var(--radius-sm); }
 .app-first-answer-more { justify-self: start; box-sizing: border-box; max-width: 100%; white-space: normal; text-align: center; }
 /* end SC2207-11 */
 
@@ -502,3 +508,10 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-entrance-caution[data-band="Caution"], .app-entrance-caution[data-band="Unknown"] { color: var(--amber); }
 .app-entrance-caution[data-band="Hazardous"] { color: var(--coral); }
 .app-entrance-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+
+/* SC1722-01: a forecast that could not be read, in place of the verdict; the native Try again keeps the 44 px target of .ui-button. */
+.app-forecast-failed { display: grid; gap: var(--space-2); min-width: 0; }
+.app-forecast-failed-head { margin: 0; color: var(--text); font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
+p.app-forecast-failed-head { font-size: var(--text-15); }
+.app-forecast-failed-reason { margin: 0; color: var(--text); font-size: var(--text-15); line-height: var(--leading-body); }
+.app-forecast-retry { justify-self: start; }

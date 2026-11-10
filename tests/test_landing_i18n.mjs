@@ -13,6 +13,7 @@ import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {preparedRendererPlugins, rendererPlugins} from './helpers/esbuild-url.mjs';
 import {catalogueProblems, COVERED} from '../scripts/check_copy.mjs';
+import {RAIL_IDS} from '../web/profile.ts';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -159,6 +160,10 @@ test('static_hosts_catalogue_and_budget: English is a no-op; Spanish writes only
   walk(entryPath);
   const initialInputs = [...initial].flatMap(p => Object.keys(byPath[p].inputs));
   assert.ok(initialInputs.includes('web/landing/copy.ts') && initialInputs.includes('web/landing/strings.generated.json'), 'the static hosts helper and the catalogue are in the initial JS');
+  // SC1407-13: the layer dots paint in the page language from the slice, without the app's rail or its layer registry.
+  assert.ok(initialInputs.includes('web/landing/LayerDots.tsx'), 'the dots are first-paint');
+  for (const mod of ['web/app/rail.ts', 'web/map/layers.ts']) assert.ok(!initialInputs.includes(mod), `${mod} is not in the initial JS`);
+  for (const id of ['landing.dots.aria', ...RAIL_IDS.map(r => `landing.dots.${r}`)]) assert.ok(slice[id]?.en?.trim(), `${id}: in the first-paint slice`);
   assert.ok(!initialInputs.includes('web/strings.es.generated.json') && !initialInputs.includes('catalog/app/strings.json'), 'SC1407-09: no Spanish table and no bilingual catalogue in the initial JS');
   const budget = JSON.parse(await readFile(join(ROOT, 'scripts/startup-budget.json'), 'utf8')).bundles['landing.html'].js_gzip_max;
   const size = [...initial].reduce((sum, p) => sum + gzipSync(result.outputFiles.find(f => f.path.endsWith(`/${p.split('/').pop()}`)).contents).length, 0);
@@ -196,7 +201,7 @@ test('landing_english_bytes_and_spanish_funnel: English is the old copy word for
   assert.ok(!es.port.includes('<b>Odd'), 'a port name with markup is escaped, not rendered');
   assert.ok(es.down.includes('Las opciones de puerto no están disponibles. Explora la costa en su lugar.') && es.down.includes('>Intentar de nuevo<'));
   assert.ok(es.wait.includes('Cargando puertos…'));
-  for (const text of ['¿Cómo pescas?', 'Esto define el límite de profundidad', '>Barco<', '>Costa<', '>Pesca submarina<', '>Kayak<', 'Marcas de arrecife y fondo marino hasta 300 ft; fondo marino y corrientes en el mapa.', 'Cargando el mapa de Morro Bay…', '>Cambiar puerto<'])
+  for (const text of ['¿Cómo pescas?', 'Esto define el límite de profundidad', '>Barco<', '>Orilla<', '>Pesca submarina<', '>Kayak<', 'Marcas de arrecife y fondo marino hasta 300 ft; fondo marino y corrientes en el mapa.', 'Cargando el mapa de Morro Bay…', '>Cambiar puerto<'])
     assert.ok(es.step.includes(text), text);
   assert.ok(es.ready.includes('Archivos del mapa de Morro Bay listos.') && es.ready.includes('aria-pressed="true"'));
   assert.match(es.failed, /<p class="landing-step-status" role="status" data-warm="failed"><\/p>/, 'a failed warm-up still says nothing');
@@ -289,10 +294,10 @@ function forecastFeed(now, ageH = 6) {
     models: {gfs_global: {meta, data: [0, 1].map(() => series({wind_speed_10m: [t => 4 + 3 * day(t), 'kn'], wind_gusts_10m: [t => 8 + 4 * day(t), 'kn'], wind_direction_10m: [300, '°'], temperature_2m: [60, '°F'], cloud_cover: [30, '%']}))},
       ncep_gfswave016: {meta, data: [0, 1].map(() => series({wave_height: [t => 2 + day(t), 'ft'], wave_period: [12, 's']}))}}};
 }
-const feeds = (now, {missing = [], ageH = 6} = {}) => async url => {
+const feeds = (now, {missing = [], ageH = 6, noModels = false} = {}) => async url => {
   const path = new URL(String(url), PAGE).pathname;
-  const body = missing.some(x => path.includes(x)) ? null : path.endsWith('/region.json') ? REGION : path === '/feeds/data/regions/morro-bay/latest.json' ? DAILY : path === '/api/forecast' ? forecastFeed(now, ageH) : null;
-  return body ? {ok: true, status: 200, json: async () => body} : {ok: false, status: 404, json: async () => ({}), body: null};
+  const body = missing.some(x => path.includes(x)) ? null : path.endsWith('/region.json') ? REGION : path === '/feeds/data/regions/morro-bay/latest.json' ? DAILY : path === '/api/forecast' ? (noModels ? {...forecastFeed(now, ageH), models: {}} : forecastFeed(now, ageH)) : null;
+  return body ? {ok: true, status: 200, headers: new Headers(), json: async () => body} : {ok: false, status: 404, json: async () => ({}), body: null};
 };
 async function onDevice(entries, fn) {
   const store = {getItem: k => entries.get(k) ?? null, setItem: () => {}, removeItem: () => {}, clear: () => {}, key: () => null, length: 0};
@@ -315,7 +320,7 @@ async function appLimit(m, now, lang, opts) {
 test('spanish_live_reason_parity: the verdict word, day, boat and reason in Spanish, the reason the app\'s own; English unchanged; scoring invariant', async () => {
   const m = await load();
   const run = (entries, opts, lang, now = NOW) => onDevice(entries, () => lang === undefined ? m.loadLandingVerdict(feeds(now, opts), now, PAGE) : m.loadLandingVerdict(feeds(now, opts), now, PAGE, lang));
-  const cases = {rated: {}, noForecast: {missing: ['/api/forecast']}, stale: {ageH: 30}};
+  const cases = {rated: {}, noForecast: {noModels: true}, stale: {ageH: 30}};
   for (const [name, opts] of Object.entries(cases)) {
     const en = await run(new Map(), opts), explicit = await run(new Map(), opts, 'en'), es = await run(new Map(), opts, 'es');
     assert.deepEqual(explicit, en, `${name}: explicit English is the default`);
@@ -328,7 +333,7 @@ test('spanish_live_reason_parity: the verdict word, day, boat and reason in Span
     assert.doesNotMatch(es.sentence, /\b(?:Wind of|Seas|forecast|marine alert)\b/, `${name}: no English reason fragments`);
     assert.equal(es.boatName, 'barco de referencia de 23 ft'); assert.equal(en.boatName, 'reference 23 ft boat'); assert.equal(m.REFERENCE_BOAT_LABEL, 'reference 23 ft boat');
   }
-  assert.equal((await run(new Map(), cases.noForecast, 'es')).verdict, 'unknown', 'no forecast reads Unknown, never a calmer word');
+  assert.equal((await run(new Map(), cases.noForecast, 'es')).verdict, 'unknown', 'a loaded forecast with no usable hours reads Unknown, never a calmer word (a failed read is no verdict: tests/test_landing_verdict.mjs)');
   assert.notEqual((await run(new Map(), cases.stale, 'es')).verdict, 'comfortable', 'a stale run holds');
   // Saved boats: a custom name stays literal; the no-name forms and the model caveat follow the language.
   const named = await run(boatEntry({name: 'Wren <b>', loa_ft: 31}), {}, 'es');

@@ -25,6 +25,7 @@ import type {Point, Series} from '../packages/coast/src/charts/series.ts';
 import type {ForecastHour, Report} from '../packages/coast/src/types.ts';
 import type {RegionalForecast} from './brief/types.ts';
 import {sample} from './map/forecast-grid.ts';
+import {responseProvenance} from './offline-response.ts';
 import {freshNearshore} from './map/nearshore-model.js';
 
 const HOUR_MS = 3_600_000;
@@ -75,12 +76,34 @@ export function parseConditionsForecast(json: unknown, region: string, near: rea
   return {region, retrieved: f.retrieved, point: {id: point.id, lat: point.lat, lon: point.lon}, models, feed: json};
 }
 
-/** The feed for `region`, or null when it fails to load or is not that region's. */
-export async function loadConditionsForecast(region: string, near: readonly [number, number] | null, fetchFn: typeof fetch, page: string): Promise<ConditionsForecast | null> {
+/** Why a forecast read failed: a rejected request (network), a cancelled one (aborted), the 15 s limit (timeout), a non-OK answer (http, with its status) or an answer that is not that region's feed (invalid). */
+export type ForecastFailureReason = 'network' | 'http' | 'invalid' | 'aborted' | 'timeout';
+
+/**
+ * What a forecast read came to: the feed (loaded, even one with no model runs), a failed read with its finite reason, or no read at
+ * all (absent: no region in hand to ask for). A failed read is never a weather answer, and never carries the URL or an error's text.
+ */
+export type ForecastLoadResult =
+  | {state: 'loaded'; forecast: ConditionsForecast; /** SC1722-03: the saved offline pack's save time (epoch ms) when the answer carried X-SC-Offline; null for a network answer. */ savedAt: number | null}
+  | {state: 'failed'; reason: ForecastFailureReason; status?: number}
+  | {state: 'absent'};
+
+const failureOf = (error: unknown): ForecastFailureReason => {
+  const name = (error as {name?: unknown} | null)?.name;
+  return name === 'AbortError' ? 'aborted' : name === 'TimeoutError' ? 'timeout' : name === 'SyntaxError' ? 'invalid' : 'network';
+};
+
+/** The feed for `region`: loaded, or failed with why (network, HTTP status, or not that region's feed). */
+export async function loadConditionsForecast(region: string, near: readonly [number, number] | null, fetchFn: typeof fetch, page: string): Promise<ForecastLoadResult> {
   try {
     const response = await fetchFn(new URL(`/api/forecast?region=${encodeURIComponent(region)}`, page).href, {signal: AbortSignal.timeout(15000)});
-    return response.ok ? parseConditionsForecast(await response.json(), region, near) : null;
-  } catch { return null; }
+    if (!response.ok) return {state: 'failed', reason: 'http', status: response.status};
+    const forecast = parseConditionsForecast(await response.json(), region, near);
+    if (!forecast) return {state: 'failed', reason: 'invalid'};
+    // A saved-pack answer is marked with its save time; a mark that is not a usable time never reads as a network answer.
+    const origin = responseProvenance(response.headers, Date.now());
+    return origin.kind === 'invalid' ? {state: 'failed', reason: 'invalid'} : {state: 'loaded', forecast, savedAt: origin.kind === 'saved' ? origin.at : null};
+  } catch (error) { return {state: 'failed', reason: failureOf(error)}; }
 }
 
 /**

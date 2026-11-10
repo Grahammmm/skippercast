@@ -2,7 +2,7 @@ import {useEffect, useRef} from 'preact/hooks';
 import {planCopy, planView} from '../plan.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {regionCoverage, regionPlans, targetLabel, targetState, TARGET_STATE_TEXT} from '../species.ts';
-import {profile, region, setParams, species, withParams} from '../state.ts';
+import {appView, navigate, profile, region, species, withParams} from '../state.ts';
 import {freshnessLabel, loadRegs, regsData, regulationState, ruleSummary, verifiedText} from '../regs.ts';
 import {currentRegionInfo, zone} from './App.tsx';
 import {language, t} from '../i18n.ts';
@@ -14,7 +14,7 @@ import './plan.css';
 
 export function PlanLink() {
   const href = withParams(typeof location === 'undefined' ? 'https://skippercast.test/map' : location.href, {view: 'plan'});
-  return <a href={href} onClick={e => { if (!e.button && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) { e.preventDefault(); setParams({view: 'plan'}); } }}>{t('plan.for', language.value, {name: targetLabel(profile.value, region.value, species.value)})}</a>;
+  return <a href={href} onClick={e => { if (!e.button && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) { e.preventDefault(); if (appView.value !== 'plan') navigate(withParams(location.href, {view: 'plan'})); } }}>{t('plan.for', language.value, {name: targetLabel(profile.value, region.value, species.value)})}</a>;
 }
 
 /** The selected target's existing registry logic, evaluated for the dock's date and instant. */

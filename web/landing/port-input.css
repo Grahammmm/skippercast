@@ -28,7 +28,7 @@
 .port-input-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 /* The app's port dialog */
-.port-dialog { width: min(560px, calc(100% - var(--space-6))); max-height: calc(100% - var(--space-6)); padding: var(--space-4) var(--space-5) var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3); }
+.port-dialog { box-sizing: border-box; width: min(560px, calc(100% - var(--space-6))); max-height: calc(100% - var(--space-6)); overflow: auto; padding: var(--space-4) var(--space-5) var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3); }
 .port-dialog::backdrop { background: color-mix(in srgb, var(--bg-deep) 70%, transparent); }
 .port-dialog-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
 .port-dialog-head h2 { flex: 1; margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
@@ -87,14 +87,15 @@
   flex: 1 1 0; flex-direction: column; gap: 0; min-width: var(--touch-min); min-height: var(--touch-min); padding: var(--space-1); justify-content: center; text-align: center;
 }
 
-/* BF-deep-links: Share beside the port. The status is announced and shows briefly; the
-   copy field opens under the button when the clipboard is unavailable. */
-.app-share { position: relative; display: inline-flex; align-items: center; }
+/* BF-deep-links: Share beside the port. Feedback wraps in its reserved space;
+   the manual-copy disclosure expands in flow when the clipboard is unavailable. */
+.app-share { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); min-width: 0; max-width: 100%; }
 .app-share-status:empty { display: none; }
-.app-share-status { margin-left: var(--space-1); color: var(--muted); font-size: var(--text-13); white-space: nowrap; }
-.app-share-popover { position: absolute; top: 100%; left: 0; z-index: 5; }
+.app-share-status { min-width: 0; max-width: 100%; color: var(--muted); font-size: var(--text-13); overflow-wrap: anywhere; }
+.app-share-popover { position: static; flex-basis: 100%; min-width: 0; max-width: 100%; }
+.app-share-popover > .ui-popover-body { position: static; box-sizing: border-box; width: min(320px, 100%); max-width: 100%; }
 .app-share-popover input {
-  width: min(320px, 80vw); min-height: var(--touch-min); padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md);
+  box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; min-height: var(--touch-min); padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md);
   background: var(--panel-2); color: var(--text); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans);
 }
 /* Measured model gaps beside the verdict. */

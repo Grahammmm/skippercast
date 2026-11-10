@@ -34,7 +34,7 @@ import {chartMark} from '../map/chart.ts';
 import type {ChartMark} from '../map/coastline.ts';
 import {habitatCard, markData, picked, spotCard} from '../map/marks.ts';
 import type {CoastReading} from '../../packages/coast/src/embed-types.ts';
-import {shownPresentation, terrainActions, terrainDetail, terrainMark, terrainPick, terrainReading} from '../map/stage.ts';
+import {choosePresentation, shownPresentation, terrainActions, terrainDetail, terrainMark, terrainPick, terrainReading} from '../map/stage.ts';
 import {coordinates, navigate, profile, region as stateRegion, selection, setParams} from '../state.ts';
 import {formatCoordinates} from '../../dist/coordinates.js';
 import {RulesLine} from './RulesCard.tsx';
@@ -45,7 +45,7 @@ import {copyText, resolveMarkCopy} from '../mark-copy.ts';
 import {addPlaceToTrip, addToTrip, loadProtectedScreen, placeTripId, protectedScreen, reviewPlace, reviewTrip, tripIds, type ProtectedScreen} from '../trip.ts';
 import {regulationsCopy, regulationsLink} from '../map/habitat.ts';
 import {drawnSpots} from '../map/ranked.ts';
-import {SAVED_CARD_PREFIX, savedSpotDistancePosition} from '../map/saved-spots.ts';
+import {SAVED_CARD_PREFIX, savedSpotDistancePosition, setSavedSpotsOn} from '../map/saved-spots.ts';
 import {cruiseSpeed} from '../limits.ts';
 import {launchOrigin, loadLaunchPoints} from '../launches.ts';
 import {homePortOrigin, loadRegionPorts, plannerPort, regionPorts, savedPortId} from '../ports.ts';
@@ -223,6 +223,17 @@ export function CopyPositionAction({mark, text}: {mark: Mark; text: string}) {
   );
 }
 
+/**
+ * SC1722-16: the explicit "Show on Chart" press after a confirmed save. Only while the session that saved is still the signed-in one and the
+ * region is still the saved region does it turn the private saved-spots layer on (Chart-only, page memory only) and, from 2D or 3D, open
+ * the Chart through the ordinary presentation change. No mark, point or row is handed on; saving alone never calls this.
+ */
+function showSavedSpotsOnChart(saved: {readonly session: Session; readonly region: string | null}): void {
+  if (session.peek() !== saved.session || stateRegion.peek() !== saved.region) return;
+  setSavedSpotsOn(true);
+  if (shownPresentation.peek() !== 'chart') choosePresentation('chart');
+}
+
 type SaveKey = {readonly id: string; readonly name: string; readonly lat: number | null; readonly lon: number | null; readonly region: string | null; readonly session: Session};
 type SaveStatus = {readonly key: SaveKey; readonly state: 'pending' | SpotResult['state']; readonly result: SpotResult | null};
 const sameSave = (a: SaveKey | null, b: SaveKey | null): boolean =>
@@ -254,10 +265,12 @@ export function SaveSpotAction({mark}: {mark: Mark}) {
     setStatus({key: mine, state: result.state, result});
   };
   const saved = shown?.state === 'saved';
+  const showOnChart = () => { if (mounted.current && sameSave(latest.current, key) && shown?.state === 'saved') showSavedSpotsOnChart(key); };
   return (
     <>
       <Button size="sm" icon={saved ? 'check' : 'plus'} disabled={!!blocked || shown?.state === 'pending' || saved} onClick={() => { void save(); }}>
         {shown?.state === 'pending' ? t('mark.save.pending', lang) : saved ? t('mark.save.saved', lang) : t('mark.save.action', lang)}</Button>
+      {saved ? <Button size="sm" icon="map" onClick={showOnChart}>{t('mark.save.showChart', lang)}</Button> : null}
       <div class="app-mark-why" style={{flexBasis: '100%'}}>
         <p>{t('mark.save.helper', lang)}</p>
         <p role="status">{shown?.result && shown.state !== 'pending' ? resultMessage(shown.result, lang) : blocked ? resultMessage(blocked, lang) : ''}</p>

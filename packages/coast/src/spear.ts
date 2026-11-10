@@ -211,7 +211,10 @@ export function recentEnergy(at: number, input: Pick<SpearInputs, 'forecastHours
     if (!Number.isFinite(t) || t < from || t > at || !known.length) return;
     energies.push(...known);
     const centre = Math.floor((at - t) / HOUR), half = Math.floor(spanHours / 2);
-    for (let i = centre - half; i <= centre + half; i++) if (i >= 0 && i < windowHours) hours.add(i);
+    // Walk the fixed look-back slots, never the declared span: an oversized or non-finite
+    // sample spacing must not set the loop bound.
+    const low = centre - half, high = centre + half;
+    for (let i = 0; i < windowHours; i++) if (i >= low && i <= high) hours.add(i);
   };
   for (const h of input.forecastHours) add(h.at, [surgeEnergy(h.waveFt, h.wavePeriodS), surgeEnergy(h.swellFt, h.swellPeriodS)]);
   const siteSpan = Math.max(1, Math.round((input.site?.temporalResolutionMinutes ?? 180) / 60));
