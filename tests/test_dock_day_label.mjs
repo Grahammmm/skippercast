@@ -44,7 +44,7 @@ const cases = [
   ['broken', 'Today · 12 pm', 'Hoy · 12'],
 ];
 for (const [hour, en, es] of cases) test(`both surfaces: ${hour}, bilingual and read-only`, () => {
-  m.state.syncFromURL(`https://s.test/map?day=2026-11-05&hour=${hour}`.replace(hour === 'broken' ? 'day=2026-11-05&' : 'NO_MATCH', ''));
+  m.state.syncFromURL(`https://s.test/map?${hour === 'broken' ? '' : 'day=2026-11-05&'}hour=${hour}`);
   const before = [m.state.day.value, m.state.hour.value, m.state.urlEpoch.value].join('|');
   for (const [lang, expected] of [['en', en], ['es', es], ['en', en]]) {
     m.language.value = lang;

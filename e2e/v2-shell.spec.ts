@@ -160,6 +160,42 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
   expect(pageErrors).toEqual([]);
 });
 
+// SC1722-10: actual mounted surfaces use the region calendar, including the repeated hour.
+for (const lang of ['en', 'es']) test(`day-qualified dock values across fall DST: ${lang}`, async ({page, v2, pageErrors}) => {
+  await page.clock.setFixedTime(new Date('2026-10-31T19:00:00Z'));
+  const cases = [
+    ['2026-10-31T23:00Z', 'Today · 4 pm', 'Hoy · 16'],
+    ['2026-11-01T08:00Z', 'Tomorrow · 1 am', 'Mañana · 1'],
+    ['2026-11-01T09:00Z', 'Tomorrow · 1 am', 'Mañana · 1'],
+    ['2026-11-03T14:00Z', 'Tue · 6 am', 'mar · 6'],
+    ['2026-11-07T14:00Z', 'Sat 7 · 6 am', 'sáb 7 · 6'],
+  ];
+  for (const [hour, en, es] of cases) {
+    await v2.open('app', {...AREA, hour, lang});
+    const expected = lang === 'es' ? es : en;
+    await expect(page.locator('.ui-dock-readout')).toHaveText(expected);
+    await expect(page.locator('input[type="range"].ui-dock-range')).toHaveAttribute('aria-valuetext', expected);
+    expect(new URL(page.url()).searchParams.get('hour')).toBe(hour);
+  }
+  // Freeze timers after mounting: native Home changes the visible/accessibility preview,
+  // while the exact UTC address remains settled until the controller's 100 ms pause.
+  await page.clock.pauseAt(new Date('2026-10-31T19:00:01Z'));
+  const slider = page.locator('input[type="range"].ui-dock-range');
+  await slider.focus();
+  await slider.press('Home');
+  const preview = lang === 'es' ? 'sáb 7 · 0' : 'Sat 7 · 12 am';
+  await expect(page.locator('.ui-dock-readout')).toHaveText(preview);
+  await expect(slider).toHaveAttribute('aria-valuetext', preview);
+  expect(new URL(page.url()).searchParams.get('hour')).toBe('2026-11-07T14:00Z');
+  await page.clock.runFor(99);
+  expect(new URL(page.url()).searchParams.get('hour')).toBe('2026-11-07T14:00Z');
+  await page.clock.runFor(1);
+  await expect(page).toHaveURL(u => u.searchParams.get('hour') === '2026-11-07T08:00Z');
+  await expect(page.locator('.ui-dock-readout')).toHaveText(preview);
+  await expect(slider).toHaveAttribute('aria-valuetext', preview);
+  expect(pageErrors).toEqual([]);
+});
+
 test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) => {
   await v2.open('app', AREA);
   const wanted = isMobile
