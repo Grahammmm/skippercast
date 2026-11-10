@@ -253,7 +253,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-07: app.css only adds the phone sheet's --sheet-hidden-offset property to the .app-sheet rules (layout, no paint); the Reports catch sheet never mounts it. Rebound from the final bytes.
   // SC1722-07: check_contrast.mjs changes only its appCss source hash and comment; contrast() is untouched. Rebound.
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
-  "web/app/app.css": "bccc6dbe1a5e688a33f13280fc191d109f1ea4e9b9c3d2b3ce152ae26b7657e8",
+  // RF1925-1: masthead minimum-width only; Reports paint and contrast proof unchanged.
+  // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
+  "web/app/app.css": "59fdac2733aa85e66f7295388c7080fdead29a94af5bd3d8faf2f268695f4988",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -321,7 +323,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // appCss surface hash and its comment. BODY09 mounts Reports/CatchCards, never the run line or the legend; contrast(), catch paint, backing,
   // assertions and thresholds are unchanged. Rebind only these two sources.
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
-  "scripts/check_contrast.mjs": "aac830e26961c015051cd6f67b6a145642af1513487fec3777a0b83c9f98a10e",
+  // RF1925-1: only appCss pin and applicability comment change.
+  "scripts/check_contrast.mjs": "cb7c5eabf33fb4e942201925caba58418ee934fb0de6d1f26ce3b4466849befb",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
