@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import math
 import os
 import re
 from pathlib import Path
@@ -96,7 +97,11 @@ def parse_extremes(payload):
         when = dt.datetime.strptime(row['t'], '%Y-%m-%d %H:%M').replace(tzinfo=dt.timezone.utc)
         if row['type'] not in ('H', 'L'):
             raise ValueError('unexpected extreme type ' + repr(row['type']))
-        out.append({'t': when.strftime('%Y-%m-%dT%H:%MZ'), 'type': row['type'], 'v': round(float(row['v']), 3)})
+        stamp = when.strftime('%Y-%m-%dT%H:%MZ')
+        height = float(row['v'])
+        if not math.isfinite(height):   # NaN, +-Infinity or an overflow string such as 1e999: refuse the whole table
+            raise ValueError('non-finite tide height at ' + stamp)
+        out.append({'t': stamp, 'type': row['type'], 'v': round(height, 3)})
     out.sort(key=lambda r: r['t'])
     for a, b in zip(out, out[1:]):
         if a['type'] == b['type']:   # a tide table alternates; two highs in a row means a missing row
