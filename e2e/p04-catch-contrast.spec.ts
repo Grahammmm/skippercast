@@ -263,9 +263,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
   // RF1925-1: masthead minimum-width only; Reports paint and contrast proof unchanged.
   // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
-  // SC1722-19: app.css adds only a desktop layout rule (stage minimum and sticky time dock); the Reports catch sheet mounts neither; check_contrast.mjs changes only the appCss hash and its comment. Rebound from the final bytes.
+  // SC1722-19: app.css adds only desktop layout rules (the app scrolls inside itself, the stage clips, a sticky time dock); the Reports catch sheet mounts neither; check_contrast.mjs changes only the appCss hash and its comment. Rebound from the final bytes.
   // RF1935-2: app.css adds only a desktop-only layer-rail preset wrap block and the rail's vertical scroll track (layout, no paint); the Reports catch sheet mounts no rail. Rebound from the final bytes.
-  "web/app/app.css": "a35235e080f0cf62a386abd5961b36ed81b3307e7207c48a58fb48ae824983cb",
+  "web/app/app.css": "33072885e199961e2a32c6f9894fe7a0f033f48041c1afee51ac9f6d0becb422",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -338,7 +338,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF1925-1: only appCss pin and applicability comment change.
   // SC1722-19: only the appCss pin and applicability comment change.
   // RF1935-2: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "1fbcf685f2f32d451af8bc399a3bb485614024d857ee06c763c540097ae0b1f2",
+  "scripts/check_contrast.mjs": "e3332e0953f674bd327e147b5e5278ee3a7ad04846c5d458d554a4f36cd437b4",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still

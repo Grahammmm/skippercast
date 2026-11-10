@@ -294,7 +294,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
      short laptop window), the app scrolls inside itself, and the time dock sits in the stage's flow at the bottom of the map
      column (sticky to the app's bottom edge), so it stays whole in the window from 1,024 x 768 up. The stage clips instead of
      hiding its overflow, because a hidden-overflow stage would be the dock's scroll container and the sticky rule would do nothing. */
-  .app { overflow-y: auto; overflow-x: clip; }
+  .app { overflow-y: auto; }
   .app-main > .app-stage { display: flex; flex-direction: column; overflow: clip; }
   .app-main > .app-stage > .app-dock { position: sticky; left: auto; right: auto; bottom: var(--space-4); flex: none; margin: auto var(--space-4) var(--space-4); z-index: var(--z-map-chrome); }
 }
