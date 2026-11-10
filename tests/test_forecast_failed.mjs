@@ -34,6 +34,7 @@ async function load() {
         export {Brief} from './web/app/Desktop.tsx';
         export {FirstAnswerLine, regionInfo} from './web/app/App.tsx';
         export {language} from './web/i18n.ts';
+        export {prepareCatalogue} from './web/i18n-catalogue.ts';
         export {region} from './web/state.ts';
         export {render} from 'preact-render-to-string';
         export {h, options} from 'preact';`},
@@ -43,6 +44,7 @@ async function load() {
   }
   delete globalThis.document; // the app shell touches the page's document on import
   const m = await import(`${bundle}?${++n}`); // a fresh module (and so fresh request state) per test, as a fresh page load
+  await m.prepareCatalogue('es');   // SC1407-09: the Spanish table, before the Spanish renders
   globalThis.document = {visibilityState: 'hidden', addEventListener: (type, fn) => listeners.push([type, fn])};
   return m;
 }
