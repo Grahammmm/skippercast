@@ -4,7 +4,7 @@
 // currentVerdict phrases in the page's language from the same catalogue (web/brief/verdict-copy.ts).
 import {useEffect} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
-import {currentVerdict, leadBrief, leadDate, leadDayText} from '../brief/Brief.tsx';
+import {currentVerdict, DockVerdictGuard, leadBrief, leadDate, leadDayText} from '../brief/Brief.tsx';
 import {firstAnswer} from '../first-answer.ts';
 import {language, t} from '../i18n.ts';
 import {isProfile, PROFILE_TABLE} from '../profile.ts';
@@ -18,8 +18,11 @@ const profileChosen = (): boolean => {
   try { return isProfile(new URLSearchParams(location.search).get('profile')) || isProfile(readStored(STORAGE_KEYS.profile)); } catch { return false; }
 };
 
-/** BF-one-answer: the app leads with one answer (web/first-answer.ts) above the desktop map; the detail stays below it. The mobile layout fills the viewport with the map and leads with the same verdict at the sheet's peek. */
-export function FirstAnswerLine({now = new Date()}: {now?: Date} = {}) {
+/** BF-one-answer: the app leads with one answer (web/first-answer.ts) above the desktop map; the detail stays below it. The mobile layout fills the viewport with the map and leads with the same verdict at the sheet's peek. SC1407-05: guarded like the brief's verdict while the dock's hour settles. */
+export const FirstAnswerLine = ({now = new Date()}: {now?: Date} = {}) => <DockVerdictGuard><SettledFirstAnswer now={now} /></DockVerdictGuard>;
+
+/** The first answer for the settled day and hour. */
+function SettledFirstAnswer({now}: {now: Date}) {
   const info = regionInfo.value, rules = info?.rules ?? null, brief = leadBrief(now), date = leadDate(now, brief), lang = language.value;
   useEffect(() => { if (rules) void loadRegs(rules); }, [rules?.id]);
   const loaded = regsData.value, p = profile.value;

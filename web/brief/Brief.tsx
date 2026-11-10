@@ -46,6 +46,7 @@ import {boatSaved} from '../boat-entry.ts';
 import type {BoatFactors} from '../score.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
+import {dockPending} from '../dock-selection.ts';
 import {dailyPartPath} from '../../dist/offline-core.js';
 import './brief-print.css';
 import {validDailyPart} from '../map/habitat.ts';
@@ -436,12 +437,32 @@ function SkillLine({now, lang}: {now: Date; lang: Language}) {
 }
 
 /**
+ * SC1407-05: while the dock's hour is pending (web/dock-selection.ts), the answer it wraps is the previous
+ * hour's, so it is hidden and inert and "Updating…" stands in, unannounced (aria-live off, no role, no focus
+ * move). Only this wrapper reads the pending flag: the settled child keeps its vnode and is not re-rendered
+ * on entry or exit, and in print the settled answer shows (brief-print.css).
+ */
+export function DockVerdictGuard({children}: {children: ComponentChildren}) {
+  const pending = dockPending.value;
+  return (
+    <div class="app-hour-guard" aria-busy={pending ? 'true' : undefined} data-pending={pending ? 'true' : undefined}>
+      {pending ? <p class="app-hour-updating ui-mono" aria-live="off">{t('dock.updating', language.value)}</p> : null}
+      <div class="app-hour-settled" hidden={pending} inert={pending}>{children}</div>
+    </div>
+  );
+}
+
+/**
  * The brief's first lines: the verdict word for the morning window of the lead's day (tomorrow until
  * a time is chosen), the day and window, one sentence naming what limits it with the basis behind a
  * popover, and whether the target is legal that day. A provisional day (packages/coast daily.ts, from
- * the day after tomorrow) says so in the verdict line itself. Before there is a brief, the waiting headline.
+ * the day after tomorrow) says so in the verdict line itself. Before there is a brief, the waiting
+ * headline. Guarded while the dock's hour settles (SC1407-05).
  */
-export function Verdict({now}: {now: Date}) {
+export const Verdict = ({now}: {now: Date}) => <DockVerdictGuard><SettledVerdict now={now} /></DockVerdictGuard>;
+
+/** The verdict for the settled day and hour. */
+function SettledVerdict({now}: {now: Date}) {
   const tz = shownRegion()?.timezone ?? DEFAULT_ZONE, brief = leadBrief(now), date = leadDate(now, brief), lang = language.value;
   const v = currentVerdict(brief, now), rulesLine = <LeadRules date={date} now={now} />;
   if (!v) return <><Headline brief={brief} />{rulesLine}</>;

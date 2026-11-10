@@ -68,6 +68,10 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-verdict-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 /* The basis keeps its 44 px target without making the verdict row taller than its heading. */
 .app-verdict .ui-popover { flex: none; margin-block: calc(var(--space-2) * -1); color: var(--muted); }
+/* SC1407-05: the verdict guard adds no box; while the dock's hour settles the old answer is hidden and Updating stands in. */
+.app-hour-guard, .app-hour-settled { display: contents; }
+.app-hour-settled[hidden] { display: none; }
+.app-hour-updating { margin: 0; color: var(--muted); font-size: var(--text-13); }
 .app-details { color: var(--muted); font-size: var(--text-13); }
 .app-details > summary { display: list-item; min-height: var(--touch-min); padding-block: var(--space-2); color: var(--text); cursor: pointer; }
 .app-details > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

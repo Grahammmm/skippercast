@@ -712,6 +712,7 @@
     "dock.play": {"en": "Play", "es": "Reproducir"},
     "dock.pause": {"en": "Pause", "es": "Pausar"},
     "dock.nextHour": {"en": "Next hour", "es": "Hora siguiente"},
+    "dock.updating": {"en": "Updating…", "es": "Actualizando…"},
     "season.state.open": {"en": "Open", "es": "Abierto"},
     "season.state.limits": {"en": "Open · limits", "es": "Abierto · con límites"},
     "season.state.closed": {"en": "Closed", "es": "Cerrado"},

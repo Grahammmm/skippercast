@@ -11,6 +11,9 @@
     display: none !important;
   }
   .app-print-only { display: block !important; }
+  /* SC1407-05: a pending dock hour never prints; the retained settled answer does. */
+  .app-hour-updating { display: none !important; }
+  .app-hour-settled[hidden] { display: contents !important; }
 
   html { color-scheme: light !important; }
   html, body, .app-main, .app-mobile, .app-mobile-page, .app-brief, .app-first-answer, .app-sheet, .ui-sheet, .ui-sheet-body, .app-sheet-brief {
