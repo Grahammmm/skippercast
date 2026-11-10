@@ -45,6 +45,7 @@ export const COPY = {
   placeholder: 'Try Morro Bay, Ventura, San Diego…',
   finding: 'Finding a nearby port…',
   unsupported: 'Location is unavailable. Search for a port instead.',
+  denied: "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.",
   unavailable: 'Location was unavailable. Search for a port instead.',
   none: 'No listed port is nearby. Search or explore the coast.',
   empty: 'No matching port yet. Try a nearby harbor or explore the coast.',
@@ -248,7 +249,7 @@ export function loadPorts(fetchFn: typeof fetch = fetch): Promise<Port[]> {
   return directory;
 }
 
-export type Located = {ok: true; port: Port} | {ok: false; reason: 'unsupported' | 'unavailable' | 'none'};
+export type Located = {ok: true; port: Port} | {ok: false; reason: 'unsupported' | 'denied' | 'unavailable' | 'none'};
 /** v1's geolocation call: low accuracy, 10 s, a five-minute-old fix is fine; the position never leaves the device. */
 export const GEO_OPTIONS: PositionOptions = {enableHighAccuracy: false, timeout: 10000, maximumAge: 300000};
 
@@ -257,7 +258,7 @@ export function locatePort(ports: readonly Port[], geolocation: Geolocation | nu
   if (!geolocation) return Promise.resolve({ok: false, reason: 'unsupported'});
   return new Promise(resolve => geolocation.getCurrentPosition(
     position => { const port = closestPort(ports, position.coords.latitude, position.coords.longitude); resolve(port ? {ok: true, port} : {ok: false, reason: 'none'}); },
-    () => resolve({ok: false, reason: 'unavailable'}), GEO_OPTIONS));
+    error => resolve({ok: false, reason: error?.code === 1 ? 'denied' : 'unavailable'}), GEO_OPTIONS));
 }
 
 // SCJ-2c: one distance origin. The brief measures from the port the trip planner measures from (web/planner.ts).
