@@ -19,8 +19,14 @@ def add_survey(url, bounds, *, ident=None, format_name=None, member='unknown', l
     root = Path(root)
     if local_root is not None and (local is not None or fetch):
         raise ValueError('Use one of --local-root, --local or --fetch')
-    matches = [r for r in read_json(root / 'catalog/surveys.json')['surveys']
-               if r['url'] == url and (not ident or r['id'] == ident)]
+    same_url = [r for r in read_json(root / 'catalog/surveys.json')['surveys'] if r['url'] == url]
+    # The original file is pinned by URL, not by product ID: every product of one
+    # URL shares its container checksum, so a new ID or archive member inherits it.
+    pinned_sha256 = {r['sha256'] for r in same_url if r['sha256'] != 'unknown'}
+    pinned_bytes = {r['bytes'] for r in same_url if r['bytes'] != 'unknown'}
+    if len(pinned_sha256) > 1 or len(pinned_bytes) > 1:
+        raise ValueError('Existing manifest rows pin conflicting checksums for this URL')
+    matches = [r for r in same_url if not ident or r['id'] == ident]
     if len(matches) > 1:
         raise ValueError('Select --id for a URL with multiple products')
     if matches:
@@ -36,6 +42,10 @@ def add_survey(url, bounds, *, ident=None, format_name=None, member='unknown', l
                    kind='bathymetry', derived_from=[], status='candidate', archive_member=member,
                    evidence=[], field_evidence={}, inspection_level='native', lineage_status='unknown',
                    notes='Private draft; metadata and rights require review before catalog inclusion.')
+    if pinned_sha256:
+        row['sha256'] = next(iter(pinned_sha256))
+    if pinned_bytes:
+        row['bytes'] = next(iter(pinned_bytes))
     _validate_survey_id(row['id'])
     local_entry = None
     if local_root is not None:

@@ -122,9 +122,13 @@ where the bytes come from:
   (`bluetopo` and `/modeling/` stay refused), so a downloaded file is a
   reviewed original only if its publisher URL is reviewed;
 - the catalog checksum and size must equal the repo pin when the manifest row
-  has one; a conflict refuses the file before any copy;
-- the copied bytes must hash to the catalog checksum (and so to the pin); a
-  mismatch caches nothing;
+  has one; a conflict refuses the file before any copy. The pin belongs to the
+  URL, not the product: `add-survey` applies the pin of every existing manifest
+  row with the same URL, so a new `--id` or `--member` cannot avoid it, and rows
+  that pin different checksums for one URL refuse;
+- the selected local file is hashed on every import and must match the catalog
+  checksum (and so the pin), even when the cache already holds those bytes; a
+  mismatch caches nothing and keeps any verified cache entry;
 - `dest` must stay inside the root (no `..`, absolute paths or escaping links),
   and duplicate catalog rows for one URL must agree.
 

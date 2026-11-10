@@ -5,13 +5,16 @@ geofetch ``catalog.jsonl`` (one JSON row per file: ``id``, ``url``, ``sha256``,
 ``size`` and ``dest`` relative to the root). It only replaces the network
 transfer. Every file still goes through :func:`fetch.fetch_source`, so the
 reviewed URL allowlist, container rules, byte cap and the repo's pinned
-checksum apply unchanged. In addition the file must hash to the catalog's
-checksum, and a catalog checksum or size that conflicts with the repo's pin
-refuses the file before any copy.
+checksum apply unchanged. In addition the selected local file must hash to the
+catalog's checksum on every import (a warm cache does not skip this), and a
+catalog checksum or size that conflicts with the repo's pin refuses the file
+before any copy. A refusal never removes an already verified cache entry.
 """
 import json
 from pathlib import Path
 import re
+
+from .io import sha256
 
 CATALOG = '_geofetch/catalog.jsonl'
 SHA256 = re.compile(r'[a-f0-9]{64}')
@@ -75,6 +78,10 @@ class LocalSourceRoot:
             raise ValueError(f'Local original escapes its source root: {row["dest"]}')
         if resolved.stat().st_size != row['size']:
             raise ValueError('Local original byte count differs from its catalog row')
+        # Hash the selected file itself, even when the cache already holds these
+        # bytes, so a report of "imported" always means the local copy was verified.
+        if sha256(resolved) != row['sha256']:
+            raise ValueError('Local original checksum mismatch against its catalog row')
         return resolved, row
 
 
