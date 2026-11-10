@@ -1,5 +1,6 @@
 // SC1137-09: editing a saved spot's name and private note from the account panel. The helpers behind the Edit form, the real
 // PATCH route's refusals as the panel receives them, and the GPX still carrying the new name and never the note.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';

@@ -9,7 +9,7 @@ import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const PAGE = 'https://s.test/map';
@@ -30,7 +30,7 @@ async function load() {
       export {language, STRINGS} from './web/i18n.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
   return (bundle = await import(pathToFileURL(out).href));
 }

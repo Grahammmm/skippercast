@@ -7,6 +7,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
+import {preparedCatalogue} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 
@@ -21,7 +22,7 @@ async function load() {
     export {language} from './web/i18n.ts';
     export {render} from 'preact-render-to-string';
     export {h} from 'preact';`},
-  bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact'});
+  bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: [preparedCatalogue]});
   return import(pathToFileURL(out).href);
 }
 

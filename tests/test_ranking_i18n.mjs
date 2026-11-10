@@ -1,6 +1,7 @@
 // SC1137-05: the words web/ranking.ts and web/area-reasons.ts write for the Where to look list read Spanish on a Spanish page, from catalogue
 // parts the producers attach, while every plain English field (what the Run line, the planner and the exports read) stays exactly as it was.
 // Offline: the committed Morro Bay atlas, synthetic reviewed reefs and a synthetic publication.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import {mkdtemp} from 'node:fs/promises';
 import {readFileSync} from 'node:fs';
@@ -10,7 +11,7 @@ import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {isDeepStrictEqual} from 'node:util';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import catalogue from '../catalog/app/strings.json' with {type: 'json'};
 import {rankedHabitat} from '../packages/coast/src/coast3d/regional.ts';
 import {CHECKING, assessScreen} from '../web/map/habitat.ts';
@@ -181,7 +182,7 @@ async function loadWR() {
       export {markData} from './web/map/marks.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   return import(pathToFileURL(out).href);
 }
 

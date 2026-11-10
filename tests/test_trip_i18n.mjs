@@ -1,5 +1,6 @@
 // SC0707-10: the Trip dialog's offline pages in Spanish. The ocean lines are tested as pure functions; the page is the real
 // web/app/Trip.tsx with the store, buttons and hooks replaced by the SP-15 fixtures (no network, no browser storage).
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdtemp} from 'node:fs/promises';
@@ -7,6 +8,7 @@ import {resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
+import {preparedCatalogue} from './helpers/esbuild-url.mjs';
 import {oceanLines} from '../web/trip-ocean-lines.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -52,7 +54,7 @@ async function load(responses) {
   await build({
     stdin: {resolveDir: root, loader: 'js', contents: `export {Trip} from './web/app/Trip.tsx'; export {language} from './web/i18n.ts'; export {h} from 'preact'; export {render} from 'preact-render-to-string'; export * from './tests/fixtures/sp1502_pack_inventory/runtime.mjs';`},
     outfile: resolve(dir, 'trip.mjs'), bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', jsxImportSource: 'preact', logLevel: 'silent',
-    plugins: [{name: 'trip-i18n-boundary', setup(b) {
+    plugins: [preparedCatalogue, {name: 'trip-i18n-boundary', setup(b) {
       b.onResolve({filter: /.*/}, args => {
         if (args.importer.endsWith('web/trip-ocean-lines.ts') && args.path === './map/currents.ts') return {path: resolve(root, 'tests/fixtures/trip_i18n/currents.mjs')};
         if (args.importer !== trip) return;
