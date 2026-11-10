@@ -8,7 +8,7 @@ import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import util from 'node:util';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 let ui;
@@ -25,7 +25,7 @@ async function components() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: rendererPlugins,
+    plugins: preparedRendererPlugins,
   });
   ui = await import(pathToFileURL(out).href);
   return ui;
