@@ -1,3 +1,4 @@
+// RF1935-4: appended focus-only layout; contrast paint, roles and thresholds unchanged.
 // BODY09 rendered acceptance candidate. NOT RUN by its author. Execute only
 // after exact-source review, final-source binding and a separate surviving run grant.
 // Actual Reports -> CatchCards -> CoastMarkup -> catchSheet; no replacement count DOM.
@@ -261,7 +262,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF1925-1: masthead minimum-width only; Reports paint and contrast proof unchanged.
   // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
   // SC1922-03: app.css adds only a Conditions-header model-family wrap/min-height rule and a pointer-events rule scoped to .app-presentation--placing (the armed placing stack, which Reports never mounts); no paint, backing or catch text changed. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
-  "web/app/app.css": "00d5ae28f750ab6b49ff6e1db9fd2335e264686f476f732c59efcd66a673b3fc",
+  "web/app/app.css": "4c1d82dcab0f536f4e79a32b4c4feb031ba7f6ac186d1f2ced21edc850448eee",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -332,7 +333,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
   // RF1925-1: only appCss pin and applicability comment change.
   // SC1922-03: only the appCss pin and applicability comment change.
-  "scripts/check_contrast.mjs": "3ad50b3b3a79facd8eed63a904049acb86b8aa36efae15e8428d4e7e98ce36b4",
+  "scripts/check_contrast.mjs": "91302c15fa07f024bd31364859f3bfe815b3c7e3f11d9b24c4658f9c42e60205",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still

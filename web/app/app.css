@@ -521,3 +521,20 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 p.app-forecast-failed-head { font-size: var(--text-15); }
 .app-forecast-failed-reason { margin: 0; color: var(--text); font-size: var(--text-15); line-height: var(--leading-body); }
 .app-forecast-retry { justify-self: start; }
+
+
+/* RF1935-4: focus is the editing signal, not a claim to detect a keyboard. */
+.app-mobile:has(.app-sheet .app-target-search:focus) {
+  --app-tabs: env(safe-area-inset-bottom, 0px);
+  --app-strip: env(safe-area-inset-top, 0px);
+}
+.app-mobile:has(.app-sheet .app-target-search:focus) .app-tabs { display: none; }
+.app-mobile:has(.app-sheet .app-target-search:focus) .app-sheet {
+  transform: translateY(0);
+  transition: none;
+}
+.app-mobile:has(.app-sheet .app-target-search:focus) .app-sheet .ui-sheet-body {
+  min-height: 0;
+  overflow: auto;
+}
+/* end RF1935-4 */

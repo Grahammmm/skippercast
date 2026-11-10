@@ -73,7 +73,7 @@
         },
         {
           "max_bytes": 73000,
-          "reason": "SC1922-03: the small map controls (Cancel waypoint, Retry region details, the phone Conditions segmented control) reach the app's --touch-min height, and a placing note that lets Chart taps pass through, in web/app/app.css, which takes the app first-load styles to 72,166 bytes on the build merged with main a2e0d0136, 166 bytes over the 72,000 budget; the budget moves up 1,000 bytes (1.2% headroom over that build), no more."
+          "reason": "Raised 72,000 to 73,000 (RF1935-4). The rule that keeps the focused phone target search visible in short viewports (hide the tabs, drop the sheet transform, let the sheet body scroll, in web/app/app.css) takes the app first-load styles to 72,262 bytes on this branch merged with main 6f584b488, 262 bytes over the 72,000 budget; the budget moves up 1,000 bytes (1.0% headroom over that build), no more."
         }
       ]
     },

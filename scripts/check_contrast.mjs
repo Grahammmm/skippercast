@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// RF1935-4: appended focus-only layout; contrast paint, roles and thresholds unchanged.
 // WCAG 2.x contrast check for the documented text/background token pairs, in
 // both themes of web/tokens.css (v2, dark default; design.md § 5). Fails under 4.5:1.
 // FE-61 Accept 2 retired v1 dist/tokens.css once no page loaded it.
@@ -403,7 +404,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1722-01 only appends a scoped .app-forecast-failed* block at the end of app.css (token text roles on the brief, not the legend glass);
   // no legend paint or backing changed and the cited line numbers above are unmoved.
   // SC1922-03 only adds a scoped .app-conditions-head model-family wrap/min-height rule after .app-conditions-head, plus a pointer-events-only rule for .app-presentation--placing (no paint); no colour, opacity, backing or text paint changed and legend glass is untouched.
-  "appCss": "00d5ae28f750ab6b49ff6e1db9fd2335e264686f476f732c59efcd66a673b3fc",
+  "appCss": "4c1d82dcab0f536f4e79a32b4c4feb031ba7f6ac186d1f2ced21edc850448eee",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
