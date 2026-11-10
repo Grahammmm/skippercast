@@ -1,5 +1,6 @@
 // SC0922-14: the account panel (dist/account.js, imported on demand) takes its language and words from openAccount({lang, strings}).
 // Synthetic rows and a fixed clock; no network. The real dialog runs in e2e/v2-account-i18n.spec.ts.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {isDeepStrictEqual} from 'node:util';

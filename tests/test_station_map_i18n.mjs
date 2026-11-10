@@ -1,5 +1,6 @@
 // SC1352-05: station readings, kinds, notes and nearshore ring copy in Spanish. The producers keep their English strings and attach
 // catalogue parts; the card and legend resolve them in the page's language. Synthetic fixtures, no network.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {signal} from '@preact/signals';

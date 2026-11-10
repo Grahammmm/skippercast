@@ -2,6 +2,7 @@
 // Real committed boundary data (dist/data/protected-areas.geojson, Point Buchon SMR) through the real planner screen
 // (dist/protected-areas.js) and the planner's own verdict (dist/geo-screen.js screenPlace). The browser Geolocation API is a stand-in that
 // counts its calls; the network, the page's storage and every other way out are recorded so a test can fail if a coordinate leaves the device.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {mkdtemp} from 'node:fs/promises';
@@ -10,7 +11,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import test from 'node:test';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import {PLANNING_MARGIN_M, pointGeometry, pointInGeometry, screenPlace} from '../dist/geo-screen.js';
 import {assetURL} from '../dist/region.js';
 import {initProtectedAreas} from '../dist/protected-areas.js';
@@ -263,7 +264,7 @@ await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader
     export {PositionView, distanceText, OFFICIAL_RULES_URL} from './web/app/PositionView.tsx';
     export {render} from 'preact-render-to-string';
     export {h} from 'preact';`},
-bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
 const view = await import(pathToFileURL(out).href);
 const html = (state, pack = 'saved', lang = 'en') => view.render(view.h(view.PositionView, {state, pack, onCheck() {}, lang}));
 const text = markup => markup.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ');

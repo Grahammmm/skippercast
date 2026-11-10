@@ -7,6 +7,7 @@ import {freshnessLabel, loadRegs, regsData, regulationState, ruleSummary, verifi
 import {currentRegionInfo, zone} from './App.tsx';
 import {language, t} from '../i18n.ts';
 import {dockState} from './TimeDock.tsx';
+import {dateTimeFormat} from '../../packages/coast/src/date-format.ts';
 import {Button} from '../ui/Button.tsx';
 import {openTrip} from '../trip.ts';
 import './plan.css';
@@ -21,7 +22,7 @@ export function targetRules(now: Date) {
   const rules = currentRegionInfo()?.rules ?? {id: region.value ?? '', timezone: zone()};
   const loaded = regsData.value, data = loaded?.region === rules.id ? loaded.data : null;
   const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, at = dockState(now, zone()).at;
-  const date = new Intl.DateTimeFormat('en-CA', {timeZone: zone(), year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
+  const date = dateTimeFormat('en-CA', zone(), {year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
   const state = regulationState(data, target, rules, now.getTime(), date, at);
   return {state, summary: ruleSummary(data, target, state, rules), freshness: freshnessLabel(data, target, state, rules, now.getTime()), available: !!data};
 }

@@ -3,6 +3,7 @@
 // (daily.ts buildDaily, web/brief/model.ts), hazard rules that no limit can
 // relax, the device storage with its failure fallback (web/limits.ts), and the
 // panel (web/app/LimitsPanel.tsx) rendered to a string.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
@@ -11,7 +12,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import fixture from './fixtures/coast/skippercast-report.json' with {type: 'json'};
 
 const {LIMIT_BOUNDS, clampLimits, defaultLimits, sameLimits, stricterFields, looserFields, limitsText} = await import('../packages/coast/src/limits.ts');
@@ -265,7 +266,7 @@ async function load() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: rendererPlugins,
+    plugins: preparedRendererPlugins,
   });
   mod = await import(pathToFileURL(out).href);
   return mod;
