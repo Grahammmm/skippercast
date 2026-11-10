@@ -544,7 +544,9 @@ function selectSnapshot(): Selected {
   if (!epoch.sealed && standing && answers(standing) && standing.region === epoch.region && standing.context === epoch.context) return {state: 'live', inputs: standing.inputs, restored: false, forecastFailed: false};
   if (saved?.region === epoch.region) return {state: 'saved', inputs: saved.inputs, restored: true, forecastFailed, ...code};
   if (!epoch.sealed) return {state: 'pending', inputs: null, restored: false, forecastFailed: false};
-  if (forecastDown(epoch.inputs)) return {state: 'failed', inputs: null, restored: false, forecastFailed: true, ...code};
+  // A failed forecast replaces the answer only where the feeds could answer; with neither feed read the brief is the existing
+  // "Readings unavailable" (never a weather word), as before this gate.
+  if (forecastDown(epoch.inputs) && (epoch.inputs.daily.data || epoch.inputs.conditions.data)) return {state: 'failed', inputs: null, restored: false, forecastFailed: true, ...code};
   return {state: 'live', inputs: epoch.inputs, restored: false, forecastFailed: false}; // no metadata or feed: the unavailable brief, never a weather word
 }
 
@@ -661,10 +663,11 @@ function SkillLine({now, lang}: {now: Date; lang: Language}) {
  * on entry or exit, and in print the settled answer shows (brief-print.css).
  */
 export function DockVerdictGuard({children, now = new Date()}: {children: ComponentChildren; now?: Date}) {
-  // SC1722-02: a source load still under way (no sealed answer, no labelled saved one) holds the same single Updating notice.
-  const source = sourcePending(now), pending = dockPending.value || source;
+  // SC1722-02: a source load still under way (no sealed answer, no labelled saved one) holds the same single Updating notice. In print the
+  // settled slot shows as for the dock; while sources are pending it holds only the waiting headline, never a weather word.
+  const pending = dockPending.value || sourcePending(now);
   return (
-    <div class="app-hour-guard" data-source-pending={source ? 'true' : undefined} aria-busy={pending ? 'true' : undefined} data-pending={pending ? 'true' : undefined}>
+    <div class="app-hour-guard" aria-busy={pending ? 'true' : undefined} data-pending={pending ? 'true' : undefined}>
       {pending ? <p class="app-hour-updating ui-mono" aria-live="off">{t('dock.updating', language.value)}</p> : null}
       <div class="app-hour-settled" hidden={pending} inert={pending}>{children}</div>
     </div>

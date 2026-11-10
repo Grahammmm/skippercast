@@ -18,8 +18,6 @@
   /* SC1407-05: a pending dock hour never prints; the retained settled answer does. */
   .app-hour-updating { display: none !important; }
   .app-hour-settled[hidden] { display: contents !important; }
-  .app-hour-guard[data-source-pending] > .app-hour-settled { display: none !important; }
-  .app-hour-guard[data-source-pending] > .app-hour-updating { display: block !important; }
 
   html { color-scheme: light !important; }
   html, body, .app-main, .app-mobile, .app-mobile-page, .app-brief, .app-first-answer, .app-sheet, .ui-sheet, .ui-sheet-body, .app-sheet-brief {

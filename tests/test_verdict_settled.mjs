@@ -202,15 +202,44 @@ test('same_context_refresh_keeps_the_published_answer: a visible-page refresh ne
   } finally {Date.now=oldNow;delete globalThis.fetch;}
 });
 
-test('metadata_failure_and_fast_load: failed context ends, dock pending wins; fast complete inputs never render Unknown',async()=>{
+test('metadata_failure_and_fast_load: failed context ends unavailable; all sources in one turn go Updating to the final word',async()=>{
   const oldNow=Date.now;Date.now=()=>NOW.getTime();
   try {
-    const m=await load();m.beginVerdictRegion(ID);m.failVerdictMetadata(ID);
+    const m=await load();m.region.value=ID;m.beginVerdictRegion(ID);m.failVerdictMetadata(ID);
     await m.loadDailyFeed(ID,async()=>new Response('',{status:503}));
-    assert.equal(m.verdictPresentation(NOW).state,'failed');
-    const s=await scenario(await load());
-    // Covered in every permutation as well; no intermediate paint required for synchronous completion.
-    for(const source of ['daily','conditions','forecast','coast'])await s.event(source);
+    assert.equal(m.verdictEpoch.value.sealed,true,'a failed metadata read ends the load, no permanent Updating');
+    assert.equal(m.verdictPresentation(NOW).verdict,null);
+    const failed=m.render(m.h(m.Verdict,{now:NOW}));
+    assert.match(failed,/<h1>Readings unavailable\.<\/h1>/); assert.doesNotMatch(failed,/Updating|app-verdict-word/);
+    const f=await load(), s=await scenario(f);
+    const before=render(f);
+    for(const html of before){assert.match(html,/Updating/);assert.doesNotMatch(html,/Unknown|app-verdict-word|data-fishable="/);}
+    for(const source of ['daily','conditions','forecast','coast']) s.pending.get(source)(response({daily,conditions,forecast:forecast(),coast:{...reportFixture,generatedAt:NOW.toISOString()}}[source]));
+    await flush();
+    const final=f.verdictPresentation(NOW);
+    assert.equal(final.state,'live'); assert.notEqual(final.verdict.verdict,'unknown','the fixture rates the day');
+    for(const html of render(f)) assert.doesNotMatch(html,/Updating|aria-busy/);
+    await s.done();
+  }finally{Date.now=oldNow;delete globalThis.fetch;}
+});
+
+test('deadline_through_the_real_loader: a forecast still unread at 20 s ends as a timed-out failure with Try again, never Unknown',async t=>{
+  const oldNow=Date.now;Date.now=()=>NOW.getTime();
+  t.mock.timers.enable({apis:['setTimeout']});
+  try {
+    const m=await load(), s=await scenario(m);
+    for(const source of ['daily','conditions','coast']) await s.event(source);
+    t.mock.timers.tick(19_999); await flush();
+    assert.equal(m.verdictEpoch.value.sealed,false,'19,999 ms: still loading');
+    assert.equal(m.verdictPresentation(NOW).state,'pending');
+    t.mock.timers.tick(1); await flush();
+    const epoch=m.verdictEpoch.value, view=m.verdictPresentation(NOW);
+    assert.equal(epoch.sealed,true,'20,000 ms: settled');
+    assert.equal(epoch.inputs.forecast.state,'timedout');
+    assert.equal(view.state,'failed'); assert.equal(view.reason,'timeout');
+    for(const html of render(m)) { assert.match(html,/Try again/); assert.doesNotMatch(html,/Unknown|app-verdict-word|data-fishable="/); }
+    s.pending.get('forecast')(response(forecast())); await flush();
+    assert.equal(m.verdictEpoch.value,epoch,'a late completion cannot reopen or rewrite the sealed snapshot');
     await s.done();
   }finally{Date.now=oldNow;delete globalThis.fetch;}
 });
