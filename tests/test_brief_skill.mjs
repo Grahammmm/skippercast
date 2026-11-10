@@ -89,7 +89,7 @@ test('the brief shows the skill line under the model line, UNKNOWN on thin histo
     assert.match(html(), new RegExp(`data-skill="known"[^>]*>Forecast skill ${lead} h ahead, last 30 days: wind ${pct}%[^<]*<a href="/skill">Scorecard</a>`));
   }
   m.hour.value = '2026-10-16T15:00Z';
-  const far = html(); assert.match(far, /data-skill="unavailable"[^>]*>Forecast skill: UNKNOWN\. No measured skill is published for forecasts 72 h or more ahead[^<]*<a href="\/skill">Scorecard<\/a>/);
+  const far = html(); assert.match(far, /data-skill="unavailable"[^>]*>Forecast skill: UNKNOWN\. No measured skill is published 72 h or more ahead[^<]*<a href="\/skill">Scorecard<\/a>/);
   assert.doesNotMatch(far.slice(far.indexOf('app-verdict-skill')), /\d+%/);
   m.language.value = 'es'; m.hour.value = '2026-10-14T15:00Z';
   assert.match(html(), /Acierto del pronóstico a 48 h, últimos 30 días: viento 70%[^<]*<a href="\/skill">Tabla de aciertos<\/a>/);
@@ -129,8 +129,8 @@ test('a lead with too few pairs says not enough history, never borrowing the 24 
 
 test('past 72 h the line says no skill is measured that far ahead, with no figure, in both languages', () => {
   const s = skillSummary(leads, 'morro-bay', NOW, NOW + 80 * H);
-  assert.match(skillLine(s, 'en'), /No measured skill is published for forecasts 72 h or more ahead\. Not for navigation\./);
-  assert.match(skillLine(s, 'es'), /No se publica acierto medido para pronósticos a 72 h o más\. No apto para navegar\./);
+  assert.match(skillLine(s, 'en'), /No measured skill is published 72 h or more ahead\. Not for navigation\./);
+  assert.match(skillLine(s, 'es'), /No se publica acierto medido a 72 h o más\. No apto para navegar\./);
   for (const lang of ['en', 'es']) assert.doesNotMatch(skillLine(s, lang), /%|publi[a-z]+ 20/);
-  assert.match(skillLine(skillSummary(leads, 'morro-bay', NOW, NOW - 2 * H), 'en'), /No measured skill applies to this hour/);
+  assert.match(skillLine(skillSummary(leads, 'morro-bay', NOW, NOW - 2 * H), 'en'), /^Forecast skill: UNKNOWN for this hour\. Not for navigation\.$/);
 });
