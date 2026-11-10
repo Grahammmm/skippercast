@@ -37,13 +37,14 @@ for (const size of SIZES) {
     const m = await page.evaluate(() => {
       const d = document.documentElement, r = document.querySelector('.app-dock')!.getBoundingClientRect(), s = document.querySelector('.app-stage')!.getBoundingClientRect();
       const w = window as unknown as {__trace: Trace};
-      return {scrollY: window.scrollY, scrollX: window.scrollX, height: d.scrollHeight, width: d.scrollWidth, iw: window.innerWidth, ih: window.innerHeight,
+      return {scrollY: window.scrollY, appScroll: document.querySelector('.app')!.scrollTop, scrollX: window.scrollX, height: d.scrollHeight, width: d.scrollWidth, iw: window.innerWidth, ih: window.innerHeight,
         dock: {top: r.top, bottom: r.bottom, left: r.left, right: r.right}, stage: {top: s.top, bottom: s.bottom, left: s.left, right: s.right},
         position: getComputedStyle(document.querySelector('.app-dock')!).position, trace: w.__trace};
     });
     expect(m.trace.calls, 'calls that scroll from script').toEqual([]);
     expect(m.trace.scrolls, 'document scroll events').toBe(0);
     expect(m.scrollY, 'scrollY').toBe(0);
+    expect(m.appScroll, 'the app\'s own scroll position').toBe(0);
     expect(m.scrollX, 'scrollX').toBe(0);
     expect(m.height, 'document height').toBeLessThanOrEqual(m.ih + 1);
     expect(m.width, 'document width').toBeLessThanOrEqual(m.iw + 1);

@@ -742,9 +742,6 @@ const clickChartPoint = async (page: Page, point: {x: number; y: number}) => {
 test('Currents draw the bound forecast as animated streamlines, read on click and follow ?current=', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
   await serveOcean(page);
-  // SC1722-19: the laptop stage is no longer held at 480 px, so it is 427 px tall at 1280x800. The land mask does not reach the canvas's top two and bottom two rows
-  // (streamlines show there over the fixture's land), which the old 480 px stage happened not to draw into; a taller window keeps the check on the mask itself.
-  if (page.viewportSize()!.width >= 1024) await page.setViewportSize({width: 1280, height: 900});
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, current: 'wcofs'});
   await expect(flow(page)).toHaveAttribute('data-motion', 'animated');
   expect(Number(await flow(page).getAttribute('data-paths')), 'streamlines over the field').toBeGreaterThan(10);
@@ -1592,6 +1589,11 @@ for (const [presentation, controls] of [['chart', '.app-chart .maplibregl-ctrl-b
       if (presentation === 'chart') await expect(page.locator(`${ATTRIBUTION} .maplibregl-ctrl-attrib-inner`)).toBeVisible();
       const hittable = `${controls}, .app-presentation .ui-segmented${presentation === 'chart' ? `, ${ATTRIBUTION}` : ''}`;
       for (const phase of ['top', 'scrolled', 'basis']) {
+        // SC1722-19: on a window shorter than the header, command bar, first answer and the 480 px stage together, the app scrolls inside itself
+        // (the document never does) and the time dock rides over the stage's bottom edge. The map controls sit at that edge, so a visitor scrolls the
+        // app to its end to use them; the check does the same, and the dock is then back in its own slot below them.
+        await expect(page.locator('.app-first-answer')).toBeVisible();
+        await page.evaluate(() => { const app = document.querySelector('.app'); if (app) app.scrollTop = app.scrollHeight; });
         if (phase === 'scrolled') await rail.evaluate(element => { element.scrollTop = element.scrollHeight; });
         if (phase === 'basis') { await rail.locator('summary[aria-label="Seafloor basis"]').click(); await rail.evaluate(element => { element.scrollTop = element.scrollHeight; }); }
         const [mine] = await rects(page, RAIL), others = [...await rects(page, controls), ...await rects(page, '.app-presentation .ui-segmented')];

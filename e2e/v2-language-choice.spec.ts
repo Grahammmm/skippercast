@@ -119,9 +119,6 @@ test.describe('storage blocked', () => {
   test('language_choice_storage_unavailable: the choice works for the visit and nothing is thrown', async ({page, pageErrors, v2, isMobile}) => {
     await v2.open('app', AREA);
     expect(await htmlLang(page)).toBe('en');
-    // SC1722-19: with storage refused the first-run card stays up, and on the laptop it sits over the account panel; the page no longer scrolls
-    // (it used to give Playwright's click retry a scrolled panel to hit), so the card is put away first, as a visitor would.
-    if (!isMobile) await page.locator('[data-first-run]').getByRole('button', {name: /Keep/}).click();
     const {spanish, english} = await openMenu(page, isMobile);
     await mark(page);
     await spanish.click();
