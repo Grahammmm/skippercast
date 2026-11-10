@@ -173,10 +173,34 @@ def read_mask(cycle, http=None):
     return lats, lons, grid < 0.5, url, hashlib.sha256(blob).hexdigest()
 
 
-def fetch_member_step(cycle, member, step, cells, shape, http=None):
+AXIS_TOLERANCE_DEGREES = 1e-6      # representation noise only; never a relative tolerance on longitude
+
+
+def check_field_axes(name, lats, lons, reference_lats, reference_lons):
+    """Refuse a field whose cells are not the land mask's cells, before any mask index is sampled.
+
+    Equal dimensions are not equal geography: every axis must be one-dimensional, finite and equal
+    to the mask's, element by element and in the same order."""
+    import numpy as np
+    for axis, have, want in (('latitude', lats, reference_lats), ('longitude', lons, reference_lons)):
+        have, want = np.asarray(have, dtype=float), np.asarray(want, dtype=float)
+        if have.ndim != 1 or want.ndim != 1 or have.shape != want.shape:
+            raise ValueError(f'GEFS {name} {axis} axis {have.shape} differs from the land mask {want.shape}')
+        if not (np.isfinite(have).all() and np.isfinite(want).all()):
+            raise ValueError(f'GEFS {name} {axis} axis is not finite; grid differs from the land mask')
+        delta = have - want
+        if axis == 'longitude':
+            delta = (delta + 180) % 360 - 180  # 180 and -180 are one meridian
+        if not np.allclose(delta, 0.0, rtol=0, atol=AXIS_TOLERANCE_DEGREES, equal_nan=False):
+            raise ValueError(f'GEFS {name} {axis} axis differs from the land mask grid (cells are displaced)')
+
+
+def fetch_member_step(cycle, member, step, cells, shape, *, reference_lats, reference_lons, http=None):
     """{field: [value per cell or None]} plus receipts for one member and step.
 
-    Returns (values, receipts, missing_fields). A missing file is reported, not raised."""
+    Returns (values, receipts, missing_fields). A missing file is reported, not raised.
+    `reference_lats`/`reference_lons` are the land mask's decoded axes; each decoded field must match
+    them before `cells` (indices into the mask) are used to index it."""
     import numpy as np
     http = http or fetch.http
     url = gefs_url(cycle, member, step)
@@ -208,9 +232,10 @@ def fetch_member_step(cycle, member, step, cells, shape, http=None):
         blob = blobs.get(name)
         if blob is None:
             continue
-        grid, _, _ = decode_one(blob)
+        grid, field_lats, field_lons = decode_one(blob)
         if grid.shape != shape:
             raise ValueError(f'GEFS grid {grid.shape} differs from the land mask {shape}')
+        check_field_axes(name, field_lats, field_lons, reference_lats, reference_lons)
         receipts.append({'member': member, 'step': step, 'field': name, 'url': url, 'range': list(found[name]),
                          'bytes': len(blob), 'sha256': hashlib.sha256(blob).hexdigest()})
         values[name] = [None if cell is None or not np.isfinite(grid[cell[0], cell[1]]) else float(grid[cell[0], cell[1]])
@@ -235,7 +260,8 @@ def collect(cycle, points, http=None, workers=32, log=log_err):
 
     def one(job):
         member, step = job
-        return job, fetch_member_step(cycle, member, step, [c and c[:2] for c in cells], shape, http)
+        return job, fetch_member_step(cycle, member, step, [c and c[:2] for c in cells], shape,
+                                      reference_lats=lats, reference_lons=lons, http=http)
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         results = dict(pool.map(one, jobs))
