@@ -50,6 +50,17 @@ region binding, the readiness or the check times change; a change drops that scr
 them all. A screen without a revision, and any unchecked (`screened: false`) answer, is never cached. Nothing is stored on
 the device or fetched. This is not the publisher's stored reef verdict (the slim file above), which has its own fingerprint.
 
+### The hourly horizon is built once per hour (SC1407-03)
+
+Not a byte budget, and no budget here changes. The time dock's 169-hour horizon (`horizonDays` in `web/hour.ts`) is
+read by the dock, the map, the brief and the share link; issue #1762 (R2) counted it rebuilt about 64 times at one load.
+It now keeps one entry, its last successful build, keyed by the whole UTC start hour and the region zone: a read in the
+same hour and zone returns that same array without formatting a single hour; another hour (forward or back) or another
+zone builds a new one, and an invalid date or zone still throws and leaves the entry in place. The shared result is
+frozen (the array, each day and its hours) so no caller can change it; a caller's own horizon passed to `dockTime` is
+neither frozen nor kept. `tests/test_frames.mjs` checks this by counting formatter calls, not by timing; no new timing
+was measured.
+
 ### Protected-area distance work (SC1407-01, #1762)
 
 Not a size budget: a note on the run-time closure screen. `distanceM` in `dist/geo-screen.js` (called by `screenPlace` for

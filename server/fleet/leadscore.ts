@@ -9,7 +9,7 @@
 //   reporting_frequency    weeks of the last 12 with a paired report of any kind, of 12 (days 0-83 before
 //                          today, so the buckets are 0-11)
 //   social_presence        a current social.* fact from the operator's own site (operator-site)
-//   ais_seen_30d           a watched MMSI of the operator's vessels seen in the last 30 days
+//   ais_seen_30d           a watched MMSI of the operator's vessels seen in the last 30 days (not after the scoring instant)
 //
 // Missing: no paired report at all (pairing not run, or not a reporter) for the first
 // two; no current operator-site fact (site not read) for social; no watched MMSI for AIS.
@@ -56,7 +56,8 @@ const day = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
 export async function leadInputs(db: D1Database, scope: {sql: string; args: (string | number)[]}, now: string): Promise<Map<string, LeadInputs>> {
   const t = Date.parse(now), today = day(t);
   const volumeFrom = day(t - LEAD_WINDOWS.volumeDays * 86400e3), weeksFrom = day(t - LEAD_WINDOWS.frequencyWeeks * 7 * 86400e3);
-  const aisFrom = new Date(t - LEAD_WINDOWS.aisDays * 86400e3).toISOString();
+  // AIS evidence is bounded on both sides: seen in [now-30d, now]; a sighting dated after `now` earns nothing.
+  const aisFrom = new Date(t - LEAD_WINDOWS.aisDays * 86400e3).toISOString(), aisTo = new Date(t).toISOString();
   const ops = `SELECT o.id FROM fleet_operators o WHERE ${scope.sql}`;
   const [reports, social, ais, ids] = await Promise.all([
     db.prepare(`SELECT v.operator_id AS op,
@@ -66,8 +67,8 @@ export async function leadInputs(db: D1Database, scope: {sql: string; args: (str
       WHERE v.operator_id IN (${ops}) GROUP BY v.operator_id`).bind(volumeFrom, weeksFrom, today, ...scope.args).all<{op: string; volume: number; weeks: number}>(),
     db.prepare(`SELECT v.operator_id AS op, MAX(f.field LIKE 'social.%') AS social FROM fleet_vessel_facts f JOIN fleet_vessels v ON v.id=f.vessel_id
       WHERE f.source_id='operator-site' AND f.superseded_at IS NULL AND v.operator_id IN (${ops}) GROUP BY v.operator_id`).bind(...scope.args).all<{op: string; social: number}>(),
-    db.prepare(`SELECT v.operator_id AS op, MAX(w.last_seen_at>=?) AS seen FROM fleet_ais_watch w JOIN fleet_vessels v ON v.id=w.vessel_id
-      WHERE w.status='watched' AND v.operator_id IN (${ops}) GROUP BY v.operator_id`).bind(aisFrom, ...scope.args).all<{op: string; seen: number}>(),
+    db.prepare(`SELECT v.operator_id AS op, MAX(w.last_seen_at>=? AND w.last_seen_at<=?) AS seen FROM fleet_ais_watch w JOIN fleet_vessels v ON v.id=w.vessel_id
+      WHERE w.status='watched' AND v.operator_id IN (${ops}) GROUP BY v.operator_id`).bind(aisFrom, aisTo, ...scope.args).all<{op: string; seen: number}>(),
     db.prepare(ops).bind(...scope.args).all<{id: string}>(),
   ]);
   const out = new Map<string, LeadInputs>(ids.results.map(r => [r.id, {landing_report_volume: null, reporting_frequency: null, social_presence: null, ais_seen_30d: null}]));
