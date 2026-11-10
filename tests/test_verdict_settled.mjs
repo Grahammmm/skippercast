@@ -297,3 +297,59 @@ test('offline_pack_snapshot_gives_date_only_chips: parts the saved pack answered
     assert.equal(fresh.chipsAdmitted(),true); assert.ok(fresh.dayVerdicts(NOW,INFO.timezone).value.size>0);
   } finally {Date.now=oldNow;delete globalThis.fetch;}
 });
+
+const retryButton = html => html.match(/<button[^>]*app-forecast-retry[^>]*>/)?.[0] ?? '';
+
+test('timed_out_forecast_can_be_retried: Try again after the 20 s deadline starts a new generation instead of joining the read the sealed epoch gave up on',async t=>{
+  const oldNow=Date.now;Date.now=()=>NOW.getTime();
+  t.mock.timers.enable({apis:['setTimeout']});
+  try {
+    const m=await load(), s=await scenario(m);
+    for(const source of ['daily','conditions','coast']) await s.event(source);
+    const stale=s.pending.get('forecast');
+    t.mock.timers.tick(20_000); await flush();
+    const sealed=m.verdictEpoch.value;
+    assert.equal(sealed.sealed,true); assert.equal(sealed.inputs.forecast.state,'timedout');
+    assert.equal(m.regionalForecastState.value.state,'loading','the loader still has the read in flight');
+    for(const html of render(m)) { assert.match(html,/app-forecast-retry/); assert.doesNotMatch(retryButton(html),/disabled/,'Try again is available once the epoch timed out'); assert.doesNotMatch(html,/aria-busy="true"/); }
+    const calls=s.calls.length, retry=m.retryRegionalForecast();
+    assert.ok(retry,'Try again starts a read'); await flush();
+    assert.equal(s.calls.length,calls+1,'a new forecast request, not the in-flight one');
+    const next=m.verdictEpoch.value;
+    assert.notEqual(next.generation,sealed.generation,'a new generation'); assert.equal(next.sealed,false);
+    assert.equal(next.inputs.forecast.state,'pending'); assert.equal(next.inputs.daily.state,'loaded','the other sources carry over');
+    assert.equal(m.verdictPresentation(NOW).state,'pending');
+    for(const html of render(m)) assert.match(html,/Updating/);
+    stale(response(forecast())); await flush();
+    assert.equal(m.verdictEpoch.value.inputs.forecast.state,'pending','the abandoned read cannot settle the new generation');
+    s.pending.get('forecast')(response(forecast())); await retry; await flush();
+    assert.equal(m.verdictEpoch.value.sealed,true); assert.equal(m.verdictEpoch.value.inputs.forecast.state,'loaded');
+    assert.equal(m.verdictPresentation(NOW).state,'live'); assert.notEqual(m.verdictPresentation(NOW).verdict.verdict,'unknown');
+    await s.done();
+  }finally{Date.now=oldNow;delete globalThis.fetch;}
+});
+
+test('metadata_failure_with_feeds_reads_unavailable_and_retry_stays_on_the_selected_region: no forecast failure the user cannot act on, no epoch switch off the selection',async()=>{
+  const oldNow=Date.now;Date.now=()=>NOW.getTime();
+  try {
+    const m=await load(), s=await scenario(m);   // region ID asks its forecast (the request a retry would reuse)
+    for(const source of ['daily','conditions','forecast','coast']) await s.event(source);
+    await s.done();
+    // The selection moves to B; its metadata cannot be read, then both feeds load.
+    m.region.value='other-region'; m.beginVerdictRegion('other-region'); m.failVerdictMetadata('other-region');
+    const epoch=m.verdictEpoch.value, t=epoch.tickets;
+    m.verdictLoad.settle(t.daily,'daily',{state:'loaded',data:{feed:{...daily,region_id:'other-region'},savedAt:null}});
+    m.verdictLoad.settle(t.conditions,'conditions',{state:'loaded',data:{feed:{...conditions,region_id:'other-region'},savedAt:null}});
+    const sealed=m.verdictEpoch.value;
+    assert.equal(sealed.sealed,true); assert.equal(sealed.inputs.forecast.state,'failed');
+    const view=m.verdictPresentation(NOW);
+    assert.notEqual(view.state,'failed','a metadata failure is not a forecast failure'); assert.equal(view.verdict,null);
+    for(const html of render(m)) { assert.doesNotMatch(html,/Couldn(&#39;|')t load the forecast|app-forecast-retry|Updating/); }
+    assert.match(m.render(m.h(m.Verdict,{now:NOW})),/<h1>Readings unavailable\.<\/h1>/);
+    // A retry never reaches for region ID's request: the epoch stays on the selected region.
+    assert.equal(m.retryRegionalForecast(),null); assert.equal(m.refreshForecastIfStale(Date.now()+3_600_000),null);
+    assert.equal(m.verdictEpoch.value,sealed,'the epoch did not move off the selected region');
+    assert.equal(m.verdictEpoch.value.region,'other-region');
+    m.verdictLoad.reset();
+  }finally{Date.now=oldNow;delete globalThis.fetch;}
+});

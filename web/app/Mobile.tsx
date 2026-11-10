@@ -27,7 +27,7 @@ import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
 import {LimitsControl} from './LimitsPanel.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
-import {BriefFooter, PrintBrief, BriefLinks, BriefTiles, Details, LowerExposure, SavedLine, Verdict, currentBrief, leadDate, leadDayText} from '../brief/Brief.tsx';
+import {BriefFooter, PrintBrief, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief, leadDate, leadDayText} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {RunLine} from '../brief/Run.tsx';
@@ -47,7 +47,7 @@ import {PlanView} from './PlanView.tsx';
 import {appView, navigate, withParams, type AppView} from '../state.ts';
 import {waypointPlacement} from '../waypoint-placement.ts';
 import {language, t} from '../i18n.ts';
-import {dayOptions, dockState, hourText, localParts, readout} from './TimeDock.tsx';
+import {dayOptions, dockState, dockValueText} from './TimeDock.tsx';
 import {previewDockState, requestDockDay, requestDockHour, useDockSelection} from '../dock-selection.ts';
 import {useDayVerdicts, withVerdicts} from './day-verdicts.ts';
 
@@ -82,8 +82,8 @@ export function HourEdge({now}: {now: Date}) {
   return (
     <div class="app-sheet-hour" role="group" aria-label={t('shell.time', lang)}>
       <Range label={t('shell.hour', lang)} value={Math.max(0, state.index)} max={outside ? 0 : state.hours.length - 1} onChange={i => requestDockHour(now, tz, at(i))} disabled={outside}
-        valueText={i => outside ? readout(state, tz, lang) : hourText(localParts(new Date(at(i)), tz).hour, lang)} class="ui-dock-range" />
-      <output class="ui-dock-readout ui-mono" aria-live="off">{readout(state, tz, lang)}</output>
+        valueText={i => dockValueText(now, tz, state, lang, at(i))} class="ui-dock-range" />
+      <output class="ui-dock-readout ui-mono" aria-live="off">{dockValueText(now, tz, state, lang)}</output>
     </div>
   );
 }
@@ -113,7 +113,6 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
             <FreshnessDot />
           </div>
           <DegradedNotice />
-          <Guard name="saved-brief"><SavedLine now={now} /></Guard>
           <Guard name="verdict"><Verdict now={now} /></Guard>
           {apart ? dockHead : null}
         </>

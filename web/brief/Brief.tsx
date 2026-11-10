@@ -407,19 +407,25 @@ export function ensureRegionalForecast(id: string, near: readonly [number, numbe
   return read;
 }
 
+/** True when the current epoch gave up on the forecast at its deadline: the read the loader still has in flight no longer answers it. */
+const forecastTimedOut = (): boolean => verdictLoad.peek()?.inputs.forecast.state === 'timedout';
+
 /** SC1722-01: read the forecast again after a failure with the request it last made: joins a read in flight, else asks once more. Null when no forecast was ever asked for. */
 export function retryRegionalForecast(): Promise<ConditionsForecast | null> | null {
-  const req = forecastRequest;
-  if (!req) return null;
-  if (forecastPending && forecastInflight) return forecastInflight;
+  const req = forecastRequest, selected = region.peek();
+  // SC1722-02: only the selected region's own request is read again; an earlier region's would switch the epoch off the selection.
+  if (!req || (selected && selected !== req.id)) return null;
+  // A read still in flight when its epoch sealed as timed out answers nothing now (the sealed epoch never admits it): Try again starts
+  // a new request, hence a new generation and deadline, and the old read's late result is ignored by the loader's generation check.
+  if (forecastPending && forecastInflight && !forecastTimedOut()) return forecastInflight;
   forecastKey = null;
   return ensureRegionalForecast(req.id, req.near, req.fetchFn, req.page);
 }
 
 /** Reload the forecast when it failed or was loaded over 30 minutes before `now`; no timer, only called as the page becomes visible. */
 export function refreshForecastIfStale(now = Date.now()): Promise<ConditionsForecast | null> | null {
-  const req = forecastRequest;
-  if (!req || forecastPending) return null;
+  const req = forecastRequest, selected = region.peek();
+  if (!req || forecastPending || (selected && selected !== req.id)) return null;
   if (regionalForecast.peek() && now - forecastLoadedAt <= FORECAST_MAX_AGE_MS) return null;
   forecastKey = null;
   return ensureRegionalForecast(req.id, req.near, req.fetchFn, req.page);
@@ -542,8 +548,10 @@ export type VerdictPresentation = {state: 'pending' | 'failed' | 'saved' | 'live
   saved: {at: number; state: SavedState} | null; forecastFailed: boolean; reason?: ForecastFailureReason; status?: number};
 type Selected = {state: VerdictPresentation['state']; inputs: InputSet | null; restored: boolean; forecastFailed: boolean; reason?: ForecastFailureReason; status?: number};
 const forecastDown = (inputs: InputSet): boolean => inputs.forecast.state === 'failed' || inputs.forecast.state === 'timedout';
+/** Metadata and at least one feed in hand: the brief could be built, so only the forecast stands between it and an answer. */
+const couldAnswer = (inputs: InputSet): boolean => !!inputs.metadata.data && !!(inputs.daily.data || inputs.conditions.data);
 /** A sealed snapshot that can carry a live answer: its forecast was read (or has none to read), with metadata and at least one feed. */
-const answers = (epoch: VerdictEpoch | null): boolean => !!epoch?.sealed && !forecastDown(epoch.inputs) && !!epoch.inputs.metadata.data && !!(epoch.inputs.daily.data || epoch.inputs.conditions.data);
+const answers = (epoch: VerdictEpoch | null): boolean => !!epoch?.sealed && !forecastDown(epoch.inputs) && couldAnswer(epoch.inputs);
 
 /** Which snapshot answers now, without building a brief (the guard and the chips read only this). */
 function selectSnapshot(): Selected {
@@ -559,9 +567,9 @@ function selectSnapshot(): Selected {
   if (!epoch.sealed && standing && answers(standing) && standing.region === epoch.region && standing.context === epoch.context) return {state: 'live', inputs: standing.inputs, restored: false, forecastFailed: false};
   if (saved?.region === epoch.region) return {state: 'saved', inputs: saved.inputs, restored: true, forecastFailed, ...code};
   if (!epoch.sealed) return {state: 'pending', inputs: null, restored: false, forecastFailed: false};
-  // A failed forecast replaces the answer only where the feeds could answer; with neither feed read the brief is the existing
-  // "Readings unavailable" (never a weather word), as before this gate.
-  if (forecastDown(epoch.inputs) && (epoch.inputs.daily.data || epoch.inputs.conditions.data)) return {state: 'failed', inputs: null, restored: false, forecastFailed: true, ...code};
+  // A failed forecast replaces the answer only where the metadata and a feed could answer; with no metadata or neither feed read the brief
+  // is the existing "Readings unavailable" (never a weather word, never a forecast failure the user cannot act on), as before this gate.
+  if (forecastDown(epoch.inputs) && couldAnswer(epoch.inputs)) return {state: 'failed', inputs: null, restored: false, forecastFailed: true, ...code};
   return {state: 'live', inputs: epoch.inputs, restored: false, forecastFailed: false}; // no metadata or feed: the unavailable brief, never a weather word
 }
 
@@ -595,7 +603,7 @@ export function verdictPresentation(now: Date, at?: string | null, lang: Languag
     }
     // A saved snapshot that cannot answer is never a saved Unknown: Updating while live reads run, then the live outcome.
     if (!epoch.sealed) return {...base, state: 'pending'};
-    if (forecastDown(epoch.inputs)) return {...base, state: 'failed'};
+    if (forecastDown(epoch.inputs) && couldAnswer(epoch.inputs)) return {...base, state: 'failed'};
     return {...base, ...assess(epoch.inputs, now, at, lang), state: 'live'};
   }
   const view = assess(s.inputs, now, at, lang);
@@ -617,7 +625,8 @@ const FORECAST_REASON: Readonly<Record<ForecastFailureReason, StringId>> = {netw
 /** SC1722-01: "Couldn't load the forecast", the plain reason and a Try again that reads the forecast again (busy and disabled while that read runs). `as` is the heading element for the place it sits in. */
 export function ForecastFailure({as: Heading = 'h1', failure}: {as?: 'h1' | 'h2' | 'p'; failure?: {reason?: ForecastFailureReason; status?: number}}) {
   // SC1722-02: the presented failure names the code; busy and disabled stay the loader's own (a retry in flight), never the presentation's.
-  const raw = regionalForecastState.value, lang = language.value, busy = raw.state === 'loading';
+  // A read the epoch gave up on at its deadline is not a retry in flight: Try again stays available and starts a new generation.
+  const raw = regionalForecastState.value, lang = language.value, timedOut = verdictEpoch.value?.inputs.forecast.state === 'timedout', busy = raw.state === 'loading' && !timedOut;
   const reason = failure?.reason ?? raw.reason, status = failure?.status ?? raw.status;
   return (
     <div class="app-forecast-failed" role="status" data-forecast="failed" data-reason={reason} aria-busy={busy ? 'true' : undefined}>

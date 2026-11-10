@@ -455,8 +455,8 @@ test('shared_clock_crosses_hour_without_navigation: the desktop dock, the phone 
     narrow.value = true;
     const phoneBefore = hourControl(render(h(App, {clock: c.clock})));
     narrow.value = false;
-    assert.deepEqual(before.desktop, ['1 pm', '10']);
-    assert.deepEqual(phoneBefore, ['1 pm', '10']);
+    assert.deepEqual(before.desktop, ['Today · 1 pm', '10']);
+    assert.deepEqual(phoneBefore, ['Today · 1 pm', '10']);
     assert.equal(before.dataHour, '2026-10-05T20:00:00.000Z');
     assert.equal(c.timers.size, 1, 'the app, the layouts and the stage share one ticker');
     const steps = calls.length;
@@ -466,8 +466,8 @@ test('shared_clock_crosses_hour_without_navigation: the desktop dock, the phone 
     narrow.value = true;
     const phone = hourControl(render(h(App, {clock: c.clock})));
     narrow.value = false;
-    assert.deepEqual(desktop, ['2 pm', '9'], 'the dock default hour moved on');
-    assert.deepEqual(phone, ['2 pm', '9'], 'the phone hour edge moved on');
+    assert.deepEqual(desktop, ['Today · 2 pm', '9'], 'the dock default hour moved on');
+    assert.deepEqual(phone, ['Today · 2 pm', '9'], 'the phone hour edge moved on');
     assert.equal(dockState(c.clock.now.value, TZ).at, Date.parse('2026-10-05T21:00:00Z'));
     assert.equal(host.dataset.hour, '2026-10-05T21:00:00.000Z', 'the map draws the hour the dock shows');
     assert.deepEqual(calls.slice(steps).filter(call => call[0] === 'setHour').map(call => call[1].toISOString()), ['2026-10-05T21:00:00.000Z']);
@@ -505,7 +505,7 @@ test('fixed_now_and_play_remain_independent: a fixed now ignores the clock and s
   state.configureStore({v2: true, storage: memory()});
   state.syncFromURL(`${ORIGIN}?region=morro-bay`);
   const c = manualClock(createHourClock, '2026-10-05T22:00:00Z');
-  assert.deepEqual(hourControl(render(h(App, {now: NOW, clock: c.clock}))), ['1 pm', '10'], 'the fixed date is what the dock reads');
+  assert.deepEqual(hourControl(render(h(App, {now: NOW, clock: c.clock}))), ['Today · 1 pm', '10'], 'the fixed date is what the dock reads');
   assert.equal(c.timers.size, 0, 'rendering starts no ticker');
 });
 
@@ -529,7 +529,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.equal(count(html, /<label>Area<select/g), 1);
   assert.match(html, /<output class="app-window ui-mono" aria-label="Time window">Today · 1 pm<\/output>/);
   assert.deepEqual(dayChips(html), [['Today', true], ...CHIPS.slice(1).map(label => [label, false])], 'no ?day= means today, at the fixed clock');
-  assert.match(html, /aria-label="Hour" aria-valuetext="1 pm" min="0" max="10" step="1" value="0"/, 'today runs from the current hour to 11 pm');
+  assert.match(html, /aria-label="Hour" aria-valuetext="Today · 1 pm" min="0" max="10" step="1" value="0"/, 'today runs from the current hour to 11 pm');
   assert.match(html, /<aside class="app-brief" aria-label="Brief">/);
   assert.match(html, /class="ui-eyebrow">Today's brief</);
   assert.match(html, /<h1>[A-Z][^<]*\.<\/h1>/, 'the headline is one sentence with a full stop');
@@ -603,8 +603,8 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   assert.deepEqual(attrs(coastView, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no colour key until a layer draws (FE-20)');
   // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.
   assert.deepEqual(dayChips(html), CHIPS.map(label => [label, label === 'Tue']));
-  assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
-  assert.match(html, /<output class="ui-dock-readout ui-mono" aria-live="off">2 pm<\/output>/);
+  assert.match(html, /aria-label="Hour" aria-valuetext="Tomorrow · 2 pm" min="0" max="23" step="1" value="14"/);
+  assert.match(html, /<output class="ui-dock-readout ui-mono" aria-live="off">Tomorrow · 2 pm<\/output>/);
   assert.match(html, /class="app-dock-zone ui-mono">P[DS]T</, 'the zone shows once in the dock');
   assert.match(html, /aria-label="Time window">Tue · 2 pm<\/output>/);
   // Selection: the mark card names the spot with blank reading and source.
@@ -689,7 +689,7 @@ test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a 
   // One sheet at peek with the hour slider at its edge, then the brief in sheet order.
   assert.equal(count(html, /class="ui-sheet /g), 1);
   assert.match(html, /<section class="ui-sheet app-sheet" data-detent="peek" role="group" aria-label="Brief"><div class="ui-sheet-edge"><button type="button" class="ui-sheet-handle" aria-label="Expand Brief" aria-expanded="false"/);
-  assert.match(html, /<\/button><div class="app-sheet-hour" role="group" aria-label="Time"><input type="range" class="ui-range ui-dock-range" aria-label="Hour" aria-valuetext="1 pm"[^>]*><output class="ui-dock-readout ui-mono" aria-live="off">1 pm<\/output><\/div><\/div>/);
+  assert.match(html, /<\/button><div class="app-sheet-hour" role="group" aria-label="Time"><input type="range" class="ui-range ui-dock-range" aria-label="Hour" aria-valuetext="Today · 1 pm"[^>]*><output class="ui-dock-readout ui-mono" aria-live="off">Today · 1 pm<\/output><\/div><\/div>/);
   const body = html.slice(html.indexOf('<div class="ui-sheet-body">'), html.indexOf('<nav aria-label="Views"'));
   // SC-LAUNCH-3: the head names the lead's day (tomorrow, no time chosen); the dock's day heads the evidence below the lead.
   const order = ['class="ui-eyebrow">Tomorrow</span>', 'class="app-fresh" role="status"', '<h1>Waiting for readings.</h1>', 'class="ui-eyebrow">Today · 1 pm</span>', '<div class="app-tiles">', 'class="ui-eyebrow">Where to look', '<details class="app-details">', '<p class="app-caveat">', '<figure class="app-spark"',
@@ -714,7 +714,7 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
   assert.match(html, /<section class="ui-sheet app-sheet app-sheet--mark" data-detent="peek" role="group" aria-label="Brief">/);
   assert.match(html, /<div class="ui-sheet-body"><div class="app-sheet-brief"><section class="app-mark" aria-label="Selected mark"><div class="app-mark-head"><h2 tabindex="-1">r12<\/h2>/);
   assert.doesNotMatch(html, /<h1>/, 'the card replaces the headline');
-  assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
+  assert.match(html, /aria-label="Hour" aria-valuetext="Tomorrow · 2 pm" min="0" max="23" step="1" value="14"/);
   assert.deepEqual(dayChips(html), CHIPS.map(label => [label, label === 'Tue']), 'the sheet\'s day menu runs from the fixed clock');
   assert.match(html, /Nearshore site —/);
   assert.match(html, /In-water visibility is unverified/);
