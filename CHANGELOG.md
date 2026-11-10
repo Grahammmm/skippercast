@@ -3,6 +3,9 @@
 ## Unreleased
 
 - RF1635-6: the shoreline publication gate refuses a CUSP feature whose `source_date` is not a real calendar day (February 29 in a non-leap year, April 31, month or day zero, year 0000, month 13) or not a plain `YYYY-MM-DD` string (Unicode digits, timestamps, padding, missing or non-text values), before the published `shoreline.geojson` is replaced, so an existing file stays byte-identical. Valid dates, including leap days and 0001-01-01 / 9999-12-31, are kept as written; the gate adds no freshness limit and no data is rebuilt.
+
+- RF1635-5: survey inventories now refuse cyclic derivation before loading or promotion; valid shared-parent lineages remain accepted and rejected promotion leaves the catalog unchanged.
+
 - SC1407-09: English pages no longer download the Spanish catalogue. The app and the landing ship English only and load the Spanish table only when the page is Spanish (a link, a stored choice or the browser's language), waiting for it before their first translated render; a switch to Spanish applies once the table arrives, and a failed load keeps English and says so once beside the language choice (the landing offers a link that reloads in Spanish). First-load scripts drop about 158 KB raw on both pages, and their budgets are lowered to match.
 
 - SC1407-04: the brief's date, hour and weekday text, the verdict's morning window and the rules and plan cards' day now reuse one date formatter per locale, zone and pattern from a shared cache (at most 64 kept) instead of building a new one on every call; every printed date and hour is unchanged, and a zone the browser rejects still fails as before.
