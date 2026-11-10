@@ -400,7 +400,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // no colour, opacity, backing or text paint changed and the cited line numbers above are unmoved.
   // SC1722-06: Limits box sizing/scroll and opaque token-backed sticky actions only; Reports does not mount them.
   // RF1925-1: masthead minimum-width only; legend paint and backing unchanged.
-  "appCss": "064a90d5e0579c192ba4a6c6db7f664975d4ec0d1c9f4167aab7504e1f20f29c",
+  // SC1722-01 only appends a scoped .app-forecast-failed* block at the end of app.css (token text roles on the brief, not the legend glass);
+  // no legend paint or backing changed and the cited line numbers above are unmoved.
+  "appCss": "59fdac2733aa85e66f7295388c7080fdead29a94af5bd3d8faf2f268695f4988",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
