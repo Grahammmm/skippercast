@@ -30,7 +30,7 @@ async function load() {
       export {Verdict} from './web/brief/Brief.tsx';
       export {FirstAnswerLine} from './web/app/FirstAnswerLine.tsx';
       export {horizonDays, dockTime} from './web/hour.ts';
-      export {language} from './web/i18n.ts';
+      export {language, prepareCatalogue} from './web/i18n.ts';
       export * as state from './web/state.ts';
       export {effect, signal} from '@preact/signals';
       export {render} from 'preact-render-to-string';
@@ -129,6 +129,7 @@ test('no_old_answer_under_preview: the verdict and first answer say Updating, un
   const shown = pending.replace(/<div class="app-hour-settled" hidden inert>[\s\S]*?<\/div><\/div>(?=<div class="app-hour-guard"|<section|$)/g, '');
   assert.doesNotMatch(shown, /Waiting for readings|app-first-answer-line/, 'no previous answer is visible under the new label');
   assert.doesNotMatch(pending, /role="(?:status|alert)"[^>]*>Updating|aria-live="(?:polite|assertive)"[^>]*>Updating/);
+  await m.prepareCatalogue('es');   // SC1407-09: the Spanish table loads on demand
   m.language.value = 'es';
   assert.match(view(), /aria-live="off">Actualizando…<\/p>/);
   m.language.value = 'en';
