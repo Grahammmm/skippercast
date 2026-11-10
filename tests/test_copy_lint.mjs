@@ -376,6 +376,13 @@ test('coverage_sc1407_13: the plan-date rules card and the landing dots are cove
   }
 });
 
+test('coverage_is_real_not_exempt: the private device log is covered once, not exempt, and has no bare prose or missing id', () => {
+  const path = 'web/app/PrivateMapLog.tsx';
+  assert.equal(COVERED.filter(p => p === path).length, 1);
+  assert.ok(!Object.hasOwn(NOT_COVERED, path));
+  assert.deepEqual(catalogueProblems().filter(p => p.includes(path) || p.includes('privateMapLog.')), []);
+});
+
 test('coverage CLI: an unlisted screen fails with and without a catalogue, in every mode; lists and baseline are never rewritten', () => {
   const root = mkTree({'web/app/views/NewEnglishScreen.tsx': 'export const V = () => <p>Hello there.</p>;\n'});
   try {

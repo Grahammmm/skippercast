@@ -33,6 +33,7 @@ zoom 12 (about 15.6 m a pixel, the worst case) those are about 0.6 and 1.3
 pixels. Features, ids and properties are the published form's, so a click
 reads the same source fields.
 """
+from datetime import date
 from pathlib import Path
 import json
 import math
@@ -40,13 +41,24 @@ import re
 
 from .contracts import atomic_json, read_json
 
-DATE = re.compile(r'\d{4}-\d{2}-\d{2}')
+DATE = re.compile(r'[0-9]{4}-[0-9]{2}-[0-9]{2}')
 SCHEMA_VERSION = 2
 DECIMALS = 5
 OVERVIEW_TOLERANCE_M = 10
 OVERVIEW_MIN_RING_M = 20
 # web/map/coastline.ts SHORELINE_DETAIL_ZOOM is the MapLibre zoom the full form loads from.
 OVERVIEW_MAX_ZOOM = 12
+
+
+def _calendar_date(value):
+    """True only for a canonical ASCII YYYY-MM-DD string that is a real Gregorian day (years 0001-9999)."""
+    if not isinstance(value, str) or not DATE.fullmatch(value):
+        return False
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
 
 
 def check_shoreline(collection, region):
@@ -59,7 +71,7 @@ def check_shoreline(collection, region):
     west, south, east, north = region['bounds']
     for feature in collection['features']:
         properties, geometry = feature.get('properties') or {}, feature.get('geometry') or {}
-        if not DATE.fullmatch(str(properties.get('source_date'))) or properties.get('DAT_SET_CR') != 'NOAA':
+        if not _calendar_date(properties.get('source_date')) or properties.get('DAT_SET_CR') != 'NOAA':
             raise ValueError(f"Shoreline feature {feature.get('id')} lacks a source date or a NOAA creator")
         lines = {'LineString': [geometry.get('coordinates')], 'MultiLineString': geometry.get('coordinates')}.get(geometry.get('type'))
         if not lines or any(len(line) < 2 or any(not (west <= x <= east and south <= y <= north) for x, y in line)
