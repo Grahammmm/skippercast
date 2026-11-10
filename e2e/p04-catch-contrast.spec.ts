@@ -329,14 +329,14 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
   // RF1925-1: only appCss pin and applicability comment change.
   "scripts/check_contrast.mjs": "cb7c5eabf33fb4e942201925caba58418ee934fb0de6d1f26ce3b4466849befb",
-  // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
-  // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
-  // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
+  // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
+  // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
+  // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
   // renders Reports with preact from these pins, but no CSS, token, font or catch markup source changes; the
   // measured colours come from the pinned styles above. Reports never mounts MapStage, so maplibre-gl and three
   // are not loaded. contrast(), assertions and thresholds are untouched. Rebind only these two.
-  "package.json": "b9fe30cef565b90f8995e9956cfc43f99bcbe103e72387bd73d215f8247a4774",
-  "pnpm-lock.yaml": "1b0d51c0eecc804cf6687293d7a92763057574fbb63686e43f2c5d86b7f65223",
+  "package.json": "83cef009e623dee19207f8ebc741b0604766989616387917901c5c654561edb3",
+  "pnpm-lock.yaml": "c9cf4a7e91697552fadd98575e199cf3be17d7fbdafd83949865222573cb736a",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {
