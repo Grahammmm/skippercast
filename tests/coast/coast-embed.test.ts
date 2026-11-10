@@ -94,11 +94,22 @@ function fixture(){
   attached:()=>attached,viewer:()=>viewerArgs!,restore:()=>Object.assign(globalThis,saved)};
 }
 
+/** The managed template: the standalone scene's outer main becomes a named group, and nothing else changes. */
+function assertManagedTemplate(text:string){
+ const open='<main id="scene"',close='</main>',label=' aria-label="Shared 2D and 3D Central Coast terrain">';
+ assert.ok(coastSceneMarkup.startsWith(open+label)&&coastSceneMarkup.endsWith(close));
+ const inner=coastSceneMarkup.slice((open+label).length,-close.length);
+ assert.ok(text.startsWith('<div id="scene" role="group"'+label),'the scene is a named group');
+ assert.ok(text.endsWith('</div>'+coastSourcesMarkup),'the sources dialog markup follows, unchanged');
+ assert.equal(text.slice('<div id="scene" role="group"'.length+label.length,-('</div>'+coastSourcesMarkup).length)===inner,true,'descendants are the template\'s own, byte for byte');
+ assert.equal(/<main[\s>]|role="main"/.test(text),false,'a reusable renderer owns no main landmark');
+}
+
 test('mounting adapts the scene for a managed host as v1 did',()=>{
  const f=fixture();
  try{
   f.mount({styles:['/a.css','/b.css'],forecastHref:'#forecast'});
-  assert.equal(f.attached(),1);assert.deepEqual(f.parsed,[coastEmbedTemplate]);
+  assert.equal(f.attached(),1);assert.equal(f.parsed.length,1);assertManagedTemplate(f.parsed[0]!);
   assert.deepEqual(f.root.children.map(n=>n.href??n.id),['/a.css','/b.css','scene','sources']);
   assert.deepEqual(f.root.children.slice(0,2).map(n=>n.rel),['stylesheet','stylesheet']);
   assert.equal(f.selected.get('.intro')!.hidden,true);
@@ -293,4 +304,31 @@ test('host-chrome setters change the scene and readings, target detail and sourc
   assert.equal(node('target-detail').hidden,false);v.selectHabitat(null);assert.deepEqual(details.slice(1),[null]);assert.equal(node('target-detail').hidden,true);
   for(const id of ['relief','sun-azimuth','photo-mix','fixed-ramp','water-opacity','water','contours','source-coverage','habitat','zoom-in','reset','reading','target-detail','.coverage-key'])assert.ok(looked.includes(id),id+' resolves outside the root');
  }finally{Object.assign(globalThis,saved);}
+});
+
+test('managed_embed_has_no_main: native and host chrome, created and supplied roots, parse a main-free scene and destroy or remount cleanly',()=>{
+ for(const chrome of ['native','host'] as const)for(const supplied of [false,true]){
+  const f=fixture();
+  try{
+   const first=f.mount({chrome,...(supplied?{root:f.root as unknown as ShadowRoot}:{})});
+   assert.equal(f.attached(),supplied?0:1,`${chrome} ${supplied?'supplied':'created'} root`);
+   assert.equal(f.parsed.length,1);assertManagedTemplate(f.parsed[0]!);
+   assert.equal(f.parsed[0]!.includes('id="sources"'),true,'the sources dialog and every bound id survive');
+   assert.throws(()=>f.mount({chrome,...(supplied?{root:f.root as unknown as ShadowRoot}:{})}),/already holds a mounted coast/,'a live mount is still refused');
+   assert.equal(f.parsed.length,1,'a refused mount parses nothing');
+   first.destroy();first.destroy();
+   assert.deepEqual(f.calls,[['destroy']],'exactly one cleanup per handle');
+   const second=f.mount({chrome,...(supplied?{root:f.root as unknown as ShadowRoot}:{})});
+   assert.equal(f.parsed.length,2);assertManagedTemplate(f.parsed[1]!);
+   assert.notEqual(f.viewer().scene,f.docs[0]!.get('scene'),'the remount builds a fresh scene');
+   second.destroy();assert.deepEqual(f.root.children,[]);
+  }finally{f.restore();}
+ }
+});
+
+test('the template itself still opens with its main for the standalone digests; only the managed parse changes',()=>{
+ assert.equal(coastEmbedTemplate.startsWith('<main id="scene"'),true);
+ assert.equal(sha256(coastSceneMarkup),'e27748cde200cec25a8d43a9906e80be84a3d763d909a6ba2fec07f079e3faaf');
+ const f=fixture();
+ try{f.mount();assert.notEqual(f.parsed[0],coastEmbedTemplate,'the managed parse is not the raw template');}finally{f.restore();}
 });
