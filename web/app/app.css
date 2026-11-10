@@ -431,7 +431,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-mobile-page { position: absolute; left: 0; right: 0; top: calc(var(--app-strip) + var(--touch-min) + var(--space-3)); bottom: var(--app-tabs); z-index: var(--z-map-chrome); overflow: auto; border-top: 1px solid var(--line); background: var(--bg); }
 
 /* Your limits (#542): the profile's comfort limits form in its own modal dialog (the port dialog's look) */
-.app-limits-dialog { width: min(480px, calc(100% - var(--space-6))); max-height: calc(100% - var(--space-6)); padding: var(--space-4) var(--space-5) var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3); }
+.app-limits-dialog { box-sizing: border-box; width: min(480px, calc(100% - var(--space-6))); max-height: calc(100% - var(--space-6)); overflow: auto; padding: var(--space-4) var(--space-5) var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3); }
 .app-limits-dialog::backdrop { background: color-mix(in srgb, var(--bg-deep) 70%, transparent); }
 .app-limits-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
 .app-limits-head h2 { flex: 1; margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
@@ -444,6 +444,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-limits-field input:focus-visible, .app-limits-field select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-limits-hint { grid-column: 1 / -1; color: var(--muted); font-size: var(--text-11); }
 .app-limits-note { color: var(--muted); font-size: var(--text-13); }
+.app-limits-dialog .app-limits-actions { position: sticky; bottom: 0; z-index: 1; padding-block: var(--space-2); background: var(--panel); }
 .app-limits-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .app-limits-trigger[data-own="true"] { color: var(--mint); }
 

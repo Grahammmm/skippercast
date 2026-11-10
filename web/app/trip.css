@@ -4,7 +4,7 @@
    offline section. Loaded after web/app/account.css. Every value is a token. */
 
 .app-trip {
-  width: min(720px, calc(100% - var(--space-6))); max-height: calc(100% - var(--space-6)); overflow: auto; padding: var(--space-4) var(--space-5) var(--space-5);
+  box-sizing: border-box; width: min(720px, calc(100% - var(--space-6))); max-height: calc(100% - var(--space-6)); overflow: auto; padding: var(--space-4) var(--space-5) var(--space-5);
   border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3);
   font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans);
 }
@@ -42,6 +42,7 @@
 .app-trip .export-transfer h2 { margin: 0 0 var(--space-2); font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); }
 
 /* Save for offline */
+.port-dialog .app-offline-actions { position: sticky; top: 0; bottom: 0; z-index: 1; padding-block: var(--space-2); background: var(--panel); }
 .app-offline { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
 .app-offline h3 { margin: 0; font: var(--weight-semibold) var(--text-15) / var(--leading-heading) var(--font-sans); }
 .app-offline p { margin: 0; color: var(--muted); font-size: var(--text-13); }
