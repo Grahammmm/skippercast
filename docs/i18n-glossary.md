@@ -54,6 +54,10 @@ app-written copy.
 | out at sea: not a harbor or launch reading | `mar adentro: no es una lectura del puerto ni del punto de salida al agua` | Not in the catalogue at the checked revision |
 | straight line | `en línea recta` | Not in the catalogue at the checked revision |
 | by water | `por agua` | Not in the catalogue at the checked revision |
+| Blank (no catch), private device log | `Sin captura (no se registró ninguna captura)`; never `desconocido` or zero fish | `privateMapLog.kind.blank`, `privateMapLog.logBlank`, `privateMapLog.explain` |
+| Private device log (device-only, not the account catch log) | `Registro privado del dispositivo` | `privateMapLog.title`, `privateMapLog.count`, `privateMapLog.countUnavailable`, `privateMapLog.readFailed` |
+| NOT FOR NAVIGATION (device-log caveat) | `NO USAR PARA NAVEGACIÓN.` | `privateMapLog.privacy` |
+| model snapshot, not an on-water observation | `instantáneas del modelo … no observaciones en el agua` | `privateMapLog.evidence`; stored snapshots stay English (`privateMapLog.snapshotEnglish`), and `privateMapLog.snapshot.*` are rendered only in English inside `lang="en"` |
 
 Related caveats that are distinct and already present, not divergences:
 
