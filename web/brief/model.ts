@@ -14,6 +14,7 @@
 // Erasable syntax only: Node tests import this file by type stripping.
 import {buildDaily, dateKey, type DailyBrief} from '../../packages/coast/src/daily.ts';
 import type {ComfortLimits} from '../../packages/coast/src/limits.ts';
+import {periodSecondsText} from '../../packages/coast/src/period-display.ts';
 import {resolveReportBinding, type CoastReportContext} from '../../packages/coast/src/state/report-binding.ts';
 import type {Alert, Area, ChlorophyllReading, County, ForecastHour, Observation, Report, SourceStatus, TideEvent} from '../../packages/coast/src/types.ts';
 import {profileSemantics, type Profile} from '../profile.ts';
@@ -100,8 +101,8 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     const period = hour?.wavePeriodS ?? hour?.swellPeriodS ?? null;
     const kayakSeas = kayakHour && kayakHour.seas.band !== 'Unknown'
       ? ` · ${kayakHour.seas.band.toLowerCase()} seas${kayakHour.seas.chop ? ' · short-period chop' : ''}${kayakHour.launchCaution ? ` · surf at the launch${kayakHour.launch.basis === 'offshore' ? ' (offshore estimate)' : ''}` : ''}` : '';
-    swell = tile('swell', 'Swell', hour?.waveFt ?? null, 'ft', (finite(period) ? `${period} s · offshore forecast` : 'offshore forecast') + kayakSeas, forecastSource, issued, TILE_LIMIT_MS.swell, now, false,
-      {parts: [...(finite(period) ? [{kind: 'literal', text: `${period} s`} as TileDetailPart] : []), {kind: 'offshoreForecast'}, ...(kayakHour && kayakHour.seas.band !== 'Unknown' ? [{kind: 'kayakSeas', band: kayakHour.seas.band} as TileDetailPart,
+    swell = tile('swell', 'Swell', hour?.waveFt ?? null, 'ft', (finite(period) ? `${periodSecondsText(period)} s · offshore forecast` : 'offshore forecast') + kayakSeas, forecastSource, issued, TILE_LIMIT_MS.swell, now, false,
+      {parts: [...(finite(period) ? [{kind: 'literal', text: `${periodSecondsText(period)} s`} as TileDetailPart] : []), {kind: 'offshoreForecast'}, ...(kayakHour && kayakHour.seas.band !== 'Unknown' ? [{kind: 'kayakSeas', band: kayakHour.seas.band} as TileDetailPart,
         ...(kayakHour.seas.chop ? [{kind: 'shortChop'} as TileDetailPart] : []), ...(kayakHour.launchCaution ? [{kind: 'launchSurf', offshore: kayakHour.launch.basis === 'offshore'} as TileDetailPart] : [])] : [])],
         ...(forecastSource ? {} : {sourceMissing: true})});
   } else {
@@ -113,9 +114,9 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     const surge = surgeHour && surgeHour.surge.band !== 'Unknown' ? ` · ${surgeHour.surge.band.toLowerCase()} surge` : '';
     const surf = shoreHour && shoreHour.surf.band !== 'Unknown'
       ? ` · ${shoreHour.surf.band.toLowerCase()} surf${shoreHour.surf.basis === 'offshore' ? ' (offshore estimate)' : ''}${shoreHour.surf.sneaker ? ' · long-period swell' : ''}` : '';
-    swell = tile('swell', 'Swell', point?.waveFt ?? null, 'ft', (site ? `${finite(point?.periodS) ? `${point.periodS} s · ` : ''}${site.name}` : 'No nearshore model site') + surge + surf,
+    swell = tile('swell', 'Swell', point?.waveFt ?? null, 'ft', (site ? `${finite(point?.periodS) ? `${periodSecondsText(point.periodS)} s · ` : ''}${site.name}` : 'No nearshore model site') + surge + surf,
       site ? {label: site.name, url: site.url} : null, site?.fetchedAt ?? null, TILE_LIMIT_MS.nearshore, now, false,
-      {parts: [...(site ? [...(finite(point?.periodS) ? [{kind: 'literal', text: `${point.periodS} s`} as TileDetailPart] : []), {kind: 'literal', text: site.name} as TileDetailPart] : [{kind: 'noNearshore'} as TileDetailPart]),
+      {parts: [...(site ? [...(finite(point?.periodS) ? [{kind: 'literal', text: `${periodSecondsText(point.periodS)} s`} as TileDetailPart] : []), {kind: 'literal', text: site.name} as TileDetailPart] : [{kind: 'noNearshore'} as TileDetailPart]),
         ...(surgeHour && surgeHour.surge.band !== 'Unknown' ? [{kind: 'surge', band: surgeHour.surge.band} as TileDetailPart] : []),
         ...(shoreHour && shoreHour.surf.band !== 'Unknown' ? [{kind: 'surf', band: shoreHour.surf.band, offshore: shoreHour.surf.basis === 'offshore'} as TileDetailPart, ...(shoreHour.surf.sneaker ? [{kind: 'longSwell'} as TileDetailPart] : [])] : [])],
         ...(site ? {} : {sourceMissing: true})});
