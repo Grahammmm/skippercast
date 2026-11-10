@@ -257,6 +257,9 @@ def vessels(rows: Iterable[dict[str, str]], service: str) -> list[Vessel]:
     return [v for v in found if _norm(v.latest["flag"]) == _norm(US_FLAG) and v.latest["name"]]
 
 
+_OFFICIAL = re.compile(r"[0-9]{5,8}")
+
+
 def candidates(found: Iterable[Vessel], *, source_id: str, rights: str, retrieved_at: str,
                fallback_url: str) -> Iterator[Candidate]:
     for vessel in found:
@@ -270,8 +273,8 @@ def candidates(found: Iterable[Vessel], *, source_id: str, rights: str, retrieve
         name = re.sub(r"\s+", " ", latest["name"]).strip()
         keys: dict[str, str] = {}
         facts = [fact("name", name, 0.8)]
-        official = re.sub(r"\D", "", latest["official"])
-        if 5 <= len(official) <= 8:
+        official = latest["official"].strip()
+        if _OFFICIAL.fullmatch(official):  # never repaired: a malformed token is dropped, not turned into another number
             keys["uscg_doc"] = official
             facts.append(fact("uscg_doc", official, 0.95))
         call_sign = latest["call_sign"].upper().replace(" ", "")

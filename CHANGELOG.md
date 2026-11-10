@@ -12,6 +12,8 @@
 
 - RF0814-8: a depth-contour file whose review expiry is an impossible calendar date (such as 2026-11-31 or 2027-02-29) now fails the existing contour check instead of drawing and exporting; real dates keep drawing through their last day and are withheld the next day.
 
+- RF0834-6: the USCG PSIX registry adapter no longer builds an official number by deleting the non-digits from a workbook value. Only a value that is already 5 to 8 plain digits becomes the document-number key and fact; anything else (letters, signs, decimals, exponent forms) leaves that one key out so it cannot attach facts to the wrong vessel, while the name, call sign and other facts are kept.
+
 - RF0844-6: SST front extraction preserves native grid origins and coordinates, so half-offset grids no longer falsely conflict; true overlapping-measurement conflicts still refuse publication.
 
 - RF0814-9: the admin fleet map's Activity type filter now also narrows the returned track segments, so a mixed-mode trip no longer draws fishing modes that were not selected; trip eligibility, paging, events and heat are unchanged.
