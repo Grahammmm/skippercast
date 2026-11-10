@@ -12,6 +12,7 @@ import {mkdtemp} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {isDeepStrictEqual} from 'node:util';
 import {build} from 'esbuild';
 import {FRAME, projector, shorelineModule, simplify} from '../scripts/build_landing_shoreline.mjs';
 import {DEFAULT_PLACE, ageText, buoyReadings, compass, feedPath, feedState, fromHarbor, loadReadout, placeLabel, tideReading, tideURL} from '../web/landing/readings.ts';
@@ -19,6 +20,7 @@ import {saveData} from '../web/landing/save-data.ts';
 import {warmApp, warmList} from '../web/landing/warm.ts';
 import {ASSET, regionWarmList, warmRegion} from '../web/landing/region-warm.ts';
 import {RAIL_IDS} from '../web/profile.ts';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const NOW = Date.parse('2026-10-07T20:00:00Z');
@@ -153,12 +155,13 @@ async function load() {
       export {Shoreline, ShorelineCredit} from './web/landing/Shoreline.tsx';
       export {SHORELINE} from './web/landing/shoreline-path.ts';
       export {Readout} from './web/landing/Readout.tsx';
-      export {LayerDots, layerURL, DOT_CURRENT, DOT_LABELS} from './web/landing/LayerDots.tsx';
-      export {RAIL_ENTRIES} from './web/app/rail.ts';
+      export {LayerDots, layerURL, DOT_CURRENT, DOT_LABELS, dotLabels} from './web/landing/LayerDots.tsx';
+      export {language} from './web/landing/i18n.ts';
+      export {RAIL_ENTRIES, railEntries} from './web/app/rail.ts';
       export {DEFAULT_CURRENT, STORAGE_KEYS} from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h, render as renderDOM, options} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
   components = await import(pathToFileURL(out).href);
   return components;
@@ -346,6 +349,32 @@ test('layer dots link each rail entry into the app with that layer, keeping the 
   // FE-20 (#482): the Currents dot names the source the rail's toggle turns on, so the map opens with Currents drawn.
   assert.equal(DOT_CURRENT, DEFAULT_CURRENT);
   assert.match(html, /href="https:\/\/s\.test\/map\?region=morro-bay&amp;layers=currents&amp;current=wcofs&amp;ui=v2" data-layer="currents">/);
+});
+
+test('landing_dots_es_and_en: the dots and their nav name follow the page language; links, order and preview ids stay the same', async () => {
+  const {LayerDots, DOT_LABELS, dotLabels, railEntries, language, render, h} = await load();
+  for (const lang of ['en', 'es']) assert.ok(isDeepStrictEqual(dotLabels(lang), Object.fromEntries(railEntries(lang).map(e => [e.id, e.label]))), `${lang}: the dots carry the rail labels`);
+  assert.ok(isDeepStrictEqual(DOT_LABELS, dotLabels('en')), 'the English compatibility map');
+  const props = {href: 'https://s.test/?ui=v2&utm=x', region: 'morro-bay'}, links = s => [...s.matchAll(/<a href="([^"]+)" data-layer="([a-z-]+)">/g)].map(m => `${m[1]} ${m[2]}`);
+  const names = s => [...s.matchAll(/<span class="landing-dot-name">([^<]+)<\/span>/g)].map(m => m[1]);
+  const en = render(h(LayerDots, props));
+  assert.match(en, /<nav class="landing-dots" aria-label="Map layers">/);
+  assert.deepEqual(names(en), RAIL_IDS.map(id => DOT_LABELS[id]));
+  let es;
+  language.value = 'es';
+  try { es = render(h(LayerDots, props)); } finally { language.value = 'en'; }
+  assert.match(es, /<nav class="landing-dots" aria-label="Capas del mapa">/);
+  assert.deepEqual(names(es), RAIL_IDS.map(id => dotLabels('es')[id]));
+  assert.ok(names(es).includes('Fondo marino') && names(es).includes('Oleaje y viento') && !names(es).includes('Seafloor'), 'Spanish names, not English');
+  assert.deepEqual(links(es), links(en), 'the same links in the same order (ui switch, current=wcofs)');
+  assert.equal(render(h(LayerDots, props)), en, 'back in English the dots are the old bytes');
+  // Hover and focus report the layer id, never the translated name; leaving reports null.
+  const seen = [], anchors = [], walk = v => { if (!v || typeof v !== 'object') return; if (Array.isArray(v)) return v.forEach(walk); if (v.type === 'a') anchors.push(v.props); walk(v.props?.children); };
+  language.value = 'es';
+  try { walk(LayerDots({...props, onPreview: id => seen.push(id)})); } finally { language.value = 'en'; }
+  assert.equal(anchors.length, RAIL_IDS.length);
+  for (const a of anchors) { a.onPointerEnter(); a.onPointerLeave(); a.onFocus(); a.onBlur(); }
+  assert.deepEqual(seen, RAIL_IDS.flatMap(id => [id, null, id, null]));
 });
 
 let night;
