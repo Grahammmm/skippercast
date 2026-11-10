@@ -318,7 +318,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // appCss surface hash and its comment. BODY09 mounts Reports/CatchCards, never the run line or the legend; contrast(), catch paint, backing,
   // assertions and thresholds are unchanged. Rebind only these two sources.
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
-  "scripts/check_contrast.mjs": "8dc8363132248cd4db566b0f52d835f266abc508d423065bed4d1c2c4609c8fe",
+  "scripts/check_contrast.mjs": "aac830e26961c015051cd6f67b6a145642af1513487fec3777a0b83c9f98a10e",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
