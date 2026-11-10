@@ -112,12 +112,13 @@ def physical_source(row, *, physical_only=False):
 
     Reviewed compilation products (fetch.COMPILATION_PREFIXES) and URLs that
     are not in canonical form never count as physical depth, whatever a
-    hand-edited status says.
+    hand-edited status says. (Manifest rows always carry ``url``; the schema
+    requires it. Bare test rows without one keep the earlier behaviour.)
     """
     from .fetch import habitat_url_refusal
     return row['kind'] == 'bathymetry' and (
         row['status'] == 'usable' or physical_only and row['status'] == 'physical-only'
-    ) and habitat_url_refusal(row.get('url')) is None
+    ) and ('url' not in row or habitat_url_refusal(row['url']) is None)
 
 
 def qualify_row(row, receipt, *, rights_url, physical_only=False):
