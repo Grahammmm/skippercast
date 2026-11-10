@@ -79,16 +79,17 @@ export function readSaved(store: SavedStore | null, region: string, now: number)
   } catch { return null; }
 }
 
-export type SavedState = 'updating' | 'failed';
+export type SavedState = 'updating' | 'failed' | 'offline';
 
 /**
  * The "Last updated" line for a brief that is (partly) still the saved one. `at` is the oldest part's fetch time. It is amber
  * when that is older than the brief's own freshness limit (the forecast run's, verdict.ts RUN_STALE_MS) or when a reading
- * on screen is already stale; a clock that reads ahead of now is never fresh.
+ * on screen is already stale; a clock that reads ahead of now is never fresh. SC1722-03: `offline` is data the saved offline
+ * pack answered, at the time the pack saved it; it is a complete sentence of its own, with no "updating" tail.
  */
 export function savedLine(at: number, now: number, state: SavedState, readingsStale: boolean, tz: string, lang: Language = 'en'): {text: string; amber: boolean} {
   const age = now - at;
   const time = new Intl.DateTimeFormat(localeOf(lang), {weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: tz, timeZoneName: 'short'}).format(new Date(at));
-  const tail = t(state === 'failed' ? 'brief.saved.failed' : 'brief.saved.updating', lang);
-  return {text: `${t('brief.saved.line', lang, {time})} ${tail}`, amber: readingsStale || !(age >= 0) || age > RUN_STALE_MS};
+  const text = state === 'offline' ? t('brief.saved.offline', lang, {time}) : `${t('brief.saved.line', lang, {time})} ${t(state === 'failed' ? 'brief.saved.failed' : 'brief.saved.updating', lang)}`;
+  return {text, amber: readingsStale || !(age >= 0) || age > RUN_STALE_MS};
 }
