@@ -372,12 +372,13 @@ export function boundSurfaceContrast(request = {}) {
 // source bytes, including later overrides, rather than claiming a partial CSS
 // parser proves the cascade. A changed source must be reviewed/rebound; default
 // CLI and generic missing-background behavior remain unchanged pending review.
+// SC1722-14: form typography changes layout, not colour, alpha, backing or contrast thresholds.
 export const SURFACE_SOURCE_SHA256 = {
   // BF-wcag only adds min-height (24 px target floor) to .text-link, .history-provenance a and .sheet-links a; no paint changed.
   // SC1722-08 only raises the History chart scroller's focus ring to 2 px and adds one .history-measurement-note > summary focus ring; no unfocused paint changed.
   "panelCss": "f765e1221775a652f300a63e657f99eff3538179376a85f53361befa5de2b385",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
-  "tokensCss": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
+  "tokensCss": "85271ff5258cbbe3bfce09a7dc0b5c16ff1e31325b5a5f8d5d8a9fedd425dfd1",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
   // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.
@@ -404,7 +405,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1722-01 only appends a scoped .app-forecast-failed* block at the end of app.css (token text roles on the brief, not the legend glass);
   // no legend paint or backing changed and the cited line numbers above are unmoved.
   // SC1922-03 only adds a scoped .app-conditions-head model-family wrap/min-height rule after .app-conditions-head, plus a pointer-events-only rule for .app-presentation--placing (no paint); no colour, opacity, backing or text paint changed and legend glass is untouched.
-  "appCss": "4c1d82dcab0f536f4e79a32b4c4feb031ba7f6ac186d1f2ced21edc850448eee",
+  "appCss": "e97805202300329205f6f5904841d1dc97f7168fa006a4003f8d642d42496f0a",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
