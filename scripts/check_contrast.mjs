@@ -396,7 +396,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // no legend paint or backing changed and the cited line numbers above are unmoved.
   // SC1722-08 only consolidates link focus outlines (removes the .app-views and first-answer duplicates; the shared a:focus-visible rule is in ui.css), so
   // focus paint intentionally changes; unfocused legend text and backing are unchanged. Cited app.css lines after :29 moved up by one.
-  "appCss": "4208780a881d14a7626289f515ea4c74e80da5ea80ccd958be88f907da394fcf",
+  // SC1722-07 only adds the phone sheet's --sheet-hidden-offset custom property (vh and @supports dvh values mirroring the existing transforms) to the .app-sheet rules;
+  // no colour, opacity, backing or text paint changed and the cited line numbers above are unmoved.
+  "appCss": "3d4f0c9597a3fad6a9d95def3390399265f19c929fde68200fde047390bf1df7",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.

@@ -97,14 +97,24 @@
    dvh line after it where dvh is unsupported */
 .ui-sheet {
   --sheet-peek: 96px;
+  /* How far the detent's transform leaves the sheet below its resting place: the body pads its end by this much (SC1722-07). */
+  --sheet-hidden-offset: calc(92vh - var(--sheet-peek));
   position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-sheet); display: flex; flex-direction: column; height: 92vh; height: 92dvh;
   border-top: 1px solid var(--line); border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--panel); box-shadow: var(--elev-3); color: var(--text);
   transform: translateY(calc(92vh - var(--sheet-peek))); transform: translateY(calc(92dvh - var(--sheet-peek))); transition: transform var(--motion-sheet);
 }
-.ui-sheet[data-detent="half"] { transform: translateY(42vh); transform: translateY(42dvh); }
-.ui-sheet[data-detent="full"] { transform: translateY(0); }
+.ui-sheet[data-detent="half"] { transform: translateY(42vh); transform: translateY(42dvh); --sheet-hidden-offset: 42vh; }
+.ui-sheet[data-detent="full"] { transform: translateY(0); --sheet-hidden-offset: 0px; }
+/* A custom property cannot fall back by parse error the way the transform lines do, so the dvh values wait for @supports. */
+@supports (height: 1dvh) {
+  .ui-sheet { --sheet-hidden-offset: calc(92dvh - var(--sheet-peek)); }
+  .ui-sheet[data-detent="half"] { --sheet-hidden-offset: 42dvh; }
+  .ui-sheet[data-detent="full"] { --sheet-hidden-offset: 0px; }
+}
 .ui-sheet-edge { display: flex; flex-direction: column; flex: none; }
 .ui-sheet-handle { display: flex; align-items: center; justify-content: center; width: 100%; min-height: var(--touch-min); padding: 0; border: 0; background: transparent; touch-action: none; cursor: grab; }
 .ui-sheet-grip { width: 40px; height: var(--space-1); border-radius: var(--radius-pill); background: var(--muted); }
-.ui-sheet-body { flex: 1; overflow: auto; padding: 0 var(--space-4) var(--space-5); }
-.ui-sheet[data-detent="peek"] .ui-sheet-body { overflow: hidden; }
+/* The end of the body is padded by the detent's hidden offset plus the tab bar, so scrolling to the end brings the last row above the screen's bottom
+   at half too; the padding follows the settled detent, never a drag frame. contain: the sheet's scroll does not chain to the page (the body only). */
+.ui-sheet-body { flex: 1; min-height: 0; box-sizing: border-box; overflow: auto; overscroll-behavior: contain; padding: 0 var(--space-4) calc(var(--space-5) + max(0px, var(--sheet-hidden-offset)) + var(--app-tabs, 0px)); }
+.ui-sheet[data-detent="peek"] .ui-sheet-body { overflow: hidden; padding-bottom: var(--space-5); }

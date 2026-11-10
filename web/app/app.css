@@ -316,13 +316,19 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 
 /* The sheet sits on the tab bar and stops under the top strip's first row at full; its detents are ui.css's, offset by the tabs. */
 .app-sheet {
-  --sheet-peek: 176px; bottom: var(--app-tabs);
+  --sheet-peek: 176px; bottom: var(--app-tabs); --sheet-hidden-offset: calc(100vh - var(--app-tabs) - var(--app-strip) - var(--sheet-peek));
   height: calc(100vh - var(--app-tabs) - var(--app-strip)); height: calc(100dvh - var(--app-tabs) - var(--app-strip));
   transform: translateY(calc(100vh - var(--app-tabs) - var(--app-strip) - var(--sheet-peek))); transform: translateY(calc(100dvh - var(--app-tabs) - var(--app-strip) - var(--sheet-peek)));
 }
 .app-sheet--mark { --sheet-peek: 220px; }
-.app-sheet[data-detent="half"] { transform: translateY(calc(50vh - var(--app-tabs) - var(--app-strip))); transform: translateY(calc(50dvh - var(--app-tabs) - var(--app-strip))); }
+.app-sheet[data-detent="half"] { transform: translateY(calc(50vh - var(--app-tabs) - var(--app-strip))); transform: translateY(calc(50dvh - var(--app-tabs) - var(--app-strip))); --sheet-hidden-offset: calc(50vh - var(--app-tabs) - var(--app-strip)); }
 .app-sheet[data-detent="full"] { transform: translateY(0); }
+/* ui.css pads the sheet body's end by --sheet-hidden-offset: the app's own offsets, as its transforms above (dvh where supported). */
+@supports (height: 1dvh) {
+  .app-sheet { --sheet-hidden-offset: calc(100dvh - var(--app-tabs) - var(--app-strip) - var(--sheet-peek)); }
+  .app-sheet[data-detent="half"] { --sheet-hidden-offset: calc(50dvh - var(--app-tabs) - var(--app-strip)); }
+  .app-sheet[data-detent="full"] { --sheet-hidden-offset: 0px; }
+}
 .app-sheet-hour { display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4) var(--space-2); }
 .app-sheet-brief, .app-sheet-layers { display: flex; flex-direction: column; gap: var(--space-3); }
 .app-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--space-5); }
