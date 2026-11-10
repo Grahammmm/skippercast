@@ -141,6 +141,8 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
   await page.keyboard.press(atEnd ? 'Home' : 'End');
   await expect(slider).toHaveValue(expectedValue);
   await expect(page).toHaveURL(/[?&]hour=\d{4}-\d{2}-\d{2}T\d{2}%3A00Z/);
+  // The dock moves at once and the address settles on the chosen hour once, 100 ms after the last input (SC1407-05), so wait for it.
+  await expect(page).toHaveURL(u => u.searchParams.get('hour') === c.hour);
   expect(new URL(page.url()).searchParams.get('hour'), 'the hour in the address').toBe(c.hour);
   expect(new URL(page.url()).searchParams.get('day'), 'the day in the address').toBe(c.day);
   await expect(page.locator('.ui-dock-readout')).toHaveText(c.expected);
