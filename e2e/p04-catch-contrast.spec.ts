@@ -270,7 +270,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/app/views/hourly-table.css": "deddfad213ef5d81cd6f82be591b5259a874a1da2961c307df9a9ca1ef644ee0",
   "web/ui/guard.css": "8e53f065f8f7af23121f7eb346ebeefe571baa21eebf1b6179e27a8b86b74d11",
   // SC2037-04: Brief.tsx imports brief-print.css (only a hidden .app-print-only class and an @media print block; no screen paint); Reports bundles Brief.
-  "web/brief/brief-print.css": "35b695c448385cd449304ca7158d3b8c26dfe9db3d3a9c90ecd0c17796b45dc0",
+  // SC1407-05: brief-print.css adds only .app-hour-guard/.app-hour-settled (display: contents) and .app-hour-updating (muted margin-less line) screen rules plus print-hide rules for the pending dock hour; the Reports catch sheet mounts none of those classes (they wrap the desktop/phone brief verdict), so no counted catch paint changes. Rebound from the final bytes.
+  "web/brief/brief-print.css": "c04bce48a759c7877f4a7a87fb0631178f0fe60bb4eac6aa6a23ed610d4fca6b",
   "web/app/views/model-disagreement.css": "c6edfd6e81395b8d5e9fe67e982e399989172765490456f6a28ec036c115b72c",
   "packages/coast/panel.css": "f765e1221775a652f300a63e657f99eff3538179376a85f53361befa5de2b385",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
