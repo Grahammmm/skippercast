@@ -13,6 +13,7 @@ import {dockTime, horizonDays, localParts, nearestHour, nextHour, play, type Doc
 import {day, hour, hourParam, setParams} from '../state.ts';
 import {zone} from './App.tsx';
 import {language, localeOf, t, type Language} from '../i18n.ts';
+import {useDayVerdicts, withVerdicts} from './day-verdicts.ts';
 
 export {localParts};
 export const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
@@ -83,7 +84,7 @@ function useReducedMotion(): boolean {
 
 export function TimeDock({now = new Date()}: {now?: Date} = {}) {
   const tz = zone(), lang = language.value;
-  const state = dockState(now, tz);
+  const state = dockState(now, tz), answers = useDayVerdicts(now, tz);
   const reduced = useReducedMotion();
   const [playing, setPlaying] = useState(false);
   useEffect(() => {
@@ -102,7 +103,7 @@ export function TimeDock({now = new Date()}: {now?: Date} = {}) {
   const at = (i: number): number => state.hours[i] ?? state.at;
   return (
     <div class="app-dock" ref={dock}>
-      <Dock days={dayOptions(now, tz, state.day, lang)} labels={dockLabels(lang)} day={state.day} onDay={d => selectDay(now, tz, d, state)} playing={playing} onPlay={setPlaying}
+      <Dock days={withVerdicts(dayOptions(now, tz, state.day, lang), answers, lang)} labels={dockLabels(lang)} day={state.day} onDay={d => selectDay(now, tz, d, state)} playing={playing} onPlay={setPlaying}
         stepOnly={reduced} advanceDisabled={nextHour(state.at, now) === null} hour={Math.max(0, state.index)} hours={state.index < 0 ? 1 : state.hours.length} disabled={state.index < 0}
         onHour={i => selectHour(now, tz, at(i))} hourText={i => state.index < 0 ? readout(state, tz, lang) : hourText(localParts(new Date(at(i)), tz).hour, lang)} />
       <span class="app-dock-zone ui-mono">{zoneName(new Date(state.at), tz)}</span>

@@ -99,14 +99,23 @@ def usable_frames(tiles, now, limit_hours):
 
 
 def _grid(rows, res):
-    grid = {}
+    measured_cells = []
     for lat, lon, temp, err in rows:
         if temp is None or err is None:
             continue  # land, cloud or no error figure: not judged
         t = _number(temp, *TEMP_RANGE_C, "temperature_c")
         e = _number(err, 0, MAX_ERROR_C, "analysis_error_c")
         y, x = _number(lat, -90, 90, "latitude"), _number(lon, -180, 180, "longitude")
-        address, measured = (round(y / res), round(x / res)), (t, e, y)
+        measured_cells.append((t, e, y, x))
+    if not measured_cells:
+        return {}
+    # One native origin for the pooled observation; relative steps retain gaps.
+    origin_y = min(c[2] for c in measured_cells)
+    origin_x = min(c[3] for c in measured_cells)
+    grid = {}
+    for measured in measured_cells:
+        _, _, y, x = measured
+        address = (round((y - origin_y) / res), round((x - origin_x) / res))
         if grid.setdefault(address, measured) != measured:  # identical overlaps are harmless; conflicts never pick a winner
             raise SstFrontError(f"conflicting overlapping measurements at grid address {address}")
     return grid
@@ -116,14 +125,14 @@ def _change(grid, a, b, km):
     """Temperature change per km across neighbours a and b, 0 unless it exceeds their summed error."""
     if a not in grid or b not in grid:
         return None
-    (ta, ea, _), (tb, eb, _) = grid[a], grid[b]
+    (ta, ea, _, _), (tb, eb, _, _) = grid[a], grid[b]
     return (tb - ta) / km if abs(tb - ta) > ea + eb else 0.0
 
 
 def ridge(grid, res):
     """Cells holding the local maximum of supported temperature change, with that change in °C per km."""
     strength = {}
-    for (i, j), (_, _, lat) in grid.items():
+    for (i, j), (_, _, lat, _) in grid.items():
         gy = _change(grid, (i - 1, j), (i + 1, j), 2 * res * KM_PER_DEGREE) or 0.0
         gx = _change(grid, (i, j - 1), (i, j + 1), 2 * res * KM_PER_DEGREE * max(math.cos(math.radians(lat)), 1e-6)) or 0.0
         if gx or gy:
@@ -177,7 +186,7 @@ def fronts_for(rows, res, when):
             continue
         strength = sum(kept[c] for c in part) / len(part)
         error = sum(grid[c][1] for c in part) / len(part)
-        coords = [[[round(c[1] * res, 5), round(c[0] * res, 5)] for c in line] for line in _lines(part)]
+        coords = [[[round(grid[c][3], 5), round(grid[c][2], 5)] for c in line] for line in _lines(part)]
         out.append({"observed_at": when.isoformat(timespec="seconds").replace("+00:00", "Z"), "cells": len(part),
                     "strength_c_per_km": round(strength, 4), "uncertainty_c": round(error, 3),
                     "band_half_width_km": round(error / strength, 3),

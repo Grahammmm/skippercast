@@ -5,6 +5,7 @@
 // vessel names, example ports, MMSIs 999xxxxxx and made-up positions.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {isDeepStrictEqual} from 'node:util';
 import {readFileSync} from 'node:fs';
 import {advisorDatabase, sqliteUnavailable} from './_advisor_d1.mjs';
 
@@ -204,6 +205,134 @@ test('acceptance 1: each tracks filter narrows the seeded trips; segments decode
     assert.equal(all.meta.trips, 1);
     assert.equal(all.features[0].properties.vessel_class, 'inspected-party');
     assert.equal(all.features[0].properties.trip_type, 'full-day');
+  } finally { sql.close(); }
+});
+
+// Mixed-mode fixture (RF0814-9), added per test so the predecessor fixtures keep their coverage: three trips of one vessel,
+// each with all three fishing modes (plus transit, uncertain, gap and in-port segments that carry geometry) and an event per mode.
+// m3's troll-slow segment has no geometry; the trips sit apart in space.
+const MODES = ['drift-anchor', 'troll-slow', 'troll-pelagic'];
+const MIXED = [['m1', '2026-08-01T12:00:00Z', 35.60], ['m2', '2026-08-02T12:00:00Z', 35.70], ['m3', '2026-08-03T12:00:00Z', 35.80]];
+function addMixed(sql) {
+  const vessel = sql.prepare(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,vessel_class,port_id,mmsi,status,profile_status,first_seen_at,last_seen_at,created_at,updated_at)
+    VALUES('v-mixed',?,'mixed-example','Mixed Example','mixed example','six-pack','morro-bay','999000009','active','hidden',?,?,?,?)`);
+  vessel.run(REGION, NOW, NOW, NOW, NOW);
+  const trip = sql.prepare(`INSERT INTO fleet_trips(id,region,vessel_id,mmsi,depart_port_id,return_port_id,departed_at,returned_at,local_date,season,season_part,status,
+    trip_type_inferred,source,rights,classifier_version,computed_at) VALUES(?,?,'v-mixed','999000009','morro-bay','morro-bay',?,?,?,'2026','summer','closed','half-day','aisstream','internal-only','cv-test',?)`);
+  const segment = sql.prepare('INSERT INTO fleet_segments(id,trip_id,seq,kind,started_at,ended_at,geometry,points_n) VALUES(?,?,?,?,?,?,?,?)');
+  const event = sql.prepare(`INSERT INTO fleet_events(id,trip_id,segment_id,vessel_id,region,kind,lat,lon,radius_m,started_at,ended_at,dwell_min,port_id,vessel_class,trip_type,
+    season,season_part,source,rights,classifier_version) VALUES(?,?,?,'v-mixed',?,?,?,?,80,?,?,30,'morro-bay','six-pack','half-day','2026','summer','aisstream','internal-only','cv-test')`);
+  for (const [id, at, lat] of MIXED) {
+    trip.run(id, REGION, at, at, at.slice(0, 10), NOW);
+    const line = [[-121.0, lat], [-120.99, lat + 0.01]];
+    [['transit', true], ['drift-anchor', true], ['troll-slow', id !== 'm3'], ['troll-pelagic', true], ['uncertain', true], ['gap', true], ['in-port', true]].forEach(([kind, drawable], seq) =>
+      segment.run(`${id}-s${seq}`, id, seq, kind, NOW, NOW, drawable ? encode(line) : null, drawable ? 2 : 0));
+    MODES.forEach((kind, i) => event.run(`${id}-e${i}`, id, `${id}-s${i + 1}`, REGION, kind, lat, -121.0, at, at));
+  }
+}
+const kinds = page => page.features.map(f => f.properties.segment_kind).sort();
+const mixedIds = page => page.features.map(f => f.id).sort();
+
+test('tracks_kind_filters_mixed_mode_segments', skip, async () => {
+  const {sql, get} = setup();
+  try {
+    addMixed(sql);
+    const q = `/api/fleet/map/tracks?region=${REGION}&vessel=v-mixed`;
+    const whole = await get(q);
+    assert.deepEqual(mixedIds(whole), ['m1-s1', 'm1-s2', 'm1-s3', 'm2-s1', 'm2-s2', 'm2-s3', 'm3-s1', 'm3-s3']);
+    for (const [kind, seq] of [['drift-anchor', 1], ['troll-slow', 2], ['troll-pelagic', 3]]) {
+      const page = await get(`${q}&kind=${kind}`);
+      const expected = ['m1', 'm2', 'm3'].map(t => `${t}-s${seq}`).filter(id => id !== 'm3-s2');
+      assert.deepEqual(mixedIds(page), expected, kind);
+      assert.ok(page.features.every(f => f.properties.segment_kind === kind), kind);
+      assert.equal(page.meta.count, expected.length, kind);
+      assert.equal(page.meta.trips, 3, kind);
+      const events = await get(`/api/fleet/map/events?region=${REGION}&vessel=v-mixed&kind=${kind}`);
+      assert.deepEqual(events.features.map(f => f.properties.kind), [kind, kind, kind], `${kind}: events unchanged`);
+    }
+    const two = await get(`${q}&kind=drift-anchor,troll-slow`);
+    assert.deepEqual(mixedIds(two), ['m1-s1', 'm1-s2', 'm2-s1', 'm2-s2', 'm3-s1']);
+    assert.ok(two.features.every(f => ['drift-anchor', 'troll-slow'].includes(f.properties.segment_kind)));
+    assert.equal(two.meta.trips, 3);
+    // Geometry, rights, basis, claim and planning fields of a kept segment are what the unfiltered layer returned.
+    const kept = (await get(`${q}&kind=troll-pelagic`)).features.find(f => f.id === 'm1-s3');
+    const same = whole.features.find(f => f.id === 'm1-s3');
+    assert.ok(isDeepStrictEqual(kept, same), 'a kept segment is unchanged by the filter');
+    assert.deepEqual(kept.geometry, {type: 'LineString', coordinates: [[-121, 35.6], [-120.99, 35.61]]});
+    assert.equal(kept.properties.rights, 'internal-only');
+    assert.equal(kept.properties.planning_only, false);
+    assert.ok(kept.properties.basis && kept.properties.claim);
+  } finally { sql.close(); }
+});
+
+test('tracks_empty_kind_keeps_all_fishing_modes', skip, async () => {
+  const {sql, as, get} = setup();
+  try {
+    addMixed(sql);
+    const q = `/api/fleet/map/tracks?region=${REGION}&vessel=v-mixed`;
+    for (const path of [q, `${q}&kind=`]) {
+      const page = await get(path);
+      assert.deepEqual(kinds(page), ['drift-anchor', 'drift-anchor', 'drift-anchor', 'troll-pelagic', 'troll-pelagic', 'troll-pelagic', 'troll-slow', 'troll-slow'], path);
+      for (const other of ['transit', 'uncertain', 'gap', 'in-port']) assert.ok(!kinds(page).includes(other), `${path}: ${other} stays out`);
+    }
+    for (const bad of ['transit', 'gap', 'in-port', 'uncertain', 'nonsense', 'drift-anchor,transit']) {
+      assert.equal((await as(`${q}&kind=${bad}`)).status, 400, bad);
+    }
+  } finally { sql.close(); }
+});
+
+test('tracks_kind_preserves_trip_eligibility_and_paging', skip, async () => {
+  const {sql, get} = setup();
+  try {
+    addMixed(sql);
+    const q = `/api/fleet/map/tracks?region=${REGION}&vessel=v-mixed&kind=troll-slow&limit=1`;
+    const walk = async extra => {
+      const pages = []; let cursor = null;
+      do {
+        const page = await get(`${q}${extra}${cursor ? `&cursor=${cursor}` : ''}`);
+        pages.push(page); cursor = page.meta.next;
+      } while (cursor && pages.length < 10);
+      return pages;
+    };
+    // Newest trip first. m3 qualifies by its event but has no drawable troll-slow segment: an empty page whose cursor still advances.
+    const pages = await walk('');
+    assert.deepEqual(pages.map(p => mixedIds(p)), [[], ['m2-s2'], ['m1-s2']]);
+    assert.deepEqual(pages.map(p => p.meta.trips), [1, 1, 1]);
+    assert.deepEqual(pages.map(p => p.meta.count), [0, 1, 1]);
+    assert.ok(pages[0].meta.next && pages[1].meta.next && pages[2].meta.next === null);
+    assert.equal(new Set(pages.map(p => p.meta.next)).size, 3, 'cursors are distinct');
+    // The same first cursor as the unfiltered layer: eligibility and ordering are by trip.
+    const unfiltered = await get(`/api/fleet/map/tracks?region=${REGION}&vessel=v-mixed&limit=1`);
+    assert.equal(unfiltered.meta.next, pages[0].meta.next);
+    // A bbox that holds nothing empties every page, never stalls the walk, and returns no other mode.
+    const boxed = await walk('&bbox=-100,10,-99,11');
+    assert.equal(boxed.length, 3);
+    assert.ok(boxed.every(p => p.features.length === 0 && p.meta.trips === 1));
+    assert.equal(boxed.at(-1).meta.next, null);
+    // A bbox around m2 only: the selected segment of m2 alone is drawn.
+    const around = await walk('&bbox=-121.1,35.65,-120.9,35.75');
+    assert.deepEqual(around.map(p => mixedIds(p)), [[], ['m2-s2'], []]);
+    // A trip left without an event of the kind is ineligible, though it still has a troll-slow segment.
+    sql.prepare("UPDATE fleet_events SET kind='drift-anchor' WHERE id='m2-e1'").run();
+    const after = await walk('');
+    assert.deepEqual(after.map(p => p.meta.trips), [1, 1]);
+    assert.deepEqual(after.map(p => mixedIds(p)), [[], ['m1-s2']]);
+  } finally { sql.close(); }
+});
+
+test('tracks_kind_does_not_bypass_gates', skip, async () => {
+  const {sql, db, as} = setup();
+  try {
+    addMixed(sql);
+    for (const query of ['&kind=troll-slow', '&kind=drift-anchor,troll-pelagic']) {
+      const path = `/api/fleet/map/tracks?region=${REGION}${query}`;
+      assert.equal((await as(path)).status, 200, `${query}: admin`);
+      assert.equal((await worker.fetch(new Request(ORIGIN + path), {ASSETS, DB: db, ...ON})).status, 401, `${query}: anonymous`);
+      assert.equal((await as(path, ON, 'someone')).status, 404, `${query}: non-admin`);
+      assert.equal((await as(path, {FLEET_ENABLED: 'true'})).status, 404, `${query}: map flag off`);
+      assert.equal((await as(path, {FLEET_MAP_ENABLED: 'true'})).status, 404, `${query}: fleet flag off`);
+      assert.equal((await as(path, {})).status, 404, `${query}: both off`);
+    }
   } finally { sql.close(); }
 });
 
