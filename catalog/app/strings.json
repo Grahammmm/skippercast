@@ -97,6 +97,7 @@
     "brief.saved.line": {"en": "Last updated {time}.", "es": "Última actualización {time}."},
     "brief.saved.updating": {"en": "Updating now.", "es": "Actualizando ahora."},
     "brief.saved.failed": {"en": "Update failed: showing the last brief saved on this device.", "es": "Falló la actualización: se muestra el último resumen guardado en este dispositivo."},
+    "brief.saved.offline": {"en": "Saved offline copy from {time}.", "es": "Copia guardada sin conexión del {time}."},
     "brief.models.detail": {"en": "Model readings", "es": "Lecturas de los modelos"},
     "brief.models.readings": {"en": "NOAA {w1} kn, ECMWF {w2} kn; NOAA {s1} ft, ECMWF {s2} ft.", "es": "NOAA {w1} kn, ECMWF {w2} kn; NOAA {s1} ft, ECMWF {s2} ft."},
     "brief.day.today": {"en": "today", "es": "hoy"},

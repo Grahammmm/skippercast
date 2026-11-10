@@ -22,6 +22,7 @@ import {coastBinding, coastData, coastReport, type CoastData} from '../coast-dat
 import type {CoastReportContext} from '../../packages/coast/src/state/report-binding.ts';
 import {briefForecast, loadConditionsForecast, type ConditionsForecast, type ForecastFailureReason} from '../conditions.ts';
 import {feedPath} from '../landing/readings.ts';
+import {responseProvenance} from '../offline-response.ts';
 import {PROFILE_TABLE, type Profile} from '../profile.ts';
 import {day, hour, hourParam, parseHour, port, profile, region, species} from '../state.ts';
 import {dockTime, horizonDays} from '../hour.ts';
@@ -71,7 +72,8 @@ let feedLoad = 0;
 // SC-PERF-INSTANT-1: the last brief that loaded, kept on this device (web/brief/saved-brief.ts) and shown at once on the
 // next visit while the feeds are read again. `held` says which parts on screen are still the saved ones and when each was
 // fetched; the brief is rebuilt from them, so the stale rules apply as to live data. Off until the app calls enableSavedBrief.
-interface HeldPart {at: number; saved: boolean; failed: boolean}
+// SC1722-03: `pack` marks a part the saved offline pack answered (X-SC-Offline): held as saved at the pack's own save time, never fresh.
+interface HeldPart {at: number; saved: boolean; failed: boolean; pack?: boolean}
 const held: {region: string | null; daily: HeldPart | null; forecast: HeldPart | null} = {region: null, daily: null, forecast: null};
 let savedStore: SavedStore | null | undefined;
 /** After this long a saved brief that has not been replaced says the update failed (a weak signal can hang a read). */
@@ -107,16 +109,24 @@ export function enableSavedBrief(store: SavedStore | null = browserStore()): voi
 
 function publishSaved(): void {
   const parts = [held.daily, held.forecast].filter((p): p is HeldPart => !!p?.saved);
-  savedBrief.value = parts.length ? {at: Math.min(...parts.map(p => p.at)), state: parts.some(p => p.failed) ? 'failed' : 'updating'} : null;
+  savedBrief.value = parts.length ? {at: Math.min(...parts.map(p => p.at)), state: parts.some(p => p.failed) ? 'failed' : parts.some(p => p.pack) ? 'offline' : 'updating'} : null;
 }
 function markFresh(part: 'daily' | 'forecast', id: string): void {
   if (held.region !== id) { held.region = id; held.daily = held.forecast = null; }
   held[part] = {at: Date.now(), saved: false, failed: false};
   publishSaved();
 }
+/** SC1722-03: the part came from the saved offline pack: held as saved at the pack's save time (not now), and never written back as a new saved brief. */
+function markPack(part: 'daily' | 'forecast', id: string, at: number): void {
+  if (held.region !== id) { held.region = id; held.daily = held.forecast = null; }
+  held[part] = {at, saved: true, failed: false, pack: true};
+  publishSaved();
+}
 function persistSaved(id: string): void {
   const feed = dailyFeed.peek(), forecast = regionalForecast.peek();
   if (!savedStore || held.region !== id || !held.daily || feed?.region_id !== id) return;
+  // A saved part on screen (the restored one or the pack's) is never renewed by a write: the stored entry keeps its own times until network data has replaced them.
+  if (held.daily.saved || held.forecast?.saved) return;
   const info = regionInfo.peek(), shown = savedRegion.peek();
   const region: SavedRegion | null = info?.id === id ? displayedRegion(info) : shown?.id === id ? displayedRegion(shown) : null;
   writeSaved(savedStore, id, {at: held.daily.at, data: feed},
@@ -144,15 +154,15 @@ export function showSavedBrief(id: string, now = Date.now()): boolean {
   publishSaved();
   const settle = setTimeout(() => {
     if (held.region !== id) return;
-    for (const part of [held.daily, held.forecast]) if (part?.saved) part.failed = true;
+    for (const part of [held.daily, held.forecast]) if (part?.saved && !part.pack) part.failed = true; // a pack answer that arrived meanwhile is not a failure
     publishSaved();
   }, SAVED_SETTLE_MS) as unknown as {unref?: () => void};
   settle.unref?.(); // Node tests must not wait for it; browsers have no unref
   return true;
 }
 
-/** True when region `id` has no daily feed on screen yet, or only the saved one that has not been replaced. */
-export const needsDailyLoad = (id: string): boolean => dailyFeed.peek()?.region_id !== id || (held.region === id && !!held.daily?.saved && !dailyPending);
+/** True when region `id` has no daily feed on screen yet, or only the restored one that has not been replaced; a pack answer is a completed read, tried again on the visible-page cadence. */
+export const needsDailyLoad = (id: string): boolean => dailyFeed.peek()?.region_id !== id || (held.region === id && !!held.daily?.saved && !held.daily.pack && !dailyPending);
 
 export const FEED_GAP = {both: t('brief.gap.both'), daily: t('brief.gap.daily').replace(/\.$/, ''), conditions: t('brief.gap.conditions')} as const;
 
@@ -160,21 +170,28 @@ export const FEED_GAP = {both: t('brief.gap.both'), daily: t('brief.gap.daily').
 const GAP_IDS: readonly StringId[] = ['brief.gap.both', 'brief.gap.daily', 'brief.gap.daily.tide', 'brief.gap.daily.alerts', 'brief.gap.daily.both', 'brief.gap.conditions'];
 const gapText = (text: string, lang: Language): string => { const id = GAP_IDS.find(i => t(i) === text); return id ? t(id, lang) : text; };
 
-async function readFeed(path: string, id: string, fetchFn: typeof fetch): Promise<RegionalDailyFeed | null> {
+/** SC1722-03: a feed read that was admitted, with the saved offline pack's save time (epoch ms) when the answer carried X-SC-Offline, else null (network). */
+interface FeedRead {feed: RegionalDailyFeed; savedAt: number | null}
+
+async function readFeed(path: string, id: string, fetchFn: typeof fetch): Promise<FeedRead | null> {
   try {
     const response = await fetchFn(path);
     const json = response.ok ? await response.json() as Partial<RegionalDailyFeed> & {schema_version?: number} : null;
-    return json?.schema_version === 1 && json.region_id === id && !!json.sources && typeof json.sources === 'object' ? json as RegionalDailyFeed : null;
+    if (!(json?.schema_version === 1 && json.region_id === id && !!json.sources && typeof json.sources === 'object')) return null;
+    // The mark is read once the feed is admitted; a mark that is not a usable time never reads as a network answer.
+    const origin = responseProvenance(response.headers, Date.now());
+    return origin.kind === 'invalid' ? null : {feed: json as RegionalDailyFeed, savedAt: origin.kind === 'saved' ? origin.at : null};
   } catch { return null; }
 }
 
 /**
  * SC2222-03: the daily feed's 'brief' part from /api/daily (about a sixth of the whole feed), with the same
  * identity checks; the whole feed is read once only when the part fails and load `load` is still the latest.
+ * Only the reply that is admitted counts for provenance, never a rejected part's.
  */
-async function readDaily(id: string, fetchFn: typeof fetch, load: number): Promise<RegionalDailyFeed | null> {
+async function readDaily(id: string, fetchFn: typeof fetch, load: number): Promise<FeedRead | null> {
   const part = await readFeed(dailyPartPath(id, 'brief'), id, fetchFn);
-  if (part && validDailyPart(part as unknown as Record<string, unknown>, 'brief', id)) return part;
+  if (part && validDailyPart(part.feed as unknown as Record<string, unknown>, 'brief', id)) return part;
   return load === feedLoad ? readFeed(dailyFeedPath(id), id, fetchFn) : null;
 }
 
@@ -211,7 +228,8 @@ async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean): P
   dailyPending = true;
   bindVisibility();
   if (!refresh) feedGaps.value = [];
-  const [daily, conditions] = await Promise.all([readDaily(id, fetchFn, load), readFeed(feedPath(undefined, id), id, fetchFn)]);
+  const [dailyRead, conditionsRead] = await Promise.all([readDaily(id, fetchFn, load), readFeed(feedPath(undefined, id), id, fetchFn)]);
+  const daily = dailyRead?.feed ?? null, conditions = conditionsRead?.feed ?? null;
   // A later load (another region) owns the feed and its gap lines; this one only returns what it read.
   if (load !== feedLoad) return mergeFeeds(daily, conditions);
   dailyPending = false;
@@ -226,7 +244,13 @@ async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean): P
   dailyLoadedAt = daily ? Date.now() : 0;
   feedGaps.value = !base && !conditions ? [FEED_GAP.both] : !base ? [dailyGap(conditions!)] : !conditions ? [FEED_GAP.conditions] : [];
   dailyFeed.value = mergeFeeds(base, conditions);
-  if (daily) { markFresh('daily', id); persistSaved(id); }
+  // SC1722-03: an admitted feed that came from the saved offline pack makes the combined daily part saved at the oldest such time
+  // (the buoy feed too: it overrides the daily's observations), never fresh and never stored as a new saved brief.
+  const packTimes = [dailyRead?.savedAt, conditionsRead?.savedAt].filter((at): at is number => typeof at === 'number');
+  if (packTimes.length) {
+    if (savedDaily && held.daily) { held.daily.at = Math.min(held.daily.at, ...packTimes); publishSaved(); } // the restored part stands, from its older of the two times
+    else markPack('daily', id, Math.min(...packTimes));
+  } else if (daily) { markFresh('daily', id); persistSaved(id); }
   return dailyFeed.peek();
 }
 
@@ -295,8 +319,9 @@ export function ensureRegionalForecast(id: string, near: readonly [number, numbe
       return null;
     }
     batch(() => { regionalForecast.value = result.forecast; regionalForecastState.value = {region: id, key, generation, state: 'loaded'}; });
-    forecastLoadedAt = Date.now();
-    markFresh('forecast', id); persistSaved(id);
+    forecastLoadedAt = Date.now(); // the read's completion for the visible-page cadence; a pack answer's own (older) time is only the held clock below
+    if (result.savedAt !== null) markPack('forecast', id, result.savedAt);
+    else { markFresh('forecast', id); persistSaved(id); }
     return result.forecast;
   });
   forecastInflight = read;
