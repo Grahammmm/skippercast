@@ -18,6 +18,7 @@ export interface VerdictInputs {
 }
 export type Source = keyof VerdictInputs;
 export type Slot<T> = {state: SourceState; data?: T; reason?: ForecastFailureReason; status?: number};
+export type ForecastSlot = Slot<VerdictInputs['forecast']>;
 export type InputSet = {[K in Source]: Slot<VerdictInputs[K]>};
 /** The context parts beside the region: the forecast point and the coast binding (null until known). */
 export type VerdictContext = {forecast: string | null; coast: string | null};

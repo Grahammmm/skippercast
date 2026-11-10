@@ -13,7 +13,7 @@
 // run they read stale with its age. Before the feed loads the brief keeps its
 // empty state; when a feed cannot be read, BriefGaps says which and the
 // headline stops waiting.
-import {createVerdictLoad, type InputSet, type Slot, type Source, type VerdictContext, type VerdictEpoch, type VerdictInputs} from './verdict-load.ts';
+import {createVerdictLoad, type ForecastSlot, type InputSet, type Source, type VerdictContext, type VerdictEpoch} from './verdict-load.ts';
 import type {ComponentChildren} from 'preact';
 import {batch, effect, signal} from '@preact/signals';
 import {counties} from '../../packages/coast/src/counties.ts';
@@ -340,7 +340,7 @@ export const regionalForecastState = signal<ForecastState>({region: null, key: n
 
 let forecastKey: string | null = null;
 let forecastRequest: {id: string; near: readonly [number, number] | null; fetchFn: typeof fetch; page: string} | null = null;
-let forecastSlot: Slot<VerdictInputs['forecast']> | null = null, forecastJoiners: number[] = [];
+let forecastSlot: ForecastSlot | null = null, forecastJoiners: number[] = [];
 let forecastLoadedAt = 0, forecastPending = false, forecastGeneration = 0, forecastInflight: Promise<ConditionsForecast | null> | null = null, visibilityBound = false;
 /** A loaded forecast older than this is fetched again when the page becomes visible. */
 export const FORECAST_MAX_AGE_MS = 30 * 60_000;
@@ -376,7 +376,7 @@ export function ensureRegionalForecast(id: string, near: readonly [number, numbe
   const read = loadConditionsForecast(id, near, fetchFn, page).then(result => {
     if (generation !== forecastGeneration) return regionalForecast.peek(); // a later request (even for this same key) owns the state
     // SC1722-02: the verdict's forecast part, under this request's ticket (-01's result, unchanged; absent is no request, not a failure).
-    const slot: Slot<VerdictInputs['forecast']> = result.state === 'loaded' ? {state: 'loaded', data: {forecast: result.forecast, savedAt: result.savedAt}}
+    const slot: ForecastSlot = result.state === 'loaded' ? {state: 'loaded', data: {forecast: result.forecast, savedAt: result.savedAt}}
       : result.state === 'failed' ? {state: 'failed', reason: result.reason, ...(result.status === undefined ? {} : {status: result.status})} : {state: 'absent'};
     verdictLoad.settle(ticket, 'forecast', slot);
     // Reads that joined this one after an epoch restart settle under their own tickets; a loaded outcome stays for later reuse.
