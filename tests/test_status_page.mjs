@@ -169,3 +169,18 @@ test('when the region list cannot be read, the page says regional coverage is mi
   assert.ok(!rows.some(r => r.name.startsWith('Buoys:')));
   assert.match(renderRows(rows), /Regional buoy feeds<\/th><td>none<\/td><td>3\.0 h<\/td><td>Cannot be read · the region list could not be read/);
 });
+
+test('each status table sits in its own keyboard-reachable, named scroller with the group name escaped', () => {
+  const rows = [
+    {group: 'Live <feeds>', name: 'A', state: 'ok', lastSuccess: '2026-11-01T20:00:00Z', ageHours: 0.5, expectedHours: 3, note: ''},
+    {group: 'Other "group"', name: 'B', state: 'late', lastSuccess: null, ageHours: null, expectedHours: 36, note: 'x'},
+  ];
+  const html = renderRows(rows);
+  const wraps = [...html.matchAll(/<div class="forecast-table-wrap" role="region" tabindex="0" aria-label="([^"]*)">(<table[\s\S]*?<\/table>)<\/div>/g)];
+  assert.equal(wraps.length, 2);
+  assert.deepEqual(wraps.map(m => m[1]), ['Live &lt;feeds&gt; data table', 'Other &quot;group&quot; data table']);
+  assert.equal((html.match(/<table /g) || []).length, 2);
+  for (const [, , table] of wraps) assert.match(table, /^<table class="evidence-table status-table"><thead><tr><th scope="col">Data<\/th>/);
+  assert.match(wraps[0][2], /<th scope="row">A<\/th><td><time datetime="2026-11-01T20:00:00Z">2026-11-01 20:00<\/time> \(30 min ago\)<\/td>/);
+  assert.equal(renderRows([]), '');
+});
