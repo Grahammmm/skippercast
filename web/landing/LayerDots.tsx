@@ -4,17 +4,21 @@
 // The name shows on hover and focus; it is the link text, so it is also the
 // accessible name. Hover and focus also report the layer (`onPreview`), so the
 // live night map (FE-25) can preview the one layer it draws, Currents. The labels
-// are the rail's (web/app/LayerRail.tsx RAIL_ENTRIES, equal by test): the
+// are the rail's (web/app/rail.ts railEntries, equal by test in both languages):
+// they come from the landing's first-paint catalogue slice (landing.dots.*), so the
 // landing does not import the app's rail, its store or their chunks before
 // first paint.
 import {RAIL_IDS, type RailId} from '../profile.ts';
+import {language, t, type Language} from './i18n.ts';
 
 /** web/state.ts DEFAULT_CURRENT (equal by test): the source the rail's Currents entry turns on. */
 export const DOT_CURRENT = 'wcofs';
 
-export const DOT_LABELS: Readonly<Record<RailId, string>> = {
-  seafloor: 'Seafloor', currents: 'Currents', 'water-temp': 'Water temp', 'sst-contrast': 'Temp contrast', 'sst-fronts': 'Temp fronts', chlorophyll: 'Chlorophyll', swell: 'Swell + wind', stations: 'Stations', fleet: 'Charter fleet', clouds: 'Clouds',
-};
+/** Each rail entry's label in `lang`. */
+export const dotLabels = (lang: Language = 'en'): Readonly<Record<RailId, string>> =>
+  Object.fromEntries(RAIL_IDS.map(id => [id, t(`landing.dots.${id}`, lang)])) as Record<RailId, string>;
+/** The English labels, kept as the compatibility export. */
+export const DOT_LABELS: Readonly<Record<RailId, string>> = dotLabels('en');
 
 /** The app at `region` with only `layer` on (Currents with the rail's default source); the ui switch of `href` stays. */
 export function layerURL(href: string, region: string, layer: string): string {
@@ -30,15 +34,16 @@ export function layerURL(href: string, region: string, layer: string): string {
 
 /** `onPreview` gets the hovered or focused layer, and null when the pointer or focus leaves it. */
 export function LayerDots({href, region, onPreview}: {href: string; region: string; onPreview?: (layer: RailId | null) => void}) {
+  const lang = language.value, labels = dotLabels(lang);
   return (
-    <nav class="landing-dots" aria-label="Map layers">
+    <nav class="landing-dots" aria-label={t('landing.dots.aria', lang)}>
       <ul>
         {RAIL_IDS.map(id => (
           <li key={id}>
             <a href={layerURL(href, region, id)} data-layer={id} onPointerEnter={() => onPreview?.(id)} onPointerLeave={() => onPreview?.(null)}
               onFocus={() => onPreview?.(id)} onBlur={() => onPreview?.(null)}>
               <span class="landing-dot" aria-hidden="true"></span>
-              <span class="landing-dot-name">{DOT_LABELS[id]}</span>
+              <span class="landing-dot-name">{labels[id]}</span>
             </a>
           </li>
         ))}
