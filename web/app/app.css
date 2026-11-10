@@ -510,3 +510,10 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-entrance-caution[data-band="Caution"], .app-entrance-caution[data-band="Unknown"] { color: var(--amber); }
 .app-entrance-caution[data-band="Hazardous"] { color: var(--coral); }
 .app-entrance-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+
+/* SC1722-01: a forecast that could not be read, in place of the verdict; the native Try again keeps the 44 px target of .ui-button. */
+.app-forecast-failed { display: grid; gap: var(--space-2); min-width: 0; }
+.app-forecast-failed-head { margin: 0; color: var(--text); font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
+p.app-forecast-failed-head { font-size: var(--text-15); }
+.app-forecast-failed-reason { margin: 0; color: var(--text); font-size: var(--text-15); line-height: var(--leading-body); }
+.app-forecast-retry { justify-self: start; }

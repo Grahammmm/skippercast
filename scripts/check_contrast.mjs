@@ -400,7 +400,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1722-07 only adds the phone sheet's --sheet-hidden-offset custom property (vh and @supports dvh values mirroring the existing transforms) to the .app-sheet rules;
   // no colour, opacity, backing or text paint changed and the cited line numbers above are unmoved.
   // SC1722-06: Limits box sizing/scroll and opaque token-backed sticky actions only; Reports does not mount them.
-  "appCss": "f998e005218b3cc7c64d89a402eddebd9c5139b807fe2be72b4d97d74cdbe424",
+  // SC1722-01 only appends a scoped .app-forecast-failed* block at the end of app.css (token text roles on the brief, not the legend glass);
+  // no legend paint or backing changed and the cited line numbers above are unmoved.
+  "appCss": "31455f3340c69a878b3ad6f11c1256cd24e0f145fbc8e686696e31bb5be3c23b",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
