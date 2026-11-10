@@ -201,7 +201,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // unchanged. Rebind only Masthead.tsx to its exact final bytes.
   // SC0707-07: Masthead.tsx reads its words from the string catalogue (web/i18n.ts, English unchanged); no CSS,
   // token or catch markup change. Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "ec2422348158b250fb82b9c03ea70a98ef7666d079d4a53d10fd33ec3fc7359c",
+  // SC1722-09: ViewNav's click pushes one history entry when the view changes (navigate) instead of replacing it (setParams).
+  // Only navigation event behaviour changed; BODY09 mounts Reports/CatchCards, never ViewNav, and no CSS, token, catch markup
+  // or Reports paint changed. contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
+  "web/app/Masthead.tsx": "a139e69f4462503540d4df87d7c8a30bd5ad4cfd6f3eaf89f30e54415e3c3c79",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
