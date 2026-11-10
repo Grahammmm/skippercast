@@ -46,7 +46,7 @@ export function PlanRules({date, species, region, now = Date.now()}: {date: stri
     <h2>{t('planRules.heading', lang, {date})}</h2>
     {(() => {
       const reads = ruleSpecies(species).map(id => readLine(data, id, date, rules, now, lang));
-      const first = reads[0].line;
+      const first = reads[0]!.line;
       // RF1925-3: only readings that are all unconfirmed and identical in badge, reason and freshness share one notice; every species keeps its name and official link.
       const same = reads.length > 1 && reads.every(({line: l}) => l.kind === 'check' && l.status === first.status && l.label === first.label && l.reason === first.reason && l.fresh === first.fresh);
       const note = (reason: string) => english ? <><span lang="en">{reason}</span> {t('rules.english.inline', lang)}</> : reason;
