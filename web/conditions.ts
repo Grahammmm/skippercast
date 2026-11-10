@@ -25,6 +25,7 @@ import type {Point, Series} from '../packages/coast/src/charts/series.ts';
 import type {ForecastHour, Report} from '../packages/coast/src/types.ts';
 import type {RegionalForecast} from './brief/types.ts';
 import {sample} from './map/forecast-grid.ts';
+import {responseProvenance} from './offline-response.ts';
 import {freshNearshore} from './map/nearshore-model.js';
 
 const HOUR_MS = 3_600_000;
@@ -83,7 +84,7 @@ export type ForecastFailureReason = 'network' | 'http' | 'invalid' | 'aborted' |
  * all (absent: no region in hand to ask for). A failed read is never a weather answer, and never carries the URL or an error's text.
  */
 export type ForecastLoadResult =
-  | {state: 'loaded'; forecast: ConditionsForecast}
+  | {state: 'loaded'; forecast: ConditionsForecast; /** SC1722-03: the saved offline pack's save time (epoch ms) when the answer carried X-SC-Offline; null for a network answer. */ savedAt: number | null}
   | {state: 'failed'; reason: ForecastFailureReason; status?: number}
   | {state: 'absent'};
 
@@ -98,7 +99,10 @@ export async function loadConditionsForecast(region: string, near: readonly [num
     const response = await fetchFn(new URL(`/api/forecast?region=${encodeURIComponent(region)}`, page).href, {signal: AbortSignal.timeout(15000)});
     if (!response.ok) return {state: 'failed', reason: 'http', status: response.status};
     const forecast = parseConditionsForecast(await response.json(), region, near);
-    return forecast ? {state: 'loaded', forecast} : {state: 'failed', reason: 'invalid'};
+    if (!forecast) return {state: 'failed', reason: 'invalid'};
+    // A saved-pack answer is marked with its save time; a mark that is not a usable time never reads as a network answer.
+    const origin = responseProvenance(response.headers, Date.now());
+    return origin.kind === 'invalid' ? {state: 'failed', reason: 'invalid'} : {state: 'loaded', forecast, savedAt: origin.kind === 'saved' ? origin.at : null};
   } catch (error) { return {state: 'failed', reason: failureOf(error)}; }
 }
 

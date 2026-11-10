@@ -297,7 +297,7 @@ function forecastFeed(now, ageH = 6) {
 const feeds = (now, {missing = [], ageH = 6, noModels = false} = {}) => async url => {
   const path = new URL(String(url), PAGE).pathname;
   const body = missing.some(x => path.includes(x)) ? null : path.endsWith('/region.json') ? REGION : path === '/feeds/data/regions/morro-bay/latest.json' ? DAILY : path === '/api/forecast' ? (noModels ? {...forecastFeed(now, ageH), models: {}} : forecastFeed(now, ageH)) : null;
-  return body ? {ok: true, status: 200, json: async () => body} : {ok: false, status: 404, json: async () => ({}), body: null};
+  return body ? {ok: true, status: 200, headers: new Headers(), json: async () => body} : {ok: false, status: 404, json: async () => ({}), body: null};
 };
 async function onDevice(entries, fn) {
   const store = {getItem: k => entries.get(k) ?? null, setItem: () => {}, removeItem: () => {}, clear: () => {}, key: () => null, length: 0};

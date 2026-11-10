@@ -61,7 +61,7 @@ function feeds(now, {missing = [], ageH = 6, asked = [], noModels = false, forec
     if (forecastReply && path === '/api/forecast') return forecastReply();
     const body = missing.some(m => path.includes(m)) ? null : path.endsWith('/region.json') ? JSON.parse(REGION)
       : path === '/feeds/data/regions/morro-bay/latest.json' ? DAILY : path === '/api/forecast' ? (noModels ? {...forecastFeed(now, ageH), models: {}} : forecastFeed(now, ageH)) : null;
-    return body ? {ok: true, status: 200, json: async () => body} : {ok: false, status: 404, json: async () => ({}), body: null};
+    return body ? {ok: true, status: 200, headers: new Headers(), json: async () => body} : {ok: false, status: 404, json: async () => ({}), body: null};
   };
 }
 
@@ -135,7 +135,7 @@ test('a loaded forecast that cannot rate the day reads Unknown with its sentence
 
 test('landing_failure_is_not_a_verdict: a forecast read that failed (abort, timeout, network, HTTP 500, 404, {}, another region\'s feed) gives no live verdict, not Unknown', async () => {
   const m = await load();
-  const ok = body => ({ok: true, status: 200, json: async () => body});
+  const ok = body => ({ok: true, status: 200, headers: new Headers(), json: async () => body});
   const replies = {
     abort: () => { throw new DOMException('gone', 'AbortError'); },
     timeout: () => { throw new DOMException('slow', 'TimeoutError'); },
@@ -143,7 +143,7 @@ test('landing_failure_is_not_a_verdict: a forecast read that failed (abort, time
     http500: () => ({ok: false, status: 500, json: async () => ({})}),
     http404: () => ({ok: false, status: 404, json: async () => ({})}),
     empty: () => ok({}),
-    badJson: () => ({ok: true, status: 200, json: async () => { throw new SyntaxError('Unexpected token'); }}),
+    badJson: () => ({ok: true, status: 200, headers: new Headers(), json: async () => { throw new SyntaxError('Unexpected token'); }}),
     otherRegion: () => ok({...forecastFeed(NOW), region_id: 'monterey-point-sur'}),
   };
   for (const [name, forecastReply] of Object.entries(replies)) {
