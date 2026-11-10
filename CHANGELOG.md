@@ -3,6 +3,7 @@
 ## Unreleased
 
 - SC1407-10 (#1762 M5): the map's first screen no longer loads the trip planner, offline pack, basemap-range and coastal-snapshot code. `web/trip.ts` keeps the trip signals, the `#export` dialog, the draft's ids and the shared protected-area screen, and loads the rest from the new `web/trip-runtime.ts` on first use; a pack or coastal call made before it arrives waits for it, and a cancelled save writes nothing. The app page's first-load script budget is lowered from 1,170,000 to 1,166,000 bytes. Planner, pack and export behaviour are unchanged.
+- RF0854-7: the operator lead score's "AIS seen in the last 30 days" part is bounded by the scoring instant: a watched vessel's sighting dated after "now" no longer earns the AIS points (it was counted as seen), while a sighting exactly at now or exactly 30 days earlier still counts. A watched operator with no qualifying sighting scores a known zero, and an operator with no watched vessel stays missing. Read-time only; weights, other parts and stored watch records are unchanged.
 
 - RF0854-8: the admin fleet operator list ranks every matching operator (do-not-contact last, then lead score, then name, then id) before applying its 500-row cap, so a high-scoring operator outside the first 500 by name is no longer left out. Matching operators are read in bounded pages by id with every filter applied to each page; `truncated` still means more than 500 matched, and the endpoint, filters, response fields and score model are unchanged.
 
