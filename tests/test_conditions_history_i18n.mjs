@@ -93,8 +93,11 @@ const snapshot = () => ({
 });
 // Hashes of main's English output (c8f1bec0) for exactly the calls above.
 const GOLDEN = {
-  history: '58a889e1e1f29b3d5eb99edc80853c4168885f98f7688549919e408c11db18ba', chart: '753164a97209761c2cdcc5afb6952cbefeeaa1042f39e0c08109043dbc0064b1', conditions: 'b91c3b15a92e0ec9d8fbbab1866f82cf4b359c8d26ca6c0176edbc1ac95278f6', hourly: '2b06a9ded393bae0a73476cfb36d54f65ea87fa6980443e4e2055f4997ef8912',
+  history: '58a889e1e1f29b3d5eb99edc80853c4168885f98f7688549919e408c11db18ba', chart: '753164a97209761c2cdcc5afb6952cbefeeaa1042f39e0c08109043dbc0064b1', conditions: '6646f40a4ed670e5637e1293aea086eae6deebab9f145c92cd3ac12355f68f45', hourly: '2b06a9ded393bae0a73476cfb36d54f65ea87fa6980443e4e2055f4997ef8912',
 };
+// SC2252-08: the Conditions digest before its one added daylight paragraph (this fixture has no daily feed, so it is the unavailable line).
+const PRIOR_CONDITIONS = 'b91c3b15a92e0ec9d8fbbab1866f82cf4b359c8d26ca6c0176edbc1ac95278f6';
+const DAYLIGHT = '<p class="app-conditions-daylight">Sunrise and sunset unavailable</p>';
 if (process.env.PRINT_GOLDEN) { console.log(JSON.stringify(snapshot())); process.exit(0); }
 
 test('english output is byte-identical to main for the History renderer, the chart, the Conditions view and the hourly table', () => {
@@ -139,6 +142,9 @@ test('conditions_en_es_en_roundtrip: Spanish chrome, row labels, caption, clocks
   assert.ok(strip(es).includes('NOAA GFS-Wave ejecución') && es.includes('PDT') && !es.includes('GMT-7'), 'model names stay as published');
   assert.equal(renderConditions('en'), en, 'switching back gives the English markup again');
   assert.equal(sha(en), GOLDEN.conditions);
+  assert.equal(en.split(DAYLIGHT).length, 2, 'exactly one daylight paragraph');
+  assert.equal(sha(en.replace(DAYLIGHT, '')), PRIOR_CONDITIONS, 'removing only the daylight paragraph gives the prior markup');
+  assert.ok(es.includes('<p class="app-conditions-daylight">Amanecer y atardecer no disponibles</p>'));
 });
 
 test('profile caveats: each profile reads its own Spanish sentence in the Conditions notes', () => {
