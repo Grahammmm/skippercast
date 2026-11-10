@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF1935-1: the trip planner no longer keeps "Loading the trip planner…" (a live status) in the page while its dialog is closed and has never been used; the loading status and the failure line with Retry appear only while the dialog is open, in English and Spanish. An open planner that is still loading keeps its status until it is ready, and a failed one keeps its message and Retry. The planner is still loaded only when first opened.
+
 - SC1722-04: failed coast reads stay settled until a view returns, a person retries, or the connection returns; transport-state updates no longer trigger a request loop in reactive readers.
 - RF1915-8: the private tide-layer builder refuses a station whose NOAA table holds a non-finite height (NaN, infinity or an overflow string such as `1e999`) before the station is admitted, so it is counted as failed and never written as invalid JSON. Finite tables, including negative and zero heights, produce byte-identical output.
 
