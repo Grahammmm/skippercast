@@ -59,16 +59,45 @@ export function boundName(name: string): string {
  * no camera centre, geometry centroid, id parsing or hidden position. A withheld card keeps its position to itself.
  */
 export function spotCandidate(mark: ChartMark): SpotCandidate | SpotResult {
-  if (CONTEXT.test(String(mark?.id ?? ''))) return refused('context');
-  if (mark?.withheld) {
-    const reading = typeof mark.reading === 'string' ? mark.reading.trim() : '', identity: MessageIdentity = reading ? {id: 'mark.save.withheld', vars: {reading}} : {id: 'mark.save.notSaved'};
-    const result: SpotResult = {state: 'refused', message: t(identity.id, 'en', identity.vars)};
-    identities.set(result, identity);
-    return result;
-  }
+  const found = classify(mark);
+  if (!('reason' in found)) return found;
+  if (found.reason !== 'withheld') return refused(found.reason);
+  const reading = typeof mark.reading === 'string' ? mark.reading.trim() : '', identity: MessageIdentity = reading ? {id: 'mark.save.withheld', vars: {reading}} : {id: 'mark.save.notSaved'};
+  const result: SpotResult = {state: 'refused', message: t(identity.id, 'en', identity.vars)};
+  identities.set(result, identity);
+  return result;
+}
+
+/** Why a mark's position may not be kept or handed on. Neutral codes: the save path words them its way, the card's copy action its own. */
+export type PositionRefusal = 'context' | 'withheld' | 'noPosition' | 'notChecked' | 'inside' | 'margin';
+export type MarkPositionScreen = {readonly allowed: true; readonly region: string; readonly candidate: SpotCandidate} | {readonly allowed: false; readonly reason: PositionRefusal};
+
+/** The one candidate rule: map context, a withheld card and a mark without its own valid position are not candidates. */
+function classify(mark: ChartMark): SpotCandidate | {readonly reason: 'context' | 'withheld' | 'noPosition'} {
+  if (CONTEXT.test(String(mark?.id ?? ''))) return {reason: 'context'};
+  if (mark?.withheld) return {reason: 'withheld'};
   const at = mark?.position, lat = at?.latitude, lon = at?.longitude;
-  if (typeof lat !== 'number' || typeof lon !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon >= 180) return refused('noPosition');
+  if (typeof lat !== 'number' || typeof lon !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon >= 180) return {reason: 'noPosition'};
   return {name: boundName(typeof mark.name === 'string' ? mark.name : ''), lat, lon, note: null};
+}
+
+/**
+ * SC2252-09: may this mark's position be kept or handed on, by the region's shared protected-area screen as already loaded?
+ * The save path and the card's copy action both ask this, so neither can allow a point the other refuses. Account-free and
+ * synchronous: it loads nothing, reads no session and sends or stores nothing. Only a covered, screened point that is neither
+ * inside a protected area nor within its 70 m margin (dist/geo-screen.js `placeRefused`) is allowed.
+ */
+export function screenMarkPosition(mark: ChartMark, region: string | null, loaded: ProtectedScreen): MarkPositionScreen {
+  const found = classify(mark);
+  if ('reason' in found) return {allowed: false, reason: found.reason};
+  const screen = region && loaded?.state === 'loaded' && loaded.region === region ? loaded.screen : null;
+  if (!region || !screen || typeof (screen as {coversGeometry?: unknown}).coversGeometry !== 'function') return {allowed: false, reason: 'notChecked'};
+  let verdict;
+  try { verdict = screenPlace(screen, {latitude: found.lat, longitude: found.lon}); } catch { return {allowed: false, reason: 'notChecked'}; }
+  if (!verdict || !verdict.screened) return {allowed: false, reason: 'notChecked'};
+  if (verdict.inside) return {allowed: false, reason: 'inside'};
+  if (placeRefused(verdict)) return {allowed: false, reason: 'margin'};
+  return {allowed: true, region, candidate: found};
 }
 
 export type SaveDeps = {
@@ -107,13 +136,8 @@ export async function saveMarkSpot(mark: ChartMark, deps: SaveDeps = {}): Promis
   if (!where) return refused('notChecked');
   let loaded: ProtectedScreen;
   try { loaded = await loadScreen(where); } catch { return refused('notChecked'); }
-  const screen = loaded.state === 'loaded' && loaded.region === where ? loaded.screen : null;
-  if (!screen || typeof (screen as {coversGeometry?: unknown}).coversGeometry !== 'function') return refused('notChecked');
-  let verdict;
-  try { verdict = screenPlace(screen, {latitude: candidate.lat, longitude: candidate.lon}); } catch { return refused('notChecked'); }
-  if (!verdict || !verdict.screened) return refused('notChecked');
-  if (verdict.inside) return refused('inside');
-  if (placeRefused(verdict)) return refused('margin');
+  const answer = screenMarkPosition(mark, where, loaded);
+  if (!answer.allowed) return answer.reason === 'withheld' ? spotCandidate(mark) as SpotResult : refused(answer.reason);
   // Re-read just before the write: a different account, a sign out or another region means this answer is not for them.
   const now = readSession();
   if (now.state !== 'signed-in') return failed('signIn');
