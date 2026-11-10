@@ -13,6 +13,7 @@ import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {preparedRendererPlugins, rendererPlugins} from './helpers/esbuild-url.mjs';
 import {catalogueProblems, COVERED} from '../scripts/check_copy.mjs';
+import {RAIL_IDS} from '../web/profile.ts';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -159,6 +160,10 @@ test('static_hosts_catalogue_and_budget: English is a no-op; Spanish writes only
   walk(entryPath);
   const initialInputs = [...initial].flatMap(p => Object.keys(byPath[p].inputs));
   assert.ok(initialInputs.includes('web/landing/copy.ts') && initialInputs.includes('web/landing/strings.generated.json'), 'the static hosts helper and the catalogue are in the initial JS');
+  // SC1407-13: the layer dots paint in the page language from the slice, without the app's rail or its layer registry.
+  assert.ok(initialInputs.includes('web/landing/LayerDots.tsx'), 'the dots are first-paint');
+  for (const mod of ['web/app/rail.ts', 'web/map/layers.ts']) assert.ok(!initialInputs.includes(mod), `${mod} is not in the initial JS`);
+  for (const id of ['landing.dots.aria', ...RAIL_IDS.map(r => `landing.dots.${r}`)]) assert.ok(slice[id]?.en?.trim(), `${id}: in the first-paint slice`);
   assert.ok(!initialInputs.includes('web/strings.es.generated.json') && !initialInputs.includes('catalog/app/strings.json'), 'SC1407-09: no Spanish table and no bilingual catalogue in the initial JS');
   const budget = JSON.parse(await readFile(join(ROOT, 'scripts/startup-budget.json'), 'utf8')).bundles['landing.html'].js_gzip_max;
   const size = [...initial].reduce((sum, p) => sum + gzipSync(result.outputFiles.find(f => f.path.endsWith(`/${p.split('/').pop()}`)).contents).length, 0);
