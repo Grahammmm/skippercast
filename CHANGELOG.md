@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF1925-6: each app view now has exactly one top-level main landmark. On the phone the whole view is the main (Reports and Plan no longer nest a second one), the bottom sheet is a named group so Conditions is a single region, and the managed terrain scene is a group rather than a second main, in Chart, 2D and 3D. Layout, words and behaviour are unchanged.
+
 - SC1722-04: failed coast reads stay settled until a view returns, a person retries, or the connection returns; transport-state updates no longer trigger a request loop in reactive readers.
 - RF1915-8: the private tide-layer builder refuses a station whose NOAA table holds a non-finite height (NaN, infinity or an overflow string such as `1e999`) before the station is admitted, so it is counted as failed and never written as invalid JSON. Finite tables, including negative and zero heights, produce byte-identical output.
 

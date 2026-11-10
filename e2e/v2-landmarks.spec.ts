@@ -77,7 +77,7 @@ for (const view of VIEWS) {
   test(`one_main_${view}: the view has one top-level main and one region per name`, async ({page, v2}) => {
     await holdCoastData(page);
     await v2.open('app', {...PLACE, presentation: 'chart', ...(view === 'coast' ? {} : {view})});
-    await expect(page.locator('h1, h2').first()).toBeVisible();
+    await expect(page.locator('h1:visible, h2:visible').first()).toBeVisible();
     await expectOneMain(page, view);
     const phone = page.viewportSize()!.width < 1024;
     if (phone && (view === 'reports' || view === 'plan')) await expect(page.locator('.app-mobile-page')).toHaveCount(1);
