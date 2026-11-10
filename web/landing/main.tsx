@@ -69,14 +69,18 @@ function nightMap(): void {
 
 // SC0707-05: the language first, before anything is mounted or a saved port navigates: the map app's own choice (web/i18n.ts initLanguage:
 // ?lang=, the stored preference, then the browser's Accept-Language), the document's lang, and the static hero and footer in that language.
-// SC1407-09: a Spanish page waits here for its table (English pages never request it); a failed load keeps English and LandingHead says so.
+// SC1407-09: a Spanish page's table loads from here (English pages never request it); the copy, a saved port's redirect and every
+// mount wait for it below, and a failed load keeps English (LandingHead says so).
+const ready = initReadyLanguage();
+installDegradedWatch(); // SC1322-06: before any read, as web/app/main.tsx, so the cost-ceiling mark reaches the landing's notice.
+// Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
+initTelemetry();
+const profile = storedProfile();
+
+/** The landing in the page language, its table ready. initReadyLanguage never rejects. */
 async function start(): Promise<void> {
-  const lang = await initReadyLanguage();
+  const lang = await ready;
   applyLandingCopy(document, lang);
-  installDegradedWatch(); // SC1322-06: before any read, as web/app/main.tsx, so the cost-ceiling mark reaches the landing's notice.
-  // Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
-  initTelemetry();
-  const profile = storedProfile();
   // A returning visitor goes on to the app; everyone else gets the night map after first paint.
   // #617: after first paint the app's own first-paint files are fetched at low priority (warm.ts), so a chosen port opens faster.
   void savedPortTarget(location.href, savedPortId(), profile).then(next => { if (next) location.replace(next); else { afterFirstPaint(nightMap); afterFirstPaint(() => void warmApp()); } });

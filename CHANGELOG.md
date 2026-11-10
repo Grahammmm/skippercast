@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC1407-09: English pages no longer download the Spanish catalogue. The app and the landing ship English only and load the Spanish table only when the page is Spanish (a link, a stored choice or the browser's language), waiting for it before their first translated render; a switch to Spanish applies once the table arrives, and a failed load keeps English and says so once beside the language choice (the landing offers a link that reloads in Spanish). First-load scripts drop about 158 KB raw on both pages, and their budgets are lowered to match.
+
 - RF0844-8: fleet trip labels (admin form and agent label import) refuse a start or end time written on a day that is not on the calendar, such as February 30, 2026-02-29 or April 31, with the existing "must be ISO UTC times" error, instead of silently rolling it into the next month and saving it against the trip; a refused admin label saves nothing and a refused agent import keeps every existing label. Valid days, leap days and accepted time precision are unchanged.
 
 - RF0844-7: the GEFS wind-ensemble build now checks each decoded wind-component and gust field's latitude and longitude axes against the GFS land mask before sampling any sea-cell index, and fails the build when a field sits on displaced cells even if its dimensions match (it previously published that wind under the mask's coordinates with a false zero-distance receipt). A failed build keeps the previous generation as before; matching grids, receipts and missing-member handling are unchanged.
