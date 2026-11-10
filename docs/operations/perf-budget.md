@@ -14,7 +14,7 @@ its budget and the share used, then PASS or FAIL. A failing group also lists its
 |---|---|---|---|
 | Landing page scripts (entry + scripts it imports at once) | 421,933 | 460,000 (raised from 445,000; see history in `scripts/perf-budget.json`) | 5.5% at first |
 | Landing page styles | 24,339 | 26,000 | 6.8% |
-| App page (brief, map) scripts, first load | 1,104,511 | 1,170,000 (raised from 1,160,000; see history in `scripts/perf-budget.json`) | 5.0% at first |
+| App page (brief, map) scripts, first load | 1,104,511 | 1,166,000 (lowered from 1,170,000 by SC1407-10; see history in `scripts/perf-budget.json`) | 5.0% at first |
 | App page styles | 67,003 | 71,000 | 6.0% |
 | Largest single built script, style or font (any page, loaded now or later) | 1,094,203 | 1,150,000 | 5.1% |
 | Brief data files in the repo (`protected-areas.geojson`, `land-water-lines.json`, `seafloor-ledger.json`) | 951,224 | 1,050,000 | 10.4% |
@@ -38,6 +38,16 @@ is published, not in the repo, so this check cannot measure it; the publisher en
 `tests/gis/test_seafloor_slim.py`). Reason: the real morro-bay export (3,064 reefs) gives 363,453 bytes, so the budget
 leaves 23.8% headroom for more reefs or longer credit text, and stops the file growing back toward the full export
 unnoticed. Raise it in a pull request with a reason, as above.
+
+### The trip planner and offline pack load on first use (SC1407-10, #1762 M5)
+
+`/map`'s first screen imports `web/trip.ts` for the trip signals, the `#export` dialog, the draft's ids and the shared
+protected-area screen. The planner, the offline pack, the basemap ranges and the coastal snapshots are
+`web/trip-runtime.ts`, which `web/trip.ts` loads with one dynamic import when the dialog opens, a pack or coastal call is
+made, or the planner's ranked set arrives; a call made earlier waits for it. `tests/test_client_build.mjs` checks the real
+build's manifest: nothing of it is in `app.html`'s static imports, and the offline pack still lists it. Measured on main
+a5005eb054: 1,169,640 bytes before, 1,164,834 after; the old 58 KB trip chunk mostly held map and tide modules the first
+screen still loads, so the saving is the trip code itself. The app budget is lowered to 1,166,000.
 
 ### Protected-area verdicts reused across hour steps (SC1407-02)
 
