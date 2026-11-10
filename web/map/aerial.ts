@@ -16,7 +16,7 @@
 //
 // Erasable syntax only: tests/test_aerial_layer.mjs imports this file by type stripping.
 import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
-import {naipSource} from '../../packages/coast/src/map-sources.ts';
+import {naipSource, type NaipFormat} from '../../packages/coast/src/map-sources.ts';
 import {base} from '../state.ts';
 import {ENC_LAYER, unavailable} from './chart.ts';
 import type {Engine, Overlay} from './engine.ts';
@@ -52,11 +52,15 @@ export const aerialAttribution = (a: AerialBase): string => `${naipSource().attr
 /** Source and layer id; the window is part of it, so another region's dates replace the credit. */
 export const aerialId = (a: AerialBase): string => `aerial:${a.first}/${a.last}`;
 
-/** The base's one raster source (naipSource()'s template, so its fixed USGS host only) and its layer. */
-export function aerialOverlay(a: AerialBase): Overlay {
-  const id = aerialId(a);
+/**
+ * The base's one raster source (naipSource()'s template, so its fixed USGS host only) and its layer. SC1407-07: the
+ * png32 fallback has its own source and layer id, so replacing the overlay replaces the source, and a late error from
+ * the retired jpgpng source no longer names a layer the engine draws.
+ */
+export function aerialOverlay(a: AerialBase, format: NaipFormat = 'jpgpng'): Overlay {
+  const id = format === 'png32' ? `${aerialId(a)}:png32` : aerialId(a);
   return {
-    sources: {[id]: {...naipSource(), attribution: aerialAttribution(a)}},
+    sources: {[id]: {...naipSource(format), attribution: aerialAttribution(a)}},
     layers: [{id, type: 'raster', source: id, paint: a.byDefault
       ? {'raster-opacity': AERIAL_DEFAULT_OPACITY, 'raster-saturation': AERIAL_DEFAULT_SATURATION}
       : {'raster-opacity': AERIAL_OPACITY, 'raster-saturation': AERIAL_SATURATION}}],
@@ -74,7 +78,14 @@ export interface AerialOptions {
 
 export function createAerial({engine, offer}: AerialOptions): {destroy(): void} {
   const drawn = computed(() => { const a = offer(); return a && base.value === 'aerial' ? a : null; });
-  const overlay = computed(() => drawn.value ? aerialOverlay(drawn.value) : null);
+  // SC1407-07: one png32 retry per draw (this base on this engine). The draw it was granted for is kept, so another
+  // region or engine reads jpgpng again at once, and a format that did not change does not redraw the overlay.
+  const fallback = signal<{drawn: AerialBase; engine: Engine} | null>(null);
+  const format = computed<NaipFormat>(() => {
+    const f = fallback.value;
+    return f && f.drawn === drawn.value && f.engine === engine.value ? 'png32' : 'jpgpng';
+  });
+  const overlay = computed(() => drawn.value ? aerialOverlay(drawn.value, format.value) : null);
   let shown: Overlay | null = null, shownOn: Engine | null = null;
   const disposers = [
     effect(() => { aerialOffer.value = offer(); }),
@@ -84,10 +95,21 @@ export function createAerial({engine, offer}: AerialOptions): {destroy(): void} 
       e.setOverlay(REGISTRY_ID, o, ENC_LAYER);
       shown = o; shownOn = e;
     }),
-    // Turned off, on again or another region: a base a tile error marked unavailable is tried again.
+    // Turned off, on again, another region or engine: a base a tile error marked unavailable is tried again, jpgpng first.
     effect(() => {
-      void drawn.value;
+      void drawn.value; void engine.value;
+      fallback.value = null;
       if (unavailable.peek().includes(REGISTRY_ID)) unavailable.value = unavailable.peek().filter(l => l !== REGISTRY_ID);
+    }),
+    // The first failure of a jpgpng draw (the service may refuse the mixed format) swaps in the png32 form once; a
+    // failure of that form stays unavailable. Only Aerial's own flag is cleared, and only while Aerial is drawn.
+    effect(() => {
+      if (!unavailable.value.includes(REGISTRY_ID)) return;
+      const d = drawn.peek(), e = engine.peek();
+      if (!d || !e || shown === null || shownOn !== e || format.peek() !== 'jpgpng') return;
+      console.warn('Aerial imagery failed as jpgpng; trying png32 once');
+      fallback.value = {drawn: d, engine: e};
+      unavailable.value = unavailable.peek().filter(l => l !== REGISTRY_ID);
     }),
   ];
   return {

@@ -5,11 +5,18 @@ export const mapSourceHosts = ['https://imagery.nationalmap.gov','https://nowcoa
 export const shorelineAttribution = 'NOAA National Geodetic Survey · CUSP shoreline';
 export const shorelineSource = {type:'geojson' as const,data:'/data/slo-shoreline.geojson',attribution:shorelineAttribution};
 
-/** Natural-color NAIP aerial mosaic: dated shoreline context, not live satellite or bottom imagery. */
-export function naipSource() {
+/** The NAIP image formats: `jpgpng` is JPEG where a tile is fully opaque and PNG where it holds transparency (open water); `png32` is PNG throughout. Never JPEG alone: water must stay transparent. */
+export type NaipFormat='jpgpng'|'png32';
+
+/**
+ * Natural-color NAIP aerial mosaic: dated shoreline context, not live satellite or bottom imagery.
+ * SC1407-07: 512 px tiles (a quarter of the requests of 256 px at the same ground resolution), so each source zoom is one
+ * lower than for 256 px tiles: 6..18 here draws over exactly the map zooms 7..19 did at 256 px.
+ */
+export function naipSource(format:NaipFormat='jpgpng') {
  const rule=encodeURIComponent(JSON.stringify({rasterFunction:'NaturalColor'}));
- return {type:'raster' as const,tileSize:256,minzoom:7,maxzoom:19,
-  tiles:[`https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=image&bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&format=png32&transparent=true&renderingRule=${rule}`],
+ return {type:'raster' as const,tileSize:512,minzoom:6,maxzoom:18,
+  tiles:[`https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=image&bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=512,512&format=${format==='png32'?'png32':'jpgpng'}&transparent=true&renderingRule=${rule}`],
   attribution:'USGS / USDA · NAIP aerial imagery (dated mosaic)'};
 }
 
