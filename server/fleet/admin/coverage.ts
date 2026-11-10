@@ -5,7 +5,8 @@
 //
 // AIS presence is reported as "seen" or "not-seen", never as compliance: most six-packs
 // carry no transponder and none has to, so a boat with no AIS is only not seen.
-// "Seen" means a watched fleet_ais_watch row for the vessel last heard within 30 days.
+// "Seen" means a watched fleet_ais_watch row for the vessel last heard within 30 days
+// up to the report clock (a row dated after it is not counted).
 // Sources count the distinct source_id of the vessel's current (not superseded) facts,
 // leaving out admin facts (an admin edit is not a source that found the boat) and AIS facts
 // (method 'ais', CF-46: AIS presence is reported separately as seen or not seen).
@@ -87,15 +88,17 @@ const byKey = (a: string | null, b: string | null): number => a === b ? 0 : a ==
 
 /** The coverage report for active vessels (one region, or all), as of `now`. */
 export async function coverageReport(db: D1Database, region: string | null, now: Date): Promise<CoverageReport> {
-  const since = new Date(now.getTime() - SEEN_DAYS * DAY_MS).toISOString();
+  // One report clock: generated_at and the inclusive upper bound of "seen". A watched row dated after
+  // it is not a sighting in the last 30 days (RF1345-9), and the read leaves it stored as it is.
+  const at = now.toISOString(), since = new Date(now.getTime() - SEEN_DAYS * DAY_MS).toISOString();
   const where = "v.status='active'" + (region ? ' AND v.region=?' : '');
   const facts = "FROM fleet_vessel_facts f WHERE f.vessel_id=v.id AND f.superseded_at IS NULL AND f.source_id<>'admin' AND f.method<>'ais'";
   const rows = (await db.prepare(`SELECT v.id,v.slug,v.name,v.region,v.completeness,${COLUMNS.map(c => 'v.' + c).join(',')},
       (SELECT COUNT(DISTINCT f.source_id) ${facts}) AS sources,
       (SELECT MIN(f.source_id) ${facts}) AS source_id,
-      EXISTS (SELECT 1 FROM fleet_ais_watch w WHERE w.vessel_id=v.id AND w.status='watched' AND w.last_seen_at>=?) AS seen
+      EXISTS (SELECT 1 FROM fleet_ais_watch w WHERE w.vessel_id=v.id AND w.status='watched' AND w.last_seen_at>=? AND w.last_seen_at<=?) AS seen
     FROM fleet_vessels v WHERE ${where} ORDER BY v.region,v.port_id,v.vessel_class,v.name_norm,v.id LIMIT ?`)
-    .bind(since, ...(region ? [region] : []), MAX_VESSELS + 1).all<VesselRow>()).results;
+    .bind(since, at, ...(region ? [region] : []), MAX_VESSELS + 1).all<VesselRow>()).results;
   const truncated = rows.length > MAX_VESSELS, vessels = rows.slice(0, MAX_VESSELS).map(v => ({...v, sources: Number(v.sources) || 0, seen: Number(v.seen) || 0}));
 
   const ports = new Map<string, VesselRow[]>();
@@ -120,7 +123,7 @@ export async function coverageReport(db: D1Database, region: string | null, now:
     .all<Omit<RunRow, 'counts'> & {counts_json: string | null}>()).results;
 
   return {
-    generated_at: now.toISOString(), region, seen_days: SEEN_DAYS, seen_since: since, groups: FIELD_GROUPS,
+    generated_at: at, region, seen_days: SEEN_DAYS, seen_since: since, groups: FIELD_GROUPS,
     totals: cell(vessels), ports: portRows, sources_per_boat: spread, single_source: single, truncated,
     runs: runs.map(({counts_json, ...r}) => ({...r, counts: parse(counts_json)})),
   };
