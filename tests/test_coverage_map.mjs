@@ -23,7 +23,10 @@ test('published regions are sorted, mapped within the viewBox, and linked exactl
     assert.ok(x >= 0 && y >= 0 && w > 0 && h > 0 && x + w <= +view[1] + 1e-9 && y + h <= +view[2] + 1e-9);
   }
   const expected = model.rows.map(r => `/map?region=${r.id}`);
-  assert.deepEqual(hrefs(svg), expected);
+  // SC1722-17: the drawing is decorative and holds no links; the list below it is the only navigation.
+  assert.deepEqual(hrefs(svg), []);
+  assert.doesNotMatch(svg, /<a[\s>]|<button|tabindex|onclick|role="img"|aria-label/);
+  assert.match(svg, /^<svg [^>]*aria-hidden="true" focusable="false"/);
   assert.deepEqual(hrefs(renderList(model)), expected);
   assert.match(svg, /35°N/);
   assert.match(svg, />Active<\/text>/);
@@ -37,7 +40,7 @@ test('adjoining latitudes are both drawn, inverted and zero bounds are counted',
     region('zero', [-123, 37, -122, 37]), region('backwards', [-122, 36, -123, 37])]});
   assert.equal(model.rows.length, 2);
   assert.equal(model.skipped, 2);
-  assert.equal(hrefs(renderMap(model)).length, 2);
+  assert.equal([...renderMap(model).matchAll(/<rect class="cov-/g)].length, 2);
   assert.match(renderList(model), /2 regions could not be drawn/);
 });
 
