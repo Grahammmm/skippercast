@@ -108,22 +108,106 @@ test('the terrain chrome sits clear of the stage chrome and axe is clean', async
   await v2.a11y('v2-map-terrain');
 });
 
-test('with WebGL disabled the stage shows Chart and v1\'s message, and axe is clean', async ({page, v2}) => {
-  await page.addInitScript(() => {
-    const original = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) {
-      return /webgl/i.test(kind) ? null : (original as (...a: unknown[]) => unknown).call(this, kind, ...rest);
-    } as typeof original;
-  });
+test('with WebGL disabled the stage says the map graphics could not start, hides the map-only controls, and axe is clean', async ({page, v2}) => {
+  await blockWebgl(page, EVERY_LOAD);
   await holdCoastData(page);
   await v2.open('app', {...PLACE, presentation: '3d'});
-  await expect(page.getByRole('status').filter({hasText: UNAVAILABLE})).toBeVisible();
+  // RF1925-2: a Chart that cannot start is explained once; the presentation toggle (and the terrain message it carried) is gone, not dead.
+  await expect(page.getByRole('status').filter({hasText: GRAPHICS})).toBeVisible();
   await expect(page.locator('.app-map')).toBeVisible();
   await expect(page.locator('.app-terrain')).toBeHidden();
-  await expect(toggle(page, 'Chart')).toHaveAttribute('aria-pressed', 'true');
-  await expect(toggle(page, '3D')).toBeDisabled();
+  await expect(page.getByRole('group', {name: 'Map presentation'})).toHaveCount(0);
   expect(params(page).presentation, 'the link keeps the request').toBe('3d');
   await v2.a11y('v2-map-no-webgl');
+});
+
+/** addInitScript arguments are JSON, so "every load" is a number, not Infinity. */
+const EVERY_LOAD = 1_000_000;
+const GRAPHICS = 'This browser could not start the map graphics.';
+/** The Chart's WebGL context is refused for the first `loads` document loads of this tab (counted in sessionStorage); the 2D canvas is untouched. */
+const blockWebgl = (page: Page, loads: number) => page.addInitScript(limit => {
+  if (window !== window.top) return;
+  const n = Number(sessionStorage.getItem('rf1925-loads') ?? '0') + 1;
+  sessionStorage.setItem('rf1925-loads', String(n));
+  if (n > limit) return;
+  const original = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) {
+    return /webgl/i.test(kind) ? null : (original as (...a: unknown[]) => unknown).call(this, kind, ...rest);
+  } as typeof original;
+}, loads);
+/** The map's own Try again (the brief has a different one for its ranking). */
+const retryButton = (page: Page) => page.getByRole('region', {name: 'Map'}).getByRole('button', {name: 'Try again', exact: true});
+const notice = (page: Page) => page.getByRole('status').filter({hasText: GRAPHICS});
+const overlap = (a: {x: number; y: number; width: number; height: number}, b: {x: number; y: number; width: number; height: number}) =>
+  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+test('Try again reloads the same address once by keyboard and the Chart recovers when graphics return', async ({page, v2, isMobile}) => {
+  await blockWebgl(page, 1);
+  await holdCoastData(page);
+  const loads: string[] = [];
+  page.on('load', () => loads.push(page.url()));
+  await v2.open('app', {...PLACE, presentation: 'chart', layers: 'swell', current: 'off'});
+  await page.evaluate(() => { location.hash = 'rf1925'; });
+  await expect(notice(page)).toBeVisible();
+  await expect(page.getByRole('button', {name: 'Layers', exact: true})).toHaveCount(0);
+  await expect(page.locator('.app-rail')).toHaveCount(0);
+  await expect(page.getByRole('group', {name: 'Map presentation'})).toHaveCount(0);
+  await expect(page.locator(isMobile ? 'input[aria-label="Hour"]' : '.app-dock')).toBeVisible();
+  const before = page.url();
+  expect(before).toContain('#rf1925');
+  const retry = retryButton(page);
+  await expect(retry).toHaveCount(1);
+  expect((await retry.boundingBox())!.height, 'a full-size target').toBeGreaterThanOrEqual(44);
+  await retry.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  await expect(notice(page)).toHaveCount(0);
+  expect(page.url(), 'the complete address is kept').toBe(before);
+  expect(loads.length, 'one initial load and one reload').toBe(2);
+  await expect(page.getByRole('group', {name: 'Map presentation'})).toBeVisible();
+});
+
+test('where graphics never start the notice returns after Try again and nothing reloads by itself', async ({page, v2}) => {
+  await blockWebgl(page, EVERY_LOAD);
+  await holdCoastData(page);
+  let loads = 0;
+  page.on('load', () => { loads++; });
+  await v2.open('app', {...PLACE, presentation: 'chart'});
+  await expect(notice(page)).toBeVisible();
+  await retryButton(page).click();
+  await expect.poll(() => loads).toBe(2);
+  await expect(notice(page)).toBeVisible();
+  await page.waitForTimeout(1500);
+  expect(loads, 'no automatic reload loop').toBe(2);
+});
+
+for (const width of [390, 320]) {
+  test(`the failed-map notice is readable and clear of the header and time controls at ${width} px wide`, async ({page, v2, isMobile}) => {
+    test.skip(!isMobile, 'the phone layout');
+    await blockWebgl(page, EVERY_LOAD);
+    await holdCoastData(page);
+    await page.setViewportSize({width, height: 844});
+    await v2.open('app', {...PLACE, presentation: 'chart'});
+    await expect(notice(page)).toBeVisible();
+    const box = (await page.locator('.app-stage-failed').boundingBox())!;
+    expect(box.x, 'inside the viewport').toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth), 'no horizontal page scroll').toBeLessThanOrEqual(width);
+    const retry = (await retryButton(page).boundingBox())!;
+    expect(retry.height).toBeGreaterThanOrEqual(44);
+    for (const clear of ['.app-top', '.ui-sheet', '.app-tabs']) expect(overlap(box, (await page.locator(clear).boundingBox())!), `clear of ${clear}`).toBe(false);
+  });
+}
+
+test('the failed-map notice sits clear of the dock on a laptop', async ({page, v2, isMobile}) => {
+  test.skip(isMobile, 'the laptop layout');
+  await blockWebgl(page, EVERY_LOAD);
+  await holdCoastData(page);
+  await v2.open('app', {...PLACE, presentation: 'chart'});
+  await expect(notice(page)).toBeVisible();
+  const box = (await page.locator('.app-stage-failed').boundingBox())!;
+  expect(overlap(box, (await page.locator('.app-dock').boundingBox())!)).toBe(false);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
 });
 
 test('unavailable terrain data returns the stage to Chart with v1\'s message', async ({page, v2}) => {
