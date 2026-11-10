@@ -65,9 +65,20 @@ export async function initProtectedAreas(map, onChange, readJSON=fetchJSON) {
     if(!printed||printed[0]!==data||printed[1]!==extra){printOf=boundaryFingerprint([...data.features,...(extra?.features||[])].map(f=>f.geometry),bounds,[...data.features,...(extra?.features||[])].map(f=>f.properties?.FULLNAME||f.properties?.NAME||null));printed=[data,extra];}
     return printOf;
   };
+  // SC1407-02: the revision a cached verdict is reused under (web/place-verdict-cache.ts): a generation that moves whenever `data` or `extra`
+  // is replaced (whatever the check time), the boundary fingerprint (geometry, names and order, envelope), the region binding and the check
+  // times, read again on every call; null while the screen is not current, so nothing stale or unbound is reused.
+  let generation=0, generationOf=null;
+  const verdictRevision=()=>{
+    if(!current())return null;
+    if(!generationOf||generationOf[0]!==data||generationOf[1]!==extra){generation++;generationOf=[data,extra];}
+    const print=fingerprint();
+    return print===null?null:`planner|${regionId}|${bounds.join(",")}|${generation}|${print}|${revision()}`;
+  };
   const screen={
     ready:()=>current(),
     fingerprint,
+    verdictRevision,
     coversGeometry:covers,
     // SC-GPSOFFLINE-1: the boundary data this screen holds right now, current or not (null when it holds none or is not bound to its region), so a live-position
     // check can still use the saved boundaries offline and say how old they are. It only reads; every verdict still comes from geo-screen.js `screenPlace`.

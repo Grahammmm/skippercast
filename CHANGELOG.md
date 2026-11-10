@@ -4,11 +4,15 @@
 
 - SC1407-07: the Aerial base asks USGS for 512 px tiles (about a quarter of the requests for the same view, at the same sharpness and over the same zoom range) as JPEG where a tile is fully opaque and PNG where it holds transparency, so open water still shows the map below; if that format fails, the base retries once in the previous PNG-only form. The map page also opens its connection to the USGS imagery host while it loads. The imagery, its dated credit and the NaturalColor rendering are unchanged.
 
+- RF0844-8: fleet trip labels (admin form and agent label import) refuse a start or end time written on a day that is not on the calendar, such as February 30, 2026-02-29 or April 31, with the existing "must be ISO UTC times" error, instead of silently rolling it into the next month and saving it against the trip; a refused admin label saves nothing and a refused agent import keeps every existing label. Valid days, leap days and accepted time precision are unchanged.
+
 - RF0844-7: the GEFS wind-ensemble build now checks each decoded wind-component and gust field's latitude and longitude axes against the GFS land mask before sampling any sea-cell index, and fails the build when a field sits on displaced cells even if its dimensions match (it previously published that wind under the mask's coordinates with a false zero-distance receipt). A failed build keeps the previous generation as before; matching grids, receipts and missing-member handling are unchanged.
 
 - RF0834-9: the forecast build keeps missing or nonfinite accumulated precipitation (ECMWF IFS) missing through its conversion to mm/hour instead of publishing dry zeros. An absent, bitmap-missing, rejected-sentinel or infinite first accumulation is no longer stored as 0 mm/h, and an interval whose start or end accumulation is not finite (including either infinity) is stored as missing rather than as no rain; only intervals that depend on the bad value are affected. Valid initial zeros, finite decreases (clamped to zero) and uneven step intervals are unchanged. No forecast data is rebuilt or republished by this change.
 
 - RF0814-8: a depth-contour file whose review expiry is an impossible calendar date (such as 2026-11-31 or 2027-02-29) now fails the existing contour check instead of drawing and exporting; real dates keep drawing through their last day and are withheld the next day.
+
+- RF0834-6: the USCG PSIX registry adapter no longer builds an official number by deleting the non-digits from a workbook value. Only a value that is already 5 to 8 plain digits becomes the document-number key and fact; anything else (letters, signs, decimals, exponent forms) leaves that one key out so it cannot attach facts to the wrong vessel, while the name, call sign and other facts are kept.
 
 - RF0844-6: SST front extraction preserves native grid origins and coordinates, so half-offset grids no longer falsely conflict; true overlapping-measurement conflicts still refuse publication.
 

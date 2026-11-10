@@ -52,9 +52,11 @@ const LABEL_FIELDS = ['started_at', 'ended_at', 'label', 'basis'];
 const AGENT_LABELS = (t: string): string => `EXISTS(SELECT 1 FROM fleet_segment_labels a WHERE a.trip_id=${t}.id AND a.labeller LIKE 'agent:%')`;
 
 const newId = (): string => [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('');
-/** An ISO UTC time with a Z, normalised to milliseconds; null if it is not one. */
+/** An ISO UTC time with a Z on a real calendar day, normalised to milliseconds; null if it is not one (February 30 never rolls into March). */
 export function isoTime(v: unknown): string | null {
   if (typeof v !== 'string' || !ISO.test(v)) return null;
+  const day = v.slice(0, 10), midnight = Date.parse(`${day}T00:00:00Z`);
+  if (!Number.isFinite(midnight) || new Date(midnight).toISOString().slice(0, 10) !== day) return null;
   const t = Date.parse(v);
   return Number.isFinite(t) ? new Date(t).toISOString() : null;
 }
