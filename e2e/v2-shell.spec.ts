@@ -157,7 +157,7 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
 });
 
 test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) => {
-  await v2.open('app', AREA);
+  await v2.open('app', {...AREA, area: 'estero'});   // SC1722-15: the Area picker is drawn only for an area link
   const wanted = isMobile
     ? ['button[aria-label="Layers"]', '[aria-label="Profile"] button:last-child', '.ui-sheet-handle', 'input[aria-label="Hour"]', '.ui-tile:last-child summary', 'label:has-text("Target") select', 'label:has-text("Area") select', '.app-tabs a[data-view="reports"]']
     : ['nav[aria-label="Views"] a[data-view="fleet"]', '[aria-label="Profile"] button:last-child', 'label:has-text("Target") select', 'label:has-text("Area") select',
