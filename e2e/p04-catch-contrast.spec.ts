@@ -182,7 +182,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF0753-2 (first-run keyboard): App.tsx changes only <FirstRun /> to <FirstRun focusOnOpen /> on the desktop shell, which
   // moves focus to the card's heading (FirstRun.tsx). BODY09 mounts Reports/CatchCards, never App or FirstRun; no CSS, token,
   // class or catch markup change; contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
-  "web/app/App.tsx": "ae91937e607c033488a0b2d84eeea283e9b444b6a8241f8233da5d531c70d55c",
+  // SC1722-03: startupFreshness keeps the source age when offline (it returned none), before its offline override; BODY09 mounts
+  // Reports/CatchCards, never App, and online results are unchanged. No CSS, token or catch markup change; contrast(), assertions
+  // and thresholds are untouched. Rebind only App.tsx.
+  "web/app/App.tsx": "6141941f7dc9080d02f9d12d33bc3cffa187af4e140b966e12916447e53c5f29",
   // SC-LAUNCH-4 (#1267, cost ceiling): Masthead.tsx imports web/degraded.ts (a signal and pure helpers, no top-level
   // side effect) and adds DegradedNotice after FreshnessDot. It renders nothing unless a response carries
   // X-SC-Degraded: cost-ceiling, which no BODY09 fixture does; when shown it reuses the existing .app-limits-note
@@ -204,7 +207,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-09: ViewNav's click pushes one history entry when the view changes (navigate) instead of replacing it (setParams).
   // Only navigation event behaviour changed; BODY09 mounts Reports/CatchCards, never ViewNav, and no CSS, token, catch markup
   // or Reports paint changed. contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "a139e69f4462503540d4df87d7c8a30bd5ad4cfd6f3eaf89f30e54415e3c3c79",
+  // SC1722-03: FreshnessDot adds the existing translated Offline word (unstyled inline span) only in the offline state, beside its
+  // unchanged age span. BODY09 mounts Reports/CatchCards, never Masthead, and no network state markup changes; no CSS, token or
+  // catch markup change; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
+  "web/app/Masthead.tsx": "32b4a07cde2c7077f73d9eb95e5fed45ec83641c5ee1de489a0944696363d6a7",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
