@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF1915-6: trip checks refuse publication identifiers over 200 UTF-16 code units before reading job state or queuing owners, rather than truncating distinct identifiers into the same stored marker. Accepted identifiers remain unchanged.
+
 - RF1915-5: the spear reading's 48-hour swell look-back now walks its 48 fixed hourly slots instead of the nearshore model's declared sample spacing, so an enormous or non-finite `temporalResolutionMinutes` can no longer hold the daily brief in a loop. Coverage, energy maxima, the 36-hour clarity gate and every ordinary verdict are unchanged.
 
 - RF1635-6: the shoreline publication gate refuses a CUSP feature whose `source_date` is not a real calendar day (February 29 in a non-leap year, April 31, month or day zero, year 0000, month 13) or not a plain `YYYY-MM-DD` string (Unicode digits, timestamps, padding, missing or non-text values), before the published `shoreline.geojson` is replaced, so an existing file stays byte-identical. Valid dates, including leap days and 0001-01-01 / 9999-12-31, are kept as written; the gate adds no freshness limit and no data is rebuilt.
