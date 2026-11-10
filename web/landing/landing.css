@@ -14,7 +14,7 @@
 }
 .landing-host { display: contents; }
 .landing a { color: inherit; }
-.landing a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.landing a:focus-visible { border-radius: var(--radius-sm); }
 
 /* Static shoreline: a blurred wide stroke under a fine bright one */
 .landing-shore { position: fixed; inset: 0; z-index: var(--z-map); width: 100%; height: 100%; pointer-events: none; }
