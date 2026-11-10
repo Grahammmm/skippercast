@@ -15,7 +15,7 @@ export type SkillLead = 24 | 48 | 72;
 export interface SkillPart {readonly variable: 'wind' | 'seas'; readonly pct: number; readonly within: number; readonly n: number; readonly station: string; readonly window: number}
 export type SkillSummary = {readonly state: 'known'; readonly lead: SkillLead; readonly parts: SkillPart[]; readonly published: string}
   | {readonly state: 'unknown'; readonly lead: SkillLead; readonly published: string | null}
-  | {readonly state: 'unavailable'};
+  | {readonly state: 'unavailable'; readonly reason: 'range' | 'invalid'};
 
 /**
  * SC1407-11: the published lead bucket for the hour `at` seen at `now` (epoch ms), by elapsed time and exactly the
@@ -34,7 +34,7 @@ const percent = (within: number, n: number) => within === n ? 100 : within === 0
 /** The skill for the forecast of the hour `at` (default now), from that lead's rows only; freshness is judged at `now`. */
 export function skillSummary(file: unknown, region: string, now: number, at: number = now): SkillSummary {
   const LEAD = skillLead(at, now);
-  if (LEAD === null) return {state: 'unavailable'};
+  if (LEAD === null) return {state: 'unavailable', reason: at - now >= 259_200_000 ? 'range' : 'invalid'};
   const f = file as {schema_version?: unknown; generated_at?: unknown; minimum?: {valid_times?: unknown}; scores?: unknown} | null;
   const generated = typeof f?.generated_at === 'string' && /(Z|[+-]\d\d:?\d\d)$/.test(f.generated_at) ? Date.parse(f.generated_at) : NaN;
   const minimum = f?.minimum?.valid_times;
@@ -58,7 +58,7 @@ export function skillSummary(file: unknown, region: string, now: number, at: num
 export function skillLine(s: SkillSummary, lang: Language | string = 'en'): string {
   const body = s.state === 'known' ? t('brief.skill.known', lang, {lead: s.lead, window: s.parts[0]!.window, date: s.published,
       parts: s.parts.map(p => t('brief.skill.part', lang, {name: t(`brief.skill.${p.variable}`, lang), pct: p.pct, within: p.within, n: p.n, station: p.station})).join('; ')})
-    : s.state === 'unknown' && s.published ? t('brief.skill.unknown', lang, {lead: s.lead, date: s.published}) : t('brief.skill.unreadable', lang);
+    : s.state === 'unknown' && s.published ? t('brief.skill.unknown', lang, {lead: s.lead, date: s.published}) : s.state === 'unknown' ? t('brief.skill.unreadable', lang, {lead: s.lead}) : t(s.reason === 'range' ? 'brief.skill.unavailable.range' : 'brief.skill.unavailable.invalid', lang);
   return `${body} ${t('brief.skill.nav', lang)}`;
 }
 
