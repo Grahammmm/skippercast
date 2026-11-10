@@ -80,8 +80,9 @@ function TripDialog() {
         <h2 id="export-heading" tabIndex={-1}>{t('trip.title', lang)}</h2>
         <IconButton icon="close" label={t('trip.close', lang)} onClick={closeTrip} />
       </div>
-      {tripReady.value ? null : <p role="status">{error ? loadFailed(error, lang) : t('trip.loading', lang)}</p>}
-      {error ? <Button size="sm" onClick={() => void loadPlanner()}>{t('trip.retry', lang)}</Button> : null}
+      {/* RF1935-1: the status and Retry belong to an open dialog; this one is always mounted, so a closed, never-used planner would otherwise keep "Loading the trip planner" in the page. */}
+      {open && !tripReady.value ? <p role="status">{error ? loadFailed(error, lang) : t('trip.loading', lang)}</p> : null}
+      {open && error ? <Button size="sm" onClick={() => void loadPlanner()}>{t('trip.retry', lang)}</Button> : null}
       {planner ? <planner.View model={planner.model} open={open} /> : null}
       <PositionCheck />
       <Button icon="download" disabled={!region.value} onClick={() => { closeTrip(); offlineOpen.value = true; }}>{t('trip.legal.open', lang)}</Button>
