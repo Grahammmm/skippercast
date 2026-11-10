@@ -15,7 +15,7 @@ its budget and the share used, then PASS or FAIL. A failing group also lists its
 | Landing page scripts (entry + scripts it imports at once) | 421,933 | 304,000 (lowered by SC1407-09 from 460,000; see history in `scripts/perf-budget.json`) | 5.5% at first |
 | Landing page styles | 24,339 | 26,000 | 6.8% |
 | App page (brief, map) scripts, first load | 1,104,511 | 1,059,000 (lowered by SC1407-09 from 1,180,000 and by SC1407-10 to 1,059,000; see history in `scripts/perf-budget.json`) | 5.0% at first |
-| App page styles | 67,003 | 71,000 | 6.0% |
+| App page styles | 67,003 | 74,000 (raised from 71,000 to 72,000 by SC1722-06, to 73,000 by RF1935-4, to 74,000 by MAIN-RED-SKIPPERCAST; see history in `scripts/perf-budget.json`) | 6.0% at first |
 | Largest single built script, style or font (any page, loaded now or later) | 1,094,203 | 1,150,000 | 5.1% |
 | Brief data files in the repo (`protected-areas.geojson`, `land-water-lines.json`, `seafloor-ledger.json`) | 951,224 | 1,050,000 | 10.4% |
 | Per-region startup data, biggest single file (`atlas-marks.json`, `search-plan-index.json`, `regulations-startup.json` in every region) | 222,047 | 240,000 | 8.1% |
@@ -80,6 +80,17 @@ zone builds a new one, and an invalid date or zone still throws and leaves the e
 frozen (the array, each day and its hours) so no caller can change it; a caller's own horizon passed to `dockTime` is
 neither frozen nor kept. `tests/test_frames.mjs` checks this by counting formatter calls, not by timing; no new timing
 was measured.
+
+### The dock moves at once; the evidence settles once (SC1407-05)
+
+Not a byte budget, and no budget here changes. Issue #1762 (R3) measured one 200-405 ms main-thread task per time-dock
+hour step. A dock input (slider, keyboard, day chip, play or reduced-motion step, on desktop or the phone's sheet edge)
+now sets only a preview (`web/dock-selection.ts`): the thumb, readout, pressed day and aria-valuetext read it at once.
+The canonical `?day=`/`?hour=`, and so the brief, map overlays, tide and URL, follow once, 100 ms after the last input,
+in one batch and one history replacement. While a preview is pending the verdict and the desktop first answer show
+"Updating…" (aria-live off, aria-busy) and hide the previous answer; share links, exports, planner and alert defaults
+and print keep the settled hour. Any URL sync, region, zone or clock-hour change, a hidden page or the dock unmounting
+drops the preview without committing it. `tests/test_dock_selection.mjs` counts the update waves; no timing was measured.
 
 ### Protected-area distance work (SC1407-01, #1762)
 

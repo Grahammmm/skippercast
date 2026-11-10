@@ -336,7 +336,7 @@ test('limits_es_all_profiles_and_native_values: labels, hints, units and the tri
     assert.match(es.boat, /Viento sostenido máximo[\s\S]*Predeterminado 10 · 4–20/);
     assert.match(es.boat, /Velocidad de crucero/); assert.match(es.boat, /Horas que quiero pescar/);
     assert.match(es.boat, /\(nm, solo ida\)/); assert.match(es.boat, /línea recta desde el puerto, no una ruta/);
-    assert.match(es.shore, /Costa usa los límites predeterminados\./); assert.match(es.shore, /Oleaje de rompiente máximo/);
+    assert.match(es.shore, /Orilla usa los límites predeterminados\./); assert.match(es.shore, /Oleaje de rompiente máximo/);
     assert.match(es.spear, /Resaca máxima/); assert.match(es.spear, /<option[^>]*value="Low"[^>]*>Baja</); assert.match(es.spear, /value="Moderate"[^>]*>Moderada</); assert.match(es.spear, /value="Strong"[^>]*>Fuerte</);
     assert.match(es.spear, /Predeterminado Moderada/); assert.match(es.spear, /Predeterminado 60 · 10–100 · se excluyen los lugares más profundos/);
     assert.match(es.spear, /Inmersión más profunda/); assert.match(es.spear, /Sin definir/); assert.match(es.spear, /Un barco/);

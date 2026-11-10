@@ -455,8 +455,8 @@ test('shared_clock_crosses_hour_without_navigation: the desktop dock, the phone 
     narrow.value = true;
     const phoneBefore = hourControl(render(h(App, {clock: c.clock})));
     narrow.value = false;
-    assert.deepEqual(before.desktop, ['1 pm', '10']);
-    assert.deepEqual(phoneBefore, ['1 pm', '10']);
+    assert.deepEqual(before.desktop, ['Today · 1 pm', '10']);
+    assert.deepEqual(phoneBefore, ['Today · 1 pm', '10']);
     assert.equal(before.dataHour, '2026-10-05T20:00:00.000Z');
     assert.equal(c.timers.size, 1, 'the app, the layouts and the stage share one ticker');
     const steps = calls.length;
@@ -466,8 +466,8 @@ test('shared_clock_crosses_hour_without_navigation: the desktop dock, the phone 
     narrow.value = true;
     const phone = hourControl(render(h(App, {clock: c.clock})));
     narrow.value = false;
-    assert.deepEqual(desktop, ['2 pm', '9'], 'the dock default hour moved on');
-    assert.deepEqual(phone, ['2 pm', '9'], 'the phone hour edge moved on');
+    assert.deepEqual(desktop, ['Today · 2 pm', '9'], 'the dock default hour moved on');
+    assert.deepEqual(phone, ['Today · 2 pm', '9'], 'the phone hour edge moved on');
     assert.equal(dockState(c.clock.now.value, TZ).at, Date.parse('2026-10-05T21:00:00Z'));
     assert.equal(host.dataset.hour, '2026-10-05T21:00:00.000Z', 'the map draws the hour the dock shows');
     assert.deepEqual(calls.slice(steps).filter(call => call[0] === 'setHour').map(call => call[1].toISOString()), ['2026-10-05T21:00:00.000Z']);
@@ -505,7 +505,7 @@ test('fixed_now_and_play_remain_independent: a fixed now ignores the clock and s
   state.configureStore({v2: true, storage: memory()});
   state.syncFromURL(`${ORIGIN}?region=morro-bay`);
   const c = manualClock(createHourClock, '2026-10-05T22:00:00Z');
-  assert.deepEqual(hourControl(render(h(App, {now: NOW, clock: c.clock}))), ['1 pm', '10'], 'the fixed date is what the dock reads');
+  assert.deepEqual(hourControl(render(h(App, {now: NOW, clock: c.clock}))), ['Today · 1 pm', '10'], 'the fixed date is what the dock reads');
   assert.equal(c.timers.size, 0, 'rendering starts no ticker');
 });
 
@@ -529,7 +529,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.equal(count(html, /<label>Area<select/g), 1);
   assert.match(html, /<output class="app-window ui-mono" aria-label="Time window">Today · 1 pm<\/output>/);
   assert.deepEqual(dayChips(html), [['Today · Unknown', true], ...CHIPS.slice(1).map(label => [label, false])], 'no ?day= means today, at the fixed clock');
-  assert.match(html, /aria-label="Hour" aria-valuetext="1 pm" min="0" max="10" step="1" value="0"/, 'today runs from the current hour to 11 pm');
+  assert.match(html, /aria-label="Hour" aria-valuetext="Today · 1 pm" min="0" max="10" step="1" value="0"/, 'today runs from the current hour to 11 pm');
   assert.match(html, /<aside class="app-brief" aria-label="Brief">/);
   assert.match(html, /class="ui-eyebrow">Today's brief</);
   assert.match(html, /<h1>[A-Z][^<]*\.<\/h1>/, 'the headline is one sentence with a full stop');
@@ -603,8 +603,8 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   assert.deepEqual(attrs(coastView, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no colour key until a layer draws (FE-20)');
   // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.
   assert.deepEqual(dayChips(html), CHIPS.map(label => [label, label === 'Tue · Unknown']));
-  assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
-  assert.match(html, /<output class="ui-dock-readout ui-mono" aria-live="off">2 pm<\/output>/);
+  assert.match(html, /aria-label="Hour" aria-valuetext="Tomorrow · 2 pm" min="0" max="23" step="1" value="14"/);
+  assert.match(html, /<output class="ui-dock-readout ui-mono" aria-live="off">Tomorrow · 2 pm<\/output>/);
   assert.match(html, /class="app-dock-zone ui-mono">P[DS]T</, 'the zone shows once in the dock');
   assert.match(html, /aria-label="Time window">Tue · 2 pm<\/output>/);
   // Selection: the mark card names the spot with blank reading and source.
@@ -680,7 +680,7 @@ async function renderMobile(href) {
 
 test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a four-tab nav', async () => {
   const html = await renderMobile(`${ORIGIN}?region=morro-bay`);
-  assert.match(html, /^<div class="app-mobile"><section class="app-stage" tabindex="-1" aria-label="Map">/, 'the map stage comes first and fills the viewport');
+  assert.match(html, /^<main class="app-mobile"><section class="app-stage" tabindex="-1" aria-label="Map">/, 'the map stage comes first and fills the viewport; the root is the page\'s one main (S4-46)');
   assert.doesNotMatch(html, /app-masthead|app-command|app-main|app-brief"|app-dock/, 'no desktop chrome');
   // Top strip: the brand and location card, the layers button, then the full-width profile switch.
   assert.match(html, /<header class="app-top"><div class="app-top-row"><div class="app-top-card"><a class="app-brand" href="\/">.*?<span class="app-location ui-mono" data-region="morro-bay">Morro Bay —<\/span><\/div><button[^>]*aria-label="Layers"[^>]*aria-pressed="false"/s);
@@ -688,8 +688,8 @@ test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a 
   assert.equal(count(html, /(?:Boat|Shore|Spear|Kayak)<\/button>/g), 4);
   // One sheet at peek with the hour slider at its edge, then the brief in sheet order.
   assert.equal(count(html, /class="ui-sheet /g), 1);
-  assert.match(html, /<section class="ui-sheet app-sheet" data-detent="peek" aria-label="Brief"><div class="ui-sheet-edge"><button type="button" class="ui-sheet-handle" aria-label="Expand Brief" aria-expanded="false"/);
-  assert.match(html, /<\/button><div class="app-sheet-hour" role="group" aria-label="Time"><input type="range" class="ui-range ui-dock-range" aria-label="Hour" aria-valuetext="1 pm"[^>]*><output class="ui-dock-readout ui-mono" aria-live="off">1 pm<\/output><\/div><\/div>/);
+  assert.match(html, /<section class="ui-sheet app-sheet" data-detent="peek" role="group" aria-label="Brief"><div class="ui-sheet-edge"><button type="button" class="ui-sheet-handle" aria-label="Expand Brief" aria-expanded="false"/);
+  assert.match(html, /<\/button><div class="app-sheet-hour" role="group" aria-label="Time"><input type="range" class="ui-range ui-dock-range" aria-label="Hour" aria-valuetext="Today · 1 pm"[^>]*><output class="ui-dock-readout ui-mono" aria-live="off">Today · 1 pm<\/output><\/div><\/div>/);
   const body = html.slice(html.indexOf('<div class="ui-sheet-body">'), html.indexOf('<nav aria-label="Views"'));
   // SC-LAUNCH-3: the head names the lead's day (tomorrow, no time chosen); the dock's day heads the evidence below the lead.
   const order = ['class="ui-eyebrow">Tomorrow</span>', 'class="app-fresh" role="status"', '<h1>Waiting for readings.</h1>', 'class="ui-eyebrow">Today · 1 pm</span>', '<div class="app-tiles">', 'class="ui-eyebrow">Where to look', '<details class="app-details">', '<p class="app-caveat">', '<figure class="app-spark"',
@@ -711,10 +711,10 @@ test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a 
 test('the mobile sheet reflects the address: the mark card stands in at peek, the hour and day follow the dock', async () => {
   const {render, h, LayersPanel, state, afterDetent, toggleLayers, dragDetent, DRAG_MIN} = await load();
   const html = await renderMobile(`${ORIGIN}?region=morro-bay&profile=spear&spot=r12&day=2026-10-06&hour=${encodeURIComponent(TUE_2PM)}&layers=clouds`);
-  assert.match(html, /<section class="ui-sheet app-sheet app-sheet--mark" data-detent="peek" aria-label="Brief">/);
+  assert.match(html, /<section class="ui-sheet app-sheet app-sheet--mark" data-detent="peek" role="group" aria-label="Brief">/);
   assert.match(html, /<div class="ui-sheet-body"><div class="app-sheet-brief"><section class="app-mark" aria-label="Selected mark"><div class="app-mark-head"><h2 tabindex="-1">r12<\/h2>/);
   assert.doesNotMatch(html, /<h1>/, 'the card replaces the headline');
-  assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
+  assert.match(html, /aria-label="Hour" aria-valuetext="Tomorrow · 2 pm" min="0" max="23" step="1" value="14"/);
   assert.deepEqual(dayChips(html), CHIPS.map(label => [label, label === 'Tue · Unknown']), 'the sheet\'s day menu runs from the fixed clock');
   assert.match(html, /Nearshore site —/);
   assert.match(html, /In-water visibility is unverified/);
@@ -1035,4 +1035,87 @@ test('map_chrome_es_unavailable_and_placement: the toggle, groups, terrain butto
     assert.equal(got.length, 0, 'the language change completed no placement');
     cancelWaypointPlacement();
   } finally { cancelWaypointPlacement(); terrainActions.value = null; terrainFailed.value = false; setLanguage('en', {storage: none, doc: null}); }
+});
+
+// S4-46 (RF1925-6): one top-level main per app view, and no two regions with one name.
+const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+/** Every element of rendered `html` with its attributes and the tags above it (a small tokenizer: the SSR output is well formed). */
+function landmarkTree(html) {
+  const out = [], stack = [];
+  for (const m of html.matchAll(/<(\/?)([a-zA-Z][\w-]*)((?:[^>"]|"[^"]*")*?)(\/?)>/g)) {
+    const [, closing, name, rest, selfClosing] = m, tag = name.toLowerCase();
+    if (closing) { const at = stack.map(e => e.tag).lastIndexOf(tag); if (at >= 0) stack.length = at; continue; }
+    const attr = Object.fromEntries([...rest.matchAll(/([\w:-]+)="([^"]*)"/g)].map(a => [a[1], a[2]]));
+    const el = {tag, attr, ancestors: stack.map(e => e.tag + (e.attr.role ? `[role=${e.attr.role}]` : '') + (e.landmark ? '*' : ''))};
+    el.landmark = tag === 'main' || attr.role === 'main' ? 'main' : attr.role === 'region' || (tag === 'section' && !attr.role && (attr['aria-label'] || attr['aria-labelledby'])) ? 'region' : tag === 'aside' ? 'complementary' : tag === 'nav' ? 'navigation' : null;
+    if (el.landmark === 'main') el.role = 'main';
+    out.push(el);
+    if (!selfClosing && !VOID_TAGS.has(tag)) stack.push(el);
+  }
+  return out;
+}
+const regionName = (html, el) => el.attr['aria-label'] ?? (el.attr['aria-labelledby'] ? html.match(new RegExp(`id="${el.attr['aria-labelledby']}"[^>]*>([^<]*)<`))?.[1] : undefined);
+/** [mains, mains nested in another landmark, duplicate region names] of one rendered page. */
+function landmarkReport(html) {
+  const tree = landmarkTree(html), mains = tree.filter(e => e.landmark === 'main');
+  const nested = mains.filter(e => e.ancestors.some(a => a.endsWith('*') || /^(main|aside|nav)/.test(a)));
+  const names = tree.filter(e => e.landmark === 'region').map(e => regionName(html, e)).filter(Boolean);
+  return {mains: mains.length, nested: nested.length, duplicates: names.filter((n, i) => names.indexOf(n) !== i), names};
+}
+
+test('one_main_all_views_en_es: every app view has exactly one top-level main on the phone and the desktop, in both languages and presentations', async () => {
+  const {narrow, setLanguage} = await load();
+  const none = {getItem: () => null, setItem() {}};
+  const real = {mobile: 0, desktop: 0};
+  try {
+    for (const lang of ['en', 'es']) {
+      setLanguage(lang, {storage: none, doc: null});
+      for (const view of ['coast', 'conditions', 'history', 'fleet', 'reports', 'plan']) {
+        for (const presentation of ['chart', '2d', '3d']) {
+          const href = `${ORIGIN}?region=morro-bay&view=${view}&presentation=${presentation}`;
+          for (const [layout, html] of [['mobile', await renderMobile(href)], ['desktop', await renderShell(href)]]) {
+            const label = `${layout} ${lang} ${view} ${presentation}`, report = landmarkReport(html);
+            assert.equal(report.mains, 1, `${label}: exactly one main`);
+            assert.equal(report.nested, 0, `${label}: the main is top level`);
+            assert.deepEqual(report.duplicates, [], `${label}: no two regions share a name`);
+            assert.doesNotMatch(html, /class="app-mobile-page"[^>]*><main|<main[^>]*class="app-mobile-page"/, `${label}: Reports and Plan own no main of their own`);
+            real[layout]++;
+          }
+        }
+      }
+    }
+  } finally { narrow.value = false; setLanguage('en', {storage: none, doc: null}); }
+  assert.deepEqual(real, {mobile: 36, desktop: 36}, 'every case rendered');
+  const mobile = await renderMobile(`${ORIGIN}?region=morro-bay&view=reports`);
+  assert.match(mobile, /^<main class="app-mobile">/, 'the phone root is the main and keeps its class');
+  assert.match(mobile, /<div class="app-mobile-page"><section class="app-firstrun"/, 'the first-run prompt keeps its place in the Reports page');
+});
+
+test('landmark_report: the helper flags a nested main and a repeated region name', () => {
+  const bad = '<main><section aria-label="Map"><main></main></section><section aria-label="Map"></section></main>';
+  assert.deepEqual(landmarkReport(bad), {mains: 2, nested: 1, duplicates: ['Map'], names: ['Map', 'Map']});
+  assert.equal(landmarkReport('<div role="main"><div role="group"></div></div>').mains, 1);
+});
+
+test('conditions_named_region_once: the phone Conditions view has one Conditions region, the sheet is a named group, the chart keeps its own region', async () => {
+  const {narrow, setLanguage} = await load();
+  const none = {getItem: () => null, setItem() {}};
+  try {
+    for (const [lang, word] of [['en', 'Conditions'], ['es', 'Condiciones']]) {
+      setLanguage(lang, {storage: none, doc: null});
+      const html = await renderMobile(`${ORIGIN}?region=morro-bay&view=conditions`);
+      const names = landmarkReport(html).names;
+      assert.equal(names.filter(n => n === word).length, 1, `${lang}: one region named ${word}`);
+      assert.match(html, new RegExp(`<section class="ui-sheet app-sheet" data-detent="[a-z]+" role="group" aria-label="${word}">`), `${lang}: the sheet is a named group`);
+      assert.match(html, new RegExp(`<section class="app-conditions" aria-labelledby="app-conditions-title"><header class="app-conditions-head"><h2 id="app-conditions-title">${word}</h2>`), `${lang}: the labelled section and its heading stay`);
+      assert.match(html, /class="app-conditions-chart" role="region" aria-label="[^"]+"/, `${lang}: the chart keeps its own region`);
+      assert.match(html, /aria-label="(Expand|Collapse) /, `${lang}: the handle keeps its name`);
+    }
+    // Brief and Conditions sheets alike are named groups.
+    setLanguage('en', {storage: none, doc: null});
+    for (const view of ['coast', 'conditions']) {
+      const html = await renderMobile(`${ORIGIN}?region=morro-bay&view=${view}`);
+      assert.match(html, /<section class="ui-sheet app-sheet[^"]*" data-detent="[a-z]+" role="group" aria-label="(Brief|Conditions)">/);
+    }
+  } finally { narrow.value = false; setLanguage('en', {storage: none, doc: null}); }
 });

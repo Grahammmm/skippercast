@@ -69,7 +69,7 @@ test('shell_es_views_sheet_and_aria: names, aria labels and the phone sheet foll
   assert.deepEqual(keys(es.nav), keys(en.nav), 'hrefs and data-view keys are the English ones');
   assert.deepEqual(keys(es.tabs), keys(en.tabs));
   assert.match(es.mobile, /aria-label="Capas"/);
-  assert.match(es.mobile, /<section class="ui-sheet app-sheet" data-detent="peek" aria-label="Resumen">/);
+  assert.match(es.mobile, /<section class="ui-sheet app-sheet" data-detent="peek" role="group" aria-label="Resumen">/);
   assert.match(es.mobile, /role="group" aria-label="Tiempo"/);
   assert.match(es.mobile, /aria-label="Hora"/);
   assert.match(es.mobile, /role="group" aria-label="Área y puerto"/);
@@ -117,7 +117,7 @@ test('shell_es_command_values: profile labels change, values and icons do not; t
   const en = await inLanguage('en', m => m.render(m.h(m.ProfileSwitch, {})));
   const es = await inLanguage('es', m => m.render(m.h(m.ProfileSwitch, {})));
   assert.deepEqual(profiles(en), ['Boat', 'Shore', 'Spear', 'Kayak']);
-  assert.deepEqual(profiles(es), ['Barco', 'Costa', 'Pesca submarina', 'Kayak']);
+  assert.deepEqual(profiles(es), ['Barco', 'Orilla', 'Pesca submarina', 'Kayak']);
   assert.match(es, /aria-label="Perfil"/);
   const m = await load();
   const option = (state, group) => ({id: 'lingcod', label: 'Lingcod', group, state, unavailable: false});
@@ -129,11 +129,11 @@ test('shell_es_command_values: profile labels change, values and icons do not; t
   const group = (g, label) => ({label, options: [option('ranked', g)]});
   assert.equal(m.shellGroupLabel(group('plan', 'Search plans · Boat'), 'boat', 'en'), 'Search plans · Boat', 'English is verbatim');
   assert.deepEqual(['link', 'profile', 'plan', 'coast', 'other'].map(g => m.shellGroupLabel(group(g, 'x'), 'shore', 'es')),
-    ['Del enlace', 'Objetivos de Costa', 'Planes de búsqueda · Costa', 'Objetivos de hábitat costero', 'Otros objetivos']);
+    ['Del enlace', 'Objetivos de Orilla', 'Planes de búsqueda · Orilla', 'Objetivos de hábitat costero', 'Otros objetivos']);
   assert.equal(m.shellGroupLabel({label: 'x', options: [{...option('ranked'), group: undefined}]}, 'boat', 'es'), 'Objetivos de Barco', 'no group key: the profile group');
   await inLanguage('es', mm => {
     const cmd = mm.render(mm.h(mm.CommandBar, {now: NOW}));
-    for (const words of ['aria-label="Barra de comandos"', 'aria-label="Especie objetivo"', 'aria-label="Busca una especie objetivo" placeholder="Busca una especie objetivo"', '<label>Objetivo<select', 'aria-label="Ventana de tiempo"', 'role="group" aria-label="Área y puerto"', '<label>Área<select', '>Toda la región</option>', 'aria-label="Elegir puerto"', '>Puerto</button>', 'aria-label="Usar mi ubicación"', 'aria-label="Compartir esta vista"'])
+    for (const words of ['aria-label="Barra de comandos"', 'aria-label="Especie objetivo"', 'aria-label="Busca especie" placeholder="Busca especie"', '<label>Objetivo<select', 'aria-label="Ventana de tiempo"', 'role="group" aria-label="Área y puerto"', '<label>Área<select', '>Toda la región</option>', 'aria-label="Elegir puerto"', '>Puerto</button>', 'aria-label="Usar mi ubicación"', 'aria-label="Compartir esta vista"'])
       assert.ok(cmd.includes(words), words);
     assert.ok(cmd.includes('value="lingcod"') && cmd.includes('Lingcod ·'), 'the target value and published name are unchanged');
   });

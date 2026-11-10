@@ -78,8 +78,8 @@ test('FE-52: Reports opens from the masthead (laptop) or the sheet footer (phone
 // ordinary day (Today has twelve hours left, so End is a real move) and the last hour of Pacific today (Today has one
 // hour, so the Day chip must be pressed and Home is the real move).
 const HOUR_CASES = [
-  {name: 'ordinary day', now: '2026-10-12T19:30:00Z', lastHour: false, atEnd: false, expected: '11 pm', hour: '2026-10-13T06:00Z', day: null},
-  {name: 'last hour today', now: '2026-10-12T06:30:00Z', lastHour: true, atEnd: true, expected: '12 am', hour: '2026-10-12T07:00Z', day: '2026-10-12'},
+  {name: 'ordinary day', now: '2026-10-12T19:30:00Z', lastHour: false, atEnd: false, expected: 'Today · 11 pm', hour: '2026-10-13T06:00Z', day: null},
+  {name: 'last hour today', now: '2026-10-12T06:30:00Z', lastHour: true, atEnd: true, expected: 'Tomorrow · 12 am', hour: '2026-10-12T07:00Z', day: '2026-10-12'},
 ] as const;
 
 for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and the hour slider update the address without a reload: ${c.name}`, async ({page, pageErrors, v2, isMobile}) => {
@@ -126,7 +126,7 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
     await expect(tomorrow).toHaveAttribute('aria-pressed', 'true');
     // The same local hour (11 pm) on tomorrow's 24 hours: index 23.
     await expect(slider).toHaveValue('23');
-    await expect(page.locator('.ui-dock-readout')).toHaveText('11 pm');
+    await expect(page.locator('.ui-dock-readout')).toHaveText('Tomorrow · 11 pm');
     await expect(page).toHaveURL(u => u.searchParams.get('hour') === '2026-10-13T06:00Z' && u.searchParams.get('day') === '2026-10-12');
   }
   // At the slider's end, End emits no input event, so choose the opposite endpoint.
@@ -141,9 +141,12 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
   await page.keyboard.press(atEnd ? 'Home' : 'End');
   await expect(slider).toHaveValue(expectedValue);
   await expect(page).toHaveURL(/[?&]hour=\d{4}-\d{2}-\d{2}T\d{2}%3A00Z/);
+  // The dock moves at once and the address settles on the chosen hour once, 100 ms after the last input (SC1407-05), so wait for it.
+  await expect(page).toHaveURL(u => u.searchParams.get('hour') === c.hour);
   expect(new URL(page.url()).searchParams.get('hour'), 'the hour in the address').toBe(c.hour);
   expect(new URL(page.url()).searchParams.get('day'), 'the day in the address').toBe(c.day);
   await expect(page.locator('.ui-dock-readout')).toHaveText(c.expected);
+  await expect(slider).toHaveAttribute('aria-valuetext', c.expected);
   expect(await stillLoaded(), 'no reload').toBe(true);
   // A shared link restores the same choices.
   const shared = page.url();
@@ -152,7 +155,44 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
   await expect(page.locator('[aria-label="Profile"] button[aria-pressed="true"]')).toHaveText('Spear');
   await expect(page.locator('input[aria-label="Hour"]')).toHaveValue(expectedValue);
   await expect(page.locator('.ui-dock-readout')).toHaveText(c.expected);
+  await expect(slider).toHaveAttribute('aria-valuetext', c.expected);
   expect(new URL(page.url()).searchParams.get('hour'), 'the shared hour is kept').toBe(c.hour);
+  expect(pageErrors).toEqual([]);
+});
+
+// SC1722-10: actual mounted surfaces use the region calendar, including the repeated hour.
+for (const lang of ['en', 'es']) test(`day-qualified dock values across fall DST: ${lang}`, async ({page, v2, pageErrors}) => {
+  await page.clock.setFixedTime(new Date('2026-10-31T19:00:00Z'));
+  const cases = [
+    ['2026-10-31T23:00Z', 'Today · 4 pm', 'Hoy · 16'],
+    ['2026-11-01T08:00Z', 'Tomorrow · 1 am', 'Mañana · 1'],
+    ['2026-11-01T09:00Z', 'Tomorrow · 1 am', 'Mañana · 1'],
+    ['2026-11-03T14:00Z', 'Tue · 6 am', 'mar · 6'],
+    ['2026-11-07T14:00Z', 'Sat 7 · 6 am', 'sáb 7 · 6'],
+  ];
+  for (const [hour, en, es] of cases) {
+    await v2.open('app', {...AREA, hour, lang});
+    const expected = lang === 'es' ? es : en;
+    await expect(page.locator('.ui-dock-readout')).toHaveText(expected);
+    await expect(page.locator('input[type="range"].ui-dock-range')).toHaveAttribute('aria-valuetext', expected);
+    expect(new URL(page.url()).searchParams.get('hour')).toBe(hour);
+  }
+  // Freeze timers after mounting: native Home changes the visible/accessibility preview,
+  // while the exact UTC address remains settled until the controller's 100 ms pause.
+  await page.clock.pauseAt(new Date('2026-10-31T19:00:01Z'));
+  const slider = page.locator('input[type="range"].ui-dock-range');
+  await slider.focus();
+  await slider.press('Home');
+  const preview = lang === 'es' ? 'sáb 7 · 0' : 'Sat 7 · 12 am';
+  await expect(page.locator('.ui-dock-readout')).toHaveText(preview);
+  await expect(slider).toHaveAttribute('aria-valuetext', preview);
+  expect(new URL(page.url()).searchParams.get('hour')).toBe('2026-11-07T14:00Z');
+  await page.clock.runFor(99);
+  expect(new URL(page.url()).searchParams.get('hour')).toBe('2026-11-07T14:00Z');
+  await page.clock.runFor(1);
+  await expect(page).toHaveURL(u => u.searchParams.get('hour') === '2026-11-07T08:00Z');
+  await expect(page.locator('.ui-dock-readout')).toHaveText(preview);
+  await expect(slider).toHaveAttribute('aria-valuetext', preview);
   expect(pageErrors).toEqual([]);
 });
 
@@ -376,6 +416,76 @@ test.describe('phone', () => {
       expect(pageErrors).toEqual([]);
     });
   }
+
+  // SC1722-09: Back to History from a peeked sheet opens it full (viewDetent); Back to another view leaves the detent as it is.
+  test('SC1722-09: Back to History opens a peeked sheet full and Back to Coast leaves the detent alone', async ({page, pageErrors, v2}) => {
+    await v2.open('app', AREA, 'phone');
+    const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
+    const tab = (view: string) => page.locator(`nav[aria-label="Views"] a[data-view="${view}"]`);
+    await tab('history').click();
+    await expect(page).toHaveURL(/[?&]view=history/);
+    await expect(sheet).toHaveAttribute('data-detent', 'full');
+    await handle.focus();
+    await page.keyboard.press('Home');
+    await expect(sheet).toHaveAttribute('data-detent', 'peek');
+    await tab('conditions').click();
+    await expect(page).toHaveURL(/[?&]view=conditions/);
+    await page.goBack();
+    await expect(page).toHaveURL(/[?&]view=history/);
+    await expect(tab('history')).toHaveAttribute('aria-current', 'page');
+    await expect(sheet).toHaveAttribute('data-detent', 'full');
+    await page.goBack();
+    await expect(page).not.toHaveURL(/[?&]view=/);
+    expect(new URL(page.url()).pathname).toBe('/map');
+    await expect(sheet).toHaveAttribute('data-detent', 'full');
+    expect(pageErrors).toEqual([]);
+  });
+});
+
+// SC1722-09: a press that changes the view is one history entry, a press on the shown view is none, an hour change replaces.
+test('SC1722-09: Back and Forward follow the views you pressed, a repeat press adds no entry and an hour change adds none', async ({page, pageErrors, v2}) => {
+  await page.clock.setFixedTime(new Date('2026-10-12T19:30:00Z'));   // an ordinary day, as HOUR_CASES: Today has hours left
+  await v2.open('app', AREA);
+  await page.evaluate(() => { (window as unknown as {__v2: number}).__v2 = 1; });
+  const stillLoaded = () => page.evaluate(() => (window as unknown as {__v2?: number}).__v2 === 1);
+  const length = () => page.evaluate(() => history.length);
+  const tab = (view: string) => page.locator(`nav[aria-label="Views"] a[data-view="${view}"]`);
+  const start = await length();
+  await tab('coast').click();
+  expect(await length(), 'a press on the shown view adds no entry').toBe(start);
+  await expect(page).not.toHaveURL(/[?&]view=/);
+  const slider = page.locator('input[aria-label="Hour"]');
+  const max = await slider.getAttribute('max');
+  expect(max, 'the slider has a numeric maximum').toMatch(/^\d+$/);
+  await slider.focus();
+  await page.keyboard.press(await slider.inputValue() === max ? 'Home' : 'End');
+  await expect(page).toHaveURL(/[?&]hour=/);
+  expect(await length(), 'an hour change adds no entry').toBe(start);
+  const hour = new URL(page.url()).searchParams.get('hour');
+  await tab('conditions').click();
+  await expect(page).toHaveURL(/[?&]view=conditions/);
+  await expect(page.locator('section.app-conditions')).toBeVisible();
+  await tab('history').click();
+  await expect(page).toHaveURL(/[?&]view=history/);
+  await expect(tab('history')).toHaveAttribute('aria-current', 'page');
+  await tab('history').click();
+  expect(await length(), 'two entries for two changed views, none for the repeat').toBe(start + 2);
+  await page.goBack();
+  await expect(page).toHaveURL(/[?&]view=conditions/);
+  await expect(tab('conditions')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('section.app-conditions')).toBeVisible();
+  await page.goBack();
+  await expect(page).not.toHaveURL(/[?&]view=/);
+  expect(new URL(page.url()).searchParams.get('hour'), 'the entry keeps the hour replaced into it').toBe(hour);
+  expect(new URL(page.url()).pathname).toBe('/map');
+  await expect(tab('coast')).toHaveAttribute('aria-current', 'page');
+  await page.goForward();
+  await expect(page).toHaveURL(/[?&]view=conditions/);
+  await page.goForward();
+  await expect(page).toHaveURL(/[?&]view=history/);
+  expect(await length()).toBe(start + 2);
+  expect(await stillLoaded(), 'no reload').toBe(true);
+  expect(pageErrors).toEqual([]);
 });
 
 // FE-60 acceptance 3: with v2 the default, one context draws one map, one of each picker and one timeline. The

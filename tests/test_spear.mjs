@@ -2,6 +2,8 @@
 // place in the daily brief (daily.ts buildDaily, web/brief/model.ts).
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import util from 'node:util';
 import fixture from './fixtures/coast/skippercast-report.json' with {type: 'json'};
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 import montereyForecast from './fixtures/brief/monterey-forecast.json' with {type: 'json'};
@@ -232,4 +234,88 @@ test('chlorophyllNear: median of valid nearby cells; gaps and failed grids stay 
   const brief = buildRegionalBrief({daily: feed, forecast: montereyForecast, place, profile: 'spear', date: '2026-10-08', now});
   assert.ok(brief.spear);
   assert.notEqual(brief.spear.clarity.band, 'Unknown');
+});
+
+// RF1915-5: the look-back walks its 48 fixed slots, never the declared sample spacing.
+const SPEAR_URL = new URL('../packages/coast/src/spear.ts', import.meta.url).href;
+/** Run `body` (a function body over `{recentEnergy, spearHours, args}`) in a child process; the parent's timeout, not a test-callback timeout, enforces liveness. */
+function inChild(body, args, timeoutMs = 20_000) {
+  const code = `const m = await import(${JSON.stringify(SPEAR_URL)}); const args = JSON.parse(process.argv[1]); const out = await (async ({recentEnergy, spearHours, args}) => {${body}})({...m, args}); console.log(JSON.stringify(out));`;
+  const r = spawnSync(process.execPath, ['--input-type=module', '-e', code, JSON.stringify(args)], {encoding: 'utf8', timeout: timeoutMs});
+  assert.ok(!r.error, `child did not return within ${timeoutMs} ms (${r.error?.code}): recentEnergy is not bounded`);
+  assert.equal(r.status, 0, r.stderr);
+  return JSON.parse(r.stdout.trim().split('\n').pop());
+}
+const SPAN_AT = Date.parse(at);
+const oneSample = minutes => ({forecastHours: [], site: {temporalResolutionMinutes: minutes, hours: [{at, waveFt: 2, periodS: 10}]}, observations: []});
+const CHILD_SAMPLE = 'const t = Date.parse(args.at); return args.minutes.map(s => recentEnergy(t, {forecastHours: [], site: {temporalResolutionMinutes: s === "Infinity" ? Infinity : s === "-Infinity" ? -Infinity : s === "NaN" ? NaN : Number(s), hours: [{at: args.at, waveFt: 2, periodS: 10}]}, observations: []}));';
+
+test('recentEnergy oversized finite spacing returns within bounded child lifetime', () => {
+  const [out] = inChild(CHILD_SAMPLE, {at, minutes: ['1e20']});
+  assert.deepEqual(out, {energy: 40, covered: 48});
+});
+
+test('recentEnergy nonfinite spacing cannot stall slot enumeration', () => {
+  const [inf, nan, negInf] = inChild(CHILD_SAMPLE, {at, minutes: ['Infinity', 'NaN', '-Infinity']});
+  assert.deepEqual(inf, {energy: 40, covered: 48});
+  // NaN credits no slot but the energy still counts; -Infinity keeps the one-slot minimum span.
+  assert.deepEqual(nan, {energy: 40, covered: 0});
+  assert.deepEqual(negInf, {energy: 40, covered: 1});
+  const input = oneSample(Infinity), hoursBefore = structuredClone(input.site.hours);
+  recentEnergy(SPAN_AT, input);
+  assert.equal(input.site.temporalResolutionMinutes, Infinity);
+  assert.ok(util.isDeepStrictEqual(input.site.hours, hoursBefore), 'inputs are not modified');
+});
+
+/** The previous loop, kept as an oracle for spans that terminate. */
+function legacyCovered(offsets, spanHours) {
+  const hours = new Set(), half = Math.floor(spanHours / 2);
+  for (const k of offsets) for (let i = k - half; i <= k + half; i++) if (i >= 0 && i < 48) hours.add(i);
+  return hours.size;
+}
+
+test('recentEnergy bounded slots preserve legacy intervals', () => {
+  for (const span of [1, 2, 3, 4, 24, 48]) {
+    for (const k of [0, 1, 2, 23, 24, 25, 46, 47, 48]) {
+      const sample = {at: iso(SPAN_AT - k * HOUR), waveFt: 2, periodS: 10};
+      const got = recentEnergy(SPAN_AT, {forecastHours: [], site: {temporalResolutionMinutes: span * 60, hours: [sample]}, observations: []});
+      assert.deepEqual(got, {energy: 40, covered: legacyCovered([k], span)}, `span ${span} h, offset ${k} h`);
+    }
+  }
+  // The existing 16-sample three-hour and current-hour-only expectations hold.
+  const site = {temporalResolutionMinutes: 180, hours: Array.from({length: 16}, (_, i) => ({at: iso(SPAN_AT - i * 3 * HOUR), waveFt: 1, periodS: 10}))};
+  assert.equal(recentEnergy(SPAN_AT, {forecastHours: [], site, observations: []}).covered, 47);
+  assert.equal(recentEnergy(SPAN_AT, {forecastHours: [{at, waveFt: 2, wavePeriodS: 10}], site: undefined, observations: []}).covered, 1);
+});
+
+test('recentEnergy admission and overlap remain unchanged', () => {
+  const none = {forecastHours: [], site: undefined, observations: []};
+  const rejected = {
+    forecastHours: [{at: 'not a time', waveFt: 9, wavePeriodS: 10}, {at: iso(SPAN_AT + HOUR), waveFt: 9, wavePeriodS: 10}, {at: iso(SPAN_AT - 49 * HOUR), waveFt: 9, wavePeriodS: 10}, {at, waveFt: null, wavePeriodS: null}],
+    site: undefined, observations: [{observedAt: 'bad', waveFt: 9, wavePeriodS: 10}],
+  };
+  assert.deepEqual(recentEnergy(SPAN_AT, rejected), {energy: null, covered: 0});
+  assert.deepEqual(recentEnergy(SPAN_AT, none), {energy: null, covered: 0});
+  // Forecast, site and buoy samples of the same hour deduplicate coverage and keep the largest energy.
+  const overlap = recentEnergy(SPAN_AT, {forecastHours: [{at, waveFt: 2, wavePeriodS: 10}], site: {temporalResolutionMinutes: 60, hours: [{at, waveFt: 3, periodS: 10}]}, observations: [{observedAt: at, waveFt: 1, wavePeriodS: 10}]});
+  assert.deepEqual(overlap, {energy: 90, covered: 1});
+  // Null or absent spacing is three hours, like 180 minutes.
+  const sample = [{at: iso(SPAN_AT - 10 * HOUR), waveFt: 2, periodS: 10}];
+  const spans = [null, undefined, 180].map(m => recentEnergy(SPAN_AT, {forecastHours: [], site: {temporalResolutionMinutes: m, hours: sample}, observations: []}));
+  assert.deepEqual(spans[0], {energy: 40, covered: 3});
+  assert.ok(util.isDeepStrictEqual(spans[0], spans[1]) && util.isDeepStrictEqual(spans[1], spans[2]), 'null, absent and 180 min agree');
+});
+
+test('spearHours oversized spacing completes without changing ordinary readings', () => {
+  const hour = {at, windKnots: 5, gustKnots: 8, waveFt: 1.8, wavePeriodS: 10, precipPct: 0};
+  const child = inChild('return spearHours({hours: [args.hour], forecastHours: [args.hour], site: {temporalResolutionMinutes: 1e20, hours: [{at: args.hour.at, waveFt: 2, periodS: 10}]}, observations: [], tideEvents: [], chlorophyll: args.chl})[0].clarity;', {hour, chl: chl(0.8)});
+  assert.ok(!child.gaps.includes('Clarity estimate: swell before the forecast began is unchecked'), 'a 48-hour cover clears the look-back gap');
+  // Ordinary readings: a missing site, and the 35/36 covered-hour clarity gate.
+  const SWELL_GAP = 'Clarity estimate: swell before the forecast began is unchecked';
+  const reading = n => spearHours({hours: [hour], forecastHours: Array.from({length: n}, (_, i) => ({...hour, at: iso(SPAN_AT - i * HOUR)})), site: undefined, observations: [], tideEvents: [], chlorophyll: chl(0.8)})[0].clarity;
+  assert.ok(reading(35).gaps.includes(SWELL_GAP));
+  assert.equal(reading(35).band, 'Fair');
+  assert.ok(!reading(36).gaps.includes(SWELL_GAP));
+  assert.equal(reading(36).band, 'Likely good');
+  assert.ok(reading(1).gaps.includes(SWELL_GAP));
 });

@@ -30,7 +30,8 @@ test('a visitor and a non-admin account see no private previews and make no requ
   for (const session of [{signIn: '/#account', signedIn: false}, {signIn: '/#account', signedIn: true, is_admin: false, user: {id: 'u1', display_name: 'Skipper'}}]) {
     const varRequests = await open(page, v2, session);
     await layers(page);
-    await expect(page.getByRole('group', {name: /Layers/})).toBeVisible();
+    // The bottom sheet is also a named group "Layers" (RF1925-6), so name the rail itself.
+    await expect(page.locator('.ui-rail[role="group"][aria-label="Layers"]')).toBeVisible();
     await expect(page.getByText('Private previews')).toHaveCount(0);
     await expect(page.locator('[data-preview]')).toHaveCount(0);
     expect(varRequests).toEqual([]);

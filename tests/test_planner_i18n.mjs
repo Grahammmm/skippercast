@@ -176,3 +176,17 @@ test('route download UI keeps its warning, sources and busy/blocked state', () =
     ui.language.value='es';assert.match(page(p),/NO USAR PARA NAVEGAR/);
   } finally {ui.language.value='en';p.dispose();}
 });
+
+// RF1925-3: step 1 is the first workflow section after the plan card; rules and waypoints follow it, before the alert, layers and transfer.
+test('step1_is_first_workflow: plan card, step 1, rules, waypoints, then the later steps, in both languages', () => {
+  const { p, model } = mk();
+  try {
+    for (const lang of ['en', 'es', 'en']) {
+      ui.language.value = lang;
+      const html = page(model), at = s => { const i = html.indexOf(s); assert.ok(i >= 0, `${lang}: ${s}`); return i; };
+      const order = ['id="export-name"', 'id="export-spots"', 'class="export-card plan-rules"', 'id="waypoint-place"', 'id="export-layers"', 'id="export-download"'].map(at);
+      assert.ok(order.every((n, i) => !i || n > order[i - 1]), `${lang}: order ${order}`);
+      assert.ok(at('id="export-best"') < at('class="export-card plan-rules"'), `${lang}: Best available before the rules`);
+    }
+  } finally { ui.language.value = 'en'; p.dispose(); }
+});

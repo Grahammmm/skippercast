@@ -10,8 +10,9 @@
 // FE-80: in 2D and 3D the terrain's zoom, reset and top view are the stage's own
 // buttons, styled as the Chart's MapLibre zoom group and placed where it sits.
 import type {ComponentChildren} from 'preact';
+import {computed} from '@preact/signals';
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {IconButton} from '../ui/Button.tsx';
+import {Button, IconButton} from '../ui/Button.tsx';
 import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
 import {createAerial} from '../map/aerial.ts';
@@ -48,6 +49,20 @@ export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> 
 /** SC1352-06: each presentation's catalogue label, shown in the page's language at render; PRESENTATIONS stays the English compatibility list. */
 const PRESENTATION_IDS: Readonly<Record<Presentation, StringId>> = {chart: 'stage.chart', '2d': 'stage.2d', '3d': 'stage.3d'};
 const NOTE_ID = 'app-stage-note';
+
+/** RF1925-2: the selected Chart could not start (chartFailed is a sticky start-up failure; a working 2D or 3D terrain is not a failed map). The one test every map-only control shares. */
+export const mapUnavailable = computed(() => chartFailed.value && shownPresentation.value === 'chart');
+
+/** The Chart could not start: say so, and offer a reload of the current page (the same address) as the only retry. */
+export function MapUnavailable() {
+  const lang = language.value;
+  return (
+    <div class="app-stage-note app-stage-failed" style={{margin: 'var(--space-4)', maxWidth: '28rem', zIndex: 1}}>
+      <p role="status" style={{margin: '0 0 var(--space-3)'}}><strong>{t('map.mpa.mapUnavailable', lang)}</strong> {t('stage.graphicsUnavailable', lang)}</p>
+      <Button variant="primary" onClick={() => location.reload()}>{t('stage.retryMap', lang)}</Button>
+    </div>
+  );
+}
 
 /** Chart, 2D, 3D; where no terrain can show, the terrain choices are disabled and point at the reason in the status line. */
 export function PresentationToggle() {
@@ -123,17 +138,15 @@ export function MapStage({children, clock}: {children?: ComponentChildren; clock
           engine => createPreviewLayers({engine, failures: {list: unavailable, clear: layer => { unavailable.value = unavailable.peek().filter(l => l !== layer); }}})]})]});
     return () => stage.destroy();
   }, [clock]);
-  const shown = shownPresentation.value, lang = language.value;
+  const shown = shownPresentation.value, lang = language.value, failed = mapUnavailable.value;
   return (
     <section class="app-stage" tabIndex={-1} aria-label={t('stage.map', lang)}>
       <div class="app-map" hidden={shown !== 'chart'}>
         <div class="app-chart" ref={chartHost} hidden={chartFailed.value} />
-        <ChartPoster />
-        {chartFailed.value ? <span>{t('map.mpa.mapUnavailable', lang)}</span> : null}
+        {failed ? <MapUnavailable /> : <ChartPoster />}
       </div>
       <div class="app-terrain" ref={terrainHost} tabIndex={-1} hidden={shown === 'chart'} data-coast-theme="tokens" />
-      <TerrainControls />
-      <PresentationToggle />
+      {failed ? null : <><TerrainControls /><PresentationToggle /></>}
       {children}
     </section>
   );

@@ -13,6 +13,7 @@
 // FE-33: the tide sparkline draws the bound coast report's curve through
 // CoastMarkup in token colours; the regional brief (high and low events only)
 // says there is no tide curve for this place and still lists the events.
+import type {Page} from '@playwright/test';
 import {test, expect} from './fixtures.ts';
 import {forecastFixture} from './forecast-fixture.ts';
 
@@ -48,6 +49,27 @@ function feed() {
     reports: [{date: iso(-DAY).slice(0, 10), boat: 'Fixture Gull', port: 'Morro Bay'}, {date: iso(-DAY).slice(0, 10), boat: 'Fixture Tern', port: 'Avila Beach'},
       {date: iso(-DAY).slice(0, 10), boat: 'Fixture Elsewhere', port: 'Santa Cruz'}],
   };
+}
+
+/**
+ * SC1722-01: a forecast that cannot be read now says so in place of the day verdict (fixtures.ts answers /api/forecast with 503 by
+ * default). The tests that read the verdict answer it with a calm synthetic /api/forecast (values invented): a feed from two hours
+ * before the clock, eight days long, at the region's three points.
+ */
+async function answerForecast(page: Page) {
+  const t0 = (BASE - 2 * HOUR) / 1000;
+  const time = Array.from({length: 8 * 24}, (_, i) => t0 + i * 3600);
+  const series = (values: Record<string, [number, string]>) => ({utc_offset_seconds: 0,
+    hourly_units: {time: 'unixtime', ...Object.fromEntries(Object.entries(values).map(([k, [, u]]) => [k, u]))},
+    hourly: {time, ...Object.fromEntries(Object.entries(values).map(([k, [v]]) => [k, time.map(() => v)]))}});
+  const points = [['north', 35.45, -121.02], ['central', 35.36, -120.94], ['offshore-1-0', 35.3, -121.25]];
+  const meta = {last_run_initialisation_time: (BASE - 3 * HOUR) / 1000, data_end_time: time.at(-1)};
+  const model = (values: Record<string, [number, string]>) => ({meta, data: points.map(() => series(values))});
+  const wind = {wind_speed_10m: [6, 'kn'], wind_gusts_10m: [9, 'kn'], wind_direction_10m: [300, '°'], temperature_2m: [60, '°F'], cloud_cover: [20, '%']} as Record<string, [number, string]>;
+  const wave = {wave_height: [2.5, 'ft'], wave_period: [11, 's']} as Record<string, [number, string]>;
+  const body = {region_id: 'morro-bay', retrieved: BASE - 20 * 60_000, requested_points: points,
+    models: {gfs_global: model(wind), ncep_gfswave016: model(wave), ecmwf_ifs025: model(wind), ecmwf_wam: model(wave)}};
+  await page.route('**/api/forecast?*', route => route.fulfill({json: body}));
 }
 
 test.beforeEach(async ({page, v2}) => {
@@ -95,8 +117,11 @@ test('acceptance 2: at the half detent the sheet shows the headline, tiles and h
   await page.locator('.ui-sheet-handle').click();
   await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'half');
   const sheet = page.locator('.ui-sheet');
-  // G 2026-11-02: SC-LAUNCH-3's legality line stays in the default view, so the top pick is reached by expanding the sheet.
-  for (const part of [sheet.locator('h1'), sheet.locator('.app-tiles'), sheet.getByRole('slider', {name: 'Hour'})]) await expect(part).toBeInViewport({ratio: 1});
+  // SC1722-01: /api/forecast answers 503 here (fixtures.ts), so the headline is "Couldn't load the forecast" with its reason and Try again
+  // in place of the verdict, and the tiles and hour slider sit below it: they are reached by scrolling the sheet body.
+  await expect(sheet.locator('h1')).toHaveText("Couldn't load the forecast");
+  for (const part of [sheet.locator('h1'), sheet.locator('.app-forecast-retry')]) await expect(part).toBeInViewport({ratio: 1});
+  for (const part of [sheet.locator('.app-tiles'), sheet.getByRole('slider', {name: 'Hour'})]) { await part.evaluate(el => el.scrollIntoView({block: 'center'})); await expect(part).toBeInViewport({ratio: 1}); }
   // Compact tiles keep the stale state and the age.
   const water = sheet.locator('.ui-tile', {hasText: 'Water'});
   await expect(water).toHaveAttribute('data-state', 'stale');
@@ -186,6 +211,7 @@ for (const retained of [false, true]) {
 }
 
 test('#616: the brief opens with the day verdict and its limit, and Details expands to the readings, deck and caveat', async ({page, pageErrors, v2, isMobile}) => {
+  await answerForecast(page);
   await v2.open('app', {region: 'morro-bay'});
   const root = page.locator(isMobile ? '.app-sheet-brief' : 'aside.app-brief');
   await expect(root).toHaveAttribute('data-basis', 'regional');

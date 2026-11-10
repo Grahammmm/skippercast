@@ -12,6 +12,7 @@
 import type {Area, ForecastHour, TideEvent, TidePoint} from './types.ts';
 import type {NearshoreHour, NearshoreSite} from './enrichment-types.ts';
 import {nearshoreAt} from './nearshore.ts';
+import {periodSecondsText} from './period-display.ts';
 
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
@@ -247,7 +248,7 @@ const ft = (value: number) => `${round(value)} ft`;
 /** The verdict from surf, wind, tide and light, with plain reasons and cautions. */
 export function shoreVerdict(s: Surf, w: ShoreWind, t: Tide, twilight: boolean): {verdict: ShoreVerdict; score: number | null; reasons: string[]; cautions: string[]} {
   const reasons: string[] = [], cautions: string[] = [];
-  if (s.sneaker) cautions.push(`Long-period swell (${s.longPeriodS} s): sneaker waves can run far up the beach without warning; stay off low rocks and keep the ocean in view`);
+  if (s.sneaker) cautions.push(`Long-period swell (${periodSecondsText(s.longPeriodS as number)} s): sneaker waves can run far up the beach without warning; stay off low rocks and keep the ocean in view`);
   if (t.veryLow) cautions.push(`Very low tide (${t.heightFt === null ? 'below datum' : ft(t.heightFt)}): wet rock and reef are exposed; watch your footing and the incoming water if you walk out`);
   if (s.band === 'Unknown') reasons.push('Surf height unknown');
   if (w.band === 'Unknown') reasons.push('Wind unknown');
@@ -255,7 +256,7 @@ export function shoreVerdict(s: Surf, w: ShoreWind, t: Tide, twilight: boolean):
   const {score: p} = SHORE;
   const onshore = w.side === 'onshore' && w.band !== 'Light';
   const score = p.surf[s.band] + s.sneakerScore + p.wind[w.band] + (onshore ? p.onshore : 0) + (t.bonus ? p.tide : 0) + (twilight ? p.twilight : 0);
-  reasons.push(`${s.band} surf${s.heightFt !== null ? ` (${ft(s.heightFt)}${s.periodS !== null ? ` at ${s.periodS} s` : ''}${s.basis === 'offshore' ? ', offshore estimate' : ''})` : ''}`);
+  reasons.push(`${s.band} surf${s.heightFt !== null ? ` (${ft(s.heightFt)}${s.periodS !== null ? ` at ${periodSecondsText(s.periodS)} s` : ''}${s.basis === 'offshore' ? ', offshore estimate' : ''})` : ''}`);
   if (s.sneaker) reasons.push('long-period swell');
   reasons.push(`${w.band.toLowerCase()} wind${w.side ? ` ${w.side}` : ''}`);
   if (t.phase === 'rising') reasons.push('rising tide');

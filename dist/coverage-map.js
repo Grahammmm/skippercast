@@ -39,8 +39,8 @@ export function renderMap(model, {width = 360} = {}) {
   for (let lat = Math.ceil(south); lat <= Math.floor(north); lat++) {
     ticks.push(`<line x1="60" x2="${width - 25}" y1="${y(lat)}" y2="${y(lat)}" stroke="var(--muted)" stroke-width="0.5"/><text x="5" y="${y(lat) + 4}" fill="var(--text)">${lat}°N</text>`);
   }
-  const boxes = rows.map(r => `<a href="${link(r)}"><rect class="cov-${r.status}" x="${x(r.bounds[0])}" y="${y(r.bounds[3])}" width="${x(r.bounds[2]) - x(r.bounds[0])}" height="${y(r.bounds[1]) - y(r.bounds[3])}" fill="${color(r.status)}" fill-opacity="0.65" stroke="${color(r.status)}"><title>${text(r.name)} — ${r.status}</title></rect></a>`).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" role="img" aria-label="Fishing bounds of published regions; details follow in the list"><rect x="5" y="5" width="12" height="12" fill="${color('active')}"/><text x="22" y="16" fill="var(--text)">Active</text><rect x="125" y="5" width="12" height="12" fill="${color('preview')}"/><text x="142" y="16" fill="var(--text)">Preview</text>${ticks.join('')}${boxes}</svg>`;
+  const boxes = rows.map(r => `<rect class="cov-${r.status}" x="${x(r.bounds[0])}" y="${y(r.bounds[3])}" width="${x(r.bounds[2]) - x(r.bounds[0])}" height="${y(r.bounds[1]) - y(r.bounds[3])}" fill="${color(r.status)}" fill-opacity="0.65" stroke="${color(r.status)}"><title>${text(r.name)} — ${r.status}</title></rect>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" aria-hidden="true" focusable="false"><rect x="5" y="5" width="12" height="12" fill="${color('active')}"/><text x="22" y="16" fill="var(--text)">Active</text><rect x="125" y="5" width="12" height="12" fill="${color('preview')}"/><text x="142" y="16" fill="var(--text)">Preview</text>${ticks.join('')}${boxes}</svg>`;
 }
 
 export function renderList(model) {

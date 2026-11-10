@@ -11,7 +11,7 @@ import {CHAT_PATH} from '../advisor/entry.ts';
 import {language, t, type Language} from '../i18n.ts';
 import {Icon, type IconName} from '../ui/icons.tsx';
 import {ensureSession, session} from '../account.ts';
-import {appView, region, setParams, withParams, type AppView} from '../state.ts';
+import {appView, navigate, region, withParams, type AppView} from '../state.ts';
 import {currentRegionInfo, freshness, regionLoad, retryRegion} from './App.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
 import {DegradedNotice} from '../degraded-notice.tsx';
@@ -75,7 +75,7 @@ export function ViewNav({href, icons = false, class: cls}: {href?: string; icons
         {(icons ? TAB_VIEWS : MASTHEAD_VIEWS).map(v => (
           <li key={v}>
             <a href={withParams(base, {view: viewParam(v)})} aria-current={v === current ? 'page' : undefined} data-view={v}
-              onClick={event => { event.preventDefault(); setParams({view: viewParam(v)}); }}>
+              onClick={event => { event.preventDefault(); if (appView.value !== v) navigate(withParams(location.href, {view: viewParam(v)})); }}>
               {icons ? <Icon name={VIEW_ICONS[v]} size={18} /> : null}{viewLabel(v, lang)}
             </a>
           </li>
@@ -91,6 +91,7 @@ export function FreshnessDot() {
   return (
     <span class="app-fresh" role="status" data-state={fresh.state} aria-label={t('shell.fresh', lang, {state})}>
       <span class="app-fresh-dot" aria-hidden="true"></span>
+      {fresh.state === 'offline' ? <span data-fresh-offline>{state}</span> : null}
       <span class="ui-mono">{fresh.age ?? '—'}</span>
     </span>
   );
