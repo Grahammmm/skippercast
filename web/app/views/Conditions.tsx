@@ -5,7 +5,9 @@
 // chart's cursor is the store's `hour`: a drag on the chart writes it as the
 // time dock does, so the map's hour moves with it. The surface-current choice
 // is the Currents rail entry's own control (`?current=`), not a copy.
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useId, useState} from 'preact/hooks';
+import type {Alert} from '../../../packages/coast/src/types.ts';
+import {alertTimeSpan} from '../../alert-time.ts';
 import {Segmented} from '../../ui/Chip.tsx';
 import {currentBrief, ensureRegionalForecast, regionalForecast} from '../../brief/Brief.tsx';
 import {coastBinding, coastReport} from '../../coast-data.ts';
@@ -44,6 +46,13 @@ const value = (v: number | null, unit: string, lang: Language = 'en') => {
   const digits = unit === 'ft' ? 1 : 0;
   return `${lang === 'en' ? Number(v.toFixed(digits)) : num(Number(v.toFixed(digits)), lang, digits)} ${unit}`;
 };
+
+/** SC2252-07: one marine alert, its published event linked to the source, its span in the region zone and its headline as the description. */
+function AlertLine({alert, tz, lang}: {alert: Alert; tz: string; lang: Language}) {
+  const id = useId(), span = alertTimeSpan(alert.effective, alert.expires, tz, lang), described = alert.headline.trim() ? id : undefined;
+  return <li aria-describedby={described}><a href={alert.url} target="_blank" rel="noopener" aria-describedby={described}>{alert.event}</a>
+    {span ? ` · ${span}` : null}{described ? <span id={id} class="app-visually-hidden">{alert.headline}</span> : null}</li>;
+}
 
 export function Conditions({now = new Date()}: {now?: Date} = {}) {
   useForecast();
@@ -93,7 +102,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
       <h3 class="ui-eyebrow">{t('conditions.before', lang)}</h3>
       <ul class="app-conditions-notes">
         <li>{lang === 'en' ? notes.caveat : copy.caveat(profile.value)}</li>
-        {brief?.alerts.map(a => <li key={a.id}><a href={a.url} target="_blank" rel="noopener">{a.event}</a></li>)}
+        {brief?.alerts.map(a => <AlertLine key={a.id} alert={a} tz={tz} lang={lang} />)}
         {brief?.notice ? <li><a href={brief.notice.url} target="_blank" rel="noopener">{t('conditions.notice', lang, {name: brief.notice.name})}</a></li> : null}
         <li>{targetRules(now).available ? <TargetRules now={now} /> : <><TargetRules now={now} /><a href={CDFW_REGULATIONS} target="_blank" rel="noopener">{t('conditions.cdfw', lang)}</a></>}</li>
         <li><PlanLink /></li>
