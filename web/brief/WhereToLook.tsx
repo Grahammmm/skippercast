@@ -43,6 +43,7 @@ import {missingSearchPlanText, searchPlanLabel} from './remaining-copy.ts';
 import {regionInfo} from '../app/region-info.ts';
 import {NO_REASONS, reasonsFor, targetEvidence} from '../area-reasons.ts';
 import {language, t, type Language, type StringId} from '../i18n.ts';
+import {fixed} from '../view-copy.ts';
 import {pickDistance, pickFit, pickName, pickReason, rankingAbout, rankingBasis, rankingEmpty, rankingLabel, reasonText} from './ranking-copy.ts';
 
 export type {Pick, Ranking};
@@ -100,7 +101,7 @@ export function routeWhyText(pick: Pick & {basis?: 'water' | 'straight'; why?: R
 function distanceLabel(pick: Pick & {basis?: 'water' | 'straight'}, lang: Language): string {
   if (lang === 'en' || pick.nm === null || !pick.basis) return pick.distance;
   const id: StringId = pick.basis === 'water' ? 'where.distance.water' : 'where.distance.straight', nm = pick.nm.toFixed(1);
-  return pick.distance === t(id, 'en', {nm}) ? t(id, lang, {nm: nm.replace('.', ',')}) : pick.distance;
+  return pick.distance === t(id, 'en', {nm}) ? t(id, lang, {nm: fixed(Number(nm), 1, lang)}) : pick.distance;
 }
 
 /** Bumped once the routes the painted Boat list still lacks are all computed, so it renders again by water. */

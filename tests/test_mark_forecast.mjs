@@ -316,8 +316,10 @@ test('SC1137-04 es: gap reasons keep every clause, thresholds and the other fami
 test('SC1137-04 es: readings, sources and the current keep values, units, point/cell and distance; both current failure clauses stay', () => {
   const en = markForecast(parsed(morroFeed()), 'morro-bay', MARK, AT, NOW, TZ), es = markForecast(parsed(morroFeed()), 'morro-bay', MARK, AT, NOW, TZ, 'es');
   assert.equal(ES(es, 0).value, '11 kt desde WNW 301° · ráfagas de 17 kt');
-  assert.equal(ES(es, 1).value, ES(en, 1).value.replace(' from ', ' desde '));
-  assert.equal(es.current.value, '0.20 kt hacia 101° verdadero');
+  assert.equal(ES(es, 1).value, ES(en, 1).value.replace(' from ', ' desde ').replace(/^(\d+)\.(\d) ft/, '$1,$2 ft'));
+  assert.equal(es.current.value, '0,20 kt hacia 101° verdadero');
+  assert.match(ES(es, 1).value, /^\d+,\d ft · \d+ s desde /, 'seas: one decimal with a comma');
+  assert.match(ES(en, 1).value, /^\d+\.\d ft · \d+ s from /, 'English seas keep the point');
   assert.deepEqual([es.current.cell, es.current.point, es.current.validAt], [en.current.cell, en.current.point, en.current.validAt], 'same cell, point and hour');
   assert.equal(ES(es, 0).grid, 'aproximadamente 13 km');
   assert.equal(ES(es, 2).grid, '0.25°', 'degree grids pass through');

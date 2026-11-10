@@ -7,7 +7,7 @@
 import {Tile, type TileHue, type TileProps} from '../ui/Tile.tsx';
 import type {IconName} from '../ui/icons.tsx';
 import type {BriefTile, TileId} from './types.ts';
-import {language, t, type Language, type StringId} from '../i18n.ts';
+import {language, num, t, type Language, type StringId} from '../i18n.ts';
 import {tileDetailText, tileSourceName} from './tile-copy.ts';
 
 const LOOK: Readonly<Record<TileId, {icon: IconName; hue: TileHue}>> = {
@@ -48,12 +48,14 @@ export function tileProps(tile: BriefTile, compact = false, dense = false, lang:
   const sourceName = tileSourceName(tile, lang);
   const name = tile.sourceUrl ? <a href={tile.sourceUrl} target="_blank" rel="noopener">{sourceName}</a> : sourceName;
   const shown = sourceName === tile.source ? tile : {...tile, source: sourceName};
+  // English prints the value as always; Spanish only swaps the decimal separator (the model's one decimal; -0 reads 0).
+  const reading = tile.value === null ? '—' : lang === 'en' ? String(tile.value) : num(tile.value === 0 ? 0 : tile.value, lang, 1);
   if (compact) {
-    return {label: tile.label, ...LOOK[tile.id], reading: tile.value === null ? '—' : String(tile.value), unit: tile.unit,
+    return {label: tile.label, ...LOOK[tile.id], reading, unit: tile.unit,
       source: sourceLine(shown, true, lang), stale: tile.state === 'stale'};
   }
   return {
-    label: tile.label, ...LOOK[tile.id], reading: tile.value === null ? '—' : String(tile.value), unit: tile.unit, detail: tileDetailText(tile, lang),
+    label: tile.label, ...LOOK[tile.id], reading, unit: tile.unit, detail: tileDetailText(tile, lang),
     source: sourceLine(shown, dense, lang), stale: tile.state === 'stale',
     basis: <>{t(`tile.basis.${tile.id}` as StringId, lang)}{datum ? t('tile.basis.reference', lang, {datum: String(datum)}) : ''}{t('tile.basis.source', lang)}{name}.{tile.lastGood ? t('tile.basis.lastGood', lang) : ''}{t('tile.basis.staleAfter', lang, {hours: Math.round(tile.limitMs / 3_600_000)})}</>,
   };
