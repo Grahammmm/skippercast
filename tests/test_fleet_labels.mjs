@@ -378,3 +378,101 @@ test('N7: fleet-ais.yml label_import runs `label import` on a file under FLEET_V
     assert.match(run({}).calls, /^-m skippercast\.fleet\.ais process --region CA\n/, 'a normal run is unchanged');
   } finally { rmSync(dir, {recursive: true, force: true}); }
 });
+
+// ---- RF0844-8: a written day that is not on the calendar is refused, never rolled into the next month ----
+const ISO_ERROR = 'started_at and ended_at must be ISO UTC times';
+const WIDE = {from: '2026-01-01T00:00:00.000Z', to: '2026-08-01T00:00:00.000Z'};
+const IMPOSSIBLE = ['2026-02-29', '2026-02-30', '2026-02-31', '2026-04-31', '2026-06-31', '2026-01-32', '2026-00-10', '2026-13-01', '2026-03-00'];
+const MARCH = hex('f');
+/** A synthetic March 1 to 4 trip: February 29 to 31 of 2026 would roll into it. */
+function seedMarch(sql) {
+  sql.prepare(`INSERT INTO fleet_trips(id,region,vessel_id,mmsi,departed_at,returned_at,local_date,season,status,source,rights,classifier_version,computed_at)
+    VALUES(?,'CA',?,'999000481',?,?,'2026-03-01','2026','closed','aisstream','internal-only','c1-test',?)`).run(MARCH, V1, '2026-03-01T00:00:00.000Z', '2026-03-04T00:00:00.000Z', NOW);
+}
+const span = (startedAt, endedAt, label = 'transit', basis = 'track shape') => ({started_at: startedAt, ended_at: endedAt, label, basis});
+const table = sql => sql.prepare('SELECT * FROM fleet_segment_labels ORDER BY id').all().map(r => ({...r}));
+
+test('label_calendar_rejects_rollover: an impossible day is refused at either end even when its rolled-over day fits', () => {
+  for (const day of IMPOSSIBLE) {
+    const v = `${day}T09:00:00Z`;
+    assert.equal(labels.isoTime(v), null, v);
+    assert.deepEqual(labels.checkLabel(span(v, '2026-07-15T00:00:00Z'), WIDE), {error: ISO_ERROR}, `started_at ${v}`);
+    assert.deepEqual(labels.checkLabel(span('2026-01-02T00:00:00Z', v), WIDE), {error: ISO_ERROR}, `ended_at ${v}`);
+  }
+  for (const v of [20260301, null, undefined, {}, '', '2026-3-01T09:00Z', '2026-03-01 09:00Z', '2026-03-01T09:00:00', '2026-03-01T09:00:00+00:00', '2026-03-01T9:00Z'])
+    assert.equal(labels.isoTime(v), null, JSON.stringify(v));
+  assert.equal(labels.isoTime('2026-02-30T24:00:00Z'), null, 'a valid clock does not save an impossible day');
+});
+
+test('label_calendar_preserves_valid_precision: real days, leap years, low years and every accepted precision normalise as before', () => {
+  for (const [v, want] of [
+    ['2028-02-29T09:00:00Z', '2028-02-29T09:00:00.000Z'], ['2000-02-29T09:00Z', '2000-02-29T09:00:00.000Z'],
+    ['0000-01-01T00:00:00Z', '0000-01-01T00:00:00.000Z'], ['0004-02-29T12:00Z', '0004-02-29T12:00:00.000Z'],
+    ['0099-12-31T23:59:59.9Z', '0099-12-31T23:59:59.900Z'], ['2026-03-01T09:05Z', '2026-03-01T09:05:00.000Z'],
+    ['2026-03-01T09:05:07Z', '2026-03-01T09:05:07.000Z'], ['2026-03-01T09:05:07.12Z', '2026-03-01T09:05:07.120Z'],
+    ['2026-03-01T09:05:07.123Z', '2026-03-01T09:05:07.123Z'], ['2026-04-30T23:59Z', '2026-04-30T23:59:00.000Z'],
+    ['2026-03-01T24:00:00Z', '2026-03-02T00:00:00.000Z'],        // the existing Date.parse reading of 24:00 on a real day
+  ]) assert.equal(labels.isoTime(v), want, v);
+  for (const v of ['1900-02-29T09:00:00Z', '2100-02-29T09:00:00Z', '0001-02-29T09:00:00Z']) assert.equal(labels.isoTime(v), null, v);
+  assert.deepEqual(labels.checkLabel(span('2028-02-29T09:00:00Z', '2028-02-29T10:00Z'), {from: '2028-02-28T00:00:00.000Z', to: '2028-03-01T00:00:00.000Z'}),
+    {ok: span('2028-02-29T09:00:00.000Z', '2028-02-29T10:00:00.000Z')});
+});
+
+test('label_bad_calendar_admin_no_insert: the admin route refuses an impossible day and saves nothing', {skip}, async () => {
+  const {sql, db} = database();
+  seedMarch(sql);
+  await labels.addLabel(db, MARCH, span('2026-03-01T09:00:00Z', '2026-03-01T10:00:00Z'), ADMIN, NOW);
+  const post = payload => worker.fetch(new Request(`${ORIGIN}/api/admin/fleet/trips/${MARCH}/labels`, {method: 'POST',
+    headers: {'Content-Type': 'application/json', Origin: ORIGIN, 'x-test-owner': ADMIN}, body: JSON.stringify(payload)}), {ASSETS, DB: db, ...ON});
+  const before = table(sql);
+  assert.equal(before.length, 2);                 // the seeded Oregon label and this one
+  for (const payload of [span('2026-02-30T09:00:00Z', '2026-03-02T10:00:00Z'), span('2026-03-02T09:00:00Z', '2026-02-31T10:00:00Z'),
+    span('2026-02-29T11:00:00Z', '2026-03-01T12:00:00Z'), span('2026-02-29T12:00Z', '2026-02-30T13:00Z')]) {
+    const r = await post(payload);
+    assert.equal(r.status, 400, JSON.stringify(payload));
+    assert.equal((await r.json()).error, ISO_ERROR);
+  }
+  assert.deepEqual(table(sql), before, 'a refused label inserts nothing');
+  // The corrected day saves.
+  const fixed = await post(span('2026-03-02T09:00:00Z', '2026-03-02T10:00:00Z'));
+  assert.equal(fixed.status, 200);
+  assert.deepEqual((await fixed.json()).label.started_at, '2026-03-02T09:00:00.000Z');
+  assert.equal(table(sql).length, 3);
+});
+
+test('label_bad_calendar_agent_no_replace: an import with any impossible day keeps every existing label', {skip}, async () => {
+  const {sql, db} = database();
+  seedMarch(sql);
+  const own = await labels.importAgentLabels(db, {trip_id: MARCH, labeller: AGENT,
+    labels: [span('2026-03-01T09:00:00Z', '2026-03-01T10:00:00Z'), span('2026-03-01T10:00:00Z', '2026-03-01T11:00:00Z', 'drift-anchor')]}, NOW);
+  assert.equal(own.status, 200);
+  const put = sql.prepare('INSERT INTO fleet_segment_labels(id,trip_id,started_at,ended_at,label,labeller,basis,created_at) VALUES(?,?,?,?,?,?,?,?)');
+  put.run(hex('e'), MARCH, '2026-03-03T09:00:00.000Z', '2026-03-03T10:00:00.000Z', 'in-port', 'agent:other', 'x y', NOW);
+  put.run(hex('d'), MARCH, '2026-03-03T12:00:00.000Z', '2026-03-03T13:00:00.000Z', 'troll-slow', ADMIN, 'approved from agent:other: x y', NOW);
+  const saved = fleetJobs.verify;
+  fleetJobs.verify = async token => token === 'good' ? {jti: 'run-rf0844-8'} : false;
+  try {
+    const call = list => worker.fetch(new Request(`${ORIGIN}/api/fleet/jobs/labels`, {method: 'POST',
+      headers: {Authorization: ['Bearer', 'good'].join(' '), 'Content-Type': 'application/json'}, body: JSON.stringify({trip_id: MARCH, labeller: AGENT, labels: list})}),
+      {ASSETS, DB: db, ...ON});
+    const before = table(sql);
+    assert.equal(before.length, 5);               // the seeded Oregon label and four on this trip
+    for (const [list, index] of [
+      [[span('2026-02-30T09:00:00Z', '2026-03-02T10:00:00Z')], 0],
+      [[span('2026-03-02T12:00:00Z', '2026-03-02T13:00:00Z'), span('2026-03-02T14:00:00Z', '2026-02-31T15:00:00Z')], 1],
+      [[span('2026-03-02T12:00:00Z', '2026-03-02T13:00:00Z'), span('2026-03-02T14:00:00Z', '2026-03-02T15:00:00Z'), span('2026-02-29T16:00Z', '2026-03-01T17:00Z')], 2],
+    ]) {
+      const r = await call(list);
+      assert.equal(r.status, 400, JSON.stringify(list));
+      assert.equal((await r.json()).error, `labels[${index}]: ${ISO_ERROR}`);
+    }
+    assert.deepEqual(table(sql), before, 'a refused import replaces nothing');
+    // A valid set still replaces only that agent's labels.
+    const ok = await call([span('2026-03-02T09:00:00Z', '2026-03-02T10:00:00Z')]);
+    assert.equal(ok.status, 200);
+    assert.deepEqual(await ok.json(), {ok: true, trip_id: MARCH, labeller: AGENT, replaced: 2, labels: 1});
+    const after = table(sql);
+    assert.deepEqual(after.filter(r => r.labeller !== AGENT), before.filter(r => r.labeller !== AGENT));
+    assert.deepEqual(after.filter(r => r.labeller === AGENT).map(r => [r.started_at, r.ended_at]), [['2026-03-02T09:00:00.000Z', '2026-03-02T10:00:00.000Z']]);
+  } finally { fleetJobs.verify = saved; }
+});
