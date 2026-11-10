@@ -223,3 +223,167 @@ test('a source that fails after the layer reported ready reads unavailable and d
   assert.equal(P.previewStatus.value.chlorophyll.state, 'ready', 'switching it off and on tries again');
   layer.destroy(); fresh(); asSession({state: 'loading'});
 });
+
+// RF1915-7: failures arrive under the registry owner the real Engine routes them to (the overlay that holds the failed source),
+// not under a name derived from the preview id. Real SST attach and real Engine over a fake MapLibre; real currents overlay.
+const {createEngine} = await import('../web/map/engine.ts');
+const {currentsOverlay, CURRENTS_TINT, CURRENTS_LINES, CURRENTS_HEADS} = await import('../web/map/preview/currents.ts');
+const {SST_CELLS, SST_BREAKS, SST_HALO, SST_LINES} = await import('../web/map/preview/sst.ts');
+
+function mapLibrary() {
+  const fake = {maps: []};
+  class FakeMap {
+    constructor(options) {
+      this.options = options; this.handlers = {}; this.sources = new Set(); this.layers = new Set(); fake.maps.push(this);
+      this.keyboard = {disableRotation() {}}; this.touchZoomRotate = {disableRotation() {}};
+    }
+    on(type, fn) { (this.handlers[type] ??= []).push(fn); }
+    fire(type, event = {}) { for (const fn of this.handlers[type] ?? []) fn(event); }
+    getLayer(id) { return this.layers.has(id) ? {} : undefined; }
+    getSource(id) { return this.sources.has(id) ? {} : undefined; }
+    addSource(id) { this.sources.add(id); }
+    addLayer(l) { this.layers.add(l.id); }
+    removeLayer(id) { this.layers.delete(id); }
+    removeSource(id) { this.sources.delete(id); }
+    getCenter() { return {lat: 35, lng: -121}; }
+    getZoom() { return 10; }
+    remove() {}
+  }
+  const control = class {};
+  fake.module = {lib: {Map: FakeMap, NavigationControl: control, ScaleControl: control, AttributionControl: control, setWorkerUrl() {}, addProtocol() {}},
+    workerUrl: '/w.js', Protocol: class { constructor() { this.tile = () => {}; } }};
+  return fake;
+}
+
+const sstDoc = () => ({data_time: new Date(Date.now() - 3600e3).toISOString(), max_age_hours: 48, colours: ['#2b5d9e', '#d33'],
+  cells: {type: 'FeatureCollection', features: []}, breaks: {type: 'FeatureCollection', features: []}});
+const currentsLoader = () => async () => async ctx => {
+  const overlay = currentsOverlay([{coords: [[-121, 35], [-120.99, 35.01], [-120.98, 35.02]]}], {url: 'data:image/png;base64,AA==', coordinates: [[-121, 36], [-120, 36], [-120, 35], [-121, 35]]}, 0.01);
+  ctx.engine.setOverlay(CURRENTS_TINT, overlay);
+  ctx.report({state: 'ready', text: 'ok'});
+  return {destroy() { ctx.engine.setOverlay(CURRENTS_TINT, null); }};
+};
+
+/** A stack as the Chart builds it: real Engine whose onLayerError appends the owner once (web/map/chart.ts markUnavailable). */
+function stack(t, {loaders = P.PREVIEW_LOADERS, fetchFn} = {}) {
+  const fake = mapLibrary(), failed = signal([]), cleared = [];
+  const engine = createEngine(fake.module, {host: {}, style: {version: 8, sources: {}, layers: []}, camera: {latitude: 35, longitude: -121, zoom: 10}, still: true, onMove() {},
+    onLayerError: layer => { if (!failed.peek().includes(layer)) failed.value = [...failed.peek(), layer]; }});
+  const map = fake.maps[0]; map.fire('style.load');
+  const failures = {list: failed, clear: l => { cleared.push(l); failed.value = failed.peek().filter(x => x !== l); }};
+  const layer = P.createPreviewLayers({engine: signal(engine), loaders, fetchFn, failures, page: () => 'https://x.test/app', palette: () => PALETTE});
+  t.after(() => finish({layer}));    // a failing assertion must still stop the preview's expiry timers
+  const sourceError = sourceId => map.fire('error', {sourceId, error: new Error('tile failed')});
+  return {map, engine, failed, cleared, layer, sourceError};
+}
+const sstFetch = () => { const n = {count: 0}; return {n, fetchFn: async () => { n.count++; return new Response(JSON.stringify(sstDoc())); }}; };
+const finish = s => { s.layer.destroy(); fresh(); asSession({state: 'loading'}); };
+
+test('sst_break_source_error_removes_entire_preview', async t => {
+  t.mock.method(console, 'error', () => {});
+  for (const failing of [SST_BREAKS, SST_CELLS]) {
+    fresh(); asSession(admin);
+    const {fetchFn} = sstFetch(), s = stack(t, {fetchFn});
+    P.togglePreview('sst', true); await tick();
+    assert.equal(P.previewStatus.value.sst.state, 'ready');
+    assert.deepEqual([...s.map.layers].sort(), [SST_CELLS, SST_HALO, SST_LINES].sort(), 'all three layers installed');
+    s.sourceError(failing);
+    assert.deepEqual(s.failed.value, [SST_CELLS], `${failing}: the Engine routes to the overlay owner`);
+    assert.equal(P.previewStatus.value.sst.state, 'unavailable');
+    assert.match(P.previewStatus.value.sst.text, /^Unavailable: the map could not load this layer's image or tiles\. Nothing is drawn\.$/);
+    assert.deepEqual([[...s.map.layers], [...s.map.sources]], [[], []], 'cells, breaks, halo and line are all removed');
+    finish(s);
+  }
+});
+
+test('currents_any_source_error_uses_tint_owner', async t => {
+  t.mock.method(console, 'error', () => {});
+  for (const failing of [CURRENTS_TINT, CURRENTS_LINES, CURRENTS_HEADS]) {
+    fresh(); asSession(admin);
+    const s = stack(t, {loaders: {...P.PREVIEW_LOADERS, currents: currentsLoader()}});
+    P.togglePreview('currents', true); await tick();
+    assert.equal(P.previewStatus.value.currents.state, 'ready');
+    assert.equal(s.map.layers.size, 3);
+    s.sourceError(failing);
+    assert.deepEqual(s.failed.value, [CURRENTS_TINT], `${failing} routes to the tint owner`);
+    assert.equal(P.previewStatus.value.currents.state, 'unavailable');
+    assert.deepEqual([[...s.map.layers], [...s.map.sources]], [[], []], 'tint, lines and heads are all removed');
+    finish(s);
+  }
+});
+
+test('retry_clears_exact_owner_only', async t => {
+  t.mock.method(console, 'error', () => {});
+  fresh(); asSession(admin);
+  const {n, fetchFn} = sstFetch(), s = stack(t, {fetchFn});
+  P.togglePreview('sst', true); await tick();
+  s.failed.value = ['basemap', ...s.failed.value];
+  s.sourceError(SST_BREAKS);
+  assert.deepEqual(s.failed.value, ['basemap', SST_CELLS]);
+  assert.equal(P.previewStatus.value.sst.state, 'unavailable');
+  await tick();
+  assert.equal(P.previewStatus.value.sst.state, 'unavailable', 'the failure persists until the person retries');
+  s.cleared.length = 0;
+  P.togglePreview('sst', false); await tick();
+  assert.equal(P.previewStatus.value.sst, undefined);
+  assert.deepEqual(s.failed.value, ['basemap', SST_CELLS], 'switching off alone clears nothing');
+  P.togglePreview('sst', true); await tick();
+  assert.deepEqual(s.cleared, [SST_CELLS], 'only the real owner marker is cleared');
+  assert.deepEqual(s.failed.value, ['basemap'], 'an unrelated failure is kept');
+  assert.equal(n.count, 2, 'one attach per switch-on');
+  assert.equal(P.previewStatus.value.sst.state, 'ready', 'ready comes from the loader');
+  assert.equal(s.map.layers.size, 3);
+  s.sourceError(SST_BREAKS);
+  assert.equal(P.previewStatus.value.sst.state, 'unavailable', 'a fresh source error is handled again');
+  assert.equal(s.map.layers.size, 0);
+  finish(s);
+});
+
+test('unrelated_and_unknown_failures_do_not_disable_preview', async t => {
+  t.mock.method(console, 'error', () => {});
+  fresh(); asSession(admin);
+  const {fetchFn} = sstFetch(), s = stack(t, {fetchFn, loaders: {...P.PREVIEW_LOADERS, currents: currentsLoader()}});
+  P.previewOn.value = ['currents', 'sst']; await tick();
+  assert.equal(P.previewStatus.value.sst.state, 'ready'); assert.equal(P.previewStatus.value.currents.state, 'ready');
+  s.failed.value = ['preview-sst', 'preview-currents', 'preview-currents-lines', 'preview-sst-breaks', 'basemap', 'nonsense'];
+  assert.equal(P.previewStatus.value.sst.state, 'ready', 'a display-id or secondary-source name is not the owner');
+  assert.equal(P.previewStatus.value.currents.state, 'ready');
+  assert.equal(s.map.layers.size, 6, 'nothing was removed');
+  s.failed.value = [...s.failed.value, SST_CELLS];
+  assert.equal(P.previewStatus.value.sst.state, 'unavailable');
+  assert.equal(P.previewStatus.value.currents.state, 'ready', 'another preview stays ready');
+  assert.deepEqual([...s.map.layers].sort(), [CURRENTS_TINT, CURRENTS_LINES, CURRENTS_HEADS].sort());
+  assert.deepEqual(P.PREVIEW_OWNERS.wind, 'preview-wind', 'wind keeps its compatibility marker');
+  assert.deepEqual([P.PREVIEW_OWNERS.seafloor, P.PREVIEW_OWNERS.chlorophyll], ['preview-seafloor', 'preview-chlorophyll']);
+  finish(s);
+});
+
+test('late_attach_failure_and_gate_cleanup_keep_working', async t => {
+  fresh(); asSession(admin);
+  const log = [], gates = [];
+  const loaders = {...Object.fromEntries(P.PREVIEW_IDS.map(id => [id, async () => async () => null])),
+    sst: async () => async () => { await new Promise(r => gates.push(r)); return {destroy: () => log.push('destroy sst')}; }};
+  const failed = signal([]), engine = signal(fakeEngine());
+  const layer = P.createPreviewLayers({engine, loaders, failures: {list: failed, clear: l => { failed.value = failed.value.filter(x => x !== l); }}});
+  t.after(() => finish({layer}));
+  P.togglePreview('sst', true); await tick();
+  failed.value = [P.PREVIEW_OWNERS.sst];                 // the owner fails while the attach is pending
+  assert.equal(P.previewStatus.value.sst.state, 'unavailable');
+  gates[0](); await tick();
+  assert.deepEqual(log, ['destroy sst'], 'the handle that arrives after the failure is destroyed');
+  assert.equal(P.previewStatus.value.sst.state, 'unavailable');
+  // The gate closing while an attach is pending keeps the late handle too.
+  P.togglePreview('sst', false); await tick();
+  P.togglePreview('sst', true); await tick();
+  assert.equal(P.previewStatus.value.sst.state, 'loading', 'retry cleared the owner marker and loads again');
+  asSession({state: 'signed-out', advisor: false}); await tick();
+  gates[1](); await tick();
+  assert.deepEqual(log, ['destroy sst', 'destroy sst'], 'a late handle after the gate closed is destroyed');
+  assert.equal(P.previewStatus.value.sst, undefined);
+  // So does replacing the engine.
+  asSession(admin); P.togglePreview('sst', false); P.togglePreview('sst', true); await tick();
+  engine.value = fakeEngine(); await tick();
+  gates[2](); await tick();
+  assert.equal(log.filter(x => x === 'destroy sst').length, 3, 'a late handle after an engine replacement is destroyed');
+  layer.destroy(); fresh(); asSession({state: 'loading'});
+});

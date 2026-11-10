@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF1915-7: the private map previews (owner/admin only, off by default) now notice a failed source for sea-surface temperature and HF-radar currents: a failure on any of their sources, such as SST's strong-break lines or the currents' streamlines, removes the whole preview and reads "unavailable" instead of staying "ready", and switching it off and on again clears that failure and tries again. Other previews, the public map and who can see the previews are unchanged.
+
 - RF1915-5: the spear reading's 48-hour swell look-back now walks its 48 fixed hourly slots instead of the nearshore model's declared sample spacing, so an enormous or non-finite `temporalResolutionMinutes` can no longer hold the daily brief in a loop. Coverage, energy maxima, the 36-hour clarity gate and every ordinary verdict are unchanged.
 
 - RF1635-6: the shoreline publication gate refuses a CUSP feature whose `source_date` is not a real calendar day (February 29 in a non-leap year, April 31, month or day zero, year 0000, month 13) or not a plain `YYYY-MM-DD` string (Unicode digits, timestamps, padding, missing or non-text values), before the published `shoreline.geojson` is replaced, so an existing file stays byte-identical. Valid dates, including leap days and 0001-01-01 / 9999-12-31, are kept as written; the gate adds no freshness limit and no data is rebuilt.
