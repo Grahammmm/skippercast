@@ -26,7 +26,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-views a { display: inline-flex; align-items: center; min-height: var(--touch-min); padding: 0 var(--space-3); border-radius: var(--radius-md); color: var(--muted); font-weight: var(--weight-medium); text-decoration: none; }
 .app-views a:hover { color: var(--text); background: var(--panel-2); }
 .app-views a[aria-current="page"] { color: var(--text); box-shadow: inset 0 -2px 0 var(--mint); }
-.app-views a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-fresh { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); }
 .app-fresh-dot { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--muted); }
 .app-fresh[data-state="ok"] .app-fresh-dot { background: var(--mint); }
@@ -388,7 +387,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-fleet-form > .app-fleet-check, .app-fleet-form > .app-empty, .app-fleet-actions { grid-column: 1 / -1; }
 .app-fleet-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; color: var(--muted); font-size: var(--text-11); }
 .app-fleet-field input { min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-13); }
-.app-fleet-field input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-fleet-field input:focus-visible, .app-fleet-check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-fleet-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .app-fleet-how summary { display: flex; align-items: center; min-height: var(--touch-min); cursor: pointer; color: var(--blue); }
 .app-fleet-how summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -461,7 +460,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-first-answer-reason { margin: 0; color: var(--text); font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans); }
 .app-first-answer-rules { margin: 0; color: var(--muted); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans); }
 .app-first-answer-rules a { color: var(--blue); text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
-.app-first-answer-rules a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.app-first-answer-rules a:focus-visible { border-radius: var(--radius-sm); }
 .app-first-answer-more { justify-self: start; box-sizing: border-box; max-width: 100%; white-space: normal; text-align: center; }
 /* end SC2207-11 */
 

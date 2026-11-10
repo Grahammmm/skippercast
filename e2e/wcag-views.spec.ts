@@ -87,7 +87,7 @@ export async function smallTargets(page: Page): Promise<Finding[]> {
 }
 
 /** Tab through the page (≤40 stops, or until focus returns to a stop already seen or leaves the document): each stop must be
- *  shown and have an outline ≥1 px or a box-shadow; the same element twice in a row is a focus trap. */
+ *  shown and have a drawn outline of at least 2 px (a box-shadow alone no longer counts); the same element twice in a row is a focus trap. */
 export async function focusWalk(page: Page): Promise<Finding[]> {
   await page.evaluate(HELPERS);
   await page.evaluate(() => { (window as unknown as {__wcagSeen: Element[]}).__wcagSeen = []; (document.activeElement as HTMLElement | null)?.blur(); });
@@ -100,7 +100,7 @@ export async function focusWalk(page: Page): Promise<Finding[]> {
       if (!el || el === document.body) return null;   // focus left the document
       const seen = w.__wcagSeen.indexOf(el), last = w.__wcagSeen.at(-1) === el;
       w.__wcagSeen.push(el);
-      const cs = getComputedStyle(el), ring = (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 1) || cs.boxShadow !== 'none';
+      const cs = getComputedStyle(el), ring = cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 2;
       return {selector: w.__wcagDescribe(el), seen: seen >= 0, trap: last, shown: w.__wcagShown(el), ring};
     });
     if (!s) break;
@@ -188,14 +188,46 @@ test.describe('the gate itself', () => {
   });
   test('the focus walk ends on a cycle, flags missing rings and hidden stops, and fails a trap with its selector', async ({page}) => {
     await page.setContent(`<style>.sr{position:absolute;width:1px;height:1px;overflow:hidden} .sr:focus{position:static;width:auto;height:auto;outline:2px solid}
-      .bare:focus{outline:none}</style><a class="sr" href="#m">Skip</a><button class="ok">a</button><button class="bare">b</button>`);
+      button:focus{outline:2px solid} .bare:focus{outline:none}</style><a class="sr" href="#m">Skip</a><button class="ok">a</button><button class="bare">b</button>`);
     expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-indicator', selector: 'button.bare'}]);
-    await page.setContent(`<input class="t"><button class="n">n</button><script>
+    await page.setContent(`<style>input:focus,button:focus{outline:2px solid}</style><input class="t"><button class="n">n</button><script>
       document.querySelector('.t').addEventListener('keydown', e => { if (e.key === 'Tab') e.preventDefault(); });</script>`);
     expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-trap', selector: 'input.t'}]);
     // Focus moving inside an open shadow root is not a trap on its host (the History view's CoastMarkup).
-    await page.setContent(`<div id="h"></div><button class="z">z</button><script>
-      document.getElementById('h').attachShadow({mode: 'open'}).innerHTML = '<button class="a">a</button><button class="b" style="outline:none">b</button>';</script>`);
+    await page.setContent(`<style>button:focus{outline:2px solid}</style><div id="h"></div><button class="z">z</button><script>
+      document.getElementById('h').attachShadow({mode: 'open'}).innerHTML = '<style>button:focus{outline:2px solid}</style><button class="a">a</button><button class="b" style="outline:none">b</button>';</script>`);
     expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-indicator', selector: 'button.b'}]);
+  });
+  test('focus_walk_rejects_one_pixel_and_shadow_only: a 1 px outline and a shadow-only ring fail; an explicit 2 px outline passes', async ({page}) => {
+    await page.setContent(`<style>button:focus{outline:2px solid} .thin:focus{outline:1px solid;box-shadow:0 0 0 3px #08f} .shadow:focus{outline:none;box-shadow:0 0 0 3px #08f}</style>
+      <button class="ok">a</button><button class="thin">b</button><button class="shadow">c</button>`);
+    expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-indicator', selector: 'button.thin'}, {kind: 'focus', rule: 'focus-indicator', selector: 'button.shadow'}]);
+  });
+});
+
+/** The shared ring (web/ui/ui.css): links and the app map canvas, found by real keyboard focus. */
+test.describe('the shared focus ring', () => {
+  test('shared_link_outline_covers_unscoped_links and map_canvas_outline_is_inset: a focused logo link and the map canvas compute a 2 px --focus outline', async ({page, v2, pageErrors}) => {
+    void pageErrors;
+    await v2.open('app', {view: 'coast', region: 'morro-bay'});
+    await expect(page.locator('a.app-brand')).toBeVisible();
+    const ring = (sel: string) => page.evaluate((s) => {
+      const el = document.querySelector(s) as HTMLElement, cs = getComputedStyle(el);
+      const probe = document.createElement('i'); probe.style.color = 'var(--focus)'; document.body.append(probe);
+      const focus = getComputedStyle(probe).color; probe.remove();
+      return {style: cs.outlineStyle, width: cs.outlineWidth, offset: cs.outlineOffset, color: cs.outlineColor, focus, active: document.activeElement === el};
+    }, sel);
+    await page.keyboard.press('Tab');   // keyboard modality, so .focus() matches :focus-visible
+    await page.locator('a.app-brand').focus();
+    const logo = await ring('a.app-brand');
+    expect(logo).toMatchObject({active: true, style: 'solid', width: '2px', offset: '2px'});
+    expect(logo.color).toBe(logo.focus);
+    const canvas = page.locator('.app-chart canvas[tabindex], .app-terrain canvas[tabindex]').first();
+    await expect(canvas).toBeVisible();
+    await canvas.focus();
+    const sel = await canvas.evaluate((el) => { el.setAttribute('data-ring', ''); return '[data-ring]'; });
+    const map = await ring(sel);
+    expect(map).toMatchObject({active: true, style: 'solid', width: '2px', offset: '-2px'});
+    expect(map.color).toBe(map.focus);
   });
 });
