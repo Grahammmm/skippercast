@@ -61,7 +61,7 @@
       "label": "App page (brief, map) styles (first load)",
       "kind": "first_load_css",
       "entry": "app.html",
-      "max_bytes": 74000,
+      "max_bytes": 75000,
       "history": [
         {
           "max_bytes": 71000,
@@ -82,6 +82,10 @@
         {
           "max_bytes": 74000,
           "reason": "Raised 73,000 to 74,000 (RF1925-2). This PR changes no stylesheet; main 9917437ec itself builds app first-load styles at 73,052 bytes (assets/app css 51.9 KB plus degraded-notice, tokens and Brief), 52 bytes over the 73,000 budget after the RF1935-4 and UXFIX-13 merges, so the required Size budget check fails on any branch merged with it; the budget moves up 1,000 bytes (1.3% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 75000,
+          "reason": "Raised 74,000 to 75,000 (SC1922-04). The preview-region marker styles this PR adds in web/app/app.css, together with the RF1935-2 app.css taken in the merge of main 611d37888, take the app first-load styles to 74,361 bytes (assets/app css 53.1 KB plus degraded-notice, tokens and Brief), 361 bytes over the 74,000 budget; the budget moves up 1,000 bytes (0.9% headroom over that build), no more."
         }
       ]
     },
