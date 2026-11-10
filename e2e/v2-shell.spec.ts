@@ -404,6 +404,7 @@ test.describe('phone', () => {
 
 // SC1722-09: a press that changes the view is one history entry, a press on the shown view is none, an hour change replaces.
 test('SC1722-09: Back and Forward follow the views you pressed, a repeat press adds no entry and an hour change adds none', async ({page, pageErrors, v2}) => {
+  await page.clock.setFixedTime(new Date('2026-10-12T19:30:00Z'));   // an ordinary day, as HOUR_CASES: Today has hours left
   await v2.open('app', AREA);
   await page.evaluate(() => { (window as unknown as {__v2: number}).__v2 = 1; });
   const stillLoaded = () => page.evaluate(() => (window as unknown as {__v2?: number}).__v2 === 1);
