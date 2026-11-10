@@ -88,7 +88,7 @@ test('a refused location leaves a message and the input focused; Explore the coa
   await openMenus(page, isMobile);
   await page.locator('button[aria-label="Use my location"]').click();
   const dialog = page.locator('dialog.port-dialog');
-  await expect(dialog.locator('[role="status"]')).toHaveText('Location permission was denied. Search for a port instead.');
+  await expect(dialog.locator('[role="status"]')).toHaveText("Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.");
   await expect(dialog.locator('input[type="search"]')).toBeFocused();
   await expect(dialog).toContainText('Your choice stays in this browser.');
   await page.keyboard.press('Escape');
@@ -99,6 +99,45 @@ test('a refused location leaves a message and the input focused; Explore the coa
   await expect(page).not.toHaveURL(/region=/);
   expect(pageErrors).toEqual([]);
 });
+
+const GEO_LINES = {
+  en: {locate: 'Use my location', denied: "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.",
+    unavailable: 'Location was unavailable. Search for a port instead.', timedOut: 'The location request timed out. Search for a port instead.', unsupported: 'Location is unavailable. Search for a port instead.'},
+  es: {locate: 'Usar mi ubicación', denied: 'El permiso de ubicación está desactivado para este sitio. Permite la ubicación en la configuración de sitios de tu navegador o busca un puerto mientras tanto.',
+    unavailable: 'No se pudo obtener la ubicación. Busca un puerto en su lugar.', timedOut: 'La solicitud de ubicación agotó el tiempo de espera. Busca un puerto en su lugar.', unsupported: 'La ubicación no está disponible. Busca un puerto en su lugar.'},
+};
+for (const lang of ['en', 'es'] as const) {
+  for (const [scenario, line] of [[1, 'denied'], [2, 'unavailable'], [3, 'timedOut'], ['none', 'unsupported']] as const) {
+    test(`SC1922-01 ${lang}: location error ${scenario} says the ${line} line on the landing and in the map's dialog, once`, async ({page, context, pageErrors, isMobile}) => {
+      const lines = GEO_LINES[lang];
+      await withProfile(page);
+      // A synthetic geolocation (never a real permission prompt) that counts its requests; "none" removes the API.
+      await context.addInitScript(code => {
+        const w = window as unknown as {__geoCalls: number};
+        w.__geoCalls = 0;
+        const geolocation = code === 'none' ? undefined : {getCurrentPosition: (_ok: unknown, fail: (e: {code: number; message: string}) => void) => { w.__geoCalls++; fail({code: code as number, message: 'device detail'}); }};
+        Object.defineProperty(navigator, 'geolocation', {value: geolocation, configurable: true});
+      }, scenario);
+      const calls = () => page.evaluate(() => (window as unknown as {__geoCalls: number}).__geoCalls);
+      // The landing's own chooser.
+      await page.goto(`/?ui=v2&lang=${lang}`);
+      const landingStatus = page.locator('.port-input-feedback[role="status"]');
+      await page.getByRole('button', {name: lines.locate}).first().click();
+      await expect(landingStatus).toHaveText(lines[line]);
+      await expect(page.locator('input[type="search"]').first()).toBeFocused();
+      expect(await calls()).toBe(scenario === 'none' ? 0 : 1);
+      // The map's Use my location dialog.
+      await page.goto(`${SHELL}&lang=${lang}`);
+      await openMenus(page, isMobile);
+      await page.locator(`button[aria-label="${lines.locate}"]`).click();
+      const dialog = page.locator('dialog.port-dialog');
+      await expect(dialog.locator('[role="status"]')).toHaveText(lines[line]);
+      await expect(dialog.locator('input[type="search"]')).toBeFocused();
+      expect(await calls()).toBe(scenario === 'none' ? 0 : 1);
+      expect(pageErrors).toEqual([]);
+    });
+  }
+}
 
 test('a home saved on /coast opens in v2, and Forget clears it for v1 and /coast too (FE-83)', async ({page, context, baseURL, pageErrors, isMobile}) => {
   const home = {v: 1, place: 'cambria', mode: 'spear'};
@@ -765,11 +804,11 @@ for (const lang of ['en', 'es'] as const) for (const surface of ['landing', 'app
     await expect(region).toHaveText(''); await expect(region.locator('svg')).toHaveCount(0);
     await region.evaluate(el => { el.setAttribute('data-original', 'yes'); });
     const messages = lang === 'en' ? [
-      'Location permission was denied. Search for a port instead.',
+      "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.",
       'Location was unavailable. Search for a port instead.',
       'The location request timed out. Search for a port instead.'
     ] : [
-      'Se denegó el permiso de ubicación. Busca un puerto en su lugar.',
+      'El permiso de ubicación está desactivado para este sitio. Permite la ubicación en la configuración de sitios de tu navegador o busca un puerto mientras tanto.',
       'No se pudo obtener la ubicación. Busca un puerto en su lugar.',
       'La solicitud de ubicación agotó el tiempo de espera. Busca un puerto en su lugar.'
     ];

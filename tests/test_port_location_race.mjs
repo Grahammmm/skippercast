@@ -54,7 +54,8 @@ const north = port('north-fixture', 'North fixture', [35, -120]);
 const south = port('south-fixture', 'South fixture', [34, -120]);
 const ports = [north, south];
 const geo = () => ({calls: [], getCurrentPosition(ok, fail) { this.calls.push({ok, fail}); }});
-const answer = (g, i, outcome) => ['failure', 'denied'].includes(outcome) ? g.calls[i].fail({code: outcome === 'denied' ? 1 : 3}) :
+const FAIL_CODE = {denied: 1, nofix: 2, failure: 3};
+const answer = (g, i, outcome) => outcome in FAIL_CODE ? g.calls[i].fail({code: FAIL_CODE[outcome]}) :
   g.calls[i].ok({coords: {latitude: outcome === 'none' ? 0 : outcome === 'south' ? 34 : 35, longitude: outcome === 'none' ? 0 : -120}});
 function mount(extra = {}) {
   const root = new Element('div'), chosen = [], explored = [];
@@ -211,3 +212,32 @@ test('forgotten feedback changes language without location lookup', async () => 
     assert.equal(errorIcon(m).length, 0);
   } finally { await m.unmount(); language.value = 'en'; }
 });
+// SC1922-01: the line a failed location read shows, in each language, through the button and the map's locate=true entry.
+const LINES = {
+  en: {denied: "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.",
+    unavailable: 'Location was unavailable. Search for a port instead.', timedOut: 'The location request timed out. Search for a port instead.', unsupported: 'Location is unavailable. Search for a port instead.'},
+  es: {denied: 'El permiso de ubicación está desactivado para este sitio. Permite la ubicación en la configuración de sitios de tu navegador o busca un puerto mientras tanto.',
+    unavailable: 'No se pudo obtener la ubicación. Busca un puerto en su lugar.', timedOut: 'La solicitud de ubicación agotó el tiempo de espera. Busca un puerto en su lugar.', unsupported: 'La ubicación no está disponible. Busca un puerto en su lugar.'},
+};
+for (const lang of ['en', 'es']) for (const entry of ['button', 'locate']) {
+  for (const [outcome, line] of [['denied', 'denied'], ['nofix', 'unavailable'], ['failure', 'timedOut'], ['unsupported', 'unsupported']]) {
+    test(`${lang} ${entry}: ${outcome} shows the ${line} line in the status, focuses search, asks once`, async () => {
+      language.value = lang;
+      try {
+        const m = mount(entry === 'locate' ? {locate: true, ...(outcome === 'unsupported' ? {geolocation: null} : {})} : outcome === 'unsupported' ? {geolocation: null} : {});
+        await m.update({});
+        if (entry === 'button') await m.click(lang === 'es' ? 'Usar mi ubicación' : 'Use my location');
+        if (outcome !== 'unsupported') { assert.equal(m.geolocation.calls.length, 1); await m.resolve(0, outcome); }
+        assert.equal(m.snapshot().feedback, LINES[lang][line]);
+        assert.ok(document.activeElement === m.input(), 'the failure focuses search');
+        assert.equal(all(m.root, n => n.attrs.role === 'status').length, 1, 'the line is the one role=status paragraph');
+        // One shot: no retry, no second request, after the failure has settled.
+        await m.update({});
+        if (outcome !== 'unsupported') assert.equal(m.geolocation.calls.length, 1, 'no automatic retry');
+        // Search and choosing still work.
+        await m.type('South'); await m.submit(); assert.equal(m.chosen[0], south);
+        await m.unmount();
+      } finally { language.value = 'en'; }
+    });
+  }
+}

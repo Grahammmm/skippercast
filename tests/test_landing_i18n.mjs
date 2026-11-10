@@ -211,6 +211,10 @@ test('landing_english_bytes_and_spanish_funnel: English is the old copy word for
   assert.ok(es.app.includes('¿Desde dónde sales al agua?') && es.app.includes('Últimas lecturas · Morro Bay &amp; Avila') && es.app.includes('Cargando las últimas lecturas…') && es.app.includes('Consultando las boyas') && es.app.includes('>Hora por hora en el mapa<'), 'LandingApp in Spanish');
   const pc = m.portCopy('es');
   assert.deepEqual([pc.finding, pc.unsupported, pc.unavailable, pc.none, pc.empty, pc.forget, pc.forgotten, pc.found(ports[0])], ['Buscando un puerto cercano…', 'La ubicación no está disponible. Busca un puerto en su lugar.', 'No se pudo obtener la ubicación. Busca un puerto en su lugar.', 'No hay un puerto de la lista cerca. Busca o explora la costa.', 'Aún no hay un puerto que coincida. Prueba un puerto cercano o explora la costa.', 'Olvidar puerto guardado', 'Se eliminó el puerto guardado. Esta visita mantiene la selección actual.', 'Puerto de la lista más cercano: Morro Bay. Selecciónalo abajo para continuar.']);
+  assert.equal(pc.denied, 'El permiso de ubicación está desactivado para este sitio. Permite la ubicación en la configuración de sitios de tu navegador o busca un puerto mientras tanto.');
+  assert.equal(en.denied, "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.");
+  const slice = JSON.parse(await readFile(join(ROOT, 'web/landing/strings.generated.json'), 'utf8'));
+  assert.equal(slice['landing.port.denied']?.en, en.denied, 'SC1922-01: the denied line is in the first-paint slice');
   assert.equal(pc.found(ports[1]), 'Puerto de la lista más cercano: <b>Odd</b> & Co {n}. Selecciónalo abajo para continuar.', 'a name is a value: markup and braces are not expanded');
   // Every new id has both languages and the same placeholders.
   for (const [id, e] of Object.entries(m.STRINGS)) if (id.startsWith('landing.')) assert.deepEqual([...(e.en.match(/\{\w+\}/g) ?? [])].sort(), [...(e.es.match(/\{\w+\}/g) ?? [])].sort(), id);
@@ -368,7 +372,7 @@ test('spanish_live_reason_parity: the verdict word, day, boat and reason in Span
 test('location denied and timedOut copy is exact in both catalogue projections and legacy English', async () => {
   const m = await load();
   for (const [key, en, es] of [
-    ['denied', 'Location permission was denied. Search for a port instead.', 'Se denegó el permiso de ubicación. Busca un puerto en su lugar.'],
+    ['denied', "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.", 'El permiso de ubicación está desactivado para este sitio. Permite la ubicación en la configuración de sitios de tu navegador o busca un puerto mientras tanto.'],
     ['timedOut', 'The location request timed out. Search for a port instead.', 'La solicitud de ubicación agotó el tiempo de espera. Busca un puerto en su lugar.']]) {
     assert.equal(m.portCopy('en')[key], en); assert.equal(m.COPY[key], en); assert.equal(m.portCopy('es')[key], es);
   }
