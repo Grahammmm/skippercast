@@ -41,7 +41,7 @@
       "label": "App page (brief, map) scripts (first load)",
       "kind": "first_load_js",
       "entry": "app.html",
-      "max_bytes": 1064000,
+      "max_bytes": 1059000,
       "history": [
         {
           "max_bytes": 1160000,
@@ -58,6 +58,10 @@
         {
           "max_bytes": 1064000,
           "reason": "Lowered 1,180,000 to 1,064,000 (SC1407-09, #1762 M5). The Spanish table now loads only for a Spanish page, so the app's first load carries English only. Vite manifest static closure of app.html: 1,169,280 bytes on main a5005eb05, 1,011,409 with this change on that base, 1,012,688 after merging main 07621807 (SC1407-06 and others); ceiling = ceil(1,012,688 x 1.05 / 1,000) x 1,000."
+        },
+        {
+          "max_bytes": 1059000,
+          "reason": "Lowered 1,064,000 to 1,059,000 (SC1407-10, #1762 M5). The trip planner, offline pack, basemap ranges and coastal snapshots moved from web/trip.ts to web/trip-runtime.ts, loaded on first use, so the app's first load no longer carries them. Vite manifest static closure of app.html: 1,007,939 bytes on this branch merged with main 1deba4ec (SC1407-09 and the earlier entries included); ceiling = ceil(1,007,939 x 1.05 / 1,000) x 1,000."
         }
       ]
     },

@@ -16,7 +16,7 @@ test('Morro Bay pack coverage: swell forecast, chart tiles and basemap; no prefe
   assert.equal(urls.some(u => /\/api\/coast\//.test(u)), false, 'Morro Bay ocean readings use the separate Coastal readings save');
   assert.ok(planTiles(morro.bounds).tiles.length > 0, 'chart tiles are planned');
   assert.ok(planBasemap(morro.bounds).tiles.length > 0, 'basemap ranges are planned');
-  const pack = read('../dist/offline-pack.js'), trip = read('../web/trip.ts');
+  const pack = read('../dist/offline-pack.js'), trip = read('../web/trip-runtime.ts');
   assert.match(pack, /store\(tileURL\(t, layers\), tileKey\(/, 'the chart plan is saved');
   assert.match(trip, /new PMTiles\(rangeRecorder\(/, 'the basemap reader saves ranges');
   assert.match(trip, /reader\.getZxy\(t\.z, t\.x, t\.y/, 'every planned basemap tile is requested');
