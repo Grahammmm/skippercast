@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 from scripts import build_tide_layer as btl
 
@@ -28,6 +29,10 @@ def hilo(*rows):
 
 GOOD = hilo(('2026-11-07 03:00', 5.5, 'H'), ('2026-11-07 09:10', -0.1, 'L'), ('2026-11-07 15:30', 5.0, 'H'),
             ('2026-11-07 21:40', 0.8, 'L'))
+
+
+def _refuse_constant(name):
+    raise ValueError(name)
 
 
 class SelectTests(unittest.TestCase):
@@ -58,6 +63,25 @@ class ParseTests(unittest.TestCase):
             btl.parse_extremes(hilo(('2026-11-07 03:00', 5.5, 'H'), ('2026-11-07 15:00', 5.0, 'H')))
 
 
+    def test_extremes_refuse_nonfinite_heights(self):
+        for bad in ('NaN', 'Infinity', '-Infinity', '1e999', '-1e999', float('nan'), float('inf'), float('-inf')):
+            for rows in ([('2026-11-07 03:00', bad, 'H')],
+                         [('2026-11-07 03:00', 5.5, 'H'), ('2026-11-07 09:10', bad, 'L')]):
+                with self.assertRaises(ValueError) as cm:
+                    btl.parse_extremes(hilo(*rows))
+                self.assertIn('non-finite tide height at 2026-11-07T', str(cm.exception))
+
+    def test_finite_heights_preserve_rounding_and_bytes(self):
+        out = btl.parse_extremes(hilo(('2026-11-07 03:00', '5.1234', 'H'), ('2026-11-07 09:10', 0, 'L'),
+                                      ('2026-11-07 15:30', -0.0004, 'H'), ('2026-11-07 21:40', '-1.5', 'L')))
+        self.assertEqual([r['v'] for r in out], [5.123, 0.0, -0.0, -1.5])
+        text = json.dumps(out)
+        self.assertEqual(text, '[{"t": "2026-11-07T03:00Z", "type": "H", "v": 5.123}, '
+                               '{"t": "2026-11-07T09:10Z", "type": "L", "v": 0.0}, '
+                               '{"t": "2026-11-07T15:30Z", "type": "H", "v": -0.0}, '
+                               '{"t": "2026-11-07T21:40Z", "type": "L", "v": -1.5}]')
+
+
 class BuildTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -85,6 +109,39 @@ class BuildTests(unittest.TestCase):
             return LISTING if url == btl.STATIONS_URL else {'error': {'message': 'none'}}
         with self.assertRaises(SystemExit):
             btl.build(self.sectors, ['morro-conception'], 'test', self.now, 8, fetch=fetch, pause=0)
+
+    def test_build_excludes_nonfinite_station_but_keeps_valid_station(self):
+        bad = hilo(('2026-11-07 03:00', 5.5, 'H'), ('2026-11-07 09:10', 'NaN', 'L'), ('2026-11-07 15:30', 5.0, 'H'),
+                   ('2026-11-07 21:40', 0.8, 'L'))
+        def fetch(url):
+            if url == btl.STATIONS_URL:
+                return LISTING
+            return GOOD if 'station=9412110' in url else bad
+        doc = btl.build(self.sectors, ['morro-conception', 'cambria-morro'], 'test', self.now, 8, fetch=fetch, pause=0)
+        self.assertEqual([s['id'] for s in doc['stations']], ['9412110'])
+        self.assertEqual([f['id'] for f in doc['failed']], ['9410000'])
+        self.assertIn('non-finite tide height', doc['failed'][0]['reason'])
+        text = json.dumps(doc)
+        self.assertNotIn('NaN', text)
+        json.loads(text, parse_constant=_refuse_constant)   # strict: no NaN/Infinity constants
+
+    def test_all_nonfinite_stations_leave_existing_output_untouched(self):
+        bad = hilo(('2026-11-07 03:00', '1e999', 'H'), ('2026-11-07 09:10', 0.1, 'L'), ('2026-11-07 15:30', 5.0, 'H'),
+                   ('2026-11-07 21:40', 0.8, 'L'))
+        def fetch(url):
+            return LISTING if url == btl.STATIONS_URL else bad
+        real_build = btl.build
+        out = Path(self.tmp.name) / 'o' / 'x.json'
+        out.parent.mkdir()
+        for preseed in (True, False):
+            out.unlink(missing_ok=True)
+            if preseed:
+                out.write_bytes(b'sentinel')
+            with mock.patch.object(btl, 'build', lambda *a, **k: real_build(*a, fetch=fetch, pause=0, **k)):
+                with self.assertRaises(SystemExit):
+                    btl.main(['--sectors', 'morro-conception', '--output', str(out)])
+            self.assertEqual(out.read_bytes() if preseed else out.exists(), b'sentinel' if preseed else False)
+            self.assertFalse(out.with_suffix('.part').exists())
 
     def test_request_url_is_hilo_mllw_gmt(self):
         url = btl.predictions_url('9412110', dt.date(2026, 11, 6), dt.date(2026, 11, 15))
