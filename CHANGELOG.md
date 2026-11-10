@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF1635-6: the shoreline publication gate refuses a CUSP feature whose `source_date` is not a real calendar day (February 29 in a non-leap year, April 31, month or day zero, year 0000, month 13) or not a plain `YYYY-MM-DD` string (Unicode digits, timestamps, padding, missing or non-text values), before the published `shoreline.geojson` is replaced, so an existing file stays byte-identical. Valid dates, including leap days and 0001-01-01 / 9999-12-31, are kept as written; the gate adds no freshness limit and no data is rebuilt.
+
 - SC1407-06: the map's reef-mark screen and the trip planner no longer each download and parse the live CDFW protected-area boundaries on the same `/map` load: when both ask the exact same query while it is in flight, one request and one parsed answer serve both (`dist/live-mpa.js`). Nothing is kept after the answer, so a later refresh asks again; each screen keeps its own checks and daily-feed fallback, and both record the time the answer arrived.
 
 - RF1345-7: the AIS port-coverage report opens exactly the requested processor `state.sqlite`, read-only, even when its path contains `?`, `#`, `%` or other URI characters; it no longer creates a stray file, reads a lookalike database or reports coverage unknown for such a path. Counts, the window and unknown-state output are unchanged.
