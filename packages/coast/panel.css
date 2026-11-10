@@ -2556,6 +2556,9 @@ body:not(.app-body) footer {
   .season-chart .axis {
     font-size: 14px;
   }
+  .history-chart .history-measurement-caption {
+    font-size: 10px;
+  }
   .season-card .eyebrow {
     font-size: 10px;
   }
