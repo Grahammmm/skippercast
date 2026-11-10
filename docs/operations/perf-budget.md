@@ -39,6 +39,17 @@ is published, not in the repo, so this check cannot measure it; the publisher en
 leaves 23.8% headroom for more reefs or longer credit text, and stops the file growing back toward the full export
 unnoticed. Raise it in a pull request with a reason, as above.
 
+### Protected-area verdicts reused across hour steps (SC1407-02)
+
+Not a size budget, but a runtime cost the brief no longer repeats: `web/place-verdict-cache.ts` keeps the protected-area
+verdict (`screenPlace`) of each atlas pick (`web/ranking.ts`) and of the Boat run line (`web/brief/run.ts`), so moving the
+time dock does not screen the same place against the same boundaries again. It holds at most 256 checked verdicts in
+memory (least recently used dropped first), keyed by the region, the screen, the screen's `verdictRevision()` and every
+coordinate of the place. The revision changes whenever the boundaries, their names or order, the covered envelope, the
+region binding, the readiness or the check times change; a change drops that screen's verdicts, and a region change drops
+them all. A screen without a revision, and any unchecked (`screened: false`) answer, is never cached. Nothing is stored on
+the device or fetched. This is not the publisher's stored reef verdict (the slim file above), which has its own fingerprint.
+
 ### The hourly horizon is built once per hour (SC1407-03)
 
 Not a byte budget, and no budget here changes. The time dock's 169-hour horizon (`horizonDays` in `web/hour.ts`) is
