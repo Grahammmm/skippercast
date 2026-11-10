@@ -20,6 +20,7 @@ import {saveData} from '../web/landing/save-data.ts';
 import {warmApp, warmList} from '../web/landing/warm.ts';
 import {ASSET, regionWarmList, warmRegion} from '../web/landing/region-warm.ts';
 import {RAIL_IDS} from '../web/profile.ts';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const NOW = Date.parse('2026-10-07T20:00:00Z');
@@ -160,7 +161,7 @@ async function load() {
       export {DEFAULT_CURRENT, STORAGE_KEYS} from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h, render as renderDOM, options} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
   components = await import(pathToFileURL(out).href);
   return components;

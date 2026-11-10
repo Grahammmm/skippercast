@@ -8,7 +8,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import test, {after} from 'node:test';
 import {build} from 'esbuild';
-import {rendererPlugin} from './helpers/esbuild-url.mjs';
+import {rendererPlugin, preparedCatalogue} from './helpers/esbuild-url.mjs';
 
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new Error('no network in this test'); };
@@ -22,7 +22,7 @@ await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader
     export {regsData} from './web/regs.ts';
     export {language} from './web/i18n.ts';
     export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
-  bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: [rendererPlugin, hookStub]});
+  bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: [rendererPlugin, preparedCatalogue, hookStub]});
 const m = await import(pathToFileURL(out).href);
 after(async () => { globalThis.fetch = realFetch; m.regsData.value = null; m.language.value = 'en'; await rm(dir, {recursive: true, force: true}); });
 
