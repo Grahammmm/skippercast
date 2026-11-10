@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- SC1407-07: the Aerial base asks USGS for 512 px tiles (about a quarter of the requests for the same view, at the same sharpness and over the same zoom range) as JPEG where a tile is fully opaque and PNG where it holds transparency, so open water still shows the map below; if that format fails, the base retries once in the previous PNG-only form. The map page also opens its connection to the USGS imagery host while it loads. The imagery, its dated credit and the NaturalColor rendering are unchanged.
 - UXFIX-13: on the phone, the first-run card's "Keep Boat for now" is a visible 44 px button on the heading row at every sheet height (it was clipped to 1 px at the closed sheet and only appeared on keyboard focus), in English and Spanish. The card stays a soft card you can ignore; the closed sheet rests 24 px higher while the card is on it.
 - SC1722-14: native form fields share a 16px font floor on the landing, app and dialogs. The target search widens from 128px to 133px so both language hints fit; its phone select is capped to the viewport. This verifies the CSS precondition, not real-iPhone focus zoom.
 - RF1935-4: Keep the phone sheet target search clear of the tabs while focused, including short emulated viewports; restore navigation on blur.
