@@ -21,10 +21,12 @@ for(const page of ['/landing.html','/app.html'])if(!shells[page])throw Error(`di
 // TA-W1: the server-rendered advisor pages link dist/chat.html's hashed stylesheet set (tokens, the chat
 // island's and advisor/pages.css) and its entry script (the chat island and the pages' telemetry).
 const advisorAssets=advisorAssetPaths(manifest);
+// SC1722-05: the page for an unknown page link (web/404.html) is compiled into the Worker (server/routes/assets.ts); a missing source fails the build.
+const notFoundHtml=await readFile('web/404.html','utf8');
 const publicRules=new Set(Object.values(regions).map(region=>region.assets.regulations));
 for(const region of draftRegions){const asset=region.assets.regulations;if(asset&&!publicRules.has(asset))await rm(`dist/client/${asset}`,{force:true});}
 
 await build({entryPoints:['server/index.ts'],outfile:'dist/server/index.js',bundle:true,format:'esm',platform:'browser',target:'es2022',
-  define:{REGIONS:JSON.stringify(regions),DEPLOYMENT:JSON.stringify(deployment),SHELLS:JSON.stringify(shells),BUILD_ID:JSON.stringify(buildId),ADVISOR_ASSETS:JSON.stringify(advisorAssets)},sourcemap:false});
+  define:{REGIONS:JSON.stringify(regions),DEPLOYMENT:JSON.stringify(deployment),SHELLS:JSON.stringify(shells),BUILD_ID:JSON.stringify(buildId),ADVISOR_ASSETS:JSON.stringify(advisorAssets),NOT_FOUND_HTML:JSON.stringify(notFoundHtml)},sourcemap:false});
 console.log(`Built shared regional Worker and public assets (build ${buildId}).`);
 
