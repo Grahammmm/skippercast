@@ -1,8 +1,10 @@
 // Synthetic device-only records. No account API or live position is used.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import util from 'node:util';
 import {createEntry, readEntries, saveEntry, LOG_KEY} from '../web/private-map-log.ts';
 import {parseConditionsForecast} from '../web/conditions.ts';
+import {language} from '../web/i18n.ts';
 
 const NOW = Date.parse('2026-11-07T18:00:00Z');
 const mark = {name: 'Synthetic reef', position: {latitude: 35, longitude: -121}};
@@ -55,6 +57,34 @@ test('withheld, missing and invalid positions cannot create a log', () => {
   for (const bad of [{...mark, withheld: true}, {name: 'no position'}, {...mark, position: {latitude: NaN, longitude: -121}}, {...mark, position: {latitude: 91, longitude: -121}}]) {
     assert.equal(createEntry(bad, 'catch', 'fixture', null, NOW, 'UTC'), null);
   }
+});
+
+test('new_spanish_capture_is_canonical_english_v1: a Spanish reader stores the same v1 English record, and switching language writes nothing', () => {
+  const capture = lang => { language.value = lang; return ['catch', 'blank'].map(kind => entry(kind, forecast())); };
+  try {
+    const en = capture('en'), es = capture('es');
+    assert.ok(util.isDeepStrictEqual(es, en), 'es capture equals en capture');
+    assert.equal(LOG_KEY, 'skippercast.private-map-log.v1');
+    const storage = store();
+    for (const e of es) assert.equal(saveEntry(e, storage), 'saved');
+    const raw = storage.getItem(LOG_KEY), rows = JSON.parse(raw);
+    assert.deepEqual(rows.map(r => Object.keys(r)), Array(2).fill(['kind', 'name', 'region', 'position', 'positionBasis', 'recordedAt', 'conditions']));
+    assert.deepEqual(rows.map(r => r.kind), ['catch', 'blank']);
+    assert.equal(rows[1].positionBasis, 'Selected map position; not live GPS');
+    const readings = [...rows[0].conditions.forecast.families.flatMap(f => f.rows), rows[0].conditions.forecast.current];
+    assert.deepEqual([...new Set(readings.map(r => r.label))], ['Wind', 'Seas', 'Current']);
+    assert.equal(readings[0].value, '12 kt');
+    assert.ok(readings.some(r => r.value === null && r.gap), 'a gap is stored as its English reason');
+    assert.ok(!/"lang"|\bes\b|ñ|á|é|í|ó|ú/.test(raw), 'no language field or Spanish text is stored');
+    let writes = 0;
+    const watched = {getItem: storage.getItem, setItem: () => { writes++; }};
+    language.value = 'en';
+    assert.ok(util.isDeepStrictEqual(readEntries(watched), rows));
+    language.value = 'es';
+    assert.ok(util.isDeepStrictEqual(readEntries(watched), rows));
+    assert.equal(writes, 0);
+    assert.equal(storage.getItem(LOG_KEY), raw);
+  } finally { language.value = 'en'; }
 });
 
 test('blocked, full or corrupt storage fails honestly without overwriting earlier records', () => {

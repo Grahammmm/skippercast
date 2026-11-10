@@ -268,7 +268,7 @@ export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/F
   'web/app/PlanView.tsx', 'web/plan.ts', 'web/app/ControlsTour.tsx', 'web/tour.ts', 'web/app/Presets.tsx', 'web/app/presets.ts',
   'web/app/TripAlerts.tsx', 'web/alerts.ts', 'web/digest.ts', 'web/app/PortAlert.tsx',
   'web/app/views/Reports.tsx', 'web/reports.ts', 'web/reports-copy.ts', 'web/app/views/Fleet.tsx',
-  'dist/account.js', 'web/account-copy.ts'];
+  'dist/account.js', 'web/account-copy.ts', 'web/app/PrivateMapLog.tsx'];
 /** Prose-like literals in covered files that are data or code, not copy: a species group name (not translated) and a prefix the model writes. */
 // dist/account.js: the GPX file's title (file data) and a developer message for an incomplete catch-log answer, never shown.
 export const LITERAL_OK = new Set(['Lingcod & rockfish', 'Using your limits', 'SkipperCast saved spots', 'The catch log answer was incomplete', 'unknown account string']);
@@ -305,7 +305,6 @@ export function catalogueProblems(root = ROOT) {
 /** Every .tsx screen under web/app (views included), web/brief and web/landing is either in COVERED (its words come from the catalogue) or here with a one-line reason it is not. A file in neither fails the lint, so a new screen cannot ship English-only unnoticed. Exact paths only: no globs, no directory exemptions. NOT_COVERED skips only the catalogue check; the ordinary copy rules still read these files. */
 export const COVERAGE_ROOTS = ['web/app', 'web/brief', 'web/landing'];
 export const NOT_COVERED = {
-  'web/app/PrivateMapLog.tsx': 'SCFEAT-CATCH-1 bounded device-only first slice; English entry controls and stored snapshot text, Spanish deferred',
   'web/app/PreviewLayers.tsx': 'MAPLIVE-1 owner-only private map previews; admin-only research wording marked lang="en", outside the Spanish scope like the admin views (#1512)',
   'web/app/App.tsx': 'composition and region loading; no visible text of its own',
   'web/app/CoastMarkup.tsx': 'renders the coast package\'s chart markup, whose labels are drawn in packages/coast; deferred, not translated here',
@@ -367,7 +366,7 @@ export function copyFiles(root = ROOT) {
     for (const entry of readdirSync(join(root, dir), {withFileTypes: true}).sort((a, b) => a.name.localeCompare(b.name))) {
       const path = `${dir}/${entry.name}`;
       if (entry.isDirectory()) walk(path);
-      else if (/\.tsx?$/.test(entry.name) && !entry.name.endsWith('.d.ts')) list.push(path);
+      else if ((/\.tsx?$/.test(entry.name) && !entry.name.endsWith('.d.ts')) || entry.name.endsWith('.html')) list.push(path); // SC1722-05: web/404.html too
     }
   };
   walk('web');

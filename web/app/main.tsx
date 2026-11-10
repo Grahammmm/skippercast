@@ -17,6 +17,7 @@ import {App, bindStartupFreshness, loadRegion, narrow, NARROW_QUERY, regionInfo}
 import {loadPlans, regionPlans} from '../species.ts';
 import {bindBriefReport, currentBrief, ensureRegionalForecast, enableSavedBrief, noteRegionInfo, loadDailyFeed, needsDailyLoad, showSavedBrief} from '../brief/Brief.tsx';
 import {regionPlace} from '../map/currents.ts';
+import {shownPresentation} from '../map/stage.ts';
 import {initTelemetry} from '../telemetry.ts';
 import {installDegradedWatch} from '../degraded.ts';
 
@@ -49,6 +50,9 @@ async function start(): Promise<void> {
   await ready;
   const host = document.getElementById('app');
   if (host) { host.replaceChildren(); render(<App />, host); }
+  // SC1407-08 (#1762 M3): a /map page that opens on the Chart starts fetching its library now, not when the Chart mounts.
+  // The Chart imports this same module (web/map/chart.ts), so the browser loads it once and the Chart reports any failure.
+  if (host && location.pathname === '/map' && region.peek() && shownPresentation.peek() === 'chart') void import('../map/maplibre.js').catch(() => {});
   // FE-51: after the render, so `#export` finds the planner's host.
   startTrip();
 

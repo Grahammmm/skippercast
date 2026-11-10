@@ -2,8 +2,12 @@
 
 ## Unreleased
 
+- RF1635-6: the shoreline publication gate refuses a CUSP feature whose `source_date` is not a real calendar day (February 29 in a non-leap year, April 31, month or day zero, year 0000, month 13) or not a plain `YYYY-MM-DD` string (Unicode digits, timestamps, padding, missing or non-text values), before the published `shoreline.geojson` is replaced, so an existing file stays byte-identical. Valid dates, including leap days and 0001-01-01 / 9999-12-31, are kept as written; the gate adds no freshness limit and no data is rebuilt.
+
 - RF1635-5: survey inventories now refuse cyclic derivation before loading or promotion; valid shared-parent lineages remain accepted and rejected promotion leaves the catalog unchanged.
 - SC1407-11: the brief's forecast-skill line now speaks for the hour the brief answers for: it reads the 24, 48 or 72 h-ahead scores by that hour's lead from now (the publisher's half-open buckets, so exactly 24 h ahead reads the 48 h scores) and names the lead, says no measured skill is published for an hour 72 h or more ahead and that the skill is unavailable for an hour already past (never a 24 h fallback), and keeps "not enough buoy history yet" when that lead is thin instead of showing another lead's figure. The line links to the full scorecard at /skill. English and Spanish.
+
+- SC1407-12: the private device log on a mark card reads in Spanish: its title, both buttons, saved/full/unavailable notices, privacy and evidence caveats, counts and the Catch / Blank (no catch) labels come from the catalogue, and a notice already shown changes language with the page without reading or writing storage. Each entry's conditions snapshot stays as stored, in English inside `lang="en"`, never re-translated or rewritten; new entries keep storing the same English v1 record (`skippercast.private-map-log.v1`, unchanged key and format) in either language. A blank still records no catch. `web/app/PrivateMapLog.tsx` moves from the copy lint's not-covered list to covered.
 
 - SC1407-09: English pages no longer download the Spanish catalogue. The app and the landing ship English only and load the Spanish table only when the page is Spanish (a link, a stored choice or the browser's language), waiting for it before their first translated render; a switch to Spanish applies once the table arrives, and a failed load keeps English and says so once beside the language choice (the landing offers a link that reloads in Spanish). First-load scripts drop about 158 KB raw on both pages, and their budgets are lowered to match.
 
@@ -14,7 +18,10 @@
 - RF1345-7: the AIS port-coverage report opens exactly the requested processor `state.sqlite`, read-only, even when its path contains `?`, `#`, `%` or other URI characters; it no longer creates a stray file, reads a lookalike database or reports coverage unknown for such a path. Counts, the window and unknown-state output are unchanged.
 
 - SC1407-03: the time dock's 169-hour horizon is built once per UTC hour and region zone instead of on every read by the dock, map, brief and share link (#1762 R2); the shared copy is frozen. Days, hours, DST change days, the selected hour and links are unchanged (`web/hour.ts`).
+
 - RF1345-9: the admin fleet coverage report no longer counts a watched AIS row dated after the report clock as a sighting in the last 30 days, so a future-dated row alone leaves the boat "not seen" in the totals, the port and class breakdowns and the single-source list alike; sightings from 30 days ago up to exactly now still count, one valid row is still enough, and the report still only reads (stored rows are left as they are).
+
+- SC1407-08: a /map page that opens on the Chart now starts loading the Chart's map library right after the app first renders, instead of waiting for the Chart to mount. The library is still loaded by dynamic import only, once per page, and stays out of the install precache; the landing, admin pages and 2D/3D starts are unchanged, and a failed load is still reported by the Chart.
 
 - RF0854-7: the operator lead score's "AIS seen in the last 30 days" part is bounded by the scoring instant: a watched vessel's sighting dated after "now" no longer earns the AIS points (it was counted as seen), while a sighting exactly at now or exactly 30 days earlier still counts. A watched operator with no qualifying sighting scores a known zero, and an operator with no watched vessel stays missing. Read-time only; weights, other parts and stored watch records are unchanged.
 
