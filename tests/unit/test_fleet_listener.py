@@ -35,6 +35,12 @@ BBOX = ((34.0, -122.0), (36.0, -119.0))
 HARBOR = Geofence(((-120.95, 35.33), (-120.85, 35.33), (-120.85, 35.39), (-120.95, 35.39), (-120.95, 35.33)))
 RETENTION = RetentionLimits(raw_days=30, discovery_days=7, static_days=90)
 NOW = datetime(2026, 7, 4, 18, 23, tzinfo=timezone.utc).timestamp()
+
+
+def unchanged_file_stat(info):
+    # Reading a file may refresh st_atime (relatime) across a second boundary,
+    # so "the file is unchanged" compares identity, size and modification only.
+    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
 WATCHED = 999000101
 OTHER = 999000202
 
@@ -479,7 +485,7 @@ class WatchTest(unittest.TestCase):
             self.assertEqual(watch.current.watched, {WATCHED})
             self.assertTrue(watch._loaded)
             self.assertIsNone(watch.last_error)
-            self.assertEqual(path.stat(), stamp)
+            self.assertEqual(unchanged_file_stat(path.stat()), unchanged_file_stat(stamp))
 
     def test_stat_error_retries_unchanged_good_file(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -501,7 +507,7 @@ class WatchTest(unittest.TestCase):
                 self.assertEqual(read.call_count, 1)
             self.assertIsNone(watch.last_error)
             self.assertEqual(watch.errors, 2)
-            self.assertEqual(path.stat(), stamp)
+            self.assertEqual(unchanged_file_stat(path.stat()), unchanged_file_stat(stamp))
 
     def test_reload_watch_stat_error_keeps_routing_and_heartbeat(self):
         with tempfile.TemporaryDirectory() as tmp:
