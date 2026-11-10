@@ -8,24 +8,36 @@ import {language} from '../i18n.ts';
 import {checkPosition, packState, type HeldScreen, type PackState} from '../position-check.ts';
 import {PositionView, type PositionState} from './PositionView.tsx';
 
+const IDLE: PositionState = {phase: 'idle'};
+
 export function PositionCheck() {
-  const [state, setState] = useState<PositionState>({phase: 'idle'}), [pack, setPack] = useState<PackState>('unknown');
+  // Retained state is tagged with the region that requested it, so a reading never shows in another region, even for the render before effects run.
+  const [held, setHeld] = useState<{id: string | null; state: PositionState}>({id: '', state: IDLE});
+  const [packed, setPacked] = useState<{id: string | null; pack: PackState}>({id: '', pack: 'unknown'});
   const run = useRef(0), open = tripOpen.value, id = region.value;
-  // Closing the dialog (or changing region) forgets the last position.
-  useEffect(() => { if (!open) { ++run.current; setState({phase: 'idle'}); } }, [open, id]);
+  const now = useRef({open, id});
+  now.current = {open, id};
+  // Closing the dialog, changing region or unmounting forgets the last position and voids any pending answer.
+  useEffect(() => {
+    ++run.current;
+    setHeld({id, state: IDLE});
+    return () => { ++run.current; };
+  }, [open, id]);
   useEffect(() => {
     if (!open) return;
     let live = true;
-    listPacks().then(packs => { if (live) setPack(packState(packs, id)); }, () => { if (live) setPack('unknown'); });
+    listPacks().then(packs => { if (live) setPacked({id, pack: packState(packs, id)}); }, () => { if (live) setPacked({id, pack: 'unknown'}); });
     return () => { live = false; };
   }, [open, id]);
   const check = () => {
-    const mine = ++run.current;
-    setState({phase: 'reading'});
+    const mine = ++run.current, asked = id;
+    setHeld({id: asked, state: {phase: 'reading'}});
     void checkPosition(async () => {
-      const loaded = await loadProtectedScreen(id);
+      const loaded = await loadProtectedScreen(asked);
       return loaded.state === 'loaded' ? loaded.screen as unknown as HeldScreen : null;
-    }).then(result => { if (run.current === mine) setState({phase: 'done', result}); });
+    }).then(result => { if (run.current === mine && now.current.open && now.current.id === asked) setHeld({id: asked, state: {phase: 'done', result}}); });
   };
+  const state = open && held.id === id ? held.state : IDLE;
+  const pack = packed.id === id ? packed.pack : 'unknown';
   return <PositionView state={state} pack={pack} onCheck={check} lang={language.value} />;
 }
