@@ -45,7 +45,7 @@
         },
         {
           "max_bytes": 1180000,
-          "reason": "Raised 1,170,000 to 1,180,000 (0.7% over the 1,171,988 measured on SC1407-05). Main ae740bb9 alone measures 1,142.0 KB against the 1,142.6 KB budget; SC1407-05 adds about 2.6 KB of minified code (web/dock-selection.ts and the verdict guard) so a time-dock step moves the dock at once and the brief, map, tide and URL settle once after the input pauses, instead of one 200-405 ms recompute per passed hour (#1762 R3). That is worth the bytes."
+          "reason": "Raised 1,170,000 to 1,180,000 (0.9% over the 1,170,408 measured on this branch merged with main 2c5eae23, 408 bytes over). SC1407-06 adds the shared live-boundary reader (dist/live-mpa.js, imported by web/map/marks.ts and dist/protected-areas.js) so the map's mark screen and the planner's screen make one request for the same in-flight ds582 query instead of two; the extra minified code in the app entry is worth the saved request and parse."
         }
       ]
     },

@@ -14,7 +14,7 @@ its budget and the share used, then PASS or FAIL. A failing group also lists its
 |---|---|---|---|
 | Landing page scripts (entry + scripts it imports at once) | 421,933 | 460,000 (raised from 445,000; see history in `scripts/perf-budget.json`) | 5.5% at first |
 | Landing page styles | 24,339 | 26,000 | 6.8% |
-| App page (brief, map) scripts, first load | 1,104,511 | 1,170,000 (raised from 1,160,000; see history in `scripts/perf-budget.json`) | 5.0% at first |
+| App page (brief, map) scripts, first load | 1,104,511 | 1,180,000 (raised from 1,170,000, earlier from 1,160,000; see history in `scripts/perf-budget.json`) | 5.0% at first |
 | App page styles | 67,003 | 71,000 | 6.0% |
 | Largest single built script, style or font (any page, loaded now or later) | 1,094,203 | 1,150,000 | 5.1% |
 | Brief data files in the repo (`protected-areas.geojson`, `land-water-lines.json`, `seafloor-ledger.json`) | 951,224 | 1,050,000 | 10.4% |
@@ -94,6 +94,18 @@ counted offline in instrumented copies of the old and new module (same verdicts)
 
 One local Node run took 1,742 ms before and 363 ms after (counters included; a sample, not a gate, and not a re-measure of
 the phone load in #1762). Not profiled further: `geometryIntersects`, unchanged, still runs first on every measured pair.
+
+### One live protected-area read per load (SC1407-06, #1762)
+
+Not a size budget: a note on the run-time boundary check. The map's mark screen (`web/map/marks.ts`) and the planner's
+screen (`dist/protected-areas.js` `refresh`) both ask the live CDFW ds582 query for the region's envelope on a `/map`
+load. `dist/live-mpa.js` lets them share a read only while it is in flight: two callers of the exact same query URL get
+one request and one parsed answer; any other URL (bounds, fields, output, parameter order) is its own read. A settled
+read is forgotten at once (answer, HTTP or transport error, 20 s timeout, broken JSON), so a later `refresh()` always
+asks again and no finished answer is kept or replayed. Each screen still runs its own checks (`validMpas` with the
+region's minimum, `validMPAs` and the provider-error refusal) and its own daily-feed fallback. The checked time both
+screens record is when the response arrived (before its body is parsed), never when a screen consumed it. Committed
+static files keep their own share (`web/shared-fetch.ts`), unchanged. No timing was measured for this change.
 
 ## Raising a budget (in a pull request, with a reason)
 
