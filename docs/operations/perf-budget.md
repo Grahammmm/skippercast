@@ -71,6 +71,17 @@ frozen (the array, each day and its hours) so no caller can change it; a caller'
 neither frozen nor kept. `tests/test_frames.mjs` checks this by counting formatter calls, not by timing; no new timing
 was measured.
 
+### The dock moves at once; the evidence settles once (SC1407-05)
+
+Not a byte budget, and no budget here changes. Issue #1762 (R3) measured one 200-405 ms main-thread task per time-dock
+hour step. A dock input (slider, keyboard, day chip, play or reduced-motion step, on desktop or the phone's sheet edge)
+now sets only a preview (`web/dock-selection.ts`): the thumb, readout, pressed day and aria-valuetext read it at once.
+The canonical `?day=`/`?hour=`, and so the brief, map overlays, tide and URL, follow once, 100 ms after the last input,
+in one batch and one history replacement. While a preview is pending the verdict and the desktop first answer show
+"Updating…" (aria-live off, aria-busy) and hide the previous answer; share links, exports, planner and alert defaults
+and print keep the settled hour. Any URL sync, region, zone or clock-hour change, a hidden page or the dock unmounting
+drops the preview without committing it. `tests/test_dock_selection.mjs` counts the update waves; no timing was measured.
+
 ### Protected-area distance work (SC1407-01, #1762)
 
 Not a size budget: a note on the run-time closure screen. `distanceM` in `dist/geo-screen.js` (called by `screenPlace` for
