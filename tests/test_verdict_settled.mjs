@@ -243,3 +243,57 @@ test('deadline_through_the_real_loader: a forecast still unread at 20 s ends as 
     await s.done();
   }finally{Date.now=oldNow;delete globalThis.fetch;}
 });
+
+test('a_b_a_reuses_the_forecast_read_under_the_current_epoch: the restarted epoch is answered by the reused read, in flight or cached, never by the older ticket',async()=>{
+  const oldNow=Date.now;Date.now=()=>NOW.getTime();
+  try {
+    for(const cached of [false,true]) {
+      const m=await load(), calls=[];let resolve;
+      m.region.value=ID;m.beginVerdictRegion(ID);
+      const fetchFn=path=>{calls.push(String(path));return new Promise(r=>{resolve=r;});};
+      const first=m.verdictEpoch.value.tickets.forecast;
+      const read=m.ensureRegionalForecast(ID,INFO.center,fetchFn,'https://skippercast.test/map');
+      if(cached){resolve(response(forecast()));await read;}
+      m.beginVerdictRegion('other-region'); m.beginVerdictRegion(ID);   // A -> B -> A before B's metadata resolves
+      const restarted=m.verdictEpoch.value;
+      assert.equal(restarted.inputs.forecast.state,'pending','the restarted epoch has not been answered yet');
+      const reused=m.ensureRegionalForecast(ID,INFO.center,fetchFn,'https://skippercast.test/map');
+      const current=m.verdictEpoch.value;
+      assert.equal(current.generation,restarted.generation,'the reused read joins the current epoch, no new generation');
+      assert.notEqual(current.tickets.forecast,first,'under its own ticket, not the older epoch\'s');
+      m.verdictLoad.settle(first,'forecast',{state:'failed'});
+      if(!cached) assert.equal(m.verdictEpoch.value.inputs.forecast.state,'pending','an older ticket can never settle it');
+      if(!cached){resolve(response(forecast()));await reused;await flush();}
+      assert.equal(m.verdictEpoch.value.inputs.forecast.state,'loaded','the reused result answers the current epoch, no false timeout');
+      assert.equal(m.verdictEpoch.value.tickets.forecast,current.tickets.forecast);
+      assert.equal(calls.length,1,'one forecast read for the region and point');
+      m.verdictLoad.reset();
+    }
+  } finally {Date.now=oldNow;delete globalThis.fetch;}
+});
+
+test('offline_pack_snapshot_gives_date_only_chips: parts the saved pack answered are saved, so no chip carries a verdict word',async()=>{
+  const oldNow=Date.now;Date.now=()=>NOW.getTime();
+  try {
+    const settleAll=(m,savedAt)=>{
+      m.region.value=ID;m.beginVerdictRegion(ID);
+      const t=m.verdictEpoch.value.tickets, parsed=m.parseConditionsForecast(forecast(),ID,INFO.center);
+      m.verdictLoad.settle(t.metadata,'metadata',{state:'loaded',data:INFO});
+      m.verdictLoad.settle(t.daily,'daily',{state:'loaded',data:{feed:daily,savedAt}});
+      m.verdictLoad.settle(t.conditions,'conditions',{state:'loaded',data:{feed:conditions,savedAt:null}});
+      m.verdictLoad.settle(t.forecast,'forecast',{state:'loaded',data:{forecast:parsed,savedAt:null}});
+      m.verdictLoad.settle(t.coast,'coast',{state:'absent'});
+    };
+    const pack=await load();settleAll(pack,NOW.getTime()-3600000);
+    assert.equal(pack.verdictEpoch.value.sealed,true);
+    assert.equal(pack.verdictPresentation(NOW).state,'saved'); assert.equal(pack.verdictPresentation(NOW).saved.state,'offline');
+    assert.equal(pack.chipsAdmitted(),false,'an offline-pack snapshot admits no chip verdicts');
+    const chips=pack.dayVerdicts(NOW,INFO.timezone).value;
+    assert.equal(chips.size,0);
+    const labels=pack.withVerdicts([{value:'d',label:'Sat'}],chips,'en');
+    assert.deepEqual(labels,[{value:'d',label:'Sat'}],'date-only label');
+    const fresh=await load();settleAll(fresh,null);
+    assert.equal(fresh.verdictPresentation(NOW).state,'live');
+    assert.equal(fresh.chipsAdmitted(),true); assert.ok(fresh.dayVerdicts(NOW,INFO.timezone).value.size>0);
+  } finally {Date.now=oldNow;delete globalThis.fetch;}
+});

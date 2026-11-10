@@ -13,7 +13,7 @@
 // run they read stale with its age. Before the feed loads the brief keeps its
 // empty state; when a feed cannot be read, BriefGaps says which and the
 // headline stops waiting.
-import {createVerdictLoad, type InputSet, type Source, type VerdictContext, type VerdictEpoch} from './verdict-load.ts';
+import {createVerdictLoad, type InputSet, type Slot, type Source, type VerdictContext, type VerdictEpoch, type VerdictInputs} from './verdict-load.ts';
 import type {ComponentChildren} from 'preact';
 import {batch, effect, signal} from '@preact/signals';
 import {counties} from '../../packages/coast/src/counties.ts';
@@ -340,6 +340,7 @@ export const regionalForecastState = signal<ForecastState>({region: null, key: n
 
 let forecastKey: string | null = null;
 let forecastRequest: {id: string; near: readonly [number, number] | null; fetchFn: typeof fetch; page: string} | null = null;
+let forecastSlot: Slot<VerdictInputs['forecast']> | null = null, forecastJoiners: number[] = [];
 let forecastLoadedAt = 0, forecastPending = false, forecastGeneration = 0, forecastInflight: Promise<ConditionsForecast | null> | null = null, visibilityBound = false;
 /** A loaded forecast older than this is fetched again when the page becomes visible. */
 export const FORECAST_MAX_AGE_MS = 30 * 60_000;
@@ -351,8 +352,18 @@ export const FORECAST_MAX_AGE_MS = 30 * 60_000;
 export function ensureRegionalForecast(id: string, near: readonly [number, number] | null, fetchFn: typeof fetch = fetch, page = location.href): Promise<ConditionsForecast | null> {
   const key = `${id}|${near?.join(',') ?? ''}`;
   bindVisibility();
-  if (forecastKey === key) return forecastInflight ?? Promise.resolve(regionalForecast.peek());
+  if (forecastKey === key) {
+    // SC1722-02: a reused read (cached or in flight) still has to answer the epoch now current. After A -> B -> A the epoch restarted with the
+    // forecast pending and the read's own ticket is stale, so the epoch asks again under a fresh ticket that only this reused read settles.
+    const epoch = verdictLoad.peek();
+    if (epoch?.region !== id || epoch.parts.forecast !== key) {
+      const joined = askSources(id, ['forecast'], {forecast: key});
+      if (forecastSlot) verdictLoad.settle(joined, 'forecast', forecastSlot); else forecastJoiners.push(joined);
+    }
+    return forecastInflight ?? Promise.resolve(regionalForecast.peek());
+  }
   const ticket = askSources(id, ['forecast'], {forecast: key});
+  forecastSlot = null; forecastJoiners = [];
   forecastKey = key;
   forecastRequest = {id, near, fetchFn, page};
   forecastPending = true;
@@ -365,8 +376,12 @@ export function ensureRegionalForecast(id: string, near: readonly [number, numbe
   const read = loadConditionsForecast(id, near, fetchFn, page).then(result => {
     if (generation !== forecastGeneration) return regionalForecast.peek(); // a later request (even for this same key) owns the state
     // SC1722-02: the verdict's forecast part, under this request's ticket (-01's result, unchanged; absent is no request, not a failure).
-    verdictLoad.settle(ticket, 'forecast', result.state === 'loaded' ? {state: 'loaded', data: {forecast: result.forecast, savedAt: result.savedAt}}
-      : result.state === 'failed' ? {state: 'failed', reason: result.reason, ...(result.status === undefined ? {} : {status: result.status})} : {state: 'absent'});
+    const slot: Slot<VerdictInputs['forecast']> = result.state === 'loaded' ? {state: 'loaded', data: {forecast: result.forecast, savedAt: result.savedAt}}
+      : result.state === 'failed' ? {state: 'failed', reason: result.reason, ...(result.status === undefined ? {} : {status: result.status})} : {state: 'absent'};
+    verdictLoad.settle(ticket, 'forecast', slot);
+    // Reads that joined this one after an epoch restart settle under their own tickets; a loaded outcome stays for later reuse.
+    for (const joined of forecastJoiners) verdictLoad.settle(joined, 'forecast', slot);
+    forecastJoiners = []; forecastSlot = result.state === 'loaded' ? slot : null;
     forecastPending = false; forecastInflight = null;
     if (result.state !== 'loaded') {
       forecastKey = null; // a failed load is tried again on the next call
@@ -585,14 +600,17 @@ export function verdictPresentation(now: Date, at?: string | null, lang: Languag
   }
   const view = assess(s.inputs, now, at, lang);
   // SC1722-03: parts the saved offline pack answered are held as saved at the pack's own time, never as fresh.
-  const times = [s.inputs.daily.data?.savedAt, s.inputs.conditions.data?.savedAt, s.inputs.forecast.data?.savedAt].filter((n): n is number => typeof n === 'number');
+  const times = packTimes(s.inputs);
   return {...base, ...view, state: times.length ? 'saved' : 'live', saved: times.length ? {at: Math.min(...times), state: 'offline'} : null};
 }
 
+/** The save times of the parts of `inputs` the saved offline pack answered (SC1722-03); empty when every part is fresh. */
+const packTimes = (inputs: InputSet): number[] => [inputs.daily.data?.savedAt, inputs.conditions.data?.savedAt, inputs.forecast.data?.savedAt].filter((n): n is number => typeof n === 'number');
+
 /** True while no weather word may show: the dock guard's source input (a saved snapshot is assessed only when one stands in). */
 export const sourcePending = (now: Date): boolean => { const s = selectSnapshot(); return s.state === 'pending' || (s.restored && verdictPresentation(now).state === 'pending'); };
-/** The day chips rate only a live snapshot: pending, failed and saved answers give date-only chips. */
-export const chipsAdmitted = (): boolean => selectSnapshot().state === 'live';
+/** The day chips rate only a live snapshot: pending, failed and saved answers (the saved brief, or parts the offline pack answered) give date-only chips. */
+export const chipsAdmitted = (): boolean => { const s = selectSnapshot(); return s.state === 'live' && !!s.inputs && packTimes(s.inputs).length === 0; };
 
 const FORECAST_REASON: Readonly<Record<ForecastFailureReason, StringId>> = {network: 'forecast.reason.network', http: 'forecast.reason.http', invalid: 'forecast.reason.invalid', aborted: 'forecast.reason.aborted', timeout: 'forecast.reason.timeout'};
 
