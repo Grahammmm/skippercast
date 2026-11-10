@@ -100,9 +100,15 @@ export function TimeDock({now = new Date()}: {now?: Date} = {}) {
     };
     return play({step, onStop: () => setPlaying(false), motion: media()});
   }, [playing, tz]);
-  // The day strip scrolls sideways on narrow stages: keep the chosen chip in view.
+  // The day strip scrolls sideways on narrow stages: keep the chosen chip in view. Only the strip moves (SC1922-04):
+  // scrollIntoView also scrolled the page, hiding the top of a 1,280x800 desktop masthead on every load.
   const dock = useRef<HTMLDivElement>(null);
-  useEffect(() => { dock.current?.querySelector<HTMLElement>('.ui-segmented [aria-pressed="true"]')?.scrollIntoView?.({block: 'nearest', inline: 'nearest'}); }, [state.day, lang]);
+  useEffect(() => {
+    const chip = dock.current?.querySelector<HTMLElement>('.ui-segmented [aria-pressed="true"]'), strip = chip?.parentElement;
+    if (!chip?.getBoundingClientRect || !strip) return;
+    const c = chip.getBoundingClientRect(), s = strip.getBoundingClientRect();
+    strip.scrollLeft += c.left < s.left ? c.left - s.left : c.right > s.right ? c.right - s.right : 0;
+  }, [state.day, lang]);
   const at = (i: number): number => state.hours[i] ?? state.at;
   return (
     <div class="app-dock" ref={dock}>

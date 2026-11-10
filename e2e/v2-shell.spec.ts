@@ -555,6 +555,8 @@ for (const lang of ['en', 'es']) {
       const group = page.locator('.app-location-preview');
       await expect(group.locator('.app-region-preview-label')).toHaveText(label);
       await expect(group.locator('.app-region-preview-reason')).toHaveText(reason);
+      // The day strip's chip reveal moves only the strip: the page itself stays at the top, masthead in view.
+      if (!isMobile) expect(await page.evaluate(() => scrollY)).toBe(0);
       for (const el of [group, group.locator('.app-region-preview-label'), group.locator('.app-region-preview-reason')]) {
         await expect(el).toBeInViewport();
         const box = (await el.boundingBox())!;
