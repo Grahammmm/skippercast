@@ -190,6 +190,26 @@ Catalogue IDs: `ranking.*`; the fit line reuses `mark.layer.habitat.fit`, `.fitU
 
 The Where to look sentences say "omitido" for a withheld place (the spec's wording); the map's screen notes say "retenido". Both mean withheld.
 
+### Plan-date rules card and landing layer dots (SC1407-13)
+
+The planner's rules card (`web/app/PlanRules.tsx`) says its own words from the catalogue and reuses the rules
+card's `rules.status.*`, `rules.fresh.*`, `rules.verified`, `rules.notconfirmed`, `rules.notverified`, `rules.link.*`,
+`rules.depth.*`, `rules.english` and `rules.english.inline`. The registry's reason (closures, restrictions, the
+opening-time note), its bag and size clauses, species names and the official link targets stay as published, in English,
+marked `lang="en"` (the link `hreflang="en"`), and the card says so; the app-written depth line is translated and not marked
+English. Stale, overdue, unknown, not-reviewed or location-dependent rules read `Revisa las reglas` with the check line,
+never open or verified. Catalogue IDs: `planRules.*`. The landing's layer dots (`web/landing/LayerDots.tsx`) read
+`landing.dots.*` from the first-paint slice; each label equals the map rail's label in both languages (by test).
+
+| English | Spanish | Catalogue ID | Meaning kept |
+| --- | --- | --- | --- |
+| Rules on the plan's date | `Reglas para la fecha del plan` | `planRules.aria` | the card's accessible name |
+| Rules on {date} | `Reglas para el {date}` | `planRules.heading` | the plan's date, as written |
+| Closed on {date}. | `Cerrado el {date}.` | `planRules.closedOn` | closed said plainly, never softened |
+| Check the official rules before this trip. | `Consulta las reglas oficiales antes de este viaje.` | `planRules.check` | unconfirmed is never open |
+| Not legal advice; check the official page. | `No es asesoría legal; consulta la página oficial.` | `planRules.notLegalAdvice` | not legal advice |
+| Map layers | `Capas del mapa` | `landing.dots.aria` | the dots' navigation name |
+| Seafloor / Currents / Water temp / Temp contrast / Temp fronts / Chlorophyll / Swell + wind / Stations / Charter fleet / Clouds | `Fondo marino` / `Corrientes` / `Temperatura del agua` / `Contraste de temperatura` / `Frentes de temperatura` / `Clorofila` / `Oleaje y viento` / `Estaciones` / `Flota chárter` / `Nubes` | `landing.dots.seafloor`, `.currents`, `.water-temp`, `.sst-contrast`, `.sst-fronts`, `.chlorophyll`, `.swell`, `.stations`, `.fleet`, `.clouds` | the rail's labels (`layer.*.label`, `rail.swell.label`, `rail.fleet.label`) |
 ### Language loading (SC1407-09)
 
 English pages ship English only; the Spanish table (`web/strings.es.generated.json`, generated from this catalogue) loads only for a Spanish page. When it cannot load, the page stays English and says so once beside the language choice (the landing adds a link that reloads the page in Spanish).
