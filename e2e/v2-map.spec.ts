@@ -1444,3 +1444,190 @@ test('the scrolling legend does not clip its basis popovers', async ({page, page
   }
   expect(pageErrors).toEqual([]);
 });
+
+// RF1935-2 (UX audit S4-15): on the desktop the five layer presets wrap inside the layer rail, the rail keeps a native vertical scroll
+// track, and neither the rail nor its focus order collides with the map's controls. Geometry is measured in a real browser.
+const RAIL = '.app-stage > .app-rail';
+const PRESET_LABELS = {en: ['Reef drift', 'Halibut', 'Crab', 'Offshore', 'Transit'], es: ['Deriva sobre arrecife', 'Mar adentro', 'Tránsito']} as const;
+const rects = (page: Page, selector: string) => page.locator(selector).evaluateAll(els => els.map(el => {
+  const {left, right, top, bottom} = el.getBoundingClientRect();
+  return {left, right, top, bottom, label: el.getAttribute('aria-label') ?? el.textContent ?? ''};
+}));
+/** The rail's client box (without its scrollbar) and every preset button's box. */
+const presetFit = (page: Page) => page.locator(RAIL).evaluate(rail => {
+  const box = rail.getBoundingClientRect(), left = box.left + rail.clientLeft;
+  const chips = [...rail.querySelectorAll(':scope > .ui-segmented button')].map(button => {
+    const {left: l, right: r, top, height} = button.getBoundingClientRect();
+    return {label: button.textContent ?? '', left: l, right: r, top: Math.round(top), height};
+  });
+  const probe = document.createElement('div'); probe.style.height = 'var(--touch-min)'; document.body.append(probe);
+  const touchMin = probe.getBoundingClientRect().height; probe.remove();
+  return {left, right: left + rail.clientWidth, scrollWidth: rail.scrollWidth, clientWidth: rail.clientWidth, scrollLeft: rail.scrollLeft, chips, touchMin,
+    wrapped: new Set(chips.map(chip => chip.top)).size > 1};
+});
+const railApart = (a: {left: number; right: number; top: number; bottom: number}, b: typeof a) => a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top;
+
+test('desktop: all five layer presets fit inside the layer rail, in English and Spanish, at every desktop width', async ({page, pageErrors, v2, isMobile}) => {
+  test.skip(isMobile, 'the desktop rail is not rendered on a phone');
+  await holdCoastData(page);
+  let wrapped = false;
+  for (const [width, height, view] of [[1024, 768, 'coast'], [1024, 768, 'fleet'], [1100, 768, 'coast'], [1280, 800, 'coast'], [1440, 900, 'coast']] as const) {
+    for (const lang of ['en', 'es'] as const) {
+      await page.setViewportSize({width, height});
+      await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor', lang, view});
+      await expect(page.locator(RAIL), `${view} ${width}px ${lang}`).toBeVisible();
+      const fit = await presetFit(page), where = `${view} ${width}px ${lang}`;
+      expect(fit.chips.length, `${where}: five presets`).toBe(5);
+      for (const label of PRESET_LABELS[lang]) expect(fit.chips.map(chip => chip.label), where).toContain(label);
+      for (const chip of fit.chips) {
+        expect(chip.left, `${where}: ${chip.label} starts inside the rail`).toBeGreaterThanOrEqual(fit.left - 0.5);
+        expect(chip.right, `${where}: ${chip.label} ends inside the rail`).toBeLessThanOrEqual(fit.right + 0.5);
+        expect(chip.height, `${where}: ${chip.label} keeps the touch size`).toBeGreaterThanOrEqual(fit.touchMin - 0.5);
+        expect(chip.height, `${where}: ${chip.label} stays one line (the group wraps, the words do not)`).toBeLessThanOrEqual(fit.touchMin + 4);
+      }
+      expect(fit.scrollWidth, `${where}: the rail never scrolls sideways`).toBeLessThanOrEqual(fit.clientWidth + 1);
+      expect(fit.scrollLeft).toBe(0);
+      wrapped ||= fit.wrapped;
+    }
+  }
+  expect(wrapped, 'the 280 px rail cannot hold five presets on one line, so the group wraps').toBe(true);
+  expect(pageErrors).toEqual([]);
+});
+
+test('desktop: Transit is reached with Tab and activated by keyboard and by click without a sideways scroll', async ({page, pageErrors, v2, isMobile}) => {
+  test.skip(isMobile, 'the desktop rail is not rendered on a phone');
+  await holdCoastData(page);
+  for (const [lang, name, helm] of [['en', 'Transit', 'Helm view'], ['es', 'Tránsito', 'Vista de timón']] as const) {
+    await page.setViewportSize({width: 1024, height: 768});
+    await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor', current: 'off', lang});
+    await page.evaluate(() => { (window as unknown as {__same: boolean}).__same = true; });
+    const presets = page.getByRole('group', {name: lang === 'en' ? 'Layer presets' : 'Preajustes de capas'}), transit = presets.getByRole('button', {name, exact: true});
+    await presets.getByRole('button').first().focus();
+    for (let i = 0; i < 4; i++) await page.keyboard.press('Tab');
+    await expect(transit, `${lang}: four Tabs from the first preset reach ${name}`).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(transit).toHaveAttribute('aria-pressed', 'true');
+    expect(params(page).layers).toBe('swell,stations');
+    expect(params(page).current).toBe('off');
+    await page.goBack();
+    expect(params(page).layers).toBe('seafloor');
+    await expect(transit).toHaveAttribute('aria-pressed', 'false');
+    await transit.click();
+    await expect(transit).toHaveAttribute('aria-pressed', 'true');
+    expect(params(page).layers).toBe('swell,stations');
+    expect(await page.evaluate(() => (window as unknown as {__same?: boolean}).__same), 'no reload').toBe(true);
+    const fit = await presetFit(page);
+    expect(fit.scrollLeft, 'no sideways scroll to reach it').toBe(0);
+    expect(fit.scrollWidth).toBeLessThanOrEqual(fit.clientWidth + 1);
+    // Helm view keeps the same five buttons, their words and their wrap.
+    await page.getByRole('switch', {name: helm}).click();
+    await expect(page.locator('html')).toHaveClass(/helm/);
+    const helmFit = await presetFit(page);
+    expect(helmFit.chips.map(chip => chip.label)).toEqual(fit.chips.map(chip => chip.label));
+    for (const chip of helmFit.chips) {
+      expect(chip.right).toBeLessThanOrEqual(helmFit.right + 0.5);
+      expect(chip.height).toBeGreaterThanOrEqual(48 - 0.5);
+    }
+    expect(helmFit.scrollWidth).toBeLessThanOrEqual(helmFit.clientWidth + 1);
+    await page.getByRole('switch', {name: helm}).click();
+  }
+  expect(pageErrors).toEqual([]);
+});
+
+test('desktop: a short rail scrolls vertically to its last controls, with a long basis open and nothing clipped sideways', async ({page, pageErrors, v2, isMobile}) => {
+  test.skip(isMobile, 'the desktop rail is not rendered on a phone');
+  await holdCoastData(page);
+  for (const [width, height] of [[1024, 768], [1280, 600]] as const) {
+    await page.setViewportSize({width, height});
+    await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor,currents'});
+    const rail = page.locator(RAIL);
+    await expect(rail).toHaveCSS('overflow-y', 'scroll');
+    await expect(rail).toHaveCSS('scrollbar-gutter', 'stable');
+    const trigger = rail.locator('summary[aria-label="Seafloor basis"]');
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const body = rail.locator('.ui-popover:has(> summary[aria-label="Seafloor basis"]) .ui-popover-body');
+    await expect(body).toBeVisible();
+    const fit = await body.evaluate(element => {
+      const rail = element.closest('.app-rail')!, box = rail.getBoundingClientRect(), left = box.left + rail.clientLeft, lines: {left: number; right: number}[] = [];
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        if (!walker.currentNode.textContent?.trim()) continue;
+        const range = document.createRange(); range.selectNodeContents(walker.currentNode);
+        for (const r of range.getClientRects()) lines.push({left: r.left, right: r.right});
+      }
+      return {left, right: left + rail.clientWidth, lines, scrollWidth: rail.scrollWidth, clientWidth: rail.clientWidth};
+    });
+    expect(fit.lines.length).toBeGreaterThan(0);
+    for (const line of fit.lines) { expect(line.left).toBeGreaterThanOrEqual(fit.left - 1); expect(line.right).toBeLessThanOrEqual(fit.right + 1); }
+    expect(fit.scrollWidth).toBeLessThanOrEqual(fit.clientWidth + 1);
+    const scrolls = await rail.evaluate(element => { element.scrollTop = element.scrollHeight; return element.scrollHeight > element.clientHeight; });
+    expect(scrolls, `${width}x${height}: a long rail scrolls`).toBe(true);
+    const base = rail.locator('.app-rail-base').getByRole('combobox', {name: 'Base'});
+    await expect(base).toBeInViewport({ratio: 1});
+    const box = (await base.boundingBox())!, railBox = (await rail.boundingBox())!;
+    expect(box.y).toBeGreaterThanOrEqual(railBox.y);
+    expect(box.y + box.height).toBeLessThanOrEqual(railBox.y + railBox.height);
+    await base.focus();
+    await expect(base).toBeFocused();
+  }
+  expect(pageErrors).toEqual([]);
+});
+
+// One test per presentation: each walks two viewports and three rail phases with many round trips, and the shared CI runners take 1.5-5 s over each,
+// so the two together outlasted the 60 s default (twice, on the exact head) while passing in 9 s on a quiet machine.
+for (const [presentation, controls] of [['chart', '.app-chart .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group'], ['3d', '.app-terrain-controls']] as const) {
+  test(`desktop: the rail stays clear of the map controls on the ${presentation === 'chart' ? 'Chart' : 'terrain'}, scrolled or not${presentation === 'chart' ? ', and the attribution stays clickable' : ''}`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(isMobile, 'the desktop rail is not rendered on a phone');
+    test.setTimeout(150_000);
+    const terrain = await syntheticTerrain(page);
+    terrain.release();
+    const ATTRIBUTION = '.app-chart .maplibregl-ctrl-attrib';
+    for (const [width, height] of [[1280, 800], [1024, 768]] as const) {
+      await page.setViewportSize({width, height});
+      await v2.open('app', {region: 'morro-bay', presentation, layers: 'seafloor,currents'});
+      const rail = page.locator(RAIL);
+      await expect(rail).toBeVisible();
+      await expect(page.locator(controls).first(), `${presentation} controls`).toBeVisible();
+      if (presentation === 'chart') await expect(page.locator(`${ATTRIBUTION} .maplibregl-ctrl-attrib-inner`)).toBeVisible();
+      const hittable = `${controls}, .app-presentation .ui-segmented${presentation === 'chart' ? `, ${ATTRIBUTION}` : ''}`;
+      for (const phase of ['top', 'scrolled', 'basis']) {
+        if (phase === 'scrolled') await rail.evaluate(element => { element.scrollTop = element.scrollHeight; });
+        if (phase === 'basis') { await rail.locator('summary[aria-label="Seafloor basis"]').click(); await rail.evaluate(element => { element.scrollTop = element.scrollHeight; }); }
+        const [mine] = await rects(page, RAIL), others = [...await rects(page, controls), ...await rects(page, '.app-presentation .ui-segmented')];
+        expect(others.length).toBeGreaterThan(1);
+        for (const other of others) expect(railApart(mine, other), `${presentation} ${width}x${height} ${phase}: rail clear of "${other.label.slice(0, 30)}"`).toBe(true);
+        const hits = await page.locator(hittable).evaluateAll(els => els.map(el => {
+          const box = el.getBoundingClientRect(), hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+          return {label: el.getAttribute('aria-label') ?? el.className, ok: !!hit && (el === hit || el.contains(hit))};
+        }));
+        for (const hit of hits) expect(hit.ok, `${presentation} ${width}x${height} ${phase}: ${hit.label} receives a click at its centre`).toBe(true);
+        // Separate, pre-existing finding (not fixed here, see the PR): the rail's bottom reservation is sized for the four terrain buttons, so the
+        // Chart's expanded credits (74 px tall for this region) reach about 8 px into a rail that has been cut to its reserved height. Recorded, not hidden.
+        if (presentation === 'chart') {
+          const [credits] = await rects(page, ATTRIBUTION);
+          if (!railApart(mine, credits!)) test.info().annotations.push({type: 'finding', description: `${width}x${height} ${phase}: expanded credits overlap the rail by ${Math.round((mine.bottom - credits!.top) * 10) / 10} px`});
+        }
+      }
+    }
+    expect(pageErrors).toEqual([]);
+  });
+}
+
+test('phone widths do not get the desktop rail rules', async ({page, pageErrors, v2, isMobile}) => {
+  test.skip(isMobile, 'runs the phone widths in the laptop project');
+  await holdCoastData(page);
+  for (const [width, height] of [[390, 844], [320, 568]] as const) {
+    await page.setViewportSize({width, height});
+    await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor'});
+    await showLayers(page);
+    expect(await page.locator(RAIL).count(), `${width}px: the layers sit in the sheet, not in the desktop rail`).toBe(0);
+    const presets = page.getByRole('group', {name: 'Layer presets'});
+    await expect(presets.getByRole('button')).toHaveCount(5);
+    const style = await presets.evaluate(group => ({wrap: getComputedStyle(group).flexWrap, radius: getComputedStyle(group).borderTopLeftRadius,
+      railOverflow: getComputedStyle(group.closest('.app-rail')!).overflowY}));
+    expect(style.wrap, 'the phone keeps the generic segmented group').toBe('nowrap');
+    expect(style.railOverflow).not.toBe('scroll');
+  }
+  expect(pageErrors).toEqual([]);
+});
