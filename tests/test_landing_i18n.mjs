@@ -177,7 +177,7 @@ test('landing_english_bytes_and_spanish_funnel: English is the old copy word for
   const ports = [port('morro-bay', 'Morro Bay'), port('ventura', '<b>Odd</b> & Co {n}', 'preview')];
   // English: the catalogue is web/ports.ts COPY and the profile table, byte for byte.
   const en = m.portCopy('en');
-  for (const k of ['question', 'placeholder', 'finding', 'unsupported', 'denied', 'unavailable', 'none', 'empty', 'privacy', 'forget', 'forgotten']) assert.equal(en[k], m.COPY[k], k);
+  for (const k of ['question', 'placeholder', 'finding', 'denied', 'timedOut', 'unsupported', 'unavailable', 'none', 'empty', 'privacy', 'forget', 'forgotten']) assert.equal(en[k], m.COPY[k], k);
   for (const p of ports) assert.deepEqual([en.found(p), en.detail(p)], [m.COPY.found(p), m.COPY.detail(p)]);
   for (const p of ['boat', 'shore', 'spear', 'kayak']) assert.deepEqual([m.t(`where.profile.${p}`, 'en'), m.t(`landing.profile.note.${p}`, 'en')], [m.PROFILE_TABLE[p].label, m.PROFILE_NOTES[p]], p);
   assert.deepEqual([m.STEP_COPY.title, m.STEP_COPY.back, m.STEP_COPY.loading('Morro Bay'), m.STEP_COPY.ready('Morro Bay')], ['How do you fish?', 'Change port', 'Loading the Morro Bay map…', 'Morro Bay map files ready.']);
@@ -367,4 +367,13 @@ test('spanish_live_reason_parity: the verdict word, day, boat and reason in Span
   await onDevice(spy, () => m.loadLandingVerdict(feeds(NOW), NOW, PAGE, 'es'));
   assert.ok(reads.every(k => ['skippercast-boat-v1', 'skippercast-limits-v1'].includes(k)), reads.join());
   assert.ok(HOUR > 0);
+});
+
+test('location denied and timedOut copy is exact in both catalogue projections and legacy English', async () => {
+  const m = await load();
+  for (const [key, en, es] of [
+    ['denied', "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.", 'El permiso de ubicación está desactivado para este sitio. Permite la ubicación en la configuración de sitios de tu navegador o busca un puerto mientras tanto.'],
+    ['timedOut', 'The location request timed out. Search for a port instead.', 'La solicitud de ubicación agotó el tiempo de espera. Busca un puerto en su lugar.']]) {
+    assert.equal(m.portCopy('en')[key], en); assert.equal(m.COPY[key], en); assert.equal(m.portCopy('es')[key], es);
+  }
 });
