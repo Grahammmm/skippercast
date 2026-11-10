@@ -11,11 +11,12 @@ const out = join(dir, 'component.mjs');
 await build({stdin: {resolveDir: process.cwd(), loader: 'ts', contents: `
   export {PortInput} from './web/landing/PortInput.tsx';
   export {language, prepareCatalogue} from './web/landing/i18n.ts';
+  export {portCopy} from './web/landing/copy.ts';
   export {h, render} from 'preact';
   export {act} from 'preact/test-utils';`}, bundle: true, format: 'esm', platform: 'node',
   outfile: out, jsx: 'automatic', jsxImportSource: 'preact', logLevel: 'silent'});
-const {PortInput, language, prepareCatalogue, h, render, act} = await import(pathToFileURL(out).href);
-await prepareCatalogue('es');   // SC1407-09: the Spanish table, as the landing's startup awaits it
+const {PortInput, h, render, act, language, portCopy, prepareCatalogue} = await import(pathToFileURL(out).href);
+await prepareCatalogue('es');
 test.after(() => rm(dir, {recursive: true, force: true}));
 
 // Minimal mounted DOM, with real Preact event dispatch and observable focus.
@@ -109,7 +110,7 @@ for (const old of ['north', 'failure', 'denied', 'none']) for (const order of ['
 test('current failure, none, unsupported and explicit retry retain ordinary controls', async () => {
   const m = mount(); await m.update({}); await m.type('South'); await m.click('Use my location');
   await m.resolve(0, 'failure'); assert.equal(m.snapshot().query, 'South');
-  assert.match(m.snapshot().feedback, /unavailable/); assert.ok(document.activeElement === m.input(), 'current failure focuses search');
+  assert.match(m.snapshot().feedback, /timed out/); assert.ok(document.activeElement === m.input(), 'current failure focuses search');
   await m.click('Use my location'); await m.resolve(1, 'none'); assert.match(m.snapshot().feedback, /No listed port/);
   await m.update({geolocation: null}); await m.click('Use my location'); assert.equal(m.snapshot().feedback, 'Location is unavailable. Search for a port instead.');
   await m.update({geolocation: geo()}); await m.click('Use my location'); await m.resolve(0, 'north');
@@ -145,15 +146,81 @@ test('locate waits for directory; replacement and fresh instances have independe
   assert.equal(fresh.chosen[0], south); assert.equal(fresh.geolocation.calls.length, 0); await fresh.unmount();
 });
 
+const status = m => all(m.root, n => n.attrs.role === 'status')[0];
+const errorIcon = m => all(status(m), n => n.localName === 'svg');
+for (const lang of ['en', 'es']) for (const [code, reason] of [[1, 'denied'], [2, 'unavailable'], [3, 'timedOut'], [99, 'unavailable'], [undefined, 'unavailable']]) {
+  test(`mounted location reason ${code} in ${lang}: stable polite region, no raw text, retry clears icon`, async () => {
+    language.value = lang;
+    const m = mount();
+    try {
+      await m.update({}); const region = status(m);
+      assert.equal(text(region), ''); assert.equal(errorIcon(m).length, 0);
+      assert.equal(region.attrs['aria-live'], 'polite'); assert.equal(region.attrs['aria-atomic'], 'true');
+      await m.type('South'); await m.click(lang === 'en' ? 'Use my location' : 'Usar mi ubicación');
+      await act(async () => { m.geolocation.calls[0].fail({code, message: 'synthetic provider detail'}); });
+      assert.equal(status(m), region); assert.equal(text(region), portCopy(lang)[reason]);
+      assert.equal(m.snapshot().query, 'South'); assert.equal(m.snapshot().ids, south.id);
+      assert.ok(document.activeElement === m.input()); assert.ok(region.attrs.class.includes('port-input-feedback--error'));
+      assert.equal(errorIcon(m).length, 1); assert.equal(errorIcon(m)[0].attrs['aria-hidden'], 'true');
+      assert.equal(all(region, n => n.localName === 'title' || n.attrs.role === 'alert').length, 0);
+      assert.equal(text(m.root).includes('synthetic provider detail'), false);
+      await m.resolve(0, 'north'); assert.equal(text(region), portCopy(lang)[reason], 'duplicate success cannot overwrite failure');
+      await m.click(lang === 'en' ? 'Use my location' : 'Usar mi ubicación');
+      assert.equal(errorIcon(m).length, 0); assert.equal(m.geolocation.calls.length, 2);
+      await m.resolve(1, 'north'); assert.equal(errorIcon(m).length, 0);
+      assert.equal(text(region), portCopy(lang).found(north)); assert.equal(m.chosen.length, 0);
+    } finally { await m.unmount(); language.value = 'en'; }
+  });
+}
+test('pending and retained feedback follows current language without another lookup', async () => {
+  const m = mount(); await m.update({});
+  try {
+    await m.click('Use my location');
+    await act(() => { language.value = 'es'; });
+    assert.equal(m.snapshot().feedback, portCopy('es').finding);
+    await m.resolve(0, 'denied'); assert.equal(m.snapshot().feedback, portCopy('es').denied);
+    await act(() => { language.value = 'en'; });
+    assert.equal(m.snapshot().feedback, portCopy('en').denied); assert.equal(m.geolocation.calls.length, 1);
+    await m.click('Use my location'); await m.resolve(1, 'north');
+    await act(() => { language.value = 'es'; });
+    assert.equal(m.snapshot().feedback, portCopy('es').found(north));
+    await m.type('South'); assert.equal(m.snapshot().feedback, ''); assert.equal(errorIcon(m).length, 0);
+    await m.submit(); assert.equal(m.chosen[0], south);
+  } finally { await m.unmount(); language.value = 'en'; }
+});
+
+for (const [label, geolocation, reason] of [
+  ['absent API', null, 'unsupported'], ['non-callable API', {getCurrentPosition: 3}, 'unsupported'],
+  ['synchronous throw', {getCurrentPosition() { throw Error('synthetic provider detail'); }}, 'unavailable']]) {
+  test(`mounted ${label} finishes finding with honest generic feedback`, async () => {
+    const m = mount({geolocation}); await m.update({});
+    try {
+      await m.click('Use my location'); assert.equal(m.snapshot().feedback, portCopy('en')[reason]);
+      assert.equal(errorIcon(m).length, 1); assert.ok(document.activeElement === m.input());
+      await m.click('Explore the coast'); assert.equal(m.explored.length, 1);
+    } finally { await m.unmount(); }
+  });
+}
+test('forgotten feedback changes language without location lookup', async () => {
+  const store = new Map([['skippercast-home-port-v1', north.id]]);
+  const m = mount({storage: {getItem: k => store.get(k) ?? null, removeItem: k => store.delete(k)}});
+  await m.update({});
+  try {
+    await m.click('Forget saved home'); assert.equal(m.snapshot().feedback, portCopy('en').forgotten);
+    await act(() => { language.value = 'es'; });
+    assert.equal(m.snapshot().feedback, portCopy('es').forgotten); assert.equal(m.geolocation.calls.length, 0);
+    assert.equal(errorIcon(m).length, 0);
+  } finally { await m.unmount(); language.value = 'en'; }
+});
 // SC1922-01: the line a failed location read shows, in each language, through the button and the map's locate=true entry.
 const LINES = {
   en: {denied: "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.",
-    unavailable: 'Location was unavailable. Search for a port instead.', unsupported: 'Location is unavailable. Search for a port instead.'},
+    unavailable: 'Location was unavailable. Search for a port instead.', timedOut: 'The location request timed out. Search for a port instead.', unsupported: 'Location is unavailable. Search for a port instead.'},
   es: {denied: 'El permiso de ubicación está desactivado para este sitio. Permite la ubicación en la configuración de sitios de tu navegador o busca un puerto mientras tanto.',
-    unavailable: 'No se pudo obtener la ubicación. Busca un puerto en su lugar.', unsupported: 'La ubicación no está disponible. Busca un puerto en su lugar.'},
+    unavailable: 'No se pudo obtener la ubicación. Busca un puerto en su lugar.', timedOut: 'La solicitud de ubicación agotó el tiempo de espera. Busca un puerto en su lugar.', unsupported: 'La ubicación no está disponible. Busca un puerto en su lugar.'},
 };
 for (const lang of ['en', 'es']) for (const entry of ['button', 'locate']) {
-  for (const [outcome, line] of [['denied', 'denied'], ['nofix', 'unavailable'], ['failure', 'unavailable'], ['unsupported', 'unsupported']]) {
+  for (const [outcome, line] of [['denied', 'denied'], ['nofix', 'unavailable'], ['failure', 'timedOut'], ['unsupported', 'unsupported']]) {
     test(`${lang} ${entry}: ${outcome} shows the ${line} line in the status, focuses search, asks once`, async () => {
       language.value = lang;
       try {

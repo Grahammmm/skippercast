@@ -370,14 +370,14 @@ test('locating resolves the nearest port, or why there is none, without throwing
   assert.deepEqual(await locatePort(PORTS, geo(35.36, -120.88)), {ok: true, port: morro});
   assert.deepEqual(await locatePort(PORTS, geo(37, -119)), {ok: false, reason: 'none'});
   const failing = code => ({calls: 0, getCurrentPosition(_ok, fail, options) { this.calls++; this.options = options; fail({code, message: 'device detail'}); }});
-  for (const [code, reason] of [[1, 'denied'], [2, 'unavailable'], [3, 'unavailable'], [0, 'unavailable']]) {
+  for (const [code, reason] of [[1, 'denied'], [2, 'unavailable'], [3, 'timedOut'], [0, 'unavailable']]) {
     const stub = failing(code), found = await locatePort(PORTS, stub);
     assert.ok(isDeepStrictEqual(found, {ok: false, reason}), `code ${code}: ${JSON.stringify(found)}`);
     assert.equal(stub.calls, 1, `code ${code}: one request`); assert.ok(isDeepStrictEqual(stub.options, GEO_OPTIONS), `code ${code}: the existing options`);
   }
   assert.ok(isDeepStrictEqual(await locatePort(PORTS, {getCurrentPosition: (_ok, fail) => fail()}), {ok: false, reason: 'unavailable'}), 'a failure with no error object stays unavailable');
   assert.deepEqual(await locatePort(PORTS, null), {ok: false, reason: 'unsupported'});
-  for (const reason of ['unsupported', 'denied', 'unavailable', 'none']) assert.match(COPY[reason], /Search|search/, `${reason} points back to the search`);
+  for (const reason of ['unsupported', 'denied', 'timedOut', 'unavailable', 'none']) assert.match(COPY[reason], /Search|search/, `${reason} points back to the search`);
   assert.match(COPY.denied, /permission is off for this site/);
   assert.match(COPY.privacy, /stays in this browser/);
 });
@@ -412,7 +412,7 @@ test('the chooser renders the question, the featured ports, both actions and the
   assert.match(html, /See all 5 ports/);
   assert.match(html, /Use my location<\/button>/);
   assert.match(html, /Explore the coast<\/button>/);
-  assert.match(html, /<p class="port-input-feedback" role="status"><\/p>/);
+  assert.match(html, /<p class="port-input-feedback" role="status" aria-live="polite" aria-atomic="true"><span><\/span><\/p>/);
   assert.match(html, /class="port-input-note">Your choice stays in this browser\./);
   assert.match(html, /<button [^>]*type="submit"[^>]*>.*?Go<\/button>/s, 'Enter submits the top match');
   assert.doesNotMatch(html, /Forget saved home/, 'nothing to forget without a saved home');
@@ -481,4 +481,19 @@ test('the entry-flow files keep the token and copy rules', () => {
     assert.doesNotMatch(source, /innerHTML/, `${file} renders through Preact`);
     assert.doesNotMatch(source, /\b(?:best spot|productive|catch rate|bite)\b/i, `${file} promises no fish`);
   }
+});
+
+test('location error codes, malformed APIs and synchronous throws are normalized without exposing provider text', async () => {
+  for (const [code, reason] of [[1, 'denied'], [2, 'unavailable'], [3, 'timedOut'], [99, 'unavailable'], [undefined, 'unavailable'], ['1', 'unavailable']]) {
+    let calls = 0;
+    const result = await locatePort(PORTS, {getCurrentPosition(_ok, fail, options) {
+      calls++; assert.equal(options.enableHighAccuracy, false); assert.equal(options.timeout, 10000); assert.equal(options.maximumAge, 300000);
+      fail({code, message: 'synthetic provider detail'});
+    }});
+    assert.equal(result.reason, reason); assert.equal(calls, 1);
+    assert.equal(JSON.stringify(result).includes('synthetic provider detail'), false);
+  }
+  assert.equal((await locatePort(PORTS, {getCurrentPosition(_ok, fail) { fail(); }})).reason, 'unavailable');
+  assert.equal((await locatePort(PORTS, {getCurrentPosition() { throw Error('synthetic provider detail'); }})).reason, 'unavailable');
+  for (const api of [null, {}, {getCurrentPosition: 4}]) assert.equal((await locatePort(PORTS, api)).reason, 'unsupported');
 });
