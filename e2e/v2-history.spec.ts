@@ -82,3 +82,47 @@ test('acceptance 1: a region without a history binding shows the unavailable sta
   await expect(view.locator('.app-coast-markup')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
+
+test('caption_live_switch_and_visibility: real pickers and en–es–en keep chart caption in the top gutter', async ({page, pageErrors, v2, isMobile}) => {
+  await v2.open('app', {region: 'morro-bay', view: 'history'});
+  if (isMobile) await page.locator('.ui-sheet-handle').press('End');
+  const view = page.locator('section.app-history');
+  const svg = view.locator('svg.history-chart');
+  const caption = svg.locator('text.history-measurement-caption');
+  await view.locator('#history-station').selectOption('synthetic-two');
+  await view.locator('[data-history-days="14"]').click();
+  await expect(caption).toHaveText('Sea temperature, °F');
+  await view.locator('#history-metric').selectOption('periodS');
+  await expect(caption).toHaveText('Dominant wave period, sec');
+  const keys = params(page.url());
+  for (const lang of ['es', 'en']) {
+    // On phones the account menu belongs to the Brief footer, not the History sheet.
+    if (isMobile) await page.locator('.app-tabs [data-view="coast"]').click();
+    const trigger = page.locator('.app-account-trigger');
+    await trigger.scrollIntoViewIfNeeded();
+    await trigger.click();
+    await page.locator('.app-account-panel').getByRole('button', {name: lang === 'es' ? 'Español' : 'English', exact: true}).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', lang);
+    await trigger.click();
+    if (isMobile) await page.goBack();
+    await expect(caption).toHaveText(lang === 'es' ? 'Período dominante de ola, sec' : 'Dominant wave period, sec');
+    await expect(svg).toHaveAttribute('aria-label', lang === 'es' ? 'Período dominante de ola, últimos 14 días, sec. Las observaciones faltantes quedan como huecos.' : 'Dominant wave period, previous 14 days, sec. Missing observations remain gaps.');
+    expect(params(page.url())).toEqual(keys);
+    await caption.scrollIntoViewIfNeeded();
+    await expect(caption).toBeInViewport();
+    const placement = await caption.evaluate(el => {
+      const text = el as SVGTextElement, box = text.getBBox(), svg = text.ownerSVGElement!;
+      const ticks = [...svg.querySelectorAll('text.axis:not(.history-measurement-caption)')].map(t => (t as SVGTextElement).getBBox());
+      const style = getComputedStyle(text);
+      return {bounds: {x: box.x, y: box.y, width: box.width, height: box.height}, fontSize: style.fontSize, x: text.getAttribute('x'), y: text.getAttribute('y'), inside: box.x >= 0 && box.y >= 0 && box.x + box.width <= 1000 && box.y + box.height <= 20,
+        clear: ticks.every(t => box.x + box.width <= t.x || t.x + t.width <= box.x || box.y + box.height <= t.y || t.y + t.height <= box.y), visible: style.display !== 'none' && style.visibility === 'visible' && style.fill !== 'none'};
+    });
+    expect(placement, JSON.stringify(placement)).toMatchObject({x: '47', y: '12', inside: true, clear: true, visible: true});
+    const overflow = svg.locator('..');
+    await overflow.evaluate(el => { el.scrollLeft = el.scrollWidth; });
+    expect(await overflow.evaluate(el => el.scrollWidth > el.clientWidth ? el.scrollLeft > 0 : el.scrollLeft === 0)).toBe(true);
+    await overflow.evaluate(el => { el.scrollLeft = 0; });
+    await expect(caption).toBeInViewport();
+  }
+  expect(pageErrors).toEqual([]);
+});
