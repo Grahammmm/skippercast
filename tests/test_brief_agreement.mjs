@@ -123,8 +123,20 @@ import {createHash} from 'node:crypto';
 // Re-pinned for SC1938-12: seas wording rounds the printed maximum up (up1).
 // BF-spanish-app: expose epoch window bounds for locale display; the 50 rating goldens above stay unchanged.
 // Re-pinned for SC0452-09: the verdict's reason sentences moved to web/brief/verdict-copy.ts (catalogue templates, a language argument); the 50 rating goldens above stay unchanged.
+// SC1407-04: local() reads the shared bounded formatter cache; exactly that import and that one expression (same
+// locale and options) are put back to their old bytes before hashing, so any other verdict change still breaks the pin.
+const SC1407_04 = [
+  ["import {dateTimeFormat} from '../../packages/coast/src/date-format.ts';\n", ''],
+  ["dateTimeFormat('en-CA', tz, {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23'})",
+    "new Intl.DateTimeFormat('en-CA', {timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23'})"],
+];
 test('verdict source outside agreement additions is unchanged', async () => {
-  const source = await readFile(new URL('../web/brief/verdict.ts', import.meta.url), 'utf8');
+  let source = await readFile(new URL('../web/brief/verdict.ts', import.meta.url), 'utf8');
+  for (const [now, before] of SC1407_04) {
+    assert.equal(source.split(now).length, 2, `exactly one ${JSON.stringify(now.slice(0, 40))}`);
+    source = source.replace(now, () => before);
+  }
+  assert.doesNotMatch(source, /dateTimeFormat|date-format/);
   const stripped = source.replace(/, agreement: (?:staleAgreement \? null : agreement|null)/g, '').split('\n').filter(line => !/agreement|Agreement/.test(line)).join('\n');
   assert.equal(createHash('sha256').update(stripped).digest('hex'), 'f2f237dced82bea18bbd2ffac38e558141ea20db3782a81175a5e86a99f09e06');
 });
