@@ -249,7 +249,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC-PERF-JUMP-1: app.css appends only layout rules (masthead, target menu width, desktop legend minimum height); no paint; the Reports catch sheet mounts none of them. Rebound from the final bytes.
   // SC1722-07: app.css only adds the phone sheet's --sheet-hidden-offset property to the .app-sheet rules (layout, no paint); the Reports catch sheet never mounts it. Rebound from the final bytes.
   // SC1722-07: check_contrast.mjs changes only its appCss source hash and comment; contrast() is untouched. Rebound.
-  "web/app/app.css": "3d4f0c9597a3fad6a9d95def3390399265f19c929fde68200fde047390bf1df7",
+  // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
+  "web/app/app.css": "bccc6dbe1a5e688a33f13280fc191d109f1ea4e9b9c3d2b3ce152ae26b7657e8",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -316,7 +317,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC-TIDAL-1: app.css only appends a scoped .app-entrance* block (token text roles in the Boat brief's run line); check_contrast.mjs rebinds only the
   // appCss surface hash and its comment. BODY09 mounts Reports/CatchCards, never the run line or the legend; contrast(), catch paint, backing,
   // assertions and thresholds are unchanged. Rebind only these two sources.
-  "scripts/check_contrast.mjs": "60a7b096b49aa7c9d1a4b5dc21b607db98037f3342a6d5f41d65f92d15704a32",
+  // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
+  "scripts/check_contrast.mjs": "8dc8363132248cd4db566b0f52d835f266abc508d423065bed4d1c2c4609c8fe",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
