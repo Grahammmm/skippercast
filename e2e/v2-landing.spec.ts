@@ -864,3 +864,183 @@ for (const lang of ['en', 'es'] as const) for (const surface of ['landing', 'app
     expect(pageErrors).toEqual([]);
   });
 }
+
+// SC1922-05: a phone's cold load of the landing does not jump. The parts mount into their hosts after first paint
+// (web/landing/main.tsx), so each host reserves what its mounted content takes (web/landing/landing.css, port-input.css).
+const COLD_PHONES = [{width: 390, height: 844}, {width: 360, height: 640}] as const;
+/** The cold-load window, from navigation start. Every qualifying shift in it counts, not only the largest session window. */
+const SAMPLE_MS = 5000;
+const CLS_BUDGET = 0.1;
+type ShiftStore = {observer: PerformanceObserver | null; entries: {value: number; hadRecentInput: boolean}[]};
+/** Install a buffered layout-shift observer before navigation; the sampling itself clicks, scrolls and focuses nothing. */
+const watchShifts = (page: Page) => page.addInitScript(() => {
+  const store: ShiftStore = {observer: null, entries: []};
+  (window as unknown as {__shifts: ShiftStore}).__shifts = store;
+  try {
+    const observer = new PerformanceObserver(list => { for (const e of list.getEntries()) { const s = e as PerformanceEntry & {value: number; hadRecentInput: boolean}; store.entries.push({value: s.value, hadRecentInput: s.hadRecentInput}); } });
+    observer.observe({type: 'layout-shift', buffered: true});
+    store.observer = observer;
+  } catch { /* unsupported: shiftSums reports it */ }
+});
+/** Wait out the window, drain the observer, and sum the entries: those without recent input (the budget) and all of them (no input is ever sent here). */
+async function shiftSums(page: Page): Promise<{counted: number; all: number; entries: number}> {
+  await page.waitForFunction(ms => performance.now() >= ms, SAMPLE_MS);
+  const sums = await page.evaluate(() => {
+    const store = (window as unknown as {__shifts?: ShiftStore}).__shifts;
+    if (!store?.observer) return null;
+    for (const e of store.observer.takeRecords()) { const s = e as PerformanceEntry & {value: number; hadRecentInput: boolean}; store.entries.push({value: s.value, hadRecentInput: s.hadRecentInput}); }
+    store.observer.disconnect();
+    const sum = (list: ShiftStore['entries']) => list.reduce((total, e) => total + e.value, 0);
+    return {counted: sum(store.entries.filter(e => !e.hadRecentInput)), all: sum(store.entries), entries: store.entries.length};
+  });
+  expect(sums, 'the layout-shift observer is supported and was installed before navigation').not.toBeNull();
+  return sums!;
+}
+/** Page-relative top and height of a box, or null when it is not there. */
+const boxOf = (page: Page, selector: string) => page.evaluate(sel => { const r = document.querySelector(sel)?.getBoundingClientRect(); return r ? {y: r.top + scrollY, h: r.height} : null; }, selector);
+/** Hold the landing's entry module (after the static page and its styles have painted) until `release()`. */
+async function holdEntry(page: Page): Promise<() => void> {
+  let release: () => void = () => {};
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route(/\/assets\/landing\.[^/]*\.js(?:\?|$)/, async route => { await held; await route.fallback(); });
+  return release;
+}
+/** The static page is there with its stylesheets: the form slot has its reserved height. */
+const slotsLaidOut = (page: Page) => page.waitForFunction(() => (document.querySelector('.landing-slot--form')?.getBoundingClientRect().height ?? 0) > 100);
+const near = (a: number, b: number, why: string) => expect(Math.abs(a - b), `${why}: ${a} against ${b}`).toBeLessThanOrEqual(1);
+
+for (const {width, height} of COLD_PHONES) {
+  test(`SC1922-05 phone_cold_cls_${width}: a cold load at ${width}x${height} shifts under ${CLS_BUDGET} over ${SAMPLE_MS / 1000} s, with the readings and the featured ports in`, async ({page, pageErrors}, info) => {
+    test.skip(info.project.name !== 'phone', 'measured at the two explicit phone sizes');
+    test.setTimeout(60_000);
+    await page.setViewportSize({width, height});
+    await landingFeeds(page);
+    await watchShifts(page);
+    await page.goto('/?ui=v2');   // no saved home, no click, no scroll, no focus
+    const sums = await shiftSums(page);
+    // The synthetic feeds answered inside the window: a hung feed would otherwise pass on an unchanged page.
+    await expect(page.locator('.landing-tiles li[data-reading]')).toHaveCount(4);
+    await expect(page.locator('.landing .port-input-list [data-port]').first()).toBeVisible();
+    console.log(`SC1922-05 ${width}x${height}: ${sums.entries} layout-shift entries, qualifying sum ${sums.counted.toFixed(4)}, all ${sums.all.toFixed(4)}`);
+    expect(sums.counted, 'layout shift without recent input').toBeLessThan(CLS_BUDGET);
+    expect(sums.all, 'headless Chromium may mark early entries as input-driven although none was sent; none may hide a shift').toBeLessThan(CLS_BUDGET);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test(`SC1922-05 reserved_form_slot_matches_mount_${width}: the reserved slots hold the readout's and the form's y and height across the mount and the late data`, async ({page, pageErrors}, info) => {
+    test.skip(info.project.name !== 'phone', 'measured at the two explicit phone sizes');
+    await page.setViewportSize({width, height});
+    await landingFeeds(page);
+    const release = await holdEntry(page);
+    await page.goto('/?ui=v2', {waitUntil: 'commit'});
+    await expect(page.locator('.landing-slot--form')).toBeAttached();
+    await slotsLaidOut(page);
+    await expect(page.locator('.landing-slot--form')).toBeEmpty();
+    await expect(page.locator('.landing-slot--form')).toHaveAttribute('aria-hidden', 'true');
+    // Before the module: the slots, and the footer under them, are where they will be.
+    const before = {readout: await boxOf(page, '.landing-slot--readout'), form: await boxOf(page, '.landing-slot--form'), footer: await boxOf(page, 'footer.landing-foot')};
+    expect(before.readout && before.form && before.footer, 'the slots and the footer are laid out before the module').toBeTruthy();
+    expect(await page.locator('form.port-input').count(), 'nothing is mounted yet').toBe(0);
+    release();
+    await expect(page.locator('form.port-input')).toBeVisible();
+    const mounted = {readout: await boxOf(page, '.landing-readout'), form: await boxOf(page, 'form.port-input'), dots: await boxOf(page, 'nav.landing-dots'), footer: await boxOf(page, 'footer.landing-foot')};
+    near(mounted.readout!.y, before.readout!.y, 'readout y on mount'); near(mounted.readout!.h, before.readout!.h, 'readout height on mount');
+    near(mounted.form!.y, before.form!.y, 'port form y on mount'); near(mounted.form!.h, before.form!.h, 'port form height on mount (the port list still loading)');
+    expect(await page.locator('.landing-slot').count(), 'the mount replaced both placeholders').toBe(0);
+    // The layer dots and the credit mounted with the form; the footer that sat under the slots did not move.
+    const credit = await boxOf(page, '#landing-credit');
+    near(mounted.footer!.y, before.footer!.y, 'footer y on mount');
+    expect(credit && credit.h > 0, 'the shoreline credit is in the footer').toBeTruthy();
+    // Late data: the readings and the port list resolve; the form stays where the slot was, and below it only the verdict (a fresh block, not reserved) pushes the footer.
+    await expect(page.locator('.landing-tiles li[data-reading]')).toHaveCount(4);
+    await expect(page.locator('.landing .port-input-list [data-port]').first()).toBeVisible();
+    const after = {form: await boxOf(page, 'form.port-input'), footer: await boxOf(page, 'footer.landing-foot')};
+    near(after.form!.y, before.form!.y, 'port form y after the readings and ports loaded'); near(after.form!.h, before.form!.h, 'port form height after the ports loaded');
+    await page.waitForTimeout(1500);   // the verdict, when it is drawn, arrives after the readings
+    const verdict = await boxOf(page, '.landing-verdict');
+    const gap = await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.landing-dots') ?? document.body).rowGap) || 0);
+    const settled = await boxOf(page, 'footer.landing-foot');
+    near(settled!.y - (verdict ? verdict.h + 16 : 0), before.footer!.y, `footer y once everything loaded${verdict ? ' (less the verdict block and its gap)' : ''} (page gap ${gap})`);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
+test('SC1922-05 loading_success_failure_stays_reserved: a failed port list and unavailable readings keep the reserved room, with the retry reachable', async ({page, pageErrors}, info) => {
+  test.skip(info.project.name !== 'phone', 'measured at the two explicit phone sizes');
+  for (const {width, height} of COLD_PHONES) {
+    await page.setViewportSize({width, height});
+    await landingFeeds(page, null, null);   // no feed, no tide: four unavailable tiles
+    await page.route('**/data/home-ports.json', route => route.fulfill({status: 503, json: {error: 'down'}}));
+    const release = await holdEntry(page);
+    await watchShifts(page);
+    await page.goto('/?ui=v2', {waitUntil: 'commit'});
+    await expect(page.locator('.landing-slot--form')).toBeAttached();
+    await slotsLaidOut(page);
+    const slot = (await boxOf(page, '.landing-slot--form'))!;
+    release();
+    await expect(page.locator('.landing .port-input-actions')).toBeVisible();
+    await expect(page.locator('.landing .port-input-results').getByRole('button', {name: 'Try again'})).toBeVisible();
+    await expect(page.locator('.landing-tiles li[data-reading]')).toHaveCount(4);
+    const form = (await boxOf(page, 'form.port-input'))!;
+    near(form.y, slot.y, `${width} px: the failed form is where its slot was`);
+    expect(form.h, `${width} px: the failed list does not collapse the form below its slot`).toBeGreaterThanOrEqual(slot.h - 1);
+    const results = (await boxOf(page, '.landing .port-input-results'))!;
+    expect(results.h, `${width} px: the results viewport keeps its height`).toBeGreaterThanOrEqual(Math.min(320, height * 0.4) - 1);
+    const sums = await shiftSums(page);
+    expect(sums.counted).toBeLessThan(CLS_BUDGET);
+    expect(sums.all).toBeLessThan(CLS_BUDGET);
+    await page.unrouteAll({behavior: 'ignoreErrors'});
+  }
+  expect(pageErrors).toEqual([]);
+});
+
+test('SC1922-05 spanish_wrap_and_accessibility_growth: the Spanish page at both widths grows without clipping, overflow or overlap; every action stays reachable', async ({page, pageErrors}, info) => {
+  test.skip(info.project.name !== 'phone', 'measured at the two explicit phone sizes');
+  for (const {width, height} of COLD_PHONES) {
+    await page.setViewportSize({width, height});
+    await landingFeeds(page);
+    await page.goto('/?ui=v2&lang=es');
+    await expect(page.locator('.landing-tiles li[data-reading]')).toHaveCount(4);
+    await expect(page.locator('.landing .port-input-list [data-port]').first()).toBeVisible();
+    await expect(page.locator('.landing .port-input-actions button')).toHaveCount(2);
+    const state = await page.evaluate(() => {
+      const box = (sel: string) => { const r = document.querySelector(sel)?.getBoundingClientRect(); return r ? {x: r.left, right: r.right, top: r.top + scrollY, bottom: r.bottom + scrollY} : null; };
+      const buttons = [...document.querySelectorAll('.landing .port-input-actions button')].map(b => { const r = b.getBoundingClientRect(); return {x: r.left, right: r.right, clipped: b.scrollWidth > b.clientWidth + 1}; });
+      return {overflow: document.documentElement.scrollWidth - innerWidth, form: box('form.port-input'), dots: box('nav.landing-dots'), footer: box('footer.landing-foot'), buttons, results: document.querySelector('.landing .port-input-results')!.getBoundingClientRect().height};
+    });
+    expect(state.overflow, `${width} px: no horizontal overflow`).toBeLessThanOrEqual(0);
+    for (const b of state.buttons) { expect(b.x).toBeGreaterThanOrEqual(0); expect(b.right).toBeLessThanOrEqual(width); expect(b.clipped, 'an action label is not cut off').toBe(false); }
+    expect(state.form!.bottom, 'the dots start below the form').toBeLessThanOrEqual(state.dots!.top + 1);
+    expect(state.dots!.bottom, 'the footer starts below the dots').toBeLessThanOrEqual(state.footer!.top + 1);
+    expect(state.results, 'the results keep their viewport').toBeGreaterThanOrEqual(Math.min(320, height * 0.4) - 1);
+    await page.locator('.landing .port-input-actions button').last().scrollIntoViewIfNeeded();
+    await expect(page.locator('.landing .port-input-actions button').last()).toBeInViewport();
+  }
+  expect(pageErrors).toEqual([]);
+});
+
+test('SC1922-05 save_data_and_no_webgl: with Save-Data on and no map, the reservation still holds and the cold load stays under the budget', async ({page, pageErrors}, info) => {
+  test.skip(info.project.name !== 'phone', 'measured at the phone size');
+  await page.setViewportSize(COLD_PHONES[0]);
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'connection', {value: {saveData: true}, configurable: true});
+    const real = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) { return kind === 'webgl2' ? null : (real as (...args: unknown[]) => unknown).call(this, kind, ...rest); } as typeof real;
+  });
+  await landingFeeds(page);
+  const release = await holdEntry(page);
+  await watchShifts(page);
+  await page.goto('/?ui=v2', {waitUntil: 'commit'});
+  await expect(page.locator('.landing-slot--form')).toBeAttached();
+  await slotsLaidOut(page);
+  const slot = (await boxOf(page, '.landing-slot--form'))!;
+  release();
+  await expect(page.locator('form.port-input')).toBeVisible();
+  near((await boxOf(page, 'form.port-input'))!.y, slot.y, 'the form is where its slot was');
+  await expect(page.locator('.landing-shore path')).toHaveCount(2);   // the static shoreline alone
+  const sums = await shiftSums(page);
+  expect(sums.counted).toBeLessThan(CLS_BUDGET);
+  expect(sums.all).toBeLessThan(CLS_BUDGET);
+  await expect(page.locator('.landing-night')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
