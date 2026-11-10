@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- UXFIX-13: on the phone, the first-run card's "Keep Boat for now" is a visible 44 px button on the heading row at every sheet height (it was clipped to 1 px at the closed sheet and only appeared on keyboard focus), in English and Spanish. The card stays a soft card you can ignore; the closed sheet rests 24 px higher while the card is on it.
 - RF1935-4: Keep the phone sheet target search clear of the tabs while focused, including short emulated viewports; restore navigation on blur.
 - RF1925-6: each app view now has exactly one top-level main landmark. On the phone the whole view is the main (Reports and Plan no longer nest a second one), the bottom sheet is a named group so Conditions is a single region, and the managed terrain scene is a group rather than a second main, in Chart, 2D and 3D. Layout, words and behaviour are unchanged.
 - RF1935-1: the trip planner no longer keeps "Loading the trip planner…" (a live status) in the page while its dialog is closed and has never been used; the loading status and the failure line with Retry appear only while the dialog is open, in English and Spanish. An open planner that is still loading keeps its status until it is ready, and a failed one keeps its message and Retry. The planner is still loaded only when first opened.
