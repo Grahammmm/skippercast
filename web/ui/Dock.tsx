@@ -2,7 +2,7 @@
 // and a mono readout, in one bar over the map (desktop) or at the sheet's
 // top edge (mobile, FE-06). Range is the labelled <input type="range"> it
 // uses; the hour's text is exposed as aria-valuetext so a screen reader
-// hears "2 pm", not "14". FE-05 binds the dock to the day and hour signals.
+// hears caller-provided day and hour text, not a numeric index. FE-05 binds the dock to the day and hour signals.
 import {IconButton} from './Button.tsx';
 import {Segmented, type SegmentedOption} from './Chip.tsx';
 import {t} from '../i18n.ts';
@@ -15,7 +15,7 @@ export type RangeProps = {
   max: number;
   step?: number;
   onChange: (value: number) => void;
-  /** Text for the current value ("2 pm"), read by assistive technology. */
+  /** Text for the current value (e.g. "Today · 2 pm"), read by assistive technology. */
   valueText?: (value: number) => string;
   disabled?: boolean;
   class?: string;
@@ -44,7 +44,7 @@ export type DockProps<D extends string> = {
   hour: number;
   hours: number;
   onHour: (hour: number) => void;
-  /** The hour as text ("2 pm"); shown in mono and read with the slider. */
+  /** The selected value as text (e.g. "Today · 2 pm"); shown in mono and read with the slider. */
   hourText: (hour: number) => string;
   /** No hours to step through (observations only): slider and play disabled. A day with one hour left still plays on into the next (FE-12). */
   disabled?: boolean;
