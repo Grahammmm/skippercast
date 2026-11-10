@@ -2,6 +2,7 @@
 // phrases the result from the catalogue (catalog/app/strings.json, `verdict.`). These tests pin the Spanish sentences, that the English
 // output and every decision are unchanged by the language, that no warning reads milder in Spanish, and that every reason the profile
 // graders can write has a Spanish form. Synthetic feeds, values invented; no network.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {boatVerdict, briefVerdict, longPeriodHour, profileVerdict, feedReader, windowHours, ALERT_CHECK_MISSING, NO_ALERT_CHECK, NO_DAYLIGHT} from '../web/brief/verdict.ts';

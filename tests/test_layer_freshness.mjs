@@ -7,7 +7,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 
 const root = new URL('..', import.meta.url).pathname;
 const json = async p => JSON.parse(await readFile(join(root, p), 'utf8'));
@@ -24,7 +24,7 @@ async function load() {
     export {render} from 'preact-render-to-string';
     export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent',
-    jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+    jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   return {m: await import(pathToFileURL(out).href), dir};
 }
 

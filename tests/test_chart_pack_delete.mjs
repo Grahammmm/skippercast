@@ -7,6 +7,7 @@ import {resolve, join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
+import {preparedCatalogue} from './helpers/esbuild-url.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const inventory = resolve(root, 'tests/fixtures/sp1502_pack_inventory');
@@ -55,7 +56,7 @@ async function harness(t, responses) {
   const result = await build({
     entryPoints: [resolve(inventory, 'entry.mjs')], outfile: resolve(dir, 'trip.mjs'),
     bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', jsxImportSource: 'preact', logLevel: 'silent', metafile: true,
-    plugins: [{name: 'chart-pack-delete-boundary', setup(b) {
+    plugins: [preparedCatalogue, {name: 'chart-pack-delete-boundary', setup(b) {
       b.onResolve({filter: /.*/}, args => {
         if (args.importer !== trip) return;
         if (args.path === 'preact/hooks') return {path: resolve(inventory, 'runtime.mjs')};
@@ -68,7 +69,7 @@ async function harness(t, responses) {
   });
   for (const input of Object.keys(result.metafile.inputs)) {
     const path = resolve(root, input);
-    assert.ok(path === trip || path === resolve(root, 'dist/offline-core.js') || path === resolve(root, 'web/i18n.ts') || path === resolve(root, 'web/brief/remaining-copy.ts') || path === resolve(root, 'web/i18n-core.ts') || path === resolve(root, 'catalog/app/strings.json') || path.startsWith(inventory + '/') || path.startsWith(fixtures + '/') ||
+    assert.ok(path === trip || path === resolve(root, 'dist/offline-core.js') || path === resolve(root, 'web/i18n.ts') || path === resolve(root, 'web/brief/remaining-copy.ts') || path === resolve(root, 'web/i18n-core.ts') || path === resolve(root, 'web/i18n-catalogue.ts') || path === resolve(root, 'web/strings.en.generated.json') || path === resolve(root, 'web/strings.es.generated.json') || path.startsWith(inventory + '/') || path.startsWith(fixtures + '/') ||
       /[/]node_modules[/](?:.*[/])?(?:@?preact|preact-render-to-string|signals-core|signals)[/]/.test(path), `unadmitted import graph input: ${input}`);
   }
   m = await import(pathToFileURL(resolve(dir, 'trip.mjs')).href);

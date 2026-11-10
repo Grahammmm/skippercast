@@ -1,5 +1,6 @@
 // SC0707-10: the trip planner in Spanish. The adapter is tested against the catalogue and the planner's real messages; the page is
 // the real web/app/Planner.tsx; GPX and offline-notes bytes are compared across languages. English output is unchanged (the existing planner tests).
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
@@ -8,7 +9,7 @@ import {getRegion} from '../dist/region.js';
 import {plannerText, plannerVerdict, hitReading, categoryText} from '../web/planner-copy.ts';
 import {verdictLine} from '../web/waypoint-placement.ts';
 import {t} from '../web/i18n.ts';
-import {rendererPlugin} from './helpers/esbuild-url.mjs';
+import {rendererPlugin, preparedCatalogue} from './helpers/esbuild-url.mjs';
 
 const WRAP = 'No se pudo completar la acción: ';
 const sample = text => text.replace(/\{(\w+)\}/g, (_, name) => name.startsWith('m_') ? '' : name === 'n' ? '7' : name === 'date' ? '2026-11-06' : `<${name}>`);
@@ -75,7 +76,7 @@ test('planner_verdict: fields, not words; thresholds and rounding as English', (
 });
 
 const root = new URL('..', import.meta.url).pathname;
-const bundle = await build({stdin: {contents: `export {Planner} from './web/app/Planner.tsx'; export {createPlanner} from './web/planner.ts'; export {language} from './web/i18n.ts'; export {h} from 'preact'; export {default as render} from 'preact-render-to-string';`, resolveDir: root}, bundle: true, write: false, platform: 'node', format: 'esm', jsx: 'automatic', jsxImportSource: 'preact', plugins: [rendererPlugin]});
+const bundle = await build({stdin: {contents: `export {Planner} from './web/app/Planner.tsx'; export {createPlanner} from './web/planner.ts'; export {language} from './web/i18n.ts'; export {h} from 'preact'; export {default as render} from 'preact-render-to-string';`, resolveDir: root}, bundle: true, write: false, platform: 'node', format: 'esm', jsx: 'automatic', jsxImportSource: 'preact', plugins: [rendererPlugin, preparedCatalogue]});
 const ui = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 const map = {getSize: () => ({x: 512}), getBounds: () => ({getWest: () => -122, getEast: () => -120, getSouth: () => 34, getNorth: () => 37})};
 const screen = {ready: () => true, pointAllowed: () => true, geometryAllowed: () => true, exportExclusions: () => ({features: [], checked_at: new Date().toISOString()})};
