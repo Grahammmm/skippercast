@@ -4,8 +4,8 @@
   "strings": {
     "planner.order.up": {"en": "Move up", "es": "Subir"},
     "planner.order.down": {"en": "Move down", "es": "Bajar"},
-    "planner.order.upAria": {"en": "Move {name} up", "es": "Subir {name}"},
-    "planner.order.downAria": {"en": "Move {name} down", "es": "Bajar {name}"},
+    "planner.order.upAria": {"en": "Move up: {name}", "es": "Subir {name}"},
+    "planner.order.downAria": {"en": "Move down: {name}", "es": "Bajar {name}"},
     "planner.order.legs": {"en": "Trip legs", "es": "Tramos del viaje"},
     "pm.manualOrder": {"en": "Your own stop order.", "es": "Tu propio orden de paradas."},
     "common.waiting": {"en": "Waiting for readings.", "es": "Esperando lecturas."},

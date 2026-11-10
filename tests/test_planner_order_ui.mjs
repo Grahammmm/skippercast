@@ -24,17 +24,17 @@ test('native order buttons retain stop focus, boundaries, escaping, mixed legs, 
  try{
   const page=await browser.newPage();await page.route('**/*',route=>route.abort());await page.setContent('<div id="root"></div>');await page.addScriptTag({content:bundle.outputFiles[0].text});await page.evaluate(()=>window.boot());
   const row=id=>page.locator(`[data-stop-id="user:${id}"]`);
-  assert.equal(await row('A').getByRole('button',{name:'Move Same up',exact:true}).count(),0);
-  assert.equal(await row('C').getByRole('button',{name:'Move C <img src=x> down',exact:true}).count(),0);
+  assert.equal(await row('A').getByRole('button',{name:'Move up: Same',exact:true}).count(),0);
+  assert.equal(await row('C').getByRole('button',{name:'Move down: C <img src=x>',exact:true}).count(),0);
   assert.equal(await page.locator('[data-stop-id="user:launch-r"] button').count(),0);
-  const up=row('B').getByRole('button',{name:'Move Same up',exact:true});await up.focus();await page.keyboard.press('Enter');
-  await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Move Same down' && document.activeElement.closest('li').dataset.stopId==='user:B');
+  const up=row('B').getByRole('button',{name:'Move up: Same',exact:true});await up.focus();await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Move down: Same' && document.activeElement.closest('li').dataset.stopId==='user:B');
   assert.equal(await page.evaluate(()=>window.p.draft.value.ids.join(',')),'user:B,user:A,user:C');
   await page.keyboard.press('Space');await page.waitForFunction(()=>document.activeElement?.closest('li')?.dataset.stopId==='user:B' && window.p.draft.value.ids[1]==='user:B');
   assert.equal(await page.locator('ol[aria-label="Trip legs"] li').first().textContent().then(s=>s.startsWith('Same → Same')),true);
   await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.closest('li')?.dataset.stopId),'user:C');
   await page.keyboard.press('Space');await page.waitForFunction(()=>window.p.draft.value.ids[1]==='user:C');
-  assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('aria-label')),'Move C <img src=x> up');
+  assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('aria-label')),'Move up: C <img src=x>');
   assert.equal(await row('C').locator('img').count(),0);
   await page.evaluate(()=>window.lang.value='es');await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Subir C <img src=x>');
   assert.equal(await row('C').getByRole('button',{name:'Subir C <img src=x>',exact:true}).textContent(),'Subir');
