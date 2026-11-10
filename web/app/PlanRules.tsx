@@ -44,20 +44,32 @@ export function PlanRules({date, species, region, now = Date.now()}: {date: stri
   const loaded = regsData.value, data = loaded?.region === rules.id ? loaded.data : null;
   return <section class="export-card plan-rules" aria-label={t('planRules.aria', lang)}>
     <h2>{t('planRules.heading', lang, {date})}</h2>
-    {ruleSpecies(species).map(id => {
-      const {line: l, official, depth} = readLine(data, id, date, rules, now, lang);
-      return <div key={id} class="plan-rule" data-kind={l.kind} data-status={l.kind === 'check' ? 'unknown' : l.status}>
-        <p><span class="app-mark-regs-badge" data-status={l.kind === 'check' ? 'unknown' : l.status}>{l.label}</span> <strong>{l.name}</strong>. {l.kind === 'closed' ? `${t('planRules.closedOn', lang, {date})} ` : ''}{english ? <><span lang="en">{l.reason}</span> {t('rules.english.inline', lang)}</> : l.reason}</p>
-        {l.kind === 'check' ? <p>{t('planRules.check', lang)}</p> : <>
-          {official.map((line, i) => <p key={i} lang={english}>{line}</p>)}
-          {depth ? <p>{depth}</p> : null}
-          {english && official.length ? <p class="export-note">{t('rules.english', lang)}</p> : null}
-          <p>{l.verified}</p>
-        </>}
-        <p class="export-note">{l.fresh}</p>
-        <a href={l.link} target="_blank" rel="noopener" hrefLang={english} aria-label={t('rules.link.for', lang, {label: l.linkLabel, name: l.name})}>{l.linkLabel}</a>
-      </div>;
-    })}
+    {(() => {
+      const reads = ruleSpecies(species).map(id => readLine(data, id, date, rules, now, lang));
+      const first = reads[0]!.line;
+      // RF1925-3: only readings that are all unconfirmed and identical in badge, reason and freshness share one notice; every species keeps its name and official link.
+      const same = reads.length > 1 && reads.every(({line: l}) => l.kind === 'check' && l.status === first.status && l.label === first.label && l.reason === first.reason && l.fresh === first.fresh);
+      const note = (reason: string) => english ? <><span lang="en">{reason}</span> {t('rules.english.inline', lang)}</> : reason;
+      const link = (l: PlanRuleLine) => <a href={l.link} target="_blank" rel="noopener" hrefLang={english} aria-label={t('rules.link.for', lang, {label: l.linkLabel, name: l.name})}>{l.linkLabel}</a>;
+      return <>
+        {same ? <div class="plan-rule" data-kind="check" data-status="unknown">
+          <p><span class="app-mark-regs-badge" data-status="unknown">{first.label}</span> <strong>{reads.map(r => r.line.name).join(', ')}</strong>. {note(first.reason)}</p>
+          <p class="export-note">{first.fresh}</p>
+          <p>{reads.map((r, i) => <>{i ? ' ' : null}{link(r.line)}</>)}</p>
+        </div> : reads.map(({line: l, official, depth}) => <div key={l.id} class="plan-rule" data-kind={l.kind} data-status={l.kind === 'check' ? 'unknown' : l.status}>
+          <p><span class="app-mark-regs-badge" data-status={l.kind === 'check' ? 'unknown' : l.status}>{l.label}</span> <strong>{l.name}</strong>. {l.kind === 'closed' ? `${t('planRules.closedOn', lang, {date})} ` : ''}{note(l.reason)}</p>
+          {l.kind === 'check' ? null : <>
+            {official.map((line, i) => <p key={i} lang={english}>{line}</p>)}
+            {depth ? <p>{depth}</p> : null}
+            {english && official.length ? <p class="export-note">{t('rules.english', lang)}</p> : null}
+            <p>{l.verified}</p>
+          </>}
+          <p class="export-note">{l.fresh}</p>
+          {link(l)}
+        </div>)}
+        {reads.some(r => r.line.kind === 'check') ? <p>{t('planRules.check', lang)}</p> : null}
+      </>;
+    })()}
     <p class="export-note">{t('planRules.notLegalAdvice', lang)}</p>
   </section>;
 }

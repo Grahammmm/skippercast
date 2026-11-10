@@ -77,6 +77,7 @@ export function History({now = new Date()}: {now?: Date} = {}) {
   useHistorySnapshot();
   const lang = language.value;
   const state = historyState(coastHistory.value, coastStatus.value.history);
+  const failed = state.kind === 'unavailable' && coastStatus.value.history === 'error';
   const selection = historySelection(historyStation.value, historyMetric.value, historyRange.value);
   const choose = (choice: CoastSelection) => {
     const patch = historyPatch(choice);
@@ -87,7 +88,10 @@ export function History({now = new Date()}: {now?: Date} = {}) {
       <h2 id="app-history-title">{t('history.title', lang)}</h2>
       {state.kind === 'ready'
         ? <CoastMarkup renderer="historyView" args={[{county: state.county, now}, state.bundle, selection, historyCopy(lang)]} onSelect={choose} />
-        : <p class="app-empty" role="status">{t(NOTES[state.kind], lang)}</p>}
+        : <>
+          <p class="app-empty" role="status">{t(NOTES[state.kind], lang)}</p>
+          {failed ? <button type="button" class="app-history-retry" onClick={() => { void coastData.load('history'); }}>{t('history.retry', lang)}</button> : null}
+        </>}
     </section>
   );
 }
