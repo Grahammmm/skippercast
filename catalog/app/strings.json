@@ -1590,6 +1590,7 @@
     "mark.save.action": {"en": "Save this spot", "es": "Guardar este lugar"},
     "mark.save.pending": {"en": "Saving…", "es": "Guardando…"},
     "mark.save.saved": {"en": "Saved to your spots", "es": "Guardado en tus lugares"},
+    "mark.save.showChart": {"en": "Show on Chart", "es": "Mostrar en la carta"},
     "mark.save.helper": {"en": "Private to your account. You can keep up to 100 saved spots.", "es": "Privado en tu cuenta. Puedes guardar hasta 100 lugares."},
     "mark.save.context": {"en": "This is map context, not a spot to save.", "es": "Esto es contexto del mapa, no un lugar para guardar."},
     "mark.save.noPosition": {"en": "This mark has no position to save.", "es": "Esta marca no tiene una posición para guardar."},
