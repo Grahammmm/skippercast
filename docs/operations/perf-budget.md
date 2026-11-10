@@ -39,6 +39,17 @@ is published, not in the repo, so this check cannot measure it; the publisher en
 leaves 23.8% headroom for more reefs or longer credit text, and stops the file growing back toward the full export
 unnoticed. Raise it in a pull request with a reason, as above.
 
+### The hourly horizon is built once per hour (SC1407-03)
+
+Not a byte budget, and no budget here changes. The time dock's 169-hour horizon (`horizonDays` in `web/hour.ts`) is
+read by the dock, the map, the brief and the share link; issue #1762 (R2) counted it rebuilt about 64 times at one load.
+It now keeps one entry, its last successful build, keyed by the whole UTC start hour and the region zone: a read in the
+same hour and zone returns that same array without formatting a single hour; another hour (forward or back) or another
+zone builds a new one, and an invalid date or zone still throws and leaves the entry in place. The shared result is
+frozen (the array, each day and its hours) so no caller can change it; a caller's own horizon passed to `dockTime` is
+neither frozen nor kept. `tests/test_frames.mjs` checks this by counting formatter calls, not by timing; no new timing
+was measured.
+
 ## Raising a budget (in a pull request, with a reason)
 
 Open `scripts/perf-budget.json`. For the group that is over, add an entry at the END of its `history` list with the new

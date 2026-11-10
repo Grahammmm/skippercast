@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC1407-03: the time dock's 169-hour horizon is built once per UTC hour and region zone instead of on every read by the dock, map, brief and share link (#1762 R2); the shared copy is frozen. Days, hours, DST change days, the selected hour and links are unchanged (`web/hour.ts`).
+
 - RF0834-9: the forecast build keeps missing or nonfinite accumulated precipitation (ECMWF IFS) missing through its conversion to mm/hour instead of publishing dry zeros. An absent, bitmap-missing, rejected-sentinel or infinite first accumulation is no longer stored as 0 mm/h, and an interval whose start or end accumulation is not finite (including either infinity) is stored as missing rather than as no rain; only intervals that depend on the bad value are affected. Valid initial zeros, finite decreases (clamped to zero) and uneven step intervals are unchanged. No forecast data is rebuilt or republished by this change.
 
 - RF0814-8: a depth-contour file whose review expiry is an impossible calendar date (such as 2026-11-31 or 2027-02-29) now fails the existing contour check instead of drawing and exporting; real dates keep drawing through their last day and are withheld the next day.
