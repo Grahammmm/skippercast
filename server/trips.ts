@@ -75,7 +75,7 @@ function validatePlanBody(plan:ExternalJSON):TripPlanBody|null{
     return {format:e.format,sha256:e.sha256,exported_at:new Date(e.exported_at).toISOString()};
   });
   const body:TripPlanBody={spots,legs,window:{depart:clock(w.depart,'departure'),return_by:clock(w.return_by,'return time'),hours},exports};
-  if(JSON.stringify(body).length>PLAN_LIMITS.bytes)throw new ClientError('plan too large');
+  if(new TextEncoder().encode(JSON.stringify(body)).byteLength>PLAN_LIMITS.bytes)throw new ClientError('plan too large');
   return body;
 }
 /** The planner fields of a trip; `species` (the primary target) must already be validated for the region. */
