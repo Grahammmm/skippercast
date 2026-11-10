@@ -145,3 +145,37 @@ test('first_answer_states_keep_checked_pairs: unknown is not drawn as success, a
   const t = themes(tokensCss);
   assert.notEqual(t.dark.mint, t.light.mint);
 });
+
+// SC1722-08: one shared 2 px focus outline for every link, an inset one for the app map canvases, no per-group copies.
+const RING = /outline\s*:\s*2px solid var\(--focus\)/;
+/** The declarations of the rule with exactly this selector list, or null. */
+const ruleBody = (css, selector) => rulesOf(css.replace(/\/\*[\s\S]*?\*\//g, '')).find(([s]) => s.split(',').map(x => x.trim()).includes(selector))?.[1] ?? null;
+const focusAudit = sheets => {
+  const f = [];
+  const link = ruleBody(sheets.uiCss, 'a:focus-visible'), canvas = ruleBody(sheets.uiCss, '.app-chart canvas:focus-visible');
+  if (!link || !RING.test(link) || !/outline-offset\s*:\s*2px/.test(link)) f.push('shared link ring');
+  if (!canvas || !RING.test(canvas) || !/outline-offset\s*:\s*-2px/.test(canvas) || ruleBody(sheets.uiCss, '.app-terrain canvas:focus-visible') !== canvas) f.push('inset canvas ring');
+  if (/box-shadow/.test(canvas ?? '')) f.push('canvas ring is a shadow');
+  for (const [name, selector] of [['appCss', '.app-views a:focus-visible'], ['appCss', '.app-first-answer-rules a:focus-visible'], ['accountCss', '.app-account-links a:focus-visible'], ['landingCss', '.landing a:focus-visible'], ['planCss', '.app-plan a:focus-visible']]) {
+    const body = ruleBody(sheets[name], selector);
+    if (body && /outline/.test(body)) f.push(`duplicate outline: ${selector}`);
+  }
+  if (!ruleBody(sheets.planCss, '.app-plan h2:focus-visible') || !RING.test(ruleBody(sheets.planCss, '.app-plan h2:focus-visible'))) f.push('plan heading ring');
+  if (!/outline-offset\s*:\s*-2px/.test(ruleBody(sheets.appCss, '.app-tabs .app-views a:focus-visible') ?? '')) f.push('tab offset');
+  if (/summary, a\)/.test(sheets.accountCss)) f.push('alerts link arm');
+  if (!/border-radius\s*:\s*var\(--radius-sm\)/.test(ruleBody(sheets.landingCss, '.landing a:focus-visible') ?? '')) f.push('landing radius');
+  if (!/border-radius\s*:\s*var\(--radius-sm\)/.test(ruleBody(sheets.appCss, '.app-first-answer-rules a:focus-visible') ?? '')) f.push('first-answer radius');
+  return f;
+};
+
+test('shared_link_outline: one a:focus-visible ring and inset canvas rings, duplicates gone, local exceptions kept', () => {
+  const sheets = {uiCss, appCss, planCss: read('web/app/plan.css'), accountCss: read('web/app/account.css'), landingCss: read('web/landing/landing.css')};
+  assert.deepEqual(focusAudit(sheets), []);
+  const mutate = (name, from, to) => { assert.ok(sheets[name].includes(from), `mutation input present: ${from}`); return focusAudit({...sheets, [name]: sheets[name].replace(from, to)}); };
+  assert.ok(mutate('uiCss', ', a:focus-visible {', ' {').includes('shared link ring'));
+  assert.ok(mutate('uiCss', '.app-chart canvas:focus-visible, .app-terrain canvas:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }', '.app-chart canvas:focus-visible, .app-terrain canvas:focus-visible { outline: 1px solid var(--focus); outline-offset: -2px; }').includes('inset canvas ring'));
+  assert.ok(mutate('uiCss', 'outline-offset: -2px; }', 'outline-offset: -2px; box-shadow: 0 0 0 2px var(--focus); }').includes('canvas ring is a shadow'));
+  assert.ok(mutate('landingCss', '.landing a:focus-visible { border-radius', '.landing a:focus-visible { outline: 2px solid var(--focus); border-radius').includes('duplicate outline: .landing a:focus-visible'));
+  assert.ok(mutate('planCss', '.app-plan h2:focus-visible {', '.app-plan h3:focus-visible {').includes('plan heading ring'));
+  assert.ok(mutate('appCss', '.app-tabs .app-views a:focus-visible { outline-offset: -2px; }', '.app-tabs .app-views a:focus-visible { outline-offset: 2px; }').includes('tab offset'));
+});

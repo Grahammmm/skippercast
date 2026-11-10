@@ -393,7 +393,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // a minimum height on the desktop legend); no colour, opacity, backing or text paint changed, and the cited line numbers above are unmoved.
   // SC-TIDAL-1 only appends a scoped .app-entrance* block at the end of app.css (token text roles on the brief's run line, not the legend glass);
   // no legend paint or backing changed and the cited line numbers above are unmoved.
-  "appCss": "3b1482c3c8e08bab1fa64f855bd892047217279b837cf989d448332f884c315e",
+  // SC1722-08 only consolidates link focus outlines (removes the .app-views and first-answer duplicates; the shared a:focus-visible rule is in ui.css), so
+  // focus paint intentionally changes; unfocused legend text and backing are unchanged. Cited app.css lines after :29 moved up by one.
+  "appCss": "c9befe468aae4b4da9668ff334f723d3b93945cac2e29b975f07b40c16d33f10",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
@@ -438,8 +440,8 @@ export function checkSurfaceSource(sources) {
         ['legend-labels', 'muted', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:858-868,2678-2684; bridge:21,27'],
         ['sheen-text', 'text', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,26'],
         ['sheen-muted', 'muted', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,27'],
-        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,176,216,230; Legend.tsx:378'],
-        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:176,197,245; Legend.tsx:109,243,378'],
+        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,175,215,229; Legend.tsx:378'],
+        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:175,196,244; Legend.tsx:109,243,378'],
       ]) {
         const foreground = resolve(role);
         results.push({theme, id, binding, foreground, surface,
