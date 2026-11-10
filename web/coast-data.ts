@@ -35,7 +35,7 @@
 //
 // Snapshots are county-wide, so a loaded snapshot is cached across places and
 // admitted again when the user returns to a bound place, until it expires.
-import {batch, computed, signal, type ReadonlySignal} from '@preact/signals';
+import {batch, computed, signal, untracked, type ReadonlySignal} from '@preact/signals';
 import {coastFetch} from '../packages/coast/src/transport.ts';
 import {resolveReportBinding, type CoastReportContext, type ReportBinding} from '../packages/coast/src/state/report-binding.ts';
 import type {Report} from '../packages/coast/src/types.ts';
@@ -107,7 +107,7 @@ export type CoastData = {
   coastBinding: ReadonlySignal<ReportBinding | null>;
   /** Select a place (null: none). Returns its binding; requests only when the binding changes. */
   setPlace(context: CoastReportContext | null): ReportBinding | null;
-  /** Ask for products for the current and later bound places. Idempotent: fetches only an idle product. */
+  /** Ask for products for the current and later bound places. Fetches idle or failed products; shares in-flight reads. */
   load(...products: CoastProduct[]): Promise<void>;
   /** Request again (an explicit retry); defaults to every product asked for. */
   refresh(...products: CoastProduct[]): Promise<void>;
@@ -276,7 +276,12 @@ export function createCoastData(options: CoastDataOptions = {}): CoastData {
 
   return {
     coastReport: admitted('report'), coastOcean: admitted('ocean'), coastHistory: admitted('history'),
-    coastStatus: shownStatus, coastBinding: binding, setPlace, load, refresh, destroy,
+    coastStatus: shownStatus, coastBinding: binding,
+    // Commands must not subscribe a calling effect to transport state: a failed
+    // read would otherwise rerun the reader and retry forever without a trigger.
+    setPlace: context => untracked(() => setPlace(context)),
+    load: (...products) => untracked(() => load(...products)),
+    refresh, destroy,
   };
 }
 

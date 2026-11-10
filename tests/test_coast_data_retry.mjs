@@ -3,6 +3,7 @@
 import test, {mock} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {effect, signal} from '@preact/signals';
 import {createCoastData} from '../web/coast-data.ts';
 import {overviewReportContext} from '../web/overview-context.ts';
 
@@ -100,6 +101,35 @@ test('a retry that fails again settles at error with no loop', async t => {
   assert.equal(client.coastStatus.value.history, 'error');
   await settle();
   assert.equal(net.calls.length, 2);
+});
+
+test('a reactive reader retries only when its own trigger changes, not when a read fails', async t => {
+  const replies = [];
+  const {net, client} = setup(t, () => new Promise(resolve => replies.push(resolve)));
+  const visit = signal(0);
+  let runs = 0;
+  const stop = effect(() => {
+    void visit.value;
+    runs++;
+    client.setPlace(MORRO());
+    void client.load('report');
+  });
+  t.after(stop);
+  await settle();
+  assert.equal(net.calls.length, 1);
+  replies.shift()(bad());
+  await settle();
+  assert.equal(client.coastStatus.value.report, 'error');
+  assert.equal(runs, 1, 'transport state must not subscribe the reader effect');
+  assert.equal(net.calls.length, 1, 'failure does not start an automatic retry');
+  visit.value++;
+  await settle();
+  assert.equal(net.calls.length, 2, 'a real return retries once');
+  replies.shift()(bad());
+  await settle();
+  assert.equal(runs, 2);
+  assert.equal(client.coastStatus.value.report, 'error');
+  assert.equal(net.calls.length, 2, 'the failed retry stays settled');
 });
 
 test('invalid_expired_stay_withheld: no retry on load or online', async t => {
