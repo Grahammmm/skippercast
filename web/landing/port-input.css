@@ -29,6 +29,12 @@
 .port-input-feedback--error > span { min-width: 0; overflow-wrap: anywhere; }
 .port-input-note { font-size: var(--text-11); }
 .port-input-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+/* SC1922-05: the landing's port form holds the room its results viewport and wrapped actions take before the port list and
+   the first line have loaded (the custom properties are landing.css's); the app's dialog and first-run sheet keep their sizing. */
+@media (max-width: 599px) {
+  .landing .port-input-results { min-height: var(--landing-results-h); }
+  .landing .port-input-actions { min-height: var(--landing-actions-h); }
+}
 
 /* The app's port dialog */
 .port-dialog { box-sizing: border-box; width: min(560px, calc(100% - var(--space-6))); max-height: calc(100% - var(--space-6)); overflow: auto; padding: var(--space-4) var(--space-5) var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3); }
