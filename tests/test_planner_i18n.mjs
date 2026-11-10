@@ -92,7 +92,7 @@ test('planner_en_bytes_and_es_chrome: es then en restores the exact English page
   const wp = {id: 'user:a', name: 'Mi <punto>', category: 'wreck', latitude: 35.3, longitude: -121.1};
   const { p, model } = mk({spots: {value: spots}, protectedHits: {value: [hit]}, waypointPosition: {value: {latitude: 35.2, longitude: -121.2}},
     draft: {value: {...mk().p.draft.value, ids: ['r1', 'r2', 'user:a'], userWaypoints: [wp], name: 'Mi plan'}},
-    tripAtlas: {value: {targets: spots, areas: []}}});
+    orderedStops: {value: [...spots, {...wp, label: wp.name}]}, tripAtlas: {value: {targets: spots, areas: []}}});
   try {
     ui.language.value = 'en';
     const en = page(model);

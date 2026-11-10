@@ -4,7 +4,7 @@
 // and exports as before. Loaded with the planner on first open. Styles:
 // web/app/trip.css. SC0707-10: every word is a catalogue id read at render in the
 // chosen language; the model's English messages go through web/planner-copy.ts.
-import {useEffect} from 'preact/hooks';
+import {useEffect, useLayoutEffect, useRef} from 'preact/hooks';
 import {signal} from '@preact/signals';
 import {coordinates} from '../state.ts';
 import {session} from '../account.ts';
@@ -140,13 +140,25 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
   const device = DEVICE_HELP[deviceChoice.value] ?? DEVICE_HELP.generic!;
   const spots = m.spots.value, shared = sharedConfidence(spots);
   const port = !m.portsFailed.value && m.ports.value.find(p => p.id === f.port);
-  const selected = d.ids.map(id => m.tripAtlas.value.targets.find(t => t.id === id)).filter((t): t is Target => !!t);
-  const waypoints = (d.userWaypoints ?? []).filter(t => d.ids.includes(t.id));
+  const stops = m.orderedStops.value;
+  const orderFocus = useRef<{id: string; direction: 'up' | 'down'} | null>(null);
+  const orderButtons = useRef(new Map<string, HTMLButtonElement>());
+  useLayoutEffect(() => {
+    const wanted = orderFocus.current;
+    if (!wanted) return;
+    const other = wanted.direction === 'up' ? 'down' : 'up';
+    (orderButtons.current.get(`${wanted.id}:${wanted.direction}`) ?? orderButtons.current.get(`${wanted.id}:${other}`))?.focus();
+    orderFocus.current = null;
+  }, [d.ids]);
+  const move = (id: string, direction: 'up' | 'down') => {
+    orderFocus.current = {id, direction};
+    if (!m.moveStop(id, direction)) orderFocus.current = null;
+  };
   // BF-closures-everywhere: the planner's shared screen for THIS region, else null (every leg then reads not checked). Its contents are mutable, so the tick (minute and boundary updates) is read here too.
   void m.tick.value;
   const shown = protectedScreen.value, screen = shown.state === 'loaded' && shown.region === m.region.id ? shown.screen : null;
   const route = tripLegs(port ? {name: port.name, lat: port.match[0], lon: port.match[1]} : null,
-    [...selected, ...waypoints].map(t => ({id: t.id, name: t.name || ('label' in t ? t.label : t.id), lat: t.latitude, lon: t.longitude})), cruiseSpeed.value,
+    stops.map(t => ({id: t.id, name: t.name || t.label || t.id, lat: t.latitude, lon: t.longitude})), cruiseSpeed.value,
     legRoute(landWater.value, m.region.id), screen);
   // The shoreline lines are asked for once when a leg waits on them (shared with the brief's request); the legs re-render when they land.
   const alertLegs: AlertLegsFn = stops => tripLegs(port ? {name: port.name, lat: port.match[0], lon: port.match[1]} : null, stops, cruiseSpeed.value, legRoute(landWater.value, m.region.id), screen);
@@ -189,10 +201,18 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
       <details class="export-card" id="export-spots" open>
         <summary><span>{t('planner.step1', lang)}</span><strong id="export-selection-count">{t('planner.selected', lang, {n: d.ids.length})}</strong></summary>
         <div class="export-card-body">
-          {route.legs.length > 0 && <section aria-label={t('planner.stops.heading', lang)}>
+          {stops.length > 0 && <section aria-label={t('planner.stops.heading', lang)}>
             <h3>{t('planner.stops.heading', lang)}</h3>
+            <ol aria-label={t('planner.stops.aria', lang)}>{stops.map(stop => {
+              const index = d.ids.indexOf(stop.id), name = stop.name || stop.label;
+              return <li key={stop.id} data-stop-id={stop.id}>{name}{index >= 0 && (['up', 'down'] as const).map(direction =>
+                (direction === 'up' ? index > 0 : index < d.ids.length - 1) ? <button key={direction} type="button" disabled={m.restorePending.value}
+                  ref={el => { const key = `${stop.id}:${direction}`; if (el) orderButtons.current.set(key, el); else orderButtons.current.delete(key); }}
+                  aria-label={t(direction === 'up' ? 'planner.order.upAria' : 'planner.order.downAria', lang, {name})}
+                  onClick={() => move(stop.id, direction)}>{t(direction === 'up' ? 'planner.order.up' : 'planner.order.down', lang)}</button> : null)}</li>;
+            })}</ol>
             {!port && <p>{t('planner.stops.noPort', lang)}</p>}
-            <ol aria-label={t('planner.stops.aria', lang)}>{route.legs.map((leg, i) => <li key={i}>{`${leg.from} → ${leg.to} · ${nmText(leg.nm, lang)} nm${leg.basis === 'straight' ? t('planner.leg.straight', lang) : ''}${minutes(leg.runMin)}${legLine(leg.screen, lang)}`}</li>)}</ol>
+            <ol aria-label={t('planner.order.legs', lang)}>{route.legs.map((leg, i) => <li key={i}>{`${leg.from} → ${leg.to} · ${nmText(leg.nm, lang)} nm${leg.basis === 'straight' ? t('planner.leg.straight', lang) : ''}${minutes(leg.runMin)}${legLine(leg.screen, lang)}`}</li>)}</ol>
             <p>{t('planner.leg.total', lang, {nm: nmText(route.totalNm, lang), minutes: minutes(route.totalRunMin)})}</p>
             <p class="export-note">{route.legs.some(leg => leg.basis === 'straight') ? t('planner.leg.straightCaveat', lang) : ''}{t('planner.leg.common', lang)}</p>
           </section>}
