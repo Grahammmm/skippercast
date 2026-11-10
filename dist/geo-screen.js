@@ -71,12 +71,14 @@ const mPerDeg = lat => {
   const r = lat * Math.PI / 180;
   return [111412.84 * Math.cos(r) - 93.5 * Math.cos(3 * r), 111132.92 - 559.82 * Math.cos(2 * r) + 1.175 * Math.cos(4 * r)];
 };
-function segDist2(p, a, b) {
-  const dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy;
-  const t = l ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l)) : 0;
-  const x = a[0] + t * dx - p[0], y = a[1] + t * dy - p[1];
+// Squared distance from point p to segment ab (projected metres). segD2 is the one copy of the arithmetic, on bare numbers.
+function segD2(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy;
+  const t = l ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l)) : 0;
+  const x = ax + t * dx - px, y = ay + t * dy - py;
   return x * x + y * y;
 }
+function segDist2(p, a, b) { return segD2(p[0], p[1], a[0], a[1], b[0], b[1]); }
 export function withinMargin(a, b, marginM = PLANNING_MARGIN_M) {
   if (!a || !b) return false;
   const x = bbox(a), y = bbox(b);
@@ -161,10 +163,55 @@ export function distanceM(a, b) {
   const pa = positions(a), pb = positions(b);
   if (!pa.length || !pb.length) return null;
   if (geometryIntersects(a, b)) return 0;
-  const lat = (pa[0][1] + pb[0][1]) / 2, [kx, ky] = mPerDeg(lat), proj = p => [p[0] * kx, p[1] * ky];
-  const lines = g => { const e = edges(g); return e.length ? e.map(([p, q]) => [proj(p), proj(q)]) : positions(g).map(p => [proj(p), proj(p)]); };
-  const best = (pts, segs) => Math.min(...pts.map(p => Math.min(...segs.map(([s, t]) => segDist2(proj(p), s, t)))));
-  return Math.sqrt(Math.min(best(pa, lines(b)), best(pb, lines(a))));
+  const lat = (pa[0][1] + pb[0][1]) / 2, [kx, ky] = mPerDeg(lat);
+  const A = projectPoints(pa, kx, ky), B = projectPoints(pb, kx, ky), SA = projectSegments(a, A, kx, ky), SB = projectSegments(b, B, kx, ky);
+  // SC1407-01: a box gap is skipped only when, shrunk by `tol` (far above the few ulps segD2's rounding can move a point), it is
+  // still farther than the best so far: an exact lower bound, so the minimum (and every verdict) is unchanged. Off for
+  // non-finite or huge coordinates, where segD2 may give NaN and the old Math.min answer must be kept.
+  const big = Math.max(maxAbs(A), maxAbs(B), maxAbs(SA), maxAbs(SB)), tol = big < 1e100 ? big * 2 ** -40 + 1e-150 : -1;
+  const ab = nearest2(A, SB, Infinity, tol);
+  return ab !== ab ? NaN : Math.sqrt(nearest2(B, SA, ab, tol));
+}
+// SC1407-01 (#1762): distanceM projects each position and edge once per pair (not once per comparison) and scans with plain
+// loops (no spread into Math.min, which throws RangeError on ~10^5 positions). The projection depends on the pair's latitude.
+function projectTo(p, kx, ky, out, i) { out[i] = p[0] * kx; out[i + 1] = p[1] * ky; }
+function projectPoints(ps, kx, ky) {
+  const out = new Float64Array(ps.length * 2);
+  for (let i = 0; i < ps.length; i++) projectTo(ps[i], kx, ky, out, 2 * i);
+  return out;
+}
+// Each segment as 8 numbers: projected ends [ax, ay, bx, by] and their box [minx, miny, maxx, maxy]. A geometry with no
+// edges (Point, MultiPoint, one-position lines) gives a zero-length segment at each position, as before.
+function projectSegments(g, pts, kx, ky) {
+  const e = edges(g), n = e.length || pts.length / 2, out = new Float64Array(n * 8);
+  let prev = null;
+  for (let i = 0, j = 0; i < n; i++, j += 8) {
+    if (!e.length) { out[j] = out[j + 2] = pts[2 * i]; out[j + 1] = out[j + 3] = pts[2 * i + 1]; }
+    else {
+      const [p, q] = e[i];
+      if (p === prev && i) { out[j] = out[j - 6]; out[j + 1] = out[j - 5]; } else projectTo(p, kx, ky, out, j);
+      projectTo(q, kx, ky, out, j + 2); prev = q;
+    }
+    out[j + 4] = Math.min(out[j], out[j + 2]); out[j + 5] = Math.min(out[j + 1], out[j + 3]);
+    out[j + 6] = Math.max(out[j], out[j + 2]); out[j + 7] = Math.max(out[j + 1], out[j + 3]);
+  }
+  return out;
+}
+function maxAbs(v) { let m = 0; for (let i = 0; i < v.length; i++) { const x = Math.abs(v[i]); if (!(x <= m)) { if (x !== x) return Infinity; m = x; } } return m; }
+// The smallest squared distance from any point of `pts` to any segment of `segs`, starting from `best`; NaN as soon as one is NaN.
+function nearest2(pts, segs, best, tol) {
+  for (let i = 0; i < pts.length; i += 2) {
+    const px = pts[i], py = pts[i + 1];
+    for (let j = 0; j < segs.length; j += 8) {
+      if (tol >= 0) {
+        const gx = Math.max(segs[j + 4] - px, px - segs[j + 6], 0) - tol, gy = Math.max(segs[j + 5] - py, py - segs[j + 7], 0) - tol;
+        if ((gx > 0 ? gx * gx : 0) + (gy > 0 ? gy * gy : 0) > best) continue;
+      }
+      const d = segD2(px, py, segs[j], segs[j + 1], segs[j + 2], segs[j + 3]);
+      if (d < best) best = d; else if (d !== d) return NaN;
+    }
+  }
+  return best;
 }
 // A closure whose box is over FAR_M from the place's box is not measured (distanceM stays null when none is nearer): keeps a 500 KB boundary file cheap.
 const FAR_M = 20000;
