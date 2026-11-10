@@ -905,8 +905,13 @@ async function holdEntry(page: Page): Promise<() => void> {
   await page.route(/\/assets\/landing\.[^/]*\.js(?:\?|$)/, async route => { await held; await route.fallback(); });
   return release;
 }
-/** The static page is there with its stylesheets: the form slot has its reserved height. */
-const slotsLaidOut = (page: Page) => page.waitForFunction(() => (document.querySelector('.landing-slot--form')?.getBoundingClientRect().height ?? 0) > 100);
+/** The static page is there with its stylesheets and its web fonts: the form slot has its reserved height. The fonts swap in
+ *  after first paint (font-display: swap) and can re-wrap the hero title above the slots by a line at 360 px, which moves
+ *  every slot together; the slots are measured once that has settled, so the comparison is about the mount, not the swap. */
+async function slotsLaidOut(page: Page) {
+  await page.waitForFunction(() => (document.querySelector('.landing-slot--form')?.getBoundingClientRect().height ?? 0) > 100);
+  await page.evaluate(async () => { await document.fonts.ready; await new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))); });
+}
 const near = (a: number, b: number, why: string) => expect(Math.abs(a - b), `${why}: ${a} against ${b}`).toBeLessThanOrEqual(1);
 
 for (const {width, height} of COLD_PHONES) {
