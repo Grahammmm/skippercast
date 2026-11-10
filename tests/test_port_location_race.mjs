@@ -163,6 +163,7 @@ for (const lang of ['en', 'es']) for (const [code, reason] of [[1, 'denied'], [2
       assert.equal(errorIcon(m).length, 1); assert.equal(errorIcon(m)[0].attrs['aria-hidden'], 'true');
       assert.equal(all(region, n => n.localName === 'title' || n.attrs.role === 'alert').length, 0);
       assert.equal(text(m.root).includes('synthetic provider detail'), false);
+      await m.resolve(0, 'north'); assert.equal(text(region), portCopy(lang)[reason], 'duplicate success cannot overwrite failure');
       await m.click(lang === 'en' ? 'Use my location' : 'Usar mi ubicación');
       assert.equal(errorIcon(m).length, 0); assert.equal(m.geolocation.calls.length, 2);
       await m.resolve(1, 'north'); assert.equal(errorIcon(m).length, 0);
@@ -184,5 +185,29 @@ test('pending and retained feedback follows current language without another loo
     assert.equal(m.snapshot().feedback, portCopy('es').found(north));
     await m.type('South'); assert.equal(m.snapshot().feedback, ''); assert.equal(errorIcon(m).length, 0);
     await m.submit(); assert.equal(m.chosen[0], south);
+  } finally { await m.unmount(); language.value = 'en'; }
+});
+
+for (const [label, geolocation, reason] of [
+  ['absent API', null, 'unsupported'], ['non-callable API', {getCurrentPosition: 3}, 'unsupported'],
+  ['synchronous throw', {getCurrentPosition() { throw Error('synthetic provider detail'); }}, 'unavailable']]) {
+  test(`mounted ${label} finishes finding with honest generic feedback`, async () => {
+    const m = mount({geolocation}); await m.update({});
+    try {
+      await m.click('Use my location'); assert.equal(m.snapshot().feedback, portCopy('en')[reason]);
+      assert.equal(errorIcon(m).length, 1); assert.ok(document.activeElement === m.input());
+      await m.click('Explore the coast'); assert.equal(m.explored.length, 1);
+    } finally { await m.unmount(); }
+  });
+}
+test('forgotten feedback changes language without location lookup', async () => {
+  const store = new Map([['skippercast-home-port-v1', north.id]]);
+  const m = mount({storage: {getItem: k => store.get(k) ?? null, removeItem: k => store.delete(k)}});
+  await m.update({});
+  try {
+    await m.click('Forget saved home'); assert.equal(m.snapshot().feedback, portCopy('en').forgotten);
+    await act(() => { language.value = 'es'; });
+    assert.equal(m.snapshot().feedback, portCopy('es').forgotten); assert.equal(m.geolocation.calls.length, 0);
+    assert.equal(errorIcon(m).length, 0);
   } finally { await m.unmount(); language.value = 'en'; }
 });
