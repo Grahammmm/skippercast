@@ -110,11 +110,11 @@ test('the dock renders Spanish labels and restores English exactly', async () =>
   assert.match(en, /aria-label="Play"/);
   assert.match(en, /aria-label="Hour"/);
   assert.match(en, />1 pm</);
-  assert.match(en, />Today</);
+  assert.match(en, />Today · Unknown</, 'the chip carries its day verdict word (SC2252-06)');
   language.value = 'es';
   const es = html();
-  for (const word of ['aria-label="Tiempo"', 'aria-label="Día"', 'aria-label="Reproducir"', 'aria-label="Hora"', '>Hoy<', '>13<']) assert.ok(es.includes(word), word);
-  assert.ok(!es.includes('Today') && !es.includes('Play'));
+  for (const word of ['aria-label="Tiempo"', 'aria-label="Día"', 'aria-label="Reproducir"', 'aria-label="Hora"', '>Hoy · Desconocido<', '>13<']) assert.ok(es.includes(word), word);
+  assert.ok(!es.includes('Today') && !es.includes('Play') && !es.includes('Unknown'));
   language.value = 'en';
   assert.equal(html(), en, 'English restores byte for byte');
 });
