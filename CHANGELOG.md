@@ -567,6 +567,8 @@
 
 ### Internal
 
+- RF0824-6: a published R2 feed that is asked for with `If-Match` or `If-Unmodified-Since` and fails that condition now answers 412 (no body, `no-store`, never cached) instead of 304, so a caller pinning an old object is not told its copy is current. These two conditions skip the edge cache and judge the current object's ETag (strong comparison) or whole-second upload time; an `If-Unmodified-Since` that is not an HTTP-date (for example `2020-01-01`) is ignored, and an `If-Match` list with an illegal tag (for example one holding a space) fails with 412; ordinary `If-None-Match`, `If-Modified-Since` and Range requests, and the cache-first path, are unchanged (`server/feeds.ts`, `tests/test_feed_preconditions.mjs`).
+
 - Design only, no app change: `docs/plans/pelagic-context/design.md` sets what albacore and bluefin pelagic context may show at a selected hour (separate dated evidence lines, only WCOFS lines change with the hour, bluefin keeps no temperature range, no score, rank or probability), the held-out validation test a search priority must pass first (not evaluable on the data held today, so priority stays off), and records that the species-search-plans search strips were retired with the v1 map (#561).
 
 - SP-FLEET-DATES: the public fleet heat route (`/api/fleet/public/heat`, still off by default) withholds a cell whose `last_date` is not an exact `YYYY-MM-DD` calendar day. The code re-check now rejects empty, padded, partial, timestamp-shaped and impossible dates such as 2021-02-29 before the 72-hour delay comparison, which the text comparison in SQL let through. The delay, vessel floor, rights allowlist, whole-season filter and paging are unchanged (`tests/test_sp_fleet_dates.mjs`, `scripts/accept_sp_fleet_dates.py`).

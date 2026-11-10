@@ -149,6 +149,69 @@ function edgeFill(cache: Cache, request: Request, key: string, logicalKey: strin
   };
 }
 
+const POSITIVE = ['If-Match', 'If-Unmodified-Since'];
+// RFC 9110 entity-tag: optional W/, then a quoted run of etagc (no space, no inner quote, no control byte).
+const ETAG_LIST = /[ \t]*(W\/)?("[\x21\x23-\x7e\x80-\xff]*")[ \t]*(?:,|$)/y;
+const ETAG_VALID = /^[ \t]*(?:\*|(?:W\/)?"[\x21\x23-\x7e\x80-\xff]*"(?:[ \t]*,[ \t]*(?:W\/)?"[\x21\x23-\x7e\x80-\xff]*")*[ \t]*,?[ \t]*)$/;
+/** If-Match precondition over a strong ETag: `*` or a legal list holding an equal strong tag. Malformed lists fail. */
+function ifMatchHolds(header: string, httpEtag: string | undefined): boolean {
+  if (header.trim() === '*') return true;
+  if (!httpEtag || httpEtag.startsWith('W/')) return false;
+  let found = false, end = 0;
+  ETAG_LIST.lastIndex = 0;
+  for (let m = ETAG_LIST.exec(header); m; m = ETAG_LIST.exec(header)) {
+    end = ETAG_LIST.lastIndex;
+    if (!m[1] && m[2] === httpEtag) found = true;
+    if (end >= header.length) break;
+  }
+  return end === header.length && found;
+}
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DAY3 = '(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)', MON3 = '(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)', TIME = '(\\d{2}):(\\d{2}):(\\d{2})';
+const HTTP_DATES: {re: RegExp; at: [day: number, month: number, year: number, time: number]}[] = [
+  {re: new RegExp(`^${DAY3}, (\\d{2}) ${MON3} (\\d{4}) ${TIME} GMT$`), at: [1, 2, 3, 4]}, // IMF-fixdate
+  {re: new RegExp(`^(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), (\\d{2})-${MON3}-(\\d{2}) ${TIME} GMT$`), at: [1, 2, 3, 4]}, // obsolete RFC 850
+  {re: new RegExp(`^${DAY3} ${MON3} ([ \\d]\\d) ${TIME} (\\d{4})$`), at: [2, 1, 6, 3]}, // obsolete asctime
+];
+/** Milliseconds for a syntactically valid HTTP-date (IMF-fixdate, RFC 850, asctime) naming a real calendar instant; NaN otherwise. */
+function parseHttpDate(value: string): number {
+  for (const {re, at} of HTTP_DATES) {
+    const m = re.exec(value);
+    if (!m) continue;
+    const group = (index: number) => m[index] ?? '';
+    const day = Number(group(at[0])), month = MONTHS.indexOf(group(at[1]));
+    let year = Number(group(at[2]));
+    if (group(at[2]).length === 2) { // RFC 850 two-digit year: more than 50 years ahead means the past century
+      year += 2000;
+      if (year > new Date().getUTCFullYear() + 50) year -= 100;
+    }
+    const hour = Number(group(at[3])), minute = Number(group(at[3] + 1)), second = Number(group(at[3] + 2));
+    if (hour > 23 || minute > 59 || second > 59) return NaN;
+    const date = new Date(Date.UTC(year, month, day, hour, minute, second));
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month || date.getUTCDate() !== day) return NaN;
+    return date.getTime();
+  }
+  return NaN;
+}
+/** Conditional headers for the one R2 get: standard precedence; an invalid If-Match list or If-Unmodified-Since date is not forwarded (judged here). */
+function conditionalHeaders(request: Request): Headers {
+  const out = new Headers(), get = (name: string) => request.headers.get(name);
+  const match = get('If-Match'), unmodified = get('If-Unmodified-Since'), none = get('If-None-Match'), modified = get('If-Modified-Since');
+  if (match !== null) { if (ETAG_VALID.test(match)) out.set('If-Match', match); }
+  else if (unmodified !== null && Number.isFinite(parseHttpDate(unmodified))) out.set('If-Unmodified-Since', unmodified);
+  if (none !== null) out.set('If-None-Match', none);
+  else if (modified !== null) out.set('If-Modified-Since', modified);
+  return out;
+}
+/** True when If-Match (or, without it, a valid If-Unmodified-Since) fails against the object R2 returned. */
+function positiveFails(request: Request, object: {httpEtag?: string; uploaded?: Date}): boolean {
+  const match = request.headers.get('If-Match'), unmodified = request.headers.get('If-Unmodified-Since');
+  if (match !== null) return !ifMatchHolds(match, object.httpEtag);
+  if (unmodified === null || !(object.uploaded instanceof Date)) return false;
+  const since = parseHttpDate(unmodified);
+  return Number.isFinite(since) && Math.floor(object.uploaded.getTime() / 1000) > Math.floor(since / 1000);
+}
+
 /**
  * GET /feeds/<branch>/<path>: R2 first (edge-cached, with Range and ETag), then
  * the GitHub branch through the fetch cache. Returns null when the path is not a feed.
@@ -158,7 +221,9 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
   if (!logicalKey) return null;
   const selected = bucket;
   // A non-seafloor edge-cache hit answers before any R2 read; seafloor stays resolve-first and uncached.
-  const edge: {cache: Cache | null; hit?: Response} = selected && !logicalKey.startsWith('tiles/seafloor/') ? await edgeLookup(request, logicalKey, build) : {cache: null};
+  // If-Match / If-Unmodified-Since need the current object's metadata, so they never use the edge cache.
+  const positive = POSITIVE.some(name => request.headers.has(name));
+  const edge: {cache: Cache | null; hit?: Response} = selected && !positive && !logicalKey.startsWith('tiles/seafloor/') ? await edgeLookup(request, logicalKey, build) : {cache: null};
   if (edge.hit) return edge.hit;
   const target = await resolver(selected)(logicalKey);
   if (target.missing) return new Response('Not found', {status: 404, headers: {'Cache-Control': 'no-store'}});
@@ -192,7 +257,8 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
   if (selected) {
     // Seafloor archives are gated on a live publication receipt and never cached.
     const fill = edge.cache && !seafloor ? edgeFill(edge.cache, request, key, logicalKey, headers, ctx, build, selected) : undefined;
-    const object = await selected.get(key, {range: request.headers, onlyIf: request.headers}) as R2Object | R2ObjectBody | null;
+    const conditional = conditionalHeaders(request);
+    const object = await selected.get(key, {range: request.headers, onlyIf: conditional}) as R2Object | R2ObjectBody | null;
     if (object) {
       if (publication && object.customMetadata?.sha256 !== expectedHash) {
         return new Response('Seafloor archive revision unavailable', {status: 503, headers});
@@ -200,6 +266,12 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
       headers.set('ETag', object.httpEtag);
       headers.set('X-Feed-Source', 'r2');
       headers.set('Accept-Ranges', 'bytes');
+      if (positiveFails(request, object)) {
+        // A failed If-Match / If-Unmodified-Since is 412, never 304 (the caller's copy is not "current"); never cached.
+        if ('body' in object) await (object.body as ReadableStream | null)?.cancel().catch(() => {});
+        headers.set('Cache-Control', 'no-store');
+        return new Response(null, {status: 412, headers});
+      }
       if (edge.cache) headers.set('X-SC-Cache', 'miss');
       if (!('body' in object)) return new Response(null, {status: 304, headers});
       if (object.range && request.headers.has('Range')) {
