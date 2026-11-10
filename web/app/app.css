@@ -290,6 +290,10 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 @media (min-width: 1024px) {
   /* The brief scrolls inside its column; the page itself stays put. */
   .app { height: 100vh; height: 100dvh; }
+  /* SC1722-19: the stage takes the row's remainder instead of its 480 px minimum, and the time dock sits in its flow at the
+     bottom of the map column (sticky), so it stays whole in the window from 1,024 x 768 up. The other chrome is absolute. */
+  .app-main > .app-stage { min-height: 0; display: flex; flex-direction: column; }
+  .app-main > .app-stage > .app-dock { position: sticky; left: auto; right: auto; bottom: var(--space-4); flex: none; margin: auto var(--space-4) var(--space-4); z-index: var(--z-map-chrome); }
 }
 
 @media (max-width: 1023px) {
