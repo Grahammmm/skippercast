@@ -3,6 +3,7 @@
 ## Unreleased
 
 - SC1407-11: the brief's forecast-skill line now speaks for the hour the brief answers for: it reads the 24, 48 or 72 h-ahead scores by that hour's lead from now (the publisher's half-open buckets, so exactly 24 h ahead reads the 48 h scores) and names the lead, reads UNKNOWN for an hour 72 h or more ahead or already past (no published score, never a 24 h fallback), and keeps "not enough buoy history yet" when that lead is thin instead of showing another lead's figure. The line links to the full scorecard at /skill. English and Spanish.
+- SC1407-06: the map's reef-mark screen and the trip planner no longer each download and parse the live CDFW protected-area boundaries on the same `/map` load: when both ask the exact same query while it is in flight, one request and one parsed answer serve both (`dist/live-mpa.js`). Nothing is kept after the answer, so a later refresh asks again; each screen keeps its own checks and daily-feed fallback, and both record the time the answer arrived.
 
 - RF1345-7: the AIS port-coverage report opens exactly the requested processor `state.sqlite`, read-only, even when its path contains `?`, `#`, `%` or other URI characters; it no longer creates a stray file, reads a lookalike database or reports coverage unknown for such a path. Counts, the window and unknown-state output are unchanged.
 
