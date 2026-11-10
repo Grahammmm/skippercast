@@ -52,6 +52,16 @@ export function readout(state: DockTime, tz: string, lang: Language = 'en'): str
   return state.index < 0 ? `${text}${t('dock.outside', lang)}` : text;
 }
 
+/** Day and hour for the controls, using the same explicit preview context as the thumb. */
+export function dockValueText(now: Date, tz: string, state: DockTime, lang: Language = 'en', at = state.at): string {
+  const parts = localParts(new Date(at), tz);
+  const label = parts.day === state.today ? t('dock.today', lang)
+    : parts.day === horizonDays(now, tz)[1]?.day ? t('dock.tomorrow', lang)
+    : dayOptions(now, tz, parts.day, lang).find(d => d.value === parts.day)!.label;
+  const text = `${label} · ${hourText(parts.hour, lang)}`;
+  return state.index < 0 ? `${text}${t('dock.outside', lang)}` : text;
+}
+
 /**
  * Write hour `at` (epoch ms) at once: ?hour= ISO UTC, ?day= its local day unless that is today. The dock's own
  * inputs go through web/dock-selection.ts instead, which shows the hour at once and settles it after a pause.
@@ -108,7 +118,7 @@ export function TimeDock({now = new Date()}: {now?: Date} = {}) {
     <div class="app-dock" ref={dock}>
       <Dock days={withVerdicts(dayOptions(now, tz, state.day, lang), answers, lang)} labels={dockLabels(lang)} day={state.day} onDay={d => requestDockDay(now, tz, d, state)} playing={playing} onPlay={setPlaying}
         stepOnly={reduced} advanceDisabled={nextHour(state.at, now) === null} hour={Math.max(0, state.index)} hours={state.index < 0 ? 1 : state.hours.length} disabled={state.index < 0}
-        onHour={i => requestDockHour(now, tz, at(i))} hourText={i => state.index < 0 ? readout(state, tz, lang) : hourText(localParts(new Date(at(i)), tz).hour, lang)} />
+        onHour={i => requestDockHour(now, tz, at(i))} hourText={i => dockValueText(now, tz, state, lang, at(i))} />
       <span class="app-dock-zone ui-mono">{zoneName(new Date(state.at), tz)}</span>
     </div>
   );

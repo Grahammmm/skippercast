@@ -81,7 +81,7 @@
         },
         {
           "max_bytes": 74000,
-          "reason": "Ceiling stays at 74,000 (SC1922-03), already raised by MAIN-RED-SKIPPERCAST. The touch-minimum rules for the map's small controls (web/app/app.css) take the app first-load styles to 73,379 bytes on this branch merged with main 9917437ec, 379 bytes over the 73,000 budget (main alone measures 73,052); the budget moves up 1,000 bytes (0.8% headroom over that build), no more."
+          "reason": "Raised 73,000 to 74,000 (RF1925-2). This PR changes no stylesheet; main 9917437ec itself builds app first-load styles at 73,052 bytes (assets/app css 51.9 KB plus degraded-notice, tokens and Brief), 52 bytes over the 73,000 budget after the RF1935-4 and UXFIX-13 merges, so the required Size budget check fails on any branch merged with it; the budget moves up 1,000 bytes (1.3% headroom over that build), no more."
         }
       ]
     },
