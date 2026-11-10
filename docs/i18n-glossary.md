@@ -219,6 +219,17 @@ English pages ship English only; the Spanish table (`web/strings.es.generated.js
 | Spanish could not load, so the page stays in English. | `No se pudo cargar el español, así que la página sigue en inglés.` | `language.loadFailed` | never claims Spanish is active |
 | Try Español again | `Volver a intentar en español` | `language.retrySpanish` | the landing's retry link; the app retries from its Español button |
 
+### Fishing profile and Coast view (SC1722-13)
+
+Two different controls must never share a visible Spanish name. The fishing profile (and the origin choice in the limits form) is `Orilla`; the Coast view of the app is `Costa`. Geographic prose about the coast as a place (`costa`, `la costa`, `línea costera`, `Costa de California central`) is not a profile label and keeps its ordinary wording.
+
+| English | Spanish | IDs | Note |
+|---|---|---|---|
+| Shore (fishing profile; also the profile name inside composed sentences such as the default-limits notice and the target group headings) | `Orilla` | `where.profile.shore` | the machine value stays `shore` |
+| Shore (launch-origin choice in the limits form) | `Orilla` | `limits.from.shore` | follows the profile name |
+| Coast (the map view, masthead and phone tab) | `Costa` | `shell.view.coast` | never the profile; the machine value stays `coast` |
+| Find a target (target search field, placeholder and accessible name) | `Busca especie` | `command.findTarget` | short, so the 128 px field shows it whole |
+
 ## 2. Observed divergences
 
 Every catalogue Spanish value that renders a listed term differently from

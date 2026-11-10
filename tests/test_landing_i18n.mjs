@@ -201,7 +201,7 @@ test('landing_english_bytes_and_spanish_funnel: English is the old copy word for
   assert.ok(!es.port.includes('<b>Odd'), 'a port name with markup is escaped, not rendered');
   assert.ok(es.down.includes('Las opciones de puerto no están disponibles. Explora la costa en su lugar.') && es.down.includes('>Intentar de nuevo<'));
   assert.ok(es.wait.includes('Cargando puertos…'));
-  for (const text of ['¿Cómo pescas?', 'Esto define el límite de profundidad', '>Barco<', '>Costa<', '>Pesca submarina<', '>Kayak<', 'Marcas de arrecife y fondo marino hasta 300 ft; fondo marino y corrientes en el mapa.', 'Cargando el mapa de Morro Bay…', '>Cambiar puerto<'])
+  for (const text of ['¿Cómo pescas?', 'Esto define el límite de profundidad', '>Barco<', '>Orilla<', '>Pesca submarina<', '>Kayak<', 'Marcas de arrecife y fondo marino hasta 300 ft; fondo marino y corrientes en el mapa.', 'Cargando el mapa de Morro Bay…', '>Cambiar puerto<'])
     assert.ok(es.step.includes(text), text);
   assert.ok(es.ready.includes('Archivos del mapa de Morro Bay listos.') && es.ready.includes('aria-pressed="true"'));
   assert.match(es.failed, /<p class="landing-step-status" role="status" data-warm="failed"><\/p>/, 'a failed warm-up still says nothing');
