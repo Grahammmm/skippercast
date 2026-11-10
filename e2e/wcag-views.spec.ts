@@ -190,7 +190,7 @@ test.describe('the gate itself', () => {
     await page.setContent(`<style>.sr{position:absolute;width:1px;height:1px;overflow:hidden} .sr:focus{position:static;width:auto;height:auto;outline:2px solid}
       button:focus{outline:2px solid} .bare:focus{outline:none}</style><a class="sr" href="#m">Skip</a><button class="ok">a</button><button class="bare">b</button>`);
     expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-indicator', selector: 'button.bare'}]);
-    await page.setContent(`<input class="t"><button class="n">n</button><script>
+    await page.setContent(`<style>input:focus,button:focus{outline:2px solid}</style><input class="t"><button class="n">n</button><script>
       document.querySelector('.t').addEventListener('keydown', e => { if (e.key === 'Tab') e.preventDefault(); });</script>`);
     expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-trap', selector: 'input.t'}]);
     // Focus moving inside an open shadow root is not a trap on its host (the History view's CoastMarkup).

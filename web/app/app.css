@@ -381,7 +381,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-fleet-form > .app-fleet-check, .app-fleet-form > .app-empty, .app-fleet-actions { grid-column: 1 / -1; }
 .app-fleet-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; color: var(--muted); font-size: var(--text-11); }
 .app-fleet-field input { min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-13); }
-.app-fleet-field input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-fleet-field input:focus-visible, .app-fleet-check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-fleet-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .app-fleet-how summary { display: flex; align-items: center; min-height: var(--touch-min); cursor: pointer; color: var(--blue); }
 .app-fleet-how summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

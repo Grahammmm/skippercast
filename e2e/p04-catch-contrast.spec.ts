@@ -228,7 +228,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/app/MapStage.tsx": "5ab4d95d39768d31fc0851cb0967ddd322bf63b0bdaf1d9801a023e745112a1c",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
-  // changes; unfocused catch text and contrast are unchanged. check_contrast.mjs changes only the appCss surface hash, its comment and moved citations. Rebound from final bytes.
+  // changes (panel.css: History scroller 2 px ring and one summary ring; app.css: fleet checkbox ring); unfocused catch text and contrast are unchanged. check_contrast.mjs changes only the appCss surface hash, its comment and moved citations. Rebound from final bytes.
   "web/ui/ui.css": "01ab205e4716a69068a7fab1f800e357ee364391540af12397d9b8a80c9f74de",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.
   // SC-E2E-GREEN: the legend shrinks and scrolls beside a mark-card min height, the phone .app-area row wraps, and the
@@ -244,7 +244,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC-PERF-LAZY-1: app.css only adds the .app-reef-text selector to the existing muted 13px .app-empty/.app-caveat rule for the deferred-reef note; the Reports catch sheet never mounts it, and contrast() is untouched. Rebound from the final bytes.
   // SC-PERF-LAZY-1: check_contrast.mjs changes only its appCss source hash; contrast() is untouched. Rebound.
   // SC-PERF-JUMP-1: app.css appends only layout rules (masthead, target menu width, desktop legend minimum height); no paint; the Reports catch sheet mounts none of them. Rebound from the final bytes.
-  "web/app/app.css": "c9befe468aae4b4da9668ff334f723d3b93945cac2e29b975f07b40c16d33f10",
+  "web/app/app.css": "4208780a881d14a7626289f515ea4c74e80da5ea80ccd958be88f907da394fcf",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -254,7 +254,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC2037-04: Brief.tsx imports brief-print.css (only a hidden .app-print-only class and an @media print block; no screen paint); Reports bundles Brief.
   "web/brief/brief-print.css": "35b695c448385cd449304ca7158d3b8c26dfe9db3d3a9c90ecd0c17796b45dc0",
   "web/app/views/model-disagreement.css": "c6edfd6e81395b8d5e9fe67e982e399989172765490456f6a28ec036c115b72c",
-  "packages/coast/panel.css": "ca0495fc90db3cf3f140d520c8231751660268af72bc7b9a4a3ac4dc1679314e",
+  "packages/coast/panel.css": "f769041713cf22215ec43fa6d5123b4d87221db60ee63bca0420425c2acad3cc",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
@@ -311,7 +311,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC-TIDAL-1: app.css only appends a scoped .app-entrance* block (token text roles in the Boat brief's run line); check_contrast.mjs rebinds only the
   // appCss surface hash and its comment. BODY09 mounts Reports/CatchCards, never the run line or the legend; contrast(), catch paint, backing,
   // assertions and thresholds are unchanged. Rebind only these two sources.
-  "scripts/check_contrast.mjs": "d2068bce89eed9369a7a54ff9d26f4c3a8e0ed3967e654656215f216cd5117dd",
+  "scripts/check_contrast.mjs": "9329f5838c8538c66065b473f5cb2c02bdf9ba3a04c7c6ddf91eb2e98d3b0a74",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still

@@ -373,7 +373,8 @@ export function boundSurfaceContrast(request = {}) {
 // CLI and generic missing-background behavior remain unchanged pending review.
 export const SURFACE_SOURCE_SHA256 = {
   // BF-wcag only adds min-height (24 px target floor) to .text-link, .history-provenance a and .sheet-links a; no paint changed.
-  "panelCss": "ca0495fc90db3cf3f140d520c8231751660268af72bc7b9a4a3ac4dc1679314e",
+  // SC1722-08 only raises the History chart scroller's focus ring to 2 px and adds one .history-measurement-note > summary focus ring; no unfocused paint changed.
+  "panelCss": "f769041713cf22215ec43fa6d5123b4d87221db60ee63bca0420425c2acad3cc",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "tokensCss": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
@@ -395,7 +396,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // no legend paint or backing changed and the cited line numbers above are unmoved.
   // SC1722-08 only consolidates link focus outlines (removes the .app-views and first-answer duplicates; the shared a:focus-visible rule is in ui.css), so
   // focus paint intentionally changes; unfocused legend text and backing are unchanged. Cited app.css lines after :29 moved up by one.
-  "appCss": "c9befe468aae4b4da9668ff334f723d3b93945cac2e29b975f07b40c16d33f10",
+  "appCss": "4208780a881d14a7626289f515ea4c74e80da5ea80ccd958be88f907da394fcf",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
