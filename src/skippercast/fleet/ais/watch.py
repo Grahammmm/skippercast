@@ -92,7 +92,7 @@ def read_watch(path: Path, region: str) -> WatchList:
         raise WatchFileError(f"watch.json cannot be read: {error.strerror or error}") from None
     try:
         document = json.loads(text)
-    except json.JSONDecodeError:
+    except ValueError:   # JSONDecodeError, or an integer past the interpreter's digit limit
         raise WatchFileError("watch.json is not JSON") from None
     return parse_watch(document, region)
 
