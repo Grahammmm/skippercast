@@ -3,6 +3,7 @@
 ## Unreleased
 
 - SC1407-08: a /map page that opens on the Chart now starts loading the Chart's map library right after the app first renders, instead of waiting for the Chart to mount. The library is still loaded by dynamic import only, once per page, and stays out of the install precache; the landing, admin pages and 2D/3D starts are unchanged, and a failed load is still reported by the Chart.
+- RF0854-7: the operator lead score's "AIS seen in the last 30 days" part is bounded by the scoring instant: a watched vessel's sighting dated after "now" no longer earns the AIS points (it was counted as seen), while a sighting exactly at now or exactly 30 days earlier still counts. A watched operator with no qualifying sighting scores a known zero, and an operator with no watched vessel stays missing. Read-time only; weights, other parts and stored watch records are unchanged.
 
 - RF0854-8: the admin fleet operator list ranks every matching operator (do-not-contact last, then lead score, then name, then id) before applying its 500-row cap, so a high-scoring operator outside the first 500 by name is no longer left out. Matching operators are read in bounded pages by id with every filter applied to each page; `truncated` still means more than 500 matched, and the endpoint, filters, response fields and score model are unchanged.
 
