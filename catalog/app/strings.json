@@ -13,6 +13,13 @@
     "fa.rules.due": {"en": "Rules due for review - check the official page before you go.", "es": "Reglas pendientes de revisión: consulta la página oficial antes de salir."},
     "fa.rules.reviewed": {"en": "Rules reviewed ({label}) - see the rules card for the limits.", "es": "Reglas revisadas ({label}): consulta la tarjeta de reglas para ver los límites."},
     "fa.more": {"en": "Show the map and detail", "es": "Ver el mapa y el detalle"},
+    "forecast.failed": {"en": "Couldn't load the forecast", "es": "No se pudo cargar el pronóstico"},
+    "forecast.reason.network": {"en": "The forecast could not be reached. Check your connection.", "es": "No se pudo conectar con el pronóstico. Revisa tu conexión."},
+    "forecast.reason.http": {"en": "The forecast service answered with an error (HTTP {status}).", "es": "El servicio de pronóstico respondió con un error (HTTP {status})."},
+    "forecast.reason.invalid": {"en": "The forecast came back in a form that could not be used.", "es": "El pronóstico llegó en un formato que no se pudo usar."},
+    "forecast.reason.aborted": {"en": "The forecast request was cancelled before it finished.", "es": "La solicitud del pronóstico se canceló antes de terminar."},
+    "forecast.reason.timeout": {"en": "The forecast took too long to answer.", "es": "El pronóstico tardó demasiado en responder."},
+    "forecast.retry": {"en": "Try again", "es": "Intentar de nuevo"},
 
     "rules.status.open": {"en": "Open", "es": "Abierto"},
     "rules.status.restricted": {"en": "Open · limits", "es": "Abierto · con límites"},

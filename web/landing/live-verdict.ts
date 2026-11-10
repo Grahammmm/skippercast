@@ -73,12 +73,15 @@ async function boundReport(info: Parameters<typeof regionPlace>[0]) {
 
 /**
  * Tomorrow's verdict for the default region at `now`, or null when the region or its feeds cannot be
- * read (no brief). A missing forecast reads Unknown, never a calmer word, as in the app.
+ * read (no brief) or the forecast read failed. A forecast that loaded but cannot rate the day reads Unknown, never a calmer word, as in the app.
  */
 export async function loadLandingVerdict(fetchFn: typeof fetch = fetch, now: Date = new Date(), page: string = location.href, lang: Language = 'en'): Promise<LandingVerdict | null> {
   const info = await createRegionReader(fetchFn)(DEFAULT_REGION).catch(() => null);
   if (!info || info === REGION_MISSING) return null;
-  const [feed, forecast, coast] = await Promise.all([loadDailyFeed(info.id, fetchFn), loadConditionsForecast(info.id, info.center, fetchFn, page), boundReport(info).catch(() => null)]);
+  const [feed, read, coast] = await Promise.all([loadDailyFeed(info.id, fetchFn), loadConditionsForecast(info.id, info.center, fetchFn, page), boundReport(info).catch(() => null)]);
+  // A forecast that could not be read is not a weather answer: the optional landing section stays absent, never Unknown.
+  if (read.state !== 'loaded') return null;
+  const forecast = read.forecast;
   const tz = info.timezone, hour = leadHour(null, null, now, tz);
   const mine = deviceBoat();
   const brief = briefFrom({info, feed, forecast, coast, profile: 'boat', hour, limits: mine.limits}, now);
