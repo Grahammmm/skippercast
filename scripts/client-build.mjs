@@ -22,6 +22,7 @@ import {join, resolve, sep} from 'node:path';
 import {build} from 'vite';
 import {clientConfig, pages} from '../vite.config.mjs';
 import {writePrecache} from './precache.mjs';
+import {generate as generateStrings} from './build_landing_strings.mjs';
 
 export const STABLE = new Set(['sw.js']);
 export const MANIFEST = '.vite/manifest.json';
@@ -105,6 +106,7 @@ export function advisorAssetPaths(manifest) {
  */
 export async function buildClient({root = 'dist', out = join(root, 'client'), copy, headers = ''} = {}) {
   root = resolve(root); out = resolve(out);
+  generateStrings();   // SC1407-09: the readers' English and Spanish tables, from catalog/app/strings.json
   await rm(out, {recursive: true, force: true});
   await build({configFile: false, ...clientConfig({root, outDir: out})});
   const manifest = JSON.parse(await readFile(join(out, MANIFEST), 'utf8'));

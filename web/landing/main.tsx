@@ -19,7 +19,7 @@ import {warmApp} from './warm.ts';
 import {Shoreline, ShorelineCredit} from './Shoreline.tsx';
 import {initTelemetry} from '../telemetry.ts';
 import {installDegradedWatch} from '../degraded.ts';
-import {initLanguage, language, t} from './i18n.ts';
+import {initReadyLanguage, language, t} from './i18n.ts';
 import {applyLandingCopy} from './copy.ts';
 
 /** web/state.ts STORAGE_KEYS.profile (equal by test); the store itself is the app's and loads there. */
@@ -69,18 +69,22 @@ function nightMap(): void {
 
 // SC0707-05: the language first, before anything is mounted or a saved port navigates: the map app's own choice (web/i18n.ts initLanguage:
 // ?lang=, the stored preference, then the browser's Accept-Language), the document's lang, and the static hero and footer in that language.
-const lang = initLanguage();
-applyLandingCopy(document, lang);
-installDegradedWatch(); // SC1322-06: before any read, as web/app/main.tsx, so the cost-ceiling mark reaches the landing's notice.
-// Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
-initTelemetry();
-const profile = storedProfile();
-// A returning visitor goes on to the app; everyone else gets the night map after first paint.
-// #617: after first paint the app's own first-paint files are fetched at low priority (warm.ts), so a chosen port opens faster.
-void savedPortTarget(location.href, savedPortId(), profile).then(next => { if (next) location.replace(next); else { afterFirstPaint(nightMap); afterFirstPaint(() => void warmApp()); } });
-mount('landing-shore', <Shoreline />);
-mount('landing-credit', <ShorelineCredit />);
-mount('landing-head', <LandingHead href={location.href} />);
-// BF-landing-live: tomorrow's verdict loads by dynamic import once the readout is in; nothing more under Save-Data.
-mount('landing-app', <LandingApp href={location.href} initialProfile={profile} verdict={() => saveData(navigator) ? Promise.resolve(null) : import('./live-verdict.ts').then(m => m.loadLandingVerdict(undefined, undefined, undefined, lang))} />);
-mount('landing-dots', <LayerDots href={location.href} region={DEFAULT_REGION} onPreview={layer => mark('preview', layer)} />);
+// SC1407-09: a Spanish page waits here for its table (English pages never request it); a failed load keeps English and LandingHead says so.
+async function start(): Promise<void> {
+  const lang = await initReadyLanguage();
+  applyLandingCopy(document, lang);
+  installDegradedWatch(); // SC1322-06: before any read, as web/app/main.tsx, so the cost-ceiling mark reaches the landing's notice.
+  // Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
+  initTelemetry();
+  const profile = storedProfile();
+  // A returning visitor goes on to the app; everyone else gets the night map after first paint.
+  // #617: after first paint the app's own first-paint files are fetched at low priority (warm.ts), so a chosen port opens faster.
+  void savedPortTarget(location.href, savedPortId(), profile).then(next => { if (next) location.replace(next); else { afterFirstPaint(nightMap); afterFirstPaint(() => void warmApp()); } });
+  mount('landing-shore', <Shoreline />);
+  mount('landing-credit', <ShorelineCredit />);
+  mount('landing-head', <LandingHead href={location.href} />);
+  // BF-landing-live: tomorrow's verdict loads by dynamic import once the readout is in; nothing more under Save-Data.
+  mount('landing-app', <LandingApp href={location.href} initialProfile={profile} verdict={() => saveData(navigator) ? Promise.resolve(null) : import('./live-verdict.ts').then(m => m.loadLandingVerdict(undefined, undefined, undefined, lang))} />);
+  mount('landing-dots', <LayerDots href={location.href} region={DEFAULT_REGION} onPreview={layer => mark('preview', layer)} />);
+}
+void start();
