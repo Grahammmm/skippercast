@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC1407-06: the map's reef-mark screen and the trip planner no longer each download and parse the live CDFW protected-area boundaries on the same `/map` load: when both ask the exact same query while it is in flight, one request and one parsed answer serve both (`dist/live-mpa.js`). Nothing is kept after the answer, so a later refresh asks again; each screen keeps its own checks and daily-feed fallback, and both record the time the answer arrived.
+
 - RF1345-7: the AIS port-coverage report opens exactly the requested processor `state.sqlite`, read-only, even when its path contains `?`, `#`, `%` or other URI characters; it no longer creates a stray file, reads a lookalike database or reports coverage unknown for such a path. Counts, the window and unknown-state output are unchanged.
 
 - SC1407-03: the time dock's 169-hour horizon is built once per UTC hour and region zone instead of on every read by the dock, map, brief and share link (#1762 R2); the shared copy is frozen. Days, hours, DST change days, the selected hour and links are unchanged (`web/hour.ts`).
