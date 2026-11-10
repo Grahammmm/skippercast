@@ -186,6 +186,15 @@ Catalogue IDs: `ranking.*`; the fit line reuses `mark.layer.habitat.fit`, `.fitU
 
 The Where to look sentences say "omitido" for a withheld place (the spec's wording); the map's screen notes say "retenido". Both mean withheld.
 
+### Language loading (SC1407-09)
+
+English pages ship English only; the Spanish table (`web/strings.es.generated.json`, generated from this catalogue) loads only for a Spanish page. When it cannot load, the page stays English and says so once beside the language choice (the landing adds a link that reloads the page in Spanish).
+
+| English | Spanish | IDs | Note |
+|---|---|---|---|
+| Spanish could not load, so the page stays in English. | `No se pudo cargar el español, así que la página sigue en inglés.` | `language.loadFailed` | never claims Spanish is active |
+| Try Español again | `Volver a intentar en español` | `language.retrySpanish` | the landing's retry link; the app retries from its Español button |
+
 ## 2. Observed divergences
 
 Every catalogue Spanish value that renders a listed term differently from

@@ -175,7 +175,7 @@ test('4: installDegradedWatch twice in one page: one network call per read, the 
 test('the landing installs the watch before its first read, and its entry chunk carries the notice but not the map shell', async () => {
   const code = await readFile(join(ROOT, 'web/landing/main.tsx'), 'utf8');
   const install = code.search(/^installDegradedWatch\(\);/m);
-  for (const first of [/^initTelemetry\(\);$/m, /^void savedPortTarget\(/m, /^mount\(/m]) assert.ok(install > 0 && install < code.search(first), `before ${first}`);
+  for (const first of [/^initTelemetry\(\);$/m, /^(?:  )?void savedPortTarget\(/m, /^(?:  )?mount\(/m]) assert.ok(install > 0 && install < code.search(first), `before ${first}`);
   const result = await build({entryPoints: [join(ROOT, 'web/landing/main.tsx')], bundle: true, splitting: true, format: 'esm', platform: 'browser', outdir: join(await mkdtemp(join(tmpdir(), 'landing-degraded-chunks-')), 'out'),
     write: false, metafile: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins, external: ['*.css']});
   const entry = Object.values(result.metafile.outputs).find(o => o.entryPoint?.endsWith('web/landing/main.tsx')), inputs = Object.keys(entry.inputs);

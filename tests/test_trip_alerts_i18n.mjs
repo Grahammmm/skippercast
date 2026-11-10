@@ -1,5 +1,6 @@
 // SC0922-12: the saved-trip alerts sheet's own words follow the page language; what the server wrote (assessment
 // messages, hazard notes) stays English and verbatim. Synthetic records only; no network.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {mkdtemp, rm} from 'node:fs/promises';
@@ -8,7 +9,7 @@ import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import * as alerts from '../web/alerts.ts';
 import {weekendDigest, toText, EMPTY_WEEKEND} from '../web/digest.ts';
 import {catalogueProblems, COVERED} from '../scripts/check_copy.mjs';
@@ -154,7 +155,7 @@ async function components() {
     export {tripRecaps} from './web/alerts.ts';
     export {language} from './web/i18n.ts';
     export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
-  bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+  bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   ui = await import(pathToFileURL(out).href);
   return ui;
 }

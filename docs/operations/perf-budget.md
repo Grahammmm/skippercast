@@ -12,9 +12,9 @@ its budget and the share used, then PASS or FAIL. A failing group also lists its
 
 | Group | Size when set | Budget | Headroom |
 |---|---|---|---|
-| Landing page scripts (entry + scripts it imports at once) | 421,933 | 460,000 (raised from 445,000; see history in `scripts/perf-budget.json`) | 5.5% at first |
+| Landing page scripts (entry + scripts it imports at once) | 421,933 | 304,000 (lowered by SC1407-09 from 460,000; see history in `scripts/perf-budget.json`) | 5.5% at first |
 | Landing page styles | 24,339 | 26,000 | 6.8% |
-| App page (brief, map) scripts, first load | 1,104,511 | 1,180,000 (raised from 1,170,000, earlier from 1,160,000; see history in `scripts/perf-budget.json`) | 5.0% at first |
+| App page (brief, map) scripts, first load | 1,104,511 | 1,064,000 (lowered by SC1407-09 from 1,180,000; see history in `scripts/perf-budget.json`) | 5.0% at first |
 | App page styles | 67,003 | 71,000 | 6.0% |
 | Largest single built script, style or font (any page, loaded now or later) | 1,094,203 | 1,150,000 | 5.1% |
 | Brief data files in the repo (`protected-areas.geojson`, `land-water-lines.json`, `seafloor-ledger.json`) | 951,224 | 1,050,000 | 10.4% |
@@ -38,6 +38,16 @@ is published, not in the repo, so this check cannot measure it; the publisher en
 `tests/gis/test_seafloor_slim.py`). Reason: the real morro-bay export (3,064 reefs) gives 363,453 bytes, so the budget
 leaves 23.8% headroom for more reefs or longer credit text, and stops the file growing back toward the full export
 unnoticed. Raise it in a pull request with a reason, as above.
+
+### English first loads without the Spanish table (SC1407-09, #1762 M5)
+
+`web/i18n.ts` and the landing's `web/landing/i18n.ts` no longer import the bilingual `catalog/app/strings.json`: they read
+English tables generated from it (`scripts/build_landing_strings.mjs`, run before every client build), and the Spanish
+table (`web/strings.es.generated.json`) is a separate chunk that `web/i18n-catalogue.ts` loads only for a Spanish page or
+a switch to Spanish. Vite manifest static closures on main a5005eb05 against this change: landing.html 447,318 to 289,476
+bytes, app.html 1,169,280 to 1,011,409. The two ceilings were lowered to the new size plus 5%, rounded up to 1,000 bytes
+(304,000 and 1,064,000). The install precache and the landing's app warm-up leave the Spanish chunk out; a saved offline
+trip pack keeps it, so Spanish still opens offline.
 
 ### Protected-area verdicts reused across hour steps (SC1407-02)
 
