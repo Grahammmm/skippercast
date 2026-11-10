@@ -1,6 +1,7 @@
 // SC1137-03: the tide-station control and the tide sparkline read the chosen language.
 // Real components are bundled and rendered to HTML; the open panel is forced open by a build-time rewrite of its one
 // useState(false) so server rendering can show it. Synthetic stations and a synthetic curve only.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFile, mkdtemp} from 'node:fs/promises';
@@ -9,7 +10,7 @@ import {dirname, join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import fixture from './fixtures/coast/skippercast-report.json' with {type: 'json'};
-import {rendererPlugin} from './helpers/esbuild-url.mjs';
+import {rendererPlugin, preparedCatalogue} from './helpers/esbuild-url.mjs';
 import {COVERED, NOT_COVERED} from '../scripts/check_copy.mjs';
 import {STRINGS} from '../web/i18n.ts';
 
@@ -42,7 +43,7 @@ async function load() {
       export {language} from './web/i18n.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: [rendererPlugin, openPanel]});
+  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: [rendererPlugin, preparedCatalogue, openPanel]});
   mod = await import(pathToFileURL(out).href);
   return mod;
 }

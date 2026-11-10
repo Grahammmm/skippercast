@@ -13,6 +13,8 @@
 import {computed, effect, signal} from '@preact/signals';
 import {feedURL} from '../../dist/feeds.js';
 import {dailyPartPath} from '../../dist/offline-core.js';
+import {createLiveMpaReader, readLiveMpa} from '../../dist/live-mpa.js';
+import {sharedFetch} from '../shared-fetch.ts';
 import {hasCoastTerrain} from '../coast-context.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt} from '../profile.ts';
 import {grade, habitat, navigate, profile, region, selection, species, withParams} from '../state.ts';
@@ -191,7 +193,10 @@ export interface MarksOptions {
   onError?: (layer: string, error: unknown) => void;
   resolver?: () => Promise<Resolver>;
   now?: () => number;
+  /** SC1407-06: the live ds582 read; default the page's shared reader (dist/live-mpa.js), or one of its own for an injected `fetchFn`. */
+  liveMpaRead?: LiveMpaRead;
 }
+type LiveMpaRead = (url: string) => Promise<{readonly data: unknown; readonly checkedAt: string}>;
 
 const isCollection = (d: {type?: unknown; features?: unknown; region_id?: unknown} | null, region: string): boolean =>
   d?.type === 'FeatureCollection' && Array.isArray(d.features) && (d.region_id === undefined || d.region_id === region);
@@ -199,6 +204,8 @@ const isCollection = (d: {type?: unknown; features?: unknown; region_id?: unknow
 /** Loads each region's layers and restores a `?habitat=` on the Chart; created with the Chart (web/map/chart.ts). */
 export function createMarks(options: MarksOptions = {}): {destroy(): void} {
   const {fetchFn = (...a) => fetch(...a), page = () => location.href, onError = () => {}, resolver = () => import('./coast-habitat.js'), now = Date.now} = options;
+  // The Chart passes the page's sharedFetch (chart.ts `shareStatic(sharedFetch)` is that same function): it meets the planner on the page's reader.
+  const liveRead: LiveMpaRead = options.liveMpaRead ?? (!options.fetchFn || options.fetchFn === sharedFetch ? readLiveMpa : createLiveMpaReader({fetchFn, now}));
   let run = 0, controller: AbortController | undefined, expiry: ReturnType<typeof setTimeout> | undefined, recheck: ReturnType<typeof setTimeout> | undefined;
   const json = async (path: string, init: RequestInit = {}): Promise<unknown> => {
     const response = await fetchFn(new URL(path, page()).href, {...init, signal: AbortSignal.timeout(20000)});
@@ -225,8 +232,9 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
     };
     const boundaries = async (): Promise<Pick<ScreenInputs, 'areas' | 'checkedAt' | 'live'> | null> => {
       try {
-        const live = bounds ? await json(mpaQuery(bounds)) as Props : null;
-        if (validMpas(live, minimum)) return {areas: live!.features as Props[], checkedAt: new Date(now()).toISOString(), live: true};
+        // SC1407-06: the planner's identical in-flight read is shared (dist/live-mpa.js); checked when the answer arrived.
+        const live = bounds ? await liveRead(mpaQuery(bounds)) : null, areas = live?.data as Props | null | undefined;
+        if (live && validMpas(areas, minimum)) return {areas: areas!.features as Props[], checkedAt: live.checkedAt, live: true};
       } catch { /* v1 then reads the daily feed's boundary record */ }
       // v1 takes a valid record's geometry with its retrieval time; one without a time is no current check (stale), never the snapshot's.
       const r = await record('mpa-boundaries'), geojson = r?.data?.geojson as Props | undefined;

@@ -1,6 +1,7 @@
 // SC0922-11: the plan view's own words, the controls tour and the preset labels follow the page language.
 // English output stays byte-identical; reviewed plan text, species names and rule summaries are not translated here.
 // Synthetic plans and links only; no network.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {mkdtemp} from 'node:fs/promises';
@@ -9,7 +10,7 @@ import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import {planCopy, planView} from '../web/plan.ts';
 import {tourSteps, TOUR_STEPS, tourTransition} from '../web/tour.ts';
 import {presetLabel, PRESETS, presetsFor} from '../web/app/presets.ts';
@@ -31,7 +32,7 @@ async function components() {
     export {language} from './web/i18n.ts';
     export * as state from './web/state.ts';
     export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
-  bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+  bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   ui = await import(pathToFileURL(out).href);
   return ui;
 }

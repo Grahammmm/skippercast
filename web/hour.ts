@@ -61,16 +61,25 @@ export function localParts(date: Date, tz: string): {day: string; hour: number; 
 /** One local day of the horizon: "YYYY-MM-DD", its weekday and its hours (epoch ms, ascending). */
 export interface HorizonDay {readonly day: string; readonly weekday: string; readonly hours: readonly number[]}
 
+// The last horizon built (#1762 R2: the dock, map, brief and share link read it many times an hour).
+// One entry, keyed by the whole UTC start hour and the zone: another hour or zone builds a new one.
+// It is shared, so it is frozen all the way down (the array, each day and its hours).
+let lastHorizon: {start: number; tz: string; days: readonly HorizonDay[]} | null = null;
+
 /** The horizon from `now` by local day: today from the current hour, the last day up to 168 hours ahead. */
-export function horizonDays(now: Date, tz: string): HorizonDay[] {
+export function horizonDays(now: Date, tz: string): readonly HorizonDay[] {
   const start = Math.floor(now.getTime() / HOUR_MS) * HOUR_MS;
+  if (lastHorizon && lastHorizon.start === start && lastHorizon.tz === tz) return lastHorizon.days;
   const days: {day: string; weekday: string; hours: number[]}[] = [];
   for (let i = 0; i < HORIZON_HOURS; i++) {
     const at = start + i * HOUR_MS, p = localParts(new Date(at), tz), last = days.at(-1);
     if (last?.day === p.day) last.hours.push(at);
     else days.push({day: p.day, weekday: p.weekday, hours: [at]});
   }
-  return days;
+  // Only a complete build is kept: an invalid date or zone throws above and leaves the last one in place.
+  for (const d of days) { Object.freeze(d.hours); Object.freeze(d); }
+  lastHorizon = {start, tz, days: Object.freeze(days)};
+  return lastHorizon.days;
 }
 
 /** The hour of `hours` whose local hour of day is closest to `hourOfDay` (the earlier on a tie). */

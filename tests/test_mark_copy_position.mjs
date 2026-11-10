@@ -12,7 +12,7 @@ import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {chromium} from '@playwright/test';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins, rendererPlugins} from './helpers/esbuild-url.mjs';
 import {initProtectedAreas} from '../dist/protected-areas.js';
 import {setRegion} from '../dist/region.js';
 import {formatCoordinates} from '../dist/coordinates.js';
@@ -34,7 +34,7 @@ async function components() {
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
   ui = await import(pathToFileURL(out).href);
   return ui;
@@ -125,10 +125,10 @@ async function browserCode() {
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       import {MarkCard} from './web/app/MarkCard.tsx';
       import {loadProtectedScreen} from './web/trip.ts';
-      import {language} from './web/i18n.ts';
+      import {language, prepareCatalogue} from './web/i18n.ts';
       import {region, coordinates} from './web/state.ts';
       import {h, render} from 'preact';
-      window.__t = {MarkCard, loadProtectedScreen, language, region, coordinates, h, render};`},
+      window.__t = {MarkCard, loadProtectedScreen, language, prepareCatalogue, region, coordinates, h, render};`},
     bundle: true, format: 'iife', platform: 'browser', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
   });
   browserBundle = await readFile(out, 'utf8');
@@ -196,7 +196,7 @@ test('copy_exactly_displayed_text: every coordinate format, one click one write,
       assert.equal(s.fetches, before, `${format}: nothing sent`);
     }
     // Language changes the retained answer without another write.
-    await page.evaluate(() => { window.__t.language.value = 'es'; });
+    await page.evaluate(async () => { await window.__t.prepareCatalogue('es'); window.__t.language.value = 'es'; });   // SC1407-09: the Spanish table first, as the app does
     await settle(page);
     assert.equal((await shot(page)).status, 'Copiada');
     assert.equal((await shot(page)).writes.length, 1);

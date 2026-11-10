@@ -10,6 +10,7 @@ import {language, t} from '../i18n.ts';
 import {profile, species} from '../state.ts';
 import {zone} from './region-info.ts';
 import {dockState} from './TimeDock.tsx';
+import {dateTimeFormat} from '../../packages/coast/src/date-format.ts';
 import type {Mark} from './MarkCard.tsx';
 
 /** The cards that speak for a place to fish, so carry the target's rules. */
@@ -22,7 +23,7 @@ export function RulesLine({mark}: {mark: Mark}) {
   useEffect(() => { if (region) void loadRegs(region); }, [region?.id, mark.id]);
   if (!region || !RULED.test(mark.id) || mark.withheld) return null;
   const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, data = loaded?.region === region.id ? loaded.data : null;
-  const at = dockState(new Date(), zone()).at, day = new Intl.DateTimeFormat('en-CA', {timeZone: zone(), year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
+  const at = dockState(new Date(), zone()).at, day = dateTimeFormat('en-CA', zone(), {year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
   const state = regulationState(data, target, region, Date.now(), day, at), s = ruleSummary(data, target, state, region, lang), page = speciesPage(data, target, region, lang), fresh = freshnessLabel(data, target, state, region, Date.now(), lang);
   const name = target === 'reef' ? 'Lingcod & rockfish' : state.profile?.name ?? target, wording = lang === 'es' ? 'en' : undefined;
   const cell = (label: string, values: readonly string[]) => values.length ? <div><dt>{label}</dt>{values.map(v => <dd key={v} class="ui-mono" lang={wording}>{v}</dd>)}</div> : null;

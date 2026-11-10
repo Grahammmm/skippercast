@@ -25,8 +25,8 @@ def port_coverage(db_path: Path, ports, since_day: str) -> dict | None:
     path = Path(db_path)
     if not path.is_file():
         return None
-    try:
-        db = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    try:  # as_uri() percent-encodes '?', '#' and '%', so the path is the exact file and mode=ro always applies
+        db = sqlite3.connect(f"{path.absolute().as_uri()}?mode=ro", uri=True)
     except sqlite3.Error:
         return None
     try:
