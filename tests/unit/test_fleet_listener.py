@@ -479,7 +479,11 @@ class WatchTest(unittest.TestCase):
             self.assertEqual(watch.current.watched, {WATCHED})
             self.assertTrue(watch._loaded)
             self.assertIsNone(watch.last_error)
-            self.assertEqual(path.stat(), stamp)
+            # Reading the file may move st_atime (relatime), so compare only
+            # what a rewrite or replacement would change.
+            after = path.stat()
+            self.assertEqual((after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns),
+                             (stamp.st_ino, stamp.st_size, stamp.st_mtime_ns, stamp.st_ctime_ns))
 
     def test_stat_error_retries_unchanged_good_file(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -501,7 +505,9 @@ class WatchTest(unittest.TestCase):
                 self.assertEqual(read.call_count, 1)
             self.assertIsNone(watch.last_error)
             self.assertEqual(watch.errors, 2)
-            self.assertEqual(path.stat(), stamp)
+            after = path.stat()
+            self.assertEqual((after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns),
+                             (stamp.st_ino, stamp.st_size, stamp.st_mtime_ns, stamp.st_ctime_ns))
 
     def test_reload_watch_stat_error_keeps_routing_and_heartbeat(self):
         with tempfile.TemporaryDirectory() as tmp:
