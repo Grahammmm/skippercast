@@ -13,7 +13,7 @@ its budget and the share used, then PASS or FAIL. A failing group also lists its
 | Group | Size when set | Budget | Headroom |
 |---|---|---|---|
 | Landing page scripts (entry + scripts it imports at once) | 421,933 | 304,000 (lowered by SC1407-09 from 460,000; see history in `scripts/perf-budget.json`) | 5.5% at first |
-| Landing page styles | 24,339 | 26,000 | 6.8% |
+| Landing page styles | 24,339 | 29,000 (raised from 26,000 by SC1922-05; see history in `scripts/perf-budget.json`) | 6.8% at first |
 | App page (brief, map) scripts, first load | 1,104,511 | 1,064,000 (lowered by SC1407-09 from 1,180,000; see history in `scripts/perf-budget.json`) | 5.0% at first |
 | App page styles | 67,003 | 74,000 (raised from 71,000 to 72,000 by SC1722-06, to 73,000 by RF1935-4, to 74,000 by MAIN-RED-SKIPPERCAST; see history in `scripts/perf-budget.json`) | 6.0% at first |
 | Largest single built script, style or font (any page, loaded now or later) | 1,094,203 | 1,150,000 | 5.1% |
