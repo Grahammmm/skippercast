@@ -4,9 +4,19 @@
 
 - RF0854-8: the admin fleet operator list ranks every matching operator (do-not-contact last, then lead score, then name, then id) before applying its 500-row cap, so a high-scoring operator outside the first 500 by name is no longer left out. Matching operators are read in bounded pages by id with every filter applied to each page; `truncated` still means more than 500 matched, and the endpoint, filters, response fields and score model are unchanged.
 
+- RF0844-7: the GEFS wind-ensemble build now checks each decoded wind-component and gust field's latitude and longitude axes against the GFS land mask before sampling any sea-cell index, and fails the build when a field sits on displaced cells even if its dimensions match (it previously published that wind under the mask's coordinates with a false zero-distance receipt). A failed build keeps the previous generation as before; matching grids, receipts and missing-member handling are unchanged.
+
+- RF0834-9: the forecast build keeps missing or nonfinite accumulated precipitation (ECMWF IFS) missing through its conversion to mm/hour instead of publishing dry zeros. An absent, bitmap-missing, rejected-sentinel or infinite first accumulation is no longer stored as 0 mm/h, and an interval whose start or end accumulation is not finite (including either infinity) is stored as missing rather than as no rain; only intervals that depend on the bad value are affected. Valid initial zeros, finite decreases (clamped to zero) and uneven step intervals are unchanged. No forecast data is rebuilt or republished by this change.
+
+- RF0814-8: a depth-contour file whose review expiry is an impossible calendar date (such as 2026-11-31 or 2027-02-29) now fails the existing contour check instead of drawing and exporting; real dates keep drawing through their last day and are withheld the next day.
+
+- RF0844-6: SST front extraction preserves native grid origins and coordinates, so half-offset grids no longer falsely conflict; true overlapping-measurement conflicts still refuse publication.
+
 - RF0814-9: the admin fleet map's Activity type filter now also narrows the returned track segments, so a mixed-mode trip no longer draws fishing modes that were not selected; trip eligibility, paging, events and heat are unchanged.
 
 - RF0834-5: the AIS matcher keeps an established watched row (and its entry in the listener's `watch.json`) when the processor has no statics for an MMSI the same single active registry vessel still holds, whether positions remain or the processor state was rebuilt. Retention needs the stored row's vessel to be that owner, no rejection and a row that passes the watched gate; no row, fact or review is invented, and an unheard, candidate, rejected, reassigned, duplicated or excluded binding gains nothing.
+
+- RF0854-9: AIS validation sync refuses a malformed or non-progressing labels response (wrong region, missing trips or next, a non-object or badly-identified trip, an out-of-order, repeated, backward or skipping cursor) with a one-line error naming only the page number, before anything is written. The last labels snapshot, the raw-position copies (which may be the only positions left after retention) and earlier reports are kept; a valid, complete, empty response still removes unlabelled copies.
 
 - RF0814-7: the trip planner's GPX, offline notes and planning-route exports now refuse, with "Included launch ramp is unavailable", when the included launch ramp is no longer in the published list (list replaced, empty, unavailable or for another region) instead of silently exporting the first listed ramp or leaving the checked launch out. The ramp checkbox stays visible, checked and enabled (showing "—") so it can be unchecked; a valid current ramp choice is still followed exactly and nothing saved is changed.
 
