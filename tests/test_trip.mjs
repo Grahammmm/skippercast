@@ -12,6 +12,8 @@ const REGION = JSON.parse(read('regions/morro-bay/region.json'));
 const {TILE_CAP, basemapRangeKey, planBasemap, planTiles} = await import('../dist/offline-core.js');
 const {draftKey} = await import('../dist/trip-export.js');
 const trip = await import('../web/trip.ts');
+// SC1407-10: the pure helpers live in the lazily loaded implementation; savePack still runs through the facade.
+const runtime = await import('../web/trip-runtime.ts');
 
 test('the account menu and mark card read the region\'s v1 draft, whatever it holds', () => {
   for (const id of ['morro-bay', 'cambria-san-simeon']) assert.equal(trip.draftKey(id), draftKey(id), 'the restated key is v1\'s');
@@ -25,7 +27,7 @@ test('the account menu and mark card read the region\'s v1 draft, whatever it ho
 
 test('the planner\'s map calls come from the shared camera and the chart\'s size', () => {
   // ?view= zoom 10 (256 px convention): 262,144 px around the world, so 512 px span 0.703° of longitude.
-  const view = trip.mapView({latitude: 35.37, longitude: -120.86, zoom: 10}, {width: 512, height: 512});
+  const view = runtime.mapView({latitude: 35.37, longitude: -120.86, zoom: 10}, {width: 512, height: 512});
   assert.deepEqual(view.getSize(), {x: 512, y: 512});
   const b = view.getBounds();
   assert.ok(Math.abs(b.getEast() - b.getWest() - 0.703125) < 1e-9);
@@ -33,14 +35,14 @@ test('the planner\'s map calls come from the shared camera and the chart\'s size
   assert.ok(b.getNorth() > 35.37 && b.getSouth() < 35.37 && b.getNorth() - 35.37 < 35.37 - b.getSouth(), 'Mercator: a pixel spans less latitude to the north');
   assert.equal(b.contains([35.37, -120.86]), true);
   assert.equal(b.contains([35.37, -120.4]), false);
-  const none = trip.mapView(null, {width: 512, height: 512});
+  const none = runtime.mapView(null, {width: 512, height: 512});
   assert.deepEqual(none.getSize(), {x: 0, y: 0}, 'no camera: v1 asks for the map first');
   assert.equal(none.getBounds().contains([35.37, -120.86]), false);
 });
 
 test('the ranked set moves the Chart to its extent', () => {
-  assert.equal(trip.fitCamera([]), null);
-  const c = trip.fitCamera([{latitude: 35.43, longitude: -121.17}, {latitude: 35.432, longitude: -121.002}]);
+  assert.equal(runtime.fitCamera([]), null);
+  const c = runtime.fitCamera([{latitude: 35.43, longitude: -121.17}, {latitude: 35.432, longitude: -121.002}]);
   assert.ok(Math.abs(c.latitude - 35.431) < 1e-9 && Math.abs(c.longitude + 121.086) < 1e-9);
   assert.ok(c.zoom > 10 && c.zoom < 12);
 });
@@ -65,7 +67,7 @@ test('the range recorder keeps each exact live range under the service worker\'s
   const put = async (key, body, headers) => { kept.push([key, body.byteLength, headers.get('ETag')]); };
   try {
     globalThis.fetch = async (_url, init) => new Response(new Uint8Array(4), {status: 206, headers: {'Content-Range': `${init.headers.range.replace('=', ' ')}/99`, ETag: '"a"'}});
-    const source = trip.rangeRecorder(archive, put, new AbortController().signal, basemapRangeKey);
+    const source = runtime.rangeRecorder(archive, put, new AbortController().signal, basemapRangeKey);
     assert.equal(source.getKey(), archive);
     assert.deepEqual(await source.getBytes(16, 4), {data: new Uint8Array(4).buffer, etag: '"a"'});
     assert.deepEqual(kept, [[`${archive}?sc-range=16-19`, 4, '"a"']]);
@@ -237,12 +239,12 @@ test('oceanPhase for a report-bound place reads only the saved-snapshot pointer;
   const morro = JSON.parse(read('regions/morro-bay/region.json')), place = {id: 'morro-bay', center: morro.map.center, localAreas: morro.map.local_areas};
   const never = () => { throw new Error('touched'); }, extras = {put: never, signal: new AbortController().signal, progress: never};
   const saved = {schema_version: 1, path: 'coastal-report', manifest: null, layers: {}, bytes: 0};
-  assert.deepEqual(await trip.oceanPhase(extras, place, {fetchFn: never, readCoastal: async () => ({saved_at: '2026-10-15T10:00:00.000Z'})}), {...saved, coastal: {saved_at: '2026-10-15T10:00:00.000Z'}});
-  assert.deepEqual(await trip.oceanPhase(extras, place, {fetchFn: never, readCoastal: async () => null}), {...saved, coastal: null});
-  assert.deepEqual(await trip.oceanPhase(extras, place, {fetchFn: never, readCoastal: async () => { throw new Error('locked'); }}), {...saved, coastal: null});
+  assert.deepEqual(await runtime.oceanPhase(extras, place, {fetchFn: never, readCoastal: async () => ({saved_at: '2026-10-15T10:00:00.000Z'})}), {...saved, coastal: {saved_at: '2026-10-15T10:00:00.000Z'}});
+  assert.deepEqual(await runtime.oceanPhase(extras, place, {fetchFn: never, readCoastal: async () => null}), {...saved, coastal: null});
+  assert.deepEqual(await runtime.oceanPhase(extras, place, {fetchFn: never, readCoastal: async () => { throw new Error('locked'); }}), {...saved, coastal: null});
   // A centre outside every reviewed local area binds no report: the regional path (here, a manifest that is not there).
   const off = {...place, center: [36.5, -122.2]};
-  const result = await trip.oceanPhase({...extras, put: async () => {}, progress() {}}, off, {origin: 'https://s.test', fetchFn: async () => new Response('no', {status: 404}), readCoastal: never});
+  const result = await runtime.oceanPhase({...extras, put: async () => {}, progress() {}}, off, {origin: 'https://s.test', fetchFn: async () => new Response('no', {status: 404}), readCoastal: never});
   assert.equal(result.path, 'none');
 });
 
