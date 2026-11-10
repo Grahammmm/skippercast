@@ -3,7 +3,12 @@
 ## Unreleased
 
 - RF0844-8: fleet trip labels (admin form and agent label import) refuse a start or end time written on a day that is not on the calendar, such as February 30, 2026-02-29 or April 31, with the existing "must be ISO UTC times" error, instead of silently rolling it into the next month and saving it against the trip; a refused admin label saves nothing and a refused agent import keeps every existing label. Valid days, leap days and accepted time precision are unchanged.
+
+- RF0834-5: the AIS matcher keeps an established watched row (and its entry in the listener's `watch.json`) when the processor has no statics for an MMSI the same single active registry vessel still holds, whether positions remain or the processor state was rebuilt. Retention needs the stored row's vessel to be that owner, no rejection and a row that passes the watched gate; no row, fact or review is invented, and an unheard, candidate, rejected, reassigned, duplicated or excluded binding gains nothing.
+
 - RF0814-7: the trip planner's GPX, offline notes and planning-route exports now refuse, with "Included launch ramp is unavailable", when the included launch ramp is no longer in the published list (list replaced, empty, unavailable or for another region) instead of silently exporting the first listed ramp or leaving the checked launch out. The ramp checkbox stays visible, checked and enabled (showing "—") so it can be unchecked; a valid current ramp choice is still followed exactly and nothing saved is changed.
+
+- RF0804-7: the trip planner's position check forgets its reading when the region changes while the dialog is open, and a slow answer for the old region no longer appears in the new one; closing or leaving the dialog also drops a pending answer. Nothing new is read, sent or stored (`web/app/PositionCheck.tsx`).
 
 - RF0824-5: saved trip plans enforce the 16,384-byte plan cap in UTF-8 bytes on create and edit, so names and notes in non-ASCII text can no longer slip a larger plan past the limit; over-cap plans are refused with "plan too large" and nothing is saved.
 
@@ -12,6 +17,8 @@
 - RF0854-5: the WCOFS surface-current reader refuses a forecast frame whose latitude, longitude, mask, U or V array does not hold exactly the requested grid's cell count, or whose time array is not one value, even when every array is equally short, long or empty. The source reports failed (or retained, keeping the prior data and its original clocks) instead of ok or missing; a complete all-dry grid still reports missing.
 
 - RF0854-6: regular-grid GRIB decoding preserves longitude/value identity for westward-scanned columns, normalizing coordinates and columns together; positive-i grids and latitude handling are unchanged.
+
+- Forecast build: wave directions resampled onto the reference grid are now interpolated as circular bearings, so 359° and 1° average to north instead of south (180°). Non-finite or out-of-range source bearings and exactly opposite bearings stay missing; scalar fields, the sea mask and already-aligned grids are unchanged (`src/skippercast/forecast/build.py`).
 
 - RF0804-8: the "Check my position" answer no longer reads "outside" for a closure inside a wide reported position accuracy. When the position accuracy plus the 70 m planning margin reaches the planner screen's 20 km search bound, the nearest held closure is measured again without that bound, so a closure within the accuracy radius is "near" (with the low-accuracy warning) instead of being skipped. A precise position far from every closure, inside-a-closure, missing-layer, stale-data and not-covered answers are unchanged. Nothing is sent or stored. NOT FOR NAVIGATION.
 
