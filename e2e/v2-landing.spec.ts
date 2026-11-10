@@ -354,9 +354,32 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) {
   });
 }
 
+// UXFIX-13 (G, D1): a real tap on the visible Keep button at peek finishes the card with Boat and shows the verdict headline, in both languages.
+for (const lang of ['en', 'es'] as const) for (const [width, height] of [[390, 844], [360, 640]] as const) {
+  test(`${lang}: a tap on Keep at peek on the ${width}x${height} phone keeps Boat and reaches the verdict`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(!isMobile, 'phone layout only');
+    await page.setViewportSize({width, height});
+    await v2.open('app', {region: 'morro-bay', lang});
+    const sheet = page.locator('.ui-sheet'), card = page.locator('[data-first-run]');
+    await expect(sheet).toHaveAttribute('data-detent', 'peek');
+    const peekHeight = (await sheet.boundingBox())!.height;
+    const keep = card.getByRole('button', {name: lang === 'en' ? 'Keep Boat for now' : /^Mantener .+ por ahora$/});
+    const box = (await keep.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(44); expect(box.height).toBeGreaterThanOrEqual(44);
+    await expect(keep).toBeInViewport({ratio: 1});
+    await keep.tap();
+    await expect(page.locator('[data-first-run]')).toHaveCount(0);
+    await expect(page).toHaveURL(/[?&]profile=boat/);
+    await expect(sheet.locator('h1')).toBeInViewport();
+    await expect(sheet).toHaveAttribute('data-detent', 'peek');
+    expect(Math.abs((await sheet.boundingBox())!.height - peekHeight), 'the sheet keeps its peek height').toBeLessThanOrEqual(1);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 // BL-SC-2: at peek the four choices are one row above the tab bar; from half up the whole card is back.
-for (const [width, height] of [[390, 844], [360, 800]] as const) {
-  test(`at peek the first-run choices are tappable above the tab bar on the ${width}px phone`, async ({page, pageErrors, v2, isMobile}) => {
+for (const [width, height] of [[390, 844], [360, 800], [360, 640]] as const) {
+  test(`at peek the first-run choices are tappable above the tab bar on the ${width}x${height} phone`, async ({page, pageErrors, v2, isMobile}) => {
     test.skip(!isMobile, 'phone layout only');
     await page.setViewportSize({width, height});
     await v2.open('app', {region: 'morro-bay'});
@@ -371,7 +394,12 @@ for (const [width, height] of [[390, 844], [360, 800]] as const) {
     await expect(card.locator('#first-run-title')).toBeVisible();
     // The intro (the card's own p) and the MYB-1 boat fields (whose hint is a p too) are both out of the peek row.
     for (const hidden of [card.locator(':scope > p'), card.locator('.ui-eyebrow'), card.locator('fieldset')]) await expect(hidden).toBeHidden();
-    for (const clipped of [card.getByRole('button', {name: 'Keep Boat for now'}), card.locator('small').first()]) expect((await clipped.boundingBox())!.height).toBeLessThanOrEqual(1);
+    expect((await card.locator('small').first().boundingBox())!.height).toBeLessThanOrEqual(1);
+    // UXFIX-13 (G, D1): Keep is a visible 44 px quiet button on the heading row, whole inside the viewport at peek.
+    const keep = card.getByRole('button', {name: 'Keep Boat for now'}), kept = (await keep.boundingBox())!, title = (await card.locator('#first-run-title').boundingBox())!;
+    expect([kept.width >= 44, kept.height >= 44, kept.x >= 0, kept.x + kept.width <= width, kept.y >= 0, kept.y + kept.height <= height]).toEqual([true, true, true, true, true, true]);
+    expect(Math.abs((kept.y + kept.height / 2) - (title.y + title.height / 2)), 'Keep sits on the heading row').toBeLessThan(kept.height / 2);
+    await expect(keep).toBeInViewport({ratio: 1});
     await page.screenshot({path: test.info().outputPath(`bl-sc-2-peek-${width}x${height}.png`)});
     // Dragged (stepped) to half: the whole card as before.
     await handle.click();
