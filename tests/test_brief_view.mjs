@@ -322,7 +322,8 @@ test('#557: the coast brief counts matching landing ports and excludes foreign p
 test('#473: the brief asks for the coast report where the region binds one, with no layer on, and only once', async t => {
   const {bindBriefReport, createCoastData, regionPlace} = await load();
   const calls = [], original = globalThis.fetch;
-  globalThis.fetch = async path => { calls.push(String(path)); return new Response('no', {status: 503}); };
+  const gates = [];
+  globalThis.fetch = path => { calls.push(String(path)); return new Promise(resolve => gates.push(() => resolve(new Response('no', {status: 503})))); };
   const client = createCoastData({clockEvents: null});
   t.after(() => { globalThis.fetch = original; client.destroy(); });
   const place = () => regionPlace(MORRO_INFO, 'boat', '');
@@ -333,8 +334,14 @@ test('#473: the brief asks for the coast report where the region binds one, with
   assert.equal(reports(), 1, 'requested with no layer on');
   // The Swell layer asks for the same place: no second request.
   client.setPlace(place());
-  await client.load('report');
+  const joined = client.load('report');
   assert.equal(reports(), 1);
+  gates.forEach(open => open()); await joined;
+  // SC1722-04: once that read has failed, a later load asks again, once.
+  const again = client.load('report');
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(reports(), 2);
+  gates.forEach(open => open()); await again;
   // Outside a binding nothing is requested.
   const before = calls.length, other = createCoastData({clockEvents: null});
   bindBriefReport(() => regionPlace({id: 'monterey-point-sur', center: [36.62, -121.9], localAreas: []}, 'boat', ''), other)();
