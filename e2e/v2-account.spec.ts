@@ -373,3 +373,82 @@ test('a tap or a close while the library is still loading keeps the late autofil
   expect(seen.loginOptions, 'the tap asked once; the autofill that was waiting did not').toBe(1);
   expect(pageErrors.filter(e => !/Failed to load resource/.test(e))).toEqual([]);
 });
+
+// RF1925-4 (S4-40): after Create verifies, the dialog keeps a polite confirmation and a Continue button; the return/reload waits
+// for an acknowledgment. Fully stubbed server; the registration itself is a Chromium virtual authenticator's synthetic credential.
+async function stubCreate(page: Page, verify: 'ok' | 'refuse' = 'ok') {
+  await passkeyFixture(page);
+  const seen = {options: 0, verified: 0};
+  await page.route('**/api/session', route => route.fulfill({json: {signIn: '/#account', signedIn: false}}));
+  await page.route('**/api/auth/register/options', route => {
+    seen.options += 1;
+    return route.fulfill({json: {challenge: b64url(randomBytes(32)), rp: {name: 'SkipperCast', id: 'localhost'}, user: {id: b64url(randomBytes(16)), name: 'Skipper', displayName: 'Skipper'},
+      pubKeyCredParams: [{type: 'public-key', alg: -7}], timeout: 60000, authenticatorSelection: {residentKey: 'required', userVerification: 'preferred'}, attestation: 'none'}});
+  });
+  await page.route('**/api/auth/register/verify', route => {
+    seen.verified += 1;
+    return verify === 'ok' ? route.fulfill({json: {ok: true}}) : route.fulfill({status: 400, json: {error: 'Verification refused'}});
+  });
+  return seen;
+}
+const CREATED = 'Account created. You\u2019re signed in. Continue to return to your screen.';
+
+test('a created account keeps its confirmation readable until Continue, then returns once', async ({page, pageErrors, v2}) => {
+  const seen = await stubCreate(page);
+  await v2.open('app', AREA);
+  await page.evaluate(() => { (window as unknown as {__stillHere: boolean}).__stillHere = true; location.hash = '#account'; });
+  const status = page.locator('#account-status'), create = page.locator('#account-create');
+  await expect(create).toBeEnabled();
+  await create.click();
+  await expect(status).toHaveText(CREATED);
+  await expect(status).toHaveAttribute('role', 'status');
+  await expect(status).toHaveAttribute('aria-live', 'polite');
+  await expect(status).toHaveAttribute('aria-atomic', 'true');
+  await expect(create).toHaveText('Continue');
+  await expect(create).toBeEnabled();
+  await expect(page.locator('#account-signin')).toBeDisabled();
+  await expect(page.locator('#account-name')).toBeDisabled();
+  await expect(page.locator('.account-card')).toBeVisible();
+  await page.waitForTimeout(1500);   // no timer closes or reloads it
+  expect(await page.evaluate(() => (window as unknown as {__stillHere?: boolean}).__stillHere), 'no reload before Continue').toBe(true);
+  await expect(status).toHaveText(CREATED);
+  await create.focus();
+  await expect(create).toBeFocused();
+  const reloaded = page.waitForEvent('load');
+  await page.keyboard.press('Enter');
+  await reloaded;
+  expect(seen).toEqual({options: 1, verified: 1});
+  expect(new URL(page.url()).searchParams.get('region')).toBe('morro-bay');
+  expect(page.url(), 'the return address replaces #account').not.toContain('#account');
+  expect(pageErrors).toEqual([]);
+});
+
+test('Escape on the created confirmation returns once without a second registration', async ({page, pageErrors, v2}) => {
+  const seen = await stubCreate(page);
+  await v2.open('app', AREA);
+  await page.evaluate(() => { location.hash = '#account'; });
+  await expect(page.locator('#account-create')).toBeEnabled();
+  await page.locator('#account-create').click();
+  await expect(page.locator('#account-status')).toHaveText(CREATED);
+  const reloaded = page.waitForEvent('load');
+  await page.keyboard.press('Escape');
+  await reloaded;
+  expect(seen).toEqual({options: 1, verified: 1});
+  expect(new URL(page.url()).searchParams.get('region')).toBe('morro-bay');
+  expect(pageErrors).toEqual([]);
+});
+
+test('a refused registration never shows the confirmation or Continue and can be retried', async ({page, v2}) => {
+  const seen = await stubCreate(page, 'refuse');
+  await v2.open('app', AREA);
+  await page.evaluate(() => { (window as unknown as {__stillHere: boolean}).__stillHere = true; location.hash = '#account'; });
+  await expect(page.locator('#account-create')).toBeEnabled();
+  await page.locator('#account-create').click();
+  await expect(page.locator('#account-status')).toContainText('Verification refused');
+  await expect(page.locator('#account-create')).toBeEnabled();
+  await expect(page.locator('#account-create')).toHaveText('Create account');
+  await expect(page.locator('#account-status')).not.toContainText('Account created');
+  await expect(page.locator('#account-name')).toBeEnabled();
+  expect(seen.verified).toBe(1);
+  expect(await page.evaluate(() => (window as unknown as {__stillHere?: boolean}).__stillHere), 'no reload').toBe(true);
+});

@@ -249,4 +249,26 @@ test('create_late_autofill_stays_ignored_after_manual_create_and_signin_still_fi
   await dlg.signin.fire('click'); await settle();
   assert.equal(dlg.status.textContent, STRINGS['account.status.signedIn'].en);
   assert.equal(count('auth/login/verify'), 1); assert.equal(nav.reloads, 1); assert.equal(dlg.create.textContent, 'Create account');
+  await dlg.scrim.fire('keydown', key('Escape'));   // sign-in leaves the dialog to the reload: close it for the next test
+});
+
+test('created_moves_lost_focus_onto_continue_never_onto_the_status', async () => {
+  reset();
+  let dlg = await opened();
+  const verify = deferred();
+  routes['auth/register/verify'] = () => verify.promise;
+  const pending = create(dlg); await settle();
+  document.activeElement = document.body;   // a disabled button loses focus to the page
+  verify.resolve(reply({ok: true})); await pending;
+  assert.equal(document.activeElement, dlg.create, 'Escape and Tab reach the dialog again');
+  assert.notEqual(document.activeElement, dlg.status);
+  await dlg.scrim.fire('keydown', key('Escape')); assert.equal(nav.reloads, 1);
+  // Focus that is already inside the card is left alone.
+  reset(); dlg = await opened();
+  const slow = deferred(); routes['auth/register/verify'] = () => slow.promise;
+  const again = create(dlg); await settle();
+  dlg.name.focus();
+  slow.resolve(reply({ok: true})); await again;
+  assert.equal(document.activeElement, dlg.name);
+  await dlg.create.fire('click');
 });

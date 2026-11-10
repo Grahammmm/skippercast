@@ -669,6 +669,9 @@ export async function openAccount(options = {}) {
         $('#account-name').disabled = true; $('#account-signin').disabled = true;
         const next = $('#account-create'); next.textContent = t('account.continue'); next.disabled = false;
         status(t('account.status.created'));
+        // A disabled button drops focus to the page, where Escape and Tab would miss the dialog: bring it back onto
+        // Continue, never onto the status (that would read it twice). Focus already inside the card stays where it is.
+        if (!$('.account-card').contains(document.activeElement)) next.focus();
       } catch (error) { if (open === self) { status(passkeyMessage(error, t)); busy(false); } }
     });
     $('#account-signin').addEventListener('click', async () => {
