@@ -129,7 +129,7 @@ test('SC1722-04: a failed read shows Try again; a successful retry draws the cha
   assert.match(failed, /<button type="button"[^>]*>Try again<\/button>/);
   assert.doesNotMatch(failed, /app-coast-markup/);
   // Spanish label comes from the catalogue.
-  assert.equal(v.t('history.retry', 'es'), 'Intentar de nuevo');
+  assert.equal(JSON.parse(readFileSync(new URL('../web/strings.es.generated.json', import.meta.url), 'utf8'))['history.retry'], 'Intentar de nuevo');
   ok = true;
   await v.coastData.load('history');
   assert.equal(calls, 2, 'one retry request');
