@@ -3,6 +3,10 @@
    bar, masthead, tab bar and any open dialog are hidden, and the brief prints as one black-on-white
    column with link text only (no expanded URLs). */
 .app-print-only { display: none; }
+/* SC1407-05: the verdict guard adds no box; while the dock's hour settles the old answer is hidden and Updating stands in. */
+.app-hour-guard, .app-hour-settled { display: contents; }
+.app-hour-settled[hidden] { display: none; }
+.app-hour-updating { margin: 0; color: var(--muted); }
 
 @media print {
   .app-masthead, .app-command, .app-stage, .app-chrome-left, .app-rail, .app-legend, .app-dock,
