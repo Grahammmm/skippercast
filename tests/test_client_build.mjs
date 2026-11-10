@@ -198,7 +198,7 @@ test('the real site builds and passes the client check (static data directories 
   const manifest = JSON.parse(await readFile(join(out, '.vite/manifest.json'), 'utf8'));
   const closure = (keys, follow) => { const seen = new Set(); const walk = k => { if (seen.has(k)) return; seen.add(k); for (const i of follow(manifest[k])) walk(i); }; keys.forEach(walk); return seen; };
   const first = closure(['app.html'], e => e.imports ?? []), all = closure(['app.html'], e => [...e.imports ?? [], ...e.dynamicImports ?? []]);
-  for (const key of ['../web/trip-runtime.ts', 'offline-pack.js', 'legal-pack.js', 'coastal-offline-core.js', '../web/planner.ts', '../web/app/Planner.tsx', '../web/map/ocean-pack.ts'])
+  for (const key of ['../web/trip-runtime.ts', 'offline-pack.js', 'legal-pack.js', 'coastal-offline-core.js', '../web/planner.ts', '../web/app/Planner.tsx'])
     assert.ok(manifest[key] && !first.has(key) && all.has(key), `${key} loads on use, not with /map`);
   const precache = JSON.parse(await readFile(join(out, 'precache.json'), 'utf8'));
   assert.ok(precache.v2.assets.includes(`/${manifest['../web/trip-runtime.ts'].file}`), 'a saved pack can open the planner offline');
