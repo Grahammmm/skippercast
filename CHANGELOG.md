@@ -4,6 +4,8 @@
 
 - RF0844-7: the GEFS wind-ensemble build now checks each decoded wind-component and gust field's latitude and longitude axes against the GFS land mask before sampling any sea-cell index, and fails the build when a field sits on displaced cells even if its dimensions match (it previously published that wind under the mask's coordinates with a false zero-distance receipt). A failed build keeps the previous generation as before; matching grids, receipts and missing-member handling are unchanged.
 
+- RF0814-8: a depth-contour file whose review expiry is an impossible calendar date (such as 2026-11-31 or 2027-02-29) now fails the existing contour check instead of drawing and exporting; real dates keep drawing through their last day and are withheld the next day.
+
 - RF0844-6: SST front extraction preserves native grid origins and coordinates, so half-offset grids no longer falsely conflict; true overlapping-measurement conflicts still refuse publication.
 
 - RF0814-9: the admin fleet map's Activity type filter now also narrows the returned track segments, so a mixed-mode trip no longer draws fishing modes that were not selected; trip eligibility, paging, events and heat are unchanged.

@@ -115,6 +115,8 @@ export const contourState = signal<ContourState>(IDLE);
 const obj = (v: unknown): Json | null => v && typeof v === 'object' && !Array.isArray(v) ? v as Json : null;
 const text = (v: unknown): string => typeof v === 'string' ? v.trim() : '';
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
+/** A real UTC calendar date: the parse must be finite and round-trip to the same spelling (Date.parse alone normalizes 2026-11-31). */
+const realDay = (day: string): boolean => { const t = Date.parse(`${day}T00:00:00Z`); return Number.isFinite(t) && new Date(t).toISOString().slice(0, 10) === day; };
 const points = (l: unknown, min: number): l is unknown[][] =>
   Array.isArray(l) && l.length >= min && l.every(p => Array.isArray(p) && p.length >= 2 && p.every(n => Number.isFinite(n)));
 const line = (g: Json | null): boolean => {
@@ -140,7 +142,7 @@ export function assessContours(data: unknown, id: string, today: string): Contou
   const d = obj(data), p = obj(d?.provenance), list = d?.features;
   if (d?.type !== 'FeatureCollection' || !p || p.region_id !== id || p.units !== 'ft' || p.interval_ft !== INTERVAL_FT || !Array.isArray(list)) return failed;
   const expires = text(p.review_expires);
-  if (!DAY.test(expires)) return failed;
+  if (!DAY.test(expires) || !realDay(expires)) return failed;
   const sources = (Array.isArray(p.sources) ? p.sources : []).map(obj).filter((s): s is Json => !!s).map(s => ({
     source_id: text(s.source_id), name: text(s.name), url: text(s.url), attribution: text(s.attribution),
     survey_date: text(s.survey_date), vertical_datum: text(s.vertical_datum)}));

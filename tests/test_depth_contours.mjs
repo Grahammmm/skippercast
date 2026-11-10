@@ -378,3 +378,44 @@ test('EC6: the area draws muted and dashed at the bottom; filled runs dash and v
   assert.deepEqual(layer.pick.layers, [DEPTH_HIT, DEPTH_UNRESOLVED_FILL]);
   assert.match(layer.pick.mark(DEPTH_UNRESOLVED_FILL, AREA().properties).reading, /shallower reading is 12 ft/);
 });
+
+const withExpiry = (file, value) => { const d = clone(file); d.provenance.review_expires = value; return d; };
+const FAILED_SHAPE = {status: 'failed', data: null, sources: [], omitted: [], expires: null};
+
+test('contour_expiry_rejects_impossible_calendar: an impossible date fails closed, never throws', () => {
+  for (const bad of ['2026-99-99', '2026-00-10', '2026-13-01', '2026-11-31', '2027-02-29', '2026-11-00', '2026-11-32']) {
+    const d = withExpiry(OVERVIEW, bad), before = JSON.stringify(d);
+    const r = assessContours(d, 'morro-bay', TODAY);
+    assert.ok(r.status === 'failed' && r.data === null && r.expires === null && r.sources.length === 0 && r.omitted.length === 0, bad);
+    assert.equal(r.status, FAILED_SHAPE.status, bad);
+    assert.equal(JSON.stringify(d), before, `${bad}: input unchanged`);
+  }
+  for (const bad of ['', '   ', '2026-1-01', 'soon']) assert.equal(assessContours(withExpiry(OVERVIEW, bad), 'morro-bay', TODAY).status, 'failed', bad);
+});
+
+test('contour_expiry_valid_leap_and_utc_boundaries: real dates keep the inclusive last day and next-day withholding', () => {
+  assert.equal(assessContours(withExpiry(OVERVIEW, '2028-02-29'), 'morro-bay', '2028-02-29').status, 'drawn');
+  assert.equal(assessContours(withExpiry(OVERVIEW, '2028-02-29'), 'morro-bay', '2028-03-01').status, 'withheld');
+  assert.equal(assessContours(withExpiry(OVERVIEW, '2026-12-31'), 'morro-bay', '2026-12-31').status, 'drawn');
+  assert.equal(assessContours(withExpiry(OVERVIEW, '2026-12-31'), 'morro-bay', '2027-01-01').status, 'withheld');
+  assert.equal(assessContours(withExpiry(OVERVIEW, ' 2026-11-30 '), 'morro-bay', '2026-11-30').status, 'drawn', 'trimmed as before');
+});
+
+test('contour_invalid_expiry_never_draws: the layer shows failed with nothing drawn', async t => {
+  const bad = withExpiry(OVERVIEW, '2026-11-31');
+  const s = setup(t, {files: {[depthContoursOverviewURL('morro-bay')]: bad}});
+  await flush(); await flush();
+  assert.equal(s.calls.some(c => c[2]), false, 'nothing drawn');
+  assert.equal(contourState.value.status, 'failed');
+});
+
+test('contour_invalid_expiry_never_exports: the trip export refuses the file, and a valid one still passes', async () => {
+  const {loadContourFile} = await import('../web/planner.ts');
+  const page = () => 'https://s.test/app/', respond = file => async () => new Response(JSON.stringify(file));
+  const bad = await loadContourFile('morro-bay', TODAY, respond(withExpiry(FULL, '2027-02-29')), page);
+  assert.ok(typeof bad.refused === 'string' && !('collection' in bad) && !('retry' in bad), 'refused, no collection, no retry');
+  const exp = FULL.provenance.review_expires;
+  assert.ok('collection' in await loadContourFile('morro-bay', exp, respond(FULL), page), 'last day exports');
+  const next = new Date(Date.parse(`${exp}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+  assert.ok(typeof (await loadContourFile('morro-bay', next, respond(FULL), page)).refused === 'string', 'next day refused');
+});

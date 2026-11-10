@@ -24,3 +24,24 @@ test('manifest is installable with PNG and maskable icons and one theme colour',
   const png = readFileSync(new URL('apple-touch-icon.png', dist));
   assert.equal(png.readUInt32BE(16), 180);
 });
+
+test('manifest_three_shortcuts_exact_identity: Map, Conditions and the trip planner, same-origin and in scope (SC2252-15)', () => {
+  const manifest = JSON.parse(read('manifest.webmanifest'));
+  assert.deepEqual([manifest.id, manifest.start_url, manifest.scope], ['/', '/', '/'], 'the default launch is still the landing');
+  const expected = [
+    ['Map', 'Open the map.', '/map'],
+    ['Conditions', 'Check ocean conditions.', '/map?view=conditions'],
+    ['Trip planner', 'Open the trip planner.', '/map#export'],
+  ];
+  assert.deepEqual(manifest.shortcuts.map(s => [s.name, s.description, s.url]), expected);
+  const origin = 'https://skippercast.test', scope = new URL(manifest.scope, origin).href;
+  for (const shortcut of manifest.shortcuts) {
+    assert.equal(shortcut.short_name, shortcut.name, shortcut.name);
+    const url = new URL(shortcut.url, origin);
+    assert.equal(url.origin, origin, `${shortcut.url} is same-origin`);
+    assert.ok(url.href.startsWith(scope), `${shortcut.url} is in scope`);
+    assert.notEqual(url.searchParams.get('view'), 'plan', 'the species Plan view is not a shortcut');
+    assert.deepEqual(shortcut.icons, [{src: '/app-icon-192.png', sizes: '192x192', type: 'image/png'}]);
+    for (const icon of shortcut.icons) assert.ok(existsSync(new URL(icon.src.slice(1), dist)), icon.src);
+  }
+});
