@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC1407-04: the brief's date, hour and weekday text, the verdict's morning window and the rules and plan cards' day now reuse one date formatter per locale, zone and pattern from a shared cache (at most 64 kept) instead of building a new one on every call; every printed date and hour is unchanged, and a zone the browser rejects still fails as before.
+
 - SC1407-06: the map's reef-mark screen and the trip planner no longer each download and parse the live CDFW protected-area boundaries on the same `/map` load: when both ask the exact same query while it is in flight, one request and one parsed answer serve both (`dist/live-mpa.js`). Nothing is kept after the answer, so a later refresh asks again; each screen keeps its own checks and daily-feed fallback, and both record the time the answer arrived.
 
 - RF1345-7: the AIS port-coverage report opens exactly the requested processor `state.sqlite`, read-only, even when its path contains `?`, `#`, `%` or other URI characters; it no longer creates a stray file, reads a lookalike database or reports coverage unknown for such a path. Counts, the window and unknown-state output are unchanged.
