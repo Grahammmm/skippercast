@@ -1,6 +1,7 @@
 // SC1137-02: the brief tiles' detail line and the source-gap sentences read the reader's language.
 // The model keeps its English `.detail` / gap `.text`; `display` metadata is the same branches as finite parts,
 // and web/brief/tile-copy.ts says them from the catalogue. Published names are never translated.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import report from './fixtures/coast/skippercast-report.json' with {type: 'json'};
