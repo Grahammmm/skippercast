@@ -10,7 +10,7 @@
 .app-chart .maplibregl-ctrl-group:not(:empty) { box-shadow: var(--elev-2); }
 .app-chart .maplibregl-ctrl-group button { width: var(--touch-min); height: var(--touch-min); color: var(--text); }
 .app-chart .maplibregl-ctrl-group button + button { border-top: 1px solid var(--line); }
-.app-chart .maplibregl-ctrl-group button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; box-shadow: none; }
+.app-chart .maplibregl-ctrl-attrib-button:focus-visible, .app-chart .maplibregl-ctrl-group button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; box-shadow: none; }
 .app-chart .maplibregl-ctrl-group button:not(:disabled):hover { background: var(--panel-2); }
 .app-chart .maplibregl-ctrl button .maplibregl-ctrl-icon { background-image: none; display: grid; place-items: center; font: var(--weight-medium) var(--text-22) / 1 var(--font-sans); }
 .app-chart .maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon::before { content: "+"; }

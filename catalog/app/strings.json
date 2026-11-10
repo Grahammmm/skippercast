@@ -1338,6 +1338,7 @@
     "trip.status.offline": {"en": "You are offline. Connect to save this region; saved regions are unchanged.", "es": "No tienes conexión. Conéctate para guardar esta región; las regiones guardadas no cambian."},
     "trip.status.saved": {"en": "Saved {name} · {bytes}.{missing}", "es": "Se guardó {name} · {bytes}.{missing}"},
     "trip.status.missing": {"en": " {n} items could not be saved and will be missing offline.", "es": " No se pudieron guardar {n} elementos y faltarán sin conexión."},
+    "trip.status.missing.one": {"en": " {n} item could not be saved and will be missing offline.", "es": " No se pudo guardar {n} elemento y faltará sin conexión."},
     "trip.status.cancelled": {"en": "Cancelled. Nothing new was saved.", "es": "Se canceló. No se guardó nada nuevo."},
     "trip.status.failed": {"en": "Could not save: {detail}", "es": "No se pudo guardar: {detail}"},
     "trip.status.deleted": {"en": "Saved region deleted.", "es": "Se eliminó la región guardada."},
