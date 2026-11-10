@@ -73,7 +73,7 @@
         },
         {
           "max_bytes": 73000,
-          "reason": "RF1925-5: the location fallback reasons (denied, timed out) get an error style, three .port-input-feedback--error rules in web/landing/port-input.css, which is emitted into the shared degraded-notice stylesheet that app.html loads first. That takes the app first-load styles to 72,054 bytes on the merged build, 54 bytes over the 72,000 budget; the budget moves up 1,000 bytes (1.3% headroom over that build), the same step as SC1722-06, no more."
+          "reason": "Raised 72,000 to 73,000 (RF1935-4). The rule that keeps the focused phone target search visible in short viewports (hide the tabs, drop the sheet transform, let the sheet body scroll, in web/app/app.css) takes the app first-load styles to 72,262 bytes on this branch merged with main 6f584b488, 262 bytes over the 72,000 budget; the budget moves up 1,000 bytes (1.0% headroom over that build), no more."
         }
       ]
     },
