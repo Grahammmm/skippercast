@@ -33,7 +33,7 @@
       "label": "App page (brief, map) scripts (first load)",
       "kind": "first_load_js",
       "entry": "app.html",
-      "max_bytes": 1170000,
+      "max_bytes": 1180000,
       "history": [
         {
           "max_bytes": 1160000,
@@ -42,6 +42,10 @@
         {
           "max_bytes": 1170000,
           "reason": "Raised 1,160,000 to 1,170,000 (0.9% over the 1,160,081 measured on this branch merged with main 109ae09f). Main alone already measures 1,132.7 KB against the 1,132.8 KB budget (earlier fixes used up the headroom); RF0804-7 adds a small amount of minified code in PositionCheck.tsx that tags each retained position-check result with its region and dialog life, which puts the first load 81 bytes over. The new code removes a wrong-region result and a stale answer after the dialog closes, which is worth the bytes."
+        },
+        {
+          "max_bytes": 1180000,
+          "reason": "Raised 1,170,000 to 1,180,000 (0.9% over the 1,170,114 measured on this branch merged with main 3d13e7c0d7). Main alone measures just under the 1,170,000 budget, so the first load had no headroom left; SC1407-08 adds a small amount of minified code in web/app/main.tsx (the /map check and the early import of the Chart library after the first render), which puts it 114 bytes over. The Chart library stays a separate chunk fetched only on a /map page that opens on the Chart, so it is not counted in the first-load script total; the new code only moves its fetch earlier and is worth the bytes."
         }
       ]
     },
