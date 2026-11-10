@@ -426,13 +426,16 @@ export function LeadRules({date, now}: {date: string; now: Date}) {
   );
 }
 
-/** SCFEAT-SKILL-1: measured forecast skill under the model-disagreement line (web/brief/skill.ts); UNKNOWN when history is short. */
+/**
+ * SCFEAT-SKILL-1: measured forecast skill under the model-disagreement line (web/brief/skill.ts); UNKNOWN when history is short.
+ * SC1407-11: for the lead of the hour `at` the brief answers for (24/48/72 h ahead of now), with a link to the full /skill scorecard.
+ */
 function SkillLine({now, lang}: {now: Date; lang: Language}) {
   useEffect(() => { loadSkill(); }, []);
-  const file = skillFile.value, id = shownRegion()?.id;
-  if (file === undefined || !id) return null;
-  const s = skillSummary(file, id, now.getTime());
-  return <p class="app-verdict-skill ui-mono" data-skill={s.state}>{skillLine(s, lang)}</p>;
+  const file = skillFile.value, region = shownRegion();
+  if (file === undefined || !region) return null;
+  const at = leadHour(hour.value, day.value, now, region.timezone), s = skillSummary(file, region.id, now.getTime(), at ? Date.parse(at) : undefined);
+  return <p class="app-verdict-skill ui-mono" data-skill={s.state}>{skillLine(s, lang)} <a href="/skill">{t('brief.details', lang)}</a></p>;
 }
 
 /**
