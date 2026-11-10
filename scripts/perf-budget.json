@@ -44,8 +44,12 @@
           "reason": "Raised 1,160,000 to 1,170,000 (0.9% over the 1,160,081 measured on this branch merged with main 109ae09f). Main alone already measures 1,132.7 KB against the 1,132.8 KB budget (earlier fixes used up the headroom); RF0804-7 adds a small amount of minified code in PositionCheck.tsx that tags each retained position-check result with its region and dialog life, which puts the first load 81 bytes over. The new code removes a wrong-region result and a stale answer after the dialog closes, which is worth the bytes."
         },
         {
+          "max_bytes": 1180000,
+          "reason": "Raised 1,170,000 to 1,180,000 (0.9% over the 1,170,408 measured on this branch merged with main 2c5eae23, 408 bytes over). SC1407-06 adds the shared live-boundary reader (dist/live-mpa.js, imported by web/map/marks.ts and dist/protected-areas.js) so the map's mark screen and the planner's screen make one request for the same in-flight ds582 query instead of two; the extra minified code in the app entry is worth the saved request and parse."
+        },
+        {
           "max_bytes": 1166000,
-          "reason": "Lowered 1,170,000 to 1,166,000 (SC1407-10, #1762 M5). The trip planner, offline pack, basemap ranges and coastal snapshots moved from web/trip.ts to web/trip-runtime.ts, loaded on first use: the first load measured 1,169,640 bytes on main a5005eb054 and 1,164,834 after (4,806 bytes less; the old 58 KB trip chunk mostly held shared map and tide modules the first screen still loads). The usual measured + 5% would be a raise, so the ceiling keeps the gain with 1,166 bytes (0.1%) of headroom, more than main's 360."
+          "reason": "Lowered 1,180,000 to 1,166,000 (SC1407-10, #1762 M5). The trip planner, offline pack, basemap ranges and coastal snapshots moved from web/trip.ts to web/trip-runtime.ts, loaded on first use: the first load measured 1,170,408 bytes on main 2c5eae23 and 1,165,767 on this branch merged with main (4,641 bytes less; the old 58 KB trip chunk mostly held shared map and tide modules the first screen still loads). The usual measured + 5% would be a raise, so the ceiling keeps the gain with 233 bytes of headroom."
         }
       ]
     },
