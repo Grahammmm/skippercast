@@ -39,3 +39,38 @@ test('map catch and blank persist locally without account writes; quota failure 
   expect(writes).toEqual([]);
   expect(pageErrors).toEqual([]);
 });
+
+test('Spanish controls save a v1 English record and show an earlier English entry as stored under lang="en"', async ({page, pageErrors, v2}) => {
+  // SC1407-12: a synthetic earlier entry, exactly as the v1 store wrote it in English.
+  const reading = {label: 'Wind', model: 'NOAA GFS', grid: 'about 13 km', value: '12 kt', gap: '', point: 'regional', validAt: 1794506400000, issuedAt: 1794502800000, cell: null};
+  const gap = {...reading, label: 'Seas', model: 'NOAA GFS-Wave', grid: '0.16°', value: null, gap: 'the regional forecast carries no NOAA GFS-Wave samples', issuedAt: null};
+  const old = {kind: 'blank', name: 'Earlier mark', region: 'morro-bay', position: {latitude: 35.1, longitude: -120.9}, positionBasis: 'Selected map position; not live GPS',
+    recordedAt: '2026-11-07T18:00:00.000Z', conditions: {at: 1794506400000, retrievedAt: null, forecast: {kind: 'points', at: 1794506400000, point: 'regional',
+      families: [{family: 'gfs', label: 'GFS', rows: [reading, gap]}], current: {...gap, label: 'Current', model: 'NOAA WCOFS', grid: 'unstated', gap: 'no current forecast'}}}};
+  const seeded = JSON.stringify([old]);
+  await page.addInitScript(([key, raw]) => { if (localStorage.getItem(key) === null) localStorage.setItem(key, raw); }, [KEY, seeded]);
+  await stubLiveFeeds(page);
+  await page.route('**/api/session', route => route.fulfill({json: {signIn: '/#account', signedIn: false}}));
+  await v2.open('app', {...AREA, lang: 'es'});
+  const log = page.getByRole('region', {name: 'Registro privado del dispositivo', exact: true});
+  await expect(log.getByRole('button', {name: 'Registrar captura aquí'})).toBeVisible();
+  await expect(log.getByRole('button', {name: 'Registrar sin captura aquí'})).toBeVisible();
+  await expect(log).toContainText('NO USAR PARA NAVEGACIÓN.');
+  await expect(log).not.toContainText('Log catch here');
+  await expect(log.locator('summary')).toHaveText('Registro del dispositivo (1)');
+  await log.locator('summary').click();
+  const earlier = log.locator('[data-private-entry]').first();
+  await expect(earlier).toContainText('Sin captura (no se registró ninguna captura) · Earlier mark');
+  await expect(earlier.locator('span[lang="en"]')).toHaveText('Selected map position; not live GPS');
+  await expect(earlier.locator('li[lang="en"]')).toHaveText([/^Wind: 12 kt · NOAA GFS/, /^Seas: Unavailable: the regional forecast carries no NOAA GFS-Wave samples · /, /^Current: Unavailable: no current forecast · /]);
+  expect(await page.evaluate(key => localStorage.getItem(key), KEY)).toBe(seeded);
+  await log.getByRole('button', {name: 'Registrar captura aquí'}).click();
+  await expect(log.getByRole('status')).toHaveText('Guardado solo en este dispositivo.');
+  await expect(log.locator('summary')).toHaveText('Registro del dispositivo (2)');
+  const rows = await page.evaluate(key => JSON.parse(localStorage.getItem(key)!), KEY);
+  expect(JSON.stringify(rows[0])).toBe(JSON.stringify(old));
+  expect(rows[1].kind).toBe('catch');
+  expect(rows[1].positionBasis).toBe('Selected map position; not live GPS');
+  expect(Object.keys(rows[1])).toEqual(['kind', 'name', 'region', 'position', 'positionBasis', 'recordedAt', 'conditions']);
+  expect(pageErrors).toEqual([]);
+});
