@@ -47,12 +47,15 @@ test('Create tapped before the autofill options return still creates the account
   expect(held, 'the dialog started a passkey-autofill request').toBeDefined();
 
   const registering = page.waitForRequest(r => r.url().endsWith('/api/auth/register/options'));
-  const reloaded = page.waitForEvent('load');   // the app reloads signed in
   await page.locator('#account-create').click();
   await registering;
   await held!.continue();                       // the autofill options arrive after Create began
   await page.unroute('**/api/auth/login/options');
 
+  // RF1925-4: the confirmation stays readable until Continue; only then does the app reload signed in.
+  await expect(page.locator('#account-status')).toContainText('Account created.');
+  const reloaded = page.waitForEvent('load');
+  await page.locator('#account-create').click();   // Continue
   await reloaded;
   expect(await page.evaluate(() => sessionStorage.getItem('create-tapped')), 'the Create click was marked when it was dispatched').toBe('1');
   await expect.poll(async () => (await (await page.request.get('/api/session')).json()).signedIn).toBe(true);
@@ -83,12 +86,14 @@ test('a closed dialog\'s late autofill cannot abort Create in the dialog that re
   await expect(page.locator('#account-create')).toBeEnabled({timeout: 30_000});
 
   const registering = page.waitForRequest(r => r.url().endsWith('/api/auth/register/options'));
-  const reloaded = page.waitForEvent('load');
   await page.locator('#account-create').click();
   await registering;
   await first!.continue();                                  // dialog A's options arrive after B's Create began
   await page.unroute('**/api/auth/login/options');
 
+  await expect(page.locator('#account-status')).toContainText('Account created.');
+  const reloaded = page.waitForEvent('load');
+  await page.locator('#account-create').click();   // Continue
   await reloaded;
   expect(await page.evaluate(() => sessionStorage.getItem('create-tapped')), 'the Create click was marked when it was dispatched').toBe('1');
   await expect.poll(async () => (await (await page.request.get('/api/session')).json()).signedIn).toBe(true);

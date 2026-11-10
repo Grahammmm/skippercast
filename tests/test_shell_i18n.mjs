@@ -69,7 +69,7 @@ test('shell_es_views_sheet_and_aria: names, aria labels and the phone sheet foll
   assert.deepEqual(keys(es.nav), keys(en.nav), 'hrefs and data-view keys are the English ones');
   assert.deepEqual(keys(es.tabs), keys(en.tabs));
   assert.match(es.mobile, /aria-label="Capas"/);
-  assert.match(es.mobile, /<section class="ui-sheet app-sheet" data-detent="peek" aria-label="Resumen">/);
+  assert.match(es.mobile, /<section class="ui-sheet app-sheet" data-detent="peek" role="group" aria-label="Resumen">/);
   assert.match(es.mobile, /role="group" aria-label="Tiempo"/);
   assert.match(es.mobile, /aria-label="Hora"/);
   assert.match(es.mobile, /role="group" aria-label="Área y puerto"/);
