@@ -405,7 +405,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // RF1925-1: masthead minimum-width only; legend paint and backing unchanged.
   // SC1722-01 only appends a scoped .app-forecast-failed* block at the end of app.css (token text roles on the brief, not the legend glass);
   // no legend paint or backing changed and the cited line numbers above are unmoved.
-  "appCss": "174c49b7e791610078a1744eed010246883899891ddd3dfc2c46de685a19f3b7",
+  // RF1935-2 only appends a desktop-only (min-width: 1024px) .app-stage > .app-rail > .ui-segmented wrap block at the end of app.css and sets the desktop rail's
+  // overflow-y: scroll with a stable scrollbar gutter (layout, no paint); no colour, opacity, backing or text paint changed and the cited line numbers above are unmoved.
+  "appCss": "9964a38b139a1056760661ceb6837fa2fa64c59df7c3ffd052f509bc531c112c",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
