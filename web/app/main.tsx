@@ -7,7 +7,7 @@
 // itself never opens on its own.
 import {render} from 'preact';
 import {effect} from '@preact/signals';
-import {initLanguage} from '../i18n.ts';
+import {initReadyLanguage} from '../i18n.ts';
 import {configureStore, coast, loadCoordinateFormat, profile, region, species, startURLSync} from '../state.ts';
 import {savedHomeURL} from '../ports.ts';
 import {followStoredLimits, loadCruise, loadLimits} from '../limits.ts';
@@ -17,6 +17,7 @@ import {App, bindStartupFreshness, loadRegion, narrow, NARROW_QUERY, regionInfo}
 import {loadPlans, regionPlans} from '../species.ts';
 import {bindBriefReport, currentBrief, ensureRegionalForecast, enableSavedBrief, noteRegionInfo, loadDailyFeed, needsDailyLoad, showSavedBrief} from '../brief/Brief.tsx';
 import {regionPlace} from '../map/currents.ts';
+import {shownPresentation} from '../map/stage.ts';
 import {initTelemetry} from '../telemetry.ts';
 import {installDegradedWatch} from '../degraded.ts';
 
@@ -24,7 +25,8 @@ import {installDegradedWatch} from '../degraded.ts';
 installDegradedWatch();
 configureStore({v2: true});
 loadCoordinateFormat();
-initLanguage();
+// SC1407-09: the language now; a Spanish page's table loads meanwhile, and the first render below waits for it.
+const ready = initReadyLanguage();
 startURLSync();
 // Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
 initTelemetry({views: true});
@@ -42,26 +44,35 @@ if (!region.peek() && !coast.peek()) void savedHomeURL(location.href).then(next 
 const width = matchMedia(NARROW_QUERY);
 narrow.value = width.matches;
 width.addEventListener('change', event => { narrow.value = event.matches; });
-const host = document.getElementById('app');
-if (host) { host.replaceChildren(); render(<App />, host); }
-// FE-51: after the render, so `#export` finds the planner's host.
-startTrip();
 
-effect(() => {
-  const id = region.value;
-  if (id && regionInfo.peek()?.id !== id) void loadRegion(id);
-  if (id && regionPlans.peek()?.region !== id) void loadPlans(id);
-  if (id) showSavedBrief(id);   // the last brief kept on this device, at once; the reads below replace it
-  if (id && needsDailyLoad(id)) void loadDailyFeed(id);
-});
-// The brief's Wind and Swell tiles (#542): the region's forecast at the point nearest its centre, once the region's centre is known.
-effect(() => {
-  const id = region.value, info = regionInfo.value;
-  if (id && info?.id === id) { void ensureRegionalForecast(id, info.center); noteRegionInfo(id); }
-});
-// The brief's coast report where the region binds one, whichever layers are on: the same place the
-// Swell and Water temp layers ask for (web/app/MapStage.tsx), so the client requests it once.
-bindBriefReport(() => { const info = regionInfo.value; return info?.id === region.value ? regionPlace(info, profile.value, species.value ?? '') : null; });
-// Reuse the displayed brief's original source clocks. Connectivity and cache access
-// never re-date a reading, and a switched-out region cannot supply the masthead age.
-bindStartupFreshness(() => regionInfo.value?.id === region.value ? currentBrief(new Date())?.tiles ?? [] : []);
+/** The first render (in the page language, its table ready) and what follows it. initReadyLanguage never rejects. */
+async function start(): Promise<void> {
+  await ready;
+  const host = document.getElementById('app');
+  if (host) { host.replaceChildren(); render(<App />, host); }
+  // SC1407-08 (#1762 M3): a /map page that opens on the Chart starts fetching its library now, not when the Chart mounts.
+  // The Chart imports this same module (web/map/chart.ts), so the browser loads it once and the Chart reports any failure.
+  if (host && location.pathname === '/map' && region.peek() && shownPresentation.peek() === 'chart') void import('../map/maplibre.js').catch(() => {});
+  // FE-51: after the render, so `#export` finds the planner's host.
+  startTrip();
+
+  effect(() => {
+    const id = region.value;
+    if (id && regionInfo.peek()?.id !== id) void loadRegion(id);
+    if (id && regionPlans.peek()?.region !== id) void loadPlans(id);
+    if (id) showSavedBrief(id);   // the last brief kept on this device, at once; the reads below replace it
+    if (id && needsDailyLoad(id)) void loadDailyFeed(id);
+  });
+  // The brief's Wind and Swell tiles (#542): the region's forecast at the point nearest its centre, once the region's centre is known.
+  effect(() => {
+    const id = region.value, info = regionInfo.value;
+    if (id && info?.id === id) { void ensureRegionalForecast(id, info.center); noteRegionInfo(id); }
+  });
+  // The brief's coast report where the region binds one, whichever layers are on: the same place the
+  // Swell and Water temp layers ask for (web/app/MapStage.tsx), so the client requests it once.
+  bindBriefReport(() => { const info = regionInfo.value; return info?.id === region.value ? regionPlace(info, profile.value, species.value ?? '') : null; });
+  // Reuse the displayed brief's original source clocks. Connectivity and cache access
+  // never re-date a reading, and a switched-out region cannot supply the masthead age.
+  bindStartupFreshness(() => regionInfo.value?.id === region.value ? currentBrief(new Date())?.tiles ?? [] : []);
+}
+void start();

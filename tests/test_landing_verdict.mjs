@@ -11,7 +11,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins, rendererPlugins} from './helpers/esbuild-url.mjs';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -37,7 +37,7 @@ async function load() {
       export {BOAT_MODEL_NOTE} from './web/boat-range.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
   return (mod = await import(pathToFileURL(out).href));
 }
@@ -55,12 +55,13 @@ function forecastFeed(now, ageH = 6) {
 }
 
 /** A fetch answering region.json, the daily feed and the forecast; `missing` lists paths that answer 404. */
-function feeds(now, {missing = [], ageH = 6, asked = []} = {}) {
+function feeds(now, {missing = [], ageH = 6, asked = [], noModels = false, forecastReply = null} = {}) {
   return async url => {
     const path = new URL(String(url), PAGE).pathname; asked.push(path);
+    if (forecastReply && path === '/api/forecast') return forecastReply();
     const body = missing.some(m => path.includes(m)) ? null : path.endsWith('/region.json') ? JSON.parse(REGION)
-      : path === '/feeds/data/regions/morro-bay/latest.json' ? DAILY : path === '/api/forecast' ? forecastFeed(now, ageH) : null;
-    return body ? {ok: true, status: 200, json: async () => body} : {ok: false, status: 404, json: async () => ({}), body: null};
+      : path === '/feeds/data/regions/morro-bay/latest.json' ? DAILY : path === '/api/forecast' ? (noModels ? {...forecastFeed(now, ageH), models: {}} : forecastFeed(now, ageH)) : null;
+    return body ? {ok: true, status: 200, headers: new Headers(), json: async () => body} : {ok: false, status: 404, json: async () => ({}), body: null};
   };
 }
 
@@ -117,9 +118,10 @@ test('the landing shows the app lead\'s own word and sentence for tomorrow, and 
   assert.ok(html.includes('href="/map?region=morro-bay&amp;profile=boat&amp;day=2026-10-09"'));
 });
 
-test('a forecast 404 reads Unknown with its sentence, never a calmer word; a stale run holds as the app does', async () => {
+// SC1722-01: a forecast that loaded but has no model runs still reads Unknown; a forecast that failed to load (404, below) is no verdict at all.
+test('a loaded forecast that cannot rate the day reads Unknown with its sentence, never a calmer word; a stale run holds as the app does', async () => {
   const m = await load();
-  const v = await m.loadLandingVerdict(feeds(NOW, {missing: ['/api/forecast']}), NOW, PAGE);
+  const v = await m.loadLandingVerdict(feeds(NOW, {noModels: true}), NOW, PAGE);
   assert.equal(v?.verdict, 'unknown');
   assert.equal(v.word, 'Unknown');
   assert.ok(v.sentence.length > 0, 'Unknown says why');
@@ -129,6 +131,27 @@ test('a forecast 404 reads Unknown with its sentence, never a calmer word; a sta
     assert.notEqual(held.verdict, 'comfortable', `${ageH} h old run: never Comfortable`);
     assert.deepEqual([held.word, held.sentence], [app.word, app.limit], `${ageH} h old run: the app's held word`);
   }
+});
+
+test('landing_failure_is_not_a_verdict: a forecast read that failed (abort, timeout, network, HTTP 500, 404, {}, another region\'s feed) gives no live verdict, not Unknown', async () => {
+  const m = await load();
+  const ok = body => ({ok: true, status: 200, headers: new Headers(), json: async () => body});
+  const replies = {
+    abort: () => { throw new DOMException('gone', 'AbortError'); },
+    timeout: () => { throw new DOMException('slow', 'TimeoutError'); },
+    network: () => { throw new TypeError('fetch failed'); },
+    http500: () => ({ok: false, status: 500, json: async () => ({})}),
+    http404: () => ({ok: false, status: 404, json: async () => ({})}),
+    empty: () => ok({}),
+    badJson: () => ({ok: true, status: 200, headers: new Headers(), json: async () => { throw new SyntaxError('Unexpected token'); }}),
+    otherRegion: () => ok({...forecastFeed(NOW), region_id: 'monterey-point-sur'}),
+  };
+  for (const [name, forecastReply] of Object.entries(replies)) {
+    assert.equal(await m.loadLandingVerdict(feeds(NOW, {forecastReply}), NOW, PAGE), null, `${name}: no verdict at all`);
+    assert.equal(await m.loadLandingVerdict(feeds(NOW, {forecastReply}), NOW, PAGE, 'es'), null, `${name}: none in Spanish either`);
+  }
+  assert.ok(await m.loadLandingVerdict(feeds(NOW), NOW, PAGE), 'the same feeds with a good forecast still answer');
+  assert.equal((await m.loadLandingVerdict(feeds(NOW, {noModels: true}), NOW, PAGE))?.verdict, 'unknown', 'a loaded forecast with no usable hours is still Unknown');
 });
 
 test('no region or no feeds: no verdict at all', async () => {
@@ -264,10 +287,10 @@ test('the landing reads only the boat and Boat limits keys, writes nothing, and 
   for (const url of asked) assert.ok(!/Wren|wind=|gust|seas|loa/.test(decodeURIComponent(url)), `no boat detail in ${url}`);
 });
 
-test('missing forecast, stale run, missing feeds keep their behaviour with a saved boat; the name implies no fresh data', async () => {
+test('no usable forecast hours, stale run, missing feeds keep their behaviour with a saved boat; the name implies no fresh data', async () => {
   const m = await load();
   const entries = device(SKIFF, {boat: {wind: 6, gust: 9, seas: 2}});
-  const unknown = (await landingOn(m, entries, NOW, {missing: ['/api/forecast']})).v;
+  const unknown = (await landingOn(m, entries, NOW, {noModels: true})).v;
   assert.equal(unknown.verdict, 'unknown');
   assert.equal(unknown.boatName, 'Wren');
   assert.match(m.render(m.h(m.LiveVerdict, {v: unknown})), /near Morro Bay &amp; Avila, Wren: <strong class="landing-verdict-word" data-verdict="unknown">Unknown</);

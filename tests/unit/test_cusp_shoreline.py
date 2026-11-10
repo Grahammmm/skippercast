@@ -3,6 +3,7 @@ import gzip
 import json
 import math
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -147,6 +148,14 @@ class ExtractTests(unittest.TestCase):
         check_shoreline(collection, {'id': 'test-region', 'bounds': BOX})
 
 
+def dated(source_date):
+    """A one-feature CUSP collection (and its region) whose feature carries `source_date`."""
+    feature = {'type': 'Feature', 'id': 'a', 'properties': {'source_date': source_date, 'DAT_SET_CR': 'NOAA'},
+               'geometry': {'type': 'LineString', 'coordinates': [[-120.85, 35.35], [-120.84, 35.36]]}}
+    return ({'type': 'FeatureCollection', 'features': [feature], 'provenance': {
+        'region_id': 'test-region', 'source_id': 'noaa-cusp-shoreline', 'features': 1}}, {'id': 'test-region', 'bounds': BOX})
+
+
 class PlatformGateTests(unittest.TestCase):
     def test_committed_imports_pass_the_gate_and_ship_in_the_published_form(self):
         imports = sorted((ROOT / 'catalog/shoreline').glob('*.geojson'))
@@ -208,6 +217,72 @@ class PlatformGateTests(unittest.TestCase):
                     {**good, 'geometry': {'type': 'LineString', 'coordinates': [[-121.5, 35.35], [-120.84, 35.36]]}}):
             with self.assertRaises(ValueError):
                 check_shoreline(collection(bad), region)
+
+    def test_source_date_requires_a_real_calendar_day(self):
+        for date in ('2026-02-29', '1900-02-29', '2026-04-31', '0000-01-01', '2026-13-01', '2026-00-10', '2026-01-00', '2026-01-32'):
+            with self.subTest(date=date), self.assertRaisesRegex(ValueError, 'Shoreline feature a lacks a source date'):
+                check_shoreline(*dated(date))
+
+    def test_source_date_requires_canonical_ascii_string(self):
+        for date in (None, True, 20100509, 2010.0, ['2010-05-09'], {'d': '2010-05-09'}, '', '٢٠١٠-٠٥-٠٩', '2010-05-09T00:00:00Z',
+                     '2010-05-09 ', ' 2010-05-09', '2010-05-09\n', '2010-5-9', '10-05-09', '20100509'):
+            with self.subTest(date=date), self.assertRaisesRegex(ValueError, 'Shoreline feature a lacks a source date'):
+                check_shoreline(*dated(date))
+        collection, region = dated(None)
+        del collection['features'][0]['properties']['source_date']
+        with self.assertRaisesRegex(ValueError, 'lacks a source date'):
+            check_shoreline(collection, region)
+
+    def test_source_date_accepts_calendar_boundaries_verbatim(self):
+        multi = {'type': 'MultiLineString', 'coordinates': [[[-120.85, 35.35], [-120.84, 35.36]]]}
+        for date in ('2000-02-29', '2024-02-29', '1900-02-28', '0001-01-01', '9999-12-31', '2010-05-09'):
+            for geometry in (None, multi):
+                with self.subTest(date=date, geometry=geometry and geometry['type']):
+                    collection, region = dated(date)
+                    if geometry:
+                        collection['features'][0]['geometry'] = geometry
+                    before = json.loads(json.dumps(collection))
+                    check_shoreline(collection, region)
+                    self.assertEqual(collection, before)
+                    self.assertEqual(slim_shoreline(collection)['features'][0]['properties']['source_date'], date)
+
+    def test_publish_invalid_date_preserves_existing_target(self):
+        root, output, region = self.publication(['2010-05-09', '2026-02-29'])
+        (output / 'shoreline.geojson').write_bytes(b'sentinel \xff bytes')
+        source = (root / 'catalog/shoreline/test-region.geojson').read_bytes()
+        with patch('skippercast.platform.shoreline.atomic_json') as write, self.assertRaises(ValueError):
+            publish_shoreline(root, region, output)
+        write.assert_not_called()
+        self.assertEqual((output / 'shoreline.geojson').read_bytes(), b'sentinel \xff bytes')
+        self.assertEqual((root / 'catalog/shoreline/test-region.geojson').read_bytes(), source)
+        self.assertEqual([p.name for p in output.iterdir()], ['shoreline.geojson'])
+
+    def test_publish_invalid_date_creates_no_target(self):
+        root, output, region = self.publication(['2010-05-09', '2026-04-31'])
+        with self.assertRaises(ValueError):
+            publish_shoreline(root, region, output)
+        self.assertEqual(list(output.iterdir()), [])
+
+    def test_publish_valid_date_keeps_published_form(self):
+        root, output, region = self.publication(['2024-02-29', '0001-01-01'])
+        source = json.loads((root / 'catalog/shoreline/test-region.geojson').read_text())
+        self.assertEqual(publish_shoreline(root, region, output), 'regions/test-region/shoreline.geojson')
+        published = json.loads((output / 'shoreline.geojson').read_text())
+        self.assertEqual(published, slim_shoreline(source))
+        self.assertEqual(sorted(f['properties']['source_date'] for f in published['features']), ['0001-01-01', '2024-02-29'])
+
+    def publication(self, dates):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: shutil.rmtree(tmp, ignore_errors=True))
+        collection, region = dated(dates[0])
+        for number, date in enumerate(dates[1:], 1):
+            collection['features'].append({**collection['features'][0], 'id': f'f{number}',
+                                           'properties': {**collection['features'][0]['properties'], 'source_date': date}})
+        collection['provenance']['features'] = len(collection['features'])
+        (tmp / 'catalog/shoreline').mkdir(parents=True)
+        (tmp / 'catalog/shoreline/test-region.geojson').write_text(json.dumps(collection))
+        (tmp / 'out').mkdir()
+        return tmp, tmp / 'out', region
 
     def test_a_region_without_an_import_publishes_none_and_drops_a_stale_copy(self):
         root, output = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())

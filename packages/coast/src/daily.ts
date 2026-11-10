@@ -8,6 +8,7 @@ import {KAYAK_WIND_RANK, kayakDay, kayakHours, kayakWindText, kayakWindowOk, typ
 import {seaward, shoreDay, shoreHours, surf, surfText, surfWindowOk, type ShoreDay, type ShoreHour} from './shore-conditions.ts';
 import {BAR_CHECK, barDay, barHours, crossingCheck, crossingHours, entranceFor, type BarDay, type BarHour} from './bar-conditions.ts';
 import {clampLimits, defaultLimits, limitsText, looserFields, sameLimits, stricterFields, type ComfortLimits} from './limits.ts';
+import {dateTimeFormat} from './date-format.ts';
 
 export type DailyDay = {date:string;label:string;weekday:string;dayNumber:number;provisional:boolean};
 export type DailyBrief = {
@@ -37,7 +38,7 @@ const finite=(value:unknown):value is number=>typeof value==='number'&&Number.is
 export function dateKey(at:string|Date,tz:string):string {
  const value=at instanceof Date?at:new Date(at);
  if(!Number.isFinite(value.getTime()))throw new RangeError('Invalid date');
- const parts=new Intl.DateTimeFormat('en-US',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(value);
+ const parts=dateTimeFormat('en-US',tz,{year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(value);
  const get=(type:string)=>parts.find(part=>part.type===type)!.value;
  return `${get('year')}-${get('month')}-${get('day')}`;
 }
@@ -50,7 +51,7 @@ function addDay(date:string,days:number):string {
  const value=calendarDate(date);value.setUTCDate(value.getUTCDate()+days);return value.toISOString().slice(0,10);
 }
 function offsetMinutes(at:Date,tz:string):number {
- const parts=new Intl.DateTimeFormat('en-US',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(at);
+ const parts=dateTimeFormat('en-US',tz,{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(at);
  const number=(type:string)=>Number(parts.find(part=>part.type===type)!.value);
  const wall=Date.UTC(number('year'),number('month')-1,number('day'),number('hour'),number('minute'),number('second'));
  return (wall-at.getTime())/60_000;
@@ -68,7 +69,7 @@ function localInstant(date:string,tz:string,hour=0):Date {
 }
 function dayInfo(date:string,county:County,now:Date):DailyDay {
  const today=dateKey(now,county.timezone),day=localInstant(date,county.timezone,12);
- const weekday=new Intl.DateTimeFormat('en-US',{timeZone:county.timezone,weekday:'long'}).format(day);
+ const weekday=dateTimeFormat('en-US',county.timezone,{weekday:'long'}).format(day);
  return {date,label:date===today?'Today':date===addDay(today,1)?'Tomorrow':weekday,weekday,dayNumber:Number(date.slice(8)),provisional:date>=addDay(today,2)};
 }
 
@@ -305,8 +306,8 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
 }
 
 const lower=(text:string)=>text.charAt(0).toLowerCase()+text.slice(1);
-const hourText=(at:string,tz:string)=>new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric'}).format(new Date(at));
-const clockText=(at:string,tz:string)=>new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit'}).format(new Date(at));
+const hourText=(at:string,tz:string)=>dateTimeFormat('en-US',tz,{hour:'numeric'}).format(new Date(at));
+const clockText=(at:string,tz:string)=>dateTimeFormat('en-US',tz,{hour:'numeric',minute:'2-digit'}).format(new Date(at));
 /** Consecutive hours as spans: "6 AM–9 AM, 1 PM–2 PM and 6 PM–7 PM" (each span ends an hour after its last hour). */
 function spans(hours:BarHour[],tz:string):string {
  const groups:BarHour[][]=[];
@@ -373,7 +374,7 @@ function spearSummary(spear:SpearDay,siteName:string|null,tz:string):string[] {
  const k=spear.clarity;
  if(k.band==='Unknown')parts.push(`Clarity unknown: ${k.missing.length?`needs ${k.missing.join(' and ')}`:'no inputs'}.`);
  else parts.push(`Clarity is an estimate, not a measurement: ${lower(k.band)}${k.drivers.length?` (${k.drivers.join('; ')})`:''}.`);
- if(spear.best)parts.push(`Calmest daylight hour: ${new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric'}).format(new Date(spear.best.at))} (${spear.best.verdict.toLowerCase()}).`);
+ if(spear.best)parts.push(`Calmest daylight hour: ${dateTimeFormat('en-US',tz,{hour:'numeric'}).format(new Date(spear.best.at))} (${spear.best.verdict.toLowerCase()}).`);
  else if(spear.hours.length)parts.push('No daylight hour reads calmer or marginal.');
  return parts;
 }

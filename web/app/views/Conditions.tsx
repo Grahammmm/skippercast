@@ -11,7 +11,7 @@ import {alertTimeSpan} from '../../alert-time.ts';
 import {daylightText} from '../../conditions-daylight.ts';
 import {Segmented} from '../../ui/Chip.tsx';
 import {currentBrief, ensureRegionalForecast, regionalForecast} from '../../brief/Brief.tsx';
-import {coastBinding, coastReport} from '../../coast-data.ts';
+import {coastBinding, coastData, coastReport} from '../../coast-data.ts';
 import {coastRows, conditionsRows, conditionsSpan, FAMILIES, forecastRows, readingsAt, sourceClocks, type Family} from '../../conditions.ts';
 import {CDFW_REGULATIONS} from '../../map/habitat.ts';
 import {disagreements, sentence} from '../../model-disagreement.ts';
@@ -19,6 +19,7 @@ import disagreeStyles from './model-disagreement.css?url';
 import {PROFILE_TABLE} from '../../profile.ts';
 import {language, localeOf, num, t, type Language} from '../../i18n.ts';
 import {profile, region, species} from '../../state.ts';
+import {regionPlace} from '../../map/currents.ts';
 import {loadRegs, regsData} from '../../regs.ts';
 import {SeasonStrip} from '../SeasonStrip.tsx';
 import {PortAlert} from '../PortAlert.tsx';
@@ -35,6 +36,17 @@ import {conditionsCopy, fixed, localTime} from '../../view-copy.ts';
 function useForecast(): void {
   const id = region.value, near = regionInfo.value?.id === id ? regionInfo.value.center : null;
   useEffect(() => { if (id) void ensureRegionalForecast(id, near); }, [id, near?.[0], near?.[1]]);
+}
+
+/** Ask for the local coast report while the view is shown; a report left in error is asked again on return. */
+function useCoastReport(): void {
+  const info = regionInfo.value, p = profile.value, target = species.value ?? '';
+  useEffect(() => {
+    const place = regionPlace(info, p, target);
+    if (!place) return;
+    coastData.setPlace(place);
+    void coastData.load('report');
+  }, [info, p, target]);
 }
 
 const FAMILY_OPTIONS = (Object.keys(FAMILIES) as Family[]).map(value => ({value, label: FAMILIES[value].label}));
@@ -57,6 +69,7 @@ function AlertLine({alert, tz, lang}: {alert: Alert; tz: string; lang: Language}
 
 export function Conditions({now = new Date()}: {now?: Date} = {}) {
   useForecast();
+  useCoastReport();
   const lang = language.value, copy = conditionsCopy(lang);
   const rulesRegion = regionInfo.value?.id === region.value ? regionInfo.value.rules ?? null : null;
   useEffect(() => { if (rulesRegion && regsData.peek()?.region !== rulesRegion.id) void loadRegs(rulesRegion); }, [rulesRegion]);

@@ -26,7 +26,7 @@ const PRODUCTS: Readonly<Record<string, StringId>> = {'/api/coast/report': 'trip
 
 /** A status line kept as its catalogue id and variables (and an English tail the store supplies), never as translated text. */
 type Status = {id: StringId; vars?: Readonly<Record<string, string | number>>; missing?: number; tail?: string} | null;
-const statusText = (s: Status, lang: Language): string => !s ? '' : t(s.id, lang, {...s.vars, ...(s.id === 'trip.status.failed' && typeof s.vars?.detail === 'string' ? {detail: tidePackMessage(s.vars.detail, lang)} : {}), ...(s.missing === undefined ? {} : {missing: s.missing ? t('trip.status.missing', lang, {n: s.missing}) : ''})}) + (s.tail ?? '');
+const statusText = (s: Status, lang: Language): string => !s ? '' : t(s.id, lang, {...s.vars, ...(s.id === 'trip.status.failed' && typeof s.vars?.detail === 'string' ? {detail: tidePackMessage(s.vars.detail, lang)} : {}), ...(s.missing === undefined ? {} : {missing: s.missing ? t(s.missing === 1 ? 'trip.status.missing.one' : 'trip.status.missing', lang, {n: s.missing}) : ''})}) + (s.tail ?? '');
 
 /** "Oct 9, 3:42 PM PDT" in the region's zone ("9 oct, 3:42 p. m. PDT" in Spanish). */
 export const stamp = (iso: string, timeZone = zone(), lang: Language = 'en'): string =>
@@ -80,8 +80,9 @@ function TripDialog() {
         <h2 id="export-heading" tabIndex={-1}>{t('trip.title', lang)}</h2>
         <IconButton icon="close" label={t('trip.close', lang)} onClick={closeTrip} />
       </div>
-      {tripReady.value ? null : <p role="status">{error ? loadFailed(error, lang) : t('trip.loading', lang)}</p>}
-      {error ? <Button size="sm" onClick={() => void loadPlanner()}>{t('trip.retry', lang)}</Button> : null}
+      {/* RF1935-1: the status and Retry belong to an open dialog; this one is always mounted, so a closed, never-used planner would otherwise keep "Loading the trip planner" in the page. */}
+      {open && !tripReady.value ? <p role="status">{error ? loadFailed(error, lang) : t('trip.loading', lang)}</p> : null}
+      {open && error ? <Button size="sm" onClick={() => void loadPlanner()}>{t('trip.retry', lang)}</Button> : null}
       {planner ? <planner.View model={planner.model} open={open} /> : null}
       <PositionCheck />
       <Button icon="download" disabled={!region.value} onClick={() => { closeTrip(); offlineOpen.value = true; }}>{t('trip.legal.open', lang)}</Button>

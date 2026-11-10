@@ -70,13 +70,13 @@ function regionReader(fetchFn: typeof fetch): ReturnType<typeof createRegionRead
 }
 
 type StartupReading = Pick<BriefTile, 'at' | 'limitMs' | 'value' | 'state' | 'lastGood'>;
-/** Source age, never arrival/cache age. Missing tiles cannot produce an all-fresh claim. */
+/** Source age, never arrival/cache age. Missing tiles cannot produce an all-fresh claim. Offline (SC1722-03) keeps the age the readings' own clocks give: no usable reading, no age. */
 export function startupFreshness(readings: readonly StartupReading[], now: () => number = Date.now, online = true): Freshness {
-  if (!online) return {state: 'offline', age: null};
   const clocks = readings.map(tile => ({tile, clock: sourceFreshness(tile.at, tile.limitMs, now)}));
   const known = clocks.filter(({tile, clock}) => tile.value !== null && tile.state !== 'unavailable' && clock.ageMs !== null);
   const oldest = known.length ? Math.max(...known.map(({clock}) => clock.ageMs!)) : null;
   const age = oldest === null ? null : oldest < 3_600_000 ? `${Math.floor(oldest / 60_000)} min` : `${Math.floor(oldest / 3_600_000)} h`;
+  if (!online) return {state: 'offline', age};
   const stale = known.some(({tile, clock}) => tile.lastGood || tile.state === 'stale' || clock.state === 'stale');
   return {state: stale ? 'stale' : !known.length || known.length !== readings.length ? 'unknown' : 'ok', age};
 }

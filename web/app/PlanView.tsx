@@ -2,18 +2,19 @@ import {useEffect, useRef} from 'preact/hooks';
 import {planCopy, planView} from '../plan.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {regionCoverage, regionPlans, targetLabel, targetState, TARGET_STATE_TEXT} from '../species.ts';
-import {profile, region, setParams, species, withParams} from '../state.ts';
+import {appView, navigate, profile, region, species, withParams} from '../state.ts';
 import {freshnessLabel, loadRegs, regsData, regulationState, ruleSummary, verifiedText} from '../regs.ts';
 import {currentRegionInfo, zone} from './App.tsx';
 import {language, t} from '../i18n.ts';
 import {dockState} from './TimeDock.tsx';
+import {dateTimeFormat} from '../../packages/coast/src/date-format.ts';
 import {Button} from '../ui/Button.tsx';
 import {openTrip} from '../trip.ts';
 import './plan.css';
 
 export function PlanLink() {
   const href = withParams(typeof location === 'undefined' ? 'https://skippercast.test/map' : location.href, {view: 'plan'});
-  return <a href={href} onClick={e => { if (!e.button && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) { e.preventDefault(); setParams({view: 'plan'}); } }}>{t('plan.for', language.value, {name: targetLabel(profile.value, region.value, species.value)})}</a>;
+  return <a href={href} onClick={e => { if (!e.button && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) { e.preventDefault(); if (appView.value !== 'plan') navigate(withParams(location.href, {view: 'plan'})); } }}>{t('plan.for', language.value, {name: targetLabel(profile.value, region.value, species.value)})}</a>;
 }
 
 /** The selected target's existing registry logic, evaluated for the dock's date and instant. */
@@ -21,7 +22,7 @@ export function targetRules(now: Date) {
   const rules = currentRegionInfo()?.rules ?? {id: region.value ?? '', timezone: zone()};
   const loaded = regsData.value, data = loaded?.region === rules.id ? loaded.data : null;
   const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, at = dockState(now, zone()).at;
-  const date = new Intl.DateTimeFormat('en-CA', {timeZone: zone(), year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
+  const date = dateTimeFormat('en-CA', zone(), {year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
   const state = regulationState(data, target, rules, now.getTime(), date, at);
   return {state, summary: ruleSummary(data, target, state, rules), freshness: freshnessLabel(data, target, state, rules, now.getTime()), available: !!data};
 }

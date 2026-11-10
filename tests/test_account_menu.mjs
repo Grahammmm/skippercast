@@ -1,6 +1,7 @@
 // FE-50: the v2 account menu's wrapper over the v1 account modules
 // (web/account.ts). The passkey flow itself is tests/test_accounts.mjs
 // (unchanged) and e2e/v2-account.spec.ts.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';

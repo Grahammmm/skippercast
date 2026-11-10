@@ -1,6 +1,7 @@
 // SC1822-09: the selected-mark card says how far the mark is from the home port or launch, for Boat and Kayak: by water where a route is
 // computed, else the labelled straight line, with the one-way run at the saved cruise speed, in Where to look's own words. One pair,
 // searched once after the paint, within ROUTE_BUDGET; no bearing; Shore and Spear unchanged; no line without an origin. Synthetic data, no network.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import {mkdtemp} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -8,7 +9,7 @@ import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import {distanceNm} from '../dist/spot-ranking.js';
 import {ROUTE_BUDGET} from '../web/ranking.ts';
 import {durationText, runMinutes} from '../web/brief/run.ts';
@@ -30,7 +31,7 @@ async function load() {
       export {profile, region} from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   mod = await import(pathToFileURL(out).href);
   return mod;
 }

@@ -10,7 +10,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import fixture from './fixtures/coast/history.json' with {type: 'json'};
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -30,7 +30,7 @@ await build({
     ${HAS_COPY ? `export {coastCopy, historyCopy, conditionsCopy} from './web/view-copy.ts'; export {COAST_COPY_KEYS} from './packages/coast/src/ui/copy.ts';` : ''}
     export {render} from 'preact-render-to-string';
     export {h} from 'preact';`},
-  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
 });
 const v = await import(pathToFileURL(out).href);
 const sha = text => createHash('sha256').update(text).digest('hex');
@@ -85,8 +85,17 @@ const renderHistory = lang => { v.language.value = lang; const html = v.render(v
 const strip = html => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 const attrs = (html, name) => [...html.matchAll(new RegExp(`\\s${name}="([^"]*)"`, 'g'))].map(m => m[1]);
 
+// Preserve the historical bytes after asserting and removing only SC1722-18's addition.
+const CAPTIONS = ['Sea temperature, °F', 'Wave height, ft', 'Wind, kt', 'Air temperature, °F', 'Reported gust, kt', 'Dominant wave period, sec'];
+function priorHistory(metric, days) {
+  const html = hist(bundle, metric, days);
+  const caption = `<text x="47" y="12" class="axis history-measurement-caption">${CAPTIONS[METRICS.indexOf(metric)]}</text>`;
+  assert.equal(html.split(caption).length, 2, 'one independently expected caption');
+  assert.equal((html.match(/history-measurement-caption/g) ?? []).length, 1);
+  return html.replace(caption, '');
+}
 const snapshot = () => ({
-  history: sha(METRICS.flatMap(m => [7, 14, 45].map(d => hist(bundle, m, d))).join('\n')),
+  history: sha(METRICS.flatMap(m => [7, 14, 45].map(d => priorHistory(m, d))).join('\n')),
   chart: sha(chartEn()),
   conditions: sha(renderConditions('en')),
   hourly: sha(renderHourly('en')),

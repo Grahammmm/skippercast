@@ -2556,6 +2556,9 @@ body:not(.app-body) footer {
   .season-chart .axis {
     font-size: 14px;
   }
+  .history-chart .history-measurement-caption {
+    font-size: 10px;
+  }
   .season-card .eyebrow {
     font-size: 10px;
   }
@@ -2903,9 +2906,13 @@ body.app-body.map-focused #expand-map {
     margin: 8px 0 0;
   }
   .chart-overflow:focus-visible {
-    outline: 1px solid var(--coast-focus);
+    outline: 2px solid var(--coast-focus);
     outline-offset: 2px;
   }
+}
+.history-measurement-note > summary:focus-visible {
+  outline: 2px solid var(--coast-mint);
+  outline-offset: 2px;
 }
 .reef-gradient {
   background:

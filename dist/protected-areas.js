@@ -4,6 +4,7 @@ import { boundaryFingerprint, closureHits, geometryCoveredByBounds, pointGeometr
 import { esc } from "./marine-charts.js";
 import {revisionCache} from './map-response.js';
 import {loadDailyPart} from './daily-feed.js';
+import {readLiveMpa} from './live-mpa.js';
 // One record of the daily feed: the Worker's projection, else the whole feed.
 const dailySection=part=>loadDailyPart(part).catch(()=>fetchJSON(getRegion().daily_feed));
 export const MPA_SERVICE = "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query";
@@ -13,8 +14,9 @@ export function validMPAs(data) {
 }
 const sourceFor = (name) => !["Buchon","Morro","Piedras","Cambria"].some(x=>name.includes(x)) ? "https://wildlife.ca.gov/Conservation/Marine/MPAs" : "https://wildlife.ca.gov/Conservation/Marine/MPAs/" + (name.includes("Buchon") ? "Point-Buchon" : name.includes("Morro") ? "Morro-Bay" : name.includes("Piedras") ? "Piedras-Blancas" : "Cambria");
 // FE-51: `map` null is the screen alone (the v2 trip planner, web/trip.ts): nothing is drawn and the Chart draws the outlines itself.
-// `readJSON` reads the committed snapshot and closures (web/trip.ts passes its shared read, so a file the v2 startup already read is not fetched again); the live check stays on fetchJSON.
-export async function initProtectedAreas(map, onChange, readJSON=fetchJSON) {
+// `readJSON` reads the committed snapshot and closures (web/trip.ts passes its shared read, so a file the v2 startup already read is not fetched again);
+// `liveMpaRead` asks the live ds582 query (live-mpa.js: the page's one reader, shared with the map's mark screen while a read is in flight).
+export async function initProtectedAreas(map, onChange, readJSON=fetchJSON, liveMpaRead=readLiveMpa) {
   const layer=map?L.layerGroup().addTo(map):null;
   const status=document.getElementById("mpa-status")||document.createElement("p");
   let data=null, checked=null, live=false, extra=null, extraChecked=null;
@@ -119,9 +121,11 @@ export async function initProtectedAreas(map, onChange, readJSON=fetchJSON) {
         } catch { /* Keep original time; stale checks withhold context and targets. */ }
       }
       try {
-        const fresh=await fetchJSON(MPA_QUERY);
+        // SC1407-06: an identical in-flight map read is shared (live-mpa.js); the checked time is when the answer arrived.
+        const {data:fresh, checkedAt}=await liveMpaRead(MPA_QUERY);
+        if (fresh?.error) throw Error(String(fresh.reason || "Provider error"));
         if (!validMPAs(fresh)) throw Error("Incomplete MPA response");
-        data=fresh; checked=new Date().toISOString(); live=true;
+        data=fresh; checked=checkedAt; live=true;
         draw(); onChange();
       } catch {
         try {

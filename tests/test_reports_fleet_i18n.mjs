@@ -9,7 +9,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import catalogue from '../catalog/app/strings.json' with {type: 'json'};
 import {COVERED, catalogueProblems} from '../scripts/check_copy.mjs';
 import {CATCH_COPY_KEYS} from '../packages/coast/src/ui/catches.ts';
@@ -40,7 +40,7 @@ async function load() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: [...rendererPlugins, {name: 'reports-trip-renderer', setup: b => { b.onResolve({filter: /^\.\/map\/maplibre\.js$/}, args => ({path: args.path, external: true})); }}],
+    plugins: [...preparedRendererPlugins, {name: 'reports-trip-renderer', setup: b => { b.onResolve({filter: /^\.\/map\/maplibre\.js$/}, args => ({path: args.path, external: true})); }}],
   });
   mod = await import(pathToFileURL(out).href);
   return mod;

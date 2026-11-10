@@ -21,7 +21,10 @@
 //   backstop for a snapshot nothing has replaced.
 // - Expiry hides, never refreshes. Past its limit a snapshot becomes null
 //   with status 'expired' and no request follows. Only refresh() or a new
-//   place requests again. Besides the expiry timer, which stalls in
+//   place requests again. A product in transport 'error' is asked again once
+//   when a view loads it, once on the page's online event and from a view's
+//   Try again button (all through load, one request per product at a time; no
+//   timer, no loop); 'invalid' and 'expired' are never retried. Besides the expiry timer, which stalls in
 //   throttled or suspended tabs, a clock signal ticks on focus, pageshow and
 //   visibilitychange and on every setPlace and load, and the snapshot and
 //   status signals read it, so a returning tab withholds an expired snapshot
@@ -32,7 +35,7 @@
 //
 // Snapshots are county-wide, so a loaded snapshot is cached across places and
 // admitted again when the user returns to a bound place, until it expires.
-import {batch, computed, signal, type ReadonlySignal} from '@preact/signals';
+import {batch, computed, signal, untracked, type ReadonlySignal} from '@preact/signals';
 import {coastFetch} from '../packages/coast/src/transport.ts';
 import {resolveReportBinding, type CoastReportContext, type ReportBinding} from '../packages/coast/src/state/report-binding.ts';
 import type {Report} from '../packages/coast/src/types.ts';
@@ -94,6 +97,7 @@ type Cache = {readonly [P in CoastProduct]: CoastSnapshot<P> | null};
 /** Events that tick the clock; the default is `window` when there is one. */
 export type CoastDataOptions = {clockEvents?: EventTarget | null};
 const CLOCK_EVENTS = ['focus', 'pageshow', 'visibilitychange'] as const;
+const ONLINE_EVENT = 'online';
 
 export type CoastData = {
   coastReport: ReadonlySignal<CoastSnapshot<'report'> | null>;
@@ -103,7 +107,7 @@ export type CoastData = {
   coastBinding: ReadonlySignal<ReportBinding | null>;
   /** Select a place (null: none). Returns its binding; requests only when the binding changes. */
   setPlace(context: CoastReportContext | null): ReportBinding | null;
-  /** Ask for products for the current and later bound places. Idempotent: fetches only an idle product. */
+  /** Ask for products for the current and later bound places. Fetches idle or failed products; shares in-flight reads. */
   load(...products: CoastProduct[]): Promise<void>;
   /** Request again (an explicit retry); defaults to every product asked for. */
   refresh(...products: CoastProduct[]): Promise<void>;
@@ -150,6 +154,14 @@ export function createCoastData(options: CoastDataOptions = {}): CoastData {
   const tick = (): void => { clock.value = Date.now(); };
   const events = options.clockEvents !== undefined ? options.clockEvents : typeof window === 'undefined' ? null : window;
   for (const type of CLOCK_EVENTS) events?.addEventListener(type, tick);
+  // Reconnection: one new attempt for each wanted product left in 'error' (a loading product joins its request).
+  const reconnected = (): void => {
+    if (!alive || !binding.value) return;
+    sweep();
+    const failed = [...wanted].filter(product => status.value[product] === 'error');
+    if (failed.length) void load(...failed);
+  };
+  events?.addEventListener(ONLINE_EVENT, reconnected);
 
   const setStatus = (product: CoastProduct, next: CoastStatus): void => { status.value = {...status.value, [product]: next}; };
   const setCache = <P extends CoastProduct>(product: P, snapshot: CoastSnapshot<P> | null): void => { cache.value = {...cache.value, [product]: snapshot}; };
@@ -242,7 +254,7 @@ export function createCoastData(options: CoastDataOptions = {}): CoastData {
       if (!alive || !binding.value) continue;
       const inFlight = requests.get(product);
       if (inFlight) pending.push(inFlight.done);
-      else if (status.value[product] === 'idle') pending.push(request(product));
+      else if (status.value[product] === 'idle' || status.value[product] === 'error') pending.push(request(product));
     }
     await Promise.all(pending);
   }
@@ -255,6 +267,7 @@ export function createCoastData(options: CoastDataOptions = {}): CoastData {
   function destroy(): void {
     alive = false;
     for (const type of CLOCK_EVENTS) events?.removeEventListener(type, tick);
+    events?.removeEventListener(ONLINE_EVENT, reconnected);
     abortAll();
     for (const timer of timers.values()) clearTimeout(timer);
     timers.clear();
@@ -263,7 +276,12 @@ export function createCoastData(options: CoastDataOptions = {}): CoastData {
 
   return {
     coastReport: admitted('report'), coastOcean: admitted('ocean'), coastHistory: admitted('history'),
-    coastStatus: shownStatus, coastBinding: binding, setPlace, load, refresh, destroy,
+    coastStatus: shownStatus, coastBinding: binding,
+    // Commands must not subscribe a calling effect to transport state: a failed
+    // read would otherwise rerun the reader and retry forever without a trigger.
+    setPlace: context => untracked(() => setPlace(context)),
+    load: (...products) => untracked(() => load(...products)),
+    refresh, destroy,
   };
 }
 

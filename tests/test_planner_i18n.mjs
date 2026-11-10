@@ -1,5 +1,6 @@
 // SC0707-10: the trip planner in Spanish. The adapter is tested against the catalogue and the planner's real messages; the page is
 // the real web/app/Planner.tsx; GPX and offline-notes bytes are compared across languages. English output is unchanged (the existing planner tests).
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
@@ -8,7 +9,7 @@ import {getRegion} from '../dist/region.js';
 import {plannerText, plannerVerdict, hitReading, categoryText} from '../web/planner-copy.ts';
 import {verdictLine} from '../web/waypoint-placement.ts';
 import {t} from '../web/i18n.ts';
-import {rendererPlugin} from './helpers/esbuild-url.mjs';
+import {rendererPlugin, preparedCatalogue} from './helpers/esbuild-url.mjs';
 
 const WRAP = 'No se pudo completar la acción: ';
 const sample = text => text.replace(/\{(\w+)\}/g, (_, name) => name.startsWith('m_') ? '' : name === 'n' ? '7' : name === 'date' ? '2026-11-06' : `<${name}>`);
@@ -75,7 +76,7 @@ test('planner_verdict: fields, not words; thresholds and rounding as English', (
 });
 
 const root = new URL('..', import.meta.url).pathname;
-const bundle = await build({stdin: {contents: `export {Planner} from './web/app/Planner.tsx'; export {createPlanner} from './web/planner.ts'; export {language} from './web/i18n.ts'; export {h} from 'preact'; export {default as render} from 'preact-render-to-string';`, resolveDir: root}, bundle: true, write: false, platform: 'node', format: 'esm', jsx: 'automatic', jsxImportSource: 'preact', plugins: [rendererPlugin]});
+const bundle = await build({stdin: {contents: `export {Planner} from './web/app/Planner.tsx'; export {createPlanner} from './web/planner.ts'; export {language} from './web/i18n.ts'; export {h} from 'preact'; export {default as render} from 'preact-render-to-string';`, resolveDir: root}, bundle: true, write: false, platform: 'node', format: 'esm', jsx: 'automatic', jsxImportSource: 'preact', plugins: [rendererPlugin, preparedCatalogue]});
 const ui = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 const map = {getSize: () => ({x: 512}), getBounds: () => ({getWest: () => -122, getEast: () => -120, getSouth: () => 34, getNorth: () => 37})};
 const screen = {ready: () => true, pointAllowed: () => true, geometryAllowed: () => true, exportExclusions: () => ({features: [], checked_at: new Date().toISOString()})};
@@ -174,4 +175,18 @@ test('route download UI keeps its warning, sources and busy/blocked state', () =
     assert.match(page(p),/Preparing planning route/);
     ui.language.value='es';assert.match(page(p),/NO USAR PARA NAVEGAR/);
   } finally {ui.language.value='en';p.dispose();}
+});
+
+// RF1925-3: step 1 is the first workflow section after the plan card; rules and waypoints follow it, before the alert, layers and transfer.
+test('step1_is_first_workflow: plan card, step 1, rules, waypoints, then the later steps, in both languages', () => {
+  const { p, model } = mk();
+  try {
+    for (const lang of ['en', 'es', 'en']) {
+      ui.language.value = lang;
+      const html = page(model), at = s => { const i = html.indexOf(s); assert.ok(i >= 0, `${lang}: ${s}`); return i; };
+      const order = ['id="export-name"', 'id="export-spots"', 'class="export-card plan-rules"', 'id="waypoint-place"', 'id="export-layers"', 'id="export-download"'].map(at);
+      assert.ok(order.every((n, i) => !i || n > order[i - 1]), `${lang}: order ${order}`);
+      assert.ok(at('id="export-best"') < at('class="export-card plan-rules"'), `${lang}: Best available before the rules`);
+    }
+  } finally { ui.language.value = 'en'; p.dispose(); }
 });

@@ -1,6 +1,7 @@
 // SC0707-08: the time dock and the season strip follow the chosen language, as display only.
 // web/hour.ts still computes every day key and hour in en-US, so ?day= and ?hour= are the same
 // in Spanish and English, across the November DST change too; English output is unchanged.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdtemp} from 'node:fs/promises';
@@ -9,7 +10,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const TZ = 'America/Los_Angeles';
@@ -30,7 +31,7 @@ async function load() {
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
   mod = await import(pathToFileURL(out).href);
   return mod;
@@ -109,11 +110,11 @@ test('the dock renders Spanish labels and restores English exactly', async () =>
   assert.match(en, /aria-label="Day"/);
   assert.match(en, /aria-label="Play"/);
   assert.match(en, /aria-label="Hour"/);
-  assert.match(en, />1 pm</);
+  assert.match(en, />Today · 1 pm</);
   assert.match(en, />Today · Unknown</, 'the chip carries its day verdict word (SC2252-06)');
   language.value = 'es';
   const es = html();
-  for (const word of ['aria-label="Tiempo"', 'aria-label="Día"', 'aria-label="Reproducir"', 'aria-label="Hora"', '>Hoy · Desconocido<', '>13<']) assert.ok(es.includes(word), word);
+  for (const word of ['aria-label="Tiempo"', 'aria-label="Día"', 'aria-label="Reproducir"', 'aria-label="Hora"', '>Hoy · Desconocido<', '>Hoy · 13<']) assert.ok(es.includes(word), word);
   assert.ok(!es.includes('Today') && !es.includes('Play') && !es.includes('Unknown'));
   language.value = 'en';
   assert.equal(html(), en, 'English restores byte for byte');
