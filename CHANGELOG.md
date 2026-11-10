@@ -2,9 +2,13 @@
 
 ## Unreleased
 
+- RF0814-9: the admin fleet map's Activity type filter now also narrows the returned track segments, so a mixed-mode trip no longer draws fishing modes that were not selected; trip eligibility, paging, events and heat are unchanged.
+
 - RF0834-5: the AIS matcher keeps an established watched row (and its entry in the listener's `watch.json`) when the processor has no statics for an MMSI the same single active registry vessel still holds, whether positions remain or the processor state was rebuilt. Retention needs the stored row's vessel to be that owner, no rejection and a row that passes the watched gate; no row, fact or review is invented, and an unheard, candidate, rejected, reassigned, duplicated or excluded binding gains nothing.
 
 - RF0814-7: the trip planner's GPX, offline notes and planning-route exports now refuse, with "Included launch ramp is unavailable", when the included launch ramp is no longer in the published list (list replaced, empty, unavailable or for another region) instead of silently exporting the first listed ramp or leaving the checked launch out. The ramp checkbox stays visible, checked and enabled (showing "—") so it can be unchecked; a valid current ramp choice is still followed exactly and nothing saved is changed.
+
+- RF0804-7: the trip planner's position check forgets its reading when the region changes while the dialog is open, and a slow answer for the old region no longer appears in the new one; closing or leaving the dialog also drops a pending answer. Nothing new is read, sent or stored (`web/app/PositionCheck.tsx`).
 
 - RF0824-5: saved trip plans enforce the 16,384-byte plan cap in UTF-8 bytes on create and edit, so names and notes in non-ASCII text can no longer slip a larger plan past the limit; over-cap plans are refused with "plan too large" and nothing is saved.
 
