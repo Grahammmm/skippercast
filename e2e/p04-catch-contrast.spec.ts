@@ -261,7 +261,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1407-05: brief-print.css adds only .app-hour-guard/.app-hour-settled (display: contents) and .app-hour-updating (muted margin-less line) screen rules plus print-hide rules for the pending dock hour; the Reports catch sheet mounts none of those classes (they wrap the desktop/phone brief verdict), so no counted catch paint changes. Rebound from the final bytes.
   "web/brief/brief-print.css": "c04bce48a759c7877f4a7a87fb0631178f0fe60bb4eac6aa6a23ed610d4fca6b",
   "web/app/views/model-disagreement.css": "c6edfd6e81395b8d5e9fe67e982e399989172765490456f6a28ec036c115b72c",
-  "packages/coast/panel.css": "f769041713cf22215ec43fa6d5123b4d87221db60ee63bca0420425c2acad3cc",
+  "packages/coast/panel.css": "f765e1221775a652f300a63e657f99eff3538179376a85f53361befa5de2b385",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
@@ -319,7 +319,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // appCss surface hash and its comment. BODY09 mounts Reports/CatchCards, never the run line or the legend; contrast(), catch paint, backing,
   // assertions and thresholds are unchanged. Rebind only these two sources.
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
-  "scripts/check_contrast.mjs": "8dc8363132248cd4db566b0f52d835f266abc508d423065bed4d1c2c4609c8fe",
+  "scripts/check_contrast.mjs": "aac830e26961c015051cd6f67b6a145642af1513487fec3777a0b83c9f98a10e",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
