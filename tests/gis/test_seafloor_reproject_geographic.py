@@ -196,6 +196,32 @@ class ReprojectGeographicTests(unittest.TestCase):
         self.assertIn('projected on its own datum to EPSG:3310', qualified['notes'])
         self.assertEqual(qualified['resolution_m'], 1.2)
 
+    def test_integer_elevation_raster_with_nodata_projects_like_float(self):
+        # Centimetre int16 elevations with a -32768 NoData hole and margin (same holes as the float tile).
+        rows, cols = np.mgrid[0:ROWS, 0:COLS]
+        lon, lat = WEST + (cols + .5) * RES, NORTH - (rows + .5) * RES
+        values = np.round(ramp(lon, lat) * 100).astype('int16')
+        values[100:130, 140:175] = -32768
+        values[:, :7] = -32768
+        int_tif = self.root / 'tile-int16.tif'
+        with rasterio.open(int_tif, 'w', driver='GTiff', width=COLS, height=ROWS, count=1, dtype='int16',
+                           transform=from_origin(WEST, NORTH, RES, RES), nodata=-32768,
+                           crs=CRS.from_user_input('EPSG:5498').to_wkt()) as out:
+            out.write(values, 1)
+        as_int = self.project(int_tif, self.root / 'int')
+        as_float = self.project(self.tif, self.root / 'float')
+        with rasterio.open(as_int['path']) as out:
+            got = out.read(1)
+        with rasterio.open(as_float['path']) as out:
+            expected = out.read(1)
+        self.assertEqual(got.dtype, np.float32)
+        self.assertTrue(np.isfinite(got).any())
+        np.testing.assert_array_equal(np.isfinite(got), np.isfinite(expected))
+        valid = np.isfinite(got)
+        # int16 rounding is at most 0.5 cm; bilinear of rounded samples cannot exceed it.
+        self.assertLess(np.abs(got[valid] / 100.0 - expected[valid]).max(), 0.006)
+        self.assertEqual(as_int['output_pixels'], as_float['output_pixels'])
+
     def test_projected_rasters_are_untouched(self):
         projected = self.root / 'utm.tif'
         with rasterio.open(projected, 'w', driver='GTiff', width=8, height=8, count=1, dtype='float32',
