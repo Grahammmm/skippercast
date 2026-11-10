@@ -158,7 +158,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
   const lang = language.value;
   const layersOpen = panel === 'layers', conditions = appView.value === 'conditions', fleet = appView.value === 'fleet';
   return (
-    <div class="app-mobile">
+    <main class="app-mobile">
       <MapStage clock={clock} />
       <header class="app-top">
         <div class="app-top-row">
@@ -171,7 +171,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
-      {appView.value === 'reports' || appView.value === 'plan' ? <main class="app-mobile-page">{firstRun}{appView.value === 'plan' ? <Guard name="plan"><TargetSelect /><PlanView now={now} /></Guard> : <Guard name="reports"><Reports now={now} /></Guard>}</main> : <Sheet label={layersOpen ? t('shell.layers', lang) : appView.value === 'conditions' || appView.value === 'fleet' || appView.value === 'history' ? viewLabel(appView.value, lang) : t('shell.brief', lang)} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
+      {appView.value === 'reports' || appView.value === 'plan' ? <div class="app-mobile-page">{firstRun}{appView.value === 'plan' ? <Guard name="plan"><TargetSelect /><PlanView now={now} /></Guard> : <Guard name="reports"><Reports now={now} /></Guard>}</div> : <Sheet landmark={false} label={layersOpen ? t('shell.layers', lang) : appView.value === 'conditions' || appView.value === 'fleet' || appView.value === 'history' ? viewLabel(appView.value, lang) : t('shell.brief', lang)} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
         class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<Guard name="time-dock"><HourEdge now={now} /></Guard>}
         onBodyFocus={event => {
           const target = event.target as Element | null;
@@ -186,6 +186,6 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
         {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : appView.value === 'conditions' ? <Guard name="conditions"><Conditions now={now} /></Guard> : appView.value === 'fleet' ? <Guard name="fleet"><Fleet onShowMap={() => setDetent('peek')} /></Guard> : appView.value === 'history' ? <Guard name="history"><History now={now} /></Guard> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
       </Sheet>}
       <ViewNav icons class="app-tabs" />
-    </div>
+    </main>
   );
 }
