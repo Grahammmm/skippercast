@@ -449,7 +449,14 @@ the days it was inside a port geofence (contradictions, schedule.py).
     for mmsi, before in sorted(prior.items()):
         if mmsi in derived or before.get("status") != "watched":
             continue
-        if mmsi in statics or mmsi in owners:
+        held = owners.get(mmsi, ())
+        if (mmsi not in statics and len(held) == 1 and held[0].id == before.get("vessel_id")
+                and (held[0].id, mmsi) not in rejected and gate_problem(before) is None):
+            # No statics left (expired, or a rebuilt state) for an MMSI the one current registry owner still holds,
+            # and that owner is the vessel the established row names: absence of evidence is not disagreement, so
+            # the stored row stands (module docstring) and the MMSI stays a target. No row, fact or review is built.
+            out.targets[mmsi] = held[0].ref
+        elif mmsi in statics or mmsi in owners:
             out.rows.append({**{k: before.get(k) for k in WATCH_COLUMNS}, "mmsi": str(mmsi), "status": "candidate"})
         elif before.get("vessel_id") in by_id:
             out.targets[mmsi] = by_id[before["vessel_id"]].ref
