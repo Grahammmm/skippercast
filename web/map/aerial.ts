@@ -57,7 +57,7 @@ export const aerialId = (a: AerialBase): string => `aerial:${a.first}/${a.last}`
  * png32 fallback has its own source and layer id, so replacing the overlay replaces the source, and a late error from
  * the retired jpgpng source no longer names a layer the engine draws.
  */
-export function aerialOverlay(a: AerialBase, format: NaipFormat = 'jpgpng'): Overlay {
+export function aerialOverlay(a: AerialBase, format?: NaipFormat): Overlay {
   const id = format === 'png32' ? `${aerialId(a)}:png32` : aerialId(a);
   return {
     sources: {[id]: {...naipSource(format), attribution: aerialAttribution(a)}},
@@ -78,15 +78,11 @@ export interface AerialOptions {
 
 export function createAerial({engine, offer}: AerialOptions): {destroy(): void} {
   const drawn = computed(() => { const a = offer(); return a && base.value === 'aerial' ? a : null; });
-  // SC1407-07: one png32 retry per draw (this base on this engine). The draw it was granted for is kept, so another
-  // region or engine reads jpgpng again at once, and a format that did not change does not redraw the overlay.
-  const fallback = signal<{drawn: AerialBase; engine: Engine} | null>(null);
-  const format = computed<NaipFormat>(() => {
-    const f = fallback.value;
-    return f && f.drawn === drawn.value && f.engine === engine.value ? 'png32' : 'jpgpng';
-  });
-  const overlay = computed(() => drawn.value ? aerialOverlay(drawn.value, format.value) : null);
+  const overlay = computed(() => drawn.value ? aerialOverlay(drawn.value) : null);
+  // SC1407-07: once the png32 form is drawn, `shown` is no longer the overlay computed above; every new draw (another
+  // region, engine, or the base chosen again) starts at jpgpng, and a failure of the png32 form is not retried.
   let shown: Overlay | null = null, shownOn: Engine | null = null;
+  const clear = () => { unavailable.value = unavailable.peek().filter(l => l !== REGISTRY_ID); };
   const disposers = [
     effect(() => { aerialOffer.value = offer(); }),
     effect(() => {
@@ -98,18 +94,15 @@ export function createAerial({engine, offer}: AerialOptions): {destroy(): void} 
     // Turned off, on again, another region or engine: a base a tile error marked unavailable is tried again, jpgpng first.
     effect(() => {
       void drawn.value; void engine.value;
-      fallback.value = null;
-      if (unavailable.peek().includes(REGISTRY_ID)) unavailable.value = unavailable.peek().filter(l => l !== REGISTRY_ID);
+      if (unavailable.peek().includes(REGISTRY_ID)) clear();
     }),
     // The first failure of a jpgpng draw (the service may refuse the mixed format) swaps in the png32 form once; a
     // failure of that form stays unavailable. Only Aerial's own flag is cleared, and only while Aerial is drawn.
     effect(() => {
-      if (!unavailable.value.includes(REGISTRY_ID)) return;
       const d = drawn.peek(), e = engine.peek();
-      if (!d || !e || shown === null || shownOn !== e || format.peek() !== 'jpgpng') return;
-      console.warn('Aerial imagery failed as jpgpng; trying png32 once');
-      fallback.value = {drawn: d, engine: e};
-      unavailable.value = unavailable.peek().filter(l => l !== REGISTRY_ID);
+      if (!unavailable.value.includes(REGISTRY_ID) || !d || !e || shownOn !== e || shown !== overlay.peek()) return;
+      e.setOverlay(REGISTRY_ID, shown = aerialOverlay(d, 'png32'), ENC_LAYER);
+      clear();
     }),
   ];
   return {

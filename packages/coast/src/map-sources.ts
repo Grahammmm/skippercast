@@ -13,10 +13,10 @@ export type NaipFormat='jpgpng'|'png32';
  * SC1407-07: 512 px tiles (a quarter of the requests of 256 px at the same ground resolution), so each source zoom is one
  * lower than for 256 px tiles: 6..18 here draws over exactly the map zooms 7..19 did at 256 px.
  */
-export function naipSource(format:NaipFormat='jpgpng') {
+export function naipSource(format?:NaipFormat) {
  const rule=encodeURIComponent(JSON.stringify({rasterFunction:'NaturalColor'}));
  return {type:'raster' as const,tileSize:512,minzoom:6,maxzoom:18,
-  tiles:[`https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=image&bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=512,512&format=${format==='png32'?'png32':'jpgpng'}&transparent=true&renderingRule=${rule}`],
+  tiles:[`https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=image&bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=512,512&format=${format==='png32'?format:'jpgpng'}&transparent=true&renderingRule=${rule}`],
   attribution:'USGS / USDA · NAIP aerial imagery (dated mosaic)'};
 }
 
