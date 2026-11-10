@@ -262,15 +262,43 @@ def validation_dir(root: Path) -> Path:
     return Path(root) / "validation"
 
 
+def _trip_id(value) -> bool:
+    return isinstance(value, str) and TRIP_ID.fullmatch(value) is not None
+
+
 def fetch_labels(worker, region_id: str) -> list[dict]:
-    """Every labelled trip of the region from ``GET /api/fleet/jobs/labels`` (pages by trip id)."""
-    trips, cursor = [], ""
+    """Every labelled trip of the region from ``GET /api/fleet/jobs/labels`` (pages by trip id).
+
+    The inventory is admitted whole or not at all: ``sync`` prunes whatever it omits, so a page that breaks
+    the producer's contract (``{region, trips, next}``, rows by strictly increasing id, ``next`` null on the last
+    page and otherwise the page's last id) raises ``WorkerError`` naming only the page number.
+    """
+    trips, cursor, ordinal = [], "", 0
     while True:
+        ordinal += 1
         page = worker.get("labels", region=region_id, **({"cursor": cursor} if cursor else {}))
-        trips.extend(t for t in page.get("trips") or [] if isinstance(t, dict))
-        following = page.get("next")
-        if not isinstance(following, str) or not TRIP_ID.match(following) or following <= cursor:
+
+        def refuse(reason: str):
+            return WorkerError(f"labels page {ordinal}: {reason}")
+
+        if not isinstance(page, dict) or page.get("region") != region_id:
+            raise refuse("not a page of this region's labels")
+        rows = page.get("trips")
+        if not isinstance(rows, list) or "next" not in page:
+            raise refuse("trips or next is missing")
+        last = cursor
+        for row in rows:
+            if not isinstance(row, dict) or not _trip_id(row.get("id")):
+                raise refuse("a trip has no valid id")
+            if row["id"] <= last:
+                raise refuse("trip ids are not in increasing order")
+            last = row["id"]
+        trips.extend(rows)
+        following = page["next"]
+        if following is None:
             return trips
+        if not _trip_id(following) or not rows or following != last:
+            raise refuse("next is not the last trip id of the page")
         cursor = following
 
 
