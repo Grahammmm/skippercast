@@ -3,6 +3,9 @@
 ## Unreleased
 
 - SC1407-13: the planner's plan-date rules card and the landing's layer dots now follow the page language. In Spanish the card's heading, badges, closed line, check-the-rules line, freshness, link labels and legal note are Spanish; the registry's reason, bag and size wording, species names and official links stay as published in English, marked `lang="en"`, and the card says so. Stale, overdue, unknown, not-reviewed or location-dependent rules still read "check the official rules", never open. The dots and their navigation name come from the landing's first-paint catalogue slice, equal to the map rail's labels; links, order and English output are unchanged. Both files are now checked by the copy lint's catalogue coverage.
+
+- RF1635-5: survey inventories now refuse cyclic derivation before loading or promotion; valid shared-parent lineages remain accepted and rejected promotion leaves the catalog unchanged.
+
 - SC1407-09: English pages no longer download the Spanish catalogue. The app and the landing ship English only and load the Spanish table only when the page is Spanish (a link, a stored choice or the browser's language), waiting for it before their first translated render; a switch to Spanish applies once the table arrives, and a failed load keeps English and says so once beside the language choice (the landing offers a link that reloads in Spanish). First-load scripts drop about 158 KB raw on both pages, and their budgets are lowered to match.
 
 - SC1407-04: the brief's date, hour and weekday text, the verdict's morning window and the rules and plan cards' day now reuse one date formatter per locale, zone and pattern from a shared cache (at most 64 kept) instead of building a new one on every call; every printed date and hour is unchanged, and a zone the browser rejects still fails as before.
