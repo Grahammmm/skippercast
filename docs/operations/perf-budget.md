@@ -123,3 +123,17 @@ Open `scripts/perf-budget.json`. For the group that is over, add an entry at the
 `max_bytes` and a `reason` a reviewer can judge (what grew and why it is worth it), then set the group's `max_bytes` to
 the same number. The check fails if `max_bytes` differs from the last history entry or a reason is empty, so a number
 cannot change quietly. Prefer shrinking the file first.
+
+### Aerial base tiles (SC1407-07, #1762 M1)
+
+Not a size budget: a note on the Aerial base's network work. Morro Bay opens on Aerial, so its NAIP tiles are part of
+first paint. `naipSource()` (`packages/coast/src/map-sources.ts`) asks the USGS ImageServer for 512 px tiles
+(`size=512,512`, `tileSize` 512) instead of 256 px: about a quarter of the requests for the same area at the same ground
+resolution (the exact ratio depends on the viewport). MapLibre picks a 512 px source zoom one lower than a 256 px one,
+so the source zooms are 6..18 (was 7..19): the same map zooms draw, the first one and the overzoom past native resolution
+included (`tests/test_naip_source.mjs`). The format is `jpgpng`: JPEG where a tile is fully opaque (land), PNG where it
+holds transparency, so open water still shows the basemap below. If the first jpgpng draw fails, `web/map/aerial.ts`
+swaps in the `png32` form once, under its own source id; a failed png32 draw stays unavailable, and turning the base
+off and on, another region or another engine starts at jpgpng again. `dist/app.html` preconnects (anonymous, as MapLibre
+fetches) to `https://imagery.nationalmap.gov`, which the CSP already allows. `scripts/measure_startup.mjs` records JSON
+only, so it does not measure imagery; any imagery comparison needs its own response listener.
