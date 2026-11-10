@@ -472,7 +472,7 @@ test('first_run_es_profile_then_optional_boat: the card, the boat step and Dismi
     m.language.value = 'es';
     const card = m.render(firstRun(m, storage));
     for (const text of ['Primera visita', '¿Cómo pescas?', 'El perfil define el límite de profundidad, la lista de especies y las capas predeterminadas del mapa. Puedes cambiarlo en cualquier momento en la barra de comandos.',
-      'Mantener Barco por ahora', '>Barco<', '>Costa<', '>Pesca submarina<', '>Kayak<', 'Marcas de arrecife y fondo marino hasta 300 ft']) assert.ok(card.includes(text), text);
+      'Mantener Barco por ahora', '>Barco<', '>Orilla<', '>Pesca submarina<', '>Kayak<', 'Marcas de arrecife y fondo marino hasta 300 ft']) assert.ok(card.includes(text), text);
     assert.ok(util.isDeepStrictEqual([...card.matchAll(/data-profile="([a-z]+)"/g)].map(x => x[1]), ['boat', 'shore', 'spear', 'kayak']), 'the stored profile ids are unchanged');
     assert.doesNotMatch(card, /How do you fish|First time here/);
     const boat = m.render(m.h(m.BoatEntry, {onDone: () => {}}));
