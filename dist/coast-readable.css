@@ -67,7 +67,13 @@ body.coast-readable {
 .coast-readable dt { color: var(--muted); font-size: var(--text-13); }
 .coast-readable dd { margin: 0; font-weight: var(--weight-medium); }
 /* The research page's wide tables scroll inside the column. */
-.coast-readable .forecast-table-wrap { overflow-x: auto; }
+.coast-readable .forecast-table-wrap { max-width: 100%; overflow-x: auto; }
+/* The sources, coverage, status and licences pages: a standalone list link keeps the app's touch height and wraps long names. */
+.coast-readable #sources-content li > a, .coast-readable #coverage-list li > a {
+  display: inline-flex; align-items: center; max-width: 100%; min-height: var(--touch-min); overflow-wrap: anywhere;
+}
+/* The coverage drawing is decorative (the region list beside it is the navigation); it shrinks to the column. */
+.coast-readable #coverage-map svg { display: block; max-width: 100%; height: auto; }
 /* FE-61 part 2: the legal pages' draft notice, an amber edge on the panel. */
 .coast-readable .legal-draft { margin: var(--space-4) 0; padding: var(--space-3) var(--space-4); border-left: 4px solid var(--amber); background: var(--panel); color: var(--text); }
 /* The licences page's collapsed licence texts. */
