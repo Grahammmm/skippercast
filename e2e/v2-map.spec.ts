@@ -1486,12 +1486,15 @@ test('desktop: a short rail scrolls vertically to its last controls, with a long
   expect(pageErrors).toEqual([]);
 });
 
-test('desktop: the rail stays clear of the map controls on the Chart and the terrain, scrolled or not, and the attribution stays clickable', async ({page, pageErrors, v2, isMobile}) => {
-  test.skip(isMobile, 'the desktop rail is not rendered on a phone');
-  const terrain = await syntheticTerrain(page);
-  terrain.release();
-  const ATTRIBUTION = '.app-chart .maplibregl-ctrl-attrib';
-  for (const [presentation, controls] of [['chart', '.app-chart .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group'], ['3d', '.app-terrain-controls']] as const) {
+// One test per presentation: each walks two viewports and three rail phases with many round trips, and the shared CI runners take 1.5-5 s over each,
+// so the two together outlasted the 60 s default (twice, on the exact head) while passing in 9 s on a quiet machine.
+for (const [presentation, controls] of [['chart', '.app-chart .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group'], ['3d', '.app-terrain-controls']] as const) {
+  test(`desktop: the rail stays clear of the map controls on the ${presentation === 'chart' ? 'Chart' : 'terrain'}, scrolled or not${presentation === 'chart' ? ', and the attribution stays clickable' : ''}`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(isMobile, 'the desktop rail is not rendered on a phone');
+    test.setTimeout(150_000);
+    const terrain = await syntheticTerrain(page);
+    terrain.release();
+    const ATTRIBUTION = '.app-chart .maplibregl-ctrl-attrib';
     for (const [width, height] of [[1280, 800], [1024, 768]] as const) {
       await page.setViewportSize({width, height});
       await v2.open('app', {region: 'morro-bay', presentation, layers: 'seafloor,currents'});
@@ -1519,9 +1522,9 @@ test('desktop: the rail stays clear of the map controls on the Chart and the ter
         }
       }
     }
-  }
-  expect(pageErrors).toEqual([]);
-});
+    expect(pageErrors).toEqual([]);
+  });
+}
 
 test('phone widths do not get the desktop rail rules', async ({page, pageErrors, v2, isMobile}) => {
   test.skip(isMobile, 'runs the phone widths in the laptop project');
