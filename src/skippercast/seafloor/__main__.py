@@ -45,6 +45,13 @@ def main():
     add.add_argument('--member', default='unknown')
     add.add_argument('--local', type=Path)
     add.add_argument('--fetch', action='store_true')
+    local_import = commands.add_parser(
+        'import-local', help='Copy reviewed originals from a hash-verified local download root into the cache')
+    local_import.add_argument('--ids', nargs='+', help='Survey IDs to import (default: usable and physical-only rows)')
+    for sub, required in ((add, False), (local_import, True)):
+        sub.add_argument('--local-root', type=Path, required=required,
+                         help='Directory of downloaded originals with a geofetch catalog')
+        sub.add_argument('--local-catalog', type=Path, help='Catalog path (default <local-root>/_geofetch/catalog.jsonl)')
     restore = commands.add_parser('restore-reference', help='Rebuild verified private cells without changing the ledger')
     restore.add_argument('--fetch', action='store_true')
     process = commands.add_parser('run', help='Measure native coverage and rank held habitat candidates')
@@ -130,9 +137,24 @@ def main():
             return
         if args.command == 'add-survey':
             from .draft import add_survey
+            local_root = None
+            if args.local_root is not None:
+                from .local_sources import LocalSourceRoot
+                local_root = LocalSourceRoot(args.local_root, args.local_catalog)
+            elif args.local_catalog is not None:
+                parser.error('--local-catalog requires --local-root')
             path = add_survey(args.url, args.bounds, ident=args.id, format_name=args.format,
-                              member=args.member, local=args.local, fetch=args.fetch)
+                              member=args.member, local=args.local, fetch=args.fetch, local_root=local_root)
             print(f'Candidate draft: {path}. Review rights and metadata before manifest promotion.')
+            return
+        if args.command == 'import-local':
+            from .local_sources import LocalSourceRoot, import_manifest
+            from .manifest import load_manifest
+            report = import_manifest(load_manifest(REPO)['surveys'], REPO/'var/seafloor/cache',
+                                     LocalSourceRoot(args.local_root, args.local_catalog), ids=args.ids)
+            print(json.dumps(report, indent=2))
+            if report['refused']:
+                raise ValueError(f"{len(report['refused'])} local original(s) refused; nothing cached for them")
             return
         if args.command == 'reaches':
             from .scope_paths import resolve_scope

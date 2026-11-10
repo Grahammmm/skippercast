@@ -110,6 +110,39 @@ separate private extraction receipt hashes its selected member. Original files,
 COGs, drafts and full receipts stay in ignored `var/seafloor/`. The manifest
 stores a small native inspection and rights receipt.
 
+### Local source root (downloaded originals with a geofetch catalog)
+
+A bulk download of originals can stand in for the network transfer. The root is
+a directory plus a geofetch `catalog.jsonl` (default
+`<root>/_geofetch/catalog.jsonl`, or `--local-catalog PATH`); each row carries
+`id`, `url`, `sha256`, `size` and `dest` relative to the root. It changes only
+where the bytes come from:
+
+- the source URL must still pass the reviewed allowlist in `fetch.py`
+  (`bluetopo` and `/modeling/` stay refused), so a downloaded file is a
+  reviewed original only if its publisher URL is reviewed;
+- the catalog checksum and size must equal the repo pin when the manifest row
+  has one; a conflict refuses the file before any copy;
+- the copied bytes must hash to the catalog checksum (and so to the pin); a
+  mismatch caches nothing;
+- `dest` must stay inside the root (no `..`, absolute paths or escaping links),
+  and duplicate catalog rows for one URL must agree.
+
+Catalog ids map to repo source ids by exact URL. Two entry points:
+
+```bash
+# new candidate from a downloaded file; the draft records local_catalog_id
+python ~/agent-work/bin/seafloor-cli.py --checkout . add-survey --url <publisher URL> --id <survey id> \
+  --bounds W S E N --local-root /path/to/downloads
+# seed the cache for qualified rows so `run` needs no --fetch; prints the
+# source-id -> catalog-id mapping and exits 1 if any file was refused
+python ~/agent-work/bin/seafloor-cli.py --checkout . import-local --local-root /path/to/downloads [--ids <survey id> ...]
+```
+
+`--local-root` cannot be combined with `--local` or `--fetch`. A URL missing from
+the catalog is an error for `add-survey`, never a silent network fallback.
+Promotion, rights review, screening and publication gates are unchanged.
+
 Adapters read native 512-pixel chunks with a 100 m seam margin, preserve no-data
 and producer uncertainty, and write a native-resolution COG. Band 1 is **meters
 positive down**; an optional band 2 is producer uncertainty in meters. Do not
