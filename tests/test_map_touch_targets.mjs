@@ -25,7 +25,7 @@ async function load() {
       export {PresentationToggle} from './web/app/MapStage.tsx';
       export {Button} from './web/ui/Button.tsx';
       export {language, setLanguage} from './web/i18n.ts';
-      export {beginWaypointPlacement, cancelWaypointPlacement, waypointPlacement} from './web/waypoint-placement.ts';
+      export {beginWaypointPlacement, cancelWaypointPlacement, placementRefused, verdictLine, waypointPlacement} from './web/waypoint-placement.ts';
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
@@ -73,6 +73,26 @@ test('placing_touch_cancel_en_es: Cancel waypoint is the app Button in the placi
     assert.equal(picked.length, 0, 'cancelling accepted no waypoint');
     assert.doesNotMatch(render(h(PresentationToggle, {})), /Cancelar punto de ruta/, 'the note is gone after Cancel');
   } finally { cancelWaypointPlacement(); setLanguage('en', {storage: none, doc: null}); }
+});
+
+test('placing_touch_cancel_refused: a refused placement keeps its line and a touch-size Cancel in the same note', async () => {
+  const {PresentationToggle, Button, beginWaypointPlacement, cancelWaypointPlacement, placementRefused, verdictLine, render, h} = await at();
+  try {
+    beginWaypointPlacement('morro-bay', () => {});
+    placementRefused.value = {screened: false};
+    const line = verdictLine(placementRefused.value);
+    assert.ok(line, 'an unchecked click is refused and has a line');
+    const html = render(h(PresentationToggle, {}));
+    assert.ok(html.includes(`${line}. <button`), 'refusal text sits right before the Cancel button');
+    assert.match(html, /<p class="app-stage-note" role="status">[^<]+ [^<]+\. <button[^>]*class="ui-button ui-button--quiet ui-button--sm"[^>]*>Cancel waypoint<\/button><\/p>/, 'one note: prompt, refusal, Button');
+    assert.equal(buttons(PresentationToggle(), Button, 'Cancel waypoint').length, 1);
+  } finally { cancelWaypointPlacement(); }
+});
+
+test('placing_touch_note_passthrough: the placing note lets Chart taps through and only its button takes them', async () => {
+  const css = await readFile(join(ROOT, 'web/app/app.css'), 'utf8');
+  assert.match(css, /^\.app-presentation--placing \{ pointer-events: none; \}$/m);
+  assert.match(css, /^\.app-presentation--placing \.ui-segmented, \.app-presentation--placing \.ui-button \{ pointer-events: auto; \}$/m);
 });
 
 test('placing_touch_cancel: no Cancel when another region is armed or the Chart is not shown', async () => {

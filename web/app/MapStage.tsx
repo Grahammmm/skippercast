@@ -54,7 +54,7 @@ export function PresentationToggle() {
   const shown = shownPresentation.value, blocked = terrainBlocked.value, lang = language.value;
   const armed = waypointPlacement.value === region.value && shown === 'chart', refused = armed && placementRefused.value ? verdictLine(placementRefused.value, lang) : null;
   return (
-    <div class="app-presentation">
+    <div class={armed ? 'app-presentation app-presentation--placing' : 'app-presentation'}>
       <p id={NOTE_ID} class="app-stage-note" role="status">{blocked === null ? '' : terrainReason(blocked, lang)}</p>
       {armed ? <p class="app-stage-note" role="status">{t('stage.placePrompt', lang)} {refused ? <>{refused}. </> : null}<Button size="sm" variant="quiet" onClick={cancelWaypointPlacement}>{t('stage.cancelWaypoint', lang)}</Button></p> : null}
       <div role="group" aria-label={t('stage.presentation', lang)} class="ui-segmented">

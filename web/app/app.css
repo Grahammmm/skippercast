@@ -367,6 +367,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 /* SC1922-03: the model-family options wrap inside the header and keep the touch floor (never squeezed, clipped or shrunk below it). */
 .app-conditions-head > .ui-segmented { flex-wrap: wrap; box-sizing: border-box; max-width: 100%; min-width: 0; }
 .app-conditions-head > .ui-segmented .ui-chip { flex: none; min-height: var(--touch-min); }
+/* SC1922-03: the touch-size Cancel makes the placing note taller; while placing, the stack's empty space and note text must not swallow Chart taps beneath them (placement waits for a tap), so only the presentation control and Cancel take pointer events. */
+.app-presentation--placing { pointer-events: none; }
+.app-presentation--placing .ui-segmented, .app-presentation--placing .ui-button { pointer-events: auto; }
 .app-conditions h2 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
 .app-conditions h3 { margin: var(--space-2) 0 0; }
 .app-conditions-now { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0; }

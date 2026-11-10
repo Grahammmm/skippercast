@@ -229,11 +229,7 @@ test('a Chart click saves a categorized user waypoint, restores it and exports s
   // Pick exposed Chart space, not a fixed geography that may be under mobile chrome.
   const canvas = page.locator('.app-chart canvas.maplibregl-canvas');
   const chart = (await canvas.boundingBox())!;
-  if (isMobile) {
-    // The placing note (its Cancel is a touch-size button, SC1922-03) sits over the top right of the Chart: tap below it.
-    const note = (await page.locator('.app-presentation .app-stage-note').last().boundingBox())!;
-    await canvas.click({position: {x: chart.width / 4, y: Math.max(chart.height / 3, note.y + note.height - chart.y + 16)}});
-  }
+  if (isMobile) await canvas.click({position: {x: chart.width / 4, y: chart.height / 3}});
   else await clickChart(page, {latitude: 35.43, longitude: -121.17});
   const dialog = page.getByRole('dialog', {name: 'Trip plan and GPX'});
   await expect(dialog).toBeVisible();
