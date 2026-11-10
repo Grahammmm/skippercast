@@ -8,7 +8,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import util from 'node:util';
 import {
-  BASELINE, COVERED, NOT_COVERED, compare, coverageProblems, formatBaseline, grown, htmlUnits, lint, lintFile, literals, readBaseline, sentences, tally, unitFindings,
+  BASELINE, COVERED, NOT_COVERED, catalogueProblems, compare, coverageProblems, formatBaseline, grown, htmlUnits, lint, lintFile, literals, readBaseline, sentences, tally, unitFindings,
 } from '../scripts/check_copy.mjs';
 
 const SCRIPT = new URL('../scripts/check_copy.mjs', import.meta.url).pathname;
@@ -358,6 +358,22 @@ test('coverage: a listed file passes; bad reasons, overlap, duplicates and odd p
 test('coverage: the repository lists classify every screen exactly once, with a reason for each exception', () => {
   assert.deepEqual(coverageProblems(), []);
   for (const [path, reason] of Object.entries(NOT_COVERED)) assert.ok(!COVERED.includes(path) && reason.trim(), path);
+});
+
+test('coverage_sc1407_13: the plan-date rules card and the landing dots are covered once, not excluded, clean, and injected bare prose in either fails', () => {
+  const problems = catalogueProblems();
+  for (const path of ['web/app/PlanRules.tsx', 'web/landing/LayerDots.tsx']) {
+    assert.equal(COVERED.filter(p => p === path).length, 1, `${path}: in COVERED once`);
+    assert.ok(!Object.hasOwn(NOT_COVERED, path), `${path}: no longer excluded`);
+    assert.deepEqual(problems.filter(p => p.startsWith(`${path}:`)), [], `${path}: every word comes from the catalogue`);
+    const root = mkTree({[path]: "export const A = () => <p>Check the official rules before this trip.</p>;\nexport const B = 'Map layers on the right edge';\n", 'catalog/app/strings.json': JSON.stringify({strings: {'x.ok': {en: 'One', es: 'Uno'}}})});
+    try {
+      const res = runIn(root);
+      assert.equal(res.status, 1, path);
+      assert.match(res.stderr, new RegExp(`${path.replace(/[./]/g, '\\$&')}:1 bare literal "Check the official rules before this trip\\."`), path);
+      assert.match(res.stderr, new RegExp(`${path.replace(/[./]/g, '\\$&')}:2 bare literal "Map layers on the right edge"`), path);
+    } finally { rmSync(root, {recursive: true, force: true}); }
+  }
 });
 
 test('coverage CLI: an unlisted screen fails with and without a catalogue, in every mode; lists and baseline are never rewritten', () => {

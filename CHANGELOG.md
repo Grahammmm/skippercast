@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC1407-13: the planner's plan-date rules card and the landing's layer dots now follow the page language. In Spanish the card's heading, badges, closed line, check-the-rules line, freshness, link labels and legal note are Spanish; the registry's reason, bag and size wording, species names and official links stay as published in English, marked `lang="en"`, and the card says so. Stale, overdue, unknown, not-reviewed or location-dependent rules still read "check the official rules", never open. The dots and their navigation name come from the landing's first-paint catalogue slice, equal to the map rail's labels; links, order and English output are unchanged. Both files are now checked by the copy lint's catalogue coverage.
+
 - RF0854-8: the admin fleet operator list ranks every matching operator (do-not-contact last, then lead score, then name, then id) before applying its 500-row cap, so a high-scoring operator outside the first 500 by name is no longer left out. Matching operators are read in bounded pages by id with every filter applied to each page; `truncated` still means more than 500 matched, and the endpoint, filters, response fields and score model are unchanged.
 
 - RF0844-8: fleet trip labels (admin form and agent label import) refuse a start or end time written on a day that is not on the calendar, such as February 30, 2026-02-29 or April 31, with the existing "must be ISO UTC times" error, instead of silently rolling it into the next month and saving it against the trip; a refused admin label saves nothing and a refused agent import keeps every existing label. Valid days, leap days and accepted time precision are unchanged.
