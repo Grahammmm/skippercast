@@ -1,6 +1,7 @@
 // SC-TIDAL-1: the harbor entrance current (flood, ebb, slack and the turn) and the bar caution that adds swell to the ebb.
 // Timing math at slack, ebb and flood; a stale-data case; a missing-data case that says so plainly; the WCOFS cross-check
 // (the caution is never calmer than the worst source); and a layout check of the real component at 390 px in headless Chromium.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {existsSync} from 'node:fs';
@@ -342,9 +343,9 @@ async function load() {
       import {EntranceCurrent} from './web/brief/EntranceCurrent.tsx';
       import {regionalForecast} from './web/brief/Brief.tsx';
       import {region} from './web/state.ts';
-      import {language} from './web/i18n.ts';
+      import {language, prepareCatalogue} from './web/i18n.ts';
       import {h, render} from 'preact';
-      window.__t = {EntranceCurrent, regionalForecast, region, language, h, render};`},
+      window.__t = {EntranceCurrent, regionalForecast, region, language, prepareCatalogue, h, render};`},
     bundle: true, format: 'iife', platform: 'browser', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
     loader: {'.css': 'empty'}});
   bundle = await readFile(out, 'utf8');
@@ -358,8 +359,9 @@ async function layout(width, lang, args) {
     const page = await (await browser.newContext({viewport: {width, height: 844}, deviceScaleFactor: 1, isMobile: true, hasTouch: true})).newPage();
     await page.setContent(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style><style>body{margin:0;padding:0 16px;background:var(--bg,#000);color:var(--text)}</style></head><body><div id="root"></div></body></html>`);
     await page.addScriptTag({content: bundle});
-    return await page.evaluate(({brief, forecast, now, lang, tz}) => {
+    return await page.evaluate(async ({brief, forecast, now, lang, tz}) => {
       const m = window.__t;
+      await m.prepareCatalogue(lang);   // SC1407-09: the Spanish table, as the app's startup awaits it
       m.region.value = 'morro-bay'; m.regionalForecast.value = forecast; m.language.value = lang;
       m.render(m.h(m.EntranceCurrent, {brief, tz, now: new Date(now)}), document.getElementById('root'));
       const box = document.querySelector('.app-entrance');
