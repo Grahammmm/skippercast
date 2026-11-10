@@ -54,11 +54,11 @@ export const aerialId = (a: AerialBase): string => `aerial:${a.first}/${a.last}`
 
 /**
  * The base's one raster source (naipSource()'s template, so its fixed USGS host only) and its layer. SC1407-07: the
- * png32 fallback has its own source and layer id, so replacing the overlay replaces the source, and a late error from
+ * png32 fallback (the only `format` passed) has its own source and layer id, so replacing the overlay replaces the source, and a late error from
  * the retired jpgpng source no longer names a layer the engine draws.
  */
 export function aerialOverlay(a: AerialBase, format?: NaipFormat): Overlay {
-  const id = format === 'png32' ? `${aerialId(a)}:png32` : aerialId(a);
+  const id = aerialId(a) + (format ? `:${format}` : '');
   return {
     sources: {[id]: {...naipSource(format), attribution: aerialAttribution(a)}},
     layers: [{id, type: 'raster', source: id, paint: a.byDefault
