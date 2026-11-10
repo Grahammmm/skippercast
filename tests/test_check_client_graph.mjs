@@ -63,6 +63,16 @@ for (const dependency of ['maplibre-gl', 'pmtiles']) {
   });
 }
 
+test('SC1407-08: allows the app entry importing the Chart library wrapper dynamically, MapLibre and PMTiles beneath it', async t => {
+  const r = await check(t, {entry: {imports: ['shared'], dynamicImports: ['web/map/maplibre.js']}, chunks: {
+    shared: {file: file('shared'), dynamicImports: ['web/map/maplibre.js']},
+    'web/map/maplibre.js': {src: 'web/map/maplibre.js', file: file('maplibre'), imports: ['maplibre-gl', 'pmtiles']},
+    'maplibre-gl': {file: file('maplibre-gl'), src: 'node_modules/maplibre-gl/dist/maplibre-gl.mjs'},
+    pmtiles: {file: file('pmtiles'), src: 'node_modules/pmtiles/dist/esm/index.js'},
+  }});
+  assert.equal(r.status, 0, r.output);
+});
+
 test('preserves three names, source paths and code markers', async t => {
   for (const chunk of [
     {file: file('three.core')},

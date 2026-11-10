@@ -8,7 +8,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import util from 'node:util';
 import {
-  BASELINE, COVERED, NOT_COVERED, catalogueProblems, compare, coverageProblems, formatBaseline, grown, htmlUnits, lint, lintFile, literals, readBaseline, sentences, tally, unitFindings,
+  BASELINE, COVERED, NOT_COVERED, catalogueProblems, compare, copyFiles, coverageProblems, formatBaseline, grown, htmlUnits, lint, lintFile, literals, readBaseline, sentences, tally, unitFindings,
 } from '../scripts/check_copy.mjs';
 
 const SCRIPT = new URL('../scripts/check_copy.mjs', import.meta.url).pathname;
@@ -404,4 +404,16 @@ test('coverage CLI: a listed screen passes; listed bare prose still fails the ca
     assert.equal(res.status, 1);
     assert.match(res.stderr, /web\/app\/App\.tsx:2 \[consecutive-not\]/);
   } finally { rmSync(excluded, {recursive: true, force: true}); }
+});
+
+// SC1722-05: the copy lint walks authored web/*.html (web/404.html) as well as TS and TSX.
+test('copy_walk_reads_web_html_once: web/404.html is enumerated once and its copy is linted', () => {
+  assert.equal(copyFiles().filter(path => path === 'web/404.html').length, 1);
+  assert.ok(!lint().some(f => f.file === 'web/404.html'), 'the shipped page adds no finding');
+  const root = mkTree({'web/404.html': '<main><p>This is not a chart. It is not a route.</p></main>', 'web/notes.txt': 'This is not a chart. It is not a route.'});
+  try {
+    assert.deepEqual(copyFiles(root).filter(path => path.startsWith('web/')), ['web/404.html']);
+    assert.deepEqual(lint(root).map(f => [f.file, f.rule]), [['web/404.html', 'consecutive-not']], 'bad copy in web/404.html is found');
+    assert.equal(runIn(root).status, 1, 'and the lint fails on it');
+  } finally { rmSync(root, {recursive: true, force: true}); }
 });

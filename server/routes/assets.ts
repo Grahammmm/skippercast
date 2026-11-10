@@ -42,6 +42,47 @@ export function shellFor(path: string, search: URLSearchParams): string | undefi
   return path === V2_SHELLS.landing || path === V2_SHELLS.app ? path : undefined;
 }
 
+// SC1722-05: the static "this page isn't here" page (web/404.html), compiled into the Worker by
+// scripts/build-worker.mjs. Absent in a source-only run, where the assets' own 404 is kept.
+declare const NOT_FOUND_HTML: string | undefined;
+
+// Paths that name a resource, not a page: a miss there stays the plain original 404.
+const RESOURCE_ROOTS: readonly string[] = ['/api', '/feeds', '/coast-data', '/data', '/regions', '/tiles', '/basemap', '/assets', '/vendor', '/downloads', '/icons', '/.well-known'];
+
+/** True when the Accept header names text/html explicitly with a positive q (an exclusion or a malformed q refuses). */
+export function acceptsHtml(accept: string | null): boolean {
+  let found = false;
+  for (const range of (accept ?? '').split(',')) {
+    const [type = '', ...params] = range.split(';').map(part => part.trim());
+    if (type.toLowerCase() !== 'text/html') continue;
+    let q = 1;
+    for (const param of params) {
+      const m = /^q\s*=\s*(.*)$/i.exec(param);
+      if (!m) continue;
+      if (!/^(?:0(?:\.\d{0,3})?|1(?:\.0{0,3})?)$/.test(m[1]!)) return false;
+      q = Number(m[1]);
+    }
+    if (q <= 0) return false;
+    found = true;
+  }
+  return found;
+}
+
+/** A page path: its last nonempty segment has no dot or ends in lowercase .html (multi-dot names such as old.release.html included), outside the resource roots. */
+export function isPagePath(path: string): boolean {
+  if (/%(?:2e|2f|5c|00)/i.test(path)) return false; // encoded dots, separators and NUL: ambiguous, fail closed
+  if (RESOURCE_ROOTS.some(root => path === root || path.startsWith(`${root}/`))) return false;
+  const last = path.split('/').filter(Boolean).pop() ?? '';
+  return !last.includes('.') || last.endsWith('.html');
+}
+
+/** The ASSETS answer for an unmapped path, or the branded 404 page for a browser's unknown page link. */
+function unknownPage(request: Request, response: Response): Response {
+  if (response.status !== 404 || typeof NOT_FOUND_HTML !== 'string' || request.method !== 'GET') return response;
+  if (!acceptsHtml(request.headers.get('Accept')) || !isPagePath(new URL(request.url).pathname)) return response;
+  return new Response(NOT_FOUND_HTML, {status: 404, headers: {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', Vary: 'Accept'}});
+}
+
 export const serveAsset: Handler<AppEnv> = async c => {
   const request = c.req.raw, assets = c.env?.ASSETS;
   if (!assets) return new Response('Not found', {status: 404});
@@ -57,7 +98,7 @@ export const serveAsset: Handler<AppEnv> = async c => {
   const page = shellFor(c.var.path, search);
   // A page path stays no-store even if the build's SHELLS lacks it: fetch the page itself.
   const current = SHELLS[page ?? c.var.path] ?? page;
-  if (!current) return assets.fetch(request);
+  if (!current) return unknownPage(request, await assets.fetch(request));
   const assetUrl = new URL(request.url); assetUrl.pathname = current.replace(/\.html$/, ''); assetUrl.search = ''; // hosts serve pages without .html
   const response = await assets.fetch(new Request(assetUrl, request));
   const fresh = new Response(response.body, response);
