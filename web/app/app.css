@@ -139,8 +139,15 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
     box-sizing: border-box;
     width: min(280px, calc(100% - 2 * var(--space-4)));
     max-height: calc(100% - var(--space-4) - var(--app-terrain-controls-bottom) - var(--app-terrain-controls-height) - var(--space-3));
-    overflow-y: auto;
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
   }
+  /* RF1935-2: the preset group is the rail's own header child. It wraps onto more rows inside the rail's width instead of running
+     past it (the generic .ui-segmented row never wraps). Structural scope: the group's translated name is not a style hook. */
+  .app-stage > .app-rail > .ui-segmented {
+    display: flex; flex-wrap: wrap; box-sizing: border-box; min-width: 0; max-width: 100%; border-radius: var(--radius-lg);
+  }
+  .app-stage > .app-rail > .ui-segmented .ui-chip { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
   /* Absolute, end-aligned popovers escape a narrow scroll origin. Open basis
      details instead occupy a full row and grow the same scrollable content. */
   .app-stage > .app-rail .ui-popover[open] { flex-basis: 100%; min-width: 0; }
