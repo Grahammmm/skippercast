@@ -44,7 +44,7 @@ import {Fleet} from './views/Fleet.tsx';
 import {History} from './views/History.tsx';
 import {Reports} from './views/Reports.tsx';
 import {PlanView} from './PlanView.tsx';
-import {appView, setParams, withParams, type AppView} from '../state.ts';
+import {appView, navigate, withParams, type AppView} from '../state.ts';
 import {waypointPlacement} from '../waypoint-placement.ts';
 import {language, t} from '../i18n.ts';
 import {dayOptions, dockState, hourText, localParts, readout, selectDay, selectHour} from './TimeDock.tsx';
@@ -131,7 +131,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
 /** The sheet footer's second way into the Reports view (the Reports tab is the first). */
 export const ReportsLink = () =>
   <a href={withParams(typeof location === 'undefined' ? 'https://skippercast.com/map' : location.href, {view: 'reports'})} class="app-reports-link"
-    onClick={event => { event.preventDefault(); setParams({view: 'reports'}); }}>{viewLabel('reports', language.value)}</a>;
+    onClick={event => { event.preventDefault(); if (appView.value !== 'reports') navigate(withParams(location.href, {view: 'reports'})); }}>{viewLabel('reports', language.value)}</a>;
 
 /** The layer rail and the legend as the sheet's content. */
 export function LayersPanel({onClose}: {onClose: () => void}) {

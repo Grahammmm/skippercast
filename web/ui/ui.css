@@ -18,7 +18,9 @@
   font: var(--weight-medium) var(--text-13) / var(--leading-heading) var(--font-sans); cursor: pointer;
   transition: background var(--motion-state), border-color var(--motion-state), color var(--motion-state);
 }
-.ui-button:focus-visible, .ui-range:focus-visible, .ui-popover-summary:focus-visible, .ui-sheet-handle:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ui-button:focus-visible, .ui-range:focus-visible, .ui-popover-summary:focus-visible, .ui-sheet-handle:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* The app map's canvases sit in a clipped stage, so their ring is drawn inward. */
+.app-chart canvas:focus-visible, .app-terrain canvas:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .ui-button:disabled, .ui-button[aria-disabled="true"] { color: var(--muted); cursor: not-allowed; opacity: 0.6; }
 .ui-button--primary { background: var(--mint); border-color: var(--mint); color: var(--bg); }
 .ui-button--primary:not(:disabled):not([aria-disabled="true"]):hover { background: color-mix(in srgb, var(--mint) 88%, var(--text)); }
