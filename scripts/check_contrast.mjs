@@ -373,6 +373,7 @@ export function boundSurfaceContrast(request = {}) {
 // parser proves the cascade. A changed source must be reviewed/rebound; default
 // CLI and generic missing-background behavior remain unchanged pending review.
 // SC1722-14: form typography changes layout, not colour, alpha, backing or contrast thresholds.
+// SC1922-04: appended preview layout/text roles leave existing legend/catch paint unchanged.
 export const SURFACE_SOURCE_SHA256 = {
   // BF-wcag only adds min-height (24 px target floor) to .text-link, .history-provenance a and .sheet-links a; no paint changed.
   // SC1722-08 only raises the History chart scroller's focus ring to 2 px and adds one .history-measurement-note > summary focus ring; no unfocused paint changed.
@@ -404,7 +405,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // RF1925-1: masthead minimum-width only; legend paint and backing unchanged.
   // SC1722-01 only appends a scoped .app-forecast-failed* block at the end of app.css (token text roles on the brief, not the legend glass);
   // no legend paint or backing changed and the cited line numbers above are unmoved.
-  "appCss": "34e25d2e9485b3462a6598512131c4ff2ae6225ddf6166254c211e6ee149b19f",
+  "appCss": "af24d8752fbcd34dce0aa2931561c2b53fe8892a2b8aff3066629174bc9f2ce8",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
