@@ -29,7 +29,11 @@ async function load() {
       export {parseConditionsForecast} from './web/conditions.ts';
       export {regsData} from './web/regs.ts';
       export {hour, day, species, profile} from './web/state.ts';
-      export {render} from 'preact-render-to-string';
+      import {render} from 'preact-render-to-string';
+      import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
+      export {admitBriefFixture};
+      export function renderFixture(...args) { admitBriefFixture(); return render(...args); }
+      export {render};
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
   });
@@ -76,7 +80,7 @@ test('the answer line precedes the map container, and its answer is the verdict 
   const m = await load();
   await setup(m);
   try {
-    const html = m.render(m.h(m.App, {now: NOW}));
+    const html = m.renderFixture(m.h(m.App, {now: NOW}));
     assert.ok(html.indexOf('app-first-answer-line') > 0, 'the answer renders');
     assert.ok(html.indexOf('app-first-answer-line') < html.indexOf('class="app-stage"'), 'the answer line precedes the map container');
     assert.ok(html.indexOf('class="app-stage"') > 0, 'the map stays');
@@ -97,7 +101,7 @@ test('yes, marginal, no and unknown each render a distinct line, and unknown nev
   try {
     for (const [name, opts] of Object.entries({marginal: {wind: 5}, no: {wind: 30}, unknown: {forecast: false}})) {
       await setup(m, opts);
-      const html = m.render(m.h(m.FirstAnswerLine, {now: NOW})), v = m.currentVerdict(m.leadBrief(NOW), NOW);
+      const html = m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW})), v = m.currentVerdict(m.leadBrief(NOW), NOW);
       lines[name] = lineOf(html);
       assert.equal(fishableOf(html), {comfortable: 'yes', marginal: 'marginal', rough: 'no', unknown: 'unknown'}[v?.verdict ?? 'unknown'], name);
       assert.equal(fishableOf(html), name, `${name}: the fixture produces the verdict it names`);
@@ -116,15 +120,15 @@ test('a missing feed reads unknown with the map still rendered; one missing feed
   const m = await load();
   try {
     await setup(m, {feed: false, forecast: false});
-    const none = m.render(m.h(m.App, {now: NOW}));
+    const none = m.renderFixture(m.h(m.App, {now: NOW}));
     assert.equal(fishableOf(none), 'unknown');
     assert.ok(none.indexOf('app-first-answer-line') < none.indexOf('class="app-stage"'), 'the map is rendered behind the line');
     await setup(m, {forecast: false});   // the daily feed alone: no forecast for the window
-    const half = m.render(m.h(m.App, {now: NOW}));
+    const half = m.renderFixture(m.h(m.App, {now: NOW}));
     assert.equal(fishableOf(half), 'unknown');
     assert.ok(lineOf(half) && half.includes('class="app-stage"'));
     await setup(m, {feed: false});       // the forecast alone
-    assert.equal(fishableOf(m.render(m.h(m.FirstAnswerLine, {now: NOW}))), 'unknown');
+    assert.equal(fishableOf(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW}))), 'unknown');
   } finally { reset(m); }
 });
 
@@ -132,7 +136,7 @@ test('tomorrow past the forecast\'s data_end_time is unknown, not a guess', asyn
   const m = await load();
   try {
     await setup(m, {days: 2});           // the model ends on 30 September; tomorrow is 1 October
-    const html = m.render(m.h(m.FirstAnswerLine, {now: NOW}));
+    const html = m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW}));
     assert.equal(fishableOf(html), 'unknown');
     assert.ok(html.includes(m.currentVerdict(m.leadBrief(NOW), NOW).limit), 'the reason is the verdict engine\'s own');
   } finally { reset(m); }
@@ -143,16 +147,16 @@ test('rules unavailable or due for review are named as such and quote no numbers
   try {
     const note = html => /<p class="app-first-answer-rules">(.*?) <a /.exec(html)[1];
     await setup(m, {rules: false});
-    const unavailable = note(m.render(m.h(m.FirstAnswerLine, {now: NOW})));
+    const unavailable = note(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW})));
     assert.match(unavailable, /^Rules unavailable/);
     await setup(m, {reviewed: false});
-    const due = note(m.render(m.h(m.FirstAnswerLine, {now: NOW})));
+    const due = note(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW})));
     assert.match(due, /^Rules due for review/);
     await setup(m);
-    const reviewed = note(m.render(m.h(m.FirstAnswerLine, {now: NOW})));
+    const reviewed = note(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW})));
     assert.match(reviewed, /^Rules reviewed \(Closed\)/, 'the salmon season ends today, so tomorrow reads closed');
     for (const text of [unavailable, due, reviewed]) assert.doesNotMatch(text, /\d/, 'no bag, size or depth numbers');
-    assert.match(m.render(m.h(m.FirstAnswerLine, {now: NOW})), /<a href="https:[^"]*" target="_blank"/, 'a pointer to the official rules');
+    assert.match(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW})), /<a href="https:[^"]*" target="_blank"/, 'a pointer to the official rules');
   } finally { reset(m); }
 });
 
@@ -161,7 +165,7 @@ test('with no profile chosen the line states which profile it assumed; a chosen 
   try {
     await setup(m);
     m.profile.value = 'kayak';
-    const html = m.render(m.h(m.FirstAnswerLine, {now: NOW}));   // no address or storage names a profile under test
+    const html = m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW}));   // no address or storage names a profile under test
     assert.match(lineOf(html), /Assuming the Kayak profile/);
     const brief = m.leadBrief(NOW);
     const base = {verdict: m.currentVerdict(brief, NOW), rules: null, regs: null, target: 'lingcod', date: brief.date, day: 'tomorrow', now: NOW, profile: 'shore'};
