@@ -88,7 +88,7 @@ test('a refused location leaves a message and the input focused; Explore the coa
   await openMenus(page, isMobile);
   await page.locator('button[aria-label="Use my location"]').click();
   const dialog = page.locator('dialog.port-dialog');
-  await expect(dialog.locator('[role="status"]')).toHaveText('Location was unavailable. Search for a port instead.');
+  await expect(dialog.locator('[role="status"]')).toHaveText('Location permission was denied. Search for a port instead.');
   await expect(dialog.locator('input[type="search"]')).toBeFocused();
   await expect(dialog).toContainText('Your choice stays in this browser.');
   await page.keyboard.press('Escape');
@@ -748,3 +748,52 @@ test('the landing names the reference 23 ft boat when no boat is saved or the sa
   await expect(page.locator('.app-verdict-limit').first()).toHaveText(sentence!);
   expect(pageErrors).toEqual([]);
 });
+
+for (const lang of ['en', 'es'] as const) for (const surface of ['landing', 'app'] as const) {
+  test(`location reason matrix ${lang} ${surface}: visible polite failure and usable search`, async ({page, isMobile, pageErrors}) => {
+    await withProfile(page);
+    await page.addInitScript(() => {
+      const state = window as unknown as {geoCode?: number; geoCalls: number}; state.geoCalls = 0;
+      Object.defineProperty(navigator, 'geolocation', {value: {getCurrentPosition(_ok: unknown, fail: (e: {code?: number; message: string}) => void) {
+        state.geoCalls++; fail({code: state.geoCode, message: 'synthetic provider detail'});
+      }}});
+    });
+    await page.goto(surface === 'landing' ? `/?ui=v2&lang=${lang}` : `${SHELL}&lang=${lang}`);
+    if (surface === 'app') { await openMenus(page, isMobile); await page.locator('.app-port').click(); }
+    const form = page.locator(surface === 'landing' ? '.landing .port-input' : 'dialog.port-dialog .port-input');
+    const region = form.locator('[role="status"]'), input = form.locator('input[type="search"]');
+    await expect(region).toHaveText(''); await expect(region.locator('svg')).toHaveCount(0);
+    await region.evaluate(el => { el.setAttribute('data-original', 'yes'); });
+    const messages = lang === 'en' ? [
+      'Location permission was denied. Search for a port instead.',
+      'Location was unavailable. Search for a port instead.',
+      'The location request timed out. Search for a port instead.'
+    ] : [
+      'Se denegó el permiso de ubicación. Busca un puerto en su lugar.',
+      'No se pudo obtener la ubicación. Busca un puerto en su lugar.',
+      'La solicitud de ubicación agotó el tiempo de espera. Busca un puerto en su lugar.'
+    ];
+    await input.fill('san d');
+    for (const [index, code] of [1, 2, 3, 99, undefined].entries()) {
+      await page.evaluate(value => { (window as unknown as {geoCode?: number}).geoCode = value; }, code);
+      await form.getByRole('button', {name: lang === 'en' ? 'Use my location' : 'Usar mi ubicación'}).click();
+      await expect(region).toHaveText(messages[code === 1 ? 0 : code === 3 ? 2 : 1]);
+      await expect(region).toHaveAttribute('data-original', 'yes');
+      await expect(region).toHaveAttribute('aria-live', 'polite'); await expect(region).toHaveAttribute('aria-atomic', 'true');
+      await expect(region.locator('svg')).toHaveAttribute('aria-hidden', 'true');
+      await expect(region.locator('title, [role="alert"]')).toHaveCount(0);
+      await expect(input).toBeFocused(); await expect(input).toHaveValue('san d');
+      await expect(form.locator('[data-port]')).toHaveText([/San Diego/]);
+      expect(await page.evaluate(() => (window as unknown as {geoCalls: number}).geoCalls)).toBe(index + 1);
+      expect(await region.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      expect(await region.evaluate(el => getComputedStyle(el).color === getComputedStyle(el.closest('form')!).color)).toBe(true);
+      expect(await form.textContent()).not.toContain('synthetic provider detail');
+    }
+    await expect(form.locator('.port-input-note')).toContainText(lang === 'en' ? 'Your choice stays in this browser.' : 'Tu elección se guarda en este navegador.');
+    await expect(form.getByRole('button', {name: lang === 'en' ? 'Explore the coast' : 'Explorar la costa'})).toBeEnabled();
+    await input.press('Enter');
+    if (surface === 'app') await expect(page.locator('dialog.port-dialog')).toBeHidden();
+    else await expect(page.locator('.landing-step[data-step="profile"]')).toBeVisible();
+    expect(pageErrors).toEqual([]);
+  });
+}

@@ -10,10 +10,13 @@ const dir = await mkdtemp(join(tmpdir(), 'port-location-'));
 const out = join(dir, 'component.mjs');
 await build({stdin: {resolveDir: process.cwd(), loader: 'ts', contents: `
   export {PortInput} from './web/landing/PortInput.tsx';
+  export {language, prepareCatalogue} from './web/landing/i18n.ts';
+  export {portCopy} from './web/landing/copy.ts';
   export {h, render} from 'preact';
   export {act} from 'preact/test-utils';`}, bundle: true, format: 'esm', platform: 'node',
   outfile: out, jsx: 'automatic', jsxImportSource: 'preact', logLevel: 'silent'});
-const {PortInput, h, render, act} = await import(pathToFileURL(out).href);
+const {PortInput, h, render, act, language, portCopy, prepareCatalogue} = await import(pathToFileURL(out).href);
+await prepareCatalogue('es');
 test.after(() => rm(dir, {recursive: true, force: true}));
 
 // Minimal mounted DOM, with real Preact event dispatch and observable focus.
@@ -51,7 +54,7 @@ const north = port('north-fixture', 'North fixture', [35, -120]);
 const south = port('south-fixture', 'South fixture', [34, -120]);
 const ports = [north, south];
 const geo = () => ({calls: [], getCurrentPosition(ok, fail) { this.calls.push({ok, fail}); }});
-const answer = (g, i, outcome) => outcome === 'failure' ? g.calls[i].fail({code: 3}) :
+const answer = (g, i, outcome) => ['failure', 'denied'].includes(outcome) ? g.calls[i].fail({code: outcome === 'denied' ? 1 : 3}) :
   g.calls[i].ok({coords: {latitude: outcome === 'none' ? 0 : outcome === 'south' ? 34 : 35, longitude: outcome === 'none' ? 0 : -120}});
 function mount(extra = {}) {
   const root = new Element('div'), chosen = [], explored = [];
@@ -72,7 +75,7 @@ function mount(extra = {}) {
     unmount: async () => act(() => render(null, root))};
 }
 
-for (const outcome of ['north', 'failure', 'none', 'unsupported']) {
+for (const outcome of ['north', 'failure', 'denied', 'none', 'unsupported']) {
   test(`manual query supersedes pending ${outcome}`, async () => {
     const m = mount(outcome === 'unsupported' ? {geolocation: null} : {}); await m.update({});
     // Invalidate synchronously, even before an immediately resolved unsupported answer resumes.
@@ -86,7 +89,7 @@ for (const outcome of ['north', 'failure', 'none', 'unsupported']) {
     await m.unmount();
   });
 }
-for (const old of ['north', 'failure', 'none']) for (const order of ['old-first', 'new-first']) {
+for (const old of ['north', 'failure', 'denied', 'none']) for (const order of ['old-first', 'new-first']) {
   test(`latest attempt wins: ${old}, ${order}`, async () => {
     const m = mount(); await m.update({}); await m.click('Use my location'); await m.click('Use my location');
     const outside = new Element('button'); outside.focus();
@@ -106,7 +109,7 @@ for (const old of ['north', 'failure', 'none']) for (const order of ['old-first'
 test('current failure, none, unsupported and explicit retry retain ordinary controls', async () => {
   const m = mount(); await m.update({}); await m.type('South'); await m.click('Use my location');
   await m.resolve(0, 'failure'); assert.equal(m.snapshot().query, 'South');
-  assert.match(m.snapshot().feedback, /unavailable/); assert.ok(document.activeElement === m.input(), 'current failure focuses search');
+  assert.match(m.snapshot().feedback, /timed out/); assert.ok(document.activeElement === m.input(), 'current failure focuses search');
   await m.click('Use my location'); await m.resolve(1, 'none'); assert.match(m.snapshot().feedback, /No listed port/);
   await m.update({geolocation: null}); await m.click('Use my location'); assert.equal(m.snapshot().feedback, 'Location is unavailable. Search for a port instead.');
   await m.update({geolocation: geo()}); await m.click('Use my location'); await m.resolve(0, 'north');
@@ -114,7 +117,7 @@ test('current failure, none, unsupported and explicit retry retain ordinary cont
   await m.submit(); assert.equal(m.chosen[0], north); await m.unmount();
 });
 for (const boundary of ['option', 'submit', 'explore', 'unmount', 'ports', 'geolocation', 'empty', 'loading']) {
-  for (const outcome of ['north', 'failure']) test(`${boundary} discards late ${outcome}`, async () => {
+  for (const outcome of ['north', 'failure', 'denied']) test(`${boundary} discards late ${outcome}`, async () => {
     const m = mount(); await m.update({}); await m.type('South'); await m.click('Use my location');
     const old = m.geolocation;
     if (boundary === 'option') await act(() => fire(all(m.root, n => n.attrs['data-port'] === south.id)[0], 'click'));
@@ -140,4 +143,46 @@ test('locate waits for directory; replacement and fresh instances have independe
   await m.unmount();
   const fresh = mount(); await fresh.update({}); await fresh.type('South'); await fresh.submit();
   assert.equal(fresh.chosen[0], south); assert.equal(fresh.geolocation.calls.length, 0); await fresh.unmount();
+});
+
+const status = m => all(m.root, n => n.attrs.role === 'status')[0];
+const errorIcon = m => all(status(m), n => n.localName === 'svg');
+for (const lang of ['en', 'es']) for (const [code, reason] of [[1, 'denied'], [2, 'unavailable'], [3, 'timedOut'], [99, 'unavailable'], [undefined, 'unavailable']]) {
+  test(`mounted location reason ${code} in ${lang}: stable polite region, no raw text, retry clears icon`, async () => {
+    language.value = lang;
+    const m = mount();
+    try {
+      await m.update({}); const region = status(m);
+      assert.equal(text(region), ''); assert.equal(errorIcon(m).length, 0);
+      assert.equal(region.attrs['aria-live'], 'polite'); assert.equal(region.attrs['aria-atomic'], 'true');
+      await m.type('South'); await m.click(lang === 'en' ? 'Use my location' : 'Usar mi ubicación');
+      await act(async () => { m.geolocation.calls[0].fail({code, message: 'synthetic provider detail'}); });
+      assert.equal(status(m), region); assert.equal(text(region), portCopy(lang)[reason]);
+      assert.equal(m.snapshot().query, 'South'); assert.equal(m.snapshot().ids, south.id);
+      assert.ok(document.activeElement === m.input()); assert.ok(region.attrs.class.includes('port-input-feedback--error'));
+      assert.equal(errorIcon(m).length, 1); assert.equal(errorIcon(m)[0].attrs['aria-hidden'], 'true');
+      assert.equal(all(region, n => n.localName === 'title' || n.attrs.role === 'alert').length, 0);
+      assert.equal(text(m.root).includes('synthetic provider detail'), false);
+      await m.click(lang === 'en' ? 'Use my location' : 'Usar mi ubicación');
+      assert.equal(errorIcon(m).length, 0); assert.equal(m.geolocation.calls.length, 2);
+      await m.resolve(1, 'north'); assert.equal(errorIcon(m).length, 0);
+      assert.equal(text(region), portCopy(lang).found(north)); assert.equal(m.chosen.length, 0);
+    } finally { await m.unmount(); language.value = 'en'; }
+  });
+}
+test('pending and retained feedback follows current language without another lookup', async () => {
+  const m = mount(); await m.update({});
+  try {
+    await m.click('Use my location');
+    await act(() => { language.value = 'es'; });
+    assert.equal(m.snapshot().feedback, portCopy('es').finding);
+    await m.resolve(0, 'denied'); assert.equal(m.snapshot().feedback, portCopy('es').denied);
+    await act(() => { language.value = 'en'; });
+    assert.equal(m.snapshot().feedback, portCopy('en').denied); assert.equal(m.geolocation.calls.length, 1);
+    await m.click('Use my location'); await m.resolve(1, 'north');
+    await act(() => { language.value = 'es'; });
+    assert.equal(m.snapshot().feedback, portCopy('es').found(north));
+    await m.type('South'); assert.equal(m.snapshot().feedback, ''); assert.equal(errorIcon(m).length, 0);
+    await m.submit(); assert.equal(m.chosen[0], south);
+  } finally { await m.unmount(); language.value = 'en'; }
 });

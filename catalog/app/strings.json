@@ -625,6 +625,8 @@
     "landing.port.finding": {"en": "Finding a nearby port…", "es": "Buscando un puerto cercano…"},
     "landing.port.unsupported": {"en": "Location is unavailable. Search for a port instead.", "es": "La ubicación no está disponible. Busca un puerto en su lugar."},
     "landing.port.unavailable": {"en": "Location was unavailable. Search for a port instead.", "es": "No se pudo obtener la ubicación. Busca un puerto en su lugar."},
+    "landing.port.denied": {"en": "Location permission was denied. Search for a port instead.", "es": "Se denegó el permiso de ubicación. Busca un puerto en su lugar."},
+    "landing.port.timedOut": {"en": "The location request timed out. Search for a port instead.", "es": "La solicitud de ubicación agotó el tiempo de espera. Busca un puerto en su lugar."},
     "landing.port.none": {"en": "No listed port is nearby. Search or explore the coast.", "es": "No hay un puerto de la lista cerca. Busca o explora la costa."},
     "landing.port.empty": {"en": "No matching port yet. Try a nearby harbor or explore the coast.", "es": "Aún no hay un puerto que coincida. Prueba un puerto cercano o explora la costa."},
     "landing.port.forget": {"en": "Forget saved home", "es": "Olvidar puerto guardado"},

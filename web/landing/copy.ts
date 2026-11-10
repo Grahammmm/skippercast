@@ -39,6 +39,8 @@ export function portCopy(lang: Language) {
     question: t('landing.port.question', lang),
     placeholder: t('landing.port.placeholder', lang),
     finding: t('landing.port.finding', lang),
+    timedOut: t('landing.port.timedOut', lang),
+    denied: t('landing.port.denied', lang),
     unsupported: t('landing.port.unsupported', lang),
     unavailable: t('landing.port.unavailable', lang),
     none: t('landing.port.none', lang),
