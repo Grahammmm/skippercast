@@ -12,6 +12,7 @@ import {mkdtemp, readFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {isDeepStrictEqual} from 'node:util';
 import {build} from 'esbuild';
 import {FIRST_RUN_KEY as V1_FIRST_RUN_KEY, HOME_PORT_KEY as V1_KEY, forgetHome as v1Forget, resolveHome as v1Resolve} from '../dist/home-port.js';
 import {
@@ -19,7 +20,7 @@ import {
 } from '../packages/coast/src/coast3d/preferences.ts';
 import {lintFile} from '../scripts/check_tokens.mjs';
 import {
-  COPY, FEATURED, FIRST_RUN_KEY, HOME_PLACE_KEY, HOME_PORT_KEY, closestPort, currentPort, exploreURL, forgetHome, hasSavedHome, homeURL, isDirectory,
+  COPY, FEATURED, FIRST_RUN_KEY, GEO_OPTIONS, HOME_PLACE_KEY, HOME_PORT_KEY, closestPort, currentPort, exploreURL, forgetHome, hasSavedHome, homeURL, isDirectory,
   landingURL, listPorts, locatePort, loadPorts, matchPorts, portURL, resolveHome, savedHomeMode, savedHomeURL, savePort, savedPortId,
 } from '../web/ports.ts';
 import {fishLink} from '../web/fish-links.ts';
@@ -368,9 +369,16 @@ test('locating resolves the nearest port, or why there is none, without throwing
   const geo = (lat, lon) => ({getCurrentPosition: (ok) => ok({coords: {latitude: lat, longitude: lon}})});
   assert.deepEqual(await locatePort(PORTS, geo(35.36, -120.88)), {ok: true, port: morro});
   assert.deepEqual(await locatePort(PORTS, geo(37, -119)), {ok: false, reason: 'none'});
-  assert.deepEqual(await locatePort(PORTS, {getCurrentPosition: (_ok, fail) => fail({code: 1})}), {ok: false, reason: 'unavailable'});
+  const failing = code => ({calls: 0, getCurrentPosition(_ok, fail, options) { this.calls++; this.options = options; fail({code, message: 'device detail'}); }});
+  for (const [code, reason] of [[1, 'denied'], [2, 'unavailable'], [3, 'unavailable'], [0, 'unavailable']]) {
+    const stub = failing(code), found = await locatePort(PORTS, stub);
+    assert.ok(isDeepStrictEqual(found, {ok: false, reason}), `code ${code}: ${JSON.stringify(found)}`);
+    assert.equal(stub.calls, 1, `code ${code}: one request`); assert.ok(isDeepStrictEqual(stub.options, GEO_OPTIONS), `code ${code}: the existing options`);
+  }
+  assert.ok(isDeepStrictEqual(await locatePort(PORTS, {getCurrentPosition: (_ok, fail) => fail()}), {ok: false, reason: 'unavailable'}), 'a failure with no error object stays unavailable');
   assert.deepEqual(await locatePort(PORTS, null), {ok: false, reason: 'unsupported'});
-  for (const reason of ['unsupported', 'unavailable', 'none']) assert.match(COPY[reason], /Search/, `${reason} points back to the search`);
+  for (const reason of ['unsupported', 'denied', 'unavailable', 'none']) assert.match(COPY[reason], /Search|search/, `${reason} points back to the search`);
+  assert.match(COPY.denied, /permission is off for this site/);
   assert.match(COPY.privacy, /stays in this browser/);
 });
 
