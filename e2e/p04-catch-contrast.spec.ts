@@ -227,7 +227,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MAPLIVE-1: MapStage.tsx only adds one more Chart layer (createPreviewLayers, passing the Chart unavailable list); no class, colour or paint change, and BODY09 never mounts MapStage.
   "web/app/MapStage.tsx": "5ab4d95d39768d31fc0851cb0967ddd322bf63b0bdaf1d9801a023e745112a1c",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
-  "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
+  "web/ui/ui.css": "f480a47ad246b865da35b5aabd2a86fe81ddf89ed8400be2a367df7fc0d0a25f",  // SC1722-07: ui.css only adds the sheet's --sheet-hidden-offset property, a settled-detent bottom padding and overscroll containment on .ui-sheet-body; the catch sheet has no sheet and no paint changed. #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.
   // SC-E2E-GREEN: the legend shrinks and scrolls beside a mark-card min height, the phone .app-area row wraps, and the
   // brief's .app-verdict-rules line gets margins, size and the existing .app-mark-regs a link rule; Reports' catch sheet
@@ -242,8 +242,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC-PERF-LAZY-1: app.css only adds the .app-reef-text selector to the existing muted 13px .app-empty/.app-caveat rule for the deferred-reef note; the Reports catch sheet never mounts it, and contrast() is untouched. Rebound from the final bytes.
   // SC-PERF-LAZY-1: check_contrast.mjs changes only its appCss source hash; contrast() is untouched. Rebound.
   // SC-PERF-JUMP-1: app.css appends only layout rules (masthead, target menu width, desktop legend minimum height); no paint; the Reports catch sheet mounts none of them. Rebound from the final bytes.
+  // SC1722-07: app.css only adds the phone sheet's --sheet-hidden-offset property to the .app-sheet rules (layout, no paint); the Reports catch sheet never mounts it. Rebound from the final bytes.
+  // SC1722-07: check_contrast.mjs changes only its appCss source hash and comment; contrast() is untouched. Rebound.
   // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
-  "web/app/app.css": "82c33886f084c96378d09a2fe1d9148d0c7f6f7a59b8cc4bc336f149ea1e11c2",
+  "web/app/app.css": "c1893be141005073a2ac96d48456bbca6f596d3ad25901f98c8da7fb636306da",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -310,7 +312,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC-TIDAL-1: app.css only appends a scoped .app-entrance* block (token text roles in the Boat brief's run line); check_contrast.mjs rebinds only the
   // appCss surface hash and its comment. BODY09 mounts Reports/CatchCards, never the run line or the legend; contrast(), catch paint, backing,
   // assertions and thresholds are unchanged. Rebind only these two sources.
-  "scripts/check_contrast.mjs": "3866a2ccfcde1e7fc669c919cae23fe62771cbd88b6fa742e67d1ca805f88f2e",
+  "scripts/check_contrast.mjs": "ad82f69d8898e1cbcb4681ef4346fb485fb0ea11b0b3b154d5e01542340f4629",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still

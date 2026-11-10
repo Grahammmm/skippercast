@@ -393,9 +393,11 @@ export const SURFACE_SOURCE_SHA256 = {
   // a minimum height on the desktop legend); no colour, opacity, backing or text paint changed, and the cited line numbers above are unmoved.
   // SC-TIDAL-1 only appends a scoped .app-entrance* block at the end of app.css (token text roles on the brief's run line, not the legend glass);
   // no legend paint or backing changed and the cited line numbers above are unmoved.
+  // SC1722-07 only adds the phone sheet's --sheet-hidden-offset custom property (vh and @supports dvh values mirroring the existing transforms) to the .app-sheet rules;
+  // no colour, opacity, backing or text paint changed and the cited line numbers above are unmoved.
   // SC1722-01 only appends a scoped .app-forecast-failed* block at the end of app.css (token text roles on the brief, not the legend glass);
   // no legend paint or backing changed and the cited line numbers above are unmoved.
-  "appCss": "82c33886f084c96378d09a2fe1d9148d0c7f6f7a59b8cc4bc336f149ea1e11c2",
+  "appCss": "c1893be141005073a2ac96d48456bbca6f596d3ad25901f98c8da7fb636306da",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
