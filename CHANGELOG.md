@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF1935-4: Keep the phone sheet target search clear of the tabs while focused, including short emulated viewports; restore navigation on blur.
+
 - RF1915-9: the offline rights-delta comparator now removes a report it just created when the write, fsync or close fails, so a torn or unsynced file no longer blocks a retry under the write-once name. A pre-existing output is never touched, and a path replaced meanwhile is preserved; if cleanup cannot finish the tool exits 4 with a fixed "incomplete report may remain" or "replacement preserved" message. Successful report bytes, mode and comparison results are unchanged.
 - SC1722-04: failed coast reads stay settled until a view returns, a person retries, or the connection returns; transport-state updates no longer trigger a request loop in reactive readers.
 - RF1915-8: the private tide-layer builder refuses a station whose NOAA table holds a non-finite height (NaN, infinity or an overflow string such as `1e999`) before the station is admitted, so it is counted as failed and never written as invalid JSON. Finite tables, including negative and zero heights, produce byte-identical output.

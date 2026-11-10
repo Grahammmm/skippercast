@@ -152,6 +152,45 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
   const now = useHourNow(fixedNow, clock);
   const [detent, setDetent] = useState<Detent>('peek');
   const [panel, setPanel] = useState<Panel>('brief');
+  // RF1935-4: only the focused sheet target needs keyboard-viewport correction.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    let frame = 0, restore: (() => void) | undefined;
+    const reveal = () => {
+      const input = document.activeElement;
+      if (!(input instanceof HTMLInputElement) || !input.matches('.app-mobile .app-sheet .app-target-search')) {
+        restore?.(); restore = undefined; return;
+      }
+      const sheet = input.closest<HTMLElement>('.app-sheet')!;
+      const body = input.closest<HTMLElement>('.ui-sheet-body')!;
+      if (!restore) {
+        const height = sheet.style.maxHeight, bottom = sheet.style.bottom, scroll = body.scrollTop;
+        restore = () => { sheet.style.maxHeight = height; sheet.style.bottom = bottom; body.scrollTop = scroll; };
+      }
+      // The visual viewport can shrink without resizing the layout viewport.
+      sheet.style.maxHeight = `${viewport.height}px`;
+      sheet.style.bottom = `calc(${Math.max(0, innerHeight - viewport.offsetTop - viewport.height)}px + env(safe-area-inset-bottom, 0px))`;
+      const bounds = body.getBoundingClientRect(), field = input.getBoundingClientRect();
+      const top = Math.max(bounds.top + body.clientTop, viewport.offsetTop);
+      const bottom = Math.min(bounds.top + body.clientTop + body.clientHeight, viewport.offsetTop + viewport.height);
+      if (body.scrollHeight > body.clientHeight) {
+        body.scrollTop += field.bottom > bottom ? field.bottom - bottom : field.top < top ? field.top - top : 0;
+      }
+    };
+    const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(reveal); };
+    viewport.addEventListener('resize', schedule);
+    viewport.addEventListener('scroll', schedule);
+    document.addEventListener('focusin', schedule);
+    document.addEventListener('focusout', schedule);
+    return () => {
+      cancelAnimationFrame(frame); restore?.();
+      viewport.removeEventListener('resize', schedule);
+      viewport.removeEventListener('scroll', schedule);
+      document.removeEventListener('focusin', schedule);
+      document.removeEventListener('focusout', schedule);
+    };
+  }, []);
   const apply = ({panel: p, detent: d}: {panel: Panel; detent: Detent}) => { setPanel(p); setDetent(d); };
   useEffect(() => setDetent(d => viewDetent(appView.value, d)), [appView.value]);
   useEffect(() => setDetent(d => boatEntryDetent(boatEntryOpen.value, d)), [boatEntryOpen.value]);
