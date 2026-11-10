@@ -763,6 +763,7 @@
     "shell.brief": {"en": "Brief", "es": "Resumen"},
     "shell.done": {"en": "Done", "es": "Listo"},
     "dock.today": {"en": "Today", "es": "Hoy"},
+  "dock.tomorrow": {"en": "Tomorrow", "es": "Mañana"},
     "dock.outside": {"en": " · outside the forecast", "es": " · fuera del pronóstico"},
     "dock.play": {"en": "Play", "es": "Reproducir"},
     "dock.pause": {"en": "Pause", "es": "Pausar"},

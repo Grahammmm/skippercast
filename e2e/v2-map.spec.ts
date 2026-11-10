@@ -256,7 +256,8 @@ test('the terrain receives the dock\'s hour', async ({page, pageErrors, v2, isMo
   const atStart = await slider.inputValue() === '0';
   await slider.focus();
   await page.keyboard.press(atStart ? 'End' : 'Home');
-  await expect(page.locator('.ui-dock-readout')).toHaveText(atStart ? '11 pm' : '12 am');
+  await expect(page.locator('.ui-dock-readout')).toHaveText(atStart ? 'Tomorrow · 11 pm' : 'Tomorrow · 12 am');
+  await expect(slider).toHaveAttribute('aria-valuetext', atStart ? 'Tomorrow · 11 pm' : 'Tomorrow · 12 am');
   const chosen = urlHour(page)!;
   await expect(host).toHaveAttribute('data-hour', chosen.replace('Z', ':00.000Z'));
   expect(pageErrors).toEqual([]);
