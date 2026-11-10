@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF1915-8: the private tide-layer builder refuses a station whose NOAA table holds a non-finite height (NaN, infinity or an overflow string such as `1e999`) before the station is admitted, so it is counted as failed and never written as invalid JSON. Finite tables, including negative and zero heights, produce byte-identical output.
+
 - RF1915-6: trip checks refuse publication identifiers over 200 UTF-16 code units before reading job state or queuing owners, rather than truncating distinct identifiers into the same stored marker. Accepted identifiers remain unchanged.
 
 - RF1915-5: the spear reading's 48-hour swell look-back now walks its 48 fixed hourly slots instead of the nearshore model's declared sample spacing, so an enormous or non-finite `temporalResolutionMinutes` can no longer hold the daily brief in a loop. Coverage, energy maxima, the 36-hour clarity gate and every ordinary verdict are unchanged.
