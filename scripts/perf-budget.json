@@ -45,7 +45,7 @@
         },
         {
           "max_bytes": 1180000,
-          "reason": "Raised 1,170,000 to 1,180,000 (0.9% over the 1,170,114 measured on this branch merged with main 3d13e7c0d7). Main alone measures just under the 1,170,000 budget, so the first load had no headroom left; SC1407-08 adds a small amount of minified code in web/app/main.tsx (the /map check and the early import of the Chart library after the first render), which puts it 114 bytes over. The Chart library stays a separate chunk fetched only on a /map page that opens on the Chart, so it is not counted in the first-load script total; the new code only moves its fetch earlier and is worth the bytes."
+          "reason": "Raised 1,170,000 to 1,180,000 (0.9% over the 1,170,408 measured on this branch merged with main 2c5eae23, 408 bytes over). SC1407-06 adds the shared live-boundary reader (dist/live-mpa.js, imported by web/map/marks.ts and dist/protected-areas.js) so the map's mark screen and the planner's screen make one request for the same in-flight ds582 query instead of two; the extra minified code in the app entry is worth the saved request and parse."
         }
       ]
     },
