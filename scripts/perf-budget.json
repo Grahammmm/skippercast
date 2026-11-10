@@ -77,7 +77,11 @@
         },
         {
           "max_bytes": 74000,
-          "reason": "Raised 73,000 to 74,000 (MAIN-RED-SKIPPERCAST). UXFIX-13 (#1892) made the phone's 'Keep Boat for now' button visible at the sheet's peek (grid row and peek height in web/landing/port-input.css). It passed CI on its own head, but merged with main be4421e5 the app first-load styles measure 73,052 bytes, 52 bytes over the 73,000 budget, and main went red. The budget moves up 1,000 bytes (1.3% headroom over that build), no more. RF1935-2 (#1891) adds the desktop layer-rail preset wrap and the Source/Base row minimum width (web/app/app.css, layout only) on top; its build with main measures 73,445 bytes, inside the same 74,000 budget."
+          "reason": "Raised 73,000 to 74,000 (MAIN-RED-SKIPPERCAST). UXFIX-13 (#1892) made the phone's 'Keep Boat for now' button visible at the sheet's peek (grid row and peek height in web/landing/port-input.css). It passed CI on its own head, but merged with main be4421e5 the app first-load styles measure 73,052 bytes, 52 bytes over the 73,000 budget, and main went red. The budget moves up 1,000 bytes (1.3% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 74000,
+          "reason": "Raised 73,000 to 74,000 (RF1925-2). This PR changes no stylesheet; main 9917437ec itself builds app first-load styles at 73,052 bytes (assets/app css 51.9 KB plus degraded-notice, tokens and Brief), 52 bytes over the 73,000 budget after the RF1935-4 and UXFIX-13 merges, so the required Size budget check fails on any branch merged with it; the budget moves up 1,000 bytes (1.3% headroom over that build), no more."
         }
       ]
     },

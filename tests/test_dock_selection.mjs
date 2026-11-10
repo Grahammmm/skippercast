@@ -72,7 +72,7 @@ test('burst_moves_before_frame_settles_once: a quick run of steps moves the labe
     assert.equal(m.requestDockHour(NOW, TZ, at), true);
     // The dock reads the new hour before any timer runs: thumb, readout and aria-valuetext together.
     const dock = m.render(m.h(m.TimeDock, {now: NOW})), edge = m.render(m.h(m.HourEdge, {now: NOW}));
-    const label = `${2 + i} pm`;
+    const label = `Today · ${2 + i} pm`;
     assert.equal(readout(dock), label);
     assert.equal(valueText(dock), label);
     assert.match(dock, new RegExp(`aria-label="Hour"[^>]*value="${1 + i}"`));
@@ -91,7 +91,7 @@ test('burst_moves_before_frame_settles_once: a quick run of steps moves the labe
   assert.equal(m.state.hour.value, m.state.hourParam(hours.at(-1) / 1000), 'the URL holds the settled (last) hour, never an intermediate one');
   assert.equal(new URL(location.href).searchParams.get('hour'), '2026-10-06T01:00Z');
   assert.equal(m.dockPending.value, false);
-  assert.equal(readout(m.render(m.h(m.TimeDock, {now: NOW}))), '6 pm');
+  assert.equal(readout(m.render(m.h(m.TimeDock, {now: NOW}))), 'Today · 6 pm');
   t.mock.timers.tick(1000);
   assert.equal(waves(), 1, 'nothing settles again');
 });
@@ -121,7 +121,7 @@ test('no_old_answer_under_preview: the verdict and first answer say Updating, un
   assert.doesNotMatch(settled, /app-hour-settled" hidden/);
   m.requestDockHour(NOW, TZ, later(m)[2]);
   const pending = view();
-  assert.equal(readout(pending), '4 pm');
+  assert.equal(readout(pending), 'Today · 4 pm');
   assert.equal(pending.match(/<p class="app-hour-updating ui-mono" aria-live="off">Updating…<\/p>/g)?.length, 2, 'both verdict surfaces say Updating');
   assert.equal(pending.match(/<div class="app-hour-guard" aria-busy="true" data-pending="true">/g)?.length, 2);
   // The old answers stay mounted but hidden and inert: removed from sight and the accessibility tree.
@@ -136,7 +136,7 @@ test('no_old_answer_under_preview: the verdict and first answer say Updating, un
   t.mock.timers.tick(100);
   const after = view();
   assert.doesNotMatch(after, /Updating|hidden inert|aria-busy/, 'after settling, the answer shows for the dock hour');
-  assert.equal(readout(after), '4 pm');
+  assert.equal(readout(after), 'Today · 4 pm');
 });
 
 test('pending_actions_use_settled_context: the canonical time, URL and print stay settled while a step is pending', async t => {
@@ -157,7 +157,7 @@ test('day chips and play follow the same rule: preview at once, settle once, kee
   m.requestDockDay(NOW, TZ, '2026-10-07', shown);
   let dock = m.render(m.h(m.TimeDock, {now: NOW}));
   assert.match(dock, /aria-pressed="true" data-on="true">Wed · Unknown</, 'the pressed chip moves at once');
-  assert.equal(readout(dock), '1 pm', 'same local hour on the new day');
+  assert.equal(readout(dock), 'Wed · 1 pm', 'same local hour on the new day');
   m.requestDockDay(NOW, TZ, '2026-10-08', m.previewDockState(NOW, TZ));
   assert.equal(waves(), 0);
   t.mock.timers.tick(100);
@@ -167,7 +167,7 @@ test('day chips and play follow the same rule: preview at once, settle once, kee
   // A play or reduced-motion step requests the next hour from the shown preview.
   m.requestDockHour(NOW, TZ, m.previewDockState(NOW, TZ).at + HOUR);
   dock = m.render(m.h(m.TimeDock, {now: NOW}));
-  assert.equal(readout(dock), '2 pm');
+  assert.equal(readout(dock), 'Thu · 2 pm');
   t.mock.timers.tick(100);
   assert.equal(m.state.hour.value, '2026-10-08T21:00Z');
 });
@@ -179,7 +179,7 @@ test('both repeated 1 am instants of the fall-back day settle exactly', async t 
   assert.equal(m.render(m.h(m.TimeDock, {now})).match(/class="app-dock-zone ui-mono">([^<]+)/)[1], 'PDT');
   m.requestDockHour(now, TZ, Date.parse('2026-11-01T09:00Z'));
   const dock = m.render(m.h(m.TimeDock, {now}));
-  assert.deepEqual([readout(dock), dock.match(/class="app-dock-zone ui-mono">([^<]+)/)[1]], ['1 am', 'PST']);
+  assert.deepEqual([readout(dock), dock.match(/class="app-dock-zone ui-mono">([^<]+)/)[1]], ['Tomorrow · 1 am', 'PST']);
   t.mock.timers.tick(100);
   assert.deepEqual([m.state.day.value, m.state.hour.value], ['2026-11-01', '2026-11-01T09:00Z']);
 });
