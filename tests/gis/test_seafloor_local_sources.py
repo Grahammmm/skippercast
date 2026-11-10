@@ -12,8 +12,10 @@ from rasterio.transform import from_origin
 
 from skippercast.platform.contracts import REPO, read_json
 from skippercast.seafloor.draft import add_survey
+from skippercast.seafloor.fetch import DIGITAL_COAST
 from skippercast.seafloor.io import sha256
 from skippercast.seafloor.local_sources import LocalSourceRoot, import_local, import_manifest
+from skippercast.seafloor.manifest import load_manifest, physical_source, promote_draft
 
 URL = 'https://pubs.usgs.gov/fixture/fixture.tif'
 SCHEMA = Path(REPO) / 'catalog/survey.schema.json'
@@ -177,6 +179,33 @@ class LocalSourceRootTests(unittest.TestCase):
         report = import_manifest([self.row], self.cache, local)
         self.assertEqual((report['imported'], report['refused'][0]['source_id']), ([], 'fixture-source'))
         self.assertEqual(sha256(cached), self.entry['sha256'])        # verified cache kept
+
+    def test_compilation_is_inspected_but_never_habitat_depth(self):
+        coned = DIGITAL_COAST + 'CA_Central_CoNED_DEM_2017_8657/CentCA_Topobathy_CoNED_1m_H7.tif'
+        ncmp = DIGITAL_COAST + 'USACE_CA_DEM_2009_9488/2009_NCMP_CA_114_BareEarth_1mGrid.tif'
+        repo, bounds = self.fixture_repo()
+        promoted = {}
+        for name, url in (('coned', coned), ('ncmp', ncmp)):
+            local = self.catalog(dict(self.entry, url=url))
+            draft = add_survey(url, bounds, ident=name + '-fixture', root=repo, local_root=local)
+            document = read_json(draft)                                # inspection still works
+            document['row']['evidence'] = ['fixture.json#/dataset']
+            draft.write_text(json.dumps(document))
+            try:
+                promoted[name] = promote_draft(draft, rights_url='https://www.fisheries.noaa.gov/inport/item/55319',
+                                               root=repo, physical_only=True)
+            except ValueError as error:
+                promoted[name] = str(error)
+        self.assertRegex(promoted['coned'], 'Compilation products are context only')
+        self.assertEqual(promoted['ncmp'], 'ncmp-fixture')
+        surveys = load_manifest(repo)['surveys']
+        self.assertEqual([r['id'] for r in surveys if physical_source(r, physical_only=True)], ['ncmp-fixture'])
+        # A hand-edited manifest cannot smuggle the compilation into processing either.
+        forged = dict(surveys[0], id='coned-forged', url=coned)
+        self.assertFalse(physical_source(forged, physical_only=True))
+        (repo / 'catalog/surveys.json').write_text(json.dumps({'surveys': surveys + [forged]}))
+        with self.assertRaisesRegex(ValueError, 'Compilation products are context only'):
+            load_manifest(repo)
 
 
 if __name__ == '__main__':

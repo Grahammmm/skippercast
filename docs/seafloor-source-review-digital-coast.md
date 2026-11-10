@@ -9,7 +9,9 @@ Reviewed 2026-11-09 by opus-coder-bopus (SEAFLOOR-RUN-2). Listings retrieved
 `src/skippercast/seafloor/fetch.py` admits seven exact dataset folders of the
 public NOAA Office for Coastal Management bucket
 `https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/<dataset>/`
-(AWS Registry of Open Data: <https://registry.opendata.aws/noaa-coastal-lidar/>).
+(AWS Registry of Open Data: <https://registry.opendata.aws/noaa-coastal-lidar/>):
+five NCMP folders as reviewed originals (`DIGITAL_COAST_DEM_PREFIXES`) and two
+CoNED folders as inspect-only compilations (`COMPILATION_PREFIXES`).
 The rest of the bucket (other DEMs, `laz/` point clouds) stays refused, and
 the existing `bluetopo` and `/modeling/` refusals are unchanged.
 
@@ -37,12 +39,17 @@ the existing `bluetopo` and `/modeling/` refusals are unchanged.
   the producer, NAVD88 heights, often geographic NAD83 coordinates). They cover
   the shallow nearshore fringe, about 0 to 25 m depth in the Morro Bay sector.
 - **CoNED is a compilation** (it merges lidar, multibeam and older soundings
-  1929–2019). docs/seafloor.md treats compilations as context, not habitat
-  depth. Admitting the CoNED folders here lets the native adapter inspect them
-  and the reviewer decide per file; a reviewer should refuse to promote a CoNED
-  file as `usable` habitat depth unless its lineage for the cell is a single
-  original survey. The Codex reviewer may prefer to drop the two CoNED folders
-  from this commit; the NCMP folders are independent of that choice.
+  1929–2019; InPort 55319 and 62987 describe it as compiled). docs/seafloor.md
+  treats compilations as context, not habitat depth, and the code now enforces
+  that: the two CoNED folders are listed separately as
+  `fetch.COMPILATION_PREFIXES`. Their files can be fetched, imported from a local
+  source root and inspected with `add-survey` (the draft and adapter receipt are
+  written), but `promote-survey` refuses them for both `usable` and
+  `--physical-only`, the manifest validator refuses a CoNED row with either
+  status, and `physical_source()` never selects one, so no public or private
+  habitat run can use CoNED depth. To use the depth inside a CoNED footprint,
+  qualify the contributing original survey (for example an NCMP tile) instead.
+  The NCMP folders are originals and stay eligible.
 - Vertical datum: NAVD88 lidar heights are not MLLW. The pipeline performs no
   datum conversion, so the station-specific NAVD88–MLLW offset is not applied;
   it matters only near the 0 ft band edge. This is recorded, not hidden.

@@ -15,14 +15,23 @@ GENERAL_PREFIXES = ('https://cmgds.marine.usgs.gov/', 'https://pubs.usgs.gov/',
             'https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/')
 # Reviewed NOAA Digital Coast DEM datasets, admitted per dataset folder, never the
 # whole bucket; review note and public listings: docs/seafloor-source-review-digital-coast.md
-DIGITAL_COAST_DEM_PREFIXES = tuple(
-    'https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/' + dataset + '/' for dataset in (
-        'USACE_CA_DEM_2009_9488', 'USACE_CA_DEM_2010_9438', 'USACE_CA_DEM_2011_9432',
-        'USACE_California_Topobathy_DEM_2014_5189', 'USACE_CA_Topobathy_DEM_2015_8482',
-        'CA_Central_CoNED_DEM_2017_8657', 'CA_north_coned_DEM_2020_9181'))
-GENERAL_PREFIXES += DIGITAL_COAST_DEM_PREFIXES
+DIGITAL_COAST = 'https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/'
+DIGITAL_COAST_DEM_PREFIXES = tuple(DIGITAL_COAST + dataset + '/' for dataset in (
+    'USACE_CA_DEM_2009_9488', 'USACE_CA_DEM_2010_9438', 'USACE_CA_DEM_2011_9432',
+    'USACE_California_Topobathy_DEM_2014_5189', 'USACE_CA_Topobathy_DEM_2015_8482'))
+# USGS CoNED DEMs are multi-survey compilations: their files may be fetched and
+# inspected (add-survey drafts) but never qualify as habitat depth; see
+# compilation_source() and its enforcement in manifest.py.
+COMPILATION_PREFIXES = tuple(DIGITAL_COAST + dataset + '/' for dataset in (
+    'CA_Central_CoNED_DEM_2017_8657', 'CA_north_coned_DEM_2020_9181'))
+GENERAL_PREFIXES += DIGITAL_COAST_DEM_PREFIXES + COMPILATION_PREFIXES
 PREFIXES = GENERAL_PREFIXES + tuple(sorted(CSUMB_EXACT_ARCHIVES))
 HOSTS = tuple(urlsplit(prefix).hostname for prefix in PREFIXES)
+
+
+def compilation_source(url):
+    """True for reviewed compilation products: context only, never habitat depth."""
+    return url.startswith(COMPILATION_PREFIXES)
 
 
 def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000, session=None):

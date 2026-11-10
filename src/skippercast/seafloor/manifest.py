@@ -99,18 +99,31 @@ def validate_manifest(document, root=REPO):
         url = row['url'].lower()
         if 'bluetopo' in url or '/modeling/' in url:
             raise ValueError('Reference compilations cannot enter the survey manifest')
+        if row['status'] in {'usable', 'physical-only'}:
+            from .fetch import compilation_source
+            if compilation_source(row['url']):
+                raise ValueError('Compilation products are context only; qualify their contributing originals')
     return document
 
 
 def physical_source(row, *, physical_only=False):
-    """Private-reviewed sources cannot enter the default/public processing path."""
-    return row['kind'] == 'bathymetry' and (row['status'] == 'usable' or
-        physical_only and row['status'] == 'physical-only')
+    """Private-reviewed sources cannot enter the default/public processing path.
+
+    Reviewed compilation products (fetch.COMPILATION_PREFIXES) never count as
+    physical depth, whatever a hand-edited status says.
+    """
+    from .fetch import compilation_source
+    return row['kind'] == 'bathymetry' and (
+        row['status'] == 'usable' or physical_only and row['status'] == 'physical-only'
+    ) and not compilation_source(row.get('url', ''))
 
 
 def qualify_row(row, receipt, *, rights_url, physical_only=False):
     """Promote only after explicit rights review and a successful native adapter run."""
     from skippercast.platform.contracts import public_url
+    from .fetch import compilation_source
+    if compilation_source(row['url']):
+        raise ValueError('Compilation products are context only; qualify their contributing originals')
     public_url(rights_url)
     if row.get('format') == 'measured-multibeam-grid' and not physical_only:
         raise ValueError('Derived multibeam support is private-only; public rights not qualified')
