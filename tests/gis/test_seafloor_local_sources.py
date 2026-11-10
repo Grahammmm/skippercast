@@ -118,6 +118,18 @@ class LocalSourceRootTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Use one of'):
             add_survey(URL, bounds, ident='fixture-draft', root=repo, local_root=local, fetch=True)
 
+    def test_reviewed_digital_coast_dem_folders_only(self):
+        bucket = 'https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/'
+        admitted = bucket + 'dem/USACE_CA_DEM_2009_9488/2009_NCMP_CA_114_BareEarth_1mGrid.tif'
+        entry, cached = import_local(dict(self.row, url=admitted), self.cache,
+                                     self.catalog(dict(self.entry, url=admitted)))
+        self.assertEqual(sha256(cached), self.entry['sha256'])
+        for url in (bucket + 'dem/Other_Unreviewed_DEM_1234/tile.tif', bucket + 'laz/geoid18/9488/tile.tif',
+                    bucket + 'dem/USACE_CA_DEM_2009_9488_extra/tile.tif'):
+            with self.subTest(url=url), self.assertRaisesRegex(ValueError, 'Unreviewed original-source URL'):
+                import_local(dict(self.row, url=url, sha256='unknown', bytes='unknown'), self.base / 'other',
+                             self.catalog(dict(self.entry, url=url)))
+
 
 if __name__ == '__main__':
     unittest.main()
