@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC1722-14: native form fields share a 16px font floor on the landing, app and dialogs. The target search widens from 128px to 133px so both language hints fit; its phone select is capped to the viewport. This verifies the CSS precondition, not real-iPhone focus zoom.
+
 - RF1635-6: the shoreline publication gate refuses a CUSP feature whose `source_date` is not a real calendar day (February 29 in a non-leap year, April 31, month or day zero, year 0000, month 13) or not a plain `YYYY-MM-DD` string (Unicode digits, timestamps, padding, missing or non-text values), before the published `shoreline.geojson` is replaced, so an existing file stays byte-identical. Valid dates, including leap days and 0001-01-01 / 9999-12-31, are kept as written; the gate adds no freshness limit and no data is rebuilt.
 
 - RF1635-5: survey inventories now refuse cyclic derivation before loading or promotion; valid shared-parent lineages remain accepted and rejected promotion leaves the catalog unchanged.
