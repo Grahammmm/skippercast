@@ -2,7 +2,10 @@
 
 ## Unreleased
 
+- RF1635-6: the shoreline publication gate refuses a CUSP feature whose `source_date` is not a real calendar day (February 29 in a non-leap year, April 31, month or day zero, year 0000, month 13) or not a plain `YYYY-MM-DD` string (Unicode digits, timestamps, padding, missing or non-text values), before the published `shoreline.geojson` is replaced, so an existing file stays byte-identical. Valid dates, including leap days and 0001-01-01 / 9999-12-31, are kept as written; the gate adds no freshness limit and no data is rebuilt.
+
 - RF1635-5: survey inventories now refuse cyclic derivation before loading or promotion; valid shared-parent lineages remain accepted and rejected promotion leaves the catalog unchanged.
+- SC1407-12: the private device log on a mark card reads in Spanish: its title, both buttons, saved/full/unavailable notices, privacy and evidence caveats, counts and the Catch / Blank (no catch) labels come from the catalogue, and a notice already shown changes language with the page without reading or writing storage. Each entry's conditions snapshot stays as stored, in English inside `lang="en"`, never re-translated or rewritten; new entries keep storing the same English v1 record (`skippercast.private-map-log.v1`, unchanged key and format) in either language. A blank still records no catch. `web/app/PrivateMapLog.tsx` moves from the copy lint's not-covered list to covered.
 
 - SC1407-09: English pages no longer download the Spanish catalogue. The app and the landing ship English only and load the Spanish table only when the page is Spanish (a link, a stored choice or the browser's language), waiting for it before their first translated render; a switch to Spanish applies once the table arrives, and a failed load keeps English and says so once beside the language choice (the landing offers a link that reloads in Spanish). First-load scripts drop about 158 KB raw on both pages, and their budgets are lowered to match.
 
