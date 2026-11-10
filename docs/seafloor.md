@@ -122,7 +122,13 @@ where the bytes come from:
 
 - the source URL must still pass the reviewed allowlist in `fetch.py`
   (`bluetopo` and `/modeling/` stay refused), so a downloaded file is a
-  reviewed original only if its publisher URL is reviewed;
+  reviewed original only if its publisher URL is reviewed. The allowlist
+  compares URL text with reviewed dataset prefixes, so only the canonical form
+  counts (`fetch.canonical_source_url`): dot segments (`..`, `.`), empty
+  segments, percent escapes, backslashes, queries, fragments, user info, ports
+  and upper-case hosts refuse, because a client may resolve them into another
+  dataset folder. Fetch and local import refuse such a URL, and promotion, the
+  manifest validator and `physical_source()` refuse or skip it as habitat depth;
 - the catalog checksum and size must equal the repo pin when the manifest row
   has one; a conflict refuses the file before any copy. The pin belongs to the
   URL, not the product: `add-survey` applies the pin of every existing manifest

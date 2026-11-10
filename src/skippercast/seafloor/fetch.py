@@ -29,13 +29,42 @@ PREFIXES = GENERAL_PREFIXES + tuple(sorted(CSUMB_EXACT_ARCHIVES))
 HOSTS = tuple(urlsplit(prefix).hostname for prefix in PREFIXES)
 
 
+def canonical_source_url(url):
+    """True only when the URL text is its own identity, so prefix checks mean what they say.
+
+    Dot segments, empty segments (a trailing slash aside), percent escapes,
+    backslashes, queries, fragments, user info, ports and whitespace are
+    refused: an HTTP client or S3 may resolve any of them to another dataset
+    folder than the one the reviewed prefix names. No reviewed source URL
+    needs any of them.
+    """
+    if not isinstance(url, str) or re.search(r'[\s\x00-\x1f\x7f%\\?#@]', url):
+        return False
+    parts = urlsplit(url)
+    segments = parts.path.split('/')
+    return (parts.scheme == 'https' and parts.netloc == (parts.hostname or '')
+            and parts.netloc == parts.netloc.lower() and segments[0] == '' and len(segments) > 1
+            and all(s not in {'', '.', '..'} for s in segments[1:-1]) and segments[-1] not in {'.', '..'})
+
+
 def compilation_source(url):
     """True for reviewed compilation products: context only, never habitat depth."""
     return url.startswith(COMPILATION_PREFIXES)
 
 
+def habitat_url_refusal(url):
+    """Why ``url`` cannot be habitat depth (None when it may be); fails closed."""
+    if not canonical_source_url(url):
+        return 'Unreviewed source URL: not in canonical form'
+    if compilation_source(url):
+        return 'Compilation products are context only; qualify their contributing originals'
+    return None
+
+
 def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000, session=None):
     url, expected = row['url'], row['sha256']
+    if not canonical_source_url(url):
+        raise ValueError('Unreviewed original-source URL: not in canonical form')
     if not (url.startswith(GENERAL_PREFIXES) or url in CSUMB_EXACT_ARCHIVES) or any(
             s in url.lower() for s in ('bluetopo', '/modeling/')):
         raise ValueError('Unreviewed original-source URL')

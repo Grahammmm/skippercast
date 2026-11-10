@@ -49,7 +49,11 @@ the existing `bluetopo` and `/modeling/` refusals are unchanged.
   status, and `physical_source()` never selects one, so no public or private
   habitat run can use CoNED depth. To use the depth inside a CoNED footprint,
   qualify the contributing original survey (for example an NCMP tile) instead.
-  The NCMP folders are originals and stay eligible.
+  The NCMP folders are originals and stay eligible. Folder admission holds only
+  for canonical URL text: a URL such as `.../USACE_CA_DEM_2009_9488/../<other
+  folder>/x.tif` (or a percent-encoded variant) refuses at fetch, import,
+  promotion, manifest validation and selection, so no path can reach CoNED or
+  an unreviewed folder through an NCMP prefix.
 - Vertical datum: NAVD88 lidar heights are not MLLW. The pipeline performs no
   datum conversion, so the station-specific NAVD88–MLLW offset is not applied;
   it matters only near the 0 ft band edge. This is recorded, not hidden.

@@ -207,6 +207,54 @@ class LocalSourceRootTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Compilation products are context only'):
             load_manifest(repo)
 
+    def test_dataset_identity_is_the_canonical_url_text_at_every_boundary(self):
+        ncmp_dir = DIGITAL_COAST + 'USACE_CA_DEM_2009_9488/'
+        ambiguous = [ncmp_dir + tail for tail in (
+            '../CA_Central_CoNED_DEM_2017_8657/fixture.tif', '../not-reviewed-dataset/fixture.tif',
+            './fixture.tif', '/fixture.tif', '%2e%2e/not-reviewed-dataset/fixture.tif',
+            '%2E%2E/CA_Central_CoNED_DEM_2017_8657/fixture.tif', '.%2e/not-reviewed-dataset/fixture.tif',
+            '..%2fnot-reviewed-dataset/fixture.tif', '%2e%2e%2fnot-reviewed-dataset%2ffixture.tif',
+            '..\\not-reviewed-dataset\\fixture.tif', 'fixture.tif?x=../../other', 'fixture.tif#../../other',
+            'fixture%2Etif', 'fixture.tif ')] + [
+            ncmp_dir.replace('noaa-nos', 'NOAA-nos') + 'fixture.tif',
+            ncmp_dir.replace('.com/', '.com:443/') + 'fixture.tif',
+            ncmp_dir.replace('https://', 'https://user@') + 'fixture.tif']
+        repo, bounds = self.fixture_repo()
+        # Control: the direct NCMP URL drafts, promotes and is physical depth.
+        ncmp = ncmp_dir + 'fixture.tif'
+        draft = add_survey(ncmp, bounds, ident='ncmp-fixture', root=repo,
+                           local_root=self.catalog(dict(self.entry, url=ncmp)))
+        document = read_json(draft)
+        document['row']['evidence'] = ['fixture.json#/dataset']
+        refused = 'Unreviewed original-source URL: not in canonical form'
+        before = sorted(self.cache.rglob('*'))
+        for url in ambiguous:
+            with self.subTest(url=url):
+                local = self.catalog(dict(self.entry, url=url))
+                with self.assertRaisesRegex(ValueError, refused):
+                    add_survey(url, bounds, ident='alias-fixture', root=repo, local_root=local)
+                with self.assertRaisesRegex(ValueError, refused):
+                    import_local(dict(self.row, url=url), self.cache, local)
+                # A hand-edited draft with the same pinned bytes cannot be promoted.
+                forged_draft = self.base / 'forged-draft.json'
+                forged_draft.write_text(json.dumps(dict(document, row=dict(document['row'], id='forged', url=url))))
+                with self.assertRaisesRegex(ValueError, 'Unreviewed (original-)?source URL: not in canonical form'):
+                    promote_draft(forged_draft, rights_url='https://www.fisheries.noaa.gov/inport/item/55319',
+                                  root=repo, physical_only=True)
+        self.assertEqual(sorted(self.cache.rglob('*')), before)
+        draft.write_text(json.dumps(document))
+        self.assertEqual(promote_draft(draft, rights_url='https://www.fisheries.noaa.gov/inport/item/55319',
+                                       root=repo, physical_only=True), 'ncmp-fixture')
+        surveys = load_manifest(repo)['surveys']
+        self.assertTrue(physical_source(surveys[0], physical_only=True))
+        # A hand-edited manifest row is refused by validation and never selected.
+        for url in ambiguous[:2]:
+            forged = dict(surveys[0], id='forged', url=url)
+            self.assertFalse(physical_source(forged, physical_only=True))
+            (repo / 'catalog/surveys.json').write_text(json.dumps({'surveys': surveys + [forged]}))
+            with self.subTest(url=url), self.assertRaisesRegex(ValueError, 'Unreviewed source URL: not in canonical'):
+                load_manifest(repo)
+
 
 if __name__ == '__main__':
     unittest.main()
