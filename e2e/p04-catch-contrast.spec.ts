@@ -183,7 +183,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF0753-2 (first-run keyboard): App.tsx changes only <FirstRun /> to <FirstRun focusOnOpen /> on the desktop shell, which
   // moves focus to the card's heading (FirstRun.tsx). BODY09 mounts Reports/CatchCards, never App or FirstRun; no CSS, token,
   // class or catch markup change; contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
-  "web/app/App.tsx": "ae91937e607c033488a0b2d84eeea283e9b444b6a8241f8233da5d531c70d55c",
+  // SC1722-03: startupFreshness keeps the source age when offline (it returned none), before its offline override; BODY09 mounts
+  // Reports/CatchCards, never App, and online results are unchanged. No CSS, token or catch markup change; contrast(), assertions
+  // and thresholds are untouched. Rebind only App.tsx.
+  "web/app/App.tsx": "6141941f7dc9080d02f9d12d33bc3cffa187af4e140b966e12916447e53c5f29",
   // SC-LAUNCH-4 (#1267, cost ceiling): Masthead.tsx imports web/degraded.ts (a signal and pure helpers, no top-level
   // side effect) and adds DegradedNotice after FreshnessDot. It renders nothing unless a response carries
   // X-SC-Degraded: cost-ceiling, which no BODY09 fixture does; when shown it reuses the existing .app-limits-note
@@ -205,7 +208,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-09: ViewNav's click pushes one history entry when the view changes (navigate) instead of replacing it (setParams).
   // Only navigation event behaviour changed; BODY09 mounts Reports/CatchCards, never ViewNav, and no CSS, token, catch markup
   // or Reports paint changed. contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "a139e69f4462503540d4df87d7c8a30bd5ad4cfd6f3eaf89f30e54415e3c3c79",
+  // SC1722-03: FreshnessDot adds the existing translated Offline word (unstyled inline span) only in the offline state, beside its
+  // unchanged age span. BODY09 mounts Reports/CatchCards, never Masthead, and no network state markup changes; no CSS, token or
+  // catch markup change; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
+  "web/app/Masthead.tsx": "32b4a07cde2c7077f73d9eb95e5fed45ec83641c5ee1de489a0944696363d6a7",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
@@ -324,14 +330,14 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
   // RF1925-1: only appCss pin and applicability comment change.
   "scripts/check_contrast.mjs": "0f8e51e9d96f39bebe7b802b33969185560a78c15d1ee13fc105b9667f02533d",
-  // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
-  // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
-  // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
+  // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
+  // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
+  // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
   // renders Reports with preact from these pins, but no CSS, token, font or catch markup source changes; the
   // measured colours come from the pinned styles above. Reports never mounts MapStage, so maplibre-gl and three
   // are not loaded. contrast(), assertions and thresholds are untouched. Rebind only these two.
-  "package.json": "b9fe30cef565b90f8995e9956cfc43f99bcbe103e72387bd73d215f8247a4774",
-  "pnpm-lock.yaml": "1b0d51c0eecc804cf6687293d7a92763057574fbb63686e43f2c5d86b7f65223",
+  "package.json": "83cef009e623dee19207f8ebc741b0604766989616387917901c5c654561edb3",
+  "pnpm-lock.yaml": "c9cf4a7e91697552fadd98575e199cf3be17d7fbdafd83949865222573cb736a",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {

@@ -79,6 +79,17 @@ replaced. A path with a `..` component is refused, for inputs, the output and th
 run directory, because lexical normalization would cancel a preceding symlink before the
 ancestry check.
 
+**Write or fsync failure.** If an ordinary write, fsync or close error happens after the tool
+created the output, it removes that new file again (only while the path still names the same
+device and inode it created) and reports the usual `REFUSED` exit 4, so a retry is not blocked
+by a torn or unsynced report. An output that already existed is never touched. If the cleanup
+itself fails, or the path was replaced meanwhile, the tool does not claim a rollback: it exits 4
+with `output cleanup failed; incomplete report may remain` or `output changed during cleanup;
+replacement preserved`, and the operator inspects the path before retrying. This is not
+crash-atomic publication: abrupt process death, power loss and adversarial concurrent
+replacement of the output directory are out of scope, and the identity check is conservative
+protection, not a race-proof sandbox.
+
 ## Acceptance
 
 ```

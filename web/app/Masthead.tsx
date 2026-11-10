@@ -91,6 +91,7 @@ export function FreshnessDot() {
   return (
     <span class="app-fresh" role="status" data-state={fresh.state} aria-label={t('shell.fresh', lang, {state})}>
       <span class="app-fresh-dot" aria-hidden="true"></span>
+      {fresh.state === 'offline' ? <span data-fresh-offline>{state}</span> : null}
       <span class="ui-mono">{fresh.age ?? '—'}</span>
     </span>
   );
