@@ -22,7 +22,9 @@
 // kept under a date filter, and the bound it escaped is listed in `meta.ignored`.
 //
 // Tracks draw fishing segments only (FISHING_KINDS, #469 D20-D22): in-port,
-// transit, uncertain and gap segments never reach the layer. The admin trip
+// transit, uncertain and gap segments never reach the layer. A kind selection does two
+// things: it picks the trips that have an event of that kind, and it narrows the drawn
+// segments to the selected kinds, so a mixed-mode trip never draws its other modes. The admin trip
 // view reads a trip's every segment through its own route (fleet/admin/labels.ts).
 //
 // Tracks page by trip: `limit` and `meta.trips` count trips, `meta.count` counts
@@ -214,6 +216,7 @@ export async function mapTracks(db: D1Database, q: MapQuery): Promise<MapPage> {
   w.in('v.vessel_class', q.class);
   w.in('t.trip_type_inferred', q.trip_type);
   w.in('t.source', q.source);
+  // Trip eligibility: a selected kind keeps trips with an event of that kind (segments are narrowed separately below).
   if (q.kind.length) w.add(`EXISTS (SELECT 1 FROM fleet_events k WHERE k.trip_id=t.id AND k.kind IN (${q.kind.map(() => '?').join(',')}))`, ...q.kind);
   if (q.season) w.add('t.season=?', q.season);
   if (q.season_part && q.season_part !== 'all') w.add('t.season_part=?', q.season_part);
@@ -224,13 +227,15 @@ export async function mapTracks(db: D1Database, q: MapQuery): Promise<MapPage> {
     FROM fleet_trips t LEFT JOIN fleet_vessels v ON v.id=t.vessel_id
     WHERE ${w.sql} ORDER BY t.departed_at DESC, t.id DESC LIMIT ?`).bind(...w.args, q.limit + 1).all<TripRow>()).results;
   const more = trips.length > q.limit, shown = trips.slice(0, q.limit);
+  // Segment filtering: draw only the selected fishing modes (all of them when none is selected), never another mode of an eligible trip.
+  const segmentKinds = q.kind.length ? FISHING_KINDS.filter(kind => q.kind.includes(kind)) : FISHING_KINDS;
   const segments = new Map<string, SegmentRow[]>();
   // D1 binds at most 100 parameters a statement: fetch segments in chunks of trips.
   for (let i = 0; i < shown.length; i += 90) {
     const ids = shown.slice(i, i + 90).map(t => t.id);
     const rows = (await db.prepare(`SELECT id, trip_id, seq, kind, started_at, ended_at, geometry, points_n, mean_sog FROM fleet_segments
-      WHERE trip_id IN (${ids.map(() => '?').join(',')}) AND kind IN (${FISHING_KINDS.map(() => '?').join(',')}) ORDER BY trip_id, seq`)
-      .bind(...ids, ...FISHING_KINDS).all<SegmentRow>()).results;
+      WHERE trip_id IN (${ids.map(() => '?').join(',')}) AND kind IN (${segmentKinds.map(() => '?').join(',')}) ORDER BY trip_id, seq`)
+      .bind(...ids, ...segmentKinds).all<SegmentRow>()).results;
     for (const row of rows) { const list = segments.get(row.trip_id) ?? []; list.push(row); segments.set(row.trip_id, list); }
   }
   const features: Feature[] = [];

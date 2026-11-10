@@ -48,6 +48,7 @@ import {appView, setParams, withParams, type AppView} from '../state.ts';
 import {waypointPlacement} from '../waypoint-placement.ts';
 import {language, t} from '../i18n.ts';
 import {dayOptions, dockState, hourText, localParts, readout, selectDay, selectHour} from './TimeDock.tsx';
+import {useDayVerdicts, withVerdicts} from './day-verdicts.ts';
 
 /** What the sheet shows: the brief, or the layer rail with the legend. */
 export type Panel = 'brief' | 'layers';
@@ -86,7 +87,7 @@ export function HourEdge({now}: {now: Date}) {
 
 /** The brief in sheet order; a selected mark's card stands in for the eyebrow and headline. Below full the tiles are compact (detail and basis at full). */
 export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date; ranking?: Ranking; onFocus?: () => void; detent?: Detent}) {
-  const tz = zone(), state = dockState(now, tz), brief = currentBrief(now);
+  const tz = zone(), state = dockState(now, tz), brief = currentBrief(now), answers = useDayVerdicts(now, tz);
   // SC-LAUNCH-3: the head introduces the lead, so it names the lead's day. When the lead answers
   // for another day than the dock's (tomorrow, until a time is chosen) the dock's heading moves
   // below the lead to head the dock-day evidence, as the desktop column does.
@@ -113,7 +114,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
       <Guard name="run"><RunLine brief={brief} ranking={ranking} now={now} /></Guard>
       <Guard name="tide"><TideSpark brief={brief} now={now} /></Guard>
       <div class="app-sheet-menus">
-        <Segmented label={t('shell.day', lang)} options={dayOptions(now, tz, state.day, lang)} value={state.day} onChange={d => selectDay(now, tz, d, state)} />
+        <Segmented label={t('shell.day', lang)} options={withVerdicts(dayOptions(now, tz, state.day, lang), answers, lang)} value={state.day} onChange={d => selectDay(now, tz, d, state)} />
         <TargetSelect />
         <div class="app-area" role="group" aria-label={t('command.areaPort', lang)}>
           <AreaSelect />
