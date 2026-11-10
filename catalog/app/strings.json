@@ -1388,6 +1388,8 @@
     "conditions.tide.high": {"en": "High", "es": "Pleamar"},
     "conditions.tide.low": {"en": "Low", "es": "Bajamar"},
     "conditions.tide.none": {"en": "No tide predictions for {day}.", "es": "No hay predicciones de marea para {day}."},
+    "conditions.daylight": {"en": "Sunrise {sunrise} · sunset {sunset} {zone}", "es": "Amanecer {sunrise} · atardecer {sunset} {zone}"},
+    "conditions.daylight.unavailable": {"en": "Sunrise and sunset unavailable", "es": "Amanecer y atardecer no disponibles"},
     "conditions.tide.day": {"en": "this day", "es": "este día"},
     "conditions.before": {"en": "Before you go", "es": "Antes de salir"},
     "conditions.notice": {"en": "Beach notice: {name}", "es": "Aviso de playa: {name}"},

@@ -4,6 +4,8 @@
 
 - RF1345-9: the admin fleet coverage report no longer counts a watched AIS row dated after the report clock as a sighting in the last 30 days, so a future-dated row alone leaves the boat "not seen" in the totals, the port and class breakdowns and the single-source list alike; sightings from 30 days ago up to exactly now still count, one valid row is still enough, and the report still only reads (stored rows are left as they are).
 
+- RF0834-9: the forecast build keeps missing or nonfinite accumulated precipitation (ECMWF IFS) missing through its conversion to mm/hour instead of publishing dry zeros. An absent, bitmap-missing, rejected-sentinel or infinite first accumulation is no longer stored as 0 mm/h, and an interval whose start or end accumulation is not finite (including either infinity) is stored as missing rather than as no rain; only intervals that depend on the bad value are affected. Valid initial zeros, finite decreases (clamped to zero) and uneven step intervals are unchanged. No forecast data is rebuilt or republished by this change.
+
 - RF0814-8: a depth-contour file whose review expiry is an impossible calendar date (such as 2026-11-31 or 2027-02-29) now fails the existing contour check instead of drawing and exporting; real dates keep drawing through their last day and are withheld the next day.
 
 - RF0844-6: SST front extraction preserves native grid origins and coordinates, so half-offset grids no longer falsely conflict; true overlapping-measurement conflicts still refuse publication.
