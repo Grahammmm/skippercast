@@ -35,7 +35,7 @@ import {Guard} from '../ui/Guard.tsx';
 import {boatEntryOpen} from './FirstRun.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
-import {MapStage} from './MapStage.tsx';
+import {MapStage, mapUnavailable} from './MapStage.tsx';
 import {useHourNow, type HourClock} from '../clock.ts';
 import {MarkCard, currentMark} from './MarkCard.tsx';
 import {Brand, DegradedNotice, FreshnessDot, Location, ViewNav, viewLabel} from './Masthead.tsx';
@@ -106,7 +106,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
   const lang = language.value, leadText = leadDayText(lead, now, tz, lang);
   return (
     <div class="app-sheet-brief" onFocusIn={onFocus} data-basis={brief?.basis}>
-      {currentMark.value ? <Guard name="mark-card"><MarkCard /></Guard> : (
+      {currentMark.value && !mapUnavailable.value ? <Guard name="mark-card"><MarkCard /></Guard> : (
         <>
           <div class="app-sheet-head">
             {apart ? <span class="ui-eyebrow">{leadText.charAt(0).toUpperCase() + leadText.slice(1)}</span> : dockHead}
@@ -147,6 +147,7 @@ export const ReportsLink = () =>
 /** The layer rail and the legend as the sheet's content. */
 export function LayersPanel({onClose}: {onClose: () => void}) {
   const lang = language.value;
+  if (mapUnavailable.value) return null;
   return (
     <div class="app-sheet-layers">
       <div class="app-sheet-head">
@@ -206,7 +207,9 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
   useEffect(() => setDetent(d => viewDetent(appView.value, d)), [appView.value]);
   useEffect(() => setDetent(d => boatEntryDetent(boatEntryOpen.value, d)), [boatEntryOpen.value]);
   const lang = language.value;
-  const layersOpen = panel === 'layers', conditions = appView.value === 'conditions', fleet = appView.value === 'fleet';
+  // RF1925-2: no Chart, no layers: the stored panel is kept, but the sheet shows the ordinary view and the trigger is gone.
+  const noMap = mapUnavailable.value, shownPanel: Panel = noMap ? 'brief' : panel;
+  const layersOpen = shownPanel === 'layers', conditions = appView.value === 'conditions', fleet = appView.value === 'fleet';
   return (
     <main class="app-mobile">
       <MapStage clock={clock} />
@@ -216,13 +219,13 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
             <Brand />
             <Location />
           </div>
-          <IconButton icon="layers" label={t('shell.layers', lang)} variant="ghost" pressed={layersOpen} onClick={() => apply(toggleLayers(panel, detent))} />
+          {noMap ? null : <IconButton icon="layers" label={t('shell.layers', lang)} variant="ghost" pressed={layersOpen} onClick={() => apply(toggleLayers(panel, detent))} />}
           <LimitsControl compact />
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
       {appView.value === 'reports' || appView.value === 'plan' ? <div class="app-mobile-page">{firstRun}{appView.value === 'plan' ? <Guard name="plan"><TargetSelect /><PlanView now={now} /></Guard> : <Guard name="reports"><Reports now={now} /></Guard>}</div> : <Sheet landmark={false} label={layersOpen ? t('shell.layers', lang) : appView.value === 'conditions' || appView.value === 'fleet' || appView.value === 'history' ? viewLabel(appView.value, lang) : t('shell.brief', lang)} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
-        class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<Guard name="time-dock"><HourEdge now={now} /></Guard>}
+        class={['app-sheet', currentMark.value && !noMap ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<Guard name="time-dock"><HourEdge now={now} /></Guard>}
         onBodyFocus={event => {
           const target = event.target as Element | null;
           // Pointer focus must not move a pressed choice before its click is delivered.
@@ -232,7 +235,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
             requestAnimationFrame(() => target.scrollIntoView({block: 'nearest'}));
           }
         }}>
-        {showsFirstRun(panel) ? firstRun : null}
+        {showsFirstRun(shownPanel) ? firstRun : null}
         {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : appView.value === 'conditions' ? <Guard name="conditions"><Conditions now={now} /></Guard> : appView.value === 'fleet' ? <Guard name="fleet"><Fleet onShowMap={() => setDetent('peek')} /></Guard> : appView.value === 'history' ? <Guard name="history"><History now={now} /></Guard> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
       </Sheet>}
       <ViewNav icons class="app-tabs" />
