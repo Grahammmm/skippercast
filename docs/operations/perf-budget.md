@@ -50,6 +50,29 @@ region binding, the readiness or the check times change; a change drops that scr
 them all. A screen without a revision, and any unchecked (`screened: false`) answer, is never cached. Nothing is stored on
 the device or fetched. This is not the publisher's stored reef verdict (the slim file above), which has its own fingerprint.
 
+### Protected-area distance work (SC1407-01, #1762)
+
+Not a size budget: a note on the run-time closure screen. `distanceM` in `dist/geo-screen.js` (called by `screenPlace` for
+every place shape and every nearby closure: the brief's ranking, the run line, saved spots, GPX checks) used to project
+each point again for every segment it was compared with, and spread whole point and segment arrays into `Math.min` (which
+also throws `RangeError` past about 10^5 positions). It now projects each position and edge end once per pair, scans with
+plain loops, and skips a segment whose projected box is already farther than the best distance so far. That box gap is
+shrunk by a small allowance before the comparison, so it is an exact lower bound: the minimum, every `PlaceVerdict`, the
+0.1 m rounding, the 70 m margin and the 20 km far cut-off are unchanged. `withinMargin`, `geometryIntersects` and the
+publish-time screen are not touched. `tests/test_distance_m.mjs` keeps the old function as an oracle and checks strict
+equality on the committed Morro Bay data, run-shaped lines, seeded random cases, holes and multipart shapes.
+
+Work for screening all 132 committed Morro Bay atlas targets (point plus reef areas) against the 8 committed closures,
+counted offline in instrumented copies of the old and new module (same verdicts):
+
+| | Projections | Point-to-segment distances |
+|---|---|---|
+| Before | 111,787,745 | 108,796,327 |
+| After | 2,997,408 | 444,194 |
+
+One local Node run took 1,742 ms before and 363 ms after (counters included; a sample, not a gate, and not a re-measure of
+the phone load in #1762). Not profiled further: `geometryIntersects`, unchanged, still runs first on every measured pair.
+
 ## Raising a budget (in a pull request, with a reason)
 
 Open `scripts/perf-budget.json`. For the group that is over, add an entry at the END of its `history` list with the new
