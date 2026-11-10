@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF0844-6: SST front extraction preserves native grid origins and coordinates, so half-offset grids no longer falsely conflict; true overlapping-measurement conflicts still refuse publication.
+
 - RF0814-9: the admin fleet map's Activity type filter now also narrows the returned track segments, so a mixed-mode trip no longer draws fishing modes that were not selected; trip eligibility, paging, events and heat are unchanged.
 
 - RF0834-5: the AIS matcher keeps an established watched row (and its entry in the listener's `watch.json`) when the processor has no statics for an MMSI the same single active registry vessel still holds, whether positions remain or the processor state was rebuilt. Retention needs the stored row's vessel to be that owner, no rejection and a row that passes the watched gate; no row, fact or review is invented, and an unheard, candidate, rejected, reassigned, duplicated or excluded binding gains nothing.
