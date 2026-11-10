@@ -9,6 +9,7 @@
 import {useEffect} from 'preact/hooks';
 import {CHAT_PATH} from '../advisor/entry.ts';
 import {language, t, type Language} from '../i18n.ts';
+import {Button} from '../ui/Button.tsx';
 import {Icon, type IconName} from '../ui/icons.tsx';
 import {ensureSession, session} from '../account.ts';
 import {appView, navigate, region, withParams, type AppView} from '../state.ts';
@@ -59,7 +60,7 @@ export function Location() {
         {info ? <>{info.name} <span class="app-location-coords">{coordinates(info.center)}</span></> : missing ? `"${region.value}"` : region.value ? `${titleCase(region.value)} —` : t('shell.location.none', lang)}
       </span>
       {state === 'loading' ? <span role="status">{t('shell.location.loading', lang)}</span> : null}
-      {state === 'error' ? <span role="status">{t('shell.location.error', lang)}{' '}<button type="button" onClick={retryRegion}>{t('shell.location.retry', lang)}</button></span> : null}
+      {state === 'error' ? <span role="status">{t('shell.location.error', lang)}{' '}<Button size="sm" variant="quiet" onClick={retryRegion}>{t('shell.location.retry', lang)}</Button></span> : null}
       {missing ? <span role="status">{t('shell.location.missing', lang, {region: region.value ?? ''})}{' '}<a href="/">{t('shell.location.choose', lang)}</a></span> : null}
     </>
   );

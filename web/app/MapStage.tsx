@@ -11,7 +11,7 @@
 // buttons, styled as the Chart's MapLibre zoom group and placed where it sits.
 import type {ComponentChildren} from 'preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {IconButton} from '../ui/Button.tsx';
+import {Button, IconButton} from '../ui/Button.tsx';
 import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
 import {createAerial} from '../map/aerial.ts';
@@ -56,7 +56,7 @@ export function PresentationToggle() {
   return (
     <div class="app-presentation">
       <p id={NOTE_ID} class="app-stage-note" role="status">{blocked === null ? '' : terrainReason(blocked, lang)}</p>
-      {armed ? <p class="app-stage-note" role="status">{t('stage.placePrompt', lang)} {refused ? <>{refused}. </> : null}<button onClick={cancelWaypointPlacement}>{t('stage.cancelWaypoint', lang)}</button></p> : null}
+      {armed ? <p class="app-stage-note" role="status">{t('stage.placePrompt', lang)} {refused ? <>{refused}. </> : null}<Button size="sm" variant="quiet" onClick={cancelWaypointPlacement}>{t('stage.cancelWaypoint', lang)}</Button></p> : null}
       <div role="group" aria-label={t('stage.presentation', lang)} class="ui-segmented">
         {PRESENTATIONS.map(p => {
           const off = p.value !== 'chart' && !!blocked;

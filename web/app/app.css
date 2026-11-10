@@ -364,6 +364,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-conditions { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; color: var(--text); font-size: var(--text-13); }
 .app-stage > .app-conditions { position: absolute; inset: 0 0 calc(var(--touch-min) + var(--space-7)) 0; z-index: var(--z-map-chrome); padding: var(--space-4); overflow: auto; background: var(--panel); }
 .app-conditions-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+/* SC1922-03: the model-family options wrap inside the header and keep the touch floor (never squeezed, clipped or shrunk below it). */
+.app-conditions-head > .ui-segmented { flex-wrap: wrap; box-sizing: border-box; max-width: 100%; min-width: 0; }
+.app-conditions-head > .ui-segmented .ui-chip { flex: none; min-height: var(--touch-min); }
 .app-conditions h2 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
 .app-conditions h3 { margin: var(--space-2) 0 0; }
 .app-conditions-now { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0; }
