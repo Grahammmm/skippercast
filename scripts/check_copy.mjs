@@ -268,7 +268,8 @@ export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/F
   'web/app/PlanView.tsx', 'web/plan.ts', 'web/app/ControlsTour.tsx', 'web/tour.ts', 'web/app/Presets.tsx', 'web/app/presets.ts',
   'web/app/TripAlerts.tsx', 'web/alerts.ts', 'web/digest.ts', 'web/app/PortAlert.tsx',
   'web/app/views/Reports.tsx', 'web/reports.ts', 'web/reports-copy.ts', 'web/app/views/Fleet.tsx',
-  'dist/account.js', 'web/account-copy.ts', 'web/app/PrivateMapLog.tsx'];
+  'dist/account.js', 'web/account-copy.ts', 'web/app/PrivateMapLog.tsx',
+  'web/app/PlanRules.tsx', 'web/landing/LayerDots.tsx'];
 /** Prose-like literals in covered files that are data or code, not copy: a species group name (not translated) and a prefix the model writes. */
 // dist/account.js: the GPX file's title (file data) and a developer message for an incomplete catch-log answer, never shown.
 export const LITERAL_OK = new Set(['Lingcod & rockfish', 'Using your limits', 'SkipperCast saved spots', 'The catch log answer was incomplete', 'unknown account string']);
@@ -311,9 +312,7 @@ export const NOT_COVERED = {
   'web/app/Desktop.tsx': 'desktop layout composition; its only literals are the Brief and Fleet pane aria-labels, deferred',
   'web/app/EnglishDetail.tsx': 'wraps official English text in lang="en"; the one prefix it adds already comes from the catalogue',
   'web/app/main.tsx': 'bootstrap that mounts the app and wires state; no visible text',
-  'web/app/PlanRules.tsx': 'plan-date rules card (headings, check-the-rules line, link labels) is English, deferred to a later Spanish unit',
   'web/app/views/FleetAdmin.tsx': 'admin-only fleet activity panel; admin views are outside the Spanish scope (#1512)',
-  'web/landing/LayerDots.tsx': 'landing layer dots and their aria-label are English, deferred to a later Spanish unit',
   'web/landing/NightMap.tsx': 'night map canvas is aria-hidden; its Basemap and Currents credit lines are English, deferred',
   'web/landing/Shoreline.tsx': 'decorative shoreline SVG (aria-hidden); its English shoreline credit sentence is deferred',
 };
