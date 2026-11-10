@@ -151,6 +151,130 @@ validate_manifest({'surveys':[json.loads(sys.argv[1])]})
 
 @unittest.skipUnless(Draft202012Validator, 'Install requirements-test.txt; required in survey-science CI')
 class SchemaTests(unittest.TestCase):
+    @staticmethod
+    def lineage_document(edges):
+        template = next(r for r in ROWS if r['status'] == 'usable'
+                        and r['format'] == 'usgs-geotiff'
+                        and r['license'] == 'public-domain-us-gov')
+        rows = []
+        for index, parents in enumerate(edges):
+            row = deepcopy(template)
+            for key in ('adapter_review', 'rights_review', 'resolution_profile',
+                        'terrain_support', 'habitat_quality_hold'):
+                row.pop(key, None)
+            row.update(id=f'lineage-{index}', url=f'https://example.gov/lineage-{index}.tif',
+                       status='candidate', derived_from=[f'lineage-{p}' for p in parents],
+                       lineage_status='linked-family' if parents else 'unknown')
+            rows.append(row)
+        return {'surveys': rows}
+
+    def test_lineage_rejects_two_and_three_row_cycles(self):
+        from skippercast.seafloor.manifest import validate_manifest
+        for edges in ([[1], [0]], [[1], [2], [0]], [[], [2], [3], [1]],
+                      [[1], [2], [3], [1], []]):
+            with self.subTest(edges=edges):
+                document = self.lineage_document(edges)
+                before = deepcopy(document)
+                with self.assertRaisesRegex(ValueError, '^Invalid survey lineage$'):
+                    validate_manifest(document, ROOT)
+                self.assertEqual(document, before)
+
+    def test_lineage_accepts_shared_ancestor_dags_in_any_row_order(self):
+        from skippercast.seafloor.manifest import validate_manifest
+        for edges in ([], [[]], [[], [0], [0], [1, 2], [], [3, 4]]):
+            for reverse in (False, True):
+                with self.subTest(edges=edges, reverse=reverse):
+                    document = self.lineage_document(edges)
+                    if reverse:
+                        document['surveys'].reverse()
+                    before = deepcopy(document)
+                    self.assertIs(validate_manifest(document, ROOT), document)
+                    self.assertEqual(document, before)
+
+    def test_lineage_preserves_self_unknown_and_duplicate_refusals(self):
+        from skippercast.seafloor.manifest import validate_manifest
+        for edges, duplicate, message in (([[0]], False, 'Invalid survey lineage'),
+                ([[1]], False, 'Invalid survey lineage'),
+                ([[], []], True, 'Duplicate survey ID')):
+            document = self.lineage_document(edges)
+            if duplicate:
+                document['surveys'][1]['id'] = document['surveys'][0]['id']
+            with self.subTest(edges=edges, duplicate=duplicate):
+                with self.assertRaisesRegex(ValueError, message):
+                    validate_manifest(document, ROOT)
+        document = self.lineage_document([[], []])
+        document['surveys'][1]['url'] = document['surveys'][0]['url']
+        with self.assertRaisesRegex(ValueError, 'Duplicate survey product'):
+            validate_manifest(document, ROOT)
+
+    def test_lineage_long_chain_is_iterative(self):
+        from skippercast.seafloor.manifest import validate_manifest
+        limit = sys.getrecursionlimit()
+        document = self.lineage_document([[i + 1] for i in range(limit + 1)] + [[]])
+        before = deepcopy(document)
+        self.assertIs(validate_manifest(document, ROOT), document)
+        self.assertEqual(document, before)
+        document['surveys'][-1].update(derived_from=['lineage-0'], lineage_status='linked-family')
+        with self.assertRaisesRegex(ValueError, '^Invalid survey lineage$'):
+            validate_manifest(document, ROOT)
+        self.assertEqual(sys.getrecursionlimit(), limit)
+
+    def test_load_manifest_refuses_transitive_cycle(self):
+        from unittest.mock import patch
+        from skippercast.seafloor.manifest import load_manifest
+        document = self.lineage_document([[1], [0]])
+        before = deepcopy(document)
+        with patch('skippercast.seafloor.manifest.read_json', side_effect=[document, SCHEMA]):
+            with self.assertRaisesRegex(ValueError, '^Invalid survey lineage$'):
+                load_manifest(ROOT)
+        self.assertEqual(document, before)
+
+    def test_promote_draft_cycle_refused_before_catalog_write(self):
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+        from unittest.mock import patch
+        from skippercast.seafloor.manifest import promote_draft, validate_manifest
+        for cyclic in (False, True):
+            with self.subTest(cyclic=cyclic), TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / 'catalog').mkdir()
+                document = self.lineage_document([[], [0]])
+                validate_manifest(document, ROOT)
+                catalog = root / 'catalog/surveys.json'
+                catalog.write_text(json.dumps(document))
+                original = catalog.read_bytes()
+                (root / 'catalog/survey.schema.json').write_text(json.dumps(SCHEMA))
+                row = deepcopy(document['surveys'][0])
+                if cyclic:
+                    row.update(derived_from=['lineage-1'], lineage_status='linked-family')
+                template = next(r for r in ROWS if r['status'] == 'usable'
+                                and r['format'] == 'usgs-geotiff'
+                                and r['license'] == 'public-domain-us-gov')
+                receipt = dict(deepcopy(template['adapter_review']), source_id=row['id'],
+                               source_sha256=row['sha256'], source_bytes=row['bytes'],
+                               horizontal_crs=row['horizontal_crs'])
+                draft = root / 'draft.json'
+                draft.write_text(json.dumps({'row': row, 'adapter_review': receipt}))
+                # Observe the real writer: the valid control must actually persist.
+                from skippercast.seafloor.manifest import atomic_json
+                with patch('skippercast.seafloor.source_ingest.ingest',
+                           return_value=(receipt, None, None)), patch(
+                           'skippercast.seafloor.manifest.atomic_json', wraps=atomic_json) as write:
+                    if cyclic:
+                        with self.assertRaisesRegex(ValueError, '^Invalid survey lineage$'):
+                            promote_draft(draft, rights_url=receipt['rights_source_url'], root=root)
+                        write.assert_not_called()
+                        self.assertEqual(catalog.read_bytes(), original)
+                    else:
+                        self.assertEqual(promote_draft(draft,
+                            rights_url=receipt['rights_source_url'], root=root), row['id'])
+                        write.assert_called_once()
+                        saved = json.loads(catalog.read_text())
+                        validate_manifest(saved, root)
+                        self.assertEqual(saved['surveys'][0], document['surveys'][1])
+                        self.assertEqual(saved['surveys'][1]['id'], row['id'])
+                        self.assertEqual(saved['surveys'][1]['status'], 'usable')
+
     def test_habitat_quality_hold_is_source_bound_and_keeps_measured_depth_usable(self):
         from jsonschema import ValidationError
         from skippercast.seafloor.manifest import validate_manifest, physical_source

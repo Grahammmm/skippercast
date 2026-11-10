@@ -1,4 +1,5 @@
 // SCFEAT-SKILL-1: measured forecast skill beside the brief's model-disagreement line. Synthetic scorecards only.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFile} from 'node:fs/promises';
@@ -51,7 +52,7 @@ test('the real published scorecard reads without error', async () => {
 
 test('the brief shows the skill line under the model line, UNKNOWN on thin history, nothing while loading', async () => {
   const {mkdtemp} = await import('node:fs/promises'), {tmpdir} = await import('node:os'), {join} = await import('node:path'), {pathToFileURL} = await import('node:url');
-  const {build} = await import('esbuild'), {rendererPlugins} = await import('./helpers/esbuild-url.mjs');
+  const {build} = await import('esbuild'), {preparedRendererPlugins} = await import('./helpers/esbuild-url.mjs');
   const out = join(await mkdtemp(join(tmpdir(), 'skill-')), 'view.mjs');
   await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
     export * from './web/brief/Brief.tsx';
@@ -59,7 +60,7 @@ test('the brief shows the skill line under the model line, UNKNOWN on thin histo
     export {regionInfo} from './web/app/App.tsx';
     export {profile, hour, day} from './web/state.ts';
     export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
-    bundle: true, platform: 'node', format: 'esm', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+    bundle: true, platform: 'node', format: 'esm', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   const m = await import(pathToFileURL(out).href), TZ = 'America/Los_Angeles';
   const T0 = Date.parse('2026-10-13T15:00:00Z') / 1000, TIMES = Array.from({length: 4}, (_, i) => T0 + i * 3600), issued = Date.parse('2026-10-13T12:00:00Z') / 1000 - 4 * 3600;
   const series = v => ({utc_offset_seconds: 0, hourly_units: {time: 'unixtime', ...Object.fromEntries(Object.keys(v).map(k => [k, k.includes('period') ? 's' : k.includes('direction') ? '°' : k.includes('height') ? 'ft' : 'kn']))},

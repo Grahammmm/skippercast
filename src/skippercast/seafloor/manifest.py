@@ -99,7 +99,27 @@ def validate_manifest(document, root=REPO):
         url = row['url'].lower()
         if 'bluetopo' in url or '/modeling/' in url:
             raise ValueError('Reference compilations cannot enter the survey manifest')
+    _require_acyclic_lineage(rows)
     return document
+
+
+def _require_acyclic_lineage(rows):
+    """Remove roots iteratively; unresolved nodes imply a directed cycle."""
+    remaining = {row['id']: len(row['derived_from']) for row in rows}
+    children = {ident: [] for ident in remaining}
+    for row in rows:
+        for parent in row['derived_from']:
+            children[parent].append(row['id'])
+    ready = [ident for ident, count in remaining.items() if count == 0]
+    completed = 0
+    while ready:
+        completed += 1
+        for child in children[ready.pop()]:
+            remaining[child] -= 1
+            if remaining[child] == 0:
+                ready.append(child)
+    if completed != len(rows):
+        raise ValueError('Invalid survey lineage')
 
 
 def physical_source(row, *, physical_only=False):

@@ -3,6 +3,7 @@
 // carries the model-limits sentence (web/boat-range.ts). No saved boat rates
 // exactly as before. The server advisor rates the reference boat unless the
 // request sends valid factors. Synthetic feeds, values invented.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdtemp, readFile} from 'node:fs/promises';
@@ -11,7 +12,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 import {BOAT_KEY, boatFactors} from '../dist/boat-handling.js';
 import {BOAT_MODEL_NOTE, BOAT_NOTE_RANGE_FT, REFERENCE_BOAT_NAME, boatBasisName, boatRangeNote} from '../web/boat-range.ts';
@@ -115,7 +116,7 @@ test('the brief names the saved boat in its basis, rates for it and shows the se
       export {regionInfo} from './web/app/App.tsx';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   const m = await import(pathToFileURL(out).href);
   m.regionInfo.value = {id: 'monterey-point-sur', name: 'Monterey', center: [36.62, -121.9], timezone: TZ};
   m.dailyFeed.value = montereyDaily;
@@ -151,7 +152,7 @@ test('no saved boat, then a 17 ft boat saved through the first-use step: the nex
       export {activeBoatFactors} from './dist/boat-handling.js';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   const m = await import(pathToFileURL(out).href);
   m.regionInfo.value = {id: 'monterey-point-sur', name: 'Monterey', center: [36.62, -121.9], timezone: TZ};
   m.dailyFeed.value = montereyDaily;

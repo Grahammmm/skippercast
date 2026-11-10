@@ -4,6 +4,7 @@
 // /api/forecast shape with invented values; each model sample reports a
 // dominant cell, as the sampler does, which the card must never read as the
 // value's location. One regression runs the real sampler (server/model-api.js).
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import {readFileSync, readdirSync} from 'node:fs';
 import {mkdtemp} from 'node:fs/promises';
@@ -12,7 +13,7 @@ import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 
 const {parseConditionsForecast} = await import('../web/conditions.ts');
 const {CELL_REACH, MODEL_GRIDS, distanceKm, gateGap, markForecast, nearestCell, readingSource} = await import('../web/brief/mark-forecast.ts');
@@ -222,7 +223,7 @@ async function components() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: rendererPlugins,
+    plugins: preparedRendererPlugins,
   });
   ui = await import(pathToFileURL(out).href);
   return ui;
