@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// RF1935-4: appended focus-only layout; contrast paint, roles and thresholds unchanged.
 // WCAG 2.x contrast check for the documented text/background token pairs, in
 // both themes of web/tokens.css (v2, dark default; design.md § 5). Fails under 4.5:1.
 // FE-61 Accept 2 retired v1 dist/tokens.css once no page loaded it.
@@ -404,7 +405,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // no legend paint or backing changed and the cited line numbers above are unmoved.
   // RF1935-2 only appends a desktop-only (min-width: 1024px) .app-stage > .app-rail > .ui-segmented wrap block at the end of app.css and sets the desktop rail's
   // overflow-y: scroll with a stable scrollbar gutter (layout, no paint); no colour, opacity, backing or text paint changed and the cited line numbers above are unmoved.
-  "appCss": "bcd68eff9b30153e71a9e48330845f3dc0562abb555764a1f9ef821a672b44d8",
+  "appCss": "1aafe4da8d0b54561dcd018a98d2d640f0aebce6acfa089d4c47726c52d3354a",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
