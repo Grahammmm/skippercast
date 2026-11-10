@@ -3,6 +3,7 @@
 ## Unreleased
 
 - SC1407-07: the Aerial base asks USGS for 512 px tiles (about a quarter of the requests for the same view, at the same sharpness and over the same zoom range) as JPEG where a tile is fully opaque and PNG where it holds transparency, so open water still shows the map below; if that format fails, the base retries once in the previous PNG-only form. The map page also opens its connection to the USGS imagery host while it loads. The imagery, its dated credit and the NaturalColor rendering are unchanged.
+- RF1345-7: the AIS port-coverage report opens exactly the requested processor `state.sqlite`, read-only, even when its path contains `?`, `#`, `%` or other URI characters; it no longer creates a stray file, reads a lookalike database or reports coverage unknown for such a path. Counts, the window and unknown-state output are unchanged.
 
 - SC1407-03: the time dock's 169-hour horizon is built once per UTC hour and region zone instead of on every read by the dock, map, brief and share link (#1762 R2); the shared copy is frozen. Days, hours, DST change days, the selected hour and links are unchanged (`web/hour.ts`).
 - RF1345-9: the admin fleet coverage report no longer counts a watched AIS row dated after the report clock as a sighting in the last 30 days, so a future-dated row alone leaves the boat "not seen" in the totals, the port and class breakdowns and the single-source list alike; sightings from 30 days ago up to exactly now still count, one valid row is still enough, and the report still only reads (stored rows are left as they are).
