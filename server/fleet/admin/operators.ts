@@ -51,7 +51,16 @@ interface OperatorRow {id: string; region: string; consent_status: string; conse
 const operatorRow = (db: D1Database, id: string): Promise<OperatorRow | null> =>
   OPERATOR_ID.test(id) ? db.prepare('SELECT * FROM fleet_operators WHERE id=?').bind(id).first<OperatorRow>() : Promise.resolve(null);
 
-/** GET /api/admin/fleet/operators: highest lead score first, then name. */
+type Ranked = {id: string; name: string; outreach_status: string; lead_score: {score: number}};
+/** Do-not-contact last, then highest lead score, then name, then id. */
+const byRank = (a: Ranked, b: Ranked): number => Number(a.outreach_status === DNC) - Number(b.outreach_status === DNC)
+  || b.lead_score.score - a.lead_score.score || a.name.localeCompare(b.name) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
+/**
+ * GET /api/admin/fleet/operators: highest lead score first, then name. Every matching operator
+ * is ranked before the cap: rows are read in pages by id (keyset, at most OPERATOR_LIMIT+1 each)
+ * and only the best OPERATOR_LIMIT are kept between pages.
+ */
 export async function listOperators(db: D1Database, q: {region?: string; outreach_status?: string; consent_status?: string}, now: string):
   Promise<{operators: unknown[]; truncated: boolean} | {error: string}> {
   const where: string[] = [], args: string[] = [];
@@ -59,18 +68,21 @@ export async function listOperators(db: D1Database, q: {region?: string; outreac
   if (q.outreach_status) { if (!oneOf(OUTREACH_STATUSES, q.outreach_status)) return {error: 'unknown outreach_status'}; where.push('o.outreach_status=?'); args.push(q.outreach_status); }
   if (q.consent_status) { if (!oneOf(CONSENT_STATUSES, q.consent_status)) return {error: 'unknown consent_status'}; where.push('o.consent_status=?'); args.push(q.consent_status); }
   const cond = where.length ? where.join(' AND ') : '1';
-  const [rows, inputs] = await Promise.all([
-    db.prepare(`SELECT o.id,o.region,o.slug,o.name,o.website,o.consent_status,o.consent_recorded_at,o.consent_revoked_at,o.outreach_status,o.updated_at,
+  const inputs = await leadInputs(db, {sql: cond, args}, now);
+  let top: Ranked[] = [], matched = 0, after: string | null = null;
+  for (;;) {
+    const page: {id: string; name: string; outreach_status: string}[] = (await db.prepare(`SELECT o.id,o.region,o.slug,o.name,o.website,o.consent_status,o.consent_recorded_at,o.consent_revoked_at,o.outreach_status,o.updated_at,
         (SELECT COUNT(*) FROM fleet_vessels v WHERE v.operator_id=o.id) AS vessels,
         (SELECT MAX(created_at) FROM fleet_outreach x WHERE x.operator_id=o.id AND x.status<>'discarded') AS last_touch,
         (SELECT COUNT(*) FROM fleet_outreach x WHERE x.operator_id=o.id AND x.status IN ('draft','approved')) AS open_drafts
-      FROM fleet_operators o WHERE ${cond} ORDER BY o.name,o.id LIMIT ?`).bind(...args, OPERATOR_LIMIT + 1).all<{id: string; name: string; outreach_status: string}>(),
-    leadInputs(db, {sql: cond, args}, now),
-  ]);
-  const operators = rows.results.slice(0, OPERATOR_LIMIT).map(o => ({...o, lead_score: leadScore(inputs.get(o.id)!)}))
-    .sort((a, b) => Number(a.outreach_status === DNC) - Number(b.outreach_status === DNC)   // do-not-contact last
-      || b.lead_score.score - a.lead_score.score || a.name.localeCompare(b.name));
-  return {operators, truncated: rows.results.length > OPERATOR_LIMIT};
+      FROM fleet_operators o WHERE (${cond})${after === null ? '' : ' AND o.id>?'} ORDER BY o.id LIMIT ?`)
+      .bind(...args, ...(after === null ? [] : [after]), OPERATOR_LIMIT + 1).all<{id: string; name: string; outreach_status: string}>()).results;
+    matched += page.length;
+    top = [...top, ...page.map(o => ({...o, lead_score: leadScore(inputs.get(o.id)!)}))].sort(byRank).slice(0, OPERATOR_LIMIT);
+    if (page.length <= OPERATOR_LIMIT) break;
+    after = page[page.length - 1]!.id;
+  }
+  return {operators: top, truncated: matched > OPERATOR_LIMIT};
 }
 
 /** The outreach log of one operator, newest first. */
