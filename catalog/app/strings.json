@@ -1497,6 +1497,7 @@
     "history.title": {"en": "Recorded history", "es": "Historial registrado"},
     "history.note.unbound": {"en": "Recorded history is unavailable for this region. SkipperCast collects buoy history only where a local coast report covers the area (Morro Bay and Cambria today).", "es": "El historial registrado no está disponible para esta región. SkipperCast recopila el historial de boyas solo donde un informe costero local cubre el área (actualmente Morro Bay y Cambria)."},
     "history.note.loading": {"en": "Loading recorded history…", "es": "Cargando historial registrado…"},
+    "history.retry": {"en": "Try again", "es": "Intentar de nuevo"},
     "history.note.unavailable": {"en": "Recorded history is unavailable right now: the history snapshot could not be read or is out of date.", "es": "El historial registrado no está disponible ahora: no se pudo leer la instantánea del historial o está desactualizada."},
     "history.eyebrow": {"en": "RECORDED OCEAN HISTORY", "es": "HISTORIAL OCEÁNICO REGISTRADO"},
     "history.ready.heading": {"en": "Know the pattern. Notice the change.", "es": "Conoce el patrón. Observa el cambio."},
