@@ -89,11 +89,11 @@ test('the brief shows the skill line under the model line, UNKNOWN on thin histo
     assert.match(html(), new RegExp(`data-skill="known"[^>]*>Forecast skill ${lead} h ahead, last 30 days: wind ${pct}%[^<]*<a href="/skill">Details</a>`));
   }
   m.hour.value = '2026-10-16T15:00Z';
-  const far = html(); assert.match(far, /data-skill="unavailable"[^>]*>Forecast skill: UNKNOWN\. The scorecard could not be read, is out of date or lacks this hour\. Not for navigation\. <a href="\/skill">Details<\/a>/);
+  const far = html(); assert.match(far, /data-skill="unavailable"[^>]*>Forecast skill: UNKNOWN\. No measured skill is published 72 h or more ahead\. Not for navigation\. <a href="\/skill">Details<\/a>/);
   assert.doesNotMatch(far.slice(far.indexOf('app-verdict-skill')), /\d+%/);
   // The hour before now (11:00 at 12:00) has no published lead: unavailable, never the 24 h figure (82%).
   m.hour.value = '2026-10-13T11:00Z';
-  const past = html(); assert.match(past, /data-skill="unavailable"/);
+  const past = html(); assert.match(past, /data-skill="unavailable"[^>]*>Forecast skill: UNKNOWN for this hour\. Not for navigation\. <a href="\/skill">Details<\/a>/);
   assert.doesNotMatch(past.slice(past.indexOf('app-verdict-skill')), /\d+%|24 h/);
   m.language.value = 'es'; m.hour.value = '2026-10-14T15:00Z';
   assert.match(html(), /Acierto del pronóstico a 48 h, últimos 30 días: viento 70%[^<]*<a href="\/skill">Detalles<\/a>/);
@@ -109,7 +109,7 @@ test('the lead uses the publisher\'s half-open buckets: exactly 24 h is 48 h ahe
   for (const [delta, lead] of cases) {
     assert.equal(skillLead(NOW + delta, NOW), lead, `delta ${delta / M} min`);
     const s = skillSummary(leads, 'morro-bay', NOW, NOW + delta);
-    if (lead === null) { assert.ok(util.isDeepStrictEqual(s, {state: 'unavailable'}), `delta ${delta / M} min`); continue; }
+    if (lead === null) { assert.ok(util.isDeepStrictEqual(s, {state: 'unavailable', reason: 'range'}), `delta ${delta / M} min`); continue; }
     assert.equal(s.state, 'known'); assert.equal(s.lead, lead); assert.equal(s.parts[0].pct, pct[lead]);
     assert.match(skillLine(s, 'en'), new RegExp(`^Forecast skill ${lead} h ahead, last 30 days: wind ${pct[lead]}%`));
     assert.match(skillLine(s, 'es'), new RegExp(`^Acierto del pronóstico a ${lead} h,`));
@@ -117,9 +117,9 @@ test('the lead uses the publisher\'s half-open buckets: exactly 24 h is 48 h ahe
   assert.equal(skillLead(NaN, NOW), null); assert.equal(skillLead(Infinity, NOW), null);
   // A past instant has no published lead: never a 24 h fallback, even just before now (the publisher has no such bucket).
   for (const back of [1, 30 * M, H - 1, H, 2 * H]) assert.equal(skillLead(NOW - back, NOW), null, `${back} ms before now`);
-  for (const at of [NaN, NOW - 1, NOW - 30 * M, NOW - H, NOW - 2 * H]) {
+  for (const at of [NaN, Infinity, -Infinity, NOW - 1, NOW - 30 * M, NOW - H, NOW - 2 * H]) {
     const s = skillSummary(leads, 'morro-bay', NOW, at);
-    assert.ok(util.isDeepStrictEqual(s, {state: 'unavailable'}), `at ${at - NOW} ms`);
+    assert.ok(util.isDeepStrictEqual(s, {state: 'unavailable', reason: 'invalid'}), `at ${at - NOW} ms`);
     assert.doesNotMatch(skillLine(s, 'en'), /%|24 h/);
   }
   assert.equal(skillSummary(leads, 'morro-bay', NOW).lead, 24, 'without a chosen hour the lead is 24 h, as before');
@@ -137,11 +137,24 @@ test('a lead with too few pairs says not enough history, never borrowing the 24 
   assert.equal(s.lead, 48); assert.equal(s.parts[0].window, 7); assert.equal(s.parts[0].pct, 100);
 });
 
-test('72 h or more ahead, or a past hour, says UNKNOWN for that hour with no figure, in both languages', () => {
-  for (const at of [NOW + 80 * H, NOW + 72 * H, NOW - 30 * M]) {
+test('72 h or more ahead says no measured skill is published; a past or invalid hour says unavailable; neither is a file failure', () => {
+  const copy = {
+    range: [/^Forecast skill: UNKNOWN\. No measured skill is published 72 h or more ahead\. Not for navigation\.$/, /^Acierto del pronóstico: DESCONOCIDO\. No se publica acierto medido a 72 h o más\. No apto para navegar\.$/],
+    invalid: [/^Forecast skill: UNKNOWN for this hour\. Not for navigation\.$/, /^Acierto del pronóstico: DESCONOCIDO para esta hora\. No apto para navegar\.$/],
+  };
+  for (const [reason, ats] of [['range', [NOW + 80 * H, NOW + 72 * H]], ['invalid', [NOW - 30 * M, NOW - 2 * H, NaN]]]) for (const at of ats) {
     const s = skillSummary(leads, 'morro-bay', NOW, at);
-    assert.match(skillLine(s, 'en'), /^Forecast skill: UNKNOWN\. The scorecard could not be read, is out of date or lacks this hour\. Not for navigation\.$/);
-    assert.match(skillLine(s, 'es'), /^Acierto del pronóstico: DESCONOCIDO\. No se pudo leer la tabla, está desactualizada o no cubre esta hora\. No apto para navegar\.$/);
-    for (const lang of ['en', 'es']) assert.doesNotMatch(skillLine(s, lang), /%|publi[a-z]+ 20|\b24 h/);
+    assert.equal(s.reason, reason, `at ${at - NOW} ms`);
+    assert.match(skillLine(s, 'en'), copy[reason][0]); assert.match(skillLine(s, 'es'), copy[reason][1]);
+    for (const lang of ['en', 'es']) assert.doesNotMatch(skillLine(s, lang), /%|publi[a-z]+ 20|\b24 h|read|leer/);
+  }
+});
+
+test('an unreadable or out-of-date scorecard says only that it could not be read or is out of date', () => {
+  for (const f of [null, file([row()], {generated_at: '2026-09-01T00:00:00Z'})]) {
+    const s = skillSummary(f, 'morro-bay', NOW, NOW + 30 * H);
+    assert.equal(s.state, 'unknown'); assert.equal(s.published, null);
+    assert.match(skillLine(s, 'en'), /^Forecast skill: UNKNOWN\. The scorecard could not be read or is out of date\. Not for navigation\.$/);
+    assert.match(skillLine(s, 'es'), /^Acierto del pronóstico: DESCONOCIDO\. No se pudo leer la tabla o está desactualizada\. No apto para navegar\.$/);
   }
 });

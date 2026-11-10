@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- SC1407-11: the brief's forecast-skill line now speaks for the hour the brief answers for: it reads the 24, 48 or 72 h-ahead scores by that hour's lead from now (the publisher's half-open buckets, so exactly 24 h ahead reads the 48 h scores) and names the lead, reads UNKNOWN for an hour 72 h or more ahead or already past (no published score, never a 24 h fallback), and keeps "not enough buoy history yet" when that lead is thin instead of showing another lead's figure. The line links to the full scorecard at /skill. English and Spanish.
+- SC1407-11: the brief's forecast-skill line now speaks for the hour the brief answers for: it reads the 24, 48 or 72 h-ahead scores by that hour's lead from now (the publisher's half-open buckets, so exactly 24 h ahead reads the 48 h scores) and names the lead, says "No measured skill is published 72 h or more ahead" for an hour 72 h or more ahead and "UNKNOWN for this hour" for one already past (no published score, never a 24 h fallback, and neither reuses the unreadable-scorecard sentence), and keeps "not enough buoy history yet" when that lead is thin instead of showing another lead's figure. The line links to the full scorecard at /skill. English and Spanish.
+
+- SC1407-03: the time dock's 169-hour horizon is built once per UTC hour and region zone instead of on every read by the dock, map, brief and share link (#1762 R2); the shared copy is frozen. Days, hours, DST change days, the selected hour and links are unchanged (`web/hour.ts`).
 
 - RF0854-7: the operator lead score's "AIS seen in the last 30 days" part is bounded by the scoring instant: a watched vessel's sighting dated after "now" no longer earns the AIS points (it was counted as seen), while a sighting exactly at now or exactly 30 days earlier still counts. A watched operator with no qualifying sighting scores a known zero, and an operator with no watched vessel stays missing. Read-time only; weights, other parts and stored watch records are unchanged.
 
