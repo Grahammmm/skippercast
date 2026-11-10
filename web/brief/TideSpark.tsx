@@ -9,6 +9,7 @@
 // Its words and the events' clock follow the chosen language (SC1137-03); heights, datum and instants stay as published.
 import {CoastMarkup} from '../app/CoastMarkup.tsx';
 import {zone} from '../app/region-info.ts';
+import {fixed} from '../view-copy.ts';
 import {selectHour} from '../app/TimeDock.tsx';
 import {language, t} from '../i18n.ts';
 import {hour} from '../state.ts';
@@ -34,7 +35,7 @@ export function TideSpark({brief, now = new Date()}: {brief: Brief | null; now?:
       {brief?.tideEvents.length ? (
         <figcaption>
           <ul class="app-spark-events">
-            {brief.tideEvents.map(e => <li key={e.at}>{t(e.type === 'H' ? 'tideSpark.high' : 'tideSpark.low', lang)} <span class="ui-mono">{eventClock(e.at, tz, lang)} · {e.heightFt.toFixed(1)} ft {brief.tideDatum}</span></li>)}
+            {brief.tideEvents.map(e => <li key={e.at}>{t(e.type === 'H' ? 'tideSpark.high' : 'tideSpark.low', lang)} <span class="ui-mono">{eventClock(e.at, tz, lang)} · {fixed(lang === 'en' ? e.heightFt : Number(e.heightFt.toFixed(1)), 1, lang)} ft {brief.tideDatum}</span></li>)}
           </ul>
         </figcaption>
       ) : null}
