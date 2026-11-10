@@ -78,8 +78,8 @@ test('FE-52: Reports opens from the masthead (laptop) or the sheet footer (phone
 // ordinary day (Today has twelve hours left, so End is a real move) and the last hour of Pacific today (Today has one
 // hour, so the Day chip must be pressed and Home is the real move).
 const HOUR_CASES = [
-  {name: 'ordinary day', now: '2026-10-12T19:30:00Z', lastHour: false, atEnd: false, expected: '11 pm', hour: '2026-10-13T06:00Z', day: null},
-  {name: 'last hour today', now: '2026-10-12T06:30:00Z', lastHour: true, atEnd: true, expected: '12 am', hour: '2026-10-12T07:00Z', day: '2026-10-12'},
+  {name: 'ordinary day', now: '2026-10-12T19:30:00Z', lastHour: false, atEnd: false, expected: 'Today · 11 pm', hour: '2026-10-13T06:00Z', day: null},
+  {name: 'last hour today', now: '2026-10-12T06:30:00Z', lastHour: true, atEnd: true, expected: 'Tomorrow · 12 am', hour: '2026-10-12T07:00Z', day: '2026-10-12'},
 ] as const;
 
 for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and the hour slider update the address without a reload: ${c.name}`, async ({page, pageErrors, v2, isMobile}) => {
@@ -126,7 +126,7 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
     await expect(tomorrow).toHaveAttribute('aria-pressed', 'true');
     // The same local hour (11 pm) on tomorrow's 24 hours: index 23.
     await expect(slider).toHaveValue('23');
-    await expect(page.locator('.ui-dock-readout')).toHaveText('11 pm');
+    await expect(page.locator('.ui-dock-readout')).toHaveText('Tomorrow · 11 pm');
     await expect(page).toHaveURL(u => u.searchParams.get('hour') === '2026-10-13T06:00Z' && u.searchParams.get('day') === '2026-10-12');
   }
   // At the slider's end, End emits no input event, so choose the opposite endpoint.
@@ -146,6 +146,7 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
   expect(new URL(page.url()).searchParams.get('hour'), 'the hour in the address').toBe(c.hour);
   expect(new URL(page.url()).searchParams.get('day'), 'the day in the address').toBe(c.day);
   await expect(page.locator('.ui-dock-readout')).toHaveText(c.expected);
+  await expect(slider).toHaveAttribute('aria-valuetext', c.expected);
   expect(await stillLoaded(), 'no reload').toBe(true);
   // A shared link restores the same choices.
   const shared = page.url();
@@ -154,7 +155,44 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
   await expect(page.locator('[aria-label="Profile"] button[aria-pressed="true"]')).toHaveText('Spear');
   await expect(page.locator('input[aria-label="Hour"]')).toHaveValue(expectedValue);
   await expect(page.locator('.ui-dock-readout')).toHaveText(c.expected);
+  await expect(slider).toHaveAttribute('aria-valuetext', c.expected);
   expect(new URL(page.url()).searchParams.get('hour'), 'the shared hour is kept').toBe(c.hour);
+  expect(pageErrors).toEqual([]);
+});
+
+// SC1722-10: actual mounted surfaces use the region calendar, including the repeated hour.
+for (const lang of ['en', 'es']) test(`day-qualified dock values across fall DST: ${lang}`, async ({page, v2, pageErrors}) => {
+  await page.clock.setFixedTime(new Date('2026-10-31T19:00:00Z'));
+  const cases = [
+    ['2026-10-31T23:00Z', 'Today · 4 pm', 'Hoy · 16'],
+    ['2026-11-01T08:00Z', 'Tomorrow · 1 am', 'Mañana · 1'],
+    ['2026-11-01T09:00Z', 'Tomorrow · 1 am', 'Mañana · 1'],
+    ['2026-11-03T14:00Z', 'Tue · 6 am', 'mar · 6'],
+    ['2026-11-07T14:00Z', 'Sat 7 · 6 am', 'sáb 7 · 6'],
+  ];
+  for (const [hour, en, es] of cases) {
+    await v2.open('app', {...AREA, hour, lang});
+    const expected = lang === 'es' ? es : en;
+    await expect(page.locator('.ui-dock-readout')).toHaveText(expected);
+    await expect(page.locator('input[type="range"].ui-dock-range')).toHaveAttribute('aria-valuetext', expected);
+    expect(new URL(page.url()).searchParams.get('hour')).toBe(hour);
+  }
+  // Freeze timers after mounting: native Home changes the visible/accessibility preview,
+  // while the exact UTC address remains settled until the controller's 100 ms pause.
+  await page.clock.pauseAt(new Date('2026-10-31T19:00:01Z'));
+  const slider = page.locator('input[type="range"].ui-dock-range');
+  await slider.focus();
+  await slider.press('Home');
+  const preview = lang === 'es' ? 'sáb 7 · 0' : 'Sat 7 · 12 am';
+  await expect(page.locator('.ui-dock-readout')).toHaveText(preview);
+  await expect(slider).toHaveAttribute('aria-valuetext', preview);
+  expect(new URL(page.url()).searchParams.get('hour')).toBe('2026-11-07T14:00Z');
+  await page.clock.runFor(99);
+  expect(new URL(page.url()).searchParams.get('hour')).toBe('2026-11-07T14:00Z');
+  await page.clock.runFor(1);
+  await expect(page).toHaveURL(u => u.searchParams.get('hour') === '2026-11-07T08:00Z');
+  await expect(page.locator('.ui-dock-readout')).toHaveText(preview);
+  await expect(slider).toHaveAttribute('aria-valuetext', preview);
   expect(pageErrors).toEqual([]);
 });
 
