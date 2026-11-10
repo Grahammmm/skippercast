@@ -409,13 +409,43 @@ def write_new(raw_path, data):
     else:
         raise Refused("output already exists")
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0), 0o644)
+    owned = None  # device/inode of the file this call created
     try:
-        view = memoryview(data)
-        while view:
-            view = view[os.write(fd, view):]
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+        try:
+            owned = os.fstat(fd)
+            view = memoryview(data)
+            while view:
+                view = view[os.write(fd, view):]
+            os.fsync(fd)
+        finally:
+            os.close(fd)  # exactly once; a close failure is rolled back like a write failure
+    except BaseException as failure:
+        try:
+            _rollback_new_output(path, owned, failure)
+        except Refused:
+            if isinstance(failure, Exception):
+                raise
+        raise
+
+
+def _rollback_new_output(path, owned, failure):
+    """Remove the report this call created, but only while the path still names that inode."""
+    if owned is None:
+        raise Refused("output cleanup failed; incomplete report may remain") from failure
+    try:
+        info = os.lstat(path)
+    except FileNotFoundError:
+        return
+    except OSError:
+        raise Refused("output cleanup failed; incomplete report may remain") from failure
+    if not stat.S_ISREG(info.st_mode) or (info.st_dev, info.st_ino) != (owned.st_dev, owned.st_ino):
+        raise Refused("output changed during cleanup; replacement preserved") from failure
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        return
+    except OSError:
+        raise Refused("output cleanup failed; incomplete report may remain") from failure
 
 
 def _diagnostic(status, detail):

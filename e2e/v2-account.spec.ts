@@ -196,6 +196,8 @@ test('signed in, saved-trip alerts save, list, delete and acknowledge through th
   await expect(dialog.getByLabel('Wind limit · kt')).toHaveValue('8');
   await expect(dialog.getByLabel('Sea limit · ft')).toHaveValue('3');
   await expect(dialog).toContainText('Limits start from the reference 23 ft boat.');
+  // The pointer rests where the menu item was, so Save can be hovered when axe runs (it was, on some runs): check that state every run.
+  await dialog.getByRole('button', {name: 'Save this fishing window'}).hover();
   await v2.a11y('v2-account-alerts-signed-in');
   await dialog.getByLabel('Area').selectOption('central');
   await dialog.getByLabel('Gust limit · kt').fill('14');
