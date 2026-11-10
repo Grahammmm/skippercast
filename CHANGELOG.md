@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- UXFIX-13: on the phone, the first-run card's "Keep Boat for now" is a visible 44 px button on the heading row at every sheet height (it was clipped to 1 px at the closed sheet and only appeared on keyboard focus), in English and Spanish. The card stays a soft card you can ignore; the closed sheet rests 24 px higher while the card is on it.
 - SC1722-14: native form fields share a 16px font floor on the landing, app and dialogs. The target search widens from 128px to 133px so both language hints fit; its phone select is capped to the viewport. This verifies the CSS precondition, not real-iPhone focus zoom.
 - RF1935-4: Keep the phone sheet target search clear of the tabs while focused, including short emulated viewports; restore navigation on blur.
 - RF1925-6: each app view now has exactly one top-level main landmark. On the phone the whole view is the main (Reports and Plan no longer nest a second one), the bottom sheet is a named group so Conditions is a single region, and the managed terrain scene is a group rather than a second main, in Chart, 2D and 3D. Layout, words and behaviour are unchanged.
