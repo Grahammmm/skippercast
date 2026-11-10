@@ -103,6 +103,8 @@ export const profile = signal<Profile>(DEFAULT_PROFILE);
 export const appView = signal<AppView>('coast');
 /** Time dock day "YYYY-MM-DD"; null means today. */
 export const day = signal<string | null>(null);
+/** SC1407-05: counts every syncFromURL, same values included, so a pending dock preview (web/dock-selection.ts) never outlives a URL change. */
+export const urlEpoch = signal(0);
 /** Home-port id a shared link names (?port=, web/ports.ts linkedPort); null when absent, repeated or malformed. Never saved. */
 export const port = signal<string | null>(null);
 /** Rail ids switched on; resolved from the URL, then storage, then the profile. */
@@ -303,6 +305,7 @@ export function syncFromURL(href: string = location.href): UrlState {
     day.value = parseDay(state.day); area.value = state.area; port.value = parsePort(state.port);
     presentation.value = shown; current.value = resolveCurrent(state, kept.layers); habitat.value = parseHabitat(state.habitat);
     historyStation.value = state.station; historyMetric.value = state.metric; historyRange.value = state.range;
+    urlEpoch.value = urlEpoch.peek() + 1;
   });
   return state;
 }
