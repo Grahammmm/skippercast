@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF1935-4: Keep the phone sheet target search clear of the tabs while focused, including short emulated viewports; restore navigation on blur.
+- RF1925-6: each app view now has exactly one top-level main landmark. On the phone the whole view is the main (Reports and Plan no longer nest a second one), the bottom sheet is a named group so Conditions is a single region, and the managed terrain scene is a group rather than a second main, in Chart, 2D and 3D. Layout, words and behaviour are unchanged.
 - SC1407-05: the time dock answers a step at once and the evidence follows once (#1762 R3): the slider, keyboard, day chips and play move the dock's label, thumb and accessible value immediately, and the brief, map overlays, tide and URL settle on the chosen hour 100 ms after the last input instead of once per passed hour. Until then the verdict and first answer read "Updating…" (not announced) rather than the previous hour's answer; share links, exports and print use the settled hour (`web/dock-selection.ts`).
 - RF1935-1: the trip planner no longer keeps "Loading the trip planner…" (a live status) in the page while its dialog is closed and has never been used; the loading status and the failure line with Retry appear only while the dialog is open, in English and Spanish. An open planner that is still loading keeps its status until it is ready, and a failed one keeps its message and Retry. The planner is still loaded only when first opened.
 

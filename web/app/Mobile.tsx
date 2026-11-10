@@ -163,13 +163,52 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
   const now = useHourNow(fixedNow, clock);
   const [detent, setDetent] = useState<Detent>('peek');
   const [panel, setPanel] = useState<Panel>('brief');
+  // RF1935-4: only the focused sheet target needs keyboard-viewport correction.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    let frame = 0, restore: (() => void) | undefined;
+    const reveal = () => {
+      const input = document.activeElement;
+      if (!(input instanceof HTMLInputElement) || !input.matches('.app-mobile .app-sheet .app-target-search')) {
+        restore?.(); restore = undefined; return;
+      }
+      const sheet = input.closest<HTMLElement>('.app-sheet')!;
+      const body = input.closest<HTMLElement>('.ui-sheet-body')!;
+      if (!restore) {
+        const height = sheet.style.maxHeight, bottom = sheet.style.bottom, scroll = body.scrollTop;
+        restore = () => { sheet.style.maxHeight = height; sheet.style.bottom = bottom; body.scrollTop = scroll; };
+      }
+      // The visual viewport can shrink without resizing the layout viewport.
+      sheet.style.maxHeight = `${viewport.height}px`;
+      sheet.style.bottom = `calc(${Math.max(0, innerHeight - viewport.offsetTop - viewport.height)}px + env(safe-area-inset-bottom, 0px))`;
+      const bounds = body.getBoundingClientRect(), field = input.getBoundingClientRect();
+      const top = Math.max(bounds.top + body.clientTop, viewport.offsetTop);
+      const bottom = Math.min(bounds.top + body.clientTop + body.clientHeight, viewport.offsetTop + viewport.height);
+      if (body.scrollHeight > body.clientHeight) {
+        body.scrollTop += field.bottom > bottom ? field.bottom - bottom : field.top < top ? field.top - top : 0;
+      }
+    };
+    const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(reveal); };
+    viewport.addEventListener('resize', schedule);
+    viewport.addEventListener('scroll', schedule);
+    document.addEventListener('focusin', schedule);
+    document.addEventListener('focusout', schedule);
+    return () => {
+      cancelAnimationFrame(frame); restore?.();
+      viewport.removeEventListener('resize', schedule);
+      viewport.removeEventListener('scroll', schedule);
+      document.removeEventListener('focusin', schedule);
+      document.removeEventListener('focusout', schedule);
+    };
+  }, []);
   const apply = ({panel: p, detent: d}: {panel: Panel; detent: Detent}) => { setPanel(p); setDetent(d); };
   useEffect(() => setDetent(d => viewDetent(appView.value, d)), [appView.value]);
   useEffect(() => setDetent(d => boatEntryDetent(boatEntryOpen.value, d)), [boatEntryOpen.value]);
   const lang = language.value;
   const layersOpen = panel === 'layers', conditions = appView.value === 'conditions', fleet = appView.value === 'fleet';
   return (
-    <div class="app-mobile">
+    <main class="app-mobile">
       <MapStage clock={clock} />
       <header class="app-top">
         <div class="app-top-row">
@@ -182,7 +221,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
-      {appView.value === 'reports' || appView.value === 'plan' ? <main class="app-mobile-page">{firstRun}{appView.value === 'plan' ? <Guard name="plan"><TargetSelect /><PlanView now={now} /></Guard> : <Guard name="reports"><Reports now={now} /></Guard>}</main> : <Sheet label={layersOpen ? t('shell.layers', lang) : appView.value === 'conditions' || appView.value === 'fleet' || appView.value === 'history' ? viewLabel(appView.value, lang) : t('shell.brief', lang)} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
+      {appView.value === 'reports' || appView.value === 'plan' ? <div class="app-mobile-page">{firstRun}{appView.value === 'plan' ? <Guard name="plan"><TargetSelect /><PlanView now={now} /></Guard> : <Guard name="reports"><Reports now={now} /></Guard>}</div> : <Sheet landmark={false} label={layersOpen ? t('shell.layers', lang) : appView.value === 'conditions' || appView.value === 'fleet' || appView.value === 'history' ? viewLabel(appView.value, lang) : t('shell.brief', lang)} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
         class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<Guard name="time-dock"><HourEdge now={now} /></Guard>}
         onBodyFocus={event => {
           const target = event.target as Element | null;
@@ -197,6 +236,6 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
         {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : appView.value === 'conditions' ? <Guard name="conditions"><Conditions now={now} /></Guard> : appView.value === 'fleet' ? <Guard name="fleet"><Fleet onShowMap={() => setDetent('peek')} /></Guard> : appView.value === 'history' ? <Guard name="history"><History now={now} /></Guard> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
       </Sheet>}
       <ViewNav icons class="app-tabs" />
-    </div>
+    </main>
   );
 }

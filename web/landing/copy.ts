@@ -40,6 +40,7 @@ export function portCopy(lang: Language) {
     placeholder: t('landing.port.placeholder', lang),
     finding: t('landing.port.finding', lang),
     unsupported: t('landing.port.unsupported', lang),
+    denied: t('landing.port.denied', lang),
     unavailable: t('landing.port.unavailable', lang),
     none: t('landing.port.none', lang),
     empty: t('landing.port.empty', lang),
