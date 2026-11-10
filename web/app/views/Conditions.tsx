@@ -8,6 +8,7 @@
 import {useEffect, useId, useState} from 'preact/hooks';
 import type {Alert} from '../../../packages/coast/src/types.ts';
 import {alertTimeSpan} from '../../alert-time.ts';
+import {daylightText} from '../../conditions-daylight.ts';
 import {Segmented} from '../../ui/Chip.tsx';
 import {currentBrief, ensureRegionalForecast, regionalForecast} from '../../brief/Brief.tsx';
 import {coastBinding, coastReport} from '../../coast-data.ts';
@@ -98,6 +99,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
           {brief.tideEvents.map(e => <li key={e.at}>{t(e.type === 'H' ? 'conditions.tide.high' : 'conditions.tide.low', lang)} <span class="ui-mono">{timeText(e.at, tz, false, lang)} · {fixed(e.heightFt, 1, lang)} ft {brief.tideDatum}</span></li>)}
         </ul>
       ) : <p class="app-empty">{t('conditions.tide.none', lang, {day: dayName(state.at, tz, lang) || t('conditions.tide.day', lang)})}</p>}
+      <p class="app-conditions-daylight">{daylightText(brief?.date === state.day ? brief : currentBrief(now, selected), state.day, tz, lang)}</p>
       <p class="app-conditions-moon">{moonLine(state.day, tz)}</p>
       <h3 class="ui-eyebrow">{t('conditions.before', lang)}</h3>
       <ul class="app-conditions-notes">

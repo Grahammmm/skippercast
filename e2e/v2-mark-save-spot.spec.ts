@@ -105,7 +105,7 @@ test('the cap and a failed save are said in words, nothing raw shows, and a retr
   ]);
   const card = await openCard(page, v2);
   const before = {url: page.url(), storage: await page.evaluate(() => JSON.stringify([{...localStorage}, {...sessionStorage}])), history: await page.evaluate(() => history.length)};
-  const save = card.getByRole('button', {name: 'Save this spot'}), status = card.getByRole('status');
+  const save = card.getByRole('button', {name: 'Save this spot'}), status = card.locator('.app-mark-why').getByRole('status');
   await save.click();
   await expect(status).toHaveText('You can keep up to 100 saved spots. Remove one in Account before saving another.');
   await expect(save).toBeEnabled();
