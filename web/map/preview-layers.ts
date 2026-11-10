@@ -78,6 +78,19 @@ export type PreviewAttach = (context: PreviewContext) => Promise<PreviewHandle |
 /** A layer's loader: the dynamic import is the only place its code is requested. */
 export type PreviewLoader = () => Promise<PreviewAttach>;
 
+/**
+ * The registry owner name each layer's failures arrive under (web/map/engine.ts routes a failed source to the overlay that
+ * contains it, so SST's secondary sources and currents' lines and heads report as the cells / tint owner). Strings only, so
+ * this file stays free of layer code. Wind is a canvas layer, not an Engine overlay: its marker is kept for compatibility.
+ */
+export const PREVIEW_OWNERS: Readonly<Record<PreviewId, string>> = {
+  seafloor: 'preview-seafloor',
+  wind: 'preview-wind',
+  currents: 'preview-currents-tint',
+  sst: 'preview-sst-cells',
+  chlorophyll: 'preview-chlorophyll',
+};
+
 export const PREVIEW_LOADERS: Readonly<Record<PreviewId, PreviewLoader>> = {
   seafloor: async () => (await import('./preview/seafloor.ts')).attach,
   wind: async () => (await import('./preview/wind.ts')).attach,
@@ -145,7 +158,7 @@ export function createPreviewLayers(o: {
   async function start(id: PreviewId, engine: Engine): Promise<void> {
     const abort = new AbortController(), item = {engine, abort, handle: null as PreviewHandle | null, failed: false};
     live.set(id, item);
-    o.failures?.clear(`preview-${id}`);
+    o.failures?.clear(PREVIEW_OWNERS[id]);
     const report = (status: PreviewStatus): void => { if (live.get(id) === item) setStatus(id, status); };
     report({state: 'loading', text: 'Loading…'});
     try {
@@ -167,7 +180,7 @@ export function createPreviewLayers(o: {
   });
   const watch = o.failures ? effect(() => {
     const bad = o.failures!.list.value;
-    for (const [id, item] of live) if (!item.failed && bad.includes(`preview-${id}`)) fail(id, item);
+    for (const [id, item] of live) if (!item.failed && bad.includes(PREVIEW_OWNERS[id])) fail(id, item);
   }) : () => {};
   return {
     destroy() { dispose(); watch(); for (const id of [...live.keys()]) stop(id); },
