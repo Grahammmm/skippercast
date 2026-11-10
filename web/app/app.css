@@ -470,12 +470,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 /* SC-PERF-INSTANT-1: the saved brief's "Last updated" line; amber when past the brief's own freshness limit, so it never reads calmer than live data. */
 .app-saved { margin: var(--space-2) 0; color: var(--muted); font-size: var(--text-13); }
 .app-saved[data-stale="true"] { color: var(--amber); font-weight: var(--weight-semibold); }
-/* SC1722-01: a forecast that could not be read, in place of the verdict; the native Try again keeps the 44 px target of .ui-button. */
-.app-forecast-failed { display: grid; gap: var(--space-2); min-width: 0; }
-.app-forecast-failed-head { margin: 0; color: var(--text); font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
-p.app-forecast-failed-head { font-size: var(--text-15); }
-.app-forecast-failed-reason { margin: 0; color: var(--text); font-size: var(--text-15); line-height: var(--leading-body); }
-.app-forecast-retry { justify-self: start; }
 
 /* SC-PERF-JUMP-1 (PERF-BASELINE-1 P10): reserve the space the late-arriving header parts fill, so the desktop shell does not move (CLS 0.85 -> about 0.11).
    The chat entry would otherwise wrap onto two lines (62 px) when the session read opens it, making the masthead 18 px taller; the place name gains its
@@ -508,3 +502,10 @@ p.app-forecast-failed-head { font-size: var(--text-15); }
 .app-entrance-caution[data-band="Caution"], .app-entrance-caution[data-band="Unknown"] { color: var(--amber); }
 .app-entrance-caution[data-band="Hazardous"] { color: var(--coral); }
 .app-entrance-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+
+/* SC1722-01: a forecast that could not be read, in place of the verdict; the native Try again keeps the 44 px target of .ui-button. */
+.app-forecast-failed { display: grid; gap: var(--space-2); min-width: 0; }
+.app-forecast-failed-head { margin: 0; color: var(--text); font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
+p.app-forecast-failed-head { font-size: var(--text-15); }
+.app-forecast-failed-reason { margin: 0; color: var(--text); font-size: var(--text-15); line-height: var(--leading-body); }
+.app-forecast-retry { justify-self: start; }
