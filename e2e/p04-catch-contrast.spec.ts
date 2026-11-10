@@ -201,7 +201,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // unchanged. Rebind only Masthead.tsx to its exact final bytes.
   // SC0707-07: Masthead.tsx reads its words from the string catalogue (web/i18n.ts, English unchanged); no CSS,
   // token or catch markup change. Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "ec2422348158b250fb82b9c03ea70a98ef7666d079d4a53d10fd33ec3fc7359c",
+  // SC1722-09: ViewNav's click pushes one history entry when the view changes (navigate) instead of replacing it (setParams).
+  // Only navigation event behaviour changed; BODY09 mounts Reports/CatchCards, never ViewNav, and no CSS, token, catch markup
+  // or Reports paint changed. contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
+  "web/app/Masthead.tsx": "a139e69f4462503540d4df87d7c8a30bd5ad4cfd6f3eaf89f30e54415e3c3c79",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
@@ -227,7 +230,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MAPLIVE-1: MapStage.tsx only adds one more Chart layer (createPreviewLayers, passing the Chart unavailable list); no class, colour or paint change, and BODY09 never mounts MapStage.
   "web/app/MapStage.tsx": "5ab4d95d39768d31fc0851cb0967ddd322bf63b0bdaf1d9801a023e745112a1c",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
-  "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
+  // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
+  // changes (panel.css: History scroller 2 px ring and one summary ring; app.css: fleet checkbox ring); unfocused catch text and contrast are unchanged. check_contrast.mjs changes only the appCss surface hash, its comment and moved citations. Rebound from final bytes.
+  "web/ui/ui.css": "9abbc695e63f168c21c8d3d58674dd478599ae304a08097debe12d7050019a0f",  // SC1722-07: ui.css only adds the sheet's --sheet-hidden-offset property, a settled-detent bottom padding and overscroll containment on .ui-sheet-body; the catch sheet has no sheet and no paint changed. #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.
   // SC-E2E-GREEN: the legend shrinks and scrolls beside a mark-card min height, the phone .app-area row wraps, and the
   // brief's .app-verdict-rules line gets margins, size and the existing .app-mark-regs a link rule; Reports' catch sheet
@@ -242,9 +247,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC-PERF-LAZY-1: app.css only adds the .app-reef-text selector to the existing muted 13px .app-empty/.app-caveat rule for the deferred-reef note; the Reports catch sheet never mounts it, and contrast() is untouched. Rebound from the final bytes.
   // SC-PERF-LAZY-1: check_contrast.mjs changes only its appCss source hash; contrast() is untouched. Rebound.
   // SC-PERF-JUMP-1: app.css appends only layout rules (masthead, target menu width, desktop legend minimum height); no paint; the Reports catch sheet mounts none of them. Rebound from the final bytes.
-  "web/app/app.css": "3b1482c3c8e08bab1fa64f855bd892047217279b837cf989d448332f884c315e",
+  // SC1722-07: app.css only adds the phone sheet's --sheet-hidden-offset property to the .app-sheet rules (layout, no paint); the Reports catch sheet never mounts it. Rebound from the final bytes.
+  // SC1722-07: check_contrast.mjs changes only its appCss source hash and comment; contrast() is untouched. Rebound.
+  "web/app/app.css": "3d4f0c9597a3fad6a9d95def3390399265f19c929fde68200fde047390bf1df7",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
-  "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
+  "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
   // SC2037-02: hourly-table.css appends only a scoped .app-hourly-over rule (amber token colour, semibold) for own-limit cell marks; Reports never mounts the hourly table, so no counted paint changes. Rebound from the final bytes.
   "web/app/views/hourly-table.css": "deddfad213ef5d81cd6f82be591b5259a874a1da2961c307df9a9ca1ef644ee0",
@@ -253,7 +260,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1407-05: brief-print.css adds only .app-hour-guard/.app-hour-settled (display: contents) and .app-hour-updating (muted margin-less line) screen rules plus print-hide rules for the pending dock hour; the Reports catch sheet mounts none of those classes (they wrap the desktop/phone brief verdict), so no counted catch paint changes. Rebound from the final bytes.
   "web/brief/brief-print.css": "c04bce48a759c7877f4a7a87fb0631178f0fe60bb4eac6aa6a23ed610d4fca6b",
   "web/app/views/model-disagreement.css": "c6edfd6e81395b8d5e9fe67e982e399989172765490456f6a28ec036c115b72c",
-  "packages/coast/panel.css": "ca0495fc90db3cf3f140d520c8231751660268af72bc7b9a4a3ac4dc1679314e",
+  "packages/coast/panel.css": "f769041713cf22215ec43fa6d5123b4d87221db60ee63bca0420425c2acad3cc",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
@@ -310,7 +317,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC-TIDAL-1: app.css only appends a scoped .app-entrance* block (token text roles in the Boat brief's run line); check_contrast.mjs rebinds only the
   // appCss surface hash and its comment. BODY09 mounts Reports/CatchCards, never the run line or the legend; contrast(), catch paint, backing,
   // assertions and thresholds are unchanged. Rebind only these two sources.
-  "scripts/check_contrast.mjs": "3ede8aea04b93c5dae06b7bbc05d0022b1fad06631190b1d6f57adc9e9fcf301",
+  "scripts/check_contrast.mjs": "60a7b096b49aa7c9d1a4b5dc21b607db98037f3342a6d5f41d65f92d15704a32",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still

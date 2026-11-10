@@ -378,6 +378,76 @@ test.describe('phone', () => {
       expect(pageErrors).toEqual([]);
     });
   }
+
+  // SC1722-09: Back to History from a peeked sheet opens it full (viewDetent); Back to another view leaves the detent as it is.
+  test('SC1722-09: Back to History opens a peeked sheet full and Back to Coast leaves the detent alone', async ({page, pageErrors, v2}) => {
+    await v2.open('app', AREA, 'phone');
+    const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
+    const tab = (view: string) => page.locator(`nav[aria-label="Views"] a[data-view="${view}"]`);
+    await tab('history').click();
+    await expect(page).toHaveURL(/[?&]view=history/);
+    await expect(sheet).toHaveAttribute('data-detent', 'full');
+    await handle.focus();
+    await page.keyboard.press('Home');
+    await expect(sheet).toHaveAttribute('data-detent', 'peek');
+    await tab('conditions').click();
+    await expect(page).toHaveURL(/[?&]view=conditions/);
+    await page.goBack();
+    await expect(page).toHaveURL(/[?&]view=history/);
+    await expect(tab('history')).toHaveAttribute('aria-current', 'page');
+    await expect(sheet).toHaveAttribute('data-detent', 'full');
+    await page.goBack();
+    await expect(page).not.toHaveURL(/[?&]view=/);
+    expect(new URL(page.url()).pathname).toBe('/map');
+    await expect(sheet).toHaveAttribute('data-detent', 'full');
+    expect(pageErrors).toEqual([]);
+  });
+});
+
+// SC1722-09: a press that changes the view is one history entry, a press on the shown view is none, an hour change replaces.
+test('SC1722-09: Back and Forward follow the views you pressed, a repeat press adds no entry and an hour change adds none', async ({page, pageErrors, v2}) => {
+  await page.clock.setFixedTime(new Date('2026-10-12T19:30:00Z'));   // an ordinary day, as HOUR_CASES: Today has hours left
+  await v2.open('app', AREA);
+  await page.evaluate(() => { (window as unknown as {__v2: number}).__v2 = 1; });
+  const stillLoaded = () => page.evaluate(() => (window as unknown as {__v2?: number}).__v2 === 1);
+  const length = () => page.evaluate(() => history.length);
+  const tab = (view: string) => page.locator(`nav[aria-label="Views"] a[data-view="${view}"]`);
+  const start = await length();
+  await tab('coast').click();
+  expect(await length(), 'a press on the shown view adds no entry').toBe(start);
+  await expect(page).not.toHaveURL(/[?&]view=/);
+  const slider = page.locator('input[aria-label="Hour"]');
+  const max = await slider.getAttribute('max');
+  expect(max, 'the slider has a numeric maximum').toMatch(/^\d+$/);
+  await slider.focus();
+  await page.keyboard.press(await slider.inputValue() === max ? 'Home' : 'End');
+  await expect(page).toHaveURL(/[?&]hour=/);
+  expect(await length(), 'an hour change adds no entry').toBe(start);
+  const hour = new URL(page.url()).searchParams.get('hour');
+  await tab('conditions').click();
+  await expect(page).toHaveURL(/[?&]view=conditions/);
+  await expect(page.locator('section.app-conditions')).toBeVisible();
+  await tab('history').click();
+  await expect(page).toHaveURL(/[?&]view=history/);
+  await expect(tab('history')).toHaveAttribute('aria-current', 'page');
+  await tab('history').click();
+  expect(await length(), 'two entries for two changed views, none for the repeat').toBe(start + 2);
+  await page.goBack();
+  await expect(page).toHaveURL(/[?&]view=conditions/);
+  await expect(tab('conditions')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('section.app-conditions')).toBeVisible();
+  await page.goBack();
+  await expect(page).not.toHaveURL(/[?&]view=/);
+  expect(new URL(page.url()).searchParams.get('hour'), 'the entry keeps the hour replaced into it').toBe(hour);
+  expect(new URL(page.url()).pathname).toBe('/map');
+  await expect(tab('coast')).toHaveAttribute('aria-current', 'page');
+  await page.goForward();
+  await expect(page).toHaveURL(/[?&]view=conditions/);
+  await page.goForward();
+  await expect(page).toHaveURL(/[?&]view=history/);
+  expect(await length()).toBe(start + 2);
+  expect(await stillLoaded(), 'no reload').toBe(true);
+  expect(pageErrors).toEqual([]);
 });
 
 // FE-60 acceptance 3: with v2 the default, one context draws one map, one of each picker and one timeline. The

@@ -12,6 +12,7 @@
 import type {Alert, ForecastHour} from './types.ts';
 import type {NearshoreSite} from './enrichment-types.ts';
 import {nearshoreAt} from './nearshore.ts';
+import {periodSecondsText} from './period-display.ts';
 import {SHORE, shoreWind, surf, type Surf, type WindSide} from './shore-conditions.ts';
 
 const HOUR = 3_600_000;
@@ -141,7 +142,7 @@ export function kayakVerdict(w: KayakWind, s: KayakSeas, launch: Surf, daylight:
   const atLaunch = launchCaution(launch);
   if (offshore) cautions.push('Offshore wind: it carries a kayak away from shore and makes the paddle back upwind; stay close in or wait');
   if (atLaunch) cautions.push(`Surf at the launch (${ft(launch.heightFt as number)}${launch.basis === 'offshore' ? ', offshore estimate' : ''}): launching and landing through breaking waves can capsize a kayak; choose a sheltered launch`);
-  if (atLaunch && launch.sneaker) cautions.push(`Long-period swell (${launch.longPeriodS} s): sets can break bigger than the average at the launch`);
+  if (atLaunch && launch.sneaker) cautions.push(`Long-period swell (${periodSecondsText(launch.longPeriodS as number)} s): sets can break bigger than the average at the launch`);
   if (fog) cautions.push('Fog or visibility alert: a kayak is hard to see and landmarks for the paddle back disappear');
   if (daylight === false) cautions.push('Outside daylight: a kayak needs daylight to be seen and to see the way back');
   if (w.band === 'Unknown') reasons.push('Wind unknown');
@@ -151,7 +152,7 @@ export function kayakVerdict(w: KayakWind, s: KayakSeas, launch: Surf, daylight:
   const score = p.wind[w.band] + (offshore ? (w.band === 'Light' ? KAYAK.offshore.lightPenalty : KAYAK.offshore.penalty) : 0)
     + p.seas[s.band] + (s.chop ? p.chop : 0) + (atLaunch ? KAYAK.launch.score : 0);
   reasons.push(`${w.band.toLowerCase()} wind${w.windKnots !== null ? ` (${round(w.windKnots)} kt${w.gustKnots !== null ? `, gust ${round(w.gustKnots)}` : ''})` : ''}${w.side ? ` ${w.side}` : ''}`);
-  reasons.push(`${s.band.toLowerCase()} seas (${ft(s.heightFt as number)}${s.periodS !== null ? ` at ${s.periodS} s` : ''})`);
+  reasons.push(`${s.band.toLowerCase()} seas (${ft(s.heightFt as number)}${s.periodS !== null ? ` at ${periodSecondsText(s.periodS)} s` : ''})`);
   if (s.chop) reasons.push('short-period chop');
   if (atLaunch) reasons.push('surf at the launch');
   if (fog) reasons.push('fog alert');
