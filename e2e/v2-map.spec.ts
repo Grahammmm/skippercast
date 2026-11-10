@@ -742,6 +742,9 @@ const clickChartPoint = async (page: Page, point: {x: number; y: number}) => {
 test('Currents draw the bound forecast as animated streamlines, read on click and follow ?current=', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
   await serveOcean(page);
+  // SC1722-19: the laptop stage is no longer held at 480 px, so it is 427 px tall at 1280x800. The land mask does not reach the canvas's top two and bottom two rows
+  // (streamlines show there over the fixture's land), which the old 480 px stage happened not to draw into; a taller window keeps the check on the mask itself.
+  if (page.viewportSize()!.width >= 1024) await page.setViewportSize({width: 1280, height: 900});
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, current: 'wcofs'});
   await expect(flow(page)).toHaveAttribute('data-motion', 'animated');
   expect(Number(await flow(page).getAttribute('data-paths')), 'streamlines over the field').toBeGreaterThan(10);
