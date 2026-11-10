@@ -119,7 +119,7 @@ test('the lead uses the publisher\'s half-open buckets: exactly 24 h is 48 h ahe
   assert.equal(skillLead(NaN, NOW), null); assert.equal(skillLead(Infinity, NOW), null);
   // A past instant has no published lead: never a 24 h fallback, even just before now (the publisher has no such bucket).
   for (const back of [1, 30 * M, H - 1, H, 2 * H]) assert.equal(skillLead(NOW - back, NOW), null, `${back} ms before now`);
-  for (const at of [NaN, NOW - 1, NOW - 30 * M, NOW - H, NOW - 2 * H]) {
+  for (const at of [NaN, Infinity, NOW - 1, NOW - 30 * M, NOW - H, NOW - 2 * H]) {
     const s = skillSummary(leads, 'morro-bay', NOW, at);
     assert.ok(util.isDeepStrictEqual(s, {state: 'unavailable', reason: 'invalid'}), `at ${at - NOW} ms`);
     assert.doesNotMatch(skillLine(s, 'en'), /%|24 h/);

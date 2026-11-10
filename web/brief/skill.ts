@@ -34,7 +34,7 @@ const percent = (within: number, n: number) => within === n ? 100 : within === 0
 /** The skill for the forecast of the hour `at` (default now), from that lead's rows only; freshness is judged at `now`. */
 export function skillSummary(file: unknown, region: string, now: number, at: number = now): SkillSummary {
   const LEAD = skillLead(at, now);
-  if (LEAD === null) return {state: 'unavailable', reason: at - now >= 259_200_000 ? 'range' : 'invalid'};
+  if (LEAD === null) return {state: 'unavailable', reason: Number.isFinite(at) && at - now >= 259_200_000 ? 'range' : 'invalid'};
   const f = file as {schema_version?: unknown; generated_at?: unknown; minimum?: {valid_times?: unknown}; scores?: unknown} | null;
   const generated = typeof f?.generated_at === 'string' && /(Z|[+-]\d\d:?\d\d)$/.test(f.generated_at) ? Date.parse(f.generated_at) : NaN;
   const minimum = f?.minimum?.valid_times;
