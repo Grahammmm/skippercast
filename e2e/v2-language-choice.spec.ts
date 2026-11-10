@@ -74,6 +74,8 @@ test('language_choice_reload_and_opposing_link: the choice survives a reload, al
   let menu = await openMenu(page, isMobile);
   const address = page.url();
   await menu.spanish.click();
+  // SC1407-09: Español applies once its table has loaded, so wait for the choice before reading the address or reloading.
+  await expect(menu.spanish).toHaveAttribute('aria-pressed', 'true');
   expect(page.url(), 'the address is untouched').toBe(address);
   await page.reload();
   expect(await htmlLang(page)).toBe('es');
@@ -89,6 +91,7 @@ test('language_choice_reload_and_opposing_link: the choice survives a reload, al
   await mark(page);
   menu = await openMenu(page, isMobile);
   await menu.spanish.click();
+  await expect(menu.spanish).toHaveAttribute('aria-pressed', 'true');   // applies once the Spanish table has loaded
   expect(page.url()).toBe(before.replace('lang=en', 'lang=es'));
   expect(await kept(page), 'no reload and no new document').toBe(true);
   await page.reload();
@@ -119,8 +122,8 @@ test.describe('storage blocked', () => {
     const {spanish, english} = await openMenu(page, isMobile);
     await mark(page);
     await spanish.click();
+    await expect(spanish).toHaveAttribute('aria-pressed', 'true');   // applies once the Spanish table has loaded
     expect(await htmlLang(page)).toBe('es');
-    await expect(spanish).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByText(PLANNING.es).first()).toBeAttached();
     await english.click();
     expect(await htmlLang(page)).toBe('en');

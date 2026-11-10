@@ -53,7 +53,7 @@ for (const entry of Object.keys(V2_EVENTS)) {
     const calls = [...code.matchAll(entry === 'web/app/main.tsx' ? /^initTelemetry\(\{views: true\}\);$/gm : CALL)];
     assert.equal(calls.length, 1, 'one top-level initTelemetry() call');
     // Before the first render, so an error while the page builds is reported too.
-    const render = code.search(/^(?:mount\(|if \(host\))/m);
+    const render = code.search(/^(?:  )?(?:mount\(|if \(host\) \{ host\.replaceChildren\(\); render\(<App)/m);   // SC1407-09: inside the async start() once the language is ready
     assert.ok(render > 0, 'finds the first render');
     assert.ok(calls[0].index < render, 'initTelemetry() runs before the first render');
   });
