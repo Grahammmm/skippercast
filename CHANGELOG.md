@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF1915-6: trip checks refuse publication identifiers over 200 UTF-16 code units before reading job state or queuing owners, rather than truncating distinct identifiers into the same stored marker. Accepted identifiers remain unchanged.
+
 - RF1635-6: the shoreline publication gate refuses a CUSP feature whose `source_date` is not a real calendar day (February 29 in a non-leap year, April 31, month or day zero, year 0000, month 13) or not a plain `YYYY-MM-DD` string (Unicode digits, timestamps, padding, missing or non-text values), before the published `shoreline.geojson` is replaced, so an existing file stays byte-identical. Valid dates, including leap days and 0001-01-01 / 9999-12-31, are kept as written; the gate adds no freshness limit and no data is rebuilt.
 
 - RF1635-5: survey inventories now refuse cyclic derivation before loading or promotion; valid shared-parent lineages remain accepted and rejected promotion leaves the catalog unchanged.
