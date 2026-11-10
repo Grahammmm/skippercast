@@ -39,6 +39,17 @@ is published, not in the repo, so this check cannot measure it; the publisher en
 leaves 23.8% headroom for more reefs or longer credit text, and stops the file growing back toward the full export
 unnoticed. Raise it in a pull request with a reason, as above.
 
+### The trip planner and offline pack load on first use (SC1407-10, #1762 M5)
+
+`/map`'s first screen imports `web/trip.ts` for the trip signals, the `#export` dialog, the draft's ids and the shared
+protected-area screen. The planner, the offline pack, the basemap ranges and the coastal snapshots are
+`web/trip-runtime.ts`, which `web/trip.ts` loads with one dynamic import when the dialog opens, a pack or coastal call is
+made, or the planner's ranked set arrives; a call made earlier waits for it. `tests/test_client_build.mjs` checks the real
+build's manifest: nothing of it is in `app.html`'s static imports, and the offline pack still lists it. Measured on main
+07621807 (after SC1407-06): 1,170,570 bytes before, 1,165,767 after this branch merged with it (4,803 bytes less); the old
+58 KB trip chunk mostly held map and tide modules the first screen still loads, so the saving is the trip code itself. The
+app budget is lowered from 1,180,000 to 1,166,000, which leaves 233 bytes of headroom.
+
 ### Protected-area verdicts reused across hour steps (SC1407-02)
 
 Not a size budget, but a runtime cost the brief no longer repeats: `web/place-verdict-cache.ts` keeps the protected-area

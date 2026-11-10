@@ -49,7 +49,7 @@
         },
         {
           "max_bytes": 1166000,
-          "reason": "Lowered 1,180,000 to 1,166,000 (SC1407-10, #1762 M5). The trip planner, offline pack, basemap ranges and coastal snapshots moved from web/trip.ts to web/trip-runtime.ts, loaded on first use: the first load measured 1,170,408 bytes on main 2c5eae23 and 1,165,767 on this branch merged with main (4,641 bytes less; the old 58 KB trip chunk mostly held shared map and tide modules the first screen still loads). The usual measured + 5% would be a raise, so the ceiling keeps the gain with 233 bytes of headroom."
+          "reason": "Lowered 1,180,000 to 1,166,000 (SC1407-10, #1762 M5). The trip planner, offline pack, basemap ranges and coastal snapshots moved from web/trip.ts to web/trip-runtime.ts, loaded on first use: the first load measured 1,170,570 bytes on main 07621807 (the merge of SC1407-06, whose entry above measured 1,170,408 on its own branch before the merge) and 1,165,767 on this branch merged with that main (4,803 bytes less; the old 58 KB trip chunk mostly held shared map and tide modules the first screen still loads). The usual measured + 5% would be a raise, so the ceiling keeps the gain with 233 bytes of headroom."
         }
       ]
     },
