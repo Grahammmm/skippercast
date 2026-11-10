@@ -520,8 +520,10 @@ p.app-forecast-failed-head { font-size: var(--text-15); }
 
 /* RF1935-2 (UX audit S4-15): on the desktop the preset group is the layer rail's own header child; it wraps onto more rows inside the
    rail's width instead of running past it (the generic .ui-segmented row is nowrap). The structural scope is the hook: the group's
-   translated name is not. The rail's own scroll track is in the desktop rail block above. */
+   translated name is not. The rail's own scroll track is in the desktop rail block above. A Source or Base select row may also shrink to
+   the rail (its label is a wrapping item whose minimum is otherwise the select's 16 px intrinsic width, which ran 37 px past the rail). */
 @media (min-width: 1024px) {
+  .app-stage > .app-rail .app-rail-source { min-width: 0; max-width: 100%; box-sizing: border-box; }
   .app-stage > .app-rail > .ui-segmented { display: flex; flex-wrap: wrap; box-sizing: border-box; min-width: 0; max-width: 100%; border-radius: var(--radius-lg); }
   .app-stage > .app-rail > .ui-segmented .ui-chip { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 }
