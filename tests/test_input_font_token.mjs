@@ -19,7 +19,8 @@ test('one shared font-size-only rule and exact input token preserve authored wid
   const port = read('web/landing/port-input.css');
   assert.match(block(port, '.port-input {'), /max-width:\s*520px;/);
   assert.match(block(port, '.port-input input {'), /flex:\s*1;\s*min-width:\s*0;/);
-  assert.match(block(port, '.app-share-popover input {'), /width:\s*min\(320px,\s*80vw\);/);
+  assert.match(block(port, '.app-share-popover input {'), /width:\s*100%;/);
+  assert.match(block(port, '.app-share-popover > .ui-popover-body {'), /width:\s*min\(320px,\s*100%\);/);
   const account = read('web/app/account.css');
   assert.match(block(account, '.boat-query-row input {'), /flex:\s*1;/);
   assert.match(account, /\.home-port-card :is\(input, select\), \.app-alerts :is\(input, select\) \{ width: 100%; \}/);
