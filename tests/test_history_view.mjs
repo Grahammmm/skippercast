@@ -4,7 +4,8 @@
 // 1. A region without a history binding shows the unavailable state.
 // 2. The copy says "recorded history" (never "climatology" except to say it is not one).
 // 3. Picker choices are store keys, so they round-trip through the address (Back and Forward: e2e/v2-history.spec.ts).
-import test from 'node:test';
+import test, {mock} from 'node:test';
+import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {mkdtempSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -22,6 +23,9 @@ await build({
     export * from './web/app/views/History.tsx';
     export {coastMarkup, isRenderableHistory} from './web/app/CoastMarkup.tsx';
     export {configureStore, readURL, syncFromURL, withParams, historyStation, historyMetric, historyRange} from './web/state.ts';
+    export {coastData} from './web/coast-data.ts';
+    export {overviewReportContext} from './web/overview-context.ts';
+    export {t} from './web/i18n.ts';
     export {render} from 'preact-render-to-string';
     export {h} from 'preact';`},
   bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
@@ -107,4 +111,29 @@ test('a bundle whose unescaped numbers are not numbers never reaches the DOM', (
   delete archive.stations[0].archive;
   assert.equal(v.isRenderableHistory(archive), false);
   assert.equal(v.isRenderableHistory(null), true, 'null renders the unavailable state');
+});
+
+test('SC1722-04: a failed read shows Try again; a successful retry draws the chart', async t => {
+  const region = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/region.json', import.meta.url), 'utf8'));
+  const point = {latitude: 35.36, longitude: -120.94};
+  const GEN = Date.parse(fixture.generatedAt) + 3_600_000;
+  mock.timers.enable({apis: ['setTimeout', 'Date'], now: GEN});
+  const original = globalThis.fetch;
+  let ok = false, calls = 0;
+  globalThis.fetch = () => { calls++; return Promise.resolve(ok ? new Response(JSON.stringify(fixture), {headers: {'Content-Type': 'application/json'}}) : new Response('no', {status: 503})); };
+  t.after(() => { globalThis.fetch = original; mock.timers.reset(); v.coastData.destroy(); });
+  assert.ok(v.coastData.setPlace(v.overviewReportContext(point, {...point, id: 'synthetic-selection', region: 'morro-bay'}, [region], 'boat', 'lingcod', new Date(GEN))));
+  await v.coastData.load('history');
+  const failed = v.render(v.h(v.History, {now: new Date(GEN)}));
+  assert.match(failed, /Recorded history is unavailable right now/);
+  assert.match(failed, /<button type="button"[^>]*>Try again<\/button>/);
+  assert.doesNotMatch(failed, /app-coast-markup/);
+  // Spanish label comes from the catalogue.
+  assert.equal(v.t('history.retry', 'es'), 'Intentar de nuevo');
+  ok = true;
+  await v.coastData.load('history');
+  assert.equal(calls, 2, 'one retry request');
+  const drawn = v.render(v.h(v.History, {now: new Date(GEN)}));
+  assert.match(drawn, /app-coast-markup/);
+  assert.doesNotMatch(drawn, /Try again|unavailable/);
 });
