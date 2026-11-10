@@ -75,12 +75,31 @@ export function parseConditionsForecast(json: unknown, region: string, near: rea
   return {region, retrieved: f.retrieved, point: {id: point.id, lat: point.lat, lon: point.lon}, models, feed: json};
 }
 
-/** The feed for `region`, or null when it fails to load or is not that region's. */
-export async function loadConditionsForecast(region: string, near: readonly [number, number] | null, fetchFn: typeof fetch, page: string): Promise<ConditionsForecast | null> {
+/** Why a forecast read failed: a rejected request (network), a cancelled one (aborted), the 15 s limit (timeout), a non-OK answer (http, with its status) or an answer that is not that region's feed (invalid). */
+export type ForecastFailureReason = 'network' | 'http' | 'invalid' | 'aborted' | 'timeout';
+
+/**
+ * What a forecast read came to: the feed (loaded, even one with no model runs), a failed read with its finite reason, or no read at
+ * all (absent: no region in hand to ask for). A failed read is never a weather answer, and never carries the URL or an error's text.
+ */
+export type ForecastLoadResult =
+  | {state: 'loaded'; forecast: ConditionsForecast}
+  | {state: 'failed'; reason: ForecastFailureReason; status?: number}
+  | {state: 'absent'};
+
+const failureOf = (error: unknown): ForecastFailureReason => {
+  const name = (error as {name?: unknown} | null)?.name;
+  return name === 'AbortError' ? 'aborted' : name === 'TimeoutError' ? 'timeout' : name === 'SyntaxError' ? 'invalid' : 'network';
+};
+
+/** The feed for `region`: loaded, or failed with why (network, HTTP status, or not that region's feed). */
+export async function loadConditionsForecast(region: string, near: readonly [number, number] | null, fetchFn: typeof fetch, page: string): Promise<ForecastLoadResult> {
   try {
     const response = await fetchFn(new URL(`/api/forecast?region=${encodeURIComponent(region)}`, page).href, {signal: AbortSignal.timeout(15000)});
-    return response.ok ? parseConditionsForecast(await response.json(), region, near) : null;
-  } catch { return null; }
+    if (!response.ok) return {state: 'failed', reason: 'http', status: response.status};
+    const forecast = parseConditionsForecast(await response.json(), region, near);
+    return forecast ? {state: 'loaded', forecast} : {state: 'failed', reason: 'invalid'};
+  } catch (error) { return {state: 'failed', reason: failureOf(error)}; }
 }
 
 /**
