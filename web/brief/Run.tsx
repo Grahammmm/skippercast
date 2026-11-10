@@ -182,7 +182,7 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   const loaded = regsData.value, data = loaded?.region === rules?.id ? loaded?.data : null;
   const active = state.kind === 'ok' || state.kind === 'no-time';
   // The route of the place whose distance is timed, never the first raw pick; nothing for a state with no run to show.
-  const routeNote = active && text.run ? runRouteNote(runRouteScreen(r.origin, pickForRun(listed, selection.value, habitat.value).pick ?? null, runScreenFor(protectedScreen.value, id))) : null;
+  const routeNote = active && text.run ? runRouteNote(runRouteScreen(r.origin, pickForRun(listed, selection.value, habitat.value).pick ?? null, runScreenFor(protectedScreen.value, id), id)) : null;
   const date = active ? new Intl.DateTimeFormat('en-CA', {timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(state.window.start)) : '';
   const opensAt = rules ? openingAt(data, target, rules, date) : null;
   // Read at the opening (not before it) so a timed opener clips rather than closing the whole day.

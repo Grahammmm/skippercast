@@ -19,7 +19,8 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import type {Window} from '../../packages/coast/src/types.ts';
-import {PLANNING_MARGIN_M, screenPlace, type PlaceVerdict} from '../../dist/geo-screen.js';
+import {PLANNING_MARGIN_M, type PlaceVerdict} from '../../dist/geo-screen.js';
+import {placeVerdicts} from '../place-verdict-cache.ts';
 import type {RoutedPick} from '../ranking.ts';
 import type {RouteFailure, RoutePoint} from '../route.ts';
 import type {Brief} from './types.ts';
@@ -112,16 +113,17 @@ const usable = (p: unknown): p is RoutePoint => {
  * fallback. One whole-line screenPlace, as trip legs do (web/trip-legs.ts). Anything it cannot say (no pick, origin or place,
  * a coordinate that is not a usable position, a water pick without its route points, a screen that is missing, not current,
  * not covering the line or throwing) is `screened: false`: never a clear verdict, and a bad point never shortens the line.
- * Reads the pick's own handoff; never searches a route or fetches.
+ * Reads the pick's own handoff; never searches a route or fetches. SC1407-02: with the current `regionId`, the verdict for the same
+ * exact line and screen revision is reused (web/place-verdict-cache.ts); without one (null, the default) it is screened every call.
  */
-export function runRouteScreen(origin: RoutePoint | null | undefined, pick: RoutedPick | null, screen: unknown): PlaceVerdict {
+export function runRouteScreen(origin: RoutePoint | null | undefined, pick: RoutedPick | null, screen: unknown, regionId: string | null = null): PlaceVerdict {
   const none: PlaceVerdict = {inside: false, name: null, distanceM: null, screened: false};
   if (!pick || !usable(origin) || !usable(pick.at)) return none;
   const bends: unknown = pick.basis === 'water' ? pick.routePoints : [];
   if (!Array.isArray(bends) || !bends.every(usable)) return none;
   try {
     const line = [origin, ...bends, pick.at].map(p => [p.longitude, p.latitude]);
-    const verdict = screenPlace(screen, {geometry: {type: 'LineString', coordinates: line}});
+    const verdict = placeVerdicts.verdict(regionId, screen, {geometry: {type: 'LineString', coordinates: line}}, 'run');
     return verdict && typeof verdict.screened === 'boolean' ? verdict : none;
   } catch { return none; }
 }

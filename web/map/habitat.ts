@@ -113,6 +113,13 @@ export interface MarkScreen {
   readonly status: ScreenStatus; readonly note: string; readonly source: string; readonly boundaries: readonly Boundary[]; readonly until: number;
   /** SC0922-10: `note` and `source` as catalogue parts for the card's language (display only; absent on a screen built by hand). */
   readonly noteCopy?: readonly MarkCopyPart[]; readonly sourceCopy?: readonly MarkCopyPart[];
+  /**
+   * SC1407-02: the revision a cached verdict is reused under (web/place-verdict-cache.ts), null when it must not be. Only
+   * `assessScreen` gives one: a token of its own per result (its boundary snapshot: names, order, geometries) plus the result's
+   * current status and `until`, null unless ready. A screen built by hand, or a copy of one, has none and is screened uncached.
+   * A producer that changed boundaries or coverage in place would have to issue a new token first; none does.
+   */
+  readonly verdictRevision?: () => string | null;
 }
 /** v1's lines while marks are withheld (dist/app.js `updateReefCoverage`, dist/protected-areas.js status). */
 export const SCREEN_NOTES = {
@@ -127,9 +134,19 @@ const boundary = (f: Props): Boundary => {
   const p = (f.properties ?? {}) as Props;
   return {name: String(p.FULLNAME || p.NAME || 'Protected area'), federal: p.Type === 'GEA', geometry: f.geometry};
 };
+let snapshots = 0;
+/** SC1407-02: `s` with a non-enumerable `verdictRevision` for its own boundary snapshot; a copy (spread) carries none, and a call on another object gives null. */
+function revisable(s: MarkScreen): MarkScreen {
+  const token = `mark:${++snapshots}`;
+  return Object.defineProperty(s, 'verdictRevision', {value: function (this: unknown): string | null {
+    return this === s && s.status === 'ready' ? `${token}|${s.status}|${s.until}` : null;
+  }});
+}
 /** v1's `freshEnough` at `now`: ready only while the boundaries, and the region's closures if it names any, were checked within the window. */
 export function assessScreen(i: ScreenInputs | null, now: number): MarkScreen {
-  if (!i) return CHECKING;
+  return i ? revisable(assessed(i, now)) : CHECKING;
+}
+function assessed(i: ScreenInputs, now: number): MarkScreen {
   const c = i.closures, at = i.areas ? i.checkedAt : null;
   const when = (t: string | null | undefined, live = false) => live ? 'checked this session' : t ? `checked ${t.slice(0, 10)}` : 'check unavailable';
   const source = [`CDFW ds582 ${when(at, i.live && !!at)}`, c !== undefined && `NOAA closures ${when(c?.checkedAt)}`].filter(Boolean).join(' · ');
