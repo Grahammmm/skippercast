@@ -82,12 +82,13 @@ test('a choice opens /map at the port with the profile, dropping area keys and k
   const url = new URL(portURL(HREF, sanDiego, 'shore'));
   assert.equal(url.pathname, '/map');
   assert.equal(url.hash, '');
-  assert.deepEqual([...url.searchParams.keys()].sort(), ['port', 'profile', 'region', 'ui', 'utm_source']);
+  assert.deepEqual([...url.searchParams.keys()].sort(), ['port', 'profile', 'region', 'ui', 'utm_source', 'view']);
+  assert.equal(url.searchParams.get('view'), 'conditions', 'an exact Conditions view stays (SC2252-15)');
   assert.equal(url.searchParams.get('region'), 'southern-california');
   assert.equal(url.searchParams.get('profile'), 'shore');
   assert.equal(new URL(portURL('https://skippercast.com/', morro)).search, '?region=morro-bay&port=morro-bay', 'no profile parameter without a profile');
   assert.equal(new URL(portURL('https://skippercast.com/', morro, 'skiff')).searchParams.get('profile'), null, 'an unknown profile is not written');
-  assert.equal(exploreURL(HREF), 'https://skippercast.com/map?profile=shore&ui=v2&utm_source=friend&coast=central', 'the coast keeps the profile');
+  assert.equal(exploreURL(HREF), 'https://skippercast.com/map?profile=shore&ui=v2&utm_source=friend&view=conditions&coast=central', 'the coast keeps the profile');
   assert.equal(landingURL(HREF), 'https://skippercast.com/?ui=v2');
   assert.equal(landingURL('https://skippercast.com/map'), 'https://skippercast.com/');
 });
@@ -114,7 +115,7 @@ test('choosing a different port clears stale place and habitat while keeping unr
   assert.equal(url.searchParams.has('place'), false);
   assert.equal(url.searchParams.has('habitat'), false);
   assert.deepEqual([...url.searchParams.entries()].sort(), [
-    ['port', 'san-diego'], ['profile', 'shore'], ['region', 'southern-california'], ['ui', 'v2'], ['utm_source', 'friend'],
+    ['port', 'san-diego'], ['profile', 'shore'], ['region', 'southern-california'], ['ui', 'v2'], ['utm_source', 'friend'], ['view', 'conditions'],
   ]);
   assert.equal(currentPort(PORTS, url.searchParams.get('region'), sanDiego.id), sanDiego);
 });
@@ -237,6 +238,40 @@ test('SC-B05: regionless home resolution preserves explicit account intent acros
       assert.equal(loads, expectedLoads, `${name}: directory demand unchanged`);
     }
   }
+});
+
+test('saved_home_preserves_only_shortcut_intents: #export and view=conditions reach the saved home, the landing drops both (SC2252-15)', async () => {
+  const savedPort = () => { const s = memory(); s.setItem(HOME_PORT_KEY, 'san-diego'); return s; };
+  const savedPlace = () => { const s = memory(); s.setItem(HOME_PLACE_KEY, JSON.stringify({v: 1, place: 'cambria', mode: 'spear'})); return s; };
+  const load = async () => PORTS;
+  const at = 'https://s.test/map?region=southern-california&port=san-diego';
+  // The three shortcut addresses with a saved port.
+  assert.equal(await savedHomeURL('https://s.test/map', savedPort(), jar(), load), at);
+  assert.equal(await savedHomeURL('https://s.test/map#export', savedPort(), jar(), load), at + '#export');
+  assert.equal(await savedHomeURL('https://s.test/map?view=conditions', savedPort(), jar(), load), 'https://s.test/map?view=conditions&region=southern-california&port=san-diego');
+  assert.equal(await savedHomeURL('https://s.test/map?ui=v2&view=conditions&utm_source=x&profile=shore#export', savedPort(), jar(), load),
+    'https://s.test/map?ui=v2&utm_source=x&profile=shore&view=conditions&region=southern-california&port=san-diego#export', 'unrelated parameters and both intents stay');
+  // A saved /coast place and a legacy cookie home keep them too.
+  assert.equal(await savedHomeURL('https://s.test/map?view=conditions#export', savedPlace(), jar(), load), 'https://s.test/map?view=conditions&place=cambria&profile=spear#export');
+  assert.equal(await savedHomeURL('https://s.test/map#export', memory(), jar(legacyCookie('avila', 'shore')), load), 'https://s.test/map?place=avila&profile=shore#export');
+  // Every other view and fragment is still dropped.
+  for (const view of ['35.37,-120.86,10', 'plan', 'Conditions', 'conditions ', '', 'coast']) {
+    assert.equal(await savedHomeURL(`https://s.test/map?view=${encodeURIComponent(view)}`, savedPort(), jar(), load), at, `view=${view}`);
+  }
+  assert.equal(await savedHomeURL('https://s.test/map?view=conditions&view=plan', savedPort(), jar(), load), at, 'a repeated view is dropped');
+  assert.equal(await savedHomeURL('https://s.test/map?view=conditions&view=conditions', savedPort(), jar(), load), at, 'a repeated view is dropped');
+  for (const fragment of ['#Export', '#export/extra', '#%65xport', '#export?x=1', '#plan']) {
+    assert.equal(await savedHomeURL('https://s.test/map' + fragment, savedPort(), jar(), load), at, fragment);
+  }
+  assert.equal(portURL('https://s.test/map?view=35,-121,10#export', sanDiego), at + '#export', 'a choice keeps the planner, never a camera');
+  // No saved home, blocked or missing storage, a missing port and an offline directory open the landing without either intent.
+  const landing = [[memory(), jar(), load], [null, null, load], [denied, deniedJar, load], [(() => { const s = memory(); s.setItem(HOME_PORT_KEY, 'missing'); return s; })(), jar(), load],
+    [savedPort(), jar(), async () => { throw Error('offline'); }]];
+  for (const [storage, cookies, directory] of landing) {
+    assert.equal(await savedHomeURL('https://s.test/map?view=conditions#export', storage, cookies, directory), 'https://s.test/');
+    assert.equal(await savedHomeURL('https://s.test/map?ui=v2#account', storage, cookies, directory), 'https://s.test/?ui=v2#account', 'the account intent still survives');
+  }
+  assert.equal(landingURL('https://s.test/map?view=conditions#export'), 'https://s.test/');
 });
 
 test('forget clears the home for v2, v1 and /coast; forgetting on either of them clears what v2 reads', () => {
