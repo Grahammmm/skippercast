@@ -1,3 +1,4 @@
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync, mkdtempSync, writeFileSync} from 'node:fs';
@@ -5,7 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import {checkGpx} from '../web/gpx-check.ts';
 import {featuresGPX} from '../dist/gpx.js';
 import {createPlanner} from '../web/planner.ts';
@@ -29,7 +30,7 @@ let ui;
 async function components() {
   if (ui) return ui;
   const out = join(mkdtempSync(join(tmpdir(), 'handoff-')), 'ui.mjs');
-  await build({stdin: {resolveDir: root, loader: 'ts', contents: `export {MarkCard} from './web/app/MarkCard.tsx'; export {Planner} from './web/app/Planner.tsx'; export {chartPick, markData, SURVEY_PICK} from './web/map/marks.ts'; export * as state from './web/state.ts'; export {language} from './web/i18n.ts'; export {h} from 'preact'; export {render} from 'preact-render-to-string';`}, bundle: true, platform: 'node', format: 'esm', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+  await build({stdin: {resolveDir: root, loader: 'ts', contents: `export {MarkCard} from './web/app/MarkCard.tsx'; export {Planner} from './web/app/Planner.tsx'; export {chartPick, markData, SURVEY_PICK} from './web/map/marks.ts'; export * as state from './web/state.ts'; export {language} from './web/i18n.ts'; export {h} from 'preact'; export {render} from 'preact-render-to-string';`}, bundle: true, platform: 'node', format: 'esm', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   return ui = await import(pathToFileURL(out).href);
 }
 const sample = readFileSync(new URL('./fixtures/gpx/handoff-sample.gpx', import.meta.url), 'utf8');

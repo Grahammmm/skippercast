@@ -543,6 +543,8 @@
     "menu.language": {"en": "Language", "es": "Idioma"},
     "menu.language.en": {"en": "English", "es": "English"},
     "menu.language.es": {"en": "Español", "es": "Español"},
+    "language.loadFailed": {"en": "Spanish could not load, so the page stays in English.", "es": "No se pudo cargar el español, así que la página sigue en inglés."},
+    "language.retrySpanish": {"en": "Try Español again", "es": "Volver a intentar en español"},
     "landing.hero.eyebrow": {"en": "Central California coast · live readings", "es": "Costa de California central · lecturas en vivo"},
     "landing.hero.title": {"en": "Know the water before you leave the dock.", "es": "Conoce el agua antes de salir del muelle."},
     "landing.hero.lede": {"en": "Wind, swell, water temperature and tide from fixed Central Coast buoys and a tide gauge, each with its station and age, beside the seafloor and currents on one map.", "es": "Viento, oleaje, temperatura del agua y marea de boyas fijas de la Costa Central y un mareógrafo, cada lectura con su estación y antigüedad, junto al fondo marino y las corrientes en un solo mapa."},

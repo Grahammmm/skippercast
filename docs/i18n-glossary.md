@@ -206,6 +206,14 @@ never open or verified. Catalogue IDs: `planRules.*`. The landing's layer dots (
 | Not legal advice; check the official page. | `No es asesoría legal; consulta la página oficial.` | `planRules.notLegalAdvice` | not legal advice |
 | Map layers | `Capas del mapa` | `landing.dots.aria` | the dots' navigation name |
 | Seafloor / Currents / Water temp / Temp contrast / Temp fronts / Chlorophyll / Swell + wind / Stations / Charter fleet / Clouds | `Fondo marino` / `Corrientes` / `Temperatura del agua` / `Contraste de temperatura` / `Frentes de temperatura` / `Clorofila` / `Oleaje y viento` / `Estaciones` / `Flota chárter` / `Nubes` | `landing.dots.seafloor`, `.currents`, `.water-temp`, `.sst-contrast`, `.sst-fronts`, `.chlorophyll`, `.swell`, `.stations`, `.fleet`, `.clouds` | the rail's labels (`layer.*.label`, `rail.swell.label`, `rail.fleet.label`) |
+### Language loading (SC1407-09)
+
+English pages ship English only; the Spanish table (`web/strings.es.generated.json`, generated from this catalogue) loads only for a Spanish page. When it cannot load, the page stays English and says so once beside the language choice (the landing adds a link that reloads the page in Spanish).
+
+| English | Spanish | IDs | Note |
+|---|---|---|---|
+| Spanish could not load, so the page stays in English. | `No se pudo cargar el español, así que la página sigue en inglés.` | `language.loadFailed` | never claims Spanish is active |
+| Try Español again | `Volver a intentar en español` | `language.retrySpanish` | the landing's retry link; the app retries from its Español button |
 
 ## 2. Observed divergences
 

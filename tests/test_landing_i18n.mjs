@@ -11,7 +11,7 @@ import {join} from 'node:path';
 import {gzipSync} from 'node:zlib';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins, rendererPlugins} from './helpers/esbuild-url.mjs';
 import {catalogueProblems, COVERED} from '../scripts/check_copy.mjs';
 import {RAIL_IDS} from '../web/profile.ts';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
@@ -51,7 +51,7 @@ async function load() {
       export {PROFILE_NOTES, PROFILE_TABLE} from './web/profile.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
   return (mod = await import(pathToFileURL(out).href));
 }
@@ -87,8 +87,8 @@ test('landing_language_precedence_and_blocked_storage: the shared resolver, the 
   // main.tsx: the language is resolved before the first mount and before a saved port can navigate; it adds no key, no header fetch and no location request.
   const main = await readFile(join(ROOT, 'web/landing/main.tsx'), 'utf8');
   const at = text => main.indexOf(text);
-  assert.ok(at('initLanguage()') > 0 && at('initLanguage()') < at('savedPortTarget(location.href') && at('initLanguage()') < at("mount('landing-shore'"), 'language first');
-  assert.ok(at('applyLandingCopy(document, lang)') > at('initLanguage()') && at('applyLandingCopy(document, lang)') < at("mount('landing-shore'"));
+  assert.ok(at('initReadyLanguage()') > 0 && at('initReadyLanguage()') < at('savedPortTarget(location.href') && at('initReadyLanguage()') < at("mount('landing-shore'"), 'language first');
+  assert.ok(at('applyLandingCopy(document, lang)') > at('initReadyLanguage()') && at('applyLandingCopy(document, lang)') < at("mount('landing-shore'"));
   assert.doesNotMatch(main.replace(/\/\/[^\n]*/g, ''), /geolocation|skippercast-language|Accept-Language|setLanguage/, 'no own key, no header fetch, no location request, no language switch');
 });
 
@@ -134,11 +134,13 @@ test('static_hosts_catalogue_and_budget: English is a no-op; Spanish writes only
   for (const file of ['main.tsx', 'copy.ts', 'Landing.tsx', 'PortInput.tsx', 'ProfileStep.tsx', 'Readout.tsx', 'readings.ts', 'live-verdict.ts']) assert.ok(COVERED.includes(`web/landing/${file}`), file);
   assert.deepEqual(catalogueProblems(), []);
   const slice = JSON.parse(await readFile(join(ROOT, 'web/landing/strings.generated.json'), 'utf8'));
+  const spanish = JSON.parse(await readFile(join(ROOT, 'web/strings.es.generated.json'), 'utf8'));   // SC1407-09: the slice is English only
   for (const [, id] of html.matchAll(/data-i18n(?:-lead|-aria)?="([^"]+)"/g)) {
     assert.ok(Object.hasOwn(slice, id), `${id}: every static translation host is in the first-paint slice`);
-    for (const lang of ['en', 'es']) assert.ok(slice[id][lang]?.trim(), `${id}: first-paint ${lang} exists`);
+    assert.ok(slice[id].en?.trim(), `${id}: first-paint en exists`);
+    assert.ok(spanish[id]?.trim(), `${id}: its es exists in the deferred Spanish table`);
   }
-  for (const [id, entry] of Object.entries(slice)) assert.deepEqual(entry, m.STRINGS[id], `${id}: generated first-paint copy matches the shared catalogue`);
+  for (const [id, entry] of Object.entries(slice)) assert.deepEqual([entry.en, spanish[id]], [m.STRINGS[id].en, m.STRINGS[id].es], `${id}: generated first-paint copy matches the shared catalogue`);
   assert.equal(JSON.parse(await readFile(join(ROOT, 'scripts/startup-budget.json'), 'utf8')).precache.install_raw_max, 802383, 'the install ceiling is the SC1137-05 measurement + 10% (the landing page adds nothing to it)');
   for (const file of ['Landing.tsx', 'PortInput.tsx', 'Readout.tsx', 'readings.ts']) {
     const root = await mkdtemp(join(tmpdir(), 'landing-lint-')), {mkdir, writeFile} = await import('node:fs/promises');
@@ -161,7 +163,8 @@ test('static_hosts_catalogue_and_budget: English is a no-op; Spanish writes only
   // SC1407-13: the layer dots paint in the page language from the slice, without the app's rail or its layer registry.
   assert.ok(initialInputs.includes('web/landing/LayerDots.tsx'), 'the dots are first-paint');
   for (const mod of ['web/app/rail.ts', 'web/map/layers.ts']) assert.ok(!initialInputs.includes(mod), `${mod} is not in the initial JS`);
-  for (const id of ['landing.dots.aria', ...RAIL_IDS.map(r => `landing.dots.${r}`)]) assert.ok(slice[id]?.en?.trim() && slice[id]?.es?.trim(), `${id}: in the first-paint slice in both languages`);
+  for (const id of ['landing.dots.aria', ...RAIL_IDS.map(r => `landing.dots.${r}`)]) assert.ok(slice[id]?.en?.trim(), `${id}: in the first-paint slice`);
+  assert.ok(!initialInputs.includes('web/strings.es.generated.json') && !initialInputs.includes('catalog/app/strings.json'), 'SC1407-09: no Spanish table and no bilingual catalogue in the initial JS');
   const budget = JSON.parse(await readFile(join(ROOT, 'scripts/startup-budget.json'), 'utf8')).bundles['landing.html'].js_gzip_max;
   const size = [...initial].reduce((sum, p) => sum + gzipSync(result.outputFiles.find(f => f.path.endsWith(`/${p.split('/').pop()}`)).contents).length, 0);
   assert.ok(size < budget, `the initial JS (${size} B gzipped) is inside the landing budget (${budget} B)`);
