@@ -261,7 +261,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC2037-04: Brief.tsx imports brief-print.css (only a hidden .app-print-only class and an @media print block; no screen paint); Reports bundles Brief.
   "web/brief/brief-print.css": "35b695c448385cd449304ca7158d3b8c26dfe9db3d3a9c90ecd0c17796b45dc0",
   "web/app/views/model-disagreement.css": "c6edfd6e81395b8d5e9fe67e982e399989172765490456f6a28ec036c115b72c",
-  "packages/coast/panel.css": "f769041713cf22215ec43fa6d5123b4d87221db60ee63bca0420425c2acad3cc",
+  "packages/coast/panel.css": "f765e1221775a652f300a63e657f99eff3538179376a85f53361befa5de2b385",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
@@ -319,7 +319,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // appCss surface hash and its comment. BODY09 mounts Reports/CatchCards, never the run line or the legend; contrast(), catch paint, backing,
   // assertions and thresholds are unchanged. Rebind only these two sources.
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
-  "scripts/check_contrast.mjs": "ff04e2fa62a03bf44b439f2fd6fe193b2d0487dc23563710ae050f17c5fc837b",
+  "scripts/check_contrast.mjs": "853c902261a4b20fc79320ca9ff825e2d0c7ebd862352fa6c3f07a2ed97cd24f",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
