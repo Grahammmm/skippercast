@@ -10,14 +10,14 @@ const needsChromium={skip:!existsSync(chromium.executablePath()) && 'chromium no
 test('native order buttons retain stop focus, boundaries, escaping, mixed legs, translations and restore disable',needsChromium,async()=>{
  const bundle=await build({stdin:{resolveDir:root,contents:`
  import {Planner} from './web/app/Planner.tsx';import {createPlanner} from './web/planner.ts';
- import {language} from './web/i18n.ts';import {launchPoints} from './web/launches.ts';
+ import {language,prepareCatalogue} from './web/i18n.ts';import {launchPoints} from './web/launches.ts';
  import {h,render} from 'preact';
  window.boot=()=>{
   const points=[{id:'user:A',name:'Same',latitude:35.1,longitude:-121,category:'other'},{id:'user:B',name:'Same',latitude:35.2,longitude:-121,category:'other'},{id:'user:C',name:'C <img src=x>',latitude:35.3,longitude:-121,category:'other'}];
   const p=createPlanner({atlas:{targets:[],areas:[]},region:{id:'test-coast',timezone:'UTC',mpa:{bounds:[-125,30,-115,40]}},map:{getSize:()=>({x:512}),getBounds:()=>({getWest:()=>-125,getEast:()=>-115,getSouth:()=>30,getNorth:()=>40})},screen:null,getVisible:()=>[],storage:null,loadPorts:async()=>({ports:[]}),emit(){},nav:{open(){},showMap(){},conditions(){}}});
   p.draft.value={...p.draft.value,ids:points.map(t=>t.id),userWaypoints:points};
   launchPoints.value={region:'test-coast',points:[{id:'r',name:'Ramp',latitude:35.4,longitude:-121}]};p.setLaunch(true);
-  window.p=p;window.lang=language;
+  window.p=p;window.lang=language;window.prep=prepareCatalogue;
   render(h(Planner,{model:p,open:false}),document.getElementById('root'));
  };`},bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic',jsxImportSource:'preact',plugins:[rendererPlugin]});
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
@@ -36,7 +36,7 @@ test('native order buttons retain stop focus, boundaries, escaping, mixed legs, 
   await page.keyboard.press('Space');await page.waitForFunction(()=>window.p.draft.value.ids[1]==='user:C');
   assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('aria-label')),'Move up: C <img src=x>');
   assert.equal(await row('C').locator('img').count(),0);
-  await page.evaluate(()=>window.lang.value='es');await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Subir C <img src=x>');
+  await page.evaluate(async()=>{await window.prep('es');window.lang.value='es';});await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Subir C <img src=x>');
   assert.equal(await row('C').getByRole('button',{name:'Subir C <img src=x>',exact:true}).textContent(),'Subir');
   await page.evaluate(()=>window.p.restorePending.value=true);assert.equal(await row('C').getByRole('button').first().isDisabled(),true);
   await page.evaluate(()=>{window.p.restorePending.value=false;window.p.draft.value={...window.p.draft.value,ids:['user:A']};});
