@@ -279,7 +279,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1922-03: app.css adds only a Conditions-header model-family wrap/min-height rule and a pointer-events rule scoped to .app-presentation--placing (the armed placing stack, which Reports never mounts); no paint, backing or catch text changed. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
   // SC1922-08: app.css lets the .app-fresh chip wrap (flex-wrap, max-width) and appends only a [data-refresh-line] wrap rule (no colour change); the Reports catch sheet mounts neither. check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
   // SC1722-20: app.css appends only a scoped .app-skip-link block (a clipped 1 px anchor at rest, a ringed 44 px panel when focused); the Reports catch sheet mounts no skip link, so no catch paint or backing changes. Rebound from the final bytes.
-  "web/app/app.css": "1fbe001171dbb5672c36b19d0e4eb5b0f20a9980abebe2cdc1cf7aafbb698e3a",
+  "web/app/app.css": "7bdf865eaeaf4a1d96849ceb5b39fcf926d315b99e63ce321aa24180fba8e510",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -355,8 +355,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF1935-2: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // SC1922-03: only the appCss pin and applicability comment change.
   // SC1922-08: only the appCss pin and applicability comment change.
+  // RF2135-5: app.css appends only a landscape-phone top-chrome layout block (flex direction and bases, --app-strip); Reports never mounts the app shell header. check_contrast.mjs changes only the appCss surface hash and its comment; every contrast role and threshold is unchanged. Rebound from the final bytes.
+  // RF2135-5 (fix round): app.css also folds duplicate declaration-identical rules (six focus rings, five 44px link targets, two link colours) into their first selector lists to fit the 75000-byte first-load budget; same declarations and selectors, no paint, contrast() or threshold change, and Reports mounts none of them. check_contrast.mjs changes only the appCss hash, shifted line citations and a comment. Both rebound from the final bytes.
   // SC1722-20: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "f56e9cdb6bc72577e2f3ed23726e6965615665fbfa9f0604c17d259d6795711e",
+  "scripts/check_contrast.mjs": "2fda007b60674284acb275fca2381b25ad4fd4cb324f54e0ab329121a3d317de",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still

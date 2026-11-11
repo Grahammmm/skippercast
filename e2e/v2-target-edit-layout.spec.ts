@@ -59,7 +59,7 @@ for (const lang of ['en', 'es']) for (const detent of ['full', 'half', 'peek']) 
     await expect(select.locator('option:not([disabled])')).toHaveCount(2);
     await expect(select.locator('option[value="salmon"]')).toHaveCount(1);
     await expect(select).toHaveValue(selected);
-    for (const size of [{width: 844, height: 220}, {width: 844, height: 260}, {width: 390, height: 844}, {width: 390, height: 420}, {width: 844, height: 220}, {width: 390, height: 844}]) {
+    for (const size of [{width: 844, height: 220}, {width: 844, height: 260}, {width: 390, height: 844}, {width: 390, height: 420}, {width: 844, height: 220}, {width: 390, height: 844}, {width: 844, height: 390}]) {
       await page.setViewportSize(size);
       await editingVisible(page);
       const after = await geometry(page);
