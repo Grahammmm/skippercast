@@ -574,7 +574,7 @@ test('Seafloor draws screened candidates and cells in Chart, names its surveys, 
   await expect(page.locator('.app-mark')).toHaveCount(0);
   await hideLayers(page);
   await clickCentre(page);
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(700);  // past the 550 ms pick settle (RF2205-5), so "no card" is still tested
   await expect(page.locator('.app-mark')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
@@ -607,7 +607,7 @@ test('A seafloor publication that expires while drawn hides its candidates with 
   await expect(page.locator('.app-legend-seafloor .app-key')).toHaveCount(0);
   await hideLayers(page);
   await clickCentre(page);
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(700);  // past the 550 ms pick settle (RF2205-5), so "no card" is still tested
   await expect(page.locator('.app-mark')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
@@ -673,7 +673,8 @@ test('clicking a reef mark sets ?spot=, drops ?habitat= and opens its card; clos
   const centre = await chartCentre(page);
   await expect(async () => {
     await page.mouse.click(centre.x, centre.y);
-    expect(params(page).spot).toBe(MARK.id);
+    // RF2205-5: a click picks after PICK_SETTLE_MS (550 ms); wait for it, so a retry click never lands on the open card and takes the heading's focus.
+    await expect.poll(() => params(page).spot, {timeout: 1500}).toBe(MARK.id);
   }).toPass({timeout: 20_000, intervals: [1000]});  // a second apart, never a double-click zoom
   expect(params(page).habitat, 'one selection at a time').toBeUndefined();
   const card = page.getByRole('region', {name: 'Selected mark'});
