@@ -5,6 +5,7 @@ is a failed archive, never permission to restart a prospective history silently.
 """
 from collections import defaultdict
 from datetime import datetime, timezone
+import errno
 import gzip
 import hashlib
 import io
@@ -58,9 +59,23 @@ def _safe_path(directory, relative):
 
 
 def _read_json(path, limit):
-    if path.is_symlink() or path.stat().st_size > limit:
-        raise ValueError('Verification manifest is linked or exceeds its size bound')
-    return json.loads(path.read_bytes())
+    refusal = ValueError('Verification manifest is linked or exceeds its size bound')
+    if path.is_symlink():
+        raise refusal
+    try:
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_BINARY', 0))
+    except OSError as error:
+        if error.errno == errno.ELOOP:
+            raise refusal from error
+        raise
+    with os.fdopen(descriptor, 'rb') as stream:
+        if os.fstat(stream.fileno()).st_size > limit:
+            raise refusal
+        # The file may grow after admission: the returned bytes are authoritative.
+        body = stream.read(limit + 1)
+    if len(body) > limit:
+        raise refusal
+    return json.loads(body)
 
 
 def _shard_bytes(directory, entry):
