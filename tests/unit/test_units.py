@@ -43,3 +43,20 @@ class UnitsTests(unittest.TestCase):
                 self.assertTrue(ratio in (1.2, 0.8) or verdict(L, ratio, 3.28084) == "contradicts", (L, ratio))
         with unittest.mock.patch.object(match, "FT_PER_M", units.FT_PER_M):  # main: 1 m at 1.2 "agrees" (loop above)
             self.assertEqual(verdict(1.0, 1.2, units.FT_PER_M), "contradicts")  # 1/0.3048 would flip it
+
+    def test_match_ft_per_m_derives_from_units(self):
+        self.assertEqual(match.FT_PER_M, round(units.FT_PER_M, 5))
+        self.assertEqual(match.FT_PER_M, 3.28084)
+        tree = ast.parse((SRC / "fleet/ais/match.py").read_text(encoding="utf-8"))
+        self.assertEqual([n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and n.value == 3.28084], [])
+
+    def test_match_verdict_between_factors_stays_legacy(self):
+        length_ft = (3.28084 + units.FT_PER_M) / 2 / 1.2
+        vessel = match._Vessel({"id": "v", "length_ft": length_ft})
+        self.assertEqual(vessel.length_check(match.Static(1, 0, "ais", length_m=1.0)), "contradicts")
+
+    def test_match_length_ft_rounding_unchanged(self):
+        self.assertEqual([L for L in LENGTHS if round(L * match.FT_PER_M, 1) != round(L * 3.28084, 1)], [])
+        vessel = match._Vessel({"id": "v", "length_ft": 40.0})
+        self.assertEqual(vessel.length_check(match.Static(1, 0, "ais", length_m=None)), "unknown")
+        self.assertEqual(vessel.length_check(match.Static(1, 0, "ais", length_m=0)), "contradicts")
