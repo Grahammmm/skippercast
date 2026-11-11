@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- RF0445-14: a child-release clock that is an integer too large to be a finite number (for example `10**400`, either sign) is now refused with the existing "finite non-boolean clock required" ValueError instead of an OverflowError, for the caller's now/horizon, the hash-bound global and stage clocks, and the mapping-stop observation. Valid clocks and every expiry check are unchanged.
 - RF0415-7: a private multibeam preparation receipt with a malformed shape (a non-object root, wrong-typed provenance containers or non-string digests) is now refused with a clear ValueError instead of an AttributeError or TypeError, including on paired import. Valid receipts and every private-only hold are unchanged.
 - RF0015-7: the switch that enlarges controls is now called "Large controls" in English and "Controles grandes" in Spanish (it was "Helm view" / "Vista de timón"). Only the label changed: the mode, its stored setting and its look are unchanged.
 - RF2205-5: a double-tap or double-click zoom on the Chart no longer selects the mark, opens a card, raises the phone sheet or places an armed waypoint under the finger. A single click or tap now acts after a short 0.55 s pause, and a region, view or waypoint change in that pause drops it. Zoom itself is MapLibre's, unchanged. Unit-tested over a fake map; not tried on a real device.
