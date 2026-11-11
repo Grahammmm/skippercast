@@ -408,8 +408,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // RF1935-2 only appends a desktop-only (min-width: 1024px) .app-stage > .app-rail > .ui-segmented wrap block at the end of app.css and sets the desktop rail's
   // overflow-y: scroll with a stable scrollbar gutter (layout, no paint); no colour, opacity, backing or text paint changed and the cited line numbers above are unmoved.
   // SC1922-03 only adds a scoped .app-conditions-head model-family wrap/min-height rule after .app-conditions-head, plus a pointer-events-only rule for .app-presentation--placing (no paint); no colour, opacity, backing or text paint changed and legend glass is untouched.
-  // SC1922-08 lets the .app-fresh chip wrap (flex-wrap, max-width, same line) and appends only a [data-refresh-line] wrap/size rule and a masthead flex-shrink rule at the end of app.css (no colour, opacity or backing; the chip keeps its muted text role); no legend paint changed and the cited line numbers above are unmoved.
-  "appCss": "c9ba442b037df296b4a95c9c04ddf2490a1e47f89509c55228e92d5df517aab1",
+  // SC1922-08 lets the .app-fresh chip wrap (flex-wrap, max-width, same line) and appends only a [data-refresh-line] wrap rule and a masthead flex-shrink rule at the end of app.css (no colour, opacity or backing; the chip keeps its muted text role); no legend paint changed and the cited line numbers above are unmoved.
+  "appCss": "af57dc140c74dcfb1b9b754d0a2116bf22d4db98ec238c02ac2dfe785aece87d",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.

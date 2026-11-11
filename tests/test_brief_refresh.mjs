@@ -226,7 +226,7 @@ test('a refused press says Offline whatever the chip shows, and the word goes wh
     assert.match(chip(m).html, /data-refresh-line="offline">Offline</, `${state}: the press answers Offline`);
   }
   m.region.value = 'morro-bay';
-  assert.match(chip(m).html, /data-refresh-line="idle"><\/span>/);
+  assert.doesNotMatch(chip(m).html, /data-refresh-line/, 'the idle chip has no status line');
 });
 
 test('the Refresh button and the failure line sit inside the chip, beside the age (one flex item of the row)', async t => {
@@ -235,6 +235,6 @@ test('the Refresh button and the failure line sit inside the chip, beside the ag
   net.state.fail.add('report');
   await m.refreshBriefNow();
   const html = chip(m).html;
-  assert.match(html, /^<span class="app-fresh" role="status"[^>]*>.*<\/span><button[^>]*app-fresh-refresh[^>]*>Refresh<\/button><span class="ui-mono" data-refresh-line="failed">Refresh failed; showing the previous brief<\/span><\/span>$/s);
+  assert.match(html, /^<span class="app-fresh" role="status"[^>]*>.*<\/span><button[^>]*app-fresh-refresh[^>]*>Refresh<\/button><span data-refresh-line="failed">Refresh failed; showing the previous brief<\/span><\/span>$/s);
   assert.equal((html.match(/<span class="app-fresh"/g) ?? []).length, 1, 'one chip, nothing beside it');
 });
