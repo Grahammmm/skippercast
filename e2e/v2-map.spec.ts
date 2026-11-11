@@ -1662,6 +1662,26 @@ test('phone widths do not get the desktop rail rules', async ({page, pageErrors,
   expect(pageErrors).toEqual([]);
 });
 
+// RF0035-8: a region.json that lists one contour form gets that form at every zoom, and the other is never asked for.
+for (const [listed, other] of [['depth-contours.geojson', 'depth-contours-overview.geojson'], ['depth-contours-overview.geojson', 'depth-contours.geojson']]) {
+  test(`RF0035-8: a region listing only ${listed} draws it at low and high zoom and never asks for the other form`, async ({page, v2}) => {
+    const asked: string[] = [];
+    await page.route('**/regions/morro-bay/region.json', async route => {
+      const response = await route.fetch();
+      await route.fulfill({response, json: {...await response.json(), chart_files: [listed, 'shoreline-overview.geojson']}});
+    });
+    await page.route(/\/regions\/morro-bay\/depth-contours(?:-overview)?\.geojson$/, async route => { asked.push(new URL(route.request().url()).pathname.split('/').pop()!); return route.continue(); });
+    await holdCoastData(page);
+    for (const view of ['35.32000,-120.90000,8', '35.32000,-120.90000,15']) {
+      await v2.open('app', {region: 'morro-bay', presentation: 'chart', view, layers: 'water-temp'});
+      await showLayers(page);
+      await expect(page.locator('.app-legend .app-swatch[data-layer="depth-contours"]')).toHaveCount(1);
+    }
+    expect(asked.length).toBeGreaterThan(0);
+    expect(asked.filter(name => name === other), 'the unlisted form is never asked for').toEqual([]);
+  });
+}
+
 // RF2315-6: the settled 3D orbit is the five-number ?view=, Share carries it, and the reopened link restores it.
 test('browser_orbit_survives_share_reopen: an orbit is shared as bearing and pitch and the reopened map reports the same angles', async ({page, context, pageErrors, v2}) => {
   await context.addInitScript(() => {
