@@ -11,6 +11,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
 from pathlib import Path
+import re
 import socket
 import tempfile
 import threading
@@ -18,6 +19,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 from urllib.parse import parse_qs
+import xml.etree.ElementTree as ET
 import zipfile
 
 from skippercast.fleet import ops
@@ -33,6 +35,7 @@ PSIX = FIXTURES / "fleet" / "psix"
 NOW = "2026-10-05T09:47:00Z"
 FCC_URL = "https://data.fcc.gov/download/pub/uls/complete/l_ship.zip"
 PSIX_URL = "https://cgmix.uscg.mil/XML/PSIXExportSearch.aspx"
+NS_X = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 # Everything personal in the FCC fixture: individual licensees, a contact row, street addresses, ZIP codes.
 PERSONAL = ("TESTPERSON", "JANE", "PEDRO", "CONTACTO", "PERSONA", "FICTA", "SAMPLE FAMILY", "EXAMPLE WAY",
             "INVENTED LANE", "MADEUP", "FAKE STREET", "99999")
@@ -138,6 +141,41 @@ def psix_xlsx(rows=None, drop_column=None) -> bytes:
         archive.writestr("xl/worksheets/sheet1.xml", sheet)
         archive.writestr("xl/worksheets/sheet2.xml", empty)
     return buffer.getvalue()
+
+
+_NAME_CELL = "F2"  # Vessel Name of the first inspection row in psix_xlsx()
+
+
+def _psix_strings(data: bytes) -> list[str]:
+    root = ET.fromstring(zipfile.ZipFile(io.BytesIO(data)).read("xl/sharedStrings.xml"))
+    return ["".join(t.text or "" for t in si.iter(f"{NS_X}t")) for si in root.iter(f"{NS_X}si")]
+
+
+def _psix_edit(data: bytes, ref: str, inner: str, kind: str = "s", add: bool = False,
+               empty_strings: bool = False) -> bytes:
+    """Rewrite one cell of the synthetic workbook (or append it to its row), leaving every other part intact."""
+    cell = f'<x:c r="{ref}"' + (f' t="{kind}"' if kind else "") + f">{inner}</x:c>" if inner else f'<x:c r="{ref}" t="s"/>'
+    source = zipfile.ZipFile(io.BytesIO(data))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as archive:
+        for name in source.namelist():
+            body = source.read(name)
+            if name == "xl/worksheets/sheet1.xml":
+                sheet = body.decode()
+                if add:
+                    row = ref.lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+                    marker = f'<x:row r="{row}">'
+                    start = sheet.index(marker)
+                    end = sheet.index("</x:row>", start)
+                    sheet = sheet[:end] + cell + sheet[end:]
+                else:
+                    sheet, count = re.subn(rf'<x:c r="{ref}"[^>]*?(/>|>.*?</x:c>)', cell, sheet, count=1)
+                    assert count == 1, ref
+                body = sheet.encode()
+            elif name == "xl/sharedStrings.xml" and empty_strings:
+                body = re.sub(rb"<x:si>.*</x:si>", b"", body)
+            archive.writestr(name, body)
+    return out.getvalue()
 
 
 # ---- FCC ULS --------------------------------------------------------------------------------
@@ -327,6 +365,44 @@ class PsixParseTests(unittest.TestCase):
         self.assertEqual((fields["TextBoxFromDate"], fields["TextBoxToDate"]), ("10/05/2023", "10/05/2026"))
         self.assertEqual(fields["__VIEWSTATE"], "SYNTHETIC-VIEWSTATE-1")
         self.assertNotIn("ButtonReset", fields)
+
+
+    def test_negative_shared_index_refuses_real_workbook(self):
+        strings = _psix_strings(psix_xlsx())
+        for index in (-1, -len(strings), -(len(strings) + 1)):
+            with self.subTest(index=index), self.assertRaisesRegex(PsixFormatError, "past the shared strings"):
+                parse_inspections(_psix_edit(psix_xlsx(), _NAME_CELL, f"<x:v>{index}</x:v>"))
+        with self.assertRaisesRegex(PsixFormatError, "past the shared strings"):  # no table at all
+            parse_inspections(_psix_edit(psix_xlsx(), _NAME_CELL, "<x:v>-1</x:v>", empty_strings=True))
+
+    def test_shared_index_boundaries_preserve_zero_based_values(self):
+        strings = _psix_strings(psix_xlsx())
+        self.assertNotEqual(strings[0], strings[-1])
+        self.assertEqual(parse_inspections(psix_xlsx())[0]["name"], "SEA EXAMPLE")
+        for index, expected in ((0, strings[0]), (len(strings) - 1, strings[-1])):
+            with self.subTest(index=index):
+                rows = parse_inspections(_psix_edit(psix_xlsx(), _NAME_CELL, f"<x:v>{index}</x:v>"))
+                self.assertEqual(rows[0]["name"], expected)
+        for index in (len(strings), len(strings) + 5):
+            with self.subTest(index=index), self.assertRaises(PsixFormatError):
+                parse_inspections(_psix_edit(psix_xlsx(), _NAME_CELL, f"<x:v>{index}</x:v>"))
+
+    def test_malformed_reference_preserves_error_contract(self):
+        for text in ("abc", "1.5", " "):
+            with self.subTest(text=text), self.assertRaisesRegex(PsixFormatError, "past the shared strings"):
+                parse_inspections(_psix_edit(psix_xlsx(), _NAME_CELL, f"<x:v>{text}</x:v>"))
+        for body in ("", "<x:v/>"):  # no value: still an empty cell, not a malformed index
+            with self.subTest(body=body):
+                self.assertEqual(parse_inspections(_psix_edit(psix_xlsx(), _NAME_CELL, body))[0]["name"], "")
+        numeric = _psix_edit(psix_xlsx(), _NAME_CELL, "<x:v>-1</x:v>", kind="")  # not a shared-string cell
+        self.assertEqual(parse_inspections(numeric)[0]["name"], "-1")
+
+    def test_late_bad_reference_never_returns_partial_rows(self):
+        self.assertGreater(len(parse_inspections(psix_xlsx())), 2)
+        with self.assertRaises(PsixFormatError):  # a later row's required column
+            parse_inspections(_psix_edit(psix_xlsx(), "F3", "<x:v>-1</x:v>"))
+        with self.assertRaises(PsixFormatError):  # a later row's extra column no inspection field reads
+            parse_inspections(_psix_edit(psix_xlsx(), "Z3", "<x:v>-1</x:v>", add=True))
 
 
 def _dates():
