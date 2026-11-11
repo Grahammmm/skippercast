@@ -281,7 +281,9 @@ test('the png32 fallback replaces the jpgpng source, so a late error from the re
   map.fire('error', {sourceId: jid, error: new Error('late')});
   map.fire('error', {sourceId: pid, error: new Error('500')});
   assert.deepEqual(errors, [['aerial', '400'], ['aerial', '500']], 'the retired source\'s late error is not the fallback\'s failure');
-  assert.equal(logged.mock.callCount(), 1);
+  assert.equal(logged.mock.callCount(), 0, 'RF1935-3: the retired source\'s late error is dropped, not a generic Chart error');
+  assert.equal(jpg.stopOnError, true);
+  assert.equal(png.stopOnError, true, 'both formats opt in to the source stop');
 });
 
 test('the rail\'s base choice offers Aerial only where the region has it, labelled with its dates', async () => {
