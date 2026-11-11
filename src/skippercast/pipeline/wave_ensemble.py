@@ -6,6 +6,10 @@ import re
 import tempfile
 from urllib.parse import urlencode
 from .collect import stamp
+from ..util.units import FT_PER_M
+
+# The historical feed rounded this factor to five decimals; keep that so published threshold_ft stays byte-identical.
+_THRESHOLD_FT_PER_M = round(FT_PER_M, 5)
 
 
 def decode_probabilities(body, points):
@@ -42,7 +46,7 @@ def decode_probabilities(body, points):
                     index=candidates[np.argmin(distances[candidates])]
                     values.append({**identity,'grid':[round(float(latitudes[index]),5),round(float(longitudes[index]),5)],
                                    'distance_km':round(float(distances[index]),2),'percent':round(float(probabilities[index])*100,2)})
-                records.append({'time':int(valid.timestamp()),'cycle':int(cycle.timestamp()),'threshold_m':threshold,'threshold_ft':round(threshold*3.28084,3),'points':values})
+                records.append({'time':int(valid.timestamp()),'cycle':int(cycle.timestamp()),'threshold_m':threshold,'threshold_ft':round(threshold*_THRESHOLD_FT_PER_M,3),'points':values})
             finally:codes_release(gid)
     if not records:raise ValueError('No recognized wave probability fields')
     return records
