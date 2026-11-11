@@ -14,6 +14,7 @@ import {Icon, type IconName} from '../ui/icons.tsx';
 import {ensureSession, session} from '../account.ts';
 import {appView, navigate, region, withParams, type AppView} from '../state.ts';
 import {currentRegionInfo, freshness, regionLoad, retryRegion} from './App.tsx';
+import {manualRefresh, refreshBriefNow} from '../brief/Brief.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
 import {DegradedNotice} from '../degraded-notice.tsx';
 import {loadRegionPorts} from '../ports.ts';
@@ -100,11 +101,17 @@ export function ViewNav({href, icons = false, class: cls}: {href?: string; icons
 export function FreshnessDot() {
   const fresh = freshness.value, lang = language.value;
   const state = {ok: t('shell.fresh.ok', lang), stale: t('shell.fresh.stale', lang), offline: t('shell.fresh.offline', lang), unknown: t('shell.fresh.unknown', lang)}[fresh.state];
+  // SC1922-08: Refresh asks the sources again once per press; the line beside it words a refused or failed press (a code in manualRefresh).
+  // A refused press says Offline whatever the chip's own state was (the browser, not the age, said it): the line is cleared when the connection returns or the region changes.
+  const manual = manualRefresh.value, busy = manual === 'refreshing';
+  const line = manual === 'failed' ? 'shell.refresh.failed' : manual === 'offline' ? 'shell.fresh.offline' : null;
   return (
     <span class="app-fresh" role="status" data-state={fresh.state} aria-label={t('shell.fresh', lang, {state})}>
       <span class="app-fresh-dot" aria-hidden="true"></span>
       {fresh.state === 'offline' ? <span data-fresh-offline>{state}</span> : null}
       <span class="ui-mono">{fresh.age ?? '—'}</span>
+      <Button variant="quiet" class="app-fresh-refresh" disabled={busy} onClick={() => { void refreshBriefNow(); }}>{t(busy ? 'dock.updating' : 'shell.refresh', lang)}</Button>
+      {line ? <span data-refresh-line={manual}>{t(line, lang)}</span> : null}
     </span>
   );
 }
