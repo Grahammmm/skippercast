@@ -30,4 +30,3 @@ test('children keep natural height, the block is account-only and forced colors 
   assert.doesNotMatch(block, /(^|\n)\.home-port-(card|scrim)\b/);
   assert.match(block, /@media \(forced-colors: active\) \{ \.account-scrim > \.account-card \{ background: Canvas; \} \}/);
 });
-
