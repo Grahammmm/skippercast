@@ -213,8 +213,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-03: FreshnessDot adds the existing translated Offline word (unstyled inline span) only in the offline state, beside its
   // unchanged age span. BODY09 mounts Reports/CatchCards, never Masthead, and no network state markup changes; no CSS, token or
   // catch markup change; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
+  // MAIN-RED pack shell: Location shares one identical app-location span between preview and ordinary branches;
+  // same classes, markup and text. BODY09 mounts Reports/CatchCards, never Masthead. CSS, tokens and catch markup
+  // are unchanged; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
   // SC1922-03: Masthead.tsx renders Location's Retry through the shared Button (ui-button--quiet ui-button--sm); BODY09 mounts Reports/CatchCards, never Masthead. No catch markup, token or paint change. Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "7cf327efbf994d25872d96f00e5815ae54b270792065fe43945f27e38385a6f5",
+  "web/app/Masthead.tsx": "c358be039c64285446254d730fa0b99f133529e36ea6fed7853e4132eaa6fd37",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.

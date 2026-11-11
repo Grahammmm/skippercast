@@ -25,11 +25,15 @@
       "label": "Landing page styles (first load)",
       "kind": "first_load_css",
       "entry": "landing.html",
-      "max_bytes": 26000,
+      "max_bytes": 29000,
       "history": [
         {
           "max_bytes": 26000,
           "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 24,339 bytes plus 6.8% headroom. PERF-BASELINE-1 A.4: landing css 18 KB on the wire."
+        },
+        {
+          "max_bytes": 29000,
+          "reason": "Raised 26,000 to 29,000 (SC1922-05). The landing's phone layout now reserves the height each late-mounting part takes (readout, port form, actions row, footer, layer dots) in web/landing/landing.css and web/landing/port-input.css, which removes the phone's three layout shifts (cold CLS 0.213 at 390 px and 0.249 at 360 px on main, 0.000 after). The reservations are about 2 KB of new rules; the landing first-load styles measure 27,808 bytes on this build (assets landing css 9.2 KB, degraded-notice 15.0 KB, tokens 3.0 KB), so the budget moves up 3,000 bytes (4.3% headroom over that build), no more."
         }
       ]
     },
