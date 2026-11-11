@@ -14,7 +14,10 @@ Usage:
   --json                         print the full result as JSON instead of tables
 
 Nothing is written: no output file, no network, no import of the baseline scripts. Malformed or schema-less input stops
-with exit status 2 and a message. Runs that carry an 'error' are counted and listed, never treated as measured; a null
+with exit status 2 and a message naming the file, result and field (every consumed field of every result and request is
+type-checked before any figure is derived). Each raw file's own argv (--only, --profiles, cold and warm) lists the groups that
+were requested: a requested group with no result is printed as UNMEASURED with 0 runs, never left out, and a group with fewer
+recorded runs than --runs says how many are missing. Runs that carry an 'error' are counted and listed, never treated as measured; a null
 metric is 'unmeasured' (not zero) and is left out of the median, with its non-null count shown.
 Inline data:/blob: URLs are not network transfers and are excluded, as reports/perf/summarize.py does. Bytes are the
 recorded CDP encodedDataLength (transferred bytes), never file sizes. Aerial timing is 'first Aerial tile received':
@@ -53,11 +56,70 @@ def load(path):
     if not isinstance(doc, dict) or not isinstance(doc.get('results'), list):
         refuse(f'{path} has no "results" list (not a measure.mjs raw file)')
     for i, r in enumerate(doc['results']):
-        if not isinstance(r, dict) or not all(k in r for k in ('page', 'profile', 'pass', 'run')):
-            refuse(f'{path} result #{i} lacks page/profile/pass/run')
-        if 'error' not in r and not isinstance(r.get('requests'), list):
-            refuse(f'{path} result #{i} ({r["page"]} {r["profile"]} {r["pass"]} #{r["run"]}) has no request list and no error')
+        check_result(path, i, r)
     return doc
+
+
+def is_num(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and v not in (float('inf'), float('-inf'))
+
+
+def check_result(path, i, r):
+    """Refuse (status 2, with the file, result number and field) anything derive()/group_docs() would otherwise crash on."""
+    if not isinstance(r, dict) or not all(k in r for k in ('page', 'profile', 'pass', 'run')):
+        refuse(f'{path} result #{i} lacks page/profile/pass/run')
+    for k in ('page', 'profile', 'pass'):
+        if not isinstance(r[k], str):
+            refuse(f'{path} result #{i}: "{k}" must be a string, got {type(r[k]).__name__}')
+    if not is_num(r['run']):
+        refuse(f'{path} result #{i} ({r["page"]} {r["profile"]} {r["pass"]}): "run" must be a number, got {r["run"]!r}')
+    where = f'{path} result #{i} ({r["page"]} {r["profile"]} {r["pass"]} #{r["run"]})'
+    if 'error' in r:
+        return   # an errored run is only counted and listed; its other fields are not consumed
+    if not isinstance(r.get('requests'), list):
+        refuse(f'{where} has no request list and no error')
+    for k in ('fcpMs', 'lcpMs', 'tbtMs', 'readyMs'):
+        if r.get(k) is not None and not is_num(r[k]):
+            refuse(f'{where}: "{k}" must be a number or null, got {r[k]!r}')
+    if r.get('settled') is not None and not isinstance(r['settled'], bool):
+        refuse(f'{where}: "settled" must be true, false or null, got {r["settled"]!r}')
+    for j, q in enumerate(r['requests']):
+        if not isinstance(q, dict):
+            refuse(f'{where} request #{j} is not an object')
+        if not isinstance(q.get('url'), str):
+            refuse(f'{where} request #{j} has no string "url"')
+        if q.get('kind') is not None and not isinstance(q['kind'], str):
+            refuse(f'{where} request #{j}: "kind" must be a string or null, got {q["kind"]!r}')
+        for k in ('bytes', 'endMs'):
+            if q.get(k) is not None and not is_num(q[k]):
+                refuse(f'{where} request #{j}: "{k}" must be a number or null, got {q[k]!r}')
+
+
+def expected_groups(doc, path):
+    """(page, profile, pass) groups a raw file's own argv asked for, with the runs asked for each (measure.mjs: cold and warm per run)."""
+    argv = doc.get('argv')
+    if argv is None:
+        return {}, f'{path} has no argv: requested groups cannot be enumerated, only groups with results are listed'
+    if not isinstance(argv, list) or not all(isinstance(a, str) for a in argv):
+        refuse(f'{path}: "argv" must be a list of strings')
+
+    def opt(name, dflt):
+        if '--' + name in argv:
+            i = argv.index('--' + name)
+            if i + 1 >= len(argv):
+                refuse(f'{path}: argv has --{name} with no value')
+            return argv[i + 1]
+        return dflt
+    runs = doc.get('runs', opt('runs', '3'))
+    try:
+        runs = int(runs)
+    except (TypeError, ValueError, OverflowError):
+        refuse(f'{path}: runs {runs!r} is not a whole number')
+    only = opt('only', '')
+    profiles = opt('profiles', 'phone,desktop')
+    pages = [p for p in only.split(',') if p] if only else sorted({r['page'] for r in doc['results']})
+    note = None if only else f'{path}: argv has no --only, so the requested pages are taken from the results present (a page with no result at all cannot be listed)'
+    return {(pg, pr, ps): runs for pg in pages for pr in profiles.split(',') if pr for ps in ('cold', 'warm')}, note
 
 
 def split_assets(values, what):
@@ -117,9 +179,14 @@ def stats(values):
 
 def group_docs(paths, assets):
     groups = defaultdict(lambda: {'loads': [], 'errors': []})
-    meta = []
+    meta, requested, notes = [], defaultdict(int), []
     for p in paths:
         doc = load(p)
+        exp, note = expected_groups(doc, p)
+        for key, n in exp.items():
+            requested[key] += n
+        if note:
+            notes.append(note)
         meta.append({'file': p, 'base': doc.get('base'), 'chromium': doc.get('chromium'), 'startedAt': doc.get('startedAt'),
                      'finishedAt': doc.get('finishedAt'), 'argv': doc.get('argv'), 'results': len(doc['results'])})
         for r in doc['results']:
@@ -131,12 +198,14 @@ def group_docs(paths, assets):
             d['run'] = r['run']
             groups[key]['loads'].append(d)
     out = {}
-    for key, g in groups.items():
-        row = {'runs': len(g['loads']), 'errors': g['errors'], 'perLoad': g['loads'], 'unsettled': sum(1 for d in g['loads'] if d['settled'] is False)}
+    for key in set(groups) | set(requested):   # a requested group with no result at all still gets a row (0 runs = unmeasured)
+        g = groups[key]
+        row = {'runs': len(g['loads']), 'errors': g['errors'], 'perLoad': g['loads'], 'unsettled': sum(1 for d in g['loads'] if d['settled'] is False),
+               'requestedRuns': requested.get(key)}
         for m, _ in METRICS + EXTRA:
             row[m] = stats([d[m] for d in g['loads']])
         out[key] = row
-    return out, meta
+    return out, meta, notes
 
 
 def fmt(s):
@@ -171,21 +240,35 @@ def main(argv):
         refuse('give at least one raw JSON path (see the module docstring)')
     assets = split_assets(opts['catalogue-asset'], '--catalogue-asset')
     base_assets = split_assets(opts['baseline-catalogue-asset'], '--baseline-catalogue-asset')
-    new, meta = group_docs(paths, assets)
+    new, meta, notes = group_docs(paths, assets)
     base = base_meta = summary = None
     if opts['baseline-raw']:
-        base, base_meta = group_docs(opts['baseline-raw'], base_assets)
+        base, base_meta, _ = group_docs(opts['baseline-raw'], base_assets)
     if opts['baseline-summary']:
         try:
             with open(opts['baseline-summary']) as f:
                 summary = {(g['page'], g['profile'], g['pass']): g for g in json.load(f)['groups']}
         except (OSError, ValueError, KeyError, TypeError) as e:
             refuse(f'cannot read baseline summary {opts["baseline-summary"]}: {e}')
+        for k, g in summary.items():
+            for m in ('fcpMs', 'lcpMs', 'tbtMs', 'readyMs', 'requestCount', 'bytesTotal'):
+                v = g.get(m + '_all', [])
+                if not isinstance(v, list) or not all(x is None or is_num(x) for x in v):
+                    refuse(f'baseline summary {opts["baseline-summary"]} group {"/".join(map(str, k))}: "{m}_all" must be a list of numbers or null')
+            if not isinstance(g.get('runs'), int):
+                refuse(f'baseline summary {opts["baseline-summary"]} group {"/".join(map(str, k))}: "runs" must be a whole number')
 
-    result = {'inputs': meta, 'catalogueAssets': assets, 'baselineInputs': base_meta, 'baselineCatalogueAssets': base_assets, 'groups': [], 'worse': [], 'summaryMismatches': []}
+    result = {'inputs': meta, 'catalogueAssets': assets, 'baselineInputs': base_meta, 'baselineCatalogueAssets': base_assets, 'groups': [], 'worse': [], 'summaryMismatches': [], 'unmeasuredGroups': [], 'notes': notes}
     for key in sorted(new):
         g = new[key]
         row = {'page': key[0], 'profile': key[1], 'pass': key[2], 'runs': g['runs'], 'errorRuns': g['errors'], 'unsettledRuns': g['unsettled'], 'metrics': {}, 'baseline': {}}
+        req = g['requestedRuns']
+        row['requestedRuns'] = req
+        # unmeasured = the file's argv asked for the group and no run of it succeeded (none recorded, or all errored)
+        row['unmeasured'] = req is not None and g['runs'] == 0
+        row['missingRuns'] = None if req is None else max(req - g['runs'] - len(g['errors']), 0)
+        if row['unmeasured']:
+            result['unmeasuredGroups'].append({'page': key[0], 'profile': key[1], 'pass': key[2], 'requestedRuns': req, 'errorRuns': len(g['errors']), 'missingRuns': row['missingRuns']})
         for m, _ in METRICS + EXTRA:
             row['metrics'][m] = g[m]
         row['perLoad'] = g['perLoad']
@@ -213,12 +296,18 @@ def main(argv):
         print(json.dumps(result, indent=1, sort_keys=True))
         return
     print('Inputs:')
+    for note in notes:
+        print('  NOTE: ' + note)
     for m in meta:
         print(f"  {m['file']}: base {m['base']}, {m['chromium']}, started {m['startedAt']}, finished {m['finishedAt']}, {m['results']} results")
     print('Catalogue assets (new):', json.dumps(assets), '| baseline:', json.dumps(base_assets))
     print('Aerial timing below is "first Aerial tile received", a network proxy and not a draw time. Spanish bytes: n/a = asset identity unknown.')
     for row in result['groups']:
         print(f"\n## {row['page']} / {row['profile']} / {row['pass']}: {row['runs']} successful run(s), {len(row['errorRuns'])} error run(s), {row['unsettledRuns']} not settled")
+        if row['requestedRuns'] is not None and row['missingRuns']:
+            print(f"   {row['missingRuns']} of {row['requestedRuns']} requested run(s) not recorded in the raw file (measuring stopped early or the file is partial)")
+        if row['unmeasured']:
+            print('   UNMEASURED: requested by the raw file\'s argv but no run of this group succeeded; every metric below is unmeasured, not zero')
         for e in row['errorRuns']:
             print(f"   error run #{e['run']}: {e['error'][:160]}")
         print('| metric | unit | new: median (min-max) | baseline: median (min-max) | delta of medians |')
@@ -226,8 +315,8 @@ def main(argv):
         for m, label in METRICS + EXTRA:
             n, b = row['metrics'][m], row['baseline'].get(m)
             d = '' if not (b and b['median'] is not None and n['median'] is not None) else f"{rnd(n['median'] - b['median']):+}"
-            nn = fmt(n) if n['of'] and (n['median'] is not None or m not in ('stringsEn', 'stringsEs', 'stringsEnRequests')) else 'n/a (asset identity unknown)'
-            if m == 'stringsEs' and n['of'] and n['median'] is None and n['n'] == 0:
+            nn = 'unmeasured' if row['unmeasured'] else fmt(n) if n['of'] and (n['median'] is not None or m not in ('stringsEn', 'stringsEs', 'stringsEnRequests')) else 'n/a (asset identity unknown)'
+            if m == 'stringsEs' and not row['unmeasured'] and n['of'] and n['median'] is None and n['n'] == 0:
                 nn = 'n/a (Spanish asset identity unknown)'
             bb = fmt(b) if b else 'not given'
             if b and m in ('stringsEs', 'stringsEn', 'stringsEnRequests') and b['median'] is None:
@@ -239,6 +328,9 @@ def main(argv):
                   f"aerialFailed={d['aerialFailed']} aerialNoEnd={d['aerialNoEnd']} aerialFromCache={d['fromCacheAerial']} js={d['jsRequests']}/{d['jsBytes']} requests={d['requestCount']}")
     if summary is not None:
         print('\nBaseline summary vs figures re-derived from the baseline raw files:', 'no mismatches' if not result['summaryMismatches'] and base else (f"{len(result['summaryMismatches'])} mismatch(es): " + json.dumps(result['summaryMismatches']) if base else 'no baseline raw given, not checked'))
+    print('\nRequested groups with no successful run (unmeasured, not zero):', 'none' if not result['unmeasuredGroups'] else '')
+    for u in result['unmeasuredGroups']:
+        print(f"  {u['page']}/{u['profile']}/{u['pass']}: {u['requestedRuns']} run(s) requested, {u['errorRuns']} errored, {u['missingRuns']} not recorded")
     print('\nMetrics whose new median is higher (worse) than the baseline median (lab numbers on a shared host; not a pass or fail):')
     if not result['worse']:
         print('  none')

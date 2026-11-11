@@ -433,6 +433,8 @@ Context for the byte and TBT changes: the baseline summary records the 15 MB hab
 
 `compare_2.py` run on `raw/live-phone.json` and `raw/live-desktop.json` with `--baseline-summary raw/summary.json --catalogue-asset strings.dae9ed705a.js` reproduced what those files hold (read 2026-11-09): 36 loads (3 pages x 2 profiles x cold/warm x 3 runs): ds582 = [2] in all 24 brief and map-home loads and [0] in all 12 landing loads; strings.dae9ed705a.js 84560-85441 B on all 18 cold loads and [0] B on the 18 warm loads (zero observed, request still counted: [1, 2] requests per load); imagery.nationalmap.gov requests per /map load: phone [12], desktop [15], landing [0]. Its group medians and ranges equal the committed `summary.json` (0 mismatches). Approximate size: the baseline string file is 84,560-85,441 B on the 18 cold loads of the three pages (about 85 KB), not an exact 85,000-byte value.
 
+`compare_2.py` enumerates the groups each raw file's own argv requested (`--only` x `--profiles` x cold/warm), so a group the 60-minute cap left with no result is printed as UNMEASURED (0 runs, not zero) and listed under 'Requested groups with no successful run'; a malformed request entry or metric field stops it with status 2 and a message naming the file, result and field. In this report all 12 requested groups were measured, so neither case applies here.
+
 ## 6. Not measured here
 
 - **Time-dock step duration**: no harness in `reports/perf` measures it. SC1407-05's tests check one recompute per settled hour, not how long it takes.
