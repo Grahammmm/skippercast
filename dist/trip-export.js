@@ -144,7 +144,7 @@ export function floatPlanSection(plan) {
   const rows=[['Boat',plan.boat===undefined?'':xml(plan.boat)],['People aboard',Number.isInteger(plan.people)?xml(plan.people):''],['Departure',floatTime(plan.departure)],['Be back by',floatTime(plan.backBy)]].filter(([,v])=>v);
   const overdue=typeof plan.overdue==='string'&&plan.overdue?`<dt>If overdue</dt><dd><pre>${xml(plan.overdue)}</pre></dd>`:'';
   if(!rows.length&&!overdue)return '';
-  return `<section><h2>Float plan</h2><dl>${rows.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}${overdue}</dl><p>Leave this float plan with someone ashore. SkipperCast does not send or file it. These times are the skipper's own, not a promise of safe passage.</p></section>`;
+  return `<section><h2>Float plan</h2><dl>${rows.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}${overdue}</dl><p>Leave this float plan with someone ashore. SkipperCast never sends or files it. These times are the skipper's own, not a promise of safe passage.</p></section>`;
 }
 export function protectedPlanNotes(request,draft,floatPlan=/** @type {object|null} */(null)) {
   try { buildExport(request); return null; }

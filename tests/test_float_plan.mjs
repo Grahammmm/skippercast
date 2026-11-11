@@ -46,7 +46,7 @@ test('float_notes_all_fields: the section, caveat, zone and escaping', () => {
   assert.ok(html.includes('<dt>Be back by</dt><dd>2026-10-12 15:30 America/Los_Angeles (UTC-07:00)</dd>'));
   assert.ok(html.includes('Call the harbor patrol &amp; Sam\n'), 'newlines stay plain text');
   assert.ok(!html.includes('<b>'));
-  assert.ok(html.includes('Leave this float plan with someone ashore. SkipperCast does not send or file it. These times are the skipper&apos;s own') || html.includes("These times are the skipper's own"));
+  assert.ok(html.includes("Leave this float plan with someone ashore. SkipperCast never sends or files it. These times are the skipper's own, not a promise of safe passage."), 'the caveat line');
 });
 
 test('float_notes_no_fields: no section and the old bytes, in both notes paths', () => {
