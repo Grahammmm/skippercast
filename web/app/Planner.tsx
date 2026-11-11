@@ -16,7 +16,9 @@ import {AREA_NOTE} from '../planner-alerts.ts';
 import {tripLegs} from '../trip-legs.ts';
 import {clockText, DEFAULT_TIMING, MAX_FISH_MIN, parseTiming, tripTimes} from '../trip-times.ts';
 import {tripStopForecast} from '../trip-forecast.ts';
-import {ensureRegionalForecast, regionalForecast, savedForecast} from '../brief/Brief.tsx';
+import {currentBrief, ensureRegionalForecast, regionalForecast, savedForecast, shownRegion} from '../brief/Brief.tsx';
+import {savedBoat} from '../../dist/boat-handling.js';
+import {BOAT_MAX, OVERDUE_MAX, seedFloatPlan, type FloatField, type FloatReason} from '../float-plan.ts';
 import {regionInfo} from './region-info.ts';
 import {profile} from '../state.ts';
 import {protectedScreen} from '../trip.ts';
@@ -123,6 +125,29 @@ function AlertSave({m, legs, open}: {m: Model; legs: AlertLegsFn; open: boolean}
   );
 }
 
+const FLOAT_ERRORS: Readonly<Record<FloatReason, StringId>> = {'boat-long': 'planner.float.err.boat', 'overdue-long': 'planner.float.err.overdue', people: 'planner.float.err.people', time: 'planner.float.err.time',
+  gap: 'planner.float.err.gap', ambiguous: 'planner.float.err.ambiguous', order: 'planner.float.err.order', date: 'planner.float.err.date', zone: 'planner.float.err.zone'};
+
+/** SC1407-14: the optional float plan. Memory only; reaches nothing but the English offline notes the person downloads. */
+function FloatPlanGroup({m}: {m: Model}) {
+  const lang = language.value, v = m.floatPlan.value, errors = m.floatErrors.value as Partial<Record<FloatField, FloatReason>>;
+  const err = (k: FloatField) => errors[k] ? <small class="export-note" id={`float-${k}-error`} role="status">{t(FLOAT_ERRORS[errors[k]!], lang)}</small> : null;
+  const edit = (k: FloatField) => (e: Event) => m.editFloatPlan({[k]: (e.currentTarget as HTMLInputElement).value});
+  return (
+    <fieldset class="export-card" id="float-plan">
+      <legend>{t('planner.float.title', lang)}</legend>
+      <p class="export-note">{t('planner.float.note', lang)}</p>
+      <div class="export-fields">
+        <label>{t('planner.float.boat', lang)}<input id="float-boat" maxLength={BOAT_MAX} value={v.boat} onInput={edit('boat')} />{err('boat')}</label>
+        <label>{t('planner.float.people', lang)}<input id="float-people" type="number" min="1" max="999" step="1" value={v.people} onInput={edit('people')} />{err('people')}</label>
+        <label>{t('planner.float.departure', lang)}<input id="float-departure" type="time" value={v.departure} onInput={edit('departure')} />{err('departure')}</label>
+        <label>{t('planner.float.backBy', lang)}<input id="float-back-by" type="time" value={v.backBy} onInput={edit('backBy')} />{err('backBy')}</label>
+      </div>
+      <label>{t('planner.float.overdue', lang)}<textarea id="float-overdue" maxLength={OVERDUE_MAX} rows={3} value={v.overdue} onInput={edit('overdue')} /></label>{err('overdue')}
+    </fieldset>
+  );
+}
+
 export function Planner({model: m, open, now}: {model: Model; open: boolean; now?: () => number}) {
   // While the dialog shows: the screen's age each minute and new boundaries refresh the counts; opening restores a saved ranked plan, else ranks an empty one (SCJ-8).
   useEffect(() => {
@@ -137,6 +162,12 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
   }, [open, m]);
 
   useEffect(() => { if (!open) return; m.setSavedSpotsOpen(true); return () => m.setSavedSpotsOpen(false); }, [open, m]);
+
+  // SC1407-14: the float plan exists only while the dialog shows (`open`), seeded once from the saved boat and the brief on screen; closing for any reason wipes it.
+  const planDate = m.draft.value.date || m.today;
+  const floatSeed = (date: string) => seedFloatPlan({boat: savedBoat()?.boat, brief: currentBrief(new Date()), shown: shownRegion(), region: m.region, date});
+  useEffect(() => { if (!open) return; m.setFloatPlanOpen(true, floatSeed(m.draft.peek().date || m.today)); return () => m.setFloatPlanOpen(false); }, [open, m]);
+  useEffect(() => { if (open) m.reseedFloatBackBy(floatSeed(planDate).fields.backBy); }, [open, planDate, m]);
 
   const lang = language.value;
   const d = m.draft.value, f = m.filters.value, s = m.summary.value, ranked = m.ranked.value, research = m.allowResearch.value;
@@ -273,6 +304,7 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
         </div>
       </details>
       <PlanRules date={d.date} species={f.species} region={m.region} />
+      {open ? <FloatPlanGroup m={m} /> : null}
       <section class="export-card" aria-label={t('planner.waypoints.heading', lang)}>
         <h2>{t('planner.waypoints.heading', lang)}</h2>
         <p>{t('planner.waypoints.note', lang)}</p>
