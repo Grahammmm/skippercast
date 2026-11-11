@@ -454,3 +454,30 @@ test('a refused registration never shows the confirmation or Continue and can be
   expect(seen.verified).toBe(1);
   expect(await page.evaluate(() => (window as unknown as {__stillHere?: boolean}).__stillHere), 'no reload').toBe(true);
 });
+
+test('the masthead account trigger is icon-sized at 1024-1179 px, labelled at 1180 px, and keeps its name', async ({page, v2, isMobile}) => {
+  test.skip(isMobile, 'explicit desktop widths run once, under the laptop project');
+  await stubAuth(page, 'unused');
+  const sizes: Array<[number, number, boolean]> = [[1024, 768, true], [1179, 800, true], [1180, 820, false], [1280, 800, false]];
+  for (const [width, height, compact] of sizes) {
+    await page.setViewportSize({width, height});
+    await v2.open('app', AREA);
+    const trigger = page.locator('.app-masthead .app-account-trigger');
+    await expect(trigger).toHaveAccessibleName('Sign in');
+    await expect(trigger).toHaveAttribute('title', 'Sign in');
+    const box = (await trigger.boundingBox())!, label = (await page.locator('.app-masthead .app-account-label').boundingBox())!;
+    if (compact) {
+      expect(Math.abs(box.width - (await trigger.evaluate(el => parseFloat(getComputedStyle(el).minInlineSize)))), `${width}px icon-sized`).toBeLessThan(1);
+      expect(label.width).toBeLessThanOrEqual(1);
+    } else expect(label.width, `${width}px keeps the label`).toBeGreaterThan(20);
+  }
+  await page.setViewportSize({width: 1024, height: 768});
+  await v2.open('app', AREA);
+  const trigger = page.locator('.app-masthead .app-account-trigger');
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('button', {name: 'Sign in or create an account'})).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(trigger).toBeFocused();
+});
