@@ -50,6 +50,8 @@ def _prepare(root, packets, side, now, horizon, *, declared_window_count=None):
     count=len(packets) if declared_window_count is None else declared_window_count
     if type(count) is not int or not len(packets)<=count<=4:
         raise ValueError("explicit original contained count required")
+    if not all(isinstance(packet,dict) for packet in packets):
+        raise ValueError('contained packet must be an object')
     items=[]; infos=[]
     for packet in packets:
         if packet.get('schema')=='coastal-derived-window-hold-v1':

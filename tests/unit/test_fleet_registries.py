@@ -24,7 +24,7 @@ import zipfile
 
 from skippercast.fleet import ops
 from skippercast.fleet.adapters import get
-from skippercast.fleet.adapters.fcc_uls import FccFormatError, FccUls, is_entity, parse_ship_zip
+from skippercast.fleet.adapters.fcc_uls import FccFormatError, FccUls, _date, is_entity, parse_ship_zip
 from skippercast.fleet.adapters.uscg_psix import (PsixFormatError, UscgPsix, candidates, parse_form,
                                                   parse_inspections, search_fields, vessels)
 from skippercast.fleet.net import FleetSession
@@ -211,6 +211,50 @@ class FccUlsTests(unittest.TestCase):
         self.assertEqual(by_call["ZZZ9005"]["status"], "terminated")
         active = {c.keys["call_sign"] for c in fcc_candidates(all_statuses=False)}
         self.assertEqual(active, {"ZZZ9001", "ZZZ9007"})
+
+    def licence_with_dates(self, grant="", expired="", cancelled="", code="A"):
+        """The ZZZ9001 candidate parsed from the fixture archive with only its HD status code and dates replaced."""
+        hd = f"HD|9000001|||ZZZ9001|{code}|SA|{grant}|{expired}|{cancelled}" + "|" * 50 + "\r\n"
+        found = [c for c in parse_ship_zip(ship_zip(replace={"HD.dat": hd.encode()}), "CA", source_id="fcc-uls",
+                                           rights="public-domain", retrieved_at=NOW)
+                 if c.keys.get("call_sign") == "ZZZ9001"]
+        self.assertEqual(len(found), 1)
+        return found[0]
+
+    def test_impossible_dates_are_omitted_one_by_one(self):
+        base = {"call_sign": "ZZZ9001", "status": "active", "status_code": "A", "radio_service": "SA", "category": "CHR"}
+        cases = [
+            (("02/30/2025", "01/15/2030", "06/01/2018"), {"expired_date": "2030-01-15", "cancellation_date": "2018-06-01"}),
+            (("01/15/2020", "13/01/2025", "06/01/2018"), {"grant_date": "2020-01-15", "cancellation_date": "2018-06-01"}),
+            (("01/15/2020", "01/15/2030", "00/00/0000"), {"grant_date": "2020-01-15", "expired_date": "2030-01-15"}),
+            (("02/30/2025", "13/01/2025", "00/00/0000"), {}),
+        ]
+        for dates, kept in cases:
+            with self.subTest(dates=dates):
+                self.assertEqual(facts(self.licence_with_dates(*dates), "fcc_licence"), [{**base, **kept}])
+
+    def test_all_invalid_dates_keep_the_candidate_unchanged(self):
+        control = self.licence_with_dates()
+        invalid = self.licence_with_dates("02/30/2025", "13/01/2025", "00/00/0000")
+        self.assertEqual((invalid.name, invalid.keys, invalid.port_hint), (control.name, control.keys, control.port_hint))
+        self.assertEqual([(f.field, f.value) for f in invalid.facts], [(f.field, f.value) for f in control.facts])
+        licence = facts(invalid, "fcc_licence")[0]
+        self.assertEqual(licence["status"], "active")  # follows the status code, not the unusable expiration
+        self.assertFalse({"grant_date", "expired_date", "cancellation_date"} & set(licence))
+
+    def test_status_follows_the_code_when_the_expiration_is_impossible(self):
+        licence = facts(self.licence_with_dates("01/15/2020", "02/30/2030", "", code="E"), "fcc_licence")[0]
+        self.assertEqual((licence["status"], licence["grant_date"]), ("expired", "2020-01-15"))
+        self.assertNotIn("expired_date", licence)
+
+    def test_date_calendar_rules(self):
+        accepted = {"02/29/2024": "2024-02-29", "02/29/2000": "2000-02-29", "01/01/0001": "0001-01-01",
+                    "12/31/9999": "9999-12-31", " 03/01/2010 ": "2010-03-01"}
+        for text, iso in accepted.items():
+            self.assertEqual(_date(text), iso, text)
+        for text in ("02/29/2025", "02/29/1900", "04/31/2024", "00/10/2024", "10/00/2024", "",
+                     "2024-02-29", "02-29-2024", "2/29/2024", "02/9/2024", "02/29/24"):
+            self.assertIsNone(_date(text), text)
 
     def test_state_filter_keys_and_categories(self):
         stats = {}

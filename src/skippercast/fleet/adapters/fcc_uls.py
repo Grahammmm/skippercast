@@ -27,6 +27,7 @@ Record layout (FCC ULS public access files; 0-based field positions):
 """
 from __future__ import annotations
 
+from datetime import date
 import io
 import re
 from typing import IO, Iterable, Iterator, Mapping
@@ -94,7 +95,12 @@ def _norm(text: str) -> str:
 
 def _date(text: str) -> str | None:
     match = re.match(r"^(\d{2})/(\d{2})/(\d{4})$", text.strip())
-    return f"{match.group(3)}-{match.group(1)}-{match.group(2)}" if match else None
+    if not match:
+        return None
+    try:  # an impossible calendar date (02/30, month 13, year 0000) is omitted, never emitted as an ISO-looking fact
+        return date(int(match.group(3)), int(match.group(1)), int(match.group(2))).isoformat()
+    except ValueError:
+        return None
 
 
 def _member(archive: zipfile.ZipFile, kind: str) -> str:
