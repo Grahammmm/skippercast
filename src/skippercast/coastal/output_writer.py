@@ -532,8 +532,11 @@ class ManagedOutputs:
         with self.lock():
             state,registered,ancestors=self._read_disjoint()
             entry,_=self._reserve_locked(state,self._observe(),name,registered=registered,ancestors=ancestors,role=role,max_bytes=max_bytes,intent=intent)
-            path=self._target(name);size=path.stat().st_size if path.exists() else 0
-            if path.exists() and (entry['state']!='complete' or entry.get('actual_bytes')!=size
+            path=self._target(name);present=path.exists();size=path.stat().st_size if present else 0
+            if not present and entry['state']!='reserved':
+                # A completed/uncertain log that vanished is lost history, not a fresh prefix.
+                raise ValueError('log partial/changed bytes preserved')
+            if present and (entry['state']!='complete' or entry.get('actual_bytes')!=size
                     or hashlib.sha256(path.read_bytes()).hexdigest()!=entry.get('sha256')):
                 raise ValueError('log partial/changed bytes preserved')
             if size+len(data)>max_bytes:raise ValueError('append ceiling exceeded before write')
