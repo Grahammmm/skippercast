@@ -16,7 +16,7 @@ import {AREA_NOTE} from '../planner-alerts.ts';
 import {tripLegs} from '../trip-legs.ts';
 import {clockText, DEFAULT_TIMING, MAX_FISH_MIN, parseTiming, tripTimes} from '../trip-times.ts';
 import {tripStopForecast} from '../trip-forecast.ts';
-import {ensureRegionalForecast, regionalForecast, savedBrief} from '../brief/Brief.tsx';
+import {ensureRegionalForecast, regionalForecast, savedForecast} from '../brief/Brief.tsx';
 import {regionInfo} from './region-info.ts';
 import {profile} from '../state.ts';
 import {protectedScreen} from '../trip.ts';
@@ -185,7 +185,7 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
   const arrival = times?.state === 'ready' && ready ? tripStopForecast({forecast: feed, region: m.region.id, now: (now ?? Date.now)(), zone, language: lang, times,
     stops: stops.map(s => ({id: s.id, lat: s.latitude, lon: s.longitude})), ownLimits: hasOwnLimits(profile.value) ? limitsFor(profile.value) : null}) : null;
   const arrivalNote = !ready ? null : arrival
-    ? <p class="export-note" id="export-forecast-basis">{t('planner.forecast.basis', lang, {point: arrival.point})}{savedBrief.value ? ` ${t('planner.forecast.saved', lang)}` : ''}</p>
+    ? <p class="export-note" id="export-forecast-basis">{t('planner.forecast.basis', lang, {point: arrival.point})}{savedForecast.value ? ` ${t('planner.forecast.saved', lang)}` : ''}</p>
     : <p class="export-note" id="export-forecast-status" role="status">{t(read?.status === 'failed' || read?.status === 'done' ? 'planner.forecast.failed' : 'planner.forecast.loading', lang)}</p>;
   useEffect(() => { if (waits) void loadLandWaterLines(m.region.id); }, [waits, m]);
   const minutes = (n: number | null): string => n === null ? '' : t('planner.leg.min', lang, {n});

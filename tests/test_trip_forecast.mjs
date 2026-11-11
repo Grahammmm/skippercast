@@ -150,6 +150,7 @@ const entry = `
   export {createPlanner} from './web/planner.ts';
   export {cruiseSpeed, savedLimits} from './web/limits.ts';
   export {regionInfo} from './web/app/region-info.ts';
+  export {savedBrief, savedForecast} from './web/brief/Brief.tsx';
   export {ensureRegionalForecast, regionalForecast} from './web/brief/Brief.tsx';
   export {buildExport} from './dist/trip-export.js';
   export {render as renderString} from 'preact-render-to-string'; export {render, h} from 'preact';`;
@@ -224,6 +225,14 @@ test('six_stops_one_request, failed_once and stale completion: the plan shares t
       m.savedLimits.value = {boat: {wind: 5, gust: 8, seas: 1}};
       assert.match(html(), /wind over your 5 kt, gusts over your 8 kt, seas over your 1 ft \(your limits\)/);
       m.savedLimits.value = {};
+      // the saved-copy sentence follows the forecast part only: a saved daily part alone (savedBrief set) never labels live arrival values
+      assert.doesNotMatch(html(), /saved copy/);
+      m.savedBrief.value = {at: NOW - 3600_000, state: 'updating'};
+      assert.doesNotMatch(html(), /saved copy/, 'only the daily part is saved');
+      m.savedForecast.value = true;
+      assert.match(html(), /Some forecast data on this page is a saved copy from an earlier visit\./);
+      m.savedBrief.value = null; m.savedForecast.value = false;
+      assert.doesNotMatch(html(), /saved copy/);
       // nothing about a forecast reaches a file, the alert preview or the saved plan
       const request = {atlas: model.tripAtlas.value, screen: deps().screen, ids: model.draft.value.ids, allowResearch: true, region: model.region, now: new Date('2026-11-01T00:00:00Z')};
       assert.doesNotMatch(m.buildExport(request).gpx, /[Ff]orecast|model values|run Nov/);
