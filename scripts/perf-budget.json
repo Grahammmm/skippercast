@@ -69,7 +69,7 @@
       "label": "App page (brief, map) styles (first load)",
       "kind": "first_load_css",
       "entry": "app.html",
-      "max_bytes": 76000,
+      "max_bytes": 77000,
       "history": [
         {
           "max_bytes": 71000,
@@ -98,6 +98,10 @@
         {
           "max_bytes": 76000,
           "reason": "Raised 75,000 to 76,000 (SC1722-19). The desktop startup and time-dock rules this PR adds in web/app/app.css, together with main's stylesheet changes taken in the merge, take the app first-load styles to 75,097 bytes (assets/app css 53.7 KB plus degraded-notice, tokens and Brief), 97 bytes over the 75,000 budget; the budget moves up 1,000 bytes (1.3% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 77000,
+          "reason": "Raised 76,000 to 77,000 (RF2135-6). The bounded account-dialog scrollport and its scroll-edge cues this PR adds in web/app/account.css, together with main's stylesheet changes taken in the merge of main f77d904f2, take the app first-load styles to 76,028 bytes (assets/app css 54.6 KB plus degraded-notice 15.0 KB, tokens 3.0 KB and Brief 1.7 KB), 28 bytes over the 76,000 budget; the budget moves up 1,000 bytes (1.3% headroom over that build), no more."
         }
       ]
     },
