@@ -562,6 +562,5 @@ p.app-forecast-failed-head { font-size: var(--text-15); }
   .app-masthead:has(> .app-location-preview) { flex-wrap: wrap; }
   .app-masthead > .app-location-preview { flex: 0 1 22rem; min-width: 18rem; max-width: 22rem; }
 }
-/* SC1922-08: the failed-press line wraps under the chip's age and Refresh button instead of widening the masthead or sheet-head row. */
+/* SC1922-08: the failed-press line wraps under the chip's age and Refresh button instead of widening the chip past its cap (on desktop the masthead keeps the chip at its own width, so a line shifts nothing at load). */
 .app-fresh > [data-refresh-line] { flex-basis: 100%; }
-.app-masthead > .app-fresh { flex-shrink: 1; }

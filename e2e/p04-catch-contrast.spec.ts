@@ -273,8 +273,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
   // RF1935-2: app.css adds only a desktop-only layer-rail preset wrap block and the rail's vertical scroll track (layout, no paint); the Reports catch sheet mounts no rail. Rebound from the final bytes.
   // SC1922-03: app.css adds only a Conditions-header model-family wrap/min-height rule and a pointer-events rule scoped to .app-presentation--placing (the armed placing stack, which Reports never mounts); no paint, backing or catch text changed. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
-  // SC1922-08: app.css lets the .app-fresh chip wrap (flex-wrap, max-width) and appends only a [data-refresh-line] wrap rule and a masthead shrink rule for it (no colour change); the Reports catch sheet mounts neither. check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
-  "web/app/app.css": "af57dc140c74dcfb1b9b754d0a2116bf22d4db98ec238c02ac2dfe785aece87d",
+  // SC1922-08: app.css lets the .app-fresh chip wrap (flex-wrap, max-width) and appends only a [data-refresh-line] wrap rule (no colour change); the Reports catch sheet mounts neither. check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
+  "web/app/app.css": "aca5a352e10a26321a0e72d46a22425337673e072ced217d0354cf657cfb2ee1",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -349,7 +349,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF1935-2: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // SC1922-03: only the appCss pin and applicability comment change.
   // SC1922-08: only the appCss pin and applicability comment change.
-  "scripts/check_contrast.mjs": "972e71a27c1d94b0f189068b66bc4dab76c0aa9e4dde0c426fcd2e542614d6f0",
+  "scripts/check_contrast.mjs": "b0b333f9e05d698a9f35aeb5de10d1348045b372c6ee31f9ad4f82c3f98dde82",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
