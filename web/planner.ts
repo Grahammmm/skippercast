@@ -626,9 +626,11 @@ export function createPlanner(deps: PlannerDeps) {
       return !!sc?.ready?.() && sc.exportExclusions?.()?.checked_at === checkedAt && Number.isFinite(age) && age >= -300_000 && age <= ROUTE_HOUR;
     } catch { return false; }
   }
+  /** The page's events where it has them (a test stand-in or a worker may not). */
+  const pageEvents = (): Pick<Document, 'addEventListener' | 'removeEventListener'> | null => typeof document !== 'undefined' && typeof document.addEventListener === 'function' ? document : null;
   const stopRouteWatch = (): void => {
     clearTimeout(routeExpiry); clearInterval(routeHealth); routeExpiry = routeHealth = undefined;
-    if (routeWatching && typeof document !== 'undefined') document.removeEventListener('visibilitychange', checkRoutePreview);
+    if (routeWatching) pageEvents()?.removeEventListener('visibilitychange', checkRoutePreview);
     routeWatching = false;
   };
   /** Remove the line and everything that watches it. `say`: tell the person it went. */
@@ -657,7 +659,7 @@ export function createPlanner(deps: PlannerDeps) {
     untracked(() => { const w = routeLive?.water; if (w && (s.state !== w.state || s.region !== w.region || s.model !== w.model || s.lines !== w.lines)) dropRoute(); });
   });
   const onBoundaries = (): void => dropRoute();
-  if (typeof document !== 'undefined') document.addEventListener('skippercast:boundaries', onBoundaries);
+  pageEvents()?.addEventListener('skippercast:boundaries', onBoundaries);
   /** Draws the planning route on the Chart; returns whether a line is now drawn. A refusal draws nothing and shows its message. */
   async function showRouteOnChart(): Promise<boolean> {
     if (disposed || routing.value) return false;
@@ -674,7 +676,8 @@ export function createPlanner(deps: PlannerDeps) {
       routeLive = {checkedAt: r.checkedAt, water: {state: water.state, region: water.region, model: water.model, lines: water.lines}};
       armRouteExpiry(r.checkedAt);
       routeHealth = setInterval(checkRoutePreview, 60_000); (routeHealth as {unref?: () => void}).unref?.();
-      if (typeof document !== 'undefined') { document.addEventListener('visibilitychange', checkRoutePreview); routeWatching = true; }
+      const events = pageEvents();
+      if (events) { events.addEventListener('visibilitychange', checkRoutePreview); routeWatching = true; }
       routeStatus.value = `Boundary check: ${r.checkedAt} · ${r.nm.toFixed(1)} nm planning route. ${ROUTE_WARNING}`;
       deps.nav.showMap(); deps.nav.fit?.(r.points);
       return true;
@@ -884,6 +887,6 @@ export function createPlanner(deps: PlannerDeps) {
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     routing, routeStatus, exportRouteFile, deliverRoute, showRouteOnChart, checkRoutePreview,
     /** For tests and a region change: stop drawing the ranked set. */
-    dispose: () => { disposed = true; dropRoute(false); stopRouteKey(); stopRouteWater(); if (typeof document !== 'undefined') document.removeEventListener('skippercast:boundaries', onBoundaries); floatGen++; floatPlan.value = emptyFloatPlan(); floatOpen.value = false; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); stopAlert(); resetAlert(); },
+    dispose: () => { disposed = true; dropRoute(false); stopRouteKey(); stopRouteWater(); pageEvents()?.removeEventListener('skippercast:boundaries', onBoundaries); floatGen++; floatPlan.value = emptyFloatPlan(); floatOpen.value = false; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); stopAlert(); resetAlert(); },
   };
 }
