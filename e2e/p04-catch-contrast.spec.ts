@@ -227,7 +227,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // markup change; BODY09 mounts Reports, not the rail. contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
   // SC1352-03: the Currents note resolves the chosen frame note or reason in the page's language (same note element and text role). No CSS, token or catch markup change.
   // MAPLIVE-1: LayerRail.tsx only appends <PreviewRailItems />, which renders nothing without an owner/admin session and adds no catch markup; BODY09 mounts Reports, not the rail. contrast(), assertions and thresholds are untouched.
-  "web/app/LayerRail.tsx": "ebadc8d0f04f19893b11fa2e0583c469806e61fe6b371b3ab7dc4b363a0f022f",
+  // SC1922-07: LayerRail.tsx sets disabled and a catalogue note on its existing rail buttons while the Chart cannot start (a state the contrast pages never reach). No CSS, token or catch markup change. Rebind only LayerRail.tsx.
+  "web/app/LayerRail.tsx": "ff4d6306b012540b3839b5222ead7fd064f5a160f4e8ea7cf715f42fc202cefb",
   // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
   // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
   // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
@@ -296,7 +297,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // The legacy failed preload now triggers a reload. Serve only its three exact
   // section URLs as 503 below, retaining unavailable sections and the strict
   // unexpected-request guard; catch markup, paint and controls stay unchanged.
-  "web/app/views/Reports.tsx": "0b05828f095c4645fcf01dbbe2a349c285d2cbf6078d2ca093c2fdcae0dc5b97",
+  // RF2115-7: Reports.tsx only passes the matching region's zone to its timestamp labels (date-only dates stay UTC); catch markup, paint and contrast are unchanged. Rebound.
+  "web/app/views/Reports.tsx": "80191b511a22f75fb9122389336cd98017c8794ac8be5e284edb53edee111b96",
   "web/app/CoastMarkup.tsx": "3d318379ff1194b26f68adadb523db08c21829ff71cf5e7cfe2ac903821f0efc",
   "packages/coast/src/ui/catches.ts": "a25442909c360171a11e5087f629de8cec94a358fc7bff877adce9dffbc0999f",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",

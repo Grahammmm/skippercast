@@ -147,7 +147,6 @@ export const ReportsLink = () =>
 /** The layer rail and the legend as the sheet's content. */
 export function LayersPanel({onClose}: {onClose: () => void}) {
   const lang = language.value;
-  if (mapUnavailable.value) return null;
   return (
     <div class="app-sheet-layers">
       <div class="app-sheet-head">
@@ -208,7 +207,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
   useEffect(() => setDetent(d => boatEntryDetent(boatEntryOpen.value, d)), [boatEntryOpen.value]);
   const lang = language.value;
   // RF1925-2: no Chart, no layers: the stored panel is kept, but the sheet shows the ordinary view and the trigger is gone.
-  const noMap = mapUnavailable.value, shownPanel: Panel = noMap ? 'brief' : panel;
+  const noMap = mapUnavailable.value, shownPanel: Panel = panel;
   const layersOpen = shownPanel === 'layers', conditions = appView.value === 'conditions', fleet = appView.value === 'fleet';
   return (
     <main class="app-mobile">
@@ -220,7 +219,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
             <Brand />
             <Location />
           </div>
-          {noMap ? null : <IconButton icon="layers" label={t('shell.layers', lang)} variant="ghost" pressed={layersOpen} onClick={() => apply(toggleLayers(panel, detent))} />}
+          {<IconButton icon="layers" label={t('shell.layers', lang)} variant="ghost" pressed={layersOpen} onClick={() => apply(toggleLayers(panel, detent))} />}
           <LimitsControl compact />
         </div>
         <ProfileSwitch class="app-profile" />
