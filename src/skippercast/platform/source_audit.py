@@ -37,8 +37,14 @@ def audit(root=REPO):
             "note":"Checks document access and receipts only. Dataset rights, variables, coverage and suitability remain reviewed separately. Retrieval and HTTP modification dates are not scientific issue times."}
 
 
-if __name__=="__main__":
+def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--output",required=True)
-    result=audit();atomic_json(p.parse_args().output,result)
+    args=p.parse_args(argv)  # help and usage errors exit here, before any catalog load or probe
+    result=audit();atomic_json(args.output,result)
     print({"checked":len(result["sources"]),"accessible":sum(s["status"]=="accessible" for s in result["sources"])})
+    return 0
+
+
+if __name__=="__main__":
+    raise SystemExit(main())
