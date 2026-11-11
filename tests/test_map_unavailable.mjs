@@ -2,6 +2,7 @@
 // current page), and drops the controls that can draw nothing. Real Preact renders of the real components and signals;
 // no browser here (e2e/v2-map.spec.ts runs the real reload and the layout).
 import assert from 'node:assert/strict';
+import util from 'node:util';
 import test from 'node:test';
 import {mkdtemp} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -20,6 +21,8 @@ async function load() {
   await build({stdin: {resolveDir: root, loader: 'ts', contents: `
     export {MapStage, MapUnavailable, mapUnavailable} from './web/app/MapStage.tsx';
     export {Desktop} from './web/app/Desktop.tsx';
+    export {LayerRail} from './web/app/LayerRail.tsx';
+    export {RailItem} from './web/ui/Rail.tsx';
     export {LayersPanel, Mobile, SheetBrief} from './web/app/Mobile.tsx';
     export {chartFailed, chartMark} from './web/map/chart.ts';
     export {terrainFailed} from './web/map/stage.ts';
@@ -88,12 +91,13 @@ test('retry_reloads_current_address_once: the rendered button calls location.rel
   assert.equal(a.chartFailed.value, true, 'no in-place reset: the page reloads');
 });
 
-test('desktop_failure_preserves_tools: no rail, legend or mark card; brief, time dock, Conditions and History stay', async () => {
+test('desktop_failure_preserves_tools: no legend or mark card, the rail stays but disabled; brief, time dock, Conditions and History stay', async () => {
   const a = await setup('&layers=swell,clouds');
   a.chartMark.value = MARK;
   try {
     const home = a.render(a.h(a.Desktop, {now}));
-    assert.doesNotMatch(home, /app-rail|app-chrome-left|class="app-mark"/, 'no map chrome');
+    assert.doesNotMatch(home, /app-chrome-left|class="app-mark"/, 'no legend or mark card');
+    assert.match(home, /app-rail/, 'the layer rail stays (SC1922-07), its buttons disabled');
     assert.match(home, /aria-label="Brief"/);
     assert.match(home, /class="app-dock"/);
     assert.match(home, EN);
@@ -112,17 +116,20 @@ test('desktop_failure_preserves_tools: no rail, legend or mark card; brief, time
   } finally { a.chartMark.value = null; }
 });
 
-test('phone_failure_while_layers_open: no Layers trigger, no panel controls, no mark-card substitution; the other tools stay', async () => {
+test('phone_failure_while_layers_open: the Layers trigger and panel stay with disabled buttons, no mark-card substitution; the other tools stay', async () => {
   const a = await setup('&layers=swell');
   a.chartMark.value = MARK;
   try {
     const failed = a.render(a.h(a.Mobile, {now}));
-    assert.doesNotMatch(failed, /aria-label="Layers"|app-sheet-layers|app-rail|app-sheet--mark/, 'no layers trigger, panel or mark class');
+    assert.match(failed, /aria-label="Layers"/, 'the layers trigger stays');
+    assert.doesNotMatch(failed, /app-sheet--mark/, 'no mark class');
     assert.doesNotMatch(failed, /class="app-mark"/, 'no mark card');
     assert.match(failed, EN);
     assert.match(failed, /aria-label="Time"/, 'the hour control stays');
     assert.match(failed, /app-tabs/, 'tabs stay');
-    assert.equal(a.render(a.h(a.LayersPanel, {onClose() {}})), '', 'a directly mounted panel exposes nothing');
+    const panel = a.render(a.h(a.LayersPanel, {onClose() {}}));
+    assert.match(panel, /app-rail/, 'the panel shows the rail');
+    assert.ok(toggles(panel).length > 0 && toggles(panel).every(b => /aria-disabled="true"/.test(b)), 'no live toggle');
     a.chartFailed.value = false;
     const ok = a.render(a.h(a.Mobile, {now}));
     assert.match(ok, /aria-label="Layers"/);
@@ -148,4 +155,51 @@ test('no_false_whole_map_failure: only a failed Chart that is the shown presenta
   a.terrainFailed.value = true;
   assert.equal(a.mapUnavailable.value, true, 'terrain that failed too leaves Chart shown and failed');
   a.terrainFailed.value = false; a.chartFailed.value = false;
+});
+
+const toggles = html => [...html.matchAll(/<button([^>]*ui-rail-toggle[^>]*)>/g)].map(m => m[1]);
+const find = (node, pick, out = []) => {
+  if (!node || typeof node !== 'object') return out;
+  if (pick(node)) out.push(node);
+  for (const child of [].concat(node.props?.children ?? [])) find(child, pick, out);
+  return out;
+};
+
+test('layer_buttons_disabled_keep_choice_en_es: every Chart layer button is aria-disabled with the reason, presses change nothing, healthy Chart unchanged', async () => {
+  const a = await setup('&layers=swell,clouds');
+  const before = a.state.layers.value.slice(), search = a.state.current.value;
+  try {
+    for (const [lang, reason] of [['en', 'Map could not start on this device or browser.'], ['es', 'El mapa no pudo iniciarse en este dispositivo o navegador.']]) {
+      a.language.value = lang;
+      const html = a.render(a.h(a.LayerRail, {}));
+      const btns = toggles(html);
+      assert.ok(btns.length >= 6, 'the rail entries render');
+      for (const b of btns) assert.match(b, /aria-disabled="true"/, 'disabled');
+      assert.equal(count(html, new RegExp(reason.replace(/\./g, '\\.'), 'g')), btns.length, 'each button names the reason');
+      assert.match(html, /aria-pressed="true"/, 'chosen state kept');
+      assert.doesNotMatch(html, /app-rail-option/, 'no live option under a disabled layer');
+    }
+    // A press: the real RailItem of every entry ignores it.
+    const items = find(a.LayerRail(), n => n.type === a.RailItem);
+    assert.ok(items.length >= 6);
+    const calls = [];
+    for (const it of items) {
+      assert.equal(it.props.disabled, true);
+      const btn = a.RailItem({...it.props, onToggle: (...x) => calls.push(x)});
+      find(btn, n => typeof n.props?.onClick === 'function').forEach(n => n.props.onClick());
+    }
+    assert.deepEqual(calls, [], 'no press reaches a layer');
+    assert.ok(util.isDeepStrictEqual(a.state.layers.value, before), 'layers kept');
+    assert.equal(a.state.current.value, search);
+    // Failure clears: buttons live again, same selection.
+    a.chartFailed.value = false;
+    const ok = a.render(a.h(a.LayerRail, {}));
+    assert.ok(toggles(ok).every(b => !/aria-disabled/.test(b)), 'healthy: nothing disabled');
+    assert.ok(util.isDeepStrictEqual(a.state.layers.value, before));
+    // A working 2D terrain: only the Chart-only entries are disabled, with the old reason.
+    a.chartFailed.value = true;
+    a.state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=2d`);
+    const terrain = a.render(a.h(a.LayerRail, {}));
+    assert.doesNotMatch(terrain, /Map could not start/);
+  } finally { a.chartFailed.value = false; }
 });
