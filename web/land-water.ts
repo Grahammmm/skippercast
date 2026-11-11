@@ -248,7 +248,8 @@ export function loadLandWater(region: string, fetchFn: Fetch = (...a) => fetch(.
   return startJob(region, null, async current => {
     if (waits) {
       const outcome = await publicationSettled(region, loading, current);
-      if (outcome === 'stale') return landWater.peek();
+      // Whatever the outcome, a load replaced or reset after the wait ended (even in the same turn) writes and asks nothing.
+      if (outcome === 'stale' || !current()) return landWater.peek();
       if (outcome === 'superseded') return landWater.peek() === loading ? (indexJob = null, landWater.value = IDLE) : landWater.peek();
       if (!chartFileListed(region, 'land-water.json')) { indexJob = null; indexTransientFailure = false; return landWater.value = {...IDLE, region, state: 'unavailable', model: null}; }
     }

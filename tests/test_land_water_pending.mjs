@@ -129,3 +129,75 @@ test('real_transport_retry_stays_explicit', async () => {
   assert.ok(retries.every(s => s.state === 'ready'));
   assert.equal(urls.length, 2, 'explicit retries share one read');
 });
+
+// RF0145-8 return 1: a wait that settled in the same turn as a replacement or reset must not act after it.
+test('same_turn_omitted_then_replacement_keeps_the_replacement', async () => {
+  const {urls, fetchFn} = recorder(() => new Response(JSON.stringify({...index, region_id: 'region-b'})));
+  publishedChartFiles.value = pending(REGION);
+  const first = loadLandWater(REGION, fetchFn);
+  await tick();
+  publishedChartFiles.value = {region: REGION, files: ['poster.svg']}; // A's wait ends 'settled' ...
+  const second = loadLandWater('region-b', fetchFn); // ... and B replaces it before A's continuation runs
+  await first;
+  assert.equal((await second).state, 'ready');
+  assert.equal(landWater.peek().region, 'region-b');
+  assert.equal(landWater.peek().state, 'ready', 'A did not overwrite B with unavailable');
+  assert.equal(urls.length, 1);
+  assert.ok(urls[0].includes('region-b'));
+});
+
+test('same_turn_listed_then_replacement_never_requests_the_replaced_index', async () => {
+  const {urls, fetchFn} = recorder();
+  publishedChartFiles.value = pending(REGION);
+  const first = loadLandWater(REGION, fetchFn);
+  await tick();
+  publishedChartFiles.value = {region: REGION, files: ['land-water.json']};
+  const second = loadLandWater('region-b', fetchFn);
+  await first;
+  assert.equal((await second).region, 'region-b');
+  await tick();
+  assert.ok(urls.length > 0 && urls.every(u => u.includes('region-b')), 'A never asked for its index');
+  assert.equal(landWater.peek().region, 'region-b');
+});
+
+test('same_turn_omitted_then_reset_stays_reset', async () => {
+  const {urls, fetchFn} = recorder();
+  publishedChartFiles.value = pending(REGION);
+  const call = loadLandWater(REGION, fetchFn);
+  await tick();
+  publishedChartFiles.value = {region: REGION, files: []};
+  resetLandWater();
+  await call;
+  await tick();
+  assert.equal(landWater.peek().state, 'idle', 'the reset is not undone');
+  assert.equal(landWater.peek().region, null);
+  assert.equal(urls.length, 0);
+});
+
+test('same_turn_listed_then_reset_never_requests', async () => {
+  const {urls, fetchFn} = recorder();
+  publishedChartFiles.value = pending(REGION);
+  const call = loadLandWater(REGION, fetchFn);
+  await tick();
+  publishedChartFiles.value = {region: REGION, files: ['land-water.json']};
+  resetLandWater();
+  await call;
+  await tick();
+  assert.equal(urls.length, 0);
+  assert.equal(landWater.peek().state, 'idle');
+});
+
+test('pending_then_listed_404_and_malformed_settle_unavailable', async () => {
+  for (const make of [() => new Response('nope', {status: 404}), () => new Response('{not json')]) {
+    resetLandWater();
+    const {urls, fetchFn} = recorder(make);
+    publishedChartFiles.value = pending(REGION);
+    const call = loadLandWater(REGION, fetchFn);
+    await tick();
+    publishedChartFiles.value = {region: REGION, files: ['land-water.json']};
+    const state = await call;
+    assert.equal(state.state, 'unavailable');
+    assert.equal(state.model, null);
+    assert.equal(urls.length, 1);
+  }
+});
