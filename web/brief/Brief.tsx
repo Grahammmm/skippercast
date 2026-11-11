@@ -13,14 +13,15 @@
 // run they read stale with its age. Before the feed loads the brief keeps its
 // empty state; when a feed cannot be read, BriefGaps says which and the
 // headline stops waiting.
+import {createVerdictLoad, type ForecastSlot, type InputSet, type Source, type VerdictContext, type VerdictEpoch} from './verdict-load.ts';
 import type {ComponentChildren} from 'preact';
 import {batch, effect, signal} from '@preact/signals';
 import {counties} from '../../packages/coast/src/counties.ts';
 import {dateKey} from '../../packages/coast/src/daily.ts';
 import type {Report} from '../../packages/coast/src/types.ts';
-import {coastBinding, coastData, coastReport, type CoastData} from '../coast-data.ts';
+import {coastBinding, coastData, coastReport, coastStatus, type CoastData} from '../coast-data.ts';
 import type {CoastReportContext} from '../../packages/coast/src/state/report-binding.ts';
-import {briefForecast, loadConditionsForecast, type ConditionsForecast, type ForecastFailureReason} from '../conditions.ts';
+import {briefForecast, loadConditionsForecast, type ConditionsForecast, type ForecastFailureReason, type ForecastLoadResult} from '../conditions.ts';
 import {feedPath} from '../landing/readings.ts';
 import {responseProvenance} from '../offline-response.ts';
 import {PROFILE_TABLE, type Profile} from '../profile.ts';
@@ -68,6 +69,32 @@ export const dailyFeedPath = (id: string): string => `/feeds/data/regions/${enco
 export const feedGaps = signal<readonly string[]>([]);
 
 let feedLoad = 0;
+
+/**
+ * SC1722-02: the weather answer's own admission (web/brief/verdict-load.ts). Each producer below reports its outcome under the ticket
+ * it was asked with; the verdict surfaces read only a sealed source snapshot (verdictPresentation). The raw signals keep serving tiles and exports.
+ */
+export const verdictEpoch = signal<VerdictEpoch | null>(null);
+export const verdictLoad = createVerdictLoad(epoch => { verdictEpoch.value = epoch; });
+/** The saved brief restored for the selected region, copied whole (with its own times) before any live part can mix with it. */
+const savedAnswer = signal<{region: string; inputs: InputSet; at: number} | null>(null);
+/** Own the load of region `id` (null clears it): a new region is a new epoch with every source pending, and withdraws the saved answer. */
+export function beginVerdictRegion(id: string | null): void {
+  if ((verdictLoad.peek()?.region ?? null) === id) return;
+  savedAnswer.value = null;
+  if (id) verdictLoad.start(id); else verdictLoad.reset();
+}
+/** Region `id`'s metadata could not be read: its context (forecast point, coast binding) can never be known, so those end failed. */
+export function failVerdictMetadata(id: string): void {
+  const epoch = verdictLoad.peek();
+  if (epoch?.region !== id) return;
+  for (const source of ['metadata', 'forecast', 'coast'] as const) verdictLoad.settle(epoch.tickets[source], source, {state: 'failed'});
+}
+/** Ask `sources` of region `id` again; the returned ticket is the only one that can settle them. */
+function askSources(id: string, sources: readonly Source[], context: Partial<VerdictContext> = {}): number {
+  beginVerdictRegion(id);
+  return verdictLoad.request(sources, context);
+}
 
 // SC-PERF-INSTANT-1: the last brief that loaded, kept on this device (web/brief/saved-brief.ts) and shown at once on the
 // next visit while the feeds are read again. `held` says which parts on screen are still the saved ones and when each was
@@ -134,7 +161,15 @@ function persistSaved(id: string): void {
 }
 /** Once the region's own metadata has been read, keep it with the saved brief (the daily feed may have been saved before it arrived). */
 export function noteRegionInfo(id: string): void {
-  if (regionInfo.peek()?.id === id && savedRegion.peek()?.id !== id) persistSaved(id);
+  const info = regionInfo.peek();
+  if (info?.id !== id) return;
+  beginVerdictRegion(id);
+  const epoch = verdictLoad.peek()!;
+  if (epoch.inputs.metadata.data !== info) {
+    const ticket = epoch.inputs.metadata.state === 'pending' ? epoch.tickets.metadata : verdictLoad.request(['metadata']);
+    verdictLoad.settle(ticket, 'metadata', {state: 'loaded', data: info});
+  }
+  if (savedRegion.peek()?.id !== id) persistSaved(id);
 }
 
 /**
@@ -146,6 +181,12 @@ export function showSavedBrief(id: string, now = Date.now()): boolean {
   const entry = readSaved(savedStore, id, now);
   if (!entry?.daily) return false;
   if (entry.region_info && !regionInfo.peek()) savedRegion.value = {id, ...entry.region_info};
+  beginVerdictRegion(id);
+  const info = entry.region_info ? {id, ...entry.region_info} : regionInfo.peek();
+  if (info?.id === id && entry.forecast) savedAnswer.value = {region: id, at: Math.min(entry.daily.at, entry.forecast.at), inputs: {
+    metadata: {state: 'loaded', data: info}, daily: {state: 'loaded', data: {feed: entry.daily.data, savedAt: entry.daily.at}},
+    conditions: {state: 'absent'}, forecast: {state: 'loaded', data: {forecast: entry.forecast.data, savedAt: entry.forecast.at}}, coast: {state: 'absent'},
+  }};
   held.region = id;
   held.daily = {at: entry.daily.at, saved: true, failed: false};
   held.forecast = entry.forecast ? {at: entry.forecast.at, saved: true, failed: false} : null;
@@ -162,7 +203,12 @@ export function showSavedBrief(id: string, now = Date.now()): boolean {
 }
 
 /** True when region `id` has no daily feed on screen yet, or only the restored one that has not been replaced; a pack answer is a completed read, tried again on the visible-page cadence. */
-export const needsDailyLoad = (id: string): boolean => dailyFeed.peek()?.region_id !== id || (held.region === id && !!held.daily?.saved && !held.daily.pack && !dailyPending);
+export const needsDailyLoad = (id: string): boolean => dailyFeed.peek()?.region_id !== id || (held.region === id && !!held.daily?.saved && !held.daily.pack && !dailyPending) || feedsUnasked(id);
+/** SC1722-02: region `id`'s current epoch still waits on a feed that no running read will settle (A -> B -> A restarts it while the raw cached feed is still A's). */
+const feedsUnasked = (id: string): boolean => {
+  const epoch = verdictLoad.peek();
+  return epoch?.region === id && (epoch.inputs.daily.state === 'pending' || epoch.inputs.conditions.state === 'pending') && !(dailyPending && dailyRequest?.id === id);
+};
 
 export const FEED_GAP = {both: t('brief.gap.both'), daily: t('brief.gap.daily').replace(/\.$/, ''), conditions: t('brief.gap.conditions')} as const;
 
@@ -216,32 +262,59 @@ function dailyGap(conditions: RegionalDailyFeed): string {
 
 /** Load the daily and conditions feeds for region `id`; failed fetches or feeds for another region leave the brief empty. */
 export function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promise<RegionalDailyFeed | null> {
-  return startFeeds(id, fetchFn, false, false);
+  return readFeeds(id, fetchFn, false);
 }
 
 let dailyRequest: {id: string; fetchFn: typeof fetch} | null = null;
-let dailyLoadedAt = 0, dailyPending = false, dailyInflight: Promise<RegionalDailyFeed | null> | null = null;
-/** SC1922-08: whether both feed reads of load `load` were admitted (a retained feed is not proof of an answer). */
-let dailyOutcome = {load: 0, ok: false};
-
-function startFeeds(id: string, fetchFn: typeof fetch, refresh: boolean, manual: boolean): Promise<RegionalDailyFeed | null> {
-  const read = readFeeds(id, fetchFn, refresh, manual);
-  dailyInflight = read;
-  return read;
-}
+let dailyLoadedAt = 0, dailyPending = false;
 
 async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean, manual = false): Promise<RegionalDailyFeed | null> {
+  const before = verdictLoad.peek()?.region === id ? verdictLoad.peek()!.inputs : null, ticket = askSources(id, ['daily', 'conditions']);
   const load = ++feedLoad;
   dailyRequest = {id, fetchFn};
   dailyPending = true;
   bindVisibility();
   if (!refresh) feedGaps.value = [];
-  const [dailyRead, conditionsRead] = await Promise.all([readDaily(id, fetchFn, load), readFeed(feedPath(undefined, id), id, fetchFn)]);
+  // SC1922-08: a pressed refresh holds what it reads (settling nothing, showing nothing) until the press knows every source's outcome.
+  const hold = manual ? manualHold : null;
+  // SC1722-02: each feed reports to the verdict on its own completion; a failed refresh waits for its partner (below).
+  const report = (source: 'daily' | 'conditions') => (read: FeedRead | null): FeedRead | null => {
+    if (!hold && (read || !refresh)) verdictLoad.settle(ticket, source, read ? {state: 'loaded', data: read} : {state: 'failed'});
+    return read;
+  };
+  const [dailyRead, conditionsRead] = await Promise.all([readDaily(id, fetchFn, load).then(report('daily')), readFeed(feedPath(undefined, id), id, fetchFn).then(report('conditions'))]);
   const daily = dailyRead?.feed ?? null, conditions = conditionsRead?.feed ?? null;
-  dailyOutcome = {load, ok: !!daily && !!conditions};
+  if (hold) {
+    // A later load (another region) owns the feed; this press's hold is then never shown.
+    if (load !== feedLoad) return mergeFeeds(daily, conditions);
+    dailyPending = false;
+    hold.daily = {
+      bad: !daily || !conditions,
+      // Every source answered: the feeds are shown and settle the verdict as an ordinary load does.
+      show: () => {
+        if (load !== feedLoad) return;
+        verdictLoad.settle(ticket, 'daily', {state: 'loaded', data: dailyRead!});
+        verdictLoad.settle(ticket, 'conditions', {state: 'loaded', data: conditionsRead!});
+        publishFeeds(id, refresh, daily, conditions, dailyRead, conditionsRead);
+      },
+      // Any source failed: the brief stays as it was, so the feeds and the verdict keep what they had (and their read time).
+      keep: () => {
+        if (load !== feedLoad) return;
+        for (const source of ['daily', 'conditions'] as const) verdictLoad.settle(ticket, source, before?.[source].state === 'loaded' ? before[source] : {state: 'failed'});
+      },
+    };
+    return dailyFeed.peek();
+  }
+  // A refresh that read neither keeps the feeds already admitted, as the brief keeps them on screen; one that read one drops the other's.
+  for (const source of ['daily', 'conditions'] as const) verdictLoad.settle(ticket, source, {state: 'failed', ...(!dailyRead && !conditionsRead && before?.[source].data ? {data: before[source].data} : {})});
   // A later load (another region) owns the feed and its gap lines; this one only returns what it read.
   if (load !== feedLoad) return mergeFeeds(daily, conditions);
   dailyPending = false;
+  return publishFeeds(id, refresh, daily, conditions, dailyRead, conditionsRead);
+}
+
+/** Show the feeds a load read (`daily`, `conditions`) with their gap lines and held clocks. */
+function publishFeeds(id: string, refresh: boolean, daily: RegionalDailyFeed | null, conditions: RegionalDailyFeed | null, dailyRead: FeedRead | null, conditionsRead: FeedRead | null): RegionalDailyFeed | null {
   // A saved daily feed on screen stands in for a daily read that failed (shown as such), never for a fresh one.
   const savedDaily = !daily && held.region === id && held.daily?.saved && dailyFeed.peek()?.region_id === id ? dailyFeed.peek() : null;
   if (savedDaily) { held.daily!.failed = true; publishSaved(); }
@@ -249,8 +322,6 @@ async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean, ma
   // A refresh that read neither keeps the feed and gap lines shown (readings carry their own times) and its old
   // read time, so the next visible page tries again.
   if (refresh && !daily && !conditions) return dailyFeed.peek();
-  // SC1922-08: a pressed refresh that lost either read keeps the feed shown and its read time, so the display is never half-replaced.
-  if (manual && (!daily || !conditions) && !savedDaily && dailyFeed.peek()?.region_id === id) return dailyFeed.peek();
   const base = daily ?? savedDaily;
   dailyLoadedAt = daily ? Date.now() : 0;
   feedGaps.value = !base && !conditions ? [FEED_GAP.both] : !base ? [dailyGap(conditions!)] : !conditions ? [FEED_GAP.conditions] : [];
@@ -269,12 +340,23 @@ async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean, ma
  * Ask the coast data client for the report wherever `place` binds one, whichever layers are on (the
  * Swell and Water temp layers ask for the same place; the client requests once per place).
  */
-export function bindBriefReport(place: () => CoastReportContext | null, data: Pick<CoastData, 'setPlace' | 'load'> = coastData): () => void {
+export function bindBriefReport(place: () => CoastReportContext | null, data: Pick<CoastData, 'setPlace' | 'load' | 'coastReport'> = coastData): () => void {
   return effect(() => {
     const p = place();
-    if (!p) return;
-    data.setPlace(p);
-    void data.load('report');
+    if (!p) return; // until the region's metadata is read its coast binding is unknown: the coast part stays pending, never absent
+    const binding = data.setPlace(p), key = `${p.regionId}:${binding?.areaId ?? ''}`, load = data.load('report');
+    // SC1722-02: a binding asks the verdict's coast part under its own ticket. The same binding already asked waits on that ask; a
+    // different one is a new context, so a completion captured for the earlier binding can no longer settle it.
+    beginVerdictRegion(p.regionId);
+    const epoch = verdictLoad.peek()!;
+    if (epoch.parts.coast === key) return;
+    const ticket = verdictLoad.request(['coast'], {coast: key});
+    if (!binding) { verdictLoad.settle(ticket, 'coast', {state: 'absent'}); return; }
+    const settle = (): void => {
+      const snapshot = data.coastReport.peek();
+      verdictLoad.settle(ticket, 'coast', snapshot ? {state: 'loaded', data: {snapshot, areaId: binding.areaId}} : {state: 'failed'});
+    };
+    void load.then(settle, settle);
   });
 }
 
@@ -291,9 +373,10 @@ export const regionalForecastState = signal<ForecastState>({region: null, key: n
 
 let forecastKey: string | null = null;
 let forecastRequest: {id: string; near: readonly [number, number] | null; fetchFn: typeof fetch; page: string} | null = null;
+let forecastSlot: ForecastSlot | null = null, forecastJoiners: number[] = [];
 let forecastLoadedAt = 0, forecastPending = false, forecastGeneration = 0, forecastInflight: Promise<ConditionsForecast | null> | null = null, visibilityBound = false;
 /** SC1922-08: the next request made is a pressed refresh (a failure keeps the forecast on screen); and how the latest request ended. */
-let keepForecastOnFailure = false, forecastOutcome = {generation: 0, failed: false};
+let keepForecastOnFailure = false;
 /** A loaded forecast older than this is fetched again when the page becomes visible. */
 export const FORECAST_MAX_AGE_MS = 30 * 60_000;
 
@@ -304,11 +387,23 @@ export const FORECAST_MAX_AGE_MS = 30 * 60_000;
 export function ensureRegionalForecast(id: string, near: readonly [number, number] | null, fetchFn: typeof fetch = fetch, page = location.href): Promise<ConditionsForecast | null> {
   const key = `${id}|${near?.join(',') ?? ''}`;
   bindVisibility();
-  if (forecastKey === key) return forecastInflight ?? Promise.resolve(regionalForecast.peek());
+  if (forecastKey === key) {
+    // SC1722-02: a reused read (cached or in flight) still has to answer the epoch now current. After A -> B -> A the epoch restarted with the
+    // forecast pending and the read's own ticket is stale, so the epoch asks again under a fresh ticket that only this reused read settles.
+    const epoch = verdictLoad.peek();
+    if (epoch?.region !== id || epoch.parts.forecast !== key) {
+      const joined = askSources(id, ['forecast'], {forecast: key});
+      if (forecastSlot) verdictLoad.settle(joined, 'forecast', forecastSlot); else forecastJoiners.push(joined);
+    }
+    return forecastInflight ?? Promise.resolve(regionalForecast.peek());
+  }
+  const prior = verdictLoad.peek()?.region === id ? verdictLoad.peek()!.inputs.forecast : null, priorLoadedAt = forecastLoadedAt;
+  const ticket = askSources(id, ['forecast'], {forecast: key});
+  forecastSlot = null; forecastJoiners = [];
   forecastKey = key;
   forecastRequest = {id, near, fetchFn, page};
   forecastPending = true;
-  const generation = ++forecastGeneration, before = regionalForecastState.peek(), keep = keepForecastOnFailure;
+  const generation = ++forecastGeneration, before = regionalForecastState.peek(), hold = keepForecastOnFailure ? manualHold : null;
   keepForecastOnFailure = false;
   batch(() => {
     if (regionalForecast.peek()?.region !== id) regionalForecast.value = null;
@@ -317,11 +412,48 @@ export function ensureRegionalForecast(id: string, near: readonly [number, numbe
   });
   const read = loadConditionsForecast(id, near, fetchFn, page).then(result => {
     if (generation !== forecastGeneration) return regionalForecast.peek(); // a later request (even for this same key) owns the state
+    if (hold) {
+      // SC1922-08: a pressed refresh holds its result (settling nothing, showing nothing) until the press knows every source's outcome.
+      forecastPending = false; forecastInflight = null;
+      hold.forecast = {
+        bad: result.state === 'failed',
+        show: () => { if (generation === forecastGeneration) apply(result); },
+        // Any source failed: the forecast on screen and the verdict's slot stay as they were, still with their own clocks; read again on the next visible page.
+        keep: () => {
+          if (generation !== forecastGeneration) return;
+          if (prior?.state !== 'loaded' || regionalForecast.peek()?.region !== id) { apply(result); return; } // nothing previous to keep
+          verdictLoad.settle(ticket, 'forecast', prior);
+          for (const joined of forecastJoiners) verdictLoad.settle(joined, 'forecast', prior);
+          forecastJoiners = []; forecastSlot = prior;
+          forecastKey = null; forecastLoadedAt = result.state === 'loaded' ? priorLoadedAt : 0;
+          regionalForecastState.value = {region: id, key, generation, state: 'loaded'};
+        },
+      };
+      return result.state === 'loaded' ? result.forecast : regionalForecast.peek();
+    }
+    return apply(result);
+  });
+  forecastInflight = read;
+  return read;
+
+  function slotOf(result: ForecastLoadResult): ForecastSlot {
+    return result.state === 'loaded' ? {state: 'loaded', data: {forecast: result.forecast, savedAt: result.savedAt}}
+      : result.state === 'failed' ? {state: 'failed', reason: result.reason, ...(result.status === undefined ? {} : {status: result.status})} : {state: 'absent'};
+  }
+  function failedStateOf(result: ForecastLoadResult): ForecastState {
+    return result.state === 'failed' ? {region: id, key, generation, state: 'failed', reason: result.reason, ...(result.status === undefined ? {} : {status: result.status})} : {region: id, key, generation, state: 'absent'};
+  }
+  function apply(result: ForecastLoadResult): ConditionsForecast | null {
+    // SC1722-02: the verdict's forecast part, under this request's ticket (-01's result, unchanged; absent is no request, not a failure).
+    const slot = slotOf(result);
+    verdictLoad.settle(ticket, 'forecast', slot);
+    // Reads that joined this one after an epoch restart settle under their own tickets; a loaded outcome stays for later reuse.
+    for (const joined of forecastJoiners) verdictLoad.settle(joined, 'forecast', slot);
+    forecastJoiners = []; forecastSlot = result.state === 'loaded' ? slot : null;
     forecastPending = false; forecastInflight = null;
-    forecastOutcome = {generation, failed: result.state === 'failed'};
     if (result.state !== 'loaded') {
       forecastKey = null; // a failed load is tried again on the next call
-      const failed: ForecastState = result.state === 'failed' ? {region: id, key, generation, state: 'failed', reason: result.reason, ...(result.status === undefined ? {} : {status: result.status})} : {region: id, key, generation, state: 'absent'};
+      const failed = failedStateOf(result);
       if (held.region === id && held.forecast?.saved && regionalForecast.peek()?.region === id) {
         // The saved forecast stays on screen, said to be the saved one; read again on the next call or visible page.
         held.forecast.failed = true; publishSaved();
@@ -330,11 +462,6 @@ export function ensureRegionalForecast(id: string, near: readonly [number, numbe
         return regionalForecast.peek();
       }
       forecastLoadedAt = 0; // a failure never renews freshness
-      if (keep && result.state === 'failed' && regionalForecast.peek()?.region === id) {
-        // SC1922-08: a pressed refresh that failed keeps the forecast shown, still with its own clocks; the chip says the refresh failed.
-        regionalForecastState.value = {region: id, key, generation, state: 'loaded'};
-        return regionalForecast.peek();
-      }
       batch(() => { regionalForecast.value = null; regionalForecastState.value = failed; });
       return null;
     }
@@ -343,64 +470,71 @@ export function ensureRegionalForecast(id: string, near: readonly [number, numbe
     if (result.savedAt !== null) markPack('forecast', id, result.savedAt);
     else { markFresh('forecast', id); persistSaved(id); }
     return result.forecast;
-  });
-  forecastInflight = read;
-  return read;
+  }
 }
+
+/** True when the current epoch gave up on the forecast at its deadline: the read the loader still has in flight no longer answers it. */
+const forecastTimedOut = (): boolean => verdictLoad.peek()?.inputs.forecast.state === 'timedout';
 
 /** SC1722-01: read the forecast again after a failure with the request it last made: joins a read in flight, else asks once more. Null when no forecast was ever asked for. */
 export function retryRegionalForecast(): Promise<ConditionsForecast | null> | null {
-  const req = forecastRequest;
-  if (!req) return null;
-  if (forecastPending && forecastInflight) return forecastInflight;
+  const req = forecastRequest, selected = region.peek();
+  // SC1722-02: only the selected region's own request is read again; an earlier region's would switch the epoch off the selection.
+  if (!req || (selected && selected !== req.id)) return null;
+  // A read still in flight when its epoch sealed as timed out answers nothing now (the sealed epoch never admits it): Try again starts
+  // a new request, hence a new generation and deadline, and the old read's late result is ignored by the loader's generation check.
+  if (forecastPending && forecastInflight && !forecastTimedOut()) return forecastInflight;
   forecastKey = null;
-  return ensureRegionalForecast(req.id, req.near, req.fetchFn, req.page);
-}
-
-/** SC1922-08: read the forecast now whatever its age; a read in flight is joined. Null when no forecast was ever asked for. */
-function refreshForecastNow(): Promise<ConditionsForecast | null> | null {
-  const req = forecastRequest;
-  if (!req) return null;
-  if (forecastPending && forecastInflight) return forecastInflight;
-  forecastKey = null;
-  keepForecastOnFailure = true;
   return ensureRegionalForecast(req.id, req.near, req.fetchFn, req.page);
 }
 
 /** SC1922-08: where a pressed refresh stands. A code, never text; the chip words it in the page's language. */
 export type ManualRefreshState = 'idle' | 'refreshing' | 'offline' | 'failed';
 export const manualRefresh = signal('idle' as ManualRefreshState);
-let manualRun: Promise<void> | null = null;
+/** What a pressed refresh read, held by each loader until the press ends: `show` makes it the brief, `keep` leaves the brief as it was. */
+interface HeldRead {bad: boolean; show(): void; keep(): void}
+let manualHold: {forecast?: HeldRead; daily?: HeldRead} | null = null, manualRun: Promise<void> | null = null;
+// Selecting another region ends the press in progress: its replies belong to the old region and must neither say anything about the new
+// one nor change what it shows, and a word left by an earlier press (failed, offline) is about the old region too.
+effect(() => {
+  void region.value;
+  manualHold = manualRun = null;
+  manualRefresh.value = 'idle';
+});
+// Back online, "Offline" said by a refused press is out of date.
+if (typeof window !== 'undefined') window.addEventListener('online', () => { if (manualRefresh.peek() === 'offline') manualRefresh.value = 'idle'; });
 
 /**
  * The freshness chip's Refresh: ask the forecast, the daily feeds and the coast report again through their own loaders, once per press.
- * A press during a press, or while any of those reads is already under way, asks nothing more. Offline asks nothing. A failed
- * read keeps what is shown and says so (manualRefresh 'failed'); it is never read as a verdict. No timer, no retry.
+ * A press during a press, or while any of those reads is already under way, asks nothing more. Offline asks nothing and says so
+ * (manualRefresh 'offline'). A press shows its new forecast and feeds only when every source answered; if any failed the brief stays
+ * exactly as it was, and says so (manualRefresh 'failed'); it is never read as a verdict. No timer, no retry.
  */
 export function refreshBriefNow(online: () => boolean = () => typeof navigator === 'undefined' || navigator.onLine !== false): Promise<void> {
   if (manualRun) return manualRun;
   if (!online()) { manualRefresh.value = 'offline'; return Promise.resolve(); }
-  if (forecastPending || dailyPending || coastData.coastStatus.peek().report === 'loading') return Promise.resolve();
+  if (forecastPending || dailyPending || coastStatus.peek().report === 'loading') return Promise.resolve();
   manualRefresh.value = 'refreshing';
-  const run = (async () => {
+  const hold: NonNullable<typeof manualHold> = manualHold = {}, fc = forecastRequest, df = dailyRequest, bound = !!coastBinding.peek();
+  return manualRun = (async () => {
+    let failed = true;
     try {
-      const forecast = refreshForecastNow(), forecastGen = forecastGeneration;
-      const daily = refreshDailyNow(), dailyLoad = feedLoad;
-      const report = coastData.refreshReportJoined();
-      await Promise.all([forecast, daily, report]);
-      const failed = (forecast && forecastOutcome.generation === forecastGen && forecastOutcome.failed)
-        || (daily && dailyOutcome.load === dailyLoad && !dailyOutcome.ok) || (await report) === 'failed';
-      manualRefresh.value = failed ? 'failed' : 'idle';
-    } catch { manualRefresh.value = 'failed'; } finally { manualRun = null; }
+      // Whatever age they are: the forecast and the feeds as their last request made them, the report by the coast client's own retry.
+      if (fc) { forecastKey = null; keepForecastOnFailure = true; }
+      await Promise.all([fc && ensureRegionalForecast(fc.id, fc.near, fc.fetchFn, fc.page), df && readFeeds(df.id, df.fetchFn, true, true), bound && coastData.refresh('report')]);
+      failed = !!(hold.forecast?.bad || hold.daily?.bad || (bound && coastStatus.peek().report !== 'ready'));
+    } catch { /* a press that threw failed */ }
+    if (manualHold !== hold) return; // another region was selected meanwhile: this press says nothing about it
+    manualHold = manualRun = null;
+    for (const read of [hold.forecast, hold.daily]) failed ? read?.keep() : read?.show();
+    manualRefresh.value = failed ? 'failed' : 'idle';
   })();
-  manualRun = run;
-  return run;
 }
 
 /** Reload the forecast when it failed or was loaded over 30 minutes before `now`; no timer, only called as the page becomes visible. */
 export function refreshForecastIfStale(now = Date.now()): Promise<ConditionsForecast | null> | null {
-  const req = forecastRequest;
-  if (!req || forecastPending) return null;
+  const req = forecastRequest, selected = region.peek();
+  if (!req || forecastPending || (selected && selected !== req.id)) return null;
   if (regionalForecast.peek() && now - forecastLoadedAt <= FORECAST_MAX_AGE_MS) return null;
   forecastKey = null;
   return ensureRegionalForecast(req.id, req.near, req.fetchFn, req.page);
@@ -414,15 +548,7 @@ export function refreshDailyIfStale(now = Date.now()): Promise<RegionalDailyFeed
   const req = dailyRequest;
   if (!req || dailyPending) return null;
   if (dailyFeed.peek() && now - dailyLoadedAt <= DAILY_MAX_AGE_MS) return null;
-  return startFeeds(req.id, req.fetchFn, true, false);
-}
-
-/** SC1922-08: read both feeds now whatever their age; a read in flight is joined, never repeated. Null when no feed was ever asked for. */
-function refreshDailyNow(): Promise<RegionalDailyFeed | null> | null {
-  const req = dailyRequest;
-  if (!req) return null;
-  if (dailyPending && dailyInflight) return dailyInflight;
-  return startFeeds(req.id, req.fetchFn, true, true);
+  return readFeeds(req.id, req.fetchFn, true);
 }
 
 // One listener for the page's life, bound on the first load.
@@ -478,11 +604,11 @@ export function leadHour(hourValue: string | null, dayValue: string | null, now:
  * is updating or the update failed. Amber when that is past the brief's own limit (verdict.ts RUN_STALE_MS) or a reading on
  * screen is stale; the brief itself, rebuilt from the saved inputs, labels its aged readings as it does for live data.
  */
-export function SavedLine({now}: {now: Date}) {
-  const s = savedBrief.value;
+export function SavedLine({now, snapshot}: {now: Date; snapshot?: VerdictPresentation}) {
+  const s = snapshot ? snapshot.saved : savedBrief.value;
   if (!s) return null;
-  const tz = shownRegion()?.timezone ?? DEFAULT_ZONE, lang = language.value;
-  const stale = !!leadBrief(now)?.tiles.some(tile => tile.state === 'stale' || tile.lastGood);
+  const tz = (snapshot?.info ?? shownRegion())?.timezone ?? DEFAULT_ZONE, lang = language.value;
+  const stale = !!(snapshot ? snapshot.brief : leadBrief(now))?.tiles.some(tile => tile.state === 'stale' || tile.lastGood);
   const line = savedLine(s.at, now.getTime(), s.state, stale, tz, lang);
   return <p class="app-saved ui-mono" role="status" data-saved={s.state} data-stale={line.amber ? 'true' : undefined}>{line.text}</p>;
 }
@@ -522,29 +648,99 @@ export function currentVerdict(brief: BriefModel | null, now: Date, lang: Langua
 }
 
 /**
- * SC1722-01: what the forecast read says about the brief on screen. `failed`: this region's read failed and nothing saved stands in
- * for it, so no weather verdict is shown; `waiting`: a read is under way with nothing to answer from (not Unknown); `saved-failed`: the
- * saved forecast is shown and the update failed or is being retried; null: the forecast loaded (even one that cannot rate the day), or
- * there is no brief or no read for this region, and the verdict stands as before.
+ * SC1722-02: what every weather-answer surface (the brief's Verdict, the first answer, the day chips) answers from. `pending`: no word
+ * yet (Updating); `failed`: the forecast could not be read and nothing saved stands in (ForecastFailure); `saved`: the saved brief's own
+ * snapshot or the offline pack's, with its SavedLine clocks; `live`: a sealed epoch's snapshot. The brief and verdict are built from the
+ * one selected snapshot, never from live parts mixed with saved ones.
  */
-export type ForecastGate = 'failed' | 'waiting' | 'saved-failed' | null;
-export function forecastGate(brief: BriefModel | null): ForecastGate {
-  const s = regionalForecastState.value, id = shownRegion()?.id, f = regionalForecast.value;
-  void savedBrief.value; // the saved hold changes with this signal
-  if (!brief || !id || s.region !== id) return null;
-  if (f?.region === id && held.region === id && held.forecast?.saved) return s.state === 'failed' || (s.state === 'loading' && s.reason) ? 'saved-failed' : null;
-  return s.state === 'failed' ? 'failed' : s.state === 'loading' && f?.region !== id ? 'waiting' : null;
+export type VerdictPresentation = {state: 'pending' | 'failed' | 'saved' | 'live'; brief: BriefModel | null; verdict: BriefVerdict | null; info: RegionInfo | null; forecast: ConditionsForecast | null;
+  saved: {at: number; state: SavedState} | null; forecastFailed: boolean; reason?: ForecastFailureReason; status?: number};
+type Selected = {state: VerdictPresentation['state']; inputs: InputSet | null; restored: boolean; forecastFailed: boolean; reason?: ForecastFailureReason; status?: number};
+const forecastDown = (inputs: InputSet): boolean => inputs.forecast.state === 'failed' || inputs.forecast.state === 'timedout';
+/** Metadata and at least one feed in hand: the brief could be built, so only the forecast stands between it and an answer. */
+const couldAnswer = (inputs: InputSet): boolean => !!inputs.metadata.data && !!(inputs.daily.data || inputs.conditions.data);
+/** A sealed snapshot that can carry a live answer: its forecast was read (or has none to read), with metadata and at least one feed. */
+const answers = (epoch: VerdictEpoch | null): boolean => !!epoch?.sealed && !forecastDown(epoch.inputs) && couldAnswer(epoch.inputs);
+
+/** Which snapshot answers now, without building a brief (the guard and the chips read only this). */
+function selectSnapshot(): Selected {
+  const epoch = verdictEpoch.value, id = region.value, saved = savedAnswer.value;
+  if (!epoch || (id && epoch.region !== id)) return {state: 'pending', inputs: null, restored: false, forecastFailed: false};
+  // The forecast read's own failure code: the epoch's (a deadline is 'timeout'), else the loader's, which keeps it while a retry runs.
+  const raw = regionalForecastState.value, rawFailed = raw.region === epoch.region && (raw.state === 'failed' || (raw.state === 'loading' && !!raw.reason));
+  const forecastFailed = forecastDown(epoch.inputs) || rawFailed, slot = epoch.inputs.forecast;
+  const code = {reason: slot.reason ?? (rawFailed ? raw.reason : undefined), status: slot.status ?? (rawFailed ? raw.status : undefined)};
+  if (answers(epoch)) return {state: 'live', inputs: epoch.inputs, restored: false, forecastFailed: false};
+  // While a refresh of the same context runs, the answer it refreshes stands.
+  const standing = verdictLoad.published();
+  if (!epoch.sealed && standing && answers(standing) && standing.region === epoch.region && standing.context === epoch.context) return {state: 'live', inputs: standing.inputs, restored: false, forecastFailed: false};
+  if (saved?.region === epoch.region) return {state: 'saved', inputs: saved.inputs, restored: true, forecastFailed, ...code};
+  if (!epoch.sealed) return {state: 'pending', inputs: null, restored: false, forecastFailed: false};
+  // A failed forecast replaces the answer only where the metadata and a feed could answer; with no metadata or neither feed read the brief
+  // is the existing "Readings unavailable" (never a weather word, never a forecast failure the user cannot act on), as before this gate.
+  if (forecastDown(epoch.inputs) && couldAnswer(epoch.inputs)) return {state: 'failed', inputs: null, restored: false, forecastFailed: true, ...code};
+  return {state: 'live', inputs: epoch.inputs, restored: false, forecastFailed: false}; // no metadata or feed: the unavailable brief, never a weather word
 }
+
+/** The brief and verdict one snapshot gives for the hour `selected` (undefined: the lead's hour). */
+function assess(inputs: InputSet, now: Date, at: string | null | undefined, lang: Language) {
+  const info = inputs.metadata.data ?? null, tz = info?.timezone ?? DEFAULT_ZONE;
+  const forecast = inputs.forecast.data && inputs.forecast.data.forecast.region === info?.id ? inputs.forecast.data.forecast : null; // only this region's, as currentVerdict
+  const selected = at === undefined ? leadHour(hour.value, day.value, now, tz) : at, coast = inputs.coast.data;
+  let brief = briefFrom({info, forecast, feed: mergeFeeds(inputs.daily.data?.feed ?? null, inputs.conditions.data?.feed ?? null),
+    coast: coast && Date.parse(coast.snapshot.expiresAt) > now.getTime() ? {report: coast.snapshot.data, areaId: coast.areaId} : null,
+    profile: profile.value, hour: selected, limits: hasOwnLimits(profile.value) ? limitsFor(profile.value) : null}, now);
+  // The tide station chosen beside the brief (a choice, not a load) applies as it does to the raw brief.
+  const chosen = tideSelection.choice.value, config = tideSelection.region.value;
+  if (brief && info && chosen && config?.id === info.id && chosen !== config.station) {
+    const station = tideSelection.stations.value.find(st => st.id === chosen) ?? {id: chosen, name: chosen};
+    brief = withTideSelection(brief, station, tideSelection.reading.value, tz, now, selected);
+  }
+  void boatSaved.value; // a boat saved on first use (boat-entry.ts) re-rates the answer
+  return {brief, verdict: briefVerdict(brief, forecast, now, tz, activeBoatFactors() as BoatFactors, lang), info, forecast};
+}
+
+/** Assess the selected snapshot for the hour `at` (the lead's hour by default; the chips pass theirs, so they never follow scrubbing). */
+export function verdictPresentation(now: Date, at?: string | null, lang: Language = language.value): VerdictPresentation {
+  const s = selectSnapshot(), base = {brief: null, verdict: null, info: null, forecast: null, saved: null, forecastFailed: s.forecastFailed, reason: s.reason, status: s.status};
+  if (!s.inputs) return {...base, state: s.state};
+  if (s.restored) {
+    const view = assess(s.inputs, now, at, lang), epoch = verdictEpoch.value!;
+    if (view.verdict && view.verdict.verdict !== 'unknown') {
+      const failed = epoch.sealed || s.forecastFailed || savedBrief.value?.state === 'failed';
+      return {...base, ...view, state: 'saved', saved: {at: savedAnswer.value!.at, state: failed ? 'failed' : 'updating'}};
+    }
+    // A saved snapshot that cannot answer is never a saved Unknown: Updating while live reads run, then the live outcome.
+    if (!epoch.sealed) return {...base, state: 'pending'};
+    if (forecastDown(epoch.inputs) && couldAnswer(epoch.inputs)) return {...base, state: 'failed'};
+    return {...base, ...assess(epoch.inputs, now, at, lang), state: 'live'};
+  }
+  const view = assess(s.inputs, now, at, lang);
+  // SC1722-03: parts the saved offline pack answered are held as saved at the pack's own time, never as fresh.
+  const times = packTimes(s.inputs);
+  return {...base, ...view, state: times.length ? 'saved' : 'live', saved: times.length ? {at: Math.min(...times), state: 'offline'} : null};
+}
+
+/** The save times of the parts of `inputs` the saved offline pack answered (SC1722-03); empty when every part is fresh. */
+const packTimes = (inputs: InputSet): number[] => [inputs.daily.data?.savedAt, inputs.conditions.data?.savedAt, inputs.forecast.data?.savedAt].filter((n): n is number => typeof n === 'number');
+
+/** True while no weather word may show: the dock guard's source input (a saved snapshot is assessed only when one stands in). */
+export const sourcePending = (now: Date): boolean => { const s = selectSnapshot(); return s.state === 'pending' || (s.restored && verdictPresentation(now).state === 'pending'); };
+/** The day chips rate only a live snapshot: pending, failed and saved answers (the saved brief, or parts the offline pack answered) give date-only chips. */
+export const chipsAdmitted = (): boolean => { const s = selectSnapshot(); return s.state === 'live' && !!s.inputs && packTimes(s.inputs).length === 0; };
 
 const FORECAST_REASON: Readonly<Record<ForecastFailureReason, StringId>> = {network: 'forecast.reason.network', http: 'forecast.reason.http', invalid: 'forecast.reason.invalid', aborted: 'forecast.reason.aborted', timeout: 'forecast.reason.timeout'};
 
 /** SC1722-01: "Couldn't load the forecast", the plain reason and a Try again that reads the forecast again (busy and disabled while that read runs). `as` is the heading element for the place it sits in. */
-export function ForecastFailure({as: Heading = 'h1'}: {as?: 'h1' | 'h2' | 'p'}) {
-  const s = regionalForecastState.value, lang = language.value, busy = s.state === 'loading';
+export function ForecastFailure({as: Heading = 'h1', failure}: {as?: 'h1' | 'h2' | 'p'; failure?: {reason?: ForecastFailureReason; status?: number}}) {
+  // SC1722-02: the presented failure names the code; busy and disabled stay the loader's own (a retry in flight), never the presentation's.
+  // A read the epoch gave up on at its deadline is not a retry in flight: Try again stays available and starts a new generation.
+  const raw = regionalForecastState.value, lang = language.value, timedOut = verdictEpoch.value?.inputs.forecast.state === 'timedout', busy = raw.state === 'loading' && !timedOut;
+  const reason = failure?.reason ?? raw.reason, status = failure?.status ?? raw.status;
   return (
-    <div class="app-forecast-failed" role="status" data-forecast="failed" data-reason={s.reason} aria-busy={busy ? 'true' : undefined}>
+    <div class="app-forecast-failed" role="status" data-forecast="failed" data-reason={reason} aria-busy={busy ? 'true' : undefined}>
       <Heading class="app-forecast-failed-head">{t('forecast.failed', lang)}</Heading>
-      <p class="app-forecast-failed-reason">{t(FORECAST_REASON[s.reason ?? 'network'], lang, {status: s.status ?? 0})}</p>
+      <p class="app-forecast-failed-reason">{t(FORECAST_REASON[reason ?? 'network'], lang, {status: status ?? 0})}</p>
       <Button class="app-forecast-retry" disabled={busy} onClick={() => { void retryRegionalForecast(); }}>{t('forecast.retry', lang)}</Button>
     </div>
   );
@@ -602,8 +798,10 @@ function SkillLine({now, lang}: {now: Date; lang: Language}) {
  * move). Only this wrapper reads the pending flag: the settled child keeps its vnode and is not re-rendered
  * on entry or exit, and in print the settled answer shows (brief-print.css).
  */
-export function DockVerdictGuard({children}: {children: ComponentChildren}) {
-  const pending = dockPending.value;
+export function DockVerdictGuard({children, now = new Date()}: {children: ComponentChildren; now?: Date}) {
+  // SC1722-02: a source load still under way (no sealed answer, no labelled saved one) holds the same single Updating notice. In print the
+  // settled slot shows as for the dock; while sources are pending it holds only the waiting headline, never a weather word.
+  const pending = dockPending.value || sourcePending(now);
   return (
     <div class="app-hour-guard" aria-busy={pending ? 'true' : undefined} data-pending={pending ? 'true' : undefined}>
       {pending ? <p class="app-hour-updating ui-mono" aria-live="off">{t('dock.updating', language.value)}</p> : null}
@@ -619,16 +817,16 @@ export function DockVerdictGuard({children}: {children: ComponentChildren}) {
  * the day after tomorrow) says so in the verdict line itself. Before there is a brief, the waiting
  * headline. Guarded while the dock's hour settles (SC1407-05).
  */
-export const Verdict = ({now}: {now: Date}) => <DockVerdictGuard><SettledVerdict now={now} /></DockVerdictGuard>;
+export const Verdict = ({now}: {now: Date}) => <DockVerdictGuard now={now}><SettledVerdict now={now} /></DockVerdictGuard>;
 
 /** The verdict for the settled day and hour. */
 function SettledVerdict({now}: {now: Date}) {
-  const tz = shownRegion()?.timezone ?? DEFAULT_ZONE, brief = leadBrief(now), date = leadDate(now, brief), lang = language.value;
-  const gate = forecastGate(brief), rulesLine = <LeadRules date={date} now={now} />;
-  if (gate === 'failed') return <div class="app-verdict app-verdict-failed"><ForecastFailure />{rulesLine}</div>;
-  if (gate === 'waiting') return <><h1>{t('common.waiting', lang)}</h1>{rulesLine}</>;
-  const v = currentVerdict(brief, now);
-  if (!v) return <><Headline brief={brief} />{rulesLine}</>;
+  const view = verdictPresentation(now), {brief, verdict: v} = view, lang = language.value;
+  const tz = view.info?.timezone ?? DEFAULT_ZONE, date = leadDate(now, brief), rulesLine = <LeadRules date={date} now={now} />;
+  // Source pending: the guard shows Updating; the hidden settled slot keeps the page's waiting headline, never a weather word.
+  if (view.state === 'pending') return <><h1>{t('common.waiting', lang)}</h1>{rulesLine}</>;
+  if (view.state === 'failed') return <div class="app-verdict app-verdict-failed"><ForecastFailure failure={view} />{rulesLine}</div>;
+  if (!v) return <><h1>{t('brief.unavailable', lang)}</h1>{rulesLine}</>;
   const when = leadDayText(date, now, tz, lang);
   const window = lang === 'es' && v.windowBounds ? v.windowBounds.map(ms => clock(ms, tz, lang)).join('–') : v.window;
   const provisional = !!brief?.provisional;
@@ -636,7 +834,7 @@ function SettledVerdict({now}: {now: Date}) {
   const models = !a || a.state === 'none' ? null : a.state === 'agree' ? t('brief.models.agree', lang, {until: window?.split('–')[1] ?? '', wind: gap(a.gap!.wind), sea: gap(a.gap!.sea)})
     : a.state === 'differ' ? `${t('brief.models.differ', lang, {at: lang === 'es' ? clock(a.worst!.ms, tz, lang) : clockText(a.worst!.ms, tz), wind: gap(a.worst!.wind), sea: gap(a.worst!.sea)})}${a.differing > 1 ? ` ${t('brief.models.hours', lang, {n: a.differing, total: a.hours})}` : ''}`
     : a.state === 'partial' ? t('brief.models.partial', lang, {n: a.compared, total: a.hours}) : t('brief.models.one', lang);
-  const modelHour = a?.state === 'differ' && regionalForecast.value ? feedReader(regionalForecast.value, now).read(a.worst!.ms) : null;
+  const modelHour = a?.state === 'differ' && view.forecast ? feedReader(view.forecast, now).read(a.worst!.ms) : null;
   const boat = v.basis === 'comfort-score' ? storedBoat() : null, rangeNote = boat && boatRangeNote(boat.loa_ft) ? t('brief.boat.note', lang) : null;
   return (
     <div class="app-verdict" data-verdict={v.verdict} data-provisional={provisional ? 'true' : undefined}>
@@ -644,7 +842,8 @@ function SettledVerdict({now}: {now: Date}) {
         <h1><span class="app-verdict-word">{t(`brief.verdict.${v.verdict}` as StringId, lang)}</span>{' '}<span class="app-verdict-window ui-mono" data-day={date}>{window ? `${when}, ${window}` : when}</span>{provisional ? ' ' : null}{provisional ? <span class="app-verdict-window app-verdict-provisional ui-mono">{t('brief.provisional', lang)}</span> : null}</h1>
         <Popover align="end">{v.basis === 'comfort-score' ? comfortBasis(boat, lang) : t('brief.basis.profile', lang)}{rangeNote ? ` ${rangeNote}` : ''}{provisional ? ` ${t('brief.provisional.basis', lang)}` : ''}{v.score !== null ? ` ${t('brief.worst', lang, {score: num(v.score, lang, 20)})}` : ''}</Popover>
       </div>
-      {gate === 'saved-failed' ? <ForecastFailure as="p" /> : null}
+      <SavedLine now={now} snapshot={view} />
+      {view.state === 'saved' && view.forecastFailed ? <ForecastFailure as="p" failure={view} /> : null}
       <p class="app-verdict-limit">{v.limit}{v.held ? ` ${v.held}` : ''}</p>
       {rangeNote ? <p class="app-verdict-boat-note">{rangeNote}</p> : null}
       {models ? <p class="app-verdict-models ui-mono" data-agreement={a!.state}>{models}</p> : null}

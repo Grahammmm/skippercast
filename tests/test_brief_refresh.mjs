@@ -30,6 +30,7 @@ async function load() {
         export {regionInfo, freshness} from './web/app/App.tsx';
         export {coastData} from './web/coast-data.ts';
         export {language} from './web/i18n.ts';
+        export {region} from './web/state.ts';
         export {prepareCatalogue} from './web/i18n-catalogue.ts';
         export {overviewReportContext} from './web/overview-context.ts';
         export {render} from 'preact-render-to-string';
@@ -47,13 +48,13 @@ async function load() {
 test.after(() => { delete globalThis.document; });
 
 /** One fetch for the page's loaders and another for the coast bridge, each counting what it was asked; `fail` names sources that answer 503. */
-function network({fail = [], conditionsAt = '2026-10-08T21:00:00Z'} = {}) {
-  const calls = {forecast: 0, daily: 0, conditions: 0, report: 0}, state = {fail: new Set(fail), conditionsAt};
+function network({fail = [], conditionsAt = '2026-10-08T21:00:00Z', retrieved = '2026-10-08T20:40:00Z'} = {}) {
+  const calls = {forecast: 0, daily: 0, conditions: 0, report: 0}, state = {fail: new Set(fail), conditionsAt, retrieved, gate: null};
   const forecast = () => {
     const start = Date.parse('2026-10-08T07:00:00Z') / 1000, time = Array.from({length: 8 * 24}, (_, i) => start + i * 3600);
     const series = values => ({utc_offset_seconds: 0, hourly_units: {time: 'unixtime', ...Object.fromEntries(Object.entries(values).map(([k, [, u]]) => [k, u]))}, hourly: {time, ...Object.fromEntries(Object.entries(values).map(([k, [v]]) => [k, time.map(() => v)]))}});
     const meta = {last_run_initialisation_time: start, data_end_time: time.at(-1)};
-    return {region_id: ID, retrieved: Date.parse('2026-10-08T20:40:00Z'), requested_points: [['monterey-bay', 36.7, -121.95], ['offshore-0-0', 36.5, -122.25]],
+    return {region_id: ID, retrieved: Date.parse(state.retrieved), requested_points: [['monterey-bay', 36.7, -121.95], ['offshore-0-0', 36.5, -122.25]],
       models: {gfs_global: {meta, data: [0, 1].map(() => series({wind_speed_10m: [9, 'kn'], wind_gusts_10m: [14, 'kn'], wind_direction_10m: [300, '°'], temperature_2m: [60, '°F'], cloud_cover: [30, '%']}))},
         ncep_gfswave016: {meta, data: [0, 1].map(() => series({wave_height: [5.1, 'ft'], wave_period: [12, 's']}))}}};
   };
@@ -62,6 +63,7 @@ function network({fail = [], conditionsAt = '2026-10-08T21:00:00Z'} = {}) {
     const kind = path.includes('forecast') ? 'forecast' : path.startsWith('/feeds/data/') ? 'daily' : path.startsWith('/api/daily') ? 'part' : 'conditions';
     if (kind === 'part') return new Response('', {status: 404}); // the brief part refused: the whole daily feed is read
     calls[kind]++;
+    if (state.gate && kind === 'forecast') await state.gate;
     if (state.fail.has(kind)) return new Response('', {status: 503});
     if (kind === 'forecast') return new Response(JSON.stringify(forecast()), {status: 200});
     if (kind === 'daily') return new Response(JSON.stringify({...montereyDaily, region_id: ID}), {status: 200});
@@ -156,4 +158,83 @@ test('a fresh answer updates what the chip ages from', async t => {
   await m.refreshBriefNow();
   assert.equal(oldest(), Date.parse('2026-10-08T22:30:00Z'), 'the new observation clock reaches the brief');
   assert.equal(m.manualRefresh.value, 'idle');
+});
+
+test('a press whose forecast answers but whose coast report fails shows the previous brief: nothing it read is kept', async t => {
+  const m = await load(), net = network();
+  await startUp(t, m, net);
+  const forecast = m.regionalForecast.value, daily = m.dailyFeed.value, slot = () => m.verdictLoad.peek().inputs;
+  assert.equal(slot().forecast.state, 'loaded');
+  net.state.fail.add('report');
+  net.state.retrieved = '2026-10-08T23:10:00Z'; // the forecast would be new
+  net.state.conditionsAt = '2026-10-08T22:30:00Z'; // and so would the observations
+  await m.refreshBriefNow();
+  assert.equal(m.manualRefresh.value, 'failed');
+  assert.equal(m.regionalForecast.value, forecast, 'the forecast on screen is the previous one, whole');
+  assert.equal(m.regionalForecast.value.retrieved, Date.parse('2026-10-08T20:40:00Z'));
+  assert.equal(m.regionalForecastState.value.state, 'loaded');
+  assert.equal(m.dailyFeed.value, daily, 'the feeds on screen are the previous ones');
+  assert.equal(slot().forecast.state, 'loaded', 'the verdict still stands on its forecast');
+  assert.equal(slot().forecast.data.forecast.retrieved, Date.parse('2026-10-08T20:40:00Z'), 'the verdict reads the previous forecast');
+  assert.equal(Date.parse(slot().conditions.data.feed.sources.diablo.checked_at), Date.parse('2026-10-08T21:00:00Z'));
+  // The next press, answered by every source, shows what it read.
+  net.state.fail.delete('report');
+  await m.refreshBriefNow();
+  assert.equal(m.manualRefresh.value, 'idle');
+  assert.equal(m.regionalForecast.value.retrieved, Date.parse('2026-10-08T23:10:00Z'));
+  assert.equal(slot().forecast.data.forecast.retrieved, Date.parse('2026-10-08T23:10:00Z'));
+  assert.equal(Date.parse(m.dailyFeed.value.sources.diablo.checked_at), Date.parse('2026-10-08T22:30:00Z'));
+});
+
+test('a failed forecast refresh leaves the verdict on the previous forecast, not on a failure', async t => {
+  const m = await load(), net = network();
+  await startUp(t, m, net);
+  net.state.fail.add('forecast');
+  await m.refreshBriefNow();
+  assert.equal(m.manualRefresh.value, 'failed');
+  assert.equal(m.verdictLoad.peek().inputs.forecast.state, 'loaded');
+  assert.equal(m.regionalForecast.value.retrieved, Date.parse('2026-10-08T20:40:00Z'));
+});
+
+test('a press in flight when another region is selected says nothing about the new one', async t => {
+  const m = await load(), net = network();
+  await startUp(t, m, net);
+  const before = m.regionalForecast.value;
+  let open; net.state.gate = new Promise(resolve => { open = resolve; });
+  net.state.fail.add('report'); // the old press would end failed
+  m.region.value = ID;
+  const press = m.refreshBriefNow();
+  assert.equal(m.manualRefresh.value, 'refreshing');
+  m.region.value = 'morro-bay'; // another region selected before the replies settle
+  assert.equal(m.manualRefresh.value, 'idle', 'the selection clears the old press');
+  open();
+  await press;
+  assert.equal(m.manualRefresh.value, 'idle', 'the old press leaves no failed word on the new region');
+  assert.equal(m.regionalForecast.value, before, 'what the old press read is not shown');
+  const was = net.calls.forecast;
+  await m.refreshBriefNow(() => false);
+  assert.equal(net.calls.forecast, was);
+});
+
+test('a refused press says Offline whatever the chip shows, and the word goes when the region changes', async t => {
+  const m = await load(), net = network();
+  await startUp(t, m, net);
+  for (const state of ['ok', 'stale', 'unknown']) {
+    m.freshness.value = {state, age: '5 min'};
+    m.region.value = ID;
+    await m.refreshBriefNow(() => false);
+    assert.match(chip(m).html, /data-refresh-line="offline">Offline</, `${state}: the press answers Offline`);
+  }
+  m.region.value = 'morro-bay';
+  assert.match(chip(m).html, /data-refresh-line="idle"><\/span>/);
+});
+
+test('the Refresh button and the failure line sit inside the chip, beside the age (one flex item of the row)', async t => {
+  const m = await load(), net = network();
+  await startUp(t, m, net);
+  net.state.fail.add('report');
+  await m.refreshBriefNow();
+  const html = chip(m).html;
+  assert.match(html, /^<span class="app-fresh" role="status"[^>]*>.*<\/span><button[^>]*app-fresh-refresh[^>]*>Refresh<\/button><span class="ui-mono" data-refresh-line="failed">Refresh failed; showing the previous brief<\/span><\/span>$/s);
+  assert.equal((html.match(/<span class="app-fresh"/g) ?? []).length, 1, 'one chip, nothing beside it');
 });

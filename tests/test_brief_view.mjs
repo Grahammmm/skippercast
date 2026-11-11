@@ -32,7 +32,11 @@ async function load() {
       export {hour} from './web/state.ts';
       export {createCoastData} from './web/coast-data.ts';
       export {regionPlace} from './web/map/currents.ts';
-      export {render} from 'preact-render-to-string';
+      import {render} from 'preact-render-to-string';
+      import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
+      export {admitBriefFixture};
+      export function renderFixture(...args) { admitBriefFixture(); return render(...args); }
+      export {render};
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
     plugins: rendererPlugins,
@@ -104,12 +108,12 @@ test('without a regional forecast the wind and swell tiles read "—" and unavai
 });
 
 test('the column renders the model: verdict and limit first, Details with readings, deck and caveat, lower-exposure line, local-report line', async () => {
-  const {Brief, briefFrom, dailyFeed, regionInfo, render, h} = await load();
+  const {Brief, briefFrom, dailyFeed, regionInfo, renderFixture, h} = await load();
   const expected = briefFrom(sources(), NOW);
   regionInfo.value = INFO;
   dailyFeed.value = montereyDaily;
   try {
-    const html = render(h(Brief, {now: NOW}));
+    const html = renderFixture(h(Brief, {now: NOW}));
     assert.match(html, /<aside class="app-brief" aria-label="Brief" data-basis="regional">/);
     // #616: without this region's forecast the verdict is Unknown and says why; the readings line moves into Details.
     assert.match(html, /<div class="app-verdict" data-verdict="unknown"><div class="app-verdict-head"><h1><span class="app-verdict-word">Unknown<\/span>/);
@@ -128,13 +132,13 @@ test('the column renders the model: verdict and limit first, Details with readin
 });
 
 test('#616: with this region\'s forecast the verdict word and its limit lead the column, with the basis named', async () => {
-  const {Brief, dailyFeed, regionInfo, regionalForecast, parseConditionsForecast, render, h} = await load();
+  const {Brief, dailyFeed, regionInfo, regionalForecast, parseConditionsForecast, renderFixture, h} = await load();
   regionInfo.value = INFO;
   dailyFeed.value = montereyDaily;
   regionalForecast.value = parseConditionsForecast(forecastFeed(), INFO.id, INFO.center);
   const tomorrow = new Date('2026-10-09T12:00:00Z'); // 5 am PDT, the morning still ahead
   try {
-    const html = render(h(Brief, {now: tomorrow}));
+    const html = renderFixture(h(Brief, {now: tomorrow}));
     const verdict = /<span class="app-verdict-word">(Comfortable|Marginal|Rough)<\/span>/.exec(html);
     assert.ok(verdict, 'a rated word, not Unknown');
     assert.match(html, /<p class="app-verdict-limit">[^<]+\.(?: Held at Marginal: [^<]+\.)?<\/p>/);
@@ -145,7 +149,7 @@ test('#616: with this region\'s forecast the verdict word and its limit lead the
 });
 
 test('SC-LAUNCH-3b: a provisional day says so beside the verdict and on the forecast tiles; tomorrow reads firm', async () => {
-  const {Brief, dailyFeed, regionInfo, regionalForecast, hour, parseConditionsForecast, render, h} = await load();
+  const {Brief, dailyFeed, regionInfo, regionalForecast, hour, parseConditionsForecast, renderFixture, h} = await load();
   regionInfo.value = INFO;
   dailyFeed.value = montereyDaily;
   regionalForecast.value = parseConditionsForecast(forecastFeed(), INFO.id, INFO.center);
@@ -154,13 +158,13 @@ test('SC-LAUNCH-3b: a provisional day says so beside the verdict and on the fore
   try {
     // NOW is 2 pm PDT on 8 October; 12 October is the fifth day of the seven.
     hour.value = '2026-10-12T16:00:00Z';
-    const late = render(h(Brief, {now: NOW}));
+    const late = renderFixture(h(Brief, {now: NOW}));
     assert.match(head(late), /<span class="app-verdict-word">(Comfortable|Marginal|Rough)<\/span>.*<span class="app-verdict-window app-verdict-provisional ui-mono">Provisional<\/span><\/h1>/, 'the marker sits in the verdict line, beside the word');
     assert.match(late, /Provisional outlook: forecasts this far ahead change\. Worst hour: [\d.]+\/10\./, 'the basis says so where the score is read');
     for (const label of ['Wind', 'Swell']) assert.match(tile(late, label), /· provisional/, `${label} tile`);
     for (const label of ['Water', 'Tide']) assert.doesNotMatch(tile(late, label), /provisional/, `${label} is a reading or a tide prediction, not a forecast outlook`);
     hour.value = '2026-10-09T16:00:00Z';
-    const tomorrow = render(h(Brief, {now: NOW}));
+    const tomorrow = renderFixture(h(Brief, {now: NOW}));
     assert.ok(head(tomorrow), 'a verdict renders for tomorrow');
     assert.doesNotMatch(tomorrow, /provisional/i, 'tomorrow is not marked provisional');
   } finally { regionInfo.value = null; dailyFeed.value = null; regionalForecast.value = null; hour.value = null; }

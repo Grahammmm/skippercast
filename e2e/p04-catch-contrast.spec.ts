@@ -217,8 +217,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // same classes, markup and text. BODY09 mounts Reports/CatchCards, never Masthead. CSS, tokens and catch markup
   // are unchanged; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
   // SC1922-03: Masthead.tsx renders Location's Retry through the shared Button (ui-button--quiet ui-button--sm); BODY09 mounts Reports/CatchCards, never Masthead. No catch markup, token or paint change. Rebind only Masthead.tsx.
-  // SC1922-08: Masthead.tsx's FreshnessDot gains a Refresh Button and a status line beside the unchanged age span; BODY09 mounts Reports/CatchCards, never Masthead. No CSS, token, catch markup or paint change. Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "15e506f100407243523c59867ca8073b0b9ffd8340b2d20e6d15529355fdea6e",
+  // SC1922-08: Masthead.tsx's FreshnessDot gains a Refresh Button and a status line inside the chip, beside the unchanged age span; BODY09 mounts Reports/CatchCards, never Masthead. No token, catch markup or catch paint change (the CSS is the app.css chip rule and appended block, bound below). Rebind only Masthead.tsx.
+  "web/app/Masthead.tsx": "f1c3d42e244a75227b5aca4b612a1a0c91694edee0c3b48dcd09cf9b180e4aec",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
@@ -272,7 +272,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
   // RF1935-2: app.css adds only a desktop-only layer-rail preset wrap block and the rail's vertical scroll track (layout, no paint); the Reports catch sheet mounts no rail. Rebound from the final bytes.
   // SC1922-03: app.css adds only a Conditions-header model-family wrap/min-height rule and a pointer-events rule scoped to .app-presentation--placing (the armed placing stack, which Reports never mounts); no paint, backing or catch text changed. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
-  "web/app/app.css": "8bc7e71b104fc2bd96d2799297623263663cc2d337770260ea553785b06880e7",
+  // SC1922-08: app.css lets the .app-fresh chip wrap (flex-wrap, max-width) and appends only a [data-refresh-line] wrap/size rule and a masthead shrink rule for it (no colour change); the Reports catch sheet mounts neither. check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
+  "web/app/app.css": "c9ba442b037df296b4a95c9c04ddf2490a1e47f89509c55228e92d5df517aab1",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -299,8 +300,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "a25442909c360171a11e5087f629de8cec94a358fc7bff877adce9dffbc0999f",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   // SC1722-04: explicit load/online retries stay unchanged; untracked commands prevent transport-state feedback in readers. No Reports/CatchCards paint change.
-  // SC1922-08: coast-data.ts gains refreshReportJoined (one report request joined or made; ordinary load/refresh and admission unchanged). No Reports/CatchCards paint change.
-  "web/coast-data.ts": "02cb4c91105ff8b3a82de44e6602bfa94ce426151beba41f376e707aa859d532",
+  "web/coast-data.ts": "5856b2145c7d96285d7b5dce03b923d7b2ebfe9504f16952657c720bf02dab06",
   // SC2007-02 (Protected areas Try again): check_contrast.mjs changes only the legendTsx surface hash and its
   // comment; Legend.tsx is not a BODY09 input and Reports never mounts the legend. contrast(), the one export this
   // spec reads, assertions and thresholds are untouched. Rebind only check_contrast.mjs. (Kept beside its pin, not in

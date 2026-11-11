@@ -111,8 +111,6 @@ export type CoastData = {
   load(...products: CoastProduct[]): Promise<void>;
   /** Request again (an explicit retry); defaults to every product asked for. */
   refresh(...products: CoastProduct[]): Promise<void>;
-  /** SC1922-08: the pressed Refresh for the report alone. Joins the report request in flight, else asks once more whatever the status; says whether that request was admitted. 'absent': no bound place, nothing asked. */
-  refreshReportJoined(): Promise<'ok' | 'failed' | 'absent'>;
   destroy(): void;
 };
 
@@ -147,7 +145,7 @@ export function createCoastData(options: CoastDataOptions = {}): CoastData {
   const status = signal<Statuses>(allStatus('unbound'));
   const binding = signal<ReportBinding | null>(null);
   const wanted = new Set<CoastProduct>();
-  const requests = new Map<CoastProduct, {controller: AbortController; done: Promise<void>; admitted?: boolean}>();
+  const requests = new Map<CoastProduct, {controller: AbortController; done: Promise<void>}>();
   const timers = new Map<CoastProduct, ReturnType<typeof setTimeout>>();
   let place: string | null = null;
   let alive = true;
@@ -201,7 +199,7 @@ export function createCoastData(options: CoastDataOptions = {}): CoastData {
 
   function request(product: CoastProduct): Promise<void> {
     requests.get(product)?.controller.abort();
-    const entry: {controller: AbortController; done: Promise<void>; admitted?: boolean} = {controller: new AbortController(), done: Promise.resolve()};
+    const entry = {controller: new AbortController(), done: Promise.resolve()};
     requests.set(product, entry);
     setStatus(product, 'loading');
     entry.done = (async () => {
@@ -214,7 +212,6 @@ export function createCoastData(options: CoastDataOptions = {}): CoastData {
       // A response for a superseded place (or a destroyed client) is discarded.
       if (!alive || requests.get(product) !== entry) return;
       requests.delete(product);
-      entry.admitted = typeof outcome === 'object';
       const held = cache.value[product];
       batch(() => {
         tick();
@@ -267,16 +264,6 @@ export function createCoastData(options: CoastDataOptions = {}): CoastData {
     await Promise.all((products.length ? products : [...wanted]).map(product => { wanted.add(product); return request(product); }));
   }
 
-  async function refreshReportJoined(): Promise<'ok' | 'failed' | 'absent'> {
-    if (!alive || !binding.value) return 'absent';
-    wanted.add('report');
-    const entry = requests.get('report');
-    if (entry) { await entry.done; return entry.admitted ? 'ok' : 'failed'; }
-    const done = request('report'), mine = requests.get('report');
-    await done;
-    return mine?.admitted ? 'ok' : 'failed';
-  }
-
   function destroy(): void {
     alive = false;
     for (const type of CLOCK_EVENTS) events?.removeEventListener(type, tick);
@@ -294,7 +281,7 @@ export function createCoastData(options: CoastDataOptions = {}): CoastData {
     // read would otherwise rerun the reader and retry forever without a trigger.
     setPlace: context => untracked(() => setPlace(context)),
     load: (...products) => untracked(() => load(...products)),
-    refresh, refreshReportJoined: () => untracked(refreshReportJoined), destroy,
+    refresh, destroy,
   };
 }
 

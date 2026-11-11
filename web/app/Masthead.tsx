@@ -102,18 +102,17 @@ export function FreshnessDot() {
   const fresh = freshness.value, lang = language.value;
   const state = {ok: t('shell.fresh.ok', lang), stale: t('shell.fresh.stale', lang), offline: t('shell.fresh.offline', lang), unknown: t('shell.fresh.unknown', lang)}[fresh.state];
   // SC1922-08: Refresh asks the sources again once per press; the line beside it words a refused or failed press (a code in manualRefresh).
+  // A refused press says Offline whatever the chip's own state was (the browser, not the age, said it): the line is cleared when the connection returns or the region changes.
   const manual = manualRefresh.value, busy = manual === 'refreshing';
-  const line = manual === 'failed' ? t('shell.refresh.failed', lang) : manual === 'offline' && fresh.state === 'offline' ? t('shell.fresh.offline', lang) : '';
+  const line = manual === 'failed' ? t('shell.refresh.failed', lang) : manual === 'offline' ? t('shell.fresh.offline', lang) : '';
   return (
-    <>
-      <span class="app-fresh" role="status" data-state={fresh.state} aria-label={t('shell.fresh', lang, {state})}>
-        <span class="app-fresh-dot" aria-hidden="true"></span>
-        {fresh.state === 'offline' ? <span data-fresh-offline>{state}</span> : null}
-        <span class="ui-mono">{fresh.age ?? '—'}</span>
-      </span>
+    <span class="app-fresh" role="status" data-state={fresh.state} aria-label={t('shell.fresh', lang, {state})}>
+      <span class="app-fresh-dot" aria-hidden="true"></span>
+      {fresh.state === 'offline' ? <span data-fresh-offline>{state}</span> : null}
+      <span class="ui-mono">{fresh.age ?? '—'}</span>
       <Button variant="quiet" class="app-fresh-refresh" disabled={busy} data-refresh onClick={() => { void refreshBriefNow(); }}>{t(busy ? 'shell.refreshing' : 'shell.refresh', lang)}</Button>
-      <span class="ui-mono" role="status" data-refresh-line={manual}>{line}</span>
-    </>
+      <span class="ui-mono" data-refresh-line={manual}>{line}</span>
+    </span>
   );
 }
 
