@@ -528,7 +528,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.match(html, /role="group" aria-label="Profile"/);
   assert.equal(count(html, /(?:Boat|Shore|Spear|Kayak)<\/button>/g), 4);
   assert.equal(count(html, /<label>Target<select/g), 1);
-  assert.equal(count(html, /<label>Area<select/g), 1);
+  assert.equal(count(html, /<label>Area<select/g), 0, 'SC1722-15: no ?area= link, no Area picker');
   assert.match(html, /<output class="app-window ui-mono" aria-label="Time window">Today · 1 pm<\/output>/);
   assert.deepEqual(dayChips(html), [['Today', true], ...CHIPS.slice(1).map(label => [label, false])], 'no ?day= means today, at the fixed clock');
   assert.match(html, /aria-label="Hour" aria-valuetext="Today · 1 pm" min="0" max="10" step="1" value="0"/, 'today runs from the current hour to 11 pm');
@@ -697,9 +697,10 @@ test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a 
   const body = html.slice(html.indexOf('<div class="ui-sheet-body">'), html.indexOf('<nav aria-label="Views"'));
   // SC-LAUNCH-3: the head names the lead's day (tomorrow, no time chosen); the dock's day heads the evidence below the lead.
   const order = ['class="ui-eyebrow">Tomorrow</span>', 'class="app-fresh" role="status"', '<h1>Waiting for readings.</h1>', 'class="ui-eyebrow">Today · 1 pm</span>', '<div class="app-tiles">', 'class="ui-eyebrow">Where to look', '<details class="app-details">', '<p class="app-caveat">', '<figure class="app-spark"',
-    '<div class="app-sheet-menus"><div role="group" aria-label="Day"', '<label>Target<select', '<label>Area<select', '<footer class="app-brief-footer">', '<div class="app-account" data-inline="true">'];
+    '<div class="app-sheet-menus"><div role="group" aria-label="Day"', '<label>Target<select', '<footer class="app-brief-footer">', '<div class="app-account" data-inline="true">'];
   const at = order.map(s => body.indexOf(s));
   assert.ok(at.every(i => i >= 0), `every piece renders: ${JSON.stringify(order.filter((_, i) => at[i] < 0))}`);
+  assert.doesNotMatch(body, /<label>Area<select/, 'SC1722-15: no ?area= link, no Area picker in the sheet menus');
   assert.deepEqual(at, [...at].sort((a, b) => a - b), 'in sheet order: lead-day eyebrow, freshness, headline, dock-day eyebrow, tiles, picks, Details with the caveat (#616), tide, menus, footer');
   assert.equal(count(body, /class="ui-tile"/g), 4);
   assert.equal(count(html, /<h1>/g), 1);

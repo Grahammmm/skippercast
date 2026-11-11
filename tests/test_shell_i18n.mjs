@@ -133,9 +133,16 @@ test('shell_es_command_values: profile labels change, values and icons do not; t
   assert.equal(m.shellGroupLabel({label: 'x', options: [{...option('ranked'), group: undefined}]}, 'boat', 'es'), 'Objetivos de Barco', 'no group key: the profile group');
   await inLanguage('es', mm => {
     const cmd = mm.render(mm.h(mm.CommandBar, {now: NOW}));
-    for (const words of ['aria-label="Barra de comandos"', 'aria-label="Especie objetivo"', 'aria-label="Busca especie" placeholder="Busca especie"', '<label>Objetivo<select', 'aria-label="Ventana de tiempo"', 'role="group" aria-label="Área y puerto"', '<label>Área<select', '>Toda la región</option>', 'aria-label="Elegir puerto"', '>Puerto</button>', 'aria-label="Usar mi ubicación"', 'aria-label="Compartir esta vista"'])
+    for (const words of ['aria-label="Barra de comandos"', 'aria-label="Especie objetivo"', 'aria-label="Busca especie" placeholder="Busca especie"', '<label>Objetivo<select', 'aria-label="Ventana de tiempo"', 'role="group" aria-label="Área y puerto"', 'aria-label="Elegir puerto"', '>Puerto</button>', 'aria-label="Usar mi ubicación"', 'aria-label="Compartir esta vista"'])
       assert.ok(cmd.includes(words), words);
     assert.ok(cmd.includes('value="lingcod"') && cmd.includes('Lingcod ·'), 'the target value and published name are unchanged');
+    // SC1722-15: the Area picker is drawn only for a link that selects an area.
+    for (const words of ['<label>Área<select', 'Toda la región'])
+      assert.ok(!cmd.includes(words), `no area selected: ${words} is not drawn`);
+    mm.state.syncFromURL(`${ORIGIN}?region=morro-bay&area=estero`);
+    const linked = mm.render(mm.h(mm.CommandBar, {now: NOW}));
+    for (const words of ['<label>Área<select', '>Toda la región</option>'])
+      assert.ok(linked.includes(words), `area selected: ${words}`);
   });
 });
 
