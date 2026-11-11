@@ -49,7 +49,9 @@ async function load() {
       export {loadLimits, savedLimits} from './web/limits.ts';
       export {COPY} from './web/ports.ts';
       export {PROFILE_NOTES, PROFILE_TABLE} from './web/profile.ts';
-      export {render} from 'preact-render-to-string';
+      import {render as renderString} from 'preact-render-to-string'; import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
+      // SC1722-02: the fixture's sources (set on the raw signals) are admitted as one settled snapshot before each render.
+      export function render(...args) { admitBriefFixture(); return renderString(...args); }
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });

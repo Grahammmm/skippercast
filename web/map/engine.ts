@@ -85,6 +85,8 @@ export interface MapView {
 export interface Overlay {
   readonly sources: Readonly<Record<string, MapLibre.SourceSpecification>>;
   readonly layers: readonly MapLibre.LayerSpecification[];
+  /** RF1935-3: the first source error removes this overlay's layers and sources and is reported once; nothing re-adds the same object. */
+  readonly stopOnError?: boolean;
 }
 
 export interface Engine {
@@ -174,8 +176,25 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   const overlayOf = (sourceId: string | undefined): string | null =>
     sourceId === undefined ? null : [...overlays].find(([, o]) => sourceId in o.sources)?.[0] ?? null;
 
+  // RF1935-3: overlays that failed (stopOnError) are detached for good; their source ids stay known so late errors are dropped.
+  const failed = new WeakSet<Overlay>();
+  const retired = new Set<string>();
+  let destroyed = false;
+  // Declared below with the other overlay helpers; hoisted function so the error handler can use it.
+  function retire(layer: string, overlay: Overlay): void {
+    failed.add(overlay);
+    for (const l of overlay.layers) if (map.getLayer(l.id)) map.removeLayer(l.id);
+    for (const id of Object.keys(overlay.sources)) { if (map.getSource(id)) map.removeSource(id); retired.add(id); }
+    overlays.delete(layer);
+  }
+
   map.on('error', (event: MapLibre.ErrorEvent & {sourceId?: string}) => {
-    const layer = overlayOf(event.sourceId) ?? sourceLayer(event.sourceId);
+    if (destroyed) return;
+    const own = overlayOf(event.sourceId);
+    if (own === null && event.sourceId !== undefined && retired.has(event.sourceId)) return;
+    const stop = own === null ? undefined : overlays.get(own);
+    if (own !== null && stop?.stopOnError) { retire(own, stop); options.onLayerError(own, event.error); return; }
+    const layer = own ?? sourceLayer(event.sourceId);
     if (layer) options.onLayerError(layer, event.error);
     else console.error('Chart error', event.error);
   });
@@ -226,6 +245,8 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   const show = (layerId: string, visible: boolean): void => { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); };
   const fill = (sourceId: string, data: SourceData): void => { (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data); };
   const draw = (layer: string, overlay: Overlay | null, before?: string | readonly string[]): void => {
+    if (overlay && failed.has(overlay)) return;
+    for (const id of Object.keys(overlay?.sources ?? {})) retired.delete(id);
     const old = overlays.get(layer), next = overlay ?? {sources: {}, layers: []};
     for (const l of old?.layers ?? []) if (!next.layers.some(n => n.id === l.id) && map.getLayer(l.id)) map.removeLayer(l.id);
     for (const id of Object.keys(old?.sources ?? {})) if (!(id in next.sources) && map.getSource(id)) map.removeSource(id);
@@ -316,6 +337,6 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       if (early && !map.getSource(sourceId)) early.images.set(sourceId, texture);
       else { early?.images.delete(sourceId); paint(sourceId, texture); }
     },
-    destroy() { flight?.(); resize?.disconnect(); map.remove(); },
+    destroy() { destroyed = true; retired.clear(); flight?.(); resize?.disconnect(); map.remove(); },
   };
 }

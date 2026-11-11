@@ -27,6 +27,7 @@ async function bundleHost() {
     import {dailyFeed, regionalForecast} from './web/brief/Brief.tsx';
     import {parseConditionsForecast} from './web/conditions.ts';
     import {regsData} from './web/regs.ts';
+    import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
     import {species, profile, hour, day} from './web/state.ts';
     import {region} from './tests/fixtures/regulations/fe61-v1.json';
     import daily from './tests/fixtures/brief/monterey-daily.json';
@@ -50,6 +51,7 @@ async function bundleHost() {
         dailyFeed.value = live === 'unknown' ? null : {...daily, region_id: region.id};
         regionalForecast.value = live === 'unknown' ? null : parseConditionsForecast(forecastFeed(region.id, live === 'no' ? 30 : 5), region.id, region.map.center);
         regsData.value = null; species.value = 'salmon'; profile.value = 'boat'; hour.value = null; day.value = null;
+        admitBriefFixture(); // SC1722-02: the fixture's sources, admitted as one settled snapshot
         render(null, document.getElementById('host'));
         render(h(FirstAnswerLine, {now: NOW}), document.getElementById('host'));
         if (state === 'yes') document.querySelector('#host .app-first-answer').setAttribute('data-fishable', 'yes');

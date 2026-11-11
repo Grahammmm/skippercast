@@ -19,7 +19,7 @@
 // Mobile.tsx (FE-06) composes the same pieces into
 // the sheet in its own order. The Reports view (FE-52) covers the brief and
 // the map; the stage stays mounted beneath it.
-import {BriefFooter, PrintBrief, BriefLinks, BriefTiles, Details, LowerExposure, SavedLine, Verdict, currentBrief} from '../brief/Brief.tsx';
+import {BriefFooter, PrintBrief, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {RunLine} from '../brief/Run.tsx';
@@ -46,7 +46,6 @@ export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Dat
   return (
     <aside class="app-brief" id={BRIEF_ID} tabIndex={-1} aria-label="Brief" data-basis={brief?.basis}>
       {/* SC-LAUNCH-3: the lead names its own day (tomorrow until a time is chosen); the eyebrow heads the evidence for the dock's day. */}
-      <Guard name="saved-brief"><SavedLine now={now} /></Guard>
       <Guard name="verdict"><Verdict now={now} /></Guard>
       <span class="ui-eyebrow">{brief ? brief.label : 'Today\'s brief'}</span>
       <Guard name="tiles"><BriefTiles brief={brief} dense /></Guard>
