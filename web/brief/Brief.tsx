@@ -19,9 +19,9 @@ import {batch, effect, signal} from '@preact/signals';
 import {counties} from '../../packages/coast/src/counties.ts';
 import {dateKey} from '../../packages/coast/src/daily.ts';
 import type {Report} from '../../packages/coast/src/types.ts';
-import {coastBinding, coastData, coastReport, type CoastData} from '../coast-data.ts';
+import {coastBinding, coastData, coastReport, coastStatus, type CoastData} from '../coast-data.ts';
 import type {CoastReportContext} from '../../packages/coast/src/state/report-binding.ts';
-import {briefForecast, loadConditionsForecast, type ConditionsForecast, type ForecastFailureReason} from '../conditions.ts';
+import {briefForecast, loadConditionsForecast, type ConditionsForecast, type ForecastFailureReason, type ForecastLoadResult} from '../conditions.ts';
 import {feedPath} from '../landing/readings.ts';
 import {responseProvenance} from '../offline-response.ts';
 import {PROFILE_TABLE, type Profile} from '../profile.ts';
@@ -267,6 +267,8 @@ export function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promis
 
 let dailyRequest: {id: string; fetchFn: typeof fetch} | null = null;
 let dailyLoadedAt = 0, dailyPending = false;
+/** SC1922-08: the feeds a pressed refresh read, for the next readFeeds to admit (daily, conditions). */
+let pressedFeeds: [FeedRead | null, FeedRead | null] | null = null;
 
 async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean): Promise<RegionalDailyFeed | null> {
   const before = verdictLoad.peek()?.region === id ? verdictLoad.peek()!.inputs : null, ticket = askSources(id, ['daily', 'conditions']);
@@ -280,7 +282,9 @@ async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean): P
     if (read || !refresh) verdictLoad.settle(ticket, source, read ? {state: 'loaded', data: read} : {state: 'failed'});
     return read;
   };
-  const [dailyRead, conditionsRead] = await Promise.all([readDaily(id, fetchFn, load).then(report('daily')), readFeed(feedPath(undefined, id), id, fetchFn).then(report('conditions'))]);
+  // SC1922-08: a pressed refresh has read the feeds itself and hands them in here, to be admitted as an ordinary load admits its reads.
+  const pressed = pressedFeeds; pressedFeeds = null;
+  const [dailyRead, conditionsRead] = pressed ? [report('daily')(pressed[0]), report('conditions')(pressed[1])] : await Promise.all([readDaily(id, fetchFn, load).then(report('daily')), readFeed(feedPath(undefined, id), id, fetchFn).then(report('conditions'))]);
   // A refresh that read neither keeps the feeds already admitted, as the brief keeps them on screen; one that read one drops the other's.
   for (const source of ['daily', 'conditions'] as const) verdictLoad.settle(ticket, source, {state: 'failed', ...(!dailyRead && !conditionsRead && before?.[source].data ? {data: before[source].data} : {})});
   const daily = dailyRead?.feed ?? null, conditions = conditionsRead?.feed ?? null;
@@ -349,6 +353,8 @@ let forecastSlot: ForecastSlot | null = null, forecastJoiners: number[] = [];
 let forecastLoadedAt = 0, forecastPending = false, forecastGeneration = 0, forecastInflight: Promise<ConditionsForecast | null> | null = null, visibilityBound = false;
 /** A loaded forecast older than this is fetched again when the page becomes visible. */
 export const FORECAST_MAX_AGE_MS = 30 * 60_000;
+/** SC1922-08: the forecast a pressed refresh read, for the next ensureRegionalForecast to admit. */
+let pressedForecast: ForecastLoadResult | null = null;
 
 /**
  * Load the forecast for region `id` at the point nearest `near`, once per region and point; the brief and the Conditions view share it.
@@ -378,7 +384,8 @@ export function ensureRegionalForecast(id: string, near: readonly [number, numbe
     const retried = before.state === 'failed' && before.region === id ? {reason: before.reason, ...(before.status === undefined ? {} : {status: before.status})} : {};
     regionalForecastState.value = {region: id, key, generation, state: 'loading', ...retried};
   });
-  const read = loadConditionsForecast(id, near, fetchFn, page).then(result => {
+  const pressed = pressedForecast; pressedForecast = null; // SC1922-08: a pressed refresh read the forecast itself and hands it in to be admitted as an ordinary read is
+  const read = (pressed ? Promise.resolve(pressed) : loadConditionsForecast(id, near, fetchFn, page)).then(result => {
     if (generation !== forecastGeneration) return regionalForecast.peek(); // a later request (even for this same key) owns the state
     // SC1722-02: the verdict's forecast part, under this request's ticket (-01's result, unchanged; absent is no request, not a failure).
     const slot: ForecastSlot = result.state === 'loaded' ? {state: 'loaded', data: {forecast: result.forecast, savedAt: result.savedAt}}
@@ -425,6 +432,52 @@ export function retryRegionalForecast(): Promise<ConditionsForecast | null> | nu
   if (forecastPending && forecastInflight && !forecastTimedOut()) return forecastInflight;
   forecastKey = null;
   return ensureRegionalForecast(req.id, req.near, req.fetchFn, req.page);
+}
+
+/** SC1922-08: where a pressed refresh stands. A code, never text; the chip words it in the page's language. */
+export type ManualRefreshState = 'idle' | 'refreshing' | 'offline' | 'failed';
+export const manualRefresh = signal('idle' as ManualRefreshState);
+let manualRun: Promise<void> | null = null;
+// Selecting another region ends the press in progress: its replies belong to the old region and must neither say anything about the new
+// one nor change what it shows, and a word left by an earlier press (failed, offline) is about the old region too.
+effect(() => {
+  void region.value;
+  manualRun = null;
+  manualRefresh.value = 'idle';
+});
+// Back online, "Offline" said by a refused press is out of date.
+if (typeof window !== 'undefined') window.addEventListener('online', () => { if (manualRefresh.peek() === 'offline') manualRefresh.value = 'idle'; });
+
+/**
+ * The freshness chip's Refresh: ask the forecast, the daily feeds and the coast report again, once per press. A press during a press, or
+ * while any of those reads is already under way, asks nothing more. Offline asks nothing and says so (manualRefresh 'offline'). The press
+ * reads the forecast and feeds without showing them, asks the coast report only once those answered, and shows the new forecast and feeds
+ * (through their own loaders) only when the coast report answered too; if any source failed the brief stays exactly as it was and the
+ * press says so (manualRefresh 'failed'); it is never read as a verdict. No timer, no retry.
+ */
+export function refreshBriefNow(online: () => boolean = () => globalThis.navigator?.onLine !== false): Promise<void> {
+  if (manualRun) return manualRun;
+  if (!online()) { manualRefresh.value = 'offline'; return Promise.resolve(); }
+  if (forecastPending || dailyPending || coastStatus.peek().report === 'loading') return Promise.resolve();
+  manualRefresh.value = 'refreshing';
+  const fc = forecastRequest, df = dailyRequest;
+  let run!: Promise<void>; // the async body below compares manualRun with it after its first await
+  run = manualRun = (async () => {
+    let ok = false;
+    try {
+      const [forecast, feeds] = await Promise.all([fc && loadConditionsForecast(fc.id, fc.near, fc.fetchFn, fc.page), df && Promise.all([readDaily(df.id, df.fetchFn, feedLoad), readFeed(feedPath(undefined, df.id), df.id, df.fetchFn)])]);
+      ok = forecast?.state !== 'failed' && !feeds?.includes(null);
+      if (ok && manualRun === run && coastBinding.peek()) { await coastData.refresh('report'); ok = coastStatus.peek().report === 'ready'; }
+      if (ok && manualRun === run) {
+        if (forecast) { pressedForecast = forecast; forecastKey = null; void ensureRegionalForecast(fc!.id, fc!.near, fc!.fetchFn, fc!.page); }
+        if (feeds) { pressedFeeds = feeds; void readFeeds(df!.id, df!.fetchFn, true); }
+      }
+    } catch { ok = false; } // a press that threw failed
+    if (manualRun !== run) return; // another region was selected meanwhile: this press says nothing about it
+    manualRun = null;
+    manualRefresh.value = ok ? 'idle' : 'failed';
+  })();
+  return run;
 }
 
 /** Reload the forecast when it failed or was loaded over 30 minutes before `now`; no timer, only called as the page becomes visible. */
