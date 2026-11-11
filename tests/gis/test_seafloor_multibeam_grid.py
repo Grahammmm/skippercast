@@ -169,3 +169,68 @@ class PrivateGridTests(unittest.TestCase):
             self.assertIn('derived-multibeam-source-review',feature['properties']['hold_reasons'])
             self.assertEqual(feature['properties']['measured_support']['native_resolution_m'],'unknown')
             self.assertEqual(feature['properties']['measured_support']['full_bin_insonification'],'unverified')
+
+
+class ReceiptShapeTests(PrivateGridTests):
+    """Hash-bound but malformed receipt JSON shapes are refused with ValueError."""
+
+    def malformed(self):
+        base = json.loads(self.sidecar.read_text())
+        cases = {'root-null': None, 'root-list': [], 'root-string': 'x', 'root-number': 1, 'root-bool': True}
+        for key in ('originals', 'beam_table_sha256', 'grid_sha256'):
+            for label, value in (('null', None), ('number', 5), ('string', 'x'), ('list', []), ('object', {})):
+                if (key == 'originals' and label == 'object') or (key != 'originals' and label == 'list'):
+                    continue
+                cases[f'{key}-{label}'] = {**base, key: value}
+        for label, value in (('null', None), ('number', 5), ('bool', True), ('object', {}), ('list', []), ('upper', 'A' * 64), ('short', 'a' * 63)):
+            cases[f'original-{label}'] = {**base, 'originals': {'o.mb57': value}}
+            cases[f'table-{label}'] = {**base, 'beam_table_sha256': [value]}
+            cases[f'grid-{label}'] = {**base, 'grid_sha256': ['c' * 64, 'd' * 64, value]}
+            cases[f'receipt-{label}'] = {**base, 'grid_receipt_sha256': value}
+        cases['empty-originals'] = {**base, 'originals': {}, 'beam_table_sha256': []}
+        cases['two-grids'] = {**base, 'grid_sha256': ['c' * 64, 'd' * 64]}
+        return cases
+
+    def bind(self, doc):
+        self.sidecar.write_text(json.dumps(doc))
+        row = deepcopy(self.row)
+        row['grid_preparation']['preparation_receipt_sha256'] = sha256(self.sidecar)
+        return row
+
+    def test_reader_refuses_every_malformed_shape(self):
+        from skippercast.seafloor.adapters.multibeam_grid import reviewed_receipt
+        for label, doc in self.malformed().items():
+            with self.subTest(case=label):
+                row = self.bind(doc)
+                with self.assertRaises(ValueError):
+                    reviewed_receipt(self.sidecar, row)
+
+    def test_valid_receipts_and_extensions_are_returned_unchanged(self):
+        from skippercast.seafloor.adapters.multibeam_grid import reviewed_receipt
+        base = json.loads(self.sidecar.read_text())
+        for n in (1, 8):
+            doc = {**base, 'originals': {f'o{i}.mb57': 'a' * 64 for i in range(n)},
+                   'beam_table_sha256': ['b' * 64] * n, 'extension': {'keep': [1, 5.0]}}
+            with self.subTest(n=n):
+                self.assertEqual(reviewed_receipt(self.sidecar, self.bind(doc)), doc)
+        nine = {**base, 'originals': {f'o{i}': 'a' * 64 for i in range(9)}, 'beam_table_sha256': ['b' * 64] * 9}
+        with self.assertRaises(ValueError):
+            reviewed_receipt(self.sidecar, self.bind(nine))
+
+    def test_paired_import_refuses_before_cache_and_cached_pair_is_untouched(self):
+        from skippercast.seafloor.adapters.multibeam_grid import source_files
+        cases = self.malformed()
+        for label in ('root-list', 'originals-list', 'original-number'):
+            doc = cases[label]
+            with self.subTest(case=label, where='fresh'), tempfile.TemporaryDirectory() as out:
+                row = self.bind(doc); cache = Path(out) / 'cache'
+                with self.assertRaises(ValueError):
+                    source_files(row, cache, self.source)
+                self.assertFalse((cache / row['sha256']).exists())
+            with self.subTest(case=label, where='cached'), tempfile.TemporaryDirectory() as out:
+                row = self.bind(doc); folder = Path(out) / row['sha256']; folder.mkdir()
+                shutil.copyfile(self.source, folder / 'source.tif'); shutil.copyfile(self.sidecar, folder / 'preparation.json')
+                before = [(folder / n).read_bytes() for n in ('source.tif', 'preparation.json')]
+                with self.assertRaises(ValueError):
+                    source_files(row, Path(out), None)
+                self.assertEqual(before, [(folder / n).read_bytes() for n in ('source.tif', 'preparation.json')])

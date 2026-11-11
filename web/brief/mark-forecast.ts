@@ -94,6 +94,10 @@ export interface MarkReading {
   readonly validAt: number | null;
   /** The run's initialisation, epoch ms, where the feed gives it. */
   readonly issuedAt: number | null;
+  /** SC2252-05: the unrounded numbers behind a model wind or seas row's text, from the same sample calls (the trip plan compares them to a person's own limits). Absent on gaps and the current row. */
+  readonly sampled?: {readonly windKn: number | null; readonly gustKn: number | null; readonly seasFt: number | null; readonly periodS: number | null};
+  /** SC2252-05: why a model row is a gap: the arrival hour is outside the run's listed hours, or no listed hour is near it, or anything else (no model, old run, missing field). */
+  readonly gapKind?: 'outside-hours' | 'no-hour' | 'other';
 }
 export interface MarkForecast {
   /** Step 0 for model wind and seas: the feed carries point series (interpolated at named points), in every region. */
@@ -152,16 +156,34 @@ function gridText(grid: string, lang: Language): string {
  * clock, the run's 36-hour limit, the feed's retrieval, the run's span, then no listed hour near.
  */
 export function gateGap(name: string, times: readonly number[], issued: number | null, retrieved: number, at: number, now: number, tz: string, lang: Language = 'en'): string {
-  if (issued === null) return t('markForecast.gate.noIssue', lang, {model: name});
-  const ahead = now + 5 * 60_000, run = runText(issued, tz, lang);
-  if (issued > ahead) return t('markForecast.gate.futureRun', lang, {model: name, run});
-  if (now - issued > 36 * HOUR) return t('markForecast.gate.oldRun', lang, {model: name, run});
-  if (!Number.isFinite(retrieved)) return t('markForecast.gate.noRetrieval', lang);
-  if (retrieved > ahead) return t('markForecast.gate.futureRetrieval', lang);
-  if (now - retrieved > 6 * HOUR) return t('markForecast.gate.oldRetrieval', lang);
+  return gateText(gateReason(times, issued, retrieved, at, now), name, issued, tz, lang);
+}
+
+type GateReason = 'noIssue' | 'futureRun' | 'oldRun' | 'noRetrieval' | 'futureRetrieval' | 'oldRetrieval' | 'outside' | 'noHour';
+/** The gate's first refusal, in the order gateGap words them (SC2252-05: typed, so a caller never matches translated text). */
+function gateReason(times: readonly number[], issued: number | null, retrieved: number, at: number, now: number): GateReason {
+  if (issued === null) return 'noIssue';
+  const ahead = now + 5 * 60_000;
+  if (issued > ahead) return 'futureRun';
+  if (now - issued > 36 * HOUR) return 'oldRun';
+  if (!Number.isFinite(retrieved)) return 'noRetrieval';
+  if (retrieved > ahead) return 'futureRetrieval';
+  if (now - retrieved > 6 * HOUR) return 'oldRetrieval';
   const first = times.length ? Math.min(...times) : null, last = times.length ? Math.max(...times) : null;
-  if (first === null || last === null || at < first || at > last) return t('markForecast.gate.outside', lang, {model: name, run});
-  return t('markForecast.gate.noHour', lang, {model: name, run});
+  return first === null || last === null || at < first || at > last ? 'outside' : 'noHour';
+}
+function gateText(reason: GateReason, name: string, issued: number | null, tz: string, lang: Language): string {
+  const run = issued === null ? '' : runText(issued, tz, lang);
+  switch (reason) {
+    case 'noIssue': return t('markForecast.gate.noIssue', lang, {model: name});
+    case 'futureRun': return t('markForecast.gate.futureRun', lang, {model: name, run});
+    case 'oldRun': return t('markForecast.gate.oldRun', lang, {model: name, run});
+    case 'noRetrieval': return t('markForecast.gate.noRetrieval', lang);
+    case 'futureRetrieval': return t('markForecast.gate.futureRetrieval', lang);
+    case 'oldRetrieval': return t('markForecast.gate.oldRetrieval', lang);
+    case 'outside': return t('markForecast.gate.outside', lang, {model: name, run});
+    case 'noHour': return t('markForecast.gate.noHour', lang, {model: name, run});
+  }
 }
 
 /** The feed's requested points, in feed order; null when malformed. */
@@ -174,19 +196,22 @@ function feedPoints(f: Feed): {id: string; lat: number; lon: number}[] | null {
 const gapRow = (label: MarkReading['label'], model: string, grid: string, gap: string, extra: Partial<MarkReading> = {}): MarkReading =>
   ({label, model, grid, value: null, gap, point: null, cell: null, validAt: null, issuedAt: null, ...extra});
 
-/** What a model's sample reads at epoch seconds `t`: the row's value, or null when a needed value is missing. */
-function modelValue(label: 'Wind' | 'Seas', series: unknown, sec: number, end: number | null, lang: Language): string | null {
+/** What a model's sample reads at epoch seconds `t`: the row's text and the numbers behind it, or null when a needed value is missing. */
+function modelValue(label: 'Wind' | 'Seas', series: unknown, sec: number, end: number | null, lang: Language): {text: string; sampled: NonNullable<MarkReading['sampled']>} | null {
   const meta = end === null ? null : {data_end_time: end}, at = (v: string, unit: string) => sample(series, v, sec, unit, meta);
   if (label === 'Wind') {
     const speed = at('wind_speed_10m', 'kn'), from = at('wind_direction_10m', '°'), gust = at('wind_gusts_10m', 'kn');
     if (speed === null) return null;
     // v1's rule: a gust below the sustained wind is left out.
-    return `${Math.round(speed)} kt${from === null ? '' : t('markForecast.from', lang, {compass: compass(from), degrees: Math.round(from)})}${gust !== null && gust >= speed ? t('markForecast.gusts', lang, {gust: Math.round(gust)}) : ''}`;
+    const gusts = gust !== null && gust >= speed ? gust : null;
+    return {text: `${Math.round(speed)} kt${from === null ? '' : t('markForecast.from', lang, {compass: compass(from), degrees: Math.round(from)})}${gusts !== null ? t('markForecast.gusts', lang, {gust: Math.round(gusts)}) : ''}`,
+      sampled: {windKn: speed, gustKn: gusts, seasFt: null, periodS: null}};
   }
   // v1's rule: seas without a positive period are left out.
   const period = at('wave_period', 's'), height = period !== null && period > 0 ? at('wave_height', 'ft') : null, from = at('wave_direction', '°');
   if (height === null || period === null) return null;
-  return `${fixed(lang === 'en' ? height : Number(height.toFixed(1)), 1, lang)} ft · ${Math.round(period)} s${from === null ? '' : t('markForecast.from', lang, {compass: compass(from), degrees: Math.round(from)})}`;
+  return {text: `${fixed(lang === 'en' ? height : Number(height.toFixed(1)), 1, lang)} ft · ${Math.round(period)} s${from === null ? '' : t('markForecast.from', lang, {compass: compass(from), degrees: Math.round(from)})}`,
+    sampled: {windKn: null, gustKn: null, seasFt: height, periodS: period}};
 }
 
 /**
@@ -197,16 +222,19 @@ function modelRow(label: 'Wind' | 'Seas', id: string, f: Feed, points: readonly 
   at: number, now: number, tz: string, lang: Language): MarkReading {
   const name = MODEL_NAMES[id] ?? id, grid = gridText(MODEL_GRIDS[id] ?? 'unstated', lang), point = points[index]!.id;
   const m = f.models?.[id], data = Array.isArray(m?.data) && m.data.length === points.length ? m.data as unknown[] : null;
-  if (!data) return gapRow(label, name, grid, t('markForecast.gap.noModel', lang, {model: name}), {point});
+  if (!data) return gapRow(label, name, grid, t('markForecast.gap.noModel', lang, {model: name}), {point, gapKind: 'other'});
   const issued = finite(m?.meta?.last_run_initialisation_time) ? m.meta.last_run_initialisation_time * 1000 : null;
   const end = finite(m?.meta?.data_end_time) ? m.meta.data_end_time : null;
   const times = (data[index] as Series | null)?.hourly?.time, retrieved = finite(f.retrieved) ? f.retrieved : NaN;
   const listed = Array.isArray(times) ? times.filter(finite).map(s => s * 1000) : [];
   const hr = issued === null ? null : forecastTime(listed, issued, retrieved, new Date(at), new Date(now));
-  if (hr === null) return gapRow(label, name, grid, gateGap(name, listed, issued, retrieved, at, now, tz, lang), {point, issuedAt: issued});
+  if (hr === null) {
+    const reason = gateReason(listed, issued, retrieved, at, now);
+    return gapRow(label, name, grid, gateText(reason, name, issued, tz, lang), {point, issuedAt: issued, gapKind: reason === 'outside' ? 'outside-hours' : reason === 'noHour' ? 'no-hour' : 'other'});
+  }
   const value = modelValue(label, data[index], hr / 1000, end, lang);
-  if (value === null) return gapRow(label, name, grid, t(label === 'Wind' ? 'markForecast.gap.noWind' : 'markForecast.gap.noSeas', lang, {model: name, hour: hourText(hr, tz, lang)}), {point, issuedAt: issued});
-  return {label, model: name, grid, value, gap: '', point, cell: null, validAt: hr, issuedAt: issued};
+  if (value === null) return gapRow(label, name, grid, t(label === 'Wind' ? 'markForecast.gap.noWind' : 'markForecast.gap.noSeas', lang, {model: name, hour: hourText(hr, tz, lang)}), {point, issuedAt: issued, gapKind: 'other'});
+  return {label, model: name, grid, value: value.text, gap: '', point, cell: null, validAt: hr, issuedAt: issued, sampled: value.sampled};
 }
 
 /** A WCOFS sample that can be real: five finite numbers, a cell on the globe, a speed of zero or more, a bearing in 0-360. Rejected whole, never repaired. */

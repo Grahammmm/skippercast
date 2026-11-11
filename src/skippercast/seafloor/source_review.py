@@ -75,7 +75,8 @@ def record(root, manifest, source_id, reach_ids, outcome, evidence, *, now, note
     state['reviews'] = [r for r in state['reviews'] if isinstance(r, dict)
                         and isinstance(r.get('source_id'), str)
                         and r['source_id'] != source_id] + [row]
-    encoded = json.dumps(state, indent=2).encode()
+    # Count exactly the bytes atomic_json(indent=2) writes, so load() can read them back.
+    encoded = (json.dumps(state, ensure_ascii=False, allow_nan=False, indent=2) + '\n').encode()
     if len(encoded) > MAX_BYTES:
         raise ValueError('Source-review checkpoint exceeds bounded size')
     if not (root/RELATIVE).resolve().is_relative_to(root):
