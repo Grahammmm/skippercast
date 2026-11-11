@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- RF0015-7: the switch that enlarges controls is now called "Large controls" in English and "Controles grandes" in Spanish (it was "Helm view" / "Vista de timón"). Only the label changed: the mode, its stored setting and its look are unchanged.
 - RF2205-5: a double-tap or double-click zoom on the Chart no longer selects the mark, opens a card, raises the phone sheet or places an armed waypoint under the finger. A single click or tap now acts after a short 0.55 s pause, and a region, view or waypoint change in that pause drops it. Zoom itself is MapLibre's, unchanged. Unit-tested over a fake map; not tried on a real device.
 - SC1922-08: the freshness chip (masthead and phone) offers Refresh. One press asks the forecast, the daily feeds and the coast report once; the new forecast and feeds are shown only when every source answered, otherwise the brief stays exactly as it was and the chip says "Refresh failed; showing the previous brief" (in Spanish too). Offline asks nothing and says Offline. Selecting another region ends a press in progress.
 - RF1935-3: when an Aerial imagery source fails (after the one PNG fallback), the map removes it, so the browser stops requesting its tiles until you choose Aerial again, and late tile errors from it no longer log as Chart errors. The "Aerial unavailable" note, the imagery and its credit are unchanged.

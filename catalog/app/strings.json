@@ -2047,7 +2047,7 @@
     "tour.s4.title": {"en": "Evidence-limit line", "es": "Línea de límites de la evidencia"},
     "tour.s4.text": {"en": "Open Details under the brief to read what this brief cannot tell you for your activity. A map layer is not a safety clearance.", "es": "Abre Detalles debajo del resumen para leer qué no puede decirte este resumen sobre tu actividad. Una capa del mapa no es una autorización de seguridad."},
     "preset.group": {"en": "Layer presets", "es": "Preajustes de capas"},
-    "preset.helm": {"en": "Helm view", "es": "Vista de timón"},
+    "preset.helm": {"en": "Large controls", "es": "Controles grandes"},
     "preset.reefDrift": {"en": "Reef drift", "es": "Deriva sobre arrecife"},
     "preset.halibut": {"en": "Halibut", "es": "Halibut"},
     "preset.crab": {"en": "Crab", "es": "Cangrejo"},
