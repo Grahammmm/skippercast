@@ -203,7 +203,12 @@ export function showSavedBrief(id: string, now = Date.now()): boolean {
 }
 
 /** True when region `id` has no daily feed on screen yet, or only the restored one that has not been replaced; a pack answer is a completed read, tried again on the visible-page cadence. */
-export const needsDailyLoad = (id: string): boolean => dailyFeed.peek()?.region_id !== id || (held.region === id && !!held.daily?.saved && !held.daily.pack && !dailyPending);
+export const needsDailyLoad = (id: string): boolean => dailyFeed.peek()?.region_id !== id || (held.region === id && !!held.daily?.saved && !held.daily.pack && !dailyPending) || feedsUnasked(id);
+/** SC1722-02: region `id`'s current epoch still waits on a feed that no running read will settle (A -> B -> A restarts it while the raw cached feed is still A's). */
+const feedsUnasked = (id: string): boolean => {
+  const epoch = verdictLoad.peek();
+  return epoch?.region === id && (epoch.inputs.daily.state === 'pending' || epoch.inputs.conditions.state === 'pending') && !(dailyPending && dailyRequest?.id === id);
+};
 
 export const FEED_GAP = {both: t('brief.gap.both'), daily: t('brief.gap.daily').replace(/\.$/, ''), conditions: t('brief.gap.conditions')} as const;
 

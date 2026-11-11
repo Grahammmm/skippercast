@@ -272,6 +272,24 @@ test('a_b_a_reuses_the_forecast_read_under_the_current_epoch: the restarted epoc
   } finally {Date.now=oldNow;delete globalThis.fetch;}
 });
 
+test('a_b_a_asks_the_feeds_again: main.tsx\'s skip predicate (needsDailyLoad) is true for the restarted epoch although the raw feed is still the region\'s',async()=>{
+  const m=await load();
+  try {
+    globalThis.fetch=path=>Promise.resolve(String(path).includes('/feeds/conditions/')?response(conditions):response(daily));
+    m.region.value=ID;m.beginVerdictRegion(ID);
+    await m.loadDailyFeed(ID);
+    assert.equal(m.needsDailyLoad(ID),false,'settled feeds are not asked again');
+    m.beginVerdictRegion('other-region'); m.beginVerdictRegion(ID);   // A -> B -> A before B's requests complete
+    assert.equal(m.verdictEpoch.value.inputs.daily.state,'pending');
+    assert.equal(m.needsDailyLoad(ID),true,'the restarted epoch asks the feeds');
+    const again=m.loadDailyFeed(ID);
+    assert.equal(m.needsDailyLoad(ID),false,'a read in flight is not asked twice');
+    await again;
+    assert.equal(m.verdictEpoch.value.inputs.daily.state,'loaded');
+    assert.equal(m.verdictEpoch.value.inputs.conditions.state,'loaded');
+  } finally {m.verdictLoad.reset();delete globalThis.fetch;}
+});
+
 test('offline_pack_snapshot_gives_date_only_chips: parts the saved pack answered are saved, so no chip carries a verdict word',async()=>{
   const oldNow=Date.now;Date.now=()=>NOW.getTime();
   try {
