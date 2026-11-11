@@ -20,7 +20,7 @@
     "fa.rules.unavailable": {"en": "Rules unavailable - open the official rules before you go.", "es": "Reglas no disponibles: abre las reglas oficiales antes de salir."},
     "fa.rules.due": {"en": "Rules due for review - check the official page before you go.", "es": "Reglas pendientes de revisión: consulta la página oficial antes de salir."},
     "fa.rules.reviewed": {"en": "Rules reviewed ({label}) - see the rules card for the limits.", "es": "Reglas revisadas ({label}): consulta la tarjeta de reglas para ver los límites."},
-    "fa.more": {"en": "Show the map and detail", "es": "Ver el mapa y el detalle"},
+    "fa.more": {"en": "Go to map and details", "es": "Ir al mapa y a los detalles"},
     "forecast.failed": {"en": "Couldn't load the forecast", "es": "No se pudo cargar el pronóstico"},
     "forecast.reason.network": {"en": "The forecast could not be reached. Check your connection.", "es": "No se pudo conectar con el pronóstico. Revisa tu conexión."},
     "forecast.reason.http": {"en": "The forecast service answered with an error (HTTP {status}).", "es": "El servicio de pronóstico respondió con un error (HTTP {status})."},

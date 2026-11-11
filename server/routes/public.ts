@@ -17,7 +17,11 @@ export const publicApi = new Hono<AppEnv>();
 
 // Public liveness only: which bindings and secrets exist is not published.
 // Feed storage shows per response in X-Feed-Source on /feeds/.
-publicApi.all('/api/health', () => json({service: 'SkipperCast', version: pkg.version, build: BUILD_ID}));
+// `build` is the client content hash; `revision` is the build checkout's commit (scripts/build-revision.mjs).
+publicApi.all('/api/health', () => {
+  const meta = typeof BUILD_REVISION === 'undefined' ? null : BUILD_REVISION;
+  return json({service: 'SkipperCast', version: pkg.version, build: BUILD_ID, revision: meta?.revision ?? null, revision_dirty: meta?.revision_dirty ?? null});
+});
 
 publicApi.get('/api/habitat', async c => {
   const url = new URL(c.req.url), region = regionById(url.searchParams.get('region'));
