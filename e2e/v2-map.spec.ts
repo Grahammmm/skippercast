@@ -1594,8 +1594,8 @@ for (const [presentation, controls] of [['chart', '.app-chart .maplibregl-ctrl-b
         const [mine] = await rects(page, RAIL), others = [...await rects(page, controls), ...await rects(page, '.app-presentation .ui-segmented')];
         expect(others.length).toBeGreaterThan(1);
         for (const other of others) expect(railApart(mine, other), `${presentation} ${width}x${height} ${phase}: rail clear of "${other.label.slice(0, 30)}"`).toBe(true);
-        // A control below the window's bottom edge has no element under its centre, so each one is scrolled into view first (SC1722-02: the page used to
-        // finish scrolling itself by a settling timing accident on a 1024x768 window and no longer does, which left the presentation switch off-screen).
+        // SC1922-04: the page no longer scrolls itself on load (TimeDock's chip reveal moves only the strip), so at 1024x768 the Map/Chart switch sits
+        // below the first screen. A click scrolls its target into view first; do the same here, then hit-test the centre exactly as before.
         const hits = await page.locator(hittable).evaluateAll(els => els.map(el => {
           el.scrollIntoView({block: 'nearest', inline: 'nearest'});
           const box = el.getBoundingClientRect(), hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
@@ -1605,8 +1605,8 @@ for (const [presentation, controls] of [['chart', '.app-chart .maplibregl-ctrl-b
         // Separate, pre-existing finding (not fixed here, see the PR): the rail's bottom reservation is sized for the four terrain buttons, so the
         // Chart's expanded credits (74 px tall for this region) reach about 8 px into a rail that has been cut to its reserved height. Recorded, not hidden.
         if (presentation === 'chart') {
-          const [credits] = await rects(page, ATTRIBUTION), [railNow] = await rects(page, RAIL);   // the rail again: scrolling a control into view moved it
-          if (!railApart(railNow!, credits!)) test.info().annotations.push({type: 'finding', description: `${width}x${height} ${phase}: expanded credits overlap the rail by ${Math.round((railNow!.bottom - credits!.top) * 10) / 10} px`});
+          const [credits] = await rects(page, ATTRIBUTION);
+          if (!railApart(mine, credits!)) test.info().annotations.push({type: 'finding', description: `${width}x${height} ${phase}: expanded credits overlap the rail by ${Math.round((mine.bottom - credits!.top) * 10) / 10} px`});
         }
       }
     }
