@@ -371,6 +371,24 @@ test('a failing coastline marks only its layer unavailable; the basemap keeps dr
   expect(asked).toEqual(['/regions/morro-bay/shoreline-overview.geojson', '/regions/morro-bay/shoreline.geojson']);
 });
 
+test('RF2205-9: an overview-only region never asks for the full shoreline, even after the overview fails', async ({page, v2}) => {
+  const asked: string[] = [];
+  await page.route('**/regions/morro-bay/region.json', async route => {
+    const response = await route.fetch();
+    await route.fulfill({response, json: {...await response.json(), chart_files: ['shoreline-overview.geojson']}});
+  });
+  await page.route(/\/regions\/morro-bay\/shoreline(?:-overview)?\.geojson$/, route => { asked.push(new URL(route.request().url()).pathname); return route.fulfill({status: 503, body: 'Offline map test'}); });
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,13'});
+  if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click();
+  await expect(page.locator('[data-unavailable="coastline"]')).toHaveText('Coastline unavailable.');
+  await expect(page.locator('[data-unavailable]')).toHaveCount(1);
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(asked.filter(path => path.endsWith('/shoreline.geojson')), 'the unlisted full shoreline is never asked for').toEqual([]);
+  expect(asked).toContain('/regions/morro-bay/shoreline-overview.geojson');
+});
+
 // BL-SC-1: at phone width the credits are MapLibre's compact toggle, folded on load whatever their length, and one tap opens them.
 test('the Chart attribution starts compact and folded on a phone and expanded on the desktop', async ({page, pageErrors, v2}) => {
   await page.route('https://imagery.nationalmap.gov/**', route => route.fulfill({body: PIXEL, contentType: 'image/png', headers: {'Access-Control-Allow-Origin': '*'}}));
