@@ -970,6 +970,37 @@ for (const {width, height} of COLD_PHONES) {
   });
 }
 
+for (const [width, height, rail] of [[390, 844, false], [1024, 768, false], [1279, 800, false], [1440, 600, false], [1280, 699, false], [1280, 700, true], [1440, 900, true]] as const) {
+  test(`RF2115-6 landing_layer_names_at_rest ${width}x${height}: every layer name is visible without hover or focus, ${rail ? 'in the fixed rail' : 'in the page flow'}`, async ({page, pageErrors}, info) => {
+    test.skip(info.project.name !== 'phone' && width < 1024, 'the compact sizes are set explicitly on the phone project');
+    await page.setViewportSize({width, height});
+    await landingFeeds(page);
+    await page.goto('/?ui=v2');
+    const links = page.locator('.landing-dots a[data-layer]');
+    await expect(links).toHaveCount(10);
+    const boxes = await links.evaluateAll(nodes => nodes.map(node => {
+      const name = node.querySelector('.landing-dot-name') as HTMLElement, style = getComputedStyle(name), a = node.getBoundingClientRect(), n = name.getBoundingClientRect();
+      return {text: name.textContent, clip: style.clipPath, opacity: style.opacity, visibility: style.visibility, display: style.display, w: n.width, h: n.height, inLink: n.left >= a.left - 1 && n.right <= a.right + 1, touch: a.height, fixed: getComputedStyle(node.closest('.landing-dots') as Element).position === 'fixed', right: n.right};
+    }));
+    for (const b of boxes) {
+      expect(b.text).toBeTruthy();
+      expect([b.clip, b.opacity, b.visibility, b.display]).toEqual(['none', '1', 'visible', b.display]);
+      expect(b.display).not.toBe('none');
+      expect(b.w).toBeGreaterThan(0);
+      expect(b.h).toBeGreaterThan(0);
+      expect(b.inLink).toBe(true);
+      expect(b.fixed).toBe(rail);
+      expect(b.right).toBeLessThanOrEqual(width);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+    if (rail) {
+      const main = await page.locator('.landing-main').boundingBox(), dots = await page.locator('nav.landing-dots').boundingBox();
+      expect(main!.x + main!.width, 'the rail does not cover the main column').toBeLessThanOrEqual(dots!.x);
+    }
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 test('SC1922-05 loading_success_failure_stays_reserved: a failed port list and unavailable readings keep the reserved room, with the retry reachable', async ({page, pageErrors}, info) => {
   test.skip(info.project.name !== 'phone', 'measured at the two explicit phone sizes');
   for (const {width, height} of COLD_PHONES) {
