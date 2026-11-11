@@ -29,7 +29,7 @@ import {appView, base, habitat, region, selection, setParams, view} from '../sta
 import {harborOrigin} from '../ranking.ts';
 import {placeWaypoint} from '../waypoint-placement.ts';
 import {shareStatic, sharedFetch} from '../shared-fetch.ts';
-import {chartFilesPending} from '../chart-files.ts';
+import {chartFileListed, chartFilesPending} from '../chart-files.ts';
 import {loadPoster, poster} from './poster.ts';
 import {COASTLINE_PICK, coastlineFetchPath, coastlineLayers, coastlineMark, coastlineSource, shorelineOverviewURL, shorelinePublished, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
@@ -204,7 +204,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
         // #617: an overview shoreline that fails falls back to the full one; any other failure marks its layer.
         onLayerError: (layer, error) => {
           const id = region.peek();
-          if (layer === 'coastline' && id && drawnShore === shorelineOverviewURL(id)) {
+          if (layer === 'coastline' && id && drawnShore === shorelineOverviewURL(id) && chartFileListed(id, 'shoreline.geojson')) {
             console.warn('Overview shoreline unavailable; loading the full shoreline', error);
             detailRegion = id; drawnShore = shorelineURL(id); engine.peek()?.setData(COASTLINE_SOURCE, new URL(drawnShore, page()).href);
           } else markUnavailable(layer, error);
