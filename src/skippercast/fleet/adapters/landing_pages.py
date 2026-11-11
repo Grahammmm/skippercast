@@ -237,7 +237,10 @@ def local_time(text: str) -> str | None:
     match = TIME.search(text or "")
     if not match:
         return None
-    hour = int(match.group(1)) % 12 + (12 if match.group(3).lower() == "p" else 0)
+    source_hour, minute = int(match.group(1)), int(match.group(2))
+    if not 1 <= source_hour <= 12 or minute > 59:
+        return None  # an impossible clock is unknown, never wrapped or clamped into another time
+    hour = source_hour % 12 + (12 if match.group(3).lower() == "p" else 0)
     return f"{hour:02d}:{match.group(2)}"
 
 
