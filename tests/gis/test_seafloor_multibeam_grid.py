@@ -219,8 +219,9 @@ class ReceiptShapeTests(PrivateGridTests):
 
     def test_paired_import_refuses_before_cache_and_cached_pair_is_untouched(self):
         from skippercast.seafloor.adapters.multibeam_grid import source_files
+        cases = self.malformed()
         for label in ('root-list', 'originals-list', 'original-number'):
-            doc = self.malformed()[label]
+            doc = cases[label]
             with self.subTest(case=label, where='fresh'), tempfile.TemporaryDirectory() as out:
                 row = self.bind(doc); cache = Path(out) / 'cache'
                 with self.assertRaises(ValueError):
