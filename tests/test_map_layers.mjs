@@ -20,7 +20,7 @@ import {readPalette} from '../web/map/palette.ts';
 import {mpaLayers, mpaMark, mpaQuery} from '../web/map/mpa.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from '../web/map/style.ts';
 import {camera, cameraParam, choosePresentation, createStage, drape, terrainCoarsened, terrainFailed, terrainPick, zoomForSpan} from '../web/map/stage.ts';
-import {configureStore, region, setParams, syncFromURL} from '../web/state.ts';
+import {appView, configureStore, region, setParams, syncFromURL} from '../web/state.ts';
 import {effect} from '@preact/signals';
 import {publishedChartFiles} from '../web/chart-files.ts';
 import {settlePicks} from './helpers/pick-settle.mjs';
@@ -930,4 +930,46 @@ test('chart_pending_pick_context_and_lifetime: the Chart drops a click still set
     settlePicks();
     assert.equal(chartMark.value.name, 'Shoreline', 'an isolated click still selects');
   } finally { cancelWaypointPlacement(); stage.destroy(); }
+});
+
+test('chart_closed_pick_context_never_picks: a null pick context at both the click and the dispatch drops the pick', () => {
+  const a = pickEngine();
+  a.ctx.value = null;   // picking is closed: null at the click and still null when the timer fires
+  a.click();
+  assert.equal(settlePicks(), 0); assert.equal(a.picks.length, 0, 'a click while closed schedules nothing');
+  const b = pickEngine();
+  b.click(); b.ctx.value = null;
+  assert.equal(settlePicks(), 1); assert.equal(b.picks.length, 0, 'closed by dispatch');
+  const c = pickEngine();
+  c.ctx.value = null; c.click(); c.ctx.value = 'a';
+  assert.equal(settlePicks(), 0); assert.equal(c.picks.length, 0, 'reopened after a closed click does not accept it');
+  const fake = library(), picks = [];
+  createEngine(fake.module, {host: {}, style: {version: 8, sources: {}, layers: []}, camera: {latitude: 35.3, longitude: -120.9, zoom: 10}, onMove() {}, onLayerError() {}, pickLayers: [], onPick: layer => picks.push(layer)});
+  fake.maps[0].fire('click', {point: {x: 1, y: 1}});
+  assert.equal(settlePicks(), 1); assert.deepEqual(picks, [null], 'an engine with no pickContext at all is not gated');
+});
+
+test('chart_closed_pick_context_never_picks: with the Chart still mounted but another view shown (Fleet), a tap selects no mark and places no waypoint', async t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay`);
+  const {fake, stage} = chartStage();
+  await tick(); await tick(); await tick();
+  const [map] = fake.maps;
+  fake.features = [{layer: {id: COASTLINE_PICK}, properties: {SOURCE_ID: 'S1', ATTRIBUTE: 'Natural.Mean High Water', HOR_ACC: '2', source_date: '2010-11-01'}}];
+  const got = [];
+  try {
+    chartMark.value = null;
+    appView.value = 'fleet';
+    map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -121, lat: 35}});
+    assert.equal(settlePicks(), 0, 'no click is left settling when the view is not the coast');
+    assert.equal(chartMark.value, null, 'no mark selected from Fleet');
+    beginWaypointPlacement('morro-bay', at => got.push(at));
+    map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -121, lat: 35}});
+    settlePicks();
+    assert.equal(got.length, 0, 'no waypoint placed from Fleet'); assert.equal(chartMark.value, null);
+    appView.value = 'coast'; cancelWaypointPlacement();
+    map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -121, lat: 35}});
+    settlePicks();
+    assert.equal(chartMark.value.name, 'Shoreline', 'back on the coast an isolated click selects');
+  } finally { appView.value = 'coast'; cancelWaypointPlacement(); stage.destroy(); }
 });

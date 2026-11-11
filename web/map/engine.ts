@@ -46,7 +46,7 @@ export interface EngineOptions {
   onSourceTileLoaded?(sourceId: string): void;
   /** Changes invalidate pending tile recovery (for example, on a region change). */
   sourceContext?(): unknown;
-  /** RF2205-5: a delayed pick is dropped unless this still returns the identity it had at the click (separate from sourceContext, so gesture state never resets tile recovery). */
+  /** RF2205-5: a delayed pick is dropped unless this still returns the identity it had at the click (separate from sourceContext, so gesture state never resets tile recovery). Null means picking is closed: it never accepts a pick, even when null at both the click and the dispatch. */
   pickContext?(): unknown;
   /** A click: the first feature under it in `pickLayers`, or null for empty water, and where it fell. */
   onPick?(layer: string | null, properties: Record<string, unknown> | null, at: {lon: number; lat: number} | null): void;
@@ -243,10 +243,13 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       const feature = query(options.pickFirst?.() ?? []) ?? query(options.pickLayers ?? []);
       const layer = feature?.layer.id ?? null, properties = feature ? feature.properties as Record<string, unknown> : null;
       const at = event.lngLat ? {lon: event.lngLat.lng, lat: event.lngLat.lat} : null;
-      const context = options.pickContext?.();
+      // A pickContext that answers null means picking is closed (Chart hidden, or not the shown view): it never accepts a pick, at the click or at dispatch.
+      const gated = !!options.pickContext, context = options.pickContext?.();
+      if (gated && context === null) return;
       timer = setTimeout(() => {
         timer = undefined;
-        if (destroyed || moving || options.pickContext?.() !== context) return;
+        const now = options.pickContext?.();
+        if (destroyed || moving || (gated && now === null) || now !== context) return;
         pick(layer, properties, at);
       }, PICK_SETTLE_MS);
     });
