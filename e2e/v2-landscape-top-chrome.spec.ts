@@ -18,7 +18,8 @@ async function open(page: Page, width: number, height: number, lang = 'en'): Pro
 
 const measure = (page: Page) => page.evaluate(() => {
   const r = (el: Element | null) => { const b = el?.getBoundingClientRect(); return b ? {top: b.top, bottom: b.bottom, left: b.left, right: b.right, width: b.width, height: b.height} : null; };
-  const controls = [...document.querySelectorAll('.app-top button, .app-top a, .app-top .ui-chip')].map(el => r(el)!);
+  // A closed <dialog> (the limits panel) is display:none, so its own buttons have no box: measure the visible triggers and chips only.
+  const controls = [...document.querySelectorAll('.app-top button, .app-top a, .app-top .ui-chip')].filter(el => !el.closest('dialog')).map(el => r(el)!);
   return {
     header: r(document.querySelector('.app-top')), sheet: r(document.querySelector('.ui-sheet')), controls,
     profile: r(document.querySelector('.app-profile')), row: r(document.querySelector('.app-top-row')),
