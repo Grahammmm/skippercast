@@ -19,7 +19,7 @@
   "--cap-ms",
   "150000",
   "--out",
-  "/home/user/.hermes/kanban/boards/skippercast/workspaces/t_cddf7aaf/scratch/live-phone-2.json"
+  "$SCR/live-phone-2.json"
  ],
  "profiles": {
   "phone": {

@@ -19,7 +19,7 @@
   "--cap-ms",
   "90000",
   "--out",
-  "/home/user/.hermes/kanban/boards/skippercast/workspaces/t_cddf7aaf/scratch/live-desktop-2.json"
+  "$SCR/live-desktop-2.json"
  ],
  "profiles": {
   "phone": {

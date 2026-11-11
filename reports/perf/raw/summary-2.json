@@ -1,7 +1,7 @@
 {
  "sources": [
   {
-   "file": "/home/user/.hermes/kanban/boards/skippercast/workspaces/t_cddf7aaf/scratch/live-desktop-2.json",
+   "file": "$SCR/live-desktop-2.json",
    "base": "https://skippercast.com",
    "chromium": "156.0.8078.4",
    "startedAt": "2026-11-11T04:16:02.322Z",
@@ -20,11 +20,11 @@
     "--cap-ms",
     "90000",
     "--out",
-    "/home/user/.hermes/kanban/boards/skippercast/workspaces/t_cddf7aaf/scratch/live-desktop-2.json"
+    "$SCR/live-desktop-2.json"
    ]
   },
   {
-   "file": "/home/user/.hermes/kanban/boards/skippercast/workspaces/t_cddf7aaf/scratch/live-phone-2.json",
+   "file": "$SCR/live-phone-2.json",
    "base": "https://skippercast.com",
    "chromium": "156.0.8078.4",
    "startedAt": "2026-11-11T04:21:27.889Z",
@@ -43,7 +43,7 @@
     "--cap-ms",
     "150000",
     "--out",
-    "/home/user/.hermes/kanban/boards/skippercast/workspaces/t_cddf7aaf/scratch/live-phone-2.json"
+    "$SCR/live-phone-2.json"
    ]
   }
  ],
