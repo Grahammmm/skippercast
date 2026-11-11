@@ -38,23 +38,38 @@ export function focusSkipTarget(doc: Document, target: SkipTarget): boolean {
   return !!stage && doc.activeElement === stage;
 }
 
-export function SkipLinks({phone = false, prepare}: {phone?: boolean; prepare?: (target: SkipTarget) => void}) {
-  const lang = language.value, pending = useRef(0);
-  useEffect(() => () => cancelAnimationFrame(pending.current), []);
-  const go = (target: SkipTarget) => (event: MouseEvent) => {
-    event.preventDefault();
-    const from = document.activeElement;
-    if (needsCoast(target, appView.peek(), phone)) setParams({view: null});
+/** What a skip needs from the page; the defaults read the live document, the address and the frame clock (read lazily, so a server render never touches them). */
+export type SkipDeps = {doc: Document; view: () => AppView; showCoast: () => void; frame: (run: () => void) => number; cancelFrame: (id: number) => void};
+const liveDeps: SkipDeps = {
+  get doc() { return document; }, view: () => appView.peek(), showCoast: () => { setParams({view: null}); },
+  frame: run => requestAnimationFrame(run), cancelFrame: id => cancelAnimationFrame(id),
+};
+
+/** One skip at a time: a new activation or an unmount cancels the pending focus, so nothing runs late or twice. */
+export function createSkip(deps: SkipDeps = liveDeps) {
+  let pending = 0;
+  const cancel = () => { if (pending) deps.cancelFrame(pending); pending = 0; };
+  const go = (target: SkipTarget, phone: boolean, prepare?: (target: SkipTarget) => void) => {
+    cancel();
+    const from = deps.doc.activeElement;
+    if (needsCoast(target, deps.view(), phone)) deps.showCoast();
     prepare?.(target);
     // One frame after Preact commits the state above; focus moves only if the user has not gone somewhere else meanwhile.
-    cancelAnimationFrame(pending.current);
-    pending.current = requestAnimationFrame(() => {
-      pending.current = 0;
-      const now = document.activeElement;
-      if (now && now !== from && now !== document.body) return;
-      focusSkipTarget(document, target);
+    pending = deps.frame(() => {
+      pending = 0;
+      const now = deps.doc.activeElement;
+      if (now && now !== from && now !== deps.doc.body) return;
+      focusSkipTarget(deps.doc, target);
     });
   };
+  return {go, cancel};
+}
+
+export function SkipLinks({phone = false, prepare}: {phone?: boolean; prepare?: (target: SkipTarget) => void}) {
+  const lang = language.value, skip = useRef<ReturnType<typeof createSkip>>();
+  skip.current ??= createSkip();
+  useEffect(() => () => skip.current?.cancel(), []);
+  const go = (target: SkipTarget) => (event: MouseEvent) => { event.preventDefault(); skip.current!.go(target, phone, prepare); };
   return (
     <>
       <a class="app-skip-link" href={`#${BRIEF_ID}`} onClick={go('brief')}>{t('a11y.skip.brief', lang)}</a>
