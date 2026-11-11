@@ -188,7 +188,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-03: startupFreshness keeps the source age when offline (it returned none), before its offline override; BODY09 mounts
   // Reports/CatchCards, never App, and online results are unchanged. No CSS, token or catch markup change; contrast(), assertions
   // and thresholds are untouched. Rebind only App.tsx.
-  "web/app/App.tsx": "6141941f7dc9080d02f9d12d33bc3cffa187af4e140b966e12916447e53c5f29",
+  // SC1722-20: App mounts the two skip-link anchors before the masthead on the desktop shell; BODY09 mounts Reports/CatchCards, never App. No CSS, token or catch markup change; contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
+  "web/app/App.tsx": "459df5c2b0fb3b2ad8d4c2fa4c1710cc35b44eae9b200435f0f8f2ec5f63027c",
   // SC-LAUNCH-4 (#1267, cost ceiling): Masthead.tsx imports web/degraded.ts (a signal and pure helpers, no top-level
   // side effect) and adds DegradedNotice after FreshnessDot. It renders nothing unless a response carries
   // X-SC-Degraded: cost-ceiling, which no BODY09 fixture does; when shown it reuses the existing .app-limits-note
@@ -245,7 +246,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // and the presentation toggle, terrain controls and poster are not rendered while the Chart is failed). BODY09 renders
   // Reports/CatchCards and does not mount MapStage; no CSS, token, catch markup, paint, assertion or threshold changes. Rebind only MapStage.tsx.
   // SC1922-03: MapStage.tsx renders Cancel waypoint through the shared Button and adds the app-presentation--placing modifier class to the stack while a waypoint placement is armed; BODY09 mounts Reports/CatchCards, never MapStage. No catch markup, token or paint change. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "0b92893c5ae333b4a7ef58dcc04dd87d300a22ed8e48599e46a2330e644218e9",
+  // SC1722-20: MapStage's stage section gains only an id (the Skip to map target); BODY09 never mounts MapStage. No paint, catch markup, contrast(), assertion or threshold changes. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "2130d03dee06a0e2b82432a71fe4e3e9edfc5463229259f190246b5269f06dea",
   "web/tokens.css": "85271ff5258cbbe3bfce09a7dc0b5c16ff1e31325b5a5f8d5d8a9fedd425dfd1",
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
   // changes (panel.css: History scroller 2 px ring and one summary ring; app.css: fleet checkbox ring); unfocused catch text and contrast are unchanged. check_contrast.mjs changes only the appCss surface hash, its comment and moved citations. Rebound from final bytes.
@@ -271,7 +273,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
   // RF1935-2: app.css adds only a desktop-only layer-rail preset wrap block and the rail's vertical scroll track (layout, no paint); the Reports catch sheet mounts no rail. Rebound from the final bytes.
   // SC1922-03: app.css adds only a Conditions-header model-family wrap/min-height rule and a pointer-events rule scoped to .app-presentation--placing (the armed placing stack, which Reports never mounts); no paint, backing or catch text changed. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
-  "web/app/app.css": "8bc7e71b104fc2bd96d2799297623263663cc2d337770260ea553785b06880e7",
+  // SC1722-20: app.css appends only a scoped .app-skip-link block (a clipped 1 px anchor at rest, a ringed 44 px panel when focused); the Reports catch sheet mounts no skip link, so no catch paint or backing changes. Rebound from the final bytes.
+  "web/app/app.css": "29077f82002df95cac8883a912c742b87d64430cd34ba7360665df24b4b454d6",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -344,7 +347,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF1925-1: only appCss pin and applicability comment change.
   // RF1935-2: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // SC1922-03: only the appCss pin and applicability comment change.
-  "scripts/check_contrast.mjs": "f76f2e8238656f3c9516499fd1e0e04a68c008c4e01015bb3955118623930177",
+  // SC1722-20: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "c805e9b89c3bd41c5beff3638306e51c516edc5208db45245aa1d3828676c0d6",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still

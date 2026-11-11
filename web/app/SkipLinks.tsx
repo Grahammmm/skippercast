@@ -66,7 +66,7 @@ export function createSkip(deps: SkipDeps = liveDeps) {
 }
 
 export function SkipLinks({phone = false, prepare}: {phone?: boolean; prepare?: (target: SkipTarget) => void}) {
-  const lang = language.value, skip = useRef<ReturnType<typeof createSkip>>();
+  const lang = language.value, skip = useRef<ReturnType<typeof createSkip> | undefined>(undefined);
   skip.current ??= createSkip();
   useEffect(() => () => skip.current?.cancel(), []);
   const go = (target: SkipTarget) => (event: MouseEvent) => { event.preventDefault(); skip.current!.go(target, phone, prepare); };

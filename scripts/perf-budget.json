@@ -69,7 +69,7 @@
       "label": "App page (brief, map) styles (first load)",
       "kind": "first_load_css",
       "entry": "app.html",
-      "max_bytes": 75000,
+      "max_bytes": 76000,
       "history": [
         {
           "max_bytes": 71000,
@@ -94,6 +94,10 @@
         {
           "max_bytes": 75000,
           "reason": "Raised 74,000 to 75,000 (SC1922-04). The preview-region marker styles this PR adds in web/app/app.css, together with the RF1935-2 app.css taken in the merge of main 611d37888, take the app first-load styles to 74,361 bytes (assets/app css 53.1 KB plus degraded-notice, tokens and Brief), 361 bytes over the 74,000 budget; the budget moves up 1,000 bytes (0.9% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 76000,
+          "reason": "Raised 75,000 to 76,000 (SC1722-20). The scoped .app-skip-link block this PR appends to web/app/app.css (the two skip links, clipped at rest and a ringed 44 px panel when focused) takes the app first-load styles to 75,425 bytes on this branch (assets/app css plus degraded-notice, tokens and Brief), 425 bytes over the 75,000 budget; the block is the whole growth, as the same build without it measures 73.1 KB. The budget moves up 1,000 bytes (0.8% headroom over that build), no more."
         }
       ]
     },
