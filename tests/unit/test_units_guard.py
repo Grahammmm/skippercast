@@ -10,7 +10,7 @@ from tests._support import ROOT
 
 SRC, OWNER, LIVE = ROOT / "src" / "skippercast", "util/units.py", "live loop"
 # Compared by value: .3048, 1852.0 and 1_852 match; 18520, 0.30481 and 3.280841 do not.
-VALUES = {float(s) for s in "3.28084 3.280839895 3.2808398950131 1.94384449 1.943844492 1.9438444924406 0.3048 1.852 1852".split()}
+VALUES = {float(s) for s in "3.28084 3.280839895 3.2808398950131 1.943844 1.94384449 1.943844492 1.9438444924 1.9438444924406 0.3048 1.852 1852".split()}
 ALLOW = {  # path under src/skippercast -> why its literal stays; delete the entry when the module reads util.units
     **{f"pipeline/{name}.py": LIVE for name in ("coast_report", "intelligence", "ocean", "wave_ensemble")},
     "platform/bottom_targets.py": "seafloor cache-key file pinned by tests/contract/test_seafloor_key_files.py",
@@ -60,6 +60,22 @@ class UnitsGuardTests(unittest.TestCase):
         src = ('# 0.3048 m per ft\ns = "1852"\n"""3.28084"""\na = 18520\nb = 3.280841\nc = 0.30481\nd = 1852.0\ne = 1_852\n'
                'f = 0x1852\ng = 1852j\nh = .3048\n')
         self.assertEqual([p.split(":")[1] for p in self.tree({"a.py": src})], ["7", "8", "11"])
+
+    def test_all_five_audited_knot_values_are_rejected(self):
+        for value in ("1.943844", "1.94384449", "1.943844492", "1.9438444924", "1.9438444924406"):
+            self.assertEqual(self.tree({"pkg/reader.py": f"y = 1\nx = v * {value}\n", OWNER: f"K = {value}\n"}),
+                             [f"pkg/reader.py:2: ft/m/kt/nmi literal outside {OWNER}; import it from skippercast.util.units"])
+
+    def test_knot_respellings_match_by_value_and_nearby_values_stay_clean(self):
+        src = "a = 1.943844e0\nb = 1.943_844\nc = 1.9438444924000\n" \
+              "# 1.943844\ns = '1.9438444924'\nd = 1.943845\ne = 11.943844\nf = 1.9438444925\n"
+        self.assertEqual([p.split(":")[1] for p in self.tree({"a.py": src})], ["1", "2", "3"])
+
+    def test_new_knot_values_respect_allow_and_stale_allow(self):
+        allow = {"p/live.py": LIVE}
+        for value in ("1.943844", "1.9438444924"):
+            self.assertEqual(self.tree({"p/live.py": f"K = {value}\n"}, allow), [])
+            self.assertEqual(self.tree({"p/live.py": "x = 1\n"}, allow), ["remove p/live.py from ALLOW (no conversion literal left)"])
 
     def test_allowlisted_file_without_literal_must_leave_allow(self):
         allow = {"p/live.py": LIVE, "p/still.py": LIVE, "p/gone.py": LIVE}
