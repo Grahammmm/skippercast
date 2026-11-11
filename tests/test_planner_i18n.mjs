@@ -190,3 +190,24 @@ test('step1_is_first_workflow: plan card, step 1, rules, waypoints, then the lat
     }
   } finally { ui.language.value = 'en'; p.dispose(); }
 });
+
+// RF2235-5: GPX is explained beside the trip-file actions, in both languages, in every export state.
+test('gpx_help_en_es_en: one visible note before the caveats, described by Download and Share only, whatever the export state', () => {
+  const en = catalogue.strings['planner.gpxHelp'].en, es = catalogue.strings['planner.gpxHelp'].es;
+  const {p, model} = mk();
+  try {
+    for (const [lang, text] of [['en', en], ['es', es], ['en', en]]) {
+      ui.language.value = lang;
+      const html = page(model);
+      assert.equal(html.split('id="export-gpx-help"').length, 2, 'exactly one note');
+      assert.ok(html.includes(`<p id="export-gpx-help" class="export-note">${text}</p>`), `${lang} text`);
+      assert.ok(html.indexOf('id="export-gpx-help"') < html.indexOf('id="export-caveats"'), 'note before caveats');
+      assert.ok(html.indexOf('id="export-caveats"') < html.indexOf('id="export-download"'), 'caveats before actions');
+      assert.equal(html.split('aria-describedby="export-gpx-help"').length, 3, 'two buttons reference the note');
+      assert.match(html, /<button class="primary" id="export-download" aria-describedby="export-gpx-help"/);
+      assert.match(html, /<button id="export-share" aria-describedby="export-gpx-help"/);
+      assert.doesNotMatch(html, /id="export-notes"[^>]*aria-describedby/);
+      assert.doesNotMatch(html, /id="export-route"[^>]*aria-describedby="export-gpx-help"/);
+    }
+  } finally { ui.language.value = 'en'; p.dispose(); }
+});

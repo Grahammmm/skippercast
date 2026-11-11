@@ -48,8 +48,8 @@ test('rendered plan names the selected boundary and keeps only context notes ena
     const html = ui.render(ui.h(ui.Planner, {model: p, open: false}));
     assert.match(html, /Morro Bay State Marine Reserve/);
     assert.match(html, /href="https:\/\/wildlife.ca.gov\/Conservation\/Marine\/MPAs\/Morro-Bay"/);
-    assert.match(html, /id="export-download" disabled/);
-    assert.match(html, /id="export-share" disabled/);
+    assert.match(html, /id="export-download"[^>]*disabled/);
+    assert.match(html, /id="export-share"[^>]*disabled/);
     assert.match(html, /id="export-notes">/);
   } finally { p.dispose(); }
 });
