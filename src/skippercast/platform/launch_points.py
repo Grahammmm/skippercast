@@ -61,6 +61,10 @@ def validate_launch_point(point, region, sources):
 def compile_launch_points(root, regions):
     """Write one launch-points file per region in ``regions`` (loaded region dicts)."""
     catalog = read_json(root / "catalog/launch-points.json")
+    if not isinstance(catalog, dict):
+        raise ValueError("Launch point catalog must be an object")
+    if not isinstance(catalog.get("launch_points"), list):
+        raise ValueError("Launch point catalog launch_points must be a list")
     by_region = {}
     seen = set()
     for point in catalog["launch_points"]:
