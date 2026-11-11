@@ -198,8 +198,9 @@ test('a failed forecast refresh leaves the verdict on the previous forecast, not
 
 test('a press in flight when another region is selected says nothing about the new one', async t => {
   const m = await load(), net = network();
-  await startUp(t, m, net);
-  const before = m.regionalForecast.value;
+  const {before: calls} = await startUp(t, m, net);
+  const before = m.regionalForecast.value, report = m.coastData.coastReport.value, status = m.coastData.coastStatus.value.report;
+  assert.equal(status, 'ready'); assert.ok(report, 'the coast report is held');
   let open; net.state.gate = new Promise(resolve => { open = resolve; });
   net.state.fail.add('report'); // the old press would end failed
   m.region.value = ID;
@@ -211,6 +212,9 @@ test('a press in flight when another region is selected says nothing about the n
   await press;
   assert.equal(m.manualRefresh.value, 'idle', 'the old press leaves no failed word on the new region');
   assert.equal(m.regionalForecast.value, before, 'what the old press read is not shown');
+  assert.equal(asked(net, calls).report, 0, 'the withdrawn press asks the coast report nothing');
+  assert.equal(m.coastData.coastStatus.value.report, status, 'the coast status is unchanged');
+  assert.equal(m.coastData.coastReport.value, report, 'the coast snapshot is not replaced');
   const was = net.calls.forecast;
   await m.refreshBriefNow(() => false);
   assert.equal(net.calls.forecast, was);

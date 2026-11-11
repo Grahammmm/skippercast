@@ -467,7 +467,7 @@ export function refreshBriefNow(online: () => boolean = () => globalThis.navigat
     try {
       const [forecast, feeds] = await Promise.all([fc && loadConditionsForecast(fc.id, fc.near, fc.fetchFn, fc.page), df && Promise.all([readDaily(df.id, df.fetchFn, feedLoad), readFeed(feedPath(undefined, df.id), df.id, df.fetchFn)])]);
       ok = forecast?.state !== 'failed' && !feeds?.includes(null);
-      if (ok && coastBinding.peek()) { await coastData.refresh('report'); ok = coastStatus.peek().report === 'ready'; }
+      if (ok && manualRun === run && coastBinding.peek()) { await coastData.refresh('report'); ok = coastStatus.peek().report === 'ready'; }
       if (ok && manualRun === run) {
         if (forecast) { pressedForecast = forecast; forecastKey = null; void ensureRegionalForecast(fc!.id, fc!.near, fc!.fetchFn, fc!.page); }
         if (feeds) { pressedFeeds = feeds; void readFeeds(df!.id, df!.fetchFn, true); }
