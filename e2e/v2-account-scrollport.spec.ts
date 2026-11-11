@@ -48,7 +48,8 @@ test('account_card_is_only_scrollport_and_reaches_end', async ({page, v2}) => {
   expect(s.top).toBe(0); expect(s.max).toBeGreaterThan(0);
   expect(await page.locator('#account-body').evaluate(el => el.scrollHeight <= el.clientHeight + 1 || getComputedStyle(el).overflowY === 'visible')).toBe(true);
   await card.evaluate(el => { el.scrollTop = el.scrollHeight; });
-  const last = card.locator('button, summary, input, a').last();
+  // The close button is the card's absolutely-positioned last child (top-right); focusing it scrolls back to the top, so take the last visible control in the body (the closed delete <details> hides its button; its summary is the last reachable control).
+  const last = page.locator('#account-body').locator('button, summary, input, a').locator('visible=true').last();
   await last.focus();
   await expect(last).toBeFocused();
   expect((await cues(page)).top).toBeGreaterThan(0);
