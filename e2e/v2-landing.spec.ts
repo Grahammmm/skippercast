@@ -600,6 +600,9 @@ test('the map reads every warmed file at startup, the static ones from the brows
   await v2.open('landing');
   const input = page.getByLabel('Where are you launching?');
   await input.fill('morro');
+  // The input is interactive before the async port directory arrives; Enter
+  // submits only a rendered match (and is otherwise correctly a no-op).
+  await expect(page.locator('.landing [data-port]')).toHaveText([/Morro Bay/]);
   await input.press('Enter');
   await expect(page.locator('.landing-step [role="status"]')).toHaveText('Morro Bay map files ready.');
   const list = ['/regions/morro-bay/atlas-marks.json', '/regions/morro-bay/search-plan-index.json', '/regions/morro-bay/shoreline-overview.geojson',
@@ -793,6 +796,7 @@ test('the landing shows the app lead\'s verdict for tomorrow for the saved boat 
   await page.route('**/api/forecast?*', () => { /* never answers */ });
   await v2.open('landing');
   await input.fill('morro');
+  await expect(page.locator('.landing [data-port]')).toHaveText([/Morro Bay/]);
   await input.press('Enter');
   await page.locator('.landing-step [data-profile="boat"]').click();
   await expect(page).toHaveURL(/\/map\?/);
