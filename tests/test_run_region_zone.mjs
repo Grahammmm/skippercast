@@ -127,10 +127,8 @@ test('run_all_clock_surfaces_share_context: daylight, entrance, fishing hours an
     swell: {heightFt: 1, periodS: 10, basis: 'offshore', longPeriodS: null}, windAgainst: false, reasons: []}));
   const props = {brief: {windows: [late], sunrise: '2026-10-12T06:52:00-07:00', sunset: '2026-10-12T17:21:00-07:00', bar: {entrance: entranceFor('morro-bay', 'morro-bay'), hours}}};
   m.species.value = 'lingcod'; m.wantedHours.value = 2; m.regsData.value = {region: rules.id, data: d};
-  const rulesRegion = {...rules, id: rules.id};
-  const at = now => new Date(now);
   try {
-    const withRules = meta => ({...meta, rules: rulesRegion});
+    const withRules = meta => ({...meta, rules}), at = now => new Date(now);
     const mismatched = show(rules.id, withRules(info('cambria-san-simeon', 'UTC')), props, at('2026-10-12T12:00:00Z'));
     const control = show(rules.id, withRules(info(rules.id, PACIFIC)), props, at('2026-10-12T12:00:00Z'));
     assert.match(control.html, /Daylight 6:52 am–5:21 pm/);
