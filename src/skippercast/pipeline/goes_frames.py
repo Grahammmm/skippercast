@@ -66,11 +66,18 @@ def local(tag):
     return tag.rsplit("}", 1)[-1]
 
 
+class _NoDoctypeBuilder(ElementTree.TreeBuilder):
+    """Refuses any DOCTYPE after XML decoding, so UTF-16 documents cannot slip past the raw-byte search."""
+
+    def doctype(self, name, pubid, system):
+        raise ValueError("Capabilities document carries a DOCTYPE")
+
+
 def layer_times(xml):
     """The raw `time` dimension entries of the `goes_longwave_imagery` layer (WMS 1.3.0, namespace-agnostic)."""
     if b"<!DOCTYPE" in (xml if isinstance(xml, bytes) else xml.encode()):
         raise ValueError("Capabilities document carries a DOCTYPE")
-    root = ElementTree.fromstring(xml)
+    root = ElementTree.fromstring(xml, parser=ElementTree.XMLParser(target=_NoDoctypeBuilder()))
     for layer in root.iter():
         if local(layer.tag) != "Layer":
             continue
