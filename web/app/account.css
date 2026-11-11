@@ -8,8 +8,7 @@
 /* RF2345-7: at 1024-1179px the masthead account trigger is icon-sized; the label stays in the accessible name. */
 @media (min-width: 1024px) and (max-width: 1179px) {
   .app-masthead > .app-account:not([data-inline]) > .app-account-trigger {
-    box-sizing: border-box; flex: none; gap: 0; padding-inline: 0; position: relative;
-    inline-size: calc(var(--touch-min) + 0.5px); min-inline-size: calc(var(--touch-min) + 0.5px); min-block-size: calc(var(--touch-min) + 0.5px);
+    box-sizing: border-box; flex: none; gap: 0; padding-inline: 0; min-inline-size: calc(var(--touch-min) + 0.5px); min-block-size: calc(var(--touch-min) + 0.5px);
   }
   .app-masthead > .app-account:not([data-inline]) > .app-account-trigger > .app-account-label {
     position: absolute; width: 1px; height: 1px; padding: 0; border: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
