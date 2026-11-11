@@ -114,7 +114,7 @@ test('the column renders the model: verdict and limit first, Details with readin
   dailyFeed.value = montereyDaily;
   try {
     const html = renderFixture(h(Brief, {now: NOW}));
-    assert.match(html, /<aside class="app-brief" aria-label="Brief" data-basis="regional">/);
+    assert.match(html, /<aside class="app-brief" id="app-brief-content" tabindex="-1" aria-label="Brief" data-basis="regional">/);
     // #616: without this region's forecast the verdict is Unknown and says why; the readings line moves into Details.
     assert.match(html, /<div class="app-verdict" data-verdict="unknown"><div class="app-verdict-head"><h1><span class="app-verdict-word">Unknown<\/span>/);
     assert.match(html, /<p class="app-verdict-limit">No forecast for this day yet\.<\/p>/);
