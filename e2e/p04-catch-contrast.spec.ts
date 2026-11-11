@@ -294,7 +294,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // The legacy failed preload now triggers a reload. Serve only its three exact
   // section URLs as 503 below, retaining unavailable sections and the strict
   // unexpected-request guard; catch markup, paint and controls stay unchanged.
-  "web/app/views/Reports.tsx": "0b05828f095c4645fcf01dbbe2a349c285d2cbf6078d2ca093c2fdcae0dc5b97",
+  // RF2115-7: Reports.tsx only passes the matching region's zone to its timestamp labels (date-only dates stay UTC); catch markup, paint and contrast are unchanged. Rebound.
+  "web/app/views/Reports.tsx": "80191b511a22f75fb9122389336cd98017c8794ac8be5e284edb53edee111b96",
   "web/app/CoastMarkup.tsx": "3d318379ff1194b26f68adadb523db08c21829ff71cf5e7cfe2ac903821f0efc",
   "packages/coast/src/ui/catches.ts": "a25442909c360171a11e5087f629de8cec94a358fc7bff877adce9dffbc0999f",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
