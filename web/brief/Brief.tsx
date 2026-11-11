@@ -216,13 +216,21 @@ function dailyGap(conditions: RegionalDailyFeed): string {
 
 /** Load the daily and conditions feeds for region `id`; failed fetches or feeds for another region leave the brief empty. */
 export function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promise<RegionalDailyFeed | null> {
-  return readFeeds(id, fetchFn, false);
+  return startFeeds(id, fetchFn, false, false);
 }
 
 let dailyRequest: {id: string; fetchFn: typeof fetch} | null = null;
-let dailyLoadedAt = 0, dailyPending = false;
+let dailyLoadedAt = 0, dailyPending = false, dailyInflight: Promise<RegionalDailyFeed | null> | null = null;
+/** SC1922-08: whether both feed reads of load `load` were admitted (a retained feed is not proof of an answer). */
+let dailyOutcome = {load: 0, ok: false};
 
-async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean): Promise<RegionalDailyFeed | null> {
+function startFeeds(id: string, fetchFn: typeof fetch, refresh: boolean, manual: boolean): Promise<RegionalDailyFeed | null> {
+  const read = readFeeds(id, fetchFn, refresh, manual);
+  dailyInflight = read;
+  return read;
+}
+
+async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean, manual = false): Promise<RegionalDailyFeed | null> {
   const load = ++feedLoad;
   dailyRequest = {id, fetchFn};
   dailyPending = true;
@@ -230,6 +238,7 @@ async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean): P
   if (!refresh) feedGaps.value = [];
   const [dailyRead, conditionsRead] = await Promise.all([readDaily(id, fetchFn, load), readFeed(feedPath(undefined, id), id, fetchFn)]);
   const daily = dailyRead?.feed ?? null, conditions = conditionsRead?.feed ?? null;
+  dailyOutcome = {load, ok: !!daily && !!conditions};
   // A later load (another region) owns the feed and its gap lines; this one only returns what it read.
   if (load !== feedLoad) return mergeFeeds(daily, conditions);
   dailyPending = false;
@@ -240,6 +249,8 @@ async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean): P
   // A refresh that read neither keeps the feed and gap lines shown (readings carry their own times) and its old
   // read time, so the next visible page tries again.
   if (refresh && !daily && !conditions) return dailyFeed.peek();
+  // SC1922-08: a pressed refresh that lost either read keeps the feed shown and its read time, so the display is never half-replaced.
+  if (manual && (!daily || !conditions) && !savedDaily && dailyFeed.peek()?.region_id === id) return dailyFeed.peek();
   const base = daily ?? savedDaily;
   dailyLoadedAt = daily ? Date.now() : 0;
   feedGaps.value = !base && !conditions ? [FEED_GAP.both] : !base ? [dailyGap(conditions!)] : !conditions ? [FEED_GAP.conditions] : [];
@@ -281,6 +292,8 @@ export const regionalForecastState = signal<ForecastState>({region: null, key: n
 let forecastKey: string | null = null;
 let forecastRequest: {id: string; near: readonly [number, number] | null; fetchFn: typeof fetch; page: string} | null = null;
 let forecastLoadedAt = 0, forecastPending = false, forecastGeneration = 0, forecastInflight: Promise<ConditionsForecast | null> | null = null, visibilityBound = false;
+/** SC1922-08: the next request made is a pressed refresh (a failure keeps the forecast on screen); and how the latest request ended. */
+let keepForecastOnFailure = false, forecastOutcome = {generation: 0, failed: false};
 /** A loaded forecast older than this is fetched again when the page becomes visible. */
 export const FORECAST_MAX_AGE_MS = 30 * 60_000;
 
@@ -295,7 +308,8 @@ export function ensureRegionalForecast(id: string, near: readonly [number, numbe
   forecastKey = key;
   forecastRequest = {id, near, fetchFn, page};
   forecastPending = true;
-  const generation = ++forecastGeneration, before = regionalForecastState.peek();
+  const generation = ++forecastGeneration, before = regionalForecastState.peek(), keep = keepForecastOnFailure;
+  keepForecastOnFailure = false;
   batch(() => {
     if (regionalForecast.peek()?.region !== id) regionalForecast.value = null;
     const retried = before.state === 'failed' && before.region === id ? {reason: before.reason, ...(before.status === undefined ? {} : {status: before.status})} : {};
@@ -304,6 +318,7 @@ export function ensureRegionalForecast(id: string, near: readonly [number, numbe
   const read = loadConditionsForecast(id, near, fetchFn, page).then(result => {
     if (generation !== forecastGeneration) return regionalForecast.peek(); // a later request (even for this same key) owns the state
     forecastPending = false; forecastInflight = null;
+    forecastOutcome = {generation, failed: result.state === 'failed'};
     if (result.state !== 'loaded') {
       forecastKey = null; // a failed load is tried again on the next call
       const failed: ForecastState = result.state === 'failed' ? {region: id, key, generation, state: 'failed', reason: result.reason, ...(result.status === undefined ? {} : {status: result.status})} : {region: id, key, generation, state: 'absent'};
@@ -315,6 +330,11 @@ export function ensureRegionalForecast(id: string, near: readonly [number, numbe
         return regionalForecast.peek();
       }
       forecastLoadedAt = 0; // a failure never renews freshness
+      if (keep && result.state === 'failed' && regionalForecast.peek()?.region === id) {
+        // SC1922-08: a pressed refresh that failed keeps the forecast shown, still with its own clocks; the chip says the refresh failed.
+        regionalForecastState.value = {region: id, key, generation, state: 'loaded'};
+        return regionalForecast.peek();
+      }
       batch(() => { regionalForecast.value = null; regionalForecastState.value = failed; });
       return null;
     }
@@ -337,6 +357,46 @@ export function retryRegionalForecast(): Promise<ConditionsForecast | null> | nu
   return ensureRegionalForecast(req.id, req.near, req.fetchFn, req.page);
 }
 
+/** SC1922-08: read the forecast now whatever its age; a read in flight is joined. Null when no forecast was ever asked for. */
+function refreshForecastNow(): Promise<ConditionsForecast | null> | null {
+  const req = forecastRequest;
+  if (!req) return null;
+  if (forecastPending && forecastInflight) return forecastInflight;
+  forecastKey = null;
+  keepForecastOnFailure = true;
+  return ensureRegionalForecast(req.id, req.near, req.fetchFn, req.page);
+}
+
+/** SC1922-08: where a pressed refresh stands. A code, never text; the chip words it in the page's language. */
+export type ManualRefreshState = 'idle' | 'refreshing' | 'offline' | 'failed';
+export const manualRefresh = signal<ManualRefreshState>('idle');
+let manualRun: Promise<void> | null = null;
+
+/**
+ * The freshness chip's Refresh: ask the forecast, the daily feeds and the coast report again through their own loaders, once per press.
+ * A press during a press, or while any of those reads is already under way, asks nothing more. Offline asks nothing. A failed
+ * read keeps what is shown and says so (manualRefresh 'failed'); it is never read as a verdict. No timer, no retry.
+ */
+export function refreshBriefNow(online: () => boolean = () => typeof navigator === 'undefined' || navigator.onLine !== false): Promise<void> {
+  if (manualRun) return manualRun;
+  if (!online()) { manualRefresh.value = 'offline'; return Promise.resolve(); }
+  if (forecastPending || dailyPending || coastData.coastStatus.peek().report === 'loading') return Promise.resolve();
+  manualRefresh.value = 'refreshing';
+  const run = (async () => {
+    try {
+      const forecast = refreshForecastNow(), forecastGen = forecastGeneration;
+      const daily = refreshDailyNow(), dailyLoad = feedLoad;
+      const report = coastData.refreshReportJoined();
+      await Promise.all([forecast, daily, report]);
+      const failed = (forecast && forecastOutcome.generation === forecastGen && forecastOutcome.failed)
+        || (daily && dailyOutcome.load === dailyLoad && !dailyOutcome.ok) || (await report) === 'failed';
+      manualRefresh.value = failed ? 'failed' : 'idle';
+    } catch { manualRefresh.value = 'failed'; } finally { manualRun = null; }
+  })();
+  manualRun = run;
+  return run;
+}
+
 /** Reload the forecast when it failed or was loaded over 30 minutes before `now`; no timer, only called as the page becomes visible. */
 export function refreshForecastIfStale(now = Date.now()): Promise<ConditionsForecast | null> | null {
   const req = forecastRequest;
@@ -354,7 +414,15 @@ export function refreshDailyIfStale(now = Date.now()): Promise<RegionalDailyFeed
   const req = dailyRequest;
   if (!req || dailyPending) return null;
   if (dailyFeed.peek() && now - dailyLoadedAt <= DAILY_MAX_AGE_MS) return null;
-  return readFeeds(req.id, req.fetchFn, true);
+  return startFeeds(req.id, req.fetchFn, true, false);
+}
+
+/** SC1922-08: read both feeds now whatever their age; a read in flight is joined, never repeated. Null when no feed was ever asked for. */
+function refreshDailyNow(): Promise<RegionalDailyFeed | null> | null {
+  const req = dailyRequest;
+  if (!req) return null;
+  if (dailyPending && dailyInflight) return dailyInflight;
+  return startFeeds(req.id, req.fetchFn, true, true);
 }
 
 // One listener for the page's life, bound on the first load.
