@@ -525,19 +525,14 @@ def test_overview_fill_other_than_the_bag_null_is_refused(tmp_path):
     assert not (tmp_path / 'derived').exists()
 
 
-def _verify_with_table(vr_bag, text):
-    """Rewrite the table, refresh only its byte reference, and run the public verifier."""
+def _verify_with_table(vr_bag, rewrite):
+    """Emit once, rewrite the table via rewrite(lines) -> text/bytes, refresh only its byte reference."""
     root = vr_bag[0]
     receipt = emit(vr_bag)
     table_path = root / receipt['supergrid_table']['path']
+    text = rewrite(table_path.read_text().splitlines())
     table_path.write_bytes(text if isinstance(text, bytes) else text.encode())
-    changed = dict(receipt, supergrid_table=ref(root, table_path, vr.TABLE_CONTRACT))
-    return root, changed, table_path
-
-
-def _table_lines(vr_bag):
-    receipt = emit(vr_bag)
-    return (vr_bag[0] / receipt['supergrid_table']['path']).read_text().splitlines()
+    return root, dict(receipt, supergrid_table=ref(root, table_path, vr.TABLE_CONTRACT))
 
 
 def test_valid_table_is_unchanged_and_verification_is_read_only(vr_bag):
@@ -550,36 +545,42 @@ def test_valid_table_is_unchanged_and_verification_is_read_only(vr_bag):
 
 @pytest.mark.parametrize('suffix', [',unbound-extra-cell', ','])
 def test_extra_supergrid_cells_refused_after_rebinding(vr_bag, suffix):
-    lines = _table_lines(vr_bag)
-    text = '\n'.join([lines[0], *(line + suffix for line in lines[1:])]) + '\n'
-    root, changed, _ = _verify_with_table(vr_bag, text)
+    root, changed = _verify_with_table(
+        vr_bag, lambda lines: '\n'.join([lines[0], *(line + suffix for line in lines[1:])]) + '\n')
     with pytest.raises(ValueError, match='supergrid table row width changed'):
         vr.verify(root, changed)
 
 
 @pytest.mark.parametrize('drop', [1, 5])
 def test_truncated_supergrid_record_is_valueerror(vr_bag, drop):
-    lines = _table_lines(vr_bag)
-    cut = [','.join(line.split(',')[:-drop]) for line in lines[1:]]
-    root, changed, _ = _verify_with_table(vr_bag, '\n'.join([lines[0], *cut]) + '\n')
+    root, changed = _verify_with_table(
+        vr_bag, lambda lines: '\n'.join([lines[0], *(','.join(x.split(',')[:-drop]) for x in lines[1:])]) + '\n')
     with pytest.raises(ValueError, match='supergrid table row width changed'):
         vr.verify(root, changed)
 
 
 def test_malformed_record_after_a_valid_first_record_is_refused(vr_bag):
-    lines = _table_lines(vr_bag)
-    bad = ','.join(lines[2].split(',')[:-1])
-    root, changed, _ = _verify_with_table(vr_bag, '\n'.join([lines[0], lines[1], bad, *lines[3:]]) + '\n')
+    root, changed = _verify_with_table(
+        vr_bag, lambda lines: '\n'.join([lines[0], lines[1], ','.join(lines[2].split(',')[:-1]), *lines[3:]]) + '\n')
     with pytest.raises(ValueError, match='supergrid table row width changed'):
         vr.verify(root, changed)
 
 
-def test_empty_and_header_only_tables_are_valueerror(vr_bag):
-    root, changed, _ = _verify_with_table(vr_bag, b'')
+def test_empty_supergrid_table_is_valueerror(vr_bag):
+    root, changed = _verify_with_table(vr_bag, lambda lines: b'')
     with pytest.raises(ValueError, match='supergrid table header missing'):
         vr.verify(root, changed)
-    lines = _table_lines(vr_bag)
-    root, changed, _ = _verify_with_table(vr_bag, lines[0] + '\n')
+
+
+def test_header_only_table_keeps_the_active_row_refusal(tmp_path):
+    source = tmp_path / 'H11879_MB_VR_MLLW.bag'
+    xml = make_vr_bag(source)
+    artifact = ref(tmp_path, source, 'native-raster-v1')
+    row = dict(id='synthetic-vr-bag', title=source.name, kind='bathymetry', format='bag',
+               url='https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H11879/BAG/' + source.name,
+               sha256=artifact['sha256'], horizontal_crs='EPSG:26911', vertical_datum='MLLW')
+    fixture = (tmp_path, source, artifact, row, hashlib.sha256(xml.encode()).hexdigest())
+    root, changed = _verify_with_table(fixture, lambda lines: lines[0] + '\n')
     with pytest.raises(ValueError) as caught:
         vr.verify(root, changed)
     assert 'row width' not in str(caught.value) and 'header missing' not in str(caught.value)
@@ -587,22 +588,27 @@ def test_empty_and_header_only_tables_are_valueerror(vr_bag):
 
 @pytest.mark.parametrize('edit', ['remove', 'append', 'reorder', 'duplicate'])
 def test_header_arity_and_order_stay_exact(vr_bag, edit):
-    lines = _table_lines(vr_bag)
-    header = lines[0].split(',')
-    header = {'remove': header[:-1], 'append': [*header, 'extra'],
-              'reorder': [header[1], header[0], *header[2:]],
-              'duplicate': [*header[:-1], header[0]]}[edit]
-    root, changed, _ = _verify_with_table(vr_bag, '\n'.join([','.join(header), *lines[1:]]) + '\n')
+    def rewrite(lines):
+        header = lines[0].split(',')
+        header = {'remove': header[:-1], 'append': [*header, 'extra'],
+                  'reorder': [header[1], header[0], *header[2:]],
+                  'duplicate': [*header[:-1], header[0]]}[edit]
+        return '\n'.join([','.join(header), *lines[1:]]) + '\n'
+    root, changed = _verify_with_table(vr_bag, rewrite)
     with pytest.raises(ValueError, match='supergrid table columns changed'):
         vr.verify(root, changed)
 
 
-def test_blank_or_unterminated_quoted_record_refuses(vr_bag):
-    lines = _table_lines(vr_bag)
-    root, changed, _ = _verify_with_table(vr_bag, '\n'.join([lines[0], lines[1], '', *lines[2:]]) + '\n')
+def test_blank_record_refuses(vr_bag):
+    root, changed = _verify_with_table(
+        vr_bag, lambda lines: '\n'.join([lines[0], lines[1], '', *lines[2:]]) + '\n')
     with pytest.raises(ValueError, match='supergrid table row width changed'):
         vr.verify(root, changed)
-    root, changed, _ = _verify_with_table(vr_bag, '\n'.join([lines[0], lines[1], '"unterminated,' + lines[2]]) + '\n')
+
+
+def test_unterminated_quoted_record_refuses(vr_bag):
+    root, changed = _verify_with_table(
+        vr_bag, lambda lines: '\n'.join([lines[0], lines[1], '"unterminated,' + lines[2]]) + '\n')
     with pytest.raises(ValueError, match='supergrid table CSV malformed'):
         vr.verify(root, changed)
 
