@@ -19,7 +19,6 @@ ALLOW = {  # path under src/skippercast -> why its literal stays; delete the ent
     **{f"{name}.py": "bytes are part of the terrain-only preview binding" for name in (
         "coastal/render/terrain_only", "coastal/vertical")},
     "monitor/collector.py": "held legacy monitor", "platform/depth_contours.py": "builder data constant mirrored by packages/coast",
-    "fleet/ais/match.py": "fleet matcher kept 3.28084 by RF0708-1 (1/0.3048 flips its 20 % length verdict)",
 }
 
 
