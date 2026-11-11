@@ -33,9 +33,10 @@ test('missing or unusable speeds never supply run times', () => {
 });
 test('no origin omits both port legs; fewer than two distinct valid stops has no legs', () => {
   assert.deepEqual(tripLegs(null, stops, null).legs.map(l => [l.from, l.to]), [['Stop 1', 'Stop 2'], ['Stop 2', 'Stop 3']]);
-  for (const origin of [null, port]) for (const choices of [[], stops.slice(0, 1), [stops[0], stops[0]]]) {
-    assert.equal(tripLegs(origin, choices, null).legs.length, 0);
-  }
+  for (const choices of [[], stops.slice(0, 1), [stops[0], stops[0]]]) assert.equal(tripLegs(null, choices, null).legs.length, 0);
+  assert.equal(tripLegs(port, [], null).legs.length, 0);
+  // SC2252-04: one valid stop is a trip from a valid port (port → stop → port), also when the same id is chosen twice.
+  for (const choices of [stops.slice(0, 1), [stops[0], stops[0]]]) assert.deepEqual(tripLegs(port, choices, 20).legs.map(l => [l.from, l.to]), [['Home', 'Stop 1'], ['Stop 1', 'Home']]);
 });
 test('bad coordinates are named and skipped without breaking the chain; duplicate ids keep first position', () => {
   const invalid = [{id: 'nan', name: 'NaN', lat: NaN, lon: 0}, {id: 'lon', name: 'Bad longitude', lat: 0, lon: 200},
