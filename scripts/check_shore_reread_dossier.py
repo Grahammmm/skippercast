@@ -106,7 +106,7 @@ def _sources(doc, errors):
         sid, where = s.get('id'), f'sources[{s.get("id")}]'
         acq = (s.get('acquisition') or {}).get('state')
         url, final = urlsplit(str(s.get('url'))), urlsplit(str(s.get('finalUrl')))
-        if url.scheme != 'https' or url.netloc != SOURCE_HOSTS.get(sid) or final.netloc != url.netloc:
+        if url.scheme != 'https' or final.scheme != 'https' or url.netloc != SOURCE_HOSTS.get(sid) or final.netloc != url.netloc:
             errors.append(f'{where}: url must be https on {SOURCE_HOSTS.get(sid)} with no off-host redirect')
         if acq == 'acquired':
             if not (_ok_hash(s.get('sha256')) and isinstance(s.get('bytes'), int) and s['bytes'] > 0

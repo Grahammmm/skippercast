@@ -143,6 +143,38 @@ class IdentityRefusals(unittest.TestCase):
         self.assertIn('no off-host redirect', '\n'.join(problems(doc)))
 
 
+class FinalUrlScheme(unittest.TestCase):
+    def test_same_host_non_https_final_is_a_finding_for_every_source(self):
+        for idx, (sid, host) in enumerate(checker.SOURCE_HOSTS.items()):
+            for bad in (f'http://{host}/x', f'ftp://{host}/x', f'//{host}/x'):
+                with self.subTest(source=sid, final=bad):
+                    doc = dossier()
+                    doc['sources'][idx]['finalUrl'] = bad
+                    self.assertEqual(doc['sources'][idx]['id'], sid)
+                    self.assertIn(f'sources[{sid}]: url must be https', '\n'.join(problems(doc)))
+
+    def test_https_path_redirect_valid_and_initial_http_or_missing_final_refused(self):
+        host = checker.SOURCE_HOSTS['noaa']
+        doc = dossier()
+        doc['sources'][0]['finalUrl'] = f'https://{host}/other?q=1'
+        self.assertEqual(problems(doc), [])
+        doc = dossier()
+        doc['sources'][0]['url'] = f'http://{host}/x'
+        self.assertIn('sources[noaa]: url must be https', '\n'.join(problems(doc)))
+        doc = dossier()
+        del doc['sources'][0]['finalUrl']
+        self.assertIn('sources[noaa]: url must be https', '\n'.join(problems(doc)))
+
+    def test_cli_downgrade_exits_one_with_fail_and_no_ok(self):
+        doc = dossier()
+        host = doc['sources'][0]['url'].split('/')[2]
+        doc['sources'][0]['finalUrl'] = f'http://{host}/x'
+        code, out, _ = CommandLine('test_exit_codes').run_main(json.dumps(doc))
+        self.assertEqual(code, 1)
+        self.assertIn('FAIL sources[', out)
+        self.assertNotIn('OK', out)
+
+
 class RawHashIsNotSemantic(unittest.TestCase):
     def test_raw_hash_change_is_not_semantic_change(self):
         doc = dossier()
