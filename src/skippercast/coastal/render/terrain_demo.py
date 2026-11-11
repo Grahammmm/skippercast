@@ -94,7 +94,10 @@ def _preflight_npy(archive, member):
 def _json(data):
     def reject(value):
         raise ValueError('nonfinite_json:' + value)
-    result = json.loads(data, parse_constant=reject)
+    try:
+        result = json.loads(data, parse_constant=reject)
+    except RecursionError as error:
+        raise ValueError('json_nesting_excessive') from error
     if not isinstance(result, dict):
         raise ValueError('json_object_required')
     return result
