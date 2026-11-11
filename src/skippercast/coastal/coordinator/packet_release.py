@@ -18,7 +18,8 @@ PACKAGE='coastal-held-acquisition-package-v1'
 
 def _horizon(now,horizon):
     if isinstance(now,bool) or isinstance(horizon,bool):raise ValueError('boolean metadata clock rejected')
-    start=epoch(now);end=epoch(horizon)
+    try:start=epoch(now);end=epoch(horizon)
+    except OverflowError:raise ValueError('finite prospective metadata horizon at most3600seconds required') from None
     if not all(math.isfinite(x) for x in (start,end)) or not start<end<=start+3600:
         raise ValueError('finite prospective metadata horizon at most3600seconds required')
     return start,end

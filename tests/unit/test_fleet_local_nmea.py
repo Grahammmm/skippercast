@@ -216,6 +216,43 @@ class SentenceTest(unittest.TestCase):
         self.assertEqual(feed(source, [single(position(1, 999000009), talker="AIVDO")]), [])
         self.assertEqual(source.counts["own_ship_dropped"], 1)
 
+    def test_prefix_lookalikes_are_ignored(self):
+        good = single(position(1, 999000001))
+        self.assertEqual(len(feed(make(), [good])), 1)
+        errors = []
+        source = make(on_malformed=errors.append)
+        for talker in ("AIVDMX", "AIVDMjunk", "AIVDOX", "aivdm", "AIVD"):
+            for bad in (False, True):
+                line = single(position(1, 999000001), talker=talker, bad=bad)
+                with self.subTest(talker=talker, bad=bad):
+                    self.assertIsNone(parse_sentence(line))
+                    self.assertEqual(feed(source, [line]), [])
+        self.assertIsNone(parse_sentence(single(position(1, 999000001), talker="AIVDMX") + "0" * 80))
+        self.assertEqual((errors, source.counts.get("own_ship_dropped", 0)), ([], 0))
+        with self.assertRaises(MalformedSentence):
+            parse_sentence("!AIVDM*00")
+
+    def test_lookalike_fragments_cannot_touch_an_active_group(self):
+        first, last = two_fragments(type5(999000003, 1234567, "CALL", "SYNTH ONE", 30, (10, 5, 3, 2)))
+        fake_first = first.replace("AIVDM", "AIVDMX", 1)
+        fake_last = last.replace("AIVDM", "AIVDMX", 1)
+        # recompute checksums for the mutated sentences
+        def fix(line):
+            body = line[1:].partition("*")[0]
+            check = 0
+            for char in body:
+                check ^= ord(char)
+            return f"!{body}*{check:02X}"
+        fake_first, fake_last = fix(fake_first), fix(fake_last)
+        source = make()
+        assembler = Assembler()
+        out = []
+        for line in (fake_first, first, fake_first, fake_last, last):
+            out += source._line(line, assembler, BBOX, None)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(assembler.dropped, 0)
+        self.assertEqual(feed(make(), [fake_first, fake_last]), [])
+
     def test_payload_outside_the_armour_is_malformed(self):
         errors = []
         self.assertEqual(feed(make(on_malformed=errors.append), [sentence("15M^^^", 0)]), [])

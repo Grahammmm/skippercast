@@ -1,5 +1,6 @@
 """Finite ordered orchestration. Preparation is metadata-only; Store owns credit."""
 import argparse
+import copy
 import json
 import math
 import os
@@ -299,7 +300,7 @@ def prepare(root, grant_ref, request_refs, *, start_epoch, deadline_epoch,
             source_reuse_execution_ready=False)
     if continuation is not None:
         prepared.update(saved_area_continuation_contract=continuation,saved_area_adoption=grant["saved_area_adoption"],max_native_admissions=6,source_volume_cap_bytes=220545408)
-    return prepared
+    return copy.deepcopy(prepared)
 
 def prepare_continuation(root,grant_ref,request_refs,**kwargs):
     result=prepare(root,grant_ref,request_refs,**kwargs)

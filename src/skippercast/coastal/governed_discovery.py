@@ -81,10 +81,16 @@ def validate(context, now, horizon):
     if not isinstance(sources,list) or not 1<=len(sources)<=40:
         raise ValueError("finite owner-pinned discovery source specs required")
     plan = _document(context["plan"], input_root, inventory.PLAN)
-    return root, grant, input_root, plan, sources, min(outer[1], inner[1], horizon)
+    deadline = min(outer[1], inner[1], horizon)
+    # Same sampled (mono, actual) pair: a wall rollback cannot renew the allowance.
+    mono_deadline = min(outer[3], inner[3], mono + (horizon - actual))
+    return root, grant, input_root, plan, sources, deadline, mono_deadline
+
+def _live(deadline, mono_deadline):
+    return time.time() < deadline and time.monotonic() < mono_deadline
 
 def run(context, *, now, horizon):
-    root, grant, input_root, plan, sources, deadline = validate(context, now, horizon)
+    root, grant, input_root, plan, sources, deadline, mono_deadline = validate(context, now, horizon)
     manager=None
     if root.exists():
         if not (root/"managed-output.json").is_file():
@@ -107,21 +113,29 @@ def run(context, *, now, horizon):
     payloads = [(name, inventory.encoded(doc)) for name,doc in docs]
     if sum(len(raw) for _,raw in payloads) > LIMIT:
         raise ValueError("complete discovery payload exceeds512KiB")
-    if time.time() >= deadline:
+    if not _live(deadline, mono_deadline):
         raise TimeoutError("discovery deadline exhausted before output")
     if manager is None:
         if not root.parent.is_dir():
             raise ValueError("owned mission parent must exist")
         root.mkdir(mode=0o700)
+        if not _live(deadline, mono_deadline):
+            raise TimeoutError("discovery deadline exhausted before output")
         manager = ManagedOutputs.create(root,grant,digest(grant))
     # All exact serialized files admitted before first artifact write.
     for name,raw in payloads:
+        if not _live(deadline, mono_deadline):
+            raise TimeoutError("discovery deadline exhausted; partial evidence retained")
         manager.reserve_file(name,role="control",max_bytes=len(raw),intent="governed-discovery:"+name)
     for name,raw in payloads:
-        if time.time() >= deadline:
+        if not _live(deadline, mono_deadline):
             raise TimeoutError("discovery deadline exhausted; partial evidence retained")
         manager.write_bytes(name,raw,role="control",max_bytes=len(raw),intent="governed-discovery:"+name)
+    if not _live(deadline, mono_deadline):
+        raise TimeoutError("discovery deadline exhausted; partial evidence retained")
     manager.audit()
+    if not _live(deadline, mono_deadline):
+        raise TimeoutError("discovery deadline exhausted; partial evidence retained")
     return dict(schema="coastal-governed-discovery-result-v1",state=terminal["state"],
                 output_root=str(root),payload_bytes=sum(len(raw) for _,raw in payloads),
                 ledger_overhead_bytes=524288,original_source_reads=0,network_requests=0,units_started=0)

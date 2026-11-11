@@ -506,10 +506,21 @@ def emit(root, source_ref, *, source_row, metadata_sha256, output_dir, placement
 
 def _read_table(path):
     with open(path, newline='') as stream:
-        reader = csv.reader(stream)
-        if tuple(next(reader)) != TABLE_COLUMNS:
-            raise ValueError('supergrid table columns changed')
-        return [dict(zip(TABLE_COLUMNS, line)) for line in reader]
+        reader = csv.reader(stream, strict=True)
+        try:
+            header = next(reader, None)
+            if header is None:
+                raise ValueError('supergrid table header missing')
+            if tuple(header) != TABLE_COLUMNS:
+                raise ValueError('supergrid table columns changed')
+            rows = []
+            for line in reader:
+                if len(line) != len(TABLE_COLUMNS):
+                    raise ValueError('supergrid table row width changed')
+                rows.append(dict(zip(TABLE_COLUMNS, line)))
+        except csv.Error as exc:
+            raise ValueError('supergrid table CSV malformed') from exc
+        return rows
 
 
 def verify(root, receipt):
