@@ -68,7 +68,7 @@ test('planner rendering follows selection and stored waypoint order, without cha
       await new Promise(resolve => setTimeout(resolve, 0));
       model.setResearch(true); model.toggleSpot('1', true);
       const html = () => m.render(m.h(m.Planner, {model, open: false}));
-      assert.doesNotMatch(html(), /aria-label="Stops in order"/);
+      assert.match(html(), /aria-label="Stops in order"/);
       model.toggleSpot('2', true); model.toggleSpot('3', true);
       const request = {atlas: model.tripAtlas.value, screen, ids: model.draft.value.ids, allowResearch: true,
         region: model.region, now: new Date('2026-11-01T00:00:00Z')};
@@ -84,12 +84,12 @@ test('planner rendering follows selection and stored waypoint order, without cha
       model.draft.value = {...model.draft.value, ids: ['user:b', ...model.draft.value.ids, 'user:a'], userWaypoints: [
         {id: 'user:a', name: 'Waypoint A', latitude: 35.4, longitude: -121, category: 'other'},
         {id: 'user:b', name: 'Waypoint B', latitude: 35.5, longitude: -121, category: 'other'}]};
-      assert.match(html(), /Stop 2 → Waypoint A/); assert.match(html(), /Waypoint A → Waypoint B/);
+      assert.match(html(), /Stop 2 → Waypoint A/); assert.match(html(), /Waypoint B → Stop 1/);
       model.ports.value = [{id: 'home', name: 'Home', match: [port.lat, port.lon]}]; model.setFilter('port', 'home');
       m.cruiseSpeed.value = 20; markup = html();
-      assert.match(markup, /Home → Stop 1/); assert.match(markup, /Waypoint B → Home/); assert.match(markup, /at least \d+ min/);
+      assert.match(markup, /Home → Waypoint B/); assert.match(markup, /Waypoint A → Home/); assert.match(markup, /at least \d+ min/);
       model.portsFailed.value = true;
-      assert.match(html(), /No home port chosen/); assert.doesNotMatch(html(), /Home → Stop 1/);
+      assert.match(html(), /No home port chosen/); assert.doesNotMatch(html(), /Home → Waypoint B/);
       model.search.value = 'no matching spots';
       assert.match(html(), /Stop 1 → Stop 3/, 'search cannot hide selected stops');
       model.tripAtlas.value = {...model.tripAtlas.value, targets: targets.map(t => t.id === '3' ? {...t, latitude: NaN} : t)};

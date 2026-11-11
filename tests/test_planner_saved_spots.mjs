@@ -15,7 +15,7 @@ import {geometryCoveredByBounds} from '../dist/geo-screen.js';
 // Only the Planner component's own effects are captured (so a test can run and clean them up); every other module keeps the real hooks.
 const hookStub = {name: 'hook-stub', setup: b => {
   b.onResolve({filter: /^preact\/hooks$/}, a => a.importer.endsWith('web/app/Planner.tsx') ? {path: 'hooks', namespace: 'hook-stub'} : null);
-  b.onLoad({filter: /.*/, namespace: 'hook-stub'}, () => ({contents: 'export const useEffect = (fn, deps) => { (globalThis.__plannerEffects ??= []).push(fn); };', loader: 'js'}));
+  b.onLoad({filter: /.*/, namespace: 'hook-stub'}, () => ({contents: 'export const useLayoutEffect = () => {}; export const useRef = current => ({current}); export const useEffect = (fn, deps) => { (globalThis.__plannerEffects ??= []).push(fn); };', loader: 'js'}));
 }};
 const dir = await mkdtemp(join(tmpdir(), 'planner-saved-')), out = join(dir, 'ui.mjs');
 await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
