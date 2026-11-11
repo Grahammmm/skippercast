@@ -67,7 +67,9 @@ test('duplicates and bad coordinates are skipped before any route call; fewer th
   assert.deepEqual(r.legs.map(l => l.to), ['Stop 1', 'Stop 2', 'Home']);
   assert.equal(route.calls, r.legs.length);
   const once = fake([3]);
-  assert.equal(tripLegs(port, [stops[0], stops[0]], 10, once).legs.length, 0); assert.equal(once.calls, 0);
+  assert.equal(tripLegs(null, [stops[0], stops[0]], 10, once).legs.length, 0); assert.equal(once.calls, 0);
+  // SC2252-04: one distinct stop from a port is port -> stop -> port, two route calls.
+  assert.equal(tripLegs(port, [stops[0], stops[0]], 10, once).legs.length, 2); assert.equal(once.calls, 2);
 });
 
 // The planner over a real land-water product (tile 12/671/1616, 32×32 cells).

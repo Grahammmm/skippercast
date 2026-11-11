@@ -118,6 +118,11 @@ test('with WebGL disabled the stage says the map graphics could not start, hides
   await expect(page.locator('.app-terrain')).toBeHidden();
   await expect(page.getByRole('group', {name: 'Map presentation'})).toHaveCount(0);
   expect(params(page).presentation, 'the link keeps the request').toBe('3d');
+  // SC1922-07: the layer buttons stay, but every one is aria-disabled with the reason. On a phone they sit in the Layers panel.
+  if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers', exact: true}).click();
+  const toggles = page.locator('.ui-rail-toggle');
+  await expect(toggles.first()).toBeVisible();
+  for (const t of await toggles.all()) await expect(t).toHaveAttribute('aria-disabled', 'true');
   await v2.a11y('v2-map-no-webgl');
 });
 
@@ -149,8 +154,9 @@ test('Try again reloads the same address once by keyboard and the Chart recovers
   await v2.open('app', {...PLACE, presentation: 'chart', layers: 'swell', current: 'off'});
   await page.evaluate(() => { location.hash = 'rf1925'; });
   await expect(notice(page)).toBeVisible();
-  await expect(page.getByRole('button', {name: 'Layers', exact: true})).toHaveCount(0);
-  await expect(page.locator('.app-rail')).toHaveCount(0);
+  // SC1922-07: the layer buttons stay (the phone's Layers trigger, the laptop's rail), disabled with the reason, instead of vanishing.
+  if (isMobile) await expect(page.getByRole('button', {name: 'Layers', exact: true})).toHaveCount(1);
+  else await expect(page.locator('.app-rail')).toHaveCount(1);
   await expect(page.getByRole('group', {name: 'Map presentation'})).toHaveCount(0);
   await expect(page.locator(isMobile ? 'input[aria-label="Hour"]' : '.app-dock')).toBeVisible();
   const before = page.url();
@@ -363,6 +369,24 @@ test('a failing coastline marks only its layer unavailable; the basemap keeps dr
   await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).toContainText('© OpenStreetMap contributors, © Protomaps');
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
   expect(asked).toEqual(['/regions/morro-bay/shoreline-overview.geojson', '/regions/morro-bay/shoreline.geojson']);
+});
+
+test('RF2205-9: an overview-only region never asks for the full shoreline, even after the overview fails', async ({page, v2}) => {
+  const asked: string[] = [];
+  await page.route('**/regions/morro-bay/region.json', async route => {
+    const response = await route.fetch();
+    await route.fulfill({response, json: {...await response.json(), chart_files: ['shoreline-overview.geojson']}});
+  });
+  await page.route(/\/regions\/morro-bay\/shoreline(?:-overview)?\.geojson$/, route => { asked.push(new URL(route.request().url()).pathname); return route.fulfill({status: 503, body: 'Offline map test'}); });
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,13'});
+  if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click();
+  await expect(page.locator('[data-unavailable="coastline"]')).toHaveText('Coastline unavailable.');
+  await expect(page.locator('[data-unavailable]')).toHaveCount(1);
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(asked.filter(path => path.endsWith('/shoreline.geojson')), 'the unlisted full shoreline is never asked for').toEqual([]);
+  expect(asked).toContain('/regions/morro-bay/shoreline-overview.geojson');
 });
 
 // BL-SC-1: at phone width the credits are MapLibre's compact toggle, folded on load whatever their length, and one tap opens them.
