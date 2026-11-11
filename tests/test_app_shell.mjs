@@ -524,7 +524,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.deepEqual(attrs(html, /data-view="([a-z]+)"/g), ['coast', 'conditions', 'history', 'fleet', 'reports']);
   assert.match(html, /class="app-fresh" role="status" data-state="unknown" aria-label="Freshness: No readings yet"/);
   // FE-50: sign in is the account menu's button, closed until pressed.
-  assert.match(html, /<div class="app-account"><button type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded="false" aria-controls="([^"]+)">.*?Sign in<\/button><div id="\1" class="app-account-panel" hidden/);
+  assert.match(html, /<div class="app-account"><button type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded="false" aria-controls="([^"]+)" title="Sign in">.*?<span class="app-account-label">Sign in<\/span><\/button><div id="\1" class="app-account-panel" hidden/);
   assert.match(html, /role="group" aria-label="Profile"/);
   assert.equal(count(html, /(?:Boat|Shore|Spear|Kayak)<\/button>/g), 4);
   assert.equal(count(html, /<label>Target<select/g), 1);
