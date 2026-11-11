@@ -133,7 +133,7 @@ extraTest('A2 nonempty producer-shaped packs render their names and metadata', a
   h.render();
   const html = await h.settle();
   for (const {meta} of packs) assert.ok(html.includes(`<strong>${meta.region_name}</strong>`));
-  assert.match(html, /2 of 3 chart tiles · 1 of 2 base map tiles \(zoom 8–9\) · 1 items missing/);
+  assert.match(html, /2 of 3 chart tiles · 1 of 2 base map tiles \(zoom 8–9\) · 1 item missing/);
   assert.match(html, /1 of 1 chart tiles/);
   assert.match(html, /datetime="2026-10-20T12:00:00Z"/i);
   assert.ok(!html.includes(EMPTY) && !html.includes(UNKNOWN));
@@ -223,9 +223,11 @@ extraTest('SC1952-03 the chart pack paragraph names the published land-water scr
 extraTest('SC1952-03 a side file missing from v2.missing is counted in the saved line, once even when the top-level list also names it', async t => {
   const url = 'https://example.test/regions/fixture-harbor/land-water.json', other = 'https://example.test/regions/fixture-harbor/depth-contours.geojson';
   for (const [meta, expected] of [
-    [{missing: [], v2: {basemap: {saved: 1, planned: 1}, shell: {saved: 1, requested: 2}, missing: [url]}}, '1 items missing'],
+    [{missing: [], v2: {basemap: {saved: 1, planned: 1}, shell: {saved: 1, requested: 2}, missing: [url]}}, '1 item missing'],
     [{missing: ['https://example.test/other'], v2: {basemap: {saved: 1, planned: 1}, shell: {saved: 1, requested: 3}, missing: [url, other]}}, '3 items missing'],
-    [{missing: [url], v2: {basemap: {saved: 1, planned: 1}, shell: {saved: 1, requested: 2}, missing: [url]}}, '1 items missing'],
+    [{missing: [url], v2: {basemap: {saved: 1, planned: 1}, shell: {saved: 1, requested: 2}, missing: [url]}}, '1 item missing'],
+    [{missing: [url], v2: {basemap: {saved: 1, planned: 1}, shell: {saved: 1, requested: 3}, missing: [url, other]}}, '2 items missing'],
+    [{missing: [url, url], v2: {basemap: {saved: 1, planned: 1}, shell: {saved: 1, requested: 2}, missing: [url, url]}}, '1 item missing'],
   ]) {
     const h = await harness(t, [success(withMeta(meta))]);
     h.render();
@@ -240,11 +242,11 @@ extraTest('SC1952-03 old metadata without v2, or with v2 but no missing list, st
   const h = await harness(t, [success(legacy)]);
   h.render();
   const html = await h.settle();
-  assert.ok(html.includes('1 of 1 chart tiles') && !html.includes('items missing'));
+  assert.ok(html.includes('1 of 1 chart tiles') && !html.includes('item missing') && !html.includes('items missing'));
   const noList = await harness(t, [success(withMeta({missing: [], v2: {basemap: {saved: 1, planned: 1}, shell: {saved: 1, requested: 1}}}))]);
   noList.render();
   const html2 = await noList.settle();
-  assert.ok(html2.includes('1 of 1 base map tiles') && !html2.includes('items missing'));
+  assert.ok(html2.includes('1 of 1 base map tiles') && !html2.includes('item missing') && !html2.includes('items missing'));
 });
 
 extraTest('SC1952-03 the status after Save counts both lists once', async t => {
