@@ -56,7 +56,9 @@ export const packMissing = (m: PackMeta): number => new Set([...m.missing, ...m.
 export function packTiles(m: PackMeta, lang: Language = 'en'): string {
   const zoom = m.tiles.max_zoom === null ? '' : t('trip.tiles.zoom', lang, {min: m.tiles.min_zoom, max: m.tiles.max_zoom});
   const base = m.v2 ? t('trip.tiles.base', lang, {saved: m.v2.basemap.saved, planned: m.v2.basemap.planned}) : '';
-  return `${t('trip.tiles', lang, {saved: m.tiles.saved, planned: m.tiles.planned})}${base}${zoom}${packMissing(m) ? t('trip.tiles.missing', lang, {n: packMissing(m)}) : ''}`;
+  const missing = packMissing(m);
+  const gaps = missing === 0 ? '' : missing === 1 ? t('trip.tiles.missingOne', lang) : t('trip.tiles.missing', lang, {n: missing});
+  return `${t('trip.tiles', lang, {saved: m.tiles.saved, planned: m.tiles.planned})}${base}${zoom}${gaps}`;
 }
 
 /** The planner-load refusal the store wrote in English, in `lang`; any other text is shown as it is. */

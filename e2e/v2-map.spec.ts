@@ -1681,3 +1681,46 @@ for (const [listed, other] of [['depth-contours.geojson', 'depth-contours-overvi
     expect(asked.filter(name => name === other), 'the unlisted form is never asked for').toEqual([]);
   });
 }
+
+// RF2315-6: the settled 3D orbit is the five-number ?view=, Share carries it, and the reopened link restores it.
+test('browser_orbit_survives_share_reopen: an orbit is shared as bearing and pitch and the reopened map reports the same angles', async ({page, context, pageErrors, v2}) => {
+  await context.addInitScript(() => {
+    const w = window as unknown as {copies: string[]};
+    w.copies = [];
+    Object.defineProperty(navigator, 'share', {configurable: true, value: undefined});
+    Object.defineProperty(navigator, 'clipboard', {configurable: true, value: {writeText: async (text: string) => { w.copies.push(text); }}});
+  });
+  await terrain3d(page, v2);
+  const angles = (value: string | null | undefined) => { const [, , , bearing, pitch] = (value ?? '').split(',').map(Number); return {bearing, pitch, fields: (value ?? '').split(',').length}; };
+  const canvas = page.locator('.app-terrain canvas');
+  const box = (await canvas.boundingBox())!;
+  const x = box.x + box.width / 2, y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 90, y + 30, {steps: 8});
+  await page.mouse.up();
+  await expect.poll(() => angles(params(page).view).fields, {message: 'the settled orbit is written as five numbers'}).toBe(5);
+  const settled = params(page).view!;
+  const saved = angles(settled);
+  expect(saved.bearing).toBeGreaterThanOrEqual(-180);
+  expect(saved.bearing).toBeLessThanOrEqual(180);
+  expect(saved.pitch).toBeGreaterThan(0);
+  expect(saved.pitch).toBeLessThanOrEqual(90);
+
+  await page.getByRole('button', {name: 'Share this view'}).dispatchEvent('click');
+  await expect.poll(() => page.evaluate(() => (window as unknown as {copies: string[]}).copies.length)).toBe(1);
+  const link = (await page.evaluate(() => (window as unknown as {copies: string[]}).copies))[0]!;
+  expect(new URL(link).searchParams.get('view'), 'Share carries the five-number view').toBe(settled);
+
+  // Reopen the shared address, then zoom once so the renderer reports its real camera again.
+  await page.goto(link);
+  const host = page.locator('.app-terrain');
+  await expect.poll(() => host.evaluate(el => !!el.shadowRoot?.getElementById('scene') && !el.shadowRoot.getElementById('loading')), {message: 'the synthetic terrain loads'}).toBe(true);
+  await page.getByRole('group', {name: 'Terrain view'}).getByRole('button', {name: 'Zoom in'}).click();
+  await expect.poll(() => angles(params(page).view).fields, {message: 'the zoom is written with the orientation'}).toBe(5);
+  await expect.poll(() => params(page).view).not.toBe(settled);
+  const restored = angles(params(page).view);
+  expect(Math.abs(restored.bearing - saved.bearing)).toBeLessThan(0.05);
+  expect(Math.abs(restored.pitch - saved.pitch)).toBeLessThan(0.05);
+  expect(pageErrors).toEqual([]);
+});
