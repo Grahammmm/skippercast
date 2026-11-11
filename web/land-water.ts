@@ -272,6 +272,8 @@ export function loadLandWaterLines(region: string, fetchFn: Fetch = (...a) => fe
   const now = landWater.peek(), model = now.model;
   if (now.region !== region || now.state !== 'ready' || !model || now.lines !== null) return Promise.resolve(now);
   if (linesJob?.region === region && linesJob.model === model) return linesJob.promise;
+  // A region.json that lists Chart files without the lines file: settle as a 404 does, unasked; the index stays usable.
+  if (!chartFileListed(region, 'land-water-lines.json')) return Promise.resolve(landWater.value = {...now, lines: false, linesLoading: false});
   landWater.value = {...now, linesLoading: true};
   return startJob(region, model, async current => {
     let lines: LandWaterLines | false = false;

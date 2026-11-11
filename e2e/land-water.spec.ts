@@ -55,3 +55,25 @@ test('with the committed index the places rank from clean cells and the lines fi
   expect(lines).toEqual([]);
   expect(pageErrors).toEqual([]);
 });
+
+test('a region.json that lists the index but not the lines file never requests the lines file; mixed cells stay unconfirmed', async ({page, pageErrors, v2, isMobile}) => {
+  const lines: string[] = [];
+  await page.route('**/regions/morro-bay/region.json', async route => {
+    const response = await route.fetch(), info = await response.json();
+    info.chartFiles = (info.chartFiles ?? []).filter((name: string) => name !== 'land-water-lines.json');
+    if (!info.chartFiles.includes('land-water.json')) info.chartFiles.push('land-water.json');
+    await route.fulfill({response, json: info});
+  });
+  await page.route(INDEX, async route => {
+    const response = await route.fetch(), index = await response.json();
+    const cells = `m${index.constants.grid * index.constants.grid}`;
+    for (const key of Object.keys(index.tiles)) index.tiles[key] = cells;
+    await route.fulfill({response, json: index});
+  });
+  page.on('request', request => { if (request.url().endsWith('/land-water-lines.json')) lines.push(request.url()); });
+  await v2.open('app', {region: 'morro-bay', profile: 'boat'});
+  await whereToLook(page, isMobile);
+  await page.waitForLoadState('networkidle');
+  expect(lines, 'the unpublished lines file is never requested').toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
