@@ -66,6 +66,7 @@ LINK_WORDS = (("contact", 5), ("book", 4), ("reserv", 4), ("about", 3), ("charte
 PHONE = re.compile(r"(?<![\d+])(?:\+?1[\s.\-]?)?\(?([2-9]\d{2})\)?[\s.\-]?([2-9]\d{2})[\s.\-]?(\d{4})(?!\d)")
 EMAIL_TEXT = re.compile(r"(?<![\w.%+-])[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,24}\b")
 NOT_EMAIL_TLDS = {"png", "jpg", "jpeg", "gif", "webp", "svg", "css", "js"}
+HIDDEN_TAGS = ("script", "style", "noscript", "template")
 HANDLE = re.compile(r"^[A-Za-z0-9._]{1,30}$")
 
 
@@ -114,10 +115,17 @@ class _Page(HTMLParser):
         self._href = ""
 
     def handle_starttag(self, tag, attrs):
+        if self._hidden:  # inside a suppressed container nothing contributes attributes; only nesting is tracked
+            if tag in HIDDEN_TAGS:
+                self._hidden += 1
+            return
         attr = {k.lower(): (v or "") for k, v in attrs}
-        if tag in ("script", "style", "noscript", "template"):
+        if tag in HIDDEN_TAGS:
+            # a script that starts in visible content still reports its booking src before its body is suppressed
+            if tag == "script" and attr.get("src"):
+                self.embeds.append(attr["src"])
             self._hidden += 1
-        if tag in ("script", "iframe") and attr.get("src"):
+        elif tag in ("script", "iframe") and attr.get("src"):
             self.embeds.append(attr["src"])
         elif tag == "a" and attr.get("href"):
             self._anchor, self._href = [], attr["href"]
@@ -125,8 +133,10 @@ class _Page(HTMLParser):
             self.og_image = self.og_image or attr["content"]
 
     def handle_endtag(self, tag):
-        if tag in ("script", "style", "noscript", "template") and self._hidden:
+        if tag in HIDDEN_TAGS and self._hidden:
             self._hidden -= 1
+        elif self._hidden:
+            return
         elif tag == "a" and self._anchor is not None:
             self.links.append((self._href, " ".join("".join(self._anchor).split())))
             self._anchor = None
