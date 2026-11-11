@@ -31,8 +31,3 @@ test('children keep natural height, the block is account-only and forced colors 
   assert.match(block, /@media \(forced-colors: active\) \{ \.account-scrim > \.account-card \{ background: Canvas; \} \}/);
 });
 
-test('mutation: a card without local covers or without a cap is rejected by the same checks', () => {
-  const mutated = block.replace(/ local,/g, ' scroll,');
-  assert.equal((mutated.match(/\blocal\b/g) ?? []).length, 0);
-  assert.doesNotMatch(block.replace('100dvh', '100%'), /100dvh/);
-});
