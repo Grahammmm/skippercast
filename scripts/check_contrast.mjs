@@ -373,6 +373,7 @@ export function boundSurfaceContrast(request = {}) {
 // parser proves the cascade. A changed source must be reviewed/rebound; default
 // CLI and generic missing-background behavior remain unchanged pending review.
 // SC1722-14: form typography changes layout, not colour, alpha, backing or contrast thresholds.
+// SC1922-04: appended preview layout/text roles leave existing legend/catch paint unchanged.
 export const SURFACE_SOURCE_SHA256 = {
   // BF-wcag only adds min-height (24 px target floor) to .text-link, .history-provenance a and .sheet-links a; no paint changed.
   // SC1722-08 only raises the History chart scroller's focus ring to 2 px and adds one .history-measurement-note > summary focus ring; no unfocused paint changed.
@@ -407,7 +408,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // RF1935-2 only appends a desktop-only (min-width: 1024px) .app-stage > .app-rail > .ui-segmented wrap block at the end of app.css and sets the desktop rail's
   // overflow-y: scroll with a stable scrollbar gutter (layout, no paint); no colour, opacity, backing or text paint changed and the cited line numbers above are unmoved.
   // SC1922-03 only adds a scoped .app-conditions-head model-family wrap/min-height rule after .app-conditions-head, plus a pointer-events-only rule for .app-presentation--placing (no paint); no colour, opacity, backing or text paint changed and legend glass is untouched.
-  "appCss": "3a3ed45b4eca2f7104c2f7860767fd9fce6305328f7573b3d7121743eee8ff9a",
+  "appCss": "8bc7e71b104fc2bd96d2799297623263663cc2d337770260ea553785b06880e7",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.

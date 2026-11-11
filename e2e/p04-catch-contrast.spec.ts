@@ -163,6 +163,7 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // catch flow never renders; check_contrast.mjs changes only the appCss surface hash and its comment, with contrast(),
 // assertions and thresholds untouched. Rebind those two exact hashes.
 // SC1722-14 changes field typography/layout only; no colour, alpha, backing or contrast threshold changes.
+// SC1922-04: shared preview disclosure and appended layout; catch/legend paint and contrast math unchanged.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC2207-01 (#1501): species.ts changes only Plan.source_links' type member from href to url.
   // The interface is erased at runtime; Reports/CatchCards markup, styles, paint and source data
@@ -213,7 +214,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // unchanged age span. BODY09 mounts Reports/CatchCards, never Masthead, and no network state markup changes; no CSS, token or
   // catch markup change; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
   // SC1922-03: Masthead.tsx renders Location's Retry through the shared Button (ui-button--quiet ui-button--sm); BODY09 mounts Reports/CatchCards, never Masthead. No catch markup, token or paint change. Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "04c7c3dd3696b7ee74008548f8176048d5818ca278ef3887e5143a01f18e1ccf",
+  "web/app/Masthead.tsx": "7cf327efbf994d25872d96f00e5815ae54b270792065fe43945f27e38385a6f5",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
@@ -267,7 +268,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
   // RF1935-2: app.css adds only a desktop-only layer-rail preset wrap block and the rail's vertical scroll track (layout, no paint); the Reports catch sheet mounts no rail. Rebound from the final bytes.
   // SC1922-03: app.css adds only a Conditions-header model-family wrap/min-height rule and a pointer-events rule scoped to .app-presentation--placing (the armed placing stack, which Reports never mounts); no paint, backing or catch text changed. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
-  "web/app/app.css": "3a3ed45b4eca2f7104c2f7860767fd9fce6305328f7573b3d7121743eee8ff9a",
+  "web/app/app.css": "8bc7e71b104fc2bd96d2799297623263663cc2d337770260ea553785b06880e7",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -340,7 +341,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF1925-1: only appCss pin and applicability comment change.
   // RF1935-2: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // SC1922-03: only the appCss pin and applicability comment change.
-  "scripts/check_contrast.mjs": "51ff46ad557159c8b90721b93410a72565658d5c15be4fe655610a1ea9db7380",
+  "scripts/check_contrast.mjs": "f76f2e8238656f3c9516499fd1e0e04a68c008c4e01015bb3955118623930177",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
