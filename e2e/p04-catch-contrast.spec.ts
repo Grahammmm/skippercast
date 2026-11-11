@@ -271,10 +271,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
   // RF1925-1: masthead minimum-width only; Reports paint and contrast proof unchanged.
   // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
+  // SC1722-19: app.css adds only desktop layout rules (the app scrolls inside itself, the stage clips, a sticky time dock); the Reports catch sheet mounts neither; check_contrast.mjs changes only the appCss hash and its comment. Rebound from the final bytes.
   // RF1935-2: app.css adds only a desktop-only layer-rail preset wrap block and the rail's vertical scroll track (layout, no paint); the Reports catch sheet mounts no rail. Rebound from the final bytes.
   // SC1922-03: app.css adds only a Conditions-header model-family wrap/min-height rule and a pointer-events rule scoped to .app-presentation--placing (the armed placing stack, which Reports never mounts); no paint, backing or catch text changed. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
   // SC1922-08: app.css lets the .app-fresh chip wrap (flex-wrap, max-width) and appends only a [data-refresh-line] wrap rule (no colour change); the Reports catch sheet mounts neither. check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
-  "web/app/app.css": "aca5a352e10a26321a0e72d46a22425337673e072ced217d0354cf657cfb2ee1",
+  "web/app/app.css": "2b1ad2c453ab12f25a6fc43ab269b3369a4217c48607fa1f756e0d10253913bb",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -346,10 +347,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // assertions and thresholds are unchanged. Rebind only these two sources.
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
   // RF1925-1: only appCss pin and applicability comment change.
+  // SC1722-19: only the appCss pin and applicability comment change.
   // RF1935-2: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // SC1922-03: only the appCss pin and applicability comment change.
   // SC1922-08: only the appCss pin and applicability comment change.
-  "scripts/check_contrast.mjs": "b0b333f9e05d698a9f35aeb5de10d1348045b372c6ee31f9ad4f82c3f98dde82",
+  "scripts/check_contrast.mjs": "ec60644e195c6108d679772941ef34dd5956bd04b7cf33ed212763792a0f5a46",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
