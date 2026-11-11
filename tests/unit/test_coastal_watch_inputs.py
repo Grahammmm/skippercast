@@ -110,3 +110,24 @@ class CoastalWatchInputTests(TestCase):
         self.assertNotIn('skipped_report_feeds', data['health'])
         atomic_json(self.tmp / 'expected.json', REAL_COLLECT(now=NOW, previous=previous, reports=[REPORT]))
         self.assertEqual((self.out / 'coastal/latest.json').read_bytes(), (self.tmp / 'expected.json').read_bytes())
+
+    def test_boolean_and_overflow_counts_do_not_support_reports(self):
+        def row(day, pub, raw):
+            return ('{"date":"%s","coordinates":[-121.4,35.6],"coordinate_role":"fishing-observation","location_review":"reviewed",'
+                    '"original_publisher_id":"%s","publisher_review":"reviewed","source_url":"https://%s.example/r",'
+                    '"catches":[{"species":"yellowfin","count":%s}]}') % (day, pub, pub, raw)
+        for raw in ('true', '1e9999'):
+            for control, expected in ((False, 'watch-only'), (True, 'recent-located-reports')):
+                with self.subTest(raw=raw, control=control):
+                    self.out = Path(tempfile.mkdtemp(dir=self.tmp))
+                    second = row('2026-09-20', 'two', '3' if control else raw)
+                    self.write('regions/central/latest.json',
+                               ('{"region_id":"central","reports":[%s,%s]}' % (row('2026-09-21', 'one', '5'), second)).encode())
+                    data, lines = self.run_watch()
+                    self.assertEqual(lines, [])
+                    self.assertNotIn('skipped_report_feeds', data['health'])
+                    for name in ('latest', 'status'):
+                        feed = json.loads((self.out / f'coastal/{name}.json').read_text())
+                        target = next(w for w in feed['regions']['central']['watch'] if w['target'] == 'yellowfin')
+                        self.assertEqual(target['status'], expected)
+                        self.assertEqual(len(target['evidence']), 2 if control else 1)
