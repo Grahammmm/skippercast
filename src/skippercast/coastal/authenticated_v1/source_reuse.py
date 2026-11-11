@@ -219,8 +219,13 @@ class BatchOwner:
             return obj
         except BaseException:
             obj.state["state"] = "uncertain"
-            atomic_json(obj.path, obj.state)
-            if obj.fd >= 0: os.close(obj.fd); obj.fd = -1
+            try:
+                atomic_json(obj.path, obj.state)
+            finally:
+                # Descriptor cleanup must not depend on the uncertain-state write.
+                if obj.fd >= 0:
+                    fd, obj.fd = obj.fd, -1
+                    os.close(fd)
             raise
         finally:
             if original >= 0: os.close(original)
