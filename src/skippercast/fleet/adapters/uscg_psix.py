@@ -151,9 +151,12 @@ def _cell_text(cell: ET.Element, shared: list[str]) -> str:
         return ""
     if kind == "s":
         try:
-            return shared[int(value.text)]
-        except (ValueError, IndexError):
-            raise PsixFormatError("PSIX workbook cell points past the shared strings") from None
+            index = int(value.text)
+        except ValueError:
+            index = -1
+        if not 0 <= index < len(shared):  # a negative index would silently read from the end of the table
+            raise PsixFormatError("PSIX workbook cell points past the shared strings")
+        return shared[index]
     return value.text
 
 

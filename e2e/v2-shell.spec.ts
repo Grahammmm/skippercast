@@ -197,7 +197,7 @@ for (const lang of ['en', 'es']) test(`day-qualified dock values across fall DST
 });
 
 test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) => {
-  await v2.open('app', AREA);
+  await v2.open('app', {...AREA, area: 'estero'});   // SC1722-15: the Area picker is drawn only for an area link
   const wanted = isMobile
     ? ['button[aria-label="Layers"]', '[aria-label="Profile"] button:last-child', '.ui-sheet-handle', 'input[aria-label="Hour"]', '.ui-tile:last-child summary', 'label:has-text("Target") select', 'label:has-text("Area") select', '.app-tabs a[data-view="reports"]']
     : ['nav[aria-label="Views"] a[data-view="fleet"]', '[aria-label="Profile"] button:last-child', 'label:has-text("Target") select', 'label:has-text("Area") select',
@@ -485,6 +485,48 @@ test('SC1722-09: Back and Forward follow the views you pressed, a repeat press a
   await expect(page).toHaveURL(/[?&]view=history/);
   expect(await length()).toBe(start + 2);
   expect(await stillLoaded(), 'no reload').toBe(true);
+  expect(pageErrors).toEqual([]);
+});
+
+// SC1722-15: the Area picker is drawn only when there is something to choose. No ?area= leaves no slot for it (the port
+// and share controls keep their group); ?area=x offers the area and Whole region, and choosing Whole region clears the link.
+test('SC1722-15: the Area picker shows only for an area link, and Whole region clears it without a reload', async ({page, pageErrors, v2, isMobile}) => {
+  const widths = () => page.evaluate(() => ({scroll: document.documentElement.scrollWidth, view: window.innerWidth}));
+  const reach = async () => {   // on the phone the controls sit in the sheet at full
+    if (!isMobile) return;
+    await page.locator('.ui-sheet-handle').focus();
+    await page.keyboard.press('End');
+    await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full');
+  };
+  const picker = page.getByRole('combobox', {name: 'Area', exact: true});
+  for (const viewport of isMobile ? (['phone', 'narrow'] as const) : ([undefined] as const)) {
+    const name = viewport ?? 'laptop';
+    await v2.open('app', AREA, viewport);
+    await reach();
+    await expect(picker, `${name}: no area, no picker`).toHaveCount(0);
+    await expect(page.locator('.app-area > label'), `${name}: no empty slot`).toHaveCount(0);
+    await expect(page.getByRole('group', {name: 'Area and port', exact: true}), `${name}: the group stays`).toHaveCount(1);
+    await expect(page.locator('.app-area > :first-child'), `${name}: the port control leads the group`).toHaveClass(/app-port/);
+    await expect(page.locator('button.app-port'), name).toBeVisible();
+    const bare = await widths();
+    expect(bare.scroll, `${name}: no horizontal scroll`).toBeLessThanOrEqual(bare.view);
+
+    await v2.open('app', {...AREA, area: 'estero'}, viewport);
+    await reach();
+    await expect(picker, `${name}: area link, picker`).toHaveCount(1);
+    expect(await picker.locator('option').evaluateAll(os => os.map(o => [(o as HTMLOptionElement).value, o.textContent])), name).toEqual([['', 'Whole region'], ['estero', 'Estero']]);
+    await expect(picker).toHaveValue('estero');
+    const linked = await widths();
+    expect(linked.scroll, `${name}: no horizontal scroll with the picker`).toBeLessThanOrEqual(linked.view);
+    await page.evaluate(() => { (window as unknown as {__v2: number}).__v2 = 1; });
+    await picker.selectOption('');
+    await expect(page, name).not.toHaveURL(/[?&](?:area|focus)=/);
+    await expect(picker, `${name}: cleared, the picker goes`).toHaveCount(0);
+    await expect(page.locator('button.app-port'), name).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as {__v2?: number}).__v2 === 1), `${name}: no reload`).toBe(true);
+    const cleared = await widths();
+    expect(cleared.scroll, `${name}: no horizontal scroll once cleared`).toBeLessThanOrEqual(cleared.view);
+  }
   expect(pageErrors).toEqual([]);
 });
 
