@@ -5,6 +5,9 @@ import {readFile} from 'node:fs/promises';
 
 export const rendererPlugin = {name: 'renderers', setup: b => {
   b.onResolve({filter: /^\.\/(?:map\/)?(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}));
+  // Side-effect stylesheet imports (web/brief/Brief.tsx's print sheet, reached through the planner's shared forecast loader) are not rendered markup.
+  b.onResolve({filter: /\.css$/}, args => ({path: args.path, namespace: 'empty-css'}));
+  b.onLoad({filter: /.*/, namespace: 'empty-css'}, () => ({contents: '', loader: 'js'}));
   b.onResolve({filter: /\?url$/}, args => ({path: args.path, namespace: 'url'}));
   b.onLoad({filter: /.*/, namespace: 'url'}, args => ({contents: `export default ${JSON.stringify(args.path)};`, loader: 'js'}));
 }};
