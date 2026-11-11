@@ -78,3 +78,20 @@
 .app-alerts .insight-card { display: flex; flex-direction: column; gap: var(--space-3); }
 .app-alerts .insight-card[open] > summary { color: var(--text); font-weight: var(--weight-semibold); }
 .app-alerts article { padding: var(--space-2) 0; border-top: 1px solid var(--line); }
+
+/* RF2135-6 (UX audit S4-32): the account dialog's border box stays inside the viewport; the card is the only scrollport and
+   shows CSS-only scroll-edge cues (local covers over scroll shadows). Account-only: other dialogs share .home-port-card. */
+.account-scrim { box-sizing: border-box; }
+.account-scrim > .account-card {
+  box-sizing: border-box; min-width: 0; width: min(560px, 100%);
+  max-height: calc(100vh - 2 * var(--space-4)); max-height: calc(100dvh - 2 * var(--space-4));
+  overflow-x: visible; overflow-y: auto;
+  background:
+    linear-gradient(var(--panel) 30%, transparent) top / 100% var(--space-5) no-repeat local,
+    linear-gradient(transparent, var(--panel) 70%) bottom / 100% var(--space-5) no-repeat local,
+    linear-gradient(var(--line), transparent) top / 100% var(--space-3) no-repeat scroll,
+    linear-gradient(transparent, var(--line)) bottom / 100% var(--space-3) no-repeat scroll,
+    var(--panel);
+}
+.account-scrim > .account-card > *, .account-scrim #account-body > * { flex-shrink: 0; min-width: 0; overflow-wrap: anywhere; }
+@media (forced-colors: active) { .account-scrim > .account-card { background: Canvas; } }
