@@ -138,13 +138,16 @@
   .landing-title { font-size: var(--text-56); }
   .landing-main { max-width: 760px; }
   .landing-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .landing-dots { position: fixed; top: 50%; right: var(--space-5); transform: translateY(-50%); }
+}
+
+/* RF2115-6: the layer names stay visible at rest. The fixed right-edge rail needs room beside the 760px main column, so it
+   only exists on a wide, tall screen; everywhere else the list stays in the page flow below the content. */
+@media (min-width: 1280px) and (min-height: 700px) {
+  .landing-dots { position: fixed; top: 50%; right: var(--space-5); transform: translateY(-50%); box-sizing: border-box; max-width: 240px; }
   .landing-dots ul { flex-direction: column; align-items: flex-end; gap: var(--space-1); }
-  .landing-dots a { flex-direction: row-reverse; }
-  /* The name shows on hover and focus only; it stays the link's accessible name. */
-  .landing-dot-name { position: absolute; right: calc(var(--space-5) + 10px); white-space: nowrap; clip-path: inset(50%); }
-  .landing-dots a:hover .landing-dot-name, .landing-dots a:focus-visible .landing-dot-name { clip-path: none; color: var(--text); }
-  .landing-dots a { position: relative; justify-content: center; min-width: var(--touch-min); }
+  .landing-dots a { flex-direction: row-reverse; min-width: 0; max-width: 100%; }
+  .landing-dot { flex: none; }
+  .landing-dot-name { min-width: 0; white-space: normal; overflow-wrap: anywhere; text-align: right; }
 }
 
 /* BF-landing-live: tomorrow's verdict for the reference boat, below the funnel; the word takes the app lead's colours. */

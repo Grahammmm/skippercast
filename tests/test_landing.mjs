@@ -339,6 +339,19 @@ test('every readout tile shows a source and an age, a stale one says stale, and 
   assert.match(late, /data-state="stale">Buoy feed stale, updated 3 h ago</);
 });
 
+test('RF2115-6 landing_layer_names_at_rest: no rule hides a layer name; the fixed rail only exists on a wide, tall screen', () => {
+  const css = readFileSync(join(ROOT, 'web/landing/landing.css'), 'utf8');
+  const rules = [...css.matchAll(/(^|\n)\s*([^{}\n@][^{}\n]*)\{([^}]*)\}/g)].map(m => [m[2].trim(), m[3]]).filter(([sel]) => /landing-dot-name/.test(sel));
+  assert.ok(rules.length > 0, 'the name keeps its layout rule');
+  for (const [sel, body] of rules) assert.doesNotMatch(body, /clip-path|opacity\s*:\s*0|visibility\s*:\s*hidden|position\s*:\s*absolute|display\s*:\s*none|text-overflow/, `${sel} leaves the name visible at rest`);
+  assert.doesNotMatch(css, /landing-dots a:(hover|focus-visible) \.landing-dot-name/, 'hover and focus never decide whether the name shows');
+  const wide = /@media \(min-width: 1280px\) and \(min-height: 700px\) \{([\s\S]*?)\n\}/.exec(css);
+  assert.ok(wide, 'a wide and tall block exists');
+  assert.match(wide[1], /\.landing-dots \{[^}]*position: fixed[^}]*max-width: 240px/);
+  const broad = /@media \(min-width: 1024px\) \{([\s\S]*?)\n\}/.exec(css.slice(css.indexOf('.landing-more')));
+  assert.doesNotMatch(broad[1], /landing-dots|landing-dot-name/, 'compact desktops keep the in-flow list');
+});
+
 test('layer dots link each rail entry into the app with that layer, keeping the ui switch', async () => {
   const {LayerDots, layerURL, DOT_CURRENT, DOT_LABELS, DEFAULT_CURRENT, RAIL_ENTRIES, render, h} = await load();
   assert.deepEqual(DOT_LABELS, Object.fromEntries(RAIL_ENTRIES.map(e => [e.id, e.label])), 'the dots carry the rail labels');
