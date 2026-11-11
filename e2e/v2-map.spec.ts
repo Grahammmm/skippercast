@@ -479,9 +479,9 @@ test('layer presets preserve Back and helm view makes controls larger', async ({
   expect(params(page).layers).toBe('seafloor');
   const bodyText = () => page.locator('body').evaluate(body => parseFloat(getComputedStyle(body).fontSize));
   const baseText = await bodyText();
-  await page.getByRole('switch', {name: 'Helm view'}).click();
+  await page.getByRole('switch', {name: 'Large controls'}).click();
   await expect(page.locator('html')).toHaveClass(/helm/);
-  expect(await bodyText(), 'Helm view raises the body text one token step').toBeGreaterThan(baseText);
+  expect(await bodyText(), 'Large controls raises the body text one token step').toBeGreaterThan(baseText);
   if (narrow(page)) {
     const small = await page.locator('button:visible, select:visible, input:visible, [role="switch"]:visible').evaluateAll(buttons => buttons.filter(button => {
       const rect = button.getBoundingClientRect();
@@ -1519,7 +1519,7 @@ test('desktop: all five layer presets fit inside the layer rail, in English and 
 test('desktop: Transit is reached with Tab and activated by keyboard and by click without a sideways scroll', async ({page, pageErrors, v2, isMobile}) => {
   test.skip(isMobile, 'the desktop rail is not rendered on a phone');
   await holdCoastData(page);
-  for (const [lang, name, helm] of [['en', 'Transit', 'Helm view'], ['es', 'Tránsito', 'Vista de timón']] as const) {
+  for (const [lang, name, helm] of [['en', 'Transit', 'Large controls'], ['es', 'Tránsito', 'Controles grandes']] as const) {
     await page.setViewportSize({width: 1024, height: 768});
     await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor', current: 'off', lang});
     await page.evaluate(() => { (window as unknown as {__same: boolean}).__same = true; });
