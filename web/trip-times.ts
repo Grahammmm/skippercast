@@ -58,6 +58,8 @@ export function wallInstants(date: string, hour: number, minute: number, zone: s
 }
 /** Sunset at the port on this local date: suncalc, called as packages/coast/src/daily.ts astro does (local noon, the zone's offset, same-date check). */
 export function sunsetAt(date: string, zone: string, lat: number, lon: number): number | null {
+  // suncalc never returns for a nonfinite coordinate (its sunset search loops), so refuse one before calling it.
+  if (!validPoint({lat, lon})) return null;
   try {
     const noon = wallInstants(date, 12, 0, zone)[0];
     if (noon === undefined) return null;
