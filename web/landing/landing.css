@@ -13,6 +13,11 @@
   padding: var(--space-4) var(--space-4) var(--space-5);
 }
 .landing-host { display: contents; }
+/* SC1922-05: the parts mount into their hosts after first paint, so the box a part will take is reserved before it
+   mounts (a phone's cold load had three shifts: the port form, its actions row and the footer). #landing-app is a real
+   column with the gap .landing-main gave its children when the host was flattened, so nothing moves on a wide screen. */
+#landing-app { display: flex; flex-direction: column; gap: var(--space-4); }
+.landing-slot { display: none; }
 .landing a { color: inherit; }
 .landing a:focus-visible { border-radius: var(--radius-sm); }
 
@@ -94,6 +99,39 @@
 .landing-foot { display: flex; flex-direction: column; gap: var(--space-1); margin-top: auto; color: var(--muted); font-size: var(--text-13); }
 .landing-foot p { margin: 0; }
 .landing-credit { font-size: var(--text-11); }
+
+/* SC1922-05: the phone's reserved footprints, measured at 360 and 390 px with the live readings and the port list loaded
+   (e2e/v2-landing.spec.ts compares each slot with what mounts). Every one is a minimum, so a longer translation or a
+   wrapped line grows the box naturally and nothing is clipped. The phone's tiers follow where a line wraps: the readout's
+   foot at 384 px, the actions row at 405 px, the privacy note at 440 px, the credit at 450 px and the layer dots at 390
+   and 510 px. */
+@media (max-width: 599px) {
+  .landing {
+    --landing-tiles-h: calc(2 * 150px + var(--space-2));   /* two rows of tiles; a tile is 150 px high */
+    --landing-foot-h: var(--touch-min);   /* the readout's foot: the link's touch row */
+    --landing-actions-h: calc(2 * var(--touch-min) + var(--space-2));   /* the port actions wrap onto two rows */
+    --landing-note-h: calc(3 * var(--text-11) * var(--leading-body));   /* the privacy note's three lines */
+    --landing-results-h: min(320px, 40vh);   /* port-input.css's results viewport */
+    --landing-dots-h: calc(4 * var(--touch-min) + 3 * var(--space-1));   /* four rows of layer links */
+    --landing-credit-h: calc(2 * var(--text-11) * var(--leading-body));   /* the shoreline credit's two lines */
+    --landing-readout-h: calc(var(--text-11) * var(--leading-body) + 2 * var(--space-2) + var(--landing-tiles-h) + var(--landing-foot-h));
+    --landing-form-h: calc(2 * var(--space-4) + 2px + var(--text-18) * var(--leading-heading) + var(--touch-min) + var(--landing-results-h) + 1.2 * var(--text-13) + var(--landing-actions-h) + var(--landing-note-h) + 5 * var(--space-3));
+  }
+  .landing-slot { display: block; }
+  .landing-slot--readout { min-height: var(--landing-readout-h); }
+  .landing-slot--form { min-height: var(--landing-form-h); }
+  .landing-tiles { min-height: var(--landing-tiles-h); }
+  .landing-readout-foot { min-height: var(--landing-foot-h); }
+  #landing-dots { display: block; min-height: var(--landing-dots-h); }
+  .landing-foot #landing-credit { display: block; min-height: var(--landing-credit-h); }
+}
+@media (max-width: 384px) { .landing { --landing-foot-h: calc(var(--touch-min) + var(--text-11) * var(--leading-body)); } }
+@media (min-width: 390px) and (max-width: 599px) { .landing { --landing-dots-h: calc(3 * var(--touch-min) + 2 * var(--space-1)); } }
+@media (min-width: 405px) and (max-width: 599px) { .landing { --landing-actions-h: var(--touch-min); } }
+@media (min-width: 440px) and (max-width: 599px) { .landing { --landing-note-h: calc(2 * var(--text-11) * var(--leading-body)); } }
+@media (min-width: 450px) and (max-width: 599px) { .landing { --landing-credit-h: calc(var(--text-11) * var(--leading-body)); } }
+@media (min-width: 510px) and (max-width: 599px) { .landing { --landing-dots-h: calc(2 * var(--touch-min) + var(--space-1)); } }
+@supports (height: 1dvh) { @media (max-width: 599px) { .landing { --landing-results-h: min(320px, 40dvh); } } }
 
 @media (min-width: 1024px) {
   .landing { padding: var(--space-5) var(--space-7) var(--space-5); }

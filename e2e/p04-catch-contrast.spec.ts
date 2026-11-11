@@ -213,7 +213,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-03: FreshnessDot adds the existing translated Offline word (unstyled inline span) only in the offline state, beside its
   // unchanged age span. BODY09 mounts Reports/CatchCards, never Masthead, and no network state markup changes; no CSS, token or
   // catch markup change; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "d2d607e081200c39d0586966a04023ca204ea18437790c7807b6ea3b28666c89",
+  // MAIN-RED pack shell: Location shares one identical app-location span between preview and ordinary branches;
+  // same classes, markup and text. BODY09 mounts Reports/CatchCards, never Masthead. CSS, tokens and catch markup
+  // are unchanged; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
+  // SC1922-03: Masthead.tsx renders Location's Retry through the shared Button (ui-button--quiet ui-button--sm); BODY09 mounts Reports/CatchCards, never Masthead. No catch markup, token or paint change. Rebind only Masthead.tsx.
+  "web/app/Masthead.tsx": "c358be039c64285446254d730fa0b99f133529e36ea6fed7853e4132eaa6fd37",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
@@ -240,7 +244,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF1925-2: MapStage.tsx changes only its failed-Chart state (a translated notice with a reload button replaces the bare span,
   // and the presentation toggle, terrain controls and poster are not rendered while the Chart is failed). BODY09 renders
   // Reports/CatchCards and does not mount MapStage; no CSS, token, catch markup, paint, assertion or threshold changes. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "7dcafdc69f3fd173cfa94b7455f57bf018918693842d335da89853a017fe7233",
+  // SC1922-03: MapStage.tsx renders Cancel waypoint through the shared Button and adds the app-presentation--placing modifier class to the stack while a waypoint placement is armed; BODY09 mounts Reports/CatchCards, never MapStage. No catch markup, token or paint change. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "0b92893c5ae333b4a7ef58dcc04dd87d300a22ed8e48599e46a2330e644218e9",
   "web/tokens.css": "85271ff5258cbbe3bfce09a7dc0b5c16ff1e31325b5a5f8d5d8a9fedd425dfd1",
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
   // changes (panel.css: History scroller 2 px ring and one summary ring; app.css: fleet checkbox ring); unfocused catch text and contrast are unchanged. check_contrast.mjs changes only the appCss surface hash, its comment and moved citations. Rebound from final bytes.
@@ -265,7 +270,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF1925-1: masthead minimum-width only; Reports paint and contrast proof unchanged.
   // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
   // RF1935-2: app.css adds only a desktop-only layer-rail preset wrap block and the rail's vertical scroll track (layout, no paint); the Reports catch sheet mounts no rail. Rebound from the final bytes.
-  "web/app/app.css": "9964a38b139a1056760661ceb6837fa2fa64c59df7c3ffd052f509bc531c112c",
+  // SC1922-03: app.css adds only a Conditions-header model-family wrap/min-height rule and a pointer-events rule scoped to .app-presentation--placing (the armed placing stack, which Reports never mounts); no paint, backing or catch text changed. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
+  "web/app/app.css": "8bc7e71b104fc2bd96d2799297623263663cc2d337770260ea553785b06880e7",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -337,7 +343,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
   // RF1925-1: only appCss pin and applicability comment change.
   // RF1935-2: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "adcfe43a72a99855db155adec0797c83a06d903d72df6174ea4e00d839261f86",
+  // SC1922-03: only the appCss pin and applicability comment change.
+  "scripts/check_contrast.mjs": "f76f2e8238656f3c9516499fd1e0e04a68c008c4e01015bb3955118623930177",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
