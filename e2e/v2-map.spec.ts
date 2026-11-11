@@ -1614,6 +1614,11 @@ for (const [presentation, controls] of [['chart', '.app-chart .maplibregl-ctrl-b
       if (presentation === 'chart') await expect(page.locator(`${ATTRIBUTION} .maplibregl-ctrl-attrib-inner`)).toBeVisible();
       const hittable = `${controls}, .app-presentation .ui-segmented${presentation === 'chart' ? `, ${ATTRIBUTION}` : ''}`;
       for (const phase of ['top', 'scrolled', 'basis']) {
+        // SC1722-19: on a window shorter than the header, command bar, first answer and the 480 px stage together, the app scrolls inside itself
+        // (the document never does) and the time dock rides over the stage's bottom edge. The map controls sit at that edge, so a visitor scrolls the
+        // app to its end to use them; the check does the same, and the dock is then back in its own slot below them.
+        await expect(page.locator('.app-first-answer')).toBeVisible();
+        await page.evaluate(() => { const app = document.querySelector('.app'); if (app) app.scrollTop = app.scrollHeight; });
         if (phase === 'scrolled') await rail.evaluate(element => { element.scrollTop = element.scrollHeight; });
         if (phase === 'basis') { await rail.locator('summary[aria-label="Seafloor basis"]').click(); await rail.evaluate(element => { element.scrollTop = element.scrollHeight; }); }
         const [mine] = await rects(page, RAIL), others = [...await rects(page, controls), ...await rects(page, '.app-presentation .ui-segmented')];

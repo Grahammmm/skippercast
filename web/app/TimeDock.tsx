@@ -78,6 +78,25 @@ export function selectDay(now: Date, tz: string, d: string, state: DockTime): vo
 /** The dock's own words in `lang`. */
 export const dockLabels = (lang: Language): DockLabels => ({time: t('shell.time', lang), day: t('shell.day', lang), hour: t('shell.hour', lang), play: t('dock.play', lang), pause: t('dock.pause', lang), nextHour: t('dock.nextHour', lang)});
 
+/**
+ * Bring the chosen day chip into the day strip by moving only that strip's own scrollLeft, the least that shows it.
+ * Element.scrollIntoView would also scroll every ancestor and the document when the dock lies below the fold, which is
+ * how the desktop app scrolled itself on load (SC1722-19). Nothing here focuses, animates or touches another scroller.
+ */
+export function revealDockDay(strip: HTMLElement | null, chip: HTMLElement | null): void {
+  if (!strip || !chip) return;
+  const width = strip.clientWidth;
+  if (!(width > 0)) return;
+  const box = strip.getBoundingClientRect(), at = chip.getBoundingClientRect();
+  const left = box.left + strip.clientLeft, right = left + width;
+  let delta = 0;
+  if (at.left < left - 0.5) delta = at.left - left;
+  else if (at.right > right + 0.5) delta = Math.min(at.right - right, at.left - left);
+  if (delta === 0) return;
+  const next = Math.min(Math.max(0, strip.scrollWidth - width), Math.max(0, strip.scrollLeft + delta));
+  if (next !== strip.scrollLeft) strip.scrollLeft = next;
+}
+
 const media = (): MediaQueryList | null => typeof matchMedia === 'function' ? matchMedia(REDUCED_MOTION) : null;
 
 /** Whether prefers-reduced-motion asks for no motion, followed while mounted. */
@@ -110,14 +129,11 @@ export function TimeDock({now = new Date()}: {now?: Date} = {}) {
     };
     return play({step, onStop: () => setPlaying(false), motion: media()});
   }, [playing, tz]);
-  // The day strip scrolls sideways on narrow stages: keep the chosen chip in view. Only the strip moves (SC1922-04):
-  // scrollIntoView also scrolled the page, hiding the top of a 1,280x800 desktop masthead on every load.
+  // The day strip scrolls sideways on narrow stages: keep the chosen chip in view, in the strip only (SC1722-19).
   const dock = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const chip = dock.current?.querySelector<HTMLElement>('.ui-segmented [aria-pressed="true"]'), strip = chip?.parentElement;
-    if (!chip?.getBoundingClientRect || !strip) return;
-    const c = chip.getBoundingClientRect(), s = strip.getBoundingClientRect();
-    strip.scrollLeft += c.left < s.left ? c.left - s.left : c.right > s.right ? c.right - s.right : 0;
+    const strip = dock.current?.querySelector<HTMLElement>('.ui-segmented') ?? null;
+    revealDockDay(strip, strip?.querySelector<HTMLElement>('[aria-pressed="true"]') ?? null);
   }, [state.day, lang]);
   const at = (i: number): number => state.hours[i] ?? state.at;
   return (
