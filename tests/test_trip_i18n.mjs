@@ -1,5 +1,6 @@
 // SC0707-10: the Trip dialog's offline pages in Spanish. The ocean lines are tested as pure functions; the page is the real
 // web/app/Trip.tsx with the store, buttons and hooks replaced by the SP-15 fixtures (no network, no browser storage).
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdtemp} from 'node:fs/promises';
@@ -7,6 +8,7 @@ import {resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
+import {preparedCatalogue} from './helpers/esbuild-url.mjs';
 import {oceanLines} from '../web/trip-ocean-lines.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -52,7 +54,7 @@ async function load(responses) {
   await build({
     stdin: {resolveDir: root, loader: 'js', contents: `export {Trip} from './web/app/Trip.tsx'; export {language} from './web/i18n.ts'; export {h} from 'preact'; export {render} from 'preact-render-to-string'; export * from './tests/fixtures/sp1502_pack_inventory/runtime.mjs';`},
     outfile: resolve(dir, 'trip.mjs'), bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', jsxImportSource: 'preact', logLevel: 'silent',
-    plugins: [{name: 'trip-i18n-boundary', setup(b) {
+    plugins: [preparedCatalogue, {name: 'trip-i18n-boundary', setup(b) {
       b.onResolve({filter: /.*/}, args => {
         if (args.importer.endsWith('web/trip-ocean-lines.ts') && args.path === './map/currents.ts') return {path: resolve(root, 'tests/fixtures/trip_i18n/currents.mjs')};
         if (args.importer !== trip) return;
@@ -116,4 +118,61 @@ test('trip_es_inventory_and_async_states: the page, the pack rows and a status f
   m.language.value = 'es';
   assert.match(render(), /No tienes conexión\. Conéctate para guardar esta región; las regiones guardadas no cambian\./);
   assert.equal(m.runtime.saves, 1);
+});
+
+// SC1722-11: the saved status says "1 item" / "1 elemento" for one missing item, and keeps the plural for three. The count is the
+// de-duplicated top-level + v2 missing list; the retained status rewrites its grammar with the language and never saves again.
+test('saved_missing_one_three_zero_en_es: one, three and none missing, with overlapping top-level and v2 entries counted once', async t => {
+  const descriptors = new Map();
+  for (const [key, value] of Object.entries({navigator: {onLine: true}, caches: {delete: async () => true}}))
+    { descriptors.set(key, Object.getOwnPropertyDescriptor(globalThis, key)); Object.defineProperty(globalThis, key, {value, configurable: true, writable: true}); }
+  const m = await load(Array.from({length: 24}, () => () => Promise.resolve([pack])));
+  t.after(() => { m.cleanup(); for (const [key, d] of descriptors) { if (d) Object.defineProperty(globalThis, key, d); else delete globalThis[key]; } });
+  const render = () => { m.runtime.cursor = 0; m.runtime.actions.clear(); const html = m.render(m.h(m.Trip)); for (const effect of m.runtime.effects.splice(0)) effect(); return html; };
+  const settle = async () => { for (let i = 0; i < 16; i++) await Promise.resolve(); return render(); };
+  const status = html => /<p role="status" aria-live="polite">([^<]*)<\/p>/.exec(html)?.[1];
+  m.language.value = 'en';   // the earlier test ended in Spanish
+  render(); await settle();
+  const save = async (missing, v2Missing) => {
+    m.runtime.saveMeta = {region_name: 'Fixture Harbor', bytes: 128, missing, v2: {basemap: {saved: 1, planned: 2}, missing: v2Missing}};
+    const call = m.runtime.actions.get('Save Fixture Harbor for offline'); assert.equal(typeof call, 'function', [...m.runtime.actions.keys()].join(' | '));
+    call(); await settle();
+  };
+  const ONE_EN = 'Saved Fixture Harbor · 1 KB. 1 item could not be saved and will be missing offline.';
+  const ONE_ES = 'Se guardó Fixture Harbor · 1 KB. No se pudo guardar 1 elemento y faltará sin conexión.';
+  const THREE_EN = 'Saved Fixture Harbor · 1 KB. 3 items could not be saved and will be missing offline.';
+  const THREE_ES = 'Se guardó Fixture Harbor · 1 KB. No se pudieron guardar 3 elementos y faltarán sin conexión.';
+  await save(['/a.png'], []);
+  assert.equal(status(render()), ONE_EN);
+  m.language.value = 'es';
+  assert.equal(status(render()), ONE_ES, 'the retained one-item status switches to Spanish without a save');
+  m.language.value = 'en';
+  assert.equal(status(render()), ONE_EN, 'and back to the exact English bytes');
+  assert.equal(m.runtime.saves, 1);
+  // Three distinct; the same URL in the top-level and the v2 list counts once.
+  await save(['/a.png', '/b.png', '/shared.png'], ['/shared.png', '/c.png']);
+  assert.equal(status(render()), 'Saved Fixture Harbor · 1 KB. 4 items could not be saved and will be missing offline.');
+  await save(['/a.png', '/shared.png'], ['/shared.png', '/b.png']);
+  assert.equal(status(render()), THREE_EN);
+  m.language.value = 'es';
+  assert.equal(status(render()), THREE_ES);
+  m.language.value = 'en';
+  assert.equal(status(render()), THREE_EN);
+  assert.equal(m.runtime.saves, 3, 'switching language never saves again');
+  // The same one item listed in both places is still one.
+  await save(['/shared.png'], ['/shared.png']);
+  assert.equal(status(render()), ONE_EN);
+  m.language.value = 'es';
+  assert.equal(status(render()), ONE_ES);
+  m.language.value = 'en'; render();
+  // Nothing missing: no missing sentence.
+  await save([], []);
+  assert.equal(status(render()), 'Saved Fixture Harbor · 1 KB.');
+  m.language.value = 'es';
+  assert.equal(status(render()), 'Se guardó Fixture Harbor · 1 KB.');
+  assert.equal(m.runtime.saves, 5);
+  // The pack inventory line keeps its own wording.
+  assert.match(render(), /faltan 1 elementos/);
+  m.language.value = 'en';
+  assert.match(render(), /1 items missing/);
 });

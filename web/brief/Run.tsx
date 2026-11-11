@@ -28,7 +28,8 @@ import {fishingHours, type FishingHours} from './fishing-hours.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 import {entranceWindow} from '../../packages/coast/src/entrance-window.ts';
 import {EntranceCurrent} from './EntranceCurrent.tsx';
-import {language, localeOf, num, t, type Language, type StringId} from '../i18n.ts';
+import {language, num, t, type Language, type StringId} from '../i18n.ts';
+import {clock} from './clock.ts';
 
 /**
  * The catalogue sentence, in `lang`, for an upstream English sentence: `text` is matched whole against the English of each id in
@@ -112,8 +113,6 @@ const distanceText = (p: RunPlace, lang: Language): string => {
   return t('run.distance.straightWhy', lang, {nm, why});
 };
 
-/** "8 am", "8:25 am": the lower-exposure line's clock; in Spanish the locale's own 24-hour clock in the same zone. */
-const clock = (iso: string, tz: string, lang: Language = 'en') => new Intl.DateTimeFormat(localeOf(lang), {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(new Date(iso)).replace(':00', '').toLowerCase();
 const kt = (n: number, lang: Language = 'en') => lang === 'es' ? num(n, lang, 1) : Number(n.toFixed(1)).toString();
 
 /** The basis: what the sum uses and what it leaves to the skipper. */
@@ -183,7 +182,7 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   const loaded = regsData.value, data = loaded?.region === rules?.id ? loaded?.data : null;
   const active = state.kind === 'ok' || state.kind === 'no-time';
   // The route of the place whose distance is timed, never the first raw pick; nothing for a state with no run to show.
-  const routeNote = active && text.run ? runRouteNote(runRouteScreen(r.origin, pickForRun(listed, selection.value, habitat.value).pick ?? null, runScreenFor(protectedScreen.value, id))) : null;
+  const routeNote = active && text.run ? runRouteNote(runRouteScreen(r.origin, pickForRun(listed, selection.value, habitat.value).pick ?? null, runScreenFor(protectedScreen.value, id), id)) : null;
   const date = active ? new Intl.DateTimeFormat('en-CA', {timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(state.window.start)) : '';
   const opensAt = rules ? openingAt(data, target, rules, date) : null;
   // Read at the opening (not before it) so a timed opener clips rather than closing the whole day.

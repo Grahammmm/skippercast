@@ -88,7 +88,7 @@ test('a refused location leaves a message and the input focused; Explore the coa
   await openMenus(page, isMobile);
   await page.locator('button[aria-label="Use my location"]').click();
   const dialog = page.locator('dialog.port-dialog');
-  await expect(dialog.locator('[role="status"]')).toHaveText('Location was unavailable. Search for a port instead.');
+  await expect(dialog.locator('[role="status"]')).toHaveText("Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.");
   await expect(dialog.locator('input[type="search"]')).toBeFocused();
   await expect(dialog).toContainText('Your choice stays in this browser.');
   await page.keyboard.press('Escape');
@@ -99,6 +99,45 @@ test('a refused location leaves a message and the input focused; Explore the coa
   await expect(page).not.toHaveURL(/region=/);
   expect(pageErrors).toEqual([]);
 });
+
+const GEO_LINES = {
+  en: {locate: 'Use my location', denied: "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.",
+    unavailable: 'Location was unavailable. Search for a port instead.', timedOut: 'The location request timed out. Search for a port instead.', unsupported: 'Location is unavailable. Search for a port instead.'},
+  es: {locate: 'Usar mi ubicación', denied: 'El permiso de ubicación está desactivado para este sitio. Permite la ubicación en la configuración de sitios de tu navegador o busca un puerto mientras tanto.',
+    unavailable: 'No se pudo obtener la ubicación. Busca un puerto en su lugar.', timedOut: 'La solicitud de ubicación agotó el tiempo de espera. Busca un puerto en su lugar.', unsupported: 'La ubicación no está disponible. Busca un puerto en su lugar.'},
+};
+for (const lang of ['en', 'es'] as const) {
+  for (const [scenario, line] of [[1, 'denied'], [2, 'unavailable'], [3, 'timedOut'], ['none', 'unsupported']] as const) {
+    test(`SC1922-01 ${lang}: location error ${scenario} says the ${line} line on the landing and in the map's dialog, once`, async ({page, context, pageErrors, isMobile}) => {
+      const lines = GEO_LINES[lang];
+      await withProfile(page);
+      // A synthetic geolocation (never a real permission prompt) that counts its requests; "none" removes the API.
+      await context.addInitScript(code => {
+        const w = window as unknown as {__geoCalls: number};
+        w.__geoCalls = 0;
+        const geolocation = code === 'none' ? undefined : {getCurrentPosition: (_ok: unknown, fail: (e: {code: number; message: string}) => void) => { w.__geoCalls++; fail({code: code as number, message: 'device detail'}); }};
+        Object.defineProperty(navigator, 'geolocation', {value: geolocation, configurable: true});
+      }, scenario);
+      const calls = () => page.evaluate(() => (window as unknown as {__geoCalls: number}).__geoCalls);
+      // The landing's own chooser.
+      await page.goto(`/?ui=v2&lang=${lang}`);
+      const landingStatus = page.locator('.port-input-feedback[role="status"]');
+      await page.getByRole('button', {name: lines.locate}).first().click();
+      await expect(landingStatus).toHaveText(lines[line]);
+      await expect(page.locator('input[type="search"]').first()).toBeFocused();
+      expect(await calls()).toBe(scenario === 'none' ? 0 : 1);
+      // The map's Use my location dialog.
+      await page.goto(`${SHELL}&lang=${lang}`);
+      await openMenus(page, isMobile);
+      await page.locator(`button[aria-label="${lines.locate}"]`).click();
+      const dialog = page.locator('dialog.port-dialog');
+      await expect(dialog.locator('[role="status"]')).toHaveText(lines[line]);
+      await expect(dialog.locator('input[type="search"]')).toBeFocused();
+      expect(await calls()).toBe(scenario === 'none' ? 0 : 1);
+      expect(pageErrors).toEqual([]);
+    });
+  }
+}
 
 test('a home saved on /coast opens in v2, and Forget clears it for v1 and /coast too (FE-83)', async ({page, context, baseURL, pageErrors, isMobile}) => {
   const home = {v: 1, place: 'cambria', mode: 'spear'};
@@ -315,9 +354,32 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) {
   });
 }
 
+// UXFIX-13 (G, D1): a real tap on the visible Keep button at peek finishes the card with Boat and shows the verdict headline, in both languages.
+for (const lang of ['en', 'es'] as const) for (const [width, height] of [[390, 844], [360, 640]] as const) {
+  test(`${lang}: a tap on Keep at peek on the ${width}x${height} phone keeps Boat and reaches the verdict`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(!isMobile, 'phone layout only');
+    await page.setViewportSize({width, height});
+    await v2.open('app', {region: 'morro-bay', lang});
+    const sheet = page.locator('.ui-sheet'), card = page.locator('[data-first-run]');
+    await expect(sheet).toHaveAttribute('data-detent', 'peek');
+    const peekHeight = (await sheet.boundingBox())!.height;
+    const keep = card.getByRole('button', {name: lang === 'en' ? 'Keep Boat for now' : /^Mantener .+ por ahora$/});
+    const box = (await keep.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(44); expect(box.height).toBeGreaterThanOrEqual(44);
+    await expect(keep).toBeInViewport({ratio: 1});
+    await keep.tap();
+    await expect(page.locator('[data-first-run]')).toHaveCount(0);
+    await expect(page).toHaveURL(/[?&]profile=boat/);
+    await expect(sheet.locator('h1')).toBeInViewport();
+    await expect(sheet).toHaveAttribute('data-detent', 'peek');
+    expect(Math.abs((await sheet.boundingBox())!.height - peekHeight), 'the sheet keeps its peek height').toBeLessThanOrEqual(1);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 // BL-SC-2: at peek the four choices are one row above the tab bar; from half up the whole card is back.
-for (const [width, height] of [[390, 844], [360, 800]] as const) {
-  test(`at peek the first-run choices are tappable above the tab bar on the ${width}px phone`, async ({page, pageErrors, v2, isMobile}) => {
+for (const [width, height] of [[390, 844], [360, 800], [360, 640]] as const) {
+  test(`at peek the first-run choices are tappable above the tab bar on the ${width}x${height} phone`, async ({page, pageErrors, v2, isMobile}) => {
     test.skip(!isMobile, 'phone layout only');
     await page.setViewportSize({width, height});
     await v2.open('app', {region: 'morro-bay'});
@@ -332,7 +394,12 @@ for (const [width, height] of [[390, 844], [360, 800]] as const) {
     await expect(card.locator('#first-run-title')).toBeVisible();
     // The intro (the card's own p) and the MYB-1 boat fields (whose hint is a p too) are both out of the peek row.
     for (const hidden of [card.locator(':scope > p'), card.locator('.ui-eyebrow'), card.locator('fieldset')]) await expect(hidden).toBeHidden();
-    for (const clipped of [card.getByRole('button', {name: 'Keep Boat for now'}), card.locator('small').first()]) expect((await clipped.boundingBox())!.height).toBeLessThanOrEqual(1);
+    expect((await card.locator('small').first().boundingBox())!.height).toBeLessThanOrEqual(1);
+    // UXFIX-13 (G, D1): Keep is a visible 44 px quiet button on the heading row, whole inside the viewport at peek.
+    const keep = card.getByRole('button', {name: 'Keep Boat for now'}), kept = (await keep.boundingBox())!, title = (await card.locator('#first-run-title').boundingBox())!;
+    expect([kept.width >= 44, kept.height >= 44, kept.x >= 0, kept.x + kept.width <= width, kept.y >= 0, kept.y + kept.height <= height]).toEqual([true, true, true, true, true, true]);
+    expect(Math.abs((kept.y + kept.height / 2) - (title.y + title.height / 2)), 'Keep sits on the heading row').toBeLessThan(kept.height / 2);
+    await expect(keep).toBeInViewport({ratio: 1});
     await page.screenshot({path: test.info().outputPath(`bl-sc-2-peek-${width}x${height}.png`)});
     // Dragged (stepped) to half: the whole card as before.
     await handle.click();
@@ -748,3 +815,52 @@ test('the landing names the reference 23 ft boat when no boat is saved or the sa
   await expect(page.locator('.app-verdict-limit').first()).toHaveText(sentence!);
   expect(pageErrors).toEqual([]);
 });
+
+for (const lang of ['en', 'es'] as const) for (const surface of ['landing', 'app'] as const) {
+  test(`location reason matrix ${lang} ${surface}: visible polite failure and usable search`, async ({page, isMobile, pageErrors}) => {
+    await withProfile(page);
+    await page.addInitScript(() => {
+      const state = window as unknown as {geoCode?: number; geoCalls: number}; state.geoCalls = 0;
+      Object.defineProperty(navigator, 'geolocation', {value: {getCurrentPosition(_ok: unknown, fail: (e: {code?: number; message: string}) => void) {
+        state.geoCalls++; fail({code: state.geoCode, message: 'synthetic provider detail'});
+      }}});
+    });
+    await page.goto(surface === 'landing' ? `/?ui=v2&lang=${lang}` : `${SHELL}&lang=${lang}`);
+    if (surface === 'app') { await openMenus(page, isMobile); await page.locator('.app-port').click(); }
+    const form = page.locator(surface === 'landing' ? '.landing .port-input' : 'dialog.port-dialog .port-input');
+    const region = form.locator('[role="status"]'), input = form.locator('input[type="search"]');
+    await expect(region).toHaveText(''); await expect(region.locator('svg')).toHaveCount(0);
+    await region.evaluate(el => { el.setAttribute('data-original', 'yes'); });
+    const messages = lang === 'en' ? [
+      "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.",
+      'Location was unavailable. Search for a port instead.',
+      'The location request timed out. Search for a port instead.'
+    ] : [
+      'El permiso de ubicación está desactivado para este sitio. Permite la ubicación en la configuración de sitios de tu navegador o busca un puerto mientras tanto.',
+      'No se pudo obtener la ubicación. Busca un puerto en su lugar.',
+      'La solicitud de ubicación agotó el tiempo de espera. Busca un puerto en su lugar.'
+    ];
+    await input.fill('san d');
+    for (const [index, code] of [1, 2, 3, 99, undefined].entries()) {
+      await page.evaluate(value => { (window as unknown as {geoCode?: number}).geoCode = value; }, code);
+      await form.getByRole('button', {name: lang === 'en' ? 'Use my location' : 'Usar mi ubicación'}).click();
+      await expect(region).toHaveText(messages[code === 1 ? 0 : code === 3 ? 2 : 1]);
+      await expect(region).toHaveAttribute('data-original', 'yes');
+      await expect(region).toHaveAttribute('aria-live', 'polite'); await expect(region).toHaveAttribute('aria-atomic', 'true');
+      await expect(region.locator('svg')).toHaveAttribute('aria-hidden', 'true');
+      await expect(region.locator('title, [role="alert"]')).toHaveCount(0);
+      await expect(input).toBeFocused(); await expect(input).toHaveValue('san d');
+      await expect(form.locator('[data-port]')).toHaveText([/San Diego/]);
+      expect(await page.evaluate(() => (window as unknown as {geoCalls: number}).geoCalls)).toBe(index + 1);
+      expect(await region.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      expect(await region.evaluate(el => getComputedStyle(el).color === getComputedStyle(el.closest('form')!).color)).toBe(true);
+      expect(await form.textContent()).not.toContain('synthetic provider detail');
+    }
+    await expect(form.locator('.port-input-note')).toContainText(lang === 'en' ? 'Your choice stays in this browser.' : 'Tu elección se guarda en este navegador.');
+    await expect(form.getByRole('button', {name: lang === 'en' ? 'Explore the coast' : 'Explorar la costa'})).toBeEnabled();
+    await input.press('Enter');
+    if (surface === 'app') await expect(page.locator('dialog.port-dialog')).toBeHidden();
+    else await expect(page.locator('.landing-step[data-step="profile"]')).toBeVisible();
+    expect(pageErrors).toEqual([]);
+  });
+}

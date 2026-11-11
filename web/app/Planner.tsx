@@ -176,28 +176,6 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
         </div>
         <p class="export-note" id="export-storage">{plannerText(storage, lang)}</p>
       </div>
-      <PlanRules date={d.date} species={f.species} region={m.region} />
-      <section class="export-card" aria-label={t('planner.waypoints.heading', lang)}>
-        <h2>{t('planner.waypoints.heading', lang)}</h2>
-        <p>{t('planner.waypoints.note', lang)}</p>
-        <button id="waypoint-place" onClick={m.chooseWaypoint}>{t('planner.waypoints.place', lang)}</button>
-        {m.waypointPosition.value ? <form onSubmit={e => {
-          e.preventDefault();
-          const data = new FormData(e.currentTarget);
-          m.saveWaypoint(String(data.get('name')), String(data.get('category')));
-        }}>
-          <p>{formatCoordinates(m.waypointPosition.value.latitude, m.waypointPosition.value.longitude, coordinates.value)}</p>
-          <label>{t('planner.waypoints.name', lang)}<input name="name" maxLength={80} required /></label>
-          <label for="waypoint-category">{t('planner.waypoints.category', lang)}</label><select id="waypoint-category" name="category">{USER_WAYPOINT_CATEGORIES.map(category => <option key={category} value={category}>{categoryText(category, lang)}</option>)}</select>
-          <button type="submit">{t('planner.waypoints.save', lang)}</button> <button type="button" onClick={() => { m.waypointPosition.value = null; }}>{t('planner.cancel', lang)}</button>
-        </form> : null}
-        {(d.userWaypoints ?? []).map(wp => <article key={wp.id}>
-          <label class="export-check"><input type="checkbox" checked={d.ids.includes(wp.id)} onChange={e => m.toggleSpot(wp.id, e.currentTarget.checked)} /><span>{wp.name} · {categoryText(wp.category, lang)}</span></label>
-          <p>{formatCoordinates(wp.latitude, wp.longitude, coordinates.value)}</p>
-          {d.ids.includes(wp.id) ? <BoundaryNote hit={m.protectedHits.value.find(h => h.id === wp.id)} /> : null}
-          <button onClick={() => m.removeWaypoint(wp.id)} aria-label={t('planner.waypoints.removeAria', lang, {name: wp.name})}>{t('planner.waypoints.remove', lang)}</button>
-        </article>)}
-      </section>
       <details class="export-card" id="export-spots" open>
         <summary><span>{t('planner.step1', lang)}</span><strong id="export-selection-count">{t('planner.selected', lang, {n: d.ids.length})}</strong></summary>
         <div class="export-card-body">
@@ -259,6 +237,28 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
           {session.value.state === 'signed-in' ? <SavedSpots m={m} /> : null}
         </div>
       </details>
+      <PlanRules date={d.date} species={f.species} region={m.region} />
+      <section class="export-card" aria-label={t('planner.waypoints.heading', lang)}>
+        <h2>{t('planner.waypoints.heading', lang)}</h2>
+        <p>{t('planner.waypoints.note', lang)}</p>
+        <button id="waypoint-place" onClick={m.chooseWaypoint}>{t('planner.waypoints.place', lang)}</button>
+        {m.waypointPosition.value ? <form onSubmit={e => {
+          e.preventDefault();
+          const data = new FormData(e.currentTarget);
+          m.saveWaypoint(String(data.get('name')), String(data.get('category')));
+        }}>
+          <p>{formatCoordinates(m.waypointPosition.value.latitude, m.waypointPosition.value.longitude, coordinates.value)}</p>
+          <label>{t('planner.waypoints.name', lang)}<input name="name" maxLength={80} required /></label>
+          <label for="waypoint-category">{t('planner.waypoints.category', lang)}</label><select id="waypoint-category" name="category">{USER_WAYPOINT_CATEGORIES.map(category => <option key={category} value={category}>{categoryText(category, lang)}</option>)}</select>
+          <button type="submit">{t('planner.waypoints.save', lang)}</button> <button type="button" onClick={() => { m.waypointPosition.value = null; }}>{t('planner.cancel', lang)}</button>
+        </form> : null}
+        {(d.userWaypoints ?? []).map(wp => <article key={wp.id}>
+          <label class="export-check"><input type="checkbox" checked={d.ids.includes(wp.id)} onChange={e => m.toggleSpot(wp.id, e.currentTarget.checked)} /><span>{wp.name} · {categoryText(wp.category, lang)}</span></label>
+          <p>{formatCoordinates(wp.latitude, wp.longitude, coordinates.value)}</p>
+          {d.ids.includes(wp.id) ? <BoundaryNote hit={m.protectedHits.value.find(h => h.id === wp.id)} /> : null}
+          <button onClick={() => m.removeWaypoint(wp.id)} aria-label={t('planner.waypoints.removeAria', lang, {name: wp.name})}>{t('planner.waypoints.remove', lang)}</button>
+        </article>)}
+      </section>
       <AlertSave m={m} legs={alertLegs} open={open} />
       <details class="export-card" id="export-layers">
         <summary><span>{t('planner.layers', lang)}</span><strong id="export-layer-count">{t('planner.layers.count', lang, {n: Object.values(d.layers).filter(Boolean).length + (m.contourTracks.value ? 1 : 0)})}</strong></summary>

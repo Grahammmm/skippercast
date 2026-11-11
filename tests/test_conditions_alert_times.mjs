@@ -12,7 +12,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {isDeepStrictEqual} from 'node:util';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const out = join(await mkdtemp(join(tmpdir(), 'alert-times-')), 'bundle.mjs');
@@ -26,7 +26,7 @@ await build({
     export {language} from './web/i18n.ts';
     export {render} from 'preact-render-to-string';
     export {h, Fragment} from 'preact';`},
-  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
 });
 const v = await import(pathToFileURL(out).href);
 

@@ -1,3 +1,4 @@
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {mkdtemp} from 'node:fs/promises';
@@ -6,7 +7,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import test from 'node:test';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import {planView, sourceLinks, PLAN_COPY} from '../web/plan.ts';
 const ROOT = new URL('..', import.meta.url).pathname;
 const json = path => JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'));
@@ -96,7 +97,7 @@ async function ui() {
     export {tripOpen} from './web/trip.ts';
     export {options} from 'preact';
     export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
-    bundle:true,format:'esm',platform:'node',outfile:out,logLevel:'silent',jsx:'automatic',jsxImportSource:'preact',plugins:rendererPlugins});
+    bundle:true,format:'esm',platform:'node',outfile:out,logLevel:'silent',jsx:'automatic',jsxImportSource:'preact',plugins:preparedRendererPlugins});
   module = await import(pathToFileURL(out).href); return module;
 }
 const htmlOf = (m, C) => m.render(m.h(C,{now:NOW}));

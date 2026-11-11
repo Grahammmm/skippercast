@@ -78,11 +78,27 @@ const PATTERNS: Record<string, RegExp> = {
   time: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/, day: /^\d{4}-\d{2}-\d{2}$/, season: /^\d{4}$/,
   mmsi: /^[1-9]\d{0,8}$/, token: /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/,
 };
-const TIMES = new Set(['iso', 'hour', 'time']);
+/** A written YYYY-MM-DD that names a real proleptic Gregorian day (no February 30, no 24:00 rollover below). */
+function realDay(v: string): boolean {
+  const y = Number(v.slice(0, 4)), m = Number(v.slice(5, 7)), d = Number(v.slice(8, 10));
+  const leap = y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0);
+  return m >= 1 && m <= 12 && d >= 1 && d <= [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]!;
+}
+/** Date/time kinds are textual keys (replacement, pruning, pairing, hourly rows), so a value Date.parse would move
+ *  to another instant is refused, never stored: iso and hour equal their own UTC ISO round-trip; time (heartbeat clocks,
+ *  seconds or 1-6 fractional digits, kept verbatim) has a real day and a clock within 00:00:00-23:59:59. */
+function realTime(kind: string, v: string): boolean {
+  if (kind === 'day') return realDay(v);
+  const ms = Date.parse(v);
+  if (!Number.isFinite(ms)) return false;
+  if (kind !== 'time') return new Date(ms).toISOString() === v;
+  return realDay(v) && Number(v.slice(11, 13)) <= 23 && Number(v.slice(14, 16)) <= 59 && Number(v.slice(17, 19)) <= 59;
+}
+const DATED = new Set(['iso', 'hour', 'time', 'day']);
 
 function valid(kind: string, v: unknown): boolean {
   if (kind.startsWith('enum:')) return ENUMS[kind.slice(5)]!.includes(v as string);
-  if (kind in PATTERNS) return typeof v === 'string' && PATTERNS[kind]!.test(v) && (!TIMES.has(kind) || Number.isFinite(Date.parse(v)));
+  if (kind in PATTERNS) return typeof v === 'string' && PATTERNS[kind]!.test(v) && (!DATED.has(kind) || realTime(kind, v));
   if (kind === 'text') return typeof v === 'string' && v.length <= 200_000;
   if (kind === 'bool') return typeof v === 'boolean';
   if (typeof v !== 'number' || !Number.isFinite(v)) return false;

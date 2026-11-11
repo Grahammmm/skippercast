@@ -25,6 +25,7 @@
 import type {ForecastHour, TideEvent} from './types.ts';
 import type {NearshoreHour, NearshoreSite} from './enrichment-types.ts';
 import {nearshoreAt} from './nearshore.ts';
+import {periodSecondsText} from './period-display.ts';
 
 const HOUR = 3_600_000;
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
@@ -195,8 +196,8 @@ export function barBand(tide: BarTide, swell: BarSwell, windAgainst: boolean): {
   const t = BAR.swell[swell.basis], h = swell.heightFt;
   const long = swell.longPeriodS !== null && swell.longPeriodS >= BAR.longPeriod.fromS;
   const ebb = tide.stage === 'ebb';
-  reasons.push(`${ft(h)}${swell.periodS !== null ? ` at ${swell.periodS} s` : ''} swell${swell.basis === 'offshore' ? ' (offshore estimate)' : ''}`);
-  if (long) reasons.push(`long-period swell (${swell.longPeriodS} s)`);
+  reasons.push(`${ft(h)}${swell.periodS !== null ? ` at ${periodSecondsText(swell.periodS)} s` : ''} swell${swell.basis === 'offshore' ? ' (offshore estimate)' : ''}`);
+  if (long) reasons.push(`long-period swell (${periodSecondsText(swell.longPeriodS as number)} s)`);
   reasons.push(tideText ? `${tideText} tide` : 'tide phase unknown');
   if (windAgainst) reasons.push('wind blowing in against the ebb');
   const hazardous = h >= t.hazardous || (tide.midEbb && h >= t.caution) || (ebb && long && h >= t.caution);

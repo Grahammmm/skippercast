@@ -35,6 +35,7 @@ import {compass} from '../landing/readings.ts';
 import {sample} from '../map/forecast-grid.ts';
 import {forecastTime} from '../map/frames.ts';
 import {localeOf, t, type Language} from '../i18n.ts';
+import {fixed} from '../view-copy.ts';
 
 const HOUR = 3_600_000;
 /** A WCOFS cell farther than this many grid lengths from the mark is not the mark's cell. */
@@ -185,7 +186,7 @@ function modelValue(label: 'Wind' | 'Seas', series: unknown, sec: number, end: n
   // v1's rule: seas without a positive period are left out.
   const period = at('wave_period', 's'), height = period !== null && period > 0 ? at('wave_height', 'ft') : null, from = at('wave_direction', '°');
   if (height === null || period === null) return null;
-  return `${height.toFixed(1)} ft · ${Math.round(period)} s${from === null ? '' : t('markForecast.from', lang, {compass: compass(from), degrees: Math.round(from)})}`;
+  return `${fixed(lang === 'en' ? height : Number(height.toFixed(1)), 1, lang)} ft · ${Math.round(period)} s${from === null ? '' : t('markForecast.from', lang, {compass: compass(from), degrees: Math.round(from)})}`;
 }
 
 /**
@@ -237,7 +238,7 @@ function currentRow(f: Feed, points: readonly {id: string; lat: number; lon: num
   const pick: {point: string; s: number[]; km?: number} | null = near ?? at_t.find(x => x.index === regional) ?? null;
   if (!pick) return gapRow('Current', name, grid, t('markForecast.gap.noCell', lang, {model: name, hour: hourText(hr, tz, lang), km: km1(reach), point: pointId}), {point: pointId, issuedAt: issued});
   const [, lat, lon, speed, toward] = pick.s as [number, number, number, number, number];
-  return {label: 'Current', model: name, grid, value: t('markForecast.towardTrue', lang, {speed: speed.toFixed(2), degrees: Math.round(toward)}), gap: '', point: pick.point,
+  return {label: 'Current', model: name, grid, value: t('markForecast.towardTrue', lang, {speed: fixed(lang === 'en' ? speed : Number(speed.toFixed(2)), 2, lang), degrees: Math.round(toward)}), gap: '', point: pick.point,
     cell: pick.km === undefined ? null : {lat, lon, km: pick.km}, validAt: hr, issuedAt: issued};
 }
 

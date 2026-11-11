@@ -16,6 +16,7 @@
 // (web/land-water.ts); the region's index loads with the brief, and the lines file
 // only when a place falls in a cell the index leaves mixed.
 import {signal} from '@preact/signals';
+import {currentRegionPreview} from '../region-preview.ts';
 import {useEffect, useState} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {Popover} from '../ui/Popover.tsx';
@@ -43,6 +44,7 @@ import {missingSearchPlanText, searchPlanLabel} from './remaining-copy.ts';
 import {regionInfo} from '../app/region-info.ts';
 import {NO_REASONS, reasonsFor, targetEvidence} from '../area-reasons.ts';
 import {language, t, type Language, type StringId} from '../i18n.ts';
+import {fixed} from '../view-copy.ts';
 import {pickDistance, pickFit, pickName, pickReason, rankingAbout, rankingBasis, rankingEmpty, rankingLabel, reasonText} from './ranking-copy.ts';
 
 export type {Pick, Ranking};
@@ -100,7 +102,7 @@ export function routeWhyText(pick: Pick & {basis?: 'water' | 'straight'; why?: R
 function distanceLabel(pick: Pick & {basis?: 'water' | 'straight'}, lang: Language): string {
   if (lang === 'en' || pick.nm === null || !pick.basis) return pick.distance;
   const id: StringId = pick.basis === 'water' ? 'where.distance.water' : 'where.distance.straight', nm = pick.nm.toFixed(1);
-  return pick.distance === t(id, 'en', {nm}) ? t(id, lang, {nm: nm.replace('.', ',')}) : pick.distance;
+  return pick.distance === t(id, 'en', {nm}) ? t(id, lang, {nm: fixed(Number(nm), 1, lang)}) : pick.distance;
 }
 
 /** Bumped once the routes the painted Boat list still lacks are all computed, so it renders again by water. */
@@ -317,6 +319,7 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   useEffect(() => { if (id && wantLines) void loadLandWaterLines(id); }, [id, wantLines, lw.model]);
   return (
     <section class="app-where" data-source={r.source ?? undefined}>
+      {currentRegionPreview() ? <p class="app-region-preview-reason">{t('shell.regionPreview.reason', lang)}</p> : null}
       <div class="app-where-head">
         <h2 class="ui-eyebrow">{t('where.title', lang)}</h2>
         {r.source ? <span class="app-where-source ui-mono">{rankingLabel(r, lang)}</span> : null}

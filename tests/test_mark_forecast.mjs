@@ -4,6 +4,7 @@
 // /api/forecast shape with invented values; each model sample reports a
 // dominant cell, as the sampler does, which the card must never read as the
 // value's location. One regression runs the real sampler (server/model-api.js).
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import {readFileSync, readdirSync} from 'node:fs';
 import {mkdtemp} from 'node:fs/promises';
@@ -12,7 +13,7 @@ import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 
 const {parseConditionsForecast} = await import('../web/conditions.ts');
 const {CELL_REACH, MODEL_GRIDS, distanceKm, gateGap, markForecast, nearestCell, readingSource} = await import('../web/brief/mark-forecast.ts');
@@ -222,7 +223,7 @@ async function components() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: rendererPlugins,
+    plugins: preparedRendererPlugins,
   });
   ui = await import(pathToFileURL(out).href);
   return ui;
@@ -315,8 +316,10 @@ test('SC1137-04 es: gap reasons keep every clause, thresholds and the other fami
 test('SC1137-04 es: readings, sources and the current keep values, units, point/cell and distance; both current failure clauses stay', () => {
   const en = markForecast(parsed(morroFeed()), 'morro-bay', MARK, AT, NOW, TZ), es = markForecast(parsed(morroFeed()), 'morro-bay', MARK, AT, NOW, TZ, 'es');
   assert.equal(ES(es, 0).value, '11 kt desde WNW 301° · ráfagas de 17 kt');
-  assert.equal(ES(es, 1).value, ES(en, 1).value.replace(' from ', ' desde '));
-  assert.equal(es.current.value, '0.20 kt hacia 101° verdadero');
+  assert.equal(ES(es, 1).value, ES(en, 1).value.replace(' from ', ' desde ').replace(/^(\d+)\.(\d) ft/, '$1,$2 ft'));
+  assert.equal(es.current.value, '0,20 kt hacia 101° verdadero');
+  assert.match(ES(es, 1).value, /^\d+,\d ft · \d+ s desde /, 'seas: one decimal with a comma');
+  assert.match(ES(en, 1).value, /^\d+\.\d ft · \d+ s from /, 'English seas keep the point');
   assert.deepEqual([es.current.cell, es.current.point, es.current.validAt], [en.current.cell, en.current.point, en.current.validAt], 'same cell, point and hour');
   assert.equal(ES(es, 0).grid, 'aproximadamente 13 km');
   assert.equal(ES(es, 2).grid, '0.25°', 'degree grids pass through');

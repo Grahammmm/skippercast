@@ -11,10 +11,12 @@ import {CHAT_PATH} from '../advisor/entry.ts';
 import {language, t, type Language} from '../i18n.ts';
 import {Icon, type IconName} from '../ui/icons.tsx';
 import {ensureSession, session} from '../account.ts';
-import {appView, region, setParams, withParams, type AppView} from '../state.ts';
+import {appView, navigate, region, withParams, type AppView} from '../state.ts';
 import {currentRegionInfo, freshness, regionLoad, retryRegion} from './App.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
 import {DegradedNotice} from '../degraded-notice.tsx';
+import {loadRegionPorts} from '../ports.ts';
+import {currentRegionPreview} from '../region-preview.ts';
 
 /** A view's name in `lang` (the catalogue's shell.view.*); rendering passes the language it reads from the signal. */
 export const viewLabel = (view: AppView, lang: Language = 'en'): string => t(`shell.view.${view}`, lang);
@@ -49,15 +51,25 @@ export function Brand() {
 }
 
 export function Location() {
+  const id = region.value, preview = currentRegionPreview();
+  useEffect(() => { if (id) void loadRegionPorts(id); }, [id]);
   const info = currentRegionInfo();
   const load = regionLoad.value;
   const state = load?.id === region.value ? load.state : null;
   const missing = state === 'missing', lang = language.value;
   return (
     <>
-      <span class="app-location ui-mono" data-region={region.value ?? ''}>
+      {preview ? <span class="app-location-preview">
+        <span class="app-location-preview-line">
+          <span class="app-location ui-mono" data-region={id ?? ''}>
+            {info ? <>{info.name} <span class="app-location-coords">{coordinates(info.center)}</span></> : missing ? `"${id}"` : `${titleCase(id!)} —`}
+          </span>
+          <span class="app-region-preview-label">{t('shell.regionPreview.label', lang)}</span>
+        </span>
+        <span class="app-region-preview-reason">{t('shell.regionPreview.reason', lang)}</span>
+      </span> : <span class="app-location ui-mono" data-region={region.value ?? ''}>
         {info ? <>{info.name} <span class="app-location-coords">{coordinates(info.center)}</span></> : missing ? `"${region.value}"` : region.value ? `${titleCase(region.value)} —` : t('shell.location.none', lang)}
-      </span>
+      </span>}
       {state === 'loading' ? <span role="status">{t('shell.location.loading', lang)}</span> : null}
       {state === 'error' ? <span role="status">{t('shell.location.error', lang)}{' '}<button type="button" onClick={retryRegion}>{t('shell.location.retry', lang)}</button></span> : null}
       {missing ? <span role="status">{t('shell.location.missing', lang, {region: region.value ?? ''})}{' '}<a href="/">{t('shell.location.choose', lang)}</a></span> : null}
@@ -75,7 +87,7 @@ export function ViewNav({href, icons = false, class: cls}: {href?: string; icons
         {(icons ? TAB_VIEWS : MASTHEAD_VIEWS).map(v => (
           <li key={v}>
             <a href={withParams(base, {view: viewParam(v)})} aria-current={v === current ? 'page' : undefined} data-view={v}
-              onClick={event => { event.preventDefault(); setParams({view: viewParam(v)}); }}>
+              onClick={event => { event.preventDefault(); if (appView.value !== v) navigate(withParams(location.href, {view: viewParam(v)})); }}>
               {icons ? <Icon name={VIEW_ICONS[v]} size={18} /> : null}{viewLabel(v, lang)}
             </a>
           </li>
@@ -91,6 +103,7 @@ export function FreshnessDot() {
   return (
     <span class="app-fresh" role="status" data-state={fresh.state} aria-label={t('shell.fresh', lang, {state})}>
       <span class="app-fresh-dot" aria-hidden="true"></span>
+      {fresh.state === 'offline' ? <span data-fresh-offline>{state}</span> : null}
       <span class="ui-mono">{fresh.age ?? '—'}</span>
     </span>
   );

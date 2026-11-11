@@ -54,6 +54,10 @@ app-written copy.
 | out at sea: not a harbor or launch reading | `mar adentro: no es una lectura del puerto ni del punto de salida al agua` | Not in the catalogue at the checked revision |
 | straight line | `en línea recta` | Not in the catalogue at the checked revision |
 | by water | `por agua` | Not in the catalogue at the checked revision |
+| Blank (no catch), private device log | `Sin captura (no se registró ninguna captura)`; never `desconocido` or zero fish | `privateMapLog.kind.blank`, `privateMapLog.logBlank`, `privateMapLog.explain` |
+| Private device log (device-only, not the account catch log) | `Registro privado del dispositivo` | `privateMapLog.title`, `privateMapLog.count`, `privateMapLog.countUnavailable`, `privateMapLog.readFailed` |
+| NOT FOR NAVIGATION (device-log caveat) | `NO USAR PARA NAVEGACIÓN.` | `privateMapLog.privacy` |
+| model snapshot, not an on-water observation | `instantáneas del modelo … no observaciones en el agua` | `privateMapLog.evidence`; stored snapshots stay English (`privateMapLog.snapshotEnglish`), and `privateMapLog.snapshot.*` are rendered only in English inside `lang="en"` |
 
 Related caveats that are distinct and already present, not divergences:
 
@@ -185,6 +189,46 @@ Catalogue IDs: `ranking.*`; the fit line reuses `mark.layer.habitat.fit`, `.fitU
 | within {ft} ft ... yd of shore | `dentro de {ft} ft ... y {yd} yd de la costa` | `ranking.within`, `.within.reach`, `.within.shore` | the thresholds in the empty line |
 
 The Where to look sentences say "omitido" for a withheld place (the spec's wording); the map's screen notes say "retenido". Both mean withheld.
+
+### Plan-date rules card and landing layer dots (SC1407-13)
+
+The planner's rules card (`web/app/PlanRules.tsx`) says its own words from the catalogue and reuses the rules
+card's `rules.status.*`, `rules.fresh.*`, `rules.verified`, `rules.notconfirmed`, `rules.notverified`, `rules.link.*`,
+`rules.depth.*`, `rules.english` and `rules.english.inline`. The registry's reason (closures, restrictions, the
+opening-time note), its bag and size clauses, species names and the official link targets stay as published, in English,
+marked `lang="en"` (the link `hreflang="en"`), and the card says so; the app-written depth line is translated and not marked
+English. Stale, overdue, unknown, not-reviewed or location-dependent rules read `Revisa las reglas` with the check line,
+never open or verified. Catalogue IDs: `planRules.*`. The landing's layer dots (`web/landing/LayerDots.tsx`) read
+`landing.dots.*` from the first-paint slice; each label equals the map rail's label in both languages (by test).
+
+| English | Spanish | Catalogue ID | Meaning kept |
+| --- | --- | --- | --- |
+| Rules on the plan's date | `Reglas para la fecha del plan` | `planRules.aria` | the card's accessible name |
+| Rules on {date} | `Reglas para el {date}` | `planRules.heading` | the plan's date, as written |
+| Closed on {date}. | `Cerrado el {date}.` | `planRules.closedOn` | closed said plainly, never softened |
+| Check the official rules before this trip. | `Consulta las reglas oficiales antes de este viaje.` | `planRules.check` | unconfirmed is never open |
+| Not legal advice; check the official page. | `No es asesoría legal; consulta la página oficial.` | `planRules.notLegalAdvice` | not legal advice |
+| Map layers | `Capas del mapa` | `landing.dots.aria` | the dots' navigation name |
+| Seafloor / Currents / Water temp / Temp contrast / Temp fronts / Chlorophyll / Swell + wind / Stations / Charter fleet / Clouds | `Fondo marino` / `Corrientes` / `Temperatura del agua` / `Contraste de temperatura` / `Frentes de temperatura` / `Clorofila` / `Oleaje y viento` / `Estaciones` / `Flota chárter` / `Nubes` | `landing.dots.seafloor`, `.currents`, `.water-temp`, `.sst-contrast`, `.sst-fronts`, `.chlorophyll`, `.swell`, `.stations`, `.fleet`, `.clouds` | the rail's labels (`layer.*.label`, `rail.swell.label`, `rail.fleet.label`) |
+### Language loading (SC1407-09)
+
+English pages ship English only; the Spanish table (`web/strings.es.generated.json`, generated from this catalogue) loads only for a Spanish page. When it cannot load, the page stays English and says so once beside the language choice (the landing adds a link that reloads the page in Spanish).
+
+| English | Spanish | IDs | Note |
+|---|---|---|---|
+| Spanish could not load, so the page stays in English. | `No se pudo cargar el español, así que la página sigue en inglés.` | `language.loadFailed` | never claims Spanish is active |
+| Try Español again | `Volver a intentar en español` | `language.retrySpanish` | the landing's retry link; the app retries from its Español button |
+
+### Fishing profile and Coast view (SC1722-13)
+
+Two different controls must never share a visible Spanish name. The fishing profile (and the origin choice in the limits form) is `Orilla`; the Coast view of the app is `Costa`. Geographic prose about the coast as a place (`costa`, `la costa`, `línea costera`, `Costa de California central`) is not a profile label and keeps its ordinary wording.
+
+| English | Spanish | IDs | Note |
+|---|---|---|---|
+| Shore (fishing profile; also the profile name inside composed sentences such as the default-limits notice and the target group headings) | `Orilla` | `where.profile.shore` | the machine value stays `shore` |
+| Shore (launch-origin choice in the limits form) | `Orilla` | `limits.from.shore` | follows the profile name |
+| Coast (the map view, masthead and phone tab) | `Costa` | `shell.view.coast` | never the profile; the machine value stays `coast` |
+| Find a target (target search field, placeholder and accessible name) | `Busca especie` | `command.findTarget` | short, so the 128 px field shows it whole |
 
 ## 2. Observed divergences
 

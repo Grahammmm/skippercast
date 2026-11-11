@@ -5,7 +5,7 @@
       "label": "Landing page scripts (first load)",
       "kind": "first_load_js",
       "entry": "landing.html",
-      "max_bytes": 460000,
+      "max_bytes": 304000,
       "history": [
         {
           "max_bytes": 445000,
@@ -14,6 +14,10 @@
         {
           "max_bytes": 460000,
           "reason": "Raised 445,000 to 460,000 (3.2% over the 445,953 measured on main 6aad80f4ca). The shared English and Spanish string catalogue (SC0707-05 landing translation, SC0452-08 language choice) grew assets/strings.js, which the landing page loads at once, so main already measured 445,953 and failed this check before the plan-view change in this pull request (which does not touch the landing page). The catalogue is the product's Spanish support; the budget keeps a small headroom so further growth is still flagged."
+        },
+        {
+          "max_bytes": 304000,
+          "reason": "Lowered 460,000 to 304,000 (SC1407-09, #1762 M5). The Spanish table now loads only for a Spanish page, so the landing's first load carries English only. Vite manifest static closure of landing.html: 447,318 bytes on main a5005eb05, 289,476 with this change; ceiling = ceil(289,476 x 1.05 / 1,000) x 1,000."
         }
       ]
     },
@@ -33,7 +37,7 @@
       "label": "App page (brief, map) scripts (first load)",
       "kind": "first_load_js",
       "entry": "app.html",
-      "max_bytes": 1170000,
+      "max_bytes": 1059000,
       "history": [
         {
           "max_bytes": 1160000,
@@ -42,6 +46,18 @@
         {
           "max_bytes": 1170000,
           "reason": "Raised 1,160,000 to 1,170,000 (0.9% over the 1,160,081 measured on this branch merged with main 109ae09f). Main alone already measures 1,132.7 KB against the 1,132.8 KB budget (earlier fixes used up the headroom); RF0804-7 adds a small amount of minified code in PositionCheck.tsx that tags each retained position-check result with its region and dialog life, which puts the first load 81 bytes over. The new code removes a wrong-region result and a stale answer after the dialog closes, which is worth the bytes."
+        },
+        {
+          "max_bytes": 1180000,
+          "reason": "Raised 1,170,000 to 1,180,000 (0.9% over the 1,170,408 measured on this branch merged with main 2c5eae23, 408 bytes over). SC1407-06 adds the shared live-boundary reader (dist/live-mpa.js, imported by web/map/marks.ts and dist/protected-areas.js) so the map's mark screen and the planner's screen make one request for the same in-flight ds582 query instead of two; the extra minified code in the app entry is worth the saved request and parse."
+        },
+        {
+          "max_bytes": 1064000,
+          "reason": "Lowered 1,180,000 to 1,064,000 (SC1407-09, #1762 M5). The Spanish table now loads only for a Spanish page, so the app's first load carries English only. Vite manifest static closure of app.html: 1,169,280 bytes on main a5005eb05, 1,011,409 with this change on that base, 1,012,688 after merging main 07621807 (SC1407-06 and others); ceiling = ceil(1,012,688 x 1.05 / 1,000) x 1,000."
+        },
+        {
+          "max_bytes": 1059000,
+          "reason": "Lowered 1,064,000 to 1,059,000 (SC1407-10, #1762 M5). The trip planner, offline pack, basemap ranges and coastal snapshots moved from web/trip.ts to web/trip-runtime.ts, loaded on first use, so the app's first load no longer carries them. Vite manifest static closure of app.html: 1,007,939 bytes on this branch merged with main 1deba4ec (SC1407-09 and the earlier entries included); ceiling = ceil(1,007,939 x 1.05 / 1,000) x 1,000."
         }
       ]
     },
@@ -49,11 +65,31 @@
       "label": "App page (brief, map) styles (first load)",
       "kind": "first_load_css",
       "entry": "app.html",
-      "max_bytes": 71000,
+      "max_bytes": 75000,
       "history": [
         {
           "max_bytes": 71000,
           "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 67,003 bytes plus 6.0% headroom. PERF-BASELINE-1 A.4: brief css 40 KB on the wire."
+        },
+        {
+          "max_bytes": 72000,
+          "reason": "SC1722-06: the phone dialogs and the Limits save actions stay inside the viewport (max-height, scroll and a sticky action row in web/app/app.css and trip.css), which takes the app first-load styles to 71,068 bytes on the merged build, over the 71,000 budget; the budget moves up 1,000 bytes (1.3% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 73000,
+          "reason": "Raised 72,000 to 73,000 (RF1935-4). The rule that keeps the focused phone target search visible in short viewports (hide the tabs, drop the sheet transform, let the sheet body scroll, in web/app/app.css) takes the app first-load styles to 72,262 bytes on this branch merged with main 6f584b488, 262 bytes over the 72,000 budget; the budget moves up 1,000 bytes (1.0% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 74000,
+          "reason": "Raised 73,000 to 74,000 (MAIN-RED-SKIPPERCAST). UXFIX-13 (#1892) made the phone's 'Keep Boat for now' button visible at the sheet's peek (grid row and peek height in web/landing/port-input.css). It passed CI on its own head, but merged with main be4421e5 the app first-load styles measure 73,052 bytes, 52 bytes over the 73,000 budget, and main went red. The budget moves up 1,000 bytes (1.3% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 74000,
+          "reason": "Raised 73,000 to 74,000 (RF1925-2). This PR changes no stylesheet; main 9917437ec itself builds app first-load styles at 73,052 bytes (assets/app css 51.9 KB plus degraded-notice, tokens and Brief), 52 bytes over the 73,000 budget after the RF1935-4 and UXFIX-13 merges, so the required Size budget check fails on any branch merged with it; the budget moves up 1,000 bytes (1.3% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 75000,
+          "reason": "Raised 74,000 to 75,000 (SC1922-04). The preview-region marker styles this PR adds in web/app/app.css, together with the RF1935-2 app.css taken in the merge of main 611d37888, take the app first-load styles to 74,361 bytes (assets/app css 53.1 KB plus degraded-notice, tokens and Brief), 361 bytes over the 74,000 budget; the budget moves up 1,000 bytes (0.9% headroom over that build), no more."
         }
       ]
     },

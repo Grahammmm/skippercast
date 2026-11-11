@@ -1,6 +1,7 @@
 // SC1352-07: the charter-ground, historical commercial-AIS and temperature-front cards and their status lines in Spanish.
 // The producers keep their English strings and attach catalogue parts; the card, rail and legend resolve them at render.
 // Synthetic fixtures and the committed files, no network.
+import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';

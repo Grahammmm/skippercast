@@ -347,6 +347,21 @@ test('offline, a v2 pack opens the app: its page at /map, hashed files, glyphs a
   await assert.rejects(dispatch(worker, get('/assets/other.0123456789.js')), /offline/);
 });
 
+test('offline_conditions_uses_committed_map_pack: the Conditions shortcut opens from a saved /map page by path, query ignored (SC2252-15)', async () => {
+  const worker = loadWorker();
+  // Unsaved, and saved but never committed: the shortcut refuses as /map does.
+  await assert.rejects(dispatch(worker, nav('/map?view=conditions')), /offline/);
+  await (await worker.storage.open('sc-pack-morro-bay-1')).put(ORIGIN + '/map', new Response('unfinished page', {headers: {'X-SC-Saved-At': T0}}));
+  await assert.rejects(dispatch(worker, nav('/map?view=conditions')), /offline/, 'an unfinished pack never answers');
+  await v2Pack(worker);
+  // A browser never sends the fragment, so the planner shortcut's navigation is plain /map.
+  for (const path of ['/map?view=conditions', '/map?view=conditions&region=morro-bay&port=morro-bay', '/map']) {
+    const page = await dispatch(worker, nav(path));
+    assert.equal(await page.text(), 'v2 page', path);
+    assert.equal(page.headers.get('X-SC-Offline'), '2026-10-09T01:00:00.000Z', `${path}: marked with the saved time`);
+  }
+});
+
 test('without a v2 pack the v1 offline answers are unchanged: /map and unsaved files fail, / opens the v1 shell', async () => {
   const worker = loadWorker();
   await (await worker.storage.open('sc-shell-dev')).put(ORIGIN + '/', new Response('v1 shell'));

@@ -35,6 +35,7 @@ import type {Profile} from '../profile.ts';
 import {KAYAK} from '../../packages/coast/src/kayak.ts';
 import {SHORE} from '../../packages/coast/src/shore-conditions.ts';
 import {SPEAR} from '../../packages/coast/src/spear.ts';
+import {dateTimeFormat} from '../../packages/coast/src/date-format.ts';
 import type {Brief} from './types.ts';
 import {modelAgreement, type Agreement} from './agreement.ts';
 import {cap, englishClock, finite, r0, up1, verdictCopy, type VerdictCopy} from './verdict-copy.ts';
@@ -77,7 +78,7 @@ export interface BriefVerdict {
 }
 
 function local(ms: number, tz: string): {date: string; hour: number} {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23'})
+  const parts = Object.fromEntries(dateTimeFormat('en-CA', tz, {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23'})
     .formatToParts(new Date(ms)).map(p => [p.type, p.value]));
   return {date: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour)};
 }

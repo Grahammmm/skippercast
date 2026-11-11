@@ -44,7 +44,9 @@ export const COPY = {
   question: 'Where are you launching?',
   placeholder: 'Try Morro Bay, Ventura, San Diego…',
   finding: 'Finding a nearby port…',
+  timedOut: 'The location request timed out. Search for a port instead.',
   unsupported: 'Location is unavailable. Search for a port instead.',
+  denied: "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.",
   unavailable: 'Location was unavailable. Search for a port instead.',
   none: 'No listed port is nearby. Search or explore the coast.',
   empty: 'No matching port yet. Try a nearby harbor or explore the coast.',
@@ -104,11 +106,17 @@ export function currentPort(ports: readonly Port[], region: string | null, saved
   return linkedPort(ports, region, linkedId) ?? inRegion.find(port => port.id === savedId) ?? inRegion[0] ?? null;
 }
 
-/** The app with `params` replacing the area keys; unrelated parameters and exact #account intent stay. */
+/** Exact fragments a home resolution keeps: the account dialog and the trip planner (SC2252-15's app shortcut). */
+const KEPT_HASHES: readonly string[] = ['#account', '#export'];
+/**
+ * The app with `params` replacing the area keys; unrelated parameters, an exact #account or #export and one
+ * exact view=conditions (SC2252-15's app shortcut) stay. A camera view, any other or a repeated view is dropped.
+ */
 function appURL(href: string, params: Record<string, string | undefined>): string {
-  const url = new URL(href);
-  url.pathname = '/map'; url.hash = url.hash === '#account' ? '#account' : '';
+  const url = new URL(href), views = url.searchParams.getAll('view');
+  url.pathname = '/map'; url.hash = KEPT_HASHES.includes(url.hash) ? url.hash : '';
   for (const key of AREA_KEYS) url.searchParams.delete(key);
+  if (views.length === 1 && views[0] === 'conditions') url.searchParams.set('view', 'conditions');
   for (const [key, value] of Object.entries(params)) if (value) url.searchParams.set(key, value);
   return url.href;
 }
@@ -242,16 +250,20 @@ export function loadPorts(fetchFn: typeof fetch = fetch): Promise<Port[]> {
   return directory;
 }
 
-export type Located = {ok: true; port: Port} | {ok: false; reason: 'unsupported' | 'unavailable' | 'none'};
+export type Located = {ok: true; port: Port} | {ok: false; reason: 'unsupported' | 'unavailable' | 'denied' | 'timedOut' | 'none'};
 /** v1's geolocation call: low accuracy, 10 s, a five-minute-old fix is fine; the position never leaves the device. */
 export const GEO_OPTIONS: PositionOptions = {enableHighAccuracy: false, timeout: 10000, maximumAge: 300000};
 
 /** The nearest listed port to the device, or why there is none. */
 export function locatePort(ports: readonly Port[], geolocation: Geolocation | null | undefined = globalThis.navigator?.geolocation): Promise<Located> {
-  if (!geolocation) return Promise.resolve({ok: false, reason: 'unsupported'});
-  return new Promise(resolve => geolocation.getCurrentPosition(
-    position => { const port = closestPort(ports, position.coords.latitude, position.coords.longitude); resolve(port ? {ok: true, port} : {ok: false, reason: 'none'}); },
-    () => resolve({ok: false, reason: 'unavailable'}), GEO_OPTIONS));
+  if (typeof geolocation?.getCurrentPosition !== 'function') return Promise.resolve({ok: false, reason: 'unsupported'});
+  return new Promise(resolve => {
+    try {
+      geolocation.getCurrentPosition(
+        position => { const port = closestPort(ports, position.coords.latitude, position.coords.longitude); resolve(port ? {ok: true, port} : {ok: false, reason: 'none'}); },
+        error => resolve({ok: false, reason: error?.code === 1 ? 'denied' : error?.code === 3 ? 'timedOut' : 'unavailable'}), GEO_OPTIONS);
+    } catch { resolve({ok: false, reason: 'unavailable'}); }
+  });
 }
 
 // SCJ-2c: one distance origin. The brief measures from the port the trip planner measures from (web/planner.ts).
