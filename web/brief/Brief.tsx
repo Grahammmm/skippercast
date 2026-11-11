@@ -807,7 +807,7 @@ function SettledVerdict({now}: {now: Date}) {
     <div class="app-verdict" data-verdict={v.verdict} data-provisional={provisional ? 'true' : undefined}>
       <div class="app-verdict-head">
         <h1><span class="app-verdict-word">{t(`brief.verdict.${v.verdict}` as StringId, lang)}</span>{' '}<span class="app-verdict-window ui-mono" data-day={date}>{window ? `${when}, ${window}` : when}</span>{provisional ? ' ' : null}{provisional ? <span class="app-verdict-window app-verdict-provisional ui-mono">{t('brief.provisional', lang)}</span> : null}</h1>
-        <Popover align="end">{v.basis === 'comfort-score' ? comfortBasis(boat, lang) : t('brief.basis.profile', lang)}{rangeNote ? ` ${rangeNote}` : ''}{provisional ? ` ${t('brief.provisional.basis', lang)}` : ''}{v.score !== null ? ` ${t('brief.worst', lang, {score: num(v.score, lang, 20)})}` : ''}</Popover>
+        <Popover align="end" accessibleName={t('a11y.basis.verdict', lang)}>{v.basis === 'comfort-score' ? comfortBasis(boat, lang) : t('brief.basis.profile', lang)}{rangeNote ? ` ${rangeNote}` : ''}{provisional ? ` ${t('brief.provisional.basis', lang)}` : ''}{v.score !== null ? ` ${t('brief.worst', lang, {score: num(v.score, lang, 20)})}` : ''}</Popover>
       </div>
       <SavedLine now={now} snapshot={view} />
       {view.state === 'saved' && view.forecastFailed ? <ForecastFailure as="p" failure={view} /> : null}

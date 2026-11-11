@@ -362,6 +362,7 @@ test.describe('phone', () => {
       await expect(sheet).toHaveAttribute('data-detent', 'peek');
       // Every visible control is at least 44 px tall and the tabs 56 px.
       const short = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('button, a, input, select, summary')]
+        .filter(el => !el.matches('.app-skip-link:not(:focus)')) // SC1722-20: a skip link is clipped to a pixel until it has focus (44 px then: e2e/v2-skip-links.spec.ts)
         .filter(el => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden')
         .map(el => ({el: el.getAttribute('aria-label') ?? el.textContent?.trim() ?? el.tagName, h: Math.round(el.getBoundingClientRect().height)}))
         .filter(x => x.h < 44));

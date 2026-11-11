@@ -14,6 +14,8 @@ export type PopoverProps = {
   summary?: string;
   /** Show the info icon instead of the summary text (the text stays as the accessible name). */
   iconOnly?: boolean;
+  /** An accessible name for the summary when its visible word alone is ambiguous ("Basis for wind"); the visible text stays. */
+  accessibleName?: string;
   /** Opens to the left of its trigger (for the map's right-hand rail). */
   align?: 'start' | 'end';
   children: ComponentChildren;
@@ -39,11 +41,11 @@ function closeOnEscape(event: KeyboardEvent) {
   event.stopPropagation();
 }
 
-export function Popover({summary: given, iconOnly = false, align = 'start', children, class: cls, sources = SOURCES_PAGE}: PopoverProps) {
+export function Popover({summary: given, iconOnly = false, accessibleName, align = 'start', children, class: cls, sources = SOURCES_PAGE}: PopoverProps) {
   const lang = language.value, summary = given ?? t('shared.popover.basis', lang);
   return (
     <details class={['ui-popover', iconOnly ? 'ui-popover--icon' : '', cls].filter(Boolean).join(' ')} data-align={align} onKeyDown={closeOnEscape}>
-      <summary class="ui-popover-summary ui-eyebrow" aria-label={iconOnly ? summary : undefined}>
+      <summary class="ui-popover-summary ui-eyebrow" aria-label={accessibleName ?? (iconOnly ? summary : undefined)}>
         {iconOnly ? <Icon name="info" size={16} /> : summary}
       </summary>
       <div class="ui-popover-body">{children}{sources ? <p class="ui-popover-sources"><a href={sources}>{t('shared.popover.sources', lang)}</a></p> : null}</div>
