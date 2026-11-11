@@ -61,10 +61,21 @@ class Scratch:
         return value
 
     def close(self):
+        """Try to release every array; raise the first ordinary failure afterwards."""
+        first, kept = None, []
         for value in self.arrays:
-            value.flush()
-            value._mmap.close()
-        self.arrays.clear()
+            try:
+                value.flush()
+            except Exception as error:
+                first = first or error
+            try:
+                value._mmap.close()
+            except Exception as error:
+                first = first or error
+                kept.append(value)
+        self.arrays[:] = kept
+        if first is not None:
+            raise first
 
 
 @contextmanager
@@ -72,8 +83,13 @@ def scratch(directory):
     owner = Scratch(directory)
     try:
         yield owner
-    finally:
-        owner.close()
+    except BaseException:
+        try:
+            owner.close()
+        except Exception:
+            pass  # the processing error stays primary
+        raise
+    owner.close()
 
 
 def source_grid(vrt, window, source, support, binding, *, root, scratch, edge=TILE_EDGE):
