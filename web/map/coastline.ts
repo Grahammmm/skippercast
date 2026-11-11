@@ -29,9 +29,10 @@ export const shorelineURL = (region: string): string => `regions/${encodeURIComp
 export const shorelineOverviewURL = (region: string): string => `regions/${encodeURIComponent(region)}/shoreline-overview.geojson`;
 /** The MapLibre zoom the full shoreline loads from (shoreline.py OVERVIEW_MAX_ZOOM); `?view=` zooms are ZOOM_OFFSET more. */
 export const SHORELINE_DETAIL_ZOOM = 12;
-/** The shoreline file the Chart draws at a `?view=` zoom: the overview below the detail zoom, unless the full one already loaded or is the only one listed. */
+/** The shoreline file the Chart draws at a `?view=` zoom: the overview below the detail zoom, unless the full one already loaded or is the only one listed; an explicitly unlisted full file is never chosen. */
 export const shorelineFor = (region: string, viewZoom: number, detail = false): string =>
-  detail || viewZoom - ZOOM_OFFSET >= SHORELINE_DETAIL_ZOOM || !chartFileListed(region, 'shoreline-overview.geojson') && chartFileListed(region, 'shoreline.geojson') ? shorelineURL(region) : shorelineOverviewURL(region);
+  !chartFileListed(region, 'shoreline.geojson') && chartFileListed(region, 'shoreline-overview.geojson') ? shorelineOverviewURL(region)
+    : detail || viewZoom - ZOOM_OFFSET >= SHORELINE_DETAIL_ZOOM || !chartFileListed(region, 'shoreline-overview.geojson') && chartFileListed(region, 'shoreline.geojson') ? shorelineURL(region) : shorelineOverviewURL(region);
 /** RF0850-2: false only when the loaded region.json lists neither shoreline file (web/chart-files.ts, fail open). */
 export const shorelinePublished = (region: string): boolean => chartFileListed(region, 'shoreline.geojson') || chartFileListed(region, 'shoreline-overview.geojson');
 /** The shoreline the Chart requests at a `?view=` zoom, or null when the region publishes none (no request). */
