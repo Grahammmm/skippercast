@@ -15,8 +15,9 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const json = path => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
 const REPORT = json('./fixtures/coast/report.json');
 const MORRO_REGION = json('../dist/regions/morro-bay/region.json');
-const ID = 'monterey-point-sur', PAGE = 'https://skippercast.test/map';
-const INFO = {id: ID, name: 'Monterey', center: [36.62, -121.9], timezone: 'America/Los_Angeles'};
+// The selected region is the one whose coast report binds (Morro Bay), as in the app; OTHER is a region selected after it.
+const ID = 'morro-bay', OTHER = 'monterey-point-sur', PAGE = 'https://skippercast.test/map';
+const INFO = {id: ID, name: 'Morro Bay', center: [35.36, -120.94], timezone: 'America/Los_Angeles'};
 const GENERATED = Date.parse(REPORT.generatedAt);
 
 let bundle, n = 0;
@@ -48,13 +49,13 @@ async function load() {
 test.after(() => { delete globalThis.document; });
 
 /** One fetch for the page's loaders and another for the coast bridge, each counting what it was asked; `fail` names sources that answer 503. */
-function network({fail = [], conditionsAt = '2026-10-08T21:00:00Z', retrieved = '2026-10-08T20:40:00Z'} = {}) {
-  const calls = {forecast: 0, daily: 0, conditions: 0, report: 0}, state = {fail: new Set(fail), conditionsAt, retrieved, gate: null};
+function network({fail = [], conditionsAt = '2026-10-08T21:00:00Z', retrieved = '2026-10-08T20:40:00Z', id = ID} = {}) {
+  const calls = {forecast: 0, daily: 0, conditions: 0, report: 0}, state = {fail: new Set(fail), conditionsAt, retrieved, gate: null, reportAt: null};
   const forecast = () => {
     const start = Date.parse('2026-10-08T07:00:00Z') / 1000, time = Array.from({length: 8 * 24}, (_, i) => start + i * 3600);
     const series = values => ({utc_offset_seconds: 0, hourly_units: {time: 'unixtime', ...Object.fromEntries(Object.entries(values).map(([k, [, u]]) => [k, u]))}, hourly: {time, ...Object.fromEntries(Object.entries(values).map(([k, [v]]) => [k, time.map(() => v)]))}});
     const meta = {last_run_initialisation_time: start, data_end_time: time.at(-1)};
-    return {region_id: ID, retrieved: Date.parse(state.retrieved), requested_points: [['monterey-bay', 36.7, -121.95], ['offshore-0-0', 36.5, -122.25]],
+    return {region_id: id, retrieved: Date.parse(state.retrieved), requested_points: [['monterey-bay', 36.7, -121.95], ['offshore-0-0', 36.5, -122.25]],
       models: {gfs_global: {meta, data: [0, 1].map(() => series({wind_speed_10m: [9, 'kn'], wind_gusts_10m: [14, 'kn'], wind_direction_10m: [300, '°'], temperature_2m: [60, '°F'], cloud_cover: [30, '%']}))},
         ncep_gfswave016: {meta, data: [0, 1].map(() => series({wave_height: [5.1, 'ft'], wave_period: [12, 's']}))}}};
   };
@@ -66,10 +67,10 @@ function network({fail = [], conditionsAt = '2026-10-08T21:00:00Z', retrieved = 
     if (state.gate && kind === 'forecast') await state.gate;
     if (state.fail.has(kind)) return new Response('', {status: 503});
     if (kind === 'forecast') return new Response(JSON.stringify(forecast()), {status: 200});
-    if (kind === 'daily') return new Response(JSON.stringify({...montereyDaily, region_id: ID}), {status: 200});
-    return new Response(JSON.stringify({schema_version: 1, region_id: ID, sources: {diablo: {id: 'diablo', name: 'NDBC 46042', kind: 'observation', url: '', checked_at: state.conditionsAt, status: 'ok'}}}), {status: 200});
+    if (kind === 'daily') return new Response(JSON.stringify({...montereyDaily, region_id: id}), {status: 200});
+    return new Response(JSON.stringify({schema_version: 1, region_id: id, sources: {diablo: {id: 'diablo', name: 'NDBC 46042', kind: 'observation', url: '', checked_at: state.conditionsAt, status: 'ok'}}}), {status: 200});
   };
-  const bridge = async () => { calls.report++; return state.fail.has('report') ? new Response('', {status: 503}) : new Response(JSON.stringify(REPORT), {status: 200, headers: {'Content-Type': 'application/json'}}); };
+  const bridge = async () => { calls.report++; return state.fail.has('report') ? new Response('', {status: 503}) : new Response(JSON.stringify(state.reportAt ? {...REPORT, generatedAt: state.reportAt} : REPORT), {status: 200, headers: {'Content-Type': 'application/json'}}); };
   return {calls, page, bridge, state};
 }
 
@@ -78,11 +79,13 @@ async function startUp(t, m, net) {
   mock.timers.enable({apis: ['Date'], now: GENERATED + 3_600_000});
   const original = globalThis.fetch;
   globalThis.fetch = net.bridge;
-  t.after(() => { m.coastData.destroy(); globalThis.fetch = original; mock.timers.reset(); });
+  m.region.value = ID; // the region selected, as the app has it before its reads begin
   m.regionInfo.value = INFO;
   const region = {...MORRO_REGION};
-  const bound = m.coastData.setPlace(m.overviewReportContext({latitude: 35.36, longitude: -120.94}, {latitude: 35.36, longitude: -120.94, id: 'sel', region: 'morro-bay'}, [region], 'boat', 'lingcod', new Date(GENERATED + 3_600_000)));
-  assert.ok(bound, 'Morro Bay binds the coast report');
+  const context = m.overviewReportContext({latitude: 35.36, longitude: -120.94}, {latitude: 35.36, longitude: -120.94, id: 'sel', region: 'morro-bay'}, [region], 'boat', 'lingcod', new Date(GENERATED + 3_600_000));
+  const unbind = m.bindBriefReport(() => context); // the app's own binding: it records the region the coast place belongs to
+  t.after(() => { unbind(); m.coastData.destroy(); globalThis.fetch = original; mock.timers.reset(); });
+  assert.ok(m.coastData.coastBinding.value, 'Morro Bay binds the coast report');
   await Promise.all([m.ensureRegionalForecast(ID, INFO.center, net.page, PAGE), m.loadDailyFeed(ID, net.page), m.coastData.load('report')]);
   const total = () => Object.values(net.calls).reduce((a, b) => a + b, 0);
   const before = {...net.calls};
@@ -206,7 +209,7 @@ test('a press in flight when another region is selected says nothing about the n
   m.region.value = ID;
   const press = m.refreshBriefNow();
   assert.equal(m.manualRefresh.value, 'refreshing');
-  m.region.value = 'morro-bay'; // another region selected before the replies settle
+  m.region.value = OTHER; // another region selected before the replies settle
   assert.equal(m.manualRefresh.value, 'idle', 'the selection clears the old press');
   open();
   await press;
@@ -229,7 +232,7 @@ test('a refused press says Offline whatever the chip shows, and the word goes wh
     await m.refreshBriefNow(() => false);
     assert.match(chip(m).html, /data-refresh-line="offline">Offline</, `${state}: the press answers Offline`);
   }
-  m.region.value = 'morro-bay';
+  m.region.value = OTHER;
   assert.doesNotMatch(chip(m).html, /data-refresh-line/, 'the idle chip has no status line');
 });
 
@@ -241,4 +244,47 @@ test('the Refresh button and the failure line sit inside the chip, beside the ag
   const html = chip(m).html;
   assert.match(html, /^<span class="app-fresh" role="status"[^>]*>.*<\/span><button[^>]*app-fresh-refresh[^>]*>Refresh<\/button><span data-refresh-line="failed">Refresh failed; showing the previous brief<\/span><\/span>$/s);
   assert.equal((html.match(/<span class="app-fresh"/g) ?? []).length, 1, 'one chip, nothing beside it');
+});
+
+test('a press after another region is selected, before its metadata is read, asks nothing and borrows nothing from the previous region', async t => {
+  const m = await load(), net = network(), other = network({id: OTHER});
+  await startUp(t, m, net);
+  const forecast = m.regionalForecast.value, report = m.coastData.coastReport.value, binding = m.coastData.coastBinding.value;
+  assert.ok(forecast && report && binding);
+  // Region B is selected and its daily read has finished (its request is B's); regionInfo, so B's forecast and coast place, are not in yet.
+  m.region.value = OTHER;
+  await m.loadDailyFeed(OTHER, other.page);
+  assert.equal(m.dailyFeed.value?.region_id, OTHER);
+  const was = {...net.calls}, epoch = m.verdictLoad.peek();
+  assert.equal(epoch.region, OTHER);
+  await m.refreshBriefNow();
+  assert.deepEqual(net.calls, was, 'nothing is asked of the previous region (forecast, feeds or coast report)');
+  assert.equal(other.calls.daily, 1, 'nor of the new region: its own daily read is the only one');
+  assert.equal(m.manualRefresh.value, 'idle', 'the refused press says nothing');
+  assert.equal(m.verdictLoad.peek(), epoch, "B's verdict epoch is not replaced");
+  assert.equal(m.regionalForecast.value, forecast, "the previous region's forecast is not written back");
+  assert.equal(m.coastData.coastReport.value, report, "the previous place's report is not refreshed");
+  assert.equal(m.coastData.coastBinding.value, binding);
+});
+
+test('a coast reply past its limit is a failed press even while the snapshot on screen is still live: nothing the press read is shown', async t => {
+  const m = await load(), net = network();
+  await startUp(t, m, net);
+  const forecast = m.regionalForecast.value, daily = m.dailyFeed.value, report = m.coastData.coastReport.value, slot = () => m.verdictLoad.peek().inputs;
+  assert.ok(report && m.coastData.coastStatus.value.report === 'ready');
+  net.state.retrieved = '2026-10-08T23:10:00Z'; // newer forecast
+  net.state.conditionsAt = '2026-10-08T22:30:00Z'; // newer observations
+  net.state.reportAt = new Date(GENERATED - 4 * 3_600_000).toISOString(); // a report older than its 3 h limit
+  await m.refreshBriefNow();
+  assert.equal(m.manualRefresh.value, 'failed');
+  assert.equal(m.coastData.coastReport.value, report, 'the snapshot on screen stays');
+  assert.equal(m.regionalForecast.value, forecast, 'the new forecast is not shown');
+  assert.equal(m.dailyFeed.value, daily, 'the new feeds are not shown');
+  assert.equal(slot().forecast.data.forecast.retrieved, Date.parse('2026-10-08T20:40:00Z'));
+  assert.match(chip(m).html, /data-refresh-line=\"failed\">Refresh failed; showing the previous brief</);
+  // A valid reply then ends it, and shows everything read.
+  net.state.reportAt = null;
+  await m.refreshBriefNow();
+  assert.equal(m.manualRefresh.value, 'idle');
+  assert.equal(m.regionalForecast.value.retrieved, Date.parse('2026-10-08T23:10:00Z'));
 });

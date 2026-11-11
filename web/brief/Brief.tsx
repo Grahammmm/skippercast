@@ -267,6 +267,8 @@ export function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promis
 
 let dailyRequest: {id: string; fetchFn: typeof fetch} | null = null;
 let dailyLoadedAt = 0, dailyPending = false;
+/** SC1922-08: the region the coast client's place was last bound for; it trails the selection until that region's metadata is read. */
+let coastPlaceRegion: string | null = null;
 /** SC1922-08: the feeds a pressed refresh read, for the next readFeeds to admit (daily, conditions). */
 let pressedFeeds: [FeedRead | null, FeedRead | null] | null = null;
 
@@ -320,7 +322,9 @@ export function bindBriefReport(place: () => CoastReportContext | null, data: Pi
   return effect(() => {
     const p = place();
     if (!p) return; // until the region's metadata is read its coast binding is unknown: the coast part stays pending, never absent
-    const binding = data.setPlace(p), key = `${p.regionId}:${binding?.areaId ?? ''}`, load = data.load('report');
+    const binding = data.setPlace(p);
+    coastPlaceRegion = p.regionId; // SC1922-08: the region the client's current place (and so a refresh of its report) belongs to
+    const key = `${p.regionId}:${binding?.areaId ?? ''}`, load = data.load('report');
     // SC1722-02: a binding asks the verdict's coast part under its own ticket. The same binding already asked waits on that ask; a
     // different one is a new context, so a completion captured for the earlier binding can no longer settle it.
     beginVerdictRegion(p.regionId);
@@ -459,15 +463,23 @@ export function refreshBriefNow(online: () => boolean = () => globalThis.navigat
   if (manualRun) return manualRun;
   if (!online()) { manualRefresh.value = 'offline'; return Promise.resolve(); }
   if (forecastPending || dailyPending || coastStatus.peek().report === 'loading') return Promise.resolve();
+  // Each source's captured request must be the selected region's own: until that region's reads have begun they are still the previous
+  // region's, and a press then asks nothing (it never borrows them, nor refreshes the previous place's report).
+  const selected = region.peek(), fc = forecastRequest, df = dailyRequest;
+  if (!selected || (fc && fc.id !== selected) || (df && df.id !== selected) || (coastBinding.peek() && coastPlaceRegion !== selected)) return Promise.resolve();
   manualRefresh.value = 'refreshing';
-  const fc = forecastRequest, df = dailyRequest;
   let run!: Promise<void>; // the async body below compares manualRun with it after its first await
   run = manualRun = (async () => {
     let ok = false;
     try {
       const [forecast, feeds] = await Promise.all([fc && loadConditionsForecast(fc.id, fc.near, fc.fetchFn, fc.page), df && Promise.all([readDaily(df.id, df.fetchFn, feedLoad), readFeed(feedPath(undefined, df.id), df.id, df.fetchFn)])]);
       ok = forecast?.state !== 'failed' && !feeds?.includes(null);
-      if (ok && manualRun === run && coastBinding.peek()) { await coastData.refresh('report'); ok = coastStatus.peek().report === 'ready'; }
+      if (ok && manualRun === run && coastBinding.peek()) {
+        // Only a reply the client admitted counts: an expired, invalid or older one leaves the held snapshot (and its 'ready') as it was.
+        const held = coastReport.peek();
+        await coastData.refresh('report');
+        ok = coastStatus.peek().report === 'ready' && coastReport.peek() !== held && coastReport.peek() !== null;
+      }
       if (ok && manualRun === run) {
         if (forecast) { pressedForecast = forecast; forecastKey = null; void ensureRegionalForecast(fc!.id, fc!.near, fc!.fetchFn, fc!.page); }
         if (feeds) { pressedFeeds = feeds; void readFeeds(df!.id, df!.fetchFn, true); }
