@@ -373,6 +373,12 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-conditions { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; color: var(--text); font-size: var(--text-13); }
 .app-stage > .app-conditions { position: absolute; inset: 0 0 calc(var(--touch-min) + var(--space-7)) 0; z-index: var(--z-map-chrome); padding: var(--space-4); overflow: auto; background: var(--panel); }
 .app-conditions-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+/* SC1922-03: the model-family options wrap inside the header and keep the touch floor (never squeezed, clipped or shrunk below it). */
+.app-conditions-head > .ui-segmented { flex-wrap: wrap; box-sizing: border-box; max-width: 100%; min-width: 0; }
+.app-conditions-head > .ui-segmented .ui-chip { flex: none; min-height: var(--touch-min); }
+/* SC1922-03: the touch-size Cancel makes the placing note taller; while placing, the stack's empty space and note text must not swallow Chart taps beneath them (placement waits for a tap), so only the presentation control and Cancel take pointer events. */
+.app-presentation--placing { pointer-events: none; }
+.app-presentation--placing .ui-segmented, .app-presentation--placing .ui-button { pointer-events: auto; }
 .app-conditions h2 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
 .app-conditions h3 { margin: var(--space-2) 0 0; }
 .app-conditions-now { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0; }
@@ -550,3 +556,16 @@ p.app-forecast-failed-head { font-size: var(--text-15); }
   overflow: auto;
 }
 /* end RF1935-4 */
+
+/* SC1922-04: preview coverage is ordinary, wrapping text, separate from the clipped name. */
+.app-location-preview { min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.app-location-preview-line { min-width: 0; display: flex; align-items: baseline; gap: var(--space-2); }
+.app-location-preview .app-location { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.app-region-preview-label { flex-shrink: 0; color: var(--text); font-size: var(--text-12); text-transform: none; letter-spacing: normal; }
+.app-region-preview-reason { margin: 0; color: var(--text); background: var(--panel); font-size: var(--text-12); white-space: normal; overflow-wrap: anywhere; text-transform: none; letter-spacing: normal; }
+.app-where > .app-region-preview-reason { margin-bottom: var(--space-3); }
+.app-top-card .app-location-preview .app-location { white-space: normal; overflow: visible; text-overflow: clip; }
+@media (min-width: 1024px) {
+  .app-masthead:has(> .app-location-preview) { flex-wrap: wrap; }
+  .app-masthead > .app-location-preview { flex: 0 1 22rem; min-width: 18rem; max-width: 22rem; }
+}

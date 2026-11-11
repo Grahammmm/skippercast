@@ -373,6 +373,7 @@ export function boundSurfaceContrast(request = {}) {
 // parser proves the cascade. A changed source must be reviewed/rebound; default
 // CLI and generic missing-background behavior remain unchanged pending review.
 // SC1722-14: form typography changes layout, not colour, alpha, backing or contrast thresholds.
+// SC1922-04: appended preview layout/text roles leave existing legend/catch paint unchanged.
 export const SURFACE_SOURCE_SHA256 = {
   // BF-wcag only adds min-height (24 px target floor) to .text-link, .history-provenance a and .sheet-links a; no paint changed.
   // SC1722-08 only raises the History chart scroller's focus ring to 2 px and adds one .history-measurement-note > summary focus ring; no unfocused paint changed.
@@ -407,7 +408,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1722-19: app.css adds only desktop (min-width 1024px) layout rules (the app scrolls inside itself, the stage clips, a sticky time dock); no colour, backing or token changes and no line citation moves.
   // RF1935-2 only appends a desktop-only (min-width: 1024px) .app-stage > .app-rail > .ui-segmented wrap block at the end of app.css and sets the desktop rail's
   // overflow-y: scroll with a stable scrollbar gutter (layout, no paint); no colour, opacity, backing or text paint changed and the cited line numbers above are unmoved.
-  "appCss": "33072885e199961e2a32c6f9894fe7a0f033f48041c1afee51ac9f6d0becb422",
+  // SC1922-03 only adds a scoped .app-conditions-head model-family wrap/min-height rule after .app-conditions-head, plus a pointer-events-only rule for .app-presentation--placing (no paint); no colour, opacity, backing or text paint changed and legend glass is untouched.
+  "appCss": "4648c022bb671f57350cdb9e4a8ddae6d727d2d3b90a0371a0ca7b4245608b61",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.

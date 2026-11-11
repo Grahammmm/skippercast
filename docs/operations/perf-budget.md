@@ -13,8 +13,8 @@ its budget and the share used, then PASS or FAIL. A failing group also lists its
 | Group | Size when set | Budget | Headroom |
 |---|---|---|---|
 | Landing page scripts (entry + scripts it imports at once) | 421,933 | 304,000 (lowered by SC1407-09 from 460,000; see history in `scripts/perf-budget.json`) | 5.5% at first |
-| Landing page styles | 24,339 | 26,000 | 6.8% |
-| App page (brief, map) scripts, first load | 1,104,511 | 1,064,000 (lowered by SC1407-09 from 1,180,000; see history in `scripts/perf-budget.json`) | 5.0% at first |
+| Landing page styles | 24,339 | 29,000 (raised from 26,000 by SC1922-05; see history in `scripts/perf-budget.json`) | 6.8% at first |
+| App page (brief, map) scripts, first load | 1,104,511 | 1,059,000 (lowered by SC1407-09 from 1,180,000 and by SC1407-10 to 1,059,000; see history in `scripts/perf-budget.json`) | 5.0% at first |
 | App page styles | 67,003 | 74,000 (raised from 71,000 to 72,000 by SC1722-06, to 73,000 by RF1935-4, to 74,000 by MAIN-RED-SKIPPERCAST; see history in `scripts/perf-budget.json`) | 6.0% at first |
 | Largest single built script, style or font (any page, loaded now or later) | 1,094,203 | 1,150,000 | 5.1% |
 | Brief data files in the repo (`protected-areas.geojson`, `land-water-lines.json`, `seafloor-ledger.json`) | 951,224 | 1,050,000 | 10.4% |
@@ -48,6 +48,16 @@ a switch to Spanish. Vite manifest static closures on main a5005eb05 against thi
 bytes, app.html 1,169,280 to 1,011,409. The two ceilings were lowered to the new size plus 5%, rounded up to 1,000 bytes
 (304,000 and 1,064,000). The install precache and the landing's app warm-up leave the Spanish chunk out; a saved offline
 trip pack keeps it, so Spanish still opens offline.
+
+### The trip planner and offline pack load on first use (SC1407-10, #1762 M5)
+
+`/map`'s first screen imports `web/trip.ts` for the trip signals, the `#export` dialog, the draft's ids and the shared
+protected-area screen. The planner, the offline pack, the basemap ranges and the coastal snapshots are
+`web/trip-runtime.ts`, which `web/trip.ts` loads with one dynamic import when the dialog opens, a pack or coastal call is
+made, or the planner's ranked set arrives; a call made earlier waits for it. `tests/test_client_build.mjs` checks the real
+build's manifest: nothing of it is in `app.html`'s static imports, and the offline pack still lists it. Measured with this branch merged with main 1deba4ec (SC1407-09 included): the app's first load is 1,007,939 bytes. The
+old 58 KB trip chunk mostly held map and tide modules the first screen still loads, so the saving is the trip code itself.
+The app budget is lowered from 1,064,000 to 1,059,000 (measured + 5%, rounded up to 1,000 bytes).
 
 ### Protected-area verdicts reused across hour steps (SC1407-02)
 

@@ -577,3 +577,68 @@ test('BF-graceful-gaps: missing conditions and malformed fleet leave the shell u
   await expect(page.locator('.app-details')).toContainText('Conditions feeds could not be read: no buoy, tide or marine alert readings. The map, rules and trip tools still work.');
   await expect.poll(() => fleetReads).toBeGreaterThan(0); expect(pageErrors).toEqual([]);
 });
+
+// SC1922-04: direct links disclose incomplete regional coverage, not a weaker forecast verdict.
+for (const lang of ['en', 'es']) {
+  const label = lang === 'en' ? 'Preview' : 'Vista previa';
+  const reason = lang === 'en'
+    ? 'Forecasts and readings are live; habitat ranks, coastline and some layers are incomplete here.'
+    : 'Los pronósticos y las lecturas están en vivo; las clasificaciones de hábitat, la costa y algunas capas están incompletas aquí.';
+  test(`SC1922-04 preview disclosure visible and bounded, ${lang}`, async ({page, pageErrors, v2, isMobile}) => {
+    let reads = 0;
+    await page.route('**/data/home-ports.json', async route => { reads++; await route.continue(); });
+    for (const size of isMobile ? [{width: 320, height: 640}, {width: 390, height: 844}] : [{width: 1280, height: 800}]) {
+      await page.setViewportSize(size);
+      await v2.open('app', {region: 'monterey-point-sur', lang, profile: 'shore'});
+      const group = page.locator('.app-location-preview');
+      await expect(group.locator('.app-region-preview-label')).toHaveText(label);
+      await expect(group.locator('.app-region-preview-reason')).toHaveText(reason);
+      // The day strip's chip reveal moves only the strip: the page itself stays at the top, masthead in view.
+      if (!isMobile) expect(await page.evaluate(() => scrollY)).toBe(0);
+      for (const el of [group, group.locator('.app-region-preview-label'), group.locator('.app-region-preview-reason')]) {
+        await expect(el).toBeInViewport();
+        const box = (await el.boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+        expect(await el.evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true);
+      }
+      if (isMobile) { await page.locator('.ui-sheet-handle').focus(); await page.keyboard.press('End'); }
+      const note = page.locator('.app-where > .app-region-preview-reason');
+      await note.scrollIntoViewIfNeeded();
+      await expect(note).toHaveText(reason);
+      await expect(note).toBeInViewport();
+      expect(await note.evaluate(el => !!(el.compareDocumentPosition(el.parentElement!.querySelector('h2')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
+    }
+    expect(reads).toBe(isMobile ? 2 : 1); // one per page, not one per Location/brief consumer
+    expect(pageErrors).toEqual([]);
+  });
+  for (const mode of ['active', '503', 'malformed', 'rejected']) test(`SC1922-04 ${mode} status shows no disclosure, ${lang}`, async ({page, pageErrors, v2}) => {
+    let reads = 0;
+    await page.route('**/data/home-ports.json', async route => {
+      reads++;
+      if (mode === 'active') await route.continue();
+      else if (mode === '503') await route.fulfill({status: 503, body: 'offline'});
+      else if (mode === 'malformed') await route.fulfill({json: {ports: []}});
+      else await route.abort('failed');
+    });
+    await v2.open('app', {region: mode === 'active' ? 'morro-bay' : 'monterey-point-sur', lang, profile: 'shore'});
+    await expect(page.locator('.app-location')).toContainText(mode === 'active' ? 'Morro Bay' : 'Monterey');
+    await expect.poll(() => reads).toBe(1);
+    await expect(page.locator('.app-region-preview-label, .app-region-preview-reason')).toHaveCount(0);
+    await expect(page.locator('h1')).toBeAttached();
+    await page.waitForTimeout(250);
+    expect(reads).toBe(1);
+    expect(pageErrors).toEqual([]);
+  });
+  test(`SC1922-04 conditions direct link reads once without opening a chooser, ${lang}`, async ({page, pageErrors, v2, isMobile}) => {
+    let reads = 0;
+    await page.route('**/data/home-ports.json', async route => { reads++; await route.continue(); });
+    await v2.open('app', {region: 'monterey-point-sur', lang, view: 'conditions', profile: 'shore'});
+    await expect(page.locator('.app-region-preview-label')).toHaveText(label);
+    // Desktop retains its brief beside Conditions; phone replaces the sheet content.
+    await expect(page.locator('.app-where')).toHaveCount(isMobile ? 0 : 1);
+    expect(reads).toBe(1);
+    expect(pageErrors).toEqual([]);
+  });
+}

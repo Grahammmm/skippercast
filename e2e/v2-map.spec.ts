@@ -1599,7 +1599,10 @@ for (const [presentation, controls] of [['chart', '.app-chart .maplibregl-ctrl-b
         const [mine] = await rects(page, RAIL), others = [...await rects(page, controls), ...await rects(page, '.app-presentation .ui-segmented')];
         expect(others.length).toBeGreaterThan(1);
         for (const other of others) expect(railApart(mine, other), `${presentation} ${width}x${height} ${phase}: rail clear of "${other.label.slice(0, 30)}"`).toBe(true);
+        // SC1922-04: the page no longer scrolls itself on load (TimeDock's chip reveal moves only the strip), so at 1024x768 the Map/Chart switch sits
+        // below the first screen. A click scrolls its target into view first; do the same here, then hit-test the centre exactly as before.
         const hits = await page.locator(hittable).evaluateAll(els => els.map(el => {
+          el.scrollIntoView({block: 'nearest', inline: 'nearest'});
           const box = el.getBoundingClientRect(), hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
           return {label: el.getAttribute('aria-label') ?? el.className, ok: !!hit && (el === hit || el.contains(hit))};
         }));

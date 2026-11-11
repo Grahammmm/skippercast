@@ -361,14 +361,14 @@ test('saved layers carry data_at, retrieved_at, max_age_hours and drawable_until
   for (const id of OCEAN_LAYERS) assert.deepEqual(gone.layers[id], {state: 'failed', reason: 'manifest', tiles: {saved: 0, listed: 0}, bytes: 0});
 });
 
-test('only the pack\'s ocean phase (web/trip.ts) imports ocean-pack, and habitat-feed exports the one layerOf', () => {
+test('only the pack\'s ocean phase (web/trip-runtime.ts) imports ocean-pack, and habitat-feed exports the one layerOf', () => {
   const importers = [];
   const walk = dir => { for (const e of readdirSync(dir, {withFileTypes: true})) {
     const path = `${dir}/${e.name}`;
     if (e.isDirectory()) { if (!['node_modules', '.git', 'dist', '.worktrees'].includes(e.name)) walk(path); } else if (/\.(ts|tsx|js|mjs)$/.test(e.name) && /ocean-pack/.test(readFileSync(path, 'utf8'))) importers.push(path);
   } };
   for (const dir of ['web', 'server', 'packages', 'tests', 'scripts']) walk(new URL(`../${dir}`, import.meta.url).pathname);
-  assert.deepEqual(importers.map(p => p.split('/').slice(-2).join('/')).sort(), ['tests/test_ocean_pack.mjs', 'web/trip.ts']);
+  assert.deepEqual(importers.map(p => p.split('/').slice(-2).join('/')).sort(), ['tests/test_ocean_pack.mjs', 'web/trip-runtime.ts']);
   const feedSource = readFileSync(new URL('../web/map/habitat-feed.ts', import.meta.url), 'utf8');
   assert.equal((feedSource.match(/function layerOf\(/g) ?? []).length, 1);
   assert.match(feedSource, /export function layerOf\(/);
