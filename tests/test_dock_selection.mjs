@@ -33,7 +33,12 @@ async function load() {
       export {language, prepareCatalogue} from './web/i18n.ts';
       export * as state from './web/state.ts';
       export {effect, signal} from '@preact/signals';
-      export {render} from 'preact-render-to-string';
+      import {render} from 'preact-render-to-string';
+      import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
+      export {admitBriefFixture};
+      // SC1722-02: the dock tests' sources are settled (a region read with no feeds), so only the dock's own pending state guards.
+      export function renderFixture(...args) { admitBriefFixture({id: 'fixture', name: 'Fixture', center: [36.6, -121.9], timezone: 'America/Los_Angeles'}); return render(...args); }
+      export {render};
       export {h, Fragment} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
   });
@@ -71,7 +76,7 @@ test('burst_moves_before_frame_settles_once: a quick run of steps moves the labe
   for (const [i, at] of hours.entries()) {
     assert.equal(m.requestDockHour(NOW, TZ, at), true);
     // The dock reads the new hour before any timer runs: thumb, readout and aria-valuetext together.
-    const dock = m.render(m.h(m.TimeDock, {now: NOW})), edge = m.render(m.h(m.HourEdge, {now: NOW}));
+    const dock = m.renderFixture(m.h(m.TimeDock, {now: NOW})), edge = m.renderFixture(m.h(m.HourEdge, {now: NOW}));
     const label = `Today · ${2 + i} pm`;
     assert.equal(readout(dock), label);
     assert.equal(valueText(dock), label);
@@ -91,7 +96,7 @@ test('burst_moves_before_frame_settles_once: a quick run of steps moves the labe
   assert.equal(m.state.hour.value, m.state.hourParam(hours.at(-1) / 1000), 'the URL holds the settled (last) hour, never an intermediate one');
   assert.equal(new URL(location.href).searchParams.get('hour'), '2026-10-06T01:00Z');
   assert.equal(m.dockPending.value, false);
-  assert.equal(readout(m.render(m.h(m.TimeDock, {now: NOW}))), 'Today · 6 pm');
+  assert.equal(readout(m.renderFixture(m.h(m.TimeDock, {now: NOW}))), 'Today · 6 pm');
   t.mock.timers.tick(1000);
   assert.equal(waves(), 1, 'nothing settles again');
 });
@@ -115,7 +120,7 @@ test('a single step still settles, and a step back to the settled hour sends not
 
 test('no_old_answer_under_preview: the verdict and first answer say Updating, unannounced, until the hour settles', async t => {
   const {m} = await page(t);
-  const view = () => m.render(m.h(m.Fragment, null, m.h(m.TimeDock, {now: NOW}), m.h(m.Verdict, {now: NOW}), m.h(m.FirstAnswerLine, {now: NOW})));
+  const view = () => m.renderFixture(m.h(m.Fragment, null, m.h(m.TimeDock, {now: NOW}), m.h(m.Verdict, {now: NOW}), m.h(m.FirstAnswerLine, {now: NOW})));
   const settled = view();
   assert.doesNotMatch(settled, /Updating/);
   assert.doesNotMatch(settled, /app-hour-settled" hidden/);
@@ -155,7 +160,7 @@ test('day chips and play follow the same rule: preview at once, settle once, kee
   const {m, writes, waves} = await page(t);
   const shown = m.previewDockState(NOW, TZ);
   m.requestDockDay(NOW, TZ, '2026-10-07', shown);
-  let dock = m.render(m.h(m.TimeDock, {now: NOW}));
+  let dock = m.renderFixture(m.h(m.TimeDock, {now: NOW}));
   assert.match(dock, /aria-pressed="true" data-on="true">Wed · Unknown</, 'the pressed chip moves at once');
   assert.equal(readout(dock), 'Wed · 1 pm', 'same local hour on the new day');
   m.requestDockDay(NOW, TZ, '2026-10-08', m.previewDockState(NOW, TZ));
@@ -166,7 +171,7 @@ test('day chips and play follow the same rule: preview at once, settle once, kee
   assert.deepEqual([url.get('day'), url.get('hour')], ['2026-10-08', '2026-10-08T20:00Z']);
   // A play or reduced-motion step requests the next hour from the shown preview.
   m.requestDockHour(NOW, TZ, m.previewDockState(NOW, TZ).at + HOUR);
-  dock = m.render(m.h(m.TimeDock, {now: NOW}));
+  dock = m.renderFixture(m.h(m.TimeDock, {now: NOW}));
   assert.equal(readout(dock), 'Thu · 2 pm');
   t.mock.timers.tick(100);
   assert.equal(m.state.hour.value, '2026-10-08T21:00Z');
@@ -176,9 +181,9 @@ test('both repeated 1 am instants of the fall-back day settle exactly', async t 
   const now = new Date('2026-10-31T19:00:00Z');
   const {m} = await page(t);
   m.requestDockHour(now, TZ, Date.parse('2026-11-01T08:00Z'));
-  assert.equal(m.render(m.h(m.TimeDock, {now})).match(/class="app-dock-zone ui-mono">([^<]+)/)[1], 'PDT');
+  assert.equal(m.renderFixture(m.h(m.TimeDock, {now})).match(/class="app-dock-zone ui-mono">([^<]+)/)[1], 'PDT');
   m.requestDockHour(now, TZ, Date.parse('2026-11-01T09:00Z'));
-  const dock = m.render(m.h(m.TimeDock, {now}));
+  const dock = m.renderFixture(m.h(m.TimeDock, {now}));
   assert.deepEqual([readout(dock), dock.match(/class="app-dock-zone ui-mono">([^<]+)/)[1]], ['Tomorrow · 1 am', 'PST']);
   t.mock.timers.tick(100);
   assert.deepEqual([m.state.day.value, m.state.hour.value], ['2026-11-01', '2026-11-01T09:00Z']);

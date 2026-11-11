@@ -27,7 +27,7 @@ import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
 import {LimitsControl} from './LimitsPanel.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
-import {BriefFooter, PrintBrief, BriefLinks, BriefTiles, Details, LowerExposure, SavedLine, Verdict, currentBrief, leadDate, leadDayText} from '../brief/Brief.tsx';
+import {BriefFooter, PrintBrief, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief, leadDate, leadDayText} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {RunLine} from '../brief/Run.tsx';
@@ -113,7 +113,6 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
             <FreshnessDot />
           </div>
           <DegradedNotice />
-          <Guard name="saved-brief"><SavedLine now={now} /></Guard>
           <Guard name="verdict"><Verdict now={now} /></Guard>
           {apart ? dockHead : null}
         </>
