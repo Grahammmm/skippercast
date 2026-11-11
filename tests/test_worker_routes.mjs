@@ -205,6 +205,21 @@ test('/api/health reports the package.json version, not a literal', async () => 
   assert.doesNotMatch(readFileSync(new URL('../server/routes/public.ts', import.meta.url), 'utf8'), /version: '\d/);
 });
 
+test('/api/health serves the build revision beside the unchanged content hash, with nulls when absent', async () => {
+  const had = Object.hasOwn(globalThis, 'BUILD_REVISION'), prior = globalThis.BUILD_REVISION;
+  const sha = 'a'.repeat(40), keys = ['build', 'revision', 'revision_dirty', 'service', 'version'];
+  try {
+    for (const [meta, want] of [[{revision: sha, revision_dirty: false}, [sha, false]], [{revision: sha, revision_dirty: true}, [sha, true]],
+      [{revision: null, revision_dirty: null}, [null, null]], [undefined, [null, null]], [{extra: 'leak'}, [null, null]]]) {
+      if (meta === undefined) delete globalThis.BUILD_REVISION; else globalThis.BUILD_REVISION = meta;
+      const response = await deployed.fetch(new Request(ORIGIN + '/api/health'), {SECRET: 'x'}), body = await response.json();
+      assert.equal(response.status, 200); assert.equal(response.headers.get('Cache-Control'), 'no-store');
+      assert.deepEqual(Object.keys(body).sort(), keys);
+      assert.deepEqual([body.build, body.revision, body.revision_dirty], ['build-test', ...want]);
+    }
+  } finally { if (had) globalThis.BUILD_REVISION = prior; else delete globalThis.BUILD_REVISION; }
+});
+
 test('HEAD is answered as GET without a body (Hono), including for the site', async () => {
   const health = await deployed.fetch(new Request(ORIGIN + '/api/health', {method: 'HEAD'}), {});
   assert.equal(health.status, 200);assert.equal(await health.text(), '');

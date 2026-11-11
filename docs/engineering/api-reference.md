@@ -71,10 +71,10 @@ Any path not under `/api/` or `/feeds/`. Stable page paths (`/`, `/index.html`, 
 Liveness. Any method answers. No authentication.
 
 ```json
-{"service":"SkipperCast","version":"0.3.0","build":"0c321d2522"}
+{"service":"SkipperCast","version":"0.3.0","build":"0c321d2522","revision":"52411925dd9c2c3aa241c2741bd745b024c4c8eb","revision_dirty":false}
 ```
 
-Only `service`, `version` and `build` are returned, so the public endpoint does not reveal which bindings and secrets exist; feed storage is visible per response in `X-Feed-Source`. `scripts/smoke_test.sh` reads `service` and `build` only.
+`build` is the client content hash and is unchanged. `revision` is the full 40-hex commit of the checkout that ran `pnpm build`, read once by `scripts/build-revision.mjs` at build time (the Worker and requests never run Git); `revision_dirty` is `true` when tracked files had staged or unstaged edits (untracked files do not count). When Git was unavailable, the checkout was unborn or the output was malformed, both are `null`; that is not an outage. A revision is not deploy attestation or proof the sources were byte-identical to the commit. Only these five fields are returned, so the public endpoint does not reveal which bindings and secrets exist; feed storage is visible per response in `X-Feed-Source`. `scripts/smoke_test.sh` reads `service` and `build` only.
 
 ### `GET /api/om/v1/forecast` and `GET /api/om/v1/marine`
 
