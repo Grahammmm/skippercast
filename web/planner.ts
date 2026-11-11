@@ -519,9 +519,11 @@ export function createPlanner(deps: PlannerDeps) {
   }
 
   /** The file for `kind`, after the publication and every boundary are checked again. */
-  async function exportFile(kind: 'gpx' | 'notes'): Promise<File> {
-    // SC1407-14: the float plan is checked and captured before any wait; a notes file never carries fields from another opening, edit or date.
+  async function exportFile(kind: 'gpx' | 'notes', guard: {current?: () => boolean} = {}): Promise<File> {
+    // SC1407-14: the float plan and the plan/file key are captured before any wait; a notes file never carries fields from another opening, edit, date or plan.
+    // `guard.current` lets the caller recheck the same snapshot right before it saves the file.
     const float = kind === 'notes' ? floatSnapshot() : null;
+    if (float) guard.current = () => floatCurrent(float);
     if (draft.value.ids.some(id => tripAtlas.value.targets.find(t => t.id === id)?.canonical_habitat)) {
       const latest = await loadReefs(region.id);
       if (latest.publication.export_sha256 !== canonical?.publication.export_sha256) throw Error('Reef data changed. Select Best available again before exporting.');
@@ -546,12 +548,12 @@ export function createPlanner(deps: PlannerDeps) {
   let floatGen = 0, floatRev = 0;
   const floatCheck = () => validateFloatPlan(floatPlan.value, draft.value.date || today, region.timezone);
   const floatErrors = computed(() => { const c = floatCheck(); return c.ok ? {} : c.errors; });
-  function floatSnapshot(): {record: FloatPlanRecord | null; gen: number; rev: number; date: string} {
+  function floatSnapshot(): {record: FloatPlanRecord | null; gen: number; rev: number; date: string; key: string} {
     const c = floatCheck();
     if (!c.ok) throw Error(FLOAT_INVALID);
-    return {record: c.record, gen: floatGen, rev: floatRev, date: draft.value.date || today};
+    return {record: c.record, gen: floatGen, rev: floatRev, date: draft.value.date || today, key: fileKey()};
   }
-  const floatCurrent = (s: {gen: number; rev: number; date: string}): boolean => !disposed && s.gen === floatGen && s.rev === floatRev && s.date === (draft.value.date || today);
+  const floatCurrent = (s: {gen: number; rev: number; date: string; key: string}): boolean => !disposed && s.gen === floatGen && s.rev === floatRev && s.date === (draft.value.date || today) && s.key === fileKey();
   function setFloatPlanOpen(on: boolean, seed?: {fields: FloatPlanFields; backAuto: boolean}): void {
     if (on === floatOpen.peek()) return;
     floatGen++; floatRev++;
@@ -617,7 +619,15 @@ export function createPlanner(deps: PlannerDeps) {
   });
   function deliver(kind: 'gpx' | 'share' | 'notes'): Promise<void> {
     if (disposed) return Promise.resolve();
-    if (kind === 'notes') return exportFile('notes').then(file => { if (!disposed) { save(file); actionStatus.value = `Download requested: ${file.name}. Find it in Downloads or your chosen save location.`; } }).catch(error => { actionStatus.value = (error as Error).message; });
+    if (kind === 'notes') {
+      // SC1407-14: the notes snapshot (float generation, revision, date and plan/file key) is rechecked immediately before the file is saved.
+      const guard: {current?: () => boolean} = {};
+      return exportFile('notes', guard).then(file => {
+        if (disposed) return;
+        if (guard.current && !guard.current()) { actionStatus.value = FLOAT_CHANGED; return; }
+        save(file); actionStatus.value = `Download requested: ${file.name}. Find it in Downloads or your chosen save location.`;
+      }).catch(error => { actionStatus.value = (error as Error).message; });
+    }
     if (!summary.value.ok) { actionStatus.value = (summary.value as {message: string}).message; return Promise.resolve(); }
     if (!prepared || prepared.key !== fileKey() || now().getTime() - prepared.at >= 60000) {
       prepared = null;

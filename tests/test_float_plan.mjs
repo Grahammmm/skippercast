@@ -161,3 +161,54 @@ test('float_stale_notes: closing, editing or changing the date while the publica
     p.dispose();
   }
 });
+
+test('float_stale_notes_plan_key: a same-date change to the stops, order, layers or plan name while the publication loads drops the file', async () => {
+  const changes = [['stops', p => p.toggleSpot('reef-1', false)], ['name', p => p.edit({name: 'Another trip'})], ['order', p => p.moveStop(p.draft.value.ids[0], 'down')], ['layers', p => p.setLayer('outlines', !p.draft.value.layers.outlines)]];
+  for (const [what, change] of changes) {
+    let gate = null;
+    const {planner: p} = harness({loadReefs: async () => { if (gate) await gate; return reefs(); }});
+    await p.selectBest();
+    p.setFloatPlanOpen(true, {fields: {...emptyFloatPlan(), boat: 'Mary'}, backAuto: true});
+    const date = p.draft.value.date, before = JSON.stringify(p.draft.value);
+    let release; gate = new Promise(r => { release = r; });
+    const pending = p.exportFile('notes');
+    change(p);
+    assert.notEqual(JSON.stringify(p.draft.value), before, `${what}: the plan really changed`);
+    assert.equal(p.draft.value.date, date, `${what}: the date did not change`);
+    release();
+    await assert.rejects(pending, /float plan changed/, what);
+    p.dispose();
+  }
+});
+
+test('float_notes_delivery_guard: closing or editing between building the file and saving it downloads nothing', async () => {
+  const realDocument = Object.getOwnPropertyDescriptor(globalThis, 'document'), realCreate = URL.createObjectURL, realRevoke = URL.revokeObjectURL, realTimeout = globalThis.setTimeout;
+  const urls = [], clicks = [];
+  Object.defineProperty(globalThis, 'document', {configurable: true, value: {createElement: () => ({click() { clicks.push(this.download); }, remove() {}}), body: {append() {}}}});
+  URL.createObjectURL = file => { urls.push(file.name); return 'blob:test'; };
+  URL.revokeObjectURL = () => {};
+  globalThis.setTimeout = (fn, ms, ...a) => realTimeout(fn, ms, ...a).unref();
+  try {
+    const changes = [['close', p => p.setFloatPlanOpen(false)], ['edit', p => p.editFloatPlan({boat: 'Changed'})], ['date', p => p.edit({date: '2026-10-14'})], ['stops', p => p.toggleSpot('old-1', false)], ['layers', p => p.setLayer('outlines', !p.draft.value.layers.outlines)], ['name', p => p.edit({name: 'Another trip'})], ['dispose', p => p.dispose()]];
+    for (const [what, change] of changes) {
+      const {planner: p} = harness();
+      p.add('old-1'); p.setResearch(true);
+      p.setFloatPlanOpen(true, {fields: {...emptyFloatPlan(), boat: 'Mary'}, backAuto: true});
+      const done = p.deliver('notes');
+      change(p);
+      await done;
+      assert.deepEqual([urls.length, clicks.length], [0, 0], `${what}: no object URL and no download`);
+      if (what !== 'dispose') assert.match(p.actionStatus.value, /float plan changed/, what);
+      p.dispose();
+    }
+    const {planner: p} = harness();
+    p.add('old-1'); p.setResearch(true);
+    p.setFloatPlanOpen(true, {fields: {...emptyFloatPlan(), boat: 'Mary'}, backAuto: true});
+    await p.deliver('notes');
+    assert.deepEqual([urls.length, clicks.length], [1, 1], 'an unchanged plan still downloads once');
+    p.dispose();
+  } finally {
+    globalThis.setTimeout = realTimeout; URL.createObjectURL = realCreate; URL.revokeObjectURL = realRevoke;
+    if (realDocument) Object.defineProperty(globalThis, 'document', realDocument); else delete globalThis.document;
+  }
+});
