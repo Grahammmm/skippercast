@@ -42,9 +42,20 @@ def _free_gb(path: Path) -> float:
     return shutil.disk_usage(probe).free / 1e9
 
 
+def _unique_members(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    # json.loads keeps only the last of a repeated member, which would silently change which target a label names
+    # (or hide an invalid earlier value). Names are compared after decoding, so "A" and "\u0041" collide.
+    members: dict[str, object] = {}
+    for name, value in pairs:
+        if name in members:
+            raise ValueError("duplicate JSON member")
+        members[name] = value
+    return members
+
+
 def _targets(path: str) -> dict[str, int]:
     try:
-        document = json.loads(Path(path).read_text())
+        document = json.loads(Path(path).read_text(), object_pairs_hook=_unique_members)
     except (OSError, ValueError):
         raise ValueError("--targets is not a readable JSON file") from None
     if not isinstance(document, dict) or not 1 <= len(document) <= MAX_LABELS:
