@@ -356,7 +356,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1922-03: only the appCss pin and applicability comment change.
   // SC1922-08: only the appCss pin and applicability comment change.
   // SC1722-20: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "130986c57b3ce83dd258c87bc0de24d69577573d38868669b6d256507bfe10cd",
+  "scripts/check_contrast.mjs": "f56e9cdb6bc72577e2f3ed23726e6965615665fbfa9f0604c17d259d6795711e",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
