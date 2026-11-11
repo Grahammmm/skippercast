@@ -8,8 +8,8 @@ import {test, expect} from './fixtures.ts';
 
 const AREA = {region: 'morro-bay'};
 const NAMES = {
-  en: {brief: 'Skip to brief', map: 'Skip to map', rows: ['Basis for wind', 'Basis for swell', 'Basis for water', 'Basis for tide']},
-  es: {brief: 'Saltar al resumen', map: 'Saltar al mapa', rows: ['Base del viento', 'Base del oleaje', 'Base del agua', 'Base de la marea']},
+  en: {brief: 'Skip to brief', map: 'Skip to map', target: 'Brief', rows: ['Basis for wind', 'Basis for swell', 'Basis for water', 'Basis for tide']},
+  es: {brief: 'Saltar al resumen', map: 'Saltar al mapa', target: 'Resumen', rows: ['Base del viento', 'Base del oleaje', 'Base del agua', 'Base de la marea']},
 } as const;
 
 test.beforeEach(async ({page}) => {
@@ -19,7 +19,7 @@ test.beforeEach(async ({page}) => {
 
 const active = (page: Page) => page.evaluate(() => {
   const el = document.activeElement as HTMLElement | null;
-  return {tag: el?.tagName ?? '', id: el?.id ?? '', text: el?.textContent?.trim() ?? '', inBrief: !!el?.closest('#app-brief-content'), inStage: !!el?.closest('.app-stage'), body: el === document.body};
+  return {tag: el?.tagName ?? '', id: el?.id ?? '', label: el?.getAttribute('aria-label') ?? '', text: el?.textContent?.trim() ?? '', inBrief: !!el?.closest('#app-brief-content'), inStage: !!el?.closest('.app-stage'), body: el === document.body};
 });
 /** Document focus neutral, as for a visitor who has just loaded the page. */
 async function neutral(page: Page) {
@@ -71,6 +71,7 @@ test('brief_enter: Enter on Skip to brief puts focus on the brief, not just the 
   await page.keyboard.press('Tab');
   await page.keyboard.press('Enter');
   await expect.poll(async () => (await active(page)).id).toBe('app-brief-content');
+  expect((await active(page)).label, 'the focused brief is named').toBe(NAMES.en.target);
   expect(page.url(), 'a handled skip does not change the address').toBe(url);
   if (isMobile) await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'half');
   // The next Tab enters the brief's own content, in its own order.
@@ -84,6 +85,18 @@ test('brief_enter: Enter on Skip to brief puts focus on the brief, not just the 
     await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'half');
     await expect.poll(async () => (await active(page)).id).toBe('app-brief-content');
   }
+  expect(pageErrors).toEqual([]);
+});
+
+test('brief_enter_es: in Spanish, Enter on Saltar al resumen focuses the brief under its localized name, Resumen', async ({page, pageErrors, v2}) => {
+  await page.addInitScript(() => { try { localStorage.setItem('skippercast-language-v1', 'es'); } catch { /* storage blocked */ } });
+  await v2.open('app', AREA);
+  await neutral(page);
+  await page.keyboard.press('Tab');
+  expect(await active(page)).toMatchObject({tag: 'A', text: NAMES.es.brief});
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await active(page)).id).toBe('app-brief-content');
+  expect((await active(page)).label, 'the focused brief carries shell.brief in Spanish').toBe(NAMES.es.target);
   expect(pageErrors).toEqual([]);
 });
 

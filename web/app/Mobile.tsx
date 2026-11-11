@@ -106,7 +106,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
   const lead = leadDate(now), apart = lead !== state.day, dockHead = <span class="ui-eyebrow">{windowText(now, tz, language.value)}</span>;
   const lang = language.value, leadText = leadDayText(lead, now, tz, lang);
   return (
-    <div class="app-sheet-brief" id={BRIEF_ID} tabIndex={-1} onFocusIn={onFocus} data-basis={brief?.basis}>
+    <div class="app-sheet-brief" id={BRIEF_ID} tabIndex={-1} aria-label={t('shell.brief', lang)} onFocusIn={onFocus} data-basis={brief?.basis}>
       {currentMark.value && !mapUnavailable.value ? <Guard name="mark-card"><MarkCard /></Guard> : (
         <>
           <div class="app-sheet-head">
