@@ -1393,6 +1393,7 @@
     "trip.tiles": {"en": "{saved} of {planned} chart tiles", "es": "{saved} de {planned} teselas de cartas"},
     "trip.tiles.base": {"en": " · {saved} of {planned} base map tiles", "es": " · {saved} de {planned} teselas del mapa base"},
     "trip.tiles.zoom": {"en": " (zoom {min}–{max})", "es": " (zoom {min}–{max})"},
+    "trip.tiles.missingOne": {"en": " · 1 item missing", "es": " · falta 1 elemento"},
     "trip.tiles.missing": {"en": " · {n} items missing", "es": " · faltan {n} elementos"},
     "trip.status.offline": {"en": "You are offline. Connect to save this region; saved regions are unchanged.", "es": "No tienes conexión. Conéctate para guardar esta región; las regiones guardadas no cambian."},
     "trip.status.saved": {"en": "Saved {name} · {bytes}.{missing}", "es": "Se guardó {name} · {bytes}.{missing}"},
