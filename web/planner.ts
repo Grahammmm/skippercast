@@ -47,7 +47,7 @@ import {buildAlertPlan, MSG as ALERT_MSG, postTrip, type AlertLegs, type AlertPl
 export type Layers = {waypoints: boolean; outlines: boolean; alignments: boolean; exclusions: boolean};
 export type LayerKey = keyof Layers;
 export type TripSpecies = 'reef' | 'lingcod' | 'rockfish';
-export type RankedDraft = {sha256: string; species: TripSpecies; priorities: {id: string; rank: number}[]};
+export type RankedDraft = {manualOrder?: boolean; sha256: string; species: TripSpecies; priorities: {id: string; rank: number}[]};
 export type UserWaypoint = {id: string; name: string; category: string; latitude: number; longitude: number};
 export type Draft = {launchId?: string; ids: string[]; userWaypoints?: UserWaypoint[]; rankedPlan: RankedDraft | null; name: string; date: string; avoidScope: 'map' | 'region'; layers: Layers};
 export type Target = {
@@ -247,6 +247,7 @@ export function createPlanner(deps: PlannerDeps) {
     const d = exportDraft(), targets = [...tripAtlas.value.targets, ...(d.userWaypoints ?? []).map(userWaypointTarget)];
     return d.ids.map(id => targets.find(t => t.id === id)).filter((t): t is Target => !!t);
   };
+  const orderedStops = computed(selected);
   const rankedDetail = (): RankedDetail => ({targets: selected(), areas: tripAtlas.value.areas.filter(a => draft.value.ids.includes(a.id)), publication: tripAtlas.value.publication});
   const unrank = (): void => { ranked.value = false; emit({targets: [], areas: []}); };
 
@@ -309,6 +310,25 @@ export function createPlanner(deps: PlannerDeps) {
     revision++;
     const ids = draft.value.ids;
     persist({...draft.value, ids: on ? [...new Set([...ids, id])] : ids.filter(x => x !== id)});
+  }
+  // Remove only recommendation presentation; keep the publication and habitat evidence.
+  const withoutRank = (t: Target): Target => {
+    const {trip_rank, trip_fit, trip_species, distance_nm, distance_basis, distance_why, ...plain} = t;
+    return {...plain, ...(trip_rank ? {name: t.label || t.id} : {})};
+  };
+  function moveStop(id: string, direction: 'up' | 'down'): boolean {
+    const d = draft.value, at = d.ids.indexOf(id), to = at + (direction === 'up' ? -1 : 1);
+    if (disposed || restorePending.value || id.startsWith('user:launch-') || at < 0 || to < 0 || to >= d.ids.length) return false;
+    const ids = [...d.ids];
+    [ids[at], ids[to]] = [ids[to]!, ids[at]!];
+    revision++;
+    batch(() => {
+      unrank();
+      tripAtlas.value = {...tripAtlas.value, targets: tripAtlas.value.targets.map(withoutRank)};
+      persist({...d, ids, rankedPlan: d.rankedPlan ? {...d.rankedPlan, manualOrder: true} : null});
+      scopeStatus.value = 'Your own stop order.';
+    });
+    return true;
   }
   function setContourTracks(on: boolean): void {
     contourTracks.value = on;
@@ -470,6 +490,7 @@ export function createPlanner(deps: PlannerDeps) {
         tripAtlas.value = {...tripAtlas.value, publication: loaded.publication, source_validation_date: loaded.source_validation_date, areas: [...atlas.areas, ...loaded.areas],
           targets: [...atlas.targets, ...loaded.targets.map(t => {
             const p = plan.priorities.find(x => x.id === t.id);
+            if (plan.manualOrder) return withoutRank(t);
             if (!p) return t;
             const s: Target = {...t, trip_rank: p.rank, trip_fit: planFit(t, plan.species), trip_species: plan.species};
             s.name = waypointTitle(s) as string;
@@ -477,8 +498,8 @@ export function createPlanner(deps: PlannerDeps) {
           })]};
         filters.value = {...filters.value, species: plan.species};
         restorePending.value = false;
-        ranked.value = draft.value.ids.every(id => plan.priorities.some(p => p.id === id));
-        scopeStatus.value = 'Saved ranked reefs restored from the current publication. Check your trip conditions before departure.';
+        ranked.value = !plan.manualOrder && draft.value.ids.every(id => plan.priorities.some(p => p.id === id));
+        scopeStatus.value = plan.manualOrder ? 'Your own stop order.' : 'Saved ranked reefs restored from the current publication. Check your trip conditions before departure.';
       });
     } catch (error) {
       if (mine === revision) scopeStatus.value = (error as Error).message;
@@ -723,7 +744,7 @@ export function createPlanner(deps: PlannerDeps) {
     chooseWaypoint, saveWaypoint, removeWaypoint, addPlace,
     savedSpots, savedSpotsState, savedSpotsStatus, setSavedSpotsOpen, refreshSavedSpots, addSavedSpot,
     alertStatus, alertBusy, alertSaved, alertIsSaved: (body: unknown): boolean => alertSavedKeys.value.includes(JSON.stringify(body)), setAlertOpen, alertPreview, saveAlert,
-    setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
+    setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     routing, routeStatus, exportRouteFile, deliverRoute,
     /** For tests and a region change: stop drawing the ranked set. */

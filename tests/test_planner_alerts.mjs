@@ -19,7 +19,7 @@ const {validateTrip} = await import('../server/trips.ts');
 
 const hookStub = {name: 'hook-stub', setup: b => {
   b.onResolve({filter: /^preact\/hooks$/}, a => a.importer.endsWith('web/app/Planner.tsx') ? {path: 'hooks', namespace: 'hook-stub'} : null);
-  b.onLoad({filter: /.*/, namespace: 'hook-stub'}, () => ({contents: 'export const useEffect = (fn, deps) => { (globalThis.__plannerEffects ??= []).push(fn); };', loader: 'js'}));
+  b.onLoad({filter: /.*/, namespace: 'hook-stub'}, () => ({contents: 'export const useLayoutEffect = () => {}; export const useRef = current => ({current}); export const useEffect = (fn, deps) => { (globalThis.__plannerEffects ??= []).push(fn); };', loader: 'js'}));
 }};
 const dir = await mkdtemp(join(tmpdir(), 'planner-alerts-')), out = join(dir, 'ui.mjs');
 await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
@@ -85,6 +85,19 @@ test('planner_alert_body_maps_ids_drops_notes_and_validates', async () => {
   assert.match(h.planner.alertStatus.value, /^Trip saved with this plan\./);
   assert.deepEqual(h.planner.draft.value.ids, [FIRST.id, SECOND.id], 'the browser draft is untouched'); assert.deepEqual(traffic, []);
   h.planner.dispose(); m.launchPoints.value = null;
+});
+
+test('reordered alert snapshot keeps launch last and validates on the server', async () => {
+  m.launchPoints.value = {region: REGION.id, points: [{id: 'ramp.1', name: 'Ramp', latitude: 35.37, longitude: -120.86}]};
+  const h = harness({launchId: 'ramp.1'});
+  try {
+    assert.equal(h.planner.moveStop(SECOND.id, 'up'), true);
+    assert.equal(h.calls.length, 0);
+    await h.save();
+    const body = h.calls[0].body;
+    assert.deepEqual(body.plan.spots.map(s => [s.name, s.order]), [['Second Reef', 0], ['North Reef', 1], ['Launch · Ramp', 2]]);
+    assert.equal(validateTrip(JSON.parse(JSON.stringify(body)), NOW.getTime()).launch_point, 'stop-3');
+  } finally { h.planner.dispose(); m.launchPoints.value = null; }
 });
 
 test('planner_alert_private_note_never_enters_trip', async () => {
