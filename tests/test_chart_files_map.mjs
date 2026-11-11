@@ -2,16 +2,19 @@
 // region.json does not list (`chart_files`, web/chart-files.ts). Unknown or listed: today's behaviour.
 // Offline: `publishedChartFiles` is set directly and the contour layer gets a fake engine and fetchFn.
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {signal} from '@preact/signals';
 import {chartFilesPending, publishedChartFiles} from '../web/chart-files.ts';
 import {SHORELINE_DETAIL_ZOOM, coastlineFetchPath, coastlineSource, shorelineFor, shorelineOverviewURL, shorelinePublished, shorelineURL} from '../web/map/coastline.ts';
-import {DETAIL_ZOOM, contourState, createDepthContours, depthContoursOverviewURL, depthContoursURL} from '../web/map/depth-contours.ts';
+import {DETAIL_ZOOM, contourState, contoursFor, createDepthContours, depthContoursOverviewURL, depthContoursURL} from '../web/map/depth-contours.ts';
 import {ZOOM_OFFSET} from '../web/map/engine.ts';
 import {camera} from '../web/map/stage.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
 
 const PAGE = 'https://s.test/map';
+const fixture = name => JSON.parse(readFileSync(new URL(`../dist/regions/morro-bay/${name}`, import.meta.url), 'utf8'));
+const FULL = fixture('depth-contours.geojson'), OVERVIEW = fixture('depth-contours-overview.geojson');
 const EMPTY = {type: 'FeatureCollection', features: []};
 const ATTRIBUTION = 'NOAA NGS · CUSP shoreline';
 const DETAIL = SHORELINE_DETAIL_ZOOM + ZOOM_OFFSET;
@@ -89,8 +92,8 @@ test('pending: only this region\'s loading list waits; a pending list fails open
 });
 
 /** The contour layer for region `r` over a fake engine; every fetch answers 404 unless the test serves it. */
-function contours(t, {serve = () => null} = {}) {
-  globalThis.location = {href: 'https://s.test/map?region=r'};
+function contours(t, {serve = () => null, id = 'r'} = {}) {
+  globalThis.location = {href: `https://s.test/map?region=${id}`};
   configureStore({v2: true, storage: null});
   syncFromURL(location.href);
   camera.value = {latitude: 35.35, longitude: -120.95, zoom: 11};
@@ -101,11 +104,12 @@ function contours(t, {serve = () => null} = {}) {
     const body = serve(path);
     return body ? {ok: true, status: 200, json: async () => body} : {ok: false, status: 404, json: async () => ({})};
   };
-  const engine = signal({setOverlay() {}, setData() {}});
-  const layer = createDepthContours({engine, fetchFn, page: () => location.href, now: () => Date.parse('2026-10-20T18:00:00Z')});
+  const overlays = [];
+  const engine = signal({setOverlay(_id, o) { overlays.push(o); }, setData() {}});
+  const layer = createDepthContours({engine, fetchFn, page: () => location.href, palette: () => ({}), now: () => Date.parse('2026-10-20T18:00:00Z')});
   t.after(() => { layer.destroy(); camera.value = null; });
   const detail = async () => { camera.value = {...camera.value, zoom: DETAIL_ZOOM + ZOOM_OFFSET}; await flush(); await flush(); };
-  return {asked, detail, layer};
+  return {asked, detail, layer, overlays};
 }
 
 test('contours unlisted: no request at any zoom, and the layer settles as none with no row', async t => {
@@ -120,13 +124,53 @@ test('contours unlisted: no request at any zoom, and the layer settles as none w
   assert.equal(contourState.value.status, 'none');
 });
 
-test('contours: only the overview listed — it is fetched once, then the full form settles none without a request', async t => {
-  publish('r', ['depth-contours-overview.geojson']);
+test('contours: only the overview listed — fetched once, drawn, and kept (not none) at the detail zoom with no full request', async t => {
+  publish('morro-bay', ['depth-contours-overview.geojson']);
+  const {asked, detail, overlays} = contours(t, {id: 'morro-bay', serve: path => path.endsWith('overview.geojson') ? OVERVIEW : null});
+  await flush(); await flush();
+  assert.deepEqual(asked, [depthContoursOverviewURL('morro-bay')]);
+  assert.equal(contourState.value.status, 'drawn');
+  await detail();
+  assert.deepEqual(asked, [depthContoursOverviewURL('morro-bay')]);
+  assert.equal(contourState.value.status, 'drawn');
+  assert.ok(contourState.value.sources.length > 0, 'sources retained');
+  assert.ok(overlays.some(o => o !== null) && !overlays.slice(overlays.findIndex(o => o !== null)).includes(null), 'drawn, then never cleared');
+});
+
+test('contours: only the full form listed — asked once at low zoom, drawn, stays drawn; the overview is never asked for', async t => {
+  publish('morro-bay', ['depth-contours.geojson']);
+  const {asked, detail, overlays} = contours(t, {id: 'morro-bay', serve: path => path.endsWith('/depth-contours.geojson') ? FULL : null});
+  await flush(); await flush();
+  assert.deepEqual(asked, [depthContoursURL('morro-bay')]);
+  assert.equal(contourState.value.status, 'drawn');
+  await detail();
+  assert.deepEqual(asked, [depthContoursURL('morro-bay')]);
+  assert.equal(contourState.value.status, 'drawn');
+  assert.ok(overlays.some(o => o !== null) && !overlays.slice(overlays.findIndex(o => o !== null)).includes(null), 'drawn, then never cleared');
+});
+
+test('contours: a single form at initial high zoom, and lookalike filenames, select only a real listed form', async t => {
+  for (const [files, want] of [[['depth-contours.geojson'], depthContoursURL], [['depth-contours-overview.geojson'], depthContoursOverviewURL]]) {
+    publish('morro-bay', files);
+    assert.equal(contoursFor('morro-bay', 1), want('morro-bay'));
+    assert.equal(contoursFor('morro-bay', DETAIL_ZOOM + ZOOM_OFFSET), want('morro-bay'));
+    assert.equal(contoursFor('morro-bay', 1, true), want('morro-bay'));
+  }
+  publish('morro-bay', ['depth-contours.geojson.bak', 'Depth-contours-overview.geojson']);
+  assert.equal(contoursFor('morro-bay', 1), depthContoursOverviewURL('morro-bay'), 'neither listed: the zoom rule');
+  assert.equal(contoursFor('morro-bay', DETAIL_ZOOM + ZOOM_OFFSET), depthContoursURL('morro-bay'));
+  publish('other', ['depth-contours.geojson']);
+  assert.equal(contoursFor('morro-bay', 1), depthContoursOverviewURL('morro-bay'), 'another region\'s list: fail open');
+  publish('morro-bay', null);
+  assert.equal(contoursFor('morro-bay', 1), depthContoursOverviewURL('morro-bay'), 'no list: fail open');
+});
+
+test('contours: a single listed form that 404s stays none and does not fall back to the other form', async t => {
+  publish('r', ['depth-contours.geojson']);
   const {asked, detail} = contours(t);
   await flush(); await flush();
-  assert.deepEqual(asked, [depthContoursOverviewURL('r')]);
   await detail();
-  assert.deepEqual(asked, [depthContoursOverviewURL('r')]);
+  assert.deepEqual(asked, [depthContoursURL('r')]);
   assert.equal(contourState.value.status, 'none');
 });
 

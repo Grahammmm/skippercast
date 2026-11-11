@@ -3,7 +3,7 @@
 // Synthetic state only: nothing here touches the network.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {mkdtemp} from 'node:fs/promises';
+import {mkdtemp, readFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -155,6 +155,12 @@ test('shell_es_account_states_and_names: all five states, names pass through esc
     assert.ok(!named.includes('<b>Skipper</b>'));
     m.session.value = {state: 'signed-in', name: null, advisor: false};
     assert.ok(m.render(m.h(m.AccountMenu, {})).includes('>Sesión iniciada</h2>'));
+    for (const [value, label] of [[{state: 'signed-out', advisor: false}, 'Iniciar sesión'], [{state: 'offline'}, 'Cuenta'], [{state: 'signed-in', name: '<b>"Sol"</b> & co', advisor: false}, '&lt;b>&quot;Sol&quot;&lt;/b> &amp; co']]) {
+      m.session.value = value;
+      const trigger = m.render(m.h(m.AccountMenu, {})).match(/<button type="button" class="ui-button ui-button--quiet app-account-trigger"[^>]*>.*?<\/button>/)[0];
+      assert.ok(trigger.includes(` title="${label}"`) && trigger.endsWith(`<span class="app-account-label">${label}</span></button>`), trigger);
+      assert.equal((trigger.match(/aria-label/g) || []).length, 0, 'the label span is the only accessible name');
+    }
     assert.equal(m.accountLabel({state: 'signed-out', advisor: false}, 'es'), 'Iniciar sesión');
     assert.equal(m.accountLabel({state: 'loading'}, 'es'), 'Iniciar sesión');
     assert.equal(m.accountLabel({state: 'offline'}, 'es'), 'Cuenta');
@@ -193,4 +199,17 @@ test('shell_language_switch: en -> es -> en restores the exact English markup, t
   const shape = html => html.replace(/<span lang="en">([^<]*)<\/span>/g, '$1').replace(/>[^<]*</g, '><').replace(/\s(?:aria-label|aria-valuetext|placeholder|title|label|aria-pressed|data-on)="[^"]*"/g, '').replace(/id="[^"]*"|aria-labelledby="[^"]*"|aria-controls="[^"]*"/g, '');
   assert.equal(shape(first), shape(es), 'switching language changes words only: same elements, order and attributes');
   m.setLanguage('en', {storage: none, doc: null});
+});
+
+test('compact_account_css_is_masthead_band_only: the narrow-desktop rule is media-bounded, masthead-direct-child scoped, non-inline and keeps the label in the DOM', async () => {
+  const css = await readFile(new URL('../web/app/account.css', import.meta.url), 'utf8');
+  const at = css.indexOf('@media (min-width: 1024px) and (max-width: 1179px)');
+  assert.ok(at >= 0, 'the band is 1024-1179px');
+  const block = css.slice(at, css.indexOf('\n}\n', at));
+  const selectors = [...block.matchAll(/^\s*([^{}@]+)\{/gm)].map(x => x[1].trim());
+  assert.equal(selectors.length, 2);
+  for (const sel of selectors) assert.ok(sel.startsWith('.app-masthead > .app-account:not([data-inline]) > .app-account-trigger'), sel);
+  assert.ok(block.includes('calc(var(--touch-min) + 0.5px)') && block.includes('clip-path: inset(50%)'));
+  assert.ok(!/display:\s*none|visibility:\s*hidden/.test(block), 'the label is visually hidden, never removed from the accessible name');
+  assert.ok(!css.slice(0, at).includes('.app-account-label'), 'no rule outside the band touches the label');
 });

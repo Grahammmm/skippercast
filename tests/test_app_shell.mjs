@@ -49,7 +49,9 @@ async function load() {
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
       export {MarkCard, clearSelection, currentMark, placeholderMark, readingCard, terrainCard} from './web/app/MarkCard.tsx';
       export {chartMark} from './web/map/chart.ts';
-      export {PresentationToggle, TerrainControls, PRESENTATIONS} from './web/app/MapStage.tsx';
+      export {PresentationToggle, TerrainControls, PRESENTATIONS, MapStage, chartLoading} from './web/app/MapStage.tsx';
+      export {mapFirstIdle} from './web/map-ready.ts';
+      export {chartFailed} from './web/map/chart.ts';
       export {terrainActions, terrainFailed, terrainReason, UNAVAILABLE, NO_TERRAIN} from './web/map/stage.ts';
       export {beginWaypointPlacement, cancelWaypointPlacement, placeWaypoint, placementRefused} from './web/waypoint-placement.ts';
       export {Legend, RankedRow} from './web/app/Legend.tsx';
@@ -522,7 +524,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.deepEqual(attrs(html, /data-view="([a-z]+)"/g), ['coast', 'conditions', 'history', 'fleet', 'reports']);
   assert.match(html, /class="app-fresh" role="status" data-state="unknown" aria-label="Freshness: No readings yet"/);
   // FE-50: sign in is the account menu's button, closed until pressed.
-  assert.match(html, /<div class="app-account"><button type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded="false" aria-controls="([^"]+)">.*?Sign in<\/button><div id="\1" class="app-account-panel" hidden/);
+  assert.match(html, /<div class="app-account"><button type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded="false" aria-controls="([^"]+)" title="Sign in">.*?<span class="app-account-label">Sign in<\/span><\/button><div id="\1" class="app-account-panel" hidden/);
   assert.match(html, /role="group" aria-label="Profile"/);
   assert.equal(count(html, /(?:Boat|Shore|Spear|Kayak)<\/button>/g), 4);
   assert.equal(count(html, /<label>Target<select/g), 1);
@@ -830,7 +832,7 @@ test('the map chrome offers Chart, 2D and 3D; without terrain the terrain choice
     try {
       const terrain = await renderShell(`${ORIGIN}?region=morro-bay&presentation=3d`);
       assert.deepEqual(toggle(terrain), [['Chart', false, false, false], ['2D', false, false, false], ['3D', true, false, false]]);
-      assert.match(terrain, /<div class="app-map" hidden><div class="app-chart"><\/div><\/div><div class="app-terrain" tabindex="-1" data-coast-theme="tokens"><\/div>/, 'the terrain host is shown with the token opt-in; the Chart host (FE-11) waits hidden');
+      assert.match(terrain, /<div class="app-map" hidden><div class="app-chart" aria-busy="false"><\/div><\/div><div class="app-terrain" tabindex="-1" data-coast-theme="tokens"><\/div>/, 'the terrain host is shown with the token opt-in; the Chart host (FE-11) waits hidden');
       const none = await renderShell(`${ORIGIN}?region=channel-islands&presentation=3d`);
       assert.deepEqual(toggle(none), [['Chart', true, false, false], ['2D', false, true, true], ['3D', false, true, true]]);
       assert.match(none, /<p id="app-stage-note" class="app-stage-note" role="status">No reviewed coastal terrain covers this region yet.<\/p>/);
@@ -942,6 +944,36 @@ test('the legend keys the ranked trip spots while the Chart draws them (#422)', 
   } finally { rankedSpots.value = []; markScreen.value = CHECKING; }
 });
 
+test('RF2115-5: the Chart shows a polite loading status and aria-busy until the visit\'s first idle; failure, terrain and a settled visit show none', async () => {
+  const {MapStage, mapFirstIdle, chartFailed, terrainFailed, language, setLanguage, render, h, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  const none = {getItem: () => null, setItem() {}};
+  const status = html => html.match(/<p[^>]*data-chart-loading-status[^>]*>([^<]*)<\/p>/);
+  const busy = html => html.match(/<div class="app-chart"[^>]*aria-busy="(true|false)"/)?.[1];
+  const idle = mapFirstIdle.peek(), failed = chartFailed.peek();
+  try {
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart`);
+    mapFirstIdle.value = false; chartFailed.value = false;
+    let html = render(h(MapStage, {}));
+    assert.equal(status(html)?.[1], 'Loading the map…');
+    assert.match(status(html)[0], /role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"|aria-live="polite"[^>]*role="status"/);
+    assert.equal(busy(html), 'true');
+    assert.equal((html.match(/aria-busy/g) ?? []).length, 1, 'only the chart host is busy');
+    setLanguage('es', {storage: none, doc: null});
+    assert.equal(status(render(h(MapStage, {})))[1], 'Cargando el mapa…');
+    setLanguage('en', {storage: none, doc: null});
+    mapFirstIdle.value = true;
+    html = render(h(MapStage, {}));
+    assert.equal(status(html)[1], '', 'settled: the status is empty'); assert.equal(busy(html), 'false');
+    mapFirstIdle.value = false; chartFailed.value = true;
+    html = render(h(MapStage, {}));
+    assert.doesNotMatch(html, /Loading the map/); assert.equal(busy(html), 'false');
+    chartFailed.value = false;
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=2d`);
+    html = render(h(MapStage, {}));
+    assert.equal(status(html)[1], '', 'terrain shown: no Chart loading cue'); assert.equal(busy(html), 'false');
+  } finally { mapFirstIdle.value = idle; chartFailed.value = failed; setLanguage('en', {storage: none, doc: null}); }
+});
 test('SC1952-06: the armed Chart status shows a refusal as text, keeps the instruction and Cancel, and hides it when disarmed, in 3D or in another region', async () => {
   const {PresentationToggle, beginWaypointPlacement, cancelWaypointPlacement, placeWaypoint, placementRefused, assessScreen, render, h, state} = await load();
   state.configureStore({v2: true, storage: memory()});

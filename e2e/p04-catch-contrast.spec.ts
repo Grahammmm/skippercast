@@ -249,7 +249,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // Reports/CatchCards and does not mount MapStage; no CSS, token, catch markup, paint, assertion or threshold changes. Rebind only MapStage.tsx.
   // SC1922-03: MapStage.tsx renders Cancel waypoint through the shared Button and adds the app-presentation--placing modifier class to the stack while a waypoint placement is armed; BODY09 mounts Reports/CatchCards, never MapStage. No catch markup, token or paint change. Rebind only MapStage.tsx.
   // SC1722-20: MapStage's stage section gains only an id (the Skip to map target); BODY09 never mounts MapStage. No paint, catch markup, contrast(), assertion or threshold changes. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "2130d03dee06a0e2b82432a71fe4e3e9edfc5463229259f190246b5269f06dea",
+  // RF2115-5: MapStage.tsx adds a startup loading status paragraph (existing app-stage-note class) and aria-busy on the Chart host; BODY09 renders Reports/CatchCards, never MapStage. No paint, token, assertion or threshold change. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "36b53b944969344d2f563b5d4da57c1c621f57127110fddc2fc7f0287f33807e",
   "web/tokens.css": "85271ff5258cbbe3bfce09a7dc0b5c16ff1e31325b5a5f8d5d8a9fedd425dfd1",
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
   // changes (panel.css: History scroller 2 px ring and one summary ring; app.css: fleet checkbox ring); unfocused catch text and contrast are unchanged. check_contrast.mjs changes only the appCss surface hash, its comment and moved citations. Rebound from final bytes.

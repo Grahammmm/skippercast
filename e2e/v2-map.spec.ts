@@ -102,7 +102,7 @@ test('the terrain chrome sits clear of the stage chrome and axe is clean', async
   await holdCoastData(page);
   await v2.open('app', {...PLACE, presentation: '3d'});
   await expect.poll(() => page.locator('.app-terrain').evaluate(el => [...(el.shadowRoot?.querySelectorAll('link') ?? [])].every(l => !!(l as HTMLLinkElement).sheet) && !!el.shadowRoot?.getElementById('scene'))).toBe(true);
-  await expect(page.locator('.app-stage-note')).toBeEmpty();
+  await expect(page.locator('#app-stage-note')).toBeEmpty();
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width, 'no horizontal page scroll').toBeLessThanOrEqual(page.viewportSize()!.width);
   await v2.a11y('v2-map-terrain');
@@ -226,7 +226,7 @@ test('unavailable terrain data returns the stage to Chart with v1\'s message', a
 
 test('a region without terrain offers Chart only and says why', async ({page, v2}) => {
   await v2.open('app', {region: 'santa-cruz-monterey-bay', presentation: '3d'});
-  await expect(page.locator('.app-stage-note')).toHaveText('No reviewed coastal terrain covers this region yet.');
+  await expect(page.locator('#app-stage-note')).toHaveText('No reviewed coastal terrain covers this region yet.');
   await expect(toggle(page, 'Chart')).toHaveAttribute('aria-pressed', 'true');
   for (const name of ['2D', '3D']) {
     await expect(toggle(page, name)).toBeDisabled();
@@ -369,6 +369,34 @@ test('a failing coastline marks only its layer unavailable; the basemap keeps dr
   await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).toContainText('© OpenStreetMap contributors, © Protomaps');
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
   expect(asked).toEqual(['/regions/morro-bay/shoreline-overview.geojson', '/regions/morro-bay/shoreline.geojson']);
+});
+
+// RF2115-5 first_chart_local_delayed_frame: a held local basemap keeps the Chart from its first idle frame, so the stage says it is loading
+// (a polite status in the chrome stack, and only the Chart host is aria-busy); once the basemap answers, the same status empties and the host is not busy.
+test('the first Chart says "Loading the map…" and is busy until its basemap is released, then neither', async ({page, pageErrors, v2}) => {
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const asked: string[] = [];
+  await page.route(`**/feeds/${ARCHIVE}`, async route => { asked.push(route.request().url()); await held; await route.fallback(); });
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,11'});
+  const chart = page.locator('.app-chart');
+  const status = page.locator('[data-chart-loading-status]');
+  await expect(status).toBeVisible();
+  await expect(status).toHaveText('Loading the map…');
+  await expect(status).toHaveAttribute('role', 'status');
+  await expect(chart).toHaveAttribute('aria-busy', 'true');
+  // Only the Chart host is busy because of the map: the status and the presentation toggle around it are never marked busy.
+  await expect(page.locator('.app-chart[aria-busy="true"]')).toHaveCount(1);
+  await expect(page.locator('.app-presentation [aria-busy], .app-presentation[aria-busy]'), 'the status stays in the chrome stack, not busy').toHaveCount(0);
+  await expect(page.locator('[data-chart-loading-status]')).toHaveCount(1);
+  expect(asked.length, 'the held basemap was asked for').toBeGreaterThan(0);
+  release();
+  await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
+  await expect(status).toHaveText('');
+  await expect(chart).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator('.app-chart[aria-busy="true"]')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
 });
 
 test('RF2205-9: an overview-only region never asks for the full shoreline, even after the overview fails', async ({page, v2}) => {
@@ -1661,6 +1689,26 @@ test('phone widths do not get the desktop rail rules', async ({page, pageErrors,
   }
   expect(pageErrors).toEqual([]);
 });
+
+// RF0035-8: a region.json that lists one contour form gets that form at every zoom, and the other is never asked for.
+for (const [listed, other] of [['depth-contours.geojson', 'depth-contours-overview.geojson'], ['depth-contours-overview.geojson', 'depth-contours.geojson']]) {
+  test(`RF0035-8: a region listing only ${listed} draws it at low and high zoom and never asks for the other form`, async ({page, v2}) => {
+    const asked: string[] = [];
+    await page.route('**/regions/morro-bay/region.json', async route => {
+      const response = await route.fetch();
+      await route.fulfill({response, json: {...await response.json(), chart_files: [listed, 'shoreline-overview.geojson']}});
+    });
+    await page.route(/\/regions\/morro-bay\/depth-contours(?:-overview)?\.geojson$/, async route => { asked.push(new URL(route.request().url()).pathname.split('/').pop()!); return route.continue(); });
+    await holdCoastData(page);
+    for (const view of ['35.32000,-120.90000,8', '35.32000,-120.90000,15']) {
+      await v2.open('app', {region: 'morro-bay', presentation: 'chart', view, layers: 'water-temp'});
+      await showLayers(page);
+      await expect(page.locator('.app-legend .app-swatch[data-layer="depth-contours"]')).toHaveCount(1);
+    }
+    expect(asked.length).toBeGreaterThan(0);
+    expect(asked.filter(name => name === other), 'the unlisted form is never asked for').toEqual([]);
+  });
+}
 
 // RF2315-6: the settled 3D orbit is the five-number ?view=, Share carries it, and the reopened link restores it.
 test('browser_orbit_survives_share_reopen: an orbit is shared as bearing and pitch and the reopened map reports the same angles', async ({page, context, pageErrors, v2}) => {
