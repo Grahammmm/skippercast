@@ -4,4 +4,11 @@ The advisor formatter must distinguish a valid nullable count from a measured ze
 
 This is display-only behavior. It does not change intake validation, species aggregation, storage representation, or catch policy. `countLines` continues to represent missing/non-finite values as null.
 
-Offline regression fixtures use the producer-shaped `counts_json` list in `tests/fixtures/sp1602_report_unknown_counts/counts.json`. Focused coverage also exercises `reportsTable`, the actual advisor report-table consumer, to confirm measured labels remain HTML-escaped there. Run the card acceptance launcher as documented in the task brief; evidence output is candidate-local and unique per invocation. A scoped pass is review-required and is not full repository or semantic acceptance.
+Offline regression fixtures use the producer-shaped `counts_json` list in `tests/fixtures/sp1602_report_unknown_counts/counts.json`. Focused coverage also exercises `reportsTable`, the actual advisor report-table consumer, to confirm measured labels remain HTML-escaped there. Run the ordinary offline regression checks directly:
+
+```bash
+node --test tests/test_sp1602_report_unknown_counts.mjs
+node --test tests/test_advisor_pages.mjs
+```
+
+The historical staged acceptance launcher for this card is retired (it remains in git history). These commands do not recreate its old baseline receipts or reproduce its expected-red baseline, and a pass is not full repository or semantic acceptance.
