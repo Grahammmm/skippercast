@@ -97,6 +97,10 @@
         },
         {
           "max_bytes": 76000,
+          "reason": "Raised 75,000 to 76,000 (SC1722-19). The desktop startup and time-dock rules this PR adds in web/app/app.css, together with main's stylesheet changes taken in the merge, take the app first-load styles to 75,097 bytes (assets/app css 53.7 KB plus degraded-notice, tokens and Brief), 97 bytes over the 75,000 budget; the budget moves up 1,000 bytes (1.3% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 76000,
           "reason": "Raised 75,000 to 76,000 (RF2135-6). The account dialog's bounded scrollport and scroll-edge cue rules this PR adds in web/app/account.css (about 1.6 KB of source) take the app first-load styles to 75,645 bytes on this branch merged with main ec6fda526 (assets/app css 54.2 KB plus degraded-notice, tokens and Brief), 645 bytes over the 75,000 budget; the budget moves up 1,000 bytes (0.5% headroom over that build), no more."
         }
       ]

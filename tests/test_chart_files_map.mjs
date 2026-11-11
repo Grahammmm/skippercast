@@ -53,16 +53,18 @@ test('only the full shoreline listed: the full file at every zoom, never the ove
   assert.equal(coastlineSource('r', PAGE, shorelineFor('r', 1)).data, 'https://s.test/regions/r/shoreline.geojson');
 });
 
-test('only the overview listed: today\'s rule (overview below the detail zoom, the full file at and after it)', () => {
+test('overview_only_never_upgrades: only the overview listed -> the overview at every zoom and after a detail load', () => {
   publish('r', ['shoreline-overview.geojson']);
   assert.equal(shorelinePublished('r'), true);
-  assert.equal(shorelineFor('r', 1), shorelineOverviewURL('r'));
-  assert.equal(shorelineFor('r', DETAIL - 1), shorelineOverviewURL('r'));
-  assert.equal(shorelineFor('r', DETAIL), shorelineURL('r'));
-  assert.equal(shorelineFor('r', 20), shorelineURL('r'));
-  assert.equal(coastlineFetchPath('r', 1, true), shorelineURL('r'));
+  for (const zoom of [1, DETAIL - 1, DETAIL, 20]) {
+    assert.equal(shorelineFor('r', zoom), shorelineOverviewURL('r'), `zoom ${zoom}`);
+    assert.equal(shorelineFor('r', zoom, true), shorelineOverviewURL('r'), `detail latch, zoom ${zoom}`);
+    assert.equal(coastlineFetchPath('r', zoom, true), shorelineOverviewURL('r'));
+  }
   publish('r', ['shoreline-overview.geojson', 'shoreline.geojson']);
   assert.equal(shorelineFor('r', DETAIL - 1), shorelineOverviewURL('r'), 'both listed: unchanged');
+  assert.equal(shorelineFor('r', DETAIL), shorelineURL('r'), 'both listed: full from the detail zoom');
+  assert.equal(shorelineFor('r', 1, true), shorelineURL('r'), 'both listed: the detail latch stays full');
 });
 
 test('another region\'s list says nothing about this one (fail open)', () => {

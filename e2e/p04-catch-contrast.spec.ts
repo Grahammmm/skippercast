@@ -217,7 +217,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // same classes, markup and text. BODY09 mounts Reports/CatchCards, never Masthead. CSS, tokens and catch markup
   // are unchanged; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
   // SC1922-03: Masthead.tsx renders Location's Retry through the shared Button (ui-button--quiet ui-button--sm); BODY09 mounts Reports/CatchCards, never Masthead. No catch markup, token or paint change. Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "c358be039c64285446254d730fa0b99f133529e36ea6fed7853e4132eaa6fd37",
+  // SC1922-08: Masthead.tsx's FreshnessDot gains a Refresh Button and a status line inside the chip, beside the unchanged age span; BODY09 mounts Reports/CatchCards, never Masthead. No token, catch markup or catch paint change (the CSS is the app.css chip rule and appended block, bound below). Rebind only Masthead.tsx.
+  "web/app/Masthead.tsx": "4f233466f19c5a174d2b94c3a2b22ad748c44c7b80b3fd5b9f2b0e3744ac3466",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
@@ -270,9 +271,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
   // RF1925-1: masthead minimum-width only; Reports paint and contrast proof unchanged.
   // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
+  // SC1722-19: app.css adds only desktop layout rules (the app scrolls inside itself, the stage clips, a sticky time dock); the Reports catch sheet mounts neither; check_contrast.mjs changes only the appCss hash and its comment. Rebound from the final bytes.
   // RF1935-2: app.css adds only a desktop-only layer-rail preset wrap block and the rail's vertical scroll track (layout, no paint); the Reports catch sheet mounts no rail. Rebound from the final bytes.
   // SC1922-03: app.css adds only a Conditions-header model-family wrap/min-height rule and a pointer-events rule scoped to .app-presentation--placing (the armed placing stack, which Reports never mounts); no paint, backing or catch text changed. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
-  "web/app/app.css": "8bc7e71b104fc2bd96d2799297623263663cc2d337770260ea553785b06880e7",
+  // SC1922-08: app.css lets the .app-fresh chip wrap (flex-wrap, max-width) and appends only a [data-refresh-line] wrap rule (no colour change); the Reports catch sheet mounts neither. check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
+  "web/app/app.css": "2b1ad2c453ab12f25a6fc43ab269b3369a4217c48607fa1f756e0d10253913bb",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -294,7 +297,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // The legacy failed preload now triggers a reload. Serve only its three exact
   // section URLs as 503 below, retaining unavailable sections and the strict
   // unexpected-request guard; catch markup, paint and controls stay unchanged.
-  "web/app/views/Reports.tsx": "0b05828f095c4645fcf01dbbe2a349c285d2cbf6078d2ca093c2fdcae0dc5b97",
+  // RF2115-7: Reports.tsx only passes the matching region's zone to its timestamp labels (date-only dates stay UTC); catch markup, paint and contrast are unchanged. Rebound.
+  "web/app/views/Reports.tsx": "80191b511a22f75fb9122389336cd98017c8794ac8be5e284edb53edee111b96",
   "web/app/CoastMarkup.tsx": "3d318379ff1194b26f68adadb523db08c21829ff71cf5e7cfe2ac903821f0efc",
   "packages/coast/src/ui/catches.ts": "a25442909c360171a11e5087f629de8cec94a358fc7bff877adce9dffbc0999f",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
@@ -343,9 +347,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // assertions and thresholds are unchanged. Rebind only these two sources.
   // SC1722-06: Limits-only geometry/sticky actions; Reports paint and contrast proof unchanged.
   // RF1925-1: only appCss pin and applicability comment change.
+  // SC1722-19: only the appCss pin and applicability comment change.
   // RF1935-2: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // SC1922-03: only the appCss pin and applicability comment change.
-  "scripts/check_contrast.mjs": "f76f2e8238656f3c9516499fd1e0e04a68c008c4e01015bb3955118623930177",
+  // SC1922-08: only the appCss pin and applicability comment change.
+  "scripts/check_contrast.mjs": "ec60644e195c6108d679772941ef34dd5956bd04b7cf33ed212763792a0f5a46",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
