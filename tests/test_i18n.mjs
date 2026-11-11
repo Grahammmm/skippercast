@@ -136,8 +136,8 @@ test('with the language es the first answer, the brief and its footer render Spa
     m.language.value = 'es';
     const es = m.render(m.h(m.App, {now: NOW})), esAnswer = answer(es), esBrief = m.render(m.h(m.Verdict, {now: NOW})), footer = m.render(m.h(m.BriefFooter, {}));
     assert.match(esAnswer, /<h2 class="app-first-answer-line">(?:Sí|Marginal|No|Aún no se sabe) - mañana/);
-    assert.match(esAnswer, /aria-label="La respuesta"/); assert.match(esAnswer, />Ver el mapa y el detalle</); assert.match(esAnswer, /Reglas (?:revisadas|pendientes de revisión|no disponibles)/);
-    assert.match(esAnswer, />Reglas oficiales</); assert.doesNotMatch(esAnswer, /Official rules|Show the map|Rules reviewed/);
+    assert.match(esAnswer, /aria-label="La respuesta"/); assert.match(esAnswer, />Ir al mapa y a los detalles</); assert.match(esAnswer, /Reglas (?:revisadas|pendientes de revisión|no disponibles)/);
+    assert.match(esAnswer, />Reglas oficiales</); assert.doesNotMatch(esAnswer, /Official rules|Go to map|Ver el mapa|Rules reviewed/);
     assert.match(esBrief, /<span class="app-verdict-word">(?:Cómodo|Marginal|Agitado|Desconocido)<\/span>/); assert.match(esBrief, /mañana/);
     assert.doesNotMatch(esBrief, /Comfortable|Rough|tomorrow/);
     assert.match(esBrief, /<span lang="en">/, 'the rules reason is the registry\'s English and is marked'); assert.match(esBrief, /\(en inglés\)/);

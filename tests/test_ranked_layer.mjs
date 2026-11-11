@@ -19,6 +19,7 @@ import {createStage, terrainFailed} from '../web/map/stage.ts';
 import {configureStore, region, syncFromURL} from '../web/state.ts';
 import {landWater} from '../web/land-water.ts';
 import {waterState} from './helpers/land-water.mjs';
+import {settlePicks} from './helpers/pick-settle.mjs';
 
 const PAGE = 'https://s.test/map';
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -226,7 +227,7 @@ test('on the Chart: the plan\'s pins, a lone pin\'s card, a group\'s zoom, and a
   chartMark.value = null;
   const group = map.data[RANKED_SOURCE].features[0].properties;
   lib.features = [{layer: {id: RANKED_PICK}, properties: group}];
-  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: -121.169, lat: 35.431}});
+  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: -121.169, lat: 35.431}}); settlePicks();
   const view = nav.params().get('view').split(',').map(Number);
   assert.ok(Math.abs(view[0] - 35.431) < 1e-5 && Math.abs(view[1] + 121.155) < 1e-5 && view[2] > 12.5, String(view));
   assert.equal(chartMark.value, null);
@@ -236,14 +237,14 @@ test('on the Chart: the plan\'s pins, a lone pin\'s card, a group\'s zoom, and a
   // A lone pin opens its card; the marks' screen going stale (#492) takes the pins and the card.
   const pin1 = map.data[RANKED_SOURCE].features[0].properties;
   lib.features = [{layer: {id: RANKED_PICK}, properties: pin1}];
-  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: -121.169, lat: 35.431}});
+  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: -121.169, lat: 35.431}}); settlePicks();
   assert.equal(chartMark.value.name, '#1 · 01 LR H3 C90% 90-120ft');
   assert.equal(chartMark.value.trip, 'test-reef-00');
   markScreen.value = marksStale();
   assert.equal(chartMark.value, null, 'the card goes with its pin');
   assert.deepEqual(map.data[RANKED_SOURCE].features, []);
   assert.equal(host.dataset.ranked, '0');
-  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: -121.169, lat: 35.431}});
+  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: -121.169, lat: 35.431}}); settlePicks();
   assert.equal(chartMark.value, null, 'a withheld spot opens no card');
   markScreen.value = CHECKING;
   assert.deepEqual(map.data[RANKED_SOURCE].features, [], 'checking again: still none');
@@ -251,7 +252,7 @@ test('on the Chart: the plan\'s pins, a lone pin\'s card, a group\'s zoom, and a
   assert.equal(host.dataset.ranked, '20');
 
   // A cleared plan takes the pins and the card.
-  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: -121.169, lat: 35.431}});
+  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: -121.169, lat: 35.431}}); settlePicks();
   assert.equal(chartMark.value.trip, 'test-reef-00');
   rankedSpots.value = [];
   assert.equal(chartMark.value, null);
