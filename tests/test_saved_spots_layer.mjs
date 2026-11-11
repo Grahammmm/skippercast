@@ -15,6 +15,7 @@ import {build} from 'esbuild';
 import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import {initProtectedAreas} from '../dist/protected-areas.js';
 import {setRegion} from '../dist/region.js';
+import {settlePicks} from './helpers/pick-settle.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 setRegion(JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/region.json', import.meta.url), 'utf8')));
@@ -534,7 +535,7 @@ test('the Chart wiring: a pin click opens the private card without touching the 
   assert.equal(pin.properties.name, 'Chart spot');
   const before = k.picked.value;
   features.push({layer: {id: 'saved-spot-pick'}, properties: pin.properties});
-  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: pin.geometry.coordinates[0], lat: pin.geometry.coordinates[1]}});
+  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: pin.geometry.coordinates[0], lat: pin.geometry.coordinates[1]}}); settlePicks();
   assert.equal(k.chartMark.value?.name, 'Chart spot', 'the pin opens its private card');
   assert.equal(k.picked.value, before + 1);
   assert.deepEqual(writes, [], 'turning the layer on and picking a pin write nothing to the address, history or storage');

@@ -195,8 +195,36 @@ test('first_answer_links_and_map_action_keep_keyboard_behavior: the desktop app 
   // The action is the shared 44 px ghost Button, reachable by Tab, and Enter scrolls the existing map/detail into view.
   expect((await more.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await expect(more).toHaveClass(/ui-button--ghost/);
+  // RF2205-6: named as navigation; the accessible name is the visible text (no aria-label, no disclosure state).
+  await expect(more).toHaveText('Go to map and details');
+  await expect(section.getByRole('button', {name: 'Go to map and details', exact: true})).toHaveCount(1);
+  await expect(more).not.toHaveAttribute('aria-expanded');
+  await expect(more).not.toHaveAttribute('aria-label');
   await more.focus();
   await expect(more).toBeFocused();
+  await page.keyboard.press('Enter');
+  expect(await page.evaluate(() => (window as unknown as {__scrolled: string[]}).__scrolled)).toContain('app-main');
+  expect(pageErrors).toEqual([]);
+});
+
+test('desktop_jump_copy_es: with Spanish chosen the same desktop action reads "Ir al mapa y a los detalles", still 44 px and still scrolls to the app', async ({page, pageErrors, v2}) => {
+  await page.addInitScript(() => {
+    try { localStorage.setItem('skippercast-language-v1', 'es'); } catch { /* storage blocked */ }
+    (window as unknown as {__scrolled: string[]}).__scrolled = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element, ...args: unknown[]) {
+      (window as unknown as {__scrolled: string[]}).__scrolled.push(String(this.className));
+      return (original as (...a: unknown[]) => void).apply(this, args);
+    };
+  });
+  await v2.open('app', AREA, 'desktop');
+  const section = page.locator('section.app-first-answer');
+  await expect(section).toBeVisible();
+  const more = section.locator('button.app-first-answer-more');
+  await expect(more).toHaveText('Ir al mapa y a los detalles');
+  await expect(section.getByRole('button', {name: 'Ir al mapa y a los detalles', exact: true})).toHaveCount(1);
+  expect((await more.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await more.focus();
   await page.keyboard.press('Enter');
   expect(await page.evaluate(() => (window as unknown as {__scrolled: string[]}).__scrolled)).toContain('app-main');
   expect(pageErrors).toEqual([]);

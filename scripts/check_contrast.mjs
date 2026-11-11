@@ -405,13 +405,14 @@ export const SURFACE_SOURCE_SHA256 = {
   // RF1925-1: masthead minimum-width only; legend paint and backing unchanged.
   // SC1722-01 only appends a scoped .app-forecast-failed* block at the end of app.css (token text roles on the brief, not the legend glass);
   // no legend paint or backing changed and the cited line numbers above are unmoved.
+  // SC1722-19: app.css adds only desktop (min-width 1024px) layout rules (the app scrolls inside itself, the stage clips, a sticky time dock); no colour, backing or token changes and no line citation moves.
   // RF1935-2 only appends a desktop-only (min-width: 1024px) .app-stage > .app-rail > .ui-segmented wrap block at the end of app.css and sets the desktop rail's
   // overflow-y: scroll with a stable scrollbar gutter (layout, no paint); no colour, opacity, backing or text paint changed and the cited line numbers above are unmoved.
   // SC1922-03 only adds a scoped .app-conditions-head model-family wrap/min-height rule after .app-conditions-head, plus a pointer-events-only rule for .app-presentation--placing (no paint); no colour, opacity, backing or text paint changed and legend glass is untouched.
   // SC1922-08 lets the .app-fresh chip wrap (flex-wrap, max-width, same line) and appends only a [data-refresh-line] wrap rule at the end of app.css (no colour, opacity or backing; the chip keeps its muted text role); no legend paint changed and the cited line numbers above are unmoved.
   // SC1722-20 only appends a scoped .app-skip-link block at the end of app.css (token colours; a clipped 1 px anchor at rest, a ringed 44 px panel when focused);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved.
-  "appCss": "a2d4808c892bd135f95128c73ffd3b97374de3513562672e0526e0080ee20234",
+  "appCss": "2dc5570f198916bb713ba728ea7186fd62377b705b25a7b82f6e50a5dca49e61",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
