@@ -60,6 +60,7 @@ export const aerialId = (a: AerialBase): string => `aerial:${a.first}/${a.last}`
 export function aerialOverlay(a: AerialBase, format?: NaipFormat): Overlay {
   const id = aerialId(a) + (format ? `:${format}` : '');
   return {
+    stopOnError: true,
     sources: {[id]: {...naipSource(format), attribution: aerialAttribution(a)}},
     layers: [{id, type: 'raster', source: id, paint: a.byDefault
       ? {'raster-opacity': AERIAL_DEFAULT_OPACITY, 'raster-saturation': AERIAL_DEFAULT_SATURATION}

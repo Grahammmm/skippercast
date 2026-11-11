@@ -114,7 +114,9 @@ test('the brief names the saved boat in its basis, rates for it and shows the se
       export * from './web/brief/Brief.tsx';
       export {Brief} from './web/app/Desktop.tsx';
       export {regionInfo} from './web/app/App.tsx';
-      export {render} from 'preact-render-to-string';
+      import {render as renderString} from 'preact-render-to-string'; import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
+      // SC1722-02: the fixture's sources (set on the raw signals) are admitted as one settled snapshot before each render.
+      export function render(...args) { admitBriefFixture(); return renderString(...args); }
       export {h} from 'preact';`},
   bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   const m = await import(pathToFileURL(out).href);
@@ -150,7 +152,9 @@ test('no saved boat, then a 17 ft boat saved through the first-use step: the nex
       export {regionInfo} from './web/app/App.tsx';
       export {saveFirstUse} from './web/boat-entry.ts';
       export {activeBoatFactors} from './dist/boat-handling.js';
-      export {render} from 'preact-render-to-string';
+      import {render as renderString} from 'preact-render-to-string'; import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
+      // SC1722-02: the fixture's sources (set on the raw signals) are admitted as one settled snapshot before each render.
+      export function render(...args) { admitBriefFixture(); return renderString(...args); }
       export {h} from 'preact';`},
   bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   const m = await import(pathToFileURL(out).href);

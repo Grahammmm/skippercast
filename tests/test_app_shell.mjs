@@ -25,7 +25,7 @@ const NOW = new Date('2026-10-05T20:00:00Z');
 /** The day chips of the 169-hour horizon from NOW: the eighth day repeats Monday, so it carries its date. */
 const WEEK = ['Today', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon 12'];
 /** The rendered chips (SC2252-06): each day with its verdict word; no feed is loaded in these renders, so every day reads Unknown. */
-const CHIPS = WEEK.map(label => `${label} · Unknown`);
+const CHIPS = WEEK.map(label => `${label}`);
 /** 2 pm Pacific on Tuesday 2026-10-06. */
 const TUE_2PM = '2026-10-06T21:00Z';
 
@@ -528,7 +528,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.equal(count(html, /<label>Target<select/g), 1);
   assert.equal(count(html, /<label>Area<select/g), 1);
   assert.match(html, /<output class="app-window ui-mono" aria-label="Time window">Today · 1 pm<\/output>/);
-  assert.deepEqual(dayChips(html), [['Today · Unknown', true], ...CHIPS.slice(1).map(label => [label, false])], 'no ?day= means today, at the fixed clock');
+  assert.deepEqual(dayChips(html), [['Today', true], ...CHIPS.slice(1).map(label => [label, false])], 'no ?day= means today, at the fixed clock');
   assert.match(html, /aria-label="Hour" aria-valuetext="Today · 1 pm" min="0" max="10" step="1" value="0"/, 'today runs from the current hour to 11 pm');
   assert.match(html, /<aside class="app-brief" aria-label="Brief">/);
   assert.match(html, /class="ui-eyebrow">Today's brief</);
@@ -602,7 +602,7 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   assert.match(coastView, /class="app-legend-water-temp"/);
   assert.deepEqual(attrs(coastView, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no colour key until a layer draws (FE-20)');
   // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.
-  assert.deepEqual(dayChips(html), CHIPS.map(label => [label, label === 'Tue · Unknown']));
+  assert.deepEqual(dayChips(html), CHIPS.map(label => [label, label === 'Tue']));
   assert.match(html, /aria-label="Hour" aria-valuetext="Tomorrow · 2 pm" min="0" max="23" step="1" value="14"/);
   assert.match(html, /<output class="ui-dock-readout ui-mono" aria-live="off">Tomorrow · 2 pm<\/output>/);
   assert.match(html, /class="app-dock-zone ui-mono">P[DS]T</, 'the zone shows once in the dock');
@@ -715,7 +715,7 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
   assert.match(html, /<div class="ui-sheet-body"><div class="app-sheet-brief"><section class="app-mark" aria-label="Selected mark"><div class="app-mark-head"><h2 tabindex="-1">r12<\/h2>/);
   assert.doesNotMatch(html, /<h1>/, 'the card replaces the headline');
   assert.match(html, /aria-label="Hour" aria-valuetext="Tomorrow · 2 pm" min="0" max="23" step="1" value="14"/);
-  assert.deepEqual(dayChips(html), CHIPS.map(label => [label, label === 'Tue · Unknown']), 'the sheet\'s day menu runs from the fixed clock');
+  assert.deepEqual(dayChips(html), CHIPS.map(label => [label, label === 'Tue']), 'the sheet\'s day menu runs from the fixed clock');
   assert.match(html, /Nearshore site —/);
   assert.match(html, /In-water visibility is unverified/);
   // The layers panel: the rail with the legend of what is on, and a Done button.
