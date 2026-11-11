@@ -70,6 +70,28 @@ def plan_index(plans, source):
     return {**{k: v for k, v in plans.items() if k not in PLAN_DROP}, 'startup_form': 'search-plan-index', 'derived_from': source}
 
 
+def _no_notices(value):
+    """The web reader's JSON-falsy "no notices": absent, null, false, 0 and "" (not `[]`, which is a list to check)."""
+    return value is None or value is False or value == '' or (isinstance(value, (int, float)) and value == 0)
+
+
+def _check_area_notices(registry, source):
+    """Refuse malformed notices (shape as web/regs.ts validRegulations reads them); the diagnostics never echo a value."""
+    notices = registry.get('area_notices')
+    if _no_notices(notices):
+        return
+    path = source['path']
+    if not isinstance(notices, list):
+        raise ValueError(f'Malformed area notices in {path}')
+    sources = registry['sources']
+    for index, notice in enumerate(notices):
+        ids = notice.get('source_ids') if isinstance(notice, dict) else None
+        if not isinstance(notice, dict) or not all(isinstance(notice.get(k), str) for k in ('id', 'name', 'note')) \
+                or not isinstance(ids, list) or not ids or not all(isinstance(i, str) for i in ids) \
+                or not all(isinstance(sources.get(i), dict) and sources[i].get('url') for i in ids):
+            raise ValueError(f'Malformed area notice at index {index} in {path}')
+
+
 def regs_startup(registry, source, region):
     """The regulations registry as the legality line reads it for `region` (see the module notes).
 
@@ -81,10 +103,7 @@ def regs_startup(registry, source, region):
     cited = {ident for profile in species.values() for ident in [*profile.get('source_ids', []), profile.get('primary_source_id')] if ident}
     # validRegulations also needs every area notice to cite a source with a URL; the copy carries no notices, so the
     # full registry must pass that check here or the copy would read valid where the registry does not.
-    for notice in registry.get('area_notices') or []:
-        if not all(isinstance(notice.get(k), str) for k in ('id', 'name', 'note')) or not notice.get('source_ids') \
-                or not all((registry['sources'].get(ident) or {}).get('url') for ident in notice['source_ids']):
-            raise ValueError(f"Area notice {notice.get('id')!r} in {source['path']} does not cite reviewed sources")
+    _check_area_notices(registry, source)
     return {**{k: registry[k] for k in REGS_KEEP if k in registry},
             'sources': {k: v for k, v in registry['sources'].items() if k in cited},
             'checks': {k: v for k, v in registry['checks'].items() if k in cited},
