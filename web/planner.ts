@@ -41,6 +41,7 @@ import {chartFileListed} from './chart-files.ts';
 import {loadPorts, plannerPort, portChoice} from './ports.ts';
 import {activeBoatFactors, savedBoat} from '../dist/boat-handling.js';
 import {hasOwnLimits, limitsFor} from './limits.ts';
+import {DEFAULT_TIMING, parseTiming, timingInputs, type TripTimingInputs} from './trip-times.ts';
 import {profile as activeProfile} from './state.ts';
 import {buildAlertPlan, MSG as ALERT_MSG, postTrip, type AlertLegs, type AlertPlan, type AlertSettings, type AlertStop} from './planner-alerts.ts';
 
@@ -49,7 +50,7 @@ export type LayerKey = keyof Layers;
 export type TripSpecies = 'reef' | 'lingcod' | 'rockfish';
 export type RankedDraft = {manualOrder?: boolean; sha256: string; species: TripSpecies; priorities: {id: string; rank: number}[]};
 export type UserWaypoint = {id: string; name: string; category: string; latitude: number; longitude: number};
-export type Draft = {launchId?: string; ids: string[]; userWaypoints?: UserWaypoint[]; rankedPlan: RankedDraft | null; name: string; date: string; avoidScope: 'map' | 'region'; layers: Layers};
+export type Draft = {launchId?: string; /** SC2252-04: browser-only trip timing; never exported, shared or saved as an alert. */ timing?: TripTimingInputs; ids: string[]; userWaypoints?: UserWaypoint[]; rankedPlan: RankedDraft | null; name: string; date: string; avoidScope: 'map' | 'region'; layers: Layers};
 export type Target = {
   id: string; label: string; name?: string; latitude: number; longitude: number; habitat_grade?: string; canonical_habitat?: boolean;
   trip_rank?: number; trip_fit?: number; trip_species?: string; evidence_confidence?: {percent: number};
@@ -213,6 +214,7 @@ export function createPlanner(deps: PlannerDeps) {
 
   const initial = readDraft(raw, atlas, today) as Draft;
   try { const id = JSON.parse(raw ?? 'null')?.launchId; if (typeof id === 'string') initial.launchId = id; } catch { /* invalid draft */ }
+  try { const saved = JSON.parse(raw ?? 'null')?.timing; if (saved !== undefined) initial.timing = timingInputs(saved); } catch { /* invalid draft */ }
   const waypointPosition = signal<{latitude: number; longitude: number} | null>(null);
   const draft = signal<Draft>(initial);
   const tripAtlas = signal<Atlas>({...atlas, targets: [...atlas.targets], areas: [...atlas.areas]});
@@ -305,6 +307,13 @@ export function createPlanner(deps: PlannerDeps) {
     if (ranked.value) { filtersDirty.value = true; scopeStatus.value = 'Trip filters changed. Select Best available again to apply them.'; }
   }
   function edit(patch: Partial<Pick<Draft, 'name' | 'date' | 'avoidScope'>>): void { revision++; persist({...draft.value, ...patch}); }
+  /** SC2252-04: the leave-port time and minutes fishing, kept in this browser's draft only. No ranking or filter change. */
+  function editTiming(patch: Partial<TripTimingInputs>): boolean {
+    const next = parseTiming(patch.leavePortAt ?? (draft.value.timing ?? DEFAULT_TIMING).leavePortAt, patch.fishMin ?? (draft.value.timing ?? DEFAULT_TIMING).fishMin);
+    if (!next) return false;
+    persist({...draft.value, timing: next});
+    return true;
+  }
   function setLayer(key: LayerKey, on: boolean): void { revision++; persist({...draft.value, layers: {...draft.value.layers, [key]: on}}); }
   function toggleSpot(id: string, on: boolean): void {
     revision++;
@@ -744,7 +753,7 @@ export function createPlanner(deps: PlannerDeps) {
     chooseWaypoint, saveWaypoint, removeWaypoint, addPlace,
     savedSpots, savedSpotsState, savedSpotsStatus, setSavedSpotsOpen, refreshSavedSpots, addSavedSpot,
     alertStatus, alertBusy, alertSaved, alertIsSaved: (body: unknown): boolean => alertSavedKeys.value.includes(JSON.stringify(body)), setAlertOpen, alertPreview, saveAlert,
-    setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
+    setFilter, edit, editTiming, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     routing, routeStatus, exportRouteFile, deliverRoute,
     /** For tests and a region change: stop drawing the ranked set. */
