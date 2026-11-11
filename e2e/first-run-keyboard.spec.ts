@@ -41,11 +41,12 @@ for (const lang of ['en', 'es'] as const) {
       await expect(keep).toBeFocused();
       await expect(keep).toBeVisible();
 
-      // Non-modal: one more Tab leaves the card for a connected element outside it.
+      // Non-modal: one more Tab leaves the card. The card is last in tab order, so the real outside
+      // target is document.body (focus returns to the page); any connected node outside the card also counts.
       await page.keyboard.press('Tab');
       const outside = await page.evaluate(() => {
         const el = document.activeElement, card = document.querySelector('[data-first-run]');
-        return {connected: !!el && el.isConnected && el !== document.body, inside: !!el && !!card && card.contains(el)};
+        return {connected: !!el && el.isConnected, inside: !!el && !!card && card.contains(el)};
       });
       expect(outside).toEqual({connected: true, inside: false});
     });
