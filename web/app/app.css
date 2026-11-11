@@ -15,7 +15,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
   min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
   background: var(--panel-2); color: var(--text); font: var(--weight-medium) var(--text-13) / var(--leading-heading) var(--font-sans);
 }
-.app select:focus-visible, .app-mobile select:focus-visible, .app-target-search:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app select:focus-visible, .app-mobile select:focus-visible, .app-target-search:focus-visible, .app-details > summary:focus-visible, .app-pick:focus-visible, .app-conditions-chart:focus-visible, .app-fleet-field input:focus-visible, .app-fleet-check input:focus-visible, .app-fleet-how summary:focus-visible, .app-limits-field input:focus-visible, .app-limits-field select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* Masthead */
 .app-masthead { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); background: var(--panel); }
@@ -71,7 +71,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-verdict .ui-popover { flex: none; margin-block: calc(var(--space-2) * -1); color: var(--muted); }
 .app-details { color: var(--muted); font-size: var(--text-13); }
 .app-details > summary { display: list-item; min-height: var(--touch-min); padding-block: var(--space-2); color: var(--text); cursor: pointer; }
-.app-details > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-details-gaps { color: var(--amber); }
 .app-details-body { display: flex; flex-direction: column; gap: var(--space-2); }
 .app-readings { margin: 0; color: var(--text); }
@@ -87,7 +86,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-pick { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: baseline; inline-size: 100%; min-block-size: 44px; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; text-align: start; cursor: pointer; }
 .app-pick:hover { border-color: var(--muted); }
 .app-pick[aria-pressed="true"] { border-color: var(--mint); }
-.app-pick:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-pick-rank { color: var(--muted); }
 .app-pick .app-fit { grid-column: 2; justify-self: start; }
 .app-pick-reason { grid-column: 2; color: var(--muted); font-size: var(--text-13); }
@@ -109,7 +107,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-gaps-more summary { display: list-item; min-height: var(--touch-min); padding-block: var(--space-2); cursor: pointer; }
 .app-gaps-more li + li { margin-top: var(--space-1); }
 .app-brief-links { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; font-size: var(--text-13); }
-.app-brief-links a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
+.app-brief-links a, .app-fleet-links a, .app-reports-footer a, .app-mark-regs a, .app-verdict-rules a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 .app-local { color: var(--muted); }
 .app-brief-footer { margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--line); color: var(--muted); font-size: var(--text-11); }
 .app-brief-footer a { display: inline-flex; align-items: center; min-height: var(--space-5); }
@@ -385,7 +383,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-conditions-now dd { margin: 0; font-size: var(--text-15); }
 /* Below the chart's natural width the region scrolls sideways rather than squeezing seven days into a phone. */
 .app-conditions-chart { flex: none; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-deep); touch-action: pan-x; }
-.app-conditions-chart:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-conditions-chart > .app-coast-markup { min-width: 720px; }
 .app-conditions-caption, .app-conditions ul { margin: 0; color: var(--muted); }
 .app-conditions ul { padding-left: var(--space-4); }
@@ -397,15 +394,12 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-fleet-check { padding: 0; font-size: var(--text-13); color: var(--text); }
 .app-fleet-basis { margin: 0; color: var(--muted); font-size: var(--text-11); }
 .app-fleet-links { margin: 0; padding: 0; list-style: none; }
-.app-fleet-links a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 .app-fleet-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--space-2); }
 .app-fleet-form > .app-fleet-check, .app-fleet-form > .app-empty, .app-fleet-actions { grid-column: 1 / -1; }
 .app-fleet-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; color: var(--muted); font-size: var(--text-11); }
 .app-fleet-field input { min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-13); }
-.app-fleet-field input:focus-visible, .app-fleet-check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-fleet-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .app-fleet-how summary { display: flex; align-items: center; min-height: var(--touch-min); cursor: pointer; color: var(--blue); }
-.app-fleet-how summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-fleet-how p { margin: 0; color: var(--muted); }
 /* FE-35: the History view takes the Conditions view's place over the map; historyView's own pickers and charts scroll inside it. */
 .app-history { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; color: var(--text); font-size: var(--text-13); }
@@ -421,10 +415,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-mark-regs dl { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: var(--space-1) 0; }
 .app-mark-regs dt { color: var(--muted); }
 .app-mark-regs dd { margin: 0; }
-.app-mark-regs a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
+.app-mark-regs a, .app-verdict-rules a { color: var(--blue); }
 /* SC-LAUNCH-3's legality line under the verdict: no default <p> margins, and its official link a full touch target as on the mark card. */
 .app-verdict-rules { margin: 0; font-size: var(--text-13); }
-.app-verdict-rules a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
 
 /* Reports view (FE-52): a page over the map stage, which stays mounted beneath it. */
 .app-main { position: relative; }
@@ -440,7 +433,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-reports a { color: var(--blue); }
 .app-reports-list a, .app-reports-section p a { display: inline-block; min-height: var(--touch-min); padding: var(--space-3) 0; box-sizing: border-box; }
 .app-reports-footer { display: flex; flex-wrap: wrap; gap: var(--space-4); }
-.app-reports-footer a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 .app-mobile-page { position: absolute; left: 0; right: 0; top: calc(var(--app-strip) + var(--touch-min) + var(--space-3)); bottom: var(--app-tabs); z-index: var(--z-map-chrome); overflow: auto; border-top: 1px solid var(--line); background: var(--bg); }
 
 /* Your limits (#542): the profile's comfort limits form in its own modal dialog (the port dialog's look) */
@@ -454,7 +446,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-limits-field { display: grid; grid-template-columns: minmax(0, 1fr) 7rem; align-items: center; gap: var(--space-1) var(--space-3); }
 .app-limits-field label { color: var(--text); font-size: var(--text-13); }
 .app-limits-field input, .app-limits-field select { min-height: var(--touch-min); min-width: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-15); }
-.app-limits-field input:focus-visible, .app-limits-field select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-limits-hint { grid-column: 1 / -1; color: var(--muted); font-size: var(--text-11); }
 .app-limits-note { color: var(--muted); font-size: var(--text-13); }
 .app-limits-dialog .app-limits-actions { position: sticky; bottom: 0; z-index: 1; padding-block: var(--space-2); background: var(--panel); }
@@ -569,5 +560,17 @@ p.app-forecast-failed-head { font-size: var(--text-15); }
   .app-masthead:has(> .app-location-preview) { flex-wrap: wrap; }
   .app-masthead > .app-location-preview { flex: 0 1 22rem; min-width: 18rem; max-width: 22rem; }
 }
+
+/* RF2135-5: ordinary landscape phones put the top card/controls row and the profile switch side by side (layout only, no paint). */
+@media (min-width: 600px) and (max-width: 1023px) and (max-height: 500px) and (orientation: landscape) {
+  .app-mobile { --app-strip: calc(72px + env(safe-area-inset-top, 0px)); }
+  .app-mobile .app-top { flex-direction: row; align-items: flex-start; }
+  .app-mobile .app-top .app-top-row { flex: 1; min-width: 0; }
+  .app-mobile .app-top .app-top-card { flex-direction: row; align-items: center; gap: var(--space-3); padding-top: 0; padding-bottom: 0; }
+  .app-mobile .app-top .app-top-card .app-brand { flex: none; }
+  .app-mobile .app-top .app-top-card .app-location { flex: 1; min-width: 0; }
+  .app-mobile .app-top .app-profile { flex: 0 0 240px; min-width: 0; }
+}
+/* end RF2135-5 */
 /* SC1922-08: the failed-press line wraps under the chip's age and Refresh button instead of widening the chip past its cap (on desktop the masthead keeps the chip at its own width, so a line shifts nothing at load). */
 .app-fresh > [data-refresh-line] { flex-basis: 100%; }
