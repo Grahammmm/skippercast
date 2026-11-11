@@ -74,6 +74,54 @@ class TimeList(TestCase):
         self.assertEqual(image["observedAt"], "2026-10-08T17:50:00.000Z")
 
 
+class CanonicalDomain(TestCase):
+    FRESH = "2026-10-08T17:38:00Z"
+
+    def test_utc_lower_overflow_does_not_poison_fresh_frames(self):
+        image = gf.parse_capabilities(document(["0001-01-01T00:00:00+01:00", self.FRESH]), NOW)
+        self.assertEqual(image["availableTimes"], ["2026-10-08T17:38:00.000Z"])
+
+    def test_canonical_low_year_is_four_digits(self):
+        self.assertEqual(gf.iso(gf.MIN_MS), "0001-01-01T00:00:00.000Z")
+        self.assertEqual(gf.iso(gf.epoch("0099-06-07T08:09:10.250Z")), "0099-06-07T08:09:10.250Z")
+        self.assertEqual(gf.iso(gf.epoch("0999-12-31T23:59:59Z")), "0999-12-31T23:59:59.000Z")
+        self.assertEqual(gf.iso(-1), "1969-12-31T23:59:59.999Z")
+        image = gf.parse_capabilities(document(["0001-01-01T00:00:00Z", self.FRESH]), NOW)
+        self.assertEqual(image["availableTimes"], ["0001-01-01T00:00:00.000Z", "2026-10-08T17:38:00.000Z"])
+        self.assertTrue(all(ISO_UTC.match(t) for t in image["availableTimes"]))
+
+    def test_utc_upper_overflow_and_rounding_are_unusable(self):
+        self.assertIsNone(gf.epoch("0001-01-01T00:00:00+01:00"))
+        self.assertIsNone(gf.epoch("9999-12-31T23:59:59.999999-01:00"))
+        self.assertIsNone(gf.epoch("9999-12-31T23:59:59.999999Z"))
+        self.assertEqual(gf.epoch("0001-01-01T00:00:00Z"), gf.MIN_MS)
+        self.assertEqual(gf.epoch("9999-12-31T23:59:59.999Z"), gf.MAX_MS)
+        self.assertEqual(gf.iso(gf.MAX_MS), "9999-12-31T23:59:59.999Z")
+
+    def test_ordinary_offsets_and_precision_unchanged(self):
+        self.assertEqual(gf.epoch("2026-10-08T10:33:00-07:00"), gf.epoch("2026-10-08T17:33:00Z"))
+        self.assertEqual(gf.epoch("2026-10-08T17:33:00.0006Z") - gf.epoch("2026-10-08T17:33:00Z"), 1)
+        self.assertIsNone(gf.epoch("2026-10-08T17:33:00"))
+
+    def run_main(self, route):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "goes-times.json"
+            output.write_text('{"prior":true}\n')
+            with mock.patch.object(gf.http, "Session", lambda **_: FakeSession({gf.CAPABILITIES_URL: route})):
+                code = gf.main(["--output", str(output)], now=NOW)
+            return code, output.read_text()
+
+    def test_mixed_list_updates_fake_session_index(self):
+        code, text = self.run_main(document(["0001-01-01T00:00:00+01:00", self.FRESH]))
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(text)["availableTimes"], ["2026-10-08T17:38:00.000Z"])
+
+    def test_unusable_only_keeps_last_index(self):
+        code, text = self.run_main(document(["0001-01-01T00:00:00+01:00"]))
+        self.assertEqual(code, 1)
+        self.assertEqual(text, '{"prior":true}\n')
+
+
 class AgeGate(TestCase):
     def test_newest_frame_older_than_90_minutes_is_refused(self):
         newest = datetime(2026, 10, 8, 17, 38, tzinfo=timezone.utc)
