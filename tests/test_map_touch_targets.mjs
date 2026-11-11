@@ -28,7 +28,7 @@ async function load() {
       export {beginWaypointPlacement, cancelWaypointPlacement, placementRefused, verdictLine, waypointPlacement} from './web/waypoint-placement.ts';
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string';
-      export {h} from 'preact';`},
+      export {h, options} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
     plugins: preparedRendererPlugins,
   });
@@ -49,6 +49,13 @@ function* walk(node) {
 }
 const text = node => [...walk(node)].flatMap(n => (typeof n.props?.children === 'string' ? [n.props.children] : [])).join('');
 const buttons = (tree, Button, label) => [...walk(tree)].filter(n => n.type === Button && text(n) === label);
+/** Location uses a hook (its region-ports effect), so it cannot be called bare: render it and read the Button vnodes Preact creates. */
+function locationButtons(s, label) {
+  const seen = [], prev = s.options.vnode;
+  s.options.vnode = v => { if (v.type === s.Button) seen.push(v); prev?.(v); };
+  try { s.render(s.h(s.Location, {})); } finally { s.options.vnode = prev; }
+  return seen.filter(n => text(n) === label);
+}
 
 test('placing_touch_cancel_en_es: Cancel waypoint is the app Button in the placing note and keeps its action', async () => {
   const s = await at();
@@ -114,7 +121,7 @@ test('region_error_touch_retry_en_es: Retry region details is the app Button in 
     assert.equal(await loadRegion('broken', status(503)), null);
     for (const [lang, words, error] of [['en', 'Retry region details', /region details/i], ['es', 'Reintentar detalles de la región', /región/i]]) {
       setLanguage(lang, {storage: none, doc: null});
-      const found = buttons(Location(), Button, words);
+      const found = locationButtons(s, words);
       assert.equal(found.length, 1, `${lang}: one ${words} Button`);
       assert.equal(found[0].props.onClick, retryRegion, `${lang}: the existing retry handler`);
       const html = render(h(Location, {}));
@@ -125,17 +132,18 @@ test('region_error_touch_retry_en_es: Retry region details is the app Button in 
 });
 
 test('region_nonerror_has_no_retry: loading, missing and a stale other-region error show no Retry Button', async () => {
-  const {Location, Button, loadRegion, regionLoad, state, render, h} = await at('region=nowhere');
+  const s = await at('region=nowhere');
+  const {Location, loadRegion, regionLoad, state, render, h} = s;
   await loadRegion('nowhere', status(404));
-  assert.equal(buttons(Location(), Button, 'Retry region details').length, 0, 'missing');
+  assert.equal(locationButtons(s, 'Retry region details').length, 0, 'missing');
   assert.match(render(h(Location, {})), /Choose a port/, 'the missing-region link stays');
   regionLoad.value = {id: 'nowhere', state: 'loading'};
-  assert.equal(buttons(Location(), Button, 'Retry region details').length, 0, 'loading');
+  assert.equal(locationButtons(s, 'Retry region details').length, 0, 'loading');
   regionLoad.value = {id: 'elsewhere', state: 'error'};
-  assert.equal(buttons(Location(), Button, 'Retry region details').length, 0, 'another region\'s stale error');
+  assert.equal(locationButtons(s, 'Retry region details').length, 0, 'another region\'s stale error');
   state.syncFromURL(`${ORIGIN}?region=elsewhere`);
   regionLoad.value = {id: 'elsewhere', state: 'error'};
-  assert.equal(buttons(Location(), Button, 'Retry region details').length, 1, 'the current region\'s error');
+  assert.equal(locationButtons(s, 'Retry region details').length, 1, 'the current region\'s error');
 });
 
 test('conditions_each_option_touch: the model-family group wraps inside the header and keeps the touch floor on each option', async () => {
