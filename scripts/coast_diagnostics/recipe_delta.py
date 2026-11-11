@@ -432,10 +432,41 @@ def write_report(report, out, *, protected_roots):
     if len(data) > MAX_OUTPUT_BYTES:
         raise RecipeDeltaError('report exceeds the output cap')
     out = _check_output(out, protected_roots)
-    temporary = out.parent / ('.' + out.name + '.incomplete-' + str(os.getpid()) + '-' + os.urandom(4).hex())
+    name = '.' + out.name + '.incomplete-' + str(os.getpid()) + '-' + os.urandom(4).hex()
+    parent_fd = _open_parent(out.parent)
+    try:
+        return _publish(data, out.name, name, parent_fd)
+    finally:
+        os.close(parent_fd)
+
+
+def _open_parent(parent):
+    """Walk the absolute parent from '/' with descriptor-relative no-follow directory opens.
+
+    The returned descriptor pins one directory inode for the whole write/publish/cleanup, so a
+    path component swapped for a symlink after validation cannot redirect any later operation.
+    """
+    flags = os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0) | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_CLOEXEC', 0)
+    parts = Path(parent).absolute().parts
+    try:
+        current = os.open(parts[0], flags)
+    except OSError as error:
+        raise RecipeDeltaError('output cannot be created safely (' + error.__class__.__name__ + ')') from error
+    for part in parts[1:]:
+        try:
+            following = os.open(part, flags, dir_fd=current)
+        except OSError as error:
+            os.close(current)
+            raise RecipeDeltaError('output parent refused (' + error.__class__.__name__ + ')') from error
+        os.close(current)
+        current = following
+    return current
+
+
+def _publish(data, final, temporary, parent_fd):
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_CLOEXEC', 0)
     try:
-        descriptor = os.open(temporary, flags, 0o644)
+        descriptor = os.open(temporary, flags, 0o644, dir_fd=parent_fd)
     except OSError as error:
         raise RecipeDeltaError('output cannot be created safely (' + error.__class__.__name__ + ')') from error
     failure = None
@@ -456,17 +487,18 @@ def write_report(report, out, *, protected_roots):
     if failure is not None:
         raise RecipeDeltaError('report write failed (' + failure.__class__.__name__ + ': ' + str(failure)
                                + '); final name not published; incomplete bytes retained as '
-                               + temporary.name) from failure
+                               + temporary) from failure
     try:
-        os.link(temporary, out)   # our own fresh regular file; link() never replaces an existing name
+        # our own fresh regular file; link() never replaces an existing name
+        os.link(temporary, final, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
     except FileExistsError as error:
         raise RecipeDeltaError('output exists; reports are never overwritten; unpublished report retained as '
-                               + temporary.name) from error
+                               + temporary) from error
     except OSError as error:
         raise RecipeDeltaError('report write failed (publish ' + error.__class__.__name__
-                               + '); final name not published; report retained as ' + temporary.name) from error
+                               + '); final name not published; report retained as ' + temporary) from error
     with contextlib.suppress(OSError):
-        os.unlink(temporary)   # only the temporary name this call created; the final link remains
+        os.unlink(temporary, dir_fd=parent_fd)   # only the temporary name this call created
     return hashlib.sha256(data).hexdigest()
 
 

@@ -760,9 +760,14 @@ def test_a3_report_write_failures_publish_nothing(failure, tmp_path, workspace, 
     real_open, real_write, real_fsync, real_close, real_link = os.open, os.write, os.fsync, os.close, os.link
     ours, wrote = set(), []
 
+    def in_reports(path, dir_fd):
+        if dir_fd is None:
+            return Path(os.fspath(path)).absolute().parent == reports.absolute()
+        return os.path.samestat(os.fstat(dir_fd), reports.stat())   # relative call: match by directory identity
+
     def opening(path, flags, *args, **kwargs):                       # in-memory doubles only
         descriptor = real_open(path, flags, *args, **kwargs)
-        if Path(os.fspath(path)).absolute().parent == reports.absolute() and flags & os.O_WRONLY:
+        if flags & os.O_WRONLY and in_reports(path, kwargs.get('dir_fd')):
             ours.add(descriptor)
         return descriptor
 
@@ -790,7 +795,10 @@ def test_a3_report_write_failures_publish_nothing(failure, tmp_path, workspace, 
 
     def linking(source, destination, *args, **kwargs):
         if failure == 'publish-race':                                 # a concurrent writer wins
-            Path(destination).write_text('inert concurrent report')
+            created = real_open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644,
+                                dir_fd=kwargs.get('dst_dir_fd'))
+            real_write(created, b'inert concurrent report')
+            real_close(created)
         return real_link(source, destination, *args, **kwargs)
 
     monkeypatch.setattr(os, 'open', opening)
