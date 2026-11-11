@@ -26,6 +26,7 @@ import {createFleetActivity} from '../map/fleet.ts';
 import {regionPlace} from '../map/currents.ts';
 import {coastPalette, readPalette} from '../map/palette.ts';
 import {createReach} from '../map/reach.ts';
+import {createPlanningRouteLayer} from '../map/planning-route.ts';
 import {createContrast} from '../map/contrast.ts';
 import {createFronts} from '../map/fronts.ts';
 import {createWaterTemp} from '../map/sst.ts';
@@ -141,6 +142,7 @@ export function MapStage({children, clock}: {children?: ComponentChildren; clock
           engine => createAerial({engine, offer: () => currentRegionInfo()?.aerial ?? null}), engine => createDepthContours({engine, host: chartHost.current!}),
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
           engine => createReach({engine, host: chartHost.current!}),
+          engine => createPlanningRouteLayer({engine, host: chartHost.current!}),
           engine => createPreviewLayers({engine, failures: {list: unavailable, clear: layer => { unavailable.value = unavailable.peek().filter(l => l !== layer); }}})]})]});
     return () => stage.destroy();
   }, [clock]);
