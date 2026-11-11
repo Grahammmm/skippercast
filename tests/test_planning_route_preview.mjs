@@ -13,7 +13,8 @@ import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {signal} from '@preact/signals';
 import {closureHits, geometryCoveredByBounds} from '../dist/geo-screen.js';
 import {landWater, landWaterModel} from '../web/land-water.ts';
-import {region as activeRegion} from '../web/state.ts';
+import {configureStore, region as activeRegion, syncFromURL, presentation} from '../web/state.ts';
+import {language, prepareCatalogue, t} from '../web/i18n.ts';
 import {createPlanner} from '../web/planner.ts';
 import {ROUTE_WARNING} from '../web/protected-route.ts';
 import {createPlanningRouteLayer, planningRoute, planningRouteFeatures} from '../web/map/planning-route.ts';
@@ -46,14 +47,18 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
 /** A document that only carries events, as the planner's boundary and visibility listeners need. */
 globalThis.document = new EventTarget();
-after(() => { delete globalThis.document; });
+globalThis.location = {href: 'https://fixture.test/map?region=fixture&presentation=chart'};
+globalThis.history = {state: null, pushState(_s, _t, url) { location.href = url; }, replaceState(_s, _t, url) { location.href = url; }};
+globalThis.dispatchEvent = () => true;
+configureStore({v2: true, storage: null});
+after(() => { delete globalThis.document; delete globalThis.location; delete globalThis.history; delete globalThis.dispatchEvent; });
 
 function harness({polygons = [polygon(13, 8, 19, 24)], routeContext, landWaterFn} = {}) {
-  const ctl = {features: polygons.map(geometry => ({geometry})), ready: true, checkedAt: CHECKED, clock: NOW, exclusionReads: 0, throwing: false};
+  const ctl = {features: polygons.map(geometry => ({geometry})), covered: true, ready: true, checkedAt: CHECKED, clock: NOW, exclusionReads: 0, throwing: false};
   const screen = {
     ready: () => ctl.ready,
     exportExclusions: () => { ctl.exclusionReads++; if (ctl.throwing) throw Error('broken'); return {checked_at: ctl.checkedAt, features: ctl.features}; },
-    coversGeometry: g => geometryCoveredByBounds(g, bounds),
+    coversGeometry: g => ctl.covered && geometryCoveredByBounds(g, bounds),
     geometryAllowed: g => geometryCoveredByBounds(g, bounds) && !closureHits([g], ctl.features).length,
     pointAllowed: p => screen.geometryAllowed({type: 'Point', coordinates: [p.longitude, p.latitude]}),
   };
@@ -88,6 +93,20 @@ test('preview_uses_real_detour_and_same_ordered_inputs: one dashed line of the b
   } finally { h.planner.dispose(); unseed(); }
 });
 
+test('preview_selects_chart_from_both_terrain_presentations', async () => {
+  for (const mode of ['2d', '3d']) {
+    location.href = `https://fixture.test/map?region=fixture&presentation=${mode}`;
+    syncFromURL(location.href);
+    const h = harness();
+    try {
+      assert.equal(presentation.value, mode);
+      await shown(h);
+      assert.equal(presentation.value, 'chart', `${mode}: route and warning must be visible`);
+      assert.equal(new URL(location.href).searchParams.get('presentation'), 'chart');
+    } finally { h.planner.dispose(); unseed(); }
+  }
+});
+
 test('preview_uses_launch_first: an included launch starts the line and the moved stop keeps its place', async () => {
   const {launchPoints} = await import('../web/launches.ts');
   const h = harness();
@@ -111,6 +130,9 @@ test('preview_invalidates_each_input_independently: stops, order, region, bounda
     'the region': () => { activeRegion.value = 'elsewhere'; },
     'a boundary refresh with the same object and time': () => document.dispatchEvent(new CustomEvent('skippercast:boundaries')),
     'the screen not ready': (h) => { h.ctl.ready = false; h.planner.checkRoutePreview(); },
+    'same-timestamp polygons replaced without an event': h => { h.ctl.features = [{geometry: polygon(13, 0, 19, 32)}]; h.planner.checkRoutePreview(); },
+    'same-timestamp polygons mutated without an event': h => { h.ctl.features[0].geometry.coordinates = polygon(13, 0, 19, 32).coordinates; document.dispatchEvent(new Event('visibilitychange')); },
+    'the screen envelope shrinks without an event': h => { h.ctl.covered = false; h.planner.checkRoutePreview(); },
     'a different boundary check time': (h) => { h.ctl.checkedAt = '2026-11-07T17:00:01.000Z'; h.planner.checkRoutePreview(); },
     'a screen that throws': (h) => { h.ctl.throwing = true; h.planner.checkRoutePreview(); },
     '36 h and 1 ms past the check': (h) => { h.ctl.clock = new Date(NOW.getTime() + 36 * 3600_000 + 1); h.planner.checkRoutePreview(); },
@@ -130,6 +152,19 @@ test('preview_invalidates_each_input_independently: stops, order, region, bounda
       if (what === 'the region') { activeRegion.value = 'fixture'; gone(h, 'returning to the region'); }
     } finally { h.planner.dispose(); unseed(); }
   }
+});
+
+test('preview_removal_status_is_spanish_after_stop_reorder', async () => {
+  await prepareCatalogue('es');
+  const h = harness();
+  try {
+    language.value = 'es';
+    await shown(h);
+    h.planner.moveStop('user:p1', 'up');
+    gone(h, 'reordered stop');
+    assert.equal(h.planner.routeStatus.value, 'Ruta retirada de la Carta: cambiaron las paradas, la región, la comprobación de límites o los datos de agua. Muéstrala de nuevo para trazar otra.');
+    assert.equal(h.planner.routeStatus.value, t('planner.route.removed', 'es'));
+  } finally { language.value = 'en'; h.planner.dispose(); unseed(); }
 });
 
 test('preview_age_exact_boundary: exactly 36 h still stands (the builder accepts it); only the clock past it removes the line, with no new search', async () => {

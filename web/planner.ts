@@ -30,6 +30,8 @@ import {ROUTE_BUDGET, type RouteFn} from './ranking.ts';
 import {waterRoute, type RouteFailure} from './route.ts';
 import {buildProtectedRoute, ROUTE_WARNING, type RouteScreen} from './protected-route.ts';
 import {clearPlanningRoute, publishPlanningRoute} from './map/planning-route.ts';
+import {choosePresentation} from './map/stage.ts';
+import {language, t} from './i18n.ts';
 import {coordinates, region as activeRegion} from './state.ts';
 import {checkGpx} from './gpx-check.ts';
 import {placeRefused, screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
@@ -165,7 +167,6 @@ const LOADING = 'Loading current screened reefs…';
 const STORAGE_OK = 'Saved on this browser for each region. Separate from your account’s trip alerts.';
 const FLOAT_INVALID = 'The float plan has a problem. Fix it or clear it before downloading the notes.';
 const ROUTE_CHANGED = 'Plan or boundary check changed while routing. Try again.';
-const ROUTE_REMOVED = 'Route on the Chart removed: the stops, region, boundary check or water data changed. Show it again to draw a new one.';
 const ROUTE_HOUR = 36 * 3600_000;
 const FLOAT_CHANGED = 'The float plan changed while the notes were being prepared. Download the notes again.';
 const STORAGE_OFF = 'Browser storage is unavailable. Keep this page open until you download your plan.';
@@ -595,9 +596,10 @@ export function createPlanner(deps: PlannerDeps) {
     // The optional launch is stored last by the legacy waypoint export, but is
     // the starting stop for this separate route. The remaining selection keeps its order.
     if (launchPoint().length && stops.length) stops.unshift(stops.pop()!);
+    const screenKey = JSON.stringify((screen as RouteScreen).exportExclusions());
     const r = buildProtectedRoute({...context, screen: screen as RouteScreen, stops,
       title: `${draft.value.name} · ${draft.value.date || today}`, now: now()});
-    return {r, context};
+    return {r, context, screenKey};
   }
   async function exportRouteFile(): Promise<File> {
     const {r} = await buildPlanningRoute();
@@ -615,15 +617,18 @@ export function createPlanner(deps: PlannerDeps) {
   // It is removed the moment anything it was built from changes (stops, their order, region, the boundary screen, the water data) or
   // buildProtectedRoute would now refuse; it is never rebuilt or restored on its own, and the download never reads it.
   const routeToken = {};
-  let routeGen = 0, routeAttempt = 0, routeLive: {checkedAt: string; water: {state: unknown; region: unknown; model: unknown; lines: unknown}} | null = null;
+  let routeGen = 0, routeAttempt = 0, routeLive: {checkedAt: string; screenKey: string; points: readonly {latitude: number; longitude: number}[]; water: {state: unknown; region: unknown; model: unknown; lines: unknown}} | null = null;
   let routeExpiry: ReturnType<typeof setTimeout> | undefined, routeHealth: ReturnType<typeof setInterval> | undefined, routeWatching = false;
   const routeKey = (): string => JSON.stringify([selected().map(t => [t.id, t.latitude, t.longitude]), launch.value, draft.value.layers, draft.value.avoidScope, activeRegion.value,
     allowResearch.value, contourTracks.value, contourFile.value, filtersDirty.value, restorePending.value, tripAtlas.value.publication?.export_sha256]);
-  /** The builder's own screen gate, read again: ready, this checked_at still held, age in its inclusive interval. A throw is a refusal. */
-  function routeScreenOk(checkedAt: string): boolean {
+  /** Re-read the complete boundary snapshot and the whole line's coverage, not just its check time. A throw is a refusal. */
+  function routeScreenOk(checkedAt: string, screenKey: string, points: readonly {latitude: number; longitude: number}[]): boolean {
     try {
       const sc = screen as RouteScreen | null, age = now().getTime() - Date.parse(checkedAt);
-      return !!sc?.ready?.() && sc.exportExclusions?.()?.checked_at === checkedAt && Number.isFinite(age) && age >= -300_000 && age <= ROUTE_HOUR;
+      const snapshot = sc?.exportExclusions?.(), geometry = {type: 'LineString', coordinates: points.map(p => [p.longitude, p.latitude])};
+      return !!sc?.ready?.() && snapshot?.checked_at === checkedAt && JSON.stringify(snapshot) === screenKey
+        && Number.isFinite(age) && age >= -300_000 && age <= ROUTE_HOUR
+        && sc.coversGeometry(geometry) === true && sc.geometryAllowed(geometry) === true;
     } catch { return false; }
   }
   /** The page's events where it has them (a test stand-in or a worker may not). */
@@ -636,14 +641,14 @@ export function createPlanner(deps: PlannerDeps) {
   /** Remove the line and everything that watches it. `say`: tell the person it went. */
   function dropRoute(say = true): void {
     routeGen++;
-    if (routeLive && say && !disposed) routeStatus.value = ROUTE_REMOVED;
+    if (routeLive && say && !disposed) routeStatus.value = t('planner.route.removed', language.peek());
     routeLive = null; stopRouteWatch(); clearPlanningRoute(routeToken);
   }
   /** Minute health check, resume from background and the first millisecond past checked_at + 36 h: no request, no new route search. */
   function checkRoutePreview(): void {
     if (!routeLive) return;
     const other = activeRegion.peek() && activeRegion.peek() !== region.id;
-    if (disposed || other || !routeScreenOk(routeLive.checkedAt)) { dropRoute(); return; }
+    if (disposed || other || !routeScreenOk(routeLive.checkedAt, routeLive.screenKey, routeLive.points)) { dropRoute(); return; }
     armRouteExpiry(routeLive.checkedAt);
   }
   function armRouteExpiry(checkedAt: string): void {
@@ -667,19 +672,19 @@ export function createPlanner(deps: PlannerDeps) {
     const attempt = ++routeAttempt, mine = routeGen, key = routeKey();
     routing.value = true; routeStatus.value = '';
     try {
-      const {r, context} = await buildPlanningRoute();
+      const {r, context, screenKey} = await buildPlanningRoute();
       const water = landWaterState.peek();
       if (disposed || mine !== routeGen || key !== routeKey()) throw Error(ROUTE_CHANGED);
       if (!deps.routeContext && (water.model !== context.model || water.lines !== context.lines)) throw Error(ROUTE_CHANGED);
-      if (!routeScreenOk(r.checkedAt)) throw Error('Protected-area boundaries changed. Try routing again.');
+      if (!routeScreenOk(r.checkedAt, screenKey, r.points)) throw Error('Protected-area boundaries changed. Try routing again.');
       publishPlanningRoute(routeToken, {region: region.id, points: r.points, nm: r.nm, checkedAt: r.checkedAt});
-      routeLive = {checkedAt: r.checkedAt, water: {state: water.state, region: water.region, model: water.model, lines: water.lines}};
+      routeLive = {checkedAt: r.checkedAt, screenKey, points: r.points, water: {state: water.state, region: water.region, model: water.model, lines: water.lines}};
       armRouteExpiry(r.checkedAt);
       routeHealth = setInterval(checkRoutePreview, 60_000); (routeHealth as {unref?: () => void}).unref?.();
       const events = pageEvents();
       if (events) { events.addEventListener('visibilitychange', checkRoutePreview); routeWatching = true; }
       routeStatus.value = `Boundary check: ${r.checkedAt} · ${r.nm.toFixed(1)} nm planning route. ${ROUTE_WARNING}`;
-      deps.nav.showMap(); deps.nav.fit?.(r.points);
+      deps.nav.showMap(); choosePresentation('chart'); deps.nav.fit?.(r.points);
       return true;
     } catch (error) {
       dropRoute(false);
