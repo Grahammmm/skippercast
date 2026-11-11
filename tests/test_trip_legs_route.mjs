@@ -83,7 +83,7 @@ const paint = (rects, base = 'w'.repeat(G * G)) => {
 };
 const product = (rects, base, bounds = [-12110000, 3530000, -12075000, 3555000]) => landWaterModel({...coast, bounds, tiles: {[COAST]: paint(rects, base)}}, 'fixture');
 const ready = (model, lines = null) => ({region: 'fixture', state: 'ready', model, lines, linesLoading: false});
-const CLAUSE = /Straight-line legs between stops; the real route is longer\./, SEA = /Sea state, the bar, fuel and conditions at each stop are not included\./;
+const CLAUSE = /Straight-line legs between stops; the real route is longer\./, SEA = /Sea state, the bar and fuel are not included in run-time estimates\./;
 
 test('planner: routed legs drop the straight-line clause; a straight leg is labelled and brings it back; lines are asked once', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'trip-legs-route-')), out = join(dir, 'ui.mjs');

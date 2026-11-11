@@ -15,8 +15,12 @@ import {ALERT_STORAGE_NOTE, PORTS_FAILED_NOTE, sharedConfidence, type AlertLegsF
 import {AREA_NOTE} from '../planner-alerts.ts';
 import {tripLegs} from '../trip-legs.ts';
 import {clockText, DEFAULT_TIMING, MAX_FISH_MIN, parseTiming, tripTimes} from '../trip-times.ts';
+import {tripStopForecast} from '../trip-forecast.ts';
+import {ensureRegionalForecast, regionalForecast, savedBrief} from '../brief/Brief.tsx';
+import {regionInfo} from './region-info.ts';
+import {profile} from '../state.ts';
 import {protectedScreen} from '../trip.ts';
-import {cruiseSpeed} from '../limits.ts';
+import {cruiseSpeed, hasOwnLimits, limitsFor} from '../limits.ts';
 import {landWater, loadLandWaterLines, type LandWaterState} from '../land-water.ts';
 import {language, t, type Language, type StringId} from '../i18n.ts';
 import {categoryText, countText, evidenceLabel, fitText, hitReading, nmText, plannerText, plannerVerdict} from '../planner-copy.ts';
@@ -119,7 +123,7 @@ function AlertSave({m, legs, open}: {m: Model; legs: AlertLegsFn; open: boolean}
   );
 }
 
-export function Planner({model: m, open}: {model: Model; open: boolean}) {
+export function Planner({model: m, open, now}: {model: Model; open: boolean; now?: () => number}) {
   // While the dialog shows: the screen's age each minute and new boundaries refresh the counts; opening restores a saved ranked plan, else ranks an empty one (SCJ-8).
   useEffect(() => {
     if (!open) return;
@@ -173,6 +177,16 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
     stops: stops.map(s => ({id: s.id, fishing: !s.id.startsWith('user:launch-')})), route});
   const clock = (at: number, after: boolean) => `${clockText(at, zone, d.date, lang, t('planner.times.nextDay', lang))}${after ? t('planner.times.afterSunset', lang) : ''}`;
   const stopTimes = times?.state === 'ready' ? new Map(times.stops.map(s => [s.id, s])) : null;
+  // SC2252-05: the regional forecast at each arrival hour, from the mark card's reader and cache. One read per opening and region, only while the plan has arrivals.
+  const info = regionInfo.value, ready = times?.state === 'ready' && info?.id === m.region.id, wantRead = open && ready;
+  useEffect(() => { if (open) return resetArrivalRead; }, [open, m.region.id]);
+  useEffect(() => { if (wantRead && info) readArrivalForecast(info.id, info.center); }, [wantRead, open, m.region.id]);
+  const read = arrivalRead.value, feed = regionalForecast.value;
+  const arrival = times?.state === 'ready' && ready ? tripStopForecast({forecast: feed, region: m.region.id, now: (now ?? Date.now)(), zone, language: lang, times,
+    stops: stops.map(s => ({id: s.id, lat: s.latitude, lon: s.longitude})), ownLimits: hasOwnLimits(profile.value) ? limitsFor(profile.value) : null}) : null;
+  const arrivalNote = !ready ? null : arrival
+    ? <p class="export-note" id="export-forecast-basis">{t('planner.forecast.basis', lang, {point: arrival.point})}{savedBrief.value ? ` ${t('planner.forecast.saved', lang)}` : ''}</p>
+    : <p class="export-note" id="export-forecast-status" role="status">{t(read?.status === 'failed' || read?.status === 'done' ? 'planner.forecast.failed' : 'planner.forecast.loading', lang)}</p>;
   useEffect(() => { if (waits) void loadLandWaterLines(m.region.id); }, [waits, m]);
   const minutes = (n: number | null): string => n === null ? '' : t('planner.leg.min', lang, {n});
   const storage = session.value.state === 'signed-in' && m.storageNote.value === t('pm.storageOk', 'en') ? ALERT_STORAGE_NOTE : m.storageNote.value;
@@ -201,12 +215,14 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
                   ref={el => { const key = `${stop.id}:${direction}`; if (el) orderButtons.current.set(key, el); else orderButtons.current.delete(key); }}
                   aria-label={t(direction === 'up' ? 'planner.order.upAria' : 'planner.order.downAria', lang, {name})}
                 onClick={() => move(stop.id, direction)}>{t(direction === 'up' ? 'planner.order.up' : 'planner.order.down', lang)}</button> : null)}
-                {stopTimes?.get(stop.id) ? <small class="export-note"> {t('planner.times.stop', lang, {arrive: clock(stopTimes.get(stop.id)!.arriveAt, stopTimes.get(stop.id)!.arriveAfterSunset), leave: clock(stopTimes.get(stop.id)!.leaveAt, stopTimes.get(stop.id)!.leaveAfterSunset)})}</small> : null}</li>;
+                {stopTimes?.get(stop.id) ? <small class="export-note"> {t('planner.times.stop', lang, {arrive: clock(stopTimes.get(stop.id)!.arriveAt, stopTimes.get(stop.id)!.arriveAfterSunset), leave: clock(stopTimes.get(stop.id)!.leaveAt, stopTimes.get(stop.id)!.leaveAfterSunset)})}</small> : null}
+                {arrival?.stops.get(stop.id) ? <><br /><small class="export-note" data-stop-forecast={stop.id}>{arrival.stops.get(stop.id)!.line}</small></> : null}</li>;
             })}</ol>
             {!port && <p>{t('planner.stops.noPort', lang)}</p>}
             <ol aria-label={t('planner.order.legs', lang)}>{route.legs.map((leg, i) => <li key={i}>{`${leg.from} → ${leg.to} · ${nmText(leg.nm, lang)} nm${leg.basis === 'straight' ? t('planner.leg.straight', lang) : ''}${minutes(leg.runMin)}${legLine(leg.screen, lang)}`}</li>)}</ol>
             <p>{t('planner.leg.total', lang, {nm: nmText(route.totalNm, lang), minutes: minutes(route.totalRunMin)})}</p>
             <p class="export-note">{route.legs.some(leg => leg.basis === 'straight') ? t('planner.leg.straightCaveat', lang) : ''}{t('planner.leg.common', lang)}</p>
+            {arrivalNote}
             {times?.state === 'ready' ? <>
               <p id="export-back-at">{t('planner.times.back', lang, {time: clock(times.backAt, times.backAfterSunset)})}</p>
               <p class="export-note" id="export-times-note">{t('planner.times.note', lang)}{times.firstOccurrence ? ` ${t('planner.times.firstOccurrence', lang)}` : ''}{times.sunsetAt === null ? ` ${t('planner.times.noSunset', lang)}` : ''}</p>
@@ -336,6 +352,18 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
     </div>
   );
 }
+
+/** SC2252-05: the plan's one read of the regional forecast for its arrival lines. One attempt per opening and region, shared with the mark card's loader and cache; a failed read is not retried by a redraw, an edit, a reorder or a limits or language change, only by closing and opening the plan again. */
+export const arrivalRead = signal<{region: string; status: 'loading' | 'failed' | 'done'} | null>(null);
+let arrivalGeneration = 0;
+export function readArrivalForecast(id: string, center: readonly [number, number], ensure: typeof ensureRegionalForecast = ensureRegionalForecast): void {
+  if (arrivalRead.peek()?.region === id) return;
+  const generation = ++arrivalGeneration, settle = (status: 'failed' | 'done') => { if (generation === arrivalGeneration) arrivalRead.value = {region: id, status}; };
+  arrivalRead.value = {region: id, status: 'loading'};
+  ensure(id, center).then(f => settle(f && f.region === id ? 'done' : 'failed'), () => settle('failed'));
+}
+/** Closing the plan or changing region: forget the attempt, so an answer still on its way is ignored. */
+export function resetArrivalRead(): void { arrivalGeneration++; arrivalRead.value = null; }
 
 /** SC2252-04: the leave-port and fishing-minutes text while it is not a valid pair (this page session only; the draft keeps the last valid pair). */
 export const timingTyped = signal<{leave: string; fish: string} | null>(null);
