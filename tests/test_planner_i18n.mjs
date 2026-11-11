@@ -204,8 +204,8 @@ test('gpx_help_en_es_en: one visible note before the caveats, described by Downl
       assert.ok(html.indexOf('id="export-gpx-help"') < html.indexOf('id="export-caveats"'), 'note before caveats');
       assert.ok(html.indexOf('id="export-caveats"') < html.indexOf('id="export-download"'), 'caveats before actions');
       assert.equal(html.split('aria-describedby="export-gpx-help"').length, 3, 'two buttons reference the note');
-      assert.match(html, /<button class="primary" id="export-download" aria-describedby="export-gpx-help"/);
-      assert.match(html, /<button id="export-share" aria-describedby="export-gpx-help"/);
+      assert.match(html, /<button class="primary" aria-describedby="export-gpx-help" id="export-download"/);
+      assert.match(html, /<button aria-describedby="export-gpx-help" id="export-share"/);
       assert.doesNotMatch(html, /id="export-notes"[^>]*aria-describedby/);
       assert.doesNotMatch(html, /id="export-route"[^>]*aria-describedby="export-gpx-help"/);
     }

@@ -65,7 +65,7 @@ test('in-app caveats equal the C1 and C4 short forms in docs/legal/disclaimers.m
 test('exportable plan: caveats sit after the validation line and before Download GPX', async () => {
   const {html, ok} = await renderSheet({longitude: -121.5, latitude: 35.2});
   assert.equal(ok, true, 'fixture plan is exportable');
-  assert.match(html, /id="export-download"[^>]*>Download GPX/);
+  assert.match(html, /id="export-download">Download GPX/);
   assertCaveats(html);
 });
 
@@ -79,6 +79,6 @@ test('GPX withheld (spot inside Morro Bay SMR): caveats still render once, befor
   }
   const {html, ok} = await renderSheet(inside);
   assert.equal(ok, false, 'GPX withheld');
-  assert.match(html, /id="export-download"[^>]*disabled/);
+  assert.match(html, /id="export-download" disabled/);
   assertCaveats(html);
 });
