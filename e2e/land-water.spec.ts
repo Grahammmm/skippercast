@@ -60,8 +60,9 @@ test('a region.json that lists the index but not the lines file never requests t
   const lines: string[] = [];
   await page.route('**/regions/morro-bay/region.json', async route => {
     const response = await route.fetch(), info = await response.json();
-    info.chartFiles = (info.chartFiles ?? []).filter((name: string) => name !== 'land-water-lines.json');
-    if (!info.chartFiles.includes('land-water.json')) info.chartFiles.push('land-water.json');
+    // The client reads region.json `chart_files` (web/app/region-info.ts), not a camelCase key.
+    info.chart_files = (info.chart_files ?? []).filter((name: string) => name !== 'land-water-lines.json');
+    if (!info.chart_files.includes('land-water.json')) info.chart_files.push('land-water.json');
     await route.fulfill({response, json: info});
   });
   await page.route(INDEX, async route => {
@@ -72,7 +73,10 @@ test('a region.json that lists the index but not the lines file never requests t
   });
   page.on('request', request => { if (request.url().endsWith('/land-water-lines.json')) lines.push(request.url()); });
   await v2.open('app', {region: 'morro-bay', profile: 'boat'});
-  await whereToLook(page, isMobile);
+  const where = await whereToLook(page, isMobile);
+  // Every cell is mixed and the lines file is unpublished: no place is confirmed as water, so none ranks.
+  await expect(where.locator('.app-empty')).toContainText('withheld: land/water not confirmed');
+  await expect(where.locator('.app-pick')).toHaveCount(0);
   await page.waitForLoadState('networkidle');
   expect(lines, 'the unpublished lines file is never requested').toEqual([]);
   expect(pageErrors).toEqual([]);
