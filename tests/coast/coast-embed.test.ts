@@ -332,3 +332,70 @@ test('the template itself still opens with its main for the standalone digests; 
  const f=fixture();
  try{f.mount();assert.notEqual(f.parsed[0],coastEmbedTemplate,'the managed parse is not the raw template');}finally{f.restore();}
 });
+
+// RF2315-6: a host's bearing/pitch pair restores the real orbit, and the renderer reports the real camera's angles.
+async function orbitViewer(ortho=false){
+ const T=await import('three');const {CoastViewer}=await import('../../packages/coast/src/coast3d/viewer.ts');const {coastPoint,coastLonLat}=await import('../../packages/coast/src/coast3d/grid.ts');
+ const views:any[]=[],v:any=Object.create(CoastViewer.prototype);
+ Object.assign(v,{alive:true,visible:true,options:{managed:true,onView:(view:unknown)=>views.push(view)},host:{dataset:{},clientWidth:800,clientHeight:600},perspective:'3d',orbit:new T.Vector3(-4600,3600,4800),orthoHeight:7000,
+  camera:ortho?new T.OrthographicCamera(-1,1,1,-1,2,1000000):new T.PerspectiveCamera(42,1,2,1000000),controls:{target:new T.Vector3(),update(){},object:null,mouseButtons:{},touches:{}},scene:{fog:null,background:null},sky:null,
+  cancelCurrentAdmission(){},hideReading(){},refine:()=>{},drawPins(){},refreshCurrents:()=>{},onResize(){},$:()=>({setAttribute(){}})});
+ if(ortho){v.perspective='2d';v.camera.position.set(0,25000,.01);}
+ return {T,v,views,coastPoint,coastLonLat};
+}
+const near=(a:number,b:number,eps=1e-6)=>Math.abs(a-b)<=eps;
+
+test('renderer_restores_actual_offset_not_metadata: the camera offset follows bearing and pitch about the centre and span, and notifyView reports it back',async()=>{
+ const {T,v,views,coastPoint}=await orbitViewer();
+ const [x,z]=coastPoint(-120.86,35.37),offset=()=>v.camera.position.clone().sub(v.controls.target);
+ // North-facing (bearing 0): the camera sits south of the target, i.e. on +z; pitch 60 is 60 degrees off straight down.
+ v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:0,pitch:60});
+ assert.ok(near(v.controls.target.x,x)&&near(v.controls.target.z,z),'the centre is the requested place, not swapped');
+ const p=60*Math.PI/180;
+ assert.ok(offset().distanceTo(new T.Vector3(0,Math.cos(p),Math.sin(p)).multiplyScalar(5000))<1e-6,'north: camera south of the target, at the requested span');
+ v.notifyView();assert.ok(near(views.at(-1).bearing,0)&&near(views.at(-1).pitch,60)&&near(views.at(-1).span,5000,1e-6),'the second report is the real camera');
+ // East-facing (bearing 90): camera west of the target (-x). Negative bearing -90: camera east (+x).
+ v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:90,pitch:45});
+ assert.ok(offset().distanceTo(new T.Vector3(-Math.sin(Math.PI/4),Math.cos(Math.PI/4),0).multiplyScalar(5000))<1e-6,'east-facing');
+ v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:-90,pitch:45});
+ assert.ok(offset().x>0&&Math.abs(offset().z)<1e-6,'a negative bearing faces west');
+ v.notifyView();assert.ok(near(views.at(-1).bearing,-90,1e-6)&&near(views.at(-1).pitch,45,1e-6));
+ v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:-135,pitch:30});v.notifyView();
+ assert.ok(near(views.at(-1).bearing,-135,1e-6)&&near(views.at(-1).pitch,30,1e-6)&&views.at(-1).bearing<0);
+ // A user orbit (camera moved directly) is what the next report says, not the last request.
+ v.camera.position.copy(v.controls.target).add(new T.Vector3(0,0,1000));v.notifyView();
+ assert.ok(near(views.at(-1).bearing,0)&&near(views.at(-1).pitch,90),'a camera moved by hand reports its own angles');
+ // Pitch endpoints clamp to the renderer's orbit bounds, and the report shows the clamp.
+ v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:20,pitch:0});v.notifyView();assert.ok(near(views.at(-1).pitch,.08*180/Math.PI,1e-6),'pitch 0 is held at minPolarAngle');
+ v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:20,pitch:90});v.notifyView();assert.ok(near(views.at(-1).pitch,.46*180,1e-6),'pitch 90 is held at maxPolarAngle');
+ assert.ok(near(views.at(-1).bearing,20,1e-6));
+});
+
+test('renderer_restores_actual_offset_not_metadata: a missing or invalid pair keeps the legacy default move and never makes NaN geometry',async()=>{
+ const {T,v}=await orbitViewer();
+ const legacy=new T.Vector3(-.56,.46,.6).normalize().multiplyScalar(5000);
+ for(const extra of [{},{bearing:30},{pitch:30},{bearing:Number.NaN,pitch:30},{bearing:30,pitch:Number.POSITIVE_INFINITY},{bearing:181,pitch:30},{bearing:30,pitch:-1},{bearing:30,pitch:91},{bearing:'30',pitch:'30'}]){
+  v.setLocation({latitude:35.37,longitude:-120.86,span:5000,...extra});
+  const offset=v.camera.position.clone().sub(v.controls.target);
+  assert.ok(offset.distanceTo(legacy)<1e-6&&Number.isFinite(offset.length()),JSON.stringify(extra));
+ }
+});
+
+test('renderer_restores_actual_offset_not_metadata: a top-down camera stays north-up and the later 3D switch uses the requested orbit',async()=>{
+ const {T,v,views}=await orbitViewer(true);
+ v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:90,pitch:45});
+ assert.ok(v.camera instanceof T.OrthographicCamera&&Math.abs(v.camera.position.x-v.controls.target.x)<1e-6&&v.camera.position.y>=25000,'the orthographic camera is not rotated');
+ v.notifyView();assert.ok(!('bearing' in views.at(-1))&&!('pitch' in views.at(-1)),'a top-down camera reports no orientation');
+ v.setPerspective('3d');
+ assert.ok(v.camera instanceof T.PerspectiveCamera);
+ v.notifyView();assert.ok(near(views.at(-1).bearing,90,1e-6)&&near(views.at(-1).pitch,45,1e-6),'the 3D camera opens on the requested orbit');
+});
+
+test('a perspective report ahead of any orientation request is the real default camera angles, and a degenerate offset reports none',async()=>{
+ const {v,views,T}=await orbitViewer();
+ v.camera.position.set(-560,460,600);v.notifyView();
+ assert.ok(near(views.at(-1).bearing,Math.atan2(560,600)*180/Math.PI,1e-6)&&near(views.at(-1).pitch,Math.acos(460/Math.hypot(560,460,600))*180/Math.PI,1e-6));
+ v.camera.position.copy(v.controls.target);assert.deepEqual(v.orbitAngles(),{},'a zero-length offset reports no orientation');
+ v.camera.position.set(Number.NaN,1,1);assert.deepEqual(v.orbitAngles(),{},'a nonfinite offset reports no orientation');
+ void T;
+});
