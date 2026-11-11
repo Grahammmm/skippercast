@@ -8,7 +8,7 @@ import {build} from 'esbuild';
 import type {Page} from '@playwright/test';
 import {test, expect} from './fixtures.ts';
 import {contrast} from '../scripts/check_contrast.mjs';
-import {rendererPlugins} from '../tests/helpers/esbuild-url.mjs';
+import {styledRendererPlugins} from '../tests/helpers/esbuild-url.mjs';
 
 const AREA = {region: 'morro-bay'};
 const NOW = '2026-09-30T16:00:00Z';   // 9 am PDT; tomorrow is 1 October
@@ -57,7 +57,7 @@ async function bundleHost() {
         if (state === 'yes') document.querySelector('#host .app-first-answer').setAttribute('data-fishable', 'yes');
       },
     };`}, bundle: true, format: 'iife', outfile: 'fa-host.js', write: false, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-  plugins: rendererPlugins, loader: {'.woff2': 'dataurl'}});
+  plugins: styledRendererPlugins, loader: {'.woff2': 'dataurl'}});
 }
 
 async function openHost(page: Page, bundle: Awaited<ReturnType<typeof bundleHost>>, width: number, theme: 'dark' | 'light') {

@@ -135,6 +135,16 @@ def represent(native):
     return geo, fidelity(native, geo)
 
 
+def _area_claim_matches(claim, native_area):
+    """True only for an exact int/float claim within tolerance; oversized ints refuse."""
+    if type(claim) not in (int, float):
+        return False
+    try:
+        return math.isfinite(claim) and abs(claim*10000-native_area) <= 1e-6
+    except OverflowError:
+        return False
+
+
 def verify_inventory(candidates, native_inventory):
     """Native boundaries remain private and hash-bound; no IDs or patches split."""
     if native_inventory.get('crs') != 'EPSG:3310' or native_inventory.get('version') != VERSION:
@@ -148,8 +158,7 @@ def verify_inventory(candidates, native_inventory):
     for original, feature in zip(native_rows, candidates['features']):
         native = polygon(original['geometry'])
         p = feature['properties']
-        if 'area_ha' in p and (type(p['area_ha']) not in (int, float)
-                or not math.isfinite(p['area_ha']) or abs(p['area_ha']*10000-native.area) > 1e-6):
+        if 'area_ha' in p and not _area_claim_matches(p['area_ha'], native.area):
             raise ValueError('Classified native area claim changed')
         expected = geographic(native)
         actual = polygon(feature['geometry'])

@@ -107,6 +107,8 @@ let savedStore: SavedStore | null | undefined;
 export const SAVED_SETTLE_MS = 20_000;
 /** Set while any part on screen is the saved one: the oldest saved part's fetch time and whether the update is running or failed; null otherwise. */
 export const savedBrief = signal<{at: number; state: SavedState} | null>(null);
+/** SC2252-05: whether the forecast part on screen is the saved one (savedBrief also stays set while only the daily part is saved). */
+export const savedForecast = signal(false);
 
 /**
  * The minimal region metadata (id, name, centre, zone) restored from the saved brief. The brief cannot be rebuilt without it, and
@@ -129,6 +131,7 @@ effect(() => {
   held.region = null; held.daily = held.forecast = null;
   savedRegion.value = null;
   savedBrief.value = null;
+  savedForecast.value = false;
 });
 
 /** Turn on keeping and showing the last brief on this device; `store` is the browser's by default, null when there is none. */
@@ -136,7 +139,10 @@ export function enableSavedBrief(store: SavedStore | null = browserStore()): voi
 
 function publishSaved(): void {
   const parts = [held.daily, held.forecast].filter((p): p is HeldPart => !!p?.saved);
-  savedBrief.value = parts.length ? {at: Math.min(...parts.map(p => p.at)), state: parts.some(p => p.failed) ? 'failed' : parts.some(p => p.pack) ? 'offline' : 'updating'} : null;
+  batch(() => {
+    savedBrief.value = parts.length ? {at: Math.min(...parts.map(p => p.at)), state: parts.some(p => p.failed) ? 'failed' : parts.some(p => p.pack) ? 'offline' : 'updating'} : null;
+    savedForecast.value = !!held.forecast?.saved;
+  });
 }
 function markFresh(part: 'daily' | 'forecast', id: string): void {
   if (held.region !== id) { held.region = id; held.daily = held.forecast = null; }

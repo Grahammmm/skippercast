@@ -92,13 +92,20 @@ class _Builder(HTMLParser):
             return
         group = IMPLICIT.get(tag)
         if group:
+            cell_depth = 0  # for a new row: nearest open cell, used only when no open row is reachable
             for depth in range(len(self.stack) - 1, 0, -1):
                 open_tag = self.stack[depth].tag
+                if tag == "tr" and open_tag in ("td", "th"):
+                    cell_depth = cell_depth or depth
+                    continue
                 if open_tag in group:
                     del self.stack[depth:]
+                    cell_depth = 0
                     break
                 if open_tag in ("table", "ul", "ol", "dl", "div", "tbody", "thead", "section", "article"):
                     break
+            if cell_depth:
+                del self.stack[cell_depth:]
         node = Node(tag, {k: v or "" for k, v in attrs}, self.stack[-1])
         self.stack[-1].children.append(node)
         if tag not in VOID:

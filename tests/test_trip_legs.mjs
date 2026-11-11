@@ -77,7 +77,7 @@ test('planner rendering follows selection and stored waypoint order, without cha
       let markup = html();
       assert.match(markup, /<ol aria-label="Stops in order">/);
       assert.match(markup, /No home port chosen, so the run from port is not counted\./);
-      assert.match(markup, /Sea state, the bar, fuel and conditions at each stop are not included\./);
+      assert.match(markup, /Sea state, the bar and fuel are not included in run-time estimates\./);
       assert.doesNotMatch(markup, /at least \d+ min/);
       assert.ok(before === m.buildExport(request).gpx, 'rendering leaves GPX bytes unchanged');
       model.toggleSpot('2', false); model.toggleSpot('2', true);

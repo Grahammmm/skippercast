@@ -86,13 +86,18 @@ class OwnedChildren:
                 fd = os.pidfd_open(pid, 0)
             except ProcessLookupError:
                 continue
-            after = self.identity(pid)
-            if not self._same(before, after) or after.get("ppid") != self.pid:
-                os.close(fd)
-                if after is None:
-                    continue
-                raise RuntimeError("owned child identity changed while pinning pidfd")
-            self.fds[pid] = fd
+            registered = False
+            try:
+                after = self.identity(pid)
+                if not self._same(before, after) or after.get("ppid") != self.pid:
+                    if after is None:
+                        continue
+                    raise RuntimeError("owned child identity changed while pinning pidfd")
+                self.fds[pid] = fd
+                registered = True
+            finally:
+                if not registered:
+                    os.close(fd)  # Unregistered fds are invisible to close().
             self.records[pid] = after
             self.history.append(after)
             # Partial records cannot prove universal absence after a crash.

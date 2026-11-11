@@ -272,6 +272,8 @@ def bind_segment(root, segment, segment_id, facts):
         if len(parts) != 5 or parts[:2] != ['seg','3310'] or parts[4] != '5000':
             raise ValueError('canonical geographic segment ID required')
         x0, y0 = int(parts[2]), int(parts[3])
+        if segment_id != f'seg:3310:{x0}:{y0}:5000':
+            raise ValueError('canonical geographic segment ID required')
         if x0 % 5000 or y0 % 5000:
             raise ValueError('geographic segment origin must use 5 km lattice')
     except (TypeError, ValueError) as error:
