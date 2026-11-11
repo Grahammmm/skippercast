@@ -26,7 +26,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-views a { display: inline-flex; align-items: center; min-height: var(--touch-min); padding: 0 var(--space-3); border-radius: var(--radius-md); color: var(--muted); font-weight: var(--weight-medium); text-decoration: none; }
 .app-views a:hover { color: var(--text); background: var(--panel-2); }
 .app-views a[aria-current="page"] { color: var(--text); box-shadow: inset 0 -2px 0 var(--mint); }
-.app-fresh { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); }
+.app-fresh { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); max-width: 20rem; color: var(--muted); }
 .app-fresh-dot { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--muted); }
 .app-fresh[data-state="ok"] .app-fresh-dot { background: var(--mint); }
 .app-fresh[data-state="stale"] .app-fresh-dot { background: var(--amber); }
@@ -562,6 +562,8 @@ p.app-forecast-failed-head { font-size: var(--text-15); }
   .app-masthead:has(> .app-location-preview) { flex-wrap: wrap; }
   .app-masthead > .app-location-preview { flex: 0 1 22rem; min-width: 18rem; max-width: 22rem; }
 }
+/* SC1922-08: the failed-press line wraps under the chip's age and Refresh button instead of widening the chip past its cap (on desktop the masthead keeps the chip at its own width, so a line shifts nothing at load). */
+.app-fresh > [data-refresh-line] { flex-basis: 100%; }
 /* SC1722-20: skip links, the first two tab stops. Clipped to a pixel at rest (still focusable and named); on focus a ringed 44 px panel at the top-left. */
 .app-skip-link { position: fixed; top: calc(var(--space-2) + env(safe-area-inset-top, 0px)); left: calc(var(--space-2) + env(safe-area-inset-left, 0px)); z-index: var(--z-toast); width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .app-skip-link:focus { display: flex; align-items: center; width: auto; height: auto; min-width: var(--touch-min); min-height: var(--touch-min); padding: 0 var(--space-4); overflow: visible; clip-path: none; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); color: var(--text); outline: 2px solid var(--focus); outline-offset: 2px; }

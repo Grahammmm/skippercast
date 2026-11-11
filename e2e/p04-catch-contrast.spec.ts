@@ -218,7 +218,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // same classes, markup and text. BODY09 mounts Reports/CatchCards, never Masthead. CSS, tokens and catch markup
   // are unchanged; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
   // SC1922-03: Masthead.tsx renders Location's Retry through the shared Button (ui-button--quiet ui-button--sm); BODY09 mounts Reports/CatchCards, never Masthead. No catch markup, token or paint change. Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "c358be039c64285446254d730fa0b99f133529e36ea6fed7853e4132eaa6fd37",
+  // SC1922-08: Masthead.tsx's FreshnessDot gains a Refresh Button and a status line inside the chip, beside the unchanged age span; BODY09 mounts Reports/CatchCards, never Masthead. No token, catch markup or catch paint change (the CSS is the app.css chip rule and appended block, bound below). Rebind only Masthead.tsx.
+  "web/app/Masthead.tsx": "4f233466f19c5a174d2b94c3a2b22ad748c44c7b80b3fd5b9f2b0e3744ac3466",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
@@ -274,8 +275,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
   // RF1935-2: app.css adds only a desktop-only layer-rail preset wrap block and the rail's vertical scroll track (layout, no paint); the Reports catch sheet mounts no rail. Rebound from the final bytes.
   // SC1922-03: app.css adds only a Conditions-header model-family wrap/min-height rule and a pointer-events rule scoped to .app-presentation--placing (the armed placing stack, which Reports never mounts); no paint, backing or catch text changed. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
+  // SC1922-08: app.css lets the .app-fresh chip wrap (flex-wrap, max-width) and appends only a [data-refresh-line] wrap rule (no colour change); the Reports catch sheet mounts neither. check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
   // SC1722-20: app.css appends only a scoped .app-skip-link block (a clipped 1 px anchor at rest, a ringed 44 px panel when focused); the Reports catch sheet mounts no skip link, so no catch paint or backing changes. Rebound from the final bytes.
-  "web/app/app.css": "29077f82002df95cac8883a912c742b87d64430cd34ba7360665df24b4b454d6",
+  "web/app/app.css": "a2d4808c892bd135f95128c73ffd3b97374de3513562672e0526e0080ee20234",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -349,8 +351,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF1925-1: only appCss pin and applicability comment change.
   // RF1935-2: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // SC1922-03: only the appCss pin and applicability comment change.
+  // SC1922-08: only the appCss pin and applicability comment change.
   // SC1722-20: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "c805e9b89c3bd41c5beff3638306e51c516edc5208db45245aa1d3828676c0d6",
+  "scripts/check_contrast.mjs": "30e7c3a2bb368f9ddcddf53594e5eb5a9fd61980b00e9787058e4fb1f2f76bf7",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
