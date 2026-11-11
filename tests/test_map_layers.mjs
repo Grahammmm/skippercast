@@ -490,6 +490,45 @@ test('a failing source marks its layer unavailable and the rest of the Chart kee
   assert.deepEqual(unavailable.value, []);
 });
 
+test('RF2205-9: an overview-only region never sends the full shoreline URL, at any zoom or after an overview error', async t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay&presentation=chart&view=35.38000,-120.88000,14`);
+  publishedChartFiles.value = {region: 'morro-bay', files: ['shoreline-overview.geojson']};
+  t.after(() => { publishedChartFiles.value = null; });
+  const {fake, stage} = chartStage();
+  await tick(); await tick();
+  const [map] = fake.maps;
+  const OVERVIEW = 'https://s.test/regions/morro-bay/shoreline-overview.geojson';
+  const shore = () => (map.dataCalls ?? []).filter(([id]) => id === COASTLINE_SOURCE).map(([, data]) => data);
+  assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, OVERVIEW, 'opened at a detail zoom: still the overview');
+  for (const zoom of [8, 16, 20]) { map.jumpTo({center: [-120.88, 35.38], zoom}); map.fire('moveend'); await tick(); }
+  map.fire('error', {sourceId: COASTLINE_SOURCE, error: new Error('503')});
+  map.fire('error', {sourceId: COASTLINE_SOURCE, error: new Error('503 again')});
+  map.jumpTo({center: [-120.88, 35.38], zoom: 18}); map.fire('moveend'); await tick();
+  assert.equal(shore().some(data => typeof data === 'string' && data.endsWith('/shoreline.geojson')), false, 'the full URL is never sent');
+  assert.deepEqual(unavailable.value.filter(layer => layer === 'coastline'), ['coastline'], 'Coastline unavailable exactly once');
+  assert.equal(chartFailed.value, false);
+  assert.equal(map.removed, false);
+  stage.destroy();
+});
+
+test('RF2205-9: both files listed still falls back to the full shoreline once, then marks only Coastline unavailable', async t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  publishedChartFiles.value = {region: 'morro-bay', files: ['shoreline-overview.geojson', 'shoreline.geojson']};
+  t.after(() => { publishedChartFiles.value = null; });
+  const {fake, stage} = chartStage();
+  await tick(); await tick();
+  const [map] = fake.maps;
+  const shore = () => (map.dataCalls ?? []).filter(([id]) => id === COASTLINE_SOURCE).map(([, data]) => data);
+  map.fire('error', {sourceId: COASTLINE_SOURCE, error: new Error('overview 503')});
+  assert.deepEqual(shore(), ['https://s.test/regions/morro-bay/shoreline.geojson'], 'one fallback to the full file');
+  assert.deepEqual(unavailable.value.filter(layer => layer === 'coastline'), []);
+  map.fire('error', {sourceId: COASTLINE_SOURCE, error: new Error('full 503')});
+  assert.deepEqual(unavailable.value.filter(layer => layer === 'coastline'), ['coastline']);
+  stage.destroy();
+});
+
 test('RF0850-2: the Chart asks for no shoreline while region.json loads, and none once the loaded list lacks it (mount and region change)', async t => {
   t.mock.method(console, 'warn', () => {});
   browser(`${PAGE}?region=morro-bay&presentation=chart`);

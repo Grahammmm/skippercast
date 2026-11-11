@@ -322,10 +322,11 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
           : plannerText(s.message, lang)}</p>
         {!s.ok && m.protectedHits.value.slice(0, 3).map(h => <p key={h.id}>{t('planner.notExported', lang, {label: h.label, names: h.matches.map(a => a.name).join(', ')})} <button onClick={() => m.removeWaypoint(h.id)}>{t('planner.remove', lang, {label: h.label})}</button></p>)}
         <p class="export-note">{t('planner.snapshot', lang)}</p>
+        <p id="export-gpx-help" class="export-note">{t('planner.gpxHelp', lang)}</p>
         <p id="export-caveats" class="export-note">{t('brief.planning', lang)} {t('planner.caveat.c4', lang)}</p>
         <div class="export-actions">
-          <button class="primary" id="export-download" disabled={!s.ok} onClick={() => void m.deliver('gpx')}>{t('planner.download', lang)}</button>
-          <button id="export-share" disabled={!s.ok} onClick={() => void m.deliver('share')}>{m.preparing.value ? t('planner.preparing', lang) : t('planner.share', lang)}</button>
+          <button class="primary" aria-describedby="export-gpx-help" id="export-download" disabled={!s.ok} onClick={() => void m.deliver('gpx')}>{t('planner.download', lang)}</button>
+          <button aria-describedby="export-gpx-help" id="export-share" disabled={!s.ok} onClick={() => void m.deliver('share')}>{m.preparing.value ? t('planner.preparing', lang) : t('planner.share', lang)}</button>
           <button id="export-notes" disabled={!m.notesReady.value} onClick={() => void m.deliver('notes')}>{t('planner.notes', lang)}</button>
         </div>
         <p id="export-action-status" role="status">{plannerText(m.actionStatus.value, lang)}</p>
