@@ -245,7 +245,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // and the presentation toggle, terrain controls and poster are not rendered while the Chart is failed). BODY09 renders
   // Reports/CatchCards and does not mount MapStage; no CSS, token, catch markup, paint, assertion or threshold changes. Rebind only MapStage.tsx.
   // SC1922-03: MapStage.tsx renders Cancel waypoint through the shared Button and adds the app-presentation--placing modifier class to the stack while a waypoint placement is armed; BODY09 mounts Reports/CatchCards, never MapStage. No catch markup, token or paint change. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "0b92893c5ae333b4a7ef58dcc04dd87d300a22ed8e48599e46a2330e644218e9",
+  // RF2115-5: MapStage.tsx adds a startup loading status paragraph (existing app-stage-note class) and aria-busy on the Chart host; BODY09 renders Reports/CatchCards, never MapStage. No paint, token, assertion or threshold change. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "0ec802d2b4ec5f48e0440a0cd775f81c2f816a0346e655f57ee4d91de18625fb",
   "web/tokens.css": "85271ff5258cbbe3bfce09a7dc0b5c16ff1e31325b5a5f8d5d8a9fedd425dfd1",
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
   // changes (panel.css: History scroller 2 px ring and one summary ring; app.css: fleet checkbox ring); unfocused catch text and contrast are unchanged. check_contrast.mjs changes only the appCss surface hash, its comment and moved citations. Rebound from final bytes.

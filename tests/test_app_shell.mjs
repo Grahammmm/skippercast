@@ -49,7 +49,9 @@ async function load() {
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
       export {MarkCard, clearSelection, currentMark, placeholderMark, readingCard, terrainCard} from './web/app/MarkCard.tsx';
       export {chartMark} from './web/map/chart.ts';
-      export {PresentationToggle, TerrainControls, PRESENTATIONS} from './web/app/MapStage.tsx';
+      export {PresentationToggle, TerrainControls, PRESENTATIONS, MapStage, chartLoading} from './web/app/MapStage.tsx';
+      export {mapFirstIdle} from './web/map-ready.ts';
+      export {chartFailed} from './web/map/chart.ts';
       export {terrainActions, terrainFailed, terrainReason, UNAVAILABLE, NO_TERRAIN} from './web/map/stage.ts';
       export {beginWaypointPlacement, cancelWaypointPlacement, placeWaypoint, placementRefused} from './web/waypoint-placement.ts';
       export {Legend, RankedRow} from './web/app/Legend.tsx';
@@ -940,6 +942,36 @@ test('the legend keys the ranked trip spots while the Chart draws them (#422)', 
   } finally { rankedSpots.value = []; markScreen.value = CHECKING; }
 });
 
+test('RF2115-5: the Chart shows a polite loading status and aria-busy until the visit\'s first idle; failure, terrain and a settled visit show none', async () => {
+  const {MapStage, mapFirstIdle, chartFailed, terrainFailed, language, setLanguage, render, h, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  const none = {getItem: () => null, setItem() {}};
+  const status = html => html.match(/<p[^>]*data-chart-loading-status[^>]*>([^<]*)<\/p>/);
+  const busy = html => html.match(/<div class="app-chart"[^>]*aria-busy="(true|false)"/)?.[1];
+  const idle = mapFirstIdle.peek(), failed = chartFailed.peek();
+  try {
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart`);
+    mapFirstIdle.value = false; chartFailed.value = false;
+    let html = render(h(MapStage, {}));
+    assert.equal(status(html)?.[1], 'Loading the map…');
+    assert.match(status(html)[0], /role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"|aria-live="polite"[^>]*role="status"/);
+    assert.equal(busy(html), 'true');
+    assert.equal((html.match(/aria-busy/g) ?? []).length, 1, 'only the chart host is busy');
+    setLanguage('es', {storage: none, doc: null});
+    assert.equal(status(render(h(MapStage, {})))[1], 'Cargando el mapa…');
+    setLanguage('en', {storage: none, doc: null});
+    mapFirstIdle.value = true;
+    html = render(h(MapStage, {}));
+    assert.equal(status(html)[1], '', 'settled: the status is empty'); assert.equal(busy(html), 'false');
+    mapFirstIdle.value = false; chartFailed.value = true;
+    html = render(h(MapStage, {}));
+    assert.doesNotMatch(html, /Loading the map/); assert.equal(busy(html), 'false');
+    chartFailed.value = false;
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=2d`);
+    html = render(h(MapStage, {}));
+    assert.equal(status(html)[1], '', 'terrain shown: no Chart loading cue'); assert.equal(busy(html), 'false');
+  } finally { mapFirstIdle.value = idle; chartFailed.value = failed; setLanguage('en', {storage: none, doc: null}); }
+});
 test('SC1952-06: the armed Chart status shows a refusal as text, keeps the instruction and Cancel, and hides it when disarmed, in 3D or in another region', async () => {
   const {PresentationToggle, beginWaypointPlacement, cancelWaypointPlacement, placeWaypoint, placementRefused, assessScreen, render, h, state} = await load();
   state.configureStore({v2: true, storage: memory()});
