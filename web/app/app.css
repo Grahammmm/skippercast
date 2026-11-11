@@ -562,3 +562,15 @@ p.app-forecast-failed-head { font-size: var(--text-15); }
   .app-masthead:has(> .app-location-preview) { flex-wrap: wrap; }
   .app-masthead > .app-location-preview { flex: 0 1 22rem; min-width: 18rem; max-width: 22rem; }
 }
+
+/* RF2135-5: ordinary landscape phones put the top card/controls row and the profile switch side by side (layout only, no paint). */
+@media (min-width: 600px) and (max-width: 1023px) and (max-height: 500px) and (orientation: landscape) {
+  .app-mobile { --app-strip: calc(72px + env(safe-area-inset-top, 0px)); }
+  .app-mobile .app-top { flex-direction: row; align-items: flex-start; }
+  .app-mobile .app-top .app-top-row { flex: 1; min-width: 0; }
+  .app-mobile .app-top .app-top-card { flex-direction: row; align-items: center; gap: var(--space-3); padding-top: 0; padding-bottom: 0; }
+  .app-mobile .app-top .app-top-card .app-brand { flex: none; }
+  .app-mobile .app-top .app-top-card .app-location { flex: 1; min-width: 0; }
+  .app-mobile .app-top .app-profile { flex: 0 0 240px; min-width: 0; }
+}
+/* end RF2135-5 */

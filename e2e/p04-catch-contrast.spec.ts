@@ -271,7 +271,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-01: app.css appends only a scoped .app-forecast-failed* block (token text roles) that the Reports catch sheet never mounts; check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
   // RF1935-2: app.css adds only a desktop-only layer-rail preset wrap block and the rail's vertical scroll track (layout, no paint); the Reports catch sheet mounts no rail. Rebound from the final bytes.
   // SC1922-03: app.css adds only a Conditions-header model-family wrap/min-height rule and a pointer-events rule scoped to .app-presentation--placing (the armed placing stack, which Reports never mounts); no paint, backing or catch text changed. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
-  "web/app/app.css": "8bc7e71b104fc2bd96d2799297623263663cc2d337770260ea553785b06880e7",
+  "web/app/app.css": "73730e7dea59097f4eb8a1e0237f0ca468eb4dfc0fcf603a4ae884e32b4a1218",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -344,7 +344,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF1925-1: only appCss pin and applicability comment change.
   // RF1935-2: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // SC1922-03: only the appCss pin and applicability comment change.
-  "scripts/check_contrast.mjs": "f76f2e8238656f3c9516499fd1e0e04a68c008c4e01015bb3955118623930177",
+  // RF2135-5: app.css appends only a landscape-phone top-chrome layout block (flex direction and bases, --app-strip); Reports never mounts the app shell header. check_contrast.mjs changes only the appCss surface hash and its comment; every contrast role and threshold is unchanged. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "973d61692ed7c5ed71282494dcfb441d1a4f855b6767f929bc770a997c3ee162",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
