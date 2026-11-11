@@ -54,8 +54,11 @@ export function c2Release(regionId: string | null, c2: C2Flag = {enabled: C2_ENA
   return c2.releases[regionId] === path ? path : null;
 }
 
-/** The shared camera as `?view=` writes it: centre in degrees and a web-map zoom. */
-export interface Camera {readonly latitude: number; readonly longitude: number; readonly zoom: number}
+/**
+ * The shared camera as `?view=` writes it: centre in degrees and a web-map zoom. `bearing` (signed, -180 to 180) and
+ * `pitch` (0 straight down to 90), in degrees, come as a pair from a settled 3D orbit; a legacy link has neither.
+ */
+export interface Camera {readonly latitude: number; readonly longitude: number; readonly zoom: number; readonly bearing?: number; readonly pitch?: number}
 
 /** The zoom a region's centre opens at when the link names no camera. */
 export const HOME_ZOOM = 12;
@@ -77,17 +80,35 @@ export const zoomForSpan = (span: number): number => clamp(12 - Math.log2(span /
 /** The inverse, clamped to the spans v1 sends the renderer. */
 export const spanForZoom = (zoom: number): number => clamp(7300 * 2 ** (12 - zoom), 1200, 245000);
 
-/** "latitude,longitude,zoom" from `?view=`; null for a masthead view or anything malformed. */
+/** "latitude,longitude,zoom" or "latitude,longitude,zoom,bearing,pitch" from `?view=`; null for a masthead view or anything malformed. */
 export function parseCamera(value: string | null): Camera | null {
   const parts = (value ?? '').split(',');
-  if (parts.length !== 3 || parts.some(p => p.trim() === '')) return null;
-  const [latitude, longitude, zoom] = parts.map(Number) as [number, number, number];
-  if (![latitude, longitude, zoom].every(Number.isFinite) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
-  return {latitude, longitude, zoom: clamp(zoom, 0, 22)};
+  if ((parts.length !== 3 && parts.length !== 5) || parts.some(p => p.trim() === '')) return null;
+  const numbers = parts.map(Number) as [number, number, number, number?, number?];
+  const [latitude, longitude, zoom, bearing, pitch] = numbers;
+  if (!numbers.every(Number.isFinite) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+  if (parts.length === 3) return {latitude, longitude, zoom: clamp(zoom, 0, 22)};
+  if (Math.abs(bearing as number) > 180 || (pitch as number) < 0 || (pitch as number) > 90) return null;
+  return {latitude, longitude, zoom: clamp(zoom, 0, 22), bearing: bearing as number, pitch: pitch as number};
 }
-export const cameraParam = (c: Camera): string => `${c.latitude.toFixed(5)},${c.longitude.toFixed(5)},${Math.round(c.zoom * 100) / 100}`;
-/** The renderer's location for a camera. */
-export const locationFor = (c: Camera): CoastLocation => ({latitude: c.latitude, longitude: c.longitude, span: spanForZoom(c.zoom)});
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+/** A camera's orientation pair as the link writes it (two decimals, bearing in -180..180); null unless both are valid. */
+function orientation(c: Camera): {bearing: number; pitch: number} | null {
+  const {bearing, pitch} = c;
+  if (typeof bearing !== 'number' || typeof pitch !== 'number' || !Number.isFinite(bearing) || !Number.isFinite(pitch)) return null;
+  const wrapped = Math.abs(bearing) <= 180 ? bearing : ((bearing + 180) % 360 + 360) % 360 - 180;
+  const b = round2(wrapped) + 0, p = round2(pitch) + 0; // + 0: no "-0"
+  return Math.abs(b) <= 180 && p >= 0 && p <= 90 ? {bearing: b, pitch: p} : null;
+}
+export const cameraParam = (c: Camera): string => {
+  const base = `${c.latitude.toFixed(5)},${c.longitude.toFixed(5)},${round2(c.zoom)}`, o = orientation(c);
+  return o ? `${base},${o.bearing},${o.pitch}` : base;
+};
+/** The renderer's location for a camera; the orientation pair goes only when the camera has a valid one. */
+export const locationFor = (c: Camera): CoastLocation => {
+  const o = orientation(c);
+  return {latitude: c.latitude, longitude: c.longitude, span: spanForZoom(c.zoom), ...(o ?? {})};
+};
 
 /** The renderer's species for the store's target, or the profile's default target. */
 export function coastSpecies(target: string | null, p: Profile): string {
@@ -414,7 +435,9 @@ export function createStage(options: StageOptions): Stage {
         onHabitat: seen => { if (alive) terrainHabitat.value = seen; },
         onView: seen => {
           if (appView.peek() !== 'coast') return;
-          const next = parseCamera(cameraParam({latitude: seen.latitude, longitude: seen.longitude, zoom: zoomForSpan(seen.span)}));
+          // Only a shown 3D orbit has an orientation to keep; 2D and old emitters report the three-field form.
+          const orbit = shownPresentation.peek() === '3d' && seen.bearing !== undefined && seen.pitch !== undefined ? {bearing: seen.bearing, pitch: seen.pitch} : {};
+          const next = parseCamera(cameraParam({latitude: seen.latitude, longitude: seen.longitude, zoom: zoomForSpan(seen.span), ...orbit}));
           if (!next) return;
           // The renderer is already there: mark its location applied so the camera is not sent back.
           applied.location = key(locationFor(next));
