@@ -958,6 +958,7 @@
     "rail.admin": {"en": "{label} · admin", "es": "{label} · administración"},
     "rail.basisSummary": {"en": "{label} basis", "es": "{label}: fundamento"},
     "rail.chartOnly": {"en": "Chart only", "es": "Solo en la Carta"},
+    "rail.chartFailed": {"en": "Map could not start on this device or browser.", "es": "El mapa no pudo iniciarse en este dispositivo o navegador."},
     "rail.notDrawn": {"en": "Not drawn yet.", "es": "Aún no se muestra."},
     "rail.unavailable": {"en": "{label} unavailable.", "es": "{label} no disponible."},
     "rail.swell.label": {"en": "Swell + wind", "es": "Oleaje y viento"},

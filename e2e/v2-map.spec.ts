@@ -118,6 +118,10 @@ test('with WebGL disabled the stage says the map graphics could not start, hides
   await expect(page.locator('.app-terrain')).toBeHidden();
   await expect(page.getByRole('group', {name: 'Map presentation'})).toHaveCount(0);
   expect(params(page).presentation, 'the link keeps the request').toBe('3d');
+  // SC1922-07: the layer buttons stay, but every one is aria-disabled with the reason.
+  const toggles = page.locator('.ui-rail-toggle');
+  await expect(toggles.first()).toBeVisible();
+  for (const t of await toggles.all()) await expect(t).toHaveAttribute('aria-disabled', 'true');
   await v2.a11y('v2-map-no-webgl');
 });
 
