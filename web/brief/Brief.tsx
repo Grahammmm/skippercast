@@ -369,7 +369,7 @@ function refreshForecastNow(): Promise<ConditionsForecast | null> | null {
 
 /** SC1922-08: where a pressed refresh stands. A code, never text; the chip words it in the page's language. */
 export type ManualRefreshState = 'idle' | 'refreshing' | 'offline' | 'failed';
-export const manualRefresh = signal<ManualRefreshState>('idle');
+export const manualRefresh = signal('idle' as ManualRefreshState);
 let manualRun: Promise<void> | null = null;
 
 /**
