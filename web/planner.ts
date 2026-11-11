@@ -43,6 +43,7 @@ import {activeBoatFactors, savedBoat} from '../dist/boat-handling.js';
 import {hasOwnLimits, limitsFor} from './limits.ts';
 import {DEFAULT_TIMING, parseTiming, timingInputs, type TripTimingInputs} from './trip-times.ts';
 import {profile as activeProfile} from './state.ts';
+import {emptyFloatPlan, validateFloatPlan, type FloatPlanFields, type FloatPlanRecord} from './float-plan.ts';
 import {buildAlertPlan, MSG as ALERT_MSG, postTrip, type AlertLegs, type AlertPlan, type AlertSettings, type AlertStop} from './planner-alerts.ts';
 
 export type Layers = {waypoints: boolean; outlines: boolean; alignments: boolean; exclusions: boolean};
@@ -159,6 +160,8 @@ export const PORTS_FAILED_NOTE = 'Port list unavailable, so Best available has n
 
 const LOADING = 'Loading current screened reefs…';
 const STORAGE_OK = 'Saved on this browser for each region. Separate from your account’s trip alerts.';
+const FLOAT_INVALID = 'The float plan has a problem. Fix it or clear it before downloading the notes.';
+const FLOAT_CHANGED = 'The float plan changed while the notes were being prepared. Download the notes again.';
 const STORAGE_OFF = 'Browser storage is unavailable. Keep this page open until you download your plan.';
 const RANKED_LAYERS: Layers = {waypoints: true, outlines: true, alignments: false, exclusions: false};
 const SPOT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -516,7 +519,11 @@ export function createPlanner(deps: PlannerDeps) {
   }
 
   /** The file for `kind`, after the publication and every boundary are checked again. */
-  async function exportFile(kind: 'gpx' | 'notes'): Promise<File> {
+  async function exportFile(kind: 'gpx' | 'notes', guard: {current?: () => boolean} = {}): Promise<File> {
+    // SC1407-14: the float plan and the plan/file key are captured before any wait; a notes file never carries fields from another opening, edit, date or plan.
+    // `guard.current` lets the caller recheck the same snapshot right before it saves the file.
+    const float = kind === 'notes' ? floatSnapshot() : null;
+    if (float) guard.current = () => floatCurrent(float);
     if (draft.value.ids.some(id => tripAtlas.value.targets.find(t => t.id === id)?.canonical_habitat)) {
       const latest = await loadReefs(region.id);
       if (latest.publication.export_sha256 !== canonical?.publication.export_sha256) throw Error('Reef data changed. Select Best available again before exporting.');
@@ -525,15 +532,42 @@ export function createPlanner(deps: PlannerDeps) {
     // Repeat the authoritative screen here, even if the preview count was valid moments ago.
     const d = draft.value;
     if (kind === 'notes') {
-      const context = protectedPlanNotes(request(), {...d, date: d.date || today});
+      if (float && !floatCurrent(float)) throw Error(FLOAT_CHANGED);
+      const context = protectedPlanNotes(request(), {...d, date: d.date || today}, float?.record ?? null);
       if (context) return new File([context], `SkipperCast-${region.id}-${d.date || today}-boundary-context.html`, {type: 'text/html'});
     }
     const result = buildExport(request()) as {gpx: string; counts: {waypoints: number}};
     if (kind === 'gpx') { const c = checkGpx(result.gpx, {waypoints: result.counts.waypoints}, screen ?? null); if (!c.ok) throw Error(`The GPX file failed its own check: ${c.problems[0]}. Nothing was handed over.`); }
     const base = `SkipperCast-${region.id}-${d.date || today}-${result.counts.waypoints}wp`;
     return kind === 'notes'
-      ? new File([offlineNotes(result, region, {...d, date: d.date || today}, coordinates.value) as string], `${base}.html`, {type: 'text/html'})
+      ? new File([offlineNotes(result, region, {...d, date: d.date || today}, coordinates.value, float?.record ?? null) as string], `${base}.html`, {type: 'text/html'})
       : new File([result.gpx], `${base}.gpx`, {type: 'application/gpx+xml'});
+  }
+  // SC1407-14: the float plan lives here, in memory, for one opening of the dialog. Never in the draft, storage, the file key, GPX, the alert or telemetry.
+  const floatPlan = signal<FloatPlanFields>(emptyFloatPlan()), floatBackAuto = signal(true), floatOpen = signal(false);
+  let floatGen = 0, floatRev = 0;
+  const floatCheck = () => validateFloatPlan(floatPlan.value, draft.value.date || today, region.timezone);
+  const floatErrors = computed(() => { const c = floatCheck(); return c.ok ? {} : c.errors; });
+  function floatSnapshot(): {record: FloatPlanRecord | null; gen: number; rev: number; date: string; key: string} {
+    const c = floatCheck();
+    if (!c.ok) throw Error(FLOAT_INVALID);
+    return {record: c.record, gen: floatGen, rev: floatRev, date: draft.value.date || today, key: fileKey()};
+  }
+  const floatCurrent = (s: {gen: number; rev: number; date: string; key: string}): boolean => !disposed && s.gen === floatGen && s.rev === floatRev && s.date === (draft.value.date || today) && s.key === fileKey();
+  function setFloatPlanOpen(on: boolean, seed?: {fields: FloatPlanFields; backAuto: boolean}): void {
+    if (on === floatOpen.peek()) return;
+    floatGen++; floatRev++;
+    batch(() => { floatOpen.value = on; floatPlan.value = on && seed ? {...seed.fields} : emptyFloatPlan(); floatBackAuto.value = on ? (seed?.backAuto ?? true) : true; });
+  }
+  function editFloatPlan(patch: Partial<FloatPlanFields>): void {
+    if (!floatOpen.peek()) return;
+    floatRev++;
+    batch(() => { floatPlan.value = {...floatPlan.value, ...patch}; if ('backBy' in patch) floatBackAuto.value = false; });
+  }
+  /** A date change: an untouched automatic Be back by is re-evaluated by the view; this sets it without marking it the person's own. */
+  function reseedFloatBackBy(backBy: string): void {
+    if (!floatOpen.peek() || !floatBackAuto.peek() || floatPlan.peek().backBy === backBy) return;
+    floatRev++; floatPlan.value = {...floatPlan.value, backBy};
   }
   const save = (file: File): void => {
     const url = URL.createObjectURL(file), a = document.createElement('a');
@@ -585,7 +619,15 @@ export function createPlanner(deps: PlannerDeps) {
   });
   function deliver(kind: 'gpx' | 'share' | 'notes'): Promise<void> {
     if (disposed) return Promise.resolve();
-    if (kind === 'notes') return exportFile('notes').then(file => { if (!disposed) { save(file); actionStatus.value = `Download requested: ${file.name}. Find it in Downloads or your chosen save location.`; } }).catch(error => { actionStatus.value = (error as Error).message; });
+    if (kind === 'notes') {
+      // SC1407-14: the notes snapshot (float generation, revision, date and plan/file key) is rechecked immediately before the file is saved.
+      const guard: {current?: () => boolean} = {};
+      return exportFile('notes', guard).then(file => {
+        if (disposed) return;
+        if (guard.current && !guard.current()) { actionStatus.value = FLOAT_CHANGED; return; }
+        save(file); actionStatus.value = `Download requested: ${file.name}. Find it in Downloads or your chosen save location.`;
+      }).catch(error => { actionStatus.value = (error as Error).message; });
+    }
     if (!summary.value.ok) { actionStatus.value = (summary.value as {message: string}).message; return Promise.resolve(); }
     if (!prepared || prepared.key !== fileKey() || now().getTime() - prepared.at >= 60000) {
       prepared = null;
@@ -753,10 +795,11 @@ export function createPlanner(deps: PlannerDeps) {
     chooseWaypoint, saveWaypoint, removeWaypoint, addPlace,
     savedSpots, savedSpotsState, savedSpotsStatus, setSavedSpotsOpen, refreshSavedSpots, addSavedSpot,
     alertStatus, alertBusy, alertSaved, alertIsSaved: (body: unknown): boolean => alertSavedKeys.value.includes(JSON.stringify(body)), setAlertOpen, alertPreview, saveAlert,
+    floatPlan, floatBackAuto, floatErrors, setFloatPlanOpen, editFloatPlan, reseedFloatBackBy,
     setFilter, edit, editTiming, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     routing, routeStatus, exportRouteFile, deliverRoute,
     /** For tests and a region change: stop drawing the ranked set. */
-    dispose: () => { disposed = true; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); stopAlert(); resetAlert(); },
+    dispose: () => { disposed = true; floatGen++; floatPlan.value = emptyFloatPlan(); floatOpen.value = false; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); stopAlert(); resetAlert(); },
   };
 }
