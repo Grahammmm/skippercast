@@ -16,7 +16,13 @@ MAX_DOCUMENT = 128 * 1024
 
 
 def _number(value):
-    if type(value) not in (int, float) or not math.isfinite(value):
+    if type(value) not in (int, float):
+        raise ValueError("finite non-boolean clock required")
+    try:
+        finite = math.isfinite(value)
+    except OverflowError:
+        finite = False
+    if not finite:
         raise ValueError("finite non-boolean clock required")
     return value
 
