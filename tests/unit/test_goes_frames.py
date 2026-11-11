@@ -143,6 +143,45 @@ class AgeGate(TestCase):
         with self.assertRaisesRegex(ValueError, "DOCTYPE"):
             gf.parse_capabilities(b'<!DOCTYPE x [<!ENTITY a "b">]>' + document(["2026-10-08T17:38:00Z"]), NOW)
 
+    def test_doctype_is_refused_in_every_encoding(self):
+        body = document(["2026-10-08T17:38:00Z"]).decode()
+        entity = body.replace("2026-10-08T17:38:00Z", "&frame;")
+        for subset in (' [<!ENTITY frame \"2026-10-08T17:38:00Z\">]', ""):
+            for text in ('<!DOCTYPE WMS_Capabilities%s>' % subset + entity, '<!DOCTYPE WMS_Capabilities%s>' % subset + body):
+                if "&frame;" in text and not subset:
+                    continue
+                for encoding in ("utf-8", "utf-16", "utf-16-le", "utf-16-be"):
+                    with self.subTest(encoding=encoding, subset=bool(subset), entity="&frame;" in text):
+                        xml = text.encode(encoding)
+                        with self.assertRaisesRegex(ValueError, "^Capabilities document carries a DOCTYPE$"):
+                            gf.parse_capabilities(xml, NOW)
+
+    def test_dtd_free_utf16_matches_utf8_and_parser_is_fresh(self):
+        body = document(["2026-10-08T17:38:00Z"]).decode()
+        with self.assertRaisesRegex(ValueError, "DOCTYPE"):
+            gf.parse_capabilities("<!DOCTYPE x>".encode("utf-16") + body.encode("utf-16")[2:], NOW)
+        expected = gf.parse_capabilities(body.encode(), NOW)
+        for encoding in ("utf-16", "utf-16-le", "utf-16-be"):
+            self.assertEqual(gf.parse_capabilities(body.encode(encoding), NOW), expected)
+        ref = body.replace("2026-10-08T17:38:00Z", "2026-10-08T17:38:00&#90;")
+        self.assertEqual(gf.parse_capabilities(ref.encode("utf-16"), NOW), expected)
+
+    def test_encoded_doctype_main_keeps_prior_bytes(self):
+        body = document(["2026-10-08T17:38:00Z"]).decode()
+        text = '<!DOCTYPE WMS_Capabilities [<!ENTITY frame "x">]>' + body
+        for encoding in ("utf-16", "utf-16-le", "utf-16-be"):
+            with tempfile.TemporaryDirectory() as tmp:
+                output = Path(tmp) / "goes-times.json"
+                output.write_text('{"prior":true}\n')
+                route = text.encode(encoding)
+                with mock.patch.object(gf.http, "Session", lambda **_: FakeSession({gf.CAPABILITIES_URL: route})), \
+                        mock.patch.object(gf, "write") as writer, mock.patch("sys.stderr") as err:
+                    code = gf.main(["--output", str(output)], now=NOW)
+                self.assertEqual(code, 1)
+                writer.assert_not_called()
+                self.assertEqual(output.read_text(), '{"prior":true}\n')
+                self.assertIn("carries a DOCTYPE", "".join(c.args[0] for c in err.write.call_args_list))
+
 
 class Collector(TestCase):
     def test_collect_reads_only_the_fixed_capabilities_url(self):
