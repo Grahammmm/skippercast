@@ -273,18 +273,13 @@ def seam_problem(k, a, b, line_a, line_b, served):
 
 
 def _number(v):
-    if not isinstance(v, (int, float)) or isinstance(v, bool):
-        return False
-    try:
-        return math.isfinite(v)
-    except OverflowError:  # an integer too large for a float is not a usable number
-        return False
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
 
 
 def _acc(value):
     try:
         acc = float(value)
-    except (TypeError, ValueError, OverflowError):
+    except (TypeError, ValueError):
         return None
     return acc if math.isfinite(acc) and acc >= 0 else None
 
@@ -316,15 +311,7 @@ def assemble(shore, region):
     # 1. lines
     lines, malformed = [], 0
     for f in shore['features']:
-        if not isinstance(f, dict):
-            malformed += 1
-            continue
-        geometry, props = f.get('geometry'), f.get('properties')
-        geometry = {} if geometry is None else geometry
-        props = {} if props is None else props
-        if not isinstance(geometry, dict) or not isinstance(props, dict):
-            malformed += 1
-            continue
+        geometry, props = (f or {}).get('geometry') or {}, (f or {}).get('properties') or {}
         coords = geometry.get('coordinates')
         group = [coords] if geometry.get('type') == 'LineString' else coords if geometry.get('type') == 'MultiLineString' else None
         if not isinstance(group, list):

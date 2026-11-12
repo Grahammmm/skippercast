@@ -107,12 +107,9 @@ def currents(doc, now):
     if (not isinstance(doc, dict) or doc.get("schema_version") != 1 or doc.get("region_id") != REGION
             or not _fresh(_ms(doc.get("generated_at")), now, 6)):
         raise ValueError("Invalid or stale regional ocean feed")
-    sources = {} if doc.get("sources") is None else doc["sources"]
-    if not isinstance(sources, dict):
-        raise ValueError("Invalid or stale regional ocean feed")
     fields = []
     for ident, (kind, resolution, url, names) in DEFINITIONS.items():
-        source = sources.get(ident)
+        source = (doc.get("sources") or {}).get(ident)
         source = source if isinstance(source, dict) else {}
         data, fetched = source.get("data"), _ms(source.get("data_retrieved_at") or source.get("last_success_at"))
         if source.get("status") != "ok" or not isinstance(data, dict) \

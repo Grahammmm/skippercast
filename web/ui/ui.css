@@ -5,10 +5,6 @@
    Targets are at least --touch-min (44 px) on the touch axis; the focus
    ring is --focus, 2 px outside, on :focus-visible only. */
 
-/* Keep native fields at the phone focus-zoom CSS precondition, including dialogs.
-   Importance overrides later component font shorthands; only font-size changes. */
-input, select, textarea { font-size: var(--text-input) !important; }
-
 .icon { display: inline-block; flex: none; vertical-align: -0.2em; }
 .ui-mono { font: var(--weight-regular) var(--text-11) / var(--leading-body) var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .ui-reading { font: var(--weight-medium) var(--text-18) / var(--leading-heading) var(--font-mono); font-variant-numeric: tabular-nums; }

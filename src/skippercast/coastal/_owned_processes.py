@@ -86,18 +86,13 @@ class OwnedChildren:
                 fd = os.pidfd_open(pid, 0)
             except ProcessLookupError:
                 continue
-            registered = False
-            try:
-                after = self.identity(pid)
-                if not self._same(before, after) or after.get("ppid") != self.pid:
-                    if after is None:
-                        continue
-                    raise RuntimeError("owned child identity changed while pinning pidfd")
-                self.fds[pid] = fd
-                registered = True
-            finally:
-                if not registered:
-                    os.close(fd)  # Unregistered fds are invisible to close().
+            after = self.identity(pid)
+            if not self._same(before, after) or after.get("ppid") != self.pid:
+                os.close(fd)
+                if after is None:
+                    continue
+                raise RuntimeError("owned child identity changed while pinning pidfd")
+            self.fds[pid] = fd
             self.records[pid] = after
             self.history.append(after)
             # Partial records cannot prove universal absence after a crash.
@@ -109,20 +104,16 @@ class OwnedChildren:
         except (OSError, RuntimeError, ValueError, KeyError):
             self.uncertain = True
         for pid, fd in list(self.fds.items()):
-            try:
-                current = self.identity(pid)
-                if current is None or current["state"] in {"Z", "X"}:
-                    continue
-                if not self._same(self.records[pid], current) or current.get("ppid") != self.pid:
-                    self.uncertain = True
-                    continue
-                try:
-                    signal.pidfd_send_signal(fd, sig, None, 0)
-                except ProcessLookupError:
-                    pass
-            except (OSError, RuntimeError, ValueError, KeyError):
-                # One unverifiable child must not starve its verified siblings.
+            current = self.identity(pid)
+            if current is None or current["state"] in {"Z", "X"}:
+                continue
+            if not self._same(self.records[pid], current) or current.get("ppid") != self.pid:
                 self.uncertain = True
+                continue
+            try:
+                signal.pidfd_send_signal(fd, sig, None, 0)
+            except ProcessLookupError:
+                pass
 
     def _reap(self, target):
         # Popen must retain the target exit status. A generic waitpid must not

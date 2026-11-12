@@ -223,11 +223,9 @@ def _verify_with_observation(root, manifest, *, now, minimum_valid_until=None):
         raise ValueError('native facts changed or forged')
     import rasterio
     import numpy as np
-    from rasterio.enums import MaskFlags
     with rasterio.open(validate_derived_geotiff(root, document['valid_support'], contract='coastal-native-support-v2')) as mask:
         if (mask.count != 1 or mask.dtypes != ('uint8',) or mask.crs != crs
                 or mask.transform != transform or mask.shape != valid.shape
-                or mask.nodatavals != (None,) or mask.mask_flag_enums != ([MaskFlags.all_valid],)
                 or not np.array_equal(mask.read(1), valid.astype('uint8'))):
             raise ValueError('native support artifact differs from source cells')
     rights = document.get('rights', {})
@@ -274,8 +272,6 @@ def bind_segment(root, segment, segment_id, facts):
         if len(parts) != 5 or parts[:2] != ['seg','3310'] or parts[4] != '5000':
             raise ValueError('canonical geographic segment ID required')
         x0, y0 = int(parts[2]), int(parts[3])
-        if segment_id != f'seg:3310:{x0}:{y0}:5000':
-            raise ValueError('canonical geographic segment ID required')
         if x0 % 5000 or y0 % 5000:
             raise ValueError('geographic segment origin must use 5 km lattice')
     except (TypeError, ValueError) as error:

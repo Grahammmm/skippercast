@@ -11,8 +11,7 @@ const ICON: Readonly<Record<PreviewId, IconName>> = {seafloor: 'seafloor', wind:
 const noteOf = (s: PreviewStatus | undefined): string => !s ? 'Off' : s.text;
 
 /** The group heading and one toggle per layer; absent without the owner gate. */
-/** SC1922-07: `disabledReason` (the Chart could not start) disables each toggle, keeping its choice. */
-export function PreviewRailItems({disabledReason}: {disabledReason?: string} = {}) {
+export function PreviewRailItems() {
   void session.value;
   if (!previewAccess()) return null;
   const on = previewOn.value, status = previewStatus.value;
@@ -21,7 +20,7 @@ export function PreviewRailItems({disabledReason}: {disabledReason?: string} = {
       <li class="app-preview-head" lang="en"><span class="ui-eyebrow">Private previews</span> <span class="ui-mono">owner only · research · not for navigation</span></li>
       {PREVIEW_LAYERS.map(l => (
         <RailItem key={l.id} id={`preview-${l.id}`} label={l.label} icon={ICON[l.id]} on={on.includes(l.id)} basis={l.basis} basisLabel={`${l.label} basis`}
-          disabled={!!disabledReason} note={disabledReason ?? (on.includes(l.id) ? noteOf(status[l.id]) : l.style)} onToggle={(_, next) => togglePreview(l.id, next)} />
+          note={on.includes(l.id) ? noteOf(status[l.id]) : l.style} onToggle={(_, next) => togglePreview(l.id, next)} />
       ))}
     </>
   );

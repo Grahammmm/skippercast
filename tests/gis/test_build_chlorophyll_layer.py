@@ -1,12 +1,9 @@
 """Chlorophyll overlay builder (MAPLAYER-CHLR-1): style-4 colours, gaps stay empty, georeference, private output."""
-import contextlib
-import io
 import json
 import math
 from pathlib import Path
 import tempfile
 import unittest
-from unittest import mock
 
 import numpy as np
 
@@ -117,102 +114,6 @@ class BuildTest(unittest.TestCase):
         self.assertEqual(cl.DEFAULT_OUTPUT, ROOT / 'var' / 'chlorophyll')
         ignore = (ROOT / '.gitignore').read_text().splitlines()
         self.assertIn('var/', ignore)
-
-BAD_SPACING = [0, 0.0, -400.0, float('nan'), float('inf'), float('-inf'), True, None, '400', 400j, 5e-324, 0.001]
-
-
-class PixelSpacingAdmissionTest(unittest.TestCase):
-    def test_invalid_spacing_is_refused_before_any_array_work(self):
-        lats, lons = axes()
-        values = np.full((len(lats), len(lons)), 1.0)
-        for bad in BAD_SPACING:
-            with self.subTest(px_m=bad), mock.patch.object(cl.np, 'arange') as arange, \
-                    mock.patch.object(cl.ndimage, 'map_coordinates') as mapped:
-                with self.assertRaisesRegex(ValueError, 'pixel-m'):
-                    cl.render(lats, lons, values, BOUNDS, px_m=bad)
-                arange.assert_not_called()
-                mapped.assert_not_called()
-
-    def test_real_scalars_are_admitted_and_coarse_spacing_gives_the_two_pixel_minimum(self):
-        for good in (2000, 2000.0, np.float32(2000), np.int64(2000)):
-            with self.subTest(px_m=good):
-                self.assertEqual(cl.render_size(BOUNDS, good), cl.render_size(BOUNDS, 2000.0))
-        self.assertEqual(cl.render_size(BOUNDS, 1e12), (2, 2))
-
-    def test_default_spacing_keeps_the_pilot_shape(self):
-        self.assertEqual(cl.render_size(cl.SECTORS['central-coast']), (835, 961))
-
-    def test_pixel_budget_is_the_product_of_the_axes_and_equality_is_admitted(self):
-        self.assertEqual(cl.MAX_RENDER_PIXELS, 4_000_000)
-        with mock.patch.object(cl, 'MAX_RENDER_PIXELS', 10 ** 12):
-            width, height = cl.render_size(BOUNDS, 50.0)
-        self.assertLess(max(width, height), cl.MAX_RENDER_PIXELS)
-        self.assertGreater(width * height, cl.MAX_RENDER_PIXELS)
-        with self.assertRaisesRegex(ValueError, 'pixel-m'):
-            cl.render_size(BOUNDS, 50.0)
-        with mock.patch.object(cl, 'MAX_RENDER_PIXELS', width * height):
-            self.assertEqual(cl.render_size(BOUNDS, 50.0), (width, height))
-        with mock.patch.object(cl, 'MAX_RENDER_PIXELS', width * height - 1):
-            with self.assertRaisesRegex(ValueError, 'pixel-m'):
-                cl.render_size(BOUNDS, 50.0)
-
-
-class PixelSpacingNoIoTest(unittest.TestCase):
-    def test_build_refuses_before_any_receipt_fetch_or_output(self):
-        for bad in (0, -1.0, float('nan'), float('inf'), 0.001, 5e-324):
-            with self.subTest(px_m=bad), tempfile.TemporaryDirectory() as tmp:
-                out = Path(tmp) / 'out'
-                saved = dict(cl.SECTORS)
-                cl.SECTORS['test'] = BOUNDS
-                try:
-                    with mock.patch.object(cl, 'Client') as client, mock.patch.object(cl.json, 'loads') as loads:
-                        with self.assertRaisesRegex(ValueError, 'pixel-m'):
-                            cl.build('test', out, receipt=Path(tmp) / 'missing.json', px_m=bad, log=lambda *_: None)
-                        with self.assertRaisesRegex(ValueError, 'pixel-m'):
-                            cl.build('test', out, px_m=bad, log=lambda *_: None)
-                        client.assert_not_called()
-                        loads.assert_not_called()
-                finally:
-                    cl.SECTORS.clear()
-                    cl.SECTORS.update(saved)
-                self.assertFalse(out.exists())
-
-    def test_existing_output_is_untouched_by_a_refusal(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            sector_dir = Path(tmp) / 'out' / 'test'
-            sector_dir.mkdir(parents=True)
-            for name in ('chlorophyll.png', 'chlorophyll.json', 'source.json'):
-                (sector_dir / name).write_bytes(b'old ' + name.encode())
-            saved = dict(cl.SECTORS)
-            cl.SECTORS['test'] = BOUNDS
-            try:
-                with self.assertRaisesRegex(ValueError, 'pixel-m'):
-                    cl.build('test', Path(tmp) / 'out', px_m=-5, log=lambda *_: None)
-            finally:
-                cl.SECTORS.clear()
-                cl.SECTORS.update(saved)
-            for name in ('chlorophyll.png', 'chlorophyll.json', 'source.json'):
-                self.assertEqual((sector_dir / name).read_bytes(), b'old ' + name.encode())
-
-    def test_cli_refusal_is_an_argparse_error_with_no_work(self):
-        for bad in ('0', '-400', 'nan', 'inf', '5e-324', '0.001'):
-            with self.subTest(px_m=bad), tempfile.TemporaryDirectory() as tmp:
-                out = Path(tmp) / 'unused'
-                stderr = io.StringIO()
-                with mock.patch.object(cl, 'Client') as client, contextlib.redirect_stderr(stderr):
-                    with self.assertRaises(SystemExit) as raised:
-                        cl.main(['--output', str(out), '--receipt', str(Path(tmp) / 'nope.json'), '--pixel-m', bad])
-                client.assert_not_called()
-                self.assertEqual(raised.exception.code, 2)
-                self.assertIn('pixel-m', stderr.getvalue())
-                self.assertNotIn('Traceback', stderr.getvalue())
-                self.assertFalse(out.exists())
-
-    def test_cli_accepts_the_default_and_a_valid_spacing(self):
-        with mock.patch.object(cl, 'build') as build:
-            cl.main([])
-            cl.main(['--pixel-m', '2000'])
-        self.assertEqual([c.args[3] for c in build.call_args_list], [400.0, 2000.0])
 
 
 if __name__ == '__main__':

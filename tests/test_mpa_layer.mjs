@@ -27,7 +27,6 @@ import {RANKED_PIN} from '../web/map/ranked.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {createStage} from '../web/map/stage.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
-import {settlePicks} from './helpers/pick-settle.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const PAGE = 'https://s.test/map';
@@ -345,7 +344,7 @@ test('Chart idle counts require diagnostics; ordinary state and picking work in 
       assert.deepEqual([host.dataset.mpaDrawn, host.dataset.mpaLabels, host.dataset.rankedDrawn],
         enabled ? ['5', '3', '2'] : [undefined, undefined, undefined], name);
       fake.features = [{layer: {id: MPA_FILL}, properties: map.data[MPA_SOURCE].features.find(f => f.properties.NAME === 'Cambria SMCA').properties}];
-      map.fire('click', {point: {x: 1, y: 1}}); settlePicks();
+      map.fire('click', {point: {x: 1, y: 1}});
       assert.equal(chartMark.value.name, 'Cambria State Marine Conservation Area', name);
       assert.equal(fake.countQueries.length, enabled ? 6 : 0, 'picking is separate from count queries');
     } finally { stage.destroy(); }
@@ -366,7 +365,7 @@ test('the Chart draws the region\'s checked areas, reports their state and label
   assert.equal(host.dataset.mpaDrawn, '5', 'the areas MapLibre drew in view');
   assert.equal(host.dataset.mpaLabels, '3', 'and the names it placed');
   fake.features = [{layer: {id: MPA_FILL}, properties: map.data[MPA_SOURCE].features.find(f => f.properties.NAME === 'Cambria SMCA').properties}];
-  map.fire('click', {point: {x: 1, y: 1}}); settlePicks();
+  map.fire('click', {point: {x: 1, y: 1}});
   assert.equal(chartMark.value.name, 'Cambria State Marine Conservation Area');
   assert.equal(chartMark.value.source, 'CDFW ds582 · checked 2026-09-21');
 

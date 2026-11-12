@@ -104,7 +104,7 @@ test('reef gives a line each for lingcod and rockfish; no date gives nothing', (
 });
 
 test('the rules block is not part of the plan, the GPX or the saved trip', () => {
-  for (const f of ['../web/planner.ts', '../dist/trip-export.js', '../web/trip.ts', '../web/trip-runtime.ts']) {
+  for (const f of ['../web/planner.ts', '../dist/trip-export.js', '../web/trip.ts']) {
     const src = readFileSync(new URL(f, import.meta.url), 'utf8');
     assert.doesNotMatch(src, /PlanRules|planRuleLine|regulationState/, f);
   }

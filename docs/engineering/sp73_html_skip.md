@@ -141,15 +141,3 @@ The operator owns PR creation, full-suite/exact-head CI, DCO and shipping.
 Those obligations remain OWED. No push, merge, network/source acquisition,
 live run, publication, service change, cap change or hold release is performed
 or authorized by this evidence.
-
-## RF0415-8 follow-up (2026-11-11)
-
-The nested-row behavior described under A3 above was later repaired: a new `tr`
-now closes the nearest open `tr` in the same table scope together with any open
-cell and inline descendants, so rows are siblings and row text no longer absorbs
-later rows. Boundaries (`table`, `tbody`, `thead`, ...) are not crossed, and a
-new `tr` with only an open cell and no reachable row still closes that cell.
-The `implicit_td_th` fixture was migrated in two fields only: first row text
-`headonetwo` and second row parent `table`. The launcher hashes and receipts
-above describe the original SP73 card; they are not renewed acceptance for this
-later repair and were not regenerated.

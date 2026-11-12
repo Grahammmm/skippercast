@@ -1,7 +1,5 @@
 """Shelf depth contours (CI6-13): the tracer, the check, the overview and the publish step, offline."""
 import json
-import subprocess
-import sys
 
 import pytest
 
@@ -297,16 +295,3 @@ def test_check_refuses_a_contour_whose_geometry_or_provenance_misstates_it(index
     edit(c if index is None else c['features'][index])
     with pytest.raises(ValueError, match=message):
         dc.check_contours(c, REGION, SOURCES)
-
-
-def test_feet_factor_keeps_its_historical_five_decimals():
-    from skippercast.util import units
-    assert type(dc.FEET_PER_M) is float and dc.FEET_PER_M == 3.28084 == round(units.FT_PER_M, 5) != units.FT_PER_M
-
-
-def test_feet_factor_reads_the_shared_owner_on_first_import():
-    child = ('import skippercast.util.units as u; u.FT_PER_M = 2.123456789\n'
-             'from skippercast.platform import depth_contours as dc; print(repr(dc.FEET_PER_M))')
-    done = subprocess.run([sys.executable, '-B', '-c', child], capture_output=True, text=True, cwd=ROOT, check=True,
-                          env={'PYTHONPATH': str(ROOT / 'src'), 'PYTHONDONTWRITEBYTECODE': '1'})
-    assert done.stdout.strip() == '2.12346'

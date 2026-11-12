@@ -7,7 +7,7 @@
 // region, feeds, tide choice and language invalidate it through the signals the brief reads.
 import {computed, type ReadonlySignal} from '@preact/signals';
 import {useMemo} from 'preact/hooks';
-import {chipsAdmitted, verdictPresentation} from '../brief/Brief.tsx';
+import {currentBrief, currentVerdict} from '../brief/Brief.tsx';
 import type {DayVerdict} from '../brief/verdict.ts';
 import {dockTime, horizonDays} from '../hour.ts';
 import {hourParam} from '../state.ts';
@@ -22,20 +22,16 @@ export interface DayAnswer {
 }
 
 const UNKNOWN = (at: string | null): DayAnswer => ({at, verdict: 'unknown', held: null, limit: null});
-/** SC1722-02: the answers while no live snapshot is admitted (a load under way, failed, or only a saved answer): no day carries a word. */
-export const PENDING_DAYS: ReadonlyMap<string, DayAnswer> = new Map();
 
 /** Every horizon day's answer keyed by local day, at `now` in `tz`. `onEvaluate` (tests) is told of each day computed. */
 export function dayVerdicts(now: Date, tz: string, {onEvaluate}: {onEvaluate?: (day: string) => void} = {}): ReadonlySignal<ReadonlyMap<string, DayAnswer>> {
   return computed(() => {
-    // Gated before any per-day engine work; a settled day with no usable hours still reads Unknown below.
-    if (!chipsAdmitted()) return PENDING_DAYS;
     const days = horizonDays(now, tz), lang = language.value, out = new Map<string, DayAnswer>();
     for (const d of days) {
       const at = hourParam(dockTime(d.day, null, now, tz, days).at / 1000);
       onEvaluate?.(d.day);
       try {
-        const v = verdictPresentation(now, at, lang).verdict;
+        const v = currentVerdict(currentBrief(now, at), now, lang);
         out.set(d.day, v ? {at, verdict: v.verdict, held: v.held, limit: v.limit} : UNKNOWN(at));
       } catch { out.set(d.day, UNKNOWN(at)); }
     }
@@ -49,7 +45,6 @@ export function useDayVerdicts(now: Date, tz: string): ReadonlyMap<string, DayAn
   return useMemo(() => dayVerdicts(new Date(ms), tz), [ms, tz]).value;
 }
 
-/** Day options with their verdict word after the day ("Sat · Rough"); a day without an answer (outside the horizon) says Unknown. While no live answer is admitted (PENDING_DAYS) the labels are the days alone. Values are unchanged. */
+/** Day options with their verdict word after the day ("Sat · Rough"); a day without an answer (outside the horizon) says Unknown. Values are unchanged. */
 export const withVerdicts = (options: readonly {value: string; label: string}[], answers: ReadonlyMap<string, DayAnswer>, lang: Language): {value: string; label: string}[] =>
-  answers === PENDING_DAYS ? options.map(o => ({value: o.value, label: o.label}))
-    : options.map(o => ({value: o.value, label: `${o.label} · ${t(`brief.verdict.${answers.get(o.value)?.verdict ?? 'unknown'}` as StringId, lang)}`}));
+  options.map(o => ({value: o.value, label: `${o.label} · ${t(`brief.verdict.${answers.get(o.value)?.verdict ?? 'unknown'}` as StringId, lang)}`}));

@@ -32,11 +32,7 @@ async function load() {
       export {regionInfo} from './web/app/App.tsx';
       export {regsData} from './web/regs.ts';
       export {hour, day, species, profile} from './web/state.ts';
-      import {render} from 'preact-render-to-string';
-      import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
-      export {admitBriefFixture};
-      export function renderFixture(...args) { admitBriefFixture(); return render(...args); }
-      export {render};
+      export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
     plugins: rendererPlugins,
@@ -67,7 +63,7 @@ test('SC-LAUNCH-3: with no time chosen the lead answers for tomorrow, from the e
   m.regionInfo.value = INFO; m.dailyFeed.value = montereyDaily; m.hour.value = null; m.day.value = null;
   m.regionalForecast.value = m.parseConditionsForecast(forecastFeed(now), INFO.id, INFO.center);
   try {
-    const html = m.renderFixture(m.h(m.Brief, {now}));
+    const html = m.render(m.h(m.Brief, {now}));
     const span = windowSpan(html);
     assert.ok(span, 'the lead names the day it answers for');
     assert.equal(span[1], '2026-10-09');
@@ -84,11 +80,11 @@ test('SC-LAUNCH-3: with no time chosen the lead answers for tomorrow, from the e
     assert.notEqual(today.limit, v.limit, 'the fixture rates today and tomorrow differently, so the day is observable');
     // A time chosen in the dock still wins: the lead follows it.
     m.hour.value = '2026-10-08T22:00Z';
-    const chosen = windowSpan(m.renderFixture(m.h(m.Brief, {now})));
+    const chosen = windowSpan(m.render(m.h(m.Brief, {now})));
     assert.equal(chosen[1], '2026-10-08');
     assert.match(chosen[2], /^today/);
     m.hour.value = null; m.day.value = '2026-10-11';
-    assert.equal(windowSpan(m.renderFixture(m.h(m.Brief, {now})))[1], '2026-10-11', 'a link\'s ?day= names the lead\'s day');
+    assert.equal(windowSpan(m.render(m.h(m.Brief, {now})))[1], '2026-10-11', 'a link\'s ?day= names the lead\'s day');
   } finally { m.regionInfo.value = null; m.dailyFeed.value = null; m.regionalForecast.value = null; m.hour.value = null; m.day.value = null; }
 });
 
@@ -100,7 +96,7 @@ test('SC-LAUNCH-3: the mobile sheet heads its lead with the lead\'s own day, at 
   const eyebrows = html => [...html.matchAll(/<span class="ui-eyebrow">([^<]*)<\/span>/g)].map(x => [x[1], x.index]);
   try {
     for (const detent of ['peek', 'full']) {
-      const html = m.renderFixture(m.h(m.SheetBrief, {now, detent}));
+      const html = m.render(m.h(m.SheetBrief, {now, detent}));
       const lead = html.indexOf('class="app-verdict"'), heads = eyebrows(html);
       assert.ok(lead > 0, `${detent}: the lead renders`);
       assert.match(windowSpan(html)[2], /^tomorrow, /, `${detent}: the lead answers for tomorrow`);
@@ -113,7 +109,7 @@ test('SC-LAUNCH-3: the mobile sheet heads its lead with the lead\'s own day, at 
     // An explicit hour today: one heading, the dock's, and the lead agrees with it.
     m.hour.value = '2026-10-08T22:00Z';
     for (const detent of ['peek', 'full']) {
-      const html = m.renderFixture(m.h(m.SheetBrief, {now, detent}));
+      const html = m.render(m.h(m.SheetBrief, {now, detent}));
       const lead = html.indexOf('class="app-verdict"');
       assert.deepEqual(eyebrows(html).filter(([, i]) => i < lead).map(([t]) => t), ['Today · 3 pm'], `${detent}: the chosen hour heads the lead`);
       assert.match(windowSpan(html)[2], /^today/);
@@ -144,7 +140,7 @@ test('SC-LAUNCH-3: the lead says the selected target is closed on the day it ans
   m.regionInfo.value = info; m.dailyFeed.value = {...montereyDaily, region_id: morro.id};
   m.regsData.value = {region: morro.id, data}; m.species.value = 'salmon'; m.profile.value = 'boat'; m.hour.value = null; m.day.value = null;
   try {
-    const html = m.renderFixture(m.h(m.Brief, {now}));
+    const html = m.render(m.h(m.Brief, {now}));
     const rules = /<p class="app-verdict-rules" data-status="(\w+)">(.*?)<\/p>/.exec(html);
     assert.ok(rules, 'the lead carries the target\'s legality line');
     assert.equal(rules[1], 'closed');
@@ -154,9 +150,9 @@ test('SC-LAUNCH-3: the lead says the selected target is closed on the day it ans
     assert.ok(html.indexOf('app-verdict-rules') < html.indexOf('class="ui-tile"'), 'legality leads, before the evidence');
     // The same target today, chosen in the dock, is open: the line reads the lead's own day.
     m.hour.value = '2026-09-30T17:00Z';
-    assert.match(m.renderFixture(m.h(m.Brief, {now})), /<p class="app-verdict-rules" data-status="open">/);
+    assert.match(m.render(m.h(m.Brief, {now})), /<p class="app-verdict-rules" data-status="open">/);
     // Before the registry loads it says to check the rules, never open.
     m.hour.value = null; m.regsData.value = null;
-    assert.match(m.renderFixture(m.h(m.Brief, {now})), /<p class="app-verdict-rules" data-status="unknown">/);
+    assert.match(m.render(m.h(m.Brief, {now})), /<p class="app-verdict-rules" data-status="unknown">/);
   } finally { m.regionInfo.value = null; m.dailyFeed.value = null; m.regsData.value = null; m.species.value = null; m.hour.value = null; }
 });

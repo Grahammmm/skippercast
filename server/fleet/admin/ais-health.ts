@@ -94,9 +94,6 @@ async function regionHealth(db: D1Database, region: string, now: number): Promis
   // Leave ageS's existing clamp unchanged for heartbeat/processor clocks.
   const lastAge = lastMessage !== null && Date.parse(lastMessage) > now ? null : ageS(lastMessage, now);
 
-  // An unparseable processor clock is unknown (null), not a run aged zero.
-  const processorAge = processed ? ageS(processed.updated_at, now) : null;
-
   const hours24 = Array.from({length: 24}, (_, i) => {
     const key = hourKey(from24 + i * HOUR_MS), r = hours.get(key);
     return r ? {...r, missing: false} : {hour: key, messages: 0, watched_messages: 0, vessels: 0, reconnects: 0, max_gap_s: 0, dropped: 0, missing: true};
@@ -123,7 +120,7 @@ async function regionHealth(db: D1Database, region: string, now: number): Promis
       .map(r => ({hour: r.hour, max_gap_s: r.max_gap_s})),
     outages: outages.reverse(),
     uptime: {d7: uptime(up, from7, GAP_DAYS * 24), d30: uptime(up, from30, 30 * 24)},
-    processor: processed && processorAge !== null ? {last_run_at: processed.updated_at, age_s: processorAge} : null,
+    processor: processed ? {last_run_at: processed.updated_at, age_s: ageS(processed.updated_at, now) ?? 0} : null,
     watch: {watched: Number(watch?.watched) || 0, candidates: Number(watch?.candidates) || 0, listener: num(doc?.watch_size)},
   };
 }

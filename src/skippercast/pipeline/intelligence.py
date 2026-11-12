@@ -15,7 +15,9 @@ from .verification_archive import load_archive, write_archive
 from .forecast_coverage import audit_forecast_coverage
 from ..platform.contracts import load_region, atomic_json, read_json
 from .. import validate
-from ..util.units import KT_PER_MS as KNOTS_PER_MS
+
+
+KNOTS_PER_MS=3600/1852
 
 
 def _member_value(series,t,times):

@@ -43,24 +43,11 @@ def _check_point(i: int, point, nonfinite: str | None = None) -> Point:
 
 
 def _project(points: Sequence[Point]) -> list[tuple[float, float]]:
-    """Metres east and north of the first point, on an equirectangular projection at the mean latitude.
-
-    Longitude is made continuous across the antimeridian for the projection only: a jump of
-    more than 180 degrees between neighbours counts one whole turn (an integer, so tracks that
-    never cross the seam keep the exact old arithmetic). The input points are not changed.
-    """
+    """Metres east and north of the first point, on an equirectangular projection at the mean latitude."""
     lat0 = sum(p[0] for p in points) / len(points)
     kx = METRES_PER_DEG * math.cos(math.radians(lat0))
     base_lat, base_lon = points[0]
-    turns, previous, xy = 0, base_lon, []
-    for lat, lon in points:
-        if lon - previous > 180:
-            turns -= 1
-        elif lon - previous < -180:
-            turns += 1
-        previous = lon
-        xy.append(((lon + 360 * turns - base_lon) * kx, (lat - base_lat) * METRES_PER_DEG))
-    return xy
+    return [((lon - base_lon) * kx, (lat - base_lat) * METRES_PER_DEG) for lat, lon in points]
 
 
 def _offset(p, a, b) -> float:

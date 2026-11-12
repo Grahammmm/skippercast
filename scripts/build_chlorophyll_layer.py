@@ -22,7 +22,6 @@ import argparse
 from datetime import datetime, timedelta, timezone
 import json
 import math
-import numbers
 from pathlib import Path
 import sys
 import urllib.request
@@ -44,7 +43,6 @@ SECTORS = {
 VMIN, VMAX = 0.05, 15.0     # mg/m3, the study's LogNorm(.05, 15)
 OPACITY = 0.85              # the study's alpha
 EARTH = 6378137.0
-MAX_RENDER_PIXELS = 4_000_000   # width * height ceiling for one rendered image
 LABEL = 'NOAA VIIRS (SNPP + NOAA-20) merged OCI chlorophyll-a, near real time. Satellite estimate, clouds leave gaps. NOT FOR NAVIGATION.'
 
 # matplotlib `turbo` (Apache-2.0, Google) sampled every 8th of 256 steps, linear in between.
@@ -93,38 +91,12 @@ def grid_from_result(result):
     return lats, lons, values
 
 
-def render_size(bounds, px_m=400.0):
-    """(width, height) in pixels for `bounds` at `px_m` metres per pixel; allocates nothing.
-
-    Raises ValueError for spacing that is not a real finite number above zero, and for a request
-    whose image would hold more than MAX_RENDER_PIXELS pixels.
-    """
-    if isinstance(px_m, bool) or not isinstance(px_m, numbers.Real):
-        raise ValueError(f'pixel-m must be a real number, got {type(px_m).__name__}')
-    try:
-        spacing = float(px_m)
-    except (OverflowError, ValueError):
-        raise ValueError('pixel-m must be a finite number above zero') from None
-    if not math.isfinite(spacing) or spacing <= 0:
-        raise ValueError(f'pixel-m must be a finite number above zero, got {px_m!r}')
-    west, south, east, north = bounds
-    x0, x1 = math.radians(west) * EARTH, math.radians(east) * EARTH
-    y0, y1 = float(mercator_y(south)), float(mercator_y(north))
-    wide, high = (x1 - x0) / spacing, (y1 - y0) / spacing
-    if not (math.isfinite(wide) and math.isfinite(high)):
-        raise ValueError(f'pixel-m {px_m!r} is too small: the image size is not finite')
-    width, height = max(2, round(wide)), max(2, round(high))
-    if width * height > MAX_RENDER_PIXELS:
-        raise ValueError(f'pixel-m {px_m!r} asks for {width}x{height} pixels; the limit is {MAX_RENDER_PIXELS} pixels')
-    return width, height
-
-
 def render(lats, lons, values, bounds, px_m=400.0):
     """RGBA uint8 image in web-mercator pixels over `bounds` (W, S, E, N), plus its pixel size."""
     west, south, east, north = bounds
     x0, x1 = math.radians(west) * EARTH, math.radians(east) * EARTH
     y0, y1 = float(mercator_y(south)), float(mercator_y(north))
-    width, height = render_size(bounds, px_m)
+    width, height = max(2, round((x1 - x0) / px_m)), max(2, round((y1 - y0) / px_m))
     px = x0 + (np.arange(width) + .5) * (x1 - x0) / width
     py = y1 - (np.arange(height) + .5) * (y1 - y0) / height
     lon = np.degrees(px / EARTH)
@@ -169,7 +141,6 @@ class Client:
 
 def build(sector, output=DEFAULT_OUTPUT, receipt=None, px_m=400.0, log=print):
     bounds = SECTORS[sector]
-    render_size(bounds, px_m)
     out = Path(output) / sector
     out.mkdir(parents=True, exist_ok=True)
     if receipt:
@@ -209,10 +180,6 @@ def main(argv=None):
     parser.add_argument('--receipt', help='rebuild from a saved source.json instead of fetching')
     parser.add_argument('--pixel-m', type=float, default=400.0)
     args = parser.parse_args(argv)
-    try:
-        render_size(SECTORS[args.sector], args.pixel_m)
-    except ValueError as err:
-        parser.error(str(err))
     build(args.sector, args.output, args.receipt, args.pixel_m)
 
 

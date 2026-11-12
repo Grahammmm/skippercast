@@ -267,11 +267,7 @@ class _Memory:
 
 
 def _read_reports(path: Path) -> list[Mapping]:
-    """Read the landing-report rows; undecodable or decoder-excessive JSON is a named ValueError."""
-    try:
-        doc = json.loads(path.read_text(encoding="utf-8"))
-    except (ValueError, RecursionError):   # UnicodeDecodeError and JSONDecodeError are ValueErrors
-        raise ValueError(f"{path}: not readable JSON") from None
+    doc = json.loads(path.read_text())
     rows = doc.get("reports") if isinstance(doc, Mapping) else doc
     if not isinstance(rows, list):
         raise ValueError(f"{path}: expected a list of report rows or an object with reports[]")
@@ -314,7 +310,6 @@ def main(argv=None) -> int:
     from ..sinks import worker_base
     try:
         given = _read_vessels(args.vessels) if args.vessels else None
-        admitted = _read_reports(args.reports)   # refuse a bad reports file before any registry access
         region = load_region(args.region)
         if args.source not in STORES:
             raise ValueError(f"no raw store for source {args.source!r}")
@@ -323,7 +318,7 @@ def main(argv=None) -> int:
         else:
             vessels, reviews = read_snapshot(Worker(worker_base()), region.id)
         first, last = args.start.isoformat(), args.end.isoformat()
-        rows = [r for r in admitted if isinstance(r.get("date"), str) and first <= r["date"] <= last]
+        rows = [r for r in _read_reports(args.reports) if isinstance(r.get("date"), str) and first <= r["date"] <= last]
         days = report_days(rows, vessels, landing_ports())
         store = STORES[args.source](args.root or ais_root(region.id))
         counts = precision(region, vessels, reviews, _history_windows(region, store, args.start, args.end), days)

@@ -48,11 +48,6 @@ def window_fragments(records, depth_m, valid, affine, crs, *, depth_band_descrip
     _polygons(records)
     if depth_band_description != 'depth_m_positive_down':
         raise ValueError('Require the verified normalized positive-down metre depth band')
-    # np.asarray drops a MaskedArray's mask, so hidden values would be admitted as
-    # support. The explicit boolean `valid` array is the only mask channel; callers
-    # resolve masked rasters into ordinary arrays before this kernel.
-    if np.ma.isMaskedArray(depth_m) or np.ma.isMaskedArray(valid):
-        raise ValueError('Masked native depth or validity arrays require explicit masks')
     values, good = np.asarray(depth_m), np.asarray(valid)
     if (values.ndim != 2 or values.shape != good.shape or good.dtype != np.bool_
             or not np.issubdtype(values.dtype, np.floating)

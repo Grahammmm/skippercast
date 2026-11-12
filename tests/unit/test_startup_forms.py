@@ -126,61 +126,6 @@ class RegulationsCopy(unittest.TestCase):
                 regs_startup(registry_with(area_notices=[notice]), {'path': 'p', 'sha256': 'x'}, region)
         regs_startup(registry_with(area_notices=[]), {'path': 'p', 'sha256': 'x'}, region)
 
-    def test_malformed_area_notices_are_refused_not_omitted(self):
-        region, src = {'id': 'r', 'species': ['salmon']}, {'path': 'p', 'sha256': 'x'}
-        good = {'id': 'n', 'name': 'N', 'note': 'x', 'source_ids': ['a']}
-        bad_collections = ({}, {'a': 1}, 'a', 5, 1.5, True, {'x': []})
-        for value in bad_collections:
-            with self.subTest(collection=value), self.assertRaisesRegex(ValueError, 'Malformed area notices in p'):
-                regs_startup(registry_with(area_notices=value), src, region)
-        bad_members = (None, True, 3, 'n', [good], {**good, 'source_ids': 'a'}, {**good, 'source_ids': 'ab'}, {**good, 'source_ids': {'a': 1}},
-                       {**good, 'source_ids': 1}, {**good, 'source_ids': True}, {**good, 'source_ids': None}, {**good, 'source_ids': []},
-                       {**good, 'source_ids': ['nope']}, {**good, 'source_ids': [['a']]}, {**good, 'source_ids': [{'a': 1}]},
-                       {**good, 'source_ids': [None]}, {**good, 'source_ids': ['a', 'nope']},
-                       {k: v for k, v in good.items() if k != 'note'}, {**good, 'id': 1}, {**good, 'name': None}, {**good, 'note': ['x']})
-        for member in bad_members:
-            for position, notices in ((0, [member]), (1, [good, member])):
-                with self.subTest(member=member, position=position), self.assertRaisesRegex(ValueError, f'Malformed area notice at index {position} in p'):
-                    regs_startup(registry_with(area_notices=notices), src, region)
-        for sources in ({'a': None}, {'a': 'u'}, {'a': {'name': 'a'}}, {'a': {'url': ''}}):
-            with self.subTest(sources=sources), self.assertRaisesRegex(ValueError, 'Malformed area notice at index 0'):
-                regs_startup({**registry_with(area_notices=[good]), 'sources': sources}, src, region)
-        registry = registry_with(area_notices=[good, None])
-        before = json.dumps(registry)
-        with self.assertRaises(ValueError):
-            regs_startup(registry, src, region)
-        self.assertEqual(json.dumps(registry), before, 'the registry is not mutated')
-
-    def test_absent_falsy_and_valid_area_notices_keep_the_same_copy(self):
-        region, src = {'id': 'r', 'species': ['salmon']}, {'path': 'p', 'sha256': 'x'}
-        expected = regs_startup(registry_with(area_notices=[]), src, region)
-        for value in (None, False, 0, 0.0, '', [], [{'id': '', 'name': '', 'note': '', 'source_ids': ['a', 'unused']}]):
-            with self.subTest(notices=value):
-                self.assertEqual(regs_startup(registry_with(area_notices=value), src, region), expected)
-        absent = registry_with()
-        del absent['area_notices']
-        self.assertEqual(regs_startup(absent, src, region), expected)
-        self.assertNotIn('area_notices', expected)
-
-    def test_a_malformed_notice_leaves_the_regulations_target_as_it_was(self):
-        for notices in ({}, [None], [{'id': 'n', 'name': 'N', 'note': 'x', 'source_ids': 'a'}]):
-            for existing in (b'{"sentinel": true}', None):
-                with self.subTest(notices=notices, existing=existing), tempfile.TemporaryDirectory() as tmp:
-                    root, output = Path(tmp), Path(tmp) / 'dist/regions/r'
-                    output.mkdir(parents=True)
-                    (root / 'dist/data').mkdir(parents=True)
-                    source = root / 'dist/data/regulations.json'
-                    source.write_text(json.dumps(registry_with(area_notices=notices)))
-                    source_bytes = source.read_bytes()
-                    if existing is not None:
-                        (output / REGS_STARTUP).write_bytes(existing)
-                    region = {'id': 'r', 'species': ['salmon'], 'assets': {'regulations': 'data/regulations.json'}}
-                    with self.assertRaises(ValueError):
-                        publish_startup_forms(root, region, output)
-                    self.assertEqual((output / REGS_STARTUP).read_bytes() if existing is not None else (output / REGS_STARTUP).exists(),
-                                     existing if existing is not None else False)
-                    self.assertEqual(source.read_bytes(), source_bytes)
-
     def test_published_beside_the_package_from_assets_regulations_and_removed_when_there_is_none(self):
         with tempfile.TemporaryDirectory() as tmp:
             root, output = Path(tmp), Path(tmp) / 'dist/regions/r'

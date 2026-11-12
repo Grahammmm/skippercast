@@ -6,7 +6,6 @@ import test from 'node:test';
 import {dockTime} from '../web/hour.ts';
 import {HOME_PORT_KEY, currentPort, exploreURL, linkedPort, portURL} from '../web/ports.ts';
 import {PROFILES, PROFILE_TABLE} from '../web/profile.ts';
-import {parseCamera} from '../web/map/stage.ts';
 import {SHARED_VIEW_KEYS, shareLink, shareOrCopy} from '../web/share-link.ts';
 import {configureStore, parsePort, port, readURL, syncFromURL, withParams} from '../web/state.ts';
 
@@ -147,16 +146,4 @@ test('Share: the sheet when present, a dismissed sheet does nothing, other refus
   assert.equal(await shareOrCopy(made, {clipboard: clipboard(false)}), 'manual', 'denied');
   assert.equal(await shareOrCopy(made, {}), 'manual', 'absent');
   assert.equal(await shareOrCopy(made, undefined), 'manual', 'no navigator');
-});
-
-test('share_keeps_view_but_not_private_keys: a five-field orbit view is carried, parses after reopening, and repeats/private keys stay out', () => {
-  const made = link(`region=morro-bay&presentation=3d&view=35.37000,-120.86000,12,-35.5,50&utm_source=x&access_token=abc#account`);
-  const shared = new URL(made.url);
-  assert.equal(shared.searchParams.get('view'), '35.37000,-120.86000,12,-35.5,50', 'the whole tuple, orientation included');
-  assert.deepEqual(parseCamera(readURL(made.url).view), {latitude: 35.37, longitude: -120.86, zoom: 12, bearing: -35.5, pitch: 50}, 'reopening restores the pair');
-  for (const key of ['utm_source', 'access_token']) assert.equal(shared.searchParams.has(key), false, key);
-  assert.equal(shared.hash, '');
-  const repeated = link('region=morro-bay&view=35.37000,-120.86000,12,35,50&view=35.1,-120.1,9,10,20');
-  assert.equal(new URL(repeated.url).searchParams.has('view'), false, 'a repeated view is dropped, as before');
-  assert.equal(link(`region=morro-bay&view=35.37000,-120.86000,12,35,50`).url, link(`region=morro-bay&view=35.37000,-120.86000,12,35,50`).url, 'a second press is byte-identical');
 });

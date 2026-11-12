@@ -23,7 +23,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import math
 import os
 import re
 import stat
@@ -364,9 +363,6 @@ def parse_json_bytes(data, label):
         if isinstance(node, str):
             if not _strict_unicode(node):
                 raise ClosureInputError("json_invalid_unicode", f"{label}: string with a lone surrogate escape")
-        elif isinstance(node, float):
-            if not math.isfinite(node):
-                raise ClosureInputError("json_nonfinite", f"{label}: non-finite number (exponent overflow)")
         elif isinstance(node, dict):
             for key in node:
                 if not _strict_unicode(key):

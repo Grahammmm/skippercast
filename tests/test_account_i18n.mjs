@@ -183,12 +183,3 @@ test('account_lint_rejects_bare_text_in_an_account_template_and_unknown_ids', ()
   delete catalogue.strings['account.b'];
   assert.match(check("const f = () => 'A bare sentence of prose';")[0], /bare literal/);
 });
-
-test('account_created_notice_and_continue_read_in_both_languages_with_english_fallback', () => {
-  const en = createCopy(EN), es = createCopy(ES);
-  assert.equal(en('account.status.created'), 'Account created. You\u2019re signed in. Continue to return to your screen.');
-  assert.equal(es('account.status.created'), 'Cuenta creada. Has iniciado sesi\u00f3n. Contin\u00faa para volver a tu pantalla.');
-  assert.equal(en('account.continue'), 'Continue'); assert.equal(es('account.continue'), 'Continuar');
-  const bad = createCopy({lang: 'es', strings: {'account.continue': '', 'account.status.created': 42}});
-  assert.equal(bad('account.continue'), 'Continue'); assert.equal(bad('account.status.created'), en('account.status.created'));
-});

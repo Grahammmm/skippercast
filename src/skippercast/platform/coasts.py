@@ -11,13 +11,6 @@ def _day(text):
         return None
 
 
-def _band_ok(band):
-    if not isinstance(band, list) or len(band) != 2 or any(type(v) not in (int, float) for v in band):
-        return False
-    south, north = band
-    return -90 <= south < north <= 90 and math.isfinite(south) and math.isfinite(north)
-
-
 def _check_advisories(region):
     advisories, seen, (lo, hi) = region.get('local_target_advisories', []), set(), region['latitude']
     if not isinstance(advisories, list):
@@ -46,9 +39,6 @@ def compile_coasts(root=REPO):
     regions = directory['regions']
     if [r['id'] for r in regions] != ['northern', 'mendocino', 'san-francisco', 'central', 'southern']:
         raise ValueError('Unexpected coastal directory')
-    for region in regions:  # every band is admitted before any neighbor seam is compared
-        if not _band_ok(region.get('latitude')):
-            raise ValueError(f"Invalid coastal latitude band: {region['id']} latitude")
     for i, region in enumerate(regions):
         bbox(region['bounds'])
         public_url(region['rules_url'])

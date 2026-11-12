@@ -86,34 +86,6 @@ class OriginalBagWindowTests(unittest.TestCase):
         self.assertEqual(result.product_uncertainty_m[0, 0], .25)
         self.assertTrue(result.qualifies_25_300ft_uncertainty_0_1m[0, 0])
 
-    def test_cell_id_requires_integer_local_indices(self):
-        result = self.read(Window(2, 1, 3, 4))
-
-        class Indexable:
-            def __index__(self):
-                return 1
-        for row, col in [(0.5, 0), (0, 1.25), (0.0, 0), (0, np.float64(1.0)), (1.0, 1.0),
-                         (True, 0), (0, False), (True, False), (np.bool_(True), 0),
-                         (0, np.bool_(False)), ('0', 0), (0, None), (float('nan'), 0),
-                         (0, float('inf'))]:
-            with self.subTest(row=row, col=col):
-                with self.assertRaisesRegex(TypeError, 'Local cell indices must be integers'):
-                    result.cell_id(row, col)
-        for row, col in [(0, 0), (np.int32(0), np.int64(0)), (np.uint64(0), np.uint64(0))]:
-            with self.subTest(valid=(type(row), type(col))):
-                self.assertEqual(result.cell_id(row, col), 'H11879:2m:1of5:1:2')
-        self.assertEqual(result.cell_id(Indexable(), np.int64(2)), 'H11879:2m:1of5:2:4')
-        self.assertEqual(result.cell_id(np.uint64(3), np.int32(2)), 'H11879:2m:1of5:4:4')
-
-    def test_cell_id_integer_bounds_stay_index_errors(self):
-        result = self.read(Window(2, 1, 3, 4))
-        for row, col in [(-1, 0), (0, -1), (4, 0), (0, 3), (2**70, 0), (0, -2**70),
-                         (np.uint64(2**63), 0)]:
-            with self.subTest(row=row, col=col):
-                with self.assertRaisesRegex(IndexError, 'Local cell index is outside the original window'):
-                    result.cell_id(row, col)
-        self.assertEqual((result.row_off, result.col_off), (1, 2))
-
     def test_depth_and_product_uncertainty_rules_are_direct_per_cell(self):
         result = self.read()
         np.testing.assert_array_equal(result.qualifies_25_300ft_uncertainty_0_1m[0],

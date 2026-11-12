@@ -100,15 +100,8 @@ def _polygons(geometry):
                 _require(isinstance(point, (list, tuple)) and len(point) == 2
                          and _number(point[0], -180, 180) and _number(point[1], -90, 90),
                          "Polygon needs finite WGS84 coordinates")
-            _require(len({tuple(p) for p in ring}) >= 3 and not _collinear(ring), "Degenerate polygon ring")
+            _require(len({tuple(p) for p in ring}) >= 3, "Degenerate polygon ring")
     return polygons
-
-
-def _collinear(ring):
-    """True when every position lies on one line (exact zero cross product, no area floor)."""
-    anchor = tuple(ring[0])
-    second = next((p for p in map(tuple, ring) if p != anchor), None)
-    return second is None or all(_cross(anchor, second, p) == 0 for p in ring)
 
 
 def _on_segment(point, a, b):

@@ -73,30 +73,3 @@ test('without a language choice the account panel reads English', async ({page, 
   await expect(card).not.toContainText('Las notas privadas');
   expect(pageErrors).toEqual([]);
 });
-
-test('the Spanish account dialog keeps its created confirmation and a Continuar button until acknowledged', async ({page, pageErrors, v2}) => {
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send('WebAuthn.enable');
-  await cdp.send('WebAuthn.addVirtualAuthenticator', {options: {protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true}});
-  await stub(page, false);
-  const b64url = (n: number) => Buffer.from(Array.from({length: n}, (_, i) => (i * 7 + 3) % 256)).toString('base64url');
-  await page.route('**/api/auth/register/options', route => route.fulfill({json: {challenge: b64url(32), rp: {name: 'SkipperCast', id: 'localhost'}, user: {id: b64url(16), name: 'Alex', displayName: 'Alex'},
-    pubKeyCredParams: [{type: 'public-key', alg: -7}], timeout: 60000, authenticatorSelection: {residentKey: 'required', userVerification: 'preferred'}, attestation: 'none'}}));
-  await page.route('**/api/auth/register/verify', route => route.fulfill({json: {ok: true}}));
-  await v2.open('app', {region: 'morro-bay', lang: 'es'});
-  await page.evaluate(() => { (window as unknown as {__stillHere: boolean}).__stillHere = true; });
-  await openPanel(page);
-  const card = page.locator('.account-card');
-  await expect(card.locator('#account-create')).toBeEnabled();
-  await card.locator('#account-create').click();
-  const status = card.locator('#account-status');
-  await expect(status).toHaveText('Cuenta creada. Has iniciado sesión. Continúa para volver a tu pantalla.');
-  await expect(status).toHaveAttribute('aria-live', 'polite');
-  await expect(card.locator('#account-create')).toHaveText('Continuar');
-  await expect(card.locator('#account-signin')).toBeDisabled();
-  expect(await page.evaluate(() => (window as unknown as {__stillHere?: boolean}).__stillHere), 'no reload before Continuar').toBe(true);
-  const reloaded = page.waitForEvent('load');
-  await card.locator('#account-create').click();
-  await reloaded;
-  expect(pageErrors).toEqual([]);
-});

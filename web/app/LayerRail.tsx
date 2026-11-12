@@ -34,7 +34,7 @@ import {regionMenu} from '../species.ts';
 import {Popover} from '../ui/Popover.tsx';
 import {Rail, RailItem} from '../ui/Rail.tsx';
 import {aerialOffer, flownText, type AerialBase} from '../map/aerial.ts';
-import {chartFailed, ENC_MIN_ZOOM} from '../map/chart.ts';
+import {ENC_MIN_ZOOM} from '../map/chart.ts';
 import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, toggleActivity} from '../map/fleet.ts';
@@ -255,8 +255,6 @@ export function LookFor() {
 
 export function LayerRail() {
   const on = layers.value, source = current.value, shown = shownPresentation.value, lang = language.value;
-  // SC1922-07: the Chart could not start, so none of its layers can draw; the buttons say so and ignore presses, and keep what was chosen.
-  const failed = shown === 'chart' && chartFailed.value, failedReason = t('rail.chartFailed', lang);
   const basisLabel = (label: string) => t('rail.basisSummary', lang, {label});
   const runtime = (note: string | undefined) => note ? <EnglishDetail lang={lang}>{note}</EnglishDetail> : undefined;
   // The Currents entry's note: the terrain renderer's own status line, or the Chart's frame note, else its reason; SC1352-03: in the page's language when the producer attached parts.
@@ -273,19 +271,19 @@ export function LayerRail() {
       {[...railEntries(lang).map(e => {
         const here = drawsIn(e.id, shown), active = railOn(e.id, on, source);
         return e.id === 'currents' ? (
-          <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(e.label)} disabled={!here || failed}
-            note={!here ? chartOnly(lang) : failed ? failedReason : active ? currentsNote() : undefined} onToggle={(_, next) => chooseCurrent(next ? DEFAULT_CURRENT : 'off')}>
-            {active && here && !failed ? <CurrentSource /> : null}
+          <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(e.label)} disabled={!here}
+            note={!here ? chartOnly(lang) : active ? currentsNote() : undefined} onToggle={(_, next) => chooseCurrent(next ? DEFAULT_CURRENT : 'off')}>
+            {active && here ? <CurrentSource /> : null}
           </RailItem>
         ) : (
-          <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(e.label)} disabled={!here || failed}
-            note={!here ? chartOnly(lang) : failed ? failedReason : e.id === 'seafloor' && shown !== 'chart' ? undefined : railNote(e.id)}
+          <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(e.label)} disabled={!here}
+            note={!here ? chartOnly(lang) : e.id === 'seafloor' && shown !== 'chart' ? undefined : railNote(e.id)}
             onToggle={(id, next) => setParams({layers: layersParam(toggled(layers.value, id, next))})}>
-            {e.id === 'fleet' && active && here && !failed ? <FleetOptions /> : null}
+            {e.id === 'fleet' && active && here ? <FleetOptions /> : null}
             {e.id === 'seafloor' && shown !== 'chart' ? <TerrainOptions on={active} /> : null}
           </RailItem>
         );
-      }), <PreviewRailItems key="previews" disabledReason={failed ? failedReason : undefined} />]}
+      }), <PreviewRailItems key="previews" />]}
     </Rail>
   );
 }

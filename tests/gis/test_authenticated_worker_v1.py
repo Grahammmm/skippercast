@@ -459,38 +459,3 @@ print(json.dumps(dict(test_only=True,original_stream_hash_passes=1,sealed_snapsh
     assert result.returncode==0,result.stderr
     report=json.loads(result.stdout)
     assert report['test_only'] and report['source_bytes']==5*1024*1024
-
-# RF1255-10: exact fractional native windows refuse even when binary64 rounds them to integers.
-from decimal import Decimal
-from fractions import Fraction
-from skippercast.coastal.authenticated_v1 import adapter_bag
-WINDOW_FIELDS=('col_off','row_off','width','height')
-BELOW,ABOVE=Decimal('0.999999999999999999999'),(Fraction(2**54+1,2**54),Decimal('1.000000000000000000001'))
-INTEGER_MESSAGE='Native source windows require integer pixel offsets and sizes'
-def _window(field,value):
-    values=dict(col_off=0,row_off=0,width=1,height=1);values[field]=value;return Window(**values)
-@pytest.mark.parametrize('window',[_window(f,BELOW) for f in ('col_off','row_off')]+[_window(f,v) for f in WINDOW_FIELDS for v in ABOVE])
-def test_exact_fractional_window_component_refuses(window):
-    with pytest.raises(ValueError,match=INTEGER_MESSAGE):adapter_bag._integer_window(window)
-@pytest.mark.parametrize('one',[1,np.int64(1),1.,Decimal('1'),Fraction(2,2)])
-def test_genuinely_integral_representations_unchanged(one):
-    result=adapter_bag._integer_window(Window(one,2*one,3*one,one))
-    assert result==(Window(1,2,3,1),2,1) and all(type(v) is int for v in (*result[0].flatten(),*result[1:]))
-def test_existing_window_limits_and_errors_unchanged():
-    for window in (Window(.5,0,1,1),Window(float('nan'),0,1,1),Window(0,float('inf'),1,1),Window(-1,0,1,1),Window(0,0,0,1),Window(0,0,1,0),Window(0,0,513,512)):
-        with pytest.raises(ValueError):adapter_bag._integer_window(window)
-    assert adapter_bag._integer_window(Window(0,0,512,512))[0]==Window(0,0,512,512)
-def test_public_fraction_refusal_precedes_adapter_native_access(fixture):
-    root,bag,row,xmlsha,source,spec,grant=fixture
-    def reached(*a,**kw):raise AssertionError('native access after fractional window')
-    with capture(fixture) as view:
-        expected=adapter_bag.read_snapshot_window(view,row,Window(1,0,1,1),expected_metadata_sha256=xmlsha)
-        integral=adapter_bag.read_snapshot_window(view,row,Window(Fraction(2,2),Decimal('0'),1.,np.int64(1)),expected_metadata_sha256=xmlsha)
-        assert (integral.row_off,integral.col_off,integral.transform,integral.cell_id(0,0))==(expected.row_off,expected.col_off,expected.transform,expected.cell_id(0,0))
-        for name in ('elevation_m','product_uncertainty_m','elevation_mask','uncertainty_mask','source_pair_valid'):
-            np.testing.assert_array_equal(getattr(integral,name),getattr(expected,name))
-        with contextlib.ExitStack() as spies:
-            for name in ('borrow','open_hdf','open_raster'):spies.enter_context(patch.object(snapshot.SealedSnapshot,name,reached))
-            for window in [_window('col_off',BELOW),_window('row_off',BELOW)]+[_window(f,ABOVE[0]) for f in WINDOW_FIELDS]:
-                with pytest.raises(ValueError,match=INTEGER_MESSAGE):
-                    adapter_bag.read_snapshot_window(view,row,window,expected_metadata_sha256=xmlsha)

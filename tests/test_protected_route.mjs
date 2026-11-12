@@ -75,18 +75,6 @@ test('planner exports the real avoid-polygon route after the normal waypoint gat
     const file=await p.exportRouteFile();
     assert.equal(file.type,'application/gpx+xml');assert.match(file.name,/-planning-route.gpx$/);
     assert.match(await file.text(),/<rte>/);assert.match(p.routeStatus.value,/Boundary check: 2026-11-07/);
-    const {launchPoints} = await import('../web/launches.ts');
-    try {
-      launchPoints.value = {region: 'fixture', points: [{id: 'ramp', name: 'Ramp', ...point(5,5)}]};
-      p.setLaunch(true);
-      assert.equal(p.moveStop('user:p1', 'up'), true);
-      const gpx = await (await p.exportRouteFile()).text();
-      const positions = [...gpx.matchAll(/<rtept lat="([^"]+)" lon="([^"]+)"/g)].map(m => ({latitude: Number(m[1]), longitude: Number(m[2])}));
-      assert.ok(positions[0].latitude === point(5,5).latitude && positions[0].longitude === point(5,5).longitude, 'planning route starts at launch');
-      const middle = positions.findIndex(q => q.latitude === targets[1].latitude && q.longitude === targets[1].longitude);
-      assert.ok(middle > 0 && middle < positions.length - 1, 'moved stop follows launch');
-      assert.ok(positions.at(-1).latitude === targets[0].latitude && positions.at(-1).longitude === targets[0].longitude, 'remaining ids retain moved order');
-    } finally { p.setLaunch(false); launchPoints.value = null; }
     s.ready=()=>false;
     await assert.rejects(p.exportRouteFile(),/Protected-area checks/);
   } finally {p.dispose();}

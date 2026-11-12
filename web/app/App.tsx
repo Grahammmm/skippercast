@@ -10,7 +10,6 @@ import {Desktop} from './Desktop.tsx';
 import {FirstRun} from './FirstRun.tsx';
 import {Masthead} from './Masthead.tsx';
 import {Mobile} from './Mobile.tsx';
-import {SkipLinks} from './SkipLinks.tsx';
 import {Trip} from './Trip.tsx';
 import {useHourNow, type HourClock} from '../clock.ts';
 import {sharedFetch} from '../shared-fetch.ts';
@@ -143,7 +142,6 @@ export function App({now: fixedNow, clock}: {now?: Date; clock?: HourClock} = {}
     <>
       {narrow.value ? <Mobile now={now} clock={clock} firstRun={<FirstRun />} /> : (
         <div class="app" style={{gridTemplateRows: 'auto auto auto 1fr'}}>
-          <SkipLinks />
           <Masthead />
           <CommandBar now={now} />
           <FirstAnswerLine now={now} />

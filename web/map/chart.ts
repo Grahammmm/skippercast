@@ -27,9 +27,9 @@ import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {appView, base, habitat, region, selection, setParams, view} from '../state.ts';
 import {harborOrigin} from '../ranking.ts';
-import {placeWaypoint, waypointPlacement} from '../waypoint-placement.ts';
+import {placeWaypoint} from '../waypoint-placement.ts';
 import {shareStatic, sharedFetch} from '../shared-fetch.ts';
-import {chartFileListed, chartFilesPending} from '../chart-files.ts';
+import {chartFilesPending} from '../chart-files.ts';
 import {loadPoster, poster} from './poster.ts';
 import {COASTLINE_PICK, coastlineFetchPath, coastlineLayers, coastlineMark, coastlineSource, shorelineOverviewURL, shorelinePublished, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
@@ -156,8 +156,6 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   const posterDone = (): void => { painted = true; poster.value = null; };
   let currents: Currents | null = null;
   let sourceContext = {};
-  // RF2205-5: a pick-only token; any change to region, presentation, view or waypoint arming drops a click still settling. Separate from sourceContext.
-  let pickContext = {};
   let viewTimer: ReturnType<typeof setTimeout> | undefined;
   const show = (c: Camera): void => { applied = cameraParam(c); host.dataset.view = applied; };
   const marks = createMarks({fetchFn, page, onError: markUnavailable});
@@ -200,14 +198,13 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       const e: Engine = createEngine(library, {
         host, camera: start, onMove,
         sourceContext: () => sourceContext,
-        pickContext: () => alive && shownPresentation.peek() === 'chart' && appView.peek() === 'coast' ? pickContext : null,
         onSourceTileLoaded: sourceId => {
           if (alive && sourceId === ENC_SOURCE) unavailable.value = unavailable.peek().filter(layer => layer !== 'chart');
         },
         // #617: an overview shoreline that fails falls back to the full one; any other failure marks its layer.
         onLayerError: (layer, error) => {
           const id = region.peek();
-          if (layer === 'coastline' && id && drawnShore === shorelineOverviewURL(id) && chartFileListed(id, 'shoreline.geojson')) {
+          if (layer === 'coastline' && id && drawnShore === shorelineOverviewURL(id)) {
             console.warn('Overview shoreline unavailable; loading the full shoreline', error);
             detailRegion = id; drawnShore = shorelineURL(id); engine.peek()?.setData(COASTLINE_SOURCE, new URL(drawnShore, page()).href);
           } else markUnavailable(layer, error);
@@ -272,7 +269,6 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   const disposers = [
     // A fresh token also rejects an old request after switching away and back.
     effect(() => { region.value; sourceContext = {}; }),
-    effect(() => { region.value; shownPresentation.value; appView.value; waypointPlacement.value; pickContext = {}; }),
     // The first Chart view loads MapLibre; a terrain-only visit never does.
     effect(() => { if (shownPresentation.value === 'chart' && camera.value && region.value) void mount(); }),
     // The shared camera moves the chart, hidden or shown, unless the chart is already there.

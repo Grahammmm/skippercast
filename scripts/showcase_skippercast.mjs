@@ -8,10 +8,6 @@
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {forecastFixture} from '../e2e/forecast-fixture.ts';
-import {KT_PER_MS} from '../web/units.ts';
-
-// The gallery's packet has always carried the factor to nine decimals; keep those bytes while deriving it from web/units.ts.
-const SHOWCASE_KT_PER_MS = Number(KT_PER_MS.toFixed(9));
 
 /** A 1×1 transparent PNG: what the stubbed NAIP imagery service answers with (as e2e/fixtures.ts). */
 const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
@@ -60,7 +56,7 @@ function oceanPacket(now) {
   const three = 3 * HOUR, first = Math.floor(now / three) * three - three, iso = ms => new Date(ms).toISOString(), cells = [];
   for (let j = 0; j < 9; j++) for (let i = 0; i < 17; i++) {
     const lon = +(-121.24 + i * 0.04).toFixed(6), lat = +(35.16 + j * 0.04).toFixed(6), uMs = 0.15 + i * 0.03, vMs = 0.12 - j * 0.02;
-    cells.push({lat, lon, uMs, vMs, speedKnots: Math.hypot(uMs, vMs) * SHOWCASE_KT_PER_MS, towardDeg: (Math.atan2(uMs, vMs) * 180 / Math.PI + 360) % 360});
+    cells.push({lat, lon, uMs, vMs, speedKnots: Math.hypot(uMs, vMs) * 1.943844492, towardDeg: (Math.atan2(uMs, vMs) * 180 / Math.PI + 360) % 360});
   }
   const wcofs = {id: 'wcofs', kind: 'forecast', label: 'NOAA WCOFS surface forecast', url: 'https://example.test/wcofs', fetchedAt: iso(now - 600_000),
     issuedAt: iso(now - three), sampleAt: null, nativeResolutionKm: 4, sampleStride: 1, horizontalDatum: 'NAD83', surfaceOnly: true,

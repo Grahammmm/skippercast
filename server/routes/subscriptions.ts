@@ -39,13 +39,3 @@ subscriptions.delete('/api/subscription', async c => {
   const removed = await d.prepare('DELETE FROM subscriptions WHERE id=? AND owner=?').bind(await hash(endpoint), owner).run();
   return removed.meta.changes > 0 ? json({enabled: false}) : json({error: 'Not found'}, 404);
 });
-// Status: does the caller hold this endpoint's row? Same hash id as POST and DELETE. An endpoint that is absent and one held by another owner
-// both answer {registered: false}, so the answer says nothing about other accounts. The endpoint travels in the body, never the URL. Reads only.
-subscriptions.post('/api/subscription/status', async c => {
-  const owner = c.var.owner, d = db(c.env), b = await body(c.req.raw);
-  if (Object.keys(b).some(k => k !== 'endpoint')) throw new ClientError('Only endpoint can be sent.');
-  const endpoint = b.endpoint;
-  if (typeof endpoint !== 'string' || !endpoint || endpoint.length > 2000) throw new ClientError('invalid endpoint');
-  const row = await d.prepare('SELECT 1 AS held FROM subscriptions WHERE id=? AND owner=?').bind(await hash(endpoint), owner).first();
-  return json({registered: row !== null});
-});

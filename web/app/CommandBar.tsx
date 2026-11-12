@@ -90,12 +90,8 @@ export function TargetSelect() {
   );
 }
 
-/** The Area picker offers a choice only when a link selected an area: that area or the whole region.
- * With no area it would be a select whose only option is "Whole region", so it draws nothing and
- * takes no slot in the command bar (UX audit S4-35). */
 export function AreaSelect() {
   const a = area.value, lang = language.value;
-  if (!a) return null;
   return (
     <label>{t('command.area', lang)}
       <select value={a ?? ''} onChange={event => setParams({area: (event.currentTarget as HTMLSelectElement).value || null})}>

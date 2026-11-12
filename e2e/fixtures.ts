@@ -72,19 +72,9 @@ export interface V2 {
   a11y(name: string): Promise<void>;
 }
 
-/** Tests started in this worker process; with the worker index it names one test's client address. */
-let testsInWorker = 0;
-
 export const test = base.extend<{pageErrors: string[]; v2: V2}>({
-  context: async ({context, baseURL}, use, info) => {
+  context: async ({context, baseURL}, use) => {
     const origin = new URL(baseURL!).origin;
-    // The Worker budgets /api/auth/* at 20 calls a minute per client address (server/routes/auth.ts, keyed on
-    // cf-connecting-ip), and every test here shares one address. Five specs create passkey accounts, each
-    // account taking three auth calls, so which of them ran in the same minute decided whether Create answered
-    // 429 (a CI shard failed with "Too many attempts" in fleet-admin.spec.ts). The budget itself is unchanged and
-    // still enforced: each test (and each retry) now speaks from its own private address, as separate visitors do.
-    testsInWorker += 1;
-    await context.setExtraHTTPHeaders({'cf-connecting-ip': `10.${info.workerIndex % 256}.${(testsInWorker >> 8) % 256}.${testsInWorker % 256}`});
     await context.route(url => url.origin !== origin && url.protocol !== 'data:' && url.protocol !== 'blob:', route => route.abort('blockedbyclient'));
     // Aerial opens by default where the region's package names it (region.json basemap.default), so the fixed
     // NAIP service answers with the pixel: the base counts as drawn and no test reaches USGS. A spec that

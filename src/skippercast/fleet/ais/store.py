@@ -14,10 +14,8 @@ Each day file holds three tables:
   so the same report heard twice, or a batch written twice, gives one row. A
   position with ``received_at - ts`` over ``aisstream.LATE_MS`` may sit in the
   wrong minute; the processor (CF-43) treats its time as suspect.
-- ``statics`` for every vessel in the box, keyed the same way. A repeated key keeps its first
-  values and only fills fields that are still NULL (the two parts of a Class B type-24
-  report arrive in one millisecond), and only when the class and every field known on both
-  rows agree; otherwise the first row stays as it is. An exact duplicate changes nothing.
+- ``statics`` for every vessel in the box, keyed the same way; a repeated key is
+  ignored.
 
 A record goes to the file of the UTC day of its ``ts``. Which vessels are
 written is the listener's decision; the store only stores.
@@ -68,7 +66,6 @@ _POSITION_DDL = """CREATE TABLE IF NOT EXISTS {table} (
   sog REAL, cog REAL, heading INTEGER, nav_status INTEGER, msg_type TEXT NOT NULL, source TEXT NOT NULL,
   received_at INTEGER NOT NULL,
   PRIMARY KEY (mmsi, ts, source)) WITHOUT ROWID"""
-_STATIC_FILL_COLUMNS = ("name", "call_sign", "imo", "ship_type", "dim_bow", "dim_stern", "dim_port", "dim_starboard")
 _STATIC_DDL = """CREATE TABLE IF NOT EXISTS statics (
   mmsi INTEGER NOT NULL, ts INTEGER NOT NULL, name TEXT, call_sign TEXT, imo INTEGER, ship_type INTEGER,
   dim_bow INTEGER, dim_stern INTEGER, dim_port INTEGER, dim_starboard INTEGER, ais_class TEXT NOT NULL,
@@ -77,21 +74,11 @@ _STATIC_DDL = """CREATE TABLE IF NOT EXISTS statics (
 
 
 def _insert_sql(table: str) -> str:
-    """Statics fill NULL fields of a compatible repeated key; positions keep the earliest receipt.
-
-    A repeated static key keeps every known value of the first row. It is updated (one SQLite change) only
-    when ``ais_class`` and every field known on both rows agree and the new row supplies at least one field
-    that is NULL in the stored row; anything else (exact duplicate, subset, conflict) changes nothing.
-    """
+    """Statics ignore a repeated key; positions keep the earliest receipt, whatever order rows arrive in."""
     columns = _STATIC_COLUMNS if table == "statics" else _POSITION_COLUMNS
     sql = f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({', '.join('?' * len(columns))}) "
     if table == "statics":
-        compatible = " AND ".join(["statics.ais_class = excluded.ais_class"] + [
-            f"(statics.{c} IS NULL OR excluded.{c} IS NULL OR statics.{c} = excluded.{c})"
-            for c in _STATIC_FILL_COLUMNS])
-        fills = " OR ".join(f"(statics.{c} IS NULL AND excluded.{c} IS NOT NULL)" for c in _STATIC_FILL_COLUMNS)
-        sets = ", ".join(f"{c} = COALESCE(statics.{c}, excluded.{c})" for c in _STATIC_FILL_COLUMNS)
-        return sql + f"ON CONFLICT (mmsi, ts, source) DO UPDATE SET {sets} WHERE ({compatible}) AND ({fills})"
+        return sql + "ON CONFLICT (mmsi, ts, source) DO NOTHING"
     updates = ", ".join(f"{c} = excluded.{c}" for c in _POSITION_COLUMNS[2:])
     return sql + (f"ON CONFLICT (mmsi, ts, source) DO UPDATE SET {updates} "
                   f"WHERE excluded.received_at < {table}.received_at")
@@ -143,9 +130,7 @@ def retention_limits(region) -> RetentionLimits:
 
 @dataclass
 class WriteCounts:
-    """SQLite changes per table: rows inserted, position rows replaced by an earlier receipt and static rows
-    enriched with a missing field (each counts 1); plain duplicates and conflicting statics are not counted.
-    So ``statics`` counts write operations, not the number of rows kept."""
+    """Rows inserted per table, plus position rows replaced by an earlier receipt; plain duplicates are not counted."""
     positions: int = 0
     discovery: int = 0
     statics: int = 0
@@ -210,10 +195,7 @@ class AisStore:
 
     def write(self, positions: Iterable[AisPosition] = (), discovery: Iterable[AisPosition] = (),
               statics: Iterable[AisStatic] = ()) -> WriteCounts:
-        """Insert records into their days' files, one transaction per day; duplicate keys are ignored.
-
-        A repeated static key is enriched in the same transaction, as described at ``_insert_sql``.
-        """
+        """Insert records into their days' files, one transaction per day; duplicate keys are ignored."""
         by_day: dict[date, dict[str, list[tuple]]] = defaultdict(lambda: defaultdict(list))
         for table, records, kind in (("positions", positions, AisPosition), ("discovery", discovery, AisPosition),
                                      ("statics", statics, AisStatic)):

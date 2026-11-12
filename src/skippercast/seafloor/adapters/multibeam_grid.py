@@ -47,8 +47,6 @@ def reviewed_receipt(path, row):
     if sha256(path) != binding['preparation_receipt_sha256']:
         raise ValueError('Preparation receipt checksum mismatch')
     receipt = json.loads(Path(path).read_bytes())
-    if not isinstance(receipt, dict):
-        raise ValueError('Invalid preparation receipt object')
     if (receipt.get('scope') != 'private-multibeam-grid-parity'
             or receipt.get('output_sha256') != row['sha256']
             or receipt.get('derived_bin_spacing_m') != binding['grid_spacing_m']
@@ -65,11 +63,9 @@ def reviewed_receipt(path, row):
     originals = receipt.get('originals', {})
     tables = receipt.get('beam_table_sha256', [])
     grids = receipt.get('grid_sha256', [])
-    if not isinstance(originals, dict) or not isinstance(tables, list) or not isinstance(grids, list):
-        raise ValueError('Incomplete original/table/grid provenance')
-    digests = [*originals.values(), *tables, *grids, receipt.get('grid_receipt_sha256', '')]
     if (not 1 <= len(originals) <= 8 or len(tables) != len(originals) or len(grids) != 3
-            or any(not isinstance(h, str) or not re.fullmatch(r'[a-f0-9]{64}', h) for h in digests)):
+            or any(not re.fullmatch(r'[a-f0-9]{64}', h) for h in [*originals.values(), *tables, *grids,
+                     receipt.get('grid_receipt_sha256', '')])):
         raise ValueError('Incomplete original/table/grid provenance')
     return receipt
 

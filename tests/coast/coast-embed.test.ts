@@ -94,22 +94,11 @@ function fixture(){
   attached:()=>attached,viewer:()=>viewerArgs!,restore:()=>Object.assign(globalThis,saved)};
 }
 
-/** The managed template: the standalone scene's outer main becomes a named group, and nothing else changes. */
-function assertManagedTemplate(text:string){
- const open='<main id="scene"',close='</main>',label=' aria-label="Shared 2D and 3D Central Coast terrain">';
- assert.ok(coastSceneMarkup.startsWith(open+label)&&coastSceneMarkup.endsWith(close));
- const inner=coastSceneMarkup.slice((open+label).length,-close.length);
- assert.ok(text.startsWith('<div id="scene" role="group"'+label),'the scene is a named group');
- assert.ok(text.endsWith('</div>'+coastSourcesMarkup),'the sources dialog markup follows, unchanged');
- assert.equal(text.slice('<div id="scene" role="group"'.length+label.length,-('</div>'+coastSourcesMarkup).length)===inner,true,'descendants are the template\'s own, byte for byte');
- assert.equal(/<main[\s>]|role="main"/.test(text),false,'a reusable renderer owns no main landmark');
-}
-
 test('mounting adapts the scene for a managed host as v1 did',()=>{
  const f=fixture();
  try{
   f.mount({styles:['/a.css','/b.css'],forecastHref:'#forecast'});
-  assert.equal(f.attached(),1);assert.equal(f.parsed.length,1);assertManagedTemplate(f.parsed[0]!);
+  assert.equal(f.attached(),1);assert.deepEqual(f.parsed,[coastEmbedTemplate]);
   assert.deepEqual(f.root.children.map(n=>n.href??n.id),['/a.css','/b.css','scene','sources']);
   assert.deepEqual(f.root.children.slice(0,2).map(n=>n.rel),['stylesheet','stylesheet']);
   assert.equal(f.selected.get('.intro')!.hidden,true);
@@ -304,98 +293,4 @@ test('host-chrome setters change the scene and readings, target detail and sourc
   assert.equal(node('target-detail').hidden,false);v.selectHabitat(null);assert.deepEqual(details.slice(1),[null]);assert.equal(node('target-detail').hidden,true);
   for(const id of ['relief','sun-azimuth','photo-mix','fixed-ramp','water-opacity','water','contours','source-coverage','habitat','zoom-in','reset','reading','target-detail','.coverage-key'])assert.ok(looked.includes(id),id+' resolves outside the root');
  }finally{Object.assign(globalThis,saved);}
-});
-
-test('managed_embed_has_no_main: native and host chrome, created and supplied roots, parse a main-free scene and destroy or remount cleanly',()=>{
- for(const chrome of ['native','host'] as const)for(const supplied of [false,true]){
-  const f=fixture();
-  try{
-   const first=f.mount({chrome,...(supplied?{root:f.root as unknown as ShadowRoot}:{})});
-   assert.equal(f.attached(),supplied?0:1,`${chrome} ${supplied?'supplied':'created'} root`);
-   assert.equal(f.parsed.length,1);assertManagedTemplate(f.parsed[0]!);
-   assert.equal(f.parsed[0]!.includes('id="sources"'),true,'the sources dialog and every bound id survive');
-   assert.throws(()=>f.mount({chrome,...(supplied?{root:f.root as unknown as ShadowRoot}:{})}),/already holds a mounted coast/,'a live mount is still refused');
-   assert.equal(f.parsed.length,1,'a refused mount parses nothing');
-   first.destroy();first.destroy();
-   assert.deepEqual(f.calls,[['destroy']],'exactly one cleanup per handle');
-   const second=f.mount({chrome,...(supplied?{root:f.root as unknown as ShadowRoot}:{})});
-   assert.equal(f.parsed.length,2);assertManagedTemplate(f.parsed[1]!);
-   assert.notEqual(f.viewer().scene,f.docs[0]!.get('scene'),'the remount builds a fresh scene');
-   second.destroy();assert.deepEqual(f.root.children,[]);
-  }finally{f.restore();}
- }
-});
-
-test('the template itself still opens with its main for the standalone digests; only the managed parse changes',()=>{
- assert.equal(coastEmbedTemplate.startsWith('<main id="scene"'),true);
- assert.equal(sha256(coastSceneMarkup),'e27748cde200cec25a8d43a9906e80be84a3d763d909a6ba2fec07f079e3faaf');
- const f=fixture();
- try{f.mount();assert.notEqual(f.parsed[0],coastEmbedTemplate,'the managed parse is not the raw template');}finally{f.restore();}
-});
-
-// RF2315-6: a host's bearing/pitch pair restores the real orbit, and the renderer reports the real camera's angles.
-async function orbitViewer(ortho=false){
- const T=await import('three');const {CoastViewer}=await import('../../packages/coast/src/coast3d/viewer.ts');const {coastPoint,coastLonLat}=await import('../../packages/coast/src/coast3d/grid.ts');
- const views:any[]=[],v:any=Object.create(CoastViewer.prototype);
- Object.assign(v,{alive:true,visible:true,options:{managed:true,onView:(view:unknown)=>views.push(view)},host:{dataset:{},clientWidth:800,clientHeight:600},perspective:'3d',orbit:new T.Vector3(-4600,3600,4800),orthoHeight:7000,
-  camera:ortho?new T.OrthographicCamera(-1,1,1,-1,2,1000000):new T.PerspectiveCamera(42,1,2,1000000),controls:{target:new T.Vector3(),update(){},object:null,mouseButtons:{},touches:{}},scene:{fog:null,background:null},sky:null,
-  cancelCurrentAdmission(){},hideReading(){},refine:()=>{},drawPins(){},refreshCurrents:()=>{},onResize(){},$:()=>({setAttribute(){}})});
- if(ortho){v.perspective='2d';v.camera.position.set(0,25000,.01);}
- return {T,v,views,coastPoint,coastLonLat};
-}
-const near=(a:number,b:number,eps=1e-6)=>Math.abs(a-b)<=eps;
-
-test('renderer_restores_actual_offset_not_metadata: the camera offset follows bearing and pitch about the centre and span, and notifyView reports it back',async()=>{
- const {T,v,views,coastPoint}=await orbitViewer();
- const [x,z]=coastPoint(-120.86,35.37),offset=()=>v.camera.position.clone().sub(v.controls.target);
- // North-facing (bearing 0): the camera sits south of the target, i.e. on +z; pitch 60 is 60 degrees off straight down.
- v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:0,pitch:60});
- assert.ok(near(v.controls.target.x,x)&&near(v.controls.target.z,z),'the centre is the requested place, not swapped');
- const p=60*Math.PI/180;
- assert.ok(offset().distanceTo(new T.Vector3(0,Math.cos(p),Math.sin(p)).multiplyScalar(5000))<1e-6,'north: camera south of the target, at the requested span');
- v.notifyView();assert.ok(near(views.at(-1).bearing,0)&&near(views.at(-1).pitch,60)&&near(views.at(-1).span,5000,1e-6),'the second report is the real camera');
- // East-facing (bearing 90): camera west of the target (-x). Negative bearing -90: camera east (+x).
- v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:90,pitch:45});
- assert.ok(offset().distanceTo(new T.Vector3(-Math.sin(Math.PI/4),Math.cos(Math.PI/4),0).multiplyScalar(5000))<1e-6,'east-facing');
- v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:-90,pitch:45});
- assert.ok(offset().x>0&&Math.abs(offset().z)<1e-6,'a negative bearing faces west');
- v.notifyView();assert.ok(near(views.at(-1).bearing,-90,1e-6)&&near(views.at(-1).pitch,45,1e-6));
- v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:-135,pitch:30});v.notifyView();
- assert.ok(near(views.at(-1).bearing,-135,1e-6)&&near(views.at(-1).pitch,30,1e-6)&&views.at(-1).bearing<0);
- // A user orbit (camera moved directly) is what the next report says, not the last request.
- v.camera.position.copy(v.controls.target).add(new T.Vector3(0,0,1000));v.notifyView();
- assert.ok(near(views.at(-1).bearing,0)&&near(views.at(-1).pitch,90),'a camera moved by hand reports its own angles');
- // Pitch endpoints clamp to the renderer's orbit bounds, and the report shows the clamp.
- v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:20,pitch:0});v.notifyView();assert.ok(near(views.at(-1).pitch,.08*180/Math.PI,1e-6),'pitch 0 is held at minPolarAngle');
- v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:20,pitch:90});v.notifyView();assert.ok(near(views.at(-1).pitch,.46*180,1e-6),'pitch 90 is held at maxPolarAngle');
- assert.ok(near(views.at(-1).bearing,20,1e-6));
-});
-
-test('renderer_restores_actual_offset_not_metadata: a missing or invalid pair keeps the legacy default move and never makes NaN geometry',async()=>{
- const {T,v}=await orbitViewer();
- const legacy=new T.Vector3(-.56,.46,.6).normalize().multiplyScalar(5000);
- for(const extra of [{},{bearing:30},{pitch:30},{bearing:Number.NaN,pitch:30},{bearing:30,pitch:Number.POSITIVE_INFINITY},{bearing:181,pitch:30},{bearing:30,pitch:-1},{bearing:30,pitch:91},{bearing:'30',pitch:'30'}]){
-  v.setLocation({latitude:35.37,longitude:-120.86,span:5000,...extra});
-  const offset=v.camera.position.clone().sub(v.controls.target);
-  assert.ok(offset.distanceTo(legacy)<1e-6&&Number.isFinite(offset.length()),JSON.stringify(extra));
- }
-});
-
-test('renderer_restores_actual_offset_not_metadata: a top-down camera stays north-up and the later 3D switch uses the requested orbit',async()=>{
- const {T,v,views}=await orbitViewer(true);
- v.setLocation({latitude:35.37,longitude:-120.86,span:5000,bearing:90,pitch:45});
- assert.ok(v.camera instanceof T.OrthographicCamera&&Math.abs(v.camera.position.x-v.controls.target.x)<1e-6&&v.camera.position.y>=25000,'the orthographic camera is not rotated');
- v.notifyView();assert.ok(!('bearing' in views.at(-1))&&!('pitch' in views.at(-1)),'a top-down camera reports no orientation');
- v.setPerspective('3d');
- assert.ok(v.camera instanceof T.PerspectiveCamera);
- v.notifyView();assert.ok(near(views.at(-1).bearing,90,1e-6)&&near(views.at(-1).pitch,45,1e-6),'the 3D camera opens on the requested orbit');
-});
-
-test('a perspective report ahead of any orientation request is the real default camera angles, and a degenerate offset reports none',async()=>{
- const {v,views,T}=await orbitViewer();
- v.camera.position.set(-560,460,600);v.notifyView();
- assert.ok(near(views.at(-1).bearing,Math.atan2(560,600)*180/Math.PI,1e-6)&&near(views.at(-1).pitch,Math.acos(460/Math.hypot(560,460,600))*180/Math.PI,1e-6));
- v.camera.position.copy(v.controls.target);assert.deepEqual(v.orbitAngles(),{},'a zero-length offset reports no orientation');
- v.camera.position.set(Number.NaN,1,1);assert.deepEqual(v.orbitAngles(),{},'a nonfinite offset reports no orientation');
- void T;
 });

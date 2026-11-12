@@ -24,12 +24,10 @@ export type TileProps = {
   stale?: boolean;
   /** The basis sentence (goes inside a <details>). */
   basis?: ComponentChildren;
-  /** The basis disclosure's accessible name ("Basis for wind"); its visible word is unchanged. */
-  basisLabel?: string;
   class?: string;
 };
 
-export function Tile({label, icon, hue, reading, unit, detail, source, stale = false, basis, basisLabel, class: cls}: TileProps) {
+export function Tile({label, icon, hue, reading, unit, detail, source, stale = false, basis, class: cls}: TileProps) {
   return (
     <div class={['ui-tile', cls].filter(Boolean).join(' ')} data-hue={hue} data-state={stale ? 'stale' : 'ok'}>
       <div class="ui-tile-label ui-eyebrow">
@@ -47,7 +45,7 @@ export function Tile({label, icon, hue, reading, unit, detail, source, stale = f
           {stale ? <span class="ui-tile-stale ui-eyebrow">stale</span> : null}
         </div>
       ) : null}
-      {basis ? <Popover accessibleName={basisLabel}>{basis}</Popover> : null}
+      {basis ? <Popover>{basis}</Popover> : null}
     </div>
   );
 }

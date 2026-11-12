@@ -86,36 +86,6 @@ class CoastalSectorShapeTests(TestCase):
                 source['sectors'][0]['latitude'] = latitude
                 self.assertEqual(self._refused(source, r'^coastal-sectors: del-norte: latitude '), [])
 
-    def test_oversized_latitude_is_named_before_atlas_not_overflow(self):
-        huge = 10 ** 400
-        for latitude in ([-huge, 35], [34, huge], [-huge, huge], [huge, -huge], [-huge, -huge + 1], [huge - 1, huge]):
-            with self.subTest(latitude=latitude):
-                source = _source()
-                source['sectors'][0]['latitude'] = json.loads(json.dumps(latitude))
-                self.assertEqual(self._refused(source, r'^coastal-sectors: del-norte: latitude '), [])
-
-    def test_latitude_outside_wgs84_domain_is_named(self):
-        for latitude in ([-91, 36], [36, 91], [-90.0001, 0], [0, 90.0001]):
-            with self.subTest(latitude=latitude):
-                source = _source()
-                source['sectors'][0]['latitude'] = latitude
-                self.assertEqual(self._refused(source, r'^coastal-sectors: del-norte: latitude '), [])
-
-    def test_non_finite_latitude_is_named_by_the_gate(self):
-        for latitude in ([float('inf'), float('inf')], [-float('inf'), 0], [0, float('nan')], [json.loads('-1e999'), 0]):
-            with self.subTest(latitude=latitude):
-                source = _source()
-                source['sectors'][0]['latitude'] = latitude
-                with self.assertRaisesRegex(ValueError, r'^coastal-sectors: del-norte: latitude '):
-                    sectors_module._check_source(source)
-
-    def test_in_domain_latitude_endpoints_pass_the_gate(self):
-        for latitude in ([-90, 90], [-90.0, 0], [0, 90.0], [-0.0, 1], [36, 37.5]):
-            with self.subTest(latitude=latitude):
-                source = _source()
-                source['sectors'][0]['latitude'] = latitude
-                sectors_module._check_source(source)
-
     def test_missing_latitude_is_named(self):
         source = _source()
         del source['sectors'][4]['latitude']

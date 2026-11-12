@@ -45,7 +45,6 @@ import re
 
 from .contracts import atomic_json, read_json
 from .shoreline import simplify
-from ..util.units import FT_PER_M
 
 SCHEMA_VERSION = 1
 INTERVAL_FT = 30
@@ -55,8 +54,7 @@ INDEX_FT = 150
 SHELF_LIMIT_FT = 600
 CELL_M = 16
 DECIMALS = 5
-# Shared owner, kept at its historical five decimals so builder bytes and the packages/coast mirror stay unchanged.
-FEET_PER_M = round(FT_PER_M, DECIMALS)
+FEET_PER_M = 3.28084
 UNVERIFIED_DATUM = 'unverified source datum'
 KINDS = ('contour', 'survey-edge', 'unresolved-area')
 # Size budgets (decoded bytes) for the two published forms; the build fails past them.

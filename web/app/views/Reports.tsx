@@ -17,7 +17,6 @@ import {PROFILE_TABLE} from '../../profile.ts';
 import {profile, region, species} from '../../state.ts';
 import type {Charters, Evidence, ReportsData, Watch} from '../../reports.ts';
 import {regionInfo} from '../App.tsx';
-import {DEFAULT_ZONE} from '../../zone.ts';
 import {CoastMarkup, isSafeCatchState} from '../CoastMarkup.tsx';
 import {language, t} from '../../i18n.ts';
 import {catchCopy, countPhrase, evidenceCopy, reportDay, rowCopy} from '../../reports-copy.ts';
@@ -70,21 +69,21 @@ export function CatchCards({state}: {state: CatchState | null}) {
   return <CoastMarkup renderer="catchSheet" args={lang === 'en' ? [state] : [state, catchCopy(lang)]} class="app-reports-catches" />;
 }
 
-export function EvidenceSection({evidence, timeZone = DEFAULT_ZONE}: {evidence: Evidence | null; timeZone?: string}) {
+export function EvidenceSection({evidence}: {evidence: Evidence | null}) {
   const lang = language.value;
   if (!evidence) return <p>{t('reports.evidence.unavailable', lang)}</p>;
   const text = evidenceCopy(evidence, lang);
   return (
     <>
       <p><span class="ui-eyebrow">{t('reports.evidence.eyebrow', lang)}</span> <strong>{text.confidence}</strong>. {text.reason ?? <EnglishDetail lang={lang}>{evidence.reason}</EnglishDetail>}</p>
-      <p class="app-reports-small">{reportDay(evidence.start, lang, timeZone)}–{reportDay(evidence.end, lang, timeZone)} · {countPhrase('trips', evidence.trips, lang)} · {countPhrase('boats', evidence.boats, lang)} · {countPhrase('days', evidence.days, lang)}. {t('reports.evidence.caveat', lang, {date: reportDay(evidence.generatedAt, lang, timeZone)})}</p>
+      <p class="app-reports-small">{reportDay(evidence.start, lang)}–{reportDay(evidence.end, lang)} · {countPhrase('trips', evidence.trips, lang)} · {countPhrase('boats', evidence.boats, lang)} · {countPhrase('days', evidence.days, lang)}. {t('reports.evidence.caveat', lang, {date: reportDay(evidence.generatedAt, lang)})}</p>
       {evidence.rows.length ? (
         <ul class="app-reports-list">
           {evidence.rows.map(r => {
             const row = rowCopy(r, lang);
             return (
               <li key={`${r.date}:${r.boat}`}>
-                <span class="ui-mono">{reportDay(r.date, lang, timeZone)}</span> · {r.boat}: {row.translated ? row.catches : <EnglishDetail lang={lang}>{row.catches}</EnglishDetail>}
+                <span class="ui-mono">{reportDay(r.date, lang)}</span> · {r.boat}: {row.translated ? row.catches : <EnglishDetail lang={lang}>{row.catches}</EnglishDetail>}
                 <small>{row.translated ? row.where : <EnglishDetail lang={lang}>{row.where}</EnglishDetail>}{r.url ? <> · <Out href={r.url}>{t('reports.source', lang)}</Out></> : null}</small>
               </li>
             );
@@ -95,16 +94,16 @@ export function EvidenceSection({evidence, timeZone = DEFAULT_ZONE}: {evidence: 
   );
 }
 
-export function DiscussionsSection({discussions: d, timeZone = DEFAULT_ZONE}: {discussions: ReportsData['discussions']; timeZone?: string}) {
+export function DiscussionsSection({discussions: d}: {discussions: ReportsData['discussions']}) {
   const lang = language.value;
   if (d.status === 'unavailable') return <p>{t('reports.disc.unavailable', lang)}</p>;
-  if (d.status === 'stale') return <p>{t('reports.disc.stale', lang, {date: reportDay(d.generatedAt, lang, timeZone)})}</p>;
+  if (d.status === 'stale') return <p>{t('reports.disc.stale', lang, {date: reportDay(d.generatedAt, lang)})}</p>;
   return (
     <>
-      <p class="app-reports-small">{t('reports.disc.updated', lang, {date: reportDay(d.generatedAt, lang, timeZone), checked: d.checkedQueries, total: d.totalQueries, degraded: d.status === 'degraded' ? t('reports.disc.degraded', lang) : ''})}</p>
+      <p class="app-reports-small">{t('reports.disc.updated', lang, {date: reportDay(d.generatedAt, lang), checked: d.checkedQueries, total: d.totalQueries, degraded: d.status === 'degraded' ? t('reports.disc.degraded', lang) : ''})}</p>
       {d.candidates.length ? (
         <ul class="app-reports-list">
-          {d.candidates.map(c => <li key={c.url}><Out href={c.url}>{c.title}</Out><small>{t('reports.disc.published', lang, {date: reportDay(c.published_at, lang, timeZone), source: c.source ?? '', basis: c.location_basis || t('reports.disc.basis', lang)})}</small></li>)}
+          {d.candidates.map(c => <li key={c.url}><Out href={c.url}>{c.title}</Out><small>{t('reports.disc.published', lang, {date: reportDay(c.published_at, lang), source: c.source ?? '', basis: c.location_basis || t('reports.disc.basis', lang)})}</small></li>)}
         </ul>
       ) : <p>{t('reports.disc.empty', lang)}</p>}
       <p class="app-reports-small">{t('reports.disc.caveat', lang)}</p>
@@ -126,7 +125,7 @@ export function WatchSection({watch}: {watch: Watch | null}) {
   );
 }
 
-export function ChartersSection({charters, timeZone = DEFAULT_ZONE}: {charters: Charters | null; timeZone?: string}) {
+export function ChartersSection({charters}: {charters: Charters | null}) {
   const lang = language.value;
   if (!charters) return <p>{t('reports.charters.none', lang)}</p>;
   return (
@@ -134,14 +133,14 @@ export function ChartersSection({charters, timeZone = DEFAULT_ZONE}: {charters: 
       {charters.rows.length ? (
         <ul class="app-reports-list">
           {charters.rows.map(r => (
-            <li key={r.label}>{r.label}<small>{t('reports.charters.ground', lang, {ground: r.ground, trips: countPhrase('trips', r.trips, lang), boats: countPhrase('boats', r.boats, lang), date: reportDay(r.latest, lang, timeZone)})}</small>
-              {r.sources.length ? <small>{r.sources.map((source, i) => <span key={`${source.url}:${source.date}:${source.boat}:${i}`}>{i ? ' · ' : t('reports.charters.sources', lang)}<Out href={source.url}>{reportDay(source.date, lang, timeZone)} · {source.boat}</Out></span>)}</small> : null}
+            <li key={r.label}>{r.label}<small>{t('reports.charters.ground', lang, {ground: r.ground, trips: countPhrase('trips', r.trips, lang), boats: countPhrase('boats', r.boats, lang), date: reportDay(r.latest, lang)})}</small>
+              {r.sources.length ? <small>{r.sources.map((source, i) => <span key={`${source.url}:${source.date}:${source.boat}:${i}`}>{i ? ' · ' : t('reports.charters.sources', lang)}<Out href={source.url}>{reportDay(source.date, lang)} · {source.boat}</Out></span>)}</small> : null}
             </li>
           ))}
         </ul>
       ) : <p>{t('reports.charters.empty', lang)}</p>}
       {charters.more ? <p class="app-reports-small">{t('reports.charters.more', lang, {n: charters.more})}</p> : null}
-      <p class="app-reports-small">{t('reports.charters.caveat', lang, {date: reportDay(charters.audit, lang, timeZone)})}</p>
+      <p class="app-reports-small">{t('reports.charters.caveat', lang, {date: reportDay(charters.audit, lang)})}</p>
     </>
   );
 }
@@ -150,17 +149,17 @@ const Section = ({id, title, children}: {id: string; title: string; children: Co
   <section class="app-reports-section" aria-labelledby={`reports-${id}`}><h2 id={`reports-${id}`}>{title}</h2>{children}</section>;
 
 /** The page body for loaded `data` (null while loading) and the catch state. */
-export function ReportsBody({data, catches, timeZone = DEFAULT_ZONE}: {data: ReportsData | null; catches: CatchState | null; timeZone?: string}) {
+export function ReportsBody({data, catches}: {data: ReportsData | null; catches: CatchState | null}) {
   const lang = language.value;
   return (
     <>
       <section class="app-reports-section" aria-label={t('reports.catches.aria', lang)}><CatchCards state={catches} /></section>
       {data ? (
         <>
-          <Section id="evidence" title={t('reports.section.evidence', lang)}><EvidenceSection evidence={data.evidence} timeZone={timeZone} /></Section>
-          <Section id="discussions" title={t('reports.section.discussions', lang)}><DiscussionsSection discussions={data.discussions} timeZone={timeZone} /></Section>
+          <Section id="evidence" title={t('reports.section.evidence', lang)}><EvidenceSection evidence={data.evidence} /></Section>
+          <Section id="discussions" title={t('reports.section.discussions', lang)}><DiscussionsSection discussions={data.discussions} /></Section>
           <Section id="watch" title={t('reports.section.watch', lang)}><WatchSection watch={data.watch} /></Section>
-          <Section id="charters" title={t('reports.section.charters', lang)}><ChartersSection charters={data.charters} timeZone={timeZone} /></Section>
+          <Section id="charters" title={t('reports.section.charters', lang)}><ChartersSection charters={data.charters} /></Section>
         </>
       ) : <p role="status">{t('reports.loading', lang)}</p>}
       <footer class="app-reports-footer">
@@ -173,7 +172,7 @@ export function ReportsBody({data, catches, timeZone = DEFAULT_ZONE}: {data: Rep
 
 export function Reports({now = new Date()}: {now?: Date} = {}) {
   const id = region.value, info = regionInfo.value, target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, lang = language.value;
-  const charters = info?.id === id ? info.charters ?? null : null, timeZone = info?.id === id ? info.timezone : DEFAULT_ZONE;
+  const charters = info?.id === id ? info.charters ?? null : null;
   useEffect(() => { if (id) void openReports(id, target, charters).catch(() => {}); }, [id, target, charters]);
   const loaded = reportsData.value, report = coastReport.value?.data, county = report ? counties[report.countyId] : undefined;
   return (
@@ -181,7 +180,7 @@ export function Reports({now = new Date()}: {now?: Date} = {}) {
       <span class="ui-eyebrow">{t('reports.eyebrow', lang)}</span>
       <h1 id="reports-title">{t('reports.title', lang)}</h1>
       <p class="app-deck">{t('reports.deck', lang)}</p>
-      <ReportsBody timeZone={timeZone} data={loaded?.key === reportsKey(id, target, charters) ? loaded.data : null} catches={report && county ? {report, county, now} : null} />
+      <ReportsBody data={loaded?.key === reportsKey(id, target, charters) ? loaded.data : null} catches={report && county ? {report, county, now} : null} />
     </article>
   );
 }

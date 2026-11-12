@@ -1,6 +1,5 @@
 """Scientific invariants for a private vector/depth kernel; offline fixtures."""
 import unittest
-from unittest import mock
 
 from affine import Affine
 import numpy as np
@@ -8,7 +7,6 @@ from pyproj import CRS
 from shapely.geometry import Polygon, box
 from shapely.ops import unary_union
 
-from skippercast.seafloor import bedrock_vectors
 from skippercast.seafloor.bedrock_vectors import (
     NativeFragments, assemble_components, window_fragments,
 )
@@ -108,43 +106,6 @@ class BedrockVectorTests(unittest.TestCase):
         ]:
             with self.subTest(shape=depth.shape,mask=valid.dtype),self.assertRaises(ValueError):
                 extract({'r':box(0,0,40,40)},depth,valid,affine)
-
-    def test_masked_depth_or_valid_refused_before_polygonization(self):
-        plain_d = np.full((4,4),30.,dtype='float32')
-        plain_v = np.ones((4,4),dtype=bool)
-        one_cell = np.zeros((4,4),dtype=bool); one_cell[1,1] = True
-        cases = {
-            'all_masked_depth': (np.ma.masked_array(plain_d,mask=True), plain_v),
-            'all_masked_valid': (plain_d, np.ma.masked_array(plain_v,mask=True)),
-            'partial_depth': (np.ma.masked_array(plain_d,mask=one_cell), plain_v),
-            'partial_valid': (plain_d, np.ma.masked_array(plain_v,mask=one_cell)),
-            'nomask_depth': (np.ma.masked_array(plain_d,mask=False), plain_v),
-            'nomask_valid': (plain_d, np.ma.masked_array(plain_v,mask=False)),
-            'both': (np.ma.masked_array(plain_d,mask=one_cell),
-                     np.ma.masked_array(plain_v,mask=one_cell)),
-        }
-        for name,(depth,valid) in cases.items():
-            before = (np.ma.getmaskarray(depth).copy(), np.ma.getmaskarray(valid).copy())
-            with self.subTest(case=name), mock.patch.object(
-                    bedrock_vectors,'shapes',side_effect=AssertionError('polygonized')) as shp:
-                with self.assertRaisesRegex(ValueError,'Masked native depth or validity'):
-                    extract({'r':box(0,0,40,40)},depth,valid)
-                shp.assert_not_called()
-            self.assertTrue(np.array_equal(np.ma.getmaskarray(depth),before[0]))
-            self.assertTrue(np.array_equal(np.ma.getmaskarray(valid),before[1]))
-
-    def test_plain_arrays_still_admitted_and_masks_resolved_by_caller(self):
-        rock = {'r':box(0,0,40,40)}
-        depth = np.full((4,4),30.,dtype='float32')
-        self.assertEqual(union(assemble_components([extract(rock,depth)])).area,1600)
-        self.assertEqual(extract(rock,depth,np.zeros((4,4),dtype=bool)).by_record,{})
-        nested = extract(rock,[[30.]*4]*4,[[True]*4]*4)  # lists: old conversion kept
-        self.assertEqual(nested.by_record['r'].area,1600)
-        masked = np.ma.masked_array(depth,mask=np.zeros((4,4),dtype=bool))
-        masked.mask[0,0] = True
-        resolved = extract(rock,masked.filled(np.nan),~np.ma.getmaskarray(masked))
-        self.assertEqual(resolved.by_record['r'].area,1500)
-        self.assertEqual(resolved.by_record['r'].intersection(box(0,30,10,40)).area,0)
 
     def test_empty_mask_and_empty_batches_are_not_missing_coverage_claims(self):
         result=extract({'r':box(0,0,40,40)},np.full((4,4),30.),np.zeros((4,4),dtype=bool))

@@ -71,13 +71,6 @@ def bounded_json(path):
     return document
 
 
-def _finite(number):
-    try:
-        return math.isfinite(number)
-    except OverflowError:  # an int too large for float conversion is not a finite control
-        return False
-
-
 def style_controls(value=None):
     value = {} if value is None else value
     if not isinstance(value, dict) or set(value) - set(DEFAULT_STYLE):
@@ -89,7 +82,7 @@ def style_controls(value=None):
                   contour_interval_m=(0.1, 1000), slope_overlay=(0, 1), uncertainty_overlay=(0, 1))
     for name, (low, high) in bounds.items():
         item = style[name]
-        if type(item) not in (int, float) or not _finite(item) or not low <= item <= high:
+        if type(item) not in (int, float) or not math.isfinite(item) or not low <= item <= high:
             raise ValueError('invalid_style_' + name)
     if (style['display_units'] not in ('m', 'ft') or type(style['no_data_overlay']) is not bool
             or type(style['depth_bands']) is not int or style['depth_bands'] not in (0, *range(2, 33))
@@ -98,7 +91,7 @@ def style_controls(value=None):
     locked = style['locked_depth_range_m']
     if style['color_range'] == 'locked':
         if (not isinstance(locked, list) or len(locked) != 2
-                or any(type(x) not in (int, float) or not _finite(x) for x in locked)
+                or any(type(x) not in (int, float) or not math.isfinite(x) for x in locked)
                 or locked[0] >= locked[1]):
             raise ValueError('locked_depth_range_required')
     elif locked is not None:

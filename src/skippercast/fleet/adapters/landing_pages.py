@@ -122,12 +122,11 @@ class _Builder(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.root = self.top = Node("#root", {})
-        self.skipping: list[str] = []  # open excluded tags, outermost first
+        self.skipping = 0
 
     def handle_starttag(self, tag, attrs):
         if self.skipping or tag in SKIP:
-            if tag in SKIP and tag not in VOID:
-                self.skipping.append(tag)
+            self.skipping += tag in SKIP and tag not in VOID
             return
         if tag in ("a", "tr", "td", "th", "li", "p", "option"):  # an unclosed sibling closes implicitly
             node, stop = self.top, {"table": ("tr", "td", "th"), "ul": ("li",), "ol": ("li",), "select": ("option",)}
@@ -141,20 +140,14 @@ class _Builder(HTMLParser):
             self.top = node
 
     def handle_endtag(self, tag):
-        if self.skipping:  # only an actually open excluded tag (and its open excluded descendants) closes
-            if tag in self.skipping:
-                del self.skipping[len(self.skipping) - 1 - self.skipping[::-1].index(tag):]
+        if self.skipping:
+            self.skipping -= tag in SKIP
             return
         node = self.top
         while node.parent and node.tag != tag:
             node = node.parent
         if node.tag == tag and node.parent:
             self.top = node.parent
-
-    def handle_startendtag(self, tag, attrs):
-        if self.skipping or tag in SKIP:  # a self-closing excluded element opens and closes nothing
-            return
-        super().handle_startendtag(tag, attrs)
 
     def handle_data(self, data):
         if not self.skipping:
@@ -244,10 +237,7 @@ def local_time(text: str) -> str | None:
     match = TIME.search(text or "")
     if not match:
         return None
-    source_hour, minute = int(match.group(1)), int(match.group(2))
-    if not 1 <= source_hour <= 12 or minute > 59:
-        return None  # an impossible clock is unknown, never wrapped or clamped into another time
-    hour = source_hour % 12 + (12 if match.group(3).lower() == "p" else 0)
+    hour = int(match.group(1)) % 12 + (12 if match.group(3).lower() == "p" else 0)
     return f"{hour:02d}:{match.group(2)}"
 
 
@@ -444,18 +434,16 @@ def _merge_offering(offerings: dict[tuple, Offering], offering: Offering) -> tup
     """Add ``offering`` under its key, merging with an offering already there; returns the key.
 
     The merged offering cites both sets of facts. Two different known prices for one offering id
-    contradict each other, so its price becomes unknown (None) rather than whichever row came first. The
-    prices are read from every cited fact too, so a later row repeating one of them cannot resolve it.
+    contradict each other, so its price becomes unknown (None) rather than whichever row came first.
     """
     key = _offering_key(offering)
     kept = offerings.get(key)
     if kept is None:
         offerings[key] = offering
         return key
-    facts = tuple(_unique([*kept.facts, *offering.facts]))
-    prices = {f.value.get("price_cents") for f in facts if f.field == "trip_types[]" and isinstance(f.value, dict)}
-    prices = (prices | {kept.price_cents, offering.price_cents}) - {None}
-    offerings[key] = replace(kept, price_cents=prices.pop() if len(prices) == 1 else None, facts=facts)
+    prices = {p for p in (kept.price_cents, offering.price_cents) if p is not None}
+    offerings[key] = replace(kept, price_cents=prices.pop() if len(prices) == 1 else None,
+                             facts=tuple(_unique([*kept.facts, *offering.facts])))
     return key
 
 

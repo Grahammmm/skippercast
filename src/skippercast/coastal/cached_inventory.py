@@ -264,7 +264,7 @@ def inventory(root,plan,*,now,horizon):
         else:
             info=path.lstat();present=stat.S_ISREG(info.st_mode) and info.st_nlink==1 and info.st_size==source["bytes"]
             if not present:holds.append("cached_source_stat_mismatch")
-        if "header" in evidence:
+        if header:
             if not compatible_source(header,source):holds.append("header_source_changed")
             v=header.get("vertical",{})
             if (v.get("conflicts")!=[] or v.get("datum")!="MLLW" or v.get("sign")!="positive_up"
@@ -289,13 +289,13 @@ def inventory(root,plan,*,now,horizon):
         for i,a in enumerate(windows):
             for b in windows[i+1:]:
                 if a[0]<b[0]+b[2] and b[0]<a[0]+a[2] and a[1]<b[1]+b[3] and b[1]<a[1]+a[3]:raise ValueError("overlapping native windows")
-        if "scope" in evidence and (scope.get("status")!="accepted_scope_only" or scope.get("independent") is not True
+        if scope and (scope.get("status")!="accepted_scope_only" or scope.get("independent") is not True
             or scope.get("holds")!=[] or not compatible_source(scope,source) or not freshness(scope,now,horizon)
             or scope.get("window_set")!=windows or scope.get("product_region")!=plan["region"]
             or scope.get("native_quality_accepted") is not False
             or scope.get("global_affine")!=header.get("transform") or scope.get("grid_shape")!=header.get("shape")):
             holds.append("prospective_geographic_scope_unreviewed")
-        if "rights" in evidence and (rights.get("independent") is not True or rights.get("private_use") is not True
+        if rights and (rights.get("independent") is not True or rights.get("private_use") is not True
             or rights.get("accepted_source_rights_for_declared_private_purpose") is not True
             or rights.get("holds_added")!=[] or not compatible_source(rights,source) or not freshness(rights,now,horizon)):
             holds.append("private_source_rights_unreviewed")
@@ -440,12 +440,8 @@ def produce(root,plan,output,*,now,horizon,plan_descriptor=None):
 def resource_inventory(retained_root,scratch_root):
     """Conservative regular-file accounting; never follows fixture aliases."""
     values={}
-    roots=(("retained",Path(retained_root),524288),("scratch",Path(scratch_root),268435456))
-    # Lexical root and every ancestor are checked before any scan or receipt write.
-    for _,root,_ in roots:
-        absolute=root.absolute()
-        if any(item.is_symlink() for item in (absolute,*absolute.parents)):raise ValueError("resource root alias")
-    for role,root,cap in roots:
+    for role,root,cap in (("retained",Path(retained_root),524288),("scratch",Path(scratch_root),268435456)):
+        if root.is_symlink():raise ValueError("resource root alias")
         total=files=links=0
         if root.exists():
             for folder,dirs,names in os.walk(root,followlinks=False):

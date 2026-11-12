@@ -16,7 +16,7 @@ import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {language, localeOf, t, type Language, type StringId} from '../i18n.ts';
 import {
-  alertDate, alertNames, alertSpecies, AlertCopyError, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, deviceStatus, latestCheck, deviceButtons, deviceLine, type DeviceStatus, eventLine, feedbackPhase, formProblemId, latestTripEvent, assessmentTimeOrNull, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotificationsId, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
+  alertDate, alertNames, alertSpecies, AlertCopyError, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, eventLine, feedbackPhase, formProblemId, latestTripEvent, assessmentTimeOrNull, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotificationsId, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
   type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type ReuseOmission, type SavedTrip, type TripPlanSummary,
 } from '../alerts.ts';
 
@@ -152,9 +152,6 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const [species, setSpecies] = useState(choice.value);
   const [status, setStatus] = useState<Say>(null);
   const [stopping, setStopping] = useState(false);
-  const [device, setDevice] = useState<DeviceStatus | null>(null);
-  const checkDevice = useMemo(() => latestCheck<DeviceStatus>(() => deviceStatus(), setDevice, () => 'unchecked'), []);
-  useEffect(checkDevice, []);
   const [trips, setTrips] = useState<{trips: SavedTrip[]; events: AlertEvent[]} | null>(null);
   const digest = trips ? weekendDigest(trips.trips, names, range.min, lang) : null;
   const [feedback, setFeedback] = useState<Feedback[] | null>(null);
@@ -259,10 +256,9 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           : t('alerts.noteReference', lang)}</p>
         <p class="small">{t('alerts.purpose', lang)}</p>
         <div class="inavx-actions">
-          {deviceButtons(device).enable ? <Button size="sm" onClick={() => { enablePush(session.publicKey).then(() => setStatus({id: 'alerts.status.enabled'}), fail).finally(checkDevice); }}>{t('alerts.enable', lang)}</Button> : null}
-          {(['device', 'all'] as const).filter(scope => scope === 'all' || deviceButtons(device).stopDevice).map(scope => <Button key={scope} size="sm" disabled={stopping} onClick={() => { setStopping(true); stopNotificationsId(scope).then(id => setStatus({id}), fail).finally(() => { setStopping(false); checkDevice(); }); }}>{t(scope === 'device' ? 'alerts.stopDevice' : 'alerts.stopAll', lang)}</Button>)}
+          <Button size="sm" onClick={act(async () => { await enablePush(session.publicKey); setStatus({id: 'alerts.status.enabled'}); })}>{t('alerts.enable', lang)}</Button>
+          {(['device', 'all'] as const).map(scope => <Button key={scope} size="sm" disabled={stopping} onClick={() => { setStopping(true); stopNotificationsId(scope).then(id => setStatus({id}), fail).finally(() => setStopping(false)); }}>{t(scope === 'device' ? 'alerts.stopDevice' : 'alerts.stopAll', lang)}</Button>)}
         </div>
-        <p id="device-status" role="status" class="small">{device ? deviceLine(device, lang) : ''}</p>
         <p id="alert-status" role="status"><Said say={status} lang={lang} /></p>
         {digest ? <section aria-labelledby="weekend-heading">
           <h3 id="weekend-heading">{t('alerts.weekend', lang)}</h3>

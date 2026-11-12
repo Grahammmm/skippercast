@@ -102,118 +102,28 @@ test('the terrain chrome sits clear of the stage chrome and axe is clean', async
   await holdCoastData(page);
   await v2.open('app', {...PLACE, presentation: '3d'});
   await expect.poll(() => page.locator('.app-terrain').evaluate(el => [...(el.shadowRoot?.querySelectorAll('link') ?? [])].every(l => !!(l as HTMLLinkElement).sheet) && !!el.shadowRoot?.getElementById('scene'))).toBe(true);
-  await expect(page.locator('#app-stage-note')).toBeEmpty();
+  await expect(page.locator('.app-stage-note')).toBeEmpty();
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width, 'no horizontal page scroll').toBeLessThanOrEqual(page.viewportSize()!.width);
   await v2.a11y('v2-map-terrain');
 });
 
-test('with WebGL disabled the stage says the map graphics could not start, hides the map-only controls, and axe is clean', async ({page, v2}) => {
-  await blockWebgl(page, EVERY_LOAD);
+test('with WebGL disabled the stage shows Chart and v1\'s message, and axe is clean', async ({page, v2}) => {
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) {
+      return /webgl/i.test(kind) ? null : (original as (...a: unknown[]) => unknown).call(this, kind, ...rest);
+    } as typeof original;
+  });
   await holdCoastData(page);
   await v2.open('app', {...PLACE, presentation: '3d'});
-  // RF1925-2: a Chart that cannot start is explained once; the presentation toggle (and the terrain message it carried) is gone, not dead.
-  await expect(page.getByRole('status').filter({hasText: GRAPHICS})).toBeVisible();
+  await expect(page.getByRole('status').filter({hasText: UNAVAILABLE})).toBeVisible();
   await expect(page.locator('.app-map')).toBeVisible();
   await expect(page.locator('.app-terrain')).toBeHidden();
-  await expect(page.getByRole('group', {name: 'Map presentation'})).toHaveCount(0);
+  await expect(toggle(page, 'Chart')).toHaveAttribute('aria-pressed', 'true');
+  await expect(toggle(page, '3D')).toBeDisabled();
   expect(params(page).presentation, 'the link keeps the request').toBe('3d');
-  // SC1922-07: the layer buttons stay, but every one is aria-disabled with the reason. On a phone they sit in the Layers panel.
-  if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers', exact: true}).click();
-  const toggles = page.locator('.ui-rail-toggle');
-  await expect(toggles.first()).toBeVisible();
-  for (const t of await toggles.all()) await expect(t).toHaveAttribute('aria-disabled', 'true');
   await v2.a11y('v2-map-no-webgl');
-});
-
-/** addInitScript arguments are JSON, so "every load" is a number, not Infinity. */
-const EVERY_LOAD = 1_000_000;
-const GRAPHICS = 'This browser could not start the map graphics.';
-/** The Chart's WebGL context is refused for the first `loads` document loads of this tab (counted in sessionStorage); the 2D canvas is untouched. */
-const blockWebgl = (page: Page, loads: number) => page.addInitScript(limit => {
-  if (window !== window.top) return;
-  const n = Number(sessionStorage.getItem('rf1925-loads') ?? '0') + 1;
-  sessionStorage.setItem('rf1925-loads', String(n));
-  if (n > limit) return;
-  const original = HTMLCanvasElement.prototype.getContext;
-  HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) {
-    return /webgl/i.test(kind) ? null : (original as (...a: unknown[]) => unknown).call(this, kind, ...rest);
-  } as typeof original;
-}, loads);
-/** The map's own Try again (the brief has a different one for its ranking). */
-const retryButton = (page: Page) => page.getByRole('region', {name: 'Map'}).getByRole('button', {name: 'Try again', exact: true});
-const notice = (page: Page) => page.getByRole('status').filter({hasText: GRAPHICS});
-const overlap = (a: {x: number; y: number; width: number; height: number}, b: {x: number; y: number; width: number; height: number}) =>
-  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
-
-test('Try again reloads the same address once by keyboard and the Chart recovers when graphics return', async ({page, v2, isMobile}) => {
-  await blockWebgl(page, 1);
-  await holdCoastData(page);
-  const loads: string[] = [];
-  page.on('load', () => loads.push(page.url()));
-  await v2.open('app', {...PLACE, presentation: 'chart', layers: 'swell', current: 'off'});
-  await page.evaluate(() => { location.hash = 'rf1925'; });
-  await expect(notice(page)).toBeVisible();
-  // SC1922-07: the layer buttons stay (the phone's Layers trigger, the laptop's rail), disabled with the reason, instead of vanishing.
-  if (isMobile) await expect(page.getByRole('button', {name: 'Layers', exact: true})).toHaveCount(1);
-  else await expect(page.locator('.app-rail')).toHaveCount(1);
-  await expect(page.getByRole('group', {name: 'Map presentation'})).toHaveCount(0);
-  await expect(page.locator(isMobile ? 'input[aria-label="Hour"]' : '.app-dock')).toBeVisible();
-  const before = page.url();
-  expect(before).toContain('#rf1925');
-  const retry = retryButton(page);
-  await expect(retry).toHaveCount(1);
-  expect((await retry.boundingBox())!.height, 'a full-size target').toBeGreaterThanOrEqual(44);
-  await retry.focus();
-  await page.keyboard.press('Enter');
-  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
-  await expect(notice(page)).toHaveCount(0);
-  expect(page.url(), 'the complete address is kept').toBe(before);
-  expect(loads.length, 'one initial load and one reload').toBe(2);
-  await expect(page.getByRole('group', {name: 'Map presentation'})).toBeVisible();
-});
-
-test('where graphics never start the notice returns after Try again and nothing reloads by itself', async ({page, v2}) => {
-  await blockWebgl(page, EVERY_LOAD);
-  await holdCoastData(page);
-  let loads = 0;
-  page.on('load', () => { loads++; });
-  await v2.open('app', {...PLACE, presentation: 'chart'});
-  await expect(notice(page)).toBeVisible();
-  await retryButton(page).click();
-  await expect.poll(() => loads).toBe(2);
-  await expect(notice(page)).toBeVisible();
-  await page.waitForTimeout(1500);
-  expect(loads, 'no automatic reload loop').toBe(2);
-});
-
-for (const width of [390, 320]) {
-  test(`the failed-map notice is readable and clear of the header and time controls at ${width} px wide`, async ({page, v2, isMobile}) => {
-    test.skip(!isMobile, 'the phone layout');
-    await blockWebgl(page, EVERY_LOAD);
-    await holdCoastData(page);
-    await page.setViewportSize({width, height: 844});
-    await v2.open('app', {...PLACE, presentation: 'chart'});
-    await expect(notice(page)).toBeVisible();
-    const box = (await page.locator('.app-stage-failed').boundingBox())!;
-    expect(box.x, 'inside the viewport').toBeGreaterThanOrEqual(0);
-    expect(box.x + box.width).toBeLessThanOrEqual(width);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth), 'no horizontal page scroll').toBeLessThanOrEqual(width);
-    const retry = (await retryButton(page).boundingBox())!;
-    expect(retry.height).toBeGreaterThanOrEqual(44);
-    for (const clear of ['.app-top', '.ui-sheet', '.app-tabs']) expect(overlap(box, (await page.locator(clear).boundingBox())!), `clear of ${clear}`).toBe(false);
-  });
-}
-
-test('the failed-map notice sits clear of the dock on a laptop', async ({page, v2, isMobile}) => {
-  test.skip(isMobile, 'the laptop layout');
-  await blockWebgl(page, EVERY_LOAD);
-  await holdCoastData(page);
-  await v2.open('app', {...PLACE, presentation: 'chart'});
-  await expect(notice(page)).toBeVisible();
-  const box = (await page.locator('.app-stage-failed').boundingBox())!;
-  expect(overlap(box, (await page.locator('.app-dock').boundingBox())!)).toBe(false);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
 });
 
 test('unavailable terrain data returns the stage to Chart with v1\'s message', async ({page, v2}) => {
@@ -226,7 +136,7 @@ test('unavailable terrain data returns the stage to Chart with v1\'s message', a
 
 test('a region without terrain offers Chart only and says why', async ({page, v2}) => {
   await v2.open('app', {region: 'santa-cruz-monterey-bay', presentation: '3d'});
-  await expect(page.locator('#app-stage-note')).toHaveText('No reviewed coastal terrain covers this region yet.');
+  await expect(page.locator('.app-stage-note')).toHaveText('No reviewed coastal terrain covers this region yet.');
   await expect(toggle(page, 'Chart')).toHaveAttribute('aria-pressed', 'true');
   for (const name of ['2D', '3D']) {
     await expect(toggle(page, name)).toBeDisabled();
@@ -262,8 +172,7 @@ test('the terrain receives the dock\'s hour', async ({page, pageErrors, v2, isMo
   const atStart = await slider.inputValue() === '0';
   await slider.focus();
   await page.keyboard.press(atStart ? 'End' : 'Home');
-  await expect(page.locator('.ui-dock-readout')).toHaveText(atStart ? 'Tomorrow · 11 pm' : 'Tomorrow · 12 am');
-  await expect(slider).toHaveAttribute('aria-valuetext', atStart ? 'Tomorrow · 11 pm' : 'Tomorrow · 12 am');
+  await expect(page.locator('.ui-dock-readout')).toHaveText(atStart ? '11 pm' : '12 am');
   const chosen = urlHour(page)!;
   await expect(host).toHaveAttribute('data-hour', chosen.replace('Z', ':00.000Z'));
   expect(pageErrors).toEqual([]);
@@ -371,52 +280,6 @@ test('a failing coastline marks only its layer unavailable; the basemap keeps dr
   expect(asked).toEqual(['/regions/morro-bay/shoreline-overview.geojson', '/regions/morro-bay/shoreline.geojson']);
 });
 
-// RF2115-5 first_chart_local_delayed_frame: a held local basemap keeps the Chart from its first idle frame, so the stage says it is loading
-// (a polite status in the chrome stack, and only the Chart host is aria-busy); once the basemap answers, the same status empties and the host is not busy.
-test('the first Chart says "Loading the map…" and is busy until its basemap is released, then neither', async ({page, pageErrors, v2}) => {
-  let release!: () => void;
-  const held = new Promise<void>(resolve => { release = resolve; });
-  const asked: string[] = [];
-  await page.route(`**/feeds/${ARCHIVE}`, async route => { asked.push(route.request().url()); await held; await route.fallback(); });
-  await holdCoastData(page);
-  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,11'});
-  const chart = page.locator('.app-chart');
-  const status = page.locator('[data-chart-loading-status]');
-  await expect(status).toBeVisible();
-  await expect(status).toHaveText('Loading the map…');
-  await expect(status).toHaveAttribute('role', 'status');
-  await expect(chart).toHaveAttribute('aria-busy', 'true');
-  // Only the Chart host is busy because of the map: the status and the presentation toggle around it are never marked busy.
-  await expect(page.locator('.app-chart[aria-busy="true"]')).toHaveCount(1);
-  await expect(page.locator('.app-presentation [aria-busy], .app-presentation[aria-busy]'), 'the status stays in the chrome stack, not busy').toHaveCount(0);
-  await expect(page.locator('[data-chart-loading-status]')).toHaveCount(1);
-  expect(asked.length, 'the held basemap was asked for').toBeGreaterThan(0);
-  release();
-  await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
-  await expect(status).toHaveText('');
-  await expect(chart).toHaveAttribute('aria-busy', 'false');
-  await expect(page.locator('.app-chart[aria-busy="true"]')).toHaveCount(0);
-  expect(pageErrors).toEqual([]);
-});
-
-test('RF2205-9: an overview-only region never asks for the full shoreline, even after the overview fails', async ({page, v2}) => {
-  const asked: string[] = [];
-  await page.route('**/regions/morro-bay/region.json', async route => {
-    const response = await route.fetch();
-    await route.fulfill({response, json: {...await response.json(), chart_files: ['shoreline-overview.geojson']}});
-  });
-  await page.route(/\/regions\/morro-bay\/shoreline(?:-overview)?\.geojson$/, route => { asked.push(new URL(route.request().url()).pathname); return route.fulfill({status: 503, body: 'Offline map test'}); });
-  await holdCoastData(page);
-  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,13'});
-  if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click();
-  await expect(page.locator('[data-unavailable="coastline"]')).toHaveText('Coastline unavailable.');
-  await expect(page.locator('[data-unavailable]')).toHaveCount(1);
-  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
-  await page.waitForTimeout(500);
-  expect(asked.filter(path => path.endsWith('/shoreline.geojson')), 'the unlisted full shoreline is never asked for').toEqual([]);
-  expect(asked).toContain('/regions/morro-bay/shoreline-overview.geojson');
-});
-
 // BL-SC-1: at phone width the credits are MapLibre's compact toggle, folded on load whatever their length, and one tap opens them.
 test('the Chart attribution starts compact and folded on a phone and expanded on the desktop', async ({page, pageErrors, v2}) => {
   await page.route('https://imagery.nationalmap.gov/**', route => route.fulfill({body: PIXEL, contentType: 'image/png', headers: {'Access-Control-Allow-Origin': '*'}}));
@@ -507,9 +370,9 @@ test('layer presets preserve Back and helm view makes controls larger', async ({
   expect(params(page).layers).toBe('seafloor');
   const bodyText = () => page.locator('body').evaluate(body => parseFloat(getComputedStyle(body).fontSize));
   const baseText = await bodyText();
-  await page.getByRole('switch', {name: 'Large controls'}).click();
+  await page.getByRole('switch', {name: 'Helm view'}).click();
   await expect(page.locator('html')).toHaveClass(/helm/);
-  expect(await bodyText(), 'Large controls raises the body text one token step').toBeGreaterThan(baseText);
+  expect(await bodyText(), 'Helm view raises the body text one token step').toBeGreaterThan(baseText);
   if (narrow(page)) {
     const small = await page.locator('button:visible, select:visible, input:visible, [role="switch"]:visible').evaluateAll(buttons => buttons.filter(button => {
       const rect = button.getBoundingClientRect();
@@ -574,7 +437,7 @@ test('Seafloor draws screened candidates and cells in Chart, names its surveys, 
   await expect(page.locator('.app-mark')).toHaveCount(0);
   await hideLayers(page);
   await clickCentre(page);
-  await page.waitForTimeout(700);  // past the 550 ms pick settle (RF2205-5), so "no card" is still tested
+  await page.waitForTimeout(300);
   await expect(page.locator('.app-mark')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
@@ -607,7 +470,7 @@ test('A seafloor publication that expires while drawn hides its candidates with 
   await expect(page.locator('.app-legend-seafloor .app-key')).toHaveCount(0);
   await hideLayers(page);
   await clickCentre(page);
-  await page.waitForTimeout(700);  // past the 550 ms pick settle (RF2205-5), so "no card" is still tested
+  await page.waitForTimeout(300);
   await expect(page.locator('.app-mark')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
@@ -673,8 +536,7 @@ test('clicking a reef mark sets ?spot=, drops ?habitat= and opens its card; clos
   const centre = await chartCentre(page);
   await expect(async () => {
     await page.mouse.click(centre.x, centre.y);
-    // RF2205-5: a click picks after PICK_SETTLE_MS (550 ms); wait for it, so a retry click never lands on the open card and takes the heading's focus.
-    await expect.poll(() => params(page).spot, {timeout: 1500}).toBe(MARK.id);
+    expect(params(page).spot).toBe(MARK.id);
   }).toPass({timeout: 20_000, intervals: [1000]});  // a second apart, never a double-click zoom
   expect(params(page).habitat, 'one selection at a time').toBeUndefined();
   const card = page.getByRole('region', {name: 'Selected mark'});
@@ -1492,263 +1354,5 @@ test('the scrolling legend does not clip its basis popovers', async ({page, page
     expect(hit.inside, `${name}: the part beyond the legend's box is not clipped`).toBe(true);
     await summary.click();
   }
-  expect(pageErrors).toEqual([]);
-});
-
-// RF1935-2 (UX audit S4-15): on the desktop the five layer presets wrap inside the layer rail, the rail keeps a native vertical scroll
-// track, and neither the rail nor its focus order collides with the map's controls. Geometry is measured in a real browser.
-const RAIL = '.app-stage > .app-rail';
-const PRESET_LABELS = {en: ['Reef drift', 'Halibut', 'Crab', 'Offshore', 'Transit'], es: ['Deriva sobre arrecife', 'Mar adentro', 'Tránsito']} as const;
-const rects = (page: Page, selector: string) => page.locator(selector).evaluateAll(els => els.map(el => {
-  const {left, right, top, bottom} = el.getBoundingClientRect();
-  return {left, right, top, bottom, label: el.getAttribute('aria-label') ?? el.textContent ?? ''};
-}));
-/** The rail's client box (without its scrollbar) and every preset button's box. */
-const presetFit = (page: Page) => page.locator(RAIL).evaluate(rail => {
-  const box = rail.getBoundingClientRect(), left = box.left + rail.clientLeft;
-  const chips = [...rail.querySelectorAll(':scope > .ui-segmented button')].map(button => {
-    const {left: l, right: r, top, height} = button.getBoundingClientRect();
-    return {label: button.textContent ?? '', left: l, right: r, top: Math.round(top), height};
-  });
-  const probe = document.createElement('div'); probe.style.height = 'var(--touch-min)'; document.body.append(probe);
-  const touchMin = probe.getBoundingClientRect().height; probe.remove();
-  return {left, right: left + rail.clientWidth, scrollWidth: rail.scrollWidth, clientWidth: rail.clientWidth, scrollLeft: rail.scrollLeft, chips, touchMin,
-    wrapped: new Set(chips.map(chip => chip.top)).size > 1};
-});
-const railApart = (a: {left: number; right: number; top: number; bottom: number}, b: typeof a) => a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top;
-
-test('desktop: all five layer presets fit inside the layer rail, in English and Spanish, at every desktop width', async ({page, pageErrors, v2, isMobile}) => {
-  test.skip(isMobile, 'the desktop rail is not rendered on a phone');
-  await holdCoastData(page);
-  let wrapped = false;
-  for (const [width, height, view] of [[1024, 768, 'coast'], [1024, 768, 'fleet'], [1100, 768, 'coast'], [1280, 800, 'coast'], [1440, 900, 'coast']] as const) {
-    for (const lang of ['en', 'es'] as const) {
-      await page.setViewportSize({width, height});
-      await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor', lang, view});
-      await expect(page.locator(RAIL), `${view} ${width}px ${lang}`).toBeVisible();
-      const fit = await presetFit(page), where = `${view} ${width}px ${lang}`;
-      expect(fit.chips.length, `${where}: five presets`).toBe(5);
-      for (const label of PRESET_LABELS[lang]) expect(fit.chips.map(chip => chip.label), where).toContain(label);
-      for (const chip of fit.chips) {
-        expect(chip.left, `${where}: ${chip.label} starts inside the rail`).toBeGreaterThanOrEqual(fit.left - 0.5);
-        expect(chip.right, `${where}: ${chip.label} ends inside the rail`).toBeLessThanOrEqual(fit.right + 0.5);
-        expect(chip.height, `${where}: ${chip.label} keeps the touch size`).toBeGreaterThanOrEqual(fit.touchMin - 0.5);
-        expect(chip.height, `${where}: ${chip.label} stays one line (the group wraps, the words do not)`).toBeLessThanOrEqual(fit.touchMin + 4);
-      }
-      expect(fit.scrollWidth, `${where}: the rail never scrolls sideways`).toBeLessThanOrEqual(fit.clientWidth + 1);
-      expect(fit.scrollLeft).toBe(0);
-      wrapped ||= fit.wrapped;
-    }
-  }
-  expect(wrapped, 'the 280 px rail cannot hold five presets on one line, so the group wraps').toBe(true);
-  expect(pageErrors).toEqual([]);
-});
-
-test('desktop: Transit is reached with Tab and activated by keyboard and by click without a sideways scroll', async ({page, pageErrors, v2, isMobile}) => {
-  test.skip(isMobile, 'the desktop rail is not rendered on a phone');
-  await holdCoastData(page);
-  for (const [lang, name, helm] of [['en', 'Transit', 'Large controls'], ['es', 'Tránsito', 'Controles grandes']] as const) {
-    await page.setViewportSize({width: 1024, height: 768});
-    await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor', current: 'off', lang});
-    await page.evaluate(() => { (window as unknown as {__same: boolean}).__same = true; });
-    const presets = page.getByRole('group', {name: lang === 'en' ? 'Layer presets' : 'Preajustes de capas'}), transit = presets.getByRole('button', {name, exact: true});
-    await presets.getByRole('button').first().focus();
-    for (let i = 0; i < 4; i++) await page.keyboard.press('Tab');
-    await expect(transit, `${lang}: four Tabs from the first preset reach ${name}`).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect(transit).toHaveAttribute('aria-pressed', 'true');
-    expect(params(page).layers).toBe('swell,stations');
-    expect(params(page).current).toBe('off');
-    await page.goBack();
-    expect(params(page).layers).toBe('seafloor');
-    await expect(transit).toHaveAttribute('aria-pressed', 'false');
-    await transit.click();
-    await expect(transit).toHaveAttribute('aria-pressed', 'true');
-    expect(params(page).layers).toBe('swell,stations');
-    expect(await page.evaluate(() => (window as unknown as {__same?: boolean}).__same), 'no reload').toBe(true);
-    const fit = await presetFit(page);
-    expect(fit.scrollLeft, 'no sideways scroll to reach it').toBe(0);
-    expect(fit.scrollWidth).toBeLessThanOrEqual(fit.clientWidth + 1);
-    // Helm view keeps the same five buttons, their words and their wrap.
-    await page.getByRole('switch', {name: helm}).click();
-    await expect(page.locator('html')).toHaveClass(/helm/);
-    const helmFit = await presetFit(page);
-    expect(helmFit.chips.map(chip => chip.label)).toEqual(fit.chips.map(chip => chip.label));
-    for (const chip of helmFit.chips) {
-      expect(chip.right).toBeLessThanOrEqual(helmFit.right + 0.5);
-      expect(chip.height).toBeGreaterThanOrEqual(48 - 0.5);
-    }
-    expect(helmFit.scrollWidth).toBeLessThanOrEqual(helmFit.clientWidth + 1);
-    await page.getByRole('switch', {name: helm}).click();
-  }
-  expect(pageErrors).toEqual([]);
-});
-
-test('desktop: a short rail scrolls vertically to its last controls, with a long basis open and nothing clipped sideways', async ({page, pageErrors, v2, isMobile}) => {
-  test.skip(isMobile, 'the desktop rail is not rendered on a phone');
-  await holdCoastData(page);
-  for (const [width, height] of [[1024, 768], [1280, 600]] as const) {
-    await page.setViewportSize({width, height});
-    await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor,currents'});
-    const rail = page.locator(RAIL);
-    await expect(rail).toHaveCSS('overflow-y', 'scroll');
-    await expect(rail).toHaveCSS('scrollbar-gutter', 'stable');
-    const trigger = rail.locator('summary[aria-label="Seafloor basis"]');
-    await trigger.focus();
-    await page.keyboard.press('Enter');
-    const body = rail.locator('.ui-popover:has(> summary[aria-label="Seafloor basis"]) .ui-popover-body');
-    await expect(body).toBeVisible();
-    const fit = await body.evaluate(element => {
-      const rail = element.closest('.app-rail')!, box = rail.getBoundingClientRect(), left = box.left + rail.clientLeft, lines: {left: number; right: number}[] = [];
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-      while (walker.nextNode()) {
-        if (!walker.currentNode.textContent?.trim()) continue;
-        const range = document.createRange(); range.selectNodeContents(walker.currentNode);
-        for (const r of range.getClientRects()) lines.push({left: r.left, right: r.right});
-      }
-      return {left, right: left + rail.clientWidth, lines, scrollWidth: rail.scrollWidth, clientWidth: rail.clientWidth};
-    });
-    expect(fit.lines.length).toBeGreaterThan(0);
-    for (const line of fit.lines) { expect(line.left).toBeGreaterThanOrEqual(fit.left - 1); expect(line.right).toBeLessThanOrEqual(fit.right + 1); }
-    expect(fit.scrollWidth).toBeLessThanOrEqual(fit.clientWidth + 1);
-    const scrolls = await rail.evaluate(element => { element.scrollTop = element.scrollHeight; return element.scrollHeight > element.clientHeight; });
-    expect(scrolls, `${width}x${height}: a long rail scrolls`).toBe(true);
-    const base = rail.locator('.app-rail-base').getByRole('combobox', {name: 'Base'});
-    await expect(base).toBeInViewport({ratio: 1});
-    const box = (await base.boundingBox())!, railBox = (await rail.boundingBox())!;
-    expect(box.y).toBeGreaterThanOrEqual(railBox.y);
-    expect(box.y + box.height).toBeLessThanOrEqual(railBox.y + railBox.height);
-    await base.focus();
-    await expect(base).toBeFocused();
-  }
-  expect(pageErrors).toEqual([]);
-});
-
-// One test per presentation: each walks two viewports and three rail phases with many round trips, and the shared CI runners take 1.5-5 s over each,
-// so the two together outlasted the 60 s default (twice, on the exact head) while passing in 9 s on a quiet machine.
-for (const [presentation, controls] of [['chart', '.app-chart .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group'], ['3d', '.app-terrain-controls']] as const) {
-  test(`desktop: the rail stays clear of the map controls on the ${presentation === 'chart' ? 'Chart' : 'terrain'}, scrolled or not${presentation === 'chart' ? ', and the attribution stays clickable' : ''}`, async ({page, pageErrors, v2, isMobile}) => {
-    test.skip(isMobile, 'the desktop rail is not rendered on a phone');
-    test.setTimeout(150_000);
-    const terrain = await syntheticTerrain(page);
-    terrain.release();
-    const ATTRIBUTION = '.app-chart .maplibregl-ctrl-attrib';
-    for (const [width, height] of [[1280, 800], [1024, 768]] as const) {
-      await page.setViewportSize({width, height});
-      await v2.open('app', {region: 'morro-bay', presentation, layers: 'seafloor,currents'});
-      const rail = page.locator(RAIL);
-      await expect(rail).toBeVisible();
-      await expect(page.locator(controls).first(), `${presentation} controls`).toBeVisible();
-      if (presentation === 'chart') await expect(page.locator(`${ATTRIBUTION} .maplibregl-ctrl-attrib-inner`)).toBeVisible();
-      const hittable = `${controls}, .app-presentation .ui-segmented${presentation === 'chart' ? `, ${ATTRIBUTION}` : ''}`;
-      for (const phase of ['top', 'scrolled', 'basis']) {
-        // SC1722-19: on a window shorter than the header, command bar, first answer and the 480 px stage together, the app scrolls inside itself
-        // (the document never does) and the time dock rides over the stage's bottom edge. The map controls sit at that edge, so a visitor scrolls the
-        // app to its end to use them; the check does the same, and the dock is then back in its own slot below them.
-        await expect(page.locator('.app-first-answer')).toBeVisible();
-        await page.evaluate(() => { const app = document.querySelector('.app'); if (app) app.scrollTop = app.scrollHeight; });
-        if (phase === 'scrolled') await rail.evaluate(element => { element.scrollTop = element.scrollHeight; });
-        if (phase === 'basis') { await rail.locator('summary[aria-label="Seafloor basis"]').click(); await rail.evaluate(element => { element.scrollTop = element.scrollHeight; }); }
-        const [mine] = await rects(page, RAIL), others = [...await rects(page, controls), ...await rects(page, '.app-presentation .ui-segmented')];
-        expect(others.length).toBeGreaterThan(1);
-        for (const other of others) expect(railApart(mine, other), `${presentation} ${width}x${height} ${phase}: rail clear of "${other.label.slice(0, 30)}"`).toBe(true);
-        // SC1922-04: the page no longer scrolls itself on load (TimeDock's chip reveal moves only the strip), so at 1024x768 the Map/Chart switch sits
-        // below the first screen. A click scrolls its target into view first; do the same here, then hit-test the centre exactly as before.
-        const hits = await page.locator(hittable).evaluateAll(els => els.map(el => {
-          el.scrollIntoView({block: 'nearest', inline: 'nearest'});
-          const box = el.getBoundingClientRect(), hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-          return {label: el.getAttribute('aria-label') ?? el.className, ok: !!hit && (el === hit || el.contains(hit))};
-        }));
-        for (const hit of hits) expect(hit.ok, `${presentation} ${width}x${height} ${phase}: ${hit.label} receives a click at its centre`).toBe(true);
-        // Separate, pre-existing finding (not fixed here, see the PR): the rail's bottom reservation is sized for the four terrain buttons, so the
-        // Chart's expanded credits (74 px tall for this region) reach about 8 px into a rail that has been cut to its reserved height. Recorded, not hidden.
-        if (presentation === 'chart') {
-          const [credits] = await rects(page, ATTRIBUTION);
-          if (!railApart(mine, credits!)) test.info().annotations.push({type: 'finding', description: `${width}x${height} ${phase}: expanded credits overlap the rail by ${Math.round((mine.bottom - credits!.top) * 10) / 10} px`});
-        }
-      }
-    }
-    expect(pageErrors).toEqual([]);
-  });
-}
-
-test('phone widths do not get the desktop rail rules', async ({page, pageErrors, v2, isMobile}) => {
-  test.skip(isMobile, 'runs the phone widths in the laptop project');
-  await holdCoastData(page);
-  for (const [width, height] of [[390, 844], [320, 568]] as const) {
-    await page.setViewportSize({width, height});
-    await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor'});
-    await showLayers(page);
-    expect(await page.locator(RAIL).count(), `${width}px: the layers sit in the sheet, not in the desktop rail`).toBe(0);
-    const presets = page.getByRole('group', {name: 'Layer presets'});
-    await expect(presets.getByRole('button')).toHaveCount(5);
-    const style = await presets.evaluate(group => ({wrap: getComputedStyle(group).flexWrap, radius: getComputedStyle(group).borderTopLeftRadius,
-      railOverflow: getComputedStyle(group.closest('.app-rail')!).overflowY}));
-    expect(style.wrap, 'the phone keeps the generic segmented group').toBe('nowrap');
-    expect(style.railOverflow).not.toBe('scroll');
-  }
-  expect(pageErrors).toEqual([]);
-});
-
-// RF0035-8: a region.json that lists one contour form gets that form at every zoom, and the other is never asked for.
-for (const [listed, other] of [['depth-contours.geojson', 'depth-contours-overview.geojson'], ['depth-contours-overview.geojson', 'depth-contours.geojson']]) {
-  test(`RF0035-8: a region listing only ${listed} draws it at low and high zoom and never asks for the other form`, async ({page, v2}) => {
-    const asked: string[] = [];
-    await page.route('**/regions/morro-bay/region.json', async route => {
-      const response = await route.fetch();
-      await route.fulfill({response, json: {...await response.json(), chart_files: [listed, 'shoreline-overview.geojson']}});
-    });
-    await page.route(/\/regions\/morro-bay\/depth-contours(?:-overview)?\.geojson$/, async route => { asked.push(new URL(route.request().url()).pathname.split('/').pop()!); return route.continue(); });
-    await holdCoastData(page);
-    for (const view of ['35.32000,-120.90000,8', '35.32000,-120.90000,15']) {
-      await v2.open('app', {region: 'morro-bay', presentation: 'chart', view, layers: 'water-temp'});
-      await showLayers(page);
-      await expect(page.locator('.app-legend .app-swatch[data-layer="depth-contours"]')).toHaveCount(1);
-    }
-    expect(asked.length).toBeGreaterThan(0);
-    expect(asked.filter(name => name === other), 'the unlisted form is never asked for').toEqual([]);
-  });
-}
-
-// RF2315-6: the settled 3D orbit is the five-number ?view=, Share carries it, and the reopened link restores it.
-test('browser_orbit_survives_share_reopen: an orbit is shared as bearing and pitch and the reopened map reports the same angles', async ({page, context, pageErrors, v2}) => {
-  await context.addInitScript(() => {
-    const w = window as unknown as {copies: string[]};
-    w.copies = [];
-    Object.defineProperty(navigator, 'share', {configurable: true, value: undefined});
-    Object.defineProperty(navigator, 'clipboard', {configurable: true, value: {writeText: async (text: string) => { w.copies.push(text); }}});
-  });
-  await terrain3d(page, v2);
-  const angles = (value: string | null | undefined) => { const [, , , bearing, pitch] = (value ?? '').split(',').map(Number); return {bearing, pitch, fields: (value ?? '').split(',').length}; };
-  const canvas = page.locator('.app-terrain canvas');
-  const box = (await canvas.boundingBox())!;
-  const x = box.x + box.width / 2, y = box.y + box.height / 2;
-  await page.mouse.move(x, y);
-  await page.mouse.down();
-  await page.mouse.move(x + 90, y + 30, {steps: 8});
-  await page.mouse.up();
-  await expect.poll(() => angles(params(page).view).fields, {message: 'the settled orbit is written as five numbers'}).toBe(5);
-  const settled = params(page).view!;
-  const saved = angles(settled);
-  expect(saved.bearing).toBeGreaterThanOrEqual(-180);
-  expect(saved.bearing).toBeLessThanOrEqual(180);
-  expect(saved.pitch).toBeGreaterThan(0);
-  expect(saved.pitch).toBeLessThanOrEqual(90);
-
-  await page.getByRole('button', {name: 'Share this view'}).dispatchEvent('click');
-  await expect.poll(() => page.evaluate(() => (window as unknown as {copies: string[]}).copies.length)).toBe(1);
-  const link = (await page.evaluate(() => (window as unknown as {copies: string[]}).copies))[0]!;
-  expect(new URL(link).searchParams.get('view'), 'Share carries the five-number view').toBe(settled);
-
-  // Reopen the shared address, then zoom once so the renderer reports its real camera again.
-  await page.goto(link);
-  const host = page.locator('.app-terrain');
-  await expect.poll(() => host.evaluate(el => !!el.shadowRoot?.getElementById('scene') && !el.shadowRoot.getElementById('loading')), {message: 'the synthetic terrain loads'}).toBe(true);
-  await page.getByRole('group', {name: 'Terrain view'}).getByRole('button', {name: 'Zoom in'}).click();
-  await expect.poll(() => angles(params(page).view).fields, {message: 'the zoom is written with the orientation'}).toBe(5);
-  await expect.poll(() => params(page).view).not.toBe(settled);
-  const restored = angles(params(page).view);
-  expect(Math.abs(restored.bearing - saved.bearing)).toBeLessThan(0.05);
-  expect(Math.abs(restored.pitch - saved.pitch)).toBeLessThan(0.05);
   expect(pageErrors).toEqual([]);
 });

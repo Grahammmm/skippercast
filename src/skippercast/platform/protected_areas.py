@@ -11,8 +11,6 @@ QUERY_SEMANTICS = {
     "geometryType": "esriGeometryEnvelope", "spatialRel": "esriSpatialRelIntersects",
     "returnGeometry": "true", "f": "geojson",
 }
-WGS84_CRS_NAMES = frozenset({"EPSG:4326", "urn:ogc:def:crs:EPSG::4326",
-                             "OGC:CRS84", "urn:ogc:def:crs:OGC:1.3:CRS84"})
 
 
 @dataclass(frozen=True)
@@ -64,14 +62,6 @@ def _boundary_geometry(geometry):
     return True
 
 
-def _wgs84_crs(crs):
-    """An explicit legacy GeoJSON CRS must name WGS84 lon/lat; magnitudes cannot decide it."""
-    if not isinstance(crs, dict) or crs.get("type") != "name" or not isinstance(crs.get("properties"), dict):
-        return False
-    name = crs["properties"].get("name")
-    return type(name) is str and name in WGS84_CRS_NAMES
-
-
 def assess_snapshot_binding(region, snapshot, sources):
     """Check recorded unfiltered query coverage, never counts or polygon extents.
 
@@ -92,8 +82,6 @@ def assess_snapshot_binding(region, snapshot, sources):
                  "Missing or malformed protected-area minimum feature count")
         _require(isinstance(snapshot, dict) and snapshot.get("type") == "FeatureCollection",
                  "Missing or malformed protected-area FeatureCollection")
-        _require("crs" not in snapshot or _wgs84_crs(snapshot["crs"]),
-                 "Unsupported or malformed protected-area snapshot CRS")
         _require("region_id" not in snapshot or snapshot["region_id"] == region.get("id"),
                  "Protected-area snapshot belongs to another region")
         # ArcGIS can expose transfer-limit metadata at the top or in properties.

@@ -97,7 +97,6 @@ from zoneinfo import ZoneInfo
 from ..config import WATCHED_MIN_CONFIDENCE
 from ..normalize import name_norm
 from ..ops import validate_ops
-from ...util import units
 from .events import iso_utc
 from .process import DAY, HOUR, SETTLE_MS, SOURCE_RIGHTS, VesselRef, WorkerError
 from .schedule import SCHEDULE, correlate, load_report_days, rules as schedule_rules
@@ -115,7 +114,7 @@ SCAN_SLICE_MS = 6 * HOUR
 MAX_REVIEWS_PER_MMSI = 5
 ROWS_PER_POST = 500
 OPS_PER_POST = 400
-FT_PER_M = round(units.FT_PER_M, 5)  # 3.28084: RF0708-1 keeps this precision (1/0.3048 flips a 20 % length verdict)
+FT_PER_M = 3.28084
 FACT_SOURCE = "ais-static"
 SOURCE_URLS = {"aisstream": "https://aisstream.io/", "marinecadastre": "https://hub.marinecadastre.gov/",
                "datalastic": "https://datalastic.com/",

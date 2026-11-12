@@ -76,20 +76,6 @@ export async function sessionUser(request:Request,database:D1Database|(()=>D1Dat
   return {id:row.user_id,display_name:row.display_name,sessionId:id,renewed};
 }
 
-/** A short browser-and-system label from a stored user agent, via a small fixed table. Never echoes the agent. */
-export function deviceLabel(ua:string|null|undefined):string{
-  const u=typeof ua==='string'?ua:'';
-  const os=/iPhone/.test(u)?'iPhone':/iPad/.test(u)?'iPad':/Android/.test(u)?'Android':/Windows/.test(u)?'Windows':/Macintosh/.test(u)?'Mac':/Linux/.test(u)?'Linux':'';
-  const edge=/Edg(e|A|iOS)?\//.test(u),firefox=/Firefox\/|FxiOS\//.test(u),chrome=/Chrome\/|CriOS\//.test(u);
-  const rows:[boolean,string,string[]][]=[
-    [/Edg\//.test(u),'Edge',['Windows']],
-    [/Firefox\//.test(u)&&!edge,'Firefox',['Windows','Mac','Linux']],
-    [chrome&&!edge&&!firefox,'Chrome',['Windows','Mac','Android']],
-    [/Version\//.test(u)&&/Safari\//.test(u)&&!chrome&&!edge&&!firefox,'Safari',['iPhone','iPad','Mac']]];
-  for(const [match,browser,systems] of rows)if(match)return systems.includes(os)?`${browser} on ${os}`:'Unknown browser';
-  return 'Unknown browser';
-}
-
 async function startSession(db:D1Database,userId:string,request:Request):Promise<string>{
   const token=b64url(crypto.getRandomValues(new Uint8Array(32)));
   const ua=(request.headers.get('User-Agent')||'').replace(/[^\x20-\x7e]/g,'').slice(0,80)||null;
@@ -183,17 +169,6 @@ export async function authRoute(request:Request,{path,db,rp,body,json,current}:A
   if(path==='/api/auth/logout'&&method==='POST'){
     await endCurrent();
     return withCookie(json({signedIn:false}),clearCookie());
-  }
-
-  // Listing sessions and ending the others need a session.
-  if(path==='/api/auth/sessions'&&method==='GET'||path==='/api/auth/sessions/end-others'&&method==='POST'){
-    if(!current)return json({error:'Sign in to manage sessions',signIn:SIGN_IN_PATH},401);
-    if(method==='GET'){
-      const rows=(await db.prepare('SELECT id,created_at,expires_at,user_agent FROM sessions WHERE user_id=? AND expires_at>? ORDER BY created_at,id').bind(current.id,now()).all<{id:string;created_at:string;expires_at:number;user_agent:string|null}>()).results;
-      return json({sessions:rows.map(r=>({current:r.id===current.sessionId,created_at:r.created_at,expires_at:r.expires_at,device:deviceLabel(r.user_agent)}))});
-    }
-    const ended=await db.prepare('DELETE FROM sessions WHERE user_id=? AND id<>?').bind(current.id,current.sessionId).run();
-    return json({ended:ended.meta.changes});
   }
 
   // Managing passkeys needs a session.

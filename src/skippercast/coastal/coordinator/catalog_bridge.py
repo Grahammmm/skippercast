@@ -483,12 +483,7 @@ def _freeze(path, value):
     raw = _encode(value)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o444)
     try:
-        view = memoryview(raw)
-        while view:
-            written = os.write(fd, view)
-            if written <= 0:
-                raise OSError("frozen bridge write made no progress")
-            view = view[written:]
+        os.write(fd, raw)
         os.fsync(fd)
     finally:
         os.close(fd)

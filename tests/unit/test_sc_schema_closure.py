@@ -437,7 +437,7 @@ class TestContractRealFamily(unittest.TestCase):
                 imported.update(alias.name.split(".")[0] for alias in node.names)
             elif isinstance(node, ast.ImportFrom):
                 imported.add((node.module or "").split(".")[0])
-        self.assertTrue(imported <= {"__future__", "argparse", "hashlib", "json", "math", "os", "re", "stat", "sys"},
+        self.assertTrue(imported <= {"__future__", "argparse", "hashlib", "json", "os", "re", "stat", "sys"},
                         imported)
         names = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
         self.assertFalse(names & {"eval", "exec", "compile", "__import__"})
@@ -465,37 +465,6 @@ class TestNegativeClosure(unittest.TestCase):
         self.refused(manifest, root, "not_a_schema")
         manifest, root = stage({"a.json": b'\xff\xfe{}'})
         self.refused(manifest, root, "json_malformed")
-
-    def test_exponent_overflow_refused_anywhere_in_documents(self):
-        for raw in (b'{"minimum": 1e999}', b'{"maximum": -1e999}', b'{"minimum": 1.7976931348623159e308}',
-                    b'{"enum": [1, [2, -1e999]]}', b'{"x-meta": {"deep": [{"v": 1e999}]}}'):
-            manifest, root = stage({"a.json": raw})
-            self.refused(manifest, root, "json_nonfinite")
-        with self.assertRaises(sc.ClosureInputError) as caught:
-            sc.parse_json_bytes(b'{"sc-schema-closure-input-v1": 1e999}', "manifest")
-        self.assertEqual(caught.exception.code, "json_nonfinite")
-
-    def test_finite_floats_still_admitted(self):
-        for raw in (b'{"minimum": 1.7976931348623157e308}', b'{"minimum": -1.7976931348623157e308}',
-                    b'{"minimum": -0.0}', b'{"minimum": 1e-999}', b'{"minimum": 3, "x": true}'):
-            manifest, root = stage({"a.json": raw})
-            self.assertEqual(sc.inspect_closure(manifest, root)["exit_code"], 0)
-
-    def test_cli_overflow_exits_2_without_report_or_analysis(self):
-        manifest, root = stage({"a.json": b'{"minimum": 1e999}'})
-        work = fresh_dir()
-        manifest_path = work / "m.json"
-        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
-        before = (manifest_path.read_bytes(), (root / "a.json").read_bytes())
-        out, stderr, stdout = work / "r.json", io.StringIO(), io.StringIO()
-        with mock.patch.object(sc, "_walk", stop_io), mock.patch.object(sys, "stderr", stderr), \
-                mock.patch.object(sys, "stdout", stdout):
-            status = sc.main(["--manifest", str(manifest_path), "--input-root", str(root), "--out", str(out)])
-        self.assertEqual(status, 2)
-        self.assertEqual(json.loads(stderr.getvalue())["code"], "json_nonfinite")
-        self.assertEqual(stdout.getvalue(), "")
-        self.assertFalse(out.exists())
-        self.assertEqual(before, (manifest_path.read_bytes(), (root / "a.json").read_bytes()))
 
     def test_aliasing_ids_conflict(self):
         manifest, root = stage({

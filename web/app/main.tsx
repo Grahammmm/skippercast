@@ -13,9 +13,9 @@ import {savedHomeURL} from '../ports.ts';
 import {followStoredLimits, loadCruise, loadLimits} from '../limits.ts';
 import {loadLaunch, loadReach, loadSpear} from '../reach.ts';
 import {startTrip} from '../trip.ts';
-import {App, bindStartupFreshness, loadRegion, narrow, NARROW_QUERY, regionInfo, regionLoad} from './App.tsx';
+import {App, bindStartupFreshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
 import {loadPlans, regionPlans} from '../species.ts';
-import {failVerdictMetadata, beginVerdictRegion, bindBriefReport, currentBrief, ensureRegionalForecast, enableSavedBrief, noteRegionInfo, loadDailyFeed, needsDailyLoad, showSavedBrief} from '../brief/Brief.tsx';
+import {bindBriefReport, currentBrief, ensureRegionalForecast, enableSavedBrief, noteRegionInfo, loadDailyFeed, needsDailyLoad, showSavedBrief} from '../brief/Brief.tsx';
 import {regionPlace} from '../map/currents.ts';
 import {shownPresentation} from '../map/stage.ts';
 import {initTelemetry} from '../telemetry.ts';
@@ -48,7 +48,6 @@ width.addEventListener('change', event => { narrow.value = event.matches; });
 /** The first render (in the page language, its table ready) and what follows it. initReadyLanguage never rejects. */
 async function start(): Promise<void> {
   await ready;
-  effect(() => beginVerdictRegion(region.value));
   const host = document.getElementById('app');
   if (host) { host.replaceChildren(); render(<App />, host); }
   // SC1407-08 (#1762 M3): a /map page that opens on the Chart starts fetching its library now, not when the Chart mounts.
@@ -64,7 +63,6 @@ async function start(): Promise<void> {
     if (id) showSavedBrief(id);   // the last brief kept on this device, at once; the reads below replace it
     if (id && needsDailyLoad(id)) void loadDailyFeed(id);
   });
-  effect(() => { const load = regionLoad.value; if (load && (load.state === 'error' || load.state === 'missing')) failVerdictMetadata(load.id); });
   // The brief's Wind and Swell tiles (#542): the region's forecast at the point nearest its centre, once the region's centre is known.
   effect(() => {
     const id = region.value, info = regionInfo.value;

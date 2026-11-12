@@ -8,7 +8,7 @@ import {landWater, landWaterLinesURL, landWaterURL, loadLandWater, resetLandWate
 import {depthContoursOverviewURL, depthContoursURL} from '../web/map/depth-contours.ts';
 import {loadPoster, poster} from '../web/map/poster.ts';
 import {shorelineOverviewURL, shorelineURL} from '../web/map/coastline.ts';
-import {packFiles} from '../web/trip-runtime.ts';
+import {packFiles} from '../web/trip.ts';
 
 const FOUR = ['land-water.json', 'poster.svg', 'shoreline.geojson', 'shoreline-overview.geojson'];
 const ALL = ['depth-contours-overview.geojson', 'depth-contours.geojson', 'land-water-lines.json', 'land-water.json', 'poster.svg', 'shoreline-overview.geojson', 'shoreline.geojson'];

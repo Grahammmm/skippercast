@@ -515,7 +515,7 @@ function signedOutHTML(t) {
     <p class="home-port-intro">${esc(t('account.out.intro'))}</p>
     <label for="account-name">${esc(t('account.name'))} <span class="account-hint">${esc(t('account.name.optional'))}</span></label>
     <input id="account-name" type="text" maxlength="60" autocomplete="username webauthn" placeholder="${esc(t('account.name.placeholder'))}" />
-    <p id="account-status" class="home-port-feedback" role="status" aria-live="polite" aria-atomic="true"></p>
+    <p id="account-status" class="home-port-feedback" role="status"></p>
     <div class="home-port-actions"><button type="button" id="account-create" class="account-primary">${esc(t('account.create'))}</button><button type="button" id="account-signin">${esc(t('account.signin'))}</button></div>
     <p class="home-port-fine">${esc(t('account.out.fine'))}</p>`;
 }
@@ -591,18 +591,8 @@ export async function openAccount(options = {}) {
   focusTitle();
   const status = message => { const el = $('#account-status'); if (el) el.textContent = message; };
   const self = open = {close};   // this dialog; a close or a newer dialog replaces it
-  // RF1925-4: set once Create has verified. The dialog then keeps its confirmation until the person acknowledges it
-  // (Continue, Close, Escape or the scrim), and the return/reload handoff runs exactly once.
-  let created = false, handedOff = false;
-  const handOff = () => {
-    if (handedOff) return;
-    handedOff = true;
-    scrim.remove(); document.body.classList.remove('choosing-home-port'); open = null;
-    finish();
-  };
 
   function close() {
-    if (created) { handOff(); return; }
     try { webauthn()?.WebAuthnAbortService?.cancelCeremony(); } catch { /* nothing pending */ }
     scrim.remove(); document.body.classList.remove('choosing-home-port'); open = null;
     if (location.hash === '#account') {
@@ -636,12 +626,12 @@ export async function openAccount(options = {}) {
     // still waiting for the library, its support check or its options must not start: its ceremony would abort theirs
     // through the shared abort service.
     let manual = false;
-    const stale = autofill => open !== self || created || (autofill && manual);
+    const stale = autofill => open !== self || (autofill && manual);
     const signIn = async (lib, autofill = false) => {
       const options = await api('auth/login/options', {method: 'POST', body: {}});
       if (stale(autofill)) return;
       const response = await lib.startAuthentication({optionsJSON: options, useBrowserAutofill: autofill});
-      if (open !== self || created) return;
+      if (open !== self) return;
       await api('auth/login/verify', {method: 'POST', body: {response}});
       status(t('account.status.signedIn')); finish();
     };
@@ -654,7 +644,6 @@ export async function openAccount(options = {}) {
       return lib;
     };
     $('#account-create').addEventListener('click', async () => {
-      if (created) { handOff(); return; }   // the Create button is now Continue: never a second registration
       manual = true; busy(true); status(t('account.status.createPrompt'));
       try {
         const lib = await ready(); if (!lib) return;
@@ -664,18 +653,10 @@ export async function openAccount(options = {}) {
         const response = await lib.startRegistration({optionsJSON: options});
         if (open !== self) return;
         await api('auth/register/verify', {method: 'POST', body: {response, display_name: name}});
-        if (open !== self) return;   // closed or replaced while verifying: nothing is painted into, or reloaded for, another dialog
-        created = true;
-        $('#account-name').disabled = true; $('#account-signin').disabled = true;
-        const next = $('#account-create'); next.textContent = t('account.continue'); next.disabled = false;
-        status(t('account.status.created'));
-        // A disabled button drops focus to the page, where Escape and Tab would miss the dialog: bring it back onto
-        // Continue, never onto the status (that would read it twice). Focus already inside the card stays where it is.
-        if (!$('.account-card').contains(document.activeElement)) next.focus();
+        status(t('account.status.created')); finish();
       } catch (error) { if (open === self) { status(passkeyMessage(error, t)); busy(false); } }
     });
     $('#account-signin').addEventListener('click', async () => {
-      if (created) return;
       manual = true; busy(true); status(t('account.status.signinPrompt'));
       try { const lib = await ready(); if (lib) await signIn(lib, false); } catch (error) { if (open === self) { status(passkeyMessage(error, t)); busy(false); } }
     });

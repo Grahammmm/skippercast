@@ -9,10 +9,6 @@ import math
 import re
 from urllib.parse import quote
 from .collect import source, stamp
-from ..util.units import KT_PER_MS
-
-# The feed's historical eight-decimal conversion precision is intentionally preserved.
-_VECTOR_KT_PER_MS = round(KT_PER_MS, 8)
 
 
 def dap_arrays(text):
@@ -39,7 +35,7 @@ def dap(client, base, query):
 def vector(u,v):
     if not all(math.isfinite(x) for x in (u,v)) or max(abs(u),abs(v))>5:
         return None
-    return round(math.hypot(u,v)*_VECTOR_KT_PER_MS,3), round(math.degrees(math.atan2(u,v))%360,1)
+    return round(math.hypot(u,v)*1.94384449,3), round(math.degrees(math.atan2(u,v))%360,1)
 
 
 def bounds_indices(values,lo,hi):

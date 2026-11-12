@@ -153,12 +153,7 @@ def _freeze(path, value):
     raw = _encode(value)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o444)
     try:
-        view = memoryview(raw)
-        while view:
-            count = os.write(fd, view)
-            if count <= 0:
-                raise OSError("frozen discovery write made no progress")
-            view = view[count:]
+        os.write(fd, raw)
         os.fsync(fd)
     finally:
         os.close(fd)
@@ -300,9 +295,7 @@ def run(plan, out, *, previous=None, root=None, allowlist=None, clock=time.time,
     discover, script = load_script(root)
     previous_doc = previous_ref = None
     if previous is not None:
-        # Bounded read: never allocate more than the ceiling plus one probe byte.
-        with Path(previous).open("rb") as stream:
-            raw = stream.read(discover.MAX_METADATA + 1)
+        raw = Path(previous).read_bytes()
         if len(raw) > discover.MAX_METADATA:
             raise ValueError("previous catalog exceeds metadata limit")
         previous_doc = json.loads(raw)

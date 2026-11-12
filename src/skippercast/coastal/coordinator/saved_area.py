@@ -100,7 +100,7 @@ def validate_adoption(root, descriptor, new_grant, *, now, horizon):
     db=resolve(origin,doc['origin_database'],contract='coastal-saved-origin-sqlite-v1',cap=1048576)
     if db!=origin/'var/coastal/authenticated.sqlite':raise ValueError('exact original authenticated database required')
     require_closed_database(db)
-    connection=sqlite3.connect(db.as_uri()+'?mode=ro&immutable=1',uri=True)
+    connection=sqlite3.connect('file:'+str(db)+'?mode=ro&immutable=1',uri=True)
     connection.row_factory=sqlite3.Row
     try:
         job=connection.execute('SELECT * FROM jobs WHERE job_id=?',(result['job_id'],)).fetchone()

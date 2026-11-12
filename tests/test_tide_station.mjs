@@ -284,7 +284,7 @@ test('offline save writes chosen station responses and directory; refuses NOAA e
   assert.equal(replay.events[0].heightFt, 3.2);
   for (const reply of [() => Response.json({error: 'No data'}), () => Response.json(hilo, {headers: {'X-SC-Offline': now.toISOString()}})])
     await assert.rejects(saveTidePack([urls[1]], put, new AbortController().signal, async () => reply()), /unchanged/);
-  const trip = readFileSync(new URL('../web/trip-runtime.ts', import.meta.url), 'utf8');
+  const trip = readFileSync(new URL('../web/trip.ts', import.meta.url), 'utf8');
   assert.match(trip, /await tideSelection.packURLs\(id\)/);
   assert.match(trip, /await saveTidePack\(tideURLs, put, signal\)/);
 });

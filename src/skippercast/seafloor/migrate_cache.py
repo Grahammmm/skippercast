@@ -100,11 +100,6 @@ def migrate_numeric_cache(reach_id, *, root=REPO, private=False, apply=False):
     try:
         for name in OUTPUTS:
             shutil.copyfile(folder/name, staging/name)
-        # The staged bytes, not the earlier source hash, are what the new receipt would seal:
-        # bind every one to the receipt admitted at entry before any metadata is rewritten.
-        for name in OUTPUTS:
-            if sha256(staging/name) != receipt['outputs'][name]:
-                raise ValueError(f'Staged output checksum mismatch: {name}')
         for name in ('cells.json', 'terrain.json'):
             data = read_json(staging/name)
             if data['input_hash'] != physical['input_hash']:

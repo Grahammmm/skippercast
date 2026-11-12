@@ -62,9 +62,7 @@ test('the brief shows the skill line under the model line, UNKNOWN on thin histo
     export {regionInfo} from './web/app/App.tsx';
     export {profile, hour, day} from './web/state.ts';
     export {language} from './web/i18n.ts';
-    import {render as renderString} from 'preact-render-to-string'; import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
-      // SC1722-02: the fixture's sources (set on the raw signals) are admitted as one settled snapshot before each render.
-      export function render(...args) { admitBriefFixture(); return renderString(...args); } export {h} from 'preact';`},
+    export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
     bundle: true, platform: 'node', format: 'esm', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
   const m = await import(pathToFileURL(out).href), TZ = 'America/Los_Angeles';
   const T0 = Date.parse('2026-10-13T15:00:00Z') / 1000, TIMES = Array.from({length: 80}, (_, i) => T0 + i * 3600), issued = Date.parse('2026-10-13T12:00:00Z') / 1000 - 4 * 3600;

@@ -8,7 +8,7 @@ import {build} from 'esbuild';
 import type {Page} from '@playwright/test';
 import {test, expect} from './fixtures.ts';
 import {contrast} from '../scripts/check_contrast.mjs';
-import {styledRendererPlugins} from '../tests/helpers/esbuild-url.mjs';
+import {rendererPlugins} from '../tests/helpers/esbuild-url.mjs';
 
 const AREA = {region: 'morro-bay'};
 const NOW = '2026-09-30T16:00:00Z';   // 9 am PDT; tomorrow is 1 October
@@ -27,7 +27,6 @@ async function bundleHost() {
     import {dailyFeed, regionalForecast} from './web/brief/Brief.tsx';
     import {parseConditionsForecast} from './web/conditions.ts';
     import {regsData} from './web/regs.ts';
-    import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
     import {species, profile, hour, day} from './web/state.ts';
     import {region} from './tests/fixtures/regulations/fe61-v1.json';
     import daily from './tests/fixtures/brief/monterey-daily.json';
@@ -51,13 +50,12 @@ async function bundleHost() {
         dailyFeed.value = live === 'unknown' ? null : {...daily, region_id: region.id};
         regionalForecast.value = live === 'unknown' ? null : parseConditionsForecast(forecastFeed(region.id, live === 'no' ? 30 : 5), region.id, region.map.center);
         regsData.value = null; species.value = 'salmon'; profile.value = 'boat'; hour.value = null; day.value = null;
-        admitBriefFixture(); // SC1722-02: the fixture's sources, admitted as one settled snapshot
         render(null, document.getElementById('host'));
         render(h(FirstAnswerLine, {now: NOW}), document.getElementById('host'));
         if (state === 'yes') document.querySelector('#host .app-first-answer').setAttribute('data-fishable', 'yes');
       },
     };`}, bundle: true, format: 'iife', outfile: 'fa-host.js', write: false, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-  plugins: styledRendererPlugins, loader: {'.woff2': 'dataurl'}});
+  plugins: rendererPlugins, loader: {'.woff2': 'dataurl'}});
 }
 
 async function openHost(page: Page, bundle: Awaited<ReturnType<typeof bundleHost>>, width: number, theme: 'dark' | 'light') {
@@ -195,36 +193,8 @@ test('first_answer_links_and_map_action_keep_keyboard_behavior: the desktop app 
   // The action is the shared 44 px ghost Button, reachable by Tab, and Enter scrolls the existing map/detail into view.
   expect((await more.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await expect(more).toHaveClass(/ui-button--ghost/);
-  // RF2205-6: named as navigation; the accessible name is the visible text (no aria-label, no disclosure state).
-  await expect(more).toHaveText('Go to map and details');
-  await expect(section.getByRole('button', {name: 'Go to map and details', exact: true})).toHaveCount(1);
-  await expect(more).not.toHaveAttribute('aria-expanded');
-  await expect(more).not.toHaveAttribute('aria-label');
   await more.focus();
   await expect(more).toBeFocused();
-  await page.keyboard.press('Enter');
-  expect(await page.evaluate(() => (window as unknown as {__scrolled: string[]}).__scrolled)).toContain('app-main');
-  expect(pageErrors).toEqual([]);
-});
-
-test('desktop_jump_copy_es: with Spanish chosen the same desktop action reads "Ir al mapa y a los detalles", still 44 px and still scrolls to the app', async ({page, pageErrors, v2}) => {
-  await page.addInitScript(() => {
-    try { localStorage.setItem('skippercast-language-v1', 'es'); } catch { /* storage blocked */ }
-    (window as unknown as {__scrolled: string[]}).__scrolled = [];
-    const original = Element.prototype.scrollIntoView;
-    Element.prototype.scrollIntoView = function (this: Element, ...args: unknown[]) {
-      (window as unknown as {__scrolled: string[]}).__scrolled.push(String(this.className));
-      return (original as (...a: unknown[]) => void).apply(this, args);
-    };
-  });
-  await v2.open('app', AREA, 'desktop');
-  const section = page.locator('section.app-first-answer');
-  await expect(section).toBeVisible();
-  const more = section.locator('button.app-first-answer-more');
-  await expect(more).toHaveText('Ir al mapa y a los detalles');
-  await expect(section.getByRole('button', {name: 'Ir al mapa y a los detalles', exact: true})).toHaveCount(1);
-  expect((await more.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  await more.focus();
   await page.keyboard.press('Enter');
   expect(await page.evaluate(() => (window as unknown as {__scrolled: string[]}).__scrolled)).toContain('app-main');
   expect(pageErrors).toEqual([]);

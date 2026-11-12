@@ -61,9 +61,7 @@ async function load() {
     export * from './web/brief/Brief.tsx';
     export {regionInfo} from './web/app/App.tsx';
     export {profile, hour, day} from './web/state.ts';
-    import {render as renderString} from 'preact-render-to-string'; import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
-      // SC1722-02: the fixture's sources (set on the raw signals) are admitted as one settled snapshot before each render.
-      export function render(...args) { admitBriefFixture(); return renderString(...args); } export {h} from 'preact';`},
+    export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
     bundle: true, platform: 'node', format: 'esm', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
   mod = await import(pathToFileURL(out).href); return mod;
 }

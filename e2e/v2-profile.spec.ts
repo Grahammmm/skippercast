@@ -149,11 +149,7 @@ test('the target menu groups plans by method and coast targets, and search narro
   expect(await unavailable(select)).toEqual(['lobster']);
   await expect(select.locator('option[value="salmon"]')).toHaveText('Chinook salmon · search plan only');
   // The rail's Look for lists the same menu (mounted in the phone's Layers sheet; hidden on a computer).
-  if (page.viewportSize()!.width < 1024) {
-    // RF1935-4: leave target editing before reaching chrome behind the expanded sheet.
-    await page.getByRole('searchbox', {name: 'Find a target'}).press('Tab');
-    await page.getByRole('button', {name: 'Layers'}).click();
-  }
+  if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click();
   await expect.poll(() => optionTexts(lookFor)).toEqual(states);
   expect(await unavailable(lookFor)).toEqual(['lobster']);
   await expect(lookFor, 'both pickers follow the one ?target=').toHaveValue('salmon');

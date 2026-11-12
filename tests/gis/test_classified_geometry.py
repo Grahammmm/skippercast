@@ -1,6 +1,5 @@
 """Synthetic point contacts, holes and bounded native representation checks."""
 from copy import deepcopy
-import json
 import unittest
 from unittest.mock import patch
 
@@ -127,40 +126,3 @@ class ClassifiedGeometryTests(unittest.TestCase):
         candidates,native=inventory(touching_hole())
         with patch.object(cg,'MAX_UNION_DIFFERENCE_M2',0):
             with self.assertRaisesRegex(ValueError,'union'):cg.verify_inventory(candidates,native)
-
-
-class AreaClaimTests(unittest.TestCase):
-    def claim(self, value):
-        candidates, native = inventory(touching_hole())
-        candidates['features'][0]['properties']['area_ha'] = value
-        return json.loads(json.dumps(candidates)), native
-
-    def test_json_integer_area_overflow_has_named_refusal(self):
-        for value in (10**400, -10**400):
-            candidates, native = self.claim(value)
-            before = deepcopy((candidates, native))
-            with self.assertRaisesRegex(ValueError, 'Classified native area claim changed'):
-                cg.verify_inventory(candidates, native)
-            self.assertEqual((candidates, native), before)
-
-    def test_representable_and_absent_claims_accepted_mismatch_refused(self):
-        area = touching_hole().area / 10000
-        for value in (area, None):
-            candidates, native = self.claim(area)
-            if value is None:
-                del candidates['features'][0]['properties']['area_ha']
-            self.assertEqual(cg.verify_inventory(candidates, native)['feature_count'], 1)
-        candidates, native = inventory(box(50000, 100000, 50100, 100100))
-        candidates['features'][0]['properties']['area_ha'] = 1
-        self.assertEqual(cg.verify_inventory(candidates, native)['feature_count'], 1)
-        for value in (area + 1e-4, 2):
-            candidates, native = self.claim(value)
-            with self.assertRaisesRegex(ValueError, 'area claim changed'):
-                cg.verify_inventory(candidates, native)
-
-    def test_nonfinite_overflowing_and_wrong_type_claims_refused(self):
-        for value in (float('nan'), float('inf'), -float('inf'), 1e305, None, True,
-                      '1', [1], {'a': 1}):
-            candidates, native = self.claim(value)
-            with self.assertRaisesRegex(ValueError, 'area claim changed'):
-                cg.verify_inventory(candidates, native)

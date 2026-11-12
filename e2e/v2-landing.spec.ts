@@ -88,7 +88,7 @@ test('a refused location leaves a message and the input focused; Explore the coa
   await openMenus(page, isMobile);
   await page.locator('button[aria-label="Use my location"]').click();
   const dialog = page.locator('dialog.port-dialog');
-  await expect(dialog.locator('[role="status"]')).toHaveText("Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.");
+  await expect(dialog.locator('[role="status"]')).toHaveText('Location was unavailable. Search for a port instead.');
   await expect(dialog.locator('input[type="search"]')).toBeFocused();
   await expect(dialog).toContainText('Your choice stays in this browser.');
   await page.keyboard.press('Escape');
@@ -99,45 +99,6 @@ test('a refused location leaves a message and the input focused; Explore the coa
   await expect(page).not.toHaveURL(/region=/);
   expect(pageErrors).toEqual([]);
 });
-
-const GEO_LINES = {
-  en: {locate: 'Use my location', denied: "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.",
-    unavailable: 'Location was unavailable. Search for a port instead.', timedOut: 'The location request timed out. Search for a port instead.', unsupported: 'Location is unavailable. Search for a port instead.'},
-  es: {locate: 'Usar mi ubicación', denied: 'El permiso de ubicación está desactivado para este sitio. Permite la ubicación en la configuración de sitios de tu navegador o busca un puerto mientras tanto.',
-    unavailable: 'No se pudo obtener la ubicación. Busca un puerto en su lugar.', timedOut: 'La solicitud de ubicación agotó el tiempo de espera. Busca un puerto en su lugar.', unsupported: 'La ubicación no está disponible. Busca un puerto en su lugar.'},
-};
-for (const lang of ['en', 'es'] as const) {
-  for (const [scenario, line] of [[1, 'denied'], [2, 'unavailable'], [3, 'timedOut'], ['none', 'unsupported']] as const) {
-    test(`SC1922-01 ${lang}: location error ${scenario} says the ${line} line on the landing and in the map's dialog, once`, async ({page, context, pageErrors, isMobile}) => {
-      const lines = GEO_LINES[lang];
-      await withProfile(page);
-      // A synthetic geolocation (never a real permission prompt) that counts its requests; "none" removes the API.
-      await context.addInitScript(code => {
-        const w = window as unknown as {__geoCalls: number};
-        w.__geoCalls = 0;
-        const geolocation = code === 'none' ? undefined : {getCurrentPosition: (_ok: unknown, fail: (e: {code: number; message: string}) => void) => { w.__geoCalls++; fail({code: code as number, message: 'device detail'}); }};
-        Object.defineProperty(navigator, 'geolocation', {value: geolocation, configurable: true});
-      }, scenario);
-      const calls = () => page.evaluate(() => (window as unknown as {__geoCalls: number}).__geoCalls);
-      // The landing's own chooser.
-      await page.goto(`/?ui=v2&lang=${lang}`);
-      const landingStatus = page.locator('.port-input-feedback[role="status"]');
-      await page.getByRole('button', {name: lines.locate}).first().click();
-      await expect(landingStatus).toHaveText(lines[line]);
-      await expect(page.locator('input[type="search"]').first()).toBeFocused();
-      expect(await calls()).toBe(scenario === 'none' ? 0 : 1);
-      // The map's Use my location dialog.
-      await page.goto(`${SHELL}&lang=${lang}`);
-      await openMenus(page, isMobile);
-      await page.locator(`button[aria-label="${lines.locate}"]`).click();
-      const dialog = page.locator('dialog.port-dialog');
-      await expect(dialog.locator('[role="status"]')).toHaveText(lines[line]);
-      await expect(dialog.locator('input[type="search"]')).toBeFocused();
-      expect(await calls()).toBe(scenario === 'none' ? 0 : 1);
-      expect(pageErrors).toEqual([]);
-    });
-  }
-}
 
 test('a home saved on /coast opens in v2, and Forget clears it for v1 and /coast too (FE-83)', async ({page, context, baseURL, pageErrors, isMobile}) => {
   const home = {v: 1, place: 'cambria', mode: 'spear'};
@@ -354,32 +315,9 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) {
   });
 }
 
-// UXFIX-13 (G, D1): a real tap on the visible Keep button at peek finishes the card with Boat and shows the verdict headline, in both languages.
-for (const lang of ['en', 'es'] as const) for (const [width, height] of [[390, 844], [360, 640]] as const) {
-  test(`${lang}: a tap on Keep at peek on the ${width}x${height} phone keeps Boat and reaches the verdict`, async ({page, pageErrors, v2, isMobile}) => {
-    test.skip(!isMobile, 'phone layout only');
-    await page.setViewportSize({width, height});
-    await v2.open('app', {region: 'morro-bay', lang});
-    const sheet = page.locator('.ui-sheet'), card = page.locator('[data-first-run]');
-    await expect(sheet).toHaveAttribute('data-detent', 'peek');
-    const peekHeight = (await sheet.boundingBox())!.height;
-    const keep = card.getByRole('button', {name: lang === 'en' ? 'Keep Boat for now' : /^Mantener .+ por ahora$/});
-    const box = (await keep.boundingBox())!;
-    expect(box.width).toBeGreaterThanOrEqual(44); expect(box.height).toBeGreaterThanOrEqual(44);
-    await expect(keep).toBeInViewport({ratio: 1});
-    await keep.tap();
-    await expect(page.locator('[data-first-run]')).toHaveCount(0);
-    await expect(page).toHaveURL(/[?&]profile=boat/);
-    await expect(sheet.locator('h1')).toBeInViewport();
-    await expect(sheet).toHaveAttribute('data-detent', 'peek');
-    expect(Math.abs((await sheet.boundingBox())!.height - peekHeight), 'the sheet keeps its peek height').toBeLessThanOrEqual(1);
-    expect(pageErrors).toEqual([]);
-  });
-}
-
 // BL-SC-2: at peek the four choices are one row above the tab bar; from half up the whole card is back.
-for (const [width, height] of [[390, 844], [360, 800], [360, 640]] as const) {
-  test(`at peek the first-run choices are tappable above the tab bar on the ${width}x${height} phone`, async ({page, pageErrors, v2, isMobile}) => {
+for (const [width, height] of [[390, 844], [360, 800]] as const) {
+  test(`at peek the first-run choices are tappable above the tab bar on the ${width}px phone`, async ({page, pageErrors, v2, isMobile}) => {
     test.skip(!isMobile, 'phone layout only');
     await page.setViewportSize({width, height});
     await v2.open('app', {region: 'morro-bay'});
@@ -394,12 +332,7 @@ for (const [width, height] of [[390, 844], [360, 800], [360, 640]] as const) {
     await expect(card.locator('#first-run-title')).toBeVisible();
     // The intro (the card's own p) and the MYB-1 boat fields (whose hint is a p too) are both out of the peek row.
     for (const hidden of [card.locator(':scope > p'), card.locator('.ui-eyebrow'), card.locator('fieldset')]) await expect(hidden).toBeHidden();
-    expect((await card.locator('small').first().boundingBox())!.height).toBeLessThanOrEqual(1);
-    // UXFIX-13 (G, D1): Keep is a visible 44 px quiet button on the heading row, whole inside the viewport at peek.
-    const keep = card.getByRole('button', {name: 'Keep Boat for now'}), kept = (await keep.boundingBox())!, title = (await card.locator('#first-run-title').boundingBox())!;
-    expect([kept.width >= 44, kept.height >= 44, kept.x >= 0, kept.x + kept.width <= width, kept.y >= 0, kept.y + kept.height <= height]).toEqual([true, true, true, true, true, true]);
-    expect(Math.abs((kept.y + kept.height / 2) - (title.y + title.height / 2)), 'Keep sits on the heading row').toBeLessThan(kept.height / 2);
-    await expect(keep).toBeInViewport({ratio: 1});
+    for (const clipped of [card.getByRole('button', {name: 'Keep Boat for now'}), card.locator('small').first()]) expect((await clipped.boundingBox())!.height).toBeLessThanOrEqual(1);
     await page.screenshot({path: test.info().outputPath(`bl-sc-2-peek-${width}x${height}.png`)});
     // Dragged (stepped) to half: the whole card as before.
     await handle.click();
@@ -600,9 +533,6 @@ test('the map reads every warmed file at startup, the static ones from the brows
   await v2.open('landing');
   const input = page.getByLabel('Where are you launching?');
   await input.fill('morro');
-  // The input is interactive before the async port directory arrives; Enter
-  // submits only a rendered match (and is otherwise correctly a no-op).
-  await expect(page.locator('.landing [data-port]')).toHaveText([/Morro Bay/]);
   await input.press('Enter');
   await expect(page.locator('.landing-step [role="status"]')).toHaveText('Morro Bay map files ready.');
   const list = ['/regions/morro-bay/atlas-marks.json', '/regions/morro-bay/search-plan-index.json', '/regions/morro-bay/shoreline-overview.geojson',
@@ -796,7 +726,6 @@ test('the landing shows the app lead\'s verdict for tomorrow for the saved boat 
   await page.route('**/api/forecast?*', () => { /* never answers */ });
   await v2.open('landing');
   await input.fill('morro');
-  await expect(page.locator('.landing [data-port]')).toHaveText([/Morro Bay/]);
   await input.press('Enter');
   await page.locator('.landing-step [data-profile="boat"]').click();
   await expect(page).toHaveURL(/\/map\?/);
@@ -817,270 +746,5 @@ test('the landing names the reference 23 ft boat when no boat is saved or the sa
   await page.goto(`${href}&ui=v2`);
   await expect(page.locator('.app-verdict-word').first()).toHaveText(word!);
   await expect(page.locator('.app-verdict-limit').first()).toHaveText(sentence!);
-  expect(pageErrors).toEqual([]);
-});
-
-for (const lang of ['en', 'es'] as const) for (const surface of ['landing', 'app'] as const) {
-  test(`location reason matrix ${lang} ${surface}: visible polite failure and usable search`, async ({page, isMobile, pageErrors}) => {
-    await withProfile(page);
-    await page.addInitScript(() => {
-      const state = window as unknown as {geoCode?: number; geoCalls: number}; state.geoCalls = 0;
-      Object.defineProperty(navigator, 'geolocation', {value: {getCurrentPosition(_ok: unknown, fail: (e: {code?: number; message: string}) => void) {
-        state.geoCalls++; fail({code: state.geoCode, message: 'synthetic provider detail'});
-      }}});
-    });
-    await page.goto(surface === 'landing' ? `/?ui=v2&lang=${lang}` : `${SHELL}&lang=${lang}`);
-    if (surface === 'app') { await openMenus(page, isMobile); await page.locator('.app-port').click(); }
-    const form = page.locator(surface === 'landing' ? '.landing .port-input' : 'dialog.port-dialog .port-input');
-    const region = form.locator('[role="status"]'), input = form.locator('input[type="search"]');
-    await expect(region).toHaveText(''); await expect(region.locator('svg')).toHaveCount(0);
-    await region.evaluate(el => { el.setAttribute('data-original', 'yes'); });
-    const messages = lang === 'en' ? [
-      "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.",
-      'Location was unavailable. Search for a port instead.',
-      'The location request timed out. Search for a port instead.'
-    ] : [
-      'El permiso de ubicación está desactivado para este sitio. Permite la ubicación en la configuración de sitios de tu navegador o busca un puerto mientras tanto.',
-      'No se pudo obtener la ubicación. Busca un puerto en su lugar.',
-      'La solicitud de ubicación agotó el tiempo de espera. Busca un puerto en su lugar.'
-    ];
-    await input.fill('san d');
-    for (const [index, code] of [1, 2, 3, 99, undefined].entries()) {
-      await page.evaluate(value => { (window as unknown as {geoCode?: number}).geoCode = value; }, code);
-      await form.getByRole('button', {name: lang === 'en' ? 'Use my location' : 'Usar mi ubicación'}).click();
-      await expect(region).toHaveText(messages[code === 1 ? 0 : code === 3 ? 2 : 1]);
-      await expect(region).toHaveAttribute('data-original', 'yes');
-      await expect(region).toHaveAttribute('aria-live', 'polite'); await expect(region).toHaveAttribute('aria-atomic', 'true');
-      await expect(region.locator('svg')).toHaveAttribute('aria-hidden', 'true');
-      await expect(region.locator('title, [role="alert"]')).toHaveCount(0);
-      await expect(input).toBeFocused(); await expect(input).toHaveValue('san d');
-      await expect(form.locator('[data-port]')).toHaveText([/San Diego/]);
-      expect(await page.evaluate(() => (window as unknown as {geoCalls: number}).geoCalls)).toBe(index + 1);
-      expect(await region.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
-      expect(await region.evaluate(el => getComputedStyle(el).color === getComputedStyle(el.closest('form')!).color)).toBe(true);
-      expect(await form.textContent()).not.toContain('synthetic provider detail');
-    }
-    await expect(form.locator('.port-input-note')).toContainText(lang === 'en' ? 'Your choice stays in this browser.' : 'Tu elección se guarda en este navegador.');
-    await expect(form.getByRole('button', {name: lang === 'en' ? 'Explore the coast' : 'Explorar la costa'})).toBeEnabled();
-    await input.press('Enter');
-    if (surface === 'app') await expect(page.locator('dialog.port-dialog')).toBeHidden();
-    else await expect(page.locator('.landing-step[data-step="profile"]')).toBeVisible();
-    expect(pageErrors).toEqual([]);
-  });
-}
-
-// SC1922-05: a phone's cold load of the landing does not jump. The parts mount into their hosts after first paint
-// (web/landing/main.tsx), so each host reserves what its mounted content takes (web/landing/landing.css, port-input.css).
-const COLD_PHONES = [{width: 390, height: 844}, {width: 360, height: 640}] as const;
-/** The cold-load window, from navigation start. Every qualifying shift in it counts, not only the largest session window. */
-const SAMPLE_MS = 5000;
-const CLS_BUDGET = 0.1;
-type ShiftStore = {observer: PerformanceObserver | null; entries: {value: number; hadRecentInput: boolean}[]};
-/** Install a buffered layout-shift observer before navigation; the sampling itself clicks, scrolls and focuses nothing. */
-const watchShifts = (page: Page) => page.addInitScript(() => {
-  const store: ShiftStore = {observer: null, entries: []};
-  (window as unknown as {__shifts: ShiftStore}).__shifts = store;
-  try {
-    const observer = new PerformanceObserver(list => { for (const e of list.getEntries()) { const s = e as PerformanceEntry & {value: number; hadRecentInput: boolean}; store.entries.push({value: s.value, hadRecentInput: s.hadRecentInput}); } });
-    observer.observe({type: 'layout-shift', buffered: true});
-    store.observer = observer;
-  } catch { /* unsupported: shiftSums reports it */ }
-});
-/** Wait out the window, drain the observer, and sum the entries: those without recent input (the budget) and all of them (no input is ever sent here). */
-async function shiftSums(page: Page): Promise<{counted: number; all: number; entries: number}> {
-  await page.waitForFunction(ms => performance.now() >= ms, SAMPLE_MS);
-  const sums = await page.evaluate(() => {
-    const store = (window as unknown as {__shifts?: ShiftStore}).__shifts;
-    if (!store?.observer) return null;
-    for (const e of store.observer.takeRecords()) { const s = e as PerformanceEntry & {value: number; hadRecentInput: boolean}; store.entries.push({value: s.value, hadRecentInput: s.hadRecentInput}); }
-    store.observer.disconnect();
-    const sum = (list: ShiftStore['entries']) => list.reduce((total, e) => total + e.value, 0);
-    return {counted: sum(store.entries.filter(e => !e.hadRecentInput)), all: sum(store.entries), entries: store.entries.length};
-  });
-  expect(sums, 'the layout-shift observer is supported and was installed before navigation').not.toBeNull();
-  return sums!;
-}
-/** Page-relative top and height of a box, or null when it is not there. */
-const boxOf = (page: Page, selector: string) => page.evaluate(sel => { const r = document.querySelector(sel)?.getBoundingClientRect(); return r ? {y: r.top + scrollY, h: r.height} : null; }, selector);
-/** Hold the landing's entry module (after the static page and its styles have painted) until `release()`. */
-async function holdEntry(page: Page): Promise<() => void> {
-  let release: () => void = () => {};
-  const held = new Promise<void>(resolve => { release = resolve; });
-  await page.route(/\/assets\/landing\.[^/]*\.js(?:\?|$)/, async route => { await held; await route.fallback(); });
-  return release;
-}
-/** The static page is there with its stylesheets and its web fonts: the form slot has its reserved height. The fonts swap in
- *  after first paint (font-display: swap) and can re-wrap the hero title above the slots by a line at 360 px, which moves
- *  every slot together; the slots are measured once that has settled, so the comparison is about the mount, not the swap. */
-async function slotsLaidOut(page: Page) {
-  await page.waitForFunction(() => (document.querySelector('.landing-slot--form')?.getBoundingClientRect().height ?? 0) > 100);
-  await page.evaluate(async () => { await document.fonts.ready; await new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))); });
-}
-const near = (a: number, b: number, why: string) => expect(Math.abs(a - b), `${why}: ${a} against ${b}`).toBeLessThanOrEqual(1);
-
-for (const {width, height} of COLD_PHONES) {
-  test(`SC1922-05 phone_cold_cls_${width}: a cold load at ${width}x${height} shifts under ${CLS_BUDGET} over ${SAMPLE_MS / 1000} s, with the readings and the featured ports in`, async ({page, pageErrors}, info) => {
-    test.skip(info.project.name !== 'phone', 'measured at the two explicit phone sizes');
-    test.setTimeout(60_000);
-    await page.setViewportSize({width, height});
-    await landingFeeds(page);
-    await watchShifts(page);
-    await page.goto('/?ui=v2');   // no saved home, no click, no scroll, no focus
-    const sums = await shiftSums(page);
-    // The synthetic feeds answered inside the window: a hung feed would otherwise pass on an unchanged page.
-    await expect(page.locator('.landing-tiles li[data-reading]')).toHaveCount(4);
-    await expect(page.locator('.landing .port-input-list [data-port]').first()).toBeVisible();
-    console.log(`SC1922-05 ${width}x${height}: ${sums.entries} layout-shift entries, qualifying sum ${sums.counted.toFixed(4)}, all ${sums.all.toFixed(4)}`);
-    expect(sums.counted, 'layout shift without recent input').toBeLessThan(CLS_BUDGET);
-    expect(sums.all, 'headless Chromium may mark early entries as input-driven although none was sent; none may hide a shift').toBeLessThan(CLS_BUDGET);
-    expect(pageErrors).toEqual([]);
-  });
-
-  test(`SC1922-05 reserved_form_slot_matches_mount_${width}: the reserved slots hold the readout's and the form's y and height across the mount and the late data`, async ({page, pageErrors}, info) => {
-    test.skip(info.project.name !== 'phone', 'measured at the two explicit phone sizes');
-    await page.setViewportSize({width, height});
-    await landingFeeds(page);
-    const release = await holdEntry(page);
-    await page.goto('/?ui=v2', {waitUntil: 'commit'});
-    await expect(page.locator('.landing-slot--form')).toBeAttached();
-    await slotsLaidOut(page);
-    await expect(page.locator('.landing-slot--form')).toBeEmpty();
-    await expect(page.locator('.landing-slot--form')).toHaveAttribute('aria-hidden', 'true');
-    // Before the module: the slots, and the footer under them, are where they will be.
-    const before = {readout: await boxOf(page, '.landing-slot--readout'), form: await boxOf(page, '.landing-slot--form'), footer: await boxOf(page, 'footer.landing-foot')};
-    expect(before.readout && before.form && before.footer, 'the slots and the footer are laid out before the module').toBeTruthy();
-    expect(await page.locator('form.port-input').count(), 'nothing is mounted yet').toBe(0);
-    release();
-    await expect(page.locator('form.port-input')).toBeVisible();
-    const mounted = {readout: await boxOf(page, '.landing-readout'), form: await boxOf(page, 'form.port-input'), dots: await boxOf(page, 'nav.landing-dots'), footer: await boxOf(page, 'footer.landing-foot')};
-    near(mounted.readout!.y, before.readout!.y, 'readout y on mount'); near(mounted.readout!.h, before.readout!.h, 'readout height on mount');
-    near(mounted.form!.y, before.form!.y, 'port form y on mount'); near(mounted.form!.h, before.form!.h, 'port form height on mount (the port list still loading)');
-    expect(await page.locator('.landing-slot').count(), 'the mount replaced both placeholders').toBe(0);
-    // The layer dots and the credit mounted with the form; the footer that sat under the slots did not move.
-    const credit = await boxOf(page, '#landing-credit');
-    near(mounted.footer!.y, before.footer!.y, 'footer y on mount');
-    expect(credit && credit.h > 0, 'the shoreline credit is in the footer').toBeTruthy();
-    // Late data: the readings and the port list resolve; the form stays where the slot was, and below it only the verdict (a fresh block, not reserved) pushes the footer.
-    await expect(page.locator('.landing-tiles li[data-reading]')).toHaveCount(4);
-    await expect(page.locator('.landing .port-input-list [data-port]').first()).toBeVisible();
-    const after = {form: await boxOf(page, 'form.port-input'), footer: await boxOf(page, 'footer.landing-foot')};
-    near(after.form!.y, before.form!.y, 'port form y after the readings and ports loaded'); near(after.form!.h, before.form!.h, 'port form height after the ports loaded');
-    await page.waitForTimeout(1500);   // the verdict, when it is drawn, arrives after the readings
-    const verdict = await boxOf(page, '.landing-verdict');
-    const gap = await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.landing-dots') ?? document.body).rowGap) || 0);
-    const settled = await boxOf(page, 'footer.landing-foot');
-    near(settled!.y - (verdict ? verdict.h + 16 : 0), before.footer!.y, `footer y once everything loaded${verdict ? ' (less the verdict block and its gap)' : ''} (page gap ${gap})`);
-    expect(pageErrors).toEqual([]);
-  });
-}
-
-for (const [width, height, rail] of [[390, 844, false], [1024, 768, false], [1279, 800, false], [1440, 600, false], [1280, 699, false], [1280, 700, true], [1440, 900, true]] as const) {
-  test(`RF2115-6 landing_layer_names_at_rest ${width}x${height}: every layer name is visible without hover or focus, ${rail ? 'in the fixed rail' : 'in the page flow'}`, async ({page, pageErrors}, info) => {
-    test.skip(info.project.name !== 'phone' && width < 1024, 'the compact sizes are set explicitly on the phone project');
-    await page.setViewportSize({width, height});
-    await landingFeeds(page);
-    await page.goto('/?ui=v2');
-    const links = page.locator('.landing-dots a[data-layer]');
-    await expect(links).toHaveCount(10);
-    const boxes = await links.evaluateAll(nodes => nodes.map(node => {
-      const name = node.querySelector('.landing-dot-name') as HTMLElement, style = getComputedStyle(name), a = node.getBoundingClientRect(), n = name.getBoundingClientRect();
-      return {text: name.textContent, clip: style.clipPath, opacity: style.opacity, visibility: style.visibility, display: style.display, w: n.width, h: n.height, inLink: n.left >= a.left - 1 && n.right <= a.right + 1, touch: a.height, fixed: getComputedStyle(node.closest('.landing-dots') as Element).position === 'fixed', right: n.right};
-    }));
-    for (const b of boxes) {
-      expect(b.text).toBeTruthy();
-      expect([b.clip, b.opacity, b.visibility, b.display]).toEqual(['none', '1', 'visible', b.display]);
-      expect(b.display).not.toBe('none');
-      expect(b.w).toBeGreaterThan(0);
-      expect(b.h).toBeGreaterThan(0);
-      expect(b.inLink).toBe(true);
-      expect(b.fixed).toBe(rail);
-      expect(b.right).toBeLessThanOrEqual(width);
-    }
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
-    if (rail) {
-      const main = await page.locator('.landing-main').boundingBox(), dots = await page.locator('nav.landing-dots').boundingBox();
-      expect(main!.x + main!.width, 'the rail does not cover the main column').toBeLessThanOrEqual(dots!.x);
-    }
-    expect(pageErrors).toEqual([]);
-  });
-}
-
-test('SC1922-05 loading_success_failure_stays_reserved: a failed port list and unavailable readings keep the reserved room, with the retry reachable', async ({page, pageErrors}, info) => {
-  test.skip(info.project.name !== 'phone', 'measured at the two explicit phone sizes');
-  for (const {width, height} of COLD_PHONES) {
-    await page.setViewportSize({width, height});
-    await landingFeeds(page, null, null);   // no feed, no tide: four unavailable tiles
-    await page.route('**/data/home-ports.json', route => route.fulfill({status: 503, json: {error: 'down'}}));
-    const release = await holdEntry(page);
-    await watchShifts(page);
-    await page.goto('/?ui=v2', {waitUntil: 'commit'});
-    await expect(page.locator('.landing-slot--form')).toBeAttached();
-    await slotsLaidOut(page);
-    const slot = (await boxOf(page, '.landing-slot--form'))!;
-    release();
-    await expect(page.locator('.landing .port-input-actions')).toBeVisible();
-    await expect(page.locator('.landing .port-input-results').getByRole('button', {name: 'Try again'})).toBeVisible();
-    await expect(page.locator('.landing-tiles li[data-reading]')).toHaveCount(4);
-    const form = (await boxOf(page, 'form.port-input'))!;
-    near(form.y, slot.y, `${width} px: the failed form is where its slot was`);
-    expect(form.h, `${width} px: the failed list does not collapse the form below its slot`).toBeGreaterThanOrEqual(slot.h - 1);
-    const results = (await boxOf(page, '.landing .port-input-results'))!;
-    expect(results.h, `${width} px: the results viewport keeps its height`).toBeGreaterThanOrEqual(Math.min(320, height * 0.4) - 1);
-    const sums = await shiftSums(page);
-    expect(sums.counted).toBeLessThan(CLS_BUDGET);
-    expect(sums.all).toBeLessThan(CLS_BUDGET);
-    await page.unrouteAll({behavior: 'ignoreErrors'});
-  }
-  expect(pageErrors).toEqual([]);
-});
-
-test('SC1922-05 spanish_wrap_and_accessibility_growth: the Spanish page at both widths grows without clipping, overflow or overlap; every action stays reachable', async ({page, pageErrors}, info) => {
-  test.skip(info.project.name !== 'phone', 'measured at the two explicit phone sizes');
-  for (const {width, height} of COLD_PHONES) {
-    await page.setViewportSize({width, height});
-    await landingFeeds(page);
-    await page.goto('/?ui=v2&lang=es');
-    await expect(page.locator('.landing-tiles li[data-reading]')).toHaveCount(4);
-    await expect(page.locator('.landing .port-input-list [data-port]').first()).toBeVisible();
-    await expect(page.locator('.landing .port-input-actions button')).toHaveCount(2);
-    const state = await page.evaluate(() => {
-      const box = (sel: string) => { const r = document.querySelector(sel)?.getBoundingClientRect(); return r ? {x: r.left, right: r.right, top: r.top + scrollY, bottom: r.bottom + scrollY} : null; };
-      const buttons = [...document.querySelectorAll('.landing .port-input-actions button')].map(b => { const r = b.getBoundingClientRect(); return {x: r.left, right: r.right, clipped: b.scrollWidth > b.clientWidth + 1}; });
-      return {overflow: document.documentElement.scrollWidth - innerWidth, form: box('form.port-input'), dots: box('nav.landing-dots'), footer: box('footer.landing-foot'), buttons, results: document.querySelector('.landing .port-input-results')!.getBoundingClientRect().height};
-    });
-    expect(state.overflow, `${width} px: no horizontal overflow`).toBeLessThanOrEqual(0);
-    for (const b of state.buttons) { expect(b.x).toBeGreaterThanOrEqual(0); expect(b.right).toBeLessThanOrEqual(width); expect(b.clipped, 'an action label is not cut off').toBe(false); }
-    expect(state.form!.bottom, 'the dots start below the form').toBeLessThanOrEqual(state.dots!.top + 1);
-    expect(state.dots!.bottom, 'the footer starts below the dots').toBeLessThanOrEqual(state.footer!.top + 1);
-    expect(state.results, 'the results keep their viewport').toBeGreaterThanOrEqual(Math.min(320, height * 0.4) - 1);
-    await page.locator('.landing .port-input-actions button').last().scrollIntoViewIfNeeded();
-    await expect(page.locator('.landing .port-input-actions button').last()).toBeInViewport();
-  }
-  expect(pageErrors).toEqual([]);
-});
-
-test('SC1922-05 save_data_and_no_webgl: with Save-Data on and no map, the reservation still holds and the cold load stays under the budget', async ({page, pageErrors}, info) => {
-  test.skip(info.project.name !== 'phone', 'measured at the phone size');
-  await page.setViewportSize(COLD_PHONES[0]);
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'connection', {value: {saveData: true}, configurable: true});
-    const real = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) { return kind === 'webgl2' ? null : (real as (...args: unknown[]) => unknown).call(this, kind, ...rest); } as typeof real;
-  });
-  await landingFeeds(page);
-  const release = await holdEntry(page);
-  await watchShifts(page);
-  await page.goto('/?ui=v2', {waitUntil: 'commit'});
-  await expect(page.locator('.landing-slot--form')).toBeAttached();
-  await slotsLaidOut(page);
-  const slot = (await boxOf(page, '.landing-slot--form'))!;
-  release();
-  await expect(page.locator('form.port-input')).toBeVisible();
-  near((await boxOf(page, 'form.port-input'))!.y, slot.y, 'the form is where its slot was');
-  await expect(page.locator('.landing-shore path')).toHaveCount(2);   // the static shoreline alone
-  const sums = await shiftSums(page);
-  expect(sums.counted).toBeLessThan(CLS_BUDGET);
-  expect(sums.all).toBeLessThan(CLS_BUDGET);
-  await expect(page.locator('.landing-night')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });

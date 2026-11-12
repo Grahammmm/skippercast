@@ -4,10 +4,8 @@ This adapter never resolves the original source pointer or re-runs native
 qualification. Scientific authority is the separate bound independent review.
 """
 import hashlib
-import io
 import json
 from pathlib import Path
-import stat
 import tempfile
 import zipfile
 import os
@@ -21,7 +19,6 @@ REVIEW = 'coastal-derived-window-review-v1'
 KEYS = {'depth', 'raw_elevation_data', 'raw_uncertainty_data', 'elevation_mask',
         'uncertainty_mask', 'source_pair_valid', 'legacy_25_300ft_uncertainty_0_1m'}
 MAX_OUTPUT = 8 * 1024 * 1024
-ARRAY_CAP = 4 * 1024 * 1024
 
 
 def _derived(root, artifact, contract):
@@ -31,34 +28,11 @@ def _derived(root, artifact, contract):
     return resolve(root, artifact, contract=contract, cap=4*1024*1024)
 
 
-def _snapshot(path, artifact):
-    """Read one bounded immutable copy of the admitted file and re-authenticate those exact bytes."""
-    fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0))
-    try:
-        info = os.fstat(fd)
-        if not stat.S_ISREG(info.st_mode) or info.st_size > ARRAY_CAP:
-            raise ValueError('bounded regular derived array snapshot required')
-        chunks, remaining = [], ARRAY_CAP + 1
-        while remaining > 0:
-            chunk = os.read(fd, remaining)
-            if not chunk:
-                break
-            chunks.append(chunk)
-            remaining -= len(chunk)
-    finally:
-        os.close(fd)
-    payload = b''.join(chunks)
-    if (len(payload) > ARRAY_CAP or len(payload) != artifact['bytes']
-            or hashlib.sha256(payload).hexdigest() != artifact.get('sha256')):
-        raise ValueError('authenticated derived array snapshot bytes/hash changed')
-    return payload
-
-
 def arrays(root, artifact, *, side=128):
-    """Inspect bounded NPY declarations, then decode those same authenticated snapshot bytes."""
+    """Inspect bounded NPY declarations before loading already-derived arrays."""
     import numpy as np
-    payload = _snapshot(_derived(root, artifact, 'coastal-authenticated-arrays-v1'), artifact)
-    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+    path = _derived(root, artifact, 'coastal-authenticated-arrays-v1')
+    with zipfile.ZipFile(path) as archive:
         entries = archive.infolist()
         if (len(entries) != len(KEYS) or {item.filename for item in entries} != {key+'.npy' for key in KEYS}
                 or sum(item.file_size for item in entries) > 4*1024*1024):
@@ -76,7 +50,7 @@ def arrays(root, artifact, *, side=128):
                         or dtype.kind not in 'fb' or dtype.itemsize > 8
                         or stream.tell()+side*side*dtype.itemsize != item.file_size):
                     raise ValueError('bounded exact128x128 primitive derived arrays required')
-    with np.load(io.BytesIO(payload), allow_pickle=False) as saved:
+    with np.load(path, allow_pickle=False) as saved:
         result = {key: saved[key].copy() for key in KEYS}
     for key in KEYS:
         expected = np.dtype('float64') if key == 'depth' else np.dtype('float32') if key.startswith('raw_') else np.dtype('bool')

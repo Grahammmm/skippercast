@@ -55,15 +55,9 @@ const REASONS = ['hole', 'conflict', 'ring-range', 'datum-suspect', 'nodata'];
 
 export const depthContoursURL = (id: string): string => `regions/${encodeURIComponent(id)}/depth-contours.geojson`;
 export const depthContoursOverviewURL = (id: string): string => `regions/${encodeURIComponent(id)}/depth-contours-overview.geojson`;
-/**
- * The contour file the Chart draws at a `?view=` zoom: the overview below the detail zoom, unless the full one already loaded.
- * RF0035-8: a region.json that lists exactly one form gets that form at every zoom; no list (or both) keeps the zoom rule.
- */
-export const contoursFor = (id: string, viewZoom: number, detail = false): string => {
-  const overview = chartFileListed(id, 'depth-contours-overview.geojson'), full = chartFileListed(id, 'depth-contours.geojson');
-  if (overview !== full) return full ? depthContoursURL(id) : depthContoursOverviewURL(id);
-  return detail || viewZoom - ZOOM_OFFSET >= DETAIL_ZOOM ? depthContoursURL(id) : depthContoursOverviewURL(id);
-};
+/** The contour file the Chart draws at a `?view=` zoom: the overview below the detail zoom, unless the full one already loaded. */
+export const contoursFor = (id: string, viewZoom: number, detail = false): string =>
+  detail || viewZoom - ZOOM_OFFSET >= DETAIL_ZOOM ? depthContoursURL(id) : depthContoursOverviewURL(id);
 
 type Json = Record<string, unknown>;
 export interface ContourSource {

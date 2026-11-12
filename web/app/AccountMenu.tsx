@@ -95,8 +95,8 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
 
   return (
     <div class="app-account" ref={root} data-inline={inline ? 'true' : undefined} onKeyDown={onDismissKey}>
-      <button ref={trigger} type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded={open} aria-controls={id} title={accountLabel(s, lang)}
-        onClick={() => setOpen(!open)}><Icon name="user" size={18} /><span class="app-account-label">{accountLabel(s, lang)}</span></button>
+      <button ref={trigger} type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded={open} aria-controls={id}
+        onClick={() => setOpen(!open)}><Icon name="user" size={18} />{accountLabel(s, lang)}</button>
       <div id={id} ref={panel} class="app-account-panel" hidden={!open} onKeyDown={onKeyDown} aria-label={t('accountMenu.aria', lang)} role="group">
         <section aria-labelledby={`${id}-account`}>
           <h2 id={`${id}-account`} class="ui-eyebrow">{s.state === 'signed-in' ? (s.name ? t('accountMenu.signedInAs', lang, {name: s.name}) : t('accountMenu.signedIn', lang)) : t('accountMenu.account', lang)}</h2>

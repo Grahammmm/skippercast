@@ -16,24 +16,9 @@ MAX_DOCUMENT = 128 * 1024
 
 
 def _number(value):
-    if type(value) not in (int, float):
-        raise ValueError("finite non-boolean clock required")
-    try:
-        finite = math.isfinite(value)
-    except OverflowError:
-        finite = False
-    if not finite:
+    if type(value) not in (int, float) or not math.isfinite(value):
         raise ValueError("finite non-boolean clock required")
     return value
-
-
-def _unique_members(pairs):
-    out = {}
-    for name, value in pairs:
-        if name in out:
-            raise ValueError("duplicate metadata member")
-        out[name] = value
-    return out
 
 
 def _canonical(value):
@@ -87,7 +72,7 @@ def _document(wrapper, expected_root, contract, *, raw=False):
         os.close(fd)
     if raw:
         return data
-    document = json.loads(data, object_pairs_hook=_unique_members)
+    document = json.loads(data)
     if not isinstance(document, dict) or document.get("schema") != contract:
         raise ValueError("metadata schema mismatch")
     return document

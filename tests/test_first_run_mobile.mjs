@@ -72,12 +72,6 @@ test('the compact peek row keeps the card markup and only peek-scoped rules', as
   const margin = ['.ui-sheet .app-firstrun .ui-button, .ui-sheet .app-firstrun input'];
   for (const sel of margin) assert.ok(rules.includes(sel), sel);
   assert.match(css, /\.ui-sheet \.app-firstrun \.ui-button, \.ui-sheet \.app-firstrun input \{ scroll-margin-block: var\(--space-2\); \}/);
-  // UXFIX-13 (G, D1): the Keep button is a visible touch-size button on the heading row at peek, never clipped to 1x1 or shown only on focus.
-  const keepRule = css.match(/\.ui-sheet\[data-detent="peek"\] \.app-firstrun > \.ui-button \{([^}]*)\}/);
-  assert.ok(keepRule, 'a peek rule for the Keep button');
-  assert.match(keepRule[1], /min-height: var\(--touch-min\)/);
-  assert.match(keepRule[1], /grid-area: 1 \/ 2/);
-  assert.doesNotMatch(css, /\.app-firstrun > \.ui-button:focus/);
   const peek = rules.filter(sel => !margin.includes(sel));
   assert.ok(peek.length >= 5, 'the peek rules exist');
   for (const sel of peek) for (const part of sel.split(',')) assert.match(part.trim(), /^\.ui-sheet\[data-detent="peek"\] \.app-firstrun/, part);

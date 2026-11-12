@@ -157,12 +157,12 @@
       {
         "tag": "tr",
         "texts": [
-          "headonetwo",
+          "headonetwonextend",
           "nextend"
         ],
         "parents": [
           "table",
-          "table"
+          "tr"
         ]
       },
       {

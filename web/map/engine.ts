@@ -29,8 +29,6 @@ export interface MapLibraryModule {
 export interface EngineCamera {readonly latitude: number; readonly longitude: number; readonly zoom: number}
 /** MapLibre's zoom uses 512 px tiles: its zoom z shows what a 256 px web map shows at z + 1. */
 export const ZOOM_OFFSET = 1;
-/** RF2205-5: how long a click waits for a double-tap zoom before it picks (MapLibre's tap interval is 500 ms). */
-export const PICK_SETTLE_MS = 550;
 /** The span-to-zoom rule's range (stage.ts zoomForSpan), in `?view=` zoom. */
 export const VIEW_ZOOM = {min: 7, max: 18} as const;
 
@@ -46,8 +44,6 @@ export interface EngineOptions {
   onSourceTileLoaded?(sourceId: string): void;
   /** Changes invalidate pending tile recovery (for example, on a region change). */
   sourceContext?(): unknown;
-  /** RF2205-5: a delayed pick is dropped unless this still returns the identity it had at the click (separate from sourceContext, so gesture state never resets tile recovery). Null means picking is closed: it never accepts a pick, even when null at both the click and the dispatch. */
-  pickContext?(): unknown;
   /** A click: the first feature under it in `pickLayers`, or null for empty water, and where it fell. */
   onPick?(layer: string | null, properties: Record<string, unknown> | null, at: {lon: number; lat: number} | null): void;
   pickLayers?: readonly string[];
@@ -89,8 +85,6 @@ export interface MapView {
 export interface Overlay {
   readonly sources: Readonly<Record<string, MapLibre.SourceSpecification>>;
   readonly layers: readonly MapLibre.LayerSpecification[];
-  /** RF1935-3: the first source error removes this overlay's layers and sources and is reported once; nothing re-adds the same object. */
-  readonly stopOnError?: boolean;
 }
 
 export interface Engine {
@@ -180,25 +174,8 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   const overlayOf = (sourceId: string | undefined): string | null =>
     sourceId === undefined ? null : [...overlays].find(([, o]) => sourceId in o.sources)?.[0] ?? null;
 
-  // RF1935-3: overlays that failed (stopOnError) are detached for good; their source ids stay known so late errors are dropped.
-  const failed = new WeakSet<Overlay>();
-  const retired = new Set<string>();
-  let destroyed = false;
-  // Declared below with the other overlay helpers; hoisted function so the error handler can use it.
-  function retire(layer: string, overlay: Overlay): void {
-    failed.add(overlay);
-    for (const l of overlay.layers) if (map.getLayer(l.id)) map.removeLayer(l.id);
-    for (const id of Object.keys(overlay.sources)) { if (map.getSource(id)) map.removeSource(id); retired.add(id); }
-    overlays.delete(layer);
-  }
-
   map.on('error', (event: MapLibre.ErrorEvent & {sourceId?: string}) => {
-    if (destroyed) return;
-    const own = overlayOf(event.sourceId);
-    if (own === null && event.sourceId !== undefined && retired.has(event.sourceId)) return;
-    const stop = own === null ? undefined : overlays.get(own);
-    if (own !== null && stop?.stopOnError) { retire(own, stop); options.onLayerError(own, event.error); return; }
-    const layer = own ?? sourceLayer(event.sourceId);
+    const layer = overlayOf(event.sourceId) ?? sourceLayer(event.sourceId);
     if (layer) options.onLayerError(layer, event.error);
     else console.error('Chart error', event.error);
   });
@@ -223,35 +200,12 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     const c = map.getCenter();
     options.onMove({latitude: c.lat, longitude: c.lng, zoom: map.getZoom() + ZOOM_OFFSET});
   });
-  // RF2205-5: a click settles for PICK_SETTLE_MS before it picks, so a double-tap zoom never selects the mark under the finger.
-  // dblclick, zoomstart and movestart (native touch zoom may fire no dblclick) drop the pending pick; clicks during a camera gesture are ignored until moveend.
-  let cancelPick = (): void => {};
-  let moving = false;
   if (options.onPick) {
     const pick = options.onPick;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    cancelPick = () => { clearTimeout(timer); timer = undefined; };
-    const gestureStart = (): void => { moving = true; cancelPick(); };
-    map.on('dblclick', cancelPick);
-    map.on('zoomstart', gestureStart);
-    map.on('movestart', gestureStart);
-    map.on('moveend', () => { moving = false; });
     map.on('click', (event: MapLibre.MapMouseEvent) => {
-      cancelPick();
-      if (moving || destroyed) return;
       const query = (ids: readonly string[]) => { const layers = ids.filter(id => map.getLayer(id)); return layers.length ? map.queryRenderedFeatures(event.point, {layers})[0] : undefined; };
       const feature = query(options.pickFirst?.() ?? []) ?? query(options.pickLayers ?? []);
-      const layer = feature?.layer.id ?? null, properties = feature ? feature.properties as Record<string, unknown> : null;
-      const at = event.lngLat ? {lon: event.lngLat.lng, lat: event.lngLat.lat} : null;
-      // A pickContext that answers null means picking is closed (Chart hidden, or not the shown view): it never accepts a pick, at the click or at dispatch.
-      const gated = !!options.pickContext, context = options.pickContext?.();
-      if (gated && context === null) return;
-      timer = setTimeout(() => {
-        timer = undefined;
-        const now = options.pickContext?.();
-        if (destroyed || moving || (gated && now === null) || now !== context) return;
-        pick(layer, properties, at);
-      }, PICK_SETTLE_MS);
+      pick(feature?.layer.id ?? null, feature ? feature.properties as Record<string, unknown> : null, event.lngLat ? {lon: event.lngLat.lng, lat: event.lngLat.lat} : null);
     });
   }
   if (options.onIdle) map.on('idle', options.onIdle);
@@ -272,8 +226,6 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   const show = (layerId: string, visible: boolean): void => { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); };
   const fill = (sourceId: string, data: SourceData): void => { (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data); };
   const draw = (layer: string, overlay: Overlay | null, before?: string | readonly string[]): void => {
-    if (overlay && failed.has(overlay)) return;
-    for (const id of Object.keys(overlay?.sources ?? {})) retired.delete(id);
     const old = overlays.get(layer), next = overlay ?? {sources: {}, layers: []};
     for (const l of old?.layers ?? []) if (!next.layers.some(n => n.id === l.id) && map.getLayer(l.id)) map.removeLayer(l.id);
     for (const id of Object.keys(old?.sources ?? {})) if (!(id in next.sources) && map.getSource(id)) map.removeSource(id);
@@ -332,7 +284,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     flyover,
     stopFlyover() { flight?.(); },
     setPadding(p) { if (typeof map.setPadding === 'function') map.setPadding(p); },
-    setCamera(c) { flight?.(); cancelPick(); map.jumpTo({center: [c.longitude, c.latitude], zoom: c.zoom - ZOOM_OFFSET}); },
+    setCamera(c) { flight?.(); map.jumpTo({center: [c.longitude, c.latitude], zoom: c.zoom - ZOOM_OFFSET}); },
     setVisible(layerId, visible) {
       if (early && !map.getLayer(layerId)) early.visible.set(layerId, visible);
       else { early?.visible.delete(layerId); show(layerId, visible); }
@@ -364,6 +316,6 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       if (early && !map.getSource(sourceId)) early.images.set(sourceId, texture);
       else { early?.images.delete(sourceId); paint(sourceId, texture); }
     },
-    destroy() { destroyed = true; cancelPick(); retired.clear(); flight?.(); resize?.disconnect(); map.remove(); },
+    destroy() { flight?.(); resize?.disconnect(); map.remove(); },
   };
 }

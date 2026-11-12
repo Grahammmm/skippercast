@@ -163,11 +163,7 @@ def read_rows(data: bytes, column_set: str) -> list[dict[str, str]]:
                 if canonical in mapping.values():
                     raise FileImportError(f"{column_set}: ambiguous column {canonical}")
                 mapping[header] = canonical
-        rows = []
-        for row in reader:
-            if None in row:  # DictReader's rest key: more cells than the header; an unquoted comma shifts identities
-                raise FileImportError(f"{column_set}: CSV unreadable near line {reader.reader.line_num}")
-            rows.append(row)
+        rows = list(reader)
     except csv.Error:
         raise FileImportError(f"{column_set}: CSV unreadable near line {reader.reader.line_num}") from None
     present = set(mapping.values())

@@ -339,19 +339,6 @@ test('every readout tile shows a source and an age, a stale one says stale, and 
   assert.match(late, /data-state="stale">Buoy feed stale, updated 3 h ago</);
 });
 
-test('RF2115-6 landing_layer_names_at_rest: no rule hides a layer name; the fixed rail only exists on a wide, tall screen', () => {
-  const css = readFileSync(join(ROOT, 'web/landing/landing.css'), 'utf8');
-  const rules = [...css.matchAll(/(^|\n)\s*([^{}\n@][^{}\n]*)\{([^}]*)\}/g)].map(m => [m[2].trim(), m[3]]).filter(([sel]) => /landing-dot-name/.test(sel));
-  assert.ok(rules.length > 0, 'the name keeps its layout rule');
-  for (const [sel, body] of rules) assert.doesNotMatch(body, /clip-path|opacity\s*:\s*0|visibility\s*:\s*hidden|position\s*:\s*absolute|display\s*:\s*none|text-overflow/, `${sel} leaves the name visible at rest`);
-  assert.doesNotMatch(css, /landing-dots a:(hover|focus-visible) \.landing-dot-name/, 'hover and focus never decide whether the name shows');
-  const wide = /@media \(min-width: 1280px\) and \(min-height: 700px\) \{([\s\S]*?)\n\}/.exec(css);
-  assert.ok(wide, 'a wide and tall block exists');
-  assert.match(wide[1], /\.landing-dots \{[^}]*position: fixed[^}]*max-width: 240px/);
-  const broad = /@media \(min-width: 1024px\) \{([\s\S]*?)\n\}/.exec(css.slice(css.indexOf('.landing-more')));
-  assert.doesNotMatch(broad[1], /landing-dots|landing-dot-name/, 'compact desktops keep the in-flow list');
-});
-
 test('layer dots link each rail entry into the app with that layer, keeping the ui switch', async () => {
   const {LayerDots, layerURL, DOT_CURRENT, DOT_LABELS, DEFAULT_CURRENT, RAIL_ENTRIES, render, h} = await load();
   assert.deepEqual(DOT_LABELS, Object.fromEntries(RAIL_ENTRIES.map(e => [e.id, e.label])), 'the dots carry the rail labels');
@@ -558,33 +545,4 @@ test('the landing warms the app\'s first-paint files once, at low priority, and 
   assert.deepEqual(await warmApp(fetchFn, {connection: {saveData: true}}), []);
   assert.deepEqual(asked, [], 'Save-Data: no request at all');
   assert.deepEqual(await warmApp(async () => { throw new Error('offline'); }, {}), [], 'a failure is quiet');
-});
-
-test('SC1922-05 reserved_slots: inert placeholders in the app host, the phone reservations in the stylesheets, the real hero, hosts and footer untouched', () => {
-  const page = readFileSync(join(ROOT, 'dist/landing.html'), 'utf8');
-  const css = readFileSync(join(ROOT, 'web/landing/landing.css'), 'utf8'), input = readFileSync(join(ROOT, 'web/landing/port-input.css'), 'utf8');
-  const app = /<div id="landing-app" class="landing-host">([\s\S]*?)<\/div>\s*<\/main>\s*<div id="landing-dots"/.exec(page);
-  assert.ok(app, 'the app host still opens with its own tag and holds only the placeholders');
-  const slots = [...app[1].matchAll(/<div class="landing-slot landing-slot--(readout|form)" aria-hidden="true"><\/div>/g)].map(m => m[1]);
-  assert.ok(isDeepStrictEqual(slots, ['readout', 'form']), 'a readout slot, then a form slot, empty and hidden from assistive technology');
-  assert.equal(app[1].replace(/<div class="landing-slot[^>]*><\/div>/g, ''), '', 'no words, controls or focusable parts in the host before the module');
-  assert.doesNotMatch(page, /landing-slot[^>]*(?:tabindex|href|<button|<input)/);
-  assert.ok(page.indexOf('landing-lede') < page.indexOf('id="landing-app"') && page.indexOf('id="landing-app"') < page.indexOf('id="landing-dots"'), 'the hero, then the app host, then the dots');
-  for (const id of ['landing-night', 'landing-shore', 'landing-dots', 'landing-credit']) assert.match(page, new RegExp(`<div id="${id}" class="landing-host"></div>`), `${id} stays an empty host`);
-  // the placeholders show on a phone only, and mounting replaces them (main.tsx mount: host.replaceChildren())
-  assert.match(css, /\.landing-slot \{ display: none; \}/);
-  const phone = /@media \(max-width: 599px\) \{\s*\.landing \{([\s\S]*?)\n  \}\n  \.landing-slot \{ display: block; \}([\s\S]*?)\n\}/.exec(css);
-  assert.ok(phone, 'the phone block holds the reservations');
-  for (const name of ['tiles', 'foot', 'actions', 'note', 'results', 'dots', 'credit', 'readout', 'form']) assert.match(phone[1], new RegExp(`--landing-${name}-h:`), `--landing-${name}-h is defined for the phone`);
-  assert.match(phone[2], /\.landing-slot--readout \{ min-height: var\(--landing-readout-h\); \}/);
-  assert.match(phone[2], /\.landing-slot--form \{ min-height: var\(--landing-form-h\); \}/);
-  assert.match(phone[2], /\.landing-tiles \{ min-height: var\(--landing-tiles-h\); \}/);
-  assert.match(phone[2], /#landing-dots \{ display: block; min-height: var\(--landing-dots-h\); \}/);
-  assert.match(phone[2], /\.landing-foot #landing-credit \{ display: block; min-height: var\(--landing-credit-h\); \}/);
-  assert.match(css, /#landing-app \{ display: flex; flex-direction: column; gap: var\(--space-4\); \}/);
-  assert.doesNotMatch(css, /\.landing-host \{[^}]*(?:min-height|min-block-size)/, 'no blanket host sizing: the decorative night and shoreline hosts stay display: contents');
-  assert.match(css, /\.landing-host \{ display: contents; \}/);
-  // the form's results and actions reserve only inside the landing, so the app's dialog and first-run sheet keep their sizing
-  assert.match(input, /@media \(max-width: 599px\) \{\s*\.landing \.port-input-results \{ min-height: var\(--landing-results-h\); \}\s*\.landing \.port-input-actions \{ min-height: var\(--landing-actions-h\); \}\s*\}/);
-  assert.doesNotMatch(input.replace(/@media \(max-width: 599px\) \{\s*\.landing \.port-input-results[\s\S]*?\n\}\n/, ''), /--landing-/, 'no shared or app rule reads a landing reservation');
 });

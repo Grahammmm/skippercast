@@ -37,10 +37,7 @@ def validate_binding(row):
         if (not member or PurePosixPath(member).is_absolute() or '..' in PurePosixPath(member).parts
                 or '\\' in member or ':' in member):
             raise ValueError('Unsafe terrain support archive member')
-    # Same lexical normalization as ArcInfo extraction, applied only after the
-    # safety loop: redundant separators or dot parts select the same product.
-    if (PurePosixPath(binding['archive_member']).as_posix().rstrip('/')
-            == PurePosixPath(row['archive_member']).as_posix().rstrip('/')):
+    if binding['archive_member'].rstrip('/') == row['archive_member'].rstrip('/'):
         raise ValueError('Terrain support must select a separate categorical product')
 
 

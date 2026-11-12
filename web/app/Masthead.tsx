@@ -9,16 +9,12 @@
 import {useEffect} from 'preact/hooks';
 import {CHAT_PATH} from '../advisor/entry.ts';
 import {language, t, type Language} from '../i18n.ts';
-import {Button} from '../ui/Button.tsx';
 import {Icon, type IconName} from '../ui/icons.tsx';
 import {ensureSession, session} from '../account.ts';
 import {appView, navigate, region, withParams, type AppView} from '../state.ts';
 import {currentRegionInfo, freshness, regionLoad, retryRegion} from './App.tsx';
-import {manualRefresh, refreshBriefNow} from '../brief/Brief.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
 import {DegradedNotice} from '../degraded-notice.tsx';
-import {loadRegionPorts} from '../ports.ts';
-import {currentRegionPreview} from '../region-preview.ts';
 
 /** A view's name in `lang` (the catalogue's shell.view.*); rendering passes the language it reads from the signal. */
 export const viewLabel = (view: AppView, lang: Language = 'en'): string => t(`shell.view.${view}`, lang);
@@ -53,26 +49,17 @@ export function Brand() {
 }
 
 export function Location() {
-  const id = region.value, preview = currentRegionPreview();
-  useEffect(() => { if (id) void loadRegionPorts(id); }, [id]);
   const info = currentRegionInfo();
   const load = regionLoad.value;
   const state = load?.id === region.value ? load.state : null;
   const missing = state === 'missing', lang = language.value;
-  const location = <span class="app-location ui-mono" data-region={id ?? ''}>
-    {info ? <>{info.name} <span class="app-location-coords">{coordinates(info.center)}</span></> : missing ? `"${id}"` : id ? `${titleCase(id)} —` : t('shell.location.none', lang)}
-  </span>;
   return (
     <>
-      {preview ? <span class="app-location-preview">
-        <span class="app-location-preview-line">
-          {location}
-          <span class="app-region-preview-label">{t('shell.regionPreview.label', lang)}</span>
-        </span>
-        <span class="app-region-preview-reason">{t('shell.regionPreview.reason', lang)}</span>
-      </span> : location}
+      <span class="app-location ui-mono" data-region={region.value ?? ''}>
+        {info ? <>{info.name} <span class="app-location-coords">{coordinates(info.center)}</span></> : missing ? `"${region.value}"` : region.value ? `${titleCase(region.value)} —` : t('shell.location.none', lang)}
+      </span>
       {state === 'loading' ? <span role="status">{t('shell.location.loading', lang)}</span> : null}
-      {state === 'error' ? <span role="status">{t('shell.location.error', lang)}{' '}<Button size="sm" variant="quiet" onClick={retryRegion}>{t('shell.location.retry', lang)}</Button></span> : null}
+      {state === 'error' ? <span role="status">{t('shell.location.error', lang)}{' '}<button type="button" onClick={retryRegion}>{t('shell.location.retry', lang)}</button></span> : null}
       {missing ? <span role="status">{t('shell.location.missing', lang, {region: region.value ?? ''})}{' '}<a href="/">{t('shell.location.choose', lang)}</a></span> : null}
     </>
   );
@@ -101,17 +88,11 @@ export function ViewNav({href, icons = false, class: cls}: {href?: string; icons
 export function FreshnessDot() {
   const fresh = freshness.value, lang = language.value;
   const state = {ok: t('shell.fresh.ok', lang), stale: t('shell.fresh.stale', lang), offline: t('shell.fresh.offline', lang), unknown: t('shell.fresh.unknown', lang)}[fresh.state];
-  // SC1922-08: Refresh asks the sources again once per press; the line beside it words a refused or failed press (a code in manualRefresh).
-  // A refused press says Offline whatever the chip's own state was (the browser, not the age, said it): the line is cleared when the connection returns or the region changes.
-  const manual = manualRefresh.value, busy = manual === 'refreshing';
-  const line = manual === 'failed' ? 'shell.refresh.failed' : manual === 'offline' ? 'shell.fresh.offline' : null;
   return (
     <span class="app-fresh" role="status" data-state={fresh.state} aria-label={t('shell.fresh', lang, {state})}>
       <span class="app-fresh-dot" aria-hidden="true"></span>
       {fresh.state === 'offline' ? <span data-fresh-offline>{state}</span> : null}
       <span class="ui-mono">{fresh.age ?? '—'}</span>
-      <Button variant="quiet" class="app-fresh-refresh" disabled={busy} onClick={() => { void refreshBriefNow(); }}>{t(busy ? 'dock.updating' : 'shell.refresh', lang)}</Button>
-      {line ? <span data-refresh-line={manual}>{t(line, lang)}</span> : null}
     </span>
   );
 }

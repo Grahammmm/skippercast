@@ -7,7 +7,6 @@ habitat polygon or assert parity with the production EPSG:3310 pipeline.
 """
 from dataclasses import dataclass
 import math
-import operator
 from pathlib import Path
 import re
 from urllib.parse import urlparse
@@ -56,31 +55,16 @@ class OriginalRegularBagWindow:
     uncertainty_mask: np.ndarray
 
     def cell_id(self, row, col):
-        # Actual integer indices only: floats (even whole), booleans and other
-        # non-index values never name a cell or add a second spelling of one.
-        row, col = _local_index(row), _local_index(col)
         if not (0 <= row < self.elevation_m.shape[0] and 0 <= col < self.elevation_m.shape[1]):
             raise IndexError('Local cell index is outside the original window')
         return f'{self.cell_id_prefix}:{self.row_off + row}:{self.col_off + col}'
-
-
-def _local_index(value):
-    if isinstance(value, (bool, np.bool_)):
-        raise TypeError('Local cell indices must be integers')
-    try:
-        return int(operator.index(value))
-    except TypeError:
-        raise TypeError('Local cell indices must be integers') from None
 
 
 def _integer_window(window):
     if not isinstance(window, Window):
         raise ValueError('An explicit rasterio Window is required')
     values = (window.row_off, window.col_off, window.height, window.width)
-    # Compare the original value too: binary64 can round an exact Decimal or
-    # Fraction such as 1 + 2**-54 to an integer that int() would then misread.
-    if any(not math.isfinite(float(value)) or not float(value).is_integer()
-           or value != int(value) for value in values):
+    if any(not math.isfinite(float(value)) or not float(value).is_integer() for value in values):
         raise ValueError('Native source windows require integer pixel offsets and sizes')
     row_off, col_off, height, width = (int(value) for value in values)
     if row_off < 0 or col_off < 0 or height <= 0 or width <= 0:

@@ -73,11 +73,6 @@ def require_closed_database(path):
             raise ValueError('closed checkpointed SQLite required; preserve nonempty '+suffix)
     return path
 
-def _open_producer(path):
-    """Open a closed producer database read-only at its literal path (URI-escaped)."""
-    path=Path(require_closed_database(path)).resolve()
-    return sqlite3.connect(path.as_uri()+'?mode=ro&immutable=1',uri=True)
-
 def import_retained(store,*,source_root,source_db,plan_ref,now,deadline,adoption=None):
     """Validate all producer/science contracts before any copy or SQL effect."""
     now=_stamp(now);deadline=_stamp(deadline)
@@ -114,7 +109,7 @@ def import_retained(store,*,source_root,source_db,plan_ref,now,deadline,adoption
     if any(item is None for item in items):raise ValueError('completed accepted qualification producers required')
     source_db=Path(source_db).resolve(strict=True);source_db.relative_to(source_root)
     require_closed_database(source_db)
-    connection=_open_producer(source_db)
+    connection=sqlite3.connect('file:'+str(require_closed_database(source_db))+'?mode=ro&immutable=1',uri=True)
     connection.row_factory=sqlite3.Row
     producers=[];all_refs={}
     try:
@@ -156,7 +151,7 @@ def import_retained(store,*,source_root,source_db,plan_ref,now,deadline,adoption
     finally:connection.close()
     segment_doc=load(source_root,plan['segment'],contract='coastal-segment-v1') if 'segment' in plan else None
     if segment_doc is None:
-        connection=_open_producer(source_db)
+        connection=sqlite3.connect('file:'+str(require_closed_database(source_db))+'?mode=ro&immutable=1',uri=True)
         try:segment_doc=json.loads(connection.execute('SELECT record_json FROM segments WHERE segment_id=?',(infos[0]['segment_id'],)).fetchone()[0])
         finally:connection.close()
     if parent:
@@ -270,9 +265,7 @@ def validate_input(store,descriptor,*,now,horizon):
         raise ValueError('registered subset outside original parent')
     if document.get('saved_area_adoption') and (len(items)!=1 or items[0]['result_ref']!=document['saved_area_adoption']['qualified_result']):
         raise ValueError('adopted map exact single original A required')
-    proofs=document['producer_proofs']
-    if type(proofs) is not list or len(proofs)!=len(items):raise ValueError('exactly one retained producer proof per mapping item required')
-    for proof_ref,item in zip(proofs,items):
+    for proof_ref,item in zip(document['producer_proofs'],items):
         proof=load(store.root,proof_ref,contract=PROOF)
         stored=store.db.execute('SELECT record_json FROM retained_producers WHERE proof_sha=?',(proof_ref['sha256'],)).fetchone()
         if (not stored or json.loads(stored[0])!=proof or item is None

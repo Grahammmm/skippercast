@@ -437,11 +437,7 @@ WAL) so retention deletes files:
   dim_port, dim_starboard, ais_class, source)` for every vessel in the bbox,
   deduplicated in memory, keyed `(mmsi, ts, source)` like the position tables.
 
-A repeated key in `positions` or `discovery` keeps the earliest `received_at`. A repeated
-`statics` key keeps its first values and only fills fields that are NULL there (the two parts
-of one Class B type-24 report share a receipt millisecond), and only when `ais_class` and every
-field known on both rows agree; on any conflict the first row stays unchanged, and an exact
-duplicate or subset is a no-op. A position's `ts` is the transponder's fix
+All three ignore a repeated key. A position's `ts` is the transponder's fix
 second within the minute of receipt, so one report heard by two stations is
 stored once (`fleet/ais/sources/aisstream.py`).
 

@@ -47,25 +47,7 @@ def recent_files(client, max_age_hours=MAX_AGE_HOURS):
     return (found[:1] + [f for f in found[1:] if client.now - (f[0] + timedelta(hours=12)) <= window])[:MAX_FILES]
 
 
-def _bounds(bounds):
-    """Admit only finite non-bool numeric lon/lat pairs inside the supported range."""
-    try:
-        axes = [bounds["longitude"], bounds["latitude"]]
-        if not all(type(a) in (list, tuple) and len(a) == 2 for a in axes):
-            raise ValueError
-        (west, east), (south, north) = axes
-        for v in (west, east, south, north):
-            if type(v) not in (int, float) or (type(v) is float and not math.isfinite(v)):
-                raise ValueError
-        if not (-180 <= west < east <= 180 and -80 <= south < north <= 80):
-            raise ValueError
-    except (KeyError, TypeError, ValueError):
-        raise ValueError("Invalid regional chlorophyll bounds") from None
-    return west, south, east, north
-
-
 def read_subset(body, bounds, path, day):
-    west, south, east, north = _bounds(bounds)
     if not body.startswith(b"CDF\x01"):
         raise ValueError("NOAA chlorophyll subset is not NetCDF classic")
     with netcdf_file(BytesIO(body), mmap=False) as nc:
@@ -83,6 +65,9 @@ def read_subset(body, bounds, path, day):
         sample = datetime.fromtimestamp(float(t[0]), timezone.utc)
         if not day <= sample < day + timedelta(days=1):
             raise ValueError("NOAA chlorophyll sample time conflicts with source filename")
+        west, south, east, north = bounds["longitude"][0], bounds["latitude"][0], bounds["longitude"][1], bounds["latitude"][1]
+        if not (-180 <= west < east <= 180 and -80 <= south < north <= 80):
+            raise ValueError("Invalid regional chlorophyll bounds")
         rows = []
         values = chl[:].copy()
         for i, y in enumerate(lat):
@@ -105,7 +90,8 @@ def read_subset(body, bounds, path, day):
 
 def fetch(client, bounds):
     """Use the newest in-window file with valid cells; else the newest file's empty result."""
-    west, south, east, north = _bounds(bounds)
+    west, east = bounds["longitude"]
+    south, north = bounds["latitude"]
     query = urlencode({"var": "chl_oci", "north": north, "south": south,
                        "west": west, "east": east, "accept": "netcdf"})
     newest = None

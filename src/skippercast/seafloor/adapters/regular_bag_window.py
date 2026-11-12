@@ -6,7 +6,6 @@ habitat polygon or assert parity with the production EPSG:3310 pipeline.
 """
 from dataclasses import dataclass
 import math
-import operator
 from pathlib import Path
 import re
 from urllib.parse import urlparse
@@ -49,20 +48,9 @@ class OriginalRegularBagWindow:
     col_off: int
 
     def cell_id(self, row, col):
-        """Return the original cell identity for integer local indices only."""
-        row, col = _local_index(row), _local_index(col)
         if not (0 <= row < self.elevation_m.shape[0] and 0 <= col < self.elevation_m.shape[1]):
             raise IndexError('Local cell index is outside the original window')
         return f'{self.cell_id_prefix}:{self.row_off + row}:{self.col_off + col}'
-
-
-def _local_index(value):
-    if isinstance(value, (bool, np.bool_)):
-        raise TypeError('Local cell indices must be integers')
-    try:
-        return operator.index(value)
-    except TypeError:
-        raise TypeError('Local cell indices must be integers') from None
 
 
 def _integer_window(window):

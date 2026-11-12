@@ -94,11 +94,6 @@ const lead = html => html.split('class="ui-tile"')[0];
 async function onScreen(m, {daily = true} = {}) {
   m.regionInfo.value = INFO;
   if (daily) m.dailyFeed.value = montereyDaily;
-  m.beginVerdictRegion(INFO.id); m.noteRegionInfo(INFO.id);
-  const {tickets} = m.verdictEpoch.value;
-  m.verdictLoad.settle(tickets.daily, 'daily', daily ? {state:'loaded',data:{feed:montereyDaily,savedAt:null}} : {state:'failed'});
-  m.verdictLoad.settle(tickets.conditions, 'conditions', {state:'absent'});
-  m.verdictLoad.settle(tickets.coast, 'coast', {state:'absent'});
 }
 
 test('forecast_failed_abort_500_invalid: the loader tells a failed read from a loaded one, with a finite reason and no exception text', async () => {
@@ -304,8 +299,6 @@ test('forecast_saved_hold_is_labelled: a failed update keeps the saved forecast 
   const m = await load();   // the next visit
   m.enableSavedBrief(store);
   assert.equal(m.showSavedBrief(INFO.id), true);
-  m.regionInfo.value = INFO; m.noteRegionInfo(INFO.id);
-  m.verdictLoad.settle(m.verdictEpoch.value.tickets.coast, 'coast', {state:'absent'});
   const held = m.regionalForecast.value;
   assert.equal(held?.region, INFO.id, 'the saved forecast is on screen before any read');
   const fetchFn = scripted(status(500), good());

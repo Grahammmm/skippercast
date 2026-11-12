@@ -2,7 +2,6 @@
 // verdict the brief already computes (web/brief/verdict.ts) and the rules card's state (web/regs.ts),
 // above the map. Bundled with esbuild and rendered to strings, as tests/test_brief_lead.mjs does; the
 // answer is compared with what verdict.ts returns for the same state, never with a copy of its text.
-import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdtemp, readFile} from 'node:fs/promises';
@@ -10,7 +9,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -30,14 +29,9 @@ async function load() {
       export {parseConditionsForecast} from './web/conditions.ts';
       export {regsData} from './web/regs.ts';
       export {hour, day, species, profile} from './web/state.ts';
-      export {language} from './web/i18n.ts';
-      import {render} from 'preact-render-to-string';
-      import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
-      export {admitBriefFixture};
-      export function renderFixture(...args) { admitBriefFixture(); return render(...args); }
-      export {render};
+      export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
-    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
   });
   return (mod = await import(pathToFileURL(out).href));
 }
@@ -82,7 +76,7 @@ test('the answer line precedes the map container, and its answer is the verdict 
   const m = await load();
   await setup(m);
   try {
-    const html = m.renderFixture(m.h(m.App, {now: NOW}));
+    const html = m.render(m.h(m.App, {now: NOW}));
     assert.ok(html.indexOf('app-first-answer-line') > 0, 'the answer renders');
     assert.ok(html.indexOf('app-first-answer-line') < html.indexOf('class="app-stage"'), 'the answer line precedes the map container');
     assert.ok(html.indexOf('class="app-stage"') > 0, 'the map stays');
@@ -103,7 +97,7 @@ test('yes, marginal, no and unknown each render a distinct line, and unknown nev
   try {
     for (const [name, opts] of Object.entries({marginal: {wind: 5}, no: {wind: 30}, unknown: {forecast: false}})) {
       await setup(m, opts);
-      const html = m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW})), v = m.currentVerdict(m.leadBrief(NOW), NOW);
+      const html = m.render(m.h(m.FirstAnswerLine, {now: NOW})), v = m.currentVerdict(m.leadBrief(NOW), NOW);
       lines[name] = lineOf(html);
       assert.equal(fishableOf(html), {comfortable: 'yes', marginal: 'marginal', rough: 'no', unknown: 'unknown'}[v?.verdict ?? 'unknown'], name);
       assert.equal(fishableOf(html), name, `${name}: the fixture produces the verdict it names`);
@@ -122,15 +116,15 @@ test('a missing feed reads unknown with the map still rendered; one missing feed
   const m = await load();
   try {
     await setup(m, {feed: false, forecast: false});
-    const none = m.renderFixture(m.h(m.App, {now: NOW}));
+    const none = m.render(m.h(m.App, {now: NOW}));
     assert.equal(fishableOf(none), 'unknown');
     assert.ok(none.indexOf('app-first-answer-line') < none.indexOf('class="app-stage"'), 'the map is rendered behind the line');
     await setup(m, {forecast: false});   // the daily feed alone: no forecast for the window
-    const half = m.renderFixture(m.h(m.App, {now: NOW}));
+    const half = m.render(m.h(m.App, {now: NOW}));
     assert.equal(fishableOf(half), 'unknown');
     assert.ok(lineOf(half) && half.includes('class="app-stage"'));
     await setup(m, {feed: false});       // the forecast alone
-    assert.equal(fishableOf(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW}))), 'unknown');
+    assert.equal(fishableOf(m.render(m.h(m.FirstAnswerLine, {now: NOW}))), 'unknown');
   } finally { reset(m); }
 });
 
@@ -138,7 +132,7 @@ test('tomorrow past the forecast\'s data_end_time is unknown, not a guess', asyn
   const m = await load();
   try {
     await setup(m, {days: 2});           // the model ends on 30 September; tomorrow is 1 October
-    const html = m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW}));
+    const html = m.render(m.h(m.FirstAnswerLine, {now: NOW}));
     assert.equal(fishableOf(html), 'unknown');
     assert.ok(html.includes(m.currentVerdict(m.leadBrief(NOW), NOW).limit), 'the reason is the verdict engine\'s own');
   } finally { reset(m); }
@@ -149,16 +143,16 @@ test('rules unavailable or due for review are named as such and quote no numbers
   try {
     const note = html => /<p class="app-first-answer-rules">(.*?) <a /.exec(html)[1];
     await setup(m, {rules: false});
-    const unavailable = note(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW})));
+    const unavailable = note(m.render(m.h(m.FirstAnswerLine, {now: NOW})));
     assert.match(unavailable, /^Rules unavailable/);
     await setup(m, {reviewed: false});
-    const due = note(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW})));
+    const due = note(m.render(m.h(m.FirstAnswerLine, {now: NOW})));
     assert.match(due, /^Rules due for review/);
     await setup(m);
-    const reviewed = note(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW})));
+    const reviewed = note(m.render(m.h(m.FirstAnswerLine, {now: NOW})));
     assert.match(reviewed, /^Rules reviewed \(Closed\)/, 'the salmon season ends today, so tomorrow reads closed');
     for (const text of [unavailable, due, reviewed]) assert.doesNotMatch(text, /\d/, 'no bag, size or depth numbers');
-    assert.match(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW})), /<a href="https:[^"]*" target="_blank"/, 'a pointer to the official rules');
+    assert.match(m.render(m.h(m.FirstAnswerLine, {now: NOW})), /<a href="https:[^"]*" target="_blank"/, 'a pointer to the official rules');
   } finally { reset(m); }
 });
 
@@ -167,7 +161,7 @@ test('with no profile chosen the line states which profile it assumed; a chosen 
   try {
     await setup(m);
     m.profile.value = 'kayak';
-    const html = m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW}));   // no address or storage names a profile under test
+    const html = m.render(m.h(m.FirstAnswerLine, {now: NOW}));   // no address or storage names a profile under test
     assert.match(lineOf(html), /Assuming the Kayak profile/);
     const brief = m.leadBrief(NOW);
     const base = {verdict: m.currentVerdict(brief, NOW), rules: null, regs: null, target: 'lingcod', date: brief.date, day: 'tomorrow', now: NOW, profile: 'shore'};
@@ -175,24 +169,4 @@ test('with no profile chosen the line states which profile it assumed; a chosen 
     assert.doesNotMatch(m.firstAnswer({...base, chosen: true}).line, /Assuming/);
     assert.equal(m.firstAnswer({...base, chosen: true, verdict: null}).fishable, 'unknown', 'no verdict at all is unknown');
   } finally { reset(m); }
-});
-
-// RF2205-6: the desktop jump is named as navigation ("go to"), not as a show/hide control, in both languages.
-test('the desktop answer jump is named "Go to map and details" / "Ir al mapa y a los detalles"; one plain button, no disclosure state', async () => {
-  const m = await load();
-  const buttons = html => [...html.matchAll(/<button\b[^>]*>.*?<\/button>/gs)].map(x => x[0]);
-  const only = html => { const b = buttons(html); assert.equal(b.length, 1, 'exactly one button in the first answer'); return b[0]; };
-  try {
-    await setup(m);
-    for (const [lang, name, old] of [['en', 'Go to map and details', /Show the map|Show map/i], ['es', 'Ir al mapa y a los detalles', /Ver el mapa y el detalle/]]) {
-      m.language.value = lang;
-      const b = only(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW})));
-      assert.match(b, /class="[^"]*\bapp-first-answer-more\b/, `${lang}: same class`);
-      assert.equal(/>([^<]*)<\/button>/.exec(b)?.[1], name, `${lang}: exact visible name`);
-      assert.doesNotMatch(b, old, `${lang}: the old show/detail wording is gone`);
-      assert.doesNotMatch(b, /aria-label|aria-expanded|aria-controls|aria-pressed|title=/, `${lang}: accessible name is the visible text; no disclosure attributes`);
-    }
-    m.language.value = 'en';
-    assert.equal(/>([^<]*)<\/button>/.exec(only(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW}))))?.[1], 'Go to map and details', 'es back to en restores the English value');
-  } finally { m.language.value = 'en'; reset(m); }
 });

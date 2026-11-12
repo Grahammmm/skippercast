@@ -7,7 +7,7 @@ import {CoastViewer,type CoastViewerOptions} from './coast3d/viewer.ts';
 import {DEFAULT_COAST_PALETTE,type CoastPalette} from './palette.ts';
 import type {CoastHandle,CoastMountOptions} from './embed-types.ts';
 import {coastPath} from './transport.ts';
-import {coastSceneMarkup,coastSourcesMarkup} from './embed-template.ts';
+import {coastEmbedTemplate} from './embed-template.ts';
 export type {CoastChrome,CoastHabitat,CoastHabitatRank,CoastHandle,CoastInitialState,CoastLocation,CoastMountOptions,CoastPerspective,CoastReading,CoastSelection,CoastShading,CoastSourceCoverage,CoastTargetDetail,CoastTerrainSource,CoastView} from './embed-types.ts';
 export type {CoastOverlay,CoastOverlayColor,CoastOverlayDrape,CoastOverlayFeature,CoastOverlayGeometry,CoastOverlayKind,CoastOverlayPalette,CoastOverlayPick,CoastOverlayStyle} from './embed-types.ts';
 
@@ -15,17 +15,6 @@ type Viewer=Pick<CoastViewer,keyof CoastHandle>;
 /** Test seam: constructs the renderer. Hosts never pass it. */
 export type CoastViewerFactory=(scene:HTMLElement,options:CoastViewerOptions)=>Viewer;
 const createViewer:CoastViewerFactory=(scene,options)=>new CoastViewer(scene,options);
-
-const SCENE_MAIN_OPEN='<main id="scene"',SCENE_MAIN_CLOSE='</main>';
-/**
- * The template a managed host parses: the standalone page's scene wrapper is a page-level main there, but a reusable
- * renderer must not own its host page's main landmark (axe landmark-no-duplicate-main, S4-46), so the outer wrapper
- * becomes a named group. Only the exact opening tag and final closing tag change; embed-template.ts keeps its bytes.
- */
-function managedEmbedTemplate():string{
- if(!coastSceneMarkup.startsWith(SCENE_MAIN_OPEN)||!coastSceneMarkup.endsWith(SCENE_MAIN_CLOSE))throw Error('mountCoast: the scene template no longer opens and closes with its main wrapper');
- return '<div id="scene" role="group"'+coastSceneMarkup.slice(SCENE_MAIN_OPEN.length,-SCENE_MAIN_CLOSE.length)+'</div>'+coastSourcesMarkup;
-}
 
 /** DEFAULT_COAST_PALETTE with the host's string values for known roles. */
 export function embedPalette(overrides:Partial<CoastPalette>={}):Readonly<CoastPalette>{
@@ -44,7 +33,7 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
  if(existing?.getElementById('scene'))throw Error('mountCoast: this root already holds a mounted coast; destroy its handle first');
  const inserted:Element[]=[];
  for(const href of options.styles??[]){const style=document.createElement('link');style.rel='stylesheet';style.href=href;root.append(style);inserted.push(style);}
- const parsed=new DOMParser().parseFromString(managedEmbedTemplate(),'text/html');
+ const parsed=new DOMParser().parseFromString(coastEmbedTemplate,'text/html');
  const scene=document.importNode(parsed.getElementById('scene')!,true),sourcesDialog=document.importNode(parsed.getElementById('sources')!,true);
  root.append(scene,sourcesDialog);inserted.push(scene,sourcesDialog);
  // Host chrome: the native panels leave the root but stay bound, detached, so the

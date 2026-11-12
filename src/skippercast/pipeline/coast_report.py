@@ -30,7 +30,7 @@ from .. import http
 from ..platform.contracts import atomic_json
 from ..util.units import FT_PER_M, KT_PER_MS
 from .coast_snapshots import COUNTY, REGION, _ms, _number, _read
-from .goes_frames import MAX_MS, MIN_MS, iso
+from .goes_frames import iso
 
 # packages/coast/src/counties.ts `slo` (a test keeps them equal): id, name, lat, lon, landLat, landLon, forecastZone.
 AREAS = (("north", "Cambria & San Simeon", 35.63, -121.2, 35.57, -121.1, "PZZ645"),
@@ -82,7 +82,7 @@ def interval(text):
         b = a + ((w * 7 + d) * 86400 + h * 3600 + m * 60 + s) * 1000
     else:
         b = _ms(end)
-    if a is None or b is None or not math.isfinite(b) or not MIN_MS <= a < b <= MAX_MS:
+    if a is None or b is None or b <= a:
         raise ValueError("Invalid forecast interval")
     return a, b
 

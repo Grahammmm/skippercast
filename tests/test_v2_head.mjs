@@ -37,16 +37,3 @@ test('the v2 pages carry v1\'s manifest link, theme colour, favicon and touch ic
   for (const icon of manifest.icons) assert.ok(existsSync(new URL(icon.src.slice(1), dist)), icon.src);
 });
 
-// SC1407-07: the app (where Morro Bay opens on the Aerial base) opens its USGS connection early; nothing else is hinted.
-test('the app head preconnects once, anonymously, to the Aerial base\'s USGS host; the landing adds no hint', async () => {
-  const {mapSourceHosts} = await import('../packages/coast/src/map-sources.ts');
-  const {CONNECT_ORIGINS} = await import('../server/security-headers.ts');
-  const HINT = /<link rel="(?:preconnect|dns-prefetch|prefetch|preload|modulepreload)"[^>]*>/g;
-  const app = read('app.html');
-  assert.deepEqual(tags(app, HINT), ['<link rel="preconnect" href="https://imagery.nationalmap.gov" crossorigin />']);
-  assert.ok(mapSourceHosts.includes('https://imagery.nationalmap.gov'), 'the host naipSource() requests');
-  assert.ok(CONNECT_ORIGINS.includes('https://imagery.nationalmap.gov'), 'the CSP already allows it');
-  assert.equal(app.split('</head>')[1].includes('preconnect'), false, 'in the head only');
-  assert.deepEqual(tags(read('landing.html'), HINT), [], 'the landing opens no USGS connection');
-});
-

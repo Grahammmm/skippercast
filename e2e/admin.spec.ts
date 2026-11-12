@@ -28,11 +28,8 @@ test('an admin signs in, sees the queue and approves a photo review with the key
   await page.goto('/map?region=morro-bay#account');
   await expect(page.locator('.account-card')).toBeVisible({timeout: 30_000});
   await autofill;
+  const reloaded = page.waitForEvent('load');   // the app reloads signed in
   await page.locator('#account-create').click();
-  // RF1925-4: the confirmation stays readable until Continue; only then does the app reload signed in.
-  await expect(page.locator('#account-status')).toContainText('Account created.');
-  const reloaded = page.waitForEvent('load');
-  await page.locator('#account-create').click();   // Continue
   await reloaded;
   await expect.poll(async () => (await (await page.request.get('/api/session')).json()).signedIn).toBe(true);
   const session = await (await page.request.get('/api/session')).json();

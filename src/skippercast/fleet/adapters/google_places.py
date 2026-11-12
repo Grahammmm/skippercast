@@ -199,12 +199,7 @@ class GooglePlaces:
                 break
             result = self.transport.search_text(body, SEARCH_MASK)
             self.report["searches"] += 1
-            if not isinstance(result, dict):
-                raise PlacesError("invalid Places response shape")
-            found = result.get("places")
-            if found is not None and not isinstance(found, list):
-                raise PlacesError("invalid Places response shape")
-            places += [p for p in found or [] if isinstance(p, dict)]
+            places += [p for p in result.get("places") or [] if isinstance(p, dict)]
             token = result.get("nextPageToken")
             if not token:
                 break
@@ -257,12 +252,10 @@ class GooglePlaces:
                 return []
             try:
                 result = self.transport.details(stored, DETAILS_MASK)
-                self.report["details"] += 1
-                if result is not None and not isinstance(result, dict):
-                    raise PlacesError("invalid Places response shape")
             except (http.SourceError, OSError, ValueError, PlacesError):
                 self.report["errors"] += 1
                 return []
+            self.report["details"] += 1
             if result is None:
                 self.report["not_found"] += 1
                 return []

@@ -228,10 +228,9 @@ def screen_place(closures, bounds, geometries, longitude, latitude):
     """JS `screenPlace` over a screen holding `closures` ([(name, Shape)]) and covering `bounds`, for a place with
     `geometries` (reef outlines) and a point. Returns {inside, name, distanceM, screened}."""
     none = {'inside': False, 'name': None, 'distanceM': None, 'screened': False}
-    raw = [*geometries, {'type': 'Point', 'coordinates': [longitude, latitude]}]
-    if not all(covered_by_bounds(g, bounds) for g in raw):      # refuse malformed input before any Shape (numpy) is built
+    shapes = [Shape(g) for g in geometries] + [Shape({'type': 'Point', 'coordinates': [longitude, latitude]})]
+    if not all(covered_by_bounds(s.g, bounds) for s in shapes):
         return none
-    shapes = [Shape(g) for g in raw]
     near = None
     for name, c in closures:
         for g in shapes:

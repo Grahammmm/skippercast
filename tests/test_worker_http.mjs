@@ -323,7 +323,7 @@ test('the 20-active-trips limit is carried by the insert: parallel saves never e
 test('public health is minimal: no binding or secret presence is disclosed', async () => {
   const response = await worker.fetch(request('/api/health'), {DB: {}, FEEDS: {}, VAPID_PUBLIC_KEY: 'k', VAPID_PRIVATE_KEY: 'k', ANTHROPIC_API_KEY: 'k'});
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), {service: 'SkipperCast', version: read('../package.json').version, build: 'build-test', revision: null, revision_dirty: null});
+  assert.deepEqual(await response.json(), {service: 'SkipperCast', version: read('../package.json').version, build: 'build-test'});
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
 });
 

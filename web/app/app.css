@@ -15,7 +15,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
   min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
   background: var(--panel-2); color: var(--text); font: var(--weight-medium) var(--text-13) / var(--leading-heading) var(--font-sans);
 }
-.app select:focus-visible, .app-mobile select:focus-visible, .app-target-search:focus-visible, .app-details > summary:focus-visible, .app-pick:focus-visible, .app-conditions-chart:focus-visible, .app-fleet-field input:focus-visible, .app-fleet-check input:focus-visible, .app-fleet-how summary:focus-visible, .app-limits-field input:focus-visible, .app-limits-field select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app select:focus-visible, .app-mobile select:focus-visible, .app-target-search:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* Masthead */
 .app-masthead { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); background: var(--panel); }
@@ -26,7 +26,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-views a { display: inline-flex; align-items: center; min-height: var(--touch-min); padding: 0 var(--space-3); border-radius: var(--radius-md); color: var(--muted); font-weight: var(--weight-medium); text-decoration: none; }
 .app-views a:hover { color: var(--text); background: var(--panel-2); }
 .app-views a[aria-current="page"] { color: var(--text); box-shadow: inset 0 -2px 0 var(--mint); }
-.app-fresh { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); max-width: 20rem; color: var(--muted); }
+.app-fresh { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); }
 .app-fresh-dot { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--muted); }
 .app-fresh[data-state="ok"] .app-fresh-dot { background: var(--mint); }
 .app-fresh[data-state="stale"] .app-fresh-dot { background: var(--amber); }
@@ -36,9 +36,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-command label { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-13); }
 /* FE-54: the target menu's search field sits beside the grouped list. */
 .app-target { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-/* SC1722-14: 107px Spanish hint + unchanged 26px padding/border at 16px. */
-.app-target-search { width: 133px; min-width: 0; font-weight: var(--weight-regular); }
-.app-target label select { max-width: 100vw; }
+.app-target-search { width: 8rem; min-width: 0; font-weight: var(--weight-regular); }
 .app-target-search::placeholder { color: var(--muted); }
 .app-profile-limits { display: inline-flex; align-items: center; gap: var(--space-2); }
 .app-area { display: inline-flex; align-items: center; gap: var(--space-2); }
@@ -71,6 +69,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-verdict .ui-popover { flex: none; margin-block: calc(var(--space-2) * -1); color: var(--muted); }
 .app-details { color: var(--muted); font-size: var(--text-13); }
 .app-details > summary { display: list-item; min-height: var(--touch-min); padding-block: var(--space-2); color: var(--text); cursor: pointer; }
+.app-details > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-details-gaps { color: var(--amber); }
 .app-details-body { display: flex; flex-direction: column; gap: var(--space-2); }
 .app-readings { margin: 0; color: var(--text); }
@@ -86,6 +85,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-pick { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: baseline; inline-size: 100%; min-block-size: 44px; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; text-align: start; cursor: pointer; }
 .app-pick:hover { border-color: var(--muted); }
 .app-pick[aria-pressed="true"] { border-color: var(--mint); }
+.app-pick:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-pick-rank { color: var(--muted); }
 .app-pick .app-fit { grid-column: 2; justify-self: start; }
 .app-pick-reason { grid-column: 2; color: var(--muted); font-size: var(--text-13); }
@@ -107,7 +107,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-gaps-more summary { display: list-item; min-height: var(--touch-min); padding-block: var(--space-2); cursor: pointer; }
 .app-gaps-more li + li { margin-top: var(--space-1); }
 .app-brief-links { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; font-size: var(--text-13); }
-.app-brief-links a, .app-fleet-links a, .app-reports-footer a, .app-mark-regs a, .app-verdict-rules a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
+.app-brief-links a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 .app-local { color: var(--muted); }
 .app-brief-footer { margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--line); color: var(--muted); font-size: var(--text-11); }
 .app-brief-footer a { display: inline-flex; align-items: center; min-height: var(--space-5); }
@@ -139,7 +139,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
     box-sizing: border-box;
     width: min(280px, calc(100% - 2 * var(--space-4)));
     max-height: calc(100% - var(--space-4) - var(--app-terrain-controls-bottom) - var(--app-terrain-controls-height) - var(--space-3));
-    overflow-y: scroll; scrollbar-gutter: stable;
+    overflow-y: auto;
   }
   /* Absolute, end-aligned popovers escape a narrow scroll origin. Open basis
      details instead occupy a full row and grow the same scrollable content. */
@@ -288,13 +288,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 @media (min-width: 1024px) {
   /* The brief scrolls inside its column; the page itself stays put. */
   .app { height: 100vh; height: 100dvh; }
-  /* SC1722-19: the document never scrolls. When the header, command bar and first answer leave the stage less than its 480 px (a
-     short laptop window), the app scrolls inside itself, and the time dock sits in the stage's flow at the bottom of the map
-     column (sticky to the app's bottom edge), so it stays whole in the window from 1,024 x 768 up. The stage clips instead of
-     hiding its overflow, because a hidden-overflow stage would be the dock's scroll container and the sticky rule would do nothing. */
-  .app { overflow-y: auto; }
-  .app-main > .app-stage { display: flex; flex-direction: column; overflow: clip; }
-  .app-main > .app-stage > .app-dock { position: sticky; left: auto; right: auto; bottom: var(--space-4); flex: none; margin: auto var(--space-4) var(--space-4); z-index: var(--z-map-chrome); }
 }
 
 @media (max-width: 1023px) {
@@ -368,21 +361,16 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-tabs .app-views a[aria-current="page"] { color: var(--mint); box-shadow: inset 0 2px 0 var(--mint); }
 .app-tabs .app-views a:focus-visible { outline-offset: -2px; }
 /* FE-32: the Conditions view covers the map above the time dock; the map stays mounted beneath it. */
-.app-conditions, .app-history { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; color: var(--text); font-size: var(--text-13); }
-.app-stage > .app-conditions, .app-stage > .app-history { position: absolute; inset: 0 0 calc(var(--touch-min) + var(--space-7)) 0; z-index: var(--z-map-chrome); padding: var(--space-4); overflow: auto; background: var(--panel); }
+.app-conditions { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; color: var(--text); font-size: var(--text-13); }
+.app-stage > .app-conditions { position: absolute; inset: 0 0 calc(var(--touch-min) + var(--space-7)) 0; z-index: var(--z-map-chrome); padding: var(--space-4); overflow: auto; background: var(--panel); }
 .app-conditions-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
-/* SC1922-03: the model-family options wrap inside the header and keep the touch floor (never squeezed, clipped or shrunk below it). */
-.app-conditions-head > .ui-segmented { flex-wrap: wrap; box-sizing: border-box; max-width: 100%; min-width: 0; }
-.app-conditions-head > .ui-segmented .ui-chip { flex: none; min-height: var(--touch-min); }
-/* SC1922-03: the touch-size Cancel makes the placing note taller; while placing, the stack's empty space and note text must not swallow Chart taps beneath them (placement waits for a tap), so only the presentation control and Cancel take pointer events. */
-.app-presentation--placing { pointer-events: none; }
-.app-presentation--placing .ui-segmented, .app-presentation--placing .ui-button { pointer-events: auto; }
 .app-conditions h2 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
 .app-conditions h3 { margin: var(--space-2) 0 0; }
 .app-conditions-now { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0; }
 .app-conditions-now dd { margin: 0; font-size: var(--text-15); }
 /* Below the chart's natural width the region scrolls sideways rather than squeezing seven days into a phone. */
 .app-conditions-chart { flex: none; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-deep); touch-action: pan-x; }
+.app-conditions-chart:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-conditions-chart > .app-coast-markup { min-width: 720px; }
 .app-conditions-caption, .app-conditions ul { margin: 0; color: var(--muted); }
 .app-conditions ul { padding-left: var(--space-4); }
@@ -394,14 +382,19 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-fleet-check { padding: 0; font-size: var(--text-13); color: var(--text); }
 .app-fleet-basis { margin: 0; color: var(--muted); font-size: var(--text-11); }
 .app-fleet-links { margin: 0; padding: 0; list-style: none; }
+.app-fleet-links a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 .app-fleet-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--space-2); }
 .app-fleet-form > .app-fleet-check, .app-fleet-form > .app-empty, .app-fleet-actions { grid-column: 1 / -1; }
 .app-fleet-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; color: var(--muted); font-size: var(--text-11); }
 .app-fleet-field input { min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-13); }
+.app-fleet-field input:focus-visible, .app-fleet-check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-fleet-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .app-fleet-how summary { display: flex; align-items: center; min-height: var(--touch-min); cursor: pointer; color: var(--blue); }
+.app-fleet-how summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-fleet-how p { margin: 0; color: var(--muted); }
 /* FE-35: the History view takes the Conditions view's place over the map; historyView's own pickers and charts scroll inside it. */
+.app-history { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; color: var(--text); font-size: var(--text-13); }
+.app-stage > .app-history { position: absolute; inset: 0 0 calc(var(--touch-min) + var(--space-7)) 0; z-index: var(--z-map-chrome); padding: var(--space-4); overflow: auto; background: var(--panel); }
 .app-history h2 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
 /* FE-54: the target's rules at a glance on a habitat card (v1's row, web/regs.ts). */
 .app-mark-regs { margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--line); font-size: var(--text-13); }
@@ -413,9 +406,10 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-mark-regs dl { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: var(--space-1) 0; }
 .app-mark-regs dt { color: var(--muted); }
 .app-mark-regs dd { margin: 0; }
-.app-mark-regs a, .app-verdict-rules a { color: var(--blue); }
+.app-mark-regs a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
 /* SC-LAUNCH-3's legality line under the verdict: no default <p> margins, and its official link a full touch target as on the mark card. */
 .app-verdict-rules { margin: 0; font-size: var(--text-13); }
+.app-verdict-rules a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
 
 /* Reports view (FE-52): a page over the map stage, which stays mounted beneath it. */
 .app-main { position: relative; }
@@ -431,6 +425,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-reports a { color: var(--blue); }
 .app-reports-list a, .app-reports-section p a { display: inline-block; min-height: var(--touch-min); padding: var(--space-3) 0; box-sizing: border-box; }
 .app-reports-footer { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+.app-reports-footer a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 .app-mobile-page { position: absolute; left: 0; right: 0; top: calc(var(--app-strip) + var(--touch-min) + var(--space-3)); bottom: var(--app-tabs); z-index: var(--z-map-chrome); overflow: auto; border-top: 1px solid var(--line); background: var(--bg); }
 
 /* Your limits (#542): the profile's comfort limits form in its own modal dialog (the port dialog's look) */
@@ -444,6 +439,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-limits-field { display: grid; grid-template-columns: minmax(0, 1fr) 7rem; align-items: center; gap: var(--space-1) var(--space-3); }
 .app-limits-field label { color: var(--text); font-size: var(--text-13); }
 .app-limits-field input, .app-limits-field select { min-height: var(--touch-min); min-width: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-15); }
+.app-limits-field input:focus-visible, .app-limits-field select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-limits-hint { grid-column: 1 / -1; color: var(--muted); font-size: var(--text-11); }
 .app-limits-note { color: var(--muted); font-size: var(--text-13); }
 .app-limits-dialog .app-limits-actions { position: sticky; bottom: 0; z-index: 1; padding-block: var(--space-2); background: var(--panel); }
@@ -519,59 +515,3 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 p.app-forecast-failed-head { font-size: var(--text-15); }
 .app-forecast-failed-reason { margin: 0; color: var(--text); font-size: var(--text-15); line-height: var(--leading-body); }
 .app-forecast-retry { justify-self: start; }
-
-/* RF1935-2 (UX audit S4-15): on the desktop the preset group is the layer rail's own header child; it wraps onto more rows inside the
-   rail's width instead of running past it (the generic .ui-segmented row is nowrap). The structural scope is the hook: the group's
-   translated name is not. The rail's own scroll track is in the desktop rail block above. A Source or Base select row may also shrink to
-   the rail (its label is a wrapping item whose minimum is otherwise the select's 16 px intrinsic width, which ran 37 px past the rail). */
-@media (min-width: 1024px) {
-  .app-stage > .app-rail .app-rail-source { min-width: 0; max-width: 100%; box-sizing: border-box; }
-  .app-stage > .app-rail > .ui-segmented { display: flex; flex-wrap: wrap; box-sizing: border-box; min-width: 0; max-width: 100%; border-radius: var(--radius-lg); }
-  .app-stage > .app-rail > .ui-segmented .ui-chip { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
-}
-
-/* RF1935-4: focus is the editing signal, not a claim to detect a keyboard. */
-.app-mobile:has(.app-sheet .app-target-search:focus) {
-  --app-tabs: env(safe-area-inset-bottom, 0px);
-  --app-strip: env(safe-area-inset-top, 0px);
-}
-.app-mobile:has(.app-sheet .app-target-search:focus) .app-tabs { display: none; }
-.app-mobile:has(.app-sheet .app-target-search:focus) .app-sheet {
-  transform: translateY(0);
-  transition: none;
-}
-.app-mobile:has(.app-sheet .app-target-search:focus) .app-sheet .ui-sheet-body {
-  min-height: 0;
-  overflow: auto;
-}
-/* end RF1935-4 */
-
-/* SC1922-04: preview coverage is ordinary, wrapping text, separate from the clipped name. */
-.app-location-preview { min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
-.app-location-preview-line { min-width: 0; display: flex; align-items: baseline; gap: var(--space-2); }
-.app-location-preview .app-location { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
-.app-region-preview-label { flex-shrink: 0; color: var(--text); font-size: var(--text-12); text-transform: none; letter-spacing: normal; }
-.app-region-preview-reason { margin: 0; color: var(--text); background: var(--panel); font-size: var(--text-12); white-space: normal; overflow-wrap: anywhere; text-transform: none; letter-spacing: normal; }
-.app-where > .app-region-preview-reason { margin-bottom: var(--space-3); }
-.app-top-card .app-location-preview .app-location { white-space: normal; overflow: visible; text-overflow: clip; }
-@media (min-width: 1024px) {
-  .app-masthead:has(> .app-location-preview) { flex-wrap: wrap; }
-  .app-masthead > .app-location-preview { flex: 0 1 22rem; min-width: 18rem; max-width: 22rem; }
-}
-
-/* RF2135-5: ordinary landscape phones put the top card/controls row and the profile switch side by side (layout only, no paint). */
-@media (min-width: 600px) and (max-width: 1023px) and (max-height: 500px) and (orientation: landscape) {
-  .app-mobile { --app-strip: calc(72px + env(safe-area-inset-top, 0px)); }
-  .app-mobile .app-top { flex-direction: row; align-items: flex-start; }
-  .app-mobile .app-top .app-top-row { flex: 1; min-width: 0; }
-  .app-mobile .app-top .app-top-card { flex-direction: row; align-items: center; gap: var(--space-3); padding-top: 0; padding-bottom: 0; }
-  .app-mobile .app-top .app-top-card .app-brand { flex: none; }
-  .app-mobile .app-top .app-top-card .app-location { flex: 1; min-width: 0; }
-  .app-mobile .app-top .app-profile { flex: 0 0 240px; min-width: 0; }
-}
-/* end RF2135-5 */
-/* SC1922-08: the failed-press line wraps under the chip's age and Refresh button instead of widening the chip past its cap (on desktop the masthead keeps the chip at its own width, so a line shifts nothing at load). */
-.app-fresh > [data-refresh-line] { flex-basis: 100%; }
-/* SC1722-20: skip links, the first two tab stops. Clipped to a pixel at rest (still focusable and named); on focus a ringed 44 px panel at the top-left. */
-.app-skip-link { position: fixed; top: calc(var(--space-2) + env(safe-area-inset-top, 0px)); left: calc(var(--space-2) + env(safe-area-inset-left, 0px)); z-index: var(--z-toast); width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.app-skip-link:focus { display: flex; align-items: center; width: auto; height: auto; min-width: var(--touch-min); min-height: var(--touch-min); padding: 0 var(--space-4); overflow: visible; clip-path: none; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); color: var(--text); outline: 2px solid var(--focus); outline-offset: 2px; }

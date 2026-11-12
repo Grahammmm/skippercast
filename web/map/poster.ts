@@ -10,9 +10,9 @@
 // An inline path is not a Largest Contentful Paint candidate, so the LCP
 // budgets keep measuring the map. Erasable syntax only: tests import this
 // file by type stripping.
-import {effect, signal} from '@preact/signals';
+import {signal} from '@preact/signals';
 import {ZOOM_OFFSET} from './engine.ts';
-import {chartFileListed, chartFilesPending, publishedChartFiles} from '../chart-files.ts';
+import {chartFileListed} from '../chart-files.ts';
 
 /** The region's poster, relative to the app page. */
 export const posterURL = (region: string): string => `regions/${encodeURIComponent(region)}/poster.svg`;
@@ -60,28 +60,8 @@ export function posterPlacement(p: Poster, camera: {latitude: number; longitude:
   return {x: width / 2 + (ox - cx) * scale, y: height / 2 + (oy - cy) * scale, scale};
 }
 
-/** RF0115-6: resolves once `region`'s pending list settles: true when it settled (a list, or a failed read that
- * fails open), false when the signal was replaced by null or another region meanwhile (this wait was superseded).
- * One effect, disposed at the first outcome, so nothing is left to ask on a later publication. */
-function listSettled(region: string): Promise<boolean> {
-  return new Promise(resolve => {
-    let stop: (() => void) | null = null, over = false;
-    const finish = (settled: boolean) => { if (over) return; over = true; stop?.(); resolve(settled); };
-    stop = effect(() => {
-      const published = publishedChartFiles.value;
-      if (published?.region !== region) finish(false);
-      else if (published.pending !== true) finish(true);
-    });
-    if (over) stop(); // settled while the effect was being set up
-  });
-}
-
-/** Load `region`'s poster unless the Chart has drawn already (`done`); a missing or malformed file shows nothing.
- * RF0115-6: while this region's list is pending the one request waits for it, rather than ask a file the list may rule out. */
+/** Load `region`'s poster unless the Chart has drawn already (`done`); a missing or malformed file shows nothing. */
 export async function loadPoster(region: string, page: string, done: () => boolean, fetchFn: typeof fetch = (...a) => fetch(...a)): Promise<void> {
-  if (chartFilesPending(region)) {
-    if (done() || !await listSettled(region) || done()) return;
-  }
   if (!chartFileListed(region, 'poster.svg')) return;
   try {
     const response = await fetchFn(new URL(posterURL(region), page).href);

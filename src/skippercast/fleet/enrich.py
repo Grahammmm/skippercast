@@ -25,7 +25,6 @@ no contact values) and returns counts for ``state.json``.
 from __future__ import annotations
 
 import json
-from copy import deepcopy
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -80,12 +79,12 @@ def enrich_code(ctx: RunContext, sink, vessels: list[Mapping[str, Any]] | None =
             for vessel in vessels:
                 for fact in adapter.enrich(vessel, binding, ctx):
                     facts.append({"vessel_id": vessel["vessel_id"], **fact.as_dict()})
-            report["bindings"][binding.id] = deepcopy(getattr(adapter, "report", {}))
+            report["bindings"][binding.id] = getattr(adapter, "report", {})
         elif binding.adapter in IMPORTERS:
             adapter = adapters.get(binding.adapter) or IMPORTERS[binding.adapter]()
             try:
                 imported += [c.as_dict() for c in adapter.discover(binding, ctx)]
-                report["bindings"][binding.id] = deepcopy(adapter.report.get(binding.id, {}))
+                report["bindings"][binding.id] = adapter.report.get(binding.id, {})
             except FileImportError as error:
                 report["bindings"][binding.id] = {"status": "failed", "error": str(error)}
 
