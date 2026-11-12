@@ -16,9 +16,9 @@ const VERDICT = /^(Comfortable|Marginal|Rough|Unknown)$/;
  * The brief only reaches its forecast-failed state once the feeds can answer, and the offline v2 fixture answers /feeds/ with 404 unless a
  * case stubs it, so every case here stubs this one instead of letting the local Worker's /feeds/ proxy fetch upstream.
  */
-async function stubDailyFeed(v2: V2) {
+function dailyFeed() {
   const now = Date.now(), iso = (offsetMs: number) => new Date(now + offsetMs).toISOString(), checked = iso(-10 * 60_000);
-  await v2.feed('**/feeds/data/regions/morro-bay/latest.json', {
+  return {
     schema_version: 1, generated_at: checked, region_id: 'morro-bay',
     sources: {
       'buoy-46011': {id: 'buoy-46011', name: 'NOAA NDBC 46011 observations', kind: 'observation', url: 'https://www.ndbc.noaa.gov/station_page.php?station=46011',
@@ -30,7 +30,40 @@ async function stubDailyFeed(v2: V2) {
       'nws-alerts': {id: 'nws-alerts', name: 'NWS marine alerts', kind: 'advisory', url: 'https://api.weather.gov/alerts/active?zone=PZZ670', checked_at: checked, status: 'ok', data: {alerts: []}},
     },
     landing_names: ['Morro Bay', 'Avila'], reports: [],
-  });
+  };
+}
+
+async function stubDailyFeed(v2: V2) { await v2.feed('**/feeds/data/regions/morro-bay/latest.json', dailyFeed()); }
+
+/** A calm synthetic Morro Bay /api/forecast answer (values invented, as e2e/v2-brief.spec.ts builds it): eight days from two hours ago, three points. */
+function calmForecast() {
+  const now = Date.now(), t0 = Math.floor((now - 2 * HOUR) / 1000 / 3600) * 3600;
+  const time = Array.from({length: 8 * 24}, (_, i) => t0 + i * 3600);
+  const series = (values: Record<string, [number, string]>) => ({utc_offset_seconds: 0,
+    hourly_units: {time: 'unixtime', ...Object.fromEntries(Object.entries(values).map(([k, [, u]]) => [k, u]))},
+    hourly: {time, ...Object.fromEntries(Object.entries(values).map(([k, [v]]) => [k, time.map(() => v)]))}});
+  const points = [['north', 35.45, -121.02], ['central', 35.36, -120.94], ['offshore-1-0', 35.3, -121.25]];
+  const meta = {last_run_initialisation_time: Math.floor((now - 3 * HOUR) / 1000), data_end_time: time.at(-1)};
+  const model = (values: Record<string, [number, string]>) => ({meta, data: points.map(() => series(values))});
+  const wind = {wind_speed_10m: [6, 'kn'], wind_gusts_10m: [9, 'kn'], wind_direction_10m: [300, '°'], temperature_2m: [60, '°F'], cloud_cover: [20, '%']} as Record<string, [number, string]>;
+  const wave = {wave_height: [2.5, 'ft'], wave_period: [11, 's']} as Record<string, [number, string]>;
+  return {region_id: 'morro-bay', retrieved: now - 20 * 60_000, requested_points: points,
+    models: {gfs_global: model(wind), ncep_gfswave016: model(wave), ecmwf_ifs025: model(wind), ecmwf_wam: model(wave)}};
+}
+
+/**
+ * Successful offline answers for everything a baseline /map load asks the local Worker for, so the clean-console budget counts any
+ * other >= 400 as a finding instead of exempting an endpoint. fixtures.ts answers /api/forecast and the brief part with 503 and /feeds/
+ * with 404 to stay offline; this case replaces each with a 200 (page routes win over the fixture's context routes).
+ */
+async function stubBaselineAnswers(page: Page, v2: V2) {
+  const feed = dailyFeed();
+  await page.route('**/api/forecast?*', route => route.fulfill({json: calmForecast()}));
+  await page.route('**/api/daily?*', route => new URL(route.request().url()).searchParams.get('part') === 'brief'
+    ? route.fulfill({json: {...feed, part: 'brief', catch_probability: null, bite_score: null}}) : route.fallback());
+  await v2.feed('**/feeds/conditions/regions/morro-bay/latest.json', feed);   // the conditions feed, read beside the daily one
+  await v2.feed('**/feeds/tiles/basemap/manifest.json', {});   // no archive key: the Aerial base draws, no archive is fetched
+  await v2.feed('**/feeds/tiles/seafloor/manifest-morro-bay.json', {status: 'held', region: 'morro-bay'});   // layer hidden, nothing to fetch
 }
 
 test.describe('@nightly net-faults', () => {
@@ -97,13 +130,12 @@ test.describe('@nightly net-faults', () => {
       if (url.origin !== origin || res.status() < 400) return;
       // The Fleet view's HEAD probe of /ports/<id> answers 404 by design while the public boat list is off (web/fleet.ts).
       if (req.method() === 'HEAD' && /^\/ports\/[^/]+$/.test(url.pathname)) return;
-      // The shared fixtures (e2e/fixtures.ts) answer these on purpose to keep the run offline.
-      if (url.pathname === '/api/forecast' || (url.pathname === '/api/daily' && url.searchParams.get('part') === 'brief') || url.pathname.startsWith('/feeds/')) return;
       bad.push(`${req.method()} ${url.pathname}${url.search} ${res.status()}`);
     });
+    await stubBaselineAnswers(page, v2);
     await v2.open('app', SHELL);
-    // The page never goes network-idle (imagery and polling), so wait for the brief's answer, then a fixed quiet spell.
-    await expect(page.locator('.app-forecast-failed').first()).toBeVisible();
+    // The page never goes network-idle (imagery and polling), so wait for the brief's answer (a verdict word, the forecast being served), then a fixed quiet spell.
+    await expect(page.locator('.app-verdict-word').first()).toHaveText(VERDICT);
     await page.waitForTimeout(4_000);
     const m = await page.evaluate(() => { const w = window as unknown as {__csp: string[]; __cls: number; __long: number}; return {csp: w.__csp, cls: w.__cls, long: w.__long}; });
     console.log(`[net-faults] CLS ${m.cls.toFixed(4)}, long tasks total ${Math.round(m.long)} ms (recorded, no threshold)`);
