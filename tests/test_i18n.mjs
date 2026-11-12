@@ -401,7 +401,7 @@ test('run_es_all_states: every state of the run line, its eight prompts and seve
     both({}, 'Up to 4 h 10 min fishing at Reef a.', 'Hasta 4 h 10 min de pesca en Reef a.');
     both({}, 'Leave 7 am · there 7:25 am · turn back 11:35 am · in by 12 pm · window 7 am–12 pm', 'Salida 7 · llegada 7:25 · regreso 11:35 · de vuelta a más tardar 12 · ventana 7–12');
     both({}, '7.4 nm straight line (water route not computed yet) · at least 25 min each way at 20 kt · top pick', '7,4 nm en línea recta (trayecto por agua aún sin calcular) · al menos 25 min por tramo a 20 kt · primera opción');
-    both({}, '>basis<', '>fundamento<'); both({}, 'aria-label="Fishing time and return"', 'aria-label="Tiempo de pesca y regreso"'); both({}, '>Fishing time</span>', '>Tiempo de pesca</span>');
+    both({}, '>How this is worked out<', '>Cómo se calcula<'); both({}, 'aria-label="Fishing time and return"', 'aria-label="Tiempo de pesca y regreso"'); both({}, '>Fishing time</span>', '>Tiempo de pesca</span>');
     both({sunrise: '2026-10-12T06:52:00-07:00', sunset: '2026-10-12T17:21:00-07:00'}, ' · Daylight 6:52 am–5:21 pm', ' · Luz del día 6:52–17:21');
     both({}, 'Set your cruise speed to see run time and when to turn back.', 'Define tu velocidad de crucero para ver el tiempo de recorrido y cuándo regresar.', null);
     both({}, '>Set cruise speed</button>', '>Definir velocidad de crucero</button>', null);
