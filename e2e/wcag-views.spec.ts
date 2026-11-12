@@ -284,7 +284,7 @@ test.describe('reading order (R-P2)', () => {
     await expect(page.locator('#app-brief-content').getByRole('button', {name: /Try again|North Buchon/}).first()).toBeVisible();
     if (isMobile) { await page.locator('.ui-sheet-handle').press('End'); await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full'); }
     const stops = await briefStops(page);
-    expect(stops.map(s => s.name)).toEqual(expect.arrayContaining(['Basis for wind', 'Basis for swell', 'Basis for water', 'Basis for tide']));
+    expect(stops.map(s => s.name)).toEqual(expect.arrayContaining(['Source for wind', 'Source for swell', 'Source for water', 'Source for tide']));
     expect(stops.length, 'the brief offers its controls to the keyboard').toBeGreaterThan(8);
     expect(readingOrderProblems(stops), JSON.stringify(stops.map(s => `${s.y} ${s.name}`))).toEqual([]);
   });

@@ -89,15 +89,17 @@ function keepEnglish(env: LanguageEnv | undefined): Language {
  */
 export async function initReadyLanguage(env?: LanguageEnv): Promise<Language> {
   const lang = initLanguage(env);
-  if (lang !== 'es') return lang;
-  const mine = ++choice;
+  const mine = ++choice; // every call, English included, supersedes an older pending request
+  if (lang !== 'es') { catalogueLoading.value = false; return lang; }
   try {
     await prepareCatalogue('es');
-    catalogueFailed.value = false;
-    return lang;
   } catch {
     return mine === choice ? keepEnglish(env) : language.peek();
   }
+  if (mine !== choice) return language.peek();
+  catalogueLoading.value = false;
+  catalogueFailed.value = false;
+  return lang;
 }
 
 /**

@@ -35,7 +35,7 @@ import {configureStore, setParams, syncFromURL} from '../web/state.ts';
 const PAGE = 'https://s.test/map', TZ = 'America/Los_Angeles', HOUR = 3_600_000;
 const NOW = new Date('2026-10-09T03:00:00Z'), AT = new Date('2026-10-09T03:00:00Z');
 const WEST = -121.0, SOUTH = 35.2, STEP = 0.02, COLS = 12, ROWS = 9;
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 /**
  * One analysis sample per cell, 57.3 °F in the south-west corner to 64.08 °F in the north-east; `hole` drops cells.
  * The i·j term twists every quad (its corners are not a plane), so the every-pixel comparison exercises the bilinear cross-term.
@@ -62,7 +62,7 @@ const fieldOf = (pts = points()) => surfaceField(pts.map(p => ({lon: p.lon, lat:
 test('the token ramp equals packages/coast temperatureColors, in every theme', async () => {
   const css = await readFile(new URL('../web/tokens.css', import.meta.url), 'utf8');
   for (const [theme, colours] of Object.entries(themes(css, FILES['web/tokens.css']))) {
-    const palette = readPalette(name => colours[name] ?? (name === 'mpa-fill-opacity' ? '0.08' : ''));
+    const palette = readPalette(name => colours[name] ?? (name === 'mpa-fill-opacity' ? '0.08' : /^map-.*-(?:opacity|width)$/.test(name) ? '1' : ''));
     assert.deepEqual(ramps(palette).sst, temperatureColors, `${theme}: --sst-0 … --sst-5 through palette.ts`);
   }
   assert.equal(temperatureColors.length, 6);
@@ -72,7 +72,7 @@ test('the current-speed token ramp equals packages/coast currentColors and the p
   const css = await readFile(new URL('../packages/coast/panel.css', import.meta.url), 'utf8');
   const tokens = await readFile(new URL('../web/tokens.css', import.meta.url), 'utf8');
   for (const [theme, colours] of Object.entries(themes(tokens, FILES['web/tokens.css']))) {
-    const palette = readPalette(name => colours[name] ?? (name === 'mpa-fill-opacity' ? '0.08' : ''));
+    const palette = readPalette(name => colours[name] ?? (name === 'mpa-fill-opacity' ? '0.08' : /^map-.*-(?:opacity|width)$/.test(name) ? '1' : ''));
     assert.deepEqual(ramps(palette).current, currentColors, `${theme}: --current-0 … --current-5 through palette.ts`);
   }
   assert.match(css, /\.current-gradient \{background:linear-gradient\(90deg,var\(--coast-current-0\),var\(--coast-current-1\),var\(--coast-current-2\),var\(--coast-current-3\),var\(--coast-current-4\),var\(--coast-current-5\)\);\}/);

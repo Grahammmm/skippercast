@@ -310,3 +310,69 @@ def test_feet_factor_reads_the_shared_owner_on_first_import():
     done = subprocess.run([sys.executable, '-B', '-c', child], capture_output=True, text=True, cwd=ROOT, check=True,
                           env={'PYTHONPATH': str(ROOT / 'src'), 'PYTHONDONTWRITEBYTECODE': '1'})
     assert done.stdout.strip() == '2.12346'
+
+
+def _dated(value, **kw):
+    c = collection(**kw)
+    for f in c['features']:
+        f['properties']['survey_date'] = value
+    for s in c['provenance']['sources']:
+        s['survey_date'] = value
+    return c
+
+
+BAD_DATES = ['2026-02-29', '1900-02-29', '2026-04-31', '2026-01-00', '2026-01-32', '0000', '0000-01', '0000-01-01',
+             '2026-00', '2026-13', 2008, True, None, '\u0662\u0660\u0660\u0668', '2026-1', '2026-01-1', '2026-W05-3',
+             ' 2008', '2008 ', '2008\n', '2008-01-01\r\n', '2008-01-01T00:00:00Z', '200', '20080']
+GOOD_DATES = ['0001', '9999', '2008', '2026-02', '2000-02-29', '2024-02-29']
+
+
+@pytest.mark.parametrize('value', BAD_DATES)
+def test_check_refuses_an_impossible_or_non_canonical_survey_date(value):
+    with pytest.raises(ValueError, match='survey date or datum'):
+        dc.check_contours(_dated(value), REGION, SOURCES)
+
+
+@pytest.mark.parametrize('value', BAD_DATES[:3] + ['0000-01-01'])
+def test_held_check_has_the_same_calendar_gate(value):
+    region = {**REGION, 'source_bindings': {'bathymetry': ['survey-a', 'survey-c']}}
+    c = _dated(value, sources=('survey-a', 'survey-c'))
+    c['provenance'].update(publication_held=True, held_sources=[{'source_id': 'survey-c', 'review_status': 'candidate'}])
+    with pytest.raises(ValueError, match='survey date or datum'):
+        dc.check_held_contours(c, region, SOURCES)
+    ok = _dated('2024-02-29', sources=('survey-a', 'survey-c'))
+    ok['provenance'].update(publication_held=True, held_sources=[{'source_id': 'survey-c', 'review_status': 'candidate'}])
+    dc.check_held_contours(ok, region, SOURCES)
+    with pytest.raises(ValueError, match='are held and cannot be published'):
+        dc.check_contours(ok, region, SOURCES)
+
+
+@pytest.mark.parametrize('value', GOOD_DATES)
+def test_check_keeps_valid_partial_survey_dates_verbatim(value):
+    c = _dated(value)
+    dc.check_contours(c, REGION, SOURCES)
+    assert c['provenance']['sources'][0]['survey_date'] == value
+    assert {f['properties']['survey_date'] for f in c['features']} == {value}
+
+
+def test_valid_but_unequal_feature_and_source_dates_still_hit_the_feature_error():
+    c = _dated('2008')
+    c['features'][0]['properties']['survey_date'] = '2009'
+    with pytest.raises(ValueError, match="lacks its source's survey date"):
+        dc.check_contours(c, REGION, SOURCES)
+
+
+def test_publish_refuses_an_impossible_date_before_writing_either_form(tmp_path):
+    root, out, fresh = tmp_path / 'root', tmp_path / 'out', tmp_path / 'fresh'
+    (root / 'catalog/depth-contours').mkdir(parents=True)
+    out.mkdir()
+    fresh.mkdir()
+    (out / 'depth-contours.geojson').write_text('full-sentinel')
+    (out / 'depth-contours-overview.geojson').write_text('overview-sentinel')
+    (root / 'catalog/depth-contours/test-bay.geojson').write_text(json.dumps(_dated('2026-02-29')))
+    for target in (out, fresh):
+        with pytest.raises(ValueError, match='survey date or datum'):
+            dc.publish_depth_contours(root, REGION, target, SOURCES)
+    assert (out / 'depth-contours.geojson').read_text() == 'full-sentinel'
+    assert (out / 'depth-contours-overview.geojson').read_text() == 'overview-sentinel'
+    assert list(fresh.iterdir()) == []

@@ -30,7 +30,7 @@ const {layers, region} = await import('../web/state.ts');
 const {readPalette} = await import('../web/map/palette.ts');
 const {layerEntry} = await import('../web/map/layers.ts');
 const FIXTURE = JSON.parse(readFileSync(new URL('./fixtures/sp1711_ais_scale_refresh/cells.json', import.meta.url), 'utf8'));
-const PALETTE = readPalette(name => `token(${name})`);
+const PALETTE = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const PAGE = 'https://example.invalid/map';
 const PATH = 'synthetic/cells.geojson';
 const BEFORE = ['fleet-heat', 'fleet-tracks', 'fleet-tracks-dashed', 'fleet-events', MARK_PICK];

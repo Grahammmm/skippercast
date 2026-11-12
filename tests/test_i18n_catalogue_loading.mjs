@@ -284,3 +284,77 @@ test('generated_tables_exact_and_stale_check_refuses: the three tables are the c
     assert.throws(() => generate({root: base}), /x\.two: no (?:English|Spanish) string/, name);
   }
 });
+
+// ---- RF1651-7: one latest-request order across initReadyLanguage and chooseReadyLanguage ----
+
+test('english_init_supersedes_pending_spanish_choice: a later English init wins over an older pending Spanish choice, on success and on failure', async () => {
+  for (const outcome of ['success', 'failure']) {
+    for (const failedBefore of [false, true]) {
+      const storage = memory();
+      await withStorage(storage, async () => {
+        const gate = deferred();
+        const {m, requests} = await page(() => gate.promise);
+        const e = env({storage});
+        await m.initReadyLanguage(e);
+        if (failedBefore) m.catalogueFailed.value = true;
+        const old = m.chooseReadyLanguage('es', e);
+        await tick();
+        assert.equal(m.catalogueLoading.peek(), true);
+        assert.equal(await m.initReadyLanguage(e), 'en', 'the newer init resolves English');
+        assert.equal(m.catalogueLoading.peek(), false, 'English init settles the older loading indicator');
+        if (outcome === 'success') gate.resolve({default: SPANISH}); else gate.reject(Error('offline'));
+        assert.equal(await old, 'en', `${outcome}: the settled old choice resolves the effective language`);
+        assert.equal(m.language.peek(), 'en');
+        assert.equal(e.doc.documentElement.lang, 'en');
+        assert.equal(m.catalogueLoading.peek(), false);
+        assert.equal(m.catalogueFailed.peek(), failedBefore, `${outcome}: the failure flag is neither raised nor cleared by the stale request`);
+        assert.ok(!storage.writes.some(w => w[1] === 'es'), 'no Spanish preference written');
+        assert.equal(requests.length, 1, 'no duplicate import');
+      });
+    }
+  }
+});
+
+test('superseded_spanish_initializer_returns_effective_language: an initial Spanish load overtaken by an English choice resolves English and owns no flags', async () => {
+  for (const outcome of ['success', 'failure']) {
+    await withStorage(memory(), async () => {
+      const gate = deferred();
+      const {m} = await page(() => gate.promise);
+      const e = env({search: '?lang=es'});
+      const init = m.initReadyLanguage(e);
+      await tick();
+      assert.equal(await m.chooseReadyLanguage('en', e), 'en');
+      if (outcome === 'success') gate.resolve({default: SPANISH}); else gate.reject(Error('offline'));
+      assert.equal(await init, 'en', `${outcome}: the stale initializer returns the effective language`);
+      assert.equal(m.language.peek(), 'en');
+      assert.equal(e.doc.documentElement.lang, 'en');
+      assert.equal(m.catalogueFailed.peek(), false, `${outcome}: stale work raises no failure`);
+      assert.equal(m.catalogueLoading.peek(), false);
+    });
+  }
+});
+
+test('newest_spanish_request_owns_flags: a stale Spanish settlement does not clear or raise the newer request\'s state; a retry after failure succeeds', async () => {
+  await withStorage(memory(), async () => {
+    const gates = [deferred(), deferred()];
+    const {m, requests} = await page(n => gates[n - 1].promise);
+    const e = env();
+    await m.initReadyLanguage(e);
+    const first = m.chooseReadyLanguage('es', e);
+    const second = m.chooseReadyLanguage('es', e);
+    await tick();
+    assert.equal(requests.length, 1, 'one shared import');
+    gates[0].reject(Error('offline'));
+    assert.equal(await first, 'en');
+    assert.equal(await second, 'en');
+    assert.equal(m.catalogueFailed.peek(), true, 'the newest request owns the failure');
+    assert.equal(m.catalogueLoading.peek(), false);
+    const retry = m.chooseReadyLanguage('es', e);
+    await tick();
+    assert.equal(requests.length, 2, 'one new request on retry');
+    gates[1].resolve({default: SPANISH});
+    assert.equal(await retry, 'es');
+    assert.equal(m.catalogueFailed.peek(), false, 'success clears the failure');
+    assert.equal(m.language.peek(), 'es');
+  });
+});

@@ -17,7 +17,7 @@ const OPTIONS = {archive: 'https://example.test/tiles/basemap/ca-coast.pmtiles',
 const VARIANTS = ['day', 'night'];
 // A sentinel per token: no real colour can collide with these, so a style colour
 // that is not one of them was written somewhere other than the palette.
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const SENTINELS = new Set(Object.values(sentinel));
 const styles = Object.fromEntries(VARIANTS.map(variant => [variant, basemapStyle(sentinel, {...OPTIONS, variant})]));
 const symbols = style => style.layers.filter(layer => layer.type === 'symbol');

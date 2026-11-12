@@ -128,14 +128,14 @@ export function rankedStyle(p: Palette) {
     source: {type: 'geojson', data: {type: 'FeatureCollection', features: []}},
     layers: [
       {id: RANKED_PICK, type: 'circle', source: RANKED_SOURCE, paint: {'circle-radius': GROUP_PX / 2, 'circle-color': p.bg, 'circle-opacity': 0}},
-      {id: RANKED_PIN, type: 'circle', source: RANKED_SOURCE, paint: {'circle-radius': 16, 'circle-color': p.mint, 'circle-stroke-color': p.bg, 'circle-stroke-width': 2.5}},
+      {id: RANKED_PIN, type: 'circle', source: RANKED_SOURCE, paint: {'circle-radius': 16, 'circle-color': p.mint, 'circle-stroke-color': p.mapInkHalo, 'circle-stroke-width': 2.5}},
       {id: 'ranked-number', type: 'symbol', source: RANKED_SOURCE,
         layout: {'text-field': ['to-string', ['get', 'rank']], 'text-font': [LABEL_FONT], 'text-size': 15, 'text-allow-overlap': true, 'text-ignore-placement': true},
         paint: {'text-color': p.bg}},
       {id: 'ranked-more', type: 'symbol', source: RANKED_SOURCE, filter: ['>', ['get', 'more'], 0],
         layout: {'text-field': ['concat', '+', ['to-string', ['get', 'more']]], 'text-font': [LABEL_FONT], 'text-size': 12, 'text-anchor': 'left',
           'text-offset': [1.4, -1.2], 'text-allow-overlap': true, 'text-ignore-placement': true},
-        paint: {'text-color': p.text, 'text-halo-color': p.bg, 'text-halo-width': 2}},
+        paint: {'text-color': p.mapInk, 'text-halo-color': p.mapInkHalo, 'text-halo-width': 2}},
     ],
   };
 }

@@ -221,7 +221,7 @@ test('Morro Bay layers display the offline reason on startup and update it on re
   globalThis.addEventListener = events.addEventListener.bind(events);
   globalThis.removeEventListener = events.removeEventListener.bind(events);
   const data = {coastReport: signal(null), coastOcean: signal(null), coastStatus: signal({report: 'error', ocean: 'error'}), setPlace() {}, load: async () => {}};
-  const options = {zone: () => TZ, place: () => ({regionId: 'morro-bay'}), data, now: () => NOW, palette: () => readPalette(name => `token(${name})`)};
+  const options = {zone: () => TZ, place: () => ({regionId: 'morro-bay'}), data, now: () => NOW, palette: () => readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`)};
   let water, currents;
   try {
     water = createWaterTemp({...options, engine: signal(engine())});
@@ -245,7 +245,7 @@ test('a place with no local report draws its region\'s feed; a bound place never
   const e = engine(), s = server(feed());
   const coastStatus = signal({report: 'unbound', ocean: 'unbound', history: 'unbound'});
   const data = {coastReport: signal(null), coastStatus, setPlace() {}, load: async () => {}};
-  const w = createWaterTemp({engine: signal(e), zone: () => TZ, place: () => ({regionId: REGION}), data, palette: () => readPalette(name => `token(${name})`),
+  const w = createWaterTemp({engine: signal(e), zone: () => TZ, place: () => ({regionId: REGION}), data, palette: () => readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`),
     now: () => NOW, fetchFn: s.fetchFn, page: () => PAGE});
   t.after(() => w.destroy());
   await settle();

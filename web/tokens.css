@@ -100,18 +100,45 @@
   --wave-1: #69b9ee;
   --wave-2: #b8b6fc;
 
+  /* Map-only roles (MGL-15): the map and its legend read these, so the chrome tokens above stay the app's alone.
+     Each default is the chrome role the map used before, as its resolved hex, so no map colour moved except the
+     habitat classes. The four --hab-* classes are checked by `node scripts/check_contrast.mjs --habitat-cvd`
+     (every pair, normal vision plus protan, deutan and tritan, solid and as the survey fill over --map-water). */
+  --map-water: #07131d;
+  --map-land: #0e1d2b;
+  --map-park: #122535;
+  --map-road: #223849;
+  --map-road-minor: #122535;
+  --map-boundary: #223849;
+  --map-label: #8ba5b7;
+  --map-halo: #07131d;
+  --map-ink: #e6eff4;
+  --map-ink-halo: #07131d;
+  --map-coast: #8ba5b7;
+  --map-contour: #2b9c9c;
+  --mark-ring: #69e0bc;
+  --hab-rock: #2d9a9a;
+  --hab-mixed: #a199ff;
+  --hab-soft: #e9bb72;
+  --hab-kelp: #69f9d5;
+  /* Numeric map controls, 1 = as drawn today: label and road strength (0 to 1), habitat fill and contour weight multipliers. */
+  --map-label-opacity: 1;
+  --map-road-opacity: 1;
+  --map-habitat-opacity: 1;
+  --map-contour-width: 1;
+
   /* Typography */
   --font-sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --text-11: 11px;
-  --text-13: 13px;
-  --text-15: 15px;
-  --text-input: 16px;
-  --text-18: 18px;
-  --text-22: 22px;
-  --text-28: 28px;
-  --text-40: 40px;
-  --text-56: 56px;
+  --text-11: 0.6875rem;
+  --text-13: 0.8125rem;
+  --text-15: 0.9375rem;
+  --text-input: 1rem;
+  --text-18: 1.125rem;
+  --text-22: 1.375rem;
+  --text-28: 1.75rem;
+  --text-40: 2.5rem;
+  --text-56: 3.5rem;
   --leading-heading: 1.25;
   --leading-body: 1.5;
   --weight-regular: 400;
@@ -169,6 +196,22 @@
   --blue: #0b5ea8;
   --coral: #b8402a;
   --amber: #8a5a00;
+  --map-water: #f4f8f9;
+  --map-land: #ffffff;
+  --map-park: #e9f0f4;
+  --map-road: #cfdbe2;
+  --map-road-minor: #e9f0f4;
+  --map-boundary: #cfdbe2;
+  --map-label: #4a6373;
+  --map-halo: #f4f8f9;
+  --map-ink: #0b2530;
+  --map-ink-halo: #f4f8f9;
+  --map-coast: #4a6373;
+  --mark-ring: #087354;
+  --hab-rock: #00a8ba;
+  --hab-mixed: #5344e9;
+  --hab-soft: #895900;
+  --hab-kelp: #207053;
   --elev-1: 0 1px 2px rgb(0 0 0 / 0.12);
   --elev-2: 0 6px 18px rgb(0 0 0 / 0.14);
   --elev-3: 0 16px 40px rgb(0 0 0 / 0.2);

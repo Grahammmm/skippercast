@@ -23,8 +23,8 @@ export const stationState = signal<{pins: readonly StationPin[]; note: string; c
 export function stationOverlay(p: Palette): Overlay {
   return {sources: {[STATION_SOURCE]: {type: 'geojson', data: {type: 'FeatureCollection', features: []}, attribution: layerEntry('stations').attribution}}, layers: [
     {id: STATION_HIT, type: 'circle', source: STATION_SOURCE, paint: {'circle-radius': 22, 'circle-color': p.blue, 'circle-opacity': 0}},
-    {id: STATION_DOTS, type: 'circle', source: STATION_SOURCE, paint: {'circle-radius': 6, 'circle-stroke-width': 2, 'circle-stroke-color': p.bg,
-      'circle-color': ['case', ['get', 'stale'], p.muted, ['==', ['get', 'kind'], 'coops'], p.mint, p.blue]}},
+    {id: STATION_DOTS, type: 'circle', source: STATION_SOURCE, paint: {'circle-radius': 6, 'circle-stroke-width': 2, 'circle-stroke-color': p.mapInkHalo,
+      'circle-color': ['case', ['get', 'stale'], p.mapLabel, ['==', ['get', 'kind'], 'coops'], p.mint, p.blue]}},
   ]};
 }
 export function createStations(o: {engine: ReadonlySignal<Engine | null>; feed: () => RegionalDailyFeed | null; zone: () => string;
