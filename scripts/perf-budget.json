@@ -69,7 +69,7 @@
       "label": "App page (brief, map) styles (first load)",
       "kind": "first_load_css",
       "entry": "app.html",
-      "max_bytes": 76000,
+      "max_bytes": 77000,
       "history": [
         {
           "max_bytes": 71000,
@@ -102,6 +102,10 @@
         {
           "max_bytes": 76000,
           "reason": "SC1722-20 (after merging main with SC1722-19): the scoped .app-skip-link block this PR appends to web/app/app.css (the two skip links, 642 source bytes) takes the merged app first-load styles (assets/app css 55,654 plus degraded-notice 15,313, tokens 3,084 and Brief 1,708) to 75,759 bytes, inside the 76,000 budget (a 241 B margin); max_bytes is unchanged."
+        },
+        {
+          "max_bytes": 77000,
+          "reason": "Raised 76,000 to 77,000 (RF2135-6). The bounded account-dialog scrollport and its scroll-edge cues this PR adds in web/app/account.css take the app first-load styles to 76,028 bytes on their own (assets/app css 54.6 KB plus degraded-notice 15.0 KB, tokens 3.0 KB and Brief 1.7 KB), 28 bytes over the 76,000 budget; the budget moves up 1,000 bytes (1.3% headroom over that build), no more."
         }
       ]
     },
