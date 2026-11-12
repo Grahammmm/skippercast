@@ -40,7 +40,8 @@ def _sample(model, point_index, epoch, field, unit, now):
     if not isinstance(hourly, dict) or not isinstance(units, dict):
         return None
     times, values = hourly.get('time'), hourly.get(field)
-    if (units.get('time') != 'unixtime' or row.get('utc_offset_seconds') != 0 or
+    offset = row.get('utc_offset_seconds')  # JSON false is not a numeric UTC offset
+    if (units.get('time') != 'unixtime' or not _number(offset) or offset != 0 or
             units.get(field) != unit or not isinstance(times, list) or
             not isinstance(values, list) or len(times) != len(values)):
         return None
