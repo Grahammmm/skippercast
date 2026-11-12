@@ -29,7 +29,7 @@ async function load() {
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {dayVerdicts, withVerdicts} from './web/app/day-verdicts.ts';
       export {TimeDock, dayOptions, dockState, selectDay, selectHour, localParts} from './web/app/TimeDock.tsx';
-      export {SheetBrief} from './web/app/Mobile.tsx';
+      export {HourEdge} from './web/app/Mobile.tsx';
       export {Verdict, currentBrief, currentVerdict, leadBrief, dailyFeed, regionalForecast} from './web/brief/Brief.tsx';
       export {regionInfo} from './web/app/region-info.ts';
       export {dockTime, horizonDays} from './web/hour.ts';
@@ -210,7 +210,7 @@ test('en_es_visible_and_accessible_both_surfaces: the word is the chip text on d
   const chips = html => [...html.match(/aria-label="(?:Day|Día)"[^>]*>(.*?)<\/div>/s)[1].matchAll(/<button\b([^>]*)>(?:<svg.*?<\/svg>)?([^<]+)<\/button>/gs)].map(b => ({text: b[2], pressed: /aria-pressed="true"/.test(b[1]), labelled: /aria-label=/.test(b[1])}));
   const values = m.dayOptions(NOW, TZ, null).map(o => o.value);
   const expected = lang => m.withVerdicts(m.dayOptions(NOW, TZ, null, lang), m.dayVerdicts(NOW, TZ).value, lang).map(o => o.label);
-  for (const Surface of [m.TimeDock, m.SheetBrief]) {
+  for (const Surface of [m.TimeDock, m.HourEdge]) {
     const en = m.render(m.h(Surface, {now: NOW}));
     for (const lang of ['en', 'es', 'en']) {
       m.language.value = lang;
