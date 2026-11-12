@@ -8,6 +8,7 @@ import {existsSync} from 'node:fs';
 import {mkdtemp, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import util from 'node:util';
 import {pathToFileURL} from 'node:url';
 import {chromium} from '@playwright/test';
 import {build} from 'esbuild';
@@ -142,6 +143,46 @@ test('own_limits_exact: strictly over, unrounded, per value and per family, in t
   assert.match(es.line, /viento por encima de tu límite de 10 kt, ráfagas por encima de tu límite de 16 kt \(tus límites\)/);
   assert.match(run({times: ready({a: at(-2)}), language: 'es'}).stops.get('a').line, /sin pronóstico para esa hora/);
   assert.doesNotMatch(over.line, VERDICT);
+});
+
+test('own_limit_decimal_comma: the saved limit prints with the language\'s decimal separator; comparisons and English are untouched', () => {
+  const half = {wind: 10, gust: 15, seas: 2.5}, arrive = {a: at(2)};   // NOAA wind 12 / gust 18 / seas 3; ECMWF 22 / 28 / 4
+  const en = run({times: ready(arrive), ownLimits: half}).stops.get('a'), enLine = en.line;
+  assert.ok(enLine.endsWith('· wind over your 10 kt, gusts over your 15 kt, seas over your 2.5 ft (your limits)'), enLine);
+  const es = run({times: ready(arrive), ownLimits: half, language: 'es'}).stops.get('a');
+  for (const fam of es.families) assert.ok(util.isDeepStrictEqual(fam.over, ['viento por encima de tu límite de 10 kt', 'ráfagas por encima de tu límite de 15 kt', 'oleaje por encima de tu límite de 2,5 ft']), fam.over.join());
+  assert.ok(es.line.includes('oleaje 4,0 ft'), es.line);
+  assert.equal(es.line.match(/de 2,5 ft/g).length, 2, es.line);
+  assert.doesNotMatch(es.line, /límite de 2\.5/);
+  // integers stay integers (no ",0", no grouping), in both languages
+  const whole = run({times: ready(arrive), ownLimits: {wind: 10, gust: 15, seas: 2}, language: 'es'}).stops.get('a');
+  assert.ok(whole.families[0].over.includes('oleaje por encima de tu límite de 2 ft'), whole.families[0].over.join());
+  assert.ok(whole.families[0].over.includes('viento por encima de tu límite de 10 kt'), whole.families[0].over.join());
+  assert.doesNotMatch(whole.line, /límite de \d+,0/);
+  // the round trip restores the exact English line and numbers
+  const back = run({times: ready(arrive), ownLimits: half, language: 'en'}).stops.get('a');
+  assert.equal(back.line, enLine);
+  assert.ok(util.isDeepStrictEqual(back.families.map(f => [f.wind, f.seas]), en.families.map(f => [f.wind, f.seas])), 'structured cells unchanged');
+  assert.equal(half.seas, 2.5);
+});
+
+test('own_limit_decimal_comma_strict: equality is not over and a just-above sample is, in either language, whatever the display rounds to', () => {
+  const half = {wind: 99, gust: 99, seas: 2.5};
+  const withSeas = height => {
+    const f = feed(), m = f.models.ncep_gfswave016;
+    m.data = m.data.map(() => series(() => ({wave_height: height, wave_period: 11, wave_direction: 290})));
+    return forecastOf(f);
+  };
+  for (const language of ['en', 'es']) {
+    const equal = run({forecast: withSeas(2.5), times: ready({a: at(0)}), ownLimits: half, language}).stops.get('a');
+    assert.deepEqual(equal.families[0].over, [], language);
+    const above = run({forecast: withSeas(2.54), times: ready({a: at(0)}), ownLimits: half, language}).stops.get('a');
+    assert.equal(above.families[0].over.length, 1, language);
+    assert.match(above.families[0].over[0], language === 'en' ? /seas over your 2\.5 ft/ : /límite de 2,5 ft/);
+    // a gap or no own limits never gets a seas note
+    assert.deepEqual(run({forecast: withSeas(2.54), times: ready({a: at(-2)}), ownLimits: half, language}).stops.get('a').families.map(f => f.over), [[], []]);
+    assert.deepEqual(run({forecast: withSeas(2.54), times: ready({a: at(0)}), ownLimits: null, language}).stops.get('a').families.map(f => f.over), [[], []]);
+  }
 });
 
 const needsChromium = {skip: !existsSync(chromium.executablePath()) && 'chromium not installed'};
