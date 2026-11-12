@@ -7,11 +7,10 @@
 .port-input-label { font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); }
 .port-input-row { display: flex; gap: var(--space-2); }
 .port-input input {
-  flex: 1; min-width: 0; min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
+  flex: 1; min-width: 0; min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md);
   background: var(--panel-2); color: var(--text); font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans);
 }
 .port-input input::placeholder { color: var(--muted); }
-.port-input input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .port-input-results { display: flex; flex-direction: column; gap: var(--space-2); max-height: min(320px, 40vh); max-height: min(320px, 40dvh); overflow: auto; }
 .port-input-list { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .port-input-option {
@@ -20,7 +19,6 @@
   transition: border-color var(--motion-state), background var(--motion-state);
 }
 .port-input-option:hover { border-color: var(--muted); }
-.port-input-option:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .port-input-option span { color: var(--muted); font-size: var(--text-13); }
 .port-input-empty, .port-input-feedback, .port-input-note { margin: 0; color: var(--muted); font-size: var(--text-13); }
 .port-input-feedback { min-height: 1.2em; }
@@ -107,7 +105,7 @@
 .app-share-popover { position: static; flex-basis: 100%; min-width: 0; max-width: 100%; }
 .app-share-popover > .ui-popover-body { position: static; box-sizing: border-box; width: min(320px, 100%); max-width: 100%; }
 .app-share-popover input {
-  box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; min-height: var(--touch-min); padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md);
+  box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; min-height: var(--touch-min); padding: var(--space-2); border: 1px solid var(--line-strong); border-radius: var(--radius-md);
   background: var(--panel-2); color: var(--text); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans);
 }
 /* Measured model gaps beside the verdict. */
@@ -118,4 +116,3 @@
 .app-sheet:not([data-detent="full"]) .app-verdict-skill { display: none; }
 .app-verdict-models-detail { color: var(--muted); font-size: var(--text-13); }
 .app-verdict-models-detail summary { cursor: pointer; min-height: var(--touch-min); }
-.app-verdict-models-detail summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
