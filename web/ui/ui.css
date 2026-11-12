@@ -22,7 +22,11 @@ input, select, textarea { font-size: var(--text-input) !important; }
   font: var(--weight-medium) var(--text-13) / var(--leading-heading) var(--font-sans); cursor: pointer;
   transition: background var(--motion-state), border-color var(--motion-state), color var(--motion-state);
 }
-.ui-button:focus-visible, .ui-range:focus-visible, .ui-popover-summary:focus-visible, .ui-sheet-handle:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* UXFIX-04: the one focus ring. Headings (h2[tabindex]), inputs, selects, summaries, links and buttons all match it; the kept copies elsewhere differ in offset. */
+:where(button, input, select, textarea, summary, [tabindex]):focus-visible, .ui-range:focus-visible, .ui-popover-summary:focus-visible, .ui-sheet-handle:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* UXFIX-04: every text field's border is --line-strong (non-text 3:1, WCAG 1.4.11), textarea included. :where keeps it at zero
+   specificity, so a scoped rule or a border reset still wins; checkbox, radio, range and button-like inputs are left alone. */
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="file"], [type="color"], [type="image"], [type="hidden"]), select, textarea) { border: 1px solid var(--line-strong); }
 /* The app map's canvases sit in a clipped stage, so their ring is drawn inward. */
 .app-chart canvas:focus-visible, .app-terrain canvas:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .ui-button:disabled, .ui-button[aria-disabled="true"] { color: var(--muted); cursor: not-allowed; opacity: 0.6; }

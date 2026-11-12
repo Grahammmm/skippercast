@@ -21,7 +21,7 @@
         },
         {
           "max_bytes": 306000,
-          "reason": "Raised 304,000 to 306,000 (UXFIX-03). The shared web/ui/scroll-cue.ts bottom-fade hook, which the Choose-port list on the landing page now imports, takes the landing first-load scripts to 304,807 bytes on this branch merged with main; main itself already measures 304,012 bytes, 12 over, so this unit adds 795 bytes. The budget moves up 2,000 bytes (0.4% headroom over that build), no more."
+          "reason": "Raised 304,000 to 306,000 (MAIN-RED-SKIPPERCAST). Main bcd9f04c builds the landing first-load scripts at 304,012 bytes (strings.en.generated 186.7 KB, signals 20.9 KB, landing 16.9 KB and others), 12 bytes over the 304,000 budget after the concurrent merges of #2110, #2111 and #2098, each of which passed CI on its own head. The budget moves up 2,000 bytes (0.7% headroom over that build), no more."
         }
       ]
     },
@@ -73,7 +73,7 @@
       "label": "App page (brief, map) styles (first load)",
       "kind": "first_load_css",
       "entry": "app.html",
-      "max_bytes": 78000,
+      "max_bytes": 77000,
       "history": [
         {
           "max_bytes": 71000,
@@ -110,10 +110,6 @@
         {
           "max_bytes": 77000,
           "reason": "Raised 76,000 to 77,000 (RF2135-6). The bounded account-dialog scrollport and its scroll-edge cues this PR adds in web/app/account.css take the app first-load styles to 76,028 bytes on their own (assets/app css 54.6 KB plus degraded-notice 15.0 KB, tokens 3.0 KB and Brief 1.7 KB), 28 bytes over the 76,000 budget; the budget moves up 1,000 bytes (1.3% headroom over that build), no more."
-        },
-        {
-          "max_bytes": 78000,
-          "reason": "Raised 77,000 to 78,000 (UXFIX-03). The one .ui-scroll-cue[data-more] bottom-fade rule this PR adds in web/ui/ui.css (the DS 6.8 16 px mask for the Choose-port list and the scrolling dialogs) takes the app first-load styles to 77,294 bytes on this branch merged with main (assets/app css 54.9 KB plus degraded-notice 15.9 KB, tokens 3.0 KB and Brief 1.7 KB), 294 bytes over the 77,000 budget; the budget moves up 1,000 bytes (0.9% headroom over that build), no more."
         }
       ]
     },
