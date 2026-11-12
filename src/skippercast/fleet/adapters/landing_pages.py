@@ -437,16 +437,18 @@ def _merge_offering(offerings: dict[tuple, Offering], offering: Offering) -> tup
     """Add ``offering`` under its key, merging with an offering already there; returns the key.
 
     The merged offering cites both sets of facts. Two different known prices for one offering id
-    contradict each other, so its price becomes unknown (None) rather than whichever row came first.
+    contradict each other, so its price becomes unknown (None) rather than whichever row came first. The
+    prices are read from every cited fact too, so a later row repeating one of them cannot resolve it.
     """
     key = _offering_key(offering)
     kept = offerings.get(key)
     if kept is None:
         offerings[key] = offering
         return key
-    prices = {p for p in (kept.price_cents, offering.price_cents) if p is not None}
-    offerings[key] = replace(kept, price_cents=prices.pop() if len(prices) == 1 else None,
-                             facts=tuple(_unique([*kept.facts, *offering.facts])))
+    facts = tuple(_unique([*kept.facts, *offering.facts]))
+    prices = {f.value.get("price_cents") for f in facts if f.field == "trip_types[]" and isinstance(f.value, dict)}
+    prices = (prices | {kept.price_cents, offering.price_cents}) - {None}
+    offerings[key] = replace(kept, price_cents=prices.pop() if len(prices) == 1 else None, facts=facts)
     return key
 
 

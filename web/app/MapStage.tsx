@@ -43,6 +43,7 @@ import {poster, posterPlacement} from '../map/poster.ts';
 import {profile, region, species} from '../state.ts';
 import {cancelWaypointPlacement, placementRefused, verdictLine, waypointPlacement} from '../waypoint-placement.ts';
 import {currentRegionInfo, zone} from './App.tsx';
+import {MAP_ID} from './SkipLinks.tsx';
 
 export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> = [
   {value: 'chart', label: 'Chart'}, {value: '2d', label: '2D'}, {value: '3d', label: '3D'},
@@ -146,7 +147,7 @@ export function MapStage({children, clock}: {children?: ComponentChildren; clock
   }, [clock]);
   const shown = shownPresentation.value, lang = language.value, failed = mapUnavailable.value;
   return (
-    <section class="app-stage" tabIndex={-1} aria-label={t('stage.map', lang)}>
+    <section class="app-stage" tabIndex={-1} aria-label={t('stage.map', lang)} id={MAP_ID}>
       <div class="app-map" hidden={shown !== 'chart'}>
         <div class="app-chart" ref={chartHost} hidden={chartFailed.value} aria-busy={chartLoading.value ? 'true' : 'false'} />
         {failed ? <MapUnavailable /> : <ChartPoster />}
