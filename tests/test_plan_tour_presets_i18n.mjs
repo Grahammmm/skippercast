@@ -149,7 +149,7 @@ test('tour_all_steps_es_and_invalid: whole Spanish paragraphs, English unchanged
 test('presets_es_labels_not_state: labels change, ids, order and state do not', async () => {
   const m = await ui_(); setup(m);
   const EN = {'reef-drift': 'Reef drift', halibut: 'Halibut', crab: 'Crab', offshore: 'Offshore', transit: 'Transit'};
-  const ES = {'reef-drift': 'Deriva sobre arrecife', halibut: 'Halibut', crab: 'Cangrejo', offshore: 'Mar adentro', transit: 'Tránsito'};
+  const ES = {'reef-drift': 'Deriva sobre arrecife', halibut: 'Lenguado', crab: 'Cangrejo', offshore: 'Mar adentro', transit: 'Tránsito'};
   for (const [id, label] of Object.entries(EN)) {
     assert.equal(presetLabel(id), label); assert.equal(presetLabel(id, 'en'), label); assert.equal(presetLabel(id, 'es'), ES[id]);
     assert.equal(PRESETS.find(p => p.id === id).label, label, 'compatibility label is English');
