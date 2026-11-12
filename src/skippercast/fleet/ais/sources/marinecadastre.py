@@ -89,7 +89,7 @@ class CorruptDay(ValueError):
 
 
 class MalformedFile(ValueError):
-    """The file is not a MarineCadastre daily CSV (a required column is missing)."""
+    """The file is not a MarineCadastre daily CSV (a required column is missing, or two columns name the same field)."""
 
 
 def day_url(day: date) -> str:
@@ -201,8 +201,11 @@ def _columns(header: list[str]) -> dict[str, int]:
     found: dict[str, int] = {}
     for index, name in enumerate(header):
         key = _ALIASES.get(name.strip().lstrip("﻿").lower().replace("_", ""))
-        if key and key not in found:
-            found[key] = index
+        if key is None:
+            continue
+        if key in found:
+            raise MalformedFile(f"ambiguous MarineCadastre AIS CSV header: '{key}' is in columns {found[key]} and {index}")
+        found[key] = index
     missing = [k for k in _REQUIRED if k not in found]
     if missing:
         raise MalformedFile(f"not a MarineCadastre AIS CSV: no {', '.join(missing)} column")
