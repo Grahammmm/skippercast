@@ -124,7 +124,6 @@ test('the known list is well-formed: every entry has a kind, a reason, an execut
 for (const view of APP_VIEWS) {
   test(`WCAG 2.1 AA: ${view} view`, async ({page, v2, pageErrors}, info) => {
     void pageErrors;
-    test.fixme(view === 'history' && ['phone-land', 'tablet'].includes(info.project.name), 'chart-overflow focus indicator missing at 844x390 and 768x1024 (UXFIX-12 finding)');
     await v2.open('app', {view, region: 'morro-bay'});
     const heading = HEADINGS[view];
     await expect(heading ? page.getByRole('heading', {name: heading, exact: true}) : page.locator(HEADING_IDS[view] ?? 'h1, h2').first()).toBeVisible();
