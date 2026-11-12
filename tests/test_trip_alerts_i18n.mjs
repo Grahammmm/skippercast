@@ -11,6 +11,7 @@ import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import * as alerts from '../web/alerts.ts';
+import {readableDate} from '../web/dates.ts';
 import {weekendDigest, toText, EMPTY_WEEKEND} from '../web/digest.ts';
 import {catalogueProblems, COVERED} from '../scripts/check_copy.mjs';
 
@@ -90,8 +91,8 @@ test('feedback phase, trip line, saved limits and reuse notes: English unchanged
   assert.equal(alerts.feedbackPhase(fb('constructor'), 'es'), 'constructor');
   assert.equal(alerts.feedbackPhase({observed_at: '', rating: 7, context: '{'}, 'es'), '');
   const trip = {id: 't', date: '2026-11-07', point: 'p', species: 's', start_hour: 7, end_hour: 13, boat_sea: 0.7, boat_name: ''};
-  assert.equal(alerts.tripLine(trip), '2026-11-07 · p · s · 7:00–13:00 · saved boat');
-  assert.equal(alerts.tripLine(trip, undefined, 'es'), '2026-11-07 · p · s · 7:00–13:00 · embarcación guardada');
+  assert.equal(alerts.tripLine(trip), 'Sat 7 Nov · p · s · 7:00–13:00 · saved boat');
+  assert.equal(alerts.tripLine(trip, undefined, 'es'), 'sáb 7 nov · p · s · 7:00–13:00 · embarcación guardada');
   assert.equal(alerts.tripLine({...trip, boat_name: 'My <b>Boat</b>'}, undefined, 'es').endsWith('My <b>Boat</b>'), true);
   assert.equal(alerts.savedTripLimits({...trip, wind_limit: 9, gust_limit: 14}), 'Saved limits: wind 9 kt · gust 14 kt · sea not recorded');
   assert.equal(alerts.savedTripLimits({...trip, wind_limit: 9, gust_limit: 14, sea_limit: 2.5}, 'es'), 'Límites guardados: viento 9 kt · ráfaga 14 kt · oleaje 2.5 ft');
@@ -138,6 +139,19 @@ test('digest: Spanish changes the words and the hazard prefix only; stored hazar
   assert.ok(!text.includes('Nota de peligro: ok'), 'one bad note drops the whole list, as before');
 });
 
+test('UXFIX-07 readableDate: Tue 10 Nov / mar 10 nov in the region zone; the DST day keeps its calendar day; anything unreadable prints as given', () => {
+  const LA = 'America/Los_Angeles';
+  assert.equal(readableDate('2026-11-10', 'en', LA), 'Tue 10 Nov');
+  assert.equal(readableDate('2026-11-10', 'es', LA), 'mar 10 nov');
+  assert.equal(readableDate('2026-11-01', 'en', LA), 'Sun 1 Nov', 'the day the clocks go back is still that day');
+  assert.equal(readableDate('2026-11-02', 'en', LA), 'Mon 2 Nov');
+  for (const zone of ['Pacific/Auckland', 'Pacific/Kiritimati', 'Etc/GMT+12']) assert.equal(readableDate('2026-11-10', 'en', zone), 'Tue 10 Nov', zone);
+  for (const bad of ['2026-02-31', '11/09/2026', '', 'soon']) assert.equal(readableDate(bad, 'en', LA), bad, bad);
+  assert.equal(readableDate('2026-11-10', 'en', 'Not/AZone'), '2026-11-10', 'an unknown zone does not throw');
+  assert.doesNotMatch(readableDate('2026-11-10', 'es', LA), /[,.]/);
+  assert.equal(alerts.tripLine({id: 't', date: '2026-11-10', point: 'p', species: 's', start_hour: 7, end_hour: 13}, undefined, 'en', 'Pacific/Auckland'), 'Tue 10 Nov · p · s · 7:00–13:00');
+});
+
 test('digest: the empty weekend says its line in the chosen language; the English export is unchanged', () => {
   const none = weekendDigest([], names, TODAY, 'es');
   assert.equal(none.empty, true);
@@ -177,11 +191,15 @@ test('recap: Spanish headings and catch labels; the server assessment stays Engl
     assert.ok(en.includes('Older catch-log entries were not read. The entries shown may be incomplete.'));
     assert.ok(!/ lang="/.test(en), 'English output carries no language marks');
     assert.ok(en.includes('<p style="white-space:pre-line;">Wind may exceed your limit.\nHazard note: &lt;b>Bar&lt;/b> crossing</p>'), 'message verbatim and escaped once ');
+    assert.ok(en.includes('Sun 1 Nov · Alpha') && en.includes('Fri 6 Nov · Alpha'), 'the rows read Sun 1 Nov / Fri 6 Nov');
+    assert.ok(en.includes('Delete the trip on Sun 1 Nov at Alpha') || en.includes('Sun 1 Nov'), 'aria names use the readable date');
+    assert.ok(!/\b\d{4}-\d{2}-\d{2}\b/.test(en), 'no ISO date is left in the visible text or the names');
     m.language.value = 'es';
     const es = draw();
+    assert.ok(es.includes('dom 1 nov · Alpha') && !/\b\d{4}-\d{2}-\d{2}\b/.test(es), 'Spanish: the same, lower-case, no ISO');
     for (const text of ['<h3>Próximos</h3>', '<h3>Pasados</h3>', 'Tu propio registro de cada viaje. Las evaluaciones del pronóstico son lo que enviamos antes del día, no lo que hizo el mar.',
       'Evaluación del día anterior · mostrada aquí', 'Tus informes de comodidad', '8/10 · Pesca', 'Tu registro de capturas', 'Captura · 3 peces', 'Sin captura: ningún pez', 'No se sabe',
-      'Eliminar</button>', 'aria-label="Eliminar el viaje del 2026-11-01 en Alpha"', 'Usar de nuevo', 'Límites guardados: viento 9 kt · ráfaga 14 kt · oleaje 2.5 ft', 'Sin evaluación reciente',
+      'Eliminar</button>', 'aria-label="Eliminar el viaje del dom 1 nov en Alpha"', 'Usar de nuevo', 'Límites guardados: viento 9 kt · ráfaga 14 kt · oleaje 2.5 ft', 'Sin evaluación reciente',
       'No se leyeron las entradas más antiguas del registro de capturas.'])
       assert.ok(es.includes(text), text);
     assert.ok(es.includes(`<p lang="en" style="white-space:pre-line;">Wind may exceed your limit.\nHazard note: &lt;b>Bar&lt;/b> crossing</p>`), 'the server text is verbatim and marked English');

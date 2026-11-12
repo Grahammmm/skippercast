@@ -122,6 +122,8 @@ test('the ranked export runs in v2: best reefs, complete outlines and a download
   await expect(page.locator('#export-spot-list')).toContainText('#1 · Strong');
   await expect(page.locator('#export-spot-list')).not.toContainText('% confidence');
   await expect(page.locator('#export-shared-confidence')).toHaveText('All ranked places: 90% evidence confidence.');
+  // UXFIX-07 (UX audit S4-38): no ISO date is visible text in the trip dialog (the native date input's value is not text).
+  expect(await page.getByRole('dialog', {name: 'Trip plan and GPX'}).innerText()).not.toMatch(/\b\d{4}-\d{2}-\d{2}\b/);
   await expect(page.locator('[data-layer="outlines"]')).toBeChecked();
   await expect(page.locator('[data-layer="alignments"]')).not.toBeChecked();
   await expect(page.locator('[data-layer="exclusions"]')).not.toBeChecked();
