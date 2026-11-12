@@ -684,7 +684,8 @@ async function renderMobile(href) {
 
 test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a four-tab nav', async () => {
   const html = await renderMobile(`${ORIGIN}?region=morro-bay`);
-  assert.match(html, /^<main class="app-mobile"><a class="app-skip-link" href="#app-brief-content">Skip to brief<\/a><a class="app-skip-link" href="#app-map-content">Skip to map<\/a><section class="app-stage" tabindex="-1" aria-label="Map" id="app-map-content">/, 'the two skip links, then the map stage that fills the viewport; the root is the page\'s one main (S4-46)');
+  assert.match(html, /^<main class="app-mobile"><a class="app-skip-link" href="#app-brief-content">Skip to brief<\/a><a class="app-skip-link" href="#app-map-content">Skip to map<\/a><header class="app-top">/, 'the two skip links, then the top strip (UXFIX-09: it precedes the map in the DOM, as on screen); the root is the page\'s one main (S4-46)');
+  assert.match(html, /<\/header><section class="app-stage" tabindex="-1" aria-label="Map" id="app-map-content">/, 'the map stage that fills the viewport follows the top strip');
   assert.doesNotMatch(html, /app-masthead|app-command|app-main|app-brief"|app-dock/, 'no desktop chrome');
   // Top strip: the brand and location card, the layers button, then the full-width profile switch.
   assert.match(html, /<header class="app-top"><div class="app-top-row"><div class="app-top-card"><a class="app-brand" href="\/">.*?<span class="app-location ui-mono" data-region="morro-bay">Morro Bay —<\/span><\/div><button[^>]*aria-label="Layers"[^>]*aria-pressed="false"/s);

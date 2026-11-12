@@ -225,7 +225,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
   return (
     <main class="app-mobile">
       <SkipLinks phone prepare={target => { if (target === 'brief') apply({panel: 'brief', detent: 'half'}); else setDetent('peek'); }} />
-      <MapStage clock={clock} />
+      {/* UXFIX-09: the top strip precedes the map in the DOM, as it does on screen (its stacking is z-index, not DOM order). */}
       <header class="app-top">
         <div class="app-top-row">
           <div class="app-top-card">
@@ -237,6 +237,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
+      <MapStage clock={clock} />
       {appView.value === 'reports' || appView.value === 'plan' ? <div class="app-mobile-page">{firstRun}{appView.value === 'plan' ? <Guard name="plan"><TargetSelect /><PlanView now={now} /></Guard> : <Guard name="reports"><Reports now={now} /></Guard>}</div> : <Sheet landmark={false} label={layersOpen ? t('shell.layers', lang) : appView.value === 'conditions' || appView.value === 'fleet' || appView.value === 'history' ? viewLabel(appView.value, lang) : t('shell.brief', lang)} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
         class={['app-sheet', currentMark.value && !noMap ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<Guard name="time-dock"><HourEdge now={now} /></Guard>}
         onBodyFocus={event => {
