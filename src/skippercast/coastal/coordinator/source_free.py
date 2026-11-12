@@ -270,7 +270,9 @@ def validate_input(store,descriptor,*,now,horizon):
         raise ValueError('registered subset outside original parent')
     if document.get('saved_area_adoption') and (len(items)!=1 or items[0]['result_ref']!=document['saved_area_adoption']['qualified_result']):
         raise ValueError('adopted map exact single original A required')
-    for proof_ref,item in zip(document['producer_proofs'],items):
+    proofs=document['producer_proofs']
+    if type(proofs) is not list or len(proofs)!=len(items):raise ValueError('exactly one retained producer proof per mapping item required')
+    for proof_ref,item in zip(proofs,items):
         proof=load(store.root,proof_ref,contract=PROOF)
         stored=store.db.execute('SELECT record_json FROM retained_producers WHERE proof_sha=?',(proof_ref['sha256'],)).fetchone()
         if (not stored or json.loads(stored[0])!=proof or item is None
