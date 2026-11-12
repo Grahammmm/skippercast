@@ -2,11 +2,17 @@
 // Before the fix the day chip's scrollIntoView({block: 'nearest'}) (web/app/TimeDock.tsx) could scroll the document as well as the day strip,
 // and the map stage's 480 px minimum pushed the dock under the window bottom (1180x820: dock bottom at 834).
 // The calls are recorded from before the first script runs, so a scroll made by the app itself shows up as a call or a document scroll event.
-import {test, expect} from './fixtures.ts';
+import {test, expect, setSize, wideViewport} from './fixtures.ts';
 
 const SIZES = [{width: 1024, height: 768}, {width: 1180, height: 820}, {width: 1280, height: 800}, {width: 1366, height: 768}, {width: 1440, height: 900}];
 
 interface Trace {calls: string[]; scrolls: number}
+
+/** The desktop layout starts at 1,024 px: the laptop project, or (nightly, E2E_WIDE=1) a wide project whose own size is that wide. */
+function notDesktop(projectName: string): boolean {
+  const wide = wideViewport();
+  return wide ? wide.width < 1024 : projectName !== 'laptop';
+}
 
 async function record(page: import('@playwright/test').Page): Promise<void> {
   await page.addInitScript(() => {
@@ -27,8 +33,9 @@ async function record(page: import('@playwright/test').Page): Promise<void> {
 
 for (const size of SIZES) {
   test(`desktop ${size.width}x${size.height}: nothing scrolls the page on load and the whole time dock is in the window`, async ({page, v2}, info) => {
-    test.skip(info.project.name !== 'laptop', 'the desktop layout only');
-    await page.setViewportSize(size);
+    test.skip(notDesktop(info.project.name), 'the desktop layout only');
+    test.skip(!!wideViewport() && size !== SIZES[0], 'a nightly project runs one case, at its own size');
+    await setSize(page, size);
     await record(page);
     await v2.open('app', {region: 'morro-bay'});
     await expect(page.locator('.app-dock .ui-dock')).toBeVisible();
@@ -60,8 +67,8 @@ for (const size of SIZES) {
 }
 
 test('a day chosen below the fold reveals its chip in the strip and moves no ancestor or the page', async ({page, v2}, info) => {
-  test.skip(info.project.name !== 'laptop', 'the desktop layout only');
-  await page.setViewportSize({width: 1024, height: 768});
+  test.skip(notDesktop(info.project.name), 'the desktop layout only');
+  await setSize(page, {width: 1024, height: 768});
   await v2.open('app', {region: 'morro-bay'});
   const strip = page.locator('.app-dock .ui-dock > .ui-segmented');
   await expect(strip.locator('.ui-chip').nth(7)).toBeAttached();

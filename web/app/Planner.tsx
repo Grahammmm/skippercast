@@ -13,6 +13,7 @@ import {USER_WAYPOINT_CATEGORIES} from '../../dist/trip-export.js';
 import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, TripSpecies} from '../planner.ts';
 import {ALERT_STORAGE_NOTE, PORTS_FAILED_NOTE, sharedConfidence, type AlertLegsFn} from '../planner.ts';
 import {AREA_NOTE} from '../planner-alerts.ts';
+import {readableDate, readableDates} from '../dates.ts';
 import {tripLegs} from '../trip-legs.ts';
 import {clockText, DEFAULT_TIMING, MAX_FISH_MIN, parseTiming, tripTimes} from '../trip-times.ts';
 import {tripStopForecast} from '../trip-forecast.ts';
@@ -113,7 +114,7 @@ function AlertSave({m, legs, open}: {m: Model; legs: AlertLegsFn; open: boolean}
     <section class="export-card" id="planner-alert" aria-label={t('planner.alert.aria', lang)}>
       <h3>{t('planner.alert.aria', lang)}</h3>
       {p ? <>
-        <p class="export-note" id="planner-alert-preview">{`${p.date} · ${p.area} · ${p.target} · ${p.hours} · ${t('planner.alert.limits', lang, {wind: p.limits.wind, gust: p.limits.gust, sea: p.limits.sea})} · ${plannerText(p.boat, lang)} · ${t(p.stops === 1 ? 'planner.alert.stop' : 'planner.alert.stops', lang, {n: p.stops})}, ${t(p.legs === 1 ? 'planner.alert.leg' : 'planner.alert.legs', lang, {n: p.legs})}`}</p>
+        <p class="export-note" id="planner-alert-preview">{`${readableDate(p.date, lang, m.region.timezone)} · ${p.area} · ${p.target} · ${p.hours} · ${t('planner.alert.limits', lang, {wind: p.limits.wind, gust: p.limits.gust, sea: p.limits.sea})} · ${plannerText(p.boat, lang)} · ${t(p.stops === 1 ? 'planner.alert.stop' : 'planner.alert.stops', lang, {n: p.stops})}, ${t(p.legs === 1 ? 'planner.alert.leg' : 'planner.alert.legs', lang, {n: p.legs})}`}</p>
         <ol aria-label={t('planner.alert.legsAria', lang)} id="planner-alert-legs">{p.legList.map((l, i) => <li key={i}>{`${l.from} → ${l.to} · ${nmText(l.nm, lang)} nm${l.basis === 'straight' ? t('planner.leg.straight', lang) : ''}${t('planner.leg.min', lang, {n: l.minutes})}${l.screen ? legLine(l.screen as Parameters<typeof plannerVerdict>[0], lang) : t('planner.alert.notChecked', lang)}`}</li>)}</ol>
         {p.legList.some(l => l.basis === 'straight') ? <p class="export-note" id="planner-alert-legs-note">{t('planner.leg.straightCaveat', lang)}{t('planner.leg.common', lang)}</p> : null}
         {p.groupNote ? <p class="export-note">{plannerText(p.groupNote, lang)}</p> : null}
@@ -293,7 +294,7 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
           <div class="export-presets">
             {PRESETS.map(scope => <button key={scope} data-scope={scope} id={scope === 'filtered' ? 'export-filtered-research' : undefined} disabled={scope === 'filtered' && !research} onClick={() => m.preset(scope)}>{t(`planner.preset.${scope}` as StringId, lang)}</button>)}
           </div>
-          <p id="export-scope-status" role="status">{plannerText(m.scopeStatus.value, lang)}</p>
+          <p id="export-scope-status" role="status">{readableDates(plannerText(m.scopeStatus.value, lang), lang, m.region.timezone)}</p>
           <label>{t('planner.find', lang)}<input id="export-search" type="search" placeholder={t('planner.find.placeholder', lang)} autoComplete="off" value={m.search.value} onInput={e => { m.search.value = e.currentTarget.value; }} /></label>
           {shared === null ? null : <p id="export-shared-confidence">{t('planner.sharedConfidence', lang, {n: shared})}</p>}
           <div id="export-spot-list" class="export-spot-list" role="group" aria-label={t('planner.spotList.aria', lang)}>
@@ -368,6 +369,7 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
           <p class="export-note">{t('planner.route.warning', lang)}</p>
           <p><a href="https://wildlife.ca.gov/Conservation/Marine/MPAs" target="_blank" rel="noopener">CDFW MPA</a> · <a href="https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas" target="_blank" rel="noopener">NOAA</a></p>
           <button id="export-route" disabled={!s.ok || m.routing.value} onClick={() => void m.deliverRoute()}>{t(m.routing.value ? 'planner.route.busy' : 'planner.route.download', lang)}</button>
+          <button id="show-planning-route" disabled={!s.ok || m.routing.value} onClick={() => void m.showRouteOnChart()}>{t(m.routing.value ? 'planner.route.busy' : 'planner.route.show', lang)}</button>
           <p role="status">{m.routeStatus.value}</p>
         </section>
         {!s.ok && m.notesReady.value ? <p>{t('planner.withheld', lang)}</p> : null}

@@ -117,14 +117,14 @@ class ClassifierIdentityTest(unittest.TestCase):
         self.assertEqual(self.geometry(other, 25), expected['geometry'])
 
     def test_canonical_payload_and_algorithm_bump(self):
-        self.assertEqual(self.classify.ALGORITHM_VERSION, 3)
+        self.assertEqual(self.classify.ALGORITHM_VERSION, 4)
         effective = {f.name: getattr(self.th, f.name) for f in fields(self.th) if f.name != 'raw'}
-        body = json.dumps({'algorithm': 3, 'activity': self.th.raw, 'effective': effective},
+        body = json.dumps({'algorithm': 4, 'activity': self.th.raw, 'effective': effective},
                           sort_keys=True, separators=(',', ':'))
-        expected = 'c3-' + hashlib.sha256(body.encode('utf-8')).hexdigest()[:16]
+        expected = 'c4-' + hashlib.sha256(body.encode('utf-8')).hexdigest()[:16]
         self.assertEqual(self.result().classifier_version, expected)
         from unittest.mock import patch
-        with patch.object(self.classify, 'ALGORITHM_VERSION', 4):
+        with patch.object(self.classify, 'ALGORITHM_VERSION', 5):
             self.assertNotEqual(self.result().classifier_version, expected)
 
     def test_mapping_protocol_not_only_mutable_dict(self):

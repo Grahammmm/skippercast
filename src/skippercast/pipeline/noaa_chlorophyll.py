@@ -7,6 +7,7 @@ import re
 from urllib.parse import urlencode
 from xml.etree import ElementTree
 
+import numpy as np
 from scipy.io import netcdf_file
 
 HOST = "https://coastwatch.noaa.gov"
@@ -47,7 +48,36 @@ def recent_files(client, max_age_hours=MAX_AGE_HOURS):
     return (found[:1] + [f for f in found[1:] if client.now - (f[0] + timedelta(hours=12)) <= window])[:MAX_FILES]
 
 
+def _bounds(bounds):
+    """Admit only finite non-bool numeric lon/lat pairs inside the supported range."""
+    try:
+        axes = [bounds["longitude"], bounds["latitude"]]
+        if not all(type(a) in (list, tuple) and len(a) == 2 for a in axes):
+            raise ValueError
+        (west, east), (south, north) = axes
+        for v in (west, east, south, north):
+            if type(v) not in (int, float) or (type(v) is float and not math.isfinite(v)):
+                raise ValueError
+        if not (-180 <= west < east <= 180 and -80 <= south < north <= 80):
+            raise ValueError
+    except (KeyError, TypeError, ValueError):
+        raise ValueError("Invalid regional chlorophyll bounds") from None
+    return west, south, east, north
+
+
+def _declared_missing(chl, values):
+    """Mask of cells whose stored value equals a declared numeric missing_value marker."""
+    marker = getattr(chl, "missing_value", None)
+    if marker is None:
+        return np.zeros(values.shape, dtype=bool)
+    marker = np.asarray(marker)
+    if marker.dtype.kind not in "iuf" or marker.ndim > 1:
+        raise ValueError("NOAA chlorophyll missing-value metadata changed")
+    return np.isin(values, marker.ravel())
+
+
 def read_subset(body, bounds, path, day):
+    west, south, east, north = _bounds(bounds)
     if not body.startswith(b"CDF\x01"):
         raise ValueError("NOAA chlorophyll subset is not NetCDF classic")
     with netcdf_file(BytesIO(body), mmap=False) as nc:
@@ -65,18 +95,16 @@ def read_subset(body, bounds, path, day):
         sample = datetime.fromtimestamp(float(t[0]), timezone.utc)
         if not day <= sample < day + timedelta(days=1):
             raise ValueError("NOAA chlorophyll sample time conflicts with source filename")
-        west, south, east, north = bounds["longitude"][0], bounds["latitude"][0], bounds["longitude"][1], bounds["latitude"][1]
-        if not (-180 <= west < east <= 180 and -80 <= south < north <= 80):
-            raise ValueError("Invalid regional chlorophyll bounds")
         rows = []
         values = chl[:].copy()
+        declared = _declared_missing(chl, values)
         for i, y in enumerate(lat):
             for j, x in enumerate(lon):
                 y, x = float(y), float(x)
                 if not (south - .04 <= y <= north + .04 and west - .04 <= x <= east + .04):
                     raise ValueError("NOAA chlorophyll cell outside requested bounds")
                 raw = float(values[0, 0, i, j])
-                value = round(raw, 5) if math.isfinite(raw) and .001 <= raw <= 100 else None
+                value = round(raw, 5) if math.isfinite(raw) and .001 <= raw <= 100 and not declared[0, 0, i, j] else None
                 rows.append({"time": sample.isoformat(timespec="seconds").replace("+00:00", "Z"),
                              "latitude": round(y, 5), "longitude": round(x, 5), "chlorophyll": value})
         if not rows:
@@ -90,8 +118,7 @@ def read_subset(body, bounds, path, day):
 
 def fetch(client, bounds):
     """Use the newest in-window file with valid cells; else the newest file's empty result."""
-    west, east = bounds["longitude"]
-    south, north = bounds["latitude"]
+    west, south, east, north = _bounds(bounds)
     query = urlencode({"var": "chl_oci", "north": north, "south": south,
                        "west": west, "east": east, "accept": "netcdf"})
     newest = None

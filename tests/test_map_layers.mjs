@@ -27,18 +27,18 @@ import {settlePicks} from './helpers/pick-settle.mjs';
 
 const PAGE = 'https://s.test/map';
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const SENTINELS = new Set(Object.values(sentinel));
 
 // design.md § 9, "Draw order, bottom to top", as entry ids; the ENC chart base sits with the bases.
 const DESIGN_ORDER = ['basemap', 'aerial', 'chart', 'relief', 'water-temp', 'water-temp-contours', 'sst-contrast', 'sst-fronts', 'chlorophyll', 'swell', 'wind', 'depth-contours', 'mpas', 'habitat',
   'shore-runs', 'seafloor', 'charter-grounds', 'commercial-ais', 'fleet-heat', 'fleet-tracks', 'fleet-events', 'currents',
-  'clouds', 'reach', 'marks', 'selection', 'trip-ranked', 'saved-spots', 'stations', 'coastline'];
+  'clouds', 'reach', 'planning-route', 'marks', 'selection', 'trip-ranked', 'saved-spots', 'stations', 'coastline'];
 
 test('the registry is in § 9 draw order and every entry declares its presentations, time and basis', () => {
   assert.deepEqual(LAYERS.map(e => e.id), DESIGN_ORDER);
   const design = readFileSync(new URL('../docs/plans/front-end/design.md', import.meta.url), 'utf8');
-  assert.match(design, /Draw order, bottom\s+to top: basemap, aerial, ENC chart, relief, water temperature field, contours,\s+temperature contrast cells, chlorophyll, swell field, wind arrows, depth contours, MPAs, habitat polygons,\s+shore runs,\s+seafloor candidates, charter\s+grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents\s+streamlines \(canvas\), clouds \(raster, above fields so the loop reads as\s+sky\), reach ring, marks, selection, ranked trip spots, private saved spots, station pins, coastline glow\./, 'the design states the order this test pins');
+  assert.match(design, /Draw order, bottom\s+to top: basemap, aerial, ENC chart, relief, water temperature field, contours,\s+temperature contrast cells, chlorophyll, swell field, wind arrows, depth contours, MPAs, habitat polygons,\s+shore runs,\s+seafloor candidates, charter\s+grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents\s+streamlines \(canvas\), clouds \(raster, above fields so the loop reads as\s+sky\), reach ring, planning route \(the trip dialog\'s preview, memory only\), marks, selection, ranked trip spots, private saved spots, station pins, coastline glow\./, 'the design states the order this test pins');
   for (const e of LAYERS) {
     assert.ok(e.presentations.length > 0 && e.presentations.every(p => p === 'chart' || p === 'terrain'), `${e.id} presentations`);
     assert.ok(e.time.length > 0 && e.time.every(t => ['static', 'hour', 'observed'].includes(t)), `${e.id} time`);
@@ -693,7 +693,7 @@ test('SC1952-06: an armed Chart tap is screened by the current region\'s marks s
 });
 
 // FE-82: registry layers on the terrain (packages/coast setOverlay, FE-81).
-const OVERLAY_PALETTE = readPalette(name => (name === 'mpa-fill-opacity' ? '0.18' : `token(${name})`));
+const OVERLAY_PALETTE = readPalette(name => (name === 'mpa-fill-opacity' ? '0.18' : /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`));
 
 test('FE-82: protected areas, reef marks and charter grounds drape on the terrain in their Chart style\'s token roles', () => {
   assert.deepEqual(LAYERS.filter(e => e.terrain).map(e => e.id), ['mpas', 'charter-grounds', 'marks']);
@@ -705,7 +705,8 @@ test('FE-82: protected areas, reef marks and charter grounds drape on the terrai
   const [mpaFill, mpaLine] = mpaLayers(sentinel), mpas = layerEntry('mpas').terrain;
   assert.deepEqual([sentinel[mpas.color], sentinel[mpas.outline], mpas.opacity], [mpaFill.paint['fill-color'], mpaLine.paint['line-color'], 'mpaFillOpacity']);
   assert.deepEqual(mpaFill.paint['fill-opacity'], ['to-number', sentinel.mpaFillOpacity], 'both read --mpa-fill-opacity');
-  const ring = markStyle(sentinel).marks.find(l => l.id === 'marks-ring').paint, marks = layerEntry('marks').terrain;
+  // Coast overlays retain their general UI roles; the Chart's independent roles have equal defaults.
+  const ring = markStyle({...sentinel, mapInkHalo: sentinel.bg, markRing: sentinel.mint}).marks.find(l => l.id === 'marks-ring').paint, marks = layerEntry('marks').terrain;
   assert.deepEqual([marks.kind, sentinel[marks.color], marks.opacity, sentinel[marks.outline]], ['point', ring['circle-color'], ring['circle-opacity'], ring['circle-stroke-color']]);
   assert.equal(marks.size, ring['circle-radius'] * 2, 'the ring\'s diameter');
   const grounds = groundsOverlay(sentinel, {outlines: {type: 'FeatureCollection', features: []}, hatch: {type: 'FeatureCollection', features: []}});

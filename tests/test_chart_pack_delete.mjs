@@ -60,16 +60,16 @@ async function harness(t, responses) {
       b.onResolve({filter: /.*/}, args => {
         if (args.importer !== trip) return;
         if (args.path === 'preact/hooks') return {path: resolve(inventory, 'runtime.mjs')};
-        if (['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-ocean-lines.ts', '../trip-forecast-end.ts', './App.tsx', './PositionCheck.tsx'].includes(args.path))
+        if (['../ui/Button.tsx', '../ui/scroll-cue.ts', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-ocean-lines.ts', '../trip-forecast-end.ts', './App.tsx', './PositionCheck.tsx'].includes(args.path))
           return {path: resolve(fixtures, 'boundary.mjs')};
-        if (['../../dist/offline-core.js', 'preact/jsx-runtime', '../i18n.ts', '../brief/remaining-copy.ts'].includes(args.path)) return;   // SC0707-10: the real catalogue reader, nothing else
+        if (['../../dist/offline-core.js', 'preact/jsx-runtime', '../i18n.ts', '../size-text.ts', '../brief/remaining-copy.ts', '../ui/focus-return.ts'].includes(args.path)) return;   // SC0707-10: the real catalogue reader, nothing else
         throw new Error(`unadmitted product import: ${args.path}`);
       });
     }}],
   });
   for (const input of Object.keys(result.metafile.inputs)) {
     const path = resolve(root, input);
-    assert.ok(path === trip || path === resolve(root, 'dist/offline-core.js') || path === resolve(root, 'web/i18n.ts') || path === resolve(root, 'web/brief/remaining-copy.ts') || path === resolve(root, 'web/i18n-core.ts') || path === resolve(root, 'web/i18n-catalogue.ts') || path === resolve(root, 'web/strings.en.generated.json') || path === resolve(root, 'web/strings.es.generated.json') || path.startsWith(inventory + '/') || path.startsWith(fixtures + '/') ||
+    assert.ok(path === trip || path === resolve(root, 'dist/offline-core.js') || path === resolve(root, 'web/i18n.ts') || path === resolve(root, 'web/size-text.ts') || path === resolve(root, 'web/brief/remaining-copy.ts') || path === resolve(root, 'web/i18n-core.ts') || path === resolve(root, 'web/ui/focus-return.ts') || path === resolve(root, 'web/i18n-catalogue.ts') || path === resolve(root, 'web/strings.en.generated.json') || path === resolve(root, 'web/strings.es.generated.json') || path.startsWith(inventory + '/') || path.startsWith(fixtures + '/') ||
       /[/]node_modules[/](?:.*[/])?(?:@?preact|preact-render-to-string|signals-core|signals)[/]/.test(path), `unadmitted import graph input: ${input}`);
   }
   m = await import(pathToFileURL(resolve(dir, 'trip.mjs')).href);

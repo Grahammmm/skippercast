@@ -28,7 +28,7 @@ const GROUNDS = json(asset('charters')), CELLS = json(asset('commercial_ais')), 
 const NOW = Date.parse('2026-10-09T18:00:00Z');
 /** The committed ds582 snapshot as a check made this hour. */
 const READY = assessScreen({areas: SNAPSHOT.features, checkedAt: new Date(NOW - 3_600_000).toISOString(), live: false, closures: undefined}, NOW);
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const sha = path => createHash('sha256').update(readFileSync(new URL(path, ROOT))).digest('hex');
 const flush = () => new Promise(resolve => setImmediate(resolve));
 

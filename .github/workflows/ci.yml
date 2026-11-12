@@ -199,6 +199,8 @@ jobs:
       # Playwright splits its own test list, so the two shards together run exactly the suite
       # `playwright test` ran as one job: same specs, same projects, same assertions.
       - name: Browser flows and accessibility (serious and critical axe violations fail)
+        env:
+          E2E_WIDE: ${{ github.event_name == 'schedule' && '1' || '' }}
         run: pnpm e2e --shard=${{ matrix.shard }}/2
       - name: Keep traces of failed tests
         if: failure()

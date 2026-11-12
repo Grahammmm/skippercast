@@ -5,7 +5,7 @@
       "label": "Landing page scripts (first load)",
       "kind": "first_load_js",
       "entry": "landing.html",
-      "max_bytes": 304000,
+      "max_bytes": 306000,
       "history": [
         {
           "max_bytes": 445000,
@@ -18,6 +18,10 @@
         {
           "max_bytes": 304000,
           "reason": "Lowered 460,000 to 304,000 (SC1407-09, #1762 M5). The Spanish table now loads only for a Spanish page, so the landing's first load carries English only. Vite manifest static closure of landing.html: 447,318 bytes on main a5005eb05, 289,476 with this change; ceiling = ceil(289,476 x 1.05 / 1,000) x 1,000."
+        },
+        {
+          "max_bytes": 306000,
+          "reason": "Raised 304,000 to 306,000 (MAIN-RED-SKIPPERCAST). Main bcd9f04c builds the landing first-load scripts at 304,012 bytes (strings.en.generated 186.7 KB, signals 20.9 KB, landing 16.9 KB and others), 12 bytes over the 304,000 budget after the concurrent merges of #2110, #2111 and #2098, each of which passed CI on its own head. The budget moves up 2,000 bytes (0.7% headroom over that build), no more."
         }
       ]
     },
@@ -25,7 +29,7 @@
       "label": "Landing page styles (first load)",
       "kind": "first_load_css",
       "entry": "landing.html",
-      "max_bytes": 29000,
+      "max_bytes": 30000,
       "history": [
         {
           "max_bytes": 26000,
@@ -34,6 +38,10 @@
         {
           "max_bytes": 29000,
           "reason": "Raised 26,000 to 29,000 (SC1922-05). The landing's phone layout now reserves the height each late-mounting part takes (readout, port form, actions row, footer, layer dots) in web/landing/landing.css and web/landing/port-input.css, which removes the phone's three layout shifts (cold CLS 0.213 at 390 px and 0.249 at 360 px on main, 0.000 after). The reservations are about 2 KB of new rules; the landing first-load styles measure 27,808 bytes on this build (assets landing css 9.2 KB, degraded-notice 15.0 KB, tokens 3.0 KB), so the budget moves up 3,000 bytes (4.3% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 30000,
+          "reason": "Raised 29,000 to 30,000 (MGL-15). web/tokens.css gains the map-only colour role tokens (--map-*, --hab-*, --mark-ring), which the landing page loads as its tokens stylesheet (3.0 KB to 3.8 KB, about 0.8 KB); the landing first-load styles measure 29,461 bytes on the merged build (assets degraded-notice 15.9 KB, landing 9.1 KB, tokens 3.8 KB), so the budget moves up 1,000 bytes (1.8% headroom over that build), no more."
         }
       ]
     },
@@ -69,7 +77,7 @@
       "label": "App page (brief, map) styles (first load)",
       "kind": "first_load_css",
       "entry": "app.html",
-      "max_bytes": 77000,
+      "max_bytes": 79000,
       "history": [
         {
           "max_bytes": 71000,
@@ -106,6 +114,14 @@
         {
           "max_bytes": 77000,
           "reason": "Raised 76,000 to 77,000 (RF2135-6). The bounded account-dialog scrollport and its scroll-edge cues this PR adds in web/app/account.css take the app first-load styles to 76,028 bytes on their own (assets/app css 54.6 KB plus degraded-notice 15.0 KB, tokens 3.0 KB and Brief 1.7 KB), 28 bytes over the 76,000 budget; the budget moves up 1,000 bytes (1.3% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 78000,
+          "reason": "Raised 77,000 to 78,000 (UXFIX-03). The one .ui-scroll-cue[data-more] bottom-fade rule this PR adds in web/ui/ui.css (the DS 6.8 16 px mask for the Choose-port list and the scrolling dialogs) takes the app first-load styles to 77,294 bytes on this branch merged with main (assets/app css 54.9 KB plus degraded-notice 15.9 KB, tokens 3.0 KB and Brief 1.7 KB), 294 bytes over the 77,000 budget; the budget moves up 1,000 bytes (0.9% headroom over that build), no more. MGL-15: explicit theme-resolved map-only colour roles and four numeric controls in web/tokens.css isolate map paint from app chrome without aliases or a restyle. Together with UXFIX-03 on main, the built app first-load styles are measured after merging; app_css stays at the existing 78,000 ceiling unless the measurement says otherwise. Removing required independent role declarations would break the frozen palette contract."
+        },
+        {
+          "max_bytes": 79000,
+          "reason": "Raised 78,000 to 79,000 (MGL-15, after merging main cef6473eb with UXFIX-05 rem font sizes). The map-only colour roles this PR adds to web/tokens.css (--map-*, --hab-*, --mark-ring, each declared separately per theme so map paint stays independent of app chrome) take the app first-load styles to 78,095 bytes on the merged build (assets/app css 54.9 KB plus degraded-notice 15.9 KB, tokens 3.8 KB and Brief 1.7 KB), 95 bytes over the 78,000 budget; the budget moves up 1,000 bytes (1.2% headroom over that build), no more."
         }
       ]
     },

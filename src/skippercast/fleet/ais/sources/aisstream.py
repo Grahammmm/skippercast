@@ -87,6 +87,8 @@ def parse_time_utc(text: str) -> int:
         raise MalformedMessage("MetaData.time_utc is not a timestamp") from None
     millis = int(moment.timestamp()) * 1000 + micro // 1000
     if sign:
+        if int(off_h) > 23 or int(off_m) > 59:
+            raise MalformedMessage("MetaData.time_utc is not a timestamp")
         offset = (int(off_h) * 60 + int(off_m)) * 60_000
         millis -= offset if sign == "+" else -offset
     return millis

@@ -130,7 +130,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 function browser(regionId = 'fixture') {configureStore({v2: true, storage: null}); syncFromURL(`https://example.test/map?region=${regionId}&layers=stations`);}
 test('runtime draws configured dots, opens cards, ages readings, and clears on region/off changes', async t => {
   t.mock.timers.enable({apis: ['setInterval']}); browser();
-  const overlays = new Map(), data = new Map(), palette = readPalette(n => `token(${n})`);
+  const overlays = new Map(), data = new Map(), palette = readPalette(n => /^map-.*-(?:opacity|width)$/.test(n) ? '1' : `token(${n})`);
   const e = {setOverlay: (k, v) => overlays.set(k, v), setData: (k, v) => data.set(k, v)};
   let now = NOW;
   const s = createStations({engine: signal(e), zone: () => 'UTC', feed: () => ({region_id: 'fixture', sources: {buoy: buoy()}}), fetchFn: async () => ({ok: true, json: async () => region}), palette: () => palette, now: () => now});
@@ -190,7 +190,7 @@ test('tide choice: a different region is ignored', () => {
 
 test('stations.ts labels the default pin and notes an unconfigured chosen station without leaking the chosen reading', async t => {
   t.mock.timers.enable({apis: ['setInterval']}); browser();
-  const overlays = new Map(), data = new Map(), palette = readPalette(n => `token(${n})`);
+  const overlays = new Map(), data = new Map(), palette = readPalette(n => /^map-.*-(?:opacity|width)$/.test(n) ? '1' : `token(${n})`);
   const e = {setOverlay: (k, v) => overlays.set(k, v), setData: (k, v) => data.set(k, v)};
   const now = NOW;
   const s = createStations({engine: signal(e), zone: () => 'UTC', feed: () => ({region_id: 'fixture', sources: {buoy: buoy(), tides: tide()}}), fetchFn: async () => ({ok: true, json: async () => region}), palette: () => palette, now: () => now});

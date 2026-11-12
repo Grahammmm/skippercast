@@ -80,6 +80,8 @@ export const SELECTION_SOURCE = 'selection';
 export const RANKED_SOURCE = 'trip-ranked';
 /** The signed-in owner's private saved spots (web/map/saved-spots.ts, SC0922-04); in memory only. */
 export const SAVED_SPOTS_SOURCE = 'private-saved-spots';
+/** The trip dialog's ephemeral planning route (web/map/planning-route.ts, SC1407-15); memory only. */
+export const PLANNING_ROUTE_SOURCE = 'planning-route';
 /** Temp contrast's supported analysis cells (web/map/contrast.ts, CI6-03). */
 export const CONTRAST_SOURCE = 'sst-contrast';
 /** Temp fronts' observed edges (web/map/fronts.ts, BF-sst-fronts). */
@@ -135,11 +137,11 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
   entry({id: 'swell', label: copy('swell', 'label', lang), control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: copy('swell', 'legend0', lang), swatch: 'swell2'}],
     basis: copy('swell', 'basis', lang), task: 'FE-17'}),
   entry({id: 'wind', label: copy('wind', 'label', lang), control: 'swell', presentations: ['chart'], sources: ['wind-arrows', 'wind-labels'], time: ['hour'],
-    attribution: 'NOAA NCEP', legend: [{label: copy('wind', 'legend0', lang), swatch: 'text'}],
+    attribution: 'NOAA NCEP', legend: [{label: copy('wind', 'legend0', lang), swatch: 'mapInk'}],
     basis: copy('wind', 'basis', lang), task: 'CI6-10'}),
   // CI6-13: shelf contours from reviewed survey grids, every zoom, Chart only; the ENC base above zoom 10 is unchanged.
   entry({id: 'depth-contours', label: copy('depth-contours', 'label', lang), control: 'always', presentations: ['chart'], sources: [DEPTH_CONTOURS_SOURCE],
-    attribution: t('layer.attr.depth', 'en'), legend: [{label: copy('depth-contours', 'legend0', lang), swatch: 'depth1'}, {label: copy('depth-contours', 'legend1', lang), swatch: 'muted'}],
+    attribution: t('layer.attr.depth', 'en'), legend: [{label: copy('depth-contours', 'legend0', lang), swatch: 'mapContour'}, {label: copy('depth-contours', 'legend1', lang), swatch: 'mapLabel'}],
     basis: copy('depth-contours', 'basis', lang), task: 'CI6-13'}),
 
   entry({id: 'mpas', label: copy('mpas', 'label', lang), control: 'always', presentations: ['chart', 'terrain'],
@@ -147,7 +149,7 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
     legend: [{label: copy('mpas', 'legend0', lang), swatch: 'mpaLine'}],
     basis: copy('mpas', 'basis', lang), task: 'FE-19'}),
   entry({id: 'habitat', label: copy('habitat', 'label', lang), control: 'always', presentations: ['chart'], gate: 'zoom ≥ 10', sources: [SURVEY_SOURCE, GEOLOGY_SOURCE],
-    legend: [{label: copy('habitat', 'legend0', lang), swatch: 'depth1'}, {label: copy('habitat', 'legend1', lang), swatch: 'muted'}, {label: copy('habitat', 'legend2', lang), swatch: 'amber'}, {label: copy('habitat', 'legend3', lang), swatch: 'mint'}],
+    legend: [{label: copy('habitat', 'legend0', lang), swatch: 'habRock'}, {label: copy('habitat', 'legend1', lang), swatch: 'habMixed'}, {label: copy('habitat', 'legend2', lang), swatch: 'habSoft'}, {label: copy('habitat', 'legend3', lang), swatch: 'habKelp'}],
     basis: copy('habitat', 'basis', lang), task: 'FE-18'}),
   entry({id: 'shore-runs', label: copy('shore-runs', 'label', lang), control: 'always', presentations: ['chart'], gate: 'profile = shore', sources: ['shore-runs', 'shore-access'],
     legend: [{label: copy('shore-runs', 'legend0', lang), swatch: 'amber'}, {label: copy('shore-runs', 'legend1', lang), swatch: 'amber'}],
@@ -181,9 +183,13 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
   entry({id: 'reach', label: copy('reach', 'label', lang), control: 'always', presentations: ['chart'], gate: t('layer.gate.reach', 'en'), sources: ['reach'],
     legend: [{label: copy('reach', 'legend0', lang), swatch: 'blue'}],
     basis: copy('reach', 'basis', lang), task: 'FE-51'}),
+  // SC1407-15: the planning route the trip dialog shows before it is downloaded; Chart only, memory only, under the marks.
+  entry({id: 'planning-route', label: copy('planning-route', 'label', lang), control: 'always', presentations: ['chart'], sources: [PLANNING_ROUTE_SOURCE],
+    legend: [{label: copy('planning-route', 'legend0', lang), swatch: 'amber'}],
+    basis: copy('planning-route', 'basis', lang), task: 'SC1407-15'}),
   entry({id: 'marks', label: copy('marks', 'label', lang), control: 'always', presentations: ['chart', 'terrain'],
     terrain: {kind: 'point', color: 'bg', opacity: 0.75, outline: 'mint', size: 18}, gate: t('layer.gate.marks', 'en'), sources: [DENSITY_SOURCE, MARKS_SOURCE],
-    legend: [{label: copy('marks', 'legend0', lang), swatch: 'mint'}, {label: copy('marks', 'legend1', lang), swatch: 'depth1'}],
+    legend: [{label: copy('marks', 'legend0', lang), swatch: 'markRing'}, {label: copy('marks', 'legend1', lang), swatch: 'depth1'}],
     basis: copy('marks', 'basis', lang), task: 'FE-18'}),
   entry({id: 'selection', label: copy('selection', 'label', lang), control: 'always', presentations: ['chart'], sources: [SELECTION_SOURCE],
     basis: copy('selection', 'basis', lang), task: 'FE-18'}),
@@ -194,7 +200,7 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
   entry({id: 'saved-spots', label: copy('saved-spots', 'label', lang), control: 'always', presentations: ['chart'], sources: [SAVED_SPOTS_SOURCE], gate: t('layer.gate.saved', 'en'),
     basis: copy('saved-spots', 'basis', lang), task: 'SC0922-04'}),
   entry({id: 'stations', label: copy('stations', 'label', lang), control: 'stations', presentations: ['chart'], sources: ['stations'], time: ['observed', 'hour'],
-    legend: [{label: copy('stations', 'legend0', lang), swatch: 'blue'}, {label: copy('stations', 'legend1', lang), swatch: 'mint'}, {label: copy('stations', 'legend2', lang), swatch: 'muted'}, {label: copy('stations', 'legend3', lang), swatch: 'blue'}],
+    legend: [{label: copy('stations', 'legend0', lang), swatch: 'blue'}, {label: copy('stations', 'legend1', lang), swatch: 'mint'}, {label: copy('stations', 'legend2', lang), swatch: 'mapLabel'}, {label: copy('stations', 'legend3', lang), swatch: 'blue'}],
     attribution: t('layer.attr.stations', 'en'), basis: copy('stations', 'basis', lang), task: 'CI6-18'}),
   entry({id: 'coastline', label: copy('coastline', 'label', lang), control: 'always', presentations: ['chart'], sources: [COASTLINE_SOURCE], attribution: COASTLINE_ATTRIBUTION,
     basis: copy('coastline', 'basis', lang), task: 'FE-11'}),

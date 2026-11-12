@@ -109,7 +109,10 @@ def simplify(points: Sequence[Point], tolerance_m: float) -> list[Point]:
 
 def _round_half_up(value: float) -> int:
     """JavaScript ``Math.round``: halves round towards +infinity."""
-    return math.floor(value + 0.5)
+    # ``value + 0.5`` can itself round up to the next integer for the largest
+    # float below a half (0.49999999999999994), so compare the remainder instead.
+    lower = math.floor(value)
+    return lower + (1 if value - lower >= 0.5 else 0)
 
 
 def _encode_value(value: int) -> str:

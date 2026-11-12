@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {h} from 'preact';
 import {render} from 'preact-render-to-string';
+import {effect} from '@preact/signals';
 import {appClock, createHourClock, useHourNow} from '../web/clock.ts';
 
 const HOUR = 3_600_000;
@@ -149,4 +150,115 @@ test('useHourNow: a fixed date is returned as is; without one the clock\'s time 
 test('the app clock exists without having started', () => {
   assert.equal(typeof appClock.retain, 'function');
   assert.ok(appClock.now.value instanceof Date);
+});
+
+// Reentrancy: a real signals effect may release (or release and re-retain) the clock while it publishes a new Date.
+/** Run `body(r, trigger)` with an effect that calls `trigger.run` once the clock first shows a time at/after `at`. */
+function withEffect(r, at, body) {
+  const trigger = {run: () => {}};
+  let fired = false;
+  const stop = effect(() => {
+    if (!fired && r.clock.now.value.getTime() >= new Date(at).getTime()) { fired = true; trigger.run(); }
+  });
+  try { body(trigger); } finally { stop(); }
+}
+
+test('last_release_inside_tick_publication_leaves_no_timeout', () => {
+  const r = rig('2026-11-11T10:59:00Z');
+  const release = r.clock.retain();
+  try {
+    withEffect(r, '2026-11-11T11:00:00Z', trigger => {
+      trigger.run = release;
+      r.set('2026-11-11T11:00:00Z');
+      r.fire();
+      assert.equal(iso(r.clock.now.value), '2026-11-11T11:00:00.000Z', 'published once');
+      assert.equal(r.timers.size, 0, 'no timeout after the last release');
+      assert.equal(r.listeners.size, 0, 'no listener after the last release');
+    });
+  } finally { release(); }
+});
+
+test('last_release_inside_visibility_publication_leaves_no_timeout', () => {
+  const r = rig('2026-11-11T10:59:00Z');
+  const release = r.clock.retain();
+  try {
+    const old = [...r.timers.values()][0].callback;
+    withEffect(r, '2026-11-11T12:00:00Z', trigger => {
+      trigger.run = release;
+      r.set('2026-11-11T12:00:00Z');
+      r.show(false);
+      assert.equal(iso(r.clock.now.value), '2026-11-11T12:00:00.000Z');
+      assert.equal(r.timers.size, 0, 'neither the old nor a replacement timeout');
+      assert.equal(r.listeners.size, 0);
+      old();
+      assert.equal(r.timers.size, 0, 'the old callback is inert');
+    });
+  } finally { release(); }
+});
+
+test('release_then_retain_inside_notification_keeps_new_generation', () => {
+  const r = rig('2026-11-11T10:59:00Z');
+  const release = r.clock.retain();
+  let again;
+  try {
+    withEffect(r, '2026-11-11T11:00:00Z', trigger => {
+      trigger.run = () => { release(); again = r.clock.retain(); };
+      const old = [...r.timers.values()][0].callback;
+      r.set('2026-11-11T11:00:00Z');
+      r.fire();
+      assert.equal(r.timers.size, 1, 'the nested sample owns exactly one timeout');
+      assert.equal(r.listeners.size, 1);
+      const [[, only]] = [...r.timers];
+      assert.equal(only.delay, HOUR);
+      old();
+      assert.equal(r.timers.size, 1, 'an obsolete callback neither publishes nor re-arms');
+      assert.equal([...r.timers.values()][0], only);
+      again();
+      assert.equal(r.timers.size, 0);
+      assert.equal(r.listeners.size, 0);
+    });
+  } finally { release(); again?.(); }
+});
+
+test('nonfinal_reentrant_release_preserves_other_consumer', () => {
+  const r = rig('2026-11-11T10:30:00Z');
+  const a = r.clock.retain(), b = r.clock.retain();
+  try {
+    withEffect(r, '2026-11-11T11:15:00Z', trigger => {
+      trigger.run = a;
+      r.set('2026-11-11T11:15:00Z');
+      r.fire();
+      assert.equal(r.timers.size, 1);
+      assert.equal([...r.timers.values()][0].delay, 45 * 60_000);
+      assert.equal(r.listeners.size, 1);
+      a();
+      assert.equal(r.timers.size, 1, 'repeating the released closure is inert');
+      b();
+      assert.equal(r.timers.size, 0);
+      assert.equal(r.listeners.size, 0);
+    });
+  } finally { a(); b(); }
+});
+
+test('restart_after_reentrant_stop_is_fresh', () => {
+  const r = rig('2026-11-11T10:59:00Z');
+  const release = r.clock.retain();
+  let again;
+  try {
+    withEffect(r, '2026-11-11T11:00:00Z', trigger => {
+      trigger.run = release;
+      r.set('2026-11-11T11:00:00Z');
+      r.fire();
+      assert.equal(r.timers.size, 0);
+      r.set('2026-11-11T13:20:00Z');
+      again = r.clock.retain();
+      assert.equal(iso(r.clock.now.value), '2026-11-11T13:20:00.000Z', 'a fresh Date at once');
+      assert.equal(r.timers.size, 1);
+      assert.equal([...r.timers.values()][0].delay, 40 * 60_000);
+      assert.equal(r.listeners.size, 1);
+      again();
+      assert.equal(r.timers.size, 0);
+      assert.equal(r.listeners.size, 0);
+    });
+  } finally { release(); again?.(); }
 });

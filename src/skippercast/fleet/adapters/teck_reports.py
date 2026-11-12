@@ -153,7 +153,10 @@ def _label(text: str) -> str:
 
 def _int(value: str | None, low: int, high: int) -> int | None:
     match = re.search(r"\d+", value or "")
-    number = int(match[0]) if match else None
+    try:
+        number = int(match[0]) if match else None
+    except ValueError:  # a digit run past the interpreter's int-conversion limit: unavailable, not a failed page
+        return None
     return number if number is not None and low <= number <= high else None
 
 

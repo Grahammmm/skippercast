@@ -22,7 +22,11 @@ input, select, textarea { font-size: var(--text-input) !important; }
   font: var(--weight-medium) var(--text-13) / var(--leading-heading) var(--font-sans); cursor: pointer;
   transition: background var(--motion-state), border-color var(--motion-state), color var(--motion-state);
 }
-.ui-button:focus-visible, .ui-range:focus-visible, .ui-popover-summary:focus-visible, .ui-sheet-handle:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* UXFIX-04: the one focus ring. Headings (h2[tabindex]), inputs, selects, summaries, links and buttons all match it; the kept copies elsewhere differ in offset. */
+:where(button, input, select, textarea, summary, [tabindex]):focus-visible, .ui-range:focus-visible, .ui-popover-summary:focus-visible, .ui-sheet-handle:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* UXFIX-04: every text field's border is --line-strong (non-text 3:1, WCAG 1.4.11), textarea included. :where keeps it at zero
+   specificity, so a scoped rule or a border reset still wins; checkbox, radio, range and button-like inputs are left alone. */
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="file"], [type="color"], [type="image"], [type="hidden"]), select, textarea) { border: 1px solid var(--line-strong); }
 /* The app map's canvases sit in a clipped stage, so their ring is drawn inward. */
 .app-chart canvas:focus-visible, .app-terrain canvas:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .ui-button:disabled, .ui-button[aria-disabled="true"] { color: var(--muted); cursor: not-allowed; opacity: 0.6; }
@@ -122,3 +126,13 @@ input, select, textarea { font-size: var(--text-input) !important; }
    at half too; the padding follows the settled detent, never a drag frame. contain: the sheet's scroll does not chain to the page (the body only). */
 .ui-sheet-body { flex: 1; min-height: 0; box-sizing: border-box; overflow: auto; overscroll-behavior: contain; padding: 0 var(--space-4) calc(var(--space-5) + max(0px, var(--sheet-hidden-offset)) + var(--app-tabs, 0px)); }
 .ui-sheet[data-detent="peek"] .ui-sheet-body { overflow: hidden; padding-bottom: var(--space-5); }
+
+/* Scroll cue (design § 6 item 8; web/ui/scroll-cue.ts): while a scroll area has more below, its last 16 px fade out. Only the
+   mask's alpha counts (the opaque token stands for "kept"), so it suits both themes. A sticky action row inside is marked data-cue-inset and the hook sets --cue-inset to its
+   height, so the fade ends above it and the row stays whole. The mask image reaches 60 px past the box (no-clip) so a dialog's
+   shadow and a focus ring outside its edge are not cut away; the fade itself is placed from the box's own bottom edge. */
+.ui-scroll-cue[data-more="true"] {
+  --cue-bleed: 60px;
+  mask-image: linear-gradient(to bottom, var(--text) calc(100% - var(--cue-bleed) - var(--cue-inset, 0px) - 16px), transparent calc(100% - var(--cue-bleed) - var(--cue-inset, 0px)), var(--text) calc(100% - var(--cue-bleed) - var(--cue-inset, 0px)));
+  mask-size: calc(100% + 2 * var(--cue-bleed)) calc(100% + 2 * var(--cue-bleed)); mask-position: calc(-1 * var(--cue-bleed)) calc(-1 * var(--cue-bleed)); mask-repeat: no-repeat; mask-clip: no-clip;
+}

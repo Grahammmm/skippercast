@@ -39,7 +39,7 @@ from pathlib import Path
 import re
 from urllib.parse import urlparse
 
-from .common import confined, ref, resolve, validate_derived_geotiff, validate_native_source
+from .common import confined, digest, ref, resolve, validate_derived_geotiff, validate_native_source
 
 SCHEMA = 'coastal-vr-refinement-receipt-v1'
 TABLE_CONTRACT = 'coastal-vr-refinement-supergrids-v1'
@@ -430,6 +430,21 @@ def plan(root, source_ref, *, source_row, metadata_sha256):
     return summary
 
 
+def _bag_summary(model, valid_refinement_cells):
+    """The receipt's BAG summary, derived only from the source model and an independent valid-cell count."""
+    supergrids = model['supergrids']
+    return dict(overview_shape=list(model['grids'].shape), overview_resolution_m=list(model['coarse']),
+                overview_bounds=[model['left'], model['bottom'], model['right'], model['top']],
+                horizontal_crs=model['crs'].to_wkt(), vertical_datum=model['metadata']['vertical_datum'],
+                vertical_wkt=model['metadata']['vertical_wkt'],
+                uncertainty_type=model['metadata']['uncertainty_type'], nodata=model['nodata'],
+                active_supergrids=len(supergrids), refinement_records=len(model['records']),
+                active_refinement_records=model['active_records'],
+                trailing_padding_records=len(model['records']) - model['active_records'],
+                valid_refinement_cells=valid_refinement_cells,
+                resolution_classes=sorted({(sg['dx'], sg['dy']) for sg in supergrids}))
+
+
 def emit(root, source_ref, *, source_row, metadata_sha256, output_dir, placement='exact_lattice'):
     """Write one GeoTIFF per refinement class plus the receipt; return the receipt."""
     import rasterio
@@ -479,16 +494,7 @@ def emit(root, source_ref, *, source_row, metadata_sha256, output_dir, placement
     receipt = dict(
         schema=SCHEMA, producer='coastal.handoff.vr_refinements', source=source_ref, source_row=source_row,
         metadata_sha256=metadata_sha256, survey_id=model['survey_id'],
-        bag=dict(overview_shape=list(model['grids'].shape), overview_resolution_m=list(model['coarse']),
-                 overview_bounds=[model['left'], model['bottom'], model['right'], model['top']],
-                 horizontal_crs=model['crs'].to_wkt(), vertical_datum=model['metadata']['vertical_datum'],
-                 vertical_wkt=model['metadata']['vertical_wkt'],
-                 uncertainty_type=model['metadata']['uncertainty_type'], nodata=nodata,
-                 active_supergrids=len(supergrids), refinement_records=len(model['records']),
-                 active_refinement_records=model['active_records'],
-                 trailing_padding_records=len(model['records']) - model['active_records'],
-                 valid_refinement_cells=sum(sg['valid_cells'] for sg in supergrids),
-                 resolution_classes=sorted({(sg['dx'], sg['dy']) for sg in supergrids})),
+        bag=_bag_summary(model, sum(sg['valid_cells'] for sg in supergrids)),
         placement=dict(policy=placement, lattice_tolerance_m=LATTICE_TOLERANCE_M, interpolation='none',
                        resampling='none', value_change='none', overlap='refused',
                        science_ruling_required=placement == 'nearest_cell',
@@ -622,6 +628,8 @@ def verify(root, receipt):
         totals['supergrids'] += len(members[name])
         totals['refinement_cells'] += int(covered.sum())
         totals['valid_cells'] += valid_cells
+    if digest(bag) != digest(_bag_summary(model, totals['valid_cells'])):
+        raise ValueError('receipt BAG summary differs from source')
     if (totals['supergrids'] != len(model['supergrids'])
             or totals['refinement_cells'] != model['active_records']
             or totals['valid_cells'] != receipt['bag']['valid_refinement_cells']):

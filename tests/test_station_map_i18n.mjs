@@ -80,7 +80,7 @@ test('station_es_chosen_is_not_default_pin: kinds and the default note follow th
 test('station_pending_switch: the layer note carries catalogue parts; Spanish follows the language with no refetch', async t => {
   t.mock.timers.enable({apis: ['setInterval']});
   configureStore({v2: true, storage: null}); syncFromURL('https://example.test/map?region=fixture&layers=stations');
-  let fetches = 0; const palette = readPalette(n => `token(${n})`), e = {setOverlay() {}, setData() {}};
+  let fetches = 0; const palette = readPalette(n => /^map-.*-(?:opacity|width)$/.test(n) ? '1' : `token(${n})`), e = {setOverlay() {}, setData() {}};
   const s = createStations({engine: signal(e), zone: () => 'UTC', feed: () => ({region_id: 'fixture', sources: {buoy: buoy(), tides: tide()}}),
     fetchFn: async () => { fetches++; return {ok: true, json: async () => region}; }, palette: () => palette, now: () => NOW});
   t.after(() => { s.destroy(); tideSelection.region.value = null; tideSelection.choice.value = null; });

@@ -35,7 +35,7 @@ const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'
 const json = path => JSON.parse(read(path));
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 const settle = async () => { for (let i = 0; i < 8; i++) await tick(); };
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const REGIONS = json('dist/regions/index.json').regions.map(r => r.id);
 const regionFiles = id => ({config: json(`dist/regions/${id}/region.json`), coverage: json(`dist/regions/${id}/coverage.json`)});
 /** The committed file under dist/ for a page-relative URL, or a 404 (as the site answers). */
@@ -79,7 +79,7 @@ test('fill, dashed outline and names read the --mpa-* tokens; names start at ?vi
   assert.equal(line.paint['line-color'], sentinel.mpaLine);
   assert.ok(Array.isArray(line.paint['line-dasharray']) && line.paint['line-dasharray'].length === 2, 'dashed outline');
   assert.equal(label.paint['text-color'], sentinel.mpaLine);
-  assert.equal(label.paint['text-halo-color'], sentinel.bg);
+  assert.equal(label.paint['text-halo-color'], sentinel.mapInkHalo);
   assert.deepEqual(label.layout['text-field'], ['get', 'NAME']);
   assert.equal(MPA_LABEL_MIN_ZOOM, 11);
   assert.equal(label.minzoom, 11 - ZOOM_OFFSET, 'MapLibre zoom 10 is ?view= zoom 11');

@@ -350,6 +350,39 @@ class PrivateIoTests(ConfirmBase):
                 with self.assertRaises(confirm.ConfirmError):
                     confirm.load_confirmations("CA", "staging", self.var)
 
+    def test_duplicate_json_members_are_refused_before_validation(self):
+        row = ('{"vessel_id": "%s", "mmsi": "%s", "method": "%s", "confirmed_on": "2026-11-01", '
+               '"evidence_ref": "r1", "withdrawn_on": %%s}') % (VESSELS[1], MMSI[1], METHODS[0])
+        ok = row % "null"
+        corrupt = {
+            "withdrawal then null": '{"version": 1, "entries": [%s]}' % (row % '"2026-11-02", "withdrawn_on": null'),
+            "null then withdrawal": '{"version": 1, "entries": [%s]}' % (row % 'null, "withdrawn_on": "2026-11-02"'),
+            "escaped duplicate key": '{"version": 1, "entries": [%s]}' % (row % 'null, "withdrawn_\\u006fn": null'),
+            "repeated evidence_ref": '{"version": 1, "entries": [%s]}' % ((row % "null")[:-1] + ', "evidence_ref": "r1"}'),
+            "identical entries": '{"version": 1, "entries": [], "entries": []}',
+            "conflicting entries": '{"version": 1, "entries": [%s], "entries": []}' % ok,
+            "entries reversed": '{"entries": [], "version": 1, "entries": [%s]}' % ok,
+            "repeated version": '{"version": 1, "version": 1, "entries": []}',
+            "escaped envelope key": '{"version": 1, "entries": [], "\\u0065ntries": []}',
+        }
+        self.ledger().parent.mkdir(parents=True)
+        for label, text in corrupt.items():
+            with self.subTest(label):
+                self.ledger().write_text(text)
+                before = tree(self.var)
+                for result in (self.add(2), self.withdraw(1), self.run_cli("confirm", "list", "--region", "CA")):
+                    self.assertEqual(result[:2], (1, ""))
+                    self.assertEqual(result[2].splitlines()[0].split(": ", 1)[1], confirm.LEDGER_BAD)
+                    self.assertNotIn("withdrawn_on", result[2])
+                    self.assertNotIn("r1", result[2])
+                self.assertEqual(tree(self.var), before)
+                with self.assertRaises(confirm.ConfirmError):
+                    confirm.load_confirmations("CA", "staging", self.var)
+        # the same field names in distinct rows stay valid
+        two = ok + ", " + ok.replace(VESSELS[1], VESSELS[2]).replace(MMSI[1], MMSI[2])
+        self.ledger().write_text('{"version": 1, "entries": [%s]}' % two)
+        self.assertEqual(len(confirm.load_confirmations("CA", "staging", self.var)), 2)
+
     def test_persisted_dates_cannot_exceed_utc_today(self):
         self.assertEqual(self.add(on=TODAY.isoformat())[0], 0)
         valid = json.loads(self.ledger().read_text())

@@ -4,9 +4,12 @@
 // SC1407-13: the card's own words follow the page's language (catalog/app/strings.json planRules.*); the
 // registry's reason and its bag and size clauses stay in the registry's English, marked lang="en", and say so.
 import {useEffect} from 'preact/hooks';
-import {freshnessLabel, loadRegs, regsData, regulationState, ruleSummary, verifiedText, type RulesRegion} from '../regs.ts';
+import {freshnessLabel, loadRegs, regsData, regulationState, ruleReason, ruleSummary, verifiedText, type RulesRegion} from '../regs.ts';
 import {language, t, type Language} from '../i18n.ts';
 import {currentRegionInfo} from './region-info.ts';
+import {readableDate} from '../dates.ts';
+import {DEFAULT_ZONE} from '../zone.ts';
+import {RuleReason} from './RuleReason.tsx';
 
 export const CHECK_RULES = t('planRules.check', 'en');
 export const NOT_LEGAL_ADVICE = t('planRules.notLegalAdvice', 'en');
@@ -17,7 +20,7 @@ export interface PlanRuleLine {
   id: string; name: string;
   /** closed: said plainly; open: restricted, scheduled and the like keep the card's own label; check: anything not confirmed. */
   kind: 'open' | 'closed' | 'check';
-  status: string; label: string; reason: string; limits: string[]; verified: string; fresh: string; link: string; linkLabel: string;
+  status: string; label: string; reason: string; /** The reason is the registry's own English wording on a Spanish page. */ english: boolean; /** A geography note (region data, English) kept apart from the Spanish sentence. */ note?: string; limits: string[]; verified: string; fresh: string; link: string; linkLabel: string;
 }
 
 /** The line, with its limits split into the registry's own (English) bag and size clauses and the app-written depth line. */
@@ -25,9 +28,9 @@ function readLine(data: unknown, species: string, date: string, region: RulesReg
   const state = regulationState(data, species, region, now, date, null), s = ruleSummary(data, species, state, region, lang), fresh = freshnessLabel(data, species, state, region, now, lang);
   const confirmed = (fresh.state === 'checked-today' || fresh.state === 'checked-earlier') && !state.overdue;
   const kind = s.status === 'unknown' || !confirmed ? 'check' : s.status === 'closed' ? 'closed' : 'open';
-  const name = state.profile?.name ?? species, official = [...s.bag, ...s.size];
+  const name = state.profile?.name ?? species, official = [...s.bag, ...s.size], why = ruleReason(state, lang);
   const line: PlanRuleLine = {id: species, name, kind, status: s.status, label: kind === 'check' && s.status !== 'unknown' ? t('rules.status.unknown', lang) : s.label,
-    reason: state.reason, limits: [...official, ...(s.depth ? [s.depth] : [])], verified: verifiedText(s, lang), fresh: fresh.text, link: s.link, linkLabel: s.linkLabel};
+    reason: why.text, english: why.english, ...(why.note ? {note: why.note} : {}), limits: [...official, ...(s.depth ? [s.depth] : [])], verified: verifiedText(s, lang), fresh: fresh.text, link: s.link, linkLabel: s.linkLabel};
   return {line, official, depth: s.depth};
 }
 
@@ -38,26 +41,26 @@ export function planRuleLine(data: unknown, species: string, date: string, regio
 
 export function PlanRules({date, species, region, now = Date.now()}: {date: string; species: string; region: {id: string; timezone?: string}; now?: number}) {
   const info = currentRegionInfo()?.rules, rules: RulesRegion = info && info.id === region.id ? info : {id: region.id, timezone: region.timezone};
-  const lang = language.value, english = lang === 'es' ? 'en' : undefined;
+  const lang = language.value, english = lang === 'es' ? 'en' : undefined, shown = readableDate(date, lang, region.timezone ?? DEFAULT_ZONE);
   useEffect(() => { void loadRegs(rules); }, [rules.id]);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const loaded = regsData.value, data = loaded?.region === rules.id ? loaded.data : null;
   return <section class="export-card plan-rules" aria-label={t('planRules.aria', lang)}>
-    <h2>{t('planRules.heading', lang, {date})}</h2>
+    <h2>{t('planRules.heading', lang, {date: shown})}</h2>
     {(() => {
       const reads = ruleSpecies(species).map(id => readLine(data, id, date, rules, now, lang));
       const first = reads[0]!.line;
       // RF1925-3: only readings that are all unconfirmed and identical in badge, reason and freshness share one notice; every species keeps its name and official link.
-      const same = reads.length > 1 && reads.every(({line: l}) => l.kind === 'check' && l.status === first.status && l.label === first.label && l.reason === first.reason && l.fresh === first.fresh);
-      const note = (reason: string) => english ? <><span lang="en">{reason}</span> {t('rules.english.inline', lang)}</> : reason;
+      const same = reads.length > 1 && reads.every(({line: l}) => l.kind === 'check' && l.status === first.status && l.label === first.label && l.reason === first.reason && l.note === first.note && l.fresh === first.fresh);
+      const note = (l: PlanRuleLine) => <RuleReason reason={{text: l.reason, english: l.english, note: l.note}} lang={lang} />;
       const link = (l: PlanRuleLine) => <a href={l.link} target="_blank" rel="noopener" hrefLang={english} aria-label={t('rules.link.for', lang, {label: l.linkLabel, name: l.name})}>{l.linkLabel}</a>;
       return <>
         {same ? <div class="plan-rule" data-kind="check" data-status="unknown">
-          <p><span class="app-mark-regs-badge" data-status="unknown">{first.label}</span> <strong>{reads.map(r => r.line.name).join(', ')}</strong>. {note(first.reason)}</p>
+          <p><span class="app-mark-regs-badge" data-status="unknown">{first.label}</span> <strong>{reads.map(r => r.line.name).join(', ')}</strong>. {note(first)}</p>
           <p class="export-note">{first.fresh}</p>
           <p>{reads.map((r, i) => <>{i ? ' ' : null}{link(r.line)}</>)}</p>
         </div> : reads.map(({line: l, official, depth}) => <div key={l.id} class="plan-rule" data-kind={l.kind} data-status={l.kind === 'check' ? 'unknown' : l.status}>
-          <p><span class="app-mark-regs-badge" data-status={l.kind === 'check' ? 'unknown' : l.status}>{l.label}</span> <strong>{l.name}</strong>. {l.kind === 'closed' ? `${t('planRules.closedOn', lang, {date})} ` : ''}{note(l.reason)}</p>
+          <p><span class="app-mark-regs-badge" data-status={l.kind === 'check' ? 'unknown' : l.status}>{l.label}</span> <strong>{l.name}</strong>. {l.kind === 'closed' ? `${t('planRules.closedOn', lang, {date: shown})} ` : ''}{note(l)}</p>
           {l.kind === 'check' ? null : <>
             {official.map((line, i) => <p key={i} lang={english}>{line}</p>)}
             {depth ? <p>{depth}</p> : null}

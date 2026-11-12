@@ -56,19 +56,36 @@ export interface BasemapStyle {
   layers: BasemapLayer[];
 }
 
-/** Colour roles for one variant, every value taken from the palette. */
+/** Colour roles for one variant, every value taken from the palette. Day uses the map-only roles (MGL-15); night keeps the landing's own roles. */
 export function basemapRoles(p: Palette, variant: BasemapVariant = 'day') {
-  const night = variant === 'night';
+  if (variant === 'day') {
+    return {water: p.mapWater, land: p.mapLand, park: p.mapPark, boundary: p.mapBoundary, road: p.mapRoad, roadMinor: p.mapRoadMinor, label: p.mapLabel, halo: p.mapHalo};
+  }
   return {
-    water: night ? p.bgDeep : p.bg,
-    land: night ? p.bg : p.panel,
+    water: p.bgDeep,
+    land: p.bg,
     park: p.panel2,
     boundary: p.line,
-    road: night ? p.panel : p.line,
+    road: p.panel,
     roadMinor: p.panel2,
     label: p.muted,
-    halo: night ? p.bgDeep : p.bg,
+    halo: p.bgDeep,
   };
+}
+
+/**
+ * A numeric map control token (CSS text) as a number. `unit` is a strength in
+ * [0,1] (zero is legitimate); `positive` is a multiplier above 0. Blank, signed,
+ * exponent, hex, non-finite or out-of-range text is refused, never turned into a
+ * value that happens to draw.
+ */
+export function mapControl(raw: string | undefined, token: string, kind: 'unit' | 'positive'): number {
+  const text = typeof raw === 'string' ? raw.trim() : '';
+  const n = /^(?:\d+\.?\d*|\.\d+)$/.test(text) ? Number(text) : NaN;
+  if (!Number.isFinite(n) || (kind === 'unit' ? n > 1 : n <= 0)) {
+    throw new Error(`Map palette: --${token} must be ${kind === 'unit' ? 'a number from 0 to 1' : 'a positive number'} (got ${JSON.stringify(raw ?? null)}).`);
+  }
+  return n;
 }
 
 const kind = (...kinds: string[]) => ['in', ['get', 'kind'], ['literal', kinds]];
@@ -79,16 +96,19 @@ const ramp = (...stops: number[]) => ['interpolate', ['linear'], ['zoom'], ...st
 export function basemapStyle(palette: Palette, {archive, assets, variant = 'day'}: BasemapOptions): BasemapStyle {
   const c = basemapRoles(palette, variant);
   const day = variant === 'day';
+  // Day label and road strength are the palette's numeric controls (1 = as drawn); night keeps the landing's fixed 0.8 and 0.6.
+  const labelOpacity = day ? mapControl(palette.mapLabelOpacity, 'map-label-opacity', 'unit') : 0.8;
+  const roadOpacity = day ? mapControl(palette.mapRoadOpacity, 'map-road-opacity', 'unit') : 0.6;
   const from = (id: string, sourceLayer: string, rest: Omit<BasemapLayer, 'id' | 'source' | 'source-layer'>): BasemapLayer =>
     ({id, source: BASEMAP_SOURCE, 'source-layer': sourceLayer, ...rest});
   const label = (size: unknown[], extra: Record<string, unknown> = {}) => ({
     layout: {'text-field': ['get', 'name'], 'text-font': [LABEL_FONT], 'text-size': size, 'text-max-width': 8, ...extra},
-    paint: {'text-color': c.label, 'text-halo-color': c.halo, 'text-halo-width': 1.2, 'text-opacity': day ? 1 : 0.8},
+    paint: {'text-color': c.label, 'text-halo-color': c.halo, 'text-halo-width': 1.2, 'text-opacity': labelOpacity},
   });
   const road = (id: string, kinds: string[], minzoom: number, color: string, width: unknown[]): BasemapLayer =>
     from(id, 'roads', {type: 'line', minzoom, filter: ['all', geometry('LineString'), kind(...kinds)],
       layout: {'line-cap': 'round', 'line-join': 'round'},
-      paint: {'line-color': color, 'line-width': width, 'line-opacity': day ? 1 : 0.6}});
+      paint: {'line-color': color, 'line-width': width, 'line-opacity': roadOpacity}});
 
   const layers: (BasemapLayer | false)[] = [
     {id: 'background', type: 'background', paint: {'background-color': c.water}},

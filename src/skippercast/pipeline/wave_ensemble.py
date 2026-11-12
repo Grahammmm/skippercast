@@ -32,7 +32,11 @@ def decode_probabilities(body, points):
                 values=[]
                 latitudes=codes_get_array(gid,'latitudes');longitudes=((codes_get_array(gid,'longitudes')+180)%360)-180
                 probabilities=codes_get_array(gid,'values')
-                populated=np.isfinite(probabilities)&(probabilities>=0)&(probabilities<=1)
+                # Each sampled index is reused across all three arrays; never let NumPy broadcast a mismatched axis.
+                if not(latitudes.ndim==longitudes.ndim==probabilities.ndim==1 and latitudes.size>0 and latitudes.shape==longitudes.shape==probabilities.shape):
+                    raise ValueError('GEFS wave probability spatial arrays must be nonempty matching one-dimensional arrays')
+                # Periodic great-circle math would let latitude 395 impersonate 35; an impossible latitude is no cell at all.
+                populated=np.isfinite(probabilities)&(probabilities>=0)&(probabilities<=1)&np.isfinite(latitudes)&(latitudes>=-90)&(latitudes<=90)
                 for point in points:
                     identity={'point_id':point['id'],'requested':[point['latitude'],point['longitude']]}
                     # The regional subset is tiny. Array distance avoids ecCodes' floating-point

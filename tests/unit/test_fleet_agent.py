@@ -411,6 +411,46 @@ class ProfileIngestTests(unittest.TestCase):
                                      [url], "the https conflict opens one review with its citation")
                     self.assertIsNotNone(profiled[KELP])
 
+    def test_a_dotted_off_limits_citation_refuses_the_whole_profile(self):
+        """A DNS root dot does not hide an off-limits host; the refused profile writes nothing and keeps its sibling."""
+        def provenance_case(url):
+            return kelp(year_built=leaf(1979, url=url)), "boat.year_built: source_url on an off-limits host (fareharbor.com)"
+
+        def conflict_case(url):
+            doc = kelp()
+            doc["conflicts"] = [{"field": "length_ft", "note": "the registry and the operator disagree",
+                                 "values": [{"value": 26, "source_url": url},
+                                            {"value": 28, "source_url": "https://kelp-test-charters.example/"}]}]
+            return doc, "conflicts[0].values[0]: source_url on an off-limits host (fareharbor.com)"
+
+        for case in (provenance_case, conflict_case):
+            for url, refused in (("https://FareHarbor.com./book", True), ("https://registry.example./", False)):
+                with self.subTest(case=case.__name__, url=url), tempfile.TemporaryDirectory() as tmp:
+                    p, folder = Registry(tmp), Path(tmp) / "profiles"
+                    p.run(DAY0, *baseline(DAY0))
+                    doc, expected = case(url)
+                    write(folder, "kelp.json", doc)
+                    write(folder, "valid.json", party())
+                    run, result = p.ingest(day(1), folder)
+                    facts = [f for f in p.rows("fleet_vessel_facts") if f["vessel_id"] == KELP and f["source_id"] == "osint"]
+                    reviews = [r for r in p.rows("fleet_reviews") if r["kind"] == "fact-conflict" and r["subject_id"] == KELP]
+                    profiled = {v["id"]: v["last_profiled_at"] for v in p.rows("fleet_vessels")}
+                    self.assertIsNotNone(profiled[SEA], "the valid profile in the same run still lands")
+                    if refused:
+                        self.assertEqual((result["status"], result["counts"]["ingested"], result["counts"]["refused"]),
+                                         ("partial", 1, 1))
+                        (report,) = json.loads((run.dir / "profiles-ingest.json").read_text())["refused"]
+                        self.assertEqual(report["file"], "kelp.json")
+                        self.assertIn(expected, report["errors"])
+                        self.assertEqual((facts, reviews, profiled[KELP]), ([], [], None), "nothing of it is stored")
+                    else:
+                        self.assertEqual((result["status"], result["counts"]["ingested"], result["counts"]["refused"]),
+                                         ("ok", 2, 0))
+                        self.assertIsNotNone(profiled[KELP])
+                        sources = [f["source_url"] for f in facts] + \
+                                  [json.loads(r["candidate_json"])["values"][0]["source_url"] for r in reviews]
+                        self.assertIn(url, sources, "the accepted citation keeps its exact bytes")
+
     def test_a_missing_profiles_directory_fails_the_step(self):
         with self.assertRaises(FileNotFoundError):
             self.p.ingest(day(1), self.dir / "absent")
@@ -429,6 +469,18 @@ class ProfileFactsTests(unittest.TestCase):
         other.append(dict(other[0], value=4.8, source_url="https://maps.googleapis.com/maps/api/place/x"))
         values = [f.value for f in profile.profile_facts(doc).facts if f.field == "reputation.other[]"]
         self.assertEqual(values, [4.5], "a number read off a Google host is never stored")
+        for host in ("g.page", "g.page.", "G.Page.", "maps.g.page.", "goo.gl", "goo.gl.", "Goo.GL.", "maps.goo.gl.",
+                     "www.google.com.", "maps.googleapis.com."):
+            with self.subTest(host):
+                dotted = party()
+                other = dotted["boat"]["reputation"]["other"]
+                other.append(dict(other[0], value=4.9, source_url=f"https://{host}/x"))
+                values = [f.value for f in profile.profile_facts(dotted).facts if f.field == "reputation.other[]"]
+                self.assertEqual(values, [4.5], "dotted and undotted Google hosts both drop the number")
+        kept = party()
+        kept["boat"]["reputation"]["other"].append(dict(other[0], value=4.2, source_url="https://Reviews.Example./x"))
+        values = [f.value for f in profile.profile_facts(kept).facts if f.field == "reputation.other[]"]
+        self.assertEqual(values, [4.5, 4.2], "an unrelated dotted source keeps its number")
         self.assertTrue(all(f.source_id == "osint" and f.rights == "facts-only" for f in mapped.facts))
         (waters,) = [f for f in mapped.facts if f.field == "waters"]
         self.assertEqual((waters.value, waters.method, waters.confidence), (["ocean", "bay"], "inference", 0.6))

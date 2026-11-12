@@ -684,7 +684,8 @@ async function renderMobile(href) {
 
 test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a four-tab nav', async () => {
   const html = await renderMobile(`${ORIGIN}?region=morro-bay`);
-  assert.match(html, /^<main class="app-mobile"><a class="app-skip-link" href="#app-brief-content">Skip to brief<\/a><a class="app-skip-link" href="#app-map-content">Skip to map<\/a><section class="app-stage" tabindex="-1" aria-label="Map" id="app-map-content">/, 'the two skip links, then the map stage that fills the viewport; the root is the page\'s one main (S4-46)');
+  assert.match(html, /^<main class="app-mobile"><a class="app-skip-link" href="#app-brief-content">Skip to brief<\/a><a class="app-skip-link" href="#app-map-content">Skip to map<\/a><header class="app-top">/, 'the two skip links, then the top strip (UXFIX-09: it precedes the map in the DOM, as on screen); the root is the page\'s one main (S4-46)');
+  assert.match(html, /<\/header><section class="app-stage" tabindex="-1" aria-label="Map" id="app-map-content">/, 'the map stage that fills the viewport follows the top strip');
   assert.doesNotMatch(html, /app-masthead|app-command|app-main|app-brief"|app-dock/, 'no desktop chrome');
   // Top strip: the brand and location card, the layers button, then the full-width profile switch.
   assert.match(html, /<header class="app-top"><div class="app-top-row"><div class="app-top-card"><a class="app-brand" href="\/">.*?<span class="app-location ui-mono" data-region="morro-bay">Morro Bay —<\/span><\/div><button[^>]*aria-label="Layers"[^>]*aria-pressed="false"/s);
@@ -693,11 +694,12 @@ test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a 
   // One sheet at peek with the hour slider at its edge, then the brief in sheet order.
   assert.equal(count(html, /class="ui-sheet /g), 1);
   assert.match(html, /<section class="ui-sheet app-sheet" data-detent="peek" role="group" aria-label="Brief"><div class="ui-sheet-edge"><button type="button" class="ui-sheet-handle" aria-label="Expand Brief" aria-expanded="false"/);
-  assert.match(html, /<\/button><div class="app-sheet-hour" role="group" aria-label="Time"><input type="range" class="ui-range ui-dock-range" aria-label="Hour" aria-valuetext="Today · 1 pm"[^>]*><output class="ui-dock-readout ui-mono" aria-live="off">Today · 1 pm<\/output><\/div><\/div>/);
+  assert.match(html, /<\/button><div class="app-sheet-hour" role="group" aria-label="Time"><div role="group" aria-label="Day" class="ui-segmented">.*?<\/div><div class="app-sheet-hour-row"><input type="range" class="ui-range ui-dock-range" aria-label="Hour" aria-valuetext="Today · 1 pm"[^>]*><output class="ui-dock-readout ui-mono" aria-live="off">Today · 1 pm<\/output><\/div><\/div><\/div>/s, 'UXFIX-11: the day chips, then the slider row, in the pinned edge');
+  assert.equal(count(html, /aria-label="Day"/g), 1, 'UXFIX-11: one day control on the phone page');
   const body = html.slice(html.indexOf('<div class="ui-sheet-body">'), html.indexOf('<nav aria-label="Views"'));
   // SC-LAUNCH-3: the head names the lead's day (tomorrow, no time chosen); the dock's day heads the evidence below the lead.
   const order = ['class="ui-eyebrow">Tomorrow</span>', 'class="app-fresh" role="status"', '<h1>Waiting for readings.</h1>', 'class="ui-eyebrow">Today · 1 pm</span>', '<div class="app-tiles">', 'class="ui-eyebrow">Where to look', '<details class="app-details">', '<p class="app-caveat">', '<figure class="app-spark"',
-    '<div class="app-sheet-menus"><div role="group" aria-label="Day"', '<label>Target<select', '<footer class="app-brief-footer">', '<div class="app-account" data-inline="true">'];
+    '<div class="app-sheet-menus"><div class="app-target"', '<label>Target<select', '<footer class="app-brief-footer">', '<div class="app-account" data-inline="true">'];
   const at = order.map(s => body.indexOf(s));
   assert.ok(at.every(i => i >= 0), `every piece renders: ${JSON.stringify(order.filter((_, i) => at[i] < 0))}`);
   assert.doesNotMatch(body, /<label>Area<select/, 'SC1722-15: no ?area= link, no Area picker in the sheet menus');

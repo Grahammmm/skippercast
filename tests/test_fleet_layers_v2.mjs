@@ -25,7 +25,7 @@ import {readPalette} from '../web/map/palette.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
 
 const ROOT = new URL('..', import.meta.url);
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const until = async (ok, what) => { for (let i = 0; i < 200 && !ok(); i++) await new Promise(r => setTimeout(r, 5)); assert.ok(ok(), what); };
 
 const EVENT = {type: 'Feature', id: 'ev-1', geometry: {type: 'Point', coordinates: [-120.9, 35.3]}, properties: {layer: 'event', id: 'ev-1', vessel_name: 'Test Boat',

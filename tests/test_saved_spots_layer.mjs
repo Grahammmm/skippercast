@@ -374,7 +374,7 @@ test('the legend row: a native checkbox, off, exact words, Try again, and the Ch
   const entry = k.LAYERS.find(e => e.id === 'saved-spots');
   assert.deepEqual([entry.control, entry.presentations, entry.sources, entry.time, entry.task, entry.attribution, entry.terrain], ['always', ['chart'], ['private-saved-spots'], ['static'], 'SC0922-04', undefined, undefined]);
   assert.equal(entry.basis, 'Your account’s saved positions, shown only to you; protected-area readings are planning context, not permission to fish.');
-  const sentinel = k.readPalette(name => `token(${name})`), style = k.chartStyle({palette: sentinel, archive: null, page: 'https://s.test/map', region: 'morro-bay', base: 'night'});
+  const sentinel = k.readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), style = k.chartStyle({palette: sentinel, archive: null, page: 'https://s.test/map', region: 'morro-bay', base: 'night'});
   const ids = style.layers.map(l => l.id);
   assert.ok(ids.indexOf('saved-spot-pin') > ids.indexOf('ranked-pin') && ids.indexOf('saved-spot-pin') < ids.indexOf(style.layers.find(l => l.source === 'coastline').id), 'after the ranked pins, under the coastline');
   assert.deepEqual(style.sources['private-saved-spots'].data, {type: 'FeatureCollection', features: []}, 'the source starts empty');
@@ -523,7 +523,7 @@ test('the Chart wiring: a pin click opens the private card without touching the 
   k.camera.value = {latitude: 35.431, longitude: -121.1, zoom: 10.9};
   const host = {dataset: {}};
   // The Chart mounts through its own entry, as the stage does.
-  const chart = k.createChart({host, load: async () => lib, fetchFn: net.fetchFn, palette: () => k.readPalette(name => `token(${name})`), page: () => nav.href, viewDelay: 0});
+  const chart = k.createChart({host, load: async () => lib, fetchFn: net.fetchFn, palette: () => k.readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), page: () => nav.href, viewDelay: 0});
   await flush();
   const [map] = maps;
   assert.ok(map, 'the Chart mounted');
