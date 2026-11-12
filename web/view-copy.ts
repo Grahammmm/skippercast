@@ -17,9 +17,15 @@ const CAVEAT_IDS: Readonly<Record<Profile, StringId>> = {boat: 'conditions.cavea
 const NEARSHORE_SOURCE = t('conditions.source.nearshore', 'en', {name: ''});
 const FEED_SOURCE = t('conditions.source.feed', 'en');
 
+// `n` rounded the way English prints it (toFixed), then localized: Intl rounds the binary float itself and can
+// disagree with toFixed at a decimal tie (60.05 -> 60.0 vs 60,1), so the language never changes the digits.
+// A caller's already-rounded -0 keeps its sign, as Intl always printed it (toFixed would drop it).
+const localized = (n: number, digits: number, lang: Language, useGrouping: boolean): string =>
+  new Intl.NumberFormat(localeOf(lang), {minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping}).format(Object.is(n, -0) ? n : Number(n.toFixed(digits)));
+
 /** `n` with exactly `digits` decimals in `lang` (English: toFixed, as the views always printed it). */
 export const fixed = (n: number, digits: number, lang: Language): string =>
-  lang === 'en' ? n.toFixed(digits) : new Intl.NumberFormat(localeOf(lang), {minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false}).format(n);
+  lang === 'en' ? n.toFixed(digits) : localized(n, digits, lang, false);
 
 /** `date` in `tz` and `lang`; a zone name is the region's short name ("PDT") in every language, never "GMT-7". */
 export function localTime(date: Date, tz: string, lang: Language, options: Intl.DateTimeFormatOptions): string {
@@ -35,7 +41,7 @@ export function coastCopy(lang: Language): CoastCopy | undefined {
   return {
     text: (key, vars) => t(key, lang, vars),
     time: (at, tz, options) => Number.isFinite(Date.parse(at)) ? localTime(new Date(at), tz, lang, options) : t('history.timeNA', lang),
-    number: (n, digits, group = false) => new Intl.NumberFormat(localeOf(lang), {minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: group}).format(n),
+    number: (n, digits, group = false) => localized(n, digits, lang, group),
     age: (at, now) => {
       const minutes = Math.round((now.getTime() - Date.parse(at)) / 60000);
       if (!Number.isFinite(minutes) || minutes < 0) return t('history.age.unavailable', lang);
