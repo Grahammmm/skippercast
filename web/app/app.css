@@ -336,7 +336,12 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
   .app-sheet[data-detent="half"] { --sheet-hidden-offset: calc(50dvh - var(--app-tabs) - var(--app-strip)); }
   .app-sheet[data-detent="full"] { --sheet-hidden-offset: 0px; }
 }
-.app-sheet-hour { display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4) var(--space-2); }
+.app-sheet-hour { display: flex; flex-direction: column; gap: var(--space-1); padding: 0 var(--space-4) var(--space-2); }
+.app-sheet-hour-row { display: flex; align-items: center; gap: var(--space-3); }
+/* UXFIX-11: the day chips ride above the slider (one 44 px row, 8 px apart, scrolling sideways inside itself) from half up; at peek the readout names the day. */
+.app-sheet-hour > .ui-segmented { gap: var(--space-2); max-width: 100%; min-width: 0; padding: 0; border: 0; background: none; overflow-x: auto; scrollbar-width: none; }
+.app-sheet-hour > .ui-segmented .ui-chip { flex: none; min-height: var(--touch-min); }
+.app-sheet[data-detent="peek"] .app-sheet-hour > .ui-segmented { display: none; }
 .app-sheet-brief, .app-sheet-layers { display: flex; flex-direction: column; gap: var(--space-3); }
 .app-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--space-5); }
 .app-sheet h1 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
@@ -352,8 +357,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-sheet .app-mark p { margin: 0; }
 .app-sheet .app-rail { padding: 0; border: 0; background: transparent; backdrop-filter: none; }
 .app-sheet-menus { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
-.app-sheet-menus > .ui-segmented { max-width: 100%; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
-.app-sheet-menus > .ui-segmented .ui-chip { flex: none; }
 .app-sheet-menus > .app-area { flex-wrap: wrap; max-width: 100%; min-width: 0; }
 .app-sheet-menus > .app-target, .app-sheet-menus .app-target label { min-width: 0; max-width: 100%; }
 .app-sheet-menus .app-target select { min-width: 0; }
