@@ -25,6 +25,12 @@ function database() {
 
 const ORIGIN = 'https://skippercast.com';
 const now = () => Math.floor(Date.now() / 1000);
+// budget() counts calls per wall-clock minute; hold Date.now inside one minute while a test
+// makes its 21 limiter calls so a minute boundary cannot reset the counter mid-loop.
+const pinMinute = (t) => {
+  const fixed = Math.floor(Date.now() / 60000) * 60000 + 1000;
+  return t.mock.method(Date, 'now', () => fixed);
+};
 let ipCounter = 0;
 function client(adapter, {host = ORIGIN, provider = 'skippercast', extra} = {}) {
   const ip = '203.0.113.' + (++ipCounter);   // a fresh auth budget per client
@@ -342,10 +348,12 @@ test('forged identity headers and cookies never authenticate; provider none disa
   sql.close();
 });
 
-test('auth endpoints are rate-limited per IP', async () => {
+test('auth endpoints are rate-limited per IP', async (t) => {
   const {sql, adapter} = database(), c = client(adapter);
+  const clock = pinMinute(t);
   for (let i = 0; i < 20; i++) assert.equal((await c.call('/api/auth/login/options', {method: 'POST', body: {}})).status, 200);
   const limited = await c.call('/api/auth/login/options', {method: 'POST', body: {}});
+  clock.mock.restore();
   assert.equal(limited.status, 429);
   assert.equal((await client(adapter).call('/api/auth/login/options', {method: 'POST', body: {}})).status, 200, 'another IP is unaffected');
   sql.close();
@@ -531,7 +539,7 @@ test('sessions_end_others_counts_actual_rows_and_preserves_current_and_other_own
   sql.close();
 });
 
-test('sessions_need_auth_and_keep_existing_request_gates', async () => {
+test('sessions_need_auth_and_keep_existing_request_gates', async (t) => {
   const {sql, adapter} = database(), c = client(adapter);
   for (const [path, method] of [['/api/auth/sessions', 'GET'], ['/api/auth/sessions/end-others', 'POST']]) {
     for (const cookie of [null, 'not-a-token', 'unknown-token']) {
@@ -555,8 +563,11 @@ test('sessions_need_auth_and_keep_existing_request_gates', async () => {
   const off = client(adapter, {provider: 'none'});
   assert.equal((await off.call('/api/auth/sessions')).status, 404);
   const limited = client(adapter);
+  const clock = pinMinute(t);
   for (let i = 0; i < 20; i++) await limited.call('/api/auth/sessions');
-  assert.equal((await limited.call('/api/auth/sessions')).status, 429);
+  const over = await limited.call('/api/auth/sessions');
+  clock.mock.restore();
+  assert.equal(over.status, 429);
   sql.close();
 });
 
