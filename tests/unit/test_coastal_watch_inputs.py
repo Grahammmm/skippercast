@@ -100,6 +100,28 @@ class CoastalWatchInputTests(TestCase):
                 _, lines = self.run_watch()
                 self.assertEqual(lines, ['coastal-watch: region feed skipped: ?: not an object'])
 
+    def test_numeric_source_url_row_does_not_stop_either_output(self):
+        base = {'coordinates': [-121.4, 35.6], 'coordinate_role': 'fishing-observation', 'location_review': 'reviewed',
+                'publisher_review': 'reviewed', 'catches': [{'species': 'yellowfin', 'count': 5}]}
+        good = [{**base, 'date': '2026-09-21', 'original_publisher_id': 'one', 'source_url': 'https://one.example/r'},
+                {**base, 'date': '2026-09-20', 'original_publisher_id': 'two', 'source_url': 'https://two.example/r'}]
+        for bad_url in (7, True):
+            with self.subTest(bad_url=bad_url):
+                bad = {**base, 'date': '2026-09-19', 'original_publisher_id': 'three', 'source_url': bad_url}
+                self.write('regions/central/latest.json', {'region_id': 'central', 'reports': [bad] + good})
+                data, lines = self.run_watch()
+                self.assertEqual(lines, [])
+                self.assertNotIn('skipped_report_feeds', data['health'])
+                latest = (self.out / 'coastal/latest.json').read_text()
+                status = (self.out / 'coastal/status.json').read_text()
+                for text in (latest, status):
+                    self.assertIn('https://one.example/r', text)
+                    self.assertIn('https://two.example/r', text)
+                    self.assertNotIn('"three"', text)
+                self.assertEqual(json.loads(latest)['health'], json.loads(status)['health'])
+                self.assertIn('"recent-located-reports"', latest)
+                self.assertIn('"auto_add_to_qualified_map": false', latest.replace(':false', ': false'))
+
     def test_clean_inputs_give_identical_output(self):
         previous = {'scope': 'california-coast-directory', 'sources': {'enso': {'data': {'k': 1}}}}
         self.write('coastal/latest.json', previous)
