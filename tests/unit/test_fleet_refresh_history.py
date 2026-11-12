@@ -147,9 +147,4 @@ class RefreshReplayTests(unittest.TestCase):
         result = refresh(self.ctx, sink)
         self.assertEqual((result["vanished_reviews"], result["kinds"]), (1, {"vanished": 1}))
         self.assertEqual([op["op"] for op in sink.applied[0]], ["review.open", "change.record"])
-        # two earlier directories + the complete current run = 3 runs
-        self.assertEqual(sink.applied[0][0]["opened_at"], NOW)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        self.assertEqual(sink.applied[0][0]["opened_at"], NOW)  # two earlier directories + the current run = 3
