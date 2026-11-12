@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -222,6 +223,17 @@ def test_private_boundary_and_alias_refusal(rig, tmp_path):
     assert rig.go() == 2 and rig.output.read_text() == "old" and rig.calls == []
 
 
+def test_symlinked_row_root_is_never_the_confinement_root(rig, tmp_path):
+    outside = tmp_path / "outside"
+    rig.root.rename(outside)
+    rig.root.symlink_to(outside)         # private-runs/MGL-06 -> outside, everything lives behind the link
+    assert rig.go() == 2
+    assert rig.go(**{"--checkout": str(outside / "repo"), "--baseline-dir": str(outside / "baseline"),
+                     "--reaches-file": str(outside / "reaches.json"), "--output": str(outside / "p.jsonl")}) == 2
+    assert rig.calls == [] and not rig.output.exists() and not (outside / "p.jsonl").exists()
+    assert not (outside / "logs").exists()
+
+
 def test_symlinked_mutable_paths_refuse(rig, tmp_path):
     outside = tmp_path / "elsewhere"
     outside.mkdir()
@@ -320,11 +332,33 @@ def test_unchanged_reuse_and_private_source_are_handled(rig):
     rig.output.unlink()
     for log in (rig.root / "logs").iterdir():
         log.rename(log.with_suffix(".old"))
+    shutil.rmtree(rig.checkout / "var/seafloor/reaches/r1")    # a private run leaves no public receipt for r1
     rig.private.add("r1")
     assert rig.go() == 1
     first = rig.rows()[0]
     assert first["status"] == "held" and first["actual"]["publication_prohibited"] is True
     assert first["findings"][0]["code"] == "private-source-only"
+
+
+def test_both_public_and_private_receipts_are_ambiguous_whatever_the_mtime(rig):
+    """Reuse does not rewrite a receipt, so a newer public receipt must never outrank an older private one."""
+    run = rig.runner()
+    rig.private.add("r1")
+    private_summary = rig.write_run("r1", values())      # the receipt the unchanged run actually used
+    rig.private.discard("r1")
+    rig.write_run("r1", values())                         # newer public receipt, same six fields
+    old = rig.checkout / "var/seafloor/private-reaches/r1/run.json"
+    os.utime(old, ns=(1, 1))
+    assert (rig.checkout / "var/seafloor/reaches/r1/run.json").stat().st_mtime_ns > old.stat().st_mtime_ns
+
+    def reuse(argv, cwd, timeout):
+        if argv[-1] == "--which":
+            return run(argv, cwd, timeout)
+        return 0, json.dumps({**private_summary, "unchanged": True}), ""
+    assert rig.go(runner=reuse) == 2
+    first = rig.rows()[0]
+    assert first["status"] == "error" and first["findings"][0]["code"] == "receipt-ambiguous"
+    assert first["actual"] is None and rig.rows()[1]["status"] == "not_run"
 
 
 def test_screen_held_is_not_exact_success(rig):

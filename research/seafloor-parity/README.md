@@ -50,7 +50,12 @@ is a named failure, never a download.
 ## Protections
 
 All paths must resolve inside `private-runs/<row-id>/` (no symlink escapes; no symlinked
-`dist`, `catalog`, `var` paths). Source checkout is outside the row root and distinct from the
+`dist`, `catalog`, `var` paths). The row root itself must be a real directory directly under the
+fixed `private-runs` parent; a symlinked row root is refused, never adopted as the confinement root.
+If both `var/seafloor/reaches/<id>/run.json` and `private-reaches/<id>/run.json` exist, the run is an
+`error` (`receipt-ambiguous`): a hash-verified reuse does not rewrite its receipt, so modification
+time cannot say which one the run used. Remove the stale receipt from the disposable checkout.
+Source checkout is outside the row root and distinct from the
 checkout; output must not exist and cannot alias an input. Baseline hashes and the source
 checkout's HEAD + `git status --porcelain` are re-checked after every child (also on failure or
 timeout); a change stops further children, sets `integrity` false and exits 2. Nothing is
