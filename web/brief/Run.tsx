@@ -13,6 +13,7 @@ import {Button} from '../ui/Button.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {LimitsDialog, LimitsForm} from '../app/LimitsPanel.tsx';
 import {regionInfo, zone} from '../app/region-info.ts';
+import {RuleReason} from '../app/RuleReason.tsx';
 import {cruiseSpeed, wantedHours} from '../limits.ts';
 import {ROUTE_BUDGET, type Ranking, type RoutedPick} from '../ranking.ts';
 import {habitat, profile, region, selection, species} from '../state.ts';
@@ -205,7 +206,7 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
       <p class="app-run-lead"><span class="ui-eyebrow">{t('run.fishing', lang)}</span> {lead}</p>
       {text.times ? <p class="app-run-times ui-mono">{text.times}{brief.sunrise && brief.sunset ? t('run.daylight', lang, {start: clock(brief.sunrise, tz, lang), end: clock(brief.sunset, tz, lang)}) : ''}</p> : null}
       {verdict ? <p class="app-run-hours" data-kind={result!.kind}>{note ? <>{said(note, lang)}{t('run.bar.check', lang)}</> : ''}{verdict}{' '}
-        {['scheduled', 'restricted'].includes(rule.status) ? <>{summary?.label ?? ruleLabel(rule, lang)}: {(r => r.english ? <span lang="en">{r.text}</span> : r.text)(ruleReason(rule, lang))} </> : ''}
+        {['scheduled', 'restricted'].includes(rule.status) ? <>{summary?.label ?? ruleLabel(rule, lang)}: <RuleReason reason={ruleReason(rule, lang)} lang={lang} marked={false} /> </> : ''}
         {summary ? <a href={summary.link}>{summary.linkLabel}</a> : null}</p> : null}
       {note ? <p class="app-run-note">{said(note, lang)}.</p> : null}
       {text.run ? (

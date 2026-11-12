@@ -31,6 +31,7 @@ import {loadRegs, regsData, regulationState, ruleReason, ruleSummary} from '../r
 import {useEffect} from 'preact/hooks';
 import {hasOwnLimits, limitsFor, type ComfortLimits} from '../limits.ts';
 import {regionInfo, type RegionInfo} from '../app/region-info.ts';
+import {RuleReason} from '../app/RuleReason.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {Button} from '../ui/Button.tsx';
 import {buildCoastBrief, buildRegionalBrief} from './model.ts';
@@ -741,7 +742,7 @@ export function LeadRules({date, now}: {date: string; now: Date}) {
   const name = target === 'reef' ? 'Lingcod & rockfish' : state.profile?.name ?? target, reason = ruleReason(state, lang);
   return (
     <p class="app-verdict-rules" data-status={s.status}>
-      <span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> {name} {leadDayText(date, now, rules.timezone ?? DEFAULT_ZONE, lang)}. {reason.english ? <><span lang="en">{reason.text}</span> {t('rules.english.inline', lang)}</> : reason.text}{' '}
+      <span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> {name} {leadDayText(date, now, rules.timezone ?? DEFAULT_ZONE, lang)}. <RuleReason reason={reason} lang={lang} />{' '}
       <a href={s.link} target="_blank" rel="noopener" aria-label={t('rules.link.for', lang, {label: s.linkLabel, name})}>{s.linkLabel}</a>
     </p>
   );

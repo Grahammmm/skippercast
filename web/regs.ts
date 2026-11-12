@@ -97,9 +97,11 @@ const LABELS: Readonly<Record<string, string>> = {restricted: 'Depth / species r
 const clock = (s: unknown, tz: string, lang: Language = 'en'): string => Number.isFinite(Date.parse(String(s))) ? new Date(String(s)).toLocaleString(lang === 'es' ? 'es-US' : 'en-US', {
   timeZone: tz, month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'}) + ' PT' : t('rules.reason.unavailableTime', lang);
 /** The rule state's reason in `lang`: the catalogue sentence when the app wrote it, else the registry's own English wording (`english`: mark it lang="en"). */
-export function ruleReason(s: Pick<RuleState, 'reason' | 'reasonId' | 'reasonVars'>, lang: Language = 'en'): {text: string; english: boolean} {
+export function ruleReason(s: Pick<RuleState, 'reason' | 'reasonId' | 'reasonVars'>, lang: Language = 'en'): {text: string; english: boolean; note?: string} {
   if (!s.reasonId) return {text: s.reason, english: lang === 'es'};
   const v = s.reasonVars ?? {}, vars = typeof v.at === 'string' ? {...v, time: clock(v.at, String(v.tz), lang)} : v;
+  // A geography note is region data (English): on a Spanish page it stays its own `note`, for the caller to mark lang="en", not folded into the Spanish sentence.
+  if (lang === 'es' && typeof v.note === 'string' && v.note) return {text: t(s.reasonId, lang, {...vars, note: ''}).trim(), english: false, note: v.note};
   return {text: t(s.reasonId, lang, vars), english: false};
 }
 /** The rule state's own label in `lang` (the card's badge comes from `ruleSummary`). */

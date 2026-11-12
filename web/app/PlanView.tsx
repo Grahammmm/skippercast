@@ -7,6 +7,7 @@ import {freshnessLabel, loadRegs, regsData, regulationState, ruleReason, ruleSum
 import {currentRegionInfo, zone} from './App.tsx';
 import {language, t} from '../i18n.ts';
 import {dockState} from './TimeDock.tsx';
+import {RuleReason} from './RuleReason.tsx';
 import {dateTimeFormat} from '../../packages/coast/src/date-format.ts';
 import {Button} from '../ui/Button.tsx';
 import {openTrip} from '../trip.ts';
@@ -23,8 +24,8 @@ export function targetRules(now: Date) {
   const loaded = regsData.value, data = loaded?.region === rules.id ? loaded.data : null;
   const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, at = dockState(now, zone()).at;
   const date = dateTimeFormat('en-CA', zone(), {year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
-  const state = regulationState(data, target, rules, now.getTime(), date, at);
-  return {state, summary: ruleSummary(data, target, state, rules), freshness: freshnessLabel(data, target, state, rules, now.getTime()), available: !!data};
+  const lang = language.value, state = regulationState(data, target, rules, now.getTime(), date, at);
+  return {state, summary: ruleSummary(data, target, state, rules, lang), freshness: freshnessLabel(data, target, state, rules, now.getTime(), lang), available: !!data};
 }
 export function TargetRules({now = new Date()}: {now?: Date}) {
   const rules = currentRegionInfo()?.rules;
@@ -32,9 +33,9 @@ export function TargetRules({now = new Date()}: {now?: Date}) {
   const {state, summary: s, freshness} = targetRules(now);
   const name = targetLabel(profile.value, region.value, species.value), lang = language.value;
   return <div class="app-plan-rules" data-status={s.status}>
-    <p><span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> {name}. {(() => { const r = ruleReason(state, lang); return r.english ? <span lang="en">{r.text}</span> : r.text; })()}</p>
+    <p><span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> {name}. <RuleReason reason={ruleReason(state, lang)} lang={lang} marked={false} /></p>
     {[...s.bag, ...s.size, ...(s.depth ? [s.depth] : [])].map((line, i) => <p key={i}>{line}</p>)}
-    <p>{verifiedText(s)}</p>
+    <p>{verifiedText(s, lang)}</p>
     <p class="app-plan-rules-fresh" data-state={freshness.state}>{freshness.text}</p>
     <a href={s.link} target="_blank" rel="noopener" aria-label={t('plan.rulesNewTab', lang, {link: s.linkLabel, name})}>{s.linkLabel}</a>
   </div>;

@@ -159,7 +159,8 @@ test('plan_rules_es_check_fail_closed: every unconfirmed reading says check the 
     const out = esHtml(d, species, date, d), t = text(out);
     assert.match(t, /Consulta las reglas oficiales antes de este viaje\./, label);
     assert.match(out, /<span class="app-mark-regs-badge" data-status="unknown">Revisa las reglas<\/span>/, label);
-    assert.doesNotMatch(out, /\(en inglés\)/, `${label}: the app's reason is Spanish, not marked English`);
+    if (d === geo) assert.match(out, /área geográfica\. <span lang="en">Synthetic band\.<\/span> \(en inglés\)/, `${label}: only the region's English note is marked English`);
+    else assert.doesNotMatch(out, /\(en inglés\)/, `${label}: the app's reason is Spanish, not marked English`);
     assert.doesNotMatch(out, /data-status="(?:open|restricted|scheduled)"/, label);
     assert.doesNotMatch(t, /Abierto|Verificado|Revisado hoy|Check the official rules/, label);
     assert.match(out, /<a href="https:\/\/[^"]+" target="_blank" rel="noopener" hreflang="en"/, `${label}: the official link stays`);
