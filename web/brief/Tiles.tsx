@@ -57,7 +57,7 @@ export function tileProps(tile: BriefTile, compact = false, dense = false, lang:
   return {
     label: tile.label, ...LOOK[tile.id], reading, unit: tile.unit, detail: tileDetailText(tile, lang),
     source: sourceLine(shown, dense, lang), stale: tile.state === 'stale',
-    basis: <>{t(`tile.basis.${tile.id}` as StringId, lang)}{datum ? t('tile.basis.reference', lang, {datum: String(datum)}) : ''}{t('tile.basis.source', lang)}{name}.{tile.lastGood ? t('tile.basis.lastGood', lang) : ''}{t('tile.basis.staleAfter', lang, {hours: Math.round(tile.limitMs / 3_600_000)})}</>,
+    basis: <>{t(`tile.basis.${tile.id}` as StringId, lang)}{datum ? (datum === 'MLLW' ? t('tile.basis.referenceMllw', lang) : t('tile.basis.reference', lang, {datum: String(datum)})) : ''}{t('tile.basis.source', lang)}{name}.{tile.lastGood ? t('tile.basis.lastGood', lang) : ''}{t('tile.basis.staleAfter', lang, {hours: Math.round(tile.limitMs / 3_600_000)})}</>,
   };
 }
 

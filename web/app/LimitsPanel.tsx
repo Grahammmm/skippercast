@@ -20,6 +20,7 @@ import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import type {ComponentChildren} from 'preact';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {closeOnScrim, rememberOpener, restoreFocus} from '../ui/focus-return.ts';
+import {useScrollCue} from '../ui/scroll-cue.ts';
 import {defaultLimits, gustBelowWind, LIMIT_BOUNDS, LIMIT_FIELDS, LIMIT_SURGE_BANDS, type ComfortLimits, type LimitField, type LimitSurge} from '../../packages/coast/src/limits.ts';
 import {depthLimitFt, PROFILE_TABLE, type Profile} from '../profile.ts';
 import {WANTED_BOUNDS, wantedHours, saveWanted, CRUISE_BOUNDS, cruiseSpeed, hasOwnLimits, limitsFor, resetLimits, saveCruise, saveLimits} from '../limits.ts';
@@ -159,7 +160,7 @@ export function LimitsForm({profile: p, onDone, focusCruise = false, focusWanted
       <p id={`${id}-note`} class="app-limits-note">
         {t('limits.note', lang)}
       </p>
-      <div class="app-limits-actions">
+      <div class="app-limits-actions" data-cue-inset>
         <Button variant="primary" type="submit">{t('limits.save', lang)}</Button>
         <Button variant="quiet" onClick={reset}>{t('limits.reset', lang)}</Button>
       </div>
@@ -172,6 +173,7 @@ export function LimitsDialog({open, onClose, title, children}: {open: boolean; o
   const lang = language.value;
   const ref = useRef<HTMLDialogElement>(null), opener = useRef<HTMLElement | null>(null);
   const id = useId();
+  useScrollCue(ref);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -179,7 +181,7 @@ export function LimitsDialog({open, onClose, title, children}: {open: boolean; o
     else if (!open && dialog.open) dialog.close();
   }, [open]);
   return (
-    <dialog ref={ref} class="app-limits-dialog" aria-labelledby={id} onClick={closeOnScrim} onClose={() => { restoreFocus(opener.current); onClose(); }}>
+    <dialog ref={ref} class="app-limits-dialog ui-scroll-cue" aria-labelledby={id} onClick={closeOnScrim} onClose={() => { restoreFocus(opener.current); onClose(); }}>
       <div class="app-limits-head">
         <h2 id={id}>{title}</h2>
         <IconButton icon="close" label={t('limits.close', lang)} onClick={onClose} />

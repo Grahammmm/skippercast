@@ -63,7 +63,7 @@ test('the primitives carry no colour or font literal, no emoji, and resolve ever
   const block = selector => Object.fromEntries([...tokens.slice(tokens.indexOf(selector)).replace(/^[^{]*\{/, '').split('}')[0].matchAll(/(--[\w-]+):\s*([^;]+);/g)].map(m => [m[1], m[2]]));
   const dark = block(':root {'), light = {...dark, ...block(':root[data-theme="light"]')};
   const css = await readFile(join(ROOT, 'web/ui/ui.css'), 'utf8');
-  const local = new Set([...css.matchAll(/(--sheet-[\w-]+):/g)].map(m => m[1]));
+  const local = new Set([...css.matchAll(/(--(?:sheet|cue)-[\w-]+):/g)].map(m => m[1]));
   for (const file of UI_FILES) {
     const source = readFileSync(join(ROOT, file), 'utf8');
     assert.deepEqual(lintFile(file, source), [], file);
@@ -130,7 +130,7 @@ test('the primitives are accessible as drawn: real buttons, names, pressed state
   assert.match(out.Segmented, /^<div role="group" aria-label="Profile" class="ui-segmented">/);
   assert.equal((out.Segmented.match(/aria-pressed="true"/g) || []).length, 1);
   assert.equal((out.Segmented.match(/<button /g) || []).length, 3);
-  assert.match(out.Tile, /<details class="ui-popover"[^>]*><summary [^>]*>basis<\/summary><div class="ui-popover-body">NWS point forecast/);
+  assert.match(out.Tile, /<details class="ui-popover"[^>]*><summary [^>]*>Source<\/summary><div class="ui-popover-body">NWS point forecast/);
   assert.match(out.TileStale, /data-state="stale"[\s\S]*>stale<\/span>/);
   assert.match(out.Rail, /^<div class="ui-rail" role="group" aria-label="Layers"><ul class="ui-rail-list"><li class="ui-rail-item" data-on="true"><button [^>]*aria-pressed="true"/);
   assert.match(out.Rail, /<summary class="ui-popover-summary ui-eyebrow" aria-label="Currents basis"><svg/);
