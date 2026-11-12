@@ -100,6 +100,7 @@ class FleetSession:
         self._next: dict[str, float] = {}
         self._robots: dict[str, tuple[float, RobotFileParser | None]] = {}
         self._checked: str | None = None  # the URL whose robots.txt get() already checked
+        self._internal_robots = False  # True only while _fetch_robots runs its own policy lookup
 
     @classmethod
     def for_region(cls, region: FleetRegion, **options: Any) -> "FleetSession":
@@ -122,9 +123,8 @@ class FleetSession:
 
     def _before_hop(self, url: str) -> None:
         """Every connection: robots for a redirect target, the host budget, then the host interval."""
-        parts = urlsplit(url)
-        host = (parts.hostname or "").lower()
-        if parts.path != "/robots.txt":
+        host = (urlsplit(url).hostname or "").lower()
+        if not self._internal_robots:  # only our own policy lookup is uncounted, never a content /robots.txt
             if url != self._checked and not self._robots_allows(url, host):
                 raise _HopRefused("robots", f"robots.txt disallows {url}")
             if self.used.get(host, 0) >= self.budget:
@@ -147,6 +147,13 @@ class FleetSession:
 
     def _fetch_robots(self, host: str) -> RobotFileParser | None:
         """The parsed robots.txt for ``host``; None means fail closed (unreachable or erroring)."""
+        previous, self._internal_robots = self._internal_robots, True
+        try:
+            return self._fetch_robots_hops(host)
+        finally:
+            self._internal_robots = previous
+
+    def _fetch_robots_hops(self, host: str) -> RobotFileParser | None:
         parser = RobotFileParser()
         current = f"https://{host}/robots.txt"
         for _hop in range(ROBOTS_HOPS + 1):
