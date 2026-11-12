@@ -294,6 +294,9 @@ def validate_consumer(fd, certificate, *, expected_grant_sha, window, stage, tok
     Caller must separately validate its real Store lease. Hash input is sealed-copy
     I/O, never an additional original-source admission.
     """
+    if (not isinstance(window, list) or len(window) != 4 or any(type(x) is not int for x in window)
+        or min(window[:2]) < 0 or not 1 <= window[2] == window[3] <= 128):
+        raise ValueError("consumer window/stage/lease fenced")
     state = _load(certificate["batch_path"])
     key = certificate["key"]
     if (state["state"] != "active" or time.monotonic() >= state["deadline"]
