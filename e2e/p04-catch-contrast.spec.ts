@@ -252,10 +252,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF2115-5: MapStage.tsx adds a startup loading status paragraph (existing app-stage-note class) and aria-busy on the Chart host; BODY09 renders Reports/CatchCards, never MapStage. No paint, token, assertion or threshold change. Rebind only MapStage.tsx.
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   "web/app/MapStage.tsx": "33ceeea87f84bdf56afdc71b6c79702a85280c13417628bf4d0fda4563346990",
-  "web/tokens.css": "85271ff5258cbbe3bfce09a7dc0b5c16ff1e31325b5a5f8d5d8a9fedd425dfd1",
+  "web/tokens.css": "839d9aa11e98ab858b9ed7ca041f094d857d7fc6518dda86d53431886ca45284",
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
   // changes (panel.css: History scroller 2 px ring and one summary ring; app.css: fleet checkbox ring); unfocused catch text and contrast are unchanged. check_contrast.mjs changes only the appCss surface hash, its comment and moved citations. Rebound from final bytes.
-  "web/ui/ui.css": "94d1f6067a21772d33ea774ebb98deea0072517058486b5d5b0afe9117a13e32",  // SC1722-07: ui.css only adds the sheet's --sheet-hidden-offset property, a settled-detent bottom padding and overscroll containment on .ui-sheet-body; the catch sheet has no sheet and no paint changed. #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
+  // UXFIX-04: ui.css folds the shared focus ring onto form controls and tabindex headings and adds a zero-specificity input/select/textarea --line-strong border; the catch sheet has no text field, and focus paint only appears on :focus-visible, so unfocused catch text and contrast are unchanged.
+  "web/ui/ui.css": "367e8625c8af4bf431d3d3789c6cb5c99726339370bee906a47e401955e77157",  // SC1722-07: ui.css only adds the sheet's --sheet-hidden-offset property, a settled-detent bottom padding and overscroll containment on .ui-sheet-body; the catch sheet has no sheet and no paint changed. #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.
   // SC-E2E-GREEN: the legend shrinks and scrolls beside a mark-card min height, the phone .app-area row wraps, and the
   // brief's .app-verdict-rules line gets margins, size and the existing .app-mark-regs a link rule; Reports' catch sheet
@@ -282,12 +283,12 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-20: app.css appends only a scoped .app-skip-link block (a clipped 1 px anchor at rest, a ringed 44 px panel when focused); the Reports catch sheet mounts no skip link, so no catch paint or backing changes. Rebound from the final bytes.
   // UXFIX-09: app.css adds one tile-basis margin rule scoped to .app-tiles (the brief's tiles; the Reports catch sheet mounts none) and raises the phone .app-top z-index by one (the top strip, not mounted by the catch sheet); no colour, backing or catch paint changed. Rebound from the final bytes.
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
-  "web/app/app.css": "b5c0e931240679f6645c539ade2e99c01fbdae7de84425ef810689059bc1f092",
+  "web/app/app.css": "3ce55c27f882d271ea7c8b83219dbcd05a9e60a287431b7542352b5055fbb2de",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
-  "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
+  "web/app/plan.css": "ba9af1737062b2a60607521f1a66fa4ea141f8ef09f58d06e357ce8d2bb5f492",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
   // SC2037-02: hourly-table.css appends only a scoped .app-hourly-over rule (amber token colour, semibold) for own-limit cell marks; Reports never mounts the hourly table, so no counted paint changes. Rebound from the final bytes.
-  "web/app/views/hourly-table.css": "deddfad213ef5d81cd6f82be591b5259a874a1da2961c307df9a9ca1ef644ee0",
+  "web/app/views/hourly-table.css": "14d186090a621aac5e9b031b0e302b6b4bd61df3a858651dd40dd6316903cde0",
   "web/ui/guard.css": "8e53f065f8f7af23121f7eb346ebeefe571baa21eebf1b6179e27a8b86b74d11",
   // SC2037-04: Brief.tsx imports brief-print.css (only a hidden .app-print-only class and an @media print block; no screen paint); Reports bundles Brief.
   // SC1407-05: brief-print.css adds only .app-hour-guard/.app-hour-settled (display: contents) and .app-hour-updating (muted margin-less line) screen rules plus print-hide rules for the pending dock hour; the Reports catch sheet mounts none of those classes (they wrap the desktop/phone brief verdict), so no counted catch paint changes. Rebound from the final bytes.
@@ -363,7 +364,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-20: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-09: check_contrast.mjs changes only the appCss surface hash; contrast() is untouched. Rebound from the final bytes.
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
-  "scripts/check_contrast.mjs": "e341bcfc4fb797f6f17a15a774b3bf6415f69c7900f248e55b614bc2edb652d9",
+  "scripts/check_contrast.mjs": "e43d52bf374df89877a0589f0858b2c73925cb510f97764ac45bb73c6337444b",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
