@@ -121,7 +121,13 @@ test('acceptance 2: at the half detent the sheet shows the headline, tiles and h
   // in place of the verdict, and the tiles and hour slider sit below it: they are reached by scrolling the sheet body.
   await expect(sheet.locator('h1')).toHaveText("Couldn't load the forecast");
   for (const part of [sheet.locator('h1'), sheet.locator('.app-forecast-retry')]) await expect(part).toBeInViewport({ratio: 1});
-  for (const part of [sheet.locator('.app-tiles'), sheet.getByRole('slider', {name: 'Hour'})]) { await part.evaluate(el => el.scrollIntoView({block: 'center'})); await expect(part).toBeInViewport({ratio: 1}); }
+  // UXFIX-11: the pinned edge now holds the day chips too, so the body starts lower and its scrollport centre sits below the window's edge (the half detent
+  // slides the sheet's end past it). Each part is centred in the part of the body that is in the window, and must still be wholly in view.
+  for (const part of [sheet.locator('.app-tiles'), sheet.getByRole('slider', {name: 'Hour'})]) {
+    // The Hour slider is pinned in the edge (not the body), so only a part inside the body is scrolled.
+    await part.evaluate(el => { const scroller = el.closest('.ui-sheet-body'); if (!scroller) return; const body = scroller.getBoundingClientRect(), box = el.getBoundingClientRect(); scroller.scrollTop += (box.top + box.bottom) / 2 - (body.top + Math.min(body.bottom, innerHeight)) / 2; });
+    await expect(part).toBeInViewport({ratio: 1});
+  }
   // Compact tiles keep the stale state and the age.
   const water = sheet.locator('.ui-tile', {hasText: /^\s*Water/});
   await expect(water).toHaveAttribute('data-state', 'stale');
