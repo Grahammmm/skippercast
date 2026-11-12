@@ -161,7 +161,7 @@ def payload(root, receipt_ref):
             or not re.fullmatch('[a-f0-9]{64}', str(receipt.get('render_binding')))):
         raise ValueError('internal_render_receipt_required')
     acceptance = receipt['acceptance']
-    if (acceptance.get('schema') != 'coastal-terrain-only-input-v1'
+    if (not isinstance(acceptance, dict) or acceptance.get('schema') != 'coastal-terrain-only-input-v1'
             or any(acceptance.get(k) != v for k, v in FLAGS.items())
             or digest({k: v for k, v in acceptance.items() if k != 'scientific_review'}) != receipt['acceptance_context_sha256']):
         raise ValueError('acceptance_context_or_holds_mismatch')
