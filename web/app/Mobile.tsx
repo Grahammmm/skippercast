@@ -18,7 +18,7 @@
 // Reports view (FE-52) opens from its tab or the sheet's footer and replaces
 // the sheet with its page over the map.
 import type {ComponentChildren} from 'preact';
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
 import {Range} from '../ui/Dock.tsx';
@@ -74,27 +74,41 @@ export const boatEntryDetent = (open: boolean, detent: Detent): Detent => open &
 /** The first-run prompt yields the sheet to the layers panel; it is still due and returns when Layers closes. */
 export const showsFirstRun = (panel: Panel): boolean => panel !== 'layers';
 
-/** The hour slider and its readout, pinned at the sheet's top edge. */
+/** UXFIX-11: the sheet body's scroll position stays where it was across a day change, until the person scrolls it themselves. */
+export function pinBodyScroll(from: Element, frames = 40): void {
+  const body = from.closest('.ui-sheet')?.querySelector<HTMLElement>('.ui-sheet-body');
+  if (!body) return;
+  const top = body.scrollTop, stop = (): void => { frames = 0; };
+  const events = ['wheel', 'touchstart', 'keydown'] as const;
+  for (const name of events) body.addEventListener(name, stop, {once: true, passive: true});
+  const hold = (): void => {
+    if (frames-- > 0) { if (body.scrollTop !== top) body.scrollTop = top; requestAnimationFrame(hold); }
+    else for (const name of events) body.removeEventListener(name, stop);
+  };
+  requestAnimationFrame(hold);
+}
+
+/**
+ * The day chips and the hour slider with its readout, pinned at the sheet's top edge (S4-07: "what about Saturday?" is one tap).
+ * SC1407-05: both read and request the dock's pending preview, so the rest of the sheet stays on the settled hour. The chips show
+ * from half up (CSS); at peek the readout names the day and the first-run card and verdict keep the peek's height.
+ */
 export function HourEdge({now}: {now: Date}) {
   const tz = zone(), lang = language.value;
   useDockSelection(now, tz);
-  const state = previewDockState(now, tz), outside = state.index < 0;
-  const at = (i: number): number => state.hours[i] ?? state.at;
+  const state = previewDockState(now, tz), outside = state.index < 0, answers = useDayVerdicts(now, tz);
+  const at = (i: number): number => state.hours[i] ?? state.at, edge = useRef<HTMLDivElement>(null);
   return (
-    <div class="app-sheet-hour" role="group" aria-label={t('shell.time', lang)}>
-      <Range label={t('shell.hour', lang)} value={Math.max(0, state.index)} max={outside ? 0 : state.hours.length - 1} onChange={i => requestDockHour(now, tz, at(i))} disabled={outside}
-        valueText={i => dockValueText(now, tz, state, lang, at(i))} class="ui-dock-range" />
-      <output class="ui-dock-readout ui-mono" aria-live="off">{dockValueText(now, tz, state, lang)}</output>
+    <div class="app-sheet-hour" ref={edge} role="group" aria-label={t('shell.time', lang)}>
+      <Segmented label={t('shell.day', lang)} options={withVerdicts(dayOptions(now, tz, state.day, lang), answers, lang)} value={state.day}
+        onChange={d => { requestDockDay(now, tz, d, state); if (edge.current) pinBodyScroll(edge.current); }} />
+      <div class="app-sheet-hour-row">
+        <Range label={t('shell.hour', lang)} value={Math.max(0, state.index)} max={outside ? 0 : state.hours.length - 1} onChange={i => requestDockHour(now, tz, at(i))} disabled={outside}
+          valueText={i => dockValueText(now, tz, state, lang, at(i))} class="ui-dock-range" />
+        <output class="ui-dock-readout ui-mono" aria-live="off">{dockValueText(now, tz, state, lang)}</output>
+      </div>
     </div>
   );
-}
-
-/** SC1407-05: the sheet's day menu reads and requests the dock's pending preview, so the rest of the sheet stays on the settled hour. */
-function SheetDays({now}: {now: Date}) {
-  const tz = zone(), lang = language.value;
-  useDockSelection(now, tz);
-  const state = previewDockState(now, tz), answers = useDayVerdicts(now, tz);
-  return <Segmented label={t('shell.day', lang)} options={withVerdicts(dayOptions(now, tz, state.day, lang), answers, lang)} value={state.day} onChange={d => requestDockDay(now, tz, d, state)} />;
 }
 
 /** The brief in sheet order; a selected mark's card stands in for the eyebrow and headline. Below full the tiles are compact (detail and basis at full). */
@@ -125,7 +139,6 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
       <Guard name="run"><RunLine brief={brief} ranking={ranking} now={now} /></Guard>
       <Guard name="tide"><TideSpark brief={brief} now={now} /></Guard>
       <div class="app-sheet-menus">
-        <SheetDays now={now} />
         <TargetSelect />
         <div class="app-area" role="group" aria-label={t('command.areaPort', lang)}>
           <AreaSelect />

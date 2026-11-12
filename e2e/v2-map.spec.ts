@@ -1120,6 +1120,9 @@ test('in 3D the Chart\'s entries and the base read "Chart only" and never toggle
   await expect(page.locator('#app-rail-base-note')).toHaveText('Chart only');
   await expect(railToggle(page, 'Seafloor'), 'FE-80: Seafloor holds the terrain options').toBeEnabled();
   await expect(page.locator('.app-legend [data-reason="seafloor"]')).toHaveText('Screened candidates: Chart only');
+  // UXFIX-11: the half-detent sheet's edge now holds the day chips, so the entry can sit in the body's end that is below the window;
+  // bring it to the middle of the body first (a forced click needs it in the window).
+  await railToggle(page, 'Water temp').evaluate(el => el.scrollIntoView({block: 'center'}));
   await railToggle(page, 'Water temp').click({force: true});
   await page.waitForTimeout(300);
   expect(params(page).layers, 'a disabled entry changes nothing').toBe('seafloor');

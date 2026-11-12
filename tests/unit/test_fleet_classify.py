@@ -16,7 +16,7 @@ import pytest
 from skippercast.fleet.ais import classify, segment
 from skippercast.fleet.ais.classify import FISHING_KINDS, classifier_version, classify_trip, label_positions
 from skippercast.fleet.ais.events import segment_geometry
-from skippercast.fleet.ais.segment import ActivityThresholds, LATE_MS, is_suspect, split_trips
+from skippercast.fleet.ais.segment import ActivityThresholds, LATE_MS, distance_nm, is_suspect, split_trips
 from skippercast.fleet.ais.sources.base import AisPosition
 from skippercast.fleet.config import Port
 from tests._support import ROOT
@@ -498,6 +498,145 @@ def test_a_new_activity_key_changes_classifier_version(block):
     node = changed['activity'] if block is None else changed['activity'][block]
     node['new_threshold'] = 1
     assert classifier_version(ActivityThresholds.from_mapping(changed)) != classifier_version(TH)
+
+
+# ---------------------------------------------------------------- thresholds compare unrounded statistics (RF1801-8)
+
+EPS = 4e-7  # below the six-decimal presentation grid: rounding would carry it onto the threshold
+
+
+def edge_rows(sog, cogs=(90.0,), lateral=0.0, n=41):
+    """Offshore fixes one minute apart heading east, every one reporting ``sog``; optional zigzag and courses."""
+    rows = []
+    for k in range(n):
+        ts = T0 + k * MIN
+        lat = OFFSHORE[0] + (lateral if k % 2 else 0.0)
+        rows.append(AisPosition(MMSI, ts, lat, OFFSHORE[1] + 0.0005 * k, sog, cogs[k % len(cogs)], None, None,
+                                'PositionReport', 'synthetic', ts + 2_000))
+    return rows
+
+
+def middle_label(rows, th=TH):
+    return label_positions(rows, PORTS, th)[len(rows) // 2]
+
+
+def middle_stats(rows, th=TH):
+    return classify.window_stats(rows, th)[len(rows) // 2]
+
+
+@pytest.mark.parametrize('sog, expected', [(2.0 - EPS, 'drift-anchor'), (2.0, 'drift-anchor'),
+                                           (2.0 + EPS, 'uncertain')])
+def test_drift_ceiling_uses_unrounded_mean(sog, expected):
+    assert TH.drift_max_sog_kn == 2.0
+    labels = label_positions(edge_rows(sog), PORTS, TH)
+    assert set(labels) == {expected}
+    assert middle_stats(edge_rows(sog)).mean_sog == pytest.approx(sog, abs=1e-12)
+
+
+def derived_speed_trip(speed_kn, minutes=60):
+    """A trip whose activity leg reports no SOG, so the speed is derived from distance and time."""
+    nm_per_deg = distance_nm(10.0, -149.85, 11.0, -149.85)
+    dlat = speed_kn / 60.0 / nm_per_deg
+    track = Track().stay(30).go_to(*OFFSHORE, CRUISE)
+    lat0, t0, fixes = track.lat, track.t, list(track.fixes)
+    for k in range(1, minutes + 1):
+        ts = t0 + k * MIN
+        fixes.append(AisPosition(MMSI, ts, lat0 + k * dlat, track.lon, None, None, None, None,
+                                 'PositionReport', 'synthetic', ts + 2_000))
+    track.lat, track.t, track.fixes = lat0 + minutes * dlat, t0 + minutes * MIN, fixes
+    return track.go_to(10.0, -150.0, CRUISE).stay(30).fixes, (lat0, dlat, minutes)
+
+
+@pytest.mark.parametrize('speed, drifting', [(2.0 + EPS, False), (2.0 - EPS, True)])
+def test_derived_speed_above_ceiling_is_not_fishing(speed, drifting):
+    fixes, (lat0, dlat, minutes) = derived_speed_trip(speed)
+    derived = [distance_nm(lat0 + (k - 1) * dlat, -149.85, lat0 + k * dlat, -149.85) * 60.0
+               for k in range(1, minutes + 1)]
+    # The measured speed really is on the stated side of the ceiling before anything is classified.
+    assert (max(derived) < 2.0) if drifting else (min(derived) > 2.0)
+    _, (result,) = classified(fixes)
+    drift_min = sum(s.minutes for s in result.segments if s.kind == 'drift-anchor')
+    assert (drift_min > 0) if drifting else (drift_min == 0 and fishing(result) == [])
+    for seg in result.segments:  # the persisted statistics stay six-decimal
+        assert seg.mean_sog == (None if seg.mean_sog is None else round(seg.mean_sog, 6))
+
+
+@pytest.mark.parametrize('sog, expected', [
+    (2.2 - EPS, 'uncertain'), (2.2, 'troll-slow'),             # slow minimum (turning courses)
+    (3.5, 'troll-slow'), (3.5 + EPS, 'transit'),               # slow maximum; straight track above it is transit
+    (5.0 - EPS, 'transit'), (5.0, 'troll-pelagic'),            # pelagic minimum
+    (9.0, 'troll-pelagic'), (9.0 + EPS, 'transit'),            # pelagic maximum
+])
+def test_band_edges_do_not_expand_from_rounding(sog, expected):
+    rows = edge_rows(sog, cogs=(0.0, 180.0))  # opposite courses: heading variance 1, so the slow arm is open
+    assert middle_label(rows) == expected
+
+
+def find_edge(build, field, above):
+    """First deterministic fixture whose full-precision ``field`` rounds to a different six-decimal value.
+
+    ``above`` True wants round(value) > value (rounding would lift it over a threshold set at the rounded
+    value); False wants round(value) < value (rounding would drop it below).
+    """
+    for step in range(1, 400):
+        rows = build(step * 1e-5)
+        value = getattr(middle_stats(rows), field)
+        rounded = round(value, 6)
+        if value != rounded and (rounded > value) == above:
+            return rows, value, rounded
+    raise AssertionError('no edge fixture found')
+
+
+def build_straightness(lateral):
+    return edge_rows(3.0, lateral=lateral)  # constant course 90: heading variance 0 shuts the other arm
+
+
+def build_heading_var(swing):
+    return edge_rows(3.0, cogs=(90.0 - swing * 20, 90.0 + swing * 20))  # a straight track: straightness 1
+
+
+def test_shape_thresholds_use_full_precision():
+    # Slow troll straightness arm: raw straightness just ABOVE the maximum must not satisfy it.
+    rows, value, rounded = find_edge(build_straightness, 'straightness', above=False)
+    edge = replace(TH, troll_slow_max_straightness=rounded)
+    assert rounded < value and middle_stats(rows, edge).heading_var < TH.troll_slow_min_heading_variance
+    assert middle_label(rows, edge) == 'uncertain'
+    assert middle_label(rows, replace(TH, troll_slow_max_straightness=value)) == 'troll-slow'      # equality control
+    # Slow troll heading-variance arm: raw variance just BELOW the minimum must not satisfy it.
+    rows, value, rounded = find_edge(build_heading_var, 'heading_var', above=True)
+    edge = replace(TH, troll_slow_min_heading_variance=rounded)
+    assert value < rounded and middle_stats(rows, edge).straightness > TH.troll_slow_max_straightness
+    assert middle_label(rows, edge) == 'uncertain'
+    assert middle_label(rows, replace(TH, troll_slow_min_heading_variance=value)) == 'troll-slow'  # equality control
+    # Transit straightness gate: raw straightness just BELOW the minimum must not make a transit.
+    rows, value, rounded = find_edge(lambda lateral: edge_rows(4.0, lateral=lateral), 'straightness', above=True)
+    assert middle_label(rows, replace(TH, transit_min_straightness=rounded)) == 'uncertain'
+    assert middle_label(rows, replace(TH, transit_min_straightness=value)) == 'transit'            # equality control
+
+
+def test_segment_statistics_remain_six_decimal():
+    fixes, _ = derived_speed_trip(2.0 + EPS)
+    _, (result,) = classified(fixes)
+    trip_rows = result.trip.positions
+    # The decision input is unrounded (strictly above 2.0) while the stored segment statistic is the six-decimal form.
+    raw = classify.window_stats(trip_rows, TH)
+    assert any(2.0 < st.mean_sog < 2.0 + 1e-6 for st in raw if st.mean_sog is not None)
+    for seg in result.segments:
+        for name in ('mean_sog', 'straightness', 'heading_var', 'p90_sog', 'distance_nm'):
+            value = getattr(seg, name)
+            assert value is None or value == round(value, 6), name
+        if seg.kind == 'gap':
+            assert (seg.mean_sog, seg.straightness, seg.heading_var) == (None, None, None)
+
+
+def test_version_four_identity_differs_from_version_three():
+    from unittest.mock import patch
+    assert classify.ALGORITHM_VERSION == 4
+    current = classifier_version(TH)
+    assert current.startswith('c4-')
+    with patch.object(classify, 'ALGORITHM_VERSION', 3):
+        previous = classifier_version(TH)
+    assert previous.startswith('c3-') and previous != current
 
 
 if __name__ == '__main__':

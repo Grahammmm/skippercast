@@ -286,9 +286,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-20: app.css appends only a scoped .app-skip-link block (a clipped 1 px anchor at rest, a ringed 44 px panel when focused); the Reports catch sheet mounts no skip link, so no catch paint or backing changes. Rebound from the final bytes.
   // UXFIX-09: app.css adds one tile-basis margin rule scoped to .app-tiles (the brief's tiles; the Reports catch sheet mounts none) and raises the phone .app-top z-index by one (the top strip, not mounted by the catch sheet); no colour, backing or catch paint changed. Rebound from the final bytes.
   // MGL-15: app.css repoints only the two depth-contour legend swatch colours to map tokens; no catch paint or layout changed.
-  "web/app/app.css": "4d8bfb23f2d1fb27edcb3f58532cdb56000c2da661c82d30cb330c0c73a469dc",
+  "web/app/app.css": "8c4ce49230e0f5428fddcb3491f1f3801b5b4e24276ec75c83830e6cddabaef8",
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // UXFIX-10: app.css appends only a scoped .app-account[data-top] block (the phone top-card account button: icon size, visually hidden label, open-state colour, z-index while its panel is open); the Reports catch sheet mounts no account menu, so no catch paint or backing changes. Rebound from the final bytes.
+  // UXFIX-11: app.css adds only the phone sheet day-chip row pin (.app-sheet-hour); the Reports catch sheet mounts no hour sheet, so no catch paint or backing changes. Rebound from the final bytes.
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "ba9af1737062b2a60607521f1a66fa4ea141f8ef09f58d06e357ce8d2bb5f492",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -371,10 +372,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // UXFIX-09: check_contrast.mjs changes only the appCss surface hash; contrast() is untouched. Rebound from the final bytes.
   // MGL-15: check_contrast.mjs gains the additive habitat CVD gate (new exports and mode) and rebinds the tokens/app surface hashes; contrast() and every legacy check are unchanged.
   // UXFIX-12: check_contrast.mjs changes only the panelCss surface hash and its comment (the .chart-overflow:focus-visible ring leaves its media block); contrast() is untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "d551db919f987d049645e7ccc0f54e21c869674c690be1f9ef34828975639972",
+  "scripts/check_contrast.mjs": "a651f7395ee2960b3e7d4139a087dc2166cd76fd938d5a20c94b81fb516aeb45",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
+  // UXFIX-11 (merged on top of UXFIX-05): the appCss surface hash changes as well; contrast() is untouched. Rebound from the merged bytes.
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
