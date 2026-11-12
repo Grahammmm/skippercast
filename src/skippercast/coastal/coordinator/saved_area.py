@@ -74,7 +74,11 @@ def _review(review, result_ref, facts, now, horizon, historical=False):
 def validate_adoption(root, descriptor, new_grant, *, now, horizon):
     """No writes, Store/Budget creation, native source opening, or clock reset."""
     continuation_grant(new_grant)
-    if type(now) not in (int,float) or type(horizon) not in (int,float) or not math.isfinite(now+horizon) or not now<=horizon<=now+3600:
+    try:
+        sound=type(now) in (int,float) and type(horizon) in (int,float) and math.isfinite(now+horizon) and now<=horizon<=now+3600
+    except OverflowError:
+        sound=False  # an integer beyond float range is the same refusal, not a conversion error
+    if not sound:
         raise ValueError('finite prospective adoption horizon required')
     doc=metadata_document(root,descriptor,ADOPTION)
     origin=Path(doc['origin_root'])
