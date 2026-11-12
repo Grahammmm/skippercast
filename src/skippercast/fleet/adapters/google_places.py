@@ -194,6 +194,7 @@ class GooglePlaces:
         body: dict[str, Any] = {"textQuery": query, "pageSize": 20, "locationBias": {"circle": {
             "center": {"latitude": port.point[0], "longitude": port.point[1]}, "radius": SEARCH_RADIUS_M}}}
         places: list[dict] = []
+        pending = False   # the last page read advertised a next page that has not been read
         for _page in range(int(binding.params.get("max_pages", 3))):
             if not self._budget(binding):
                 break
@@ -206,9 +207,12 @@ class GooglePlaces:
                 raise PlacesError("invalid Places response shape")
             places += [p for p in found or [] if isinstance(p, dict)]
             token = result.get("nextPageToken")
+            pending = bool(token)
             if not token:
                 break
             body = {**body, "pageToken": token}
+        if pending:
+            raise PlacesError("incomplete Places search")   # a prefix is no evidence of a unique match
         return places
 
     def _match(self, port_id: str, vessels: list[Mapping[str, Any]], binding, ctx: RunContext) -> dict[str, str]:
