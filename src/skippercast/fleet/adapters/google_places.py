@@ -57,7 +57,7 @@ DETAILS_MASK = "id"
 CONFIDENCE = 0.85
 MIN_NAME = 4               # a shorter normalised vessel name matches too much
 SEARCH_RADIUS_M = 20000.0
-PLACE_ID = re.compile(r"^[A-Za-z0-9_-]{10,300}$")
+PLACE_ID = re.compile(r"^[A-Za-z0-9_-]{10,300}\Z")
 
 # Fields a google-places fact may hold and for how long (days; None = indefinitely). Anything else: not at all.
 CACHE_DAYS: Mapping[str, int | None] = {"place_id": None, "location.latitude": 30, "location.longitude": 30}
