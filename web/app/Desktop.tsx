@@ -36,6 +36,8 @@ import {Reports} from './views/Reports.tsx';
 import {PlanView} from './PlanView.tsx';
 import {appView} from '../state.ts';
 import {useHourNow, type HourClock} from '../clock.ts';
+import {BRIEF_ID} from './SkipLinks.tsx';
+import {language, t} from '../i18n.ts';
 
 export {emptyTiles} from '../brief/Tiles.tsx';
 export {DISCLAIMER} from '../brief/Brief.tsx';
@@ -43,7 +45,7 @@ export {DISCLAIMER} from '../brief/Brief.tsx';
 export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Date} = {}) {
   const brief = currentBrief(now);
   return (
-    <aside class="app-brief" aria-label="Brief" data-basis={brief?.basis}>
+    <aside class="app-brief" id={BRIEF_ID} tabIndex={-1} aria-label={t('shell.brief', language.value)} data-basis={brief?.basis}>
       {/* SC-LAUNCH-3: the lead names its own day (tomorrow until a time is chosen); the eyebrow heads the evidence for the dock's day. */}
       <Guard name="verdict"><Verdict now={now} /></Guard>
       <span class="ui-eyebrow">{brief ? brief.label : 'Today\'s brief'}</span>
