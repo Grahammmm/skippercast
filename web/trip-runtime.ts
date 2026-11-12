@@ -189,6 +189,8 @@ export function createTripRuntime(ctx: TripContext) {
       nav: {
         open: ctx.openTrip,
         showMap() { ctx.closeTrip(); if (appView.peek() !== 'coast') ctx.go({view: null}); },
+        // SC1407-15: the route preview's points, kept in frame (a detour included), as Show ranked spots on map does.
+        fit(points) { const at = fitCamera(points); if (at) ctx.go({view: cameraParam(at)}); },
         conditions(date: string) { ctx.closeTrip(); ctx.go({view: 'conditions', day: date}); },
         chooseWaypoint(pick) {
           ctx.closeTrip();

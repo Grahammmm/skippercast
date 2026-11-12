@@ -74,6 +74,8 @@ import {unreviewedNote} from '../brief/shore.ts';
 import {WAVE_MODEL} from '../map/forecast-grid.ts';
 import {currentStatus, shownPresentation, terrainCoarsened, terrainCoverage, terrainOptions} from '../map/stage.ts';
 import {drawnSpots} from '../map/ranked.ts';
+import {planningRoute} from '../map/planning-route.ts';
+import {ROUTE_WARNING} from '../protected-route.ts';
 import {retrySavedSpots, savedSpotsOn, savedSpotsStatus, setSavedSpotsOn} from '../map/saved-spots.ts';
 import {Segmented} from '../ui/Chip.tsx';
 import {Fragment} from 'preact';
@@ -341,6 +343,20 @@ export function RankedRow() {
   );
 }
 
+/** SC1407-15: the planning route the trip dialog drew, while one is on the Chart: its length and check time, and the whole warning beside the row. */
+export function PlanningRouteRow() {
+  const r = planningRoute.value, lang = language.value, entry = layerCopy('planning-route', lang);
+  if (!r || r.region !== region.value || shownPresentation.value !== 'chart') return null;
+  return (
+    <li class="app-legend-planning-route">
+      <span class="app-swatch" data-layer="planning-route" aria-hidden="true"></span>{entry.legend[0]?.label ?? entry.label}
+      <Popover iconOnly summary={t('legend.bs.planningRoute', lang)}><p>{entry.basis}</p></Popover>
+      <p class="app-legend-note ui-mono" data-stamp="planning-route">{t('legend.planningRoute.detail', lang, {nm: r.nm.toFixed(1), checked: r.checkedAt})}</p>
+      <p class="app-legend-note" data-reason="planning-route"><EnglishDetail lang={lang}>{ROUTE_WARNING}</EnglishDetail></p>
+    </li>
+  );
+}
+
 /** The owner's saved spots (SC0922-04): a native checkbox, off at the start, with why it cannot be turned on or what it shows, and Try again after a failed read. */
 export function SavedSpotsRow() {
   const status = savedSpotsStatus.value, lang = language.value, entry = layerCopy('saved-spots', lang);
@@ -437,6 +453,7 @@ export function Legend() {
       <ul>
         {on.map(e => <Fragment key={e.id}>{legendRow(e, shown, lang)}{drawsIn(e.id, shown) ? <Cadence id={e.id} lang={lang} /> : null}</Fragment>)}
         <PreviewLegendRows />
+        <PlanningRouteRow />
         <RankedRow />
         <SavedSpotsRow />
         <ShoreRow />
