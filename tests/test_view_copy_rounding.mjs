@@ -46,9 +46,9 @@ test('negative_ties_and_signed_zero_keep_sign', () => {
   }
   assert.equal(v.fixed(0, 1, 'es'), '0,0');
   assert.equal(num(0, 1), '0,0');
-  // An actual -0 now prints as English toFixed does ("0.0"), so Spanish "0,0"; a negative that rounds to zero keeps its sign in both.
-  assert.equal(v.fixed(-0, 1, 'en'), '0.0');
-  assert.equal(v.fixed(-0, 1, 'es'), '0,0');
+  // An actual -0 (an already-rounded value from a caller) keeps the sign Intl always gave it; English toFixed prints "0.0".
+  assert.equal(v.fixed(-0, 1, 'es'), '-0,0');
+  assert.equal(num(-0, 1), '-0,0');
 });
 
 test('digits_and_grouping_preserve_contract', () => {

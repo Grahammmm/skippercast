@@ -19,8 +19,9 @@ const FEED_SOURCE = t('conditions.source.feed', 'en');
 
 // `n` rounded the way English prints it (toFixed), then localized: Intl rounds the binary float itself and can
 // disagree with toFixed at a decimal tie (60.05 -> 60.0 vs 60,1), so the language never changes the digits.
+// A caller's already-rounded -0 keeps its sign, as Intl always printed it (toFixed would drop it).
 const localized = (n: number, digits: number, lang: Language, useGrouping: boolean): string =>
-  new Intl.NumberFormat(localeOf(lang), {minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping}).format(Number(n.toFixed(digits)));
+  new Intl.NumberFormat(localeOf(lang), {minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping}).format(Object.is(n, -0) ? n : Number(n.toFixed(digits)));
 
 /** `n` with exactly `digits` decimals in `lang` (English: toFixed, as the views always printed it). */
 export const fixed = (n: number, digits: number, lang: Language): string =>
