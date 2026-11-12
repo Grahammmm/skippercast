@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
+import util from 'node:util';
 import {linkVerdict, measuredBytesPerSecond, offerMegabytes, pageTimings, requestReefPublication, acceptReefLoad, mapFirstIdle, SLOW_BYTES_PER_S} from '../web/reef-lazy.ts';
 import {ranking, reefPublication} from '../web/ranking.ts';
 
@@ -190,4 +191,69 @@ test('a 2d or 3d presentation never mounts the Chart, so the terrain stage relea
   assert.match(stage, /import \{markMapIdle\} from '\.\.\/map-ready\.ts'/);
   const mount = stage.slice(stage.indexOf('async function mount()'));
   assert.match(mount.slice(0, mount.indexOf('const visibility')), /finally \{[^}]*markMapIdle\(\)/s);
+});
+
+// RF1651-6: "same origin" is a parsed scheme + host + port, never a text prefix of the resource URL.
+const row = (name, bytes = 300_000, start = 0, end = 9000) => ({name, transferSize: bytes, startTime: start, responseEnd: end});
+const timingsOf = (entries, origin) => pageTimings({getEntriesByType: () => entries}, origin);
+const BAD = {bytes: 300_000, start: 0, end: 9000};
+
+test('foreign_origin_prefix_is_not_local: a lookalike or credentialed URL that starts with the page origin is left out', () => {
+  const foreign = ['https://x.test.cdn.invalid/data', 'https://x.testing/a', 'https://x.test@evil.invalid/a', 'https://x.test:evil@evil.invalid/a'];
+  for (const name of foreign) assert.deepEqual(timingsOf([row(name)], 'https://x.test'), [], name);
+  assert.deepEqual(timingsOf([row('https://x.test/a.js', 300_000, 5, 50)], 'https://x.test'), [{bytes: 300_000, start: 5, end: 50}]);
+  assert.deepEqual(linkVerdict(undefined, timingsOf([row('https://x.test.cdn.invalid/data')], 'https://x.test')), {slow: false}, 'foreign-only rows invent no slowdown');
+});
+
+test('scheme_and_effective_port_are_identity: case, default port, path, query and hash do not matter; another scheme or port does', () => {
+  const ok = ['https://X.TEST/a', 'https://x.test:443/a', 'https://x.test/a/b?q=1#h', 'https://x.test'];
+  for (const name of ok) assert.deepEqual(timingsOf([row(name)], 'https://x.test'), [BAD], name);
+  for (const name of ['http://x.test/a', 'https://x.test:8443/a', 'wss://x.test/a']) assert.deepEqual(timingsOf([row(name)], 'https://x.test'), [], name);
+  assert.deepEqual(timingsOf([row('https://x.test:8443/a')], 'https://x.test:8443'), [BAD], 'a non-default port page matches its own port');
+  assert.deepEqual(timingsOf([row('https://x.test/a')], 'https://x.test:8443'), []);
+  const rows = [row('https://x.test/1', 1, 0, 5), row('https://x.test.evil.invalid/2', 2, 0, 5), row('https://x.test/3', 3, 1, 6)];
+  assert.ok(util.isDeepStrictEqual(timingsOf(rows, 'https://x.test'), [{bytes: 1, start: 0, end: 5}, {bytes: 3, start: 1, end: 6}]), 'accepted values and order are kept');
+});
+
+test('malformed_row_does_not_erase_siblings: bad names are skipped one by one; a bad origin matches nothing; no origin keeps timing-only behaviour', () => {
+  const rows = [row('not a url'), row('/relative/path'), row('data:text/plain,hello'), row(undefined), row('https://x.test/good'), row('https://[bad/')];
+  assert.deepEqual(timingsOf(rows, 'https://x.test'), [BAD], 'one good row survives the bad ones');
+  for (const origin of ['not an origin', 'null', 'data:text/plain,x', 'file:///tmp/a']) {
+    assert.deepEqual(timingsOf([row('https://x.test/good'), row('file:///tmp/a'), row('data:text/plain,x')], origin), [], `origin ${origin}`);
+  }
+  for (const origin of [undefined, '']) assert.deepEqual(timingsOf([row('anything at all'), row('https://other.test/a')], origin), [BAD, BAD], `origin ${JSON.stringify(origin)}`);
+  assert.deepEqual(pageTimings(undefined, 'https://x.test'), []);
+  assert.deepEqual(pageTimings({getEntriesByType: () => { throw new Error('no timing API'); }}, 'https://x.test'), []);
+  assert.deepEqual(pageTimings({getEntriesByType: () => undefined}, 'https://x.test'), []);
+});
+
+test('local_speed_not_foreign_latency_controls_gate: fast local plus slow foreign loads once; slow local offers; foreign-only does not offer', async () => {
+  const run = async entries => {
+    const s = setup();
+    s.deps.link = () => linkVerdict(undefined, timingsOf(entries, 'https://x.test'));
+    const done = requestReefPublication('morro-bay', s.deps);
+    s.map.go(); s.idle.go(); await done;
+    return s;
+  };
+  const fast = row('https://x.test/a.js', 300_000, 0, 1000), slowForeign = row('https://x.test.cdn.invalid/data', 300_000, 0, 9000);
+  let s = await run([fast, slowForeign]);
+  assert.equal(s.calls.fetch, 1, 'the fast local download decides, so the reef loads by itself');
+  assert.equal(reefPublication.value.state, 'ready');
+  s = await run([slowForeign]);
+  assert.equal(s.calls.fetch, 1, 'foreign-only rows are no measurement, so no offer');
+  assert.equal(reefPublication.value.state, 'ready');
+  s = await run([row('https://x.test/a.js', 300_000, 0, 9000)]);
+  assert.equal(s.calls.fetch, 0, 'a genuinely slow local download still gets the offer');
+  assert.equal(reefPublication.value.state, 'offer'); assert.equal(reefPublication.value.why, 'slow-measured');
+});
+
+test('connection_and_cache_policy_unchanged: cache hits, empty spans and small totals are left out; Save-Data and slow types still win', () => {
+  assert.deepEqual(timingsOf([row('https://x.test/a', 0, 0, 9000), row('https://x.test/b', 300_000, 9000, 9000), row('https://x.test/c', 300_000, 9000, 10)], 'https://x.test'), []);
+  assert.deepEqual(linkVerdict(undefined, timingsOf([row('https://x.test/a', 60_000, 0, 9000)], 'https://x.test')), {slow: false}, 'too small a total to judge');
+  const fastLocal = timingsOf([row('https://x.test/a', 300_000, 0, 300)], 'https://x.test');
+  assert.deepEqual(linkVerdict({saveData: true}, fastLocal), {slow: true, why: 'save-data'});
+  assert.deepEqual(linkVerdict({effectiveType: '3g'}, []), {slow: true, why: 'slow-type'});
+  const input = [row('https://x.test/a'), row('https://evil.invalid/b')], before = JSON.stringify(input);
+  timingsOf(input, 'https://x.test');
+  assert.equal(JSON.stringify(input), before, 'the timing buffer is not mutated');
 });

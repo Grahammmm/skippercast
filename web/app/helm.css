@@ -6,3 +6,4 @@ html.helm .app-rail [aria-label="Layer presets"] { display: flex; flex-wrap: wra
 /* UXFIX-11: Large controls keep the sheet's day chips at 48 px (the chip rule there pins the 44 px token and would otherwise win), in a row that still fits them. */
 html.helm .app-sheet-hour > .ui-segmented { max-height: 56px; }
 html.helm .app-sheet-hour > .ui-segmented .ui-chip { min-height: 48px; }
+html.helm .app-account[data-top] > .app-account-top-trigger { min-inline-size: 48px; min-block-size: 48px; }

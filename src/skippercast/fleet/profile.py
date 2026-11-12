@@ -86,12 +86,14 @@ def load_off_limits(path=None):
 
 
 def _host(url):
+    """Lowercase hostname for policy comparison only; folds exactly one DNS root dot (`host.` is `host`)."""
     if not isinstance(url, str):
         return ""
     try:
-        return (urlsplit(url).hostname or "").lower()
+        host = (urlsplit(url).hostname or "").lower()
     except ValueError:
         return ""
+    return host[:-1] if host.endswith(".") and ":" not in host else host
 
 
 def _on_host(host, hosts):
