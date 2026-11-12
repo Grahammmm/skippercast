@@ -13,7 +13,7 @@ import {USER_WAYPOINT_CATEGORIES} from '../../dist/trip-export.js';
 import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, TripSpecies} from '../planner.ts';
 import {ALERT_STORAGE_NOTE, PORTS_FAILED_NOTE, sharedConfidence, type AlertLegsFn} from '../planner.ts';
 import {AREA_NOTE} from '../planner-alerts.ts';
-import {readableDate} from '../dates.ts';
+import {readableDate, readableDates} from '../dates.ts';
 import {tripLegs} from '../trip-legs.ts';
 import {clockText, DEFAULT_TIMING, MAX_FISH_MIN, parseTiming, tripTimes} from '../trip-times.ts';
 import {tripStopForecast} from '../trip-forecast.ts';
@@ -294,7 +294,7 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
           <div class="export-presets">
             {PRESETS.map(scope => <button key={scope} data-scope={scope} id={scope === 'filtered' ? 'export-filtered-research' : undefined} disabled={scope === 'filtered' && !research} onClick={() => m.preset(scope)}>{t(`planner.preset.${scope}` as StringId, lang)}</button>)}
           </div>
-          <p id="export-scope-status" role="status">{plannerText(m.scopeStatus.value, lang)}</p>
+          <p id="export-scope-status" role="status">{readableDates(plannerText(m.scopeStatus.value, lang), lang, m.region.timezone)}</p>
           <label>{t('planner.find', lang)}<input id="export-search" type="search" placeholder={t('planner.find.placeholder', lang)} autoComplete="off" value={m.search.value} onInput={e => { m.search.value = e.currentTarget.value; }} /></label>
           {shared === null ? null : <p id="export-shared-confidence">{t('planner.sharedConfidence', lang, {n: shared})}</p>}
           <div id="export-spot-list" class="export-spot-list" role="group" aria-label={t('planner.spotList.aria', lang)}>

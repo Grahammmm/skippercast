@@ -59,7 +59,7 @@ test('a closed date says closed plainly, never open', () => {
   const d = data(); d.species.lingcod.windows = [{start: '2026-04-01', end: '2026-10-31'}];
   const out = html(d, 'lingcod', '2026-11-10'), t = text(out), line = m.planRuleLine(d, 'lingcod', '2026-11-10', MORRO, NOW);
   assert.equal(line.kind, 'closed');
-  assert.match(t, /Closed on 2026-11-10/);
+  assert.match(t, /Closed on Tue 10 Nov/);
   assert.doesNotMatch(t, /\bOpen\b/);
   assert.doesNotMatch(out, /Check the official rules/);
 });
@@ -129,13 +129,13 @@ test('plan_rules_es_confirmed_states: open, restricted, scheduled and closed rea
     const out = esHtml(d, 'lingcod', date), t = text(out);
     assert.match(out, new RegExp(`<span class="app-mark-regs-badge" data-status="${status}">${badge}</span>`), status);
     assert.match(out, /<section class="export-card plan-rules" aria-label="Reglas para la fecha del plan">/, status);
-    assert.match(out, new RegExp(`<h2>Reglas para el ${date}</h2>`), status);
+    assert.match(out, new RegExp(`<h2>Reglas para el ${{'2026-10-14': 'mié 14 oct', '2026-11-10': 'mar 10 nov'}[date]}</h2>`), status);
     assert.match(t, /No es asesoría legal; consulta la página oficial\./, status);
     assert.doesNotMatch(t, /Consulta las reglas oficiales antes de este viaje/, `${status}: a confirmed state carries no check line`);
     assert.doesNotMatch(t, /Rules on|Check the official rules|Not legal advice|Closed on|Verified|Checked today/, `${status}: none of the card's own words stay English`);
   }
   const out = esHtml(closed, 'lingcod', '2026-11-10'), t = text(out);
-  assert.match(t, /Cerrado Lingcod \. Cerrado el 2026-11-10\. Outside the reviewed local season\./);
+  assert.match(t, /Cerrado Lingcod \. Cerrado el mar 10 nov\. Outside the reviewed local season\./);
   assert.doesNotMatch(out, /Abierto/); assert.doesNotMatch(out, /data-status="open"/);
   assert.match(text(esHtml(open, 'lingcod')), /Verificado el .* Revisado hoy/);
   const reef = esHtml(data(), 'reef');
@@ -186,7 +186,7 @@ test('plan_rules_official_english_and_escape: official wording and links stay En
   assert.doesNotMatch(out, /lang="en">(?:Reglas|Todas|Abierto|Verificado|Revisado)/, 'no Spanish chrome is tagged English');
   assert.doesNotMatch(en, / lang=|hreflang|en inglés|in English/, 'English output gains no language markup');
   assert.match(en, /<a href="https:\/\/[^"]+" target="_blank" rel="noopener" aria-label="Official rules for Lingcod \(official page, opens in a new tab\)">Official rules<\/a>/);
-  assert.match(text(en), /Rules on 2026-10-14/);
+  assert.match(text(en), /Rules on Wed 14 Oct/);
   const restricted = data(); restricted.species.lingcod.windows = [{start: '2026-04-01', end: '2026-12-31', restriction: 'Synthetic: shoreward of the 20-fathom line only.'}];
   assert.match(esHtml(restricted, 'lingcod'), /<span lang="en">Synthetic: shoreward of the 20-fathom line only\.<\/span> \(en inglés\)/);
   const hostile = data(); hostile.species.lingcod.name = '<img src=x onerror=alert(1)>{date}'; hostile.species.lingcod.bag = '<b>{name}</b> per person daily';

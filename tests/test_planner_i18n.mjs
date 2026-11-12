@@ -166,6 +166,14 @@ test('UXFIX-07 planner alert preview: the date reads Tue 10 Nov / mar 10 nov in 
     assert.match(en, /id="planner-alert-preview">Tue 10 Nov · Area · reef/);
     ui.language.value = 'es';
     assert.match(ui.render(ui.h(ui.Planner, {model: alertModel, open: true})), /id="planner-alert-preview">mar 10 nov · Area · reef/);
+    // The ranked status quotes the plan's date: read like the preview, in both languages, while the stored message stays ISO.
+    const status = '3 distinct reef spots ranked. Waypoints + reef outlines only. Check conditions for 2026-11-06 before committing to the trip.';
+    const withStatus = {...model, scopeStatus: {value: status}};
+    ui.language.value = 'en';
+    assert.match(page(withStatus), /id="export-scope-status" role="status">3 distinct reef spots ranked\. [^<]*Check conditions for Fri 6 Nov before/);
+    ui.language.value = 'es';
+    assert.match(page(withStatus), /id="export-scope-status" role="status">[^<]*para vie 6 nov antes/);
+    assert.equal(withStatus.scopeStatus.value, status);
   } finally { ui.language.value = 'en'; p.dispose(); }
 });
 

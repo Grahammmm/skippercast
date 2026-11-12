@@ -13,6 +13,9 @@ const format = (locale: string, timeZone: string): Intl.DateTimeFormat => {
   return f;
 };
 
+/** `text` with each ISO date in it read as readableDate does: for a status line that quotes the plan's date. */
+export const readableDates = (text: string, lang: Language | string, timeZone: string): string => text.replace(/\b\d{4}-\d{2}-\d{2}\b/g, d => readableDate(d, lang, timeZone));
+
 /** `iso` ("2026-11-10") as "Tue 10 Nov" (en) or "mar 10 nov" (es), the same calendar day in `timeZone`; anything else prints as given. */
 export function readableDate(iso: string, lang: Language | string, timeZone: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
