@@ -65,13 +65,13 @@ test('tiles_chrome_en_es_en: exact English, exact Spanish, English again', async
     assert.ok(en.includes('NDBC 46042 · unavailable · provisional'), 'unavailable forecast tile still provisional');
     assert.ok(en.includes('NDBC 46042 · 5 h old</'), 'water has no provisional');
     assert.ok(en.includes('NOAA 9413450 Monterey · last good 2 h old'));
-    assert.ok(en.includes('Reference level: MLLW. Source: ') && en.includes('. The latest check failed; this is the last good reading. Shown as stale after 18 h.'));
+    assert.ok(en.includes("Heights are above MLLW (mean lower low water, the chart's zero). Source: ") && !en.includes('Reference level') && en.includes('. The latest check failed; this is the last good reading. Shown as stale after 18 h.'));
     assert.ok(en.includes('Forecast hour nearest the selected time, in knots with the gust; the issue time sets the age. Source: '));
     const es = html('es');
     assert.ok(es.includes('NDBC 46042 · antigüedad: 5 h · provisional'));
     assert.ok(es.includes('NDBC 46042 · no disponible · provisional'));
     assert.ok(es.includes('NOAA 9413450 Monterey · última lectura válida, antigüedad: 2 h'));
-    assert.ok(es.includes('Nivel de referencia: MLLW. Fuente: '));
+    assert.ok(es.includes('Alturas sobre MLLW (bajamar media inferior, el cero de la carta). Fuente: ') && !es.includes('Nivel de referencia'));
     assert.ok(es.includes('La última revisión falló; esta es la última lectura válida. Se muestra como desactualizada después de 18 h.'));
     assert.ok(es.includes('Viento') && es.includes('Marea'));
     assert.ok(!es.includes('Source:') && !es.includes('unavailable'), 'no English chrome left in Spanish');

@@ -75,16 +75,16 @@ test('rendered groups, disclosures, assessment fallback, comfort reports and unc
     assert.equal(draw([]), '<div id="saved-trips"><p>No saved trips.</p></div>');
     let html = draw([trip('future', '2026-11-03')]);
     assert.match(html, /<h3>Upcoming<\/h3>/);
-    assert.match(html, /aria-label="Use again: trip on 2026-11-03 at Test area"[^>]*>Use again<\/button>/);
+    assert.match(html, /aria-label="Use again: trip on Tue 3 Nov at Test area"[^>]*>Use again<\/button>/);
     assert.doesNotMatch(html, /<h3>Past<\/h3>|No saved trips/);
     html = draw([trip('past', '2026-11-01')]);
     assert.match(html, /<h3>Past<\/h3>/);
     assert.doesNotMatch(html, /<h3>Upcoming<\/h3>/);
-    assert.match(html, /<details><summary>2026-11-01 · Test area · Test species · 7:00–13:00<\/summary>/);
+    assert.match(html, /<details><summary>Sun 1 Nov · Test area · Test species · 7:00–13:00<\/summary>/);
     assert.match(html, /No day-before assessment was delivered/);
     assert.match(html, /Your own record of each trip\. Forecast assessments are what we sent before the day, not what the sea did\./);
-    assert.match(html, /aria-label="Delete the trip on 2026-11-01 at Test area"/);
-    assert.match(html, /<\/details><button[^>]*>Delete<\/button> <button aria-label="Use again: trip on 2026-11-01 at Test area" type="button"[^>]*>Use again<\/button>/, 'collapsed past rows offer Use again outside the disclosure');
+    assert.match(html, /aria-label="Delete the trip on Sun 1 Nov at Test area"/);
+    assert.match(html, /<\/details><button[^>]*>Delete<\/button> <button aria-label="Use again: trip on Sun 1 Nov at Test area" type="button"[^>]*>Use again<\/button>/, 'collapsed past rows offer Use again outside the disclosure');
     assert.doesNotMatch(html, /Your comfort reports/);
     html = draw([trip('past', '2026-11-01'), trip('future', '2026-11-03')],
       [event('final', 'past', 'final'), event('orphan', 'deleted', 'final')], [report('2026-11-02T07:30:00Z', 8)]);
@@ -168,7 +168,7 @@ test('rendered_recap_lists_fish_blank_unknown_privately', async () => {
     assert.match(html, /Your comfort reports<\/h4><p>8\/10 · fishing<\/p><h4>Your catch log<\/h4><ul><li>Fish · 3 fish<\/li><li>Blank: no fish<\/li><li>Not sure<\/li><li>Fish · 1 fish<\/li><\/ul><\/details>/);
     assert.equal((html.match(/Your catch log/g) ?? []).length, 1, 'only the past trip with entries shows the section');
     assert.doesNotMatch(html, /LOGNOTE|35\.12|120\.65|OWNER-alice|lingcod|jig|Fish · 9|forecast the catch|predict|total|%/i);
-    assert.match(html, /<h3>Upcoming<\/h3><p><strong>2026-11-03/, 'the upcoming row is as before');
+    assert.match(html, /<h3>Upcoming<\/h3><p><strong>Tue 3 Nov/, 'the upcoming row is as before');
     assert.doesNotMatch(html.slice(html.indexOf('<h3>Upcoming</h3>'), html.indexOf('<h3>Past</h3>')), /catch/i);
     // Markup in a hostile id or count cannot reach the page: ids are keys, counts numbers.
     const hostile = draw([trip('past', '2026-11-01')], catchLogEntries({entries: [{...logged('<script>x</script>', 'past', 'fish', 2)}]}));
@@ -237,14 +237,14 @@ test('rendered_upcoming_limits_assessment_stay_in_own_row', async () => {
       ev(3, 'one', 'final', 'delivered', '2026-11-02T07:30:00Z'), ev(4, 'gone', '<script>alert(1)</script>', '<b>x</b>', 'bad')];
     const html = draw(trips, events, {timeZone: 'America/Los_Angeles'});
     const rows = html.slice(html.indexOf('<h3>Upcoming</h3>')).split('</p>');
-    const row = id => rows.find(r => r.includes(`2026-11-0${id}`));
+    const day = {3: 'Tue 3 Nov', 4: 'Wed 4 Nov', 5: 'Thu 5 Nov'}, row = id => rows.find(r => r.includes(day[id]));
     assert.match(row(3), /Saved limits: wind 9 kt · gust 14 kt · sea 2.5 ft · Material change · shown here · <time datetime="2026-11-03T07:30:00Z">02 Nov 2026, 23:30 (GMT-8|PST)<\/time>/);
     assert.doesNotMatch(row(3), /withdrawn|Day-before|12 kt/);
     assert.match(row(4), /wind 12 kt · gust 18 kt · sea 4 ft · Earlier alert withdrawn · not delivered — read it here · <time/);
     assert.doesNotMatch(row(4), /Material change/);
     assert.match(row(5), /wind 10 kt · gust 15 kt · sea 3 ft · No recent assessment<\/span>/);
     assert.doesNotMatch(html, /<script|<b>x/);
-    assert.match(row(3), /aria-label="Delete the trip on 2026-11-03 at Test area"/);
+    assert.match(row(3), /aria-label="Delete the trip on Tue 3 Nov at Test area"/);
     // Events that are another trip's, an empty window and an omitted events prop all say so.
     assert.match(draw([trips[0]], [ev(9, 'other', 'update', 'in-app', '2026-11-03T07:30:00Z')]), /No recent assessment/);
     assert.match(draw([trips[0]], []), /No recent assessment/);
@@ -287,7 +287,7 @@ test('saved_plan_upcoming_and_past_show_stored_names_and_totals', async () => {
     assert.match(part, /<ol><li>First<\/li><li>Second<\/li><li>Third<\/li><\/ol>/);
     assert.match(part, /Saved leg totals: 3\.75 nm · 20 min/);
   }
-  assert.match(up, /aria-label="Delete the trip on 2026-11-03[^>]*>Delete<\/button> <button[^>]*>Use again<\/button>/);
+  assert.match(up, /aria-label="Delete the trip on Tue 3 Nov[^>]*>Delete<\/button> <button[^>]*>Use again<\/button>/);
   assert.ok(past.indexOf('</summary>') < past.indexOf('Plan saved with this alert') && past.indexOf('Plan saved with this alert') < past.indexOf('No day-before assessment'), 'plan sits right after the summary');
   assert.match(past, /<\/details><button[^>]*>Delete<\/button>/);
 });
@@ -299,7 +299,7 @@ test('saved_plan_absent_is_render_identical', async () => {
   assert.equal(draw([{...bare[0], plan: null, targets: ['reef'], launch_point: {lat: 1, lon: 2}}, {...bare[1], plan: null}]), html);
   assert.equal(draw(bare.map(t => ({...t, plan: undefined}))), html);
   assert.doesNotMatch(html, /Plan saved|Not re-checked|Stops|leg totals/);
-  assert.match(html, /<h3>Upcoming<\/h3><p><strong>2026-11-03/, 'no-plan upcoming row stays a p');
+  assert.match(html, /<h3>Upcoming<\/h3><p><strong>Tue 3 Nov/, 'no-plan upcoming row stays a p');
 });
 
 test('saved_plan_unknown_species_is_stored_text', async () => {
