@@ -261,6 +261,63 @@ test('the factory: pending changes on entry and exit only; a stale timer or an u
   stop();
 });
 
+test('hidden_timeout_before_visibility_event: a hidden page never settles, even before its event is delivered', async () => {
+  const {createDockSelection, dockTime, horizonDays} = await load();
+  const hours = horizonDays(NOW, TZ)[0].hours;
+  const make = page => {
+    const queue = [], commits = [];
+    const c = createDockSelection({schedule: run => { queue.push(run); return queue.length; }, cancel: () => {}, context: () => 'a', commit: (_n, _z, x) => commits.push(x),
+      settled: (now, tz) => dockTime(null, undefined, now, tz), doc: () => page});
+    return {c, queue, commits, release: c.retain()};
+  };
+  // Hidden with the event withheld: nothing commits and the preview is gone.
+  const doc = Object.assign(new EventTarget(), {hidden: false});
+  const a = make(doc);
+  a.c.request(NOW, TZ, hours[3]);
+  doc.hidden = true;
+  a.queue.at(-1)();
+  assert.equal(a.commits.length, 0);
+  assert.equal(a.c.pending.value, false);
+  // A duplicate callback, the late event, and showing the page again revive nothing.
+  a.queue.at(-1)();
+  doc.dispatchEvent(new Event('visibilitychange'));
+  doc.hidden = false;
+  doc.dispatchEvent(new Event('visibilitychange'));
+  a.queue.at(-1)();
+  assert.equal(a.commits.length, 0);
+  // A fresh visible request settles once; a repeated callback cannot double-commit.
+  a.c.request(NOW, TZ, hours[4]);
+  a.queue.at(-1)();
+  a.queue.at(-1)();
+  assert.equal(a.commits.length, 1);
+  a.release();
+  // A visible page and no document both settle once.
+  for (const page of [Object.assign(new EventTarget(), {hidden: false}), null]) {
+    const b = make(page);
+    b.c.request(NOW, TZ, hours[2]);
+    b.queue.at(-1)();
+    b.queue.at(-1)();
+    assert.equal(b.commits.length, 1);
+    b.release();
+  }
+});
+
+test('hidden_timeout_keeps_canonical_day_hour_and_history', async t => {
+  const {m, writes, waves} = await page(t);
+  const doc = Object.assign(new EventTarget(), {hidden: false});
+  globalThis.document = doc;
+  t.after(() => { delete globalThis.document; });
+  const day = m.state.day.value, hour = m.state.hour.value;
+  m.requestDockHour(NOW, TZ, later(m)[2]);
+  assert.equal(m.dockPending.value, true);
+  doc.hidden = true;
+  t.mock.timers.tick(500);
+  assert.equal(m.dockPending.value, false);
+  assert.equal(writes.length, 0, 'no history write');
+  assert.equal(waves(), 0, 'no canonical wave');
+  assert.ok(m.state.day.value === day && m.state.hour.value === hour, 'canonical day/hour unchanged');
+});
+
 test('urlEpoch counts every URL sync, same values included', async () => {
   const {state} = await load();
   state.configureStore({storage: memory()});
