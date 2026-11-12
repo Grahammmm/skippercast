@@ -196,3 +196,42 @@ test('the desktop answer jump is named "Go to map and details" / "Ir al mapa y a
     assert.equal(/>([^<]*)<\/button>/.exec(only(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW}))))?.[1], 'Go to map and details', 'es back to en restores the English value');
   } finally { m.language.value = 'en'; reset(m); }
 });
+
+// RF1801-7: the assumed profile is named through the catalogue's where.profile.* label in the page language.
+test('the assumed profile is named in the page language; English and chosen lines are unchanged', async () => {
+  const m = await load();
+  const names = {boat: ['Boat', 'Barco'], shore: ['Shore', 'Orilla'], spear: ['Spear', 'Pesca submarina'], kayak: ['Kayak', 'Kayak']};
+  try {
+    await setup(m);
+    const brief = m.leadBrief(NOW), verdicts = [null, m.currentVerdict(brief, NOW)];
+    const base = {rules: null, regs: null, target: 'lingcod', date: brief.date, day: 'tomorrow', now: NOW};
+    for (const [profile, [en, es]] of Object.entries(names)) for (const verdict of verdicts) {
+      const s = {...base, verdict, profile};
+      const old = m.firstAnswer({...s, chosen: false, lang: 'en'});
+      assert.ok(old.line.endsWith(` Assuming the ${en} profile: change it above.`), `${profile}: English suffix`);
+      assert.equal(m.firstAnswer({...s, chosen: false}).line, old.line, `${profile}: omitted lang is English`);
+      const spanish = m.firstAnswer({...s, chosen: false, lang: 'es'});
+      assert.ok(spanish.line.endsWith(` Suponiendo el perfil ${es}: cámbialo arriba.`), `${profile}: Spanish suffix, got ${spanish.line}`);
+      assert.equal(spanish.fishable, old.fishable, `${profile}: fishable unchanged`);
+      assert.equal(spanish.asOf, old.asOf, `${profile}: asOf unchanged`);
+      for (const lang of ['en', 'es']) {
+        const chosen = m.firstAnswer({...s, chosen: true, lang});
+        assert.doesNotMatch(chosen.line, /Assuming|Suponiendo/, `${profile}/${lang}: chosen omits the assumption`);
+        assert.equal(chosen.line, chosen.line.trimEnd(), `${profile}/${lang}: no trailing space`);
+      }
+    }
+    // The real line: en -> es -> en for Boat, then Shore and Spear in Spanish.
+    for (const [profile, [en, es]] of Object.entries(names)) {
+      m.profile.value = profile; m.language.value = 'en';
+      const before = lineOf(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW})));
+      assert.match(before, new RegExp(`Assuming the ${en} profile`));
+      m.language.value = 'es';
+      const html = m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW}));
+      assert.match(lineOf(html), new RegExp(`Suponiendo el perfil ${es}: `), `${profile}: rendered Spanish`);
+      assert.match(html, /<a href="https:[^"]*" target="_blank"/, 'official link kept');
+      assert.ok(fishableOf(html), 'fishable attribute kept');
+      m.language.value = 'en';
+      assert.equal(lineOf(m.renderFixture(m.h(m.FirstAnswerLine, {now: NOW}))), before, `${profile}: back to the exact English line`);
+    }
+  } finally { m.language.value = 'en'; reset(m); }
+});
