@@ -11,6 +11,7 @@ import {sizeText} from '../size-text.ts';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {closeOnScrim, rememberOpener, restoreFocus} from '../ui/focus-return.ts';
 import {PortDialog} from '../landing/PortInput.tsx';
+import {useScrollCue} from '../ui/scroll-cue.ts';
 import {PositionCheck} from './PositionCheck.tsx';
 import {region} from '../state.ts';
 import {
@@ -73,6 +74,7 @@ function loadFailed(error: string, lang: Language): string {
 
 function TripDialog() {
   const ref = useRef<HTMLDialogElement>(null), opener = useRef<HTMLElement | null>(null), open = tripOpen.value, error = tripError.value, planner = plannerView.value, lang = language.value;
+  useScrollCue(ref);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -80,7 +82,7 @@ function TripDialog() {
     if (!open && dialog.open) dialog.close();
   }, [open]);
   return (
-    <dialog ref={ref} id="export-panel" class="app-trip" aria-labelledby="export-heading" onClick={closeOnScrim} onClose={() => { restoreFocus(opener.current); closeTrip(); }}>
+    <dialog ref={ref} id="export-panel" class="app-trip ui-scroll-cue" aria-labelledby="export-heading" onClick={closeOnScrim} onClose={() => { restoreFocus(opener.current); closeTrip(); }}>
       <div class="port-dialog-head">
         <h2 id="export-heading" tabIndex={-1}>{t('trip.title', lang)}</h2>
         <IconButton icon="close" label={t('trip.close', lang)} onClick={closeTrip} />
