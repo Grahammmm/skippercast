@@ -3,6 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
+import zipfile
 
 import numpy as np
 from pyproj import CRS, Transformer
@@ -221,6 +222,53 @@ class ReprojectGeographicTests(unittest.TestCase):
         # int16 rounding is at most 0.5 cm; bilinear of rounded samples cannot exceed it.
         self.assertLess(np.abs(got[valid] / 100.0 - expected[valid]).max(), 0.006)
         self.assertEqual(as_int['output_pixels'], as_float['output_pixels'])
+
+    def zip_row(self, members, member):
+        archive = self.root / 'archive.zip'
+        with zipfile.ZipFile(archive, 'w') as out:
+            for name, path in members.items():
+                out.write(path, name)
+        return archive, {'id': 'geo-zip', 'url': 'https://pubs.usgs.gov/geo-fixture.zip', 'kind': 'bathymetry',
+                         'format': 'geographic-geotiff', 'sha256': sha256(archive), 'bytes': archive.stat().st_size,
+                         'archive_member': member, 'vertical_datum': 'unknown', 'resolution_m': 'unknown',
+                         'status': 'candidate', 'license': 'unknown'}
+
+    def test_geographic_archive_member_is_projected_as_a_tiff_not_reopened_as_a_zip(self):
+        archive, row = self.zip_row({'a/tile.tif': self.tif}, 'a/tile.tif')
+        bounds = [WEST + 20 * RES, NORTH - 200 * RES, WEST + 260 * RES, NORTH - 20 * RES]
+        receipt, _, reused = ingest(row, bounds, root=self.root, local=archive)
+        self.assertFalse(reused)
+        self.assertEqual(receipt['source_sha256'], row['sha256'])
+        self.assertEqual(receipt['horizontal_crs'], 'EPSG:3310')
+        projected = receipt['reprojection']
+        native = self.root / 'var/seafloor/cache' / projected['product_sha256']
+        self.assertTrue((native / 'source.tif').is_file())
+        self.assertFalse((native / 'source.zip').exists())
+
+    def test_projection_is_keyed_by_the_selected_member_not_only_the_archive(self):
+        other = write_tile(self.root / 'other.tif')
+        with rasterio.open(other) as src:
+            values = src.read(1)
+            profile = src.profile
+        values = np.where(values == profile['nodata'], values, values + np.float32(5))
+        with rasterio.open(other, 'w', **profile) as out:
+            out.write(values, 1)
+        archive, row = self.zip_row({'a/tile.tif': self.tif, 'b/tile.tif': other}, 'a/tile.tif')
+        bounds = [WEST + 20 * RES, NORTH - 200 * RES, WEST + 260 * RES, NORTH - 20 * RES]
+        first, _, _ = ingest(row, bounds, root=self.root, local=archive)
+        second, _, _ = ingest(dict(row, archive_member='b/tile.tif'), bounds, root=self.root)
+        self.assertEqual(first['source_sha256'], second['source_sha256'])
+        self.assertNotEqual(first['reprojection']['product_sha256'], second['reprojection']['product_sha256'])
+        self.assertNotEqual(first['cog_sha256'], second['cog_sha256'])
+        # Same archive hash and identical header, different bytes: prepare itself must not reuse.
+        directory = self.root / 'keyed'
+        directory.mkdir()
+        with rasterio.open(self.tif) as ds:
+            one = rg.prepare(ds, 'a' * 64, directory)
+        with rasterio.open(other) as ds:
+            two = rg.prepare(ds, 'a' * 64, directory)
+        self.assertNotEqual(one['path'], two['path'])
+        self.assertNotEqual(one['product_content_sha256'], two['product_content_sha256'])
 
     def test_projected_rasters_are_untouched(self):
         projected = self.root / 'utm.tif'

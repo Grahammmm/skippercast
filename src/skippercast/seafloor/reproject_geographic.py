@@ -217,11 +217,19 @@ def content_sha256(path):
     return digest.hexdigest()
 
 
-def prepare(dataset, source_sha256, directory, *, kind='depth'):
-    """Return the cached receipt (with 'path') of the metric grid for a geographic ``dataset``."""
+def prepare(dataset, source_sha256, directory, *, kind='depth', member=None):
+    """Return the cached receipt (with 'path') of the metric grid for a geographic ``dataset``.
+
+    ``source_sha256`` names the original file (an archive may hold several rasters);
+    the opened raster's own bytes (``raster_sha256``) and ``member`` name are part of
+    the cache key, so two members with identical grid metadata never share a product.
+    """
     params = plan(dataset, kind=kind)
-    inputs = {'source_sha256': source_sha256, 'kind': kind, 'parameters': params,
-              'implementation_sha256': sha256(Path(__file__))}
+    raster = Path(dataset.name)
+    if not raster.is_file():
+        raise ValueError('Reprojection needs the selected raster as a file to bind its identity')
+    inputs = {'source_sha256': source_sha256, 'raster_sha256': sha256(raster), 'member': member,
+              'kind': kind, 'parameters': params, 'implementation_sha256': sha256(Path(__file__))}
     key = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
     directory = Path(directory)
     output = directory / f'reprojected-{key[:32]}.tif'
@@ -299,8 +307,14 @@ def ingest(row, bounds, *, root=None, fetch=False, local=None):
     with usgs_geotiff.open_source(source, row) as dataset:
         if not geographic(dataset):
             raise ValueError('geographic-geotiff rows must hold a geographic raster; use usgs-geotiff')
-        projected = prepare(dataset, source_sha256, source.parent)
-    derived = dict(row, format='usgs-geotiff', archive_member='unknown',
+        projected = prepare(dataset, source_sha256, source.parent, member=row['archive_member'])
+    # The projected product is a bare TIFF whatever container the original came in. Its url
+    # only names the cached copy's container (fetch_source keys the extension off it), so the
+    # original's archive suffix is replaced; the file is local and is never fetched.
+    url = row['url']
+    if not url.lower().endswith(('.tif', '.tiff')):
+        url = url.rsplit('/', 1)[0] + '/' + Path(url).stem + '.tif'
+    derived = dict(row, format='usgs-geotiff', archive_member='unknown', url=url,
                    sha256=projected['product_sha256'], bytes=projected['product_bytes'])
     native, _, _ = ingest_native(derived, bounds, root=root, local=Path(projected['path']))
     inputs = {'version': VERSION, 'source_sha256': source_sha256, 'archive_member': row['archive_member'],
