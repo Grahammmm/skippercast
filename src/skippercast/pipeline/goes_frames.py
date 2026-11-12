@@ -16,8 +16,10 @@ published index stays, aging out of the same gate in the client. Ported from
 import argparse
 from datetime import datetime, timedelta, timezone
 import json
+import os
 from pathlib import Path
 import sys
+import tempfile
 from xml.etree import ElementTree
 
 from .. import http
@@ -112,9 +114,21 @@ def collect(session, now=None):
 
 def write(path, record):
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n")
-    tmp.replace(path)
+    text = json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n"
+    # Each call owns a distinct same-directory staging file, so overlapping writes never share one.
+    fd, name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    tmp = Path(name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(text)
+        os.chmod(tmp, 0o644)  # mkstemp creates 0600; the published index is read by the web server
+        tmp.replace(path)
+    except BaseException:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
 
 
 def main(argv=None, now=None):
