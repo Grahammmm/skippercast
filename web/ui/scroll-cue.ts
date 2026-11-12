@@ -2,19 +2,20 @@
 // `.ui-scroll-cue[data-more="true"]`) and drops the fade at the end. This hook only sets `data-more` from one read of the
 // scroll geometry, on mount, on scroll (passive), when the box resizes and when its content changes (a capped box does not
 // resize when its list gets longer or shorter). A sticky action row marked `data-cue-inset` stays out of the fade: its
-// height becomes `--cue-inset`, so the fade ends above it.
+// top edge's distance from the box's bottom becomes `--cue-inset`, so the fade ends above it.
 import {useEffect} from 'preact/hooks';
 import type {RefObject} from 'preact';
 
-export function useScrollCue(ref: RefObject<HTMLElement>): void {
+export function useScrollCue(ref: RefObject<HTMLElement | null>): void {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const update = () => {
       const more = el.scrollHeight - el.scrollTop - el.clientHeight > 1;
       if (el.dataset.more !== String(more)) el.dataset.more = String(more);
-      const inset = el.querySelector<HTMLElement>('[data-cue-inset]')?.offsetHeight;
-      if (inset) el.style.setProperty('--cue-inset', `${inset}px`);
+      const row = el.querySelector<HTMLElement>('[data-cue-inset]');
+      const inset = row ? Math.round(el.getBoundingClientRect().bottom - row.getBoundingClientRect().top) : 0;
+      if (inset > 0) el.style.setProperty('--cue-inset', `${inset}px`);
       else el.style.removeProperty('--cue-inset');
     };
     update();

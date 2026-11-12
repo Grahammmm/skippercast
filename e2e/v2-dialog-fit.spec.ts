@@ -150,7 +150,7 @@ for (const size of [{width: 390, height: 844}, {width: 844, height: 390}]) {
     const port = page.locator('dialog.port-dialog');
     await expect(port).toBeVisible();
     const list = port.locator('.port-input-results');
-    await page.getByRole('button', {name: /^Show all/}).click();
+    await page.getByRole('button', {name: /^See all \d+ ports/}).click();
     expect(await list.evaluate(e => e.scrollHeight > e.clientHeight)).toBe(true);
     await list.evaluate(e => { e.scrollTop = 0; });
     await expect.poll(() => cue(list)).toBe('true');
@@ -180,8 +180,9 @@ test('scroll_cue_fades_limits_and_keeps_the_sticky_save_row_unmasked', async ({p
   await expect.poll(() => cue(limits)).toBe('true');
   expect(await maskOf(limits)).not.toBe('none');
   expect(await maskOf(actions)).toBe('none');
-  // The fade ends above the sticky row: the inset is the row's own height.
-  expect(await limits.evaluate((e, a) => (e as HTMLElement).style.getPropertyValue('--cue-inset') === `${(a as HTMLElement).offsetHeight}px`, await actions.elementHandle())).toBe(true);
+  // The fade ends above the sticky row: the inset reaches from the dialog's bottom edge to the row's top edge.
+  const gap = await limits.evaluate((e, a) => parseFloat((e as HTMLElement).style.getPropertyValue('--cue-inset')) - (e.getBoundingClientRect().bottom - (a as HTMLElement).getBoundingClientRect().top), await actions.elementHandle());
+  expect(Math.abs(gap)).toBeLessThanOrEqual(1);
   await toEnd(limits);
   await expect.poll(() => cue(limits)).toBe('false');
   expect(await maskOf(limits)).toBe('none');
