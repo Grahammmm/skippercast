@@ -12,6 +12,7 @@ import {Button} from '../ui/Button.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
 import {profile} from '../state.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
+import {readableDate} from '../dates.ts';
 import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {language, localeOf, t, type Language, type StringId} from '../i18n.ts';
@@ -113,13 +114,13 @@ export function SavedTrips({recaps, names, remove, useAgain, read = {loading: fa
     const when = e && (at === null ? t('alerts.timeUnavailable', lang) : <time dateTime={e.created_at}>{at}</time>);
     return <><br /><span class="small">{savedTripLimits(trip, lang)} · {e ? <>{eventLine(e, lang)} · {when}</> : t('alerts.noRecent', lang)}</span></>;
   };
-  const deletion = (trip: SavedTrip) => <Button size="sm" variant="quiet" onClick={remove(trip.id)} aria-label={t('alerts.deleteAria', lang, {date: trip.date, point: names.point.get(trip.point) ?? trip.point})}>{t('alerts.delete', lang)}</Button>;
-  const again = (trip: SavedTrip) => <Button type="button" size="sm" variant="quiet" onClick={() => useAgain(trip)} aria-label={t('alerts.againAria', lang, {date: trip.date, point: names.point.get(trip.point) ?? trip.point})}>{t('alerts.again', lang)}</Button>;
+  const deletion = (trip: SavedTrip) => <Button size="sm" variant="quiet" onClick={remove(trip.id)} aria-label={t('alerts.deleteAria', lang, {date: readableDate(trip.date, lang, timeZone), point: names.point.get(trip.point) ?? trip.point})}>{t('alerts.delete', lang)}</Button>;
+  const again = (trip: SavedTrip) => <Button type="button" size="sm" variant="quiet" onClick={() => useAgain(trip)} aria-label={t('alerts.againAria', lang, {date: readableDate(trip.date, lang, timeZone), point: names.point.get(trip.point) ?? trip.point})}>{t('alerts.again', lang)}</Button>;
   const planOf = (trip: SavedTrip) => { const s = tripPlanSummary(trip, names, lang); return s ? <SavedPlan plan={s} lang={lang} /> : null; };
   return <div id="saved-trips">
     {!recaps.upcoming.length && !recaps.past.length ? <p>{t('alerts.none', lang)}</p> : null}
     {recaps.upcoming.length ? <><h3>{t('alerts.upcoming', lang)}</h3>{recaps.upcoming.map(trip => {
-      const row = <p key={trip.id}><strong>{tripLine(trip, names, lang)}</strong> {deletion(trip)} {again(trip)}{standing(trip)}</p>;
+      const row = <p key={trip.id}><strong>{tripLine(trip, names, lang, timeZone)}</strong> {deletion(trip)} {again(trip)}{standing(trip)}</p>;
       const plan = planOf(trip);
       return plan ? <div key={trip.id}>{row}{plan}</div> : row;
     })}</> : null}
@@ -127,7 +128,7 @@ export function SavedTrips({recaps, names, remove, useAgain, read = {loading: fa
       <p class="small">{t('alerts.pastNote', lang)}</p>
       {read.loading ? <p class="small">{t('alerts.catchReading', lang)}</p> : !read.complete ? <p class="small">{t('alerts.catchPartial', lang)}</p> : null}
       {recaps.past.map(({trip, final, reports, catches}) => <article key={trip.id}>
-        <details><summary>{tripLine(trip, names, lang)}</summary>
+        <details><summary>{tripLine(trip, names, lang, timeZone)}</summary>
           {planOf(trip)}
           {final ? <><strong>{eventLine(final, lang)}</strong><p lang={only} style={{whiteSpace: 'pre-line'}}>{final.message}</p></> : <p>{t('alerts.noFinal', lang)}</p>}
           {reports.length ? <><h4>{t('alerts.comfortReports', lang)}</h4>{reports.map((f, i) => <p key={i}>{f.rating}/10 · {feedbackPhase(f, lang)}</p>)}</> : null}
@@ -250,7 +251,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           <Button type="submit" variant="primary" disabled={unavailable}>{t('alerts.save', lang)}</Button>
         </form>
         <p id="reuse-status" role="status" class="small">{reuse ? reuseStatus(reuse.omitted, lang) : ''}</p>
-        <p class="small" id="trip-boat-note">{reuse && reuse.copied !== 'none' ? reuseLimitsNote(reuse.date, reuse.copied, p === 'boat', lang) : p !== 'boat'
+        <p class="small" id="trip-boat-note">{reuse && reuse.copied !== 'none' ? reuseLimitsNote(readableDate(reuse.date, lang, region.timezone), reuse.copied, p === 'boat', lang) : p !== 'boat'
           ? t('alerts.noteNonBoat', lang, {profile: t(`where.profile.${p}` as StringId, lang)})
           : ownBoatLimits
           ? t(saved ? 'alerts.noteOwnSaved' : 'alerts.noteOwnNone', lang, {profile: t('where.profile.boat', lang)})
