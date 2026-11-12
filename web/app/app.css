@@ -581,3 +581,8 @@ p.app-forecast-failed-head { font-size: var(--text-15); }
 .app-skip-link:focus { display: flex; align-items: center; width: auto; height: auto; min-width: var(--touch-min); min-height: var(--touch-min); padding: 0 var(--space-4); overflow: visible; clip-path: none; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); color: var(--text); outline: 2px solid var(--focus); outline-offset: 2px; }
 /* UXFIX-09: each tile's basis button sits at the tile's foot, so the four stand on one line whatever the source line wraps to. */
 .app-tiles .ui-tile > .ui-popover { margin-top: auto; }
+/* UXFIX-10: the phone's top-card account entry (data-top) is the icon-sized trigger of RF2345-7 at every width; its panel opens above the sheet. */
+.app-account[data-top] > .app-account-top-trigger { box-sizing: border-box; flex: none; gap: 0; padding-inline: 0; min-inline-size: calc(var(--touch-min) + 0.5px); min-block-size: calc(var(--touch-min) + 0.5px); box-shadow: var(--elev-2); }
+.app-account[data-top] > .app-account-top-trigger[aria-expanded="true"] { color: var(--text); background: var(--panel-2); }
+.app-account[data-top] > .app-account-top-trigger > .app-account-label { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.app-top:has(.app-account[data-top] .app-account-panel:not([hidden])) { z-index: var(--z-modal); }
