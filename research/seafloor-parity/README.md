@@ -10,14 +10,14 @@ review-required evidence: it is not legal clearance, not publication and not liv
 ```text
 <python> -B <private-tools>/research/seafloor-parity/run_parity.py --row-id MGL-06 \
   --source-checkout <reviewed-source-checkout> \
-  --checkout /home/user/agent-work/reports/seafloor-agg/private-runs/MGL-06/repo \
-  --baseline-dir /home/user/agent-work/reports/seafloor-agg/private-runs/MGL-06/baseline \
-  --reaches-file /home/user/agent-work/reports/seafloor-agg/private-runs/MGL-06/reaches.json \
-  --output /home/user/agent-work/reports/seafloor-agg/private-runs/MGL-06/parity.jsonl \
+  --checkout ~/agent-work/reports/seafloor-agg/private-runs/MGL-06/repo \
+  --baseline-dir ~/agent-work/reports/seafloor-agg/private-runs/MGL-06/baseline \
+  --reaches-file ~/agent-work/reports/seafloor-agg/private-runs/MGL-06/reaches.json \
+  --output ~/agent-work/reports/seafloor-agg/private-runs/MGL-06/parity.jsonl \
   --python <python-with-seafloor-dependencies>
 ```
 
-The launcher is fixed: `/home/user/agent-work/bin/seafloor-cli.py`. Each reach runs exactly
+The launcher is fixed: `~/agent-work/bin/seafloor-cli.py`. Each reach runs exactly
 `[python, -B, launcher, --checkout, CHECKOUT, run, --reach, ID]` (cwd = checkout, 1800 s
 timeout). No fetch, force, physical-only, publish or forwarded option exists.
 `reaches.json` is a nonempty JSON array of unique reach IDs in output order.

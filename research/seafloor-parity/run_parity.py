@@ -18,8 +18,8 @@ import sys
 from pathlib import Path
 
 SCHEMA_VERSION = 1
-PRIVATE_PARENT = Path('/home/user/agent-work/reports/seafloor-agg/private-runs')
-LAUNCHER = '/home/user/agent-work/bin/seafloor-cli.py'
+PRIVATE_PARENT = Path(os.path.expanduser('~/agent-work/reports/seafloor-agg/private-runs'))
+LAUNCHER = os.path.expanduser('~/agent-work/bin/seafloor-cli.py')
 ROW_IDS = ('MGL-06', 'MGL-07', 'MGL-08', 'MGL-09')
 FIELDS = ('tier1_km2', 'selected_valid_km2', 'tier2_km2', 'polygons_by_grade', 'habitat_count', 'held_by_reason')
 AREAS = ('tier1_km2', 'selected_valid_km2', 'tier2_km2')
