@@ -252,7 +252,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF2115-5: MapStage.tsx adds a startup loading status paragraph (existing app-stage-note class) and aria-busy on the Chart host; BODY09 renders Reports/CatchCards, never MapStage. No paint, token, assertion or threshold change. Rebind only MapStage.tsx.
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   "web/app/MapStage.tsx": "33ceeea87f84bdf56afdc71b6c79702a85280c13417628bf4d0fda4563346990",
-  "web/tokens.css": "839d9aa11e98ab858b9ed7ca041f094d857d7fc6518dda86d53431886ca45284",
+  // UXFIX-05: tokens.css only turns the eight --text-* font sizes from px into the same sizes in rem (identical at a 16 px root); no colour, paint, gradient, catch markup, assertion or threshold changes, so BODY09 stays applicable. Rebind web/tokens.css and the check_contrast.mjs surface-source pin only.
+  "web/tokens.css": "229478d5eee7343bf1da46f8a05bda29e357d480a65a11a067faabd91d80d540",
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
   // changes (panel.css: History scroller 2 px ring and one summary ring; app.css: fleet checkbox ring); unfocused catch text and contrast are unchanged. check_contrast.mjs changes only the appCss surface hash, its comment and moved citations. Rebound from final bytes.
   // UXFIX-04: ui.css folds the shared focus ring onto form controls and tabindex headings and adds a zero-specificity input/select/textarea --line-strong border; the catch sheet has no text field, and focus paint only appears on :focus-visible, so unfocused catch text and contrast are unchanged.
@@ -285,7 +286,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // UXFIX-09: app.css adds one tile-basis margin rule scoped to .app-tiles (the brief's tiles; the Reports catch sheet mounts none) and raises the phone .app-top z-index by one (the top strip, not mounted by the catch sheet); no colour, backing or catch paint changed. Rebound from the final bytes.
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // UXFIX-10: app.css appends only a scoped .app-account[data-top] block (the phone top-card account button: icon size, visually hidden label, open-state colour, z-index while its panel is open); the Reports catch sheet mounts no account menu, so no catch paint or backing changes. Rebound from the final bytes.
-  "web/app/app.css": "902322fc5a20dfd3a3729527ba87c88caae8c9872bf3939450ff123ff66b5a6e",
+  "web/app/app.css": "9ec61f87fc6724905301388f351b34859c96a1d66d1dcb749357d42c994cc839",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "ba9af1737062b2a60607521f1a66fa4ea141f8ef09f58d06e357ce8d2bb5f492",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -367,7 +368,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // UXFIX-09: check_contrast.mjs changes only the appCss surface hash; contrast() is untouched. Rebound from the final bytes.
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "9aa72cc9b0b6e0f1d6f9913ba1ed92fd1d9bef92f2060daef09211a5ab62e522",
+  // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
+  // UXFIX-11: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "4d65ec282b31ec6e6a27c6b5fc3b4023f341ed89dec0810ddac6a5a55d9e5f71",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still

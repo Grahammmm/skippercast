@@ -82,6 +82,8 @@ export function createDockSelection(options: DockSelectionOptions = {}): DockSel
     if (!p || g !== generation || p.generation !== g) return;
     // A stale callback (unmounted, or the URL, region or pair moved) commits nothing.
     if (holders === 0 || p.context !== untracked(context)) { cancel(); return; }
+    // The page went hidden before its visibilitychange handler ran: drop the preview, never publish it.
+    if (doc()?.hidden) { cancel(); return; }
     batch(() => { preview.value = null; commit(p.now, p.tz, p.at); });
   }
 
