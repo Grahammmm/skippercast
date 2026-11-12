@@ -415,7 +415,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1722-20 only appends a scoped .app-skip-link block at the end of app.css (token colours; a clipped 1 px anchor at rest, a ringed 44 px panel when focused);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved. It also folds the .app-history layout rules into the .app-conditions ones (same declarations, same order; no paint changed) to stay inside the app styles size budget.
   // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
-  "appCss": "b7ec62fa4af1dcbcce4e40355aaf568613676fdaa3a93e14771f1c9c052b9195",
+  "appCss": "b5c0e931240679f6645c539ade2e99c01fbdae7de84425ef810689059bc1f092",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.

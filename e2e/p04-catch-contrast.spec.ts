@@ -280,8 +280,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1922-03: app.css adds only a Conditions-header model-family wrap/min-height rule and a pointer-events rule scoped to .app-presentation--placing (the armed placing stack, which Reports never mounts); no paint, backing or catch text changed. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
   // SC1922-08: app.css lets the .app-fresh chip wrap (flex-wrap, max-width) and appends only a [data-refresh-line] wrap rule (no colour change); the Reports catch sheet mounts neither. check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
   // SC1722-20: app.css appends only a scoped .app-skip-link block (a clipped 1 px anchor at rest, a ringed 44 px panel when focused); the Reports catch sheet mounts no skip link, so no catch paint or backing changes. Rebound from the final bytes.
+  // UXFIX-09: app.css adds one tile-basis margin rule scoped to .app-tiles (the brief's tiles; the Reports catch sheet mounts none) and raises the phone .app-top z-index by one (the top strip, not mounted by the catch sheet); no colour, backing or catch paint changed. Rebound from the final bytes.
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
-  "web/app/app.css": "b7ec62fa4af1dcbcce4e40355aaf568613676fdaa3a93e14771f1c9c052b9195",
+  "web/app/app.css": "b5c0e931240679f6645c539ade2e99c01fbdae7de84425ef810689059bc1f092",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -360,8 +361,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF2135-5: app.css appends only a landscape-phone top-chrome layout block (flex direction and bases, --app-strip); Reports never mounts the app shell header. check_contrast.mjs changes only the appCss surface hash and its comment; every contrast role and threshold is unchanged. Rebound from the final bytes.
   // RF2135-5 (fix round): app.css also folds duplicate declaration-identical rules (six focus rings, five 44px link targets, two link colours) into their first selector lists to fit the 75000-byte first-load budget; same declarations and selectors, no paint, contrast() or threshold change, and Reports mounts none of them. check_contrast.mjs changes only the appCss hash, shifted line citations and a comment. Both rebound from the final bytes.
   // SC1722-20: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
+  // UXFIX-09: check_contrast.mjs changes only the appCss surface hash; contrast() is untouched. Rebound from the final bytes.
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
-  "scripts/check_contrast.mjs": "2b9b6a52063f7a444beeb5d1fd391f2954df2e6af5f03654981af0cef48ffe7e",
+  "scripts/check_contrast.mjs": "e341bcfc4fb797f6f17a15a774b3bf6415f69c7900f248e55b614bc2edb652d9",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
