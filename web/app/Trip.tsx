@@ -26,8 +26,9 @@ const PHASES: Readonly<Record<string, StringId>> = {files: 'trip.phase.files', t
 const PRODUCTS: Readonly<Record<string, StringId>> = {'/api/coast/report': 'trip.product.report', '/api/coast/ocean': 'trip.product.ocean', '/api/coast/history': 'trip.product.history'};
 
 /** A status line kept as its catalogue id and variables (and an English tail the store supplies), never as translated text. */
-type Status = {id: StringId; vars?: Readonly<Record<string, string | number>>; missing?: number; tail?: string} | null;
-const statusText = (s: Status, lang: Language): string => !s ? '' : t(s.id, lang, {...s.vars, ...(s.id === 'trip.status.failed' && typeof s.vars?.detail === 'string' ? {detail: tidePackMessage(s.vars.detail, lang)} : {}), ...(s.missing === undefined ? {} : {missing: s.missing ? t(s.missing === 1 ? 'trip.status.missing.one' : 'trip.status.missing', lang, {n: s.missing}) : ''})}) + (s.tail ?? '');
+type Status = {id: StringId; vars?: Readonly<Record<string, string | number>>; bytes?: number; missing?: number; tail?: string} | null;
+// `bytes` stays a number and is written here in the language being rendered, so the GB decimal separator follows a language change.
+const statusText = (s: Status, lang: Language): string => !s ? '' : t(s.id, lang, {...s.vars, ...(s.bytes === undefined ? {} : {bytes: sizeText(s.bytes, lang)}), ...(s.id === 'trip.status.failed' && typeof s.vars?.detail === 'string' ? {detail: tidePackMessage(s.vars.detail, lang)} : {}), ...(s.missing === undefined ? {} : {missing: s.missing ? t(s.missing === 1 ? 'trip.status.missing.one' : 'trip.status.missing', lang, {n: s.missing}) : ''})}) + (s.tail ?? '');
 
 /** "Oct 9, 3:42 PM PDT" in the region's zone ("9 oct, 3:42 p. m. PDT" in Spanish). */
 export const stamp = (iso: string, timeZone = zone(), lang: Language = 'en'): string =>
@@ -145,7 +146,7 @@ function ChartPack() {
     setBusy(controller); setStatus(null);
     try {
       const {meta, keep} = await savePackKept(() => savePack(id, controller.signal, setProgress));
-      setStatus({id: 'trip.status.saved', vars: {name: meta.region_name, bytes: sizeText(meta.bytes, lang)}, missing: packMissing(meta), ...(KEEP_WORDS[keep] ? {tail: ` ${KEEP_WORDS[keep]}`} : {})});
+      setStatus({id: 'trip.status.saved', vars: {name: meta.region_name}, bytes: meta.bytes, missing: packMissing(meta), ...(KEEP_WORDS[keep] ? {tail: ` ${KEEP_WORDS[keep]}`} : {})});
     } catch (e) {
       setStatus(controller.signal.aborted ? {id: 'trip.status.cancelled'} : {id: 'trip.status.failed', vars: {detail: (e as Error).message}});
     } finally { setBusy(null); setProgress(null); void refresh(); }
