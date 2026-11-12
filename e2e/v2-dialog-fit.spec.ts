@@ -28,8 +28,11 @@ async function fits(dialog: Locator, actions?: Locator) {
 }
 
 async function account(page: Page, name: RegExp | string) {
-  await page.locator('.ui-sheet-handle').focus();
-  await page.keyboard.press('End');
+  // The desktop layout (nightly laptop projects) has no sheet: the account trigger is already in view.
+  if (await page.locator('.ui-sheet-handle').count()) {
+    await page.locator('.ui-sheet-handle').focus();
+    await page.keyboard.press('End');
+  }
   await page.locator('.app-account-trigger').click();
   await page.locator('.app-account-panel').getByRole('button', {name}).click();
 }
