@@ -1,16 +1,19 @@
 """NOAA ocean-color gaps and source clocks must survive ingestion."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
 import json
 import re
+from types import SimpleNamespace
 import unittest
 from xml.etree import ElementTree
 
+import numpy as np
 from scipy.io import netcdf_file
 
 from skippercast.pipeline.noaa_chlorophyll import latest_file, read_subset
 from skippercast.pipeline.noaa_chlorophyll import CATALOG, MAX_AGE_HOURS, MAX_FILES, fetch, recent_files
+from skippercast.pipeline.collect import source
 from tests._support import FIXTURES as FIXTURE_ROOT, ROOT
 
 
@@ -207,6 +210,150 @@ class NoaaChlorophyllOrdinalDateTests(unittest.TestCase):
                 return "<catalog><dataset"
         with self.assertRaises(ElementTree.ParseError):
             recent_files(Bad(at(30), ()))
+
+
+SMALL_BOUNDS = {"latitude": [34.95, 35.05], "longitude": [-121.05, -120.95]}
+SMALL_DAY = datetime(2026, 9, 22, tzinfo=timezone.utc)
+
+
+def declared(values, marker=None, seconds=1790078400, fill=-32767.0):
+    """Classic NetCDF with a one-by-N chlorophyll row; marker (if given) is stored as missing_value."""
+    stream = BytesIO()
+    with netcdf_file(stream, mode="w") as nc:
+        for name, n in (("time", 1), ("altitude", 1), ("lat", 1), ("lon", len(values))):
+            nc.createDimension(name, n)
+        nc.createVariable("time", "d", ("time",))[:] = [seconds]
+        nc.variables["time"].units = "seconds since 1970-01-01 00:00:00Z"
+        nc.createVariable("altitude", "d", ("altitude",))[:] = [0]
+        nc.createVariable("lat", "d", ("lat",))[:] = [35.0]
+        nc.createVariable("lon", "d", ("lon",))[:] = [-121.0 + .01 * i for i in range(len(values))]
+        chl = nc.createVariable("chl_oci", "f", ("time", "altitude", "lat", "lon"))
+        chl.units = "mg m^-3"
+        chl.standard_name = "mass_concentration_of_chlorophyll_a_in_sea_water"
+        chl._FillValue = fill
+        if marker is not None:
+            chl.missing_value = marker
+        chl[:] = [[[values]]]
+        nc.flush()
+        return stream.getvalue()
+
+
+def read_declared(values, marker=None):
+    data = read_subset(declared(values, marker), SMALL_BOUNDS, "synthetic.nc", SMALL_DAY)
+    return data, [s["chlorophyll"] for s in data["samples"]]
+
+
+class NoaaChlorophyllDeclaredMissingTests(unittest.TestCase):
+    def test_declared_inrange_missing_is_not_measurement(self):
+        data, values = read_declared([.75, -32767.0], np.float32(.75))
+        self.assertEqual(values, [None, None])
+        self.assertEqual((data["valid_cells"], data["total_cells"]), (0, 2))
+        self.assertEqual((data["sample_at"], data["units"], data["dataset"]), ("2026-09-22T12:00:00Z", {"chlorophyll": "mg m-3"}, "synthetic.nc"))
+        self.assertEqual([(s["latitude"], s["longitude"]) for s in data["samples"]], [(35.0, -121.0), (35.0, -120.99)])
+
+    def test_marker_union_and_vector_use_raw_stored_values(self):
+        for marker in (np.float32(.5), np.array([.5], dtype="f"), np.array([.5, .25], dtype="f"), np.array([2], dtype="i")):
+            with self.subTest(marker=marker):
+                _, values = read_declared([.5, .25, -32767.0, .750004, 2.0], marker)
+                masked = {float(v) for v in np.atleast_1d(marker)}
+                self.assertEqual(values[:2], [None if v in masked else v for v in (.5, .25)])
+                self.assertIsNone(values[2])
+                self.assertEqual(values[3], .75)  # five-place output, but never the compared domain
+                self.assertEqual(values[4], None if 2.0 in masked else 2.0)
+
+    def test_marker_comparison_is_not_on_rounded_output(self):
+        _, values = read_declared([.750004, .75], np.float32(.75))
+        self.assertEqual(values, [.75, None])
+
+    def test_absent_nonmatching_and_empty_markers_change_nothing(self):
+        raw = [.001, 100.0, .0009, 100.5, -32767.0]
+        expected = [.001, 100.0, None, None, None]
+        for marker in (None, np.float32(.9), np.array([], dtype="f")):
+            with self.subTest(marker=marker):
+                data, values = read_declared(raw, marker)
+                self.assertEqual(values, expected)
+                self.assertEqual((data["valid_cells"], data["total_cells"]), (2, 5))
+
+    def test_old_fixture_result_is_unchanged_by_nonmatching_marker(self):
+        plain = read_subset(NoaaChlorophyllTests().fixture(), SMALL_BOUNDS, "r.nc", SMALL_DAY)
+        marked, _ = read_declared([.75, -32767.0], np.float32(.3))
+        self.assertEqual([r["chlorophyll"] for r in marked["samples"]], [r["chlorophyll"] for r in plain["samples"]])
+        self.assertEqual((marked["valid_cells"], plain["valid_cells"]), (1, 1))
+
+    def test_malformed_marker_refuses_with_fixed_error(self):
+        message = "NOAA chlorophyll missing-value metadata changed"
+        with self.assertRaises(ValueError) as caught:
+            read_declared([.5, .25], "bad")
+        self.assertEqual(str(caught.exception), message)
+        from skippercast.pipeline.noaa_chlorophyll import _declared_missing
+        # classic NetCDF stores attributes flat, so exercise the rank-two case on the decoder's own reader
+        with self.assertRaises(ValueError) as caught:
+            _declared_missing(SimpleNamespace(missing_value=np.array([[.5, .25]], dtype="f")), np.zeros((1, 1, 1, 2), dtype="f"))
+        self.assertEqual(str(caught.exception), message)
+
+    def test_nonfinite_values_stay_null_with_numeric_nan_marker(self):
+        data, values = read_declared([float("nan"), float("inf"), .4], np.float32("nan"))
+        self.assertEqual(values, [None, None, .4])
+        self.assertEqual(data["valid_cells"], 1)
+
+    def test_all_masked_source_is_missing_not_ok(self):
+        body = declared([.75, -32767.0], np.float32(.75))
+        result = source("synthetic-chl", "Synthetic", "chlorophyll", "https://example.invalid", 96,
+                        lambda client: read_subset(body, SMALL_BOUNDS, "synthetic.nc", SMALL_DAY),
+                        datetime(2026, 9, 22, 13, tzinfo=timezone.utc))
+        self.assertEqual(result["status"], "missing")
+        self.assertEqual((result["data"]["valid_cells"], result["data"]["total_cells"]), (0, 2))
+        self.assertEqual([s["chlorophyll"] for s in result["data"]["samples"]], [None, None])
+
+
+class MaskedClient:
+    """Catalog of days 300/301 with synthetic bodies; a day's body is looked up in bodies by ordinal."""
+
+    def __init__(self, now, bodies):
+        self.now, self.bodies, self.urls = now, bodies, []
+
+    def get(self, url, as_binary=False):
+        self.urls.append(url)
+        if url == CATALOG:
+            return "<catalog>" + "".join(f'<dataset urlPath="{FULL.format(d)}"/>' for d in self.bodies) + "</catalog>"
+        return self.bodies[re.search(r"V2026(\d{3})_", url).group(1)]
+
+
+def day_body(ordinal, values, marker=None):
+    stamp = datetime(2026, 1, 1, 12, tzinfo=timezone.utc) + timedelta(days=int(ordinal) - 1)
+    return declared(values, marker, seconds=int(stamp.timestamp()))
+
+
+class NoaaChlorophyllMaskedWalkBackTests(unittest.TestCase):
+    def test_masked_newest_walks_back_to_genuine_older_file(self):
+        client = MaskedClient(at(31), {"301": day_body("301", [.75, -32767.0], np.float32(.75)),
+                                       "300": day_body("300", [.75, -32767.0])})
+        data = fetch(client, BOUNDS)
+        self.assertEqual((data["dataset"], data["valid_cells"], data["sample_at"]), (FULL.format("300"), 1, "2026-10-27T12:00:00Z"))
+        self.assertIn("V2026300_", data["query_url"])
+        self.assertEqual(len(client.urls), 3)
+        self.assertEqual(client.urls[0], CATALOG)
+        self.assertIn("V2026301_", client.urls[1])
+        self.assertIn("V2026300_", client.urls[2])
+
+    def test_all_masked_candidates_keep_newest_gap(self):
+        client = MaskedClient(at(31), {d: day_body(d, [.75, -32767.0], np.float32(.75)) for d in ("301", "300")})
+        data = fetch(client, BOUNDS)
+        self.assertEqual((data["dataset"], data["valid_cells"], data["total_cells"]), (FULL.format("301"), 0, 2))
+        self.assertIn("V2026301_", data["query_url"])
+
+    def test_out_of_window_older_file_is_never_fetched(self):
+        client = MaskedClient(at(31, 13), {"301": day_body("301", [.75, -32767.0], np.float32(.75)),
+                                           "300": day_body("300", [.75, -32767.0])})
+        data = fetch(client, BOUNDS)
+        self.assertEqual((data["dataset"], data["valid_cells"]), (FULL.format("301"), 0))
+        self.assertFalse([u for u in client.urls if "V2026300_" in u])
+
+    def test_malformed_marker_propagates_without_fallback(self):
+        client = MaskedClient(at(31), {"301": day_body("301", [.75, -32767.0], "bad"), "300": day_body("300", [.75, -32767.0])})
+        with self.assertRaises(ValueError):
+            fetch(client, BOUNDS)
+        self.assertFalse([u for u in client.urls if "V2026300_" in u])
 
 
 if __name__ == "__main__":
