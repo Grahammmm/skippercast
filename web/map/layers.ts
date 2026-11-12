@@ -80,6 +80,8 @@ export const SELECTION_SOURCE = 'selection';
 export const RANKED_SOURCE = 'trip-ranked';
 /** The signed-in owner's private saved spots (web/map/saved-spots.ts, SC0922-04); in memory only. */
 export const SAVED_SPOTS_SOURCE = 'private-saved-spots';
+/** The trip dialog's ephemeral planning route (web/map/planning-route.ts, SC1407-15); memory only. */
+export const PLANNING_ROUTE_SOURCE = 'planning-route';
 /** Temp contrast's supported analysis cells (web/map/contrast.ts, CI6-03). */
 export const CONTRAST_SOURCE = 'sst-contrast';
 /** Temp fronts' observed edges (web/map/fronts.ts, BF-sst-fronts). */
@@ -181,6 +183,10 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
   entry({id: 'reach', label: copy('reach', 'label', lang), control: 'always', presentations: ['chart'], gate: t('layer.gate.reach', 'en'), sources: ['reach'],
     legend: [{label: copy('reach', 'legend0', lang), swatch: 'blue'}],
     basis: copy('reach', 'basis', lang), task: 'FE-51'}),
+  // SC1407-15: the planning route the trip dialog shows before it is downloaded; Chart only, memory only, under the marks.
+  entry({id: 'planning-route', label: copy('planning-route', 'label', lang), control: 'always', presentations: ['chart'], sources: [PLANNING_ROUTE_SOURCE],
+    legend: [{label: copy('planning-route', 'legend0', lang), swatch: 'amber'}],
+    basis: copy('planning-route', 'basis', lang), task: 'SC1407-15'}),
   entry({id: 'marks', label: copy('marks', 'label', lang), control: 'always', presentations: ['chart', 'terrain'],
     terrain: {kind: 'point', color: 'bg', opacity: 0.75, outline: 'mint', size: 18}, gate: t('layer.gate.marks', 'en'), sources: [DENSITY_SOURCE, MARKS_SOURCE],
     legend: [{label: copy('marks', 'legend0', lang), swatch: 'markRing'}, {label: copy('marks', 'legend1', lang), swatch: 'depth1'}],

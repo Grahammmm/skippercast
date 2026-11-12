@@ -250,9 +250,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1922-03: MapStage.tsx renders Cancel waypoint through the shared Button and adds the app-presentation--placing modifier class to the stack while a waypoint placement is armed; BODY09 mounts Reports/CatchCards, never MapStage. No catch markup, token or paint change. Rebind only MapStage.tsx.
   // SC1722-20: MapStage's stage section gains only an id (the Skip to map target); BODY09 never mounts MapStage. No paint, catch markup, contrast(), assertion or threshold changes. Rebind only MapStage.tsx.
   // RF2115-5: MapStage.tsx adds a startup loading status paragraph (existing app-stage-note class) and aria-busy on the Chart host; BODY09 renders Reports/CatchCards, never MapStage. No paint, token, assertion or threshold change. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "36b53b944969344d2f563b5d4da57c1c621f57127110fddc2fc7f0287f33807e",
+  "web/app/MapStage.tsx": "33ceeea87f84bdf56afdc71b6c79702a85280c13417628bf4d0fda4563346990",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   "web/tokens.css": "3feb5aee870cd08f8bd295d1f0cd6042a81593fa896ce7459319941d025f2406",
+  // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
   // changes (panel.css: History scroller 2 px ring and one summary ring; app.css: fleet checkbox ring); unfocused catch text and contrast are unchanged. check_contrast.mjs changes only the appCss surface hash, its comment and moved citations. Rebound from final bytes.
   "web/ui/ui.css": "94d1f6067a21772d33ea774ebb98deea0072517058486b5d5b0afe9117a13e32",  // SC1722-07: ui.css only adds the sheet's --sheet-hidden-offset property, a settled-detent bottom padding and overscroll containment on .ui-sheet-body; the catch sheet has no sheet and no paint changed. #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
@@ -281,7 +282,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1922-08: app.css lets the .app-fresh chip wrap (flex-wrap, max-width) and appends only a [data-refresh-line] wrap rule (no colour change); the Reports catch sheet mounts neither. check_contrast.mjs changes only the appCss surface hash and its comment. Rebound from the final bytes.
   // SC1722-20: app.css appends only a scoped .app-skip-link block (a clipped 1 px anchor at rest, a ringed 44 px panel when focused); the Reports catch sheet mounts no skip link, so no catch paint or backing changes. Rebound from the final bytes.
   // MGL-15: app.css repoints only the two depth-contour legend swatch colours to map tokens; no catch paint or layout changed.
-  "web/app/app.css": "8bd636982ab5f952861cd6787eae7771466aa2f4a5f7183db68017e4dd3af3cf",
+  "web/app/app.css": "4216efc25984ca173e9dbd54e39090d94a440b8c0f93dc77f88dfca7fe3aa3c2",
+  // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "01981c75cdc5973cc6772fa7e2fb33dc565bbf7f637e50462357f0138f5d1cb6",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -361,7 +363,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF2135-5 (fix round): app.css also folds duplicate declaration-identical rules (six focus rings, five 44px link targets, two link colours) into their first selector lists to fit the 75000-byte first-load budget; same declarations and selectors, no paint, contrast() or threshold change, and Reports mounts none of them. check_contrast.mjs changes only the appCss hash, shifted line citations and a comment. Both rebound from the final bytes.
   // SC1722-20: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // MGL-15: check_contrast.mjs gains the additive habitat CVD gate (new exports and mode) and rebinds the tokens/app surface hashes; contrast() and every legacy check are unchanged.
-  "scripts/check_contrast.mjs": "febf148ba1e66b9d1c0c0428ffc864e18830a72187c5830f430c7fb6e78f509f",
+  "scripts/check_contrast.mjs": "61066673e54c57dff32a761e648f7ed09cff7b2dac15922025f6aee365569d04",
+  // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
