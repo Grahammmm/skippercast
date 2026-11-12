@@ -377,7 +377,8 @@ export function boundSurfaceContrast(request = {}) {
 export const SURFACE_SOURCE_SHA256 = {
   // BF-wcag only adds min-height (24 px target floor) to .text-link, .history-provenance a and .sheet-links a; no paint changed.
   // SC1722-08 only raises the History chart scroller's focus ring to 2 px and adds one .history-measurement-note > summary focus ring; no unfocused paint changed.
-  "panelCss": "f765e1221775a652f300a63e657f99eff3538179376a85f53361befa5de2b385",
+  // UXFIX-12 only moves the .chart-overflow:focus-visible ring out of a media block (same 2 px ring, now at all widths); no unfocused paint changed.
+  "panelCss": "4558cd4edb0be1827ef6c00523a05b1c8eae84b0d0d81a93c33d5e12e4c66fa9",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "tokensCss": "85271ff5258cbbe3bfce09a7dc0b5c16ff1e31325b5a5f8d5d8a9fedd425dfd1",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
