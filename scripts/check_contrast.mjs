@@ -392,7 +392,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1722-08 only raises the History chart scroller's focus ring to 2 px and adds one .history-measurement-note > summary focus ring; no unfocused paint changed.
   "panelCss": "f765e1221775a652f300a63e657f99eff3538179376a85f53361befa5de2b385",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
-  "tokensCss": "839d9aa11e98ab858b9ed7ca041f094d857d7fc6518dda86d53431886ca45284",
+  "tokensCss": "229478d5eee7343bf1da46f8a05bda29e357d480a65a11a067faabd91d80d540",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
   // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.
