@@ -17,6 +17,9 @@ def camera_projection(vertices, vertical_exaggeration=1.0):
     # np.asarray would silently drop a mask; refuse every MaskedArray, even all-false.
     if np.ma.isMaskedArray(vertices):
         raise ValueError("camera_unmasked_vertices_required")
+    # float64 conversion would silently discard imaginary parts; refuse the whole complex family.
+    if np.iscomplexobj(vertices):
+        raise ValueError("camera_real_vertices_required")
     points = np.asarray(vertices, dtype=np.float64).copy()
     if points.ndim != 2 or points.shape[1] != 3 or not len(points):
         raise ValueError("camera_xyz_vertices_required")
