@@ -83,5 +83,7 @@ export function Tiles({tiles, nearshore = false, compact = false, dense = false,
     const p = tileProps(tile, compact, dense, lang);
     return provisional && FORECAST_TILES.has(tile.id) ? {...p, source: t('tile.source.provisional', lang, {source: p.source ?? ''})} : p;
   }) : emptyTiles(nearshore, lang);
-  return <div class={dense ? 'app-tiles app-tiles--dense' : 'app-tiles'}>{props.map(tile => <Tile key={tile.label} {...tile} label={label(tile.label)} />)}</div>;
+  // SC1722-20: each basis disclosure is named for its row (the tile's id, never its translated label); the empty tiles keep the model's order.
+  const ids: readonly TileId[] = tiles ? tiles.map(tile => tile.id) : ['wind', 'swell', 'water', 'tide'];
+  return <div class={dense ? 'app-tiles app-tiles--dense' : 'app-tiles'}>{props.map((tile, i) => <Tile key={tile.label} {...tile} label={label(tile.label)} basisLabel={tile.basis ? t(`a11y.basis.${ids[i]}` as StringId, lang) : undefined} />)}</div>;
 }
