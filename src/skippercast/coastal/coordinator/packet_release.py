@@ -141,7 +141,7 @@ def build_acquisition_package(root,grant_ref,template_refs,*,rights,trial,segmen
     metadata_document(root,trial,'coastal-bounded-patch-quality-policy-v3' if selected['name']=='coastal-contained-windows-v3' else 'coastal-bounded-patch-quality-policy-v2')
     paths=[root/'metadata'/f'{prefix}-{i}.json' for i in range(len(templates))]
     result_path=root/'metadata'/f'{prefix}-validation.json'
-    if any(p.exists() for p in [*paths,result_path]):raise ValueError('preserve existing packet package')
+    if any(os.path.lexists(p) for p in [*paths,result_path]):raise ValueError('preserve existing packet package')
     generated=[canonical_packet(t,grant,rights=rights,trial=trial,segment=segment,code_sha=code,deps_sha=deps) for t in templates]
     for packet in generated:
         validate_scope_packet(root,grant,packet,now=now,horizon=horizon,review=scope_review)
