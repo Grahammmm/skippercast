@@ -22,6 +22,8 @@ async function activate(page: Page, selector: string) {
 /** The account menu's trigger opens the menu; the named entry opens the overlay, and the menu's trigger is its opener. */
 async function viaMenu(page: Page, id: string, lang: string) {
   const opener = await activate(page, '.app-account-trigger');
+  // Opening the menu moves focus to its first control after the render; wait for that so it cannot pull focus off the entry.
+  await expect(page.locator('.app-account-panel button:not([disabled])').first()).toBeFocused();
   const entry = page.locator('.app-account-panel').getByRole('button', {name: copy(id, lang), exact: true});
   await expect(entry).toBeEnabled();
   await entry.focus();
