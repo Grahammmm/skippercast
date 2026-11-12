@@ -155,11 +155,11 @@ def check(entries, exports: Path) -> tuple[list[dict], list[str]]:
             errors.append(f"{where}: an object with trip_id, labeller and labels only")
             continue
         tid, labeller, labels = entry.get("trip_id"), entry.get("labeller"), entry.get("labels")
-        if not isinstance(tid, str) or not TRIP_ID.match(tid) or tid in seen:
+        if not isinstance(tid, str) or not TRIP_ID.fullmatch(tid) or tid in seen:
             errors.append(f"{where}: trip_id must be 32 hex characters, once per file")
             continue
         seen.add(tid)
-        if not isinstance(labeller, str) or not LABELLER.match(labeller):
+        if not isinstance(labeller, str) or not LABELLER.fullmatch(labeller):
             errors.append(f"{where}: labeller must be agent:<name>")
             continue
         if not isinstance(labels, list) or len(labels) > MAX_LABELS:

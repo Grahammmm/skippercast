@@ -9,6 +9,7 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {relativeTime} from '../../dist/offline-core.js';
 import {sizeText} from '../size-text.ts';
 import {Button, IconButton} from '../ui/Button.tsx';
+import {closeOnScrim, rememberOpener, restoreFocus} from '../ui/focus-return.ts';
 import {PortDialog} from '../landing/PortInput.tsx';
 import {PositionCheck} from './PositionCheck.tsx';
 import {region} from '../state.ts';
@@ -71,15 +72,15 @@ function loadFailed(error: string, lang: Language): string {
 }
 
 function TripDialog() {
-  const ref = useRef<HTMLDialogElement>(null), open = tripOpen.value, error = tripError.value, planner = plannerView.value, lang = language.value;
+  const ref = useRef<HTMLDialogElement>(null), opener = useRef<HTMLElement | null>(null), open = tripOpen.value, error = tripError.value, planner = plannerView.value, lang = language.value;
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) { dialog.showModal(); dialog.scrollTop = 0; dialog.querySelector<HTMLElement>('#export-heading')?.focus(); }
+    if (open && !dialog.open) { opener.current = rememberOpener(); dialog.showModal(); dialog.scrollTop = 0; dialog.querySelector<HTMLElement>('#export-heading')?.focus(); }
     if (!open && dialog.open) dialog.close();
   }, [open]);
   return (
-    <dialog ref={ref} id="export-panel" class="app-trip" aria-labelledby="export-heading" onClose={closeTrip}>
+    <dialog ref={ref} id="export-panel" class="app-trip" aria-labelledby="export-heading" onClick={closeOnScrim} onClose={() => { restoreFocus(opener.current); closeTrip(); }}>
       <div class="port-dialog-head">
         <h2 id="export-heading" tabIndex={-1}>{t('trip.title', lang)}</h2>
         <IconButton icon="close" label={t('trip.close', lang)} onClick={closeTrip} />
