@@ -53,7 +53,7 @@ export default defineConfig({
       ['phone-small', 360, 640, true], ['phone-land', 844, 390, true], ['tablet', 768, 1024, true],
       ['laptop-1024', 1024, 768, false], ['laptop-1366', 1366, 768, false],
     ] as const).map(([name, width, height, touch]) => ({
-      name, testMatch: /(net-faults|wcag-views|v2-dialog-fit|v2-sheet-reach)\.spec\.ts$/,
+      name, testMatch: /(net-faults|wcag-views|v2-dialog-fit|v2-sheet-reach|v2-desktop-fit)\.spec\.ts$/,
       use: {...devices['Desktop Chrome'], viewport: {width, height}, hasTouch: touch, isMobile: touch},
     })) : []),
   ],
