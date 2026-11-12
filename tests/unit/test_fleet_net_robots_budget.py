@@ -7,6 +7,7 @@ factory replaced by in-memory fakes.
 import io
 import socket
 import unittest
+from urllib.parse import urlsplit
 
 from skippercast.fleet.net import ROBOTS_TTL, FleetSession, Skipped
 
@@ -139,6 +140,15 @@ class RobotsBudgetTests(unittest.TestCase):
 
     def test_robots_policy_applies_to_content_redirect(self):
         world = _World(robots=b"User-agent: SkipperCast\nDisallow: /robots.txt\n")
+        # Newer stdlib robotparsers (3.13.x) implicitly allow /robots.txt whatever the file says, so the
+        # parser's own verdict on that path varies by Python version. Fetch the policy once, then pin the
+        # verdict this test is about (the policy forbids /robots.txt) to keep it version-independent.
+        world.net._robots_allows(_url("/a"), HOST)
+        parser = world.net._robots[HOST][1]
+        assert parser is not None
+        stdlib_can_fetch = parser.can_fetch
+        parser.can_fetch = lambda agent, url: (  # type: ignore[method-assign]
+            False if urlsplit(url).path == "/robots.txt" else stdlib_can_fetch(agent, url))
         with self.assertRaises(Skipped) as caught:
             world.net.get(_url("/go"))
         self.assertEqual(caught.exception.reason, "robots-redirect")
