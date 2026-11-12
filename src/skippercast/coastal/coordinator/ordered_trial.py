@@ -173,6 +173,8 @@ def _roots(values,source_root,*,empty=False):
 
 def inventory(preparation):
     """Observed admission/checkpoint caps, not a filesystem quota."""
+    def scan_failed(error):
+        raise ValueError("aggregate inventory traversal failed") from error
     def count(roots):
         total=0;files=0
         for text in roots:
@@ -181,7 +183,7 @@ def inventory(preparation):
                 raise ValueError("aggregate root symlink")
             if not root.exists():continue
             if not root.is_dir():raise ValueError("aggregate root must be directory")
-            for directory,dirs,names in os.walk(root,followlinks=False):
+            for directory,dirs,names in os.walk(root,followlinks=False,onerror=scan_failed):
                 for name in dirs+names:
                     p=Path(directory)/name
                     if p.is_symlink():raise ValueError("aggregate owned symlink")
