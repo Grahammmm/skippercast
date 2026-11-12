@@ -80,7 +80,8 @@ def _parent(root, relative):
 
 def _read(root, relative, *, metadata=True):
     with _parent(root, relative) as (parent, leaf):
-        fd = os.open(leaf, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=parent)
+        # O_NONBLOCK: a writer-less FIFO must reach the descriptor regularity check below, not wait in open().
+        fd = os.open(leaf, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent)
         with os.fdopen(fd, "rb") as stream:
             info = os.fstat(stream.fileno())
             if not stat.S_ISREG(info.st_mode) or metadata and info.st_size > catalog_bridge.MAX_DOCUMENT_BYTES:
