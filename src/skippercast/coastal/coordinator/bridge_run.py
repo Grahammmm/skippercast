@@ -85,7 +85,13 @@ def _read(root, relative, *, metadata=True):
             info = os.fstat(stream.fileno())
             if not stat.S_ISREG(info.st_mode) or metadata and info.st_size > catalog_bridge.MAX_DOCUMENT_BYTES:
                 raise ValueError("regular bounded metadata required")
-            return stream.read()
+            if not metadata:
+                return stream.read()
+            # Bound the bytes actually read: the file may grow after fstat.
+            raw = stream.read(catalog_bridge.MAX_DOCUMENT_BYTES + 1)
+            if len(raw) > catalog_bridge.MAX_DOCUMENT_BYTES:
+                raise ValueError("regular bounded metadata required")
+            return raw
 
 
 def _json(root, relative):
