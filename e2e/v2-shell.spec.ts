@@ -691,8 +691,8 @@ for (const [percent, scale] of [[125, 1.25], [150, 1.5]] as const) {
   test(`UXFIX-05: root text size ${percent}% grows the text ${scale}x and nothing clips or scrolls sideways`, async ({page, pageErrors, v2}) => {
     await v2.open('app', AREA);
     const sample = () => page.evaluate(() => {
-      const px = (el: Element | null) => parseFloat(getComputedStyle(el!).fontSize);
-      return {body: px(document.body), h1: px(document.querySelector('.ui-sheet h1, aside.app-brief h1')), limit: px(document.querySelector('.app-verdict-limit, .app-verdict h1'))};
+      const px = (selector: string) => { const el = document.querySelector(selector); return el ? parseFloat(getComputedStyle(el).fontSize) : NaN; };
+      return {body: px('body'), headline: px('.ui-sheet h1, aside.app-brief h1'), location: px('.app-location')};
     });
     const before = await sample();
     // A constructed stylesheet: the page's CSP forbids injected <style> elements.
@@ -702,11 +702,11 @@ for (const [percent, scale] of [[125, 1.25], [150, 1.5]] as const) {
       document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
     }, `html { font-size: ${percent}%; }`);
     const after = await sample();
-    for (const key of ['body', 'h1', 'limit'] as const) expect(after[key] / before[key], `${key} computed size ratio`).toBeCloseTo(scale, 2);
+    for (const key of ['body', 'headline', 'location'] as const) expect(after[key] / before[key], `${key} computed size ratio`).toBeCloseTo(scale, 2);
     const geometry = await page.evaluate(() => {
       const rect = (el: Element | null) => { const r = el!.getBoundingClientRect(); return {left: r.left, top: r.top, right: r.right, bottom: r.bottom}; };
       return {scrollWidth: document.documentElement.scrollWidth, width: innerWidth, height: innerHeight,
-        verdict: rect(document.querySelector('.ui-sheet h1, aside.app-brief h1')), dock: rect(document.querySelector('.app-dock .ui-dock'))};
+        verdict: rect(document.querySelector('.ui-sheet h1, aside.app-brief h1')), dock: rect(document.querySelector('.app-dock .ui-dock, .app-sheet-hour'))};
     });
     expect(geometry.scrollWidth, 'no horizontal page scroll').toBeLessThanOrEqual(geometry.width);
     for (const name of ['verdict', 'dock'] as const) {
