@@ -17,7 +17,8 @@ HORIZON_HOURS = 192  # eight days
 
 
 def hourly_then_3h(hourly_until, end=HORIZON_HOURS):
-    return list(range(0, hourly_until + 1)) + list(range(hourly_until + 3, end + 1, 3))
+    """Hourly steps to ``hourly_until``, then 3-hourly; never past inclusive ``end``."""
+    return list(range(0, min(hourly_until, end) + 1)) + list(range(hourly_until + 3, end + 1, 3))
 
 
 ECMWF_STEPS = list(range(0, 145, 3)) + list(range(150, HORIZON_HOURS + 1, 6))
