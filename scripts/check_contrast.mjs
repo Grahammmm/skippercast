@@ -618,7 +618,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved. It also folds the .app-history layout rules into the .app-conditions ones (same declarations, same order; no paint changed) to stay inside the app styles size budget.
   // MGL-15 adds map-only tokens (--map-*, --hab-*, --mark-ring) to tokens.css and repoints only the two depth-contour legend swatch rules in app.css to them;
   // existing text and legend-glass backing paint, thresholds and cited line numbers are unchanged (map-only additions and swatch colours are not text or backing).
-  "appCss": "d2854ce9a65b937d71b39e4886cdcb190c039a64893565a54386f64dfc91cc8a",
+  // UXFIX-09: app.css adds one tile-basis margin rule scoped to .app-tiles and raises the phone .app-top z-index by one; no colour, backing or text paint changed. Rebound from the final bytes.
+  "appCss": "0681c0efdf45d17b10b809d79bade59ca9066217be3ef7564499fed01d4ebbc9",
   // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.

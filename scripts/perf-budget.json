@@ -29,7 +29,7 @@
       "label": "Landing page styles (first load)",
       "kind": "first_load_css",
       "entry": "landing.html",
-      "max_bytes": 29000,
+      "max_bytes": 30000,
       "history": [
         {
           "max_bytes": 26000,
@@ -38,6 +38,10 @@
         {
           "max_bytes": 29000,
           "reason": "Raised 26,000 to 29,000 (SC1922-05). The landing's phone layout now reserves the height each late-mounting part takes (readout, port form, actions row, footer, layer dots) in web/landing/landing.css and web/landing/port-input.css, which removes the phone's three layout shifts (cold CLS 0.213 at 390 px and 0.249 at 360 px on main, 0.000 after). The reservations are about 2 KB of new rules; the landing first-load styles measure 27,808 bytes on this build (assets landing css 9.2 KB, degraded-notice 15.0 KB, tokens 3.0 KB), so the budget moves up 3,000 bytes (4.3% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 30000,
+          "reason": "Raised 29,000 to 30,000 (MGL-15). web/tokens.css gains the map-only colour role tokens (--map-*, --hab-*, --mark-ring), which the landing page loads as its tokens stylesheet (3.0 KB to 3.8 KB, about 0.8 KB); the landing first-load styles measure 29,461 bytes on the merged build (assets degraded-notice 15.9 KB, landing 9.1 KB, tokens 3.8 KB), so the budget moves up 1,000 bytes (1.8% headroom over that build), no more."
         }
       ]
     },
