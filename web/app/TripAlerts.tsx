@@ -12,10 +12,10 @@ import {Button} from '../ui/Button.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
 import {profile} from '../state.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
-import {readableDate} from '../dates.ts';
+import {readableDate, readableInstant} from '../dates.ts';
 import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
-import {language, localeOf, t, type Language, type StringId} from '../i18n.ts';
+import {language, t, type Language, type StringId} from '../i18n.ts';
 import {
   alertDate, alertNames, alertSpecies, AlertCopyError, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, deviceStatus, latestCheck, deviceButtons, deviceLine, type DeviceStatus, eventLine, feedbackPhase, formProblemId, latestTripEvent, assessmentTimeOrNull, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotificationsId, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
   type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type ReuseOmission, type SavedTrip, type TripPlanSummary,
@@ -303,7 +303,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
         {feedback ? (
           <div id="comfort-history">
             <p class="small">{t('alerts.comfort.history', lang, {n: feedback.length})}</p>
-            {feedback.slice(0, 5).map((f, i) => <p key={i}>{new Date(f.observed_at).toLocaleDateString(lang === 'es' ? localeOf(lang) : undefined)} · {f.rating}/10 · {feedbackPhase(f, lang)}</p>)}
+            {feedback.slice(0, 5).map((f, i) => <p key={i}>{readableInstant(f.observed_at, lang, region.timezone)} · {f.rating}/10 · {feedbackPhase(f, lang)}</p>)}
           </div>
         ) : null}
       </details>

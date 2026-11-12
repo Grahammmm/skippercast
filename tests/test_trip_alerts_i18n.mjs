@@ -11,7 +11,7 @@ import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import * as alerts from '../web/alerts.ts';
-import {readableDate} from '../web/dates.ts';
+import {readableDate, readableInstant} from '../web/dates.ts';
 import {weekendDigest, toText, EMPTY_WEEKEND} from '../web/digest.ts';
 import {catalogueProblems, COVERED} from '../scripts/check_copy.mjs';
 
@@ -150,6 +150,21 @@ test('UXFIX-07 readableDate: Tue 10 Nov / mar 10 nov in the region zone; the DST
   assert.equal(readableDate('2026-11-10', 'en', 'Not/AZone'), '2026-11-10', 'an unknown zone does not throw');
   assert.doesNotMatch(readableDate('2026-11-10', 'es', LA), /[,.]/);
   assert.equal(alerts.tripLine({id: 't', date: '2026-11-10', point: 'p', species: 's', start_hour: 7, end_hour: 13}, undefined, 'en', 'Pacific/Auckland'), 'Tue 10 Nov · p · s · 7:00–13:00');
+});
+
+test('UXFIX-07 readableInstant: a stored timestamp reads as its day in the region zone, not the browser zone (comfort history)', () => {
+  const LA = 'America/Los_Angeles', at = '2026-11-10T01:00:00Z';   // 17:00 on Mon 9 Nov in Los Angeles; Tue 10 Nov in UTC
+  assert.equal(readableInstant(at, 'en', LA), 'Mon 9 Nov');
+  assert.equal(readableInstant(at, 'es', LA), 'lun 9 nov');
+  assert.equal(readableInstant('2026-11-10T07:59:59Z', 'en', LA), 'Mon 9 Nov', 'the last second before local midnight');
+  assert.equal(readableInstant('2026-11-10T08:00:00Z', 'en', LA), 'Tue 10 Nov');
+  assert.equal(readableInstant('2026-11-01T20:00:00Z', 'en', LA), 'Sun 1 Nov', 'the day the clocks go back');
+  assert.equal(readableInstant(at, 'en', 'Pacific/Auckland'), 'Tue 10 Nov');
+  for (const bad of ['', 'soon']) assert.equal(readableInstant(bad, 'en', LA), bad, bad);
+  assert.equal(readableInstant(at, 'en', 'Not/AZone'), at, 'an unknown zone does not throw');
+  const source = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
+  assert.match(source, /readableInstant\(f\.observed_at, lang, region\.timezone\)/, 'the comfort history uses the region zone');
+  assert.doesNotMatch(source, /toLocaleDateString/, 'no browser-zone date left in the alerts dialog');
 });
 
 test('digest: the empty weekend says its line in the chosen language; the English export is unchanged', () => {

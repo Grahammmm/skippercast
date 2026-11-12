@@ -16,6 +16,16 @@ const format = (locale: string, timeZone: string): Intl.DateTimeFormat => {
 /** `text` with each ISO date in it read as readableDate does: for a status line that quotes the plan's date. */
 export const readableDates = (text: string, lang: Language | string, timeZone: string): string => text.replace(/\b\d{4}-\d{2}-\d{2}\b/g, d => readableDate(d, lang, timeZone));
 
+/** A stored timestamp ("2026-11-10T01:00:00Z") as readableDate prints the calendar day it fell on in `timeZone` ("Mon 9 Nov" in Los Angeles), whatever the browser's zone; unreadable input prints as given. */
+export function readableInstant(timestamp: string, lang: Language | string, timeZone: string): string {
+  try {
+    const at = new Date(timestamp);
+    if (Number.isNaN(at.getTime())) return timestamp;
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', {timeZone, year: 'numeric', month: '2-digit', day: '2-digit'}).formatToParts(at).map(x => [x.type, x.value]));
+    return readableDate(`${p.year}-${p.month}-${p.day}`, lang, timeZone);
+  } catch { return timestamp; }   // an unknown time zone must not break the sheet
+}
+
 /** `iso` ("2026-11-10") as "Tue 10 Nov" (en) or "mar 10 nov" (es), the same calendar day in `timeZone`; anything else prints as given. */
 export function readableDate(iso: string, lang: Language | string, timeZone: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
