@@ -370,7 +370,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-20: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-09: check_contrast.mjs changes only the appCss surface hash; contrast() is untouched. Rebound from the final bytes.
   // MGL-15: check_contrast.mjs gains the additive habitat CVD gate (new exports and mode) and rebinds the tokens/app surface hashes; contrast() and every legacy check are unchanged.
-  "scripts/check_contrast.mjs": "5ea81fa1b13a469d3269dd90bfc1a2b784e80d7641624ac7684bec85d5aa29d9",
+  // UXFIX-12: check_contrast.mjs changes only the panelCss surface hash and its comment (the .chart-overflow:focus-visible ring leaves its media block); contrast() is untouched. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "d551db919f987d049645e7ccc0f54e21c869674c690be1f9ef34828975639972",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
