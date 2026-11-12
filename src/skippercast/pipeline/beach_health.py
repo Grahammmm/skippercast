@@ -106,7 +106,7 @@ def parse(payload, expected_count, binding, fetched_at):
                 or not south <= lat <= north or not west <= lon <= east):
             raise ValueError("Invalid/out-of-county beach geometry")
         key = next((attributes[k] for k in ("GlobalID_2", "Station", "FID") if attributes.get(k) is not None), None)
-        if key is None or str(key) == "":
+        if key is None or isinstance(key, (dict, list)) or str(key) == "":  # a JSON container is not an identity
             raise ValueError("Missing beach identity")
         ident = str(key)
         if ident in seen:
