@@ -27,7 +27,7 @@ import {responseProvenance} from '../offline-response.ts';
 import {PROFILE_TABLE, type Profile} from '../profile.ts';
 import {day, hour, hourParam, parseHour, port, profile, region, species} from '../state.ts';
 import {dockTime, horizonDays} from '../hour.ts';
-import {loadRegs, regsData, regulationState, ruleSummary} from '../regs.ts';
+import {loadRegs, regsData, regulationState, ruleReason, ruleSummary} from '../regs.ts';
 import {useEffect} from 'preact/hooks';
 import {hasOwnLimits, limitsFor, type ComfortLimits} from '../limits.ts';
 import {regionInfo, type RegionInfo} from '../app/region-info.ts';
@@ -738,10 +738,10 @@ export function LeadRules({date, now}: {date: string; now: Date}) {
   const loaded = regsData.value, data = loaded?.region === rules.id ? loaded.data : null;
   const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget;
   const state = regulationState(data, target, rules, now.getTime(), date, null), s = ruleSummary(data, target, state, rules, lang);
-  const name = target === 'reef' ? 'Lingcod & rockfish' : state.profile?.name ?? target;
+  const name = target === 'reef' ? 'Lingcod & rockfish' : state.profile?.name ?? target, reason = ruleReason(state, lang);
   return (
     <p class="app-verdict-rules" data-status={s.status}>
-      <span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> {name} {leadDayText(date, now, rules.timezone ?? DEFAULT_ZONE, lang)}. {lang === 'es' ? <><span lang="en">{state.reason}</span> {t('rules.english.inline', lang)}</> : state.reason}{' '}
+      <span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> {name} {leadDayText(date, now, rules.timezone ?? DEFAULT_ZONE, lang)}. {reason.english ? <><span lang="en">{reason.text}</span> {t('rules.english.inline', lang)}</> : reason.text}{' '}
       <a href={s.link} target="_blank" rel="noopener" aria-label={t('rules.link.for', lang, {label: s.linkLabel, name})}>{s.linkLabel}</a>
     </p>
   );

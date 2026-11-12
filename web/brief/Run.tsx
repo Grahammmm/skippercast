@@ -23,7 +23,7 @@ import {loadProtectedScreen, protectedScreen, type ProtectedScreen} from '../tri
 import {currentRanking, listedBoatPicks} from './WhereToLook.tsx';
 import type {Brief} from './types.ts';
 import {PROFILE_TABLE} from '../profile.ts';
-import {loadRegs, regsData, regulationState, ruleSummary, openingAt} from '../regs.ts';
+import {loadRegs, regsData, regulationState, ruleLabel, ruleReason, ruleSummary, openingAt} from '../regs.ts';
 import {fishingHours, type FishingHours} from './fishing-hours.ts';
 import {entranceWindow} from '../../packages/coast/src/entrance-window.ts';
 import {EntranceCurrent} from './EntranceCurrent.tsx';
@@ -205,7 +205,7 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
       <p class="app-run-lead"><span class="ui-eyebrow">{t('run.fishing', lang)}</span> {lead}</p>
       {text.times ? <p class="app-run-times ui-mono">{text.times}{brief.sunrise && brief.sunset ? t('run.daylight', lang, {start: clock(brief.sunrise, tz, lang), end: clock(brief.sunset, tz, lang)}) : ''}</p> : null}
       {verdict ? <p class="app-run-hours" data-kind={result!.kind}>{note ? <>{said(note, lang)}{t('run.bar.check', lang)}</> : ''}{verdict}{' '}
-        {['scheduled', 'restricted'].includes(rule.status) ? <>{summary?.label ?? rule.label}: {lang === 'es' ? <span lang="en">{rule.reason}</span> : rule.reason} </> : ''}
+        {['scheduled', 'restricted'].includes(rule.status) ? <>{summary?.label ?? ruleLabel(rule, lang)}: {(r => r.english ? <span lang="en">{r.text}</span> : r.text)(ruleReason(rule, lang))} </> : ''}
         {summary ? <a href={summary.link}>{summary.linkLabel}</a> : null}</p> : null}
       {note ? <p class="app-run-note">{said(note, lang)}.</p> : null}
       {text.run ? (

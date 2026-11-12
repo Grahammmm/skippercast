@@ -3,7 +3,7 @@ import {planCopy, planView} from '../plan.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {regionCoverage, regionPlans, targetLabel, targetState, TARGET_STATE_TEXT} from '../species.ts';
 import {appView, navigate, profile, region, species, withParams} from '../state.ts';
-import {freshnessLabel, loadRegs, regsData, regulationState, ruleSummary, verifiedText} from '../regs.ts';
+import {freshnessLabel, loadRegs, regsData, regulationState, ruleReason, ruleSummary, verifiedText} from '../regs.ts';
 import {currentRegionInfo, zone} from './App.tsx';
 import {language, t} from '../i18n.ts';
 import {dockState} from './TimeDock.tsx';
@@ -32,7 +32,7 @@ export function TargetRules({now = new Date()}: {now?: Date}) {
   const {state, summary: s, freshness} = targetRules(now);
   const name = targetLabel(profile.value, region.value, species.value), lang = language.value;
   return <div class="app-plan-rules" data-status={s.status}>
-    <p><span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> {name}. {state.reason}</p>
+    <p><span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> {name}. {(() => { const r = ruleReason(state, lang); return r.english ? <span lang="en">{r.text}</span> : r.text; })()}</p>
     {[...s.bag, ...s.size, ...(s.depth ? [s.depth] : [])].map((line, i) => <p key={i}>{line}</p>)}
     <p>{verifiedText(s)}</p>
     <p class="app-plan-rules-fresh" data-state={freshness.state}>{freshness.text}</p>

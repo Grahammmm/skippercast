@@ -125,7 +125,8 @@ test('plan_rules_es_confirmed_states: open, restricted, scheduled and closed rea
     [scheduled, '2026-10-14', 'open', 'scheduled', 'Apertura sin confirmar'], [closed, '2026-11-10', 'closed', 'closed', 'Cerrado']]) {
     const en = m.planRuleLine(d, 'lingcod', date, MORRO, NOW), es = m.planRuleLine(d, 'lingcod', date, MORRO, NOW, 'es');
     assert.deepEqual([es.kind, es.status, en.kind, en.status], [kind, status, kind, status], status);
-    assert.deepEqual([es.name, es.reason, es.link], [en.name, en.reason, en.link], `${status}: names, the registry's reason and the link are not translated`);
+    assert.deepEqual([es.name, es.link], [en.name, en.link], `${status}: names and the link are not translated`);
+    assert.ok(status === 'restricted' ? es.reason === en.reason : es.reason !== en.reason, `${status}: the registry's reason is not translated; the app's is`);
     const out = esHtml(d, 'lingcod', date), t = text(out);
     assert.match(out, new RegExp(`<span class="app-mark-regs-badge" data-status="${status}">${badge}</span>`), status);
     assert.match(out, /<section class="export-card plan-rules" aria-label="Reglas para la fecha del plan">/, status);
@@ -135,7 +136,7 @@ test('plan_rules_es_confirmed_states: open, restricted, scheduled and closed rea
     assert.doesNotMatch(t, /Rules on|Check the official rules|Not legal advice|Closed on|Verified|Checked today/, `${status}: none of the card's own words stay English`);
   }
   const out = esHtml(closed, 'lingcod', '2026-11-10'), t = text(out);
-  assert.match(t, /Cerrado Lingcod \. Cerrado el 2026-11-10\. Outside the reviewed local season\./);
+  assert.match(t, /Cerrado Lingcod \. Cerrado el 2026-11-10\. Fuera de la temporada local revisada\./);
   assert.doesNotMatch(out, /Abierto/); assert.doesNotMatch(out, /data-status="open"/);
   assert.match(text(esHtml(open, 'lingcod')), /Verificado el .* Revisado hoy/);
   const reef = esHtml(data(), 'reef');
@@ -158,7 +159,7 @@ test('plan_rules_es_check_fail_closed: every unconfirmed reading says check the 
     const out = esHtml(d, species, date, d), t = text(out);
     assert.match(t, /Consulta las reglas oficiales antes de este viaje\./, label);
     assert.match(out, /<span class="app-mark-regs-badge" data-status="unknown">Revisa las reglas<\/span>/, label);
-    assert.match(out, /<span lang="en">[^<]+<\/span> \(en inglés\)/, `${label}: the registry's reason stays English and says so`);
+    assert.doesNotMatch(out, /\(en inglés\)/, `${label}: the app's reason is Spanish, not marked English`);
     assert.doesNotMatch(out, /data-status="(?:open|restricted|scheduled)"/, label);
     assert.doesNotMatch(t, /Abierto|Verificado|Revisado hoy|Check the official rules/, label);
     assert.match(out, /<a href="https:\/\/[^"]+" target="_blank" rel="noopener" hreflang="en"/, `${label}: the official link stays`);
@@ -167,11 +168,11 @@ test('plan_rules_es_check_fail_closed: every unconfirmed reading says check the 
   const other = inSpanish(() => m.render(m.h(m.PlanRules, {date: '2026-10-14', species: 'lingcod', region: {id: 'morro-bay'}, now: NOW})));
   assert.match(text(other), /Consulta las reglas oficiales antes de este viaje/, 'another region\'s registry is never read');
   assert.doesNotMatch(other, /data-status="open"/);
-  // The opening day without an hour is restricted to the opening time, not open: its timing note stays the registry's English.
+  // The opening day without an hour is restricted to the opening time, not open: its timing note reads in Spanish.
   const opening = data(); opening.species.lingcod.windows = [{start: '2026-10-14', end: '2026-12-31', start_at: '2026-10-14T14:00:00Z'}];
   const day = esHtml(opening, 'lingcod');
   assert.match(day, /data-status="restricted">Abierto · con límites</); assert.doesNotMatch(day, /data-status="open"/);
-  assert.match(day, /<span lang="en">Season starts [^<]+The opening date is not an all-day opening\.<\/span> \(en inglés\)/);
+  assert.match(day, /La temporada empieza el [^<]+ El día de apertura no está abierto todo el día\./); assert.doesNotMatch(day, /Season starts|\(en inglés\)/);
   for (const date of ['', '2026-1-4', 'tomorrow']) assert.equal(esHtml(data(), 'lingcod', date), '', `blank or malformed date ${JSON.stringify(date)} renders nothing`);
 });
 
@@ -180,7 +181,7 @@ test('plan_rules_official_english_and_escape: official wording and links stay En
   assert.match(out, /<p lang="en">2 per person daily<\/p>/); assert.match(out, /<p lang="en">22 in min total length<\/p>/);
   assert.match(out, /<p>Todas las profundidades<\/p>/, 'the app-written depth line is Spanish and not marked English');
   assert.match(out, /<p class="export-note">El texto de las reglas se muestra tal como se publica, en inglés\.<\/p>/);
-  assert.match(out, /<span lang="en">Local closures, MPAs and gear restrictions still apply\.<\/span> \(en inglés\)/);
+  assert.match(out, /Siguen vigentes los cierres locales, las áreas marinas protegidas y las restricciones de artes\./); assert.doesNotMatch(out, /Local closures/);
   assert.match(out, /<a href="https:\/\/[^"]+" target="_blank" rel="noopener" hreflang="en" aria-label="Reglas oficiales para Lingcod \(página oficial, se abre en una pestaña nueva\)">Reglas oficiales<\/a>/);
   assert.deepEqual(hrefs(out), hrefs(en), 'the same official destination');
   assert.doesNotMatch(out, /lang="en">(?:Reglas|Todas|Abierto|Verificado|Revisado)/, 'no Spanish chrome is tagged English');

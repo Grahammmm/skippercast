@@ -30,6 +30,8 @@ export interface RulesRegion {
 }
 export interface RuleState {
   status: string; label: string; today: string; reason: string; issues: string[]; profile?: Data; timingNote?: string | null; members?: RuleState[];
+  /** Catalogue ids (rules.reason.*, rules.label.*) for the app-worded `reason` and `label`; `reason` and `label` stay the English text. Absent: `reason` is the registry's own (English) wording. */
+  reasonId?: StringId; reasonVars?: Record<string, string | number>; labelId?: StringId;
   /** A source check is older than the registry's own `check_interval_hours` (still inside the `maxAgeHours` ceiling). */
   overdue?: boolean;
 }
@@ -92,8 +94,16 @@ export function validRegulations(data: Data, region: RulesRegion): boolean {
 }
 
 const LABELS: Readonly<Record<string, string>> = {restricted: 'Depth / species restrictions', open: 'Season open', closed: 'Season closed', scheduled: 'Opener unconfirmed', unknown: 'Check rules'};
-const clock = (s: unknown, tz: string): string => Number.isFinite(Date.parse(String(s))) ? new Date(String(s)).toLocaleString('en-US', {
-  timeZone: tz, month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'}) + ' PT' : 'Unavailable';
+const clock = (s: unknown, tz: string, lang: Language = 'en'): string => Number.isFinite(Date.parse(String(s))) ? new Date(String(s)).toLocaleString(lang === 'es' ? 'es-US' : 'en-US', {
+  timeZone: tz, month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'}) + ' PT' : t('rules.reason.unavailableTime', lang);
+/** The rule state's reason in `lang`: the catalogue sentence when the app wrote it, else the registry's own English wording (`english`: mark it lang="en"). */
+export function ruleReason(s: Pick<RuleState, 'reason' | 'reasonId' | 'reasonVars'>, lang: Language = 'en'): {text: string; english: boolean} {
+  if (!s.reasonId) return {text: s.reason, english: lang === 'es'};
+  const v = s.reasonVars ?? {}, vars = typeof v.at === 'string' ? {...v, time: clock(v.at, String(v.tz), lang)} : v;
+  return {text: t(s.reasonId, lang, vars), english: false};
+}
+/** The rule state's own label in `lang` (the card's badge comes from `ruleSummary`). */
+export const ruleLabel = (s: Pick<RuleState, 'label' | 'labelId'>, lang: Language = 'en'): string => s.labelId ? t(s.labelId, lang) : s.label;
 
 /**
  * dist/regulations.js `regulationState` with no method and no location, for the trip day
@@ -106,38 +116,43 @@ export function regulationState(data: Data, species: string, region: RulesRegion
     const status = ['excluded', 'unknown', 'closed', 'scheduled', 'restricted', 'open'].find(s => members.some(m => m.status === s))!;
     const first = members.find(m => m.status === status)!;
     return {...first, members, overdue: members.some(m => m.overdue), issues: [...new Set(members.flatMap(m => m.issues))],
-      label: status === 'closed' && members.some(m => m.status !== 'closed') ? 'Check both seasons' : first.label};
+      ...(status === 'closed' && members.some(m => m.status !== 'closed') ? {label: 'Check both seasons', labelId: 'rules.label.checkBoth' as StringId} : {})};
   }
   const today = dateOnly(tripDate) ? tripDate! : dayIn(tz, now);
   const p = validRegulations(data, region) ? ruleProfile(data, species, region) : null;
-  if (!p) return {status: 'unknown', label: 'Check rules', today, reason: 'Regulations unavailable. Open the official CDFW rules before fishing.', issues: []};
+  if (!p) return {status: 'unknown', label: 'Check rules', today, reason: 'Regulations unavailable. Open the official CDFW rules before fishing.', issues: [], labelId: 'rules.label.unknown', reasonId: 'rules.reason.unavailable'};
   const issues = sourceIssues(data, p.source_ids, now);
   const reviewed = today >= data.valid_from && today <= data.valid_through && age(data.reviewed_at, now) >= -1;
   const window = p.windows.find((w: Data) => today >= w.start && today <= w.end);
   let status = !window ? 'closed' : window.requires_opening_review ? 'scheduled' : window.restriction ? 'restricted' : 'open';
   let reason = status === 'closed' ? 'Outside the reviewed local season.' : status === 'scheduled'
     ? 'Scheduled opening only. A new review of season, health and trap restrictions is required before showing open.' : 'Local closures, MPAs and gear restrictions still apply.';
-  if (window?.restriction) reason = window.restriction;
+  let reasonId: StringId | undefined = status === 'closed' ? 'rules.reason.outsideSeason' : status === 'scheduled' ? 'rules.reason.scheduled' : 'rules.reason.closures';
+  let reasonVars: Record<string, string | number> | undefined;
+  if (window?.restriction) { reason = window.restriction; reasonId = undefined; }
   const opening = window?.start_at ? Date.parse(window.start_at) : null;
   const timed = Number.isFinite(tripInstant) && dayIn(tz, tripInstant!) === today ? tripInstant : !tripDate ? now : null;
   let timingNote: string | null = null, timedRestriction = false;
   if (opening !== null && today === window.start) {
     timingNote = `Season starts ${clock(window.start_at, tz)}. The opening date is not an all-day opening.`;
-    if (timed !== null && timed < opening) { status = 'closed'; reason = `Before the legal opening time. ${timingNote}`; }
-    else if (timed === null && status === 'open') { status = 'restricted'; timedRestriction = true; reason = timingNote; }
+    const at = {at: window.start_at, tz};
+    if (timed !== null && timed < opening) { status = 'closed'; reason = `Before the legal opening time. ${timingNote}`; reasonId = 'rules.reason.beforeOpening'; reasonVars = at; }
+    else if (timed === null && status === 'open') { status = 'restricted'; timedRestriction = true; reason = timingNote; reasonId = 'rules.reason.seasonStarts'; reasonVars = at; }
   }
-  if (data.rules_review_status !== 'reviewed') { status = 'unknown'; reason = 'Saved regulatory content needs review. Consult the official rules before fishing.'; }
-  else if (!reviewed) { status = 'unknown'; reason = 'This date is outside the reviewed rule period. Current-year rules need review.'; }
+  if (data.rules_review_status !== 'reviewed') { status = 'unknown'; reason = 'Saved regulatory content needs review. Consult the official rules before fishing.'; reasonId = 'rules.reason.needsReview'; reasonVars = undefined; }
+  else if (!reviewed) { status = 'unknown'; reason = 'This date is outside the reviewed rule period. Current-year rules need review.'; reasonId = 'rules.reason.outsidePeriod'; reasonVars = undefined; }
   else if (issues.length) {
-    status = 'unknown';
-    reason = issues.some(id => data.checks[id]?.status === 'changed') ? 'An official source changed after review. The saved limits below may have changed; check CDFW.'
-      : `The daily source check is incomplete or over ${maxAgeHours(data)} hours old. Check CDFW; saved rules are shown below.`;
+    status = 'unknown'; reasonVars = undefined;
+    if (issues.some(id => data.checks[id]?.status === 'changed')) { reason = 'An official source changed after review. The saved limits below may have changed; check CDFW.'; reasonId = 'rules.reason.sourceChanged'; }
+    else { reason = `The daily source check is incomplete or over ${maxAgeHours(data)} hours old. Check CDFW; saved rules are shown below.`; reasonId = 'rules.reason.checkOld'; reasonVars = {hours: maxAgeHours(data)}; }
   }
   const interval = checkIntervalHours(data), overdue = interval !== null && p.source_ids.some((id: string) => age(data.checks?.[id]?.data_retrieved_at, now) > interval);
-  const state: RuleState = {status, label: timedRestriction && status === 'restricted' ? 'Opening time applies' : LABELS[status]!, today, reason, issues, profile: p, timingNote, overdue};
+  const labelId = (timedRestriction && status === 'restricted' ? 'rules.label.openingTime' : `rules.label.${status}`) as StringId;
+  const state: RuleState = {status, label: timedRestriction && status === 'restricted' ? 'Opening time applies' : LABELS[status]!, labelId, today, reason, reasonId, reasonVars, issues, profile: p, timingNote, overdue};
   // v1's geographicSeasonState with no location chosen.
   const area = window?.geography;
-  return area && ['open', 'restricted'].includes(status) ? {...state, status: 'unknown', label: 'Choose fishing location', reason: `This season applies only within a geographic area. ${area.note}`} : state;
+  return area && ['open', 'restricted'].includes(status) ? {...state, status: 'unknown', label: 'Choose fishing location', labelId: 'rules.label.chooseLocation', reason: `This season applies only within a geographic area. ${area.note}`,
+    reasonId: 'rules.reason.geography', reasonVars: {note: area.note}} : state;
 }
 
 /** The opening on this local date, guarded like the regulations reader. */
