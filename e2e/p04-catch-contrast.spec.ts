@@ -256,7 +256,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
   // changes (panel.css: History scroller 2 px ring and one summary ring; app.css: fleet checkbox ring); unfocused catch text and contrast are unchanged. check_contrast.mjs changes only the appCss surface hash, its comment and moved citations. Rebound from final bytes.
   // UXFIX-04: ui.css folds the shared focus ring onto form controls and tabindex headings and adds a zero-specificity input/select/textarea --line-strong border; the catch sheet has no text field, and focus paint only appears on :focus-visible, so unfocused catch text and contrast are unchanged.
-  "web/ui/ui.css": "367e8625c8af4bf431d3d3789c6cb5c99726339370bee906a47e401955e77157",  // SC1722-07: ui.css only adds the sheet's --sheet-hidden-offset property, a settled-detent bottom padding and overscroll containment on .ui-sheet-body; the catch sheet has no sheet and no paint changed. #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
+  // UXFIX-03: ui.css also adds the `.ui-scroll-cue[data-more="true"]` bottom-fade mask rule (dialogs and the port list; no catch element carries the class). No paint, token, contrast(), assertion or threshold change. Rebind only ui.css.
+  "web/ui/ui.css": "5ddb9e24186425f02936005b7bb90c54bf6c80750ae1d5a7cf1bf4c8f3bd202a",  // SC1722-07: ui.css only adds the sheet's --sheet-hidden-offset property, a settled-detent bottom padding and overscroll containment on .ui-sheet-body; the catch sheet has no sheet and no paint changed. #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.
   // SC-E2E-GREEN: the legend shrinks and scrolls beside a mark-card min height, the phone .app-area row wraps, and the
   // brief's .app-verdict-rules line gets margins, size and the existing .app-mark-regs a link rule; Reports' catch sheet
@@ -362,8 +363,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF2135-5 (fix round): app.css also folds duplicate declaration-identical rules (six focus rings, five 44px link targets, two link colours) into their first selector lists to fit the 75000-byte first-load budget; same declarations and selectors, no paint, contrast() or threshold change, and Reports mounts none of them. check_contrast.mjs changes only the appCss hash, shifted line citations and a comment. Both rebound from the final bytes.
   // SC1722-20: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
-  // UXFIX-04 x SC1407-15 merge: hashes below rebound from the merged bytes; check_contrast.mjs only shifts app.css citations after :18 up by one. No paint, contrast() or threshold change.
-  "scripts/check_contrast.mjs": "7ff04b6a9ac330489c4a55bf39686829050ae39c318b9b96d77dfa9f64443b22",
+  "scripts/check_contrast.mjs": "21f393aadc7688d79b7d3a49066fc95f1efe60b8acf713aa06e9ba97f336b342",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
