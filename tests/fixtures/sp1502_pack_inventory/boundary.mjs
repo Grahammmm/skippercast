@@ -12,6 +12,7 @@ export function Button({children, ...props}) {
   return h('button', props, children);
 }
 export const IconButton = () => null;
+export const useScrollCue = () => {};
 export const PortDialog = ({children}) => h('div', {}, children);
 export const canSaveCoastal = async () => false;
 export const readCoastal = async () => null;
