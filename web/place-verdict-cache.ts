@@ -49,11 +49,15 @@ function revisionOf(screen: unknown): string | null {
 /** A number exactly as it is (negative zero kept apart); null for anything that is not a finite number. */
 const num = (n: unknown): string | null => typeof n === 'number' && Number.isFinite(n) ? (Object.is(n, -0) ? '-0' : String(n)) : null;
 
-/** Nested coordinate arrays in order, or null when any leaf is not a finite number. */
-function coords(c: unknown): string | null {
+/** Most array nestings a key will descend (GeoJSON needs four at most); deeper material is unkeyable, not cached. */
+export const MAX_KEY_DEPTH = 8;
+
+/** Nested coordinate arrays in order, or null when any leaf is not a finite number or the nesting is too deep. */
+function coords(c: unknown, depth = 0): string | null {
   if (!Array.isArray(c)) return num(c);
+  if (depth >= MAX_KEY_DEPTH) return null;
   const parts: string[] = [];
-  for (const x of c) { const s = coords(x); if (s === null) return null; parts.push(s); }
+  for (const x of c) { const s = coords(x, depth + 1); if (s === null) return null; parts.push(s); }
   return `[${parts.join(',')}]`;
 }
 
