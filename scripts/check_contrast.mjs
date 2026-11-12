@@ -414,7 +414,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // RF2135-5 (size fix) also folds six identical focus-ring rules into the first one, one 44px link-target rule for five links and the two blue link colours into one rule (same declarations and selectors, no paint changed); that removes two rules before the legend rules, so the cited app.css lines after :29 moved up by two.
   // SC1722-20 only appends a scoped .app-skip-link block at the end of app.css (token colours; a clipped 1 px anchor at rest, a ringed 44 px panel when focused);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved. It also folds the .app-history layout rules into the .app-conditions ones (same declarations, same order; no paint changed) to stay inside the app styles size budget.
-  "appCss": "7bdf865eaeaf4a1d96849ceb5b39fcf926d315b99e63ce321aa24180fba8e510",
+  // UXFIX-10 only appends a scoped .app-account[data-top] block at the end of app.css (the phone top-card account button: icon size, hidden label, open-state text/panel colour, z-index);
+  // no legend paint, backing or text role changed and the cited line numbers above are unmoved.
+  "appCss": "3abead46f04a5f2a58655fa8b1aa88f38e0b85cd024a76e800f5e1a9b688959e",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
