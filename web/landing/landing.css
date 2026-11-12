@@ -63,6 +63,7 @@
 .landing-step { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--panel) 88%, transparent); }
 .landing-step h2 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
 .landing-step h2:focus { outline: none; }
+/* Kept: beats the :focus outline reset above and rounds the ring. */
 .landing-step h2:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
 .landing-step-place { margin: 0; color: var(--mint); }
 .landing-step-intro, .landing-step-status { margin: 0; color: var(--muted); font-size: var(--text-13); }
