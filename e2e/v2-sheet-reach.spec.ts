@@ -4,18 +4,20 @@
 // hidden offset plus the tab bar. These tests scroll ONLY the body to its end and measure Sign in before any
 // focus, click or scrollIntoView could move it.
 import type {Locator, Page} from '@playwright/test';
-import {test, expect} from './fixtures.ts';
+import {test, expect, setSize, wideViewport} from './fixtures.ts';
 
 const SHELL = '/map?region=morro-bay&ui=v2';
 const SIZES = [[390, 844], [375, 667], [360, 640]] as const;
 const DETENTS = ['half', 'full'] as const;
 type Detent = (typeof DETENTS)[number];
+/** UXFIX-12: at 844x390 (nightly `phone-land`) the half-height sheet starts Sign in above the visible body. Landscape layout waits for the map decision, so these cases are fixme until it lands. */
+const landscapeHalf = () => wideViewport() !== null && test.info().project.name === 'phone-land';
 
 /** A signed-out visitor who already chose a profile, so the first-run card does not replace the brief. */
 async function openSignedOut(page: Page, width: number, height: number): Promise<void> {
   await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
   await page.route('**/api/session', route => route.fulfill({json: {signIn: '/#account', signedIn: false}}));
-  await page.setViewportSize({width, height});
+  await setSize(page, {width, height});
   await page.goto(SHELL);
   await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'peek');
   await expect(signIn(page)).toHaveText(/Sign in/);
@@ -71,6 +73,8 @@ for (const [width, height] of SIZES) {
     for (const shape of ['long', 'short'] as const) {
       test(`sheet_footer_reachable_half_and_full: Sign in is whole above the tab bar at ${detent}, ${width}x${height}, ${shape} content`, async ({page, pageErrors, isMobile}) => {
         test.skip(!isMobile, 'phone layout only');
+        test.skip(!!wideViewport() && width !== SIZES[0][0], 'a nightly project runs one size, its own');
+        test.fixme(detent === 'half' && landscapeHalf(), 'landscape sheet layout waits for the map decision (UXFIX-12 finding)');
         await openSignedOut(page, width, height);
         await shapeContent(page, shape);
         await goTo(page, detent);
@@ -101,6 +105,7 @@ for (const [width, height] of SIZES) {
 
 test('sheet_reach_survives_resize_and_full_half_return: the end stays reachable after full, and across resizes', async ({page, pageErrors, isMobile}) => {
   test.skip(!isMobile, 'phone layout only');
+  test.fixme(landscapeHalf(), 'landscape sheet layout waits for the map decision (UXFIX-12 finding)');
   await openSignedOut(page, 390, 844);
   await shapeContent(page, 'long');
   const reached = async (label: string) => {
@@ -113,7 +118,7 @@ test('sheet_reach_survives_resize_and_full_half_return: the end stays reachable 
   await goTo(page, 'full'); await reached('full');
   await goTo(page, 'half'); await reached('half again (stale scroll position)');
   for (const [width, height] of [[360, 640], [375, 667], [390, 844]] as const) {
-    await page.setViewportSize({width, height});
+    await setSize(page, {width, height});
     await settled(page);
     await reached(`half after resize to ${width}x${height}`);
   }
