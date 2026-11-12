@@ -369,6 +369,7 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
           <p class="export-note">{t('planner.route.warning', lang)}</p>
           <p><a href="https://wildlife.ca.gov/Conservation/Marine/MPAs" target="_blank" rel="noopener">CDFW MPA</a> · <a href="https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas" target="_blank" rel="noopener">NOAA</a></p>
           <button id="export-route" disabled={!s.ok || m.routing.value} onClick={() => void m.deliverRoute()}>{t(m.routing.value ? 'planner.route.busy' : 'planner.route.download', lang)}</button>
+          <button id="show-planning-route" disabled={!s.ok || m.routing.value} onClick={() => void m.showRouteOnChart()}>{t(m.routing.value ? 'planner.route.busy' : 'planner.route.show', lang)}</button>
           <p role="status">{m.routeStatus.value}</p>
         </section>
         {!s.ok && m.notesReady.value ? <p>{t('planner.withheld', lang)}</p> : null}
