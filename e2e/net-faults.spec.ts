@@ -66,6 +66,38 @@ async function stubBaselineAnswers(page: Page, v2: V2) {
   await v2.feed('**/feeds/tiles/seafloor/manifest-morro-bay.json', {status: 'held', region: 'morro-bay'});   // layer hidden, nothing to fetch
 }
 
+/**
+ * The share of the viewport that shows map: the map's area inside the viewport, less the part of it under the cover (sheet or brief).
+ * Only the map/cover intersection (both clipped to the viewport) is subtracted. Self-contained: page.evaluate serialises it into the page.
+ */
+type Box = {left: number; right: number; top: number; bottom: number};
+function visibleMapShare(vw: number, vh: number, map: Box | null, cover: Box | null): number {
+  if (!map) return -1;
+  const clip = (r: Box): Box => ({left: Math.max(r.left, 0), right: Math.min(r.right, vw), top: Math.max(r.top, 0), bottom: Math.min(r.bottom, vh)});
+  const area = (r: Box) => Math.max(0, r.right - r.left) * Math.max(0, r.bottom - r.top);
+  const m = clip(map), c = cover ? clip(cover) : null;
+  const overlap = c ? area({left: Math.max(m.left, c.left), right: Math.min(m.right, c.right), top: Math.max(m.top, c.top), bottom: Math.min(m.bottom, c.bottom)}) : 0;
+  return Math.max(0, area(m) - overlap) / (vw * vh);
+}
+
+test.describe('visible map share geometry', () => {
+  const box = (left: number, top: number, right: number, bottom: number): Box => ({left, top, right, bottom});
+  test('adjacent rectangles: the cover does not hide any map', () => {
+    expect(visibleMapShare(1024, 768, box(300, 0, 1024, 768), box(0, 0, 300, 768))).toBeCloseTo(724 / 1024, 6);
+  });
+  test('overlapping rectangles: only the overlap is subtracted', () => {
+    expect(visibleMapShare(1024, 768, box(0, 0, 1024, 768), box(0, 0, 300, 768))).toBeCloseTo(724 / 1024, 6);
+  });
+  test('partially offscreen, disjoint rectangles: offscreen parts count for nothing', () => {
+    expect(visibleMapShare(1024, 768, box(300, 0, 1024, 768), box(-500, 0, 300, 768))).toBeCloseTo(724 / 1024, 6);
+    expect(visibleMapShare(1024, 768, box(300, 0, 1324, 768), box(0, 0, 300, 768))).toBeCloseTo(724 / 1024, 6);
+  });
+  test('no map is -1; no cover leaves the whole map', () => {
+    expect(visibleMapShare(1024, 768, null, null)).toBe(-1);
+    expect(visibleMapShare(1024, 768, box(0, 0, 512, 768), null)).toBeCloseTo(0.5, 6);
+  });
+});
+
 test.describe('@nightly net-faults', () => {
   test.beforeEach(async ({v2}) => { test.skip(!WIDE, 'nightly only: set E2E_WIDE=1'); await stubDailyFeed(v2); });
 
@@ -140,11 +172,11 @@ test.describe('@nightly net-faults', () => {
     const m = await page.evaluate(() => { const w = window as unknown as {__csp: string[]; __cls: number; __long: number}; return {csp: w.__csp, cls: w.__cls, long: w.__long}; });
     console.log(`[net-faults] CLS ${m.cls.toFixed(4)}, long tasks total ${Math.round(m.long)} ms (recorded, no threshold)`);
     // The visible map share (map area not under the sheet or brief) is recorded, not asserted: the landscape layout waits for the map decision.
-    const share = await page.evaluate(() => {
-      const vw = innerWidth, vh = innerHeight, area = (r: DOMRect) => Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0)) * Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
-      const map = document.querySelector('.app-chart'), cover = document.querySelector('.ui-sheet, .app-brief');
-      return map ? Math.max(0, area(map.getBoundingClientRect()) - (cover ? area(cover.getBoundingClientRect()) : 0)) / (vw * vh) : -1;
-    });
+    const share = await page.evaluate(([src, vw, vh]) => {
+      const visibleMapShare = new Function(`return ${src}`)() as (w: number, h: number, m: Box | null, c: Box | null) => number;
+      const rect = (el: Element | null) => el ? el.getBoundingClientRect() : null;
+      return visibleMapShare(vw as number, vh as number, rect(document.querySelector('.app-chart')), rect(document.querySelector('.ui-sheet, .app-brief')));
+    }, [visibleMapShare.toString(), page.viewportSize()!.width, page.viewportSize()!.height] as const);
     console.log(`[net-faults] ${test.info().project.name} ${page.viewportSize()!.width}x${page.viewportSize()!.height}: visible map share ${(share * 100).toFixed(1)}% (recorded, not asserted)`);
     expect(m.csp, 'securitypolicyviolation events').toEqual([]);
     expect(bad, 'same-origin responses >= 400').toEqual([]);
