@@ -208,7 +208,7 @@ test('signed in, saved-trip alerts save, list, delete and acknowledge through th
   expect(posted[0]).toMatchObject({region: 'morro-bay', species: 'halibut', point: 'central', start_hour: 7, end_hour: 13, wind_limit: 8, gust_limit: 14, sea_limit: 3});
   // SC1537-06 (#1170): the saved trip reads by the region's names, never its raw ids.
   await expect(dialog.locator('#saved-trips')).toContainText('Estero Bay · California halibut · 7:00–13:00');
-  await expect(dialog.getByRole('button', {name: /^Delete the trip on \d{4}-\d{2}-\d{2} at Estero Bay$/})).toBeVisible();
+  await expect(dialog.getByRole('button', {name: /^Delete the trip on [A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2} at Estero Bay$/})).toBeVisible();
   await dialog.getByText('Recent assessments (1)').click();
   await dialog.getByRole('button', {name: 'Mark read'}).click();
   await expect.poll(() => acked).toEqual({id: 7});
@@ -480,4 +480,38 @@ test('the masthead account trigger is icon-sized at 1024-1179 px, labelled at 11
   await expect(page.getByRole('button', {name: 'Sign in or create an account'})).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(trigger).toBeFocused();
+});
+
+test('UXFIX-10: the phone top card holds an icon-sized account button at peek, half and full, opening the same menu', async ({page, v2, isMobile}) => {
+  test.skip(!isMobile, 'phone layout only');
+  await stubAuth(page, 'unused');
+  await v2.open('app', AREA);
+  const top = page.locator('.app-account[data-top] > .app-account-top-trigger'), card = page.locator('.app-top-card');
+  const cardHeight = async () => (await card.boundingBox())!.height;
+  await page.evaluate(() => { const s = new CSSStyleSheet(); s.replaceSync('.app-account[data-top] { display: none !important; }'); document.adoptedStyleSheets = [s]; });
+  const without = await cardHeight();
+  await page.evaluate(() => { document.adoptedStyleSheets = []; });
+  const viewport = page.viewportSize()!;
+  for (const detent of ['peek', 'half', 'full'] as const) {
+    await page.locator('.ui-sheet-handle').focus();
+    await page.keyboard.press(detent === 'peek' ? 'Home' : 'End');
+    if (detent === 'half') await page.keyboard.press('ArrowDown');
+    await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', detent);
+    await expect(top, `${detent}: named like Sign in`).toHaveAccessibleName('Sign in');
+    const box = (await top.boundingBox())!;
+    expect(box.width, `${detent}: at least 44 wide`).toBeGreaterThanOrEqual(44);
+    expect(box.height, `${detent}: at least 44 tall`).toBeGreaterThanOrEqual(44);
+    expect(box.y + box.height, `${detent}: inside the viewport without scrolling`).toBeLessThanOrEqual(viewport.height);
+    expect(box.x + box.width, `${detent}: inside the viewport`).toBeLessThanOrEqual(viewport.width);
+    expect(Math.abs(await cardHeight() - without), `${detent}: the top card keeps its height`).toBeLessThanOrEqual(1);
+    await top.click();
+    await expect(top).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('.app-account[data-top] .app-account-panel')).toBeVisible();
+    await expect(page.locator('.app-account[data-top] .app-account-panel').getByRole('button', {name: 'Sign in or create an account'})).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(top).toHaveAttribute('aria-expanded', 'false');
+  }
+  const duplicates = await page.evaluate(() => { const seen = new Set<string>(), dup: string[] = []; for (const el of document.querySelectorAll('[id]')) { if (seen.has(el.id)) dup.push(el.id); seen.add(el.id); } return dup; });
+  expect(duplicates, 'no duplicate ids').toEqual([]);
+  await expect(page.locator('.app-brief-footer .app-account-trigger'), 'the footer entry stays').toHaveCount(1);
 });

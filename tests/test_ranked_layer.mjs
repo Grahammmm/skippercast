@@ -24,7 +24,7 @@ import {settlePicks} from './helpers/pick-settle.mjs';
 const PAGE = 'https://s.test/map';
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 const settle = async () => { for (let i = 0; i < 6; i++) await tick(); };
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const SENTINELS = new Set(Object.values(sentinel));
 /** Words § 12 keeps off every card: no count, chance or promise of fish, and no "best". */
 const PROMISE = /\b(?:hotspot|chance|odds|probab\w*|productive|best|catch rate|bite|guarantee\w*)\b/i;

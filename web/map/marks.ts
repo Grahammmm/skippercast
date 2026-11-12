@@ -27,7 +27,7 @@ import {
 import {DENSITY_SOURCE, GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE, SURVEY_SOURCE, overlayFeatures, setTerrainLayer} from './layers.ts';
 import {loadMpas, mpaQuery, validMpas} from './mpa.ts';
 import type {Palette} from './palette.ts';
-import {LABEL_FONT} from './style.ts';
+import {LABEL_FONT, mapControl} from './style.ts';
 import {camera, coastSpecies, shownPresentation, terrainDetail, terrainMark} from './stage.ts';
 import {atlasMarksURL} from '../startup-forms.ts';
 import {regionAtlas} from '../species.ts';
@@ -156,29 +156,31 @@ export function densityLayer(p: Palette) {
 /** The Chart's FE-18 sources and layers, coloured from the palette: habitat fills and geology go in § 9's habitat slot, the density, marks and the selection near the top. */
 export function markStyle(p: Palette) {
   const source = () => ({type: 'geojson', data: EMPTY});
-  const kind = ['match', ['get', 'kind'], 'rock', p.depth1, 'mixed', p.muted, 'sediment', p.amber, 'kelp', p.mint, p.muted];
+  const kind = ['match', ['get', 'kind'], 'rock', p.habRock, 'mixed', p.habMixed, 'sediment', p.habSoft, 'kelp', p.habKelp, p.habMixed];
+  // The habitat fill multiplier (1 = the ramp below as drawn), never past 0.6.
+  const k = mapControl(p.mapHabitatOpacity, 'map-habitat-opacity', 'positive'), fill = (o: number) => Math.min(0.6, o * k);
   return {
     sources: {[SURVEY_SOURCE]: source(), [GEOLOGY_SOURCE]: source(), [DENSITY_SOURCE]: source(), [MARKS_SOURCE]: source(), [SELECTION_SOURCE]: source()},
     habitat: [
-      {id: SURVEY_PICK, type: 'fill', source: SURVEY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0.12, 12, 0.22, 15, 0.3]}},
+      {id: SURVEY_PICK, type: 'fill', source: SURVEY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 9, fill(0.12), 12, fill(0.22), 15, fill(0.3)]}},
       {id: 'survey-habitat-line', type: 'line', source: SURVEY_SOURCE, minzoom: 11,
         paint: {'line-color': kind, 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.6, 15, 1.6], 'line-opacity': 0.8}},
-      {id: GEOLOGY_PICK, type: 'fill', source: GEOLOGY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': 0.06}},
+      {id: GEOLOGY_PICK, type: 'fill', source: GEOLOGY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': fill(0.06)}},
       {id: 'geology-line', type: 'line', source: GEOLOGY_SOURCE, minzoom: MIN_ZOOM, paint: {'line-color': kind, 'line-width': 1.2, 'line-dasharray': [3, 2]}},
     ],
     marks: [
       densityLayer(p),
       {id: MARK_PICK, type: 'circle', source: MARKS_SOURCE, minzoom: MIN_ZOOM, paint: {'circle-radius': 22, 'circle-color': p.bg, 'circle-opacity': 0}},
       {id: 'marks-ring', type: 'circle', source: MARKS_SOURCE, minzoom: MIN_ZOOM,
-        paint: {'circle-radius': 9, 'circle-color': p.bg, 'circle-opacity': 0.75, 'circle-stroke-color': p.mint, 'circle-stroke-width': 2}},
+        paint: {'circle-radius': 9, 'circle-color': p.mapInkHalo, 'circle-opacity': 0.75, 'circle-stroke-color': p.markRing, 'circle-stroke-width': 2}},
       {id: 'marks-fit', type: 'symbol', source: MARKS_SOURCE, minzoom: MIN_ZOOM, filter: ['has', 'fit'],
         layout: {'text-field': ['get', 'fit'], 'text-font': [LABEL_FONT], 'text-size': 11, 'text-allow-overlap': true, 'text-ignore-placement': true},
-        paint: {'text-color': p.text}},
+        paint: {'text-color': p.mapInk}},
       {id: 'marks-depth', type: 'symbol', source: MARKS_SOURCE, minzoom: 12, filter: ['has', 'depth'],
         layout: {'text-field': ['get', 'depth'], 'text-font': [LABEL_FONT], 'text-size': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 12],
           'text-offset': [0, 1.6], 'text-anchor': 'top', 'text-optional': true},
-        paint: {'text-color': p.text, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
-      {id: 'selection-ring', type: 'circle', source: SELECTION_SOURCE, paint: {'circle-radius': 15, 'circle-opacity': 0, 'circle-stroke-color': p.text, 'circle-stroke-width': 2.5}},
+        paint: {'text-color': p.mapInk, 'text-halo-color': p.mapInkHalo, 'text-halo-width': 1.2}},
+      {id: 'selection-ring', type: 'circle', source: SELECTION_SOURCE, paint: {'circle-radius': 15, 'circle-opacity': 0, 'circle-stroke-color': p.mapInk, 'circle-stroke-width': 2.5}},
     ],
   };
 }

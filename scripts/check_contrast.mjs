@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 // RF1935-4: appended focus-only layout; contrast paint, roles and thresholds unchanged.
+// MGL-15: adds the offline habitat class CVD pair gate (exported helpers, `--habitat-cvd`, and the default run) and the two map text pairs;
+// every legacy check, threshold, exit and transparent refusal is unchanged.
 // WCAG 2.x contrast check for the documented text/background token pairs, in
 // both themes of web/tokens.css (v2, dark default; design.md § 5). Fails under 4.5:1.
 // FE-61 Accept 2 retired v1 dist/tokens.css once no page loaded it.
@@ -13,7 +15,13 @@ export const PAIRS_V2 = [
   ...['bg', 'bg-deep', 'panel', 'panel-2'].flatMap(bg => [['text', bg, 'body text and readings'], ['muted', bg, 'labels, units and ages']]),
   ...['mint', 'blue', 'coral', 'amber'].flatMap(fg => ['panel', 'panel-2'].map(bg => [fg, bg, 'reading text'])),
   ['bg', 'mint', 'primary button label'],
+  // MGL-15: the map-only text roles, each on its own halo.
+  ['map-ink', 'map-ink-halo', 'map text on its halo'],
+  ['map-label', 'map-halo', 'map labels on their halo'],
 ];
+// UXFIX-04: input and select borders are non-text UI, held to WCAG 1.4.11 (3:1), not the 4.5:1 text floor.
+export const NON_TEXT_MIN = 3;
+export const NON_TEXT_PAIRS = ['panel', 'panel-2'].map(bg => ['line-strong', bg, 'input and select border']);
 
 // Which rule holds each theme's tokens: dark is :root and light overrides it.
 export const FILES = {
@@ -59,6 +67,16 @@ export function check(css, spec = V2) {
       const ratio = contrast(tokens[fg], tokens[bg]);
       rows.push(`${name.padEnd(5)} --${fg} on --${bg}: ${ratio.toFixed(2)}:1 (${use})`);
       if (ratio < MIN) failures.push(`${name}: --${fg} ${tokens[fg]} on --${bg} ${tokens[bg]} is ${ratio.toFixed(2)}:1, below ${MIN}:1 (${use})`);
+    }
+  }
+  if (spec === V2) {
+    for (const [name, tokens] of Object.entries(themes(css, spec))) {
+      for (const [fg, bg, use] of NON_TEXT_PAIRS) {
+        if (!tokens[fg] || !tokens[bg]) { failures.push(`${name}: --${fg} or --${bg} is not a hex colour token`); continue; }
+        const ratio = contrast(tokens[fg], tokens[bg]);
+        rows.push(`${name.padEnd(5)} --${fg} on --${bg}: ${ratio.toFixed(2)}:1 (${use}, non-text minimum ${NON_TEXT_MIN}:1)`);
+        if (ratio < NON_TEXT_MIN) failures.push(`${name}: --${fg} ${tokens[fg]} on --${bg} ${tokens[bg]} is ${ratio.toFixed(2)}:1, below ${NON_TEXT_MIN}:1 (${use})`);
+      }
     }
   }
   return {failures, rows};
@@ -368,6 +386,189 @@ export function boundSurfaceContrast(request = {}) {
   }
 }
 
+// MGL-15: habitat class separation under colour-vision deficiency. A reference
+// check for the vector-water map with solid outlines: it is not proof for
+// aerial imagery, lower zooms, the real translucent stroke pixels, legal
+// clearance or biological accuracy. Every value stays unrounded until compared.
+export const HABITAT_CLASSES = ['rock', 'mixed', 'soft', 'kelp'];
+export const CVD_SIMULATIONS = ['normal', 'protanopia', 'deuteranopia', 'tritanopia'];
+export const HABITAT_MIN_DELTA_E = {solid: 12, fill: 6};
+export const HABITAT_FILL_ZOOM = 13;
+// Machado, Oliveira and Fernandes 2009, severity 1.0, applied to linear sRGB.
+export const MACHADO_SEVERITY_1 = {
+  normal: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+  protanopia: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
+  deuteranopia: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]],
+  tritanopia: [[1.255528, -0.076749, -0.178779], [-0.078411, 0.930809, 0.147602], [0.004733, 0.691367, 0.303900]],
+};
+const HEX6 = /^#[0-9a-f]{6}$/i;
+const unit = v => (Number.isFinite(v) && v >= 0 && v <= 1) || (() => { throw Error(`Expected a finite value in [0,1], got ${v}`); })();
+
+/** sRGB transfer function (IEC 61966-2-1): encoded [0,1] to linear [0,1]. */
+export function srgbToLinear(v) {
+  unit(v);
+  return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+}
+export function linearToSrgb(v) {
+  unit(v);
+  return v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055;
+}
+/** Linear sRGB triple after a colour-vision simulation, clamped back into gamut. */
+export function simulateCvd(linear, simulation) {
+  if (!Object.hasOwn(MACHADO_SEVERITY_1, simulation)) throw Error(`Unknown colour-vision simulation: ${simulation}`);
+  if (!Array.isArray(linear) || linear.length !== 3) throw Error('Expected a linear RGB triple');
+  linear.forEach(unit);
+  const m = MACHADO_SEVERITY_1[simulation];
+  return m.map(row => Math.min(1, Math.max(0, row[0] * linear[0] + row[1] * linear[1] + row[2] * linear[2])));
+}
+/** Linear sRGB to CIE Lab under D65 (white 0.95047, 1, 1.08883). */
+export function linearRgbToLab([r, g, b]) {
+  const x = 0.4124564 * r + 0.3575761 * g + 0.1804375 * b;
+  const y = 0.2126729 * r + 0.7151522 * g + 0.0721750 * b;
+  const z = 0.0193339 * r + 0.1191920 * g + 0.9503041 * b;
+  const f = t => (t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116);
+  const [fx, fy, fz] = [f(x / 0.95047), f(y), f(z / 1.08883)];
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+/** CIEDE2000 (Sharma, Wu and Dalal 2005), unrounded. */
+export function deltaE2000(lab1, lab2) {
+  const [L1, a1, b1] = lab1, [L2, a2, b2] = lab2;
+  if (![...lab1, ...lab2].every(Number.isFinite) || lab1.length !== 3 || lab2.length !== 3) throw Error('Expected finite Lab triples');
+  const rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI, p7 = 25 ** 7;
+  const mean = (Math.hypot(a1, b1) + Math.hypot(a2, b2)) / 2;
+  const g = 0.5 * (1 - Math.sqrt(mean ** 7 / (mean ** 7 + p7)));
+  const [a1p, a2p] = [(1 + g) * a1, (1 + g) * a2];
+  const [c1p, c2p] = [Math.hypot(a1p, b1), Math.hypot(a2p, b2)];
+  const hue = (b, a) => (b === 0 && a === 0 ? 0 : (deg(Math.atan2(b, a)) + 360) % 360);
+  const [h1p, h2p] = [hue(b1, a1p), hue(b2, a2p)];
+  const chromatic = c1p * c2p !== 0;
+  let dh = 0;
+  if (chromatic) { dh = h2p - h1p; if (dh > 180) dh -= 360; else if (dh < -180) dh += 360; }
+  const dL = L2 - L1, dC = c2p - c1p, dH = 2 * Math.sqrt(c1p * c2p) * Math.sin(rad(dh / 2));
+  const lMean = (L1 + L2) / 2, cMean = (c1p + c2p) / 2;
+  let hMean = h1p + h2p;
+  if (chromatic) hMean = Math.abs(h1p - h2p) <= 180 ? hMean / 2 : (hMean < 360 ? (hMean + 360) / 2 : (hMean - 360) / 2);
+  const t = 1 - 0.17 * Math.cos(rad(hMean - 30)) + 0.24 * Math.cos(rad(2 * hMean)) + 0.32 * Math.cos(rad(3 * hMean + 6)) - 0.2 * Math.cos(rad(4 * hMean - 63));
+  const sl = 1 + 0.015 * (lMean - 50) ** 2 / Math.sqrt(20 + (lMean - 50) ** 2);
+  const sc = 1 + 0.045 * cMean, sh = 1 + 0.015 * cMean * t;
+  const rt = -Math.sin(rad(2 * 30 * Math.exp(-(((hMean - 275) / 25) ** 2)))) * 2 * Math.sqrt(cMean ** 7 / (cMean ** 7 + p7));
+  return Math.sqrt((dL / sl) ** 2 + (dC / sc) ** 2 + (dH / sh) ** 2 + rt * (dC / sc) * (dH / sh));
+}
+/** Encoded-sRGB source-over of a hex class colour on a hex backdrop; the result is encoded channels in [0,1]. */
+export function blendHexOver(foreground, backdrop, alpha) {
+  if (!HEX6.test(foreground) || !HEX6.test(backdrop)) throw Error('Expected #rrggbb colours');
+  if (!Number.isFinite(alpha) || !(alpha > 0) || alpha > 1) throw Error(`Expected a fill alpha in (0,1], got ${alpha}`);
+  const [f, b] = [rgbOf(foreground), rgbOf(backdrop)];
+  return f.map((v, i) => (v * alpha + b[i] * (1 - alpha)) / 255);
+}
+/** CIEDE2000 between two encoded-sRGB triples as seen under `simulation`. */
+export function cvdDeltaE(encodedA, encodedB, simulation) {
+  const lab = encoded => linearRgbToLab(simulateCvd(encoded.map(srgbToLinear), simulation));
+  return deltaE2000(lab(encodedA), lab(encodedB));
+}
+
+/** The zoom-`zoom` value of a linear `interpolate` on ['zoom'], the form the survey fill opacity is written in. */
+export function evaluateZoomRamp(expression, zoom) {
+  const stops = Array.isArray(expression) ? expression.slice(3) : [];
+  if (!Number.isFinite(zoom) || !Array.isArray(expression) || expression[0] !== 'interpolate' || !Array.isArray(expression[1]) || expression[1][0] !== 'linear' ||
+      !Array.isArray(expression[2]) || expression[2][0] !== 'zoom' || expression[2].length !== 1 || expression[1].length !== 1 || expression.length !== 3 + stops.length ||
+      stops.length < 4 || stops.length % 2 || !stops.every(Number.isFinite) || stops.some((v, i) => i % 2 === 0 && i > 0 && v <= stops[i - 2])) {
+    throw Error('Unsupported zoom ramp expression');
+  }
+  if (zoom <= stops[0]) return stops[1];
+  for (let i = 2; i < stops.length; i += 2) {
+    if (zoom <= stops[i]) return stops[i - 1] + (zoom - stops[i - 2]) / (stops[i] - stops[i - 2]) * (stops[i + 1] - stops[i - 1]);
+  }
+  return stops[stops.length - 1];
+}
+
+/** Every `--name: value;` (any value) declared directly in the rule for `selector`. */
+function rawBlock(css, selector) {
+  const start = css.indexOf(`${selector} {`);
+  if (start < 0) throw Error(`tokens.css: missing ${selector}`);
+  const open = css.indexOf('{', start);
+  return Object.fromEntries([...css.slice(open + 1, css.indexOf('}', open)).matchAll(/--([a-z0-9-]+):\s*([^;]+);/g)].map(m => [m[1], m[2].trim()]));
+}
+/** Each theme's custom properties as text (light overrides dark), numbers included; `themes()` keeps to hex colours. */
+export function rawThemes(css, spec = V2) {
+  const text = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const base = rawBlock(text, spec.selectors[spec.base]);
+  return {[spec.base]: base, [spec.overlay]: {...base, ...rawBlock(text, spec.selectors[spec.overlay])}};
+}
+
+/** The survey fill's effective opacity at `zoom` for one theme's raw tokens, evaluated from the renderer's own paint expression. */
+export function habitatFillAlpha(markStyle, readPalette, rawTokens, surveyLayerId, zoom = HABITAT_FILL_ZOOM) {
+  const layer = markStyle(readPalette(name => rawTokens[name] ?? '')).habitat.find(l => l.id === surveyLayerId);
+  if (!layer) throw Error(`Renderer has no ${surveyLayerId} layer`);
+  return evaluateZoomRamp(layer.paint['fill-opacity'], zoom);
+}
+
+/**
+ * Every unordered pair of the four habitat classes, in both themes and under
+ * normal vision plus protan/deutan/tritan simulation, once as solid colours
+ * (outlines) and once as the fill blended over --map-water at `alpha`.
+ * Reports every row; nothing is reduced to a best pair or a minimum.
+ * `alphas` maps a theme name to its fill alpha (or pass one number for all).
+ */
+export function checkHabitatCvd(css, alphas, spec = V2) {
+  const failures = [], rows = [], results = [], lines = [];
+  const record = r => {
+    results.push(r);
+    const label = `${r.theme} ${r.simulation} ${r.pair} ${r.kind}`;
+    if (r.status === 'pass') rows.push(`${label} alpha ${r.alpha}: dE2000 ${r.deltaE.toFixed(3)} (${r.deltaE}) >= ${r.threshold}`);
+    else failures.push(`${label}${r.alpha === undefined ? '' : ` alpha ${r.alpha}`}: ${r.status}${r.deltaE === undefined ? '' : ` dE2000 ${r.deltaE.toFixed(3)} (${r.deltaE}) < ${r.threshold}`}${r.reason ? `: ${r.reason}` : ''}`);
+    lines.push(r.status === 'pass' ? `PASS ${rows.at(-1)}` : `FAIL ${failures.at(-1)}`);
+  };
+  try {
+    for (const [theme, tokens] of Object.entries(rawThemes(css, spec))) {
+      const alpha = typeof alphas === 'number' ? alphas : alphas?.[theme];
+      const water = tokens['map-water'], classes = HABITAT_CLASSES.map(name => [name, tokens[`hab-${name}`]]);
+      const missing = [['map-water', water], ...classes.map(([name, value]) => [`hab-${name}`, value])].filter(([, value]) => !HEX6.test(value ?? '')).map(([name]) => `--${name}`);
+      if (missing.length) { record({theme, simulation: 'all', pair: 'all', kind: 'tokens', status: 'resolution_error', reason: `${missing.join(', ')} is not a hex colour token`}); continue; }
+      if (typeof alpha !== 'number' || !Number.isFinite(alpha) || !(alpha > 0) || alpha > 1) {
+        record({theme, simulation: 'all', pair: 'all', kind: 'fill', status: 'resolution_error', reason: `fill alpha must be a finite number in (0,1], got ${alpha}`}); continue;
+      }
+      for (const simulation of CVD_SIMULATIONS) {
+        for (let i = 0; i < classes.length; i++) {
+          for (let j = i + 1; j < classes.length; j++) {
+            for (const [kind, a] of [['solid', 1], ['fill', alpha]]) {
+              const threshold = HABITAT_MIN_DELTA_E[kind], pair = `${classes[i][0]}/${classes[j][0]}`;
+              try {
+                const deltaE = cvdDeltaE(blendHexOver(classes[i][1], water, a), blendHexOver(classes[j][1], water, a), simulation);
+                record({theme, simulation, pair, kind, alpha: a, deltaE, threshold, status: deltaE >= threshold ? 'pass' : 'measured_failure'});
+              } catch (error) {
+                record({theme, simulation, pair, kind, alpha: a, threshold, status: 'resolution_error', reason: error.message});
+              }
+            }
+          }
+        }
+      }
+    }
+    if (!results.length) throw Error('No habitat class rows were produced');
+  } catch (error) {
+    record({theme: 'unresolved', simulation: 'all', pair: 'all', kind: 'tokens', status: 'resolution_error', reason: error.message});
+  }
+  return {failures, rows, results, lines};
+}
+
+/**
+ * The gate on `css` with each theme's fill alpha read from the real renderer
+ * (markStyle's survey fill at zoom 13 under that theme's numeric tokens), so a
+ * changed ramp or control moves the gate with it. Never throws: any failure to
+ * evaluate is a failure line, not a pass.
+ */
+export async function habitatCvdReport(css) {
+  try {
+    const {markStyle, SURVEY_PICK} = await import(new URL('../web/map/marks.ts', import.meta.url).href);
+    const {readPalette} = await import(new URL('../web/map/palette.ts', import.meta.url).href);
+    const alphas = Object.fromEntries(Object.entries(rawThemes(css)).map(([theme, raw]) => [theme, habitatFillAlpha(markStyle, readPalette, raw, SURVEY_PICK)]));
+    return checkHabitatCvd(css, alphas);
+  } catch (error) {
+    const reason = `habitat CVD gate could not run: ${error.message}`;
+    return {failures: [reason], rows: [], results: [{status: 'resolution_error', reason}], lines: [`FAIL ${reason}`]};
+  }
+}
+
 // Deliberately snapshot-bound evidence mode. These hashes authenticate ALL
 // source bytes, including later overrides, rather than claiming a partial CSS
 // parser proves the cascade. A changed source must be reviewed/rebound; default
@@ -380,7 +581,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // UXFIX-12 only moves the .chart-overflow:focus-visible ring out of a media block (same 2 px ring, now at all widths); no unfocused paint changed.
   "panelCss": "4558cd4edb0be1827ef6c00523a05b1c8eae84b0d0d81a93c33d5e12e4c66fa9",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
-  "tokensCss": "85271ff5258cbbe3bfce09a7dc0b5c16ff1e31325b5a5f8d5d8a9fedd425dfd1",
+  "tokensCss": "56f9708cfa02f651680a2bc02bd3d9080f65dec849aea6888f6bfc52508a5775",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
   // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.
@@ -398,6 +599,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // a minimum height on the desktop legend); no colour, opacity, backing or text paint changed, and the cited line numbers above are unmoved.
   // SC-TIDAL-1 only appends a scoped .app-entrance* block at the end of app.css (token text roles on the brief's run line, not the legend glass);
   // no legend paint or backing changed and the cited line numbers above are unmoved.
+  // UXFIX-04 only adds --line-strong to tokens.css, re-points input/select border colour to it and deletes duplicate focus outlines (shared rule in ui.css); no text role, backing or legend paint changed.
   // SC1722-08 only consolidates link focus outlines (removes the .app-views and first-answer duplicates; the shared a:focus-visible rule is in ui.css), so
   // focus paint intentionally changes; unfocused legend text and backing are unchanged. Cited app.css lines after :29 moved up by one.
   // SC1722-07 only adds the phone sheet's --sheet-hidden-offset custom property (vh and @supports dvh values mirroring the existing transforms) to the .app-sheet rules;
@@ -415,8 +617,13 @@ export const SURFACE_SOURCE_SHA256 = {
   // RF2135-5 (size fix) also folds six identical focus-ring rules into the first one, one 44px link-target rule for five links and the two blue link colours into one rule (same declarations and selectors, no paint changed); that removes two rules before the legend rules, so the cited app.css lines after :29 moved up by two.
   // SC1722-20 only appends a scoped .app-skip-link block at the end of app.css (token colours; a clipped 1 px anchor at rest, a ringed 44 px panel when focused);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved. It also folds the .app-history layout rules into the .app-conditions ones (same declarations, same order; no paint changed) to stay inside the app styles size budget.
+  // MGL-15 adds map-only tokens (--map-*, --hab-*, --mark-ring) to tokens.css and repoints only the two depth-contour legend swatch rules in app.css to them;
+  // existing text and legend-glass backing paint, thresholds and cited line numbers are unchanged (map-only additions and swatch colours are not text or backing).
+  // UXFIX-09: app.css adds one tile-basis margin rule scoped to .app-tiles and raises the phone .app-top z-index by one; no colour, backing or text paint changed. Rebound from the final bytes.
+  "appCss": "4d8bfb23f2d1fb27edcb3f58532cdb56000c2da661c82d30cb330c0c73a469dc",
   // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
-  "appCss": "b7ec62fa4af1dcbcce4e40355aaf568613676fdaa3a93e14771f1c9c052b9195",
+  // UXFIX-10 only appends a scoped .app-account[data-top] block at the end of app.css (the phone top-card account button: icon size, hidden label, open-state text/panel colour, z-index);
+  // no legend paint, backing or text role changed and the cited line numbers above are unmoved.
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
@@ -462,8 +669,8 @@ export function checkSurfaceSource(sources) {
         ['legend-labels', 'muted', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:858-868,2678-2684; bridge:21,27'],
         ['sheen-text', 'text', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,26'],
         ['sheen-muted', 'muted', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,27'],
-        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,173,214,228; Legend.tsx:394'],
-        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:173,194,243; Legend.tsx:111,245,394'],
+        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,173,213,227; Legend.tsx:394'],
+        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:173,194,242; Legend.tsx:111,245,394'],
       ]) {
         const foreground = resolve(role);
         results.push({theme, id, binding, foreground, surface,
@@ -497,6 +704,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   const root = new URL('../', import.meta.url);
   const named = process.argv.slice(2).filter(a => !a.startsWith('--'));
+  // MGL-15: read-only habitat class CVD gate; an optional file argument checks that tokens.css instead of the repository's.
+  if (process.argv.includes('--habitat-cvd')) {
+    let css;
+    try { css = readFileSync(named.length ? named[0] : new URL('web/tokens.css', root), 'utf8'); } catch (error) {
+      console.error(`Habitat CVD check could not read its tokens: ${error.message}`);
+      process.exit(1);
+    }
+    const {failures, lines, rows} = await habitatCvdReport(css);
+    console.log(lines.join('\n'));
+    if (failures.length) { console.error(`Habitat CVD check failed: ${failures.length} of ${lines.length} rows.`); process.exit(1); }
+    console.log(`Habitat CVD check passed: ${rows.length} rows (solid >= ${HABITAT_MIN_DELTA_E.solid}, fill >= ${HABITAT_MIN_DELTA_E.fill} dE2000).`);
+    process.exit(0);
+  }
   let failed = false, count = 0;
   for (const file of named.length ? named : Object.keys(FILES)) {
     const spec = FILES[file.replace(/^\.\//, '')] || V2;
@@ -514,6 +734,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     if (process.argv.includes('--verbose')) console.log(transparent.rows.map(r => `${BRIDGE}: ${r}`).join('\n'));
     if (transparent.failures.length) { failed = true; console.error(`Transparent contrast check failed in ${BRIDGE}:\n  ${transparent.failures.join('\n  ')}`); }
     count += transparent.rows.length;
+    // MGL-15: habitat classes are part of the default run; their failures are reported apart from the transparent-evidence ones above.
+    const habitat = await habitatCvdReport(readFileSync(new URL('web/tokens.css', root), 'utf8'));
+    if (process.argv.includes('--verbose')) console.log(habitat.rows.map(r => `habitat CVD: ${r}`).join('\n'));
+    if (habitat.failures.length) { failed = true; console.error(`Habitat CVD check failed in web/tokens.css:\n  ${habitat.failures.join('\n  ')}`); }
   }
   if (failed) process.exit(1);
   console.log(`Contrast check passed: ${count} text pairs at or above ${MIN}:1 in light and dark themes.`);

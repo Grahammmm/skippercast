@@ -65,7 +65,7 @@ test('density weights rank grade and fit, change with the target, and draw nothi
 test('the density source belongs to the Marks entry, fades out as the marks come in, and colours from the palette', () => {
   assert.equal(sourceLayer(DENSITY_SOURCE), 'marks');
   assert.equal(sourceLayer(MARKS_SOURCE), 'marks');
-  const sentinel = readPalette(name => `token(${name})`);
+  const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
   const layer = densityLayer(sentinel), style = markStyle(sentinel);
   assert.equal(layer.type, 'heatmap');
   assert.equal(layer.source, DENSITY_SOURCE);

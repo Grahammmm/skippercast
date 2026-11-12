@@ -12,10 +12,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app { display: grid; grid-template-rows: auto auto 1fr; min-height: 100vh; min-height: 100dvh; }
 .app-brief a, .app-sheet a { color: var(--blue); }
 .app select, .app-mobile select, .app-target-search {
-  min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
+  min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md);
   background: var(--panel-2); color: var(--text); font: var(--weight-medium) var(--text-13) / var(--leading-heading) var(--font-sans);
 }
-.app select:focus-visible, .app-mobile select:focus-visible, .app-target-search:focus-visible, .app-details > summary:focus-visible, .app-pick:focus-visible, .app-conditions-chart:focus-visible, .app-fleet-field input:focus-visible, .app-fleet-check input:focus-visible, .app-fleet-how summary:focus-visible, .app-limits-field input:focus-visible, .app-limits-field select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* Masthead */
 .app-masthead { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); background: var(--panel); }
@@ -199,8 +198,8 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-legend-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .app-swatch { width: var(--space-4); height: var(--space-2); border-radius: var(--radius-sm); background: var(--muted); }
 .app-swatch[data-layer="seafloor"] { background: linear-gradient(90deg, var(--depth-0), var(--depth-3)); }
-.app-swatch[data-layer="depth-contours"] { height: 0; border-top: 2px solid var(--depth-1); }
-.app-swatch[data-layer="depth-contours-edge"] { height: 0; border-top: 1px dashed var(--muted); }
+.app-swatch[data-layer="depth-contours"] { height: 0; border-top: 2px solid var(--map-contour); }
+.app-swatch[data-layer="depth-contours-edge"] { height: 0; border-top: 1px dashed var(--map-label); }
 .app-swatch[data-layer="planning-route"] { height: 0; border-top: 2px dashed var(--amber); }
 .app-swatch[data-layer="trip-ranked"] { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--mint); }
 .app-swatch[data-layer="marks-density"] { border-radius: var(--radius-pill); background: radial-gradient(circle, var(--depth-0), var(--depth-1) 45%, transparent 75%); }
@@ -312,7 +311,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-mobile { --app-tabs: calc(56px + env(safe-area-inset-bottom, 0px)); --app-strip: calc(84px + env(safe-area-inset-top, 0px)); position: relative; height: 100vh; height: 100dvh; overflow: hidden; }
 .app-mobile .app-stage { position: absolute; inset: 0; min-height: 0; }
 .app-mobile .app-presentation { top: calc(var(--app-strip) + var(--touch-min) + var(--space-5)); bottom: auto; flex-direction: column-reverse; }
-.app-top { position: absolute; top: 0; left: 0; right: 0; z-index: var(--z-map-chrome); display: flex; flex-direction: column; gap: var(--space-2); padding: calc(var(--space-3) + env(safe-area-inset-top, 0px)) var(--space-4) 0; }
+.app-top { position: absolute; top: 0; left: 0; right: 0; z-index: calc(var(--z-map-chrome) + 1); display: flex; flex-direction: column; gap: var(--space-2); padding: calc(var(--space-3) + env(safe-area-inset-top, 0px)) var(--space-4) 0; }
 .app-top-row { display: flex; align-items: center; gap: var(--space-2); }
 .app-top-card { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 0 var(--space-3) var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); backdrop-filter: blur(6px); }
 .app-top-card .app-brand { min-height: var(--touch-min); font-size: var(--text-15); }
@@ -398,7 +397,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-fleet-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--space-2); }
 .app-fleet-form > .app-fleet-check, .app-fleet-form > .app-empty, .app-fleet-actions { grid-column: 1 / -1; }
 .app-fleet-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; color: var(--muted); font-size: var(--text-11); }
-.app-fleet-field input { min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-13); }
+.app-fleet-field input { min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-13); }
 .app-fleet-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .app-fleet-how summary { display: flex; align-items: center; min-height: var(--touch-min); cursor: pointer; color: var(--blue); }
 .app-fleet-how p { margin: 0; color: var(--muted); }
@@ -444,7 +443,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-limits-status { color: var(--text); font-size: var(--text-15); }
 .app-limits-field { display: grid; grid-template-columns: minmax(0, 1fr) 7rem; align-items: center; gap: var(--space-1) var(--space-3); }
 .app-limits-field label { color: var(--text); font-size: var(--text-13); }
-.app-limits-field input, .app-limits-field select { min-height: var(--touch-min); min-width: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-15); }
+.app-limits-field input, .app-limits-field select { min-height: var(--touch-min); min-width: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-15); }
 .app-limits-hint { grid-column: 1 / -1; color: var(--muted); font-size: var(--text-11); }
 .app-limits-note { color: var(--muted); font-size: var(--text-13); }
 .app-limits-dialog .app-limits-actions { position: sticky; bottom: 0; z-index: 1; padding-block: var(--space-2); background: var(--panel); }
@@ -576,3 +575,15 @@ p.app-forecast-failed-head { font-size: var(--text-15); }
 /* SC1722-20: skip links, the first two tab stops. Clipped to a pixel at rest (still focusable and named); on focus a ringed 44 px panel at the top-left. */
 .app-skip-link { position: fixed; top: calc(var(--space-2) + env(safe-area-inset-top, 0px)); left: calc(var(--space-2) + env(safe-area-inset-left, 0px)); z-index: var(--z-toast); width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .app-skip-link:focus { display: flex; align-items: center; width: auto; height: auto; min-width: var(--touch-min); min-height: var(--touch-min); padding: 0 var(--space-4); overflow: visible; clip-path: none; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); color: var(--text); outline: 2px solid var(--focus); outline-offset: 2px; }
+/* UXFIX-10: the phone's top-card account entry (data-top) is the icon-sized trigger of RF2345-7 at every width; its panel opens above the sheet. */
+.app-account[data-top] > .app-account-top-trigger { box-sizing: border-box; flex: none; gap: 0; padding-inline: 0; min-inline-size: calc(var(--touch-min) + 0.5px); min-block-size: calc(var(--touch-min) + 0.5px); box-shadow: var(--elev-2); }
+.app-account[data-top] > .app-account-top-trigger[aria-expanded="true"] { color: var(--text); background: var(--panel-2); }
+.app-account[data-top] > .app-account-top-trigger > .app-account-label { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.app-top:has(.app-account[data-top] .app-account-panel:not([hidden])) { z-index: var(--z-modal); }
+/* UXFIX-09: each tile's basis button sits at the tile's foot, so the four stand on one line whatever the source line wraps to. */
+.app-tiles .ui-tile > .ui-popover { margin-top: auto; }
+/* UXFIX-10: the phone's top-card account entry (data-top) is the icon-sized trigger of RF2345-7 at every width; its panel opens above the sheet. */
+.app-account[data-top] > .app-account-top-trigger { box-sizing: border-box; flex: none; gap: 0; padding-inline: 0; min-inline-size: calc(var(--touch-min) + 0.5px); min-block-size: calc(var(--touch-min) + 0.5px); box-shadow: var(--elev-2); }
+.app-account[data-top] > .app-account-top-trigger[aria-expanded="true"] { color: var(--text); background: var(--panel-2); }
+.app-account[data-top] > .app-account-top-trigger > .app-account-label { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.app-top:has(.app-account[data-top] .app-account-panel:not([hidden])) { z-index: var(--z-modal); }
