@@ -69,7 +69,7 @@
       "label": "App page (brief, map) styles (first load)",
       "kind": "first_load_css",
       "entry": "app.html",
-      "max_bytes": 77000,
+      "max_bytes": 78000,
       "history": [
         {
           "max_bytes": 71000,
@@ -106,6 +106,10 @@
         {
           "max_bytes": 77000,
           "reason": "Raised 76,000 to 77,000 (RF2135-6). The bounded account-dialog scrollport and its scroll-edge cues this PR adds in web/app/account.css take the app first-load styles to 76,028 bytes on their own (assets/app css 54.6 KB plus degraded-notice 15.0 KB, tokens 3.0 KB and Brief 1.7 KB), 28 bytes over the 76,000 budget; the budget moves up 1,000 bytes (1.3% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 78000,
+          "reason": "MGL-15: explicit theme-resolved map-only colour roles and four numeric controls in web/tokens.css isolate map paint from app chrome without aliases or a restyle. With main fb8828040 merged, the built app first-load styles measure 77,104 bytes, 104 over 77,000. Raise only app_css by the existing 1,000-byte increment to 78,000; keep every measured file and all other budgets unchanged. Removing required independent role declarations would break the frozen palette contract."
         }
       ]
     },
