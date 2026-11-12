@@ -71,6 +71,8 @@ def read_subset(body, bounds, expected_time, resolution):
         required = {"time", "lat", "lon", "u", "v", "number_of_sites", "hdop", "depth"}
         if not required <= nc.variables.keys():
             raise ValueError("NOAA HFRNet subset lacks required fields")
+        if any(hasattr(nc.variables[k], a) for k in required for a in ("scale_factor", "add_offset")):
+            raise ValueError("NOAA HFRNet packed variables unsupported")
         t, lat, lon = (nc.variables[k][:].copy() for k in ("time", "lat", "lon"))
         u, v, n, hdop = (nc.variables[k] for k in ("u", "v", "number_of_sites", "hdop"))
         shape = (1, len(lat), len(lon))

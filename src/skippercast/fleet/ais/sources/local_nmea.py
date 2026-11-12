@@ -103,6 +103,9 @@ def parse_sentence(line: str) -> Fragment | None:
         raise MalformedSentence("fragment numbers are not whole numbers") from None
     if not (1 <= index_n <= count_n <= 9) or not 0 <= fill_n <= 5 or not payload:
         raise MalformedSentence("fragment numbers out of range")
+    if fill_n and index_n < count_n:
+        # Only the last fragment of a message is padded; fill bits here would be joined in as payload.
+        raise MalformedSentence("nonfinal fragment has fill bits")
     return Fragment(own=fields[0] == "AIVDO", count=count_n, index=index_n, seq=seq, channel=channel,
                     payload=payload, fill=fill_n)
 
