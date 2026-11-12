@@ -24,7 +24,7 @@ export function Button({children, ...props}) {
   if (props.onClick) probe.actions.set(Array.isArray(children) ? children.join('') : children, props.onClick);
   return h('button', {type: 'button'}, children);
 }
-export const IconButton = () => null, PortDialog = ({children}) => h('div', {}, children), PositionCheck = () => null;
+export const IconButton = () => null, useScrollCue = () => {}, PortDialog = ({children}) => h('div', {}, children), PositionCheck = () => null;
 export const closeTrip = () => { probe.closes++; };
 export const loadPlanner = () => { probe.loads++; return probe.loader(); };
 export const listPacks = async () => [], canSaveCoastal = async () => false, readCoastal = async () => null, deleteCoastal = async () => {}, saveCoastal = async () => {}, savePack = async () => ({});
@@ -38,7 +38,7 @@ async function load() {
     stdin: {resolveDir: root, loader: 'js', contents: `export {Trip} from './web/app/Trip.tsx'; export {language, t} from './web/i18n.ts'; export {h} from 'preact'; export {render} from 'preact-render-to-string'; export * from '${BOUNDARY}';`},
     outfile: resolve(dir, 'trip.mjs'), bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', jsxImportSource: 'preact', logLevel: 'silent',
     plugins: [preparedCatalogue, {name: 'trip-loading-boundary', setup(b) {
-      const stubbed = ['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-ocean-lines.ts', '../trip-forecast-end.ts', './App.tsx', './PositionCheck.tsx'];
+      const stubbed = ['../ui/Button.tsx', '../ui/scroll-cue.ts', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-ocean-lines.ts', '../trip-forecast-end.ts', './App.tsx', './PositionCheck.tsx'];
       b.onResolve({filter: /.*/}, args => {
         if (args.path === BOUNDARY || (args.importer === trip && stubbed.includes(args.path))) return {path: BOUNDARY, namespace: BOUNDARY};
       });

@@ -8,7 +8,7 @@ import {readFileSync, writeFileSync, mkdirSync, mkdtempSync, realpathSync, rmSyn
 import {tmpdir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {FILES, PAIRS_BRIDGE, check, checkBridge, themes, SURFACE_SOURCE_SHA256} from '../scripts/check_contrast.mjs';
+import {FILES, NON_TEXT_PAIRS, PAIRS_BRIDGE, check, checkBridge, themes, SURFACE_SOURCE_SHA256} from '../scripts/check_contrast.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const SCRIPT = 'scripts/check_contrast.mjs';
@@ -31,7 +31,8 @@ test('required contrast CI adopts pinned surface proof and keeps every failure g
   for (const [file, spec] of Object.entries(FILES)) {
     const css = read(file), result = check(css, spec);
     assert.deepEqual(result.failures, [], file);
-    assert.equal(result.rows.length, 2 * spec.pairs.length);
+    // UXFIX-04: web/tokens.css also carries the two non-text --line-strong pairs per theme.
+    assert.equal(result.rows.length, 2 * (spec.pairs.length + (file === 'web/tokens.css' ? NON_TEXT_PAIRS.length : 0)));
     opaquePairs += result.rows.length;
     // Keep real source checks sensitive to a foreground/background equality.
     const [foreground, background] = spec.pairs[0];
@@ -45,8 +46,8 @@ test('required contrast CI adopts pinned surface proof and keeps every failure g
   assert.deepEqual(bridged.failures, []);
   assert.equal(bridged.rows.length, 2 * PAIRS_BRIDGE.length);
   opaquePairs += bridged.rows.length;
-  // 2 × (17 web/tokens.css + 20 bridge) pairs; FE-61 Accept 2 retired v1 dist/tokens.css (2 × 19).
-  assert.equal(opaquePairs, 74);
+  // 2 × (17 web/tokens.css text + 2 non-text + 20 bridge) pairs; FE-61 Accept 2 retired v1 dist/tokens.css (2 × 19).
+  assert.equal(opaquePairs, 78);
   assert.ok(checkBridge(bridge.replace('--coast-text: var(--text);', '--coast-text: var(--panel);'), tokens).failures.length > 0);
 
   // Run the real approved explicit CLI, without importing/rerunning its math suite.
