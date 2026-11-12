@@ -1,4 +1,4 @@
-// SC1722-20: each Basis disclosure in the brief is named for its row ("Basis for wind") while its visible word stays, and no two
+// SC1722-20: each Basis disclosure in the brief is named for its row ("Source for wind") while its visible word stays, and no two
 // disclosures in one brief share an accessible name. The real bundled Tiles, Tile and Popover are rendered to markup; the verdict and
 // run disclosures are proved by the catalogue names they take and by e2e/v2-skip-links.spec.ts on the real page.
 import assert from 'node:assert/strict';
@@ -25,7 +25,7 @@ const {Tiles, Popover, Tile, language, render, h} = await import(pathToFileURL(o
 const HOUR = 3_600_000;
 const tile = (id, over = {}) => ({id, label: id[0].toUpperCase() + id.slice(1), value: 5, unit: 'kt', detail: 'detail', source: 'NDBC 46042', sourceUrl: null, state: 'fresh', ageMs: HOUR, limitMs: 3 * HOUR, lastGood: false, ...over});
 const FOUR = () => ['wind', 'swell', 'water', 'tide'].map(id => tile(id));
-const NAMES = {en: ['Basis for wind', 'Basis for swell', 'Basis for water', 'Basis for tide'], es: ['Base del viento', 'Base del oleaje', 'Base del agua', 'Base de la marea']};
+const NAMES = {en: ['Source for wind', 'Source for swell', 'Source for water', 'Source for tide'], es: ['Fuente del viento', 'Fuente del oleaje', 'Fuente del agua', 'Fuente de la marea']};
 /** Each summary's accessible name (its aria-label, else its text) and its visible word. */
 const summaries = html => [...html.matchAll(/<summary class="ui-popover-summary ui-eyebrow"(?: aria-label="([^"]*)")?>(.*?)<\/summary>/g)].map(m => ({name: m[1] ?? m[2], visible: m[2]}));
 const asLang = (lang, fn) => { language.value = lang; try { return fn(); } finally { language.value = 'en'; } };
@@ -58,15 +58,15 @@ test('compact rows have no disclosure to name, and a tile keeps its row name whe
 });
 
 test('opt_in_popover: the name is only set when asked for; every legacy rendering is unchanged', () => {
-  const bare = render(h(Popover, {}, 'x')), named = render(h(Popover, {accessibleName: 'Basis for wind'}, 'x'));
-  assert.match(bare, /<summary class="ui-popover-summary ui-eyebrow">basis<\/summary>/, 'no prop: no aria-label');
-  assert.match(named, /<summary class="ui-popover-summary ui-eyebrow" aria-label="Basis for wind">basis<\/summary>/, 'the visible word stays');
+  const bare = render(h(Popover, {}, 'x')), named = render(h(Popover, {accessibleName: 'Source for wind'}, 'x'));
+  assert.match(bare, /<summary class="ui-popover-summary ui-eyebrow">Source<\/summary>/, 'no prop: no aria-label');
+  assert.match(named, /<summary class="ui-popover-summary ui-eyebrow" aria-label="Source for wind">Source<\/summary>/, 'the visible word stays');
   assert.match(render(h(Popover, {iconOnly: true, summary: 'Where'}, 'x')), /aria-label="Where"/, 'an icon-only summary is still named by its summary');
   assert.match(render(h(Popover, {iconOnly: true, summary: 'Where', accessibleName: 'Where to look'}, 'x')), /aria-label="Where to look"/);
   assert.match(render(h(Popover, {summary: ''}, 'x')), /<summary class="ui-popover-summary ui-eyebrow"><\/summary>/, 'an explicit empty summary stays empty');
   const noName = render(h(Tile, {label: 'Wind', reading: '5', basis: 'b'}));
   assert.doesNotMatch(noName, /aria-label/, 'a generic Tile keeps its markup');
-  assert.match(render(h(Tile, {label: 'Wind', reading: '5', basis: 'b', basisLabel: 'Basis for wind'})), /aria-label="Basis for wind"/);
+  assert.match(render(h(Tile, {label: 'Wind', reading: '5', basis: 'b', basisLabel: 'Source for wind'})), /aria-label="Source for wind"/);
 });
 
 test('verdict and run names: their own catalogue words in both languages, distinct from the rows and from each other', async () => {
@@ -77,12 +77,25 @@ test('verdict and run names: their own catalogue words in both languages, distin
     assert.ok(words.every(w => typeof w === 'string' && w.trim()), `${lang}: every row has a name`);
     assert.equal(new Set(words).size, ids.length, `${lang}: all six are different`);
   }
-  assert.equal(strings['a11y.basis.verdict'].en, 'Basis for the verdict');
-  assert.equal(strings['a11y.basis.run'].en, 'Basis for run time');
+  assert.equal(strings['a11y.basis.verdict'].en, 'Source for the verdict');
+  assert.equal(strings['a11y.basis.run'].en, 'How this is worked out: run time');
   // The run disclosure's visible word stays its own "basis"/"fundamento"; the Spanish name contains it (label in name).
   assert.ok(strings['a11y.basis.run'].es.toLowerCase().includes(strings['run.basis'].es.toLowerCase()));
   for (const file of ['web/brief/Brief.tsx', 'web/brief/Run.tsx']) {
     const source = await readFile(join(ROOT, file), 'utf8');
     assert.match(source, file.endsWith('Brief.tsx') ? /accessibleName=\{t\('a11y\.basis\.verdict'/ : /accessibleName=\{t\('a11y\.basis\.run'/, file);
+  }
+});
+
+// UXFIX-06: the tide basis explains MLLW in plain words; another datum keeps the plain reference-level line.
+test('mllw_gloss: only a tide basis on MLLW carries the gloss, in both languages', () => {
+  const GLOSS = {en: "Heights are above MLLW (mean lower low water, the chart's zero).", es: 'Alturas sobre MLLW (bajamar media inferior, el cero de la carta).'};
+  const OTHER = {en: 'Reference level: NAVD88.', es: 'Nivel de referencia: NAVD88.'};
+  const basis = (lang, datum) => asLang(lang, () => render(h(Tiles, {tiles: ['wind', 'swell', 'water', 'tide'].map(id => tile(id, id === 'tide' ? {detail: `Rising · ${datum}`} : {}))})));
+  for (const lang of ['en', 'es']) {
+    assert.ok(basis(lang, 'MLLW').includes(GLOSS[lang]), `${lang}: MLLW is explained`);
+    assert.ok(!basis(lang, 'MLLW').includes(OTHER[lang].split(':')[0]), `${lang}: no bare reference line beside the gloss`);
+    assert.ok(basis(lang, 'NAVD88').includes(OTHER[lang]) && !basis(lang, 'NAVD88').includes(GLOSS[lang]), `${lang}: another datum keeps today's text`);
+    assert.equal(basis(lang, 'MLLW').split(GLOSS[lang]).length, 2, `${lang}: the gloss appears once, on the tide only`);
   }
 });
