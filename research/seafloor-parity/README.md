@@ -52,6 +52,10 @@ is a named failure, never a download.
 All paths must resolve inside `private-runs/<row-id>/` (no symlink escapes; no symlinked
 `dist`, `catalog`, `var` paths). The row root itself must be a real directory directly under the
 fixed `private-runs` parent; a symlinked row root is refused, never adopted as the confinement root.
+Before any child starts, each requested reach's `var/seafloor/reaches/<id>` and
+`var/seafloor/private-reaches/<id>` must be absent or a real directory inside the checkout with no
+symlink anywhere under it (the pipeline writes checkpoints, outputs and `run.json` through it); a
+symlinked or escaping reach directory is refused with no child run.
 If both `var/seafloor/reaches/<id>/run.json` and `private-reaches/<id>/run.json` exist, the run is an
 `error` (`receipt-ambiguous`): a hash-verified reuse does not rewrite its receipt, so modification
 time cannot say which one the run used. Remove the stale receipt from the disposable checkout.
