@@ -144,7 +144,7 @@ def hourly(observations):
 def recent_summary(observations, qc, now, days=WINDOW_DAYS):
     end = int(now.timestamp() * 1000)
     start = end // HOUR * HOUR - days * 24 * HOUR
-    selected = {at: o for at, o in observations.items() if start <= at <= end}
+    selected = {at: o for at, o in observations.items() if start <= at < end}  # half-open, like the gap scan
     hours = hourly(selected)
     slots = {epoch(h["at"]) for h in hours if any(h[m] is not None for m in FIELDS)}
     expected, gap, max_gap = math.ceil((end - start) / HOUR), 0, 0
