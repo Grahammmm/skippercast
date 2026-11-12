@@ -54,6 +54,8 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-tiles--dense { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-1); }
 .app-tiles--dense .ui-tile { min-width: 0; padding: var(--space-2) var(--space-1); }
 .app-tiles--dense .ui-tile-label .icon { display: none; }
+/* UXFIX-09: each tile's basis button sits at the tile's foot, so the four stand on one line whatever the source line wraps to. */
+.app-tiles .ui-tile > .ui-popover { margin-top: auto; }
 .app-tiles--dense .ui-tile-detail, .app-tiles--dense .ui-tile-source { flex-wrap: wrap; overflow-wrap: anywhere; font-size: var(--text-11); }
 .app-tiles--dense .ui-tile:nth-child(n + 3) .ui-popover-body { left: auto; right: 0; }
 /* #616: the day verdict leads the brief; the word takes the verdict's colour, the limit sentence follows. */
@@ -312,7 +314,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-mobile { --app-tabs: calc(56px + env(safe-area-inset-bottom, 0px)); --app-strip: calc(84px + env(safe-area-inset-top, 0px)); position: relative; height: 100vh; height: 100dvh; overflow: hidden; }
 .app-mobile .app-stage { position: absolute; inset: 0; min-height: 0; }
 .app-mobile .app-presentation { top: calc(var(--app-strip) + var(--touch-min) + var(--space-5)); bottom: auto; flex-direction: column-reverse; }
-.app-top { position: absolute; top: 0; left: 0; right: 0; z-index: var(--z-map-chrome); display: flex; flex-direction: column; gap: var(--space-2); padding: calc(var(--space-3) + env(safe-area-inset-top, 0px)) var(--space-4) 0; }
+.app-top { position: absolute; top: 0; left: 0; right: 0; z-index: calc(var(--z-map-chrome) + 1); display: flex; flex-direction: column; gap: var(--space-2); padding: calc(var(--space-3) + env(safe-area-inset-top, 0px)) var(--space-4) 0; }
 .app-top-row { display: flex; align-items: center; gap: var(--space-2); }
 .app-top-card { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 0 var(--space-3) var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); backdrop-filter: blur(6px); }
 .app-top-card .app-brand { min-height: var(--touch-min); font-size: var(--text-15); }
