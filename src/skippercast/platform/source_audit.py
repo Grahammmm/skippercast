@@ -22,7 +22,8 @@ def probe(source, session=None):
         body=r.body
         row.update(status="accessible",http_status=r.status,final_url=r.final_url,
                    content_type=r.headers.get("Content-Type"),http_last_modified=r.headers.get("Last-Modified"),
-                   sampled_bytes=len(body),body_complete=len(body)<=SAMPLE_BYTES,sha256=r.receipt.sha256)
+                   # Complete only if not cut by the local sample cap and not an HTTP 206 fragment.
+                   sampled_bytes=len(body),body_complete=r.status!=206 and len(body)<=SAMPLE_BYTES,sha256=r.receipt.sha256)
         if not body.strip(): raise ValueError("Empty documentation response")
     except Exception as e:
         row.update(status="unavailable",error=f"{type(e).__name__}: {str(e)[:180]}")
