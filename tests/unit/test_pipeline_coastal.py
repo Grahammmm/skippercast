@@ -62,6 +62,26 @@ class CoastalWatchTests(unittest.TestCase):
         for bad in [{**other,'coordinates':[-118,33]},{**other,'date':'2026-10-01'},{**other,'date':'2026-08-01'},{**other,'location_review':'unreviewed'},{**other,'original_publisher_id':'one'}]:
             self.assertEqual(result([report,bad])['status'],'watch-only')
 
+    def test_non_text_source_urls_skip_only_their_own_report(self):
+        report={'date':'2026-09-21','coordinates':[-121.4,35.6],'coordinate_role':'fishing-observation','location_review':'reviewed','original_publisher_id':'one','publisher_review':'reviewed','source_url':'https://one.example/report','catches':[{'species':'yellowfin','count':5}]}
+        other={**report,'date':'2026-09-20','source_url':'https://two.example/report','original_publisher_id':'two'}
+        def result(rows):return next(w for w in located_reports(self.coast,rows,self.now,self.catalog['policy']) if w['target']=='yellowfin')
+        for value in (7,0,-3,2.5,True,False,None,['https://bad.example'],{'url':'https://bad.example'},b'https://bad.example/x'):
+            bad={**other,'original_publisher_id':'three','date':'2026-09-19','source_url':value}
+            for rows in ([bad,report,other],[report,other,bad]):
+                with self.subTest(value=value):
+                    got=result(rows)
+                    self.assertEqual(got['status'],'recent-located-reports')
+                    self.assertEqual([e['url'] for e in got['evidence']],['https://one.example/report','https://two.example/report'])
+            with self.subTest(value=value,quorum=True):
+                got=result([report,bad])
+                self.assertEqual(got['status'],'watch-only');self.assertEqual(len(got['evidence']),1)
+                self.assertEqual(result([bad])['evidence'],[])
+        gone={k:v for k,v in other.items() if k!='source_url'}
+        self.assertEqual(result([report,gone])['status'],'watch-only')
+        for url in ('http://two.example/r','','https:///r'):
+            self.assertEqual(result([report,{**other,'source_url':url}])['status'],'watch-only')
+
     def test_only_positive_finite_non_boolean_counts_support_reports(self):
         import copy
         def rep(day,pub,*counts):return {'date':day,'coordinates':[-121.4,35.6],'coordinate_role':'fishing-observation','location_review':'reviewed','original_publisher_id':pub,'publisher_review':'reviewed','source_url':f'https://{pub}.example/r','catches':[{'species':'yellowfin','count':c} for c in counts]}

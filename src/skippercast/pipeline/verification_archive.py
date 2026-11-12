@@ -235,9 +235,15 @@ def write_archive(directory, region_id, forecasts, observations, now, previous_d
         else:
             raise ValueError('Unknown prior verification archive format')
     current = _write_generation(directory, region_id, forecasts, observations, now)
-    if previous is not None:
-        _atomic_bytes(directory / 'verification-state.previous.json', _json(previous) + b'\n')
-    _atomic_bytes(directory / 'verification-state.json', _json(current) + b'\n')
+    # Admit both complete on-disk buffers (newline and migration marker included)
+    # before replacing either manifest.
+    current_bytes = _json(current) + b'\n'
+    previous_bytes = _json(previous) + b'\n' if previous is not None else None
+    if len(current_bytes) > MAX_MANIFEST_BYTES or (previous_bytes is not None and len(previous_bytes) > MAX_MANIFEST_BYTES):
+        raise ValueError('Verification manifest is linked or exceeds its size bound')
+    if previous_bytes is not None:
+        _atomic_bytes(directory / 'verification-state.previous.json', previous_bytes)
+    _atomic_bytes(directory / 'verification-state.json', current_bytes)
     prune_archive(directory)
     return current
 
