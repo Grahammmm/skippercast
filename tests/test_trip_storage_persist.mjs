@@ -1,3 +1,4 @@
+import './helpers/spanish-ready.mjs';
 // SC2037-05: the browser is asked to keep saved packs once, only after a save resolved; the dialog's words and
 // the estimate line. A stubbed navigator.storage counts every call.
 import assert from 'node:assert/strict';
@@ -63,5 +64,6 @@ test('the refused words and the estimate line', async () => {
   assert.equal(KEEP_WORDS.agreed, 'This browser agreed to keep saved packs.');
   const line = await storageLine(stub().nav);
   assert.deepEqual(line, {used: 1_500_000, quota: 2_000_000_000});
-  assert.equal(estimateWords(line), "Browser's estimate: 1.5 MB used of 2000.0 MB available");
+  assert.equal(estimateWords(line), "Browser's estimate: 1.5 MB used of 2.0 GB available");
+  assert.equal(estimateWords(line, 'es'), 'Estimación del navegador: 1.5 MB usados de 2,0 GB disponibles');
 });

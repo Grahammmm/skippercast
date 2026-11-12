@@ -160,7 +160,9 @@ const focusAudit = sheets => {
     const body = ruleBody(sheets[name], selector);
     if (body && /outline/.test(body)) f.push(`duplicate outline: ${selector}`);
   }
-  if (!ruleBody(sheets.planCss, '.app-plan h2:focus-visible') || !RING.test(ruleBody(sheets.planCss, '.app-plan h2:focus-visible'))) f.push('plan heading ring');
+  // UXFIX-04: the plan heading (h2 tabindex=-1, PlanView.tsx) takes the shared ring; plan.css keeps no copy of it.
+  const shared = rulesOf(sheets.uiCss.replace(/\/\*[\s\S]*?\*\//g, '')).find(([s]) => /^:where\([^)]*\[tabindex\][^)]*\):focus-visible/.test(s.trim()));
+  if (!shared || !RING.test(shared[1]) || !/outline-offset\s*:\s*2px/.test(shared[1]) || ruleBody(sheets.planCss, '.app-plan h2:focus-visible')) f.push('plan heading ring');
   if (!/outline-offset\s*:\s*-2px/.test(ruleBody(sheets.appCss, '.app-tabs .app-views a:focus-visible') ?? '')) f.push('tab offset');
   if (/summary, a\)/.test(sheets.accountCss)) f.push('alerts link arm');
   if (!/border-radius\s*:\s*var\(--radius-sm\)/.test(ruleBody(sheets.landingCss, '.landing a:focus-visible') ?? '')) f.push('landing radius');
@@ -176,6 +178,7 @@ test('shared_link_outline: one a:focus-visible ring and inset canvas rings, dupl
   assert.ok(mutate('uiCss', '.app-chart canvas:focus-visible, .app-terrain canvas:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }', '.app-chart canvas:focus-visible, .app-terrain canvas:focus-visible { outline: 1px solid var(--focus); outline-offset: -2px; }').includes('inset canvas ring'));
   assert.ok(mutate('uiCss', 'outline-offset: -2px; }', 'outline-offset: -2px; box-shadow: 0 0 0 2px var(--focus); }').includes('canvas ring is a shadow'));
   assert.ok(mutate('landingCss', '.landing a:focus-visible { border-radius', '.landing a:focus-visible { outline: 2px solid var(--focus); border-radius').includes('duplicate outline: .landing a:focus-visible'));
-  assert.ok(mutate('planCss', '.app-plan h2:focus-visible {', '.app-plan h3:focus-visible {').includes('plan heading ring'));
+  assert.ok(mutate('uiCss', 'summary, [tabindex]):focus-visible', 'summary):focus-visible').includes('plan heading ring'));
+  assert.ok(focusAudit({...sheets, planCss: sheets.planCss + '\n.app-plan h2:focus-visible { outline: 2px solid var(--focus); }'}).includes('plan heading ring'));
   assert.ok(mutate('appCss', '.app-tabs .app-views a:focus-visible { outline-offset: -2px; }', '.app-tabs .app-views a:focus-visible { outline-offset: 2px; }').includes('tab offset'));
 });
