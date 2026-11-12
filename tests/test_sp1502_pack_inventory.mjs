@@ -66,14 +66,14 @@ async function harness(t, responses) {
         if (args.path === 'preact/hooks') return {path: resolve(fixtures, 'runtime.mjs')};
         if (['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-ocean-lines.ts', '../trip-forecast-end.ts', './App.tsx', './PositionCheck.tsx'].includes(args.path))
           return {path: resolve(fixtures, 'boundary.mjs')};
-        if (['../../dist/offline-core.js', 'preact/jsx-runtime', '../i18n.ts', '../brief/remaining-copy.ts'].includes(args.path)) return;   // SC0707-10: the real catalogue reader, nothing else
+        if (['../../dist/offline-core.js', 'preact/jsx-runtime', '../i18n.ts', '../size-text.ts', '../brief/remaining-copy.ts'].includes(args.path)) return;   // SC0707-10: the real catalogue reader, nothing else
         throw new Error(`unadmitted product import: ${args.path}`);
       });
     }}, preparedCatalogue],
   });
   for (const input of Object.keys(result.metafile.inputs)) {
     const path = resolve(root, input);
-    assert.ok(path === resolve(root, 'web/app/Trip.tsx') || path === resolve(root, 'dist/offline-core.js') || path === resolve(root, 'web/i18n.ts') || path === resolve(root, 'web/brief/remaining-copy.ts') || path === resolve(root, 'web/i18n-core.ts') || path === resolve(root, 'web/i18n-catalogue.ts') || path === resolve(root, 'web/strings.en.generated.json') || path === resolve(root, 'web/strings.es.generated.json') ||
+    assert.ok(path === resolve(root, 'web/app/Trip.tsx') || path === resolve(root, 'dist/offline-core.js') || path === resolve(root, 'web/i18n.ts') || path === resolve(root, 'web/size-text.ts') || path === resolve(root, 'web/brief/remaining-copy.ts') || path === resolve(root, 'web/i18n-core.ts') || path === resolve(root, 'web/i18n-catalogue.ts') || path === resolve(root, 'web/strings.en.generated.json') || path === resolve(root, 'web/strings.es.generated.json') ||
       path.startsWith(fixtures + '/') || /[/]node_modules[/](?:.*[/])?(?:@?preact|preact-render-to-string|signals-core|signals)[/]/.test(path),
     `unadmitted import graph input: ${input}`);
   }
@@ -211,12 +211,13 @@ extraTest('A4 overlapping refreshes retain rows while pending and ignore older s
 const withMeta = (extra, tiles = {saved: 1, planned: 1, min_zoom: 8, max_zoom: null}) =>
   [{cache: 'skippercast-pack-fixture-harbor-20261022', meta: {...structuredClone(packs[1].meta), region_id: 'fixture-harbor', region_name: 'Fixture Harbor', tiles, ...extra}}];
 
-extraTest('SC1952-03 the chart pack paragraph names the published land-water screen and depth contours, qualified, beside the older coverage', async t => {
+extraTest('UXFIX-08 the chart pack paragraph says in plain words what works without signal, with no zoom or land-water screen', async t => {
   const h = await harness(t, [success([])]);
   h.render();
   const html = await h.settle();
-  assert.ok(html.includes('the published land-water screen and depth contours (where the region publishes them)'));
-  for (const kept of ['NOAA chart tiles', 'base map at zoom 8–12', 'Water temperature and currents are saved with the pack when current; each saved region below says what was saved. For Morro Bay and Cambria, save Coastal readings below.', 'Check the saved pack before leaving coverage.'])
+  assert.ok(html.includes('Saves what you need without signal: the forecast, rules and protected areas, the chart, the base map and depth lines for this region.'));
+  assert.ok(!/zoom|land-water screen/i.test(html.match(/Saves what you need[^<]*/)[0]));
+  for (const kept of ['Water temperature and currents are saved with the pack when current; each saved region below says what was saved. For Morro Bay and Cambria, save Coastal readings below.', 'Check the saved pack before leaving coverage.'])
     assert.ok(html.includes(kept), kept);
 });
 
