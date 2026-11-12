@@ -73,6 +73,8 @@ def read_subset(body, bounds, path):
         temp = nc.variables["analysed_sst"]
         err = nc.variables["analysis_error"]
         mask = nc.variables["mask"]
+        if lat.ndim != 1 or lon.ndim != 1 or len(set(lat.tolist())) != len(lat) or len(set(lon.tolist())) != len(lon):
+            raise ValueError("NOAA SST axes changed")  # rank-two or repeated native coordinates would repeat grid addresses
         if len(t) != 1 or len(lat) < 1 or len(lon) < 1 or temp.shape != (1, len(lat), len(lon)) or err.shape != temp.shape or mask.shape != temp.shape:
             raise ValueError("NOAA SST axes changed")
         if temp.units != b"kelvin" or err.units != b"kelvin" or temp.scale_factor != .01 or err.scale_factor != .01 or abs(temp.add_offset - 273.15) > .001 or mask.flag_values.tolist() != [1, 2, 4]:
