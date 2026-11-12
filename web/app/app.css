@@ -200,6 +200,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-swatch[data-layer="seafloor"] { background: linear-gradient(90deg, var(--depth-0), var(--depth-3)); }
 .app-swatch[data-layer="depth-contours"] { height: 0; border-top: 2px solid var(--depth-1); }
 .app-swatch[data-layer="depth-contours-edge"] { height: 0; border-top: 1px dashed var(--muted); }
+.app-swatch[data-layer="planning-route"] { height: 0; border-top: 2px dashed var(--amber); }
 .app-swatch[data-layer="trip-ranked"] { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--mint); }
 .app-swatch[data-layer="marks-density"] { border-radius: var(--radius-pill); background: radial-gradient(circle, var(--depth-0), var(--depth-1) 45%, transparent 75%); }
 .app-swatch[data-layer="currents"] { background: var(--flow); }

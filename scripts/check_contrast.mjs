@@ -428,7 +428,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // RF2135-5 (size fix) also folds six identical focus-ring rules into the first one, one 44px link-target rule for five links and the two blue link colours into one rule (same declarations and selectors, no paint changed); that removes two rules before the legend rules, so the cited app.css lines after :29 moved up by two.
   // SC1722-20 only appends a scoped .app-skip-link block at the end of app.css (token colours; a clipped 1 px anchor at rest, a ringed 44 px panel when focused);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved. It also folds the .app-history layout rules into the .app-conditions ones (same declarations, same order; no paint changed) to stay inside the app styles size budget.
-  "appCss": "22bf62be063f7d6386d866f109f96b2be26452f2fafc5b7255caed4c5fb7f134",
+  // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
+  "appCss": "5a1d3e6da97b02e086ebc6845a5b6bbb1d40fc12256474aa5f944ce371426011",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
@@ -452,7 +453,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1352-06 shows the saved-spots status in the page’s language through the same Status wrapper (copy only, no paint); the same note text role stays, and no backing, opacity, token or threshold changed.
   // SC1352-07 shows the evidence layers' status lines (charter grounds, commercial AIS, temperature fronts) and the fronts basis in the page's language through the same Status wrapper (copy only, no paint); the same note text roles stay, and two lines were added above the cited rows.
   // SCFEAT-FRESH-1 adds an "Updates: cadence" line under each drawn layer row and the protected-areas row, using the existing app-legend-note text role (copy only); no backing, opacity, token or threshold changed.
-  "legendTsx": "8123b609f7925f58446bf58a5ab640e231380cc533537244cf4e9588b82f43c2"
+  // SC1407-15: planning-route row uses existing text/muted glass roles; no paint math, thresholds or backing changed.
+  "legendTsx": "045a0f55859fc8aace47ab6b23a6ee7fed0736d41e13ee3835bc1f1215f24ce9"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
@@ -473,8 +475,8 @@ export function checkSurfaceSource(sources) {
         ['legend-labels', 'muted', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:858-868,2678-2684; bridge:21,27'],
         ['sheen-text', 'text', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,26'],
         ['sheen-muted', 'muted', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,27'],
-        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,173,213,227; Legend.tsx:378'],
-        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:173,194,242; Legend.tsx:109,243,378'],
+        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,173,213,227; Legend.tsx:394'],
+        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:173,194,242; Legend.tsx:111,245,394'],
       ]) {
         const foreground = resolve(role);
         results.push({theme, id, binding, foreground, surface,
