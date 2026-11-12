@@ -13,8 +13,9 @@ export interface MoonPhase {readonly name: PhaseName; readonly fraction: number}
 
 const RAD = Math.PI / 180;
 const norm = (deg: number): number => ((deg % 360) + 360) % 360;
-/** The Moon's mean rate of elongation, degrees per day: "within a day" of a principal phase. */
-const DEG_PER_DAY = 12.19;
+const DAY_MS = 86400000;
+/** Signed circular difference in degrees, [-180, 180). */
+const wrap = (deg: number): number => ((deg + 180) % 360 + 360) % 360 - 180;
 const PHASES: readonly PhaseName[] = ['new', 'waxing crescent', 'first quarter', 'waxing gibbous', 'full', 'waning gibbous', 'last quarter', 'waning crescent'];
 
 /** The Moon's elongation east of the Sun in degrees, [0, 360): 0 new, 90 first quarter, 180 full, 270 last quarter. */
@@ -32,9 +33,11 @@ export function elongation(at: Date): number {
 export function moonPhase(at: Date): MoonPhase {
   const e = elongation(at);
   const fraction = (1 - Math.cos(e * RAD)) / 2;
-  const index = Math.round(e / 90) * 2;
-  const near = Math.abs(e - Math.round(e / 90) * 90) <= DEG_PER_DAY;
-  const name = near ? PHASES[index % 8]! : PHASES[Math.floor(e / 90) * 2 + 1]!;
+  const q = Math.round(e / 90);
+  // "Within one day" is elapsed time: the modelled elongation reaches the nearest principal angle between at - 1 day and at + 1 day.
+  const target = wrap(q * 90 - e);
+  const near = wrap(elongation(new Date(at.getTime() - DAY_MS)) - e) <= target && target <= wrap(elongation(new Date(at.getTime() + DAY_MS)) - e);
+  const name = near ? PHASES[(q * 2) % 8]! : PHASES[Math.floor(e / 90) * 2 + 1]!;
   return {name, fraction};
 }
 
