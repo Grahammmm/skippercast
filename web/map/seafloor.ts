@@ -185,7 +185,7 @@ export const seafloorSource = () => ({type: 'geojson' as const, data: EMPTY});
 
 /** The four layers, hidden until the publication admits something; the depth ramp ranks grade and fit (strongest brightest). */
 export function seafloorLayers(p: Palette) {
-  const color = ['match', ['get', 'tone'], 'strong', p.depth0, 'moderate', p.depth1, 'some', p.depth2, 'search', p.amber, 'interpreted', p.blue, p.muted];
+  const color = ['match', ['get', 'tone'], 'strong', p.depth0, 'moderate', p.depth1, 'some', p.depth2, 'search', p.amber, 'interpreted', p.blue, p.mapLabel];
   const of = (tones: Tone[]) => ['in', ['get', 'tone'], ['literal', tones]];
   const layout = {visibility: 'none'};
   return [

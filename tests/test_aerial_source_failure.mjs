@@ -49,7 +49,7 @@ function setup(t, {base = 'aerial'} = {}) {
   syncFromURL(location.href);
   unavailable.value = [];
   const fake = library(), errors = [];
-  const style = chartStyle({palette: readPalette(name => `token(${name})`), archive: 'https://s.test/feeds/tiles/basemap/x.pmtiles', page: PAGE, region: 'morro-bay', base});
+  const style = chartStyle({palette: readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), archive: 'https://s.test/feeds/tiles/basemap/x.pmtiles', page: PAGE, region: 'morro-bay', base});
   const eng = createEngine(fake.module, {host: {}, style, camera: {latitude: 35.37, longitude: -120.86, zoom: 12}, onMove() {},
     onLayerError: (layer, error) => { errors.push([layer, error.message]); markUnavailable(layer); }});
   const [map] = fake.maps;

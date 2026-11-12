@@ -106,7 +106,7 @@ function contours(t, {serve = () => null, id = 'r'} = {}) {
   };
   const overlays = [];
   const engine = signal({setOverlay(_id, o) { overlays.push(o); }, setData() {}});
-  const layer = createDepthContours({engine, fetchFn, page: () => location.href, palette: () => ({}), now: () => Date.parse('2026-10-20T18:00:00Z')});
+  const layer = createDepthContours({engine, fetchFn, page: () => location.href, palette: () => ({mapContourWidth: '1'}), now: () => Date.parse('2026-10-20T18:00:00Z')});
   t.after(() => { layer.destroy(); camera.value = null; });
   const detail = async () => { camera.value = {...camera.value, zoom: DETAIL_ZOOM + ZOOM_OFFSET}; await flush(); await flush(); };
   return {asked, detail, layer, overlays};
