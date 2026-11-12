@@ -88,6 +88,9 @@ history, not a climatology, forecast or catch probability.
   The 7-, 14- and 45-day views read the 45 days of hourly means. Missing hours
   and sentinel values are counted, never filled or interpolated; conflicting
   duplicate rows mask the value.
+- **Recent window:** samples are start-inclusive and `through`-exclusive. A
+  partial current UTC-hour bucket counts in `expectedHours`; a sample exactly
+  at the cutoff belongs to the next window.
 - **Failures:** a station whose index or annual files fail keeps its published
   baseline; a failed realtime file keeps the last series, marked stale after
   three hours. If every request fails nothing is published.
