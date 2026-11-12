@@ -20,7 +20,8 @@ Record layout (FCC ULS public access files; 0-based field positions):
 - ``HD``: 1 unique system identifier, 4 call sign, 5 licence status,
   6 radio service, 7 grant date, 8 expired date, 9 cancellation date.
 - ``EN``: 1 identifier, 5 entity type (``L`` licensee), 7 entity name,
-  8 first name, 10 last name, 16 city, 17 state, 23 applicant type code.
+  8 first name, 9 middle initial (a personal-name part: any value withholds the entity), 10 last name,
+  16 city, 17 state, 23 applicant type code.
 - ``SH``: 1 identifier, 4 call sign, 8 ship category, 9 vessel name,
   10 vessel identification (USCG official number or state registration),
   21 MMSI.
@@ -175,7 +176,7 @@ def parse_ship_zip(data: bytes | IO[bytes], state: str, *, source_id: str, right
     for f in _records(archive, members["EN"], "EN", stats):
         if f[5].strip() != "L" or f[17].strip().upper() != state:
             continue
-        entity = f[7].strip() if is_entity(f[23], f[7], f[8], f[10]) else None
+        entity = f[7].strip() if not f[9].strip() and is_entity(f[23], f[7], f[8], f[10]) else None
         licensees[f[1]] = (entity, ports.get(_norm(f[16])))
     headers: dict[str, list[str]] = {}
     for f in _records(archive, members["HD"], "HD", stats):
