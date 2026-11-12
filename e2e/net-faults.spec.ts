@@ -1,0 +1,90 @@
+// UXFIX-12 @nightly: network faults and a clean console, on fixtures. Runs only when E2E_WIDE=1 (the nightly e2e step in ci.yml);
+// a pull-request run lists these cases and skips every one. Nothing here reaches a live host: fixtures.ts aborts every other origin.
+import type {Page, Route} from '@playwright/test';
+import {test, expect} from './fixtures.ts';
+
+const WIDE = process.env.E2E_WIDE === '1';
+const SHELL = '/map?region=morro-bay&ui=v2';
+const FORECAST = '**/api/forecast?*';
+/** The day verdict's words (web/brief/verdict.ts VERDICT_WORD): none may show before the final answer (SC1722-02). */
+const VERDICT = /^(Comfortable|Marginal|Rough|Unknown)$/;
+
+test.describe('@nightly net-faults', () => {
+  test.beforeEach(() => { test.skip(!WIDE, 'nightly only: set E2E_WIDE=1'); });
+
+  /** Records every verdict word the page ever renders, from before the first script runs. */
+  async function watchVerdict(page: Page) {
+    await page.addInitScript(() => {
+      const seen: string[] = [];
+      (window as unknown as {__verdictSeen: string[]}).__verdictSeen = seen;
+      const look = () => { for (const el of document.querySelectorAll('.app-verdict-word, [data-verdict]')) seen.push((el.textContent ?? '').trim() || String(el.getAttribute('data-verdict'))); };
+      new MutationObserver(look).observe(document, {subtree: true, childList: true, characterData: true, attributes: true});
+    });
+  }
+  const verdictSeen = (page: Page) => page.evaluate(() => (window as unknown as {__verdictSeen: string[]}).__verdictSeen);
+
+  const faults: Array<[string, (route: Route) => Promise<void>]> = [
+    ['aborted', route => route.abort('failed')],
+    ['500', route => route.fulfill({status: 500, json: {error: 'fixture fault'}})],
+    ['empty object {}', route => route.fulfill({json: {}})],
+    ['8 s delay then 503', async route => { await new Promise(r => setTimeout(r, 8_000)); await route.fulfill({status: 503, json: {error: 'fixture fault'}}).catch(() => undefined); }],
+  ];
+  for (const [name, answer] of faults) {
+    test(`forecast ${name}: no verdict word before the final one, and a failed state with Try again by 20 s`, async ({page, pageErrors}) => {
+      await watchVerdict(page);
+      await page.route(FORECAST, answer);
+      await page.goto(SHELL);
+      const failed = page.locator('.app-forecast-failed').first();
+      await expect(failed).toBeVisible({timeout: 20_000});
+      await expect(failed.locator('.app-forecast-retry')).toBeEnabled({timeout: 20_000});
+      const seen = await verdictSeen(page);
+      expect(seen.filter(w => VERDICT.test(w)), 'verdict words rendered under this fault').toEqual([]);
+      expect(pageErrors).toEqual([]);
+    });
+  }
+
+  test('aerial imagery host aborted: after the first failures, at most 2 further requests to it in the next 30 s (RF1935-3)', async ({page, pageErrors}) => {
+    test.setTimeout(90_000);
+    const times: number[] = [];
+    await page.route('https://imagery.nationalmap.gov/**', route => { times.push(Date.now()); return route.abort('failed'); });
+    await page.goto(SHELL);
+    await expect.poll(() => times.length, {message: 'the Aerial base asks for imagery', timeout: 20_000}).toBeGreaterThan(0);
+    await page.waitForTimeout(5_000);
+    const after = Date.now(), already = times.length;
+    await page.waitForTimeout(30_000);
+    const further = times.filter(t => t > after).length;
+    console.log(`[net-faults] aerial requests before the window: ${already}, further in 30 s: ${further}`);
+    expect(further, 'requests to the failed host in the 30 s after the first failures settled').toBeLessThanOrEqual(2);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test('console budget on a baseline /map load: no CSP violation, no same-origin response >= 400 except the Fleet HEAD probe; CLS and long tasks recorded', async ({page, pageErrors}) => {
+    await page.addInitScript(() => {
+      const w = window as unknown as {__csp: string[]; __cls: number; __long: number};
+      w.__csp = []; w.__cls = 0; w.__long = 0;
+      document.addEventListener('securitypolicyviolation', e => w.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));
+      new PerformanceObserver(list => { for (const e of list.getEntries() as Array<PerformanceEntry & {hadRecentInput?: boolean; value?: number}>) if (!e.hadRecentInput) w.__cls += e.value ?? 0; }).observe({type: 'layout-shift', buffered: true});
+      new PerformanceObserver(list => { for (const e of list.getEntries()) w.__long += e.duration; }).observe({type: 'longtask', buffered: true});
+    });
+    const bad: string[] = [];
+    const origin = new URL(test.info().project.use.baseURL ?? `http://localhost:${process.env.E2E_PORT || '8787'}`).origin;
+    page.on('response', res => {
+      const req = res.request(), url = new URL(res.url());
+      if (url.origin !== origin || res.status() < 400) return;
+      // The Fleet view's HEAD probe of /ports/<id> answers 404 by design while the public boat list is off (web/fleet.ts).
+      if (req.method() === 'HEAD' && /^\/ports\/[^/]+$/.test(url.pathname)) return;
+      // The shared fixtures (e2e/fixtures.ts) answer these on purpose to keep the run offline.
+      if (url.pathname === '/api/forecast' || (url.pathname === '/api/daily' && url.searchParams.get('part') === 'brief') || url.pathname.startsWith('/feeds/')) return;
+      bad.push(`${req.method()} ${url.pathname}${url.search} ${res.status()}`);
+    });
+    await page.goto(SHELL);
+    await expect(page).toHaveTitle(/SkipperCast/);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2_000);
+    const m = await page.evaluate(() => { const w = window as unknown as {__csp: string[]; __cls: number; __long: number}; return {csp: w.__csp, cls: w.__cls, long: w.__long}; });
+    console.log(`[net-faults] CLS ${m.cls.toFixed(4)}, long tasks total ${Math.round(m.long)} ms (recorded, no threshold)`);
+    expect(m.csp, 'securitypolicyviolation events').toEqual([]);
+    expect(bad, 'same-origin responses >= 400').toEqual([]);
+    expect(pageErrors).toEqual([]);
+  });
+});

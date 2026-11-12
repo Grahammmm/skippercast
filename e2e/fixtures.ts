@@ -48,6 +48,20 @@ export const AERIAL_LCP_BUDGET_MS = 10000;
 /** A 1×1 transparent PNG: what the stubbed NAIP service answers with. */
 export const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 
+/** UXFIX-12: the five nightly projects (playwright.config.ts, `E2E_WIDE=1`). */
+const WIDE_PROJECTS = ['phone-small', 'phone-land', 'tablet', 'laptop-1024', 'laptop-1366'];
+/** The running project's own size when it is one of the nightly ones, else null (phone and laptop keep their per-test sizes). */
+export function wideViewport(): {width: number; height: number} | null {
+  const info = base.info(), size = info.project.use.viewport;
+  return process.env.E2E_WIDE === '1' && WIDE_PROJECTS.includes(info.project.name) && size ? {width: size.width, height: size.height} : null;
+}
+/** Set the page's size: the nightly project's own where it applies, else `fallback`. Prints the size the case actually ran at. */
+export async function setSize(page: Page, fallback: {width: number; height: number}): Promise<void> {
+  const wide = wideViewport();
+  await page.setViewportSize(wide ?? fallback);
+  if (wide) console.log(`[wide-viewport] ${base.info().project.name} | ${base.info().title} | ran at ${page.viewportSize()!.width}x${page.viewportSize()!.height}`);
+}
+
 /** One largest-contentful-paint candidate, with the element that produced it. */
 export interface LcpCandidate {ms: number; tag: string; cls: string; size: number}
 /** A settled Largest Contentful Paint: every candidate the load produced, and the last of them. */

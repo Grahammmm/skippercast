@@ -1,5 +1,5 @@
 import type {Locator, Page} from '@playwright/test';
-import {test, expect} from './fixtures.ts';
+import {test, expect, setSize, wideViewport} from './fixtures.ts';
 import {stubLiveFeeds} from '../scripts/measure_startup.mjs';
 
 const sizes = [{width: 360, height: 640}, {width: 390, height: 844}, {width: 844, height: 390}];
@@ -46,7 +46,8 @@ async function scrollChecks(dialog: Locator, actions: Locator, last: Locator) {
 
 for (const size of sizes) {
   test(`dialogs_fit_phone_and_landscape_without_action_autoscroll ${size.width}x${size.height}`, async ({page, v2, pageErrors}) => {
-    await page.setViewportSize(size);
+    test.skip(!!wideViewport() && size !== sizes[0], 'a nightly project runs one case, at its own size');
+    await setSize(page, size);
     await page.addInitScript(() => localStorage.setItem('skippercast-profile-v1', 'boat'));
     await stubLiveFeeds(page);
     await v2.open('app', {region: 'morro-bay', profile: 'boat'});
@@ -95,7 +96,7 @@ for (const size of sizes) {
 
 for (const profile of ['boat', 'spear']) {
   test(`dialog_scroll_keeps_actions_and_content_reachable ${profile} light`, async ({page, v2}) => {
-    await page.setViewportSize({width: 844, height: 390});
+    await setSize(page, {width: 844, height: 390});
     await page.addInitScript(p => {
       localStorage.setItem('skippercast-profile-v1', p);
       localStorage.setItem('skippercast-limits-v1', JSON.stringify({spear: {from: 'shore'}}));
