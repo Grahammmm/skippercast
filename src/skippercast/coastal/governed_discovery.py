@@ -5,7 +5,7 @@ from pathlib import Path
 import time
 
 from . import cached_inventory as inventory
-from .child_release import _canonical, _clock, _document, _plain
+from .child_release import _canonical, _clock, _document, _number, _plain
 from .handoff.common import digest
 from .coordinator.loop import implementation_hashes
 from .output_writer import ManagedOutputs, DISCOVERY_PROFILE, validate_partition, validate_output_plan
@@ -14,6 +14,7 @@ SCHEMA = "coastal-governed-discovery-context-v1"
 LIMIT = 512 * 1024
 
 def validate(context, now, horizon):
+    now, horizon = _number(now), _number(horizon)
     if not isinstance(context, dict) or context.get("schema") != SCHEMA:
         raise ValueError("typed discovery context required")
     grant = context.get("child_grant")
