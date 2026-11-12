@@ -42,7 +42,10 @@ def execute(job, output, *, now):
         raise ValueError('job input hash mismatch')
     manifest = load(root, job['input_manifest'])
     stage = job['stage']
-    minimum_valid_until = now + timedelta(seconds=float(job['budget']['wall_s']))
+    try:
+        minimum_valid_until = now + timedelta(seconds=float(job['budget']['wall_s']))
+    except OverflowError:
+        raise ValueError('job wall budget cannot form a supported review horizon') from None
     synthetic = job['segment'].get('synthetic') is True
     if manifest.get('synthetic') is not synthetic:
         raise ValueError('synthetic source/job identity mismatch')
