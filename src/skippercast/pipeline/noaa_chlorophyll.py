@@ -7,6 +7,7 @@ import re
 from urllib.parse import urlencode
 from xml.etree import ElementTree
 
+import numpy as np
 from scipy.io import netcdf_file
 
 HOST = "https://coastwatch.noaa.gov"
@@ -64,6 +65,17 @@ def _bounds(bounds):
     return west, south, east, north
 
 
+def _declared_missing(chl, values):
+    """Mask of cells whose stored value equals a declared numeric missing_value marker."""
+    marker = getattr(chl, "missing_value", None)
+    if marker is None:
+        return np.zeros(values.shape, dtype=bool)
+    marker = np.asarray(marker)
+    if marker.dtype.kind not in "iuf" or marker.ndim > 1:
+        raise ValueError("NOAA chlorophyll missing-value metadata changed")
+    return np.isin(values, marker.ravel())
+
+
 def read_subset(body, bounds, path, day):
     west, south, east, north = _bounds(bounds)
     if not body.startswith(b"CDF\x01"):
@@ -85,13 +97,14 @@ def read_subset(body, bounds, path, day):
             raise ValueError("NOAA chlorophyll sample time conflicts with source filename")
         rows = []
         values = chl[:].copy()
+        declared = _declared_missing(chl, values)
         for i, y in enumerate(lat):
             for j, x in enumerate(lon):
                 y, x = float(y), float(x)
                 if not (south - .04 <= y <= north + .04 and west - .04 <= x <= east + .04):
                     raise ValueError("NOAA chlorophyll cell outside requested bounds")
                 raw = float(values[0, 0, i, j])
-                value = round(raw, 5) if math.isfinite(raw) and .001 <= raw <= 100 else None
+                value = round(raw, 5) if math.isfinite(raw) and .001 <= raw <= 100 and not declared[0, 0, i, j] else None
                 rows.append({"time": sample.isoformat(timespec="seconds").replace("+00:00", "Z"),
                              "latitude": round(y, 5), "longitude": round(x, 5), "chlorophyll": value})
         if not rows:
