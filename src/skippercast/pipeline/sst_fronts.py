@@ -82,7 +82,7 @@ def usable_frames(tiles, now, limit_hours):
     out, refused = [], {"missing_time": 0, "unparseable_time": 0, "future": 0, "stale": 0}
     for name, tile in tiles:
         index, frames, res = _frames(tile, name)
-        for frame in frames:
+        for number, frame in enumerate(frames):
             raw = frame.get("time") if isinstance(frame, dict) else None
             when = observation_time(raw)
             if raw is None:
@@ -93,9 +93,22 @@ def usable_frames(tiles, now, limit_hours):
                 refused["future"] += 1
             elif (now - when).total_seconds() > limit_hours * 3600:  # exactly at the limit still counts
                 refused["stale"] += 1
-            elif isinstance(frame.get("cells"), list):
-                out.append((when, [[r[i] for i in index] for r in frame["cells"]], res))
+            else:
+                out.append((when, _rows(frame.get("cells"), index, f"{name} frame {number}"), res))
     return out, refused
+
+
+def _rows(cells, index, where):
+    """The needed fields of each cell of a time-eligible frame; a malformed block or row is refused, never skipped."""
+    if not isinstance(cells, list):
+        raise SstFrontError(f"{where}: cells is not a list")
+    width = max(index) + 1
+    rows = []
+    for n, row in enumerate(cells):
+        if not isinstance(row, list) or len(row) < width:
+            raise SstFrontError(f"{where}: cell {n} is not a list with the required fields")
+        rows.append([row[i] for i in index])
+    return rows
 
 
 def _grid(rows, res):
