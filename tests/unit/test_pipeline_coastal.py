@@ -82,4 +82,23 @@ class CoastalWatchTests(unittest.TestCase):
         for url in ('http://two.example/r','','https:///r'):
             self.assertEqual(result([report,{**other,'source_url':url}])['status'],'watch-only')
 
+    def test_only_positive_finite_non_boolean_counts_support_reports(self):
+        import copy
+        def rep(day,pub,*counts):return {'date':day,'coordinates':[-121.4,35.6],'coordinate_role':'fishing-observation','location_review':'reviewed','original_publisher_id':pub,'publisher_review':'reviewed','source_url':f'https://{pub}.example/r','catches':[{'species':'yellowfin','count':c} for c in counts]}
+        def result(rows):return next(w for w in located_reports(self.coast,rows,self.now,self.catalog['policy']) if w['target']=='yellowfin')
+        good=rep('2026-09-21','one',5)
+        for count in (5,2.5,10**400):
+            self.assertEqual(result([good,rep('2026-09-20','two',count)])['status'],'recent-located-reports',count)
+        for count in (True,False,float('inf'),float('-inf'),float('nan'),0,-1,'5',None):
+            rows=[good,rep('2026-09-20','two',count)];before=copy.deepcopy(rows)
+            got=result(rows)
+            self.assertEqual(got['status'],'watch-only',count);self.assertEqual(len(got['evidence']),1)
+            self.assertIsNone(got['catch_probability']);self.assertIs(got['auto_add_to_qualified_map'],False)
+            self.assertEqual(str(rows),str(before))
+        # A rejected catch does not suppress valid catches in the same or later reports.
+        got=result([rep('2026-09-21','one',True,5),rep('2026-09-20','two',float('inf'),3)])
+        self.assertEqual(got['status'],'recent-located-reports')
+        self.assertEqual([e['publisher'] for e in got['evidence']],['one','two'])
+        self.assertEqual(result([rep('2026-09-21','one',True),rep('2026-09-20','two',float('inf'))])['evidence'],[])
+
 if __name__=='__main__':unittest.main()

@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from html.parser import HTMLParser
 import hashlib
+import math
 import re
 import sys
 from urllib.parse import urlencode, urlsplit
@@ -99,7 +100,9 @@ def located_reports(coast, reports, now, policy):
             if not isinstance(publisher,str) or not publisher or report.get('publisher_review')!='reviewed' or urlsplit(url).scheme!='https': continue
             for catch in report['catches']:
                 ident = catch['species']
-                if ident in coast['watch'] and isinstance(catch.get('count'), (int,float)) and catch['count'] > 0:
+                count = catch.get('count')
+                # Booleans are ints and inf compares > 0; neither is a catch count. No ceiling; ints are never float-converted.
+                if ident in coast['watch'] and not isinstance(count, bool) and isinstance(count, (int,float)) and count > 0 and (isinstance(count, int) or math.isfinite(count)):
                     accepted.setdefault(ident, {})[(publisher,report['date'])] = {'date':report['date'],'url':url,'publisher':publisher}
         except (TypeError, ValueError, KeyError): continue
     result=[]
