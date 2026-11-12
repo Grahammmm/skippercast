@@ -85,9 +85,10 @@ export function evaluatePortAlert(limits: Thresholds, forecast: RegionalForecast
   // WINDOW_HOURS slots, so an hour the forecast leaves out entirely is a gap just like an hour with a null reading.
   const windSlots = new Set<number>(), swellSlots = new Set<number>();
   let hoursChecked = 0;
-  for (const h of forecast.hours) {
-    const t = Date.parse(h.at);
-    if (!Number.isFinite(t) || t < start || t >= end) continue;
+  // Each variable's exceedance is its EARLIEST qualifying instant in the window (not the peak, not the first row met):
+  // rows are visited in ascending parsed-epoch order; the stable sort keeps source order for equal instants. forecast.hours is never reordered.
+  const rows = forecast.hours.map(h => ({h, t: Date.parse(h.at)})).filter(r => !(!Number.isFinite(r.t) || r.t < start || r.t >= end)).sort((a, b) => a.t - b.t);
+  for (const {h, t} of rows) {
     const slot = Math.floor((t - start) / HOUR_MS);
     // A negative wind or swell reading is impossible: missing evidence, exactly like null (zero stays a valid calm reading).
     const wind = finite(h.windKnots) && h.windKnots >= 0 ? h.windKnots : null, swell = finite(h.swellFt) && h.swellFt >= 0 ? h.swellFt : null;
