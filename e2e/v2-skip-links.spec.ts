@@ -8,8 +8,8 @@ import {test, expect} from './fixtures.ts';
 
 const AREA = {region: 'morro-bay'};
 const NAMES = {
-  en: {brief: 'Skip to brief', map: 'Skip to map', target: 'Brief', rows: ['Basis for wind', 'Basis for swell', 'Basis for water', 'Basis for tide']},
-  es: {brief: 'Saltar al resumen', map: 'Saltar al mapa', target: 'Resumen', rows: ['Base del viento', 'Base del oleaje', 'Base del agua', 'Base de la marea']},
+  en: {brief: 'Skip to brief', map: 'Skip to map', target: 'Brief', rows: ['Source for wind', 'Source for swell', 'Source for water', 'Source for tide']},
+  es: {brief: 'Saltar al resumen', map: 'Saltar al mapa', target: 'Resumen', rows: ['Fuente del viento', 'Fuente del oleaje', 'Fuente del agua', 'Fuente de la marea']},
 } as const;
 
 test.beforeEach(async ({page}) => {
