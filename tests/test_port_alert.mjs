@@ -174,3 +174,77 @@ test('zero remains calm and a valid hit survives negative data', () => {
   for (const bad of [NaN, Infinity, '9', undefined])
     assert.equal(evaluatePortAlert(LIMITS, forecast(full(i => i === 3 ? {windKnots: bad} : {})), NOW).state, 'partial', String(bad));
 });
+
+// RF1651-10: an unreadable (nonfinite) evaluation clock is stale, never a window of arbitrary dates.
+const BAD_CLOCKS = [['NaN', NaN], ['invalid Date', new Date('invalid').getTime()], ['+Infinity', Infinity], ['-Infinity', -Infinity]];
+const EMPTY_PEAK = {windKt: null, swellFt: null};
+const loudFar = () => forecast([hourAt(-30, {windKnots: 40, swellFt: 9}), hourAt(24 * 13, {windKnots: 40, swellFt: 9})]);
+
+test('a nonfinite clock cannot alert on rows outside any window: stale, nothing checked, metadata kept', () => {
+  for (const [name, bad] of BAD_CLOCKS) {
+    const f = loudFar();
+    const r = evaluatePortAlert(LIMITS, f, bad);
+    assert.equal(r.state, 'stale', name);
+    assert.equal(r.hoursChecked, 0, name);
+    assert.deepEqual(r.exceedances, [], name);
+    assert.deepEqual(r.peak, EMPTY_PEAK, name);
+    assert.equal(r.notification, null, name);
+    assert.equal(r.source, f.label);
+    assert.equal(r.issuedAt, f.issuedAt);
+    assert.equal(r.fetchedAt, f.fetchedAt);
+  }
+});
+
+test('a nonfinite clock over calm complete data or an empty forecast is stale, not clear, partial or no-data', () => {
+  for (const [name, bad] of BAD_CLOCKS) for (const f of [forecast(full()), forecast([]), forecast(full(() => ({windKnots: 40})))]) {
+    const r = evaluatePortAlert(LIMITS, f, bad);
+    assert.equal(r.state, 'stale', name);
+    assert.equal(r.hoursChecked, 0, name);
+    assert.deepEqual(r.exceedances, [], name);
+    assert.deepEqual(r.peak, EMPTY_PEAK, name);
+    assert.equal(r.notification, null, name);
+  }
+});
+
+test('an absent forecast keeps no-data precedence over any clock', () => {
+  for (const now of [NaN, Infinity, -Infinity, NOW]) {
+    const r = evaluatePortAlert(LIMITS, null, now);
+    assert.equal(r.state, 'no-data');
+    assert.equal(r.hoursChecked, 0);
+    assert.deepEqual(r.exceedances, []);
+    assert.deepEqual(r.peak, EMPTY_PEAK);
+    assert.equal(r.source, null);
+    assert.equal(r.issuedAt, null);
+    assert.equal(r.fetchedAt, null);
+    assert.equal(r.notification, null);
+  }
+});
+
+test('finite-clock results are unchanged by the nonfinite refusal', () => {
+  const calm = evaluatePortAlert(LIMITS, forecast(full()), NOW);
+  assert.equal(calm.state, 'clear');
+  assert.equal(calm.hoursChecked, WINDOW_HOURS);
+  assert.deepEqual(calm.peak, {windKt: 8, swellFt: 3});
+  const edge = evaluatePortAlert(LIMITS, forecast(full(i => (i === 4 ? {windKnots: 15} : {}))), NOW);
+  assert.equal(edge.state, 'alert');
+  assert.deepEqual(edge.exceedances.map(e => [e.kind, e.value]), [['wind', 15]]);
+  assert.equal(evaluatePortAlert(LIMITS, forecast(full().slice(0, 12)), NOW).state, 'partial');
+  assert.equal(evaluatePortAlert(LIMITS, forecast([]), NOW).state, 'no-data');
+  assert.equal(evaluatePortAlert(LIMITS, forecast(full(), {fetchedAt: 'nonsense'}), NOW).state, 'stale');
+  assert.equal(evaluatePortAlert(LIMITS, forecast(full(), {issuedAt: '2026-11-06T04:00:00Z'}), NOW).state, 'stale');
+  const end = evaluatePortAlert(LIMITS, forecast([hourAt(WINDOW_HOURS, {windKnots: 40})]), NOW);
+  assert.equal(end.state, 'no-data', 'the window end is exclusive');
+});
+
+test('refusing a nonfinite clock does not mutate the limits, forecast or hours', () => {
+  const freeze = o => Object.freeze(o);
+  const limits = freeze({...LIMITS});
+  const hours = full(i => (i === 2 ? {windKnots: 40} : {})).map(freeze);
+  const f = freeze({...forecast(Object.freeze(hours))});
+  const before = JSON.stringify([limits, f]);
+  for (const [name, bad] of BAD_CLOCKS) {
+    const r = evaluatePortAlert(limits, f, bad);
+    assert.equal(r.state, 'stale', name);
+    assert.equal(JSON.stringify([limits, f]), before, name);
+  }
+});
