@@ -86,16 +86,3 @@ test('verdict and run names: their own catalogue words in both languages, distin
     assert.match(source, file.endsWith('Brief.tsx') ? /accessibleName=\{t\('a11y\.basis\.verdict'/ : /accessibleName=\{t\('a11y\.basis\.run'/, file);
   }
 });
-
-// UXFIX-06: the tide basis explains MLLW in plain words; another datum keeps the plain reference-level line.
-test('mllw_gloss: only a tide basis on MLLW carries the gloss, in both languages', () => {
-  const GLOSS = {en: "Heights are above MLLW (mean lower low water, the chart's zero).", es: 'Alturas sobre MLLW (bajamar media inferior, el cero de la carta).'};
-  const OTHER = {en: 'Reference level: NAVD88.', es: 'Nivel de referencia: NAVD88.'};
-  const basis = (lang, datum) => asLang(lang, () => render(h(Tiles, {tiles: ['wind', 'swell', 'water', 'tide'].map(id => tile(id, id === 'tide' ? {detail: `Rising · ${datum}`} : {}))})));
-  for (const lang of ['en', 'es']) {
-    assert.ok(basis(lang, 'MLLW').includes(GLOSS[lang]), `${lang}: MLLW is explained`);
-    assert.ok(!basis(lang, 'MLLW').includes(OTHER[lang].split(':')[0]), `${lang}: no bare reference line beside the gloss`);
-    assert.ok(basis(lang, 'NAVD88').includes(OTHER[lang]) && !basis(lang, 'NAVD88').includes(GLOSS[lang]), `${lang}: another datum keeps today's text`);
-    assert.equal(basis(lang, 'MLLW').split(GLOSS[lang]).length, 2, `${lang}: the gloss appears once, on the tide only`);
-  }
-});

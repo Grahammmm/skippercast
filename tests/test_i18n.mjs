@@ -234,6 +234,7 @@ async function load() {
       export {App, regionInfo} from './web/app/App.tsx';
       export {RulesLine} from './web/app/MarkCard.tsx';
       export {BriefFooter, BriefGaps, BriefTiles, Caveat, Details, FEED_GAP, Verdict, comfortBasis, dailyFeed, feedGaps, leadDayText, regionalForecast} from './web/brief/Brief.tsx';
+      export {Tiles} from './web/brief/Tiles.tsx';
       export {parseConditionsForecast} from './web/conditions.ts';
       export {language} from './web/i18n.ts';
       export {markData} from './web/map/marks.ts';
@@ -247,6 +248,24 @@ async function load() {
   });
   return (mod = await import(pathToFileURL(out).href));
 }
+
+// UXFIX-06: the tide basis explains MLLW in plain words; another datum keeps the plain reference-level line.
+test('mllw_gloss: only a tide basis on MLLW carries the gloss, in both languages', async () => {
+  const m = await load();
+  const GLOSS = {en: "Heights are above MLLW (mean lower low water, the chart's zero).", es: 'Alturas sobre MLLW (bajamar media inferior, el cero de la carta).'};
+  const OTHER = {en: 'Reference level: NAVD88.', es: 'Nivel de referencia: NAVD88.'};
+  const tile = (id, over = {}) => ({id, label: id[0].toUpperCase() + id.slice(1), value: 5, unit: 'kt', detail: 'detail', source: 'NDBC 46042', sourceUrl: null, state: 'fresh', ageMs: 3_600_000, limitMs: 3 * 3_600_000, lastGood: false, ...over});
+  const basis = (lang, datum) => {
+    m.language.value = lang;
+    try { return m.render(m.h(m.Tiles, {tiles: ['wind', 'swell', 'water', 'tide'].map(id => tile(id, id === 'tide' ? {detail: `Rising · ${datum}`} : {}))})); } finally { m.language.value = 'en'; }
+  };
+  for (const lang of ['en', 'es']) {
+    assert.ok(basis(lang, 'MLLW').includes(GLOSS[lang]), `${lang}: MLLW is explained`);
+    assert.ok(!basis(lang, 'MLLW').includes(OTHER[lang].split(':')[0]), `${lang}: no bare reference line beside the gloss`);
+    assert.ok(basis(lang, 'NAVD88').includes(OTHER[lang]) && !basis(lang, 'NAVD88').includes(GLOSS[lang]), `${lang}: another datum keeps today's text`);
+    assert.equal(basis(lang, 'MLLW').split(GLOSS[lang]).length, 2, `${lang}: the gloss appears once, on the tide only`);
+  }
+});
 
 /** The frozen FE-61 registry with fresh synthetic source checks (as tests/test_first_answer.mjs builds it). */
 async function registry() {
