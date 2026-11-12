@@ -45,6 +45,7 @@ app-written copy.
 | Marginal (verdict label) | `Marginal` | `brief.verdict.marginal`, `brief.basis.comfort`, `verdict.held`, `fa.marginal` (resolved by SC1352-10, see section 2) |
 | Rough (verdict label; "too rough" in the first answer) | `Agitado` | `brief.verdict.rough`, `brief.basis.comfort`, `brief.basis.profile`, `fa.no` (resolved by SC1352-10, see section 2) |
 | Unknown (verdict label; never Comfortable) | `Desconocido` | `brief.verdict.unknown` |
+| Halibut (the layer preset; California halibut) | `Lenguado` | `preset.halibut` |
 | not checked | `no revisado` | `brief.gaps.unchecked` |
 | inside (protected area) | `dentro de un área protegida` | Not in the catalogue at the checked revision. `rules.depth.inside` is a different phrase, the depth line: `Dentro de la línea de 50 brazas` |
 | within 70 m (of a protected area) | `a 70 m o menos de un área protegida` | Not in the catalogue at the checked revision |
