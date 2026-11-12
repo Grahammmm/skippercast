@@ -61,7 +61,7 @@ test('labels preserve the existing screened, depth-limited features and card tex
 });
 
 test('zoom styling adds non-pickable outline and optional label with palette colours', () => {
-  const p = readPalette(name => `token(${name})`), style = markStyle(p);
+  const p = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), style = markStyle(p);
   const habitat = style.habitat, marks = style.marks;
   assert.deepEqual(habitat.map(l => l.id), [SURVEY_PICK, 'survey-habitat-line', GEOLOGY_PICK, 'geology-line']);
   assert.deepEqual(marks.map(l => l.id), ['marks-density', MARK_PICK, 'marks-ring', 'marks-fit', 'marks-depth', 'selection-ring']);
@@ -79,6 +79,6 @@ test('zoom styling adds non-pickable outline and optional label with palette col
   assert.deepEqual(label.layout['text-size'], ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 12]);
   assert.deepEqual(label.layout['text-offset'], [0, 1.6]); assert.equal(label.layout['text-anchor'], 'top');
   assert.equal(label.layout['text-optional'], true);
-  assert.deepEqual(label.paint, {'text-color': p.text, 'text-halo-color': p.bg, 'text-halo-width': 1.2});
+  assert.deepEqual(label.paint, {'text-color': p.mapInk, 'text-halo-color': p.mapInkHalo, 'text-halo-width': 1.2});
   assert.doesNotMatch(JSON.stringify([line.paint['line-color'], label.paint]), /#[0-9a-f]{3,8}|rgba?\(/i);
 });

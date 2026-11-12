@@ -4,8 +4,9 @@
 // literals everywhere under web/ and getPropertyValue('--…') outside this file.
 // Values are whatever web/tokens.css resolves to for the current theme, so a
 // token change reaches the map without touching map code. Every value is a
-// colour except `mpaFillOpacity`, the protected-area fill's opacity (FE-19),
-// carried as its CSS text for MapLibre's `to-number`.
+// colour except `mpaFillOpacity` and the four `map*Opacity`/`mapContourWidth`
+// controls (MGL-15), carried as their CSS text for MapLibre's `to-number`; the
+// modules that draw with them validate the text (mapControl in style.ts).
 import {basemapRoles} from './style.ts';
 
 /** Palette keys and the custom property each one reads (without the leading `--`). */
@@ -18,6 +19,11 @@ export const PALETTE_TOKENS = {
   swell0: 'swell-0', swell1: 'swell-1', swell2: 'swell-2', swell3: 'swell-3',
   contrast0: 'contrast-0', contrast1: 'contrast-1', contrast2: 'contrast-2',
   flow: 'flow', flowFast: 'flow-fast', mpaFill: 'mpa-fill', mpaFillOpacity: 'mpa-fill-opacity', mpaLine: 'mpa-line',
+  // MGL-15: map-only roles (web/tokens.css), so the map and its legend never read the app chrome's tokens.
+  mapWater: 'map-water', mapLand: 'map-land', mapPark: 'map-park', mapRoad: 'map-road', mapRoadMinor: 'map-road-minor', mapBoundary: 'map-boundary',
+  mapLabel: 'map-label', mapHalo: 'map-halo', mapInk: 'map-ink', mapInkHalo: 'map-ink-halo', mapCoast: 'map-coast', mapContour: 'map-contour',
+  habRock: 'hab-rock', habMixed: 'hab-mixed', habSoft: 'hab-soft', habKelp: 'hab-kelp', markRing: 'mark-ring',
+  mapLabelOpacity: 'map-label-opacity', mapRoadOpacity: 'map-road-opacity', mapHabitatOpacity: 'map-habitat-opacity', mapContourWidth: 'map-contour-width',
 } as const;
 
 export type PaletteKey = keyof typeof PALETTE_TOKENS;

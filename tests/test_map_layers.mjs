@@ -27,7 +27,7 @@ import {settlePicks} from './helpers/pick-settle.mjs';
 
 const PAGE = 'https://s.test/map';
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const SENTINELS = new Set(Object.values(sentinel));
 
 // design.md § 9, "Draw order, bottom to top", as entry ids; the ENC chart base sits with the bases.
@@ -693,7 +693,7 @@ test('SC1952-06: an armed Chart tap is screened by the current region\'s marks s
 });
 
 // FE-82: registry layers on the terrain (packages/coast setOverlay, FE-81).
-const OVERLAY_PALETTE = readPalette(name => (name === 'mpa-fill-opacity' ? '0.18' : `token(${name})`));
+const OVERLAY_PALETTE = readPalette(name => (name === 'mpa-fill-opacity' ? '0.18' : /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`));
 
 test('FE-82: protected areas, reef marks and charter grounds drape on the terrain in their Chart style\'s token roles', () => {
   assert.deepEqual(LAYERS.filter(e => e.terrain).map(e => e.id), ['mpas', 'charter-grounds', 'marks']);
@@ -705,7 +705,8 @@ test('FE-82: protected areas, reef marks and charter grounds drape on the terrai
   const [mpaFill, mpaLine] = mpaLayers(sentinel), mpas = layerEntry('mpas').terrain;
   assert.deepEqual([sentinel[mpas.color], sentinel[mpas.outline], mpas.opacity], [mpaFill.paint['fill-color'], mpaLine.paint['line-color'], 'mpaFillOpacity']);
   assert.deepEqual(mpaFill.paint['fill-opacity'], ['to-number', sentinel.mpaFillOpacity], 'both read --mpa-fill-opacity');
-  const ring = markStyle(sentinel).marks.find(l => l.id === 'marks-ring').paint, marks = layerEntry('marks').terrain;
+  // Coast overlays retain their general UI roles; the Chart's independent roles have equal defaults.
+  const ring = markStyle({...sentinel, mapInkHalo: sentinel.bg, markRing: sentinel.mint}).marks.find(l => l.id === 'marks-ring').paint, marks = layerEntry('marks').terrain;
   assert.deepEqual([marks.kind, sentinel[marks.color], marks.opacity, sentinel[marks.outline]], ['point', ring['circle-color'], ring['circle-opacity'], ring['circle-stroke-color']]);
   assert.equal(marks.size, ring['circle-radius'] * 2, 'the ring\'s diameter');
   const grounds = groundsOverlay(sentinel, {outlines: {type: 'FeatureCollection', features: []}, hatch: {type: 'FeatureCollection', features: []}});

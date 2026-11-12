@@ -89,7 +89,7 @@ function chartAt(width, dom = false, flyoverGate = () => ({reduced: true, saveDa
   const land = {styles: [], mountCoast: () => ({load: async () => true, destroy() {}, setOverlay() {}, removeOverlay() {}})};
   const stage = createStage({host: {dataset: {}, shadowRoot: {replaceChildren() {}}}, load: async () => land, center: () => [35.37, -120.86], viewDelay: 0,
     doc: {hidden: false, addEventListener() {}, removeEventListener() {}},
-    renderers: [() => createChart({host, load: async () => fake.module, fetchFn, page: () => PAGE, palette: () => readPalette(n => `token(${n})`), viewDelay: 0,
+    renderers: [() => createChart({host, load: async () => fake.module, fetchFn, page: () => PAGE, palette: () => readPalette(n => /^map-.*-(?:opacity|width)$/.test(n) ? '1' : `token(${n})`), viewDelay: 0,
       covers: dom ? undefined : () => [TOP, sheet], flyoverGate})]});
   return {fake, host, stage, sheet, view: () => new URL(location.href).searchParams.get('view')};
 }
