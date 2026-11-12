@@ -287,7 +287,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // UXFIX-10: app.css appends only a scoped .app-account[data-top] block (the phone top-card account button: icon size, visually hidden label, open-state colour, z-index while its panel is open); the Reports catch sheet mounts no account menu, so no catch paint or backing changes. Rebound from the final bytes.
   // UXFIX-11: app.css adds only the phone sheet day-chip row pin (.app-sheet-hour); the Reports catch sheet mounts no hour sheet, so no catch paint or backing changes. Rebound from the final bytes.
-  "web/app/app.css": "902322fc5a20dfd3a3729527ba87c88caae8c9872bf3939450ff123ff66b5a6e",
+  "web/app/app.css": "3f599b8007bdfc698935c7d3052bde106163aa5b15216f68c9dd7c52f0216eeb",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "ba9af1737062b2a60607521f1a66fa4ea141f8ef09f58d06e357ce8d2bb5f492",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -371,7 +371,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-11 (merged on top of UXFIX-05): the appCss surface hash changes as well; contrast() is untouched. Rebound from the merged bytes.
-  "scripts/check_contrast.mjs": "4d65ec282b31ec6e6a27c6b5fc3b4023f341ed89dec0810ddac6a5a55d9e5f71",
+  "scripts/check_contrast.mjs": "23a8363f9bda996a578bb6fdf0a15b545c10746a040a1253ad7ff1097e814d71",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
