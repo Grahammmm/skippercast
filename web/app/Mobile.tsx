@@ -36,6 +36,7 @@ import {boatEntryOpen} from './FirstRun.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage, mapUnavailable} from './MapStage.tsx';
+import {BRIEF_ID, SkipLinks} from './SkipLinks.tsx';
 import {useHourNow, type HourClock} from '../clock.ts';
 import {MarkCard, currentMark} from './MarkCard.tsx';
 import {Brand, DegradedNotice, FreshnessDot, Location, ViewNav, viewLabel} from './Masthead.tsx';
@@ -105,7 +106,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
   const lead = leadDate(now), apart = lead !== state.day, dockHead = <span class="ui-eyebrow">{windowText(now, tz, language.value)}</span>;
   const lang = language.value, leadText = leadDayText(lead, now, tz, lang);
   return (
-    <div class="app-sheet-brief" onFocusIn={onFocus} data-basis={brief?.basis}>
+    <div class="app-sheet-brief" id={BRIEF_ID} tabIndex={-1} aria-label={t('shell.brief', lang)} onFocusIn={onFocus} data-basis={brief?.basis}>
       {currentMark.value && !mapUnavailable.value ? <Guard name="mark-card"><MarkCard /></Guard> : (
         <>
           <div class="app-sheet-head">
@@ -210,6 +211,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
   const layersOpen = shownPanel === 'layers', conditions = appView.value === 'conditions', fleet = appView.value === 'fleet';
   return (
     <main class="app-mobile">
+      <SkipLinks phone prepare={target => { if (target === 'brief') apply({panel: 'brief', detent: 'half'}); else setDetent('peek'); }} />
       <MapStage clock={clock} />
       <header class="app-top">
         <div class="app-top-row">

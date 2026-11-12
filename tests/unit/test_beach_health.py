@@ -227,3 +227,85 @@ class PublishTests(TestCase):
             self.assertEqual(bh.publish(tmp, FakeSession({})), {"morro-bay": "error"})
             self.assertTrue(bh.due(Path(tmp) / "regions/morro-bay/beach-health.json", NOW))
         self.assertTrue(bh.due(Path("/nonexistent/beach-health.json"), NOW))
+
+
+HUGE = 10**400  # valid JSON integer far outside float range
+GEOMETRY_ERROR = "^Invalid/out-of-county beach geometry$"
+
+
+def oversized(axis, value):
+    """The synthetic fixture with only the last feature's `axis` set to `value`."""
+    payload = fixture("query.json")
+    payload["features"][-1]["geometry"][axis] = value
+    return payload
+
+
+def oversized_routes(axis, value):
+    return {**routes(), bh.query_url(BINDING): json.dumps(oversized(axis, value), allow_nan=False).encode()}
+
+
+VARIANTS = [(axis, sign * HUGE) for axis in ("x", "y") for sign in (1, -1)]
+
+
+class OversizedCoordinateTests(TestCase):
+    def test_oversized_integer_geometry_is_named(self):
+        for axis, value in VARIANTS:
+            payload = oversized(axis, value)
+            before = copy.deepcopy(payload)
+            with self.subTest(axis=axis, negative=value < 0), self.assertRaisesRegex(ValueError, GEOMETRY_ERROR):
+                bh.parse(payload, 4, BINDING, FETCHED)
+            self.assertEqual(payload, before)
+
+    def test_oversized_integer_json_collect_has_no_partial_rows(self):
+        for axis, value in VARIANTS:
+            with self.subTest(axis=axis, negative=value < 0):
+                feed = bh.collect("morro-bay", FakeSession(oversized_routes(axis, value)), NOW)
+                self.assertEqual(feed["waterQuality"], [])
+                self.assertEqual(len(feed["sources"]), 1)
+                self.assertEqual(feed["sources"][0]["outcome"], "error")
+                self.assertEqual(feed["sources"][0]["error"], "Invalid/out-of-county beach geometry")
+                self.assertEqual(coast_types().errors(feed["sources"], "SourceStatus[]"), [])
+
+    def stale_success(self, root):
+        path = Path(root) / "regions/morro-bay/beach-health.json"
+        path.parent.mkdir(parents=True)
+        stale = bh.collect("morro-bay", FakeSession(routes()), NOW - timedelta(hours=3))
+        path.write_text(json.dumps(stale))
+        self.assertEqual(len(stale["waterQuality"]), 4)
+        return path
+
+    def test_oversized_integer_publish_replaces_stale_success(self):
+        for axis, value in VARIANTS:
+            with self.subTest(axis=axis, negative=value < 0), tempfile.TemporaryDirectory() as tmp:
+                path = self.stale_success(tmp)
+                self.assertEqual(bh.publish(tmp, FakeSession(oversized_routes(axis, value)), NOW), {"morro-bay": "error"})
+                feed = json.loads(path.read_text())
+                self.assertEqual(feed["waterQuality"], [])
+                self.assertEqual((feed["sources"][0]["outcome"], feed["sources"][0]["error"]),
+                                 ("error", "Invalid/out-of-county beach geometry"))
+
+    def test_geometry_error_retries_and_recovers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self.stale_success(tmp)
+            self.assertEqual(bh.publish(tmp, FakeSession(oversized_routes("y", HUGE)), NOW), {"morro-bay": "error"})
+            # An error feed is due at once, even though its retrieval time is recent.
+            fetched = datetime.fromisoformat(json.loads(path.read_text())["sources"][0]["fetchedAt"].replace("Z", "+00:00"))
+            self.assertTrue(bh.due(path, fetched))
+            self.assertTrue(bh.due(path, fetched + timedelta(minutes=1)))
+            self.assertEqual(bh.publish(tmp, FakeSession(routes()), fetched + timedelta(minutes=1)), {"morro-bay": "ok"})
+            feed = json.loads(path.read_text())
+            self.assertEqual((feed["sources"][0]["outcome"], len(feed["waterQuality"])), ("ok", 4))
+
+    def test_numeric_geometry_compatibility(self):
+        healthy = bh.parse(fixture("query.json"), 4, BINDING, FETCHED)
+        self.assertEqual(sorted((r["lon"], r["lat"]) for r in healthy),
+                         sorted((f["geometry"]["x"], f["geometry"]["y"]) for f in fixture("query.json")["features"]))
+        county = fixture("query.json")
+        county["features"][-1]["geometry"] = {"x": -121, "y": 35}  # in-bounds integers stay accepted and exact
+        rows = bh.parse(county, 4, BINDING, FETCHED)
+        exact = [r for r in rows if (r["lat"], r["lon"]) == (35, -121)]
+        self.assertEqual([(type(r["lat"]), type(r["lon"])) for r in exact], [(int, int)])
+        for axis, value in (("x", -118), ("y", 34), ("x", -(2**60)), ("y", 2**60), ("x", True), ("y", False), ("x", None),
+                            ("y", "35.3"), ("x", float("nan")), ("y", float("inf")), ("x", float("-inf"))):
+            with self.subTest(axis=axis, value=value), self.assertRaisesRegex(ValueError, GEOMETRY_ERROR):
+                bh.parse(oversized(axis, value), 4, BINDING, FETCHED)

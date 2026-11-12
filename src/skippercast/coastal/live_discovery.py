@@ -153,7 +153,12 @@ def _freeze(path, value):
     raw = _encode(value)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o444)
     try:
-        os.write(fd, raw)
+        view = memoryview(raw)
+        while view:
+            count = os.write(fd, view)
+            if count <= 0:
+                raise OSError("frozen discovery write made no progress")
+            view = view[count:]
         os.fsync(fd)
     finally:
         os.close(fd)
