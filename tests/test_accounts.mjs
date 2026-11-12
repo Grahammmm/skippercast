@@ -441,3 +441,137 @@ test('account_fine_print_names_log_and_spots', () => {
   assert.ok(src.includes('SkipperCast stores only its public key. Saved trips, alerts, boat comfort feedback, catch-log entries and saved spots belong to your account, and you can delete the account at any time.'));
   assert.ok(src.includes('Delete your SkipperCast account and all saved trips, alerts, notification devices, catch log, saved spots and comfort feedback?'));
 });
+
+// --- session list and end-others (SC2252-01) ---
+const sha = t => createHash('sha256').update(t).digest('hex');
+const seedSession = (sql, userId, token, {ua = null, expires = now() + 1000, created = new Date().toISOString()} = {}) =>
+  sql.prepare('INSERT INTO sessions(id,user_id,created_at,expires_at,user_agent) VALUES(?,?,?,?,?)').run(sha(token), userId, created, expires, ua);
+const userId = sql => sql.prepare('SELECT id FROM users ORDER BY created_at LIMIT 1').get().id;
+const withToken = (c, token) => { c.jar.cookie = token; };
+
+test('sessions_list_is_active_owner_only_and_current_marked', async () => {
+  const {sql, adapter} = database(), a = client(adapter), b = client(adapter);
+  await register(a, new SoftwareAuthenticator(), 'A');
+  await register(b, new SoftwareAuthenticator(), 'B');
+  const [ua, ub] = sql.prepare('SELECT id FROM users ORDER BY created_at, id').all().map(r => r.id);
+  const aid = sql.prepare('SELECT user_id FROM sessions WHERE id=?').get(sha(a.jar.cookie)).user_id;
+  const other = aid === ua ? ub : ua;
+  seedSession(sql, aid, 'canary-token-one', {ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Version/17.0 Mobile Safari/604.1', created: '2020-01-01T00:00:00.000Z'});
+  seedSession(sql, aid, 'canary-token-expired', {expires: now(), ua: 'Firefox/1 Windows'});
+  seedSession(sql, other, 'canary-token-foreign', {ua: 'Firefox/1 Windows'});
+  const r = await a.call('/api/auth/sessions');
+  assert.equal(r.status, 200);
+  assert.deepEqual(Object.keys(r.data), ['sessions']);
+  assert.equal(r.data.sessions.length, 2);
+  for (const s of r.data.sessions) assert.deepEqual(Object.keys(s), ['current', 'created_at', 'expires_at', 'device']);
+  assert.equal(r.data.sessions[0].created_at, '2020-01-01T00:00:00.000Z');
+  assert.equal(r.data.sessions[0].device, 'Safari on iPhone');
+  assert.equal(r.data.sessions[0].current, false);
+  assert.equal(r.data.sessions[1].current, true);
+  assert.equal(typeof r.data.sessions[1].expires_at, 'number');
+  const text = JSON.stringify(r.data);
+  for (const leak of [aid, other, sha(a.jar.cookie), sha('canary-token-one'), 'canary-token', 'Mozilla', '17_0', 'CPU']) assert.ok(!text.includes(leak), leak);
+  sql.close();
+});
+
+test('sessions_device_fixed_table_and_unknown', async () => {
+  const {deviceLabel} = await import('../server/auth.ts');
+  const rows = [
+    ['Mozilla/5.0 (Windows NT 10.0) Chrome/120 Safari/537 Edg/120', 'Edge on Windows'],
+    ['Mozilla/5.0 (Windows NT 10.0; rv:1) Firefox/120', 'Firefox on Windows'],
+    ['Mozilla/5.0 (Macintosh; Intel Mac OS X) Firefox/120', 'Firefox on Mac'],
+    ['Mozilla/5.0 (X11; Linux x86_64; rv:1) Firefox/120', 'Firefox on Linux'],
+    ['Mozilla/5.0 (Windows NT 10.0) Chrome/120 Safari/537', 'Chrome on Windows'],
+    ['Mozilla/5.0 (Macintosh; Intel Mac OS X) Chrome/120 Safari/537', 'Chrome on Mac'],
+    ['Mozilla/5.0 (Linux; Android 14) Chrome/120 Mobile Safari/537', 'Chrome on Android'],
+    ['Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Version/17.0 Mobile Safari/604.1', 'Safari on iPhone'],
+    ['Mozilla/5.0 (iPad; CPU OS 17_0) Version/17.0 Mobile Safari/604.1', 'Safari on iPad'],
+    ['Mozilla/5.0 (Macintosh; Intel Mac OS X) Version/17.0 Safari/605.1', 'Safari on Mac'],
+    // Precedence and fallbacks.
+    ['Mozilla/5.0 (Linux; Android 14) Safari/537 Version/4', 'Unknown browser'],
+    ['Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) CriOS/120 Mobile Safari/604.1', 'Unknown browser'],
+    ['Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) FxiOS/120 Version/17 Mobile Safari/604.1', 'Unknown browser'],
+    ['Mozilla/5.0 (X11; Linux x86_64) Chrome/120 Safari/537', 'Unknown browser'],
+    ['Mozilla/5.0 (Macintosh) Edg/120 Chrome/120', 'Unknown browser'],
+    ['Mozilla/5.0 (Linux; Android 14) Chrome/120 EdgA/120', 'Unknown browser'],
+    ['curl/8.0 <script>alert(1)</script>', 'Unknown browser'],
+    ['Mozilla/5.0 (Windows NT 10', 'Unknown browser'],
+    ['', 'Unknown browser'], [null, 'Unknown browser'], [undefined, 'Unknown browser']];
+  for (const [ua, want] of rows) assert.equal(deviceLabel(ua), want, String(ua));
+});
+
+test('sessions_end_others_counts_actual_rows_and_preserves_current_and_other_owner', async () => {
+  const {sql, adapter} = database(), a = client(adapter), b = client(adapter);
+  await register(a, new SoftwareAuthenticator(), 'A');
+  await register(b, new SoftwareAuthenticator(), 'B');
+  const aid = sql.prepare('SELECT user_id FROM sessions WHERE id=?').get(sha(a.jar.cookie)).user_id;
+  const bid = sql.prepare('SELECT user_id FROM sessions WHERE id=?').get(sha(b.jar.cookie)).user_id;
+  assert.equal((await a.call('/api/auth/sessions/end-others', {method: 'POST'})).data.ended, 0);
+  const PHONE = 'p'.repeat(43); seedSession(sql, aid, PHONE); seedSession(sql, aid, 'old', {expires: now() - 5});
+  const trips = await a.call('/api/trips', {method: 'POST', body: trip()});
+  assert.ok(trips.status < 300, JSON.stringify(trips.data));
+  const phone = client(adapter); withToken(phone, PHONE);
+  assert.equal((await phone.call('/api/trips')).status, 200);
+  const currentBefore = sql.prepare('SELECT * FROM sessions WHERE id=?').get(sha(a.jar.cookie));
+  const foreignBefore = JSON.stringify(sql.prepare('SELECT * FROM sessions WHERE user_id=?').all(bid));
+  const passkeysBefore = count(sql, 'passkeys'), tripsBefore = count(sql, 'trips');
+  const r = await a.call('/api/auth/sessions/end-others', {method: 'POST'});
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.data, {ended: 2});
+  assert.equal(r.setCookie, null);
+  assert.deepEqual(sql.prepare('SELECT * FROM sessions WHERE id=?').get(sha(a.jar.cookie)), currentBefore);
+  assert.equal(sql.prepare('SELECT COUNT(*) n FROM sessions WHERE user_id=?').get(aid).n, 1);
+  assert.equal(JSON.stringify(sql.prepare('SELECT * FROM sessions WHERE user_id=?').all(bid)), foreignBefore);
+  assert.equal(count(sql, 'passkeys'), passkeysBefore);
+  assert.equal(count(sql, 'trips'), tripsBefore);
+  assert.equal((await phone.call('/api/trips')).status, 401);
+  assert.equal((await a.call('/api/trips')).status, 200);
+  assert.equal((await b.call('/api/trips')).status, 200);
+  assert.deepEqual((await a.call('/api/auth/sessions/end-others', {method: 'POST'})).data, {ended: 0});
+  sql.close();
+});
+
+test('sessions_need_auth_and_keep_existing_request_gates', async () => {
+  const {sql, adapter} = database(), c = client(adapter);
+  for (const [path, method] of [['/api/auth/sessions', 'GET'], ['/api/auth/sessions/end-others', 'POST']]) {
+    for (const cookie of [null, 'not-a-token', 'unknown-token']) {
+      withToken(c, cookie);
+      const r = await c.call(path, {method});
+      assert.equal(r.status, 401);
+      assert.equal(r.data.error, 'Sign in to manage sessions');
+      assert.equal(r.data.signIn, '/#account');
+      assert.match(r.headers.get('Cache-Control'), /no-store/);
+    }
+  }
+  const real = client(adapter); await register(real, new SoftwareAuthenticator());
+  const uid = sql.prepare('SELECT user_id FROM sessions').get().user_id;
+  seedSession(sql, uid, 'other-dev');
+  assert.equal((await real.call('/api/auth/sessions/end-others', {method: 'POST', origin: 'https://evil.example'})).status, 400);
+  assert.equal(count(sql, 'sessions'), 2);
+  sql.prepare('UPDATE sessions SET expires_at=? WHERE id=?').run(now() - 1, sha(real.jar.cookie));
+  assert.equal((await real.call('/api/auth/sessions')).status, 401);
+  assert.equal((await real.call('/api/auth/sessions', {method: 'POST'})).status, 404);
+  assert.equal((await real.call('/api/auth/sessions/end-others')).status, 404);
+  const off = client(adapter, {provider: 'none'});
+  assert.equal((await off.call('/api/auth/sessions')).status, 404);
+  const limited = client(adapter);
+  for (let i = 0; i < 20; i++) await limited.call('/api/auth/sessions');
+  assert.equal((await limited.call('/api/auth/sessions')).status, 429);
+  sql.close();
+});
+
+test('sessions_keep_normal_sliding_renewal_and_privacy_export', async () => {
+  const {sql, adapter} = database(), c = client(adapter);
+  await register(c, new SoftwareAuthenticator());
+  const token = c.jar.cookie;
+  assert.equal((await c.call('/api/auth/sessions')).setCookie, null);
+  assert.equal((await c.call('/api/auth/sessions/end-others', {method: 'POST'})).setCookie, null);
+  sql.prepare('UPDATE sessions SET expires_at=?').run(now() + 10 * 86400);
+  const r = await c.call('/api/auth/sessions');
+  assert.match(r.setCookie, new RegExp(`^${COOKIE}=${token};`));
+  assert.equal(c.jar.cookie, token);
+  assert.equal((await c.call('/api/trips')).status, 200);
+  const exported = await c.call('/api/privacy');
+  assert.deepEqual(Object.keys(exported.data.account.sessions[0]), ['created_at', 'expires_at', 'user_agent']);
+  sql.close();
+});

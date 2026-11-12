@@ -18,7 +18,8 @@ def _check_source(source):
                 raise ValueError(f'coastal-sectors: {name}: {field} must be text')
         lat = sector.get('latitude')
         if not (isinstance(lat, list) and len(lat) == 2 and all(
-                isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in lat)
+                isinstance(v, (int, float)) and not isinstance(v, bool)
+                and -90 <= v <= 90 and math.isfinite(v) for v in lat)  # domain first: no float() of a huge int
                 and lat[0] < lat[1]):
             raise ValueError(f'coastal-sectors: {name}: latitude must be two finite numbers, south < north')
 
