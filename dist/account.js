@@ -520,6 +520,61 @@ function signedOutHTML(t) {
     <p class="home-port-fine">${esc(t('account.out.fine'))}</p>`;
 }
 
+/** SC2252-02: one `<li>` per session row, in server order; the device label is escaped, only the current row is marked. */
+export function sessionListHTML(rows, copy) {
+  const t = asCopy(copy);
+  return rows.map(row => `<li><span>${esc(row.device)}${row.current ? ` (${esc(t('account.sessions.current'))})` : ''} · ${esc(t('account.sessions.since', {date: day(row.created_at, t.lang)}))}</span></li>`).join('');
+}
+/** The sessions answer, or null when it is not exactly: a list with one current row, each with a boolean flag, a device label, a readable start and an integer expiry. */
+function readSessions(data) {
+  const rows = data?.sessions;
+  if (!Array.isArray(rows) || !rows.length) return null;
+  const good = rows.every(r => r && typeof r.current === 'boolean' && typeof r.device === 'string' && r.device !== '' && typeof r.created_at === 'string' && !Number.isNaN(Date.parse(r.created_at)) && Number.isInteger(r.expires_at));
+  return good && rows.filter(r => r.current).length === 1 ? rows : null;
+}
+/**
+ * The "Signed in on" section: lists this owner's sessions and signs out the others after a confirmation. `$` finds the section's
+ * nodes; `alive()` says whether they still belong to the open dialog. Failures stay in this section's status line.
+ */
+export function createSessionControl({$, copy, alive = () => true}) {
+  const t = asCopy(copy);
+  const list = $('#account-sessions'), note = $('#account-sessions-status'), button = $('#account-end-others');
+  let generation = 0, locked = false, notice = '', warning = '';
+  const draw = rows => {
+    list.innerHTML = rows ? sessionListHTML(rows, t) : '';
+    button.hidden = !rows?.some(r => !r.current);
+    warning = rows ? '' : t('account.sessions.loadFailed');
+    note.textContent = [notice, warning].filter(Boolean).join(' ');
+  };
+  const refresh = async () => {
+    const mine = ++generation;
+    let rows = null;
+    try { rows = readSessions(await api('auth/sessions')); } catch { /* shown as the load failure */ }
+    if (mine !== generation || !alive()) return;
+    draw(rows);
+  };
+  button.addEventListener('click', async () => {
+    if (locked) return;
+    locked = true;
+    try {
+      if (!await confirmInPage(button, t('account.sessions.confirm'), t('account.sessions.endOthers'), t) || !alive()) return;
+      let ended;
+      try {
+        ended = (await api('auth/sessions/end-others', {method: 'POST', body: {}}))?.ended;
+        if (!Number.isInteger(ended) || ended < 0) throw Error('unconfirmed');
+      } catch {
+        if (alive()) { notice = t('account.sessions.endFailed'); note.textContent = [notice, warning].filter(Boolean).join(' '); }
+        return;
+      }
+      if (!alive()) return;
+      notice = ended === 1 ? t('account.sessions.ended.one', {n: ended}) : t('account.sessions.ended.other', {n: ended});
+      await refresh();
+      if (alive() && button.hidden) { note.tabIndex = -1; note.focus(); }
+    } finally { locked = false; }
+  });
+  return {refresh};
+}
+
 function signedInHTML(session, passkeys, t) {
   const name = session.user?.display_name;
   return `<h1 id="account-title">${esc(name ? t('account.in.titleNamed', {name}) : t('account.in.title'))}</h1>
@@ -529,6 +584,10 @@ function signedInHTML(session, passkeys, t) {
       <button type="button" data-remove-passkey="${esc(p.id)}"${passkeys.length < 2 ? ` disabled title="${esc(t('account.passkeys.removeTitle'))}"` : ''}>${esc(t('account.remove'))}</button></li>`).join('')}</ul>
     <p id="account-status" class="home-port-feedback" role="status"></p>
     <div class="home-port-actions"><button type="button" id="account-add">${esc(t('account.add'))}</button><button type="button" id="account-signout">${esc(t('account.signout'))}</button></div>
+    <h2 class="account-subhead">${esc(t('account.sessions.head'))}</h2>
+    <ul id="account-sessions" class="account-passkeys"></ul>
+    <p id="account-sessions-status" class="home-port-feedback" role="status" aria-live="polite" tabindex="-1"></p>
+    <div class="home-port-actions"><button type="button" id="account-end-others" hidden>${esc(t('account.sessions.endOthers'))}</button></div>
     ${logFormHTML(t)}
     ${spotFormHTML(t)}
     <details class="account-danger"><summary>${esc(t('account.del.head'))}</summary>
@@ -965,9 +1024,11 @@ export async function openAccount(options = {}) {
     });
     for (const button of body.querySelectorAll('[data-remove-passkey]')) button.addEventListener('click', async () => {
       if (!await confirmInPage(button, t('account.pk.confirm'), t('account.pk.confirmYes'), t)) return;
-      try { await api('auth/passkeys', {method: 'DELETE', body: {id: button.dataset.removePasskey}}); await render(); status(t('account.status.removed')); }
+      try { await api('auth/passkeys', {method: 'DELETE', body: {id: button.dataset.removePasskey}}); await render(); status(t('account.status.removed') + ' ' + t('account.sessions.passkeyNote')); }
       catch (error) { status(passkeyMessage(error, t)); }
     });
+    const sessionList = $('#account-sessions');
+    createSessionControl({$, copy: t, alive: () => open === self && sessionList.isConnected}).refresh();
   };
   await render();
 }
