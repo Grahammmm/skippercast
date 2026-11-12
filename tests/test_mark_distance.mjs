@@ -53,6 +53,17 @@ test('mark_distance_routed_uses_water_nm_and_saved_speed: the route wins, with a
   assert.ok(MARK_ROUTE_ATTEMPTS <= ROUTE_BUDGET);
 });
 
+test('mark_distance_overflowing_run_is_omitted: a non-finite derived run drops only the run, in both languages', () => {
+  const water = markDistance(ORIGIN, north(6), MODEL, null, () => ({ok: true, nm: Number.MAX_VALUE, points: []}));
+  assert.equal(water.nm, Number.MAX_VALUE);
+  assert.equal(markDistanceLine('P', water, 2), `P · ${Number.MAX_VALUE.toFixed(1)} nm by water`);
+  assert.equal(markDistanceLine('P', {nm: 3, basis: 'straight'}, Number.MIN_VALUE), 'P · 3.0 nm straight line');
+  assert.equal(markDistanceLine('P', {nm: 3, basis: 'straight'}, Number.MIN_VALUE, 'es'), 'P · 3,0 nm en línea recta');
+  for (const bad of [null, 0, -5, NaN, Infinity]) assert.equal(markDistanceLine('P', {nm: 3, basis: 'straight'}, bad), 'P · 3.0 nm straight line');
+  assert.equal(markDistanceLine('P', {nm: 3, basis: 'straight'}, 20), 'P · 3.0 nm straight line · run ≥ 10 min');
+  assert.equal(markDistanceLine('P', {nm: 6, basis: 'water'}, 20), 'P · 6.0 nm by water · run 20 min');
+});
+
 test('mark_distance_straight_is_labelled_and_lower_bounded: no route and every failure keep the chord', () => {
   const to = north(10), chord = distanceNm(ORIGIN, to);
   for (const reason of ['no-product', 'lines-needed', 'start-not-water', 'end-not-water', 'no-route', 'too-far']) {
