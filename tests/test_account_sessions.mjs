@@ -10,7 +10,11 @@ class El {
   }
   append(child) { child.parentElement = this; this.children.push(child); return child; }
   after(node) { const kids = this.parentElement.children; node.parentElement = this.parentElement; kids.splice(kids.indexOf(this) + 1, 0, node); }
-  remove() { const kids = this.parentElement.children; kids.splice(kids.indexOf(this), 1); }
+  remove() {
+    const kids = this.parentElement.children; kids.splice(kids.indexOf(this), 1);
+    // A browser drops focus to the page when the focused element, or one inside it, leaves the document.
+    if (document.activeElement === this || (this.box && Object.values(this.box).includes(document.activeElement))) document.activeElement = document.body;
+  }
   querySelector(sel) {
     if (sel === ':scope > .account-confirm') return this.children.find(c => c.className === 'account-confirm') ?? null;
     if (this.box) return sel === 'p' ? this.box.p : sel.includes('"no"') ? this.box.no : this.box.yes;
@@ -22,7 +26,7 @@ class El {
   focus() { document.activeElement = this; }
   get isConnected() { return true; }
 }
-const document = {activeElement: null, createElement: () => { const el = new El(); el.box = {p: new El(), no: new El('button'), yes: new El('button')}; return el; }};
+const document = {body: {}, activeElement: null, createElement: () => { const el = new El(); el.box = {p: new El(), no: new El('button'), yes: new El('button')}; return el; }};
 globalThis.document = document;
 
 let calls = [], script = [];   // script: queued replies {ok, body} or a function returning a promise
@@ -95,6 +99,31 @@ test('confirming signs out the others once, says how many and redraws', async ()
   assert.equal(s.note.textContent, 'Signed out 1 other device.');
   assert.equal(s.button.hidden, true); assert.ok(!s.list.innerHTML.includes('iPhone'));
   assert.equal(document.activeElement, s.note);
+});
+
+test('focus stays on another field when the sign-out hides the action, whether the refresh works or fails', async () => {
+  for (const refresh of [listing(one), 'network']) {
+    const s = section(), field = new El('input'); reset([listing(two)]);
+    await createSessionControl({$: s.$, alive: () => true}).refresh();
+    // The owner tabs into a field while the sign-out request is in flight.
+    script.push(async () => { field.focus(); return {body: {ended: 1}}; }, refresh);
+    s.button.fire('click'); const box = confirmBox(s);
+    box.fire('click', {target: {closest: () => ({dataset: {confirm: 'yes'}})}});
+    await settle(); await settle();
+    assert.equal(s.button.hidden, true);
+    assert.equal(document.activeElement, field, 'focus elsewhere is preserved');
+    assert.notEqual(document.activeElement, s.note);
+  }
+});
+
+test('focus moves to the status line when the action held it and a failed refresh hides it', async () => {
+  const s = section(); reset([listing(two)]);
+  await createSessionControl({$: s.$, alive: () => true}).refresh();
+  script.push({body: {ended: 1}}, 'network');
+  s.button.fire('click'); const box = confirmBox(s);
+  box.fire('click', {target: {closest: () => ({dataset: {confirm: 'yes'}})}});
+  await settle(); await settle();
+  assert.equal(s.button.hidden, true); assert.equal(document.activeElement, s.note);
 });
 
 test('cancel and Escape send nothing and keep the list', async () => {
