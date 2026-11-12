@@ -122,11 +122,12 @@ class _Builder(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.root = self.top = Node("#root", {})
-        self.skipping = 0
+        self.skipping: list[str] = []  # open excluded tags, outermost first
 
     def handle_starttag(self, tag, attrs):
         if self.skipping or tag in SKIP:
-            self.skipping += tag in SKIP and tag not in VOID
+            if tag in SKIP and tag not in VOID:
+                self.skipping.append(tag)
             return
         if tag in ("a", "tr", "td", "th", "li", "p", "option"):  # an unclosed sibling closes implicitly
             node, stop = self.top, {"table": ("tr", "td", "th"), "ul": ("li",), "ol": ("li",), "select": ("option",)}
@@ -140,14 +141,20 @@ class _Builder(HTMLParser):
             self.top = node
 
     def handle_endtag(self, tag):
-        if self.skipping:
-            self.skipping -= tag in SKIP
+        if self.skipping:  # only an actually open excluded tag (and its open excluded descendants) closes
+            if tag in self.skipping:
+                del self.skipping[len(self.skipping) - 1 - self.skipping[::-1].index(tag):]
             return
         node = self.top
         while node.parent and node.tag != tag:
             node = node.parent
         if node.tag == tag and node.parent:
             self.top = node.parent
+
+    def handle_startendtag(self, tag, attrs):
+        if self.skipping or tag in SKIP:  # a self-closing excluded element opens and closes nothing
+            return
+        super().handle_startendtag(tag, attrs)
 
     def handle_data(self, data):
         if not self.skipping:
