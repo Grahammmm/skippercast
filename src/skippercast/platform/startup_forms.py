@@ -33,10 +33,11 @@ removed).
 """
 from pathlib import Path
 import hashlib
+import json
 import math
 from xml.sax.saxutils import escape
 
-from .contracts import atomic_json, read_json, within
+from .contracts import _unique, atomic_json, within
 from .shoreline import overview_shoreline
 
 SCHEMA_VERSION = 1
@@ -58,6 +59,18 @@ REGS_KEEP = ('schema_version', 'revision', 'reviewed_at', 'valid_from', 'valid_t
 def derived_from(path, relative):
     """The provenance block of a copy: the original's published path and SHA-256."""
     return {'path': relative, 'sha256': hashlib.sha256(Path(path).read_bytes()).hexdigest()}
+
+
+def _snapshot(original, relative):
+    """The original's decoded JSON and its provenance block, both from one read of its bytes.
+
+    As strict as contracts.read_json (text decoding, so a BOM is refused; duplicate keys; non-finite numbers). The
+    SHA-256 is of the very bytes decoded, so a copy always names the bytes it was made from."""
+    def invalid(value):
+        raise ValueError(f"Non-finite JSON number: {value}")
+    raw = Path(original).read_bytes()
+    value = json.loads(raw.decode('utf-8'), object_pairs_hook=_unique, parse_constant=invalid)
+    return value, {'path': relative, 'sha256': hashlib.sha256(raw).hexdigest()}
 
 
 def atlas_marks(atlas, source):
@@ -147,7 +160,7 @@ def _publish_text(target, original, relative, form):
     if original is None or not original.is_file():
         target.unlink(missing_ok=True)
         return None
-    target.write_text(form(read_json(original), derived_from(original, relative)), encoding='utf-8')
+    target.write_text(form(*_snapshot(original, relative)), encoding='utf-8')
     return target
 
 
@@ -155,7 +168,7 @@ def _publish(target, original, relative, form):
     if original is None or not original.is_file():
         target.unlink(missing_ok=True)
         return None
-    atomic_json(target, form(read_json(original), derived_from(original, relative)))
+    atomic_json(target, form(*_snapshot(original, relative)))
     return target
 
 

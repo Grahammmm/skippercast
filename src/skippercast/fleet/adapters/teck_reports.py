@@ -259,7 +259,9 @@ class TeckReports:
         """Every boat card of the binding's directory, following the pager."""
         url: str | None = urljoin(binding.params["base"].rstrip("/") + "/", binding.params["directory"].lstrip("/"))
         seen: set[str] = set()
-        while url and url not in seen:
+        while url:
+            if url in seen:  # a pager that loops back would otherwise end as if the directory were complete
+                raise LayoutError(url, "directory pager repeats a previously visited page")
             if len(seen) >= MAX_PAGES:
                 raise LayoutError(url, f"directory pager runs past {MAX_PAGES} pages")
             seen.add(url)
