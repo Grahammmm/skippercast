@@ -59,6 +59,25 @@ test('withheld, missing and invalid positions cannot create a log', () => {
   }
 });
 
+test('unrepresentable capture clocks return null before the forecast or storage is touched; Date endpoints stay legal', () => {
+  const trap = {get feed() { throw new Error('forecast consulted'); }, get regions() { throw new Error('forecast consulted'); }};
+  const spy = {getItem: () => { throw new Error('storage read'); }, setItem: () => { throw new Error('storage write'); }};
+  const bad = [8.64e15 + 1, -8.64e15 - 1, Number.MAX_VALUE, -Number.MAX_VALUE, NaN, Infinity, -Infinity, undefined, null, String(NOW)];
+  for (const kind of ['catch', 'blank']) for (const now of bad) {
+    const made = createEntry(mark, kind, 'fixture', trap, now, 'UTC');
+    assert.equal(made, null);
+    assert.equal(saveEntry(made, spy), 'unavailable');
+  }
+  for (const [now, iso] of [[0, '1970-01-01T00:00:00.000Z'], [-1, '1969-12-31T23:59:59.999Z'], [8.64e15, '+275760-09-13T00:00:00.000Z'], [-8.64e15, '-271821-04-20T00:00:00.000Z']]) {
+    const made = createEntry(mark, 'catch', 'fixture', null, now, 'UTC');
+    assert.equal(made.recordedAt, iso);
+    assert.equal(made.conditions, null);
+    const s = store();
+    assert.equal(saveEntry(made, s), 'saved');
+    assert.equal(readEntries(s).length, 1);
+  }
+});
+
 test('new_spanish_capture_is_canonical_english_v1: a Spanish reader stores the same v1 English record, and switching language writes nothing', () => {
   const capture = lang => { language.value = lang; return ['catch', 'blank'].map(kind => entry(kind, forecast())); };
   try {
