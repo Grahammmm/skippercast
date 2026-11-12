@@ -211,7 +211,7 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
       {text.run ? (
         <p class="app-run-detail ui-mono">
           {text.run}{place && !place.chosen ? t('run.topPick', lang) : ''}{' '}
-          <Popover summary={t('run.basis', lang)} align="start">{runBasis(harbor, lang)}</Popover>
+          <Popover summary={t('run.basis', lang)} accessibleName={t('a11y.basis.run', lang)} align="start">{runBasis(harbor, lang)}</Popover>
         </p>
       ) : null}
       {routeNote ? <p class="app-run-protected">{said(routeNote, lang)}</p> : null}

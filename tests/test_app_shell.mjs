@@ -532,7 +532,9 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.match(html, /<output class="app-window ui-mono" aria-label="Time window">Today · 1 pm<\/output>/);
   assert.deepEqual(dayChips(html), [['Today', true], ...CHIPS.slice(1).map(label => [label, false])], 'no ?day= means today, at the fixed clock');
   assert.match(html, /aria-label="Hour" aria-valuetext="Today · 1 pm" min="0" max="10" step="1" value="0"/, 'today runs from the current hour to 11 pm');
-  assert.match(html, /<aside class="app-brief" aria-label="Brief">/);
+  assert.match(html, /<aside class="app-brief" id="app-brief-content" tabindex="-1" aria-label="Brief">/);
+  assert.match(html, /^<div class="app"[^>]*><a class="app-skip-link" href="#app-brief-content">Skip to brief<\/a><a class="app-skip-link" href="#app-map-content">Skip to map<\/a><header class="app-masthead">/, 'the two skip links come before the masthead and the command bar');
+  assert.equal(count(html, /class="app-skip-link"/g), 2, 'one pair on the desktop');
   assert.match(html, /class="ui-eyebrow">Today's brief</);
   assert.match(html, /<h1>[A-Z][^<]*\.<\/h1>/, 'the headline is one sentence with a full stop');
   assert.equal(count(html, /class="ui-tile"/g), 4);
@@ -541,7 +543,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.match(html, /class="ui-eyebrow">Where to look</);
   assert.match(html, /<p class="app-caveat">Habitat describes a place to look; fish presence is unverified.<\/p>/);
   assert.equal(count(html, /separate clocks/g), 1, 'one disclaimer line per page');
-  assert.match(html, /<section class="app-stage" tabindex="-1" aria-label="Map">/);
+  assert.match(html, /<section class="app-stage" tabindex="-1" aria-label="Map" id="app-map-content">/);
   assert.match(html, /<section class="app-legend" aria-label="Legend">/);
   assert.match(html, /role="group" aria-label="Layers"/);
   assert.equal(count(html, /class="ui-rail-item"/g), 10);
@@ -682,7 +684,7 @@ async function renderMobile(href) {
 
 test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a four-tab nav', async () => {
   const html = await renderMobile(`${ORIGIN}?region=morro-bay`);
-  assert.match(html, /^<main class="app-mobile"><section class="app-stage" tabindex="-1" aria-label="Map">/, 'the map stage comes first and fills the viewport; the root is the page\'s one main (S4-46)');
+  assert.match(html, /^<main class="app-mobile"><a class="app-skip-link" href="#app-brief-content">Skip to brief<\/a><a class="app-skip-link" href="#app-map-content">Skip to map<\/a><section class="app-stage" tabindex="-1" aria-label="Map" id="app-map-content">/, 'the two skip links, then the map stage that fills the viewport; the root is the page\'s one main (S4-46)');
   assert.doesNotMatch(html, /app-masthead|app-command|app-main|app-brief"|app-dock/, 'no desktop chrome');
   // Top strip: the brand and location card, the layers button, then the full-width profile switch.
   assert.match(html, /<header class="app-top"><div class="app-top-row"><div class="app-top-card"><a class="app-brand" href="\/">.*?<span class="app-location ui-mono" data-region="morro-bay">Morro Bay —<\/span><\/div><button[^>]*aria-label="Layers"[^>]*aria-pressed="false"/s);
@@ -715,7 +717,7 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
   const {render, h, LayersPanel, state, afterDetent, toggleLayers, dragDetent, DRAG_MIN} = await load();
   const html = await renderMobile(`${ORIGIN}?region=morro-bay&profile=spear&spot=r12&day=2026-10-06&hour=${encodeURIComponent(TUE_2PM)}&layers=clouds`);
   assert.match(html, /<section class="ui-sheet app-sheet app-sheet--mark" data-detent="peek" role="group" aria-label="Brief">/);
-  assert.match(html, /<div class="ui-sheet-body"><div class="app-sheet-brief"><section class="app-mark" aria-label="Selected mark"><div class="app-mark-head"><h2 tabindex="-1">r12<\/h2>/);
+  assert.match(html, /<div class="ui-sheet-body"><div class="app-sheet-brief" id="app-brief-content" tabindex="-1" aria-label="Brief"><section class="app-mark" aria-label="Selected mark"><div class="app-mark-head"><h2 tabindex="-1">r12<\/h2>/);
   assert.doesNotMatch(html, /<h1>/, 'the card replaces the headline');
   assert.match(html, /aria-label="Hour" aria-valuetext="Tomorrow · 2 pm" min="0" max="23" step="1" value="14"/);
   assert.deepEqual(dayChips(html), CHIPS.map(label => [label, label === 'Tue']), 'the sheet\'s day menu runs from the fixed clock');

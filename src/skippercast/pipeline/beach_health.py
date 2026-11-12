@@ -57,7 +57,10 @@ def count_url(binding):
 
 
 def _number(value):
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    # Integers are finite at any size; isfinite would convert them to float and overflow on huge JSON integers.
+    if isinstance(value, bool):
+        return False
+    return isinstance(value, int) or (isinstance(value, float) and math.isfinite(value))
 
 
 def _is_wkid_4326(value):
