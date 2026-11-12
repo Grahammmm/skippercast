@@ -47,6 +47,15 @@ export default defineConfig({
   projects: [
     {name: 'phone', use: {...devices['Desktop Chrome'], viewport: {width: 390, height: 844}, hasTouch: true, isMobile: true}},
     {name: 'laptop', use: {...devices['Desktop Chrome'], viewport: {width: 1280, height: 800}}},
+    // UXFIX-12: five more sizes, nightly only (`E2E_WIDE=1` in ci.yml's scheduled e2e step). They run just the specs that take
+    // the project size (e2e/fixtures.ts wideViewport), not the whole suite; PR runs keep the two projects above.
+    ...(process.env.E2E_WIDE === '1' ? ([
+      ['phone-small', 360, 640, true], ['phone-land', 844, 390, true], ['tablet', 768, 1024, true],
+      ['laptop-1024', 1024, 768, false], ['laptop-1366', 1366, 768, false],
+    ] as const).map(([name, width, height, touch]) => ({
+      name, testMatch: /(net-faults|wcag-views|v2-dialog-fit|v2-sheet-reach)\.spec\.ts$/,
+      use: {...devices['Desktop Chrome'], viewport: {width, height}, hasTouch: touch, isMobile: touch},
+    })) : []),
   ],
   webServer: {
     command: 'node e2e/serve.mjs',
