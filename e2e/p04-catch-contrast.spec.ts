@@ -285,7 +285,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // UXFIX-09: app.css adds one tile-basis margin rule scoped to .app-tiles (the brief's tiles; the Reports catch sheet mounts none) and raises the phone .app-top z-index by one (the top strip, not mounted by the catch sheet); no colour, backing or catch paint changed. Rebound from the final bytes.
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // UXFIX-10: app.css appends only a scoped .app-account[data-top] block (the phone top-card account button: icon size, visually hidden label, open-state colour, z-index while its panel is open); the Reports catch sheet mounts no account menu, so no catch paint or backing changes. Rebound from the final bytes.
-  "web/app/app.css": "9ec61f87fc6724905301388f351b34859c96a1d66d1dcb749357d42c994cc839",
+  "web/app/app.css": "b96c98ab60d01e81134f86ee1080f73c24d3722f5238a181ebcbfd132a8b186d",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "ba9af1737062b2a60607521f1a66fa4ea141f8ef09f58d06e357ce8d2bb5f492",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -367,7 +367,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // UXFIX-09: check_contrast.mjs changes only the appCss surface hash; contrast() is untouched. Rebound from the final bytes.
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "9d1523823e802df9b8b922bcab4fa61c102c9168bdea4033a5d9a94c492a988d",
+  "scripts/check_contrast.mjs": "9a9a28c82c6dbbb0068631300ddc3ac4cbeffb956d07177cd4621801c10ec52c",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still
