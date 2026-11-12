@@ -454,7 +454,7 @@ test('the night map draws the first listed source with a fresh frame, the night 
   assert.equal(nightSource([staleForecast], now), 'wcofs', 'none fresh: the forecast, which then draws nothing and says why');
   assert.equal(nightSource(undefined, now), 'wcofs');
 
-  const palette = readPalette(name => `token(${name})`);
+  const palette = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
   const style = nightStyle(palette, 'https://s.test/feeds/tiles/basemap/a.pmtiles', 'https://s.test/?ui=v2', 'morro-bay');
   assert.equal(style.name, 'SkipperCast basemap (night)');
   assert.equal(style.glyphs, 'https://s.test/basemap/glyphs/{fontstack}/{range}.pbf');
@@ -477,7 +477,7 @@ test('the night map draws the first listed source with a fresh frame, the night 
 
 test('the night map draws only the shoreline form region.json lists, and none when it lists neither (RF0850-7)', async () => {
   const {nightRegion, nightStyle, readPalette} = await loadNight();
-  const palette = readPalette(name => `token(${name})`), archive = 'https://s.test/feeds/tiles/basemap/a.pmtiles', page = 'https://s.test/?ui=v2';
+  const palette = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), archive = 'https://s.test/feeds/tiles/basemap/a.pmtiles', page = 'https://s.test/?ui=v2';
   const base = nightStyle(palette, archive, page, 'morro-bay');
   assert.deepEqual(nightStyle(palette, archive, page, 'morro-bay', null), base, 'null draws exactly as before');
   assert.equal(base.sources.coastline.data, 'https://s.test/regions/morro-bay/shoreline-overview.geojson');

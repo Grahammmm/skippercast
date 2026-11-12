@@ -35,7 +35,7 @@ const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'
 const json = path => JSON.parse(read(path));
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 const settle = async () => { for (let i = 0; i < 8; i++) await tick(); };
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const REGIONS = json('dist/regions/index.json').regions.map(r => r.id);
 const regionFiles = id => ({config: json(`dist/regions/${id}/region.json`), coverage: json(`dist/regions/${id}/coverage.json`)});
 /** The committed file under dist/ for a page-relative URL, or a 404 (as the site answers). */

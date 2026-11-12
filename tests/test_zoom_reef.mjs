@@ -61,7 +61,7 @@ test('labels preserve the existing screened, depth-limited features and card tex
 });
 
 test('zoom styling adds non-pickable outline and optional label with palette colours', () => {
-  const p = readPalette(name => `token(${name})`), style = markStyle(p);
+  const p = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), style = markStyle(p);
   const habitat = style.habitat, marks = style.marks;
   assert.deepEqual(habitat.map(l => l.id), [SURVEY_PICK, 'survey-habitat-line', GEOLOGY_PICK, 'geology-line']);
   assert.deepEqual(marks.map(l => l.id), ['marks-density', MARK_PICK, 'marks-ring', 'marks-fit', 'marks-depth', 'selection-ring']);

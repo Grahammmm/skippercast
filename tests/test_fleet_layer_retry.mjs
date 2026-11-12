@@ -20,7 +20,7 @@ const REGION = json('dist/regions/morro-bay/region.json');
 const SNAPSHOT = json(`dist/${REGION.assets.protected_areas}`);
 const NOW = Date.parse('2026-10-11T00:00:00Z');
 const READY = assessScreen({areas: SNAPSHOT.features, checkedAt: new Date(NOW - 3_600_000).toISOString(), live: false, closures: undefined}, NOW);
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const flush = async () => { for (let i = 0; i < 3; i++) await new Promise(resolve => setImmediate(resolve)); };
 const engine = () => signal({setOverlay() {}, setData() {}});
 

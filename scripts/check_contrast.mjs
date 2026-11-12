@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 // RF1935-4: appended focus-only layout; contrast paint, roles and thresholds unchanged.
+// MGL-15: adds the offline habitat class CVD pair gate (exported helpers, `--habitat-cvd`, and the default run) and the two map text pairs;
+// every legacy check, threshold, exit and transparent refusal is unchanged.
 // WCAG 2.x contrast check for the documented text/background token pairs, in
 // both themes of web/tokens.css (v2, dark default; design.md § 5). Fails under 4.5:1.
 // FE-61 Accept 2 retired v1 dist/tokens.css once no page loaded it.
@@ -496,15 +498,16 @@ export function habitatFillAlpha(markStyle, readPalette, rawTokens, surveyLayerI
  * `alphas` maps a theme name to its fill alpha (or pass one number for all).
  */
 export function checkHabitatCvd(css, alphas, spec = V2) {
-  const failures = [], rows = [], results = [];
+  const failures = [], rows = [], results = [], lines = [];
   const record = r => {
     results.push(r);
     const label = `${r.theme} ${r.simulation} ${r.pair} ${r.kind}`;
     if (r.status === 'pass') rows.push(`${label} alpha ${r.alpha}: dE2000 ${r.deltaE.toFixed(3)} (${r.deltaE}) >= ${r.threshold}`);
     else failures.push(`${label}${r.alpha === undefined ? '' : ` alpha ${r.alpha}`}: ${r.status}${r.deltaE === undefined ? '' : ` dE2000 ${r.deltaE.toFixed(3)} (${r.deltaE}) < ${r.threshold}`}${r.reason ? `: ${r.reason}` : ''}`);
+    lines.push(r.status === 'pass' ? `PASS ${rows.at(-1)}` : `FAIL ${failures.at(-1)}`);
   };
   try {
-    for (const [theme, tokens] of Object.entries(themes(css, spec))) {
+    for (const [theme, tokens] of Object.entries(rawThemes(css, spec))) {
       const alpha = typeof alphas === 'number' ? alphas : alphas?.[theme];
       const water = tokens['map-water'], classes = HABITAT_CLASSES.map(name => [name, tokens[`hab-${name}`]]);
       const missing = [['map-water', water], ...classes.map(([name, value]) => [`hab-${name}`, value])].filter(([, value]) => !HEX6.test(value ?? '')).map(([name]) => `--${name}`);
@@ -532,7 +535,25 @@ export function checkHabitatCvd(css, alphas, spec = V2) {
   } catch (error) {
     record({theme: 'unresolved', simulation: 'all', pair: 'all', kind: 'tokens', status: 'resolution_error', reason: error.message});
   }
-  return {failures, rows, results};
+  return {failures, rows, results, lines};
+}
+
+/**
+ * The gate on `css` with each theme's fill alpha read from the real renderer
+ * (markStyle's survey fill at zoom 13 under that theme's numeric tokens), so a
+ * changed ramp or control moves the gate with it. Never throws: any failure to
+ * evaluate is a failure line, not a pass.
+ */
+export async function habitatCvdReport(css) {
+  try {
+    const {markStyle, SURVEY_PICK} = await import(new URL('../web/map/marks.ts', import.meta.url).href);
+    const {readPalette} = await import(new URL('../web/map/palette.ts', import.meta.url).href);
+    const alphas = Object.fromEntries(Object.entries(rawThemes(css)).map(([theme, raw]) => [theme, habitatFillAlpha(markStyle, readPalette, raw, SURVEY_PICK)]));
+    return checkHabitatCvd(css, alphas);
+  } catch (error) {
+    const reason = `habitat CVD gate could not run: ${error.message}`;
+    return {failures: [reason], rows: [], results: [{status: 'resolution_error', reason}], lines: [`FAIL ${reason}`]};
+  }
 }
 
 // Deliberately snapshot-bound evidence mode. These hashes authenticate ALL
@@ -546,7 +567,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1722-08 only raises the History chart scroller's focus ring to 2 px and adds one .history-measurement-note > summary focus ring; no unfocused paint changed.
   "panelCss": "f765e1221775a652f300a63e657f99eff3538179376a85f53361befa5de2b385",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
-  "tokensCss": "85271ff5258cbbe3bfce09a7dc0b5c16ff1e31325b5a5f8d5d8a9fedd425dfd1",
+  "tokensCss": "3feb5aee870cd08f8bd295d1f0cd6042a81593fa896ce7459319941d025f2406",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
   // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.
@@ -581,7 +602,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // RF2135-5 (size fix) also folds six identical focus-ring rules into the first one, one 44px link-target rule for five links and the two blue link colours into one rule (same declarations and selectors, no paint changed); that removes two rules before the legend rules, so the cited app.css lines after :29 moved up by two.
   // SC1722-20 only appends a scoped .app-skip-link block at the end of app.css (token colours; a clipped 1 px anchor at rest, a ringed 44 px panel when focused);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved. It also folds the .app-history layout rules into the .app-conditions ones (same declarations, same order; no paint changed) to stay inside the app styles size budget.
-  "appCss": "7bdf865eaeaf4a1d96849ceb5b39fcf926d315b99e63ce321aa24180fba8e510",
+  // MGL-15 adds map-only tokens (--map-*, --hab-*, --mark-ring) to tokens.css and repoints only the two depth-contour legend swatch rules in app.css to them;
+  // existing text and legend-glass backing paint, thresholds and cited line numbers are unchanged (map-only additions and swatch colours are not text or backing).
+  "appCss": "8bd636982ab5f952861cd6787eae7771466aa2f4a5f7183db68017e4dd3af3cf",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
@@ -661,6 +684,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   const root = new URL('../', import.meta.url);
   const named = process.argv.slice(2).filter(a => !a.startsWith('--'));
+  // MGL-15: read-only habitat class CVD gate; an optional file argument checks that tokens.css instead of the repository's.
+  if (process.argv.includes('--habitat-cvd')) {
+    let css;
+    try { css = readFileSync(named.length ? named[0] : new URL('web/tokens.css', root), 'utf8'); } catch (error) {
+      console.error(`Habitat CVD check could not read its tokens: ${error.message}`);
+      process.exit(1);
+    }
+    const {failures, lines, rows} = await habitatCvdReport(css);
+    console.log(lines.join('\n'));
+    if (failures.length) { console.error(`Habitat CVD check failed: ${failures.length} of ${lines.length} rows.`); process.exit(1); }
+    console.log(`Habitat CVD check passed: ${rows.length} rows (solid >= ${HABITAT_MIN_DELTA_E.solid}, fill >= ${HABITAT_MIN_DELTA_E.fill} dE2000).`);
+    process.exit(0);
+  }
   let failed = false, count = 0;
   for (const file of named.length ? named : Object.keys(FILES)) {
     const spec = FILES[file.replace(/^\.\//, '')] || V2;
@@ -678,6 +714,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     if (process.argv.includes('--verbose')) console.log(transparent.rows.map(r => `${BRIDGE}: ${r}`).join('\n'));
     if (transparent.failures.length) { failed = true; console.error(`Transparent contrast check failed in ${BRIDGE}:\n  ${transparent.failures.join('\n  ')}`); }
     count += transparent.rows.length;
+    // MGL-15: habitat classes are part of the default run; their failures are reported apart from the transparent-evidence ones above.
+    const habitat = await habitatCvdReport(readFileSync(new URL('web/tokens.css', root), 'utf8'));
+    if (process.argv.includes('--verbose')) console.log(habitat.rows.map(r => `habitat CVD: ${r}`).join('\n'));
+    if (habitat.failures.length) { failed = true; console.error(`Habitat CVD check failed in web/tokens.css:\n  ${habitat.failures.join('\n  ')}`); }
   }
   if (failed) process.exit(1);
   console.log(`Contrast check passed: ${count} text pairs at or above ${MIN}:1 in light and dark themes.`);

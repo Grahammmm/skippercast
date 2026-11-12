@@ -89,7 +89,7 @@ test('v2: grade and fit draw on the depth ramp from palette tokens; the key keep
   assert.deepEqual([toneOf(search, 'fit_lingcod'), toneOf(interpreted, 'terrain')], ['search', 'interpreted']);
   assert.deepEqual([fitKey('lingcod', 'boat'), fitKey('rockfish', 'boat'), fitKey(null, 'spear'), fitKey('reef', 'boat')],
     ['fit_lingcod', 'fit_rockfish_reef', 'fit_cabezon_shallow_reef', null]);
-  const sentinel = readPalette(name => `token(${name})`), layers = seafloorLayers(sentinel);
+  const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), layers = seafloorLayers(sentinel);
   assert.deepEqual(layers.map(l => l.id), [...SEAFLOOR_LAYERS]);
   assert.ok(layers.every(l => l.source === SEAFLOOR_SOURCE && l.layout.visibility === 'none'), 'hidden until the publication admits something');
   const color = layers[1].paint['fill-color'], outputs = Object.fromEntries(color.slice(2, -1).reduce((pairs, v, i, all) => i % 2 ? pairs : [...pairs, [v, all[i + 1]]], []));

@@ -189,7 +189,7 @@ function harness({reduced = false, ocean = packet(wcofs()), land = [], now = () 
   const motion = {matches: reduced, addEventListener: (t, fn) => { motionListeners[t] = fn; }, removeEventListener: () => {}};
   const frames = {request: fn => { requests.push(fn); return next++; }, cancel: id => cancels.push(id)};
   const data = {coastOcean: signal({data: ocean}), coastStatus: signal({ocean: 'ready', report: 'idle', history: 'idle'}), setPlace() {}, load: async () => {}};
-  const currents = createCurrents({view, palette: () => readPalette(name => `token(${name})`), zone: () => TZ, data, doc, motion, frames, now, onHide, ...options});
+  const currents = createCurrents({view, palette: () => readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), zone: () => TZ, data, doc, motion, frames, now, onHide, ...options});
   const fire = type => { for (const fn of listeners[type] ?? []) fn(); };
   const visibility = hidden => { doc.hidden = hidden; for (const fn of docListeners.visibilitychange ?? []) fn(); };
   return {currents, canvases, requests, cancels, fire, visibility, data, listeners, dash: () => canvases[1], motionListeners, motion};

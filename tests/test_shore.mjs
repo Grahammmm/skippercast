@@ -35,7 +35,7 @@ const SNAPSHOT = json(`dist/${REGION.assets.protected_areas}`);
 const HOUR = 3_600_000;
 const NOW = Date.parse('2026-10-11T00:00:00Z');
 const iso = ms => new Date(ms).toISOString();
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const screenAt = (areas, now) => assessScreen({areas, checkedAt: iso(now - HOUR), live: false, closures: undefined}, now);
 const READY = screenAt(SNAPSHOT.features, NOW);

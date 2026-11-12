@@ -22,7 +22,7 @@ const json = path => JSON.parse(readFileSync(new URL(path, ROOT), 'utf8'));
 const FULL = json('dist/regions/morro-bay/depth-contours.geojson');
 const OVERVIEW = json('dist/regions/morro-bay/depth-contours-overview.geojson');
 const TODAY = '2026-10-20';
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const clone = v => structuredClone(v);
 

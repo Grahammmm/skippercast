@@ -26,7 +26,7 @@ import {settlePicks} from './helpers/pick-settle.mjs';
 
 const PAGE = 'https://s.test/map', TZ = 'America/Los_Angeles', HOUR = 3_600_000, MIN = 60_000;
 const NOW = new Date('2026-10-09T18:00:00Z'), AT = new Date('2026-10-09T20:00:00Z'), AT_PARAM = '2026-10-09T20:00Z';
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const iso = ms => new Date(ms).toISOString();
 const FIELD = [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER];
 

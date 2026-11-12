@@ -27,7 +27,7 @@ import {settlePicks} from './helpers/pick-settle.mjs';
 
 const PAGE = 'https://s.test/map';
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const SENTINELS = new Set(Object.values(sentinel));
 
 // design.md § 9, "Draw order, bottom to top", as entry ids; the ENC chart base sits with the bases.
@@ -693,7 +693,7 @@ test('SC1952-06: an armed Chart tap is screened by the current region\'s marks s
 });
 
 // FE-82: registry layers on the terrain (packages/coast setOverlay, FE-81).
-const OVERLAY_PALETTE = readPalette(name => (name === 'mpa-fill-opacity' ? '0.18' : `token(${name})`));
+const OVERLAY_PALETTE = readPalette(name => (name === 'mpa-fill-opacity' ? '0.18' : /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`));
 
 test('FE-82: protected areas, reef marks and charter grounds drape on the terrain in their Chart style\'s token roles', () => {
   assert.deepEqual(LAYERS.filter(e => e.terrain).map(e => e.id), ['mpas', 'charter-grounds', 'marks']);
