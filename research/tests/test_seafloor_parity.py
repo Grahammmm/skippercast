@@ -249,7 +249,7 @@ def test_launcher_argv_and_one_call_per_reach(rig):
     assert rig.go() == 0
     which, *runs = rig.calls
     assert which[0] == [sys.executable, "-B", parity.LAUNCHER, "--checkout", str(rig.checkout), "--which"]
-    assert parity.LAUNCHER == "/home/user/agent-work/bin/seafloor-cli.py"
+    assert parity.LAUNCHER == os.path.expanduser("~/agent-work/bin/seafloor-cli.py")
     assert [c[0] for c in runs] == [[sys.executable, "-B", parity.LAUNCHER, "--checkout", str(rig.checkout), "run", "--reach", r]
                                     for r in ("r1", "r2")]
     assert all(c[1] == str(rig.checkout) and c[2] == 1800 for c in runs)
@@ -385,7 +385,7 @@ def test_offline_cli_fixture_end_to_end(rig):
 
 
 def test_production_cli_cannot_override_private_parent():
-    assert str(parity.PRIVATE_PARENT) == "/home/user/agent-work/reports/seafloor-agg/private-runs"
+    assert str(parity.PRIVATE_PARENT) == os.path.expanduser("~/agent-work/reports/seafloor-agg/private-runs")
     assert "--private-parent" not in parity.parser().format_help()
     with pytest.raises(SystemExit):
         parity.parser().parse_args(["--private-parent", "/tmp"])
