@@ -394,6 +394,54 @@ class ReviewFixes(unittest.TestCase):
         self.assertEqual(op["website"], "https://boat.example.com/book")  # the operator's null is no fact
         self.assertNotIn("booking_url", op)                                # nor is a landing page's
 
+    def _operator_null_case(self, **cols):
+        sea = stored("Sea Example", n=4, operator_id="o" * 32, **cols)
+        admin = {"id": "c" * 32, "vessel_id": sea["id"], "field": "operator", "value": None, "source_id": "admin",
+                 "source_url": "admin:user-1", "method": "admin", "confidence": 1, "retrieved_at": EARLIER}
+        candidate = cand("Sea Example", "operator-site", facts=[fact("operator", "Example Charters", "landing-pages")])
+        return sea, admin, candidate
+
+    def test_admin_null_operator_clears_operator_id(self):
+        sea, admin, candidate = self._operator_null_case()
+        result = resolve(Snapshot([sea], facts=[admin]), [candidate], CONFIG, NOW)
+        op = vessel_op(result, sea["id"])
+        self.assertIn("operator_id", op)
+        self.assertIsNone(op["operator_id"])
+        self.assertEqual(of(result, "operator.upsert"), [])
+
+    def test_admin_null_operator_respects_pins(self):
+        for pin in ("operator_id", "*"):
+            with self.subTest(pin=pin):
+                sea, admin, candidate = self._operator_null_case(pinned=[pin])
+                result = resolve(Snapshot([sea], facts=[admin]), [candidate], CONFIG, NOW)
+                self.assertNotIn("operator_id", vessel_op(result, sea["id"]))
+                self.assertEqual(of(result, "operator.upsert"), [])
+
+    def test_non_admin_or_stored_operator_null_does_not_clear(self):
+        sea, admin, candidate = self._operator_null_case()
+        nonadmin = dict(admin, source_id="landing-pages", method="page")
+        op = vessel_op(resolve(Snapshot([sea], facts=[nonadmin]), [candidate], CONFIG, NOW), sea["id"])
+        self.assertNotEqual(op.get("operator_id", "absent"), None)  # the null is no fact; the named fact wins
+        sea["sources"] = [{"id": "d" * 32, "field": "operator", "source_id": "admin", "confidence": 1,
+                           "retrieved_at": EARLIER}]
+        op = vessel_op(resolve(Snapshot([sea]), [candidate], CONFIG, NOW), sea["id"])
+        self.assertNotIn("operator_id", op)  # a stored winner keeps the stored column
+
+    def test_admin_null_operator_reaches_sqlite_as_null(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            sink = SqliteSink(Path(tmp) / "fleet.sqlite", "CA", "run-1")
+            sea, admin, candidate = self._operator_null_case()
+            sink.apply(resolve(Snapshot(), [cand("Sea Example", "operator-site",
+                                                 facts=[fact("operator", "Example Charters", "landing-pages")])],
+                               CONFIG, EARLIER).ops)
+            snap = Snapshot.from_sqlite(sink.db, "CA")
+            vid = snap.vessels[0]["id"]
+            self.assertIsNotNone(sink.db.execute("SELECT operator_id FROM fleet_vessels WHERE id=?", (vid,)).fetchone()[0])
+            admin["vessel_id"] = vid
+            snap.facts = [admin]
+            sink.apply(resolve(snap, [candidate], CONFIG, NOW).ops)
+            self.assertIsNone(sink.db.execute("SELECT operator_id FROM fleet_vessels WHERE id=?", (vid,)).fetchone()[0])
+
     def test_slugs_are_capped_at_80(self):
         long_name = "Example " * 20
         taken = frozenset({slugify(long_name)[:80].strip("-")})
