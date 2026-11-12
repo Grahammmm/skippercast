@@ -16,35 +16,35 @@ const trip = (over = {}) => ({id: 't', date: '2026-11-02', point: 'sur', species
 
 test('a known area and species read by name; the saved boat is still appended', () => {
   const names = alerts.alertNames(REGION);
-  assert.equal(alerts.tripLine(trip(), names), '2026-11-02 · Point Sur · Rockfish · 7:00–13:00');
-  assert.equal(alerts.tripLine(trip({boat_sea: 0.7, boat_name: 'Skiff'}), names), '2026-11-02 · Point Sur · Rockfish · 7:00–13:00 · Skiff');
-  assert.equal(alerts.tripLine(trip({boat_sea: 0.7, boat_name: ''}), names), '2026-11-02 · Point Sur · Rockfish · 7:00–13:00 · saved boat');
-  assert.equal(alerts.tripLine(trip({boat_sea: 0, boat_name: 'Skiff'}), names), '2026-11-02 · Point Sur · Rockfish · 7:00–13:00', 'no boat without boat_sea');
+  assert.equal(alerts.tripLine(trip(), names), 'Mon 2 Nov · Point Sur · Rockfish · 7:00–13:00');
+  assert.equal(alerts.tripLine(trip({boat_sea: 0.7, boat_name: 'Skiff'}), names), 'Mon 2 Nov · Point Sur · Rockfish · 7:00–13:00 · Skiff');
+  assert.equal(alerts.tripLine(trip({boat_sea: 0.7, boat_name: ''}), names), 'Mon 2 Nov · Point Sur · Rockfish · 7:00–13:00 · saved boat');
+  assert.equal(alerts.tripLine(trip({boat_sea: 0, boat_name: 'Skiff'}), names), 'Mon 2 Nov · Point Sur · Rockfish · 7:00–13:00', 'no boat without boat_sea');
 });
 
 test('an area no longer in the region file prints its raw id, never "undefined"', () => {
   const line = alerts.tripLine(trip({point: 'old-cove'}), alerts.alertNames(REGION));
-  assert.equal(line, '2026-11-02 · old-cove · Rockfish · 7:00–13:00');
+  assert.equal(line, 'Mon 2 Nov · old-cove · Rockfish · 7:00–13:00');
   assert.doesNotMatch(line, /undefined/);
 });
 
 test('a species the region lists without a target option reads as alertSpecies does (raw id); an unlisted one prints raw', () => {
   const names = alerts.alertNames(REGION);
   assert.equal(names.species.get('halibut'), alerts.alertSpecies(REGION, null).options.find(o => o.id === 'halibut').name);
-  assert.equal(alerts.tripLine(trip({species: 'halibut'}), names), '2026-11-02 · Point Sur · halibut · 7:00–13:00');
-  assert.equal(alerts.tripLine(trip({species: 'lingcod'}), names), '2026-11-02 · Point Sur · lingcod · 7:00–13:00', 'named but not in the region\'s species list');
-  assert.equal(alerts.tripLine(trip({species: 'squid'}), names), '2026-11-02 · Point Sur · squid · 7:00–13:00');
+  assert.equal(alerts.tripLine(trip({species: 'halibut'}), names), 'Mon 2 Nov · Point Sur · halibut · 7:00–13:00');
+  assert.equal(alerts.tripLine(trip({species: 'lingcod'}), names), 'Mon 2 Nov · Point Sur · lingcod · 7:00–13:00', 'named but not in the region\'s species list');
+  assert.equal(alerts.tripLine(trip({species: 'squid'}), names), 'Mon 2 Nov · Point Sur · squid · 7:00–13:00');
 });
 
 test('without names the line is exactly today\'s, ids and all', () => {
-  assert.equal(alerts.tripLine(trip()), '2026-11-02 · sur · rockfish · 7:00–13:00');
-  assert.equal(alerts.tripLine(trip({boat_sea: 0.7})), '2026-11-02 · sur · rockfish · 7:00–13:00 · saved boat');
+  assert.equal(alerts.tripLine(trip()), 'Mon 2 Nov · sur · rockfish · 7:00–13:00');
+  assert.equal(alerts.tripLine(trip({boat_sea: 0.7})), 'Mon 2 Nov · sur · rockfish · 7:00–13:00 · saved boat');
 });
 
 test('an id named like an object property is looked up, not inherited', () => {
   const names = alerts.alertNames(REGION);
   const line = alerts.tripLine(trip({point: 'constructor', species: '__proto__'}), names);
-  assert.equal(line, '2026-11-02 · constructor · __proto__ · 7:00–13:00');
+  assert.equal(line, 'Mon 2 Nov · constructor · __proto__ · 7:00–13:00');
 });
 
 const KINDS = {initial: 'First assessment', update: 'Material change', retraction: 'Earlier alert withdrawn', final: 'Day-before assessment', 'missed-final': 'Day-before assessment missed'};
@@ -74,16 +74,16 @@ test('an empty region gives empty name maps and raw-id lines', () => {
   const names = alerts.alertNames({id: 'x', timezone: 'UTC', species: [], forecast_points: []});
   assert.equal(names.point.size, 0);
   assert.equal(names.species.size, 0);
-  assert.equal(alerts.tripLine(trip(), names), '2026-11-02 · sur · rockfish · 7:00–13:00');
+  assert.equal(alerts.tripLine(trip(), names), 'Mon 2 Nov · sur · rockfish · 7:00–13:00');
 });
 
 test('the dialog shows the names and plain assessment headings; the Mark read rule is unchanged', () => {
   const src = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
   assert.match(src, /useMemo\(\(\) => alertNames\(region\), \[region\]\)/);
-  assert.match(src, /tripLine\(trip, names, lang\)/);
+  assert.match(src, /tripLine\(trip, names, lang, timeZone\)/);
   assert.match(src, /<strong>\{eventLine\(e, lang\)\}<\/strong>/);
   assert.doesNotMatch(src, /\{e\.kind\} · \{e\.status\}/);
-  assert.match(src, /aria-label=\{t\('alerts\.deleteAria', lang, \{date: trip\.date, point: names\.point\.get\(trip\.point\) \?\? trip\.point\}\)\}/);
+  assert.match(src, /aria-label=\{t\('alerts\.deleteAria', lang, \{date: readableDate\(trip\.date, lang, timeZone\), point: names\.point\.get\(trip\.point\) \?\? trip\.point\}\)\}/);
   assert.equal(JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings['alerts.deleteAria'].en, 'Delete the trip on {date} at {point}');
   assert.match(src, /!\['read', 'delivered'\]\.includes\(e\.status\)/);
 });
