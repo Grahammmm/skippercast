@@ -364,6 +364,22 @@ def _same_points(prior_dir, by_region):
     return True
 
 
+def _reusable_manifest(path):
+    """The prior manifest when it has the fields reuse reads, else None: a cache miss, never an exception."""
+    try:
+        prior = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+    if not isinstance(prior, dict) or not isinstance(prior.get('cycle'), int) or isinstance(prior['cycle'], bool):
+        return None
+    regions = prior.get('regions')
+    if not isinstance(regions, list) or not all(isinstance(region, str) for region in regions):
+        return None
+    if not all(isinstance(prior.get(key), str) and prior[key] for key in ('cycle_iso', 'built_at')):
+        return None
+    return prior
+
+
 def build(output, previous=None, force=False, now=None, regions=None, http=None, exists=None, log=log_err):
     """Build or reuse the ensemble. Returns a status dict; keeps the previous build on failure."""
     output.mkdir(parents=True, exist_ok=True)
@@ -375,9 +391,9 @@ def build(output, previous=None, force=False, now=None, regions=None, http=None,
         cycle = latest_cycle(now, exists=exists)
         if cycle is None:
             raise RuntimeError('no complete GEFS cycle published in the last 48 hours')
-        prior = json.loads(prior_manifest.read_text()) if prior_manifest and prior_manifest.is_file() else None
-        if (prior and prior.get('cycle') == int(cycle.timestamp()) and sorted(prior.get('regions', [])) == sorted(by_region)
-                and not force and _same_points(prior_dir, by_region)):
+        prior = None if force or not prior_manifest else _reusable_manifest(prior_manifest)
+        if (prior and prior['cycle'] == int(cycle.timestamp()) and sorted(prior['regions']) == sorted(by_region)
+                and _same_points(prior_dir, by_region)):
             if target.resolve() != prior_dir.resolve():
                 shutil.rmtree(target, ignore_errors=True)
                 shutil.copytree(prior_dir, target)
