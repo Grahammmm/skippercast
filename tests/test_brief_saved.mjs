@@ -19,7 +19,7 @@ async function load() {
   if (!href) {
     const out = join(await mkdtemp(join(tmpdir(), 'brief-saved-')), 'brief.mjs');
     await build({
-      stdin: {resolveDir: ROOT, loader: 'ts', contents: `export * from './web/brief/Brief.tsx'; export * from './web/brief/saved-brief.ts'; export {regionInfo} from './web/app/region-info.ts'; export {region} from './web/state.ts';`},
+      stdin: {resolveDir: ROOT, loader: 'ts', contents: `export * from './web/brief/Brief.tsx'; export * from './web/brief/saved-brief.ts'; export {regionInfo} from './web/app/region-info.ts'; export {region} from './web/state.ts'; export {parseConditionsForecast} from './web/conditions.ts';`},
       bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
       plugins: rendererPlugins,
     });
@@ -184,4 +184,51 @@ test('region switch: the restored brief of region A is withdrawn when B is selec
   assert.equal(m.savedBrief.value, null, 'A saved status is withdrawn');
   assert.equal(m.dailyFeed.value, null);
   m.region.value = null;
+});
+
+// SC2252-05: the trip plan labels its arrival values "a saved copy" only while the forecast part itself is the saved one.
+// savedBrief stays set while only the daily part is saved, so savedForecast says which part.
+const liveForecastFeed = () => {
+  const start = Math.floor(Date.now() / HOUR) * 3600, time = Array.from({length: 48}, (_, i) => start + i * 3600), issued = Date.now() / 1000 - 3600;
+  const series = values => ({utc_offset_seconds: 0, hourly_units: {time: 'unixtime', ...Object.fromEntries(Object.entries(values).map(([k, [, u]]) => [k, u]))},
+    hourly: {time, ...Object.fromEntries(Object.entries(values).map(([k, [v]]) => [k, time.map(() => v)]))}});
+  const meta = {last_run_initialisation_time: issued, data_end_time: time.at(-1)};
+  return {region_id: ID, retrieved: Date.now() - 20 * 60_000, requested_points: [['monterey-bay', 36.7, -121.95], ['offshore-0-0', 36.5, -122.25]],
+    models: {gfs_global: {meta, data: [0, 1].map(() => series({wind_speed_10m: [9, 'kn'], wind_gusts_10m: [14, 'kn'], wind_direction_10m: [300, '°'], temperature_2m: [60, '°F'], cloud_cover: [30, '%']}))},
+      ncep_gfswave016: {meta, data: [0, 1].map(() => series({wave_height: [5.1, 'ft'], wave_period: [12, 's']}))}}};
+};
+
+test('SC2252-05: savedForecast is true only while the forecast part is the saved copy, not while only the daily part is', async () => {
+  const first = await load(), store = memory(), now = Date.now();
+  first.writeSaved(store, ID, {at: now - HOUR, data: {...montereyDaily, region_id: ID}},
+    {at: now - HOUR, data: first.parseConditionsForecast(liveForecastFeed(), ID, INFO.center)}, INFO);
+  const m = await load();
+  assert.equal(m.savedForecast.value, false, 'nothing saved on screen yet');
+  m.enableSavedBrief(store);
+  assert.equal(m.showSavedBrief(ID), true);
+  assert.ok(m.regionalForecast.value, 'the saved forecast is on screen');
+  assert.equal(m.savedBrief.value.state, 'updating');
+  assert.equal(m.savedForecast.value, true, 'both parts saved: the forecast is a saved copy');
+  // a fresh forecast replaces the saved one while the daily feed is still the saved one (the daily read has not answered)
+  await m.ensureRegionalForecast(ID, INFO.center, async () => new Response(JSON.stringify(liveForecastFeed()), {status: 200}), 'https://skippercast.test/map');
+  assert.notEqual(m.savedBrief.value, null, 'the daily part is still the saved one');
+  assert.equal(m.savedForecast.value, false, 'live arrival values are not labelled a saved copy');
+  await m.loadDailyFeed(ID, feedServer());
+  assert.equal(m.savedBrief.value, null);
+  assert.equal(m.savedForecast.value, false);
+});
+
+test('SC2252-05: a failed forecast refresh keeps the saved forecast and savedForecast true; selecting another region clears it', async () => {
+  const first = await load(), store = memory(), now = Date.now();
+  first.writeSaved(store, ID, {at: now - HOUR, data: {...montereyDaily, region_id: ID}},
+    {at: now - HOUR, data: first.parseConditionsForecast(liveForecastFeed(), ID, INFO.center)}, INFO);
+  const m = await load();
+  m.enableSavedBrief(store);
+  m.showSavedBrief(ID);
+  await m.ensureRegionalForecast(ID, INFO.center, async () => new Response('', {status: 503}), 'https://skippercast.test/map');
+  assert.equal(m.savedForecast.value, true, 'the saved forecast stays on screen and is still a saved copy');
+  assert.equal(m.savedBrief.value.state, 'failed');
+  m.region.value = 'other-region';
+  assert.equal(m.savedForecast.value, false);
+  assert.equal(m.savedBrief.value, null);
 });

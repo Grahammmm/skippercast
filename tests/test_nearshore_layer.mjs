@@ -22,6 +22,7 @@ import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, ringMa
 import {readPalette} from '../web/map/palette.ts';
 import {ISOLINE_LABELS, ISOLINE_LAYER, ISOLINE_SOURCE, STROKE_CASING, STROKE_LAYER, STROKE_SOURCE, SWELL_LAYER, SWELL_SOURCE, createSwell, nearshoreState, swellOverlay} from '../web/map/swell.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
+import {settlePicks} from './helpers/pick-settle.mjs';
 
 const PAGE = 'https://s.test/map', TZ = 'America/Los_Angeles', HOUR = 3_600_000, MIN = 60_000;
 const NOW = new Date('2026-10-09T18:00:00Z'), AT = new Date('2026-10-09T20:00:00Z'), AT_PARAM = '2026-10-09T20:00Z';
@@ -338,9 +339,9 @@ test('a ring is asked before the Chart\'s own pick layers, so it opens over a pr
     workerUrl: '/w.js', Protocol: class { constructor() { this.tile = () => {}; } }};
   createEngine(module, {host: {}, style: {version: 8, sources: {}, layers: [{id: MPA_FILL}, {id: NEARSHORE_LAYER}]}, camera: {latitude: 35.3, longitude: -120.9, zoom: 10},
     onMove() {}, onLayerError() {}, pickLayers: [MPA_FILL], pickFirst: () => [NEARSHORE_LAYER], onPick: (layer, properties) => picks.push([layer, properties.id])});
-  maps[0].fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -120.9, lat: 35.3}});
+  maps[0].fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -120.9, lat: 35.3}}); settlePicks();
   maps[0].layers = [MPA_FILL];
-  maps[0].fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -120.9, lat: 35.3}});
+  maps[0].fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -120.9, lat: 35.3}}); settlePicks();
   assert.deepEqual(picks, [[NEARSHORE_LAYER, `${NEARSHORE_LAYER}-feature`], [MPA_FILL, `${MPA_FILL}-feature`]]);
 });
 

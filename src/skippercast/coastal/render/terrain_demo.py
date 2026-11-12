@@ -94,7 +94,18 @@ def _preflight_npy(archive, member):
 def _json(data):
     def reject(value):
         raise ValueError('nonfinite_json:' + value)
-    result = json.loads(data, parse_constant=reject)
+    def unique(pairs):
+        # A repeated decoded member name is ambiguous; never keep only the last one.
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError('duplicate_json_key')
+            result[key] = value
+        return result
+    try:
+        result = json.loads(data, parse_constant=reject, object_pairs_hook=unique)
+    except RecursionError as error:
+        raise ValueError('json_nesting_excessive') from error
     if not isinstance(result, dict):
         raise ValueError('json_object_required')
     return result
@@ -150,7 +161,7 @@ def payload(root, receipt_ref):
             or not re.fullmatch('[a-f0-9]{64}', str(receipt.get('render_binding')))):
         raise ValueError('internal_render_receipt_required')
     acceptance = receipt['acceptance']
-    if (acceptance.get('schema') != 'coastal-terrain-only-input-v1'
+    if (not isinstance(acceptance, dict) or acceptance.get('schema') != 'coastal-terrain-only-input-v1'
             or any(acceptance.get(k) != v for k, v in FLAGS.items())
             or digest({k: v for k, v in acceptance.items() if k != 'scientific_review'}) != receipt['acceptance_context_sha256']):
         raise ValueError('acceptance_context_or_holds_mismatch')

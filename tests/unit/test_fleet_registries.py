@@ -11,6 +11,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
 from pathlib import Path
+import re
 import socket
 import tempfile
 import threading
@@ -18,11 +19,12 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 from urllib.parse import parse_qs
+import xml.etree.ElementTree as ET
 import zipfile
 
 from skippercast.fleet import ops
 from skippercast.fleet.adapters import get
-from skippercast.fleet.adapters.fcc_uls import FccFormatError, FccUls, is_entity, parse_ship_zip
+from skippercast.fleet.adapters.fcc_uls import FccFormatError, FccUls, _date, is_entity, parse_ship_zip
 from skippercast.fleet.adapters.uscg_psix import (PsixFormatError, UscgPsix, candidates, parse_form,
                                                   parse_inspections, search_fields, vessels)
 from skippercast.fleet.net import FleetSession
@@ -33,6 +35,7 @@ PSIX = FIXTURES / "fleet" / "psix"
 NOW = "2026-10-05T09:47:00Z"
 FCC_URL = "https://data.fcc.gov/download/pub/uls/complete/l_ship.zip"
 PSIX_URL = "https://cgmix.uscg.mil/XML/PSIXExportSearch.aspx"
+NS_X = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 # Everything personal in the FCC fixture: individual licensees, a contact row, street addresses, ZIP codes.
 PERSONAL = ("TESTPERSON", "JANE", "PEDRO", "CONTACTO", "PERSONA", "FICTA", "SAMPLE FAMILY", "EXAMPLE WAY",
             "INVENTED LANE", "MADEUP", "FAKE STREET", "99999")
@@ -140,6 +143,41 @@ def psix_xlsx(rows=None, drop_column=None) -> bytes:
     return buffer.getvalue()
 
 
+_NAME_CELL = "F2"  # Vessel Name of the first inspection row in psix_xlsx()
+
+
+def _psix_strings(data: bytes) -> list[str]:
+    root = ET.fromstring(zipfile.ZipFile(io.BytesIO(data)).read("xl/sharedStrings.xml"))
+    return ["".join(t.text or "" for t in si.iter(f"{NS_X}t")) for si in root.iter(f"{NS_X}si")]
+
+
+def _psix_edit(data: bytes, ref: str, inner: str, kind: str = "s", add: bool = False,
+               empty_strings: bool = False) -> bytes:
+    """Rewrite one cell of the synthetic workbook (or append it to its row), leaving every other part intact."""
+    cell = f'<x:c r="{ref}"' + (f' t="{kind}"' if kind else "") + f">{inner}</x:c>" if inner else f'<x:c r="{ref}" t="s"/>'
+    source = zipfile.ZipFile(io.BytesIO(data))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as archive:
+        for name in source.namelist():
+            body = source.read(name)
+            if name == "xl/worksheets/sheet1.xml":
+                sheet = body.decode()
+                if add:
+                    row = ref.lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+                    marker = f'<x:row r="{row}">'
+                    start = sheet.index(marker)
+                    end = sheet.index("</x:row>", start)
+                    sheet = sheet[:end] + cell + sheet[end:]
+                else:
+                    sheet, count = re.subn(rf'<x:c r="{ref}"[^>]*?(/>|>.*?</x:c>)', cell, sheet, count=1)
+                    assert count == 1, ref
+                body = sheet.encode()
+            elif name == "xl/sharedStrings.xml" and empty_strings:
+                body = re.sub(rb"<x:si>.*</x:si>", b"", body)
+            archive.writestr(name, body)
+    return out.getvalue()
+
+
 # ---- FCC ULS --------------------------------------------------------------------------------
 
 class FccUlsTests(unittest.TestCase):
@@ -173,6 +211,50 @@ class FccUlsTests(unittest.TestCase):
         self.assertEqual(by_call["ZZZ9005"]["status"], "terminated")
         active = {c.keys["call_sign"] for c in fcc_candidates(all_statuses=False)}
         self.assertEqual(active, {"ZZZ9001", "ZZZ9007"})
+
+    def licence_with_dates(self, grant="", expired="", cancelled="", code="A"):
+        """The ZZZ9001 candidate parsed from the fixture archive with only its HD status code and dates replaced."""
+        hd = f"HD|9000001|||ZZZ9001|{code}|SA|{grant}|{expired}|{cancelled}" + "|" * 50 + "\r\n"
+        found = [c for c in parse_ship_zip(ship_zip(replace={"HD.dat": hd.encode()}), "CA", source_id="fcc-uls",
+                                           rights="public-domain", retrieved_at=NOW)
+                 if c.keys.get("call_sign") == "ZZZ9001"]
+        self.assertEqual(len(found), 1)
+        return found[0]
+
+    def test_impossible_dates_are_omitted_one_by_one(self):
+        base = {"call_sign": "ZZZ9001", "status": "active", "status_code": "A", "radio_service": "SA", "category": "CHR"}
+        cases = [
+            (("02/30/2025", "01/15/2030", "06/01/2018"), {"expired_date": "2030-01-15", "cancellation_date": "2018-06-01"}),
+            (("01/15/2020", "13/01/2025", "06/01/2018"), {"grant_date": "2020-01-15", "cancellation_date": "2018-06-01"}),
+            (("01/15/2020", "01/15/2030", "00/00/0000"), {"grant_date": "2020-01-15", "expired_date": "2030-01-15"}),
+            (("02/30/2025", "13/01/2025", "00/00/0000"), {}),
+        ]
+        for dates, kept in cases:
+            with self.subTest(dates=dates):
+                self.assertEqual(facts(self.licence_with_dates(*dates), "fcc_licence"), [{**base, **kept}])
+
+    def test_all_invalid_dates_keep_the_candidate_unchanged(self):
+        control = self.licence_with_dates()
+        invalid = self.licence_with_dates("02/30/2025", "13/01/2025", "00/00/0000")
+        self.assertEqual((invalid.name, invalid.keys, invalid.port_hint), (control.name, control.keys, control.port_hint))
+        self.assertEqual([(f.field, f.value) for f in invalid.facts], [(f.field, f.value) for f in control.facts])
+        licence = facts(invalid, "fcc_licence")[0]
+        self.assertEqual(licence["status"], "active")  # follows the status code, not the unusable expiration
+        self.assertFalse({"grant_date", "expired_date", "cancellation_date"} & set(licence))
+
+    def test_status_follows_the_code_when_the_expiration_is_impossible(self):
+        licence = facts(self.licence_with_dates("01/15/2020", "02/30/2030", "", code="E"), "fcc_licence")[0]
+        self.assertEqual((licence["status"], licence["grant_date"]), ("expired", "2020-01-15"))
+        self.assertNotIn("expired_date", licence)
+
+    def test_date_calendar_rules(self):
+        accepted = {"02/29/2024": "2024-02-29", "02/29/2000": "2000-02-29", "01/01/0001": "0001-01-01",
+                    "12/31/9999": "9999-12-31", " 03/01/2010 ": "2010-03-01"}
+        for text, iso in accepted.items():
+            self.assertEqual(_date(text), iso, text)
+        for text in ("02/29/2025", "02/29/1900", "04/31/2024", "00/10/2024", "10/00/2024", "",
+                     "2024-02-29", "02-29-2024", "2/29/2024", "02/9/2024", "02/29/24"):
+            self.assertIsNone(_date(text), text)
 
     def test_state_filter_keys_and_categories(self):
         stats = {}
@@ -283,6 +365,44 @@ class PsixParseTests(unittest.TestCase):
         self.assertEqual((fields["TextBoxFromDate"], fields["TextBoxToDate"]), ("10/05/2023", "10/05/2026"))
         self.assertEqual(fields["__VIEWSTATE"], "SYNTHETIC-VIEWSTATE-1")
         self.assertNotIn("ButtonReset", fields)
+
+
+    def test_negative_shared_index_refuses_real_workbook(self):
+        strings = _psix_strings(psix_xlsx())
+        for index in (-1, -len(strings), -(len(strings) + 1)):
+            with self.subTest(index=index), self.assertRaisesRegex(PsixFormatError, "past the shared strings"):
+                parse_inspections(_psix_edit(psix_xlsx(), _NAME_CELL, f"<x:v>{index}</x:v>"))
+        with self.assertRaisesRegex(PsixFormatError, "past the shared strings"):  # no table at all
+            parse_inspections(_psix_edit(psix_xlsx(), _NAME_CELL, "<x:v>-1</x:v>", empty_strings=True))
+
+    def test_shared_index_boundaries_preserve_zero_based_values(self):
+        strings = _psix_strings(psix_xlsx())
+        self.assertNotEqual(strings[0], strings[-1])
+        self.assertEqual(parse_inspections(psix_xlsx())[0]["name"], "SEA EXAMPLE")
+        for index, expected in ((0, strings[0]), (len(strings) - 1, strings[-1])):
+            with self.subTest(index=index):
+                rows = parse_inspections(_psix_edit(psix_xlsx(), _NAME_CELL, f"<x:v>{index}</x:v>"))
+                self.assertEqual(rows[0]["name"], expected)
+        for index in (len(strings), len(strings) + 5):
+            with self.subTest(index=index), self.assertRaises(PsixFormatError):
+                parse_inspections(_psix_edit(psix_xlsx(), _NAME_CELL, f"<x:v>{index}</x:v>"))
+
+    def test_malformed_reference_preserves_error_contract(self):
+        for text in ("abc", "1.5", " "):
+            with self.subTest(text=text), self.assertRaisesRegex(PsixFormatError, "past the shared strings"):
+                parse_inspections(_psix_edit(psix_xlsx(), _NAME_CELL, f"<x:v>{text}</x:v>"))
+        for body in ("", "<x:v/>"):  # no value: still an empty cell, not a malformed index
+            with self.subTest(body=body):
+                self.assertEqual(parse_inspections(_psix_edit(psix_xlsx(), _NAME_CELL, body))[0]["name"], "")
+        numeric = _psix_edit(psix_xlsx(), _NAME_CELL, "<x:v>-1</x:v>", kind="")  # not a shared-string cell
+        self.assertEqual(parse_inspections(numeric)[0]["name"], "-1")
+
+    def test_late_bad_reference_never_returns_partial_rows(self):
+        self.assertGreater(len(parse_inspections(psix_xlsx())), 2)
+        with self.assertRaises(PsixFormatError):  # a later row's required column
+            parse_inspections(_psix_edit(psix_xlsx(), "F3", "<x:v>-1</x:v>"))
+        with self.assertRaises(PsixFormatError):  # a later row's extra column no inspection field reads
+            parse_inspections(_psix_edit(psix_xlsx(), "Z3", "<x:v>-1</x:v>", add=True))
 
 
 def _dates():

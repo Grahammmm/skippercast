@@ -77,7 +77,7 @@ def parse_sentence(line: str) -> Fragment | None:
     characters, has no or a wrong checksum, or has unusable fields.
     """
     text = line.strip()
-    if not text.startswith(("!AIVDM", "!AIVDO")):
+    if text.partition(",")[0].partition("*")[0] not in ("!AIVDM", "!AIVDO"):
         return None
     if len(text) > MAX_SENTENCE:
         raise MalformedSentence("sentence longer than 82 characters")
@@ -103,7 +103,10 @@ def parse_sentence(line: str) -> Fragment | None:
         raise MalformedSentence("fragment numbers are not whole numbers") from None
     if not (1 <= index_n <= count_n <= 9) or not 0 <= fill_n <= 5 or not payload:
         raise MalformedSentence("fragment numbers out of range")
-    return Fragment(own=body.startswith("AIVDO"), count=count_n, index=index_n, seq=seq, channel=channel,
+    if fill_n and index_n < count_n:
+        # Only the last fragment of a message is padded; fill bits here would be joined in as payload.
+        raise MalformedSentence("nonfinal fragment has fill bits")
+    return Fragment(own=fields[0] == "AIVDO", count=count_n, index=index_n, seq=seq, channel=channel,
                     payload=payload, fill=fill_n)
 
 

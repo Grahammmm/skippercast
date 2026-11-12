@@ -13,9 +13,9 @@ its budget and the share used, then PASS or FAIL. A failing group also lists its
 | Group | Size when set | Budget | Headroom |
 |---|---|---|---|
 | Landing page scripts (entry + scripts it imports at once) | 421,933 | 304,000 (lowered by SC1407-09 from 460,000; see history in `scripts/perf-budget.json`) | 5.5% at first |
-| Landing page styles | 24,339 | 26,000 | 6.8% |
-| App page (brief, map) scripts, first load | 1,104,511 | 1,064,000 (lowered by SC1407-09 from 1,180,000; see history in `scripts/perf-budget.json`) | 5.0% at first |
-| App page styles | 67,003 | 72,000 (raised from 71,000 by SC1722-06; see history in `scripts/perf-budget.json`) | 6.0% at first |
+| Landing page styles | 24,339 | 29,000 (raised from 26,000 by SC1922-05; see history in `scripts/perf-budget.json`) | 6.8% at first |
+| App page (brief, map) scripts, first load | 1,104,511 | 1,059,000 (lowered by SC1407-09 from 1,180,000 and by SC1407-10 to 1,059,000; see history in `scripts/perf-budget.json`) | 5.0% at first |
+| App page styles | 67,003 | 74,000 (raised from 71,000 to 72,000 by SC1722-06, to 73,000 by RF1935-4, to 74,000 by MAIN-RED-SKIPPERCAST; see history in `scripts/perf-budget.json`) | 6.0% at first |
 | Largest single built script, style or font (any page, loaded now or later) | 1,094,203 | 1,150,000 | 5.1% |
 | Brief data files in the repo (`protected-areas.geojson`, `land-water-lines.json`, `seafloor-ledger.json`) | 951,224 | 1,050,000 | 10.4% |
 | Per-region startup data, biggest single file (`atlas-marks.json`, `search-plan-index.json`, `regulations-startup.json` in every region) | 222,047 | 240,000 | 8.1% |
@@ -49,6 +49,16 @@ bytes, app.html 1,169,280 to 1,011,409. The two ceilings were lowered to the new
 (304,000 and 1,064,000). The install precache and the landing's app warm-up leave the Spanish chunk out; a saved offline
 trip pack keeps it, so Spanish still opens offline.
 
+### The trip planner and offline pack load on first use (SC1407-10, #1762 M5)
+
+`/map`'s first screen imports `web/trip.ts` for the trip signals, the `#export` dialog, the draft's ids and the shared
+protected-area screen. The planner, the offline pack, the basemap ranges and the coastal snapshots are
+`web/trip-runtime.ts`, which `web/trip.ts` loads with one dynamic import when the dialog opens, a pack or coastal call is
+made, or the planner's ranked set arrives; a call made earlier waits for it. `tests/test_client_build.mjs` checks the real
+build's manifest: nothing of it is in `app.html`'s static imports, and the offline pack still lists it. Measured with this branch merged with main 1deba4ec (SC1407-09 included): the app's first load is 1,007,939 bytes. The
+old 58 KB trip chunk mostly held map and tide modules the first screen still loads, so the saving is the trip code itself.
+The app budget is lowered from 1,064,000 to 1,059,000 (measured + 5%, rounded up to 1,000 bytes).
+
 ### Protected-area verdicts reused across hour steps (SC1407-02)
 
 Not a size budget, but a runtime cost the brief no longer repeats: `web/place-verdict-cache.ts` keeps the protected-area
@@ -70,6 +80,17 @@ zone builds a new one, and an invalid date or zone still throws and leaves the e
 frozen (the array, each day and its hours) so no caller can change it; a caller's own horizon passed to `dockTime` is
 neither frozen nor kept. `tests/test_frames.mjs` checks this by counting formatter calls, not by timing; no new timing
 was measured.
+
+### The dock moves at once; the evidence settles once (SC1407-05)
+
+Not a byte budget, and no budget here changes. Issue #1762 (R3) measured one 200-405 ms main-thread task per time-dock
+hour step. A dock input (slider, keyboard, day chip, play or reduced-motion step, on desktop or the phone's sheet edge)
+now sets only a preview (`web/dock-selection.ts`): the thumb, readout, pressed day and aria-valuetext read it at once.
+The canonical `?day=`/`?hour=`, and so the brief, map overlays, tide and URL, follow once, 100 ms after the last input,
+in one batch and one history replacement. While a preview is pending the verdict and the desktop first answer show
+"Updating…" (aria-live off, aria-busy) and hide the previous answer; share links, exports, planner and alert defaults
+and print keep the settled hour. Any URL sync, region, zone or clock-hour change, a hidden page or the dock unmounting
+drops the preview without committing it. `tests/test_dock_selection.mjs` counts the update waves; no timing was measured.
 
 ### Protected-area distance work (SC1407-01, #1762)
 
@@ -112,3 +133,17 @@ Open `scripts/perf-budget.json`. For the group that is over, add an entry at the
 `max_bytes` and a `reason` a reviewer can judge (what grew and why it is worth it), then set the group's `max_bytes` to
 the same number. The check fails if `max_bytes` differs from the last history entry or a reason is empty, so a number
 cannot change quietly. Prefer shrinking the file first.
+
+### Aerial base tiles (SC1407-07, #1762 M1)
+
+Not a size budget: a note on the Aerial base's network work. Morro Bay opens on Aerial, so its NAIP tiles are part of
+first paint. `naipSource()` (`packages/coast/src/map-sources.ts`) asks the USGS ImageServer for 512 px tiles
+(`size=512,512`, `tileSize` 512) instead of 256 px: about a quarter of the requests for the same area at the same ground
+resolution (the exact ratio depends on the viewport). MapLibre picks a 512 px source zoom one lower than a 256 px one,
+so the source zooms are 6..18 (was 7..19): the same map zooms draw, the first one and the overzoom past native resolution
+included (`tests/test_naip_source.mjs`). The format is `jpgpng`: JPEG where a tile is fully opaque (land), PNG where it
+holds transparency, so open water still shows the basemap below. If the first jpgpng draw fails, `web/map/aerial.ts`
+swaps in the `png32` form once, under its own source id; a failed png32 draw stays unavailable, and turning the base
+off and on, another region or another engine starts at jpgpng again. `dist/app.html` preconnects (anonymous, as MapLibre
+fetches) to `https://imagery.nationalmap.gov`, which the CSP already allows. `scripts/measure_startup.mjs` records JSON
+only, so it does not measure imagery; any imagery comparison needs its own response listener.

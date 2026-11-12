@@ -1,0 +1,2656 @@
+{
+ "sources": [
+  {
+   "file": "$SCR/live-desktop-2.json",
+   "base": "https://skippercast.com",
+   "chromium": "156.0.8078.4",
+   "startedAt": "2026-11-11T04:16:02.322Z",
+   "finishedAt": "2026-11-11T04:21:27.388Z",
+   "argv": [
+    "--base",
+    "https://skippercast.com",
+    "--pages",
+    "live",
+    "--only",
+    "landing,brief,map-home",
+    "--runs",
+    "3",
+    "--profiles",
+    "desktop",
+    "--cap-ms",
+    "90000",
+    "--out",
+    "$SCR/live-desktop-2.json"
+   ]
+  },
+  {
+   "file": "$SCR/live-phone-2.json",
+   "base": "https://skippercast.com",
+   "chromium": "156.0.8078.4",
+   "startedAt": "2026-11-11T04:21:27.889Z",
+   "finishedAt": "2026-11-11T04:28:37.885Z",
+   "argv": [
+    "--base",
+    "https://skippercast.com",
+    "--pages",
+    "live",
+    "--only",
+    "landing,brief,map-home",
+    "--runs",
+    "3",
+    "--profiles",
+    "phone",
+    "--cap-ms",
+    "150000",
+    "--out",
+    "$SCR/live-phone-2.json"
+   ]
+  }
+ ],
+ "groups": [
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "settledAll": true,
+   "layerDataStartMs": 530,
+   "layerDataStartMs_all": [
+    722,
+    530,
+    339
+   ],
+   "layerDataEndMs": 940,
+   "layerDataEndMs_all": [
+    1400,
+    940,
+    884
+   ],
+   "fcpMs": 252,
+   "fcpMs_all": [
+    476,
+    252,
+    236
+   ],
+   "lcpMs": 1320,
+   "lcpMs_all": [
+    1712,
+    948,
+    1320
+   ],
+   "readyMs": 474,
+   "readyMs_all": [
+    663,
+    474,
+    311
+   ],
+   "mapCanvasMs": 684,
+   "mapCanvasMs_all": [
+    1067,
+    684,
+    610
+   ],
+   "canvasQuietMs": 2055,
+   "canvasQuietMs_all": [
+    2996,
+    2055,
+    1518
+   ],
+   "tbtMs": 215,
+   "tbtMs_all": [
+    612,
+    205,
+    215
+   ],
+   "cls": 0.7023,
+   "cls_all": [
+    0.7023,
+    0.3386,
+    0.7147
+   ],
+   "longestTaskMs": 397,
+   "longestTaskMs_all": [
+    397,
+    403,
+    383
+   ],
+   "scriptMs": 782,
+   "scriptMs_all": [
+    389,
+    985,
+    782
+   ],
+   "taskMs": 3420,
+   "taskMs_all": [
+    3037,
+    4283,
+    3420
+   ],
+   "jsHeapUsedBytes": 209331044,
+   "jsHeapUsedBytes_all": [
+    209331044,
+    88774180,
+    237805128
+   ],
+   "requestCount": 132,
+   "requestCount_all": [
+    128,
+    132,
+    132
+   ],
+   "bytesTotal": 4647912,
+   "bytesTotal_all": [
+    3690963,
+    4653143,
+    4647912
+   ],
+   "requestsBeforeFcp": 70,
+   "requestsBeforeFcp_all": [
+    70,
+    70,
+    70
+   ],
+   "requestsBeforeLcp": 112,
+   "requestsBeforeLcp_all": [
+    112,
+    110,
+    119
+   ],
+   "clientRedirectMs": 0,
+   "clientRedirectMs_all": [
+    0,
+    0,
+    0
+   ],
+   "settledMs": 28175,
+   "settledMs_all": [
+    28175,
+    35465,
+    19407
+   ],
+   "bytesByKind": {
+    "html": 4052,
+    "js": 764869,
+    "css": 42041,
+    "json": 890469,
+    "tiles": 1715739,
+    "fonts": 70651,
+    "images": 0,
+    "other": 1159674
+   },
+   "requestsByKind": {
+    "html": 1,
+    "js": 70,
+    "css": 8,
+    "json": 19,
+    "tiles": 24,
+    "fonts": 2,
+    "images": 0,
+    "other": 8
+   },
+   "pmtilesRangeRequests": 17,
+   "pmtilesBytes": 1242753,
+   "habitatExportLoaded": 0,
+   "medianRun": 2,
+   "heaviest": [
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 609027,
+     "startMs": 1755,
+     "endMs": 4223
+    },
+    {
+     "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=image&bbox=-13462700.917811524,4187526.157575097,-13443133.038570518,4207094.0368161015&bboxSR=3857&imageSR=3857&size=512,512&format=jpgpng&transparent=true&renderingRule=%7B%22rasterFunction%22%3A%22NaturalColor%22%7D",
+     "kind": "other",
+     "bytes": 549469,
+     "startMs": 746,
+     "endMs": 851
+    },
+    {
+     "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=image&bbox=-13462700.917811524,4207094.0368161015,-13443133.038570518,4226661.916057106&bboxSR=3857&imageSR=3857&size=512,512&format=jpgpng&transparent=true&renderingRule=%7B%22rasterFunction%22%3A%22NaturalColor%22%7D",
+     "kind": "other",
+     "bytes": 503238,
+     "startMs": 746,
+     "endMs": 24299
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/regions/morro-bay/habitat-slim-ebbecc6131e55e83.geojson.gz",
+     "kind": "tiles",
+     "bytes": 362877,
+     "startMs": 24852,
+     "endMs": 25538
+    },
+    {
+     "url": "https://skippercast.com/assets/maplibre-gl.98baef7acf.js",
+     "kind": "js",
+     "bytes": 312035,
+     "startMs": 451,
+     "endMs": 535
+    },
+    {
+     "url": "https://skippercast.com/api/coast/ocean",
+     "kind": "json",
+     "bytes": 272699,
+     "startMs": 653,
+     "endMs": 940
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 196251,
+     "startMs": 1755,
+     "endMs": 3780
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 173899,
+     "startMs": 1755,
+     "endMs": 2613
+    },
+    {
+     "url": "https://skippercast.com/api/coast/report",
+     "kind": "json",
+     "bytes": 141956,
+     "startMs": 532,
+     "endMs": 768
+    },
+    {
+     "url": "https://skippercast.com/assets/app.e37043eee3.js",
+     "kind": "js",
+     "bytes": 110304,
+     "startMs": 105,
+     "endMs": 229
+    }
+   ]
+  },
+  {
+   "page": "brief",
+   "profile": "desktop",
+   "pass": "warm",
+   "runs": 3,
+   "settledAll": true,
+   "layerDataStartMs": 383,
+   "layerDataStartMs_all": [
+    384,
+    383,
+    330
+   ],
+   "layerDataEndMs": 835,
+   "layerDataEndMs_all": [
+    754,
+    1040,
+    835
+   ],
+   "fcpMs": 124,
+   "fcpMs_all": [
+    124,
+    124,
+    228
+   ],
+   "lcpMs": 268,
+   "lcpMs_all": [
+    268,
+    272,
+    228
+   ],
+   "readyMs": 258,
+   "readyMs_all": [
+    258,
+    259,
+    209
+   ],
+   "mapCanvasMs": 569,
+   "mapCanvasMs_all": [
+    592,
+    569,
+    512
+   ],
+   "canvasQuietMs": 1261,
+   "canvasQuietMs_all": [
+    1261,
+    1403,
+    1053
+   ],
+   "tbtMs": 220,
+   "tbtMs_all": [
+    220,
+    254,
+    178
+   ],
+   "cls": 0.2146,
+   "cls_all": [
+    0.2146,
+    0.2147,
+    0.1943
+   ],
+   "longestTaskMs": 392,
+   "longestTaskMs_all": [
+    392,
+    435,
+    350
+   ],
+   "scriptMs": 1018,
+   "scriptMs_all": [
+    489,
+    1103,
+    1018
+   ],
+   "taskMs": 3465,
+   "taskMs_all": [
+    2198,
+    3783,
+    3465
+   ],
+   "jsHeapUsedBytes": 208132260,
+   "jsHeapUsedBytes_all": [
+    208132260,
+    219538164,
+    86233652
+   ],
+   "requestCount": 132,
+   "requestCount_all": [
+    129,
+    132,
+    133
+   ],
+   "bytesTotal": 2022737,
+   "bytesTotal_all": [
+    1670442,
+    2022737,
+    2038901
+   ],
+   "requestsBeforeFcp": 70,
+   "requestsBeforeFcp_all": [
+    70,
+    70,
+    85
+   ],
+   "requestsBeforeLcp": 85,
+   "requestsBeforeLcp_all": [
+    85,
+    85,
+    85
+   ],
+   "clientRedirectMs": 0,
+   "clientRedirectMs_all": [
+    0,
+    0,
+    0
+   ],
+   "settledMs": 19396,
+   "settledMs_all": [
+    19406,
+    19396,
+    19357
+   ],
+   "bytesByKind": {
+    "html": 4013,
+    "js": 0,
+    "css": 0,
+    "json": 439797,
+    "tiles": 1575982,
+    "fonts": 0,
+    "images": 0,
+    "other": 2198
+   },
+   "requestsByKind": {
+    "html": 1,
+    "js": 70,
+    "css": 8,
+    "json": 19,
+    "tiles": 24,
+    "fonts": 2,
+    "images": 0,
+    "other": 8
+   },
+   "pmtilesRangeRequests": 17,
+   "pmtilesBytes": 1199897,
+   "habitatExportLoaded": 0,
+   "medianRun": 1,
+   "heaviest": [
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 609018,
+     "startMs": 1558,
+     "endMs": 4385
+    },
+    {
+     "url": "https://skippercast.com/api/coast/ocean",
+     "kind": "json",
+     "bytes": 273064,
+     "startMs": 488,
+     "endMs": 754
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 196246,
+     "startMs": 1558,
+     "endMs": 3830
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 173899,
+     "startMs": 1557,
+     "endMs": 2346
+    },
+    {
+     "url": "https://skippercast.com/api/coast/report",
+     "kind": "json",
+     "bytes": 141581,
+     "startMs": 384,
+     "endMs": 513
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 78667,
+     "startMs": 1558,
+     "endMs": 2972
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 52426,
+     "startMs": 1558,
+     "endMs": 3311
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 28970,
+     "startMs": 1557,
+     "endMs": 2702
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/regions/morro-bay/ledger.json",
+     "kind": "tiles",
+     "bytes": 21452,
+     "startMs": 783,
+     "endMs": 1010
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 19216,
+     "startMs": 1557,
+     "endMs": 1911
+    }
+   ]
+  },
+  {
+   "page": "brief",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "settledAll": true,
+   "layerDataStartMs": 3654,
+   "layerDataStartMs_all": [
+    3680,
+    3654,
+    3602
+   ],
+   "layerDataEndMs": 17815,
+   "layerDataEndMs_all": [
+    17815,
+    18130,
+    17573
+   ],
+   "fcpMs": 1952,
+   "fcpMs_all": [
+    1952,
+    1952,
+    1956
+   ],
+   "lcpMs": 1952,
+   "lcpMs_all": [
+    1952,
+    1952,
+    1956
+   ],
+   "readyMs": 3289,
+   "readyMs_all": [
+    3289,
+    3319,
+    3204
+   ],
+   "mapCanvasMs": 8119,
+   "mapCanvasMs_all": [
+    8120,
+    8119,
+    8025
+   ],
+   "canvasQuietMs": 9069,
+   "canvasQuietMs_all": [
+    9069,
+    10808,
+    8955
+   ],
+   "tbtMs": 956,
+   "tbtMs_all": [
+    824,
+    966,
+    956
+   ],
+   "cls": 0.0262,
+   "cls_all": [
+    0.0262,
+    0.0262,
+    0.0262
+   ],
+   "longestTaskMs": 2313,
+   "longestTaskMs_all": [
+    2023,
+    2313,
+    2507
+   ],
+   "scriptMs": 1477,
+   "scriptMs_all": [
+    1505,
+    1467,
+    1477
+   ],
+   "taskMs": 10483,
+   "taskMs_all": [
+    9737,
+    10483,
+    11255
+   ],
+   "jsHeapUsedBytes": 230904884,
+   "jsHeapUsedBytes_all": [
+    241547936,
+    228871096,
+    230904884
+   ],
+   "requestCount": 129,
+   "requestCount_all": [
+    129,
+    128,
+    129
+   ],
+   "bytesTotal": 4432690,
+   "bytesTotal_all": [
+    4432690,
+    4432858,
+    4431776
+   ],
+   "requestsBeforeFcp": 70,
+   "requestsBeforeFcp_all": [
+    70,
+    70,
+    70
+   ],
+   "requestsBeforeLcp": 70,
+   "requestsBeforeLcp_all": [
+    70,
+    70,
+    70
+   ],
+   "clientRedirectMs": 0,
+   "clientRedirectMs_all": [
+    0,
+    0,
+    0
+   ],
+   "settledMs": 32542,
+   "settledMs_all": [
+    32542,
+    32548,
+    32533
+   ],
+   "bytesByKind": {
+    "html": 4048,
+    "js": 765017,
+    "css": 42029,
+    "json": 816647,
+    "tiles": 1577180,
+    "fonts": 70649,
+    "images": 0,
+    "other": 1156595
+   },
+   "requestsByKind": {
+    "html": 1,
+    "js": 70,
+    "css": 8,
+    "json": 19,
+    "tiles": 23,
+    "fonts": 2,
+    "images": 0,
+    "other": 6
+   },
+   "pmtilesRangeRequests": 18,
+   "pmtilesBytes": 1464293,
+   "habitatExportLoaded": 0,
+   "medianRun": 1,
+   "heaviest": [
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 609023,
+     "startMs": 10173,
+     "endMs": 23386
+    },
+    {
+     "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=image&bbox=-13462700.917811524,4187526.157575097,-13443133.038570518,4207094.0368161015&bboxSR=3857&imageSR=3857&size=512,512&format=jpgpng&transparent=true&renderingRule=%7B%22rasterFunction%22%3A%22NaturalColor%22%7D",
+     "kind": "other",
+     "bytes": 549477,
+     "startMs": 8267,
+     "endMs": 22399
+    },
+    {
+     "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=image&bbox=-13462700.917811524,4207094.0368161015,-13443133.038570518,4226661.916057106&bboxSR=3857&imageSR=3857&size=512,512&format=jpgpng&transparent=true&renderingRule=%7B%22rasterFunction%22%3A%22NaturalColor%22%7D",
+     "kind": "other",
+     "bytes": 503507,
+     "startMs": 8266,
+     "endMs": 21963
+    },
+    {
+     "url": "https://skippercast.com/assets/maplibre-gl.98baef7acf.js",
+     "kind": "js",
+     "bytes": 312061,
+     "startMs": 3209,
+     "endMs": 7838
+    },
+    {
+     "url": "https://skippercast.com/api/coast/ocean",
+     "kind": "json",
+     "bytes": 273057,
+     "startMs": 7979,
+     "endMs": 17815
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 196256,
+     "startMs": 10173,
+     "endMs": 19589
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 173894,
+     "startMs": 10171,
+     "endMs": 18402
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 151153,
+     "startMs": 10169,
+     "endMs": 16978
+    },
+    {
+     "url": "https://skippercast.com/api/coast/report",
+     "kind": "json",
+     "bytes": 141630,
+     "startMs": 3685,
+     "endMs": 7058
+    },
+    {
+     "url": "https://skippercast.com/assets/app.e37043eee3.js",
+     "kind": "js",
+     "bytes": 110294,
+     "startMs": 232,
+     "endMs": 3025
+    }
+   ]
+  },
+  {
+   "page": "brief",
+   "profile": "phone",
+   "pass": "warm",
+   "runs": 3,
+   "settledAll": true,
+   "layerDataStartMs": 1282,
+   "layerDataStartMs_all": [
+    1094,
+    1282,
+    1550
+   ],
+   "layerDataEndMs": 4794,
+   "layerDataEndMs_all": [
+    3867,
+    4794,
+    5422
+   ],
+   "fcpMs": 340,
+   "fcpMs_all": [
+    292,
+    340,
+    340
+   ],
+   "lcpMs": 828,
+   "lcpMs_all": [
+    692,
+    828,
+    952
+   ],
+   "readyMs": 848,
+   "readyMs_all": [
+    710,
+    848,
+    946
+   ],
+   "mapCanvasMs": 1848,
+   "mapCanvasMs_all": [
+    1495,
+    1848,
+    2007
+   ],
+   "canvasQuietMs": 5010,
+   "canvasQuietMs_all": [
+    4072,
+    5010,
+    5683
+   ],
+   "tbtMs": 1702,
+   "tbtMs_all": [
+    1619,
+    1702,
+    2732
+   ],
+   "cls": 0.0044,
+   "cls_all": [
+    0.0044,
+    0.0044,
+    0.0044
+   ],
+   "longestTaskMs": 2276,
+   "longestTaskMs_all": [
+    2008,
+    2329,
+    2276
+   ],
+   "scriptMs": 2476,
+   "scriptMs_all": [
+    3538,
+    2177,
+    2476
+   ],
+   "taskMs": 13156,
+   "taskMs_all": [
+    13156,
+    12326,
+    13300
+   ],
+   "jsHeapUsedBytes": 242209280,
+   "jsHeapUsedBytes_all": [
+    244560652,
+    242209280,
+    82233988
+   ],
+   "requestCount": 129,
+   "requestCount_all": [
+    132,
+    129,
+    129
+   ],
+   "bytesTotal": 2034837,
+   "bytesTotal_all": [
+    2377817,
+    2034754,
+    2034837
+   ],
+   "requestsBeforeFcp": 70,
+   "requestsBeforeFcp_all": [
+    70,
+    70,
+    70
+   ],
+   "requestsBeforeLcp": 84,
+   "requestsBeforeLcp_all": [
+    84,
+    84,
+    84
+   ],
+   "clientRedirectMs": 0,
+   "clientRedirectMs_all": [
+    0,
+    0,
+    0
+   ],
+   "settledMs": 20742,
+   "settledMs_all": [
+    21979,
+    20241,
+    20742
+   ],
+   "bytesByKind": {
+    "html": 4015,
+    "js": 0,
+    "css": 0,
+    "json": 535890,
+    "tiles": 1492728,
+    "fonts": 0,
+    "images": 0,
+    "other": 2201
+   },
+   "requestsByKind": {
+    "html": 1,
+    "js": 70,
+    "css": 8,
+    "json": 19,
+    "tiles": 23,
+    "fonts": 2,
+    "images": 0,
+    "other": 6
+   },
+   "pmtilesRangeRequests": 18,
+   "pmtilesBytes": 1464299,
+   "habitatExportLoaded": 0,
+   "medianRun": 2,
+   "heaviest": [
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 609011,
+     "startMs": 3999,
+     "endMs": 11166
+    },
+    {
+     "url": "https://skippercast.com/api/coast/ocean",
+     "kind": "json",
+     "bytes": 273108,
+     "startMs": 1705,
+     "endMs": 4794
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 196258,
+     "startMs": 3999,
+     "endMs": 9135
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 173884,
+     "startMs": 3998,
+     "endMs": 8035
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 151157,
+     "startMs": 3998,
+     "endMs": 6353
+    },
+    {
+     "url": "https://skippercast.com/api/coast/report",
+     "kind": "json",
+     "bytes": 142000,
+     "startMs": 1282,
+     "endMs": 2899
+    },
+    {
+     "url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&geometry=-121.9%2C34.95%2C-120.55%2C35.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson",
+     "kind": "json",
+     "bytes": 96130,
+     "startMs": 2152,
+     "endMs": 3800
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 78674,
+     "startMs": 3998,
+     "endMs": 6997
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 52421,
+     "startMs": 3999,
+     "endMs": 7275
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 36323,
+     "startMs": 3998,
+     "endMs": 5244
+    }
+   ]
+  },
+  {
+   "page": "landing",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "settledAll": true,
+   "layerDataStartMs": 783,
+   "layerDataStartMs_all": [
+    1743,
+    783,
+    381
+   ],
+   "layerDataEndMs": 1167,
+   "layerDataEndMs_all": [
+    2932,
+    1146,
+    1167
+   ],
+   "fcpMs": 572,
+   "fcpMs_all": [
+    888,
+    572,
+    176
+   ],
+   "lcpMs": 572,
+   "lcpMs_all": [
+    888,
+    572,
+    176
+   ],
+   "readyMs": null,
+   "readyMs_all": [
+    null,
+    null,
+    null
+   ],
+   "mapCanvasMs": 809,
+   "mapCanvasMs_all": [
+    1791,
+    809,
+    408
+   ],
+   "canvasQuietMs": 809,
+   "canvasQuietMs_all": [
+    1791,
+    809,
+    408
+   ],
+   "tbtMs": 0,
+   "tbtMs_all": [
+    0,
+    0,
+    0
+   ],
+   "cls": 0.0581,
+   "cls_all": [
+    0.0581,
+    0.0581,
+    0.0578
+   ],
+   "longestTaskMs": 324,
+   "longestTaskMs_all": [
+    343,
+    324,
+    255
+   ],
+   "scriptMs": 196,
+   "scriptMs_all": [
+    375,
+    194,
+    196
+   ],
+   "taskMs": 1347,
+   "taskMs_all": [
+    1738,
+    1347,
+    1254
+   ],
+   "jsHeapUsedBytes": 19292184,
+   "jsHeapUsedBytes_all": [
+    23766156,
+    16440764,
+    19292184
+   ],
+   "requestCount": 130,
+   "requestCount_all": [
+    130,
+    130,
+    130
+   ],
+   "bytesTotal": 1617159,
+   "bytesTotal_all": [
+    1600942,
+    1618216,
+    1617159
+   ],
+   "requestsBeforeFcp": 27,
+   "requestsBeforeFcp_all": [
+    27,
+    27,
+    27
+   ],
+   "requestsBeforeLcp": 27,
+   "requestsBeforeLcp_all": [
+    27,
+    27,
+    27
+   ],
+   "clientRedirectMs": 0,
+   "clientRedirectMs_all": [
+    0,
+    0,
+    0
+   ],
+   "settledMs": 11271,
+   "settledMs_all": [
+    12854,
+    11271,
+    10624
+   ],
+   "bytesByKind": {
+    "html": 4147,
+    "js": 495172,
+    "css": 18477,
+    "json": 555183,
+    "tiles": 213555,
+    "fonts": 38075,
+    "images": 0,
+    "other": 292803
+   },
+   "requestsByKind": {
+    "html": 1,
+    "js": 55,
+    "css": 6,
+    "json": 12,
+    "tiles": 10,
+    "fonts": 1,
+    "images": 0,
+    "other": 45
+   },
+   "pmtilesRangeRequests": 8,
+   "pmtilesBytes": 127733,
+   "habitatExportLoaded": 0,
+   "medianRun": 2,
+   "heaviest": [
+    {
+     "url": "https://skippercast.com/assets/maplibre-gl.98baef7acf.js",
+     "kind": "js",
+     "bytes": 312037,
+     "startMs": 685,
+     "endMs": 744
+    },
+    {
+     "url": "https://skippercast.com/api/coast/ocean",
+     "kind": "json",
+     "bytes": 272564,
+     "startMs": 783,
+     "endMs": 1143
+    },
+    {
+     "url": "https://skippercast.com/api/coast/report",
+     "kind": "json",
+     "bytes": 141973,
+     "startMs": 1006,
+     "endMs": 1146
+    },
+    {
+     "url": "https://skippercast.com/assets/app.e37043eee3.js",
+     "kind": "other",
+     "bytes": 110445,
+     "startMs": 656,
+     "endMs": 702
+    },
+    {
+     "url": "https://skippercast.com/api/forecast?region=morro-bay",
+     "kind": "json",
+     "bytes": 102791,
+     "startMs": 1006,
+     "endMs": 1062
+    },
+    {
+     "url": "https://skippercast.com/basemap/glyphs/dm-sans-medium/0-255.pbf",
+     "kind": "tiles",
+     "bytes": 83650,
+     "startMs": 1345,
+     "endMs": 1387
+    },
+    {
+     "url": "https://skippercast.com/assets/strings.en.generated.5db58dd7c4.js",
+     "kind": "js",
+     "bytes": 51607,
+     "startMs": 482,
+     "endMs": 551
+    },
+    {
+     "url": "https://skippercast.com/assets/dm-sans-latin.17cf521964.woff2",
+     "kind": "fonts",
+     "bytes": 38070,
+     "startMs": 548,
+     "endMs": 603
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 37349,
+     "startMs": 956,
+     "endMs": 1515
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 34542,
+     "startMs": 956,
+     "endMs": 1695
+    }
+   ]
+  },
+  {
+   "page": "landing",
+   "profile": "desktop",
+   "pass": "warm",
+   "runs": 3,
+   "settledAll": true,
+   "layerDataStartMs": 199,
+   "layerDataStartMs_all": [
+    197,
+    224,
+    199
+   ],
+   "layerDataEndMs": 571,
+   "layerDataEndMs_all": [
+    571,
+    495,
+    627
+   ],
+   "fcpMs": 92,
+   "fcpMs_all": [
+    120,
+    92,
+    72
+   ],
+   "lcpMs": 92,
+   "lcpMs_all": [
+    120,
+    92,
+    72
+   ],
+   "readyMs": null,
+   "readyMs_all": [
+    null,
+    null,
+    null
+   ],
+   "mapCanvasMs": 234,
+   "mapCanvasMs_all": [
+    225,
+    259,
+    234
+   ],
+   "canvasQuietMs": 1281,
+   "canvasQuietMs_all": [
+    1196,
+    1418,
+    1281
+   ],
+   "tbtMs": 237,
+   "tbtMs_all": [
+    237,
+    281,
+    195
+   ],
+   "cls": 0.0578,
+   "cls_all": [
+    0.0562,
+    0.058,
+    0.0578
+   ],
+   "longestTaskMs": 287,
+   "longestTaskMs_all": [
+    287,
+    331,
+    245
+   ],
+   "scriptMs": 192,
+   "scriptMs_all": [
+    187,
+    200,
+    192
+   ],
+   "taskMs": 1340,
+   "taskMs_all": [
+    1389,
+    1340,
+    1218
+   ],
+   "jsHeapUsedBytes": 20140672,
+   "jsHeapUsedBytes_all": [
+    23087224,
+    19597140,
+    20140672
+   ],
+   "requestCount": 130,
+   "requestCount_all": [
+    130,
+    130,
+    130
+   ],
+   "bytesTotal": 506479,
+   "bytesTotal_all": [
+    506479,
+    506305,
+    506584
+   ],
+   "requestsBeforeFcp": 27,
+   "requestsBeforeFcp_all": [
+    47,
+    27,
+    27
+   ],
+   "requestsBeforeLcp": 27,
+   "requestsBeforeLcp_all": [
+    47,
+    27,
+    27
+   ],
+   "clientRedirectMs": 0,
+   "clientRedirectMs_all": [
+    0,
+    0,
+    0
+   ],
+   "settledMs": 10086,
+   "settledMs_all": [
+    10086,
+    10104,
+    10077
+   ],
+   "bytesByKind": {
+    "html": 4107,
+    "js": 0,
+    "css": 0,
+    "json": 420203,
+    "tiles": 82170,
+    "fonts": 0,
+    "images": 0,
+    "other": 0
+   },
+   "requestsByKind": {
+    "html": 1,
+    "js": 55,
+    "css": 6,
+    "json": 12,
+    "tiles": 10,
+    "fonts": 1,
+    "images": 0,
+    "other": 45
+   },
+   "pmtilesRangeRequests": 8,
+   "pmtilesBytes": 81062,
+   "habitatExportLoaded": 0,
+   "medianRun": 3,
+   "heaviest": [
+    {
+     "url": "https://skippercast.com/api/coast/ocean",
+     "kind": "json",
+     "bytes": 272318,
+     "startMs": 199,
+     "endMs": 610
+    },
+    {
+     "url": "https://skippercast.com/api/coast/report",
+     "kind": "json",
+     "bytes": 141669,
+     "startMs": 312,
+     "endMs": 627
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 37357,
+     "startMs": 269,
+     "endMs": 605
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 34537,
+     "startMs": 269,
+     "endMs": 611
+    },
+    {
+     "url": "https://skippercast.com/",
+     "kind": "html",
+     "bytes": 4105,
+     "startMs": 0,
+     "endMs": 36
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 3920,
+     "startMs": 268,
+     "endMs": 587
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 2370,
+     "startMs": 268,
+     "endMs": 393
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 1457,
+     "startMs": 269,
+     "endMs": 810
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 1421,
+     "startMs": 269,
+     "endMs": 1033
+    },
+    {
+     "url": "https://skippercast.com/basemap/glyphs/dm-sans-medium/0-255.pbf",
+     "kind": "tiles",
+     "bytes": 1112,
+     "startMs": 599,
+     "endMs": 630
+    }
+   ]
+  },
+  {
+   "page": "landing",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "settledAll": true,
+   "layerDataStartMs": 3559,
+   "layerDataStartMs_all": [
+    3849,
+    3514,
+    3559
+   ],
+   "layerDataEndMs": 9222,
+   "layerDataEndMs_all": [
+    10059,
+    9051,
+    9222
+   ],
+   "fcpMs": 952,
+   "fcpMs_all": [
+    1220,
+    864,
+    952
+   ],
+   "lcpMs": 952,
+   "lcpMs_all": [
+    1220,
+    864,
+    952
+   ],
+   "readyMs": null,
+   "readyMs_all": [
+    null,
+    null,
+    null
+   ],
+   "mapCanvasMs": 6610,
+   "mapCanvasMs_all": [
+    6973,
+    6544,
+    6610
+   ],
+   "canvasQuietMs": 6672,
+   "canvasQuietMs_all": [
+    7037,
+    6630,
+    6672
+   ],
+   "tbtMs": 231,
+   "tbtMs_all": [
+    169,
+    231,
+    231
+   ],
+   "cls": 0,
+   "cls_all": [
+    0,
+    0,
+    0
+   ],
+   "longestTaskMs": 561,
+   "longestTaskMs_all": [
+    439,
+    963,
+    561
+   ],
+   "scriptMs": 743,
+   "scriptMs_all": [
+    677,
+    1051,
+    743
+   ],
+   "taskMs": 5018,
+   "taskMs_all": [
+    4373,
+    7170,
+    5018
+   ],
+   "jsHeapUsedBytes": 15510532,
+   "jsHeapUsedBytes_all": [
+    15571384,
+    14942720,
+    15510532
+   ],
+   "requestCount": 128,
+   "requestCount_all": [
+    128,
+    128,
+    128
+   ],
+   "bytesTotal": 1615012,
+   "bytesTotal_all": [
+    1598823,
+    1615012,
+    1615738
+   ],
+   "requestsBeforeFcp": 27,
+   "requestsBeforeFcp_all": [
+    27,
+    27,
+    27
+   ],
+   "requestsBeforeLcp": 27,
+   "requestsBeforeLcp_all": [
+    27,
+    27,
+    27
+   ],
+   "clientRedirectMs": 0,
+   "clientRedirectMs_all": [
+    0,
+    0,
+    0
+   ],
+   "settledMs": 19047,
+   "settledMs_all": [
+    19444,
+    18807,
+    19047
+   ],
+   "bytesByKind": {
+    "html": 4148,
+    "js": 495289,
+    "css": 18478,
+    "json": 555787,
+    "tiles": 210660,
+    "fonts": 38080,
+    "images": 0,
+    "other": 292878
+   },
+   "requestsByKind": {
+    "html": 1,
+    "js": 55,
+    "css": 6,
+    "json": 12,
+    "tiles": 8,
+    "fonts": 1,
+    "images": 0,
+    "other": 45
+   },
+   "pmtilesRangeRequests": 6,
+   "pmtilesBytes": 124843,
+   "habitatExportLoaded": 0,
+   "medianRun": 3,
+   "heaviest": [
+    {
+     "url": "https://skippercast.com/assets/maplibre-gl.98baef7acf.js",
+     "kind": "js",
+     "bytes": 312037,
+     "startMs": 1970,
+     "endMs": 6348
+    },
+    {
+     "url": "https://skippercast.com/api/coast/ocean",
+     "kind": "json",
+     "bytes": 272897,
+     "startMs": 6503,
+     "endMs": 9222
+    },
+    {
+     "url": "https://skippercast.com/api/coast/report",
+     "kind": "json",
+     "bytes": 141900,
+     "startMs": 3563,
+     "endMs": 5882
+    },
+    {
+     "url": "https://skippercast.com/assets/app.e37043eee3.js",
+     "kind": "other",
+     "bytes": 110450,
+     "startMs": 1819,
+     "endMs": 4559
+    },
+    {
+     "url": "https://skippercast.com/api/forecast?region=morro-bay",
+     "kind": "json",
+     "bytes": 102916,
+     "startMs": 3559,
+     "endMs": 5461
+    },
+    {
+     "url": "https://skippercast.com/basemap/glyphs/dm-sans-medium/0-255.pbf",
+     "kind": "tiles",
+     "bytes": 83655,
+     "startMs": 8902,
+     "endMs": 9851
+    },
+    {
+     "url": "https://skippercast.com/assets/strings.en.generated.5db58dd7c4.js",
+     "kind": "js",
+     "bytes": 51664,
+     "startMs": 266,
+     "endMs": 1161
+    },
+    {
+     "url": "https://skippercast.com/assets/dm-sans-latin.17cf521964.woff2",
+     "kind": "fonts",
+     "bytes": 38073,
+     "startMs": 898,
+     "endMs": 1311
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 37347,
+     "startMs": 8173,
+     "endMs": 8850
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 34537,
+     "startMs": 8174,
+     "endMs": 9716
+    }
+   ]
+  },
+  {
+   "page": "landing",
+   "profile": "phone",
+   "pass": "warm",
+   "runs": 3,
+   "settledAll": true,
+   "layerDataStartMs": 825,
+   "layerDataStartMs_all": [
+    825,
+    1341,
+    799
+   ],
+   "layerDataEndMs": 3697,
+   "layerDataEndMs_all": [
+    3645,
+    4218,
+    3697
+   ],
+   "fcpMs": 280,
+   "fcpMs_all": [
+    280,
+    356,
+    236
+   ],
+   "lcpMs": 280,
+   "lcpMs_all": [
+    280,
+    356,
+    236
+   ],
+   "readyMs": null,
+   "readyMs_all": [
+    null,
+    null,
+    null
+   ],
+   "mapCanvasMs": 876,
+   "mapCanvasMs_all": [
+    876,
+    1476,
+    847
+   ],
+   "canvasQuietMs": 876,
+   "canvasQuietMs_all": [
+    876,
+    2033,
+    847
+   ],
+   "tbtMs": 32,
+   "tbtMs_all": [
+    26,
+    281,
+    32
+   ],
+   "cls": 0,
+   "cls_all": [
+    0,
+    0,
+    0
+   ],
+   "longestTaskMs": 594,
+   "longestTaskMs_all": [
+    594,
+    1236,
+    472
+   ],
+   "scriptMs": 515,
+   "scriptMs_all": [
+    515,
+    1024,
+    493
+   ],
+   "taskMs": 4267,
+   "taskMs_all": [
+    4267,
+    8114,
+    4130
+   ],
+   "jsHeapUsedBytes": 15736204,
+   "jsHeapUsedBytes_all": [
+    15736204,
+    15643228,
+    15839000
+   ],
+   "requestCount": 128,
+   "requestCount_all": [
+    128,
+    128,
+    128
+   ],
+   "bytesTotal": 551202,
+   "bytesTotal_all": [
+    551330,
+    550864,
+    551202
+   ],
+   "requestsBeforeFcp": 27,
+   "requestsBeforeFcp_all": [
+    27,
+    27,
+    27
+   ],
+   "requestsBeforeLcp": 27,
+   "requestsBeforeLcp_all": [
+    27,
+    27,
+    27
+   ],
+   "clientRedirectMs": 0,
+   "clientRedirectMs_all": [
+    0,
+    0,
+    0
+   ],
+   "settledMs": 12964,
+   "settledMs_all": [
+    12717,
+    14005,
+    12964
+   ],
+   "bytesByKind": {
+    "html": 4108,
+    "js": 0,
+    "css": 0,
+    "json": 421136,
+    "tiles": 125962,
+    "fonts": 0,
+    "images": 0,
+    "other": 0
+   },
+   "requestsByKind": {
+    "html": 1,
+    "js": 55,
+    "css": 6,
+    "json": 12,
+    "tiles": 8,
+    "fonts": 1,
+    "images": 0,
+    "other": 45
+   },
+   "pmtilesRangeRequests": 6,
+   "pmtilesBytes": 124854,
+   "habitatExportLoaded": 0,
+   "medianRun": 1,
+   "heaviest": [
+    {
+     "url": "https://skippercast.com/api/coast/ocean",
+     "kind": "json",
+     "bytes": 272952,
+     "startMs": 825,
+     "endMs": 3645
+    },
+    {
+     "url": "https://skippercast.com/api/coast/report",
+     "kind": "json",
+     "bytes": 141975,
+     "startMs": 1173,
+     "endMs": 3223
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 37358,
+     "startMs": 1286,
+     "endMs": 2092
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 34537,
+     "startMs": 1287,
+     "endMs": 2564
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 32938,
+     "startMs": 1288,
+     "endMs": 2700
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 17652,
+     "startMs": 872,
+     "endMs": 1220
+    },
+    {
+     "url": "https://skippercast.com/",
+     "kind": "html",
+     "bytes": 4110,
+     "startMs": 0,
+     "endMs": 168
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/basemap/ca-coast-20261011.pmtiles",
+     "kind": "tiles",
+     "bytes": 2377,
+     "startMs": 1287,
+     "endMs": 2106
+    },
+    {
+     "url": "https://skippercast.com/data/home-ports.json",
+     "kind": "json",
+     "bytes": 1110,
+     "startMs": 385,
+     "endMs": 541
+    },
+    {
+     "url": "https://skippercast.com/precache.json",
+     "kind": "json",
+     "bytes": 1110,
+     "startMs": 416,
+     "endMs": 577
+    }
+   ]
+  },
+  {
+   "page": "map-home",
+   "profile": "desktop",
+   "pass": "cold",
+   "runs": 3,
+   "settledAll": true,
+   "layerDataStartMs": 645,
+   "layerDataStartMs_all": [
+    645,
+    556,
+    684
+   ],
+   "layerDataEndMs": 1275,
+   "layerDataEndMs_all": [
+    1275,
+    1084,
+    1457
+   ],
+   "fcpMs": 548,
+   "fcpMs_all": [
+    548,
+    543,
+    638
+   ],
+   "lcpMs": 1444,
+   "lcpMs_all": [
+    1444,
+    1219,
+    1474
+   ],
+   "readyMs": 547,
+   "readyMs_all": [
+    547,
+    529,
+    616
+   ],
+   "mapCanvasMs": 886,
+   "mapCanvasMs_all": [
+    940,
+    834,
+    886
+   ],
+   "canvasQuietMs": 5353,
+   "canvasQuietMs_all": [
+    1397,
+    5681,
+    5353
+   ],
+   "tbtMs": 986,
+   "tbtMs_all": [
+    181,
+    986,
+    1123
+   ],
+   "cls": 0.3236,
+   "cls_all": [
+    0.3222,
+    0.6871,
+    0.3236
+   ],
+   "longestTaskMs": 375,
+   "longestTaskMs_all": [
+    357,
+    416,
+    375
+   ],
+   "scriptMs": 917,
+   "scriptMs_all": [
+    847,
+    917,
+    1038
+   ],
+   "taskMs": 4035,
+   "taskMs_all": [
+    3263,
+    4035,
+    4155
+   ],
+   "jsHeapUsedBytes": 87708816,
+   "jsHeapUsedBytes_all": [
+    217503944,
+    87171460,
+    87708816
+   ],
+   "requestCount": 205,
+   "requestCount_all": [
+    205,
+    205,
+    205
+   ],
+   "bytesTotal": 4660118,
+   "bytesTotal_all": [
+    4651223,
+    4661399,
+    4660118
+   ],
+   "requestsBeforeFcp": 157,
+   "requestsBeforeFcp_all": [
+    157,
+    157,
+    157
+   ],
+   "requestsBeforeLcp": 184,
+   "requestsBeforeLcp_all": [
+    183,
+    184,
+    185
+   ],
+   "clientRedirectMs": 420,
+   "clientRedirectMs_all": [
+    420,
+    379,
+    478
+   ],
+   "settledMs": 19688,
+   "settledMs_all": [
+    19685,
+    19688,
+    19822
+   ],
+   "bytesByKind": {
+    "html": 8048,
+    "js": 765014,
+    "css": 41992,
+    "json": 892518,
+    "tiles": 1721989,
+    "fonts": 70647,
+    "images": 0,
+    "other": 1159875
+   },
+   "requestsByKind": {
+    "html": 2,
+    "js": 134,
+    "css": 12,
+    "json": 21,
+    "tiles": 24,
+    "fonts": 4,
+    "images": 0,
+    "other": 8
+   },
+   "pmtilesRangeRequests": 17,
+   "pmtilesBytes": 1242723,
+   "habitatExportLoaded": 0,
+   "medianRun": 3,
+   "heaviest": [
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 609015,
+     "startMs": 1881,
+     "endMs": 3651
+    },
+    {
+     "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=image&bbox=-13462700.917811524,4187526.157575097,-13443133.038570518,4207094.0368161015&bboxSR=3857&imageSR=3857&size=512,512&format=jpgpng&transparent=true&renderingRule=%7B%22rasterFunction%22%3A%22NaturalColor%22%7D",
+     "kind": "other",
+     "bytes": 549468,
+     "startMs": 943,
+     "endMs": 1074
+    },
+    {
+     "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=image&bbox=-13462700.917811524,4207094.0368161015,-13443133.038570518,4226661.916057106&bboxSR=3857&imageSR=3857&size=512,512&format=jpgpng&transparent=true&renderingRule=%7B%22rasterFunction%22%3A%22NaturalColor%22%7D",
+     "kind": "other",
+     "bytes": 503243,
+     "startMs": 943,
+     "endMs": 1092
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/regions/morro-bay/habitat-slim-ebbecc6131e55e83.geojson.gz",
+     "kind": "tiles",
+     "bytes": 363503,
+     "startMs": 2572,
+     "endMs": 2789
+    },
+    {
+     "url": "https://skippercast.com/assets/maplibre-gl.98baef7acf.js",
+     "kind": "js",
+     "bytes": 312045,
+     "startMs": 584,
+     "endMs": 649
+    },
+    {
+     "url": "https://skippercast.com/api/coast/ocean",
+     "kind": "json",
+     "bytes": 273165,
+     "startMs": 854,
+     "endMs": 1457
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 196261,
+     "startMs": 1881,
+     "endMs": 3441
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 173895,
+     "startMs": 1881,
+     "endMs": 2546
+    },
+    {
+     "url": "https://skippercast.com/api/coast/report",
+     "kind": "json",
+     "bytes": 141405,
+     "startMs": 686,
+     "endMs": 1145
+    },
+    {
+     "url": "https://skippercast.com/assets/app.e37043eee3.js",
+     "kind": "js",
+     "bytes": 110298,
+     "startMs": 261,
+     "endMs": 367
+    }
+   ]
+  },
+  {
+   "page": "map-home",
+   "profile": "desktop",
+   "pass": "warm",
+   "runs": 3,
+   "settledAll": true,
+   "layerDataStartMs": 522,
+   "layerDataStartMs_all": [
+    515,
+    537,
+    522
+   ],
+   "layerDataEndMs": 906,
+   "layerDataEndMs_all": [
+    1080,
+    906,
+    885
+   ],
+   "fcpMs": 392,
+   "fcpMs_all": [
+    401,
+    386,
+    392
+   ],
+   "lcpMs": 392,
+   "lcpMs_all": [
+    401,
+    386,
+    392
+   ],
+   "readyMs": 377,
+   "readyMs_all": [
+    391,
+    364,
+    377
+   ],
+   "mapCanvasMs": 717,
+   "mapCanvasMs_all": [
+    717,
+    704,
+    760
+   ],
+   "canvasQuietMs": 6075,
+   "canvasQuietMs_all": [
+    6075,
+    6212,
+    5148
+   ],
+   "tbtMs": 1325,
+   "tbtMs_all": [
+    1047,
+    1509,
+    1325
+   ],
+   "cls": 0.1997,
+   "cls_all": [
+    0.1997,
+    0.1932,
+    0.2003
+   ],
+   "longestTaskMs": 469,
+   "longestTaskMs_all": [
+    469,
+    546,
+    433
+   ],
+   "scriptMs": 1337,
+   "scriptMs_all": [
+    1163,
+    1337,
+    1406
+   ],
+   "taskMs": 4569,
+   "taskMs_all": [
+    3963,
+    4700,
+    4569
+   ],
+   "jsHeapUsedBytes": 87697848,
+   "jsHeapUsedBytes_all": [
+    221508516,
+    87697848,
+    86239828
+   ],
+   "requestCount": 206,
+   "requestCount_all": [
+    206,
+    206,
+    206
+   ],
+   "bytesTotal": 2024980,
+   "bytesTotal_all": [
+    2043145,
+    2012981,
+    2024980
+   ],
+   "requestsBeforeFcp": 158,
+   "requestsBeforeFcp_all": [
+    158,
+    158,
+    158
+   ],
+   "requestsBeforeLcp": 158,
+   "requestsBeforeLcp_all": [
+    158,
+    158,
+    158
+   ],
+   "clientRedirectMs": 184,
+   "clientRedirectMs_all": [
+    209,
+    178,
+    184
+   ],
+   "settledMs": 19375,
+   "settledMs_all": [
+    19375,
+    19381,
+    19368
+   ],
+   "bytesByKind": {
+    "html": 8007,
+    "js": 0,
+    "css": 0,
+    "json": 442725,
+    "tiles": 1572057,
+    "fonts": 0,
+    "images": 0,
+    "other": 2198
+   },
+   "requestsByKind": {
+    "html": 2,
+    "js": 134,
+    "css": 12,
+    "json": 22,
+    "tiles": 24,
+    "fonts": 4,
+    "images": 0,
+    "other": 8
+   },
+   "pmtilesRangeRequests": 17,
+   "pmtilesBytes": 1182833,
+   "habitatExportLoaded": 0,
+   "medianRun": 1,
+   "heaviest": [
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 609004,
+     "startMs": 1751,
+     "endMs": 4154
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/regions/morro-bay/habitat-slim-ebbecc6131e55e83.geojson.gz",
+     "kind": "tiles",
+     "bytes": 359417,
+     "startMs": 1933,
+     "endMs": 2274
+    },
+    {
+     "url": "https://skippercast.com/api/coast/ocean",
+     "kind": "json",
+     "bytes": 272927,
+     "startMs": 623,
+     "endMs": 1080
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 196248,
+     "startMs": 1751,
+     "endMs": 3797
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 173894,
+     "startMs": 1750,
+     "endMs": 2415
+    },
+    {
+     "url": "https://skippercast.com/api/coast/report",
+     "kind": "json",
+     "bytes": 141909,
+     "startMs": 515,
+     "endMs": 710
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 78680,
+     "startMs": 1750,
+     "endMs": 3076
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 52425,
+     "startMs": 1750,
+     "endMs": 3439
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 28968,
+     "startMs": 1750,
+     "endMs": 2744
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/regions/morro-bay/ledger.json",
+     "kind": "tiles",
+     "bytes": 21485,
+     "startMs": 907,
+     "endMs": 1102
+    }
+   ]
+  },
+  {
+   "page": "map-home",
+   "profile": "phone",
+   "pass": "cold",
+   "runs": 3,
+   "settledAll": true,
+   "layerDataStartMs": 4095,
+   "layerDataStartMs_all": [
+    4095,
+    4558,
+    4091
+   ],
+   "layerDataEndMs": 18453,
+   "layerDataEndMs_all": [
+    18167,
+    18453,
+    18553
+   ],
+   "fcpMs": 3745,
+   "fcpMs_all": [
+    3745,
+    4326,
+    3580
+   ],
+   "lcpMs": 3745,
+   "lcpMs_all": [
+    3745,
+    4326,
+    3700
+   ],
+   "readyMs": 3787,
+   "readyMs_all": [
+    3787,
+    4402,
+    3722
+   ],
+   "mapCanvasMs": 8564,
+   "mapCanvasMs_all": [
+    8564,
+    8995,
+    8505
+   ],
+   "canvasQuietMs": 9514,
+   "canvasQuietMs_all": [
+    9514,
+    10032,
+    9430
+   ],
+   "tbtMs": 778,
+   "tbtMs_all": [
+    778,
+    890,
+    657
+   ],
+   "cls": 0.0001,
+   "cls_all": [
+    0.0001,
+    0.0001,
+    0.0041
+   ],
+   "longestTaskMs": 2280,
+   "longestTaskMs_all": [
+    3776,
+    2259,
+    2280
+   ],
+   "scriptMs": 1701,
+   "scriptMs_all": [
+    2883,
+    1701,
+    1302
+   ],
+   "taskMs": 12200,
+   "taskMs_all": [
+    18610,
+    12200,
+    9820
+   ],
+   "jsHeapUsedBytes": 235841268,
+   "jsHeapUsedBytes_all": [
+    233652868,
+    240279840,
+    235841268
+   ],
+   "requestCount": 201,
+   "requestCount_all": [
+    201,
+    201,
+    201
+   ],
+   "bytesTotal": 4438415,
+   "bytesTotal_all": [
+    4438415,
+    4438618,
+    4438072
+   ],
+   "requestsBeforeFcp": 157,
+   "requestsBeforeFcp_all": [
+    157,
+    157,
+    143
+   ],
+   "requestsBeforeLcp": 157,
+   "requestsBeforeLcp_all": [
+    157,
+    157,
+    157
+   ],
+   "clientRedirectMs": 3344,
+   "clientRedirectMs_all": [
+    3309,
+    3634,
+    3344
+   ],
+   "settledMs": 33532,
+   "settledMs_all": [
+    36827,
+    33532,
+    32842
+   ],
+   "bytesByKind": {
+    "html": 8049,
+    "js": 764983,
+    "css": 42020,
+    "json": 818942,
+    "tiles": 1577207,
+    "fonts": 70653,
+    "images": 0,
+    "other": 1156584
+   },
+   "requestsByKind": {
+    "html": 2,
+    "js": 134,
+    "css": 12,
+    "json": 20,
+    "tiles": 23,
+    "fonts": 4,
+    "images": 0,
+    "other": 6
+   },
+   "pmtilesRangeRequests": 18,
+   "pmtilesBytes": 1464310,
+   "habitatExportLoaded": 0,
+   "medianRun": 1,
+   "heaviest": [
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 609007,
+     "startMs": 10579,
+     "endMs": 23823
+    },
+    {
+     "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=image&bbox=-13462700.917811524,4187526.157575097,-13443133.038570518,4207094.0368161015&bboxSR=3857&imageSR=3857&size=512,512&format=jpgpng&transparent=true&renderingRule=%7B%22rasterFunction%22%3A%22NaturalColor%22%7D",
+     "kind": "other",
+     "bytes": 549465,
+     "startMs": 8729,
+     "endMs": 22772
+    },
+    {
+     "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=image&bbox=-13462700.917811524,4207094.0368161015,-13443133.038570518,4226661.916057106&bboxSR=3857&imageSR=3857&size=512,512&format=jpgpng&transparent=true&renderingRule=%7B%22rasterFunction%22%3A%22NaturalColor%22%7D",
+     "kind": "other",
+     "bytes": 503227,
+     "startMs": 8726,
+     "endMs": 22335
+    },
+    {
+     "url": "https://skippercast.com/assets/maplibre-gl.98baef7acf.js",
+     "kind": "js",
+     "bytes": 312060,
+     "startMs": 3667,
+     "endMs": 8268
+    },
+    {
+     "url": "https://skippercast.com/api/coast/ocean",
+     "kind": "json",
+     "bytes": 273211,
+     "startMs": 8413,
+     "endMs": 18167
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 196255,
+     "startMs": 10579,
+     "endMs": 20154
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 173904,
+     "startMs": 10578,
+     "endMs": 18931
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 151156,
+     "startMs": 10576,
+     "endMs": 17225
+    },
+    {
+     "url": "https://skippercast.com/api/coast/report",
+     "kind": "json",
+     "bytes": 141644,
+     "startMs": 4102,
+     "endMs": 7481
+    },
+    {
+     "url": "https://skippercast.com/assets/app.e37043eee3.js",
+     "kind": "js",
+     "bytes": 110302,
+     "startMs": 206,
+     "endMs": 2990
+    }
+   ]
+  },
+  {
+   "page": "map-home",
+   "profile": "phone",
+   "pass": "warm",
+   "runs": 3,
+   "settledAll": true,
+   "layerDataStartMs": 1652,
+   "layerDataStartMs_all": [
+    3037,
+    1584,
+    1652
+   ],
+   "layerDataEndMs": 5091,
+   "layerDataEndMs_all": [
+    5517,
+    4787,
+    5091
+   ],
+   "fcpMs": 1238,
+   "fcpMs_all": [
+    1619,
+    876,
+    1238
+   ],
+   "lcpMs": 1238,
+   "lcpMs_all": [
+    2127,
+    1172,
+    1238
+   ],
+   "readyMs": 1256,
+   "readyMs_all": [
+    2210,
+    1165,
+    1256
+   ],
+   "mapCanvasMs": 2321,
+   "mapCanvasMs_all": [
+    4248,
+    2164,
+    2321
+   ],
+   "canvasQuietMs": 6186,
+   "canvasQuietMs_all": [
+    13657,
+    5909,
+    6186
+   ],
+   "tbtMs": 2179,
+   "tbtMs_all": [
+    6152,
+    1957,
+    2179
+   ],
+   "cls": 0.0044,
+   "cls_all": [
+    0.0044,
+    0.0044,
+    0.0002
+   ],
+   "longestTaskMs": 2189,
+   "longestTaskMs_all": [
+    3355,
+    2109,
+    2189
+   ],
+   "scriptMs": 2015,
+   "scriptMs_all": [
+    4036,
+    1937,
+    2015
+   ],
+   "taskMs": 12115,
+   "taskMs_all": [
+    20188,
+    12115,
+    11999
+   ],
+   "jsHeapUsedBytes": 232612284,
+   "jsHeapUsedBytes_all": [
+    234949992,
+    230771300,
+    232612284
+   ],
+   "requestCount": 202,
+   "requestCount_all": [
+    202,
+    202,
+    202
+   ],
+   "bytesTotal": 2040519,
+   "bytesTotal_all": [
+    2040937,
+    2026495,
+    2040519
+   ],
+   "requestsBeforeFcp": 144,
+   "requestsBeforeFcp_all": [
+    144,
+    144,
+    157
+   ],
+   "requestsBeforeLcp": 157,
+   "requestsBeforeLcp_all": [
+    157,
+    157,
+    157
+   ],
+   "clientRedirectMs": 662,
+   "clientRedirectMs_all": [
+    1203,
+    628,
+    662
+   ],
+   "settledMs": 21237,
+   "settledMs_all": [
+    24634,
+    21237,
+    20735
+   ],
+   "bytesByKind": {
+    "html": 8008,
+    "js": 0,
+    "css": 0,
+    "json": 538168,
+    "tiles": 1492437,
+    "fonts": 0,
+    "images": 0,
+    "other": 2202
+   },
+   "requestsByKind": {
+    "html": 2,
+    "js": 134,
+    "css": 12,
+    "json": 21,
+    "tiles": 23,
+    "fonts": 4,
+    "images": 0,
+    "other": 6
+   },
+   "pmtilesRangeRequests": 18,
+   "pmtilesBytes": 1464295,
+   "habitatExportLoaded": 0,
+   "medianRun": 3,
+   "heaviest": [
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 609014,
+     "startMs": 4427,
+     "endMs": 11598
+    },
+    {
+     "url": "https://skippercast.com/api/coast/ocean",
+     "kind": "json",
+     "bytes": 272933,
+     "startMs": 2171,
+     "endMs": 5091
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 196258,
+     "startMs": 4427,
+     "endMs": 9524
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 173891,
+     "startMs": 4427,
+     "endMs": 7743
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 151157,
+     "startMs": 4422,
+     "endMs": 6099
+    },
+    {
+     "url": "https://skippercast.com/api/coast/report",
+     "kind": "json",
+     "bytes": 141655,
+     "startMs": 1652,
+     "endMs": 3044
+    },
+    {
+     "url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&geometry=-121.9%2C34.95%2C-120.55%2C35.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson",
+     "kind": "json",
+     "bytes": 96156,
+     "startMs": 2661,
+     "endMs": 3996
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 78674,
+     "startMs": 4427,
+     "endMs": 7393
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 52423,
+     "startMs": 4427,
+     "endMs": 7772
+    },
+    {
+     "url": "https://skippercast.com/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles",
+     "kind": "tiles",
+     "bytes": 36322,
+     "startMs": 4426,
+     "endMs": 5834
+    }
+   ]
+  }
+ ]
+}

@@ -67,7 +67,9 @@ test('duplicates and bad coordinates are skipped before any route call; fewer th
   assert.deepEqual(r.legs.map(l => l.to), ['Stop 1', 'Stop 2', 'Home']);
   assert.equal(route.calls, r.legs.length);
   const once = fake([3]);
-  assert.equal(tripLegs(port, [stops[0], stops[0]], 10, once).legs.length, 0); assert.equal(once.calls, 0);
+  assert.equal(tripLegs(null, [stops[0], stops[0]], 10, once).legs.length, 0); assert.equal(once.calls, 0);
+  // SC2252-04: one distinct stop from a port is port -> stop -> port, two route calls.
+  assert.equal(tripLegs(port, [stops[0], stops[0]], 10, once).legs.length, 2); assert.equal(once.calls, 2);
 });
 
 // The planner over a real land-water product (tile 12/671/1616, 32×32 cells).
@@ -81,7 +83,7 @@ const paint = (rects, base = 'w'.repeat(G * G)) => {
 };
 const product = (rects, base, bounds = [-12110000, 3530000, -12075000, 3555000]) => landWaterModel({...coast, bounds, tiles: {[COAST]: paint(rects, base)}}, 'fixture');
 const ready = (model, lines = null) => ({region: 'fixture', state: 'ready', model, lines, linesLoading: false});
-const CLAUSE = /Straight-line legs between stops; the real route is longer\./, SEA = /Sea state, the bar, fuel and conditions at each stop are not included\./;
+const CLAUSE = /Straight-line legs between stops; the real route is longer\./, SEA = /Sea state, the bar and fuel are not included in run-time estimates\./;
 
 test('planner: routed legs drop the straight-line clause; a straight leg is labelled and brings it back; lines are asked once', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'trip-legs-route-')), out = join(dir, 'ui.mjs');

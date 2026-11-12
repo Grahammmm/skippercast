@@ -16,6 +16,7 @@
 // (web/land-water.ts); the region's index loads with the brief, and the lines file
 // only when a place falls in a cell the index leaves mixed.
 import {signal} from '@preact/signals';
+import {currentRegionPreview} from '../region-preview.ts';
 import {useEffect, useState} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {Popover} from '../ui/Popover.tsx';
@@ -318,6 +319,7 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   useEffect(() => { if (id && wantLines) void loadLandWaterLines(id); }, [id, wantLines, lw.model]);
   return (
     <section class="app-where" data-source={r.source ?? undefined}>
+      {currentRegionPreview() ? <p class="app-region-preview-reason">{t('shell.regionPreview.reason', lang)}</p> : null}
       <div class="app-where-head">
         <h2 class="ui-eyebrow">{t('where.title', lang)}</h2>
         {r.source ? <span class="app-where-source ui-mono">{rankingLabel(r, lang)}</span> : null}

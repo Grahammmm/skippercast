@@ -27,6 +27,7 @@ Record layout (FCC ULS public access files; 0-based field positions):
 """
 from __future__ import annotations
 
+from datetime import date
 import io
 import re
 from typing import IO, Iterable, Iterator, Mapping
@@ -94,7 +95,12 @@ def _norm(text: str) -> str:
 
 def _date(text: str) -> str | None:
     match = re.match(r"^(\d{2})/(\d{2})/(\d{4})$", text.strip())
-    return f"{match.group(3)}-{match.group(1)}-{match.group(2)}" if match else None
+    if not match:
+        return None
+    try:  # an impossible calendar date (02/30, month 13, year 0000) is omitted, never emitted as an ISO-looking fact
+        return date(int(match.group(3)), int(match.group(1)), int(match.group(2))).isoformat()
+    except ValueError:
+        return None
 
 
 def _member(archive: zipfile.ZipFile, kind: str) -> str:
@@ -191,7 +197,7 @@ def parse_ship_zip(data: bytes | IO[bytes], state: str, *, source_id: str, right
         active = status == "active"
         if not active and not all_statuses:
             continue
-        call_sign = (f[4] or (hd[4] if hd else "")).strip().upper()
+        call_sign = (f[4].strip() or (hd[4].strip() if hd else "")).upper()
         keys = _keys(call_sign, f[21], f[10])
         url = licence_url(usi)
 

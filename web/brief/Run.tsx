@@ -12,7 +12,7 @@ import {useEffect, useState} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {LimitsDialog, LimitsForm} from '../app/LimitsPanel.tsx';
-import {regionInfo} from '../app/region-info.ts';
+import {regionInfo, zone} from '../app/region-info.ts';
 import {cruiseSpeed, wantedHours} from '../limits.ts';
 import {ROUTE_BUDGET, type Ranking, type RoutedPick} from '../ranking.ts';
 import {habitat, profile, region, selection, species} from '../state.ts';
@@ -25,7 +25,6 @@ import type {Brief} from './types.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {loadRegs, regsData, regulationState, ruleSummary, openingAt} from '../regs.ts';
 import {fishingHours, type FishingHours} from './fishing-hours.ts';
-import {DEFAULT_ZONE} from '../zone.ts';
 import {entranceWindow} from '../../packages/coast/src/entrance-window.ts';
 import {EntranceCurrent} from './EntranceCurrent.tsx';
 import {language, num, t, type Language, type StringId} from '../i18n.ts';
@@ -176,7 +175,7 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   useEffect(() => watchBoundaries(() => setRevision(n => n + 1)), []);
   if (!brief || !r) return null;
   const lang = language.value;
-  const state = planRun(brief, place, cruiseSpeed.value, now), tz = regionInfo.value?.timezone ?? DEFAULT_ZONE;
+  const state = planRun(brief, place, cruiseSpeed.value, now), tz = zone();
   const text = runText(state, tz, place?.unranked, lang), harbor = r.harbor ?? t('where.harbor', lang);
   const target = species.value ?? PROFILE_TABLE.boat.defaultTarget;
   const loaded = regsData.value, data = loaded?.region === rules?.id ? loaded?.data : null;
@@ -212,7 +211,7 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
       {text.run ? (
         <p class="app-run-detail ui-mono">
           {text.run}{place && !place.chosen ? t('run.topPick', lang) : ''}{' '}
-          <Popover summary={t('run.basis', lang)} align="start">{runBasis(harbor, lang)}</Popover>
+          <Popover summary={t('run.basis', lang)} accessibleName={t('a11y.basis.run', lang)} align="start">{runBasis(harbor, lang)}</Popover>
         </p>
       ) : null}
       {routeNote ? <p class="app-run-protected">{said(routeNote, lang)}</p> : null}

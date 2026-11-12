@@ -22,8 +22,10 @@ export function tripLegs(origin: Point | null, stops: Stop[], speedKn: number | 
     if (!valid(stop)) skipped.push(stop.name);
     else points.push(stop);
   }
-  if (points.length < 2) points.length = 0;
-  if (origin && valid(origin) && points.length) {
+  // One valid stop is a trip only from a valid origin (port, stop, port); without one, fewer than two stops have no legs.
+  const homed = !!origin && valid(origin);
+  if (points.length < (homed ? 1 : 2)) points.length = 0;
+  if (origin && homed && points.length) {
     points.unshift(origin);
     points.push(origin);
   }
