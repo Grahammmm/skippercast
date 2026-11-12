@@ -95,14 +95,18 @@ def validate_candidate(data, root=REPO):
         value = data["temporal"].get(key)
         if value:
             if len(value) == 10:
-                parsed = date.fromisoformat(value)
+                interval.append((date.fromisoformat(value), False))
             else:
                 instant = datetime.fromisoformat(value.replace("Z", "+00:00"))
                 if instant.tzinfo is None: raise ValueError("Coverage instants need a timezone")
-                parsed = instant.date()
-            interval.append(parsed)
-    if len(interval) == 2 and interval[0] > interval[1]:
-        raise ValueError("Coverage interval is reversed")
+                interval.append((instant, True))
+    if len(interval) == 2:
+        (start, start_instant), (end, end_instant) = interval
+        if not (start_instant and end_instant):
+            start = start.date() if start_instant else start
+            end = end.date() if end_instant else end
+        if start > end:
+            raise ValueError("Coverage interval is reversed")
     for key in ("source_time", "checked_at"):
         value = data["temporal"][key]
         if value is not None:

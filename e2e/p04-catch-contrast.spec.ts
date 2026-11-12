@@ -252,7 +252,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // RF2115-5: MapStage.tsx adds a startup loading status paragraph (existing app-stage-note class) and aria-busy on the Chart host; BODY09 renders Reports/CatchCards, never MapStage. No paint, token, assertion or threshold change. Rebind only MapStage.tsx.
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   "web/app/MapStage.tsx": "33ceeea87f84bdf56afdc71b6c79702a85280c13417628bf4d0fda4563346990",
-  "web/tokens.css": "839d9aa11e98ab858b9ed7ca041f094d857d7fc6518dda86d53431886ca45284",
+  // UXFIX-05: tokens.css only turns the eight --text-* font sizes from px into the same sizes in rem (identical at a 16 px root); no colour, paint, gradient, catch markup, assertion or threshold changes, so BODY09 stays applicable. Rebind web/tokens.css and the check_contrast.mjs surface-source pin only.
+  "web/tokens.css": "229478d5eee7343bf1da46f8a05bda29e357d480a65a11a067faabd91d80d540",
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
   // changes (panel.css: History scroller 2 px ring and one summary ring; app.css: fleet checkbox ring); unfocused catch text and contrast are unchanged. check_contrast.mjs changes only the appCss surface hash, its comment and moved citations. Rebound from final bytes.
   // UXFIX-04: ui.css folds the shared focus ring onto form controls and tabindex headings and adds a zero-specificity input/select/textarea --line-strong border; the catch sheet has no text field, and focus paint only appears on :focus-visible, so unfocused catch text and contrast are unchanged.
@@ -367,7 +368,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // UXFIX-09: check_contrast.mjs changes only the appCss surface hash; contrast() is untouched. Rebound from the final bytes.
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "9a9a28c82c6dbbb0068631300ddc3ac4cbeffb956d07177cd4621801c10ec52c",
+  // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "b1e6b5dbde687b2bda2d9d38700d3fad3eb3cd51da4a04ee166e33cc6567a727",
   // Dependabot #1879 (npm-minor-and-patch, 7 updates; supersedes the #1420 note): package.json and pnpm-lock.yaml change only dependency pins
   // (@simplewebauthn/server 14.1.0, hono 4.13.17, preact 11.2.0, suncalc 2.1.2, @cloudflare/workers-types 5.20261107.1,
   // @playwright/test 1.65.0, vite 8.3.6, plus transitive lockfile entries). The BODY09 bundle still

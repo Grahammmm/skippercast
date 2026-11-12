@@ -75,6 +75,7 @@ export function clearThresholds(storage: PortAlertStorage | null = browserStorag
 export function evaluatePortAlert(limits: Thresholds, forecast: RegionalForecast | null, now: number = Date.now()): PortAlert {
   const base = {exceedances: [], peak: {windKt: null, swellFt: null}, hoursChecked: 0, source: forecast?.label ?? null, issuedAt: forecast?.issuedAt ?? null, fetchedAt: forecast?.fetchedAt ?? null, notification: null};
   if (!forecast) return {state: 'no-data', ...base};
+  if (!Number.isFinite(now)) return {state: 'stale', ...base};
   const issued = Date.parse(forecast.issuedAt), fetched = Date.parse(forecast.fetchedAt);
   if (!Number.isFinite(issued) || !Number.isFinite(fetched) || now - issued > MAX_RUN_AGE_HOURS * HOUR_MS || now - fetched > MAX_FETCH_AGE_HOURS * HOUR_MS) return {state: 'stale', ...base};
   const start = Math.floor(now / HOUR_MS) * HOUR_MS, end = start + WINDOW_HOURS * HOUR_MS;
