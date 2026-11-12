@@ -119,3 +119,70 @@ test('coordinate_attribute_contract_preserves_edges', () => {
   assert.equal(c3.screen.length, 1);
   assert.deepEqual(s3.seen, [{longitude: -120, latitude: 34}]);
 });
+
+// A screen that clears every pair and records what it was asked about.
+function clearScreen() {
+  const seen = [];
+  return {seen, ready: () => true, pointAllowed: (p) => { seen.push(p); return true; }, geometryAllowed: () => true};
+}
+const NONDECIMAL = ['0x23', '0X23', '0b100011', '0B100011', '0o43', '0O43', '35e0', '3.5E1', '1e-7', '-1E-7', '3.5e+1', '35E-0', '+35e0'];
+const both = (tag, lat, lon) => { const attrs = ` lat=\"${lat}\" lon=\"${lon}\"`; return tag === 'wpt' ? wpt(attrs) : trk(attrs); };
+
+test('javascript_radices_and_scientific_notation_are_not_gpx_decimals', () => {
+  for (const tag of ['wpt', 'trkpt']) {
+    const n = tag === 'wpt' ? 1 : 0;
+    for (const bad of NONDECIMAL) {
+      const onLat = problemsOf(both(tag, bad, '-120'), n), onLon = problemsOf(both(tag, '35', bad.startsWith('-') || bad.startsWith('+') ? bad : `-${bad}`), n);
+      assert.ok(onLat.includes(`Invalid ${tag} lat`), `${tag} lat ${bad}: ${onLat}`);
+      assert.ok(!onLat.includes(`Invalid ${tag} lon`), `${tag} lat ${bad} must not blame lon`);
+      assert.ok(onLon.includes(`Invalid ${tag} lon`), `${tag} lon ${bad}: ${onLon}`);
+      assert.ok(!onLon.includes(`Invalid ${tag} lat`), `${tag} lon ${bad} must not blame lat`);
+    }
+    // A valid neighbouring decimal point does not authorize them.
+    assert.ok(problemsOf(both(tag, '35.5e0', '-120'), n).includes(`Invalid ${tag} lat`));
+  }
+});
+
+test('ordinary_xml_decimal_spellings_are_preserved', () => {
+  const spellings = [['+35', 35], ['035', 35], ['35.', 35], ['.5', 0.5], ['-.5', -0.5], ['-0', -0], ['0', 0], [' 34.5 ', 34.5], ['\t34.5\n', 34.5], ['0.0000001', 1e-7], ['-0.0000001', -1e-7]];
+  for (const [text, expected] of spellings) {
+    const s = clearScreen(), c = checkGpx(wpt(` lat=\"${text}\" lon=\"${text}\"`), {waypoints: 1}, s);
+    assert.equal(c.ok, true, `wpt ${JSON.stringify(text)}: ${JSON.stringify(c)}`);
+    assert.equal(s.seen.length, 1, text);
+    assert.equal(s.seen[0].latitude, expected, `latitude ${text}`);
+    assert.equal(s.seen[0].longitude, expected, `longitude ${text}`);
+    assert.equal(checkGpx(trk(` lat=\"${text}\" lon=\"${text}\"`), {waypoints: 0}).ok, true, `trkpt ${JSON.stringify(text)}`);
+  }
+  // Tiny decimals are never rounded to zero.
+  const s = clearScreen();
+  checkGpx(wpt(' lat=\"0.0000001\" lon=\"-120\"'), {waypoints: 1}, s);
+  assert.notEqual(s.seen[0].latitude, 0);
+});
+
+test('invalid_lexical_token_is_never_screened_clear', () => {
+  const good = '<wpt lat=\"34\" lon=\"-120\"><name>Good</name></wpt>', bad = '<wpt lat=\"0x23\" lon=\"-120\"><name>Bad</name></wpt>';
+  for (const [label, body] of [['bad first', bad + good], ['bad second', good + bad]]) {
+    const s = clearScreen(), c = checkGpx(wrap(body), {waypoints: 2}, s);
+    assert.equal(c.ok, false, label);
+    assert.ok(c.problems.includes('Invalid wpt lat'), label);
+    assert.equal(c.screen.length, 2, label);
+    assert.equal(s.seen.length, 1, `${label}: only the valid sibling is screened`);
+    assert.deepEqual(s.seen[0], {longitude: -120, latitude: 34}, label);
+  }
+  // Exponent in longitude: same refusal, no borrowing of the valid latitude.
+  const s2 = clearScreen(), c2 = checkGpx(wpt(' lat=\"34\" lon=\"-1.2e2\"'), {waypoints: 1}, s2);
+  assert.equal(c2.ok, false);
+  assert.deepEqual(s2.seen, []);
+  assert.deepEqual(c2.screen.map(v => v.screened), [false]);
+});
+
+test('track_only_lexical_refusal_is_structural', () => {
+  for (const bad of ['0x23', '35e0', '0b11', '0o43']) {
+    const s = clearScreen(), c = checkGpx(trk(` lat=\"${bad}\" lon=\"-120\"`), {waypoints: 0}, s);
+    assert.equal(c.ok, false, bad);
+    assert.ok(c.problems.includes('Invalid trkpt lat'), `${bad}: ${c.problems}`);
+    assert.ok(!c.problems.includes('Waypoint count mismatch'), bad);
+    assert.deepEqual(s.seen, [], bad);
+    assert.equal(c.screen.length, 0, bad);
+  }
+});
