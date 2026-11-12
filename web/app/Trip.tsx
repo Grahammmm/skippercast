@@ -6,7 +6,8 @@
 // its source assembled it. SC0707-10: every word is a catalogue id read at render; a status
 // is kept as an id and its variables, so a language change updates it without a second save or delete.
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {formatBytes, relativeTime} from '../../dist/offline-core.js';
+import {relativeTime} from '../../dist/offline-core.js';
+import {sizeText} from '../size-text.ts';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
 import {PositionCheck} from './PositionCheck.tsx';
@@ -144,7 +145,7 @@ function ChartPack() {
     setBusy(controller); setStatus(null);
     try {
       const {meta, keep} = await savePackKept(() => savePack(id, controller.signal, setProgress));
-      setStatus({id: 'trip.status.saved', vars: {name: meta.region_name, bytes: formatBytes(meta.bytes)}, missing: packMissing(meta), ...(KEEP_WORDS[keep] ? {tail: ` ${KEEP_WORDS[keep]}`} : {})});
+      setStatus({id: 'trip.status.saved', vars: {name: meta.region_name, bytes: sizeText(meta.bytes, lang)}, missing: packMissing(meta), ...(KEEP_WORDS[keep] ? {tail: ` ${KEEP_WORDS[keep]}`} : {})});
     } catch (e) {
       setStatus(controller.signal.aborted ? {id: 'trip.status.cancelled'} : {id: 'trip.status.failed', vars: {detail: (e as Error).message}});
     } finally { setBusy(null); setProgress(null); void refresh(); }
@@ -165,7 +166,7 @@ function ChartPack() {
         {busy ? <Button onClick={() => busy.abort()}>{t('trip.cancel', lang)}</Button> : null}
       </div>
       {progress ? <progress max={Math.max(1, progress.total)} value={progress.done} aria-label={t('trip.saving', lang)} /> : null}
-      <p role="status" aria-live="polite">{progress ? t('trip.progress', lang, {phase: PHASES[progress.phase] ? t(PHASES[progress.phase]!, lang) : progress.phase, done: progress.done, total: progress.total, bytes: formatBytes(progress.bytes)}) : statusText(status, lang)}</p>
+      <p role="status" aria-live="polite">{progress ? t('trip.progress', lang, {phase: PHASES[progress.phase] ? t(PHASES[progress.phase]!, lang) : progress.phase, done: progress.done, total: progress.total, bytes: sizeText(progress.bytes, lang)}) : statusText(status, lang)}</p>
       {inventoryState !== 'success' ? <p role="status" aria-live="polite">
         {inventoryState === 'loading' ? t('trip.checking', lang) : t('trip.checkFailed', lang)}
         {packs !== null ? t('trip.retained', lang) : ''}
@@ -175,14 +176,14 @@ function ChartPack() {
           const ocean = oceanLines(meta, new Date(), zone(), lang);
           return (
           <li key={cache}>
-            <div><strong>{meta.region_name}</strong><span class="ui-mono">{t('trip.saved', lang)} <Saved iso={meta.saved_at} lang={lang} /> · {formatBytes(meta.bytes)}</span><span>{packTiles(meta, lang)}</span><span>{forecastEndLine(meta, new Date(), zone())}</span>
+            <div><strong>{meta.region_name}</strong><span class="ui-mono">{t('trip.saved', lang)} <Saved iso={meta.saved_at} lang={lang} /> · {sizeText(meta.bytes, lang)}</span><span>{packTiles(meta, lang)}</span><span>{forecastEndLine(meta, new Date(), zone())}</span>
               {ocean ? <><span>{t('tripOcean.water', lang, {line: ocean.water})}</span><span>{t('tripOcean.currents', lang, {line: ocean.currents})}</span></> : null}<LegalChecklist meta={meta} lang={lang} /></div>
             <Button size="sm" disabled={!!busy} onClick={() => void remove(cache)} aria-label={t('trip.deleteAria', lang, {name: meta.region_name})}>{t('trip.delete', lang)}</Button>
           </li>
           );
         }) : inventoryState === 'success' ? <li>{t('trip.empty', lang)}</li> : null}
       </ul>
-      {room ? <p>{estimateWords(room)}</p> : null}
+      {room ? <p>{estimateWords(room, lang)}</p> : null}
     </section>
   );
 }
@@ -216,10 +217,10 @@ function CoastalReadings() {
         <Button icon="download" disabled={!writable || !!busy} onClick={() => void save()}>{t('trip.coastal.save', lang)}</Button>
         {busy ? <Button onClick={() => busy.abort()}>{t('trip.cancel', lang)}</Button> : <Button disabled={!meta || !writable} onClick={() => void remove()}>{t('trip.coastal.delete', lang)}</Button>}
       </div>
-      <p role="status" aria-live="polite">{status ? statusText(status, lang) : (meta ? <>{t('trip.saved', lang)} <Saved iso={meta.saved_at} lang={lang} /> · {formatBytes(meta.bytes)}</> : meta === null ? t('trip.coastal.none', lang) : t('trip.coastal.checking', lang))}</p>
+      <p role="status" aria-live="polite">{status ? statusText(status, lang) : (meta ? <>{t('trip.saved', lang)} <Saved iso={meta.saved_at} lang={lang} /> · {sizeText(meta.bytes, lang)}</> : meta === null ? t('trip.coastal.none', lang) : t('trip.coastal.checking', lang))}</p>
       {meta ? (
         <ul class="app-offline-list">
-          {meta.products.map(p => <li key={p.path}><strong>{PRODUCTS[p.path] ? t(PRODUCTS[p.path]!, lang) : p.path}</strong><span class="ui-mono">{formatBytes(p.bytes)} · {t('trip.coastal.assembled', lang)} <time dateTime={p.generated_at}>{stamp(p.generated_at, zone(), lang)}</time></span></li>)}
+          {meta.products.map(p => <li key={p.path}><strong>{PRODUCTS[p.path] ? t(PRODUCTS[p.path]!, lang) : p.path}</strong><span class="ui-mono">{sizeText(p.bytes, lang)} · {t('trip.coastal.assembled', lang)} <time dateTime={p.generated_at}>{stamp(p.generated_at, zone(), lang)}</time></span></li>)}
         </ul>
       ) : null}
     </section>

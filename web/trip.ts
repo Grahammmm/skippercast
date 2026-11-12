@@ -16,7 +16,8 @@
 // change reloads the page, as v1 does. Erasable syntax only (Node tests import this).
 import {signal} from '@preact/signals';
 import {browserStorage} from '../dist/browser-storage.js';
-import {formatBytes} from '../dist/offline-core.js';
+import {sizeText} from './size-text.ts';
+import {t, type Language} from './i18n.ts';
 import type {RankedPlan, RankedScreen} from './map/ranked.ts';
 import {sharedFetch} from './shared-fetch.ts';
 import {cancelWaypointPlacement} from './waypoint-placement.ts';
@@ -210,7 +211,7 @@ export async function storageLine(nav: StorageNav = globalThis.navigator as Stor
   } catch { return null; }
 }
 /** The list's one line from the browser's estimate. */
-export const estimateWords = (r: {used: number; quota: number}): string => `Browser's estimate: ${formatBytes(r.used)} used of ${formatBytes(r.quota)} available`;
+export const estimateWords = (r: {used: number; quota: number}, lang: Language = 'en'): string => t('trip.estimate', lang, {used: sizeText(r.used, lang), quota: sizeText(r.quota, lang)});
 /** Run a save; only once it has resolved, ask the browser to keep it. A save that throws or is cancelled makes no request. */
 export async function savePackKept(save: () => Promise<PackMeta>, nav?: StorageNav): Promise<{meta: PackMeta; keep: Keep}> {
   const meta = await save();
