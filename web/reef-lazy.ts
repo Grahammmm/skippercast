@@ -42,8 +42,12 @@ export function linkVerdict(connection: LinkInfo | undefined, timings: readonly 
 /** The page's finished same-origin downloads from the Resource Timing buffer (cache hits have no transfer and are left out). */
 export function pageTimings(perf: Pick<Performance, 'getEntriesByType'> | undefined = globalThis.performance, origin = globalThis.location?.origin): Timing[] {
   try {
+    // Same origin means the same parsed scheme, host and port, never a text prefix (https://x.test.cdn.invalid/ starts with https://x.test).
+    const mine = origin ? new URL(origin).origin : null;
+    if (mine === 'null') return []; // an opaque origin is never equal to anything
+    const sameOrigin = (name: string): boolean => { try { return mine === null || new URL(name).origin === mine; } catch { return false; } };
     return (perf?.getEntriesByType('resource') as PerformanceResourceTiming[] | undefined ?? [])
-      .filter(e => e.transferSize > 0 && e.responseEnd > e.startTime && (!origin || e.name.startsWith(origin)))
+      .filter(e => e.transferSize > 0 && e.responseEnd > e.startTime && sameOrigin(e.name))
       .map(e => ({bytes: e.transferSize, start: e.startTime, end: e.responseEnd}));
   } catch { return []; }
 }
