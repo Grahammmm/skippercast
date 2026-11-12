@@ -23,6 +23,8 @@ const active = (page: Page) => page.evaluate(() => {
 });
 /** Document focus neutral, as for a visitor who has just loaded the page. */
 async function neutral(page: Page) {
+  // v2.open waits only for the title; the shell (and, in Spanish, its strings) may still be rendering, so wait for both links.
+  await expect(page.locator('.app-skip-link')).toHaveCount(2);
   await page.evaluate(() => { (document.activeElement as HTMLElement | null)?.blur(); window.scrollTo(0, 0); });
   expect((await active(page)).body).toBe(true);
 }
@@ -91,6 +93,7 @@ test('brief_enter: Enter on Skip to brief puts focus on the brief, not just the 
 test('brief_enter_es: in Spanish, Enter on Saltar al resumen focuses the brief under its localized name, Resumen', async ({page, pageErrors, v2}) => {
   await page.addInitScript(() => { try { localStorage.setItem('skippercast-language-v1', 'es'); } catch { /* storage blocked */ } });
   await v2.open('app', AREA);
+  await expect(page.locator('.app-skip-link')).toHaveText([NAMES.es.brief, NAMES.es.map]);
   await neutral(page);
   await page.keyboard.press('Tab');
   expect(await active(page)).toMatchObject({tag: 'A', text: NAMES.es.brief});
