@@ -625,9 +625,11 @@ class _Resolver:
                 cols[col], winners[col] = value, best
         rule = self.config.rules.get("operator")
         best = winner(by_field.get("operator", ()), rule, self.config.kind) if rule else None
-        if (best is not None and isinstance(best.value, str) and name_norm(best.value)
-                and not {"*", "operator_id"} & vessel.pinned):
-            cols["operator_id"] = self.operator(best.value.strip()[:120].strip())
+        if best is not None and not {"*", "operator_id"} & vessel.pinned:
+            if best.value is None:  # only an admin's null survives by_field: it clears the association
+                cols["operator_id"] = None
+            elif isinstance(best.value, str) and name_norm(best.value):
+                cols["operator_id"] = self.operator(best.value.strip()[:120].strip())
         if vessel.stored is None:  # a new vessel: candidate hints fill what no fact gave
             for kind in KEY_ORDER:
                 if kind not in cols and kind in vessel.keys and _column_value(kind, vessel.keys[kind])[0]:
