@@ -76,6 +76,71 @@ class GoesFrameWriteTest(unittest.TestCase):
         self.assertEqual(self.target.read_bytes(), _bytes("old"))
         self.assertEqual(self._names(), ["goes-times.json"])
 
+    def _track_mkstemp(self):
+        fds = []
+        real_mkstemp = tempfile.mkstemp
+
+        def mkstemp(*a, **k):
+            fd, name = real_mkstemp(*a, **k)
+            fds.append(fd)
+            return fd, name
+
+        return fds, mock.patch("tempfile.mkstemp", mkstemp)
+
+    def _assert_closed(self, fd):
+        with self.assertRaises(OSError):
+            os.fstat(fd)
+
+    def test_wrapper_construction_failure_closes_descriptor_and_keeps_original_error(self):
+        goes_frames.write(self.target, _record("old"))
+        primary = OSError("open rejected")  # e.g. an audit hook refusing the open before FileIO owns the descriptor
+        fds, tracker = self._track_mkstemp()
+        with tracker, mock.patch("os.fdopen", side_effect=primary):
+            with self.assertRaises(OSError) as ctx:
+                goes_frames.write(self.target, _record("new"))
+        self.assertIs(ctx.exception, primary)
+        self.assertEqual(len(fds), 1)
+        self._assert_closed(fds[0])
+        self.assertEqual(self.target.read_bytes(), _bytes("old"))
+        self.assertEqual(self._names(), ["goes-times.json"])
+
+    def test_wrapper_failure_after_descriptor_already_closed_is_not_closed_twice(self):
+        primary = OSError("wrapper failed")
+        fds, tracker = self._track_mkstemp()
+        closes = []
+        real_close = os.close
+
+        def fdopen(fd, *a, **k):
+            real_close(fd)  # the library released it itself before failing
+            raise primary
+
+        def close(fd):
+            closes.append(fd)
+            return real_close(fd)
+
+        with tracker, mock.patch("os.fdopen", fdopen), mock.patch("os.close", close):
+            with self.assertRaises(OSError) as ctx:
+                goes_frames.write(self.target, _record("new"))
+        self.assertIs(ctx.exception, primary)
+        self.assertEqual(closes, [])
+        self._assert_closed(fds[0])
+        self.assertEqual(self._names(), [])
+
+    def test_descriptor_close_failure_does_not_mask_primary_error(self):
+        primary = OSError("open rejected")
+        fds, tracker = self._track_mkstemp()
+        real_close = os.close
+
+        def close(fd):
+            real_close(fd)
+            raise OSError("close failed")
+
+        with tracker, mock.patch("os.fdopen", side_effect=primary), mock.patch("os.close", close):
+            with self.assertRaises(OSError) as ctx:
+                goes_frames.write(self.target, _record("new"))
+        self.assertIs(ctx.exception, primary)
+        self._assert_closed(fds[0])
+
     def test_replace_failure_preserves_previous_target_and_foreign_files(self):
         goes_frames.write(self.target, _record("old"))
         legacy = self.target.with_suffix(".json.tmp")

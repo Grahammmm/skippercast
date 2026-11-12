@@ -112,6 +112,20 @@ def collect(session, now=None):
     return parse_capabilities(body, now)
 
 
+def _close_if_owned(fd, identity):
+    """Close the mkstemp descriptor when a failed os.fdopen never took ownership of it.
+
+    A failure inside fdopen may have already closed the descriptor (and the number may since be reused), so
+    close only while it still names the very file mkstemp opened. Never raises: the caller re-raises the original error.
+    """
+    try:
+        now = os.fstat(fd)
+        if (now.st_dev, now.st_ino) == (identity.st_dev, identity.st_ino):
+            os.close(fd)
+    except OSError:
+        pass
+
+
 def write(path, record):
     path.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n"
@@ -119,7 +133,13 @@ def write(path, record):
     fd, name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
     tmp = Path(name)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+        identity = os.fstat(fd)
+        try:
+            stream = os.fdopen(fd, "w", encoding="utf-8")
+        except BaseException:
+            _close_if_owned(fd, identity)
+            raise
+        with stream:
             stream.write(text)
         os.chmod(tmp, 0o644)  # mkstemp creates 0600; the published index is read by the web server
         tmp.replace(path)
