@@ -136,3 +136,73 @@ test('share_alias_refusal_preserves_other_state', () => {
   assert.equal(made.url, `${ORIGIN}/map?coast=central&profile=boat&day=2026-11-04&target=rockfish&grade=ab`);
   assert.equal(made.title, 'Wed Nov 4 · Boat');
 });
+
+// RF1550-8: the legacy Fish `layer` alias is read from the original query too; Fish rewrites a first alias and erases how
+// often it was repeated, so any repeated alias is ambiguous. An explicit `layers` (present, even empty or bad) blocks it.
+const expectNoLayers = (query, base = MAIN_URL, title = MAIN_TITLE) => {
+  const made = blockFetch(() => link(query));
+  assert.deepEqual(param(made, 'layers'), [], query);
+  assert.deepEqual(param(made, 'layer'), [], `${query}: no layer key leaks out`);
+  assert.equal(made.url, base, query);
+  assert.equal(made.title, title, query);
+};
+
+test('share_layer_alias_refuses_duplicates_before_rewrite', () => {
+  for (const q of ['layer=waves&layer=currents', 'layer=currents&layer=waves', 'layer=waves&layer=waves', 'layer=waves&layer=',
+    'layer=&layer=waves', 'layer=waves&layer=bogus', 'layer=bogus&layer=waves', 'layer=waves&layer=currents&layer=clouds']) {
+    expectNoLayers(`${BASE}&${q}`);
+  }
+});
+
+test('share_layer_alias_single_mapping_is_unchanged', () => {
+  const mapping = {opportunity: 'seafloor', bathymetry: 'seafloor', currents: 'currents', temperature: 'water-temp',
+    waves: 'swell', clouds: 'clouds', habitat: 'seafloor', 'w%61ves': 'swell'};
+  for (const [alias, layers] of Object.entries(mapping)) {
+    const made = blockFetch(() => link(`${BASE}&layer=${alias}`));
+    assert.deepEqual(param(made, 'layers'), [layers], alias);
+    assert.deepEqual(param(made, 'layer'), [], `${alias}: no layer key leaks out`);
+    assert.equal(made.url, `${MAIN_URL}&layers=${layers}`, alias);
+    assert.equal(made.title, MAIN_TITLE, alias);
+  }
+  for (const bad of ['', 'Waves', 'WAVES', 'wa%20ves', 'wa%0Aves', 'bogus', 'constructor', '__proto__', 'toString']) expectNoLayers(`${BASE}&layer=${bad}`);
+});
+
+test('share_explicit_layers_presence_blocks_alias_fallback', () => {
+  for (const q of ['layers=terrain&layer=waves&layer=currents', 'layer=waves&layer=currents&layers=terrain', 'layers=terrain&layer=waves',
+    'layer=waves&layers=terrain', 'layers=terrain&layer=waves&layer=waves']) {
+    assert.equal(blockFetch(() => link(`${BASE}&${q}`)).url, `${MAIN_URL}&layers=terrain`, q);
+  }
+  for (const q of ['layers=&layer=waves', 'layer=waves&layers=', 'layers=a%20b&layer=waves', 'layers=terrain&layers=swell&layer=waves',
+    'layers=terrain&layers=terrain&layer=waves', `layers=${'a'.repeat(201)}&layer=waves`, 'layers=&layer=waves&layer=currents']) {
+    expectNoLayers(`${BASE}&${q}`);
+  }
+  assert.equal(blockFetch(() => link(`${BASE}&layers=${'a'.repeat(200)}&layer=waves&layer=currents`)).url, `${MAIN_URL}&layers=${'a'.repeat(200)}`);
+});
+
+test('share_layer_alias_refusal_preserves_unrelated_state', () => {
+  const dup = 'layer=waves&layer=currents';
+  const coastBase = 'coast=central&base=sat&spot=a1&habitat=reef&grade=ab';
+  const coastUrl = `${ORIGIN}/map?coast=central&profile=boat&day=2026-11-04&base=sat&habitat=reef&spot=a1&grade=ab`;
+  expectNoLayers(coastBase, coastUrl, 'Wed Nov 4 · Boat');
+  expectNoLayers(`${dup}&${coastBase}&utm_source=x#frag`, coastUrl, 'Wed Nov 4 · Boat');
+  expectNoLayers(`${coastBase}&${dup}`, coastUrl, 'Wed Nov 4 · Boat');
+  const hourBase = 'region=morro-bay&port=morro-bay&hour=2026-11-05T15:00Z&current=on&view=3d&presentation=map';
+  const hourUrl = `${ORIGIN}/map?region=morro-bay&port=morro-bay&profile=boat&day=2026-11-05&hour=2026-11-05T15%3A00Z&view=3d&presentation=map&current=on`;
+  expectNoLayers(hourBase, hourUrl, 'Morro Bay · Thu Nov 5 · Boat');
+  expectNoLayers(`${hourBase}&${dup}&token=secret`, hourUrl, 'Morro Bay · Thu Nov 5 · Boat');
+  const target = `${MAIN_URL}&target=rockfish`;
+  assert.equal(blockFetch(() => link(`${BASE}&species=rockfish&${dup}`)).url, target);
+  // A single legacy layer still rewrites exactly as before, beside the other view keys.
+  const made = blockFetch(() => link('mode=boat&layer=waves&place=coast&grade=ab&base=sat'));
+  assert.equal(made.url, `${ORIGIN}/map?coast=central&profile=boat&day=2026-11-04&layers=swell&base=sat&grade=ab`);
+  assert.equal(made.title, 'Wed Nov 4 · Boat');
+});
+
+test('share_layer_alias_repeated_presses_are_pure', () => {
+  const href = `${ORIGIN}/map?${BASE}&layer=waves&layer=currents`;
+  const input = () => ({href, origin: ORIGIN, ports: PORTS, region: 'southern-california', savedId: null, profile: 'boat', now: WED, tz: TZ});
+  const first = blockFetch(() => shareLink(input())), second = blockFetch(() => shareLink(input()));
+  assert.deepEqual(first, second);
+  assert.equal(first.url, MAIN_URL);
+  assert.equal(href, `${ORIGIN}/map?${BASE}&layer=waves&layer=currents`);
+});
