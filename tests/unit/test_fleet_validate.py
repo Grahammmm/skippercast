@@ -537,6 +537,39 @@ class LabelImportTests(unittest.TestCase):
         self.assertEqual([b for _, b in worker.calls], [{"trip_id": TRIP, "labeller": "agent:test", "labels": []},
                                                         {"trip_id": OTHER, "labeller": "agent:test", "labels": []}])
 
+    def test_identifiers_with_a_suffix_are_refused_whole_token(self):
+        trip_msg, lab_msg = "trip_id must be 32 hex characters", "labeller must be agent:<name>"
+        for bad in (TRIP + "\n", TRIP + "\r\n", TRIP + "\r", TRIP[:5] + "\n" + TRIP[5:], " " + TRIP, TRIP + " ",
+                    TRIP + "a", TRIP[:31], 7):
+            for labels in ([], None):   # withdrawal and a normal label list
+                with self.subTest(trip=repr(bad), withdrawal=labels == []):
+                    self.assertIn(trip_msg, self.errors(self.proposal(labels=labels, trip=bad)))
+        for bad in ("agent:test\n", "agent:test\r\n", "agent:test\r", "agent:te\nst", " agent:test", "agent:test ",
+                    "agent:test!", "agent:" + "a" * 65, "agent:"):
+            with self.subTest(labeller=repr(bad)):
+                self.assertIn(lab_msg, self.errors(self.proposal(labels=[], labeller=bad)))
+
+    def test_a_valid_entry_followed_by_a_malformed_one_posts_nothing(self):
+        for entry in (self.proposal(labels=[], trip=OTHER + "\n"), self.proposal(labels=[], trip=OTHER, labeller="agent:x\n")):
+            with self.subTest(entry=entry):
+                self.assertTrue(self.errors(self.proposal(labels=[]), entry).startswith("entry 2: "))
+
+    def test_identifier_boundaries_are_unchanged(self):
+        worker = LabelWorker([])
+        names = ("a", "a" * 64, "A.b_c-d", "0")
+        entries = [self.proposal(labels=[], trip=f"{k:032x}", labeller=f"agent:{n}") for k, n in enumerate(names)]
+        self.assertEqual(labelling.import_labels(self.write(*entries), worker)["posted"], len(names))
+        self.assertEqual([(b["trip_id"], b["labeller"]) for _, b in worker.calls],
+                         [(f"{k:032x}", f"agent:{n}") for k, n in enumerate(names)])
+
+    def test_a_dry_run_with_a_terminal_newline_exits_two_without_the_token(self):
+        path = self.write(self.proposal(labels=[], trip=OTHER + "\n"))
+        err = io.StringIO()
+        with mock.patch.object(labelling, "job_worker", side_effect=AssertionError("no Worker")), redirect_stderr(err):
+            self.assertEqual(labelling.main(["import", str(path), "--dry-run"]), 2)
+        self.assertIn("entry 1: trip_id must be 32 hex characters", err.getvalue())
+        self.assertNotIn(OTHER, err.getvalue())
+
     def test_a_worker_refusal_stops_at_that_trip_and_says_how_many_were_posted(self):
         (self.dir / f"{OTHER}.json").write_text((self.dir / f"{TRIP}.json").read_text())
         third = "e" * 32
