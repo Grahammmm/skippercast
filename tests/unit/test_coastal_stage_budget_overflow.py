@@ -75,7 +75,7 @@ def test_large_finite_wall_budget_is_terminal_input_error(tmp_path, capsys, wall
     refused(tmp_path, wall_text, capsys)
 
 
-@pytest.mark.parametrize('wall_text', [str(10 ** 400), str(-10 ** 400)])
+@pytest.mark.parametrize('wall_text', [str(10 ** 400), str(-10 ** 400)], ids=['positive', 'negative'])
 def test_huge_integer_conversion_is_contained(tmp_path, capsys, wall_text):
     refused(tmp_path, wall_text, capsys)
     job = make_job(tmp_path / 'direct')
