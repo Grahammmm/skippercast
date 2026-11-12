@@ -231,3 +231,81 @@ test.describe('the shared focus ring', () => {
     expect(map.color).toBe(map.focus);
   });
 });
+
+// UXFIX-09 / R-P2 (S4-11 order part): the brief's Tab sequence follows what people see. Positions are measured against the
+// brief's own root, so the scroll the focus causes does not move them. DOM order only: no positive tabindex.
+interface Stop {name: string; y: number; tile: number; belowValue: boolean}
+const SLACK = 4;
+
+/** Problems with a brief's Tab sequence: a stop higher than the one before it (by more than 4 px), or the four tiles' basis
+ *  buttons not the next stops after one another, in tile order, each below its tile's value. */
+export function readingOrderProblems(stops: readonly Stop[]): string[] {
+  const problems = stops.flatMap((s, i) => i > 0 && s.y < stops[i - 1]!.y - SLACK ? [`"${s.name}" (y ${s.y}) is above "${stops[i - 1]!.name}" (y ${stops[i - 1]!.y})`] : []);
+  const tiles = stops.map((s, i) => ({...s, i})).filter(s => s.tile >= 0);
+  if (tiles.length !== 4) problems.push(`${tiles.length} tile stops, expected 4`);
+  tiles.forEach((s, n) => {
+    if (s.tile !== n) problems.push(`"${s.name}" is tile ${s.tile}, expected tile ${n}`);
+    if (n > 0 && s.i !== tiles[n - 1]!.i + 1) problems.push(`"${s.name}" does not directly follow "${tiles[n - 1]!.name}"`);
+    if (!s.belowValue) problems.push(`"${s.name}" is not below its tile's value`);
+  });
+  return problems;
+}
+
+/** Focus the brief's root and Tab until focus leaves it (≤ 60 stops). */
+async function briefStops(page: Page): Promise<Stop[]> {
+  await page.evaluate(() => (document.getElementById('app-brief-content') as HTMLElement).focus());
+  const stops: Stop[] = [];
+  for (let n = 0; n < 60; n++) {
+    await page.keyboard.press('Tab');
+    const stop = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null, root = document.getElementById('app-brief-content')!;
+      if (!el || !root.contains(el)) return null;
+      const r = el.getBoundingClientRect(), top = root.getBoundingClientRect().top, tile = el.closest('.ui-tile');
+      const value = tile?.querySelector('.ui-tile-reading')?.getBoundingClientRect();
+      return {name: (el.getAttribute('aria-label') || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40),
+        y: Math.round(r.top - top + (getComputedStyle(root).overflowY === 'auto' ? root.scrollTop : 0)),
+        tile: tile ? [...root.querySelectorAll('.ui-tile')].indexOf(tile) : -1, belowValue: !!value && r.top >= value.bottom - 4};
+    });
+    if (!stop) break;
+    stops.push(stop);
+  }
+  return stops;
+}
+
+test.describe('reading order (R-P2)', () => {
+  test.beforeEach(async ({page}) => {
+    await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
+  });
+
+  test('the brief is tabbed top to bottom, and each tile\'s basis button is the next stop after its value', async ({page, v2, pageErrors, isMobile}) => {
+    void pageErrors;
+    await v2.open('app', {view: 'coast', region: 'morro-bay'});
+    await expect(page.getByRole('heading', {name: 'Where to look', exact: true})).toBeVisible();
+    await expect(page.locator('#app-brief-content').getByRole('button', {name: /Try again|North Buchon/}).first()).toBeVisible();
+    if (isMobile) { await page.locator('.ui-sheet-handle').press('End'); await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full'); }
+    const stops = await briefStops(page);
+    expect(stops.map(s => s.name)).toEqual(expect.arrayContaining(['Basis for wind', 'Basis for swell', 'Basis for water', 'Basis for tide']));
+    expect(stops.length, 'the brief offers its controls to the keyboard').toBeGreaterThan(8);
+    expect(readingOrderProblems(stops), JSON.stringify(stops.map(s => `${s.y} ${s.name}`))).toEqual([]);
+  });
+
+  test('the top strip comes before the map: after the skip links, Tab reaches the logo', async ({page, v2, pageErrors}) => {
+    void pageErrors;
+    await v2.open('app', {view: 'coast', region: 'morro-bay'});
+    await expect(page.locator('a.app-brand').first()).toBeVisible();
+    await page.locator('a.app-skip-link').last().focus();
+    await page.keyboard.press('Tab');
+    await expect(page.locator('a.app-brand').first()).toBeFocused();
+  });
+
+  test('the check itself: a stop above the one before it, or a basis button out of tile order, is a problem', () => {
+    const stop = (name: string, y: number, tile = -1, belowValue = false): Stop => ({name, y, tile, belowValue});
+    const tiles = [0, 1, 2, 3].map(n => stop(`Basis ${n}`, 100, n, true));
+    expect(readingOrderProblems([stop('Refresh', 0), ...tiles, stop('Details', 200)])).toEqual([]);
+    expect(readingOrderProblems([stop('Refresh', 0), ...tiles.slice(0, 2), {...tiles[2]!, y: 80}, tiles[3]!])).toEqual(['"Basis 2" (y 80) is above "Basis 1" (y 100)']);
+    expect(readingOrderProblems([stop('Refresh', 0), ...tiles.slice(0, 3)])).toEqual(['3 tile stops, expected 4']);
+    expect(readingOrderProblems([stop('Refresh', 0), tiles[0]!, stop('Tide station', 100), ...tiles.slice(1)])).toEqual(['"Basis 1" does not directly follow "Basis 0"']);
+    expect(readingOrderProblems([stop('Refresh', 0), tiles[1]!, tiles[0]!, tiles[2]!, tiles[3]!])).toEqual(['"Basis 1" is tile 1, expected tile 0', '"Basis 0" is tile 0, expected tile 1']);
+    expect(readingOrderProblems([stop('Refresh', 0), ...tiles.slice(0, 3), {...tiles[3]!, belowValue: false}])).toEqual(['"Basis 3" is not below its tile\'s value']);
+  });
+});
