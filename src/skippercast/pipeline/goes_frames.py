@@ -16,8 +16,10 @@ published index stays, aging out of the same gate in the client. Ported from
 import argparse
 from datetime import datetime, timedelta, timezone
 import json
+import os
 from pathlib import Path
 import sys
+import tempfile
 from xml.etree import ElementTree
 
 from .. import http
@@ -110,11 +112,43 @@ def collect(session, now=None):
     return parse_capabilities(body, now)
 
 
+def _close_if_owned(fd, identity):
+    """Close the mkstemp descriptor when a failed os.fdopen never took ownership of it.
+
+    A failure inside fdopen may have already closed the descriptor (and the number may since be reused), so
+    close only while it still names the very file mkstemp opened. Never raises: the caller re-raises the original error.
+    """
+    try:
+        now = os.fstat(fd)
+        if (now.st_dev, now.st_ino) == (identity.st_dev, identity.st_ino):
+            os.close(fd)
+    except OSError:
+        pass
+
+
 def write(path, record):
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n")
-    tmp.replace(path)
+    text = json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n"
+    # Each call owns a distinct same-directory staging file, so overlapping writes never share one.
+    fd, name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    tmp = Path(name)
+    try:
+        identity = os.fstat(fd)
+        try:
+            stream = os.fdopen(fd, "w", encoding="utf-8")
+        except BaseException:
+            _close_if_owned(fd, identity)
+            raise
+        with stream:
+            stream.write(text)
+        os.chmod(tmp, 0o644)  # mkstemp creates 0600; the published index is read by the web server
+        tmp.replace(path)
+    except BaseException:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
 
 
 def main(argv=None, now=None):

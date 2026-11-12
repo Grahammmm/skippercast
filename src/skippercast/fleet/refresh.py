@@ -65,8 +65,12 @@ def detect(before: Snapshot, sent: Iterable[Mapping[str, Any]], now: str, *, com
            vanished_runs: int, vanished_days: float) -> list[dict]:
     """The change, review and offering operations for one run (pure; see the module table).
 
-    ``history``: the earlier complete discovery runs; ``complete``: this run's discovery was."""
+    ``history``: the complete discovery runs; ``complete``: this run's discovery was. Decisions are as of ``now``:
+    only runs strictly earlier than ``now`` count, so replaying an older saved ingest ignores later runs.
+    The cutoff compares canonical UTC-millisecond times, not their spelling; emitted timestamps keep ``now``."""
     sent = list(sent)
+    as_of = ops.iso(now, "now")
+    earlier = [at for at in (ops.iso(at, "history") for at in history) if at < as_of]
     stored = {v["id"]: v for v in before.vessels}
     decided = {r["id"] for r in before.reviews}
     out: list[dict] = []
@@ -77,7 +81,7 @@ def detect(before: Snapshot, sent: Iterable[Mapping[str, Any]], now: str, *, com
 
     def missed(vessel) -> int:  # earlier complete runs that did not list it
         last = ops.iso(vessel["last_seen_at"], "last_seen_at")
-        return sum(at > last for at in history)
+        return sum(at > last for at in earlier)
 
     def gone(vessel, runs: int) -> bool:
         return runs >= vanished_runs and _days(now, vessel["last_seen_at"]) >= vanished_days
