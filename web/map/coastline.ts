@@ -55,7 +55,7 @@ export function coastlineLayers(p: Palette): LineLayer[] {
     {id: COASTLINE_GLOW, type: 'line', source: COASTLINE_SOURCE, layout,
       paint: {'line-color': p.blue, 'line-width': ['interpolate', ['linear'], ['zoom'], 7, 3, 14, 7], 'line-blur': 4, 'line-opacity': 0.28}},
     {id: COASTLINE_LINE, type: 'line', source: COASTLINE_SOURCE, layout,
-      paint: {'line-color': p.muted, 'line-width': ['interpolate', ['linear'], ['zoom'], 7, 0.8, 14, 1.4], 'line-opacity': 0.85}},
+      paint: {'line-color': p.mapCoast, 'line-width': ['interpolate', ['linear'], ['zoom'], 7, 0.8, 14, 1.4], 'line-opacity': 0.85}},
   ];
 }
 

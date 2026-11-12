@@ -95,9 +95,12 @@ export type PositionResult = {located: {ok: false; reason: 'unsupported' | 'deni
  * The fix lives only in the returned value; nothing here writes it anywhere or sends it.
  */
 export async function checkPosition(loadScreen: () => Promise<HeldScreen | null>, geolocation?: Pick<Geolocation, 'getCurrentPosition'> | null): Promise<PositionResult> {
-  const [located, screen] = await Promise.all([readPosition(geolocation), loadScreen().catch(() => null)]);
+  // Both start now; the loader's rejection is caught at once so a failure while the permission prompt is open is never unhandled.
+  const reading = readPosition(geolocation), screen = loadScreen().catch(() => null);
+  const located = await reading;
+  // A failed read is already the answer: boundaries cannot change it, so they are not waited for (the loader finishes on its own).
   if (!located.ok) return {located};
-  return {located, reading: readingFor(located.fix, screen)};
+  return {located, reading: readingFor(located.fix, await screen)};
 }
 
 /** Whether the legal pack saved this region's boundaries on this device: 'unknown' when the saved packs could not be listed. */

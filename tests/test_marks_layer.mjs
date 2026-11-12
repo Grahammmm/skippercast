@@ -35,7 +35,7 @@ const SURVEY = read('regions/cambria-san-simeon/survey-habitat.geojson'), GEOLOG
 const SOCAL = read('regions/southern-california/region.json'), SOCAL_ATLAS = read('regions/southern-california/atlas.json');
 /** The run-time screen just after a live check against the committed snapshot (#489; tests/test_mark_screen.mjs covers the screen itself). */
 const CHECKED = assessScreen({areas: read('data/protected-areas.geojson').features, checkedAt: new Date().toISOString(), live: true}, Date.now());
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const SENTINELS = new Set(Object.values(sentinel));
 /** Words § 12 keeps off every card: no count, chance or promise of fish. */
 const PROMISE = /\b(?:hotspot|chance|odds|probab\w*|productive|best spot|catch rate|bite|guarantee\w*)\b/i;

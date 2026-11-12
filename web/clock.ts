@@ -35,9 +35,12 @@ export function createHourClock(options: HourClockOptions = {}): HourClock {
   /** Take the real time, publish it, and keep exactly one timeout waiting for the next whole hour after it. */
   const sample = (): void => {
     const at = read();
-    if (at.getTime() !== now.peek().getTime()) now.value = at;
+    // Publishing is a reentrancy boundary: a signal subscriber may release (or release and re-retain) the clock
+    // synchronously. So this sample takes ownership first, and arms a timeout only if it still owns it afterwards.
     stopTimer();
     const mine = ++generation;
+    if (at.getTime() !== now.peek().getTime()) now.value = at;
+    if (mine !== generation || retained === 0) return;
     timer = schedule(() => { if (mine === generation && retained > 0) { armed = false; sample(); } }, HOUR_MS - (at.getTime() % HOUR_MS));
     armed = true;
   };
