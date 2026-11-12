@@ -79,10 +79,18 @@ test.describe('@nightly net-faults', () => {
     });
     await page.goto(SHELL);
     await expect(page).toHaveTitle(/SkipperCast/);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2_000);
+    // The page never goes network-idle (imagery and polling), so wait for the brief's answer, then a fixed quiet spell.
+    await expect(page.locator('.app-forecast-failed').first()).toBeVisible();
+    await page.waitForTimeout(4_000);
     const m = await page.evaluate(() => { const w = window as unknown as {__csp: string[]; __cls: number; __long: number}; return {csp: w.__csp, cls: w.__cls, long: w.__long}; });
     console.log(`[net-faults] CLS ${m.cls.toFixed(4)}, long tasks total ${Math.round(m.long)} ms (recorded, no threshold)`);
+    // The visible map share (map area not under the sheet or brief) is recorded, not asserted: the landscape layout waits for the map decision.
+    const share = await page.evaluate(() => {
+      const vw = innerWidth, vh = innerHeight, area = (r: DOMRect) => Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0)) * Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
+      const map = document.querySelector('.app-chart'), cover = document.querySelector('.ui-sheet, .app-brief');
+      return map ? Math.max(0, area(map.getBoundingClientRect()) - (cover ? area(cover.getBoundingClientRect()) : 0)) / (vw * vh) : -1;
+    });
+    console.log(`[net-faults] ${test.info().project.name} ${page.viewportSize()!.width}x${page.viewportSize()!.height}: visible map share ${(share * 100).toFixed(1)}% (recorded, not asserted)`);
     expect(m.csp, 'securitypolicyviolation events').toEqual([]);
     expect(bad, 'same-origin responses >= 400').toEqual([]);
     expect(pageErrors).toEqual([]);
