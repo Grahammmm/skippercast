@@ -79,6 +79,6 @@ test('zoom styling adds non-pickable outline and optional label with palette col
   assert.deepEqual(label.layout['text-size'], ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 12]);
   assert.deepEqual(label.layout['text-offset'], [0, 1.6]); assert.equal(label.layout['text-anchor'], 'top');
   assert.equal(label.layout['text-optional'], true);
-  assert.deepEqual(label.paint, {'text-color': p.text, 'text-halo-color': p.bg, 'text-halo-width': 1.2});
+  assert.deepEqual(label.paint, {'text-color': p.mapInk, 'text-halo-color': p.mapInkHalo, 'text-halo-width': 1.2});
   assert.doesNotMatch(JSON.stringify([line.paint['line-color'], label.paint]), /#[0-9a-f]{3,8}|rgba?\(/i);
 });

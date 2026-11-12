@@ -95,8 +95,8 @@ test('the overlay: a dashed survey edge, contours heavier at the index, a click 
   const by = id => o.layers.find(l => l.id === id);
   assert.deepEqual(by(DEPTH_EDGE).filter, ['==', ['get', 'kind'], 'survey-edge']);
   assert.deepEqual(by(DEPTH_EDGE).paint['line-dasharray'], [2, 2]);
-  assert.equal(by(DEPTH_EDGE).paint['line-color'], 'token(muted)');
-  assert.equal(by(DEPTH_LINE).paint['line-color'], 'token(depth-1)');
+  assert.equal(by(DEPTH_EDGE).paint['line-color'], 'token(map-label)');
+  assert.equal(by(DEPTH_LINE).paint['line-color'], 'token(map-contour)');
   assert.deepEqual(by(DEPTH_LINE).paint['line-opacity'], ['case', ['==', ['get', 'index'], true], 0.85, 0.55]);
   assert.equal(by(DEPTH_HIT).paint['line-opacity'], 0);
   assert.equal(by(DEPTH_HIT).filter, undefined, 'contours and edge are both selectable');
@@ -144,7 +144,7 @@ test('the registry entry: always on, Chart only, every zoom; the basis says not 
   assert.match(e.basis, /withheld one year after their source review/, 'the age limit');
   assert.match(e.basis, /2 m grids, surveyed 2008/, 'the product, grid and age');
   assert.doesNotMatch(e.basis + e.legend.map(r => r.label).join(' '), /\b(fish|catch|hotspot|feeding|bite)/i);
-  assert.deepEqual(e.legend.map(r => r.swatch), ['depth1', 'muted']);
+  assert.deepEqual(e.legend.map(r => r.swatch), ['mapContour', 'mapLabel']);
   // The ENC chart base is left as it was: its own entry, source, zoom gate and basis.
   assert.equal(layerEntry('chart').gate, 'zoom ≥ 10');
 });
@@ -364,9 +364,9 @@ test('EC6: the area draws muted and dashed at the bottom; filled runs dash and v
   assert.ok(ids.indexOf(DEPTH_UNRESOLVED_FILL) < ids.indexOf(DEPTH_UNRESOLVED_LINE) && ids.indexOf(DEPTH_UNRESOLVED_LINE) < ids.indexOf(DEPTH_EDGE));
   const unresolved = ['==', ['get', 'kind'], 'unresolved-area'];
   assert.deepEqual(by(DEPTH_UNRESOLVED_FILL), {id: DEPTH_UNRESOLVED_FILL, type: 'fill', source: DEPTH_CONTOURS_SOURCE, filter: unresolved,
-    paint: {'fill-color': 'token(muted)', 'fill-opacity': 0.18}});
+    paint: {'fill-color': 'token(map-label)', 'fill-opacity': 0.18}});
   assert.deepEqual(by(DEPTH_UNRESOLVED_LINE).filter, unresolved);
-  assert.deepEqual(by(DEPTH_UNRESOLVED_LINE).paint, {'line-color': 'token(muted)', 'line-width': 1, 'line-dasharray': [1, 2]});
+  assert.deepEqual(by(DEPTH_UNRESOLVED_LINE).paint, {'line-color': 'token(map-label)', 'line-width': 1, 'line-dasharray': [1, 2]});
   const line = by(DEPTH_LINE).paint, verified = ['case', ['==', ['get', 'provenance'], 'verified'], 1.25, 1], index = ['==', ['get', 'index'], true];
   assert.deepEqual(line['line-dasharray'], ['case', ['==', ['get', 'provenance'], 'filled'], ['literal', [4, 3]], ['literal', [1, 0]]]);
   assert.deepEqual(line['line-width'], ['interpolate', ['linear'], ['zoom'],

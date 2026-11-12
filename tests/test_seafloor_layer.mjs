@@ -94,7 +94,7 @@ test('v2: grade and fit draw on the depth ramp from palette tokens; the key keep
   assert.ok(layers.every(l => l.source === SEAFLOOR_SOURCE && l.layout.visibility === 'none'), 'hidden until the publication admits something');
   const color = layers[1].paint['fill-color'], outputs = Object.fromEntries(color.slice(2, -1).reduce((pairs, v, i, all) => i % 2 ? pairs : [...pairs, [v, all[i + 1]]], []));
   assert.deepEqual(outputs, {strong: 'token(depth-0)', moderate: 'token(depth-1)', some: 'token(depth-2)', search: 'token(amber)', interpreted: 'token(blue)'});
-  assert.equal(color.at(-1), 'token(muted)');
+  assert.equal(color.at(-1), 'token(map-label)');
   assert.equal(layers[0].paint['fill-color'], 'token(depth-3)', 'cells are the deepest step');
   for (const l of layers) for (const [key, value] of Object.entries(l.paint)) if (key.endsWith('color')) {
     for (const v of [value].flat(Infinity)) if (typeof v === 'string' && /^[#(]|rgb|hsl/.test(v)) assert.fail(`${l.id} ${key} has a literal colour ${v}`);

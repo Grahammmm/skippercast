@@ -2,20 +2,23 @@
 // not accepted map backdrops or evidence about production contrast.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync} from 'node:fs';
+import {mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync, symlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {pathToFileURL} from 'node:url';
+import {pathToFileURL, fileURLToPath} from 'node:url';
 import {
   FILES, PAIRS_BRIDGE, check, checkBridge, classifyContrast, evaluateContrast,
-  resolveRgba, sourceOver, checkTransparentBridge,
+  resolveRgba, sourceOver, checkTransparentBridge, rawThemes,
 } from '../scripts/check_contrast.mjs';
 
 const BLACK = [0, 0, 0, 1], WHITE = [255, 255, 255, 1];
 const PROVENANCE = 'Synthetic unit fixture: uniform solid backing';
 const declarations = values => Object.entries(values).map(([key, value]) => `--${key}: ${value};`).join('\n');
+// Supply the additive CVD gate's palette/numeric inputs; opaque pairs below remain synthetic 21:1.
+const CVD_INPUTS = rawThemes(readFileSync(new URL('../web/tokens.css', import.meta.url), 'utf8')).dark;
 const V2_CSS = `:root {
-${declarations({bg: '#000000', 'bg-deep': '#000000', panel: '#000000', 'panel-2': '#000000',
+${declarations({...CVD_INPUTS, bg: '#000000', 'bg-deep': '#000000', panel: '#000000', 'panel-2': '#000000',
+  'map-ink': '#ffffff', 'map-ink-halo': '#000000', 'map-label': '#ffffff', 'map-halo': '#000000',
   text: '#ffffff', muted: '#ffffff', mint: '#ffffff', blue: '#ffffff', coral: '#ffffff', amber: '#ffffff'})}
 }
 :root[data-theme="light"] { }`;
@@ -189,6 +192,7 @@ test('default CLI fails closed on unresolved synthetic requests in this Node pro
     writeFileSync(script, readFileSync(new URL('../scripts/check_contrast.mjs', import.meta.url)));
     writeFileSync(join(root, 'web/tokens.css'), V2_CSS);
     writeFileSync(join(root, 'packages/coast/tokens-bridge.css'), BRIDGE_CSS);
+    symlinkSync(fileURLToPath(new URL('../web/map', import.meta.url)), join(root, 'web/map'), 'dir');
     process.argv = [process.execPath, script];
     process.exit = code => { exitCodes.push(code); throw exitSignal; };
     console.log = (...args) => stdout.push(args.join(' '));

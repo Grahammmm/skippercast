@@ -79,7 +79,7 @@ test('fill, dashed outline and names read the --mpa-* tokens; names start at ?vi
   assert.equal(line.paint['line-color'], sentinel.mpaLine);
   assert.ok(Array.isArray(line.paint['line-dasharray']) && line.paint['line-dasharray'].length === 2, 'dashed outline');
   assert.equal(label.paint['text-color'], sentinel.mpaLine);
-  assert.equal(label.paint['text-halo-color'], sentinel.bg);
+  assert.equal(label.paint['text-halo-color'], sentinel.mapInkHalo);
   assert.deepEqual(label.layout['text-field'], ['get', 'NAME']);
   assert.equal(MPA_LABEL_MIN_ZOOM, 11);
   assert.equal(label.minzoom, 11 - ZOOM_OFFSET, 'MapLibre zoom 10 is ?view= zoom 11');

@@ -705,7 +705,8 @@ test('FE-82: protected areas, reef marks and charter grounds drape on the terrai
   const [mpaFill, mpaLine] = mpaLayers(sentinel), mpas = layerEntry('mpas').terrain;
   assert.deepEqual([sentinel[mpas.color], sentinel[mpas.outline], mpas.opacity], [mpaFill.paint['fill-color'], mpaLine.paint['line-color'], 'mpaFillOpacity']);
   assert.deepEqual(mpaFill.paint['fill-opacity'], ['to-number', sentinel.mpaFillOpacity], 'both read --mpa-fill-opacity');
-  const ring = markStyle(sentinel).marks.find(l => l.id === 'marks-ring').paint, marks = layerEntry('marks').terrain;
+  // Coast overlays retain their general UI roles; the Chart's independent roles have equal defaults.
+  const ring = markStyle({...sentinel, mapInkHalo: sentinel.bg, markRing: sentinel.mint}).marks.find(l => l.id === 'marks-ring').paint, marks = layerEntry('marks').terrain;
   assert.deepEqual([marks.kind, sentinel[marks.color], marks.opacity, sentinel[marks.outline]], ['point', ring['circle-color'], ring['circle-opacity'], ring['circle-stroke-color']]);
   assert.equal(marks.size, ring['circle-radius'] * 2, 'the ring\'s diameter');
   const grounds = groundsOverlay(sentinel, {outlines: {type: 'FeatureCollection', features: []}, hatch: {type: 'FeatureCollection', features: []}});
