@@ -10,6 +10,8 @@ from contextlib import redirect_stderr, redirect_stdout
 from copy import deepcopy
 import io
 import json
+from pathlib import Path
+import tempfile
 import unittest
 from unittest import mock
 
@@ -56,6 +58,38 @@ class PolicyTests(unittest.TestCase):
         doc = load('six-pack.json')
         doc['conflicts'][0]['values'][1]['source_url'] = 'https://fareharbor.com/embeds/book/placeholder-example/'
         self.assertEqual(profile.policy_errors(doc), ['conflicts[0].values[1]: source_url on an off-limits host (fareharbor.com)'])
+
+    def test_a_dns_root_dot_does_not_hide_an_off_limits_host(self):
+        for source in ('https://fareharbor.com./x', 'https://FareHarbor.COM./x?a=1', 'https://book.fareharbor.com.:443/x#f'):
+            host = 'fareharbor.com' if 'book' not in source else 'book.fareharbor.com'
+            with self.subTest(source):
+                doc = load('party.json')
+                doc['boat']['year_built'] = prov(1979, source)
+                self.assertEqual(profile.policy_errors(doc), [f'boat.year_built: source_url on an off-limits host ({host})'])
+                doc = load('six-pack.json')
+                doc['conflicts'][0]['values'][1]['source_url'] = source
+                self.assertEqual(profile.policy_errors(doc),
+                                 [f'conflicts[0].values[1]: source_url on an off-limits host ({host})'])
+
+    def test_a_dotted_host_follows_the_catalog_not_a_hard_coded_name(self):
+        doc = load('party.json')
+        for source, bad in (('https://directory.example./x', True), ('https://Www.Directory.Example./x', True),
+                            ('https://notdirectory.example./x', False), ('https://directory.example.allowed.example./x', False),
+                            ('https://Operator.Example./x', False), ('https://fareharbor.com./x', False)):
+            with self.subTest(source):
+                doc['boat']['year_built'] = prov(1979, source)
+                errors = profile.policy_errors(doc, off_limits=['directory.example'])
+                self.assertEqual(bool(errors), bad, errors)
+        before = deepcopy(doc)
+        profile.policy_errors(doc, off_limits=['directory.example'])
+        self.assertEqual(doc, before, 'the policy never rewrites a citation')
+
+    def test_only_one_dns_root_dot_is_folded(self):
+        for url, expected in (('https://Sea.Example/x', 'sea.example'), ('https://sea.example./x', 'sea.example'),
+                              ('https://sea.example../x', 'sea.example.'), ('https://[::1]/x', '::1'),
+                              ('https://[::1', ''), ('https:///x', ''), (None, ''), (7, '')):
+            with self.subTest(url):
+                self.assertEqual(profile._host(url), expected)
 
     def test_off_limits_values_need_a_page_source(self):
         doc = load('party.json')
@@ -224,6 +258,22 @@ class SchemaTests(unittest.TestCase):
             self.assertEqual(profile.main([str(PROFILES / 'invalid.json')]), 1)
         self.assertIn('party.json: valid fleet-profile', out.getvalue())
         self.assertIn('invalid.json: 3 error(s)', err.getvalue())
+
+    def test_cli_refuses_a_dotted_off_limits_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad, good = Path(tmp) / 'bad.json', Path(tmp) / 'good.json'
+            doc = load('party.json')
+            doc['boat']['year_built'] = prov(1979, 'https://fareharbor.com./x')
+            bad.write_text(json.dumps(doc), encoding='utf-8')
+            doc['boat']['year_built'] = prov(1979, 'https://Operator.Example./x')
+            good.write_text(json.dumps(doc), encoding='utf-8')
+            out, err = io.StringIO(), io.StringIO()
+            with redirect_stdout(out), redirect_stderr(err):
+                self.assertEqual(profile.main([str(bad)]), 1)
+                self.assertEqual(profile.main([str(good)]), 0)
+        self.assertIn('boat.year_built: source_url on an off-limits host (fareharbor.com)', err.getvalue())
+        self.assertNotIn('bad.json: valid fleet-profile', out.getvalue())
+        self.assertIn('good.json: valid fleet-profile', out.getvalue())
 
 
 class MissingDependencyTests(unittest.TestCase):
