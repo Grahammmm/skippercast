@@ -197,7 +197,7 @@ def parse_ship_zip(data: bytes | IO[bytes], state: str, *, source_id: str, right
         active = status == "active"
         if not active and not all_statuses:
             continue
-        call_sign = (f[4] or (hd[4] if hd else "")).strip().upper()
+        call_sign = (f[4].strip() or (hd[4].strip() if hd else "")).upper()
         keys = _keys(call_sign, f[21], f[10])
         url = licence_url(usi)
 
