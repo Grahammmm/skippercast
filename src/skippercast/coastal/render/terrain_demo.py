@@ -94,8 +94,16 @@ def _preflight_npy(archive, member):
 def _json(data):
     def reject(value):
         raise ValueError('nonfinite_json:' + value)
+    def unique(pairs):
+        # A repeated decoded member name is ambiguous; never keep only the last one.
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError('duplicate_json_key')
+            result[key] = value
+        return result
     try:
-        result = json.loads(data, parse_constant=reject)
+        result = json.loads(data, parse_constant=reject, object_pairs_hook=unique)
     except RecursionError as error:
         raise ValueError('json_nesting_excessive') from error
     if not isinstance(result, dict):
