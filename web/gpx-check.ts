@@ -10,6 +10,9 @@ function readAttributes(attrs: string): {ok: boolean; list: [string, string][]} 
   return {ok: !attrs.slice(at).trim(), list};
 }
 
+/** ASCII XML-decimal coordinate shape: optional sign, digits with optional fraction, or a leading point and digits. */
+const DECIMAL_COORDINATE = /^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)$/;
+
 const ENTITIES: Record<string, string> = {amp: '&', lt: '<', gt: '>', quot: '"', apos: "'"};
 /** One reference at the sticky position: a named XML entity, or decimal `#digits` / hexadecimal `#xhex`, each ending in `;`. */
 const reference = /&(?:(amp|lt|gt|quot|apos)|#([0-9]+)|#x([0-9A-Fa-f]+));/y;
@@ -65,8 +68,9 @@ export function checkGpx(xml: string, expected: {waypoints: number}, screen?: un
       const read = readAttributes(attrs), pair: number[] = [];
       if (!read.ok) fail(`Malformed ${name} attributes`);
       for (const [key, limit] of [['lat', 90], ['lon', 180]] as const) {
-        const found = read.list.filter(([k]) => k === key), v = found[0]?.[1], n = Number(v);
-        const valid = found.length === 1 && !!v?.trim() && Number.isFinite(n) && Math.abs(n) <= limit;
+        // The whole trimmed token must be an XML decimal before conversion: Number alone also accepts 0x, 0b, 0o and exponent spellings.
+        const found = read.list.filter(([k]) => k === key), v = found[0]?.[1]?.trim() ?? '', n = DECIMAL_COORDINATE.test(v) ? Number(v) : NaN;
+        const valid = found.length === 1 && Number.isFinite(n) && Math.abs(n) <= limit;
         if (!valid) fail(`Invalid ${name} ${key}`);
         pair.push(valid && read.ok ? n : NaN);
       }
