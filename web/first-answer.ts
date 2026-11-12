@@ -4,7 +4,7 @@
 // web/regs.ts regulationState and ruleSummary give the rules card. Nothing is graded here and no
 // rule is quoted: legality is a pointer to the rules card, never a ruling.
 import type {BriefVerdict, DayVerdict} from './brief/verdict.ts';
-import {PROFILE_TABLE, type Profile} from './profile.ts';
+import type {Profile} from './profile.ts';
 import {CDFW_OCEAN, regulationState, ruleSummary, type RulesRegion} from './regs.ts';
 import {t, type Language, type StringId} from './i18n.ts';
 
@@ -55,7 +55,7 @@ function legality(s: FirstAnswerState): {note: string; href: string} {
 /** The first answer for the lead's day. Every field comes from verdict.ts, regs.ts or the profile table. */
 export function firstAnswer(s: FirstAnswerState): FirstAnswer {
   const v = s.verdict, fishable = v ? FISHABLE[v.verdict] : 'unknown', lang = s.lang ?? 'en';
-  const law = legality(s), assumed = s.chosen ? '' : ` ${t('fa.assumed', lang, {profile: PROFILE_TABLE[s.profile].label})}`;
+  const law = legality(s), assumed = s.chosen ? '' : ` ${t('fa.assumed', lang, {profile: t(`where.profile.${s.profile}`, lang)})}`;
   return {
     fishable, legalityNote: law.note, rulesHref: law.href, asOf: s.now.toISOString(),
     line: `${t(LINE[fishable], lang, {day: s.day})}${assumed}`,
