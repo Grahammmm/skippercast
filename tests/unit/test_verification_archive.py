@@ -1,16 +1,72 @@
 """A prospective history must survive publication and fail closed if incomplete."""
+from contextlib import contextmanager
 import gzip
 import hashlib
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
 
+from skippercast.pipeline import verification_archive
 from skippercast.pipeline.verification_archive import load_archive, write_archive, prune_archive, MAX_RAW_BYTES
 
 NOW = 1790092800
 REGION = 'morro-bay'
+
+
+class _SpyStream:
+    """Delegating binary stream that records every read request and its returned size."""
+
+    def __init__(self, stream, log):
+        self._stream, self._log = stream, log
+
+    def read(self, size=-1):
+        data = self._stream.read(size)
+        self._log.append((size, len(data)))
+        return data
+
+    def __enter__(self):
+        self._stream.__enter__()
+        return self
+
+    def __exit__(self, *exc):
+        return self._stream.__exit__(*exc)
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
+@contextmanager
+def grow_after_fstat(target, extra):
+    """Append to the real regular file right after its descriptor is stat'ed for admission."""
+    real = os.fstat
+    stat = Path(target).stat()
+    state = {'done': False}
+
+    def fstat(fd):
+        result = real(fd)
+        if not state['done'] and (result.st_dev, result.st_ino) == (stat.st_dev, stat.st_ino):
+            state['done'] = True
+            with open(target, 'ab') as stream:
+                stream.write(extra)
+        return result
+
+    with patch('skippercast.pipeline.verification_archive.os.fstat', fstat):
+        yield state
+
+
+@contextmanager
+def spy_reads(log):
+    real = os.fdopen
+
+    def fdopen(fd, mode='r', *args, **kwargs):
+        stream = real(fd, mode, *args, **kwargs)
+        return _SpyStream(stream, log) if mode == 'rb' else stream
+
+    with patch('skippercast.pipeline.verification_archive.os.fdopen', fdopen):
+        yield
 
 
 def row(index=0):
@@ -158,6 +214,87 @@ class VerificationArchiveTests(unittest.TestCase):
                 write_archive(self.root, REGION, [row(), row(1)], [], NOW + 60)
         self.assertEqual(self.manifest(), first)
         self.assertEqual(load_archive(self.root, REGION)['forecasts'], [row()])
+
+    def test_json_at_cap_and_cap_plus_one(self):
+        path = self.root / 'm.json'
+        path.write_bytes(b'{"value": 1}' + b' ' * 52)
+        self.assertEqual(path.stat().st_size, 64)
+        self.assertEqual(verification_archive._read_json(path, 64), {'value': 1})
+        path.write_bytes(b'{"value": 1}' + b' ' * 53)
+        with self.assertRaisesRegex(ValueError, 'exceeds its size bound'):
+            verification_archive._read_json(path, 64)
+        path.write_bytes(b'{"value": ')
+        with self.assertRaises(json.JSONDecodeError):
+            verification_archive._read_json(path, 64)
+
+    def test_linked_manifest_is_refused(self):
+        write_archive(self.root, REGION, [row()], [], NOW)
+        (self.root / 'linked.json').symlink_to(self.root / 'verification-state.json')
+        with self.assertRaisesRegex(ValueError, 'linked'):
+            verification_archive._read_json(self.root / 'linked.json', 1 << 20)
+
+    def test_post_fstat_growth_is_refused_before_decode(self):
+        path = self.root / 'm.json'
+        path.write_bytes(b'{"value": 1}')
+        log = []
+        with grow_after_fstat(path, b' ' * 127) as state, spy_reads(log), \
+                patch('skippercast.pipeline.verification_archive.json.loads') as loads:
+            with self.assertRaisesRegex(ValueError, 'exceeds its size bound'):
+                verification_archive._read_json(path, 64)
+        self.assertTrue(state['done'])
+        self.assertEqual(path.stat().st_size, 139)
+        loads.assert_not_called()
+        self.assertTrue(log)
+        self.assertTrue(all(requested == 65 for requested, _ in log))
+        self.assertLessEqual(sum(returned for _, returned in log), 65)
+
+    def test_load_archive_growth_cannot_return_legacy_history(self):
+        legacy = {'schema_version': 1, 'region_id': REGION, 'forecasts': [row()], 'observations': [obs()]}
+        path = self.root / 'verification-state.json'
+        path.write_text(json.dumps(legacy))
+        cap = path.stat().st_size + 16
+        with patch('skippercast.pipeline.verification_archive.MAX_LEGACY_BYTES', cap):
+            self.assertEqual(load_archive(self.root, REGION, required=True), legacy)
+            with grow_after_fstat(path, b' ' * 256) as state:
+                with self.assertRaisesRegex(ValueError, 'exceeds its size bound'):
+                    load_archive(self.root, REGION, required=True)
+        self.assertTrue(state['done'])
+
+    def test_prior_read_failure_does_not_install_new_manifests(self):
+        write_archive(self.root, REGION, [row()], [], NOW)
+        path = self.root / 'verification-state.json'
+        sentinel = self.root / 'verification-archive' / 'sentinel.txt'
+        sentinel.write_bytes(b'unrelated bytes')
+        shards = sorted(p.relative_to(self.root).as_posix() for p in self.root.rglob('*') if p.is_file())
+        with patch('skippercast.pipeline.verification_archive.MAX_LEGACY_BYTES', path.stat().st_size + 16):
+            with grow_after_fstat(path, b' ' * 256) as state:
+                with self.assertRaisesRegex(ValueError, 'exceeds its size bound'):
+                    write_archive(self.root, REGION, [row(), row(1)], [], NOW + 60)
+        self.assertTrue(state['done'])
+        self.assertFalse((self.root / 'verification-state.previous.json').exists())
+        self.assertEqual(sentinel.read_bytes(), b'unrelated bytes')
+        self.assertEqual(sorted(p.relative_to(self.root).as_posix() for p in self.root.rglob('*') if p.is_file()), shards)
+        self.assertEqual(json.loads(path.read_bytes()).get('forecasts_count'), 1)
+
+    def test_prune_growth_never_removes_shards(self):
+        write_archive(self.root, REGION, [row()], [], NOW)
+        write_archive(self.root, REGION, [row(), row(1)], [], NOW + 60)
+        unmanaged = self.root / 'verification-archive' / 'forecasts' / 'unmanaged.json.gz'
+        unmanaged.write_bytes(b'kept')
+        before = sorted(p.relative_to(self.root).as_posix() for p in self.root.rglob('*') if p.is_file())
+        for name, constant in (('verification-state.json', 'MAX_LEGACY_BYTES'),
+                               ('verification-state.previous.json', 'MAX_MANIFEST_BYTES')):
+            with self.subTest(manifest=name):
+                path = self.root / name
+                cap = max((self.root / n).stat().st_size for n in ('verification-state.json', 'verification-state.previous.json')) + 16
+                with patch('skippercast.pipeline.verification_archive.' + constant, cap):
+                    with grow_after_fstat(path, b' ' * 256) as state:
+                        with self.assertRaisesRegex(ValueError, 'exceeds its size bound'):
+                            prune_archive(self.root)
+                self.assertTrue(state['done'])
+                path.write_bytes(path.read_bytes().rstrip(b' '))
+                self.assertEqual(sorted(p.relative_to(self.root).as_posix() for p in self.root.rglob('*') if p.is_file()), before)
+        self.assertEqual(unmanaged.read_bytes(), b'kept')
 
 
 if __name__ == '__main__':

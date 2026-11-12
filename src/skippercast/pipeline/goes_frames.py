@@ -14,7 +14,7 @@ published index stays, aging out of the same gate in the client. Ported from
 """
 
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import sys
@@ -35,29 +35,49 @@ LIMITATIONS = ("Dated longwave infrared satellite mosaic: brightness temperature
                "patterns are coarser than individual beaches.")
 
 
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+# Representable UTC datetime domain (0001-01-01T00:00:00.000Z .. 9999-12-31T23:59:59.999Z) in epoch ms.
+MIN_MS = -62_135_596_800_000
+MAX_MS = 253_402_300_799_999
+
+
 def iso(ms):
     """Epoch milliseconds -> `YYYY-MM-DDTHH:MM:SS.mmmZ` (JavaScript `toISOString`, as the client compares strings)."""
-    return datetime.fromtimestamp(ms // 1000, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.") + f"{ms % 1000:03d}Z"
+    moment = _EPOCH + timedelta(seconds=ms // 1000)
+    return (f"{moment.year:04d}-{moment.month:02d}-{moment.day:02d}T{moment.hour:02d}:{moment.minute:02d}:"
+            f"{moment.second:02d}.{ms % 1000:03d}Z")
 
 
 def epoch(value):
-    """An ISO 8601 time with an explicit zone -> epoch ms; None for anything else (ranges, naive times)."""
+    """An ISO 8601 time with an explicit zone -> epoch ms; None for anything else (ranges, naive times,
+    instants outside the four-digit UTC year domain `iso` can write)."""
     try:
         moment = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
-    except ValueError:
+        if not moment.tzinfo or moment.utcoffset() is None:
+            return None
+        delta = moment - _EPOCH
+        ms = round(((delta.days * 86_400 + delta.seconds) * 1_000_000 + delta.microseconds) / 1000)
+    except (ValueError, OverflowError):
         return None
-    return round(moment.timestamp() * 1000) if moment.tzinfo else None
+    return ms if MIN_MS <= ms <= MAX_MS else None
 
 
 def local(tag):
     return tag.rsplit("}", 1)[-1]
 
 
+class _NoDoctypeBuilder(ElementTree.TreeBuilder):
+    """Refuses any DOCTYPE after XML decoding, so UTF-16 documents cannot slip past the raw-byte search."""
+
+    def doctype(self, name, pubid, system):
+        raise ValueError("Capabilities document carries a DOCTYPE")
+
+
 def layer_times(xml):
     """The raw `time` dimension entries of the `goes_longwave_imagery` layer (WMS 1.3.0, namespace-agnostic)."""
     if b"<!DOCTYPE" in (xml if isinstance(xml, bytes) else xml.encode()):
         raise ValueError("Capabilities document carries a DOCTYPE")
-    root = ElementTree.fromstring(xml)
+    root = ElementTree.fromstring(xml, parser=ElementTree.XMLParser(target=_NoDoctypeBuilder()))
     for layer in root.iter():
         if local(layer.tag) != "Layer":
             continue

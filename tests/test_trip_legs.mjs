@@ -33,9 +33,10 @@ test('missing or unusable speeds never supply run times', () => {
 });
 test('no origin omits both port legs; fewer than two distinct valid stops has no legs', () => {
   assert.deepEqual(tripLegs(null, stops, null).legs.map(l => [l.from, l.to]), [['Stop 1', 'Stop 2'], ['Stop 2', 'Stop 3']]);
-  for (const origin of [null, port]) for (const choices of [[], stops.slice(0, 1), [stops[0], stops[0]]]) {
-    assert.equal(tripLegs(origin, choices, null).legs.length, 0);
-  }
+  for (const choices of [[], stops.slice(0, 1), [stops[0], stops[0]]]) assert.equal(tripLegs(null, choices, null).legs.length, 0);
+  assert.equal(tripLegs(port, [], null).legs.length, 0);
+  // SC2252-04: one valid stop is a trip from a valid port (port → stop → port), also when the same id is chosen twice.
+  for (const choices of [stops.slice(0, 1), [stops[0], stops[0]]]) assert.deepEqual(tripLegs(port, choices, 20).legs.map(l => [l.from, l.to]), [['Home', 'Stop 1'], ['Stop 1', 'Home']]);
 });
 test('bad coordinates are named and skipped without breaking the chain; duplicate ids keep first position', () => {
   const invalid = [{id: 'nan', name: 'NaN', lat: NaN, lon: 0}, {id: 'lon', name: 'Bad longitude', lat: 0, lon: 200},
@@ -68,7 +69,7 @@ test('planner rendering follows selection and stored waypoint order, without cha
       await new Promise(resolve => setTimeout(resolve, 0));
       model.setResearch(true); model.toggleSpot('1', true);
       const html = () => m.render(m.h(m.Planner, {model, open: false}));
-      assert.doesNotMatch(html(), /aria-label="Stops in order"/);
+      assert.match(html(), /aria-label="Stops in order"/);
       model.toggleSpot('2', true); model.toggleSpot('3', true);
       const request = {atlas: model.tripAtlas.value, screen, ids: model.draft.value.ids, allowResearch: true,
         region: model.region, now: new Date('2026-11-01T00:00:00Z')};
@@ -76,7 +77,7 @@ test('planner rendering follows selection and stored waypoint order, without cha
       let markup = html();
       assert.match(markup, /<ol aria-label="Stops in order">/);
       assert.match(markup, /No home port chosen, so the run from port is not counted\./);
-      assert.match(markup, /Sea state, the bar, fuel and conditions at each stop are not included\./);
+      assert.match(markup, /Sea state, the bar and fuel are not included in run-time estimates\./);
       assert.doesNotMatch(markup, /at least \d+ min/);
       assert.ok(before === m.buildExport(request).gpx, 'rendering leaves GPX bytes unchanged');
       model.toggleSpot('2', false); model.toggleSpot('2', true);
@@ -84,12 +85,12 @@ test('planner rendering follows selection and stored waypoint order, without cha
       model.draft.value = {...model.draft.value, ids: ['user:b', ...model.draft.value.ids, 'user:a'], userWaypoints: [
         {id: 'user:a', name: 'Waypoint A', latitude: 35.4, longitude: -121, category: 'other'},
         {id: 'user:b', name: 'Waypoint B', latitude: 35.5, longitude: -121, category: 'other'}]};
-      assert.match(html(), /Stop 2 → Waypoint A/); assert.match(html(), /Waypoint A → Waypoint B/);
+      assert.match(html(), /Stop 2 → Waypoint A/); assert.match(html(), /Waypoint B → Stop 1/);
       model.ports.value = [{id: 'home', name: 'Home', match: [port.lat, port.lon]}]; model.setFilter('port', 'home');
       m.cruiseSpeed.value = 20; markup = html();
-      assert.match(markup, /Home → Stop 1/); assert.match(markup, /Waypoint B → Home/); assert.match(markup, /at least \d+ min/);
+      assert.match(markup, /Home → Waypoint B/); assert.match(markup, /Waypoint A → Home/); assert.match(markup, /at least \d+ min/);
       model.portsFailed.value = true;
-      assert.match(html(), /No home port chosen/); assert.doesNotMatch(html(), /Home → Stop 1/);
+      assert.match(html(), /No home port chosen/); assert.doesNotMatch(html(), /Home → Waypoint B/);
       model.search.value = 'no matching spots';
       assert.match(html(), /Stop 1 → Stop 3/, 'search cannot hide selected stops');
       model.tripAtlas.value = {...model.tripAtlas.value, targets: targets.map(t => t.id === '3' ? {...t, latitude: NaN} : t)};

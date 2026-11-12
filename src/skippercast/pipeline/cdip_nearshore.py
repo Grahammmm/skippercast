@@ -181,6 +181,8 @@ def parse_dap_ascii(text):
             values = [v.strip() for v in joined.split(",") if v.strip()]
             if len(values) != int(array.group(2)):
                 raise ValueError(f"Incomplete CDIP array: {array.group(1)}")
+            if array.group(1) in result:
+                raise ValueError(f"Duplicate CDIP variable: {array.group(1)}")
             result[array.group(1)] = [_value(v) for v in values]
             continue
         # Scalar records may be adjacent rather than separated by an empty line.
@@ -191,6 +193,8 @@ def parse_dap_ascii(text):
             value = _value(scalar.group(2))
             if isinstance(value, float) and not math.isfinite(value):
                 raise ValueError("Invalid DAP scalar value")
+            if scalar.group(1) in result:
+                raise ValueError(f"Duplicate CDIP variable: {scalar.group(1)}")
             result[scalar.group(1)] = [value]
     return result
 

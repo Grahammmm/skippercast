@@ -13,6 +13,7 @@ import {
   NO_LAND_WATER, decodeCells, ensureLandWater, keepWater, landWater, landWaterLines, landWaterModel, linesPlace, loadLandWater, loadLandWaterLines,
   placeFor, placeOf, resetLandWater, withheldNote,
 } from '../web/land-water.ts';
+import {publishedChartFiles} from '../web/chart-files.ts';
 import {ranking} from '../web/ranking.ts';
 
 const fixture = name => JSON.parse(readFileSync(new URL(`./fixtures/land-water/${name}`, import.meta.url), 'utf8'));
@@ -341,4 +342,70 @@ test('committed data: Cambria (NB-SC-08) harbour mouth is land, inshore forecast
   for (const p of points.filter(q => q.offshore)) assert.notEqual(at2(p.latitude, p.longitude).state, 'land', p.id);
   const outside = at2(35.70, -121.09);
   assert.deepEqual(outside, {state: 'unknown', reason: 'outside-bounds'}, 'north of the bounds');
+});
+
+// RF0035-9: a published Chart files list that omits the lines file is never asked for it.
+const publishFiles = files => { publishedChartFiles.value = files === null ? null : {region: 'fixture', files}; };
+const countingFetch = () => { const calls = []; return {calls, fetchFn: async url => { const name = url.split('/').pop(); calls.push(name); return new Response(FILES[name]); }}; };
+
+test('unlisted_lines_never_requested / clean_cells_survive_missing_lines: an index-only list skips the lines file, clean cells still classify', async () => {
+  resetLandWater();
+  publishFiles(['land-water.json']);
+  try {
+    const c = countingFetch();
+    const place = await ensureLandWater('fixture', [NEAR, FAR], c.fetchFn);
+    assert.deepEqual(c.calls, ['land-water.json'], 'no lines request');
+    const ready = landWater.value;
+    assert.equal(ready.state, 'ready');
+    assert.equal(ready.lines, false);
+    assert.equal(ready.linesLoading, false);
+    assert.deepEqual(place(NEAR), {state: 'unknown', reason: 'unavailable'}, 'mixed cell is unavailable, not water');
+    assert.deepEqual(place(FAR), {state: 'water'}, 'clean water stays usable');
+    assert.deepEqual(place(at(3300, 3500)), {state: 'land'}, 'clean land stays usable');
+    const direct = await loadLandWaterLines('fixture', c.fetchFn);
+    assert.ok(direct.model === ready.model && direct.lines === false);
+    assert.deepEqual(c.calls, ['land-water.json']);
+  } finally { publishFiles(null); resetLandWater(); }
+});
+
+test('repeat_and_concurrent_omission_settles: simultaneous and repeated callers settle with no request or retry', async () => {
+  resetLandWater();
+  publishFiles(['land-water.json']);
+  try {
+    const c = countingFetch();
+    await loadLandWater('fixture', c.fetchFn);
+    const [a, b] = await Promise.all([ensureLandWater('fixture', [NEAR], c.fetchFn), ensureLandWater('fixture', [NEAR], c.fetchFn)]);
+    assert.deepEqual(a(NEAR), {state: 'unknown', reason: 'unavailable'});
+    assert.deepEqual(b(NEAR), {state: 'unknown', reason: 'unavailable'});
+    await loadLandWater('fixture', c.fetchFn, {retryTransient: true});
+    await loadLandWaterLines('fixture', c.fetchFn);
+    assert.deepEqual(c.calls, ['land-water.json']);
+    assert.equal(landWater.value.linesLoading, false);
+  } finally { publishFiles(null); resetLandWater(); }
+});
+
+test('listed_or_unknown_legacy_transport: a listed, absent, pending or other-region list still requests the lines file', async () => {
+  const cases = [['listed', ['land-water.json', 'land-water-lines.json']], ['absent', null], ['malformed', 'x'], ['lookalike', ['land-water.json', 'land-water-lines.json.bak']]];
+  for (const [label, files] of cases) {
+    resetLandWater();
+    publishedChartFiles.value = label === 'absent' ? null : {region: 'fixture', files};
+    try {
+      const c = countingFetch();
+      const place = await ensureLandWater('fixture', [NEAR], c.fetchFn);
+      if (label === 'lookalike') assert.deepEqual(c.calls, ['land-water.json'], label);
+      else { assert.deepEqual(c.calls, ['land-water.json', 'land-water-lines.json'], label); assert.deepEqual(place(NEAR), {state: 'water'}, label); }
+    } finally { publishFiles(null); resetLandWater(); }
+  }
+  for (const published of [{region: 'fixture', files: null, pending: true}, {region: 'other', files: ['land-water.json']}]) {
+    resetLandWater();
+    publishedChartFiles.value = published;
+    try {
+      const c = countingFetch();
+      const pending = ensureLandWater('fixture', [NEAR], c.fetchFn);
+      // RF0145-8: a still-pending list holds the index request; the list settling without a files array releases it.
+      if (published.pending) publishedChartFiles.value = {region: 'fixture', files: null};
+      await pending;
+      assert.deepEqual(c.calls, ['land-water.json', 'land-water-lines.json']);
+    } finally { publishFiles(null); resetLandWater(); }
+  }
 });

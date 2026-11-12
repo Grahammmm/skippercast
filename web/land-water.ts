@@ -15,8 +15,8 @@
 // - pending: the lines file is still loading.
 // Ranking keeps water only (fail-closed) and counts the rest in its basis. This is a
 // planning screen, not a navigation boundary. Erasable syntax only: Node tests import it.
-import {signal} from '@preact/signals';
-import {chartFileListed} from './chart-files.ts';
+import {effect, signal} from '@preact/signals';
+import {chartFileListed, publishedChartFiles} from './chart-files.ts';
 
 export type UnknownReason = 'outside-bounds' | 'unserved-tile' | 'edge' | 'unavailable' | 'pending';
 export type Placement = {readonly state: 'water' | 'land'} | {readonly state: 'unknown'; readonly reason: UnknownReason};
@@ -241,8 +241,18 @@ export function loadLandWater(region: string, fetchFn: Fetch = (...a) => fetch(.
   indexTransientFailure = false;
   // A region whose region.json lists Chart files without this one has no index: settle as a 404 does, unasked.
   if (!chartFileListed(region, 'land-water.json')) { indexJob = null; landWater.value = {...IDLE, region, state: 'unavailable', model: null}; return Promise.resolve(landWater.peek()); }
-  landWater.value = {...IDLE, region, state: 'loading'};
+  // RF0145-8: while this region's region.json is explicitly still loading, hold the request until its list settles.
+  const published = publishedChartFiles.peek(), waits = published?.region === region && published.pending === true;
+  const loading: LandWaterState = {...IDLE, region, state: 'loading'};
+  landWater.value = loading;
   return startJob(region, null, async current => {
+    if (waits) {
+      const outcome = await publicationSettled(region, loading, current);
+      // Whatever the outcome, a load replaced or reset after the wait ended (even in the same turn) writes and asks nothing.
+      if (outcome === 'stale' || !current()) return landWater.peek();
+      if (outcome === 'superseded') return landWater.peek() === loading ? (indexJob = null, landWater.value = IDLE) : landWater.peek();
+      if (!chartFileListed(region, 'land-water.json')) { indexJob = null; indexTransientFailure = false; return landWater.value = {...IDLE, region, state: 'unavailable', model: null}; }
+    }
     let model: LandWaterModel | null = null;
     let transient = false;
     try {
@@ -259,6 +269,25 @@ export function loadLandWater(region: string, fetchFn: Fetch = (...a) => fetch(.
   }, 'index').promise;
 }
 
+/**
+ * Resolve once `region`'s pending publication list settles ('settled'), is replaced by another region's or null
+ * ('superseded'), or this load is reset or replaced ('stale'). One subscription, released before resolving.
+ */
+function publicationSettled(region: string, loading: LandWaterState, current: () => boolean): Promise<'settled' | 'superseded' | 'stale'> {
+  return new Promise(resolve => {
+    let result: 'settled' | 'superseded' | 'stale' | null = null;
+    let stop: (() => void) | null = null;
+    const end = (r: 'settled' | 'superseded' | 'stale'): void => { if (result) return; result = r; stop?.(); resolve(r); };
+    stop = effect(() => {
+      const state = landWater.value, published = publishedChartFiles.value;
+      if (!current() || state !== loading) end('stale');
+      else if (published?.region !== region) end('superseded');
+      else if (published.pending !== true) end('settled');
+    });
+    if (result) stop();
+  });
+}
+
 async function sha256(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -272,6 +301,8 @@ export function loadLandWaterLines(region: string, fetchFn: Fetch = (...a) => fe
   const now = landWater.peek(), model = now.model;
   if (now.region !== region || now.state !== 'ready' || !model || now.lines !== null) return Promise.resolve(now);
   if (linesJob?.region === region && linesJob.model === model) return linesJob.promise;
+  // A region.json that lists Chart files without the lines file: settle as a 404 does, unasked; the index stays usable.
+  if (!chartFileListed(region, 'land-water-lines.json')) return Promise.resolve(landWater.value = {...now, lines: false, linesLoading: false});
   landWater.value = {...now, linesLoading: true};
   return startJob(region, model, async current => {
     let lines: LandWaterLines | false = false;

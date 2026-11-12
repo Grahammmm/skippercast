@@ -183,12 +183,18 @@ def _clean(text: str) -> str | None:
     return text or None
 
 
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
 def _time_ms(text: str) -> int:
-    """``2026-06-20 00:00:00`` (UTC) as epoch milliseconds."""
+    """``2026-06-20 00:00:00`` (UTC) as the epoch millisecond that contains it.
+
+    Integer arithmetic floors a submillisecond fraction, so ``23:59:59.999999`` stays on its UTC day."""
     moment = datetime.fromisoformat(text.strip())
     if moment.tzinfo is None:
         moment = moment.replace(tzinfo=timezone.utc)
-    return round(moment.timestamp() * 1000)
+    delta = moment - _EPOCH
+    return delta.days * 86_400_000 + delta.seconds * 1000 + delta.microseconds // 1000
 
 
 def _columns(header: list[str]) -> dict[str, int]:

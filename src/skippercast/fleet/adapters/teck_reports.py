@@ -164,19 +164,31 @@ def _dimensions(value: str | None) -> tuple[float | None, float | None]:
     return length, beam
 
 
+def _calendar_date(year: str, month: int, day: str) -> date | None:
+    """A real calendar date, or None: an impossible optional cell must not abort the page."""
+    try:
+        return date(int(year), month, int(day))
+    except (ValueError, OverflowError):
+        return None
+
+
 def _last_report(root: Node) -> str | None:
     dates: list[date] = []
     for cell in root.find_all("td", cls="scale-data"):  # older layout: <td class="scale-data"><strong>MM-DD-YYYY
         for strong in cell.find_all("strong"):
             match = _MDY.match(strong.text())
             if match:
-                dates.append(date(int(match[3]), int(match[1]), int(match[2])))
+                found = _calendar_date(match[3], int(match[1]), match[2])
+                if found:
+                    dates.append(found)
     for block in root.find_all(cls="rf-trip-date"):  # newer layout: <span class="rf-trip-day">Oct 4</span> + year
         day = block.find(cls="rf-trip-day")
         year = block.find(cls="rf-trip-yr")
         parts = (day.text() if day else "").split()
         if len(parts) == 2 and parts[0][:3].lower() in _MONTHS and parts[1].isdigit() and year and year.text().isdigit():
-            dates.append(date(int(year.text()), _MONTHS[parts[0][:3].lower()], int(parts[1])))
+            found = _calendar_date(year.text(), _MONTHS[parts[0][:3].lower()], parts[1])
+            if found:
+                dates.append(found)
     return max(dates).isoformat() if dates else None
 
 
@@ -247,7 +259,9 @@ class TeckReports:
         """Every boat card of the binding's directory, following the pager."""
         url: str | None = urljoin(binding.params["base"].rstrip("/") + "/", binding.params["directory"].lstrip("/"))
         seen: set[str] = set()
-        while url and url not in seen:
+        while url:
+            if url in seen:  # a pager that loops back would otherwise end as if the directory were complete
+                raise LayoutError(url, "directory pager repeats a previously visited page")
             if len(seen) >= MAX_PAGES:
                 raise LayoutError(url, f"directory pager runs past {MAX_PAGES} pages")
             seen.add(url)

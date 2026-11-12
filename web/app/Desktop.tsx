@@ -19,14 +19,14 @@
 // Mobile.tsx (FE-06) composes the same pieces into
 // the sheet in its own order. The Reports view (FE-52) covers the brief and
 // the map; the stage stays mounted beneath it.
-import {BriefFooter, PrintBrief, BriefLinks, BriefTiles, Details, LowerExposure, SavedLine, Verdict, currentBrief} from '../brief/Brief.tsx';
+import {BriefFooter, PrintBrief, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {RunLine} from '../brief/Run.tsx';
 import {Guard} from '../ui/Guard.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
-import {MapStage} from './MapStage.tsx';
+import {MapStage, mapUnavailable} from './MapStage.tsx';
 import {MarkCard} from './MarkCard.tsx';
 import {TimeDock} from './TimeDock.tsx';
 import {Conditions} from './views/Conditions.tsx';
@@ -36,6 +36,8 @@ import {Reports} from './views/Reports.tsx';
 import {PlanView} from './PlanView.tsx';
 import {appView} from '../state.ts';
 import {useHourNow, type HourClock} from '../clock.ts';
+import {BRIEF_ID} from './SkipLinks.tsx';
+import {language, t} from '../i18n.ts';
 
 export {emptyTiles} from '../brief/Tiles.tsx';
 export {DISCLAIMER} from '../brief/Brief.tsx';
@@ -43,9 +45,8 @@ export {DISCLAIMER} from '../brief/Brief.tsx';
 export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Date} = {}) {
   const brief = currentBrief(now);
   return (
-    <aside class="app-brief" aria-label="Brief" data-basis={brief?.basis}>
+    <aside class="app-brief" id={BRIEF_ID} tabIndex={-1} aria-label={t('shell.brief', language.value)} data-basis={brief?.basis}>
       {/* SC-LAUNCH-3: the lead names its own day (tomorrow until a time is chosen); the eyebrow heads the evidence for the dock's day. */}
-      <Guard name="saved-brief"><SavedLine now={now} /></Guard>
       <Guard name="verdict"><Verdict now={now} /></Guard>
       <span class="ui-eyebrow">{brief ? brief.label : 'Today\'s brief'}</span>
       <Guard name="tiles"><BriefTiles brief={brief} dense /></Guard>
@@ -67,7 +68,7 @@ export function Desktop({now: fixedNow, clock}: {now?: Date; clock?: HourClock} 
     <main class="app-main">
       {appView.value === 'fleet' ? <aside class="app-brief" aria-label="Fleet"><Guard name="fleet"><Fleet /></Guard></aside> : <Brief now={now} />}
       <MapStage clock={clock}>
-        {appView.value === 'conditions' ? <Guard name="conditions"><Conditions now={now} /></Guard> : appView.value === 'history' ? <Guard name="history"><History now={now} /></Guard> : <><div class="app-chrome-left"><Guard name="mark-card"><MarkCard /></Guard><Guard name="legend"><Legend /></Guard></div><Guard name="layer-rail"><LayerRail /></Guard></>}
+        {appView.value === 'conditions' ? <Guard name="conditions"><Conditions now={now} /></Guard> : appView.value === 'history' ? <Guard name="history"><History now={now} /></Guard> : <>{mapUnavailable.value ? null : <div class="app-chrome-left"><Guard name="mark-card"><MarkCard /></Guard><Guard name="legend"><Legend /></Guard></div>}<Guard name="layer-rail"><LayerRail /></Guard></>}
         <Guard name="time-dock"><TimeDock now={now} /></Guard>
       </MapStage>
       {appView.value === 'plan' ? <div class="app-page"><Guard name="plan"><PlanView now={now} /></Guard></div> : null}

@@ -6,6 +6,7 @@ import hashlib
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 from pyproj import Transformer, Geod
 from shapely.geometry import box, mapping, Point, Polygon, MultiPolygon, shape
@@ -145,6 +146,53 @@ class ScreenTests(unittest.TestCase):
                    for point in shape(layer['features'][0]['geometry']).exterior.coords]
         self.assertAlmostEqual(min(distances),1829.8,places=4)
         self.assertAlmostEqual(max(distances),1829.8,places=4)
+
+    def _circle(self, **changes):
+        body=b'<DIV8 N="165.1155">Offline boundary fixture</DIV8>'
+        zone={'id':'fixture','section':'165.1155','reviewed_xml_sha256':hashlib.sha256(body).hexdigest(),
+              'geometry_method':'nad83-geodesic-circle','center_nad83':[-120.8563888889,35.2063888889],
+              'radius_m':1828.8}
+        zone.update(changes)
+        def getter(url):
+            return (b'{"titles":[{"number":33,"up_to_date_as_of":"2026-09-24"}]}'
+                    if url.endswith('titles') else body)
+        return zone, getter
+
+    def test_invalid_circle_radii_refuse_before_geodesic(self):
+        bad=[0,-0.0,-0.5,-1,-2,True,False,None,'1828.8',[1828.8],{'r':1},
+             float('nan'),float('inf'),float('-inf'),10**400,-10**400]
+        for radius in bad:
+            with self.subTest(radius=repr(radius)[:20]):
+                zone,getter=self._circle(radius_m=radius)
+                with mock.patch('skippercast.seafloor.screen_sources.Geod') as geod:
+                    with self.assertRaisesRegex(ValueError,'^Invalid reviewed security-circle radius$'):
+                        security_layer({'security_zones':[zone]},getter)
+                geod.assert_not_called()
+        zone,getter=self._circle()
+        del zone['radius_m']
+        with mock.patch('skippercast.seafloor.screen_sources.Geod') as geod:
+            with self.assertRaisesRegex(ValueError,'^Invalid reviewed security-circle radius$'):
+                security_layer({'security_zones':[zone]},getter)
+        geod.assert_not_called()
+
+    def test_positive_int_and_float_circle_radii_keep_margin(self):
+        lon,lat=-120.8563888889,35.2063888889
+        back=Transformer.from_crs(4326,4269,always_xy=True)
+        for radius in (2000,1828.8):
+            with self.subTest(radius=radius):
+                zone,getter=self._circle(radius_m=radius)
+                layer,_=security_layer({'security_zones':[zone]},getter)
+                ring=shape(layer['features'][0]['geometry'])
+                self.assertTrue(ring.is_valid)
+                self.assertEqual(len(ring.exterior.coords),361)
+                for point in ring.exterior.coords:
+                    distance=Geod(ellps='GRS80').inv(lon,lat,*back.transform(*point))[2]
+                    self.assertAlmostEqual(distance,radius+1,places=4)
+
+    def test_circle_text_hash_check_precedes_radius_gate(self):
+        zone,getter=self._circle(radius_m=0,reviewed_xml_sha256='0'*64)
+        with self.assertRaisesRegex(ValueError,'text changed'):
+            security_layer({'security_zones':[zone]},getter)
 
     def test_coastal_zone_envelope_covers_published_vertices_and_fails_on_change(self):
         body=('''<DIV8 N="334.1130"><P>(iv) Zone 4. Beginning at the mouth of the
