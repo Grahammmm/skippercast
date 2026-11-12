@@ -47,7 +47,7 @@ test('the signed-in account panel is Spanish end to end and the delete confirmat
   await openPanel(page);
   const card = page.locator('.account-card');
   await expect(card.locator('#account-title')).toHaveText('Sesión iniciada como Alex');
-  await expect(card.locator('h2.account-subhead')).toHaveText(['Claves de acceso', 'Registro de capturas', 'Sitios guardados']);
+  await expect(card.locator('h2.account-subhead')).toHaveText(['Claves de acceso', 'Sesiones iniciadas en', 'Registro de capturas', 'Sitios guardados']);
   await expect(card.locator('#account-add')).toHaveText('Agregar una clave de acceso en este dispositivo');
   await expect(card.locator('[data-remove-passkey]')).toHaveAttribute('title', 'Agrega otra clave de acceso antes de eliminar esta');
   await expect(card.locator('#log-status')).toHaveText('Todavía no hay entradas.');
