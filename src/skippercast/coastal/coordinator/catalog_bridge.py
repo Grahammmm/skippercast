@@ -75,7 +75,10 @@ def _read(path, label):
         raise ValueError(f"{label} must be a regular file")
     if info.st_size > MAX_DOCUMENT_BYTES:
         raise ValueError(f"{label} exceeds the metadata read bound")
-    raw = path.read_bytes()
+    with open(path, "rb") as handle:
+        raw = handle.read(MAX_DOCUMENT_BYTES + 1)  # the actual bytes, not the earlier lstat, bound the read
+    if len(raw) > MAX_DOCUMENT_BYTES:
+        raise ValueError(f"{label} exceeds the metadata read bound")
     return json.loads(raw), raw
 
 

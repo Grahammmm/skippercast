@@ -300,7 +300,9 @@ def run(plan, out, *, previous=None, root=None, allowlist=None, clock=time.time,
     discover, script = load_script(root)
     previous_doc = previous_ref = None
     if previous is not None:
-        raw = Path(previous).read_bytes()
+        # Bounded read: never allocate more than the ceiling plus one probe byte.
+        with Path(previous).open("rb") as stream:
+            raw = stream.read(discover.MAX_METADATA + 1)
         if len(raw) > discover.MAX_METADATA:
             raise ValueError("previous catalog exceeds metadata limit")
         previous_doc = json.loads(raw)

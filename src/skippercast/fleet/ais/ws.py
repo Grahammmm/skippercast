@@ -246,7 +246,8 @@ async def handshake_response(reader: asyncio.StreamReader, key: str) -> None:
         if ":" in line:
             name, value = line.split(":", 1)
             headers[name.strip().lower()] = value.strip()
-    if headers.get("upgrade", "").lower() != "websocket" or "upgrade" not in headers.get("connection", "").lower():
+    connection_tokens = {token.strip().lower() for token in headers.get("connection", "").split(",")}
+    if headers.get("upgrade", "").lower() != "websocket" or "upgrade" not in connection_tokens:
         raise HandshakeError("response is not a WebSocket upgrade")
     if headers.get("sec-websocket-accept") != accept_key(key):
         raise HandshakeError("Sec-WebSocket-Accept does not match the key")

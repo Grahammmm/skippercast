@@ -71,7 +71,14 @@ def frame_for_time(layer, selected_time, now):
         if layer.get("status") not in ("ok", "retained") or not frames:
             return {**result, "reason": "Source unavailable or no populated cells"}
         age = (clock-sample)/3600
-        if age < -1 or age > layer["max_age_hours"]:
+        limit = layer["max_age_hours"]
+        try:
+            admitted = finite(limit) and limit >= 0
+        except OverflowError:
+            admitted = False
+        if not admitted:
+            raise ValueError("Invalid freshness limit")
+        if age < -1 or age > limit:
             return {**result, "reason": "Source is outside its freshness window"}
         if layer["kind"] == "forecast":
             times = [f["time"] for f in frames]

@@ -124,7 +124,7 @@ SCHEMAS = MappingProxyType({
         'inputs': [{'source_id': 'str', 'sha256': 'sha256'}], 'outputs': [{'path': 'str', 'sha256': 'sha256'}],
         'ec_sha256': 'sha256'},
 })
-_num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)  # noqa: E731
+_num = lambda v: not isinstance(v, bool) and (isinstance(v, int) or isinstance(v, float) and math.isfinite(v))  # noqa: E731
 _int = lambda v: isinstance(v, int) and not isinstance(v, bool)  # noqa: E731
 _seq = lambda n, ok: lambda v: isinstance(v, list) and len(v) == n and all(ok(x) for x in v)  # noqa: E731
 

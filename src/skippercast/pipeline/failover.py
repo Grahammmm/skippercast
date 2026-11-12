@@ -14,6 +14,8 @@ def fresh(row, now):
     if row.get("status") not in ("ok", "retained") or not data:
         return False
     if row.get("kind") == "prediction":
+        if not all(isinstance(data.get(key), str) for key in ("coverage_start", "coverage_end")):
+            return False
         try:
             start = datetime.fromisoformat(data["coverage_start"].replace("Z", "+00:00"))
             end = datetime.fromisoformat(data["coverage_end"].replace("Z", "+00:00"))

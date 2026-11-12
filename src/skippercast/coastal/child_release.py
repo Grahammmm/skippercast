@@ -27,6 +27,15 @@ def _number(value):
     return value
 
 
+def _unique_members(pairs):
+    out = {}
+    for name, value in pairs:
+        if name in out:
+            raise ValueError("duplicate metadata member")
+        out[name] = value
+    return out
+
+
 def _canonical(value):
     if not isinstance(value, str):
         raise ValueError("absolute canonical path required")
@@ -78,7 +87,7 @@ def _document(wrapper, expected_root, contract, *, raw=False):
         os.close(fd)
     if raw:
         return data
-    document = json.loads(data)
+    document = json.loads(data, object_pairs_hook=_unique_members)
     if not isinstance(document, dict) or document.get("schema") != contract:
         raise ValueError("metadata schema mismatch")
     return document

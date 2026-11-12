@@ -77,6 +77,16 @@ def _host(url: str) -> str:
         return ""
 
 
+def _resolve(base: str, ref: str) -> str | None:
+    """urljoin(base, ref) kept as-is when it is syntactically valid; None for a malformed attribute."""
+    try:
+        url = urljoin(base, ref)
+        urlsplit(url)
+    except ValueError:
+        return None
+    return url
+
+
 def _under(host: str, table: Mapping[str, str]) -> str | None:
     for suffix, value in table.items():
         if host == suffix or host.endswith("." + suffix):
@@ -239,8 +249,11 @@ class OperatorSite:
         for href, label in parsed.links:
             if href.lower().startswith(("mailto:", "tel:", "javascript:", "#")):
                 continue
-            url = urldefrag(urljoin(page_url, href))[0]
-            parts = urlsplit(url)
+            try:
+                url = urldefrag(urljoin(page_url, href))[0]
+                parts = urlsplit(url)
+            except ValueError:
+                continue  # a malformed href is not a candidate
             if parts.scheme != "https" or (parts.hostname or "").lower() not in site:
                 continue
             if parts.path.lower().endswith(SKIP_EXTENSIONS):
@@ -260,9 +273,13 @@ class OperatorSite:
             elif lowered.startswith("mailto:"):
                 self._email(href.strip()[7:], page, found, 0.8)
             else:
-                self._external(urljoin(page, href.strip()), page, found)
+                url = _resolve(page, href.strip())
+                if url is not None:
+                    self._external(url, page, found)
         for src in parsed.embeds:
-            url = urljoin(page, src.strip())
+            url = _resolve(page, src.strip())
+            if url is None:
+                continue
             platform = _under(_host(url), BOOKING_PLATFORMS)
             if platform:
                 found.add("booking_platform", platform, page, 0.7)
@@ -272,8 +289,8 @@ class OperatorSite:
         for match in EMAIL_TEXT.finditer(text):
             self._email(match.group(0), page, found, 0.7)
         if parsed.og_image:
-            image = urljoin(page, parsed.og_image.strip())
-            if image.startswith("https://") and _host(image):
+            image = _resolve(page, parsed.og_image.strip())
+            if image and image.startswith("https://") and _host(image):
                 found.add("photos[]", {"url": image, "attribution": _host(page)}, page, 0.6)
 
     @staticmethod
@@ -288,7 +305,10 @@ class OperatorSite:
 
     @staticmethod
     def _external(url: str, page: str, found: _Found) -> None:
-        parts = urlsplit(url)
+        try:
+            parts = urlsplit(url)
+        except ValueError:
+            return
         if parts.scheme != "https":
             return
         host = (parts.hostname or "").lower()
