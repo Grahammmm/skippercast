@@ -155,6 +155,28 @@ test('planner_es_files_identical: GPX, notes, names and types are the same bytes
   } finally { ui.language.value = 'en'; p.dispose(); }
 });
 
+test('UXFIX-07 planner alert preview: the date reads Tue 10 Nov / mar 10 nov in the region zone; the stored plan date stays ISO', () => {
+  const { p, model } = mk();
+  const preview = {date: '2026-11-10', area: 'Area', target: 'reef', groupNote: '', hours: '07:00–13:00', limits: {wind: 12, gust: 18, sea: 4}, boat: '', stops: 2, legs: 1, legList: []};
+  const body = {date: '2026-11-10'};
+  const alertModel = {...model, alertPreview: () => ({ok: true, body, preview}), alertIsSaved: () => false};
+  try {
+    ui.language.value = 'en';
+    const en = ui.render(ui.h(ui.Planner, {model: alertModel, open: true}));
+    assert.match(en, /id="planner-alert-preview">Tue 10 Nov · Area · reef/);
+    ui.language.value = 'es';
+    assert.match(ui.render(ui.h(ui.Planner, {model: alertModel, open: true})), /id="planner-alert-preview">mar 10 nov · Area · reef/);
+    // The ranked status quotes the plan's date: read like the preview, in both languages, while the stored message stays ISO.
+    const status = '3 distinct reef spots ranked. Waypoints + reef outlines only. Check conditions for 2026-11-06 before committing to the trip.';
+    const withStatus = {...model, scopeStatus: {value: status}};
+    ui.language.value = 'en';
+    assert.match(page(withStatus), /id="export-scope-status" role="status">3 distinct reef spots ranked\. [^<]*Check conditions for Fri 6 Nov before/);
+    ui.language.value = 'es';
+    assert.match(page(withStatus), /id="export-scope-status" role="status">[^<]*para vie 6 nov antes/);
+    assert.equal(withStatus.scopeStatus.value, status);
+  } finally { ui.language.value = 'en'; p.dispose(); }
+});
+
 test('planner_es_margin_is_inclusive: protected-area warnings say "{n} m o menos", never an exact separation', () => {
   for (const id of ['planner.hit.near', 'planner.hit.reefNear', 'pm.outlineNamed', 'pm.alignmentNamed']) {
     const es = catalogue.strings[id].es;

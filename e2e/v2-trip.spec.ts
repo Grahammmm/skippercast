@@ -122,6 +122,8 @@ test('the ranked export runs in v2: best reefs, complete outlines and a download
   await expect(page.locator('#export-spot-list')).toContainText('#1 · Strong');
   await expect(page.locator('#export-spot-list')).not.toContainText('% confidence');
   await expect(page.locator('#export-shared-confidence')).toHaveText('All ranked places: 90% evidence confidence.');
+  // UXFIX-07 (UX audit S4-38): no ISO date is visible text in the trip dialog (the native date input's value is not text).
+  expect(await page.getByRole('dialog', {name: 'Trip plan and GPX'}).innerText()).not.toMatch(/\b\d{4}-\d{2}-\d{2}\b/);
   await expect(page.locator('[data-layer="outlines"]')).toBeChecked();
   await expect(page.locator('[data-layer="alignments"]')).not.toBeChecked();
   await expect(page.locator('[data-layer="exclusions"]')).not.toBeChecked();
@@ -415,5 +417,29 @@ test('a reload on #export reopens the plan, ready, with no loading text left beh
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeHidden();
   await expect(loadingStatus(page)).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
+
+// UXFIX-04: the float-plan textarea takes the same --line-strong border as the planner's inputs and selects, in both themes.
+test('the planner float-plan fields, textarea included, draw their border in --line-strong in both themes', async ({page, pageErrors, v2, isMobile}) => {
+  await v2.open('app', AREA);
+  await openPlan(page, isMobile);
+  const fields = ['#float-boat', '#float-people', '#float-overdue', '#export-date'];
+  for (const id of fields) await expect(page.locator(id), `${id} is in the planner`).toHaveCount(1);
+  for (const theme of ['dark', 'light']) {
+    await page.evaluate(t => { if (t === 'light') document.documentElement.setAttribute('data-theme', 'light'); else document.documentElement.removeAttribute('data-theme'); }, theme);
+    const result = await page.evaluate(ids => {
+      const probe = document.createElement('i');
+      probe.style.color = 'var(--line-strong)';
+      document.body.append(probe);
+      const strong = getComputedStyle(probe).color;
+      probe.remove();
+      return {strong, borders: ids.map(id => { const s = getComputedStyle(document.querySelector(id)!); return [id, s.borderTopColor, s.borderTopWidth, s.borderTopStyle]; })};
+    }, fields);
+    expect(result.strong, `${theme}: the token resolves`).toMatch(/^rgb/);
+    for (const [id, colour, width, style] of result.borders) {
+      expect([colour, width, style], `${theme} ${id}`).toEqual([result.strong, '1px', 'solid']);
+    }
+  }
   expect(pageErrors).toEqual([]);
 });

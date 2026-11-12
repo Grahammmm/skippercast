@@ -19,6 +19,9 @@ export const PAIRS_V2 = [
   ['map-ink', 'map-ink-halo', 'map text on its halo'],
   ['map-label', 'map-halo', 'map labels on their halo'],
 ];
+// UXFIX-04: input and select borders are non-text UI, held to WCAG 1.4.11 (3:1), not the 4.5:1 text floor.
+export const NON_TEXT_MIN = 3;
+export const NON_TEXT_PAIRS = ['panel', 'panel-2'].map(bg => ['line-strong', bg, 'input and select border']);
 
 // Which rule holds each theme's tokens: dark is :root and light overrides it.
 export const FILES = {
@@ -64,6 +67,16 @@ export function check(css, spec = V2) {
       const ratio = contrast(tokens[fg], tokens[bg]);
       rows.push(`${name.padEnd(5)} --${fg} on --${bg}: ${ratio.toFixed(2)}:1 (${use})`);
       if (ratio < MIN) failures.push(`${name}: --${fg} ${tokens[fg]} on --${bg} ${tokens[bg]} is ${ratio.toFixed(2)}:1, below ${MIN}:1 (${use})`);
+    }
+  }
+  if (spec === V2) {
+    for (const [name, tokens] of Object.entries(themes(css, spec))) {
+      for (const [fg, bg, use] of NON_TEXT_PAIRS) {
+        if (!tokens[fg] || !tokens[bg]) { failures.push(`${name}: --${fg} or --${bg} is not a hex colour token`); continue; }
+        const ratio = contrast(tokens[fg], tokens[bg]);
+        rows.push(`${name.padEnd(5)} --${fg} on --${bg}: ${ratio.toFixed(2)}:1 (${use}, non-text minimum ${NON_TEXT_MIN}:1)`);
+        if (ratio < NON_TEXT_MIN) failures.push(`${name}: --${fg} ${tokens[fg]} on --${bg} ${tokens[bg]} is ${ratio.toFixed(2)}:1, below ${NON_TEXT_MIN}:1 (${use})`);
+      }
     }
   }
   return {failures, rows};
@@ -567,7 +580,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1722-08 only raises the History chart scroller's focus ring to 2 px and adds one .history-measurement-note > summary focus ring; no unfocused paint changed.
   "panelCss": "f765e1221775a652f300a63e657f99eff3538179376a85f53361befa5de2b385",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
-  "tokensCss": "3feb5aee870cd08f8bd295d1f0cd6042a81593fa896ce7459319941d025f2406",
+  "tokensCss": "7a9832ee99cc3b71fa40e3eacabaf40b0479a6c48eb141f5cca0cc55bb43abbb",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
   // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.
@@ -585,6 +598,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // a minimum height on the desktop legend); no colour, opacity, backing or text paint changed, and the cited line numbers above are unmoved.
   // SC-TIDAL-1 only appends a scoped .app-entrance* block at the end of app.css (token text roles on the brief's run line, not the legend glass);
   // no legend paint or backing changed and the cited line numbers above are unmoved.
+  // UXFIX-04 only adds --line-strong to tokens.css, re-points input/select border colour to it and deletes duplicate focus outlines (shared rule in ui.css); no text role, backing or legend paint changed.
   // SC1722-08 only consolidates link focus outlines (removes the .app-views and first-answer duplicates; the shared a:focus-visible rule is in ui.css), so
   // focus paint intentionally changes; unfocused legend text and backing are unchanged. Cited app.css lines after :29 moved up by one.
   // SC1722-07 only adds the phone sheet's --sheet-hidden-offset custom property (vh and @supports dvh values mirroring the existing transforms) to the .app-sheet rules;
@@ -604,7 +618,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved. It also folds the .app-history layout rules into the .app-conditions ones (same declarations, same order; no paint changed) to stay inside the app styles size budget.
   // MGL-15 adds map-only tokens (--map-*, --hab-*, --mark-ring) to tokens.css and repoints only the two depth-contour legend swatch rules in app.css to them;
   // existing text and legend-glass backing paint, thresholds and cited line numbers are unchanged (map-only additions and swatch colours are not text or backing).
-  "appCss": "4216efc25984ca173e9dbd54e39090d94a440b8c0f93dc77f88dfca7fe3aa3c2",
+  "appCss": "d2854ce9a65b937d71b39e4886cdcb190c039a64893565a54386f64dfc91cc8a",
   // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
@@ -651,8 +665,8 @@ export function checkSurfaceSource(sources) {
         ['legend-labels', 'muted', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:858-868,2678-2684; bridge:21,27'],
         ['sheen-text', 'text', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,26'],
         ['sheen-muted', 'muted', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,27'],
-        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,173,214,228; Legend.tsx:394'],
-        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:173,194,243; Legend.tsx:111,245,394'],
+        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,173,213,227; Legend.tsx:394'],
+        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:173,194,242; Legend.tsx:111,245,394'],
       ]) {
         const foreground = resolve(role);
         results.push({theme, id, binding, foreground, surface,

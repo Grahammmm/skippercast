@@ -7,7 +7,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL, fileURLToPath} from 'node:url';
 import {
-  FILES, PAIRS_BRIDGE, check, checkBridge, classifyContrast, evaluateContrast,
+  FILES, NON_TEXT_PAIRS, PAIRS_BRIDGE, check, checkBridge, classifyContrast, evaluateContrast,
   resolveRgba, sourceOver, checkTransparentBridge, rawThemes,
 } from '../scripts/check_contrast.mjs';
 
@@ -19,7 +19,7 @@ const CVD_INPUTS = rawThemes(readFileSync(new URL('../web/tokens.css', import.me
 const V2_CSS = `:root {
 ${declarations({...CVD_INPUTS, bg: '#000000', 'bg-deep': '#000000', panel: '#000000', 'panel-2': '#000000',
   'map-ink': '#ffffff', 'map-ink-halo': '#000000', 'map-label': '#ffffff', 'map-halo': '#000000',
-  text: '#ffffff', muted: '#ffffff', mint: '#ffffff', blue: '#ffffff', coral: '#ffffff', amber: '#ffffff'})}
+  text: '#ffffff', muted: '#ffffff', 'line-strong': '#ffffff', mint: '#ffffff', blue: '#ffffff', coral: '#ffffff', amber: '#ffffff'})}
 }
 :root[data-theme="light"] { }`;
 const BRIDGE_CSS = `[data-coast-theme="tokens"] {
@@ -165,9 +165,12 @@ test('opaque checks retain both themes, full pair counts and failure sensitivity
   for (const [css, spec] of [[V2_CSS, FILES['web/tokens.css']]]) {
     const result = check(css, spec);
     assert.deepEqual(result.failures, []);
-    assert.equal(result.rows.length, 2 * spec.pairs.length);
+    assert.equal(result.rows.length, 2 * (spec.pairs.length + NON_TEXT_PAIRS.length));
     assert.ok(result.rows.every(row => row.includes('21.00:1')));
   }
+  // UXFIX-04: the input border token is held to the 3:1 non-text floor, and a missing token is a failure, not a skip.
+  assert.match(check(V2_CSS.replace('--line-strong: #ffffff;', ''), FILES['web/tokens.css']).failures.join('\n'), /--line-strong or --panel is not a hex colour token/);
+  assert.match(check(V2_CSS.replace('--line-strong: #ffffff;', '--line-strong: #111111;'), FILES['web/tokens.css']).failures.join('\n'), /--line-strong #111111 on --panel #000000 is .*below 3:1/);
   const bridge = checkBridge(BRIDGE_CSS, V2_CSS);
   assert.deepEqual(bridge.failures, []);
   assert.equal(bridge.rows.length, 2 * PAIRS_BRIDGE.length);

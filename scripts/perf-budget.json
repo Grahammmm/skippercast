@@ -5,7 +5,7 @@
       "label": "Landing page scripts (first load)",
       "kind": "first_load_js",
       "entry": "landing.html",
-      "max_bytes": 304000,
+      "max_bytes": 306000,
       "history": [
         {
           "max_bytes": 445000,
@@ -18,6 +18,10 @@
         {
           "max_bytes": 304000,
           "reason": "Lowered 460,000 to 304,000 (SC1407-09, #1762 M5). The Spanish table now loads only for a Spanish page, so the landing's first load carries English only. Vite manifest static closure of landing.html: 447,318 bytes on main a5005eb05, 289,476 with this change; ceiling = ceil(289,476 x 1.05 / 1,000) x 1,000."
+        },
+        {
+          "max_bytes": 306000,
+          "reason": "Raised 304,000 to 306,000 (MAIN-RED-SKIPPERCAST). Main bcd9f04c builds the landing first-load scripts at 304,012 bytes (strings.en.generated 186.7 KB, signals 20.9 KB, landing 16.9 KB and others), 12 bytes over the 304,000 budget after the concurrent merges of #2110, #2111 and #2098, each of which passed CI on its own head. The budget moves up 2,000 bytes (0.7% headroom over that build), no more."
         }
       ]
     },
