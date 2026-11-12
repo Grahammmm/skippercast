@@ -259,7 +259,7 @@ export function mpaLayers(p: Palette): MpaLayer[] {
       paint: {'line-color': p.mpaLine, 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1, 14, 1.8], 'line-dasharray': [3, 2]}},
     {id: MPA_LABEL, type: 'symbol', source: MPA_SOURCE, minzoom: MPA_LABEL_MIN_ZOOM - ZOOM_OFFSET,
       layout: {'text-field': ['get', 'NAME'], 'text-font': [LABEL_FONT], 'text-size': ['interpolate', ['linear'], ['zoom'], 10, 11, 14, 13], 'text-max-width': 8},
-      paint: {'text-color': p.mpaLine, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
+      paint: {'text-color': p.mpaLine, 'text-halo-color': p.mapInkHalo, 'text-halo-width': 1.2}},
   ];
 }
 

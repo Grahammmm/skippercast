@@ -13,6 +13,9 @@ export const PAIRS_V2 = [
   ...['bg', 'bg-deep', 'panel', 'panel-2'].flatMap(bg => [['text', bg, 'body text and readings'], ['muted', bg, 'labels, units and ages']]),
   ...['mint', 'blue', 'coral', 'amber'].flatMap(fg => ['panel', 'panel-2'].map(bg => [fg, bg, 'reading text'])),
   ['bg', 'mint', 'primary button label'],
+  // MGL-15: the map-only text roles, each on its own halo.
+  ['map-ink', 'map-ink-halo', 'map text on its halo'],
+  ['map-label', 'map-halo', 'map labels on their halo'],
 ];
 
 // Which rule holds each theme's tokens: dark is :root and light overrides it.
@@ -366,6 +369,170 @@ export function boundSurfaceContrast(request = {}) {
   } catch (error) {
     return {status: 'resolution_error', lowerBound: null, reason: error.message, rendered: false};
   }
+}
+
+// MGL-15: habitat class separation under colour-vision deficiency. A reference
+// check for the vector-water map with solid outlines: it is not proof for
+// aerial imagery, lower zooms, the real translucent stroke pixels, legal
+// clearance or biological accuracy. Every value stays unrounded until compared.
+export const HABITAT_CLASSES = ['rock', 'mixed', 'soft', 'kelp'];
+export const CVD_SIMULATIONS = ['normal', 'protanopia', 'deuteranopia', 'tritanopia'];
+export const HABITAT_MIN_DELTA_E = {solid: 12, fill: 6};
+export const HABITAT_FILL_ZOOM = 13;
+// Machado, Oliveira and Fernandes 2009, severity 1.0, applied to linear sRGB.
+export const MACHADO_SEVERITY_1 = {
+  normal: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+  protanopia: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
+  deuteranopia: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]],
+  tritanopia: [[1.255528, -0.076749, -0.178779], [-0.078411, 0.930809, 0.147602], [0.004733, 0.691367, 0.303900]],
+};
+const HEX6 = /^#[0-9a-f]{6}$/i;
+const unit = v => (Number.isFinite(v) && v >= 0 && v <= 1) || (() => { throw Error(`Expected a finite value in [0,1], got ${v}`); })();
+
+/** sRGB transfer function (IEC 61966-2-1): encoded [0,1] to linear [0,1]. */
+export function srgbToLinear(v) {
+  unit(v);
+  return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+}
+export function linearToSrgb(v) {
+  unit(v);
+  return v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055;
+}
+/** Linear sRGB triple after a colour-vision simulation, clamped back into gamut. */
+export function simulateCvd(linear, simulation) {
+  if (!Object.hasOwn(MACHADO_SEVERITY_1, simulation)) throw Error(`Unknown colour-vision simulation: ${simulation}`);
+  if (!Array.isArray(linear) || linear.length !== 3) throw Error('Expected a linear RGB triple');
+  linear.forEach(unit);
+  const m = MACHADO_SEVERITY_1[simulation];
+  return m.map(row => Math.min(1, Math.max(0, row[0] * linear[0] + row[1] * linear[1] + row[2] * linear[2])));
+}
+/** Linear sRGB to CIE Lab under D65 (white 0.95047, 1, 1.08883). */
+export function linearRgbToLab([r, g, b]) {
+  const x = 0.4124564 * r + 0.3575761 * g + 0.1804375 * b;
+  const y = 0.2126729 * r + 0.7151522 * g + 0.0721750 * b;
+  const z = 0.0193339 * r + 0.1191920 * g + 0.9503041 * b;
+  const f = t => (t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116);
+  const [fx, fy, fz] = [f(x / 0.95047), f(y), f(z / 1.08883)];
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+/** CIEDE2000 (Sharma, Wu and Dalal 2005), unrounded. */
+export function deltaE2000(lab1, lab2) {
+  const [L1, a1, b1] = lab1, [L2, a2, b2] = lab2;
+  if (![...lab1, ...lab2].every(Number.isFinite) || lab1.length !== 3 || lab2.length !== 3) throw Error('Expected finite Lab triples');
+  const rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI, p7 = 25 ** 7;
+  const mean = (Math.hypot(a1, b1) + Math.hypot(a2, b2)) / 2;
+  const g = 0.5 * (1 - Math.sqrt(mean ** 7 / (mean ** 7 + p7)));
+  const [a1p, a2p] = [(1 + g) * a1, (1 + g) * a2];
+  const [c1p, c2p] = [Math.hypot(a1p, b1), Math.hypot(a2p, b2)];
+  const hue = (b, a) => (b === 0 && a === 0 ? 0 : (deg(Math.atan2(b, a)) + 360) % 360);
+  const [h1p, h2p] = [hue(b1, a1p), hue(b2, a2p)];
+  const chromatic = c1p * c2p !== 0;
+  let dh = 0;
+  if (chromatic) { dh = h2p - h1p; if (dh > 180) dh -= 360; else if (dh < -180) dh += 360; }
+  const dL = L2 - L1, dC = c2p - c1p, dH = 2 * Math.sqrt(c1p * c2p) * Math.sin(rad(dh / 2));
+  const lMean = (L1 + L2) / 2, cMean = (c1p + c2p) / 2;
+  let hMean = h1p + h2p;
+  if (chromatic) hMean = Math.abs(h1p - h2p) <= 180 ? hMean / 2 : (hMean < 360 ? (hMean + 360) / 2 : (hMean - 360) / 2);
+  const t = 1 - 0.17 * Math.cos(rad(hMean - 30)) + 0.24 * Math.cos(rad(2 * hMean)) + 0.32 * Math.cos(rad(3 * hMean + 6)) - 0.2 * Math.cos(rad(4 * hMean - 63));
+  const sl = 1 + 0.015 * (lMean - 50) ** 2 / Math.sqrt(20 + (lMean - 50) ** 2);
+  const sc = 1 + 0.045 * cMean, sh = 1 + 0.015 * cMean * t;
+  const rt = -Math.sin(rad(2 * 30 * Math.exp(-(((hMean - 275) / 25) ** 2)))) * 2 * Math.sqrt(cMean ** 7 / (cMean ** 7 + p7));
+  return Math.sqrt((dL / sl) ** 2 + (dC / sc) ** 2 + (dH / sh) ** 2 + rt * (dC / sc) * (dH / sh));
+}
+/** Encoded-sRGB source-over of a hex class colour on a hex backdrop; the result is encoded channels in [0,1]. */
+export function blendHexOver(foreground, backdrop, alpha) {
+  if (!HEX6.test(foreground) || !HEX6.test(backdrop)) throw Error('Expected #rrggbb colours');
+  if (!Number.isFinite(alpha) || !(alpha > 0) || alpha > 1) throw Error(`Expected a fill alpha in (0,1], got ${alpha}`);
+  const [f, b] = [rgbOf(foreground), rgbOf(backdrop)];
+  return f.map((v, i) => (v * alpha + b[i] * (1 - alpha)) / 255);
+}
+/** CIEDE2000 between two encoded-sRGB triples as seen under `simulation`. */
+export function cvdDeltaE(encodedA, encodedB, simulation) {
+  const lab = encoded => linearRgbToLab(simulateCvd(encoded.map(srgbToLinear), simulation));
+  return deltaE2000(lab(encodedA), lab(encodedB));
+}
+
+/** The zoom-`zoom` value of a linear `interpolate` on ['zoom'], the form the survey fill opacity is written in. */
+export function evaluateZoomRamp(expression, zoom) {
+  const stops = Array.isArray(expression) ? expression.slice(3) : [];
+  if (!Number.isFinite(zoom) || !Array.isArray(expression) || expression[0] !== 'interpolate' || !Array.isArray(expression[1]) || expression[1][0] !== 'linear' ||
+      !Array.isArray(expression[2]) || expression[2][0] !== 'zoom' || expression[2].length !== 1 || expression[1].length !== 1 || expression.length !== 3 + stops.length ||
+      stops.length < 4 || stops.length % 2 || !stops.every(Number.isFinite) || stops.some((v, i) => i % 2 === 0 && i > 0 && v <= stops[i - 2])) {
+    throw Error('Unsupported zoom ramp expression');
+  }
+  if (zoom <= stops[0]) return stops[1];
+  for (let i = 2; i < stops.length; i += 2) {
+    if (zoom <= stops[i]) return stops[i - 1] + (zoom - stops[i - 2]) / (stops[i] - stops[i - 2]) * (stops[i + 1] - stops[i - 1]);
+  }
+  return stops[stops.length - 1];
+}
+
+/** Every `--name: value;` (any value) declared directly in the rule for `selector`. */
+function rawBlock(css, selector) {
+  const start = css.indexOf(`${selector} {`);
+  if (start < 0) throw Error(`tokens.css: missing ${selector}`);
+  const open = css.indexOf('{', start);
+  return Object.fromEntries([...css.slice(open + 1, css.indexOf('}', open)).matchAll(/--([a-z0-9-]+):\s*([^;]+);/g)].map(m => [m[1], m[2].trim()]));
+}
+/** Each theme's custom properties as text (light overrides dark), numbers included; `themes()` keeps to hex colours. */
+export function rawThemes(css, spec = V2) {
+  const text = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const base = rawBlock(text, spec.selectors[spec.base]);
+  return {[spec.base]: base, [spec.overlay]: {...base, ...rawBlock(text, spec.selectors[spec.overlay])}};
+}
+
+/** The survey fill's effective opacity at `zoom` for one theme's raw tokens, evaluated from the renderer's own paint expression. */
+export function habitatFillAlpha(markStyle, readPalette, rawTokens, surveyLayerId, zoom = HABITAT_FILL_ZOOM) {
+  const layer = markStyle(readPalette(name => rawTokens[name] ?? '')).habitat.find(l => l.id === surveyLayerId);
+  if (!layer) throw Error(`Renderer has no ${surveyLayerId} layer`);
+  return evaluateZoomRamp(layer.paint['fill-opacity'], zoom);
+}
+
+/**
+ * Every unordered pair of the four habitat classes, in both themes and under
+ * normal vision plus protan/deutan/tritan simulation, once as solid colours
+ * (outlines) and once as the fill blended over --map-water at `alpha`.
+ * Reports every row; nothing is reduced to a best pair or a minimum.
+ * `alphas` maps a theme name to its fill alpha (or pass one number for all).
+ */
+export function checkHabitatCvd(css, alphas, spec = V2) {
+  const failures = [], rows = [], results = [];
+  const record = r => {
+    results.push(r);
+    const label = `${r.theme} ${r.simulation} ${r.pair} ${r.kind}`;
+    if (r.status === 'pass') rows.push(`${label} alpha ${r.alpha}: dE2000 ${r.deltaE.toFixed(3)} (${r.deltaE}) >= ${r.threshold}`);
+    else failures.push(`${label}${r.alpha === undefined ? '' : ` alpha ${r.alpha}`}: ${r.status}${r.deltaE === undefined ? '' : ` dE2000 ${r.deltaE.toFixed(3)} (${r.deltaE}) < ${r.threshold}`}${r.reason ? `: ${r.reason}` : ''}`);
+  };
+  try {
+    for (const [theme, tokens] of Object.entries(themes(css, spec))) {
+      const alpha = typeof alphas === 'number' ? alphas : alphas?.[theme];
+      const water = tokens['map-water'], classes = HABITAT_CLASSES.map(name => [name, tokens[`hab-${name}`]]);
+      const missing = [['map-water', water], ...classes.map(([name, value]) => [`hab-${name}`, value])].filter(([, value]) => !HEX6.test(value ?? '')).map(([name]) => `--${name}`);
+      if (missing.length) { record({theme, simulation: 'all', pair: 'all', kind: 'tokens', status: 'resolution_error', reason: `${missing.join(', ')} is not a hex colour token`}); continue; }
+      if (typeof alpha !== 'number' || !Number.isFinite(alpha) || !(alpha > 0) || alpha > 1) {
+        record({theme, simulation: 'all', pair: 'all', kind: 'fill', status: 'resolution_error', reason: `fill alpha must be a finite number in (0,1], got ${alpha}`}); continue;
+      }
+      for (const simulation of CVD_SIMULATIONS) {
+        for (let i = 0; i < classes.length; i++) {
+          for (let j = i + 1; j < classes.length; j++) {
+            for (const [kind, a] of [['solid', 1], ['fill', alpha]]) {
+              const threshold = HABITAT_MIN_DELTA_E[kind], pair = `${classes[i][0]}/${classes[j][0]}`;
+              try {
+                const deltaE = cvdDeltaE(blendHexOver(classes[i][1], water, a), blendHexOver(classes[j][1], water, a), simulation);
+                record({theme, simulation, pair, kind, alpha: a, deltaE, threshold, status: deltaE >= threshold ? 'pass' : 'measured_failure'});
+              } catch (error) {
+                record({theme, simulation, pair, kind, alpha: a, threshold, status: 'resolution_error', reason: error.message});
+              }
+            }
+          }
+        }
+      }
+    }
+    if (!results.length) throw Error('No habitat class rows were produced');
+  } catch (error) {
+    record({theme: 'unresolved', simulation: 'all', pair: 'all', kind: 'tokens', status: 'resolution_error', reason: error.message});
+  }
+  return {failures, rows, results};
 }
 
 // Deliberately snapshot-bound evidence mode. These hashes authenticate ALL

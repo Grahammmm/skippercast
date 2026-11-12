@@ -85,10 +85,10 @@ export function windGeometry(f: WindFrame) {
 export function windOverlay(p: Palette): Overlay {
   const empty = {type: 'geojson' as const, attribution: layerEntry('wind').attribution, data: {type: 'FeatureCollection' as const, features: []}};
   return {sources: {[WIND_ARROWS]: empty, [WIND_LABELS]: empty}, layers: [
-    {id: 'wind-casing', type: 'line', source: WIND_ARROWS, paint: {'line-color': p.bg, 'line-width': 4}},
-    {id: WIND_ARROWS, type: 'line', source: WIND_ARROWS, paint: {'line-color': p.text, 'line-width': 2}},
+    {id: 'wind-casing', type: 'line', source: WIND_ARROWS, paint: {'line-color': p.mapInkHalo, 'line-width': 4}},
+    {id: WIND_ARROWS, type: 'line', source: WIND_ARROWS, paint: {'line-color': p.mapInk, 'line-width': 2}},
     {id: WIND_LABELS, type: 'symbol', source: WIND_LABELS, layout: {'text-field': ['get', 'label'], 'text-font': [LABEL_FONT], 'text-size': 11, 'text-offset': [0, 1.6]},
-      paint: {'text-color': p.text, 'text-halo-color': p.bg, 'text-halo-width': 1.5}},
+      paint: {'text-color': p.mapInk, 'text-halo-color': p.mapInkHalo, 'text-halo-width': 1.5}},
   ]};
 }
 
