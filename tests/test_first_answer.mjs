@@ -208,7 +208,7 @@ test('the assumed profile is named in the page language; English and chosen line
     for (const [profile, [en, es]] of Object.entries(names)) for (const verdict of verdicts) {
       const s = {...base, verdict, profile};
       const old = m.firstAnswer({...s, chosen: false, lang: 'en'});
-      assert.ok(old.line.endsWith(` Assuming the ${en} profile: change it above.`), `${profile}: English suffix`);
+      assert.ok(old.line.endsWith(` Assuming the ${en} profile - change it above.`), `${profile}: English suffix`);
       assert.equal(m.firstAnswer({...s, chosen: false}).line, old.line, `${profile}: omitted lang is English`);
       const spanish = m.firstAnswer({...s, chosen: false, lang: 'es'});
       assert.ok(spanish.line.endsWith(` Suponiendo el perfil ${es}: cámbialo arriba.`), `${profile}: Spanish suffix, got ${spanish.line}`);
