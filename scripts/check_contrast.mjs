@@ -619,7 +619,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // MGL-15 adds map-only tokens (--map-*, --hab-*, --mark-ring) to tokens.css and repoints only the two depth-contour legend swatch rules in app.css to them;
   // existing text and legend-glass backing paint, thresholds and cited line numbers are unchanged (map-only additions and swatch colours are not text or backing).
   // UXFIX-09: app.css adds one tile-basis margin rule scoped to .app-tiles and raises the phone .app-top z-index by one; no colour, backing or text paint changed. Rebound from the final bytes.
-  "appCss": "4d8bfb23f2d1fb27edcb3f58532cdb56000c2da661c82d30cb330c0c73a469dc",
+  "appCss": "8c4ce49230e0f5428fddcb3491f1f3801b5b4e24276ec75c83830e6cddabaef8",
   // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
   // UXFIX-10 only appends a scoped .app-account[data-top] block at the end of app.css (the phone top-card account button: icon size, hidden label, open-state text/panel colour, z-index);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved.

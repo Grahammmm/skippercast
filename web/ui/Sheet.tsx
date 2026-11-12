@@ -72,6 +72,8 @@ export function Sheet({label, detent, onDetent, edge, children, onBodyFocus, cla
     if (drag.current) return;
     const handle = event.currentTarget as HTMLElement, sheet = handle.closest<HTMLElement>('.ui-sheet');
     if (!sheet || event.button !== 0) return;
+    // Own the gesture: native link dragging can otherwise cancel capture as the sheet moves.
+    event.preventDefault();
     const base = new DOMMatrixReadOnly(getComputedStyle(sheet).transform).m42;
     // A cancelled drag (pointercancel fires no click) would otherwise leave the flag to swallow the next tap.
     delete handle.dataset.dragged;

@@ -12,7 +12,7 @@ import {screenPlace} from '../dist/geo-screen.js';
 import {assetURL, getRegion, setRegion} from '../dist/region.js';
 import {initProtectedAreas} from '../dist/protected-areas.js';
 import {assessScreen} from '../web/map/habitat.ts';
-import {VERDICT_CACHE_CAP, placeVerdictCache, placeVerdicts} from '../web/place-verdict-cache.ts';
+import {VERDICT_CACHE_CAP, placeKey, placeVerdictCache, placeVerdicts} from '../web/place-verdict-cache.ts';
 import {ranking} from '../web/ranking.ts';
 import {runRouteScreen} from '../web/brief/run.ts';
 import {region} from '../web/state.ts';
@@ -307,4 +307,38 @@ test('verdict_cache_uncapable_unchecked_and_mutation_safe: anything without a va
   assert.equal(refused.inside, true, 'a refused line is a checked verdict');
   runRouteScreen(HARBOR, pick, screen, 'morro-bay');
   assert.equal(seen.n, n + 1, 'and is cached like a clear one');
+});
+
+const nest = (leaf, n) => { let v = leaf; for (let i = 0; i < n; i++) v = [v]; return v; };
+
+test('cache_key_excessive_depth_is_unkeyable: depth bound is explicit (8 keys, 9 does not)', () => {
+  assert.equal(placeKey({geometry: {type: 'Point', coordinates: nest(0, 20000)}}), null);
+  assert.equal(placeKey({geometries: [{type: 'Point', coordinates: nest(0, 20000)}]}), null);
+  assert.equal(placeKey({geometry: {type: 'Point', coordinates: nest(1, 8)}}), `_|_|"Point"${'['.repeat(8)}1${']'.repeat(8)}|_`);
+  assert.equal(placeKey({geometry: {type: 'Point', coordinates: nest(1, 9)}}), null);
+});
+
+test('cache_deep_place_preserves_real_unchecked_refusal and retries/propagates evaluator failure', () => {
+  const screen = {verdictRevision: () => 'r1', coversGeometry: () => false};
+  const place = {geometry: {type: 'Point', coordinates: nest(0, 20000)}};
+  const cache = placeVerdictCache();
+  const direct = screenPlace(screen, place);
+  assert.equal(direct.screened, false);
+  same(cache.verdict('a', screen, place), direct, 'same unchecked verdict, no throw');
+  assert.equal(cache.size, 0);
+  let n = 0;
+  const counted = placeVerdictCache((s, p) => { n++; return {screened: true, inside: false}; });
+  counted.verdict('a', screen, place); counted.verdict('a', screen, place);
+  assert.equal(n, 2, 'every unkeyable call evaluates');
+  assert.equal(counted.size, 0);
+  const boom = placeVerdictCache(() => { throw new Error('boom'); });
+  assert.throws(() => boom.verdict('a', screen, place), /boom/);
+  assert.equal(boom.size, 0);
+});
+
+test('cache_standard_geojson_keys_unchanged: ordinary shapes still key and hit; -0 distinct', () => {
+  const ring = Array.from({length: 5000}, (_, i) => [i, i + 1]);
+  assert.equal(placeKey({geometry: {type: 'MultiPolygon', coordinates: [[ring]]}}).startsWith('_|_|"MultiPolygon"[[[[0,1],[1,2]'), true);
+  assert.equal(placeKey({geometry: {type: 'LineString', coordinates: [[0, 0], [1, 2]]}}), '_|_|"LineString"[[0,0],[1,2]]|_');
+  assert.notEqual(placeKey({geometry: {type: 'Point', coordinates: [-0, 0]}}), placeKey({geometry: {type: 'Point', coordinates: [0, 0]}}));
 });

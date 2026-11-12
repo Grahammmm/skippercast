@@ -2,6 +2,7 @@
 // then the real Planner page: arrive/leave lines, the missing-input line, and that the timing stays in the browser draft only.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import util from 'node:util';
 import {mkdtemp, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -198,4 +199,38 @@ test('the real Planner page shows the times, hides them without speed or port, a
       assert.equal('timing' in legacy.draft.value, false, 'a legacy draft keeps its shape until timing is edited'); legacy.dispose();
     } finally { model.dispose(); }
   } finally { await rm(dir, {recursive: true, force: true}); }
+});
+
+test('computed_instants_outside_date_range_refuse: whole-result invalid-route, never a partial or throwing clock', () => {
+  const UTC = 'UTC', END = 8.64e15, depart = Date.parse('2026-11-10T07:00:00Z'), toEnd = (END - depart) / MIN;
+  const one = [{id: 'a', fishing: true}], base = (runs, over = {}) => input({zone: UTC, route: fakeRoute(runs), stops: one, timing: {leavePortAt: '07:00', fishMin: 0}, ...over});
+  const refused = (r, why) => { assert.deepEqual(r, {state: 'unavailable', reasons: ['invalid-route']}, why); };
+  // exact endpoint admitted (and formattable); the next millisecond refused
+  assert.equal(depart + toEnd * MIN, END);
+  const edge = ready(tripTimes(base([toEnd, 0])));
+  assert.equal(edge.backAt, END);
+  assert.doesNotThrow(() => clockText(edge.backAt, UTC, '2026-11-10', 'en', 'next day'));
+  refused(tripTimes(base([toEnd + 1 / MIN, 0])), 'one millisecond past the endpoint');
+  // arrival out of range: no partial fields
+  const far = tripTimes(base([toEnd + 1, 0]));
+  refused(far, 'arrival');
+  assert.equal('stops' in far || 'backAt' in far || 'departAt' in far, false);
+  // dwell crosses the endpoint while arrival fits; zero-dwell nonfishing stop at the same arrival is fine
+  refused(tripTimes(base([toEnd - 30, 0], {timing: {leavePortAt: '07:00', fishMin: 60}})), 'dwell');
+  ready(tripTimes(base([toEnd, 0], {stops: [{id: 'a', fishing: false}], timing: {leavePortAt: '07:00', fishMin: 60}})));
+  // only the return leg is out of range
+  refused(tripTimes(base([10, toEnd])), 'return only');
+  // finite minutes whose millisecond product overflows
+  refused(tripTimes(base([1e305, 1])), 'overflow');
+  // real tripLegs with a tiny positive speed; the ordinary route stays ready and renderable
+  const tiny = tripLegs(port, stops, 1e-10);
+  assert.ok(Number.isFinite(tiny.totalRunMin));
+  refused(tripTimes(input({route: tiny})), 'tiny speed');
+  const ok = ready(tripTimes(input()));
+  assert.doesNotThrow(() => clockText(ok.backAt, LA, '2026-11-10', 'en', 'next day'));
+  // precedence and no mutation
+  assert.deepEqual(reasons(tripTimes(base([5, 5], {route: {...fakeRoute([5, 5]), totalRunMin: null}}))), ['no-speed']);
+  const route = fakeRoute([toEnd + 1, 0]), copy = structuredClone({route, stops: one, timing: {leavePortAt: '07:00', fishMin: 0}});
+  tripTimes(input({zone: UTC, route, stops: one, timing: copy.timing}));
+  assert.ok(util.isDeepStrictEqual({route, stops: one, timing: copy.timing}, copy), 'inputs unchanged');
 });
