@@ -569,7 +569,10 @@ export function createSessionControl({$, copy, alive = () => true}) {
       if (!alive()) return;
       notice = ended === 1 ? t('account.sessions.ended.one', {n: ended}) : t('account.sessions.ended.other', {n: ended});
       await refresh();
-      if (alive() && button.hidden) { note.tabIndex = -1; note.focus(); }
+      // The hidden action loses focus to the page; hand it to the status line only if nothing else holds it, so a field the
+      // owner moved to while the sign-out ran keeps its focus.
+      const held = document.activeElement;
+      if (alive() && button.hidden && (!held || held === document.body || held === document.documentElement || held === button)) { note.tabIndex = -1; note.focus(); }
     } finally { locked = false; }
   });
   return {refresh};
