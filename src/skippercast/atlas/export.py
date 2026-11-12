@@ -31,7 +31,8 @@ def coordinate(value):
             "A coordinate must be [longitude, latitude]")
     lon, lat = value
     require(all(isinstance(x, (int, float)) and not isinstance(x, bool)
-                and math.isfinite(x) for x in value), "Invalid coordinate")
+                and (isinstance(x, int) or math.isfinite(x)) for x in value),
+            "Invalid coordinate")
     require(-180 <= lon <= 180 and -90 <= lat <= 90, "Coordinate outside WGS84 bounds")
 
 
