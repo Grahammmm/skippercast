@@ -8,6 +8,7 @@
 import {useEffect, useId, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import type {ComponentChildren} from 'preact';
 import {Button, IconButton} from '../ui/Button.tsx';
+import {closeOnScrim, rememberOpener, restoreFocus} from '../ui/focus-return.ts';
 import {forgetHome, hasSavedHome, listPorts, locatePort, type CookieJar, type HomeStorage, type Port} from '../ports.ts';
 import {language, t} from './i18n.ts';
 import {portCopy} from './copy.ts';
@@ -119,16 +120,16 @@ export type PortDialogProps = {
 /** The app's port sheet: a native modal dialog (Escape, the focus trap and the autofocus are the browser's), opened only by a control. */
 export function PortDialog({open, onClose, title, children}: PortDialogProps) {
   const lang = language.value;
-  const ref = useRef<HTMLDialogElement>(null);
+  const ref = useRef<HTMLDialogElement>(null), opener = useRef<HTMLElement | null>(null);
   const id = useId();
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) { opener.current = rememberOpener(); dialog.showModal(); }
     else if (!open && dialog.open) dialog.close();
   }, [open]);
   return (
-    <dialog ref={ref} class="port-dialog" aria-labelledby={id} onClose={onClose}>
+    <dialog ref={ref} class="port-dialog" aria-labelledby={id} onClick={closeOnScrim} onClose={() => { restoreFocus(opener.current); onClose(); }}>
       <div class="port-dialog-head">
         <h2 id={id}>{title ?? t('landing.port.dialog', lang)}</h2>
         <IconButton icon="close" label={t('landing.port.close', lang)} onClick={onClose} />
