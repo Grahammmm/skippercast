@@ -208,7 +208,7 @@ test('signed in, saved-trip alerts save, list, delete and acknowledge through th
   expect(posted[0]).toMatchObject({region: 'morro-bay', species: 'halibut', point: 'central', start_hour: 7, end_hour: 13, wind_limit: 8, gust_limit: 14, sea_limit: 3});
   // SC1537-06 (#1170): the saved trip reads by the region's names, never its raw ids.
   await expect(dialog.locator('#saved-trips')).toContainText('Estero Bay · California halibut · 7:00–13:00');
-  await expect(dialog.getByRole('button', {name: /^Delete the trip on \d{4}-\d{2}-\d{2} at Estero Bay$/})).toBeVisible();
+  await expect(dialog.getByRole('button', {name: /^Delete the trip on [A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2} at Estero Bay$/})).toBeVisible();
   await dialog.getByText('Recent assessments (1)').click();
   await dialog.getByRole('button', {name: 'Mark read'}).click();
   await expect.poll(() => acked).toEqual({id: 7});

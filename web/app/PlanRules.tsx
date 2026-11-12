@@ -7,6 +7,8 @@ import {useEffect} from 'preact/hooks';
 import {freshnessLabel, loadRegs, regsData, regulationState, ruleReason, ruleSummary, verifiedText, type RulesRegion} from '../regs.ts';
 import {language, t, type Language} from '../i18n.ts';
 import {currentRegionInfo} from './region-info.ts';
+import {readableDate} from '../dates.ts';
+import {DEFAULT_ZONE} from '../zone.ts';
 import {RuleReason} from './RuleReason.tsx';
 
 export const CHECK_RULES = t('planRules.check', 'en');
@@ -39,12 +41,12 @@ export function planRuleLine(data: unknown, species: string, date: string, regio
 
 export function PlanRules({date, species, region, now = Date.now()}: {date: string; species: string; region: {id: string; timezone?: string}; now?: number}) {
   const info = currentRegionInfo()?.rules, rules: RulesRegion = info && info.id === region.id ? info : {id: region.id, timezone: region.timezone};
-  const lang = language.value, english = lang === 'es' ? 'en' : undefined;
+  const lang = language.value, english = lang === 'es' ? 'en' : undefined, shown = readableDate(date, lang, region.timezone ?? DEFAULT_ZONE);
   useEffect(() => { void loadRegs(rules); }, [rules.id]);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const loaded = regsData.value, data = loaded?.region === rules.id ? loaded.data : null;
   return <section class="export-card plan-rules" aria-label={t('planRules.aria', lang)}>
-    <h2>{t('planRules.heading', lang, {date})}</h2>
+    <h2>{t('planRules.heading', lang, {date: shown})}</h2>
     {(() => {
       const reads = ruleSpecies(species).map(id => readLine(data, id, date, rules, now, lang));
       const first = reads[0]!.line;
@@ -58,7 +60,7 @@ export function PlanRules({date, species, region, now = Date.now()}: {date: stri
           <p class="export-note">{first.fresh}</p>
           <p>{reads.map((r, i) => <>{i ? ' ' : null}{link(r.line)}</>)}</p>
         </div> : reads.map(({line: l, official, depth}) => <div key={l.id} class="plan-rule" data-kind={l.kind} data-status={l.kind === 'check' ? 'unknown' : l.status}>
-          <p><span class="app-mark-regs-badge" data-status={l.kind === 'check' ? 'unknown' : l.status}>{l.label}</span> <strong>{l.name}</strong>. {l.kind === 'closed' ? `${t('planRules.closedOn', lang, {date})} ` : ''}{note(l)}</p>
+          <p><span class="app-mark-regs-badge" data-status={l.kind === 'check' ? 'unknown' : l.status}>{l.label}</span> <strong>{l.name}</strong>. {l.kind === 'closed' ? `${t('planRules.closedOn', lang, {date: shown})} ` : ''}{note(l)}</p>
           {l.kind === 'check' ? null : <>
             {official.map((line, i) => <p key={i} lang={english}>{line}</p>)}
             {depth ? <p>{depth}</p> : null}

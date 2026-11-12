@@ -8,6 +8,7 @@
 
 import {DEFAULT_ZONE} from './zone.ts';
 import {t, type Language, type StringId} from './i18n.ts';
+import {readableDate} from './dates.ts';
 
 /** A message this module wrote itself, carried with its catalogue id so the sheet can show it in the language chosen when it is drawn. `.message` stays the English text. */
 export class AlertCopyError extends Error {
@@ -243,9 +244,9 @@ export const alertNames = (region: RegionAlerts): AlertNames => ({
   species: new Map(alertSpecies(region, null).options.map(o => [o.id, o.name])),
 });
 
-/** The saved trip's line: "2026-11-02 · Point Sur · Rockfish · 7:00–13:00" with names (raw ids without them or when unknown), with the saved boat when it has one. */
-export const tripLine = (trip: SavedTrip, names?: AlertNames, lang: Language = 'en'): string =>
-  `${trip.date} · ${names?.point.get(trip.point) ?? trip.point} · ${names?.species.get(trip.species) ?? trip.species} · ${trip.start_hour}:00–${trip.end_hour}:00${trip.boat_sea ? ` · ${trip.boat_name || t('alerts.savedBoat', lang)}` : ''}`;
+/** The saved trip's line: "Mon 2 Nov · Point Sur · Rockfish · 7:00–13:00" with names (raw ids without them or when unknown), with the saved boat when it has one. The date reads in `timeZone`; the stored date stays ISO. */
+export const tripLine = (trip: SavedTrip, names?: AlertNames, lang: Language = 'en', timeZone: string = DEFAULT_ZONE): string =>
+  `${readableDate(trip.date, lang, timeZone)} · ${names?.point.get(trip.point) ?? trip.point} · ${names?.species.get(trip.species) ?? trip.species} · ${trip.start_hour}:00–${trip.end_hour}:00${trip.boat_sea ? ` · ${trip.boat_name || t('alerts.savedBoat', lang)}` : ''}`;
 
 /** What a saved trip's stored plan shows: target names, stop names in saved order and summed leg totals. Never positions, notes or ids. */
 export type TripPlanSummary =
