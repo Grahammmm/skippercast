@@ -245,6 +245,36 @@ def test_symlinked_mutable_paths_refuse(rig, tmp_path):
     assert rig.go() == 2 and rig.calls == []
 
 
+@pytest.mark.parametrize("tree", ["reaches", "private-reaches"])
+@pytest.mark.parametrize("kind", ["dir-link", "dangling-link", "file-link"])
+def test_symlinked_reach_destination_refuses_before_any_child(rig, tmp_path, tree, kind):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    folder = rig.checkout / "var/seafloor" / tree / "r2"      # requested reach, not the first
+    folder.parent.mkdir(parents=True)
+    if kind == "dir-link":
+        folder.symlink_to(outside)
+    elif kind == "dangling-link":
+        folder.symlink_to(tmp_path / "does-not-exist")
+    else:
+        folder.mkdir()
+        (outside / "run.json").write_text("outside")
+        (folder / "run.json").symlink_to(outside / "run.json")
+    before = sorted(p.name for p in outside.iterdir())
+    assert rig.go() == 2
+    assert rig.calls == [] and not rig.output.exists()          # no --which, no run, no output
+    assert sorted(p.name for p in outside.iterdir()) == before
+    assert not (outside / "coverage-checkpoint.json").exists() and not (rig.root / "logs").exists()
+    if kind == "file-link":
+        assert (outside / "run.json").read_text() == "outside"
+
+
+def test_real_reach_directories_inside_the_checkout_are_admitted(rig):
+    for tree in ("reaches", "private-reaches"):
+        (rig.checkout / "var/seafloor" / tree / "r1").mkdir(parents=True)
+    assert rig.go() == 0 and len(rig.calls) == 3
+
+
 def test_baseline_must_be_committed_identity(rig):
     manifest = json.loads((rig.baseline / "manifest.json").read_text())
     for change in ({"ledger_sha256": "0" * 64}, {"source_commit": "b" * 40}, {"extra": 1}):

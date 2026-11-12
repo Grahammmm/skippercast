@@ -187,6 +187,27 @@ def _confined(arg, root_abs, root_real, name):
     return real
 
 
+REACH_TREES = ('var/seafloor/reaches', 'var/seafloor/private-reaches')
+
+
+def _confine_reach_destinations(plan, ident):
+    """Refuse a requested reach directory (public or private tree) that is, or contains, a symlink or
+    resolves outside the checkout: the pipeline writes checkpoints, outputs and run.json through it."""
+    for tree in REACH_TREES:
+        folder = plan.checkout / tree / ident
+        rel = f'{tree}/{ident}'
+        if not os.path.lexists(folder):
+            continue    # the pipeline creates it under the already-verified, symlink-free parent
+        if os.path.islink(folder):
+            raise Preflight(f'{rel} in the checkout is a symlink')
+        if Path(os.path.realpath(folder)) != folder or not folder.is_dir():
+            raise Preflight(f'{rel} in the checkout is not a real directory inside it')
+        for here, dirs, files in os.walk(folder, followlinks=False):
+            for name in (*dirs, *files):
+                if os.path.islink(os.path.join(here, name)):
+                    raise Preflight(f'{rel} in the checkout contains a symlink')
+
+
 def admit(args, parent):
     plan = Plan()
     # The fixed private parent is the only trust anchor. The row root must be a real directory directly
@@ -244,6 +265,8 @@ def admit(args, parent):
     if len(set(requested)) != len(requested):
         raise Preflight('reaches file repeats a reach ID')
     plan.reaches = list(requested)
+    for ident in plan.reaches:
+        _confine_reach_destinations(plan, ident)
     try:
         _admit_baseline(plan)
     except Evidence as error:
