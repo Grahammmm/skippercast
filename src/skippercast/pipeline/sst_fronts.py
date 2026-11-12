@@ -52,7 +52,7 @@ def observation_time(value):
     try:
         if isinstance(value, str):
             when = datetime.fromisoformat(value.replace("Z", "+00:00"))
-            return when if when.tzinfo else None
+            return when.astimezone(timezone.utc) if when.tzinfo else None
         if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
             return datetime.fromtimestamp(value, timezone.utc)
     except (ValueError, OverflowError, OSError):
