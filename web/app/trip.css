@@ -19,7 +19,7 @@
 .app-trip p { margin: var(--space-2) 0; overflow-wrap: anywhere; }
 .app-trip .export-note, .app-trip small, #export-validation { color: var(--muted); font-size: var(--text-13); }
 .app-trip label { display: flex; flex-direction: column; gap: var(--space-1); color: var(--muted); font-size: var(--text-13); }
-.app-trip :is(button, input:not([type="checkbox"]), select) {
+.app-trip :is(button, input:not([type="checkbox"]), select, textarea) {
   box-sizing: border-box; min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md);
   background: var(--panel); color: var(--text); font: inherit;
 }
