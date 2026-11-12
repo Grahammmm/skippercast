@@ -45,23 +45,30 @@ class Node:
     def text(self) -> str:
         """The element's text with whitespace collapsed; ``<br>`` counts as a space."""
         parts: list[str] = []
-
-        def walk(node: Node) -> None:
-            for child in node.children:
+        frames = [iter(self.children)]  # explicit stack: deep valid markup must not hit the recursion limit
+        while frames:
+            for child in frames[-1]:
                 if isinstance(child, str):
                     parts.append(child)
                 elif child.tag == "br":
                     parts.append(" ")
                 else:
-                    walk(child)
-        walk(self)
+                    frames.append(iter(child.children))
+                    break
+            else:
+                frames.pop()
         return _SPACE.sub(" ", "".join(parts)).strip()
 
     def iter(self) -> Iterator["Node"]:
-        for child in self.children:
-            if isinstance(child, Node):
-                yield child
-                yield from child.iter()
+        frames = [iter(self.children)]
+        while frames:
+            for child in frames[-1]:
+                if isinstance(child, Node):
+                    yield child
+                    frames.append(iter(child.children))
+                    break
+            else:
+                frames.pop()
 
     def find_all(self, tag: str | None = None, cls: str | None = None,
                  where: Callable[["Node"], bool] | None = None) -> list["Node"]:
