@@ -134,3 +134,56 @@ for (const profile of ['boat', 'spear']) {
     await fits(offline, save);
   });
 }
+
+// R-P3 (UXFIX-03): a scroll area with more below shows the 16 px bottom fade (data-more) until its end; sticky action rows stay whole.
+const cue = (el: Locator) => el.evaluate(e => (e as HTMLElement).dataset.more ?? null);
+const maskOf = (el: Locator) => el.evaluate(e => getComputedStyle(e).maskImage);
+const toEnd = (el: Locator) => el.evaluate(e => { e.scrollTop = e.scrollHeight; });
+
+for (const size of [{width: 390, height: 844}, {width: 844, height: 390}]) {
+  test(`scroll_cue_fades_the_port_list_until_its_end ${size.width}x${size.height}`, async ({page, v2}) => {
+    await page.setViewportSize(size);
+    await page.addInitScript(() => localStorage.setItem('skippercast-profile-v1', 'boat'));
+    await stubLiveFeeds(page);
+    await v2.open('app', {region: 'morro-bay', profile: 'boat'});
+    await page.locator('button.app-port').dispatchEvent('click');
+    const port = page.locator('dialog.port-dialog');
+    await expect(port).toBeVisible();
+    const list = port.locator('.port-input-results');
+    await page.getByRole('button', {name: /^Show all/}).click();
+    expect(await list.evaluate(e => e.scrollHeight > e.clientHeight)).toBe(true);
+    await list.evaluate(e => { e.scrollTop = 0; });
+    await expect.poll(() => cue(list)).toBe('true');
+    expect(await maskOf(list)).not.toBe('none');
+    await toEnd(list);
+    await expect.poll(() => cue(list)).toBe('false');
+    expect(await maskOf(list)).toBe('none');
+    // A short list does not overflow, so it never fades.
+    await port.getByRole('searchbox').fill('Morro');
+    await expect(port.locator('.port-input-option')).toHaveCount(1);
+    expect(await list.evaluate(e => e.scrollHeight <= e.clientHeight)).toBe(true);
+    await expect.poll(() => cue(list)).toBe('false');
+    await page.keyboard.press('Escape');
+  });
+}
+
+test('scroll_cue_fades_limits_and_keeps_the_sticky_save_row_unmasked', async ({page, v2}) => {
+  await page.setViewportSize({width: 844, height: 390});
+  await page.addInitScript(() => localStorage.setItem('skippercast-profile-v1', 'boat'));
+  await stubLiveFeeds(page);
+  await v2.open('app', {region: 'morro-bay', profile: 'boat'});
+  await page.locator('.app-limits-trigger').click();
+  const limits = page.locator('dialog.app-limits-dialog').first();
+  await expect(limits).toBeVisible();
+  const actions = limits.locator('.app-limits-actions');
+  await limits.evaluate(e => { e.scrollTop = 0; });
+  await expect.poll(() => cue(limits)).toBe('true');
+  expect(await maskOf(limits)).not.toBe('none');
+  expect(await maskOf(actions)).toBe('none');
+  // The fade ends above the sticky row: the inset is the row's own height.
+  expect(await limits.evaluate((e, a) => (e as HTMLElement).style.getPropertyValue('--cue-inset') === `${(a as HTMLElement).offsetHeight}px`, await actions.elementHandle())).toBe(true);
+  await toEnd(limits);
+  await expect.poll(() => cue(limits)).toBe('false');
+  expect(await maskOf(limits)).toBe('none');
+  await page.keyboard.press('Escape');
+});

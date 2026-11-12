@@ -9,6 +9,7 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {formatBytes, relativeTime} from '../../dist/offline-core.js';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
+import {useScrollCue} from '../ui/scroll-cue.ts';
 import {PositionCheck} from './PositionCheck.tsx';
 import {region} from '../state.ts';
 import {
@@ -70,6 +71,7 @@ function loadFailed(error: string, lang: Language): string {
 
 function TripDialog() {
   const ref = useRef<HTMLDialogElement>(null), open = tripOpen.value, error = tripError.value, planner = plannerView.value, lang = language.value;
+  useScrollCue(ref);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -77,7 +79,7 @@ function TripDialog() {
     if (!open && dialog.open) dialog.close();
   }, [open]);
   return (
-    <dialog ref={ref} id="export-panel" class="app-trip" aria-labelledby="export-heading" onClose={closeTrip}>
+    <dialog ref={ref} id="export-panel" class="app-trip ui-scroll-cue" aria-labelledby="export-heading" onClose={closeTrip}>
       <div class="port-dialog-head">
         <h2 id="export-heading" tabIndex={-1}>{t('trip.title', lang)}</h2>
         <IconButton icon="close" label={t('trip.close', lang)} onClick={closeTrip} />

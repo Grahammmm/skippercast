@@ -122,3 +122,13 @@ input, select, textarea { font-size: var(--text-input) !important; }
    at half too; the padding follows the settled detent, never a drag frame. contain: the sheet's scroll does not chain to the page (the body only). */
 .ui-sheet-body { flex: 1; min-height: 0; box-sizing: border-box; overflow: auto; overscroll-behavior: contain; padding: 0 var(--space-4) calc(var(--space-5) + max(0px, var(--sheet-hidden-offset)) + var(--app-tabs, 0px)); }
 .ui-sheet[data-detent="peek"] .ui-sheet-body { overflow: hidden; padding-bottom: var(--space-5); }
+
+/* Scroll cue (design § 6 item 8; web/ui/scroll-cue.ts): while a scroll area has more below, its last 16 px fade out. The mask is
+   colour-free, so it suits both themes. A sticky action row inside is marked data-cue-inset and the hook sets --cue-inset to its
+   height, so the fade ends above it and the row stays whole. The mask image reaches 60 px past the box (no-clip) so a dialog's
+   shadow and a focus ring outside its edge are not cut away; the fade itself is placed from the box's own bottom edge. */
+.ui-scroll-cue[data-more="true"] {
+  --cue-bleed: 60px;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--cue-bleed) - var(--cue-inset, 0px) - 16px), transparent calc(100% - var(--cue-bleed) - var(--cue-inset, 0px)), #000 calc(100% - var(--cue-bleed) - var(--cue-inset, 0px)));
+  mask-size: calc(100% + 2 * var(--cue-bleed)) calc(100% + 2 * var(--cue-bleed)); mask-position: calc(-1 * var(--cue-bleed)) calc(-1 * var(--cue-bleed)); mask-repeat: no-repeat; mask-clip: no-clip;
+}
