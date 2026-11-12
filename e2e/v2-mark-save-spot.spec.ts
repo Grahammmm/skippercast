@@ -89,7 +89,9 @@ test('save_spot_preserves_address_and_privacy: a keyboard save posts the mark on
   expect(Math.abs(Number(account.spots[0]!.body.lat) - MARK.latitude)).toBeLessThan(1e-4);
   expect(Math.abs(Number(account.spots[0]!.body.lon) - MARK.longitude)).toBeLessThan(1e-4);
   // A second press on the confirmed card writes nothing more.
-  await card.getByRole('button', {name: 'Saved to your spots'}).click({force: true}).catch(() => undefined);
+  // The click is dispatched on the button itself: at phone peek the card's button rests under the tab bar, where a coordinate click (even forced)
+  // lands on the History tab and pushes a history entry that this test is not about.
+  await card.getByRole('button', {name: 'Saved to your spots'}).dispatchEvent('click').catch(() => undefined);
   await page.waitForTimeout(300);
   expect(account.spots).toHaveLength(1);
   await expectNoTrace(page, before, account.others);

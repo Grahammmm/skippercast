@@ -429,7 +429,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1722-20 only appends a scoped .app-skip-link block at the end of app.css (token colours; a clipped 1 px anchor at rest, a ringed 44 px panel when focused);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved. It also folds the .app-history layout rules into the .app-conditions ones (same declarations, same order; no paint changed) to stay inside the app styles size budget.
   // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
-  "appCss": "920c736012ed3ecb32db0d34c3c6ea1e89a44cb1948ed2c04a211da3269b1147",
+  // UXFIX-10 only appends a scoped .app-account[data-top] block at the end of app.css (the phone top-card account button: icon size, hidden label, open-state text/panel colour, z-index);
+  // no legend paint, backing or text role changed and the cited line numbers above are unmoved.
+  "appCss": "902322fc5a20dfd3a3729527ba87c88caae8c9872bf3939450ff123ff66b5a6e",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
