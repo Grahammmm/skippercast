@@ -55,6 +55,9 @@ async function login(c, auth, opts = {}) {
   return {response, result: await c.call('/api/auth/login/verify', {method: 'POST', body: {response}})};
 }
 const trip = () => ({region: 'morro-bay', point: 'north', species: 'reef', date: new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Los_Angeles'}).format(new Date(Date.now() + 86400000)), start_hour: 7, end_hour: 13, wind_limit: 8, gust_limit: 12, sea_limit: 3});
+// The per-IP budget counts in fixed wall-clock minutes (server/http.ts budget); a burst that straddles :00 would be split across two
+// counters and never reach the limit. Start such a burst only when the current minute has time left.
+const withinOneMinute = async () => { const left = 60000 - (Date.now() % 60000); if (left < 5000) await new Promise(r => setTimeout(r, left + 50)); };
 const count = (sql, table) => sql.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n;
 
 test('register → session → private trip → sign out → 401 → sign in again', async () => {
@@ -344,6 +347,7 @@ test('forged identity headers and cookies never authenticate; provider none disa
 
 test('auth endpoints are rate-limited per IP', async () => {
   const {sql, adapter} = database(), c = client(adapter);
+  await withinOneMinute();
   for (let i = 0; i < 20; i++) assert.equal((await c.call('/api/auth/login/options', {method: 'POST', body: {}})).status, 200);
   const limited = await c.call('/api/auth/login/options', {method: 'POST', body: {}});
   assert.equal(limited.status, 429);
@@ -555,6 +559,7 @@ test('sessions_need_auth_and_keep_existing_request_gates', async () => {
   const off = client(adapter, {provider: 'none'});
   assert.equal((await off.call('/api/auth/sessions')).status, 404);
   const limited = client(adapter);
+  await withinOneMinute();
   for (let i = 0; i < 20; i++) await limited.call('/api/auth/sessions');
   assert.equal((await limited.call('/api/auth/sessions')).status, 429);
   sql.close();
