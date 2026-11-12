@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
-import {moonLine, moonPhase} from '../web/moon.ts';
+import {elongation, localNoon, moonLine, moonPhase} from '../web/moon.ts';
 
 // Instants typed from the U.S. Naval Observatory "Phases of the Moon" table for 2026 (aa.usno.navy.mil/data/MoonPhases), UT.
 const NEW = ['2026-01-18T19:52Z', '2026-02-17T12:01Z', '2026-03-19T01:23Z', '2026-04-17T11:52Z', '2026-05-16T20:01Z', '2026-06-15T02:54Z', '2026-07-14T09:44Z', '2026-08-12T17:37Z'];
@@ -52,8 +52,9 @@ test('a day crossing a phase boundary takes the name of its local noon, not UTC 
 });
 
 test('local noon follows daylight saving time', () => {
-  // 2026-03-26 noon PDT is 19:00 UT: first quarter at UTC noon, waxing gibbous at local noon.
-  assert.equal(moonLine('2026-03-26', 'America/Los_Angeles'), 'Moon: waxing gibbous, 61% lit');
+  // 2026-03-26 noon PDT is 19:00 UT (not 20:00 as in PST); within a day of the first quarter by the model's own motion.
+  assert.equal(localNoon('2026-03-26', 'America/Los_Angeles').toISOString(), '2026-03-26T19:00:00.000Z');
+  assert.equal(moonLine('2026-03-26', 'America/Los_Angeles'), 'Moon: first quarter, 61% lit');
 });
 
 test('the line reads "Moon: <name>, <n>% lit" and makes no rise, set, solunar, bite or feeding claim', () => {
@@ -64,6 +65,32 @@ test('the line reads "Moon: <name>, <n>% lit" and makes no rise, set, solunar, b
   assert.doesNotMatch(line, forbidden);
   const code = readFileSync(new URL('../web/moon.ts', import.meta.url), 'utf8').split('\n').filter(l => !l.trimStart().startsWith('//')).join('\n');
   assert.doesNotMatch(code, forbidden);
+});
+
+test('principal phase is the one reached within +-24 elapsed hours, not a fixed angle', () => {
+  const at = (t, h) => moonPhase(new Date(Date.parse(t) + h * HOUR));
+  for (const h of [-22, 22]) assert.equal(at('2026-05-16T20:01Z', h).name, 'new', `new ${h}`);
+  assert.equal(at('2026-01-03T10:03Z', 22).name, 'full');
+  assert.equal(at('2026-01-26T04:47Z', 22).name, 'first quarter');
+  assert.equal(at('2026-05-16T20:01Z', 28).name, 'waxing crescent');
+  assert.equal(at('2026-05-16T20:01Z', -28).name, 'waning crescent');
+  assert.equal(at('2026-01-03T10:03Z', 36).name, 'waning gibbous');
+  // fraction is still computed at the instant itself
+  const when = Date.parse('2026-05-16T20:01Z') + 22 * HOUR;
+  assert.equal(moonPhase(new Date(when)).fraction, (1 - Math.cos(elongation(new Date(when)) * Math.PI / 180)) / 2);
+});
+
+test('the window edge sits at the model crossing +-24 h, across the 360/0 seam', () => {
+  // Bisect the model's own new-moon crossing (elongation wraps 360 -> 0) near the USNO instant.
+  const signed = ms => { const e = elongation(new Date(ms)); return e > 180 ? e - 360 : e; };
+  let lo = Date.parse('2026-05-16T20:01Z') - 6 * HOUR, hi = Date.parse('2026-05-16T20:01Z') + 6 * HOUR;
+  for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (signed(mid) < 0) lo = mid; else hi = mid; }
+  const cross = (lo + hi) / 2, margin = 5 * 60000;
+  const name = ms => moonPhase(new Date(ms)).name;
+  assert.equal(name(cross + 24 * HOUR - margin), 'new');
+  assert.equal(name(cross - 24 * HOUR + margin), 'new');
+  assert.equal(name(cross + 24 * HOUR + margin), 'waxing crescent');
+  assert.equal(name(cross - 24 * HOUR - margin), 'waning crescent');
 });
 
 test('the Conditions view shows the line under Tide events for the dock day and feeds nothing else', () => {
