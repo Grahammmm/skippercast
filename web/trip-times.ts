@@ -84,13 +84,19 @@ export function tripTimes(input: TripTimesInput): TripTimes {
   if (!parsed || !instants.length) return {state: 'unavailable', reasons: ['invalid-departure']};
   const departAt = instants[0]!, sunset = sunsetAt(date, zone, port!.lat, port!.lon), after = (at: number): boolean => sunset !== null && at > sunset;
   let clock = departAt;
-  const out: TripStopTime[] = stops.map((stop, i) => {
+  // A computed instant must be a valid Date (finite minutes can still overflow it); refuse the whole result, never a partial one.
+  const representable = (at: number): boolean => Number.isFinite(at) && Number.isFinite(new Date(at).getTime());
+  const out: TripStopTime[] = [];
+  for (const [i, stop] of stops.entries()) {
     clock += route.legs[i]!.runMin! * MINUTE;
     const arriveAt = clock;
+    if (!representable(arriveAt)) return {state: 'unavailable', reasons: ['invalid-route']};
     clock += (stop.fishing ? parsed.fishMin : 0) * MINUTE;
-    return {id: stop.id, arriveAt, leaveAt: clock, arriveAfterSunset: after(arriveAt), leaveAfterSunset: after(clock)};
-  });
+    if (!representable(clock)) return {state: 'unavailable', reasons: ['invalid-route']};
+    out.push({id: stop.id, arriveAt, leaveAt: clock, arriveAfterSunset: after(arriveAt), leaveAfterSunset: after(clock)});
+  }
   const backAt = clock + route.legs[stops.length]!.runMin! * MINUTE;
+  if (!representable(backAt)) return {state: 'unavailable', reasons: ['invalid-route']};
   return {state: 'ready', departAt, sunsetAt: sunset, firstOccurrence: instants.length > 1, stops: out, backAt, backAfterSunset: after(backAt)};
 }
 
