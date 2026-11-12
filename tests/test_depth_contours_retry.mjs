@@ -44,7 +44,7 @@ function setup(t, {files = {}, script = {}} = {}) {
   };
   const engine = signal({setOverlay: (layer, o, before) => calls.push(['overlay', layer, o && o.layers.map(l => l.id), before ?? null]),
     setData: (id, data) => calls.push(['data', id, data.features.length])});
-  const layer = createDepthContours({engine, fetchFn, page: () => location.href, palette: () => readPalette(n => n), now: () => clock.now});
+  const layer = createDepthContours({engine, fetchFn, page: () => location.href, palette: () => readPalette(n => (/^map-.*-(?:opacity|width)$/.test(n) ? '1' : n)), now: () => clock.now});
   t.after(() => { layer.destroy(); camera.value = null; publishedChartFiles.value = null; });
   /** Move the camera a little at `seconds` after the first read. */
   const move = (seconds, zoom = camera.value.zoom) => {

@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
-import {readFileSync, writeFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync} from 'node:fs';
+import {readFileSync, writeFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -46,8 +46,8 @@ test('required contrast CI adopts pinned surface proof and keeps every failure g
   assert.deepEqual(bridged.failures, []);
   assert.equal(bridged.rows.length, 2 * PAIRS_BRIDGE.length);
   opaquePairs += bridged.rows.length;
-  // 2 × (17 web/tokens.css text + 2 non-text + 20 bridge) pairs; FE-61 Accept 2 retired v1 dist/tokens.css (2 × 19).
-  assert.equal(opaquePairs, 78);
+  // 2 × (17 web/tokens.css text + 2 map text + 2 non-text + 20 bridge) pairs; FE-61 Accept 2 retired v1 dist/tokens.css; MGL-15 adds two map-only text pairs.
+  assert.equal(opaquePairs, 82);
   assert.ok(checkBridge(bridge.replace('--coast-text: var(--text);', '--coast-text: var(--panel);'), tokens).failures.length > 0);
 
   // Run the real approved explicit CLI, without importing/rerunning its math suite.
@@ -68,6 +68,8 @@ test('required contrast CI adopts pinned surface proof and keeps every failure g
       mkdirSync(dirname(join(scratch, path)), {recursive: true});
       writeFileSync(join(scratch, path), read(path));
     }
+    // The additive CVD gate reads the actual renderer, not a fixture alpha.
+    symlinkSync(join(ROOT, 'web/map'), join(scratch, 'web/map'), 'dir');
     // Current source files alone never make the generic unresolved CLI pass.
     const unresolved = cli(scratch, []);
     assert.equal(unresolved.status, 1);

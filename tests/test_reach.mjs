@@ -105,7 +105,7 @@ test('the Chart ring: a dashed line and one label, drawn only with a harbor and 
   assert.deepEqual(fc.features.map(f => [f.geometry.type, f.properties.kind]), [['LineString', 'ring'], ['Point', 'label']]);
   assert.equal(fc.features[1].properties.label, `12 nm from ${HARBOR.name} · straight line, not a route`);
   assert.equal(reachLabel(2.5, 'Morro Bay'), '2.5 nm from Morro Bay · straight line, not a route');
-  const sentinel = readPalette(name => `token(${name})`);
+  const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
   const o = reachOverlay(sentinel, fc);
   assert.deepEqual(Object.keys(o.sources), [REACH_SOURCE]);
   assert.deepEqual(o.layers.map(l => l.id), [REACH_LINE, REACH_LABEL]);

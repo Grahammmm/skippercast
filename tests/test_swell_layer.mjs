@@ -39,7 +39,7 @@ const PAGE = 'https://s.test/map', TZ = 'America/Los_Angeles', HOUR = 3_600_000;
 const NOW = new Date('2026-10-09T18:00:00Z'), ISSUED = Date.parse('2026-10-09T06:00:00Z');
 const AT = new Date('2026-10-09T20:00:00Z'), AT_PARAM = '2026-10-09T20:00Z';
 const LATS = [35.05, 35.3, 35.55], LONS = [-121.75, -121.5, -121.25];
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const times = Array.from({length: 48}, (_, k) => ISSUED / 1000 + k * 3600);
 const kOf = at => (at - ISSUED) / HOUR;
 
