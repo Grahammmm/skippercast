@@ -104,7 +104,7 @@ test('without a regional forecast the wind and swell tiles read "—" and unavai
   const html = render(h(Tiles, {tiles: brief.tiles}));
   assert.equal((html.match(/<span class="ui-reading">—<\/span>/g) || []).length, 2);
   assert.equal((html.match(/· unavailable/g) || []).length, 2);
-  assert.match(html, /Reference level: MLLW\./, 'the tide basis names the reference level');
+  assert.match(html, /Heights are above MLLW \(mean lower low water, the chart's zero\)\./, 'the tide basis explains MLLW');
 });
 
 test('the column renders the model: verdict and limit first, Details with readings, deck and caveat, lower-exposure line, local-report line', async () => {

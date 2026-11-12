@@ -38,9 +38,9 @@ test('the failed boundary reads the chosen language; English is unchanged', () =
 
 test('popover default summary and source link follow the language; caller summary, empty summary, sources=false and custom URL are untouched', () => {
   const pop = props => m.render(m.h(m.Popover, props, 'Body'));
-  assert.ok(withLang('en', () => pop({})).includes('>basis</summary>') && withLang('en', () => pop({})).includes('<a href="/sources">How it’s built</a>'));
+  assert.ok(withLang('en', () => pop({})).includes('>Source</summary>') && withLang('en', () => pop({})).includes('<a href="/sources">How it’s built</a>'));
   const es = withLang('es', () => pop({}));
-  assert.ok(es.includes('>base</summary>') && es.includes('<a href="/sources">Cómo se hizo</a>'));
+  assert.ok(es.includes('>Fuente</summary>') && es.includes('<a href="/sources">Cómo se hizo</a>'));
   assert.ok(withLang('es', () => pop({summary: 'Swell basis', iconOnly: true})).includes('aria-label="Swell basis"'));
   assert.ok(withLang('es', () => pop({summary: ''})).includes('></summary>'));
   assert.ok(!withLang('es', () => pop({sources: false})).includes('ui-popover-sources'));
