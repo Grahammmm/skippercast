@@ -228,7 +228,12 @@ def _excel_date(text: str) -> str | None:
         serial = float(text)
     except ValueError:
         match = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})", text)
-        return f"{match.group(3)}-{int(match.group(1)):02d}-{int(match.group(2)):02d}" if match else None
+        if not match:
+            return None
+        try:
+            return date(int(match.group(3)), int(match.group(1)), int(match.group(2))).isoformat()
+        except ValueError:
+            return None  # impossible calendar date: unavailable, never a fabricated one
     return (date(1899, 12, 30) + timedelta(days=int(serial))).isoformat() if 1 < serial < 100000 else None
 
 

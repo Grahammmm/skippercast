@@ -223,9 +223,11 @@ def _verify_with_observation(root, manifest, *, now, minimum_valid_until=None):
         raise ValueError('native facts changed or forged')
     import rasterio
     import numpy as np
+    from rasterio.enums import MaskFlags
     with rasterio.open(validate_derived_geotiff(root, document['valid_support'], contract='coastal-native-support-v2')) as mask:
         if (mask.count != 1 or mask.dtypes != ('uint8',) or mask.crs != crs
                 or mask.transform != transform or mask.shape != valid.shape
+                or mask.nodatavals != (None,) or mask.mask_flag_enums != ([MaskFlags.all_valid],)
                 or not np.array_equal(mask.read(1), valid.astype('uint8'))):
             raise ValueError('native support artifact differs from source cells')
     rights = document.get('rights', {})

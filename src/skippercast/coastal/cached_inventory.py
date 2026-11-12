@@ -440,8 +440,12 @@ def produce(root,plan,output,*,now,horizon,plan_descriptor=None):
 def resource_inventory(retained_root,scratch_root):
     """Conservative regular-file accounting; never follows fixture aliases."""
     values={}
-    for role,root,cap in (("retained",Path(retained_root),524288),("scratch",Path(scratch_root),268435456)):
-        if root.is_symlink():raise ValueError("resource root alias")
+    roots=(("retained",Path(retained_root),524288),("scratch",Path(scratch_root),268435456))
+    # Lexical root and every ancestor are checked before any scan or receipt write.
+    for _,root,_ in roots:
+        absolute=root.absolute()
+        if any(item.is_symlink() for item in (absolute,*absolute.parents)):raise ValueError("resource root alias")
+    for role,root,cap in roots:
         total=files=links=0
         if root.exists():
             for folder,dirs,names in os.walk(root,followlinks=False):

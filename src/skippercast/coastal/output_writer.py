@@ -585,6 +585,10 @@ class ManagedOutputs:
         with self.lock():
             state,registered,ancestors=self._read_disjoint();seen=self._observe()
             entry,saved=self._reserve_locked(state,seen,name,registered=registered,ancestors=ancestors,role=role,max_bytes=max_bytes,intent=intent)
+            # A registered complete checkpoint must still have its bytes, and an
+            # uncertain one is a hold: neither may be recreated as a fresh write.
+            if entry['state']=='uncertain' or (entry['state']=='complete' and not self._target(name).exists()):
+                raise ValueError('checkpoint prior state changed or uncertain')
             # Same order as two reserve_file() calls: the checkpoint is reserved
             # (and saved) before the temporary's arguments are checked. Walk
             # again only if that reservation saved the ledger.

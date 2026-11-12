@@ -205,6 +205,11 @@ def _verify(root,receipt,expected,items):
                            and np.array_equal(actual.compressed(),values[item['valid']].astype('float32'))
                            and ds.units==('m',) and ds.scales==(1.0,) and ds.offsets==(0.0,))
                 if not valid:raise ValueError('completed raster values/support changed')
+                if role=='uncertainty':
+                    tags=ds.tags()
+                    if (ds.descriptions!=('producer_uncertainty_m',) or tags.get('uncertainty_kind')!='producer_uncertainty_m'
+                            or tags.get('publication_prohibited')!='true'):
+                        raise ValueError('completed uncertainty physical semantics changed')
                 if role=='terrain':
                     tags=ds.tags()
                     if (ds.descriptions!=('depth_m_positive_down',) or tags.get('publication_prohibited')!='true'
