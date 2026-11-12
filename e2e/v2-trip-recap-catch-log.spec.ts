@@ -75,7 +75,7 @@ test('catch_log_is_read_once_for_signed_in_recap', async ({page, pageErrors, v2,
   await expect(saved).not.toContainText('Reading your catch log');
 
   // Existing mutations refresh trips and comfort but never the log.
-  await dialog.getByRole('button', {name: /^Delete the trip on 2020-03-01 /}).click();
+  await dialog.getByRole('button', {name: /^Delete the trip on Sun 1 Mar /}).click();
   await expect(saved.locator('article')).toHaveCount(2);
   await dialog.getByText('How did your boat feel today?').click();
   await dialog.getByRole('button', {name: 'Save private feedback'}).click();
@@ -143,7 +143,7 @@ for (const [name, fulfil, incomplete] of [
     expect((await saved.innerText()).split(NOT_READ).length - 1).toBe(incomplete ? 1 : 0);
     // Nothing is claimed about an empty history, and no private field is drawn.
     await expect(saved).not.toContainText(/Your catch log|Fish ·|Blank|Not sure|no catches|nothing logged|LOGNOTE|OWNER|lingcod/i);
-    await expect(dialog.getByRole('button', {name: /^Delete the trip on 2020-03-02 /})).toHaveCount(2);
+    await expect(dialog.getByRole('button', {name: /^Delete the trip on Mon 2 Mar /})).toHaveCount(2);
     expect(pageErrors).toEqual([]);
   });
 }

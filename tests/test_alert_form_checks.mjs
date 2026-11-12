@@ -192,7 +192,7 @@ test('reuse_note_replaces_initial_provenance: the limits come from the saved tri
   assert.equal(reuseLimitsNote('2026-10-24', 'some', true), "Some limits start from your saved trip on 2026-10-24; other limits were left unchanged. Alerts use your current boat settings, not the old trip's boat.");
   for (const note of [reuseLimitsNote('2026-10-24', 'all', true), reuseLimitsNote('2026-10-24', 'some', false)]) assert.doesNotMatch(note, /saved boat|reference 23 ft|Boat limits|your .* limits;/);
   const src = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
-  assert.match(src, /reuse && reuse\.copied !== 'none' \? reuseLimitsNote\(reuse\.date, reuse\.copied, p === 'boat', lang\) : p !== 'boat'/, 'the initial notes remain the fallback');
+  assert.match(src, /reuse && reuse\.copied !== 'none' \? reuseLimitsNote\(readableDate\(reuse\.date, lang, region\.timezone\), reuse\.copied, p === 'boat', lang\) : p !== 'boat'/, 'the initial notes remain the fallback');
 });
 
 test('reuse_sends_nothing_until_explicit_save: filling the form makes no request and Use again has no network or storage path', async () => {
