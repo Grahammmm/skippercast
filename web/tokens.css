@@ -103,15 +103,15 @@
   /* Typography */
   --font-sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --text-11: 11px;
-  --text-13: 13px;
-  --text-15: 15px;
-  --text-input: 16px;
-  --text-18: 18px;
-  --text-22: 22px;
-  --text-28: 28px;
-  --text-40: 40px;
-  --text-56: 56px;
+  --text-11: 0.6875rem;
+  --text-13: 0.8125rem;
+  --text-15: 0.9375rem;
+  --text-input: 1rem;
+  --text-18: 1.125rem;
+  --text-22: 1.375rem;
+  --text-28: 1.75rem;
+  --text-40: 2.5rem;
+  --text-56: 3.5rem;
   --leading-heading: 1.25;
   --leading-body: 1.5;
   --weight-regular: 400;
