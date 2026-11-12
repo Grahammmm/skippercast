@@ -14,7 +14,7 @@ import {PROFILE_TABLE, RAIL_IDS} from '../web/profile.ts';
 const HOUR = 3_600_000, REGION = 'test-coast', PAGE = 'https://s.test/map';
 const NOW = new Date('2026-10-16T12:00:00Z');
 const ago = hours => new Date(NOW.getTime() - hours * HOUR).toISOString();
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 
 const front = (observedAt, id = 'f1') => ({id, observed_at: observedAt, strength_c_per_km: 0.2, uncertainty_c: 0.3, band_half_width_km: 1.5,
   geometry: {type: 'LineString', coordinates: [[-121.0, 35.0], [-120.9, 35.1], [-120.8, 35.2]]}});

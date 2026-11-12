@@ -11,7 +11,7 @@ import {configureStore, setParams, syncFromURL} from '../web/state.ts';
 
 const HOUR = 3_600_000, NOW = new Date('2026-10-20T12:00:00Z'), ID = 'chlorophyll-observation';
 const PAGE = 'https://example.test/map', BASE = 'https://example.test/feeds/conditions/regions/test-coast/';
-const palette = () => readPalette(name => `token(${name})`);
+const palette = () => readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 function fixture({age = 24, maxAge = 96, status = 'ok'} = {}) {
   const time = (NOW.getTime() - age * HOUR) / 1000, sample = new Date(time * 1000).toISOString();
   const fields = ['latitude', 'longitude', 'chlorophyll_mg_m3'], resolution = [.0375, .0375], bounds = [-121.5, 35, -121, 35.5];

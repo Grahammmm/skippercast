@@ -7,6 +7,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
+import {isDeepStrictEqual} from 'node:util';
 import {build} from 'esbuild';
 import {assessScreen} from '../web/map/habitat.ts';
 import {ranking} from '../web/ranking.ts';
@@ -45,6 +46,67 @@ test('otherwise identical copies choose the same canonical source link when feed
   assert.deepEqual(reasonsFor('A', [b, a], NOW), got);
   assert.equal(got.length, 1);
   assert.equal(got[0].sourceURL, 'https://example.test/a');
+});
+
+const COMPOSED = '\u00e9', DECOMPOSED = 'e\u0301';
+const orders = list => list.length <= 1 ? [list] : list.flatMap((x, i) => orders([...list.slice(0, i), ...list.slice(i + 1)]).map(rest => [x, ...rest]));
+const same = (a, b, msg) => assert.ok(isDeepStrictEqual(a, b), msg);
+
+test('collating_equal_reason_text_is_permutation_stable', () => {
+  assert.equal(COMPOSED.localeCompare(DECOMPOSED), 0, 'precondition: the two spellings collate equal');
+  const a = rec({id: 'r1', text: COMPOSED}), b = rec({id: 'r1', text: DECOMPOSED});
+  const got = reasonsFor('A', [a, b], NOW);
+  same(reasonsFor('A', [b, a], NOW), got, 'reversing the feeds gives the same complete reason');
+  assert.equal(got.length, 1);
+  assert.equal(got[0].text, DECOMPOSED, 'raw code-unit order picks e + U+0301; nothing is normalised');
+});
+
+test('collating_equal_source_is_permutation_stable', () => {
+  const a = rec({id: 'r1', source: COMPOSED, sourceURL: 'https://example.test/a'}), b = rec({id: 'r1', source: DECOMPOSED, sourceURL: 'https://example.test/a'});
+  const got = reasonsFor('A', [a, b], NOW);
+  same(reasonsFor('A', [b, a], NOW), got, 'reversing the feeds gives the same complete reason');
+  assert.equal(got[0].source, DECOMPOSED);
+  assert.equal(got[0].text, 'Reported lingcod nearby.');
+});
+
+test('kind_collision_obeys_field_precedence', () => {
+  const a = rec({id: 'r1', kind: COMPOSED, source: 'A source', text: 'a'}), b = rec({id: 'r1', kind: DECOMPOSED, source: 'Z source', text: 'z'});
+  const got = reasonsFor('A', [a, b], NOW);
+  same(reasonsFor('A', [b, a], NOW), got);
+  assert.equal(got.length, 1);
+  assert.equal(got[0].source, 'Z source', 'the raw kind order decides before source, text or link');
+});
+
+test('all_permutations_keep_cap_and_identity', () => {
+  const set = [rec({id: 'u', text: COMPOSED, date: '2026-10-30'}), rec({id: 'u', text: DECOMPOSED, date: '2026-10-30'}),
+    rec({id: 'k1', kind: 'survey', date: '2026-10-29', text: 'S', source: 'S1'}), rec({id: 'k2', kind: 'screen', date: '2026-10-28', text: 'C', source: 'S2'}),
+    rec({id: 'k3', kind: 'tide', date: '2026-10-27', text: 'T', source: 'S3'})];
+  const want = reasonsFor('A', set, NOW);
+  assert.equal(want.length, 3);
+  assert.equal(want.filter(r => r.text === COMPOSED || r.text === DECOMPOSED).length, 1, 'one syndicated id');
+  assert.deepEqual(want.map(r => r.date), ['2026-10-30', '2026-10-29', '2026-10-28'], 'newest first');
+  for (const order of orders(set)) same(reasonsFor('A', order, NOW), want, 'every feed order gives identical output');
+});
+
+test('ordinary_collation_and_link_priority_preserved', () => {
+  const lo = rec({id: 'r1', source: 'apple', text: 'x'}), hi = rec({id: 'r1', source: 'Banana', text: 'x'});
+  assert.equal(reasonsFor('A', [hi, lo], NOW)[0].source, 'apple', 'locale order still decides unequal strings');
+  assert.equal(reasonsFor('A', [lo, hi], NOW)[0].source, 'apple');
+  const linked = rec({id: 'r2', source: 'Z', sourceURL: 'https://example.test/z'}), bare = rec({id: 'r2', source: 'A'});
+  assert.equal(reasonsFor('A', [bare, linked], NOW)[0].sourceURL, 'https://example.test/z', 'linked beats unlinked');
+  const u1 = rec({id: 'r3', sourceURL: 'https://example.test/b'}), u2 = rec({id: 'r3', sourceURL: 'https://example.test/a'});
+  assert.equal(reasonsFor('A', [u1, u2], NOW)[0].sourceURL, 'https://example.test/a');
+  assert.equal(reasonsFor('A', [u2, u1], NOW)[0].sourceURL, 'https://example.test/a');
+});
+
+test('published_bytes_and_metadata_preserved', () => {
+  const got = reasonsFor('A', [rec({id: 'r1', text: DECOMPOSED, source: COMPOSED}), rec({id: 'r2', kind: 'survey', text: COMPOSED, source: DECOMPOSED})], NOW);
+  assert.equal(got.length, 2);
+  assert.ok(got.some(r => r.text === DECOMPOSED && r.source === COMPOSED) && got.some(r => r.text === COMPOSED && r.source === DECOMPOSED), 'display strings are not normalised');
+  const generated = reasonsFor('A', targetEvidence({id: 'A', survey_year: 2008, source_name: DECOMPOSED}), NOW);
+  assert.equal(generated[0].copy?.key, 'survey', 'generated survey descriptor kept');
+  assert.equal(generated[0].source, DECOMPOSED);
+  assert.equal(reasonsFor('A', [rec({text: '<b>x</b>'})], NOW)[0].text, '<b>x</b>', 'markup stays raw for the view to escape');
 });
 
 test('four or more eligible reasons give exactly three, newest first, one per kind, the same whatever the input order', () => {

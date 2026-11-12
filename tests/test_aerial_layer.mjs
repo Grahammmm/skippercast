@@ -241,7 +241,7 @@ function library() {
 test('in the Chart style the base waits for style.load, then sits over the basemap and under the ENC chart', t => {
   t.mock.method(console, 'error', () => {});
   const fake = library(), errors = [];
-  const style = chartStyle({palette: readPalette(name => `token(${name})`), archive: 'https://s.test/feeds/tiles/basemap/x.pmtiles', page: PAGE, region: 'morro-bay', base: 'aerial'});
+  const style = chartStyle({palette: readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), archive: 'https://s.test/feeds/tiles/basemap/x.pmtiles', page: PAGE, region: 'morro-bay', base: 'aerial'});
   const eng = createEngine(fake.module, {host: {}, style, camera: {latitude: 35.37, longitude: -120.86, zoom: 12}, onMove() {},
     onLayerError: (layer, error) => errors.push([layer, error.message])});
   const [map] = fake.maps, id = aerialId(MORRO);
@@ -261,7 +261,7 @@ test('in the Chart style the base waits for style.load, then sits over the basem
 test('the png32 fallback replaces the jpgpng source, so a late error from the retired source is not Aerial\'s', t => {
   const logged = t.mock.method(console, 'error', () => {});
   const fake = library(), errors = [];
-  const style = chartStyle({palette: readPalette(name => `token(${name})`), archive: 'https://s.test/feeds/tiles/basemap/x.pmtiles', page: PAGE, region: 'morro-bay', base: 'aerial'});
+  const style = chartStyle({palette: readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), archive: 'https://s.test/feeds/tiles/basemap/x.pmtiles', page: PAGE, region: 'morro-bay', base: 'aerial'});
   const eng = createEngine(fake.module, {host: {}, style, camera: {latitude: 35.37, longitude: -120.86, zoom: 12}, onMove() {},
     onLayerError: (layer, error) => errors.push([layer, error.message])});
   const [map] = fake.maps;

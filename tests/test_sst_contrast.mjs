@@ -37,7 +37,7 @@ const FIELDS = ['latitude', 'longitude', 'temperature_c', 'analysis_error_c', 't
 const BASE = `${PAGE.replace('/map', '')}/feeds/conditions/regions/${REGION}/`;
 const STEP = 0.05, ERROR = 0.3;
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const lat = j => +(35.025 + j * STEP).toFixed(3), lon = i => +(-120.975 + i * STEP).toFixed(3);
 
 /**
