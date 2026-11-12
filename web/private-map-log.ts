@@ -21,7 +21,7 @@ const positionOK = (p: Position | undefined): p is Position => !!p && Number.isF
 
 /** Capture time, not the time dock's selected forecast hour. Existing age/unit gates keep stale data as gaps. */
 export function createEntry(mark: LogMark, kind: MapLogEntry['kind'], region: string, forecast: ConditionsForecast | null, now: number, tz: string): MapLogEntry | null {
-  if (mark.withheld || !positionOK(mark.position) || !region || !Number.isFinite(now)) return null;
+  if (mark.withheld || !positionOK(mark.position) || !region || !clockOK(now)) return null;
   const f = markForecast(forecast, region, {lat: mark.position.latitude, lon: mark.position.longitude}, now, now, tz);
   const retrieved = (forecast?.feed as {retrieved?: unknown} | undefined)?.retrieved;
   return {kind, name: mark.name, region, position: {...mark.position}, positionBasis: 'Selected map position; not live GPS', recordedAt: new Date(now).toISOString(),

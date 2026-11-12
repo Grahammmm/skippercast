@@ -234,6 +234,10 @@ def compile_readiness(root=REPO):
         held_files = lead['held_substrate_overlap_screen_bboxes']
         variable_files = variable_by_id[ident]['source_files_with_eligible_cells']
         regular_files = regular_by_id[ident]['source_files_with_eligible_cells']
+        regular_file_rows = [row for row in regular_depth['files'] if row.get('status') == 'ok'
+                             and row.get('sectors', {}).get(ident, {}).get('depth_uncertainty_eligible_cells', 0) > 0]
+        if len(regular_file_rows) != regular_files:
+            raise ValueError('Regular-depth sector file count does not match source rows')
         variable_file_rows = [row for row in variable_depth['files']
                               if row.get('sectors', {}).get(ident, {}).get('depth_uncertainty_eligible_cells', 0) > 0]
         if len(variable_file_rows) != variable_files:
