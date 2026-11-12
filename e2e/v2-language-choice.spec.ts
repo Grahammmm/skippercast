@@ -16,7 +16,7 @@ test.beforeEach(async ({page}) => {
 
 /** The account button: in the masthead, or (phone) in the sheet's footer with the sheet lifted to full. */
 async function openMenu(page: Page, isMobile: boolean) {
-  const trigger = page.locator('.app-account:not([data-top]) .app-account-trigger');
+  const trigger = page.locator('.app-account-trigger');
   if (isMobile) {
     await page.locator('.ui-sheet-handle').focus();
     await page.keyboard.press('End');
@@ -25,7 +25,7 @@ async function openMenu(page: Page, isMobile: boolean) {
   }
   await trigger.click();
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
-  const panel = page.locator('.app-account:not([data-top]) .app-account-panel');
+  const panel = page.locator('.app-account-panel');
   return {trigger, panel, english: panel.getByRole('button', {name: 'English'}), spanish: panel.getByRole('button', {name: 'Español'})};
 }
 const htmlLang = (page: Page) => page.evaluate(() => document.documentElement.lang);

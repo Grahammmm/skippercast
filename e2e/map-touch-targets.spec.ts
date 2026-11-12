@@ -71,10 +71,10 @@ async function fullSheet(page: Page, isMobile: boolean) {
 /** Arm waypoint placing from the trip planner, as a visitor does (e2e/v2-trip.spec.ts). */
 async function armPlacing(page: Page, isMobile: boolean, lang: Lang) {
   await fullSheet(page, isMobile);
-  const trigger = page.locator('.app-account:not([data-top]) .app-account-trigger');
+  const trigger = page.locator('.app-account-trigger');
   await trigger.scrollIntoViewIfNeeded();
   await trigger.click();
-  await page.locator('.app-account:not([data-top]) .app-account-panel').getByRole('button', {name: new RegExp(`^${WORDS[lang].plan}`)}).click();
+  await page.locator('.app-account-panel').getByRole('button', {name: new RegExp(`^${WORDS[lang].plan}`)}).click();
   await expect(page.getByRole('dialog', {name: WORDS[lang].plan})).toBeVisible();
   await page.locator('#waypoint-place').click();
   await expect(page.getByRole('dialog', {name: WORDS[lang].plan})).toBeHidden();

@@ -98,10 +98,10 @@ test('caption_live_switch_and_visibility: real pickers and en–es–en keep cha
   for (const lang of ['es', 'en']) {
     // On phones the account menu belongs to the Brief footer, not the History sheet.
     if (isMobile) await page.locator('.app-tabs [data-view="coast"]').click();
-    const trigger = page.locator('.app-account:not([data-top]) .app-account-trigger');
+    const trigger = page.locator('.app-account-trigger');
     await trigger.scrollIntoViewIfNeeded();
     await trigger.click();
-    await page.locator('.app-account:not([data-top]) .app-account-panel').getByRole('button', {name: lang === 'es' ? 'Español' : 'English', exact: true}).click();
+    await page.locator('.app-account-panel').getByRole('button', {name: lang === 'es' ? 'Español' : 'English', exact: true}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', lang);
     await trigger.click();
     if (isMobile) await page.goBack();

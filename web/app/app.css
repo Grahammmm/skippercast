@@ -318,6 +318,11 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-top-card .app-location { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .app-top-card .app-location-coords { display: none; }
 .app-top .ui-icon-button { flex: none; box-shadow: var(--elev-2); }
+/* UXFIX-10: the phone's top-card account entry (data-top) is the icon-sized trigger of RF2345-7 at every width; its panel opens above the sheet. */
+.app-account[data-top] > .app-account-top-trigger { box-sizing: border-box; flex: none; gap: 0; padding-inline: 0; min-inline-size: calc(var(--touch-min) + 0.5px); min-block-size: calc(var(--touch-min) + 0.5px); box-shadow: var(--elev-2); }
+.app-account[data-top] > .app-account-top-trigger[aria-expanded="true"] { color: var(--text); background: var(--panel-2); }
+.app-account[data-top] > .app-account-top-trigger > .app-account-label { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.app-top:has(.app-account[data-top] .app-account-panel:not([hidden])) { z-index: var(--z-modal); }
 .app-profile { display: flex; box-shadow: var(--elev-2); }
 .app-profile .ui-chip { flex: 1; min-width: 0; padding: var(--space-1) var(--space-2); }
 

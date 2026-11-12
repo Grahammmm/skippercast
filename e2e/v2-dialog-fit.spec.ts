@@ -30,8 +30,8 @@ async function fits(dialog: Locator, actions?: Locator) {
 async function account(page: Page, name: RegExp | string) {
   await page.locator('.ui-sheet-handle').focus();
   await page.keyboard.press('End');
-  await page.locator('.app-account:not([data-top]) .app-account-trigger').click();
-  await page.locator('.app-account:not([data-top]) .app-account-panel').getByRole('button', {name}).click();
+  await page.locator('.app-account-trigger').click();
+  await page.locator('.app-account-panel').getByRole('button', {name}).click();
 }
 
 async function scrollChecks(dialog: Locator, actions: Locator, last: Locator) {

@@ -44,7 +44,7 @@ function LazyAlerts({regionId}: {regionId: string}) {
   return View ? <View.c regionId={regionId} target={species.peek()} /> : <p role="status">{t(failed ? 'accountMenu.alertsError' : 'accountMenu.alertsLoading', lang)}</p>;
 }
 
-/** `inline`: the panel opens in the flow (the mobile sheet's footer) instead of under the button. `top`: the phone's top-card entry (UXFIX-10), the icon-sized trigger of RF2345-7 at every width; its panel exists only while open, so the page never holds two menus' regions. */
+/** `inline`: the panel opens in the flow (the mobile sheet's footer) instead of under the button. `top`: the phone's top-card entry (UXFIX-10), the icon-sized trigger of RF2345-7 at every width, under its own class (`app-account-top-trigger`) so the page still holds one `.app-account-trigger`; its panel exists only while open, so the page never holds two menus' regions. */
 export function AccountMenu({inline = false, top = false}: {inline?: boolean; top?: boolean} = {}) {
   const [open, setOpen] = useState(false);
   const [alerts, setAlerts] = useState(false);
@@ -95,7 +95,7 @@ export function AccountMenu({inline = false, top = false}: {inline?: boolean; to
 
   return (
     <div class="app-account" ref={root} data-inline={inline ? 'true' : undefined} data-top={top ? 'true' : undefined} onKeyDown={onDismissKey}>
-      <button ref={trigger} type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded={open} aria-controls={id} title={accountLabel(s, lang)}
+      <button ref={trigger} type="button" class={top ? 'ui-button ui-button--quiet app-account-top-trigger' : 'ui-button ui-button--quiet app-account-trigger'} aria-expanded={open} aria-controls={id} title={accountLabel(s, lang)}
         onClick={() => setOpen(!open)}><Icon name="user" size={18} /><span class="app-account-label">{accountLabel(s, lang)}</span></button>
       {top && !open ? null : <div id={id} ref={panel} class="app-account-panel" hidden={!open} onKeyDown={onKeyDown} aria-label={t('accountMenu.aria', lang)} role="group">
         <section aria-labelledby={`${id}-account`}>
