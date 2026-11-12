@@ -273,13 +273,18 @@ def seam_problem(k, a, b, line_a, line_b, served):
 
 
 def _number(v):
-    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+    if not isinstance(v, (int, float)) or isinstance(v, bool):
+        return False
+    try:
+        return math.isfinite(v)
+    except OverflowError:  # an integer too large for a float is not a usable number
+        return False
 
 
 def _acc(value):
     try:
         acc = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None
     return acc if math.isfinite(acc) and acc >= 0 else None
 
