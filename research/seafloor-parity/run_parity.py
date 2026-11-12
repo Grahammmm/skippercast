@@ -189,11 +189,16 @@ def _confined(arg, root_abs, root_real, name):
 
 def admit(args, parent):
     plan = Plan()
-    parent = Path(parent)
-    root_abs = Path(os.path.abspath(parent / args.row_id))
-    if not root_abs.is_dir():
-        raise Preflight(f'row root {root_abs} does not exist')
-    root_real = Path(os.path.realpath(root_abs))
+    # The fixed private parent is the only trust anchor. The row root must be a real directory directly
+    # under it: a symlinked row root is never adopted as the confinement root.
+    parent_abs = Path(os.path.abspath(parent))
+    parent_real = Path(os.path.realpath(parent_abs))
+    root_abs = parent_abs / args.row_id
+    root_real = parent_real / args.row_id
+    if os.path.islink(root_abs) or not root_abs.is_dir():
+        raise Preflight(f'row root {root_abs} does not exist or is a symlink')
+    if Path(os.path.realpath(root_abs)) != root_real:
+        raise Preflight('row root does not resolve directly under the fixed private-runs parent')
     plan.row_id, plan.root = args.row_id, root_real
     plan.checkout = _confined(args.checkout, root_abs, root_real, '--checkout')
     plan.baseline_dir = _confined(args.baseline_dir, root_abs, root_real, '--baseline-dir')
@@ -350,9 +355,13 @@ def evaluate(plan, reach_id, stdout):
     stdout_values = six_fields(summary, 'stdout summary')
     folders = [plan.checkout / 'var/seafloor/reaches' / reach_id, plan.checkout / 'var/seafloor/private-reaches' / reach_id]
     present = [f for f in folders if (f / 'run.json').is_file()]
-    folder = max(present, key=lambda f: (f / 'run.json').stat().st_mtime_ns) if present else None
-    if folder is None:
+    if len(present) > 1:
+        # Hash-verified reuse does not rewrite a receipt, so mtime cannot say which one this run used.
+        raise Evidence('receipt-ambiguous', 'both a public and a private run receipt exist for the reach; '
+                       'cannot tell which this run used (remove the stale one in the disposable checkout)')
+    if not present:
         raise Evidence('receipt-missing', 'no run receipt for the reach')
+    folder = present[0]
     receipt_path = folder / 'run.json'
     receipt = read_json(receipt_path)
     rsum = receipt.get('ledger_summary') if isinstance(receipt, dict) else None
