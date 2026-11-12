@@ -7,6 +7,7 @@ outside its region, names an unknown forecast point, or repeats an id.
 """
 import math
 
+from .. import validate
 from .contracts import atomic_json, read_json
 
 EARTH_NM = 3440.065
@@ -91,6 +92,8 @@ def compile_launch_points(root, regions):
             "launch_points": points,
         }
         documents[region["id"]] = document
+    for document in documents.values():  # schema-check every document before the first write
+        validate.check("launch-points", document)
     outputs = {}
     for region_id, document in documents.items():
         outputs[region_id] = atomic_json(root / "dist/regions" / region_id / "launch-points.json", document, kind="launch-points")
