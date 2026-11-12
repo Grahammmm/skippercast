@@ -140,7 +140,7 @@ test('with the language es the first answer, the brief and its footer render Spa
     assert.match(esAnswer, />Reglas oficiales</); assert.doesNotMatch(esAnswer, /Official rules|Go to map|Ver el mapa|Rules reviewed/);
     assert.match(esBrief, /<span class="app-verdict-word">(?:Cómodo|Marginal|Agitado|Desconocido)<\/span>/); assert.match(esBrief, /mañana/);
     assert.doesNotMatch(esBrief, /Comfortable|Rough|tomorrow/);
-    assert.match(esBrief, /<span lang="en">/, 'the rules reason is the registry\'s English and is marked'); assert.match(esBrief, /\(en inglés\)/);
+    assert.match(esBrief, /Fuera de la temporada local revisada\./, 'the rules reason is app wording, in Spanish'); assert.doesNotMatch(esBrief, /Outside the reviewed local season|\(en inglés\)/);
     assert.doesNotMatch(enBrief, /lang="en"|en inglés/);
     assert.ok(footer.includes(t('brief.disclaimer', 'es')) && footer.includes('>Términos<') && footer.includes('>Fuentes<'), footer);
     assert.match(m.render(m.h(m.BriefTiles, {brief: null})), /Viento.*Oleaje.*Agua.*Marea/s);

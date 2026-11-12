@@ -154,3 +154,20 @@ test('language_choice_keyboard: Enter and Space choose, the arrows and Escape wo
   await expect(trigger).toBeFocused();
   expect(pageErrors).toEqual([]);
 });
+
+test('es_no_english_leftovers: on ?lang=es no visible text is TODAY, TODAY\'S BRIEF or Halibut, and "Costa" names one button', async ({page, pageErrors, v2}) => {
+  await v2.open('app', {region: 'morro-bay', lang: 'es'});
+  await expect(page.getByText(PLANNING.es).first()).toBeAttached();
+  const texts = await page.evaluate(() => {
+    const out: string[] = [], walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      const el = n.parentElement, s = (n.textContent ?? '').trim();
+      if (s && el && el.checkVisibility()) out.push(s);
+    }
+    return out;
+  });
+  for (const word of ['TODAY', "TODAY'S BRIEF", 'Halibut']) expect(texts.filter(s => s === word), word).toEqual([]);
+  const costa = await page.getByRole('button', {name: 'Costa', exact: true}).evaluateAll(els => els.filter(e => e.checkVisibility()).length);
+  expect(costa, 'visible buttons named Costa').toBeLessThanOrEqual(1);
+  expect(pageErrors).toEqual([]);
+});

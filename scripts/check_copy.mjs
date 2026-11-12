@@ -269,7 +269,7 @@ export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/F
   'web/app/TripAlerts.tsx', 'web/alerts.ts', 'web/digest.ts', 'web/app/PortAlert.tsx',
   'web/app/views/Reports.tsx', 'web/reports.ts', 'web/reports-copy.ts', 'web/app/views/Fleet.tsx',
   'dist/account.js', 'web/account-copy.ts', 'web/app/PrivateMapLog.tsx',
-  'web/app/PlanRules.tsx', 'web/landing/LayerDots.tsx'];
+  'web/app/PlanRules.tsx', 'web/app/RuleReason.tsx', 'web/landing/LayerDots.tsx'];
 /** Prose-like literals in covered files that are data or code, not copy: a species group name (not translated) and a prefix the model writes. */
 // dist/account.js: the GPX file's title (file data) and a developer message for an incomplete catch-log answer, never shown.
 export const LITERAL_OK = new Set(['Lingcod & rockfish', 'Using your limits', 'SkipperCast saved spots', 'The catch log answer was incomplete', 'unknown account string']);
