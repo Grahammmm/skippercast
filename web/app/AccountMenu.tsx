@@ -44,8 +44,8 @@ function LazyAlerts({regionId}: {regionId: string}) {
   return View ? <View.c regionId={regionId} target={species.peek()} /> : <p role="status">{t(failed ? 'accountMenu.alertsError' : 'accountMenu.alertsLoading', lang)}</p>;
 }
 
-/** `inline`: the panel opens in the flow (the mobile sheet's footer) instead of under the button. */
-export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
+/** `inline`: the panel opens in the flow (the mobile sheet's footer) instead of under the button. `top`: the phone's top-card entry (UXFIX-10), the icon-sized trigger of RF2345-7 at every width. */
+export function AccountMenu({inline = false, top = false}: {inline?: boolean; top?: boolean} = {}) {
   const [open, setOpen] = useState(false);
   const [alerts, setAlerts] = useState(false);
   const [tour, setTour] = useState<TourState>(null);
@@ -94,7 +94,7 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
   };
 
   return (
-    <div class="app-account" ref={root} data-inline={inline ? 'true' : undefined} onKeyDown={onDismissKey}>
+    <div class="app-account" ref={root} data-inline={inline ? 'true' : undefined} data-top={top ? 'true' : undefined} onKeyDown={onDismissKey}>
       <button ref={trigger} type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded={open} aria-controls={id} title={accountLabel(s, lang)}
         onClick={() => setOpen(!open)}><Icon name="user" size={18} /><span class="app-account-label">{accountLabel(s, lang)}</span></button>
       <div id={id} ref={panel} class="app-account-panel" hidden={!open} onKeyDown={onKeyDown} aria-label={t('accountMenu.aria', lang)} role="group">

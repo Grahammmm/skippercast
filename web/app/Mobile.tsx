@@ -221,6 +221,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
           </div>
           {<IconButton icon="layers" label={t('shell.layers', lang)} variant="ghost" pressed={layersOpen} onClick={() => apply(toggleLayers(panel, detent))} />}
           <LimitsControl compact />
+          <AccountMenu top />
         </div>
         <ProfileSwitch class="app-profile" />
       </header>

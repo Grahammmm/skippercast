@@ -24,7 +24,7 @@ test.beforeEach(async ({page}) => {
 
 /** The account button: in the masthead, or (phone) in the sheet's footer with the sheet lifted to full. */
 async function accountButton(page: Page, isMobile: boolean) {
-  const trigger = page.locator('.app-account-trigger');
+  const trigger = page.locator('.app-account:not([data-top]) .app-account-trigger');
   if (isMobile) {
     await page.locator('.ui-sheet-handle').focus();
     await page.keyboard.press('End');
@@ -72,7 +72,7 @@ test('signing in from the account menu completes the passkey flow and keeps the 
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await trigger.click();
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.locator('.app-account-panel [data-preset]')).toHaveCount(4);
+  await expect(page.locator('.app-account:not([data-top]) .app-account-panel [data-preset]')).toHaveCount(4);
   await v2.a11y('v2-account-menu');
   await page.getByRole('button', {name: 'Sign in or create an account'}).click();
   await expect(page.locator('.account-card')).toBeVisible();
@@ -86,14 +86,14 @@ test('signing in from the account menu completes the passkey flow and keeps the 
   expect(new URL(page.url()).searchParams.get('region')).toBe('morro-bay');
   expect(page.url(), 'no hash left behind').not.toContain('#');
   await (await accountButton(page, isMobile)).click();
-  await expect(page.locator('.app-account-panel')).toContainText('Signed in as Skipper');
+  await expect(page.locator('.app-account:not([data-top]) .app-account-panel')).toContainText('Signed in as Skipper');
   expect(pageErrors).toEqual([]);
 });
 
 test('Escape closes the open account menu after Shift+Tab returns to its trigger (FE-50)', async ({page, pageErrors, v2, isMobile}) => {
   await stubAuth(page, 'unused');
   await v2.open('app', AREA);
-  const trigger = await accountButton(page, isMobile), panel = page.locator('.app-account-panel');
+  const trigger = await accountButton(page, isMobile), panel = page.locator('.app-account:not([data-top]) .app-account-panel');
   await trigger.focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('button', {name: 'Sign in or create an account'})).toBeFocused();
@@ -110,7 +110,7 @@ test('Escape closes the open account menu after Shift+Tab returns to its trigger
 test('the menu is keyboard operable and Escape returns focus to its button', async ({page, pageErrors, v2, isMobile}) => {
   await stubAuth(page, 'unused');
   await v2.open('app', AREA);
-  const trigger = await accountButton(page, isMobile), panel = page.locator('.app-account-panel');
+  const trigger = await accountButton(page, isMobile), panel = page.locator('.app-account:not([data-top]) .app-account-panel');
   await trigger.focus();
   await page.keyboard.press('Enter');
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
@@ -252,7 +252,7 @@ test('the map page and a signed-in account dialog request no passkey library', a
   state.signedIn = true;
   const seen = watchPasskeyRequests(page);
   await v2.open('app', AREA);
-  await expect(page.locator('.app-account-trigger')).toHaveText('Skipper');
+  await expect(page.locator('.app-account:not([data-top]) .app-account-trigger')).toHaveText('Skipper');
   await page.evaluate(() => { location.hash = '#account'; });
   await expect(page.locator('#account-add')).toBeVisible();
   await expect(page.locator('#log-form')).toBeVisible();
@@ -275,7 +275,7 @@ test('the signed-out dialog loads the library for its sign-in and Sign in comple
   await reloaded;
   expect(state.verified).toBe(1);
   expect(seen.library, 'one library request however many sign-in paths asked').toBe(1);
-  await expect(page.locator('.app-account-trigger')).toHaveText('Skipper');
+  await expect(page.locator('.app-account:not([data-top]) .app-account-trigger')).toHaveText('Skipper');
   expect(seen.library, 'the signed-in page asks for none').toBe(1);
   expect(pageErrors.filter(e => !/Failed to load resource/.test(e))).toEqual([]);
 });
@@ -480,4 +480,38 @@ test('the masthead account trigger is icon-sized at 1024-1179 px, labelled at 11
   await expect(page.getByRole('button', {name: 'Sign in or create an account'})).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(trigger).toBeFocused();
+});
+
+test('UXFIX-10: the phone top card holds an icon-sized account button at peek, half and full, opening the same menu', async ({page, v2, isMobile}) => {
+  test.skip(!isMobile, 'phone layout only');
+  await stubAuth(page, 'unused');
+  await v2.open('app', AREA);
+  const top = page.locator('.app-account[data-top] > .app-account-trigger'), card = page.locator('.app-top-card');
+  const cardHeight = async () => (await card.boundingBox())!.height;
+  await page.evaluate(() => { const s = new CSSStyleSheet(); s.replaceSync('.app-account[data-top] { display: none !important; }'); document.adoptedStyleSheets = [s]; });
+  const without = await cardHeight();
+  await page.evaluate(() => { document.adoptedStyleSheets = []; });
+  const viewport = page.viewportSize()!;
+  for (const detent of ['peek', 'half', 'full'] as const) {
+    await page.locator('.ui-sheet-handle').focus();
+    await page.keyboard.press(detent === 'peek' ? 'Home' : 'End');
+    if (detent === 'half') await page.keyboard.press('ArrowDown');
+    await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', detent);
+    await expect(top, `${detent}: named like Sign in`).toHaveAccessibleName('Sign in');
+    const box = (await top.boundingBox())!;
+    expect(box.width, `${detent}: at least 44 wide`).toBeGreaterThanOrEqual(44);
+    expect(box.height, `${detent}: at least 44 tall`).toBeGreaterThanOrEqual(44);
+    expect(box.y + box.height, `${detent}: inside the viewport without scrolling`).toBeLessThanOrEqual(viewport.height);
+    expect(box.x + box.width, `${detent}: inside the viewport`).toBeLessThanOrEqual(viewport.width);
+    expect(Math.abs(await cardHeight() - without), `${detent}: the top card keeps its height`).toBeLessThanOrEqual(1);
+    await top.click();
+    await expect(top).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('.app-account[data-top] .app-account-panel')).toBeVisible();
+    await expect(page.locator('.app-account[data-top] .app-account-panel').getByRole('button', {name: 'Sign in or create an account'})).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(top).toHaveAttribute('aria-expanded', 'false');
+  }
+  const duplicates = await page.evaluate(() => { const seen = new Set<string>(), dup: string[] = []; for (const el of document.querySelectorAll('[id]')) { if (seen.has(el.id)) dup.push(el.id); seen.add(el.id); } return dup; });
+  expect(duplicates, 'no duplicate ids').toEqual([]);
+  await expect(page.locator('.app-brief-footer .app-account-trigger'), 'the footer entry stays').toHaveCount(1);
 });

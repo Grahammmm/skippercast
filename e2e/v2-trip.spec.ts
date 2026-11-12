@@ -72,10 +72,10 @@ async function accountMenu(page: Page, isMobile: boolean) {
     await page.keyboard.press('End');
     await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full');
   }
-  const trigger = page.locator('.app-account-trigger');
+  const trigger = page.locator('.app-account:not([data-top]) .app-account-trigger');
   await trigger.scrollIntoViewIfNeeded();
   await trigger.click();
-  return page.locator('.app-account-panel');
+  return page.locator('.app-account:not([data-top]) .app-account-panel');
 }
 async function openPlan(page: Page, isMobile: boolean) {
   await (await accountMenu(page, isMobile)).getByRole('button', {name: /^Trip plan and GPX/}).click();
@@ -370,7 +370,7 @@ test('the closed trip planner never announces loading before it is used, and a s
   await page.route('**/data/atlas.json', async route => { atlasRequests++; await held; await route.continue(); });
   try {
     await v2.open('app', AREA);
-    await expect(page.locator('.app-account-trigger')).toBeVisible();
+    await expect(page.locator('.app-account:not([data-top]) .app-account-trigger')).toBeVisible();
     // Ordinary startup: the app is settled and no planner was asked for, so the closed dialog holds no loading text.
     await expect(page.locator('#export-panel')).toHaveCount(1);
     await expect(loadingStatus(page)).toHaveCount(0);

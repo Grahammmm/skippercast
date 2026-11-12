@@ -14,6 +14,14 @@
     position: absolute; width: 1px; height: 1px; padding: 0; border: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
   }
 }
+/* UXFIX-10: the phone's top-card entry (data-top) is the same icon-sized trigger at every width; its panel opens above the sheet. */
+.app-account[data-top] > .app-account-trigger {
+  box-sizing: border-box; flex: none; gap: 0; padding-inline: 0; min-inline-size: calc(var(--touch-min) + 0.5px); min-block-size: calc(var(--touch-min) + 0.5px); box-shadow: var(--elev-2);
+}
+.app-account[data-top] > .app-account-trigger > .app-account-label {
+  position: absolute; width: 1px; height: 1px; padding: 0; border: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.app-top:has(.app-account[data-top] .app-account-panel:not([hidden])) { z-index: var(--z-modal); }
 .app-account-panel, .home-port-card, #account-body, .app-alerts, .app-alerts .insight-card { display: flex; flex-direction: column; gap: var(--space-3); }
 .app-account-panel section, .account-passkeys, .account-confirm { display: flex; flex-direction: column; gap: var(--space-2); }
 .app-account-links, .home-port-card label, .app-alerts label { display: flex; flex-direction: column; gap: var(--space-1); }

@@ -42,7 +42,7 @@ async function stub(page: Page, catchLog: (route: Route, call: number) => Promis
 const answer = (entries: unknown) => async (route: Route) => { await route.fulfill({json: {entries}, headers: DONE}); };
 
 async function openAlerts(page: Page, isMobile: boolean) {
-  const trigger = page.locator('.app-account-trigger');
+  const trigger = page.locator('.app-account:not([data-top]) .app-account-trigger');
   if (isMobile) {
     await page.locator('.ui-sheet-handle').focus();
     await page.keyboard.press('End');
