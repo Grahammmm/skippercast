@@ -685,3 +685,46 @@ for (const lang of ['en', 'es']) {
     expect(pageErrors).toEqual([]);
   });
 }
+
+// UXFIX-05: type sizes are rem tokens, so a larger browser text size grows every text box and none of them clips or scrolls the page.
+for (const [percent, scale] of [[125, 1.25], [150, 1.5]] as const) {
+  test(`UXFIX-05: root text size ${percent}% grows the text ${scale}x and nothing clips or scrolls sideways`, async ({page, pageErrors, v2}) => {
+    await v2.open('app', AREA);
+    const sample = () => page.evaluate(() => {
+      const px = (el: Element | null) => parseFloat(getComputedStyle(el!).fontSize);
+      return {body: px(document.body), h1: px(document.querySelector('.ui-sheet h1, aside.app-brief h1')), limit: px(document.querySelector('.app-verdict-limit, .app-verdict h1'))};
+    });
+    const before = await sample();
+    // A constructed stylesheet: the page's CSP forbids injected <style> elements.
+    await page.evaluate(css => {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(css);
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    }, `html { font-size: ${percent}%; }`);
+    const after = await sample();
+    for (const key of ['body', 'h1', 'limit'] as const) expect(after[key] / before[key], `${key} computed size ratio`).toBeCloseTo(scale, 2);
+    const geometry = await page.evaluate(() => {
+      const rect = (el: Element | null) => { const r = el!.getBoundingClientRect(); return {left: r.left, top: r.top, right: r.right, bottom: r.bottom}; };
+      return {scrollWidth: document.documentElement.scrollWidth, width: innerWidth, height: innerHeight,
+        verdict: rect(document.querySelector('.ui-sheet h1, aside.app-brief h1')), dock: rect(document.querySelector('.app-dock .ui-dock'))};
+    });
+    expect(geometry.scrollWidth, 'no horizontal page scroll').toBeLessThanOrEqual(geometry.width);
+    for (const name of ['verdict', 'dock'] as const) {
+      const r = geometry[name];
+      expect(r.left, `${name} left`).toBeGreaterThanOrEqual(0);
+      expect(r.top, `${name} top`).toBeGreaterThanOrEqual(0);
+      expect(r.right, `${name} right`).toBeLessThanOrEqual(geometry.width);
+      expect(r.bottom, `${name} bottom`).toBeLessThanOrEqual(geometry.height);
+    }
+    await page.locator('.app-limits-trigger').click();
+    const limits = page.locator('dialog.app-limits-dialog').first();
+    await expect(limits).toBeVisible();
+    const box = await limits.evaluate(el => { const r = el.getBoundingClientRect(); return {left: r.left, top: r.top, right: r.right, bottom: r.bottom, horizontal: el.scrollWidth - el.clientWidth}; });
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.top).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(geometry.width);
+    expect(box.bottom).toBeLessThanOrEqual(geometry.height);
+    expect(box.horizontal, 'the Limits dialog does not scroll sideways').toBeLessThanOrEqual(1);
+    expect(pageErrors).toEqual([]);
+  });
+}

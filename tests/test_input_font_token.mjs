@@ -10,7 +10,7 @@ const block = (css, selector) => {
 };
 
 test('one shared font-size-only rule and exact input token preserve authored widths and viewport zoom', () => {
-  assert.match(read('web/tokens.css'), /--text-input:\s*16px;/);
+  assert.match(read('web/tokens.css'), /--text-input:\s*1rem;/);
   const rules = [...read('web/ui/ui.css').matchAll(/input,\s*select,\s*textarea\s*\{([^}]+)\}/g)];
   assert.equal(rules.length, 1);
   assert.equal(rules[0][1].trim(), 'font-size: var(--text-input) !important;');
