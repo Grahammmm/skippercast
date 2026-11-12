@@ -64,7 +64,7 @@ async function harness(t, responses) {
       b.onResolve({filter: /.*/}, args => {
         if (args.importer !== resolve(root, 'web/app/Trip.tsx')) return;
         if (args.path === 'preact/hooks') return {path: resolve(fixtures, 'runtime.mjs')};
-        if (['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-ocean-lines.ts', '../trip-forecast-end.ts', './App.tsx', './PositionCheck.tsx'].includes(args.path))
+        if (['../ui/Button.tsx', '../ui/scroll-cue.ts', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-ocean-lines.ts', '../trip-forecast-end.ts', './App.tsx', './PositionCheck.tsx'].includes(args.path))
           return {path: resolve(fixtures, 'boundary.mjs')};
         if (['../../dist/offline-core.js', 'preact/jsx-runtime', '../i18n.ts', '../brief/remaining-copy.ts'].includes(args.path)) return;   // SC0707-10: the real catalogue reader, nothing else
         throw new Error(`unadmitted product import: ${args.path}`);

@@ -9,7 +9,7 @@ import type {RefObject} from 'preact';
 export function useScrollCue(ref: RefObject<HTMLElement | null>): void {
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || typeof el.getBoundingClientRect !== 'function') return; // no layout to read (a test's stand-in element)
     const update = () => {
       const more = el.scrollHeight - el.scrollTop - el.clientHeight > 1;
       if (el.dataset.more !== String(more)) el.dataset.more = String(more);
