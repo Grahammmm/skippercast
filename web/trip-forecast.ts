@@ -13,7 +13,7 @@
 import type {ConditionsForecast, Family} from './conditions.ts';
 import {hourText, markForecast, runText, type MarkReading} from './brief/mark-forecast.ts';
 import type {ComfortLimits} from '../packages/coast/src/limits.ts';
-import {t, type Language} from './i18n.ts';
+import {num, t, type Language} from './i18n.ts';
 import {fixed} from './view-copy.ts';
 import type {TripTimes} from './trip-times.ts';
 
@@ -43,9 +43,11 @@ function cell(r: MarkReading): ArrivalCell {
 function overWords(f: {wind: ArrivalCell; seas: ArrivalCell}, limits: ComfortLimits | null, lang: Language): string[] {
   if (!limits) return [];
   const w = f.wind.state === 'value' ? f.wind.sampled : null, s = f.seas.state === 'value' ? f.seas.sampled : null, out: string[] = [];
-  if (w && w.windKn !== null && w.windKn > limits.wind) out.push(t('planner.forecast.overWind', lang, {n: limits.wind}));
-  if (w && w.gustKn !== null && w.gustKn > limits.gust) out.push(t('planner.forecast.overGust', lang, {n: limits.gust}));
-  if (s && s.seasFt !== null && s.seasFt > limits.seas) out.push(t('planner.forecast.overSeas', lang, {n: limits.seas}));
+  // Only the placeholder is localized (Spanish decimal comma, no grouping); the comparisons below stay on the raw numbers and English keeps its number as is.
+  const shown = (n: number): string | number => lang === 'en' ? n : num(n, lang, 1);
+  if (w && w.windKn !== null && w.windKn > limits.wind) out.push(t('planner.forecast.overWind', lang, {n: shown(limits.wind)}));
+  if (w && w.gustKn !== null && w.gustKn > limits.gust) out.push(t('planner.forecast.overGust', lang, {n: shown(limits.gust)}));
+  if (s && s.seasFt !== null && s.seasFt > limits.seas) out.push(t('planner.forecast.overSeas', lang, {n: shown(limits.seas)}));
   return out;
 }
 
