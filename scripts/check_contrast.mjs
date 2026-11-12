@@ -431,7 +431,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
   // UXFIX-10 only appends a scoped .app-account[data-top] block at the end of app.css (the phone top-card account button: icon size, hidden label, open-state text/panel colour, z-index);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved.
-  "appCss": "25b9ac5fd97f06f4c91ad66354fc579e4409f47f355f35ab666d6e82feeb237b",
+  "appCss": "3c1152011ed70e1c58790db4d0ea833f37de8811bc9bcf5d042b30fdc659e34d",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
