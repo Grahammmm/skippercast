@@ -38,12 +38,16 @@ export function yardsFromShore(p: {latitude: number; longitude: number}, lines: 
   let best = Infinity;
   for (const line of lines) {
     for (let i = 1; i < line.length; i++) {
-      const ax = (line[i - 1]![0]! - p.longitude) * kx, ay = (line[i - 1]![1]! - p.latitude) * ky;
-      const bx = (line[i]![0]! - p.longitude) * kx, by = (line[i]![1]! - p.latitude) * ky;
-      const dx = bx - ax, dy = by - ay, len = dx * dx + dy * dy;
-      const t = len ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len)) : 0;
-      const d = Math.hypot(ax + t * dx, ay + t * dy);
-      if (d < best) best = d;
+      // RF1500-22: +180 and -180 are one meridian, so also try the intact segment shifted by -360/+360 degrees
+      // (both endpoints together, never wrapped separately) and keep the nearest.
+      for (const shift of [0, -360, 360]) {
+        const ax = (line[i - 1]![0]! + shift - p.longitude) * kx, ay = (line[i - 1]![1]! - p.latitude) * ky;
+        const bx = (line[i]![0]! + shift - p.longitude) * kx, by = (line[i]![1]! - p.latitude) * ky;
+        const dx = bx - ax, dy = by - ay, len = dx * dx + dy * dy;
+        const t = len ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len)) : 0;
+        const d = Math.hypot(ax + t * dx, ay + t * dy);
+        if (d < best) best = d;
+      }
     }
   }
   return Number.isFinite(best) ? best : null;

@@ -13,6 +13,7 @@ import {forgetHome, hasSavedHome, listPorts, locatePort, type CookieJar, type Ho
 import {language, t} from './i18n.ts';
 import {portCopy} from './copy.ts';
 import {Icon} from '../ui/icons.tsx';
+import {useScrollCue} from '../ui/scroll-cue.ts';
 import type {Located} from '../ports.ts';
 
 type Feedback = null | {kind: 'found'; port: Port} | {kind: 'finding' | 'forgotten' | 'empty' | Extract<Located, {ok: false}>['reason']};
@@ -39,6 +40,8 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
   const lang = language.value, COPY = portCopy(lang), label = labelProp ?? COPY.question;
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
+  const results = useRef<HTMLDivElement>(null);
+  useScrollCue(results);
   const [query, setQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -80,7 +83,7 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
           onInput={event => { invalidate(); setQuery((event.currentTarget as HTMLInputElement).value); setNearest(null); setFeedback(null); }} />
         <Button type="submit" variant="primary" icon="arrow" disabled={!matches[0]}>{t('landing.port.go', lang)}</Button>
       </div>
-      <div class="port-input-results" aria-live="polite">
+      <div ref={results} class="port-input-results ui-scroll-cue" aria-live="polite">
         {ports === null ? <p class="port-input-empty">{t('landing.port.loading', lang)}</p> : null}
         {ports && !matches.length ? <p class="port-input-empty">{ports.length ? COPY.empty : t('landing.port.listDown', lang)}</p> : null}
         {ports && !ports.length && onRetry ? <Button size="sm" onClick={onRetry}>{t('landing.port.retry', lang)}</Button> : null}
