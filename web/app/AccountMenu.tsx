@@ -44,7 +44,7 @@ function LazyAlerts({regionId}: {regionId: string}) {
   return View ? <View.c regionId={regionId} target={species.peek()} /> : <p role="status">{t(failed ? 'accountMenu.alertsError' : 'accountMenu.alertsLoading', lang)}</p>;
 }
 
-/** `inline`: the panel opens in the flow (the mobile sheet's footer) instead of under the button. `top`: the phone's top-card entry (UXFIX-10), the icon-sized trigger of RF2345-7 at every width. */
+/** `inline`: the panel opens in the flow (the mobile sheet's footer) instead of under the button. `top`: the phone's top-card entry (UXFIX-10), the icon-sized trigger of RF2345-7 at every width; its panel exists only while open, so the page never holds two menus' regions. */
 export function AccountMenu({inline = false, top = false}: {inline?: boolean; top?: boolean} = {}) {
   const [open, setOpen] = useState(false);
   const [alerts, setAlerts] = useState(false);
@@ -97,7 +97,7 @@ export function AccountMenu({inline = false, top = false}: {inline?: boolean; to
     <div class="app-account" ref={root} data-inline={inline ? 'true' : undefined} data-top={top ? 'true' : undefined} onKeyDown={onDismissKey}>
       <button ref={trigger} type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded={open} aria-controls={id} title={accountLabel(s, lang)}
         onClick={() => setOpen(!open)}><Icon name="user" size={18} /><span class="app-account-label">{accountLabel(s, lang)}</span></button>
-      <div id={id} ref={panel} class="app-account-panel" hidden={!open} onKeyDown={onKeyDown} aria-label={t('accountMenu.aria', lang)} role="group">
+      {top && !open ? null : <div id={id} ref={panel} class="app-account-panel" hidden={!open} onKeyDown={onKeyDown} aria-label={t('accountMenu.aria', lang)} role="group">
         <section aria-labelledby={`${id}-account`}>
           <h2 id={`${id}-account`} class="ui-eyebrow">{s.state === 'signed-in' ? (s.name ? t('accountMenu.signedInAs', lang, {name: s.name}) : t('accountMenu.signedIn', lang)) : t('accountMenu.account', lang)}</h2>
           <p>{t(ACCOUNT_LINE[s.state], lang)}</p>
@@ -140,7 +140,7 @@ export function AccountMenu({inline = false, top = false}: {inline?: boolean; to
             <li><a href="downloads/spot-notes.html" target="_blank" rel="noopener"><Icon name="download" size={16} />{t('accountMenu.spotNotes', lang)}</a></li>
           </ul>
         </section>
-      </div>
+      </div>}
       {alerts && regionId
         ? <PortDialog open onClose={() => { setAlerts(false); trigger.current?.focus(); }} title={t('accountMenu.alerts', lang)}><LazyAlerts regionId={regionId} /></PortDialog>
         : null}
