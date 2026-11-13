@@ -47,8 +47,14 @@ class ClassifyTest(unittest.TestCase):
     def test_a_frozen_clock_in_the_file_allows_clock_reads(self):
         for freeze in ("from freezegun import freeze_time", "import time_machine",
                        "monkeypatch.setattr(module.time, 'time', lambda: 1.0)",
-                       "with mock.patch('pkg.mod.datetime') as fake:"):
+                       "with mock.patch('pkg.mod.datetime') as fake:",
+                       "with mock.patch.object(time, \"time\", return_value=123):",
+                       "with mock.patch.object(module.datetime, 'now', return_value=fixed):"):
             self.assertEqual(kinds(freeze, NOW), [], freeze)
+
+    def test_patch_object_of_the_clock_freezes_it_but_other_attributes_do_not(self):
+        self.assertEqual(kinds('with mock.patch.object(time, "time", return_value=123):', EPOCH), [])
+        self.assertEqual(kinds('with mock.patch.object(time, "sleep"):', EPOCH), ["clock"])
 
     def test_pragma_on_the_line_or_the_line_above(self):
         self.assertEqual(kinds(NOW + PRAGMA), [])

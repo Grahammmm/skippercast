@@ -32,7 +32,8 @@ PRAGMA = re.compile(r"#\s*determinism-ok:\s*\S{3,}")
 CLOCK = re.compile(r"\b(?:datetime|date)\.(?:now|utcnow|today)\(|\btime\.(?:time|time_ns)\(")
 FROZEN = re.compile(
     r"freezegun|freeze_time|time[_-]machine|\bfreeze_?clock\b|\bfrozen_(?:now|clock|time)\b|\bfixed_(?:now|clock)\b"
-    r"|\bpatch(?:\.object)?\(\s*[\"'][\w.]*\b(?:time|datetime|date|clock|now)\b"
+    r"|\bpatch\(\s*[\"'][\w.]*\b(?:time|datetime|date|clock|now)\b"
+    r"|\bpatch\.object\(\s*[^,()\n]+,\s*[\"'](?:time|time_ns|datetime|date|clock|now|utcnow|today)[\"']"
     r"|\bsetattr\([^)\n]*\b(?:time|datetime|date|clock|now)\b"
 )
 PORT = re.compile(
