@@ -118,7 +118,7 @@ flowchart LR
 | `live-conditions.yml` | Every 30 minutes (:07, :37) inside a ~5.5-hour self-chaining run; restarted by the watchdog and the freshness check | `conditions` branch + R2: live observations, intelligence (models, ensembles, currents, verification), habitat dynamics; forecast tiles to `forecasts`; then private trip checks |
 | `daily-data.yml` | 04:17 America/Los_Angeles | `data` branch + R2: dated reports, regulations and their review state, recent discussions, survey discovery |
 | `research-daily.yml` | After each `daily-data.yml` run, or manually | Research inventories (NOAA BAG checks, ENC hazard reviews, USGS map-block and DOI audits) as workflow artifacts, with a read-only token; not product feeds |
-| `feed-freshness.yml` | Hourly at :52 | Opens or closes the `feed-stale` issue; restarts the live loop after 75 minutes |
+| `feed-freshness.yml` | Hourly at :52 | Opens or closes the `feed-stale` issue; restarts the live loop after 75 minutes; keeps one `rules-card-blank` issue open while no species in the default region has a season status |
 | `seafloor.yml` | Daily 10:23 UTC, on seafloor source changes, or manually | R2 `tiles/seafloor/`; proposes a ledger PR |
 | `forecast-tiles.yml` | Manual | Forces a forecast tile rebuild |
 | `regional-legal-review.yml` | Mondays (Pacific), or on rule-source changes | Legal review packets for the Northern, Mendocino and San Francisco rules, as workflow artifacts |
