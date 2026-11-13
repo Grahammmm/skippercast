@@ -75,10 +75,10 @@ class ClassifyTest(unittest.TestCase):
         for line in (PY_ASSERT, PY_ASSERT_NAME):
             self.assertEqual(kinds(line), ["version"], line)
             self.assertEqual(kinds("if sys.version_info >= (3, 12):", line), [], line)
-        self.assertEqual(kinds("assert area == 3.14", "assert python_ok", "python = 'x'"), [])
+        self.assertEqual(kinds("assert area == 3.14", "assert python_ok", "python = 'x'"), [])  # determinism-ok: lint input text, not a version assertion
 
     def test_patched_python_version_is_not_a_version_assumption(self):
-        self.assertEqual(kinds("monkeypatch.setattr(platform, 'python_version', lambda: '3.13.0')", PY_ASSERT), [])
+        self.assertEqual(kinds("monkeypatch.setattr(platform, 'python_version', lambda: '3.13.0')", PY_ASSERT), [])  # determinism-ok: lint input text, not a version assertion
 
     def test_patching_something_else_on_the_time_module_does_not_freeze_the_clock(self):
         for other in ('with patch("time.sleep"):', "monkeypatch.setattr(module.time, 'sleep', lambda s: None)",
@@ -94,6 +94,21 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(kinds("pytest.skip('needs freezegun')", EPOCH), ["clock"])
         self.assertEqual(kinds("from freezegun import freeze_time  # a real freezer", EPOCH), [])
 
+    def test_patch_text_inside_a_string_is_not_a_freeze(self):
+        said = "patch('time.time')"
+        for prose in (['explanation = "' + said + ' is not used"'], ["print(" + repr(said) + ")"],
+                      ["note = f\"" + said + " {EPOCH}\""], ['text = """', said, '"""'],
+                      ["pytest.skip(\"setattr('time.time', fake) is unavailable\")"],
+                      ["checks = ['" + "usefixtures(\"frozen_now\")" + "']"]):
+            self.assertEqual(kinds(*prose, EPOCH), ["clock"], prose)
+        self.assertEqual(kinds('explanation = "no clock mocking is used"', EPOCH), ["clock"])
+        self.assertEqual(kinds('with patch("time.time", return_value=1.0):', EPOCH), [])  # the real call still freezes
+        self.assertEqual(kinds('text = "patch(\'time.time\')"', 'with patch("time.time", return_value=1.0):', EPOCH), [])
+        self.assertEqual(kinds('@pytest.mark.usefixtures("frozen_now")', EPOCH), [])
+
+    def test_python_version_patch_text_inside_a_string_is_not_a_guard(self):
+        self.assertEqual(kinds("note = \"patch(platform, 'python_version')\"", PY_ASSERT), ["version"])
+
     def test_a_wrapped_patch_call_still_freezes(self):
         self.assertEqual(kinds("with mock.patch.object(", '    time, "time", return_value=123', "):", EPOCH), [])
 
@@ -102,6 +117,15 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(classify_spans(wrapped), [(2, 5, "port")])
         self.assertEqual(kinds(*wrapped[:3], "        0,", "    ))"), [])
         self.assertEqual(kinds("srv = HTTPServer(", "    ('127.0.0.1', " + PORT_NUMBER + "),", "    Handler,", ")"), ["port"])
+
+    def test_a_bind_with_the_tuple_on_its_own_line_is_flagged_and_port_zero_is_not(self):
+        for tail in ("", ","):  # black's magic trailing comma
+            fixed = ["s.bind(", '    ("127.0.0.1", ' + PORT_NUMBER + ")" + tail, ")"]
+            self.assertEqual(classify_spans(fixed), [(1, 3, "port")], tail)
+            self.assertEqual(kinds(*fixed[:1], '    ("127.0.0.1", 0)' + tail, ")"), [], tail)
+        self.assertEqual(kinds("s.bind(", "    (", '        "127.0.0.1",', "        " + PORT_NUMBER + ",", "    ),", ")"), ["port"])
+        self.assertEqual(kinds("s.bind(", "    (", '        "127.0.0.1",', "        0,", "    ),", ")"), [])
+        self.assertEqual(kinds("s.bind(('127.0.0.1', " + PORT_NUMBER + ") )"), ["port"])
 
     def test_a_wrapped_python_version_assertion_needs_a_guard(self):
         wrapped = ["assert platform.python_version() == (", '    "3.' + '11.0"', ")"]
@@ -200,6 +224,25 @@ class DiffModeTest(unittest.TestCase):
         self.assertIn("new=0 existing=3", out)
         edited = wrapped[:5] + ['        "0.0.0.0",'] + wrapped[6:]  # one argument line of the statement changes
         self.write("tests/unit/test_wrapped.py", edited)
+        self.git("add", "-A")
+        self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "argument")
+        code, out = self.run_lint("--base", "HEAD^1")
+        self.assertEqual(code, 1, out)
+        self.assertIn("::error file=tests/unit/test_wrapped.py,line=5,title=Deterministic-test lint (port)", out)
+
+    def test_editing_a_bind_whose_tuple_is_on_its_own_line_fails_but_editing_beside_it_does_not(self):
+        wrapped = ["import socket", "", "def test_port():", "    s = socket.socket()", "    s.bind(",
+                   '        ("127.0.0.1", ' + PORT_NUMBER + "),", "    )", "    s.close()"]
+        self.write("tests/unit/test_wrapped.py", wrapped)
+        self.git("add", "-A")
+        self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "wrapped")
+        self.write("tests/unit/test_wrapped.py", wrapped[:-1] + ["    s.shutdown(0)"])  # beside the statement
+        self.git("add", "-A")
+        self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "beside")
+        code, out = self.run_lint("--base", "HEAD^1")
+        self.assertEqual(code, 0, out)
+        self.assertIn("new=0 existing=3", out)
+        self.write("tests/unit/test_wrapped.py", wrapped[:5] + ['        ("0.0.0.0", ' + PORT_NUMBER + "),"] + wrapped[6:-1] + ["    s.shutdown(0)"])
         self.git("add", "-A")
         self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "argument")
         code, out = self.run_lint("--base", "HEAD^1")

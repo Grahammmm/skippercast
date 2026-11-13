@@ -41,7 +41,8 @@ FROZEN_NAMES = re.compile(
     r"\bfreezegun\b|\bfreeze_time\b|\btime_machine\b|\bfreezer\b|\bfreeze_?clock\b|\bfrozen_(?:now|clock|time)\b"
     r"|\bfixed_(?:now|clock)\b"
 )
-FROZEN_PATCH = re.compile(  # run on code with string contents kept (the patch target is a string)
+TARGET_NAME = re.compile(r"[A-Za-z_][\w.]*")  # a string that can name a patch target; any other string is prose
+FROZEN_PATCH = re.compile(  # run on the `calls` view: code, with only target-like strings kept (the target is a string)
     r"\bpatch\(\s*[\"'][\w.]*\b" + _CLOCK_NAMES + r"[\"']"
     r"|\bpatch\.object\(\s*[^,()]+,\s*[\"']" + _CLOCK_NAMES + r"[\"']"
     r"|\bsetattr\(\s*[\"'][\w.]*\b" + _CLOCK_NAMES + r"[\"']"
@@ -50,7 +51,7 @@ FROZEN_PATCH = re.compile(  # run on code with string contents kept (the patch t
 )
 # A statement may span lines (black wraps long calls), so these run on a whole statement; \s matches a newline.
 PORT = re.compile(
-    r"\.bind\(\(\s*[^,()]+,\s*[1-9]\d*\s*,?\s*\)\)"
+    r"\.bind\(\s*\(\s*[^,()]+,\s*[1-9]\d*\s*,?\s*\)\s*,?\s*\)"
     r"|(?:HTTPServer|TCPServer|UDPServer|create_server)\(\s*\(?\s*[^,()]+,\s*[1-9]\d*\s*,?\s*\)"
     r"|\bport\s*=\s*[1-9]\d{3,4}\b|[\"']port[\"']\s*:\s*[1-9]\d{3,4}\b|--port(?:=|[\"']?\s*,?\s*[\"']?)[1-9]\d{3,4}\b"
 )
@@ -63,13 +64,25 @@ _STRING_TYPES = {tokenize.STRING, getattr(tokenize, "FSTRING_START", -1), getatt
                  getattr(tokenize, "FSTRING_END", -1)}
 
 
-def statements(lines):
-    """[(first line, last line, text, code, docstring_only)] for the logical statements of a file (1-based lines).
+def blank(buffer, srow, scol, erow, ecol):
+    """Overwrite the source text between two token positions (1-based rows) with spaces, keeping line lengths."""
+    for row in range(srow, erow + 1):
+        line = buffer[row - 1]
+        begin = scol if row == srow else 0
+        end = ecol if row == erow else len(line)
+        buffer[row - 1] = line[:begin] + " " * max(0, min(end, len(line)) - begin) + line[end:]
 
-    `text` is the statement without comments; `code` is `text` with string contents blanked. A file that does not
-    tokenize (a fragment) falls back to one statement per physical line."""
+
+def statements(lines):
+    """[(first line, last line, text, code, docstring_only, calls)] for the logical statements of a file (1-based lines).
+
+    `text` is the statement without comments; `code` is `text` with string contents blanked; `calls` is `code` with
+    the strings that can name a patch target (dotted names) kept, so `patch("time.time")` survives but a sentence that
+    merely contains the text patch('time.time') does not. A file that does not tokenize (a fragment) falls back to
+    one statement per physical line, with `calls` = `text` minus comments."""
     text_lines = list(lines)
     code_lines = list(lines)
+    calls_lines = list(lines)
     spans, current = [], None
     try:
         for token in tokenize.generate_tokens(io.StringIO("\n".join(lines) + "\n").readline):
@@ -77,6 +90,7 @@ def statements(lines):
             if kind == tokenize.COMMENT:
                 text_lines[srow - 1] = text_lines[srow - 1][:scol]
                 code_lines[srow - 1] = code_lines[srow - 1][:scol]
+                calls_lines[srow - 1] = calls_lines[srow - 1][:scol]
             elif kind == tokenize.NEWLINE:
                 if current:
                     spans.append(current)
@@ -86,17 +100,18 @@ def statements(lines):
                     current = [srow, erow, True]
                 current[1] = max(current[1], erow)
                 current[2] = current[2] and kind in _STRING_TYPES
-                if kind == tokenize.STRING:
-                    for row in range(srow, erow + 1):
-                        begin = scol if row == srow else 0
-                        end = ecol if row == erow else len(code_lines[row - 1])
-                        line = code_lines[row - 1]
-                        code_lines[row - 1] = line[:begin] + " " * max(0, min(end, len(line)) - begin) + line[end:]
+                if kind == tokenize.STRING or kind == getattr(tokenize, "FSTRING_MIDDLE", -1):
+                    inner = token.string.lstrip("rRbBuUfF").strip("\"'") if kind == tokenize.STRING else ""
+                    buffers = [code_lines] if srow == erow and TARGET_NAME.fullmatch(inner) else [code_lines, calls_lines]
+                    for buffer in buffers:
+                        blank(buffer, srow, scol, erow, ecol)
     except (tokenize.TokenError, SyntaxError):
         text_lines = [("" if line.lstrip().startswith("#") else line) for line in lines]
         code_lines = list(text_lines)
+        calls_lines = list(text_lines)
         spans = [[number, number, False] for number in range(1, len(lines) + 1)]
-    return [(first, last, "\n".join(text_lines[first - 1:last]), "\n".join(code_lines[first - 1:last]), only_string)
+    return [(first, last, "\n".join(text_lines[first - 1:last]), "\n".join(code_lines[first - 1:last]), only_string,
+             "\n".join(calls_lines[first - 1:last]))
             for first, last, only_string in spans if "\n".join(text_lines[first - 1:last]).strip()]
 
 
@@ -112,10 +127,10 @@ def classify_spans(lines):
     The line range is the lines the matched text covers, so an edit to any of them (the port argument of a wrapped
     `bind((` call, say) makes the hit "added"."""
     stmts = [stmt for stmt in statements(lines) if not stmt[4]]
-    frozen = any(FROZEN_NAMES.search(code) or FROZEN_PATCH.search(text) for _, _, text, code, _ in stmts)
-    guarded = any(VERSION_GUARD_CODE.search(code) or VERSION_GUARD_PATCH.search(text) for _, _, text, code, _ in stmts)
+    frozen = any(FROZEN_NAMES.search(code) or FROZEN_PATCH.search(calls) for _, _, _, code, _, calls in stmts)
+    guarded = any(VERSION_GUARD_CODE.search(code) or VERSION_GUARD_PATCH.search(calls) for _, _, _, code, _, calls in stmts)
     hits = []
-    for first, last, text, code, _ in stmts:
+    for first, last, text, code, _, _ in stmts:
         if has_pragma(lines, first, last):
             continue
         found = set()
