@@ -203,6 +203,8 @@ class ControllerWithPreChangeCandidate(unittest.TestCase):
         env = self.env(**options)
         controller = self.candidate / '.deploy-controller/scripts'
         controller.mkdir(parents=True)  # what the sparse controller checkout writes
+        # Mirrors the sparse-checkout list in deploy-cloudflare.yml; the deploy step now runs
+        # $CONTROLLER/scripts/wrangler_config.mjs, so this fixture must carry it too (SC2184-08).
         for name in ('check_deploy_source.py', 'worker_versions.mjs', 'wrangler_config.mjs'):
             shutil.copy(ROOT / 'scripts' / name, controller / name)
         results = {}
