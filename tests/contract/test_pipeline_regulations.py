@@ -76,6 +76,8 @@ class RegulationChecks(unittest.TestCase):
         self.assertIn('mpa-soquel-canyon', result['review_required'])
 
     def test_spatial_season_requires_bounded_latitudes_and_a_dependency(self):
+        # The committed salmon record has no open window (closed for the rest of 2026); give this fixture the old fall one.
+        self.registry['species']['salmon']['windows']=[{'start':'2026-09-01','end':'2026-09-30'}]
         window=self.registry['species']['salmon']['windows'][0]
         window['geography']={'kind':'latitude-band','south':35.0,'north':35.4,
                              'source_id':'rules-salmon','note':'Reviewed latitude-restricted opening.'}

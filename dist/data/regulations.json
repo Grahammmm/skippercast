@@ -15,7 +15,7 @@
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
       "approved_content_sha256": "658a6d4344ddae6315d82f49b94bc949ba08fba7cb0736ba60ecbad68f845ce0",
       "reviewed_at": "2026-09-25T08:09:03Z",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "rules-gear": {
@@ -23,7 +23,7 @@
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
       "approved_content_sha256": "499f7caea6ab785f3becbf81a21e8281f4088b01a719c76ef9ff3b249540239f",
       "reviewed_at": "2026-09-25T08:09:03Z",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "rules-invertebrates": {
@@ -31,7 +31,7 @@
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
       "approved_content_sha256": "619c3420bfda1aeadf13cbd7f3151803ad9bea49384a9c73a417351196227582",
       "reviewed_at": "2026-09-25T08:09:03Z",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "rules-whales": {
@@ -39,7 +39,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
       "approved_content_sha256": "72852d5fff39e9882b444366a434e959a049f08760cb1fd2b5d835c7cbde15a5",
       "reviewed_at": "2026-09-25T08:09:03Z",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "rules-health": {
@@ -47,7 +47,7 @@
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
       "approved_content_sha256": "598336053084e316362daf6531380cb888d2c7b4f4f93f7cdaf3ecc202969eba",
       "reviewed_at": "2026-09-25T08:09:03Z",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "rules-ocean": {
@@ -55,7 +55,7 @@
       "url": "https://wildlife.ca.gov/Fishing/Ocean",
       "approved_content_sha256": "aa99f150e6f39a5c01cbb65d1dadd17317974429ea166d89b0199abf25a391a4",
       "reviewed_at": "2026-09-25T08:09:03Z",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "rules-groundfish": {
@@ -63,7 +63,7 @@
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
       "approved_content_sha256": "7b4c9bd0f71f9fa812735171ae0d9ada52514cd1dd564a1368eb6dc9824b4b0b",
       "reviewed_at": "2026-09-25T08:09:03Z",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "rules-inseason": {
@@ -71,7 +71,7 @@
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
       "approved_content_sha256": "75cf221228831bf99550e55a2943e84f356a7d3886411b6cf1cc1fb675a14c99",
       "reviewed_at": "2026-09-25T08:09:03Z",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "rules-salmon": {
@@ -79,7 +79,7 @@
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
       "approved_content_sha256": "f0530f309bced157f4a9687a62f87d241543af164a320debf9b8373d69bfccb1",
       "reviewed_at": "2026-09-25T08:09:03Z",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "rules-crab": {
@@ -87,7 +87,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/Invertebrates/Crabs",
       "approved_content_sha256": "c5426397ad8ff91ca1d161c435bf3ba707939a39d2e58a443fc3f1d1e1affdf6",
       "reviewed_at": "2026-09-25T08:09:03Z",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "mpa-buchon": {
@@ -95,7 +95,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Buchon",
       "approved_content_sha256": "0fac9f714ff114701ba98c37619f35d29dc7c3a5118b85e517bccd0e1ffd319b",
       "reviewed_at": "2026-09-25T08:09:03Z",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "mpa-cambria": {
@@ -103,7 +103,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Cambria-White-Rock",
       "approved_content_sha256": "16ee08ea0ec26ac3072ef89991b91c1bf262c626456037f9bc0a90d2d9597efe",
       "reviewed_at": "2026-09-25T08:09:03Z",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "rules-book": {
@@ -118,7 +118,7 @@
       "name": "California FGC rulemaking: effective and pending changes",
       "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
       "approved_content_sha256": "8a780ba99038595a2c4a5866bf170e4304c9529db2f5ebad3770cc69f479b055",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -150,7 +150,7 @@
       "name": "CDFW Piedras Blancas MPAs · San Simeon",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Piedras-Blancas",
       "approved_content_sha256": "061671563564ea6e5a7b903f638a9be484363e11fcf07e7b75deae3697679d5a",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Rechecked unchanged CDFW Piedras Blancas page and its coordinates. SMR is no-take; offshore SMCA allows salmon and albacore only. Both remain excluded from automatic target geometry and exports."
     },
@@ -158,7 +158,7 @@
       "name": "CDFW Vandenberg State Marine Reserve",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Vandenberg",
       "approved_content_sha256": "8c944b71cfcf164abb33c1f71cd43d76e829cee4a41a1d2d92dae53e55ee80f6",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Read the official CDFW Vandenberg SMR page and coordinates. It prohibits take and describes restricted public entry. Its 32.91 square miles are a reserve, not fishable reef habitat."
     },
@@ -166,7 +166,7 @@
       "name": "CDFW Point Conception State Marine Reserve",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Conception",
       "approved_content_sha256": "94229a4fb98b2bca09328bed318ada36372ea9c4479c371c5142ae50c6b3f4cb",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Read the official CDFW Point Conception SMR page and coordinates. It prohibits take in the mapped reserve; the regional 34°27 N management line does not erase this exclusion."
     },
@@ -174,7 +174,7 @@
       "name": "Vandenberg Space Force Base maritime danger-zone updates",
       "url": "https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/",
       "approved_content_sha256": null,
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Held: this official Vandenberg maritime-update URL returned HTTP 403 from the scheduled collector. The public official page says Danger Zone 4 is always closed and launch zones change, but there is no fresh adapter receipt or live clearance."
     },
@@ -182,7 +182,7 @@
       "name": "CDFW Año Nuevo SMR and Greyhound Rock SMCA",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Ano-Nuevo-Greyhound-Rock",
       "approved_content_sha256": "93236ef6e66f716f825f9ddb70c1ceb439e76d593101dcdf8652b23509759228",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Inspected CDFW Año Nuevo SMR and Greyhound Rock SMCA page: Año Nuevo reserve prohibits take; Greyhound Rock has specified hook-and-line shoreline finfish, giant kelp, salmon and market squid exceptions. SkipperCast excludes both mapped areas from all fishing targets and exports."
     },
@@ -190,7 +190,7 @@
       "name": "CDFW Soquel Canyon SMCA",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Soquel-Canyon",
       "approved_content_sha256": "955e36e12c5c9de0667db2d4b7d65563c9f34275e495646e73c5de0d6e550c92",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Inspected CDFW Soquel Canyon SMCA page and coordinates: pelagic finfish take is excepted, while other marine take is prohibited. The app conservatively excludes the mapped area from every target and export."
     },
@@ -198,7 +198,7 @@
       "name": "CDFW Portuguese Ledge SMCA",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Portuguese-Ledge",
       "approved_content_sha256": "07f5b2b7b69a90358067a0ac0f4bb4bea65925e3967368ef6205586a70da042a",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Inspected CDFW Portuguese Ledge SMCA page and coordinates: pelagic finfish take is permitted and non-pelagic take is prohibited. The app conservatively excludes the mapped area from every target and export."
     },
@@ -206,7 +206,7 @@
       "name": "CDFW Carmel Pinnacles State Marine Reserve",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Carmel-Pinnacles",
       "approved_content_sha256": "a86e66dff82348a43b4838ca0b3053975b5912e2847769dc4efa4589be1e97a4",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Read CDFW Carmel Pinnacles SMR page and coordinates: no take is allowed. Granite spires are within the reserve and are not a fishing target."
     },
@@ -214,7 +214,7 @@
       "name": "CDFW Carmel Bay State Marine Conservation Area",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Carmel-Bay",
       "approved_content_sha256": "a2f4ba2627b1d6c3b2d8018512f06aad9a918378ee4bac92939128c472c43c16",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Read CDFW Carmel Bay SMCA page and coordinates: recreational finfish take may be allowed, subject to other limits. Exclude the polygon from all app targets conservatively."
     },
@@ -222,7 +222,7 @@
       "name": "CDFW Point Lobos SMR and SMCA",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Lobos",
       "approved_content_sha256": "3aa2c0f123cc9075717f6a45505de27f50eb4d96eca4549c7ecaf42d18fe1549",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Read CDFW Point Lobos SMR and SMCA page: reserve prohibits take and conservation area has stated exceptions. Exclude both mapped polygons from targets."
     },
@@ -230,7 +230,7 @@
       "name": "CDFW Point Sur SMR and SMCA",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Sur",
       "approved_content_sha256": "0d9e96fde5a3793268b582f4907470a7752f9dbbb0fe88f17f6d48acdfcada8d",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Read CDFW Point Sur SMR and SMCA page: reserve prohibits take; conservation area allows salmon and albacore only. Exclude both polygons."
     },
@@ -238,7 +238,7 @@
       "name": "CDFW Edward F. Ricketts and Lovers Point–Julia Platt",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Edward-F-Ricketts-Lovers-Point-Julia-Platt",
       "approved_content_sha256": "adc0443d36fcd0dcddff079f32641d40cbab044033b996ce7451ee66194b4bec",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Read CDFW Ricketts and Lovers Point page: reserve prohibits take; Ricketts SMCA has restricted hook-and-line finfish exception. Exclude both mapped polygons."
     },
@@ -246,7 +246,7 @@
       "name": "CDFW Asilomar State Marine Reserve",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Pacific-Grove-Marine-Gardens-Asilomar",
       "approved_content_sha256": "632da53510794782c01d2a4746e8fdb0f87ac87bb9205aedd3e273bb31b20602",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Read CDFW Asilomar and Pacific Grove page: Asilomar reserve prohibits take; Pacific Grove SMCA permits finfish with other limits. Exclude all mapped polygon portions."
     },
@@ -254,7 +254,7 @@
       "name": "CDFW Big Creek SMR and SMCA",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Big-Creek",
       "approved_content_sha256": "65d1e5cf8205c1cf00263f9cbe0ce0cd9db914187bbc3255001f5506c27b7e69",
-      "normalization": "text-and-links-v3",
+      "normalization": "text-and-links-v4",
       "reviewed_at": "2026-09-25T08:09:03Z",
       "review_note": "Read CDFW Big Creek SMR and SMCA page, coordinates and distinct permissions. SMR prohibits take and generally anchoring/mooring shallower than 10 fathoms except stated cases; SMCA permits salmon and albacore. Both polygons are excluded from app targets."
     }
@@ -281,16 +281,18 @@
         "rules-inseason",
         "rules-gear",
         "rules-groundfish",
-        "rules-health",
         "rules-book",
-        "rules-proposals",
         "rules-groundfish-pdf"
       ],
       "methods": {
         "rod": {
           "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
         }
-      }
+      },
+      "also_check_source_ids": [
+        "rules-proposals",
+        "rules-health"
+      ]
     },
     "rockfish": {
       "name": "Rockfish / rock cod",
@@ -314,16 +316,18 @@
         "rules-inseason",
         "rules-gear",
         "rules-groundfish",
-        "rules-health",
         "rules-book",
-        "rules-proposals",
         "rules-groundfish-pdf"
       ],
       "methods": {
         "rod": {
           "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
         }
-      }
+      },
+      "also_check_source_ids": [
+        "rules-proposals",
+        "rules-health"
+      ]
     },
     "halibut": {
       "name": "California halibut",
@@ -346,29 +350,26 @@
         "rules-central",
         "rules-inseason",
         "rules-gear",
-        "rules-health",
-        "rules-book",
-        "rules-proposals"
+        "rules-book"
       ],
       "methods": {
         "rod": {
           "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
         }
-      }
+      },
+      "also_check_source_ids": [
+        "rules-proposals",
+        "rules-health"
+      ]
     },
     "salmon": {
       "name": "Chinook salmon",
-      "season": "2026 fall season: Sep 1–30, Pigeon Point to the U.S.–Mexico border, unless closed early.",
-      "windows": [
-        {
-          "start": "2026-09-01",
-          "end": "2026-09-30"
-        }
-      ],
-      "bag": "2 salmon per person daily; one daily limit aboard. No coho or steelhead retention.",
-      "size": "20 in minimum total length during this fall season.",
+      "season": "Closed for the remainder of 2026. 2027 ocean salmon season dates are set in March and April 2027.",
+      "windows": [],
+      "bag": "None: the recreational ocean salmon fishery is closed for the rest of 2026.",
+      "size": "Not applicable while the fishery is closed.",
       "details": [
-        "The fall fishery has a 20,000-Chinook harvest guideline and can close before Sep 30. Check CDFW immediately before the trip.",
+        "CDFW Central Region page (updated Nov 7, 2026): the recreational ocean salmon fishery is closed for the remainder of the year. 2027 dates are not yet set; check CDFW before any 2027 trip.",
         "North of Point Conception: one rod and no more than two single-point, single-shank barbless hooks when targeting salmon or with salmon aboard.",
         "When using bait other than while trolling, use barbless circle hooks. Two hooks must be rigidly tied no more than 5 in apart.",
         "Do not fillet salmon aboard before landing ashore."
@@ -378,16 +379,18 @@
         "rules-inseason",
         "rules-gear",
         "rules-salmon",
-        "rules-health",
         "rules-book",
-        "rules-proposals",
         "rules-salmon-pdf"
       ],
       "methods": {
         "rod": {
           "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
         }
-      }
+      },
+      "also_check_source_ids": [
+        "rules-proposals",
+        "rules-health"
+      ]
     },
     "albacore": {
       "name": "Albacore tuna",
@@ -414,15 +417,17 @@
         "rules-gear",
         "rules-ocean",
         "rules-book",
-        "rules-health",
-        "rules-proposals",
         "rules-tuna-federal"
       ],
       "methods": {
         "rod": {
           "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
         }
-      }
+      },
+      "also_check_source_ids": [
+        "rules-proposals",
+        "rules-health"
+      ]
     },
     "bluefin": {
       "name": "Pacific bluefin tuna",
@@ -447,30 +452,32 @@
         "rules-gear",
         "rules-ocean",
         "rules-book",
-        "rules-health",
-        "rules-proposals",
         "rules-tuna-federal"
       ],
       "methods": {
         "rod": {
           "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
         }
-      }
+      },
+      "also_check_source_ids": [
+        "rules-proposals",
+        "rules-health"
+      ]
     },
     "dungeness": {
       "name": "Dungeness crab",
-      "season": "Closed locally Jul 1–Nov 6, 2026. Next scheduled opener: Nov 7, 2026, subject to health and gear restrictions.",
+      "season": "Open from Nov 7, 2026 (south of the Mendocino/Sonoma county line). Crab traps are prohibited until at least Jan 1, 2027; hoop nets and crab snares are permitted.",
       "windows": [
         {
           "start": "2026-11-07",
           "end": "2026-12-31",
-          "requires_opening_review": true
+          "restriction": "Open from Nov 7, 2026. Crab traps are prohibited until at least Jan 1, 2027; hoop nets and crab snares are permitted."
         }
       ],
       "bag": "When open: 10 per person daily; 10 in possession on a private boat.",
       "size": "5¾ in shell width, measured across the body just in front of the side spines, excluding those spines. Carry a crab gauge.",
       "details": [
-        "Season opening and trap permission are separate. November trap clearance has not been confirmed; check CDFW whale-safe and health notices.",
+        "Season opening and trap permission are separate. CDFW (Nov 7, 2026): crab traps may not be set or fished in ocean waters, and a Fleet Advisory is in effect; the Oct 30 risk assessment prohibits traps until at least Jan 1, 2027. Check CDFW whale-safe and health notices.",
         "A crab-trap validation is required to use traps. Maximum 10 deployed traps per person; required escape rings, destruct device, GO ID and buoy markings apply.",
         "Hoop nets and snares have separate gear rules. A trap restriction does not itself close those methods, but the season and health closures still apply.",
         "Check the current 2026 hoop-net marking rules and all gear details in §29.80 before setting gear.",
@@ -481,13 +488,12 @@
       "source_ids": [
         "rules-central",
         "rules-inseason",
+        "rules-health",
         "rules-crab",
         "rules-whales",
-        "rules-health",
         "rules-invertebrates",
         "rules-ocean",
-        "rules-book",
-        "rules-proposals"
+        "rules-book"
       ],
       "methods": {
         "trap": {
@@ -500,7 +506,10 @@
         "snare": {
           "note": "Use the current snare definition and gear limits. A trap restriction does not by itself establish permission to take Dungeness; the season and health checks also apply."
         }
-      }
+      },
+      "also_check_source_ids": [
+        "rules-proposals"
+      ]
     }
   },
   "common_notes": [
