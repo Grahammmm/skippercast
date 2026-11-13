@@ -114,7 +114,10 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
     // every brief assertion measured upstream readings. Failing the part here takes the brief down its
     // own documented fallback to the stubbed whole feed; the part itself is covered by
     // tests/test_daily_brief_part.mjs and tests/test_brief_daily_part.mjs. Other parts fall through:
-    // e2e/boundary-fixture.ts answers the boundary parts and the regulations part is read live today.
+    // e2e/boundary-fixture.ts answers the boundary parts. The regulations part reaches the local Worker,
+    // which reads published feeds from R2 only (never GitHub); e2e/serve.mjs seeds that R2 with the daily-feed
+    // fixture and the published regulations block (e2e/seed/morro-bay-daily-regulations.json), so the part
+    // answers from a fixed copy.
     await context.route('**/api/daily?*', async route => {
       if (new URL(route.request().url()).searchParams.get('part') !== 'brief') { await route.fallback(); return; }
       await route.fulfill({status: 503, json: {error: 'Offline UI test'}});
@@ -141,7 +144,7 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
       const search = new URLSearchParams({...params, ui: 'v2'});
       return `${name === 'app' ? '/map' : '/'}?${search}`;
     };
-    // The local Worker proxies /feeds/ to upstream; a v2 page never reaches it (tests stay offline).
+    // The local Worker serves /feeds/ from its R2 only (seeded by e2e/serve.mjs); a v2 page never reaches it, so every feed is an explicit stub.
     await page.route('**/feeds/**', route => route.fulfill({status: 404, json: {error: 'No feed stub (e2e/fixtures.ts v2.feed)'}}));
     await page.addInitScript(() => {
       const w = window as unknown as {__lcp: number; __lcpCandidates: LcpCandidate[]};

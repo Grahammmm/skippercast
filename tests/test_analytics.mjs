@@ -4,6 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
+import {feedBucket} from './fixtures/feed-bucket.mjs';
 import {deployConfig, features, stripJsonComments} from '../scripts/wrangler_config.mjs';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
@@ -63,12 +64,12 @@ test('successful /feeds/ reads are sampled 1 in FEED_SAMPLE with a weight; failu
   globalThis.fetch = async url => String(url).includes('missing') ? new Response('no', {status: 404}) : Response.json({ok: true});
   try {
     Math.random = () => 0.99;   // not sampled
-    assert.equal((await worker.fetch(new Request(ORIGIN + '/feeds/conditions/latest.json'), {ANALYTICS})).status, 200);
+    assert.equal((await worker.fetch(new Request(ORIGIN + '/feeds/conditions/latest.json'), {ANALYTICS, FEEDS: feedBucket()})).status, 200);
     assert.equal(of(points, 'request').length, 0);
     Math.random = () => 0;      // sampled
-    assert.equal((await worker.fetch(new Request(ORIGIN + '/feeds/conditions/latest.json'), {ANALYTICS})).status, 200);
+    assert.equal((await worker.fetch(new Request(ORIGIN + '/feeds/conditions/latest.json'), {ANALYTICS, FEEDS: feedBucket()})).status, 200);
     Math.random = () => 0.99;
-    assert.equal((await worker.fetch(new Request(ORIGIN + '/feeds/conditions/missing.json'), {ANALYTICS})).status, 404);
+    assert.equal((await worker.fetch(new Request(ORIGIN + '/feeds/conditions/missing.json'), {ANALYTICS, FEEDS: feedBucket()})).status, 404);
   } finally { globalThis.fetch = original; Math.random = random; }
   assert.deepEqual(of(points, 'request').map(p => [p.blobs[1], p.doubles[0], p.doubles[2]]), [['/feeds/*', 200, FEED_SAMPLE], ['/feeds/*', 404, 1]]);
 });

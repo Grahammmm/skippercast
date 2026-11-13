@@ -13,6 +13,7 @@ globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html'};
 globalThis.BUILD_ID = 'build-test';
 import {withSessions} from './fixtures/test-sessions.mjs';
+import {feedBucket} from './fixtures/feed-bucket.mjs';
 const {default: deployed, checkTrips, ClientError} = await import('../server/index.ts');
 // Private routes are reached through real session cookies (fixtures/test-sessions.mjs).
 const worker = withSessions(deployed);
@@ -64,13 +65,12 @@ test('/api/om answers an Open-Meteo-style query through worker.fetch from the pu
   const start = Math.floor(Date.now() / 3600000) * 3600;
   globalThis.fetch = async (url, options) => {
     requested.push(url.replace(DEPLOYMENT.forecast_feed, ''));
-    assert.equal(options.redirect, 'manual');
     if (url.endsWith('/manifest.json')) return Response.json({model: 'gfs_global', tiles: ['35_-121'], meta: {last_run_initialisation_time: start, data_end_time: start + 3600}});
     if (url.endsWith('/tiles/35_-121.json')) return Response.json(windTile(start));
     return new Response('missing', {status: 404});
   };
   try {
-    const response = await worker.fetch(request('/api/om/v1/forecast?latitude=35.1&longitude=-120.9&models=gfs_global&hourly=wind_speed_10m,wind_gusts_10m&wind_speed_unit=kn&timezone=UTC&timeformat=unixtime&forecast_days=1'), {});
+    const response = await worker.fetch(request('/api/om/v1/forecast?latitude=35.1&longitude=-120.9&models=gfs_global&hourly=wind_speed_10m,wind_gusts_10m&wind_speed_unit=kn&timezone=UTC&timeformat=unixtime&forecast_days=1'), {FEEDS: feedBucket()});
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('Cache-Control'), 'public, max-age=300, s-maxage=300');
     const data = await response.json();
@@ -78,10 +78,10 @@ test('/api/om answers an Open-Meteo-style query through worker.fetch from the pu
     const now = data.hourly.time.indexOf(start);
     assert.ok(now >= 0);assert.equal(data.hourly.wind_speed_10m[now], 9.7);assert.equal(data.hourly.wind_gusts_10m[now], 15.6);
     assert.deepEqual(requested, ['/gfs_global/manifest.json', '/gfs_global/tiles/35_-121.json']);
-    const bad = await worker.fetch(request('/api/om/v1/forecast?latitude=north&longitude=-120.9'), {});
+    const bad = await worker.fetch(request('/api/om/v1/forecast?latitude=north&longitude=-120.9'), {FEEDS: feedBucket()});
     assert.equal(bad.status, 400);assert.equal((await bad.json()).error, true);
-    assert.equal((await worker.fetch(request('/api/om/data/not_a_model/static/meta.json'), {})).status, 400);
-    assert.equal((await worker.fetch(request('/api/om/v1/other'), {})).status, 401, 'unknown om paths fall through to the private routes');
+    assert.equal((await worker.fetch(request('/api/om/data/not_a_model/static/meta.json'), {FEEDS: feedBucket()})).status, 400);
+    assert.equal((await worker.fetch(request('/api/om/v1/other'), {FEEDS: feedBucket()})).status, 401, 'unknown om paths fall through to the private routes');
   } finally { globalThis.fetch = original; }
 });
 

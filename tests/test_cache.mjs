@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {cacheKey, cached, overLimit} from '../server/edge-cache.ts';
 import {useBucket, EDGE_CACHE_MAX_BYTES} from '../server/feeds.ts';
+import {feedBucket} from './fixtures/feed-bucket.mjs';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
@@ -49,6 +50,8 @@ async function withEdge(fn) {
   globalThis.caches = {default: cache, async open() { throw Error('named caches unavailable'); }};
   try { return await fn(cache); } finally { globalThis.caches = originalCaches; globalThis.fetch = originalFetch; useBucket({}); }
 }
+// Published feeds come only from R2: these tests stub the feed's logical URL and read it through the stand-in.
+const FEED_ENV = {FEEDS: feedBucket()};
 const ctx = () => { const pending = []; return {pending, waitUntil: p => pending.push(p), settle: () => Promise.all(pending)}; };
 const get = (path, headers = {}) => new Request('https://skippercast.com' + path, {headers: {'cf-connecting-ip': '203.0.113.9', ...headers}});
 
@@ -63,14 +66,14 @@ test('/api/om answers repeat queries from the edge cache; errors are not cached'
   globalThis.fetch = async url => { reads++; assert.match(url, /gfs_global\/manifest\.json$/);
     return Response.json({meta: {last_run_initialisation_time: 0}, provider: 'NOAA', cycle_iso: '2026-09-28T00:00Z'}); };
   const c = ctx();
-  const first = await worker.fetch(get('/api/om/data/gfs_global/static/meta.json?b=2&a=1'), {}, c);await c.settle();
+  const first = await worker.fetch(get('/api/om/data/gfs_global/static/meta.json?b=2&a=1'), FEED_ENV, c);await c.settle();
   assert.equal(first.status, 200);assert.equal(first.headers.get('X-SC-Cache'), 'miss');
   assert.match(first.headers.get('Cache-Control'), /s-maxage=300/);
-  const second = await worker.fetch(get('/api/om/data/gfs_global/static/meta.json?a=1&b=2'), {}, ctx());
+  const second = await worker.fetch(get('/api/om/data/gfs_global/static/meta.json?a=1&b=2'), FEED_ENV, ctx());
   assert.equal(second.headers.get('X-SC-Cache'), 'hit');assert.deepEqual(await second.json(), await first.json());
   assert.equal(reads, 1, 'the hit did not read the manifest again');
   assert.equal(second.headers.get('Content-Security-Policy') !== null, true, 'cached responses still get security headers');
-  for (let i = 0; i < 2; i++) assert.equal((await worker.fetch(get('/api/om/data/nope/static/meta.json'), {}, ctx())).status, 400);
+  for (let i = 0; i < 2; i++) assert.equal((await worker.fetch(get('/api/om/data/nope/static/meta.json'), FEED_ENV, ctx())).status, 400);
   assert.equal(cache.puts, 1, 'the 400 was not stored');
 }));
 
@@ -79,21 +82,21 @@ test('/api/forecast and /api/intelligence share one feed read per TTL', () => wi
   globalThis.fetch = async () => { reads++; return Response.json({region_id: 'morro-bay', schema_version: 1, forecast: {points: {north: {}}},
     sources: {'model-x': {name: 'x', status: 'ok', issue: 'i', url: 'u', checked_at: 'c', raw: 'dropped'}, other: {kept: true}}}); };
   const c = ctx();
-  const forecast = await worker.fetch(get('/api/forecast?region=morro-bay'), {}, c);await c.settle();
+  const forecast = await worker.fetch(get('/api/forecast?region=morro-bay'), FEED_ENV, c);await c.settle();
   assert.equal(forecast.headers.get('X-SC-Cache'), 'miss');assert.deepEqual(await forecast.json(), {points: {north: {}}});
-  const intel = await worker.fetch(get('/api/intelligence?region=morro-bay&junk=1'), {}, ctx());
+  const intel = await worker.fetch(get('/api/intelligence?region=morro-bay&junk=1'), FEED_ENV, ctx());
   assert.equal(intel.headers.get('X-SC-Cache'), 'hit');assert.equal(reads, 1);
   const body = await intel.json();assert.equal(body.forecast, undefined);assert.equal(body.sources['model-x'].raw, undefined);assert.equal(body.sources.other.kept, true);
   assert.equal(intel.headers.get('Cache-Control'), 'public, max-age=60, s-maxage=60');
-  assert.equal((await worker.fetch(get('/api/forecast?region=morro-bay'), {}, ctx())).headers.get('X-SC-Cache'), 'hit');
+  assert.equal((await worker.fetch(get('/api/forecast?region=morro-bay'), FEED_ENV, ctx())).headers.get('X-SC-Cache'), 'hit');
 }));
 
 test('/api/habitat is cached per region', () => withEdge(async () => {
   let reads = 0;
   globalThis.fetch = async () => { reads++; return Response.json({schema_version: 1, region_id: 'morro-bay', layers: {}}); };
   const c = ctx();
-  assert.equal((await worker.fetch(get('/api/habitat?region=morro-bay'), {}, c)).headers.get('X-SC-Cache'), 'miss');await c.settle();
-  assert.equal((await worker.fetch(get('/api/habitat?region=morro-bay&x=1'), {}, ctx())).headers.get('X-SC-Cache'), 'hit');
+  assert.equal((await worker.fetch(get('/api/habitat?region=morro-bay'), FEED_ENV, c)).headers.get('X-SC-Cache'), 'miss');await c.settle();
+  assert.equal((await worker.fetch(get('/api/habitat?region=morro-bay&x=1'), FEED_ENV, ctx())).headers.get('X-SC-Cache'), 'hit');
   assert.equal(reads, 1);
 }));
 
@@ -104,23 +107,23 @@ test('/api/daily returns one validated part of the daily feed and caches its sib
     sources: {'mpa-boundaries': {status: 'ok', data: {geojson: {}}}, 'model-x': {raw: 'large'}}};
   globalThis.fetch = async url => { reads++; assert.match(url, /\/data\/regions\/morro-bay\/latest\.json$/); return Response.json(feed); };
   const c = ctx();
-  const rules = await worker.fetch(get('/api/daily?region=morro-bay&part=regulations&x=1'), {}, c);await c.settle();
+  const rules = await worker.fetch(get('/api/daily?region=morro-bay&part=regulations&x=1'), FEED_ENV, c);await c.settle();
   assert.equal(rules.status, 200);assert.equal(rules.headers.get('X-SC-Cache'), 'miss');
   assert.deepEqual(await rules.json(), {schema_version: 1, region_id: 'morro-bay', generated_at: '2026-09-29T11:00:00Z',
     catch_probability: null, bite_score: null, part: 'regulations', regulations: {reviewed_at: 'r'}});
-  const mpas = await worker.fetch(get('/api/daily?part=mpa-boundaries&region=morro-bay'), {}, ctx());
+  const mpas = await worker.fetch(get('/api/daily?part=mpa-boundaries&region=morro-bay'), FEED_ENV, ctx());
   assert.equal(mpas.headers.get('X-SC-Cache'), 'hit');assert.equal(reads, 1, 'one feed read answers every part');
   assert.deepEqual((await mpas.json()).sources, {'mpa-boundaries': feed.sources['mpa-boundaries']});
-  assert.deepEqual((await (await worker.fetch(get('/api/daily?region=morro-bay&part=additional-closures'), {}, ctx())).json()).sources, {});
-  assert.equal((await worker.fetch(get('/api/daily?region=morro-bay&part=reports'), {}, ctx())).status, 400);
-  assert.equal((await worker.fetch(get('/api/daily?region=nowhere&part=regulations'), {}, ctx())).status, 404);
+  assert.deepEqual((await (await worker.fetch(get('/api/daily?region=morro-bay&part=additional-closures'), FEED_ENV, ctx())).json()).sources, {});
+  assert.equal((await worker.fetch(get('/api/daily?region=morro-bay&part=reports'), FEED_ENV, ctx())).status, 400);
+  assert.equal((await worker.fetch(get('/api/daily?region=nowhere&part=regulations'), FEED_ENV, ctx())).status, 404);
 }));
 
 test('/api/daily refuses a daily feed the app would reject, and does not cache the failure', () => withEdge(async cache => {
   let reads = 0;
   globalThis.fetch = async () => { reads++; return Response.json({schema_version: 1, region_id: 'morro-bay', generated_at: '2026-09-29T11:00:00Z',
     health: {}, reports: [], sources: {}, catch_probability: 0.4, bite_score: null, regulations: {}}); };
-  for (let i = 0; i < 2; i++) assert.notEqual((await worker.fetch(get('/api/daily?region=morro-bay&part=regulations'), {}, ctx())).status, 200);
+  for (let i = 0; i < 2; i++) assert.notEqual((await worker.fetch(get('/api/daily?region=morro-bay&part=regulations'), FEED_ENV, ctx())).status, 200);
   assert.equal(reads, 2);assert.equal(cache.puts, 0);
 }));
 
@@ -129,7 +132,7 @@ test('without caches.default the endpoints still answer', async () => {
   globalThis.caches = {get default() { throw Error('default cache forbidden'); }, async open() { throw Error('no'); }};
   globalThis.fetch = async () => Response.json({schema_version: 1, region_id: 'morro-bay', layers: {}});
   try {
-    const r = await worker.fetch(get('/api/habitat?region=morro-bay'), {});
+    const r = await worker.fetch(get('/api/habitat?region=morro-bay'), FEED_ENV);
     assert.equal(r.status, 200);assert.equal(r.headers.get('X-SC-Cache'), 'miss');
   } finally { globalThis.caches = originalCaches; globalThis.fetch = originalFetch; }
 });
@@ -194,7 +197,7 @@ test('R2 feeds larger than the cache limit, 404s and seafloor archives are not c
 
 test('per-IP rate limits: /api/om 60/min and feeds 300/min return 429 with Retry-After', () => withEdge(async cache => {
   globalThis.fetch = async () => Response.json({meta: {}, provider: 'NOAA'});
-  const env = {PUBLIC_LIMITER: fakeLimiter(60), FEED_LIMITER: fakeLimiter(300), FEEDS: bucket({'data/x.json': '{}'}, [])};
+  const env = {PUBLIC_LIMITER: fakeLimiter(60), FEED_LIMITER: fakeLimiter(300), ...FEED_ENV};
   // /api/om counts misses only: with the edge cache empty every request is a miss.
   const {match} = cache; cache.match = async () => undefined;
   for (let i = 0; i < 60; i++) assert.equal((await worker.fetch(get('/api/om/data/gfs_global/static/meta.json'), env, ctx())).status, 200);
@@ -213,19 +216,19 @@ test('per-IP rate limits: /api/om 60/min and feeds 300/min return 429 with Retry
 test('/api/om limits only cache misses per IP: hits are free even over the limit; no or a failing binding fails open', () => withEdge(async cache => {
   let reads = 0;
   globalThis.fetch = async () => { reads++; return Response.json({meta: {}, provider: 'NOAA'}); };
-  const env = {PUBLIC_LIMITER: fakeLimiter(60)}, path = '/api/om/data/gfs_global/static/meta.json';
+  const env = {PUBLIC_LIMITER: fakeLimiter(60), ...FEED_ENV}, path = '/api/om/data/gfs_global/static/meta.json';
   const c = ctx(); assert.equal((await worker.fetch(get(path), env, c)).status, 200); await c.settle();
   for (let i = 0; i < 100; i++) assert.equal((await worker.fetch(get(path), env, ctx())).status, 200);
   assert.equal(reads, 1);assert.equal(env.PUBLIC_LIMITER.counts.get('om:203.0.113.9'), 1, 'one miss then 100 hits spend one unit');
-  const over = {PUBLIC_LIMITER: fakeLimiter(0)};
+  const over = {PUBLIC_LIMITER: fakeLimiter(0), ...FEED_ENV};
   assert.equal((await worker.fetch(get(path), over, ctx())).status, 200, 'a hit is served to an address over its limit');
   assert.equal(over.PUBLIC_LIMITER.counts.size, 0, 'a hit never consults the limiter');
   const {match} = cache; cache.match = async () => undefined;
   assert.equal((await worker.fetch(get(path), over, ctx())).status, 429, 'the same address is refused on a miss');
-  for (const e of [{}, {PUBLIC_LIMITER: {limit: async () => { throw Error('limiter down'); }}}]) {
+  for (const e of [{...FEED_ENV}, {PUBLIC_LIMITER: {limit: async () => { throw Error('limiter down'); }}, ...FEED_ENV}]) {
     for (let i = 0; i < 61; i++) assert.equal((await worker.fetch(get(path), e, ctx())).status, 200, 'fails open');
   }
-  const kinds = {PUBLIC_LIMITER: fakeLimiter(60)};
+  const kinds = {PUBLIC_LIMITER: fakeLimiter(60), ...FEED_ENV};
   for (const kind of ['forecast', 'marine']) assert.notEqual((await worker.fetch(get(`/api/om/v1/${kind}?latitude=35.4&longitude=-120.9`), kinds, ctx())).status, 429);
   assert.deepEqual([...kinds.PUBLIC_LIMITER.counts], [['om:203.0.113.9', 2]], '/v1/forecast and /v1/marine use the same gate');
   cache.match = match;
@@ -235,7 +238,7 @@ test('/api/daily limits only cache misses per IP on PUBLIC_LIMITER (429 with Ret
   let reads = 0;
   globalThis.fetch = async () => { reads++; return Response.json({schema_version: 1, region_id: 'morro-bay', generated_at: '2026-09-29T11:00:00Z', health: {ok: 1},
     reports: [], sources: {}, catch_probability: null, bite_score: null, regulations: {}}); };
-  const env = {PUBLIC_LIMITER: fakeLimiter(60)};
+  const env = {PUBLIC_LIMITER: fakeLimiter(60), ...FEED_ENV};
   const part = (ip) => worker.fetch(get('/api/daily?region=morro-bay&part=regulations', ip ? {'cf-connecting-ip': ip} : {}), env, ctx());
   // Hits are free: a hundred map loads from one address read the feed once and spend one unit.
   for (let i = 0; i < 100; i++) assert.equal((await part()).status, 200);
