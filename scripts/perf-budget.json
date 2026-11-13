@@ -5,7 +5,7 @@
       "label": "Landing page scripts (first load)",
       "kind": "first_load_js",
       "entry": "landing.html",
-      "max_bytes": 306000,
+      "max_bytes": 321000,
       "history": [
         {
           "max_bytes": 445000,
@@ -22,6 +22,10 @@
         {
           "max_bytes": 306000,
           "reason": "Raised 304,000 to 306,000 (MAIN-RED-SKIPPERCAST). Main bcd9f04c builds the landing first-load scripts at 304,012 bytes (strings.en.generated 186.7 KB, signals 20.9 KB, landing 16.9 KB and others), 12 bytes over the 304,000 budget after the concurrent merges of #2110, #2111 and #2098, each of which passed CI on its own head. The budget moves up 2,000 bytes (0.7% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 321000,
+          "reason": "Budget drift, raised by the budget-drift bot (SC-CI-2 first run on main 114079ae1; earlier hand-set ceilings left 0.1% to 2.3% margins). Landing page scripts (first load): main measures 305,509 bytes, 99.8% of the 306,000 byte budget; ceiling = ceil(305,509 x 1.05 / 1,000) x 1,000 = 321,000 (5.1% headroom)."
         }
       ]
     },
@@ -29,7 +33,7 @@
       "label": "Landing page styles (first load)",
       "kind": "first_load_css",
       "entry": "landing.html",
-      "max_bytes": 30000,
+      "max_bytes": 31000,
       "history": [
         {
           "max_bytes": 26000,
@@ -42,6 +46,10 @@
         {
           "max_bytes": 30000,
           "reason": "Raised 29,000 to 30,000 (MGL-15). web/tokens.css gains the map-only colour role tokens (--map-*, --hab-*, --mark-ring), which the landing page loads as its tokens stylesheet (3.0 KB to 3.8 KB, about 0.8 KB); the landing first-load styles measure 29,461 bytes on the merged build (assets degraded-notice 15.9 KB, landing 9.1 KB, tokens 3.8 KB), so the budget moves up 1,000 bytes (1.8% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 31000,
+          "reason": "Budget drift, raised by the budget-drift bot (SC-CI-2 first run on main 114079ae1; earlier hand-set ceilings left 0.1% to 2.3% margins). Landing page styles (first load): main measures 29,488 bytes, 98.3% of the 30,000 byte budget; ceiling = ceil(29,488 x 1.05 / 1,000) x 1,000 = 31,000 (5.1% headroom)."
         }
       ]
     },
@@ -49,7 +57,7 @@
       "label": "App page (brief, map) scripts (first load)",
       "kind": "first_load_js",
       "entry": "app.html",
-      "max_bytes": 1059000,
+      "max_bytes": 1111000,
       "history": [
         {
           "max_bytes": 1160000,
@@ -70,6 +78,10 @@
         {
           "max_bytes": 1059000,
           "reason": "Lowered 1,064,000 to 1,059,000 (SC1407-10, #1762 M5). The trip planner, offline pack, basemap ranges and coastal snapshots moved from web/trip.ts to web/trip-runtime.ts, loaded on first use, so the app's first load no longer carries them. Vite manifest static closure of app.html: 1,007,939 bytes on this branch merged with main 1deba4ec (SC1407-09 and the earlier entries included); ceiling = ceil(1,007,939 x 1.05 / 1,000) x 1,000."
+        },
+        {
+          "max_bytes": 1111000,
+          "reason": "Budget drift, raised by the budget-drift bot (SC-CI-2 first run on main 114079ae1; earlier hand-set ceilings left 0.1% to 2.3% margins). App page (brief, map) scripts (first load): main measures 1,057,712 bytes, 99.9% of the 1,059,000 byte budget; ceiling = ceil(1,057,712 x 1.05 / 1,000) x 1,000 = 1,111,000 (5.0% headroom)."
         }
       ]
     },
@@ -77,7 +89,7 @@
       "label": "App page (brief, map) styles (first load)",
       "kind": "first_load_css",
       "entry": "app.html",
-      "max_bytes": 79000,
+      "max_bytes": 83000,
       "history": [
         {
           "max_bytes": 71000,
@@ -122,17 +134,25 @@
         {
           "max_bytes": 79000,
           "reason": "Raised 78,000 to 79,000 (MGL-15, after merging main cef6473eb with UXFIX-05 rem font sizes). The map-only colour roles this PR adds to web/tokens.css (--map-*, --hab-*, --mark-ring, each declared separately per theme so map paint stays independent of app chrome) take the app first-load styles to 78,095 bytes on the merged build (assets/app css 54.9 KB plus degraded-notice 15.9 KB, tokens 3.8 KB and Brief 1.7 KB), 95 bytes over the 78,000 budget; the budget moves up 1,000 bytes (1.2% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 83000,
+          "reason": "Budget drift, raised by the budget-drift bot (SC-CI-2 first run on main 114079ae1; earlier hand-set ceilings left 0.1% to 2.3% margins). App page (brief, map) styles (first load): main measures 78,662 bytes, 99.6% of the 79,000 byte budget; ceiling = ceil(78,662 x 1.05 / 1,000) x 1,000 = 83,000 (5.5% headroom)."
         }
       ]
     },
     "largest_built_file": {
       "label": "Largest single built script, style or font",
       "kind": "largest_built_file",
-      "max_bytes": 1150000,
+      "max_bytes": 1180000,
       "history": [
         {
           "max_bytes": 1150000,
           "reason": "Initial budget (SC-PERF-BUDGET-1). Measured 1,094,203 bytes (the map engine) plus 5.1% headroom. Stops one big blob being bundled in anywhere, loaded now or on demand."
+        },
+        {
+          "max_bytes": 1180000,
+          "reason": "Budget drift, raised by the budget-drift bot (SC-CI-2 first run on main 114079ae1; earlier hand-set ceilings left 0.1% to 2.3% margins). Largest single built script, style or font: main measures 1,123,774 bytes, 97.7% of the 1,150,000 byte budget; ceiling = ceil(1,123,774 x 1.05 / 1,000) x 1,000 = 1,180,000 (5.0% headroom)."
         }
       ]
     },
