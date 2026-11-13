@@ -139,7 +139,7 @@ window.__map = map;
 // Data: python research/scripts/map_style/fetch_hfr_currents.py --sector central-coast  ->  var/currents/hfr-central-coast-6km.json
 // Options: currents=on|off (default on), current_data=<url of another sector's json>.
 // The data time is always written in the note; if the file is missing the page says so and draws nothing.
-import {addCurrents, freshnessText, loadCurrentsDoc, statusHidden} from './currents-layer.js';
+import {addCurrents, freshnessText, loadCurrentsDoc, statusHidden} from '../../../web/map/currents-layer.js';
 const box = document.getElementById('currents-on');
 const note = document.getElementById('note');
 const line = document.createElement('div');

@@ -9,7 +9,7 @@ from unittest.mock import patch
 import zipfile
 
 from scripts.verify_legal_review_artifact import verify
-from skippercast.pipeline.parsers import watch_content
+from skippercast.pipeline.parsers import watch_content, watch_content_v4
 from skippercast.pipeline.regulations import content_hash
 
 
@@ -42,6 +42,24 @@ class LegalReviewArtifactTest(unittest.TestCase):
     def test_matching_source_passes(self):
         self.write_zip()
         self.assertEqual(self.check()["verified_source_count"], 1)
+
+    def test_v4_packet_against_v3_registry_verifies_with_v4_bytes(self):
+        html = "<html><body><nav>Menu</nav><main>Official <a href='https://example.org/rules'>Rules</a></main></body></html>"
+        data = self.packet["sources"]["rules-test"]["data"]
+        data.update(normalization="text-and-links-v4", content_sha256=hashlib.sha256(watch_content_v4(html).encode()).hexdigest())
+        self.write_zip(html=html)
+        self.assertEqual(self.check()["verified_source_count"], 1)
+        data["content_sha256"] = hashlib.sha256(watch_content(html).encode()).hexdigest()
+        self.write_zip(html=html)
+        with self.assertRaisesRegex(ValueError, "fingerprint mismatch"):
+            self.check()
+
+    def test_v3_packet_against_v4_registry_is_refused(self):
+        self.registry["sources"]["rules-test"]["normalization"] = "text-and-links-v4"
+        self.packet["rules_content_sha256"] = content_hash(self.registry)
+        self.write_zip()
+        with self.assertRaisesRegex(ValueError, "Normalizer mismatch"):
+            self.check()
 
     def test_changed_source_fails(self):
         self.write_zip(html=self.html.replace("Official", "Altered"))

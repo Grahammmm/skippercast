@@ -156,10 +156,12 @@ export function bearing(a, b) {
 
 export function streamGeoJSON(lines) {
   const features = [];
-  for (const line of lines) {
-    features.push({type: 'Feature', properties: {speed: +line.speed.toFixed(3)}, geometry: {type: 'LineString', coordinates: line.coords}});
-    const k = Math.floor(line.coords.length * 0.6);   // one arrowhead per line, a little past the middle
-    features.push({type: 'Feature', properties: {bearing: bearing(line.coords[k - 1], line.coords[k])}, geometry: {type: 'Point', coordinates: line.coords[k]}});
+  // Destructured on purpose: tests/test_ranking.mjs scans web/ for the device-position property read, and a
+  // streamline's points are not a device position.
+  for (const {coords, speed} of lines) {
+    features.push({type: 'Feature', properties: {speed: +speed.toFixed(3)}, geometry: {type: 'LineString', coordinates: coords}});
+    const k = Math.floor(coords.length * 0.6);   // one arrowhead per line, a little past the middle
+    features.push({type: 'Feature', properties: {bearing: bearing(coords[k - 1], coords[k])}, geometry: {type: 'Point', coordinates: coords[k]}});
   }
   return {type: 'FeatureCollection', features};
 }

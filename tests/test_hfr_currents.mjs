@@ -2,9 +2,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {balance} from '../research/scripts/map_style/balance-ramp.js';
+import {balance} from '../web/map/balance-ramp.js';
 import {bearing, bilinear, freshnessText, gridOf, streamGeoJSON, streamlines, tintPixels, velocityAt, vorticity}
-  from '../research/scripts/map_style/currents-layer.js';
+  from '../web/map/currents-layer.js';
 
 const lats = [35.0, 35.05, 35.1, 35.15, 35.2, 35.25], lons = [-121.0, -120.95, -120.9, -120.85, -120.8, -120.75];
 const field = fn => lats.map(la => lons.map(lo => fn(la, lo)));
@@ -86,14 +86,14 @@ test('bilinear gives the exact value at a cell and refuses outside', () => {
 });
 
 test('the colour table is the 256-entry cmocean balance and the output stays out of public builds', () => {
-  const src = readFileSync(new URL('../research/scripts/map_style/balance-ramp.js', import.meta.url), 'utf8');
+  const src = readFileSync(new URL('../web/map/balance-ramp.js', import.meta.url), 'utf8');
   assert.equal([...src.matchAll(/'([0-9a-f]{96})'/g)].map(m => m[1]).join('').length, 256 * 6);
   const build = readFileSync(new URL('../scripts/client-build.mjs', import.meta.url), 'utf8');
   assert.ok(!/var\/currents/.test(build), 'client-build never reads var/');
 });
 
 test('missing or invalid currents data keeps its status visible and draws nothing; overlay-off still hides valid data', async () => {
-  const {statusHidden, loadCurrentsDoc} = await import('../research/scripts/map_style/currents-layer.js');
+  const {statusHidden, loadCurrentsDoc} = await import('../web/map/currents-layer.js');
   assert.equal(statusHidden(true, false), false);   // failure shown even with the checkbox unchecked
   assert.equal(statusHidden(false, false), true);   // valid data, overlay deliberately off
   assert.equal(statusHidden(false, true), false);
