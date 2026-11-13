@@ -1,7 +1,7 @@
 """Guard the distinction between measured seabed research and fishing targets."""
 import json
 import unittest
-from research.lib.receipts import RECEIPTS
+from research.lib.receipts import RECEIPTS, locate
 from research.lib.paths import ROOT
 
 
@@ -165,7 +165,7 @@ class NbsHardResearchPublicationTests(unittest.TestCase):
                             feature["properties"]["exportable"] is False
                             for feature in merged["features"]))
         for source in merged["source_layers"]:
-            source_path = ROOT / source["path"]
+            source_path = locate(source["path"])
             self.assertEqual(hashlib.sha256(source_path.read_bytes()).hexdigest(), source["sha256"])
             original = json.loads(source_path.read_text())
             self.assertEqual(source["features"], len(original["features"]))
