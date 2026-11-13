@@ -15,11 +15,12 @@ import {loadLaunch, loadReach, loadSpear} from '../reach.ts';
 import {startTrip} from '../trip.ts';
 import {App, bindStartupFreshness, loadRegion, narrow, NARROW_QUERY, regionInfo, regionLoad} from './App.tsx';
 import {loadPlans, regionPlans} from '../species.ts';
-import {failVerdictMetadata, beginVerdictRegion, bindBriefReport, currentBrief, ensureRegionalForecast, enableSavedBrief, noteRegionInfo, loadDailyFeed, needsDailyLoad, showSavedBrief} from '../brief/Brief.tsx';
+import {failVerdictMetadata, beginVerdictRegion, bindBriefReport, currentBrief, ensureRegionalForecast, enableSavedBrief, noteRegionInfo, loadDailyFeed, needsDailyLoad, savedBrief, showSavedBrief, verdictEpoch} from '../brief/Brief.tsx';
 import {regionPlace} from '../map/currents.ts';
 import {shownPresentation} from '../map/stage.ts';
 import {initTelemetry} from '../telemetry.ts';
 import {installDegradedWatch} from '../degraded.ts';
+import {holdMap, MAP_WAIT_MAX_MS, releaseMap, whenMapMayLoad} from '../map-ready.ts';
 
 // SC-LAUNCH-4: before any read, so every response's cost-ceiling mark reaches the notice.
 installDegradedWatch();
@@ -41,6 +42,14 @@ loadSpear();
 loadLaunch();
 // The shell shows "No port chosen" until the address changes.
 if (!region.peek() && !coast.peek()) void savedHomeURL(location.href).then(next => location.replace(next));
+// SCB-11: a page that opens on a region holds the Chart's own downloads (MapLibre, the basemap, the protected areas, the marks)
+// until the first verdict is on screen: the region's answer settled, or the saved brief shown; at most MAP_WAIT_MAX_MS after the
+// page started. On a slow link they would otherwise share it with the files the verdict needs (web/map-ready.ts).
+if (region.peek()) {
+  holdMap();
+  effect(() => { if (verdictEpoch.value?.sealed || savedBrief.value) releaseMap(); });
+  setTimeout(releaseMap, Math.max(0, MAP_WAIT_MAX_MS - performance.now()));
+}
 const width = matchMedia(NARROW_QUERY);
 narrow.value = width.matches;
 width.addEventListener('change', event => { narrow.value = event.matches; });
@@ -51,9 +60,10 @@ async function start(): Promise<void> {
   effect(() => beginVerdictRegion(region.value));
   const host = document.getElementById('app');
   if (host) { host.replaceChildren(); render(<App />, host); }
-  // SC1407-08 (#1762 M3): a /map page that opens on the Chart starts fetching its library now, not when the Chart mounts.
-  // The Chart imports this same module (web/map/chart.ts), so the browser loads it once and the Chart reports any failure.
-  if (host && location.pathname === '/map' && region.peek() && shownPresentation.peek() === 'chart') void import('../map/maplibre.js').catch(() => {});
+  // SC1407-08 (#1762 M3): a /map page that opens on the Chart starts fetching its library as soon as the map may load (SCB-11: after
+  // the first verdict), not when the Chart mounts. The Chart imports this same module (web/map/chart.ts), so the browser loads it once
+  // and the Chart reports any failure.
+  if (host && location.pathname === '/map' && region.peek() && shownPresentation.peek() === 'chart') whenMapMayLoad(() => void import('../map/maplibre.js').catch(() => {}));
   // FE-51: after the render, so `#export` finds the planner's host.
   startTrip();
 

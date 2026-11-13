@@ -125,6 +125,44 @@ function pageStyles(root) {
   };
 }
 
+/**
+ * SCB-11: a page's startup imports. dist/app.html's entry (web/app/entry.ts) starts the first verdict's reads, then imports the
+ * app (web/app/main.tsx) at once; that import and its static imports are the page's startup code, so the page names them as
+ * modulepreload links (fetched with the page, not after the entry ran) and scripts/check_client.mjs budgets and screens them
+ * as the page's initial JavaScript. Keys are pages; values are the manifest keys of the imports the entry starts at once.
+ */
+export const STARTUP_IMPORTS = Object.freeze({'app.html': Object.freeze(['../web/app/main.tsx'])});
+
+function startupPreload() {
+  let root = resolve(import.meta.dirname, 'dist');
+  return {
+    name: 'skippercast:startup-preload',
+    configResolved(config) { root = config.root; },
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, ctx) {
+        const page = ctx.filename && basename(ctx.filename), starts = STARTUP_IMPORTS[page];
+        if (!starts || !ctx.bundle || !ctx.chunk) return html;
+        const chunks = Object.values(ctx.bundle).filter(o => o.type === 'chunk');
+        const byFile = new Map(chunks.map(c => [c.fileName, c]));
+        const files = [], seen = new Set([ctx.chunk.fileName, ...ctx.chunk.imports]);
+        const walk = file => {
+          if (seen.has(file)) return;
+          seen.add(file); files.push(file);
+          for (const next of byFile.get(file)?.imports ?? []) walk(next);
+        };
+        for (const start of starts) {
+          const id = resolve(root, start);
+          const chunk = chunks.find(c => c.isDynamicEntry && c.facadeModuleId === id);
+          if (!chunk) throw Error(`${page}: no dynamic chunk for its startup import ${start}`);
+          walk(chunk.fileName);
+        }
+        return files.map(file => ({tag: 'link', attrs: {rel: 'modulepreload', crossorigin: true, href: `./${file}`}, injectTo: 'head'}));
+      },
+    },
+  };
+}
+
 /** The client build for authored pages in `root`, written to `outDir`. */
 export function clientConfig({root = resolve(import.meta.dirname, 'dist'), outDir = resolve(root, 'client')} = {}) {
   return {
@@ -132,7 +170,7 @@ export function clientConfig({root = resolve(import.meta.dirname, 'dist'), outDi
     base: './',
     publicDir: false,
     logLevel: 'warn',
-    plugins: [staticRefs(), pageStyles(root), maplibreCss()],
+    plugins: [staticRefs(), pageStyles(root), maplibreCss(), startupPreload()],
     // Preact islands in web/ (P4-01b): JSX compiles to preact/jsx-runtime.
     oxc: {jsx: {runtime: 'automatic', importSource: 'preact'}},
     build: {
