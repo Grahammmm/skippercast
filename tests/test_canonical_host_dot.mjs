@@ -53,3 +53,32 @@ test('response headers equal today: 301, Cache-Control, no body', async () => {
     assert.equal(await res.text(), '');
   }
 });
+
+// WU-03 (audit RISK-004): plain http on the production host is redirected, not served.
+test('http on the production host goes to https with path and query kept', () => {
+  assert.equal(loc('http://skippercast.com/'), 'https://skippercast.com/');
+  assert.equal(loc('http://skippercast.com/map?region=central#h'), 'https://skippercast.com/map?region=central');
+  assert.equal(loc('http://skippercast.com:80/a'), 'https://skippercast.com/a');
+});
+
+test('http plus www. plus a trailing dot is still one 301 to the https bare host', () => {
+  for (const href of ['http://www.skippercast.com/x', 'http://www.skippercast.com./x', 'http://skippercast.com./x']) {
+    const target = loc(href);
+    assert.equal(target, 'https://skippercast.com/x', href);
+    assert.equal(canonicalRedirect(new URL(target)), null, 'no second hop');
+  }
+});
+
+test('the https upgrade is only for the production host', () => {
+  for (const href of ['http://localhost:8787/', 'http://127.0.0.1:8787/x', 'http://[::1]/', 'http://skippercast.example.workers.dev/',
+    'http://notskippercast.com/', 'http://skippercast.com.evil.example/']) {
+    assert.equal(canonicalRedirect(new URL(href)), null, href);
+  }
+});
+
+test('the upgrade reply has the same shape as the host redirect', async () => {
+  const res = canonicalRedirect(new URL('http://skippercast.com/x'));
+  assert.equal(res.status, 301);
+  assert.equal(res.headers.get('Cache-Control'), 'public, max-age=3600');
+  assert.equal(await res.text(), '');
+});
