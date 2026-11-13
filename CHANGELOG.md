@@ -3,6 +3,7 @@
 ## Unreleased
 
 - WU-03: `http://skippercast.com` now redirects to `https://` (one 301, path and query kept) instead of serving the page over plain HTTP. Local development and the staging address are unchanged.
+- Rules: an official page is now fingerprinted by its main content and the documents it links to (`text-and-links-v4`). A website restyle by the agency (a stylesheet version number, a renamed footer link) no longer marks every rule source as changed. Sources reviewed under the old method read as needing review until their next human review; nothing is approved by this change.
 - The draft privacy notice (`/privacy`) and draft terms (`/terms.html`) are removed, with every link to them and their sitemap entries. Both were unreviewed drafts. A short, reviewed replacement is a roadmap item for before launch.
 - Coast feeds: the `COAST_FEEDS` switch now reads SkipperCast's own ocean, history, report, nearshore and beach packets from the current published release. It was reading a copy frozen on 2026-10-13, so every switched source was judged stale and served from the older Fish service instead.
 - MGL-15: the map's colours now come from map-only tokens, so changing a map colour no longer repaints the app's own screens, and the habitat classes (rock, mixed, soft bottom, kelp) have colours checked to stay apart for people with red-green or blue-yellow colour blindness. Only those four class colours changed; every other map colour is as before.

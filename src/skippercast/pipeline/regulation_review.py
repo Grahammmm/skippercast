@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 
 from ..platform.contracts import REPO, ID, atomic_json, read_json, within
 from .collect import Client, source, stamp
-from .parsers import watch_content
+from .parsers import watch_content_v4
 from .regulations import content_hash, regulatory_snapshot, validate_bindings, watch_jobs
 
 
@@ -92,7 +92,7 @@ def _collect_into(ident, output, jurisdiction, registry, now):
                 body = super().get(url, as_json, as_pdf, as_binary)
                 if isinstance(body, str):
                     (output / (source_id + '.html')).write_text(body)
-                    (output / (source_id + '.txt')).write_text(watch_content(body))
+                    (output / (source_id + '.txt')).write_text(watch_content_v4(body))
                 return body
         return source_id, source(*job, now=now, client_factory=ReviewClient)
 
