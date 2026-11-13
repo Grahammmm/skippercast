@@ -23,7 +23,7 @@ class VRHardContextTests(unittest.TestCase):
 
     def test_published_context_keeps_depth_policy_separate_from_local_depth(self):
         layer=json.loads((ROOT/'dist/data/cape-mendocino-native-hard-context.geojson').read_text())
-        screen=json.loads((ROOT/'dist/data/noaa-h11975-cape-mendocino-hard-depth-screen.json').read_text())
+        screen=json.loads((ROOT/'research/receipts/noaa-h11975-cape-mendocino-hard-depth-screen.json').read_text())
         self.assertEqual(layer['source_screen_counts'],screen['counts'])
         self.assertGreater(len(layer['features']),100)
         for feature in layer['features']:

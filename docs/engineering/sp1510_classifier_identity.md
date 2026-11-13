@@ -28,26 +28,12 @@ old implementation could label the same synthetic one-knot trip `drift-anchor`
 with a typed drift threshold of 2.0 and `uncertain` at 0.5 while emitting the
 same version. Production incidence of typed overrides is unverified.
 
-## Offline acceptance
+## Tests
 
-Run from the clone, using the sibling operator-staged `SOURCE-MANIFEST.json`.
-The helper derives paths from its own location, verifies the staging schema,
-repo/base identity, and uses staged test/scanner interpreters without fallback.
-Each invocation makes a unique directory under the supplied candidate `out`
-root. It records stdout and stderr separately, child argv/cwd/runtime/exit,
-structured test counts, source hashes and raw-output hashes.
-
-    python3 scripts/accept_sp1510_classifier_identity.py --suite baseline --output ../out/author-baseline
-    python3 scripts/accept_sp1510_classifier_identity.py --suite focused --output ../out/author-focused
-    python3 scripts/accept_sp1510_classifier_identity.py --suite regression --output ../out/author-regression
-    python3 scripts/accept_sp1510_classifier_identity.py --suite repository --output ../out/author-repository
-
-Baseline is historical evidence on unchanged pinned product code ONLY, before
-repair. It executes exactly `test_primary_regression` and `test_healthy_control`.
-Success means child exit 1, the specific A1 collision assertion failed, healthy
-control passed, and no errors/skips occurred: `BASELINE_GAP_REPRODUCED`, never
-repair success. Do not rerun baseline against repaired code or relabel the old
-receipt. Focused reuses the identical pair inside its eight-test suite.
+`tests/unit/test_sp1510_classifier_identity.py` runs under ordinary pytest and
+unittest discovery. `test_primary_regression` and `test_healthy_control` are the
+A1 pair: on the unchanged pinned product code before the repair the A1 collision
+assertion failed while the healthy control passed.
 
 A1 checks label-changing effective drift overrides through `classify_trip`.
 A2 checks repeats and recursively reordered raw/typed mapping keys.
@@ -58,22 +44,14 @@ that the changed label does not change those non-label properties. Additional
 checks pin the canonical representation, algorithm bump and Mapping protocol.
 Fixtures contain public dataclass-shaped synthetic inputs, no real track.
 
-Regression first executes the original dotted selector
-`tests.unit.test_fleet_classify` via a file bootstrap of `unittest` module main,
-then executes the unchanged file with pytest so its parametrized function tests
-are not silently omitted. Child imports are anchored to this clone and their
-paths/hashes verified. No original tests are modified. Repository runs the
-unchanged `scripts/check_repository.py` using the staging manifest's
-`runtime.credential_scan_python3`, not a system-Python fallback.
-
-Pre-import network/model/process/SQLite guards and candidate-root binding apply
-to test children. The complete actual product modules execute; no planner
-extracts, fake classifier, or external implementation is imported. The raw-store
-module imported by AIS package initialization defines APIs without eager I/O;
-its access entrypoints are then denied before test execution. All patches are
-scoped/restored (including under ordinary test discovery), and no irreversible
-audit hook is installed. These are regression sentinels, not a hostile-code
-sandbox. No network connection or real-store operation is used as a control.
+Test-scoped network/model/process/SQLite sentinels are installed in `setUp`
+before the product imports. The complete actual product modules execute; no
+planner extracts, fake classifier, or external implementation is imported. The
+raw-store module imported by AIS package initialization defines APIs without
+eager I/O; its access entrypoints are then denied before test execution. All
+patches are scoped and restored, and no irreversible audit hook is installed.
+These are regression sentinels, not a hostile-code sandbox. No network
+connection or real-store operation is used as a control.
 
 Scoped green remains REVIEW REQUIRED. Full repository CI, Node/Python discovery,
 survey/GIS accounting, regional/search parity, other privacy/credential checks,

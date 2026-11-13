@@ -21,8 +21,6 @@ import zlib
 from tests._support import ROOT as REPO
 
 FIXTURES = REPO / "tests/fixtures/sc116-render-faces"
-RUN_ROOT = None
-EVENTS = []
 BASE = "2979d59bfbb7d724eb83b34a48102b914ee8eaa3"
 MESH_SHA = "c3a6f0678a693a7b0f0ada2d891add312bb3454548fea15f8fb68156cdc7d757"
 
@@ -103,13 +101,9 @@ class RenderFacesTests(unittest.TestCase):
         self.np = importlib.import_module("numpy")
         self.assertEqual(Path(self.api.__file__).resolve(),
                          REPO / "src/skippercast/coastal/render/mesh.py")
-        if RUN_ROOT is None:
-            temporary = tempfile.TemporaryDirectory(prefix="sc116-case-")
-            self.addCleanup(temporary.cleanup)
-            self.root = Path(temporary.name)
-        else:
-            RUN_ROOT.mkdir(parents=True, exist_ok=True)
-            self.root = Path(tempfile.mkdtemp(prefix="sc116-case-", dir=RUN_ROOT))
+        temporary = tempfile.TemporaryDirectory(prefix="sc116-case-")
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
         self.baseline = json.loads((FIXTURES / "baseline.json").read_text())
         self.assertEqual(self.baseline["base"], BASE)
         self.assertEqual(self.baseline["mesh_sha256"], MESH_SHA)
@@ -131,8 +125,6 @@ class RenderFacesTests(unittest.TestCase):
         self.assertEqual(metadata["visible_bounds_px"],
                          [int(x.min()), int(y.min()), int(x.max()), int(y.max())])
         self.assertGreater(metadata["visible_pixels"], 0)
-        EVENTS.append({"id": self.id(), "fixture": before, "after": snapshot(mesh),
-                       "png": str(path), "png_sha256": digest(encoded), "metadata": metadata})
 
     def refusal(self, faces):
         mesh = synthetic(self.np)
@@ -151,9 +143,6 @@ class RenderFacesTests(unittest.TestCase):
             allocation.assert_not_called()
         self.assertEqual(path.read_bytes(), sentinel)
         self.assertEqual(snapshot(mesh), before)
-        EVENTS.append({"id": self.id(), "fixture": before, "after": snapshot(mesh),
-                       "sentinel": str(path), "before_sha256": digest(sentinel),
-                       "after_sha256": digest(path.read_bytes()), "projection_write_allocation_calls": 0})
 
     def test_regression_negative_index(self):
         self.refusal(self.np.array([[0, 1, -1]], dtype=self.np.int64))
@@ -236,40 +225,6 @@ class RenderFacesTests(unittest.TestCase):
             writer.assert_not_called()
         self.assertEqual(path.read_bytes(), b"degenerate-sentinel")
         self.assertEqual(snapshot(mesh), before)
-        EVENTS.append({"id": self.id(), "fixture": before, "after": snapshot(mesh),
-                       "sentinel_sha256": digest(path.read_bytes())})
-
-    def test_compatibility_log_seals(self):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "sc116_evidence", REPO / "tools/run_sc116_render_faces.py")
-        runner = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(runner)
-        paths = [self.root / name for name in ("stdout.txt", "stderr.txt")]
-        for path in paths:
-            path.write_text("completed child output\n")
-        seal = runner.seal_logs(paths)
-        self.assertTrue(runner.verify_logs(seal))
-        missing = {str(self.root / "absent.txt"): next(iter(seal.values()))}
-        with self.assertRaisesRegex(ValueError, "sc116_log_integrity_invalid"):
-            runner.verify_logs(missing)
-        paths[0].write_text("changed child output\n")
-        with self.assertRaisesRegex(ValueError, "sc116_log_integrity_invalid"):
-            runner.verify_logs(seal)
-        # A separate pristine log is sealed, then an exit-writer-like append occurs.
-        late = self.root / "late.txt"
-        late.write_text("complete\n")
-        late_seal = runner.seal_logs([late])
-        self.assertTrue(runner.verify_logs(late_seal))
-        with late.open("a") as output:
-            output.write("late append\n")
-        with self.assertRaisesRegex(ValueError, "sc116_log_integrity_invalid"):
-            runner.verify_logs(late_seal)
-        with self.assertRaisesRegex(ValueError, "sc116_logs_missing"):
-            runner.verify_logs({})
-        EVENTS.append({"id": self.id(), "complete_positive": True,
-                       "missing_rejected": True, "changed_rejected": True,
-                       "late_append_rejected": True})
 
     def test_compatibility_three_vertices(self):
         for dtype in ("int32", "int64", "uint64"):

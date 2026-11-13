@@ -116,32 +116,8 @@
       "sha256": "0c74059e5cb6bf6dfe9566d2156e887127f6e3d8d20bbfc263f54745b53023be"
     },
     {
-      "path": "dist/data/bluetopo-statewide-source-review.json",
-      "sha256": "d582fe3a16da6fd11400a3d382fb0dda45d7df83e3099e4c1e94e0cbeae14876"
-    },
-    {
       "path": "dist/data/california-atlas-readiness.json",
       "sha256": "5bd94bcfa039ccb97b2036feebe10eb1d3fe4a07e08dfb5c5e145613ff50fcc9"
-    },
-    {
-      "path": "dist/data/cdfw-predicted-hard-central.geojson",
-      "sha256": "727ba3c983d37108baad62e41c9dfcdb38adf17234444b4e66a7b1f6fb3f00ed"
-    },
-    {
-      "path": "dist/data/cdfw-predicted-hard-mendocino.geojson",
-      "sha256": "e6d8a97b8e67b2043a95779a09dc41d234253c363272a3a3180cc3ff9c4f2f3c"
-    },
-    {
-      "path": "dist/data/cdfw-predicted-hard-northern.geojson",
-      "sha256": "4ac72386ba976e0ff245914f1f6124f5056616ffda160b9c9903d543b77073e9"
-    },
-    {
-      "path": "dist/data/cdfw-predicted-hard-san-francisco.geojson",
-      "sha256": "949789a36d71065c936155416823c3d6e3aea60107eb6ac3dbbca38ffee9695f"
-    },
-    {
-      "path": "dist/data/cdfw-predicted-hard-southern.geojson",
-      "sha256": "cb69bfe6e5025dba8b152454bb87515eb0df423240e3ad0e024ca39d98de0ff0"
     },
     {
       "path": "dist/data/home-ports.json",
@@ -160,10 +136,6 @@
       "sha256": "ad550087f443ed7098216b09461bbd7d551206a43370a644b3c00d5956764848"
     },
     {
-      "path": "dist/data/usgs-depth-datum-ledger.json",
-      "sha256": "df1d00e94830d7f2e814d842580f2d3a219b19d73acbaddf47ac519900cca8b1"
-    },
-    {
       "path": "dist/data/usgs-ds781-metadata-review.json",
       "sha256": "02f5974da931b916e228d84759bffc09b46667dafe427beee653012ededd3664"
     },
@@ -172,23 +144,51 @@
       "sha256": "619867ac4183289d023e5933c2ba3ce2a27c95e602eeeb13f524681061dd0771"
     },
     {
-      "path": "dist/data/usgs-hard-context-central.geojson",
+      "path": "research/receipts/bluetopo-statewide-source-review.json",
+      "sha256": "d582fe3a16da6fd11400a3d382fb0dda45d7df83e3099e4c1e94e0cbeae14876"
+    },
+    {
+      "path": "research/receipts/cdfw-predicted-hard-central.geojson",
+      "sha256": "727ba3c983d37108baad62e41c9dfcdb38adf17234444b4e66a7b1f6fb3f00ed"
+    },
+    {
+      "path": "research/receipts/cdfw-predicted-hard-mendocino.geojson",
+      "sha256": "e6d8a97b8e67b2043a95779a09dc41d234253c363272a3a3180cc3ff9c4f2f3c"
+    },
+    {
+      "path": "research/receipts/cdfw-predicted-hard-northern.geojson",
+      "sha256": "4ac72386ba976e0ff245914f1f6124f5056616ffda160b9c9903d543b77073e9"
+    },
+    {
+      "path": "research/receipts/cdfw-predicted-hard-san-francisco.geojson",
+      "sha256": "949789a36d71065c936155416823c3d6e3aea60107eb6ac3dbbca38ffee9695f"
+    },
+    {
+      "path": "research/receipts/cdfw-predicted-hard-southern.geojson",
+      "sha256": "cb69bfe6e5025dba8b152454bb87515eb0df423240e3ad0e024ca39d98de0ff0"
+    },
+    {
+      "path": "research/receipts/usgs-depth-datum-ledger.json",
+      "sha256": "df1d00e94830d7f2e814d842580f2d3a219b19d73acbaddf47ac519900cca8b1"
+    },
+    {
+      "path": "research/receipts/usgs-hard-context-central.geojson",
       "sha256": "3eddd1f56df2ed1e4d173cbf084f585858f989685ee5b73db8fab69094f7f263"
     },
     {
-      "path": "dist/data/usgs-hard-context-mendocino.geojson",
+      "path": "research/receipts/usgs-hard-context-mendocino.geojson",
       "sha256": "91bb29a5c10d9f3a5e88229488d7309f0d05f5c6a457c0bacf861c224eaf5866"
     },
     {
-      "path": "dist/data/usgs-hard-context-northern.geojson",
+      "path": "research/receipts/usgs-hard-context-northern.geojson",
       "sha256": "ed49554e57955619d5326613c5e8003cd44f38e18eaf3a78ebd51323a18c1cc8"
     },
     {
-      "path": "dist/data/usgs-hard-context-san-francisco.geojson",
+      "path": "research/receipts/usgs-hard-context-san-francisco.geojson",
       "sha256": "830834a507cc1ef880c569ef6d7e07bcee051c537c25b075d8d3caf42e1dc1a4"
     },
     {
-      "path": "dist/data/usgs-hard-context-southern.geojson",
+      "path": "research/receipts/usgs-hard-context-southern.geojson",
       "sha256": "9ff03521bcd1e406716ed4bd507593fcefba05b5836a87a21479ca1f2bf07f3d"
     }
   ],
@@ -545,7 +545,7 @@
           "usgs_hard_context_outlines": {
             "value": 0,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": null
         },
@@ -554,7 +554,7 @@
           "predicted_hard_patches": {
             "value": 32,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "no USGS/CSUMB class raster read; CDFW ds3091 predicted context only"
@@ -694,7 +694,7 @@
           "usgs_hard_context_outlines": {
             "value": 0,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": null
         },
@@ -703,7 +703,7 @@
           "predicted_hard_patches": {
             "value": 29,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "no USGS/CSUMB class raster read; CDFW ds3091 predicted context only"
@@ -786,7 +786,7 @@
         "usgs_ds781_grids_opened": {
           "value": 4,
           "label": "ESTIMATED",
-          "basis": "DS781 rasters opened in dist/data/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
+          "basis": "DS781 rasters opened in research/receipts/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
         },
         "sources": [
           {
@@ -926,7 +926,7 @@
           "usgs_hard_context_outlines": {
             "value": 109,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": null
         },
@@ -935,7 +935,7 @@
           "predicted_hard_patches": {
             "value": 35,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "native classes read (USGS character); CDFW ds3091 context"
@@ -1132,7 +1132,7 @@
           "usgs_hard_context_outlines": {
             "value": 0,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": null
         },
@@ -1141,7 +1141,7 @@
           "predicted_hard_patches": {
             "value": 29,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "no USGS/CSUMB class raster read; CDFW ds3091 predicted context only"
@@ -1340,7 +1340,7 @@
           "usgs_hard_context_outlines": {
             "value": 0,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": null
         },
@@ -1349,7 +1349,7 @@
           "predicted_hard_patches": {
             "value": 21,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "no USGS/CSUMB class raster read; CDFW ds3091 predicted context only"
@@ -1444,7 +1444,7 @@
         "usgs_ds781_grids_opened": {
           "value": 3,
           "label": "ESTIMATED",
-          "basis": "DS781 rasters opened in dist/data/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
+          "basis": "DS781 rasters opened in research/receipts/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
         },
         "sources": [
           {
@@ -1645,7 +1645,7 @@
           "usgs_hard_context_outlines": {
             "value": 139,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": null
         },
@@ -1654,7 +1654,7 @@
           "predicted_hard_patches": {
             "value": 38,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "native classes read (USGS character); CDFW ds3091 context"
@@ -1757,7 +1757,7 @@
         "usgs_ds781_grids_opened": {
           "value": 3,
           "label": "ESTIMATED",
-          "basis": "DS781 rasters opened in dist/data/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
+          "basis": "DS781 rasters opened in research/receipts/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
         },
         "sources": [
           {
@@ -1966,7 +1966,7 @@
           "usgs_hard_context_outlines": {
             "value": 228,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": null
         },
@@ -1975,7 +1975,7 @@
           "predicted_hard_patches": {
             "value": 15,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "native classes read (USGS character); CDFW ds3091 context"
@@ -2084,7 +2084,7 @@
         "usgs_ds781_grids_opened": {
           "value": 5,
           "label": "ESTIMATED",
-          "basis": "DS781 rasters opened in dist/data/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
+          "basis": "DS781 rasters opened in research/receipts/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
         },
         "sources": [
           {
@@ -2297,7 +2297,7 @@
           "usgs_hard_context_outlines": {
             "value": 367,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": null
         },
@@ -2306,7 +2306,7 @@
           "predicted_hard_patches": {
             "value": 45,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "native classes read (USGS character); CDFW ds3091 context"
@@ -2405,7 +2405,7 @@
         "usgs_ds781_grids_opened": {
           "value": 5,
           "label": "ESTIMATED",
-          "basis": "DS781 rasters opened in dist/data/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
+          "basis": "DS781 rasters opened in research/receipts/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
         },
         "sources": [
           {
@@ -2526,7 +2526,7 @@
           "usgs_hard_context_outlines": {
             "value": 248,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": {
             "ledger_reaches_habitat_screened": {
@@ -2556,7 +2556,7 @@
           "predicted_hard_patches": {
             "value": 35,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "native classes read (USGS character); CDFW ds3091 context"
@@ -2822,7 +2822,7 @@
           "usgs_hard_context_outlines": {
             "value": 11,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": {
             "ledger_reaches_habitat_screened": {
@@ -2852,7 +2852,7 @@
           "predicted_hard_patches": {
             "value": 16,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "native classes read (USGS character) + CSUMB/ledger terrain habitat; CDFW ds3091 context"
@@ -3170,7 +3170,7 @@
           "usgs_hard_context_outlines": {
             "value": 0,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": {
             "ledger_reaches_habitat_screened": {
@@ -3200,7 +3200,7 @@
           "predicted_hard_patches": {
             "value": 21,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "native classes read + CSUMB/ledger terrain habitat; CDFW ds3091 context"
@@ -3534,7 +3534,7 @@
           "usgs_hard_context_outlines": {
             "value": 0,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": {
             "ledger_reaches_habitat_screened": {
@@ -3564,7 +3564,7 @@
           "predicted_hard_patches": {
             "value": 23,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "native classes read + CSUMB/ledger terrain habitat; CDFW ds3091 context"
@@ -3685,7 +3685,7 @@
         "usgs_ds781_grids_opened": {
           "value": 2,
           "label": "ESTIMATED",
-          "basis": "DS781 rasters opened in dist/data/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
+          "basis": "DS781 rasters opened in research/receipts/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
         },
         "sources": [
           {
@@ -3927,7 +3927,7 @@
           "usgs_hard_context_outlines": {
             "value": 160,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": {
             "ledger_reaches_habitat_screened": {
@@ -3957,7 +3957,7 @@
           "predicted_hard_patches": {
             "value": 21,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "native classes read (USGS character) + CSUMB/ledger terrain habitat; CDFW ds3091 context"
@@ -4101,7 +4101,7 @@
         "usgs_ds781_grids_opened": {
           "value": 2,
           "label": "ESTIMATED",
-          "basis": "DS781 rasters opened in dist/data/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
+          "basis": "DS781 rasters opened in research/receipts/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
         },
         "sources": [
           {
@@ -4307,7 +4307,7 @@
           "usgs_hard_context_outlines": {
             "value": 216,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": {
             "ledger_reaches_habitat_screened": {
@@ -4337,7 +4337,7 @@
           "predicted_hard_patches": {
             "value": 65,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "native classes read (USGS character) + CSUMB/ledger terrain habitat; CDFW ds3091 context"
@@ -4437,7 +4437,7 @@
         "usgs_ds781_grids_opened": {
           "value": 5,
           "label": "ESTIMATED",
-          "basis": "DS781 rasters opened in dist/data/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
+          "basis": "DS781 rasters opened in research/receipts/usgs-depth-datum-ledger.json whose bbox centre lies in this sector box; 0-300 ft pixels not recorded"
         },
         "sources": [
           {
@@ -4659,7 +4659,7 @@
           "usgs_hard_context_outlines": {
             "value": 102,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": null
         },
@@ -4668,7 +4668,7 @@
           "predicted_hard_patches": {
             "value": 38,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "native classes read (USGS character); CDFW ds3091 context"
@@ -4972,7 +4972,7 @@
           "usgs_hard_context_outlines": {
             "value": 0,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": null
         },
@@ -4981,7 +4981,7 @@
           "predicted_hard_patches": {
             "value": 132,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "native classes read (USGS character); CDFW ds3091 context"
@@ -5295,7 +5295,7 @@
           "usgs_hard_context_outlines": {
             "value": 0,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": null
         },
@@ -5304,7 +5304,7 @@
           "predicted_hard_patches": {
             "value": 48,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "no USGS/CSUMB class raster read; CDFW ds3091 predicted context only"
@@ -5567,7 +5567,7 @@
           "usgs_hard_context_outlines": {
             "value": 0,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": null
         },
@@ -5576,7 +5576,7 @@
           "predicted_hard_patches": {
             "value": 55,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "no USGS/CSUMB class raster read; CDFW ds3091 predicted context only"
@@ -5811,7 +5811,7 @@
           "usgs_hard_context_outlines": {
             "value": 0,
             "label": "MEASURED",
-            "basis": "class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
+            "basis": "class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED)"
           },
           "csumb_terrain_habitat": null
         },
@@ -5820,7 +5820,7 @@
           "predicted_hard_patches": {
             "value": 14,
             "label": "MEASURED",
-            "basis": "patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
+            "basis": "patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the sector bounds (assignment ESTIMATED; bands may include offshore islands)"
           }
         },
         "summary": "no USGS/CSUMB class raster read; CDFW ds3091 predicted context only"

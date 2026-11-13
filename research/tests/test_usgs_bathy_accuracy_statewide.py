@@ -10,7 +10,7 @@ from research.lib.paths import ROOT
 
 class UsgsAccuracyAuditTests(unittest.TestCase):
     def setUp(self):
-        self.ledger = json.loads((ROOT / 'dist/data/usgs-depth-datum-ledger.json').read_text())
+        self.ledger = json.loads((ROOT / 'research/receipts/usgs-depth-datum-ledger.json').read_text())
         self.source = dict(next(row for row in self.ledger['sources'] if row['id'] == 'P9HEZNRO'))
         self.raw = (b'<metadata><vertaccr>Estimated to be no less than 20 cm, owing to total propagated uncertainties.</vertaccr></metadata>')
         self.source['metadata_sha256'] = hashlib.sha256(self.raw).hexdigest()

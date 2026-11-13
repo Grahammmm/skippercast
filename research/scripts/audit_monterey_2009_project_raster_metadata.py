@@ -14,7 +14,7 @@ URL = ("https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/"
        "CentralMontereyBay/multibeam/data/version1/metadata/"
        "CentralMontereyBay_Project.xml")
 SHA256 = "36ca10ff75830005baeb4338a03ea51d080fc1cb2d793660730cfecda37cb8c3"
-CONTEXT = ROOT / "dist/data/usgs-offshore-monterey-hard-context.geojson"
+CONTEXT = ROOT / "research/receipts/usgs-offshore-monterey-hard-context.geojson"
 
 
 def bounds_of_feature(feature):

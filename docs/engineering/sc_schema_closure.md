@@ -105,11 +105,8 @@ is expected evidence frozen in the contract test, not an exemption, and it does 
 claim that any validator misbehaves today. The contract test fails if those schema files or their
 listing change; refreshing the pinned fixtures is a reviewed change.
 
-## Acceptance
+## Tests
 
-`python3 scripts/accept_sc_schema_closure.py --suite {focused,contract,negative} --output <new-dir>`
-runs the matching unittest class in-process with network, process and model sentinels installed
-first, temporary files redirected into the run directory, and a receipt of argv, cwd, interpreter,
-counts and code and fixture hashes. The negative suite also proves that the closure-completeness
-assertion rejects a report with one real edge removed by an in-memory double, while every other
-field stays identical. The same tests run under pytest as `tests/unit/test_sc_schema_closure.py`.
+`tests/unit/test_sc_schema_closure.py` runs under pytest. Its negative group also proves that
+the closure-completeness assertion rejects a report with one real edge removed by an in-memory
+double, while every other field stays identical.

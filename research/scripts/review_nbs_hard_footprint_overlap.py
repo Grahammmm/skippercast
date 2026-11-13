@@ -70,7 +70,7 @@ def main():
     parser.add_argument('--depth', type=Path, default=Path('dist/data/nbs-hard-footprint-depth-audit.json'))
     parser.add_argument('--scheme', type=Path, default=Path('var/modeling-tile-scheme-20260923.gpkg'))
     parser.add_argument('--cache', type=Path, default=Path('var/nbs-cache'))
-    parser.add_argument('--hard-dir', type=Path, default=Path('dist/data'))
+    parser.add_argument('--hard-dir', type=Path, default=Path('research/receipts'))
     parser.add_argument('--usgs-audit', type=Path, default=Path('var/usgs-doi-native-audit.json'))
     parser.add_argument('--usgs-cache', type=Path, default=Path('var/usgs-doi-native-cache'))
     parser.add_argument('--map-audit', type=Path, default=Path('var/usgs-native-audit.json'))
