@@ -79,7 +79,7 @@ class OfflineProduct:
                             if k == 'skippercast' or k.startswith('skippercast.')}
         for key in self.old_modules:
             sys.modules.pop(key)
-        sys.path.insert(0, str(REPO / 'src'))
+        # The installed package must resolve to REPO / 'src' (checked below).
         sys.dont_write_bytecode = True
         sys.meta_path.insert(0, NoModels())
         try:
