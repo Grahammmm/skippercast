@@ -9,6 +9,7 @@ export const REGION_COVERAGE_ENABLED = true;
 export function RegionPickerEntry() {
   const [Picker, setPicker] = useState<ComponentType | null>(null);
   const [failed, setFailed] = useState(false);
+  const [opened, setOpened] = useState(false);
   const busy = useRef(false), alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const load = () => {
@@ -19,8 +20,8 @@ export function RegionPickerEntry() {
     }, () => { if (alive.current) setFailed(true); }).finally(() => { busy.current = false; });
   };
   const lang = language.value;
-  return REGION_COVERAGE_ENABLED ? <details class="region-picker-entry" onToggle={event => { if (event.currentTarget.open) load(); }}>
+  return REGION_COVERAGE_ENABLED ? <details class="region-picker-entry" onToggle={event => { setOpened(event.currentTarget.open); if (event.currentTarget.open) load(); }}>
     <summary>{t('landing.regions.browse', lang)}</summary>
-    {Picker ? <Picker /> : <p role="status">{t(failed ? 'landing.regions.failed' : 'landing.regions.loading', lang)}</p>}
+    {opened ? Picker ? <Picker /> : <p role="status">{t(failed ? 'landing.regions.failed' : 'landing.regions.loading', lang)}</p> : null}
   </details> : null;
 }
