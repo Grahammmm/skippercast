@@ -1,7 +1,7 @@
 // Shared fixtures for the browser tests: only the local site is reachable
 // (every other origin is aborted, so NWS, NOAA and map tiles never decide a
 // result), uncaught page errors fail the test, and axe checks are recorded.
-import {mkdirSync, writeFileSync} from 'node:fs';
+import {mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {forecastFixture} from './forecast-fixture.ts';
 import AxeBuilder from '@axe-core/playwright';
@@ -114,12 +114,21 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
     // every brief assertion measured upstream readings. Failing the part here takes the brief down its
     // own documented fallback to the stubbed whole feed; the part itself is covered by
     // tests/test_daily_brief_part.mjs and tests/test_brief_daily_part.mjs. Other parts fall through:
-    // e2e/boundary-fixture.ts answers the boundary parts. The regulations part reaches the local Worker,
-    // whose R2 is empty (published feeds are never read from GitHub), so it fails and the rules card keeps
-    // the bundled registry copy (web/regs.ts loads that first).
+    // e2e/boundary-fixture.ts answers the boundary parts. The regulations part would reach the local Worker,
+    // whose R2 is empty (published feeds are never read from GitHub, SC2184-13): it answers 503 "Feed
+    // unavailable", web/regs.ts retries a 5xx forever (the page never goes network-idle) and the rules card
+    // loses the fresh daily source check the live feed used to supply. Answer it here instead with the
+    // committed registry as the Worker's regulations part, every source check stamped as made just now, which
+    // is what a healthy daily feed gives. Specs that test the part route it themselves.
+    const registry = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'dist', 'data', 'regulations.json'), 'utf8'));
     await context.route('**/api/daily?*', async route => {
-      if (new URL(route.request().url()).searchParams.get('part') !== 'brief') { await route.fallback(); return; }
-      await route.fulfill({status: 503, json: {error: 'Offline UI test'}});
+      const query = new URL(route.request().url()).searchParams, part = query.get('part');
+      if (part === 'brief') { await route.fulfill({status: 503, json: {error: 'Offline UI test'}}); return; }
+      if (part !== 'regulations') { await route.fallback(); return; }
+      const now = new Date().toISOString();
+      const checks = Object.fromEntries(Object.entries(registry.checks as Record<string, Record<string, unknown>>).map(([id, check]) => [id, {...check, data_retrieved_at: now}]));
+      await route.fulfill({json: {schema_version: 1, region_id: query.get('region'), generated_at: now, catch_probability: null, bite_score: null,
+        part: 'regulations', regulations: {...registry, checks}}});
     });
     const fixtureNow = Date.now();
     await context.route('**/api/om/**', route => route.fulfill({json: forecastFixture(new URL(route.request().url()), fixtureNow)}));

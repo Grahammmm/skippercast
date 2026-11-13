@@ -7,16 +7,19 @@ test.beforeEach(async ({page}) => {
   await page.addInitScript(() => localStorage.setItem('skippercast-profile-v1', 'boat'));
 });
 
+// A fractional line height above the field (the rules paragraph's wrapping decides it) can leave the scrolled-into-view
+// field up to a quarter pixel past the edge; that is rounding, not clipping, so edges are compared with a half-pixel slack.
+const SUBPIXEL = 0.5;
 async function geometry(page: Page) {
-  return page.locator('.app-sheet .app-target-search').evaluate(el => {
+  return page.locator('.app-sheet .app-target-search').evaluate((el, slack) => {
     const r = el.getBoundingClientRect(), body = el.closest('.ui-sheet-body')!;
     const b = body.getBoundingClientRect();
     return {input: r.toJSON(), body: b.toJSON(), viewport: {width: innerWidth, height: innerHeight},
-      visible: r.width > 0 && r.height > 0 && r.left >= 0 && r.right <= innerWidth && r.top >= Math.max(0, b.top + body.clientTop)
-        && r.bottom <= Math.min(innerHeight, b.top + body.clientTop + body.clientHeight),
+      visible: r.width > 0 && r.height > 0 && r.left >= 0 && r.right <= innerWidth && r.top >= Math.max(0, b.top + body.clientTop) - slack
+        && r.bottom <= Math.min(innerHeight, b.top + body.clientTop + body.clientHeight) + slack,
       hit: document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === el,
       overflow: document.documentElement.scrollWidth > innerWidth};
-  });
+  }, SUBPIXEL);
 }
 async function editingVisible(page: Page) {
   await expect.poll(async () => {
@@ -110,10 +113,10 @@ test('visual-only resize and scroll are bounded, duplicate events and cancelled 
     viewport.dispatchEvent(new Event('scroll'));
   });
   await editingVisible(page);
-  await expect.poll(() => search.evaluate(el => {
+  await expect.poll(() => search.evaluate((el, slack) => {
     const r = el.getBoundingClientRect(), v = window.visualViewport!;
-    return r.top >= v.offsetTop && r.bottom <= v.offsetTop + v.height;
-  })).toBe(true);
+    return r.top >= v.offsetTop - slack && r.bottom <= v.offsetTop + v.height + slack;
+  }, SUBPIXEL)).toBe(true);
   await expect(sheet).toHaveCSS('max-height', '220px');
   // Cancel a pending reveal with blur; late viewport events must not reapply it.
   await search.evaluate(el => {
