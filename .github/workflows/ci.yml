@@ -297,11 +297,15 @@ jobs:
         run: pnpm typecheck
       # Size budget (SC-PERF-BUDGET-1): file sizes only, no network, no timing. Raising a budget
       # needs a written reason in scripts/perf-budget.json (docs/operations/perf-budget.md).
+      # From 97% of a budget the check warns but passes; the budget-drift bot (budget-drift.yml)
+      # raises the ceiling on main, so a feature pull request does not have to (SC-CI-2).
       - name: Size budget (first-load files and brief data)
         if: matrix.python == '3.13'
         run: |
           pnpm build
           python scripts/check_perf_budget.py
+          # Fails only if a hand edit changed a budget number without its history entry (SC-CI-2).
+          python scripts/budget_drift.py --check
       - name: Forecast handling and GPX checks
         if: needs.changes.outputs.web != 'false'
         run: |

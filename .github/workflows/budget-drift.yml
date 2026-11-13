@@ -1,0 +1,84 @@
+name: Budget drift
+
+# SC-CI-2. A size budget fails only above its number and warns from 97% of it. When main's build reaches 97% of a
+# budget, this job opens ONE bot pull request (branch bot/budget-drift) that raises the ceiling to measured + 5%,
+# with the history reason naming the commit that moved it. A feature pull request therefore does not have to raise a
+# budget, and main does not go red for a margin of a few bytes. See docs/operations/perf-budget.md.
+#
+# It never pushes main and never merges: the pull request is reviewed like any other. Roll back by reverting the
+# pull request, or by deleting this workflow (the warn-only checks keep working without it).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Only the newest main commit matters: it is measured, and an older run would propose stale numbers.
+concurrency:
+  group: budget-drift
+  cancel-in-progress: true
+
+jobs:
+  drift:
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    permissions:
+      actions: write        # dispatch Offline checks on the bot branch
+      contents: write       # push bot/budget-drift (never main)
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 10
+          dest: ${{ runner.temp }}/setup-pnpm
+      - name: Budget files are consistent
+        run: python3 scripts/budget_drift.py --check
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # The client budgets are measured by the same check CI runs. Whether main passes it is not this job's
+      # question (the Offline checks run says that), so a failure here still leaves its measurements behind.
+      - name: Measure the client budgets
+        run: |
+          mkdir -p var
+          BUDGET_MEASUREMENTS_OUT=var/client-budget.json node scripts/check_client.mjs || echo "::warning::check_client.mjs failed; its measurements are used if it wrote them"
+      - name: Raise every budget at 97% or more to measured + 5%
+        env:
+          # A commit message is not trusted text: it is passed as data, cut to one line, and cleaned by the script.
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          subject=$(printf '%s\n' "$COMMIT_MESSAGE" | head -n 1)
+          cause="main ${GITHUB_SHA::10}${subject:+ $subject}"
+          # The default body, used if nothing drifted (create-pull-request then opens nothing and closes a stale bot pull request).
+          printf 'No budget drift on main %s.\n' "${GITHUB_SHA::10}" > var/budget-drift-body.md
+          measured=()
+          if [ -f var/client-budget.json ]; then measured=(--client-measurements var/client-budget.json); fi
+          python3 scripts/budget_drift.py "${measured[@]}" --cause "$cause" --apply --body-out var/budget-drift-body.md
+          python3 scripts/budget_drift.py --check
+      - name: Propose the budget change (never push main)
+        id: pr
+        uses: peter-evans/create-pull-request@15733dbdfeedb4f7fdb73d13c6f5ac83b710fab8 # v8.1.2
+        with:
+          branch: bot/budget-drift
+          add-paths: |
+            scripts/perf-budget.json
+            scripts/startup-budget.json
+          title: "Budget drift: raise size budgets that reached 97% to measured + 5%"
+          body-path: var/budget-drift-body.md
+          commit-message: "Budget drift: raise size budgets that reached 97% to measured + 5%"
+          signoff: true
+          delete-branch: true
+      # GitHub starts no pull_request workflows for pushes made with GITHUB_TOKEN, so the required
+      # survey-science check would never appear. workflow_dispatch is exempt from that rule; its check runs
+      # attach to the branch head and satisfy branch protection (the same step seafloor.yml uses).
+      - name: Run Offline checks on the bot branch
+        if: steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref bot/budget-drift
