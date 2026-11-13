@@ -7,7 +7,9 @@ const read=p=>JSON.parse(readFileSync(new URL(p,import.meta.url)));
 globalThis.REGIONS={'morro-bay':read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT=read('../deployments/production.json');
 import {withSessions} from './fixtures/test-sessions.mjs';
+import {feedBucket} from './fixtures/feed-bucket.mjs';
 const {default:deployed,validateSubscription,checkTrips,validateTripBoat}=await import('../server/index.ts');
+const {readFeed}=await import('../server/feeds.ts');
 // Owner-isolation tests sign in through real session cookies (fixtures/test-sessions.mjs);
 // deployed.fetch is the Worker exactly as deployed.
 const worker=withSessions(deployed);
@@ -62,22 +64,29 @@ test('public feed requests use edge-compatible redirect handling and reject redi
   const originalFetch=globalThis.fetch,originalCaches=globalThis.caches;let calls=0;
   try{
     globalThis.caches={get default(){throw Error('default cache forbidden');},async open(name){assert.equal(name,'skippercast-public-feeds-v1');throw Error('optional cache unavailable');}};
-    globalThis.fetch=async(url,options)=>{calls++;assert.equal(options.redirect,'manual');return Response.json({region_id:'morro-bay',sources:{},forecast:{points:{north:{}}}});};
-    const result=await worker.fetch(request('forecast?region=morro-bay'),{});
+    // Published feeds are read from R2 only (the stand-in reads this stub at the feed's logical URL).
+    globalThis.fetch=async()=>{calls++;return Response.json({region_id:'morro-bay',sources:{},forecast:{points:{north:{}}}});};
+    const result=await worker.fetch(request('forecast?region=morro-bay'),{FEEDS:feedBucket()});
     assert.equal(result.status,200);assert.deepEqual(await result.json(),{points:{north:{}}});
-    globalThis.fetch=async(url,options)=>{calls++;assert.equal(options.redirect,'manual');return new Response(null,{status:302,headers:{Location:'https://untrusted.example/feed'}});};
-    assert.equal((await worker.fetch(request('intelligence?region=morro-bay'),{})).status,503);
+    globalThis.fetch=async()=>{calls++;return new Response(null,{status:302,headers:{Location:'https://untrusted.example/feed'}});};
+    assert.equal((await worker.fetch(request('intelligence?region=morro-bay'),{FEEDS:feedBucket()})).status,503);
     assert.equal(calls,2,'a redirect must not cause another fetch');
+    // The reviewed upstream read that is still fetched (api.weather.gov) uses manual redirects and rejects a 3xx without following it.
+    calls=0;
+    globalThis.fetch=async(url,options)=>{calls++;assert.equal(options.redirect,'manual');return new Response(null,{status:302,headers:{Location:'https://untrusted.example/feed'}});};
+    const quiet=console.error;console.error=()=>{};
+    try{await assert.rejects(readFeed('https://api.weather.gov/alerts/active?zone=PZZ670'),/feed HTTP 302/);}finally{console.error=quiet;}
+    assert.equal(calls,1,'a redirect must not cause another fetch');
   }finally{globalThis.fetch=originalFetch;globalThis.caches=originalCaches;}
 });
 test('public habitat endpoint is region-pinned and rejects a cross-region product',async()=>{
   const original=globalThis.fetch;let calls=0;
   try{
     globalThis.fetch=async url=>{calls++;assert.equal(url,REGIONS['morro-bay'].habitat_feed);return Response.json({schema_version:1,region_id:'morro-bay',layers:{}});};
-    assert.equal((await worker.fetch(request('habitat?region=morro-bay'),{})).status,200);
-    assert.equal((await worker.fetch(request('habitat?region=https://attacker.test'),{})).status,404);assert.equal(calls,1);
+    assert.equal((await worker.fetch(request('habitat?region=morro-bay'),{FEEDS:feedBucket()})).status,200);
+    assert.equal((await worker.fetch(request('habitat?region=https://attacker.test'),{FEEDS:feedBucket()})).status,404);assert.equal(calls,1);
     globalThis.fetch=async()=>Response.json({schema_version:1,region_id:'southern-california',layers:{}});
-    assert.equal((await worker.fetch(request('habitat?region=morro-bay'),{})).status,503);
+    assert.equal((await worker.fetch(request('habitat?region=morro-bay'),{FEEDS:feedBucket()})).status,503);
   }finally{globalThis.fetch=original;}
 });
 test('outbox produces one in-app event for repeated checks and does not silently skip a missed final',async()=>{

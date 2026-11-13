@@ -4,11 +4,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
+import {feedBucket} from './fixtures/feed-bucket.mjs';
 const read=p=>JSON.parse(readFileSync(new URL(p,import.meta.url)));
 const region=read('../regions/morro-bay/region.json');
 globalThis.REGIONS={'morro-bay':region};
 globalThis.DEPLOYMENT=read('../deployments/production.json');
 const {checkOwnerTrips}=await import('../server/trips.ts');
+const {useBucket}=await import('../server/feeds.ts');
 const {windowInstants}=await import('../server/alert-policy.ts');
 const {hash}=await import('../server/http.ts');
 const {BAR_CHECK}=await import('../packages/coast/src/bar-conditions.ts');
@@ -65,12 +67,13 @@ async function scenario(run,{owners=['alice'],subscribe=true}={}){
     if(u.startsWith(PUSH)){state.pushes++;return new Response(null,{status:state.push});}
     throw Error('unexpected network request '+u);
   };
+  useBucket({FEEDS:feedBucket()});   // published feeds come only from R2
   const ctx={sql,state,
     check:(owner='alice')=>checkOwnerTrips(env,owner,state.now,new Map()),
     advance:(hours=.25)=>{state.now+=hours*HOUR;},
     events:(owner='alice')=>sql.prepare('SELECT id,kind,message,status,created_at FROM alert_events WHERE owner=? ORDER BY created_at,rowid').all(owner).map(r=>({...r})),
     stored:(owner='alice')=>JSON.parse(sql.prepare('SELECT last_assessment FROM trips WHERE id=?').get('trip-'+owner).last_assessment)};
-  try{await run(ctx);}finally{globalThis.fetch=original;sql.close();}
+  try{await run(ctx);}finally{globalThis.fetch=original;useBucket({});sql.close();}
 }
 const HAZARD=hour=>`Regional Morro Bay entrance: the offshore bar estimate reads hazardous at ${hour}; this does not establish the trip's launch or crossing. ${BAR_CHECK}`;
 const NOT_JUDGED=`Regional Morro Bay entrance: bar not judged for the complete saved window; this does not establish the trip's launch or crossing. ${BAR_CHECK}`;
