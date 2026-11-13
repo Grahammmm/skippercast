@@ -119,6 +119,17 @@ jobs:
         run: |
           gh label create site-down --color B60205 --description "The site or /api/health stopped answering" 2>/dev/null || true
           python scripts/site_uptime_alert.py --base "${FEEDS_PUBLIC_BASE:-https://skippercast.g4651.workers.dev}" --report "$RUNNER_TEMP/site-uptime.json"
+      # The coast data paths are proxied from a second ("Fish") Worker that nothing else here reaches. On 2026-11-12 the
+      # reviewed-habitat release answered 503 for hours with every other check green. One `coast-data-down` issue per outage.
+      - name: Probe the coast data paths and alert once when one is down
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create coast-data-down --color B60205 --description "A coast data path stopped answering" 2>/dev/null || true
+          python scripts/site_uptime_alert.py --base "${FEEDS_PUBLIC_BASE:-https://skippercast.g4651.workers.dev}" --report "$RUNNER_TEMP/coast-data.json" \
+            --paths /api/coast/habitat/release /api/coast/report /api/coast/ocean \
+            --label coast-data-down --title "Coast data path is down" --subject "the coast data service"
       # Red only for a stale feed or a whole critical kind out; a partial outage stays green.
       - name: Fail when a feed is stale or a critical kind is out
         if: always() && (steps.age.outputs.stale == 'true' || steps.age.outputs.degraded == 'true')
