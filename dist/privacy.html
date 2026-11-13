@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Privacy notice · SkipperCast</title>
+    <link rel="canonical" href="https://skippercast.com/privacy" />
+    <meta name="description" content="What SkipperCast stores when you make an account, how long it is kept, and how to export or delete it." />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="app-icon.svg" />
+    <!-- FE-61 part 2: the v2 tokens and the readable pages' sheet (FE-86), as sources.html. -->
+    <link rel="stylesheet" href="../web/tokens.css" />
+    <link rel="stylesheet" href="coast-readable.css" />
+  </head>
+  <body class="coast-readable">
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header>
+      <a class="brand" href="./">SkipperCast</a>
+      <nav aria-label="Public information"><a href="./">Back to the map</a><a href="/sources">Sources &amp; methods</a></nav>
+    </header>
+    <main id="content">
+      <h1>Privacy notice</h1>
+      <p class="legal-draft" role="note">
+        Draft — pending review by counsel. This notice describes what the
+        current code does; it has not yet been reviewed by a lawyer. The name
+        of the operator and a contact address are still to be added.
+      </p>
+      <p class="small">Draft dated November 13, 2026.</p>
+
+      <h2 id="summary">In short</h2>
+      <ul>
+        <li>The map, forecasts and downloads work without an account.</li>
+        <li>
+          If you make an account, we store what you save in it. You can export
+          or delete all of it yourself, at any time.
+        </li>
+        <li>
+          We run no advertising and no third-party tracking scripts.
+        </li>
+        <li>We do not sell your information.</li>
+      </ul>
+
+      <h2 id="account">Your account</h2>
+      <p>
+        You sign in with a passkey. There is no password, and we do not ask for
+        or store an email address, phone number or real name. You may give the
+        account a display name (up to 60 characters); that is optional. We
+        store your passkey’s public key and the dates it was used, never the
+        private key, which stays on your device. An account can hold up to 10
+        passkeys.
+      </p>
+      <p>
+        When you sign in we keep a record of that sign-in, with the first 80
+        characters of your browser’s description (for example “Chrome on Mac”),
+        so the account panel can show where you are signed in and let you sign
+        out other devices. We set one cookie, <code>__Host-sc_session</code>,
+        when you sign in. It keeps you signed in for 30 days from your last
+        use and is not used for tracking.
+      </p>
+
+      <h2 id="stored">What an account stores, and for how long</h2>
+      <table class="evidence-table">
+        <thead>
+          <tr>
+            <th scope="col">What we store</th>
+            <th scope="col">Why</th>
+            <th scope="col">How long</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Account id, optional display name, passkeys</th>
+            <td>To sign you in.</td>
+            <td>Until you delete your account. There is no automatic deletion of unused accounts.</td>
+          </tr>
+          <tr>
+            <th scope="row">Sign-in sessions</th>
+            <td>To keep you signed in and list your devices.</td>
+            <td>Until they expire (30 days after last use) or you sign out.</td>
+          </tr>
+          <tr>
+            <th scope="row">Saved trips: area, forecast point, species, date, hours, wind, gust and sea limits, optional boat details and plan</th>
+            <td>To check the forecast for your trip and send alerts.</td>
+            <td>Removed 90 days after the trip date, or when you delete the trip.</td>
+          </tr>
+          <tr>
+            <th scope="row">Alerts we sent you and delivery records</th>
+            <td>To show alert history and avoid sending twice.</td>
+            <td>90 days.</td>
+          </tr>
+          <tr>
+            <th scope="row">Notification devices: your browser’s push address and its encryption keys (up to 5)</th>
+            <td>To deliver alerts.</td>
+            <td>Until you turn notifications off, the push service reports the device gone, or you delete your account.</td>
+          </tr>
+          <tr>
+            <th scope="row">Comfort ratings: area, time, a 1–10 rating and the conditions you entered</th>
+            <td>To tune comfort estimates.</td>
+            <td>365 days.</td>
+          </tr>
+          <tr>
+            <th scope="row">Private catch log: time, method, species, outcome, count, optional position and note</th>
+            <td>Your own record.</td>
+            <td>Until you delete the entry or your account. There is no automatic deletion.</td>
+          </tr>
+          <tr>
+            <th scope="row">Saved spots: name, position and optional note (up to 100)</th>
+            <td>Your own private places.</td>
+            <td>Until you delete the spot or your account. There is no automatic deletion.</td>
+          </tr>
+          <tr>
+            <th scope="row">Request counters: a one-way hash and a count</th>
+            <td>To limit how fast requests can be made.</td>
+            <td>About two minutes (about two days for the daily boat-lookup counter).</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Your catch log and saved spots are private to your account. No public
+        page, feed or other account reads them. Expired records are removed by
+        a scheduled cleanup, so removal can lag the dates above by a short
+        time. Deleted records may remain for a time in backups kept by our
+        hosting provider.
+      </p>
+
+      <h2 id="position">Your position</h2>
+      <p>
+        In the account panel, “Use my position” asks your browser for one fresh
+        location only when you press it. It fills the position boxes. Nothing
+        is sent to SkipperCast until you press Save. A catch-log position is
+        optional; a saved spot needs one. Elsewhere on the site, such as
+        finding a nearby port or the boat-position tool, your location is used
+        in the browser only and is not sent to SkipperCast.
+      </p>
+
+      <h2 id="rights">Export and delete</h2>
+      <p>
+        In the trip-alerts panel, “Export my records” downloads one JSON file
+        with your account details, trips, comfort ratings, alerts, devices
+        (the push service name and date only), catch log and saved spots.
+        “Delete account” (account panel) or “Delete all my records”
+        (trip-alerts panel) removes all of that at once, including your
+        passkeys and sessions. It cannot be undone and there is no waiting
+        period. To correct a record, change it and save it again.
+      </p>
+
+      <h2 id="boat-lookup">AI boat lookup</h2>
+      <p>
+        The boat lookup may not be available. When it is, and you press “look
+        up” on your boat profile, the boat description you typed (3 to 120
+        characters, for example “Parker 2320 SL 2019”) is sent to Anthropic,
+        which runs a Claude model with web search to find the builder’s
+        specifications. Your account id is not sent. Only signed-in people can
+        use it, 20 times a day. We keep the answer in a shared cache for up to
+        30 days, keyed by the text, so the same lookup is not repeated for
+        anyone; do not type personal information into that box. How Anthropic
+        handles what it receives is set by Anthropic’s own terms.
+      </p>
+
+      <h2 id="analytics">Usage statistics</h2>
+      <p>
+        Our pages are built to send a small set of anonymous counts to our own
+        Cloudflare analytics dataset, not to an analytics company. At the time
+        of this draft the server discards them and stores none; if storing is
+        switched on, this notice is updated first. What the counts are:
+      </p>
+      <ul>
+        <li>
+          <strong>Visit steps</strong>, once per page load and region, with the
+          region, the site build and, where the link had one, whether the visit
+          came from a text, Instagram, Facebook or our printed QR code. The map
+          sends <code>map_viewed</code>, <code>port_selected</code>, <code>spot_saved</code> and <code>offline_saved</code>. The home page
+          sends error reports only.
+        </li>
+        <li>
+          <strong>Error reports</strong> when a page hits an uncaught error:
+          the message with web-address queries, positions, emails and long
+          numbers removed and cut short, the script’s file name only, and the
+          site build.
+        </li>
+        <li>
+          <strong>Server counts</strong>: each request to our server is counted
+          by page type, method, status and speed, without your IP address,
+          account or what you typed.
+        </li>
+      </ul>
+      <p>
+        There is no cookie, no storage and no visitor, session or device id in
+        these counts. If your browser sends Do Not Track or Global Privacy
+        Control, the pages send neither visit steps nor error reports. Cloudflare
+        keeps such counts for three months by default; we set no other period.
+      </p>
+
+      <h2 id="device">On your device</h2>
+      <p>
+        Your home port, boat profile, comfort limits, language, map choices, a
+        private map log (up to 500 entries, including positions you pick on the
+        map) and saved offline map data are kept in your browser’s storage and
+        never sent to us. Clearing your browser’s site data removes them.
+      </p>
+
+      <h2 id="others">Other companies that see your visit</h2>
+      <p>
+        Our site runs on Cloudflare, which handles your IP address and requests
+        to deliver and secure it and keeps standard request logs; a request for
+        a forecast carries its latitude and longitude. Your browser loads map
+        tiles and public data directly from OpenStreetMap, NOAA (weather,
+        tides, charts, cloud imagery), the National Weather Service, the
+        California Department of Fish and Wildlife (protected-area boundaries,
+        through ArcGIS), the U.S. Geological Survey (aerial imagery) and GitHub
+        (backup copies of data files). Each sees your IP address under its own
+        policy. Alerts are delivered through your browser’s push service
+        (Google, Mozilla, Apple or Microsoft).
+      </p>
+
+      <h2 id="changes">Changes and contact</h2>
+      <p>
+        We will change the date at the top of this page when the notice changes.
+        The operator’s name and a contact address will be added here before
+        launch.
+      </p>
+
+      <p>
+        <a href="terms.html">Terms of use</a> ·
+        <a href="sources.html">Sources &amp; methods</a> ·
+        <a href="licenses.html">Licences &amp; attributions</a>
+      </p>
+    </main>
+  </body>
+</html>
