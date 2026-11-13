@@ -30,7 +30,7 @@ h1{font-size:16px;margin:0 0 6px} p{margin:6px 0} .warning{color:#8a1c1c}
 <script src="/node_modules/pmtiles/dist/pmtiles.js"></script>
 <script type="module">
 import * as maplibregl from '/node_modules/maplibre-gl/dist/maplibre-gl.mjs';
-import {validate,fresh,sample,particles} from './wind-layer.js';
+import {validate,fresh,sample,particles} from '../../../web/map/wind-layer.js';
 const q=new URLSearchParams(location.search);
 maplibregl.setWorkerUrl('/node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs');
 maplibregl.addProtocol('pmtiles',new window.pmtiles.Protocol().tile);
