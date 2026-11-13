@@ -1,13 +1,12 @@
 """SC2184-02/03: policy-A is enforced by the binding check, and the committed review decision stays unapproved."""
 from copy import deepcopy
 import json
-from pathlib import Path
 import pytest
 
 from skippercast.pipeline.regulation_review import approved_registry, jurisdiction_files
 from skippercast.pipeline.regulations import content_hash, validate_bindings, regional_source_ids
+from tests._support import ROOT
 
-ROOT = Path(__file__).resolve().parents[2]
 PENDING = ROOT / 'jurisdictions/reviews/PENDING-2026-11-13-california-central.json'
 
 

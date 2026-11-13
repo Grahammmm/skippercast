@@ -49,6 +49,18 @@
     "required_source_ids": {
       "type": "array",
       "items": {"$ref": "common.schema.json#/$defs/id"}
+    },
+    "species_required_source_ids": {
+      "type": "object",
+      "propertyNames": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$"},
+      "additionalProperties": {
+        "type": "array",
+        "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$"}
+      }
+    },
+    "also_check_source_ids": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$"}
     }
   },
   "additionalProperties": false

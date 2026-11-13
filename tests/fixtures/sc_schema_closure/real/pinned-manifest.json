@@ -62,7 +62,7 @@
     },
     {
       "path": "schemas/jurisdiction.schema.json",
-      "sha256": "790a8b2b366d276d38eb983302d3825b85af147a8eda1fd2eda0aa87b9eb987c"
+      "sha256": "91c15503d5728365ea48376e4387a86d88c9c592b4846b2ce2ef8cc97985912b"
     },
     {
       "path": "schemas/launch-points.schema.json",
