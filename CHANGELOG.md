@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- SCB-16: the phone and desktop port chooser now offers every California region with dated, per-layer coverage from the reviewed SCB-01 audit. Draft regions can be inspected but not opened; previews stay previews. Held habitat, missing products, rules needing review and Trinidad–Klamath's overview-only map remain visible. This does not activate any region or approve rules.
 - WU-03: `http://skippercast.com` now redirects to `https://` (one 301, path and query kept) instead of serving the page over plain HTTP. Local development and the staging address are unchanged.
 - Rules: an official page is now fingerprinted by its main content and the documents it links to (`text-and-links-v4`). A website restyle by the agency (a stylesheet version number, a renamed footer link) no longer marks every rule source as changed. Sources reviewed under the old method read as needing review until their next human review; nothing is approved by this change.
 - The draft privacy notice (`/privacy`) and draft terms (`/terms.html`) are removed, with every link to them and their sitemap entries. Both were unreviewed drafts. A short, reviewed replacement is a roadmap item for before launch.

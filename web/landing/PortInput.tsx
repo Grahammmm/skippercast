@@ -15,6 +15,7 @@ import {portCopy} from './copy.ts';
 import {Icon} from '../ui/icons.tsx';
 import {useScrollCue} from '../ui/scroll-cue.ts';
 import type {Located} from '../ports.ts';
+import {RegionPickerEntry} from '../RegionPickerEntry.tsx';
 
 type Feedback = null | {kind: 'found'; port: Port} | {kind: 'finding' | 'forgotten' | 'empty' | Extract<Located, {ok: false}>['reason']};
 
@@ -76,6 +77,7 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
   useEffect(() => { if (locate && ports) void findNearby(); }, [locate, ports, geolocation]);
 
   return (
+    <>
     <form class="port-input" onSubmit={event => { event.preventDefault(); if (matches[0]) choose(matches[0]); }}>
       <label class="port-input-label" for={id}>{label}</label>
       <div class="port-input-row">
@@ -106,6 +108,8 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
       {saved ? <Button variant="quiet" size="sm" class="port-input-forget" onClick={forget}>{COPY.forget}</Button> : null}
       <p id={`${id}-note`} class="port-input-note">{COPY.privacy}</p>
     </form>
+    <RegionPickerEntry />
+    </>
   );
 }
 

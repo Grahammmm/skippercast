@@ -1,0 +1,26 @@
+// Rollback switch: false hides both entry points without changing any region or feed.
+import type {ComponentType} from 'preact';
+import {useEffect, useRef, useState} from 'preact/hooks';
+import {language, t} from './i18n.ts';
+import './region-picker.css';
+export const REGION_COVERAGE_ENABLED = true;
+
+/** Load the directory only when requested, not on the first-visit critical path. */
+export function RegionPickerEntry() {
+  const [Picker, setPicker] = useState<ComponentType | null>(null);
+  const [failed, setFailed] = useState(false);
+  const busy = useRef(false), alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const load = () => {
+    if (Picker || busy.current) return;
+    busy.current = true; setFailed(false);
+    void import('./landing/RegionPicker.tsx').then(module => {
+      if (alive.current) setPicker(() => module.RegionPicker);
+    }, () => { if (alive.current) setFailed(true); }).finally(() => { busy.current = false; });
+  };
+  const lang = language.value;
+  return REGION_COVERAGE_ENABLED ? <details class="region-picker-entry" onToggle={event => { if (event.currentTarget.open) load(); }}>
+    <summary>{t('landing.regions.browse', lang)}</summary>
+    {Picker ? <Picker /> : <p role="status">{t(failed ? 'landing.regions.failed' : 'landing.regions.loading', lang)}</p>}
+  </details> : null;
+}
