@@ -117,6 +117,16 @@ The Worker is TypeScript (`server/*.ts`). Node 22.18 and later run it directly b
 
 Then call `worker.fetch(new Request(...), env)` with `env = {DB, FEEDS, IDENTITY_PROVIDER, ...}`. For D1, load `drizzle/0000_*.sql` into `node:sqlite`'s `DatabaseSync(':memory:')` behind a small `prepare/bind/first/all/run/batch` adapter (copy the one in `test_private_api.mjs`). For R2, pass an object with `async get(key)` (see `fakeBucket` in `tests/test_feeds.mjs`). For outbound HTTP, pass a `fetcher` where the module accepts one (`lookupBoat`, `verifyJobToken`) or stub `globalThis.fetch` for the test and restore it after.
 
+## Deterministic tests (lint)
+
+`scripts/check_test_determinism.py` runs in the `check` job (SC-CI-5). A Python test line **added** by a pull request (under `tests/` or `research/tests/`) fails it when it:
+
+- **reads the wall clock** (`datetime.now()`, `utcnow()`, `today()`, `date.today()`, `time.time()`) in a file that has no frozen clock (`freezegun`, `time_machine`, or a patched or monkeypatched `time`, `datetime`, `clock` or `now`). Pass a fixed instant in instead. `time.monotonic()` for a duration is fine.
+- **listens on a fixed port** (`bind((host, 8080))`, `HTTPServer((host, 8080), ...)`, `port=8080`, `--port 8080`). Bind port 0 and read the port back; parallel workers and a busy runner make a fixed port flaky.
+- **asserts the Python version** (a line that asserts on a Python 3.x number) in a file that never mentions `sys.version_info`. Guard it, or compare against `sys.version_info`.
+
+A line that is meant as written ends with `# determinism-ok: <reason>` (or has that comment on the line above). Hits on lines a change did not add are warnings, counted in the step log (`determinism lint: new=0 existing=N`); push, nightly and dispatch runs only count. Run it locally with `python scripts/check_test_determinism.py --base origin/main` (new lines fail) or without arguments (the whole-tree count). It is a line heuristic, not a proof: a file-level freeze marker excuses every clock read in that file, and Node tests (`tests/*.mjs`) are not covered.
+
 ## Adding a fixture
 
 Browser map tests use `e2e/boundary-fixture.ts` for simulated current checks of the committed regional MPA polygons and additional-closure source hashes. The ArcGIS query must match that region's configured envelope. This keeps the marker tests independent of snapshot age and upstream feed availability; production freshness, exclusions and timeouts are unchanged. A per-test route can override the fixture. `e2e/boundaries.spec.ts` verifies both successful loading without the upstream feed and continued withholding when a stale snapshot has no current check.
