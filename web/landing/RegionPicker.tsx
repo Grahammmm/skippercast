@@ -1,4 +1,5 @@
 import {useId, useState} from 'preact/hooks';
+import '../region-picker.css';
 import {language, t, type StringId} from '../i18n.ts';
 import {Button} from '../ui/Button.tsx';
 import {COVERAGE_LAYERS, coverageNeedsRecheck, coverageRegionURL, coverageStatusId, lifecycleId, snapshot} from '../region-coverage.ts';

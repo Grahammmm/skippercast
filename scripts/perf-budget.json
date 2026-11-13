@@ -5,7 +5,7 @@
       "label": "Landing page scripts (first load)",
       "kind": "first_load_js",
       "entry": "landing.html",
-      "max_bytes": 306000,
+      "max_bytes": 310000,
       "history": [
         {
           "max_bytes": 445000,
@@ -22,6 +22,10 @@
         {
           "max_bytes": 306000,
           "reason": "Raised 304,000 to 306,000 (MAIN-RED-SKIPPERCAST). Main bcd9f04c builds the landing first-load scripts at 304,012 bytes (strings.en.generated 186.7 KB, signals 20.9 KB, landing 16.9 KB and others), 12 bytes over the 304,000 budget after the concurrent merges of #2110, #2111 and #2098, each of which passed CI on its own head. The budget moves up 2,000 bytes (0.7% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 310000,
+          "reason": "SCB-16: CI head 5625ea3 measured 309,046 B against 306,000 B. The shared English catalogue gains the honest per-layer directory copy and the shared port chooser gains the small lazy entry; region metadata and picker implementation remain on demand. Preserve the existing single-source catalogue contract rather than inventing a second translation pipeline for this feature. Raise only 4,000 B to 310,000 B, not the historical 5% margin. Picker CSS is moved behind the same lazy boundary; CSS ceilings are unchanged."
         }
       ]
     },
@@ -49,7 +53,7 @@
       "label": "App page (brief, map) scripts (first load)",
       "kind": "first_load_js",
       "entry": "app.html",
-      "max_bytes": 1059000,
+      "max_bytes": 1063000,
       "history": [
         {
           "max_bytes": 1160000,
@@ -70,6 +74,10 @@
         {
           "max_bytes": 1059000,
           "reason": "Lowered 1,064,000 to 1,059,000 (SC1407-10, #1762 M5). The trip planner, offline pack, basemap ranges and coastal snapshots moved from web/trip.ts to web/trip-runtime.ts, loaded on first use, so the app's first load no longer carries them. Vite manifest static closure of app.html: 1,007,939 bytes on this branch merged with main 1deba4ec (SC1407-09 and the earlier entries included); ceiling = ceil(1,007,939 x 1.05 / 1,000) x 1,000."
+        },
+        {
+          "max_bytes": 1063000,
+          "reason": "SCB-16: CI head 5625ea3 measured 1,061,249 B against 1,059,000 B. The shared English coverage copy and lazy chooser entry are new feature payload; the directory and picker still load on request. Keep the canonical catalogue and its existing full-reader contract. Raise only 4,000 B to 1,063,000 B, not the historical 5% margin; no map engine or region data is moved onto the critical path, and CSS ceilings are unchanged."
         }
       ]
     },
