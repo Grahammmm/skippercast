@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Deterministic-test lint (SC-CI-5): block new clock, port and interpreter-version dependence in Python tests.
 
-Python test files (tests/**.py, research/tests/**.py) must not gain a line that
+Python test files (every directory in pyproject's pytest testpaths) must not gain a line that
 
   clock    reads the wall clock (datetime.now/utcnow/today, date.today, time.time/time_ns) in a file with no
            frozen clock (freezegun, time_machine, or a patched/monkeypatched time/datetime/clock/now);
@@ -21,9 +21,12 @@ import os
 import re
 import subprocess
 import sys
+import tomllib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TEST_DIRS = ("tests", "research/tests")
+# The directories pytest collects (pyproject [tool.pytest.ini_options] testpaths), so a new test root is covered at once.
+with open(os.path.join(ROOT, "pyproject.toml"), "rb") as _handle:
+    TEST_DIRS = tuple(tomllib.load(_handle)["tool"]["pytest"]["ini_options"]["testpaths"])
 PRAGMA = re.compile(r"#\s*determinism-ok:\s*\S{3,}")
 
 CLOCK = re.compile(r"\b(?:datetime|date)\.(?:now|utcnow|today)\(|\btime\.(?:time|time_ns)\(")
