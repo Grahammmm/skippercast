@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- WU-03: `http://skippercast.com` now redirects to `https://` (one 301, path and query kept) instead of serving the page over plain HTTP. Local development and the staging address are unchanged.
 - Coast feeds: the `COAST_FEEDS` switch now reads SkipperCast's own ocean, history, report, nearshore and beach packets from the current published release. It was reading a copy frozen on 2026-10-13, so every switched source was judged stale and served from the older Fish service instead.
 - MGL-15: the map's colours now come from map-only tokens, so changing a map colour no longer repaints the app's own screens, and the habitat classes (rock, mixed, soft bottom, kelp) have colours checked to stay apart for people with red-green or blue-yellow colour blindness. Only those four class colours changed; every other map colour is as before.
 - SC1407-15: the trip dialog has Show route on Chart. It computes the same protected-area-avoiding planning route as the route download and draws it as one dashed line under the marks, with its length, boundary-check time and the NOT FOR NAVIGATION warning in the legend. The line stays in this page only and disappears when the stops, their order, the region, the boundary check or the water data change, or when the route could no longer be built; a refused route draws nothing. It is not saved, shared or exported, and the download still builds its own route.
