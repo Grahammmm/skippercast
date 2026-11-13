@@ -1392,6 +1392,7 @@ jobs:
       - name: Check original USGS camera windows inside published measured-depth research outlines
         run: >-
           python research/scripts/audit_usgs_native_overlap.py
+          --contexts research/receipts
           --context-name northern-nbs-usgs-hard-research-context.geojson
           --context-name san-francisco-nbs-usgs-hard-research-context.geojson
           --context-name central-nbs-usgs-hard-research-context.geojson

@@ -117,7 +117,7 @@ def main():
     parser.add_argument("--bathy", type=Path, required=True)
     parser.add_argument("--character", type=Path, required=True)
     parser.add_argument("--pixel", type=Path, default=Path("research/receipts/monterey-original-300-pixel-review.json"))
-    parser.add_argument("--context", type=Path, default=Path("dist/data/usgs-offshore-monterey-hard-context.geojson"))
+    parser.add_argument("--context", type=Path, default=Path("research/receipts/usgs-offshore-monterey-hard-context.geojson"))
     parser.add_argument("--metadata", type=Path, default=Path("research/receipts/usgs-csmp-map-metadata.json"))
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()

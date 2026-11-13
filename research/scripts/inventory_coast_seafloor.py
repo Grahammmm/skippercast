@@ -49,12 +49,12 @@ INPUTS = {
     'readiness': 'dist/data/california-atlas-readiness.json',
     'ledger': 'dist/data/seafloor-ledger.json',
     'reaches': 'catalog/reaches.json',
-    'usgs_bathy': 'dist/data/usgs-depth-datum-ledger.json',
+    'usgs_bathy': 'research/receipts/usgs-depth-datum-ledger.json',
     'usgs_meta': 'dist/data/usgs-ds781-metadata-review.json',
     'usgs_char': 'dist/data/usgs-ds781-native-character-review.json',
     'noaa_regular': 'dist/data/noaa-regular-native-depth-review.json',
     'noaa_vr': 'dist/data/noaa-vr-native-depth-expanded-review.json',
-    'bluetopo': 'dist/data/bluetopo-statewide-source-review.json',
+    'bluetopo': 'research/receipts/bluetopo-statewide-source-review.json',
     'ports': 'dist/data/home-ports.json',
     'em300': 'catalog/candidates/usgs-monterey-1998-em300-original.json',
     'caldig': 'catalog/candidates/usgs-caldig-v2.json',
@@ -62,8 +62,8 @@ INPUTS = {
     'surveys': 'catalog/surveys.json',
 }
 CSUMB_GLOB = 'catalog/csumb-*native-sources.json'
-DS3091_GLOB = 'dist/data/cdfw-predicted-hard-*.geojson'
-USGS_HARD_GLOB = 'dist/data/usgs-hard-context-*.geojson'
+DS3091_GLOB = 'research/receipts/cdfw-predicted-hard-*.geojson'
+USGS_HARD_GLOB = 'research/receipts/usgs-hard-context-*.geojson'
 
 # Candidate sources a better 0-300 ft grid may come from, by family. Named in the gap list.
 # Only the cited repo document is evidence; availability for a given sector is unverified.
@@ -577,7 +577,7 @@ def build():
                 'usgs_character_rasters_opened': fig(ch.get('opened_native_rasters', 0), 'MEASURED', INPUTS['usgs_char']),
                 'usgs_class_tables_verified': fig(ch.get('verified_original_class_tables', 0), 'MEASURED', INPUTS['usgs_char']),
                 'usgs_hard_context_outlines': fig(usgs_hard[sid], 'MEASURED',
-                                                  'class-3 display outlines in dist/data/usgs-hard-context-*.geojson whose centroid '
+                                                  'class-3 display outlines in research/receipts/usgs-hard-context-*.geojson whose centroid '
                                                   'lies in the sector bounds (assignment ESTIMATED)'),
                 'csumb_terrain_habitat': None,
             },
@@ -585,7 +585,7 @@ def build():
                 'status': 'decoded (40 m predicted hard/soft, rugosity proxy); docs/california-seabed-coverage.md records all 2,870 '
                           'tiles intersecting the 19 sectors decoded with zero failures',
                 'predicted_hard_patches': fig(ds3091[sid], 'MEASURED',
-                                              'patches in dist/data/cdfw-predicted-hard-*.geojson whose centroid lies in the '
+                                              'patches in research/receipts/cdfw-predicted-hard-*.geojson whose centroid lies in the '
                                               'sector bounds (assignment ESTIMATED; bands may include offshore islands)'),
             },
         }
@@ -786,7 +786,7 @@ def shallow_block(sid, cls, ev, reaches, ctx):
         'extent_confirmed_shallow': extent,
         'seafloor_ledger_context': ledger_context,
         'usgs_ds781_grids_opened': fig(len(usgs_open), 'ESTIMATED',
-                                       'DS781 rasters opened in dist/data/usgs-depth-datum-ledger.json whose bbox centre lies in '
+                                       'DS781 rasters opened in research/receipts/usgs-depth-datum-ledger.json whose bbox centre lies in '
                                        'this sector box; 0-300 ft pixels not recorded') if usgs_open else None,
         'sources': [{k: v for k, v in e.items() if k in ('family', 'name', 'resolution_m', 'resolution_range_m', 'depth',
                                                           'release_date', 'acquisition', 'pixels_0_300ft',

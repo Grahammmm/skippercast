@@ -129,8 +129,8 @@ class NbsHardResearchPublicationTests(unittest.TestCase):
         self.assertNotIn("P9EC35PF", releases)  # Original CMECS identifies this Eureka class as jetty.
 
     def test_estero_layer_contains_only_screened_research_outlines(self):
-        review = json.loads((ROOT / "dist/data/nbs-central-usgs-hard-overlap-review.json").read_text())
-        layer = json.loads((ROOT / "dist/data/central-estero-nbs-usgs-hard-research-context.geojson").read_text())
+        review = json.loads((ROOT / "research/receipts/nbs-central-usgs-hard-overlap-review.json").read_text())
+        layer = json.loads((ROOT / "research/receipts/central-estero-nbs-usgs-hard-research-context.geojson").read_text())
         self.assertEqual(review["status"], "research-leads-only")
         self.assertFalse(review["fishing_target"])
         self.assertFalse(review["exportable"])

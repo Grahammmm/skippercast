@@ -110,7 +110,7 @@ def build(root: Path) -> dict:
 
     envelopes = {}
     usgs_bounds = {r['archive_url']: r['raster_bounds_wgs84']
-                   for r in read('dist/data/usgs-depth-datum-ledger.json')['sources']
+                   for r in read('research/receipts/usgs-depth-datum-ledger.json')['sources']
                    if r.get('raster_bounds_wgs84')}
     for region in read('research/receipts/noaa-region-bag-envelope-review.json')['regions']:
         for lead in region['leads']:
@@ -133,7 +133,7 @@ def build(root: Path) -> dict:
                    else USGS + SFML if source == 'csmp' else USGS)
         add(url, source, segments_for(box), licence,
             'catalog/surveys.json: ' + record['id'] +
-            ('; dist/data/usgs-depth-datum-ledger.json:raster_bounds_wgs84' if url in usgs_bounds else ''),
+            ('; research/receipts/usgs-depth-datum-ledger.json:raster_bounds_wgs84' if url in usgs_bounds else ''),
             association_basis='Committed bbox or inspected window; scheduling hint only, not native support.')
 
     caldig = read('research/catalog/usgs-caldig-v2.json')

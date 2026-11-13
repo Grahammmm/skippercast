@@ -98,7 +98,7 @@ def main():
     p.add_argument('--doi-audit', type=Path, default=Path('var/usgs-doi-native-audit.json'))
     p.add_argument('--discovery', type=Path, default=Path('dist/data/noaa-survey-discovery.json'))
     p.add_argument('--sectors', type=Path, default=Path('catalog/coastal-sectors.json'))
-    p.add_argument('--output', type=Path, default=Path('dist/data/usgs-depth-datum-ledger.json'))
+    p.add_argument('--output', type=Path, default=Path('research/receipts/usgs-depth-datum-ledger.json'))
     a = p.parse_args()
     read = lambda name: json.loads(getattr(a, name).read_text())
     result = build([read('legacy_metadata'), read('doi_metadata')],

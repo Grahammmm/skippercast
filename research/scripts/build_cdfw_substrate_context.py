@@ -99,7 +99,7 @@ def main():
     parser.add_argument('--mpas', type=Path, default=Path('var/live-coastal-latest.json'))
     parser.add_argument('--coasts', type=Path, default=Path('dist/data/coasts.json'))
     parser.add_argument('--cache', type=Path, default=Path('var/cdfw-ds3091-tiles'))
-    parser.add_argument('--output-dir', type=Path, default=Path('dist/data'))
+    parser.add_argument('--output-dir', type=Path, default=Path('research/receipts'))
     args = parser.parse_args()
     outputs = build(json.loads(args.audit.read_text()), json.loads(args.mpas.read_text()),
                     json.loads(args.coasts.read_text()), args.cache)

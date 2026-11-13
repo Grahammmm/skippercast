@@ -133,7 +133,7 @@ def reconcile(context, manifest, video_cache, bag_audit, usgs_audit, usgs_metada
 def main():
     root = Path('.')
     result = reconcile(
-        root/'dist/data/northern-nbs-usgs-hard-research-context.geojson',
+        root/'research/receipts/northern-nbs-usgs-hard-research-context.geojson',
         json.loads((root/'research/catalog/usgs-video-cruises.json').read_text()),
         root/'var/usgs-video-cache', root/'var/noaa-h11975-native-audit.json',
         root/'var/usgs-doi-native-audit.json', root/'var/usgs-doi-metadata.json',
