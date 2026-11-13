@@ -8,7 +8,10 @@ test('coverage code loads only on request and a failed cold load leaves the port
   expect(reads).toBe(0);
   await page.getByText('Browse California regions and coverage', {exact: true}).click();
   await expect(page.getByRole('status').filter({hasText: 'Coverage could not load.'})).toBeVisible();
-  expect(reads).toBe(1);
+  // With lazy CSS, Vite preloads the module before importing it; an aborted
+  // preload can be followed by the import request. Neither is a UI retry loop.
+  expect(reads).toBeGreaterThan(0);
+  expect(reads).toBeLessThanOrEqual(2);
   await expect(page.getByRole('searchbox', {name: 'Where are you launching?'})).toBeEnabled();
   await expect(page.getByRole('button', {name: 'Explore the coast', exact: true})).toBeEnabled();
   await page.getByText('Browse California regions and coverage', {exact: true}).click();
