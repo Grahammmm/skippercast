@@ -4,23 +4,27 @@
 Python test files (every directory in pyproject's pytest testpaths) must not gain a line that
 
   clock    reads the wall clock (datetime.now/utcnow/today, date.today, time.time/time_ns) in a file with no
-           frozen clock (freezegun, time_machine, or a patched/monkeypatched time/datetime/clock/now);
+           frozen clock (freezegun, time_machine, or a patch/monkeypatch whose TARGET is time/datetime/clock/now;
+           patch("time.sleep"), a comment, a docstring or a string naming a freezer excuse nothing);
   port     listens on a hard-coded port (bind((host, 8080)), HTTPServer((host, 8080)), port=8080, --port 8080;
            use port 0 and read the port back);
   version  asserts something about the Python version in a file that never mentions sys.version_info.
 
-Clock reads for durations (time.monotonic, perf_counter) are not flagged. A line that is meant as written ends with
-`# determinism-ok: <reason>` (or has that comment on the line above).
+A statement wrapped over several lines is judged as one statement; it counts as new when a line it matches on was added
+or changed. Clock reads for durations (time.monotonic, perf_counter) are not flagged. A line that is meant as written
+ends with `# determinism-ok: <reason>` (on any line of the statement, or as a comment on the line above it).
 
 Modes. `--base REF`: only lines ADDED between REF and --head (default HEAD) fail; hits on existing lines are counted
 and reported as warnings. No `--base`: the whole tree is scanned, every hit is a warning and the exit code is 0
 (the weekly hit count). `--warn-only` turns a failure into a warning (the roll-back switch). Standard library only.
 """
 import argparse
+import io
 import os
 import re
 import subprocess
 import sys
+import tokenize
 import tomllib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,42 +34,108 @@ with open(os.path.join(ROOT, "pyproject.toml"), "rb") as _handle:
 PRAGMA = re.compile(r"#\s*determinism-ok:\s*\S{3,}")
 
 CLOCK = re.compile(r"\b(?:datetime|date)\.(?:now|utcnow|today)\(|\btime\.(?:time|time_ns)\(")
-FROZEN = re.compile(
-    r"freezegun|freeze_time|time[_-]machine|\bfreeze_?clock\b|\bfrozen_(?:now|clock|time)\b|\bfixed_(?:now|clock)\b"
-    r"|\bpatch\(\s*[\"'][\w.]*\b(?:time|datetime|date|clock|now)\b"
-    r"|\bpatch\.object\(\s*[^,()\n]+,\s*[\"'](?:time|time_ns|datetime|date|clock|now|utcnow|today)[\"']"
-    r"|\bsetattr\([^)\n]*\b(?:time|datetime|date|clock|now)\b"
+_CLOCK_NAMES = r"(?:time|time_ns|datetime|date|clock|now|utcnow|today)"
+# Freeze evidence is read from code only (comments, docstrings and string contents are blanked), so a comment such as
+# "do not use freezegun" excuses nothing; a patch counts only when its TARGET is a clock (patch("time.sleep") is not).
+FROZEN_NAMES = re.compile(
+    r"\bfreezegun\b|\bfreeze_time\b|\btime_machine\b|\bfreezer\b|\bfreeze_?clock\b|\bfrozen_(?:now|clock|time)\b"
+    r"|\bfixed_(?:now|clock)\b"
 )
+FROZEN_PATCH = re.compile(  # run on code with string contents kept (the patch target is a string)
+    r"\bpatch\(\s*[\"'][\w.]*\b" + _CLOCK_NAMES + r"[\"']"
+    r"|\bpatch\.object\(\s*[^,()]+,\s*[\"']" + _CLOCK_NAMES + r"[\"']"
+    r"|\bsetattr\(\s*[\"'][\w.]*\b" + _CLOCK_NAMES + r"[\"']"
+    r"|\bsetattr\(\s*[^,()]+,\s*[\"']" + _CLOCK_NAMES + r"[\"']"
+    r"|\busefixtures\([^)]*[\"'](?:frozen_(?:now|clock|time)|fixed_(?:now|clock)|freeze_?clock|freezer)[\"']"
+)
+# A statement may span lines (black wraps long calls), so these run on a whole statement; \s matches a newline.
 PORT = re.compile(
-    r"\.bind\(\(\s*[^,()]+,\s*[1-9]\d*\s*\)\)"
-    r"|(?:HTTPServer|TCPServer|UDPServer|create_server)\(\(?\s*[^,()]+,\s*[1-9]\d*\s*\)"
+    r"\.bind\(\(\s*[^,()]+,\s*[1-9]\d*\s*,?\s*\)\)"
+    r"|(?:HTTPServer|TCPServer|UDPServer|create_server)\(\s*\(?\s*[^,()]+,\s*[1-9]\d*\s*,?\s*\)"
     r"|\bport\s*=\s*[1-9]\d{3,4}\b|[\"']port[\"']\s*:\s*[1-9]\d{3,4}\b|--port(?:=|[\"']?\s*,?\s*[\"']?)[1-9]\d{3,4}\b"
 )
 PYTHON_WORD = re.compile(r"python|cpython|\bpy3|sys\.version\b|python_version", re.I)
 PYTHON_NUMBER = re.compile(r"\b3[._]?(?:9|1\d)(?:\.\d+)?\b")
 ASSERTING = re.compile(r"\bassert|\bexpect\b|==")
-VERSION_GUARD = re.compile(r"sys\.version_info|(?:setattr|patch)\([^)\n]*python_version")
+VERSION_GUARD_CODE = re.compile(r"\bsys\.version_info\b")
+VERSION_GUARD_PATCH = re.compile(r"\b(?:setattr|patch(?:\.object)?)\([^)]*python_version")
+_STRING_TYPES = {tokenize.STRING, getattr(tokenize, "FSTRING_START", -1), getattr(tokenize, "FSTRING_MIDDLE", -1),
+                 getattr(tokenize, "FSTRING_END", -1)}
+
+
+def statements(lines):
+    """[(first line, last line, text, code, docstring_only)] for the logical statements of a file (1-based lines).
+
+    `text` is the statement without comments; `code` is `text` with string contents blanked. A file that does not
+    tokenize (a fragment) falls back to one statement per physical line."""
+    text_lines = list(lines)
+    code_lines = list(lines)
+    spans, current = [], None
+    try:
+        for token in tokenize.generate_tokens(io.StringIO("\n".join(lines) + "\n").readline):
+            kind, (srow, scol), (erow, ecol) = token.type, token.start, token.end
+            if kind == tokenize.COMMENT:
+                text_lines[srow - 1] = text_lines[srow - 1][:scol]
+                code_lines[srow - 1] = code_lines[srow - 1][:scol]
+            elif kind == tokenize.NEWLINE:
+                if current:
+                    spans.append(current)
+                current = None
+            elif kind not in (tokenize.NL, tokenize.INDENT, tokenize.DEDENT, tokenize.ENDMARKER):
+                if current is None:
+                    current = [srow, erow, True]
+                current[1] = max(current[1], erow)
+                current[2] = current[2] and kind in _STRING_TYPES
+                if kind == tokenize.STRING:
+                    for row in range(srow, erow + 1):
+                        begin = scol if row == srow else 0
+                        end = ecol if row == erow else len(code_lines[row - 1])
+                        line = code_lines[row - 1]
+                        code_lines[row - 1] = line[:begin] + " " * max(0, min(end, len(line)) - begin) + line[end:]
+    except (tokenize.TokenError, SyntaxError):
+        text_lines = [("" if line.lstrip().startswith("#") else line) for line in lines]
+        code_lines = list(text_lines)
+        spans = [[number, number, False] for number in range(1, len(lines) + 1)]
+    return [(first, last, "\n".join(text_lines[first - 1:last]), "\n".join(code_lines[first - 1:last]), only_string)
+            for first, last, only_string in spans if "\n".join(text_lines[first - 1:last]).strip()]
+
+
+def has_pragma(lines, first, last):
+    if any(PRAGMA.search(line) for line in lines[first - 1:last]):
+        return True
+    return first > 1 and lines[first - 2].strip().startswith("#") and bool(PRAGMA.search(lines[first - 2]))
+
+
+def classify_spans(lines):
+    """[(first line, last line, kind)] for the statements of one file that carry a hit and no pragma.
+
+    The line range is the lines the matched text covers, so an edit to any of them (the port argument of a wrapped
+    `bind((` call, say) makes the hit "added"."""
+    stmts = [stmt for stmt in statements(lines) if not stmt[4]]
+    frozen = any(FROZEN_NAMES.search(code) or FROZEN_PATCH.search(text) for _, _, text, code, _ in stmts)
+    guarded = any(VERSION_GUARD_CODE.search(code) or VERSION_GUARD_PATCH.search(text) for _, _, text, code, _ in stmts)
+    hits = []
+    for first, last, text, code, _ in stmts:
+        if has_pragma(lines, first, last):
+            continue
+        found = set()
+        for pattern, kind in ((CLOCK, "clock"), (PORT, "port")):
+            if kind == "clock" and frozen:
+                continue
+            for match in pattern.finditer(text):
+                begin = first + text.count("\n", 0, match.start())
+                found.add((begin, first + text.count("\n", 0, max(match.end() - 1, match.start())), kind))
+        if found:  # one hit per starting line and kind, so a hit in a long string statement is its own line
+            hits.extend(sorted(found))
+        elif (not guarded and "version_info" not in code and ASSERTING.search(text) and PYTHON_WORD.search(text)
+                and PYTHON_NUMBER.search(text)):
+            hits.append((first, last, "version"))
+    return sorted(set(hits))
 
 
 def classify(lines):
-    """[(1-based line number, kind)] for the lines of one file that carry a hit and no pragma."""
-    text = "\n".join(lines)
-    frozen = bool(FROZEN.search(text))
-    guarded = bool(VERSION_GUARD.search(text))
-    hits = []
-    for number, line in enumerate(lines, 1):
-        code = line.strip()
-        if not code or code.startswith("#") or "version_info" in code:
-            continue
-        if PRAGMA.search(line) or (number > 1 and lines[number - 2].strip().startswith("#") and PRAGMA.search(lines[number - 2])):
-            continue
-        if not frozen and CLOCK.search(line):
-            hits.append((number, "clock"))
-        elif PORT.search(line):
-            hits.append((number, "port"))
-        elif not guarded and ASSERTING.search(line) and PYTHON_WORD.search(line) and PYTHON_NUMBER.search(line):
-            hits.append((number, "version"))
-    return hits
+    """[(1-based line number, kind)] for the hits of one file (see classify_spans)."""
+    return [(first, kind) for first, _, kind in classify_spans(lines)]
 
 
 def test_files():
@@ -113,8 +183,10 @@ def main(argv=None):
     for path in test_files():
         with open(os.path.join(ROOT, path), encoding="utf-8", errors="replace") as handle:
             lines = handle.read().splitlines()
-        for number, kind in classify(lines):
-            (new if number in added.get(path, ()) else old).append((path, number, kind, lines[number - 1].strip()))
+        for first, last, kind in classify_spans(lines):
+            # A wrapped statement is new when any line it covers was added or changed.
+            is_new = any(number in added.get(path, ()) for number in range(first, last + 1))
+            (new if is_new else old).append((path, first, kind, lines[first - 1].strip()))
     for path, number, kind, source in new:
         level = "warning" if args.warn_only else "error"
         print(f"::{level} file={path},line={number},title=Deterministic-test lint ({kind})::{kind}: {source[:120]}  "
