@@ -19,7 +19,7 @@ import zlib
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from skippercast.pipeline.parsers import watch_content  # noqa: E402
+from skippercast.pipeline.parsers import watch_content, watch_content_v4  # noqa: E402
 from skippercast.pipeline.regulation_review import jurisdiction_files  # noqa: E402
 from skippercast.pipeline.regulations import content_hash  # noqa: E402
 
@@ -113,9 +113,10 @@ def verify(archive, jurisdiction_id):
                 if not body.startswith(b"%PDF-"):
                     raise ValueError(f"Invalid PDF: {ident}")
                 actual = hashlib.sha256(body).hexdigest()
-            elif kind == "text-and-links-v3":
+            elif kind in ("text-and-links-v3", "text-and-links-v4"):
                 filename = ident + ".html"
-                actual = hashlib.sha256(watch_content(_member(zipped, filename, text=True)).encode()).hexdigest()
+                normalize = watch_content_v4 if kind == "text-and-links-v4" else watch_content
+                actual = hashlib.sha256(normalize(_member(zipped, filename, text=True)).encode()).hexdigest()
             elif kind == "ecfr-section-text-v1":
                 filename = ident + ".txt"
                 text = _member(zipped, filename, text=True)
