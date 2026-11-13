@@ -25,9 +25,10 @@ jobs:
   drift:
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
+    # actions: dispatch Offline checks on the bot branch. contents: push bot/budget-drift (never main).
     permissions:
-      actions: write        # dispatch Offline checks on the bot branch
-      contents: write       # push bot/budget-drift (never main)
+      actions: write
+      contents: write
       pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
