@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SCB-12: the map library now starts downloading alongside the app shell, rather than waiting for the shell's code to run. Heavy aerial and seafloor requests wait for the first brief to settle; failures and timeouts release them too. The loading notice and first-complete-frame marker still wait for the imagery, and all publication checks are unchanged. Phone-emulation timings and limitations are recorded in `reports/perf/SCB-12.md`.
+
 - WU-03: `http://skippercast.com` now redirects to `https://` (one 301, path and query kept) instead of serving the page over plain HTTP. Local development and the staging address are unchanged.
 - Rules: an official page is now fingerprinted by its main content and the documents it links to (`text-and-links-v4`). A website restyle by the agency (a stylesheet version number, a renamed footer link) no longer marks every rule source as changed. Sources reviewed under the old method read as needing review until their next human review; nothing is approved by this change.
 - The draft privacy notice (`/privacy`) and draft terms (`/terms.html`) are removed, with every link to them and their sitemap entries. Both were unreviewed drafts. A short, reviewed replacement is a roadmap item for before launch.

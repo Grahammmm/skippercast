@@ -17,12 +17,13 @@ import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {mapSourceHosts, naipSource} from '../packages/coast/src/map-sources.ts';
 import {
-  AERIAL_CATALOG_ID, AERIAL_DEFAULT_OPACITY, AERIAL_DEFAULT_SATURATION, AERIAL_OPACITY, AERIAL_SATURATION, aerialAttribution, aerialBase, aerialId, aerialOffer, aerialOverlay, createAerial, flownText,
+  AERIAL_CATALOG_ID, AERIAL_DEFAULT_OPACITY, AERIAL_DEFAULT_SATURATION, AERIAL_OPACITY, AERIAL_SATURATION, aerialAttribution, aerialBase, aerialId, aerialOffer, aerialOverlay, createAerial, createImageryStartup, flownText,
 } from '../web/map/aerial.ts';
 import {ENC_LAYER, chartStyle, markUnavailable, unavailable} from '../web/map/chart.ts';
 import {createEngine} from '../web/map/engine.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
+import {createVerdictLoad, SOURCES} from '../web/brief/verdict-load.ts';
 
 const PAGE = 'https://s.test/map';
 const json = path => JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'));
@@ -30,6 +31,28 @@ const regionIds = readdirSync(new URL('../regions/', import.meta.url), {withFile
   .filter(entry => entry.isDirectory() && existsSync(new URL(`../regions/${entry.name}/region.json`, import.meta.url))).map(entry => entry.name);
 const MORRO = aerialBase(json('dist/regions/morro-bay/region.json'));
 const origin = template => new URL(template.replace('{bbox-epsg-3857}', '0,0,1,1')).origin;
+
+test('SCB-12: imagery releases on terminal success, failure or timeout, never re-holds on refresh, and disposes', () => {
+  for (const outcome of ['loaded', 'failed', 'timedout']) {
+    const epoch = signal(null);
+    let timeout;
+    const load = createVerdictLoad(value => { epoch.value = value; }, {set: fn => { timeout = fn; return 1; }, clear() {}});
+    const startup = createImageryStartup(() => epoch.value?.sealed === true);
+    const ticket = load.start('morro-bay');
+    assert.equal(startup.ready.value, false);
+    if (outcome === 'timedout') timeout();
+    else for (const source of SOURCES) load.settle(ticket, source, {state: outcome});
+    assert.equal(startup.ready.value, true, outcome);
+    load.request(['forecast']);
+    assert.equal(startup.ready.value, true, 'refresh never withdraws already released imagery');
+    startup.destroy();
+    load.reset();
+  }
+  const settled = signal(false), startup = createImageryStartup(() => settled.value);
+  startup.destroy();
+  settled.value = true;
+  assert.equal(startup.ready.value, false, 'destroyed stages stop following the brief');
+});
 
 test('the aerial base is read from the region package, only where it names usgs-naip with ordered dates', () => {
   const config = json('regions/morro-bay/region.json').basemap.aerial;

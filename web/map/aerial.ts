@@ -71,6 +71,13 @@ export function aerialOverlay(a: AerialBase, format?: NaipFormat): Overlay {
 /** The current region's aerial base, while a Chart exists to draw it; the rail offers Aerial only then. */
 export const aerialOffer = signal<AerialBase | null>(null);
 
+/** SCB-12: release heavy imagery once the brief settles (success or failure), never withdraw it on a refresh. */
+export function createImageryStartup(settled: () => boolean): {ready: ReadonlySignal<boolean>; destroy(): void} {
+  const ready = signal(false);
+  const destroy = effect(() => { if (settled()) ready.value = true; });
+  return {ready, destroy};
+}
+
 export interface AerialOptions {
   engine: ReadonlySignal<Engine | null>;
   /** The current region's aerial base (RegionInfo.aerial), null where none is offered; a signal read here is followed. */

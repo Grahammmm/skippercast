@@ -118,6 +118,8 @@ export type ChartLayer = (engine: ReadonlySignal<Engine | null>) => {
 
 export interface ChartOptions {
   host: HTMLElement;
+  /** SCB-12: don't call the first frame complete while startup is deliberately holding an imagery layer. */
+  idleReady?: () => boolean;
   layers?: readonly ChartLayer[];
   load?: () => Promise<MapLibraryModule>;
   fetchFn?: typeof fetch;
@@ -231,6 +233,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
           chartMark.value = chartPick(layer, properties, clickMark(other, at, [p => seafloor?.cellAt(p) ?? null, fieldReading]), at);
         },
         onIdle: () => {
+          if (options.idleReady && !options.idleReady()) return;
           markMapIdle(); // SC-PERF-LAZY-1: the reef export may start now
           if (!painted) { posterDone(); flyIfFirst(e); try { performance.mark('skippercast-chart-idle'); } catch { /* no timing API */ } }
           else flyAsked = true;
@@ -253,7 +256,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
         if (host.clientWidth < 1024) { const p = openBandPadding(rect, covers()); e.setPadding(p); padded = p.top + p.bottom > 0; host.dataset.pad = `${p.top},${p.bottom}`; }
         else if (padded) { e.setPadding({top: 0, bottom: 0, left: 0, right: 0}); padded = false; host.dataset.pad = '0,0'; }
       };
-      seafloor = createSeafloor({engine: e, open: url => new library.PMTiles(url), fetchFn, page,
+      seafloor = createSeafloor({engine: e, startReady: options.idleReady, open: url => new library.PMTiles(url), fetchFn, page,
         size: () => ({width: host.clientWidth, height: host.clientHeight}),
         onHide: () => { if (chartMark.peek()?.id.startsWith('seafloor:')) chartMark.value = null; }});
       currents = createCurrents({view: e.view, palette, zone: options.zone, place: options.place,

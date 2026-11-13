@@ -95,7 +95,7 @@ function staticRefs() {
 // cascade. Instead each page's local <link rel="stylesheet"> tags become one
 // generated NAME.page.css that @imports them in their original order, so the
 // built page loads a single stylesheet with the authored cascade.
-export const PAGE_STYLESHEET = /<link rel="stylesheet" href="([\w.-]+\.css)"\s*\/?>[ \t]*\n?/g;
+export const PAGE_STYLESHEET = /<link rel="stylesheet" href="((?:\.\.\/web\/)?[\w./-]+\.css)"\s*\/?>[ \t]*\n?/g;
 
 function pageStyles(root) {
   const sheets = new Map();
