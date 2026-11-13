@@ -4,13 +4,15 @@
 // dist/index.html; these checks keep it from going missing again.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {existsSync, readFileSync, statSync} from 'node:fs';
+import {existsSync, readFileSync, statSync, writeFileSync} from 'node:fs';
+import {isDeepStrictEqual} from 'node:util';
 
 const dist = new URL('../dist/', import.meta.url);
 const read = name => readFileSync(new URL(name, dist), 'utf8');
 const ORIGIN = 'https://skippercast.com';
 const head = html => html.split('</head>')[0];
 const meta = (html, attr, key) => [...head(html).matchAll(new RegExp(`<meta ${attr}="${key}" content="([^"]*)"`, 'g'))].map(m => m[1]);
+const SNAPSHOT = new URL('./fixtures/search-surface.json', import.meta.url);
 const canonical = html => [...head(html).matchAll(/<link rel="canonical" href="([^"]+)"/g)].map(m => m[1]);
 
 test('the landing names one canonical home, a share card and the site name', () => {
@@ -92,4 +94,45 @@ test('discovery_keeps_private_and_alias_urls_out', () => {
   const locs = [...read('sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
   for (const path of ['/map', '/admin.html', '/chat.html', '/my-data.html', '/upload.html', '/coverage.html', '/skill.html'])
     assert.ok(!locs.includes(`${ORIGIN}${path}`), `${path} stays out of the sitemap`);
+});
+
+// The search-facing surface in one committed snapshot (tests/fixtures/search-surface.json): robots.txt
+// byte for byte, the sitemap's exact URL list, and the robots and canonical tags of a fixed page list.
+// Any change to these files fails here until the snapshot changes in the same, reviewed PR.
+// To accept a deliberate change: SEARCH_SURFACE_UPDATE=1 node --test tests/test_site_discovery.mjs
+const SURFACE_PAGES = ['landing', 'sources', 'status', 'coverage', 'skill', 'licenses', 'species-research', 'app', 'admin', 'chat', 'my-data', 'upload'];
+const SERVER_PAGES = ['/report', '/about', '/methodology'];
+
+async function searchSurface() {
+  const pages = {};
+  for (const name of SURFACE_PAGES) {
+    const html = read(`${name}.html`);
+    pages[`${name}.html`] = {robots: meta(html, 'name', 'robots'), canonical: canonical(html)};
+  }
+  // The server pages are rendered by the worker from dist/coast-readable.html; no network is used.
+  globalThis.REGIONS = {};
+  globalThis.DEPLOYMENT = {allowed_origins: [ORIGIN]};
+  const {serveCoastPage} = await import('../server/coast-pages.ts');
+  const template = read('coast-readable.html');
+  for (const path of SERVER_PAGES) {
+    const response = await serveCoastPage(new Request(ORIGIN + path), {template, regions: {}, now: new Date('2026-10-07T12:00:00Z'), fetcher: async () => { throw new Error('offline'); }});
+    const html = await response.text();
+    pages[path] = {robots: meta(html, 'name', 'robots'), canonical: canonical(html), xRobotsTag: response.headers.get('X-Robots-Tag')};
+  }
+  return {
+    robotsTxt: read('robots.txt').split('\n'),
+    sitemap: [...read('sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]),
+    pages,
+  };
+}
+
+test('search_surface_matches_the_committed_snapshot', async () => {
+  const actual = await searchSurface();
+  if (process.env.SEARCH_SURFACE_UPDATE === '1') writeFileSync(SNAPSHOT, JSON.stringify(actual, null, 2) + '\n');
+  const expected = JSON.parse(readFileSync(SNAPSHOT, 'utf8'));
+  assert.ok(isDeepStrictEqual(actual.robotsTxt, expected.robotsTxt), `dist/robots.txt changed; update tests/fixtures/search-surface.json in the same PR:\n${JSON.stringify(actual.robotsTxt)}`);
+  assert.ok(isDeepStrictEqual(actual.sitemap, expected.sitemap), `dist/sitemap.xml URL list changed; update tests/fixtures/search-surface.json in the same PR:\n${JSON.stringify(actual.sitemap)}`);
+  assert.ok(isDeepStrictEqual(Object.keys(actual.pages), Object.keys(expected.pages)), 'the fixed page list changed');
+  for (const page of Object.keys(expected.pages))
+    assert.ok(isDeepStrictEqual(actual.pages[page], expected.pages[page]), `${page} robots or canonical tags changed; update tests/fixtures/search-surface.json in the same PR:\n${JSON.stringify(actual.pages[page])}`);
 });
