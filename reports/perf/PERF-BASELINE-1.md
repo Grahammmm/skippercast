@@ -1,5 +1,7 @@
 # PERF-BASELINE-1: SkipperCast speed baseline, root causes, ranked proposals
 
+> **Raw captures were removed from the tree on 2026-11-12** (28 files, 15 MB; audit CUT-005). They are unchanged in git history at commit `44e6c0e5c1c9`. To read one: `git show 44e6c0e5c1c9:reports/perf/raw/<file>`. To rerun a helper script below, restore the folder first: `git restore --source=44e6c0e5c1c9 -- reports/perf/raw`.
+
 Cards t_90731da3 (opus-coder, archived mid-run) and t_18f59404 (sonnet-coder, finishing it) (G 2026-11-07: "Figure
 out why loading is slow and determine everything we can do to make the site load faster and give a better
 experience."). **Measure and propose only.** No product code was changed. This report, its measuring scripts and the

@@ -1,5 +1,7 @@
 # PERF-BASELINE-2: second, smaller page-load measurement of the live build (SC1922-12)
 
+> **Raw captures were removed from the tree on 2026-11-12** (28 files, 15 MB; audit CUT-005). They are unchanged in git history at commit `44e6c0e5c1c9`. To read one: `git show 44e6c0e5c1c9:reports/perf/raw/<file>`. To rerun a helper script below, restore the folder first: `git restore --source=44e6c0e5c1c9 -- reports/perf/raw`.
+
 Date: 2026-11-10 PST (measured 2026-11-11 04:16-04:28 UTC). Lab numbers from one shared host, one browser, one load at a time. **They are observations, not a pass or fail, and not real-device speed.** The 2026-11 baseline (`PERF-BASELINE-1.md`, `raw/live-desktop.json`, `raw/live-phone.json`, `raw/summary.json`) is untouched (SHA-256 of all 61 tracked files under `reports/perf` identical before and after).
 
 ## 1. Which build was measured (status: **deployed build verified**)
