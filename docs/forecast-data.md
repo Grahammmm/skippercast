@@ -45,5 +45,5 @@ On September 28, 2026, against Open-Meteo for the same Central Coast points and 
 ## Known differences and follow-ups
 
 - ECMWF open data has no visibility and no swell partitions, so those values are null. ECMWF waves are 0.25°; Open-Meteo shows a 9 km WAM grid.
-- Nothing calls Open-Meteo at runtime any more. The app's surface currents come from NOAA WCOFS samples that the regional pipeline publishes with the shared forecast (`currents` in `/api/forecast`), and the legacy personal monitor (`monitor/collector.py`) requests `/api/om`.
+- Nothing calls Open-Meteo at runtime any more. The app's surface currents come from NOAA WCOFS samples that the regional pipeline publishes with the shared forecast (`currents` in `/api/forecast`).
 - Gap: there is no hourly sea-surface temperature forecast in the app's weather layers (Météo-France SST was dropped with the Open-Meteo currents). NOAA WCOFS temperature forecasts remain in the habitat layers.

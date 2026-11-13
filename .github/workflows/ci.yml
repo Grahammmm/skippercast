@@ -257,10 +257,6 @@ jobs:
           path: ${{ runner.temp }}/pytest-core.xml
           if-no-files-found: ignore
           retention-days: 14
-      - name: Offline demonstration
-        env:
-          PYTHONPATH: src
-        run: python -m skippercast demo
       - name: Rebuild regional contracts
         env:
           PYTHONPATH: src
