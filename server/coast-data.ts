@@ -4,6 +4,7 @@
 // copied to R2 by scripts/coast/publish_assets.py are served from there instead,
 // each object hashed against its manifest entry before any byte leaves.
 import {json} from './http.ts';
+import {releaseKey} from './feeds.ts';
 import {sourceFreshness, startupAdmission, startupDeadline} from '../web/landing/region-warm.ts';
 import catalog from '../catalog/sources.json' with {type: 'json'};
 import health from '../catalog/feed-health.json' with {type: 'json'};
@@ -211,7 +212,9 @@ async function ownFeed(store: CoastStore | null, name: CoastFeed, now: number, s
   if (!store) return 'unbound';
   const feed = FEEDS[name];
   try {
-    const bytes = await small(store, feed.key, feed.max, signal); if (!bytes) return 'missing';
+    // Feeds are published as releases since #631; the plain key is the frozen pre-release copy, so reading it is always stale.
+    const target = await releaseKey(store, feed.key); if (target.missing) return 'missing';
+    const bytes = await small(store, target.key, feed.max, signal); if (!bytes) return 'missing';
     const data = JSON.parse(new TextDecoder().decode(bytes)) as Json;
     if (!data || typeof data !== 'object' || !feed.valid(data) || !isClock(data[feed.generated])) return 'invalid';
     return sourceFreshness(data[feed.generated], feed.maxAge, () => now).state === 'current' ? data : 'stale';
