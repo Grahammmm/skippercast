@@ -670,3 +670,42 @@ test('#422: history needs a positive recentWindowDays; a merged report over 8 MB
   const fits = feedStore({[REPORT]: pad(reportFeed(), 8 * 1024 * 1024), [BEACH]: beachFeed()});
   assert.equal((await serveCoastData(request('/api/coast/report'), counting, fits, coastFeeds('report'))).status, 200, 'the unmerged packet fits');
 });
+
+// The switched feeds must be read through the current R2 release (publish_r2.py, #631), not the frozen legacy key.
+async function releasedStore(files, legacy = {}) {
+  const enc = v => new TextEncoder().encode(typeof v === 'string' ? v : JSON.stringify(v));
+  const objects = Object.fromEntries(Object.entries(legacy).map(([k, v]) => [k, enc(v)])), byPrefix = {};
+  for (const [key, value] of Object.entries(files)) {
+    const bytes = enc(value), digest = await sha(bytes), [prefix, ...rest] = key.split('/');
+    objects[`${prefix}/.r2-objects/${digest}`] = bytes; (byPrefix[prefix] ??= {})[rest.join('/')] = digest;
+  }
+  for (const [prefix, listed] of Object.entries(byPrefix)) {
+    const release = enc({schema_version: 1, files: listed}), generation = await sha(release);
+    objects[`${prefix}/.r2-releases/${generation}.json`] = release;
+    objects[`${prefix}/.r2-current.json`] = enc({schema_version: 1, generation});
+  }
+  const store = fakeStore(objects), get = store.get.bind(store);
+  store.get = async (key, options) => { const o = await get(key, options); return o && {...o, json: async () => JSON.parse(new TextDecoder().decode(objects[key]))}; };
+  return store;
+}
+
+test('switched feeds are read from the current R2 release, not the frozen legacy key', async () => {
+  const ocean = oceanFeed(), history = historyFeed();
+  // The legacy keys still hold the last copy written before releases began; it is weeks old.
+  const store = await releasedStore({[OCEAN]: ocean, [HISTORY]: history}, {[OCEAN]: oceanFeed(ago(700)), [HISTORY]: historyFeed(ago(700))});
+  const o = await serveCoastData(request('/api/coast/ocean'), noBridge, store, all);
+  assert.equal(o.headers.get('X-Coast-Upstream'), 'ocean=skippercast'); assert.deepEqual(await o.json(), ocean);
+  const h = await serveCoastData(request('/api/coast/history?county=slo'), noBridge, store, all);
+  assert.equal(h.headers.get('X-Coast-Upstream'), 'history=skippercast'); assert.equal((await h.json()).generatedAt, history.generatedAt);
+});
+
+test('a feed absent from the current release, or a broken release pointer, falls back to the bridge', async () => {
+  const fishOcean = async () => response({...oceanFeed(), generatedAt: ago(0.1)});
+  // The release holds other files but not the ocean packet; a legacy copy must not be used in its place.
+  const absent = await releasedStore({[NEARSHORE]: nearshoreFeed()}, {[OCEAN]: oceanFeed()});
+  assert.equal((await serveCoastData(request('/api/coast/ocean'), fishOcean, absent, all)).headers.get('X-Coast-Upstream'), 'ocean=fish (missing)');
+  const broken = await releasedStore({[OCEAN]: oceanFeed()});
+  broken.objects['conditions/.r2-current.json'] = new TextEncoder().encode('{"schema_version":1,"generation":"nope"}');
+  assert.equal((await serveCoastData(request('/api/coast/ocean'), fishOcean, broken, all)).headers.get('X-Coast-Upstream'), 'ocean=fish (unreadable)');
+});
+

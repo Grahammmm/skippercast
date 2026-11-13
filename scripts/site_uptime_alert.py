@@ -14,7 +14,10 @@ Probes send the User-Agent SkipperCast-uptime-check/1.0; a 401, 403 or 429 is na
 Issue text carries paths, status codes and error class names only: never response bodies, headers, redirect targets or tokens.
 A redirect to another host is never followed and counts as down.
 
-Usage: site_uptime_alert.py --base URL --report FILE [--dry-run]
+The same probe watches other public paths under another label (--paths, --label, --title, --subject): the freshness workflow
+uses it for the coast data paths, which are proxied from a second Worker that no other check reaches.
+
+Usage: site_uptime_alert.py --base URL --report FILE [--paths PATH ...] [--label NAME --title TEXT --subject TEXT] [--dry-run]
 """
 import argparse
 from datetime import datetime, timezone
@@ -87,9 +90,9 @@ def probe(base, path, timeout=TIMEOUT):
         return {"path": path, "error": type(reason).__name__}
 
 
-def check(base, timeout=TIMEOUT, retry_delay=RETRY_DELAY, sleep=time.sleep):
+def check(base, timeout=TIMEOUT, retry_delay=RETRY_DELAY, sleep=time.sleep, paths=PATHS):
     """Probe every path; retry the failed ones once after retry_delay. Returns the failures left."""
-    failed = [p for p in PATHS if probe(base, p, timeout)]
+    failed = [p for p in paths if probe(base, p, timeout)]
     if failed:
         sleep(retry_delay)
     return [f for f in (probe(base, p, timeout) for p in failed) if f]
@@ -99,22 +102,22 @@ def describe(failure):
     return " ".join(str(failure[k]) for k in ("path", "error", "status") if k in failure)
 
 
-def plan(failures, issues, now, still_hours=STILL_HOURS):
+def plan(failures, issues, now, still_hours=STILL_HOURS, title=TITLE, subject="the site"):
     """The actions for one pass: [("create", title, body) | ("comment", n, text) | ("close", n, text)]."""
     issues = sorted(issues, key=lambda i: i["createdAt"])
     if not failures:
         actions = []
         for issue in issues:
             minutes = int((now - stale.parse(issue["createdAt"])).total_seconds() // 60)
-            actions.append(("close", issue["number"], f"Recovered: the site was down for {minutes // 60} h {minutes % 60} min."))
+            actions.append(("close", issue["number"], f"Recovered: {subject} was down for {minutes // 60} h {minutes % 60} min."))
         return actions
     lines = "\n".join(f"- {describe(f)}" for f in failures)
     refused = ("\n\nEvery path was refused (4xx), not unreachable: check edge bot rules before treating this as an outage."
                if all(f.get("error") == "refused" for f in failures) else "")
     if not issues:
-        body = (f"The site did not answer on:\n{lines}{refused}\n\nThis issue is the alert: it is not repeated every hour. A `still: N h` "
-                f"comment follows every {still_hours} h while it stays down, and the issue closes when the site answers again.")
-        return [("create", TITLE, body)]
+        body = (f"{subject[:1].upper()}{subject[1:]} did not answer on:\n{lines}{refused}\n\nThis issue is the alert: it is not repeated every hour. A `still: N h` "
+                f"comment follows every {still_hours} h while it stays down, and the issue closes when {subject} answers again.")
+        return [("create", title, body)]
     issue = issues[0]
     opened = (now - stale.parse(issue["createdAt"])).total_seconds() / 3600
     due = math.floor(opened / still_hours) * still_hours
@@ -123,10 +126,10 @@ def plan(failures, issues, now, still_hours=STILL_HOURS):
     return []
 
 
-def apply(actions, runner):
+def apply(actions, runner, label=LABEL):
     for action in actions:
         if action[0] == "create":
-            runner("issue", "create", "--label", LABEL, "--title", action[1], "--body", action[2])
+            runner("issue", "create", "--label", label, "--title", action[1], "--body", action[2])
         elif action[0] == "comment":
             runner("issue", "comment", str(action[1]), "--body", action[2])
         else:
@@ -138,14 +141,21 @@ def main(argv=None, runner=stale.gh, now=None, sleep=time.sleep, timeout=TIMEOUT
     parser.add_argument("--base", default="")
     parser.add_argument("--report", required=True)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--paths", nargs="+", default=list(PATHS), help="public paths to probe (default: the site's own)")
+    parser.add_argument("--label", default=LABEL, help="issue label that holds this probe's one open alert")
+    parser.add_argument("--title", default=TITLE)
+    parser.add_argument("--subject", default="the site", help="what the alert text calls the thing probed")
     args = parser.parse_args(argv)
+    if not all(p.startswith("/") and "://" not in p and not p.startswith("//") for p in args.paths):
+        print("site_uptime_alert: --paths must be site paths that start with one /", file=sys.stderr)
+        return 2
     base = args.base.strip().rstrip("/")
     parts = parse.urlsplit(base)
     if parts.scheme not in ("http", "https") or not parts.netloc or parts.query or parts.fragment:
         print("site_uptime_alert: --base must be an http(s) URL", file=sys.stderr)
         return 2
     now = now or datetime.now(timezone.utc)
-    failures = check(base, timeout, retry_delay, sleep)
+    failures = check(base, timeout, retry_delay, sleep, tuple(args.paths))
     report = {"down": bool(failures), "failures": failures, "checked_at": now.isoformat()}
     Path(args.report).write_text(json.dumps(report))
     print(f"down: {str(bool(failures)).lower()}")
@@ -153,12 +163,12 @@ def main(argv=None, runner=stale.gh, now=None, sleep=time.sleep, timeout=TIMEOUT
         print(f"  {describe(failure)}")
     if args.dry_run:
         return 0
-    issues = json.loads(runner("issue", "list", "--label", LABEL, "--state", "open", "--limit", "100",
+    issues = json.loads(runner("issue", "list", "--label", args.label, "--state", "open", "--limit", "100",
                                "--json", "number,title,createdAt,comments"))
-    actions = plan(failures, issues, now)
+    actions = plan(failures, issues, now, title=args.title, subject=args.subject)
     for action in actions:
         print(" | ".join(str(part).splitlines()[0] for part in action))
-    apply(actions, runner)
+    apply(actions, runner, args.label)
     print(f"site_uptime_alert: {len(actions)} action(s)")
     return 0
 
