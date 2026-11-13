@@ -66,6 +66,7 @@ test('an approved ocean control reads and serves its own synthetic feed', async 
   const bytes = new TextEncoder().encode(JSON.stringify(ocean)), reads = [];
   const store = {
     async get(key) {
+      if (key.includes('/.r2-')) return null;  // no release pointer: the feed sits at its plain key
       reads.push(key);
       return {size: bytes.byteLength, body: new Response(bytes).body, arrayBuffer: async () => bytes.buffer};
     },

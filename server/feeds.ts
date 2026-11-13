@@ -26,7 +26,7 @@ const SNAPSHOTS = new Set(['conditions', 'data', 'forecasts']);
 const HASH = /^[a-f0-9]{64}$/;
 
 /** Capture the bucket and pin each prefix once for a multi-file operation. */
-function resolver(selected: R2Bucket | null) {
+function resolver(selected: Pick<R2Bucket, 'get'> | null) {
   const snapshots = new Map<string, Promise<Snapshot | null>>();
   return async (key: string): Promise<{key: string; generation?: string; missing?: boolean}> => {
     const [prefix, ...parts] = key.split('/');
@@ -54,6 +54,10 @@ function resolver(selected: R2Bucket | null) {
     return {key: `${prefix}/.r2-objects/${sha}`, generation: snapshot.generation};
   };
 }
+
+/** Where a published feed's bytes live now: its object in the current release, or the same key before the first release.
+ *  `missing` means the current release does not hold the file. A broken release pointer throws. */
+export const releaseKey = (store: Pick<R2Bucket, 'get'>, key: string) => resolver(store)(key);
 
 /** Request-scoped reader: manifest and tiles stay in one release during publication. */
 export function createFeedReader(): (url: string) => Promise<ExternalJSON> {
