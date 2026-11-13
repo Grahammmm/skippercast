@@ -32,7 +32,6 @@ export function coastRedirect(search: URLSearchParams): string {
  * present, and `/map` is the app. `undefined`: not a page path this function decides.
  */
 export function shellFor(path: string, search: URLSearchParams): string | undefined {
-  if(path === '/privacy') return '/privacy.html'; // Fish compatibility uses the complete existing notice.
   if(path === '/sources') return '/sources.html'; // #475: the canonical sources page (open-questions Q16).
   if(path === '/status') return '/status.html'; // SC-LAUNCH-5: per-source data freshness.
   if(path === '/coverage') return '/coverage.html'; // ROUTE-1: the whole-coast coverage map.

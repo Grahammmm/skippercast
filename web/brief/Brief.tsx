@@ -955,4 +955,4 @@ export const PLANNING_AID = t('brief.planning');
 
 /** The one disclaimer line per page with the planning-aid line, Terms and Sources links; `children` adds links after them. */
 export const BriefFooter = ({children}: {children?: ComponentChildren} = {}) =>
-  <footer class="app-brief-footer">{t('brief.disclaimer', language.value)} {t('brief.planning', language.value)} <a href="/terms.html">{t('brief.terms', language.value)}</a> · <a href="/sources">{t('brief.sources', language.value)}</a>{children}</footer>;
+  <footer class="app-brief-footer">{t('brief.disclaimer', language.value)} {t('brief.planning', language.value)} <a href="/sources">{t('brief.sources', language.value)}</a>{children}</footer>;

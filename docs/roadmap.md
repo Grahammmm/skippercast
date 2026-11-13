@@ -49,6 +49,23 @@ This is what the code on `main` does. It is not a statement that a feature is li
 
 The evidence limits in [web-app.md](web-app.md#evidence-limits) still apply: bottom scores rank mapped habitat, not catch probability, and forecasts are regional model values.
 
+## Later: privacy notice and terms (owner decision, 2026-11-12)
+
+The draft privacy notice (`/privacy`) and draft terms (`/terms.html`) were removed on 2026-11-12. Both were
+unreviewed drafts with placeholders and wrong statements about hosting and sign-in. Their last text is in git
+history (`dist/privacy.html`, `dist/terms.html`).
+
+To do before a public launch push, as the bare minimum:
+
+- A short privacy notice written from what the code does: what an account stores (passkey, saved trips,
+  saved spots, catch log, alert devices), how long each is kept, how to export and delete it (`/api/privacy`),
+  what anonymous usage events are sent (`docs/engineering/telemetry.md`), and that the boat lookup sends the
+  boat description to an AI provider.
+- Short terms: planning aid, not a navigation chart; no warranty; rules must be checked at the source.
+- The Text Advisor needs its own section before any pilot (`docs/operations/runbooks/advisor-meta-app-review.md`).
+- Tests that used to pin the notice's wording (location sentences, the usage-event list) were removed with the
+  page; restore them against the new notice.
+
 ## Next
 
 The owner sets the order. Morro Bay is the only active region until it is refined.

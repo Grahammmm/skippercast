@@ -66,18 +66,13 @@ for (const entry of Object.keys(V2_EVENTS)) {
   });
 }
 
-test('the privacy notice, telemetry doc and CHANGELOG name every v2 event', () => {
+test('the telemetry doc and CHANGELOG name every v2 event', () => {
   const all = [...new Set(Object.values(V2_EVENTS).flat())];
-  const notice = source('dist/privacy.html'), doc = source('docs/engineering/telemetry.md');
-  const v2Notice = /The map\s+sends ([^.]+)\./.exec(notice)?.[1] ?? '';
+  const doc = source('docs/engineering/telemetry.md');
   const v2Doc = /The v2 pages[^\n]+/.exec(doc)?.[0] ?? '';
   const changelog = source('CHANGELOG.md').split(/^## /m)[1].split('\n').find(line => line.includes('anonymous usage statistics')) ?? '';
   for (const event of all) {
-    assert.match(v2Notice, new RegExp(`<code>${event}</code>`), `notice: ${event}`);
     assert.match(v2Doc, new RegExp(`\`${event}\``), `doc: ${event}`);
     assert.match(changelog, new RegExp(`\`${event}\``), `CHANGELOG: ${event}`);
   }
-  assert.match(notice, /The home page\s+sends error reports only/);
-  // FE-61: v1's map was the only sender of these; the notice no longer lists them.
-  for (const gone of ['forecast_viewed', 'install']) assert.doesNotMatch(notice, new RegExp(`<code>${gone}</code>`), gone);
 });

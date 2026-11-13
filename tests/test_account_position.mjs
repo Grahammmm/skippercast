@@ -132,7 +132,7 @@ test('each form is independent', () => {
   assert.equal(b.lat.value, '1.000000'); assert.equal(a.lat.value, ''); assert.ok(a.button.disabled);
 });
 
-test('the new words exist in English and Spanish with matching placeholders, and the privacy sentences are kept', () => {
+test('the new words exist in English and Spanish with matching placeholders', () => {
   const ids = ['use', 'finding', 'filled', 'unsupported', 'denied', 'unavailable', 'timeout', 'hint'].map(n => 'account.position.' + n);
   for (const id of ids) {
     assert.ok(catalog[id]?.en && catalog[id]?.es, id);
@@ -142,10 +142,6 @@ test('the new words exist in English and Spanish with matching placeholders, and
   assert.ok(positionControlsHTML('log').includes('id="log-use-position"') && positionControlsHTML('spot').includes('Use my position'));
   assert.ok(positionControlsHTML('log', createCopy({lang: 'es', strings: Object.fromEntries(ids.map(id => [id, catalog[id].es]))})).includes('Usar mi ubicación'));
   assert.ok(catalog['account.log.fine'].en.includes('A position is never shared, mapped or put in a feed.'));
-  const privacy = readFileSync(new URL('../dist/privacy.html', import.meta.url), 'utf8').replace(/\s+/g, ' ');
-  assert.ok(privacy.includes('asks your browser for one fresh location only when you press it'));
-  assert.ok(privacy.includes('Nothing is sent to SkipperCast until you press Save'));
-  assert.ok(privacy.includes('your location is used in the browser only and is not sent to SkipperCast'));
 });
 
 test('the catch-log redraw keeps Save off while a position request is pending, and lets it go afterwards', () => {
