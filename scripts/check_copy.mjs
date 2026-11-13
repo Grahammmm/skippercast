@@ -37,7 +37,7 @@ export const ROOT = process.env.COPY_LINT_ROOT || fileURLToPath(new URL('..', im
 export const BASELINE = 'scripts/copy-lint-baseline.json';
 
 /** Pages skipped entirely (legal text, owned by the owner and counsel). */
-export const LEGAL_PAGES = new Set(['dist/terms.html', 'dist/privacy.html', 'dist/licenses.html']);
+export const LEGAL_PAGES = new Set(['dist/licenses.html']);
 /** Pages that are themselves the "how we know" disclosure: method names allowed. */
 export const DISCLOSURE_PAGES = new Set(['dist/sources.html', 'dist/species-research.html', 'dist/commercial-ais.html']);
 /** Modules whose strings are disclosures by definition. */
