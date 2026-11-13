@@ -4,9 +4,12 @@
 // (accounts need it) and http://localhost:<port> allowed as an account origin.
 // Run `pnpm build` first. Playwright starts this (playwright.config.ts).
 //
-// Public /feeds/ requests still use the Worker's upstream. Browser fixtures
-// intercept forecast feeds and /api/om before the Worker receives them;
-// blocking other browser origins alone does not block Worker-side requests.
+// Published feeds come only from R2 (SC2184-13), and the local R2 starts empty,
+// so a /feeds/ or feed-backed /api/ request the browser fixtures do not answer
+// gets the Worker's "Feed unavailable" (404, or 503 for a feed-backed /api/
+// route); it is never read from GitHub. Browser fixtures intercept forecast
+// feeds and /api/om before the Worker receives them. Other Worker-side reads
+// (api.weather.gov) are not blocked by blocking browser origins.
 import {spawn, spawnSync} from 'node:child_process';
 import {existsSync, readdirSync, rmSync} from 'node:fs';
 import {resolve} from 'node:path';

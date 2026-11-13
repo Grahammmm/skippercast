@@ -54,7 +54,7 @@ flowchart LR
       r2[("R2 skippercast-feeds<br/>same keys + tiles/seafloor")]
     end
     subgraph edge["Worker (server/)"]
-      feedsroute["/feeds/* route<br/>R2 first, GitHub fallback"]
+      feedsroute["/feeds/* route<br/>R2 only"]
       api["/api/* public:<br/>om, forecast, intelligence, habitat"]
       private["/api/* private:<br/>trips, alerts, push, feedback, boat lookup"]
       cron["cron: watchdog"]
@@ -109,7 +109,7 @@ flowchart LR
 ## Hosting today
 
 - **skippercast.com runs on SkipperCast's own Cloudflare account** (`wrangler.jsonc`, `.github/workflows/deploy-cloudflare.yml`) with D1, R2 and the 15-minute cron watchdog; the workers.dev address is the always-on staging copy. `IDENTITY_PROVIDER=skippercast` ties private routes to passkey accounts; any other value keeps them closed. See [Cloudflare](cloudflare.md).
-- **Feeds are published twice**: to GitHub branches (history, fallback) and to R2 (what the Cloudflare Worker serves). The guide's direction is R2 as the system of record (P0-04, P2-05).
+- **Feeds are published twice**: to GitHub branches (history, the public copy) and to R2 (what the Cloudflare Worker serves, with no GitHub fallback since SC2184-13). The guide's direction is R2 as the system of record (P0-04, P2-05).
 
 ## Scheduled jobs
 
