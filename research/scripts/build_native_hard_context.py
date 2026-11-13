@@ -128,7 +128,7 @@ def compile_context(reviews, summary, mpa_snapshot, federal_snapshot, *, expecte
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--reviews', type=Path, default=Path('var'))
-    p.add_argument('--summary', type=Path, default=Path('dist/data/noaa-native-hard-review-summary.json'))
+    p.add_argument('--summary', type=Path, default=Path('research/receipts/noaa-native-hard-review-summary.json'))
     p.add_argument('--mpas', type=Path, default=Path('var/live-coastal-latest.json'))
     p.add_argument('--federal', type=Path, default=Path('dist/data/noaa-federal-areas.json'))
     p.add_argument('--output', type=Path, default=Path('dist/data/sf-native-hard-context.geojson'))

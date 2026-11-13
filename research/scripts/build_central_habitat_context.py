@@ -171,7 +171,7 @@ def build_region(region_id, usgs, usgs_digest):
 
 
 def main():
-    source = ROOT / "dist/data/usgs-hard-context-central.geojson"
+    source = ROOT / "research/receipts/usgs-hard-context-central.geojson"
     raw = source.read_bytes()
     usgs = json.loads(raw)
     if usgs.get("scope") != "generalized-statewide-usgs-hard-bottom-context" or usgs.get("coast_id") != "central":

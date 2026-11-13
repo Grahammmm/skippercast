@@ -44,7 +44,7 @@ def build(root, fetch=False):
             or video_receipt.get("minimum_interior_clearance_m") != INTERIOR_M):
         raise ValueError("Original beam or camera spatial review changed")
     features = {feature["properties"]["id"]: feature
-                for feature in json.loads((root / "dist/data/usgs-offshore-monterey-hard-context.geojson").read_text())["features"]}
+                for feature in json.loads((root / "research/receipts/usgs-offshore-monterey-hard-context.geojson").read_text())["features"]}
     outlines = {suffix: shape(features[row["context_id"]]["geometry"])
                 for suffix, row in beam_receipt["outlines"].items()}
     if set(outlines) != {"023", "046"}:

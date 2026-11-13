@@ -138,7 +138,7 @@ def main():
     parser.add_argument('--camera-cache', type=Path, default=Path('var/usgs-video-cache'))
     parser.add_argument('--tile-audit', type=Path, required=True)
     parser.add_argument('--tile-cache', type=Path, default=Path('var/cdfw-ds3091-tiles'))
-    parser.add_argument('--usgs-context', type=Path, default=Path('dist/data/usgs-hard-context-san-francisco.geojson'))
+    parser.add_argument('--usgs-context', type=Path, default=Path('research/receipts/usgs-hard-context-san-francisco.geojson'))
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--verify', type=Path, help='Reviewed coordinate-free baseline; changed source evidence fails closed')
     args = parser.parse_args()

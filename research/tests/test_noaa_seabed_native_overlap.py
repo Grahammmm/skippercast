@@ -7,7 +7,7 @@ from research.lib.paths import ROOT
 
 class NoaaSeabedNativeOverlapTests(unittest.TestCase):
     def test_public_overlap_receipt_is_coordinate_free_and_source_bound(self):
-        review = json.loads((ROOT / 'dist/data/noaa-seabed-samples-native-overlap-review.json').read_text())
+        review = json.loads((ROOT / 'research/receipts/noaa-seabed-samples-native-overlap-review.json').read_text())
         samples = json.loads((ROOT / 'dist/data/noaa-seabed-samples-sector-review.json').read_text())
         sectors = json.loads((ROOT / 'dist/data/coastal-sectors.json').read_text())['sectors']
         self.assertEqual(review['scope'], 'nos-rock-description-versus-original-noaa-depth-triage')

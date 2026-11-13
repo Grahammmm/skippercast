@@ -21,7 +21,7 @@ from research.lib.paths import ROOT
 from research.scripts.build_central_rov_depth_evidence import fetch, source_bytes
 
 
-CONTEXT = ROOT / "dist/data/usgs-offshore-monterey-hard-context.geojson"
+CONTEXT = ROOT / "research/receipts/usgs-offshore-monterey-hard-context.geojson"
 MATRIX = ROOT / "research/receipts/monterey-original-300-paired-review.json"
 PIN = ROOT / "research/catalog/central-rov-2024-source.json"
 ROCKFISH = ("Copper_rf", "Gopher_rf", "Vermilion_rf", "Canary_rf",

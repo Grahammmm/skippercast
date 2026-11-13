@@ -39,7 +39,8 @@ SOURCE_PINS = {
     SCHEMA: 'a659d136536a553043fac917473428ae0c6e51bdb179cc66bdd295e09ebf1593',
     'regions/morro-bay/coast.json': 'dbe6ffebea0e6d4321c949ae42329db487448a251af695f060c1092366b6bc47',
     # repinned for NB-SC-06, NB-SC-07 and NB-SC-08: test_coast_recipe.py carries the new morro-bay and cambria region.json pins
-    'tests/unit/test_coast_recipe.py': '74d11343a892029b90056c12f19e29965b1318a7d89cd5249059a5e7b73b6773',
+    # repinned for SC2184-16: test_coast_recipe.py carries the new build_coast_prefetch_plan.py pin
+    'tests/unit/test_coast_recipe.py': '2097efa009634a479dd0dfc8e01465e8a51b646148e3fc682a1c2c8a0eaf94d0',
 }
 # Exactly the metadata files the existing validator reads for one recipe.
 READ_SET = {SCHEMA, 'catalog/sources.json', 'catalog/coastal-sectors.json',

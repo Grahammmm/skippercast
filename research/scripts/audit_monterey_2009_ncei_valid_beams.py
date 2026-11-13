@@ -233,7 +233,7 @@ def decode_line(path, inf, fnv, spec, outlines, collect=None):
 
 
 def build(root, fetch=False):
-    context_path = root / "dist/data/usgs-offshore-monterey-hard-context.geojson"
+    context_path = root / "research/receipts/usgs-offshore-monterey-hard-context.geojson"
     matrix_path = root / "research/receipts/monterey-300-source-evidence-matrix.json"
     features = {f["properties"]["id"]: f for f in json.loads(context_path.read_text())["features"]}
     matrix = json.loads(matrix_path.read_text())

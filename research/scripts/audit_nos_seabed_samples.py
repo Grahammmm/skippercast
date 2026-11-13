@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SERVICE = "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/nos_seabed_dynamic/MapServer/0"
 ENVELOPE = [-122.3, 34.3, -120.0, 36.9]
 SOURCES = {
-    "monterey": (ROOT / "dist/data/usgs-offshore-monterey-hard-context.geojson", "EPSG:4326"),
+    "monterey": (ROOT / "research/receipts/usgs-offshore-monterey-hard-context.geojson", "EPSG:4326"),
     "point_buchon": (ROOT / "var/review/point-buchon-2009-csumb-100m-blocks.geojson", "EPSG:32610"),
     "estero": (ROOT / "var/review/estero-nominal-research-blocks.geojson", "EPSG:32610"),
 }
