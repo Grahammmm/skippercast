@@ -159,7 +159,7 @@ test('check_client passes with a WARN from 97% of a budget, and records what it 
   await writeFile(join(root, 'shell.js'), `import {helper} from './helper.js';\nexport const pad = ${JSON.stringify(Array.from({length: 400}, (_, i) => `${i}-${Math.sin(i)}`))};\nhelper(pad);`);
   const out = join(root, 'client'), budget = join(root, 'budget.json'), measured = join(root, 'measured.json');
   await buildClient({root, out, headers: '/*\n'});
-  const check = (b, env = {}) => writeFile(budget, JSON.stringify({bundles: {'app.html': b}})).then(() => run(process.execPath, [CHECK, out, root, budget], {env: {...process.env, ...env}}));
+  const check = (b, env = {}) => writeFile(budget, JSON.stringify({bundles: {'app.html': b}})).then(() => run(process.execPath, [CHECK, out, root, budget], {env: {...process.env, GITHUB_ACTIONS: 'false', ...env}}));
   const size = Number((await check({js_gzip_max: 100000})).stdout.match(/app\.html js (\d+) B/)[1]);
   // Inside 97%: quiet. At 97% or more but not over: passes and warns. Over: fails as before.
   assert.doesNotMatch((await check({js_gzip_max: Math.ceil(size / 0.96)})).stderr, /WARN/);
