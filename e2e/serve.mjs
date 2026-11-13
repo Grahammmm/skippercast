@@ -4,14 +4,17 @@
 // (accounts need it) and http://localhost:<port> allowed as an account origin.
 // Run `pnpm build` first. Playwright starts this (playwright.config.ts).
 //
-// Published feeds come only from R2 (SC2184-13), and the local R2 starts empty,
-// so a /feeds/ or feed-backed /api/ request the browser fixtures do not answer
-// gets the Worker's "Feed unavailable" (404, or 503 for a feed-backed /api/
-// route); it is never read from GitHub. Browser fixtures intercept forecast
-// feeds and /api/om before the Worker receives them. Other Worker-side reads
-// (api.weather.gov) are not blocked by blocking browser origins.
+// Published feeds come only from R2 (SC2184-13); they are never read from GitHub.
+// Before that change the Worker read the Morro Bay daily feed live from GitHub.
+// The local R2 now starts with that feed seeded from committed fixtures (below),
+// so the Worker-side read the browser fixtures fall through to (the daily feed's
+// regulations part, /api/daily?part=regulations) answers from a fixed copy. Any
+// other feed key is absent: a /feeds/ request gets 404, a feed-backed /api/ route
+// 503. Browser fixtures intercept forecast feeds and /api/om before the Worker
+// receives them. Other Worker-side reads (api.weather.gov) are not blocked by
+// blocking browser origins.
 import {spawn, spawnSync} from 'node:child_process';
-import {existsSync, readdirSync, rmSync} from 'node:fs';
+import {existsSync, readdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
@@ -29,6 +32,23 @@ run('npx', [...WRANGLER, 'd1', 'migrations', 'apply', 'DB', '--local', '--config
 // TA-W1: browser-test fixtures (e2e/seed/*.sql, in name order), loaded before the Worker starts so no spec writes to D1 under a running test.
 for (const file of readdirSync(resolve(root, 'e2e/seed')).filter(name => name.endsWith('.sql')).sort())
   run('npx', [...WRANGLER, 'd1', 'execute', 'DB', '--local', '--config', config, '--persist-to', state, '--file', resolve(root, 'e2e/seed', file)]);
+// SC2184-13: the Worker reads published feeds from R2 only, and before that change it read the Morro Bay daily feed
+// live from GitHub. The local FEEDS bucket gets the same feed before the Worker starts: the contract-checked
+// daily-feed fixture (tests/contract/test_schemas.py) with the published feed's regulations block, recorded in
+// e2e/seed/morro-bay-daily-regulations.json (provenance inside), its check clocks moved to now (as net-faults and
+// v2-brief date their feeds relative to now) so the copy never ages past the 36 h check limit. Statuses, hashes
+// and rules stay as published. This answers the rules card's /api/daily?part=regulations read (web/regs.ts
+// loadRegs), which map pages make at startup; the card's wording sets the brief's height, which
+// e2e/v2-target-edit-layout.spec.ts measures.
+const seedTime = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+const daily = JSON.parse(readFileSync(resolve(root, 'tests/fixtures/feeds/daily-latest.json'), 'utf8'));
+const {regulations} = JSON.parse(readFileSync(resolve(root, 'e2e/seed/morro-bay-daily-regulations.json'), 'utf8'));
+regulations.checked_at = seedTime;
+for (const check of Object.values(regulations.checks)) if (check.data_retrieved_at) check.data_retrieved_at = seedTime;
+const seedFile = resolve(root, '.wrangler/e2e-feed-daily.json');
+writeFileSync(seedFile, JSON.stringify({...daily, regulations}));
+run('npx', [...WRANGLER, 'r2', 'object', 'put', 'skippercast-feeds/data/regions/morro-bay/latest.json', '--local', '--config', config,
+  '--persist-to', state, '--file', seedFile, '--content-type', 'application/json']);
 // #571, #579: the Worker runs in e2e/worker.mjs (Wrangler's programmatic API, under the same pin), which also serves the
 // test-only SQL endpoint e2e/d1.ts uses, so no second workerd ever opens this state while the Worker runs.
 const server = spawn('npx', ['--yes', '--package', WRANGLER[1], '--', process.execPath, resolve(root, 'e2e/worker.mjs'), config, state, port,
