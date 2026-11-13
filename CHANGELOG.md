@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- WU-03: `http://skippercast.com` now redirects to `https://` (one 301, path and query kept) instead of serving the page over plain HTTP. Local development and the staging address are unchanged.
 - Rules: an official page is now fingerprinted by its main content and the documents it links to (`text-and-links-v4`). A website restyle by the agency (a stylesheet version number, a renamed footer link) no longer marks every rule source as changed. Sources reviewed under the old method read as needing review until their next human review; nothing is approved by this change.
 - MGL-15: the map's colours now come from map-only tokens, so changing a map colour no longer repaints the app's own screens, and the habitat classes (rock, mixed, soft bottom, kelp) have colours checked to stay apart for people with red-green or blue-yellow colour blindness. Only those four class colours changed; every other map colour is as before.
 - SC1407-15: the trip dialog has Show route on Chart. It computes the same protected-area-avoiding planning route as the route download and draws it as one dashed line under the marks, with its length, boundary-check time and the NOT FOR NAVIGATION warning in the legend. The line stays in this page only and disappears when the stops, their order, the region, the boundary check or the water data change, or when the route could no longer be built; a refused route draws nothing. It is not saved, shared or exported, and the download still builds its own route.
