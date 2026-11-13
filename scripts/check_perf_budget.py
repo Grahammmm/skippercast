@@ -9,7 +9,7 @@ downloaded and nothing is timed. Two kinds of file are measured:
 
 * First-load files: after `pnpm build`, the landing page and the app page each load one entry script, the
   scripts it imports straight away, and its stylesheets (read from dist/client/.vite/manifest.json).
-  Scripts loaded later on demand (dynamic import) are not first-load and are not counted here, but the
+  The app bootstrap's mandatory shell is also first-load. Optional dynamic imports are not counted, but the
   "largest single built file" budget still covers every file Vite emits.
 * Brief data files: the data files the brief and the map read on every load (PERF-BASELINE-1 section A.8).
   Three named files are summed. The per-region startup files (atlas marks, search-plan index, regulations
@@ -43,11 +43,14 @@ def kib(n: int) -> str:
 
 
 def first_load_closure(manifest: dict, entry_key: str) -> tuple[list[str], list[str]]:
-    """Files (js, css) an entry loads straight away: itself plus static imports, no dynamic imports."""
+    """Files loaded straight away, including the app bootstrap's mandatory shell, not optional maps."""
     js: list[str] = []
     css: list[str] = []
     seen: set[str] = set()
     stack = [entry_key]
+    if entry_key == "app.html":
+        stack.extend(key for key in manifest.get(entry_key, {}).get("dynamicImports", [])
+                     if key == "../web/app/main.tsx")
     while stack:
         key = stack.pop()
         if key in seen:

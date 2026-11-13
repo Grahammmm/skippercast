@@ -27,6 +27,6 @@ This is emulation on a loaded shared host, software WebGL, one region (Morro Bay
 
 ## Verification and rollback
 
-Typecheck, real build, client asset/budget checks, check_web and local CI contracts/repository checks passed. Full bounded installed prepush gate and remote exact-head CI are recorded in the review handoff, not assumed here. Existing phone shell browser coverage passed at all its viewport presets; new held-main/library-failure browser tests passed. Candidate build: 036340dce1. No budget raised or tests skipped.
+Typecheck, real build, client asset/budget checks, check_web and local CI contracts/repository checks passed. Full bounded installed prepush gate and remote exact-head CI are recorded in the review handoff, not assumed here. Existing phone shell browser coverage passed at all its viewport presets; new held-main/library-failure browser tests passed. Timing candidate build: 036340dce1; later changes affect test contracts and budget accounting, not runtime code. No tests skipped. The separate raw-byte app_js budget rises by 2,000 bytes with its required written history (1,060,776 measured against 1,061,000); its checker now includes the mandatory dynamic shell, as the gzip checker already does. All other budget limits remain unchanged.
 
 Rollback: revert this one PR through the usual reviewed path. No live switch, database migration or service restart is involved.
