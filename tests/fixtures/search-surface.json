@@ -1,0 +1,118 @@
+{
+  "robotsTxt": [
+    "# Every page may be crawled; private pages carry their own noindex.",
+    "# server/advisor/pages/sitemap.ts answers this path while the advisor is on.",
+    "User-agent: *",
+    "Allow: /",
+    "",
+    "Sitemap: https://skippercast.com/sitemap.xml",
+    ""
+  ],
+  "sitemap": [
+    "https://skippercast.com/",
+    "https://skippercast.com/report",
+    "https://skippercast.com/about",
+    "https://skippercast.com/methodology",
+    "https://skippercast.com/sources",
+    "https://skippercast.com/status",
+    "https://skippercast.com/coverage",
+    "https://skippercast.com/skill",
+    "https://skippercast.com/species-research.html",
+    "https://skippercast.com/licenses.html"
+  ],
+  "pages": {
+    "landing.html": {
+      "robots": [],
+      "canonical": [
+        "https://skippercast.com/"
+      ]
+    },
+    "sources.html": {
+      "robots": [],
+      "canonical": [
+        "https://skippercast.com/sources"
+      ]
+    },
+    "status.html": {
+      "robots": [],
+      "canonical": [
+        "https://skippercast.com/status"
+      ]
+    },
+    "coverage.html": {
+      "robots": [],
+      "canonical": [
+        "https://skippercast.com/coverage"
+      ]
+    },
+    "skill.html": {
+      "robots": [],
+      "canonical": [
+        "https://skippercast.com/skill"
+      ]
+    },
+    "licenses.html": {
+      "robots": [],
+      "canonical": [
+        "https://skippercast.com/licenses.html"
+      ]
+    },
+    "species-research.html": {
+      "robots": [],
+      "canonical": [
+        "https://skippercast.com/species-research.html"
+      ]
+    },
+    "app.html": {
+      "robots": [
+        "noindex"
+      ],
+      "canonical": []
+    },
+    "admin.html": {
+      "robots": [
+        "noindex"
+      ],
+      "canonical": []
+    },
+    "chat.html": {
+      "robots": [
+        "noindex"
+      ],
+      "canonical": []
+    },
+    "my-data.html": {
+      "robots": [
+        "noindex"
+      ],
+      "canonical": []
+    },
+    "upload.html": {
+      "robots": [
+        "noindex"
+      ],
+      "canonical": []
+    },
+    "/report": {
+      "robots": [],
+      "canonical": [
+        "https://skippercast.com/report"
+      ],
+      "xRobotsTag": null
+    },
+    "/about": {
+      "robots": [],
+      "canonical": [
+        "https://skippercast.com/about"
+      ],
+      "xRobotsTag": null
+    },
+    "/methodology": {
+      "robots": [],
+      "canonical": [
+        "https://skippercast.com/methodology"
+      ],
+      "xRobotsTag": null
+    }
+  }
+}
