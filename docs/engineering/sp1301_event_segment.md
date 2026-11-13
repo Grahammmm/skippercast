@@ -49,43 +49,10 @@ Frozen test-first hashes (sha256, commit `6ae4b777`; unchanged by the repair com
 
 - `tests/test_sp1301_event_segment.mjs` `4ef19306e3b3538f3e57f4536d205398aa9ce17be2a947262a3ebae4e0ba11cf`
 - `tests/fixtures/sp1301_event_segment/request.json` `753615fa4ed52f670d974a47aadcaf3b0ea238e00578d92d366886524fa5e0b7`
-- `tests/fixtures/sp1301_event_segment/tripwire.mjs` `2dcb043dbcfdf0c04e284f73fe9f9e75e74a80da0ef4a4acf2d8a7869ef3d7e0`
 
-## Acceptance helper
+## Tests
 
-`python3 scripts/accept_sp1301_event_segment.py --suite MODE --output DIR`, where MODE is one of:
-
-- `baseline`: only the A4 pair (`SP1301_SUITE=baseline` registers just those two), on the base
-  bytes of `server/fleet/activity.ts`. This is historical evidence; after the repair it reports
-  `SOURCE_DRIFT` by design.
-- `focused`: the whole new file against the named A1–A4 case map. Zero skips allowed.
-- `regression`: `tests/test_fleet_activity.mjs`, which must be unchanged from the base. All of
-  its tests run, with zero skips.
-- `helper-paths`: `tests/fixtures/sp1301_event_segment/helper_paths_cases.py` under the staged
-  `.venv` interpreter with unittest's runner (12 named cases). They are synthetic regressions for
-  the helper's own `--output` preflight. Each case builds an invented candidate root inside the
-  run's scratch directory and checks the following. A symlinked parent with a missing child, a
-  deeper symlinked intermediate, a symlinked leaf, a symlinked `out` root and a dangling link are
-  all refused. So are `..` traversal (absolute, inside `out`, relative), an absolute path outside
-  `out`, `out` itself and a file in the ancestry. Every refusal leaves the case tree, links
-  included, exactly as it was. Fresh outputs get distinct `run-*` children and earlier receipts
-  are preserved.
-- `repository`: the unchanged `scripts/check_repository.py`, under the operator manifest's
-  `runtime.credential_scan_python3`.
-- `typecheck`: `pnpm exec tsc --noEmit -p` run separately for `tsconfig.json`,
-  `web/tsconfig.json` and `packages/coast/tsconfig.json`.
-
-The helper derives the repository from its own location and reads the candidate's operator
-`SOURCE-MANIFEST.json`. Each run writes to a new unique `run-*` child of DIR. Before creating
-anything, `--output` must sit under the candidate's `out` directory with no `..` component, and
-every existing component from `out` down to the leaf must be a real directory, not a symlink.
-Only then are the missing components created, one exclusive `mkdir` at a time (round 1 review
-fix: the helper used to `mkdir -p` first and check for symlinks afterwards). Node children get a scratch HOME/TMPDIR, no inherited credentials, and
-`tests/fixtures/sp1301_event_segment/tripwire.mjs` preloaded, which fails any fetch, socket, DNS
-or http(s) attempt. The tripwire catches mistakes; it is not a sandbox. Each run records argv,
-cwd, exit codes, runtime versions, test names and counts, raw stdout/stderr with their hashes,
-file hashes, and per-commit `Material-Author` trailers in `manifest.json`, and writes its hash
-to `manifest.json.sha256`.
+`node --test tests/test_sp1301_event_segment.mjs` runs the A1–A4 cases under ordinary discovery.
 
 ## Limits
 

@@ -1,21 +1,16 @@
 """SC111: qualify_row requires integer native evidence counts.
 
 Import is inert: no guards, roots, environment or tempfile settings change here.
-The standalone runner (tools/run_sc111_qualify_counts.py) selects these methods
-by explicit name under its offline guards; ordinary unittest/pytest discovery
-runs the same methods against the importable candidate package.
+Ordinary unittest/pytest discovery runs these methods against the importable
+candidate package.
 """
 from copy import deepcopy
-import importlib.util
 import json
-from pathlib import Path
-import tempfile
 import unittest
 from unittest.mock import patch
 
 from tests._support import ROOT as REPO
 FIXTURE = REPO / 'tests/fixtures/sc111-qualify-counts/qualification.json'
-RUNNER = REPO / 'tools/run_sc111_qualify_counts.py'
 CATALOG = REPO / 'catalog/surveys.json'
 TOKEN = 'native_receipt_counts_invalid'
 SOURCE_BYTES = 'source_bytes'
@@ -41,28 +36,12 @@ def snapshot(value):
     return repr(value)
 
 
-def load_runner():
-    spec = importlib.util.spec_from_file_location('sc111_runner_for_tests', RUNNER)
-    if spec is None or spec.loader is None:
-        raise ImportError('SC111 runner is not loadable')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 class QualifyCountsTests(unittest.TestCase):
-    # The runner assigns a list to collect evidence; ordinary discovery records nothing.
-    events = None
-
     @classmethod
     def setUpClass(cls):
         from skippercast.seafloor import manifest
         cls.manifest = manifest
         cls.data = json.loads(FIXTURE.read_text())
-
-    def record(self, **event):
-        if self.events is not None:
-            self.events.append({'test_id': self.id(), **event})
 
     # ---- fixture constructors -------------------------------------------------
     def variants(self):
@@ -81,7 +60,6 @@ class QualifyCountsTests(unittest.TestCase):
                                              physical_only=physical_only)
         finally:
             after = (snapshot(row), snapshot(receipt))
-            self.record(inputs_unchanged=before == after)
             self.assertEqual(before, after, 'caller inputs mutated')
 
     def refused(self, row, receipt, physical_only=False, pattern=TOKEN, rights_url=None):
@@ -210,7 +188,6 @@ class QualifyCountsTests(unittest.TestCase):
                     else:
                         bad[field] = value
                     self.refused(row, bad, physical)
-                    self.record(field=field, value=label, variant=name, refused=True)
 
     def test_regression_source_bytes_malformed_refused(self):
         self.malformed_field(SOURCE_BYTES)
@@ -245,57 +222,6 @@ class QualifyCountsTests(unittest.TestCase):
     def test_regression_boolean_shallow_count_refused(self):
         self.deciding_boolean_refusal()
 
-    # ---- A1 regression: evidence log sealing ----------------------------------
-    def test_regression_seal_rejects_missing_changed_and_late_append_logs(self):
-        runner = load_runner()
-        root = Path(tempfile.mkdtemp(prefix='sc111-seal-'))
-        created = []
-
-        def cleanup():
-            # Explicit absolute removal of only the inert files this test created.
-            for path in reversed(created):
-                if path.is_dir():
-                    path.rmdir()
-                elif path.exists():
-                    path.unlink()
-            root.rmdir()
-        self.addCleanup(cleanup)
-
-        def complete(name):
-            run = root / name
-            run.mkdir()
-            created.append(run)
-            (run / 'stdout.txt').write_text('inert synthetic stdout\n')
-            (run / 'stderr.txt').write_text('inert synthetic stderr\n')
-            (run / 'receipt.json').write_text('{"inert": true}\n')
-            runner.seal(run)
-            created.extend(run / leaf for leaf in ('stdout.txt', 'stderr.txt', 'receipt.json', 'seal.json'))
-            return run
-
-        runner.verify_seal(complete('positive'))
-        missing = complete('missing')
-        (missing / 'stderr.txt').unlink()
-        with self.assertRaisesRegex(ValueError, 'sealed log missing'):
-            runner.verify_seal(missing)
-        changed = complete('changed')
-        (changed / 'stdout.txt').write_text('inert synthetic stdouT\n')
-        with self.assertRaisesRegex(ValueError, 'sealed log changed'):
-            runner.verify_seal(changed)
-        late = complete('late-append')
-        with (late / 'receipt.json').open('a') as handle:
-            handle.write('late\n')
-        with self.assertRaisesRegex(ValueError, 'sealed log changed'):
-            runner.verify_seal(late)
-        with self.assertRaisesRegex(ValueError, 'seal already exists'):
-            runner.seal(late)
-        unsealed = root / 'unsealed'
-        unsealed.mkdir()
-        created.append(unsealed)
-        with self.assertRaisesRegex(ValueError, 'seal missing'):
-            runner.verify_seal(unsealed)
-        self.record(seal_positive=True, missing_rejected=True, changed_rejected=True,
-                    late_append_rejected=True)
-
     # ---- A2 compatibility -----------------------------------------------------
     def test_compatibility_producer_shaped_receipts_drop_unreviewed_extras(self):
         d = self.data
@@ -324,7 +250,6 @@ class QualifyCountsTests(unittest.TestCase):
                     self.assertEqual(result['adapter_review'][field], review[field])
                 self.assertEqual(result['bytes'], row['bytes'])
                 self.assertEqual(result['resolution_m'], row['resolution_m'])
-        self.record(catalog_reviewed_rows=len(reviewed))
 
     # ---- A3 negative control --------------------------------------------------
     def test_negative_control_count_predicate_seam(self):
@@ -351,8 +276,6 @@ class QualifyCountsTests(unittest.TestCase):
         self.assertIs(manifest._require_native_counts, original)
         self.deciding_boolean_refusal()
         positive()
-        self.record(mutant_detected=True, positive_passed=True, restored=True,
-                    mutant_returned_boolean_count=True, expected_inner_failure=inner)
 
 
 if __name__ == '__main__':

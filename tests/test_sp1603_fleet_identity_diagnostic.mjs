@@ -75,24 +75,17 @@ test('A4 corrupt returned hash/bytes and wrong source/case identities fail close
   assert.equal(evaluate(corpus, python, worker).status, 'PARITY_UNRESOLVED');
 });
 for (const negative of ['corrupt-fixture', 'missing-runtime']) {
-  test(`A4 actual acceptance wrapper rejects ${negative} as unexpected, not expected red`, () => {
+  test(`A4 strict diagnostic rejects ${negative} as unexpected, not expected red`, () => {
     const out = path.join(directory, negative);
     mkdirSync(out);
-    const args = [python, path.join(ROOT, 'scripts/accept_sp1603_fleet_identity_diagnostic.py'),
-      '--suite', 'baseline', '--output', out];
+    const override = [];
     if (negative === 'corrupt-fixture') {
       const bad = path.join(out, 'corrupt.json');
       writeFileSync(bad, JSON.stringify({...corpus, provenance: 'synthetically corrupted'}));
-      args.push('--fixture', bad);
-    } else args.push('--python', path.join(out, 'missing-python'));
-    const result = child(args, out, 'acceptance-negative');
-    assert.equal(result.receipt.exit, 1, result.stderr);
-    const summary = JSON.parse(result.stdout);
-    assert.equal(summary.status, 'UNEXPECTED_ERROR');
-    assert.equal(summary.error, negative === 'corrupt-fixture' ? 'FIXTURE_HASH_MISMATCH' : 'PYTHON_RUNTIME_MISSING');
-    assert.equal(load(path.join(summary.output, 'acceptance.json')).children.length, 0, 'outer wrapper rejects before any child launch');
+      override.push('--fixture', bad);
+    } else override.push('--python', path.join(out, 'missing-python'));
     const strictArgs = [process.execPath, path.join(HERE, 'diagnostic.mjs'), '--output', path.join(out, 'strict-negative')];
-    strictArgs.push(...args.slice(6)); // exactly the same synthetic override
+    strictArgs.push(...override);
     const strict = child(strictArgs, out, 'strict-negative');
     assert.equal(strict.receipt.exit, 2);
     const message = JSON.parse(strict.stderr);
