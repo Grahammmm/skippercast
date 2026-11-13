@@ -1,12 +1,12 @@
-// MAPLIVE-1: surface currents, style "current 5" (MAPLAYER-CURRENT-1; research/scripts/map_style/currents-layer.js).
+// MAPLIVE-1: surface currents, style "current 5" (MAPLAYER-CURRENT-1; web/map/currents-layer.js).
 // A spin tint under dark streamlines from a real HF-radar grid, drawn only where all four surrounding cells hold a
 // vector. The maths is the study's own module, imported unchanged; only the MapLibre wiring differs (the Chart's
 // overlay API, and arrowheads as small triangles because the Chart carries no arrow sprite).
 import type {Overlay} from '../engine.ts';
 import {PREVIEW_DATA, type PreviewAttach} from '../preview-layers.ts';
 import {ageText, BEFORE_APP_LAYERS, expireWhenStale, freshWithin, handle, hoursOld, utc} from './common.ts';
-import {balance} from '../../../research/scripts/map_style/balance-ramp.js';
-import {bearing, gridOf, loadCurrentsDoc, STREAM_COLOUR, streamlines, tintPixels} from '../../../research/scripts/map_style/currents-layer.js';
+import {balance} from '../balance-ramp.js';
+import {bearing, gridOf, loadCurrentsDoc, STREAM_COLOUR, streamlines, tintPixels} from '../currents-layer.js';
 
 export const CURRENTS_TINT = 'preview-currents-tint', CURRENTS_LINES = 'preview-currents-lines', CURRENTS_HEADS = 'preview-currents-heads';
 /** HF-radar grids are hourly; the study set no limit, so the preview withholds one older than two days. */
