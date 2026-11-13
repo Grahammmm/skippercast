@@ -67,6 +67,32 @@ test('14 distinct consecutive fully green UTC nights remove effective tag and re
   const repeat = nightly(reports('2030-01-14'), rows, state, '2030-01-14');
   assert.equal(repeat.report.specs[row.spec].green_days, 14);
 });
+test('a failing rerun on the 14th green date voids the streak expiry; the hard deadline stays', () => {
+  let state = empty();
+  for (let d = 1; d <= 14; d++) {
+    const day = `2030-01-${String(d).padStart(2, '0')}`;
+    ({state} = nightly(reports(day), rows, state, day));
+  }
+  assert.equal(state.expired[row.key], '2030-01-14');
+  const bad = reports('2030-01-14'); bad[1].suites = [];
+  let report;
+  ({state, report} = nightly(bad, rows, state, '2030-01-14'));
+  assert.equal(state.days['2030-01-14'][row.key], false);
+  assert.equal(report.specs[row.spec].green_days, 0);
+  assert.equal(state.expired[row.key], undefined);
+  assert.deepEqual(policy(row, state, '2030-01-14'), {tag: ['@flaky'], retries: 2});
+  // A later green rerun cannot restore the broken date either.
+  ({state} = nightly(reports('2030-01-14'), rows, state, '2030-01-14'));
+  assert.equal(state.expired[row.key], undefined);
+  // An expiry latched on an earlier date survives a later failure.
+  const earlier = {days: structuredClone(state.days), expired: {[row.key]: '2030-01-14'}};
+  const later = reports('2030-01-15'); later[1].suites = [];
+  assert.equal(nightly(later, rows, earlier, '2030-01-15').state.expired[row.key], '2030-01-14');
+  // The hard deadline still expires it on a failing night.
+  const hardBad = reports('2030-01-16'); hardBad[1].suites = [];
+  assert.equal(nightly(hardBad, rows, empty(), '2030-01-16').state.expired[row.key], '2030-01-16');
+  assert.equal(nightly(hardBad, rows, {days: {}, expired: {[row.key]: '2030-01-16'}}, '2030-01-16').state.expired[row.key], '2030-01-16');
+});
 test('failure, recovery, skip, missing target/project/shard and global errors break green credit', () => {
   const mutations = [
     r => { r.pop(); },

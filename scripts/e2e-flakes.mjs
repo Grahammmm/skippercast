@@ -96,7 +96,11 @@ export function nightly(reports, rows, previous, day = today()) {
     days[day][row.key] = (days[day][row.key] ?? true) && green;
     let streak = 0;
     for (let t = Date.parse(day); t >= Date.parse(row.first_seen) && days[new Date(t).toISOString().slice(0, 10)]?.[row.key] === true; t -= DAY) streak++;
-    if (streak >= 14 || day >= row.expiry) expired[row.key] ??= day;
+    const hard = day >= row.expiry;
+    // A streak expiry latched earlier on this UTC date is void if a failing rerun breaks the
+    // streak; the hard deadline and expiries latched on earlier dates stay.
+    if (!hard && streak < 14 && expired[row.key] === day) delete expired[row.key];
+    if (streak >= 14 || hard) expired[row.key] ??= day;
     if (m) m.green_days = streak;
   }
   for (const d of Object.keys(days)) if (Date.parse(day) - Date.parse(d) > 30 * DAY) delete days[d];
