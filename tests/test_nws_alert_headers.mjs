@@ -33,11 +33,10 @@ test('an api.weather.gov read sends exactly the NWS User-Agent and Accept header
   });
 });
 
-test('a GitHub raw feed read keeps the old init shape with no headers key', async () => {
+test('a published-feed URL is read from R2 only: with no bucket it throws and fetches nothing', async () => {
   await withFetch(() => Response.json({ok: true}), async calls => {
-    assert.deepEqual(await readFeed(RAW + 'data/regions/morro-bay/latest.json'), {ok: true});
-    assert.deepEqual(Object.keys(calls[0].init).sort(), ['redirect', 'signal']);
-    assert.equal(calls[0].init.redirect, 'manual');
+    await assert.rejects(readFeed(RAW + 'data/regions/morro-bay/latest.json'), /Feed storage unavailable/);
+    assert.equal(calls.length, 0);
   });
 });
 
