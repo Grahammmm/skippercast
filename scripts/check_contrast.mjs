@@ -624,7 +624,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // no colour, opacity, backing or text role changed and the cited line numbers above are unmoved. Rebound from the final bytes.
   // MAIN-RED-5: pointer-event routing only; no paint, backing, opacity or text role changes.
   // MAIN-RED-7: one landscape-phone (max-height: 500px) sheet-footer link spacing rule (margin, side padding, min-width); no colour, opacity, backing or text role changed. Rebound from the final bytes.
-  "appCss": "8764dafd34ec08697a1e4d5d3fc9480cd60ecb959bfdd54226937d772a83fc65",
+  "appCss": "ea47a308ed3ed26a56558714894a22425f65244a647fc22916e9e73bdbb92591",
   // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
   // UXFIX-10 only appends a scoped .app-account[data-top] block at the end of app.css (the phone top-card account button: icon size, hidden label, open-state text/panel colour, z-index);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved.

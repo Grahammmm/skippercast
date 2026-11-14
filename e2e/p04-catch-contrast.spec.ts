@@ -295,7 +295,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SCB-11: app.css changes only the wide-desktop (min-width: 1280px) masthead and command bar layout (fixed two-line place name, flex order, auto margins, a time window minimum width); the Reports catch sheet mounts neither, and no colour, backing or catch paint changed. Rebound from the final bytes.
   // MAIN-RED-5: Chart loading-status hit-testing only; Reports paint/backing and thresholds unchanged.
   // MAIN-RED-7: app.css adds one landscape-phone sheet-footer link spacing rule (the Reports catch sheet mounts no sheet footer); no colour, backing or catch paint changed. Rebound from the final bytes.
-  "web/app/app.css": "8764dafd34ec08697a1e4d5d3fc9480cd60ecb959bfdd54226937d772a83fc65",
+  "web/app/app.css": "ea47a308ed3ed26a56558714894a22425f65244a647fc22916e9e73bdbb92591",
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // UXFIX-10: app.css appends only a scoped .app-account[data-top] block (the phone top-card account button: icon size, visually hidden label, open-state colour, z-index while its panel is open); the Reports catch sheet mounts no account menu, so no catch paint or backing changes. Rebound from the final bytes.
   // UXFIX-11: app.css adds only the phone sheet day-chip row pin (.app-sheet-hour); the Reports catch sheet mounts no hour sheet, so no catch paint or backing changes. Rebound from the final bytes.
@@ -386,7 +386,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SCB-11: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // MAIN-RED-5: only the appCss surface binding/comment changed; contrast calculations and gates unchanged.
   // MAIN-RED-7: only the appCss surface binding/comment changed; contrast calculations and gates unchanged.
-  "scripts/check_contrast.mjs": "456dfa97d5c7720dccac16d748ec574adc4bd6cef1fd51e0d9a873fd59eed895",
+  "scripts/check_contrast.mjs": "4f38c7e1a2accb5a279cda72fbb934a724642794c833960db14d53a5eb20782b",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
