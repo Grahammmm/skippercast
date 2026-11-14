@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC-AUDIT-2c (#2184): apply G's signed Central Coast rules review under the v4 source fingerprints through December 31, 2026. Salmon stays closed for the remainder of 2026; Dungeness is restricted by the signed trap prohibition. Policy-A keeps proposals as also-check links and the health advisory blocking Dungeness only. Vandenberg maritime access remains on hold; fresh daily source checks and location-specific restrictions still apply.
+
 - MAIN-RED-5: the “Loading the map” announcement no longer intercepts clicks on Chart controls beneath it. Its appearance and screen-reader announcements are unchanged.
 
 - R4-SC-07: the automatic first-visit map flyover no longer runs below the 1024px desktop layout breakpoint, leaving phone and tablet interactions free of the camera tour. Desktop tours and reduced-motion, Save-Data and shared-link protections are unchanged.
