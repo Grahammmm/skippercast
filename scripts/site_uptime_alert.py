@@ -65,6 +65,17 @@ def probe(base, path, timeout=TIMEOUT):
         with request.build_opener(SameHost).open(_request(base + path), timeout=timeout) as response:
             if response.status != 200:
                 return {"path": path, "status": response.status}
+            if path.startswith('/feeds/tiles/seafloor/manifest-') and path.endswith('.json'):
+                try:
+                    manifest = json.loads(response.read(1 << 20))
+                    region = path.removeprefix('/feeds/tiles/seafloor/manifest-').removesuffix('.json')
+                    expires = datetime.fromisoformat(manifest['expires_at'].replace('Z', '+00:00'))
+                    ok = (manifest['status'] == 'ready' and manifest['region'] == region
+                          and expires.tzinfo is not None and expires > datetime.now(timezone.utc))
+                except (ValueError, KeyError, TypeError, AttributeError):
+                    ok = False
+                if not ok:
+                    return {'path': path, 'status': 200, 'error': 'habitat unavailable'}
             if path == "/api/health":
                 try:
                     ok = isinstance(json.loads(response.read(1 << 20)), dict)

@@ -92,6 +92,23 @@ class SiteUptimeTest(unittest.TestCase):
         self.assertEqual(code, 0)
         return json.loads(self.report.read_text())
 
+    def test_seafloor_manifest_needs_ready_region_and_current_expiry(self):
+        path = "/feeds/tiles/seafloor/manifest-morro-bay.json"
+        good = {"region": "morro-bay", "status": "ready", "expires_at": "2099-01-01T00:00:00Z"}
+        bodies = [good, {**good, "status": "held"}, {**good, "region": "other"},
+                  {**good, "expires_at": "2020-01-01T00:00:00Z"}, {**good, "expires_at": "2099-01-01"},
+                  {**good, "expires_at": None}, [], {}, "not a manifest"]
+        for index, body in enumerate(bodies):
+            with self.subTest(body=body):
+                site = FakeSite({path: (200, json.dumps(body))})
+                self.addCleanup(site.server.server_close)
+                self.addCleanup(site.server.shutdown)
+                result = uptime.probe(site.base, path)
+                if index == 0:
+                    self.assertIsNone(result)
+                else:
+                    self.assertEqual(result, {"path": path, "status": 200, "error": "habitat unavailable"})
+
     def test_all_up_reports_up_and_makes_no_write_call(self):
         report = self.run_once(self.site())
         self.assertEqual((report["down"], report["failures"]), (False, []))

@@ -14,6 +14,8 @@ const INDEX = '**/regions/morro-bay/land-water.json';
 const LINES = '**/regions/morro-bay/land-water-lines.json';
 
 test.beforeEach(async ({page}) => {
+  // Test atlas land/water behavior under explicit download deferral, not failed habitat.
+  await page.addInitScript(() => Object.defineProperty(navigator, 'connection', {value: {saveData: true, effectiveType: '4g'}, configurable: true}));
   await page.route('**/api/coast/report', route => route.fulfill({status: 503, json: {error: 'Offline UI test'}}));
 });
 

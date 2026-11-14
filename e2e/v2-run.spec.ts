@@ -52,6 +52,8 @@ function forecast() {
 }
 
 test.beforeEach(async ({page, v2}) => {
+  // Keep the synthetic run's atlas destination via explicit download deferral.
+  await page.addInitScript(() => Object.defineProperty(navigator, 'connection', {value: {saveData: true, effectiveType: '4g'}, configurable: true}));
   await page.clock.setFixedTime(BASE);
   await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
   await page.route('**/api/forecast?*', route => route.fulfill({json: forecast()}));
