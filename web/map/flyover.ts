@@ -4,8 +4,9 @@
 // camera, `?view=` and every north-up overlay are as they were. It runs once
 // per browser session, only over the region's home framing (never for a link
 // that names a view, a spot or a habitat), and never when the browser asks for
-// reduced motion or Save-Data, or the page is hidden. The first touch, click,
-// wheel or key stops it and returns the Chart north up and flat at once
+// reduced motion or Save-Data, the page is hidden, or the screen is below the
+// 1024px desktop layout: phone/tablet first taps take priority over the tour.
+// The first touch, click, wheel or key stops it and returns the Chart north up and flat at once
 // (web/map/engine.ts `flyover`). The desktop 3D orbit is dot's renderer camera
 // and is not here (interface note on #413).
 //
@@ -49,6 +50,8 @@ export function flyoverLegs(center: Point, harbor: Point | null): FlyLeg[] {
 }
 
 export interface FlyoverGate {
+  /** Below the 1024px desktop layout breakpoint. */
+  readonly smallScreen: boolean;
   /** prefers-reduced-motion: reduce. */
   readonly reduced: boolean;
   /** The browser asked to save data. */
@@ -62,7 +65,7 @@ export interface FlyoverGate {
 }
 
 /** Whether the first Chart view may fly: every gate open. */
-export const mayFly = (g: FlyoverGate): boolean => !g.reduced && !g.saveData && !g.hidden && !g.linked && !g.seen;
+export const mayFly = (g: FlyoverGate): boolean => !g.smallScreen && !g.reduced && !g.saveData && !g.hidden && !g.linked && !g.seen;
 
 /** Reads the session flag; storage that throws counts as unseen (the flight then happens once per page load). */
 export function flyoverSeen(storage: () => Storage | null | undefined = () => sessionStorage): boolean {
@@ -76,8 +79,9 @@ export function markFlyoverSeen(storage: () => Storage | null | undefined = () =
 
 /** The browser's gates, read now; `linked` is the caller's. Outside a browser nothing flies. */
 export function browserGate(linked: boolean): FlyoverGate {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return {reduced: true, saveData: false, hidden: true, linked, seen: false};
+  if (typeof window === 'undefined' || typeof document === 'undefined') return {smallScreen: true, reduced: true, saveData: false, hidden: true, linked, seen: false};
   return {
+    smallScreen: window.innerWidth < 1024,
     reduced: typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches,
     saveData: saveData(typeof navigator === 'undefined' ? null : navigator),
     hidden: document.hidden,
