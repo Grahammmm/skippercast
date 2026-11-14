@@ -2,6 +2,8 @@
 import hashlib
 import json
 import math
+import os
+import stat
 from pathlib import Path
 
 MAX_FILE_BYTES = 64 * 1024 * 1024
@@ -17,13 +19,23 @@ class AlignmentValidityHold(ValueError):
 
 def identity(path):
     path = Path(path)
-    if not path.is_file() or path.stat().st_size > MAX_FILE_BYTES:
+    if not path.is_file():
         raise ValueError("artifact_byte_bound")
     digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
+    count = 0
+    with path.open("rb", buffering=0) as stream:
+        opened = os.fstat(stream.fileno())
+        if not stat.S_ISREG(opened.st_mode) or opened.st_size > MAX_FILE_BYTES:
+            raise ValueError("artifact_byte_bound")
+        while True:
+            block = stream.read(min(1024 * 1024, MAX_FILE_BYTES - count + 1))
+            if not block:
+                break
+            count += len(block)
+            if count > MAX_FILE_BYTES:
+                raise ValueError("artifact_byte_bound")
             digest.update(block)
-    return {"sha256": digest.hexdigest(), "bytes": path.stat().st_size}
+    return {"sha256": digest.hexdigest(), "bytes": count}
 
 
 def check_geotiff(path):

@@ -5,8 +5,7 @@ inert text: no file, archive or raw source is bound, and the comparator must
 never stat or open one. The comparator explains DECLARED metadata only; a clean
 report is REVIEW REQUIRED, never semantic, closure or scientific acceptance.
 
-Functions take no arguments so they run unchanged under pytest collection and
-under scripts/accept_sc_segment_delta.py (stdlib-only, offline sentinels). Test
+Functions take no arguments and run under pytest collection. Test
 groups: test_a1_* focused, test_a2_* producer contract, test_a3_* negative.
 """
 import builtins
@@ -26,7 +25,6 @@ from tests._support import FIXTURES, ROOT
 
 FIXTURE_DIR = FIXTURES / 'sc_segment_delta'
 MODULE_PATH = ROOT / 'scripts' / 'coast_diagnostics' / 'segment_receipt_delta.py'
-RUNNER_PATH = ROOT / 'scripts' / 'accept_sc_segment_delta.py'
 PRODUCER_PATH = ROOT / 'scripts' / 'validate_coast_receipt.py'
 SCHEMA_PATH = ROOT / 'skills' / 'coast-campaign-shared' / 'schemas' / 'coast-segment-receipt-v1.schema.json'
 # Pins measured by the planner at Grahammmm/skippercast main 59fca09b.
@@ -43,11 +41,8 @@ FROZEN_BOOKKEEPING_FIELDS = ('created_utc', 'author_profile', 'author_model', 'c
 FLAGS = dict(evidence_scope='declared_metadata_only', referenced_bytes_verified=False,
              semantic_approval=False, closure_verified=False, semantic_comparability='UNVERIFIED')
 
-# Redirected by the acceptance runner to its write-once synthetic output tree.
-WORK_ROOT = None
 _COUNTER = itertools.count()
 _MODULE = None
-_RUNNER = None
 
 
 # ---------------------------------------------------------------- helpers ---
@@ -61,17 +56,6 @@ def delta():
         spec.loader.exec_module(module)
         _MODULE = module
     return _MODULE
-
-
-def runner():
-    """The acceptance runner module (its run-root helpers only; suites are never re-entered)."""
-    global _RUNNER
-    if _RUNNER is None:
-        spec = importlib.util.spec_from_file_location('sc_segment_delta_runner_under_test', RUNNER_PATH)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        _RUNNER = module
-    return _RUNNER
 
 
 def canon(value):
@@ -133,7 +117,7 @@ def fake(label):
 
 
 def workdir(label):
-    base = WORK_ROOT if WORK_ROOT is not None else tempfile.mkdtemp(prefix='sc-segment-delta-')
+    base = tempfile.mkdtemp(prefix='sc-segment-delta-')
     path = Path(os.path.realpath(base)) / f'{label}-{next(_COUNTER)}'
     path.mkdir(parents=True, exist_ok=False)
     return path
@@ -894,66 +878,6 @@ def test_a3_unsafe_nesting_is_refused_consistently():
     assert snapshot(work) == before
 
 
-def test_a3_runner_output_root_refuses_symlinks_before_writing():
-    module = runner()
-    work = workdir('runner-root')
-    target = work / 'target'
-    target.mkdir()
-    (target / 'keep.txt').write_bytes(b'keep')
-    (work / 'leaf-link').symlink_to(target, target_is_directory=True)
-    (work / 'anc-link').symlink_to(target, target_is_directory=True)
-    (work / 'dangling').symlink_to(work / 'nowhere')
-    (work / 'plain-file').write_bytes(b'file')
-    refused = [work / 'leaf-link', work / 'anc-link' / 'sub', work / 'anc-link' / 'sub' / 'deeper',
-               work / 'dangling', work / 'dangling' / 'sub', work / 'plain-file', work / 'plain-file' / 'sub',
-               str(work / 'x' / '..' / 'y'), str(work) + '//z', 'relative/../escape']
-    before = tree(work)
-    for output in refused:
-        try:
-            module.prepare_run_dir(output, '2026-10-24T00:00:00.000000Z')
-        except module.RunRootRefused:
-            pass
-        else:
-            raise AssertionError(f'output symlink followed or unsafe run root accepted: {output}')
-        assert tree(work) == before, f'refusal changed the filesystem: {output}'
-    assert not (work / 'nowhere').exists() and not (work / 'y').exists() and not (work / 'z').exists()
-    # The runner CLI refuses with exit 2 before any write.
-    for output in (work / 'leaf-link', work / 'anc-link' / 'sub'):
-        out, err = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = module.main(['--suite', 'focused', '--output', str(output)])
-        assert code == 2 and 'REFUSED' in err.getvalue(), (code, err.getvalue())
-        assert tree(work) == before
-    # Fresh root (missing ancestors created without following links) and a rerun get distinct run dirs.
-    fresh = work / 'fresh' / 'a'
-    first, first_fd = module.prepare_run_dir(fresh, '2026-10-24T00:00:00.000000Z')
-    second, second_fd = module.prepare_run_dir(fresh, '2026-10-24T00:00:00.000000Z')
-    try:
-        assert first != second and first.parent == second.parent == fresh
-        for run in (first, second):
-            assert os.path.realpath(run) == str(run)
-            assert (run / 'tmp').is_dir() and (run / 'work').is_dir()
-        module.write_once(first_fd, 'receipt.json', b'first')
-        try:
-            module.write_once(first_fd, 'receipt.json', b'second')
-        except FileExistsError:
-            pass
-        else:
-            raise AssertionError('evidence file was overwritten')
-        assert (first / 'receipt.json').read_bytes() == b'first'
-        os.symlink(target / 'keep.txt', first / 'stdout.txt')
-        try:
-            module.write_once(first_fd, 'stdout.txt', b'through-link')
-        except OSError:
-            pass
-        else:
-            raise AssertionError('evidence write followed a symlink')
-        assert (target / 'keep.txt').read_bytes() == b'keep'
-    finally:
-        os.close(first_fd)
-        os.close(second_fd)
-
-
 # ------------------------------------------------------ mutation controls ---
 # Each control pairs a regression check with an in-memory callable double that
 # breaks exactly the behaviour it guards. The negative suite requires the check
@@ -1084,21 +1008,6 @@ def check_nesting_gate():
     raise AssertionError('nesting escaped: a 600-level receipt was explained')
 
 
-def check_runner_refuses_symlink_output():
-    module = runner()
-    work = workdir('runner-control')
-    target = work / 'target'
-    target.mkdir()
-    (work / 'link').symlink_to(target, target_is_directory=True)
-    try:
-        result = module.prepare_run_dir(work / 'link', '2026-10-24T00:00:00.000000Z')
-    except module.RunRootRefused:
-        assert os.listdir(target) == [], f'output symlink followed: target changed despite refusal {os.listdir(target)}'
-        return
-    os.close(result[1])
-    raise AssertionError(f'output symlink followed: wrote {os.listdir(target)} into the link target')
-
-
 def _double_scalar_equality(module):
     def lenient(a, b):
         if type(a) is not type(b):
@@ -1127,14 +1036,6 @@ def _double_depth_gate_disabled(module):
     return patched(module, MAX_DEPTH=10 ** 9)
 
 
-def _double_runner_follows_links(module):
-    def following(output):
-        path = os.path.abspath(os.fspath(output))
-        os.makedirs(path, exist_ok=True)
-        return os.open(path, os.O_RDONLY | os.O_DIRECTORY), path
-    return patched(runner(), open_output_root=following)
-
-
 MUTATION_CONTROLS = (
     ('projection_drops_changed_source_sha', check_projection_includes_content, _double_projection_drops_source_sha,
      'projection differs'),
@@ -1149,8 +1050,6 @@ MUTATION_CONTROLS = (
     ('date_time_range_only_leap_second', check_leap_second_placement, _double_range_only_date_time,
      'expected InvalidReceipt'),
     ('nesting_gate_disabled', check_nesting_gate, _double_depth_gate_disabled, 'nesting escaped'),
-    ('runner_output_symlink_followed', check_runner_refuses_symlink_output, _double_runner_follows_links,
-     'output symlink followed'),
 )
 
 

@@ -90,24 +90,13 @@ crash-atomic publication: abrupt process death, power loss and adversarial concu
 replacement of the output directory are out of scope, and the identity check is conservative
 protection, not a race-proof sandbox.
 
-## Acceptance
+## Tests
 
-```
-python3 scripts/accept_sc_rights_delta.py --suite focused|contract|negative --output <new-run-dir>
-```
-
-The runner pins `sys.path` to this repository and turns off bytecode writing. Before it
-imports any project module, it installs sentinels for DNS, sockets, HTTP, subprocesses and
-model clients, plus an audit hook that limits file access. Reads are confined to the
-repository's `src/skippercast`, `scripts` and `tests` trees, the stdlib and the run
-directory, and writes are confined to the run directory. It then runs the plain test functions in
-[`tests/unit/test_sc_rights_delta.py`](../../tests/unit/test_sc_rights_delta.py) in-process,
-and pytest collects the same functions. The contract suite checks that opening
-deployment policy and catalog files is denied. The negative suite uses in-memory doubles
-that normalize credit text, disable the producer binding, disable the unknown-field gate, or
-disable the `..` path refusal.
-Each double must make its exact regression fail and leave an unrelated control passing.
-Each run writes `receipt.json` and `console.txt` into a new directory.
+pytest collects the plain test functions in
+[`tests/unit/test_sc_rights_delta.py`](../../tests/unit/test_sc_rights_delta.py). The negative
+tests use in-memory doubles that normalize credit text, disable the producer binding, disable
+the unknown-field gate, or disable the `..` path refusal. Each double must make its exact
+regression fail and leave an unrelated control passing.
 
 The synthetic producer inputs in
 [`tests/fixtures/sc_rights_delta`](../../tests/fixtures/sc_rights_delta/producer_inputs_left.json)

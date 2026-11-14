@@ -24,7 +24,7 @@ const REGION = json('dist/regions/morro-bay/region.json');
 const GROUNDS = json(`dist/${REGION.assets.charters}`), CELLS = json(`dist/${REGION.assets.commercial_ais}`), SNAPSHOT = json(`dist/${REGION.assets.protected_areas}`);
 const HOUR = 3_600_000, NOW = new Date('2026-10-16T12:00:00Z');
 const READY = assessScreen({areas: SNAPSHOT.features, checkedAt: new Date(+NOW - HOUR).toISOString(), live: false, closures: undefined}, +NOW);
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const ground = GROUNDS.grounds[0], cell = CELLS.features[0].properties;
 const es = mark => resolveMarkCopy(mark, 'es'), en = mark => resolveMarkCopy(mark, 'en');

@@ -58,7 +58,7 @@ function mount(detent = 'peek') {
   assert.match(html, /class="ui-sheet-handle"/);
   assert.equal(typeof handlers.onPointerDown, 'function');
   const pointer = (kind, pointerId = 1, clientY = 300, button = 0) => {
-    handlers[`onPointer${kind}`]({pointerId, clientY, button, currentTarget: handle});
+    handlers[`onPointer${kind}`]({pointerId, clientY, button, currentTarget: handle, preventDefault() {}});
   };
   const click = () => handlers.onClick({currentTarget: handle});
   const key = value => {

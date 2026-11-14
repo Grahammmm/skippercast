@@ -78,8 +78,8 @@ test('FE-52: Reports opens from the masthead (laptop) or the sheet footer (phone
 // ordinary day (Today has twelve hours left, so End is a real move) and the last hour of Pacific today (Today has one
 // hour, so the Day chip must be pressed and Home is the real move).
 const HOUR_CASES = [
-  {name: 'ordinary day', now: '2026-10-12T19:30:00Z', lastHour: false, atEnd: false, expected: '11 pm', hour: '2026-10-13T06:00Z', day: null},
-  {name: 'last hour today', now: '2026-10-12T06:30:00Z', lastHour: true, atEnd: true, expected: '12 am', hour: '2026-10-12T07:00Z', day: '2026-10-12'},
+  {name: 'ordinary day', now: '2026-10-12T19:30:00Z', lastHour: false, atEnd: false, expected: 'Today · 11 pm', hour: '2026-10-13T06:00Z', day: null},
+  {name: 'last hour today', now: '2026-10-12T06:30:00Z', lastHour: true, atEnd: true, expected: 'Tomorrow · 12 am', hour: '2026-10-12T07:00Z', day: '2026-10-12'},
 ] as const;
 
 for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and the hour slider update the address without a reload: ${c.name}`, async ({page, pageErrors, v2, isMobile}) => {
@@ -126,7 +126,7 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
     await expect(tomorrow).toHaveAttribute('aria-pressed', 'true');
     // The same local hour (11 pm) on tomorrow's 24 hours: index 23.
     await expect(slider).toHaveValue('23');
-    await expect(page.locator('.ui-dock-readout')).toHaveText('11 pm');
+    await expect(page.locator('.ui-dock-readout')).toHaveText('Tomorrow · 11 pm');
     await expect(page).toHaveURL(u => u.searchParams.get('hour') === '2026-10-13T06:00Z' && u.searchParams.get('day') === '2026-10-12');
   }
   // At the slider's end, End emits no input event, so choose the opposite endpoint.
@@ -141,9 +141,12 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
   await page.keyboard.press(atEnd ? 'Home' : 'End');
   await expect(slider).toHaveValue(expectedValue);
   await expect(page).toHaveURL(/[?&]hour=\d{4}-\d{2}-\d{2}T\d{2}%3A00Z/);
+  // The dock moves at once and the address settles on the chosen hour once, 100 ms after the last input (SC1407-05), so wait for it.
+  await expect(page).toHaveURL(u => u.searchParams.get('hour') === c.hour);
   expect(new URL(page.url()).searchParams.get('hour'), 'the hour in the address').toBe(c.hour);
   expect(new URL(page.url()).searchParams.get('day'), 'the day in the address').toBe(c.day);
   await expect(page.locator('.ui-dock-readout')).toHaveText(c.expected);
+  await expect(slider).toHaveAttribute('aria-valuetext', c.expected);
   expect(await stillLoaded(), 'no reload').toBe(true);
   // A shared link restores the same choices.
   const shared = page.url();
@@ -152,12 +155,49 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
   await expect(page.locator('[aria-label="Profile"] button[aria-pressed="true"]')).toHaveText('Spear');
   await expect(page.locator('input[aria-label="Hour"]')).toHaveValue(expectedValue);
   await expect(page.locator('.ui-dock-readout')).toHaveText(c.expected);
+  await expect(slider).toHaveAttribute('aria-valuetext', c.expected);
   expect(new URL(page.url()).searchParams.get('hour'), 'the shared hour is kept').toBe(c.hour);
   expect(pageErrors).toEqual([]);
 });
 
+// SC1722-10: actual mounted surfaces use the region calendar, including the repeated hour.
+for (const lang of ['en', 'es']) test(`day-qualified dock values across fall DST: ${lang}`, async ({page, v2, pageErrors}) => {
+  await page.clock.setFixedTime(new Date('2026-10-31T19:00:00Z'));
+  const cases = [
+    ['2026-10-31T23:00Z', 'Today · 4 pm', 'Hoy · 16'],
+    ['2026-11-01T08:00Z', 'Tomorrow · 1 am', 'Mañana · 1'],
+    ['2026-11-01T09:00Z', 'Tomorrow · 1 am', 'Mañana · 1'],
+    ['2026-11-03T14:00Z', 'Tue · 6 am', 'mar · 6'],
+    ['2026-11-07T14:00Z', 'Sat 7 · 6 am', 'sáb 7 · 6'],
+  ];
+  for (const [hour, en, es] of cases) {
+    await v2.open('app', {...AREA, hour, lang});
+    const expected = lang === 'es' ? es : en;
+    await expect(page.locator('.ui-dock-readout')).toHaveText(expected);
+    await expect(page.locator('input[type="range"].ui-dock-range')).toHaveAttribute('aria-valuetext', expected);
+    expect(new URL(page.url()).searchParams.get('hour')).toBe(hour);
+  }
+  // Freeze timers after mounting: native Home changes the visible/accessibility preview,
+  // while the exact UTC address remains settled until the controller's 100 ms pause.
+  await page.clock.pauseAt(new Date('2026-10-31T19:00:01Z'));
+  const slider = page.locator('input[type="range"].ui-dock-range');
+  await slider.focus();
+  await slider.press('Home');
+  const preview = lang === 'es' ? 'sáb 7 · 0' : 'Sat 7 · 12 am';
+  await expect(page.locator('.ui-dock-readout')).toHaveText(preview);
+  await expect(slider).toHaveAttribute('aria-valuetext', preview);
+  expect(new URL(page.url()).searchParams.get('hour')).toBe('2026-11-07T14:00Z');
+  await page.clock.runFor(99);
+  expect(new URL(page.url()).searchParams.get('hour')).toBe('2026-11-07T14:00Z');
+  await page.clock.runFor(1);
+  await expect(page).toHaveURL(u => u.searchParams.get('hour') === '2026-11-07T08:00Z');
+  await expect(page.locator('.ui-dock-readout')).toHaveText(preview);
+  await expect(slider).toHaveAttribute('aria-valuetext', preview);
+  expect(pageErrors).toEqual([]);
+});
+
 test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) => {
-  await v2.open('app', AREA);
+  await v2.open('app', {...AREA, area: 'estero'});   // SC1722-15: the Area picker is drawn only for an area link
   const wanted = isMobile
     ? ['button[aria-label="Layers"]', '[aria-label="Profile"] button:last-child', '.ui-sheet-handle', 'input[aria-label="Hour"]', '.ui-tile:last-child summary', 'label:has-text("Target") select', 'label:has-text("Area") select', '.app-tabs a[data-view="reports"]']
     : ['nav[aria-label="Views"] a[data-view="fleet"]', '[aria-label="Profile"] button:last-child', 'label:has-text("Target") select', 'label:has-text("Area") select',
@@ -322,6 +362,7 @@ test.describe('phone', () => {
       await expect(sheet).toHaveAttribute('data-detent', 'peek');
       // Every visible control is at least 44 px tall and the tabs 56 px.
       const short = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('button, a, input, select, summary')]
+        .filter(el => !el.matches('.app-skip-link:not(:focus)')) // SC1722-20: a skip link is clipped to a pixel until it has focus (44 px then: e2e/v2-skip-links.spec.ts)
         .filter(el => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden')
         .map(el => ({el: el.getAttribute('aria-label') ?? el.textContent?.trim() ?? el.tagName, h: Math.round(el.getBoundingClientRect().height)}))
         .filter(x => x.h < 44));
@@ -448,6 +489,48 @@ test('SC1722-09: Back and Forward follow the views you pressed, a repeat press a
   expect(pageErrors).toEqual([]);
 });
 
+// SC1722-15: the Area picker is drawn only when there is something to choose. No ?area= leaves no slot for it (the port
+// and share controls keep their group); ?area=x offers the area and Whole region, and choosing Whole region clears the link.
+test('SC1722-15: the Area picker shows only for an area link, and Whole region clears it without a reload', async ({page, pageErrors, v2, isMobile}) => {
+  const widths = () => page.evaluate(() => ({scroll: document.documentElement.scrollWidth, view: window.innerWidth}));
+  const reach = async () => {   // on the phone the controls sit in the sheet at full
+    if (!isMobile) return;
+    await page.locator('.ui-sheet-handle').focus();
+    await page.keyboard.press('End');
+    await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full');
+  };
+  const picker = page.getByRole('combobox', {name: 'Area', exact: true});
+  for (const viewport of isMobile ? (['phone', 'narrow'] as const) : ([undefined] as const)) {
+    const name = viewport ?? 'laptop';
+    await v2.open('app', AREA, viewport);
+    await reach();
+    await expect(picker, `${name}: no area, no picker`).toHaveCount(0);
+    await expect(page.locator('.app-area > label'), `${name}: no empty slot`).toHaveCount(0);
+    await expect(page.getByRole('group', {name: 'Area and port', exact: true}), `${name}: the group stays`).toHaveCount(1);
+    await expect(page.locator('.app-area > :first-child'), `${name}: the port control leads the group`).toHaveClass(/app-port/);
+    await expect(page.locator('button.app-port'), name).toBeVisible();
+    const bare = await widths();
+    expect(bare.scroll, `${name}: no horizontal scroll`).toBeLessThanOrEqual(bare.view);
+
+    await v2.open('app', {...AREA, area: 'estero'}, viewport);
+    await reach();
+    await expect(picker, `${name}: area link, picker`).toHaveCount(1);
+    expect(await picker.locator('option').evaluateAll(os => os.map(o => [(o as HTMLOptionElement).value, o.textContent])), name).toEqual([['', 'Whole region'], ['estero', 'Estero']]);
+    await expect(picker).toHaveValue('estero');
+    const linked = await widths();
+    expect(linked.scroll, `${name}: no horizontal scroll with the picker`).toBeLessThanOrEqual(linked.view);
+    await page.evaluate(() => { (window as unknown as {__v2: number}).__v2 = 1; });
+    await picker.selectOption('');
+    await expect(page, name).not.toHaveURL(/[?&](?:area|focus)=/);
+    await expect(picker, `${name}: cleared, the picker goes`).toHaveCount(0);
+    await expect(page.locator('button.app-port'), name).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as {__v2?: number}).__v2 === 1), `${name}: no reload`).toBe(true);
+    const cleared = await widths();
+    expect(cleared.scroll, `${name}: no horizontal scroll once cleared`).toBeLessThanOrEqual(cleared.view);
+  }
+  expect(pageErrors).toEqual([]);
+});
+
 // FE-60 acceptance 3: with v2 the default, one context draws one map, one of each picker and one timeline. The
 // contexts are the app at /map (Chart) and /coast, which moves to the app's 3D terrain (FE-78): the terrain lives
 // inside the same stage and its in-scene place and target controls stay hidden, and no v1 map mounts.
@@ -537,3 +620,113 @@ test('BF-graceful-gaps: missing conditions and malformed fleet leave the shell u
   await expect(page.locator('.app-details')).toContainText('Conditions feeds could not be read: no buoy, tide or marine alert readings. The map, rules and trip tools still work.');
   await expect.poll(() => fleetReads).toBeGreaterThan(0); expect(pageErrors).toEqual([]);
 });
+
+// SC1922-04: direct links disclose incomplete regional coverage, not a weaker forecast verdict.
+for (const lang of ['en', 'es']) {
+  const label = lang === 'en' ? 'Preview' : 'Vista previa';
+  const reason = lang === 'en'
+    ? 'Forecasts and readings are live; habitat ranks, coastline and some layers are incomplete here.'
+    : 'Los pronósticos y las lecturas están en vivo; las clasificaciones de hábitat, la costa y algunas capas están incompletas aquí.';
+  test(`SC1922-04 preview disclosure visible and bounded, ${lang}`, async ({page, pageErrors, v2, isMobile}) => {
+    let reads = 0;
+    await page.route('**/data/home-ports.json', async route => { reads++; await route.continue(); });
+    for (const size of isMobile ? [{width: 320, height: 640}, {width: 390, height: 844}] : [{width: 1280, height: 800}]) {
+      await page.setViewportSize(size);
+      await v2.open('app', {region: 'monterey-point-sur', lang, profile: 'shore'});
+      const group = page.locator('.app-location-preview');
+      await expect(group.locator('.app-region-preview-label')).toHaveText(label);
+      await expect(group.locator('.app-region-preview-reason')).toHaveText(reason);
+      // The day strip's chip reveal moves only the strip: the page itself stays at the top, masthead in view.
+      if (!isMobile) expect(await page.evaluate(() => scrollY)).toBe(0);
+      for (const el of [group, group.locator('.app-region-preview-label'), group.locator('.app-region-preview-reason')]) {
+        await expect(el).toBeInViewport();
+        const box = (await el.boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+        expect(await el.evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true);
+      }
+      if (isMobile) { await page.locator('.ui-sheet-handle').focus(); await page.keyboard.press('End'); }
+      const note = page.locator('.app-where > .app-region-preview-reason');
+      await note.scrollIntoViewIfNeeded();
+      await expect(note).toHaveText(reason);
+      await expect(note).toBeInViewport();
+      expect(await note.evaluate(el => !!(el.compareDocumentPosition(el.parentElement!.querySelector('h2')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
+    }
+    expect(reads).toBe(isMobile ? 2 : 1); // one per page, not one per Location/brief consumer
+    expect(pageErrors).toEqual([]);
+  });
+  for (const mode of ['active', '503', 'malformed', 'rejected']) test(`SC1922-04 ${mode} status shows no disclosure, ${lang}`, async ({page, pageErrors, v2}) => {
+    let reads = 0;
+    await page.route('**/data/home-ports.json', async route => {
+      reads++;
+      if (mode === 'active') await route.continue();
+      else if (mode === '503') await route.fulfill({status: 503, body: 'offline'});
+      else if (mode === 'malformed') await route.fulfill({json: {ports: []}});
+      else await route.abort('failed');
+    });
+    await v2.open('app', {region: mode === 'active' ? 'morro-bay' : 'monterey-point-sur', lang, profile: 'shore'});
+    await expect(page.locator('.app-location')).toContainText(mode === 'active' ? 'Morro Bay' : 'Monterey');
+    await expect.poll(() => reads).toBe(1);
+    await expect(page.locator('.app-region-preview-label, .app-region-preview-reason')).toHaveCount(0);
+    await expect(page.locator('h1')).toBeAttached();
+    await page.waitForTimeout(250);
+    expect(reads).toBe(1);
+    expect(pageErrors).toEqual([]);
+  });
+  test(`SC1922-04 conditions direct link reads once without opening a chooser, ${lang}`, async ({page, pageErrors, v2, isMobile}) => {
+    let reads = 0;
+    await page.route('**/data/home-ports.json', async route => { reads++; await route.continue(); });
+    await v2.open('app', {region: 'monterey-point-sur', lang, view: 'conditions', profile: 'shore'});
+    await expect(page.locator('.app-region-preview-label')).toHaveText(label);
+    // Desktop retains its brief beside Conditions; phone replaces the sheet content.
+    await expect(page.locator('.app-where')).toHaveCount(isMobile ? 0 : 1);
+    expect(reads).toBe(1);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
+// UXFIX-05: type sizes are rem tokens, so a larger browser text size grows every text box and none of them clips or scrolls the page.
+for (const [percent, scale] of [[125, 1.25], [150, 1.5]] as const) {
+  test(`UXFIX-05: root text size ${percent}% grows the text ${scale}x and nothing clips or scrolls sideways`, async ({page, pageErrors, v2}) => {
+    await v2.open('app', AREA);
+    // Measure the real brief, not the async bootstrap's empty host.
+    await expect(page.locator('.ui-sheet h1, aside.app-brief h1')).toBeVisible();
+    const sample = () => page.evaluate(() => {
+      const px = (selector: string) => { const el = document.querySelector(selector); return el ? parseFloat(getComputedStyle(el).fontSize) : NaN; };
+      return {body: px('body'), headline: px('.ui-sheet h1, aside.app-brief h1'), location: px('.app-location')};
+    });
+    const before = await sample();
+    // A constructed stylesheet: the page's CSP forbids injected <style> elements.
+    await page.evaluate(css => {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(css);
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    }, `html { font-size: ${percent}%; }`);
+    const after = await sample();
+    for (const key of ['body', 'headline', 'location'] as const) expect(after[key] / before[key], `${key} computed size ratio`).toBeCloseTo(scale, 2);
+    const geometry = await page.evaluate(() => {
+      const rect = (el: Element | null) => { const r = el!.getBoundingClientRect(); return {left: r.left, top: r.top, right: r.right, bottom: r.bottom}; };
+      return {scrollWidth: document.documentElement.scrollWidth, width: innerWidth, height: innerHeight,
+        verdict: rect(document.querySelector('.ui-sheet h1, aside.app-brief h1')), dock: rect(document.querySelector('.app-dock .ui-dock, .app-sheet-hour'))};
+    });
+    expect(geometry.scrollWidth, 'no horizontal page scroll').toBeLessThanOrEqual(geometry.width);
+    for (const name of ['verdict', 'dock'] as const) {
+      const r = geometry[name];
+      expect(r.left, `${name} left`).toBeGreaterThanOrEqual(0);
+      expect(r.top, `${name} top`).toBeGreaterThanOrEqual(0);
+      expect(r.right, `${name} right`).toBeLessThanOrEqual(geometry.width);
+      expect(r.bottom, `${name} bottom`).toBeLessThanOrEqual(geometry.height);
+    }
+    await page.locator('.app-limits-trigger').click();
+    const limits = page.locator('dialog.app-limits-dialog').first();
+    await expect(limits).toBeVisible();
+    const box = await limits.evaluate(el => { const r = el.getBoundingClientRect(); return {left: r.left, top: r.top, right: r.right, bottom: r.bottom, horizontal: el.scrollWidth - el.clientWidth}; });
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.top).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(geometry.width);
+    expect(box.bottom).toBeLessThanOrEqual(geometry.height);
+    expect(box.horizontal, 'the Limits dialog does not scroll sideways').toBeLessThanOrEqual(1);
+    expect(pageErrors).toEqual([]);
+  });
+}

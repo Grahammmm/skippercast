@@ -59,7 +59,7 @@ async function load(responses) {
         if (args.importer.endsWith('web/trip-ocean-lines.ts') && args.path === './map/currents.ts') return {path: resolve(root, 'tests/fixtures/trip_i18n/currents.mjs')};
         if (args.importer !== trip) return;
         if (args.path === 'preact/hooks') return {path: resolve(fixtures, 'runtime.mjs')};
-        if (['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-forecast-end.ts', './App.tsx', './PositionCheck.tsx'].includes(args.path)) return {path: resolve(fixtures, 'boundary.mjs')};
+        if (['../ui/Button.tsx', '../ui/scroll-cue.ts', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-forecast-end.ts', './App.tsx', './PositionCheck.tsx'].includes(args.path)) return {path: resolve(fixtures, 'boundary.mjs')};
       });
     }}],
   });
@@ -84,13 +84,13 @@ test('trip_es_inventory_and_async_states: the page, the pack rows and a status f
   render();
   const en = await settle();
   assert.match(en, /<span>Water temp: saved · not shown after .+ · only for hours on or after the analysis<\/span><span>Currents: not saved: not published for this area<\/span>/);
-  assert.match(en, /2 of 3 chart tiles · 1 of 2 base map tiles \(zoom 8–9\) · 1 items missing/);
+  assert.match(en, /2 of 3 chart tiles · 1 of 2 base map tiles \(zoom 8–9\) · 1 item missing/);
   assert.match(en, /Saved \d+ min ago|Saved \d+ h ago|Saved \d+ days ago/);
   m.language.value = 'es';
   const es = render();
   assert.match(es, /<h3 id="app-offline-pack">Paquete de cartas<\/h3>/);
   assert.match(es, /<span>Temperatura del agua: guardado · no se muestra después de .+ · solo para horas a partir del análisis<\/span><span>Corrientes: no guardado: no se publica para esta área<\/span>/);
-  assert.match(es, /2 de 3 teselas de cartas · 1 de 2 teselas del mapa base \(zoom 8–9\) · faltan 1 elementos/);
+  assert.match(es, /2 de 3 teselas de cartas · 1 de 2 teselas del mapa base \(zoom 8–9\) · falta 1 elemento/);
   assert.match(es, /Guardado hace \d+ (min|h|d)/);
   assert.match(es, /aria-label="Eliminar la región guardada Fixture Harbor"/);
   assert.match(es, /<strong>Lecturas costeras<\/strong>|<h3 id="app-offline-coastal">Lecturas costeras<\/h3>/);
@@ -172,7 +172,41 @@ test('saved_missing_one_three_zero_en_es: one, three and none missing, with over
   assert.equal(status(render()), 'Se guardó Fixture Harbor · 1 KB.');
   assert.equal(m.runtime.saves, 5);
   // The pack inventory line keeps its own wording.
-  assert.match(render(), /faltan 1 elementos/);
+  assert.match(render(), /falta 1 elemento/);
   m.language.value = 'en';
-  assert.match(render(), /1 items missing/);
+  assert.match(render(), /1 item missing/);
+});
+
+// UXFIX-08 review: the saved status keeps the raw byte count, so the GB decimal separator follows the language shown now
+// (2.0 GB in English, 2,0 GB in Spanish), without a second save, and the missing-file sentence is kept.
+test('saved_gb_status_follows_language: a 2 GB save reads 2.0 GB, 2,0 GB, 2.0 GB across en, es, en', async t => {
+  const descriptors = new Map();
+  for (const [key, value] of Object.entries({navigator: {onLine: true}, caches: {delete: async () => true}}))
+    { descriptors.set(key, Object.getOwnPropertyDescriptor(globalThis, key)); Object.defineProperty(globalThis, key, {value, configurable: true, writable: true}); }
+  const m = await load(Array.from({length: 8}, () => () => Promise.resolve([pack])));
+  t.after(() => { m.language.value = 'en'; m.cleanup(); for (const [key, d] of descriptors) { if (d) Object.defineProperty(globalThis, key, d); else delete globalThis[key]; } });
+  const render = () => { m.runtime.cursor = 0; m.runtime.actions.clear(); const html = m.render(m.h(m.Trip)); for (const effect of m.runtime.effects.splice(0)) effect(); return html; };
+  const settle = async () => { for (let i = 0; i < 16; i++) await Promise.resolve(); return render(); };
+  const status = html => /<p role="status" aria-live="polite">([^<]*)<\/p>/.exec(html)?.[1];
+  m.language.value = 'en';
+  render(); await settle();
+  const save = async (missing) => {
+    m.runtime.saveMeta = {region_name: 'Fixture Harbor', bytes: 2e9, missing};
+    const call = m.runtime.actions.get('Save Fixture Harbor for offline'); assert.equal(typeof call, 'function');
+    call(); await settle();
+  };
+  await save([]);
+  assert.equal(status(render()), 'Saved Fixture Harbor · 2.0 GB.');
+  m.language.value = 'es';
+  assert.equal(status(render()), 'Se guardó Fixture Harbor · 2,0 GB.', 'the retained status is written in Spanish, with the Spanish decimal separator');
+  m.language.value = 'en';
+  assert.equal(status(render()), 'Saved Fixture Harbor · 2.0 GB.', 'and back to the exact English text');
+  // A missing file is still said, in the language shown, beside the size.
+  await save(['/a.png']);
+  assert.equal(status(render()), 'Saved Fixture Harbor · 2.0 GB. 1 item could not be saved and will be missing offline.');
+  m.language.value = 'es';
+  assert.equal(status(render()), 'Se guardó Fixture Harbor · 2,0 GB. No se pudo guardar 1 elemento y faltará sin conexión.');
+  m.language.value = 'en';
+  assert.equal(status(render()), 'Saved Fixture Harbor · 2.0 GB. 1 item could not be saved and will be missing offline.');
+  assert.equal(m.runtime.saves, 2, 'switching language never saves again');
 });

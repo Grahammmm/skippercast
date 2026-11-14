@@ -586,7 +586,10 @@ def write_new(path, data):
         try:
             view = memoryview(data)
             while view:
-                view = view[os.write(fd, view):]
+                written = os.write(fd, view)
+                if written <= 0:
+                    raise OSError(f'no write progress on --out {text}')
+                view = view[written:]
             os.fsync(fd)
         except BaseException:
             os.close(fd)

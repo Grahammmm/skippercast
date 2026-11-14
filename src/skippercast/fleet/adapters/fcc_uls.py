@@ -20,13 +20,15 @@ Record layout (FCC ULS public access files; 0-based field positions):
 - ``HD``: 1 unique system identifier, 4 call sign, 5 licence status,
   6 radio service, 7 grant date, 8 expired date, 9 cancellation date.
 - ``EN``: 1 identifier, 5 entity type (``L`` licensee), 7 entity name,
-  8 first name, 10 last name, 16 city, 17 state, 23 applicant type code.
+  8 first name, 9 middle initial (a personal-name part: any value withholds the entity), 10 last name,
+  16 city, 17 state, 23 applicant type code.
 - ``SH``: 1 identifier, 4 call sign, 8 ship category, 9 vessel name,
   10 vessel identification (USCG official number or state registration),
   21 MMSI.
 """
 from __future__ import annotations
 
+from datetime import date
 import io
 import re
 from typing import IO, Iterable, Iterator, Mapping
@@ -94,7 +96,12 @@ def _norm(text: str) -> str:
 
 def _date(text: str) -> str | None:
     match = re.match(r"^(\d{2})/(\d{2})/(\d{4})$", text.strip())
-    return f"{match.group(3)}-{match.group(1)}-{match.group(2)}" if match else None
+    if not match:
+        return None
+    try:  # an impossible calendar date (02/30, month 13, year 0000) is omitted, never emitted as an ISO-looking fact
+        return date(int(match.group(3)), int(match.group(1)), int(match.group(2))).isoformat()
+    except ValueError:
+        return None
 
 
 def _member(archive: zipfile.ZipFile, kind: str) -> str:
@@ -169,7 +176,7 @@ def parse_ship_zip(data: bytes | IO[bytes], state: str, *, source_id: str, right
     for f in _records(archive, members["EN"], "EN", stats):
         if f[5].strip() != "L" or f[17].strip().upper() != state:
             continue
-        entity = f[7].strip() if is_entity(f[23], f[7], f[8], f[10]) else None
+        entity = f[7].strip() if not f[9].strip() and is_entity(f[23], f[7], f[8], f[10]) else None
         licensees[f[1]] = (entity, ports.get(_norm(f[16])))
     headers: dict[str, list[str]] = {}
     for f in _records(archive, members["HD"], "HD", stats):
@@ -191,7 +198,7 @@ def parse_ship_zip(data: bytes | IO[bytes], state: str, *, source_id: str, right
         active = status == "active"
         if not active and not all_statuses:
             continue
-        call_sign = (f[4] or (hd[4] if hd else "")).strip().upper()
+        call_sign = (f[4].strip() or (hd[4].strip() if hd else "")).upper()
         keys = _keys(call_sign, f[21], f[10])
         url = licence_url(usi)
 

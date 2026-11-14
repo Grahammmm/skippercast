@@ -156,10 +156,10 @@ def compile_context(review, scheme, cache, hard_context, usgs_audit, usgs_cache,
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--review", type=Path, default=Path("dist/data/nbs-central-usgs-hard-overlap-review.json"))
+    parser.add_argument("--review", type=Path, default=Path("research/receipts/nbs-central-usgs-hard-overlap-review.json"))
     parser.add_argument("--scheme", type=Path, default=Path("var/modeling-tile-scheme-20260923.gpkg"))
     parser.add_argument("--cache", type=Path, default=Path("var/nbs-cache"))
-    parser.add_argument("--hard", type=Path, default=Path("dist/data/usgs-hard-context-central.geojson"))
+    parser.add_argument("--hard", type=Path, default=Path("research/receipts/usgs-hard-context-central.geojson"))
     parser.add_argument("--usgs-audit", type=Path, default=Path("var/usgs-doi-native-audit.json"))
     parser.add_argument("--usgs-cache", type=Path, default=Path("var/usgs-doi-native-cache"))
     parser.add_argument("--map-audit", type=Path)

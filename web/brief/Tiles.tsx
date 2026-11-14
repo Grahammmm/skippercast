@@ -57,7 +57,7 @@ export function tileProps(tile: BriefTile, compact = false, dense = false, lang:
   return {
     label: tile.label, ...LOOK[tile.id], reading, unit: tile.unit, detail: tileDetailText(tile, lang),
     source: sourceLine(shown, dense, lang), stale: tile.state === 'stale',
-    basis: <>{t(`tile.basis.${tile.id}` as StringId, lang)}{datum ? t('tile.basis.reference', lang, {datum: String(datum)}) : ''}{t('tile.basis.source', lang)}{name}.{tile.lastGood ? t('tile.basis.lastGood', lang) : ''}{t('tile.basis.staleAfter', lang, {hours: Math.round(tile.limitMs / 3_600_000)})}</>,
+    basis: <>{t(`tile.basis.${tile.id}` as StringId, lang)}{datum ? (datum === 'MLLW' ? t('tile.basis.referenceMllw', lang) : t('tile.basis.reference', lang, {datum: String(datum)})) : ''}{t('tile.basis.source', lang)}{name}.{tile.lastGood ? t('tile.basis.lastGood', lang) : ''}{t('tile.basis.staleAfter', lang, {hours: Math.round(tile.limitMs / 3_600_000)})}</>,
   };
 }
 
@@ -83,5 +83,7 @@ export function Tiles({tiles, nearshore = false, compact = false, dense = false,
     const p = tileProps(tile, compact, dense, lang);
     return provisional && FORECAST_TILES.has(tile.id) ? {...p, source: t('tile.source.provisional', lang, {source: p.source ?? ''})} : p;
   }) : emptyTiles(nearshore, lang);
-  return <div class={dense ? 'app-tiles app-tiles--dense' : 'app-tiles'}>{props.map(tile => <Tile key={tile.label} {...tile} label={label(tile.label)} />)}</div>;
+  // SC1722-20: each basis disclosure is named for its row (the tile's id, never its translated label); the empty tiles keep the model's order.
+  const ids: readonly TileId[] = tiles ? tiles.map(tile => tile.id) : ['wind', 'swell', 'water', 'tide'];
+  return <div class={dense ? 'app-tiles app-tiles--dense' : 'app-tiles'}>{props.map((tile, i) => <Tile key={tile.label} {...tile} label={label(tile.label)} basisLabel={tile.basis ? t(`a11y.basis.${ids[i]}` as StringId, lang) : undefined} />)}</div>;
 }

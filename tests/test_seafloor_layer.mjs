@@ -18,6 +18,7 @@ import {clickMark} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {camera} from '../web/map/stage.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
+import {signal} from '@preact/signals';
 
 const FIXTURE = readFileSync(new URL('./fixtures/seafloor/chart.pmtiles', import.meta.url));
 // Reads and feed answers still in flight (not counting ones a test holds on purpose); settle() waits for them.
@@ -89,12 +90,12 @@ test('v2: grade and fit draw on the depth ramp from palette tokens; the key keep
   assert.deepEqual([toneOf(search, 'fit_lingcod'), toneOf(interpreted, 'terrain')], ['search', 'interpreted']);
   assert.deepEqual([fitKey('lingcod', 'boat'), fitKey('rockfish', 'boat'), fitKey(null, 'spear'), fitKey('reef', 'boat')],
     ['fit_lingcod', 'fit_rockfish_reef', 'fit_cabezon_shallow_reef', null]);
-  const sentinel = readPalette(name => `token(${name})`), layers = seafloorLayers(sentinel);
+  const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), layers = seafloorLayers(sentinel);
   assert.deepEqual(layers.map(l => l.id), [...SEAFLOOR_LAYERS]);
   assert.ok(layers.every(l => l.source === SEAFLOOR_SOURCE && l.layout.visibility === 'none'), 'hidden until the publication admits something');
   const color = layers[1].paint['fill-color'], outputs = Object.fromEntries(color.slice(2, -1).reduce((pairs, v, i, all) => i % 2 ? pairs : [...pairs, [v, all[i + 1]]], []));
   assert.deepEqual(outputs, {strong: 'token(depth-0)', moderate: 'token(depth-1)', some: 'token(depth-2)', search: 'token(amber)', interpreted: 'token(blue)'});
-  assert.equal(color.at(-1), 'token(muted)');
+  assert.equal(color.at(-1), 'token(map-label)');
   assert.equal(layers[0].paint['fill-color'], 'token(depth-3)', 'cells are the deepest step');
   for (const l of layers) for (const [key, value] of Object.entries(l.paint)) if (key.endsWith('color')) {
     for (const v of [value].flat(Infinity)) if (typeof v === 'string' && /^[#(]|rgb|hsl/.test(v)) assert.fail(`${l.id} ${key} has a literal colour ${v}`);
@@ -149,7 +150,7 @@ async function settle() {
   for (let quiet = 0, limit = Date.now() + 10_000; quiet < 4 && Date.now() < limit;) { await turn(); quiet = inflight ? 0 : quiet + 1; }
 }
 /** A seafloor layer over the fixture with injected feeds, clock and timers. */
-function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers = 'seafloor', target = '', bounds = null} = {}) {
+function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers = 'seafloor', target = '', bounds = null, startReady} = {}) {
   configureStore({v2: true, storage: null});
   const url = layers => `${PAGE_V2}?region=morro-bay&profile=${profile}&layers=${layers}${target ? `&target=${target}` : ''}`;
   syncFromURL(url(layers));
@@ -162,6 +163,7 @@ function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers =
     async fire() { const [id, t] = rig.timers.entries().next().value; rig.timers.delete(id); t.fn(); await settle(); },
   };
   rig.layer = createSeafloor({
+    startReady,
     engine: {setVisible: (id, on) => rig.calls.push(['visible', id, on]), setData: (id, data) => { rig.calls.push(['data', id, data.features.length]); rig.data = data; }},
     open: url => { rig.opened.push(url); return fixtureReader(rig.tileHold, bounds); }, size: () => ({width: 1000, height: 700}), page: () => PAGE_V2, now: () => rig.clock,
     setTimer: (fn, delay) => { const id = ++rig.next; rig.timers.set(id, {fn, delay}); return id; }, clearTimer: id => rig.timers.delete(id),
@@ -180,6 +182,20 @@ function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers =
 }
 const deferred = () => { let release; const promise = new Promise(resolve => { release = resolve; }); return {promise, release}; };
 const drawnIds = rig => rig.data.features.map(f => f.properties.id).sort();
+
+test('SCB-12: deferred seafloor requests still run the unchanged publication gate on release', async t => {
+  const ready = signal(false);
+  const rig = seafloorRig({startReady: () => ready.value, manifest: {status: 'held'}});
+  t.after(() => rig.layer.destroy());
+  await settle();
+  assert.deepEqual(rig.requests, []);
+  assert.equal(seafloorState.value.status, 'checking');
+  ready.value = true;
+  await settle();
+  assert.deepEqual(rig.requests, ['/feeds/tiles/seafloor/manifest-morro-bay.json']);
+  assert.equal(seafloorState.value.status, 'held');
+  assert.deepEqual(rig.opened, [], 'a held publication never opens an archive');
+});
 
 test('v2: toggling Seafloor adds and removes exactly its layers; held reaches and held features never draw', async t => {
   const rig = seafloorRig({layers: 'currents'});

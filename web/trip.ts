@@ -6,34 +6,28 @@
 // saves the region and this app's shell and basemap tiles join it; the coastal
 // snapshots are dist/coastal-offline-core.js unchanged. Each loads on first use.
 //
+// SC1407-10: this module is what the first screen imports (the signals, the #export dialog, the draft's ids and
+// the one protected-area screen). The planner, the pack, the basemap ranges and the coastal snapshots are
+// web/trip-runtime.ts, loaded by this module's one dynamic import on first actual use; a call made before it
+// arrives waits for it. The exports keep their names and signatures, so no importer changes.
+//
 // The protected-area screen and the pack read v1's region store once, so the
 // planner stays bound to the region it opened for; opening it after a region
 // change reloads the page, as v1 does. Erasable syntax only (Node tests import this).
 import {signal} from '@preact/signals';
-import type {Source} from 'pmtiles';
-import {loadManifest} from '../dist/seafloor-data.js';
-import {BASEMAP_MANIFEST, basemapArchive} from './map/chart.ts';
-import {shorelineOverviewURL, shorelineURL} from './map/coastline.ts';
-import {chartFileListed} from './chart-files.ts';
-import {landWaterLinesURL, landWaterURL} from './land-water.ts';
-import {depthContoursOverviewURL, depthContoursURL} from './map/depth-contours.ts';
 import {browserStorage} from '../dist/browser-storage.js';
-import {formatBytes} from '../dist/offline-core.js';
-import {atlasMarksURL, planIndexURL} from './startup-forms.ts';
-import {MARKS_SOURCE} from './map/layers.ts';
-import {markSources} from './map/marks.ts';
+import {sizeText} from './size-text.ts';
+import {t, type Language} from './i18n.ts';
+import type {RankedPlan, RankedScreen} from './map/ranked.ts';
 import {sharedFetch} from './shared-fetch.ts';
-import {NO_PLAN, fitCamera, rankedSpots, recheckPlan, screenRanked, type RankedPlan, type RankedScreen} from './map/ranked.ts';
-import {camera, cameraParam, choosePresentation, type Camera} from './map/stage.ts';
-import {beginWaypointPlacement, cancelWaypointPlacement} from './waypoint-placement.ts';
-import {appView, day, navigate, region, withParams, type UrlKey} from './state.ts';
-import {reachFor} from './reach.ts';
-import {tideSelection} from './tide-selection.ts';
-import {saveTidePack} from './tide-stations.ts';
+import {cancelWaypointPlacement} from './waypoint-placement.ts';
+import {navigate, region, withParams, type UrlKey} from './state.ts';
+import type {TripRuntime} from './trip-runtime.ts';
 
 /** The v2 app's page key in a pack (dist/sw.js `V2_SHELL`). */
 export const V2_SHELL = '/map';
 export const TRIP_HASH = '#export';
+// When this module first ran, as before the split: a pack copies the responses browsed since then.
 const sessionStart = Date.now();
 
 /** The planner's actions the app calls (web/planner.ts `createPlanner`). */
@@ -61,21 +55,6 @@ export function savedIds(id: string | null, storage: Pick<Storage, 'getItem'> | 
 }
 const refreshIds = (): void => { tripIds.value = savedIds(region.peek()); };
 
-/** The 2D-map calls the planner makes (`getSize`, `getBounds`), answered from the shared camera and the map's size. */
-export function mapView(c: Camera | null, size: {width: number; height: number}) {
-  const world = c ? 256 * 2 ** c.zoom : Infinity, mercator = (lat: number) => (1 - Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)) / Math.PI) / 2;
-  const latitude = (y: number) => 360 / Math.PI * Math.atan(Math.exp(Math.PI * (1 - 2 * y))) - 90;
-  const lon = c?.longitude ?? NaN, y = c ? mercator(c.latitude) : NaN, w = size.width / world * 360, h = size.height / world;
-  const b = {getWest: () => lon - w / 2, getEast: () => lon + w / 2, getNorth: () => latitude(y - h / 2), getSouth: () => latitude(y + h / 2)};
-  return {
-    getSize: () => ({x: c ? size.width : 0, y: c ? size.height : 0}),
-    getBounds: () => ({...b, contains: ([la, lo]: [number, number]) => lo >= b.getWest() && lo <= b.getEast() && la >= b.getSouth() && la <= b.getNorth()}),
-  };
-}
-const chartSize = () => { const r = document.querySelector('.app-chart')?.getBoundingClientRect(); return {width: r?.width ?? 0, height: r?.height ?? 0}; };
-
-/** v1's pack's option bag, which its JavaScript types too narrowly to pass a callback with arguments. */
-type Loose<T> = (options: Record<string, unknown>) => T;
 const plain = (): string => location.href.split('#')[0]!;
 const go = (patch: Partial<Record<UrlKey, string | null>>): void => { navigate(withParams(plain(), patch)); };
 export const openTrip = (): void => { cancelWaypointPlacement(); if (location.hash !== TRIP_HASH) navigate(plain() + TRIP_HASH); else tripOpen.value = true; };
@@ -126,6 +105,25 @@ export function loadProtectedScreen(id: string | null = region.peek(), init: (id
   return mine.done;
 }
 
+/** v2 registers v1's /sw.js only once something is saved, so a visitor who saves nothing never stores its precache. */
+export function registerOffline(): void {
+  if (!('serviceWorker' in navigator) || !isSecureContext) return;
+  navigator.serviceWorker.register('/sw.js').catch((error: Error) => console.warn('SkipperCast service worker not registered:', error.message));
+}
+
+// The implementation, one instance per page over this module's state; a failed import or start leaves the slot
+// empty so the dialog's Retry imports again. `runtimeSource.load` is the only import of it (tests delay or fail it).
+type RuntimeModule = typeof import('./trip-runtime.ts');
+export const runtimeSource = {load: (): Promise<RuntimeModule> => import('./trip-runtime.ts')};
+let runtimeLoad: Promise<TripRuntime> | null = null, runtimeNow: TripRuntime | null = null;
+function runtime(): Promise<TripRuntime> {
+  if (runtimeNow) return Promise.resolve(runtimeNow);
+  runtimeLoad ??= Promise.resolve().then(() => runtimeSource.load()).then(m => runtimeNow ??= m.createTripRuntime({
+    sessionStart, loadProtectedScreen: id => loadProtectedScreen(id), screenElsewhere: () => screenElsewhere, v1Region, json, openTrip, closeTrip, go, registerOffline,
+  })).catch((error: unknown) => { runtimeLoad = null; throw error; });
+  return runtimeLoad;
+}
+
 let planner: {region: string; ready: Promise<Planner | null>} | null = null;
 /** The planner for the current region, started on first use; null without a region, after a failure, or while a region change reloads. */
 export async function loadPlanner(): Promise<Planner | null> {
@@ -133,160 +131,38 @@ export async function loadPlanner(): Promise<Planner | null> {
   if (!id) return null;
   if (planner && planner.region !== id) { location.reload(); return null; }
   tripError.value = '';
-  planner ??= {region: id, ready: startPlanner(id).then(api => { tripReady.value = true; return api; }, (error: Error) => {
-    tripError.value = `The trip planner could not load (${error.message}). Try again when you are online.`;
-    planner = null;
+  if (planner) return planner.ready;
+  // Started for `id` only: a region changed while the implementation arrives or the planner starts publishes nothing.
+  const mine: {region: string; ready: Promise<Planner | null>} = {region: id, ready: runtime().then(async rt => {
+    if (region.peek() !== id) return null;
+    const started = await rt.startPlanner(id);
+    if (region.peek() !== id) { started.model.dispose(); return null; }
+    plannerView.value = started;
+    tripReady.value = true;
+    return started.model;
+  }).then(api => { if (!api && planner === mine) planner = null; return api; }, (error: Error) => {
+    if (planner === mine) planner = null;
+    if (region.peek() === id) tripError.value = `The trip planner could not load (${error.message}). Try again when you are online.`;
     return null;
   })};
-  return planner.ready;
+  planner = mine;
+  return mine.ready;
 }
 
-async function startPlanner(id: string): Promise<Planner> {
-  // SCJ-2b: the brief's screen (one live ds582 query, one freshness clock), started here if the brief has not.
-  const loaded = await loadProtectedScreen(id);
-  if (loaded.state !== 'loaded') { if (screenElsewhere) location.reload(); throw new Error('protected-area check unavailable'); }
-  const screen = loaded.screen, regions = await v1Region(id);
-  const [{createPlanner}, {Planner: View}] = await Promise.all([import('./planner.ts'), import('./app/Planner.tsx')]);
-  const path = regions.assetURL('atlas');
-  const atlas = (path ? await json(path) : {targets: [], areas: [], drifts: []}) as import('./planner.ts').Atlas;
-  // The ranked pins are screened by the planner's own screen, as v1's are (#495).
-  rankedScreen = screen as RankedScreen;
-  drawRanked();
-  const model = createPlanner({atlas, screen, region: regions.getRegion() as import('./planner.ts').PlannerDeps['region'],
-    map: {getSize: () => mapView(camera.peek(), chartSize()).getSize(), getBounds: () => mapView(camera.peek(), chartSize()).getBounds()},
-    // Read when the planner starts for the region; a range changed later applies to the next region's planner, and the planner measures from its chosen port.
-    reachNm: reachFor('boat'), viewDay: () => day.peek(),
-    getVisible: () => { const ids = new Set((markSources[MARKS_SOURCE]?.value.features ?? []).map(f => f.properties.id)); return atlas.targets.filter(t => ids.has(t.id)); },
-    nav: {
-      open: openTrip,
-      showMap() { closeTrip(); if (appView.peek() !== 'coast') go({view: null}); },
-      conditions(date: string) { closeTrip(); go({view: 'conditions', day: date}); },
-      chooseWaypoint(pick) {
-        closeTrip();
-        if (appView.peek() !== 'coast') go({view: null});
-        choosePresentation('chart');
-        beginWaypointPlacement(id, pick);
-      },
-    }});
-  plannerView.value = {model, View};
-  return model;
+/** Run `act` once on the planner for the region current at the call; a region changed meanwhile adds nothing. */
+async function withPlanner(act: (m: Planner) => void): Promise<void> {
+  const id = region.peek(), m = await loadPlanner();
+  if (m && region.peek() === id) act(m);
+  refreshIds();
 }
-
-export async function addToTrip(id: string): Promise<void> { (await loadPlanner())?.add(id); refreshIds(); }
-export async function reviewTrip(id: string): Promise<void> { (await loadPlanner())?.review(id); refreshIds(); }
+export async function addToTrip(id: string): Promise<void> { await withPlanner(m => m.add(id)); }
+export async function reviewTrip(id: string): Promise<void> { await withPlanner(m => m.review(id)); }
 /** SCJ-1: a recommended habitat place joins the trip, or opens it for export, as a user waypoint whose id is planner.ts `addPlace`'s (`habitat:reef:r1` → `user:habitat-reef-r1`). */
 export const placeTripId = (id: string): string => `user:habitat-${id.replace(/^habitat:/, '').replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}`;
-export async function addPlaceToTrip(p: Parameters<Planner['addPlace']>[0]): Promise<void> { (await loadPlanner())?.addPlace(p); refreshIds(); }
-export async function reviewPlace(p: Parameters<Planner['addPlace']>[0]): Promise<void> { const m = await loadPlanner(), id = m?.addPlace(p); if (id) m!.review(id); refreshIds(); }
+export async function addPlaceToTrip(p: Parameters<Planner['addPlace']>[0]): Promise<void> { const place = {...p}; await withPlanner(m => { m.addPlace(place); }); }
+export async function reviewPlace(p: Parameters<Planner['addPlace']>[0]): Promise<void> { const place = {...p}; await withPlanner(m => { const id = m.addPlace(place); if (id) m.review(id); }); }
 
-/** "Show ranked spots on map" moves the Chart to the ranked set's extent (web/map/ranked.ts draws their pins). */
-export {fitCamera};
-
-// The ranked plan the Chart draws (#495): the planner's latest event, screened as v1's
-// dist/trip-ranking-layer.js screens it; a publication found changed is held until verified again.
-let ranked: RankedPlan = NO_PLAN, rankedScreen: RankedScreen | null = null;
-const rejected = new Map<string, number>();
-const drawRanked = (): void => { rankedSpots.value = screenRanked(ranked, rankedScreen, rejected, region.peek()); };
-/** Each minute, as v1 does: the screen's age and the publication's expiry again, and the manifest still the plan's. */
-async function recheckRanked(): Promise<void> {
-  drawRanked();
-  const current = ranked, hash = current.publication?.export_sha256;
-  if (!current.targets.length || !hash) return;
-  const gate = await loadManifest(current.publication?.region);
-  if (ranked !== current) return;
-  const next = recheckPlan(current, gate, rejected, Date.now());
-  if (next !== current) { ranked = next; drawRanked(); }
-}
-
-// The offline pack.
-interface Extras {
-  store(url: string, key?: string, init?: RequestInit, misses?: string[]): Promise<boolean>;
-  put(key: string, body: ArrayBuffer, headers: Headers): Promise<void>;
-  signal: AbortSignal;
-  progress(phase: string, done: number, total: number): void;
-}
-
-/** A PMTiles source that keeps each byte range it reads under offline-core.js `basemapRangeKey`. */
-export function rangeRecorder(url: string, put: Extras['put'], signal: AbortSignal, key: (url: string, range: string) => string | null): Source {
-  return {
-    getKey: () => url,
-    async getBytes(offset, length, s, etag) {
-      const range = `bytes=${offset}-${offset + length - 1}`, at = key(url, range);
-      const response = await fetch(url, {headers: {range}, credentials: 'omit', signal: s ?? signal});
-      // Only the exact range, live: a whole archive or a saved answer is never stored.
-      if (!at || response.status !== 206 || response.headers.has('X-SC-Offline')) { void response.body?.cancel(); throw new Error(`Basemap range ${range}: HTTP ${response.status}`); }
-      const data = await response.arrayBuffer(), tag = response.headers.get('ETag');
-      if (data.byteLength > length || (etag && tag && tag !== etag)) throw new Error('The basemap archive changed while saving.');
-      await put(at, data, response.headers);
-      return {data, etag: tag && !tag.startsWith('W/') ? tag : undefined};
-    },
-  };
-}
-
-/**
- * The pack's stored files in order: the shell, the basemap manifest, the shoreline forms, then the land-water index and lines and the full and
- * overview depth contours the region publishes, then the startup copies (#617) and `hashed`. A fixed allowlist, each gated on its own name in the
- * region's published `chart_files` (an unknown list fails open, as chartFileListed decides); poster.svg and any other name are never saved.
- */
-export function packFiles(id: string, page: string, hashed: readonly string[]): [string, string, RequestInit][] {
-  const origin = new URL(page).origin, listed = (name: string, url: string): string[] => chartFileListed(id, name) ? [url] : [];
-  return [[origin + V2_SHELL, origin + V2_SHELL, {}],
-    ...[BASEMAP_MANIFEST, ...listed('shoreline.geojson', shorelineURL(id)), ...listed('shoreline-overview.geojson', shorelineOverviewURL(id)),
-      ...listed('land-water.json', landWaterURL(id)), ...listed('land-water-lines.json', landWaterLinesURL(id)),
-      ...listed('depth-contours.geojson', depthContoursURL(id)), ...listed('depth-contours-overview.geojson', depthContoursOverviewURL(id)),
-      atlasMarksURL(id), planIndexURL(id)]
-      .map((p): [string, string, RequestInit] => [new URL(p, page).href, new URL(p, page).href, {}]),
-    ...hashed.map((p): [string, string, RequestInit] => [origin + p, origin + p, {cache: 'default'}])];
-}
-
-/**
- * The pack's ocean phase (docs/plans/offline-ocean-coverage.md D3, D6, D9), run only inside the explicit Save action. A place with a
- * coast report (resolveReportBinding, as the layers decide it) reads its Coastal readings pointer and fetches nothing; any other
- * place saves its water-temperature and current layers whole or not at all (web/map/ocean-pack.ts). Fatal storage errors propagate.
- */
-export async function oceanPhase({put, signal, progress}: Pick<Extras, 'put' | 'signal' | 'progress'>, region: {id: string; center: readonly [number, number]; localAreas?: readonly {id: string; bounds: readonly number[]}[]},
-  deps: {now?: () => Date; origin?: string; fetchFn?: typeof fetch; readCoastal?: () => Promise<{saved_at?: string} | null>} = {}) {
-  const [{regionPlace}, {resolveReportBinding}, ocean] = await Promise.all([import('./map/currents.ts'), import('../packages/coast/src/state/report-binding.ts'), import('./map/ocean-pack.ts')]);
-  const place = regionPlace(region, 'boat', '');
-  if (place && resolveReportBinding(place)) {
-    const saved = await (deps.readCoastal ?? readCoastal)().catch(() => null);
-    return {schema_version: 1, path: 'coastal-report', manifest: null, layers: {}, bytes: 0, coastal: saved?.saved_at ? {saved_at: saved.saved_at} : null};
-  }
-  const fetchFn = deps.fetchFn ?? fetch, now = deps.now ?? (() => new Date());
-  let manifestStatus: number | null = null;   // saveOcean asks for the manifest first
-  const saved = await ocean.saveOcean({regionId: region.id, origin: deps.origin ?? location.origin, put, signal, progress: (_layer, done, total) => progress('ocean', done, total),
-    fetchFn: async (...a) => { const r = await fetchFn(...a); manifestStatus ??= r.status; return r; },
-    eligible: (id, manifest) => ocean.eligibility(id, manifest, now())});
-  return manifestStatus === 404 && !saved.manifest.stored ? {schema_version: 1, path: 'none', manifest: saved.manifest, layers: {}, bytes: 0, cap_bytes: saved.cap_bytes} : {schema_version: 1, path: 'regional', ...saved};
-}
-
-/** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, the published shoreline, land-water and depth-contour files, the startup copies (#617), tiles and, last, the ocean phase. */
-async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds: number[], place: Parameters<typeof oceanPhase>[1]) {
-  const page = location.href, misses: string[] = [];
-  const tideURLs = await tideSelection.packURLs(id);
-  await saveTidePack(tideURLs, put, signal);
-  const list = await fetch('/precache.json', {cache: 'no-cache', signal}).then(r => r.ok ? r.json() : null, () => null) as {build?: string; v2?: {assets?: unknown[]; static?: unknown[]}} | null;
-  const hashed = [...list?.v2?.assets ?? [], ...list?.v2?.static ?? []].filter((p): p is string => typeof p === 'string' && /^\/(?!\/)/.test(p));
-  const files = packFiles(id, page, hashed);
-  let done = 0;
-  for (const [url, key, init] of files) { await store(url, key, init, misses); progress('shell', ++done, files.length); }
-  const [archive, {basemapRangeKey, planBasemap}] = await Promise.all([basemapArchive((...a) => fetch(...a), page), import('../dist/offline-core.js')]);
-  const plan = planBasemap(bounds) as {tiles: {z: number; x: number; y: number}[]; minZoom: number; maxZoom: number | null};
-  let saved = 0, tile = 0;
-  if (archive) {
-    const {PMTiles} = await import('./map/maplibre.js');
-    const reader = new PMTiles(rangeRecorder(archive, put, signal, basemapRangeKey));
-    for (const t of plan.tiles) {
-      if (signal.aborted) break;
-      try { if (await reader.getZxy(t.z, t.x, t.y, signal)) saved++; } catch (error) { if (signal.aborted) throw error; misses.push(`basemap ${t.z}/${t.x}/${t.y}`); }
-      progress('basemap', ++tile, plan.tiles.length);
-    }
-  }
-  const ocean = await oceanPhase({put, signal, progress}, place);
-  return {build: list?.build ?? null, shell: {saved: files.length - misses.filter(m => !m.startsWith('basemap')).length, requested: files.length},
-    basemap: {archive: archive ? new URL(archive).pathname : null, saved, planned: plan.tiles.length, min_zoom: plan.minZoom, max_zoom: plan.maxZoom}, missing: misses.slice(0, 50), ocean};
-}
-
+// The offline pack, implemented in web/trip-runtime.ts; each call waits for it.
 export interface PackMeta {
   region_id: string; region_name: string; saved_at: string; bytes: number; missing: string[];
   tiles: {saved: number; planned: number; min_zoom: number; max_zoom: number | null};
@@ -294,27 +170,26 @@ export interface PackMeta {
   /** Cache-only inventory, recomputed whenever the offline dialog opens. */
   legal?: Awaited<ReturnType<typeof import('../dist/legal-pack.js').inspectLegalPack>>;
   /** The ocean phase's record (D9), additive: absent from packs saved before it. */
-  ocean?: Awaited<ReturnType<typeof oceanPhase>>;
+  ocean?: Awaited<ReturnType<RuntimeModule['oceanPhase']>>;
   /** ISO time of the last hour both the saved wind and wave models cover; additive, absent from older packs or when a model was not saved. */
   forecast_end?: string;
 }
 export type Progress = {phase: string; done: number; total: number; bytes: number};
 export async function listPacks(): Promise<{cache: string; meta: PackMeta}[]> {
   if (!('caches' in globalThis)) return [];
-  const packs = await (await import('../dist/offline-pack.js')).listPacks() as {cache: string; meta: PackMeta}[];
-  const {inspectLegalPack} = await import('../dist/legal-pack.js');
-  for (const pack of packs) pack.meta.legal = await inspectLegalPack(await caches.open(pack.cache), pack.meta.region_id, location.origin);
-  return packs;
+  return (await runtime()).listPacks();
 }
-/** Save `id` for offline: v1's pack with this app added; then the worker is registered so the pack answers offline. */
+/** Save `id` for offline: v1's pack with this app added; then the worker is registered so the pack answers offline. A save cancelled before the implementation arrives writes nothing. */
 export async function savePack(id: string, signal: AbortSignal, progress: (p: Progress) => void): Promise<PackMeta> {
-  const regions = await v1Region(id), save = (await import('../dist/offline-pack.js')).savePack as unknown as Loose<Promise<PackMeta>>;
-  const region = regions.getRegion() as {id: string; bounds: number[]; map?: {center?: [number, number]; local_areas?: {id: string; bounds: number[]}[]}};
-  const place = {id, center: region.map?.center ?? [NaN, NaN] as [number, number], localAreas: region.map?.local_areas ?? []};
-  const meta = await save({signal, progress, sessionStart, more: (extras: Extras) => v2Pack(extras, id, region.bounds, place)});
-  registerOffline();
-  return meta;
+  signal.throwIfAborted();
+  const rt = await runtime();
+  signal.throwIfAborted();
+  return rt.savePack(id, signal, progress);
 }
+export const readCoastal = async () => (await runtime()).readCoastal();
+export const canSaveCoastal = async () => (await runtime()).canSaveCoastal();
+export async function saveCoastal(signal: AbortSignal) { signal.throwIfAborted(); const rt = await runtime(); signal.throwIfAborted(); return rt.saveCoastal(signal); }
+export const deleteCoastal = async () => (await runtime()).deleteCoastal();
 
 /** What the browser said about keeping saved packs: agreed or refused our request, already keeps them, or has no storage API. */
 export type Keep = 'agreed' | 'refused' | 'already' | 'unavailable';
@@ -336,7 +211,7 @@ export async function storageLine(nav: StorageNav = globalThis.navigator as Stor
   } catch { return null; }
 }
 /** The list's one line from the browser's estimate. */
-export const estimateWords = (r: {used: number; quota: number}): string => `Browser's estimate: ${formatBytes(r.used)} used of ${formatBytes(r.quota)} available`;
+export const estimateWords = (r: {used: number; quota: number}, lang: Language = 'en'): string => t('trip.estimate', lang, {used: sizeText(r.used, lang), quota: sizeText(r.quota, lang)});
 /** Run a save; only once it has resolved, ask the browser to keep it. A save that throws or is cancelled makes no request. */
 export async function savePackKept(save: () => Promise<PackMeta>, nav?: StorageNav): Promise<{meta: PackMeta; keep: Keep}> {
   const meta = await save();
@@ -350,40 +225,28 @@ export const KEEP_WORDS: Readonly<Record<Keep, string>> = {
   unavailable: '',
 };
 
-const coastal = () => import('../dist/coastal-offline-core.js');
-const coastalOptions = (signal?: AbortSignal) => ({origin: location.origin, caches: globalThis.caches, signal});
-export const readCoastal = async () => (await coastal()).readCoastalSnapshot(coastalOptions());
-export const canSaveCoastal = async () => (await coastal()).canMutateCoastalSnapshot({caches: globalThis.caches});
-export async function saveCoastal(signal: AbortSignal) { const meta = await (await coastal()).saveCoastalSnapshot(coastalOptions(signal)); registerOffline(); return meta; }
-export const deleteCoastal = async () => (await coastal()).deleteCoastalSnapshot(coastalOptions());
-
-/** v2 registers v1's /sw.js only once something is saved, so a visitor who saves nothing never stores its precache. */
-export function registerOffline(): void {
-  if (!('serviceWorker' in navigator) || !isSecureContext) return;
-  navigator.serviceWorker.register('/sw.js').catch((error: Error) => console.warn('SkipperCast service worker not registered:', error.message));
-}
-
 /**
  * From main.tsx: the dialog follows `#export`, the ranked set draws on and moves the Chart, and a saved pack keeps the worker current.
  * The dialog opens only with a region (SC2252-15): a regionless /map#export (the app shortcut) stays closed while main.tsx's home
  * resolution replaces the address, and opens when a region arrives. Returns a function that undoes the start (tests).
+ * SC1407-10: only an open dialog and the planner's own ranked event load the implementation; the boundary, region and
+ * timer redraws run once it is there (before it, there is no ranked set to draw).
  */
 export function startTrip(): () => void {
   const sync = () => { tripOpen.value = location.hash === TRIP_HASH && !!region.peek(); if (tripOpen.peek()) void loadPlanner(); };
   const onRanked = (event: Event) => {
-    const detail = (event as CustomEvent<RankedPlan | null>).detail;
-    ranked = detail?.targets ? detail : NO_PLAN;
-    drawRanked();
-    const at = detail?.fit ? fitCamera(ranked.targets) : null;
-    if (at) go({view: cameraParam(at)});
+    const detail = (event as CustomEvent<RankedPlan | null>).detail, at = region.peek();
+    if (runtimeNow) runtimeNow.ranked(detail);
+    else void runtime().then(rt => { if (region.peek() === at) rt.ranked(detail); }, () => {});
   };
+  const drawRanked = () => { runtimeNow?.drawRanked(); };
   addEventListener('hashchange', sync);
   addEventListener('storage', refreshIds);
   const stops = [region.subscribe(sync), region.subscribe(refreshIds)];
   document.addEventListener('skippercast:trip-ranked', onRanked);
   document.addEventListener('skippercast:boundaries', drawRanked);
   stops.push(region.subscribe(drawRanked));
-  const timer = setInterval(() => { void recheckRanked(); }, 60000);
+  const timer = setInterval(() => { void runtimeNow?.recheckRanked(); }, 60000);
   void globalThis.caches?.keys().then(names => { if (names.some(n => n.startsWith('sc-pack-') || n.startsWith('sc-coastal-'))) registerOffline(); }, () => {});
   return () => {
     removeEventListener('hashchange', sync); removeEventListener('storage', refreshIds);

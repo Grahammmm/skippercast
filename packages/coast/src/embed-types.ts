@@ -44,10 +44,14 @@ export type CoastSelection={latitude:number;longitude:number;region?:string;id?:
 export type CoastHabitatRank={id:string;title:string;detail:string};
 /** The native habitat rail: its status line, why it reads so, and up to 12 ranked reefs (none unless `ok`). */
 export type CoastHabitat={status:string;state:'ok'|'withheld'|'unavailable'|'shore';ranks:readonly CoastHabitatRank[];canExplore:boolean};
-/** The renderer camera: centre in WGS84 degrees and visible span in metres. */
-export type CoastView={latitude:number;longitude:number;span:number};
-/** A host camera request; without `span` the renderer keeps its scale. */
-export type CoastLocation={latitude:number;longitude:number;span?:number};
+/**
+ * The renderer camera: centre in WGS84 degrees and visible span in metres. `bearing` and `pitch` (a pair, in
+ * degrees) come only from the 3D perspective camera: bearing is the horizontal viewing direction clockwise from
+ * north, signed -180 to 180; pitch is the angle away from straight down, 0 to 90.
+ */
+export type CoastView={latitude:number;longitude:number;span:number;bearing?:number;pitch?:number};
+/** A host camera request; without `span` the renderer keeps its scale. `bearing` and `pitch` (a pair, units as in `CoastView`) restore a 3D orbit; a missing or invalid pair keeps the default angle. */
+export type CoastLocation={latitude:number;longitude:number;span?:number;bearing?:number;pitch?:number};
 
 /** State applied once at mount, before `load()`, in the order v1 applies it. */
 export type CoastInitialState={

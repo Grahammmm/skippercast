@@ -12,7 +12,7 @@
 // marks their tags vite-ignore, so they stay at their stable /vendor/ paths
 // with their integrity attributes intact. The web manifest and icons keep
 // their stable URLs the same way (the manifest names its icons by path).
-import {readdirSync} from 'node:fs';
+import {existsSync, readdirSync} from 'node:fs';
 import {basename, resolve} from 'node:path';
 import {defineConfig} from 'vite';
 
@@ -95,7 +95,7 @@ function staticRefs() {
 // cascade. Instead each page's local <link rel="stylesheet"> tags become one
 // generated NAME.page.css that @imports them in their original order, so the
 // built page loads a single stylesheet with the authored cascade.
-export const PAGE_STYLESHEET = /<link rel="stylesheet" href="([\w.-]+\.css)"\s*\/?>[ \t]*\n?/g;
+export const PAGE_STYLESHEET = /<link rel="stylesheet" href="((?:\.\.\/web\/)?[\w./-]+\.css)"\s*\/?>[ \t]*\n?/g;
 
 function pageStyles(root) {
   const sheets = new Map();
@@ -125,6 +125,36 @@ function pageStyles(root) {
   };
 }
 
+/**
+ * SCB-11: pages with a second, tiny script of their own, built as an entry of its own (manifest key = the value) and linked
+ * `async` right after the page's charset. /map's starts the first verdict's reads (web/app/early.ts): it imports nothing the page
+ * shares, so it runs as soon as it arrives, seconds before the app's own code on a slow phone. The page's entry, its chunks and
+ * its stylesheets are left exactly as Vite builds them.
+ */
+export const EARLY_SCRIPTS = Object.freeze({'app.html': '../web/app/early.ts'});
+const earlyInputs = root => Object.fromEntries(pages(root).filter(page => EARLY_SCRIPTS[page] && existsSync(resolve(root, EARLY_SCRIPTS[page])))
+  .map(page => [`${basename(page, '.html')}-early`, resolve(root, EARLY_SCRIPTS[page])]));
+
+function earlyScripts(root) {
+  return {
+    name: 'skippercast:early-scripts',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, ctx) {
+        const src = ctx.filename && EARLY_SCRIPTS[basename(ctx.filename)];
+        if (!src || !ctx.bundle) return html;
+        const id = resolve(root, src);
+        const chunk = Object.values(ctx.bundle).find(o => o.type === 'chunk' && o.isEntry && o.facadeModuleId === id);
+        if (!chunk) return html;
+        // Right after the charset, and asked for at high priority: an async script's default is low, behind the app's own chunks.
+        const tag = `<script type="module" async fetchpriority="high" crossorigin src="./${chunk.fileName}"></script>`;
+        const charset = /<meta charset="[^"]*"\s*\/?>\n?/i;
+        return charset.test(html) ? html.replace(charset, m => `${m}    ${tag}\n`) : html.replace('<head>', `<head>\n    ${tag}`);
+      },
+    },
+  };
+}
+
 /** The client build for authored pages in `root`, written to `outDir`. */
 export function clientConfig({root = resolve(import.meta.dirname, 'dist'), outDir = resolve(root, 'client')} = {}) {
   return {
@@ -132,7 +162,7 @@ export function clientConfig({root = resolve(import.meta.dirname, 'dist'), outDi
     base: './',
     publicDir: false,
     logLevel: 'warn',
-    plugins: [staticRefs(), pageStyles(root), maplibreCss()],
+    plugins: [staticRefs(), pageStyles(root), maplibreCss(), earlyScripts(root)],
     // Preact islands in web/ (P4-01b): JSX compiles to preact/jsx-runtime.
     oxc: {jsx: {runtime: 'automatic', importSource: 'preact'}},
     build: {
@@ -150,7 +180,7 @@ export function clientConfig({root = resolve(import.meta.dirname, 'dist'), outDi
       sourcemap: false,
       reportCompressedSize: false,
       rolldownOptions: {
-        input: Object.fromEntries(pages(root).map(name => [name.replace(/\.html$/, ''), resolve(root, name)])),
+        input: {...Object.fromEntries(pages(root).map(name => [name.replace(/\.html$/, ''), resolve(root, name)])), ...earlyInputs(root)},
         output,
       },
     },

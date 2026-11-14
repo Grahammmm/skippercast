@@ -78,7 +78,8 @@ test('language_choice_reload_and_opposing_link: the choice survives a reload, al
   await expect(menu.spanish).toHaveAttribute('aria-pressed', 'true');
   expect(page.url(), 'the address is untouched').toBe(address);
   await page.reload();
-  expect(await htmlLang(page)).toBe('es');
+  // The parallel bootstrap no longer makes document load an app-readiness signal.
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
   await expect(page.getByText(PLANNING.es).first()).toBeAttached();
   menu = await openMenu(page, isMobile);
   await expect(menu.spanish).toHaveAttribute('aria-pressed', 'true');
@@ -95,14 +96,14 @@ test('language_choice_reload_and_opposing_link: the choice survives a reload, al
   expect(page.url()).toBe(before.replace('lang=en', 'lang=es'));
   expect(await kept(page), 'no reload and no new document').toBe(true);
   await page.reload();
-  expect(await htmlLang(page)).toBe('es');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
 
   // The inverse, from an address that says Español.
   menu = await openMenu(page, isMobile);
   await menu.english.click();
   expect(page.url()).toBe(before);
   await page.reload();
-  expect(await htmlLang(page)).toBe('en');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   expect(pageErrors).toEqual([]);
 });
 
@@ -152,5 +153,22 @@ test('language_choice_keyboard: Enter and Space choose, the arrows and Escape wo
   await page.keyboard.press('Escape');
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(trigger).toBeFocused();
+  expect(pageErrors).toEqual([]);
+});
+
+test('es_no_english_leftovers: on ?lang=es no visible text is TODAY, TODAY\'S BRIEF or Halibut, and "Costa" names one button', async ({page, pageErrors, v2}) => {
+  await v2.open('app', {region: 'morro-bay', lang: 'es'});
+  await expect(page.getByText(PLANNING.es).first()).toBeAttached();
+  const texts = await page.evaluate(() => {
+    const out: string[] = [], walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      const el = n.parentElement, s = (n.textContent ?? '').trim();
+      if (s && el && el.checkVisibility()) out.push(s);
+    }
+    return out;
+  });
+  for (const word of ['TODAY', "TODAY'S BRIEF", 'Halibut']) expect(texts.filter(s => s === word), word).toEqual([]);
+  const costa = await page.getByRole('button', {name: 'Costa', exact: true}).evaluateAll(els => els.filter(e => e.checkVisibility()).length);
+  expect(costa, 'visible buttons named Costa').toBeLessThanOrEqual(1);
   expect(pageErrors).toEqual([]);
 });

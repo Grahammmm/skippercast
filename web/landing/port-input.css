@@ -7,11 +7,10 @@
 .port-input-label { font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); }
 .port-input-row { display: flex; gap: var(--space-2); }
 .port-input input {
-  flex: 1; min-width: 0; min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
+  flex: 1; min-width: 0; min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md);
   background: var(--panel-2); color: var(--text); font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans);
 }
 .port-input input::placeholder { color: var(--muted); }
-.port-input input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .port-input-results { display: flex; flex-direction: column; gap: var(--space-2); max-height: min(320px, 40vh); max-height: min(320px, 40dvh); overflow: auto; }
 .port-input-list { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .port-input-option {
@@ -20,12 +19,20 @@
   transition: border-color var(--motion-state), background var(--motion-state);
 }
 .port-input-option:hover { border-color: var(--muted); }
-.port-input-option:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .port-input-option span { color: var(--muted); font-size: var(--text-13); }
 .port-input-empty, .port-input-feedback, .port-input-note { margin: 0; color: var(--muted); font-size: var(--text-13); }
 .port-input-feedback { min-height: 1.2em; }
+.port-input-feedback--error { display: flex; align-items: flex-start; gap: var(--space-2); color: var(--text); }
+.port-input-feedback--error > svg { flex-shrink: 0; }
+.port-input-feedback--error > span { min-width: 0; overflow-wrap: anywhere; }
 .port-input-note { font-size: var(--text-11); }
 .port-input-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+/* SC1922-05: the landing's port form holds the room its results viewport and wrapped actions take before the port list and
+   the first line have loaded (the custom properties are landing.css's); the app's dialog and first-run sheet keep their sizing. */
+@media (max-width: 599px) {
+  .landing .port-input-results { min-height: var(--landing-results-h); }
+  .landing .port-input-actions { min-height: var(--landing-actions-h); }
+}
 
 /* The app's port dialog */
 .port-dialog { box-sizing: border-box; width: min(560px, calc(100% - var(--space-6))); max-height: calc(100% - var(--space-6)); overflow: auto; padding: var(--space-4) var(--space-5) var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3); }
@@ -66,21 +73,24 @@
 
 /* BL-SC-2: at the sheet's peek the question and one row of the four choices
    sit above the tab bar; from half up the whole card shows as above. The notes
-   and the Keep button stay in the accessibility tree and the Tab order. The
+   stay in the accessibility tree; the Keep button is visible (UXFIX-13). The
    card asks no boat fields (SC-LANDING-ORDER: they follow a Boat choice, in
    .app-boat-entry). Keyboard focus on a choice opens the sheet to full
    (web/app/Mobile.tsx). */
-.ui-sheet[data-detent="peek"] .app-firstrun { gap: var(--space-1); padding: var(--space-1) var(--space-3); }
+.ui-sheet[data-detent="peek"] .app-firstrun { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-2); margin-bottom: 0; padding: var(--space-1) var(--space-3); }
 .ui-sheet[data-detent="peek"] .app-firstrun > .ui-eyebrow, .ui-sheet[data-detent="peek"] .app-firstrun > p { display: none; }
 /* Focus scrolling leaves a little room, so a focused choice is never cut by the sheet's edge. */
 .ui-sheet .app-firstrun .ui-button, .ui-sheet .app-firstrun input { scroll-margin-block: var(--space-2); }
-.ui-sheet[data-detent="peek"] .app-firstrun > .ui-button, .ui-sheet[data-detent="peek"] .app-firstrun-options small {
+.ui-sheet[data-detent="peek"] .app-firstrun-options small {
   position: absolute; width: 1px; height: 1px; min-width: 0; min-height: 0; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
-/* BF-wcag: the clipped Keep button is still a Tab stop, so focus shows it at full touch size (skip-link pattern, WCAG 2.4.7). */
-.ui-sheet[data-detent="peek"] .app-firstrun > .ui-button:focus {
-  position: static; width: auto; height: auto; min-width: var(--touch-min); min-height: var(--touch-min); padding: var(--space-1) var(--space-3); overflow: visible; clip-path: none;
-}
+/* UXFIX-13 (G, D1): the visible Keep row takes 24 px more than the old clipped one, so the sheet rests that much higher while the card is on it
+   (the sheet's own height is unchanged; a mark's taller peek, app.css, still wins). */
+.app-sheet:not(.app-sheet--mark)[data-detent="peek"]:has(.app-firstrun) { --sheet-peek: 200px; }
+/* The Keep button stays a visible quiet button at peek, on the heading row beside the question, so a touch visitor can skip the card. */
+.ui-sheet[data-detent="peek"] .app-firstrun > h2 { grid-area: 1 / 1; }
+.ui-sheet[data-detent="peek"] .app-firstrun > .ui-button { grid-area: 1 / 2; min-width: var(--touch-min); min-height: var(--touch-min); padding: var(--space-1) var(--space-3); white-space: nowrap; }
+.ui-sheet[data-detent="peek"] .app-firstrun-options { grid-area: 2 / 1 / 3 / 3; }
 .ui-sheet[data-detent="peek"] .app-firstrun h2 { font-size: var(--text-15); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ui-sheet[data-detent="peek"] .app-firstrun-options { flex-direction: row; flex-wrap: nowrap; }
 .ui-sheet[data-detent="peek"] .app-firstrun-options .ui-button {
@@ -95,7 +105,7 @@
 .app-share-popover { position: static; flex-basis: 100%; min-width: 0; max-width: 100%; }
 .app-share-popover > .ui-popover-body { position: static; box-sizing: border-box; width: min(320px, 100%); max-width: 100%; }
 .app-share-popover input {
-  box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; min-height: var(--touch-min); padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md);
+  box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; min-height: var(--touch-min); padding: var(--space-2); border: 1px solid var(--line-strong); border-radius: var(--radius-md);
   background: var(--panel-2); color: var(--text); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans);
 }
 /* Measured model gaps beside the verdict. */
@@ -106,4 +116,3 @@
 .app-sheet:not([data-detent="full"]) .app-verdict-skill { display: none; }
 .app-verdict-models-detail { color: var(--muted); font-size: var(--text-13); }
 .app-verdict-models-detail summary { cursor: pointer; min-height: var(--touch-min); }
-.app-verdict-models-detail summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

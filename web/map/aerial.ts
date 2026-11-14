@@ -16,7 +16,7 @@
 //
 // Erasable syntax only: tests/test_aerial_layer.mjs imports this file by type stripping.
 import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
-import {naipSource} from '../../packages/coast/src/map-sources.ts';
+import {naipSource, type NaipFormat} from '../../packages/coast/src/map-sources.ts';
 import {base} from '../state.ts';
 import {ENC_LAYER, unavailable} from './chart.ts';
 import type {Engine, Overlay} from './engine.ts';
@@ -52,11 +52,16 @@ export const aerialAttribution = (a: AerialBase): string => `${naipSource().attr
 /** Source and layer id; the window is part of it, so another region's dates replace the credit. */
 export const aerialId = (a: AerialBase): string => `aerial:${a.first}/${a.last}`;
 
-/** The base's one raster source (naipSource()'s template, so its fixed USGS host only) and its layer. */
-export function aerialOverlay(a: AerialBase): Overlay {
-  const id = aerialId(a);
+/**
+ * The base's one raster source (naipSource()'s template, so its fixed USGS host only) and its layer. SC1407-07: the
+ * png32 fallback (the only `format` passed) has its own source and layer id, so replacing the overlay replaces the source, and a late error from
+ * the retired jpgpng source no longer names a layer the engine draws.
+ */
+export function aerialOverlay(a: AerialBase, format?: NaipFormat): Overlay {
+  const id = aerialId(a) + (format ? `:${format}` : '');
   return {
-    sources: {[id]: {...naipSource(), attribution: aerialAttribution(a)}},
+    stopOnError: true,
+    sources: {[id]: {...naipSource(format), attribution: aerialAttribution(a)}},
     layers: [{id, type: 'raster', source: id, paint: a.byDefault
       ? {'raster-opacity': AERIAL_DEFAULT_OPACITY, 'raster-saturation': AERIAL_DEFAULT_SATURATION}
       : {'raster-opacity': AERIAL_OPACITY, 'raster-saturation': AERIAL_SATURATION}}],
@@ -65,6 +70,16 @@ export function aerialOverlay(a: AerialBase): Overlay {
 
 /** The current region's aerial base, while a Chart exists to draw it; the rail offers Aerial only then. */
 export const aerialOffer = signal<AerialBase | null>(null);
+
+/** SCB-12: give the brief a head start, not ownership of map readiness. A held coast
+ * report must not hold imagery/publication feedback for the verdict's 20 s deadline. */
+export const IMAGERY_HEAD_START_MS = 5_000;
+export function createImageryStartup(settled: () => boolean): {ready: ReadonlySignal<boolean>; destroy(): void} {
+  const ready = signal(false);
+  const timer = setTimeout(() => { ready.value = true; }, IMAGERY_HEAD_START_MS);
+  const dispose = effect(() => { if (settled()) { ready.value = true; clearTimeout(timer); } });
+  return {ready, destroy() { dispose(); clearTimeout(timer); }};
+}
 
 export interface AerialOptions {
   engine: ReadonlySignal<Engine | null>;
@@ -75,7 +90,10 @@ export interface AerialOptions {
 export function createAerial({engine, offer}: AerialOptions): {destroy(): void} {
   const drawn = computed(() => { const a = offer(); return a && base.value === 'aerial' ? a : null; });
   const overlay = computed(() => drawn.value ? aerialOverlay(drawn.value) : null);
+  // SC1407-07: once the png32 form is drawn, `shown` is no longer the overlay computed above; every new draw (another
+  // region, engine, or the base chosen again) starts at jpgpng, and a failure of the png32 form is not retried.
   let shown: Overlay | null = null, shownOn: Engine | null = null;
+  const clear = () => { unavailable.value = unavailable.peek().filter(l => l !== REGISTRY_ID); };
   const disposers = [
     effect(() => { aerialOffer.value = offer(); }),
     effect(() => {
@@ -84,10 +102,18 @@ export function createAerial({engine, offer}: AerialOptions): {destroy(): void} 
       e.setOverlay(REGISTRY_ID, o, ENC_LAYER);
       shown = o; shownOn = e;
     }),
-    // Turned off, on again or another region: a base a tile error marked unavailable is tried again.
+    // Turned off, on again, another region or engine: a base a tile error marked unavailable is tried again, jpgpng first.
     effect(() => {
-      void drawn.value;
-      if (unavailable.peek().includes(REGISTRY_ID)) unavailable.value = unavailable.peek().filter(l => l !== REGISTRY_ID);
+      void drawn.value; void engine.value;
+      if (unavailable.peek().includes(REGISTRY_ID)) clear();
+    }),
+    // The first failure of a jpgpng draw (the service may refuse the mixed format) swaps in the png32 form once; a
+    // failure of that form stays unavailable. Only Aerial's own flag is cleared, and only while Aerial is drawn.
+    effect(() => {
+      const d = drawn.peek(), e = engine.peek();
+      if (!unavailable.value.includes(REGISTRY_ID) || !d || !e || shownOn !== e || shown !== overlay.peek()) return;
+      e.setOverlay(REGISTRY_ID, shown = aerialOverlay(d, 'png32'), ENC_LAYER);
+      clear();
     }),
   ];
   return {

@@ -31,6 +31,16 @@ test('readable and information pages carry a canonical, description and share me
   assert.ok(html.includes('<meta name="twitter:card" content="summary">'),path);
  }
 });
+test('the readable report names the county it covers, not all of Central California (SCB-08)',async()=>{
+ for(const query of ['','?region=monterey-point-sur']){
+  const html=await(await serveCoastPage(request('/report'+query),options())).text();
+  assert.match(html,/<title>San Luis Obispo County coastal report · SkipperCast<\/title>/,query);
+  assert.match(html,/<meta property="og:title" content="San Luis Obispo County coastal report · SkipperCast">/,query);
+  assert.match(html,/<meta name="description" content="[^"]*San Luis Obispo County[^"]*Morro Bay and Cambria/,query);
+  assert.doesNotMatch(html,/Central California/,query);
+ }
+ assert.match(template,/<title>San Luis Obispo County coastal report · SkipperCast<\/title>/);
+});
 test('original Fish aliases preserve profile, target, geographic binding and exact hour',()=>{
  const result=selection('?area=north&mode=spear&species=gopher&hour=2026-10-07T12:00:00Z');
  assert.equal(result.context.regionId,'cambria-san-simeon');assert.equal(result.context.profile,'spear');assert.equal(result.context.target,'gopher');assert.equal(result.context.at.toISOString(),at);assert.match(result.workspace,/region=cambria-san-simeon/);

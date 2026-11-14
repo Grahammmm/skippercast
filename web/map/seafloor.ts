@@ -185,7 +185,7 @@ export const seafloorSource = () => ({type: 'geojson' as const, data: EMPTY});
 
 /** The four layers, hidden until the publication admits something; the depth ramp ranks grade and fit (strongest brightest). */
 export function seafloorLayers(p: Palette) {
-  const color = ['match', ['get', 'tone'], 'strong', p.depth0, 'moderate', p.depth1, 'some', p.depth2, 'search', p.amber, 'interpreted', p.blue, p.muted];
+  const color = ['match', ['get', 'tone'], 'strong', p.depth0, 'moderate', p.depth1, 'some', p.depth2, 'search', p.amber, 'interpreted', p.blue, p.mapLabel];
   const of = (tones: Tone[]) => ['in', ['get', 'tone'], ['literal', tones]];
   const layout = {visibility: 'none'};
   return [
@@ -325,6 +325,8 @@ export interface ArchiveReader {getHeader(): Promise<ArchiveHeader>; getZxy(z: n
 export interface SeafloorEngine {setVisible(layerId: string, visible: boolean): void; setData(sourceId: string, data: SeafloorCollection): void}
 export interface SeafloorOptions {
   engine: SeafloorEngine;
+  /** SCB-12: a reactive startup-only gate; publication checks still run unchanged when released. */
+  startReady?: () => boolean;
   /** A PMTiles reader for the archive's absolute URL. */
   open(url: string): ArchiveReader;
   /** The Chart's size in CSS pixels. */
@@ -389,6 +391,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     if (!on.peek() || !id) { state = 'off'; publish(OFF); return; }
     if (!retry) attempt = 0;
     publish({status: 'checking', note: 'Checking seafloor publication…'});
+    if (o.startReady && !o.startReady()) return;
     const gate = await loadManifest(id, fetchFn, now()) as Gate;
     if (request !== enabling) return;
     if (gate.state !== 'ready' || !gate.manifest) {
@@ -489,7 +492,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
 
   const on = computed(() => layers.value.includes('seafloor'));
   const disposers = [
-    effect(() => { on.value; region.value; untracked(() => void enable()); }),
+    effect(() => { on.value; region.value; o.startReady?.(); untracked(() => void enable()); }),
     effect(() => { camera.value; shownPresentation.value; profile.value; ownSpearDepthFt.value; species.value; grade.value; seafloorView.value; untracked(() => void draw()); }),
   ];
   return {

@@ -72,7 +72,7 @@ __all__ = ["ALGORITHM_VERSION", "BASIS", "KINDS", "FISHING_KINDS", "Classificati
            "classifier_version", "classify_trip", "label_positions", "window_stats"]
 
 # Bump when classification behaviour or the fingerprint representation changes.
-ALGORITHM_VERSION = 3
+ALGORITHM_VERSION = 4
 KINDS = ("in-port", "transit", "drift-anchor", "troll-slow", "troll-pelagic", "uncertain", "gap")
 FISHING_KINDS = ("drift-anchor", "troll-slow", "troll-pelagic")
 _SUSTAINED = {"drift-anchor": "drift_min_minutes", "troll-slow": "troll_slow_min_minutes",
@@ -198,7 +198,7 @@ def _stats(rows: Sequence[AisPosition], speeds, courses) -> Stats:
         if path > 0:
             net = distance_nm(usable[0].lat, usable[0].lon, usable[-1].lat, usable[-1].lon)
             straightness = min(1.0, net / path)
-    return Stats(_round(mean_sog), _round(straightness), _round(heading_var))
+    return Stats(mean_sog, straightness, heading_var)
 
 
 def _round(value):
@@ -385,6 +385,7 @@ def classify_trip(trip: Trip, ports: Sequence[Geofence], thresholds: ActivityThr
         stats = _stats(rows[part], speeds[part], courses[part])
         usable = [p for p in rows[part] if not is_suspect(p)]
         distance = sum(distance_nm(a.lat, a.lon, b.lat, b.lon) for a, b in zip(usable, usable[1:]))
-        segments.append(Segment(seq, run.kind, run.start, run.end, tuple(rows[part]), stats.mean_sog,
-                                stats.straightness, stats.heading_var, _p90(speeds[part]), _round(distance)))
+        segments.append(Segment(seq, run.kind, run.start, run.end, tuple(rows[part]), _round(stats.mean_sog),
+                                _round(stats.straightness), _round(stats.heading_var), _p90(speeds[part]),
+                                _round(distance)))
     return Classification(trip, tuple(segments), version)

@@ -2905,10 +2905,10 @@ body.app-body.map-focused #expand-map {
     color: var(--coast-muted);
     margin: 8px 0 0;
   }
-  .chart-overflow:focus-visible {
-    outline: 2px solid var(--coast-focus);
-    outline-offset: 2px;
-  }
+}
+.chart-overflow:focus-visible {
+  outline: 2px solid var(--coast-focus);
+  outline-offset: 2px;
 }
 .history-measurement-note > summary:focus-visible {
   outline: 2px solid var(--coast-mint);

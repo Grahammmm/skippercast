@@ -21,7 +21,7 @@ from research.lib.receipts import locate
 
 ROOT = Path(__file__).resolve().parents[2]
 MATRIX = "dist/data/monterey-300-source-evidence-matrix.json"
-CONTEXT = "dist/data/usgs-offshore-monterey-hard-context.geojson"
+CONTEXT = "research/receipts/usgs-offshore-monterey-hard-context.geojson"
 
 
 def build(matrix, context, scan_fn=scan):

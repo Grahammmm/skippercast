@@ -165,7 +165,7 @@ def main():
     p.add_argument('--sectors', type=Path, default=Path('dist/data/coastal-sectors.json'))
     p.add_argument('--mpas', type=Path, default=Path('var/qualification-current/coastal/latest.json'))
     p.add_argument('--bodega', type=Path, default=Path('dist/data/sf-native-hard-context.geojson'))
-    p.add_argument('--output', type=Path, default=Path('dist/data/noaa-seabed-samples-native-overlap-review.json'))
+    p.add_argument('--output', type=Path, default=Path('research/receipts/noaa-seabed-samples-native-overlap-review.json'))
     a = p.parse_args()
     data = review(a.raw_dir, json.loads(a.samples.read_text()), json.loads(a.regular.read_text()),
                   a.cache, json.loads(a.sectors.read_text())['sectors'],

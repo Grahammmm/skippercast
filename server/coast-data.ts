@@ -4,6 +4,7 @@
 // copied to R2 by scripts/coast/publish_assets.py are served from there instead,
 // each object hashed against its manifest entry before any byte leaves.
 import {json} from './http.ts';
+import {releaseKey} from './feeds.ts';
 import {sourceFreshness, startupAdmission, startupDeadline} from '../web/landing/region-warm.ts';
 import catalog from '../catalog/sources.json' with {type: 'json'};
 import health from '../catalog/feed-health.json' with {type: 'json'};
@@ -211,7 +212,9 @@ async function ownFeed(store: CoastStore | null, name: CoastFeed, now: number, s
   if (!store) return 'unbound';
   const feed = FEEDS[name];
   try {
-    const bytes = await small(store, feed.key, feed.max, signal); if (!bytes) return 'missing';
+    // Feeds are published as releases since #631; the plain key is the frozen pre-release copy, so reading it is always stale.
+    const target = await releaseKey(store, feed.key); if (target.missing) return 'missing';
+    const bytes = await small(store, target.key, feed.max, signal); if (!bytes) return 'missing';
     const data = JSON.parse(new TextDecoder().decode(bytes)) as Json;
     if (!data || typeof data !== 'object' || !feed.valid(data) || !isClock(data[feed.generated])) return 'invalid';
     return sourceFreshness(data[feed.generated], feed.maxAge, () => now).state === 'current' ? data : 'stale';
@@ -248,6 +251,17 @@ async function fishReport(fetcher: typeof fetch, url: URL, signal: AbortSignal):
     const data = JSON.parse(new TextDecoder().decode(await bounded(upstream, 8 * MB, signal))) as Json;
     return data?.schemaVersion === 1 && data.countyId === 'slo' && isClock(data.generatedAt) && Array.isArray(data.sources) ? data : null;
   } catch { return null; }
+}
+/**
+ * SCB-11: the report without its copy of the protected-area geometry (`spatial.protectedAreas`). Nothing SkipperCast serves reads
+ * that copy (the map draws its region's own snapshot, region.json `assets.protected_areas`, and screens with it), yet it is about
+ * 70% of the report's bytes, and the brief's first verdict waits for the whole report. Its source row in `sources` stays.
+ */
+export function leanReport(report: Json): Json {
+  const spatial = report.spatial;
+  if (!spatial || typeof spatial !== 'object' || Array.isArray(spatial) || !Object.hasOwn(spatial, 'protectedAreas')) return report;
+  const {protectedAreas: _unread, ...kept} = spatial as Json;
+  return {...report, spatial: kept};
 }
 /** A SkipperCast packet, re-checked against the route's byte limit after any merge (as the service worker does). */
 function ownResponse(data: Json, method: string, upstream: string, max: number): Response {
@@ -326,11 +340,13 @@ async function serveCoastRequest(request: Request, fetcher: typeof fetch, store:
       const fish = own.nearshore && own['water-quality'] ? null : await startupDeadline(
         child => fishReport(fetcher, target.url, child), Math.max(0, (deadlineAt - performance.now()) / 2), signal).catch(() => null);
       if (!fish && !(own.nearshore && own['water-quality'])) notes.push('fish=unavailable');
-      return ownResponse(overlay(fishEnrichment(own.report, fish), own, now), request.method, notes.join(', '), target.max);
+      return ownResponse(leanReport(overlay(fishEnrichment(own.report, fish), own, now)), request.method, notes.join(', '), target.max);
     }
   }
   signal.throwIfAborted();
   const overlaid = Object.keys(own).length > 0;
+  // SCB-11: the report is re-written without its unread protected-area copy (leanReport), so its length is not Fish's either.
+  const rewritten = overlaid || target.snapshot === 'report';
   // Do not forward client cookies, Origin, Referer, Authorization or arbitrary headers.
   try {
     const upstream = await fetcher(new Request(target.url, {method: request.method, headers,
@@ -358,7 +374,7 @@ async function serveCoastRequest(request: Request, fetcher: typeof fetch, store:
         if (!/^\d+$/.test(size) || !Number.isSafeInteger(Number(size)) || (rangeLength !== null && Number(size) !== rangeLength)) {
           await upstream.body?.cancel(); return json({error: 'Coast range unavailable'}, 503);
         }
-        if (!overlaid) out.set('Content-Length', size);  // an overlaid report's length differs from Fish's
+        if (!rewritten) out.set('Content-Length', size);  // an overlaid or lean report's length differs from Fish's
       }
       await upstream.body?.cancel();
       return new Response(null, {status: upstream.status, headers: out});
@@ -368,7 +384,8 @@ async function serveCoastRequest(request: Request, fetcher: typeof fetch, store:
       if (!/^application\/json\b/i.test(upstream.headers.get('Content-Type') ?? '')) throw Error('Unexpected format');
       const data = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
       if (!data || data.schemaVersion !== 1 || data.countyId !== 'slo' || typeof data.generatedAt !== 'string' || !Number.isFinite(Date.parse(data.generatedAt))) throw Error('Wrong snapshot identity');
-      if (overlaid) bytes = new TextEncoder().encode(JSON.stringify(overlay(data, own, now)));
+      const merged = overlaid ? overlay(data, own, now) : data, lean = target.snapshot === 'report' ? leanReport(merged) : merged;
+      if (lean !== data) bytes = new TextEncoder().encode(JSON.stringify(lean));
       if (bytes.byteLength > target.max) throw Error('Byte limit');  // merged rows can outgrow Fish's bytes
     }
     if (rangeLength !== null && bytes.byteLength !== rangeLength) throw Error('Invalid returned range');

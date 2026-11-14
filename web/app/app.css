@@ -12,10 +12,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app { display: grid; grid-template-rows: auto auto 1fr; min-height: 100vh; min-height: 100dvh; }
 .app-brief a, .app-sheet a { color: var(--blue); }
 .app select, .app-mobile select, .app-target-search {
-  min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
+  min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md);
   background: var(--panel-2); color: var(--text); font: var(--weight-medium) var(--text-13) / var(--leading-heading) var(--font-sans);
 }
-.app select:focus-visible, .app-mobile select:focus-visible, .app-target-search:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* Masthead */
 .app-masthead { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); background: var(--panel); }
@@ -26,7 +25,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-views a { display: inline-flex; align-items: center; min-height: var(--touch-min); padding: 0 var(--space-3); border-radius: var(--radius-md); color: var(--muted); font-weight: var(--weight-medium); text-decoration: none; }
 .app-views a:hover { color: var(--text); background: var(--panel-2); }
 .app-views a[aria-current="page"] { color: var(--text); box-shadow: inset 0 -2px 0 var(--mint); }
-.app-fresh { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); }
+.app-fresh { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); max-width: 20rem; color: var(--muted); }
 .app-fresh-dot { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--muted); }
 .app-fresh[data-state="ok"] .app-fresh-dot { background: var(--mint); }
 .app-fresh[data-state="stale"] .app-fresh-dot { background: var(--amber); }
@@ -36,7 +35,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-command label { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-13); }
 /* FE-54: the target menu's search field sits beside the grouped list. */
 .app-target { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.app-target-search { width: 8rem; min-width: 0; font-weight: var(--weight-regular); }
+/* SC1722-14: 107px Spanish hint + unchanged 26px padding/border at 16px. */
+.app-target-search { width: 133px; min-width: 0; font-weight: var(--weight-regular); }
+.app-target label select { max-width: 100vw; }
 .app-target-search::placeholder { color: var(--muted); }
 .app-profile-limits { display: inline-flex; align-items: center; gap: var(--space-2); }
 .app-area { display: inline-flex; align-items: center; gap: var(--space-2); }
@@ -69,7 +70,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-verdict .ui-popover { flex: none; margin-block: calc(var(--space-2) * -1); color: var(--muted); }
 .app-details { color: var(--muted); font-size: var(--text-13); }
 .app-details > summary { display: list-item; min-height: var(--touch-min); padding-block: var(--space-2); color: var(--text); cursor: pointer; }
-.app-details > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-details-gaps { color: var(--amber); }
 .app-details-body { display: flex; flex-direction: column; gap: var(--space-2); }
 .app-readings { margin: 0; color: var(--text); }
@@ -85,7 +85,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-pick { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: baseline; inline-size: 100%; min-block-size: 44px; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; text-align: start; cursor: pointer; }
 .app-pick:hover { border-color: var(--muted); }
 .app-pick[aria-pressed="true"] { border-color: var(--mint); }
-.app-pick:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-pick-rank { color: var(--muted); }
 .app-pick .app-fit { grid-column: 2; justify-self: start; }
 .app-pick-reason { grid-column: 2; color: var(--muted); font-size: var(--text-13); }
@@ -107,7 +106,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-gaps-more summary { display: list-item; min-height: var(--touch-min); padding-block: var(--space-2); cursor: pointer; }
 .app-gaps-more li + li { margin-top: var(--space-1); }
 .app-brief-links { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; font-size: var(--text-13); }
-.app-brief-links a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
+.app-brief-links a, .app-fleet-links a, .app-reports-footer a, .app-mark-regs a, .app-verdict-rules a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 .app-local { color: var(--muted); }
 .app-brief-footer { margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--line); color: var(--muted); font-size: var(--text-11); }
 .app-brief-footer a { display: inline-flex; align-items: center; min-height: var(--space-5); }
@@ -131,6 +130,10 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-presentation .ui-chip { min-width: var(--touch-min); }
 .app-stage-note { margin: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); color: var(--text); font-size: var(--text-13); box-shadow: var(--elev-2); }
 .app-stage-note:empty { padding: 0; border: 0; box-shadow: none; }
+/* The loading announcement and its flex wrapper can overlap map chrome.
+   Only interactive chrome and the other status panels should consume clicks. */
+.app-presentation { pointer-events: none; }
+.app-presentation:not(.app-presentation--placing) > :not([data-chart-loading-status]) { pointer-events: auto; }
 .app-rail { position: absolute; top: var(--space-4); right: var(--space-4); }
 /* Reserve all four terrain buttons, their outer borders and a gap. Long desktop
    rails scroll within the remaining space; the phone's sheet keeps its layout. */
@@ -139,7 +142,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
     box-sizing: border-box;
     width: min(280px, calc(100% - 2 * var(--space-4)));
     max-height: calc(100% - var(--space-4) - var(--app-terrain-controls-bottom) - var(--app-terrain-controls-height) - var(--space-3));
-    overflow-y: auto;
+    overflow-y: scroll; scrollbar-gutter: stable;
   }
   /* Absolute, end-aligned popovers escape a narrow scroll origin. Open basis
      details instead occupy a full row and grow the same scrollable content. */
@@ -199,8 +202,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-legend-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .app-swatch { width: var(--space-4); height: var(--space-2); border-radius: var(--radius-sm); background: var(--muted); }
 .app-swatch[data-layer="seafloor"] { background: linear-gradient(90deg, var(--depth-0), var(--depth-3)); }
-.app-swatch[data-layer="depth-contours"] { height: 0; border-top: 2px solid var(--depth-1); }
-.app-swatch[data-layer="depth-contours-edge"] { height: 0; border-top: 1px dashed var(--muted); }
+.app-swatch[data-layer="depth-contours"] { height: 0; border-top: 2px solid var(--map-contour); }
+.app-swatch[data-layer="depth-contours-edge"] { height: 0; border-top: 1px dashed var(--map-label); }
+.app-swatch[data-layer="planning-route"] { height: 0; border-top: 2px dashed var(--amber); }
 .app-swatch[data-layer="trip-ranked"] { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--mint); }
 .app-swatch[data-layer="marks-density"] { border-radius: var(--radius-pill); background: radial-gradient(circle, var(--depth-0), var(--depth-1) 45%, transparent 75%); }
 .app-swatch[data-layer="currents"] { background: var(--flow); }
@@ -288,6 +292,13 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 @media (min-width: 1024px) {
   /* The brief scrolls inside its column; the page itself stays put. */
   .app { height: 100vh; height: 100dvh; }
+  /* SC1722-19: the document never scrolls. When the header, command bar and first answer leave the stage less than its 480 px (a
+     short laptop window), the app scrolls inside itself, and the time dock sits in the stage's flow at the bottom of the map
+     column (sticky to the app's bottom edge), so it stays whole in the window from 1,024 x 768 up. The stage clips instead of
+     hiding its overflow, because a hidden-overflow stage would be the dock's scroll container and the sticky rule would do nothing. */
+  .app { overflow-y: auto; }
+  .app-main > .app-stage { display: flex; flex-direction: column; overflow: clip; }
+  .app-main > .app-stage > .app-dock { position: sticky; left: auto; right: auto; bottom: var(--space-4); flex: none; margin: auto var(--space-4) var(--space-4); z-index: var(--z-map-chrome); }
 }
 
 @media (max-width: 1023px) {
@@ -304,7 +315,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-mobile { --app-tabs: calc(56px + env(safe-area-inset-bottom, 0px)); --app-strip: calc(84px + env(safe-area-inset-top, 0px)); position: relative; height: 100vh; height: 100dvh; overflow: hidden; }
 .app-mobile .app-stage { position: absolute; inset: 0; min-height: 0; }
 .app-mobile .app-presentation { top: calc(var(--app-strip) + var(--touch-min) + var(--space-5)); bottom: auto; flex-direction: column-reverse; }
-.app-top { position: absolute; top: 0; left: 0; right: 0; z-index: var(--z-map-chrome); display: flex; flex-direction: column; gap: var(--space-2); padding: calc(var(--space-3) + env(safe-area-inset-top, 0px)) var(--space-4) 0; }
+.app-top { position: absolute; top: 0; left: 0; right: 0; z-index: calc(var(--z-map-chrome) + 1); display: flex; flex-direction: column; gap: var(--space-2); padding: calc(var(--space-3) + env(safe-area-inset-top, 0px)) var(--space-4) 0; }
 .app-top-row { display: flex; align-items: center; gap: var(--space-2); }
 .app-top-card { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 0 var(--space-3) var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); backdrop-filter: blur(6px); }
 .app-top-card .app-brand { min-height: var(--touch-min); font-size: var(--text-15); }
@@ -329,7 +340,13 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
   .app-sheet[data-detent="half"] { --sheet-hidden-offset: calc(50dvh - var(--app-tabs) - var(--app-strip)); }
   .app-sheet[data-detent="full"] { --sheet-hidden-offset: 0px; }
 }
-.app-sheet-hour { display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4) var(--space-2); }
+.app-sheet-hour { display: flex; flex-direction: column; padding: 0 var(--space-4) var(--space-2); }
+.app-sheet-hour-row { display: flex; align-items: center; gap: var(--space-3); }
+/* UXFIX-11: the day chips ride above the slider (one 44 px row, 8 px apart, scrolling sideways inside itself) from half up; at peek the readout names the day.
+   The row opens with the sheet's own motion, so a tap that moves the sheet up from peek (focus in the body) is not carried off its target mid-press. */
+.app-sheet-hour > .ui-segmented { box-sizing: border-box; gap: var(--space-2); max-width: 100%; min-width: 0; max-height: calc(var(--touch-min) + var(--space-1)); padding: 0 0 var(--space-1); border: 0; background: none; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; transition: max-height var(--motion-sheet), padding-bottom var(--motion-sheet), visibility var(--motion-sheet); }
+.app-sheet-hour > .ui-segmented .ui-chip { flex: none; min-height: var(--touch-min); }
+.app-sheet[data-detent="peek"] .app-sheet-hour > .ui-segmented { max-height: 0; padding-bottom: 0; visibility: hidden; }
 .app-sheet-brief, .app-sheet-layers { display: flex; flex-direction: column; gap: var(--space-3); }
 .app-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--space-5); }
 .app-sheet h1 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
@@ -345,8 +362,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-sheet .app-mark p { margin: 0; }
 .app-sheet .app-rail { padding: 0; border: 0; background: transparent; backdrop-filter: none; }
 .app-sheet-menus { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
-.app-sheet-menus > .ui-segmented { max-width: 100%; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
-.app-sheet-menus > .ui-segmented .ui-chip { flex: none; }
 .app-sheet-menus > .app-area { flex-wrap: wrap; max-width: 100%; min-width: 0; }
 .app-sheet-menus > .app-target, .app-sheet-menus .app-target label { min-width: 0; max-width: 100%; }
 .app-sheet-menus .app-target select { min-width: 0; }
@@ -361,16 +376,21 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-tabs .app-views a[aria-current="page"] { color: var(--mint); box-shadow: inset 0 2px 0 var(--mint); }
 .app-tabs .app-views a:focus-visible { outline-offset: -2px; }
 /* FE-32: the Conditions view covers the map above the time dock; the map stays mounted beneath it. */
-.app-conditions { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; color: var(--text); font-size: var(--text-13); }
-.app-stage > .app-conditions { position: absolute; inset: 0 0 calc(var(--touch-min) + var(--space-7)) 0; z-index: var(--z-map-chrome); padding: var(--space-4); overflow: auto; background: var(--panel); }
+.app-conditions, .app-history { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; color: var(--text); font-size: var(--text-13); }
+.app-stage > .app-conditions, .app-stage > .app-history { position: absolute; inset: 0 0 calc(var(--touch-min) + var(--space-7)) 0; z-index: var(--z-map-chrome); padding: var(--space-4); overflow: auto; background: var(--panel); }
 .app-conditions-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+/* SC1922-03: the model-family options wrap inside the header and keep the touch floor (never squeezed, clipped or shrunk below it). */
+.app-conditions-head > .ui-segmented { flex-wrap: wrap; box-sizing: border-box; max-width: 100%; min-width: 0; }
+.app-conditions-head > .ui-segmented .ui-chip { flex: none; min-height: var(--touch-min); }
+/* SC1922-03: the touch-size Cancel makes the placing note taller; while placing, the stack's empty space and note text must not swallow Chart taps beneath them (placement waits for a tap), so only the presentation control and Cancel take pointer events. */
+.app-presentation--placing { pointer-events: none; }
+.app-presentation--placing .ui-segmented, .app-presentation--placing .ui-button { pointer-events: auto; }
 .app-conditions h2 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
 .app-conditions h3 { margin: var(--space-2) 0 0; }
 .app-conditions-now { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0; }
 .app-conditions-now dd { margin: 0; font-size: var(--text-15); }
 /* Below the chart's natural width the region scrolls sideways rather than squeezing seven days into a phone. */
 .app-conditions-chart { flex: none; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-deep); touch-action: pan-x; }
-.app-conditions-chart:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-conditions-chart > .app-coast-markup { min-width: 720px; }
 .app-conditions-caption, .app-conditions ul { margin: 0; color: var(--muted); }
 .app-conditions ul { padding-left: var(--space-4); }
@@ -382,19 +402,14 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-fleet-check { padding: 0; font-size: var(--text-13); color: var(--text); }
 .app-fleet-basis { margin: 0; color: var(--muted); font-size: var(--text-11); }
 .app-fleet-links { margin: 0; padding: 0; list-style: none; }
-.app-fleet-links a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 .app-fleet-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--space-2); }
 .app-fleet-form > .app-fleet-check, .app-fleet-form > .app-empty, .app-fleet-actions { grid-column: 1 / -1; }
 .app-fleet-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; color: var(--muted); font-size: var(--text-11); }
-.app-fleet-field input { min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-13); }
-.app-fleet-field input:focus-visible, .app-fleet-check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-fleet-field input { min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-13); }
 .app-fleet-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .app-fleet-how summary { display: flex; align-items: center; min-height: var(--touch-min); cursor: pointer; color: var(--blue); }
-.app-fleet-how summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-fleet-how p { margin: 0; color: var(--muted); }
 /* FE-35: the History view takes the Conditions view's place over the map; historyView's own pickers and charts scroll inside it. */
-.app-history { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; color: var(--text); font-size: var(--text-13); }
-.app-stage > .app-history { position: absolute; inset: 0 0 calc(var(--touch-min) + var(--space-7)) 0; z-index: var(--z-map-chrome); padding: var(--space-4); overflow: auto; background: var(--panel); }
 .app-history h2 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
 /* FE-54: the target's rules at a glance on a habitat card (v1's row, web/regs.ts). */
 .app-mark-regs { margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--line); font-size: var(--text-13); }
@@ -406,10 +421,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-mark-regs dl { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: var(--space-1) 0; }
 .app-mark-regs dt { color: var(--muted); }
 .app-mark-regs dd { margin: 0; }
-.app-mark-regs a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
+.app-mark-regs a, .app-verdict-rules a { color: var(--blue); }
 /* SC-LAUNCH-3's legality line under the verdict: no default <p> margins, and its official link a full touch target as on the mark card. */
 .app-verdict-rules { margin: 0; font-size: var(--text-13); }
-.app-verdict-rules a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
 
 /* Reports view (FE-52): a page over the map stage, which stays mounted beneath it. */
 .app-main { position: relative; }
@@ -425,7 +439,6 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-reports a { color: var(--blue); }
 .app-reports-list a, .app-reports-section p a { display: inline-block; min-height: var(--touch-min); padding: var(--space-3) 0; box-sizing: border-box; }
 .app-reports-footer { display: flex; flex-wrap: wrap; gap: var(--space-4); }
-.app-reports-footer a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 .app-mobile-page { position: absolute; left: 0; right: 0; top: calc(var(--app-strip) + var(--touch-min) + var(--space-3)); bottom: var(--app-tabs); z-index: var(--z-map-chrome); overflow: auto; border-top: 1px solid var(--line); background: var(--bg); }
 
 /* Your limits (#542): the profile's comfort limits form in its own modal dialog (the port dialog's look) */
@@ -438,8 +451,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-limits-status { color: var(--text); font-size: var(--text-15); }
 .app-limits-field { display: grid; grid-template-columns: minmax(0, 1fr) 7rem; align-items: center; gap: var(--space-1) var(--space-3); }
 .app-limits-field label { color: var(--text); font-size: var(--text-13); }
-.app-limits-field input, .app-limits-field select { min-height: var(--touch-min); min-width: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-15); }
-.app-limits-field input:focus-visible, .app-limits-field select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-limits-field input, .app-limits-field select { min-height: var(--touch-min); min-width: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-15); }
 .app-limits-hint { grid-column: 1 / -1; color: var(--muted); font-size: var(--text-11); }
 .app-limits-note { color: var(--muted); font-size: var(--text-13); }
 .app-limits-dialog .app-limits-actions { position: sticky; bottom: 0; z-index: 1; padding-block: var(--space-2); background: var(--panel); }
@@ -490,9 +502,27 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 }
 @media (min-width: 1280px) {
   .app-masthead { flex-wrap: nowrap; }
-  .app-masthead > .app-location { flex: 0 1 15.75rem; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  /* SCB-11: two lines, the name over its coordinates (see below). An overflow other than visible already lets a flex item shrink to nothing. */
+  .app-masthead > .app-location { flex: 0 1 14.5rem; height: 2.125rem; line-height: 1.0625rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .app-masthead > .app-location > * { display: block; }
   .app-masthead > * { flex-shrink: 0; }
-  .app-masthead > .app-location, .app-masthead > .app-degraded { flex-shrink: 1; }
+  .app-masthead > .app-degraded { flex-shrink: 1; }
+  /* SCB-11: the views, the freshness, the account menu and the port controls hold still while the page fills in. The first verdict now lands within a
+     frame or two of the region's name, the session read and the target list, so any nudge of these in that frame is counted with the verdict's own move.
+     - The place name has a fixed width (14.5rem, the width it has once the chat entry is in the row), so its name and coordinates never move the views.
+       It keeps two lines from the start, the name over its coordinates: the coordinates start at the box's left edge, not after the name, so the name
+       gaining its text or re-measuring when the monospace font arrives (about 6% wider than the fallback) moves nothing.
+     - "Loading region…" (the one status line with no button or link) sits after the freshness, where the row's free space starts, so its going moves
+       nothing; it gives way (clipped) before the place name does. The error and missing lines keep their place beside the name, in reading and tab order.
+     - The cost-ceiling notice, the chat entry and the account menu (everything after the freshness) sit at the row's right end, so the chat entry
+       opening moves nothing to its left or right.
+     - The port controls sit at the command bar's right end, so the target menu widening as its options land moves nothing. Where the time window shares
+       their row (about 1,430 px and wider) it keeps a fixed width after them, so its words and the monospace font arriving do not move them either.
+     Sized for the first-load style budget (scripts/perf-budget.json): short selectors, no rule a default already gives. */
+  .app-masthead > span[role="status"]:not([class], :has(*)) { order: 1; flex-shrink: 1000; overflow: hidden; white-space: nowrap; }
+  .app-masthead > .app-fresh ~ * { order: 2; }
+  .app-masthead > .app-fresh + *, .app-command > .app-area { margin-left: auto; }
+  .app-command > .app-window { min-width: 9rem; }
 }
 /* The desktop legend is bottom-anchored and grows upward as the reef, currents and rules rows land (324 px to about 510 px), moving every row in it;
    it starts at about its settled height, and still shrinks and scrolls on a short map. */
@@ -515,3 +545,71 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 p.app-forecast-failed-head { font-size: var(--text-15); }
 .app-forecast-failed-reason { margin: 0; color: var(--text); font-size: var(--text-15); line-height: var(--leading-body); }
 .app-forecast-retry { justify-self: start; }
+
+/* RF1935-2 (UX audit S4-15): on the desktop the preset group is the layer rail's own header child; it wraps onto more rows inside the
+   rail's width instead of running past it (the generic .ui-segmented row is nowrap). The structural scope is the hook: the group's
+   translated name is not. The rail's own scroll track is in the desktop rail block above. A Source or Base select row may also shrink to
+   the rail (its label is a wrapping item whose minimum is otherwise the select's 16 px intrinsic width, which ran 37 px past the rail). */
+@media (min-width: 1024px) {
+  .app-stage > .app-rail .app-rail-source { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .app-stage > .app-rail > .ui-segmented { display: flex; flex-wrap: wrap; box-sizing: border-box; min-width: 0; max-width: 100%; border-radius: var(--radius-lg); }
+  .app-stage > .app-rail > .ui-segmented .ui-chip { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+}
+
+/* RF1935-4: focus is the editing signal, not a claim to detect a keyboard. */
+.app-mobile:has(.app-sheet .app-target-search:focus) {
+  --app-tabs: env(safe-area-inset-bottom, 0px);
+  --app-strip: env(safe-area-inset-top, 0px);
+}
+.app-mobile:has(.app-sheet .app-target-search:focus) .app-tabs { display: none; }
+.app-mobile:has(.app-sheet .app-target-search:focus) .app-sheet {
+  transform: translateY(0);
+  transition: none;
+}
+.app-mobile:has(.app-sheet .app-target-search:focus) .app-sheet .ui-sheet-body {
+  min-height: 0;
+  overflow: auto;
+}
+/* end RF1935-4 */
+
+/* SC1922-04: preview coverage is ordinary, wrapping text, separate from the clipped name. */
+.app-location-preview { min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.app-location-preview-line { min-width: 0; display: flex; align-items: baseline; gap: var(--space-2); }
+.app-location-preview .app-location { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.app-region-preview-label { flex-shrink: 0; color: var(--text); font-size: var(--text-12); text-transform: none; letter-spacing: normal; }
+.app-region-preview-reason { margin: 0; color: var(--text); background: var(--panel); font-size: var(--text-12); white-space: normal; overflow-wrap: anywhere; text-transform: none; letter-spacing: normal; }
+.app-where > .app-region-preview-reason { margin-bottom: var(--space-3); }
+.app-top-card .app-location-preview .app-location { white-space: normal; overflow: visible; text-overflow: clip; }
+@media (min-width: 1024px) {
+  .app-masthead:has(> .app-location-preview) { flex-wrap: wrap; }
+  .app-masthead > .app-location-preview { flex: 0 1 22rem; min-width: 18rem; max-width: 22rem; }
+}
+
+/* RF2135-5: ordinary landscape phones put the top card/controls row and the profile switch side by side (layout only, no paint). */
+@media (min-width: 600px) and (max-width: 1023px) and (max-height: 500px) and (orientation: landscape) {
+  .app-mobile { --app-strip: calc(72px + env(safe-area-inset-top, 0px)); }
+  .app-mobile .app-top { flex-direction: row; align-items: flex-start; }
+  .app-mobile .app-top .app-top-row { flex: 1; min-width: 0; }
+  .app-mobile .app-top .app-top-card { flex-direction: row; align-items: center; gap: var(--space-3); padding-top: 0; padding-bottom: 0; }
+  .app-mobile .app-top .app-top-card .app-brand { flex: none; }
+  .app-mobile .app-top .app-top-card .app-location { flex: 1; min-width: 0; }
+  .app-mobile .app-top .app-profile { flex: 0 0 240px; min-width: 0; }
+}
+/* end RF2135-5 */
+/* SC1922-08: the failed-press line wraps under the chip's age and Refresh button instead of widening the chip past its cap (on desktop the masthead keeps the chip at its own width, so a line shifts nothing at load). */
+.app-fresh > [data-refresh-line] { flex-basis: 100%; }
+/* SC1722-20: skip links, the first two tab stops. Clipped to a pixel at rest (still focusable and named); on focus a ringed 44 px panel at the top-left. */
+.app-skip-link { position: fixed; top: calc(var(--space-2) + env(safe-area-inset-top, 0px)); left: calc(var(--space-2) + env(safe-area-inset-left, 0px)); z-index: var(--z-toast); width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.app-skip-link:focus { display: flex; align-items: center; width: auto; height: auto; min-width: var(--touch-min); min-height: var(--touch-min); padding: 0 var(--space-4); overflow: visible; clip-path: none; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); color: var(--text); outline: 2px solid var(--focus); outline-offset: 2px; }
+/* UXFIX-10: the phone's top-card account entry (data-top) is the icon-sized trigger of RF2345-7 at every width; its panel opens above the sheet. */
+.app-account[data-top] > .app-account-top-trigger { box-sizing: border-box; flex: none; gap: 0; padding-inline: 0; min-inline-size: calc(var(--touch-min) + 0.5px); min-block-size: calc(var(--touch-min) + 0.5px); box-shadow: var(--elev-2); }
+.app-account[data-top] > .app-account-top-trigger[aria-expanded="true"] { color: var(--text); background: var(--panel-2); }
+.app-account[data-top] > .app-account-top-trigger > .app-account-label { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.app-top:has(.app-account[data-top] .app-account-panel:not([hidden])) { z-index: var(--z-modal); }
+/* UXFIX-09: each tile's basis button sits at the tile's foot, so the four stand on one line whatever the source line wraps to. */
+.app-tiles .ui-tile > .ui-popover { margin-top: auto; }
+/* UXFIX-10: the phone's top-card account entry (data-top) is the icon-sized trigger of RF2345-7 at every width; its panel opens above the sheet. */
+.app-account[data-top] > .app-account-top-trigger { box-sizing: border-box; flex: none; gap: 0; padding-inline: 0; min-inline-size: calc(var(--touch-min) + 0.5px); min-block-size: calc(var(--touch-min) + 0.5px); box-shadow: var(--elev-2); }
+.app-account[data-top] > .app-account-top-trigger[aria-expanded="true"] { color: var(--text); background: var(--panel-2); }
+.app-account[data-top] > .app-account-top-trigger > .app-account-label { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.app-top:has(.app-account[data-top] .app-account-panel:not([hidden])) { z-index: var(--z-modal); }

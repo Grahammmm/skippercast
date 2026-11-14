@@ -54,7 +54,6 @@ Dated audit, rollout, source-request and review records live in [archive/](archi
 | [region-pipeline.md](region-pipeline.md) | Region rollout and the full data flow |
 | [regions.md](regions.md) | How to add a coastline: contracts, sources, compiler and checks |
 | [data-contracts.md](data-contracts.md) | Data needs, source bindings and feed contracts |
-| [monitor-reference.md](monitor-reference.md) | The legacy Morro Bay forecast collector and alert lifecycle |
 | [social-preview-image-sources.md](social-preview-image-sources.md) | Provenance of the social preview image (prompt in `social-preview-prompt.txt`) |
 
 | [engineering/api-reference.md](engineering/api-reference.md) | Every HTTP route the Worker answers, with examples |

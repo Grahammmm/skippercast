@@ -122,6 +122,8 @@ test('the ranked export runs in v2: best reefs, complete outlines and a download
   await expect(page.locator('#export-spot-list')).toContainText('#1 · Strong');
   await expect(page.locator('#export-spot-list')).not.toContainText('% confidence');
   await expect(page.locator('#export-shared-confidence')).toHaveText('All ranked places: 90% evidence confidence.');
+  // UXFIX-07 (UX audit S4-38): no ISO date is visible text in the trip dialog (the native date input's value is not text).
+  expect(await page.getByRole('dialog', {name: 'Trip plan and GPX'}).innerText()).not.toMatch(/\b\d{4}-\d{2}-\d{2}\b/);
   await expect(page.locator('[data-layer="outlines"]')).toBeChecked();
   await expect(page.locator('[data-layer="alignments"]')).not.toBeChecked();
   await expect(page.locator('[data-layer="exclusions"]')).not.toBeChecked();
@@ -353,5 +355,91 @@ test('survey outline joins the trip and downloads checked GPX; charter ground ex
   await expect(card).toContainText('Charter-reported grounds and AIS activity are not exported: they show apparent activity, not a verified place.');
   await expect(card.getByRole('button', {name: 'GPX', exact: true})).toBeDisabled();
   expect(surveyRequests, 'a region without published survey outlines requests none').toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+
+// RF1935-1 (UX audit S4-19): the trip dialog is always mounted, so its loading status must exist only while the dialog is open.
+// These read the DOM, not the accessibility tree, so a status inside the closed dialog counts.
+const PLANNER_LOADING = 'Loading the trip planner';
+const loadingStatus = (page: Page) => page.locator('#export-panel [role="status"]', {hasText: PLANNER_LOADING});
+
+test('the closed trip planner never announces loading before it is used, and a slow open keeps it until the planner is ready', async ({page, pageErrors, v2, isMobile}) => {
+  await rankedReefs(page);
+  // The planner's own start-up read, held until the test releases it: "pending" lasts as long as the test wants, not a timer.
+  let release = () => {};
+  const held = new Promise<void>(resolve => { release = resolve; });
+  let atlasRequests = 0;
+  await page.route('**/data/atlas.json', async route => { atlasRequests++; await held; await route.continue(); });
+  try {
+    await v2.open('app', AREA);
+    await expect(page.locator('.app-account-trigger')).toBeVisible();
+    // Ordinary startup: the app is settled and no planner was asked for, so the closed dialog holds no loading text.
+    await expect(page.locator('#export-panel')).toHaveCount(1);
+    await expect(loadingStatus(page)).toHaveCount(0);
+    expect(await page.locator('#export-panel').evaluate(el => el.textContent)).not.toContain(PLANNER_LOADING);
+    expect(atlasRequests, 'the planner is not started before it is used').toBe(0);
+    // Opening it starts the planner; with its start-up read held, loading stays (past five seconds) and nothing clears it early.
+    await openPlan(page, isMobile);
+    await expect(loadingStatus(page)).toHaveCount(1);
+    await expect(loadingStatus(page)).toBeVisible();
+    await page.waitForTimeout(6000);
+    await expect(loadingStatus(page)).toHaveCount(1);
+    // Closing while pending removes it from the page; reopening the still-pending planner brings it back without a second request.
+    await page.getByRole('button', {name: 'Close the trip plan'}).click();
+    await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeHidden();
+    await expect(loadingStatus(page)).toHaveCount(0);
+    await openPlan(page, isMobile);
+    await expect(loadingStatus(page)).toHaveCount(1);
+    expect(atlasRequests, 'reopening does not start the planner again').toBe(1);
+  } finally { release(); }
+  // Released: the planner is ready, the status goes, and the planner's own view is there.
+  await expect(page.locator('#export-selection-count')).toBeVisible();
+  await expect(loadingStatus(page)).toHaveCount(0);
+  // Closed and reopened once ready: no loading flash, the same planner.
+  await page.getByRole('button', {name: 'Close the trip plan'}).click();
+  await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeHidden();
+  await expect(loadingStatus(page)).toHaveCount(0);
+  await openPlan(page, isMobile);
+  await expect(page.locator('#export-selection-count')).toBeVisible();
+  await expect(loadingStatus(page)).toHaveCount(0);
+  expect(atlasRequests, 'one planner start for the whole visit').toBe(1);
+  expect(pageErrors).toEqual([]);
+});
+
+test('a reload on #export reopens the plan, ready, with no loading text left behind', async ({page, pageErrors, v2, isMobile}) => {
+  await rankedReefs(page);
+  await v2.open('app', AREA);
+  await openPlan(page, isMobile);
+  await page.reload();
+  await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeVisible();
+  await expect(page.locator('#export-selection-count')).toBeVisible();
+  await expect(loadingStatus(page)).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeHidden();
+  await expect(loadingStatus(page)).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
+
+// UXFIX-04: the float-plan textarea takes the same --line-strong border as the planner's inputs and selects, in both themes.
+test('the planner float-plan fields, textarea included, draw their border in --line-strong in both themes', async ({page, pageErrors, v2, isMobile}) => {
+  await v2.open('app', AREA);
+  await openPlan(page, isMobile);
+  const fields = ['#float-boat', '#float-people', '#float-overdue', '#export-date'];
+  for (const id of fields) await expect(page.locator(id), `${id} is in the planner`).toHaveCount(1);
+  for (const theme of ['dark', 'light']) {
+    await page.evaluate(t => { if (t === 'light') document.documentElement.setAttribute('data-theme', 'light'); else document.documentElement.removeAttribute('data-theme'); }, theme);
+    const result = await page.evaluate(ids => {
+      const probe = document.createElement('i');
+      probe.style.color = 'var(--line-strong)';
+      document.body.append(probe);
+      const strong = getComputedStyle(probe).color;
+      probe.remove();
+      return {strong, borders: ids.map(id => { const s = getComputedStyle(document.querySelector(id)!); return [id, s.borderTopColor, s.borderTopWidth, s.borderTopStyle]; })};
+    }, fields);
+    expect(result.strong, `${theme}: the token resolves`).toMatch(/^rgb/);
+    for (const [id, colour, width, style] of result.borders) {
+      expect([colour, width, style], `${theme} ${id}`).toEqual([result.strong, '1px', 'solid']);
+    }
+  }
   expect(pageErrors).toEqual([]);
 });

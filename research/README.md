@@ -128,7 +128,8 @@ token and results uploaded as workflow artifacts:
   map-block/DOI discovery and XML audits, after each `daily-data.yml` run
   (formerly steps inside it); incremental state lives in the Actions cache.
 - `research-substrate.yml`, `research-fish-survey.yml` (formerly `monthly-*.yml`):
-  the monthly source re-verifications, on their original schedules.
+  the source re-verifications, run by hand (`workflow_dispatch` only; the monthly
+  schedules were removed).
 
 `tests/contract/test_research_boundary.py` fails if a product workflow references
 `research/` or a research workflow can publish.

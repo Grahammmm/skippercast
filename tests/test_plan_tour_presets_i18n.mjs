@@ -149,7 +149,7 @@ test('tour_all_steps_es_and_invalid: whole Spanish paragraphs, English unchanged
 test('presets_es_labels_not_state: labels change, ids, order and state do not', async () => {
   const m = await ui_(); setup(m);
   const EN = {'reef-drift': 'Reef drift', halibut: 'Halibut', crab: 'Crab', offshore: 'Offshore', transit: 'Transit'};
-  const ES = {'reef-drift': 'Deriva sobre arrecife', halibut: 'Halibut', crab: 'Cangrejo', offshore: 'Mar adentro', transit: 'Tránsito'};
+  const ES = {'reef-drift': 'Deriva sobre arrecife', halibut: 'Lenguado', crab: 'Cangrejo', offshore: 'Mar adentro', transit: 'Tránsito'};
   for (const [id, label] of Object.entries(EN)) {
     assert.equal(presetLabel(id), label); assert.equal(presetLabel(id, 'en'), label); assert.equal(presetLabel(id, 'es'), ES[id]);
     assert.equal(PRESETS.find(p => p.id === id).label, label, 'compatibility label is English');
@@ -159,8 +159,8 @@ test('presets_es_labels_not_state: labels change, ids, order and state do not', 
   try {
     m.language.value = 'en'; const en = page(m, m.Presets);
     m.language.value = 'es'; const es = page(m, m.Presets);
-    assert.ok(en.includes('aria-label="Layer presets"') && en.includes('Helm view') && en.includes('Reef drift'));
-    assert.ok(es.includes('aria-label="Preajustes de capas"') && es.includes('Vista de timón') && es.includes('Mar adentro') && es.includes('Tránsito'));
+    assert.ok(en.includes('aria-label="Layer presets"') && en.includes('Large controls') && !en.includes('Helm view') && en.includes('Reef drift'));
+    assert.ok(es.includes('aria-label="Preajustes de capas"') && es.includes('Controles grandes') && !es.includes('Vista de timón') && es.includes('Mar adentro') && es.includes('Tránsito'));
     assert.match(es, /role="switch"/); assert.match(es, /aria-checked="false"/);
     const order = html => [...html.matchAll(/<button[^>]*>([^<]*)<\/button>/g)].map(x => x[1]).length;
     assert.equal(order(en), order(es), 'same number of controls');

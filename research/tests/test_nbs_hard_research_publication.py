@@ -1,7 +1,7 @@
 """Guard the distinction between measured seabed research and fishing targets."""
 import json
 import unittest
-from research.lib.receipts import RECEIPTS
+from research.lib.receipts import RECEIPTS, locate
 from research.lib.paths import ROOT
 
 
@@ -129,8 +129,8 @@ class NbsHardResearchPublicationTests(unittest.TestCase):
         self.assertNotIn("P9EC35PF", releases)  # Original CMECS identifies this Eureka class as jetty.
 
     def test_estero_layer_contains_only_screened_research_outlines(self):
-        review = json.loads((ROOT / "dist/data/nbs-central-usgs-hard-overlap-review.json").read_text())
-        layer = json.loads((ROOT / "dist/data/central-estero-nbs-usgs-hard-research-context.geojson").read_text())
+        review = json.loads((ROOT / "research/receipts/nbs-central-usgs-hard-overlap-review.json").read_text())
+        layer = json.loads((ROOT / "research/receipts/central-estero-nbs-usgs-hard-research-context.geojson").read_text())
         self.assertEqual(review["status"], "research-leads-only")
         self.assertFalse(review["fishing_target"])
         self.assertFalse(review["exportable"])
@@ -165,7 +165,7 @@ class NbsHardResearchPublicationTests(unittest.TestCase):
                             feature["properties"]["exportable"] is False
                             for feature in merged["features"]))
         for source in merged["source_layers"]:
-            source_path = ROOT / source["path"]
+            source_path = locate(source["path"])
             self.assertEqual(hashlib.sha256(source_path.read_bytes()).hexdigest(), source["sha256"])
             original = json.loads(source_path.read_text())
             self.assertEqual(source["features"], len(original["features"]))

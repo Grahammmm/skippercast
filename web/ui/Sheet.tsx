@@ -53,11 +53,13 @@ export type SheetProps = {
   /** Let the parent reveal body controls when focus enters them. */
   onBodyFocus?: (event: FocusEvent) => void;
   class?: string;
+  /** False when the page already exposes this content as its own landmark: the sheet is then a named group, not a region. */
+  landmark?: boolean;
 };
 
 type Drag = {pointerId: number; y: number; base: number; sheet: HTMLElement; moved: boolean};
 
-export function Sheet({label, detent, onDetent, edge, children, onBodyFocus, class: cls}: SheetProps) {
+export function Sheet({label, detent, onDetent, edge, children, onBodyFocus, class: cls, landmark = true}: SheetProps) {
   const drag = useRef<Drag | null>(null);
   const onKeyDown = (event: KeyboardEvent) => {
     const next = nextDetent(detent, event.key);
@@ -70,6 +72,8 @@ export function Sheet({label, detent, onDetent, edge, children, onBodyFocus, cla
     if (drag.current) return;
     const handle = event.currentTarget as HTMLElement, sheet = handle.closest<HTMLElement>('.ui-sheet');
     if (!sheet || event.button !== 0) return;
+    // Own the gesture: native link dragging can otherwise cancel capture as the sheet moves.
+    event.preventDefault();
     const base = new DOMMatrixReadOnly(getComputedStyle(sheet).transform).m42;
     // A cancelled drag (pointercancel fires no click) would otherwise leave the flag to swallow the next tap.
     delete handle.dataset.dragged;
@@ -109,7 +113,7 @@ export function Sheet({label, detent, onDetent, edge, children, onBodyFocus, cla
     onDetent(stepDetent(detent));
   };
   return (
-    <section class={['ui-sheet', cls].filter(Boolean).join(' ')} data-detent={detent} aria-label={label}>
+    <section class={['ui-sheet', cls].filter(Boolean).join(' ')} data-detent={detent} role={landmark ? undefined : 'group'} aria-label={label}>
       <div class="ui-sheet-edge">
         <button type="button" class="ui-sheet-handle" aria-label={`${detent === 'full' ? 'Collapse' : 'Expand'} ${label}`}
           aria-expanded={detent !== 'peek'} data-detent={detent} onClick={onClick} onKeyDown={onKeyDown}

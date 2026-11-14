@@ -53,8 +53,8 @@ test('the trip date is the next calendar day on DST nights and year ends, inside
 });
 
 test('a saved trip and its feedback read as before', () => {
-  assert.equal(alerts.tripLine({id: 't', date: '2026-10-13', point: 'central', species: 'reef', start_hour: 7, end_hour: 13}), '2026-10-13 · central · reef · 7:00–13:00');
-  assert.equal(alerts.tripLine({id: 't', date: '2026-10-13', point: 'central', species: 'reef', start_hour: 7, end_hour: 13, boat_sea: 0.7, boat_name: ''}), '2026-10-13 · central · reef · 7:00–13:00 · saved boat');
+  assert.equal(alerts.tripLine({id: 't', date: '2026-10-13', point: 'central', species: 'reef', start_hour: 7, end_hour: 13}), 'Tue 13 Oct · central · reef · 7:00–13:00');
+  assert.equal(alerts.tripLine({id: 't', date: '2026-10-13', point: 'central', species: 'reef', start_hour: 7, end_hour: 13, boat_sea: 0.7, boat_name: ''}), 'Tue 13 Oct · central · reef · 7:00–13:00 · saved boat');
   assert.equal(alerts.feedbackPhase({observed_at: '', rating: 7, context: '{"phase":"return"}'}), 'return');
   assert.equal(alerts.feedbackPhase({observed_at: '', rating: 7, context: '{'}), '', 'a bad record never breaks the list');
 });

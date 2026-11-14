@@ -11,11 +11,13 @@ import {DEFAULT_ZONE} from './zone.ts';
 
 const DAY_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-/** A report date in `lang`: a bare date is a civil date (read in UTC), a timestamp is an instant in the default zone; anything else "date unavailable". */
-export function reportDay(iso: string | null | undefined, lang: Language): string {
+/** A report date in `lang`: a bare date is a civil date (read in UTC), a timestamp is an instant in `timeZone` (the loaded region's, else the default); anything else "date unavailable". */
+export function reportDay(iso: string | null | undefined, lang: Language, timeZone: string = DEFAULT_ZONE): string {
   const at = iso ? Date.parse(DAY_ONLY.test(iso) ? `${iso}T12:00:00Z` : iso) : NaN;
-  return Number.isFinite(at)
-    ? new Intl.DateTimeFormat(localeOf(lang), {month: 'short', day: 'numeric', year: 'numeric', timeZone: DAY_ONLY.test(iso ?? '') ? 'UTC' : DEFAULT_ZONE}).format(at)
+  // An impossible civil day (Feb 29 in a common year, Apr 31) would roll into the next real day: refuse it instead.
+  const real = !iso || !DAY_ONLY.test(iso) || (Number.isFinite(at) && new Date(at).toISOString().slice(0, 10) === iso);
+  return Number.isFinite(at) && real
+    ? new Intl.DateTimeFormat(localeOf(lang), {month: 'short', day: 'numeric', year: 'numeric', timeZone: DAY_ONLY.test(iso ?? '') ? 'UTC' : timeZone}).format(at)
     : t('reports.dateNA', lang);
 }
 

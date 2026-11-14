@@ -14,7 +14,7 @@ class MorroReportDatumTests(unittest.TestCase):
                     b'Bathymetry, backscatter intensity, and benthic habitat offshore of Point Estero '
                     b'Bathymetry, backscatter intensity, and benthic habitat offshore of Point Buchon</body></html>')
         self.manifest['report_sha256'] = hashlib.sha256(self.raw).hexdigest()
-        self.ledger = json.loads((ROOT / 'dist/data/usgs-depth-datum-ledger.json').read_text())
+        self.ledger = json.loads((ROOT / 'research/receipts/usgs-depth-datum-ledger.json').read_text())
         self.xml = {ident: (b'<metadata><vertaccr>Estimated to be no less than 20 cm owing to total propagated uncertainties.</vertaccr>'
                             b'<horizpar>Accuracies of final products may be lower.</horizpar></metadata>')
                     for ident in self.manifest['release_ids']}

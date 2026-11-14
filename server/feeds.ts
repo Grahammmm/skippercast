@@ -1,7 +1,10 @@
-// Feed storage for the Worker. Published feeds (conditions, data, forecasts)
-// are read from the R2 bucket bound as FEEDS when present; otherwise from their
-// GitHub branch. Snapshot-backed feeds keep these logical URLs while bytes
-// live at immutable keys; legacy keys remain readable until first migration.
+// Feed storage for the Worker. Published feeds (conditions, data, forecasts,
+// tiles) are read only from the R2 bucket bound as FEEDS; map tiles may also
+// come from the bundled site assets. A feed key is never fetched from GitHub:
+// with no bucket bound (or past the cost ceiling) a feed is unavailable.
+// RAW below is only the logical name region files use for a feed.
+// Snapshot-backed feeds keep these logical URLs while bytes live at immutable
+// keys; legacy keys remain readable until first migration.
 import {edgeCache, cacheKey, store, tagged} from './edge-cache.ts';
 import type {WaitUntil} from './edge-cache.ts';
 import type {ExternalJSON} from './types.ts';
@@ -26,7 +29,7 @@ const SNAPSHOTS = new Set(['conditions', 'data', 'forecasts']);
 const HASH = /^[a-f0-9]{64}$/;
 
 /** Capture the bucket and pin each prefix once for a multi-file operation. */
-function resolver(selected: R2Bucket | null) {
+function resolver(selected: Pick<R2Bucket, 'get'> | null) {
   const snapshots = new Map<string, Promise<Snapshot | null>>();
   return async (key: string): Promise<{key: string; generation?: string; missing?: boolean}> => {
     const [prefix, ...parts] = key.split('/');
@@ -55,19 +58,23 @@ function resolver(selected: R2Bucket | null) {
   };
 }
 
-/** Request-scoped reader: manifest and tiles stay in one release during publication. */
+/** Where a published feed's bytes live now: its object in the current release, or the same key before the first release.
+ *  `missing` means the current release does not hold the file. A broken release pointer throws. */
+export const releaseKey = (store: Pick<R2Bucket, 'get'>, key: string) => resolver(store)(key);
+
+/** Request-scoped reader: manifest and tiles stay in one release during publication.
+ *  A published-feed URL is read from R2 only; any other URL (api.weather.gov) is fetched. */
 export function createFeedReader(): (url: string) => Promise<ExternalJSON> {
   const selected = bucket, resolve = resolver(selected);
   return async url => {
     const key = feedKey(url);
-    if (selected && key) {
-      const target = await resolve(key);
-      if (target.missing) throw Error('Feed absent from current release');
-      const object = await selected.get(target.key);
-      if (object) return object.json();
-      if (target.generation) throw Error('Feed release object unavailable');
-    }
-    return readUpstreamFeed(url);
+    if (!key) return readUpstreamFeed(url);
+    if (!selected) throw Error('Feed storage unavailable');
+    const target = await resolve(key);
+    if (target.missing) throw Error('Feed absent from current release');
+    const object = await selected.get(target.key);
+    if (object) return object.json();
+    throw Error(target.generation ? 'Feed release object unavailable' : 'Feed unavailable');
   };
 }
 
@@ -213,8 +220,9 @@ function positiveFails(request: Request, object: {httpEtag?: string; uploaded?: 
 }
 
 /**
- * GET /feeds/<branch>/<path>: R2 first (edge-cached, with Range and ETag), then
- * the GitHub branch through the fetch cache. Returns null when the path is not a feed.
+ * GET /feeds/<branch>/<path>: from R2 (edge-cached, with Range and ETag); map
+ * tiles R2 does not hold come from the bundled assets. Nothing is fetched from
+ * GitHub. Returns null when the path is not a feed.
  */
 export async function serveFeed(request: Request, path: string, assets: Fetcher | undefined, {ctx, build}: {ctx?: WaitUntil; build?: string} = {}): Promise<Response | null> {
   const logicalKey = feedKey(path);
@@ -298,16 +306,14 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
     headers.set('X-Feed-Source', 'assets');
     return rangeResponse(new Uint8Array(await response.arrayBuffer()), request, headers);
   }
-  const upstream = await fetch(RAW + key, {signal: AbortSignal.timeout(18000), redirect: 'manual',
-    cf: {cacheTtl: cacheFor(key), cacheEverything: true}});
-  if (!upstream.ok) return new Response(JSON.stringify({error: 'Feed unavailable'}), {status: upstream.status === 404 ? 404 : 502, headers});
-  headers.set('X-Feed-Source', 'github');
-  return new Response(upstream.body, {status: 200, headers});
+  // No bucket bound (local dev, or past the cost ceiling): the feed is unavailable, never fetched elsewhere.
+  if (!selected) return new Response(JSON.stringify({error: 'Feed unavailable'}), {status: 503, headers: {'Content-Type': 'application/json', 'Cache-Control': 'no-store'}});
+  return new Response(JSON.stringify({error: 'Feed unavailable'}), {status: 404, headers});
 }
 
 /**
- * A published regional feed as parsed JSON: R2 when bound, else the named
- * cache, else the reviewed GitHub URL. Throws when the feed is unavailable.
+ * A published regional feed as parsed JSON from R2 (see createFeedReader); any
+ * other URL through the named cache, then the network. Throws when unavailable.
  */
 export async function readFeed(url: string): Promise<ExternalJSON> { return createFeedReader()(url); }
 
@@ -317,7 +323,7 @@ export const NWS_HEADERS = Object.freeze({'User-Agent': 'SkipperCast-worker (+ht
 async function readUpstreamFeed(url: string): Promise<ExternalJSON> {
   let stage='r2';
   try{
-    // Published feeds come from R2 when the bucket is bound; GitHub otherwise.
+    // Never a published feed (those are R2 only); NWS alerts and other reviewed public URLs.
     stage='cache';
     const key=new Request(url);let cache:Cache|null|undefined,cached:Response|undefined;
     // The named cache is optional; a cache failure must never disable public feeds.

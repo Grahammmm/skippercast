@@ -371,7 +371,7 @@ test('W10A: stalled abort-honouring Fish enrichment preserves the owned report',
   assert.equal(result.status, 200);
   assert.equal(aborted, true);
   assert.equal(result.headers.get('X-Coast-Upstream'), 'report=skippercast, fish=unavailable');
-  assert.deepEqual(await result.json(), owned);
+  assert.deepEqual(await result.json(), served(owned));
 });
 
 test('W10A: cold-key saturation refuses promptly while an admitted key can still join', {timeout: 1000}, async t => {
@@ -448,6 +448,8 @@ const all = coastFeeds('nearshore,water-quality,ocean,history');
 // FE-87: coast_report.py's assembled fixture (tests/unit/test_coast_report.py), re-dated only for the Worker's age check.
 const skippercastReport = JSON.parse(readFileSync(new URL('./fixtures/coast/skippercast-report.json', import.meta.url), 'utf8'));
 const reportFeed = (generated = ago(0.4)) => ({...skippercastReport, generatedAt: generated});
+// SCB-11: what the route serves of a report: everything but the unread protected-area copy under spatial.
+const served = report => { const {protectedAreas: _unread, ...spatial} = report.spatial; return {...report, spatial}; };
 const every = coastFeeds('report,nearshore,water-quality,ocean,history');
 
 test('COAST_FEEDS names the switched sources; unset, empty and unknown names switch nothing', () => {
@@ -599,7 +601,7 @@ test('with every source switched and published, the snapshots make no Fish reque
   assert.equal(r.headers.get('X-Coast-Upstream'), 'report=skippercast, nearshore=skippercast, water-quality=skippercast');
   const report = await r.json();
   for (const key of ['generatedAt', 'forecasts', 'observations', 'tides', 'tideEvents', 'alerts', 'catches', 'catchContext', 'catchStatus', 'spatial', 'visibility'])
-    assert.deepEqual(report[key], own[key], key);
+    assert.deepEqual(report[key], served(own)[key], key);
   assert.deepEqual(report.sources, [...own.sources, ...near.sources, ...beach.sources]);
   assert.deepEqual([report.nearshore, report.waterQuality], [near.nearshore, beach.waterQuality]);
   assert.equal(calls, 0);
@@ -640,7 +642,30 @@ test('Fish enrichment preserves processing failure provenance with successful an
   // An unavailable Fish packet leaves the original report intact.
   const r = await serveCoastData(request('/api/coast/report'), async () => response(null), store, coastFeeds('report'));
   assert.equal(r.status, 200);
-  assert.deepEqual(await r.json(), own);
+  assert.deepEqual(await r.json(), served(own));
+});
+
+test('SCB-11: the report route leaves out the unread protected-area copy and keeps every other part and source row', async () => {
+  const own = reportFeed();
+  assert.ok(own.spatial.protectedAreas && own.spatial.surfaceTemperature, 'the fixture carries both spatial layers');
+  const fishWith = {...fishReport, spatial: own.spatial};
+  for (const [name, fetcher, store, feeds] of [['Fish', async () => response(fishWith), null, new Set()],
+    ['SkipperCast', fish, feedStore({[REPORT]: own}), coastFeeds('report')]]) {
+    const r = await serveCoastData(request('/api/coast/report'), fetcher, store, feeds);
+    assert.equal(r.status, 200, name);
+    const report = await r.json(), source = name === 'Fish' ? fishWith : own;
+    assert.equal(Object.hasOwn(report.spatial, 'protectedAreas'), false, name);
+    assert.deepEqual(report.spatial.surfaceTemperature, own.spatial.surfaceTemperature, name);
+    assert.equal(r.headers.get('Content-Length'), String(new TextEncoder().encode(JSON.stringify(report)).byteLength), name);
+    const enriched = name === 'Fish' ? ['spatial', 'sources'] : ['spatial', 'sources', 'nearshore', 'waterQuality'];
+    for (const key of Object.keys(source).filter(k => !enriched.includes(k))) assert.deepEqual(report[key], source[key], `${name} ${key}`);
+    if (name === 'Fish') assert.deepEqual(report.sources, fishWith.sources);
+  }
+  // A report with no protected-area copy, and every other snapshot, pass through byte for byte; HEAD names no length it would not send.
+  assert.equal(await (await serveCoastData(request('/api/coast/report'), fish)).text(), JSON.stringify(fishReport));
+  const head = await serveCoastData(request('/api/coast/report', {method: 'HEAD'}), async () => new Response(null, {headers: {'Content-Type': 'application/json', 'Content-Length': '999'}}));
+  assert.equal(head.status, 200); assert.equal(head.headers.get('Content-Length'), null);
+  assert.equal(await (await serveCoastData(request('/api/coast/ocean'), async () => response(fishWith))).text(), JSON.stringify(fishWith));
 });
 
 test('a stale, future or malformed report feed falls back to the Fish report exactly as before', async () => {
@@ -670,3 +695,42 @@ test('#422: history needs a positive recentWindowDays; a merged report over 8 MB
   const fits = feedStore({[REPORT]: pad(reportFeed(), 8 * 1024 * 1024), [BEACH]: beachFeed()});
   assert.equal((await serveCoastData(request('/api/coast/report'), counting, fits, coastFeeds('report'))).status, 200, 'the unmerged packet fits');
 });
+
+// The switched feeds must be read through the current R2 release (publish_r2.py, #631), not the frozen legacy key.
+async function releasedStore(files, legacy = {}) {
+  const enc = v => new TextEncoder().encode(typeof v === 'string' ? v : JSON.stringify(v));
+  const objects = Object.fromEntries(Object.entries(legacy).map(([k, v]) => [k, enc(v)])), byPrefix = {};
+  for (const [key, value] of Object.entries(files)) {
+    const bytes = enc(value), digest = await sha(bytes), [prefix, ...rest] = key.split('/');
+    objects[`${prefix}/.r2-objects/${digest}`] = bytes; (byPrefix[prefix] ??= {})[rest.join('/')] = digest;
+  }
+  for (const [prefix, listed] of Object.entries(byPrefix)) {
+    const release = enc({schema_version: 1, files: listed}), generation = await sha(release);
+    objects[`${prefix}/.r2-releases/${generation}.json`] = release;
+    objects[`${prefix}/.r2-current.json`] = enc({schema_version: 1, generation});
+  }
+  const store = fakeStore(objects), get = store.get.bind(store);
+  store.get = async (key, options) => { const o = await get(key, options); return o && {...o, json: async () => JSON.parse(new TextDecoder().decode(objects[key]))}; };
+  return store;
+}
+
+test('switched feeds are read from the current R2 release, not the frozen legacy key', async () => {
+  const ocean = oceanFeed(), history = historyFeed();
+  // The legacy keys still hold the last copy written before releases began; it is weeks old.
+  const store = await releasedStore({[OCEAN]: ocean, [HISTORY]: history}, {[OCEAN]: oceanFeed(ago(700)), [HISTORY]: historyFeed(ago(700))});
+  const o = await serveCoastData(request('/api/coast/ocean'), noBridge, store, all);
+  assert.equal(o.headers.get('X-Coast-Upstream'), 'ocean=skippercast'); assert.deepEqual(await o.json(), ocean);
+  const h = await serveCoastData(request('/api/coast/history?county=slo'), noBridge, store, all);
+  assert.equal(h.headers.get('X-Coast-Upstream'), 'history=skippercast'); assert.equal((await h.json()).generatedAt, history.generatedAt);
+});
+
+test('a feed absent from the current release, or a broken release pointer, falls back to the bridge', async () => {
+  const fishOcean = async () => response({...oceanFeed(), generatedAt: ago(0.1)});
+  // The release holds other files but not the ocean packet; a legacy copy must not be used in its place.
+  const absent = await releasedStore({[NEARSHORE]: nearshoreFeed()}, {[OCEAN]: oceanFeed()});
+  assert.equal((await serveCoastData(request('/api/coast/ocean'), fishOcean, absent, all)).headers.get('X-Coast-Upstream'), 'ocean=fish (missing)');
+  const broken = await releasedStore({[OCEAN]: oceanFeed()});
+  broken.objects['conditions/.r2-current.json'] = new TextEncoder().encode('{"schema_version":1,"generation":"nope"}');
+  assert.equal((await serveCoastData(request('/api/coast/ocean'), fishOcean, broken, all)).headers.get('X-Coast-Upstream'), 'ocean=fish (unreadable)');
+});
+

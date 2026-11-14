@@ -27,6 +27,7 @@ import {RANKED_PIN} from '../web/map/ranked.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {createStage} from '../web/map/stage.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
+import {settlePicks} from './helpers/pick-settle.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const PAGE = 'https://s.test/map';
@@ -34,7 +35,7 @@ const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'
 const json = path => JSON.parse(read(path));
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 const settle = async () => { for (let i = 0; i < 8; i++) await tick(); };
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const REGIONS = json('dist/regions/index.json').regions.map(r => r.id);
 const regionFiles = id => ({config: json(`dist/regions/${id}/region.json`), coverage: json(`dist/regions/${id}/coverage.json`)});
 /** The committed file under dist/ for a page-relative URL, or a 404 (as the site answers). */
@@ -78,7 +79,7 @@ test('fill, dashed outline and names read the --mpa-* tokens; names start at ?vi
   assert.equal(line.paint['line-color'], sentinel.mpaLine);
   assert.ok(Array.isArray(line.paint['line-dasharray']) && line.paint['line-dasharray'].length === 2, 'dashed outline');
   assert.equal(label.paint['text-color'], sentinel.mpaLine);
-  assert.equal(label.paint['text-halo-color'], sentinel.bg);
+  assert.equal(label.paint['text-halo-color'], sentinel.mapInkHalo);
   assert.deepEqual(label.layout['text-field'], ['get', 'NAME']);
   assert.equal(MPA_LABEL_MIN_ZOOM, 11);
   assert.equal(label.minzoom, 11 - ZOOM_OFFSET, 'MapLibre zoom 10 is ?view= zoom 11');
@@ -344,7 +345,7 @@ test('Chart idle counts require diagnostics; ordinary state and picking work in 
       assert.deepEqual([host.dataset.mpaDrawn, host.dataset.mpaLabels, host.dataset.rankedDrawn],
         enabled ? ['5', '3', '2'] : [undefined, undefined, undefined], name);
       fake.features = [{layer: {id: MPA_FILL}, properties: map.data[MPA_SOURCE].features.find(f => f.properties.NAME === 'Cambria SMCA').properties}];
-      map.fire('click', {point: {x: 1, y: 1}});
+      map.fire('click', {point: {x: 1, y: 1}}); settlePicks();
       assert.equal(chartMark.value.name, 'Cambria State Marine Conservation Area', name);
       assert.equal(fake.countQueries.length, enabled ? 6 : 0, 'picking is separate from count queries');
     } finally { stage.destroy(); }
@@ -365,7 +366,7 @@ test('the Chart draws the region\'s checked areas, reports their state and label
   assert.equal(host.dataset.mpaDrawn, '5', 'the areas MapLibre drew in view');
   assert.equal(host.dataset.mpaLabels, '3', 'and the names it placed');
   fake.features = [{layer: {id: MPA_FILL}, properties: map.data[MPA_SOURCE].features.find(f => f.properties.NAME === 'Cambria SMCA').properties}];
-  map.fire('click', {point: {x: 1, y: 1}});
+  map.fire('click', {point: {x: 1, y: 1}}); settlePicks();
   assert.equal(chartMark.value.name, 'Cambria State Marine Conservation Area');
   assert.equal(chartMark.value.source, 'CDFW ds582 · checked 2026-09-21');
 

@@ -5,10 +5,12 @@ a decision for each source and a fingerprint of the reviewed legal content.
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 import sys
@@ -16,7 +18,7 @@ from zoneinfo import ZoneInfo
 
 from ..platform.contracts import REPO, ID, atomic_json, read_json, within
 from .collect import Client, source, stamp
-from .parsers import watch_content
+from .parsers import watch_content_v4
 from .regulations import content_hash, regulatory_snapshot, validate_bindings, watch_jobs
 
 
@@ -30,6 +32,37 @@ def jurisdiction_files(ident, root=REPO):
     return jurisdiction, registry, registry_path
 
 
+COLLECTION_MARKER = '.collection-in-progress'
+
+
+@contextmanager
+def _reserve_packet_dir(output):
+    """Own a packet folder while one collection fetches and writes into it.
+
+    Cooperating collectors only: the marker is created exclusively, so one wins.
+    A stale marker is evidence and is never reclaimed. Only our own marker is
+    removed, and never in place of an original exception.
+    """
+    output.mkdir(parents=True, exist_ok=True)
+    marker = output / COLLECTION_MARKER
+    try:
+        os.close(os.open(marker, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
+    except FileExistsError:
+        raise ValueError('Use a new packet directory; preserve previous evidence') from None
+    try:
+        # A competitor may have finished between the early preflight and the marker.
+        if any(entry.name != COLLECTION_MARKER for entry in output.iterdir()):
+            raise ValueError('Use a new packet directory; preserve previous evidence')
+        yield
+    except BaseException:
+        try:
+            marker.unlink()
+        except OSError:
+            pass
+        raise
+    marker.unlink()
+
+
 def collect_packet(ident, output, root=REPO, now=None):
     now = now or datetime.now(timezone.utc)
     jurisdiction, registry, _ = jurisdiction_files(ident, root)
@@ -38,8 +71,11 @@ def collect_packet(ident, output, root=REPO, now=None):
         raise ValueError('Packet output is not a folder')
     if output.exists() and any(output.iterdir()):
         raise ValueError('Use a new packet directory; preserve previous evidence')
-    output.mkdir(parents=True, exist_ok=True)
+    with _reserve_packet_dir(output):
+        return _collect_into(ident, output, jurisdiction, registry, now)
 
+
+def _collect_into(ident, output, jurisdiction, registry, now):
     def fetch(job):
         source_id = job[0]
         if not ID.fullmatch(source_id):
@@ -56,7 +92,7 @@ def collect_packet(ident, output, root=REPO, now=None):
                 body = super().get(url, as_json, as_pdf, as_binary)
                 if isinstance(body, str):
                     (output / (source_id + '.html')).write_text(body)
-                    (output / (source_id + '.txt')).write_text(watch_content(body))
+                    (output / (source_id + '.txt')).write_text(watch_content_v4(body))
                 return body
         return source_id, source(*job, now=now, client_factory=ReviewClient)
 

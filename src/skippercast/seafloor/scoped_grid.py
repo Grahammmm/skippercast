@@ -15,6 +15,24 @@ from .grid import assign_reaches, cell_counts, make_reaches, mosaic_reference
 from .io import sha256
 from .scope_paths import resolve_scope
 
+def _require_scope_bounds(bounds):
+    """Admit only an ordered, non-wrapping WGS84 [west, south, east, north] list.
+
+    Direct comparisons reject NaN, infinities and huge integers without float
+    conversion; nothing is sorted, clamped or wrapped.
+    """
+    shape = 'Scope bounds must be [west, south, east, north] in WGS84 degrees'
+    if not isinstance(bounds, list) or len(bounds) != 4:
+        raise ValueError(f'{shape}: expected a list of four numbers')
+    if any(type(value) not in (int, float) for value in bounds):
+        raise ValueError(f'{shape}: every value must be a JSON number')
+    west, south, east, north = bounds
+    if not -180 <= west < east <= 180:
+        raise ValueError(f'{shape}: need -180 <= west < east <= 180')
+    if not -90 <= south < north <= 90:
+        raise ValueError(f'{shape}: need -90 <= south < north <= 90')
+
+
 def build(root=REPO, *, fetch=False, region=None, scope_config=None, scope_id=None):
     root = Path(root).resolve()
     if scope_config is None:
@@ -22,6 +40,7 @@ def build(root=REPO, *, fetch=False, region=None, scope_config=None, scope_id=No
     config, paths = resolve_scope(root, scope_config=scope_config, scope_id=scope_id)
     if paths.is_central_default:
         raise ValueError('Use the retained central grid builder for the Central Coast scope')
+    _require_scope_bounds(config.get('bounds'))
     config_path = paths.config_path
     ledger_path = paths.ledger_path
     region = region or config['id']

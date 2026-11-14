@@ -25,7 +25,7 @@ def read(path):
 def build(root):
     root = Path(root)
     discovery = read(root / "dist/data/noaa-survey-discovery.json")
-    products = read(root / "dist/data/noaa-survey-products.json")
+    products = read(root / "research/receipts/noaa-survey-products.json")
     native = read(root / "research/receipts/noaa-region-bag-envelope-review.json")
     usgs = read(root / "catalog/usgs-ds781-source-leads.json")
     metadata = read(root / "catalog/usgs-ds781-metadata-review.json")
@@ -313,7 +313,7 @@ def build(root):
         raise ValueError("Unreviewed W00614 300 ft native-cell source lead")
     original_ids = {row["context_id"] for row in original_pixel["outlines"]}
     original_context_sha = hashlib.sha256(
-        (root / "dist/data/usgs-offshore-monterey-hard-context.geojson").read_bytes()).hexdigest()
+        (root / "research/receipts/usgs-offshore-monterey-hard-context.geojson").read_bytes()).hexdigest()
     original_pixel_sha = hashlib.sha256(
         (root / "research/receipts/monterey-original-300-pixel-review.json").read_bytes()).hexdigest()
     monterey_no_overlap = {}

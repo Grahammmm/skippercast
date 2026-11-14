@@ -75,7 +75,124 @@ test('planner exports the real avoid-polygon route after the normal waypoint gat
     const file=await p.exportRouteFile();
     assert.equal(file.type,'application/gpx+xml');assert.match(file.name,/-planning-route.gpx$/);
     assert.match(await file.text(),/<rte>/);assert.match(p.routeStatus.value,/Boundary check: 2026-11-07/);
+    const {launchPoints} = await import('../web/launches.ts');
+    try {
+      launchPoints.value = {region: 'fixture', points: [{id: 'ramp', name: 'Ramp', ...point(5,5)}]};
+      p.setLaunch(true);
+      assert.equal(p.moveStop('user:p1', 'up'), true);
+      const gpx = await (await p.exportRouteFile()).text();
+      const positions = [...gpx.matchAll(/<rtept lat="([^"]+)" lon="([^"]+)"/g)].map(m => ({latitude: Number(m[1]), longitude: Number(m[2])}));
+      assert.ok(positions[0].latitude === point(5,5).latitude && positions[0].longitude === point(5,5).longitude, 'planning route starts at launch');
+      const middle = positions.findIndex(q => q.latitude === targets[1].latitude && q.longitude === targets[1].longitude);
+      assert.ok(middle > 0 && middle < positions.length - 1, 'moved stop follows launch');
+      assert.ok(positions.at(-1).latitude === targets[0].latitude && positions.at(-1).longitude === targets[0].longitude, 'remaining ids retain moved order');
+    } finally { p.setLaunch(false); launchPoints.value = null; }
     s.ready=()=>false;
     await assert.rejects(p.exportRouteFile(),/Protected-area checks/);
   } finally {p.dispose();}
+});
+
+// RF1830-7: near-zero coordinates must be spelled as GPX (xsd:decimal) text, never as JS exponent notation.
+const zeroModel = landWaterModel({...coast, bounds: [-8000,-8000,8000,8000],
+  tiles: Object.fromEntries([2047,2048].flatMap(x => [2047,2048].map(y => [`12/${x}/${y}`, 'w1024'])))}, 'fixture');
+const zeroBounds = [-0.05,-0.05,0.05,0.05];
+const zeroScreen = () => ({ready:()=>true, exportExclusions:()=>({checked_at:checked,features:[]}),
+  coversGeometry:g=>geometryCoveredByBounds(g,zeroBounds), geometryAllowed:g=>geometryCoveredByBounds(g,zeroBounds)});
+const at = (latitude, longitude) => ({latitude, longitude});
+const zeroRoute = (stops, extra = {}) => buildProtectedRoute({model:zeroModel,lines:null,screen:zeroScreen(),stops,title:'Zero',now,...extra});
+const DECIMAL = /^-?\d+(\.\d+)?$/;
+const rtepts = gpx => [...gpx.matchAll(/<rtept lat="([^"]*)" lon="([^"]*)"\/>/g)].map(m => [m[1], m[2]]);
+const sameValues = (r) => {
+  const pts = rtepts(r.gpx);
+  return pts.length === r.points.length && pts.every(([a,o],i) => Number(a) === r.points[i].latitude && Number(o) === r.points[i].longitude);
+};
+
+test('route_tiny_coordinates_are_decimal', () => {
+  const cases = [[1e-7,0.01],[-1e-7,-0.01],[0.01,1e-7],[-0.01,-1e-7],[1e-8,-1e-8],[-1e-8,1e-8]];
+  for (const [la, lo] of cases) {
+    const r = zeroRoute([at(la, lo), at(0.02, 0.02)]);
+    assert.ok(r.points.length >= 2);
+    const pts = rtepts(r.gpx);
+    assert.equal(pts.length, r.points.length);
+    assert.ok(pts.flat().every(v => DECIMAL.test(v)), `decimal lexical form for ${la},${lo}: ${pts[0]}`);
+    assert.ok(!/[eE]\d|[eE][+-]/.test(r.gpx.replace(/xmlns="[^"]*"/, '').match(/<rte>.*<\/rte>/s)[0].replace(/<(name|desc)>.*?<\/\1>/g, '')), 'no exponent in route points');
+    assert.ok(sameValues(r));
+  }
+  assert.deepEqual(rtepts(zeroRoute([at(-0.01, 1e-7), at(0.02, 0.02)]).gpx)[0], ['-0.01', '0.0000001']);
+  assert.deepEqual(rtepts(zeroRoute([at(-1e-7, 1e-8), at(0.02, 0.02)]).gpx)[0], ['-0.0000001', '0.00000001']);
+});
+
+test('route_precision_and_subnormal_roundtrip', () => {
+  const fine = 1.2345678901234568e-7;
+  for (const [la, lo, text] of [[fine, 0.01, ['0.00000012345678901234568', '0.01']], [-fine, -0.01, ['-0.00000012345678901234568', '-0.01']]]) {
+    const stops = [at(la, lo), at(0.02, 0.02)], before = JSON.stringify(stops), r = zeroRoute(stops);
+    assert.deepEqual(rtepts(r.gpx)[0], text);
+    assert.equal(JSON.stringify(stops), before, 'input stops are not mutated');
+    assert.ok(r.points[0].latitude === la && r.points[0].longitude === lo && sameValues(r));
+  }
+  for (const tiny of [Number.MIN_VALUE, -Number.MIN_VALUE]) {
+    const r = zeroRoute([at(tiny, -tiny), at(0.02, 0.02)]), [la, lo] = rtepts(r.gpx)[0];
+    assert.ok(DECIMAL.test(la) && DECIMAL.test(lo));
+    assert.ok(Number(la) === tiny && Number(lo) === -tiny, 'subnormal survives Number(attribute)');
+    assert.ok(sameValues(r));
+  }
+});
+
+test('route_zero_and_transition_preserved', () => {
+  const [z] = rtepts(zeroRoute([at(0, -0), at(0.02, 0.02)]).gpx);
+  assert.deepEqual(z, ['0', '0']);
+  const [a] = rtepts(zeroRoute([at(0.000001, 0.0000001), at(0.02, 0.02)]).gpx);
+  assert.deepEqual(a, ['0.000001', '0.0000001']);
+  const ordinary = zeroRoute([at(0.0123, -0.0456), at(0.02, 0.02)]);
+  const expected = ordinary.points.map(p => `<rtept lat="${String(p.latitude)}" lon="${String(p.longitude)}"/>`).join('');
+  assert.ok(ordinary.gpx.includes(`</metadata><rte>`) && ordinary.gpx.includes(`${expected}</rte>`) && /<rtept lat="0.0123" lon="-0.0456"\/>/.test(ordinary.gpx));
+  assert.ok(ordinary.nm > 0 && ordinary.points.length >= 2);
+});
+
+test('route_intermediate_stops_not_rounded', () => {
+  const stops = [at(0.01, 0.01), at(-1e-7, 1e-7), at(-0.01, -0.01)], r = zeroRoute(stops);
+  let from = -1;
+  for (const s of stops) {
+    const next = r.points.findIndex((q, i) => i > from && q.latitude === s.latitude && q.longitude === s.longitude);
+    assert.ok(next > from, 'stop kept in visit order');
+    from = next;
+  }
+  const pts = rtepts(r.gpx);
+  assert.ok(pts.flat().every(v => DECIMAL.test(v)) && sameValues(r));
+  assert.ok(pts.some(([la, lo]) => la === '-0.0000001' && lo === '0.0000001'), 'tiny intermediate stop spelled in full');
+  assert.ok(r.points.length > 3 && r.points.length <= 3000);
+});
+
+test('route_existing_refusals_and_metadata_unchanged', () => {
+  const stops = [at(1e-7, 1e-7), at(0.02, 0.02)];
+  assert.throws(() => zeroRoute(stops, {screen: {...zeroScreen(), ready: () => false}}), /boundar/i);
+  assert.throws(() => zeroRoute(stops, {now: new Date('2026-11-09T17:00:00Z')}), /boundar/i);
+  assert.throws(() => zeroRoute([stops[0]]), /2–12 stops/);
+  assert.throws(() => zeroRoute([at(1e-7, 1e-7), at(0.2, 0.2)]), /stop/i);
+  assert.throws(() => zeroRoute(stops, {model: null}), /route.*unavailable/i);
+  assert.throws(() => zeroRoute(stops, {maxNodes: 1}), /route.*unavailable/i);
+  const r = zeroRoute(stops, {title: 'A & B <x>'});
+  assert.match(r.gpx, /<name>A &amp; B &lt;x&gt;<\/name>/);
+  assert.match(r.gpx, /NOT FOR NAVIGATION/);
+  assert.match(r.gpx, /<time>2026-11-07T17:00:00.000Z<\/time>/);
+});
+
+test('planner_route_file_uses_decimal_encoder', async () => {
+  const region = {id:'fixture',timezone:'America/Los_Angeles',mpa:{bounds:zeroBounds}}, base = zeroScreen();
+  const s = {...base, pointAllowed:p=>base.geometryAllowed({type:'Point',coordinates:[p.longitude,p.latitude]})};
+  const targets = [at(-0.01, 1e-7), at(0.02, -1e-8)].map((p,i)=>({...p,id:`user:z${i}`,name:`Zero ${i}`,category:'other'}));
+  const raw = JSON.stringify({ids:targets.map(p=>p.id),userWaypoints:targets,name:'Zero',date:'2026-11-07'});
+  const p = createPlanner({atlas:{targets:[],areas:[]},screen:s,region,now:()=>now,
+    map:{getSize:()=>({x:512}),getBounds:()=>({getWest:()=>zeroBounds[0],getSouth:()=>zeroBounds[1],getEast:()=>zeroBounds[2],getNorth:()=>zeroBounds[3]})},
+    getVisible:()=>[],storage:{getItem:()=>raw,setItem(){}},landWater:async()=>()=>({state:'water'}),
+    routeContext:async()=>({model:zeroModel,lines:null}),loadPorts:async()=>null,emit(){},nav:{open(){},showMap(){},conditions(){}}});
+  try {
+    const file = await p.exportRouteFile(), gpx = await file.text();
+    assert.equal(file.type, 'application/gpx+xml'); assert.match(file.name, /-planning-route.gpx$/);
+    assert.match(gpx, /NOT FOR NAVIGATION/); assert.match(gpx, /wildlife.ca.gov/);
+    const pts = rtepts(gpx);
+    assert.ok(pts.flat().every(v => DECIMAL.test(v)), 'planner route file has decimal coordinates only');
+    assert.deepEqual(pts[0], ['-0.01', '0.0000001']);
+    assert.deepEqual(pts.at(-1), ['0.02', '-0.00000001']);
+  } finally { p.dispose(); }
 });

@@ -15,6 +15,7 @@ import {build} from 'esbuild';
 import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import {initProtectedAreas} from '../dist/protected-areas.js';
 import {setRegion} from '../dist/region.js';
+import {settlePicks} from './helpers/pick-settle.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 setRegion(JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/region.json', import.meta.url), 'utf8')));
@@ -373,7 +374,7 @@ test('the legend row: a native checkbox, off, exact words, Try again, and the Ch
   const entry = k.LAYERS.find(e => e.id === 'saved-spots');
   assert.deepEqual([entry.control, entry.presentations, entry.sources, entry.time, entry.task, entry.attribution, entry.terrain], ['always', ['chart'], ['private-saved-spots'], ['static'], 'SC0922-04', undefined, undefined]);
   assert.equal(entry.basis, 'Your account’s saved positions, shown only to you; protected-area readings are planning context, not permission to fish.');
-  const sentinel = k.readPalette(name => `token(${name})`), style = k.chartStyle({palette: sentinel, archive: null, page: 'https://s.test/map', region: 'morro-bay', base: 'night'});
+  const sentinel = k.readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), style = k.chartStyle({palette: sentinel, archive: null, page: 'https://s.test/map', region: 'morro-bay', base: 'night'});
   const ids = style.layers.map(l => l.id);
   assert.ok(ids.indexOf('saved-spot-pin') > ids.indexOf('ranked-pin') && ids.indexOf('saved-spot-pin') < ids.indexOf(style.layers.find(l => l.source === 'coastline').id), 'after the ranked pins, under the coastline');
   assert.deepEqual(style.sources['private-saved-spots'].data, {type: 'FeatureCollection', features: []}, 'the source starts empty');
@@ -522,7 +523,7 @@ test('the Chart wiring: a pin click opens the private card without touching the 
   k.camera.value = {latitude: 35.431, longitude: -121.1, zoom: 10.9};
   const host = {dataset: {}};
   // The Chart mounts through its own entry, as the stage does.
-  const chart = k.createChart({host, load: async () => lib, fetchFn: net.fetchFn, palette: () => k.readPalette(name => `token(${name})`), page: () => nav.href, viewDelay: 0});
+  const chart = k.createChart({host, load: async () => lib, fetchFn: net.fetchFn, palette: () => k.readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), page: () => nav.href, viewDelay: 0});
   await flush();
   const [map] = maps;
   assert.ok(map, 'the Chart mounted');
@@ -534,7 +535,7 @@ test('the Chart wiring: a pin click opens the private card without touching the 
   assert.equal(pin.properties.name, 'Chart spot');
   const before = k.picked.value;
   features.push({layer: {id: 'saved-spot-pick'}, properties: pin.properties});
-  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: pin.geometry.coordinates[0], lat: pin.geometry.coordinates[1]}});
+  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: pin.geometry.coordinates[0], lat: pin.geometry.coordinates[1]}}); settlePicks();
   assert.equal(k.chartMark.value?.name, 'Chart spot', 'the pin opens its private card');
   assert.equal(k.picked.value, before + 1);
   assert.deepEqual(writes, [], 'turning the layer on and picking a pin write nothing to the address, history or storage');

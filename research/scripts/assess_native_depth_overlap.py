@@ -124,7 +124,7 @@ def build(audit, context_dir, cache):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--audit', type=Path, default=Path('var/noaa-native-audit.json'))
-    parser.add_argument('--context-dir', type=Path, default=Path('dist/data'))
+    parser.add_argument('--context-dir', type=Path, default=Path('research/receipts'))
     parser.add_argument('--cache', type=Path, default=Path('var/noaa-native-cache'))
     parser.add_argument('--output', type=Path, default=Path('var/native-depth-overlap-leads.json'))
     args = parser.parse_args()

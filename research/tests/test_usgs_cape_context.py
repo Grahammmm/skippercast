@@ -6,7 +6,7 @@ from research.lib.paths import ROOT
 class CapeMendocinoContextTests(TestCase):
     def test_source_boundaries_remain_non_fishing_context(self):
         source = json.loads((ROOT / 'catalog/usgs-seafloor-sources.json').read_text())['sources'][0]
-        layer = json.loads((ROOT / 'dist/data/cape-mendocino-seafloor-context.geojson').read_text())
+        layer = json.loads((ROOT / 'research/receipts/cape-mendocino-seafloor-context.geojson').read_text())
         self.assertEqual(layer['source_file_sha256'], source['character_sha256'])
         self.assertEqual(layer['sector_id'], 'humboldt-cape')
         self.assertEqual(len(layer['features']), 43)

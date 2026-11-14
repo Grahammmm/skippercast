@@ -51,10 +51,13 @@ const named = (s: string): string => s.toLowerCase().replace(/\.(com|org|net)\b/
 const identity = (r: EvidenceRecord, source: string, date: string): string =>
   str(r.id) ? `id:${str(r.id)}` : `tuple:${named(source)}|${date}|${str(r.area)}|${str(r.species).toLowerCase()}`;
 
+/** Locale order, then raw UTF-16 code units when collation calls two different strings equal (composed vs decomposed accents). */
+const collate = (a: string, b: string): number => a.localeCompare(b) || (a < b ? -1 : a > b ? 1 : 0);
+
 /**
  * At most MAX_REASONS dated reasons for `area`, newest first, one per distinct kind. A record with a missing, malformed or
  * future date, no text or no source is left out (an undated reason is not shown), and so is any record of another area.
- * Ties fall to kind, link presence, source, text, then canonical HTTPS link (code-unit order).
+ * Ties fall to kind, link presence, source, text (each by locale order, then code-unit order), then canonical HTTPS link (code-unit order).
  */
 export function reasonsFor(area: string, evidence: readonly EvidenceRecord[] | null | undefined, now: number): Reason[] {
   if (!Array.isArray(evidence) || !str(area)) return [];
@@ -68,8 +71,8 @@ export function reasonsFor(area: string, evidence: readonly EvidenceRecord[] | n
       text: text.length > MAX_TEXT ? `${text.slice(0, MAX_TEXT - 1).trimEnd()}…` : text, date: when.label, source, sourceURL: https(r.sourceURL), ...(copy ? {copy} : {})}});
   }
   // Sorted before anything is dropped, so which copy of a duplicate stands never depends on the order the feeds came in.
-  eligible.sort((a, b) => b.ms - a.ms || a.kind.localeCompare(b.kind) || Number(!a.reason.sourceURL) - Number(!b.reason.sourceURL)
-    || a.reason.source.localeCompare(b.reason.source) || a.reason.text.localeCompare(b.reason.text)
+  eligible.sort((a, b) => b.ms - a.ms || collate(a.kind, b.kind) || Number(!a.reason.sourceURL) - Number(!b.reason.sourceURL)
+    || collate(a.reason.source, b.reason.source) || collate(a.reason.text, b.reason.text)
     || ((a.reason.sourceURL ?? '') < (b.reason.sourceURL ?? '') ? -1 : (a.reason.sourceURL ?? '') > (b.reason.sourceURL ?? '') ? 1 : 0));
   const keys = new Set<string>(), kinds = new Set<string>();
   const fresh = (seen: Set<string>, k: string): boolean => !seen.has(k) && (seen.add(k), true);

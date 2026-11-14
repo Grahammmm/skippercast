@@ -1,5 +1,6 @@
 """Finite ordered orchestration. Preparation is metadata-only; Store owns credit."""
 import argparse
+import copy
 import json
 import math
 import os
@@ -172,6 +173,8 @@ def _roots(values,source_root,*,empty=False):
 
 def inventory(preparation):
     """Observed admission/checkpoint caps, not a filesystem quota."""
+    def scan_failed(error):
+        raise ValueError("aggregate inventory traversal failed") from error
     def count(roots):
         total=0;files=0
         for text in roots:
@@ -180,7 +183,7 @@ def inventory(preparation):
                 raise ValueError("aggregate root symlink")
             if not root.exists():continue
             if not root.is_dir():raise ValueError("aggregate root must be directory")
-            for directory,dirs,names in os.walk(root,followlinks=False):
+            for directory,dirs,names in os.walk(root,followlinks=False,onerror=scan_failed):
                 for name in dirs+names:
                     p=Path(directory)/name
                     if p.is_symlink():raise ValueError("aggregate owned symlink")
@@ -299,7 +302,7 @@ def prepare(root, grant_ref, request_refs, *, start_epoch, deadline_epoch,
             source_reuse_execution_ready=False)
     if continuation is not None:
         prepared.update(saved_area_continuation_contract=continuation,saved_area_adoption=grant["saved_area_adoption"],max_native_admissions=6,source_volume_cap_bytes=220545408)
-    return prepared
+    return copy.deepcopy(prepared)
 
 def prepare_continuation(root,grant_ref,request_refs,**kwargs):
     result=prepare(root,grant_ref,request_refs,**kwargs)

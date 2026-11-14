@@ -49,6 +49,15 @@ This is what the code on `main` does. It is not a statement that a feature is li
 
 The evidence limits in [web-app.md](web-app.md#evidence-limits) still apply: bottom scores rank mapped habitat, not catch probability, and forecasts are regional model values.
 
+## Privacy notice and terms (SCB-05, 2026-11-13)
+
+`/privacy` and `/terms.html` are back as short drafts written from what the code does (the 2026-11-12 drafts were
+removed because they made claims the code does not support). Still open before they stop being drafts: the
+operator's name and a contact address, a lawyer's read, the owner's confirmation that no usage-statistics
+binding is set outside GitHub and whether the boat lookup is live, and a Text Advisor section before any pilot
+(`docs/operations/runbooks/advisor-meta-app-review.md`). `tests/test_legal_pages.mjs` fails if the numbers in the
+notice (retention, limits, session length) stop matching the server.
+
 ## Next
 
 The owner sets the order. Morro Bay is the only active region until it is refined.

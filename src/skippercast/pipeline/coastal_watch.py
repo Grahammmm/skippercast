@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from html.parser import HTMLParser
 import hashlib
+import math
 import re
 import sys
 from urllib.parse import urlencode, urlsplit
@@ -89,16 +90,20 @@ def located_reports(coast, reports, now, policy):
             day = datetime.strptime(report['date'], '%Y-%m-%d').date()
             lon, lat = report['coordinates']
             w,s,e,n = coast['bounds']
-            host = (urlsplit(report['source_url']).hostname or '').removeprefix('www.')
+            url = report['source_url']
+            if not isinstance(url, str): continue
+            host = (urlsplit(url).hostname or '').removeprefix('www.')
             if not (today-timedelta(days=policy['report_max_age_days']) <= day <= today and w <= lon <= e and s <= lat < n and host): continue
             if report.get('coordinate_role') != 'fishing-observation' or report.get('location_review') != 'reviewed': continue
             # Syndicated reports must carry their reviewed original publisher, not the mirror's domain.
             publisher=report.get('original_publisher_id')
-            if not isinstance(publisher,str) or not publisher or report.get('publisher_review')!='reviewed' or urlsplit(report['source_url']).scheme!='https': continue
+            if not isinstance(publisher,str) or not publisher or report.get('publisher_review')!='reviewed' or urlsplit(url).scheme!='https': continue
             for catch in report['catches']:
                 ident = catch['species']
-                if ident in coast['watch'] and isinstance(catch.get('count'), (int,float)) and catch['count'] > 0:
-                    accepted.setdefault(ident, {})[(publisher,report['date'])] = {'date':report['date'],'url':report['source_url'],'publisher':publisher}
+                count = catch.get('count')
+                # Booleans are ints and inf compares > 0; neither is a catch count. No ceiling; ints are never float-converted.
+                if ident in coast['watch'] and not isinstance(count, bool) and isinstance(count, (int,float)) and count > 0 and (isinstance(count, int) or math.isfinite(count)):
+                    accepted.setdefault(ident, {})[(publisher,report['date'])] = {'date':report['date'],'url':url,'publisher':publisher}
         except (TypeError, ValueError, KeyError): continue
     result=[]
     for ident in coast['watch']:

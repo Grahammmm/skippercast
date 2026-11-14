@@ -149,7 +149,7 @@ def build(root, fetch=False):
     matrix = json.loads(matrix_path.read_text())
     if original.get("scope") != "monterey-2009-centralmontereybay-original-valid-beam-research" or original.get("fishing_target") is not False:
         raise ValueError("Original beam audit changed")
-    features = {f["properties"]["id"]: f for f in json.loads((root / "dist/data/usgs-offshore-monterey-hard-context.geojson").read_text())["features"]}
+    features = {f["properties"]["id"]: f for f in json.loads((root / "research/receipts/usgs-offshore-monterey-hard-context.geojson").read_text())["features"]}
     outlines = {ident: shape(features[row["context_id"]]["geometry"]) for ident, row in original["outlines"].items()}
     collected = defaultdict(lambda: {"lon": [], "lat": [], "depth": []})
 

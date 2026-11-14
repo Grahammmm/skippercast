@@ -8,12 +8,12 @@ from copy import deepcopy
 import hashlib
 import importlib
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
 import unittest
 from unittest.mock import patch
-import uuid
 
 from tests._support import FIXTURES as SUPPORT_FIXTURES, ROOT
 
@@ -34,41 +34,93 @@ def file_hash(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-class DraftIDCases(unittest.TestCase):
-    external_root = None
-    external_guard = None
-    assertion_class = "compatibility"
+def no_symlinks(path):
+    path = Path(os.path.abspath(path))
+    for component in (path, *path.parents):
+        if component.is_symlink():
+            raise ValueError(f"Symlink in synthetic/output ancestry: {component}")
+    return path
 
+
+class IsolationGuard:
+    """Only synthetic writes; code/runtime and authored fixture reads permitted.
+
+    The audit hook is a scoped defense-in-depth check, not a hostile-code sandbox.
+    It records only while a test has started it.
+    """
+
+    def __init__(self, synthetic, repo=ROOT):
+        self.synthetic = no_symlinks(synthetic)
+        self.repo = Path(repo).resolve()
+        self.fixtures = self.repo / "tests/fixtures/sc82-draft-id"
+        self.runtime = {Path(sys.base_prefix).resolve(), Path(sys.prefix).resolve()}
+        self.active = False
+        self.events = []
+        self.unexpected = []
+
+    def authorize(self, path, write=False, *, control=False):
+        if isinstance(path, int):
+            # Existing stdio and already-open descriptors; product uses Path APIs.
+            return
+        path = no_symlinks(os.fsdecode(path))
+        allowed = path.is_relative_to(self.synthetic)
+        if not write:
+            allowed |= path.is_relative_to(self.fixtures)
+            allowed |= path.is_relative_to(self.repo) and path.suffix in {".py", ".pyc"}
+            allowed |= any(path.is_relative_to(root) for root in self.runtime)
+        if not allowed:
+            event = {"event": "file-denied", "path": str(path), "write": write,
+                     "control": control}
+            self.events.append(event)
+            if not control:
+                self.unexpected.append(event)
+            raise PermissionError("SC82 synthetic file boundary")
+
+    def audit(self, event, args):
+        if not self.active:
+            return
+        if event.startswith("socket.") or event in {
+                "subprocess.Popen", "os.system", "os.fork", "os.forkpty",
+                "os.posix_spawn", "os.spawn", "pty.spawn", "os.exec"}:
+            self.unexpected.append({"event": event})
+            raise PermissionError("SC82 no-network/no-child boundary")
+        if event == "open":
+            path, mode, flags = args
+            write = bool(flags & (os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND))
+            self.authorize(path, write)
+        elif event in {"os.mkdir", "os.remove", "os.rmdir", "os.chmod", "os.truncate"}:
+            self.authorize(args[0], True)
+        elif event in {"os.rename", "os.link", "os.symlink"}:
+            self.authorize(args[0], True)
+            self.authorize(args[1], True)
+
+    def start(self):
+        sys.addaudithook(self.audit)
+        self.active = True
+
+    def stop(self):
+        self.active = False
+
+
+class DraftIDCases(unittest.TestCase):
     def setUp(self):
-        self.preservation = {}
-        self.owned_temp = None
-        self.guard = self.external_guard
         self.old_bytecode = sys.dont_write_bytecode
         self.old_tempdir = tempfile.tempdir
         sys.dont_write_bytecode = True
         self.addCleanup(setattr, sys, "dont_write_bytecode", self.old_bytecode)
         self.addCleanup(setattr, tempfile, "tempdir", self.old_tempdir)
-        if self.external_root is None:
-            # Ordinary discovery gets scoped guards, not permanent ambient changes.
-            self.owned_temp = tempfile.TemporaryDirectory(prefix="sc82-")
-            self.addCleanup(self.owned_temp.cleanup)
-            self.tree = Path(self.owned_temp.name)
-            from tools.run_sc82_draft_id import IsolationGuard
-            self.guard = IsolationGuard(self.tree)
-            self.guard.start()
-            self.addCleanup(self.guard.stop)
-        else:
-            self.tree = self.external_root / uuid.uuid4().hex
-            self.tree.mkdir()
-        # The fresh runner already redirects pre-import defaults. Ordinary CI
-        # uses explicit API roots without changing cached product defaults for
+        # Ordinary discovery gets scoped guards, not permanent ambient changes.
+        self.owned_temp = tempfile.TemporaryDirectory(prefix="sc82-")
+        self.addCleanup(self.owned_temp.cleanup)
+        self.tree = Path(self.owned_temp.name)
+        self.guard = IsolationGuard(self.tree)
+        self.guard.start()
+        self.addCleanup(self.guard.stop)
+        # Explicit API roots; cached product defaults stay unchanged for
         # unrelated peer suites in the same interpreter.
         self.draft = importlib.import_module("skippercast.seafloor.draft")
         expected = ROOT / "src/skippercast/seafloor/draft.py"
         self.assertEqual(Path(self.draft.__file__).resolve(), expected)
-        if self.external_root is not None:
-            self.assertEqual(self.draft.REPO, self.external_root)
-            self.assertEqual(self.draft.add_survey.__kwdefaults__["root"], self.external_root)
         shape = json.loads((FIXTURES / "source-shape.json").read_text())
         self.row = shape["row"]
         self.saved = shape["adapter_review"]
@@ -126,11 +178,9 @@ class DraftIDCases(unittest.TestCase):
         self.original_document = {"schema_version": 1, "surveys": deepcopy(rows)}
         self.before = {str(path.relative_to(self.tree)): file_hash(path)
                        for path in (self.catalog, self.sentinel, self.existing, self.escape)}
-        self.preservation["before"] = self.before
 
     def unchanged(self):
         after = {name: file_hash(self.tree / name) for name in self.before}
-        self.preservation["after"] = after
         self.assertEqual(after, self.before)
         self.assertEqual(self.read_rows, [self.original_document] * len(self.read_rows))
 
@@ -262,31 +312,26 @@ class DraftIDCases(unittest.TestCase):
             self.assertEqual(len(self.calls), 1)
             self.assertEqual(self.calls[0][0]["id"], "../escape")
             self.assertEqual(self.writes, [])
-            self.preservation["mutant_detected"] = True
             self.forbid_ingest = self.forbid_writer = False
             self.calls.clear()
             self.read_rows.clear()
             self.positive()
-            self.preservation["positive_passed"] = True
         self.assertIs(self.draft._validate_survey_id, original)
         self.calls.clear()
         self.writes.clear()
         self.read_rows.clear()
         self.positive()
-        self.preservation["restored_positive_passed"] = True
 
 
 def invalid_case(ident, matched):
     def test(self):
         self.reject(deepcopy(ident), matched=matched)
-    test.assertion_class = "invalid-effective-id/no-ingest/no-write/preservation"
     return test
 
 
 def fallback_case(ident):
     def test(self):
         self.positive(deepcopy(ident), matched=False)
-    test.assertion_class = "compatibility/documented-falsy-fallback"
     return test
 
 
@@ -296,25 +341,3 @@ for label, value in INVALID.items():
         setattr(DraftIDCases, "test_reject_new_" + label.replace("-", "_"), invalid_case(value, False))
     else:
         setattr(DraftIDCases, "test_fallback_new_" + label.replace("-", "_"), fallback_case(value))
-
-# Each receipt records the method's assertion class, not a guessed test count.
-for name in unittest.defaultTestLoader.getTestCaseNames(DraftIDCases):
-    method = getattr(DraftIDCases, name)
-    if not hasattr(method, "assertion_class"):
-        method.assertion_class = "negative-control" if "negative_control" in name else "compatibility/isolation"
-
-
-def load_suite(suite):
-    names = unittest.defaultTestLoader.getTestCaseNames(DraftIDCases)
-    if suite == "compatibility":
-        names = [n for n in names if not n.startswith("test_reject_") and "negative_control" not in n]
-    elif suite == "regression":
-        names = [n for n in names if "negative_control" not in n]
-    elif suite == "negative-control":
-        names = ["test_negative_control_shared_check_only", "test_positive_matched",
-                 "test_isolation_allowed_and_denied_synthetic_control"]
-    elif suite == "baseline-regression":
-        names = ["test_reject_matched_traversal", "test_positive_matched"]
-    else:
-        raise ValueError("Unknown suite")
-    return unittest.TestSuite(DraftIDCases(name) for name in names)

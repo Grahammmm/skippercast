@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Privacy notice · SkipperCast</title>
     <link rel="canonical" href="https://skippercast.com/privacy" />
+    <meta name="description" content="What SkipperCast stores when you make an account, how long it is kept, and how to export or delete it." />
     <meta name="color-scheme" content="dark" />
     <link rel="icon" href="app-icon.svg" />
     <!-- FE-61 part 2: the v2 tokens and the readable pages' sheet (FE-86), as sources.html. -->
@@ -21,405 +22,149 @@
       <h1>Privacy notice</h1>
       <p class="legal-draft" role="note">
         Draft — pending review by counsel. This notice describes what the
-        current code does; it has not yet been reviewed by a lawyer.
+        current code does; it has not yet been reviewed by a lawyer. The name
+        of the operator and a contact address are still to be added.
       </p>
-      <p class="small">Draft dated November 4, 2026.</p>
+      <p class="small">Draft dated November 13, 2026.</p>
 
       <h2 id="summary">In short</h2>
       <ul>
-        <li>The map, forecasts and downloads work without an account.</li>
+        <li>You can use the map, forecasts and downloads without an account.</li>
         <li>
-          If you sign in, we store the records you save: trip alerts,
-          notification devices, comfort ratings, private catch-log entries and
-          saved spots. You can export or delete your records at any time.
+          If you make an account, we store what you save in it, and you can
+          export or delete all of it yourself.
         </li>
-        <li>
-          We do not sell or share personal information, and we run no
-          advertising or third-party trackers. The site counts a few anonymous
-          visit steps and page errors, without cookies or identifiers, and
-          sends nothing when your browser asks not to be tracked. See
-          <a href="#analytics">Usage statistics</a>.
-        </li>
-        <li>
-          If you use the AI boat lookup, the boat description you type is sent to
-          Anthropic to find its specifications.
-        </li>
-        <li>
-          If you text the SkipperCast Text Advisor, use its web chat or message
-          us on Instagram, we keep the conversation to answer you. Message text
-          is deleted after 180 days, unposted photos after 90 days, and
-          everything when you ask us to erase it. See
-          <a href="#text-advisor">Text Advisor</a>.
-        </li>
+        <li>We do not use advertising or third-party tracking scripts.</li>
+        <li>We do not sell your information.</li>
       </ul>
 
-      <h2 id="notice-at-collection">Notice at collection</h2>
+      <h2 id="account">Your account</h2>
       <p>
-        This section is our notice at collection under the California Consumer
-        Privacy Act (CCPA). It lists the personal information SkipperCast
-        collects, why, whether it is sold or shared, and how long it is kept.
+        You sign in with a passkey. There is no password, and we do not ask for
+        or store an email address, phone number or real name. You can give the
+        account a display name (up to 60 characters); that is optional. We
+        store your passkey’s public key and its use count and dates, never the
+        private key.
       </p>
+      <p>
+        When you sign in, we keep a record of that sign-in with the first 80
+        characters of your browser’s description (for example “Chrome on Mac”)
+        so you can see where you are signed in and sign out other devices. We
+        set one cookie, <code>__Host-sc_session</code>, when you sign in. It
+        keeps you signed in for 30 days from your last use and is not used for
+        tracking.
+      </p>
+
+      <h2 id="stored">What an account stores, and for how long</h2>
       <table class="evidence-table">
         <thead>
           <tr>
-            <th scope="col">What we store (only when you are signed in)</th>
+            <th scope="col">What</th>
             <th scope="col">Why</th>
             <th scope="col">How long</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <th scope="row">Account identifier supplied by the sign-in provider</th>
-            <td>Links your saved records to you. Your email address is not stored.</td>
-            <td>Kept with your records; removed when you delete them.</td>
+            <th scope="row">Account id, display name, passkeys</th>
+            <td>To sign you in</td>
+            <td>No automatic deletion found. Kept until you delete your account.</td>
           </tr>
           <tr>
-            <th scope="row">Trips: area, forecast point, target species, date, hours, wind/gust/sea limits, latest assessment</th>
-            <td>Check the forecast for your trip and send alerts.</td>
-            <td>Deleted 90 days after the trip date, or when you delete the trip.</td>
+            <th scope="row">Sign-in sessions</th>
+            <td>To keep you signed in; list your devices</td>
+            <td>Until they expire (30 days after last use) or you sign out.</td>
           </tr>
           <tr>
-            <th scope="row">Alert events: the alert text, time and delivery status</th>
-            <td>Show alert history and avoid duplicate notifications.</td>
-            <td>Deleted 90 days after the alert was created, or with its trip.</td>
+            <th scope="row">Saved trips and their settings (area, forecast point, species, date, hours, limits, boat, plan)</th>
+            <td>To check the forecast and send alerts</td>
+            <td>Removed 90 days after the trip date, or when you delete them.</td>
           </tr>
           <tr>
-            <th scope="row">Delivery receipts: which device an alert was sent to, when, and the push service’s response code</th>
-            <td>Avoid resending and detect expired devices.</td>
-            <td>Deleted with their alert (90 days).</td>
+            <th scope="row">Alerts we sent you and delivery records</th>
+            <td>To show alert history and avoid sending twice</td>
+            <td>90 days.</td>
           </tr>
           <tr>
-            <th scope="row">Push subscriptions: your browser’s push endpoint and encryption keys</th>
-            <td>Deliver notifications to up to five devices.</td>
-            <td>Until you turn notifications off, the push service reports the device expired, or you delete your data.</td>
+            <th scope="row">Notification devices (your browser’s push address and keys; up to 5)</th>
+            <td>To deliver alerts</td>
+            <td>Until you turn notifications off, the push service reports the device gone, or you delete your account.</td>
           </tr>
           <tr>
-            <th scope="row">Comfort feedback: area, time, 1–10 rating, trip phase, and the wind, sea, swell period, heading and forecast point you entered</th>
-            <td>Calibrate boat-comfort estimates.</td>
-            <td>Deleted 365 days after the rating, or when you delete your data.</td>
+            <th scope="row">Comfort ratings</th>
+            <td>To tune comfort estimates</td>
+            <td>365 days.</td>
           </tr>
           <tr>
-            <th scope="row">Private catch log: start time, optional end time, method and species, outcome (fish, blank or unknown), count, optional position and note, and a linked trip if you choose one</th>
-            <td>Keep your own record of fishing effort and outcomes, including trips with no catch.</td>
-            <td>Until you delete the entry or delete all your account records; no automatic age-based deletion.</td>
+            <th scope="row">Private catch log (time, method, species, outcome, count, optional position and note)</th>
+            <td>Your own record</td>
+            <td>No automatic deletion found. Kept until you delete the entry or your account.</td>
           </tr>
           <tr>
-            <th scope="row">Saved spots: name, position and optional note</th>
-            <td>Keep your own private places for later use and export.</td>
-            <td>Until you delete the spot or delete all your account records; no automatic age-based deletion.</td>
-          </tr>
-          <tr>
-            <th scope="row">Request counters: a one-way hash of your identifier plus a time window, and a count</th>
-            <td>Rate limits (30 requests a minute; 20 boat lookups a day).</td>
-            <td>Removed after they expire: about two minutes for the per-minute counter, two days for the daily lookup counter.</td>
+            <th scope="row">Saved spots (name, position, optional note; up to 100)</th>
+            <td>Your own private places</td>
+            <td>No automatic deletion found. Kept until you delete the spot or your account.</td>
           </tr>
         </tbody>
       </table>
       <p>
-        Catch-log entries and saved spots are associated with your account and
-        each has a record identifier and a creation time.
-      </p>
-      <p>
-        Expired records are removed by a scheduled cleanup job, so deletion can
-        lag the dates above by a short time. Catch-log entries and saved spots
-        do not expire automatically; they stay until you delete them or delete
-        all your account records.
-      </p>
-      <p>
-        <strong>Sale and sharing.</strong> We do not sell personal information
-        and do not share it for cross-context behavioral advertising. We have
-        not done so in the past 12 months.
-      </p>
-      <p>
-        <strong>Sensitive information.</strong> Catch-log entries can include a
-        position, and saved spots include a position. Their classification
-        under the CCPA remains for counsel to review.
+        Your catch log and saved spots are private to your account. No public
+        page, feed or other account reads them. Positions are optional in the
+        catch log and required for a saved spot. They are stored on our server
+        only if you press Save. “Use my position” asks your browser for one
+        location when you press it. Backups: deleted records may remain in
+        database backups kept by our hosting provider for a time.
       </p>
 
-      <h2 id="boat-lookup">AI boat lookup</h2>
+      <h2 id="rights">Export and delete</h2>
       <p>
-        The boat profile is saved only on your device. If you choose “look up”,
-        the boat description you type (for example “Parker 2320 SL 2019”, up to
-        120 characters) is sent to
-        <a href="https://www.anthropic.com/legal/privacy">Anthropic</a>, whose
-        Claude model searches the web for the builder’s specifications. Your
-        account identifier is not sent. The result is cached by our hosting
-        provider for up to 30 days, keyed by the description, so the same lookup
-        is not repeated. Do not type personal information into the boat field.
+        In the trip-alerts panel, “Export my records” downloads your trips,
+        ratings, alerts, devices (push service name and date only), catch log
+        and saved spots, and your account details as one JSON file. “Delete
+        account” (account panel) or “Delete all my records” (trip-alerts panel)
+        removes all of that at once, including your passkeys and sessions. It
+        cannot be undone, and there is no waiting period. To correct a record,
+        change or delete it and save it again.
       </p>
 
-      <h2 id="text-advisor">Text Advisor (texts, web chat and Instagram)</h2>
-      <p>
-        The Text Advisor answers fishing questions by text message, in a web
-        chat on this site, and by Instagram direct message. Skippers also use it
-        to send catch reports and photos. It is being tested and is not yet open
-        to the public; this section describes what the current code does.
-      </p>
-      <table class="evidence-table">
-        <thead>
-          <tr>
-            <th scope="col">What we store</th>
-            <th scope="col">Why</th>
-            <th scope="col">How long</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <th scope="row">Your phone number, as a one-way keyed hash (to recognise you) and an encrypted copy (decrypted only to send you a reply)</th>
-            <td>Reply to you and keep one conversation per number. The number is never stored in plain text, shown to our team or written to logs.</td>
-            <td>Until you erase your data.</td>
-          </tr>
-          <tr>
-            <th scope="row">For the web chat: a random identifier in a cookie (<code>sc_adv</code>, 90 days); we store only a hash of it</th>
-            <td>Keep your chat together between visits.</td>
-            <td>Until you erase your data. A web chat never linked to a phone number is deleted with everything in it 90 days after its last message.</td>
-          </tr>
-          <tr>
-            <th scope="row">For Instagram: the Instagram-scoped id Meta gives us for you (not your username or profile)</th>
-            <td>Reply to your direct message or comment.</td>
-            <td>Until you erase your data.</td>
-          </tr>
-          <tr>
-            <th scope="row">The messages you send and our replies, with their times; what you tell us to remember (the name you want to be called, your home port, the fish you target, your language)</th>
-            <td>Answer you and keep the conversation in context.</td>
-            <td>Message text: 180 days, then deleted (the time and the topic we recorded stay, for counts). What you tell us to remember: until you erase your data.</td>
-          </tr>
-          <tr>
-            <th scope="row">Instagram comments on our posts, only when they start with one of our keywords (RIG, REPORT, ID, BOATS, or the Spanish words) or, if we turn on public answers, ask a question</th>
-            <td>Send one private reply with a link, or one answer under the comment. Other comments are not stored.</td>
-            <td>The comment text: 180 days, then deleted, or sooner if you erase your data.</td>
-          </tr>
-          <tr>
-            <th scope="row">Photos and videos you send</th>
-            <td>Identify fish and read count boards. Location and camera details are removed from photos when they reach SkipperCast's storage, and from videos before anyone reviews them (the relay's copies, below, keep them for up to 30 days). Photos stay private unless a skipper has agreed to posting or you agree to share yours with credit, and our team approves it.</td>
-            <td>90 days, then deleted, unless the photo was approved for posting or posted, or is the count board of a published report; those stay until you erase your data. Photos already posted to our Instagram or Facebook stay there until removed.</td>
-          </tr>
-          <tr>
-            <th scope="row">For skippers: the boat's name, port, landing, Instagram handle and booking link, catch reports, and when photo consent was given or withdrawn</th>
-            <td>Publish the boat's reports and page, and credit the boat in posts.</td>
-            <td>Published reports stay as the boat's record; erasing your data removes your contact from them.</td>
-          </tr>
-          <tr>
-            <th scope="row">Daily counters of messages per contact, and for the web chat per internet address (kept only as a keyed hash, never the address)</th>
-            <td>Limit how many messages and AI answers one person can use a day, and how many texts we send to a number that has not texted us.</td>
-            <td>The counters reset each day; old ones are removed within 8 days.</td>
-          </tr>
-          <tr>
-            <th scope="row">Copies on our message relay: texts and iMessages reach us through an iPhone and a Mac that our team keeps, which hold the conversation and photos and videos as they arrived (before location and camera details are removed)</th>
-            <td>Receive and send texts. They are not copied to iCloud or backed up.</td>
-            <td>Up to 30 days, then deleted automatically on the devices; copies the relay software keeps of photos and videos are deleted weekly once they are more than 7 days old. When you erase your data, we also delete your conversation from the relay by hand.</td>
-          </tr>
-        </tbody>
-      </table>
-      <p>
-        <strong>Automatic deletion.</strong> Once a week we delete message text
-        older than 180 days; photos and videos older than 90 days unless they
-        were approved for posting, posted, or are the count board of a
-        published report; our team's review notes 90 days after the decision;
-        web chats never linked to a phone number 90 days after their last
-        message; and copies made by SEND ME MY DATA after 7 days. Erasing your
-        data removes all of it from SkipperCast's storage at once. Our message
-        relay (the iPhone and Mac above) keeps texts, photos and videos for up to
-        30 days; when you erase your data we delete your conversation there by
-        hand too.
-      </p>
-      <p>
-        <strong>Who else handles it.</strong> To write answers and identify
-        fish, the text of your message, the recent conversation and your photos
-        are sent to
-        <a href="https://www.anthropic.com/legal/privacy">Anthropic</a>. Texts
-        travel through Apple (iMessage) or your mobile carrier, and through
-        <a href="https://www.twilio.com/legal/privacy">Twilio</a> if we move our
-        number to it. Instagram messages and comments travel through
-        <a href="https://privacycenter.instagram.com/policy">Meta</a>, which
-        keeps its own copy under its own policy. Everything we store is held
-        with Cloudflare. Our usage statistics count messages, topics and
-        response times only, never message text or numbers.
-      </p>
-      <p>
-        <strong>We message you only in reply.</strong> We do not send
-        promotions. Besides replies we send only service messages: an
-        invitation when a skipper invites you to their crew (you join only if
-        you reply YES; NO stops that boat inviting you for 30 days) or our team
-        invites a skipper, a one-time code when you ask to link the web chat to
-        your number, and updates to a skipper about their boat (its verification, a
-        photo that was posted). On Instagram we can only reply within 24 hours
-        of your last message, and send one private reply per comment.
-      </p>
-      <p><strong>Your controls.</strong> Send these words as a message, by text or Instagram DM:</p>
-      <ul>
-        <li><strong>STOP:</strong> no more messages of any kind. START turns replies back on.</li>
-        <li><strong>HELP:</strong> what the service does and how to reach us.</li>
-        <li>
-          <strong>FORGET ME</strong>, then <strong>DELETE</strong> to confirm:
-          erases your contact, messages, photos and anything our team reviewed
-          about them. Posts already published and the boat reports a skipper
-          sent stay, without your contact. A later message starts fresh.
-        </li>
-        <li>
-          <strong>SEND ME MY DATA:</strong> a link to a copy of everything we
-          store about you, as JSON. The link works for 24 hours, and the copy is
-          deleted after 7 days.
-        </li>
-      </ul>
+      <h2 id="boat-lookup">Boat lookup (AI)</h2>
+      <p>The boat lookup is not available yet.</p>
 
-      <h2 id="device">Stored on your device</h2>
+      <h2 id="analytics">Usage statistics</h2>
+      <p>We do not collect usage statistics.</p>
+
+      <h2 id="device">On your device</h2>
       <p>
-        Your chosen home port, boat profile and export drafts are kept in your
-        browser’s local storage, and recent forecasts in session storage. They
-        never leave your device unless you export them. If you use “find a
-        nearby port” or the boat-position tool, your location is used in the
-        browser only and is not sent to SkipperCast. Positions you choose to
-        save in a catch-log entry or saved spot are stored with your account as
-        described above.
-      </p>
-      <p>
-        In the account panel, “Use my position” asks your browser for one fresh
-        location only when you press it. It fills the position boxes and shows
-        the device-reported accuracy. Nothing is sent to SkipperCast until you
-        press Save. A catch-log position is optional; saved spots require a
-        position. Saved positions are private to your account; your saved spots
-        can be shown on your own Chart.
+        Your home port, boat profile, comfort limits, language, map choices, a
+        private map log (up to 500 entries, including positions you pick on the
+        map) and saved offline map data are kept in your browser’s storage and
+        never sent to us. Clearing your browser’s site data removes them.
       </p>
 
-      <h2 id="service-providers">Service providers and data sources</h2>
-      <ul>
-        <li>
-          <strong>Hosting.</strong> SkipperCast runs on Cloudflare and on OpenAI’s
-          ChatGPT Sites. They process your IP address and request details to
-          deliver and secure the service. Sign-in, where available, is provided
-          by ChatGPT.
-        </li>
-        <li>
-          <strong>Push notifications</strong> are delivered through your
-          browser’s push service (Apple, Google, Mozilla or Microsoft).
-        </li>
-        <li>
-          <strong>Map and data providers.</strong> Your browser requests map
-          tiles, charts and some live data directly from providers such as
-          OpenStreetMap, NOAA, the National Weather Service, CDFW and Open-Meteo.
-          Those providers receive your IP address under their own privacy
-          policies.
-        </li>
-      </ul>
-
-      <h2 id="analytics">Usage statistics and cookies</h2>
+      <h2 id="others">Other companies that see your visit</h2>
       <p>
-        The map, the home page and the Text Advisor pages send us a small set
-        of anonymous usage statistics, so we can see which steps of a visit
-        people reach and which releases break. They go to our own Cloudflare
-        Workers Analytics Engine dataset, not to an analytics company.
-      </p>
-      <ul>
-        <li>
-          <strong>Visit steps.</strong> The name of a step, counted at most once
-          per page load and region: showing a map (<code>map_viewed</code>), choosing a port (<code>port_selected</code>),
-          adding a spot to a trip (<code>spot_saved</code>), saving a region
-          for offline use (<code>offline_saved</code>), and opening a Text
-          Advisor port, species or boat page or following its “Text
-          SkipperCast” link (<code>advisor_port_view</code>,
-          <code>advisor_species_view</code>, <code>advisor_boat_view</code>,
-          <code>advisor_cta</code>). The map sends <code>map_viewed</code>, <code>port_selected</code>,
-          <code>spot_saved</code> and <code>offline_saved</code>. The home page
-          sends error reports only.
-        </li>
-        <li>
-          <strong>With each step:</strong> the id of the region shown (a region
-          we do not publish is recorded as “other”), the site’s build, and
-          where the visit came from when the page address has an
-          <code>s</code> parameter of <code>txt</code> (a link in a Text
-          Advisor message), <code>ig</code> or <code>fb</code> (Instagram and
-          Facebook posts) or <code>qr</code> (our printed QR code). Any other
-          value is not sent.
-        </li>
-        <li>
-          <strong>Error reports.</strong> When a page hits an uncaught error,
-          the browser sends whether it was an error or a rejected promise; the
-          error message, with web-address queries and coordinates removed, cut
-          to 200 characters; the script’s file name only (no folder or
-          address), with the line and column; the site’s build; and the last
-          request id our server returned to that page. Before storing a report,
-          our server also removes email addresses and runs of six or more
-          digits, cuts the message to 96 characters, and keeps only a
-          shortened one-way hash of the request id, so we can match the error
-          to our server logs. A page sends at most 5 error reports and 30
-          records in all.
-        </li>
-      </ul>
-      <p>
-        <strong>Not collected:</strong> no cookies, local storage, or user,
-        session or device identifier; no full web addresses, positions or boat
-        details. We do not collect form entries; error messages are scrubbed
-        as above. Your IP address is not stored with the statistics; our
-        server uses it only to limit how often it accepts them, as on every
-        public request.
-      </p>
-      <p>
-        <strong>How long it is kept.</strong> Cloudflare keeps these records
-        for three months, the Analytics Engine default, and we set no longer
-        period. A daily operations report copies the last day’s step counts
-        and the ten most reported errors (scrubbed message, script file name,
-        line, kind and build) into the run summary of a GitHub Actions job in
-        our public code repository, where anyone can read them and GitHub
-        keeps them under its own retention for workflow runs.
-      </p>
-      <p>
-        <strong>Do Not Track and Global Privacy Control.</strong> If your
-        browser sends either signal, the pages send no usage statistics or
-        error reports at all.
-      </p>
-      <p>
-        There are no advertising or third-party tracking scripts, and
-        SkipperCast sets no tracking cookies. If what we collect changes, this
-        notice will be updated first.
-      </p>
-
-      <h2 id="rights">Your choices and rights</h2>
-      <p>
-        California residents have the right to know, access, correct and delete
-        their personal information, and not to be discriminated against for
-        exercising these rights. Anyone can use the controls below.
-      </p>
-      <ul>
-        <li>
-          <strong>Export:</strong> under “My trip alerts”, “Export my records” downloads
-          your trips, comfort feedback, alert history, private catch-log entries
-          and saved spots (with their positions and notes) as JSON (served by
-          <code>GET /api/privacy</code>).
-        </li>
-        <li>
-          <strong>Delete:</strong> “Delete all my records” permanently removes your
-          trips, alerts, delivery receipts, notification devices, comfort
-          feedback, private catch-log entries and saved spots
-          (<code>DELETE /api/privacy</code>).
-        </li>
-        <li>
-          <strong>Correct:</strong> delete and re-save a trip; “Stop
-          notifications” removes your notification devices.
-        </li>
-      </ul>
-
-      <h2 id="children">Children</h2>
-      <p>
-        SkipperCast is for adults 18 and over and is not directed to children.
-        We do not knowingly collect information from anyone under 18.
+        Our site runs on Cloudflare, which handles your IP address and requests
+        to deliver and secure it. Our host keeps standard request logs. Your
+        browser loads map tiles and public data directly from OpenStreetMap,
+        NOAA (weather, tides, charts, cloud imagery), the National Weather
+        Service, the California Department of Fish and Wildlife
+        (protected-area boundaries via ArcGIS), the U.S. Geological Survey
+        (aerial imagery) and GitHub (backup copies of data files). Each sees
+        your IP address under its own policy. Alerts are delivered through your
+        browser’s push service (Google, Mozilla, Apple or Microsoft).
       </p>
 
       <h2 id="changes">Changes and contact</h2>
       <p>
-        We will update the date above when this notice changes.
-        <em>Placeholder: operator name and privacy contact address to be added.</em>
-        Until then, contact us through the
-        <a href="https://github.com/Grahammmm/skippercast/issues"
-          >project issue tracker</a
-        >
-        (do not post personal information there).
+        We will change the date on this page when the notice changes. The
+        operator’s name and a contact address will be added here before
+        launch.
       </p>
 
       <p>
-        <a href="terms.html">Terms of use</a>
-        · <a href="licenses.html">Licences &amp; attributions</a>
-        · <a href="sources.html">Sources &amp; methods</a>
+        <a href="terms.html">Terms of use</a> ·
+        <a href="sources.html">Sources &amp; methods</a> ·
+        <a href="licenses.html">Licences &amp; attributions</a>
       </p>
     </main>
   </body>

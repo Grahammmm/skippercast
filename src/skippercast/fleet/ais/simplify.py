@@ -43,11 +43,24 @@ def _check_point(i: int, point, nonfinite: str | None = None) -> Point:
 
 
 def _project(points: Sequence[Point]) -> list[tuple[float, float]]:
-    """Metres east and north of the first point, on an equirectangular projection at the mean latitude."""
+    """Metres east and north of the first point, on an equirectangular projection at the mean latitude.
+
+    Longitude is made continuous across the antimeridian for the projection only: a jump of
+    more than 180 degrees between neighbours counts one whole turn (an integer, so tracks that
+    never cross the seam keep the exact old arithmetic). The input points are not changed.
+    """
     lat0 = sum(p[0] for p in points) / len(points)
     kx = METRES_PER_DEG * math.cos(math.radians(lat0))
     base_lat, base_lon = points[0]
-    return [((lon - base_lon) * kx, (lat - base_lat) * METRES_PER_DEG) for lat, lon in points]
+    turns, previous, xy = 0, base_lon, []
+    for lat, lon in points:
+        if lon - previous > 180:
+            turns -= 1
+        elif lon - previous < -180:
+            turns += 1
+        previous = lon
+        xy.append(((lon + 360 * turns - base_lon) * kx, (lat - base_lat) * METRES_PER_DEG))
+    return xy
 
 
 def _offset(p, a, b) -> float:
@@ -96,7 +109,10 @@ def simplify(points: Sequence[Point], tolerance_m: float) -> list[Point]:
 
 def _round_half_up(value: float) -> int:
     """JavaScript ``Math.round``: halves round towards +infinity."""
-    return math.floor(value + 0.5)
+    # ``value + 0.5`` can itself round up to the next integer for the largest
+    # float below a half (0.49999999999999994), so compare the remainder instead.
+    lower = math.floor(value)
+    return lower + (1 if value - lower >= 0.5 else 0)
 
 
 def _encode_value(value: int) -> str:

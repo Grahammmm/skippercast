@@ -387,7 +387,10 @@ class DayFileTest(unittest.TestCase):
                         open_files.add(os.readlink(entry))
                     except OSError:
                         pass
-                self.assertFalse([p for p in open_files if '/ais/raw/' in p], open_files)
+                # Only this test's own directory: another test in the same process may
+                # leave a day file open under its own (already removed) temp directory.
+                mine = os.path.realpath(tmp) + os.sep
+                self.assertFalse([p for p in open_files if p.startswith(mine) and '/ais/raw/' in p], open_files)
             asyncio.run(listener.retain())
             self.assertFalse(store.day_path(old_day).exists())
             self.assertTrue(store.day_path(datetime(2026, 7, 4).date()).exists())

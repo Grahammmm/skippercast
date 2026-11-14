@@ -1,14 +1,53 @@
 """SP-15-v1 A1-A4: synthetic public API tests; no live source/store access."""
+from contextlib import ExitStack
 from dataclasses import fields, replace
 import hashlib
+import importlib.abc
 import json
+import os
+import socket
+import sqlite3
+import subprocess
+import sys
 from types import MappingProxyType
 import unittest
+from unittest.mock import patch
+import urllib.request
 
-from scripts.accept_sp1510_classifier_identity import offline_boundary
 from tests._support import ROOT
 
 FIXTURE = ROOT / 'tests/fixtures/sp1510_classifier_identity/synthetic.json'
+LIVE_MODULES = ('openai', 'anthropic', 'ollama', 'skippercast.fleet.ais.listener',
+                'skippercast.fleet.ais.process', 'skippercast.fleet.ais.backfill',
+                'skippercast.fleet.ais.ws', 'skippercast.fleet.sink')
+
+
+def deny(*args, **kwargs):
+    raise RuntimeError('SP1510 offline sentinel: network/model/store/process access forbidden')
+
+
+class NoLiveImports(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if any(fullname == p or fullname.startswith(p + '.') for p in LIVE_MODULES):
+            deny()
+        return None
+
+
+def offline_boundary(stack):
+    """Test-scoped sentinels: classification must not reach network, model, store or a process."""
+    for obj, name in ((socket.socket, 'connect'), (socket.socket, 'connect_ex'),
+                      (socket, 'create_connection'), (socket, 'getaddrinfo'),
+                      (urllib.request, 'urlopen'), (sqlite3, 'connect'),
+                      (subprocess, 'Popen'), (os, 'system')):
+        stack.enter_context(patch.object(obj, name, deny))
+    finder = NoLiveImports()
+    sys.meta_path.insert(0, finder)
+    stack.callback(sys.meta_path.remove, finder)
+    # AIS __init__ imports store, which only defines APIs; no connection is opened.
+    from skippercast.fleet.ais import store
+    for name in ('connect', 'write', 'days', 'positions', 'statics', 'retain'):
+        if hasattr(store.AisStore, name):
+            stack.enter_context(patch.object(store.AisStore, name, deny))
 
 
 def reordered(value):
@@ -19,9 +58,9 @@ def reordered(value):
 
 class ClassifierIdentityTest(unittest.TestCase):
     def setUp(self):
-        self.boundary = offline_boundary(ROOT)
-        self.boundary.__enter__()
-        self.addCleanup(self.boundary.__exit__, None, None, None)
+        stack = ExitStack()
+        self.addCleanup(stack.close)
+        offline_boundary(stack)
         from skippercast.fleet.ais import classify
         from skippercast.fleet.ais.events import segment_geometry
         from skippercast.fleet.ais.segment import ActivityThresholds, Trip
@@ -117,14 +156,14 @@ class ClassifierIdentityTest(unittest.TestCase):
         self.assertEqual(self.geometry(other, 25), expected['geometry'])
 
     def test_canonical_payload_and_algorithm_bump(self):
-        self.assertEqual(self.classify.ALGORITHM_VERSION, 3)
+        self.assertEqual(self.classify.ALGORITHM_VERSION, 4)
         effective = {f.name: getattr(self.th, f.name) for f in fields(self.th) if f.name != 'raw'}
-        body = json.dumps({'algorithm': 3, 'activity': self.th.raw, 'effective': effective},
+        body = json.dumps({'algorithm': 4, 'activity': self.th.raw, 'effective': effective},
                           sort_keys=True, separators=(',', ':'))
-        expected = 'c3-' + hashlib.sha256(body.encode('utf-8')).hexdigest()[:16]
+        expected = 'c4-' + hashlib.sha256(body.encode('utf-8')).hexdigest()[:16]
         self.assertEqual(self.result().classifier_version, expected)
         from unittest.mock import patch
-        with patch.object(self.classify, 'ALGORITHM_VERSION', 4):
+        with patch.object(self.classify, 'ALGORITHM_VERSION', 5):
             self.assertNotEqual(self.result().classifier_version, expected)
 
     def test_mapping_protocol_not_only_mutable_dict(self):

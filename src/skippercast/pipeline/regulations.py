@@ -49,8 +49,10 @@ def validate_bindings(jurisdiction, registry):
             raise ValueError(f'Unreviewed regulatory authority: {ident}')
         if watch.get('format', 'html') not in ('html', 'pdf', 'ecfr'):
             raise ValueError(f'Unsupported regulation format: {ident}')
-        normalizer = {'html': 'text-and-links-v3', 'pdf': 'pdf-bytes-v1', 'ecfr': 'ecfr-section-text-v1'}[watch.get('format', 'html')]
-        if definition.get('normalization') != normalizer:
+        # A registry reviewed before v4 keeps its v3 label until its next review; its html sources then read
+        # "normalization-mismatch" at check time, which the app treats as needing review. Nothing is approved by relabelling.
+        normalizer = {'html': ('text-and-links-v4', 'text-and-links-v3'), 'pdf': ('pdf-bytes-v1',), 'ecfr': ('ecfr-section-text-v1',)}[watch.get('format', 'html')]
+        if definition.get('normalization') not in normalizer:
             raise ValueError(f'Regulation normalizer differs from the reviewed contract: {ident}')
         if watch.get('format') == 'ecfr' and (f"/title-{watch.get('title')}/" not in watch['url'] or
                 not watch['url'].endswith('/section-' + str(watch.get('section')))):

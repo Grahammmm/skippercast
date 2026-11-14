@@ -1,6 +1,5 @@
 """The package declares what src/ imports, and requirements files match its extras."""
 import ast
-from importlib.resources import files
 import os
 from pathlib import Path
 import re
@@ -10,6 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from skippercast import paths
+from skippercast.coastal import resources as coastal_resources
 from skippercast.platform.contracts import REPO
 from tests._support import ROOT
 
@@ -114,17 +114,37 @@ class ExtrasTests(unittest.TestCase):
                               f'{module} (imported by {files[0]}) is not declared in any extra')
 
 
+RESOURCES = Path(coastal_resources.__file__).resolve().parent
+
+
 class CoastalSchemaResourceTests(unittest.TestCase):
-    def test_packaged_schema_copies_match_canonical_contracts(self):
-        resources = {p.name: p for p in files('skippercast.coastal.resources').iterdir()
-                     if p.name.endswith('.schema.json')}
+    """schemas/ is the one copy; the packaged names are relative symlinks to it (SC-AUDIT-14)."""
+
+    def test_packaged_schemas_are_links_to_the_canonical_contracts(self):
+        resources = {p.name: p for p in RESOURCES.iterdir() if p.name.endswith('.schema.json')}
         self.assertIn('region.schema.json', resources)
         self.assertIn('fleet-region.schema.json', resources)
-        for canonical in sorted((ROOT / 'schemas').glob('*.schema.json')):
-            if canonical.name in resources:
-                with self.subTest(schema=canonical.name):
-                    self.assertEqual(resources[canonical.name].read_bytes(), canonical.read_bytes(),
-                                     f'packaged {canonical.name} differs from its canonical contract')
+        canonical_dir = (ROOT / 'schemas').resolve()
+        linked = 0
+        for name, packaged in sorted(resources.items()):
+            canonical = canonical_dir / name
+            with self.subTest(schema=name):
+                if not canonical.exists():
+                    continue  # packaged-only contract (e.g. render-handoff-v2): not a duplicate of schemas/
+                self.assertTrue(packaged.is_symlink(), f'packaged {name} is a second copy; link it to schemas/{name}')
+                self.assertFalse(os.path.isabs(os.readlink(packaged)), f'{name}: link must be relative')
+                self.assertEqual(Path(packaged).resolve(), canonical)
+                self.assertEqual(packaged.read_bytes(), canonical.read_bytes())
+                linked += 1
+        self.assertEqual(linked, 27)
+
+    def test_no_packaged_regular_file_repeats_a_canonical_schema(self):
+        canonical = {p.read_bytes(): p.name for p in (ROOT / 'schemas').glob('*.schema.json')}
+        for packaged in RESOURCES.iterdir():
+            if packaged.name.endswith('.schema.json') and not packaged.is_symlink():
+                with self.subTest(schema=packaged.name):
+                    self.assertNotIn(packaged.read_bytes(), canonical,
+                                     f'{packaged.name} duplicates schemas/{canonical.get(packaged.read_bytes())}')
 
 
 class RepoRootTests(unittest.TestCase):

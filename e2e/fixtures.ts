@@ -48,6 +48,20 @@ export const AERIAL_LCP_BUDGET_MS = 10000;
 /** A 1×1 transparent PNG: what the stubbed NAIP service answers with. */
 export const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 
+/** UXFIX-12: the five nightly projects (playwright.config.ts, `E2E_WIDE=1`). */
+const WIDE_PROJECTS = ['phone-small', 'phone-land', 'tablet', 'laptop-1024', 'laptop-1366'];
+/** The running project's own size when it is one of the nightly ones, else null (phone and laptop keep their per-test sizes). */
+export function wideViewport(): {width: number; height: number} | null {
+  const info = base.info(), size = info.project.use.viewport;
+  return process.env.E2E_WIDE === '1' && WIDE_PROJECTS.includes(info.project.name) && size ? {width: size.width, height: size.height} : null;
+}
+/** Set the page's size: the nightly project's own where it applies, else `fallback`. Prints the size the case actually ran at. */
+export async function setSize(page: Page, fallback: {width: number; height: number}): Promise<void> {
+  const wide = wideViewport();
+  await page.setViewportSize(wide ?? fallback);
+  if (wide) console.log(`[wide-viewport] ${base.info().project.name} | ${base.info().title} | ran at ${page.viewportSize()!.width}x${page.viewportSize()!.height}`);
+}
+
 /** One largest-contentful-paint candidate, with the element that produced it. */
 export interface LcpCandidate {ms: number; tag: string; cls: string; size: number}
 /** A settled Largest Contentful Paint: every candidate the load produced, and the last of them. */
@@ -72,9 +86,19 @@ export interface V2 {
   a11y(name: string): Promise<void>;
 }
 
+/** Tests started in this worker process; with the worker index it names one test's client address. */
+let testsInWorker = 0;
+
 export const test = base.extend<{pageErrors: string[]; v2: V2}>({
-  context: async ({context, baseURL}, use) => {
+  context: async ({context, baseURL}, use, info) => {
     const origin = new URL(baseURL!).origin;
+    // The Worker budgets /api/auth/* at 20 calls a minute per client address (server/routes/auth.ts, keyed on
+    // cf-connecting-ip), and every test here shares one address. Five specs create passkey accounts, each
+    // account taking three auth calls, so which of them ran in the same minute decided whether Create answered
+    // 429 (a CI shard failed with "Too many attempts" in fleet-admin.spec.ts). The budget itself is unchanged and
+    // still enforced: each test (and each retry) now speaks from its own private address, as separate visitors do.
+    testsInWorker += 1;
+    await context.setExtraHTTPHeaders({'cf-connecting-ip': `10.${info.workerIndex % 256}.${(testsInWorker >> 8) % 256}.${testsInWorker % 256}`});
     await context.route(url => url.origin !== origin && url.protocol !== 'data:' && url.protocol !== 'blob:', route => route.abort('blockedbyclient'));
     // Aerial opens by default where the region's package names it (region.json basemap.default), so the fixed
     // NAIP service answers with the pixel: the base counts as drawn and no test reaches USGS. A spec that
@@ -90,7 +114,10 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
     // every brief assertion measured upstream readings. Failing the part here takes the brief down its
     // own documented fallback to the stubbed whole feed; the part itself is covered by
     // tests/test_daily_brief_part.mjs and tests/test_brief_daily_part.mjs. Other parts fall through:
-    // e2e/boundary-fixture.ts answers the boundary parts and the regulations part is read live today.
+    // e2e/boundary-fixture.ts answers the boundary parts. The regulations part reaches the local Worker,
+    // which reads published feeds from R2 only (never GitHub); e2e/serve.mjs seeds that R2 with the daily-feed
+    // fixture and the published regulations block (e2e/seed/morro-bay-daily-regulations.json), so the part
+    // answers from a fixed copy.
     await context.route('**/api/daily?*', async route => {
       if (new URL(route.request().url()).searchParams.get('part') !== 'brief') { await route.fallback(); return; }
       await route.fulfill({status: 503, json: {error: 'Offline UI test'}});
@@ -117,7 +144,7 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
       const search = new URLSearchParams({...params, ui: 'v2'});
       return `${name === 'app' ? '/map' : '/'}?${search}`;
     };
-    // The local Worker proxies /feeds/ to upstream; a v2 page never reaches it (tests stay offline).
+    // The local Worker serves /feeds/ from its R2 only (seeded by e2e/serve.mjs); a v2 page never reaches it, so every feed is an explicit stub.
     await page.route('**/feeds/**', route => route.fulfill({status: 404, json: {error: 'No feed stub (e2e/fixtures.ts v2.feed)'}}));
     await page.addInitScript(() => {
       const w = window as unknown as {__lcp: number; __lcpCandidates: LcpCandidate[]};

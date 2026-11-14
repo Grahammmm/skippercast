@@ -20,7 +20,7 @@ URL = ("https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/"
        "CA_Central_CoNED_DEM_2017_8657/CentCA_Topobathy_DEM_Spatial_Metadata.gpkg")
 SHA256 = "721c073303b60a09d479256b1ccb1d1e3b7088232f7a6a3f8837ef0fd3feb379"
 TABLE = "CentCA_Topobathy_DEM_Spatial_Metadata_v3"
-CONTEXT = ROOT / "dist/data/usgs-offshore-monterey-hard-context.geojson"
+CONTEXT = ROOT / "research/receipts/usgs-offshore-monterey-hard-context.geojson"
 MATRIX = ROOT / "research/receipts/monterey-original-300-paired-review.json"
 
 

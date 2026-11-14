@@ -136,11 +136,11 @@ test('with the language es the first answer, the brief and its footer render Spa
     m.language.value = 'es';
     const es = m.render(m.h(m.App, {now: NOW})), esAnswer = answer(es), esBrief = m.render(m.h(m.Verdict, {now: NOW})), footer = m.render(m.h(m.BriefFooter, {}));
     assert.match(esAnswer, /<h2 class="app-first-answer-line">(?:Sí|Marginal|No|Aún no se sabe) - mañana/);
-    assert.match(esAnswer, /aria-label="La respuesta"/); assert.match(esAnswer, />Ver el mapa y el detalle</); assert.match(esAnswer, /Reglas (?:revisadas|pendientes de revisión|no disponibles)/);
-    assert.match(esAnswer, />Reglas oficiales</); assert.doesNotMatch(esAnswer, /Official rules|Show the map|Rules reviewed/);
+    assert.match(esAnswer, /aria-label="La respuesta"/); assert.match(esAnswer, />Ir al mapa y a los detalles</); assert.match(esAnswer, /Reglas (?:revisadas|pendientes de revisión|no disponibles)/);
+    assert.match(esAnswer, />Reglas oficiales</); assert.doesNotMatch(esAnswer, /Official rules|Go to map|Ver el mapa|Rules reviewed/);
     assert.match(esBrief, /<span class="app-verdict-word">(?:Cómodo|Marginal|Agitado|Desconocido)<\/span>/); assert.match(esBrief, /mañana/);
     assert.doesNotMatch(esBrief, /Comfortable|Rough|tomorrow/);
-    assert.match(esBrief, /<span lang="en">/, 'the rules reason is the registry\'s English and is marked'); assert.match(esBrief, /\(en inglés\)/);
+    assert.match(esBrief, /Fuera de la temporada local revisada\./, 'the rules reason is app wording, in Spanish'); assert.doesNotMatch(esBrief, /Outside the reviewed local season|\(en inglés\)/);
     assert.doesNotMatch(enBrief, /lang="en"|en inglés/);
     assert.ok(footer.includes(t('brief.disclaimer', 'es')) && footer.includes('>Términos<') && footer.includes('>Fuentes<'), footer);
     assert.match(m.render(m.h(m.BriefTiles, {brief: null})), /Viento.*Oleaje.*Agua.*Marea/s);
@@ -234,17 +234,38 @@ async function load() {
       export {App, regionInfo} from './web/app/App.tsx';
       export {RulesLine} from './web/app/MarkCard.tsx';
       export {BriefFooter, BriefGaps, BriefTiles, Caveat, Details, FEED_GAP, Verdict, comfortBasis, dailyFeed, feedGaps, leadDayText, regionalForecast} from './web/brief/Brief.tsx';
+      export {Tiles} from './web/brief/Tiles.tsx';
       export {parseConditionsForecast} from './web/conditions.ts';
       export {language} from './web/i18n.ts';
       export {markData} from './web/map/marks.ts';
       export {regsData} from './web/regs.ts';
       export {hour, day, species, profile} from './web/state.ts';
-      export {render} from 'preact-render-to-string';
+      import {render as renderString} from 'preact-render-to-string'; import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
+      // SC1722-02: the fixture's sources (set on the raw signals) are admitted as one settled snapshot before each render.
+      export function render(...args) { admitBriefFixture(); return renderString(...args); }
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
   return (mod = await import(pathToFileURL(out).href));
 }
+
+// UXFIX-06: the tide basis explains MLLW in plain words; another datum keeps the plain reference-level line.
+test('mllw_gloss: only a tide basis on MLLW carries the gloss, in both languages', async () => {
+  const m = await load();
+  const GLOSS = {en: "Heights are above MLLW (mean lower low water, the chart's zero).", es: 'Alturas sobre MLLW (bajamar media inferior, el cero de la carta).'};
+  const OTHER = {en: 'Reference level: NAVD88.', es: 'Nivel de referencia: NAVD88.'};
+  const tile = (id, over = {}) => ({id, label: id[0].toUpperCase() + id.slice(1), value: 5, unit: 'kt', detail: 'detail', source: 'NDBC 46042', sourceUrl: null, state: 'fresh', ageMs: 3_600_000, limitMs: 3 * 3_600_000, lastGood: false, ...over});
+  const basis = (lang, datum) => {
+    m.language.value = lang;
+    try { return m.render(m.h(m.Tiles, {tiles: ['wind', 'swell', 'water', 'tide'].map(id => tile(id, id === 'tide' ? {detail: `Rising · ${datum}`} : {}))})); } finally { m.language.value = 'en'; }
+  };
+  for (const lang of ['en', 'es']) {
+    assert.ok(basis(lang, 'MLLW').includes(GLOSS[lang]), `${lang}: MLLW is explained`);
+    assert.ok(!basis(lang, 'MLLW').includes(OTHER[lang].split(':')[0]), `${lang}: no bare reference line beside the gloss`);
+    assert.ok(basis(lang, 'NAVD88').includes(OTHER[lang]) && !basis(lang, 'NAVD88').includes(GLOSS[lang]), `${lang}: another datum keeps today's text`);
+    assert.equal(basis(lang, 'MLLW').split(GLOSS[lang]).length, 2, `${lang}: the gloss appears once, on the tide only`);
+  }
+});
 
 /** The frozen FE-61 registry with fresh synthetic source checks (as tests/test_first_answer.mjs builds it). */
 async function registry() {
@@ -291,7 +312,9 @@ async function loadWR() {
       export {landWater} from './web/land-water.ts';
       export {language} from './web/i18n.ts';
       export {profile, region, selection, habitat, species} from './web/state.ts';
-      export {render} from 'preact-render-to-string';
+      import {render as renderString} from 'preact-render-to-string'; import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
+      // SC1722-02: the fixture's sources (set on the raw signals) are admitted as one settled snapshot before each render.
+      export function render(...args) { admitBriefFixture(); return renderString(...args); }
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
@@ -397,7 +420,7 @@ test('run_es_all_states: every state of the run line, its eight prompts and seve
     both({}, 'Up to 4 h 10 min fishing at Reef a.', 'Hasta 4 h 10 min de pesca en Reef a.');
     both({}, 'Leave 7 am · there 7:25 am · turn back 11:35 am · in by 12 pm · window 7 am–12 pm', 'Salida 7 · llegada 7:25 · regreso 11:35 · de vuelta a más tardar 12 · ventana 7–12');
     both({}, '7.4 nm straight line (water route not computed yet) · at least 25 min each way at 20 kt · top pick', '7,4 nm en línea recta (trayecto por agua aún sin calcular) · al menos 25 min por tramo a 20 kt · primera opción');
-    both({}, '>basis<', '>fundamento<'); both({}, 'aria-label="Fishing time and return"', 'aria-label="Tiempo de pesca y regreso"'); both({}, '>Fishing time</span>', '>Tiempo de pesca</span>');
+    both({}, '>How this is worked out<', '>Cómo se calcula<'); both({}, 'aria-label="Fishing time and return"', 'aria-label="Tiempo de pesca y regreso"'); both({}, '>Fishing time</span>', '>Tiempo de pesca</span>');
     both({sunrise: '2026-10-12T06:52:00-07:00', sunset: '2026-10-12T17:21:00-07:00'}, ' · Daylight 6:52 am–5:21 pm', ' · Luz del día 6:52–17:21');
     both({}, 'Set your cruise speed to see run time and when to turn back.', 'Define tu velocidad de crucero para ver el tiempo de recorrido y cuándo regresar.', null);
     both({}, '>Set cruise speed</button>', '>Definir velocidad de crucero</button>', null);

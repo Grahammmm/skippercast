@@ -8,6 +8,7 @@ import {mkdtemp} from 'node:fs/promises';import {tmpdir} from 'node:os';
 import {join} from 'node:path';import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {feedBucket} from './fixtures/feed-bucket.mjs';
 import {stationPins} from '../web/map/station-model.ts';
 import {DAILY_PARTS as PACK_PARTS, packRequests} from '../dist/offline-core.js';
 import catalog from '../catalog/station-locations.json' with {type: 'json'};
@@ -87,6 +88,7 @@ test('a feed without chlorophyll, tides or landing names gives a part without th
   // Brief.tsx readFeed's identity check.
   assert.ok(part.schema_version === 1 && part.region_id === 'monterey-point-sur' && !!part.sources && typeof part.sources === 'object');
 });
+const FEED_ENV = {FEEDS: feedBucket()};   // published feeds come only from R2
 const ctx = () => { const pending = []; return {waitUntil: p => pending.push(p), settle: () => Promise.all(pending)}; };
 const get = path => new Request('https://skippercast.com' + path, {headers: {'cf-connecting-ip': '203.0.113.9'}});
 async function withEdge(feed, fn) {
@@ -100,10 +102,10 @@ const morro = {...structuredClone(everyKind), region_id: 'morro-bay'};
 
 test('?part=brief caches its three siblings, and a sibling caches the brief: one feed read answers all four', async () => {
   for (const first of ['brief', 'regulations']) await withEdge(morro, async state => {
-    const c = ctx(), r = await worker.fetch(get(`/api/daily?region=morro-bay&part=${first}`), {}, c);await c.settle();
+    const c = ctx(), r = await worker.fetch(get(`/api/daily?region=morro-bay&part=${first}`), FEED_ENV, c);await c.settle();
     assert.equal(r.status, 200);assert.equal(r.headers.get('X-SC-Cache'), 'miss');assert.equal(state.entries.size, 4);
     for (const p of DAILY_PARTS) {
-      const hit = await worker.fetch(get(`/api/daily?part=${p}&region=morro-bay&x=1`), {}, ctx());
+      const hit = await worker.fetch(get(`/api/daily?part=${p}&region=morro-bay&x=1`), FEED_ENV, ctx());
       assert.equal(hit.headers.get('X-SC-Cache'), 'hit', p);
       assert.deepEqual(await hit.json(), viaJSON(dailyPartOf(morro, p)), p);
     }
@@ -113,12 +115,12 @@ test('?part=brief caches its three siblings, and a sibling caches the brief: one
 
 test('unknown part is 400, unknown region 404, and an invalid feed fails before any part is cached', async () => {
   await withEdge(morro, async state => {
-    assert.equal((await worker.fetch(get('/api/daily?region=morro-bay&part=briefs'), {}, ctx())).status, 400);
-    assert.equal((await worker.fetch(get('/api/daily?region=nowhere&part=brief'), {}, ctx())).status, 404);
+    assert.equal((await worker.fetch(get('/api/daily?region=morro-bay&part=briefs'), FEED_ENV, ctx())).status, 400);
+    assert.equal((await worker.fetch(get('/api/daily?region=nowhere&part=brief'), FEED_ENV, ctx())).status, 404);
     assert.equal(state.reads, 0);
   });
   await withEdge({...morro, catch_probability: 0.4}, async state => {
-    for (let i = 0; i < 2; i++) assert.notEqual((await worker.fetch(get('/api/daily?region=morro-bay&part=brief'), {}, ctx())).status, 200);
+    for (let i = 0; i < 2; i++) assert.notEqual((await worker.fetch(get('/api/daily?region=morro-bay&part=brief'), FEED_ENV, ctx())).status, 200);
     assert.equal(state.reads, 2);assert.equal(state.entries.size, 0);
   });
 });

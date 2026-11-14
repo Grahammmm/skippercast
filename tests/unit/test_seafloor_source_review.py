@@ -142,3 +142,127 @@ class SourceReviewTests(unittest.TestCase):
 
         self.assertFalse(state_cache.allowed('source-review', 'cache/'+'a'*64+'/source.tif'))
         self.assertFalse(state_cache.allowed('source-review', 'reaches/source-review/run.json'))
+
+    # Exact serialized-byte admission: record must never write what load refuses.
+    NOTE = 'Complete original grid compared against the current source set.'
+
+    def record_as(self, source, note=None):
+        return review.record(self.root, self.manifest, source, ('r01',),
+                             'no-incremental-support', self.evidence, now=NOW,
+                             note=note or self.NOTE)
+
+    def checkpoint(self):
+        return self.root/review.RELATIVE
+
+    def inventory(self):
+        return sorted(p.relative_to(self.root).as_posix() for p in self.root.rglob('*'))
+
+    def seed_padded(self, pad=0, *, compact=False):
+        """Readable checkpoint: one real prior review ('untested') plus pad ASCII bytes."""
+        self.checkpoint().unlink(missing_ok=True)
+        self.record_as('untested')
+        state = review.load(self.root)
+        state['reviews'][0]['pad'] = 'x'*pad
+        atomic_json(self.checkpoint(), state, indent=None if compact else 2)
+
+    def final_size(self, note=None, *, replace=False):
+        """Bytes the writer produces when 'tested' is recorded on the seeded checkpoint."""
+        self.seed_padded()
+        if replace:
+            self.record_as('tested')
+        self.record_as('tested', note)
+        return self.checkpoint().stat().st_size
+
+    def assert_refused_untouched(self, *, writer, **kw):
+        before, files = self.checkpoint().read_bytes(), self.inventory()
+        with self.assertRaisesRegex(ValueError, 'exceeds bounded size'):
+            self.record_as('tested', **kw)
+        writer.assert_not_called()
+        self.assertEqual(self.checkpoint().read_bytes(), before)
+        self.assertEqual(self.inventory(), files)
+
+    def test_newline_over_cap_preserves_checkpoint(self):
+        base = self.final_size()
+        self.seed_padded(review.MAX_BYTES + 1 - base)
+        self.assertLessEqual(self.checkpoint().stat().st_size, review.MAX_BYTES)
+        with patch.object(review, 'atomic_json', wraps=review.atomic_json) as writer:
+            self.assert_refused_untouched(writer=writer)
+        self.assertEqual(len(review.load(self.root)['reviews']), 1)
+        active, deferred, warnings = self.partition()
+        self.assertEqual(([r['id'] for r in active], [r['id'] for r in deferred], warnings),
+                         (['tested'], ['untested'], []))
+
+    def test_exact_final_cap_is_readable(self):
+        base = self.final_size()
+        self.seed_padded(review.MAX_BYTES - base)
+        self.record_as('tested')
+        self.assertEqual(self.checkpoint().stat().st_size, review.MAX_BYTES)
+        self.assertEqual(len(review.load(self.root)['reviews']), 2)
+        active, deferred, warnings = self.partition()
+        self.assertEqual((active, [r['id'] for r in deferred], warnings),
+                         ([], ['tested', 'untested'], []))
+
+    def test_final_bytes_below_cap_pass_and_over_cap_refuse(self):
+        for replace in (False, True):
+            note = self.NOTE + ' Rechecked.' if replace else None
+            final = self.final_size(note, replace=replace)
+            for cap, ok in ((final+1, True), (final, True), (final-1, False)):
+                with self.subTest(replace=replace, cap=cap):
+                    self.seed_padded()
+                    if replace:
+                        self.record_as('tested')
+                    with patch.object(review, 'MAX_BYTES', cap), \
+                            patch.object(review, 'atomic_json', wraps=review.atomic_json) as writer:
+                        if ok:
+                            self.record_as('tested', note)
+                            self.assertEqual(self.checkpoint().stat().st_size, final)
+                            self.assertEqual(len(review.load(self.root)['reviews']), 2)
+                        else:
+                            self.assert_refused_untouched(writer=writer, note=note)
+                            self.assertEqual(len(review.load(self.root)['reviews']),
+                                             2 if replace else 1)
+
+    def test_compact_input_expansion_is_preflighted(self):
+        final = self.final_size(replace=True)
+        self.seed_padded(compact=True)
+        self.record_as('tested')
+        self.checkpoint().write_bytes(json.dumps(review.load(self.root), separators=(',', ':')).encode())
+        self.assertLess(self.checkpoint().stat().st_size, final - 1)
+        with patch.object(review, 'MAX_BYTES', final - 1), \
+                patch.object(review, 'atomic_json', wraps=review.atomic_json) as writer:
+            self.assert_refused_untouched(writer=writer)
+            self.assertEqual(len(review.load(self.root)['reviews']), 2)
+        with patch.object(review, 'MAX_BYTES', final):
+            self.record_as('tested')
+        self.assertEqual(self.checkpoint().stat().st_size, final)
+
+    def test_utf8_bytes_not_ascii_escapes_set_the_budget(self):
+        note = 'é'*200 + ' café ☃ 海'
+        self.record_as('tested', note)
+        raw = self.checkpoint().read_bytes()
+        final = len(raw)
+        self.assertTrue(raw.endswith(b'}\n'))
+        self.assertIn('é'.encode(), raw)
+        self.assertNotIn(b'\\u00e9', raw)
+        state = review.load(self.root)
+        self.assertEqual(raw, (json.dumps(state, ensure_ascii=False, indent=2) + '\n').encode())
+        self.checkpoint().unlink()
+        for cap, ok in ((final, True), (final-1, False)):
+            with self.subTest(cap=cap), patch.object(review, 'MAX_BYTES', cap), \
+                    patch.object(review, 'atomic_json', wraps=review.atomic_json) as writer:
+                if ok:
+                    self.record_as('tested', note)
+                    self.assertEqual(self.checkpoint().read_bytes(), raw)
+                else:
+                    self.checkpoint().unlink(missing_ok=True)
+                    files = self.inventory()
+                    with self.assertRaisesRegex(ValueError, 'exceeds bounded size'):
+                        self.record_as('tested', note)
+                    writer.assert_not_called()
+                    self.assertEqual(self.inventory(), files)
+
+    def test_oversized_evidence_still_refused_before_any_checkpoint_write(self):
+        atomic_json(self.root/self.evidence, {'pad': 'x'*review.MAX_EVIDENCE_BYTES})
+        with self.assertRaisesRegex(ValueError, 'Unsafe source-review evidence'):
+            self.record_as('tested')
+        self.assertFalse(self.checkpoint().exists())

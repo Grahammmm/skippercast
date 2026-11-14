@@ -213,6 +213,51 @@ class NaisPresenceTest(unittest.TestCase):
         self.assertEqual(raised.exception.code, 2)
         self.assertEqual(source.calls, [])
 
+    def test_duplicate_json_labels_are_refused(self):
+        cases = {
+            "duplicate_label_different_values_refused": '{"A": 999000001, "A": 999000002}',
+            "duplicate_label_identical_values_refused": '{"A": 999000001, "A": 999000001}',
+            "escaped_duplicate_label_refused": '{"A": 999000001, "\\u0041": 999000002}',
+            "duplicate_cannot_hide_invalid_value": '{"A": 0, "A": 999000002}',
+        }
+        for name, raw in cases.items():
+            with self.subTest(name):
+                self.targets.write_text(raw)
+                with self.assertRaises(ValueError) as raised:
+                    nais._targets(str(self.targets))
+                self.assertEqual(str(raised.exception), "--targets is not a readable JSON file")
+
+    def test_duplicate_cli_stops_before_work(self):
+        self.targets.write_text('{"A": 999000001, "A": 999000002}')
+        source = FakeSource({})
+        out, err = io.StringIO(), io.StringIO()
+        argv = ["--region", "CA", "--from", "2026-01-12", "--to", "2026-01-14", "--targets", str(self.targets),
+                "--workdir", str(self.dir / "work"), "--private-out", str(self.dir / "private.json")]
+        with mock.patch.object(nais, "load_region", side_effect=AssertionError("region loaded")), \
+                mock.patch.object(nais, "_free_gb", side_effect=AssertionError("disk checked")), \
+                mock.patch.object(nais, "_write_private", side_effect=AssertionError("output written")), \
+                redirect_stderr(err), self.assertRaises(SystemExit) as raised:
+            nais.main(argv, source=source, out=out)
+        self.assertEqual(raised.exception.code, 2)
+        self.assertEqual(source.calls, [])
+        self.assertEqual(out.getvalue(), "")
+        self.assertTrue(err.getvalue().rstrip().endswith("error: --targets is not a readable JSON file"))
+        for private in ("999000001", "999000002", str(self.targets)):
+            self.assertNotIn(private, err.getvalue().split("error:")[1])
+        self.assertFalse((self.dir / "private.json").exists())
+
+    def test_valid_unique_labels_unchanged(self):
+        self.targets.write_text('{"A": 999000001}')
+        self.assertEqual(nais._targets(str(self.targets)), {"A": 999000001})
+        five = {c: 999000000 + i for i, c in enumerate("EDCBA", 1)}
+        self.targets.write_text(json.dumps(five))
+        result = nais._targets(str(self.targets))
+        self.assertEqual(result, five)
+        self.assertEqual(list(result), list("EDCBA"))
+        self.targets.write_text('{"A": 999000001, "B": 999000001}')
+        with self.assertRaisesRegex(ValueError, "share one MMSI"):
+            nais._targets(str(self.targets))
+
     def test_no_worker_is_constructed(self):
         with mock.patch("skippercast.fleet.ais.process.Worker", Worker, create=True), \
                 mock.patch("skippercast.fleet.ais.backfill.backfill", side_effect=AssertionError("backfill called")):

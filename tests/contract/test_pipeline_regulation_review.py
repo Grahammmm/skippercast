@@ -74,6 +74,31 @@ class ReviewGate(TestCase):
             self.packet['sources']['rules-book'][field] = value
             self.assertEqual(rules.regulatory_snapshot(self.packet['sources'],self.now,approved)['checks']['rules-book']['status'],expected)
 
+    def test_site_furniture_does_not_change_the_fingerprint_but_main_content_does(self):
+        page = lambda css, footer, calendar, rule, doc: (
+            f'<html><head><link href="/site.css?cdv={css}" rel="stylesheet"></head><body>'
+            f'<header><a href="{calendar}">Calendar</a></header>'
+            f'<main><h1>rules</h1><p>{rule}</p><a href="{doc}">current booklet</a></main>'
+            f'<footer><a href="/News">{footer}</a></footer></body></html>')
+        base = page(1408, 'News Room', 'https://cal.example/old', 'Season open.', 'one.pdf')
+        watched = page_watch(base, ['rules'])
+        self.assertEqual(watched['normalization'], 'text-and-links-v4')
+        # A stylesheet version, a renamed footer link and a header widget are the site's furniture.
+        self.assertEqual(watched['content_sha256'], page_watch(page(1409, 'Newsroom', 'https://cal.example/new', 'Season open.', 'one.pdf'), ['rules'])['content_sha256'])
+        # The rule's wording and the document it links to are the content.
+        self.assertNotEqual(watched['content_sha256'], page_watch(page(1408, 'News Room', 'https://cal.example/old', 'Season closed.', 'one.pdf'), ['rules'])['content_sha256'])
+        self.assertNotEqual(watched['content_sha256'], page_watch(page(1408, 'News Room', 'https://cal.example/old', 'Season open.', 'two.pdf'), ['rules'])['content_sha256'])
+        # Expected words must be in the content itself, not only in the furniture.
+        with self.assertRaises(ValueError): page_watch(base.replace('<h1>rules</h1>', '').replace('News Room', 'rules'), ['rules'])
+
+    def test_a_page_without_exactly_one_main_is_watched_whole(self):
+        none = lambda footer: f'<p>rules</p><a href="one.pdf">booklet</a><div><a href="/News">{footer}</a></div>'
+        self.assertNotEqual(page_watch(none('News Room'), ['rules'])['content_sha256'], page_watch(none('Newsroom'), ['rules'])['content_sha256'])
+        two = lambda footer: f'<main><p>rules</p></main><main><p>more</p></main><footer>{footer}</footer>'
+        self.assertNotEqual(page_watch(two('a'), ['rules'])['content_sha256'], page_watch(two('b'), ['rules'])['content_sha256'])
+        # Stylesheet <link> tags are never document links, with or without a main.
+        self.assertEqual(page_watch('<link href="a.css?v=1"><p>rules</p>', ['rules'])['content_sha256'], page_watch('<link href="a.css?v=2"><p>rules</p>', ['rules'])['content_sha256'])
+
     def test_document_link_changes_are_watched_even_when_link_text_is_unchanged(self):
         a = page_watch('<p>rules</p><a href="one.pdf">current booklet</a>', ['rules'])
         b = page_watch('<p>rules</p><a href="two.pdf">current booklet</a>', ['rules'])

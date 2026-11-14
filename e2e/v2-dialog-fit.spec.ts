@@ -1,5 +1,5 @@
 import type {Locator, Page} from '@playwright/test';
-import {test, expect} from './fixtures.ts';
+import {test, expect, setSize, wideViewport} from './fixtures.ts';
 import {stubLiveFeeds} from '../scripts/measure_startup.mjs';
 
 const sizes = [{width: 360, height: 640}, {width: 390, height: 844}, {width: 844, height: 390}];
@@ -28,8 +28,11 @@ async function fits(dialog: Locator, actions?: Locator) {
 }
 
 async function account(page: Page, name: RegExp | string) {
-  await page.locator('.ui-sheet-handle').focus();
-  await page.keyboard.press('End');
+  // The desktop layout (nightly laptop projects) has no sheet: the account trigger is already in view.
+  if (await page.locator('.ui-sheet-handle').count()) {
+    await page.locator('.ui-sheet-handle').focus();
+    await page.keyboard.press('End');
+  }
   await page.locator('.app-account-trigger').click();
   await page.locator('.app-account-panel').getByRole('button', {name}).click();
 }
@@ -46,7 +49,8 @@ async function scrollChecks(dialog: Locator, actions: Locator, last: Locator) {
 
 for (const size of sizes) {
   test(`dialogs_fit_phone_and_landscape_without_action_autoscroll ${size.width}x${size.height}`, async ({page, v2, pageErrors}) => {
-    await page.setViewportSize(size);
+    test.skip(!!wideViewport() && size !== sizes[0], 'a nightly project runs one case, at its own size');
+    await setSize(page, size);
     await page.addInitScript(() => localStorage.setItem('skippercast-profile-v1', 'boat'));
     await stubLiveFeeds(page);
     await v2.open('app', {region: 'morro-bay', profile: 'boat'});
@@ -95,7 +99,7 @@ for (const size of sizes) {
 
 for (const profile of ['boat', 'spear']) {
   test(`dialog_scroll_keeps_actions_and_content_reachable ${profile} light`, async ({page, v2}) => {
-    await page.setViewportSize({width: 844, height: 390});
+    await setSize(page, {width: 844, height: 390});
     await page.addInitScript(p => {
       localStorage.setItem('skippercast-profile-v1', p);
       localStorage.setItem('skippercast-limits-v1', JSON.stringify({spear: {from: 'shore'}}));
@@ -134,3 +138,57 @@ for (const profile of ['boat', 'spear']) {
     await fits(offline, save);
   });
 }
+
+// R-P3 (UXFIX-03): a scroll area with more below shows the 16 px bottom fade (data-more) until its end; sticky action rows stay whole.
+const cue = (el: Locator) => el.evaluate(e => (e as HTMLElement).dataset.more ?? null);
+const maskOf = (el: Locator) => el.evaluate(e => getComputedStyle(e).maskImage);
+const toEnd = (el: Locator) => el.evaluate(e => { e.scrollTop = e.scrollHeight; });
+
+for (const size of [{width: 390, height: 844}, {width: 844, height: 390}]) {
+  test(`scroll_cue_fades_the_port_list_until_its_end ${size.width}x${size.height}`, async ({page, v2}) => {
+    await page.setViewportSize(size);
+    await page.addInitScript(() => localStorage.setItem('skippercast-profile-v1', 'boat'));
+    await stubLiveFeeds(page);
+    await v2.open('app', {region: 'morro-bay', profile: 'boat'});
+    await page.locator('button.app-port').dispatchEvent('click');
+    const port = page.locator('dialog.port-dialog');
+    await expect(port).toBeVisible();
+    const list = port.locator('.port-input-results');
+    await page.getByRole('button', {name: /^See all \d+ ports/}).click();
+    expect(await list.evaluate(e => e.scrollHeight > e.clientHeight)).toBe(true);
+    await list.evaluate(e => { e.scrollTop = 0; });
+    await expect.poll(() => cue(list)).toBe('true');
+    expect(await maskOf(list)).not.toBe('none');
+    await toEnd(list);
+    await expect.poll(() => cue(list)).toBe('false');
+    expect(await maskOf(list)).toBe('none');
+    // A short list does not overflow, so it never fades.
+    await port.getByRole('searchbox').fill('Morro');
+    await expect(port.locator('.port-input-option')).toHaveCount(1);
+    expect(await list.evaluate(e => e.scrollHeight <= e.clientHeight)).toBe(true);
+    await expect.poll(() => cue(list)).toBe('false');
+    await page.keyboard.press('Escape');
+  });
+}
+
+test('scroll_cue_fades_limits_and_keeps_the_sticky_save_row_unmasked', async ({page, v2}) => {
+  await page.setViewportSize({width: 844, height: 390});
+  await page.addInitScript(() => localStorage.setItem('skippercast-profile-v1', 'boat'));
+  await stubLiveFeeds(page);
+  await v2.open('app', {region: 'morro-bay', profile: 'boat'});
+  await page.locator('.app-limits-trigger').click();
+  const limits = page.locator('dialog.app-limits-dialog').first();
+  await expect(limits).toBeVisible();
+  const actions = limits.locator('.app-limits-actions');
+  await limits.evaluate(e => { e.scrollTop = 0; });
+  await expect.poll(() => cue(limits)).toBe('true');
+  expect(await maskOf(limits)).not.toBe('none');
+  expect(await maskOf(actions)).toBe('none');
+  // The fade ends above the sticky row: the inset reaches from the dialog's bottom edge to the row's top edge.
+  const gap = await limits.evaluate((e, a) => parseFloat((e as HTMLElement).style.getPropertyValue('--cue-inset')) - (e.getBoundingClientRect().bottom - (a as HTMLElement).getBoundingClientRect().top), await actions.elementHandle());
+  expect(Math.abs(gap)).toBeLessThanOrEqual(1);
+  await toEnd(limits);
+  await expect.poll(() => cue(limits)).toBe('false');
+  expect(await maskOf(limits)).toBe('none');
+  await page.keyboard.press('Escape');
+});

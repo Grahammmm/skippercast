@@ -17,12 +17,13 @@ import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {mapSourceHosts, naipSource} from '../packages/coast/src/map-sources.ts';
 import {
-  AERIAL_CATALOG_ID, AERIAL_DEFAULT_OPACITY, AERIAL_DEFAULT_SATURATION, AERIAL_OPACITY, AERIAL_SATURATION, aerialAttribution, aerialBase, aerialId, aerialOffer, aerialOverlay, createAerial, flownText,
+  AERIAL_CATALOG_ID, AERIAL_DEFAULT_OPACITY, AERIAL_DEFAULT_SATURATION, AERIAL_OPACITY, AERIAL_SATURATION, IMAGERY_HEAD_START_MS, aerialAttribution, aerialBase, aerialId, aerialOffer, aerialOverlay, createAerial, createImageryStartup, flownText,
 } from '../web/map/aerial.ts';
-import {ENC_LAYER, chartStyle, unavailable} from '../web/map/chart.ts';
+import {ENC_LAYER, chartStyle, markUnavailable, unavailable} from '../web/map/chart.ts';
 import {createEngine} from '../web/map/engine.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
+import {createVerdictLoad, SOURCES} from '../web/brief/verdict-load.ts';
 
 const PAGE = 'https://s.test/map';
 const json = path => JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'));
@@ -30,6 +31,46 @@ const regionIds = readdirSync(new URL('../regions/', import.meta.url), {withFile
   .filter(entry => entry.isDirectory() && existsSync(new URL(`../regions/${entry.name}/region.json`, import.meta.url))).map(entry => entry.name);
 const MORRO = aerialBase(json('dist/regions/morro-bay/region.json'));
 const origin = template => new URL(template.replace('{bbox-epsg-3857}', '0,0,1,1')).origin;
+
+test('SCB-12: imagery releases on terminal success, failure or timeout, never re-holds on refresh, and disposes', () => {
+  for (const outcome of ['loaded', 'failed', 'timedout']) {
+    const epoch = signal(null);
+    let timeout;
+    const load = createVerdictLoad(value => { epoch.value = value; }, {set: fn => { timeout = fn; return 1; }, clear() {}});
+    const startup = createImageryStartup(() => epoch.value?.sealed === true);
+    const ticket = load.start('morro-bay');
+    assert.equal(startup.ready.value, false);
+    if (outcome === 'timedout') timeout();
+    else for (const source of SOURCES) load.settle(ticket, source, {state: outcome});
+    assert.equal(startup.ready.value, true, outcome);
+    load.request(['forecast']);
+    assert.equal(startup.ready.value, true, 'refresh never withdraws already released imagery');
+    startup.destroy();
+    load.reset();
+  }
+  const settled = signal(false), startup = createImageryStartup(() => settled.value);
+  startup.destroy();
+  settled.value = true;
+  assert.equal(startup.ready.value, false, 'destroyed stages stop following the brief');
+});
+
+test('SCB-12: a held brief releases imagery at the head-start boundary, without sealing the verdict', t => {
+  t.mock.timers.enable({apis: ['setTimeout']});
+  const epoch = signal(null), load = createVerdictLoad(value => { epoch.value = value; });
+  load.start('morro-bay');
+  const startup = createImageryStartup(() => epoch.value?.sealed === true);
+  t.mock.timers.tick(IMAGERY_HEAD_START_MS - 1);
+  assert.equal(startup.ready.value, false);
+  t.mock.timers.tick(1);
+  assert.equal(startup.ready.value, true);
+  assert.equal(epoch.value.sealed, false, 'map progress never manufactures a weather answer');
+  startup.destroy();
+  load.reset();
+  const stopped = createImageryStartup(() => false);
+  stopped.destroy();
+  t.mock.timers.tick(IMAGERY_HEAD_START_MS);
+  assert.equal(stopped.ready.value, false, 'unmounted stages cancel the release timer');
+});
 
 test('the aerial base is read from the region package, only where it names usgs-naip with ordered dates', () => {
   const config = json('regions/morro-bay/region.json').basemap.aerial;
@@ -133,6 +174,85 @@ test('a tile error marks only Aerial unavailable, and choosing it again retries'
   unavailable.value = [];
 });
 
+// SC1407-07: the format the drawn overlay asks USGS for, and its source ids.
+const formatOf = overlay => overlay && new URL(Object.values(overlay.sources)[0].tiles[0].replace('{bbox-epsg-3857}', '0,0,1,1')).searchParams.get('format');
+const sourceIds = overlay => Object.keys(overlay?.sources ?? {});
+
+test('a failed jpgpng draw is retried once as png32; a failed png32 draw stays unavailable; a new draw starts at jpgpng', t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay&base=aerial`);
+  unavailable.value = ['clouds'];
+  const e = engine(), live = signal(e), offer = signal(MORRO);
+  const a = createAerial({engine: live, offer: () => offer.value});
+  assert.equal(formatOf(e.overlay), 'jpgpng');
+  assert.deepEqual(sourceIds(e.overlay), [aerialId(MORRO)]);
+  assert.equal(e.calls, 1);
+
+  markUnavailable('aerial');
+  assert.equal(formatOf(e.overlay), 'png32', 'the first failure swaps in png32');
+  assert.deepEqual(sourceIds(e.overlay), [`${aerialId(MORRO)}:png32`], 'its own source, so the jpgpng source is removed');
+  assert.deepEqual(e.overlay.layers.map(l => [l.id, l.source]), [[`${aerialId(MORRO)}:png32`, `${aerialId(MORRO)}:png32`]]);
+  assert.equal(Object.values(e.overlay.sources)[0].attribution, aerialAttribution(MORRO), 'the dated credit stays');
+  assert.equal(e.before, ENC_LAYER);
+  assert.deepEqual(unavailable.value, ['clouds'], 'only Aerial\'s own flag is cleared for the retry');
+  assert.equal(e.calls, 2);
+
+  markUnavailable('aerial');
+  markUnavailable('aerial');
+  assert.deepEqual(unavailable.value, ['clouds', 'aerial'], 'the fallback failing stays unavailable');
+  assert.equal(formatOf(e.overlay), 'png32');
+  assert.equal(e.calls, 2, 'no retry loop');
+  markUnavailable('mpas');
+  assert.equal(e.calls, 2, 'another layer\'s failure changes nothing here');
+
+  setParams({base: 'night'});
+  assert.equal(e.overlay, null);
+  assert.deepEqual(unavailable.value, ['clouds', 'mpas'], 'switching away clears only Aerial');
+  setParams({base: 'aerial'});
+  assert.equal(formatOf(e.overlay), 'jpgpng', 'chosen again: jpgpng first');
+  assert.equal(e.calls, 4);
+  markUnavailable('chart');
+  assert.equal(formatOf(e.overlay), 'jpgpng', 'an unrelated failure does not swap the format');
+  assert.equal(e.calls, 4);
+
+  // Another region's draw: straight to its own jpgpng overlay, never through png32.
+  markUnavailable('aerial');
+  assert.equal(formatOf(e.overlay), 'png32');
+  const OTHER = {...MORRO, first: '2024-06-01', last: '2024-06-09', checkedAt: '2024-07-01'};
+  offer.value = OTHER;
+  assert.equal(e.calls, 6, 'one redraw for the region change');
+  assert.deepEqual(sourceIds(e.overlay), [aerialId(OTHER)]);
+  assert.equal(formatOf(e.overlay), 'jpgpng');
+
+  // Another engine: the retry already used on the old one does not carry over.
+  markUnavailable('aerial');
+  assert.equal(formatOf(e.overlay), 'png32');
+  const next = engine();
+  live.value = next;
+  assert.equal(next.calls, 1);
+  assert.equal(formatOf(next.overlay), 'jpgpng');
+  assert.ok(!unavailable.value.includes('aerial'));
+  markUnavailable('aerial');
+  assert.equal(formatOf(next.overlay), 'png32', 'one retry on the new engine too');
+  assert.equal(next.calls, 2);
+
+  // Not drawn, or destroyed: a failure requests nothing.
+  offer.value = null;
+  assert.equal(next.overlay, null);
+  const calls = next.calls;
+  markUnavailable('aerial');
+  assert.equal(next.calls, calls, 'no request while Aerial is not offered');
+  assert.ok(unavailable.value.includes('aerial'));
+  offer.value = MORRO;
+  assert.equal(formatOf(next.overlay), 'jpgpng');
+  a.destroy();
+  markUnavailable('aerial');
+  assert.equal(next.calls, calls + 1, 'a destroyed controller swaps nothing');
+  assert.ok(unavailable.value.includes('aerial'));
+  assert.ok([...e.tiles, ...next.tiles].every(t => origin(t) === 'https://imagery.nationalmap.gov'));
+  unavailable.value = [];
+});
+
 /** A fake MapLibre map for the engine's overlay calls (as tests/test_clouds_layer.mjs). */
 function library() {
   const fake = {maps: []};
@@ -162,7 +282,7 @@ function library() {
 test('in the Chart style the base waits for style.load, then sits over the basemap and under the ENC chart', t => {
   t.mock.method(console, 'error', () => {});
   const fake = library(), errors = [];
-  const style = chartStyle({palette: readPalette(name => `token(${name})`), archive: 'https://s.test/feeds/tiles/basemap/x.pmtiles', page: PAGE, region: 'morro-bay', base: 'aerial'});
+  const style = chartStyle({palette: readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), archive: 'https://s.test/feeds/tiles/basemap/x.pmtiles', page: PAGE, region: 'morro-bay', base: 'aerial'});
   const eng = createEngine(fake.module, {host: {}, style, camera: {latitude: 35.37, longitude: -120.86, zoom: 12}, onMove() {},
     onLayerError: (layer, error) => errors.push([layer, error.message])});
   const [map] = fake.maps, id = aerialId(MORRO);
@@ -177,6 +297,34 @@ test('in the Chart style the base waits for style.load, then sits over the basem
   eng.setOverlay('aerial', null);
   assert.equal(map.getSource(id), undefined);
   assert.equal(map.layers.indexOf(id), -1);
+});
+
+test('the png32 fallback replaces the jpgpng source, so a late error from the retired source is not Aerial\'s', t => {
+  const logged = t.mock.method(console, 'error', () => {});
+  const fake = library(), errors = [];
+  const style = chartStyle({palette: readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`), archive: 'https://s.test/feeds/tiles/basemap/x.pmtiles', page: PAGE, region: 'morro-bay', base: 'aerial'});
+  const eng = createEngine(fake.module, {host: {}, style, camera: {latitude: 35.37, longitude: -120.86, zoom: 12}, onMove() {},
+    onLayerError: (layer, error) => errors.push([layer, error.message])});
+  const [map] = fake.maps;
+  map.fire('style.load');
+  const jpg = aerialOverlay(MORRO), png = aerialOverlay(MORRO, 'png32');
+  const [jid] = sourceIds(jpg), [pid] = sourceIds(png);
+  assert.equal(jid, aerialId(MORRO), 'the default form keeps its id');
+  assert.notEqual(pid, jid);
+  assert.deepEqual(png.layers[0].paint, jpg.layers[0].paint);
+  assert.deepEqual({...png.sources[pid], tiles: null}, {...jpg.sources[jid], tiles: null}, 'same size, zooms and dated credit; only the format differs');
+  eng.setOverlay('aerial', jpg, ENC_LAYER);
+  map.fire('error', {sourceId: jid, error: new Error('400')});
+  eng.setOverlay('aerial', png, ENC_LAYER);
+  assert.equal(map.getSource(jid), undefined, 'the jpgpng source is gone');
+  assert.ok(map.getSource(pid));
+  assert.equal(map.layers[map.layers.indexOf(pid) + 1], ENC_LAYER, 'still directly under the ENC chart');
+  map.fire('error', {sourceId: jid, error: new Error('late')});
+  map.fire('error', {sourceId: pid, error: new Error('500')});
+  assert.deepEqual(errors, [['aerial', '400'], ['aerial', '500']], 'the retired source\'s late error is not the fallback\'s failure');
+  assert.equal(logged.mock.callCount(), 0, 'RF1935-3: the retired source\'s late error is dropped, not a generic Chart error');
+  assert.equal(jpg.stopOnError, true);
+  assert.equal(png.stopOnError, true, 'both formats opt in to the source stop');
 });
 
 test('the rail\'s base choice offers Aerial only where the region has it, labelled with its dates', async () => {

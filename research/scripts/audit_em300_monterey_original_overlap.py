@@ -68,7 +68,7 @@ def build(root, fetch=False):
     verify(cache, fetch)
     recent_path = ensure_newer(root, fetch)
     matrix_path = root / "research/receipts/monterey-300-source-evidence-matrix.json"
-    context_path = root / "dist/data/usgs-offshore-monterey-hard-context.geojson"
+    context_path = root / "research/receipts/usgs-offshore-monterey-hard-context.geojson"
     old_receipt_path = root / "research/receipts/monterey-1995-original-multibeam-overlap.json"
     matrix = json.loads(matrix_path.read_text())
     context = json.loads(context_path.read_text())

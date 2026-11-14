@@ -131,7 +131,14 @@ class SqliteSink:
             raise SinkRefused(f"invalid region or run id: {region!r} {run_id!r}")
         self.region, self.run_id, self.clock = region, run_id, clock
         self.db = sqlite3.connect(str(path), isolation_level=None)
-        self.migrate(root or repo_root())
+        try:
+            self.migrate(root or repo_root())
+        except BaseException:
+            try:  # the constructor owns the connection until it returns; never mask the original failure
+                self.db.close()
+            except Exception:
+                pass
+            raise
 
     def migrate(self, root: Path) -> None:
         """Apply drizzle/<tag>.sql in _journal.json order, each once (tracked in _skippercast_migrations)."""
