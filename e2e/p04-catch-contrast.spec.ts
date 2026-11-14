@@ -255,7 +255,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SCB-12: MapStage stages Chart imagery behind the first brief settlement and delays its first-idle mark.
   // BODY09 mounts Reports/CatchCards directly, never MapStage; its catch markup, styles, paint, contrast(),
   // assertions and thresholds are unchanged. Rebind only MapStage.tsx; this does not grant a BODY09 run.
-  "web/app/MapStage.tsx": "3e4992ba6e13e22c0c5f367573caa28307a6cba3704ab25be084c746c85ce64d",
+  // R4-SC-09: MapStage.tsx only imports createSharpStart and seafloorState and passes a `sharp` signal to the Chart's
+  // createAerial (aerial preview first, full image later). BODY09 mounts Reports/CatchCards directly, never MapStage;
+  // no class, token, catch markup, paint, contrast(), assertion or threshold change. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "b44757a357bba098044818406957d0c577938ab2afca7b20af53a97123f9a642",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   "web/tokens.css": "56f9708cfa02f651680a2bc02bd3d9080f65dec849aea6888f6bfc52508a5775",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
