@@ -23,11 +23,11 @@ From the repository root:
 ```bash
 python3 -m pip install -e ".[test]"
 python3 -m pytest -m "not gis"
-PYTHONPATH=src python3 -m skippercast demo
+python3 -m skippercast --help
 python3 scripts/check_repository.py
 ```
 
-Tests and CI must remain offline. Use synthetic fixtures for provider edge cases. Check missing values, coverage, units, issue times, returned grids, and delivery-state semantics when changing the monitor. An attractive screen is not evidence that a trip qualifies.
+Tests and CI must remain offline. Use synthetic fixtures for provider edge cases. Check missing values, coverage, units, issue times, returned grids, and delivery-state semantics when changing forecast or alert code. An attractive screen is not evidence that a trip qualifies.
 
 When changing atlas data, document the source, date, rights, datum, method, exclusions, and validation scope. Regenerate exports into a temporary output folder first and review the changes. Source checks and current on-water/legal conditions are different claims.
 

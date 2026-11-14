@@ -16,11 +16,11 @@
 //   (scripts/startup-budget.json "bundles"; FE-09, front-end design § 13).
 // - The install precache and the offline pack's app shell stay within their raw
 //   byte budgets (scripts/startup-budget.json "precache"; FE-51).
-import {readdir, readFile} from 'node:fs/promises';
+import {readdir, readFile, writeFile} from 'node:fs/promises';
 import {join, posix} from 'node:path';
 import {gzipSync} from 'node:zlib';
 import {MANIFEST, STABLE} from './client-build.mjs';
-import {installAssets, SHELLS} from './precache.mjs';
+import {appStartup, installAssets, SHELLS} from './precache.mjs';
 
 const dir = process.argv[2] || 'dist/client';
 const budgetFile = process.argv[4] || new URL('./startup-budget.json', import.meta.url).pathname;
@@ -113,6 +113,17 @@ if (!(await readFile(join(dir, '.assetsignore'), 'utf8').catch(() => '')).includ
 const budgets = JSON.parse(await readFile(budgetFile, 'utf8')).bundles || {};
 const gzipped = async file => gzipSync(await readFile(join(dir, file)), {level: 9}).length;
 const measured = [];
+// A budget fails only above its number; from WARN_RATIO of it the check still passes but says so (an annotation
+// in GitHub Actions). Keep equal to WARN_RATIO in scripts/check_perf_budget.py (tests/unit/test_budget_drift.py).
+// BUDGET_MEASUREMENTS_OUT=<file> also writes every measured number for scripts/budget_drift.py.
+const WARN_RATIO = 0.97;
+const measurements = {bundles: {}, precache: {}};
+const nearBudget = (what, size, max) => {
+  if (Number.isFinite(max) && size <= max && size >= WARN_RATIO * max) {
+    const note = `${what} is ${size} B, ${(size / max * 100).toFixed(1)}% of its ${max} B budget; it passes, and main's budget-drift bot raises the ceiling in its own pull request`;
+    console.warn(process.env.GITHUB_ACTIONS === 'true' ? `::warning title=Client budget near its ceiling::${note}` : `WARN: ${note}`);
+  }
+};
 for (const [page, budget] of Object.entries(budgets)) {
   if (page === 'comment' || !manifest[page]) continue;
   const js = new Set(), css = new Set();
@@ -123,12 +134,14 @@ for (const [page, budget] of Object.entries(budgets)) {
     for (const file of e.css || []) css.add(file);
     (e.imports || []).forEach(walk);
   };
-  walk(page);
+  for (const root of page === 'app.html' ? appStartup(manifest) : [page]) walk(root);
   const total = async files => { let n = 0; for (const f of files) n += await exists(f) ? await gzipped(f) : 0; return n; };
   const size = {js: await total(js), css: await total(css)};
   measured.push(`${page} js ${size.js} B, css ${size.css} B gzipped`);
+  measurements.bundles[page] = size;
   for (const kind of ['js', 'css']) {
     const max = budget[`${kind}_gzip_max`];
+    nearBudget(`${page} initial ${kind === 'js' ? 'JavaScript' : 'CSS'} (gzipped)`, size[kind], max);
     if (Number.isFinite(max) && size[kind] > max) problems.push(`${page}: initial ${kind === 'js' ? 'JavaScript' : 'CSS'} ${size[kind]} B gzipped exceeds its budget of ${max} B (${budgetFile})`);
   }
 }
@@ -147,12 +160,16 @@ if (precache) {
     pack_shell: await raw([...(precache.v2?.assets || []), ...(precache.v2?.static || [])]),
   };
   measured.push(`precache install ${sizes.install} B, pack shell ${sizes.pack_shell} B raw`);
+  Object.assign(measurements.precache, sizes);
   for (const [name, size] of Object.entries(sizes)) {
     const max = precacheBudget?.[`${name}_raw_max`];
+    nearBudget(`precache ${name.replace('_', ' ')} (raw)`, size, max);
     if (precacheBudget && !Number.isFinite(max)) problems.push(`${budgetFile}: precache.${name}_raw_max is missing or not a number`);
     else if (Number.isFinite(max) && size > max) problems.push(`precache ${name.replace('_', ' ')} is ${size} B raw, over its budget of ${max} B (${budgetFile})`);
   }
 }
+
+if (process.env.BUDGET_MEASUREMENTS_OUT) await writeFile(process.env.BUDGET_MEASUREMENTS_OUT, JSON.stringify(measurements, null, 2) + '\n');
 
 // 7. The Chart loads MapLibre and PMTiles only by dynamic import (FE-11).
 // The v2 app loads three and the coast renderer only by dynamic import on the
@@ -181,7 +198,7 @@ if (manifest['app.html']) {
     else if (THREE_MARKERS.some(marker => code.includes(marker))) problems.push(`app.html statically imports ${e.file}, which contains three`);
     for (const next of e.imports || []) await walk(next);
   };
-  await walk('app.html');
+  for (const root of appStartup(manifest)) await walk(root);
 }
 
 if (problems.length) {

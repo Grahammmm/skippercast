@@ -12,6 +12,7 @@ import {readFileSync} from 'node:fs';
 import {inflateSync} from 'node:zlib';
 import type {Locator, Page, Route} from '@playwright/test';
 import {chartCentre, expect, PIXEL, test, type V2} from './fixtures.ts';
+import {quarantine} from '../scripts/e2e-flakes.mjs';
 
 const UNAVAILABLE = 'Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable.';
 const PLACE = {region: 'morro-bay', profile: 'spear', target: 'rockfish', hour: '2030-01-02T03:00Z', habitat: 'reef:r1', view: '35.38000,-120.88000,12'};
@@ -390,7 +391,8 @@ test('the first Chart says "Loading the map…" and is busy until its basemap is
   await expect(page.locator('.app-chart[aria-busy="true"]')).toHaveCount(1);
   await expect(page.locator('.app-presentation [aria-busy], .app-presentation[aria-busy]'), 'the status stays in the chrome stack, not busy').toHaveCount(0);
   await expect(page.locator('[data-chart-loading-status]')).toHaveCount(1);
-  expect(asked.length, 'the held basemap was asked for').toBeGreaterThan(0);
+  // SCB-11: the Chart's downloads wait for the first verdict, at most MAP_WAIT_MAX_MS (6 s) when the coast report never answers.
+  await expect.poll(() => asked.length, {message: 'the held basemap was asked for', timeout: 12_000}).toBeGreaterThan(0);
   release();
   await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
   await expect(status).toHaveText('');
@@ -1297,6 +1299,10 @@ async function serveForecast(page: Page, {region = 'morro-bay', issuedHoursAgo =
     models: {ncep_gfswave016: {data, meta: {last_run_initialisation_time: issued / 1000, data_end_time: times.at(-1)}}}}}));
 }
 
+// Same-head recovery: run 43168947180 attempts 1 -> 2. Only this case, not this file.
+const swellQuarantine = quarantine('e2e/v2-map.spec.ts');
+test.describe('SC-CI-3 quarantine', {tag: swellQuarantine.tag}, () => {
+test.describe.configure({retries: swellQuarantine.retries});
 test('Swell draws the model grid as a field with period lines and strokes, names the run, follows the hour and leaves when off', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
   await serveForecast(page);
@@ -1304,6 +1310,8 @@ test('Swell draws the model grid as a field with period lines and strokes, names
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'none', hour: hourParam(horizonStart() + 24 * HOUR_MS)});
   // Inside the grid and clear of the legend and the always-on depth contours.
   const swellProbe = await chartPoint(page, CURRENT_VIEW, SWELL_POINT.lon, SWELL_POINT.lat), x = swellProbe.x, y = swellProbe.y;
+  // A stable pixel before deferred Aerial attaches is not the final water baseline.
+  await expect(page.locator('.app-chart')).toHaveAttribute('aria-busy', 'false');
   let water: number[] = [];
   await expect.poll(async () => { const a = await pixel(page, x, y); await page.waitForTimeout(400); water = await pixel(page, x, y); return apart(a, water); }).toBe(0);
 
@@ -1350,6 +1358,8 @@ test('Swell draws the model grid as a field with period lines and strokes, names
   await collapseSheet(page);
   await expect.poll(async () => apart(await pixel(page, x, y), water), {message: 'the water shows again'}).toBeLessThan(12);
   expect(pageErrors).toEqual([]);
+});
+
 });
 
 test('Swell draws nothing for a stale run or points that form no grid, and says why', async ({page, v2}) => {

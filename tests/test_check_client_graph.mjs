@@ -73,6 +73,21 @@ test('SC1407-08: allows the app entry importing the Chart library wrapper dynami
   assert.equal(r.status, 0, r.output);
 });
 
+test('SCB-12: mandatory shell behind bootstrap retains static-library guards and byte budgets', async t => {
+  const shell = '../web/app/main.tsx';
+  const r = await check(t, {entry: {dynamicImports: [shell]}, chunks: {
+    [shell]: {file: file('main'), imports: ['maplibre-gl']},
+    'maplibre-gl': {file: file('maplibre-gl')},
+  }});
+  assert.equal(r.status, 1, r.output);
+  assert.match(r.output, /MapLibre and PMTiles load by dynamic import only/);
+  const oversized = await check(t, {entry: {dynamicImports: [shell]}, chunks: {[shell]: {file: file('main')}},
+    code: {[file('main')]: Array.from({length: 100000}, (_, i) => `export const a${i}='${i * 7919}';`).join('\n')},
+  });
+  assert.equal(oversized.status, 1, oversized.output);
+  assert.match(oversized.output, /initial JavaScript .* exceeds its budget/);
+});
+
 test('preserves three names, source paths and code markers', async t => {
   for (const chunk of [
     {file: file('three.core')},

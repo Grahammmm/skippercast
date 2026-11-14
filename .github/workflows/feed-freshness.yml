@@ -5,7 +5,8 @@ name: Live feed freshness
 # alerts, tides, forecast models) has served degraded data past its limit; closes
 # each once it recovers. The run is red only when a feed is stale or every source
 # of a critical kind in one feed is out; a partial outage keeps the issue current
-# and stays green. Limits: catalog/feed-health.json.
+# and stays green. Limits: catalog/feed-health.json. The live-conditions alarm-clock
+# dispatches this hourly; the schedule is a fallback if that cycle stops.
 on:
   schedule:
     - cron: "52 * * * *"
@@ -130,11 +131,10 @@ jobs:
           python scripts/site_uptime_alert.py --base "${FEEDS_PUBLIC_BASE:-https://skippercast.g4651.workers.dev}" --report "$RUNNER_TEMP/coast-data.json" \
             --paths /api/coast/habitat/release /api/coast/report /api/coast/ocean \
             --label coast-data-down --title "Coast data path is down" --subject "the coast data service"
-      # Is the rules card blank? On 2026-11 CI stayed green while all seven species read "Check rules". This runs the
-      # app's own rules logic (web/regs.ts) in Node against the live site; one `rules-card-blank` issue stays open while
-      # EVERY species in the default region is unknown, and closes when one has a season status. Not a Python copy of the
-      # rules: that would drift. The install steps cannot fail the job; a failed install or probe crash counts as blank
-      # (fail safe), and the issue is the signal, never the job's result.
+      # Run the app's rules logic for all six Stage 1 regions. Keep one aggregate
+      # issue open if ANY species lacks a status or ANY probe crashes; one healthy
+      # region must never close an alert for a different, unhealthy region.
+      # Install/probe failures count as missing status (fail safe), not job failure.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         continue-on-error: true
         with:
@@ -154,21 +154,31 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set +e
-          gh label create rules-card-blank --color B60205 --description "No species in the active region has a season status" 2>/dev/null || true
-          # Exit 0 is the only healthy answer: 3 is blank, anything else (a crash, a missing install) is blank too.
-          out="$(node scripts/rules_status_probe.mjs --base "${FEEDS_PUBLIC_BASE:-https://skippercast.g4651.workers.dev}" 2>&1)"
-          code=$?
+          gh label create rules-card-blank --color B60205 --description "A beta-region species has no season status, or its probe failed" 2>/dev/null || true
+          # Collect every region before touching the shared issue. Only all-green recovers.
+          code=0
+          out=""
+          for region in morro-bay cambria-san-simeon south-big-sur-san-simeon big-sur-coast monterey-point-sur point-arguello-conception; do
+            result="$(node scripts/rules_status_probe.mjs --region "$region" --base "${FEEDS_PUBLIC_BASE:-https://skippercast.g4651.workers.dev}" 2>&1)"
+            status=$?
+            if [ "$status" != 0 ]; then code=1; fi
+            out+="$region (probe exit $status)"$'\n'"$result"$'\n\n'
+          done
           echo "$out"
           { echo '```'; echo "$out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           existing="$(gh issue list --label rules-card-blank --state open --json number --jq '.[0].number')"
           listed=$?  # a failed list must not open a duplicate
           if [ "$code" = 0 ]; then
             for number in $(gh issue list --label rules-card-blank --state open --json number --jq '.[].number'); do
-              gh issue close "$number" --comment "Recovered: at least one species in the active region has a season status again. ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+              gh issue close "$number" --comment "Recovered: every species in all six Stage 1 regions has a season status again. ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             done
-          elif [ "$listed" = 0 ] && [ -z "$existing" ]; then
-            body="Every species in the active region reads \"Check rules\" (probe exit code $code), or the probe could not run. The rules card shows no season status to anglers."$'\n\n'"$out"$'\n\n'"Opened by ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}. One issue per event: it closes by itself when a species has a season status again (rules review, then approval)."
-            gh issue create --label rules-card-blank --title "Rules card is blank: no species has a season status" --body "$body"
+          elif [ "$listed" = 0 ]; then
+            body="At least one species in a Stage 1 region reads \"Check rules\", or a region's probe could not run. Per-region results follow."$'\n\n'"$out"$'\n\n'"Updated by ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}. One issue per event: it closes only when every species in all six regions has a season status again (rules review, then approval)."
+            if [ -n "$existing" ]; then
+              gh issue edit "$existing" --body "$body"
+            else
+              gh issue create --label rules-card-blank --title "Rules status missing in a beta region" --body "$body"
+            fi
           fi
           exit 0
       # Red only for a stale feed or a whole critical kind out; a partial outage stays green.
