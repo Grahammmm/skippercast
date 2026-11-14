@@ -142,7 +142,7 @@ test('with the language es the first answer, the brief and its footer render Spa
     assert.doesNotMatch(esBrief, /Comfortable|Rough|tomorrow/);
     assert.match(esBrief, /Fuera de la temporada local revisada\./, 'the rules reason is app wording, in Spanish'); assert.doesNotMatch(esBrief, /Outside the reviewed local season|\(en inglés\)/);
     assert.doesNotMatch(enBrief, /lang="en"|en inglés/);
-    assert.ok(footer.includes(t('brief.disclaimer', 'es')) && footer.includes('>Fuentes<'), footer);
+    assert.ok(footer.includes(t('brief.disclaimer', 'es')) && footer.includes('>Términos<') && footer.includes('>Fuentes<'), footer);
     assert.match(m.render(m.h(m.BriefTiles, {brief: null})), /Viento.*Oleaje.*Agua.*Marea/s);
     assert.match(m.render(m.h(m.Details, {brief: null})), /<summary>Detalles/);
     m.feedGaps.value = [m.FEED_GAP.conditions, 'a gap the catalogue does not know'];
