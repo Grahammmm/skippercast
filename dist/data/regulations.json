@@ -3,7 +3,7 @@
   "revision": "2026-09-25-central-south-big-sur-area-review",
   "reviewed_at": "2026-09-25T08:09:03Z",
   "valid_from": "2026-09-21",
-  "valid_through": "2026-12-31",
+  "valid_through": "2027-03-31",
   "timezone": "America/Los_Angeles",
   "area": "Avila–Cambria · California recreational boat fishing",
   "scope": "Area-wide season rules for this coast and adjacent U.S. waters. Not a location-specific clearance.",
@@ -262,7 +262,7 @@
   "species": {
     "lingcod": {
       "name": "Lingcod",
-      "season": "Apr 1–Dec 31, 2026 · boat fishing at all depths in the Central Management Area.",
+      "season": "Apr 1–Dec 31 · boat fishing at all depths in the Central Management Area. Closed Jan 1–Mar 31, including early 2027; CDFW has not yet published a 2027 groundfish summary.",
       "windows": [
         {
           "start": "2026-04-01",
@@ -272,6 +272,7 @@
       "bag": "2 per person daily; 2 in possession. Separate from the 10-fish RCG limit.",
       "size": "22 in minimum total length.",
       "details": [
+        "Jan 1–Mar 31 is closed to rockfish and lingcod (T14 CCR §27.40(b)(1), printed without a year in the 2026 booklet). The 2027 summary is not out; check CDFW before the Apr 1 opener.",
         "Use one line with no more than two hooks when targeting lingcod, or when lingcod are aboard. Your double-drop rig fits that limit.",
         "Carry a descending device ready for immediate use.",
         "Fillets aboard: at least 14 in, with all skin attached."
@@ -296,7 +297,7 @@
     },
     "rockfish": {
       "name": "Rockfish / rock cod",
-      "season": "Apr 1–Dec 31, 2026 · boat fishing at all depths in the Central Management Area.",
+      "season": "Apr 1–Dec 31 · boat fishing at all depths in the Central Management Area. Closed Jan 1–Mar 31, including early 2027; CDFW has not yet published a 2027 groundfish summary.",
       "windows": [
         {
           "start": "2026-04-01",
@@ -306,6 +307,7 @@
       "bag": "10 total rockfish, cabezon and greenlings combined per person daily and in possession.",
       "size": "No minimum length for retained rockfish. Species must be identified.",
       "details": [
+        "Jan 1–Mar 31 is closed to rockfish and lingcod (T14 CCR §27.40(b)(1), printed without a year in the 2026 booklet). The 2027 summary is not out; check CDFW before the Apr 1 opener.",
         "Within the 10: at most 1 copper, 2 canary, and 2 vermilion/sunset rockfish combined.",
         "No retention of yelloweye, quillback, cowcod or bronzespotted rockfish.",
         "Use one line with no more than two hooks when targeting rockfish, or when rockfish are aboard. Carry a descending device ready for use.",
@@ -331,11 +333,11 @@
     },
     "halibut": {
       "name": "California halibut",
-      "season": "Year-round in the reviewed 2026 rules. This card covers waters south of Point Sur.",
+      "season": "Year-round (T14 CCR §28.15). This card covers waters south of Point Sur. The 2027 booklet is not out; the reviewed rules are the 2026 booklet.",
       "windows": [
         {
           "start": "2026-01-01",
-          "end": "2026-12-31"
+          "end": "2027-03-31"
         }
       ],
       "bag": "5 per person daily; 5 in possession.",
@@ -364,12 +366,14 @@
     },
     "salmon": {
       "name": "Chinook salmon",
-      "season": "Closed for the remainder of 2026. 2027 ocean salmon season dates are set in March and April 2027.",
+      "season": "Closed for the remainder of 2026 and through the 2027 spring. The booklet lists an Apr 3, 2027 opener south of Pigeon Point, but CDFW sets the 2027 dates in March and April 2027. Treat as closed until CDFW confirms.",
       "windows": [],
-      "bag": "None: the recreational ocean salmon fishery is closed for the rest of 2026.",
+      "bag": "None: the recreational ocean salmon fishery is closed until its 2027 opening.",
       "size": "Not applicable while the fishery is closed.",
       "details": [
         "CDFW Central Region page (updated Nov 7, 2026): the recreational ocean salmon fishery is closed for the remainder of the year. 2027 dates are not yet set; check CDFW before any 2027 trip.",
+        "2026 booklet (T14 CCR §27.80(e), (f)): closed statewide until the 2027 opening dates; Pigeon Point to the U.S./Mexico border is listed open from Apr 3, 2027, or as changed in-season. This card ends Mar 31, 2027, before that date.",
+        "From Jan 1, 2027 (T14 CCR §1.73(c)), an angler holding a salmon with its adipose fin present must give a tissue sample on request.",
         "North of Point Conception: one rod and no more than two single-point, single-shank barbless hooks when targeting salmon or with salmon aboard.",
         "When using bait other than while trolling, use barbless circle hooks. Two hooks must be rigidly tied no more than 5 in apart.",
         "Do not fillet salmon aboard before landing ashore."
@@ -394,11 +398,11 @@
     },
     "albacore": {
       "name": "Albacore tuna",
-      "season": "Year-round in the reviewed 2026 rules. Offshore U.S. waters north of Point Conception.",
+      "season": "Year-round (T14 CCR §28.38). Offshore U.S. waters north of Point Conception. The 2027 booklet is not out; the reviewed rules are the 2026 booklet.",
       "windows": [
         {
           "start": "2026-01-01",
-          "end": "2026-12-31"
+          "end": "2027-03-31"
         }
       ],
       "bag": "25 per person daily and in possession, in addition to the general 20-finfish limit.",
@@ -431,11 +435,11 @@
     },
     "bluefin": {
       "name": "Pacific bluefin tuna",
-      "season": "Year-round in the reviewed 2026 rules. Offshore U.S. waters off this part of California.",
+      "season": "Year-round (T14 CCR §28.38). Offshore U.S. waters off this part of California. The 2027 booklet is not out; the reviewed rules are the 2026 booklet.",
       "windows": [
         {
           "start": "2026-01-01",
-          "end": "2026-12-31"
+          "end": "2027-03-31"
         }
       ],
       "bag": "2 per person daily and in possession on a day trip, in addition to the general 20-finfish limit.",
@@ -466,12 +470,17 @@
     },
     "dungeness": {
       "name": "Dungeness crab",
-      "season": "Open from Nov 7, 2026 (south of the Mendocino/Sonoma county line). Crab traps are prohibited until at least Jan 1, 2027; hoop nets and crab snares are permitted.",
+      "season": "Open Nov 7, 2026 through Jun 30, 2027 (south of the Mendocino/Sonoma county line). Crab traps are prohibited until at least Jan 1, 2027 and after that depend on CDFW; hoop nets and crab snares were permitted as of Nov 7, 2026.",
       "windows": [
         {
           "start": "2026-11-07",
           "end": "2026-12-31",
           "restriction": "Open from Nov 7, 2026. Crab traps are prohibited until at least Jan 1, 2027; hoop nets and crab snares are permitted."
+        },
+        {
+          "start": "2027-01-01",
+          "end": "2027-06-30",
+          "restriction": "Open through Jun 30, 2027. Crab traps were prohibited until at least Jan 1, 2027; whether traps are allowed after that is a CDFW risk-assessment decision not yet published, so check CDFW before setting a trap. Hoop nets and crab snares were permitted as of Nov 7, 2026."
         }
       ],
       "bag": "When open: 10 per person daily; 10 in possession on a private boat.",
@@ -480,7 +489,7 @@
         "Season opening and trap permission are separate. CDFW (Nov 7, 2026): crab traps may not be set or fished in ocean waters, and a Fleet Advisory is in effect; the Oct 30 risk assessment prohibits traps until at least Jan 1, 2027. Check CDFW whale-safe and health notices.",
         "A crab-trap validation is required to use traps. Maximum 10 deployed traps per person; required escape rings, destruct device, GO ID and buoy markings apply.",
         "Hoop nets and snares have separate gear rules. A trap restriction does not itself close those methods, but the season and health closures still apply.",
-        "Check the current 2026 hoop-net marking rules and all gear details in §29.80 before setting gear.",
+        "Check the current hoop-net marking rules and all gear details in §29.80 before setting gear.",
         "Crab traps may not be deployed during the seven days before the Dungeness season opens. Service deployed traps at intervals no greater than nine days, weather conditions permitting (§29.80(c)).",
         "Crab loop traps or snares may have no more than six loops. Hoop nets must be raised and inspected at least every two hours (§29.80).",
         "North of Point Arguello, each hoop net must have the required surface buoy marked with the operator’s GO ID; the main buoy may not exceed 6 in in diameter or 14 in in length. An optional orange marker marked H and its connecting line have additional marking specifications; check §29.80(b) before rigging."
@@ -517,7 +526,7 @@
     "For finfish, the general daily limit is 20 total, with no more than ten of one species unless a specific exception applies; lower species and group limits still apply. Lingcod and RCG count toward 20. The reviewed bluefin and albacore allowances are additional-limit exceptions.",
     "MPAs, local closures and the Diablo Canyon security zone override an area-wide open season. Check the exact fishing position in CDFW’s official map.",
     "For finfish, carry a landing net with an opening of at least 18 in. South of Pigeon Point, within 1,000 yd of shore, metallic/wire lines or leaders and hooks wider than 1½ in inside are prohibited.",
-    "Proposals and staff recommendations are not current rules. Pending 2026 measurement amendments and MPA petitions do not change these limits until legally effective and reviewed."
+    "Proposals and staff recommendations are not current rules. A 2026 sport-fishing rulemaking (OAL-approved, effective Jan 1, 2027) changes how total length is measured (T14 CCR §1.62) and adds the salmon tissue-sample request (§1.73); it changes no season, bag or minimum size for the seven species on this card. Other pending amendments and MPA petitions do not change these limits until legally effective and reviewed."
   ],
   "official_map_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map",
   "checks": {
