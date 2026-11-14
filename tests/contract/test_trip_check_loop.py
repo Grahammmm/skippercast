@@ -1,6 +1,11 @@
 """Trip checks run in their own job (scripts/trip_check_loop.py runs scripts/check_saved_trips.py) and cannot fail the conditions publisher."""
 import json
+import os
+from pathlib import Path
 import re
+import subprocess
+import tempfile
+import textwrap
 import unittest
 
 from scripts.trip_check_loop import watch
@@ -79,6 +84,25 @@ def jobs(workflow):
     return dict(zip(parts[1::2], parts[2::2]))
 
 
+def run_block(block):
+    """Extract one literal workflow shell step without a YAML dependency."""
+    return textwrap.dedent(block.split('        run: |\n', 1)[1].split('\n      - ', 1)[0])
+
+
+def run_shell(script, mocks, **values):
+    """Exercise the actual workflow shell with offline commands and task-local files."""
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        path, log, summary = root / 'step.sh', root / 'log', root / 'summary'
+        path.write_text(textwrap.dedent(mocks) + '\n' + script)
+        env = dict(os.environ, TEST_LOG=str(log), GITHUB_STEP_SUMMARY=str(summary),
+                   GITHUB_SERVER_URL='https://example.invalid', GITHUB_REPOSITORY='fixture/repo',
+                   GITHUB_RUN_ID='1', **values)
+        result = subprocess.run(['bash', '-e', '-o', 'pipefail', str(path)], env=env,
+                                capture_output=True, text=True, timeout=10)
+        return result, log.read_text() if log.exists() else '', summary.read_text() if summary.exists() else ''
+
+
 class LiveWorkflowTests(unittest.TestCase):
     def setUp(self):
         self.text = (ROOT / '.github' / 'workflows' / 'live-conditions.yml').read_text()
@@ -87,7 +111,7 @@ class LiveWorkflowTests(unittest.TestCase):
     def test_workflow_grants_nothing_by_default(self):
         header = self.text.split('\njobs:\n', 1)[0]
         self.assertIn('\npermissions: {}\n', header)
-        self.assertEqual(set(self.jobs), {'refresh', 'notify', 'next'})
+        self.assertEqual(set(self.jobs), {'refresh', 'notify', 'next', 'alarm-clock'})
 
     def test_publisher_can_push_but_has_no_identity_token_or_actions_write(self):
         refresh = self.jobs['refresh']
@@ -115,13 +139,57 @@ class LiveWorkflowTests(unittest.TestCase):
         header = self.text.split('\njobs:\n', 1)[0]
         self.assertRegex(header, r'workflow_dispatch:\n    inputs:\n      check_trips:\n(?:        .*\n)*?        type: boolean\n        default: false')
 
-    def test_only_next_can_dispatch_and_it_holds_no_secrets(self):
+    def test_only_next_and_alarm_clock_can_dispatch_and_hold_no_secrets(self):
         chain = self.jobs['next']
         self.assertIn('actions: write', chain)
         self.assertIn('needs: refresh', chain)
         self.assertIn('gh workflow run live-conditions.yml', chain)
         self.assertNotIn('secrets.', chain)
         self.assertNotIn('actions: write', self.jobs['refresh'] + self.jobs['notify'])
+        self.assertEqual({name for name, block in self.jobs.items() if 'actions: write' in block},
+                         {'next', 'alarm-clock'})
+        self.assertEqual({name for name, block in self.jobs.items() if 'feed-freshness.yml' in block},
+                         {'alarm-clock'})
+
+    def test_alarm_clock_is_isolated_and_least_privilege(self):
+        alarm = self.jobs['alarm-clock']
+        self.assertIn("if: github.ref == 'refs/heads/main'", alarm)
+        self.assertNotIn('needs:', alarm)
+        self.assertNotIn('secrets.', alarm)
+        self.assertNotIn('id-token', alarm)
+        self.assertNotIn('contents:', alarm)
+        permissions = alarm.split('    permissions:\n', 1)[1].split('    steps:', 1)[0]
+        self.assertEqual(permissions.strip(), 'actions: write')
+        timeout = re.search(r'timeout-minutes: (\d+)', alarm)
+        self.assertIsNotNone(timeout)
+        assert timeout is not None
+        self.assertLessEqual(int(timeout[1]), 345)
+        self.assertEqual(re.findall(r'gh workflow run ([^\s]+)', alarm), ['feed-freshness.yml'])
+        self.assertIn('gh workflow run feed-freshness.yml --ref main', alarm)
+        self.assertNotIn('needs: alarm-clock', self.text)
+
+    def test_alarm_ticks_hourly_even_when_dispatch_fails(self):
+        script = run_block(self.jobs['alarm-clock']).replace('SECONDS', 'test_seconds')
+        for status in (0, 1):
+            with self.subTest(dispatch_exit=status):
+                result, log, _ = run_shell(script, '''
+                    test_seconds=0
+                    gh() { printf '%s|%s\\n' "$test_seconds" "$*" >> "$TEST_LOG"; return "$DISPATCH_EXIT"; }
+                    timeout() {
+                      shift
+                      "$@"
+                      status=$?
+                      test_seconds=$((test_seconds + 60))
+                      return "$status"
+                    }
+                    sleep() { test_seconds=$((test_seconds + $1)); }
+                ''', DISPATCH_EXIT=str(status))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual([int(line.split('|')[0]) for line in log.splitlines()],
+                                 [0, 3600, 7200, 10800, 14400, 18000])
+                self.assertTrue(all(line.endswith('workflow run feed-freshness.yml --ref main')
+                                    for line in log.splitlines()))
+                self.assertEqual(result.stdout.count('::warning::'), 6 if status else 0)
 
     def test_loop_starts_only_from_schedule_or_dispatch_never_push(self):
         # A push run always waited behind the running loop's concurrency group and was cancelled.
@@ -138,6 +206,63 @@ class LiveWorkflowTests(unittest.TestCase):
         # job-auth.js pins workflow_ref to this file, so trip checks must stay in it.
         policy = json.loads((ROOT / 'deployments' / 'production.json').read_text())
         self.assertEqual(policy['scheduler']['workflow'], '.github/workflows/live-conditions.yml')
+
+
+class RulesAlarmWorkflowTests(unittest.TestCase):
+    REGIONS = ('morro-bay', 'cambria-san-simeon', 'south-big-sur-san-simeon',
+               'big-sur-coast', 'monterey-point-sur', 'point-arguello-conception')
+    MOCKS = '''
+        node() {
+          printf 'probe|%s\\n' "$3" >> "$TEST_LOG"
+          echo "region: $3"
+          if [ "$3" = "$FAIL_REGION" ]; then return "$PROBE_EXIT"; fi
+        }
+        gh() {
+          printf 'gh|%s\\n' "$*" >> "$TEST_LOG"
+          if [ "$1 $2" = 'issue list' ]; then
+            if [ "$LIST_FAIL" = 1 ]; then return 1; fi
+            if [ "$EXISTING" = 1 ]; then echo 42; fi
+          fi
+        }
+    '''
+
+    def run_rules(self, **values):
+        workflow = (ROOT / '.github/workflows/feed-freshness.yml').read_text()
+        step = workflow.split('      - name: Probe the rules card and alert once when it is blank\n', 1)[1]
+        defaults = dict(FAIL_REGION='', PROBE_EXIT='3', EXISTING='0', LIST_FAIL='0')
+        defaults.update(values)
+        result, log, summary = run_shell(run_block(step), self.MOCKS, **defaults)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([line.split('|')[1] for line in log.splitlines() if line.startswith('probe|')],
+                         list(self.REGIONS))
+        self.assertTrue(all(region in summary for region in self.REGIONS))
+        return log
+
+    def test_any_missing_region_or_crash_opens_one_aggregate_issue(self):
+        for region, code in ((self.REGIONS[0], '3'), (self.REGIONS[2], '3'),
+                             (self.REGIONS[-1], '3'), (self.REGIONS[1], '1'), (self.REGIONS[3], '127')):
+            with self.subTest(region=region, exit=code):
+                log = self.run_rules(FAIL_REGION=region, PROBE_EXIT=code)
+                self.assertEqual(log.count('gh|issue create'), 1)
+                self.assertNotIn('gh|issue close', log)
+                self.assertIn(f'{region} (probe exit {code})', log)
+
+    def test_existing_issue_is_refreshed_not_closed_by_healthy_regions(self):
+        log = self.run_rules(FAIL_REGION=self.REGIONS[0], EXISTING='1')
+        self.assertEqual(log.count('gh|issue edit 42'), 1)
+        self.assertNotIn('gh|issue create', log)
+        self.assertNotIn('gh|issue close', log)
+
+    def test_only_all_six_healthy_closes_the_issue(self):
+        log = self.run_rules(EXISTING='1')
+        self.assertEqual(log.count('gh|issue close 42'), 1)
+        self.assertNotIn('gh|issue create', log)
+        self.assertNotIn('gh|issue edit', log)
+
+    def test_issue_list_failure_cannot_create_a_duplicate(self):
+        log = self.run_rules(FAIL_REGION=self.REGIONS[0], LIST_FAIL='1')
+        self.assertNotIn('gh|issue create', log)
+        self.assertNotIn('gh|issue close', log)
 
 
 class TokenScopeTests(unittest.TestCase):
