@@ -21,12 +21,12 @@ test('reuseExistingServer is true only for a local run with E2E_REUSE=1', async 
   for (const [env, want] of cases) assert.equal((await load(env)).webServer.reuseExistingServer, want, JSON.stringify(env));
 });
 
-test('port, projects and retries are unchanged', async () => {
+test('port and projects stay unchanged; ordinary tests never retry', async () => {
   const c = await load({E2E_PORT: '9000'});
   assert.equal(c.use.baseURL, 'http://localhost:9000');
   assert.equal(c.webServer.url, 'http://localhost:9000/api/health');
   assert.deepEqual(c.projects.map(p => p.name), ['phone', 'laptop']);
   assert.equal(c.retries, 0);
-  assert.equal((await load({CI: '1'})).retries, 1);
+  assert.equal((await load({CI: '1'})).retries, 0);
   assert.equal((await load({})).use.baseURL, 'http://localhost:8787');
 });
