@@ -170,5 +170,72 @@
       "content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
       "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
     }
-  }
+  },
+  "reviewed_regions": [
+    {
+      "id": "cambria-san-simeon",
+      "fishing_bounds": [
+        -121.32,
+        35.53,
+        -121.06,
+        35.66
+      ]
+    },
+    {
+      "id": "morro-bay",
+      "fishing_bounds": [
+        -121.18,
+        35.05,
+        -120.72,
+        35.56
+      ]
+    },
+    {
+      "id": "point-arguello-conception",
+      "fishing_bounds": [
+        -121.15,
+        34.45,
+        -120.38,
+        35.03
+      ]
+    },
+    {
+      "id": "santa-cruz-monterey-bay",
+      "fishing_bounds": [
+        -122.68,
+        36.601,
+        -121.72,
+        37.182
+      ]
+    },
+    {
+      "id": "monterey-point-sur",
+      "fishing_bounds": [
+        -122.34,
+        36.301,
+        -121.66,
+        36.624
+      ]
+    },
+    {
+      "id": "big-sur-coast",
+      "fishing_bounds": [
+        -122.19,
+        35.901,
+        -121.46,
+        36.299
+      ]
+    },
+    {
+      "id": "south-big-sur-san-simeon",
+      "fishing_bounds": [
+        -121.99,
+        35.661,
+        -121.21,
+        35.899
+      ]
+    }
+  ],
+  "geographic_scope_record": "jurisdictions/reviews/2026-09-25-california-central-south-big-sur.json",
+  "geographic_scope_note": "Preserves the existing reviewed regional bounds verbatim; no geographic expansion or new access clearance. Source decisions and rule wording are covered by G-SIGNATURE.md and its 2026-11-14 addendum."
 }
