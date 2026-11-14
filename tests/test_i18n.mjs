@@ -29,6 +29,48 @@ test('Accept-Language: absent, es, es-MX, weights, malformed -> the documented c
   assert.equal(resolveLanguage(undefined, 'es-MX,es;q=0.9'), 'es');
 });
 
+test('Accept-Language: a member with more than one q weight is dropped; valid members survive', () => {
+  // duplicate_quality_conflicts_drop_member: neither first-wins nor last-wins keeps the Spanish member
+  for (const header of ['es;q=1;q=0, en;q=0.5', 'es;q=0;q=1, en;q=0.5']) {
+    assert.equal(acceptedLanguage(header), 'en', header);
+    assert.equal(resolveLanguage(null, header), 'en', header);
+  }
+  // duplicate_quality_is_case_insensitive_and_not_deduplicated: equal values, Q/q mixtures, trimmed boundaries
+  for (const header of ['es;q=1;q=1, en;q=0.5', 'es;Q=0.8;q=0.8, en;q=0.5', 'es; q=0.9 ; Q=0.9, en;q=0.5', 'es;q=0.7;Q=0.7;q=0.7, en;q=0.1'])
+    assert.equal(acceptedLanguage(header), 'en', header);
+  // malformed_later_quality_cannot_hide: any second q refuses the member, valid or not, in either order
+  for (const header of ['es;q=1;q=garbage, en;q=0.5', 'es;q=1;q=1.5, en;q=0.5', 'es;q=garbage;q=1, en;q=0.5', 'es;Q=0.8;q=0, en;q=0.5'])
+    assert.equal(acceptedLanguage(header), 'en', header);
+  // duplicate-only supported members: null from acceptedLanguage, English from resolveLanguage, no throw
+  for (const header of ['es;q=1;q=0', 'es;q=1;q=1, fr', 'es;q=0.5;q=0.5, es-MX;q=1;q=1']) {
+    assert.equal(acceptedLanguage(header), null, header);
+    assert.equal(resolveLanguage(undefined, header), 'en', header);
+  }
+  // a bad member does not invalidate independent valid members, wherever they sit
+  assert.equal(acceptedLanguage('en;q=1;q=1, es;q=0.4'), 'es');
+  assert.equal(acceptedLanguage('en;q=0.2, es;q=1;q=1, es-MX;q=0.3'), 'es', 'the later valid es-MX member outranks en');
+  assert.equal(resolveLanguage(null, 'en;q=1;q=1, es;q=0.4'), 'es');
+});
+
+test('Accept-Language: valid single weights keep their ranking and position order', () => {
+  // valid_weight_ranking_stays_stable
+  for (const [header, want] of [['es, en;q=0.5', 'es'], ['en, es', 'en'], ['es, en', 'es'], ['es;q=0.9, en;q=0.9', 'es'], ['en;q=0.9, es;q=0.9', 'en'],
+    ['en;q=0.999, es;q=1', 'es'], ['en;q=0.001, fr;q=1', 'en'], ['es;q=0, en;q=0', null], ['es-MX;q=0.5, en-US;q=0.4', 'es'], ['es;q=0.8, en;q=0.5', 'es']])
+    assert.equal(acceptedLanguage(header), want, header);
+});
+
+test('an explicit preference beats the header, even a header with duplicate weights; an unsupported preference reads English, not the header', () => {
+  // explicit_preference_still_wins
+  for (const [header, noPreference] of [['es;q=1;q=0, en;q=0.5', 'en'], ['en;q=1;q=1, es;q=0.5', 'es']]) {
+    assert.equal(resolveLanguage('en', header), 'en', header);
+    assert.equal(resolveLanguage('es', header), 'es', header);
+    assert.equal(resolveLanguage('fr', header), 'en', header);
+    assert.equal(resolveLanguage('', header), noPreference, header);
+  }
+  assert.equal(resolveLanguage(null, 'es;q=1;q=0, en;q=0.5'), 'en');
+  assert.equal(resolveLanguage(undefined, 'es;q=1;q=0, en;q=0.5'), 'en');
+});
+
 test('an explicit preference beats the header; an unsupported preference reads English, not the header', () => {
   assert.equal(resolveLanguage('en', 'es'), 'en');
   assert.equal(resolveLanguage('es', 'en-US'), 'es');

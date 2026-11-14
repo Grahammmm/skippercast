@@ -117,12 +117,16 @@ export function lastKnownEligible(request: Request, path: string): boolean {
   return API_READS.has(path) || path.startsWith('/api/om/');
 }
 
-/** Edge-cache key of the last-known copy: path, sorted query and the exact byte range asked for. */
+/**
+ * Edge-cache key of the last-known copy: origin, path, and one `request`
+ * value holding JSON [sorted query pairs, Range header or null]. Caller
+ * parameters live only inside that array, so none can alias the Range part;
+ * equal query multisets share a key in any order, duplicates are kept.
+ */
 export function lastKnownKey(request: Request): Request {
   const source = new URL(request.url), key = new URL(source.origin + '/__sc-last-known' + source.pathname);
-  for (const [name, value] of [...source.searchParams].sort(([a, x], [b, y]) => a < b ? -1 : a > b ? 1 : x < y ? -1 : x > y ? 1 : 0)) key.searchParams.append(name, value);
-  const range = request.headers.get('Range');
-  if (range) key.searchParams.set('sc-range', range);
+  const pairs = [...source.searchParams].sort(([a, x], [b, y]) => a < b ? -1 : a > b ? 1 : x < y ? -1 : x > y ? 1 : 0);
+  key.searchParams.set('request', JSON.stringify([pairs, request.headers.get('Range')]));
   return new Request(key.href);
 }
 
@@ -136,7 +140,7 @@ const INTERNAL = ['X-SC-LK-Status', 'X-SC-Last-Known-At'];
  * of an object too large for the feed cache, which is how the basemap PMTiles
  * stays usable when degraded. Unavailable (tests, bare dev) means no copies.
  */
-export const LAST_KNOWN_CACHE = 'skippercast-last-known-v1';
+export const LAST_KNOWN_CACHE = 'skippercast-last-known-v2';
 async function lastKnownCache(): Promise<Cache | null> {
   try { return (await (globalThis as {caches?: CacheStorage}).caches?.open(LAST_KNOWN_CACHE)) ?? null; } catch { return null; }
 }
