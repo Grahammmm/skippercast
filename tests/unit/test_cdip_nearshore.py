@@ -300,7 +300,7 @@ class BindingTests(TestCase):
 
     def test_catalog_source_carries_the_cdip_credit(self):
         source = load_catalogs()[1]["cdip-mop"]
-        self.assertEqual((source["adapter"], source["review_status"]), (cdip.ADAPTER, "candidate"))
+        self.assertEqual((source["adapter"], source["review_status"]), (cdip.ADAPTER, "approved"))
         self.assertTrue(source["rights"]["attribution_required"])
         self.assertIn("CDIP, Scripps Institution of Oceanography", source["rights"]["attribution"])
         self.assertIn(cdip.HOST, source["allowed_hosts"])
