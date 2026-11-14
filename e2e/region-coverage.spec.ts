@@ -26,6 +26,7 @@ test('California picker: all regions, honest gaps, drafts stay closed and previe
   await expect(picker.locator('[data-coverage-layer=rules]')).toContainText('Review needed');
   await expect(picker).toContainText('dated snapshot, not live feed health');
   await expect(picker.getByRole('button', {name: 'Open preview map'})).toBeVisible();
+  await expect.poll(() => picker.evaluate(el => getComputedStyle(el).display), {message: 'picker stylesheet is applied before measuring layout'}).toBe('grid');
   expect(await picker.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await v2.a11y('scb16-picker');
   if (test.info().project.name === 'phone') {
