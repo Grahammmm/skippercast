@@ -4,9 +4,13 @@ import {snapshot} from '../web/region-coverage.ts';
 const browse = 'Browse California regions and coverage';
 
 test('California picker: all regions, honest gaps, drafts stay closed and preview navigation clears old port', async ({page, v2}) => {
+  const styles: string[] = [];
+  page.on('request', request => { if (/\/assets\/region-picker\.[^/]+\.css$/.test(new URL(request.url()).pathname)) styles.push(request.url()); });
   await v2.open('landing');
+  expect(styles, 'picker CSS stays off the cold landing path').toEqual([]);
   await page.getByText(browse, {exact: true}).click();
   const picker = page.getByRole('region', {name: 'California region'});
+  await expect.poll(() => styles.length, {message: 'opening the picker loads its stylesheet'}).toBe(1);
   const select = picker.getByLabel('California region', {exact: true});
   await expect(select.locator('option')).toHaveCount(snapshot.regions.length);
   for (const row of snapshot.regions) {

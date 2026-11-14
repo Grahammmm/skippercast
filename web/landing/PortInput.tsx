@@ -77,7 +77,6 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
   useEffect(() => { if (locate && ports) void findNearby(); }, [locate, ports, geolocation]);
 
   return (
-    <>
     <form class="port-input" onSubmit={event => { event.preventDefault(); if (matches[0]) choose(matches[0]); }}>
       <label class="port-input-label" for={id}>{label}</label>
       <div class="port-input-row">
@@ -107,9 +106,8 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
       </div>
       {saved ? <Button variant="quiet" size="sm" class="port-input-forget" onClick={forget}>{COPY.forget}</Button> : null}
       <p id={`${id}-note`} class="port-input-note">{COPY.privacy}</p>
+      <RegionPickerEntry />
     </form>
-    <RegionPickerEntry />
-    </>
   );
 }
 

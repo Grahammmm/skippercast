@@ -1,5 +1,5 @@
 import {useId, useState} from 'preact/hooks';
-import '../region-picker.css';
+import pickerStyles from '../region-picker.css?url';
 import {language, t, type StringId} from '../i18n.ts';
 import {Button} from '../ui/Button.tsx';
 import {COVERAGE_LAYERS, coverageNeedsRecheck, coverageRegionURL, coverageStatusId, lifecycleId, snapshot} from '../region-coverage.ts';
@@ -10,6 +10,7 @@ export function RegionPicker({href = location.href, now = Date.now()}: {href?: s
   const row = snapshot.regions.find(r => r.id === selected)!;
   const lang = language.value, id = useId(), target = coverageRegionURL(href, row.id);
   return <section class="region-picker" aria-label={t('regions.choose', lang)}>
+    <link rel="stylesheet" href={pickerStyles} />
     <label for={id}>{t('regions.choose', lang)}</label>
     <select id={id} value={row.id} onChange={event => setSelected(event.currentTarget.value)} aria-describedby={`${id}-snapshot`}>
       {snapshot.regions.map(r => <option key={r.id} value={r.id}>{r.name} — {t(lifecycleId(r), lang)}</option>)}
