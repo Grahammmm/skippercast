@@ -622,7 +622,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // UXFIX-09: app.css adds one tile-basis margin rule scoped to .app-tiles and raises the phone .app-top z-index by one; no colour, backing or text paint changed. Rebound from the final bytes.
   // SCB-11: app.css changes only the wide-desktop (min-width: 1280px) masthead and command bar layout (the place name's fixed two-line box, flex order and auto margins, and a time window minimum width);
   // no colour, opacity, backing or text role changed and the cited line numbers above are unmoved. Rebound from the final bytes.
-  "appCss": "1f74ca4bea5bef556e5260cab3398ca230ac693fa8fc13a4e4a3a7ea920ac1e0",
+  // MAIN-RED-5: pointer-event routing only; no paint, backing, opacity or text role changes.
+  "appCss": "458f83534d334a5f68ffe5e5d59470bd191be5b570a897c115312e2f6635497c",
   // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
   // UXFIX-10 only appends a scoped .app-account[data-top] block at the end of app.css (the phone top-card account button: icon size, hidden label, open-state text/panel colour, z-index);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved.
