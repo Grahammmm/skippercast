@@ -15,6 +15,7 @@ import {portCopy} from './copy.ts';
 import {Icon} from '../ui/icons.tsx';
 import {useScrollCue} from '../ui/scroll-cue.ts';
 import type {Located} from '../ports.ts';
+import {RegionPickerEntry} from '../RegionPickerEntry.tsx';
 
 type Feedback = null | {kind: 'found'; port: Port} | {kind: 'finding' | 'forgotten' | 'empty' | Extract<Located, {ok: false}>['reason']};
 
@@ -105,6 +106,7 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp
       </div>
       {saved ? <Button variant="quiet" size="sm" class="port-input-forget" onClick={forget}>{COPY.forget}</Button> : null}
       <p id={`${id}-note`} class="port-input-note">{COPY.privacy}</p>
+      <RegionPickerEntry />
     </form>
   );
 }

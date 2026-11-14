@@ -123,6 +123,8 @@ function appURL(href: string, params: Record<string, string | undefined>): strin
 /** The app at `port`: /map?region=…&port=…(&profile=…). */
 export const portURL = (href: string, port: Port, profile?: Profile | null): string =>
   appURL(href, {region: port.region, port: port.id, profile: isProfile(profile) ? profile : undefined});
+/** A region choice drops the previous port, camera, target and local area. */
+export const regionURL = (href: string, region: string): string => appURL(href, {region});
 /** "Explore the coast": the app over the central coast with no port. */
 export const exploreURL = (href: string): string => appURL(href, {coast: 'central'});
 
