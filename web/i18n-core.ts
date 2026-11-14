@@ -38,13 +38,14 @@ export function supported(tag: unknown): Language | null {
 
 /**
  * The first supported language of an Accept-Language header by weight (then by position); null when the
- * header is absent or names none. An entry whose tag or weight is malformed, or whose weight is 0, is dropped.
+ * header is absent or names none. An entry whose tag or weight is malformed, whose weight is 0, or that carries
+ * more than one q weight (contradictory, whatever the values) is dropped; the other entries still count.
  */
 export function acceptedLanguage(header: unknown): Language | null {
   if (typeof header !== 'string') return null;
   const ranked = header.split(',').flatMap((part, position) => {
-    const [tag = '', ...params] = part.split(';').map(s => s.trim()), weight = params.find(p => /^q=/i.test(p));
-    const q = weight === undefined ? 1 : /^q=(?:0(?:\.\d{0,3})?|1(?:\.0{0,3})?)$/i.test(weight) ? Number(weight.slice(2)) : NaN;
+    const [tag = '', ...params] = part.split(';').map(s => s.trim()), weights = params.filter(p => /^q=/i.test(p)), weight = weights[0];
+    const q = weights.length > 1 ? NaN : weight === undefined ? 1 : /^q=(?:0(?:\.\d{0,3})?|1(?:\.0{0,3})?)$/i.test(weight) ? Number(weight.slice(2)) : NaN;
     return /^(?:[a-z]{1,8}(?:-[a-z0-9]{1,8})*|\*)$/i.test(tag) && q > 0 ? [{tag, q, position}] : [];
   }).sort((a, b) => b.q - a.q || a.position - b.position);
   for (const {tag} of ranked) { const found = supported(tag); if (found) return found; }
