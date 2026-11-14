@@ -18,7 +18,6 @@ ALLOW = {  # path under src/skippercast -> why its literal stays; delete the ent
         "seafloor/habitat", "seafloor/search_areas")},
     **{f"{name}.py": "bytes are part of the terrain-only preview binding" for name in (
         "coastal/render/terrain_only", "coastal/vertical")},
-    "monitor/collector.py": "held legacy monitor",
 }
 
 

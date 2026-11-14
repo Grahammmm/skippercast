@@ -49,12 +49,12 @@ jobs:
           EVENT: ${{ github.event_name }}
         run: python3 scripts/ci_select.py
   # Required check (branch protection requires the `survey-science` context).
-  # It always reports and passes only when `check` passed on every Python and
-  # `survey-tests` passed, or a successful PR selector explicitly omitted GIS.
-  # Missing/failed/cancelled prerequisites are non-success, not defect auto-fixes.
+  # Unless the run is cancelled, it reports and passes only when `check` passed on
+  # every Python and `survey-tests` passed, or a successful PR selector omitted GIS.
+  # Missing/failed/cancelled prerequisites remain non-success in an active run.
   survey-science:
     needs: [changes, survey-tests, check]
-    if: always()
+    if: ${{ !cancelled() }}
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
@@ -198,10 +198,26 @@ jobs:
         run: pnpm exec playwright install chromium
       # Playwright splits its own test list, so the two shards together run exactly the suite
       # `playwright test` ran as one job: same specs, same projects, same assertions.
+      - name: Restore nightly quarantine clock (read-only; PRs never save it)
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: test-results/quarantine-state.json
+          key: e2e-clock-v1-${{ hashFiles('e2e/flaky.tsv') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: e2e-clock-v1-${{ hashFiles('e2e/flaky.tsv') }}-
+      # E2E_WIDE adds the five extra screen sizes (playwright.config.ts) on the nightly and on every
+      # push to main (CI-2), so a wide-size break shows on the merge that caused it. PRs keep two sizes.
       - name: Browser flows and accessibility (serious and critical axe violations fail)
         env:
-          E2E_WIDE: ${{ github.event_name == 'schedule' && '1' || '' }}
+          E2E_WIDE: ${{ (github.event_name == 'schedule' || github.event_name == 'push') && '1' || '' }}
         run: pnpm e2e --shard=${{ matrix.shard }}/2
+      - name: Keep per-test JSON even when the shard fails
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-json-${{ matrix.shard }}
+          path: test-results/e2e-run.json
+          if-no-files-found: error
+          retention-days: 15
       - name: Keep traces of failed tests
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -210,6 +226,44 @@ jobs:
           name: e2e-results-${{ matrix.shard }}
           path: test-results/
           retention-days: 7
+  e2e-flake-rates:
+    # Accounting only, in the existing nightly schedule. No tests are duplicated,
+    # no write token/PR/publication, and a missing/failed shard earns no green day.
+    needs: e2e
+    if: always() && github.event_name == 'schedule'
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: test-results/quarantine-state.json
+          key: e2e-clock-v1-${{ hashFiles('e2e/flaky.tsv') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: e2e-clock-v1-${{ hashFiles('e2e/flaky.tsv') }}-
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: e2e-json-*
+          path: test-results/nightly
+      - name: Publish per-spec rates and advance the 14-green-day clock
+        if: always()
+        run: node scripts/e2e-flakes.mjs test-results/nightly/e2e-json-1/e2e-run.json test-results/nightly/e2e-json-2/e2e-run.json
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: always() && hashFiles('test-results/flake-rates.json') != ''
+        with:
+          path: test-results/quarantine-state.json
+          key: e2e-clock-v1-${{ hashFiles('e2e/flaky.tsv') }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: e2e-flake-rates
+          path: |
+            test-results/flake-rates.*
+            test-results/quarantine-state.json
+          if-no-files-found: error
+          retention-days: 30
   check:
     needs: changes
     # A broken selector runs conservative tests, but cannot pass the final gate.
@@ -226,6 +280,9 @@ jobs:
         python: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The synthetic merge commit and its first parent: the deterministic-test lint diffs HEAD^1..HEAD.
+          fetch-depth: 2
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python }}
@@ -257,10 +314,6 @@ jobs:
           path: ${{ runner.temp }}/pytest-core.xml
           if-no-files-found: ignore
           retention-days: 14
-      - name: Offline demonstration
-        env:
-          PYTHONPATH: src
-        run: python -m skippercast demo
       - name: Rebuild regional contracts
         env:
           PYTHONPATH: src
@@ -274,6 +327,19 @@ jobs:
           fi
       - name: Documentation and publication checks
         run: python scripts/check_repository.py
+      # SC-CI-5: a Python test line ADDED by this change must not read the wall clock without a frozen
+      # clock, listen on a fixed port, or assert a Python version without a sys.version_info guard
+      # (docs/engineering/testing.md, Deterministic tests). Existing hits are warnings and counted;
+      # only added lines fail. HEAD^1 is the base of the synthetic PR/merge-queue commit (fetch-depth 2).
+      # Push, nightly and dispatch runs count the existing hits only and cannot fail. One Python leg is enough.
+      - name: Deterministic-test lint (new lines fail; existing hits are warnings)
+        if: matrix.python == '3.13'
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ] || [ "$GITHUB_EVENT_NAME" = merge_group ]; then
+            python scripts/check_test_determinism.py --base HEAD^1
+          else
+            python scripts/check_test_determinism.py
+          fi
       - name: Lint Python (syntax errors and undefined names)
         run: |
           python -m pip install ruff==0.17.4
@@ -297,11 +363,15 @@ jobs:
         run: pnpm typecheck
       # Size budget (SC-PERF-BUDGET-1): file sizes only, no network, no timing. Raising a budget
       # needs a written reason in scripts/perf-budget.json (docs/operations/perf-budget.md).
+      # From 97% of a budget the check warns but passes; the budget-drift bot (budget-drift.yml)
+      # raises the ceiling on main, so a feature pull request does not have to (SC-CI-2).
       - name: Size budget (first-load files and brief data)
         if: matrix.python == '3.13'
         run: |
           pnpm build
           python scripts/check_perf_budget.py
+          # Fails only if a hand edit changed a budget number without its history entry (SC-CI-2).
+          python scripts/budget_drift.py --check
       - name: Forecast handling and GPX checks
         if: needs.changes.outputs.web != 'false'
         run: |

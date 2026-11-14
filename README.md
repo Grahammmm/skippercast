@@ -1,6 +1,6 @@
 # SkipperCast
 
-**A phone-first fishing map and ocean forecast for California boat anglers: where the structure is, what the water will do, and what the rules allow.**
+**A phone-first fishing map and ocean forecast for boat anglers on California's Central Coast: where the structure is, what the water will do, and what the rules allow.** Coverage today is the Central Coast; the rest of California is in preview or draft (see [Coverage](#coverage)).
 
 **[Open the app](https://skippercast.com)** · [Documentation](docs/README.md)
 
@@ -11,12 +11,12 @@
 - **A fishing map on a nautical chart.** NOAA chart base, species selectors, reef and soft-bottom habitat candidates with their terrain evidence, marine protected areas, charter-reported grounds and a seafloor habitat layer built from original surveys.
 - **A 7-day forecast chart.** One meteogram of wind and gusts, seas and period, tide and an hourly conditions score for your boat, built from SkipperCast's own NOAA and ECMWF forecast tiles, next to live buoy and weather-station readings.
 - **A day verdict.** For the day you pick, one word for the morning window (Comfortable, Marginal, Rough or Unknown), the window it covers and the one thing that limits it at its hour: wind, seas, wind chop or a crossing swell, as the conditions score charged it. Partial or old forecasts hold it at Marginal, a marine alert makes it Rough, and from the day after tomorrow it is marked provisional. It is a comfort rating, not a bite forecast or a safety clearance.
-- **The rules at a glance.** A regulations summary for the selected species, place and date: season status, bag and size limits, gear rules and links to the official CDFW pages, checked against the official sources every day.
+- **The rules at a glance.** A regulations summary for the selected species, place and date: season status, bag and size limits, gear rules and links to the official CDFW pages, checked against the official sources every day. Where a species' rules have not been re-approved the card says "Check rules" instead of a season status; on 2026-11-13 that was every species in the active region ([#2196](https://github.com/Grahammmm/skippercast/issues/2196)).
 - **Plans that go with you.** GPX export for chartplotters and iNavX, an offline trip pack for when the signal drops, and saved-trip alerts on a SkipperCast account you sign in to with a passkey.
 
 ## Coverage
 
-California's outer coast, in regional packages. `active` is the main reviewed package; `preview` packages are still gathering reviewed evidence, and each one shows what it covers.
+SkipperCast does not yet cover all of California. The coast is built as regional packages: **one is `active` (Morro Bay & Avila), 15 are `preview` (published, but still gathering reviewed evidence, so each shows what it covers) and 6 are `draft` (not published; all in Southern California)**, counted from `regions/*/region.json` on 2026-11-13. Seabed habitat is published for six central packages only (Monterey Peninsula to Point Conception); everywhere else the map shows no habitat rather than guessing. The readable coastal report at `/report` covers San Luis Obispo County only (Morro Bay and Cambria–San Simeon). The 16 published packages are:
 
 | Package | Status |
 | --- | --- |
@@ -27,7 +27,7 @@ California's outer coast, in regional packages. `active` is the main reviewed pa
 | Bodega Bay to Point Reyes · Point Arena to northern Sonoma · Fort Bragg to Point Arena | `preview` |
 | Shelter Cove to Fort Bragg · Humboldt Bay to Cape Mendocino · Trinidad to Klamath River · Crescent City & Del Norte | `preview` |
 
-The whole coast can also be browsed by CDFW's five ocean regions, with seasonal species and protected areas ([coastal directory](docs/coastal-directory.md)). The package list is generated in [`dist/regions/index.json`](dist/regions/index.json).
+The whole coast can also be browsed by CDFW's five ocean regions, with seasonal species and protected areas ([coastal directory](docs/coastal-directory.md)); that is a directory, not mapped coverage. The package list is generated in [`dist/regions/index.json`](dist/regions/index.json).
 
 ## Run it
 
@@ -51,7 +51,7 @@ Every layer keeps its source, date and coverage state, and the app shows a gap a
 
 ## Status
 
-A working mobile web app, version 0.8. See the [roadmap](docs/roadmap.md) and [changelog](CHANGELOG.md). 2026-10-10: the rebuilt map app is the default at [skippercast.com](https://skippercast.com) (landing at `/`, app at `/map`; [front-end plan](docs/plans/front-end/dev-plan.md), FE-60); FE-61 removes the classic map and its `?ui=v1` switch. The Text Advisor (text SkipperCast for reports, rules and fish IDs) is built; pending owner launch steps (it stays dark behind `TEXT_ADVISOR_ENABLED` until the [owner to-do](docs/plans/text-advisor/11-testing-rollout.md#owner-to-do)): the channels, media intake, vision, the conversation engine, the rules table, the data tools (reports, conditions, rules, species, rigging, trips), skipper registration, skipper fish reports (count-board photos, typed counts, confirmation and corrections) the anglers' fish ID with photo sharing, the daily port answers ("what's biting", in English and Spanish) the trip planning brief (advisory first, one confidence phrase), the media runner job (derived photos, the Story footer, the daily and roundup graphics) and the public port, species and boat pages are in, in English and Spanish, with an admin review queue, health view Skippers view (invites, verification, crew, contacts), funnel dashboard and rules editor with the CDFW change-watch for the team, the Meta (Instagram and Facebook) client and publishing quota, social post drafts (captions, the team's approval in the queue and the Posts view), publishing to Instagram and the Page with collaborator tags, videos stripped of their location metadata, the daily "what's biting" post, the weekly roundup, the posting calendar and the morning Stories, the Instagram inbox (comments and messages, after Meta's App Review), post insights and the weekly retention prune ([plan](docs/plans/text-advisor/README.md)).
+A working mobile web app, version 0.8, ahead of its beta: Morro Bay is the only active region (see [Coverage](#coverage)). See the [roadmap](docs/roadmap.md) and [changelog](CHANGELOG.md). 2026-10-10: the rebuilt map app is the default at [skippercast.com](https://skippercast.com) (landing at `/`, app at `/map`; [front-end plan](docs/plans/front-end/dev-plan.md), FE-60); FE-61 removes the classic map and its `?ui=v1` switch. The Text Advisor (text SkipperCast for reports, rules and fish IDs) is built; pending owner launch steps (it stays dark behind `TEXT_ADVISOR_ENABLED` until the [owner to-do](docs/plans/text-advisor/11-testing-rollout.md#owner-to-do)): the channels, media intake, vision, the conversation engine, the rules table, the data tools (reports, conditions, rules, species, rigging, trips), skipper registration, skipper fish reports (count-board photos, typed counts, confirmation and corrections) the anglers' fish ID with photo sharing, the daily port answers ("what's biting", in English and Spanish) the trip planning brief (advisory first, one confidence phrase), the media runner job (derived photos, the Story footer, the daily and roundup graphics) and the public port, species and boat pages are in, in English and Spanish, with an admin review queue, health view Skippers view (invites, verification, crew, contacts), funnel dashboard and rules editor with the CDFW change-watch for the team, the Meta (Instagram and Facebook) client and publishing quota, social post drafts (captions, the team's approval in the queue and the Posts view), publishing to Instagram and the Page with collaborator tags, videos stripped of their location metadata, the daily "what's biting" post, the weekly roundup, the posting calendar and the morning Stories, the Instagram inbox (comments and messages, after Meta's App Review), post insights and the weekly retention prune ([plan](docs/plans/text-advisor/README.md)).
 
 ## License
 
