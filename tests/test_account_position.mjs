@@ -143,9 +143,9 @@ test('the new words exist in English and Spanish with matching placeholders, and
   assert.ok(positionControlsHTML('log', createCopy({lang: 'es', strings: Object.fromEntries(ids.map(id => [id, catalog[id].es]))})).includes('Usar mi ubicación'));
   assert.ok(catalog['account.log.fine'].en.includes('A position is never shared, mapped or put in a feed.'));
   const privacy = readFileSync(new URL('../dist/privacy.html', import.meta.url), 'utf8').replace(/\s+/g, ' ');
-  assert.ok(privacy.includes('asks your browser for one fresh location only when you press it'));
-  assert.ok(privacy.includes('Nothing is sent to SkipperCast until you press Save'));
-  assert.ok(privacy.includes('your location is used in the browser only and is not sent to SkipperCast'));
+  assert.ok(privacy.includes('Positions are optional in the catch log and required for a saved spot'));
+  assert.ok(privacy.includes('They are stored on our server only if you press Save'));
+  assert.ok(privacy.includes('“Use my position” asks your browser for one location when you press it'));
 });
 
 test('the catch-log redraw keeps Save off while a position request is pending, and lets it go afterwards', () => {

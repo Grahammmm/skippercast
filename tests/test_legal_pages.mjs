@@ -16,24 +16,33 @@ test('the notice retention and limits equal the constants in the server', () => 
   const tripDays = Number(need(trips, /const cutoff=new Date\(now-(\d+)\*86400000\)/, 'trip and alert retention')[1]);
   const feedbackDays = Number(need(trips, /comfort_feedback WHERE observed_at<\?'\)\.bind\(new Date\(now-(\d+)\*86400000\)/, 'feedback retention')[1]);
   const sessionDays = Number(need(auth, /SESSION_SECONDS=(\d+)\*86400/, 'session length')[1]);
-  const passkeys = Number(need(auth, /MAX_PASSKEYS=(\d+)/, 'passkey limit')[1]);
   const nameChars = Number(need(auth, /\.trim\(\)\.slice\(0,(\d+)\)/, 'display name length')[1]);
   const uaChars = Number(need(auth, /replace\(\/\[\^\\x20-\\x7e\]\/g,''\)\.slice\(0,(\d+)\)/, 'User-Agent length')[1]);
   const spots = Number(need(read('server/routes/spots.ts'), /MAX_SPOTS = (\d+)/, 'spot limit')[1]);
   const devices = Number(need(read('server/routes/subscriptions.ts'), /COUNT\(\*\) FROM subscriptions WHERE owner=\?\) < (\d+)/, 'device limit')[1]);
-  const lookups = Number(need(read('server/routes/boat.ts'), /await count\(id\) > (\d+)/, 'daily boat lookups')[1]);
   assert.equal(tripDays, 90); assert.equal(feedbackDays, 365);
   has(`Removed ${tripDays} days after the trip date`);
   has(`Alerts we sent you and delivery records .{0,60}${tripDays} days`);
   has(`${feedbackDays} days\\.`);
   has(`Until they expire \\(${sessionDays} days after last use\\)`);
   has(`keeps you signed in for ${sessionDays} days`);
-  has(`up to ${passkeys} passkeys`);
   has(`display name \\(up to ${nameChars} characters\\)`);
   has(`first ${uaChars} characters of your browser`);
-  has(`position and optional note \\(up to ${spots}\\)`);
-  has(`encryption keys \\(up to ${devices}\\)`);
-  has(`use it, ${lookups} times a day`);
+  has(`optional note; up to ${spots}\\)`);
+  has(`push address and keys; up to ${devices}\\)`);
+});
+
+test('the boat lookup is described as not available and the notice sends no text to an AI provider (G SPLIT decision, 2026-11-14)', () => {
+  has('The boat lookup is not available yet');
+  assert.ok(!/Anthropic|Claude/.test(privacy), 'the Anthropic paragraph returns only when G confirms the lookup is live');
+});
+
+test('usage statistics are described as off: nothing is stored while ENABLE_ANALYTICS is unset', () => {
+  has('We do not collect usage statistics');
+  has('at present the server discards them and stores none');
+  assert.ok(!/three months/.test(privacy), 'no unverified Cloudflare retention claim');
+  const config = read('scripts/wrangler_config.mjs');
+  assert.match(config, /analytics: on\('ENABLE_ANALYTICS'\)/, 'the binding is added only when ENABLE_ANALYTICS is set; if this changes, update the notice first');
 });
 
 test('the notice names the one cookie the server sets', () => {
