@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- R4-SC-13 (#1770): Shelter Cove's nearshore buoy (Cape Mendocino 46213) stopped reporting on 2026-11-08, which left four of the region's live sources about 140 hours stale. The region now names Eel River 46022 (about 50 km north-northeast, same open-coast exposure) as its reviewed backup. When 46213 is silent the live feed uses 46022 and labels the reading with that station's ID; when 46213 reports again it takes over. The offshore buoy and tide station are unchanged.
 - WU-03: `http://skippercast.com` now redirects to `https://` (one 301, path and query kept) instead of serving the page over plain HTTP. Local development and the staging address are unchanged.
 - Rules: an official page is now fingerprinted by its main content and the documents it links to (`text-and-links-v4`). A website restyle by the agency (a stylesheet version number, a renamed footer link) no longer marks every rule source as changed. Sources reviewed under the old method read as needing review until their next human review; nothing is approved by this change.
 - The draft privacy notice (`/privacy`) and draft terms (`/terms.html`) are removed, with every link to them and their sitemap entries. Both were unreviewed drafts. A short, reviewed replacement is a roadmap item for before launch.
