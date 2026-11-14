@@ -596,6 +596,8 @@ p.app-forecast-failed-head { font-size: var(--text-15); }
   .app-mobile .app-top .app-profile { flex: 0 0 240px; min-width: 0; }
 }
 /* end RF2135-5 */
+/* MAIN-RED-7: on a landscape phone the three footer links (Terms, Sources, Reports) must share one row, or Sign in drops a 44 px row below the tab bar. Each link keeps a 44 px target; its margin goes and its side padding narrows. */
+@media (max-height: 500px) and (orientation: landscape) { .app-sheet .app-brief-footer a { min-width: var(--touch-min); margin-right: 0; padding-inline: var(--space-1); text-align: center; } }
 /* SC1922-08: the failed-press line wraps under the chip's age and Refresh button instead of widening the chip past its cap (on desktop the masthead keeps the chip at its own width, so a line shifts nothing at load). */
 .app-fresh > [data-refresh-line] { flex-basis: 100%; }
 /* SC1722-20: skip links, the first two tab stops. Clipped to a pixel at rest (still focusable and named); on focus a ringed 44 px panel at the top-left. */
