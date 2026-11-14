@@ -1,4 +1,4 @@
-// SCB-11: web/early-reads.ts starts the first verdict's reads with the page (web/app/entry.ts) and hands each answer to the
+// SCB-11: web/early-reads.ts starts the first verdict's reads with the page (web/app/early.ts) and hands each answer to the
 // app's own first read of the same URL, once. These tests pin the reads to the paths the app asks for, and the hand-over rules.
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -114,8 +114,17 @@ test('a failed early read reports nowhere until the app takes it, and then to th
   } finally { process.off('unhandledRejection', record); }
 });
 
-test('the page entry starts the reads before it asks for the app', () => {
-  const entry = read('web/app/entry.ts');
-  assert.ok(entry.indexOf('startEarlyReads()') < entry.indexOf("import('./main.tsx')"));
-  assert.match(read('dist/app.html'), /<script type="module" async src="\.\.\/web\/app\/entry\.ts"><\/script>/);
+test('/map\'s early script starts the reads at once, unless the app is already running', async t => {
+  const saved = {location: globalThis.location, fetch: globalThis.fetch};
+  t.after(() => { globalThis.location = saved.location; globalThis.fetch = saved.fetch; delete globalThis.skippercastApp; });
+  for (const [running, expected] of [[true, 0], [false, 5]]) {
+    const {calls, page} = scope();
+    globalThis.location = page.location; globalThis.fetch = page.fetch;
+    if (running) globalThis.skippercastApp = true; else delete globalThis.skippercastApp;
+    await import(`../web/app/early.ts?running=${running}`);
+    assert.equal(calls.length, expected, running ? 'the app asked for its files itself' : 'the five reads started');
+  }
+  // The app marks the page before its first read (installDegradedWatch wraps fetch, and every read follows it).
+  const main = read('web/app/main.tsx');
+  assert.ok(main.indexOf('.skippercastApp = true;') >= 0 && main.indexOf('.skippercastApp = true;') < main.indexOf('\ninstallDegradedWatch();'));
 });

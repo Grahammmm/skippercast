@@ -20,8 +20,7 @@ import {readdir, readFile} from 'node:fs/promises';
 import {join, posix} from 'node:path';
 import {gzipSync} from 'node:zlib';
 import {MANIFEST, STABLE} from './client-build.mjs';
-import {STARTUP_IMPORTS} from '../vite.config.mjs';
-import {installAssets, SHELLS} from './precache.mjs';
+import {APP_EARLY, installAssets, SHELLS} from './precache.mjs';
 
 const dir = process.argv[2] || 'dist/client';
 const budgetFile = process.argv[4] || new URL('./startup-budget.json', import.meta.url).pathname;
@@ -111,9 +110,6 @@ if (!(await readFile(join(dir, '.assetsignore'), 'utf8').catch(() => '')).includ
 
 // 6. v2 page budgets: the entry plus its static imports (what runs before first
 // paint) and its stylesheets, gzipped; a page absent from this build is skipped.
-// SCB-11: with the imports its entry starts at once (vite.config.mjs STARTUP_IMPORTS): the app's code, imported by its entry.
-// Only an import the entry does make dynamically is one; if the entry imported it statically, the walk below reaches it anyway.
-const startups = page => (STARTUP_IMPORTS[page] ?? []).filter(start => (manifest[page]?.dynamicImports ?? []).includes(start));
 const budgets = JSON.parse(await readFile(budgetFile, 'utf8')).bundles || {};
 const gzipped = async file => gzipSync(await readFile(join(dir, file)), {level: 9}).length;
 const measured = [];
@@ -128,7 +124,8 @@ for (const [page, budget] of Object.entries(budgets)) {
     (e.imports || []).forEach(walk);
   };
   walk(page);
-  for (const start of startups(page)) walk(start);
+  // SCB-11: /map's early script runs before first paint too.
+  if (page === 'app.html') walk(APP_EARLY);
   const total = async files => { let n = 0; for (const f of files) n += await exists(f) ? await gzipped(f) : 0; return n; };
   const size = {js: await total(js), css: await total(css)};
   measured.push(`${page} js ${size.js} B, css ${size.css} B gzipped`);
@@ -187,7 +184,7 @@ if (manifest['app.html']) {
     for (const next of e.imports || []) await walk(next);
   };
   await walk('app.html');
-  for (const start of startups('app.html')) await walk(start);
+  await walk(APP_EARLY);
 }
 
 if (problems.length) {

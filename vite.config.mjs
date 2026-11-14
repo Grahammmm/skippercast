@@ -12,7 +12,7 @@
 // marks their tags vite-ignore, so they stay at their stable /vendor/ paths
 // with their integrity attributes intact. The web manifest and icons keep
 // their stable URLs the same way (the manifest names its icons by path).
-import {readdirSync} from 'node:fs';
+import {existsSync, readdirSync} from 'node:fs';
 import {basename, resolve} from 'node:path';
 import {defineConfig} from 'vite';
 
@@ -126,62 +126,30 @@ function pageStyles(root) {
 }
 
 /**
- * SCB-11: a page's startup imports. dist/app.html's entry (web/app/entry.ts) starts the first verdict's reads, then imports the
- * app (web/app/main.tsx) at once; that import and its static imports are the page's startup code, so the page names them as
- * modulepreload links (fetched with the page, not after the entry ran) and scripts/check_client.mjs budgets and screens them
- * as the page's initial JavaScript. Keys are pages; values are the manifest keys of the imports the entry starts at once.
+ * SCB-11: pages with a second, tiny script of their own, built as an entry of its own (manifest key = the value) and linked
+ * `async` right after the page's charset. /map's starts the first verdict's reads (web/app/early.ts): it imports nothing the page
+ * shares, so it runs as soon as it arrives, seconds before the app's own code on a slow phone. The page's entry, its chunks and
+ * its stylesheets are left exactly as Vite builds them.
  */
-export const STARTUP_IMPORTS = Object.freeze({'app.html': Object.freeze(['../web/app/main.tsx'])});
+export const EARLY_SCRIPTS = Object.freeze({'app.html': '../web/app/early.ts'});
+const earlyInputs = root => Object.fromEntries(pages(root).filter(page => EARLY_SCRIPTS[page] && existsSync(resolve(root, EARLY_SCRIPTS[page])))
+  .map(page => [`${basename(page, '.html')}-early`, resolve(root, EARLY_SCRIPTS[page])]));
 
-/**
- * SCB-11: the page's stylesheets in the cascade a static import of the startup code would give. Vite lists an entry's own sheet
- * before the sheets it shares with other pages (web/ui/ui.css, the fonts), so the shared rules would win over the page's; and
- * the startup imports' sheets would arrive later, when the import runs. The shared sheets come first, then the startup imports'
- * dependencies' sheets, the page's own sheet and the startup chunk's own sheet: the order main.tsx had as the page's entry.
- */
-export function startupSheets(html, entryFile, chunks, depCss, startCss) {
-  const LINK = /[ \t]*<link rel="stylesheet" crossorigin href="\.\/(assets\/[^"]+\.css)">[ \t]*\n?/g;
-  const present = [...html.matchAll(LINK)].map(m => m[1]);
-  if (!present.length) return html;
-  const elsewhere = new Set(chunks.filter(c => c.fileName !== entryFile).flatMap(c => [...(c.viteMetadata?.importedCss ?? [])]));
-  const order = [...new Set([...present.filter(f => elsewhere.has(f)), ...depCss, ...present.filter(f => !elsewhere.has(f)), ...startCss])];
-  const at = html.search(LINK);
-  const rest = html.replace(LINK, '');
-  return rest.slice(0, at) + order.map(f => `    <link rel="stylesheet" crossorigin href="./${f}">\n`).join('') + rest.slice(at);
-}
-
-function startupPreload() {
-  let root = resolve(import.meta.dirname, 'dist');
+function earlyScripts(root) {
   return {
-    name: 'skippercast:startup-preload',
-    configResolved(config) { root = config.root; },
+    name: 'skippercast:early-scripts',
     transformIndexHtml: {
       order: 'post',
       handler(html, ctx) {
-        const page = ctx.filename && basename(ctx.filename), starts = STARTUP_IMPORTS[page];
-        if (!starts || !ctx.bundle || !ctx.chunk) return html;
-        const chunks = Object.values(ctx.bundle).filter(o => o.type === 'chunk');
-        const byFile = new Map(chunks.map(c => [c.fileName, c]));
-        const cssOf = file => [...(byFile.get(file)?.viteMetadata?.importedCss ?? [])];
-        const files = [], seen = new Set([ctx.chunk.fileName, ...ctx.chunk.imports]);
-        const startFiles = [], depCss = [];
-        // Depth first, a chunk's imports before the chunk: the order Vite gives the sheets of a static import.
-        const walk = file => {
-          if (seen.has(file)) return;
-          seen.add(file); files.push(file);
-          for (const next of byFile.get(file)?.imports ?? []) walk(next);
-          if (!startFiles.includes(file)) depCss.push(...cssOf(file));
-        };
-        for (const start of starts) {
-          const id = resolve(root, start);
-          const chunk = chunks.find(c => c.isDynamicEntry && c.facadeModuleId === id);
-          // A page whose entry does not import it dynamically (a test fixture's page) names no preload; check_client budgets either way.
-          if (!chunk) continue;
-          startFiles.push(chunk.fileName);
-          walk(chunk.fileName);
-        }
-        return {html: startupSheets(html, ctx.chunk.fileName, chunks, depCss, startFiles.flatMap(cssOf)),
-          tags: files.map(file => ({tag: 'link', attrs: {rel: 'modulepreload', crossorigin: true, href: `./${file}`}, injectTo: 'head'}))};
+        const src = ctx.filename && EARLY_SCRIPTS[basename(ctx.filename)];
+        if (!src || !ctx.bundle) return html;
+        const id = resolve(root, src);
+        const chunk = Object.values(ctx.bundle).find(o => o.type === 'chunk' && o.isEntry && o.facadeModuleId === id);
+        if (!chunk) return html;
+        // Right after the charset, and asked for at high priority: an async script's default is low, behind the app's own chunks.
+        const tag = `<script type="module" async fetchpriority="high" crossorigin src="./${chunk.fileName}"></script>`;
+        const charset = /<meta charset="[^"]*"\s*\/?>\n?/i;
+        return charset.test(html) ? html.replace(charset, m => `${m}    ${tag}\n`) : html.replace('<head>', `<head>\n    ${tag}`);
       },
     },
   };
@@ -194,7 +162,7 @@ export function clientConfig({root = resolve(import.meta.dirname, 'dist'), outDi
     base: './',
     publicDir: false,
     logLevel: 'warn',
-    plugins: [staticRefs(), pageStyles(root), maplibreCss(), startupPreload()],
+    plugins: [staticRefs(), pageStyles(root), maplibreCss(), earlyScripts(root)],
     // Preact islands in web/ (P4-01b): JSX compiles to preact/jsx-runtime.
     oxc: {jsx: {runtime: 'automatic', importSource: 'preact'}},
     build: {
@@ -212,7 +180,7 @@ export function clientConfig({root = resolve(import.meta.dirname, 'dist'), outDi
       sourcemap: false,
       reportCompressedSize: false,
       rolldownOptions: {
-        input: Object.fromEntries(pages(root).map(name => [name.replace(/\.html$/, ''), resolve(root, name)])),
+        input: {...Object.fromEntries(pages(root).map(name => [name.replace(/\.html$/, ''), resolve(root, name)])), ...earlyInputs(root)},
         output,
       },
     },

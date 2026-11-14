@@ -73,16 +73,6 @@ test('SC1407-08: allows the app entry importing the Chart library wrapper dynami
   assert.equal(r.status, 0, r.output);
 });
 
-test('SCB-11: the app code its entry imports at once is screened as startup code', async t => {
-  const main = '../web/app/main.tsx';
-  const r = await check(t, {entry: {dynamicImports: [main]}, chunks: {
-    [main]: {file: file('main'), src: main, isDynamicEntry: true, imports: ['maplibre-gl']},
-    'maplibre-gl': {file: file('maplibre-gl'), src: 'node_modules/maplibre-gl/dist/maplibre-gl.mjs'},
-  }});
-  assert.equal(r.status, 1, r.output);
-  assert.match(r.output, /MapLibre and PMTiles load by dynamic import only/);
-});
-
 test('preserves three names, source paths and code markers', async t => {
   for (const chunk of [
     {file: file('three.core')},
