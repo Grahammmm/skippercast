@@ -170,7 +170,7 @@
     }
   },
   "record_path": "jurisdictions/reviews/2026-11-14-california-central.json",
-  "scope": "Recreational boat-fishing legal summaries, source identity and documented area notices. Not live operational clearance or verification of every map boundary.",
+  "scope": "Rechecked unchanged Central species-rule and Piedras Blancas SMR/SMCA fingerprints for South Big Sur\u2013San Simeon. CDFW SMR prohibits take; SMCA allows salmon/albacore only. Both official polygons are excluded conservatively. Vandenberg 403 is held outside this fishing footprint. No harbor, route, bottom target or live trip clearance is approved.",
   "reviewed_regions": [
     {
       "id": "cambria-san-simeon",
@@ -188,6 +188,51 @@
         35.05,
         -120.72,
         35.56
+      ]
+    },
+    {
+      "id": "point-arguello-conception",
+      "fishing_bounds": [
+        -121.15,
+        34.45,
+        -120.38,
+        35.03
+      ]
+    },
+    {
+      "id": "santa-cruz-monterey-bay",
+      "fishing_bounds": [
+        -122.68,
+        36.601,
+        -121.72,
+        37.182
+      ]
+    },
+    {
+      "id": "monterey-point-sur",
+      "fishing_bounds": [
+        -122.34,
+        36.301,
+        -121.66,
+        36.624
+      ]
+    },
+    {
+      "id": "big-sur-coast",
+      "fishing_bounds": [
+        -122.19,
+        35.901,
+        -121.46,
+        36.299
+      ]
+    },
+    {
+      "id": "south-big-sur-san-simeon",
+      "fishing_bounds": [
+        -121.99,
+        35.661,
+        -121.21,
+        35.899
       ]
     }
   ]
