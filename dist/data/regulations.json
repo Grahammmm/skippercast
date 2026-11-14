@@ -810,7 +810,7 @@
       "source_status": "ok"
     }
   },
-  "checked_at": "2026-11-14T22:08:33Z",
+  "checked_at": "2026-11-14T22:34:33Z",
   "review_required": [
     "access-vandenberg-maritime"
   ],
@@ -953,7 +953,7 @@
       ]
     }
   ],
-  "review_record": null,
+  "review_record": "jurisdictions/reviews/2026-11-14-california-central.json",
   "approved_rules_content_sha256": "7cbe11fff7f5dad3324021f80c47b261919a61bdbe28d88538abf0bd2129df9f",
   "rules_review_status": "reviewed"
 }

@@ -168,5 +168,27 @@
       "content_sha256": "652de50b794c7f8b73e766cc1b3a84417db163462a21da4c93a2acc653b9b891",
       "note": "G approved all in chat 2026-11-14 (SIGN-SHEET-2027); hash is the fresh packet hash"
     }
-  }
+  },
+  "record_path": "jurisdictions/reviews/2026-11-14-california-central.json",
+  "scope": "Recreational boat-fishing legal summaries, source identity and documented area notices. Not live operational clearance or verification of every map boundary.",
+  "reviewed_regions": [
+    {
+      "id": "cambria-san-simeon",
+      "fishing_bounds": [
+        -121.32,
+        35.53,
+        -121.06,
+        35.66
+      ]
+    },
+    {
+      "id": "morro-bay",
+      "fishing_bounds": [
+        -121.18,
+        35.05,
+        -120.72,
+        35.56
+      ]
+    }
+  ]
 }
