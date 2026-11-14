@@ -255,5 +255,8 @@ test('SCB-07-C: canonical adapter preserves bands, fits, terrain and source cred
   const screen = {...LOADED_SCREEN, screen: {...PLANNER_SCREEN, fingerprint: () => 'boundaries-v1'}};
   assert.ok(ranking(inputs({coast: 'gopher-rockfish', publication: {...READY, loaded: slim}, plannerScreen: screen})).picks.length);
   assert.deepEqual(ranking(inputs({coast: 'gopher-rockfish', publication: {...READY, loaded: slim}})).picks, [], 'no outline and mismatched fingerprint withholds, never treats the waypoint as an outline');
-  assert.equal(ranking(inputs({publication: {...READY, loaded}, now: NOW + 500})).empty, 'Reviewed habitat unavailable');
+  const expired = ranking(inputs({publication: {...READY, loaded}, now: NOW + 500, reachNm: 6}));
+  assert.equal(expired.empty, 'Reviewed habitat unavailable');
+  assert.deepEqual(expired.picks, []); assert.equal(expired.reach, 6);
+  assert.ok(expired.harbor && expired.origin, 'habitat failure does not hide origin/range controls');
 });

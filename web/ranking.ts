@@ -463,7 +463,7 @@ export function ranking(i: RankingInputs): Ranking {
   }
   const pub = i.publication, plannerSpecies = Object.hasOwn(PLANNER_SPECIES, i.coast) ? PLANNER_SPECIES[i.coast] : undefined;
   const ownHabitat = !!i.region && HABITAT_REGIONS.includes(i.region) && speciesOptions.some(s => s.id === i.coast && (s.field || s.id === 'all'));
-  const unavailable = (): Ranking => ({source: null, label: '', basis: '', picks: [], empty: 'Reviewed habitat unavailable', habitatUnavailable: true});
+  const unavailable = (): Ranking => ({source: null, label: '', basis: '', picks: [], empty: 'Reviewed habitat unavailable', habitatUnavailable: true, ...extra});
   if (pub && pub.region === i.region && ownHabitat && (pub.state === 'unavailable' || pub.state === 'ready' && (manifestState(pub.loaded.publication, i.region, i.now).state !== 'ready'
       || !(pub.loaded.habitatExpiresAt === undefined || pub.loaded.habitatExpiresAt > i.now)))) return unavailable();
   if (pub && i.region && (plannerSpecies || ownHabitat)) {

@@ -27,6 +27,7 @@ for (const failure of ['held', 'expired', 'missing']) {
     await expect(brief(page, isMobile).locator('[data-habitat="unavailable"]')).toBeVisible();
     await expect(brief(page, isMobile).locator('[data-habitat="unavailable"]')).toHaveText('Reviewed habitat unavailable');
     await expect(brief(page, isMobile).locator('.app-pick')).toHaveCount(0);
+    await expect(brief(page, isMobile).getByRole('button', {name: 'Set range'})).toBeVisible();
     expect(exports).toBe(0);
     expect(pageErrors).toEqual([]);
   });
