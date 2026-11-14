@@ -134,6 +134,11 @@ export const DEPLOY_PUBLIC_VARS = Object.freeze([
   'FLEET_ENABLED', 'FLEET_MAP_ENABLED', 'CUSTOM_DOMAINS', 'WORKERS_INVOCATION_LOGS',
 ]);
 
+// A name that looks like a credential can never be in the public receipt, whoever edits the list.
+export const SECRET_NAME = /secret|token|key|password/i;
+const secretLike = DEPLOY_PUBLIC_VARS.filter(name => SECRET_NAME.test(name));
+if (secretLike.length) throw Error(`DEPLOY_PUBLIC_VARS names look like secrets: ${secretLike.join(', ')}`);
+
 export function deploySnapshot(commit, environ = {}) {
   if (!/^[0-9a-f]{40}$/.test(commit ?? '')) throw Error('deploy snapshot requires a full commit SHA');
   return {commit, variables: Object.fromEntries(DEPLOY_PUBLIC_VARS.map(name =>
