@@ -94,6 +94,11 @@ const contentType = (key: string): string => key.endsWith('.geojson.gz') ? 'appl
   : key.endsWith('.pmtiles') ? 'application/octet-stream' : key.endsWith('.md') ? 'text/markdown; charset=utf-8' : 'application/octet-stream';
 // Feeds named latest/index/manifest change in place; tiles are replaced per model cycle.
 const cacheFor = (key: string): number => /(^|\/)(latest|index|manifest|status|health|intelligence|habitat-dynamics)[^/]*\.json$/.test(key) ? 60 : 300;
+// R4-SC-08: a basemap archive named by its content (scripts/basemap/regions.py content_key: the first 16 hex of its
+// SHA-256, published once, never overwritten) never changes bytes, so browsers keep it a year. A date-only name
+// (ca-coast-YYYYMMDD.pmtiles, published before content names) may get new bytes and keeps cacheFor's lifetime.
+export const CONTENT_NAMED_BASEMAP = /^tiles\/basemap\/ca-coast-\d{8}-[a-f0-9]{16}\.pmtiles$/;
+export const IMMUTABLE = 'public, max-age=31536000, immutable';
 
 function parseRange(header: string | null, size: number): {start: number; end: number} | 'invalid' | null {
   const match = /^bytes=(\d*)-(\d*)$/.exec(header || '');
@@ -258,7 +263,8 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
       return new Response('Seafloor screening unavailable or expired', {status: 503, headers: {'Cache-Control': 'no-store'}});
     }
   }
-  const headers = new Headers({'Content-Type': contentType(logicalKey), 'Cache-Control': seafloor ? 'no-store' : `public, max-age=${cacheFor(logicalKey)}`,
+  const headers = new Headers({'Content-Type': contentType(logicalKey),
+    'Cache-Control': seafloor ? 'no-store' : CONTENT_NAMED_BASEMAP.test(logicalKey) ? IMMUTABLE : `public, max-age=${cacheFor(logicalKey)}`,
     'X-Content-Type-Options': 'nosniff', 'Access-Control-Allow-Origin': '*',
     'Access-Control-Expose-Headers': 'ETag, Content-Range, Content-Length, Accept-Ranges, X-Feed-Generation'});
   if (target.generation) headers.set('X-Feed-Generation', target.generation);

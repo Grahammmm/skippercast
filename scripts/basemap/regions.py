@@ -1,6 +1,6 @@
 """Plan, record and publish the Chart basemap archive (FE-10, docs/plans/front-end/design.md § 4).
 
-One archive, `tiles/basemap/ca-coast-<build>.pmtiles`, cut by byte ranges
+One archive, `tiles/basemap/ca-coast-<build>-<sha256[:16]>.pmtiles`, cut by byte ranges
 from a Protomaps daily planet build: zooms 0-10 over one overview box around
 every active and preview region (padded), zooms 11-14 inside each region's
 `bounds` from regions/<id>/region.json. MapLibre overzooms past 14.
@@ -12,7 +12,9 @@ scripts/basemap/build_basemap.sh runs the steps:
     python scripts/basemap/regions.py publish                      # R2: archive, read-back, then manifest
 
 Publishing needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (scripts/publish_r2.py)
-and never deletes: an older archive stays until a lifecycle rule or a person removes it.
+and never deletes or overwrites: the archive is built as ca-coast-<build>.pmtiles and
+published under its content key (R4-SC-08), which the site serves as immutable; an
+older archive stays until a lifecycle rule or a person removes it.
 """
 import argparse
 from datetime import datetime, timezone
@@ -98,9 +100,18 @@ def latest(listing):
 
 
 def archive_key(build):
+    """The date-only name the build writes locally (and the key published before R4-SC-08)."""
     if not re.fullmatch(BUILD_PATTERN, str(build)):
         raise ValueError(f'A Protomaps build is YYYYMMDD, not {build!r}')
     return f'{PREFIX}/ca-coast-{build}.pmtiles'
+
+
+def content_key(build, digest):
+    """The published key (R4-SC-08): the build date plus the first 16 hex of the archive's SHA-256, so one key
+    only ever names one set of bytes. Only this form is served as immutable (server/feeds.ts CONTENT_NAMED_BASEMAP)."""
+    if not re.fullmatch(r'[a-f0-9]{64}', str(digest)):
+        raise ValueError(f'A SHA-256 is 64 lowercase hex, not {digest!r}')
+    return archive_key(build).removesuffix('.pmtiles') + f'-{digest[:16]}.pmtiles'
 
 
 def plan(build, listing, root=ROOT):
@@ -125,11 +136,12 @@ def sha256(path):
 
 
 def manifest(planned, archive, seconds, now=None):
-    """The pointer the Chart style reads: which archive, its size and hash, what it covers."""
+    """The pointer the Chart style reads: which archive (its content key), its size and hash, what it covers."""
     archive = Path(archive)
     if archive.name != planned['key'].rsplit('/', 1)[1] or archive.stat().st_size < 1024:
         raise ValueError(f'{archive} is not the planned archive or is empty')
-    return {'schema_version': 1, 'key': planned['key'], 'bytes': archive.stat().st_size, 'sha256': sha256(archive),
+    digest = sha256(archive)
+    return {'schema_version': 1, 'key': content_key(planned['build'], digest), 'bytes': archive.stat().st_size, 'sha256': digest,
             'built_at': (now or datetime.now(timezone.utc)).strftime('%Y-%m-%dT%H:%M:%SZ'),
             'build_seconds': int(seconds), 'attribution': ATTRIBUTION, 'license': 'ODbL-1.0',
             'source': {'build': planned['build'], **planned['source']},
@@ -137,17 +149,37 @@ def manifest(planned, archive, seconds, now=None):
             'regions': [{'id': r['id'], 'bbox': r['bbox']} for r in planned['regions']]}
 
 
+def _head(s3, bucket, key):
+    """The stored object's head, or None when R2 holds nothing at `key`; any other error propagates."""
+    try:
+        return s3.head_object(Bucket=bucket, Key=key)
+    except Exception as error:
+        if getattr(error, 'response', {}).get('Error', {}).get('Code') in ('404', 'NoSuchKey', 'NotFound'):
+            return None
+        raise
+
+
 def publish(s3, bucket, archive, document):
-    """Upload the archive, check its stored size and hash, then write the manifest. Never deletes."""
-    s3.upload_file(str(archive), bucket, document['key'], ExtraArgs={
-        'ContentType': 'application/octet-stream', 'CacheControl': 'public, max-age=31536000, immutable',
-        'Metadata': {'sha256': document['sha256']}})
-    head = s3.head_object(Bucket=bucket, Key=document['key'])
+    """Upload the archive once under its content key, check its stored size and hash, then write the manifest.
+
+    Never deletes and never overwrites (R4-SC-08): an object already at the key is left as it is. When it holds
+    these bytes (a rerun after a failed manifest write) the manifest is written; otherwise nothing is."""
+    key = document['key']
+    if key != content_key(document['source']['build'], document['sha256']):
+        raise RuntimeError(f'{key} is not the content key of this archive; rebuild the manifest. Nothing published.')
+    head = _head(s3, bucket, key)
+    existed = head is not None
+    if not existed:
+        s3.upload_file(str(archive), bucket, key, ExtraArgs={
+            'ContentType': 'application/octet-stream', 'CacheControl': 'public, max-age=31536000, immutable',
+            'Metadata': {'sha256': document['sha256']}})
+        head = s3.head_object(Bucket=bucket, Key=key)
     if head.get('ContentLength') != document['bytes'] or head.get('Metadata', {}).get('sha256') != document['sha256']:
-        raise RuntimeError(f"R2 read-back mismatch for {document['key']}; manifest not updated")
+        raise RuntimeError(f'{key} already holds other bytes; not overwritten, manifest not updated' if existed
+                           else f'R2 read-back mismatch for {key}; manifest not updated')
     s3.put_object(Bucket=bucket, Key=f'{PREFIX}/manifest.json', Body=json.dumps(document, indent=2).encode(),
                   ContentType='application/json', CacheControl='public, max-age=60')
-    return f"Published /feeds/{document['key']} ({document['bytes']:,} bytes) and /feeds/{PREFIX}/manifest.json"
+    return f"Published /feeds/{key} ({document['bytes']:,} bytes) and /feeds/{PREFIX}/manifest.json"
 
 
 def listing():

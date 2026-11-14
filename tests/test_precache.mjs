@@ -81,6 +81,8 @@ test('only-v2 files leave the install precache; the v2 list is the app graph wit
   await mkdir(join(dir, '.vite'), {recursive: true});
   await mkdir(join(dir, 'basemap/glyphs/dm-sans-medium'), {recursive: true});
   await writeFile(join(dir, 'basemap/glyphs/dm-sans-medium/0-255.pbf'), 'pbf');
+  await mkdir(join(dir, 'basemap/glyphs/v/0123456789abcdef/dm-sans-medium'), {recursive: true});
+  await writeFile(join(dir, 'basemap/glyphs/v/0123456789abcdef/dm-sans-medium/0-255.pbf'), 'pbf');
   await writeFile(join(dir, 'basemap/glyphs/DM-SANS-OFL.txt'), 'licence');
   await writeFile(join(dir, '.vite/manifest.json'), JSON.stringify(manifest));
   for (const e of Object.values(manifest)) for (const f of [e.file, ...(e.css || []), ...(e.assets || [])]) await writeFile(join(dir, f), '');
@@ -94,7 +96,8 @@ test('only-v2 files leave the install precache; the v2 list is the app graph wit
   assert.deepEqual(out.v2.assets, [...reachable(manifest, ['app.html'], new Set(['../web/map/terrain.js']))].sort());
   assert.deepEqual(out.v2.assets, ['/assets/app.1111111111.js', '/assets/app.2222222222.css', '/assets/font.3333333333.woff2', '/assets/maplibre-gl-worker.7777777777.js',
     '/assets/maplibre.6666666666.js', '/assets/shared.5555555555.js']);
-  assert.deepEqual(out.v2.static, ['/basemap/glyphs/dm-sans-medium/0-255.pbf']);
+  // R4-SC-08: the pack stores the content-versioned glyphs the style loads, not the unversioned copies.
+  assert.deepEqual(out.v2.static, ['/basemap/glyphs/v/0123456789abcdef/dm-sans-medium/0-255.pbf']);
 });
 
 // #497: '/' is the landing; its first paint joins the install list, MapLibre does not.

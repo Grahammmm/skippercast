@@ -15,17 +15,25 @@ LISTING = [{'key': '20261007.pmtiles', 'size': 138664957457, 'version': '4.15.2'
            {'key': 'notes.txt'}]
 
 
+class Missing(Exception):
+    """What boto3's head_object raises for an absent key (a ClientError with code 404)."""
+    response = {'Error': {'Code': '404'}}
+
+
 class FakeS3:
-    def __init__(self, stored_bytes=None):
+    def __init__(self, stored_bytes=None, existing=None):
         self.calls, self.stored_bytes = [], stored_bytes
+        self.objects = dict(existing or {})  # key -> head_object answer
 
     def upload_file(self, path, bucket, key, ExtraArgs):
         self.calls.append(('upload', key))
-        self.metadata, self.size = ExtraArgs['Metadata'], Path(path).stat().st_size
+        self.objects[key] = {'ContentLength': self.stored_bytes or Path(path).stat().st_size, 'Metadata': ExtraArgs['Metadata']}
 
     def head_object(self, Bucket, Key):
         self.calls.append(('head', Key))
-        return {'ContentLength': self.stored_bytes or self.size, 'Metadata': self.metadata}
+        if Key not in self.objects:
+            raise Missing(Key)
+        return self.objects[Key]
 
     def put_object(self, Bucket, Key, Body, **kwargs):
         self.calls.append(('put', Key))
@@ -105,23 +113,54 @@ class ManifestAndPublishTests(unittest.TestCase):
         document = regions.manifest(self.planned, self.archive, 36.4, now=NOW)
         self.assertEqual(document['bytes'], 4104)
         self.assertEqual(document['sha256'], regions.sha256(self.archive))
+        # R4-SC-08: the published key names the content; the local file keeps the date-only name.
+        self.assertEqual(document['key'], f"tiles/basemap/ca-coast-20261008-{document['sha256'][:16]}.pmtiles")
         self.assertEqual(document['build_seconds'], 36)
         self.assertEqual(document['source']['build'], '20261008')
         self.assertEqual(document['attribution'], '© OpenStreetMap contributors, © Protomaps')
         self.assertEqual(document['built_at'], '2026-09-28T12:00:00Z')
         with self.assertRaises(ValueError):
             regions.manifest(self.planned, self.dir / 'other.pmtiles', 1)
+        with self.assertRaises(ValueError):
+            regions.content_key('20261008', 'A' * 64)
 
     def test_publish_reads_the_archive_back_before_moving_the_manifest(self):
         document = regions.manifest(self.planned, self.archive, 1, now=NOW)
         s3 = FakeS3()
-        regions.publish(s3, 'bucket', self.archive, document)
-        key = 'tiles/basemap/ca-coast-20261008.pmtiles'
-        self.assertEqual(s3.calls, [('upload', key), ('head', key), ('put', 'tiles/basemap/manifest.json')])
+        self.assertIn(document['key'], regions.publish(s3, 'bucket', self.archive, document))
+        key = document['key']
+        self.assertEqual(s3.calls, [('head', key), ('upload', key), ('head', key), ('put', 'tiles/basemap/manifest.json')])
         short = FakeS3(stored_bytes=10)
-        with self.assertRaises(RuntimeError):
+        with self.assertRaisesRegex(RuntimeError, 'read-back mismatch'):
             regions.publish(short, 'bucket', self.archive, document)
         self.assertNotIn(('put', 'tiles/basemap/manifest.json'), short.calls)
+
+    def test_publish_never_overwrites_an_existing_key(self):
+        document = regions.manifest(self.planned, self.archive, 1, now=NOW)
+        key, put = document['key'], ('put', 'tiles/basemap/manifest.json')
+        other = FakeS3(existing={key: {'ContentLength': document['bytes'], 'Metadata': {'sha256': 'f' * 64}}})
+        with self.assertRaisesRegex(RuntimeError, 'already holds other bytes; not overwritten'):
+            regions.publish(other, 'bucket', self.archive, document)
+        self.assertEqual(other.calls, [('head', key)], 'no upload over another archive, no manifest')
+        # A rerun after a failed manifest write: the same bytes are there, so only the manifest is written.
+        same = FakeS3(existing={key: {'ContentLength': document['bytes'], 'Metadata': {'sha256': document['sha256']}}})
+        regions.publish(same, 'bucket', self.archive, document)
+        self.assertEqual(same.calls, [('head', key), put])
+        # A manifest that does not name its archive's content key (a date-only key from before R4-SC-08) uploads nothing.
+        for stale in ({**document, 'key': 'tiles/basemap/ca-coast-20261008.pmtiles'}, {**document, 'sha256': 'e' * 64}):
+            s3 = FakeS3()
+            with self.assertRaisesRegex(RuntimeError, 'not the content key'):
+                regions.publish(s3, 'bucket', self.archive, stale)
+            self.assertEqual(s3.calls, [])
+
+    def test_head_errors_other_than_absence_stop_publication(self):
+        document = regions.manifest(self.planned, self.archive, 1, now=NOW)
+
+        class Denied(FakeS3):
+            def head_object(self, Bucket, Key):
+                raise PermissionError('403')
+        with self.assertRaises(PermissionError):
+            regions.publish(Denied(), 'bucket', self.archive, document)
 
 
 class WorkflowTests(unittest.TestCase):

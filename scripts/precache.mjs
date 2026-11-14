@@ -99,7 +99,8 @@ export async function precacheManifest(dir, buildId) {
     warm: appWarm(manifest),
     v2: {
       assets: [...reachable(manifest, ['app.html'], OFFLINE_SKIP)].sort(),
-      static: glyphs.filter(n => n.endsWith('.pbf')).sort().map(n => `/basemap/glyphs/${n}`),
+      // R4-SC-08: the content-versioned glyphs the Chart style loads (scripts/client-build.mjs versionGlyphs).
+      static: glyphs.filter(n => n.startsWith('v/') && n.endsWith('.pbf')).sort().map(n => `/basemap/glyphs/${n}`),
     },
   };
 }

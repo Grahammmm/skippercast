@@ -12,7 +12,8 @@
 //    cached page can never pin an old set of assets.
 // 4. precache.json and the build id in sw.js (scripts/precache.mjs), _headers
 //    (server/security-headers.ts, plus a year's immutable caching for
-//    /assets/*) and .assetsignore (keeps .vite/ off the CDN).
+//    /assets/* and the content-versioned glyphs /basemap/glyphs/v/*) and
+//    .assetsignore (keeps .vite/ off the CDN).
 //
 // The build id hashes every page and every hashed asset name, so any change
 // to a module, stylesheet or page gives a new id (and a new service worker).
@@ -23,11 +24,18 @@ import {build} from 'vite';
 import {clientConfig, pages} from '../vite.config.mjs';
 import {writePrecache} from './precache.mjs';
 import {generate as generateStrings} from './build_landing_strings.mjs';
+import {GLYPH_VERSION} from '../web/map/style.ts';
 
 export const STABLE = new Set(['sw.js']);
 export const MANIFEST = '.vite/manifest.json';
 // Hashed names never change content, so browsers and the edge keep them a year.
 export const IMMUTABLE_ASSETS = '/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n';
+// R4-SC-08: the label glyphs are also published under their content version,
+// basemap/glyphs/v/<GLYPH_VERSION>/<stack>/<range>.pbf, which the Chart style
+// loads and browsers keep a year. The unversioned basemap/glyphs/<stack>/ files
+// stay, with the assets' default revalidation, for pages and packs that name them.
+export const GLYPHS = 'basemap/glyphs';
+export const IMMUTABLE_GLYPHS = `/${GLYPHS}/v/*\n  Cache-Control: public, max-age=31536000, immutable\n`;
 // Authored module sources: Vite builds these, so they are never copied raw.
 const SOURCE = /\.(?:js|css|html)$/;
 
@@ -50,6 +58,33 @@ export async function copyStatic(src, out, {only} = {}) {
     if (only && !only(name)) continue;
     await cp(join(src, name), join(out, name), {recursive: true, filter: from => !PRIVATE_OUTPUT.test(from.split(sep).join('/'))});
   }
+}
+
+/**
+ * The glyph set's content version: the first 16 hex of SHA-256 over every
+ * unversioned range file under `dir` (sorted `<stack>/<range>.pbf` path, NUL,
+ * bytes, NUL), with those paths; null when `dir` holds no range file.
+ */
+export async function glyphVersion(dir) {
+  const names = (await readdir(dir, {recursive: true}).catch(() => []))
+    .map(name => name.split(sep).join('/')).filter(name => name.endsWith('.pbf') && !name.startsWith('v/')).sort();
+  if (!names.length) return null;
+  const hash = createHash('sha256');
+  for (const name of names) hash.update(name).update('\0').update(await readFile(join(dir, name))).update('\0');
+  return {version: hash.digest('hex').slice(0, 16), names};
+}
+
+/**
+ * Copy the glyph ranges in `out` to basemap/glyphs/v/<version>/ and return the
+ * version (null without glyphs). Throws when the files no longer hash to
+ * `expected` (GLYPH_VERSION), so a versioned URL never names other bytes.
+ */
+export async function versionGlyphs(out, expected = GLYPH_VERSION) {
+  const dir = join(out, GLYPHS), set = await glyphVersion(dir);
+  if (!set) return null;
+  if (set.version !== expected) throw Error(`${GLYPHS} hashes to ${set.version}, not GLYPH_VERSION ${expected}: set GLYPH_VERSION in web/map/style.ts with the new glyph files`);
+  for (const name of set.names) await cp(join(dir, name), join(dir, 'v', set.version, name));
+  return set.version;
 }
 
 /** `html` with <meta name="skippercast-build"> naming `buildId`, just before </head>. */
@@ -111,8 +146,9 @@ export async function buildClient({root = 'dist', out = join(root, 'client'), co
   await build({configFile: false, ...clientConfig({root, outDir: out})});
   const manifest = JSON.parse(await readFile(join(out, MANIFEST), 'utf8'));
   await copyStatic(root, out, {only: copy});
+  await versionGlyphs(out);
   const {buildId, shells} = await hashPages(out, pages(root));
-  await writeFile(join(out, '_headers'), headers + IMMUTABLE_ASSETS);
+  await writeFile(join(out, '_headers'), headers + IMMUTABLE_ASSETS + IMMUTABLE_GLYPHS);
   await writeFile(join(out, '.assetsignore'), '.vite\n');
   await writePrecache(out, buildId);
   return {buildId, shells, manifest};

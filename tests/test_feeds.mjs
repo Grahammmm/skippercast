@@ -137,6 +137,26 @@ test('watchdog reports critical sources degraded past the shared limit, as the f
   } finally { console.warn = warn; useBucket({}); }
 });
 
+test('R4-SC-08: a content-named basemap archive is kept a year; a date-only one keeps 300 s; seafloor stays no-store', async () => {
+  const hashed = 'tiles/basemap/ca-coast-20261008-0123456789abcdef.pmtiles', dated = 'tiles/basemap/ca-coast-20261008.pmtiles';
+  const archive = {async get() { return {body: new Blob(['PMTiles']).stream(), size: 7, httpEtag: '"p"', customMetadata: {}}; }};
+  try {
+    useBucket({FEEDS: archive});
+    const control = async path => (await serveFeed(new Request('https://s' + path), path)).headers.get('Cache-Control');
+    assert.equal(await control('/feeds/' + hashed), 'public, max-age=31536000, immutable');
+    assert.equal(await control('/feeds/' + dated), 'public, max-age=300', 'the archive live today, until the next publish');
+    for (const near of ['ca-coast-20261008-0123456789ABCDEF', 'ca-coast-20261008-0123456789abcde', 'ca-coast-0123456789abcdef', 'other-20261008-0123456789abcdef'])
+      assert.equal(await control(`/feeds/tiles/basemap/${near}.pmtiles`), 'public, max-age=300', `${near} is not a content name`);
+    assert.equal(await control('/feeds/tiles/basemap/manifest.json'), 'public, max-age=60', 'the pointer still moves within a minute');
+    const seafloor = '/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles';
+    useBucket({FEEDS: {async get(key) {
+      if (key === 'tiles/seafloor/manifest-morro-bay.json') return {json: async () => ({region: 'morro-bay', status: 'ready', archive_sha256: 'a'.repeat(64), expires_at: new Date(Date.now() + 3600000).toISOString()})};
+      return {body: new Blob(['PMTiles']).stream(), size: 7, httpEtag: '"a"', customMetadata: {sha256: 'a'.repeat(64)}};
+    }}});
+    assert.equal(await control(seafloor), 'no-store');
+  } finally { useBucket({}); }
+});
+
 test('seafloor archives require a fresh matching revision and never fall back to assets', async () => {
   const path = '/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles';
   const control = 'tiles/seafloor/manifest-morro-bay.json';
