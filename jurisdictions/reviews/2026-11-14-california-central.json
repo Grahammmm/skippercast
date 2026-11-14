@@ -1,0 +1,241 @@
+{
+  "schema_version": 1,
+  "jurisdiction_id": "california-central",
+  "reviewed_species": [
+    "lingcod",
+    "rockfish",
+    "halibut",
+    "salmon",
+    "albacore",
+    "bluefin",
+    "dungeness"
+  ],
+  "revision": "2026-11-14-g-signed-resigned-v4",
+  "reviewed_at": "2026-11-14T15:39:00Z",
+  "record_path": "jurisdictions/reviews/2026-11-14-california-central.json",
+  "rules_content_sha256": "52aee1ad6bd52292f47cb3fdb3e0fd6569e134e2afb13c57647dd9e0e12fa1be",
+  "sources": {
+    "rules-central": {
+      "decision": "approve",
+      "content_sha256": "7ec9419a2410727b242be7505466ceb9fadbec36e3256414f6a26f4d0345dd6d",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-crab": {
+      "decision": "approve",
+      "content_sha256": "59d3d2891cf002d936889aef8260de731bb8092cd395872adc055c73652e6bf9",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-health": {
+      "decision": "approve",
+      "content_sha256": "7d6497471d535a06c85f6a4a2c5137e03ce9583ffdd49a691653b6ba5bcb6051",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-inseason": {
+      "decision": "approve",
+      "content_sha256": "893f7965bce1f96e66157374bb9d59fe64f19889ad1f2dc78a4705d8d548d86d",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-ocean": {
+      "decision": "approve",
+      "content_sha256": "d3d91c464dd356fb6d07a1bbda60ae971fe94651828e36e82216cfa4b11c16b9",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-proposals": {
+      "decision": "approve",
+      "content_sha256": "4f514162f876973b16329cf4fb4f7e21469f9350bb6c9d5e6befcc38c1659f44",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-salmon": {
+      "decision": "approve",
+      "content_sha256": "8d5d75b73ec07b5d3c86af94d25ea8c80dd4d75ed43b0a4a21ad3b00a0c42e58",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-whales": {
+      "decision": "approve",
+      "content_sha256": "cdf5f93501fcb4e42911ca6358b4a869f0ef4980dc01043b9f7e84d2d0f6f330",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-book": {
+      "decision": "approve",
+      "content_sha256": "d0e1b4867bccc3ea33e16555fc638e61527b3a99148ae46a631173bc3bef90a1",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-salmon-pdf": {
+      "decision": "approve",
+      "content_sha256": "87f644927fa005c96536346d86c3a018d2eab8e5259b525405615a0877250e03",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "access-vandenberg-maritime": {
+      "decision": "hold",
+      "content_sha256": null,
+      "note": "HOLD: fetch failed; not covered by G signature."
+    },
+    "mpa-ano-greyhound": {
+      "decision": "approve",
+      "content_sha256": "7b13e3b7a11d2a8cf34016e58792f41794fbf8d9a016bf279c6b6f3ca2584385",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-asilomar": {
+      "decision": "approve",
+      "content_sha256": "5f560ebc7f19e6f0844c9c4e363b03d121327da540dff7487477ce49b379e140",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-big-creek": {
+      "decision": "approve",
+      "content_sha256": "652de50b794c7f8b73e766cc1b3a84417db163462a21da4c93a2acc653b9b891",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-buchon": {
+      "decision": "approve",
+      "content_sha256": "e104bad0ddfe3d754e4b0088122ee0430d831ec7b5ca5f7b15a9c4b0c6c165a3",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-cambria": {
+      "decision": "approve",
+      "content_sha256": "841aca011bb49c19470f46248303b412ef09f8c9c9a1fd9ccd7b40949f89bb6a",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-carmel-bay": {
+      "decision": "approve",
+      "content_sha256": "67c41ff68f521abea3438a38a3a1f0923629942f42e25350d74405a153c1539a",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-carmel-pinnacles": {
+      "decision": "approve",
+      "content_sha256": "85a9294c34aeaf75512d47a805577352851b9938e31b4b60808722f772c9f2fd",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-piedras": {
+      "decision": "approve",
+      "content_sha256": "0de3ac61aa49e0efec48ac92f3d869a168a2b396e28e2074df75342c44177818",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-point-conception": {
+      "decision": "approve",
+      "content_sha256": "46d7b1645de5d32996640dfeb68b7a332d11b27696c9bdc04e3b6fcf7fc0b8ba",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-point-lobos": {
+      "decision": "approve",
+      "content_sha256": "50a5ccf144ad8324d3d8e0b31048e95d328e590d8f030973607dabe6a2197d94",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-point-sur": {
+      "decision": "approve",
+      "content_sha256": "561243932af5440845850bd5d72c3421437e64807ba171c10862bea48f734689",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-portuguese-ledge": {
+      "decision": "approve",
+      "content_sha256": "42832c5babe29ff5f8aef84e98b64cc4e08b69da88c1e9d601826e7f221986e5",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-ricketts-lovers": {
+      "decision": "approve",
+      "content_sha256": "e3f15aa9cba9b7190c07a6c93b16bc36f9224bd16757cbdd6a7663a0633837aa",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-soquel-canyon": {
+      "decision": "approve",
+      "content_sha256": "8f69b65711f3aa3c0efb7e41665952ccc68dd67ba3776d30e661540389621790",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "mpa-vandenberg": {
+      "decision": "approve",
+      "content_sha256": "06938b25abdb70feb64da9b378326b71b254328b24a4eed2480b1833188a33bf",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-gear": {
+      "decision": "approve",
+      "content_sha256": "04b8462a51b83d5e3460e5d803e8ebc9fc35f52b57b34654a9b396be36a7e558",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-groundfish": {
+      "decision": "approve",
+      "content_sha256": "9cff8ec8f1368f26d094dd1aabef12f10d86260b1afc5a4c4d414ada3c728bf2",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-groundfish-pdf": {
+      "decision": "approve",
+      "content_sha256": "39f71e7ef92b505950b3a800a1e58f8702c7de6e5b3a0843576c94af9a10d78e",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-invertebrates": {
+      "decision": "approve",
+      "content_sha256": "6fa8d09c6f530755e1b5e887d3e6549671a99d4a0dce57812bb0fc0c5acfd10c",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    },
+    "rules-tuna-federal": {
+      "decision": "approve",
+      "content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
+      "note": "G approved as written in SIGN-SHEET.md and G-SIGNATURE.md; re-signature addendum 2026-11-14 covers fresh rules-health and rules-salmon fingerprints; valid through 2026-12-31."
+    }
+  },
+  "reviewed_regions": [
+    {
+      "id": "cambria-san-simeon",
+      "fishing_bounds": [
+        -121.32,
+        35.53,
+        -121.06,
+        35.66
+      ]
+    },
+    {
+      "id": "morro-bay",
+      "fishing_bounds": [
+        -121.18,
+        35.05,
+        -120.72,
+        35.56
+      ]
+    },
+    {
+      "id": "point-arguello-conception",
+      "fishing_bounds": [
+        -121.15,
+        34.45,
+        -120.38,
+        35.03
+      ]
+    },
+    {
+      "id": "santa-cruz-monterey-bay",
+      "fishing_bounds": [
+        -122.68,
+        36.601,
+        -121.72,
+        37.182
+      ]
+    },
+    {
+      "id": "monterey-point-sur",
+      "fishing_bounds": [
+        -122.34,
+        36.301,
+        -121.66,
+        36.624
+      ]
+    },
+    {
+      "id": "big-sur-coast",
+      "fishing_bounds": [
+        -122.19,
+        35.901,
+        -121.46,
+        36.299
+      ]
+    },
+    {
+      "id": "south-big-sur-san-simeon",
+      "fishing_bounds": [
+        -121.99,
+        35.661,
+        -121.21,
+        35.899
+      ]
+    }
+  ],
+  "geographic_scope_record": "jurisdictions/reviews/2026-09-25-california-central-south-big-sur.json",
+  "geographic_scope_note": "Preserves the existing reviewed regional bounds verbatim; no geographic expansion or new access clearance. Source decisions and rule wording are covered by G-SIGNATURE.md and its 2026-11-14 addendum."
+}

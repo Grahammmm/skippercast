@@ -113,7 +113,7 @@ def regs_startup(registry, source, region):
     are copied whole, so every rule state is the full registry's."""
     wanted = {part for species in region['species'] for part in (('lingcod', 'rockfish') if species == 'reef' else (species,))}
     species = {key: value for key, value in registry['species'].items() if key in wanted}
-    cited = {ident for profile in species.values() for ident in [*profile.get('source_ids', []), profile.get('primary_source_id')] if ident}
+    cited = {ident for profile in species.values() for ident in [*profile.get('source_ids', []), *profile.get('also_check_source_ids', []), profile.get('primary_source_id')] if ident}
     # validRegulations also needs every area notice to cite a source with a URL; the copy carries no notices, so the
     # full registry must pass that check here or the copy would read valid where the registry does not.
     _check_area_notices(registry, source)

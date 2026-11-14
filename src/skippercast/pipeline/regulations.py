@@ -61,9 +61,23 @@ def validate_bindings(jurisdiction, registry):
         if not notice.get('source_ids') or not set(notice['source_ids']) <= registry['sources'].keys():
             raise ValueError('Every area notice needs watched legal sources')
     required = set(jurisdiction.get('required_source_ids', []))
+    # Policy-A (G, 2026-11-12): a page either blocks (shared `required_source_ids`, or per species in
+    # `species_required_source_ids`) or is an "also check" link (`also_check_source_ids`) that never blocks.
+    per_species = jurisdiction.get('species_required_source_ids', {})
+    also_check = set(jurisdiction.get('also_check_source_ids', []))
+    known = registry['sources'].keys()
+    if not set(per_species) <= registry['species'].keys() or not also_check <= known \
+            or not all(set(ids) <= known for ids in per_species.values()):
+        raise ValueError('Jurisdiction names an unknown species or source in its blocking policy')
+    if also_check & required:
+        raise ValueError('A page cannot both block every species and be an also-check link')
     for ident, profile in registry['species'].items():
-        if not required <= set(profile['source_ids']):
+        blocking = set(profile['source_ids'])
+        if not required | set(per_species.get(ident, [])) <= blocking:
             raise ValueError(f'Missing shared legal dependencies for {ident}')
+        links = set(profile.get('also_check_source_ids', []))
+        if blocking & links or not links <= also_check or not also_check <= blocking | links:
+            raise ValueError(f'Also-check links must cover every non-blocking policy page, and never block: {ident}')
 
 
 def watch_jobs(watches):
@@ -98,7 +112,7 @@ def regional_source_ids(jurisdiction, registry, region):
     validate_region_binding(jurisdiction, registry, region)
     active = {species for target in region['species']
               for species in (('lingcod', 'rockfish') if target == 'reef' else (target,))}
-    identifiers = set(jurisdiction.get('required_source_ids', []))
+    identifiers = set(jurisdiction.get('required_source_ids', [])) | set(jurisdiction.get('also_check_source_ids', []))
     for species in active:
         identifiers.update(registry['species'][species]['source_ids'])
     notices = {notice['id']: notice for notice in registry.get('area_notices', [])}

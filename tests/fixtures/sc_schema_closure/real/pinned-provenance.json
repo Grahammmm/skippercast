@@ -97,10 +97,10 @@
       "sha256": "2dfea0315f5e8ea8bda804e0ac715e7dd34765b9e6aaf16883524fa5d85e2f08"
     },
     {
-      "bytes": 2193,
-      "git_blob": "5815cc5e88e1b4f83be1686f93efe0e8cd209a45",
+      "bytes": 2611,
+      "git_blob": "eed3441714187d478cd4b5776e7c5690cdc0b954",
       "path": "schemas/jurisdiction.schema.json",
-      "sha256": "790a8b2b366d276d38eb983302d3825b85af147a8eda1fd2eda0aa87b9eb987c"
+      "sha256": "91c15503d5728365ea48376e4387a86d88c9c592b4846b2ce2ef8cc97985912b"
     },
     {
       "bytes": 2684,
