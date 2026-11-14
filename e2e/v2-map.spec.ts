@@ -1310,6 +1310,8 @@ test('Swell draws the model grid as a field with period lines and strokes, names
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'none', hour: hourParam(horizonStart() + 24 * HOUR_MS)});
   // Inside the grid and clear of the legend and the always-on depth contours.
   const swellProbe = await chartPoint(page, CURRENT_VIEW, SWELL_POINT.lon, SWELL_POINT.lat), x = swellProbe.x, y = swellProbe.y;
+  // A stable pixel before deferred Aerial attaches is not the final water baseline.
+  await expect(page.locator('.app-chart')).toHaveAttribute('aria-busy', 'false');
   let water: number[] = [];
   await expect.poll(async () => { const a = await pixel(page, x, y); await page.waitForTimeout(400); water = await pixel(page, x, y); return apart(a, water); }).toBe(0);
 
