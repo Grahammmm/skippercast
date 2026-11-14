@@ -12,6 +12,7 @@ import {readFileSync} from 'node:fs';
 import {inflateSync} from 'node:zlib';
 import type {Locator, Page, Route} from '@playwright/test';
 import {chartCentre, expect, PIXEL, test, type V2} from './fixtures.ts';
+import {quarantine} from '../scripts/e2e-flakes.mjs';
 
 const UNAVAILABLE = 'Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable.';
 const PLACE = {region: 'morro-bay', profile: 'spear', target: 'rockfish', hour: '2030-01-02T03:00Z', habitat: 'reef:r1', view: '35.38000,-120.88000,12'};
@@ -1297,6 +1298,10 @@ async function serveForecast(page: Page, {region = 'morro-bay', issuedHoursAgo =
     models: {ncep_gfswave016: {data, meta: {last_run_initialisation_time: issued / 1000, data_end_time: times.at(-1)}}}}}));
 }
 
+// Same-head recovery: run 43168947180 attempts 1 -> 2. Only this case, not this file.
+const swellQuarantine = quarantine('e2e/v2-map.spec.ts');
+test.describe('SC-CI-3 quarantine', {tag: swellQuarantine.tag}, () => {
+test.describe.configure({retries: swellQuarantine.retries});
 test('Swell draws the model grid as a field with period lines and strokes, names the run, follows the hour and leaves when off', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
   await serveForecast(page);
@@ -1350,6 +1355,8 @@ test('Swell draws the model grid as a field with period lines and strokes, names
   await collapseSheet(page);
   await expect.poll(async () => apart(await pixel(page, x, y), water), {message: 'the water shows again'}).toBeLessThan(12);
   expect(pageErrors).toEqual([]);
+});
+
 });
 
 test('Swell draws nothing for a stale run or points that form no grid, and says why', async ({page, v2}) => {
