@@ -71,7 +71,8 @@ class RunnerSwitchTests(unittest.TestCase):
     """Heavy workflows read their runner from a repository variable (docs/operations/runners.md)."""
 
     # fleet-health.yml alerts when Hermes (the data runner) is down, so it cannot run there (charter-fleet design § 4).
-    HOSTED_ONLY = {'deploy-cloudflare.yml', 'dco.yml', 'release.yml', 'fleet-health.yml'}
+    # e2e-timing.yml measures input latency, so it stays on the same GitHub-hosted runner class every night (CI-PARITY-1).
+    HOSTED_ONLY = {'deploy-cloudflare.yml', 'dco.yml', 'release.yml', 'fleet-health.yml', 'e2e-timing.yml'}
 
     # ci.yml is the one pull_request workflow that can reach the box. A pull request from a
     # fork, or a Dependabot update (third-party install scripts), stays on GitHub-hosted runners
