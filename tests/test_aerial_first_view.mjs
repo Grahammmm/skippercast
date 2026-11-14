@@ -6,7 +6,7 @@ import test from 'node:test';
 import {signal} from '@preact/signals';
 import {naipSource} from '../packages/coast/src/map-sources.ts';
 import {
-  PREVIEW_SIZE, SHARP_WAIT_MAX_MS, aerialBase, aerialId, aerialOverlay, createAerial, createSharpStart, previewTiles,
+  PREVIEW_SIZE, SHARP_WAIT_MAX_MS, aerialBase, aerialId, aerialOverlay, aerialSoft, createAerial, createSharpStart, previewTiles,
 } from '../web/map/aerial.ts';
 import {ENC_LAYER, markUnavailable, unavailable} from '../web/map/chart.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
@@ -71,6 +71,40 @@ test('with `sharp`, a first draw is the preview; sharp lays the full image over 
   setParams({base: 'aerial'});
   assert.deepEqual(shape(e.overlay), [[ID, '512,512', 'jpgpng']], 'chosen again after the first view: the full image at once');
   a.destroy();
+});
+
+test('aerialSoft reads true from the preview until the full image is alone, and never for a failed or removed base', t => {
+  t.mock.method(console, 'warn', () => {});
+  browser();
+  const e = engine(), sharp = signal(false);
+  const a = createAerial({engine: signal(e), offer: () => MORRO, sharp: () => sharp.value});
+  assert.equal(aerialSoft.value, true, 'the preview alone');
+  sharp.value = true;
+  assert.equal(aerialSoft.value, true, 'the full image still arriving over the preview');
+  e.settle();
+  assert.equal(aerialSoft.value, false, 'the full image alone');
+  a.destroy();
+
+  browser();
+  const f = engine(), b = createAerial({engine: signal(f), offer: () => MORRO, sharp: () => false});
+  assert.equal(aerialSoft.value, true);
+  setParams({base: 'night'});
+  assert.equal(aerialSoft.value, false, 'another base: nothing left to refine');
+  b.destroy();
+
+  browser();
+  const g = engine(), c = createAerial({engine: signal(g), offer: () => MORRO, sharp: () => false});
+  markUnavailable('aerial');
+  assert.equal(aerialSoft.value, true, 'the png32 preview after one failure');
+  markUnavailable('aerial');
+  assert.equal(aerialSoft.value, false, 'a base that failed for good never holds the Chart busy');
+  c.destroy();
+  unavailable.value = [];
+
+  browser();
+  const h = engine(), d = createAerial({engine: signal(h), offer: () => MORRO});
+  assert.equal(aerialSoft.value, false, 'without `sharp` the full image is drawn at once');
+  d.destroy();
 });
 
 test('without `sharp` the full image is drawn at once, as before', () => {

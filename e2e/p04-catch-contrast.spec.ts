@@ -258,7 +258,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // R4-SC-09: MapStage.tsx only imports createSharpStart and seafloorState and passes a `sharp` signal to the Chart's
   // createAerial (aerial preview first, full image later). BODY09 mounts Reports/CatchCards directly, never MapStage;
   // no class, token, catch markup, paint, contrast(), assertion or threshold change. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "b44757a357bba098044818406957d0c577938ab2afca7b20af53a97123f9a642",
+  // R4-SC-09 review fix: the Chart host's aria-busy also covers the aerial preview (aerialSoft) after the first idle;
+  // an attribute on the Chart host only, which BODY09 never mounts. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "8944f248861c10bc16203cd9e0052770d3f7106f01e3c02cf03863009047c5b8",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   "web/tokens.css": "56f9708cfa02f651680a2bc02bd3d9080f65dec849aea6888f6bfc52508a5775",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.

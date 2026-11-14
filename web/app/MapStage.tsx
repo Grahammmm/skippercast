@@ -15,7 +15,7 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
-import {createAerial, createImageryStartup, createSharpStart} from '../map/aerial.ts';
+import {aerialSoft, createAerial, createImageryStartup, createSharpStart} from '../map/aerial.ts';
 import {createCharterGrounds} from '../map/charter-grounds.ts';
 import {createShore} from '../map/shore.ts';
 import {chartFailed, createChart, unavailable} from '../map/chart.ts';
@@ -59,6 +59,8 @@ export const mapUnavailable = computed(() => chartFailed.value && shownPresentat
 
 /** RF2115-5: the visit's first Chart is shown and has neither drawn its first idle frame nor failed. Visit-wide, one-way (web/map-ready.ts): never restarts after the first idle. */
 export const chartLoading = computed(() => shownPresentation.value === 'chart' && !chartFailed.value && !mapFirstIdle.value);
+/** R4-SC-09: the Chart host stays aria-busy after that first idle while the aerial base is still the first view's preview. */
+const chartBusy = computed(() => chartLoading.value || (shownPresentation.value === 'chart' && !chartFailed.value && aerialSoft.value));
 
 /** The Chart could not start: say so, and offer a reload of the current page (the same address) as the only retry. */
 export function MapUnavailable() {
@@ -160,7 +162,7 @@ export function MapStage({children, clock}: {children?: ComponentChildren; clock
   return (
     <section class="app-stage" tabIndex={-1} aria-label={t('stage.map', lang)} id={MAP_ID}>
       <div class="app-map" hidden={shown !== 'chart'}>
-        <div class="app-chart" ref={chartHost} hidden={chartFailed.value} aria-busy={chartLoading.value ? 'true' : 'false'} />
+        <div class="app-chart" ref={chartHost} hidden={chartFailed.value} aria-busy={chartBusy.value ? 'true' : 'false'} />
         {failed ? <MapUnavailable /> : <ChartPoster />}
       </div>
       <div class="app-terrain" ref={terrainHost} tabIndex={-1} hidden={shown === 'chart'} data-coast-theme="tokens" />

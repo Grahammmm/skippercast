@@ -64,6 +64,12 @@ export const PREVIEW_SIZE = 256;
 const FULL_SIZE = '&size=512,512&';
 /** How the base is drawn: the preview alone (first view), the full image laid over the preview, or the full image alone. */
 export type AerialStage = 'preview' | 'both' | 'full';
+const softStage = signal(false);
+/**
+ * R4-SC-09: the drawn aerial base is still the preview (alone or under the arriving full image) and has not failed for
+ * good. The Chart's first view is still being refined, so its host stays aria-busy (web/app/MapStage.tsx).
+ */
+export const aerialSoft = computed(() => softStage.value && !unavailable.value.includes(REGISTRY_ID));
 /** naipSource()'s template at PREVIEW_SIZE, or null if the template no longer names its 512 px size. */
 export function previewTiles(format?: NaipFormat): string[] | null {
   const {tiles} = naipSource(format);
@@ -144,6 +150,7 @@ export function createAerial({engine, offer, sharp}: AerialOptions): {destroy():
     const overlay = aerialOverlay(a, format, stage);
     e.setOverlay(REGISTRY_ID, overlay, ENC_LAYER);
     shown = {a, e, format, stage, overlay};
+    softStage.value = stage !== 'full';
     // The full image laid over the preview: once the map settles, its tiles are in, and the preview goes.
     if (stage === 'both') {
       const off = e.view?.on('idle', () => {
@@ -162,7 +169,7 @@ export function createAerial({engine, offer, sharp}: AerialOptions): {destroy():
     effect(() => {
       const e = engine.value, a = drawn.value;
       if (!e) return;
-      if (!a) { if (shown) { unwatch(); e.setOverlay(REGISTRY_ID, null, ENC_LAYER); shown = null; } return; }
+      if (!a) { if (shown) { unwatch(); e.setOverlay(REGISTRY_ID, null, ENC_LAYER); shown = null; softStage.value = false; } return; }
       if (shown?.a === a && shown.e === e) return;
       put(a, e, undefined, !sharpened.peek() && previewTiles() ? 'preview' : 'full');
     }),
@@ -189,6 +196,7 @@ export function createAerial({engine, offer, sharp}: AerialOptions): {destroy():
     destroy() {
       for (const dispose of disposers) dispose();
       unwatch();
+      softStage.value = false;
       aerialOffer.value = null;
     },
   };
