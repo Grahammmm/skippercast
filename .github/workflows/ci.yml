@@ -208,9 +208,11 @@ jobs:
           key: e2e-clock-v1-${{ hashFiles('e2e/flaky.tsv') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: e2e-clock-v1-${{ hashFiles('e2e/flaky.tsv') }}-
       # The divisor is the matrix size, so the shard list is the only number to change.
+      # E2E_WIDE adds the five extra screen sizes (playwright.config.ts) on the nightly and on every
+      # push to main (CI-2), so a wide-size break shows on the merge that caused it. PRs keep two sizes.
       - name: Browser flows and accessibility (serious and critical axe violations fail)
         env:
-          E2E_WIDE: ${{ github.event_name == 'schedule' && '1' || '' }}
+          E2E_WIDE: ${{ (github.event_name == 'schedule' || github.event_name == 'push') && '1' || '' }}
         run: pnpm e2e --shard=${{ matrix.shard }}/${{ strategy.job-total }}
       - name: Keep per-test JSON even when the shard fails
         if: always()
