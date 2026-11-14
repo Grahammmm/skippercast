@@ -412,6 +412,17 @@ jobs:
       - name: Summarize the deployed production switches
         if: steps.deploy.outputs.deployed == 'true' && steps.smoke.outcome == 'success'
         run: node "$CONTROLLER/scripts/wrangler_config.mjs" --summary dist/client/deploy.json
+      - name: Keep the deployed switches snapshot as a run artifact
+        if: steps.deploy.outputs.deployed == 'true' && steps.smoke.outcome == 'success'
+        # A failed upload must not trip the rollback step (failure()) on a deploy that already passed smoke.
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          # Only the allow-listed receipt for the selected commit, never the deploy config or environment.
+          name: deploy-json-${{ needs.source.outputs.sha }}
+          path: dist/client/deploy.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Roll back after a failed smoke test
         if: failure() && steps.deploy.outputs.deployed == 'true'
         env:
