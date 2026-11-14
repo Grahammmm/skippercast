@@ -18,6 +18,7 @@ import {clickMark} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {camera} from '../web/map/stage.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
+import {signal} from '@preact/signals';
 
 const FIXTURE = readFileSync(new URL('./fixtures/seafloor/chart.pmtiles', import.meta.url));
 // Reads and feed answers still in flight (not counting ones a test holds on purpose); settle() waits for them.
@@ -149,7 +150,7 @@ async function settle() {
   for (let quiet = 0, limit = Date.now() + 10_000; quiet < 4 && Date.now() < limit;) { await turn(); quiet = inflight ? 0 : quiet + 1; }
 }
 /** A seafloor layer over the fixture with injected feeds, clock and timers. */
-function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers = 'seafloor', target = '', bounds = null} = {}) {
+function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers = 'seafloor', target = '', bounds = null, startReady} = {}) {
   configureStore({v2: true, storage: null});
   const url = layers => `${PAGE_V2}?region=morro-bay&profile=${profile}&layers=${layers}${target ? `&target=${target}` : ''}`;
   syncFromURL(url(layers));
@@ -162,6 +163,7 @@ function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers =
     async fire() { const [id, t] = rig.timers.entries().next().value; rig.timers.delete(id); t.fn(); await settle(); },
   };
   rig.layer = createSeafloor({
+    startReady,
     engine: {setVisible: (id, on) => rig.calls.push(['visible', id, on]), setData: (id, data) => { rig.calls.push(['data', id, data.features.length]); rig.data = data; }},
     open: url => { rig.opened.push(url); return fixtureReader(rig.tileHold, bounds); }, size: () => ({width: 1000, height: 700}), page: () => PAGE_V2, now: () => rig.clock,
     setTimer: (fn, delay) => { const id = ++rig.next; rig.timers.set(id, {fn, delay}); return id; }, clearTimer: id => rig.timers.delete(id),
@@ -180,6 +182,20 @@ function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers =
 }
 const deferred = () => { let release; const promise = new Promise(resolve => { release = resolve; }); return {promise, release}; };
 const drawnIds = rig => rig.data.features.map(f => f.properties.id).sort();
+
+test('SCB-12: deferred seafloor requests still run the unchanged publication gate on release', async t => {
+  const ready = signal(false);
+  const rig = seafloorRig({startReady: () => ready.value, manifest: {status: 'held'}});
+  t.after(() => rig.layer.destroy());
+  await settle();
+  assert.deepEqual(rig.requests, []);
+  assert.equal(seafloorState.value.status, 'checking');
+  ready.value = true;
+  await settle();
+  assert.deepEqual(rig.requests, ['/feeds/tiles/seafloor/manifest-morro-bay.json']);
+  assert.equal(seafloorState.value.status, 'held');
+  assert.deepEqual(rig.opened, [], 'a held publication never opens an archive');
+});
 
 test('v2: toggling Seafloor adds and removes exactly its layers; held reaches and held features never draw', async t => {
   const rig = seafloorRig({layers: 'currents'});

@@ -391,7 +391,8 @@ test('the first Chart says "Loading the map…" and is busy until its basemap is
   await expect(page.locator('.app-chart[aria-busy="true"]')).toHaveCount(1);
   await expect(page.locator('.app-presentation [aria-busy], .app-presentation[aria-busy]'), 'the status stays in the chrome stack, not busy').toHaveCount(0);
   await expect(page.locator('[data-chart-loading-status]')).toHaveCount(1);
-  expect(asked.length, 'the held basemap was asked for').toBeGreaterThan(0);
+  // SCB-11: the Chart's downloads wait for the first verdict, at most MAP_WAIT_MAX_MS (6 s) when the coast report never answers.
+  await expect.poll(() => asked.length, {message: 'the held basemap was asked for', timeout: 12_000}).toBeGreaterThan(0);
   release();
   await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
   await expect(status).toHaveText('');
@@ -1305,12 +1306,18 @@ test.describe.configure({retries: swellQuarantine.retries});
 test('Swell draws the model grid as a field with period lines and strokes, names the run, follows the hour and leaves when off', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
   await serveForecast(page);
+  // The terrain stays held, but its unrelated report must settle the desktop source guard.
+  await page.route('**/api/coast/report', route => route.fulfill({status: 503, json: {error: 'Offline swell test'}}));
   // Tomorrow has all 24 hours, so the slider can always step.
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'none', hour: hourParam(horizonStart() + 24 * HOUR_MS)});
-  // Inside the grid and clear of the legend and the always-on depth contours.
-  const swellProbe = await chartPoint(page, CURRENT_VIEW, SWELL_POINT.lon, SWELL_POINT.lat), x = swellProbe.x, y = swellProbe.y;
+  if (!narrow(page)) await expect(page.locator('.app-first-answer')).toBeVisible();
+  // Sample the same geographic point, not cached page pixels: the first answer, dock and canvas scrolling move it.
+  const probe = () => chartPoint(page, CURRENT_VIEW, SWELL_POINT.lon, SWELL_POINT.lat);
+  const sample = async () => { const {x, y} = await probe(); return pixel(page, x, y); };
+  // A stable pixel before deferred Aerial attaches is not the final water baseline.
+  await expect(page.locator('.app-chart')).toHaveAttribute('aria-busy', 'false');
   let water: number[] = [];
-  await expect.poll(async () => { const a = await pixel(page, x, y); await page.waitForTimeout(400); water = await pixel(page, x, y); return apart(a, water); }).toBe(0);
+  await expect.poll(async () => { const a = await sample(); await page.waitForTimeout(400); water = await sample(); return apart(a, water); }).toBe(0);
 
   await openLayers(page);
   const entry = page.locator('.ui-rail-item', {hasText: 'Swell'});
@@ -1328,20 +1335,21 @@ test('Swell draws the model grid as a field with period lines and strokes, names
   if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click();
   await collapseSheet(page);
   let drawn: number[] = [];
-  await expect.poll(async () => apart(drawn = await pixel(page, x, y), water), {message: 'the field is drawn over the water'}).toBeGreaterThan(40);
+  await expect.poll(async () => apart(drawn = await sample(), water), {message: 'the field is drawn over the water'}).toBeGreaterThan(40);
 
   // The next (or previous) hour: about 4 ft apart, so new pixels and a new valid hour.
   const slider = page.locator('input[aria-label="Hour"]');
   await slider.focus();
   await page.keyboard.press(await slider.inputValue() === await slider.getAttribute('max') ? 'ArrowLeft' : 'ArrowRight');
   await collapseSheet(page);
-  await expect.poll(async () => apart(await pixel(page, x, y), drawn), {message: 'the texture follows the hour'}).toBeGreaterThan(30);
+  await expect.poll(async () => apart(await sample(), drawn), {message: 'the texture follows the hour'}).toBeGreaterThan(30);
   await openLayers(page);
   await expect(stamp).not.toHaveText(before!);
   if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click();
 
   // A click on the field reads the model there (clear of the depth contours and the reef marks).
-  await clickChartPoint(page, {x, y});
+  if (!narrow(page)) await expect(page.locator('.app-first-answer')).toBeVisible();
+  await clickChartPoint(page, await probe());
   await expect(page.locator('.app-mark h2')).toHaveText('Primary swell');
   await expect(page.locator('.app-mark .ui-reading')).toHaveText(/^\d\.\d ft · 1[123]\.\d s · from WNW \d{3}°$/);
   await expect(page.locator('.app-mark-source')).toHaveText(/^NOAA GFS-Wave · run \w{3} \d{1,2}, \d{1,2} [ap]m · 6 h old · valid /);
@@ -1353,7 +1361,7 @@ test('Swell draws the model grid as a field with period lines and strokes, names
   await expect(page.locator('.app-mark')).toHaveCount(0);
   if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click();
   await collapseSheet(page);
-  await expect.poll(async () => apart(await pixel(page, x, y), water), {message: 'the water shows again'}).toBeLessThan(12);
+  await expect.poll(async () => apart(await sample(), water), {message: 'the water shows again'}).toBeLessThan(12);
   expect(pageErrors).toEqual([]);
 });
 

@@ -22,8 +22,10 @@ const read = (p: string) => readFileSync(resolve(ROOT, p));
 // ?url sheets stay URL assets. All are qualified, hash-pinned below and, where the page requests them, served exact;
 // model-disagreement.css is only a URL string in the bundle (Reports never mounts Conditions) and must not be requested.
 const HEAD_STYLES = ['web/tokens.css', 'web/ui/ui.css', 'web/app/app.css', 'web/app/plan.css', 'web/app/season.css', 'web/app/views/hourly-table.css', 'web/ui/guard.css', 'web/brief/brief-print.css'];
-const URL_STYLES = ['packages/coast/panel.css', 'packages/coast/tokens-bridge.css', 'web/app/views/model-disagreement.css'];
-const UNREQUESTED_STYLES = ['web/app/views/model-disagreement.css'];
+// SCB-16: the port chooser's lazy picker links its URL sheet only when mounted;
+// Reports never opens it. Keep the exact sheet qualified and forbid its request.
+const URL_STYLES = ['packages/coast/panel.css', 'packages/coast/tokens-bridge.css', 'web/app/views/model-disagreement.css', 'web/region-picker.css'];
+const UNREQUESTED_STYLES = ['web/app/views/model-disagreement.css', 'web/region-picker.css'];
 const STYLES = [...HEAD_STYLES, ...URL_STYLES];
 const FONTS = ['web/fonts/dm-sans-latin.woff2', 'web/fonts/jetbrains-mono-latin.woff2'];
 const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/app/Masthead.tsx', 'web/app/LayerRail.tsx', 'web/app/MapStage.tsx', 'web/app/views/Reports.tsx', 'web/app/CoastMarkup.tsx',
@@ -250,7 +252,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1922-03: MapStage.tsx renders Cancel waypoint through the shared Button and adds the app-presentation--placing modifier class to the stack while a waypoint placement is armed; BODY09 mounts Reports/CatchCards, never MapStage. No catch markup, token or paint change. Rebind only MapStage.tsx.
   // SC1722-20: MapStage's stage section gains only an id (the Skip to map target); BODY09 never mounts MapStage. No paint, catch markup, contrast(), assertion or threshold changes. Rebind only MapStage.tsx.
   // RF2115-5: MapStage.tsx adds a startup loading status paragraph (existing app-stage-note class) and aria-busy on the Chart host; BODY09 renders Reports/CatchCards, never MapStage. No paint, token, assertion or threshold change. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "33ceeea87f84bdf56afdc71b6c79702a85280c13417628bf4d0fda4563346990",
+  // SCB-12: MapStage stages Chart imagery behind the first brief settlement and delays its first-idle mark.
+  // BODY09 mounts Reports/CatchCards directly, never MapStage; its catch markup, styles, paint, contrast(),
+  // assertions and thresholds are unchanged. Rebind only MapStage.tsx; this does not grant a BODY09 run.
+  "web/app/MapStage.tsx": "3e4992ba6e13e22c0c5f367573caa28307a6cba3704ab25be084c746c85ce64d",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   "web/tokens.css": "56f9708cfa02f651680a2bc02bd3d9080f65dec849aea6888f6bfc52508a5775",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
@@ -287,7 +292,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-20: app.css appends only a scoped .app-skip-link block (a clipped 1 px anchor at rest, a ringed 44 px panel when focused); the Reports catch sheet mounts no skip link, so no catch paint or backing changes. Rebound from the final bytes.
   // UXFIX-09: app.css adds one tile-basis margin rule scoped to .app-tiles (the brief's tiles; the Reports catch sheet mounts none) and raises the phone .app-top z-index by one (the top strip, not mounted by the catch sheet); no colour, backing or catch paint changed. Rebound from the final bytes.
   // MGL-15: app.css repoints only the two depth-contour legend swatch colours to map tokens; no catch paint or layout changed.
-  "web/app/app.css": "8c4ce49230e0f5428fddcb3491f1f3801b5b4e24276ec75c83830e6cddabaef8",
+  // SCB-11: app.css changes only the wide-desktop (min-width: 1280px) masthead and command bar layout (fixed two-line place name, flex order, auto margins, a time window minimum width); the Reports catch sheet mounts neither, and no colour, backing or catch paint changed. Rebound from the final bytes.
+  // MAIN-RED-5: Chart loading-status hit-testing only; Reports paint/backing and thresholds unchanged.
+  "web/app/app.css": "0ca635b4f5b9dd3b5e34f934c0c47b93c88734b4fcb33f958535105faf40496b",
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // UXFIX-10: app.css appends only a scoped .app-account[data-top] block (the phone top-card account button: icon size, visually hidden label, open-state colour, z-index while its panel is open); the Reports catch sheet mounts no account menu, so no catch paint or backing changes. Rebound from the final bytes.
   // UXFIX-11: app.css adds only the phone sheet day-chip row pin (.app-sheet-hour); the Reports catch sheet mounts no hour sheet, so no catch paint or backing changes. Rebound from the final bytes.
@@ -301,6 +308,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1407-05: brief-print.css adds only .app-hour-guard/.app-hour-settled (display: contents) and .app-hour-updating (muted margin-less line) screen rules plus print-hide rules for the pending dock hour; the Reports catch sheet mounts none of those classes (they wrap the desktop/phone brief verdict), so no counted catch paint changes. Rebound from the final bytes.
   "web/brief/brief-print.css": "c04bce48a759c7877f4a7a87fb0631178f0fe60bb4eac6aa6a23ed610d4fca6b",
   "web/app/views/model-disagreement.css": "c6edfd6e81395b8d5e9fe67e982e399989172765490456f6a28ec036c115b72c",
+  // SCB-16: scoped picker rules only; never mounted or requested by Reports.
+  "web/region-picker.css": "ebc4fcaed679f3017e83921334f5c9ef5a10e70b7aed04eef6a995a0da75e6af",
   // UXFIX-12: panel.css moves the existing .chart-overflow:focus-visible outline out of its max-width:760px media block so it applies at every width; it paints only on keyboard focus of the history/forecast chart wrappers, never in the Reports catch sheet, so no counted catch paint or contrast changes. Rebound from the final bytes.
   "packages/coast/panel.css": "4558cd4edb0be1827ef6c00523a05b1c8eae84b0d0d81a93c33d5e12e4c66fa9",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
@@ -373,7 +382,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // UXFIX-09: check_contrast.mjs changes only the appCss surface hash; contrast() is untouched. Rebound from the final bytes.
   // MGL-15: check_contrast.mjs gains the additive habitat CVD gate (new exports and mode) and rebinds the tokens/app surface hashes; contrast() and every legacy check are unchanged.
   // UXFIX-12: check_contrast.mjs changes only the panelCss surface hash and its comment (the .chart-overflow:focus-visible ring leaves its media block); contrast() is untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "a651f7395ee2960b3e7d4139a087dc2166cd76fd938d5a20c94b81fb516aeb45",
+  // SCB-11: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
+  // MAIN-RED-5: only the appCss surface binding/comment changed; contrast calculations and gates unchanged.
+  "scripts/check_contrast.mjs": "1489468a412599c2b363465f5b2bb608cfb2b7491f8abb48204c69b7960455ab",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.

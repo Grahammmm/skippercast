@@ -24,7 +24,8 @@ def test_runtime_route_names_cannot_hide_missing_static_resources(tmp_path, monk
         check(tmp_path, monkeypatch, html)
 
 def test_registered_navigation_and_exact_rss_links_are_valid(tmp_path, monkeypatch):
-    check(tmp_path, monkeypatch, '<a href="/report">Report</a><a href="/methodology">Methods</a><a href="/about">About</a><link rel="alternate" type="application/rss+xml" href="/feed.xml">')
+    (tmp_path / "privacy.html").write_text("Complete existing notice")
+    check(tmp_path, monkeypatch, '<a href="/report">Report</a><a href="/methodology">Methods</a><a href="/about">About</a><a href="/privacy">Privacy</a><link rel="alternate" type="application/rss+xml" href="/feed.xml">')
 
 
 def write_web(tmp_path, name, source):

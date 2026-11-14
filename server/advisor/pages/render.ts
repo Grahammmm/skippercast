@@ -191,7 +191,7 @@ ${advisor ? cta(copy, settings, page.ctaMessage) : ''}
 </main>
 <footer class="adv-footer">
   <p>${copy.disclaimer}</p>
-  <p><a href="/">${copy.openMap}</a></p>
+  <p><a href="/">${copy.openMap}</a> · <a href="/terms.html">${copy.terms}</a> · <a href="/privacy.html">${copy.privacy}</a></p>
 </footer>
 ${advisor ? raw('<div id="advisor-chat" class="chat-host"></div>') : ''}
 ${advisor && js ? html`<script type="module" src="${js}"></script>` : ''}
