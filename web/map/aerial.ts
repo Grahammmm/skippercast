@@ -71,6 +71,16 @@ export function aerialOverlay(a: AerialBase, format?: NaipFormat): Overlay {
 /** The current region's aerial base, while a Chart exists to draw it; the rail offers Aerial only then. */
 export const aerialOffer = signal<AerialBase | null>(null);
 
+/** SCB-12: give the brief a head start, not ownership of map readiness. A held coast
+ * report must not hold imagery/publication feedback for the verdict's 20 s deadline. */
+export const IMAGERY_HEAD_START_MS = 5_000;
+export function createImageryStartup(settled: () => boolean): {ready: ReadonlySignal<boolean>; destroy(): void} {
+  const ready = signal(false);
+  const timer = setTimeout(() => { ready.value = true; }, IMAGERY_HEAD_START_MS);
+  const dispose = effect(() => { if (settled()) { ready.value = true; clearTimeout(timer); } });
+  return {ready, destroy() { dispose(); clearTimeout(timer); }};
+}
+
 export interface AerialOptions {
   engine: ReadonlySignal<Engine | null>;
   /** The current region's aerial base (RegionInfo.aerial), null where none is offered; a signal read here is followed. */

@@ -15,7 +15,7 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
-import {createAerial} from '../map/aerial.ts';
+import {createAerial, createImageryStartup} from '../map/aerial.ts';
 import {createCharterGrounds} from '../map/charter-grounds.ts';
 import {createShore} from '../map/shore.ts';
 import {chartFailed, createChart, unavailable} from '../map/chart.ts';
@@ -34,14 +34,14 @@ import {createChlorophyll} from '../map/chlorophyll.ts';
 import {createSwell} from '../map/swell.ts';
 import {createPreviewLayers} from '../map/preview-layers.ts';
 import {createStations} from '../map/stations.ts';
-import {dailyFeed} from '../brief/Brief.tsx';
+import {dailyFeed, verdictEpoch} from '../brief/Brief.tsx';
 import {mapFirstIdle} from '../map-ready.ts';
 import {createWind} from '../map/wind.ts';
 import type {HourClock} from '../clock.ts';
 import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked, terrainReason} from '../map/stage.ts';
 import {language, t, type StringId} from '../i18n.ts';
 import {poster, posterPlacement} from '../map/poster.ts';
-import {profile, region, species} from '../state.ts';
+import {base, profile, region, species} from '../state.ts';
 import {cancelWaypointPlacement, placementRefused, verdictLine, waypointPlacement} from '../waypoint-placement.ts';
 import {currentRegionInfo, zone} from './App.tsx';
 import {MAP_ID} from './SkipLinks.tsx';
@@ -136,16 +136,21 @@ export function MapStage({children, clock}: {children?: ComponentChildren; clock
   const terrainHost = useRef<HTMLDivElement>(null), chartHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const place = () => regionPlace(currentRegionInfo(), profile.value, species.value ?? '');
+    // SCB-12: an early canvas must not flood the brief's link with large aerial tiles.
+    // Release once, even when the brief settles as failed/timed out; refreshes never detach imagery.
+    const imagery = createImageryStartup(() => verdictEpoch.value?.sealed === true);
+    const aerialWaiting = computed(() => !imagery.ready.value && base.value === 'aerial' && !!currentRegionInfo()?.aerial);
     const stage = createStage({host: terrainHost.current!, palette, overlayPalette, center: () => currentRegionInfo()?.center ?? null, zone, clock,
       renderers: [() => createChart({host: chartHost.current!, zone, place,
+        idleReady: () => !aerialWaiting.value,
         layers: [engine => createChlorophyll({engine}), engine => createSwell({engine, zone, place}), engine => createContrast({engine, zone, place}), engine => createFronts({engine, place}), engine => createWind({engine, zone}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
           engine => createStations({engine, zone, feed: () => dailyFeed.value}),
-          engine => createAerial({engine, offer: () => currentRegionInfo()?.aerial ?? null}), engine => createDepthContours({engine, host: chartHost.current!}),
+          engine => createAerial({engine: computed(() => aerialWaiting.value ? null : engine.value), offer: () => currentRegionInfo()?.aerial ?? null}), engine => createDepthContours({engine, host: chartHost.current!}),
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
           engine => createReach({engine, host: chartHost.current!}),
           engine => createPlanningRouteLayer({engine, host: chartHost.current!}),
           engine => createPreviewLayers({engine, failures: {list: unavailable, clear: layer => { unavailable.value = unavailable.peek().filter(l => l !== layer); }}})]})]});
-    return () => stage.destroy();
+    return () => { imagery.destroy(); stage.destroy(); };
   }, [clock]);
   const shown = shownPresentation.value, lang = language.value, failed = mapUnavailable.value;
   return (

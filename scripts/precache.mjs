@@ -73,13 +73,18 @@ export function landingShell(manifest) {
   return reachable(manifest, [LANDING_PAGE], new Set(), false);
 }
 
+/** SCB-12: the bootstrap's mandatory shell import and (SCB-11) the early script count as first-paint code, not optional map code. */
+export function appStartup(manifest) {
+  return ['app.html', APP_EARLY, ...(manifest['app.html']?.dynamicImports || []).filter(key => key === '../web/app/main.tsx')];
+}
+
 /**
  * #617: the app's first-paint files the landing warms after its own first paint (web/landing/warm.ts): the app
- * page's static graph (no dynamic imports) without what the landing already loaded for its own first paint.
+ * page and mandatory shell's static graph (no optional dynamic imports) without the landing's first paint.
  */
 export function appWarm(manifest) {
   const landing = landingShell(manifest);
-  return [...reachable(manifest, APP, new Set(), false)].filter(f => !landing.has(f)).sort();
+  return [...reachable(manifest, appStartup(manifest), new Set(), false)].filter(f => !landing.has(f)).sort();
 }
 
 /** The install list's hashed files: every script and style a non-v2 page can load, plus the landing's first paint. */

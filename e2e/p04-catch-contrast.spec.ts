@@ -250,7 +250,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1922-03: MapStage.tsx renders Cancel waypoint through the shared Button and adds the app-presentation--placing modifier class to the stack while a waypoint placement is armed; BODY09 mounts Reports/CatchCards, never MapStage. No catch markup, token or paint change. Rebind only MapStage.tsx.
   // SC1722-20: MapStage's stage section gains only an id (the Skip to map target); BODY09 never mounts MapStage. No paint, catch markup, contrast(), assertion or threshold changes. Rebind only MapStage.tsx.
   // RF2115-5: MapStage.tsx adds a startup loading status paragraph (existing app-stage-note class) and aria-busy on the Chart host; BODY09 renders Reports/CatchCards, never MapStage. No paint, token, assertion or threshold change. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "33ceeea87f84bdf56afdc71b6c79702a85280c13417628bf4d0fda4563346990",
+  // SCB-12: MapStage stages Chart imagery behind the first brief settlement and delays its first-idle mark.
+  // BODY09 mounts Reports/CatchCards directly, never MapStage; its catch markup, styles, paint, contrast(),
+  // assertions and thresholds are unchanged. Rebind only MapStage.tsx; this does not grant a BODY09 run.
+  "web/app/MapStage.tsx": "3e4992ba6e13e22c0c5f367573caa28307a6cba3704ab25be084c746c85ce64d",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   "web/tokens.css": "56f9708cfa02f651680a2bc02bd3d9080f65dec849aea6888f6bfc52508a5775",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
