@@ -11,7 +11,7 @@ const WIDE = process.env.E2E_WIDE === '1';
 type JourneyEvent = {name: string; startTime: number; duration: number};
 type JourneyWindow = Window & {__journeyEvents: JourneyEvent[]};
 
-test('SCB-02 phone journey: first tap, day chip and dock step stay under 100ms with the tour enabled', async ({page, v2, isMobile, pageErrors}) => {
+test('SCB-02 phone journey: first tap, day chip and dock step stay under 100ms with the automatic tour suppressed', async ({page, v2, isMobile, pageErrors}) => {
   // Absolute latency at 4x CPU is nightly/local proof, not a shared-runner PR gate.
   test.skip(!WIDE, 'timing journey runs with E2E_WIDE=1');
   test.skip(!isMobile, 'phone journey');
@@ -29,9 +29,21 @@ test('SCB-02 phone journey: first tap, day chip and dock step stay under 100ms w
   await cdp.send('Emulation.setCPUThrottlingRate', {rate: 4});
   try {
     await v2.open('app', {region: 'morro-bay', profile: 'boat', 'boat-entry': 'ask', diagnostics: '1'});
-    await expect(page.locator('.app-chart')).toHaveAttribute('data-mpa-drawn', /\d/);
+    const chart = page.locator('.app-chart');
+    await expect(chart).toHaveAttribute('data-mpa-drawn', /\d/);
+    // #2224 suppresses the automatic tour on phones; prove that before any
+    // input, rather than letting an input stop a mistakenly running tour.
+    await expect(chart).not.toHaveAttribute('data-flyover', /./);
+    expect(await page.evaluate(key => sessionStorage.getItem(key), FLYOVER_KEY)).toBeNull();
     expect(await page.evaluate(() => PerformanceObserver.supportedEntryTypes.includes('event'))).toBe(true);
     const measure = async (name: string, action: () => Promise<void>) => {
+      // First map idle is not the end of lazy startup requests or their paint.
+      // Keep setup/previous interaction work outside this interaction's window.
+      await page.waitForLoadState('networkidle');
+      await page.evaluate(async () => {
+        await document.fonts.ready;
+        await new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done())));
+      });
       const since = await page.evaluate(() => performance.now());
       await action();
       await page.waitForTimeout(1200); // Event Timing delivers after the next paint.
