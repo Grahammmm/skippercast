@@ -62,6 +62,44 @@ jobs:
           FEEDS_PUBLIC_BASE: ${{ vars.FEEDS_PUBLIC_BASE }}
         run: python scripts/live_loop.py --skip-trips --budget-minutes 330
 
+  # Clock alarms independently of the publisher and GitHub's delayed schedule.
+  # No checkout, publication credentials or dependency on another job.
+  alarm-clock:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 345
+    permissions:
+      actions: write
+    steps:
+      - name: Start the alarm checks hourly for this live cycle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          deadline=$((SECONDS + 330 * 60))
+          tick=$SECONDS
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            # Release workflow-level concurrency promptly after publication stops,
+            # including fast failures. Unknown state must not stop the alarms.
+            if refresh_status=$(timeout 30s gh api "repos/$GH_REPO/actions/runs/$GITHUB_RUN_ID/jobs?per_page=100" \
+              --jq '.jobs[] | select(.name == "refresh") | .status'); then
+              if [ "$refresh_status" = completed ]; then exit 0; fi
+            else
+              echo "::warning::Could not read refresh status; keeping the alarm clock running."
+            fi
+            if [ "$SECONDS" -ge "$tick" ]; then
+              if ! timeout 60s gh workflow run feed-freshness.yml --ref main; then
+                echo "::warning::Could not start feed-freshness.yml; retrying at the next hourly tick."
+              fi
+              tick=$((tick + 3600))
+              if [ "$tick" -ge "$deadline" ]; then break; fi
+            fi
+            delay=$((tick - SECONDS))
+            # Four-minute slices leave room for bounded API/dispatch latency.
+            if [ "$delay" -gt 240 ]; then delay=240; fi
+            if [ "$delay" -gt 0 ]; then sleep "$delay"; fi
+          done
+
   # Private saved-trip checks after each publication, beside the refresh job.
   # With the ENABLE_QUEUES repository variable set to "true", the Worker's cron
   # queues these checks itself (server/trip-queue.ts), so this job runs only when
