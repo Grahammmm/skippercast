@@ -251,7 +251,9 @@ jobs:
           path: test-results/nightly
       - name: Publish per-spec rates and advance the 14-green-day clock
         if: always()
-        run: node scripts/e2e-flakes.mjs test-results/nightly/e2e-json-1/e2e-run.json test-results/nightly/e2e-json-2/e2e-run.json
+        # Every shard's JSON, so the matrix size stays the only number to change; a missing
+        # shard leaves fewer files than the reported shard total and earns no green day.
+        run: node scripts/e2e-flakes.mjs test-results/nightly/e2e-json-*/e2e-run.json
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: always() && hashFiles('test-results/flake-rates.json') != ''
         with:
