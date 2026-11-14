@@ -43,6 +43,6 @@ The asynchronous entry also needed the existing ordered-page stylesheet plugin t
 
 ## Budget and rollback (READ)
 
-The original candidate's raw app_js ceiling increased by 2,000 bytes to 1,061,000 with written budget history; its corrected checker includes the mandatory shell. The final repair stays within that ceiling; all other ceilings are unchanged. No separate held BODY09 acceptance run was executed; its source-pin applicability note remains intact.
+The original candidate proposed a 2,000-byte app_js increase to 1,061,000, retained in its written history. Main subsequently merged SC-CI-2's independently approved drift budgets, including app_js 1,111,000. Reconciliation retains that main ceiling and both histories, with no further ceiling increase relative to current main. Both corrected checkers still count the mandatory shell; main's warning/drift behavior is preserved. No separate held BODY09 acceptance run was executed; its source-pin applicability note remains intact.
 
 Rollback: revert this one PR through the usual reviewed path. No migration, live flag swap or service restart.
