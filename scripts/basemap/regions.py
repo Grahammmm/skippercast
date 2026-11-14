@@ -38,6 +38,7 @@ PREFIX = 'tiles/basemap'
 BUILD_PATTERN = r'\d{8}'  # a Protomaps daily build, YYYYMMDD
 ATTRIBUTION = '© OpenStreetMap contributors, © Protomaps'
 MAX_LISTING_BYTES = 1 << 20  # 12 KB today
+MAX_SINGLE_PUT = 5 * 2**30 - 5 * 2**20  # R2's single PutObject limit; the archive is about 180 MiB
 AGENT = {'User-Agent': 'SkipperCast basemap build (https://skippercast.com)'}
 
 
@@ -159,21 +160,39 @@ def _head(s3, bucket, key):
         raise
 
 
+def _create_once(s3, bucket, key, archive, document):
+    """PUT the archive only if nothing is at `key`; False when R2 refused because an object is already there.
+
+    The refusal is R2's own atomic `If-None-Match: *` check at the commit of the write (R2 conditional
+    operations), so an object another publisher creates after our HEAD is never overwritten. One conditional
+    PutObject carries the whole archive; an archive above the single-PUT limit is refused before any write."""
+    if Path(archive).stat().st_size > MAX_SINGLE_PUT:
+        raise RuntimeError(f'{archive} exceeds the {MAX_SINGLE_PUT:,}-byte single PUT limit; nothing published.')
+    try:
+        with open(archive, 'rb') as body:
+            s3.put_object(Bucket=bucket, Key=key, Body=body, IfNoneMatch='*', ContentType='application/octet-stream',
+                          CacheControl='public, max-age=31536000, immutable', Metadata={'sha256': document['sha256']})
+    except Exception as error:
+        response = getattr(error, 'response', {})
+        if (response.get('Error', {}).get('Code') == 'PreconditionFailed'
+                or response.get('ResponseMetadata', {}).get('HTTPStatusCode') == 412):
+            return False
+        raise
+    return True
+
+
 def publish(s3, bucket, archive, document):
     """Upload the archive once under its content key, check its stored size and hash, then write the manifest.
 
-    Never deletes and never overwrites (R4-SC-08): an object already at the key is left as it is. When it holds
-    these bytes (a rerun after a failed manifest write) the manifest is written; otherwise nothing is."""
+    Never deletes and never overwrites (R4-SC-08): an object already at the key, including one created between our
+    HEAD and our write, is left as it is. When it holds these bytes (a rerun after a failed manifest write) the
+    manifest is written; otherwise nothing is."""
     key = document['key']
     if key != content_key(document['source']['build'], document['sha256']):
         raise RuntimeError(f'{key} is not the content key of this archive; rebuild the manifest. Nothing published.')
     head = _head(s3, bucket, key)
-    existed = head is not None
-    if not existed:
-        s3.upload_file(str(archive), bucket, key, ExtraArgs={
-            'ContentType': 'application/octet-stream', 'CacheControl': 'public, max-age=31536000, immutable',
-            'Metadata': {'sha256': document['sha256']}})
-        head = s3.head_object(Bucket=bucket, Key=key)
+    existed = head is not None or not _create_once(s3, bucket, key, archive, document)
+    head = s3.head_object(Bucket=bucket, Key=key) if head is None else head
     if head.get('ContentLength') != document['bytes'] or head.get('Metadata', {}).get('sha256') != document['sha256']:
         raise RuntimeError(f'{key} already holds other bytes; not overwritten, manifest not updated' if existed
                            else f'R2 read-back mismatch for {key}; manifest not updated')

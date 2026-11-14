@@ -20,14 +20,16 @@ class Missing(Exception):
     response = {'Error': {'Code': '404'}}
 
 
+class Precondition(Exception):
+    """What boto3 raises when R2 refuses a PUT with `If-None-Match: *` because the key exists (412)."""
+    response = {'Error': {'Code': 'PreconditionFailed'}, 'ResponseMetadata': {'HTTPStatusCode': 412}}
+
+
 class FakeS3:
+    """R2 as the publisher sees it; a PUT with IfNoneMatch='*' is refused at commit while the key holds an object."""
     def __init__(self, stored_bytes=None, existing=None):
         self.calls, self.stored_bytes = [], stored_bytes
         self.objects = dict(existing or {})  # key -> head_object answer
-
-    def upload_file(self, path, bucket, key, ExtraArgs):
-        self.calls.append(('upload', key))
-        self.objects[key] = {'ContentLength': self.stored_bytes or Path(path).stat().st_size, 'Metadata': ExtraArgs['Metadata']}
 
     def head_object(self, Bucket, Key):
         self.calls.append(('head', Key))
@@ -35,8 +37,30 @@ class FakeS3:
             raise Missing(Key)
         return self.objects[Key]
 
-    def put_object(self, Bucket, Key, Body, **kwargs):
-        self.calls.append(('put', Key))
+    def put_object(self, Bucket, Key, Body, IfNoneMatch=None, Metadata=None, **kwargs):
+        if Key.endswith('manifest.json'):
+            self.calls.append(('put', Key))
+            return
+        self.calls.append(('create', Key))
+        if IfNoneMatch != '*':
+            raise AssertionError('an archive PUT must be create-only (IfNoneMatch="*")')
+        if Key in self.objects:
+            raise Precondition(Key)
+        self.objects[Key] = {'ContentLength': self.stored_bytes or len(Body.read()), 'Metadata': Metadata}
+
+
+class RacingS3(FakeS3):
+    """Another publisher creates `racer` at the key right after our HEAD sees it absent."""
+    def __init__(self, racer):
+        super().__init__()
+        self.racer = racer
+
+    def head_object(self, Bucket, Key):
+        try:
+            return super().head_object(Bucket, Key)
+        except Missing:
+            self.objects[Key] = self.racer
+            raise
 
 
 class RegionPlanTests(unittest.TestCase):
@@ -129,7 +153,7 @@ class ManifestAndPublishTests(unittest.TestCase):
         s3 = FakeS3()
         self.assertIn(document['key'], regions.publish(s3, 'bucket', self.archive, document))
         key = document['key']
-        self.assertEqual(s3.calls, [('head', key), ('upload', key), ('head', key), ('put', 'tiles/basemap/manifest.json')])
+        self.assertEqual(s3.calls, [('head', key), ('create', key), ('head', key), ('put', 'tiles/basemap/manifest.json')])
         short = FakeS3(stored_bytes=10)
         with self.assertRaisesRegex(RuntimeError, 'read-back mismatch'):
             regions.publish(short, 'bucket', self.archive, document)
@@ -153,6 +177,29 @@ class ManifestAndPublishTests(unittest.TestCase):
                 regions.publish(s3, 'bucket', self.archive, stale)
             self.assertEqual(s3.calls, [])
 
+    def test_publish_never_overwrites_an_object_created_after_its_head(self):
+        # R2 refuses the create-only PUT at commit (412), so the racer's object stays and the manifest does not move.
+        document = regions.manifest(self.planned, self.archive, 1, now=NOW)
+        key, put = document['key'], ('put', 'tiles/basemap/manifest.json')
+        racer = {'ContentLength': 4096, 'Metadata': {'sha256': 'f' * 64}}
+        raced = RacingS3(racer)
+        with self.assertRaisesRegex(RuntimeError, 'already holds other bytes; not overwritten'):
+            regions.publish(raced, 'bucket', self.archive, document)
+        self.assertIs(raced.objects[key], racer, 'the conflicting object is preserved')
+        self.assertEqual(raced.calls, [('head', key), ('create', key), ('head', key)])
+        # The racer wrote these same bytes (another run of this build, or our own lost acknowledgment): manifest written.
+        same = RacingS3({'ContentLength': document['bytes'], 'Metadata': {'sha256': document['sha256']}})
+        regions.publish(same, 'bucket', self.archive, document)
+        self.assertEqual(same.calls, [('head', key), ('create', key), ('head', key), put])
+
+    def test_an_archive_above_the_single_put_limit_writes_nothing(self):
+        document = regions.manifest(self.planned, self.archive, 1, now=NOW)
+        s3 = FakeS3()
+        with patch.object(regions, 'MAX_SINGLE_PUT', document['bytes'] - 1):
+            with self.assertRaisesRegex(RuntimeError, 'single PUT limit; nothing published'):
+                regions.publish(s3, 'bucket', self.archive, document)
+        self.assertEqual(s3.calls, [('head', document['key'])])
+
     def test_head_errors_other_than_absence_stop_publication(self):
         document = regions.manifest(self.planned, self.archive, 1, now=NOW)
 
@@ -161,6 +208,15 @@ class ManifestAndPublishTests(unittest.TestCase):
                 raise PermissionError('403')
         with self.assertRaises(PermissionError):
             regions.publish(Denied(), 'bucket', self.archive, document)
+
+        class Refused(FakeS3):  # a PUT error other than 412 (e.g. 409 bucket lock) stops publication too
+            def put_object(self, Bucket, Key, Body, **kwargs):
+                self.calls.append(('create', Key))
+                raise PermissionError('409')
+        refused = Refused()
+        with self.assertRaises(PermissionError):
+            regions.publish(refused, 'bucket', self.archive, document)
+        self.assertEqual(refused.calls, [('head', document['key']), ('create', document['key'])])
 
 
 class WorkflowTests(unittest.TestCase):
