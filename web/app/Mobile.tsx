@@ -199,7 +199,8 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
       const top = Math.max(bounds.top + body.clientTop, viewport.offsetTop);
       const bottom = Math.min(bounds.top + body.clientTop + body.clientHeight, viewport.offsetTop + viewport.height);
       if (body.scrollHeight > body.clientHeight) {
-        body.scrollTop += field.bottom > bottom ? field.bottom - bottom : field.top < top ? field.top - top : 0;
+        // scrollTop can quantize a fractional delta; round outward so shorter unavailable content never clips the focused field.
+        body.scrollTop += field.bottom > bottom ? Math.ceil(field.bottom - bottom) : field.top < top ? Math.floor(field.top - top) : 0;
       }
     };
     const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(reveal); };
