@@ -13,7 +13,7 @@ unowned rows, duplicates and deadlines beyond 15 calendar days are rejected.
 The owner is the repository owner, not an invented team. This is not permission
 to tag an entire file or to quarantine a deterministic failure.
 
-The existing nightly `Offline checks` schedule uploads both shards' Playwright
+The existing nightly `Offline checks` schedule uploads every shard's Playwright
 JSON even on failure. Its accounting job publishes `e2e-flake-rates` (JSON,
 Markdown and clock state), plus the same table in the job summary. The flake
 rate is **tests recovering on retry / executed project-test instances**, per
@@ -22,7 +22,7 @@ An all-skipped denominator is unknown, not zero. No historical rate is inferred
 from incomplete runs. No tests are duplicated in the accounting job.
 
 Fourteen consecutive UTC nights with first-attempt passes expire the effective
-tag and retries automatically on subsequent runs. Both shards and both
+tag and retries automatically on subsequent runs. Every shard and both
 phone/laptop instances of the admitted test must be present; retries, failures,
 skipped/missing targets, duplicate shards, global errors and missing dates do
 not earn green credit. A rerun cannot overwrite an observed bad night. The
