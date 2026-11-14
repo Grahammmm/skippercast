@@ -9,6 +9,10 @@
 // is used when Playwright's own is missing (local sandboxes only).
 import {existsSync, readdirSync} from 'node:fs';
 import {defineConfig, devices} from '@playwright/test';
+import {registry} from './scripts/e2e-flakes.mjs';
+
+// Invalid or unowned quarantine entries must fail before any browser test runs.
+registry();
 
 const port = process.env.E2E_PORT || '8787';
 function localChromium(): string | undefined {
@@ -27,11 +31,12 @@ export default defineConfig({
   outputDir: 'test-results/e2e',
   fullyParallel: true,
   workers: process.env.CI ? 4 : 3,
-  retries: process.env.CI ? 1 : 0,
+  // Only the bounded @flaky describe in flaky.tsv overrides this to two.
+  retries: 0,
   timeout: 60_000,
   expect: {timeout: 15_000},
   forbidOnly: !!process.env.CI,
-  reporter: process.env.CI ? [['list'], ['github']] : [['list']],
+  reporter: process.env.CI ? [['list'], ['github'], ['json', {outputFile: 'test-results/e2e-run.json'}]] : [['list'], ['json', {outputFile: 'test-results/e2e-run.json'}]],
   globalTeardown: './e2e/axe-summary.ts',
   use: {
     baseURL: `http://localhost:${port}`,
@@ -47,7 +52,7 @@ export default defineConfig({
   projects: [
     {name: 'phone', use: {...devices['Desktop Chrome'], viewport: {width: 390, height: 844}, hasTouch: true, isMobile: true}},
     {name: 'laptop', use: {...devices['Desktop Chrome'], viewport: {width: 1280, height: 800}}},
-    // UXFIX-12: five more sizes, nightly only (`E2E_WIDE=1` in ci.yml's scheduled e2e step). They run just the specs that take
+    // UXFIX-12: five more sizes, nightly and main pushes (`E2E_WIDE=1` in ci.yml's e2e step, CI-2). They run just the specs that take
     // the project size (e2e/fixtures.ts wideViewport), not the whole suite; PR runs keep the two projects above.
     ...(process.env.E2E_WIDE === '1' ? ([
       ['phone-small', 360, 640, true], ['phone-land', 844, 390, true], ['tablet', 768, 1024, true],
