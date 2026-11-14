@@ -49,12 +49,12 @@ jobs:
           EVENT: ${{ github.event_name }}
         run: python3 scripts/ci_select.py
   # Required check (branch protection requires the `survey-science` context).
-  # It always reports and passes only when `check` passed on every Python and
-  # `survey-tests` passed, or a successful PR selector explicitly omitted GIS.
-  # Missing/failed/cancelled prerequisites are non-success, not defect auto-fixes.
+  # Unless the run is cancelled, it reports and passes only when `check` passed on
+  # every Python and `survey-tests` passed, or a successful PR selector omitted GIS.
+  # Missing/failed/cancelled prerequisites remain non-success in an active run.
   survey-science:
     needs: [changes, survey-tests, check]
-    if: always()
+    if: ${{ !cancelled() }}
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
