@@ -1,0 +1,1 @@
+{"schema_version":1,"region_id":"monterey-point-sur","layer_id":"sst-fronts","product":"NOAA Geo-Polar Blended night SST","credit":"NOAA CoastWatch","generated_at":"2026-11-14T20:37:14Z","max_age_hours":48.0,"observed_at":"2026-11-13T12:00:00Z","refused_frames":{"missing_time":0,"unparseable_time":0,"future":0,"stale":0},"fronts":[]}

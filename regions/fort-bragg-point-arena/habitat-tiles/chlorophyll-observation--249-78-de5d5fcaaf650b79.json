@@ -1,0 +1,1 @@
+{"schema_version":1,"region_id":"fort-bragg-point-arena","layer_id":"chlorophyll-observation","bounds":[-124.5,39.0,-124.0,39.5],"resolution_degrees":[0.0375,0.0375],"fields":["latitude","longitude","chlorophyll_mg_m3"],"frames":[{"time":1794052800,"cells":[[39.05625,-124.40625,0.32191],[39.16875,-124.40625,0.28674],[39.20625,-124.40625,0.27898]],"valid_cells":3}]}
