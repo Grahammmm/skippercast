@@ -1,8 +1,8 @@
 // SCB-11: the first verdict's reads start with the page, not after the app's code has loaded.
 //
 // On a slow phone the app's code takes seconds to arrive, and the brief only asks for the files its weather
-// answer waits on (web/brief/verdict-load.ts) once that code has run. The page entry (web/app/main.tsx) calls
-// startEarlyReads before it imports the app: for a link that names a region it asks at once for the region's
+// answer waits on (web/brief/verdict-load.ts) once that code has run. The page's early script (web/app/early.ts,
+// linked async ahead of the app) calls startEarlyReads as soon as it arrives: for a link that names a region it asks at once for the region's
 // metadata, the daily feed's brief part, the conditions feed, the forecast and, where the region binds one, the
 // coast report. The same call wraps the page's fetch so the app's own first read of each of those URLs (a plain
 // GET with the same credentials and no headers, body or cache mode) takes the answer already on its way instead
