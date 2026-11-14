@@ -120,6 +120,27 @@ test('failure, recovery, skip, missing target/project/shard and global errors br
   const first = nightly(reports(), rows, empty(), '2030-01-01');
   assert.equal(nightly(reports('2030-01-03'), rows, first.state, '2030-01-03').report.specs[row.spec].green_days, 1);
 });
+test('the shard total comes from the reports: all four shards are complete, a partial set is not', () => {
+  const shards = (total = 4) => Array.from({length: total}, (_, i) => {
+    const r = structuredClone(reports()[Math.min(i, 1)]);
+    if (i > 1) r.suites = [];
+    r.config = {argv: ['node', 'cli', 'test', `--shard=${i + 1}/${total}`], shard: {current: i + 1, total}};
+    return r;
+  });
+  assert.equal(measure(shards(), rows).complete, true);
+  assert.equal(nightly(shards(), rows, empty(), '2030-01-01').report.specs[row.spec].green_days, 1);
+  for (const mutate of [
+    r => { r.pop(); },
+    r => { r.splice(2); },
+    r => { r[3] = structuredClone(r[2]); },
+    r => { r[3].config.shard.total = 5; },
+    r => { r[3].config.argv[3] = '--shard=4/2'; },
+  ]) {
+    const r = shards(); mutate(r);
+    assert.equal(measure(r, rows).complete, false);
+  }
+  assert.equal(measure([], rows).complete, false);
+});
 test('real Playwright execution: only tagged tests retry twice; persistent failures still fail', () => {
   const dir = mkdtempSync(join(tmpdir(), 'sc-ci-3-'));
   try {
