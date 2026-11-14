@@ -2225,15 +2225,15 @@
       ],
       "documentation_url": "https://nowcoast.noaa.gov/",
       "adapter": "goes-frames",
-      "review_status": "candidate",
-      "reviewed_at": "2026-10-08",
+      "review_status": "approved",
+      "reviewed_at": "2026-11-13",
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA / NESDIS GOES East and West longwave infrared, served by NOAA nowCOAST",
         "terms_url": "https://www.weather.gov/disclaimer/",
         "commercial_use": "allowed",
         "attribution_required": true,
-        "commercial_note": "U.S. government work. SkipperCast publishes only the advertised acquisition times; the browser requests the imagery from nowCOAST, pinned to a listed time. Pending owner confirmation (FE-44)."
+        "commercial_note": "U.S. government work. nowCOAST's WMS capabilities document states Fees NONE and AccessConstraints NONE. SkipperCast publishes only the advertised acquisition times; the browser requests the imagery from nowCOAST, pinned to a listed time. Owner confirmed (R4-SC-05 packet, FE-44)."
       },
       "authenticity": {
         "basis": "The goes_longwave_imagery layer's own WMS time dimension; no time is derived from the clock",
