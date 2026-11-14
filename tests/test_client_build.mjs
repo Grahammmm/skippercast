@@ -12,7 +12,7 @@ import {join} from 'node:path';
 import {promisify} from 'node:util';
 import {buildClient, copyStatic, hashName} from '../scripts/client-build.mjs';
 import {BUILD_PLACEHOLDER} from '../scripts/precache.mjs';
-import {dropMaplibreLogo, MAPLIBRE_CSS, STATIC_REF} from '../vite.config.mjs';
+import {dropMaplibreLogo, MAPLIBRE_CSS, STATIC_REF, startupSheets} from '../vite.config.mjs';
 
 const run = promisify(execFile);
 const CHECK = new URL('../scripts/check_client.mjs', import.meta.url).pathname;
@@ -202,7 +202,28 @@ test('the real site builds and passes the client check (static data directories 
     assert.ok(manifest[key] && !first.has(key) && all.has(key), `${key} loads on use, not with /map`);
   const precache = JSON.parse(await readFile(join(out, 'precache.json'), 'utf8'));
   assert.ok(precache.v2.assets.includes(`/${manifest['../web/trip-runtime.ts'].file}`), 'a saved pack can open the planner offline');
+  // SCB-11: /map links the startup code's sheets itself, and the shared sheet (web/ui/ui.css) comes before the page's own,
+  // so helm.css and app.css keep winning over the ui defaults as they did when main.tsx was the page's entry.
+  const page = await readFile(join(out, `app.${buildId}.html`), 'utf8');
+  const sheets = [...page.matchAll(/<link rel="stylesheet" crossorigin href="\.\/(assets\/[^"]+\.css)">/g)].map(m => m[1]);
+  const startCss = [...closure(['../web/app/main.tsx'], e => e.imports ?? [])].flatMap(k => manifest[k].css ?? []);
+  assert.ok(startCss.length && startCss.every(f => sheets.includes(f)), `the startup sheets ${startCss} are linked in ${sheets}`);
+  const holding = async text => { for (const [i, f] of sheets.entries()) if ((await readFile(join(out, f), 'utf8')).includes(text)) return i; return -1; };
+  const ui = await holding('.ui-button--sm{'), own = await holding('.app{');
+  assert.ok(ui >= 0 && own > ui, `the ui sheet (${sheets[ui]}) comes before the page's own (${sheets[own]})`);
   await rm(out, {recursive: true, force: true});
+});
+
+test('startupSheets orders the shared sheets, the startup dependencies, the page and the startup chunk (SCB-11)', () => {
+  const html = '<head>\n    <script async type="module" crossorigin src="./assets/app.js"></script>\n'
+    + '    <link rel="stylesheet" crossorigin href="./assets/app.css">\n    <link rel="stylesheet" crossorigin href="./assets/ui.css">\n<title>x</title>\n</head>';
+  const chunk = (fileName, css) => ({fileName, viteMetadata: {importedCss: new Set(css)}});
+  const chunks = [chunk('assets/app.js', ['assets/app.css', 'assets/ui.css']), chunk('assets/landing.js', ['assets/ui.css'])];
+  const out = startupSheets(html, 'assets/app.js', chunks, ['assets/Brief.css', 'assets/ui.css'], ['assets/main.css']);
+  assert.deepEqual([...out.matchAll(/href="\.\/(assets\/[^"]+)"/g)].map(m => m[1]),
+    ['assets/ui.css', 'assets/Brief.css', 'assets/app.css', 'assets/main.css']);
+  assert.ok(out.includes('</script>\n    <link') && out.includes('main.css">\n<title>'), 'the sheets stay where Vite put them');
+  assert.equal(startupSheets('<head></head>', 'assets/app.js', chunks, ['assets/Brief.css'], []), '<head></head>', 'no sheets, no change');
 });
 
 test('the bundled MapLibre stylesheet drops only the logo, which no map turns on', async () => {
