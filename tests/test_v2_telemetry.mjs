@@ -1,7 +1,7 @@
 // The v2 pages start the cookie-less telemetry (web/telemetry.ts;
 // docs/engineering/telemetry.md) that v1's dist/boot.js started until FE-61, and the funnel events
-// they can send are exactly the ones the privacy notice
-// (dist/privacy.html#analytics), the telemetry doc and the CHANGELOG name.
+// they can send are exactly the ones the telemetry doc and the CHANGELOG name (the privacy notice
+// says usage statistics are off, dist/privacy.html#analytics, so it names none).
 // The event set is found by following every relative static and dynamic
 // import from each v2 entry (web/ and the v1 modules in dist/ it loads) to
 // the track('<event>') calls in the files reached.
@@ -66,13 +66,16 @@ for (const entry of Object.keys(V2_EVENTS)) {
   });
 }
 
-test('the telemetry doc and CHANGELOG name every v2 event', () => {
+test('the telemetry doc and CHANGELOG name every v2 event; the notice says usage statistics are off', () => {
   const all = [...new Set(Object.values(V2_EVENTS).flat())];
-  const doc = source('docs/engineering/telemetry.md');
+  const notice = source('dist/privacy.html'), doc = source('docs/engineering/telemetry.md');
   const v2Doc = /The v2 pages[^\n]+/.exec(doc)?.[0] ?? '';
   const changelog = source('CHANGELOG.md').split(/^## /m)[1].split('\n').find(line => line.includes('anonymous usage statistics')) ?? '';
   for (const event of all) {
     assert.match(v2Doc, new RegExp(`\`${event}\``), `doc: ${event}`);
     assert.match(changelog, new RegExp(`\`${event}\``), `CHANGELOG: ${event}`);
   }
+  // ITEM-07 decision 2 (OFF): the notice carries the approved one-line replacement and no event names.
+  assert.match(notice, /We do not collect usage statistics\./);
+  for (const event of all) assert.doesNotMatch(notice, new RegExp(`<code>${event}</code>`), `notice names no event while analytics is off: ${event}`);
 });
