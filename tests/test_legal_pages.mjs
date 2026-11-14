@@ -39,7 +39,8 @@ test('the boat lookup is described as not available and the notice sends no text
 
 test('usage statistics are described as off: nothing is stored while ENABLE_ANALYTICS is unset', () => {
   has('We do not collect usage statistics');
-  has('at present the server discards them and stores none');
+  assert.ok(!/Do Not Track|Global Privacy Control|map_viewed/.test(privacy), 'the OFF text replaces the whole section; the DNT line is left out (ITEM-07)');
+  has('Our host keeps standard request logs');
   assert.ok(!/three months/.test(privacy), 'no unverified Cloudflare retention claim');
   const config = read('scripts/wrangler_config.mjs');
   assert.match(config, /analytics: on\('ENABLE_ANALYTICS'\)/, 'the binding is added only when ENABLE_ANALYTICS is set; if this changes, update the notice first');
