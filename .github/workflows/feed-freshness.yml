@@ -120,8 +120,8 @@ jobs:
         run: |
           gh label create site-down --color B60205 --description "The site or /api/health stopped answering" 2>/dev/null || true
           python scripts/site_uptime_alert.py --base "${FEEDS_PUBLIC_BASE:-https://skippercast.g4651.workers.dev}" --report "$RUNNER_TEMP/site-uptime.json"
-      # The coast data paths are proxied from a second ("Fish") Worker that nothing else here reaches. On 2026-11-12 the
-      # reviewed-habitat release answered 503 for hours with every other check green. One `coast-data-down` issue per outage.
+      # Habitat now comes from SkipperCast's own four regional controls, not the retired Fish bridge.
+      # Keep the existing coast-data-down issue identity (#2195): all paths must recover before it closes.
       - name: Probe the coast data paths and alert once when one is down
         if: always()
         env:
@@ -129,7 +129,9 @@ jobs:
         run: |
           gh label create coast-data-down --color B60205 --description "A coast data path stopped answering" 2>/dev/null || true
           python scripts/site_uptime_alert.py --base "${FEEDS_PUBLIC_BASE:-https://skippercast.g4651.workers.dev}" --report "$RUNNER_TEMP/coast-data.json" \
-            --paths /api/coast/habitat/release /api/coast/report /api/coast/ocean \
+            --paths /feeds/tiles/seafloor/manifest-morro-bay.json /feeds/tiles/seafloor/manifest-cambria-san-simeon.json \
+              /feeds/tiles/seafloor/manifest-monterey-point-sur.json /feeds/tiles/seafloor/manifest-point-arguello-conception.json \
+              /api/coast/report /api/coast/ocean \
             --label coast-data-down --title "Coast data path is down" --subject "the coast data service"
       # Run the app's rules logic for all six Stage 1 regions. Keep one aggregate
       # issue open if ANY species lacks a status or ANY probe crashes; one healthy

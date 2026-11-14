@@ -33,7 +33,6 @@
 import {signal} from '@preact/signals';
 import {bestSpots, distanceNm} from '../dist/spot-ranking.js';
 import {placeRefused, screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
-import {loadReefTrip, loadReefTripBrief} from '../dist/reef-trip-data.js';
 import {loadManifest, manifestState} from '../dist/seafloor-data.js';
 import {speciesFit} from '../dist/species-fit.js';
 import {speciesOptions} from '../packages/coast/src/habitat-types.ts';
@@ -42,7 +41,7 @@ import {yardsFromShore} from './shore-distance.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt, type Profile} from './profile.ts';
 import {LAND_WATER_BASIS, NO_LAND_WATER, keepWater, withheldNote, type LandWaterLines, type LandWaterModel, type Place} from './land-water.ts';
 import {waterRoute, type Route, type RouteFailure, type RoutePoint} from './route.ts';
-import type {HabitatFeature} from './map/coast-ranking.js';
+import {HABITAT_REGIONS, habitatGate, habitatFeatures, loadHabitatPublication, loadReviewedHabitat, rankedHabitat, type HabitatFeature} from './map/coast-ranking.js';
 import {CHECKING, SCREEN_NOTES, fitLine, markAreas, markFit, markFitCopy, markShown, withheld, type AtlasTarget, type MarkData, type MarkScreen} from './map/habitat.ts';
 import {cp, type CopyVar, type MarkCopyPart} from './mark-copy.ts';
 import {placeVerdicts} from './place-verdict-cache.ts';
@@ -92,6 +91,8 @@ export interface Ranking {readonly source: RankingSource | null; readonly label:
   readonly withheld?: number;
   /** Some place waits on the land/water lines file; the list shows once it loads. */
   readonly pending?: boolean;
+  /** SCB-07-C: a failed habitat gate, not a search-plan or atlas empty list. */
+  readonly habitatUnavailable?: true;
   /** SC1137-05: the label, basis and empty line as catalogue parts for a Spanish page; absent, the plain fields are shown. */
   readonly copy?: RankingCopy}
 
@@ -113,6 +114,9 @@ const miles = (origin: Origin | null, p: {latitude: number; longitude: number}):
 const distance = (nm: number | null): string => nm === null ? '—' : `${nm.toFixed(1)} nm`;
 const band = (lo: number, hi: number): string => `~${Math.round(lo)}–${Math.round(hi)} ft`;
 const known = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+/** Verified export source credits remain visible on the ranking, including noncommercial terms. */
+const sourceCredits = (rights: unknown): string => Array.isArray(rights) ? rights.map(r =>
+  r && typeof r.credit === 'string' && typeof r.notice === 'string' ? ` ${r.credit} ${r.notice}` : '').join('') : '';
 /** RF1050-16: a depth band enters a list only if it is finite, nonnegative, ordered and wholly inside the limit; nothing is coerced, swapped or repaired. */
 const validDepthBand = (lo: unknown, hi: unknown, limitFt: number): boolean => known(lo) && known(hi) && known(limitFt) && limitFt > 0 && lo >= 0 && lo <= hi && hi <= limitFt;
 /** The same test for a published `[lo, hi]` pair: exactly two entries. */
@@ -189,10 +193,13 @@ export function habitatPicks(ranked: readonly HabitatFeature[], screen: MarkScre
   return habitatScreened(ranked, screen, region, coast, limitFt, origin, keep, place).picks;
 }
 
-function habitatScreened(ranked: readonly HabitatFeature[], screen: MarkScreen, region: string, coast: string, limitFt: number, origin: Origin | null, keep: Keep, place: Place): Screened {
+function habitatScreened(ranked: readonly HabitatFeature[], screen: MarkScreen, region: string, coast: string, limitFt: number, origin: Origin | null, keep: Keep, place: Place, planner?: ReadyScreen): Screened {
   const field = speciesOptions.find(s => s.id === coast)?.field ?? null, label = speciesLabel(coast);
   const admitted = ranked.filter(f => {
     const p = f.properties;
+    // Slim has no outline: admit its whole-area verdict only against the current identical boundary data.
+    if (p.slim === true && (!planner?.ready() || planner.fingerprint?.() !== p.protected_fingerprint || !p.protected_place || placeRefused(p.protected_place as PlaceVerdict))) return false;
+    if (planner && p.slim !== true && (!planner.pointAllowed({latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}) || !planner.geometryAllowed(f.geometry))) return false;
     return p.region === region && validDepthBand(p.depth_min_ft, p.depth_max_ft, limitFt) && known(p.waypoint_latitude) && known(p.waypoint_longitude)
       && !withheld({latitude: p.waypoint_latitude, longitude: p.waypoint_longitude, geometry: f.geometry}, screen)
       && kept(keep, miles(origin, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}), swim(keep, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}));
@@ -204,9 +211,9 @@ function habitatScreened(ranked: readonly HabitatFeature[], screen: MarkScreen, 
     const species = speciesPart(coast), rated = !!label && n >= 1 && n <= 3;
     return {id, kind: 'habitat', name: 'Reef habitat', distance: yd === null ? distance(nm) : swimText(yd), nm, at, screen: screenPlace(screen, {...at, geometry: f.geometry}),
       depth: band(p.depth_min_ft, p.depth_max_ft), fit: label && n >= 1 && n <= 3 ? fitLine(label, n) : 'Screened reef habitat',
-      reason: `Terrain score ${p.terrain_score}/100${p.terrain_grade ? ` · grade ${p.terrain_grade}` : ''}.`,
+      reason: `Terrain score ${p.terrain_score}/100${p.terrain_grade ? ` · grade ${p.terrain_grade}` : ''}.` + sourceCredits(p.source_rights),
       copy: {...swimCopy(yd), name: [rp('name.reefHabitat')], fit: rated && species ? [cp('mark.layer.habitat.fit', {species, n})] : [rp('fit.screened')],
-        reason: [p.terrain_grade ? rp('reason.terrainGraded', {score: String(p.terrain_score), grade: String(p.terrain_grade)}) : rp('reason.terrain', {score: String(p.terrain_score)})]}};
+        ...(sourceCredits(p.source_rights) ? {} : {reason: [p.terrain_grade ? rp('reason.terrainGraded', {score: String(p.terrain_score), grade: String(p.terrain_grade)}) : rp('reason.terrain', {score: String(p.terrain_score)})]})}};
   })};
 }
 
@@ -216,9 +223,9 @@ export type TerrainHabitat =
   | {readonly state: 'ready'; readonly features: readonly HabitatFeature[]; readonly expiresAt: number; readonly rank: (f: readonly HabitatFeature[], field: string | null, now?: number) => HabitatFeature[]};
 export const terrainHabitat = signal<TerrainHabitat>({state: 'idle'});
 
-type Loader = () => Promise<typeof import('./map/coast-ranking.js')>;
-/** Load the reviewed release once (it is coast-wide); a failure leaves the atlas ranking in place. */
-export async function loadTerrainHabitat(loader: Loader = () => import('./map/coast-ranking.js')): Promise<void> {
+type Loader = () => Promise<{loadReviewedHabitat: typeof loadReviewedHabitat; rankedHabitat: typeof rankedHabitat}>;
+/** Legacy coast-wide consumer; the brief itself reuses its lazy per-region publication. */
+export async function loadTerrainHabitat(loader: Loader = async () => ({loadReviewedHabitat, rankedHabitat})): Promise<void> {
   if (terrainHabitat.peek().state !== 'idle') return;
   terrainHabitat.value = {state: 'loading'};
   try {
@@ -228,7 +235,7 @@ export async function loadTerrainHabitat(loader: Loader = () => import('./map/co
 }
 
 /** A target as `loadReefTrip` publishes it (the fields read here). */
-export interface PublishedReef {readonly id: string; readonly latitude: number; readonly longitude: number; readonly neighborhood_depth_ft: readonly number[]; readonly terrain_interpretation?: string;
+export interface PublishedReef {readonly id: string; readonly latitude: number; readonly longitude: number; readonly neighborhood_depth_ft: readonly number[]; readonly terrain_interpretation?: string; readonly source_rights?: readonly {readonly credit?: unknown; readonly notice?: unknown}[];
   /** SC-PERF-PROTCHECK-1: the verdict the publisher computed for this reef (valid only with the publication's `protected_fingerprint`). */
   readonly protected_place?: PlaceVerdict}
 type Ranked = PublishedReef & {readonly name: string; readonly trip_fit: number};
@@ -240,11 +247,15 @@ export type ReefPublication = {readonly state: 'idle' | 'loading' | 'unavailable
   | {readonly state: 'deferred'; readonly region: string}
   /** SC-PERF-LAZY-1: Save-Data or a slow link; nothing is fetched until the angler asks. `bytes` is the published size when known. */
   | {readonly state: 'offer'; readonly region: string; readonly bytes: number | null; readonly why: 'save-data' | 'slow-type' | 'slow-measured'}
-  | {readonly state: 'ready'; readonly region: string; readonly loaded: {readonly targets: readonly PublishedReef[]; readonly areas: readonly {id: string; geometry: unknown}[]; readonly protected_fingerprint?: string; readonly slim?: boolean; readonly publication: {export_sha256?: string} & Record<string, unknown>}};
+  | {readonly state: 'ready'; readonly region: string; readonly loaded: {readonly targets: readonly PublishedReef[]; readonly areas: readonly {id: string; geometry: unknown}[]; readonly protected_fingerprint?: string; readonly slim?: boolean; readonly habitatExpiresAt?: number; readonly publication: {export_sha256?: string} & Record<string, unknown>}};
 export const reefPublication = signal<ReefPublication>({state: 'idle'});
 type ReefLoader = (region: string) => Promise<unknown>;
 /** The manifest gate as dist/seafloor-data.js `loadManifest` returns it (the fields read here). */
-type ReefGate = (region: string) => Promise<{readonly state: string; readonly manifest?: {readonly export_sha256?: string} | null}>;
+type ReefGate = (region: string) => Promise<{readonly state: string; readonly manifest?: {readonly export_sha256?: string} | null; readonly habitatExpiresAt?: number}>;
+const currentHabitatGate: ReefGate = async region => {
+  const coast = HABITAT_REGIONS.includes(region) ? await habitatGate() : null;
+  return {...await loadManifest(region), ...(coast ? {habitatExpiresAt: coast.expiresAt} : {})};
+};
 
 /** Each load's number: only the latest load may write its answer, so A→B→A never lets the first A's late answer land. */
 let generation = 0;
@@ -265,14 +276,14 @@ async function startLoad(region: string, loader: ReefLoader): Promise<void> {
 export function supersedeReefLoads(): void { generation++; }
 
 /** Load the region's publication once (another region starts again); a failure leaves the list above in place. */
-export async function loadReefPublication(region: string, loader: ReefLoader = loadReefTripBrief): Promise<void> {
+export async function loadReefPublication(region: string, loader: ReefLoader = loadHabitatPublication): Promise<void> {
   const was = reefPublication.peek();
   if (was.state !== 'idle' && was.state !== 'deferred' && was.state !== 'offer' && was.region === region) return;
   await startLoad(region, loader);
 }
 
 /** Fetch the region's publication now, whatever state it is in (the angler's "Load … on Wi-Fi" or "Try again"); a load already running is left alone. */
-export async function reloadReefPublication(region: string, loader: ReefLoader = loadReefTripBrief): Promise<void> {
+export async function reloadReefPublication(region: string, loader: ReefLoader = loadHabitatPublication): Promise<void> {
   const was = reefPublication.peek();
   if (was.state === 'loading' && was.region === region) return;
   await startLoad(region, loader);
@@ -285,15 +296,18 @@ export async function reloadReefPublication(region: string, loader: ReefLoader =
  * verification, a rejected publication returns only through a fresh `loadReefTrip` once the manifest is ready again
  * (a superseded one reloads at once). A load or another check started meanwhile wins.
  */
-export async function recheckReefPublication(region: string, gate: ReefGate = r => loadManifest(r), loader: ReefLoader = loadReefTripBrief): Promise<void> {
+export async function recheckReefPublication(region: string, gate: ReefGate = currentHabitatGate, loader: ReefLoader = loadHabitatPublication): Promise<void> {
   const was = reefPublication.peek();
   const held = was.state === 'ready' ? was.loaded.publication.export_sha256 : was.state === 'unavailable' ? was.rejected : undefined;
   if (was.region !== region || !held) return;
-  let live: string | undefined;
-  try { const g = await gate(region); live = g.state === 'ready' ? g.manifest?.export_sha256 : undefined; } catch { live = undefined; }
+  let live: string | undefined, expiresAt: number | undefined;
+  try { const g = await gate(region); live = g.state === 'ready' ? g.manifest?.export_sha256 : undefined; expiresAt = g.habitatExpiresAt; } catch { live = undefined; }
   if (reefPublication.peek() !== was) return;
   if (was.state === 'ready') {
-    if (live === held) return;
+    if (live === held) {
+      if (expiresAt !== undefined) reefPublication.value = {...was, loaded: {...was.loaded, habitatExpiresAt: Math.min(was.loaded.habitatExpiresAt ?? Infinity, expiresAt)}};
+      return;
+    }
     reefPublication.value = {state: 'unavailable', region, rejected: held};
     if (!live) return;
   } else if (!live) return;
@@ -308,7 +322,7 @@ export async function recheckReefPublication(region: string, gate: ReefGate = r 
 const slimStale = (loaded: {slim?: boolean; protected_fingerprint?: string}, screen: ReadyScreen): boolean =>
   loaded.slim === true && (typeof loaded.protected_fingerprint !== 'string' || screen.fingerprint?.() !== loaded.protected_fingerprint);
 /** Reload the full export when the held publication is the slim one and the screen no longer matches it (called when the screen loads or refreshes). */
-export async function settleReefPublication(region: string, plannerScreen: PlannerScreenState | undefined, loader: ReefLoader = loadReefTrip): Promise<void> {
+export async function settleReefPublication(region: string, plannerScreen: PlannerScreenState | undefined, loader: ReefLoader = r => loadHabitatPublication(r, {full: true})): Promise<void> {
   const was = reefPublication.peek();
   if (was.state !== 'ready' || was.region !== region || plannerScreen?.state !== 'loaded' || plannerScreen.region !== undefined && plannerScreen.region !== region) return;
   if (!plannerScreen.screen.ready() || !slimStale(was.loaded, plannerScreen.screen)) return;
@@ -351,10 +365,10 @@ function publicationScreened(loaded: Extract<ReefPublication, {state: 'ready'}>[
     const [lo, hi] = t.neighborhood_depth_ft as [number, number], nm = miles(origin, t), yd = swim(keep, t);
     const species = speciesPart(coast);
     return {id: t.id, kind: 'reef', name: t.name, distance: yd === null ? distance(nm) : swimText(yd), nm, depth: band(lo, hi),
-      fit: label ? fitLine(label, t.trip_fit) : 'Screened reef habitat', reason: t.terrain_interpretation ?? 'Surveyed reef terrain.', at: {latitude: t.latitude, longitude: t.longitude},
+      fit: label ? fitLine(label, t.trip_fit) : 'Screened reef habitat', reason: (t.terrain_interpretation ?? 'Surveyed reef terrain.') + sourceCredits(t.source_rights), at: {latitude: t.latitude, longitude: t.longitude},
       screen: (stored ? t.protected_place : undefined) ?? screenPlace(screen, {latitude: t.latitude, longitude: t.longitude, geometries: areasOf(loaded, t)}),
       copy: {...swimCopy(yd), fit: label && species ? [cp('mark.layer.habitat.fit', {species, n: t.trip_fit})] : [rp('fit.screened')],
-        ...(t.terrain_interpretation === undefined ? {reason: [rp('reason.surveyed')]} : {})}};
+        ...(t.terrain_interpretation === undefined && !sourceCredits(t.source_rights) ? {reason: [rp('reason.surveyed')]} : {})}};
   })};
 }
 /** The reef areas a published place lies in (its `area_ids` in the publication's `areas`). */
@@ -448,7 +462,11 @@ export function ranking(i: RankingInputs): Ranking {
       copy: {...(r.copy?.label ? {label: r.copy.label} : {}), ...(r.copy?.about ? {about: r.copy.about} : {}), ...(r.source ? {basis: [rp('basis.homePort')]} : {}), empty: [rp('empty.homePort')]}};
   }
   const pub = i.publication, plannerSpecies = Object.hasOwn(PLANNER_SPECIES, i.coast) ? PLANNER_SPECIES[i.coast] : undefined;
-  if (pub && i.region && plannerSpecies) {
+  const ownHabitat = !!i.region && HABITAT_REGIONS.includes(i.region) && speciesOptions.some(s => s.id === i.coast && (s.field || s.id === 'all'));
+  const unavailable = (): Ranking => ({source: null, label: '', basis: '', picks: [], empty: 'Reviewed habitat unavailable', habitatUnavailable: true});
+  if (pub && pub.region === i.region && ownHabitat && (pub.state === 'unavailable' || pub.state === 'ready' && (manifestState(pub.loaded.publication, i.region, i.now).state !== 'ready'
+      || !(pub.loaded.habitatExpiresAt === undefined || pub.loaded.habitatExpiresAt > i.now)))) return unavailable();
+  if (pub && i.region && (plannerSpecies || ownHabitat)) {
     if (pub.region !== i.region || pub.state === 'idle' || pub.state === 'loading' || pub.state === 'deferred')
       return bare('Loading ranked reef places…', 'empty.loadingPublication');
     if (pub.state === 'ready' && manifestState(pub.loaded.publication, i.region, i.now).state === 'ready') {
@@ -459,6 +477,15 @@ export function ranking(i: RankingInputs): Ranking {
         return ps?.state === 'failed' ? {...head, empty: SCREEN_NOT_CURRENT, copy: notCurrent} : {...head, empty: SCREEN_NOTES.checking, copy: {...lead, empty: [cp(CHECKING_NOTE)]}};
       if (!ps.screen.ready()) return {...head, empty: SCREEN_NOT_CURRENT, copy: notCurrent};
       if (slimStale(pub.loaded, ps.screen)) return bare('Loading ranked reef places…', 'empty.loadingPublication');
+      if (!plannerSpecies) {
+        const field = speciesOptions.find(s => s.id === i.coast)?.field ?? null;
+        const adapted = habitatScreened(rankedHabitat(habitatFeatures(pub.loaded), field, i.now), i.screen, i.region, i.coast, limit, origin, keep, place, ps.screen);
+        // These are SkipperCast publication places: selecting one moves the Chart, not the retired Fish viewer.
+        const s = {...adapted, picks: adapted.picks.map(p => ({...p, kind: 'reef' as const}))};
+        return {source: 'terrain', label: 'Reviewed terrain habitat', ...checked(s, 'terrain', TERRAIN_BASIS + from,
+          `No reviewed terrain habitat passes the current protected-area and closure check ${within} for this target.`,
+          [rp('empty.terrain.none', {within: withinCopy})]), ...extra};
+      }
       const s = publicationScreened(pub.loaded, ps.screen, plannerSpecies, speciesLabel(i.coast), i.coast, limit, origin, keep, place);
       const empty = s.withheld ? `No other ranked reef places ${within} for this target.`
         : `No ranked reef places pass the current protected-area check ${within} for this target.`;

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SCB-07-C: Where to look uses SkipperCast's own screened reef release, gated by all four regional manifests and their earliest expiry. Held, expired or missing habitat visibly says “Reviewed habitat unavailable” instead of silently ranking atlas marks. The Fish habitat bridge returns “retired”; the existing freshness alert now probes the four SkipperCast controls. Noncommercial source terms and credits remain attached.
+
 - MAIN-RED-5: the “Loading the map” announcement no longer intercepts clicks on Chart controls beneath it. Its appearance and screen-reader announcements are unchanged.
 
 - R4-SC-07: the automatic first-visit map flyover no longer runs below the 1024px desktop layout breakpoint, leaving phone and tablet interactions free of the camera tour. Desktop tours and reduced-motion, Save-Data and shared-link protections are unchanged.

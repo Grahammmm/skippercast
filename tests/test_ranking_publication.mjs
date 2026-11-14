@@ -58,18 +58,19 @@ test('a reef the terrain release bands differently is ranked once with the publi
     depth_min_ft: 179, depth_max_ft: 195, waypoint_latitude: 35.20, waypoint_longitude: -121.00, terrain_score: 80, fit_lingcod: 3}};
   const terrain = {state: 'ready', features: [feature], expiresAt: NOW + 3600000, rank: f => [...f]};
   const old = ranking(inputs({terrain, publication: {state: 'unavailable', region: 'morro-bay'}}));
-  assert.equal(old.source, 'terrain'); assert.deepEqual(old.picks.map(p => p.depth), ['~179–195 ft'], 'the retained branch still bands it from the release');
+  assert.equal(old.source, null); assert.deepEqual(old.picks, []); assert.equal(old.empty, 'Reviewed habitat unavailable');
   const r = ranking(inputs({terrain}));
   assert.equal(r.source, 'publication');
   assert.deepEqual(r.picks.filter(p => p.depth === '~200–278 ft').map(p => p.id), ['r-target']);
   assert.ok(!r.picks.some(p => p.depth === '~179–195 ft' || p.id === 'h-target'));
 });
 
-test('species the planner cannot rank, and an expired or unavailable publication, use the labelled atlas list', () => {
-  for (const coast of ['gopher-rockfish', 'halibut']) assert.equal(ranking(inputs({coast, target: coast === 'halibut' ? 'halibut' : 'gopher-rockfish'})).label, 'Survey reef atlas');
-  for (const publication of [{state: 'unavailable', region: 'morro-bay'}, {...READY, loaded: {...LOADED, publication: manifest(NOW - 1000)}}, undefined]) {
+test('held, expired or missing habitat never silently falls back to the atlas', () => {
+  assert.equal(ranking(inputs({coast: 'halibut', target: 'halibut'})).label, 'Survey reef atlas', 'non-reef atlas unchanged');
+  for (const publication of [{state: 'unavailable', region: 'morro-bay'}, {...READY, loaded: {...LOADED, publication: manifest(NOW - 1000)}},
+    {...READY, loaded: {...LOADED, habitatExpiresAt: NOW}}]) {
     const r = ranking(inputs({publication}));
-    assert.equal(r.source, 'atlas'); assert.ok(r.picks.length && r.picks.every(p => p.kind === 'spot'));
+    assert.equal(r.source, null); assert.deepEqual(r.picks, []); assert.equal(r.empty, 'Reviewed habitat unavailable');
   }
 });
 
@@ -151,7 +152,7 @@ test('the planner\'s gate again: a held, unavailable or superseded publication s
     reefPublication.value = loaded;
     await recheckReefPublication('morro-bay', gate, loader(LOADED));
     assert.deepEqual(reefPublication.value, {state: 'unavailable', region: 'morro-bay', rejected: B});
-    const r = brief(); assert.equal(r.source, 'atlas'); assert.ok(!r.picks.some(p => p.kind === 'reef'), 'no publication place once rejected');
+    const r = brief(); assert.equal(r.source, null); assert.deepEqual(r.picks, []); assert.equal(r.empty, 'Reviewed habitat unavailable');
   }
   await recheckReefPublication('morro-bay', async () => ({state: 'held'}), loader(LOADED));
   assert.equal(reefPublication.value.state, 'unavailable', 'still held: still withheld'); assert.equal(calls, 1, 'no reload while the manifest is not ready');
@@ -208,4 +209,51 @@ test('a reef pick moves the Chart to the place (view only) and is never pressed'
   assert.equal(url.searchParams.get('habitat'), 'r-a'); assert.equal(url.searchParams.get('spot'), 'r-a'); assert.equal(picked.value, before, 'no mark card');
   const html = render(h(WhereToLook, {ranking: {source: 'publication', label: 'Seafloor reef publication', basis: 'B.', picks: [{...pick, id: 'r-a'}], empty: ''}}));
   assert.match(html, /<li data-mark="r-a"><button type="button" class="app-pick" aria-pressed="false">/);
+});
+
+
+test('SCB-07-C: four manifest controls gate the release at the earliest expiry', async () => {
+  const {habitatGate, HABITAT_REGIONS} = await import('../web/map/coast-ranking.js');
+  const expiry = NOW + 1000;
+  const seen = [];
+  const fetcher = async (url, options) => {
+    seen.push(url); assert.equal(options.cache, 'no-store');
+    const region = /manifest-(.*)\.json/.exec(url)[1];
+    return Response.json({...manifest(region === 'cambria-san-simeon' ? expiry : NOW + 2000), region});
+  };
+  const gate = await habitatGate(fetcher, NOW);
+  assert.equal(gate.expiresAt, expiry);
+  assert.deepEqual(seen.sort(), HABITAT_REGIONS.map(r => `/feeds/tiles/seafloor/manifest-${r}.json`).sort());
+  for (const failed of HABITAT_REGIONS) for (const failure of ['held', 'expired', 'missing', 'invalid']) {
+    await assert.rejects(habitatGate(async url => {
+      const region = /manifest-(.*)\.json/.exec(url)[1];
+      if (region !== failed) return Response.json({...manifest(), region});
+      if (failure === 'missing') return new Response('', {status: 404});
+      return Response.json({...manifest(failure === 'expired' ? NOW : NOW + 1000), region,
+        status: failure === 'held' ? 'held' : 'ready', ...(failure === 'invalid' ? {archive_sha256: null} : {})});
+    }, NOW), /habitat unavailable/);
+  }
+});
+
+test('SCB-07-C: canonical adapter preserves bands, fits, terrain and source credit; slim needs the identical current screen', async () => {
+  const {habitatFeatures, rankedHabitat} = await import('../web/map/coast-ranking.js');
+  const credit = [{id: 'synthetic-survey', credit: 'Synthetic survey lab', notice: 'Noncommercial use only', policyURL: 'https://example.test/terms'}];
+  const targets = LOADED.targets.map(t => ({...t, habitat_grade: 'A', source_rights: credit,
+    species_fit: {...t.species_fit, 'gopher-rockfish': t.id === 'r-c' ? 3 : 2}}));
+  const loaded = {...LOADED, targets, habitatExpiresAt: NOW + 500};
+  const features = habitatFeatures(loaded), target = features.find(f => f.id === 'r-c').properties;
+  assert.equal(target.waypoint_latitude, 35.34); assert.equal(target.waypoint_longitude, -120.92);
+  assert.deepEqual([target.depth_min_ft, target.depth_max_ft], [30, 55]);
+  assert.equal(target.terrain_score, 50); assert.equal(target.terrain_grade, 'A'); assert.equal(target.fit_gopher_rockfish, 3);
+  assert.deepEqual(target.source_rights, credit);
+  assert.equal(rankedHabitat(features, 'fit_gopher_rockfish', NOW)[0].id, 'r-c');
+  const full = ranking(inputs({coast: 'gopher-rockfish', publication: {...READY, loaded}}));
+  assert.equal(full.source, 'terrain'); assert.equal(full.picks[0].id, 'r-c'); assert.equal(full.picks[0].kind, 'reef');
+  assert.ok(!full.picks.some(p => ['r-inside', 'r-touch', 'r-deep'].includes(p.id)));
+  const slim = {...loaded, slim: true, areas: [], protected_fingerprint: 'boundaries-v1',
+    targets: targets.map(t => ({...t, protected_place: {inside: false, screened: true, distanceM: null, name: null}}))};
+  const screen = {...LOADED_SCREEN, screen: {...PLANNER_SCREEN, fingerprint: () => 'boundaries-v1'}};
+  assert.ok(ranking(inputs({coast: 'gopher-rockfish', publication: {...READY, loaded: slim}, plannerScreen: screen})).picks.length);
+  assert.deepEqual(ranking(inputs({coast: 'gopher-rockfish', publication: {...READY, loaded: slim}})).picks, [], 'no outline and mismatched fingerprint withholds, never treats the waypoint as an outline');
+  assert.equal(ranking(inputs({publication: {...READY, loaded}, now: NOW + 500})).empty, 'Reviewed habitat unavailable');
 });

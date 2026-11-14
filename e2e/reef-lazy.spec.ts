@@ -10,6 +10,27 @@ import {stubLiveFeeds} from '../scripts/measure_startup.mjs';
 import {syntheticTerrain} from './terrain-keyboard-fixture.ts';
 
 const EXPORT = '**/feeds/tiles/seafloor/regions/morro-bay/habitat-export.geojson.gz';
+for (const failure of ['held', 'expired', 'missing']) {
+  test(`SCB-07-C: another region ${failure} visibly withholds habitat, with no export download`, async ({page, pageErrors, v2, isMobile}) => {
+    await stubLiveFeeds(page);
+    let exports = 0;
+    await page.route('**/feeds/tiles/seafloor/regions/**/habitat-*', r => { exports++; return r.fulfill({status: 500}); });
+    await page.route('**/feeds/tiles/seafloor/manifest-*.json', r => {
+      const region = /manifest-(.*)\.json/.exec(new URL(r.request().url()).pathname)![1];
+      const failed = region === 'cambria-san-simeon';
+      if (failed && failure === 'missing') return r.fulfill({status: 404});
+      return r.fulfill({json: {region, status: failed && failure === 'held' ? 'held' : 'ready', archive_sha256: 'a'.repeat(64),
+        expires_at: new Date(Date.now() + (failed && failure === 'expired' ? -86400000 : 86400000)).toISOString()}});
+    });
+    await v2.open('app', {region: 'morro-bay', profile: 'boat'});
+    await openFull(page, isMobile);
+    await expect(brief(page, isMobile).locator('[data-habitat="unavailable"]')).toBeVisible();
+    await expect(brief(page, isMobile).locator('[data-habitat="unavailable"]')).toHaveText('Reviewed habitat unavailable');
+    await expect(brief(page, isMobile).locator('.app-pick')).toHaveCount(0);
+    expect(exports).toBe(0);
+    expect(pageErrors).toEqual([]);
+  });
+}
 const PUBLISHED_BYTES = 15_414_929;
 test.beforeEach(async ({page}) => {
   await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
@@ -19,7 +40,7 @@ test.beforeEach(async ({page}) => {
 async function stubExport(page: Page, answer: 'ok' | 'fail') {
   await stubLiveFeeds(page);
   const body = gzipSync('{}'), expires_at = new Date(Date.now() + 86400000).toISOString(), seen = {requests: 0};
-  await page.route('**/feeds/tiles/seafloor/manifest-morro-bay.json', r => r.fulfill({json: {region: 'morro-bay', status: 'ready', archive_sha256: 'a'.repeat(64), expires_at,
+  await page.route('**/feeds/tiles/seafloor/manifest-*.json', r => r.fulfill({json: {region: /manifest-(.*)\.json/.exec(new URL(r.request().url()).pathname)![1], status: 'ready', archive_sha256: 'a'.repeat(64), expires_at,
     export_file: 'habitat-export.geojson.gz', export_sha256: createHash('sha256').update(body).digest('hex'), export_bytes: PUBLISHED_BYTES, export_decoded_bytes: 2}}));
   await page.route(EXPORT, r => { seen.requests++; return answer === 'ok' ? r.fulfill({contentType: 'application/gzip', body}) : r.fulfill({status: 500, body: 'no'}); });
   return seen;
@@ -82,7 +103,8 @@ test('export failing: the brief and map still work, the page says the ranking di
   const where = brief(page, isMobile), note = where.locator('[data-reef="unavailable"]');
   await expect(note).toContainText('could not be loaded');
   await expect(page.locator('.app-chart')).toHaveAttribute('data-marks', /^[1-9]\d*$/);
-  await expect(where.locator('.app-pick').first()).toBeVisible(); // the built-in list still ranks
+  await expect(where.locator('[data-habitat="unavailable"]')).toHaveText('Reviewed habitat unavailable');
+  await expect(where.locator('.app-pick')).toHaveCount(0); // no silent atlas fallback
   const before = seen.requests;
   await note.getByRole('button', {name: 'Try again'}).click();
   await expect.poll(() => seen.requests).toBe(before + 1);

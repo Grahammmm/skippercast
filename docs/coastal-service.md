@@ -1,5 +1,40 @@
 # Coastal data service during the Fish merge
 
+## Habitat bridge retired (SCB-07-C, 2026-11-14)
+
+`/api/coast/habitat/*` and `/coast-data/data/skippercast-*` return HTTP 410
+with `status: retired`, including requests pinned to an old release. HEAD has
+no body. Neither Fish nor old coast R2 objects are read for these paths.
+Report, ocean, history, shore files and terrain assets are unchanged.
+The older habitat storage description below is historical, not a serving path.
+
+Where to look reads SkipperCast's existing `/feeds/tiles/seafloor/` publication:
+all four controls (`manifest-morro-bay.json`, `manifest-cambria-san-simeon.json`,
+`manifest-monterey-point-sur.json`, `manifest-point-arguello-conception.json`)
+must be ready and current. Effective expiry is their minimum `expires_at`.
+The existing per-region slim loader, first-paint/Save-Data admission, hashes,
+byte limits, current protected-area screen and full-export fallback remain in
+force; it does not download four regions' exports. The remaining reef fit
+groups adapt that same verified canonical publication. Source-specific credits
+and noncommercial terms remain visible on ranked places.
+
+A missing, held, expired or unreadable release shows **Reviewed habitat unavailable**,
+with no silent reef-atlas fallback. Non-reef atlas lists and the explicit slow-link
+load offer remain separate. The existing minute recheck withdraws a loaded
+publication when any control is held; expiry is also checked at ranking time.
+No engine, screen policy, rights register or publication job changes here.
+
+`feed-freshness.yml` keeps the `coast-data-down` issue identity (#2195), but
+probes the four controls instead of the retired Fish release path, along with
+the existing report/ocean probes. A 200 manifest is healthy only if it names the
+expected region, is ready and has an unexpired timezone-aware expiry. The
+existing watcher closes the issue only when every path recovers; this PR does
+not close the issue manually or run a publishing workflow.
+
+Read-only probe evidence: [SCB-07-C manifest probe](scb-07-c-manifest-probe.md).
+
+## Historical bridge and storage contract
+
 SkipperCast reads selected public datasets from the existing owner-operated
 Fish Worker through a bounded same-origin bridge. This preserves Fish's running
 report/history/ocean collectors and its private government-habitat publication
