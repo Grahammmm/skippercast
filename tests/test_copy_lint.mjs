@@ -52,7 +52,7 @@ const a = 'it\\'s one', b = /"not a string"/g, c = \`two \${'inner'} three\`;
 
 test('legal pages are skipped; disclosure pages allow method names but not "not" pairs', () => {
   const copy = '<p>Depths are in MLLW here. This is not a chart. It is not a route.</p>';
-  assert.deepEqual(lintFile('dist/terms.html', copy), []);
+  assert.deepEqual(lintFile('dist/licenses.html', copy), []);
   assert.deepEqual(rules(lintFile('dist/sources.html', copy)), ['consecutive-not']);
   assert.deepEqual(rules(lintFile('dist/index.html', copy)), ['consecutive-not', 'method-name']);
   assert.deepEqual(rules(lintFile('web/disclaimers.ts', `export const X = '${'Depths are in MLLW here.'}';`)), []);

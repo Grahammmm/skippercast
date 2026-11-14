@@ -115,8 +115,8 @@ def audit(context: dict, depth: dict, coverage_probes: list[tuple[float, float]]
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--context", type=Path, default=Path("dist/data/usgs-offshore-monterey-hard-context.geojson"))
-    parser.add_argument("--depth-review", type=Path, default=Path("dist/data/usgs-offshore-monterey-bathy-context-review.json"))
+    parser.add_argument("--context", type=Path, default=Path("research/receipts/usgs-offshore-monterey-hard-context.geojson"))
+    parser.add_argument("--depth-review", type=Path, default=Path("research/receipts/usgs-offshore-monterey-bathy-context-review.json"))
     parser.add_argument("--probe", action="append", default=[], help="Additional longitude,latitude coverage probe; repeatable")
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()

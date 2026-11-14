@@ -22,7 +22,8 @@ def probe(source, session=None):
         body=r.body
         row.update(status="accessible",http_status=r.status,final_url=r.final_url,
                    content_type=r.headers.get("Content-Type"),http_last_modified=r.headers.get("Last-Modified"),
-                   sampled_bytes=len(body),body_complete=len(body)<=SAMPLE_BYTES,sha256=r.receipt.sha256)
+                   # Complete only if not cut by the local sample cap and not an HTTP 206 fragment.
+                   sampled_bytes=len(body),body_complete=r.status!=206 and len(body)<=SAMPLE_BYTES,sha256=r.receipt.sha256)
         if not body.strip(): raise ValueError("Empty documentation response")
     except Exception as e:
         row.update(status="unavailable",error=f"{type(e).__name__}: {str(e)[:180]}")
@@ -37,8 +38,14 @@ def audit(root=REPO):
             "note":"Checks document access and receipts only. Dataset rights, variables, coverage and suitability remain reviewed separately. Retrieval and HTTP modification dates are not scientific issue times."}
 
 
-if __name__=="__main__":
+def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--output",required=True)
-    result=audit();atomic_json(p.parse_args().output,result)
+    args=p.parse_args(argv)  # help and usage errors exit here, before any catalog load or probe
+    result=audit();atomic_json(args.output,result)
     print({"checked":len(result["sources"]),"accessible":sum(s["status"]=="accessible" for s in result["sources"])})
+    return 0
+
+
+if __name__=="__main__":
+    raise SystemExit(main())

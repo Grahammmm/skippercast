@@ -130,6 +130,16 @@ def _no_symlinks(path: Path) -> None:
             raise ConfirmError(LEDGER_BAD)
 
 
+def _no_duplicate_members(pairs: list) -> dict:
+    """JSON object hook: a repeated decoded member name is ambiguous, so refuse (nothing is echoed)."""
+    seen: dict = {}
+    for key, value in pairs:
+        if key in seen:
+            raise ConfirmError(LEDGER_BAD)
+        seen[key] = value
+    return seen
+
+
 def load_confirmations(region: str, sink: str, var: Path | None = None) -> list[dict]:
     """The sink's entries (withdrawn ones included); an absent ledger is empty and nothing is created."""
     path = ledger_path(region, sink, var)
@@ -142,7 +152,7 @@ def load_confirmations(region: str, sink: str, var: Path | None = None) -> list[
         raise ConfirmError(LEDGER_BAD) from None
     try:
         with os.fdopen(descriptor, "rb") as handle:
-            return parse_ledger(json.loads(handle.read().decode("utf-8")))
+            return parse_ledger(json.loads(handle.read().decode("utf-8"), object_pairs_hook=_no_duplicate_members))
     except (OSError, ValueError):  # includes JSON and UTF-8 errors
         raise ConfirmError(LEDGER_BAD) from None
 

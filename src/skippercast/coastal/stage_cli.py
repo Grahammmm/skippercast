@@ -42,7 +42,10 @@ def execute(job, output, *, now):
         raise ValueError('job input hash mismatch')
     manifest = load(root, job['input_manifest'])
     stage = job['stage']
-    minimum_valid_until = now + timedelta(seconds=float(job['budget']['wall_s']))
+    try:
+        minimum_valid_until = now + timedelta(seconds=float(job['budget']['wall_s']))
+    except OverflowError:
+        raise ValueError('job wall budget cannot form a supported review horizon') from None
     synthetic = job['segment'].get('synthetic') is True
     if manifest.get('synthetic') is not synthetic:
         raise ValueError('synthetic source/job identity mismatch')
@@ -132,9 +135,10 @@ def execute(job, output, *, now):
                 raise ValueError("terrain-only queue/output root confinement")
             if terrain_only.context(manifest) != job["params"]["terrain_context_digest"]:
                 raise ValueError("terrain-only context binding mismatch")
-            checked = terrain_only.verify(terrain_root, manifest, now=now)
+            checked = terrain_only.verify(terrain_root, manifest, now=now, minimum_valid_until=minimum_valid_until)
             produced = terrain_only.preview(terrain_root, checked, output_dir=(out/"preview").relative_to(terrain_root),
-                now=now, style=job["params"].get("terrain_style"))
+                now=now, style=job["params"].get("terrain_style"),
+                minimum_valid_until=minimum_valid_until)
             path = out/"terrain-only-result.json"
             write(path, produced)
             owned = []

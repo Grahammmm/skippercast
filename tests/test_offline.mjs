@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
+import {sizeText} from '../web/size-text.ts';
 import {planTiles, tileURL, tileKey, packRequests, relativeTime, formatBytes, bannerText, installHint, isIOS, stampedHeaders,
   SHARED_FILES, TILE_CAP, ENC_ORIGIN, planBasemap, isOceanKey} from '../dist/offline-core.js';
 
@@ -16,7 +17,7 @@ test('Morro Bay pack coverage: swell forecast, chart tiles and basemap; no prefe
   assert.equal(urls.some(u => /\/api\/coast\//.test(u)), false, 'Morro Bay ocean readings use the separate Coastal readings save');
   assert.ok(planTiles(morro.bounds).tiles.length > 0, 'chart tiles are planned');
   assert.ok(planBasemap(morro.bounds).tiles.length > 0, 'basemap ranges are planned');
-  const pack = read('../dist/offline-pack.js'), trip = read('../web/trip.ts');
+  const pack = read('../dist/offline-pack.js'), trip = read('../web/trip-runtime.ts');
   assert.match(pack, /store\(tileURL\(t, layers\), tileKey\(/, 'the chart plan is saved');
   assert.match(trip, /new PMTiles\(rangeRecorder\(/, 'the basemap reader saves ranges');
   assert.match(trip, /reader\.getZxy\(t\.z, t\.x, t\.y/, 'every planned basemap tile is requested');
@@ -233,4 +234,20 @@ test('the files phase stays free of ocean keys: no packRequests URL is an ocean 
   const synthetic = {id: 'r', assets: {atlas: 'data/atlas.json', habitats: 'data/habitat-regions.json'}, ...feeds};
   for (const region of [synthetic, morro])
     assert.deepEqual(packRequests({origin: ORIGIN, region, shared: SHARED_FILES}).filter(u => isOceanKey(u, ORIGIN)), [], region.id);
+});
+
+test('UXFIX-08 sizeText: GB from 1 GB with the language separator, smaller sizes as formatBytes, shared formatter unchanged', () => {
+  assert.equal(sizeText(10737.4e6, 'en'), '10.7 GB');
+  assert.equal(sizeText(10737.4e6, 'es'), '10,7 GB');
+  assert.equal(sizeText(1e9, 'en'), '1.0 GB');
+  assert.equal(sizeText(512e6, 'es'), formatBytes(512e6));
+  assert.equal(sizeText(999e6, 'en'), '999.0 MB');
+  assert.equal(sizeText(340e3, 'en'), '340 KB');
+  assert.equal(sizeText(NaN, 'en'), '—');
+  assert.equal(formatBytes(10737.4e6), '10737.4 MB');
+});
+
+test('UXFIX-08 the pack intro has no zoom or land-water screen in either language', () => {
+  const intro = JSON.parse(read('../catalog/app/strings.json')).strings['trip.pack.intro'];
+  for (const lang of ['en', 'es']) assert.ok(!/zoom|land-water|tierra-agua/i.test(intro[lang]), lang);
 });

@@ -3,6 +3,7 @@
 // over a fake MapLibre and a fake terrain, so neither a GPU nor the library is
 // needed. The web/map/*.ts files run by type stripping.
 import assert from 'node:assert/strict';
+import util from 'node:util';
 import {existsSync, readFileSync} from 'node:fs';
 import test from 'node:test';
 import {RAIL_IDS} from '../web/profile.ts';
@@ -19,24 +20,25 @@ import {readPalette} from '../web/map/palette.ts';
 import {mpaLayers, mpaMark, mpaQuery} from '../web/map/mpa.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from '../web/map/style.ts';
 import {camera, cameraParam, choosePresentation, createStage, drape, terrainCoarsened, terrainFailed, terrainPick, zoomForSpan} from '../web/map/stage.ts';
-import {configureStore, region, setParams, syncFromURL} from '../web/state.ts';
+import {appView, configureStore, region, setParams, syncFromURL} from '../web/state.ts';
 import {effect} from '@preact/signals';
 import {publishedChartFiles} from '../web/chart-files.ts';
+import {settlePicks} from './helpers/pick-settle.mjs';
 
 const PAGE = 'https://s.test/map';
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const SENTINELS = new Set(Object.values(sentinel));
 
 // design.md § 9, "Draw order, bottom to top", as entry ids; the ENC chart base sits with the bases.
 const DESIGN_ORDER = ['basemap', 'aerial', 'chart', 'relief', 'water-temp', 'water-temp-contours', 'sst-contrast', 'sst-fronts', 'chlorophyll', 'swell', 'wind', 'depth-contours', 'mpas', 'habitat',
   'shore-runs', 'seafloor', 'charter-grounds', 'commercial-ais', 'fleet-heat', 'fleet-tracks', 'fleet-events', 'currents',
-  'clouds', 'reach', 'marks', 'selection', 'trip-ranked', 'saved-spots', 'stations', 'coastline'];
+  'clouds', 'reach', 'planning-route', 'marks', 'selection', 'trip-ranked', 'saved-spots', 'stations', 'coastline'];
 
 test('the registry is in § 9 draw order and every entry declares its presentations, time and basis', () => {
   assert.deepEqual(LAYERS.map(e => e.id), DESIGN_ORDER);
   const design = readFileSync(new URL('../docs/plans/front-end/design.md', import.meta.url), 'utf8');
-  assert.match(design, /Draw order, bottom\s+to top: basemap, aerial, ENC chart, relief, water temperature field, contours,\s+temperature contrast cells, chlorophyll, swell field, wind arrows, depth contours, MPAs, habitat polygons,\s+shore runs,\s+seafloor candidates, charter\s+grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents\s+streamlines \(canvas\), clouds \(raster, above fields so the loop reads as\s+sky\), reach ring, marks, selection, ranked trip spots, private saved spots, station pins, coastline glow\./, 'the design states the order this test pins');
+  assert.match(design, /Draw order, bottom\s+to top: basemap, aerial, ENC chart, relief, water temperature field, contours,\s+temperature contrast cells, chlorophyll, swell field, wind arrows, depth contours, MPAs, habitat polygons,\s+shore runs,\s+seafloor candidates, charter\s+grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents\s+streamlines \(canvas\), clouds \(raster, above fields so the loop reads as\s+sky\), reach ring, planning route \(the trip dialog\'s preview, memory only\), marks, selection, ranked trip spots, private saved spots, station pins, coastline glow\./, 'the design states the order this test pins');
   for (const e of LAYERS) {
     assert.ok(e.presentations.length > 0 && e.presentations.every(p => p === 'chart' || p === 'terrain'), `${e.id} presentations`);
     assert.ok(e.time.length > 0 && e.time.every(t => ['static', 'hour', 'observed'].includes(t)), `${e.id} time`);
@@ -490,6 +492,45 @@ test('a failing source marks its layer unavailable and the rest of the Chart kee
   assert.deepEqual(unavailable.value, []);
 });
 
+test('RF2205-9: an overview-only region never sends the full shoreline URL, at any zoom or after an overview error', async t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay&presentation=chart&view=35.38000,-120.88000,14`);
+  publishedChartFiles.value = {region: 'morro-bay', files: ['shoreline-overview.geojson']};
+  t.after(() => { publishedChartFiles.value = null; });
+  const {fake, stage} = chartStage();
+  await tick(); await tick();
+  const [map] = fake.maps;
+  const OVERVIEW = 'https://s.test/regions/morro-bay/shoreline-overview.geojson';
+  const shore = () => (map.dataCalls ?? []).filter(([id]) => id === COASTLINE_SOURCE).map(([, data]) => data);
+  assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, OVERVIEW, 'opened at a detail zoom: still the overview');
+  for (const zoom of [8, 16, 20]) { map.jumpTo({center: [-120.88, 35.38], zoom}); map.fire('moveend'); await tick(); }
+  map.fire('error', {sourceId: COASTLINE_SOURCE, error: new Error('503')});
+  map.fire('error', {sourceId: COASTLINE_SOURCE, error: new Error('503 again')});
+  map.jumpTo({center: [-120.88, 35.38], zoom: 18}); map.fire('moveend'); await tick();
+  assert.equal(shore().some(data => typeof data === 'string' && data.endsWith('/shoreline.geojson')), false, 'the full URL is never sent');
+  assert.deepEqual(unavailable.value.filter(layer => layer === 'coastline'), ['coastline'], 'Coastline unavailable exactly once');
+  assert.equal(chartFailed.value, false);
+  assert.equal(map.removed, false);
+  stage.destroy();
+});
+
+test('RF2205-9: both files listed still falls back to the full shoreline once, then marks only Coastline unavailable', async t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  publishedChartFiles.value = {region: 'morro-bay', files: ['shoreline-overview.geojson', 'shoreline.geojson']};
+  t.after(() => { publishedChartFiles.value = null; });
+  const {fake, stage} = chartStage();
+  await tick(); await tick();
+  const [map] = fake.maps;
+  const shore = () => (map.dataCalls ?? []).filter(([id]) => id === COASTLINE_SOURCE).map(([, data]) => data);
+  map.fire('error', {sourceId: COASTLINE_SOURCE, error: new Error('overview 503')});
+  assert.deepEqual(shore(), ['https://s.test/regions/morro-bay/shoreline.geojson'], 'one fallback to the full file');
+  assert.deepEqual(unavailable.value.filter(layer => layer === 'coastline'), []);
+  map.fire('error', {sourceId: COASTLINE_SOURCE, error: new Error('full 503')});
+  assert.deepEqual(unavailable.value.filter(layer => layer === 'coastline'), ['coastline']);
+  stage.destroy();
+});
+
 test('RF0850-2: the Chart asks for no shoreline while region.json loads, and none once the loaded list lacks it (mount and region change)', async t => {
   t.mock.method(console, 'warn', () => {});
   browser(`${PAGE}?region=morro-bay&presentation=chart`);
@@ -585,11 +626,11 @@ test('a shoreline click fills the mark card; empty water clears it; no WebGL fai
   await tick(); await tick();
   const [map] = first.fake.maps;
   first.fake.features = [{layer: {id: COASTLINE_PICK}, properties: {SOURCE_ID: 'S1', ATTRIBUTE: 'Natural.Mean High Water', HOR_ACC: '2', source_date: '2010-11-01'}}];
-  map.fire('click', {point: {x: 1, y: 1}});
+  map.fire('click', {point: {x: 1, y: 1}}); settlePicks();
   assert.equal(chartMark.value.name, 'Shoreline');
   assert.equal(chartMark.value.source, 'NOAA NGS CUSP · source date 2010-11-01');
   first.fake.features = [];
-  map.fire('click', {point: {x: 2, y: 2}});
+  map.fire('click', {point: {x: 2, y: 2}}); settlePicks();
   assert.equal(chartMark.value, null);
   first.stage.destroy();
 
@@ -611,7 +652,7 @@ test('SC1952-06: an armed Chart tap is screened by the current region\'s marks s
   const BOX = {type: 'Polygon', coordinates: [[[-121.01, 34.99], [-120.99, 34.99], [-120.99, 35.01], [-121.01, 35.01], [-121.01, 34.99]]]};
   const ready = () => assessScreen({areas: [{type: 'Feature', properties: {NAME, Type: 'SMR'}, geometry: BOX}], checkedAt: new Date().toISOString(), live: true}, Date.now());
   const data = id => ({region: {id}, atlas: null, survey: null, geology: null});
-  const tap = (lat, lon) => map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: lon, lat}});
+  const tap = (lat, lon) => { map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: lon, lat}}); settlePicks(); };
   // A shoreline feature sits under every tap: a tap that is not consumed would select it.
   fake.features = [{layer: {id: COASTLINE_PICK}, properties: {SOURCE_ID: 'S1', ATTRIBUTE: 'Natural.Mean High Water', HOR_ACC: '2', source_date: '2010-11-01'}}];
   const got = [];
@@ -652,7 +693,7 @@ test('SC1952-06: an armed Chart tap is screened by the current region\'s marks s
 });
 
 // FE-82: registry layers on the terrain (packages/coast setOverlay, FE-81).
-const OVERLAY_PALETTE = readPalette(name => (name === 'mpa-fill-opacity' ? '0.18' : `token(${name})`));
+const OVERLAY_PALETTE = readPalette(name => (name === 'mpa-fill-opacity' ? '0.18' : /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`));
 
 test('FE-82: protected areas, reef marks and charter grounds drape on the terrain in their Chart style\'s token roles', () => {
   assert.deepEqual(LAYERS.filter(e => e.terrain).map(e => e.id), ['mpas', 'charter-grounds', 'marks']);
@@ -664,7 +705,8 @@ test('FE-82: protected areas, reef marks and charter grounds drape on the terrai
   const [mpaFill, mpaLine] = mpaLayers(sentinel), mpas = layerEntry('mpas').terrain;
   assert.deepEqual([sentinel[mpas.color], sentinel[mpas.outline], mpas.opacity], [mpaFill.paint['fill-color'], mpaLine.paint['line-color'], 'mpaFillOpacity']);
   assert.deepEqual(mpaFill.paint['fill-opacity'], ['to-number', sentinel.mpaFillOpacity], 'both read --mpa-fill-opacity');
-  const ring = markStyle(sentinel).marks.find(l => l.id === 'marks-ring').paint, marks = layerEntry('marks').terrain;
+  // Coast overlays retain their general UI roles; the Chart's independent roles have equal defaults.
+  const ring = markStyle({...sentinel, mapInkHalo: sentinel.bg, markRing: sentinel.mint}).marks.find(l => l.id === 'marks-ring').paint, marks = layerEntry('marks').terrain;
   assert.deepEqual([marks.kind, sentinel[marks.color], marks.opacity, sentinel[marks.outline]], ['point', ring['circle-color'], ring['circle-opacity'], ring['circle-stroke-color']]);
   assert.equal(marks.size, ring['circle-radius'] * 2, 'the ring\'s diameter');
   const grounds = groundsOverlay(sentinel, {outlines: {type: 'FeatureCollection', features: []}, hatch: {type: 'FeatureCollection', features: []}});
@@ -843,4 +885,131 @@ test('FE-82: in Terrain the protected areas and reef marks drape without the Cha
 test('the map loads the full shoreline at the zoom the published overview was simplified for (#617)', () => {
   const overview = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/shoreline-overview.geojson', import.meta.url), 'utf8'));
   assert.equal(overview.provenance.overview.max_zoom, SHORELINE_DETAIL_ZOOM);
+});
+
+/** RF2205-5: an engine over the fake MapLibre with one pickable layer; `ctx.value` is the pick context. */
+function pickEngine() {
+  const fake = library(), picks = [], ctx = {value: 'a'};
+  fake.features = [{layer: {id: 'pin'}, properties: {id: 'p1'}}];
+  const engine = createEngine(fake.module, {host: {}, style: {version: 8, sources: {}, layers: [{id: 'pin'}]}, camera: {latitude: 35.3, longitude: -120.9, zoom: 10},
+    onMove() {}, onLayerError() {}, pickLayers: ['pin'], pickContext: () => ctx.value,
+    onPick: (layer, properties, at) => picks.push([layer, properties?.id ?? null, at])});
+  const [map] = fake.maps;
+  const click = () => map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -120.9, lat: 35.3}});
+  return {fake, map, engine, picks, ctx, click};
+}
+
+test('chart_double_tap_never_picks: click/click/dblclick and a native touch zoom pick nothing, before or after the timers run', () => {
+  const a = pickEngine();
+  a.click(); a.click(); a.map.fire('dblclick');
+  assert.equal(settlePicks(), 0); assert.equal(a.picks.length, 0, 'a mouse double-click picks nothing');
+  const b = pickEngine();
+  b.click(); b.map.fire('zoomstart'); b.map.fire('movestart');
+  b.click();   // the second tap's click arrives while the zoom is moving
+  assert.equal(settlePicks(), 0); assert.equal(b.picks.length, 0, 'a touch zoom with no dblclick picks nothing');
+  b.map.fire('moveend');
+  assert.equal(settlePicks(), 0); assert.equal(b.picks.length, 0);
+  b.click();
+  assert.equal(settlePicks(), 1); assert.equal(b.picks.length, 1, 'a later deliberate click after the zoom settles still picks');
+});
+
+test('chart_single_pick_settles_once: nothing at 549 ms, one pick at 550 ms, with the click\'s own feature and point', t => {
+  t.mock.timers.enable({apis: ['setTimeout']});
+  const a = pickEngine();
+  a.click();
+  t.mock.timers.tick(549);
+  assert.equal(a.picks.length, 0);
+  a.fake.features = [];   // the camera or layers moving later must not change what was clicked
+  t.mock.timers.tick(1);
+  assert.equal(a.picks.length, 1);
+  assert.ok(util.isDeepStrictEqual(a.picks[0], ['pin', 'p1', {lon: -120.9, lat: 35.3}]), 'the feature and point captured at the click');
+  t.mock.timers.tick(5000);
+  assert.equal(a.picks.length, 1, 'once');
+  a.click(); t.mock.timers.tick(550);
+  assert.ok(util.isDeepStrictEqual(a.picks[1], [null, null, {lon: -120.9, lat: 35.3}]), 'empty water is a null pick');
+  a.click(); a.click(); t.mock.timers.tick(550);
+  assert.equal(a.picks.length, 3, 'a later click replaces the pending one');
+  t.mock.timers.reset();
+});
+
+test('chart_pending_pick_context_and_lifetime: a changed pick context, setCamera and destroy drop a pending pick', () => {
+  const a = pickEngine();
+  a.click(); a.ctx.value = 'b'; assert.equal(settlePicks(), 1); assert.equal(a.picks.length, 0, 'region/view/waypoint change drops it');
+  a.ctx.value = 'a'; a.click(); a.ctx.value = 'b'; a.ctx.value = 'a';
+  assert.equal(settlePicks(), 1); assert.equal(a.picks.length, 1, 'identity equality only: the token itself changes on away-and-back (the Chart replaces the object)');
+  const b = pickEngine();
+  b.click(); b.engine.setCamera({latitude: 35, longitude: -121, zoom: 9});
+  assert.equal(settlePicks(), 0); assert.equal(b.picks.length, 0, 'setCamera cancels');
+  const c = pickEngine();
+  c.click(); c.engine.destroy();
+  assert.equal(settlePicks(), 0); assert.equal(c.picks.length, 0, 'destroy cancels');
+});
+
+test('chart_pending_pick_context_and_lifetime: the Chart drops a click still settling when waypoint placement is armed, and a settled click selects once', async t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay`);
+  const {fake, stage} = chartStage();
+  await tick(); await tick(); await tick();
+  const [map] = fake.maps;
+  fake.features = [{layer: {id: COASTLINE_PICK}, properties: {SOURCE_ID: 'S1', ATTRIBUTE: 'Natural.Mean High Water', HOR_ACC: '2', source_date: '2010-11-01'}}];
+  try {
+    chartMark.value = null;
+    const got = [];
+    map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -121, lat: 35}});
+    beginWaypointPlacement('morro-bay', at => got.push(at));
+    assert.equal(settlePicks(), 1);
+    assert.equal(chartMark.value, null, 'the old click does not become a mark'); assert.equal(got.length, 0, 'nor a waypoint');
+    cancelWaypointPlacement();
+    map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -121, lat: 35}});
+    cancelWaypointPlacement(); beginWaypointPlacement('morro-bay', at => got.push(at)); cancelWaypointPlacement();
+    assert.equal(settlePicks(), 1); assert.equal(chartMark.value, null, 'arm and cancel in between still drops it');
+    map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -121, lat: 35}});
+    map.fire('dblclick');
+    assert.equal(settlePicks(), 0); assert.equal(chartMark.value, null, 'a double tap selects nothing');
+    map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -121, lat: 35}});
+    settlePicks();
+    assert.equal(chartMark.value.name, 'Shoreline', 'an isolated click still selects');
+  } finally { cancelWaypointPlacement(); stage.destroy(); }
+});
+
+test('chart_closed_pick_context_never_picks: a null pick context at both the click and the dispatch drops the pick', () => {
+  const a = pickEngine();
+  a.ctx.value = null;   // picking is closed: null at the click and still null when the timer fires
+  a.click();
+  assert.equal(settlePicks(), 0); assert.equal(a.picks.length, 0, 'a click while closed schedules nothing');
+  const b = pickEngine();
+  b.click(); b.ctx.value = null;
+  assert.equal(settlePicks(), 1); assert.equal(b.picks.length, 0, 'closed by dispatch');
+  const c = pickEngine();
+  c.ctx.value = null; c.click(); c.ctx.value = 'a';
+  assert.equal(settlePicks(), 0); assert.equal(c.picks.length, 0, 'reopened after a closed click does not accept it');
+  const fake = library(), picks = [];
+  createEngine(fake.module, {host: {}, style: {version: 8, sources: {}, layers: []}, camera: {latitude: 35.3, longitude: -120.9, zoom: 10}, onMove() {}, onLayerError() {}, pickLayers: [], onPick: layer => picks.push(layer)});
+  fake.maps[0].fire('click', {point: {x: 1, y: 1}});
+  assert.equal(settlePicks(), 1); assert.deepEqual(picks, [null], 'an engine with no pickContext at all is not gated');
+});
+
+test('chart_closed_pick_context_never_picks: with the Chart still mounted but another view shown (Fleet), a tap selects no mark and places no waypoint', async t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay`);
+  const {fake, stage} = chartStage();
+  await tick(); await tick(); await tick();
+  const [map] = fake.maps;
+  fake.features = [{layer: {id: COASTLINE_PICK}, properties: {SOURCE_ID: 'S1', ATTRIBUTE: 'Natural.Mean High Water', HOR_ACC: '2', source_date: '2010-11-01'}}];
+  const got = [];
+  try {
+    chartMark.value = null;
+    appView.value = 'fleet';
+    map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -121, lat: 35}});
+    assert.equal(settlePicks(), 0, 'no click is left settling when the view is not the coast');
+    assert.equal(chartMark.value, null, 'no mark selected from Fleet');
+    beginWaypointPlacement('morro-bay', at => got.push(at));
+    map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -121, lat: 35}});
+    settlePicks();
+    assert.equal(got.length, 0, 'no waypoint placed from Fleet'); assert.equal(chartMark.value, null);
+    appView.value = 'coast'; cancelWaypointPlacement();
+    map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: -121, lat: 35}});
+    settlePicks();
+    assert.equal(chartMark.value.name, 'Shoreline', 'back on the coast an isolated click selects');
+  } finally { appView.value = 'coast'; cancelWaypointPlacement(); stage.destroy(); }
 });

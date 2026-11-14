@@ -63,24 +63,11 @@ another.
 No plan/schema contract, allowance constant, output lifecycle, report field or
 CLI argument changed. The CLI already takes numeric `--now`/`--horizon`.
 
-## Acceptance
+## Tests
 
-`scripts/accept_sc_cache_clock.py --suite {focused,contract,negative} --output
-<candidate>/out/<new-run>` runs `tests/unit/test_sc_cache_clock.py` (rows a1/a2/a3)
-and the existing `tests/unit/test_coastal_cached_intake.py` in-process, offline,
-against the staged repository only, and writes a write-once receipt with
-argv, cwd, input hashes, per-phase counts and raw pytest output.
-
-Before it imports anything or creates the run root, the runner checks every
-input against the frozen identities in
-`tests/fixtures/sc_cache_clock/input-pins.json` (SHA-256 and size). Each input
-is opened one path component at a time from `/` with no-follow descriptors,
-so a symlink anywhere in the unresolved ancestry, a special file or a
-non-regular leaf is refused. Reads are capped at 2 MiB per file and 16 MiB in
-total, at most size+1 bytes are read, and the descriptor identity must not
-change during the read. Any difference exits 3 and writes nothing. The pins
-file has to be regenerated whenever a pinned input changes; its own hash is
-recorded in each receipt.
+`tests/unit/test_sc_cache_clock.py` (rows a1/a2/a3) and the existing
+`tests/unit/test_coastal_cached_intake.py` run under ordinary pytest, offline,
+on synthetic metadata only.
 
 Host timezone variation uses a test-local `datetime` subclass, never host
 settings or environment overrides. The negative suite replaces

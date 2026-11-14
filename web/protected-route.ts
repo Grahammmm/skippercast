@@ -13,6 +13,15 @@ export interface RouteScreen {
 }
 export const ROUTE_WARNING = 'NOT FOR NAVIGATION. Planning only: no depth, hazards, tides or passage clearance. Check official charts and current rules.';
 export const ROUTE_SOURCES = 'CDFW MPA boundaries: https://wildlife.ca.gov/Conservation/Marine/MPAs; NOAA supplemental closures where supplied: https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas. Water routing: region NOAA shoreline land-water screen.';
+// GPX lat/lon are xsd:decimal: spell JS exponent notation (1e-7) as plain digits, without rounding. Mirrors dist/gpx.js.
+const dec = (v: number): string => {
+  const s = String(v), m = /^(-?)(\d+)(?:\.(\d+))?[eE]([+-]?\d+)$/.exec(s);
+  if (!m) return s;
+  const [, sign, int, frac = '', exp] = m, digits = int! + frac, point = int!.length + Number(exp);
+  return sign + (point <= 0 ? '0.' + '0'.repeat(-point) + digits
+    : point >= digits.length ? digits + '0'.repeat(point - digits.length)
+    : digits.slice(0, point) + '.' + digits.slice(point));
+};
 const geometry = (ps: readonly RoutePoint[]) => ps.length === 1
   ? {type:'Point', coordinates:[ps[0]!.longitude, ps[0]!.latitude]}
   : {type:'LineString', coordinates:ps.map(p=>[p.longitude,p.latitude])};
@@ -44,6 +53,6 @@ export function buildProtectedRoute({model, lines, screen, stops, title, now = n
   // Recheck at serialization; an expired or replaced boundary screen cannot export.
   if (!screen.ready() || screen.exportExclusions()?.checked_at !== checkedAt) throw Error('Protected-area boundaries changed. Try routing again.');
   const description = `${ROUTE_WARNING} Avoids screened polygons plus the 70 m planning margin. Boundary check: ${checkedAt}. ${ROUTE_SOURCES} Water-screen source: ${model?.source}.`;
-  const gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="SkipperCast" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${xml(title)}</name><desc>${xml(description)}</desc><time>${now.toISOString()}</time></metadata><rte><name>${xml(title)}</name><desc>${xml(description)}</desc>${points.map(p=>`<rtept lat="${p.latitude}" lon="${p.longitude}"/>`).join('')}</rte></gpx>`;
+  const gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="SkipperCast" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${xml(title)}</name><desc>${xml(description)}</desc><time>${now.toISOString()}</time></metadata><rte><name>${xml(title)}</name><desc>${xml(description)}</desc>${points.map(p=>`<rtept lat="${dec(p.latitude)}" lon="${dec(p.longitude)}"/>`).join('')}</rte></gpx>`;
   return {gpx,points,checkedAt:checkedAt!,nm};
 }

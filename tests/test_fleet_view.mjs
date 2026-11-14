@@ -59,7 +59,7 @@ function open(t, h, query) {
   configureStore({v2: true, storage: null});
   syncFromURL(location.href);
   markData.value = {region: {id: 'morro-bay', jurisdiction_id: 'california-central', assets: {}}, atlas: null, survey: null, geology: null};
-  const fleet = createFleetActivity({engine: h.engine, fetchFn: h.fetchFn, palette: () => readPalette(name => `token(${name})`)});
+  const fleet = createFleetActivity({engine: h.engine, fetchFn: h.fetchFn, palette: () => readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`)});
   t.after(() => { fleet.destroy(); markData.value = null; activityOn.value = []; activityFilters.value = {}; hidePlanning.value = false; });
   return fleet;
 }

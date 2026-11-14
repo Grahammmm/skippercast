@@ -80,6 +80,8 @@ export function shareLink({href, origin, ports, region, savedId, profile, now, t
   const target = raw.has('target') ? single(raw, 'target', TARGET_ID) : single(raw, 'species', TARGET_ID);
   if (target) p.set('target', target);
   for (const key of SHARED_VIEW_KEYS) {
+    // fishLink rewrites a first `layer` into `layers` and erases the original cardinality: without an explicit `layers`, only a lone alias is unambiguous.
+    if (key === 'layers' && !raw.has('layers') && raw.getAll('layer').length !== 1) continue;
     const value = single(from, key, PLAIN);
     if (value) p.set(key, value);
   }

@@ -130,7 +130,8 @@ test('BF-hourly-table: the hour-by-hour row follows the chart and the dock; a ro
   await target.getByRole('button').click();
   await expect.poll(hourMs).toBe(at);
   await expect(target).toHaveAttribute('aria-current', 'true');
-  await expect(slider).toHaveAttribute('aria-valuetext', label);
+  // The dock now says the day too ("Fri · 12 am"); the row button carries only the hour, so the slider's text is a day, a dot and that hour.
+  await expect(slider).toHaveAttribute('aria-valuetext', new RegExp(`^\\S.* · ${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
   expect(await cursor.getAttribute('x1')).not.toBe(before);
   // Enter on a focused row does the same.
   const last = row(await table.locator('tbody tr:not([aria-current])').last().getAttribute('data-at')), lastAt = Date.parse((await last.getAttribute('data-at'))!);

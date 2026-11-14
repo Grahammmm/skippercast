@@ -88,20 +88,8 @@ following symlinks; inputs must be regular files (FIFOs and devices are refused
 without blocking). `--out` must not exist and is created exclusively, with
 deterministic sorted JSON and nonfinite values forbidden.
 
-## Acceptance
+## Tests
 
-`scripts/accept_sc_segment_delta.py --suite focused|contract|negative --output DIR`
-runs `tests/unit/test_sc_segment_delta.py` in-process with only the standard
-library and jsonschema, after disabling bytecode, installing offline sentinels,
-pinning the import path to this checkout and redirecting temporary and work
-files into a new write-once run directory. `DIR` must be normalized. It is
-opened from `/` one component at a time without following symlinks, and a
-symlink or non-directory anywhere in it is refused with exit 2 before anything
-is created. Missing trailing components are created relative to the verified
-parent descriptor. The run directory is created exclusively, and evidence files
-are written relative to its descriptor with no overwrite and no symlink
-following. The negative suite also proves each
-regression check fails against an in-memory broken double and passes once it
-is removed. The test module is written to be collectable by pytest as well, but
-local pytest collection is UNVERIFIED (pytest is not installed in the staged
-runtime; full discovery is operator-run). Local success is not full CI.
+`tests/unit/test_sc_segment_delta.py` runs under pytest with offline
+sentinels. Its negative group also proves each regression check fails against
+an in-memory broken double and passes once it is removed.

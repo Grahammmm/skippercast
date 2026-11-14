@@ -252,15 +252,35 @@ def erddap_grid(data, meta, variables, kind):
 
 def page_watch(body, keywords):
     """Detect a reviewed page changing, without pretending to interpret law."""
-    text = watch_content(body)
+    text = watch_content_v4(body)
     if not all(re.search(word, text, re.I) for word in keywords):
         raise ValueError("Expected source content absent; possible error/challenge page")
     return {"content_sha256": hashlib.sha256(text.encode()).hexdigest(), "interpretation": "manual review required",
-            "normalization": "text-and-links-v3", "permission_to_fish": None}
+            "normalization": "text-and-links-v4", "permission_to_fish": None}
+
+
+def watch_content_v4(body):
+    """The page's own content and the documents it links to, without the site's furniture.
+
+    v3 hashed every href on the page and all visible text. On 2026-11-12 that made 18 of 28
+    California sources read "changed" for a stylesheet version number, a renamed footer link
+    and a calendar widget. v4 keeps what a reviewer reads: when the page has exactly one
+    <main>, only its text and the links inside it; and only <a> links, never <link> tags.
+    A page with no <main>, or more than one, is watched whole, so nothing is skipped by guesswork.
+    """
+    body = re.sub(r"<!--.*?(?:-->|$)", "", body, flags=re.S)
+    cleaned = re.sub(r"<(script|style)\b[^>]*>.*?</\1>", "", body, flags=re.S | re.I)
+    mains = re.findall(r"<main\b[^>]*>(.*?)</main>", cleaned, flags=re.S | re.I)
+    scope = mains[0] if len(mains) == 1 else cleaned
+    links = sorted({html.unescape(value) for _, value in re.findall(r'''<a\b[^>]*?\bhref\s*=\s*(["'])(.*?)\1''', scope, re.I | re.S)
+                    if value and not value.startswith(('#', 'javascript:', 'mailto:', 'tel:'))})
+    return plain(scope) + '\nDOCUMENT LINKS\n' + '\n'.join(links)
 
 
 def watch_content(body):
-    """Track document links too: a replacement PDF can keep the same link label."""
+    """text-and-links-v3, kept to verify review records made before v4.
+
+    Track document links too: a replacement PDF can keep the same link label."""
     body = re.sub(r"<!--.*?(?:-->|$)", "", body, flags=re.S)
     cleaned = re.sub(r"<(script|style)\b[^>]*>.*?</\1>", "", body, flags=re.S | re.I)
     links = sorted({html.unescape(value) for _, value in re.findall(r'''\bhref\s*=\s*(["'])(.*?)\1''', cleaned, re.I | re.S)

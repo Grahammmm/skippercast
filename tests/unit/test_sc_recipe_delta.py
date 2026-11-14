@@ -39,7 +39,8 @@ SOURCE_PINS = {
     SCHEMA: 'a659d136536a553043fac917473428ae0c6e51bdb179cc66bdd295e09ebf1593',
     'regions/morro-bay/coast.json': 'dbe6ffebea0e6d4321c949ae42329db487448a251af695f060c1092366b6bc47',
     # repinned for NB-SC-06, NB-SC-07 and NB-SC-08: test_coast_recipe.py carries the new morro-bay and cambria region.json pins
-    'tests/unit/test_coast_recipe.py': '74d11343a892029b90056c12f19e29965b1318a7d89cd5249059a5e7b73b6773',
+    # repinned for SC2184-16: test_coast_recipe.py carries the new build_coast_prefetch_plan.py pin
+    'tests/unit/test_coast_recipe.py': '2097efa009634a479dd0dfc8e01465e8a51b646148e3fc682a1c2c8a0eaf94d0',
 }
 # Exactly the metadata files the existing validator reads for one recipe.
 READ_SET = {SCHEMA, 'catalog/sources.json', 'catalog/coastal-sectors.json',
@@ -760,9 +761,14 @@ def test_a3_report_write_failures_publish_nothing(failure, tmp_path, workspace, 
     real_open, real_write, real_fsync, real_close, real_link = os.open, os.write, os.fsync, os.close, os.link
     ours, wrote = set(), []
 
+    def in_reports(path, dir_fd):
+        if dir_fd is None:
+            return Path(os.fspath(path)).absolute().parent == reports.absolute()
+        return os.path.samestat(os.fstat(dir_fd), reports.stat())   # relative call: match by directory identity
+
     def opening(path, flags, *args, **kwargs):                       # in-memory doubles only
         descriptor = real_open(path, flags, *args, **kwargs)
-        if Path(os.fspath(path)).absolute().parent == reports.absolute() and flags & os.O_WRONLY:
+        if flags & os.O_WRONLY and in_reports(path, kwargs.get('dir_fd')):
             ours.add(descriptor)
         return descriptor
 
@@ -790,7 +796,10 @@ def test_a3_report_write_failures_publish_nothing(failure, tmp_path, workspace, 
 
     def linking(source, destination, *args, **kwargs):
         if failure == 'publish-race':                                 # a concurrent writer wins
-            Path(destination).write_text('inert concurrent report')
+            created = real_open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644,
+                                dir_fd=kwargs.get('dst_dir_fd'))
+            real_write(created, b'inert concurrent report')
+            real_close(created)
         return real_link(source, destination, *args, **kwargs)
 
     monkeypatch.setattr(os, 'open', opening)

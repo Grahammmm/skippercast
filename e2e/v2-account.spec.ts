@@ -208,7 +208,7 @@ test('signed in, saved-trip alerts save, list, delete and acknowledge through th
   expect(posted[0]).toMatchObject({region: 'morro-bay', species: 'halibut', point: 'central', start_hour: 7, end_hour: 13, wind_limit: 8, gust_limit: 14, sea_limit: 3});
   // SC1537-06 (#1170): the saved trip reads by the region's names, never its raw ids.
   await expect(dialog.locator('#saved-trips')).toContainText('Estero Bay · California halibut · 7:00–13:00');
-  await expect(dialog.getByRole('button', {name: /^Delete the trip on \d{4}-\d{2}-\d{2} at Estero Bay$/})).toBeVisible();
+  await expect(dialog.getByRole('button', {name: /^Delete the trip on [A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2} at Estero Bay$/})).toBeVisible();
   await dialog.getByText('Recent assessments (1)').click();
   await dialog.getByRole('button', {name: 'Mark read'}).click();
   await expect.poll(() => acked).toEqual({id: 7});
@@ -374,4 +374,144 @@ test('a tap or a close while the library is still loading keeps the late autofil
   expect(state.verified).toBe(1);
   expect(seen.loginOptions, 'the tap asked once; the autofill that was waiting did not').toBe(1);
   expect(pageErrors.filter(e => !/Failed to load resource/.test(e))).toEqual([]);
+});
+
+// RF1925-4 (S4-40): after Create verifies, the dialog keeps a polite confirmation and a Continue button; the return/reload waits
+// for an acknowledgment. Fully stubbed server; the registration itself is a Chromium virtual authenticator's synthetic credential.
+async function stubCreate(page: Page, verify: 'ok' | 'refuse' = 'ok') {
+  await passkeyFixture(page);
+  const seen = {options: 0, verified: 0};
+  await page.route('**/api/session', route => route.fulfill({json: {signIn: '/#account', signedIn: false}}));
+  await page.route('**/api/auth/register/options', route => {
+    seen.options += 1;
+    return route.fulfill({json: {challenge: b64url(randomBytes(32)), rp: {name: 'SkipperCast', id: 'localhost'}, user: {id: b64url(randomBytes(16)), name: 'Skipper', displayName: 'Skipper'},
+      pubKeyCredParams: [{type: 'public-key', alg: -7}], timeout: 60000, authenticatorSelection: {residentKey: 'required', userVerification: 'preferred'}, attestation: 'none'}});
+  });
+  await page.route('**/api/auth/register/verify', route => {
+    seen.verified += 1;
+    return verify === 'ok' ? route.fulfill({json: {ok: true}}) : route.fulfill({status: 400, json: {error: 'Verification refused'}});
+  });
+  return seen;
+}
+const CREATED = 'Account created. You\u2019re signed in. Continue to return to your screen.';
+
+test('a created account keeps its confirmation readable until Continue, then returns once', async ({page, pageErrors, v2}) => {
+  const seen = await stubCreate(page);
+  await v2.open('app', AREA);
+  await page.evaluate(() => { (window as unknown as {__stillHere: boolean}).__stillHere = true; location.hash = '#account'; });
+  const status = page.locator('#account-status'), create = page.locator('#account-create');
+  await expect(create).toBeEnabled();
+  await create.click();
+  await expect(status).toHaveText(CREATED);
+  await expect(status).toHaveAttribute('role', 'status');
+  await expect(status).toHaveAttribute('aria-live', 'polite');
+  await expect(status).toHaveAttribute('aria-atomic', 'true');
+  await expect(create).toHaveText('Continue');
+  await expect(create).toBeEnabled();
+  await expect(page.locator('#account-signin')).toBeDisabled();
+  await expect(page.locator('#account-name')).toBeDisabled();
+  await expect(page.locator('.account-card')).toBeVisible();
+  await page.waitForTimeout(1500);   // no timer closes or reloads it
+  expect(await page.evaluate(() => (window as unknown as {__stillHere?: boolean}).__stillHere), 'no reload before Continue').toBe(true);
+  await expect(status).toHaveText(CREATED);
+  await create.focus();
+  await expect(create).toBeFocused();
+  const reloaded = page.waitForEvent('load');
+  await page.keyboard.press('Enter');
+  await reloaded;
+  expect(seen).toEqual({options: 1, verified: 1});
+  expect(new URL(page.url()).searchParams.get('region')).toBe('morro-bay');
+  expect(page.url(), 'the return address replaces #account').not.toContain('#account');
+  expect(pageErrors).toEqual([]);
+});
+
+test('Escape on the created confirmation returns once without a second registration', async ({page, pageErrors, v2}) => {
+  const seen = await stubCreate(page);
+  await v2.open('app', AREA);
+  await page.evaluate(() => { location.hash = '#account'; });
+  await expect(page.locator('#account-create')).toBeEnabled();
+  await page.locator('#account-create').click();
+  await expect(page.locator('#account-status')).toHaveText(CREATED);
+  const reloaded = page.waitForEvent('load');
+  await page.keyboard.press('Escape');
+  await reloaded;
+  expect(seen).toEqual({options: 1, verified: 1});
+  expect(new URL(page.url()).searchParams.get('region')).toBe('morro-bay');
+  expect(pageErrors).toEqual([]);
+});
+
+test('a refused registration never shows the confirmation or Continue and can be retried', async ({page, v2}) => {
+  const seen = await stubCreate(page, 'refuse');
+  await v2.open('app', AREA);
+  await page.evaluate(() => { (window as unknown as {__stillHere: boolean}).__stillHere = true; location.hash = '#account'; });
+  await expect(page.locator('#account-create')).toBeEnabled();
+  await page.locator('#account-create').click();
+  await expect(page.locator('#account-status')).toContainText('Verification refused');
+  await expect(page.locator('#account-create')).toBeEnabled();
+  await expect(page.locator('#account-create')).toHaveText('Create account');
+  await expect(page.locator('#account-status')).not.toContainText('Account created');
+  await expect(page.locator('#account-name')).toBeEnabled();
+  expect(seen.verified).toBe(1);
+  expect(await page.evaluate(() => (window as unknown as {__stillHere?: boolean}).__stillHere), 'no reload').toBe(true);
+});
+
+test('the masthead account trigger is icon-sized at 1024-1179 px, labelled at 1180 px, and keeps its name', async ({page, v2, isMobile}) => {
+  test.skip(isMobile, 'explicit desktop widths run once, under the laptop project');
+  await stubAuth(page, 'unused');
+  const sizes: Array<[number, number, boolean]> = [[1024, 768, true], [1179, 800, true], [1180, 820, false], [1280, 800, false]];
+  for (const [width, height, compact] of sizes) {
+    await page.setViewportSize({width, height});
+    await v2.open('app', AREA);
+    const trigger = page.locator('.app-masthead .app-account-trigger');
+    await expect(trigger).toHaveAccessibleName('Sign in');
+    await expect(trigger).toHaveAttribute('title', 'Sign in');
+    const box = (await trigger.boundingBox())!, label = (await page.locator('.app-masthead .app-account-label').boundingBox())!;
+    if (compact) {
+      expect(Math.abs(box.width - (await trigger.evaluate(el => parseFloat(getComputedStyle(el).minInlineSize)))), `${width}px icon-sized`).toBeLessThan(1);
+      expect(label.width).toBeLessThanOrEqual(1);
+    } else expect(label.width, `${width}px keeps the label`).toBeGreaterThan(20);
+  }
+  await page.setViewportSize({width: 1024, height: 768});
+  await v2.open('app', AREA);
+  const trigger = page.locator('.app-masthead .app-account-trigger');
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('button', {name: 'Sign in or create an account'})).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(trigger).toBeFocused();
+});
+
+test('UXFIX-10: the phone top card holds an icon-sized account button at peek, half and full, opening the same menu', async ({page, v2, isMobile}) => {
+  test.skip(!isMobile, 'phone layout only');
+  await stubAuth(page, 'unused');
+  await v2.open('app', AREA);
+  const top = page.locator('.app-account[data-top] > .app-account-top-trigger'), card = page.locator('.app-top-card');
+  const cardHeight = async () => (await card.boundingBox())!.height;
+  await page.evaluate(() => { const s = new CSSStyleSheet(); s.replaceSync('.app-account[data-top] { display: none !important; }'); document.adoptedStyleSheets = [s]; });
+  const without = await cardHeight();
+  await page.evaluate(() => { document.adoptedStyleSheets = []; });
+  const viewport = page.viewportSize()!;
+  for (const detent of ['peek', 'half', 'full'] as const) {
+    await page.locator('.ui-sheet-handle').focus();
+    await page.keyboard.press(detent === 'peek' ? 'Home' : 'End');
+    if (detent === 'half') await page.keyboard.press('ArrowDown');
+    await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', detent);
+    await expect(top, `${detent}: named like Sign in`).toHaveAccessibleName('Sign in');
+    const box = (await top.boundingBox())!;
+    expect(box.width, `${detent}: at least 44 wide`).toBeGreaterThanOrEqual(44);
+    expect(box.height, `${detent}: at least 44 tall`).toBeGreaterThanOrEqual(44);
+    expect(box.y + box.height, `${detent}: inside the viewport without scrolling`).toBeLessThanOrEqual(viewport.height);
+    expect(box.x + box.width, `${detent}: inside the viewport`).toBeLessThanOrEqual(viewport.width);
+    expect(Math.abs(await cardHeight() - without), `${detent}: the top card keeps its height`).toBeLessThanOrEqual(1);
+    await top.click();
+    await expect(top).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('.app-account[data-top] .app-account-panel')).toBeVisible();
+    await expect(page.locator('.app-account[data-top] .app-account-panel').getByRole('button', {name: 'Sign in or create an account'})).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(top).toHaveAttribute('aria-expanded', 'false');
+  }
+  const duplicates = await page.evaluate(() => { const seen = new Set<string>(), dup: string[] = []; for (const el of document.querySelectorAll('[id]')) { if (seen.has(el.id)) dup.push(el.id); seen.add(el.id); } return dup; });
+  expect(duplicates, 'no duplicate ids').toEqual([]);
+  await expect(page.locator('.app-brief-footer .app-account-trigger'), 'the footer entry stays').toHaveCount(1);
 });

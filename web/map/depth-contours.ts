@@ -28,7 +28,7 @@ import {DEPTH_CONTOURS_SOURCE, layerEntry} from './layers.ts';
 import {MPA_FILL} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {camera} from './stage.ts';
-import {LABEL_FONT} from './style.ts';
+import {LABEL_FONT, mapControl} from './style.ts';
 
 const REGISTRY_ID = 'depth-contours';
 /** EC6 (docs/seafloor-ec.md): where the survey could not be verified, a muted area under a dashed outline. */
@@ -55,9 +55,15 @@ const REASONS = ['hole', 'conflict', 'ring-range', 'datum-suspect', 'nodata'];
 
 export const depthContoursURL = (id: string): string => `regions/${encodeURIComponent(id)}/depth-contours.geojson`;
 export const depthContoursOverviewURL = (id: string): string => `regions/${encodeURIComponent(id)}/depth-contours-overview.geojson`;
-/** The contour file the Chart draws at a `?view=` zoom: the overview below the detail zoom, unless the full one already loaded. */
-export const contoursFor = (id: string, viewZoom: number, detail = false): string =>
-  detail || viewZoom - ZOOM_OFFSET >= DETAIL_ZOOM ? depthContoursURL(id) : depthContoursOverviewURL(id);
+/**
+ * The contour file the Chart draws at a `?view=` zoom: the overview below the detail zoom, unless the full one already loaded.
+ * RF0035-8: a region.json that lists exactly one form gets that form at every zoom; no list (or both) keeps the zoom rule.
+ */
+export const contoursFor = (id: string, viewZoom: number, detail = false): string => {
+  const overview = chartFileListed(id, 'depth-contours-overview.geojson'), full = chartFileListed(id, 'depth-contours.geojson');
+  if (overview !== full) return full ? depthContoursURL(id) : depthContoursOverviewURL(id);
+  return detail || viewZoom - ZOOM_OFFSET >= DETAIL_ZOOM ? depthContoursURL(id) : depthContoursOverviewURL(id);
+};
 
 type Json = Record<string, unknown>;
 export interface ContourSource {
@@ -176,25 +182,26 @@ export function assessContours(data: unknown, id: string, today: string): Contou
 export function contoursOverlay(p: Palette, data: ContourCollection): Overlay {
   const contour = ['==', ['get', 'kind'], 'contour'], index = ['==', ['get', 'index'], true];
   const unresolved = ['==', ['get', 'kind'], 'unresolved-area'];
-  const heavier = (w: unknown) => ['*', w, ['case', ['==', ['get', 'provenance'], 'verified'], 1.25, 1]];
+  const wk = mapControl(p.mapContourWidth, 'map-contour-width', 'positive');  // 1 = the weights below as drawn
+  const heavier = (w: unknown) => ['*', w, ['case', ['==', ['get', 'provenance'], 'verified'], 1.25 * wk, wk]];
   const label = {'symbol-placement': 'line', 'text-field': ['concat', ['to-string', ['get', 'depth_ft']], ' ft'], 'text-font': [LABEL_FONT],
     'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10, 14, 12], 'symbol-spacing': 320, 'text-max-angle': 30};
-  const labelPaint = {'text-color': p.depth1, 'text-halo-color': p.bg, 'text-halo-width': 1.2};
+  const labelPaint = {'text-color': p.mapContour, 'text-halo-color': p.mapInkHalo, 'text-halo-width': 1.2};
   return {
     sources: {[DEPTH_CONTOURS_SOURCE]: {type: 'geojson', data, attribution: layerEntry(REGISTRY_ID).attribution} as MapLibre.SourceSpecification},
     layers: [
-      {id: DEPTH_UNRESOLVED_FILL, type: 'fill', source: DEPTH_CONTOURS_SOURCE, filter: unresolved, paint: {'fill-color': p.muted, 'fill-opacity': 0.18}},
+      {id: DEPTH_UNRESOLVED_FILL, type: 'fill', source: DEPTH_CONTOURS_SOURCE, filter: unresolved, paint: {'fill-color': p.mapLabel, 'fill-opacity': 0.18}},
       {id: DEPTH_UNRESOLVED_LINE, type: 'line', source: DEPTH_CONTOURS_SOURCE, filter: unresolved, layout: {'line-join': 'round'},
-        paint: {'line-color': p.muted, 'line-width': 1, 'line-dasharray': [1, 2]}},
+        paint: {'line-color': p.mapLabel, 'line-width': 1, 'line-dasharray': [1, 2]}},
       {id: DEPTH_EDGE, type: 'line', source: DEPTH_CONTOURS_SOURCE, filter: ['==', ['get', 'kind'], 'survey-edge'], layout: {'line-join': 'round'},
-        paint: {'line-color': p.muted, 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.8, 14, 1.4], 'line-dasharray': [2, 2], 'line-opacity': 0.8}},
+        paint: {'line-color': p.mapLabel, 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.8, 14, 1.4], 'line-dasharray': [2, 2], 'line-opacity': 0.8}},
       {id: DEPTH_LINE, type: 'line', source: DEPTH_CONTOURS_SOURCE, filter: contour, layout: {'line-join': 'round', 'line-cap': 'round'},
-        paint: {'line-color': p.depth1,
+        paint: {'line-color': p.mapContour,
           // A zoom curve must stay the outermost expression, so the verified factor multiplies each stop.
           'line-width': ['interpolate', ['linear'], ['zoom'], 8, heavier(['case', index, 0.9, 0.4]), 14, heavier(['case', index, 1.6, 0.8])],
           'line-dasharray': ['case', ['==', ['get', 'provenance'], 'filled'], ['literal', [4, 3]], ['literal', [1, 0]]],
           'line-opacity': ['case', index, 0.85, 0.55]}},
-      {id: DEPTH_HIT, type: 'line', source: DEPTH_CONTOURS_SOURCE, paint: {'line-color': p.depth1, 'line-width': 12, 'line-opacity': 0}},
+      {id: DEPTH_HIT, type: 'line', source: DEPTH_CONTOURS_SOURCE, paint: {'line-color': p.mapContour, 'line-width': 12, 'line-opacity': 0}},
       {id: DEPTH_LABEL, type: 'symbol', source: DEPTH_CONTOURS_SOURCE, filter: ['all', contour, index], layout: label, paint: labelPaint},
       {id: DEPTH_LABEL_MINOR, type: 'symbol', source: DEPTH_CONTOURS_SOURCE, minzoom: DETAIL_ZOOM, filter: ['all', contour, ['!', index]], layout: label, paint: labelPaint},
     ] as MapLibre.LayerSpecification[],

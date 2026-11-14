@@ -82,7 +82,7 @@ def query(root, ident, geometry, kind, fetch):
 
 def build(root, fetch=False):
     matrix_path = root / "research/receipts/monterey-300-source-evidence-matrix.json"
-    context_path = root / "dist/data/usgs-offshore-monterey-hard-context.geojson"
+    context_path = root / "research/receipts/usgs-offshore-monterey-hard-context.geojson"
     matrix = json.loads(matrix_path.read_text())
     if matrix.get("outline_count") != 17:
         raise ValueError("Reviewed Monterey outline set changed")

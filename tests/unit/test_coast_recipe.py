@@ -32,7 +32,7 @@ STATUSES = {'usgs-point-buchon': 'approved', 'usgs-morro-bay': 'approved',
 PINS = {
     'catalog/sources.json': 'fb131160ea88e6790a6f91a702604aa0cf2a01c7481b9ca28dddf7bf77914ba5',
     'catalog/coastal-sectors.json': 'bb876ebb25357c91e02d4984b2f353e88be86560a9fb87b15ac0573b416f2378',
-    'research/scripts/build_coast_prefetch_plan.py': '1b35545b5d959ae90a28e5c4aaa011670ec7ca921a7a3f1af7d9552af361517a',
+    'research/scripts/build_coast_prefetch_plan.py': 'dfcee06d7f92f5030fdbcfd1bfadfadf2245b99b61949e366304f9d88f880c92',
     'src/skippercast/coastal/prefetch.py': 'b5f39a73be33f251fac799427a482b02b12433b2027813209b611e0e74ba5550',
     'regions/morro-bay/region.json': '26812352608f4775d0890a9545e1d483980b746e102d88b93e23f1371d20efb3',
     'regions/cambria-san-simeon/region.json': 'df5f53c542af95b6fd1c66309a93a3c90f95f592403683af2674400549ba3f22',

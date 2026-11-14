@@ -137,21 +137,20 @@ test('past the ceiling a feed is served from its last-known copy and says so, wi
   assert.deepEqual(upstream, [], 'and no upstream fetch either: the copy answered');
 }));
 
-test('past the ceiling a feed with no copy takes the free GitHub fallback, and one with neither answers 503 degraded; R2 is never read', () => withWorld(async ({upstream}) => {
+test('past the ceiling a feed with no copy answers 503 degraded with no GitHub fetch; R2 is never read', () => withWorld(async ({upstream}) => {
   const FEEDS = snapshotBucket(), env = {FEEDS, COST_CEILING_R2_READS_PER_DAY: '6'};
   recordReads(6);
-  globalThis.fetch = async url => { upstream.push(String(url)); return /other\.json$/.test(url) ? Response.json({x: 'github'}) : new Response('missing', {status: 404}); };
-  const github = await fetchSettled(get('/feeds/data/regions/morro-bay/other.json'), env);
-  assert.equal(github.status, 200); assert.equal(github.headers.get('X-Feed-Source'), 'github');
-  assert.equal(github.headers.get('X-SC-Degraded'), 'cost-ceiling');
-  assert.deepEqual(await github.json(), {x: 'github'});
-  const none = await fetchSettled(get('/feeds/data/regions/morro-bay/latest.json'), env);
-  assert.equal(none.status, 503);
-  assert.equal(none.headers.get('Retry-After'), String(DEGRADED_RETRY_SECONDS));
-  assert.equal(none.headers.get('X-SC-Degraded'), 'cost-ceiling');
-  assert.equal((await none.json()).degraded, true);
+  globalThis.fetch = async url => { upstream.push(String(url)); return Response.json({x: 'github'}); };
+  for (const path of ['/feeds/data/regions/morro-bay/other.json', '/feeds/data/regions/morro-bay/latest.json']) {
+    const none = await fetchSettled(get(path), env);
+    assert.equal(none.status, 503, path);
+    assert.equal(none.headers.get('Retry-After'), String(DEGRADED_RETRY_SECONDS));
+    assert.equal(none.headers.get('X-SC-Degraded'), 'cost-ceiling');
+    assert.equal(none.headers.get('X-Feed-Source'), null);
+    assert.equal((await none.json()).degraded, true);
+  }
   assert.deepEqual(FEEDS.reads, [], 'R2 untouched past the ceiling');
-  assert.equal(upstream.length, 2);
+  assert.deepEqual(upstream, [], 'a feed key is never fetched from GitHub');
 }));
 
 test('a PMTiles byte range of an object too large for the edge cache is answered from its last-known copy as the same 206', () => withWorld(async ({cache}) => {

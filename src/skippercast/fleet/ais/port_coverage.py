@@ -20,8 +20,9 @@ from .process import DAY
 HEADING = "### AIS coverage by port"
 
 
-def port_coverage(db_path: Path, ports, since_day: str) -> dict | None:
-    """``{"ports": {id: {"mmsis", "mmsi_days"}}, "never_heard": [ids]}``; ``None`` without state or presence table."""
+def port_coverage(db_path: Path, ports, since_day: str, *, until_day: str | None = None) -> dict | None:
+    """Days are inclusive local ISO days; ``until_day=None`` keeps the lower-bound-only count.
+    ``{"ports": {id: {"mmsis", "mmsi_days"}}, "never_heard": [ids]}``; ``None`` without state or presence table."""
     path = Path(db_path)
     if not path.is_file():
         return None
@@ -30,8 +31,9 @@ def port_coverage(db_path: Path, ports, since_day: str) -> dict | None:
     except sqlite3.Error:
         return None
     try:
-        rows = db.execute("SELECT port_id, COUNT(DISTINCT mmsi), COUNT(*) FROM match_presence WHERE day >= ? "
-                          "GROUP BY port_id", (since_day,)).fetchall()
+        upper, args = ("", (since_day,)) if until_day is None else (" AND day <= ?", (since_day, until_day))
+        rows = db.execute("SELECT port_id, COUNT(DISTINCT mmsi), COUNT(*) FROM match_presence WHERE day >= ?"
+                          f"{upper} GROUP BY port_id", args).fetchall()
     except sqlite3.Error:
         return None
     finally:
@@ -68,12 +70,14 @@ def main(argv=None) -> int:
         now = datetime.fromisoformat(args.now) if args.now else datetime.now(timezone.utc)
         if now.tzinfo is None:
             now = now.replace(tzinfo=timezone.utc)
-        since_day = _day(int(now.timestamp() * 1000) - WINDOW_DAYS * DAY, ZoneInfo(region.timezone))
+        now_ms, zone = int(now.timestamp() * 1000), ZoneInfo(region.timezone)
+        since_day, until_day = _day(now_ms - WINDOW_DAYS * DAY, zone), _day(now_ms, zone)
         root = ais_root(region.id)
     except (FleetConfigError, ValueError) as error:
         print(f"fleet ais port-coverage: {error}", file=sys.stderr)
         return 2
-    sys.stdout.write(render(port_coverage(root / "state.sqlite", region.ports, since_day), region.ports))
+    sys.stdout.write(render(port_coverage(root / "state.sqlite", region.ports, since_day, until_day=until_day),
+                           region.ports))
     return 0
 
 

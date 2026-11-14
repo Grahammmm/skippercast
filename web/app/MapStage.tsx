@@ -10,8 +10,9 @@
 // FE-80: in 2D and 3D the terrain's zoom, reset and top view are the stage's own
 // buttons, styled as the Chart's MapLibre zoom group and placed where it sits.
 import type {ComponentChildren} from 'preact';
+import {computed} from '@preact/signals';
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {IconButton} from '../ui/Button.tsx';
+import {Button, IconButton} from '../ui/Button.tsx';
 import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
 import {createAerial} from '../map/aerial.ts';
@@ -25,6 +26,7 @@ import {createFleetActivity} from '../map/fleet.ts';
 import {regionPlace} from '../map/currents.ts';
 import {coastPalette, readPalette} from '../map/palette.ts';
 import {createReach} from '../map/reach.ts';
+import {createPlanningRouteLayer} from '../map/planning-route.ts';
 import {createContrast} from '../map/contrast.ts';
 import {createFronts} from '../map/fronts.ts';
 import {createWaterTemp} from '../map/sst.ts';
@@ -33,6 +35,7 @@ import {createSwell} from '../map/swell.ts';
 import {createPreviewLayers} from '../map/preview-layers.ts';
 import {createStations} from '../map/stations.ts';
 import {dailyFeed} from '../brief/Brief.tsx';
+import {mapFirstIdle} from '../map-ready.ts';
 import {createWind} from '../map/wind.ts';
 import type {HourClock} from '../clock.ts';
 import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked, terrainReason} from '../map/stage.ts';
@@ -41,6 +44,7 @@ import {poster, posterPlacement} from '../map/poster.ts';
 import {profile, region, species} from '../state.ts';
 import {cancelWaypointPlacement, placementRefused, verdictLine, waypointPlacement} from '../waypoint-placement.ts';
 import {currentRegionInfo, zone} from './App.tsx';
+import {MAP_ID} from './SkipLinks.tsx';
 
 export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> = [
   {value: 'chart', label: 'Chart'}, {value: '2d', label: '2D'}, {value: '3d', label: '3D'},
@@ -49,14 +53,33 @@ export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> 
 const PRESENTATION_IDS: Readonly<Record<Presentation, StringId>> = {chart: 'stage.chart', '2d': 'stage.2d', '3d': 'stage.3d'};
 const NOTE_ID = 'app-stage-note';
 
+/** RF1925-2: the selected Chart could not start (chartFailed is a sticky start-up failure; a working 2D or 3D terrain is not a failed map). The one test every map-only control shares. */
+export const mapUnavailable = computed(() => chartFailed.value && shownPresentation.value === 'chart');
+
+/** RF2115-5: the visit's first Chart is shown and has neither drawn its first idle frame nor failed. Visit-wide, one-way (web/map-ready.ts): never restarts after the first idle. */
+export const chartLoading = computed(() => shownPresentation.value === 'chart' && !chartFailed.value && !mapFirstIdle.value);
+
+/** The Chart could not start: say so, and offer a reload of the current page (the same address) as the only retry. */
+export function MapUnavailable() {
+  const lang = language.value;
+  return (
+    <div class="app-stage-note app-stage-failed" style={{margin: 'var(--space-4)', maxWidth: '28rem', zIndex: 1}}>
+      <p role="status" style={{margin: '0 0 var(--space-3)'}}><strong>{t('map.mpa.mapUnavailable', lang)}</strong> {t('stage.graphicsUnavailable', lang)}</p>
+      <Button variant="primary" onClick={() => location.reload()}>{t('stage.retryMap', lang)}</Button>
+    </div>
+  );
+}
+
 /** Chart, 2D, 3D; where no terrain can show, the terrain choices are disabled and point at the reason in the status line. */
 export function PresentationToggle() {
   const shown = shownPresentation.value, blocked = terrainBlocked.value, lang = language.value;
+  const loading = chartLoading.value;
   const armed = waypointPlacement.value === region.value && shown === 'chart', refused = armed && placementRefused.value ? verdictLine(placementRefused.value, lang) : null;
   return (
-    <div class="app-presentation">
+    <div class={armed ? 'app-presentation app-presentation--placing' : 'app-presentation'}>
+      <p class="app-stage-note" data-chart-loading-status role="status" aria-live="polite" aria-atomic="true">{loading ? t('stage.loadingChart', lang) : ''}</p>
       <p id={NOTE_ID} class="app-stage-note" role="status">{blocked === null ? '' : terrainReason(blocked, lang)}</p>
-      {armed ? <p class="app-stage-note" role="status">{t('stage.placePrompt', lang)} {refused ? <>{refused}. </> : null}<button onClick={cancelWaypointPlacement}>{t('stage.cancelWaypoint', lang)}</button></p> : null}
+      {armed ? <p class="app-stage-note" role="status">{t('stage.placePrompt', lang)} {refused ? <>{refused}. </> : null}<Button size="sm" variant="quiet" onClick={cancelWaypointPlacement}>{t('stage.cancelWaypoint', lang)}</Button></p> : null}
       <div role="group" aria-label={t('stage.presentation', lang)} class="ui-segmented">
         {PRESENTATIONS.map(p => {
           const off = p.value !== 'chart' && !!blocked;
@@ -120,20 +143,19 @@ export function MapStage({children, clock}: {children?: ComponentChildren; clock
           engine => createAerial({engine, offer: () => currentRegionInfo()?.aerial ?? null}), engine => createDepthContours({engine, host: chartHost.current!}),
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
           engine => createReach({engine, host: chartHost.current!}),
+          engine => createPlanningRouteLayer({engine, host: chartHost.current!}),
           engine => createPreviewLayers({engine, failures: {list: unavailable, clear: layer => { unavailable.value = unavailable.peek().filter(l => l !== layer); }}})]})]});
     return () => stage.destroy();
   }, [clock]);
-  const shown = shownPresentation.value, lang = language.value;
+  const shown = shownPresentation.value, lang = language.value, failed = mapUnavailable.value;
   return (
-    <section class="app-stage" tabIndex={-1} aria-label={t('stage.map', lang)}>
+    <section class="app-stage" tabIndex={-1} aria-label={t('stage.map', lang)} id={MAP_ID}>
       <div class="app-map" hidden={shown !== 'chart'}>
-        <div class="app-chart" ref={chartHost} hidden={chartFailed.value} />
-        <ChartPoster />
-        {chartFailed.value ? <span>{t('map.mpa.mapUnavailable', lang)}</span> : null}
+        <div class="app-chart" ref={chartHost} hidden={chartFailed.value} aria-busy={chartLoading.value ? 'true' : 'false'} />
+        {failed ? <MapUnavailable /> : <ChartPoster />}
       </div>
       <div class="app-terrain" ref={terrainHost} tabIndex={-1} hidden={shown === 'chart'} data-coast-theme="tokens" />
-      <TerrainControls />
-      <PresentationToggle />
+      {failed ? null : <><TerrainControls /><PresentationToggle /></>}
       {children}
     </section>
   );

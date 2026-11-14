@@ -57,7 +57,10 @@ def count_url(binding):
 
 
 def _number(value):
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    # Integers are finite at any size; isfinite would convert them to float and overflow on huge JSON integers.
+    if isinstance(value, bool):
+        return False
+    return isinstance(value, int) or (isinstance(value, float) and math.isfinite(value))
 
 
 def _is_wkid_4326(value):
@@ -103,7 +106,7 @@ def parse(payload, expected_count, binding, fetched_at):
                 or not south <= lat <= north or not west <= lon <= east):
             raise ValueError("Invalid/out-of-county beach geometry")
         key = next((attributes[k] for k in ("GlobalID_2", "Station", "FID") if attributes.get(k) is not None), None)
-        if key is None or str(key) == "":
+        if key is None or isinstance(key, (dict, list)) or str(key) == "":  # a JSON container is not an identity
             raise ValueError("Missing beach identity")
         ident = str(key)
         if ident in seen:

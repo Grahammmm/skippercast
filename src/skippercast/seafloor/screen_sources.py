@@ -6,6 +6,7 @@ reviewed local catalog: new geography is held until its restrictions are reviewe
 from datetime import date, datetime, timezone
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
@@ -131,6 +132,18 @@ def _title33_issue(document):
     return issue
 
 
+def _admit_circle_radius(radius):
+    invalid = 'Invalid reviewed security-circle radius'
+    if type(radius) not in (int, float):
+        raise ValueError(invalid)
+    try:
+        finite = math.isfinite(radius)
+    except OverflowError as error:
+        raise ValueError(invalid) from error
+    if not finite or radius <= 0:
+        raise ValueError(invalid)
+
+
 def security_layer(config, getter=ecfr_bytes):
     titles_url = 'https://www.ecfr.gov/api/versioner/v1/titles'
     raw = getter(titles_url)
@@ -144,6 +157,7 @@ def security_layer(config, getter=ecfr_bytes):
         if section.get('N') != zone['section'] or digest != zone['reviewed_xml_sha256']:
             raise ValueError('Security text changed; boundary review required')
         if zone['geometry_method'] == 'nad83-geodesic-circle':
+            _admit_circle_radius(zone.get('radius_m'))
             lon, lat = zone['center_nad83']
             geod = Geod(ellps='GRS80')
             # One-meter outward approximation avoids an inscribed chord cutting

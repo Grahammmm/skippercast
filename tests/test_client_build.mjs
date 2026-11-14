@@ -153,6 +153,24 @@ test('check_client fails a v2 page over its gzipped JavaScript or CSS budget (FE
   await rm(root, {recursive: true, force: true});
 });
 
+test('check_client passes with a WARN from 97% of a budget, and records what it measured (SC-CI-2)', async () => {
+  const root = await site();
+  await writeFile(join(root, 'app.html'), '<!doctype html><html><head><link rel="stylesheet" href="styles.css"><script type="module" src="shell.js"></script></head><body>v2</body></html>');
+  await writeFile(join(root, 'shell.js'), `import {helper} from './helper.js';\nexport const pad = ${JSON.stringify(Array.from({length: 400}, (_, i) => `${i}-${Math.sin(i)}`))};\nhelper(pad);`);
+  const out = join(root, 'client'), budget = join(root, 'budget.json'), measured = join(root, 'measured.json');
+  await buildClient({root, out, headers: '/*\n'});
+  const check = (b, env = {}) => writeFile(budget, JSON.stringify({bundles: {'app.html': b}})).then(() => run(process.execPath, [CHECK, out, root, budget], {env: {...process.env, GITHUB_ACTIONS: 'false', ...env}}));
+  const size = Number((await check({js_gzip_max: 100000})).stdout.match(/app\.html js (\d+) B/)[1]);
+  // Inside 97%: quiet. At 97% or more but not over: passes and warns. Over: fails as before.
+  assert.doesNotMatch((await check({js_gzip_max: Math.ceil(size / 0.96)})).stderr, /WARN/);
+  const near = await check({js_gzip_max: size + 1}, {BUDGET_MEASUREMENTS_OUT: measured});
+  assert.match(near.stderr, /WARN: app\.html initial JavaScript \(gzipped\) is \d+ B, \d+\.\d% of its \d+ B budget/);
+  assert.equal(JSON.parse(await readFile(measured, 'utf8')).bundles['app.html'].js, size);
+  assert.match((await check({js_gzip_max: size + 1}, {GITHUB_ACTIONS: 'true'})).stderr, /^::warning title=Client budget near its ceiling::/m);
+  await assert.rejects(check({js_gzip_max: size - 1}), /exceeds its budget of/);
+  await rm(root, {recursive: true, force: true});
+});
+
 test('check_client fails when the v2 app entry statically imports three (FE-71)', async () => {
   const root = await site();
   const renderer = 'export const make = () => { throw new Error("THREE.WebGLRenderer: Error creating WebGL context."); };';
@@ -193,6 +211,15 @@ test('the real site builds and passes the client check (static data directories 
   const {buildId} = await buildClient({root: DIST, out, copy: keep});
   const {stdout} = await run(process.execPath, [CHECK, out, DIST]);
   assert.match(stdout, new RegExp(`precached for build ${buildId}`));
+  // SC1407-10: /map's first load (app.html and every script it imports at once) holds no planner or pack implementation;
+  // web/trip-runtime.ts arrives by web/trip.ts's dynamic import, and the offline pack's v2 list still carries it.
+  const manifest = JSON.parse(await readFile(join(out, '.vite/manifest.json'), 'utf8'));
+  const closure = (keys, follow) => { const seen = new Set(); const walk = k => { if (seen.has(k)) return; seen.add(k); for (const i of follow(manifest[k])) walk(i); }; keys.forEach(walk); return seen; };
+  const first = closure(['app.html'], e => e.imports ?? []), all = closure(['app.html'], e => [...e.imports ?? [], ...e.dynamicImports ?? []]);
+  for (const key of ['../web/trip-runtime.ts', 'offline-pack.js', 'legal-pack.js', 'coastal-offline-core.js', '../web/planner.ts', '../web/app/Planner.tsx'])
+    assert.ok(manifest[key] && !first.has(key) && all.has(key), `${key} loads on use, not with /map`);
+  const precache = JSON.parse(await readFile(join(out, 'precache.json'), 'utf8'));
+  assert.ok(precache.v2.assets.includes(`/${manifest['../web/trip-runtime.ts'].file}`), 'a saved pack can open the planner offline');
   await rm(out, {recursive: true, force: true});
 });
 

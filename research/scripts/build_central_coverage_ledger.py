@@ -39,8 +39,8 @@ def read(path):
 def build(root):
     root = Path(root)
     existing = read(root / "dist/data/atlas.json")
-    nbs = read(root / "dist/data/nbs-central-300-depth-screen.json")
-    hard = read(root / "dist/data/point-conception-native-hard-300-review-summary.json")
+    nbs = read(root / "research/receipts/nbs-central-300-depth-screen.json")
+    hard = read(root / "research/receipts/point-conception-native-hard-300-review-summary.json")
     conception_deep_gap = read(root / "dist/data/point-conception-original-bag-200-300ft-gap.json")
     conception_ladder = read(root / "dist/data/point-conception-original-bag-depth-ladder.json")
     conception_rugged = read(root / "dist/data/point-conception-original-4m-rugged-overlap.json")
@@ -48,7 +48,7 @@ def build(root):
     conception_control = read(root / "dist/data/point-conception-processing-control-review.json")
     conception_8m = read(root / "dist/data/point-conception-original-8m-hard-overlap.json")
     conception_access = read(root / "dist/data/point-conception-original-4m-access-screen.json")
-    closure = read(root / "dist/data/central-atlas-300-current-closure-screen.json")
+    closure = read(root / "research/receipts/central-atlas-300-current-closure-screen.json")
     if nbs["screened_unique_tiles"] != nbs["requested_unique_tiles"] or nbs["failed_tiles"]:
         raise ValueError("Central NBS audit incomplete; coverage ledger cannot be published")
     if not closure["all_geometry_clear_of_screen_buffers"]:

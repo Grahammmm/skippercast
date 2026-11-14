@@ -75,7 +75,10 @@ def _read(path, label):
         raise ValueError(f"{label} must be a regular file")
     if info.st_size > MAX_DOCUMENT_BYTES:
         raise ValueError(f"{label} exceeds the metadata read bound")
-    raw = path.read_bytes()
+    with open(path, "rb") as handle:
+        raw = handle.read(MAX_DOCUMENT_BYTES + 1)  # the actual bytes, not the earlier lstat, bound the read
+    if len(raw) > MAX_DOCUMENT_BYTES:
+        raise ValueError(f"{label} exceeds the metadata read bound")
     return json.loads(raw), raw
 
 
@@ -483,7 +486,12 @@ def _freeze(path, value):
     raw = _encode(value)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o444)
     try:
-        os.write(fd, raw)
+        view = memoryview(raw)
+        while view:
+            written = os.write(fd, view)
+            if written <= 0:
+                raise OSError("frozen bridge write made no progress")
+            view = view[written:]
         os.fsync(fd)
     finally:
         os.close(fd)

@@ -5,67 +5,88 @@
 
 .app-account { position: relative; }
 .app-account-trigger[aria-expanded="true"] { color: var(--text); background: var(--panel-2); }
+/* RF2345-7: at 1024-1179px the masthead account trigger is icon-sized; the label stays in the accessible name. */
+@media (min-width: 1024px) and (max-width: 1179px) {
+  .app-masthead > .app-account:not([data-inline]) > .app-account-trigger {
+    box-sizing: border-box; flex: none; gap: 0; padding-inline: 0; min-inline-size: calc(var(--touch-min) + 0.5px); min-block-size: calc(var(--touch-min) + 0.5px);
+  }
+  .app-masthead > .app-account:not([data-inline]) > .app-account-trigger > .app-account-label {
+    position: absolute; width: 1px; height: 1px; padding: 0; border: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+}
+.app-account-panel, .home-port-card, #account-body, .app-alerts, .app-alerts .insight-card { display: flex; flex-direction: column; gap: var(--space-3); }
+.app-account-panel section, .account-passkeys, .account-confirm { display: flex; flex-direction: column; gap: var(--space-2); }
+.app-account-links, .home-port-card label, .app-alerts label { display: flex; flex-direction: column; gap: var(--space-1); }
+.app-account-panel, .home-port-card { overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); box-shadow: var(--elev-3); }
 .app-account-panel {
   position: absolute; top: calc(100% + var(--space-2)); right: 0; z-index: var(--z-modal); width: min(360px, calc(100vw - var(--space-6)));
-  max-height: calc(100vh - var(--space-7) * 2); overflow: auto; display: flex; flex-direction: column; gap: var(--space-3);
-  padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3);
+  max-height: calc(100vh - var(--space-7) * 2);
+  padding: var(--space-4); color: var(--text);
 }
 .app-account-panel[hidden] { display: none; }
 .app-account[data-inline] { margin-top: var(--space-3); }
 .app-account[data-inline] .app-account-panel { position: static; width: auto; max-height: none; margin-top: var(--space-2); box-shadow: none; }
-.app-account-panel section { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
-.app-account-panel h2 { margin: 0; }
-.app-account-panel p { margin: 0; color: var(--muted); font-size: var(--text-13); }
+.app-account-panel section { align-items: flex-start; }
 .app-account-presets { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); width: 100%; }
 .app-account-presets .ui-button { flex-direction: column; align-items: flex-start; height: auto; padding: var(--space-2); text-align: left; }
 .app-account-presets small { color: var(--muted); font-size: var(--text-11); }
-.app-account-links { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.app-account-links, .account-passkeys { margin: 0; padding: 0; list-style: none; }
 .app-account-links a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--touch-min); color: var(--blue); font-size: var(--text-13); }
 
 /* v1 dialogs over the v2 shell */
 .home-port-scrim { position: fixed; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; padding: var(--space-4); background: color-mix(in srgb, var(--bg-deep) 70%, transparent); }
 .home-port-card, .app-alerts { color: var(--text); font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans); }
 .home-port-card {
-  position: relative; width: min(560px, 100%); max-height: calc(100% - var(--space-4)); overflow: auto; display: flex; flex-direction: column; gap: var(--space-3);
-  padding: var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); box-shadow: var(--elev-3);
+  position: relative; width: min(560px, 100%); max-height: calc(100% - var(--space-4));
+  padding: var(--space-5);
 }
-#account-body { display: flex; flex-direction: column; gap: var(--space-3); }
 .home-port-card h1 { margin: 0; padding-right: var(--space-7); font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
 .home-port-card h2 { margin: var(--space-2) 0 0; font: var(--weight-semibold) var(--text-15) / var(--leading-heading) var(--font-sans); }
 .home-port-kicker { color: var(--muted); font-size: var(--text-11); font-weight: var(--weight-medium); letter-spacing: var(--tracking-eyebrow); }
-.home-port-card p, .app-alerts p { margin: 0; }
-.home-port-intro, .home-port-fine, .home-port-feedback, .account-hint, .boat-unit, .app-alerts .small { color: var(--muted); font-size: var(--text-13); }
+.home-port-card p, .app-alerts p, .app-account-panel p, .app-account-panel h2 { margin: 0; }
+.home-port-intro, .home-port-fine, .home-port-feedback, .account-hint, .boat-unit, .app-account-panel p, .app-alerts .small, .home-port-card label, .app-alerts label { color: var(--muted); font-size: var(--text-13); }
 .home-port-fine { font-size: var(--text-11); }
 .home-port-feedback:empty { display: none; }
 .home-port-actions, .inavx-actions, .boat-query-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .boat-query-row input { flex: 1; }
 .home-port-card :is(button, input, select), .app-alerts :is(button, input, select) {
-  box-sizing: border-box; min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
+  box-sizing: border-box; min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md);
   background: var(--panel-2); color: var(--text); font: inherit;
 }
 .home-port-card :is(input, select), .app-alerts :is(input, select) { width: 100%; }
 /* The rule above flattens every button in the alerts dialog to a panel button, but the shared primary hover (ui.css, specificity 0,4,0) still
    paints it mint and left the text pale: 1.3:1 while the pointer rests on Save (axe color-contrast, seen on main as a flaky e2e failure). */
 .app-alerts .ui-button--primary:not(:disabled):not([aria-disabled="true"]):hover { background: color-mix(in srgb, var(--panel-2) 88%, var(--text)); }
-.home-port-card :is(button, input, select):focus-visible, .app-alerts :is(button, input, select, summary):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .home-port-card button:not(:disabled), .app-alerts button:not(:disabled) { cursor: pointer; }
 .home-port-card button:disabled { opacity: 0.6; cursor: not-allowed; }
 .home-port-card .account-primary { border-color: var(--mint); background: var(--mint); color: var(--bg); font-weight: var(--weight-semibold); }
 .home-port-card .account-destructive { border-color: var(--coral); color: var(--coral); }
 .home-port-card a, .app-alerts a { color: var(--blue); }
 .home-port-close { position: absolute; top: var(--space-3); right: var(--space-3); }
-.home-port-card label, .app-alerts label { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-13); color: var(--muted); }
-.account-passkeys { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .account-passkeys li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: var(--text-13); }
 .account-danger summary, .app-alerts summary { min-height: var(--touch-min); display: flex; align-items: center; cursor: pointer; }
 .account-danger { color: var(--coral); }
-.account-confirm { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--coral); border-radius: var(--radius-md); }
+.account-confirm { padding: var(--space-3); border: 1px solid var(--coral); border-radius: var(--radius-md); }
 .boat-form, .insight-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-2) var(--space-3); }
 .boat-ai { color: var(--amber); font-size: var(--text-11); }
 .boat-match { padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); font-size: var(--text-13); }
 
 /* Trip alerts inside the app dialog (web/app/TripAlerts.tsx) */
-.app-alerts { display: flex; flex-direction: column; gap: var(--space-3); }
-.app-alerts .insight-card { display: flex; flex-direction: column; gap: var(--space-3); }
 .app-alerts .insight-card[open] > summary { color: var(--text); font-weight: var(--weight-semibold); }
 .app-alerts article { padding: var(--space-2) 0; border-top: 1px solid var(--line); }
+
+/* RF2135-6 (UX audit S4-32): the account dialog's border box stays inside the viewport; the card is the only scrollport and
+   shows CSS-only scroll-edge cues (local covers over scroll shadows). Account-only: other dialogs share .home-port-card. */
+.account-scrim > .account-card {
+  box-sizing: border-box; min-width: 0;
+  max-height: calc(100vh - 2 * var(--space-4)); max-height: calc(100dvh - 2 * var(--space-4));
+  overflow-y: auto;
+  background:
+    linear-gradient(var(--panel) 30%, transparent) top / 100% var(--space-5) no-repeat local,
+    linear-gradient(transparent, var(--panel) 70%) bottom / 100% var(--space-5) no-repeat local,
+    linear-gradient(var(--line), transparent) top / 100% var(--space-3) no-repeat scroll,
+    linear-gradient(transparent, var(--line)) bottom / 100% var(--space-3) no-repeat scroll,
+    var(--panel);
+}
+.account-scrim :is(.account-card, #account-body) > * { flex-shrink: 0; min-width: 0; overflow-wrap: anywhere; }
+@media (forced-colors: active) { .account-scrim > .account-card { background: Canvas; } }

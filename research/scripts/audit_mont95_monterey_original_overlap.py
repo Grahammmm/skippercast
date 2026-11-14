@@ -90,7 +90,7 @@ def audit(root, fetch=False):
     cache = root / "var/review/mont95-original"
     verify_sources(cache, fetch)
     matrix_path = root / "research/receipts/monterey-300-source-evidence-matrix.json"
-    context_path = root / "dist/data/usgs-offshore-monterey-hard-context.geojson"
+    context_path = root / "research/receipts/usgs-offshore-monterey-hard-context.geojson"
     newer = ensure_newer(root, fetch)
     matrix = json.loads(matrix_path.read_text())
     context = json.loads(context_path.read_text())

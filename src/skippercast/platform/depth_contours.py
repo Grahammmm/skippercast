@@ -45,6 +45,7 @@ import re
 
 from .contracts import atomic_json, read_json
 from .shoreline import simplify
+from ..util.units import FT_PER_M
 
 SCHEMA_VERSION = 1
 INTERVAL_FT = 30
@@ -54,7 +55,8 @@ INDEX_FT = 150
 SHELF_LIMIT_FT = 600
 CELL_M = 16
 DECIMALS = 5
-FEET_PER_M = 3.28084
+# Shared owner, kept at its historical five decimals so builder bytes and the packages/coast mirror stay unchanged.
+FEET_PER_M = round(FT_PER_M, DECIMALS)
 UNVERIFIED_DATUM = 'unverified source datum'
 KINDS = ('contour', 'survey-edge', 'unresolved-area')
 # Size budgets (decoded bytes) for the two published forms; the build fails past them.
@@ -70,6 +72,7 @@ OVERVIEW_MAX_ZOOM = 12
 SOURCE_REVIEW_DAYS = 365
 YEAR = re.compile(r'\d{4}(-\d{2}(-\d{2})?)?')
 SHA256 = re.compile(r'[0-9a-f]{64}')
+SURVEY_DATE = re.compile(r'([0-9]{4})(?:-([0-9]{2})(?:-([0-9]{2}))?)?')
 
 
 def levels(low_ft, high_ft, interval=INTERVAL_FT, limit=SHELF_LIMIT_FT):
@@ -205,6 +208,18 @@ def omitted_sources(region, sources, listed_ids):
     return omitted
 
 
+def _survey_date(value):
+    """True for a real ASCII `YYYY`, `YYYY-MM` or `YYYY-MM-DD` Gregorian date (checked, never rewritten)."""
+    m = SURVEY_DATE.fullmatch(value) if isinstance(value, str) else None
+    if not m:
+        return False
+    try:
+        date(int(m[1]), int(m[2] or 1), int(m[3] or 1))
+    except ValueError:
+        return False
+    return True
+
+
 def check_contours(collection, region, sources):
     """Raise ValueError unless `collection` is an in-region contour set from approved, bound survey grids.
 
@@ -254,7 +269,7 @@ def _check(collection, region, sources, allowed):
         reviewed = sources.get(ident) or {}
         if ident not in bound or reviewed.get('review_status') not in allowed or 'bathymetry' not in reviewed.get('needs', []):
             raise ValueError(f"Depth contour source {ident} is not an approved bathymetry binding of {region['id']}")
-        if not SHA256.fullmatch(str(entry.get('sha256'))) or not YEAR.fullmatch(str(entry.get('survey_date'))) \
+        if not SHA256.fullmatch(str(entry.get('sha256'))) or not _survey_date(entry.get('survey_date')) \
                 or not entry.get('vertical_datum'):
             raise ValueError(f"Depth contour source {ident} lacks its grid hash, survey date or datum")
         counts = entry.get('provenance_counts', {})

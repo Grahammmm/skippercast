@@ -250,6 +250,30 @@ class SiteUptimeTest(unittest.TestCase):
         text = uptime.plan([{"path": "/map", "error": "refused", "status": 403}, {"path": "/", "status": 503}], [], T0)[0][2]
         self.assertNotIn("Every path was refused", text)
 
+    def test_other_paths_alert_under_their_own_label_and_leave_the_site_alert_alone(self):
+        coast = ("--paths", "/api/coast/habitat/release", "/api/coast/report", "--label", "coast-data-down",
+                 "--title", "Coast data path is down", "--subject", "the coast data service")
+        site = self.site(_api_coast_habitat_release=(503, "secret-body"), _api_coast_report=(200, "{}"), _map=(503, ""))
+        report = self.run_once(site, *coast)
+        self.assertEqual(report["failures"], [{"path": "/api/coast/habitat/release", "status": 503}])
+        self.assertNotIn("/map", site.hits)  # only the named paths are probed
+        issue = self.gh.issues[0]
+        self.assertEqual((issue["title"], issue["label"]), ("Coast data path is down", "coast-data-down"))
+        self.assertIn("The coast data service did not answer on:\n- /api/coast/habitat/release 503", issue["body"])
+        self.assertNotIn("secret-body", issue["body"])
+        self.assertEqual(self.gh.calls[0][:4], ("issue", "list", "--label", "coast-data-down"))
+        site.routes["/api/coast/habitat/release"] = [(200, "{}")]
+        self.now += timedelta(hours=2)
+        self.assertFalse(self.run_once(site, *coast)["down"])
+        self.assertEqual(self.gh.issues[0]["state"], "closed")
+        self.assertIn("Recovered: the coast data service was down for 2 h 0 min.", self.gh.issues[0]["comments"][-1]["body"])
+
+    def test_paths_must_be_site_paths(self):
+        for bad in ("https://other.invalid/x", "//other.invalid/x", "api/health"):
+            code = uptime.main(["--base", "http://127.0.0.1:9", "--report", str(self.report), "--paths", bad], runner=self.gh, now=self.now)
+            self.assertEqual(code, 2, bad)
+        self.assertEqual(self.gh.calls, [])
+
     def test_503_and_cross_host_redirect_keep_their_old_shape(self):
         self.assertEqual(self.run_once(self.site(_map=(503, "")), "--dry-run")["failures"], [{"path": "/map", "status": 503}])
         redirect = self.run_once(self.site(root=(301, "", "http://other.invalid/x")), "--dry-run")["failures"]

@@ -71,6 +71,8 @@ def read_subset(body, bounds, expected_time, resolution):
         required = {"time", "lat", "lon", "u", "v", "number_of_sites", "hdop", "depth"}
         if not required <= nc.variables.keys():
             raise ValueError("NOAA HFRNet subset lacks required fields")
+        if any(hasattr(nc.variables[k], a) for k in required for a in ("scale_factor", "add_offset")):
+            raise ValueError("NOAA HFRNet packed variables unsupported")
         t, lat, lon = (nc.variables[k][:].copy() for k in ("time", "lat", "lon"))
         u, v, n, hdop = (nc.variables[k] for k in ("u", "v", "number_of_sites", "hdop"))
         shape = (1, len(lat), len(lon))
@@ -80,9 +82,16 @@ def read_subset(body, bounds, expected_time, resolution):
             raise ValueError("NOAA HFRNet units changed")
         if u.standard_name != b"surface_eastward_sea_water_velocity" or v.standard_name != b"surface_northward_sea_water_velocity":
             raise ValueError("NOAA HFRNet vector semantics changed")
-        sample = datetime.fromtimestamp(int(t[0]), timezone.utc)
+        mismatch = ValueError("NOAA HFRNet returned time differs from advertised time")
+        epoch = float(t[0])
+        if not math.isfinite(epoch) or epoch != math.floor(epoch):
+            raise mismatch
+        try:
+            sample = datetime.fromtimestamp(int(epoch), timezone.utc)
+        except (ValueError, OverflowError, OSError):
+            raise mismatch from None
         if sample != expected_time:
-            raise ValueError("NOAA HFRNet returned time differs from advertised time")
+            raise mismatch
         west, south, east, north = bounds["longitude"][0], bounds["latitude"][0], bounds["longitude"][1], bounds["latitude"][1]
         if not (-180 <= west < east <= 180 and -80 <= south < north <= 80):
             raise ValueError("Invalid NOAA HFRNet regional bounds")

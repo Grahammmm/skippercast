@@ -63,7 +63,7 @@ test('the primitives carry no colour or font literal, no emoji, and resolve ever
   const block = selector => Object.fromEntries([...tokens.slice(tokens.indexOf(selector)).replace(/^[^{]*\{/, '').split('}')[0].matchAll(/(--[\w-]+):\s*([^;]+);/g)].map(m => [m[1], m[2]]));
   const dark = block(':root {'), light = {...dark, ...block(':root[data-theme="light"]')};
   const css = await readFile(join(ROOT, 'web/ui/ui.css'), 'utf8');
-  const local = new Set([...css.matchAll(/(--sheet-[\w-]+):/g)].map(m => m[1]));
+  const local = new Set([...css.matchAll(/(--(?:sheet|cue)-[\w-]+):/g)].map(m => m[1]));
   for (const file of UI_FILES) {
     const source = readFileSync(join(ROOT, file), 'utf8');
     assert.deepEqual(lintFile(file, source), [], file);
@@ -130,7 +130,7 @@ test('the primitives are accessible as drawn: real buttons, names, pressed state
   assert.match(out.Segmented, /^<div role="group" aria-label="Profile" class="ui-segmented">/);
   assert.equal((out.Segmented.match(/aria-pressed="true"/g) || []).length, 1);
   assert.equal((out.Segmented.match(/<button /g) || []).length, 3);
-  assert.match(out.Tile, /<details class="ui-popover"[^>]*><summary [^>]*>basis<\/summary><div class="ui-popover-body">NWS point forecast/);
+  assert.match(out.Tile, /<details class="ui-popover"[^>]*><summary [^>]*>Source<\/summary><div class="ui-popover-body">NWS point forecast/);
   assert.match(out.TileStale, /data-state="stale"[\s\S]*>stale<\/span>/);
   assert.match(out.Rail, /^<div class="ui-rail" role="group" aria-label="Layers"><ul class="ui-rail-list"><li class="ui-rail-item" data-on="true"><button [^>]*aria-pressed="true"/);
   assert.match(out.Rail, /<summary class="ui-popover-summary ui-eyebrow" aria-label="Currents basis"><svg/);
@@ -162,4 +162,19 @@ test('the dock renders reduced-motion stepping and disables only forward movemen
   }
   assert.doesNotMatch(button(render(h(Dock, {...props, playing: true, advanceDisabled: true})), 'Pause'), / disabled/);
   assert.match(button(render(h(Dock, {...props, disabled: true})), 'Play'), / disabled/);
+});
+
+test('sheet_default_and_opt_out: landmark={false} changes only the section role to group', async () => {
+  const mod = await ui();
+  const {render, h, Sheet} = mod;
+  const edge = h('span', null, 'edge');
+  const props = {label: 'Brief', detent: 'half', onDetent() {}, edge};
+  const region = render(h(Sheet, props, 'Headline'));
+  const asRegion = render(h(Sheet, {...props, landmark: true}, 'Headline'));
+  const group = render(h(Sheet, {...props, landmark: false}, 'Headline'));
+  assert.equal(asRegion, region, 'landmark defaults to true');
+  assert.doesNotMatch(region, /role=/, 'the default section carries no explicit role');
+  assert.match(group, /^<section class="ui-sheet" data-detent="half" role="group" aria-label="Brief">/);
+  assert.equal(group.replace(' role="group"', ''), region, 'the opt-out differs only by the role attribute: handle name, expanded state, edge and body stay');
+  assert.match(group, /<button type="button" class="ui-sheet-handle" aria-label="Expand Brief" aria-expanded="true"/);
 });

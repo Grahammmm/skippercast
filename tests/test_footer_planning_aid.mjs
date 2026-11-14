@@ -39,7 +39,7 @@ function c1ShortForm() {
   return row.split('|').map(cell => cell.trim())[3];
 }
 
-test('the desktop brief footer (no children) carries the C1 line once, then Terms and Sources links', async () => {
+test('the desktop brief footer (no children) carries the C1 line once, then the Sources link', async () => {
   const {BriefFooter, DISCLAIMER, PLANNING_AID, render, h} = await load();
   assert.equal(PLANNING_AID, LINE);
   const html = render(h(BriefFooter, {}));
@@ -47,26 +47,27 @@ test('the desktop brief footer (no children) carries the C1 line once, then Term
   assert.equal(count(html, '<footer'), 1);
   assert.equal(count(html, 'separate clocks'), 1, 'the clocks disclaimer is unchanged and still once');
   assert.ok(html.includes(DISCLAIMER));
-  const at = html.indexOf(LINE), terms = html.indexOf('<a href="/terms.html">Terms</a>'), sources = html.indexOf('<a href="/sources">Sources</a>');
-  assert.ok(html.indexOf(DISCLAIMER) < at && at < terms && terms < sources, `order: clocks, C1 line, Terms, Sources in ${html}`);
+  const at = html.indexOf(LINE), sources = html.indexOf('<a href="/sources">Sources</a>');
+  assert.ok(html.indexOf(DISCLAIMER) < at && at < sources, `order: clocks, C1 line, Sources in ${html}`);
+  assert.ok(!html.includes('terms.html'), 'the draft terms page was removed');
 });
 
-test('the mobile brief footer (with children) keeps the line and both links, children after them', async () => {
+test('the mobile brief footer (with children) keeps the line and the Sources link, children after it', async () => {
   const {BriefFooter, render, h} = await load();
   const html = render(h(BriefFooter, {}, h('a', {href: '/reports', class: 'child'}, 'Reports')));
   assert.equal(count(html, LINE), 1, html);
-  const terms = html.indexOf('href="/terms.html"'), sources = html.indexOf('href="/sources"'), child = html.indexOf('class="child"');
-  assert.ok(terms > html.indexOf(LINE) && sources > terms && child > sources, `children come last in ${html}`);
+  const sources = html.indexOf('href="/sources"'), child = html.indexOf('class="child"');
+  assert.ok(sources > html.indexOf(LINE) && child > sources, `children come last in ${html}`);
   assert.ok(html.endsWith('</footer>'));
 });
 
-test('the landing has the line exactly once, inside its one footer, followed by a /terms.html link', () => {
+test('the landing has the line exactly once, inside its one footer', () => {
   const page = read('dist/landing.html');
   assert.equal(count(page, '<footer'), 1);
   assert.equal(count(page, LINE), 1);
   const footer = page.slice(page.indexOf('<footer'), page.indexOf('</footer>'));
-  assert.match(footer, /<p class="landing-planning" data-i18n-lead="brief\.planning">Planning aid · not a navigation chart\. <a href="\/terms\.html" data-i18n="brief\.terms">Terms<\/a><\/p>/);
-  assert.match(footer, /<li><a href="\/terms\.html" data-i18n="brief\.terms">Terms<\/a><\/li>/, 'the nav keeps its own Terms item');
+  assert.match(footer, /<p class="landing-planning" data-i18n-lead="brief\.planning">Planning aid · not a navigation chart\.<\/p>/);
+  assert.doesNotMatch(footer, /terms\.html|href="\/privacy"/, 'the draft terms and privacy pages were removed');
   assert.ok(footer.indexOf('separate clocks') < footer.indexOf(LINE), 'after the clocks line');
 });
 
@@ -74,7 +75,7 @@ test('the C1 short form in disclaimers.md is the brief constant and the landing 
   const {PLANNING_AID} = await load();
   const short = c1ShortForm();
   assert.equal(short, PLANNING_AID);
-  assert.ok(read('dist/landing.html').includes(`>${short} <a href="/terms.html" data-i18n="brief.terms">`));
+  assert.ok(read('dist/landing.html').includes(`>${short}</p>`));
 });
 
 test('disclaimers.md item 3 is built; item 2 still is not', () => {

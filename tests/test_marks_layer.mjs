@@ -23,6 +23,7 @@ import {COASTLINE_GLOW, COASTLINE_PICK} from '../web/map/coastline.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {createStage, habitatHref, terrainDetail, terrainFailed, terrainMark} from '../web/map/stage.ts';
 import {configureStore, navigate, setParams, syncFromURL} from '../web/state.ts';
+import {settlePicks} from './helpers/pick-settle.mjs';
 
 const PAGE = 'https://s.test/map';
 const read = path => JSON.parse(readFileSync(new URL(`../dist/${path}`, import.meta.url), 'utf8'));
@@ -34,7 +35,7 @@ const SURVEY = read('regions/cambria-san-simeon/survey-habitat.geojson'), GEOLOG
 const SOCAL = read('regions/southern-california/region.json'), SOCAL_ATLAS = read('regions/southern-california/atlas.json');
 /** The run-time screen just after a live check against the committed snapshot (#489; tests/test_mark_screen.mjs covers the screen itself). */
 const CHECKED = assessScreen({areas: read('data/protected-areas.geojson').features, checkedAt: new Date().toISOString(), live: true}, Date.now());
-const sentinel = readPalette(name => `token(${name})`);
+const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const SENTINELS = new Set(Object.values(sentinel));
 /** Words § 12 keeps off every card: no count, chance or promise of fish. */
 const PROMISE = /\b(?:hotspot|chance|odds|probab\w*|productive|best spot|catch rate|bite|guarantee\w*)\b/i;
@@ -261,7 +262,7 @@ test('one selection: a mark click writes ?spot= and drops ?habitat=; a terrain p
   assert.ok(Number(host.dataset.marks) > 0);
   const before = picked.value;
   lib.features = [{layer: {id: MARK_PICK}, properties: {id: 'SC26-001'}}];
-  map.fire('click', {point: {x: 0, y: 0}});
+  map.fire('click', {point: {x: 0, y: 0}}); settlePicks();
   assert.equal(nav.params().get('spot'), 'SC26-001');
   assert.equal(nav.params().get('habitat'), null, 'the terrain selection goes');
   assert.equal(picked.value, before + 1, 'a pick asks the card for focus');
@@ -269,7 +270,7 @@ test('one selection: a mark click writes ?spot= and drops ?habitat=; a terrain p
   assert.equal(spotCard.value.reading, 'Fits lingcod habitat 3 of 3');
   assert.deepEqual(map.data[SELECTION_SOURCE].features[0].geometry.coordinates, [-120.843179, 35.164314], 'the selected mark is outlined');
   const entries = nav.stack.length;
-  map.fire('click', {point: {x: 0, y: 0}});
+  map.fire('click', {point: {x: 0, y: 0}}); settlePicks();
   assert.equal(nav.stack.length, entries, 'the same mark again adds no history entry');
 
   // A terrain pin in 3D: ?habitat= with a history entry, and the atlas spot goes.
@@ -285,21 +286,21 @@ test('one selection: a mark click writes ?spot= and drops ?habitat=; a terrain p
 
   // A mark again: the stage tells the renderer to drop its selection.
   lib.features = [{layer: {id: MARK_PICK}, properties: {id: 'SC26-001'}}];
-  map.fire('click', {point: {x: 0, y: 0}});
+  map.fire('click', {point: {x: 0, y: 0}}); settlePicks();
   await settle();
   assert.equal(land.selected.at(-1), null, 'selectHabitat(null)');
   assert.equal(nav.params().get('habitat'), null);
 
   // A coastline click is the Chart's own selection and drops the link's; Back brings the spot back.
   lib.features = [{layer: {id: COASTLINE_PICK}, properties: {SOURCE_ID: 'S1', ATTRIBUTE: 'Natural.Mean High Water', source_date: '2010-11-01'}}];
-  map.fire('click', {point: {x: 0, y: 0}});
+  map.fire('click', {point: {x: 0, y: 0}}); settlePicks();
   assert.equal(chartMark.value.name, 'Shoreline');
   assert.equal(nav.params().get('spot'), null);
   nav.back();
   assert.equal(nav.params().get('spot'), 'SC26-001');
   assert.equal(chartMark.value, null, 'Back restores the link\'s selection and clears the Chart\'s');
   lib.features = [];
-  map.fire('click', {point: {x: 0, y: 0}});
+  map.fire('click', {point: {x: 0, y: 0}}); settlePicks();
   assert.equal(nav.params().get('spot'), 'SC26-001', 'empty water leaves the link alone');
   stage.destroy();
 });
@@ -328,10 +329,10 @@ test('survey and geology outlines open their own cards from the loaded files', a
   assert.equal(map.data[SURVEY_SOURCE].features.length, SURVEY.features.length);
   assert.ok(map.data[GEOLOGY_SOURCE].features.length > 0);
   lib.features = [{layer: {id: SURVEY_PICK}, properties: {id: SURVEY.features[0].properties.id, kind: 'rock'}}];
-  map.fire('click', {point: {x: 0, y: 0}});
+  map.fire('click', {point: {x: 0, y: 0}}); settlePicks();
   assert.equal(chartMark.value.source, 'USGS original seafloor-character class 3 · compiled 2022-06-07');
   lib.features = [{layer: {id: GEOLOGY_PICK}, properties: {id: GEOLOGY.features[0].properties.id}}];
-  map.fire('click', {point: {x: 0, y: 0}});
+  map.fire('click', {point: {x: 0, y: 0}}); settlePicks();
   assert.equal(chartMark.value.name, 'Coast Range ophiolite');
   assert.equal(chartPick(SURVEY_PICK, {id: 'unknown'}), null, 'an id the files lack selects nothing');
   stage.destroy();

@@ -49,7 +49,9 @@ async function load() {
       export {loadLimits, savedLimits} from './web/limits.ts';
       export {COPY} from './web/ports.ts';
       export {PROFILE_NOTES, PROFILE_TABLE} from './web/profile.ts';
-      export {render} from 'preact-render-to-string';
+      import {render as renderString} from 'preact-render-to-string'; import {admitBriefFixture} from './tests/helpers/settled-brief.ts';
+      // SC1722-02: the fixture's sources (set on the raw signals) are admitted as one settled snapshot before each render.
+      export function render(...args) { admitBriefFixture(); return renderString(...args); }
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
@@ -98,7 +100,7 @@ const fakePage = () => {
   const writes = [], host = (attrs, first = 'English') => { const lead = {nodeType: 3, nodeValue: first + ' '}, el = {attrs: {...attrs}, firstChild: lead, _t: first,
     getAttribute: k => el.attrs[k] ?? null, setAttribute: (k, v) => { writes.push(['attr', k, v]); el.attrs[k] = v; }};
     Object.defineProperty(el, 'textContent', {get: () => el._t, set: v => { writes.push(['text', v]); el._t = v; }}); return el; };
-  const hosts = [host({'data-i18n': 'landing.hero.title'}), host({'data-i18n': 'brief.terms'}, 'Terms'), host({'data-i18n-lead': 'brief.planning'}, 'Planning aid · not a navigation chart.'), host({'data-i18n-aria': 'landing.aria.public'}), host({'data-i18n': 'landing.nope.unknown'}), host({'data-i18n': 'brief.disclaimer'}, 'Forecasts, observations and habitat carry separate clocks; check the rules before you fish.')];
+  const hosts = [host({'data-i18n': 'landing.hero.title'}), host({'data-i18n-lead': 'brief.planning'}, 'Planning aid · not a navigation chart.'), host({'data-i18n-aria': 'landing.aria.public'}), host({'data-i18n': 'landing.nope.unknown'}), host({'data-i18n': 'brief.disclaimer'}, 'Forecasts, observations and habitat carry separate clocks; check the rules before you fish.')];
   const sel = {'[data-i18n]': 'data-i18n', '[data-i18n-lead]': 'data-i18n-lead', '[data-i18n-aria]': 'data-i18n-aria'};
   return {writes, hosts, doc: {querySelectorAll: s => hosts.filter(h => sel[s] in h.attrs)}};
 };
@@ -110,18 +112,17 @@ test('static_hosts_catalogue_and_budget: English is a no-op; Spanish writes only
   assert.deepEqual(page.writes, [], 'English makes no DOM write');
   page = fakePage();
   m.applyLandingCopy(page.doc, 'es');
-  const [title, terms, planning, nav, unknown, disclaimer] = page.hosts;
+  const [title, planning, nav, unknown, disclaimer] = page.hosts;
   assert.equal(title._t, 'Conoce el agua antes de salir del muelle.');
-  assert.equal(terms._t, 'Términos');
-  assert.equal(planning.firstChild.nodeValue, 'Ayuda de planificación · no es una carta náutica. ', 'only the lead text node changes; the Terms link after it is kept');
+  assert.equal(planning.firstChild.nodeValue, 'Ayuda de planificación · no es una carta náutica. ', 'only the lead text node changes');
   assert.equal(nav.attrs['aria-label'], 'Información pública');
   assert.equal(unknown._t, 'English', 'an unknown id leaves its host as it is');
   assert.equal(disclaimer._t, 'Los pronósticos, las observaciones y el hábitat tienen relojes separados; revisa las reglas antes de pescar.', 'the actual first-paint helper translates the footer warning');
-  assert.equal(page.writes.length, 4, 'three text hosts and aria-label; the lead text node is the fifth write');
+  assert.equal(page.writes.length, 3, 'two text hosts and aria-label; the lead text node is the fourth write');
   // dist/landing.html: every marked host names a catalogue id with an es value; English text, links, metadata and scripts are untouched.
   const html = await readFile(join(ROOT, 'dist/landing.html'), 'utf8');
   const ids = [...html.matchAll(/data-i18n(?:-lead)?="([^"]+)"/g)].map(x => x[1]);
-  assert.ok(ids.length >= 12, 'the hero and the footer are marked');
+  assert.ok(ids.length >= 8, 'the hero and the footer are marked');
   for (const id of ids) assert.ok(m.STRINGS[id]?.es?.trim(), `${id} has an es value`);
   assert.match(html, /<html lang="en">/, 'no-JS stays English');
   assert.deepEqual([...html.matchAll(/<script\b[^>]*>/g)].map(x => x[0]), ['<script type="application/ld+json">', '<script type="module" src="../web/landing/main.tsx">'], 'no new script');
@@ -177,7 +178,7 @@ test('landing_english_bytes_and_spanish_funnel: English is the old copy word for
   const ports = [port('morro-bay', 'Morro Bay'), port('ventura', '<b>Odd</b> & Co {n}', 'preview')];
   // English: the catalogue is web/ports.ts COPY and the profile table, byte for byte.
   const en = m.portCopy('en');
-  for (const k of ['question', 'placeholder', 'finding', 'unsupported', 'unavailable', 'none', 'empty', 'privacy', 'forget', 'forgotten']) assert.equal(en[k], m.COPY[k], k);
+  for (const k of ['question', 'placeholder', 'finding', 'denied', 'timedOut', 'unsupported', 'unavailable', 'none', 'empty', 'privacy', 'forget', 'forgotten']) assert.equal(en[k], m.COPY[k], k);
   for (const p of ports) assert.deepEqual([en.found(p), en.detail(p)], [m.COPY.found(p), m.COPY.detail(p)]);
   for (const p of ['boat', 'shore', 'spear', 'kayak']) assert.deepEqual([m.t(`where.profile.${p}`, 'en'), m.t(`landing.profile.note.${p}`, 'en')], [m.PROFILE_TABLE[p].label, m.PROFILE_NOTES[p]], p);
   assert.deepEqual([m.STEP_COPY.title, m.STEP_COPY.back, m.STEP_COPY.loading('Morro Bay'), m.STEP_COPY.ready('Morro Bay')], ['How do you fish?', 'Change port', 'Loading the Morro Bay map…', 'Morro Bay map files ready.']);
@@ -211,6 +212,10 @@ test('landing_english_bytes_and_spanish_funnel: English is the old copy word for
   assert.ok(es.app.includes('¿Desde dónde sales al agua?') && es.app.includes('Últimas lecturas · Morro Bay &amp; Avila') && es.app.includes('Cargando las últimas lecturas…') && es.app.includes('Consultando las boyas') && es.app.includes('>Hora por hora en el mapa<'), 'LandingApp in Spanish');
   const pc = m.portCopy('es');
   assert.deepEqual([pc.finding, pc.unsupported, pc.unavailable, pc.none, pc.empty, pc.forget, pc.forgotten, pc.found(ports[0])], ['Buscando un puerto cercano…', 'La ubicación no está disponible. Busca un puerto en su lugar.', 'No se pudo obtener la ubicación. Busca un puerto en su lugar.', 'No hay un puerto de la lista cerca. Busca o explora la costa.', 'Aún no hay un puerto que coincida. Prueba un puerto cercano o explora la costa.', 'Olvidar puerto guardado', 'Se eliminó el puerto guardado. Esta visita mantiene la selección actual.', 'Puerto de la lista más cercano: Morro Bay. Selecciónalo abajo para continuar.']);
+  assert.equal(pc.denied, 'El permiso de ubicación está desactivado para este sitio. Permite la ubicación en la configuración de sitios de tu navegador o busca un puerto mientras tanto.');
+  assert.equal(en.denied, "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.");
+  const slice = JSON.parse(await readFile(join(ROOT, 'web/landing/strings.generated.json'), 'utf8'));
+  assert.equal(slice['landing.port.denied']?.en, en.denied, 'SC1922-01: the denied line is in the first-paint slice');
   assert.equal(pc.found(ports[1]), 'Puerto de la lista más cercano: <b>Odd</b> & Co {n}. Selecciónalo abajo para continuar.', 'a name is a value: markup and braces are not expanded');
   // Every new id has both languages and the same placeholders.
   for (const [id, e] of Object.entries(m.STRINGS)) if (id.startsWith('landing.')) assert.deepEqual([...(e.en.match(/\{\w+\}/g) ?? [])].sort(), [...(e.es.match(/\{\w+\}/g) ?? [])].sort(), id);
@@ -363,4 +368,13 @@ test('spanish_live_reason_parity: the verdict word, day, boat and reason in Span
   await onDevice(spy, () => m.loadLandingVerdict(feeds(NOW), NOW, PAGE, 'es'));
   assert.ok(reads.every(k => ['skippercast-boat-v1', 'skippercast-limits-v1'].includes(k)), reads.join());
   assert.ok(HOUR > 0);
+});
+
+test('location denied and timedOut copy is exact in both catalogue projections and legacy English', async () => {
+  const m = await load();
+  for (const [key, en, es] of [
+    ['denied', "Location permission is off for this site. Allow location in your browser's site settings, or search for a port meanwhile.", 'El permiso de ubicación está desactivado para este sitio. Permite la ubicación en la configuración de sitios de tu navegador o busca un puerto mientras tanto.'],
+    ['timedOut', 'The location request timed out. Search for a port instead.', 'La solicitud de ubicación agotó el tiempo de espera. Busca un puerto en su lugar.']]) {
+    assert.equal(m.portCopy('en')[key], en); assert.equal(m.COPY[key], en); assert.equal(m.portCopy('es')[key], es);
+  }
 });

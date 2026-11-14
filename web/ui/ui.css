@@ -5,6 +5,10 @@
    Targets are at least --touch-min (44 px) on the touch axis; the focus
    ring is --focus, 2 px outside, on :focus-visible only. */
 
+/* Keep native fields at the phone focus-zoom CSS precondition, including dialogs.
+   Importance overrides later component font shorthands; only font-size changes. */
+input, select, textarea { font-size: var(--text-input) !important; }
+
 .icon { display: inline-block; flex: none; vertical-align: -0.2em; }
 .ui-mono { font: var(--weight-regular) var(--text-11) / var(--leading-body) var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .ui-reading { font: var(--weight-medium) var(--text-18) / var(--leading-heading) var(--font-mono); font-variant-numeric: tabular-nums; }
@@ -18,7 +22,11 @@
   font: var(--weight-medium) var(--text-13) / var(--leading-heading) var(--font-sans); cursor: pointer;
   transition: background var(--motion-state), border-color var(--motion-state), color var(--motion-state);
 }
-.ui-button:focus-visible, .ui-range:focus-visible, .ui-popover-summary:focus-visible, .ui-sheet-handle:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* UXFIX-04: the one focus ring. Headings (h2[tabindex]), inputs, selects, summaries, links and buttons all match it; the kept copies elsewhere differ in offset. */
+:where(button, input, select, textarea, summary, [tabindex]):focus-visible, .ui-range:focus-visible, .ui-popover-summary:focus-visible, .ui-sheet-handle:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* UXFIX-04: every text field's border is --line-strong (non-text 3:1, WCAG 1.4.11), textarea included. :where keeps it at zero
+   specificity, so a scoped rule or a border reset still wins; checkbox, radio, range and button-like inputs are left alone. */
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="file"], [type="color"], [type="image"], [type="hidden"]), select, textarea) { border: 1px solid var(--line-strong); }
 /* The app map's canvases sit in a clipped stage, so their ring is drawn inward. */
 .app-chart canvas:focus-visible, .app-terrain canvas:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .ui-button:disabled, .ui-button[aria-disabled="true"] { color: var(--muted); cursor: not-allowed; opacity: 0.6; }
@@ -114,7 +122,19 @@
 .ui-sheet-edge { display: flex; flex-direction: column; flex: none; }
 .ui-sheet-handle { display: flex; align-items: center; justify-content: center; width: 100%; min-height: var(--touch-min); padding: 0; border: 0; background: transparent; touch-action: none; cursor: grab; }
 .ui-sheet-grip { width: 40px; height: var(--space-1); border-radius: var(--radius-pill); background: var(--muted); }
-/* The end of the body is padded by the detent's hidden offset plus the tab bar, so scrolling to the end brings the last row above the screen's bottom
-   at half too; the padding follows the settled detent, never a drag frame. contain: the sheet's scroll does not chain to the page (the body only). */
-.ui-sheet-body { flex: 1; min-height: 0; box-sizing: border-box; overflow: auto; overscroll-behavior: contain; padding: 0 var(--space-4) calc(var(--space-5) + max(0px, var(--sheet-hidden-offset)) + var(--app-tabs, 0px)); }
+/* The end of the body is padded by the detent's hidden offset, so scrolling to the end brings the last row above the tab bar at half too; the
+   padding follows the settled detent, never a drag frame. The app's sheet already stands on the tab bar (app.css sets its bottom to the bar's height), so the
+   bar is not padded again (CI-1: on an 844x390 landscape phone that extra 56 px hid Sign in at full and made the half body taller than the sheet).
+   contain: the sheet's scroll does not chain to the page (the body only). */
+.ui-sheet-body { flex: 1; min-height: 0; box-sizing: border-box; overflow: auto; overscroll-behavior: contain; padding: 0 var(--space-4) calc(var(--space-5) + max(0px, var(--sheet-hidden-offset))); }
 .ui-sheet[data-detent="peek"] .ui-sheet-body { overflow: hidden; padding-bottom: var(--space-5); }
+
+/* Scroll cue (design § 6 item 8; web/ui/scroll-cue.ts): while a scroll area has more below, its last 16 px fade out. Only the
+   mask's alpha counts (the opaque token stands for "kept"), so it suits both themes. A sticky action row inside is marked data-cue-inset and the hook sets --cue-inset to its
+   height, so the fade ends above it and the row stays whole. The mask image reaches 60 px past the box (no-clip) so a dialog's
+   shadow and a focus ring outside its edge are not cut away; the fade itself is placed from the box's own bottom edge. */
+.ui-scroll-cue[data-more="true"] {
+  --cue-bleed: 60px;
+  mask-image: linear-gradient(to bottom, var(--text) calc(100% - var(--cue-bleed) - var(--cue-inset, 0px) - 16px), transparent calc(100% - var(--cue-bleed) - var(--cue-inset, 0px)), var(--text) calc(100% - var(--cue-bleed) - var(--cue-inset, 0px)));
+  mask-size: calc(100% + 2 * var(--cue-bleed)) calc(100% + 2 * var(--cue-bleed)); mask-position: calc(-1 * var(--cue-bleed)) calc(-1 * var(--cue-bleed)); mask-repeat: no-repeat; mask-clip: no-clip;
+}

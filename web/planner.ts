@@ -28,7 +28,10 @@ import {track} from './telemetry.ts';
 import {ensureLandWater, landWater as landWaterState, loadLandWaterLines, withheldNote, type LandWaterLines, type LandWaterModel, type Place} from './land-water.ts';
 import {ROUTE_BUDGET, type RouteFn} from './ranking.ts';
 import {waterRoute, type RouteFailure} from './route.ts';
-import {buildProtectedRoute, type RouteScreen} from './protected-route.ts';
+import {buildProtectedRoute, ROUTE_WARNING, type RouteScreen} from './protected-route.ts';
+import {clearPlanningRoute, publishPlanningRoute} from './map/planning-route.ts';
+import {choosePresentation} from './map/stage.ts';
+import {language, t} from './i18n.ts';
 import {coordinates, region as activeRegion} from './state.ts';
 import {checkGpx} from './gpx-check.ts';
 import {placeRefused, screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
@@ -41,15 +44,17 @@ import {chartFileListed} from './chart-files.ts';
 import {loadPorts, plannerPort, portChoice} from './ports.ts';
 import {activeBoatFactors, savedBoat} from '../dist/boat-handling.js';
 import {hasOwnLimits, limitsFor} from './limits.ts';
+import {DEFAULT_TIMING, parseTiming, timingInputs, type TripTimingInputs} from './trip-times.ts';
 import {profile as activeProfile} from './state.ts';
+import {emptyFloatPlan, validateFloatPlan, type FloatPlanFields, type FloatPlanRecord} from './float-plan.ts';
 import {buildAlertPlan, MSG as ALERT_MSG, postTrip, type AlertLegs, type AlertPlan, type AlertSettings, type AlertStop} from './planner-alerts.ts';
 
 export type Layers = {waypoints: boolean; outlines: boolean; alignments: boolean; exclusions: boolean};
 export type LayerKey = keyof Layers;
 export type TripSpecies = 'reef' | 'lingcod' | 'rockfish';
-export type RankedDraft = {sha256: string; species: TripSpecies; priorities: {id: string; rank: number}[]};
+export type RankedDraft = {manualOrder?: boolean; sha256: string; species: TripSpecies; priorities: {id: string; rank: number}[]};
 export type UserWaypoint = {id: string; name: string; category: string; latitude: number; longitude: number};
-export type Draft = {launchId?: string; ids: string[]; userWaypoints?: UserWaypoint[]; rankedPlan: RankedDraft | null; name: string; date: string; avoidScope: 'map' | 'region'; layers: Layers};
+export type Draft = {launchId?: string; /** SC2252-04: browser-only trip timing; never exported, shared or saved as an alert. */ timing?: TripTimingInputs; ids: string[]; userWaypoints?: UserWaypoint[]; rankedPlan: RankedDraft | null; name: string; date: string; avoidScope: 'map' | 'region'; layers: Layers};
 export type Target = {
   id: string; label: string; name?: string; latitude: number; longitude: number; habitat_grade?: string; canonical_habitat?: boolean;
   trip_rank?: number; trip_fit?: number; trip_species?: string; evidence_confidence?: {percent: number};
@@ -88,7 +93,9 @@ export interface PlannerDeps {
   map: MapView;
   /** The atlas targets the Chart shows now. */
   getVisible(): Target[];
-  nav: {open(): void; showMap(): void; conditions(date: string): void; chooseWaypoint?(pick: (at: {latitude: number; longitude: number}) => void): void};
+  nav: {open(): void; showMap(): void; conditions(date: string): void; chooseWaypoint?(pick: (at: {latitude: number; longitude: number}) => void): void;
+    /** SC1407-15: move the Chart to show these points (the route preview), after `showMap`. */
+    fit?(points: readonly {latitude: number; longitude: number}[]): void};
   storage?: Pick<Storage, 'getItem' | 'setItem'> | null;
   now?: () => Date;
   loadReefs?: (region: string) => Promise<Reefs>;
@@ -158,6 +165,10 @@ export const PORTS_FAILED_NOTE = 'Port list unavailable, so Best available has n
 
 const LOADING = 'Loading current screened reefs…';
 const STORAGE_OK = 'Saved on this browser for each region. Separate from your account’s trip alerts.';
+const FLOAT_INVALID = 'The float plan has a problem. Fix it or clear it before downloading the notes.';
+const ROUTE_CHANGED = 'Plan or boundary check changed while routing. Try again.';
+const ROUTE_HOUR = 36 * 3600_000;
+const FLOAT_CHANGED = 'The float plan changed while the notes were being prepared. Download the notes again.';
 const STORAGE_OFF = 'Browser storage is unavailable. Keep this page open until you download your plan.';
 const RANKED_LAYERS: Layers = {waypoints: true, outlines: true, alignments: false, exclusions: false};
 const SPOT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -213,6 +224,7 @@ export function createPlanner(deps: PlannerDeps) {
 
   const initial = readDraft(raw, atlas, today) as Draft;
   try { const id = JSON.parse(raw ?? 'null')?.launchId; if (typeof id === 'string') initial.launchId = id; } catch { /* invalid draft */ }
+  try { const saved = JSON.parse(raw ?? 'null')?.timing; if (saved !== undefined) initial.timing = timingInputs(saved); } catch { /* invalid draft */ }
   const waypointPosition = signal<{latitude: number; longitude: number} | null>(null);
   const draft = signal<Draft>(initial);
   const tripAtlas = signal<Atlas>({...atlas, targets: [...atlas.targets], areas: [...atlas.areas]});
@@ -247,6 +259,7 @@ export function createPlanner(deps: PlannerDeps) {
     const d = exportDraft(), targets = [...tripAtlas.value.targets, ...(d.userWaypoints ?? []).map(userWaypointTarget)];
     return d.ids.map(id => targets.find(t => t.id === id)).filter((t): t is Target => !!t);
   };
+  const orderedStops = computed(selected);
   const rankedDetail = (): RankedDetail => ({targets: selected(), areas: tripAtlas.value.areas.filter(a => draft.value.ids.includes(a.id)), publication: tripAtlas.value.publication});
   const unrank = (): void => { ranked.value = false; emit({targets: [], areas: []}); };
 
@@ -304,11 +317,37 @@ export function createPlanner(deps: PlannerDeps) {
     if (ranked.value) { filtersDirty.value = true; scopeStatus.value = 'Trip filters changed. Select Best available again to apply them.'; }
   }
   function edit(patch: Partial<Pick<Draft, 'name' | 'date' | 'avoidScope'>>): void { revision++; persist({...draft.value, ...patch}); }
+  /** SC2252-04: the leave-port time and minutes fishing, kept in this browser's draft only. No ranking or filter change. */
+  function editTiming(patch: Partial<TripTimingInputs>): boolean {
+    const next = parseTiming(patch.leavePortAt ?? (draft.value.timing ?? DEFAULT_TIMING).leavePortAt, patch.fishMin ?? (draft.value.timing ?? DEFAULT_TIMING).fishMin);
+    if (!next) return false;
+    persist({...draft.value, timing: next});
+    return true;
+  }
   function setLayer(key: LayerKey, on: boolean): void { revision++; persist({...draft.value, layers: {...draft.value.layers, [key]: on}}); }
   function toggleSpot(id: string, on: boolean): void {
     revision++;
     const ids = draft.value.ids;
     persist({...draft.value, ids: on ? [...new Set([...ids, id])] : ids.filter(x => x !== id)});
+  }
+  // Remove only recommendation presentation; keep the publication and habitat evidence.
+  const withoutRank = (t: Target): Target => {
+    const {trip_rank, trip_fit, trip_species, distance_nm, distance_basis, distance_why, ...plain} = t;
+    return {...plain, ...(trip_rank ? {name: t.label || t.id} : {})};
+  };
+  function moveStop(id: string, direction: 'up' | 'down'): boolean {
+    const d = draft.value, at = d.ids.indexOf(id), to = at + (direction === 'up' ? -1 : 1);
+    if (disposed || restorePending.value || id.startsWith('user:launch-') || at < 0 || to < 0 || to >= d.ids.length) return false;
+    const ids = [...d.ids];
+    [ids[at], ids[to]] = [ids[to]!, ids[at]!];
+    revision++;
+    batch(() => {
+      unrank();
+      tripAtlas.value = {...tripAtlas.value, targets: tripAtlas.value.targets.map(withoutRank)};
+      persist({...d, ids, rankedPlan: d.rankedPlan ? {...d.rankedPlan, manualOrder: true} : null});
+      scopeStatus.value = 'Your own stop order.';
+    });
+    return true;
   }
   function setContourTracks(on: boolean): void {
     contourTracks.value = on;
@@ -470,6 +509,7 @@ export function createPlanner(deps: PlannerDeps) {
         tripAtlas.value = {...tripAtlas.value, publication: loaded.publication, source_validation_date: loaded.source_validation_date, areas: [...atlas.areas, ...loaded.areas],
           targets: [...atlas.targets, ...loaded.targets.map(t => {
             const p = plan.priorities.find(x => x.id === t.id);
+            if (plan.manualOrder) return withoutRank(t);
             if (!p) return t;
             const s: Target = {...t, trip_rank: p.rank, trip_fit: planFit(t, plan.species), trip_species: plan.species};
             s.name = waypointTitle(s) as string;
@@ -477,8 +517,8 @@ export function createPlanner(deps: PlannerDeps) {
           })]};
         filters.value = {...filters.value, species: plan.species};
         restorePending.value = false;
-        ranked.value = draft.value.ids.every(id => plan.priorities.some(p => p.id === id));
-        scopeStatus.value = 'Saved ranked reefs restored from the current publication. Check your trip conditions before departure.';
+        ranked.value = !plan.manualOrder && draft.value.ids.every(id => plan.priorities.some(p => p.id === id));
+        scopeStatus.value = plan.manualOrder ? 'Your own stop order.' : 'Saved ranked reefs restored from the current publication. Check your trip conditions before departure.';
       });
     } catch (error) {
       if (mine === revision) scopeStatus.value = (error as Error).message;
@@ -486,7 +526,11 @@ export function createPlanner(deps: PlannerDeps) {
   }
 
   /** The file for `kind`, after the publication and every boundary are checked again. */
-  async function exportFile(kind: 'gpx' | 'notes'): Promise<File> {
+  async function exportFile(kind: 'gpx' | 'notes', guard: {current?: () => boolean} = {}): Promise<File> {
+    // SC1407-14: the float plan and the plan/file key are captured before any wait; a notes file never carries fields from another opening, edit, date or plan.
+    // `guard.current` lets the caller recheck the same snapshot right before it saves the file.
+    const float = kind === 'notes' ? floatSnapshot() : null;
+    if (float) guard.current = () => floatCurrent(float);
     if (draft.value.ids.some(id => tripAtlas.value.targets.find(t => t.id === id)?.canonical_habitat)) {
       const latest = await loadReefs(region.id);
       if (latest.publication.export_sha256 !== canonical?.publication.export_sha256) throw Error('Reef data changed. Select Best available again before exporting.');
@@ -495,15 +539,42 @@ export function createPlanner(deps: PlannerDeps) {
     // Repeat the authoritative screen here, even if the preview count was valid moments ago.
     const d = draft.value;
     if (kind === 'notes') {
-      const context = protectedPlanNotes(request(), {...d, date: d.date || today});
+      if (float && !floatCurrent(float)) throw Error(FLOAT_CHANGED);
+      const context = protectedPlanNotes(request(), {...d, date: d.date || today}, float?.record ?? null);
       if (context) return new File([context], `SkipperCast-${region.id}-${d.date || today}-boundary-context.html`, {type: 'text/html'});
     }
     const result = buildExport(request()) as {gpx: string; counts: {waypoints: number}};
     if (kind === 'gpx') { const c = checkGpx(result.gpx, {waypoints: result.counts.waypoints}, screen ?? null); if (!c.ok) throw Error(`The GPX file failed its own check: ${c.problems[0]}. Nothing was handed over.`); }
     const base = `SkipperCast-${region.id}-${d.date || today}-${result.counts.waypoints}wp`;
     return kind === 'notes'
-      ? new File([offlineNotes(result, region, {...d, date: d.date || today}, coordinates.value) as string], `${base}.html`, {type: 'text/html'})
+      ? new File([offlineNotes(result, region, {...d, date: d.date || today}, coordinates.value, float?.record ?? null) as string], `${base}.html`, {type: 'text/html'})
       : new File([result.gpx], `${base}.gpx`, {type: 'application/gpx+xml'});
+  }
+  // SC1407-14: the float plan lives here, in memory, for one opening of the dialog. Never in the draft, storage, the file key, GPX, the alert or telemetry.
+  const floatPlan = signal<FloatPlanFields>(emptyFloatPlan()), floatBackAuto = signal(true), floatOpen = signal(false);
+  let floatGen = 0, floatRev = 0;
+  const floatCheck = () => validateFloatPlan(floatPlan.value, draft.value.date || today, region.timezone);
+  const floatErrors = computed(() => { const c = floatCheck(); return c.ok ? {} : c.errors; });
+  function floatSnapshot(): {record: FloatPlanRecord | null; gen: number; rev: number; date: string; key: string} {
+    const c = floatCheck();
+    if (!c.ok) throw Error(FLOAT_INVALID);
+    return {record: c.record, gen: floatGen, rev: floatRev, date: draft.value.date || today, key: fileKey()};
+  }
+  const floatCurrent = (s: {gen: number; rev: number; date: string; key: string}): boolean => !disposed && s.gen === floatGen && s.rev === floatRev && s.date === (draft.value.date || today) && s.key === fileKey();
+  function setFloatPlanOpen(on: boolean, seed?: {fields: FloatPlanFields; backAuto: boolean}): void {
+    if (on === floatOpen.peek()) return;
+    floatGen++; floatRev++;
+    batch(() => { floatOpen.value = on; floatPlan.value = on && seed ? {...seed.fields} : emptyFloatPlan(); floatBackAuto.value = on ? (seed?.backAuto ?? true) : true; });
+  }
+  function editFloatPlan(patch: Partial<FloatPlanFields>): void {
+    if (!floatOpen.peek()) return;
+    floatRev++;
+    batch(() => { floatPlan.value = {...floatPlan.value, ...patch}; if ('backBy' in patch) floatBackAuto.value = false; });
+  }
+  /** A date change: an untouched automatic Be back by is re-evaluated by the view; this sets it without marking it the person's own. */
+  function reseedFloatBackBy(backBy: string): void {
+    if (!floatOpen.peek() || !floatBackAuto.peek() || floatPlan.peek().backBy === backBy) return;
+    floatRev++; floatPlan.value = {...floatPlan.value, backBy};
   }
   const save = (file: File): void => {
     const url = URL.createObjectURL(file), a = document.createElement('a');
@@ -512,7 +583,8 @@ export function createPlanner(deps: PlannerDeps) {
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
   const routing = signal(false), routeStatus = signal('');
-  async function exportRouteFile(): Promise<File> {
+  /** The one route calculation: the download and Show route on Chart each call it for themselves, with every export gate. */
+  async function buildPlanningRoute() {
     const key = fileKey();
     // Retain all existing consent, publication, whole-reef and export guards.
     await exportFile('gpx');
@@ -524,8 +596,13 @@ export function createPlanner(deps: PlannerDeps) {
     // The optional launch is stored last by the legacy waypoint export, but is
     // the starting stop for this separate route. The remaining selection keeps its order.
     if (launchPoint().length && stops.length) stops.unshift(stops.pop()!);
+    const screenKey = JSON.stringify((screen as RouteScreen).exportExclusions());
     const r = buildProtectedRoute({...context, screen: screen as RouteScreen, stops,
       title: `${draft.value.name} · ${draft.value.date || today}`, now: now()});
+    return {r, context, screenKey};
+  }
+  async function exportRouteFile(): Promise<File> {
+    const {r} = await buildPlanningRoute();
     routeStatus.value = `Boundary check: ${r.checkedAt} · ${r.nm.toFixed(1)} nm planning route. NOT FOR NAVIGATION.`;
     return new File([r.gpx], `SkipperCast-${region.id}-${draft.value.date || today}-planning-route.gpx`, {type:'application/gpx+xml'});
   }
@@ -535,6 +612,85 @@ export function createPlanner(deps: PlannerDeps) {
     try { const file = await exportRouteFile(); if (!disposed) save(file); }
     catch (error) { if (!disposed) routeStatus.value = (error as Error).message; }
     finally { routing.value = false; }
+  }
+  // SC1407-15: Show route on Chart. The route is drawn from its own calculation (buildPlanningRoute) and lives in memory only, owned here.
+  // It is removed the moment anything it was built from changes (stops, their order, region, the boundary screen, the water data) or
+  // buildProtectedRoute would now refuse; it is never rebuilt or restored on its own, and the download never reads it.
+  const routeToken = {};
+  let routeGen = 0, routeAttempt = 0, routeLive: {checkedAt: string; screenKey: string; points: readonly {latitude: number; longitude: number}[]; water: {state: unknown; region: unknown; model: unknown; lines: unknown}} | null = null;
+  let routeExpiry: ReturnType<typeof setTimeout> | undefined, routeHealth: ReturnType<typeof setInterval> | undefined, routeWatching = false;
+  const routeKey = (): string => JSON.stringify([selected().map(t => [t.id, t.latitude, t.longitude]), launch.value, draft.value.layers, draft.value.avoidScope, activeRegion.value,
+    allowResearch.value, contourTracks.value, contourFile.value, filtersDirty.value, restorePending.value, tripAtlas.value.publication?.export_sha256]);
+  /** Re-read the complete boundary snapshot and the whole line's coverage, not just its check time. A throw is a refusal. */
+  function routeScreenOk(checkedAt: string, screenKey: string, points: readonly {latitude: number; longitude: number}[]): boolean {
+    try {
+      const sc = screen as RouteScreen | null, age = now().getTime() - Date.parse(checkedAt);
+      const snapshot = sc?.exportExclusions?.(), geometry = {type: 'LineString', coordinates: points.map(p => [p.longitude, p.latitude])};
+      return !!sc?.ready?.() && snapshot?.checked_at === checkedAt && JSON.stringify(snapshot) === screenKey
+        && Number.isFinite(age) && age >= -300_000 && age <= ROUTE_HOUR
+        && sc.coversGeometry(geometry) === true && sc.geometryAllowed(geometry) === true;
+    } catch { return false; }
+  }
+  /** The page's events where it has them (a test stand-in or a worker may not). */
+  const pageEvents = (): Pick<Document, 'addEventListener' | 'removeEventListener'> | null => typeof document !== 'undefined' && typeof document.addEventListener === 'function' ? document : null;
+  const stopRouteWatch = (): void => {
+    clearTimeout(routeExpiry); clearInterval(routeHealth); routeExpiry = routeHealth = undefined;
+    if (routeWatching) pageEvents()?.removeEventListener('visibilitychange', checkRoutePreview);
+    routeWatching = false;
+  };
+  /** Remove the line and everything that watches it. `say`: tell the person it went. */
+  function dropRoute(say = true): void {
+    routeGen++;
+    if (routeLive && say && !disposed) routeStatus.value = t('planner.route.removed', language.peek());
+    routeLive = null; stopRouteWatch(); clearPlanningRoute(routeToken);
+  }
+  /** Minute health check, resume from background and the first millisecond past checked_at + 36 h: no request, no new route search. */
+  function checkRoutePreview(): void {
+    if (!routeLive) return;
+    const other = activeRegion.peek() && activeRegion.peek() !== region.id;
+    if (disposed || other || !routeScreenOk(routeLive.checkedAt, routeLive.screenKey, routeLive.points)) { dropRoute(); return; }
+    armRouteExpiry(routeLive.checkedAt);
+  }
+  function armRouteExpiry(checkedAt: string): void {
+    clearTimeout(routeExpiry);
+    const left = Date.parse(checkedAt) + ROUTE_HOUR + 1 - now().getTime();
+    routeExpiry = setTimeout(checkRoutePreview, Math.min(Math.max(left, 0), 2 ** 31 - 1));
+    (routeExpiry as {unref?: () => void}).unref?.();
+  }
+  let lastRouteKey = '';
+  const stopRouteKey = effect(() => { const key = routeKey(); if (key !== lastRouteKey) { lastRouteKey = key; untracked(() => dropRoute()); } });
+  const stopRouteWater = effect(() => {
+    const s = landWaterState.value;
+    untracked(() => { const w = routeLive?.water; if (w && (s.state !== w.state || s.region !== w.region || s.model !== w.model || s.lines !== w.lines)) dropRoute(); });
+  });
+  const onBoundaries = (): void => dropRoute();
+  pageEvents()?.addEventListener('skippercast:boundaries', onBoundaries);
+  /** Draws the planning route on the Chart; returns whether a line is now drawn. A refusal draws nothing and shows its message. */
+  async function showRouteOnChart(): Promise<boolean> {
+    if (disposed || routing.value) return false;
+    dropRoute(false);
+    const attempt = ++routeAttempt, mine = routeGen, key = routeKey();
+    routing.value = true; routeStatus.value = '';
+    try {
+      const {r, context, screenKey} = await buildPlanningRoute();
+      const water = landWaterState.peek();
+      if (disposed || mine !== routeGen || key !== routeKey()) throw Error(ROUTE_CHANGED);
+      if (!deps.routeContext && (water.model !== context.model || water.lines !== context.lines)) throw Error(ROUTE_CHANGED);
+      if (!routeScreenOk(r.checkedAt, screenKey, r.points)) throw Error('Protected-area boundaries changed. Try routing again.');
+      publishPlanningRoute(routeToken, {region: region.id, points: r.points, nm: r.nm, checkedAt: r.checkedAt});
+      routeLive = {checkedAt: r.checkedAt, screenKey, points: r.points, water: {state: water.state, region: water.region, model: water.model, lines: water.lines}};
+      armRouteExpiry(r.checkedAt);
+      routeHealth = setInterval(checkRoutePreview, 60_000); (routeHealth as {unref?: () => void}).unref?.();
+      const events = pageEvents();
+      if (events) { events.addEventListener('visibilitychange', checkRoutePreview); routeWatching = true; }
+      routeStatus.value = `Boundary check: ${r.checkedAt} · ${r.nm.toFixed(1)} nm planning route. ${ROUTE_WARNING}`;
+      deps.nav.showMap(); choosePresentation('chart'); deps.nav.fit?.(r.points);
+      return true;
+    } catch (error) {
+      dropRoute(false);
+      if (!disposed && attempt === routeAttempt) routeStatus.value = (error as Error).message;
+      return false;
+    } finally { if (attempt === routeAttempt) routing.value = false; }
   }
   const preparing = signal(false);
   let prepared: {file: File; key: string; at: number; hash?: string} | null = null, pending: Promise<void> | null = null, disposed = false, attempted = '';
@@ -555,7 +711,15 @@ export function createPlanner(deps: PlannerDeps) {
   });
   function deliver(kind: 'gpx' | 'share' | 'notes'): Promise<void> {
     if (disposed) return Promise.resolve();
-    if (kind === 'notes') return exportFile('notes').then(file => { if (!disposed) { save(file); actionStatus.value = `Download requested: ${file.name}. Find it in Downloads or your chosen save location.`; } }).catch(error => { actionStatus.value = (error as Error).message; });
+    if (kind === 'notes') {
+      // SC1407-14: the notes snapshot (float generation, revision, date and plan/file key) is rechecked immediately before the file is saved.
+      const guard: {current?: () => boolean} = {};
+      return exportFile('notes', guard).then(file => {
+        if (disposed) return;
+        if (guard.current && !guard.current()) { actionStatus.value = FLOAT_CHANGED; return; }
+        save(file); actionStatus.value = `Download requested: ${file.name}. Find it in Downloads or your chosen save location.`;
+      }).catch(error => { actionStatus.value = (error as Error).message; });
+    }
     if (!summary.value.ok) { actionStatus.value = (summary.value as {message: string}).message; return Promise.resolve(); }
     if (!prepared || prepared.key !== fileKey() || now().getTime() - prepared.at >= 60000) {
       prepared = null;
@@ -723,10 +887,11 @@ export function createPlanner(deps: PlannerDeps) {
     chooseWaypoint, saveWaypoint, removeWaypoint, addPlace,
     savedSpots, savedSpotsState, savedSpotsStatus, setSavedSpotsOpen, refreshSavedSpots, addSavedSpot,
     alertStatus, alertBusy, alertSaved, alertIsSaved: (body: unknown): boolean => alertSavedKeys.value.includes(JSON.stringify(body)), setAlertOpen, alertPreview, saveAlert,
-    setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
+    floatPlan, floatBackAuto, floatErrors, setFloatPlanOpen, editFloatPlan, reseedFloatBackBy,
+    setFilter, edit, editTiming, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
-    routing, routeStatus, exportRouteFile, deliverRoute,
+    routing, routeStatus, exportRouteFile, deliverRoute, showRouteOnChart, checkRoutePreview,
     /** For tests and a region change: stop drawing the ranked set. */
-    dispose: () => { disposed = true; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); stopAlert(); resetAlert(); },
+    dispose: () => { disposed = true; dropRoute(false); stopRouteKey(); stopRouteWater(); pageEvents()?.removeEventListener('skippercast:boundaries', onBoundaries); floatGen++; floatPlan.value = emptyFloatPlan(); floatOpen.value = false; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); stopAlert(); resetAlert(); },
   };
 }

@@ -50,7 +50,6 @@ EXPECTED_LIMIT = 32 * 1024 * 1024
 UNBOUNDED = 1 << 62
 LARGE = 1024 * 1024
 ROOT_ID = "queue:synthetic"
-RUN_ROOT = None  # set by tools/run_sc155_prepare_ingress.py to its exclusive invocation root
 RECORDS = []
 ORIGINS = []  # actual product module origins, captured while the fixture-scoped real modules are loaded
 _MISSING = object()
@@ -71,13 +70,11 @@ def load_file(name, path, register=True):
 
 @functools.lru_cache(maxsize=None)
 def case_parent():
-    """Runner root; else the candidate's sibling out/ when staged; else the inherited temp root (CI).
+    """The candidate's sibling out/ when staged; else the inherited temp root (CI).
 
     Decided once per process: under xdist another test (test_sc162) can create
     REPO.parent/out mid-run, which would otherwise move the parent between
     setUp and the isolation assertion."""
-    if RUN_ROOT is not None:
-        return Path(RUN_ROOT).resolve()
     staged = REPO.parent / "out"
     if staged.is_dir():
         parent = staged / "discovery"
@@ -705,8 +702,7 @@ class EvidenceSuite(unittest.TestSuite):
         origins, records = ORIGINS[first_origin:], RECORDS[first_record:]
         problems = execution_problems(executed, subtests, skips, failures, errors, origins)
         spec = REPO.parent / "ACCEPTANCE-SPEC.json"
-        sources = (PRODUCT, COMMON, CONSTRUCTORS, REPO / "tests/unit/test_sc155_prepare_ingress.py",
-                   REPO / "tools/run_sc155_prepare_ingress.py")
+        sources = (PRODUCT, COMMON, CONSTRUCTORS, REPO / "tests/unit/test_sc155_prepare_ingress.py")
         receipt = dict(
             schema="sc155-discovery-receipt/v1", argv=list(sys.argv), orig_argv=list(getattr(sys, "orig_argv", [])),
             cwd=os.getcwd(), interpreter=sys.executable, prefix=sys.prefix, python=sys.version, head=git_head(),

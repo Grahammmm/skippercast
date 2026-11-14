@@ -86,7 +86,7 @@ def build(scheme, selections, cache):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--scheme", type=Path, required=True)
-    p.add_argument("--source-screen", type=Path, default=Path("dist/data/nbs-central-300-depth-screen.json"))
+    p.add_argument("--source-screen", type=Path, default=Path("research/receipts/nbs-central-300-depth-screen.json"))
     p.add_argument("--cache", type=Path, default=Path("var/review/bluetopo-central-rat"))
     p.add_argument("--output", type=Path, required=True)
     args = p.parse_args()

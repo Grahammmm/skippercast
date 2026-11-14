@@ -47,7 +47,7 @@ export function markDistance(from: unknown, to: unknown, model: LandWaterModel |
 export function markDistanceLine(originName: string, d: MarkDistance, speedKn: number | null, lang: Language = 'en'): string {
   const nm = d.nm.toFixed(1), shown = lang === 'es' ? nm.replace('.', ',') : nm;
   const min = speedKn === null ? null : runMinutes(d.nm, speedKn);
-  const run = min === null ? '' : t('where.run', lang, {bound: d.basis === 'water' ? '' : '≥ ', duration: durationText(min)});
+  const run = min === null || !Number.isFinite(min) ? '' : t('where.run', lang, {bound: d.basis === 'water' ? '' : '≥ ', duration: durationText(min)});
   return `${originName} · ${t(d.basis === 'water' ? 'where.distance.water' : 'where.distance.straight', lang, {nm: shown})}${run}`;
 }
 

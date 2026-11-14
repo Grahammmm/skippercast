@@ -78,7 +78,7 @@ def build(root, fetch=False):
     index_path = root / "var/review/noaa2612-tileindex.zip"
     read_pinned(index_path, BASE + INDEX, INDEX_SHA, fetch, 8_000_000)
     matrix_path = root / "research/receipts/monterey-300-source-evidence-matrix.json"
-    context_path = root / "dist/data/usgs-offshore-monterey-hard-context.geojson"
+    context_path = root / "research/receipts/usgs-offshore-monterey-hard-context.geojson"
     matrix = json.loads(matrix_path.read_text())
     if matrix.get("outline_count") != 17:
         raise ValueError("Monterey reviewed outline set changed")

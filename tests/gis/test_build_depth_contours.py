@@ -518,3 +518,37 @@ def test_native_nodata_and_unresolved_only_sources_become_areas_and_padding_stay
     assert found == [(f'usgs-b-unresolved-{reason}', reason, n) for reason, n in areas]
     assert doc['provenance']['sources'][list(grids).index('usgs-b')]['provenance_counts'] == {
         'measured': measured, 'filled': 0, 'verified': 0, 'unresolved': sum(n for _, n in areas)}
+
+
+def _hist_vs_derived(monkeypatch, run):
+    from skippercast.platform import depth_contours as dc
+    derived = run()
+    with monkeypatch.context() as m:
+        m.setattr(dc, 'FEET_PER_M', 3.28084)   # explicit historical control
+        control = run()
+    return dc.FEET_PER_M, derived, control
+
+
+def test_derived_feet_factor_leaves_collection_bytes_unchanged(tmp_path, monkeypatch):
+    import json
+    a = _tif(tmp_path / 'a.tif', _slope((128, 128), shallow=-2.0), X0, Y0)
+    b = _tif(tmp_path / 'b.tif', _slope((64, 64)), X0 + 248, Y0)
+    factor, derived, control = _hist_vs_derived(
+        monkeypatch, lambda: _run_builder(monkeypatch, {'usgs-a': a, 'usgs-b': b}, _sources('usgs-a', 'usgs-b')))
+    assert factor == 3.28084
+    assert {f['properties'].get('depth_ft') for f in derived['features'] if f['properties']['kind'] == 'contour'} >= {30, 60}
+    assert any(f['properties']['kind'] == 'survey-edge' for f in derived['features'])
+    assert json.dumps(derived) == json.dumps(control)
+
+
+def test_derived_feet_factor_keeps_shoal_hint_rounding(tmp_path, monkeypatch):
+    import numpy as np
+    a = _tif(tmp_path / 'a.tif', _slope((128, 128), shallow=-2.0), X0, Y0)
+    codes, hint = np.full((128, 128), 10), np.full((128, 128), np.nan)
+    codes[0:8, 64:72], hint[0:8, 64:72] = 41, -3.0
+    prov = _ec(tmp_path / 'provenance.tif', codes, hint=hint)
+    _, derived, control = _hist_vs_derived(monkeypatch, lambda: _run_builder(
+        monkeypatch, {'usgs-a': a}, _sources('usgs-a'), '--provenance', f'usgs-a={prov}'))
+    hints = [f['properties']['shoal_hint_ft'] for f in derived['features'] if f['properties']['kind'] == 'unresolved-area']
+    assert hints == [10] and all(type(h) is int for h in hints)
+    assert derived == control

@@ -89,7 +89,7 @@ test('acceptance 1 and 3: a stale tile shows the stale state and its age; the br
   await expect(root).toHaveAttribute('data-basis', 'regional');
   // The full sheet shows each tile's detail line and basis (below full the tiles are compact).
   if (isMobile) { await page.locator('.ui-sheet-handle').press('End'); await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full'); }
-  const water = root.locator('.ui-tile', {hasText: 'Water'});
+  const water = root.locator('.ui-tile', {hasText: /^\s*Water/});
   await expect(water).toHaveAttribute('data-state', 'stale');
   await expect(water.locator('.ui-tile-stale')).toHaveText('stale');
   // The desktop column's dense tiles drop "old" from the age; the full sheet keeps it.
@@ -121,9 +121,15 @@ test('acceptance 2: at the half detent the sheet shows the headline, tiles and h
   // in place of the verdict, and the tiles and hour slider sit below it: they are reached by scrolling the sheet body.
   await expect(sheet.locator('h1')).toHaveText("Couldn't load the forecast");
   for (const part of [sheet.locator('h1'), sheet.locator('.app-forecast-retry')]) await expect(part).toBeInViewport({ratio: 1});
-  for (const part of [sheet.locator('.app-tiles'), sheet.getByRole('slider', {name: 'Hour'})]) { await part.evaluate(el => el.scrollIntoView({block: 'center'})); await expect(part).toBeInViewport({ratio: 1}); }
+  // UXFIX-11: the pinned edge now holds the day chips too, so the body starts lower and its scrollport centre sits below the window's edge (the half detent
+  // slides the sheet's end past it). Each part is centred in the part of the body that is in the window, and must still be wholly in view.
+  for (const part of [sheet.locator('.app-tiles'), sheet.getByRole('slider', {name: 'Hour'})]) {
+    // The Hour slider is pinned in the edge (not the body), so only a part inside the body is scrolled.
+    await part.evaluate(el => { const scroller = el.closest('.ui-sheet-body'); if (!scroller) return; const body = scroller.getBoundingClientRect(), box = el.getBoundingClientRect(); scroller.scrollTop += (box.top + box.bottom) / 2 - (body.top + Math.min(body.bottom, innerHeight)) / 2; });
+    await expect(part).toBeInViewport({ratio: 1});
+  }
   // Compact tiles keep the stale state and the age.
-  const water = sheet.locator('.ui-tile', {hasText: 'Water'});
+  const water = sheet.locator('.ui-tile', {hasText: /^\s*Water/});
   await expect(water).toHaveAttribute('data-state', 'stale');
   await expect(water.locator('.ui-tile-source')).toContainText('NDBC 46011 · 5 h');
   // Expanded, the sheet holds Where to look and its top pick, scrolled to in the sheet body.
@@ -193,7 +199,7 @@ for (const retained of [false, true]) {
     const root = page.locator(isMobile ? '.app-sheet-brief' : 'aside.app-brief');
     await expect(root).toHaveAttribute('data-basis', 'regional');
     if (isMobile) { await page.locator('.ui-sheet-handle').press('End'); await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full'); }
-    const water = root.locator('.ui-tile', {hasText: 'Water'}), tide = root.locator('.ui-tile', {hasText: 'Tide'});
+    const water = root.locator('.ui-tile', {hasText: /^\s*Water/}), tide = root.locator('.ui-tile', {hasText: 'Tide'});
     await expect(water.locator('.ui-tile-source')).toContainText('NDBC 46028 (backup for 46011)');
     // The basis names the source and links to the actual station's official page.
     await water.locator('summary').click();

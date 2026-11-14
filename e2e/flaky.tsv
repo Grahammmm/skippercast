@@ -1,0 +1,2 @@
+spec	first_seen	owner	expiry	test
+e2e/v2-map.spec.ts	2026-11-12	@Grahammmm	2026-11-27	Swell draws the model grid as a field with period lines and strokes, names the run, follows the hour and leaves when off

@@ -182,3 +182,90 @@ def test_guarded_bag_metadata_entry_point_retains_rejections(original_bag, defec
             expected = 'external/soft links refused'
     with pytest.raises(ValueError, match=expected):
         bag_v2.inspect_metadata(source, 'H11879')
+
+
+CANONICAL = 'canonical geographic segment ID required'
+
+
+def _segment_record(root, segment_id, bbox, name='alias-segment.json'):
+    write(root / name, dict(schema='coastal-segment-v1', segment_id=segment_id,
+                            crs='EPSG:3310', bbox=bbox, region='synthetic'))
+    return ref(root, root / name, 'coastal-segment-v1')
+
+
+def _support(x0, y0):
+    return dict(crs='EPSG:3310', geometry=dict(type='Polygon', coordinates=[[
+        [x0 + 100, y0 + 100], [x0 + 900, y0 + 100], [x0 + 900, y0 + 900],
+        [x0 + 100, y0 + 900], [x0 + 100, y0 + 100]]]))
+
+
+@pytest.mark.parametrize('spelling', ['+0', '-0', '00', ' 0', '0 ', '\uff10', '+5000',
+                                      '05000', '-05000', '5_000'])
+@pytest.mark.parametrize('axis', [0, 1])
+def test_noncanonical_numeric_spellings_are_refused(tmp_path, spelling, axis):
+    origin = [0, 0]
+    value = int(spelling.replace('_', ''))
+    origin[axis] = value
+    parts = ['0', '0']
+    parts[axis] = spelling
+    segment_id = f'seg:3310:{parts[0]}:{parts[1]}:5000'
+    bbox = [origin[0], origin[1], origin[0] + 5000, origin[1] + 5000]
+    facts = dict(support=_support(*origin))
+    with pytest.raises(ValueError, match=CANONICAL):
+        mapping_input.bind_segment(tmp_path, _segment_record(tmp_path, segment_id, bbox),
+                                   segment_id, facts)
+    assert 'segment' not in facts
+
+
+@pytest.mark.parametrize('origin', [(0, 0), (5000, 5000), (-5000, -5000), (-5000, 0), (0, 5000),
+                                    (-5000, 5000)])
+def test_canonical_signed_lattice_origins_still_bind(tmp_path, origin):
+    x0, y0 = origin
+    segment_id = f'seg:3310:{x0}:{y0}:5000'
+    bbox = [x0, y0, x0 + 5000, y0 + 5000]
+    facts = dict(support=_support(x0, y0))
+    holds = mapping_input.bind_segment(tmp_path, _segment_record(tmp_path, segment_id, bbox),
+                                       segment_id, facts)
+    assert holds == []
+    assert facts['segment']['segment_id'] == segment_id
+    assert facts['segment']['bbox'] == bbox
+
+
+def test_producer_refuses_alias_before_output(qualified):
+    root, document, _ = qualified
+    alias = 'seg:3310:+0:0:5000'
+    segment = _segment_record(root, alias, [0, 0, 5000, 5000])
+    with pytest.raises(ValueError, match=CANONICAL):
+        mapping_input.produce(root, document['source'], segment_id=alias, segment=segment,
+                              window=document['window'], vertical=document['declared_vertical'],
+                              output_dir='alias-input', synthetic=True, rights=document['rights'])
+    assert not (root / 'alias-input').exists()
+
+
+def test_verifier_refuses_fully_rebound_alias(qualified):
+    root, document, _ = qualified
+    document = deepcopy(document)
+    alias = 'seg:3310:+0:0:5000'
+    document['segment_id'] = alias
+    document['segment'] = _segment_record(root, alias, [0, 0, 5000, 5000])
+    document['native_facts']['segment']['segment_id'] = alias
+    document['facts_digest'] = mapping_input.digest(document['native_facts'])
+    review = dict(schema='coastal-private-input-review-v2', independent=True,
+                  reviewer_id='synthetic-test-reviewer', facts_digest=document['facts_digest'],
+                  checked_at='2026-10-17T00:00:00Z', valid_until='2026-10-19T00:00:00Z',
+                  decision='accept', holds_added=[])
+    write(root / 'alias-review.json', review)
+    document['review'] = ref(root, root / 'alias-review.json', review['schema'])
+    with pytest.raises(ValueError, match=CANONICAL):
+        mapping_input.verify(root, document, now=NOW)
+
+
+def test_missing_segment_and_wrong_record_identity_unchanged(tmp_path):
+    facts = {}
+    assert mapping_input.bind_segment(tmp_path, None, 'seg:3310:0:0:5000', facts) == [
+        'geographic_segment_record_missing']
+    assert facts['segment'] is None
+    segment_id = 'seg:3310:0:0:5000'
+    other = _segment_record(tmp_path, 'seg:3310:5000:0:5000', [5000, 0, 10000, 5000])
+    with pytest.raises(ValueError, match='geographic segment record identity invalid'):
+        mapping_input.bind_segment(tmp_path, other, segment_id, dict(support=_support(0, 0)))

@@ -4,6 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {isDeepStrictEqual} from 'node:util';
 
 const {PORT_ALERT_KEY, parseThresholds, loadThresholds, saveThresholds, clearThresholds, evaluatePortAlert, WINDOW_HOURS} = await import('../web/port-alert.ts');
 
@@ -173,4 +174,133 @@ test('zero remains calm and a valid hit survives negative data', () => {
   assert.equal(hit.exceedances[0].kind, 'wind');
   for (const bad of [NaN, Infinity, '9', undefined])
     assert.equal(evaluatePortAlert(LIMITS, forecast(full(i => i === 3 ? {windKnots: bad} : {})), NOW).state, 'partial', String(bad));
+});
+
+// RF1651-10: an unreadable (nonfinite) evaluation clock is stale, never a window of arbitrary dates.
+const BAD_CLOCKS = [['NaN', NaN], ['invalid Date', new Date('invalid').getTime()], ['+Infinity', Infinity], ['-Infinity', -Infinity]];
+const EMPTY_PEAK = {windKt: null, swellFt: null};
+const loudFar = () => forecast([hourAt(-30, {windKnots: 40, swellFt: 9}), hourAt(24 * 13, {windKnots: 40, swellFt: 9})]);
+
+test('a nonfinite clock cannot alert on rows outside any window: stale, nothing checked, metadata kept', () => {
+  for (const [name, bad] of BAD_CLOCKS) {
+    const f = loudFar();
+    const r = evaluatePortAlert(LIMITS, f, bad);
+    assert.equal(r.state, 'stale', name);
+    assert.equal(r.hoursChecked, 0, name);
+    assert.deepEqual(r.exceedances, [], name);
+    assert.deepEqual(r.peak, EMPTY_PEAK, name);
+    assert.equal(r.notification, null, name);
+    assert.equal(r.source, f.label);
+    assert.equal(r.issuedAt, f.issuedAt);
+    assert.equal(r.fetchedAt, f.fetchedAt);
+  }
+});
+
+test('a nonfinite clock over calm complete data or an empty forecast is stale, not clear, partial or no-data', () => {
+  for (const [name, bad] of BAD_CLOCKS) for (const f of [forecast(full()), forecast([]), forecast(full(() => ({windKnots: 40})))]) {
+    const r = evaluatePortAlert(LIMITS, f, bad);
+    assert.equal(r.state, 'stale', name);
+    assert.equal(r.hoursChecked, 0, name);
+    assert.deepEqual(r.exceedances, [], name);
+    assert.deepEqual(r.peak, EMPTY_PEAK, name);
+    assert.equal(r.notification, null, name);
+  }
+});
+
+test('an absent forecast keeps no-data precedence over any clock', () => {
+  for (const now of [NaN, Infinity, -Infinity, NOW]) {
+    const r = evaluatePortAlert(LIMITS, null, now);
+    assert.equal(r.state, 'no-data');
+    assert.equal(r.hoursChecked, 0);
+    assert.deepEqual(r.exceedances, []);
+    assert.deepEqual(r.peak, EMPTY_PEAK);
+    assert.equal(r.source, null);
+    assert.equal(r.issuedAt, null);
+    assert.equal(r.fetchedAt, null);
+    assert.equal(r.notification, null);
+  }
+});
+
+test('finite-clock results are unchanged by the nonfinite refusal', () => {
+  const calm = evaluatePortAlert(LIMITS, forecast(full()), NOW);
+  assert.equal(calm.state, 'clear');
+  assert.equal(calm.hoursChecked, WINDOW_HOURS);
+  assert.deepEqual(calm.peak, {windKt: 8, swellFt: 3});
+  const edge = evaluatePortAlert(LIMITS, forecast(full(i => (i === 4 ? {windKnots: 15} : {}))), NOW);
+  assert.equal(edge.state, 'alert');
+  assert.deepEqual(edge.exceedances.map(e => [e.kind, e.value]), [['wind', 15]]);
+  assert.equal(evaluatePortAlert(LIMITS, forecast(full().slice(0, 12)), NOW).state, 'partial');
+  assert.equal(evaluatePortAlert(LIMITS, forecast([]), NOW).state, 'no-data');
+  assert.equal(evaluatePortAlert(LIMITS, forecast(full(), {fetchedAt: 'nonsense'}), NOW).state, 'stale');
+  assert.equal(evaluatePortAlert(LIMITS, forecast(full(), {issuedAt: '2026-11-06T04:00:00Z'}), NOW).state, 'stale');
+  const end = evaluatePortAlert(LIMITS, forecast([hourAt(WINDOW_HOURS, {windKnots: 40})]), NOW);
+  assert.equal(end.state, 'no-data', 'the window end is exclusive');
+});
+
+test('refusing a nonfinite clock does not mutate the limits, forecast or hours', () => {
+  const freeze = o => Object.freeze(o);
+  const limits = freeze({...LIMITS});
+  const hours = full(i => (i === 2 ? {windKnots: 40} : {})).map(freeze);
+  const f = freeze({...forecast(Object.freeze(hours))});
+  const before = JSON.stringify([limits, f]);
+  for (const [name, bad] of BAD_CLOCKS) {
+    const r = evaluatePortAlert(limits, f, bad);
+    assert.equal(r.state, 'stale', name);
+    assert.equal(JSON.stringify([limits, f]), before, name);
+  }
+});
+
+// RF1900-8: each variable's exceedance is its earliest qualifying instant, whatever the order the rows arrive in.
+const permute = (rows, order) => order.map(i => rows[i]);
+const ORDERS = [[0, 1, 2, 3, 4, 5], [5, 4, 3, 2, 1, 0], [3, 0, 5, 1, 4, 2], [2, 5, 0, 4, 1, 3]];
+const earliestRows = () => [hourAt(0), hourAt(1, {windKnots: 15, swellFt: 6}), hourAt(2), hourAt(3, {windKnots: 30, swellFt: 10}), hourAt(4, {windKnots: 22}), hourAt(5)];
+
+test('earliest_hits_survive_reversal_and_shuffle: first qualifying value, not the later peak', () => {
+  const rows = earliestRows();
+  const base = evaluatePortAlert(LIMITS, forecast(rows), NOW);
+  assert.deepEqual(base.exceedances.map(e => [e.kind, e.at, e.value]), [['wind', rows[1].at, 15], ['swell', rows[1].at, 6]], 'wind before swell on the same row');
+  assert.deepEqual(base.peak, {windKt: 30, swellFt: 10});
+  for (const order of ORDERS) assert.ok(isDeepStrictEqual(evaluatePortAlert(LIMITS, forecast(permute(rows, order)), NOW), base), `order ${order}`);
+});
+
+test('independent_variable_onsets_keep_chronological_order', () => {
+  const rows = [hourAt(0), hourAt(1, {swellFt: 6}), hourAt(2, {windKnots: 16}), hourAt(3, {windKnots: 30, swellFt: 10}), hourAt(4), hourAt(5)];
+  const base = evaluatePortAlert(LIMITS, forecast(rows), NOW);
+  assert.deepEqual(base.exceedances.map(e => [e.kind, e.at, e.value]), [['swell', rows[1].at, 6], ['wind', rows[2].at, 16]]);
+  assert.match(base.notification.title, /^Swell and Wind/);
+  for (const order of ORDERS) assert.ok(isDeepStrictEqual(evaluatePortAlert(LIMITS, forecast(permute(rows, order)), NOW), base), `order ${order}`);
+});
+
+test('chronology_uses_epoch_not_timestamp_text: offset times keep their original bytes; equal instants keep source order', () => {
+  const early = hourAt(0, {at: '2026-11-07T23:00:00+05:00', windKnots: 15}); // 18:00Z, lexically later than 19:00Z
+  const later = hourAt(1, {at: '2026-11-07T19:00:00Z', windKnots: 20});
+  assert.ok(early.at > later.at, 'text order disagrees with time order');
+  const r = evaluatePortAlert(LIMITS, forecast([later, early]), NOW);
+  assert.deepEqual(r.exceedances, [{kind: 'wind', at: '2026-11-07T23:00:00+05:00', value: 15}]);
+  const twin = hourAt(0, {at: '2026-11-07T20:00:00+02:00', windKnots: 18}); // same instant as early
+  assert.equal(evaluatePortAlert(LIMITS, forecast([twin, early, later]), NOW).exceedances[0].at, twin.at);
+  assert.equal(evaluatePortAlert(LIMITS, forecast([early, twin, later]), NOW).exceedances[0].at, early.at);
+});
+
+test('invalid_and_outside_rows_cannot_displace_first_hit', () => {
+  const rows = [hourAt(5, {windKnots: 25}), hourAt(-1, {windKnots: 40, swellFt: 9}), hourAt(WINDOW_HOURS, {windKnots: 40, swellFt: 9}), hourAt(0, {at: 'nonsense', windKnots: 40}),
+    hourAt(2, {windKnots: null, swellFt: -4}), hourAt(3, {windKnots: -9, swellFt: null}), hourAt(4, {windKnots: 15}), hourAt(0, {at: hourAt(0).at})];
+  const r = evaluatePortAlert(LIMITS, forecast(rows), NOW);
+  assert.deepEqual(r.exceedances.map(e => [e.kind, e.at, e.value]), [['wind', hourAt(4).at, 15]]);
+  assert.deepEqual(r.peak, {windKt: 25, swellFt: 3});
+  const start = evaluatePortAlert(LIMITS, forecast([hourAt(1, {windKnots: 30}), hourAt(0, {at: '2026-11-07T18:00:00Z', windKnots: 15})]), NOW);
+  assert.deepEqual(start.exceedances.map(e => e.value), [15], 'the start of the window is inclusive');
+});
+
+test('frozen_input_and_sorted_output_compatibility: input is never reordered or mutated', () => {
+  const rows = earliestRows().reverse().map(h => Object.freeze(h));
+  const hours = Object.freeze([...rows]);
+  const f = Object.freeze(forecast(hours));
+  const before = JSON.stringify(f);
+  const r = evaluatePortAlert(LIMITS, f, NOW);
+  assert.equal(JSON.stringify(f), before);
+  assert.equal(r.exceedances[0].at, hourAt(1).at);
+  assert.equal(r.hoursChecked, 6);
+  assert.ok(isDeepStrictEqual(r, evaluatePortAlert(LIMITS, forecast(earliestRows()), NOW)), 'same result as ascending input');
+  assert.equal(r.notification.body, 'Forecast wind 15 kt (your limit 15 kt); swell 6 ft (your limit 6 ft) within 48 h. Model forecast for planning, not for navigation.');
 });

@@ -126,6 +126,33 @@ export const COAST_VARS = ['COAST_FEEDS'];
 /** The coast snapshots' plain vars from an environment: COAST_VARS only, non-empty only. */
 export function coastVars(environ = {}) { return pickVars(COAST_VARS, environ); }
 
+// Public deploy receipt: enumerate names, never prefixes. Advisor phone/contact
+// settings and future *_ENABLED names are deliberately not public by default.
+export const DEPLOY_PUBLIC_VARS = Object.freeze([
+  'COAST_FEEDS', 'ENABLE_QUEUES', 'ENABLE_ANALYTICS', 'ENABLE_ADVISOR',
+  'TEXT_ADVISOR_ENABLED', 'ADVISOR_REPLIES_ENABLED', 'ADVISOR_SOCIAL_ENABLED', 'ADVISOR_INBOX_ENABLED',
+  'FLEET_ENABLED', 'FLEET_MAP_ENABLED', 'CUSTOM_DOMAINS', 'WORKERS_INVOCATION_LOGS',
+]);
+
+export function deploySnapshot(commit, environ = {}) {
+  if (!/^[0-9a-f]{40}$/.test(commit ?? '')) throw Error('deploy snapshot requires a full commit SHA');
+  return {commit, variables: Object.fromEntries(DEPLOY_PUBLIC_VARS.map(name =>
+    [name, typeof environ[name] === 'string' ? environ[name].trim() : '']))};
+}
+
+export function deploySummary(snapshot) {
+  // Re-apply the allow-list even when reading a receipt from disk.
+  const {commit, variables} = deploySnapshot(snapshot.commit, snapshot.variables);
+  const escape = value => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\|/g, '&#124;').replace(/\r/g, '&#13;').replace(/\n/g, '&#10;');
+  return ['### Deployed production switches', '',
+    'Configured values from `/deploy.json`; `(unset)` means no override, not necessarily disabled.', '',
+    '| Variable | Value |', '| --- | --- |', `| Deployed commit | <code>${commit}</code> |`,
+    ...Object.entries(variables).map(([name, value]) => `| ${name} | ${value ? `<code>${escape(value)}</code>` : '(unset)'} |`),
+    '',
+  ].join('\n');
+}
+
 /** {queues, analytics, advisor} from environment variables; "true" (any case) turns a feature on. */
 export function features(environ = {}) {
   const on = name => String(environ[name] ?? '').trim().toLowerCase() === 'true';
@@ -162,10 +189,17 @@ export function deployConfig(text, databaseId, bucket, domains = '', {queues = f
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const [databaseId, bucket, out = 'wrangler.deploy.jsonc'] = process.argv.slice(2);
-  const enabled = features(process.env);
-  const config = deployConfig(readFileSync('wrangler.jsonc', 'utf8'), databaseId || '', bucket || '', process.argv[5] || '', {...enabled, environ: process.env});
-  writeFileSync(out, JSON.stringify(config, null, 2) + '\n');
-  const on = Object.keys(enabled).filter(k => enabled[k]);
-  console.log(`Wrote ${out}${on.length ? ` (with ${on.join(', ')})` : ''}`);
+  if (process.argv[2] === '--snapshot') {
+    // Written after pnpm build, which clears dist/client, and before Wrangler uploads assets.
+    writeFileSync(process.argv[4], JSON.stringify(deploySnapshot(process.argv[3], process.env), null, 2) + '\n');
+  } else if (process.argv[2] === '--summary') {
+    writeFileSync(process.env.GITHUB_STEP_SUMMARY, deploySummary(JSON.parse(readFileSync(process.argv[3], 'utf8'))), {flag: 'a'});
+  } else {
+    const [databaseId, bucket, out = 'wrangler.deploy.jsonc'] = process.argv.slice(2);
+    const enabled = features(process.env);
+    const config = deployConfig(readFileSync('wrangler.jsonc', 'utf8'), databaseId || '', bucket || '', process.argv[5] || '', {...enabled, environ: process.env});
+    writeFileSync(out, JSON.stringify(config, null, 2) + '\n');
+    const on = Object.keys(enabled).filter(k => enabled[k]);
+    console.log(`Wrote ${out}${on.length ? ` (with ${on.join(', ')})` : ''}`);
+  }
 }

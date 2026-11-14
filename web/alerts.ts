@@ -8,6 +8,7 @@
 
 import {DEFAULT_ZONE} from './zone.ts';
 import {t, type Language, type StringId} from './i18n.ts';
+import {readableDate} from './dates.ts';
 
 /** A message this module wrote itself, carried with its catalogue id so the sheet can show it in the language chosen when it is drawn. `.message` stays the English text. */
 export class AlertCopyError extends Error {
@@ -243,9 +244,9 @@ export const alertNames = (region: RegionAlerts): AlertNames => ({
   species: new Map(alertSpecies(region, null).options.map(o => [o.id, o.name])),
 });
 
-/** The saved trip's line: "2026-11-02 · Point Sur · Rockfish · 7:00–13:00" with names (raw ids without them or when unknown), with the saved boat when it has one. */
-export const tripLine = (trip: SavedTrip, names?: AlertNames, lang: Language = 'en'): string =>
-  `${trip.date} · ${names?.point.get(trip.point) ?? trip.point} · ${names?.species.get(trip.species) ?? trip.species} · ${trip.start_hour}:00–${trip.end_hour}:00${trip.boat_sea ? ` · ${trip.boat_name || t('alerts.savedBoat', lang)}` : ''}`;
+/** The saved trip's line: "Mon 2 Nov · Point Sur · Rockfish · 7:00–13:00" with names (raw ids without them or when unknown), with the saved boat when it has one. The date reads in `timeZone`; the stored date stays ISO. */
+export const tripLine = (trip: SavedTrip, names?: AlertNames, lang: Language = 'en', timeZone: string = DEFAULT_ZONE): string =>
+  `${readableDate(trip.date, lang, timeZone)} · ${names?.point.get(trip.point) ?? trip.point} · ${names?.species.get(trip.species) ?? trip.species} · ${trip.start_hour}:00–${trip.end_hour}:00${trip.boat_sea ? ` · ${trip.boat_name || t('alerts.savedBoat', lang)}` : ''}`;
 
 /** What a saved trip's stored plan shows: target names, stop names in saved order and summed leg totals. Never positions, notes or ids. */
 export type TripPlanSummary =
@@ -345,7 +346,7 @@ export type StopResult = 'stopped' | 'none' | 'partial';
 type PushNavigator = {serviceWorker?: {getRegistration(scope?: string): Promise<{pushManager: {getSubscription(): Promise<{endpoint: string; unsubscribe(): Promise<boolean>} | null>}} | undefined>}};
 
 /** This browser's existing push subscription, found without registering a worker, asking permission or subscribing. */
-const localSubscription = async (nav: PushNavigator) => (await nav.serviceWorker?.getRegistration('/sw.js'))?.pushManager.getSubscription() ?? null;
+export const localSubscription = async (nav: PushNavigator) => (await nav.serviceWorker?.getRegistration('/sw.js'))?.pushManager.getSubscription() ?? null;
 const unsubscribed = async (subscription: {unsubscribe(): Promise<boolean>}): Promise<StopResult> => {
   try { return (await subscription.unsubscribe()) ? 'stopped' : 'partial'; } catch { return 'partial'; }
 };
@@ -385,4 +386,46 @@ export async function stopNotificationsId(scope: 'device' | 'all', fetchFn: type
 /** The same action with the status line in English. */
 export async function stopNotifications(scope: 'device' | 'all', fetchFn: typeof fetch = fetch, nav: PushNavigator = navigator): Promise<string> {
   return t(await stopNotificationsId(scope, fetchFn, nav), 'en');
+}
+
+/** Whether this account will notify this device: server-confirmed, set up here but not sending, unchecked, blocked, off, or unavailable. */
+export type DeviceStatus = 'confirmed' | 'not-sending' | 'unchecked' | 'blocked' | 'off' | 'unavailable';
+type NotificationLike = {permission?: string} | undefined;
+
+/** Read on opening and after each button. Reads the permission and the local subscription and asks the server only when a subscription exists;
+ *  it never asks permission, registers a worker or subscribes. A failed check is `unchecked`, never `confirmed`. */
+export async function deviceStatus(fetchFn: typeof fetch = fetch, nav: PushNavigator = navigator, notif: NotificationLike = globalThis.Notification): Promise<DeviceStatus> {
+  if (!('serviceWorker' in nav) || !('PushManager' in globalThis) || !notif) return 'unavailable';
+  if (notif.permission === 'denied') return 'blocked';
+  let subscription;
+  try { subscription = await localSubscription(nav); } catch { return 'off'; }
+  if (!subscription) return 'off';
+  try {
+    const r = await api<{registered?: unknown}>('subscription/status', {method: 'POST', body: JSON.stringify({endpoint: subscription.endpoint})}, fetchFn);
+    return r.registered === true ? 'confirmed' : r.registered === false ? 'not-sending' : 'unchecked';
+  } catch { return 'unchecked'; }
+}
+
+/** The catalogue id of the sheet's line for each state. */
+export const DEVICE_LINE_ID: Readonly<Record<DeviceStatus, StringId>> = {
+  confirmed: 'alerts.device.confirmed',
+  'not-sending': 'alerts.device.notSending',
+  unchecked: 'alerts.device.unchecked',
+  blocked: 'alerts.device.blocked',
+  off: 'alerts.device.off',
+  unavailable: 'alerts.err.push',
+};
+/** The sheet's line for each state, in `lang` (English by default). */
+export const deviceLine = (s: DeviceStatus, lang: Language = 'en'): string => t(DEVICE_LINE_ID[s], lang);
+/** The same lines in English. */
+export const DEVICE_LINE: Readonly<Record<DeviceStatus, string>> = Object.fromEntries(
+  (Object.keys(DEVICE_LINE_ID) as DeviceStatus[]).map(s => [s, deviceLine(s)])) as Record<DeviceStatus, string>;
+/** Which buttons the state shows: Enable is hidden only when the server confirmed; Stop on this device shows whenever a local subscription exists. Stop on all devices always shows. */
+export const deviceButtons = (s: DeviceStatus | null): {enable: boolean; stopDevice: boolean} =>
+  ({enable: s !== 'confirmed', stopDevice: s === 'confirmed' || s === 'not-sending' || s === 'unchecked'});
+
+/** Latest check wins: a check that was started before a newer one never delivers its answer, so a slow opening check cannot overwrite the refresh after a button. */
+export function latestCheck<T>(check: () => Promise<T>, apply: (value: T) => void, failed: () => T): () => void {
+  let latest = 0;
+  return () => { const mine = ++latest; void check().then(v => v, failed).then(v => { if (mine === latest) apply(v); }); };
 }

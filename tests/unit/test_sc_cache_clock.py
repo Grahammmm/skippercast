@@ -1,33 +1,28 @@
 """SC-CACHE-CLOCK: cached metadata evidence times are explicit and host-timezone independent.
 
-Synthetic metadata only. Test names carry their acceptance row (a1/a2/a3) so the
-named runner (scripts/accept_sc_cache_clock.py) can select each suite; the same
-tests also run under ordinary pytest discovery. ``naive_regression`` tests decide
+Synthetic metadata only. Test names carry their acceptance row (a1/a2/a3) and run
+under ordinary pytest discovery. ``naive_regression`` tests decide
 the awareness gate, ``aware_positive`` tests are its positive control and
 ``completeness_gate`` tests decide the separate complete date-time gate.
 """
 from datetime import datetime, timedelta, timezone
 import hashlib
-import importlib.util
 import io
 import json
 import math
-import os
-from pathlib import Path
 import sys
 from unittest.mock import patch
 
 import pytest
 
 from skippercast.coastal import cached_inventory as ci
-from tests._support import FIXTURES, ROOT
+from tests._support import FIXTURES
 
 VECTORS = json.loads((FIXTURES / "sc_cache_clock" / "vectors.json").read_text(encoding="utf-8"))
 GROUPS = VECTORS["equivalent_instants"]
 INVALID = [(kind, text) for kind in ("naive", "date_only", "incomplete", "out_of_range",
                                      "invalid_offset", "malformed") for text in VECTORS[kind]]
 AWARE_STRINGS = [text for group in GROUPS for text in group["strings"]]
-RUNNER_PATH = ROOT / "scripts" / "accept_sc_cache_clock.py"
 
 
 def base_parse(text):
@@ -495,190 +490,3 @@ def test_a3_newly_refused_aware_forms_are_only_incomplete_or_bad_offset_fields()
         newly_refused.append(text)
     assert sorted(newly_refused) == sorted(VECTORS["base_accepted_now_refused"]["strings"])
     assert set(newly_refused) <= set(VECTORS["incomplete"]) | set(VECTORS["invalid_offset"])
-
-
-# A3 runner input contract (synthetic trees only) ---------------------------
-
-@pytest.fixture()
-def runner():
-    """Load the acceptance runner as a plain module; main() only ever runs to a preflight refusal here."""
-    flag = sys.dont_write_bytecode
-    spec = importlib.util.spec_from_file_location("sc_cache_clock_runner_under_test", RUNNER_PATH)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    try:
-        spec.loader.exec_module(module)
-    finally:
-        sys.dont_write_bytecode = flag
-    return module
-
-
-INPUT_FILES = {"a.txt": b"alpha\n", "sub/b.json": b"{\"b\": 1}\n"}
-PINS_NAME = "pins/input-pins.json"
-
-
-def synthetic_repo(tmp_path, runner, files=INPUT_FILES):
-    repo = tmp_path / "repo"
-    for name, data in files.items():
-        (repo / name).parent.mkdir(parents=True, exist_ok=True)
-        (repo / name).write_bytes(data)
-    pins = dict(schema=runner.PINS_SCHEMA, inputs={
-        name: dict(sha256=hashlib.sha256(data).hexdigest(), bytes=len(data)) for name, data in files.items()})
-    (repo / PINS_NAME).parent.mkdir(parents=True, exist_ok=True)
-    (repo / PINS_NAME).write_bytes(json.dumps(pins, sort_keys=True).encode())
-    return repo
-
-
-def tree_state(root):
-    """Names, link/type flags and regular-file bytes; never follows a symlink."""
-    state = []
-    for folder, dirs, names in os.walk(root, followlinks=False):
-        for name in sorted(dirs + names):
-            path = Path(folder) / name
-            info = path.lstat()
-            regular = path.is_file() and not path.is_symlink()
-            state.append((str(path.relative_to(root)), info.st_mode >> 12, path.read_bytes() if regular else None))
-    return sorted(state)
-
-
-def test_a3_runner_input_matching_regular_tree_accepted(tmp_path, runner):
-    repo = synthetic_repo(tmp_path, runner)
-    before = tree_state(tmp_path)
-    checked = runner.preflight(repo, tuple(INPUT_FILES), PINS_NAME)
-    assert checked["data"] == INPUT_FILES
-    assert checked["sha256"] == {n: hashlib.sha256(d).hexdigest() for n, d in INPUT_FILES.items()}
-    assert checked["pins_sha256"] == hashlib.sha256((repo / PINS_NAME).read_bytes()).hexdigest()
-    assert tree_state(tmp_path) == before
-
-
-def assert_refused(tmp_path, runner, repo, match, inputs=tuple(INPUT_FILES)):
-    before = tree_state(tmp_path)
-    with pytest.raises(ValueError, match=match):
-        runner.preflight(repo, inputs, PINS_NAME)
-    assert tree_state(tmp_path) == before  # inputs and prior outputs untouched, nothing created
-
-
-def test_a3_runner_input_hash_mismatch_refused(tmp_path, runner):
-    repo = synthetic_repo(tmp_path, runner)
-    (repo / "a.txt").write_bytes(b"alphA\n")  # same size, different bytes
-    assert_refused(tmp_path, runner, repo, "does not match its frozen pin")
-
-
-def test_a3_runner_input_size_mismatch_refused(tmp_path, runner):
-    repo = synthetic_repo(tmp_path, runner)
-    (repo / "sub/b.json").write_bytes(b"{\"b\": 12}\n")
-    assert_refused(tmp_path, runner, repo, "does not match its frozen pin")
-
-
-def test_a3_runner_input_unpinned_or_extra_pin_refused(tmp_path, runner):
-    repo = synthetic_repo(tmp_path, runner)
-    assert_refused(tmp_path, runner, repo, "pins must cover exactly", inputs=("a.txt",))
-    assert_refused(tmp_path, runner, repo, "pins must cover exactly", inputs=("a.txt", "sub/b.json", "c.txt"))
-
-
-def test_a3_runner_input_symlink_root_refused(tmp_path, runner):
-    repo = synthetic_repo(tmp_path, runner)
-    alias = tmp_path / "alias"
-    alias.symlink_to(repo, target_is_directory=True)
-    assert_refused(tmp_path, runner, alias, "symlink or non-directory ancestry")
-
-
-def test_a3_runner_input_symlink_root_ancestor_refused(tmp_path, runner):
-    synthetic_repo(tmp_path, runner)
-    alias = tmp_path / "alias"
-    alias.symlink_to(tmp_path, target_is_directory=True)
-    assert_refused(tmp_path, runner, alias / "repo", "symlink or non-directory ancestry")
-
-
-def test_a3_runner_input_symlink_intermediate_refused(tmp_path, runner):
-    repo = synthetic_repo(tmp_path, runner)
-    (repo / "sub").rename(tmp_path / "real-sub")
-    (repo / "sub").symlink_to(tmp_path / "real-sub", target_is_directory=True)
-    assert_refused(tmp_path, runner, repo, "symlink or non-directory ancestry")
-
-
-def test_a3_runner_input_symlink_leaf_refused(tmp_path, runner):
-    repo = synthetic_repo(tmp_path, runner)
-    (repo / "a.txt").rename(tmp_path / "real-a.txt")
-    (repo / "a.txt").symlink_to(tmp_path / "real-a.txt")
-    assert_refused(tmp_path, runner, repo, "symlink or special input refused")
-
-
-def test_a3_runner_input_symlink_pins_refused(tmp_path, runner):
-    repo = synthetic_repo(tmp_path, runner)
-    (repo / PINS_NAME).rename(tmp_path / "real-pins.json")
-    (repo / PINS_NAME).symlink_to(tmp_path / "real-pins.json")
-    assert_refused(tmp_path, runner, repo, "symlink or special input refused")
-
-
-def test_a3_runner_input_special_file_refused(tmp_path, runner):
-    repo = synthetic_repo(tmp_path, runner)
-    (repo / "a.txt").rename(tmp_path / "real-a.txt")
-    os.mkfifo(repo / "a.txt")
-    assert_refused(tmp_path, runner, repo, "regular input file required")
-
-
-def test_a3_runner_input_directory_as_leaf_refused(tmp_path, runner):
-    repo = synthetic_repo(tmp_path, runner)
-    (repo / "a.txt").rename(tmp_path / "real-a.txt")
-    (repo / "a.txt").mkdir()
-    assert_refused(tmp_path, runner, repo, "regular input file required")
-
-
-def test_a3_runner_input_oversize_refused_before_read(tmp_path, runner):
-    big = b"x" * (runner.FILE_CAP + 1)
-    repo = synthetic_repo(tmp_path, runner, files={"a.txt": big, "sub/b.json": b"{}\n"})
-    original = runner.read_chunk
-
-    def refuse_oversize(fd, size):
-        assert os.fstat(fd).st_size <= runner.FILE_CAP, "no read of an oversize input"
-        return original(fd, size)
-    with patch.object(runner, "read_chunk", side_effect=refuse_oversize):
-        assert_refused(tmp_path, runner, repo, "per-file input cap")
-
-
-def test_a3_runner_input_aggregate_cap_refused(tmp_path, runner):
-    repo = synthetic_repo(tmp_path, runner)
-    room = (repo / PINS_NAME).stat().st_size + len(INPUT_FILES["a.txt"]) + 3  # b.json does not fit
-    with patch.object(runner, "TOTAL_CAP", room):
-        assert_refused(tmp_path, runner, repo, "aggregate input cap exceeded: sub/b.json")
-
-
-def test_a3_runner_input_growth_during_read_refused(tmp_path, runner):
-    repo = synthetic_repo(tmp_path, runner)
-    original = runner.read_chunk
-    target = (repo / "a.txt").stat().st_ino
-    grown = []
-
-    def grow_then_read(fd, size):
-        if not grown and os.fstat(fd).st_ino == target:
-            with open(repo / "a.txt", "ab") as stream:
-                stream.write(b"more")
-            grown.append(True)
-        return original(fd, size)
-    with patch.object(runner, "read_chunk", side_effect=grow_then_read):
-        with pytest.raises(ValueError, match="changed during bounded read"):
-            runner.preflight(repo, tuple(INPUT_FILES), PINS_NAME)
-    assert grown
-
-
-def test_a3_runner_input_preflight_failure_writes_no_output(tmp_path, runner):
-    repo = synthetic_repo(tmp_path, runner)
-    (repo / "a.txt").write_bytes(b"alphA\n")
-    out_root = tmp_path / "out"
-    out_root.mkdir()
-    (out_root / "prior-run").mkdir()
-    (out_root / "prior-run" / "receipt.json").write_bytes(b"{}\n")
-    before = tree_state(tmp_path)
-    argv = ["accept_sc_cache_clock.py", "--suite", "focused", "--output", str(out_root / "new-run")]
-    stdout = io.StringIO()
-    with patch.object(runner, "REPO", repo), patch.object(runner, "OUT_ROOT", out_root), \
-            patch.object(runner, "INPUTS", tuple(INPUT_FILES)), patch.object(runner, "PINS", PINS_NAME), \
-            patch.object(runner, "install_guards", side_effect=AssertionError("no guard install")), \
-            patch.object(sys, "argv", argv), patch.object(sys, "stdout", stdout):
-        with pytest.raises(SystemExit) as stopped:
-            runner.main()
-    assert stopped.value.code == 3
-    assert json.loads(stdout.getvalue())["status"] == "REFUSED"
-    assert tree_state(tmp_path) == before
-    assert not (out_root / "new-run").exists()

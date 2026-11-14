@@ -11,8 +11,6 @@ from unittest.mock import patch
 from tests._support import ROOT
 
 FIXTURES = ROOT / 'tests/fixtures/sc115-normalized-packing'
-RUN_ROOT = None
-EVENTS = []
 
 
 def load_file(name, path):
@@ -35,13 +33,8 @@ class PackingTests(unittest.TestCase):
         self.np, self.rio, self.api = np, rasterio, normalized
         self.assertEqual(Path(normalized.__file__).resolve(),
                          ROOT / 'src/skippercast/seafloor/normalized.py')
-        if RUN_ROOT is None:
-            self.root = Path(self.scope.enter_context(
-                tempfile.TemporaryDirectory(prefix='case-')))
-        else:
-            parent = Path(RUN_ROOT)
-            parent.mkdir(parents=True, exist_ok=True)
-            self.root = Path(tempfile.mkdtemp(prefix='case-', dir=parent))
+        self.root = Path(self.scope.enter_context(
+            tempfile.TemporaryDirectory(prefix='case-')))
         self.sentinel = self.root / 'sentinel.txt'
         self.sentinel.write_text('SC115 retained synthetic sentinel\n')
         self.before_sentinel = self.fixtures.hashes(self.root)
@@ -50,8 +43,6 @@ class PackingTests(unittest.TestCase):
     def record_preservation(self):
         after = self.fixtures.hashes(self.root)
         self.assertEqual(after['sentinel.txt'], self.before_sentinel['sentinel.txt'])
-        EVENTS.append({'id': self.id(), 'root': str(self.root),
-                       'sentinel_before': self.before_sentinel, 'fixture_after': after})
 
     def make(self, name, **kwargs):
         return self.fixtures.make_raster(self.root / (name + '.tif'), **kwargs)
@@ -60,8 +51,6 @@ class PackingTests(unittest.TestCase):
         before = self.fixtures.hashes(self.root)
         result = self.api.raster_identity(path)
         self.assertEqual(before, self.fixtures.hashes(self.root))
-        EVENTS.append({'id': self.id(), 'raster': path.name, 'identity': result,
-                       'fixture_before': before, 'fixture_after': self.fixtures.hashes(self.root)})
         return result
 
     def refusal(self, path):
@@ -70,8 +59,6 @@ class PackingTests(unittest.TestCase):
             self.api.raster_identity(path)
         after = self.fixtures.hashes(self.root)
         self.assertEqual(before, after)
-        EVENTS.append({'id': self.id(), 'rejected_raster': path.name,
-                       'fixture_before': before, 'fixture_after': after})
 
     def test_regression_equal_samples_nonunit_scale_rejected(self):
         plain = self.make('plain')
@@ -105,9 +92,6 @@ class PackingTests(unittest.TestCase):
                             actual = getattr(ds, field)[band]
                         representable = (self.np.isnan(actual) if self.np.isnan(value)
                                          else actual == value)
-                        EVENTS.append({'native_metadata': field, 'band': band + 1,
-                                       'requested': str(value), 'observed': str(actual),
-                                       'representable': bool(representable)})
                         if representable:
                             self.refusal(path)
                         else:
@@ -136,8 +120,6 @@ class PackingTests(unittest.TestCase):
                 self.refusal(path)
             self.assertEqual(reads, [])
         self.assertEqual(before, self.fixtures.hashes(self.root))
-        EVENTS.append({'synthetic_header': True, 'scales': str(scales),
-                       'offsets': str(offsets), 'read_count': len(reads)})
 
     def test_regression_synthetic_headers_reject_before_read(self):
         for band in (0, 1):
@@ -175,28 +157,6 @@ class PackingTests(unittest.TestCase):
             values = ds.read(1); values[0, 0] = float('inf'); ds.write(values, 1)
         with self.assertRaisesRegex(ValueError, 'Infinite normalized raster value'):
             self.api.raster_identity(infinite)
-
-    def test_compatibility_complete_log_binding(self):
-        runner = load_file('sc115_runner_for_binding', ROOT / 'tools/run_sc115_normalized_packing.py')
-        log = self.root / 'inert-log.txt'
-        log.write_text('complete\n')
-        binding = runner.bind_logs([log])
-        runner.verify_logs(binding)
-        missing = self.root / 'never-created.txt'
-        with self.assertRaises(FileNotFoundError):
-            runner.bind_logs([missing])
-        log.write_text('changed\n')
-        with self.assertRaisesRegex(ValueError, 'log changed'):
-            runner.verify_logs(binding)
-        late = self.root / 'late.txt'
-        late.write_text('completed writer\n')
-        late_binding = runner.bind_logs([late])
-        with late.open('a') as stream:
-            stream.write('late append\n')
-        with self.assertRaisesRegex(ValueError, 'log changed'):
-            runner.verify_logs(late_binding)
-        with self.assertRaises(FileNotFoundError):
-            runner.verify_logs({str(missing): {'sha256': '0' * 64, 'bytes': 0}})
 
 
 if __name__ == '__main__':

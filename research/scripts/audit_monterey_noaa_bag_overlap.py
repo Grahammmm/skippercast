@@ -90,7 +90,7 @@ def main():
     p.add_argument("--survey-id", required=True)
     p.add_argument("--source-url", required=True)
     p.add_argument("--sha256", required=True)
-    p.add_argument("--context", type=Path, default=Path("dist/data/usgs-offshore-monterey-hard-context.geojson"))
+    p.add_argument("--context", type=Path, default=Path("research/receipts/usgs-offshore-monterey-hard-context.geojson"))
     p.add_argument("--pixel", type=Path, default=Path("research/receipts/monterey-original-300-pixel-review.json"))
     p.add_argument("--output", type=Path, required=True)
     args = p.parse_args()

@@ -10,19 +10,14 @@ the publication-prohibition admission only; they are not measured terrain,
 alignment, imagery rights, science or end-to-end production evidence, and these
 tests open no raster, source, BAG, model, renderer or viewer.
 
-Suites (scripts/accept_bm1_render_private.py):
+Suites:
   focused       PositiveA1, NegativeA2, BoundaryA3
   compatibility Compatibility
   negative      GateControl  (A4: test-only module copy without the gate)
-  isolation     Isolation    (A6: fresh file-launched process and the runner)
 
-This module follows the repository layout contract: it takes ROOT from
-tests._support and never edits sys.path. Ordinary discovery (pytest, or
+This module never edits sys.path. Ordinary discovery (pytest, or
 ``python -m unittest`` with the package importable) runs it like any other unit
-module. The acceptance runner owns the file-launched process: it installs the
-offline sentinels, redirected filesystem globals and the repository-relative
-import path BEFORE importing this module, and records the isolation report the
-Isolation tests read back from a fresh runner process.
+module.
 """
 import collections
 import contextlib
@@ -33,22 +28,13 @@ import importlib.util
 import inspect
 import io
 import json
-import os
 from pathlib import Path
-import subprocess
 import sys
 import tempfile
 import unittest
 from unittest import mock
 
-from tests._support import ROOT
-
 from skippercast.coastal.handoff import common, render
-
-REPO = ROOT
-RUNNER = ROOT / 'scripts' / 'accept_bm1_render_private.py'
-RENDER_FILE = ROOT / 'src' / 'skippercast' / 'coastal' / 'handoff' / 'render.py'
-OFFLINE_MESSAGE = 'BM1 offline sentinel: network access refused'
 
 PROHIBITION_ERROR = 'render publication prohibition required'
 PURPOSE_ERROR = 'explicit known render purpose required'
@@ -501,120 +487,6 @@ class GateControl(unittest.TestCase):
         self.assertEqual(result.testsRun, len(DECIDING) + len(POSITIVE_CONTROLS))
         self.assertEqual((failed, errored, len(result.skipped)), (set(), set(), 0))
         self.assertTrue(result.wasSuccessful())
-
-
-class Isolation(unittest.TestCase):
-    """A6: the authored runner's fresh file-launched process, its import closure
-    and its argument/output-root boundary. The runner is launched twice for the
-    compatibility suite; every run records the isolation report it measured
-    in-process before and after importing this module and the candidate."""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.base = Path(tempfile.mkdtemp(prefix='bm1-isolation-class-'))
-        cls.out = cls.base / 'runner-out'
-        cls.receipts = [cls._launch(cls.base, '--suite', 'compatibility', '--output-root', str(cls.out))
-                        for _ in range(2)]
-        cls.children = sorted(p for p in cls.out.iterdir() if p.is_dir()) if cls.out.is_dir() else []
-
-    @staticmethod
-    def _launch(cwd, *args):
-        env = {k: v for k, v in os.environ.items() if not k.startswith('PYTHON')}
-        env.update(TMPDIR=str(cwd))
-        return subprocess.run([sys.executable, str(RUNNER), *args], cwd=cwd, env=env,
-                              capture_output=True, text=True, timeout=600)
-
-    def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix='bm1-isolation-'))
-
-    def _runner(self, *args):
-        return self._launch(self.tmp, *args)
-
-    def _report(self):
-        for done in self.receipts:
-            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        self.assertEqual(len(self.children), 2)
-        return self.children[0], json.loads((self.children[0] / 'isolation-report.json').read_text())
-
-    def test_fresh_process_offline_before_project_import(self):
-        child, report = self._report()
-        self.assertEqual(report['pre_import_project_modules'], [])
-        self.assertIs(report['pre_import_test_module_loaded'], False)
-        self.assertEqual(report['sentinel'], dict.fromkeys(('create_connection', 'socket_connect', 'getaddrinfo'),
-                                                           OFFLINE_MESSAGE))
-        self.assertIs(report['dont_write_bytecode'], True)
-        self.assertEqual(report['isolated_flag'], 1)
-        self.assertEqual(report['pycache_after'], report['pycache_before'])
-        run_tmp = (child / 'tmp').resolve()
-        self.assertEqual(Path(report['tempdir']).resolve(), run_tmp)
-        self.assertEqual(Path(report['home']).resolve(), run_tmp)
-        self.assertEqual(report['sys_path_head'], [str(REPO / 'src'), str(REPO)])
-
-    def test_fresh_process_imports_only_the_candidate_closure(self):
-        _, report = self._report()
-        self.assertEqual(Path(report['render_file']).resolve(), RENDER_FILE.resolve())
-        self.assertIn('skippercast.coastal.handoff.render', report['closure'])
-        self.assertIn('skippercast.coastal.mapping', report['closure'])
-        for name, file in report['closure'].items():
-            with self.subTest(module=name):
-                self.assertTrue(Path(file).resolve().is_relative_to((REPO / 'src').resolve()), file)
-        self.assertEqual(report['path_defaults'], [])
-
-    def test_runner_rejects_unknown_suite_and_extra_arguments(self):
-        target = self.tmp / 'refused-out'
-        for args in (('--suite', 'everything', '--output-root', str(target)),
-                     ('--suite', 'focused', '--output-root', str(target), '--extra'),
-                     ('--suite', 'focused'),
-                     ('--suite', 'focused', '--output-root', 'relative/out')):
-            with self.subTest(args=args):
-                done = self._runner(*args)
-                self.assertEqual(done.returncode, 2, done.stderr)
-                self.assertFalse(target.exists())
-                self.assertFalse((self.tmp / 'relative').exists())
-
-    def test_runner_rejects_repo_contained_root_before_writing(self):
-        target = REPO / 'out-bm1-refused-probe'
-        self.assertFalse(target.exists())
-        done = self._runner('--suite', 'focused', '--output-root', str(target / 'child'))
-        self.assertEqual(done.returncode, 2, done.stderr)
-        self.assertIn('repository', done.stderr)
-        self.assertFalse(target.exists())
-
-    def test_runner_rejects_linked_roots_before_writing(self):
-        real = self.tmp / 'link-target'
-        real.mkdir()
-        alias = self.tmp / 'link-alias'
-        alias.symlink_to(real, target_is_directory=True)
-        for candidate in (alias, alias / 'child'):
-            with self.subTest(root=str(candidate)):
-                done = self._runner('--suite', 'focused', '--output-root', str(candidate))
-                self.assertEqual(done.returncode, 2, done.stderr)
-                self.assertIn('symlink', done.stderr)
-                self.assertEqual(list(real.iterdir()), [])
-
-    def test_runner_writes_fresh_bound_evidence(self):
-        for done in self.receipts:
-            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        self.assertEqual(len(self.children), 2)
-        self.assertNotEqual(self.children[0].name, self.children[1].name)
-        for child in self.children:
-            result = json.loads((child / 'result.json').read_text())
-            invocation = json.loads((child / 'invocation.json').read_text())
-            self.assertEqual(result['verdict'], 'PASS_REVIEW_REQUIRED')
-            self.assertEqual(result['tests_ran'], result['tests_expected'])
-            self.assertGreater(result['tests_ran'], 0)
-            self.assertEqual(result['skipped'], 0)
-            for stream in ('stdout', 'stderr'):
-                raw = (child / f'suite.{stream}.txt').read_bytes()
-                self.assertEqual(hashlib.sha256(raw).hexdigest(), result[f'suite_{stream}_sha256'])
-            self.assertEqual(hashlib.sha256((child / 'isolation-report.json').read_bytes()).hexdigest(),
-                             result['isolation_report_sha256'])
-            self.assertEqual(hashlib.sha256((child / 'invocation.json').read_bytes()).hexdigest(),
-                             result['invocation_sha256'])
-            self.assertEqual(invocation['suite'], 'compatibility')
-            self.assertEqual(invocation['hashes']['src/skippercast/coastal/handoff/render.py'],
-                             hashlib.sha256(RENDER_FILE.read_bytes()).hexdigest())
-            self.assertRegex(invocation['git']['head'], '^[0-9a-f]{40}$')
 
 
 if __name__ == '__main__':

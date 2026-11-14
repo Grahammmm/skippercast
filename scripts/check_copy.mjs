@@ -37,7 +37,7 @@ export const ROOT = process.env.COPY_LINT_ROOT || fileURLToPath(new URL('..', im
 export const BASELINE = 'scripts/copy-lint-baseline.json';
 
 /** Pages skipped entirely (legal text, owned by the owner and counsel). */
-export const LEGAL_PAGES = new Set(['dist/terms.html', 'dist/privacy.html', 'dist/licenses.html']);
+export const LEGAL_PAGES = new Set(['dist/licenses.html']);
 /** Pages that are themselves the "how we know" disclosure: method names allowed. */
 export const DISCLOSURE_PAGES = new Set(['dist/sources.html', 'dist/species-research.html', 'dist/commercial-ais.html']);
 /** Modules whose strings are disclosures by definition. */
@@ -259,7 +259,7 @@ export function lintFile(path, source) {
 export const CATALOGUE = 'catalog/app/strings.json';
 export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/FirstAnswerLine.tsx', 'web/app/RulesCard.tsx', 'web/brief/verdict-copy.ts', 'web/brief/WhereToLook.tsx', 'web/brief/ranking-copy.ts', 'web/brief/Run.tsx', 'web/brief/EntranceCurrent.tsx', 'web/app/LanguageChoice.tsx', 'web/brief/Tiles.tsx', 'web/brief/tile-copy.ts', 'web/brief/TideStationControl.tsx', 'web/brief/TideSpark.tsx', 'web/brief/tide-copy.ts', 'web/brief/MarkForecast.tsx', 'web/brief/remaining-copy.ts', 'web/ui/Guard.tsx', 'web/ui/Popover.tsx', 'web/degraded-notice.tsx', 'web/degraded.ts', 'web/app/MapStage.tsx',
   'web/landing/main.tsx', 'web/landing/copy.ts', 'web/landing/Landing.tsx', 'web/landing/PortInput.tsx', 'web/landing/ProfileStep.tsx', 'web/landing/Readout.tsx', 'web/landing/readings.ts', 'web/landing/live-verdict.ts', 'web/app/FirstRun.tsx', 'web/app/LimitsPanel.tsx',
-  'web/app/Masthead.tsx', 'web/app/Mobile.tsx', 'web/app/CommandBar.tsx', 'web/app/AccountMenu.tsx',
+  'web/app/Masthead.tsx', 'web/app/Mobile.tsx', 'web/app/SkipLinks.tsx', 'web/app/CommandBar.tsx', 'web/app/AccountMenu.tsx',
   'web/app/TimeDock.tsx', 'web/ui/Dock.tsx', 'web/season.ts', 'web/app/SeasonStrip.tsx',
   'web/map/layers.ts', 'web/app/rail.ts', 'web/app/LayerRail.tsx', 'web/app/Legend.tsx',
   'web/app/Planner.tsx', 'web/app/Trip.tsx', 'web/app/PositionCheck.tsx', 'web/app/PositionView.tsx', 'web/position-check.ts', 'web/trip-ocean-lines.ts', 'web/planner-copy.ts',
@@ -269,7 +269,7 @@ export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/F
   'web/app/TripAlerts.tsx', 'web/alerts.ts', 'web/digest.ts', 'web/app/PortAlert.tsx',
   'web/app/views/Reports.tsx', 'web/reports.ts', 'web/reports-copy.ts', 'web/app/views/Fleet.tsx',
   'dist/account.js', 'web/account-copy.ts', 'web/app/PrivateMapLog.tsx',
-  'web/app/PlanRules.tsx', 'web/landing/LayerDots.tsx'];
+  'web/app/PlanRules.tsx', 'web/app/RuleReason.tsx', 'web/landing/LayerDots.tsx'];
 /** Prose-like literals in covered files that are data or code, not copy: a species group name (not translated) and a prefix the model writes. */
 // dist/account.js: the GPX file's title (file data) and a developer message for an incomplete catch-log answer, never shown.
 export const LITERAL_OK = new Set(['Lingcod & rockfish', 'Using your limits', 'SkipperCast saved spots', 'The catch log answer was incomplete', 'unknown account string']);

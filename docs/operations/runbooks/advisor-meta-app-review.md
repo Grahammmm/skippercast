@@ -14,7 +14,7 @@ Do the steps in order and tick them as you go. Meta's dashboard labels move ofte
 - [ ] The advisor is deployed with `TEXT_ADVISOR_ENABLED=true`. Every advisor path, the webhook included, answers `404` while it is off, and Meta cannot verify a `404`.
 - [ ] Health → **Instagram inbox** shows "Webhook verify token and app secret: Set".
 - [ ] `ADVISOR_INBOX_ENABLED` is unset or `false` for now.
-- [ ] The privacy notice ([`dist/privacy.html` § Text Advisor](../../../dist/privacy.html)) has been reviewed and approved by you and counsel. It is a draft until then, and App Review checks it.
+- [ ] The privacy notice (`dist/privacy.html` § Text Advisor; the draft page was removed on 2026-11-12; see the roadmap, so a notice must be written first) has been reviewed and approved by you and counsel. It is a draft until then, and App Review checks it.
 
 ## 1. Business Verification
 

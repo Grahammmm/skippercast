@@ -29,7 +29,7 @@ async function load() {
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {dayVerdicts, withVerdicts} from './web/app/day-verdicts.ts';
       export {TimeDock, dayOptions, dockState, selectDay, selectHour, localParts} from './web/app/TimeDock.tsx';
-      export {SheetBrief} from './web/app/Mobile.tsx';
+      export {HourEdge} from './web/app/Mobile.tsx';
       export {Verdict, currentBrief, currentVerdict, leadBrief, dailyFeed, regionalForecast} from './web/brief/Brief.tsx';
       export {regionInfo} from './web/app/region-info.ts';
       export {dockTime, horizonDays} from './web/hour.ts';
@@ -39,6 +39,7 @@ async function load() {
       export {language} from './web/i18n.ts';
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string';
+      export {admitBriefFixture} from './tests/helpers/settled-brief.ts';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
   });
@@ -77,6 +78,7 @@ function setup(m, {profile = 'boat', feed = daily(), fc = forecast(ID)} = {}) {
   m.regionInfo.value = {id: ID, name: 'Monterey', center: [36.62, -121.9], timezone: TZ};
   m.dailyFeed.value = feed; m.regionalForecast.value = fc;
   m.savedLimits.value = {}; m.language.value = 'en';
+  m.admitBriefFixture();
 }
 
 /** The verdict the brief shows once day `d` is chosen from the dock as it stands. */
@@ -159,6 +161,7 @@ test('profile_boat_limits_and_sources_invalidate: each change re-reads the days 
   const check = (label, change) => {
     const before = evaluated;
     change();
+    if (label.startsWith('fresh ') || label === 'region switch') m.admitBriefFixture(); // SC1722-02: a changed fixture source is admitted as a new terminal snapshot
     const now = words();
     assert.equal(evaluated, before + 8, `${label}: the eight days are read again`);
     assert.ok(util.isDeepStrictEqual(now, parity(m, label)), `${label}: equals the brief`);
@@ -176,7 +179,7 @@ test('profile_boat_limits_and_sources_invalidate: each change re-reads the days 
   check('limits reset', () => { m.savedLimits.value = {}; });
   check('fresh forecast', () => { m.regionalForecast.value = forecast(ID, [30, 30, 5, 5, 5]); });
   check('fresh daily', () => { m.dailyFeed.value = daily({alerts: [{id: 'a3', event: 'Small Craft Advisory', effective: '2026-10-09T07:00:00Z', ends: '2026-10-10T07:00:00Z'}]}); });
-  const gone = check('region switch', () => { m.regionInfo.value = {id: 'elsewhere', name: 'Elsewhere', center: [34, -119], timezone: TZ}; });
+  const gone = check('region switch', () => { m.state.setParams({region: 'elsewhere'}); m.regionInfo.value = {id: 'elsewhere', name: 'Elsewhere', center: [34, -119], timezone: TZ}; });
   assert.ok(Object.values(gone).every(w => w === 'unknown'), 'the old region\'s answers are withdrawn');
   check('language', () => { m.language.value = 'es'; });
   m.language.value = 'en';
@@ -207,7 +210,7 @@ test('en_es_visible_and_accessible_both_surfaces: the word is the chip text on d
   const chips = html => [...html.match(/aria-label="(?:Day|Día)"[^>]*>(.*?)<\/div>/s)[1].matchAll(/<button\b([^>]*)>(?:<svg.*?<\/svg>)?([^<]+)<\/button>/gs)].map(b => ({text: b[2], pressed: /aria-pressed="true"/.test(b[1]), labelled: /aria-label=/.test(b[1])}));
   const values = m.dayOptions(NOW, TZ, null).map(o => o.value);
   const expected = lang => m.withVerdicts(m.dayOptions(NOW, TZ, null, lang), m.dayVerdicts(NOW, TZ).value, lang).map(o => o.label);
-  for (const Surface of [m.TimeDock, m.SheetBrief]) {
+  for (const Surface of [m.TimeDock, m.HourEdge]) {
     const en = m.render(m.h(Surface, {now: NOW}));
     for (const lang of ['en', 'es', 'en']) {
       m.language.value = lang;

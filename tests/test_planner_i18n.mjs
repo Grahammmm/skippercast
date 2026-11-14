@@ -93,7 +93,7 @@ test('planner_en_bytes_and_es_chrome: es then en restores the exact English page
   const wp = {id: 'user:a', name: 'Mi <punto>', category: 'wreck', latitude: 35.3, longitude: -121.1};
   const { p, model } = mk({spots: {value: spots}, protectedHits: {value: [hit]}, waypointPosition: {value: {latitude: 35.2, longitude: -121.2}},
     draft: {value: {...mk().p.draft.value, ids: ['r1', 'r2', 'user:a'], userWaypoints: [wp], name: 'Mi plan'}},
-    tripAtlas: {value: {targets: spots, areas: []}}});
+    orderedStops: {value: [...spots, {...wp, label: wp.name}]}, tripAtlas: {value: {targets: spots, areas: []}}});
   try {
     ui.language.value = 'en';
     const en = page(model);
@@ -155,6 +155,28 @@ test('planner_es_files_identical: GPX, notes, names and types are the same bytes
   } finally { ui.language.value = 'en'; p.dispose(); }
 });
 
+test('UXFIX-07 planner alert preview: the date reads Tue 10 Nov / mar 10 nov in the region zone; the stored plan date stays ISO', () => {
+  const { p, model } = mk();
+  const preview = {date: '2026-11-10', area: 'Area', target: 'reef', groupNote: '', hours: '07:00–13:00', limits: {wind: 12, gust: 18, sea: 4}, boat: '', stops: 2, legs: 1, legList: []};
+  const body = {date: '2026-11-10'};
+  const alertModel = {...model, alertPreview: () => ({ok: true, body, preview}), alertIsSaved: () => false};
+  try {
+    ui.language.value = 'en';
+    const en = ui.render(ui.h(ui.Planner, {model: alertModel, open: true}));
+    assert.match(en, /id="planner-alert-preview">Tue 10 Nov · Area · reef/);
+    ui.language.value = 'es';
+    assert.match(ui.render(ui.h(ui.Planner, {model: alertModel, open: true})), /id="planner-alert-preview">mar 10 nov · Area · reef/);
+    // The ranked status quotes the plan's date: read like the preview, in both languages, while the stored message stays ISO.
+    const status = '3 distinct reef spots ranked. Waypoints + reef outlines only. Check conditions for 2026-11-06 before committing to the trip.';
+    const withStatus = {...model, scopeStatus: {value: status}};
+    ui.language.value = 'en';
+    assert.match(page(withStatus), /id="export-scope-status" role="status">3 distinct reef spots ranked\. [^<]*Check conditions for Fri 6 Nov before/);
+    ui.language.value = 'es';
+    assert.match(page(withStatus), /id="export-scope-status" role="status">[^<]*para vie 6 nov antes/);
+    assert.equal(withStatus.scopeStatus.value, status);
+  } finally { ui.language.value = 'en'; p.dispose(); }
+});
+
 test('planner_es_margin_is_inclusive: protected-area warnings say "{n} m o menos", never an exact separation', () => {
   for (const id of ['planner.hit.near', 'planner.hit.reefNear', 'pm.outlineNamed', 'pm.alignmentNamed']) {
     const es = catalogue.strings[id].es;
@@ -187,6 +209,27 @@ test('step1_is_first_workflow: plan card, step 1, rules, waypoints, then the lat
       const order = ['id="export-name"', 'id="export-spots"', 'class="export-card plan-rules"', 'id="waypoint-place"', 'id="export-layers"', 'id="export-download"'].map(at);
       assert.ok(order.every((n, i) => !i || n > order[i - 1]), `${lang}: order ${order}`);
       assert.ok(at('id="export-best"') < at('class="export-card plan-rules"'), `${lang}: Best available before the rules`);
+    }
+  } finally { ui.language.value = 'en'; p.dispose(); }
+});
+
+// RF2235-5: GPX is explained beside the trip-file actions, in both languages, in every export state.
+test('gpx_help_en_es_en: one visible note before the caveats, described by Download and Share only, whatever the export state', () => {
+  const en = catalogue.strings['planner.gpxHelp'].en, es = catalogue.strings['planner.gpxHelp'].es;
+  const {p, model} = mk();
+  try {
+    for (const [lang, text] of [['en', en], ['es', es], ['en', en]]) {
+      ui.language.value = lang;
+      const html = page(model);
+      assert.equal(html.split('id="export-gpx-help"').length, 2, 'exactly one note');
+      assert.ok(html.includes(`<p id="export-gpx-help" class="export-note">${text}</p>`), `${lang} text`);
+      assert.ok(html.indexOf('id="export-gpx-help"') < html.indexOf('id="export-caveats"'), 'note before caveats');
+      assert.ok(html.indexOf('id="export-caveats"') < html.indexOf('id="export-download"'), 'caveats before actions');
+      assert.equal(html.split('aria-describedby="export-gpx-help"').length, 3, 'two buttons reference the note');
+      assert.match(html, /<button class="primary" aria-describedby="export-gpx-help" id="export-download"/);
+      assert.match(html, /<button aria-describedby="export-gpx-help" id="export-share"/);
+      assert.doesNotMatch(html, /id="export-notes"[^>]*aria-describedby/);
+      assert.doesNotMatch(html, /id="export-route"[^>]*aria-describedby="export-gpx-help"/);
     }
   } finally { ui.language.value = 'en'; p.dispose(); }
 });

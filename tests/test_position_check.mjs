@@ -10,6 +10,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import test from 'node:test';
+import util from 'node:util';
 import {build} from 'esbuild';
 import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 import {PLANNING_MARGIN_M, pointGeometry, pointInGeometry, screenPlace} from '../dist/geo-screen.js';
@@ -342,4 +343,79 @@ test('no background tracking or notification code in the check', () => {
     const source = readFileSync(new URL(file, import.meta.url), 'utf8').replace(/\/\/.*$/gm, '');
     assert.ok(!/watchPosition|Notification|serviceWorker|setInterval|localStorage|sessionStorage|indexedDB|caches\.|sendBeacon|XMLHttpRequest|\bfetch\(|WebSocket/.test(source), file);
   }
+});
+
+// RF1801-6: a failed position read is the answer at once; boundary loading neither delays it nor can change it.
+const defer = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return {promise, resolve, reject}; };
+const flush = async () => { for (let i = 0; i < 5; i++) await new Promise(resolve => setImmediate(resolve)); };
+/** A loader whose answer the test releases, counting how often it is started. */
+function pendingLoader() { const d = defer(); const loader = () => { loader.calls++; return d.promise; }; loader.calls = 0; return Object.assign(loader, {release: d.resolve, fail: d.reject}); }
+/** The promise's settled value once the event loop has run, or 'pending'. */
+async function peek(promise) { let state = 'pending'; promise.then(v => { state = v; }, e => { state = {rejected: e}; }); await flush(); return state; }
+const sameAs = (a, b, message) => assert.ok(util.isDeepStrictEqual(a, b), `${message}: ${JSON.stringify(a)}`);
+/** Any rejection nobody observed during the test. */
+function watchUnhandled() { const seen = []; const on = e => seen.push(e); process.on('unhandledRejection', on); return {seen, stop() { process.off('unhandledRejection', on); }}; }
+const HELD = {heldBoundaries: () => ({current: true, checked_at: FRESH, features: [buchon]}), coversGeometry: () => true};
+
+test('a refused, failed or unsupported position read returns while boundaries are still loading', async () => {
+  const cases = [
+    ['denied', geolocation({error: 1}), 'denied'],
+    ['unavailable (no signal)', geolocation({error: 2}), 'unavailable'],
+    ['unavailable (timeout)', geolocation({error: 3}), 'unavailable'],
+    ['unavailable (bad coordinates)', geolocation({latitude: NaN, longitude: 1, accuracy: 5}), 'unavailable'],
+    ['unsupported', null, 'unsupported'],
+  ];
+  for (const [name, geo, reason] of cases) {
+    const loader = pendingLoader();
+    try {
+      const state = await peek(checkPosition(loader, geo));
+      sameAs(state, {located: {ok: false, reason}}, `${name}: the failed read is not held for boundaries`);
+      assert.equal(loader.calls, 1, `${name}: the loader still starts once, concurrently`);
+      if (geo) assert.equal(geo.calls.current.length, 1, `${name}: one position read`);
+    } finally { loader.release(null); await flush(); }
+  }
+});
+
+test('a successful fix still waits for boundaries, in either completion order', async () => {
+  const fix = fixOf(OUTSIDE, 8);
+  const loader = pendingLoader(), geo = geolocation(fixAnswer(OUTSIDE));
+  const answer = checkPosition(loader, geo);
+  assert.equal(await peek(answer.then(() => 'done')), 'pending', 'a located fix is not answered before the boundaries');
+  loader.release(null);
+  sameAs(await answer, {located: {ok: true, fix}, reading: {kind: 'no-boundaries'}}, 'null boundaries');
+  const held = pendingLoader(), again = checkPosition(held, geolocation(fixAnswer(OUTSIDE)));
+  await flush();
+  held.release(HELD);
+  sameAs(await again, {located: {ok: true, fix}, reading: readingFor(fix, HELD)}, 'held boundaries');
+  // Boundaries first, the position later (the permission prompt is still open).
+  const early = defer(), geoLater = {calls: 0, getCurrentPosition(ok) { this.calls++; early.promise.then(() => ok({coords: {latitude: OUTSIDE.latitude, longitude: OUTSIDE.longitude, accuracy: 8}})); }};
+  const ready = checkPosition(async () => HELD, geoLater);
+  await flush();
+  early.resolve();
+  sameAs(await ready, {located: {ok: true, fix}, reading: readingFor(fix, HELD)}, 'boundaries before the fix');
+  assert.equal(geoLater.calls, 1);
+});
+
+test('a boundary loader that fails late, or early, never changes the location answer or goes unobserved', async () => {
+  const watch = watchUnhandled();
+  try {
+    const loader = pendingLoader();
+    sameAs(await peek(checkPosition(loader, geolocation({error: 1}))), {located: {ok: false, reason: 'denied'}}, 'denied before the loader fails');
+    loader.fail(new Error('boundaries failed after the answer'));
+    await flush();
+    // The loader fails while the position prompt is still open; the position then fails.
+    const early = defer(), prompt = {getCurrentPosition(ok, fail) { early.promise.then(() => fail({code: 1})); }};
+    const failing = checkPosition(async () => { throw new Error('boundaries failed first'); }, prompt);
+    await flush();
+    early.resolve();
+    sameAs(await failing, {located: {ok: false, reason: 'denied'}}, 'the location failure stays the reason');
+    // A successful fix is still a fix when boundaries fail, before or after it.
+    const fix = fixOf(OUTSIDE, 8), late = pendingLoader(), succeeding = checkPosition(late, geolocation(fixAnswer(OUTSIDE)));
+    await flush();
+    late.fail(new Error('boundaries failed after the fix'));
+    sameAs(await succeeding, {located: {ok: true, fix}, reading: {kind: 'no-boundaries'}}, 'loader fails after the fix');
+    sameAs(await checkPosition(async () => { throw new Error('boundaries failed first'); }, geolocation(fixAnswer(OUTSIDE))), {located: {ok: true, fix}, reading: {kind: 'no-boundaries'}}, 'loader fails before the fix');
+    await flush();
+    assert.deepEqual(watch.seen, [], 'no unhandled rejection');
+  } finally { watch.stop(); }
 });

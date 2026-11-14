@@ -15,14 +15,14 @@ METADATA_XML = ('<gridDataset><axis name="lat"><values resolution="0.05394"/></a
                 '<values resolution="0.06246"/></axis><TimeSpan><end>{end}</end></TimeSpan></gridDataset>')
 
 
-def subset(depth=(1.4,)):
+def subset(depth=(1.4,), epoch=None):
     stream = BytesIO()
     with netcdf_file(stream, mode="w") as nc:
         for name, size in (("time", 1), ("lat", 1), ("lon", 2)):
             nc.createDimension(name, size)
-        t = nc.createVariable("time", "i", ("time",))
+        t = nc.createVariable("time", "i" if epoch is None else "d", ("time",))
         t.units = "seconds since 1970-01-01"
-        t[:] = [1790287200]
+        t[:] = [1790287200 if epoch is None else epoch]
         if len(depth) == 1:
             nc.createVariable("depth", "f", ()).data[...] = depth[0]
         else:
@@ -139,6 +139,38 @@ class DepthTests(unittest.TestCase):
         self.assertEqual(data["native_resolution_degrees"], RESOLUTION)
         tuple_bounds = {"latitude": (34.95, 35.05), "longitude": (-121, -120.9)}
         self.assertEqual(fetch(Client(body=subset()), tuple_bounds)["total_cells"], 2)
+
+
+class EpochTests(unittest.TestCase):
+    ADVERTISED = 1790287200
+
+    def read(self, epoch, expected=WHEN):
+        return read_subset(subset(epoch=epoch), BOUNDS, expected, RESOLUTION)
+
+    def test_fractional_nonfinite_and_unrepresentable_epochs_refused(self):
+        bad = (self.ADVERTISED + .25, self.ADVERTISED + .75, self.ADVERTISED - .25, -.5,
+               float("nan"), float("inf"), float("-inf"), 1e300, -1e300)
+        for epoch in bad:
+            with self.subTest(epoch=epoch):
+                with self.assertRaisesRegex(ValueError, r"^NOAA HFRNet returned time differs from advertised time$"):
+                    self.read(epoch)
+
+    def test_fractional_epoch_refused_even_when_expected_is_fractional(self):
+        expected = datetime(2026, 9, 24, 22, 0, 0, 250000, tzinfo=timezone.utc)
+        with self.assertRaisesRegex(ValueError, r"^NOAA HFRNet returned time differs from advertised time$"):
+            self.read(self.ADVERTISED + .25, expected)
+
+    def test_whole_second_float_matches_integer_and_mismatches_refuse(self):
+        self.assertEqual(self.read(float(self.ADVERTISED)), read_subset(subset(), BOUNDS, WHEN, RESOLUTION))
+        for epoch in (self.ADVERTISED + 1, self.ADVERTISED + 3600):
+            with self.subTest(epoch=epoch):
+                with self.assertRaisesRegex(ValueError, "differs from advertised"):
+                    self.read(float(epoch))
+
+    def test_units_error_still_precedes_fractional_time(self):
+        body = subset(epoch=self.ADVERTISED + .25).replace(b"m s-1", b"m s-2", 1)
+        with self.assertRaisesRegex(ValueError, "units changed"):
+            read_subset(body, BOUNDS, WHEN, RESOLUTION)
 
 
 if __name__ == "__main__":

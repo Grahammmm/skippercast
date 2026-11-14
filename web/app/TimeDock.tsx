@@ -10,7 +10,8 @@
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {Dock, type DockLabels} from '../ui/Dock.tsx';
 import {dockTime, horizonDays, localParts, nearestHour, nextHour, play, type DockTime} from '../hour.ts';
-import {day, hour, hourParam, setParams} from '../state.ts';
+import {day, hour} from '../state.ts';
+import {commitDockHour, previewDockState, requestDockDay, requestDockHour, useDockSelection} from '../dock-selection.ts';
 import {zone} from './App.tsx';
 import {language, localeOf, t, type Language} from '../i18n.ts';
 import {useDayVerdicts, withVerdicts} from './day-verdicts.ts';
@@ -51,13 +52,23 @@ export function readout(state: DockTime, tz: string, lang: Language = 'en'): str
   return state.index < 0 ? `${text}${t('dock.outside', lang)}` : text;
 }
 
-/** Write hour `at` (epoch ms): ?hour= ISO UTC, ?day= its local day unless that is today. */
-export function selectHour(now: Date, tz: string, at: number): void {
-  const d = localParts(new Date(at), tz).day;
-  setParams({day: d === localParts(now, tz).day ? null : d, hour: hourParam(at / 1000)});
+/** Day and hour for the controls, using the same explicit preview context as the thumb. */
+export function dockValueText(now: Date, tz: string, state: DockTime, lang: Language = 'en', at = state.at): string {
+  const parts = localParts(new Date(at), tz);
+  const label = parts.day === state.today ? t('dock.today', lang)
+    : parts.day === horizonDays(now, tz)[1]?.day ? t('dock.tomorrow', lang)
+    : dayOptions(now, tz, parts.day, lang).find(d => d.value === parts.day)!.label;
+  const text = `${label} · ${hourText(parts.hour, lang)}`;
+  return state.index < 0 ? `${text}${t('dock.outside', lang)}` : text;
 }
 
-/** A day chip: the same local hour on day `d`, or the nearest hour that day has in the horizon. */
+/**
+ * Write hour `at` (epoch ms) at once: ?hour= ISO UTC, ?day= its local day unless that is today. The dock's own
+ * inputs go through web/dock-selection.ts instead, which shows the hour at once and settles it after a pause.
+ */
+export const selectHour = (now: Date, tz: string, at: number): void => commitDockHour(now, tz, at);
+
+/** A day chip at once: the same local hour on day `d`, or the nearest hour that day has in the horizon. */
 export function selectDay(now: Date, tz: string, d: string, state: DockTime): void {
   const hours = horizonDays(now, tz).find(x => x.day === d)?.hours ?? [];
   const at = nearestHour(hours, localParts(new Date(state.at), tz).hour, tz);
@@ -66,6 +77,25 @@ export function selectDay(now: Date, tz: string, d: string, state: DockTime): vo
 
 /** The dock's own words in `lang`. */
 export const dockLabels = (lang: Language): DockLabels => ({time: t('shell.time', lang), day: t('shell.day', lang), hour: t('shell.hour', lang), play: t('dock.play', lang), pause: t('dock.pause', lang), nextHour: t('dock.nextHour', lang)});
+
+/**
+ * Bring the chosen day chip into the day strip by moving only that strip's own scrollLeft, the least that shows it.
+ * Element.scrollIntoView would also scroll every ancestor and the document when the dock lies below the fold, which is
+ * how the desktop app scrolled itself on load (SC1722-19). Nothing here focuses, animates or touches another scroller.
+ */
+export function revealDockDay(strip: HTMLElement | null, chip: HTMLElement | null): void {
+  if (!strip || !chip) return;
+  const width = strip.clientWidth;
+  if (!(width > 0)) return;
+  const box = strip.getBoundingClientRect(), at = chip.getBoundingClientRect();
+  const left = box.left + strip.clientLeft, right = left + width;
+  let delta = 0;
+  if (at.left < left - 0.5) delta = at.left - left;
+  else if (at.right > right + 0.5) delta = Math.min(at.right - right, at.left - left);
+  if (delta === 0) return;
+  const next = Math.min(Math.max(0, strip.scrollWidth - width), Math.max(0, strip.scrollLeft + delta));
+  if (next !== strip.scrollLeft) strip.scrollLeft = next;
+}
 
 const media = (): MediaQueryList | null => typeof matchMedia === 'function' ? matchMedia(REDUCED_MOTION) : null;
 
@@ -84,28 +114,33 @@ function useReducedMotion(): boolean {
 
 export function TimeDock({now = new Date()}: {now?: Date} = {}) {
   const tz = zone(), lang = language.value;
-  const state = dockState(now, tz), answers = useDayVerdicts(now, tz);
+  // SC1407-05: the controls show the pending preview at once; the evidence follows the settled hour.
+  useDockSelection(now, tz);
+  const state = previewDockState(now, tz), answers = useDayVerdicts(now, tz);
   const reduced = useReducedMotion();
   const [playing, setPlaying] = useState(false);
   useEffect(() => {
     if (!playing) return;
     const step = (): boolean => {
-      const clock = new Date(), next = nextHour(dockState(clock, tz).at, clock);
+      const clock = new Date(), next = nextHour(previewDockState(clock, tz).at, clock);
       if (next === null) return false;
-      selectHour(clock, tz, next);
+      requestDockHour(clock, tz, next);
       return true;
     };
     return play({step, onStop: () => setPlaying(false), motion: media()});
   }, [playing, tz]);
-  // The day strip scrolls sideways on narrow stages: keep the chosen chip in view.
+  // The day strip scrolls sideways on narrow stages: keep the chosen chip in view, in the strip only (SC1722-19).
   const dock = useRef<HTMLDivElement>(null);
-  useEffect(() => { dock.current?.querySelector<HTMLElement>('.ui-segmented [aria-pressed="true"]')?.scrollIntoView?.({block: 'nearest', inline: 'nearest'}); }, [state.day, lang]);
+  useEffect(() => {
+    const strip = dock.current?.querySelector<HTMLElement>('.ui-segmented') ?? null;
+    revealDockDay(strip, strip?.querySelector<HTMLElement>('[aria-pressed="true"]') ?? null);
+  }, [state.day, lang]);
   const at = (i: number): number => state.hours[i] ?? state.at;
   return (
     <div class="app-dock" ref={dock}>
-      <Dock days={withVerdicts(dayOptions(now, tz, state.day, lang), answers, lang)} labels={dockLabels(lang)} day={state.day} onDay={d => selectDay(now, tz, d, state)} playing={playing} onPlay={setPlaying}
+      <Dock days={withVerdicts(dayOptions(now, tz, state.day, lang), answers, lang)} labels={dockLabels(lang)} day={state.day} onDay={d => requestDockDay(now, tz, d, state)} playing={playing} onPlay={setPlaying}
         stepOnly={reduced} advanceDisabled={nextHour(state.at, now) === null} hour={Math.max(0, state.index)} hours={state.index < 0 ? 1 : state.hours.length} disabled={state.index < 0}
-        onHour={i => selectHour(now, tz, at(i))} hourText={i => state.index < 0 ? readout(state, tz, lang) : hourText(localParts(new Date(at(i)), tz).hour, lang)} />
+        onHour={i => requestDockHour(now, tz, at(i))} hourText={i => dockValueText(now, tz, state, lang, at(i))} />
       <span class="app-dock-zone ui-mono">{zoneName(new Date(state.at), tz)}</span>
     </div>
   );
