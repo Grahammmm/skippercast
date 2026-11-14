@@ -390,7 +390,8 @@ test('the first Chart says "Loading the map…" and is busy until its basemap is
   await expect(page.locator('.app-chart[aria-busy="true"]')).toHaveCount(1);
   await expect(page.locator('.app-presentation [aria-busy], .app-presentation[aria-busy]'), 'the status stays in the chrome stack, not busy').toHaveCount(0);
   await expect(page.locator('[data-chart-loading-status]')).toHaveCount(1);
-  expect(asked.length, 'the held basemap was asked for').toBeGreaterThan(0);
+  // SCB-11: the Chart's downloads wait for the first verdict, at most MAP_WAIT_MAX_MS (6 s) when the coast report never answers.
+  await expect.poll(() => asked.length, {message: 'the held basemap was asked for', timeout: 12_000}).toBeGreaterThan(0);
   release();
   await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
   await expect(status).toHaveText('');
