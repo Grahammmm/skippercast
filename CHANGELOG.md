@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- SCB-08: coverage wording now says what is covered today. The README opens with the Central Coast (not all of California) and counts the regions (1 active, 15 preview, 6 draft), says seabed habitat is published for six central packages, and says the rules card shows "Check rules" until a species' rules are re-approved. The readable coastal report at `/report` is now titled and described as the San Luis Obispo County report (Morro Bay and Cambria–San Simeon only) instead of "Central California".
 - WU-03: `http://skippercast.com` now redirects to `https://` (one 301, path and query kept) instead of serving the page over plain HTTP. Local development and the staging address are unchanged.
 - Rules: an official page is now fingerprinted by its main content and the documents it links to (`text-and-links-v4`). A website restyle by the agency (a stylesheet version number, a renamed footer link) no longer marks every rule source as changed. Sources reviewed under the old method read as needing review until their next human review; nothing is approved by this change.
 - The draft privacy notice (`/privacy`) and draft terms (`/terms.html`) are removed, with every link to them and their sitemap entries. Both were unreviewed drafts. A short, reviewed replacement is a roadmap item for before launch.
