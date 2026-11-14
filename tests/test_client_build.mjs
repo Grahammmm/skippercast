@@ -265,6 +265,15 @@ test('the real site builds and passes the client check (static data directories 
     assert.equal(headerCacheControl(headers, path), 'public, max-age=31536000, immutable', path);
     assert.equal(headerCacheControl(headers, path.replace(`/v/${GLYPH_VERSION}`, '')), null, `${path} unversioned keeps the default`);
   }
+  // SCB-11: /map links its early script (web/app/early.ts) async, at high priority, ahead of the app's own entry; the script
+  // imports nothing, so it runs the moment it arrives; the landing warms it and a saved pack carries it with the app.
+  const early = manifest['../web/app/early.ts'], page = await readFile(join(out, `app.${buildId}.html`), 'utf8');
+  assert.ok(early?.isEntry && !early.imports?.length && !early.dynamicImports?.length, 'the early script is an entry that imports nothing');
+  const scripts = [...page.matchAll(/<script ([^>]*)><\/script>/g)].map(m => m[1]).filter(a => a.includes('type="module"'));
+  assert.equal(scripts[0], `type="module" async fetchpriority="high" crossorigin src="./${early.file}"`);
+  assert.ok(scripts.slice(1).some(a => a.includes(`src="./${manifest['app.html'].file}"`)), 'the app\'s own entry follows');
+  assert.ok(precache.warm.includes(`/${early.file}`) && precache.v2.assets.includes(`/${early.file}`), 'warmed by the landing, carried in a pack');
+  assert.ok(!precache.assets.includes(`/${early.file}`), 'not in every visitor\'s install list');
   await rm(out, {recursive: true, force: true});
 });
 
