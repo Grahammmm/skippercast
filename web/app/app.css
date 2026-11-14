@@ -368,6 +368,8 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-sheet-menus label { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-13); }
 .app-sheet .app-brief-footer { margin-top: 0; }
 .app-sheet .app-brief-footer a { display: inline-block; min-height: var(--touch-min); box-sizing: border-box; margin-right: var(--space-2); padding: var(--space-3) var(--space-2); }
+/* MAIN-RED-7: on a landscape phone the three footer links (Terms, Sources, Reports) must share one row, or Sign in drops a 44 px row below the tab bar. Each link keeps a 44 px target; its margin goes and its side padding narrows. */
+@media (max-height: 500px) and (orientation: landscape) { .app-sheet .app-brief-footer a { min-width: var(--touch-min); margin-right: 0; padding-inline: var(--space-1); text-align: center; } }
 
 /* The tab nav under the sheet: four equal 56 px targets with icon and label. */
 .app-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-sheet); box-sizing: border-box; height: var(--app-tabs); padding-bottom: env(safe-area-inset-bottom, 0px); border-top: 1px solid var(--line); background: var(--panel); }
