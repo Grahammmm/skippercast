@@ -255,7 +255,12 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SCB-12: MapStage stages Chart imagery behind the first brief settlement and delays its first-idle mark.
   // BODY09 mounts Reports/CatchCards directly, never MapStage; its catch markup, styles, paint, contrast(),
   // assertions and thresholds are unchanged. Rebind only MapStage.tsx; this does not grant a BODY09 run.
-  "web/app/MapStage.tsx": "3e4992ba6e13e22c0c5f367573caa28307a6cba3704ab25be084c746c85ce64d",
+  // R4-SC-09: MapStage.tsx only imports createSharpStart and seafloorState and passes a `sharp` signal to the Chart's
+  // createAerial (aerial preview first, full image later). BODY09 mounts Reports/CatchCards directly, never MapStage;
+  // no class, token, catch markup, paint, contrast(), assertion or threshold change. Rebind only MapStage.tsx.
+  // R4-SC-09 review fix: the Chart host's aria-busy also covers the aerial preview (aerialSoft) after the first idle;
+  // an attribute on the Chart host only, which BODY09 never mounts. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "8944f248861c10bc16203cd9e0052770d3f7106f01e3c02cf03863009047c5b8",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   "web/tokens.css": "56f9708cfa02f651680a2bc02bd3d9080f65dec849aea6888f6bfc52508a5775",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
@@ -294,7 +299,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MGL-15: app.css repoints only the two depth-contour legend swatch colours to map tokens; no catch paint or layout changed.
   // SCB-11: app.css changes only the wide-desktop (min-width: 1280px) masthead and command bar layout (fixed two-line place name, flex order, auto margins, a time window minimum width); the Reports catch sheet mounts neither, and no colour, backing or catch paint changed. Rebound from the final bytes.
   // MAIN-RED-5: Chart loading-status hit-testing only; Reports paint/backing and thresholds unchanged.
-  "web/app/app.css": "0ca635b4f5b9dd3b5e34f934c0c47b93c88734b4fcb33f958535105faf40496b",
+  // MAIN-RED-7: app.css adds one landscape-phone sheet-footer link spacing rule (the Reports catch sheet mounts no sheet footer); no colour, backing or catch paint changed. Rebound from the final bytes.
+  "web/app/app.css": "ea47a308ed3ed26a56558714894a22425f65244a647fc22916e9e73bdbb92591",
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // UXFIX-10: app.css appends only a scoped .app-account[data-top] block (the phone top-card account button: icon size, visually hidden label, open-state colour, z-index while its panel is open); the Reports catch sheet mounts no account menu, so no catch paint or backing changes. Rebound from the final bytes.
   // UXFIX-11: app.css adds only the phone sheet day-chip row pin (.app-sheet-hour); the Reports catch sheet mounts no hour sheet, so no catch paint or backing changes. Rebound from the final bytes.
@@ -384,7 +390,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // UXFIX-12: check_contrast.mjs changes only the panelCss surface hash and its comment (the .chart-overflow:focus-visible ring leaves its media block); contrast() is untouched. Rebound from the final bytes.
   // SCB-11: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // MAIN-RED-5: only the appCss surface binding/comment changed; contrast calculations and gates unchanged.
-  "scripts/check_contrast.mjs": "1489468a412599c2b363465f5b2bb608cfb2b7491f8abb48204c69b7960455ab",
+  // MAIN-RED-7: only the appCss surface binding/comment changed; contrast calculations and gates unchanged.
+  "scripts/check_contrast.mjs": "4f38c7e1a2accb5a279cda72fbb934a724642794c833960db14d53a5eb20782b",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
