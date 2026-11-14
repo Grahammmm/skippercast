@@ -79,14 +79,24 @@ jobs:
           deadline=$((SECONDS + 330 * 60))
           tick=$SECONDS
           while [ "$SECONDS" -lt "$deadline" ]; do
-            if ! timeout 60s gh workflow run feed-freshness.yml --ref main; then
-              echo "::warning::Could not start feed-freshness.yml; retrying at the next hourly tick."
+            # Release workflow-level concurrency promptly after publication stops,
+            # including fast failures. Unknown state must not stop the alarms.
+            if refresh_status=$(timeout 30s gh api "repos/$GH_REPO/actions/runs/$GITHUB_RUN_ID/jobs?per_page=100" \
+              --jq '.jobs[] | select(.name == "refresh") | .status'); then
+              if [ "$refresh_status" = completed ]; then exit 0; fi
+            else
+              echo "::warning::Could not read refresh status; keeping the alarm clock running."
             fi
-            tick=$((tick + 3600))
-            if [ "$tick" -ge "$deadline" ]; then
-              break
+            if [ "$SECONDS" -ge "$tick" ]; then
+              if ! timeout 60s gh workflow run feed-freshness.yml --ref main; then
+                echo "::warning::Could not start feed-freshness.yml; retrying at the next hourly tick."
+              fi
+              tick=$((tick + 3600))
+              if [ "$tick" -ge "$deadline" ]; then break; fi
             fi
             delay=$((tick - SECONDS))
+            # Four-minute slices leave room for bounded API/dispatch latency.
+            if [ "$delay" -gt 240 ]; then delay=240; fi
             if [ "$delay" -gt 0 ]; then sleep "$delay"; fi
           done
 

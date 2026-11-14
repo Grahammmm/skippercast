@@ -174,12 +174,16 @@ class LiveWorkflowTests(unittest.TestCase):
             with self.subTest(dispatch_exit=status):
                 result, log, _ = run_shell(script, '''
                     test_seconds=0
-                    gh() { printf '%s|%s\\n' "$test_seconds" "$*" >> "$TEST_LOG"; return "$DISPATCH_EXIT"; }
+                    gh() {
+                      if [ "$1" = api ]; then echo in_progress; return 0; fi
+                      printf '%s|%s\\n' "$test_seconds" "$*" >> "$TEST_LOG"
+                      return "$DISPATCH_EXIT"
+                    }
                     timeout() {
                       shift
                       "$@"
                       status=$?
-                      test_seconds=$((test_seconds + 60))
+                      if [ "$2" = workflow ]; then test_seconds=$((test_seconds + 60)); fi
                       return "$status"
                     }
                     sleep() { test_seconds=$((test_seconds + $1)); }
@@ -190,6 +194,60 @@ class LiveWorkflowTests(unittest.TestCase):
                 self.assertTrue(all(line.endswith('workflow run feed-freshness.yml --ref main')
                                     for line in log.splitlines()))
                 self.assertEqual(result.stdout.count('::warning::'), 6 if status else 0)
+
+    def test_alarm_releases_concurrency_after_refresh_completes(self):
+        script = run_block(self.jobs['alarm-clock']).replace('SECONDS', 'test_seconds')
+        for completed_at in (1, 3661, 7250):
+            with self.subTest(completed_at=completed_at):
+                result, log, _ = run_shell(script, '''
+                    test_seconds=0
+                    gh() {
+                      if [ "$1" = api ]; then
+                        printf 'poll|%s|%s\\n' "$test_seconds" "$*" >> "$TEST_LOG"
+                        if [ "$test_seconds" -ge "$COMPLETED_AT" ]; then
+                          echo completed
+                        else
+                          echo in_progress
+                        fi
+                      else
+                        printf 'dispatch|%s\\n' "$test_seconds" >> "$TEST_LOG"
+                      fi
+                    }
+                    timeout() { shift; "$@"; }
+                    sleep() {
+                      printf 'sleep|%s\\n' "$1" >> "$TEST_LOG"
+                      test_seconds=$((test_seconds + $1))
+                    }
+                ''', COMPLETED_AT=str(completed_at), GH_REPO='fixture/repo')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                lines = log.splitlines()
+                polls = [line.split('|') for line in lines if line.startswith('poll|')]
+                stopped_at = int(polls[-1][1])
+                self.assertGreaterEqual(stopped_at, completed_at)
+                self.assertLessEqual(stopped_at - completed_at, 240)
+                self.assertTrue(all('repos/fixture/repo/actions/runs/1/jobs?per_page=100' in poll[2]
+                                    for poll in polls))
+                self.assertTrue(all(int(line.split('|')[1]) < completed_at
+                                    for line in lines if line.startswith('dispatch|')))
+                self.assertTrue(all(int(line.split('|')[1]) <= 240
+                                    for line in lines if line.startswith('sleep|')))
+                self.assertTrue(lines[-1].startswith('poll|'))
+
+    def test_alarm_status_api_failure_warns_and_keeps_hourly_ticks(self):
+        script = run_block(self.jobs['alarm-clock']).replace('SECONDS', 'test_seconds')
+        result, log, _ = run_shell(script, '''
+            test_seconds=0
+            gh() {
+              if [ "$1" = api ]; then return 1; fi
+              printf '%s\\n' "$test_seconds" >> "$TEST_LOG"
+            }
+            timeout() { shift; "$@"; }
+            sleep() { test_seconds=$((test_seconds + $1)); }
+        ''', GH_REPO='fixture/repo')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([int(line) for line in log.splitlines()],
+                         [0, 3600, 7200, 10800, 14400, 18000])
+        self.assertIn('::warning::Could not read refresh status', result.stdout)
 
     def test_loop_starts_only_from_schedule_or_dispatch_never_push(self):
         # A push run always waited behind the running loop's concurrency group and was cancelled.
