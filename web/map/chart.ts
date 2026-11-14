@@ -22,7 +22,7 @@
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
-import {markMapIdle} from '../map-ready.ts';
+import {mapMayLoad, markMapIdle} from '../map-ready.ts';
 import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {appView, base, habitat, region, selection, setParams, view} from '../state.ts';
@@ -153,9 +153,10 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   let mounting = false, alive = true, applied = '', drawnRegion: string | null = null, seafloor: ReturnType<typeof createSeafloor> | null = null;
   // #617: the shoreline file drawn now, and the region whose full shoreline has loaded (kept on zooming out: no second request).
   let drawnShore = '', detailRegion: string | null = null;
-  // #617: the poster (poster.ts) is asked for once, on the first mount, and goes on the first idle or user move.
+  // #617: the poster (poster.ts) is asked for once, on the first Chart view, and goes on the first idle or user move.
   let posterAsked = false, painted = false;
   const posterDone = (): void => { painted = true; poster.value = null; };
+  const askPoster = (id: string): void => { if (!posterAsked) { posterAsked = true; void loadPoster(id, page(), () => painted, options.fetchFn); } };
   let currents: Currents | null = null;
   let sourceContext = {};
   // RF2205-5: a pick-only token; any change to region, presentation, view or waypoint arming drops a click still settling. Separate from sourceContext.
@@ -193,7 +194,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     const at = camera.peek(), id = region.peek();
     if (mounting || engine.peek() || chartFailed.peek() || !at || !id) return;
     mounting = true;
-    if (!posterAsked) { posterAsked = true; void loadPoster(id, page(), () => painted, options.fetchFn); }
+    askPoster(id);
     try {
       const [library, archive] = await Promise.all([load(), basemapArchive(fetchFn, page())]);
       if (!alive) return;
@@ -276,8 +277,13 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     // A fresh token also rejects an old request after switching away and back.
     effect(() => { region.value; sourceContext = {}; }),
     effect(() => { region.value; shownPresentation.value; appView.value; waypointPlacement.value; pickContext = {}; }),
-    // The first Chart view loads MapLibre; a terrain-only visit never does.
-    effect(() => { if (shownPresentation.value === 'chart' && camera.value && region.value) void mount(); }),
+    // The first Chart view loads MapLibre; a terrain-only visit never does. SCB-11: not while the page holds the map's downloads for the
+    // first verdict (web/map-ready.ts); the coast outline (a few KB) is asked meanwhile, so the empty Chart still shows the coast.
+    effect(() => {
+      const id = region.value, wanted = shownPresentation.value === 'chart' && camera.value && id;
+      if (!wanted) return;
+      if (mapMayLoad.value) void mount(); else if (!engine.peek() && !chartFailed.peek()) askPoster(id);
+    }),
     // The shared camera moves the chart, hidden or shown, unless the chart is already there.
     // A flyover stops first, so its moveend at the old centre still matches `applied` and writes nothing.
     effect(() => { const e = engine.value, c = camera.value; if (e && c && cameraParam(c) !== applied) { e.stopFlyover(); show(c); e.setCamera(c); } }),
@@ -308,8 +314,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     effect(() => { if (shownPresentation.value !== 'chart' || appView.value !== 'coast' || selection.value || habitat.value) engine.peek()?.stopFlyover(); }),
     // The region's protected areas, checked before they draw; a region change replaces them. They load with the
     // region, whatever the presentation, because the terrain drapes the same areas (FE-82).
-    // The legend's Try again (retryMpas) reloads them for the same region after a failed read (SC2007-02).
-    effect(() => { const id = region.value; retryMpas.value; if (id) void loadRegionMpas(id); }),
+    // The legend's Try again (retryMpas) reloads them for the same region after a failed read (SC2007-02). SCB-11: after the first verdict.
+    effect(() => { const id = region.value; retryMpas.value; if (id && mapMayLoad.value) void loadRegionMpas(id); }),
     effect(() => { const e = engine.value, m = mpas.value; if (e && m && m.region === region.value) e.setData(MPA_SOURCE, m.data); }),
     effect(() => { host.dataset.mpa = mpaState.value.status; }),
     // A new link selection (a mark, a terrain pick, Back) replaces the Chart's own: one selection at a time.

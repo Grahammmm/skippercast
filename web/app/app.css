@@ -498,9 +498,27 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 }
 @media (min-width: 1280px) {
   .app-masthead { flex-wrap: nowrap; }
-  .app-masthead > .app-location { flex: 0 1 15.75rem; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  /* SCB-11: two lines, the name over its coordinates (see below). An overflow other than visible already lets a flex item shrink to nothing. */
+  .app-masthead > .app-location { flex: 0 1 14.5rem; height: 2.125rem; line-height: 1.0625rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .app-masthead > .app-location > * { display: block; }
   .app-masthead > * { flex-shrink: 0; }
-  .app-masthead > .app-location, .app-masthead > .app-degraded { flex-shrink: 1; }
+  .app-masthead > .app-degraded { flex-shrink: 1; }
+  /* SCB-11: the views, the freshness, the account menu and the port controls hold still while the page fills in. The first verdict now lands within a
+     frame or two of the region's name, the session read and the target list, so any nudge of these in that frame is counted with the verdict's own move.
+     - The place name has a fixed width (14.5rem, the width it has once the chat entry is in the row), so its name and coordinates never move the views.
+       It keeps two lines from the start, the name over its coordinates: the coordinates start at the box's left edge, not after the name, so the name
+       gaining its text or re-measuring when the monospace font arrives (about 6% wider than the fallback) moves nothing.
+     - "Loading region…" (the one status line with no button or link) sits after the freshness, where the row's free space starts, so its going moves
+       nothing; it gives way (clipped) before the place name does. The error and missing lines keep their place beside the name, in reading and tab order.
+     - The cost-ceiling notice, the chat entry and the account menu (everything after the freshness) sit at the row's right end, so the chat entry
+       opening moves nothing to its left or right.
+     - The port controls sit at the command bar's right end, so the target menu widening as its options land moves nothing. Where the time window shares
+       their row (about 1,430 px and wider) it keeps a fixed width after them, so its words and the monospace font arriving do not move them either.
+     Sized for the first-load style budget (scripts/perf-budget.json): short selectors, no rule a default already gives. */
+  .app-masthead > span[role="status"]:not([class], :has(*)) { order: 1; flex-shrink: 1000; overflow: hidden; white-space: nowrap; }
+  .app-masthead > .app-fresh ~ * { order: 2; }
+  .app-masthead > .app-fresh + *, .app-command > .app-area { margin-left: auto; }
+  .app-command > .app-window { min-width: 9rem; }
 }
 /* The desktop legend is bottom-anchored and grows upward as the reef, currents and rules rows land (324 px to about 510 px), moving every row in it;
    it starts at about its settled height, and still shrinks and scrolls on a short map. */

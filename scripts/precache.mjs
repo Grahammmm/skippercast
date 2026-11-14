@@ -38,6 +38,9 @@ export const BUILD_PLACEHOLDER = "const BUILD = 'dev';";
 const HASHED = /\.[0-9a-f]{10}\.[a-z0-9]+$/;
 export const V2_PAGES = ['app.html', 'landing.html'];
 export const LANDING_PAGE = 'landing.html';
+/** SCB-11: /map's early script (vite.config.mjs EARLY_SCRIPTS), an entry of its own that the page loads with its entry. */
+export const APP_EARLY = '../web/app/early.ts';
+const APP = ['app.html', APP_EARLY];
 export const SHELLS = ['/'];
 const OFFLINE_SKIP = new Set(['../web/map/terrain.js']);
 
@@ -61,8 +64,8 @@ export function reachable(manifest, roots, skip = new Set(), dynamic = true) {
 
 /** Hashed files that only the v2 pages load. */
 export function v2Only(manifest) {
-  const others = reachable(manifest, Object.keys(manifest).filter(k => manifest[k].isEntry && !V2_PAGES.includes(k)));
-  return new Set([...reachable(manifest, V2_PAGES)].filter(f => !others.has(f)));
+  const others = reachable(manifest, Object.keys(manifest).filter(k => manifest[k].isEntry && !V2_PAGES.includes(k) && k !== APP_EARLY));
+  return new Set([...reachable(manifest, [...V2_PAGES, APP_EARLY])].filter(f => !others.has(f)));
 }
 
 /** #497: what the landing needs to paint offline (no dynamic imports, so no MapLibre). */
@@ -70,9 +73,9 @@ export function landingShell(manifest) {
   return reachable(manifest, [LANDING_PAGE], new Set(), false);
 }
 
-/** SCB-12: the bootstrap's mandatory shell import still counts as first-paint code, not optional map code. */
+/** SCB-12: the bootstrap's mandatory shell import and (SCB-11) the early script count as first-paint code, not optional map code. */
 export function appStartup(manifest) {
-  return ['app.html', ...(manifest['app.html']?.dynamicImports || []).filter(key => key === '../web/app/main.tsx')];
+  return ['app.html', APP_EARLY, ...(manifest['app.html']?.dynamicImports || []).filter(key => key === '../web/app/main.tsx')];
 }
 
 /**
@@ -103,7 +106,7 @@ export async function precacheManifest(dir, buildId) {
     static: top.filter(n => STATIC.test(n)).map(n => `/${n}`),
     warm: appWarm(manifest),
     v2: {
-      assets: [...reachable(manifest, ['app.html'], OFFLINE_SKIP)].sort(),
+      assets: [...reachable(manifest, APP, OFFLINE_SKIP)].sort(),
       static: glyphs.filter(n => n.endsWith('.pbf')).sort().map(n => `/basemap/glyphs/${n}`),
     },
   };
