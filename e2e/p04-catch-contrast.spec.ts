@@ -22,8 +22,10 @@ const read = (p: string) => readFileSync(resolve(ROOT, p));
 // ?url sheets stay URL assets. All are qualified, hash-pinned below and, where the page requests them, served exact;
 // model-disagreement.css is only a URL string in the bundle (Reports never mounts Conditions) and must not be requested.
 const HEAD_STYLES = ['web/tokens.css', 'web/ui/ui.css', 'web/app/app.css', 'web/app/plan.css', 'web/app/season.css', 'web/app/views/hourly-table.css', 'web/ui/guard.css', 'web/brief/brief-print.css'];
-const URL_STYLES = ['packages/coast/panel.css', 'packages/coast/tokens-bridge.css', 'web/app/views/model-disagreement.css'];
-const UNREQUESTED_STYLES = ['web/app/views/model-disagreement.css'];
+// SCB-16: the port chooser's lazy picker links its URL sheet only when mounted;
+// Reports never opens it. Keep the exact sheet qualified and forbid its request.
+const URL_STYLES = ['packages/coast/panel.css', 'packages/coast/tokens-bridge.css', 'web/app/views/model-disagreement.css', 'web/region-picker.css'];
+const UNREQUESTED_STYLES = ['web/app/views/model-disagreement.css', 'web/region-picker.css'];
 const STYLES = [...HEAD_STYLES, ...URL_STYLES];
 const FONTS = ['web/fonts/dm-sans-latin.woff2', 'web/fonts/jetbrains-mono-latin.woff2'];
 const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/app/Masthead.tsx', 'web/app/LayerRail.tsx', 'web/app/MapStage.tsx', 'web/app/views/Reports.tsx', 'web/app/CoastMarkup.tsx',
@@ -305,6 +307,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1407-05: brief-print.css adds only .app-hour-guard/.app-hour-settled (display: contents) and .app-hour-updating (muted margin-less line) screen rules plus print-hide rules for the pending dock hour; the Reports catch sheet mounts none of those classes (they wrap the desktop/phone brief verdict), so no counted catch paint changes. Rebound from the final bytes.
   "web/brief/brief-print.css": "c04bce48a759c7877f4a7a87fb0631178f0fe60bb4eac6aa6a23ed610d4fca6b",
   "web/app/views/model-disagreement.css": "c6edfd6e81395b8d5e9fe67e982e399989172765490456f6a28ec036c115b72c",
+  // SCB-16: scoped picker rules only; never mounted or requested by Reports.
+  "web/region-picker.css": "ebc4fcaed679f3017e83921334f5c9ef5a10e70b7aed04eef6a995a0da75e6af",
   // UXFIX-12: panel.css moves the existing .chart-overflow:focus-visible outline out of its max-width:760px media block so it applies at every width; it paints only on keyboard focus of the history/forecast chart wrappers, never in the Reports catch sheet, so no counted catch paint or contrast changes. Rebound from the final bytes.
   "packages/coast/panel.css": "4558cd4edb0be1827ef6c00523a05b1c8eae84b0d0d81a93c33d5e12e4c66fa9",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
