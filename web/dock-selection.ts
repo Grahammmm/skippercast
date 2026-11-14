@@ -96,7 +96,11 @@ export function createDockSelection(options: DockSelectionOptions = {}): DockSel
     if (base.index >= 0 && base.at === at) { cancel(); return true; }
     stop();
     const g = generation;
-    preview.value = {at, day: localParts(new Date(at), tz).day, now, tz, context: untracked(context), generation: g};
+    const mine: Preview = {at, day: localParts(new Date(at), tz).day, now, tz, context: untracked(context), generation: g};
+    preview.value = mine;
+    // Publishing runs observers synchronously: one may cancel, release the last holder or replace this request.
+    // Arm the timeout only while this exact request still owns the preview, so no orphan timer is left or overwritten.
+    if (generation !== g || preview.peek() !== mine) return true;
     timer = schedule(() => settle(g), delay);
     return true;
   }
