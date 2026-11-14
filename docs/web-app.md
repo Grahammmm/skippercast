@@ -100,7 +100,7 @@ NOAA chart images follow the service's portrayal units. Wave, tide, and habitat 
 
 The site is served by SkipperCast's Cloudflare Worker (`wrangler.jsonc`), which publishes the built `dist/client` and `dist/server`; see [Cloudflare](cloudflare.md). Source credentials, generated archives, DNS receipts, and personal monitor state are not committed. Deploys come only from `main` through `.github/workflows/deploy-cloudflare.yml`; a failed deploy is rolled back, never repaired by hand in the dashboard.
 
-The private personal Telegram monitor is not wired into the public web app. The portable Python collector and alert lifecycle stay available for a later authenticated integration.
+The private personal Telegram monitor is not wired into the public web app. The legacy Python collector and alert lifecycle have been removed from this checkout; the separate private integration is unchanged.
 
 ## Live measurements
 

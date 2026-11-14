@@ -103,7 +103,6 @@ flowchart LR
 | Trip alerts | Saved-trip alerts in the account menu (`web/app/TripAlerts.tsx`, `web/alerts.ts`); `server/alert-policy.ts`, `server/trips.ts` (`checkTrips`, `deliver`), `scripts/check_saved_trips.py` | After each live cycle the job calls `POST /api/jobs/check` with a GitHub OIDC token (`server/job-auth.ts`); the Worker assesses due trips and sends Web Push with idempotent receipts | [Regional intelligence](regional-intelligence.md) |
 | AI boat lookup | `server/boat-lookup.ts` | Signed-in only; asks an Anthropic model with web search for a named boat's specifications; the person confirms them | [Boat profile](boat-profile.md) |
 | Watchdog | `server/watchdog.ts` | Cloudflare cron every 15 minutes: if `conditions/latest.json` is over 45 minutes old and no live run is active, dispatch one | [Cloudflare](cloudflare.md) |
-| Legacy monitor | `src/skippercast/monitor/` | Morro Bay-only forecast collector and alert-lifecycle utilities used by the offline demo and a separate personal monitor; slated for archiving (guide P2-08) | [Monitor reference](monitor-reference.md) |
 | Agent skills | `skills/` | Instructions for agents adding regions, discovering and ingesting data, and recent-discussion research | — |
 
 ## Hosting today
