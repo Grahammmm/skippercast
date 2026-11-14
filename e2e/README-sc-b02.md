@@ -15,3 +15,11 @@ Keep all 18 serial scenarios (nine each at 390x844 and 1280x800), the seven desk
 The retained `sc-b02-focused` job runs only for its explicit dispatch input on `codex/sc-b02-focused-ci`. Before dispatch, its owner must bind this composition's exact base, source head/tree, full patch hash and relocated fixture hash in a newly reviewed immutable delivery. Preserve its qualified hosted runner and pinned dependency/browser route, one-attempt guard, source scans, exit handling and evidence upload. An old delivery's pins do not cover this source.
 
 Browser/runtime qualification, the remaining B02 attempt budget and actual final source/delivery review are prerequisites. This fixture must never be launched as a way to discover or repair an unsupported local browser environment. Normal required CI and deployment verification remain separate gates.
+
+## Timing journey (not a CI gate)
+
+`e2e/v2-flyover.spec.ts` holds the SCB-02 phone journey: 4x CPU, first tap, day chip and dock step each under 100 ms. It is skipped unless `E2E_TIMING=1`, because absolute latency is not stable on a shared runner. Run it on a quiet machine:
+
+```sh
+E2E_TIMING=1 pnpm e2e e2e/v2-flyover.spec.ts --project=phone
+```
