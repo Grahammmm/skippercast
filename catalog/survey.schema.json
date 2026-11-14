@@ -106,6 +106,7 @@
       "enum": [
         "bag",
         "usgs-geotiff",
+        "geographic-geotiff",
         "arcgrid",
         "csumb",
         "vector",
@@ -351,6 +352,57 @@
         "rights_source_url": {
           "type": "string",
           "pattern": "^https://[^ ]+$"
+        },
+        "reprojection": {
+          "description": "Present only when a geographic original was projected on its own datum before the adapter (reproject_geographic.py).",
+          "type": "object",
+          "required": [
+            "version",
+            "source_sha256",
+            "source_crs",
+            "target_crs",
+            "datum_transformation",
+            "vertical_crs",
+            "vertical_units",
+            "resampling",
+            "cell_m",
+            "source_spacing_m",
+            "product_sha256",
+            "product_content_sha256"
+          ],
+          "properties": {
+            "version": {
+              "const": "geographic-to-california-albers-v1"
+            },
+            "source_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "target_crs": {
+              "enum": [
+                "EPSG:3310",
+                "EPSG:6414"
+              ]
+            },
+            "resampling": {
+              "enum": [
+                "bilinear",
+                "nearest"
+              ]
+            },
+            "cell_m": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "product_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "product_content_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
         },
         "raster_identity": {
           "type": "object",

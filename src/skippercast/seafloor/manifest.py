@@ -176,9 +176,17 @@ def qualify_row(row, receipt, *, rights_url, physical_only=False):
     result['adapter_review']['rights_source_url'] = rights_url
     if 'raster_identity' in receipt:
         result['adapter_review']['raster_identity'] = receipt['raster_identity']
+    if 'reprojection' in receipt:
+        result['adapter_review']['reprojection'] = receipt['reprojection']
     result['notes'] = ('Opened through original-native-adapters-v1; native-resolution COG cached by source hash. '
                        'Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. '
                        'Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.')
+    if 'reprojection' in receipt:
+        projected = receipt['reprojection']
+        result['notes'] = result['notes'].replace(
+            'native-resolution COG cached by source hash.',
+            f"geographic original projected on its own datum to {projected['target_crs']} "
+            f"({projected['resampling']}, {projected['cell_m']} m, never finer than the source); COG cached by source hash.")
     if row.get('format') == 'measured-multibeam-grid':
         result['notes'] = ('Reviewed measured-support bins derived from original irregular soundings. '
                            'Grid spacing is not native acquisition resolution or calibrated accuracy. '
