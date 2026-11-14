@@ -164,17 +164,20 @@ jobs:
     # Sharded 1/2 + 2/2 (2026-11-03): the single job was 903s median / 1157s p90 and was the long
     # pole of a 7-check pull request. The two shards run concurrently, so the same specs finish in
     # about half the wall clock. Nothing is skipped and no assertion is dropped.
+    # Four shards (CI-3, G 2026-11-13): each of the two shards still spent 13 to 14 minutes in the
+    # test step with Playwright's 4 workers already using the runner's 4 CPUs, so more runners is
+    # the lever. Each shard is its own check, e2e (1) to e2e (4); all four must pass.
     # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
     # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 25
     strategy:
-      # Both shards must report their own verdict. bin/mergegate.py reads a cancelled check as
-      # pending and blocks on it, so a failure in one shard must not cancel the other: that would
-      # turn one red shard into one red plus one blocking check.
+      # Every shard must report its own verdict. bin/mergegate.py reads a cancelled check as
+      # pending and blocks on it, so a failure in one shard must not cancel the others: that would
+      # turn one red shard into one red plus blocking checks.
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -196,7 +199,7 @@ jobs:
       - name: Install Playwright's Chromium (self-hosted; the host already has its libraries)
         if: runner.environment != 'github-hosted'
         run: pnpm exec playwright install chromium
-      # Playwright splits its own test list, so the two shards together run exactly the suite
+      # Playwright splits its own test list, so the shards together run exactly the suite
       # `playwright test` ran as one job: same specs, same projects, same assertions.
       - name: Restore nightly quarantine clock (read-only; PRs never save it)
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -204,10 +207,13 @@ jobs:
           path: test-results/quarantine-state.json
           key: e2e-clock-v1-${{ hashFiles('e2e/flaky.tsv') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: e2e-clock-v1-${{ hashFiles('e2e/flaky.tsv') }}-
+      # The divisor is the matrix size, so the shard list is the only number to change.
+      # E2E_WIDE adds the five extra screen sizes (playwright.config.ts) on the nightly and on every
+      # push to main (CI-2), so a wide-size break shows on the merge that caused it. PRs keep two sizes.
       - name: Browser flows and accessibility (serious and critical axe violations fail)
         env:
-          E2E_WIDE: ${{ github.event_name == 'schedule' && '1' || '' }}
-        run: pnpm e2e --shard=${{ matrix.shard }}/2
+          E2E_WIDE: ${{ (github.event_name == 'schedule' || github.event_name == 'push') && '1' || '' }}
+        run: pnpm e2e --shard=${{ matrix.shard }}/${{ strategy.job-total }}
       - name: Keep per-test JSON even when the shard fails
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -247,7 +253,9 @@ jobs:
           path: test-results/nightly
       - name: Publish per-spec rates and advance the 14-green-day clock
         if: always()
-        run: node scripts/e2e-flakes.mjs test-results/nightly/e2e-json-1/e2e-run.json test-results/nightly/e2e-json-2/e2e-run.json
+        # Every shard's JSON, so the matrix size stays the only number to change; a missing
+        # shard leaves fewer files than the reported shard total and earns no green day.
+        run: node scripts/e2e-flakes.mjs test-results/nightly/e2e-json-*/e2e-run.json
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: always() && hashFiles('test-results/flake-rates.json') != ''
         with:

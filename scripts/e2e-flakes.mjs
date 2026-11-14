@@ -46,7 +46,7 @@ export function quarantine(spec) {
 export function measure(reports, rows) {
   const specs = {};
   const targets = new Map(rows.map(row => [row.spec, row]));
-  let complete = reports.length === 2 && reports.every(r => Array.isArray(r.suites) && r.stats && !r.errors?.length);
+  let complete = reports.length > 0 && reports.every(r => Array.isArray(r.suites) && r.stats && !r.errors?.length);
   function walk(suites) {
     for (const suite of suites) {
       for (const spec of suite.specs ?? []) {
@@ -75,10 +75,14 @@ export function measure(reports, rows) {
   for (const report of reports) walk(report.suites ?? []);
   for (const m of Object.values(specs)) m.flake_rate = m.executed ? m.flaky / m.executed : null;
   // Each shard reports its identity; duplicate/partial files cannot earn a green day.
-  complete &&= reports.map(r => r.config?.shard?.current).sort().join(',') === '1,2' && reports.every(r => r.config?.shard?.total === 2);
+  // The workflow's matrix size is the shard total: shards 1..total must each report once.
+  const total = reports[0]?.config?.shard?.total;
+  const every = Array.from({length: Number.isInteger(total) && total > 0 ? total : 0}, (_, i) => i + 1).join(',');
+  complete &&= !!every && reports.length === total && reports.every(r => r.config?.shard?.total === total) &&
+    reports.map(r => r.config.shard.current).sort((a, b) => a - b).join(',') === every;
   // Match the workflow's full-suite invocation; --grep/file/project smoke runs
-  // must not be mistaken for a complete nightly, even with both shard numbers.
-  complete &&= reports.every(r => r.config.argv?.slice(2).join(' ') === `test --shard=${r.config.shard.current}/2`);
+  // must not be mistaken for a complete nightly, even with every shard number.
+  complete &&= reports.every(r => r.config.argv?.slice(2).join(' ') === `test --shard=${r.config.shard.current}/${total}`);
   return {complete, specs};
 }
 export function nightly(reports, rows, previous, day = today()) {
