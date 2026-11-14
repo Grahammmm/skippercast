@@ -15,10 +15,11 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
-import {createAerial, createImageryStartup} from '../map/aerial.ts';
+import {createAerial, createImageryStartup, createSharpStart} from '../map/aerial.ts';
 import {createCharterGrounds} from '../map/charter-grounds.ts';
 import {createShore} from '../map/shore.ts';
 import {chartFailed, createChart, unavailable} from '../map/chart.ts';
+import {seafloorState} from '../map/seafloor.ts';
 import {createCommercialAis} from '../map/commercial-ais.ts';
 import {createDepthContours} from '../map/depth-contours.ts';
 import {createClouds} from '../map/clouds.ts';
@@ -140,17 +141,20 @@ export function MapStage({children, clock}: {children?: ComponentChildren; clock
     // Release once, even when the brief settles as failed/timed out; refreshes never detach imagery.
     const imagery = createImageryStartup(() => verdictEpoch.value?.sealed === true);
     const aerialWaiting = computed(() => !imagery.ready.value && base.value === 'aerial' && !!currentRegionInfo()?.aerial);
+    // R4-SC-09: the first view's aerial base is a quarter-pixel preview; the full image follows once the map has first
+    // settled and the seafloor's first view has landed (or SHARP_WAIT_MAX_MS after that settle), so the two do not share the link.
+    const sharp = createSharpStart(() => mapFirstIdle.value, () => seafloorState.value.status === 'checking');
     const stage = createStage({host: terrainHost.current!, palette, overlayPalette, center: () => currentRegionInfo()?.center ?? null, zone, clock,
       renderers: [() => createChart({host: chartHost.current!, zone, place,
         idleReady: () => !aerialWaiting.value,
         layers: [engine => createChlorophyll({engine}), engine => createSwell({engine, zone, place}), engine => createContrast({engine, zone, place}), engine => createFronts({engine, place}), engine => createWind({engine, zone}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
           engine => createStations({engine, zone, feed: () => dailyFeed.value}),
-          engine => createAerial({engine: computed(() => aerialWaiting.value ? null : engine.value), offer: () => currentRegionInfo()?.aerial ?? null}), engine => createDepthContours({engine, host: chartHost.current!}),
+          engine => createAerial({engine: computed(() => aerialWaiting.value ? null : engine.value), offer: () => currentRegionInfo()?.aerial ?? null, sharp: () => sharp.ready.value}), engine => createDepthContours({engine, host: chartHost.current!}),
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
           engine => createReach({engine, host: chartHost.current!}),
           engine => createPlanningRouteLayer({engine, host: chartHost.current!}),
           engine => createPreviewLayers({engine, failures: {list: unavailable, clear: layer => { unavailable.value = unavailable.peek().filter(l => l !== layer); }}})]})]});
-    return () => { imagery.destroy(); stage.destroy(); };
+    return () => { imagery.destroy(); sharp.destroy(); stage.destroy(); };
   }, [clock]);
   const shown = shownPresentation.value, lang = language.value, failed = mapUnavailable.value;
   return (
