@@ -1,17 +1,17 @@
 # SCB-12 — start the map in parallel
 
-**MEASURED: final cold canvas median is 4.857 s, versus main's 7.610 s.** The five final runs were [4786, 4857, 4897, 4757, 5014] ms: four meet the unchanged 5.0 s target individually; one is 14 ms over. The median meets the target, but this is **not** an all-runs or worst-case pass. Review that distinction explicitly. Not merged, deployed or verified live.
+**MEASURED: final cold canvas median is 4.811 s, versus the original main baseline's 7.610 s.** After merging current main 9037fd2be, all five final runs meet the unchanged 5.0 s target: [4803, 4820, 4811, 4846, 4806] ms. Earlier outliers remain disclosed below; this is not a worst-case guarantee. Not merged, deployed or verified live.
 
-**MEASURED trade-off:** the first verdict is 717 ms later. This improves map start, not the whole first visit. SCB-11 owns the brief diet. The map's first-idle mark is not proof every later asynchronous overlay has arrived.
+**MEASURED trade-off:** the first verdict is 713 ms later. This improves map start, not the whole first visit. SCB-11 owns the brief diet. The map's first-idle mark is not proof every later asynchronous overlay has arrived.
 
-| Cold median | main 114079ae (n=3) | final runtime e5c2b7f92b (n=5) |
+| Cold median | original main 114079ae (n=3) | merged runtime 317406aab8 (n=5) |
 |---|---:|---:|
-| canvasMs | 7610 | 4857 |
-| verdictMs | 7466 | 8183 |
-| chartIdleMs | 19943 | 19868 |
-| bytesToVerdict | 960698 | 1234969 |
+| canvasMs | 7610 | 4811 |
+| verdictMs | 7466 | 8179 |
+| chartIdleMs | 19943 | 19779 |
+| bytesToVerdict | 960698 | 1234945 |
 
-MEASURED warm medians: canvas 917 ms, saved verdict 502 ms, chart idle 4072 ms. Raw final file: `round3-phone-final5s.json`, preserved with the card evidence.
+MEASURED warm medians: canvas 895 ms, saved verdict 488 ms, chart idle 3952 ms. Raw final file: `round3-phone-merged.json`, preserved with the card evidence.
 
 ## Change and preserved boundaries (READ)
 
@@ -24,7 +24,8 @@ The asynchronous entry also needed the existing ordered-page stylesheet plugin t
 ## Final-round diagnosis and verification
 
 - **MEASURED:** twelve selected original failures reproduced on the preserved old build. The old imagery latch could wait for a held coast/report's twenty-second verdict deadline, blocking map idle and seafloor feedback beyond existing browser expectations.
-- **MEASURED:** final five-second-cap build passes all four affected specs together: 186 passed, 24 existing viewport-conditional skips, zero failures (7.0 min). This includes the original failed language, text-size, map loading, credits, publication/expiry, protected-area and aerial cases, plus held-main and failed-library bootstrap coverage. Receipt: `round3-repo-e2e-1794620885692746870.log`.
+- **MEASURED:** pre-merge five-second-cap build passes all four affected specs together: 186 passed, 24 existing viewport-conditional skips, zero failures (7.0 min). This includes the original failed language, text-size, map loading, credits, publication/expiry, protected-area and aerial cases, plus held-main and failed-library bootstrap coverage. Receipt: `round3-repo-e2e-1794620885692746870.log`.
+- **MEASURED:** after merging main, the five affected specs (including phone-sheet reach) pass together: 203 passed, 41 existing viewport-conditional skips, zero failures (5.7 min). Receipt: `round3-repo-e2e-1794622057143700415.log`.
 - **MEASURED:** 64 focused startup/aerial/chart/seafloor unit tests pass, including exact head-start boundary, unchanged unsealed weather epoch, disposal, publication hold and expiry behavior. Typecheck, build, both size gates, all 27 source pins, copy/token lint, check_web and local CI checks pass. Exact-head installed prepush and remote outcomes belong in the final Kanban handoff; earlier-head receipts do not establish them.
 - **MEASURED:** an intermediate broad run hit the desktop Chart rail centre-click assertion. Untouched main 114079ae reproduced that same assertion in two of three repetitions; its receipt and the candidate trace are retained. This does not excuse another failure or clear the separate main-red release hold. No rail assertion or product layout was changed in this round.
 
@@ -34,7 +35,9 @@ The asynchronous entry also needed the existing ordered-page stylesheet plugin t
 
 **MEASURED:** an initial three-second-cap probe had canvas median 4.817 s but included 5.782 s in its first run, while another task-owned browser overlapped. That first library response began at 1.581 s versus about 0.55 s subsequently. **READ:** the harness synchronously compresses assets on their first request. **INFERRED:** that one-time work and overlap contributed; neither is proven to explain the whole delay. All raw runs remain preserved, not relabelled as passes.
 
-**MEASURED:** after explicitly preparing the server's compressed representations (not browser caches), the three-second-cap sample had all five canvas runs <=5 s but verdict median 9.152 s. Rejected because imagery competed with ordinary brief completion. The final five-second cap restores the verdict to 8.183 s while still allowing held/error paths to progress. The final sample used the same prepared server and no other task-owned browser; shared-host load was 38–51 at cold-run completion. Its 5.014 s outlier is retained.
+**MEASURED:** after explicitly preparing the server's compressed representations (not browser caches), the three-second-cap sample had all five canvas runs <=5 s but verdict median 9.152 s. Rejected because imagery competed with ordinary brief completion. The five-second cap restored the pre-merge verdict to 8.183 s, while its canvas sample included a 5.014 s outlier. That whole sample remains in `round3-phone-final5s.json`.
+
+**READ/MEASURED:** main then advanced to 9037fd2be, including CI-1's reviewed phone-sheet CSS fix. Merged it with both changelog entries retained and all 27 source pins matching, rebuilt as 317406aab8, prepared that build's compressed representations, and repeated all five cold/warm runs. No other task-owned browser overlapped this final sample. It yielded the primary table above, with 32–51 shared-host load at cold-run completion. The merged build's repeated browser and exact-head gate outcomes are recorded in the final handoff, not inferred from the pre-merge pass.
 
 **Limits:** one emulated region (Morro Bay), software WebGL, loaded shared host, changing public upstream responses, local HTTP/Brotli rather than edge HTTP2. Baseline n=3 and final n=5 were not simultaneous. No real-phone or production speed guarantee. Re-measure live after a reviewed deployment before claiming the live target.
 
