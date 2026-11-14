@@ -2096,7 +2096,12 @@
       "review_status": "approved",
       "reviewed_at": "2026-11-13",
       "rights": {
-        "license": "public-domain",
+        "license": "unrestricted-use",
+        "scope": "Mixed feed, two stations with different published terms: 46028 is NDBC-owned (US government work, public domain); 46215 is measured by CDIP/Scripps and NDBC relays it (CDIP file licence: redistribution and use without restriction, not a public-domain dedication). The row-level value is the one that fits both; the per-station terms are in components.",
+        "components": [
+          {"station": "46028", "owner": "NOAA National Data Buoy Center", "license": "public-domain", "terms_url": "https://www.weather.gov/disclaimer/"},
+          {"station": "46215", "owner": "CDIP, Scripps Institution of Oceanography (relayed by NDBC)", "license": "unrestricted-use", "terms_url": "https://cdip.ucsd.edu/m/documents/data_access.html"}
+        ],
         "attribution": "NOAA National Data Buoy Center; 46215 measured by CDIP/Scripps",
         "terms_url": "https://www.weather.gov/disclaimer/",
         "commercial_use": "allowed",
