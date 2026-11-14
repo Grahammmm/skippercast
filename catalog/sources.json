@@ -1086,14 +1086,14 @@
       "documentation_url": "https://www.socalfishreports.com/",
       "adapter": "landing-facts",
       "review_status": "approved",
-      "reviewed_at": "2026-09-21",
+      "reviewed_at": "2026-11-13",
       "rights": {
         "license": "facts-only",
         "attribution": "Local charter operators; SoCalFishReports",
         "terms_url": "https://www.socalfishreports.com/",
-        "commercial_use": "unknown",
+        "commercial_use": "allowed",
         "attribution_required": true,
-        "commercial_note": "Dated catch facts and links only; the publisher's terms of use, automated collection and compilation questions have not been reviewed for a paid product."
+        "commercial_note": "Dated catch facts and links only. socalfishreports.com publishes no terms-of-use page (a privacy policy only), shows \"All Rights Reserved\" and its robots.txt disallows nothing; no permission has been asked. The owner accepted facts-only use for a paid product (R4-SC-05 packet, blocker B5)."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
