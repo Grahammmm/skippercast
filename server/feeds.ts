@@ -263,8 +263,9 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
       return new Response('Seafloor screening unavailable or expired', {status: 503, headers: {'Cache-Control': 'no-store'}});
     }
   }
+  const cacheControl = seafloor ? 'no-store' : CONTENT_NAMED_BASEMAP.test(logicalKey) ? IMMUTABLE : `public, max-age=${cacheFor(logicalKey)}`;
   const headers = new Headers({'Content-Type': contentType(logicalKey),
-    'Cache-Control': seafloor ? 'no-store' : CONTENT_NAMED_BASEMAP.test(logicalKey) ? IMMUTABLE : `public, max-age=${cacheFor(logicalKey)}`,
+    'Cache-Control': cacheControl,
     'X-Content-Type-Options': 'nosniff', 'Access-Control-Allow-Origin': '*',
     'Access-Control-Expose-Headers': 'ETag, Content-Range, Content-Length, Accept-Ranges, X-Feed-Generation'});
   if (target.generation) headers.set('X-Feed-Generation', target.generation);
@@ -305,10 +306,14 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
     }
   }
   if (target.generation) return new Response('Feed release object unavailable', {status: 503, headers: {'Cache-Control': 'no-store'}});
+  // Only a successful archive response keeps the year-long immutable policy: every miss or error is no-store,
+  // so a request during a temporary outage can never pin "Not found" for the content-named archive.
+  headers.set('Cache-Control', 'no-store');
   if (seafloor) return new Response('Not found', {status: 404, headers});
   if (key.startsWith('tiles/')) {  // map tiles ship with the site until R2 is connected
     const response = assets ? await assets.fetch(new Request(new URL('/' + key, request.url))) : null;
     if (!response?.ok) return new Response('Not found', {status: 404, headers});
+    headers.set('Cache-Control', cacheControl);
     headers.set('X-Feed-Source', 'assets');
     return rangeResponse(new Uint8Array(await response.arrayBuffer()), request, headers);
   }

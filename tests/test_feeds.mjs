@@ -157,6 +157,24 @@ test('R4-SC-08: a content-named basemap archive is kept a year; a date-only one 
   } finally { useBucket({}); }
 });
 
+test('R4-SC-08: a missing or unavailable content-named basemap archive is never cached for a year', async () => {
+  const hashed = 'tiles/basemap/ca-coast-20261008-0123456789abcdef.pmtiles', path = '/feeds/' + hashed;
+  const request = () => new Request('https://s' + path);
+  try {
+    useBucket({FEEDS: {async get() { return null; }}});
+    let r = await serveFeed(request(), path, {fetch: async () => new Response('gone', {status: 404})});
+    assert.equal(r.status, 404);
+    assert.equal(r.headers.get('Cache-Control'), 'no-store', 'miss in R2 and assets');
+    r = await serveFeed(request(), path);
+    assert.equal(r.status, 404);
+    assert.equal(r.headers.get('Cache-Control'), 'no-store', 'miss with no assets binding');
+    r = await serveFeed(request(), path, {fetch: async () => new Response(new Uint8Array([1, 2, 3]))});
+    assert.equal(r.status, 200);
+    assert.equal(r.headers.get('X-Feed-Source'), 'assets');
+    assert.equal(r.headers.get('Cache-Control'), 'public, max-age=31536000, immutable', 'a successful assets archive stays immutable');
+  } finally { useBucket({}); }
+});
+
 test('seafloor archives require a fresh matching revision and never fall back to assets', async () => {
   const path = '/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles';
   const control = 'tiles/seafloor/manifest-morro-bay.json';
