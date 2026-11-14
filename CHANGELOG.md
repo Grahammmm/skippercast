@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- MAIN-RED-5: the “Loading the map” announcement no longer intercepts clicks on Chart controls beneath it. Its appearance and screen-reader announcements are unchanged.
 - The readable coastal report at `/report` now opens with a plain heading, "San Luis Obispo County coastal report", and a first sentence saying it covers San Luis Obispo County on the Central Coast (Morro Bay and Cambria–San Simeon) only, not the rest of California.
 - R4-SC-07: the automatic first-visit map flyover no longer runs below the 1024px desktop layout breakpoint, leaving phone and tablet interactions free of the camera tour. Desktop tours and reduced-motion, Save-Data and shared-link protections are unchanged.
 - SCB-16: the phone and desktop port chooser now offers every California region with dated, per-layer coverage from the reviewed SCB-01 audit. Draft regions can be inspected but not opened; previews stay previews. Held habitat, missing products, rules needing review and Trinidad–Klamath's overview-only map remain visible. This does not activate any region or approve rules.
@@ -634,6 +635,7 @@
 
 ### Internal
 
+- SC-AUDIT-14 (#2184 item 14): the 27 JSON Schema files that existed twice (`schemas/` and `src/skippercast/coastal/resources/`) now exist once. `schemas/` is the only copy; the packaged names are relative symlinks to it, so a built wheel still carries the real files (checked) and an edit can no longer leave the two out of step. `tests/contract/test_packaging.py` now fails if a packaged schema is a second copy. Nothing else changed; the atlas, catalog and `dist/` duplicates are listed in the pull request as follow-up.
 - RF0824-6: a published R2 feed that is asked for with `If-Match` or `If-Unmodified-Since` and fails that condition now answers 412 (no body, `no-store`, never cached) instead of 304, so a caller pinning an old object is not told its copy is current. These two conditions skip the edge cache and judge the current object's ETag (strong comparison) or whole-second upload time; an `If-Unmodified-Since` that is not an HTTP-date (for example `2020-01-01`) is ignored, and an `If-Match` list with an illegal tag (for example one holding a space) fails with 412; ordinary `If-None-Match`, `If-Modified-Since` and Range requests, and the cache-first path, are unchanged (`server/feeds.ts`, `tests/test_feed_preconditions.mjs`).
 
 - Design only, no app change: `docs/plans/pelagic-context/design.md` sets what albacore and bluefin pelagic context may show at a selected hour (separate dated evidence lines, only WCOFS lines change with the hour, bluefin keeps no temperature range, no score, rank or probability), the held-out validation test a search priority must pass first (not evaluable on the data held today, so priority stays off), and records that the species-search-plans search strips were retired with the v1 map (#561).
