@@ -16,8 +16,9 @@
 //
 // Past the ceiling the Worker is "degraded" until the UTC day ends:
 //   - no request reads R2 (the bucket is withheld, so every route takes the
-//     path it takes with no bucket bound: GitHub branches for feeds, shipped
-//     assets for tiles, the Fish bridge for coast data);
+//     path it takes with no bucket bound: published feeds are unavailable,
+//     never read from GitHub; tiles come from the shipped assets and coast
+//     data from the Fish bridge);
 //   - public reads are answered first from their last-known copy, kept in the
 //     edge cache for LAST_KNOWN_SECONDS from the last time they were served
 //     normally;

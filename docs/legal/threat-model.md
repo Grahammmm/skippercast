@@ -20,7 +20,7 @@ flowchart LR
     cf --> worker
     worker --> d1[("D1: trips, subscriptions,<br/>events, feedback, limits")]
     worker --> r2[("R2: skippercast-feeds")]
-    worker --> gh[("GitHub branches:<br/>conditions, data, forecasts")]
+    worker -->|"watchdog freshness check only"| gh[("GitHub branches:<br/>conditions, data, forecasts")]
     worker --> push["Browser push services"]
     worker --> anthropic["Anthropic API"]
     actions["GitHub Actions jobs"] -->|"OIDC token"| worker
@@ -95,7 +95,7 @@ Routes: `/api/trips`, `/api/events/ack`, `/api/subscription`, `/api/comfort`, `/
 | T | Publishing false conditions (a compromised job, token or dependency writes the branch or bucket) | Only Actions write the branches; atomic per-cycle commits; R2 pointers uploaded after data files (`scripts/publish_r2.py`); seafloor archives served only with a matching SHA-256 receipt and expiry (`serveFeed`) | Medium: feeds are not signed; any holder of the Cloudflare token or `contents: write` can publish | P2-02 schemas; P2-06 narrower tokens; P0-04 run ids |
 | D / I | R2 silently stale while monitoring is green (A6) | Watchdog restarts the live job (`server/watchdog.ts`); hourly freshness check (`scripts/check_feed_freshness.py`) | High on `main`: R2 upload failures are warnings and freshness is read from GitHub only | P0-04 (PR #30: hard failures, public-route freshness, read-back) |
 | D | Expensive anonymous reads (up to 15 MB tiles decoded per request) | 5-minute browser cache headers | High on `main` | P0-05 (PR #43: edge cache, per-IP limits) |
-| D | R2 errors take feeds down (errors do not fall back to GitHub) | Missing objects fall back to GitHub | Medium | R2 outage runbook (`docs/operations/runbooks/r2-outage.md`, PR #46); P2-05 |
+| D | R2 errors or a missing object take feeds down (no GitHub fallback since SC2184-13) | Edge-cached copies until their TTL; last-known copies past the cost ceiling | Medium | R2 outage runbook (`docs/operations/runbooks/r2-outage.md`, PR #46); P2-05 |
 | S | SSRF through feed URLs | Worker reads only URLs compiled into the bundle from reviewed region files (`REGIONS`, `DEPLOYMENT` in `scripts/build-worker.mjs`); `redirect: 'manual'`; 18 s timeout; 15 MB cap | Low | — |
 
 ## 7. CI/CD and secrets

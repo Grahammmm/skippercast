@@ -1,13 +1,13 @@
 """SC158: noncentral held diagnostics hash only a no-follow regular snapshot leaf.
 
 Offline, synthetic checks of ``skippercast.seafloor.scoped.load_snapshot``. Each
-fixture lives in a fresh temporary root (the runner's admitted output root, the
-candidate's sibling ``out/`` directory, or the inherited temporary directory in
-CI), never under ``tests/fixtures``. Every patch is fixture-scoped and reversible;
+fixture lives in a fresh temporary root (the candidate's sibling ``out/``
+directory, or the inherited temporary directory in CI), never under
+``tests/fixtures``. Every patch is fixture-scoped and reversible;
 nothing here writes, installs hooks or changes the environment at import time.
 """
 import builtins
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack
 from datetime import datetime, timezone
 import hashlib
 import importlib.util
@@ -30,8 +30,6 @@ from tests._support import ROOT as REPO
 pytestmark = pytest.mark.gis
 SRC = REPO / 'src'
 FIXTURES = REPO / 'tests' / 'fixtures' / 'sc158-snapshot-diagnostic'
-RUNNER = REPO / 'tools' / 'run_sc158_snapshot_diagnostic.py'
-OUT_ENV = 'SC158_OUT_ROOT'
 UNSAFE = 'unsafe scope snapshot diagnostic'
 SCOPE_ID = 'sc158-demo'
 REACH = 'demo-reach'
@@ -39,54 +37,7 @@ NOW = datetime(2026, 9, 28, 12, 0, tzinfo=timezone.utc)
 CHUNK_LIMIT = 1024 * 1024
 WRITE_FLAGS = os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND
 
-REQUIRED_TESTS = ('test_positive_contract', 'test_rejects_malformed', 'test_baseline_compatibility',
-                  'test_isolation_and_discovery', 'test_deciding_negative_control')
-POSITIVE_CASES = ('absent-snapshot', 'absent-screen-dir', 'tiny-regular-snapshot',
-                  'streamed-multi-chunk-snapshot', 'central-default-delegates', 'central-config-delegates')
-MALFORMED_CASES = ('leaf-symlink-inside', 'leaf-symlink-outside', 'dangling-leaf-link', 'directory-leaf',
-                   'modeled-special-file', 'growth-before-open', 'growth-during-read',
-                   'replacement-before-open', 'replacement-during-read', 'vanished-before-open',
-                   'modeled-name-replacement-after-read', 'same-inode-change-at-final-name',
-                   'modeled-final-name-type-change')
-COMPATIBILITY_CASES = ('resolve-scope-noncentral-paths', 'resolve-scope-central-paths',
-                       'sc75-config-outside-root-refused', 'sc13a-in-root-ancestor-alias-preserved',
-                       'held-result-matches-legacy-for-accepted-inputs', 'require-noncentral-unchanged',
-                       'central-replacement-refused')
-ISOLATION_CASES = ('staged-module-origin', 'temporary-root-admitted', 'module-import-has-no-side-effects',
-                   'peer-and-ambient-state-restored', 'finalization-complete-positive',
-                   'finalization-missing-log', 'finalization-mutated-log', 'finalization-late-append',
-                   'finalization-exit-hook-lifecycle')
-NEGATIVE_CASES = ('legacy-leaf-alias-mutant-detected', 'restored-real-reader-positive')
-SUBTEST_CASES = {
-    'test_positive_contract': POSITIVE_CASES,
-    'test_rejects_malformed': MALFORMED_CASES,
-    'test_baseline_compatibility': COMPATIBILITY_CASES,
-    'test_isolation_and_discovery': ISOLATION_CASES,
-    'test_deciding_negative_control': NEGATIVE_CASES,
-}
 PEER_TEST = 'tests.unit.test_check_repository.ScopeTests.test_fixtures_plan_and_advisor_runbooks_are_scanned'
-# Filled by test_deciding_negative_control; the runner binds it into its receipt.
-NEGATIVE_EVIDENCE = []
-# test id -> {case: 'pass' | 'fail' | 'skip'}; a recorded failure is never overwritten by a later pass.
-EXECUTED = {}
-# Opt-in path (set only by an evidence caller) for this module's executed cases and loaded origins.
-DISCOVERY_EVIDENCE_ENV = 'SC158_DISCOVERY_EVIDENCE'
-
-
-def tearDownModule():
-    """Write executed IDs, case outcomes and loaded origins only when a caller asked for them."""
-    target = os.environ.get(DISCOVERY_EVIDENCE_ENV, '').strip()
-    if not target:
-        return
-    origins = {name: getattr(module, '__file__', None) for name, module in sorted(sys.modules.items())
-               if name.split('.')[0] in ('skippercast', 'tests', 'pyproj', 'shapely')
-               and getattr(module, '__file__', None)}
-    evidence = {'schema': 'sc158.discovery-evidence/v1', 'module': __name__, 'module_file': __file__,
-                'interpreter': sys.executable, 'required_tests': list(REQUIRED_TESTS),
-                'subtest_cases': {name: list(cases) for name, cases in SUBTEST_CASES.items()},
-                'executed': EXECUTED, 'module_origins': origins}
-    with open(target, 'x', encoding='utf-8') as stream:
-        stream.write(json.dumps(evidence, indent=2, sort_keys=True) + '\n')
 
 
 class Product:
@@ -118,10 +69,7 @@ def staged_product():
 
 def temporary_base():
     """The admitted parent for fixture roots (None means the inherited temporary directory)."""
-    configured = os.environ.get(OUT_ENV, '').strip()
-    if configured:
-        base = Path(configured)
-    elif (REPO.parent / 'SOURCE-MANIFEST.json').is_file():
+    if (REPO.parent / 'SOURCE-MANIFEST.json').is_file():
         base = REPO.parent / 'out' / 'discovery'
     else:
         return None
@@ -325,27 +273,9 @@ def modeled_fifo(result):
 
 class SnapshotDiagnosticTests(unittest.TestCase):
     def setUp(self):
-        EXECUTED.setdefault(self.id(), {})
         self.product = staged_product()
         self.fixture = Fixture(self)
         self.enterContext(mock.patch.object(self.product.contracts, 'REPO', self.fixture.root))
-
-    @contextmanager
-    def subTest(self, msg=None, **params):
-        """unittest's subTest, also recording each case outcome in EXECUTED."""
-        record = EXECUTED.setdefault(self.id(), {})
-        case = params.get('case', msg)
-        outcome = 'fail'
-        with (super().subTest(msg, **params) if msg is not None else super().subTest(**params)):
-            try:
-                yield
-                outcome = 'pass'
-            except unittest.SkipTest:
-                outcome = 'skip'
-                raise
-            finally:
-                if record.get(case) in (None, 'pass'):
-                    record[case] = outcome
 
     def load(self, fixture, scope_config=None, now=None):
         return self.product.scoped.load_snapshot(
@@ -623,7 +553,7 @@ class SnapshotDiagnosticTests(unittest.TestCase):
             self.assertEqual((dict(os.environ), list(sys.path), sys.dont_write_bytecode,
                               self._sc158_entries()), before)
             self.assertNotIn('sc158_import_probe', sys.modules)
-            self.assertEqual(probe.REQUIRED_TESTS, REQUIRED_TESTS)
+            self.assertEqual(probe.PEER_TEST, PEER_TEST)
         with self.subTest(case='peer-and-ambient-state-restored'):
             peer_before = self._run_peer()
             ambient_before = self._ambient()
@@ -638,55 +568,6 @@ class SnapshotDiagnosticTests(unittest.TestCase):
             self.assertEqual(self._sc158_entries(), entries_before)
             self.assertEqual(self._run_peer(), peer_before)
             self.assertEqual(peer_before, (1, 0, 0, 0))
-        runner = self._load_runner()
-        logs = {'stdout.txt': 'synthetic stdout\n', 'stderr.txt': ''}
-        receipt = {'schema': 'sc158.synthetic-finalization', 'status': 'PASS'}
-        with self.subTest(case='finalization-complete-positive'):
-            run_dir = self._seal_dir(runner, 'complete', receipt, logs)
-            self.assertEqual(runner.verify_sealed(run_dir), [])
-            with self.assertRaises(FileExistsError):
-                runner.seal_run(run_dir, receipt, logs)
-        with self.subTest(case='finalization-missing-log'):
-            run_dir = self._seal_dir(runner, 'missing', receipt, logs)
-            os.unlink(run_dir / 'stdout.txt')
-            self.assertIn('missing log stdout.txt', runner.verify_sealed(run_dir))
-        with self.subTest(case='finalization-mutated-log'):
-            run_dir = self._seal_dir(runner, 'mutated', receipt, logs)
-            (run_dir / 'stdout.txt').write_text('synthetic stdouT\n', encoding='utf-8')
-            self.assertIn('changed log stdout.txt', runner.verify_sealed(run_dir))
-        with self.subTest(case='finalization-late-append'):
-            run_dir = self._seal_dir(runner, 'late', receipt, logs)
-            with open(run_dir / 'stderr.txt', 'a', encoding='utf-8') as stream:
-                stream.write('late writer\n')
-            self.assertIn('changed log stderr.txt', runner.verify_sealed(run_dir))
-            with self.assertRaises(FileExistsError):
-                runner.seal_run(run_dir, receipt, logs)
-        with self.subTest(case='finalization-exit-hook-lifecycle'):
-            # Real child processes with real exit hooks through the runner's genuine
-            # supervise/finalize lifecycle. Under the runner that lifecycle ran in the
-            # unguarded parent before this guarded child started (child execution is
-            # refused here); its sealed record is checked. Under ordinary discovery
-            # the same lifecycle runs now beneath this fixture's temporary root.
-            recorded = os.environ.get(runner.QUALIFICATION_ENV, '').strip()
-            if recorded:
-                qualification = json.loads(Path(recorded).read_text(encoding='utf-8'))
-            else:
-                qualification = runner.qualify_finalization(self.fixture.tmp / 'finalization-qualification')
-            modes = qualification['modes']
-            self.assertEqual(sorted(modes), sorted(runner.PROBE_MODES))
-            stream_mode, file_mode = modes['late-stream'], modes['late-file']
-            self.assertEqual((stream_mode['exit_code'], stream_mode['status'], stream_mode['seal_problems']),
-                             (0, 'PASS', []))
-            self.assertTrue(stream_mode['late_line_in_raw_stderr'])
-            self.assertTrue(stream_mode['late_line_in_sealed_stderr'], 'late exit-hook bytes missing from seal')
-            self.assertNotEqual(file_mode['exit_code'], 0)
-            self.assertEqual(file_mode['status'], 'FAIL')
-            self.assertIn('stderr.txt', file_mode['unexpected_entries'])
-            self.assertTrue(any(problem.startswith('unsealable') for problem in file_mode['seal_problems']))
-            self.assertTrue(qualification['passed'])
-            for mode in modes.values():
-                self.assertEqual(runner.verify_sealed(mode['probe_root']),
-                                 [] if mode is stream_mode else ['missing receipt'])
 
     def test_deciding_negative_control(self):
         product = self.product
@@ -709,9 +590,6 @@ class SnapshotDiagnosticTests(unittest.TestCase):
             tripped = spies[0].target_reads()
             self.assertTrue(tripped, 'legacy mutant did not trip the target-read sentinel')
             self.assertEqual(identity(fx.external), fx.external_identity)
-            NEGATIVE_EVIDENCE.append({'case': 'legacy-leaf-alias-mutant-detected', 'detected': True,
-                                      'deciding_assertion_failure': failure,
-                                      'target_reads': len(tripped)})
         with self.subTest(case='restored-real-reader-positive'):
             self.assertIs(product.scoped.__dict__.get('_snapshot_sha256'), real_reader)
             fx = Fixture(self)
@@ -721,7 +599,6 @@ class SnapshotDiagnosticTests(unittest.TestCase):
             fx.make_screen_dir()
             fx.snapshot.symlink_to(fx.external)
             self.assert_safe_refusal(fx, protected=[fx.external])
-            NEGATIVE_EVIDENCE.append({'case': 'restored-real-reader-positive', 'passed': True})
 
     # Helpers for isolation checks.
     def _sc158_entries(self):
@@ -741,19 +618,6 @@ class SnapshotDiagnosticTests(unittest.TestCase):
         result = unittest.TestResult()
         unittest.defaultTestLoader.loadTestsFromName(PEER_TEST).run(result)
         return result.testsRun, len(result.failures), len(result.errors), len(result.skipped)
-
-    def _load_runner(self):
-        spec = importlib.util.spec_from_file_location('sc158_runner_probe', RUNNER)
-        runner = importlib.util.module_from_spec(spec)
-        with mock.patch.object(sys, 'dont_write_bytecode', True):
-            spec.loader.exec_module(runner)
-        return runner
-
-    def _seal_dir(self, runner, name, receipt, logs):
-        run_dir = self.fixture.tmp / ('seal-' + name)
-        run_dir.mkdir()
-        runner.seal_run(run_dir, receipt, logs)
-        return run_dir
 
 
 if __name__ == '__main__':

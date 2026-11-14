@@ -1,7 +1,7 @@
 """SC-RIGHTS-DELTA: compare two frozen sc-rights-observation-v1 envelopes (docs/engineering/sc_rights_delta.md).
 
-Plain test_* functions with no pytest fixtures or imports, so the existing pytest discovery
-collects them and scripts/accept_sc_rights_delta.py can run the same functions in-process.
+Plain test_* functions with no pytest fixtures or imports; the existing pytest discovery
+collects them.
 Name prefixes map to the card's acceptance rows: test_a1_* focused, test_a2_* producer
 contract, test_a3_* negative and preservation. Every path derives from tests._support.ROOT.
 """
@@ -579,15 +579,6 @@ def test_a3_symlink_fifo_and_special_inputs_are_refused():
     assert stat.S_ISFIFO(os.lstat(fifo).st_mode)
 
 
-def _load_runner():
-    import importlib.util
-    path = REPO / "scripts" / "accept_sc_rights_delta.py"
-    spec = importlib.util.spec_from_file_location("sc_rights_delta_runner_under_test", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 def _cancelled_symlink_tree():
     """work/link -> work/elsewhere/deep, so link/.. is physically work/elsewhere, lexically work."""
     work = _fresh_dir()
@@ -627,22 +618,10 @@ def test_a3_cancelled_symlink_component_paths_are_refused():
         assert prior.read_bytes() == b"prior evidence\n"
         assert _snapshot(work) == before
 
-        runner = _load_runner()
-        for bad in (str(work / "link" / ".." / "run-abs"), os.path.join("link", "..", "run-rel")):
-            try:
-                runner.make_run_root(bad)
-            except SystemExit as refusal:
-                assert "refused" in str(refusal.code), bad
-            else:
-                raise AssertionError(f"runner admitted cancelled run root {bad}")
-        assert _snapshot(work) == before
-
         # Ordinary absolute and relative paths still work.
         assert _cli(str(good), "good.json", str(work / "ok-abs.json")) == 0
         assert _cli("good.json", str(good), "ok-rel.json") == 0
         assert (work / "ok-abs.json").is_file() and (work / "ok-rel.json").is_file()
-        made = runner.make_run_root("run-ok")
-        assert made == work / "run-ok" and (made / "tmp").is_dir()
     finally:
         os.chdir(cwd)
 

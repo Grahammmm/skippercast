@@ -54,6 +54,18 @@ test('warm files omit deferred CSS URL references but retain styles, fonts and o
   assert.ok(reachable(manifest, ['app.html']).has(`/${panel}`), 'offline packs still include referenced panel styles');
 });
 
+test('SCB-12: the mandatory shell behind the bootstrap still warms, excluding optional renderer chunks', () => {
+  const manifest = {
+    'app.html': {file: 'assets/boot.1111111111.js', dynamicImports: ['../web/app/main.tsx', '../web/map/maplibre.js']},
+    '../web/app/main.tsx': {file: 'assets/main.2222222222.js', imports: ['shared'], dynamicImports: ['planner']},
+    shared: {file: 'assets/shared.3333333333.js'},
+    planner: {file: 'assets/planner.4444444444.js'},
+    '../web/map/maplibre.js': {file: 'assets/maplibre.5555555555.js'},
+    'landing.html': {file: 'assets/landing.6666666666.js', imports: ['shared']},
+  };
+  assert.deepEqual(appWarm(manifest), ['/assets/boot.1111111111.js', '/assets/main.2222222222.js']);
+});
+
 test('the build refuses a worker without the build placeholder', async () => {
   const dir = await site();
   await writeFile(join(dir, 'sw.js'), 'self.x=1');

@@ -30,7 +30,7 @@ from research.lib.receipts import locate
 ROOT = Path(__file__).resolve().parents[2]
 SCHEME = "var/review/BlueTopo_Tile_Scheme_20260924_191855.gpkg"
 MATRIX = "dist/data/monterey-300-source-evidence-matrix.json"
-CONTEXT = "dist/data/usgs-offshore-monterey-hard-context.geojson"
+CONTEXT = "research/receipts/usgs-offshore-monterey-hard-context.geojson"
 TILES = {"BC24S26W", "BH44P5CL", "BH44N5CK", "BH44P5CK", "BH44N5CJ"}
 
 

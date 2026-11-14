@@ -166,7 +166,7 @@ def main():
     p.add_argument('--federal-areas',type=Path,default=Path('var/noaa-federal-areas.json'))
     p.add_argument('--hazards',type=Path,default=Path('research/catalog/noaa-survey-hazards.json'))
     p.add_argument('--report-cache',type=Path,default=Path('var/noaa-report-cache'))
-    p.add_argument('--screen',type=Path,default=Path('dist/data/noaa-h11975-cape-mendocino-hard-depth-screen.json'))
+    p.add_argument('--screen',type=Path,default=Path('research/receipts/noaa-h11975-cape-mendocino-hard-depth-screen.json'))
     p.add_argument('--output',type=Path,default=Path('dist/data/cape-mendocino-native-hard-context.geojson'))
     a=p.parse_args()
     packet=json.loads(a.survey_audit.read_text())

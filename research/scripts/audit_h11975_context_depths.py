@@ -87,7 +87,7 @@ def audit(root=ROOT):
                     read(root / 'var/noaa-federal-areas.json'),
                     read(root / 'research/catalog/noaa-survey-hazards.json'),
                     root / 'var/noaa-report-cache', mask_callback=collect)
-    previous = read(root / 'dist/data/noaa-h11975-cape-mendocino-hard-depth-screen.json')
+    previous = read(root / 'research/receipts/noaa-h11975-cape-mendocino-hard-depth-screen.json')
     for key in ('bag_sha256', 'usgs_archive_sha256', 'survey_report_sha256', 'counts'):
         if result[key] != previous[key]:
             raise ValueError('Original-cell screen changed: ' + key)

@@ -73,8 +73,8 @@ def merge(primary_path, addition_path, native_path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--primary', type=Path, default=Path('dist/data/central-estero-nbs-usgs-hard-research-context.geojson'))
-    parser.add_argument('--addition', type=Path, default=Path('dist/data/central-south-nbs-usgs-hard-research-context.geojson'))
+    parser.add_argument('--primary', type=Path, default=Path('research/receipts/central-estero-nbs-usgs-hard-research-context.geojson'))
+    parser.add_argument('--addition', type=Path, default=Path('research/receipts/central-south-nbs-usgs-hard-research-context.geojson'))
     parser.add_argument('--native', type=Path, default=Path('dist/data/point-conception-native-hard-context.geojson'))
     parser.add_argument('--output', type=Path, default=Path('dist/data/central-nbs-usgs-hard-research-context.geojson'))
     args = parser.parse_args()

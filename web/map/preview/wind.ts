@@ -1,11 +1,11 @@
-// MAPLIVE-1: wind particle trails, style "wind 3" (MAPLAYER-WIND-1; research/scripts/map_style/wind-layer.js).
+// MAPLIVE-1: wind particle trails, style "wind 3" (MAPLAYER-WIND-1; web/map/wind-layer.js).
 // A canvas over the Chart driven by the study's own particle module, fed a real NOAA GFS 10 m grid. The module
 // wants a MapLibre-shaped map, so a small adapter maps it onto the engine's view (the Chart exposes no raw map).
 // A run older than 18 h, or an invalid grid, draws nothing.
 import type {MapView} from '../engine.ts';
 import {PREVIEW_DATA, type PreviewAttach} from '../preview-layers.ts';
 import {ageText, expireWhenStale, getJson, handle, hoursOld, utc} from './common.ts';
-import {COLOURS, fresh, particles, validate} from '../../../research/scripts/map_style/wind-layer.js';
+import {COLOURS, fresh, particles, validate} from '../wind-layer.js';
 
 type Listener = () => void;
 /** The subset of MapLibre's Map the particle module calls, over the engine's view. */

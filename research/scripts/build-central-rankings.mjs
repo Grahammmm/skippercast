@@ -6,7 +6,7 @@ import {speciesFit} from '../../dist/species-fit.js';
 
 const atlasBytes = readFileSync('dist/data/atlas.json');
 const atlas = JSON.parse(atlasBytes);
-const screen = JSON.parse(readFileSync('dist/data/central-atlas-300-current-closure-screen.json', 'utf8'));
+const screen = JSON.parse(readFileSync('research/receipts/central-atlas-300-current-closure-screen.json', 'utf8'));
 const geometryDigest = createHash('sha256').update(JSON.stringify({
   targets:atlas.targets.map(t=>[t.id,t.latitude,t.longitude]),
   areas:atlas.areas.map(a=>[a.id,a.geometry]),

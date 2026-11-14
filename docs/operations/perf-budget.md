@@ -134,6 +134,80 @@ Open `scripts/perf-budget.json`. For the group that is over, add an entry at the
 the same number. The check fails if `max_bytes` differs from the last history entry or a reason is empty, so a number
 cannot change quietly. Prefer shrinking the file first.
 
+### Budgets with headroom (SC-CI-2)
+
+Why: in the 14 days to 2026-11-13, 5 of main's 24 red-main fix pull requests were a size budget a few bytes too tight
+(#1895 app styles 52 B over, #1907 and #1943 and #2170 pack shell 63 B, 198 B and 4 B over, #2119 landing scripts 12 B over).
+Each passed CI on its own head, went red once merged with its neighbours, and held every merge in the repository until a
+fix pull request was reviewed. On 2026-11-13 five of the eight groups below sat between 97.7% and 99.9% of their number,
+and the pack shell at 99.8%.
+
+What a budget does now (all the byte budgets CI checks: the eight groups in `scripts/perf-budget.json`, and the precache
+and gzipped page bundle numbers in `scripts/startup-budget.json`):
+
+* It fails only **above** its number (unchanged).
+* From **97%** of its number it passes with a `WARN` row (`check_perf_budget.py`) or a `WARN:` line
+  (`check_client.mjs`), and a GitHub annotation in Actions. Nothing fails.
+* On every push to main, `.github/workflows/budget-drift.yml` builds main and runs `scripts/budget_drift.py`. Every
+  budget at or above 97% (or over) gets the ceiling **measured x 1.05, rounded up to 1,000 bytes** (the rule this file's
+  history already used), and one bot pull request (branch `bot/budget-drift`, signed off, Offline checks dispatched on it)
+  carries the new numbers, each with its reason: the measured size, the old number, and the main commit that moved it. The
+  pull request is reviewed and merged like any other; nothing is pushed to main by the bot.
+* The reasons go in `history` for `perf-budget.json` (as before) and in the new `drift_history` list for
+  `startup-budget.json` (which has no per-number history). `python3 scripts/budget_drift.py --check` (run in the Size
+  budget step) fails if a budget with a `drift_history` entry was hand-edited without a new entry.
+* Budgets are only ever **raised** by the bot. Lowering after a real saving stays a deliberate edit in the pull request that
+  made the saving (SC1407-09 and SC1407-10 above), with its history entry.
+
+So a feature pull request does not raise a budget while main has headroom: a ceiling sits 5% above main, and the next bump
+comes about 2% of growth later. A pull request that on its own takes a group past its number still raises it by hand, with
+a reason, as above; and a WARN on a pull request is information, not a request to edit the budget file.
+
+Run it yourself: `pnpm build && BUDGET_MEASUREMENTS_OUT=var/client-budget.json node scripts/check_client.mjs &&
+python3 scripts/budget_drift.py --client-measurements var/client-budget.json` prints what the bot would change; add
+`--apply` to write it. **Roll back:** revert the bot's pull request (the budgets return to their earlier numbers), or
+delete `.github/workflows/budget-drift.yml`; the warn-only checks keep working without it.
+
+Not covered: `scripts/startup-budget.json` `morro-bay.max_bytes` (the e2e startup JSON budget, measured by
+`scripts/measure_startup.mjs` in the e2e job, 91% today) keeps its own measured + 10% rule.
+
+### Budgets with headroom (SC-CI-2)
+
+Why: in the 14 days to 2026-11-13, 5 of main's 24 red-main fix pull requests were a size budget a few bytes too tight
+(#1895 app styles 52 B over, #1907 and #1943 and #2170 pack shell 63 B, 198 B and 4 B over, #2119 landing scripts 12 B over).
+Each passed CI on its own head, went red once merged with its neighbours, and held every merge in the repository until a
+fix pull request was reviewed. On 2026-11-13 five of the eight groups below sat between 97.7% and 99.9% of their number,
+and the pack shell at 99.8%.
+
+What a budget does now (all the byte budgets CI checks: the eight groups in `scripts/perf-budget.json`, and the precache
+and gzipped page bundle numbers in `scripts/startup-budget.json`):
+
+* It fails only **above** its number (unchanged).
+* From **97%** of its number it passes with a `WARN` row (`check_perf_budget.py`) or a `WARN:` line
+  (`check_client.mjs`), and a GitHub annotation in Actions. Nothing fails.
+* On every push to main, `.github/workflows/budget-drift.yml` builds main and runs `scripts/budget_drift.py`. Every
+  budget at or above 97% (or over) gets the ceiling **measured x 1.05, rounded up to 1,000 bytes** (the rule this file's
+  history already used), and one bot pull request (branch `bot/budget-drift`, signed off, Offline checks dispatched on it)
+  carries the new numbers, each with its reason: the measured size, the old number, and the main commit that moved it. The
+  pull request is reviewed and merged like any other; nothing is pushed to main by the bot.
+* The reasons go in `history` for `perf-budget.json` (as before) and in the new `drift_history` list for
+  `startup-budget.json` (which has no per-number history). `python3 scripts/budget_drift.py --check` (run in the Size
+  budget step) fails if a budget with a `drift_history` entry was hand-edited without a new entry.
+* Budgets are only ever **raised** by the bot. Lowering after a real saving stays a deliberate edit in the pull request that
+  made the saving (SC1407-09 and SC1407-10 above), with its history entry.
+
+So a feature pull request does not raise a budget while main has headroom: a ceiling sits 5% above main, and the next bump
+comes about 2% of growth later. A pull request that on its own takes a group past its number still raises it by hand, with
+a reason, as above; and a WARN on a pull request is information, not a request to edit the budget file.
+
+Run it yourself: `pnpm build && BUDGET_MEASUREMENTS_OUT=var/client-budget.json node scripts/check_client.mjs &&
+python3 scripts/budget_drift.py --client-measurements var/client-budget.json` prints what the bot would change; add
+`--apply` to write it. **Roll back:** revert the bot's pull request (the budgets return to their earlier numbers), or
+delete `.github/workflows/budget-drift.yml`; the warn-only checks keep working without it.
+
+Not covered: `scripts/startup-budget.json` `morro-bay.max_bytes` (the e2e startup JSON budget, measured by
+`scripts/measure_startup.mjs` in the e2e job, 91% today) keeps its own measured + 10% rule.
+
 ### Aerial base tiles (SC1407-07, #1762 M1)
 
 Not a size budget: a note on the Aerial base's network work. Morro Bay opens on Aerial, so its NAIP tiles are part of

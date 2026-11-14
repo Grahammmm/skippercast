@@ -1,6 +1,6 @@
 # Quickstart
 
-Choose the atlas if you want fishing research on your chartplotter. Choose the Python tools if you want to collect and inspect forecast evidence or develop the project.
+Choose the atlas if you want fishing research on your chartplotter. Choose the Python tools if you want to validate files, re-export the atlas, or develop the project.
 
 ## Use the atlas without installing anything
 
@@ -9,28 +9,27 @@ Choose the atlas if you want fishing research on your chartplotter. Choose the P
 3. Back up your chartplotter data, then follow the [iNavX instructions](inavx.md).
 4. For a searchable list, download `exports/spot-notes.html` and open it locally in a browser. The page makes no external requests.
 
-## Run the offline demonstration
+## Install and inspect the Python tools
 
-Use Python 3.11+ with IANA time-zone data available. macOS and typical Linux installations provide it; Windows users may need the standard `tzdata` package for Python's `zoneinfo` support.
+Use Python 3.11+ from the repository root.
 
-macOS / Linux, from the repository root:
+macOS / Linux:
 
 ```bash
-PYTHONPATH=src python3 -m skippercast demo
 python3 -m pip install -e ".[test]"
+python3 -m skippercast --help
 python3 -m pytest -m "not gis"
 ```
 
 PowerShell:
 
 ```powershell
-$env:PYTHONPATH = "src"
-python -m skippercast demo
 python -m pip install -e ".[test]"
+python -m skippercast --help
 python -m pytest -m "not gis"
 ```
 
-No Python package dependencies are needed for the core tools (the tests need the pinned `test` extra: pytest, jsonschema, moto); the optional Windows `tzdata` package supplies system time-zone data. Tests use saved/synthetic fixtures and temporary directories. They do not contact providers, schedule tasks, or deliver messages.
+No Python package dependencies are needed for the core tools (the tests need the pinned `test` extra: pytest, jsonschema, moto). Tests use saved/synthetic fixtures and temporary directories. They do not contact providers, schedule tasks, or deliver messages.
 
 ## Optional editable installation
 
@@ -38,7 +37,7 @@ No Python package dependencies are needed for the core tools (the tests need the
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .
-skippercast demo
+skippercast --help
 ```
 
 On Windows, activate with `.venv\Scripts\Activate.ps1`. Installing build tools may use the network. Repository data and example profiles stay in this checkout; they are not bundled inside a Python wheel.
@@ -47,29 +46,21 @@ Optional extras install the pinned scientific and publishing tools: `ocean` (Net
 
 Code finds `regions/`, `catalog/` and `dist/` through `skippercast.paths.repo_root()`: the source checkout by default, or the directory named by `SKIPPERCAST_ROOT`.
 
-## Collect live evidence
-
-From the repository root:
+## Validate a file
 
 ```bash
-PYTHONPATH=src python3 -m skippercast collect \
-  --config configs/morro-bay.example.json \
-  --output var/runs/first-check
+python3 -m skippercast validate sources-catalog catalog/sources.json
 ```
 
-Use a new output directory for every run. The collector will not overwrite a prior run. This command contacts the sources described in the [source register](data-sources.md). A system `curl` is used for CDFW pages when available; TLS verification remains enabled. Sources can fail or return incomplete fields. A nonzero exit status means the collection or screen is incomplete: inspect its saved manifest and gaps rather than treating it as “no good dates.”
-
-Read the saved raw sources, metadata, and `screen.json` together. Retrieval time is not forecast issue time. Passing numerical limits does not produce a recommendation. The [forecast workflow](forecast-workflow.md) explains the additional review and [assessment rubric](assessment-rubric.md) defines the scores.
-
-The supplied profile is a **regional Morro Bay example**, not a geographic discovery engine. Changing coordinates alone does not change the NWS zone, harbor, tide station, buoy selection, regulatory sources, or navigation requirements. Those must be reviewed before adapting it to another location.
+Schema validation needs the optional `jsonschema` dependency included in the `test` extra. It checks file structure, not current source freshness or whether a trip qualifies.
 
 ## Re-export the atlas
 
 ```bash
-PYTHONPATH=src python3 -m skippercast atlas validate \
+python3 -m skippercast atlas validate \
   --data atlas/avila-point-estero-2026-09-20/data/atlas.json
 
-PYTHONPATH=src python3 -m skippercast atlas export \
+python3 -m skippercast atlas export \
   --data atlas/avila-point-estero-2026-09-20/data/atlas.json \
   --output var/atlas-preview
 ```

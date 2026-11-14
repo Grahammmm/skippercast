@@ -4,7 +4,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {readFeed, NWS_HEADERS, RAW} from '../server/feeds.ts';
+import {readFeed, NWS_HEADERS, RAW, useBucket} from '../server/feeds.ts';
+import {feedBucket} from './fixtures/feed-bucket.mjs';
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
@@ -33,11 +34,10 @@ test('an api.weather.gov read sends exactly the NWS User-Agent and Accept header
   });
 });
 
-test('a GitHub raw feed read keeps the old init shape with no headers key', async () => {
+test('a published-feed URL is read from R2 only: with no bucket it throws and fetches nothing', async () => {
   await withFetch(() => Response.json({ok: true}), async calls => {
-    assert.deepEqual(await readFeed(RAW + 'data/regions/morro-bay/latest.json'), {ok: true});
-    assert.deepEqual(Object.keys(calls[0].init).sort(), ['redirect', 'signal']);
-    assert.equal(calls[0].init.redirect, 'manual');
+    await assert.rejects(readFeed(RAW + 'data/regions/morro-bay/latest.json'), /Feed storage unavailable/);
+    assert.equal(calls.length, 0);
   });
 });
 
@@ -90,7 +90,8 @@ async function tripIssues(nws) {
   try {
     return await withFetch((url, init) => new URL(url).hostname === 'api.weather.gov' ? nws(url, init)
       : url === REGION.intelligence_feed ? Response.json(INTEL) : Response.json({}, {status: 503}), async calls => {
-      const result = await checkTrips({DB: adapter});
+      useBucket({FEEDS: feedBucket()});   // published feeds come only from R2; checkTrips reads the bucket in place
+      const result = await checkTrips({DB: adapter}).finally(() => useBucket({}));
       assert.equal(result.changes, 1);
       const nwsCalls = calls.filter(c => new URL(c.url).hostname === 'api.weather.gov');
       assert.ok(nwsCalls.length >= 1 && nwsCalls.every(c => sentUA(c.init) === UA), 'every NWS read carries the User-Agent');

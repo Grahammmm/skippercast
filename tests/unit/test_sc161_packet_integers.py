@@ -6,28 +6,24 @@ ints for every named finite profile's native_window, before the existing
 equality/membership checks. The unnamed legacy branch is unchanged.
 
 Ordinary unittest discovery is safe: no product import, write, audit hook or
-environment change happens at module import time. Product imports occur inside
-the reversible offline guard from tools/run_sc161_packet_integers.py.
+environment change happens at module import time. Product imports occur in
+setUpClass.
 """
 from copy import deepcopy
 import builtins
 import importlib
-import importlib.util
 import io
 import json
 import os
 from pathlib import Path
 import socket
 import subprocess
-import sys
 import unittest
 from unittest.mock import patch
-import uuid
 
 from tests._support import FIXTURES, ROOT as REPO
 
 FIXTURE = FIXTURES / 'sc161-packet-integers'
-RUNNER = REPO / 'tools/run_sc161_packet_integers.py'
 CODE = 'packet_integer_binding_invalid'
 OUTSIDE = 'window outside immutable finite grant'
 SHAPE = 'contained input shape/count differs from immutable grant'
@@ -35,20 +31,6 @@ MISSING = object()
 PACKET_KEYS = ('execution_profile', 'window_side', 'window_count', 'source', 'source_root',
                'source_relative_path', 'ordered_scope_contract', 'geographic_review',
                'output_retention', 'output_root', 'larger_runtime_contract', 'support_policy')
-
-
-def load_file(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError('missing test support')
-    module = importlib.util.module_from_spec(spec)
-    old = sys.dont_write_bytecode
-    try:
-        sys.dont_write_bytecode = True
-        spec.loader.exec_module(module)
-    finally:
-        sys.dont_write_bytecode = old
-    return module
 
 
 def equality_only(p):
@@ -124,44 +106,15 @@ def typed(value):
 
 
 class PacketIntegerBindingTests(unittest.TestCase):
-    OUTPUT_ROOT = None
-
     @classmethod
     def setUpClass(cls):
-        cls.support = load_file('sc161_support', RUNNER)
-        if cls.OUTPUT_ROOT is None:
-            # CI may supply an inherited admitted output root. Never mutate env.
-            inherited = os.environ.get('SKIPPERCAST_TEST_OUTPUT_ROOT')
-            prefix = Path(inherited) if inherited else REPO.parent / 'out/discovery'
-            cls.run_root = prefix / ('sc161-' + uuid.uuid4().hex)
-            cls.run_root.mkdir(parents=True, exist_ok=False)
-        else:
-            cls.run_root = Path(cls.OUTPUT_ROOT)
-        cls.cases = {}
-        cls.control = {'expected': [], 'detected': [], 'inner_failures': {}, 'restored': False}
         cls.fixture = json.loads((FIXTURE / 'windows.json').read_text())
-        cls.guard = cls.support.OfflineProduct(cls.run_root)
-        cls.guard.__enter__()
-        try:
-            cls.p = importlib.import_module('skippercast.coastal.authenticated_v1.profiles')
-            cls.policy = importlib.import_module('skippercast.coastal.authenticated_v1.policy')
-            cls.common = importlib.import_module('skippercast.coastal.handoff.common')
-            cls.origins = cls.guard.origins()
-        except BaseException:
-            cls.guard.__exit__(*sys.exc_info())
-            raise
+        cls.p = importlib.import_module('skippercast.coastal.authenticated_v1.profiles')
+        cls.policy = importlib.import_module('skippercast.coastal.authenticated_v1.policy')
+        cls.common = importlib.import_module('skippercast.coastal.handoff.common')
         cls.genuine = staticmethod(cls.p.validate_grant_packet)
         cls.constants = typed((cls.p.CONTAINED, cls.p.LARGER, cls.p.PARTIAL_SUPPORT,
                                cls.p.PARTIAL_WINDOWS, cls.p.ORDERED_SCOPE, cls.p.MANAGED_EIGHT_COPY))
-
-    @classmethod
-    def tearDownClass(cls):
-        events = list(cls.guard.events)
-        cls.guard.__exit__(None, None, None)
-        cls.support.dump(cls.run_root / 'test-details.json', {
-            'cases': cls.cases, 'module_origins': cls.origins, 'guard_events': events,
-            'negative_control': cls.control, 'fixture_hashes': cls.support.fixture_hashes()})
-        print('SC161_DETAILS=' + str(cls.run_root / 'test-details.json'))
 
     def setUp(self):
         self.validate = self.genuine
@@ -169,14 +122,7 @@ class PacketIntegerBindingTests(unittest.TestCase):
     # ------------------------------------------------------------ helpers
 
     def case(self, name):
-        self.__class__.cases.setdefault(self._testMethodName, []).append(name)
         return self.subTest(case=name)
-
-    def finish(self):
-        recorded = self.__class__.cases.get(self._testMethodName, [])
-        expected = self.support.EXPECTED_CASES[self._testMethodName]
-        self.assertEqual((len(recorded), len(set(recorded))), (expected, expected),
-                         'missing, extra or duplicate subcases')
 
     def old_validate(self, grant, packet):
         return equality_only(self.p)(grant, packet)
@@ -328,7 +274,6 @@ class PacketIntegerBindingTests(unittest.TestCase):
                     self.validate(g[name], packet_for(g[name], window))
                 self.assertIn(OUTSIDE, str(caught.exception))
                 self.assertNotIn(CODE, str(caught.exception))
-        self.finish()
 
     # ------------------------------------------------------------ compatibility
 
@@ -378,7 +323,6 @@ class PacketIntegerBindingTests(unittest.TestCase):
                 self.assertIsNotNone(new)
                 self.assertIn(reason, new)
                 self.assertEqual(new, self.message(self.old_validate, grant, packet))
-        self.finish()
 
     # ------------------------------------------------------------ deciding negative control
 
@@ -386,22 +330,17 @@ class PacketIntegerBindingTests(unittest.TestCase):
         cases = self.decisive_cases()
         g = self.grants()
         positive = packet_for(g['unit'], g['unit']['window_set'][0])
-        control = self.__class__.control
-        control['expected'] = [label for label, _, _ in cases]
-        detected = []
         with patch.object(self, 'validate', self.old_validate):
             for label, grant, packet in cases:
                 with self.case('control-detects-' + label):
                     try:
                         self.assert_integer_refusal(grant, packet)  # SAME regression assertion
-                    except self.failureException as inner:
-                        detected.append(label)
-                        control['inner_failures'][label] = str(inner).splitlines()[0]
+                    except self.failureException:
+                        pass
                     else:
                         self.fail('equality-only control was not detected: ' + label)
             with self.case('control-integer-positive'):
                 self.assert_accepts_baseline(g['unit'], positive)
-        control['detected'] = detected
         with self.case('control-restored'):
             self.assertEqual(self.validate, self.genuine)
             self.assertIs(self.p.validate_grant_packet, self.genuine)
@@ -410,8 +349,6 @@ class PacketIntegerBindingTests(unittest.TestCase):
                 self.assert_integer_refusal(grant, packet)
         with self.case('restored-integer-positive'):
             self.assert_accepts_baseline(g['unit'], positive)
-        control['restored'] = self.validate == self.genuine
-        self.finish()
 
     # ------------------------------------------------------------ preservation
 
@@ -467,9 +404,6 @@ class PacketIntegerBindingTests(unittest.TestCase):
                                     self.p.ORDERED_SCOPE, self.p.MANAGED_EIGHT_COPY)), self.constants)
         with self.case('product-origin-is-candidate'):
             self.assertTrue(Path(self.p.__file__).resolve().is_relative_to(REPO / 'src'))
-            self.assertEqual(self.origins['skippercast.coastal.authenticated_v1.profiles'],
-                             str((REPO / 'src/skippercast/coastal/authenticated_v1/profiles.py').resolve()))
-        self.finish()
 
 
 if __name__ == '__main__':

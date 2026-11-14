@@ -6,7 +6,7 @@ from research.lib.paths import ROOT
 class UsgsSourceRegistryDatumTest(unittest.TestCase):
     def test_original_usgs_depth_datum_is_not_invented(self):
         registry = {row["id"]: row for row in json.loads((ROOT / "catalog/sources.json").read_text())["sources"]}
-        ledger = json.loads((ROOT / "dist/data/usgs-depth-datum-ledger.json").read_text())
+        ledger = json.loads((ROOT / "research/receipts/usgs-depth-datum-ledger.json").read_text())
         by_release = {row["id"]: row for row in ledger["sources"]}
         for source_id, release_id in (("usgs-point-buchon", "P9KBGELE"),
                                       ("usgs-morro-bay", "P9HEZNRO"),

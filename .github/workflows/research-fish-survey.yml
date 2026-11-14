@@ -1,8 +1,6 @@
 name: "Research: monthly California fish survey evidence review"
 
 on:
-  schedule:
-    - cron: "19 11 2 * *"
   workflow_dispatch:
 
 permissions:

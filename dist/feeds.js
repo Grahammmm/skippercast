@@ -1,8 +1,7 @@
 // Published feeds (live conditions, daily evidence, forecast tiles) live in
-// Cloudflare R2 when the site runs on SkipperCast's own Cloudflare account, and
-// on GitHub branches before that. Region configs name the GitHub location; the
-// browser always asks the site's /feeds/ route, which serves R2 first and
-// falls back to GitHub, so moving storage never needs a front-end change.
+// Cloudflare R2. Region configs still name each feed by its old GitHub
+// location (RAW below is only that logical name); the browser always asks the
+// site's /feeds/ route, which serves R2 and never GitHub.
 export const RAW = 'https://raw.githubusercontent.com/Grahammmm/skippercast/';
 const BRANCHES = ['conditions/', 'data/', 'forecasts/'];
 

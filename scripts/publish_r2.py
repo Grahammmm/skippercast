@@ -200,16 +200,52 @@ def sync(s3, bucket, source, prefix):
     """
     if prefix not in SNAPSHOT_PREFIXES:
         return sync_legacy(s3, bucket, source, prefix)
+    # One shared retry budget for the daily data publish, not one per object.
+    retried = False
+
+    def attempt(operation):
+        nonlocal retried
+        try:
+            return operation()
+        except Exception as error:
+            if prefix != 'data' or retried or not transport_error(error):
+                raise
+            retried = True
+            print('::warning title=R2 publish::Transport error; retrying data snapshot once in 5 seconds')
+            import time
+            time.sleep(5)
+            return operation()
+
+    def read_current():
+        try:
+            prior = s3.get_object(Bucket=bucket, Key=f'{prefix}/{CURRENT}')
+            pointer = json.loads(prior['Body'].read())
+            if pointer.get('schema_version') != 1 or not re.fullmatch('[a-f0-9]{64}', pointer.get('generation', '')):
+                raise ValueError('Invalid current R2 release; refusing to overwrite it')
+            return prior['ETag'], pointer
+        except s3.exceptions.NoSuchKey:
+            return None, None
+
+    expected, pointer = attempt(read_current)
+    # Freeze the original CAS baseline across retries. Never rebase onto a
+    # concurrent release, even after a lost acknowledgment of our own commit.
+    return attempt(lambda: sync_snapshot(s3, bucket, source, prefix, expected, pointer))
+
+
+def transport_error(error):
+    """Only connection/TLS/timeouts, never HTTP, validation, auth or CAS errors."""
+    import ssl
+    from botocore import exceptions as boto_errors
+    from urllib3 import exceptions as http_errors
+    return isinstance(error, (ssl.SSLError, TimeoutError, ConnectionError,
+                              boto_errors.ConnectionError, boto_errors.ReadTimeoutError,
+                              http_errors.SSLError, http_errors.ProtocolError,
+                              http_errors.TimeoutError))
+
+
+def sync_snapshot(s3, bucket, source, prefix, expected, pointer):
+    """Publish against the caller's frozen current-release baseline."""
     pointer_key = f'{prefix}/{CURRENT}'
-    try:
-        prior = s3.get_object(Bucket=bucket, Key=pointer_key)
-        expected = prior['ETag']
-        prior_body = prior['Body'].read()
-        pointer = json.loads(prior_body)
-        if pointer.get('schema_version') != 1 or not re.fullmatch('[a-f0-9]{64}', pointer.get('generation', '')):
-            raise ValueError('Invalid current R2 release; refusing to overwrite it')
-    except s3.exceptions.NoSuchKey:
-        expected, pointer = None, None
     local = scan(source)
     if not local:
         raise ValueError('Refusing to publish an empty snapshot')

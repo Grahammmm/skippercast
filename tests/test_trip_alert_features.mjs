@@ -5,11 +5,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
+import {feedBucket} from './fixtures/feed-bucket.mjs';
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
 const {checkTrips} = await import('../server/index.ts');
 const {checkOwnerTrips} = await import('../server/trips.ts');
+const {useBucket} = await import('../server/feeds.ts');
 const REGION = globalThis.REGIONS['morro-bay'];
 const ADV = 'Applicable marine advisory', UNAVAILABLE = 'Marine advisories unavailable';
 const COASTAL = REGION.marine_zones.coastal, OFFSHORE = REGION.marine_zones.offshore;
@@ -43,11 +45,12 @@ async function run(answers, {trips = [['trip-1', 'north']], owner = false} = {})
     if (u.hostname === 'api.weather.gov') { const body = answers[u.searchParams.get('zone')]; return body === undefined ? Response.json({}, {status: 503}) : Response.json(body); }
     return String(url) === REGION.intelligence_feed ? Response.json(INTEL) : Response.json({}, {status: 503});
   };
+  useBucket({FEEDS: feedBucket()});   // published feeds come only from R2
   try {
     const result = owner ? await checkOwnerTrips({DB: adapter}, 'alice', NOW, new Map()) : await checkTrips({DB: adapter});
     const assessed = Object.fromEntries(sql.prepare('SELECT id,last_assessment FROM trips ORDER BY id').all().map(r => [r.id, JSON.parse(r.last_assessment)]));
     return {result, assessed};
-  } finally { globalThis.fetch = original; sql.close(); }
+  } finally { globalThis.fetch = original; useBucket({}); sql.close(); }
 }
 const coastal = async body => (await run({[COASTAL]: body})).assessed['trip-1'];
 const show = v => JSON.stringify(v) ?? 'undefined';

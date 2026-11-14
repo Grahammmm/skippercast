@@ -9,7 +9,7 @@ downloaded and nothing is timed. Two kinds of file are measured:
 
 * First-load files: after `pnpm build`, the landing page and the app page each load one entry script, the
   scripts it imports straight away, and its stylesheets (read from dist/client/.vite/manifest.json).
-  Scripts loaded later on demand (dynamic import) are not first-load and are not counted here, but the
+  The app bootstrap's mandatory shell is also first-load. Optional dynamic imports are not counted, but the
   "largest single built file" budget still covers every file Vite emits.
 * Brief data files: the data files the brief and the map read on every load (PERF-BASELINE-1 section A.8).
   Three named files are summed. The per-region startup files (atlas marks, search-plan index, regulations
@@ -22,15 +22,25 @@ budget's "history" list with the new "max_bytes" and a "reason", and set the bud
 number. The check fails if "max_bytes" differs from the last history entry, so a number cannot be
 changed without a written reason that reviewers see in the diff. See docs/operations/perf-budget.md.
 
+A group fails only above its budget. From 97% of its budget (WARN_RATIO) it passes but prints a WARN row and, in
+GitHub Actions, a ::warning annotation: main is then close to a knife edge, and scripts/budget_drift.py (run on main
+by .github/workflows/budget-drift.yml) opens one bot pull request that raises the ceiling to the measured size plus 5%
+with the commit that moved it, so a feature pull request does not have to raise a budget.
+
 Usage: python3 scripts/check_perf_budget.py [--root DIR] [--budget FILE]
-Exit 0: every group within budget. Exit 1: a budget is exceeded or the budget file is invalid.
+Exit 0: every group within budget (WARN rows are not failures). Exit 1: a budget is exceeded or the budget file is invalid.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
+
+# From this share of its budget a group still passes but is reported as WARN. Keep equal to WARN_RATIO in
+# scripts/check_client.mjs (tests/unit/test_budget_drift.py checks that they match).
+WARN_RATIO = 0.97
 
 REPO = Path(__file__).resolve().parent.parent
 DEFAULT_BUDGET = REPO / "scripts" / "perf-budget.json"
@@ -43,11 +53,14 @@ def kib(n: int) -> str:
 
 
 def first_load_closure(manifest: dict, entry_key: str) -> tuple[list[str], list[str]]:
-    """Files (js, css) an entry loads straight away: itself plus static imports, no dynamic imports."""
+    """Files loaded straight away, including the app bootstrap's mandatory shell, not optional maps."""
     js: list[str] = []
     css: list[str] = []
     seen: set[str] = set()
     stack = [entry_key]
+    if entry_key == "app.html":
+        stack.extend(key for key in manifest.get(entry_key, {}).get("dynamicImports", [])
+                     if key == "../web/app/main.tsx")
     while stack:
         key = stack.pop()
         if key in seen:
@@ -125,13 +138,20 @@ def validate_budget(budget: dict) -> list[str]:
     return problems
 
 
+def status_of(used: int, limit: int) -> str:
+    """OVER BUDGET above the budget, WARN from 97% of it, else OK. Only OVER BUDGET fails the check."""
+    if used > limit:
+        return "OVER BUDGET"
+    return "WARN" if used >= WARN_RATIO * limit else "OK"
+
+
 def render(budget: dict, results: dict[str, dict]) -> tuple[str, bool]:
     lines = ["SIZE BUDGET CHECK (file sizes in bytes; nothing is downloaded or timed)", ""]
     rows = []
     ok = True
     for name, spec in budget["budgets"].items():
         used, limit = results[name]["bytes"], spec["max_bytes"]
-        status = "OK" if used <= limit else "OVER BUDGET"
+        status = status_of(used, limit)
         ok &= used <= limit
         rows.append((spec["label"], kib(used), kib(limit), f"{used / limit * 100:.0f}%", status))
     head = ("What is measured", "Size now", "Budget", "Used", "Result")
@@ -151,8 +171,18 @@ def render(budget: dict, results: dict[str, dict]) -> tuple[str, bool]:
             lines += [f"    {kib(b):>12}  {f}" for f, b in sorted(res["files"], key=lambda x: -x[1])[:8]]
             lines += ["  If the growth is intended, raise the budget in this pull request with a written reason:",
                       "  see docs/operations/perf-budget.md (add a history entry in scripts/perf-budget.json)."]
+    near = [(spec, results[name]["bytes"]) for name, spec in budget["budgets"].items()
+            if status_of(results[name]["bytes"], spec["max_bytes"]) == "WARN"]
+    for spec, used in near:
+        lines += ["", f"WARN: {spec['label']} is at {used / spec['max_bytes'] * 100:.1f}% of its budget "
+                      f"({used:,} of {spec['max_bytes']:,} bytes). It still passes. After this merges, main's budget-drift bot "
+                      f"raises the ceiling (measured + 5%) in its own pull request, with the commit that moved it."]
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            print(f"::warning title=Size budget near its ceiling::{spec['label']} is at "
+                  f"{used / spec['max_bytes'] * 100:.1f}% of its {spec['max_bytes']:,} byte budget")
     lines += ["", "Not measured here: live data answers and the reef export, which are published outside this repository."]
-    lines += ["", "RESULT: " + ("PASS, every group is within its budget." if ok else "FAIL, at least one group is over budget.")]
+    note = f" ({len(near)} within 3% of the ceiling, see WARN)" if near and ok else ""
+    lines += ["", "RESULT: " + ("PASS, every group is within its budget." + note if ok else "FAIL, at least one group is over budget.")]
     return "\n".join(lines), ok
 
 

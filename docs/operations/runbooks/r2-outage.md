@@ -11,7 +11,12 @@
 - Bucket `skippercast-feeds` (override with `R2_BUCKET`), bound to the Worker as `FEEDS` in `wrangler.jsonc`. Keys mirror the GitHub branches: `conditions/...`, `data/...`, `forecasts/...`, plus `tiles/seafloor/...` from the seafloor workflow.
 - Writers: `scripts/publish_branch_r2.sh <worktree> <prefix>` (live loop, daily job, forecast tiles) calls `scripts/publish_r2.py`, which uploads only files whose SHA-256 differs from the index at `<prefix>/.r2-sync.json`, data files before pointer files (`latest`, `index`, `manifest`, `*-health`), deletions last. `src/skippercast/seafloor/publish.py` writes seafloor archives and their `manifest-<region>.json` after a read-back check.
 - Credentials: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The S3 access key is the token's id and the secret is the SHA-256 of the token, so rotating the token rotates both.
-- Reader: `server/feeds.ts`. `serveFeed` (the `/feeds/` route) and `readBucketJSON` (used by `/api/om`, `/api/forecast`, `/api/intelligence`, `/api/habitat`, and the watchdog) fall back to GitHub **only when R2 has no object for the key**. If R2 itself errors, the request fails (5xx), so the lever in a real R2 outage is to deploy without the binding (Fix A). Seafloor archives never fall back; they fail closed with 503/404 by design.
+- Reader: `server/feeds.ts`. `serveFeed` (the `/feeds/` route) and `createFeedReader` (used by `/api/om`, `/api/forecast`, `/api/intelligence`, `/api/habitat`, `/api/daily` and trip checks) read published feeds **from R2 only**; the Worker never fetches a feed from GitHub (SC2184-13). What users then get:
+  - a key absent from the bound bucket: `404` on `/feeds/` (map tiles under `tiles/` may still come from the shipped assets), and an error answer on the `/api/` route;
+  - no bucket bound: `503` with `Cache-Control: no-store`;
+  - past the R2 cost ceiling ([cost ceiling](../cost-ceiling.md)): the last-known copy if one is held, otherwise `503` with `{degraded: true}`;
+  - R2 itself erroring: the request fails (5xx).
+  Seafloor archives fail closed with 503/404 by design. The cron watchdog alone still compares the GitHub branch copy of `conditions/latest.json` when R2 has none (`server/watchdog.ts` `liveFeed`); it serves nothing to users.
 - On `main`, an R2 upload failure is a warning and the job stays green. After PR #30 ([P0-04]) merges, it fails the job, every `latest.json` carries `published_at` and `run_id`, and `scripts/verify_published_feed.py` checks the public route after each publish.
 
 ## Detect
@@ -26,7 +31,7 @@ for p in conditions/latest.json data/latest.json forecasts/gfs_global/manifest.j
 done
 ```
 
-Healthy: `200` and `x-feed-source: r2` for each. `github` means R2 has no copy of that key; a 5xx means R2 errored.
+Healthy: `200` and `x-feed-source: r2` for each. `404` means R2 has no copy of that key (there is no GitHub fallback); `503` with no `x-sc-degraded` header means the Worker has no bucket bound; `503` with `x-sc-degraded: cost-ceiling` means the R2 cost ceiling tripped ([cost ceiling](../cost-ceiling.md)); another 5xx means R2 errored.
 
 ## Diagnose (in order)
 
@@ -58,16 +63,7 @@ W="npx --yes wrangler@4.142.0"
 
 ## Fix
 
-**A. R2 is erroring (platform outage): serve feeds from GitHub.** From a checkout of `main` at the repository root, build and deploy a config without the R2 binding (the comment stripping matches `scripts/cloudflare_deploy.sh`):
-
-```bash
-pnpm install --frozen-lockfile && pnpm build
-DB_ID=$($W d1 list --json | python3 -c "import json,sys; print(next(r.get('uuid') or r.get('database_id') for r in json.load(sys.stdin) if r.get('name')=='skippercast'))")
-node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8").replace(/^\s*\/\/.*$/gm,""));c.d1_databases[0].database_id=process.argv[1];delete c.r2_buckets;fs.writeFileSync("wrangler.deploy.jsonc",JSON.stringify(c,null,2));' "$DB_ID"
-npx --yes wrangler@4.142.0 deploy --config wrangler.deploy.jsonc --message "R2 outage: serve feeds from GitHub"
-```
-
-Live, daily and forecast feeds then come from GitHub (`x-feed-source: github`); map tiles under `tiles/` come from static assets; seafloor archives answer 404 until R2 returns. Worker secrets are kept across deploys. Undo with the Rollback step below.
+**A. R2 is erroring (platform outage): there is no fallback store.** Since SC2184-13 the Worker never reads a published feed from GitHub, so deploying without the R2 binding no longer helps: every feed would answer `503`. Leave the binding in place, track the incident on cloudflarestatus.com, and escalate (below) if it lasts more than an hour. Edge-cached copies keep answering until their TTL runs out. When R2 recovers, check Detect again; if uploads failed during the outage, do B.
 
 **B. Uploads are failing (R2 stale).** Fix the cause (usually the token: [secrets rotation](secrets-rotation.md)), then republish. The next live cycle republishes `conditions` and `forecasts`; to catch up immediately, dispatch the jobs:
 
@@ -98,13 +94,13 @@ For seafloor archives, rerun the publication: `gh workflow run seafloor.yml --re
 
 ## Verify
 
-- Every line of Detect shows `200` and `x-feed-source: r2` (or `github` while Fix A is in place).
+- Every line of Detect shows `200` and `x-feed-source: r2`.
 - `latest.json` on `$SITE/feeds/conditions/` matches the GitHub copy (Detect and Diagnose step 4).
 - After PR #30: `python3 scripts/verify_published_feed.py "$SITE/feeds/conditions/latest.json" <run_id>` passes for the latest run.
 
 ## Rollback
 
-Fix A is undone by a normal deploy, which restores the `FEEDS` binding: **Actions → Deploy to Cloudflare → Run workflow**. Fixes B and C only write what the GitHub branches already hold; there is nothing to undo.
+Fix A changes nothing. If a deploy without the `FEEDS` binding was made anyway, a normal deploy restores it: **Actions → Deploy to Cloudflare → Run workflow**. Fixes B and C only write what the GitHub branches already hold; there is nothing to undo.
 
 ## Escalate
 

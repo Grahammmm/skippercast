@@ -99,7 +99,7 @@ def main():
     parser.add_argument('--manifest', type=Path,
                         default=Path('research/catalog/usgs-morro-report-datum-source.json'))
     parser.add_argument('--ledger', type=Path,
-                        default=Path('dist/data/usgs-depth-datum-ledger.json'))
+                        default=Path('research/receipts/usgs-depth-datum-ledger.json'))
     parser.add_argument('--cache', type=Path,
                         default=Path('var/usgs-report-cache/ofr20231064.xml'))
     parser.add_argument('--fetch', action='store_true')

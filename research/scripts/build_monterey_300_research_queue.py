@@ -69,7 +69,7 @@ def build(audit):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--audit", type=Path, default=Path("dist/data/usgs-offshore-monterey-bathy-context-review.json"))
+    parser.add_argument("--audit", type=Path, default=Path("research/receipts/usgs-offshore-monterey-bathy-context-review.json"))
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     report = build(json.loads(args.audit.read_text()))

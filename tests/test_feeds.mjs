@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {feedKey, rangeResponse, readBucketJSON, serveFeed, useBucket} from '../server/feeds.ts';
+import {createFeedReader, feedKey, rangeResponse, readBucketJSON, readFeed, serveFeed, useBucket} from '../server/feeds.ts';
 import {CRITICAL_DEGRADED_HOURS, criticalDegraded, dataAgeHours, degradedSources, failingKinds, feedAgeMinutes, watchdog} from '../server/watchdog.ts';
 import {feedURL, withFeeds} from '../dist/feeds.js';
 
@@ -44,20 +44,28 @@ function fakeBucket(objects) {
   }};
 }
 
-test('feeds come from R2 when bound, GitHub otherwise', async () => {
+test('feeds come from R2 only: an absent or unbound feed is never fetched from GitHub', async () => {
   useBucket({FEEDS: fakeBucket({'conditions/latest.json': '{"completed_at":"2026-09-28T13:00:00Z"}'})});
   let r = await serveFeed(new Request('https://s/feeds/conditions/latest.json'), '/feeds/conditions/latest.json');
   assert.equal(r.headers.get('X-Feed-Source'), 'r2');
   assert.equal(r.headers.get('Cache-Control'), 'public, max-age=60');
   assert.deepEqual(await readBucketJSON(RAW + 'conditions/latest.json'), {completed_at: '2026-09-28T13:00:00Z'});
   assert.equal(await serveFeed(new Request('https://s/feeds/main/x'), '/feeds/main/x'), null);
-  const realFetch = globalThis.fetch;
-  globalThis.fetch = async url => (assert.equal(url, RAW + 'data/x.json'), new Response('{}', {status: 200}));
+  const realFetch = globalThis.fetch, fetched = [];
+  globalThis.fetch = async url => { fetched.push(String(url)); return new Response('{}', {status: 200}); };
   try {
+    r = await serveFeed(new Request('https://s/feeds/data/x.json'), '/feeds/data/x.json');
+    assert.equal(r.status, 404, 'absent from a bound bucket');
+    assert.equal(r.headers.get('X-Feed-Source'), null);
+    await assert.rejects(createFeedReader()(RAW + 'data/x.json'), /Feed unavailable/);
     useBucket({});
     r = await serveFeed(new Request('https://s/feeds/data/x.json'), '/feeds/data/x.json');
-    assert.equal(r.headers.get('X-Feed-Source'), 'github');
+    assert.equal(r.status, 503, 'no bucket bound');
+    assert.equal(r.headers.get('Cache-Control'), 'no-store');
+    assert.equal(r.headers.get('X-Feed-Source'), null);
     assert.equal(await readBucketJSON(RAW + 'data/x.json'), undefined);
+    await assert.rejects(readFeed(RAW + 'data/x.json'), /Feed storage unavailable/);
+    assert.deepEqual(fetched, [], 'no GitHub (or any upstream) fetch for a feed key');
   } finally { globalThis.fetch = realFetch; }
 });
 
