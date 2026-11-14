@@ -1,32 +1,45 @@
 # SCB-12 — start the map in parallel
 
-**MEASURED: canvas target passes locally:** median 4.865 s; every cold run is <=5.0 s ([4871, 4771, 4865, 4749, 4915] ms). Baseline main was 7.610 s (3 runs). Not merged, deployed or verified live.
+**MEASURED: final cold canvas median is 4.857 s, versus main's 7.610 s.** The five final runs were [4786, 4857, 4897, 4757, 5014] ms: four meet the unchanged 5.0 s target individually; one is 14 ms over. The median meets the target, but this is **not** an all-runs or worst-case pass. Review that distinction explicitly. Not merged, deployed or verified live.
 
-**MEASURED trade-off:** verdict changes by 692 ms; review this explicitly. This is a map-start improvement, not a claim that the whole first visit is faster. SCB-11 owns brief startup. Fully drawn below means the existing first-idle mark, not proof every later async overlay has arrived.
+**MEASURED trade-off:** the first verdict is 717 ms later. This improves map start, not the whole first visit. SCB-11 owns the brief diet. The map's first-idle mark is not proof every later asynchronous overlay has arrived.
 
-| Cold median | main 114079ae (n=3) | candidate 036340dce1 (n=5) |
+| Cold median | main 114079ae (n=3) | final runtime e5c2b7f92b (n=5) |
 |---|---:|---:|
-| canvasMs | 7610 | 4865 |
-| verdictMs | 7466 | 8158 |
-| chartIdleMs | 19943 | 19680 |
-| bytesToVerdict | 960698 | 1232282 |
+| canvasMs | 7610 | 4857 |
+| verdictMs | 7466 | 8183 |
+| chartIdleMs | 19943 | 19868 |
+| bytesToVerdict | 960698 | 1234969 |
+
+MEASURED warm medians: canvas 917 ms, saved verdict 502 ms, chart idle 4072 ms. Raw final file: `round3-phone-final5s.json`, preserved with the card evidence.
 
 ## Change and preserved boundaries (READ)
 
-A dependency-free Vite entry starts the existing MapLibre wrapper and mandatory app graph concurrently. Explicit terrain choices, unchosen homes and non-map pages stay lazy. The store still resolves saved homes, aliases and terrain fallbacks. Library failure cannot block the app, and createChart owns its existing failure panel. No handwritten preloads, new providers, service changes or credentials.
+A dependency-free Vite entry starts the existing MapLibre wrapper and mandatory app graph concurrently. Explicit terrain choices, unchosen homes and non-map pages stay lazy. The store still resolves saved homes, aliases and terrain fallbacks. Library failure cannot block the app; createChart owns its existing failure panel. No handwritten preloads, new providers, service changes or credentials.
 
-Aerial and seafloor downloads wait for the existing first brief epoch to seal, including failure/timeout. The latch never re-holds imagery during refresh. Seafloor publication/rights/held-source checks run unchanged after release. Initial idle/flyover does not claim completion while imagery is deliberately held. The mandatory app graph still counts in startup budgets and landing warm assets.
+Heavy aerial/seafloor work gets the brief's first settlement or a **maximum five-second head start**, whichever comes first. The latch never re-holds imagery during refresh. It does not seal the weather verdict or weaken the independent seafloor publication, expiry, rights and held-source checks. Initial idle/flyover does not claim completion while imagery is deliberately held. Both startup budgets and landing warm assets include the mandatory dynamic shell.
 
-The new asynchronous entry exposed a stylesheet cascade reversal (MEASURED: UI sheet defaults overwrote the phone app's 176px peek/56px bottom). The existing ordered-page stylesheet plugin now also handles ../web/ paths. Its repaired 320px computed geometry matches main; the existing phone shell/axe browser test and both new real-bootstrap browser tests passed (3 tests). Unmodified main passed the same shell test; earlier candidate failures are preserved, not hidden or skipped.
+The asynchronous entry also needed the existing ordered-page stylesheet plugin to handle ../web/ paths: otherwise UI sheet defaults reversed the phone cascade. Reload-language and text-size tests now await actual app state before their original language/geometry assertions. The swell pixel test waits for honest map idle before sampling water, rather than sampling before delayed Aerial appears. No semantic assertions were dropped and no global timeout was raised.
 
-## Method and limits (MEASURED unless stated)
+## Final-round diagnosis and verification
 
-Built actual Vite assets served with Brotli over local HTTP; public live GET fallthrough for feeds, map files and real external aerial tiles. No synthetic feed responses, stubbed aerial images or route-fulfilled app downloads. Same server/harness for baseline and candidate. CDP: CPU 4x; latency 150ms; down 204800 B/s, up 96000 B/s; 390x844, DPR3, touch/mobile UA. Fresh browser context per cold run, same-context warm tab three seconds later, one browser at a time. Flyover is enabled. DOM canvas marker, actual verdict marker and existing chart-idle mark match SCB-02's script. Raw timings/request logs, scripts and rejected trials are in the card evidence archive and local results folder.
+- **MEASURED:** twelve selected original failures reproduced on the preserved old build. The old imagery latch could wait for a held coast/report's twenty-second verdict deadline, blocking map idle and seafloor feedback beyond existing browser expectations.
+- **MEASURED:** final five-second-cap build passes all four affected specs together: 186 passed, 24 existing viewport-conditional skips, zero failures (7.0 min). This includes the original failed language, text-size, map loading, credits, publication/expiry, protected-area and aerial cases, plus held-main and failed-library bootstrap coverage. Receipt: `round3-repo-e2e-1794620885692746870.log`.
+- **MEASURED:** 64 focused startup/aerial/chart/seafloor unit tests pass, including exact head-start boundary, unchanged unsealed weather epoch, disposal, publication hold and expiry behavior. Typecheck, build, both size gates, all 27 source pins, copy/token lint, check_web and local CI checks pass. Exact-head installed prepush and remote outcomes belong in the final Kanban handoff; earlier-head receipts do not establish them.
+- **MEASURED:** an intermediate broad run hit the desktop Chart rail centre-click assertion. Untouched main 114079ae reproduced that same assertion in two of three repetitions; its receipt and the candidate trace are retained. This does not excuse another failure or clear the separate main-red release hold. No rail assertion or product layout was changed in this round.
 
-This is emulation on a loaded shared host, software WebGL, one region (Morro Bay), not G's real phone. Local HTTP transport/Brotli differs from production's edge/HTTP2 compression. Public upstream data can change between runs. Baseline n=3 includes a slow first run; candidate n=5. Re-measure live after a reviewed merge before calling the production target verified. The audit's proposal to relax to 6s was not adopted.
+## Timing method, rejected trials and limits
 
-## Verification and rollback
+**READ/MEASURED:** actual built Vite assets, Brotli local HTTP, public live GET fallthrough and real external aerial imagery; no stubbed feeds, aerial pixels or route-fulfilled app downloads. CDP CPU 4x, 150 ms latency, down 204800 B/s, up 96000 B/s, 390x844, DPR3, mobile/touch. Fresh browser context for each cold run, same-context warm tab three seconds later. Flyover remains enabled. Canvas, verdict and chart-idle markers follow SCB-02's method; its proposed relaxation to six seconds was not adopted.
 
-Typecheck, real build, client asset/budget checks, check_web and local CI contracts/repository checks passed. Full bounded installed prepush gate and remote exact-head CI are recorded in the review handoff, not assumed here. Existing phone shell browser coverage passed at all its viewport presets; new held-main/library-failure browser tests passed. Timing candidate build: 036340dce1; later changes affect test contracts and budget accounting, not runtime code. No tests skipped. The separate raw-byte app_js budget rises by 2,000 bytes with its required written history (1,060,776 measured against 1,061,000); its checker now includes the mandatory dynamic shell, as the gzip checker already does. All other budget limits remain unchanged.
+**MEASURED:** an initial three-second-cap probe had canvas median 4.817 s but included 5.782 s in its first run, while another task-owned browser overlapped. That first library response began at 1.581 s versus about 0.55 s subsequently. **READ:** the harness synchronously compresses assets on their first request. **INFERRED:** that one-time work and overlap contributed; neither is proven to explain the whole delay. All raw runs remain preserved, not relabelled as passes.
 
-Rollback: revert this one PR through the usual reviewed path. No live switch, database migration or service restart is involved.
+**MEASURED:** after explicitly preparing the server's compressed representations (not browser caches), the three-second-cap sample had all five canvas runs <=5 s but verdict median 9.152 s. Rejected because imagery competed with ordinary brief completion. The final five-second cap restores the verdict to 8.183 s while still allowing held/error paths to progress. The final sample used the same prepared server and no other task-owned browser; shared-host load was 38–51 at cold-run completion. Its 5.014 s outlier is retained.
+
+**Limits:** one emulated region (Morro Bay), software WebGL, loaded shared host, changing public upstream responses, local HTTP/Brotli rather than edge HTTP2. Baseline n=3 and final n=5 were not simultaneous. No real-phone or production speed guarantee. Re-measure live after a reviewed deployment before claiming the live target.
+
+## Budget and rollback (READ)
+
+The original candidate's raw app_js ceiling increased by 2,000 bytes to 1,061,000 with written budget history; its corrected checker includes the mandatory shell. The final repair stays within that ceiling; all other ceilings are unchanged. No separate held BODY09 acceptance run was executed; its source-pin applicability note remains intact.
+
+Rollback: revert this one PR through the usual reviewed path. No migration, live flag swap or service restart.

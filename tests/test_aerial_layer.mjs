@@ -17,7 +17,7 @@ import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {mapSourceHosts, naipSource} from '../packages/coast/src/map-sources.ts';
 import {
-  AERIAL_CATALOG_ID, AERIAL_DEFAULT_OPACITY, AERIAL_DEFAULT_SATURATION, AERIAL_OPACITY, AERIAL_SATURATION, aerialAttribution, aerialBase, aerialId, aerialOffer, aerialOverlay, createAerial, createImageryStartup, flownText,
+  AERIAL_CATALOG_ID, AERIAL_DEFAULT_OPACITY, AERIAL_DEFAULT_SATURATION, AERIAL_OPACITY, AERIAL_SATURATION, IMAGERY_HEAD_START_MS, aerialAttribution, aerialBase, aerialId, aerialOffer, aerialOverlay, createAerial, createImageryStartup, flownText,
 } from '../web/map/aerial.ts';
 import {ENC_LAYER, chartStyle, markUnavailable, unavailable} from '../web/map/chart.ts';
 import {createEngine} from '../web/map/engine.ts';
@@ -52,6 +52,24 @@ test('SCB-12: imagery releases on terminal success, failure or timeout, never re
   startup.destroy();
   settled.value = true;
   assert.equal(startup.ready.value, false, 'destroyed stages stop following the brief');
+});
+
+test('SCB-12: a held brief releases imagery at the head-start boundary, without sealing the verdict', t => {
+  t.mock.timers.enable({apis: ['setTimeout']});
+  const epoch = signal(null), load = createVerdictLoad(value => { epoch.value = value; });
+  load.start('morro-bay');
+  const startup = createImageryStartup(() => epoch.value?.sealed === true);
+  t.mock.timers.tick(IMAGERY_HEAD_START_MS - 1);
+  assert.equal(startup.ready.value, false);
+  t.mock.timers.tick(1);
+  assert.equal(startup.ready.value, true);
+  assert.equal(epoch.value.sealed, false, 'map progress never manufactures a weather answer');
+  startup.destroy();
+  load.reset();
+  const stopped = createImageryStartup(() => false);
+  stopped.destroy();
+  t.mock.timers.tick(IMAGERY_HEAD_START_MS);
+  assert.equal(stopped.ready.value, false, 'unmounted stages cancel the release timer');
 });
 
 test('the aerial base is read from the region package, only where it names usgs-naip with ordered dates', () => {
