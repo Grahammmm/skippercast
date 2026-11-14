@@ -7,7 +7,8 @@
 // coast report. The same call wraps the page's fetch so the app's own first read of each of those URLs (a plain
 // GET with the same credentials and no headers, body or cache mode) takes the answer already on its way instead
 // of asking again. Each answer is handed over once, and only within EARLY_READ_TTL_MS of its start; every other
-// read (a refresh, a retry, another region, a different request) goes to the network exactly as before. A
+// read (a refresh, a retry, another region, a different request) goes to the network exactly as before, and a read
+// that is not compatible (other credentials or redirect handling) leaves the answer for the first one that is. A
 // caller's own signal still ends its wait for the headers and, once they have arrived, the reading of the body, as it
 // would end its own request.
 //
@@ -127,9 +128,11 @@ export function startEarlyReads(scope: Scope = globalThis, id: string | null = s
       let url: string | null;
       try { url = new URL(input, scope.location?.href ?? page).href; } catch { url = null; }
       const read = url === null ? undefined : started.get(url);
-      if (read && url !== null) {
+      // Only a compatible read consumes the entry; an incompatible one leaves it for the first compatible read, and
+      // never renews its start time. The entry goes before the answer is returned, so two readers cannot share a body.
+      if (read && url !== null && read.credentials === (init.credentials ?? 'same-origin') && read.redirect === (init.redirect ?? 'follow')) {
         started.delete(url);
-        if (read.credentials === (init.credentials ?? 'same-origin') && read.redirect === (init.redirect ?? 'follow') && now() - read.at <= EARLY_READ_TTL_MS) return untilAborted(read.response, init.signal);
+        if (now() - read.at <= EARLY_READ_TTL_MS) return untilAborted(read.response, init.signal);
       }
     }
     return original.call(scope, input, init);
