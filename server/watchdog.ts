@@ -102,6 +102,21 @@ export async function liveFeed(): Promise<ExternalJSON> {
   return feed;
 }
 
+/**
+ * How many runs of the live workflow have `status`. An unknown answer is not "none": a non-ok
+ * response, an unreadable body or a body without a non-negative safe integer total_count rejects
+ * with a fixed message (no body, URL or token), so the caller never dispatches on a guess and the
+ * cron invocation fails visibly.
+ */
+async function activeRuns(env: WatchdogEnv, status: string): Promise<number> {
+  const response = await github(env, `/actions/workflows/${WORKFLOW}/runs?status=${status}&per_page=1`);
+  if (!response.ok) { await response.body?.cancel().catch(() => {}); throw Error('watchdog run discovery unavailable'); }
+  const body: unknown = await response.json().catch(() => { throw Error('watchdog run discovery unreadable'); });
+  const count = body && typeof body === 'object' && !Array.isArray(body) ? (body as {total_count?: unknown}).total_count : undefined;
+  if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0) throw Error('watchdog run discovery malformed');
+  return count;
+}
+
 export async function watchdog(env: WatchdogEnv, now = Date.now(), feedRead: Promise<ExternalJSON> = liveFeed()): Promise<{age_minutes: number | null; action: string; degraded: string[]; failing_kinds: string[]}> {
   const feed = await feedRead;
   const age = feedAgeMinutes(feed, now);
@@ -114,8 +129,7 @@ export async function watchdog(env: WatchdogEnv, now = Date.now(), feedRead: Pro
   if (age <= STALE_MINUTES) return result;
   if (!env.GITHUB_TOKEN) { console.warn('Live feed stale; GITHUB_TOKEN not set, cannot restart', result); return {...result, action: 'no-token'}; }
   for (const status of ['in_progress', 'queued']) {
-    const runs = await github(env, `/actions/workflows/${WORKFLOW}/runs?status=${status}&per_page=1`);
-    if (runs.ok && (await runs.json<{total_count: number}>()).total_count > 0) return {...result, action: `already-${status}`};
+    if (await activeRuns(env, status) > 0) return {...result, action: `already-${status}`};
   }
   const status = await dispatchWorkflow(env, WORKFLOW);
   const outcome = {...result, action: status === 204 ? 'dispatched' : `dispatch-failed-${status}`};
