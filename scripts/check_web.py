@@ -52,6 +52,11 @@ def check_page_references(path):
                 app = (ROOT / "server/app.ts").read_text()
                 assert f"'{url.path}'" in router and "app.route('/', coastPages);" in app, (path, ref)
                 continue
+            if navigation and url.path == "/privacy":
+                assets = (ROOT / "server/routes/assets.ts").read_text()
+                assert "if(path === '/privacy') return '/privacy.html';" in assets, (path, ref)
+                assert (WEB / "privacy.html").exists(), (path, ref)
+                continue
             if navigation and url.path == "/map":
                 assets = (ROOT / "server/routes/assets.ts").read_text()
                 assert "if (path === '/map') return V2_SHELLS.app;" in assets, (path, ref)
@@ -289,8 +294,7 @@ def markup_sinks(root=ROOT):
     return found
 
 
-# The draft terms and privacy pages were removed on 2026-11-12 (owner decision); see docs/roadmap.md.
-LEGAL_PAGES = ("licenses.html",)
+LEGAL_PAGES = ("terms.html", "privacy.html", "licenses.html")
 
 
 def check_no_v1_sheets():
@@ -302,7 +306,7 @@ def check_no_v1_sheets():
 
 
 def check_legal_pages():
-    """The licences page exists, says it is a draft, and is reachable; no page links the removed terms or privacy pages.
+    """Terms, privacy and licences exist, say they are drafts, and are reachable.
 
     FE-61: the v1 shell that linked them is gone; the landing's nav links the
     sources page, and the sources page links all three.
@@ -318,10 +322,6 @@ def check_legal_pages():
     parser.feed((WEB / "sources.html").read_text())
     missing = set(LEGAL_PAGES) - set(parser.refs)
     assert not missing, ("sources.html", sorted(missing))
-    for removed in ("terms.html", "privacy.html"):
-        assert not (WEB / removed).exists(), removed
-    for page in sorted(WEB.glob("*.html")):
-        assert not re.search(r'href="/?(?:terms\.html|privacy(?:\.html)?)"', page.read_text()), page.name
 
 
 BUNDLED_LIBRARIES = {"maplibre-gl": "MapLibre GL JS", "pmtiles": "PMTiles"}
