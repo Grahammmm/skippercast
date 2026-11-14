@@ -84,7 +84,8 @@ for (const lang of ['en', 'es'] as const) {
   test(`placing_touch_cancel_${lang}: Cancel waypoint is touch size, scans clean, and cancels without placing`, async ({page, pageErrors, v2, isMobile}) => {
     void pageErrors;
     const writes: string[] = [];
-    page.on('request', r => { if (r.method() !== 'GET' && r.method() !== 'HEAD') writes.push(new URL(r.url()).pathname); });
+    // The anonymous /api/telemetry beacon is not a save; it fires on its own timing (v2-trip and v2-private-map-log leave it out too).
+    page.on('request', r => { if (r.method() !== 'GET' && r.method() !== 'HEAD' && new URL(r.url()).pathname !== '/api/telemetry') writes.push(new URL(r.url()).pathname); });
     await v2.open('app', {...AREA, lang});
     await armPlacing(page, isMobile, lang);
     const cancel = page.getByRole('button', {name: WORDS[lang].cancel});
