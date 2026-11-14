@@ -235,6 +235,7 @@ jobs:
           sparse-checkout: |
             scripts/check_deploy_source.py
             scripts/worker_versions.mjs
+            scripts/wrangler_config.mjs
           sparse-checkout-cone-mode: false
       - name: Move the deploy controller out of the candidate tree
         run: |
@@ -395,6 +396,8 @@ jobs:
           WORKERS_INVOCATION_LOGS: ${{ vars.WORKERS_INVOCATION_LOGS }}
         run: |
           mkdir -p var
+          # Same allow-listed receipt goes to the asset bundle and, after smoke succeeds, the summary.
+          node "$CONTROLLER/scripts/wrangler_config.mjs" --snapshot "$DEPLOY_SHA" dist/client/deploy.json
           # GITHUB_SHA is set for the script too: a candidate older than DEPLOY_SHA support labels
           # its Worker version and D1 backup with GITHUB_SHA, which is otherwise the newer main head.
           GITHUB_SHA="$DEPLOY_SHA" bash scripts/cloudflare_deploy.sh
@@ -406,6 +409,9 @@ jobs:
         run: |
           if [ -z "$SITE" ]; then echo "::error::CLOUDFLARE_SITE_URL is unset, so the deploy was not smoke-tested."; exit 1; fi
           bash scripts/smoke_test.sh "$SITE"
+      - name: Summarize the deployed production switches
+        if: steps.deploy.outputs.deployed == 'true' && steps.smoke.outcome == 'success'
+        run: node "$CONTROLLER/scripts/wrangler_config.mjs" --summary dist/client/deploy.json
       - name: Roll back after a failed smoke test
         if: failure() && steps.deploy.outputs.deployed == 'true'
         env:
