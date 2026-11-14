@@ -5,7 +5,62 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {stripJsonComments, deployConfig, customDomains, features, advisorVars, fleetVars, FLEET_VARS, coastVars, COAST_VARS, ADVISOR_SECRETS} from '../scripts/wrangler_config.mjs';
+import {stripJsonComments, deployConfig, customDomains, features, advisorVars, fleetVars, FLEET_VARS, coastVars, COAST_VARS, ADVISOR_SECRETS, DEPLOY_PUBLIC_VARS, deploySnapshot, deploySummary} from '../scripts/wrangler_config.mjs';
+
+const PUBLIC_SWITCHES = ['COAST_FEEDS', 'ENABLE_QUEUES', 'ENABLE_ANALYTICS', 'ENABLE_ADVISOR',
+  'TEXT_ADVISOR_ENABLED', 'ADVISOR_REPLIES_ENABLED', 'ADVISOR_SOCIAL_ENABLED', 'ADVISOR_INBOX_ENABLED',
+  'FLEET_ENABLED', 'FLEET_MAP_ENABLED', 'CUSTOM_DOMAINS', 'WORKERS_INVOCATION_LOGS'];
+const PRIVATE_VARS = Object.fromEntries([...ADVISOR_SECRETS, 'ADVISOR_NUMBER', 'ADVISOR_ADMIN_CONTACT_ID',
+  'ADVISOR_MODEL', 'ADVISOR_FUTURE_ENABLED', 'FLEET_FUTURE_ENABLED', 'CLOUDFLARE_API_TOKEN', 'UNRELATED']
+  .map(name => [name, 'private-value']));
+
+test('public deploy receipt is an explicit allow-list, never all vars or a prefix', () => {
+  assert.deepEqual(DEPLOY_PUBLIC_VARS, PUBLIC_SWITCHES);
+  const snapshot = deploySnapshot('a'.repeat(40), {...PRIVATE_VARS,
+    ...Object.fromEntries(PUBLIC_SWITCHES.map(name => [name, ` ${name}-value `]))});
+  assert.deepEqual(Object.keys(snapshot), ['commit', 'variables']);
+  assert.deepEqual(Object.keys(snapshot.variables), PUBLIC_SWITCHES);
+  for (const name of PUBLIC_SWITCHES) assert.equal(snapshot.variables[name], `${name}-value`);
+  assert.doesNotMatch(JSON.stringify(snapshot) + deploySummary(snapshot), /private-value/);
+  for (const bad of ['', undefined, 'a'.repeat(39), 'a'.repeat(41), 'G'.repeat(40)])
+    assert.throws(() => deploySnapshot(bad, PRIVATE_VARS), /full commit SHA/);
+});
+
+test('receipt distinguishes unset from false; summary re-filters and escapes table values', () => {
+  const snapshot = deploySnapshot('b'.repeat(40), {ENABLE_QUEUES: ' false ', ENABLE_ADVISOR: ' ',
+    COAST_FEEDS: '<tag>|`&\nnext'});
+  assert.equal(snapshot.variables.ENABLE_QUEUES, 'false');
+  assert.equal(snapshot.variables.ENABLE_ADVISOR, '');
+  assert.equal(snapshot.variables.WORKERS_INVOCATION_LOGS, '');
+  const summary = deploySummary({...snapshot, variables: {...snapshot.variables, ...PRIVATE_VARS}});
+  assert.match(summary, /\| ENABLE_QUEUES \| <code>false<\/code> \|/);
+  assert.match(summary, /\| ENABLE_ADVISOR \| \(unset\) \|/);
+  assert.match(summary, /&lt;tag&gt;&#124;`&amp;&#10;next/);
+  assert.doesNotMatch(summary, /private-value|<tag>/);
+});
+
+test('snapshot CLI and successful-deploy summary use the same file and selected commit', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'deploy-receipt-'));
+  const script = fileURLToPath(new URL('../scripts/wrangler_config.mjs', import.meta.url));
+  const out = join(dir, 'deploy.json'), summary = join(dir, 'summary.md'), commit = 'c'.repeat(40);
+  try {
+    const run = spawnSync(process.execPath, [script, '--snapshot', commit, out], {cwd: dir, encoding: 'utf8',
+      env: {...process.env, ...PRIVATE_VARS, GITHUB_SHA: 'd'.repeat(40), COAST_FEEDS: ' ocean,history ', ENABLE_QUEUES: 'false'}});
+    assert.equal(run.status, 0, run.stderr);
+    const snapshot = JSON.parse(readFileSync(out, 'utf8'));
+    assert.equal(snapshot.commit, commit, 'selected SHA, not the newer workflow GITHUB_SHA');
+    assert.equal(snapshot.variables.COAST_FEEDS, 'ocean,history');
+    writeFileSync(summary, 'Existing outcome\n');
+    const report = spawnSync(process.execPath, [script, '--summary', out], {cwd: dir, encoding: 'utf8',
+      env: {...process.env, GITHUB_STEP_SUMMARY: summary, COAST_FEEDS: 'different-now'}});
+    assert.equal(report.status, 0, report.stderr);
+    assert.equal(readFileSync(summary, 'utf8'), 'Existing outcome\n' + deploySummary(snapshot));
+    assert.doesNotMatch(readFileSync(out, 'utf8') + readFileSync(summary, 'utf8') + run.stdout + run.stderr, /private-value/);
+    const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
+    assert.match(workflow, /node "\$CONTROLLER\/scripts\/wrangler_config.mjs" --snapshot "\$DEPLOY_SHA" dist\/client\/deploy.json/);
+    assert.match(workflow, /Summarize the deployed production switches\n        if: steps.deploy.outputs.deployed == 'true' && steps.smoke.outcome == 'success'\n        run: node "\$CONTROLLER\/scripts\/wrangler_config.mjs" --summary dist\/client\/deploy.json/);
+  } finally { rmSync(dir, {recursive: true, force: true}); }
+});
 
 test('comment stripping leaves // and /* inside strings alone', () => {
   const text = '{\n  // a comment\n  "url": "https://example.com/a//b", /* block */ "glob": "x/*y*/z",\n  "n": 1, // trailing\n}';
