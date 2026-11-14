@@ -15,10 +15,18 @@ def _validate_survey_id(ident):
 
 
 def add_survey(url, bounds, *, ident=None, format_name=None, member='unknown', local=None,
-               fetch=False, root=REPO):
+               fetch=False, root=REPO, local_root=None):
     root = Path(root)
-    matches = [r for r in read_json(root / 'catalog/surveys.json')['surveys']
-               if r['url'] == url and (not ident or r['id'] == ident)]
+    if local_root is not None and (local is not None or fetch):
+        raise ValueError('Use one of --local-root, --local or --fetch')
+    same_url = [r for r in read_json(root / 'catalog/surveys.json')['surveys'] if r['url'] == url]
+    # The original file is pinned by URL, not by product ID: every product of one
+    # URL shares its container checksum, so a new ID or archive member inherits it.
+    pinned_sha256 = {r['sha256'] for r in same_url if r['sha256'] != 'unknown'}
+    pinned_bytes = {r['bytes'] for r in same_url if r['bytes'] != 'unknown'}
+    if len(pinned_sha256) > 1 or len(pinned_bytes) > 1:
+        raise ValueError('Existing manifest rows pin conflicting checksums for this URL')
+    matches = [r for r in same_url if not ident or r['id'] == ident]
     if len(matches) > 1:
         raise ValueError('Select --id for a URL with multiple products')
     if matches:
@@ -34,12 +42,25 @@ def add_survey(url, bounds, *, ident=None, format_name=None, member='unknown', l
                    kind='bathymetry', derived_from=[], status='candidate', archive_member=member,
                    evidence=[], field_evidence={}, inspection_level='native', lineage_status='unknown',
                    notes='Private draft; metadata and rights require review before catalog inclusion.')
+    if pinned_sha256:
+        row['sha256'] = next(iter(pinned_sha256))
+    if pinned_bytes:
+        row['bytes'] = next(iter(pinned_bytes))
     _validate_survey_id(row['id'])
+    local_entry = None
+    if local_root is not None:
+        found = local_root.resolve(url, row['sha256'], row['bytes'])
+        if found is None:
+            raise ValueError('Original URL is not in the local source catalog')
+        local, local_entry = found
+        # The catalog checksum becomes the expectation, so the copied bytes must match it.
+        row.update(sha256=local_entry['sha256'], bytes=local_entry['size'])
     saved, downloaded, unchanged = ingest(row, bounds, root=root, fetch=fetch, local=local)
     row.update(status='candidate', sha256=saved['source_sha256'], bytes=saved['source_bytes'],
                resolution_m=review_spacing(saved), horizontal_crs=saved['horizontal_crs'],
                vertical_datum=saved['vertical_datum'], hold_reason='unknown')
     destination = root / 'var/seafloor/drafts' / (row['id'] + '.json')
     atomic_json(destination, {'row': row, 'adapter_review': saved,
-                              'downloaded': downloaded, 'normalization_reused': unchanged}, indent=2)
+                              'downloaded': downloaded, 'normalization_reused': unchanged,
+                              **({'local_catalog_id': local_entry['id']} if local_entry else {})}, indent=2)
     return destination

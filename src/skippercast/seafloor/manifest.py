@@ -99,6 +99,11 @@ def validate_manifest(document, root=REPO):
         url = row['url'].lower()
         if 'bluetopo' in url or '/modeling/' in url:
             raise ValueError('Reference compilations cannot enter the survey manifest')
+        if row['status'] in {'usable', 'physical-only'}:
+            from .fetch import habitat_url_refusal
+            refusal = habitat_url_refusal(row['url'])
+            if refusal:
+                raise ValueError(refusal)
     _require_acyclic_lineage(rows)
     return document
 
@@ -123,14 +128,26 @@ def _require_acyclic_lineage(rows):
 
 
 def physical_source(row, *, physical_only=False):
-    """Private-reviewed sources cannot enter the default/public processing path."""
-    return row['kind'] == 'bathymetry' and (row['status'] == 'usable' or
-        physical_only and row['status'] == 'physical-only')
+    """Private-reviewed sources cannot enter the default/public processing path.
+
+    Reviewed compilation products (fetch.COMPILATION_PREFIXES) and URLs that
+    are not in canonical form never count as physical depth, whatever a
+    hand-edited status says. (Manifest rows always carry ``url``; the schema
+    requires it. Bare test rows without one keep the earlier behaviour.)
+    """
+    from .fetch import habitat_url_refusal
+    return row['kind'] == 'bathymetry' and (
+        row['status'] == 'usable' or physical_only and row['status'] == 'physical-only'
+    ) and ('url' not in row or habitat_url_refusal(row['url']) is None)
 
 
 def qualify_row(row, receipt, *, rights_url, physical_only=False):
     """Promote only after explicit rights review and a successful native adapter run."""
     from skippercast.platform.contracts import public_url
+    from .fetch import habitat_url_refusal
+    refusal = habitat_url_refusal(row['url'])
+    if refusal:
+        raise ValueError(refusal)
     public_url(rights_url)
     if row.get('format') == 'measured-multibeam-grid' and not physical_only:
         raise ValueError('Derived multibeam support is private-only; public rights not qualified')

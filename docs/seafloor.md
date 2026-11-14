@@ -48,7 +48,9 @@ command. Future survey runs will reuse cell IDs `3310:<x-index>:<y-index>`.
 ### What the denominator measures
 
 [NOAA BlueTopo](https://nauticalcharts.noaa.gov/data/bluetopo.html) is a compilation,
-not an independent original survey. We pin the 2026-09-24 tile scheme by SHA-256
+not an independent original survey. We pin the 2026-11-09 tile scheme by SHA-256
+(re-pinned from the 2026-09-24 scheme, whose object NOAA removed; retrieval
+record: `docs/seafloor-bluetopo-scheme-repin.md`)
 and select all 252 tile footprints intersecting the configured search box.
 Per-tile delivered dates, URLs and publisher checksums are in the ledger.
 Four bounded workers read elevation overviews at approximately 32 m spacing;
@@ -109,6 +111,49 @@ exact native product name. The transport-file hash covers the ZIP, while a
 separate private extraction receipt hashes its selected member. Original files,
 COGs, drafts and full receipts stay in ignored `var/seafloor/`. The manifest
 stores a small native inspection and rights receipt.
+
+### Local source root (downloaded originals with a geofetch catalog)
+
+A bulk download of originals can stand in for the network transfer. The root is
+a directory plus a geofetch `catalog.jsonl` (default
+`<root>/_geofetch/catalog.jsonl`, or `--local-catalog PATH`); each row carries
+`id`, `url`, `sha256`, `size` and `dest` relative to the root. It changes only
+where the bytes come from:
+
+- the source URL must still pass the reviewed allowlist in `fetch.py`
+  (`bluetopo` and `/modeling/` stay refused), so a downloaded file is a
+  reviewed original only if its publisher URL is reviewed. The allowlist
+  compares URL text with reviewed dataset prefixes, so only the canonical form
+  counts (`fetch.canonical_source_url`): dot segments (`..`, `.`), empty
+  segments, percent escapes, backslashes, queries, fragments, user info, ports
+  and upper-case hosts refuse, because a client may resolve them into another
+  dataset folder. Fetch and local import refuse such a URL, and promotion, the
+  manifest validator and `physical_source()` refuse or skip it as habitat depth;
+- the catalog checksum and size must equal the repo pin when the manifest row
+  has one; a conflict refuses the file before any copy. The pin belongs to the
+  URL, not the product: `add-survey` applies the pin of every existing manifest
+  row with the same URL, so a new `--id` or `--member` cannot avoid it, and rows
+  that pin different checksums for one URL refuse;
+- the selected local file is hashed on every import and must match the catalog
+  checksum (and so the pin), even when the cache already holds those bytes; a
+  mismatch caches nothing and keeps any verified cache entry;
+- `dest` must stay inside the root (no `..`, absolute paths or escaping links),
+  and duplicate catalog rows for one URL must agree.
+
+Catalog ids map to repo source ids by exact URL. Two entry points:
+
+```bash
+# new candidate from a downloaded file; the draft records local_catalog_id
+python ~/agent-work/bin/seafloor-cli.py --checkout . add-survey --url <publisher URL> --id <survey id> \
+  --bounds W S E N --local-root /path/to/downloads
+# seed the cache for qualified rows so `run` needs no --fetch; prints the
+# source-id -> catalog-id mapping and exits 1 if any file was refused
+python ~/agent-work/bin/seafloor-cli.py --checkout . import-local --local-root /path/to/downloads [--ids <survey id> ...]
+```
+
+`--local-root` cannot be combined with `--local` or `--fetch`. A URL missing from
+the catalog is an error for `add-survey`, never a silent network fallback.
+Promotion, rights review, screening and publication gates are unchanged.
 
 Adapters read native 512-pixel chunks with a 100 m seam margin, preserve no-data
 and producer uncertainty, and write a native-resolution COG. Band 1 is **meters
