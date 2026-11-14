@@ -10,8 +10,9 @@ import {mkdtemp, mkdir, readdir, readFile, rm, writeFile} from 'node:fs/promises
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {promisify} from 'node:util';
-import {buildClient, copyStatic, hashName} from '../scripts/client-build.mjs';
+import {buildClient, copyStatic, glyphVersion, hashName, IMMUTABLE_ASSETS, IMMUTABLE_GLYPHS, versionGlyphs} from '../scripts/client-build.mjs';
 import {BUILD_PLACEHOLDER} from '../scripts/precache.mjs';
+import {GLYPH_VERSION} from '../web/map/style.ts';
 import {dropMaplibreLogo, MAPLIBRE_CSS, STATIC_REF} from '../vite.config.mjs';
 
 const run = promisify(execFile);
@@ -82,7 +83,8 @@ test('the build hashes scripts and styles, renames pages and keeps sw.js, vendor
   assert.equal(await readFile(join(out, 'data/regulations.json'), 'utf8'), '{}');
   assert.ok((await readFile(join(out, 'sw.js'), 'utf8')).startsWith(`const BUILD = '${buildId}';`));
   assert.equal(await readFile(join(out, '.assetsignore'), 'utf8'), '.vite\n');
-  assert.equal(await readFile(join(out, '_headers'), 'utf8'), '/*\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n');
+  assert.equal(await readFile(join(out, '_headers'), 'utf8'), '/*\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n'
+    + '/basemap/glyphs/v/*\n  Cache-Control: public, max-age=31536000, immutable\n');
   const html = await readFile(join(out, `landing.${buildId}.html`), 'utf8');
   // Vendored files keep their stable path and SRI; the manifest and icons are not hashed.
   assert.match(html, new RegExp(`<script\\s+src="vendor/lib\\.js" integrity="${SRI.replace(/[+/]/g, '\\$&')}" defer>`));
@@ -106,6 +108,40 @@ test('the build hashes scripts and styles, renames pages and keeps sw.js, vendor
 test('the build id changes when any module changes', async () => {
   const a = await built(), b = await built({app: 'export const ready = false;'});
   assert.notEqual(a.buildId, b.buildId);
+});
+
+/** The Cache-Control a Cloudflare `_headers` file gives `path` (its rules' `*` matches any run of characters), or null. */
+function headerCacheControl(text, path) {
+  let rule = null, found = null;
+  for (const line of text.split('\n')) {
+    if (line.startsWith('/')) rule = new RegExp(`^${line.trim().split('*').map(p => p.replace(/[.?+^$()[\]{}|\\]/g, '\\$&')).join('.*')}$`);
+    else if (/^\s+Cache-Control:/.test(line) && rule?.test(path)) found = line.split(':').slice(1).join(':').trim();
+  }
+  return found;
+}
+
+test('R4-SC-08: the glyphs are copied under their content version, kept a year; a stale version fails the build', async () => {
+  const out = await mkdtemp(join(tmpdir(), 'sc-glyphs-'));
+  try {
+    assert.equal(await versionGlyphs(out, 'unused'), null, 'no glyphs, nothing to version');
+    await mkdir(join(out, 'basemap/glyphs/dm-sans-medium'), {recursive: true});
+    await writeFile(join(out, 'basemap/glyphs/dm-sans-medium/0-255.pbf'), 'range a');
+    await writeFile(join(out, 'basemap/glyphs/DM-SANS-OFL.txt'), 'licence');
+    const {version, names} = await glyphVersion(join(out, 'basemap/glyphs'));
+    assert.match(version, /^[0-9a-f]{16}$/);
+    assert.deepEqual(names, ['dm-sans-medium/0-255.pbf']);
+    await assert.rejects(versionGlyphs(out, 'ffffffffffffffff'), new RegExp(`hashes to ${version}, not GLYPH_VERSION ffffffffffffffff`));
+    assert.equal(await versionGlyphs(out, version), version);
+    assert.equal(await readFile(join(out, `basemap/glyphs/v/${version}/dm-sans-medium/0-255.pbf`), 'utf8'), 'range a');
+    assert.equal(await readFile(join(out, 'basemap/glyphs/dm-sans-medium/0-255.pbf'), 'utf8'), 'range a', 'the unversioned file stays');
+    assert.equal((await glyphVersion(join(out, 'basemap/glyphs'))).version, version, 'the versioned copy is not part of the hash');
+    await writeFile(join(out, 'basemap/glyphs/dm-sans-medium/0-255.pbf'), 'range b');
+    await assert.rejects(versionGlyphs(out, version), /not GLYPH_VERSION/, 'changed bytes under the old version are refused');
+  } finally { await rm(out, {recursive: true, force: true}); }
+  const rules = '/*\n  X-Frame-Options: DENY\n' + IMMUTABLE_ASSETS + IMMUTABLE_GLYPHS;
+  assert.equal(headerCacheControl(rules, `/basemap/glyphs/v/${GLYPH_VERSION}/dm-sans-medium/0-255.pbf`), 'public, max-age=31536000, immutable');
+  assert.equal(headerCacheControl(rules, '/basemap/glyphs/dm-sans-medium/0-255.pbf'), null, 'unversioned: the assets default, as before');
+  assert.equal(headerCacheControl(rules, '/assets/app.0123456789.js'), 'public, max-age=31536000, immutable');
 });
 
 test('check_client passes a good build and fails on missing chunks, raw sources, stale precache and a worker without the build id', async () => {
@@ -220,6 +256,15 @@ test('the real site builds and passes the client check (static data directories 
     assert.ok(manifest[key] && !first.has(key) && all.has(key), `${key} loads on use, not with /map`);
   const precache = JSON.parse(await readFile(join(out, 'precache.json'), 'utf8'));
   assert.ok(precache.v2.assets.includes(`/${manifest['../web/trip-runtime.ts'].file}`), 'a saved pack can open the planner offline');
+  // R4-SC-08: the real glyphs ship under GLYPH_VERSION (kept a year) and unversioned (unchanged); a pack stores the versioned ones.
+  const glyphs = ['0-255', '8192-8447'].map(range => `/basemap/glyphs/v/${GLYPH_VERSION}/dm-sans-medium/${range}.pbf`);
+  assert.deepEqual(precache.v2.static, glyphs);
+  const headers = await readFile(join(out, '_headers'), 'utf8');
+  for (const path of glyphs) {
+    assert.deepEqual(await readFile(join(out, path)), await readFile(join(out, path.replace(`/v/${GLYPH_VERSION}`, ''))), path);
+    assert.equal(headerCacheControl(headers, path), 'public, max-age=31536000, immutable', path);
+    assert.equal(headerCacheControl(headers, path.replace(`/v/${GLYPH_VERSION}`, '')), null, `${path} unversioned keeps the default`);
+  }
   // SCB-11: /map links its early script (web/app/early.ts) async, at high priority, ahead of the app's own entry; the script
   // imports nothing, so it runs the moment it arrives; the landing warms it and a saved pack carries it with the app.
   const early = manifest['../web/app/early.ts'], page = await readFile(join(out, `app.${buildId}.html`), 'utf8');

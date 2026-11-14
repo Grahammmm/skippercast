@@ -94,6 +94,11 @@ const contentType = (key: string): string => key.endsWith('.geojson.gz') ? 'appl
   : key.endsWith('.pmtiles') ? 'application/octet-stream' : key.endsWith('.md') ? 'text/markdown; charset=utf-8' : 'application/octet-stream';
 // Feeds named latest/index/manifest change in place; tiles are replaced per model cycle.
 const cacheFor = (key: string): number => /(^|\/)(latest|index|manifest|status|health|intelligence|habitat-dynamics)[^/]*\.json$/.test(key) ? 60 : 300;
+// R4-SC-08: a basemap archive named by its content (scripts/basemap/regions.py content_key: the first 16 hex of its
+// SHA-256, published once, never overwritten) never changes bytes, so browsers keep it a year. A date-only name
+// (ca-coast-YYYYMMDD.pmtiles, published before content names) may get new bytes and keeps cacheFor's lifetime.
+export const CONTENT_NAMED_BASEMAP = /^tiles\/basemap\/ca-coast-\d{8}-[a-f0-9]{16}\.pmtiles$/;
+export const IMMUTABLE = 'public, max-age=31536000, immutable';
 
 function parseRange(header: string | null, size: number): {start: number; end: number} | 'invalid' | null {
   const match = /^bytes=(\d*)-(\d*)$/.exec(header || '');
@@ -258,7 +263,9 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
       return new Response('Seafloor screening unavailable or expired', {status: 503, headers: {'Cache-Control': 'no-store'}});
     }
   }
-  const headers = new Headers({'Content-Type': contentType(logicalKey), 'Cache-Control': seafloor ? 'no-store' : `public, max-age=${cacheFor(logicalKey)}`,
+  const cacheControl = seafloor ? 'no-store' : CONTENT_NAMED_BASEMAP.test(logicalKey) ? IMMUTABLE : `public, max-age=${cacheFor(logicalKey)}`;
+  const headers = new Headers({'Content-Type': contentType(logicalKey),
+    'Cache-Control': cacheControl,
     'X-Content-Type-Options': 'nosniff', 'Access-Control-Allow-Origin': '*',
     'Access-Control-Expose-Headers': 'ETag, Content-Range, Content-Length, Accept-Ranges, X-Feed-Generation'});
   if (target.generation) headers.set('X-Feed-Generation', target.generation);
@@ -299,10 +306,14 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
     }
   }
   if (target.generation) return new Response('Feed release object unavailable', {status: 503, headers: {'Cache-Control': 'no-store'}});
+  // Only a successful archive response keeps the year-long immutable policy: every miss or error is no-store,
+  // so a request during a temporary outage can never pin "Not found" for the content-named archive.
+  headers.set('Cache-Control', 'no-store');
   if (seafloor) return new Response('Not found', {status: 404, headers});
   if (key.startsWith('tiles/')) {  // map tiles ship with the site until R2 is connected
     const response = assets ? await assets.fetch(new Request(new URL('/' + key, request.url))) : null;
     if (!response?.ok) return new Response('Not found', {status: 404, headers});
+    headers.set('Cache-Control', cacheControl);
     headers.set('X-Feed-Source', 'assets');
     return rangeResponse(new Uint8Array(await response.arrayBuffer()), request, headers);
   }

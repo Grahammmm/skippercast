@@ -20,6 +20,7 @@ import {saveData} from '../web/landing/save-data.ts';
 import {warmApp, warmList} from '../web/landing/warm.ts';
 import {ASSET, regionWarmList, warmRegion} from '../web/landing/region-warm.ts';
 import {RAIL_IDS} from '../web/profile.ts';
+import {GLYPH_VERSION} from '../web/map/style.ts';
 import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -457,7 +458,7 @@ test('the night map draws the first listed source with a fresh frame, the night 
   const palette = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
   const style = nightStyle(palette, 'https://s.test/feeds/tiles/basemap/a.pmtiles', 'https://s.test/?ui=v2', 'morro-bay');
   assert.equal(style.name, 'SkipperCast basemap (night)');
-  assert.equal(style.glyphs, 'https://s.test/basemap/glyphs/{fontstack}/{range}.pbf');
+  assert.equal(style.glyphs, `https://s.test/basemap/glyphs/v/${GLYPH_VERSION}/{fontstack}/{range}.pbf`);
   assert.equal(style.sources.coastline.data, 'https://s.test/regions/morro-bay/shoreline-overview.geojson', 'the light overview shoreline (#617)');
   assert.deepEqual(style.layers.slice(-2).map(l => [l.id, l.paint['line-color'], l.paint['line-opacity']]), [['coastline-glow', 'token(depth-0)', 0.45], ['coastline', 'token(flow)', 0.9]], 'the coastline last, in the SVG\'s glow');
   const colours = style.layers.flatMap(l => Object.entries(l.paint ?? {}).filter(([k]) => k.endsWith('-color')).map(([, v]) => v));
