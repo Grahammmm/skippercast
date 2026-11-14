@@ -73,6 +73,8 @@ test('snapshot CLI and successful-deploy summary use the same file and selected 
     const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
     assert.match(workflow, /node "\$CONTROLLER\/scripts\/wrangler_config.mjs" --snapshot "\$DEPLOY_SHA" dist\/client\/deploy.json/);
     assert.match(workflow, /Summarize the deployed production switches\n        if: steps.deploy.outputs.deployed == 'true' && steps.smoke.outcome == 'success'\n        run: node "\$CONTROLLER\/scripts\/wrangler_config.mjs" --summary dist\/client\/deploy.json/);
+    // The same receipt is kept per run, only after a smoke-tested deploy, named for the selected commit.
+    assert.match(workflow, /Keep the deployed switches snapshot as a run artifact\n        if: steps.deploy.outputs.deployed == 'true' && steps.smoke.outcome == 'success'\n(?:        #[^\n]*\n)?        continue-on-error: true\n        uses: actions\/upload-artifact@[0-9a-f]{40}[^\n]*\n        with:\n(?:          #[^\n]*\n)?          name: deploy-json-\$\{\{ needs.source.outputs.sha \}\}\n          path: dist\/client\/deploy.json\n          if-no-files-found: error\n/);
   } finally { rmSync(dir, {recursive: true, force: true}); }
 });
 
