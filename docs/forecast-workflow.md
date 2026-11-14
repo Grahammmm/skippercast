@@ -1,6 +1,6 @@
 # From forecast evidence to an assessment
 
-This workflow describes operator or agent review around the shipped collector and alert rules. It is not a fully automated forecast or delivery service.
+This workflow describes manual operator or agent review of forecast evidence. The legacy Python collector and alert lifecycle are no longer shipped; this guide is not an executable forecast or delivery service.
 
 ## 1. Choose a real trip window
 
@@ -10,7 +10,7 @@ Evaluate north and south separately. Use charted outbound and return routes; do 
 
 ## 2. Collect and examine the sources
 
-Run the [collector](quickstart.md#collect-live-evidence), then inspect its raw responses, manifest, model metadata, and screen. Check fresh NWS PZZ645, the LOX discussion, applicable advisories, buoy observations, local notices, rules, and the other [source records](data-sources.md). Recover a transport failure with another fresh official read where possible; record both the failed access and recovery.
+Inspect the available source responses, acquisition records, model metadata, and screen. Check fresh NWS PZZ645, the LOX discussion, applicable advisories, buoy observations, local notices, rules, and the other [source records](data-sources.md). Recover a transport failure with another fresh official read where possible; record both the failed access and recovery.
 
 Compare **ECMWF IFS versus NOAA GFS** for wind and **ECMWF WAM versus NOAA GFS Wave** for seas at matching hours and relevant grid cells. Open-Meteo provides access to these models; it is not another independent model. Its combined response grid is not proof of each underlying model's grid. Check single-model results where matching locations matters.
 
@@ -30,11 +30,11 @@ The atlas is dated habitat research. Use only points that fit the current plan's
 
 Apply the [fixed rubric](assessment-rubric.md). Record both scores and their reasons, separate confidence, area, departure/fishing/return times, hazards, unresolved critical gaps, `verification_complete`, and `meets_numeric_targets`. Use null/unrated when evidence cannot support a score. Dates four through seven days away remain provisional.
 
-The lifecycle module checks supplied flags and scores; it cannot establish that the input assessment is truthful or complete. The caller must verify that at least four fishing hours and all numeric/trip requirements actually hold before setting those flags.
+Flags and scores cannot establish that an input assessment is truthful or complete. The reviewer must verify that at least four fishing hours and all numeric/trip requirements actually hold before setting those flags.
 
 ## 5. Decide whether to notify
 
-Use `action_for(trip_date, assessment, previous, now)` from `skippercast.monitor.lifecycle` with a timezone-aware local time and **delivered** prior state:
+For a separately maintained integration, use timezone-aware local time and **delivered** prior state when reviewing notification decisions:
 
 1. Send an initial alert when a future date first qualifies.
 2. Send material changes and explicit retractions when it falls below the threshold or evidence can no longer verify it.
@@ -50,4 +50,4 @@ No sending adapter is shipped. A production adapter must use a stable event ID, 
 
 An assessment message should contain: type; date and area; overall and component scores; confidence and reason; departure/fishing/return times; wind; combined seas and available components/chop; tides/currents/entrance; changes or rationale; and direct sources with issue times. Use local time, knots, feet, and seconds for this profile. Every final assessment must say: **Recheck current marine and entrance conditions before departure.**
 
-Scheduling, saved per-date state, receipt reconciliation, and failure deduplication remain integration work. Running the collector once does not start a monitor.
+Scheduling, saved per-date state, receipt reconciliation, and failure deduplication remain integration work. Reading forecast evidence does not start a monitor.
