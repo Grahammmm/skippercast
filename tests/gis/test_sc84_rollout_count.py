@@ -5,8 +5,7 @@ planning tree built from tests/fixtures/sc84-rollout-count/fixture.json in a fre
 temporary directory. Spies wrap (never replace) the module's own ledger reader,
 reference hasher and geometry helpers, so the call order is observed while the
 real implementation runs. The survey manifest is supplied through a patched
-load_manifest, as in tests/gis/test_seafloor_rollout.py. Every test appends
-before/after byte hashes of its synthetic tree and the authored fixture to EVIDENCE.
+load_manifest, as in tests/gis/test_seafloor_rollout.py.
 """
 import hashlib
 import json
@@ -23,21 +22,6 @@ from skippercast.seafloor.io import sha256
 from tests._support import FIXTURES
 
 FIXTURE = FIXTURES/'sc84-rollout-count/fixture.json'
-EVIDENCE = []
-
-# Assertion class per test method, reported by tools/run_sc84_rollout_count.py.
-ASSERTION_CLASSES = {
-    'test_zero_count_is_maintenance_mode': 'positive',
-    'test_one_count_selects_top_reach': 'positive',
-    'test_default_count_is_three_with_tie_order': 'positive',
-    'test_exact_reach_count_is_inclusive_bound': 'positive',
-    'test_region_filters_and_processed_refresh_unchanged': 'positive',
-    'test_bool_count_refused_before_ledger_read': 'negative-early-refusal',
-    'test_noninteger_counts_refused_before_ledger_read': 'negative-early-refusal',
-    'test_out_of_range_integers_refused_before_manifest_reference_geometry': 'negative-bound-after-ledger',
-    'test_reviewed_window_fixture_counts': 'compatibility',
-}
-
 # Values that are not a Python int (or are a bool) and must never reach the ledger.
 NONINTEGER_COUNTS = (True, False, 0.0, 1.0, 3.0, 1.5, -0.5, float('nan'), float('inf'),
                      float('-inf'), '1', '', None, [], [1], (1,), {}, {'n': 1}, {1})
@@ -91,11 +75,11 @@ class SyntheticTree(unittest.TestCase):
 
     def tearDown(self):
         self.manifest.stop()
-        after = tree_digest(self.root)
-        EVIDENCE.append({'test': self.id(), 'synthetic_tree_before': self.before,
-                         'synthetic_tree_after': after, 'tree_unchanged': after == self.before,
-                         'fixture_before': self.fixture_before, 'fixture_after': file_digest(FIXTURE)})
-        self._tmp.cleanup()
+        try:
+            # rollout.plan never changes its inputs, in any test.
+            self.assertTreeUnchanged()
+        finally:
+            self._tmp.cleanup()
 
     def assertTreeUnchanged(self):
         self.assertEqual(tree_digest(self.root), self.before)

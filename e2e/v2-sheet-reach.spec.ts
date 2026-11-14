@@ -1,7 +1,7 @@
 // SC1722-07 (UX audit S4-06): the phone sheet is moved down by its detent's transform, so at half height the last
 // stretch of its scrolling body sat below the screen and the footer's Sign in, the only sign-in entry on the phone,
 // could be reached only by dragging the sheet to full. The body now carries bottom padding equal to its detent's
-// hidden offset plus the tab bar. These tests scroll ONLY the body to its end and measure Sign in before any
+// hidden offset (the sheet stands on the tab bar, so the bar is not padded again; CI-1). These tests scroll ONLY the body to its end and measure Sign in before any
 // focus, click or scrollIntoView could move it.
 import type {Locator, Page} from '@playwright/test';
 import {test, expect, setSize, wideViewport} from './fixtures.ts';

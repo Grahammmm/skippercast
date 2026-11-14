@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {advance,colour,fresh,sample,validate} from '../research/scripts/map_style/wind-layer.js';
+import {advance,colour,fresh,sample,validate} from '../web/map/wind-layer.js';
 const grid=()=>({schema_version:1,source_id:'noaa-gfs',units:'m/s',width:2,height:2,
   west:-122,north:36,resolution_degrees:.25,max_age_hours:18,
   run_time:'2026-11-07T12:00:00Z',data_time:'2026-11-07T18:00:00Z',

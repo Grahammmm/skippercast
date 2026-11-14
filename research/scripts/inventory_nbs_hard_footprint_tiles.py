@@ -117,7 +117,7 @@ def inventory(scheme, context_files, sectors):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--scheme', type=Path, default=Path('var/modeling-tile-scheme-20260923.gpkg'))
-    parser.add_argument('--hard-dir', type=Path, default=Path('dist/data'))
+    parser.add_argument('--hard-dir', type=Path, default=Path('research/receipts'))
     parser.add_argument('--sectors', type=Path, default=Path('catalog/coastal-sectors.json'))
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()

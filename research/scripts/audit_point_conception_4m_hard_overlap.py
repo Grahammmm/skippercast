@@ -89,7 +89,7 @@ def audit_one(bag_path, bag_sha, character_data, character_transform, character_
 
 def build(bag_cache=CACHE, usgs_cache=USGS_CACHE):
     name, url, sha = USGS_SOURCE
-    previous = json.loads((ROOT / "dist/data/point-conception-native-hard-300-review-summary.json").read_text())
+    previous = json.loads((ROOT / "research/receipts/point-conception-native-hard-300-review-summary.json").read_text())
     if (previous.get("scope") != "native-noaa-usgs-review-summary"
             or {row.get("survey_id") for row in previous.get("surveys", [])} != {"H11952", "H11953"}
             or any(not any(source.get("archive_sha256") == sha

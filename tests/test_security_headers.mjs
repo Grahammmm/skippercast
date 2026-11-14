@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync, readdirSync} from 'node:fs';
 import {CSP, CONNECT_ORIGINS, IMAGE_ORIGINS, SECURITY_HEADERS, secure, headersFile} from '../server/security-headers.ts';
 import {cloudSource, mapSourceHosts, naipSource} from '../packages/coast/src/map-sources.ts';
+import {RAW, feedURL} from '../dist/feeds.js';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
@@ -62,16 +63,21 @@ test('the NAIP aerial base\'s host is allowed for MapLibre\'s tile fetches, and 
 
 // Every https origin written as a string literal in the client must be either
 // allowed by the CSP or known to be a plain link (never fetched or embedded).
+// raw.githubusercontent.com appears only as the logical name of a published
+// feed, which the client rewrites to the site's /feeds/ route (dist/feeds.js).
 const LINK_ONLY = new Set(['docs.raymarine.com', 'inavx.com', 'marinespecies.wildlife.ca.gov', 'support.garmin.com',
   'wildlife.ca.gov', 'www.fisheries.noaa.gov', 'www.lowrance.com', 'www.morrobayca.gov', 'www.ndbc.noaa.gov',
   'www.simrad-yachting.com', 'www8.garmin.com']);
 test('every origin the client code names is allowed by the CSP or is a plain link', () => {
   const allowed = new Set([...CONNECT_ORIGINS, ...IMAGE_ORIGINS].map(o => new URL(o).host));
+  assert.equal(allowed.has('raw.githubusercontent.com'), false, 'the browser never fetches GitHub');
   const dist = new URL('../dist/', import.meta.url), unknown = new Set();
   for (const name of readdirSync(dist).filter(n => n.endsWith('.js'))) {
     const text = readFileSync(new URL(name, dist), 'utf8');
-    for (const match of text.matchAll(/(?<!href=)["'`]https:\/\/([A-Za-z0-9.-]+)/g)) {
-      if (!allowed.has(match[1]) && !LINK_ONLY.has(match[1])) unknown.add(`${match[1]} (${name})`);
+    for (const match of text.matchAll(/(?<!href=)(["'`])https:\/\/([A-Za-z0-9.-]+)([^"'`]*)/g)) {
+      const url = `https://${match[2]}${match[3]}`;
+      if (match[2] === 'raw.githubusercontent.com' && (url === RAW || feedURL(url).startsWith('/feeds/'))) continue;
+      if (!allowed.has(match[2]) && !LINK_ONLY.has(match[2])) unknown.add(`${match[2]} (${name})`);
     }
   }
   assert.deepEqual([...unknown], [], 'add new fetch/tile hosts to server/security-headers.ts, or to LINK_ONLY if only linked');

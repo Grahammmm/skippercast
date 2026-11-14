@@ -22,7 +22,7 @@ class HardFootprintTileTest(unittest.TestCase):
         scheme = root / 'var/modeling-tile-scheme-20260923.gpkg'
         if not scheme.exists():
             self.skipTest('Pinned NOAA scheme not cached')
-        contexts = {coast: root / 'dist/data' / f'usgs-hard-context-{coast}.geojson'
+        contexts = {coast: root / 'research/receipts' / f'usgs-hard-context-{coast}.geojson'
                     for coast in COASTS}
         sectors = json.loads((root / 'catalog/coastal-sectors.json').read_text())
         report = inventory(scheme, contexts, sectors)

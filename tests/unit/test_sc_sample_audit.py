@@ -1,8 +1,7 @@
 """SC-SAMPLE-AUDIT: read-only composition report for a fixed coast-sample-v1 sample.
 
-Offline synthetic fixtures only. Tests are plain functions (no pytest import) so the
-staged acceptance runner can execute them in-process with the installed python3; pytest
-collects them normally through pyproject testpaths/python_files. Test names carry the
+Offline synthetic fixtures only. Tests are plain functions (no pytest import); pytest
+collects them through pyproject testpaths/python_files. Test names carry the
 acceptance row: test_a1_* focused, test_a2_* producer contract, test_a3_* negative.
 """
 import contextlib
@@ -39,11 +38,8 @@ def _load(name, path):
     return module
 
 
-RUNNER_PATH = ROOT / 'scripts' / 'accept_sc_sample_audit.py'
-
 producer = _load('_sc_sample_audit_test_producer', PRODUCER_PATH)
 audit = _load('sc_sample_audit_sample_coverage', AUDIT_PATH)
-runner = _load('_sc_sample_audit_runner_under_test', RUNNER_PATH)
 
 
 @contextlib.contextmanager
@@ -657,33 +653,6 @@ def test_a3_cli_symlink_plus_dotdot_paths_exit_refused():
         assert tree_snapshot(tmp) == before
         for path in (tmp / 'sample.json', far / 'sample.json', target / 'sample.json'):
             assert path.read_bytes() == data
-
-
-def test_a3_runner_run_dir_refuses_symlinked_or_dotdot_ancestry():
-    with real_tmpdir() as tmp:
-        far = tmp / 'far'
-        target = far / 'target'
-        target.mkdir(parents=True)
-        os.symlink(target, tmp / 'link')
-        before = tree_snapshot(tmp)
-        for output in (tmp / 'link' / 'runner-root', tmp / 'link',
-                       str(tmp / 'link') + '/../root2', str(tmp) + '/../root3',
-                       tmp / 'link' / 'a' / 'b'):
-            try:
-                runner.make_run_dir(output)
-            except SystemExit as error:
-                assert str(error).startswith('REFUSED '), str(error)
-            else:
-                raise AssertionError('runner must refuse %s' % output)
-        assert tree_snapshot(tmp) == before, 'nothing may be created behind a refused path'
-        assert list(target.iterdir()) == [] and not (far / 'root2').exists()
-        assert not (tmp.parent / 'root3').exists()
-        # Ordinary real-directory first run and re-run give distinct write-once directories.
-        first = runner.make_run_dir(tmp / 'out' / 'nested')
-        second = runner.make_run_dir(tmp / 'out' / 'nested')
-        assert first != second and first.parent == second.parent == tmp / 'out' / 'nested'
-        assert (first / 'tmp').is_dir() and (second / 'tmp').is_dir()
-        assert not first.is_symlink() and not second.is_symlink()
 
 
 def _numeric_document(target_literal):

@@ -104,7 +104,11 @@ def verify(archive, jurisdiction_id):
             data = record.get("data") if isinstance(record.get("data"), dict) else {}
             if record.get("status") != "ok" or record.get("url") != expected["url"]:
                 raise ValueError(f"Unusable source or URL mismatch: {ident}")
-            if data.get("normalization") != expected["normalization"]:
+            # A registry reviewed before v4 keeps its v3 label until its next review, while collection now
+            # fingerprints with v4 (same transitional rule as validate_bindings). Accept only that pairing.
+            if data.get("normalization") != expected["normalization"] and not (
+                    expected["normalization"] == "text-and-links-v3"
+                    and data.get("normalization") == "text-and-links-v4"):
                 raise ValueError(f"Normalizer mismatch: {ident}")
             kind = data["normalization"]
             if kind == "pdf-bytes-v1":

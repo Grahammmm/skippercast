@@ -1,8 +1,6 @@
 name: "Research: monthly statewide substrate review"
 
 on:
-  schedule:
-    - cron: "37 10 1 * *"
   workflow_dispatch:
 
 permissions:

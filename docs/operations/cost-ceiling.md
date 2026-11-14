@@ -160,8 +160,9 @@ set only in the dashboard is lost at the next deploy.
 Once today's count reaches the ceiling (`server/cost-ceiling.ts:71`), the
 Worker is degraded until the UTC day ends (`server/cost-ceiling.ts:17-27`,
 `server/cost-ceiling.ts:229-251`). No request reads R2: the bucket is
-withheld, so feeds come from their GitHub branch, tiles from the shipped
-assets and coast data from the Fish bridge. Public reads (`GET` on `/feeds/*`
+withheld, so published feeds have no live source (they are never read from
+GitHub), tiles come from the shipped assets and coast data from the Fish
+bridge. Public reads (`GET` on `/feeds/*`
 except seafloor archives, `/api/daily`, `/api/forecast`, `/api/intelligence`,
 `/api/habitat` and `/api/om/*`; `server/cost-ceiling.ts:110-117`) are answered
 first from their last-known copy, the response saved the last time they were

@@ -19,6 +19,7 @@ RESEARCH_PREFIXES = ('audit_', 'screen_', 'triage_', 'review_', 'discover_', 'in
 # Run by daily-data.yml; their outputs (survey-discovery.json, survey-products.json) are loaded by the app.
 # measure_startup.mjs measures the app itself; the startup budget browser test (e2e/startup.spec.ts) runs it.
 PRODUCT_EXCEPTIONS = {'audit_noaa_survey_products.py', 'discover_noaa_surveys.py', 'measure_startup.mjs'}
+SOURCE_SUFFIXES = {'.js', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.html'}
 JS_RESEARCH_IMPORT = re.compile(r"""(?:\bfrom\s*|\bimport\s*\(?\s*)['"][^'"]*\bresearch/""")
 
 
@@ -43,8 +44,14 @@ class ResearchBoundaryTest(unittest.TestCase):
         self.assertEqual(offenders, [])
 
     def test_web_and_worker_never_import_research(self):
+        # dist/ (top level), server/, the client source in web/ and the shared packages/ all ship to users.
         paths = [*sorted((ROOT / 'dist').glob('*.js')), *sorted((ROOT / 'dist').glob('*.html')),
                  *sorted((ROOT / 'server').rglob('*.[jt]s'))]
+        for top in ('web', 'packages'):
+            paths += sorted(p for p in (ROOT / top).rglob('*')
+                            if p.is_file() and p.suffix in SOURCE_SUFFIXES and 'node_modules' not in p.parts)
+        self.assertTrue(any(p.parts[len(ROOT.parts)] == 'web' for p in paths), 'web/ is not scanned')
+        self.assertTrue(any(p.parts[len(ROOT.parts)] == 'packages' for p in paths), 'packages/ is not scanned')
         offenders = [p.relative_to(ROOT).as_posix() for p in paths
                      if JS_RESEARCH_IMPORT.search(p.read_text(encoding='utf-8'))]
         self.assertEqual(offenders, [])

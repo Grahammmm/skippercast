@@ -127,7 +127,7 @@ def build(ledger, cache, *, fetch_missing=False, fetch_missing_only=False, worke
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--ledger', type=Path,
-                        default=Path('dist/data/usgs-depth-datum-ledger.json'))
+                        default=Path('research/receipts/usgs-depth-datum-ledger.json'))
     parser.add_argument('--cache', type=Path,
                         default=Path('var/usgs-accuracy-xml-cache'))
     parser.add_argument('--fetch', action='store_true')

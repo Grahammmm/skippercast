@@ -5,7 +5,7 @@ SkipperCast runs only on a Cloudflare account the owner controls: the Worker, th
 ## What is in place
 
 - **`wrangler.jsonc`**: the Worker (`dist/server/index.js`), the fingerprinted site (`dist/client`), D1 as `DB`, the R2 bucket `skippercast-feeds` as `FEEDS`, and a cron trigger every 15 minutes.
-- **`/feeds/<branch>/<path>`**: the site's single route for published feeds (`conditions`, `data`, `forecasts`). It serves from R2 when the bucket is bound, and otherwise from the GitHub branch through Cloudflare's cache. It supports Range and ETag. The browser uses this route for every feed, so moving storage needs no front-end change. Each response names its source in the `X-Feed-Source` header (`r2`, `github` or `assets`). `/api/health` reports only the service, version and build.
+- **`/feeds/<branch>/<path>`**: the site's single route for published feeds (`conditions`, `data`, `forecasts`). It serves only from R2 (map tiles R2 does not hold come from the shipped assets); it never reads a feed from GitHub. With no bucket bound it answers `503`, and a key absent from the bucket answers `404`. It supports Range and ETag. The browser uses this route for every feed, so moving storage needs no front-end change. Each response names its source in the `X-Feed-Source` header (`r2`, `github` or `assets`). `/api/health` reports only the service, version and build.
 - **Publishing:**
   - After each GitHub push, `scripts/publish_branch_r2.sh` publishes that branch's committed files as one R2 snapshot. Ordinary feed URLs and the GitHub branch layout stay unchanged.
   - `scripts/publish_r2.py` uploads immutable SHA-256 objects, verifies changed objects and the complete snapshot by read-back, then conditionally commits one release pointer. A conflicting publisher fails rather than replacing a release committed during its upload. Forecast API requests pin the same snapshot for manifest and tile reads. See [R2 snapshot publication](operations/runbooks/r2-snapshots.md) for migration, rollback and retained-object storage.
@@ -27,7 +27,7 @@ SkipperCast runs only on a Cloudflare account the owner controls: the Worker, th
 - **Deploy (`.github/workflows/deploy-cloudflare.yml`)**: after **Offline checks** pass on a `main` commit, it builds the newest `main` commit whose checks passed (never one older than production serves, and nothing while production's commit cannot be traced; the guards run from the workflow's own revision; a run that ships nothing reports "held" through a neutral **Cloudflare deploy** check run), creates the D1 database and R2 buckets if missing, records a D1 Time Travel bookmark, exports D1 to the private `skippercast-backups` bucket, applies `drizzle/` migrations, deploys and uploads optional secrets. `scripts/smoke_test.sh` then checks the site; a failure rolls the Worker back automatically. Manual rollback: run the workflow with action **rollback**. See [roll back a release](operations/runbooks/rollback-release.md).
 
 Verified locally with `wrangler dev` (Cloudflare's runtime, local D1 and R2):
-- pages, the forecast API, `/feeds/` from R2 and from GitHub, and path-traversal refusal;
+- pages, the forecast API, `/feeds/` from R2, and path-traversal refusal;
 - the cron handler;
 - the full app in Chromium, with every feed through `/feeds/`, no direct GitHub requests and no errors.
 
@@ -55,7 +55,7 @@ Verified locally with `wrangler dev` (Cloudflare's runtime, local D1 and R2):
 - `<branch> <dir> <message>` commits the whole directory as one commit **with no parent** and force-pushes it with a lease on the commit it was loaded from. If another job published in between, the push is refused and the cycle fails; nothing is overwritten, and the next cycle reloads and publishes on top. Unchanged content is not re-published.
 - Each job pushes only its own branch: the live loop `conditions` and `forecasts`, the daily job `data`, the manual Forecast tiles workflow `forecasts`. The lease is what keeps the last two from clobbering each other; they are in different concurrency groups.
 
-Nothing reads branch history: the app, the Worker's GitHub fallback and the collectors read files. History the pipeline needs is kept as files inside the snapshot: `data` keeps `history/` and `regions/<id>/history/` for 90 days, and `conditions` keeps each region's `verification-archive/` for 30 days.
+Nothing reads branch history: the app, the watchdog's branch check and the collectors read files. History the pipeline needs is kept as files inside the snapshot: `data` keeps `history/` and `regions/<id>/history/` for 90 days, and `conditions` keeps each region's `verification-archive/` for 30 days.
 
 **Existing history is squashed automatically.** The first publish after this change replaces each branch with a single commit; `git rev-list --count origin/conditions` then stays at 1. The owner does not need to rewrite anything by hand. The repository's size on GitHub shrinks only after GitHub garbage-collects the unreachable commits, which it does on its own schedule; GitHub Support can run it on request. Existing clones keep the old objects until their reflogs expire and `git gc` runs.
 

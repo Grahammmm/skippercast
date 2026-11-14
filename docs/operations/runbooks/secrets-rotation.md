@@ -60,7 +60,7 @@ export CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=...   # the token being in
 4. Verify every consumer: `gh workflow run deploy-cloudflare.yml --ref main` (deploy) and `gh workflow run live-conditions.yml --ref main` (R2 publish); both must be green and the live run must log `R2 skippercast-feeds/conditions: ... uploaded`.
 5. Revoke the old token in the dashboard (**API Tokens → ... → Delete**).
 
-Until step 3, R2 publication fails; on `main` that is a warning and GitHub branches stay current (see [R2 outage](r2-outage.md) for catching up R2).
+Until step 3, R2 publication fails; on `main` that is a warning and GitHub branches stay current, but the site keeps serving the older R2 copy (it never reads feeds from GitHub; see [R2 outage](r2-outage.md) for catching up R2).
 
 ## ANTHROPIC_API_KEY
 

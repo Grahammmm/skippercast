@@ -17,6 +17,7 @@
 - **Forecast tiles sync to R2 on every run**, hash-indexed, so a new bucket is never left empty. PR #11.
 - **Git feed branches are single-commit mirrors.** Each publish is one parentless commit force-pushed with a lease, so a concurrent publisher is refused, not overwritten. R2 lifecycle rules expire run manifests after 7 days. PR #57.
 - The GitHub branch stays as a fallback when R2 is unbound (local and development deployments) and as a public, inspectable copy.
+  - *Amended by SC2184-13 (audit #2184 item 13):* the Worker no longer falls back to the branch. With R2 unbound a feed answers `503`; a key absent from R2 answers `404`. The branch stays as the public, inspectable copy.
 
 ## Consequences
 

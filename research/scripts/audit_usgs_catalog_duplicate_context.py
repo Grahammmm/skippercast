@@ -68,7 +68,7 @@ def audit(candidate, coast_shards):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--candidate', type=Path, required=True)
-    parser.add_argument('--shards', type=Path, default=Path('dist/data'))
+    parser.add_argument('--shards', type=Path, default=Path('research/receipts'))
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     data = json.loads(args.candidate.read_text())

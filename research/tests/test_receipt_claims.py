@@ -56,7 +56,7 @@ class ReceiptClaimsTest(unittest.TestCase):
 
     def test_usgs_bathy_accuracy_statewide(self):
         review = json.loads((RECEIPTS / 'usgs-bathymetry-accuracy-review.json').read_text())
-        ledger = json.loads((WEB / 'data/usgs-depth-datum-ledger.json').read_text())
+        ledger = json.loads((RECEIPTS / 'usgs-depth-datum-ledger.json').read_text())
         assert review['scope'] == 'california-usgs-original-bathymetry-accuracy-review'
         assert review['status'] == 'ok' and not review['issues']
         assert review['source_grid_count'] == review['fully_verified_source_count'] == len(review['sources']) == ledger['source_grid_count']

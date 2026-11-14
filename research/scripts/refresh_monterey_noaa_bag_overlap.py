@@ -41,7 +41,7 @@ def main():
     args = p.parse_args()
     root = args.root
     bindings = json.loads((root / "catalog/monterey-original-bag-overlap-bindings.json").read_text())
-    context_path = root / "dist/data/usgs-offshore-monterey-hard-context.geojson"
+    context_path = root / "research/receipts/usgs-offshore-monterey-hard-context.geojson"
     pixel_path = root / "research/receipts/monterey-original-300-pixel-review.json"
     context = json.loads(context_path.read_text())
     pixel = json.loads(pixel_path.read_text())

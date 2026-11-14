@@ -75,10 +75,6 @@ no output created. The report records `sample_file_sha256` and
 
 `tests/unit/test_sc_sample_audit.py` uses the tiny synthetic fixture in
 `tests/fixtures/sc_sample_audit/` and inputs generated through the unchanged producer.
-The test functions do not import pytest, so `scripts/accept_sc_sample_audit.py` can run
-them offline with the installed `python3` (`--suite focused|contract|negative --output
-DIR`). The runner installs network, subprocess and model-import sentinels, keeps
-temporary files inside a new run directory, records hashes and per-test results, and for
-the negative suite proves that an in-memory double omitting the zero-selected group is
-caught and that disabling the sample-hash comparison is caught. A passing run is
-review-required local evidence, not full CI.
+pytest collects the plain test functions. The negative tests prove that an in-memory
+double omitting the zero-selected group is caught and that disabling the sample-hash
+comparison is caught.

@@ -1,6 +1,6 @@
 """SC-SCHEMA-CLOSURE: static offline dependency closure of explicitly listed JSON Schemas.
 
-Three groups, selected by class name in scripts/accept_sc_schema_closure.py:
+Three groups:
     TestFocusedClosure      A1 focused behaviour on tiny synthetic schemas and the real family
     TestContractRealFamily  A2 producer contract against the pinned real families and the
                             independent oracle expectations frozen in the fixtures
@@ -39,20 +39,10 @@ def load_module():
 sc = load_module()
 
 
-RUNNER_PATH = REPO / "scripts" / "accept_sc_schema_closure.py"
-
-
 def fresh_dir():
     # Physical (symlink-free) path: platforms alias their temporary directory through a
     # symlink, and the tool refuses every symlinked ancestor.
     return Path(os.path.realpath(tempfile.mkdtemp(prefix="sc-schema-closure-")))
-
-
-def load_runner():
-    spec = importlib.util.spec_from_file_location("accept_sc_schema_closure_under_test", RUNNER_PATH)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def classify(report):
@@ -707,19 +697,6 @@ class TestNegativeClosure(unittest.TestCase):
                               "--out", str(nested / "ok.json")])
         self.assertEqual(status, 0)
         self.assertEqual(json.loads((nested / "ok.json").read_text(encoding="utf-8"))["exit_code"], 0)
-
-    def test_runner_output_refuses_symlinked_higher_ancestor(self):
-        runner = load_runner()
-        base = fresh_dir()
-        (base / "real" / "nested").mkdir(parents=True)
-        os.symlink(base / "real", base / "link")
-        with mock.patch("os.mkdir", side_effect=AssertionError("mkdir reached through a symlink")):
-            error = runner.prepare_output(str(base / "link" / "nested" / "run"))
-        self.assertIsNotNone(error)
-        self.assertFalse((base / "real" / "nested" / "run").exists())
-        self.assertIsNone(runner.prepare_output(str(base / "real" / "nested" / "run")))
-        self.assertTrue((base / "real" / "nested" / "run").is_dir())
-        self.assertIsNotNone(runner.prepare_output(str(base / "real" / "nested" / "run")))  # write-once
 
     def test_row_cap_applies_to_every_emitted_collection(self):
         # Review round 1 item 4: on-boundary passes, one over is refused before resolution.

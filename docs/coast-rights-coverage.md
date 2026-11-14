@@ -47,17 +47,8 @@ source downloads or raw survey data.
 
 ## Frozen acceptance and evidence
 
-`run_n3_rights_coverage_acceptance.py` supports focused, compatibility, negative
-and portability modes. Invoke each separately with `--mode MODE --output-root
-ABS`. It allocates a new directory, records argv/cwd, exact local HEAD,
-authored/protected byte hashes, raw stdout/stderr and their hashes, executed
-test/subtest/skip counts and actual module origins. It uses unittest in-process;
-there are no shell or child-interpreter calls. Missing dependencies exit 3
-INPUT_UNAVAILABLE and remain an operator staging item, never an install or
-import-path workaround. Explicit exits determine acceptance, not Python assert.
-Socket, DNS and subprocess seams are installed before candidate imports;
-invocations of those seams also fail the final receipt even if caught. These
-are offline accidental-side-effect controls, not a hostile-code sandbox.
+The one-ticket acceptance runner that once drove these checks was deleted
+because no test or workflow used it. The unit tests below are the check.
 
 The initial focused red result was captured before implementation was present.
 It is test-first evidence only and must not be counted as acceptance. Later

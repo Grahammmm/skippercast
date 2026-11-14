@@ -54,7 +54,7 @@ flowchart LR
       r2[("R2 skippercast-feeds<br/>same keys + tiles/seafloor")]
     end
     subgraph edge["Worker (server/)"]
-      feedsroute["/feeds/* route<br/>R2 first, GitHub fallback"]
+      feedsroute["/feeds/* route<br/>R2 only"]
       api["/api/* public:<br/>om, forecast, intelligence, habitat"]
       private["/api/* private:<br/>trips, alerts, push, feedback, boat lookup"]
       cron["cron: watchdog"]
@@ -103,13 +103,12 @@ flowchart LR
 | Trip alerts | Saved-trip alerts in the account menu (`web/app/TripAlerts.tsx`, `web/alerts.ts`); `server/alert-policy.ts`, `server/trips.ts` (`checkTrips`, `deliver`), `scripts/check_saved_trips.py` | After each live cycle the job calls `POST /api/jobs/check` with a GitHub OIDC token (`server/job-auth.ts`); the Worker assesses due trips and sends Web Push with idempotent receipts | [Regional intelligence](regional-intelligence.md) |
 | AI boat lookup | `server/boat-lookup.ts` | Signed-in only; asks an Anthropic model with web search for a named boat's specifications; the person confirms them | [Boat profile](boat-profile.md) |
 | Watchdog | `server/watchdog.ts` | Cloudflare cron every 15 minutes: if `conditions/latest.json` is over 45 minutes old and no live run is active, dispatch one | [Cloudflare](cloudflare.md) |
-| Legacy monitor | `src/skippercast/monitor/` | Morro Bay-only forecast collector and alert-lifecycle utilities used by the offline demo and a separate personal monitor; slated for archiving (guide P2-08) | [Monitor reference](monitor-reference.md) |
 | Agent skills | `skills/` | Instructions for agents adding regions, discovering and ingesting data, and recent-discussion research | — |
 
 ## Hosting today
 
 - **skippercast.com runs on SkipperCast's own Cloudflare account** (`wrangler.jsonc`, `.github/workflows/deploy-cloudflare.yml`) with D1, R2 and the 15-minute cron watchdog; the workers.dev address is the always-on staging copy. `IDENTITY_PROVIDER=skippercast` ties private routes to passkey accounts; any other value keeps them closed. See [Cloudflare](cloudflare.md).
-- **Feeds are published twice**: to GitHub branches (history, fallback) and to R2 (what the Cloudflare Worker serves). The guide's direction is R2 as the system of record (P0-04, P2-05).
+- **Feeds are published twice**: to GitHub branches (history, the public copy) and to R2 (what the Cloudflare Worker serves, with no GitHub fallback since SC2184-13). The guide's direction is R2 as the system of record (P0-04, P2-05).
 
 ## Scheduled jobs
 
@@ -118,11 +117,11 @@ flowchart LR
 | `live-conditions.yml` | Every 30 minutes (:07, :37) inside a ~5.5-hour self-chaining run; restarted by the watchdog and the freshness check | `conditions` branch + R2: live observations, intelligence (models, ensembles, currents, verification), habitat dynamics; forecast tiles to `forecasts`; then private trip checks |
 | `daily-data.yml` | 04:17 America/Los_Angeles | `data` branch + R2: dated reports, regulations and their review state, recent discussions, survey discovery |
 | `research-daily.yml` | After each `daily-data.yml` run, or manually | Research inventories (NOAA BAG checks, ENC hazard reviews, USGS map-block and DOI audits) as workflow artifacts, with a read-only token; not product feeds |
-| `feed-freshness.yml` | Hourly at :52 | Opens or closes the `feed-stale` issue; restarts the live loop after 75 minutes |
+| `feed-freshness.yml` | Hourly at :52 | Opens or closes the `feed-stale` issue; restarts the live loop after 75 minutes; keeps one `rules-card-blank` issue open while no species in the default region has a season status |
 | `seafloor.yml` | Daily 10:23 UTC, on seafloor source changes, or manually | R2 `tiles/seafloor/`; proposes a ledger PR |
 | `forecast-tiles.yml` | Manual | Forces a forecast tile rebuild |
 | `regional-legal-review.yml` | Mondays (Pacific), or on rule-source changes | Legal review packets for the Northern, Mendocino and San Francisco rules, as workflow artifacts |
-| `research-fish-survey.yml`, `research-substrate.yml`, `draft-region-rehearsal.yml` | Monthly, manual or on draft-region changes | Research evidence reviews as workflow artifacts; not product feeds |
+| `research-fish-survey.yml`, `research-substrate.yml`, `draft-region-rehearsal.yml` | Manual only (the two research workflows); on draft-region changes (rehearsal) | Research evidence reviews as workflow artifacts; not product feeds |
 | `draft-region-health.yml` | Daily (Pacific) or manual; ops report, not a code check | Draft region legal and source health in the job summary and artifacts; fails for legal or source review without turning `main` red |
 | `ci.yml` (Offline checks) | Every push and PR | Tests and generated-file drift checks ([testing](engineering/testing.md)) |
 | `deploy-cloudflare.yml` | Push to `main` or manual | Cloudflare deployment |

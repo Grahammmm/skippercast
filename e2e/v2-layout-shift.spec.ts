@@ -39,6 +39,8 @@ test('the legend reserve gives way to a selected-mark card on a short-ish deskto
   await page.setViewportSize({width: 1280, height: 800});
   await v2.open('app', {region: 'morro-bay'});
   await expect(page.locator('.app-legend-mpa')).toBeVisible();
+  // The MPA key appears before the source guard reveals the answer above this short map.
+  await expect(page.locator('.app-first-answer')).toBeVisible();
   // Stand in for the selected-mark card: same class and place in the column as the real one.
   await page.locator('.app-chrome-left').evaluate(col => {
     const card = document.createElement('section');

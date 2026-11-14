@@ -1,10 +1,14 @@
 """SC159 synthetic title ingress tests; safe ordinary unittest discovery.
 
-All five contract methods are unittest tests. No product imports, writes, audit
-hooks, environment changes or native stubs occur at module import time.
+No product imports, writes, audit hooks, environment changes or native stubs
+occur at module import time. Product imports happen only inside OfflineProduct.
 """
-from contextlib import contextmanager
+import builtins
+from contextlib import ExitStack, contextmanager
 from copy import deepcopy
+import hashlib
+import importlib
+import importlib.abc
 import importlib.util
 import io
 import json
@@ -16,7 +20,6 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
-import uuid
 
 from tests._support import ROOT as REPO
 
@@ -38,6 +41,109 @@ def load_file(name, path):
     finally:
         sys.dont_write_bytecode = old
     return module
+
+
+def digest(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+class NoModels(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split('.')[0] in {'openai', 'anthropic', 'ollama', 'litellm',
+                                     'hermes_tools', 'transformers'}:
+            raise RuntimeError('offline model import refused')
+        return None
+
+
+class OfflineProduct:
+    """Fixture-scoped seams, installed before any product import.
+
+    This is an accidental-side-effect guard, not a hostile-code sandbox. No
+    permanent audit hooks or fake native libraries are installed. Native library
+    data lookups needed for ordinary imports remain genuine staged dependencies.
+    """
+    def __init__(self, state):
+        self.state = Path(state).resolve()
+        self.stack = ExitStack()
+        self.events = []
+
+    def refuse(self, *args, **kwargs):
+        self.events.append('refused-side-effect')
+        raise RuntimeError('offline network/model/child execution refused')
+
+    def __enter__(self):
+        self.old_path = sys.path[:]
+        self.old_meta = sys.meta_path[:]
+        self.old_bytecode = sys.dont_write_bytecode
+        self.old_modules = {k: v for k, v in sys.modules.items()
+                            if k == 'skippercast' or k.startswith('skippercast.')}
+        for key in self.old_modules:
+            sys.modules.pop(key)
+        # The installed package must resolve to REPO / 'src' (checked below).
+        sys.dont_write_bytecode = True
+        sys.meta_path.insert(0, NoModels())
+        try:
+            for target in ('socket.create_connection', 'socket.getaddrinfo',
+                           'socket.socket.connect', 'socket.socket.connect_ex',
+                           'socket.socket.sendto', 'subprocess.Popen', 'os.system',
+                           'os.popen', 'os.execv', 'os.execve', 'os.execl',
+                           'os.execlp', 'os.execvp', 'os.execvpe', 'os.spawnv',
+                           'os.spawnve', 'os.spawnvp', 'os.spawnvpe', 'os.fork',
+                           'os.posix_spawn', 'os.posix_spawnp'):
+                module, name = target.rsplit('.', 1)
+                owner = importlib.import_module(module) if module != 'socket.socket' else socket.socket
+                if hasattr(owner, name):
+                    self.stack.enter_context(patch.object(owner, name, self.refuse))
+            # Refuse Python-level host/catalog/cache reads during product imports.
+            # Reads of source bytes, genuine installed packages and synthetic state
+            # are allowed. Writes are confined to the test's own state.
+            for owner, name in ((builtins, 'open'), (io, 'open')):
+                original = getattr(owner, name)
+                def guarded(file, mode='r', *args, _open=original, **kwargs):
+                    if isinstance(file, (str, bytes, os.PathLike)):
+                        path = Path(os.fsdecode(file)).absolute()
+                        write = any(ch in mode for ch in 'wax+')
+                        if write and not path.is_relative_to(self.state):
+                            raise RuntimeError('offline write outside synthetic state')
+                        allowed = (path.is_relative_to(self.state)
+                                   or path.is_relative_to(REPO / 'src')
+                                   or path.is_relative_to(REPO / 'tests')
+                                   or path.is_relative_to(Path(sys.prefix))
+                                   or path.is_relative_to(Path(sys.base_prefix))
+                                   or str(path) in {'/dev/null', '/proc/meminfo'})
+                        if not allowed:
+                            raise RuntimeError('offline host/source read refused')
+                    return _open(file, mode, *args, **kwargs)
+                self.stack.enter_context(patch.object(owner, name, guarded))
+            paths = importlib.import_module('skippercast.paths')
+            self.stack.enter_context(patch.object(paths, 'repo_root', return_value=self.state))
+            http = importlib.import_module('skippercast.http')
+            self.stack.enter_context(patch.object(http, 'default_session', self.refuse))
+            self.stack.enter_context(patch.object(http.Session, 'get', self.refuse))
+            self.stack.enter_context(patch.object(http.Session, 'download', self.refuse))
+            self.product = importlib.import_module('skippercast.seafloor.screen_sources')
+            contracts = importlib.import_module('skippercast.platform.contracts')
+            if contracts.REPO != self.state or self.product.refresh.__defaults__[0] != self.state:
+                raise RuntimeError('synthetic root/default redirection failed')
+            for name, module in list(sys.modules.items()):
+                if name == 'skippercast' or name.startswith('skippercast.'):
+                    origin = getattr(module, '__file__', None)
+                    if origin and not Path(origin).resolve().is_relative_to(REPO / 'src'):
+                        raise RuntimeError('product imported outside candidate')
+            return self
+        except BaseException:
+            self.__exit__(*sys.exc_info())
+            raise
+
+    def __exit__(self, *exc):
+        self.stack.close()
+        for key in list(sys.modules):
+            if key == 'skippercast' or key.startswith('skippercast.'):
+                sys.modules.pop(key)
+        sys.modules.update(self.old_modules)
+        sys.path[:] = self.old_path
+        sys.meta_path[:] = self.old_meta
+        sys.dont_write_bytecode = self.old_bytecode
 
 
 def malformed_cases():
@@ -86,54 +192,20 @@ def malformed_cases():
 
 
 class Title33MetadataTests(unittest.TestCase):
-    OUTPUT_ROOT = None
-
-    @classmethod
-    def setUpClass(cls):
-        cls.support = load_file('sc159_support', REPO / 'tools/run_sc159_title33_metadata.py')
-        if cls.OUTPUT_ROOT is None:
-            # CI may supply an already admitted output root. Never mutate env.
-            inherited = os.environ.get('SKIPPERCAST_TEST_OUTPUT_ROOT')
-            prefix = Path(inherited) if inherited else REPO.parent / 'out/discovery'
-            cls.run_root = prefix / ('sc159-' + uuid.uuid4().hex)
-            cls.run_root.mkdir(parents=True, exist_ok=False)
-        else:
-            cls.run_root = Path(cls.OUTPUT_ROOT)
-        cls.cases = []
-        cls.origins = {}
-        cls.methods = []
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.support.dump(cls.run_root / 'test-details.json', {
-            'case_ids': cls.cases, 'module_origins': cls.origins,
-            'method_ids': cls.methods,
-            'fixture_hashes': {p.name: cls.support.digest(p) for p in sorted(FIXTURE.iterdir())
-                               if p.is_file()},
-        })
-        print('SC159_DETAILS=' + str(cls.run_root / 'test-details.json'))
-
     def setUp(self):
-        self.__class__.methods.append(self.id())
-        self.temp = tempfile.TemporaryDirectory(prefix=self._testMethodName + '-', dir=self.run_root)
+        self.temp = tempfile.TemporaryDirectory(prefix=self._testMethodName + '-')
         self.addCleanup(self.temp.cleanup)
         self.state = Path(self.temp.name)
-        self.assertEqual(self.support.digest(FIXTURE / 'notice.xml'), NOTICE_SHA)
-        self.assertEqual(self.support.digest(FIXTURE / 'titles.json'), TITLES_SHA)
+        self.assertEqual(digest(FIXTURE / 'notice.xml'), NOTICE_SHA)
+        self.assertEqual(digest(FIXTURE / 'titles.json'), TITLES_SHA)
         self.payload = json.loads((FIXTURE / 'titles.json').read_text())
         self.body = (FIXTURE / 'notice.xml').read_bytes()
 
     @contextmanager
-    def case(self, name):
-        self.__class__.cases.append(self._testMethodName + ':' + name)
-        yield
-
-    @contextmanager
     def product(self):
-        with self.support.OfflineProduct(self.state) as context:
+        with OfflineProduct(self.state) as context:
             yield context.product
             self.assertEqual(context.events, [])
-            self.__class__.origins.update(context.origins)
 
     def config(self):
         return {'security_zones': [], 'reviewed_notice_sections': [{
@@ -181,7 +253,7 @@ class Title33MetadataTests(unittest.TestCase):
         self.assertEqual(calls, expected_calls)
         self.assertEqual(layer, {'type': 'FeatureCollection', 'features': []})
         self.assertEqual(receipt, {'titles_url': TITLES_URL,
-                                  'titles_sha256': self.support.hashlib.sha256(raw).hexdigest(),
+                                  'titles_sha256': hashlib.sha256(raw).hexdigest(),
                                   'sections': expected_sections, 'up_to_date_as_of': date})
         self.assertEqual(payload, before)
 
@@ -194,13 +266,13 @@ class Title33MetadataTests(unittest.TestCase):
                  patch.object(product, 'reviewed_dms_coastal_envelope', side_effect=AssertionError('DMS entered')):
                 for date in ('2026-09-24', '2024-02-29', '2000-02-29', '0001-01-01', '9999-12-31'):
                     for notice in (False, True):
-                        with self.subTest(date=date, notice=notice), self.case(f'{date}-notice={notice}'):
+                        with self.subTest(date=date, notice=notice):
                             self.assert_positive(product, date, notice)
 
     def test_rejects_malformed(self):
         with self.product() as product:
             for name, payload in malformed_cases().items():
-                with self.subTest(case=name), self.case(name):
+                with self.subTest(case=name):
                     self.assert_invalid(product, payload)
 
     def test_baseline_compatibility(self):
@@ -208,7 +280,7 @@ class Title33MetadataTests(unittest.TestCase):
         # suites which consume catalog/source fixtures outside this card's input.
         with self.product() as product:
             for classification in ('outside-reviewed-scope', 'trip-time-vessel-restriction'):
-                with self.subTest(classification=classification), self.case(classification):
+                with self.subTest(classification=classification):
                     config = self.config()
                     config['reviewed_notice_sections'][0]['classification'] = classification
                     ((layer, receipt), calls, _) = self.call(product, self.payload, config)
@@ -221,13 +293,13 @@ class Title33MetadataTests(unittest.TestCase):
                 ('classification', 'unreviewed', 'Invalid reviewed notice section'),
                 ('section', '../bad', 'Invalid reviewed notice section'),
             ):
-                with self.subTest(case=name), self.case('preserve-' + name):
+                with self.subTest(case=name):
                     config = self.config()
                     key = 'reviewed_xml_sha256' if name == 'hash' else name
                     config['reviewed_notice_sections'][0][key] = value
                     with self.assertRaisesRegex(ValueError, pattern):
                         self.call(product, self.payload, config)
-            with self.case('security-xml-hash-preserved'):
+            with self.subTest(case='security-xml-hash-preserved'):
                 config = {'security_zones': [{'section': '334.9999',
                                               'reviewed_xml_sha256': '0' * 64}]}
                 with self.assertRaisesRegex(ValueError, 'Security text changed'):
@@ -238,8 +310,8 @@ class Title33MetadataTests(unittest.TestCase):
         old_modules = {k: v for k, v in sys.modules.items()
                        if k == 'tests' or k.startswith('tests.')}
         try:
-            # The repository root is already importable (pytest `pythonpath`, or
-            # the SC159 runner); tests never edit sys.path themselves.
+            # The repository root is already importable (pytest `pythonpath`);
+            # tests never edit sys.path themselves.
             for key in old_modules:
                 sys.modules.pop(key)
             peer = load_file('sc159_peer_dco', REPO / 'tests/unit/test_check_dco.py')
@@ -257,63 +329,24 @@ class Title33MetadataTests(unittest.TestCase):
                     sys.modules.pop(key)
             sys.modules.update(old_modules)
 
-    def test_isolation_and_discovery(self):
-        with self.case('original-peer-before-after'):
-            before_peer = self.peer_test()
-            before = (sys.path[:], sys.meta_path[:], dict(os.environ), sys.dont_write_bytecode,
-                      socket.create_connection, subprocess.Popen)
-            modules = {k: v for k, v in sys.modules.items()
-                       if k == 'skippercast' or k.startswith('skippercast.')}
-            with self.product() as product:
-                self.assertEqual(product.REPO, self.state)
-                self.assertEqual(product.refresh.__defaults__[0], self.state)
-                self.assertNotEqual(subprocess.Popen, before[-1])
-                self.assertNotEqual(socket.create_connection, before[-2])
-                self.assert_positive(product, notice=True)
-            after = (sys.path[:], sys.meta_path[:], dict(os.environ), sys.dont_write_bytecode,
-                     socket.create_connection, subprocess.Popen)
-            self.assertEqual(before, after)
-            self.assertEqual(modules, {k: v for k, v in sys.modules.items()
-                                      if k == 'skippercast' or k.startswith('skippercast.')})
-            self.assertEqual(self.peer_test(), before_peer)
-        with self.case('ordinary-loader-five-required-methods'):
-            suite = unittest.defaultTestLoader.loadTestsFromTestCase(type(self))
-            expected = {name for names in self.support.METHODS.values() for name in names}
-            self.assertEqual({test._testMethodName for test in suite}, expected)
-            self.assertEqual(suite.countTestCases(), 5)
-        with self.case('evidence-complete-positive'):
-            logs = self.state / 'logs'
-            logs.mkdir()
-            (logs / 'stdout.txt').write_text('complete\n')
-            (logs / 'stderr.txt').write_text('complete\n')
-            frozen = self.support.log_inventory(logs)
-            self.assertTrue(self.support.verify_logs(logs, frozen))
-        with self.case('evidence-missing-log'):
-            missing = self.state / 'missing-logs'
-            missing.mkdir()
-            (missing / 'stdout.txt').write_text('complete\n')
-            with self.assertRaisesRegex(ValueError, 'missing evidence log'):
-                self.support.verify_logs(missing, frozen)
-        with self.case('evidence-mutated-log'):
-            (logs / 'stdout.txt').write_text('mutated!\n')
-            with self.assertRaisesRegex(ValueError, 'changed evidence log'):
-                self.support.verify_logs(logs, frozen)
-        with self.case('evidence-late-append'):
-            late = self.state / 'late-logs'
-            late.mkdir()
-            (late / 'stdout.txt').write_text('complete\n')
-            (late / 'stderr.txt').write_text('complete\n')
-            original = self.support.log_inventory(late)
-            with (late / 'stderr.txt').open('a') as writer:
-                writer.write('late writer output\n')
-            with self.assertRaisesRegex(ValueError, 'changed evidence log'):
-                self.support.verify_logs(late, original)
-        with self.case('evidence-new-complete-positive'):
-            fresh = self.state / 'fresh-complete-logs'
-            fresh.mkdir()
-            (fresh / 'stdout.txt').write_text('finished fresh writer\n')
-            (fresh / 'stderr.txt').write_text('finished fresh writer\n')
-            self.assertTrue(self.support.verify_logs(fresh, self.support.log_inventory(fresh)))
+    def test_isolation(self):
+        before_peer = self.peer_test()
+        before = (sys.path[:], sys.meta_path[:], dict(os.environ), sys.dont_write_bytecode,
+                  socket.create_connection, subprocess.Popen)
+        modules = {k: v for k, v in sys.modules.items()
+                   if k == 'skippercast' or k.startswith('skippercast.')}
+        with self.product() as product:
+            self.assertEqual(product.REPO, self.state)
+            self.assertEqual(product.refresh.__defaults__[0], self.state)
+            self.assertNotEqual(subprocess.Popen, before[-1])
+            self.assertNotEqual(socket.create_connection, before[-2])
+            self.assert_positive(product, notice=True)
+        after = (sys.path[:], sys.meta_path[:], dict(os.environ), sys.dont_write_bytecode,
+                 socket.create_connection, subprocess.Popen)
+        self.assertEqual(before, after)
+        self.assertEqual(modules, {k: v for k, v in sys.modules.items()
+                                  if k == 'skippercast' or k.startswith('skippercast.')})
+        self.assertEqual(self.peer_test(), before_peer)
 
     def test_deciding_negative_control(self):
         cases = malformed_cases()
@@ -322,19 +355,17 @@ class Title33MetadataTests(unittest.TestCase):
             def legacy(document):
                 return next(row for row in document['titles'] if row['number'] == 33)['up_to_date_as_of']
             for name in ('duplicate-int', 'date-query'):
-                with self.subTest(case=name), self.case('mutant-detected-' + name):
+                with self.subTest(case=name):
                     # Same real security_layer, same getter/config and SAME deciding
                     # regression assertion. Only the synthetic selector seam differs.
                     with patch.object(product, '_title33_issue', legacy):
-                        with self.assertRaisesRegex(AssertionError, 'ValueError not raised') as failure:
+                        with self.assertRaisesRegex(AssertionError, 'ValueError not raised'):
                             self.assert_invalid(product, cases[name])
-                        print('INTENDED_MUTANT_FAILURE ' + name + ': ' + str(failure.exception))
                         self.assert_positive(product)
                     self.assertIs(product._title33_issue, genuine)
                     self.assert_invalid(product, cases[name])
                     self.assert_positive(product)
-            with self.case('restored-positive-leap-day'):
-                self.assert_positive(product, '2024-02-29', notice=True)
+            self.assert_positive(product, '2024-02-29', notice=True)
 
 
 if __name__ == '__main__':
