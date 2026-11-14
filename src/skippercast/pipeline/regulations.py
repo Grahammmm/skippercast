@@ -76,7 +76,10 @@ def validate_bindings(jurisdiction, registry):
         if not required | set(per_species.get(ident, [])) <= blocking:
             raise ValueError(f'Missing shared legal dependencies for {ident}')
         links = set(profile.get('also_check_source_ids', []))
-        if blocking & links or not links <= also_check or not also_check <= blocking | links:
+        # Every also-check page this species does not itself block on must be a link, and nothing else may be one;
+        # an also-check page can only sit in blocking sources where policy-A makes it blocking (per species).
+        expected_links = also_check - required - set(per_species.get(ident, []))
+        if links != expected_links or blocking & expected_links:
             raise ValueError(f'Also-check links must cover every non-blocking policy page, and never block: {ident}')
 
 

@@ -37,6 +37,11 @@ def test_committed_central_policy_a(central):
     (lambda r: r['species']['salmon'].update(also_check_source_ids=['rules-proposals']), 'Also-check links'),
     (lambda r: r['species']['dungeness'].update(also_check_source_ids=['rules-proposals', 'rules-health']), 'Also-check links'),
     (lambda r: r['species']['halibut'].update(also_check_source_ids=['rules-proposals', 'rules-health', 'rules-gear']), 'Also-check links'),
+    # Moving an also-check page into a species' blocking sources must be refused (it would block that species).
+    (lambda r: (r['species']['halibut']['source_ids'].append('rules-proposals'),
+                r['species']['halibut']['also_check_source_ids'].remove('rules-proposals')), 'Also-check links'),
+    (lambda r: (r['species']['salmon']['source_ids'].append('rules-health'),
+                r['species']['salmon']['also_check_source_ids'].remove('rules-health')), 'Also-check links'),
 ])
 def test_binding_refuses_drift_from_policy_a(central, mutate, message):
     jurisdiction, registry = central
