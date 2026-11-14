@@ -203,7 +203,9 @@ class ControllerWithPreChangeCandidate(unittest.TestCase):
         env = self.env(**options)
         controller = self.candidate / '.deploy-controller/scripts'
         controller.mkdir(parents=True)  # what the sparse controller checkout writes
-        for name in ('check_deploy_source.py', 'worker_versions.mjs'):
+        # Mirrors the sparse-checkout list in deploy-cloudflare.yml; the deploy step now runs
+        # $CONTROLLER/scripts/wrangler_config.mjs, so this fixture must carry it too (SC2184-08).
+        for name in ('check_deploy_source.py', 'worker_versions.mjs', 'wrangler_config.mjs'):
             shutil.copy(ROOT / 'scripts' / name, controller / name)
         results = {}
         moved = self.bash(step('Move the deploy controller out of the candidate tree'), env)
@@ -223,6 +225,7 @@ class ControllerWithPreChangeCandidate(unittest.TestCase):
         recheck = self.outputs()
         # The deploy step's condition: if: steps.recheck.outputs.hold == 'false'.
         if results['recheck'].returncode == 0 and recheck.get('hold') == 'false':
+            (self.candidate / 'dist/client').mkdir(parents=True)
             results['deploy'] = self.bash(step('Back up D1, migrate and deploy'), env)
         return results, {**{'production_' + k: v for k, v in read.items()}, **recheck, **self.outputs()}
 
@@ -262,6 +265,10 @@ class ControllerWithPreChangeCandidate(unittest.TestCase):
         self.assertEqual(out['hold'], 'false', results['recheck'].stdout + results['recheck'].stderr)
         self.assertEqual(results['deploy'].returncode, 0, results['deploy'].stdout + results['deploy'].stderr)
         self.assertEqual(out.get('deployed'), 'true')
+        receipt = json.loads((self.candidate / 'dist/client/deploy.json').read_text())
+        self.assertEqual(receipt['commit'], self.sha, 'receipt labels the candidate, not the controller head')
+        self.assertIn('COAST_FEEDS', receipt['variables'])
+        self.assertNotIn('CLOUDFLARE_API_TOKEN', receipt['variables'])
         self.assertEqual(out.get('previous_version'), 'v-prod-s')
         calls = self.wrangler_calls()
         self.assertIn('--yes wrangler@4.142.0 deploy --config wrangler.deploy.jsonc --message ' + self.sha + ' run ' + RUN_ID, calls)

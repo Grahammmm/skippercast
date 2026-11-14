@@ -23,6 +23,8 @@ regions() { python "$here/regions.py" "$@" --dir "$out"; }
 mkdir -p "$out"
 if [ "$build" = latest ]; then build=$(python "$here/regions.py" latest); fi
 read -r source overview overview_max detail_min detail_max archive < <(regions plan --build "$build")
+# Refuse stale/missing detail boxes before any extract or removal of an old archive.
+python "$here/check_detail.py" --dir "$out"
 rm -f "$out/overview.pmtiles" "$out/detail.pmtiles" "$out/$archive"
 start=$(date +%s)
 "$pmtiles" extract "$source" "$out/overview.pmtiles" --bbox="$overview" --minzoom=0 --maxzoom="$overview_max"
