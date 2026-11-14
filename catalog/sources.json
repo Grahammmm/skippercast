@@ -1086,14 +1086,14 @@
       "documentation_url": "https://www.socalfishreports.com/",
       "adapter": "landing-facts",
       "review_status": "approved",
-      "reviewed_at": "2026-09-21",
+      "reviewed_at": "2026-11-13",
       "rights": {
         "license": "facts-only",
         "attribution": "Local charter operators; SoCalFishReports",
         "terms_url": "https://www.socalfishreports.com/",
-        "commercial_use": "unknown",
+        "commercial_use": "allowed",
         "attribution_required": true,
-        "commercial_note": "Dated catch facts and links only; the publisher's terms of use, automated collection and compilation questions have not been reviewed for a paid product."
+        "commercial_note": "Dated catch facts and links only. socalfishreports.com publishes no terms-of-use page (a privacy policy only), shows \"All Rights Reserved\" and its robots.txt disallows nothing; no permission has been asked. The owner accepted facts-only use for a paid product (R4-SC-05 packet, blocker B5)."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -2225,15 +2225,15 @@
       ],
       "documentation_url": "https://nowcoast.noaa.gov/",
       "adapter": "goes-frames",
-      "review_status": "candidate",
-      "reviewed_at": "2026-10-08",
+      "review_status": "approved",
+      "reviewed_at": "2026-11-13",
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA / NESDIS GOES East and West longwave infrared, served by NOAA nowCOAST",
         "terms_url": "https://www.weather.gov/disclaimer/",
         "commercial_use": "allowed",
         "attribution_required": true,
-        "commercial_note": "U.S. government work. SkipperCast publishes only the advertised acquisition times; the browser requests the imagery from nowCOAST, pinned to a listed time. Pending owner confirmation (FE-44)."
+        "commercial_note": "U.S. government work. nowCOAST's WMS capabilities document states Fees NONE and AccessConstraints NONE. SkipperCast publishes only the advertised acquisition times; the browser requests the imagery from nowCOAST, pinned to a listed time. Owner confirmed (R4-SC-05 packet, FE-44)."
       },
       "authenticity": {
         "basis": "The goes_longwave_imagery layer's own WMS time dimension; no time is derived from the clock",
@@ -2290,15 +2290,15 @@
       "needs": [],
       "documentation_url": "https://www.slocounty.ca.gov/departments/slo-health/public-health/environmental-health-services/all-environmental-health-services/recreational-health/beach-water-quality-monitoring",
       "adapter": "slo-beach-health",
-      "review_status": "candidate",
-      "reviewed_at": "2026-10-08",
+      "review_status": "approved",
+      "reviewed_at": "2026-11-13",
       "rights": {
         "license": "facts-only",
         "attribution": "County of San Luis Obispo Public Health; link to the county beach water quality monitoring page",
         "terms_url": "https://www.slocounty.ca.gov/departments/slo-health/public-health/environmental-health-services/all-environmental-health-services/recreational-health/beach-water-quality-monitoring",
-        "commercial_use": "unknown",
+        "commercial_use": "allowed",
         "attribution_required": true,
-        "commercial_note": "Public county status page with no stated licence. SkipperCast keeps concise factual statuses, the county's advisory text and the page link only; no dashboard design, photos or maps are reused. Commercial use pending owner confirmation (FE-41, open question Q8)."
+        "commercial_note": "Public county status page with no stated licence on the SurfSafeSLO item. The county's conditions-of-use page says its material \"is for the noncommercial use of the general public\" and asks for permission for use outside Fair Use. SkipperCast keeps concise factual statuses, the county's advisory text and the page link only; no dashboard design, photos or maps are reused. The owner accepted this for commercial use without written county permission (R4-SC-05 packet, FE-41)."
       },
       "authenticity": {
         "basis": "The county's officially linked SurfSafeSLO public ArcGIS view; full-count, WGS84 and in-county geometry checks on every fetch",
