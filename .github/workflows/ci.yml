@@ -159,8 +159,9 @@ jobs:
           retention-days: 14
   e2e:
     # Browser tests (P4-09a): Playwright + axe against the built site under
-    # `wrangler dev` (e2e/serve.mjs), at 390x844 and 1280x800.
-    # Runs on pull requests too (G 2026-11-02), so e2e breakage is caught before main.
+    # `wrangler dev` (e2e/serve.mjs), at 390x844 and 1280x800 plus the five wide sizes (E2E_WIDE).
+    # Runs on pull requests too (G 2026-11-02), so e2e breakage is caught before main. A pull
+    # request runs the same projects as main (CI-PARITY-1).
     # Sharded 1/2 + 2/2 (2026-11-03): the single job was 903s median / 1157s p90 and was the long
     # pole of a 7-check pull request. The two shards run concurrently, so the same specs finish in
     # about half the wall clock. Nothing is skipped and no assertion is dropped.
@@ -208,11 +209,15 @@ jobs:
           key: e2e-clock-v1-${{ hashFiles('e2e/flaky.tsv') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: e2e-clock-v1-${{ hashFiles('e2e/flaky.tsv') }}-
       # The divisor is the matrix size, so the shard list is the only number to change.
-      # E2E_WIDE adds the five extra screen sizes (playwright.config.ts) on the nightly and on every
-      # push to main (CI-2), so a wide-size break shows on the merge that caused it. PRs keep two sizes.
+      # E2E_WIDE adds the five extra screen sizes (playwright.config.ts). It is '1' for every event
+      # (pull_request, merge_group, push, schedule, workflow_dispatch): a pull request and main run
+      # the same projects, so main never runs a test a pull request cannot run. Never set an E2E_*
+      # variable from github.event_name here; tests/test_ci_e2e_parity.mjs fails if it does (CI-PARITY-1).
+      # The SCB-02 timing journey is not part of this job; it has its own advisory nightly run
+      # (.github/workflows/e2e-timing.yml).
       - name: Browser flows and accessibility (serious and critical axe violations fail)
         env:
-          E2E_WIDE: ${{ (github.event_name == 'schedule' || github.event_name == 'push') && '1' || '' }}
+          E2E_WIDE: '1'
         run: pnpm e2e --shard=${{ matrix.shard }}/${{ strategy.job-total }}
       - name: Keep per-test JSON even when the shard fails
         if: always()

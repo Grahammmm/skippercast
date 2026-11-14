@@ -52,7 +52,8 @@ POLICY = {"off_limits": "catalog/fleet/off-limits.json", "min_interval_s": 1.0, 
 
 
 def _time(text: Any) -> datetime:
-    return datetime.strptime(ops.iso(text, "time")[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
+    # ops.iso validates and canonicalizes to exactly three millisecond digits; keep them (the stale cutoff is strict to the ms)
+    return datetime.strptime(ops.iso(text, "time"), "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
 
 
 def _missing(vessel: Mapping[str, Any]) -> list[str]:
