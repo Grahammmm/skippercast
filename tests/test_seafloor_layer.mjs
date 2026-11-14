@@ -11,7 +11,7 @@ import {readFileSync} from 'node:fs';
 import {PMTiles} from 'pmtiles';
 import {decodeTile as decodeV2, dedupeById as dedupeV2, manifestState, tileFeatures as tileFeaturesV2} from '../dist/seafloor-data.js';
 import {
-  EXPIRED, INCOMPLETE, NO_PUBLICATION, SEAFLOOR_LAYERS, SEAFLOOR_SOURCE, admitCell, admitHabitat, createSeafloor, fitKey, legendKey,
+  EXPIRED, INCOMPLETE, NO_PUBLICATION, SEAFLOOR_LAYERS, SEAFLOOR_SOURCE, TILE_PARALLEL, admitCell, admitHabitat, createSeafloor, fitKey, legendKey,
   cellBasis, publicationRights, seafloorLayers, seafloorMark, seafloorState, seafloorView, surveyList, surveySummary, toneOf, viewBounds,
 } from '../web/map/seafloor.ts';
 import {clickMark} from '../web/map/chart.ts';
@@ -150,7 +150,7 @@ async function settle() {
   for (let quiet = 0, limit = Date.now() + 10_000; quiet < 4 && Date.now() < limit;) { await turn(); quiet = inflight ? 0 : quiet + 1; }
 }
 /** A seafloor layer over the fixture with injected feeds, clock and timers. */
-function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers = 'seafloor', target = '', bounds = null, startReady} = {}) {
+function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers = 'seafloor', target = '', bounds = null, startReady, reader = null} = {}) {
   configureStore({v2: true, storage: null});
   const url = layers => `${PAGE_V2}?region=morro-bay&profile=${profile}&layers=${layers}${target ? `&target=${target}` : ''}`;
   syncFromURL(url(layers));
@@ -165,7 +165,7 @@ function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers =
   rig.layer = createSeafloor({
     startReady,
     engine: {setVisible: (id, on) => rig.calls.push(['visible', id, on]), setData: (id, data) => { rig.calls.push(['data', id, data.features.length]); rig.data = data; }},
-    open: url => { rig.opened.push(url); return fixtureReader(rig.tileHold, bounds); }, size: () => ({width: 1000, height: 700}), page: () => PAGE_V2, now: () => rig.clock,
+    open: url => { rig.opened.push(url); return reader ?? fixtureReader(rig.tileHold, bounds); }, size: () => ({width: 1000, height: 700}), page: () => PAGE_V2, now: () => rig.clock,
     setTimer: (fn, delay) => { const id = ++rig.next; rig.timers.set(id, {fn, delay}); return id; }, clearTimer: id => rig.timers.delete(id),
     fetchFn: async url => {
       rig.requests.push(url);
@@ -421,4 +421,48 @@ test('v2: a cell reads only where nothing more specific is picked, and goes with
   off.layers('currents');
   await settle();
   assert.equal(off.layer.cellAt(CELL_ONLY), null, 'off withdraws the cells');
+});
+
+// R4-SC-09: at most TILE_PARALLEL tile ranges in flight, the view's centre first, a newer view's before an older one's;
+// what draws is the same as reading every tile at once.
+test('R4-SC-09: seafloor tiles load TILE_PARALLEL at a time, centre first and newest view first, and draw the same features', async t => {
+  const BOUNDS = {minLon: -122, minLat: 34.5, maxLon: -120, maxLat: 36};
+  const reference = seafloorRig({bounds: BOUNDS});
+  await settle();
+  const expected = drawnIds(reference);
+  reference.layer.destroy();
+
+  const base = fixtureReader(null, BOUNDS), asked = [], waiting = [];
+  let active = 0, most = 0;
+  const reader = {
+    getHeader: () => base.getHeader(),
+    getZxy(z, x, y) {
+      asked.push(`${z}/${x}/${y}`); most = Math.max(most, ++active);
+      const gate = deferred();
+      waiting.push(gate.release);
+      return gate.promise.then(() => base.getZxy(z, x, y)).finally(() => { active--; });
+    },
+  };
+  const rig = seafloorRig({bounds: BOUNDS, reader});
+  t.after(() => rig.layer.destroy());
+  await settle();
+  assert.equal(TILE_PARALLEL, 2);
+  assert.equal(asked.length, TILE_PARALLEL, 'only TILE_PARALLEL ranges asked at once');
+  const centre = [Math.floor((-120.948 + 180) / 360 * 4096), Math.floor((1 - Math.asinh(Math.tan(35.353 * Math.PI / 180)) / Math.PI) / 2 * 4096)];
+  assert.equal(asked[0], `12/${centre[0]}/${centre[1]}`, 'the tile under the view\'s centre first');
+
+  // Another view while the first one's ranges wait: its tiles go before the older view's that have not started.
+  camera.value = {latitude: 35.30, longitude: -121.10, zoom: 13};
+  await settle();
+  const moved = [Math.floor((-121.10 + 180) / 360 * 4096), Math.floor((1 - Math.asinh(Math.tan(35.30 * Math.PI / 180)) / Math.PI) / 2 * 4096)];
+  waiting.shift()();
+  await settle();
+  assert.equal(asked[TILE_PARALLEL], `12/${moved[0]}/${moved[1]}`, 'the new view\'s centre takes the freed slot');
+
+  camera.value = {latitude: 35.353, longitude: -120.948, zoom: 13};
+  for (let i = 0; i < 200 && waiting.length; i++) { waiting.shift()(); await settle(); }
+  assert.equal(waiting.length, 0);
+  assert.ok(most <= TILE_PARALLEL, `never more than ${TILE_PARALLEL} in flight (saw ${most})`);
+  assert.deepEqual(drawnIds(rig), expected, 'the same features as reading every tile at once');
+  assert.equal(seafloorState.value.status, 'ready');
 });
