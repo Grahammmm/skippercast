@@ -908,7 +908,9 @@ test('the shell files keep the token and copy rules, and app.html mounts the ent
   }
   const page = await readFile(join(ROOT, 'dist/app.html'), 'utf8');
   assert.match(page, /<div id="app">/);
-  assert.match(page, /<script type="module" src="\.\.\/web\/app\/main\.tsx"><\/script>/);
+  // SCB-11: app.html's entry (web/app/entry.ts) starts the first verdict's reads, then imports the app (tests/test_early_reads.mjs).
+  assert.match(page, /<script type="module" async src="\.\.\/web\/app\/entry\.ts"><\/script>/);
+  assert.match(readFileSync(join(ROOT, 'web/app/entry.ts'), 'utf8'), /^void import\('\.\/main\.tsx'\);$/m);
   assert.deepEqual(attrs(page, /<link rel="stylesheet" href="([^"]+)"/g), ['../web/tokens.css', '../web/ui/ui.css', '../web/app/app.css', '../web/landing/port-input.css', '../web/app/account.css', '../web/app/trip.css', '../web/app/helm.css'],
     'tokens first, then the primitives, then the shell, then the entry flow (FE-08), then the account dialogs (FE-50), then the trip plan (FE-51), then the Helm view (BF-helm-mode)');
   // FE-61: tests/test_no_v1_map_library.mjs checks that no tracked file names the retired 2D map library.

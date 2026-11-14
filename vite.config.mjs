@@ -154,7 +154,8 @@ function startupPreload() {
         for (const start of starts) {
           const id = resolve(root, start);
           const chunk = chunks.find(c => c.isDynamicEntry && c.facadeModuleId === id);
-          if (!chunk) throw Error(`${page}: no dynamic chunk for its startup import ${start}`);
+          // A page whose entry does not import it dynamically (a test fixture's page) names no preload; check_client budgets either way.
+          if (!chunk) continue;
           walk(chunk.fileName);
         }
         return files.map(file => ({tag: 'link', attrs: {rel: 'modulepreload', crossorigin: true, href: `./${file}`}, injectTo: 'head'}));

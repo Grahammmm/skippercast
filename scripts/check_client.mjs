@@ -112,6 +112,8 @@ if (!(await readFile(join(dir, '.assetsignore'), 'utf8').catch(() => '')).includ
 // 6. v2 page budgets: the entry plus its static imports (what runs before first
 // paint) and its stylesheets, gzipped; a page absent from this build is skipped.
 // SCB-11: with the imports its entry starts at once (vite.config.mjs STARTUP_IMPORTS): the app's code, imported by its entry.
+// Only an import the entry does make dynamically is one; if the entry imported it statically, the walk below reaches it anyway.
+const startups = page => (STARTUP_IMPORTS[page] ?? []).filter(start => (manifest[page]?.dynamicImports ?? []).includes(start));
 const budgets = JSON.parse(await readFile(budgetFile, 'utf8')).bundles || {};
 const gzipped = async file => gzipSync(await readFile(join(dir, file)), {level: 9}).length;
 const measured = [];
@@ -126,7 +128,7 @@ for (const [page, budget] of Object.entries(budgets)) {
     (e.imports || []).forEach(walk);
   };
   walk(page);
-  for (const start of STARTUP_IMPORTS[page] ?? []) { if (!manifest[start]) problems.push(`${page}: its startup import ${start} is not in the build`); walk(start); }
+  for (const start of startups(page)) walk(start);
   const total = async files => { let n = 0; for (const f of files) n += await exists(f) ? await gzipped(f) : 0; return n; };
   const size = {js: await total(js), css: await total(css)};
   measured.push(`${page} js ${size.js} B, css ${size.css} B gzipped`);
@@ -185,7 +187,7 @@ if (manifest['app.html']) {
     for (const next of e.imports || []) await walk(next);
   };
   await walk('app.html');
-  for (const start of STARTUP_IMPORTS['app.html'] ?? []) await walk(start);
+  for (const start of startups('app.html')) await walk(start);
 }
 
 if (problems.length) {

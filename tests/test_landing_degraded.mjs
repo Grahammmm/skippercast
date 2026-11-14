@@ -162,13 +162,14 @@ test('4: installDegradedWatch twice in one page: one network call per read, the 
     assert.deepEqual(degraded.peek(), {since: null}, 'the same state as one install');
     assert.equal(html(h(DegradedNotice)), MAP_NOTICE, 'one notice, /map\'s words');
   } finally { degraded.value = null; }
-  // The landing and /map are separate documents, each installing the watch once at the top of its entry.
-  for (const [entry, page] of [['web/landing/main.tsx', 'dist/landing.html'], ['web/app/main.tsx', 'dist/app.html']]) {
+  // The landing and /map are separate documents, each installing the watch once at the top of its app (SCB-11: /map's page entry,
+  // web/app/entry.ts, starts the verdict's reads and then imports web/app/main.tsx, which installs the watch before its first read).
+  for (const [entry, page, script] of [['web/landing/main.tsx', 'dist/landing.html', 'web/landing/main.tsx'], ['web/app/main.tsx', 'dist/app.html', 'web/app/entry.ts']]) {
     const code = await readFile(join(ROOT, entry), 'utf8');
     assert.equal(code.match(/^installDegradedWatch\(\);/gm)?.length, 1, `${entry}: one install`);
     assert.match(code, /^import \{installDegradedWatch\} from '\.\.\/degraded\.ts';$/m);
-    const scripts = [...(await readFile(join(ROOT, page), 'utf8')).matchAll(/<script type="module" src="([^"]+)"/g)].map(m => m[1]);
-    assert.deepEqual(scripts, [`../${entry}`], `${page} loads only its own entry`);
+    const scripts = [...(await readFile(join(ROOT, page), 'utf8')).matchAll(/<script type="module"(?: async)? src="([^"]+)"/g)].map(m => m[1]);
+    assert.deepEqual(scripts, [`../${script}`], `${page} loads only its own entry`);
   }
 });
 
