@@ -250,7 +250,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1922-03: MapStage.tsx renders Cancel waypoint through the shared Button and adds the app-presentation--placing modifier class to the stack while a waypoint placement is armed; BODY09 mounts Reports/CatchCards, never MapStage. No catch markup, token or paint change. Rebind only MapStage.tsx.
   // SC1722-20: MapStage's stage section gains only an id (the Skip to map target); BODY09 never mounts MapStage. No paint, catch markup, contrast(), assertion or threshold changes. Rebind only MapStage.tsx.
   // RF2115-5: MapStage.tsx adds a startup loading status paragraph (existing app-stage-note class) and aria-busy on the Chart host; BODY09 renders Reports/CatchCards, never MapStage. No paint, token, assertion or threshold change. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "33ceeea87f84bdf56afdc71b6c79702a85280c13417628bf4d0fda4563346990",
+  // SCB-12: MapStage stages Chart imagery behind the first brief settlement and delays its first-idle mark.
+  // BODY09 mounts Reports/CatchCards directly, never MapStage; its catch markup, styles, paint, contrast(),
+  // assertions and thresholds are unchanged. Rebind only MapStage.tsx; this does not grant a BODY09 run.
+  "web/app/MapStage.tsx": "3e4992ba6e13e22c0c5f367573caa28307a6cba3704ab25be084c746c85ce64d",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   "web/tokens.css": "56f9708cfa02f651680a2bc02bd3d9080f65dec849aea6888f6bfc52508a5775",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
@@ -287,7 +290,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-20: app.css appends only a scoped .app-skip-link block (a clipped 1 px anchor at rest, a ringed 44 px panel when focused); the Reports catch sheet mounts no skip link, so no catch paint or backing changes. Rebound from the final bytes.
   // UXFIX-09: app.css adds one tile-basis margin rule scoped to .app-tiles (the brief's tiles; the Reports catch sheet mounts none) and raises the phone .app-top z-index by one (the top strip, not mounted by the catch sheet); no colour, backing or catch paint changed. Rebound from the final bytes.
   // MGL-15: app.css repoints only the two depth-contour legend swatch colours to map tokens; no catch paint or layout changed.
-  "web/app/app.css": "8c4ce49230e0f5428fddcb3491f1f3801b5b4e24276ec75c83830e6cddabaef8",
+  // SCB-11: app.css changes only the wide-desktop (min-width: 1280px) masthead and command bar layout (fixed two-line place name, flex order, auto margins, a time window minimum width); the Reports catch sheet mounts neither, and no colour, backing or catch paint changed. Rebound from the final bytes.
+  "web/app/app.css": "1f74ca4bea5bef556e5260cab3398ca230ac693fa8fc13a4e4a3a7ea920ac1e0",
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // UXFIX-10: app.css appends only a scoped .app-account[data-top] block (the phone top-card account button: icon size, visually hidden label, open-state colour, z-index while its panel is open); the Reports catch sheet mounts no account menu, so no catch paint or backing changes. Rebound from the final bytes.
   // UXFIX-11: app.css adds only the phone sheet day-chip row pin (.app-sheet-hour); the Reports catch sheet mounts no hour sheet, so no catch paint or backing changes. Rebound from the final bytes.
@@ -373,7 +377,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // UXFIX-09: check_contrast.mjs changes only the appCss surface hash; contrast() is untouched. Rebound from the final bytes.
   // MGL-15: check_contrast.mjs gains the additive habitat CVD gate (new exports and mode) and rebinds the tokens/app surface hashes; contrast() and every legacy check are unchanged.
   // UXFIX-12: check_contrast.mjs changes only the panelCss surface hash and its comment (the .chart-overflow:focus-visible ring leaves its media block); contrast() is untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "a651f7395ee2960b3e7d4139a087dc2166cd76fd938d5a20c94b81fb516aeb45",
+  // SCB-11: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "93a20d28ce24e7a6fc443fbba4e6bb0a5e3333ea6d364f71a09057257ab59573",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
