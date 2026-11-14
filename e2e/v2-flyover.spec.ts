@@ -6,11 +6,14 @@
 import {test, expect} from './fixtures.ts';
 
 const FLYOVER_KEY = 'skippercast-flyover-v1';
+const WIDE = process.env.E2E_WIDE === '1';
 
 type JourneyEvent = {name: string; startTime: number; duration: number};
 type JourneyWindow = Window & {__journeyEvents: JourneyEvent[]};
 
 test('SCB-02 phone journey: first tap, day chip and dock step stay under 100ms with the tour enabled', async ({page, v2, isMobile, pageErrors}) => {
+  // Absolute latency at 4x CPU is nightly/local proof, not a shared-runner PR gate.
+  test.skip(!WIDE, 'timing journey runs with E2E_WIDE=1');
   test.skip(!isMobile, 'phone journey');
   await page.emulateMedia({reducedMotion: 'no-preference'});
   // The SCB-02 journey's 4x CPU profile and Event Timing measurement, over
