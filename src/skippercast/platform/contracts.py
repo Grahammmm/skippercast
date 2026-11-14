@@ -23,7 +23,7 @@ from ..util.time import stamp  # noqa: F401  (re-exported; callers import it fro
 ID = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
 DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 REPO = repo_root()
-PUBLIC_RIGHTS = {"public-domain", "CC0-1.0", "CC-BY-4.0", "CC-BY-NC-4.0", "facts-only"}
+PUBLIC_RIGHTS = {"public-domain", "CC0-1.0", "CC-BY-4.0", "CC-BY-NC-4.0", "facts-only", "unrestricted-use"}
 # Redistribution (above) and commercial use are separate questions; see docs/legal/data-rights-register.md.
 COMMERCIAL_USE = {"allowed", "prohibited", "permission-required", "unknown"}
 

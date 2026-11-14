@@ -2258,15 +2258,15 @@
       ],
       "documentation_url": "https://cdip.ucsd.edu/m/documents/data_access.html",
       "adapter": "cdip-mop-dap2",
-      "review_status": "candidate",
-      "reviewed_at": "2026-10-08",
+      "review_status": "approved",
+      "reviewed_at": "2026-11-13",
       "rights": {
-        "license": "CDIP dataset licence attribute: redistribution and use without restriction",
+        "license": "unrestricted-use",
         "attribution": "Data from CDIP, Scripps Institution of Oceanography (https://cdip.ucsd.edu/)",
         "terms_url": "https://cdip.ucsd.edu/m/documents/data_access.html",
         "commercial_use": "allowed",
         "attribution_required": true,
-        "commercial_note": "Each MOP forecast file's licence attribute reads 'These data may be redistributed and used without restriction.' CDIP's data-use page asks web displays to link to cdip.ucsd.edu and asks that the data be used unaltered; SkipperCast converts metres to feet and nulls samples the publisher flags, which the owner should confirm. Pending owner confirmation (FE-40)."
+        "commercial_note": "Each MOP forecast file's licence attribute reads \"These data may be redistributed and used without restriction.\" CDIP's data-use page asks web displays to link to cdip.ucsd.edu and says its data are free \"provided that they are not altered in any way\"; SkipperCast converts metres to feet and nulls samples the publisher flags. The owner accepted that this meets the licence (R4-SC-05 packet, FE-40)."
       },
       "authenticity": {
         "basis": "Primary publisher THREDDS OPeNDAP server; the site label and coordinates in each file are checked against the reviewed binding",
