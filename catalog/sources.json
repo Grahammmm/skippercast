@@ -2093,20 +2093,15 @@
       ],
       "documentation_url": "https://www.ndbc.noaa.gov/faq/dataindex.shtml",
       "adapter": "ndbc-history",
-      "review_status": "approved",
-      "reviewed_at": "2026-11-13",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-07",
       "rights": {
-        "license": "unrestricted-use",
-        "scope": "Mixed feed, two stations with different published terms: 46028 is NDBC-owned (US government work, public domain); 46215 is measured by CDIP/Scripps and NDBC relays it (CDIP file licence: redistribution and use without restriction, not a public-domain dedication). The row-level value is the one that fits both; the per-station terms are in components.",
-        "components": [
-          {"station": "46028", "owner": "NOAA National Data Buoy Center", "license": "public-domain", "terms_url": "https://www.weather.gov/disclaimer/"},
-          {"station": "46215", "owner": "CDIP, Scripps Institution of Oceanography (relayed by NDBC)", "license": "unrestricted-use", "terms_url": "https://cdip.ucsd.edu/m/documents/data_access.html"}
-        ],
+        "license": "public-domain",
         "attribution": "NOAA National Data Buoy Center; 46215 measured by CDIP/Scripps",
         "terms_url": "https://www.weather.gov/disclaimer/",
         "commercial_use": "allowed",
         "attribution_required": true,
-        "commercial_note": "U.S. government work for NDBC-owned station 46028. Station 46215 is a Scripps/CDIP buoy that NDBC relays; CDIP's own files for it carry the licence \"These data may be redistributed and used without restriction.\" and CDIP asks for a link to cdip.ucsd.edu. Monthly bands and hourly means are SkipperCast aggregations that keep counts and missing coverage, credited to NOAA/NDBC and CDIP without implied endorsement. Owner confirmed (R4-SC-05 packet, FE-42)."
+        "commercial_note": "U.S. government work. Monthly bands and hourly means are SkipperCast aggregations, credited to NOAA/NDBC without implied endorsement. Pending owner confirmation (FE-42)."
       },
       "authenticity": {
         "basis": "Primary publisher archive index and annual files; SHA-256 recorded per file",
@@ -2263,15 +2258,15 @@
       ],
       "documentation_url": "https://cdip.ucsd.edu/m/documents/data_access.html",
       "adapter": "cdip-mop-dap2",
-      "review_status": "approved",
-      "reviewed_at": "2026-11-13",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
       "rights": {
-        "license": "unrestricted-use",
+        "license": "CDIP dataset licence attribute: redistribution and use without restriction",
         "attribution": "Data from CDIP, Scripps Institution of Oceanography (https://cdip.ucsd.edu/)",
         "terms_url": "https://cdip.ucsd.edu/m/documents/data_access.html",
         "commercial_use": "allowed",
         "attribution_required": true,
-        "commercial_note": "Each MOP forecast file's licence attribute reads \"These data may be redistributed and used without restriction.\" CDIP's data-use page asks web displays to link to cdip.ucsd.edu and says its data are free \"provided that they are not altered in any way\"; SkipperCast converts metres to feet and nulls samples the publisher flags. The owner accepted that this meets the licence (R4-SC-05 packet, FE-40)."
+        "commercial_note": "Each MOP forecast file's licence attribute reads 'These data may be redistributed and used without restriction.' CDIP's data-use page asks web displays to link to cdip.ucsd.edu and asks that the data be used unaltered; SkipperCast converts metres to feet and nulls samples the publisher flags, which the owner should confirm. Pending owner confirmation (FE-40)."
       },
       "authenticity": {
         "basis": "Primary publisher THREDDS OPeNDAP server; the site label and coordinates in each file are checked against the reviewed binding",

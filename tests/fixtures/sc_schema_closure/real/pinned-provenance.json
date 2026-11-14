@@ -157,10 +157,10 @@
       "sha256": "1bc0bc2de34fd8ac163be8a578ffe6c3a0ee998394b01d65e2bde3db535367b7"
     },
     {
-      "bytes": 3833,
-      "git_blob": "a72247cce670990180c9d1a808e08f6fe3893d3b",
+      "bytes": 3813,
+      "git_blob": "d206fc7e8d1d208b3fbe1e1ae7d26a56dbb879b3",
       "path": "schemas/source.schema.json",
-      "sha256": "c11322b316500afe75fabb857221b696387158111396e87e8c0d832439bc7a93"
+      "sha256": "b2c1301d87fddb2be8cfca10795742bcf02a74a9b36913153ee23bce9052f6b6"
     },
     {
       "bytes": 540,

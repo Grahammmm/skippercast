@@ -74,7 +74,7 @@
   "if": {"properties": {"review_status": {"const": "approved"}}},
   "then": {
     "properties": {
-      "rights": {"properties": {"license": {"enum": ["public-domain", "CC0-1.0", "CC-BY-4.0", "CC-BY-NC-4.0", "facts-only", "unrestricted-use"]}}}
+      "rights": {"properties": {"license": {"enum": ["public-domain", "CC0-1.0", "CC-BY-4.0", "CC-BY-NC-4.0", "facts-only"]}}}
     }
   },
   "additionalProperties": true

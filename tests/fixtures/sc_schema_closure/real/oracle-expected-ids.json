@@ -610,7 +610,7 @@
       "source_path": "skills/coast-campaign-shared/schemas/coast-tier2-check-v1.schema.json"
     }
   ],
-  "manifest_sha256": "f9d13ad0359facb9116aefa6a84667055bcdae51d31bfe921b9c9c6d5ed63943",
+  "manifest_sha256": "c4b3bf6995345726bf12ca7289f52fe6ae7dbfe595211a4993a8e7d7fb85b4c6",
   "oracle": "referencing.jsonschema.DRAFT202012 id_of + subresources_of; exact-string duplicate ids",
   "schema": "sc-schema-closure-oracle-ids-v1"
 }
