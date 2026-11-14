@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- MAIN-RED-5: the “Loading the map” announcement no longer intercepts clicks on Chart controls beneath it. Its appearance and screen-reader announcements are unchanged.
+
 - R4-SC-07: the automatic first-visit map flyover no longer runs below the 1024px desktop layout breakpoint, leaving phone and tablet interactions free of the camera tour. Desktop tours and reduced-motion, Save-Data and shared-link protections are unchanged.
 - SCB-16: the phone and desktop port chooser now offers every California region with dated, per-layer coverage from the reviewed SCB-01 audit. Draft regions can be inspected but not opened; previews stay previews. Held habitat, missing products, rules needing review and Trinidad–Klamath's overview-only map remain visible. This does not activate any region or approve rules.
 - SCB-12: the map library now starts downloading alongside the app shell, rather than waiting for the shell's code to run. Heavy aerial and seafloor requests give the first brief a head start, releasing when it settles or after five seconds; a held report cannot block map readiness indefinitely. The loading notice and first-complete-frame marker still wait for the imagery, and all publication checks are unchanged. Phone-emulation timings and limitations are recorded in `reports/perf/SCB-12.md`.

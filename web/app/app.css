@@ -130,6 +130,10 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-presentation .ui-chip { min-width: var(--touch-min); }
 .app-stage-note { margin: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); color: var(--text); font-size: var(--text-13); box-shadow: var(--elev-2); }
 .app-stage-note:empty { padding: 0; border: 0; box-shadow: none; }
+/* The loading announcement and its flex wrapper can overlap map chrome.
+   Only interactive chrome and the other status panels should consume clicks. */
+.app-presentation { pointer-events: none; }
+.app-presentation > :not([data-chart-loading-status]) { pointer-events: auto; }
 .app-rail { position: absolute; top: var(--space-4); right: var(--space-4); }
 /* Reserve all four terrain buttons, their outer borders and a gap. Long desktop
    rails scroll within the remaining space; the phone's sheet keeps its layout. */
