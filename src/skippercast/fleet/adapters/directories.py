@@ -53,8 +53,8 @@ def parse_ggfa(markup: str, url: str) -> tuple[VesselSeed, ...]:
             port = node.text() or None
         elif node.tag == "b" and node.find("i") is not None:
             name = node.find("i").text()
-            if not name:
-                continue
+            if not name:  # a recognized entry with no name is an incomplete list, not an optional field
+                raise LayoutError(url, "vessel entry has no name")
             if port is None:
                 raise LayoutError(url, "vessel entry before any port heading")
             seeds.append(VesselSeed(name=name, port=port))
@@ -70,8 +70,8 @@ def parse_sac(markup: str, url: str) -> tuple[LandingSeed, ...]:
     for link in root.find_all("a", where=lambda n: "wixui-button" in n.classes and bool(n.attrs.get("href"))):
         label_node = link.find(cls="wixui-button__label")
         label = (label_node.text() if label_node else "") or link.attrs.get("aria-label", "").strip()
-        if not label:
-            continue
+        if not label:  # a selected member link with no label is an incomplete list, not skippable
+            raise LayoutError(url, "member landing link has no label")
         name, _, place = label.partition(" - ")
         seeds.append(LandingSeed(name=name.strip(), place=place.strip() or None, url=link.attrs["href"]))
     if not seeds:
