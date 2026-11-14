@@ -8,7 +8,8 @@
 // GET with the same credentials and no headers, body or cache mode) takes the answer already on its way instead
 // of asking again. Each answer is handed over once, and only within EARLY_READ_TTL_MS of its start; every other
 // read (a refresh, a retry, another region, a different request) goes to the network exactly as before. A
-// caller's own signal still ends its wait, as it would end its own request.
+// caller's own signal still ends its wait for the headers and, once they have arrived, the reading of the body, as it
+// would end its own request.
 //
 // Erasable syntax only: the node tests import it by type stripping.
 
@@ -63,14 +64,45 @@ function plain(init: RequestInit): boolean {
   } catch { return false; }
 }
 
-/** Reject when `signal` aborts first, as the caller's own request would; the started read itself carries no caller's signal. */
+/**
+ * `response` with its body ending in `signal.reason` when `signal` aborts before the body is fully read, as the body of the
+ * caller's own request would: the started read carries no caller's signal, so a stalled body would otherwise never end.
+ * The answer's status, headers and address are kept; an answer without a body is returned as it is.
+ */
+function bodyUntilAborted(response: Response, signal: AbortSignal): Response {
+  if (!response.body) return response;
+  const reader = response.body.getReader();
+  let abort = (): void => {};
+  const done = (): void => signal.removeEventListener('abort', abort);
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      abort = (): void => { done(); try { controller.error(signal.reason); } catch { /* already ended */ } reader.cancel(signal.reason).catch(() => {}); };
+      if (signal.aborted) abort(); else signal.addEventListener('abort', abort, {once: true});
+    },
+    async pull(controller) {
+      try {
+        const {done: finished, value} = await reader.read();
+        if (finished) { done(); controller.close(); } else controller.enqueue(value);
+      } catch (error) { done(); try { controller.error(error); } catch { /* already ended */ } }
+    },
+    cancel(reason) { done(); return reader.cancel(reason); },
+  });
+  const wrapped = new Response(body, {status: response.status, statusText: response.statusText, headers: response.headers});
+  for (const key of ['url', 'redirected', 'type'] as const) Object.defineProperty(wrapped, key, {value: response[key]});
+  return wrapped;
+}
+
+/**
+ * Reject when `signal` aborts before the answer's headers arrive, and end the answer's body in the abort's reason when it
+ * aborts later, as the caller's own request would; the started read itself carries no caller's signal.
+ */
 function untilAborted(promise: Promise<Response>, signal: AbortSignal | null | undefined): Promise<Response> {
   if (!signal) return promise;
   if (signal.aborted) return Promise.reject(signal.reason);
   return new Promise<Response>((resolve, reject) => {
     const abort = (): void => reject(signal.reason);
     signal.addEventListener('abort', abort, {once: true});
-    promise.then(value => { signal.removeEventListener('abort', abort); resolve(value); },
+    promise.then(value => { signal.removeEventListener('abort', abort); resolve(bodyUntilAborted(value, signal)); },
       error => { signal.removeEventListener('abort', abort); reject(error); });
   });
 }

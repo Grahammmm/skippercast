@@ -101,6 +101,36 @@ test('a started answer is handed over only within its time to live, and a caller
   await assert.rejects(wait, /timed out/);
 });
 
+test('a caller\'s abort after the headers arrive still ends the reading of the body', async () => {
+  // Headers at once, a body that never ends: the app's own request would reject its body read when its signal aborts.
+  const stalled = () => Promise.resolve(new Response(new ReadableStream({start(controller) { controller.enqueue(new TextEncoder().encode('{')); }}),
+    {status: 200, headers: {'x-origin': 'net'}}));
+  const page = {fetch: stalled, location: {href: PAGE}};
+  startEarlyReads(page, 'morro-bay');
+  const timeout = new AbortController();
+  const response = await page.fetch('/api/forecast?region=morro-bay', {signal: timeout.signal});
+  assert.equal(response.ok, true);
+  assert.equal(response.headers.get('x-origin'), 'net');
+  const body = response.json();
+  const outcome = Promise.race([body.then(() => 'resolved', error => error), new Promise(resolve => setTimeout(resolve, 2000, 'still waiting'))]);
+  await new Promise(resolve => setTimeout(resolve, 10));
+  timeout.abort(new DOMException('limit', 'TimeoutError'));
+  assert.equal((await outcome).name, 'TimeoutError', 'the abort rejects the body read');
+  // Aborted before the body is first read, and a body that finishes before any abort: both as the caller's own request.
+  const early = {fetch: stalled, location: {href: PAGE}};
+  startEarlyReads(early, 'morro-bay');
+  const first = new AbortController();
+  const got = await early.fetch('/api/daily?region=morro-bay&part=brief', {signal: first.signal});
+  first.abort(new Error('left the page'));
+  await assert.rejects(got.text(), /left the page/);
+  const whole = scope();
+  startEarlyReads(whole.page, 'morro-bay');
+  const live = new AbortController();
+  const answer = await whole.page.fetch('/regions/morro-bay/region.json', {signal: live.signal});
+  assert.equal(await answer.text(), '1');
+  live.abort(new Error('too late to matter'));
+});
+
 test('a failed early read reports nowhere until the app takes it, and then to the app', async () => {
   const page = {location: {href: PAGE}, fetch: () => Promise.reject(new TypeError('offline'))};
   const unhandled = [];
