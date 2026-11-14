@@ -80,6 +80,104 @@ test('the range recorder keeps each exact live range under the service worker\'s
   } finally { globalThis.fetch = realFetch; }
 });
 
+// RF1036-8: a 206 is stored under the requested range key only when it really is that slice.
+async function recordRange(offset, length, answer, etag) {
+  const archive = 'https://s.test/feeds/tiles/basemap/ca-coast-20261008.pmtiles', realFetch = globalThis.fetch;
+  const puts = [], fetches = [], reads = {n: 0};
+  const put = async (key, body, headers) => { puts.push([key, new Uint8Array(body), headers.get('Content-Range')]); };
+  globalThis.fetch = async (url, init) => {
+    fetches.push(init.headers.range);
+    const {range, bytes, status = 206, headers = {}} = answer(init);
+    const response = new Response(bytes, {status, headers: range ? {'Content-Range': range, ...headers} : headers});
+    const read = response.arrayBuffer.bind(response);
+    response.arrayBuffer = () => { reads.n++; return read(); };
+    return response;
+  };
+  try {
+    const source = runtime.rangeRecorder(archive, put, new AbortController().signal, basemapRangeKey);
+    const out = await source.getBytes(offset, length, undefined, etag).then(value => ({value}), error => ({error}));
+    return {...out, puts, fetches, reads: reads.n, archive};
+  } finally { globalThis.fetch = realFetch; }
+}
+const distinct = n => Uint8Array.from({length: n}, (_, i) => i + 1);
+
+test('range_header_identity_before_write: only the requested slice is saved, and a wrong answer is refused before it is read', async () => {
+  const ok = await recordRange(16, 4, () => ({range: 'bytes 16-19/99', bytes: distinct(4)}));
+  assert.equal(ok.error, undefined);
+  assert.equal(ok.puts.length, 1);
+  assert.equal(ok.puts[0][0], `${ok.archive}?sc-range=16-19`);
+  assert.ok(Buffer.from(ok.puts[0][1]).equals(Buffer.from(distinct(4))) && Buffer.from(ok.value.data).equals(Buffer.from(distinct(4))), 'the bytes are kept unchanged');
+  assert.equal((await recordRange(16, 4, () => ({range: '  bytes 16-19/*  ', bytes: distinct(4)}))).puts.length, 1, 'an unknown total with the full slice is fine');
+  for (const [name, range] of [['wrong start', 'bytes 20-23/99'], ['wrong end', 'bytes 16-18/*'], ['past the request', 'bytes 16-20/99'], ['missing', undefined], ['bad unit', 'items 16-19/99'],
+    ['reversed', 'bytes 19-16/99'], ['impossible total', 'bytes 16-19/19'], ['trailing junk', 'bytes 16-19/99 x'], ['multipart', 'bytes 16-17/99, 18-19/99'], ['unsatisfied', 'bytes */99'],
+    ['unsafe field', 'bytes 16-19/99999999999999999999']]) {
+    const r = await recordRange(16, 4, () => ({range, bytes: distinct(4)}));
+    assert.match(String(r.error?.message), /Basemap range bytes=16-19/, name);
+    assert.equal(r.puts.length, 0, `${name}: nothing written`);
+    assert.equal(r.reads, 0, `${name}: the body is never read`);
+  }
+});
+
+test('range_body_cardinality_before_write: the body must be exactly as long as the answered interval', async () => {
+  for (const n of [0, 3, 5]) {
+    const r = await recordRange(16, 4, () => ({range: 'bytes 16-19/99', bytes: distinct(n)}));
+    assert.match(String(r.error?.message), /wrong length/, `${n} bytes`);
+    assert.equal(r.puts.length, 0, `${n} bytes: nothing written`);
+  }
+  const ok = await recordRange(16, 4, () => ({range: 'bytes 16-19/99', bytes: distinct(4)}));
+  assert.equal(ok.puts.length, 1);
+});
+
+test('small_archive_eof_is_not_truncation: a range clipped at the known end is kept, a premature or unproven short one is not', async () => {
+  const eof = await recordRange(0, 16384, () => ({range: 'bytes 0-99/100', bytes: distinct(100)}));
+  assert.equal(eof.error, undefined);
+  assert.equal(eof.puts.length, 1);
+  assert.equal(eof.puts[0][0], `${eof.archive}?sc-range=0-16383`, 'kept under the key of the request');
+  assert.equal(eof.puts[0][2], 'bytes 0-99/100', 'with its truthful Content-Range');
+  assert.equal(eof.value.data.byteLength, 100);
+  for (const [name, range, n] of [['premature end', 'bytes 0-98/100', 99], ['unknown total', 'bytes 0-99/*', 100], ['one byte missing', 'bytes 0-99/100', 99],
+    ['request ends inside the archive', 'bytes 0-99/20000', 100]]) {
+    const r = await recordRange(0, 16384, () => ({range, bytes: distinct(n)}));
+    assert.ok(r.error, name);
+    assert.equal(r.puts.length, 0, `${name}: nothing written`);
+  }
+});
+
+test('range_request_integer_bounds: an impossible request is refused before any fetch', async () => {
+  for (const [offset, length] of [[-1, 4], [1.5, 4], [NaN, 4], [Infinity, 4], [2 ** 53, 4], [0, 0], [0, -3], [0, 2.5], [0, 2 ** 53], [Number.MAX_SAFE_INTEGER, 2]]) {
+    const r = await recordRange(offset, length, () => ({range: 'bytes 0-0/1', bytes: distinct(1)}));
+    assert.match(String(r.error?.message), /not a valid range/, `${offset},${length}`);
+    assert.equal(r.fetches.length + r.puts.length, 0, `${offset},${length}: no request, no write`);
+  }
+  const zero = await recordRange(0, 1, () => ({range: 'bytes 0-0/1', bytes: distinct(1)}));
+  assert.equal(zero.puts.length, 1);
+});
+
+test('existing_safety_and_failure_controls: a saved or whole answer, a changed archive and a failing network or store still refuse', async () => {
+  const good = {range: 'bytes 16-19/99', bytes: distinct(4), headers: {ETag: '"a"'}};
+  const changed = await recordRange(16, 4, () => good, '"b"');
+  assert.match(String(changed.error?.message), /changed while saving/);
+  assert.equal(changed.puts.length, 0);
+  const weak = await recordRange(16, 4, () => ({...good, headers: {ETag: 'W/"a"'}}));
+  assert.equal(weak.value.etag, undefined, 'a weak ETag is not handed back');
+  assert.equal((await recordRange(16, 4, () => good, '"a"')).value.etag, '"a"');
+  for (const answer of [{...good, status: 200}, {...good, headers: {'X-SC-Offline': '2026-10-01T00:00:00Z'}}]) {
+    const r = await recordRange(16, 4, () => answer);
+    assert.match(String(r.error?.message), /Basemap range bytes=16-19: HTTP/);
+    assert.equal(r.puts.length, 0);
+  }
+  const realFetch = globalThis.fetch, mine = new AbortController(), seen = [];
+  try {
+    globalThis.fetch = async (_u, init) => { seen.push(init.signal); throw new TypeError('network down'); };
+    const source = runtime.rangeRecorder('https://s.test/feeds/tiles/basemap/ca-coast-20261008.pmtiles', async () => {}, new AbortController().signal, basemapRangeKey);
+    await assert.rejects(source.getBytes(16, 4, mine.signal), /network down/);
+    assert.deepEqual(seen, [mine.signal]);
+    globalThis.fetch = async () => new Response(distinct(4), {status: 206, headers: {'Content-Range': 'bytes 16-19/99'}});
+    const failing = runtime.rangeRecorder('https://s.test/feeds/tiles/basemap/ca-coast-20261008.pmtiles', async () => { throw new Error('quota'); }, new AbortController().signal, basemapRangeKey);
+    await assert.rejects(failing.getBytes(16, 4), /quota/);
+  } finally { globalThis.fetch = realFetch; }
+});
+
 test('the headless protected-area screen is v1\'s: the same checks, and the same GPX bytes for the same selection', async () => {
   const restore = {document: globalThis.document, L: globalThis.L, fetch: globalThis.fetch};
   const stamp = new Date(Date.now() - 60000).toISOString();

@@ -35,11 +35,33 @@ test("seasons roll at Pacific midnight; crab opens Nov 7 with its trap restricti
     ["2026-10-01T07:00:00Z", "salmon", "closed"],
     ["2026-11-07T07:59:00Z", "dungeness", "closed"],
     ["2026-11-07T08:00:00Z", "dungeness", "restricted"],
-    ["2027-01-01T08:00:00Z", "lingcod", "unknown"],
+    ["2027-01-01T08:00:00Z", "lingcod", "closed"], // Jan 1-Mar 31 is closed (T14 CCR 27.40(b)(1)); R4-SC-04
   ]) {
     const at = Date.parse(date);
     assert.equal(state(data(at), species, at).status, expected);
   }
+});
+test("R4-SC-04: 2027 dates run to the reviewed end (2027-03-31) and read 'Check rules' after it", () => {
+  assert.equal(original.valid_through, "2027-03-31");
+  assert.ok(original.valid_through >= "2027-01-17", "a 12-18 GO needs valid_through >= GO + 30 days");
+  const at = (day) => Date.parse(`${day}T20:00:00Z`);
+  for (const [day, species, expected] of [
+    ["2027-01-01", "lingcod", "closed"], ["2027-03-31", "lingcod", "closed"],
+    ["2027-01-01", "rockfish", "closed"], ["2027-03-31", "rockfish", "closed"],
+    ["2027-01-01", "halibut", "open"], ["2027-03-31", "halibut", "open"],
+    ["2027-01-01", "albacore", "open"], ["2027-03-31", "albacore", "open"],
+    ["2027-01-01", "bluefin", "open"], ["2027-03-31", "bluefin", "open"],
+    ["2027-01-01", "salmon", "closed"], ["2027-03-31", "salmon", "closed"],
+    ["2027-01-01", "dungeness", "restricted"], ["2027-03-31", "dungeness", "restricted"],
+    ["2027-04-01", "lingcod", "unknown"], ["2027-04-01", "halibut", "unknown"], ["2027-04-01", "dungeness", "unknown"], ["2027-04-01", "salmon", "unknown"],
+  ]) {
+    const t = at(day);
+    assert.equal(state(data(t), species, t).status, expected, `${species} on ${day}`);
+  }
+  // Dungeness after Jan 1 must not claim traps are allowed or still banned: it sends the angler to CDFW.
+  const t = at("2027-01-15"), crab = state(data(t), "dungeness", t);
+  assert.match(crab.reason, /check CDFW before setting a trap/);
+  assert.match(crab.reason, /Jun 30, 2027/);
 });
 test("stale, changed, missing, retained, unreviewed and mismatched evidence withhold open", () => {
   for (const edit of [

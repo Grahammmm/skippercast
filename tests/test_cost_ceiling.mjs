@@ -28,7 +28,7 @@ globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.SHELLS = {};
 globalThis.BUILD_ID = 'b1';
 const {default: worker} = await import('../server/index.ts');
-const {resetMeter, readsToday, recordReads, flush, ceilingOf, keepLastKnown, lastKnown, DEFAULT_R2_READS_PER_DAY, FLUSH_READS, DEGRADED_RETRY_SECONDS, LAST_KNOWN_CACHE, LAST_KNOWN_MAX_BYTES} = await import('../server/cost-ceiling.ts');
+const {resetMeter, readsToday, recordReads, flush, ceilingOf, keepLastKnown, lastKnown, lastKnownKey, DEFAULT_R2_READS_PER_DAY, FLUSH_READS, DEGRADED_RETRY_SECONDS, LAST_KNOWN_CACHE, LAST_KNOWN_MAX_BYTES} = await import('../server/cost-ceiling.ts');
 const {useBucket} = await import('../server/feeds.ts');
 
 /** caches.default with the semantics the Worker relies on (as tests/test_cache.mjs): no 206 or no-store puts; Range from a cached 200. */
@@ -284,4 +284,87 @@ test('the per-IP private gate answers 429 before any session lookup reaches D1',
   assert.equal(limited.headers.get('Retry-After'), '60');
   assert.deepEqual(DB.queries, [], 'no D1 read for a refused request');
   assert.equal(FEED_LIMITER.counts.get('private-ip:203.0.113.9'), 1);
+}));
+
+// RF1036-6: a last-known copy belongs to the exact path, query multiset and Range header; a caller query parameter never aliases the Range discriminator.
+const lkReq = (path, headers = {}, origin = 'https://synthetic.example') => new Request(origin + path, {headers});
+const lkKeyUrl = (path, headers, origin) => lastKnownKey(lkReq(path, headers, origin)).url;
+const PART = '/feeds/tiles/basemap/a.pmtiles';
+const partial = (text, range) => new Response(text, {status: 206, headers: {'Content-Range': range, 'Content-Length': String(text.length), 'Content-Type': 'application/octet-stream'}});
+async function saved(request, response) { await keepLastKnown(request, response, null); }
+async function text(response) { return response === null ? null : response.text(); }
+
+test('range_vs_sc_range_query_never_alias: a Range request and a caller sc-range query get distinct keys; saving either cannot satisfy the other', () => withWorld(async () => {
+  const ranged = lkReq(PART, {Range: 'bytes=0-3'}), queried = lkReq(PART + '?sc-range=bytes%3D0-3');
+  assert.notEqual(lastKnownKey(ranged).url, lastKnownKey(queried).url);
+  await saved(ranged, partial('PART', 'bytes 0-3/8'));
+  assert.equal(await lastKnown(queried), null, 'the never-cached non-range request gets no copy');
+  const hit = await lastKnown(ranged);
+  assert.equal(hit.status, 206); assert.equal(hit.headers.get('Content-Range'), 'bytes 0-3/8'); assert.equal(await hit.text(), 'PART');
+  await saved(queried, new Response('WHOLE-OBJ', {status: 200, headers: {'Content-Length': '9'}}));
+  const whole = await lastKnown(queried);
+  assert.equal(whole.status, 200); assert.equal(await whole.text(), 'WHOLE-OBJ');
+  assert.equal(await text(await lastKnown(ranged)), 'PART', 'the ranged copy is untouched by the query save');
+}));
+
+test('range_queries_do_not_overwrite_caller_values: the same Range with different or duplicate caller sc-range values stays distinct', () => withWorld(async () => {
+  const range = {Range: 'bytes=0-3'};
+  const a = lkReq(PART + '?sc-range=one', range), b = lkReq(PART + '?sc-range=two', range), dup = lkReq(PART + '?sc-range=one&sc-range=two', range), plain = lkReq(PART, range);
+  assert.equal(new Set([a, b, dup, plain].map(r => lastKnownKey(r).url)).size, 4);
+  await saved(a, partial('AAAA', 'bytes 0-3/8'));
+  await saved(b, partial('BBBB', 'bytes 0-3/16'));
+  for (const [request, body, contentRange] of [[a, 'AAAA', 'bytes 0-3/8'], [b, 'BBBB', 'bytes 0-3/16']]) {
+    const hit = await lastKnown(request);
+    assert.equal(await hit.text(), body); assert.equal(hit.headers.get('Content-Range'), contentRange);
+  }
+  assert.equal(await lastKnown(dup), null); assert.equal(await lastKnown(plain), null);
+}));
+
+test('query_permutations_still_share_identity: an equal query multiset shares a key in any order; a different multiset does not', () => {
+  const k = q => lkKeyUrl(PART + q);
+  assert.equal(k('?a=1&b=2&a=3'), k('?b=2&a=3&a=1'));
+  assert.equal(k('?a=1&a=1&b=2'), k('?b=2&a=1&a=1'));
+  assert.equal(k('?x=%26%3D%25&y=%C3%A9%E2%9C%93'), k('?y=%C3%A9%E2%9C%93&x=%26%3D%25'), 'encoded ampersand, equals, percent and Unicode survive reordering');
+  assert.notEqual(k('?a=1&a=1'), k('?a=1'), 'removing a duplicate changes the key');
+  assert.notEqual(k('?a='), k('?a=x'), 'an empty value is not another value');
+  assert.notEqual(k('?a=1&b=2'), k('?a=1%26b%3D2'), 'an encoded delimiter is not a second parameter');
+  assert.notEqual(k('?a=%26b%3D2'), k('?a=&b=2'));
+  assert.notEqual(k('?a=%25'), k('?a=%2525'));
+  assert.notEqual(k('?a=\u00e9'), k('?a=e'));
+});
+
+test('ordinary_range_variants_stay_separate: absent and empty Range, different ranges, paths and origins never alias; the same range replays whole', () => withWorld(async () => {
+  const keys = [lkKeyUrl(PART), lkKeyUrl(PART, {Range: ''}), lkKeyUrl(PART, {Range: 'bytes=0-3'}), lkKeyUrl(PART, {Range: 'bytes=4-7'}),
+    lkKeyUrl('/feeds/tiles/basemap/b.pmtiles', {Range: 'bytes=0-3'}), lkKeyUrl(PART, {Range: 'bytes=0-3'}, 'https://other.example')];
+  assert.equal(new Set(keys).size, keys.length);
+  const first = lkReq(PART, {Range: 'bytes=0-3'}), second = lkReq(PART, {Range: 'bytes=4-7'});
+  await saved(first, partial('PART', 'bytes 0-3/8'));
+  await saved(second, partial('TAIL', 'bytes 4-7/8'));
+  const hit = await lastKnown(lkReq(PART, {Range: 'bytes=4-7'}));
+  assert.equal(hit.status, 206); assert.equal(hit.headers.get('Content-Range'), 'bytes 4-7/8'); assert.equal(hit.headers.get('X-SC-Degraded'), 'cost-ceiling');
+  assert.equal(await hit.text(), 'TAIL');
+  assert.equal(await lastKnown(lkReq(PART)), null); assert.equal(await lastKnown(lkReq(PART, {Range: ''})), null);
+  assert.equal(await lastKnown(lkReq(PART, {Range: 'bytes=0-7'})), null);
+}));
+
+test('legacy_cache_is_not_a_fallback: an ambiguous entry in the v1 named cache is never read; a v2 save then replays exactly', () => withWorld(async () => {
+  assert.equal(LAST_KNOWN_CACHE, 'skippercast-last-known-v2');
+  const legacy = new FakeCache(), current = new FakeCache(), opened = [], originalCaches = globalThis.caches;
+  globalThis.caches = {default: new FakeCache(), async open(name) { opened.push(name); if (name === 'skippercast-last-known-v1') return legacy; if (name === LAST_KNOWN_CACHE) return current; throw Error('named caches unavailable'); }};
+  try {
+    legacy.entries.set('https://synthetic.example/__sc-last-known' + PART + '?sc-range=bytes%3D0-3',
+      {status: 200, headers: [['X-SC-LK-Status', '206'], ['Content-Range', 'bytes 0-3/8']], body: new TextEncoder().encode('OLD!')});
+    const queried = lkReq(PART + '?sc-range=bytes%3D0-3'), ranged = lkReq(PART, {Range: 'bytes=0-3'});
+    assert.equal(await lastKnown(queried), null); assert.equal(await lastKnown(ranged), null);
+    assert.ok(!opened.includes('skippercast-last-known-v1'), 'the v1 namespace is never opened');
+    await saved(ranged, partial('PART', 'bytes 0-3/8'));
+    assert.equal(await text(await lastKnown(ranged)), 'PART'); assert.equal(await lastKnown(queried), null);
+  } finally { globalThis.caches = originalCaches; }
+}));
+
+test('a degraded request with no copy in the new namespace answers the honest 503 with no R2 read', () => withWorld(async () => {
+  const FEEDS = snapshotBucket(), env = {FEEDS, COST_CEILING_R2_READS_PER_DAY: '2'};
+  recordReads(5);
+  const response = await fetchSettled(get('/feeds/tiles/basemap/big.pmtiles?sc-range=bytes%3D1000-17383'), env);
+  assert.equal(response.status, 503); assert.equal(response.headers.get('X-SC-Degraded'), 'cost-ceiling'); assert.deepEqual(FEEDS.reads, []);
 }));
