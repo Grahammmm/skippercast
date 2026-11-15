@@ -30,7 +30,7 @@ The helper and raw JSON receipts remain outside the repository. Executed from
 the clone root:
 
 ```sh
-/home/user/repos/skippercast/.venv/bin/python /home/user/.hermes/kanban/boards/skippercast/workspaces/t_683dca43/receipts.py
+"$HOME/repos/skippercast/.venv/bin/python" ../receipts.py
 wc -l .github/workflows/research-substrate.yml .github/workflows/research-fish-survey.yml
 ```
 
