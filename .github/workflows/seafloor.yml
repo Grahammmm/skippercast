@@ -24,6 +24,7 @@ on:
       - catalog/classified-habitat-policy.json
       - catalog/seafloor-screen.json
       - catalog/reaches.json
+      - catalog/seafloor-rough-first.json
       - src/skippercast/seafloor/**
       - src/skippercast/platform/bottom_targets.py
       - scripts/build_map_tiles.py
@@ -173,6 +174,23 @@ jobs:
               f.write(Path('var/seafloor/ledger-pr.md').read_text())
               for key in d['published']: f.write('\nPublished /feeds/'+key+'\n')
           PY
+      # R4-SC-09-F1c: every real run records the archive's per-zoom sizes and, for a rough-first region, each size
+      # gate item, whether the build passed or the gate stopped it. Sizes and hashes only: the repository is public,
+      # so the archive itself is never uploaded as an artifact.
+      - name: Record the archive size receipt
+        if: always() && steps.publication.outcome != 'skipped'
+        env:
+          REGION: ${{ matrix.region }}
+        run: python -m skippercast.seafloor.rough_first summary --region "$REGION" >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the size receipt (never an archive)
+        if: always() && steps.publication.outcome != 'skipped'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: seafloor-size-receipt-${{ matrix.region }}
+          path: var/seafloor/publication/${{ matrix.region }}-tiles.json
+          if-no-files-found: warn
+          overwrite: true
+          retention-days: 90
       - name: Verify the public Worker serves the exact archive with HTTP Range
         env:
           SEAFLOOR_PUBLIC_BASE: ${{ vars.CLOUDFLARE_SITE_URL || 'https://skippercast.com' }}

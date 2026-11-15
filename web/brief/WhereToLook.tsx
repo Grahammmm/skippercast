@@ -340,7 +340,7 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
             </li>
           ))}
         </ol>
-      ) : <EmptyOrPlan empty={rankingEmpty(r, lang)} />}
+      ) : r.habitatUnavailable ? <p class="app-empty" role="status" data-habitat="unavailable">{r.empty}</p> : <EmptyOrPlan empty={rankingEmpty(r, lang)} />}
       <ReefNote id={id} lang={lang} />
       <RangeControl measured={r.harbor} />
     </section>

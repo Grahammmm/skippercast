@@ -26,10 +26,32 @@ TILES = ROOT / 'dist/tiles'
 
 
 def build_vector_archive(tool, layers, output, *, title, attribution, description,
-                         minzoom=8, maxzoom=15, precise=False):
-    """Shared deterministic PMTiles builder; callers own data qualification."""
+                         minzoom=8, maxzoom=15, precise=False, coarse_first=False):
+    """Shared deterministic PMTiles builder; callers own data qualification.
+
+    coarse_first generalises display-only habitat at z8–11 with default detail
+    and simplification; z12+ retains the precise build. Canonical exports do not
+    pass through this delivery-format transformation.
+    """
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
+    if coarse_first and minzoom < 12 <= maxzoom:
+        with tempfile.TemporaryDirectory() as tmp:
+            low, high = Path(tmp)/'coarse.pmtiles', Path(tmp)/'detail.pmtiles'
+            common = dict(title=title, attribution=attribution, description=description,
+                          precise=True, coarse_first=True)
+            build_vector_archive(tool, layers, low, minzoom=minzoom, maxzoom=11, **common)
+            build_vector_archive(tool, layers, high, minzoom=12, maxzoom=maxzoom, **common)
+            joined = Path(tmp)/output.name
+            subprocess.run([str(Path(tool).resolve().with_name('tile-join')), '--quiet',
+                            '--force', '--no-tile-size-limit', '-o', str(joined),
+                            str(low), str(high)], check=True)
+            temporary = output.with_suffix('.part')
+            shutil.copyfile(joined, temporary)
+            temporary.replace(output)
+        return output
+    if coarse_first and maxzoom < 12:
+        layers = {name: features for name, features in layers.items() if name != 'cells'}
     with tempfile.TemporaryDirectory() as tmp:
         args = []
         for name, features in sorted(layers.items()):
@@ -40,7 +62,8 @@ def build_vector_archive(tool, layers, output, *, title, attribution, descriptio
             args += ['-L', f'{name}:{path.name}']
         env = {**os.environ, 'PATH': f"{Path(tool).resolve().parent}{os.pathsep}{os.environ.get('PATH', '')}",
                'TIPPECANOE_MAX_THREADS': '1'}
-        flags = (['--no-line-simplification', '--no-tiny-polygon-reduction', '--full-detail=15', '--low-detail=15']
+        flags = ([] if coarse_first and maxzoom < 12 else
+                 ['--no-line-simplification', '--no-tiny-polygon-reduction', '--full-detail=15', '--low-detail=15']
                  if precise else ['--detect-shared-borders'])
         subprocess.run(['tippecanoe', '--quiet', '--force', '-o', output.name,
                         '-Z', str(minzoom), '-z', str(maxzoom), '--no-tile-size-limit', '--no-feature-limit',

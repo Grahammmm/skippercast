@@ -181,16 +181,26 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
     const viewport = window.visualViewport;
     if (!viewport) return;
     let frame = 0, restore: (() => void) | undefined;
+    // The sheet's header and content can keep growing after the last viewport or focus event (late data on a slow phone).
+    // While the field is edited, a size change there runs the reveal again.
+    const resized = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(() => schedule());
+    const observed = new Set<Element>();
+    const unobserve = () => { resized?.disconnect(); observed.clear(); };
     const reveal = () => {
       const input = document.activeElement;
       if (!(input instanceof HTMLInputElement) || !input.matches('.app-mobile .app-sheet .app-target-search')) {
-        restore?.(); restore = undefined; return;
+        unobserve(); restore?.(); restore = undefined; return;
       }
       const sheet = input.closest<HTMLElement>('.app-sheet')!;
       const body = input.closest<HTMLElement>('.ui-sheet-body')!;
       if (!restore) {
         const height = sheet.style.maxHeight, bottom = sheet.style.bottom, scroll = body.scrollTop;
         restore = () => { sheet.style.maxHeight = height; sheet.style.bottom = bottom; body.scrollTop = scroll; };
+      }
+      // The body's box stays fixed while its content grows, so its children are observed too.
+      // Only new elements are added: observe() reports at once, and re-observing every pass would never settle.
+      for (const el of [sheet.querySelector('.ui-sheet-edge'), body, ...body.children]) {
+        if (resized && el && !observed.has(el)) { observed.add(el); resized.observe(el); }
       }
       // The visual viewport can shrink without resizing the layout viewport.
       sheet.style.maxHeight = `${viewport.height}px`;
@@ -209,7 +219,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
     document.addEventListener('focusin', schedule);
     document.addEventListener('focusout', schedule);
     return () => {
-      cancelAnimationFrame(frame); restore?.();
+      cancelAnimationFrame(frame); unobserve(); restore?.();
       viewport.removeEventListener('resize', schedule);
       viewport.removeEventListener('scroll', schedule);
       document.removeEventListener('focusin', schedule);

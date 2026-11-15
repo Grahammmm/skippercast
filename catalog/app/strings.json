@@ -2526,6 +2526,7 @@
     "stage.placePrompt": {"en": "Tap the Chart to place your waypoint.", "es": "Toca la Carta para colocar tu punto de ruta."},
     "stage.graphicsUnavailable": {"en": "This browser could not start the map graphics. Graphics support may be unavailable or temporarily blocked. Trying again reloads this page. Forecasts and trip tools remain available.", "es": "Este navegador no pudo iniciar los gráficos del mapa. Es posible que los gráficos no estén disponibles o estén bloqueados temporalmente. Al intentarlo de nuevo se recarga esta página. Los pronósticos y las herramientas de viaje siguen disponibles."},
     "stage.loadingChart": {"en": "Loading the map…", "es": "Cargando el mapa…"},
+    "stage.seafloorRough": {"en": "Rough seafloor — full detail loading", "es": "Fondo marino aproximado — cargando el detalle completo"},
     "stage.retryMap": {"en": "Try again", "es": "Intentar de nuevo"},
     "stage.cancelWaypoint": {"en": "Cancel waypoint", "es": "Cancelar punto de ruta"},
     "stage.zoomIn": {"en": "Zoom in", "es": "Acercar"},

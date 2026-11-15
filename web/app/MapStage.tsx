@@ -19,7 +19,7 @@ import {aerialSoft, createAerial, createImageryStartup, createSharpStart} from '
 import {createCharterGrounds} from '../map/charter-grounds.ts';
 import {createShore} from '../map/shore.ts';
 import {chartFailed, createChart, unavailable} from '../map/chart.ts';
-import {seafloorState} from '../map/seafloor.ts';
+import {seafloorRough, seafloorState} from '../map/seafloor.ts';
 import {createCommercialAis} from '../map/commercial-ais.ts';
 import {createDepthContours} from '../map/depth-contours.ts';
 import {createClouds} from '../map/clouds.ts';
@@ -83,6 +83,7 @@ export function PresentationToggle() {
       <p class="app-stage-note" data-chart-loading-status role="status" aria-live="polite" aria-atomic="true">{loading ? t('stage.loadingChart', lang) : ''}</p>
       <p id={NOTE_ID} class="app-stage-note" role="status">{blocked === null ? '' : terrainReason(blocked, lang)}</p>
       {armed ? <p class="app-stage-note" role="status">{t('stage.placePrompt', lang)} {refused ? <>{refused}. </> : null}<Button size="sm" variant="quiet" onClick={cancelWaypointPlacement}>{t('stage.cancelWaypoint', lang)}</Button></p> : null}
+      {shown === 'chart' && seafloorRough.value ? <p class="app-stage-note" data-seafloor-rough role="status">{t('stage.seafloorRough', lang)}</p> : null}
       <div role="group" aria-label={t('stage.presentation', lang)} class="ui-segmented">
         {PRESENTATIONS.map(p => {
           const off = p.value !== 'chart' && !!blocked;
