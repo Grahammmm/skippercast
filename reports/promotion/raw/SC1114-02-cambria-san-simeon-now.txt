@@ -1,0 +1,8 @@
+technical preflight only; human/legal approval and beta GO still required; checked 2026-11-15T20:23:10.717Z
+PASS cambria-san-simeon
+  PASS package: preview
+  PASS feeds: regional conditions, daily and intelligence fresh; critical sources checked
+  PASS tides: station 9412553; current coverage and future high/low prediction
+  PASS rules: lingcod:open, rockfish:open, halibut:open, salmon:closed, albacore:open, bluefin:open, dungeness:restricted; valid through 2027-03-31
+  PASS habitat: ready; current screening manifest (archive not downloaded)
+  PASS smoke: HTTP map shell and regional brief; live head f8a679d1451141ccad443d65d5138a0cbb6e3074 (not a browser test)
