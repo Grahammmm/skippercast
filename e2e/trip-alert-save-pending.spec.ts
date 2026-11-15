@@ -9,7 +9,7 @@ test.beforeEach(async ({page}) => {
   await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
 });
 
-/** Signed in, trips stubbed: each POST waits for `replies` to hand it a status (or 0 to answer at once with 201). */
+/** Signed in, trips stubbed: each POST is held until `answer(status)` releases it. */
 async function stubTrips(page: Page) {
   const posts: unknown[] = [], waiting: ((status: number) => void)[] = [];
   await page.route('**/api/session', route => route.fulfill({json: {signIn: '/#account', signedIn: true, user: {display_name: 'Skipper'}, publicKey: null}}));
