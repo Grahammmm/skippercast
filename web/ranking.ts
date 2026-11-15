@@ -305,7 +305,9 @@ export async function recheckReefPublication(region: string, gate: ReefGate = cu
   if (reefPublication.peek() !== was) return;
   if (was.state === 'ready') {
     if (live === held) {
-      if (expiresAt !== undefined) reefPublication.value = {...was, loaded: {...was.loaded, habitatExpiresAt: Math.min(was.loaded.habitatExpiresAt ?? Infinity, expiresAt)}};
+      // The coast-wide expiry is the live gate's answer: another region's renewed manifest moves it out. The held publication's own
+      // `expires_at` is never extended here; `ranking` still withholds it through `manifestState` once it passes.
+      if (expiresAt !== undefined) reefPublication.value = {...was, loaded: {...was.loaded, habitatExpiresAt: expiresAt}};
       return;
     }
     reefPublication.value = {state: 'unavailable', region, rejected: held};

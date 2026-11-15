@@ -177,6 +177,27 @@ test('the planner\'s gate again: a held, unavailable or superseded publication s
   assert.equal(reefPublication.value, there, 'a late check never rejects a later load');
 });
 
+test('SCB-07-C: another region\'s renewed manifest refreshes the coast-wide expiry; the selected publication\'s own expiry still withholds', async () => {
+  const at = now => ranking(inputs({publication: reefPublication.value, now}));
+  // Four ready manifests; another region's manifest is the earliest to expire (NOW + 1000) when the publication loads.
+  reefPublication.value = {state: 'idle'};
+  await loadReefPublication('morro-bay', async () => ({...LOADED, habitatExpiresAt: NOW + 1000}));
+  assert.equal(at(NOW + 2000).empty, 'Reviewed habitat unavailable', 'unrenewed: withheld after the old coast-wide expiry');
+  // That manifest is renewed; the selected export hash is unchanged, so the held publication stays and its coast-wide expiry moves out.
+  const renewed = async () => ({state: 'ready', manifest: {export_sha256: B}, habitatExpiresAt: NOW + 7200000});
+  await recheckReefPublication('morro-bay', renewed, async () => { throw Error('no reload for an unchanged hash'); });
+  assert.equal(reefPublication.value.loaded.habitatExpiresAt, NOW + 7200000);
+  const after = at(NOW + 2000);
+  assert.equal(after.source, 'publication', 'renewed: still served after the old expiry'); assert.ok(after.picks.length);
+  // The selected publication's own manifest expiry is still honoured, however late the coast-wide expiry.
+  reefPublication.value = {state: 'idle'};
+  await loadReefPublication('morro-bay', async () => ({...LOADED, publication: manifest(NOW + 5000), habitatExpiresAt: NOW + 1000}));
+  await recheckReefPublication('morro-bay', renewed, async () => { throw Error('no reload for an unchanged hash'); });
+  assert.equal(at(NOW + 4000).source, 'publication');
+  const own = at(NOW + 6000);
+  assert.equal(own.source, null); assert.deepEqual(own.picks, []); assert.equal(own.empty, 'Reviewed habitat unavailable');
+});
+
 test('A→B→A: the first A load\'s late failure or late older data never replaces the second A load\'s answer', async () => {
   for (const settle of [d => d.no(Error('Seafloor layer unavailable')), d => d.ok(LOADED)]) {
     reefPublication.value = {state: 'idle'};
