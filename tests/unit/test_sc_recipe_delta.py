@@ -40,7 +40,10 @@ SOURCE_PINS = {
     'regions/morro-bay/coast.json': 'dbe6ffebea0e6d4321c949ae42329db487448a251af695f060c1092366b6bc47',
     # repinned for NB-SC-06, NB-SC-07 and NB-SC-08: test_coast_recipe.py carries the new morro-bay and cambria region.json pins
     # repinned for SC2184-16: test_coast_recipe.py carries the new build_coast_prefetch_plan.py pin
-    'tests/unit/test_coast_recipe.py': '2097efa009634a479dd0dfc8e01465e8a51b646148e3fc682a1c2c8a0eaf94d0',
+    # SC1114-07: test_coast_recipe.py carries the South Big Sur preview-wording pin.
+    # Scope amendment: fix card t_57d66a92 SCOPE-3 authorizes this transitive pin only;
+    # the exact-byte assertion, frozen snapshots and publication state are unchanged.
+    'tests/unit/test_coast_recipe.py': 'a1fa940c01f7d328e686fa0e2b9fc392882d11d1a7731c987ee67effb983e5b2',
 }
 # Exactly the metadata files the existing validator reads for one recipe.
 READ_SET = {SCHEMA, 'catalog/sources.json', 'catalog/coastal-sectors.json',
