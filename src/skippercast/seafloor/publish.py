@@ -19,6 +19,7 @@ from .coverage import cell_geometry
 from .io import sha256
 from .protected_screen import stamp as stamp_protected
 from .run import run
+from . import rough_first
 from .rights import feature_rights, deployment_use
 from .screen import input_identity, load_snapshot
 from .search_areas import published_contract
@@ -231,9 +232,27 @@ def build(region, *, root=REPO, tool=None, now=None):
     archive = folder/f'seafloor-{region}.pmtiles'
     credits = sorted({r['attribution'] for f in layers['habitat']
                       for r in json.loads(f['properties'].get('source_rights', '[]'))})
-    build_vector_archive(tool, layers, archive, title=f'SkipperCast seafloor — {region}',
+    tiles = dict(title=f'SkipperCast seafloor — {region}',
         attribution='; '.join(credits + ['CDFW / NOAA / eCFR spatial restrictions; SkipperCast']),
         description=NOTICE+' Habitat candidate, unverified. Nominal depth; verify on your sounder.', precise=True)
+    # R4-SC-09-F1c: a region with an approved rough-first reference publishes the rough-first archive only when it
+    # passes the size gate against the control archive built here from the same layers; otherwise nothing is published.
+    reference = rough_first.load_reference(root, region)
+    if reference is None:
+        build_vector_archive(tool, layers, archive, **tiles)
+        receipt = rough_first.control_receipt(region, archive.read_bytes())
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            control = Path(tmp)/archive.name
+            build_vector_archive(tool, layers, control, **tiles)
+            build_vector_archive(tool, layers, archive, **tiles, coarse_first=True)
+            receipt = rough_first.evaluate(region, control.read_bytes(), archive.read_bytes(), reference,
+                                           reference_sha256=sha256(root/rough_first.REFERENCE_FILE))
+    rough_first.write_receipt(root, region, receipt)
+    if not receipt['pass']:
+        archive.unlink()  # an unaccepted candidate never stays in the public bundle
+        raise rough_first.GateFailure(f'Rough-first size gate failed for {region}: '
+                                      + ', '.join(receipt['failed'])+'; nothing published, no rebaseline')
     ledger = read_json(root/'dist/data/seafloor-ledger.json')
     # Canonical screened boundaries, not quantized/clipped MVT fragments.
     # Only public habitat properties and producer URLs accompany them.
@@ -279,6 +298,7 @@ def build(region, *, root=REPO, tool=None, now=None):
                 **scope_fields,
                 'expires_at': expires.isoformat(), 'built_at': now.isoformat(),
                 'archive': archive.name, 'archive_sha256': sha256(archive), 'archive_bytes': archive.stat().st_size,
+                **({'rough_first': dict(rough_first.MANIFEST_FIELD)} if reference is not None else {}),
                 'layers': {name: len(features) for name, features in layers.items()},
                 'habitat_counts': {status: sum(f['properties'].get('status') == status for f in layers['habitat'])
                     for status in ('habitat', 'search-area', 'classified-area')},

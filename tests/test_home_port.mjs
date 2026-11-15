@@ -78,3 +78,16 @@ test('explicit new port clears Fish geography and habitat so readable report bin
  old.searchParams.set('target','');const empty=new URL(portChoiceURL(old.href,morro));assert.equal(empty.searchParams.has('target'),true);assert.equal(empty.searchParams.get('target'),'');
  const other=new URL(portChoiceURL(old.href,sanDiego));assert.equal(other.searchParams.has('target'),false);
 });
+
+test('SCP3-10: a trip-alert tap on a regionless /map#alerts keeps #alerts through every saved-home resolution; other fragments and cameras drop',async()=>{
+ const {portURL:port,homeURL,savedHomeURL,HOME_PORT_KEY,HOME_PLACE_KEY}=await import('../web/ports.ts');
+ const store=(k,v)=>{const m=new Map([[k,v]]);return {getItem:key=>m.get(key)??null,setItem:()=>{},removeItem:()=>{}};};
+ const load=async()=>[sanDiego],at='https://s.test/map?region=southern-california&port=san-diego';
+ assert.equal(await savedHomeURL('https://s.test/map#alerts',store(HOME_PORT_KEY,'san-diego'),null,load),at+'#alerts','saved port');
+ assert.equal(await savedHomeURL('https://s.test/map#alerts',store(HOME_PLACE_KEY,JSON.stringify({v:1,place:'cambria',mode:'spear'})),null,load),'https://s.test/map?place=cambria&profile=spear#alerts','native saved home');
+ assert.equal(port('https://s.test/map#alerts',sanDiego),at+'#alerts');assert.equal(homeURL('https://s.test/map#alerts',{port:sanDiego}),at+'#alerts');
+ for(const hash of ['#account','#export'])assert.equal(port('https://s.test/map#'+hash.slice(1),sanDiego),at+hash,hash+' unchanged');
+ assert.equal(port('https://s.test/map?view=conditions&utm_source=x#alerts',sanDiego),at.replace('/map?','/map?utm_source=x&view=conditions&')+'#alerts','conditions and unrelated query stay');
+ for(const hash of ['#Alerts','#alerts/extra','#alerts?x=1','#%61lerts','#alertsx','#plan','#'])assert.equal(port('https://s.test/map'+hash,sanDiego),at,hash+' dropped');
+ assert.equal(port('https://s.test/map?view=35,-121,10&region=old#alerts',sanDiego),at+'#alerts','a camera view and the old region are replaced');
+});
