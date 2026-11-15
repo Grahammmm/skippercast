@@ -25,7 +25,7 @@ not proof that the private custodian has no such artifact.
   admitted evidence. Its count is **UNKNOWN**, not zero; disposition is **HOLD**.
 
 Installed-wheel closure [#746] is already merged and explicitly excluded.
-Older SC-1 text in [P1] still calls installed closure unresolved; that stale text
+Older SC-1 text preceding the pins in [P9] still calls installed closure unresolved; that stale text
 is not a new wheel gap, prerequisite, or reason to duplicate the installed receipt.
 Nothing changes production, tests, policies, grants, stores, charges or review gates.
 
@@ -90,8 +90,8 @@ existing evidence owner/role, not a newly assigned job or a completion dependenc
 
 | Gap ID | Required policy / preservation criterion | Existing evidence class and receipt/window binding | Missing proof and precise custodian gap | Result |
 | --- | --- | --- | --- | --- |
-| G01 | Source, ordered window set, policy SHA, grant/packet/plan and upstream receipt must bind the same chain [P2–P4]. | Documented historical R1–R8 bind strict A–D only; P-A–P-D are separately pinned candidates. Synthetic grant/packet mismatch tests [P6]. | SC-5 admission/receipt custodian: exact full source/receipt/policy hashes and matching partial grant, windows, plan, code/dependency identity; no live chain read back. | HOLD |
-| G02 | Every partial window has at least one unsupported cell and at least 8,192 supported pairs; enclosed holes require actual topology, not invalid counts [P2–P5]. | Documented historical strict A–D have 0 unsupported cells; candidates have 14/4/299/18 invalid cells only. Actual partial enclosed/component counts UNKNOWN. | SC-5 pre-scan custodian (existing t_689254ff harness lineage): retained `outputs/sc5-partial-20261020p1-prescan/mask-topology-receipt.json`, full hash/bytes, row-run and 4/8-neighbour enclosed/border summaries and review are not supplied here. Locator is planned, not proof it exists. | HOLD |
+| G01 | Source, ordered window set, policy SHA, grant/packet/plan and upstream receipt must bind the same chain [P2]/[P3]/[P4]. | Documented historical R1–R8 bind strict A–D only; P-A–P-D are separately pinned candidates. Synthetic grant/packet mismatch tests [P6]. | SC-5 admission/receipt custodian: exact full source/receipt/policy hashes and matching partial grant, windows, plan, code/dependency identity; no live chain read back. | HOLD |
+| G02 | Every partial window has at least one unsupported cell and at least 8,192 supported pairs; enclosed holes require actual topology, not invalid counts [P2]/[P3]/[P4]/[P5]. | Documented historical strict A–D have 0 unsupported cells; candidates have 14/4/299/18 invalid cells only. Actual partial enclosed/component counts UNKNOWN. | SC-5 pre-scan custodian (existing t_689254ff harness lineage): retained `outputs/sc5-partial-20261020p1-prescan/mask-topology-receipt.json`, full hash/bytes, row-run and 4/8-neighbour enclosed/border summaries and review are not supplied here. Locator is planned, not proof it exists. | HOLD |
 | G03 | Unsupported cells are native mask-invalid only, retained as nodata; all mask-valid raw/normalized pairs finite, source-valid and eligible [P2]. | Synthetic-only mapping/evaluation refusals [P7]; count-only candidates cannot distinguish enclosed holes or unmasked NaN. | SC-5 qualification custodian: same-return native masks and finite-pair diagnostic receipt binding, without reopening source to fill this report. | HOLD |
 | G04 | Native mask → qualification → map mask/terrain/uncertainty must preserve support, nodata and exact georeference. | Synthetic-only `_prepare` mask preservation [P7]; strict R5/R6 TIFF equality in [P1] concerns fully supported windows, not holes. | SC-5 mapping/validation custodian: existing partial per-stage hashes, support equality and topology summaries for P-A–P-D; actual counts UNKNOWN. | HOLD |
 | G05 | Map → mesh → preview retains enclosed holes and supported components, with no interpolation or bridging [P8]. | Synthetic-only renderer test has one 12-cell enclosed hole, two support/mesh components, zero spanning components per fixture core; corruption tests reject filling/bridging. R4 holes N/A. | SC-5 terrain/artifact validator: existing source-bound live `--require-holes` receipt plus map/mesh/preview comparison; live hole/component/spanning counts UNKNOWN, not synthetic values. | HOLD |
@@ -111,7 +111,7 @@ pre-scan that meets this intent proves input topology only, not end-stage preser
 | --- | --- | --- |
 | E01 | Fully supported R4 and strict reruns cannot prove holes. | HOLD G02/G05; documented zero applies only to those historical windows. |
 | E02 | Synthetic holes/renderer PASS cannot populate live observed fields. | HOLD G04–G06; fixture values remain explicitly synthetic. |
-| E03 | Strict grant/status cannot borrow partial-policy authority or vice versa. | HOLD G01/G08; distinct policy SHA, opt-in, ordered windows and status required [P2–P4]. |
+| E03 | Strict grant/status cannot borrow partial-policy authority or vice versa. | HOLD G01/G08; distinct policy SHA, opt-in, ordered windows and status required [P2]/[P3]/[P4]. |
 | E04 | UnmaskedNaN is not native-mask unsupported-cell evidence. | HOLD G03; mask-valid nonfinite/sentinel faults remain refusals [P7]. |
 | E05 | Wrong policy, window or source hash breaks the chain. | HOLD G01; no label-only/source-name substitution, truncated hash expansion or stale review reuse. |
 | E06 | Filled holes or bridged disjoint components remain failures. | HOLD G05/G06; fixture corruption refusals [P8] do not prove live absence of defects. |
@@ -141,7 +141,7 @@ metadata, not independent read-back of their referenced private files.
 [P6]: https://github.com/Grahammmm/skippercast/blob/0991fc70d212c9405f7b174950cb3fa4d7c6846d/tests/unit/test_coastal_partial_support.py#L70-L294
 [P7]: https://github.com/Grahammmm/skippercast/blob/0991fc70d212c9405f7b174950cb3fa4d7c6846d/tests/gis/test_coastal_partial_support_mapping.py#L36-L193
 [P8]: https://github.com/Grahammmm/skippercast/blob/0991fc70d212c9405f7b174950cb3fa4d7c6846d/research/tests/gis/test_check_terrain_acceptance_render.py#L25-L195
-[P9]: https://github.com/Grahammmm/skippercast/blob/0991fc70d212c9405f7b174950cb3fa4d7c6846d/skills/skippercast-discover-coastal-sources/references/coastal-pipeline.md#L410-L447
+[P9]: https://github.com/Grahammmm/skippercast/blob/0991fc70d212c9405f7b174950cb3fa4d7c6846d/skills/skippercast-discover-coastal-sources/references/coastal-pipeline.md#L402-L447
 [#746]: https://github.com/Grahammmm/skippercast/pull/746
 [#761]: https://github.com/Grahammmm/skippercast/pull/761
 [#781]: https://github.com/Grahammmm/skippercast/pull/781
