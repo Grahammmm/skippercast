@@ -39,17 +39,16 @@ No open PR in the pre-build snapshot touched this candidate root.
 
 ## Executed acceptance
 
-Cwd for the following command:
-`/home/user/.hermes/kanban/boards/skippercast/workspaces/t_a4b647e6/repo`
+Cwd for the following command: the task-local clone root (`repo/`).
 
 Command (using the provisioned clone interpreter):
 ```
-/home/user/agent-work/bin/memcap -- .venv/bin/python -m pytest -q workspace/candidates/AUDINV-FIX-149/tests
+~/agent-work/bin/memcap -- .venv/bin/python -m pytest -q workspace/candidates/AUDINV-FIX-149/tests
 ```
 Exit 0; full output:
 ```
 ....................................                                     [100%]
-36 passed in 0.05s
+36 passed in 0.04s
 ```
 The explicit candidate command is required: ordinary CI does not collect these
 workspace tests. Offline synthetic acceptance is not scientific/visual/legal
