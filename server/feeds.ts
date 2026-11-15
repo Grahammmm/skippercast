@@ -315,11 +315,11 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
         headers.set('Content-Range', `bytes ${offset}-${offset + length - 1}/${object.size}`);
         headers.set('Content-Length', String(length));
         if (fill) { const filled = fill({size: object.size, range: object.range}).catch(() => {}); if (ctx?.waitUntil) ctx.waitUntil(filled); else await filled; }
-        return new Response(object.body, {status: 206, headers});
+        return new Response((object as R2ObjectBody).body, {status: 206, headers});
       }
       headers.set('Content-Length', String(object.size));
       if (fill && object.size <= EDGE_CACHE_MAX_BYTES) {
-        const [reply, keep] = (object.body as ReadableStream).tee();
+        const [reply, keep] = ((object as R2ObjectBody).body as ReadableStream).tee();
         await fill({size: object.size, httpEtag: object.httpEtag, body: keep});
         return new Response(reply, {status: 200, headers});
       }
