@@ -19,7 +19,8 @@ are review-required evidence, not semantic or operational acceptance.
 Snapshot reviewed on **2026-11-15T23:26:00Z**. Repository evidence is frozen at
 main **`0991fc70d212c9405f7b174950cb3fa4d7c6846d`** (`git log -1
 --format='%H %cI'`: commit time `2026-11-15T14:59:46-08:00`). Relative repository
-locators below refer to that SHA, not an unpinned future main.
+locators below refer to that SHA, not an unpinned future main. `agent-work/`
+locators are relative to the operator's local workspace, not this repository.
 
 | Ref | Source / exact locator | Date and identity |
 |---|---|---|
@@ -27,9 +28,9 @@ locators below refer to that SHA, not an unpinned future main.
 | S2 | `.github/workflows/dco.yml`:9–60 | Same main; SHA256 `829d753fd31c17efbaf031ff2cd55db4dac22984d40f60711569a8225d3184f1` |
 | S3 | `.github/required-checks.json`:1–9 | Same main; SHA256 `5a39f6f09c1ecf638680742be66c8ca92557dd453dd6064077a2992bd187a47c` |
 | S4 | `scripts/ci_select.py`:55–101, 104–145 | Same main; SHA256 `3a012dae24ecd89cc5c3505f80fbdcb968b09c9d22dda8f894a94aa4515a346d` |
-| S5 | Local admitted spec `/home/user/agent-work/reports/oc-specs/AUDINV-CIW-67.md`:1–71, 293–336 | Dated 2026-11-15; SHA256 `48aa8bb3bf1678a5a976dfc8cc8329da3d31bc9ea35dffd3f3ba7678dc5e9f20` |
-| S6 | Local `/home/user/agent-work/reports/ci-audit/THROUGHPUT.md`:3, 21–59, 84–113 | Historical analysis, 2026-10-28 08:45 PDT; SHA256 `4abb6d2a63ae648efeded66645711e526e5c50fc5c63d975f2935bc698cf16ed` |
-| S7 | Local `/home/user/agent-work/reports/ci-audit/evidence3.txt`:1–24, 53–64 | Historical receipts, 2026-10-28 08:2x PDT (minute incomplete in source); SHA256 `7eea0f9872017884750548cf69176545e72ed52c43faecd00fed5881ee983164` |
+| S5 | Local admitted spec `agent-work/reports/oc-specs/AUDINV-CIW-67.md`:1–71, 293–336 | Dated 2026-11-15; SHA256 `48aa8bb3bf1678a5a976dfc8cc8329da3d31bc9ea35dffd3f3ba7678dc5e9f20` |
+| S6 | Local `agent-work/reports/ci-audit/THROUGHPUT.md`:3, 21–59, 84–113 | Historical analysis, 2026-10-28 08:45 PDT; SHA256 `4abb6d2a63ae648efeded66645711e526e5c50fc5c63d975f2935bc698cf16ed` |
+| S7 | Local `agent-work/reports/ci-audit/evidence3.txt`:1–24, 53–64 | Historical receipts, 2026-10-28 08:2x PDT (minute incomplete in source); SHA256 `7eea0f9872017884750548cf69176545e72ed52c43faecd00fed5881ee983164` |
 
 S5 retains successful read-only API commands and their exact responses; these are
 **recorded receipts**, not API observations refreshed by this builder. Its checked
@@ -128,7 +129,7 @@ automatic action follows after a week, even if the missing receipts later arrive
 ## Bounded local validation
 
 On the frozen source, `python3 -B scripts/ci_select.py --fixtures` executed under
-`/home/user/agent-work/bin/memcap --` and reported **3263 selector/evidence fixtures
+`agent-work/bin/memcap --` and reported **3263 selector/evidence fixtures
 passed** (exit 0). These are synthetic evaluator/path fixtures, including negative
 prerequisite statuses, not production merge groups. The unchanged workflow-pin and
 determinism wiring unittest selection passed **9 tests** (exit 0). Report acceptance
