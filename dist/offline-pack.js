@@ -155,9 +155,14 @@ export async function savePack({signal, progress = () => {}, sessionStart = 0, m
       ...(answer ? {v2} : {}), ...(ocean ? {ocean} : {}), ...(forecast_end ? {forecast_end} : {}),
     };
     await cache.put(PACK_META, new Response(JSON.stringify(meta), {headers: {'Content-Type': 'application/json'}}));
-    // The new pack is complete: older packs of the same region go.
-    for (const old of (await caches.keys()).filter(n => n !== name && n.startsWith(`${PACK_PREFIX}${region.id}-`))) await caches.delete(old);
-    track('offline_saved', {region: region.id});
+    // PACK_META is written: the pack is committed. Tidying older packs of the same region and analytics are best-effort
+    // and never reach the catch below, which would delete the new pack. A pack that cannot be deleted is left for the next save.
+    try {
+      for (const old of (await caches.keys()).filter(n => n !== name && n.startsWith(`${PACK_PREFIX}${region.id}-`))) {
+        try { await caches.delete(old); } catch { /* left for the next save */ }
+      }
+    } catch { /* the committed pack stands */ }
+    try { track('offline_saved', {region: region.id}); } catch { /* analytics never undoes a save */ }
     return meta;
   } catch (error) {
     await caches.delete(name);
