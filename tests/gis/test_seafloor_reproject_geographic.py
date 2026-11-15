@@ -281,5 +281,231 @@ class ReprojectGeographicTests(unittest.TestCase):
                 rg.plan(ds)
 
 
+BOUNDS = [WEST + 20 * RES, NORTH - 200 * RES, WEST + 260 * RES, NORTH - 20 * RES]
+TOKEN = 'geographic-depth-out-of-domain'
+F32_LIMIT = -91.44000244140625          # float32(-91.44) written out, not derived from the module
+BELOW_LIMIT = float(np.nextafter(np.float32(-91.44), np.float32(-np.inf)))
+
+
+def ramp_values():
+    rows, cols = np.mgrid[0:ROWS, 0:COLS]
+    return ramp(WEST + (cols + .5) * RES, NORTH - (rows + .5) * RES).astype('float32')
+
+
+def write_values(path, values, *, nodata=-3.4028234663852886e38, dtype='float32', width=COLS, height=ROWS,
+                 units=None, scale=None):
+    profile = dict(driver='GTiff', width=width, height=height, count=1, dtype=dtype,
+                   transform=from_origin(WEST, NORTH, RES, RES), nodata=nodata,
+                   crs=CRS.from_user_input('EPSG:5498').to_wkt())
+    with rasterio.open(path, 'w', **profile) as out:
+        if scale:
+            out.scales = (scale,)       # before the data: GTiff drops it when set after, with NoData
+        out.write(values.astype(dtype), 1)
+        if units:
+            out.units = (units,)
+    return path
+
+
+class NcmpOutlierHoldTests(unittest.TestCase):
+    """A valid, finite -889.6 m sample (NCMP 2009 tile 113, SEAFLOOR-RUN-1) is held before reprojection."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def row(self, tif, **extra):
+        return dict({'id': 'ncmp-fixture', 'url': 'https://pubs.usgs.gov/geo-fixture.tif', 'kind': 'bathymetry',
+                     'format': 'geographic-geotiff', 'sha256': sha256(tif), 'bytes': tif.stat().st_size,
+                     'archive_member': 'unknown', 'vertical_datum': 'unknown', 'resolution_m': 'unknown',
+                     'status': 'candidate', 'license': 'unknown'}, **extra)
+
+    def tile(self, name, edits=None, **kwargs):
+        values = ramp_values()
+        for index, value in (edits or {}).items():
+            values[index] = value
+        return write_values(self.root / name, values, **kwargs)
+
+    def cache_of(self, row):
+        return self.root / 'var/seafloor/cache' / row['sha256']
+
+    def snapshot(self, row):
+        return {str(p.relative_to(self.root)): sha256(p) for p in self.cache_of(row).rglob('*') if p.is_file()}
+
+    def refused(self, tif, bounds=BOUNDS):
+        row = self.row(tif)
+        before = sha256(tif)
+        with patch.object(rg, 'prepare', side_effect=AssertionError('prepare must not run')) as prepare, \
+                patch('skippercast.seafloor.ingest.ingest', side_effect=AssertionError('native ingest ran')), \
+                self.assertRaises(ValueError) as caught:
+            ingest(row, bounds, root=self.root, local=tif)
+        prepare.assert_not_called()
+        self.assertEqual(sha256(tif), before)
+        self.assertEqual(sorted(p.name for p in self.cache_of(row).iterdir()), ['source.json', 'source.tif'])
+        return caught.exception
+
+    def test_ncmp_113_single_and_block_outlier(self):
+        control = self.tile('control.tif')
+        receipt, _, reused = ingest(self.row(control), BOUNDS, root=self.root, local=control)
+        self.assertFalse(reused)
+        self.assertEqual(receipt['source_sha256'], sha256(control))
+        self.assertTrue(ingest(self.row(control), BOUNDS, root=self.root)[2])
+        for name, edits in {'single': {(60, 100): -889.6},
+                            'block': {(slice(60, 65), slice(100, 105)): -889.6}}.items():
+            with self.subTest(name=name):
+                error = self.refused(self.tile(f'{name}.tif', edits))
+                text = str(error)
+                self.assertTrue(text.startswith(TOKEN + ':'))
+                self.assertIn('-91.44000244', text)
+                self.assertIn('-889.6000', text)
+                self.assertIn('1 valid' if name == 'single' else '25 valid', text)
+                self.assertIn('ncmp-fixture', text)
+                self.assertIn(sha256(self.root / f'{name}.tif'), text)
+                self.assertIn('Human quality review', text)
+                self.assertNotIn(str(self.root), text)
+
+    def test_pre_resampling_no_dilution(self):
+        # Interior: one deep sample inside fully valid 2x2 kernels, where bilinear weights would
+        # blend it with in-band neighbours. Edge: the north-east corner pixel of the source.
+        for name, index in {'kernel': (50, 100), 'corner': (0, COLS - 1)}.items():
+            with self.subTest(name=name):
+                self.assertRegex(str(self.refused(self.tile(f'{name}.tif', {index: -889.6}))), TOKEN)
+
+    def test_masked_extreme_is_nodata(self):
+        # The same holes written three ways: a -32768 sentinel, a finite -889.6 declared as NoData,
+        # and plain NaN. None is a valid elevation, so none holds the tile, and all three project
+        # to the identical product (the NoData rule is unchanged).
+        blocks = (slice(10, 20), slice(10, 20)), (slice(30, 40), slice(10, 20))
+        hashes = {}
+        for name, nodata, fill in (('sentinel', -32768.0, -32768.0), ('finite', -889.6, -889.6),
+                                   ('nan', -3.4028234663852886e38, np.nan)):
+            with self.subTest(name=name):
+                data = ramp_values()
+                for block in blocks:
+                    data[block] = fill
+                data[50:60, 10:20] = np.nan                  # nonfinite is excluded whatever the mask
+                tif = write_values(self.root / f'{name}.tif', data, nodata=nodata)
+                with rasterio.open(tif) as ds:
+                    violations, minimum = rg.scan_depth_domain(ds)
+                self.assertEqual(violations, 0)
+                self.assertGreater(minimum, -28.0)
+                receipt, _, _ = ingest(self.row(tif, id=name), BOUNDS, root=self.root, local=tif)
+                hashes[name] = receipt['reprojection']['product_content_sha256']
+                self.assertGreater(receipt['nominal_0_300ft_pixels_in_requested_bounds'], 0)
+        self.assertEqual(len(set(hashes.values())), 1, hashes)
+
+    def test_representable_depth_boundary(self):
+        self.assertEqual(rg.MIN_ELEVATION_M, F32_LIMIT)
+        self.assertEqual(rg.OUT_OF_DOMAIN, TOKEN)
+        self.assertEqual(BELOW_LIMIT, -91.44001007080078)
+        for name, value in {'limit': F32_LIMIT, 'ordinary': -25.0, 'land': 30.0}.items():
+            with self.subTest(name=name):
+                tif = self.tile(f'{name}.tif', {(60, 100): value})
+                with rasterio.open(tif) as ds:
+                    self.assertEqual(rg.scan_depth_domain(ds)[0], 0)
+                ingest(self.row(tif, id=name), BOUNDS, root=self.root, local=tif)
+        tif = self.tile('below.tif', {(60, 100): BELOW_LIMIT})
+        with rasterio.open(tif) as ds:
+            self.assertEqual(rg.scan_depth_domain(ds), (1, BELOW_LIMIT))
+        self.assertIn(TOKEN, str(self.refused(tif)))
+
+    def test_whole_source_not_requested_window(self):
+        tif = self.tile('far.tif', {(230, 290): -889.6})        # outside rows/cols of BOUNDS
+        self.assertRegex(str(self.refused(tif)), TOKEN)
+        # The same file held under a bounding box that does contain the anomaly.
+        self.assertRegex(str(self.refused(tif, [WEST, NORTH - ROWS * RES, WEST + COLS * RES, NORTH])), TOKEN)
+
+    def test_warm_cache_cannot_bypass(self):
+        bad = self.tile('bad.tif', {(60, 100): -889.6})
+        row = self.row(bad)
+        # Seed projected and final artifacts for the bad original through the unchanged APIs.
+        with patch.object(rg, 'check_depth_domain'):
+            seeded, _, _ = ingest(row, BOUNDS, root=self.root, local=bad)
+        before = self.snapshot(row)
+        self.assertTrue(any(name.endswith('.tif') and '/geographic-' in name for name in before))
+        self.assertTrue(any('/reprojected-' in name for name in before))
+        with patch.object(rg, 'prepare', side_effect=AssertionError('no reuse')), \
+                self.assertRaisesRegex(ValueError, TOKEN):
+            ingest(row, BOUNDS, root=self.root)
+        self.assertEqual(self.snapshot(row), before)
+        self.assertEqual(seeded['source_sha256'], row['sha256'])
+        # An altered original is still refused by the existing source integrity check.
+        other = self.tile('other.tif', {(61, 101): -20.0})
+        with self.assertRaisesRegex(ValueError, 'checksum mismatch'):
+            ingest(dict(row, url='https://pubs.usgs.gov/other.tif', sha256=sha256(self.tile('good.tif'))),
+                   BOUNDS, root=self.root, local=other)
+
+    def test_bounded_scan_and_integer_sentinel(self):
+        class Recorder:
+            def __init__(self, dataset):
+                self.dataset, self.windows = dataset, []
+                self.width, self.height = dataset.width, dataset.height
+
+            def read(self, band, *, window, masked):
+                self.windows.append((window.col_off, window.row_off, window.width, window.height))
+                return self.dataset.read(band, window=window, masked=masked)
+
+        big_rows, big_cols = 1030, 1100
+        for dtype, nodata, deep, fine in (('float32', -3.4e38, -889.6, -91.0), ('float64', -9999.0, -889.6, -91.0),
+                                          ('int16', -32768, -890, -91)):
+            with self.subTest(dtype=dtype):
+                values = np.full((big_rows, big_cols), -20.0)
+                values[5:9, 5:9] = nodata
+                tif = write_values(self.root / f'big-{dtype}.tif', values, nodata=nodata, dtype=dtype,
+                                   width=big_cols, height=big_rows)
+                with rasterio.open(tif) as ds:
+                    watcher = Recorder(ds)
+                    self.assertEqual(rg.scan_depth_domain(watcher), (0, -20.0))
+                    self.assertTrue(all(w[2] <= 512 and w[3] <= 512 for w in watcher.windows))
+                    self.assertEqual(sum(w[2] * w[3] for w in watcher.windows), big_rows * big_cols)
+                    self.assertEqual(len(set(watcher.windows)), len(watcher.windows))
+                # Window seams (row/col 511|512, last row/col) and a value just inside the limit.
+                for index in ((511, 511), (512, 512), (big_rows - 1, big_cols - 1), (1023, 1023)):
+                    edited = values.copy()
+                    edited[index] = deep
+                    edited[0, 0] = fine
+                    write_values(self.root / 'seam.tif', edited, nodata=nodata, dtype=dtype,
+                                 width=big_cols, height=big_rows)
+                    with rasterio.open(self.root / 'seam.tif') as ds:
+                        self.assertEqual(rg.scan_depth_domain(ds), (1, float(np.dtype(dtype).type(deep))), index)
+        # Real route on an integer tile whose sentinel is masked and whose valid sample is too deep.
+        values = np.full((ROWS, COLS), -20)
+        values[:, :7] = -32768
+        values[60, 100] = -890
+        tif = write_values(self.root / 'int16.tif', values, nodata=-32768, dtype='int16')
+        self.assertRegex(str(self.refused(tif)), TOKEN)
+
+    def test_legacy_and_metadata_refusals_unchanged(self):
+        # Refusals that precede the scan keep their own meaning even when the tile holds an outlier,
+        # and the scan is never reached for them or for non-geographic rows.
+        def variant(name, **header):
+            values = ramp_values()
+            values[60, 100] = -889.6
+            return write_values(self.root / f'{name}.tif', values, **header)
+
+        wgs84 = self.root / 'wgs84.tif'
+        values = ramp_values()
+        values[60, 100] = -889.6
+        with rasterio.open(wgs84, 'w', driver='GTiff', width=COLS, height=ROWS, count=1, dtype='float32',
+                           transform=from_origin(WEST, NORTH, RES, RES), crs='EPSG:4326') as out:
+            out.write(values, 1)
+        cases = {'No reviewed same-datum target': wgs84, 'not metres': variant('feet', units='ft'),
+                 'Packed elevation': variant('packed', scale=2.0)}
+        with patch.object(rg, 'scan_depth_domain', side_effect=AssertionError('scan reached')):
+            for message, path in cases.items():
+                with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                    ingest(self.row(path), BOUNDS, root=self.root, local=path)
+            # A native-format row never reaches the geographic route, even for a geographic raster.
+            plain = variant('plain')
+            with self.assertRaisesRegex(ValueError, 'projected raster in meters'):
+                ingest(dict(self.row(plain), format='usgs-geotiff'), BOUNDS, root=self.root, local=plain)
+            with self.assertRaisesRegex(ValueError, 'only for geographic-geotiff'):
+                rg.ingest(dict(self.row(plain), format='usgs-geotiff'), BOUNDS, root=self.root, local=plain)
+        # Without the patch the same plain tile is held, so the patched runs above prove ordering.
+        self.assertRegex(str(self.refused(plain)), TOKEN)
+
+
 if __name__ == '__main__':
     unittest.main()
