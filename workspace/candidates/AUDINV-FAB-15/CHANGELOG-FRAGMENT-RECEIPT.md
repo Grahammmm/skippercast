@@ -43,25 +43,25 @@ This is machine-valid evidence requiring review, not adoption or live acceptance
 
 ## Acceptance execution
 
-Cwd: `/home/user/.hermes/kanban/boards/skippercast/workspaces/t_aad1a2bd/repo`
+Cwd: `~/.hermes/kanban/boards/skippercast/workspaces/t_aad1a2bd/repo`
 
-Command: `/home/user/agent-work/bin/memcap -- .venv/bin/python3 -B -m pytest -q -p no:cacheprovider workspace/candidates/AUDINV-FAB-15/tests`
+Command: `~/agent-work/bin/memcap -- .venv/bin/python3 -B -m pytest -q -p no:cacheprovider workspace/candidates/AUDINV-FAB-15/tests`
 
 Exit: **0**
 
 stdout (complete):
 ````text
 .............................                                            [100%]
-29 passed in 0.69s
+29 passed in 0.78s
 ````
 
 stderr (complete):
 ````text
 ````
 
-Cwd: `/home/user/.hermes/kanban/boards/skippercast/workspaces/t_aad1a2bd/repo`
+Cwd: `~/.hermes/kanban/boards/skippercast/workspaces/t_aad1a2bd/repo`
 
-Command: `/home/user/agent-work/bin/memcap -- .venv/bin/python3 -B -m unittest tests.contract.test_changelog_section tests.contract.test_changelog_section_edges tests.contract.test_changelog_section_fences -v`
+Command: `~/agent-work/bin/memcap -- .venv/bin/python3 -B -m unittest tests.contract.test_changelog_section tests.contract.test_changelog_section_edges tests.contract.test_changelog_section_fences -v`
 
 Exit: **0**
 
@@ -94,12 +94,12 @@ test_tilde_long_and_indented_fences (tests.contract.test_changelog_section_fence
 test_unclosed_fence_in_earlier_section_exits_one_by_line (tests.contract.test_changelog_section_fences.ChangelogSectionFenceTests.test_unclosed_fence_in_earlier_section_exits_one_by_line) ... ok
 
 ----------------------------------------------------------------------
-Ran 21 tests in 0.194s
+Ran 21 tests in 0.238s
 
 OK
 ````
 
-Cwd: `/home/user/.hermes/kanban/boards/skippercast/workspaces/t_aad1a2bd/repo`
+Cwd: `~/.hermes/kanban/boards/skippercast/workspaces/t_aad1a2bd/repo`
 
 Command: `git diff --check`
 
