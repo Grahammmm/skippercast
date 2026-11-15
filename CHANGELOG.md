@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- E2E-TARGET-EDIT-1: on a phone, the target search field being edited above the keyboard stays visible when the sheet's header or content grows later (for example when page data arrives slowly). The sheet now brings the field back into view whenever its header or content changes size while you type, not only when the keyboard or focus changes.
+
 - SC-AUDIT-2c (#2184): apply G's signed Central Coast rules review under the v4 source fingerprints through December 31, 2026. Salmon stays closed for the remainder of 2026; Dungeness is restricted by the signed trap prohibition. Policy-A keeps proposals as also-check links and the health advisory blocking Dungeness only. Vandenberg maritime access remains on hold; fresh daily source checks and location-specific restrictions still apply.
 
 - MAIN-RED-5: the “Loading the map” announcement no longer intercepts clicks on Chart controls beneath it. Its appearance and screen-reader announcements are unchanged.
