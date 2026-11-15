@@ -18,3 +18,8 @@ export declare function rankedHabitat(features: readonly HabitatFeature[], field
 
 /** The reviewed release's admitted features and its earliest review expiry (ms); rejects when the release is unavailable. */
 export declare function loadReviewedHabitat(): Promise<{features: HabitatFeature[]; expiresAt: number}>;
+export declare const HABITAT_REGIONS: readonly string[];
+export declare function habitatGate(fetchImpl?: typeof fetch, now?: number): Promise<{expiresAt: number; manifests: {region: string; export_sha256: string}[]}>;
+type Publication = Extract<import('../ranking.ts').ReefPublication, {state: 'ready'}>['loaded'];
+export declare function loadHabitatPublication(region: string, options?: {full?: boolean}): Promise<Publication>;
+export declare function habitatFeatures(loaded: Publication): HabitatFeature[];

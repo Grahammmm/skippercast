@@ -12,10 +12,8 @@ import health from '../catalog/feed-health.json' with {type: 'json'};
 const ORIGIN = 'https://fish-report.g4651.workers.dev';
 const MB = 1024 * 1024;
 const SLO_REGIONS = new Set(['morro-bay', 'cambria-san-simeon']);
-const HABITAT_REGIONS = new Set([...SLO_REGIONS, 'monterey-point-sur', 'point-arguello-conception']);
 const SNAPSHOTS = new Set(['report', 'ocean', 'history']);
 const DATA_FILES = new Set([
-  '/data/skippercast-manifest.json', '/data/skippercast-habitat.geojson', '/data/skippercast-species.json',
   '/data/slo-shore-habitat.geojson', '/data/slo-shoreline.geojson', '/data/coast3d/chart-model.json',
 ]);
 const RESPONSE_HEADERS = ['Content-Type', 'ETag', 'Last-Modified', 'Content-Range', 'Accept-Ranges',
@@ -34,15 +32,6 @@ export function coastTarget(input: URL): {url: URL; max: number; snapshot: strin
           (input.searchParams.has('region') && !SLO_REGIONS.has(input.searchParams.get('region')!))) return null;
       if ([...input.searchParams.keys()].some(k => !['county', 'region'].includes(k))) return null;
       upstream = '/api/' + name; snapshot = name; max = name === 'history' ? 16 * MB : 8 * MB;
-    } else if (name === 'habitat/release') {
-      if (input.search) return null;
-      upstream = asset = '/api/habitat/release'; max = 512 * 1024;
-    } else if (name === 'habitat/tiles') {
-      const region = input.searchParams.get('region'), release = input.searchParams.get('release');
-      if (!region || !HABITAT_REGIONS.has(region) || (release !== null && !/^[a-f0-9]{64}$/.test(release))) return null;
-      if ([...input.searchParams.keys()].some(k => !['region', 'release'].includes(k))) return null;
-      params.set('region', region); if (release) params.set('release', release);
-      upstream = '/api/habitat/tiles'; asset = upstream + '?region=' + region; max = 2 * MB;
     } else return null;
   } else if (path.startsWith('/coast-data/')) {
     upstream = path.slice('/coast-data'.length);
@@ -306,6 +295,11 @@ export async function serveCoastData(request: Request, fetcher: typeof fetch = f
 async function serveCoastRequest(request: Request, fetcher: typeof fetch, store: CoastStore | null,
   feeds: ReadonlySet<CoastFeed>, signal: AbortSignal, now: number, deadlineAt: number): Promise<Response> {
   if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', {status: 405, headers: {Allow: 'GET, HEAD'}});
+  const path = new URL(request.url).pathname;
+  if (path.startsWith('/api/coast/habitat/') || path.startsWith('/coast-data/data/skippercast-')) {
+    const body = JSON.stringify({status: 'retired', error: 'Fish habitat bridge retired', replacement: '/feeds/tiles/seafloor/'});
+    return new Response(request.method === 'HEAD' ? null : body, {status: 410, headers: {'Content-Type': 'application/json', 'Cache-Control': 'no-store'}});
+  }
   const target = coastTarget(new URL(request.url)); if (!target) return json({error: 'Unknown coast dataset'}, 404);
   const headers = new Headers();
   const range = request.headers.get('Range');

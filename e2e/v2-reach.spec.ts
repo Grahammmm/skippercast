@@ -10,6 +10,8 @@ import {test, expect, checkA11y} from './fixtures.ts';
 const REACH_KEY = 'skippercast-reach-v1';
 
 test.beforeEach(async ({page}) => {
+  // Exercise atlas range filtering via explicit download deferral, not failed habitat.
+  await page.addInitScript(() => Object.defineProperty(navigator, 'connection', {value: {saveData: true, effectiveType: '4g'}, configurable: true}));
   await page.route('**/api/coast/report', route => route.fulfill({status: 503, json: {error: 'Offline UI test'}}));
 });
 
