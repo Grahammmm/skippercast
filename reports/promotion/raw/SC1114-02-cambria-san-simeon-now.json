@@ -1,0 +1,44 @@
+{
+  "checked_at": "2026-11-15T20:23:13.670Z",
+  "base": "https://skippercast.com",
+  "scope": "technical preflight only; human/legal approval and beta GO still required",
+  "rules_through": null,
+  "results": [
+    {
+      "region": "cambria-san-simeon",
+      "pass": true,
+      "checks": [
+        {
+          "name": "package",
+          "pass": true,
+          "detail": "preview"
+        },
+        {
+          "name": "feeds",
+          "pass": true,
+          "detail": "regional conditions, daily and intelligence fresh; critical sources checked"
+        },
+        {
+          "name": "tides",
+          "pass": true,
+          "detail": "station 9412553; current coverage and future high/low prediction"
+        },
+        {
+          "name": "rules",
+          "pass": true,
+          "detail": "lingcod:open, rockfish:open, halibut:open, salmon:closed, albacore:open, bluefin:open, dungeness:restricted; valid through 2027-03-31"
+        },
+        {
+          "name": "habitat",
+          "pass": true,
+          "detail": "ready; current screening manifest (archive not downloaded)"
+        },
+        {
+          "name": "smoke",
+          "pass": true,
+          "detail": "HTTP map shell and regional brief; live head f8a679d1451141ccad443d65d5138a0cbb6e3074 (not a browser test)"
+        }
+      ]
+    }
+  ]
+}
