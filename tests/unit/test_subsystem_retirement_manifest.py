@@ -2,9 +2,9 @@
 import copy
 import hashlib
 import json
+import os
 import re
 import subprocess
-import time
 
 import pytest
 
@@ -150,24 +150,22 @@ def have_commit(sha):
 
 @pytest.fixture
 def frozen_manifest(manifest):
-    """The manifest, with its frozen source commit present in the object store.
+    """The manifest, with its frozen source commit required in the object store.
 
-    CI checks out a shallow clone (fetch-depth 1 or 2), which lacks this older commit, so
-    fetch just that commit (the remote allows fetching a reachable SHA). Parallel workers may
-    race on the shallow lock; the commit check decides, not the fetch exit status. With no
-    remote or history the history-bound checks skip; a full CI run then fails on the
-    unexpected skip, so a broken fetch is never silent.
+    This test is offline: it never fetches. CI checks out a shallow clone (fetch-depth 1 or 2)
+    that lacks this older commit, so the `check` and full-suite `survey-tests` jobs fetch it
+    once, before pytest starts, in the "Frozen retirement-manifest history" step of
+    .github/workflows/ci.yml (that step fails the job if the commit cannot be supplied).
+    Under CI a missing commit fails here too, never skips; on a developer's shallow clone it
+    skips with the command that supplies it.
     """
     sha = manifest['source_commit']
-    for attempt in range(5):
-        if have_commit(sha):
-            return manifest
-        subprocess.run(['git', 'fetch', '--no-tags', '--depth=1', 'origin', sha], cwd=ROOT,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120)
-        time.sleep(attempt)
     if have_commit(sha):
         return manifest
-    pytest.skip(f'frozen source commit {sha[:12]} is not in this clone and could not be fetched')
+    message = f'frozen source commit {sha[:12]} is not in this clone: git fetch --no-tags --depth=1 origin {sha}'
+    if os.environ.get('CI') or os.environ.get('GITHUB_ACTIONS'):
+        pytest.fail(message, pytrace=False)
+    pytest.skip(message)
 
 
 def test_manifest_schema_version_and_unknown_fields(frozen_manifest):
