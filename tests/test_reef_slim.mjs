@@ -228,7 +228,11 @@ test('default wiring: the angler\'s explicit load (Load on Wi-Fi, Try again) fet
   const { loadReefPublication } = await import('../web/ranking.ts');
   const pub = await publication();
   const realFetch = globalThis.fetch;
-  globalThis.fetch = pub.fetchImpl;
+  globalThis.fetch = async url => {
+    const match = String(url).match(/manifest-([^/]+)\.json$/);
+    if (match && match[1] !== 'morro-bay') return new Response(JSON.stringify({...pub.manifest, region: match[1]}));
+    return pub.fetchImpl(url);
+  };
   try {
     reefPublication.value = {state: 'idle'};
     await requestReefPublication('morro-bay', {link: () => ({slow: true, why: 'save-data'})});

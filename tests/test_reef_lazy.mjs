@@ -116,13 +116,14 @@ test('a new region while one waits: only the newest region loads', async () => {
   assert.equal(reefPublication.value.region, 'santa-barbara');
 });
 
-test('reef fetch failing: the brief still ranks from the built-in list, and Try again loads it', async () => {
+test('reef fetch failing: habitat is visibly unavailable without atlas picks, and Try again loads it', async () => {
   const s = setup({fail: true});
   const done = requestReefPublication('morro-bay', s.deps); s.map.go(); s.idle.go(); await done;
   assert.equal(s.calls.fetch, 1);
   assert.deepEqual({...reefPublication.value}, {state: 'unavailable', region: 'morro-bay'});
   const r = ranking(inputs(reefPublication.value));
-  assert.equal(r.source, 'atlas'); assert.ok(r.picks.length > 0);
+  assert.equal(r.source, null); assert.deepEqual(r.picks, []);
+  assert.equal(r.habitatUnavailable, true); assert.equal(r.empty, 'Reviewed habitat unavailable');
   let ok = 0;
   await acceptReefLoad('morro-bay', async () => { ok++; return {targets: [], areas: [], publication: {}}; });
   assert.equal(ok, 1); assert.equal(reefPublication.value.state, 'ready');

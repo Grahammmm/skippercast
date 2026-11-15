@@ -16,7 +16,7 @@ for (const [label, store, feeds] of [['no R2', null, undefined], ['empty R2', fa
   ['all feeds switched, none published', fakeStore({}), coastFeeds('nearshore,water-quality,ocean,history,report')]]) {
   const serve = (req, fetcher) => serveCoastData(req, fetcher, store, feeds);
   test(`${label}: bridge reads only explicit public datasets on the fixed owned host`, () => {
-    for (const path of ['/api/coast/report', '/api/coast/ocean', '/api/coast/history?county=slo', '/api/coast/habitat/release', '/api/coast/habitat/tiles?region=morro-bay', '/coast-data/data/coast-wide/c--122880--155648-32.bin', '/coast-data/data/coast3d/chart-model.json', '/coast-data/data/skippercast-habitat.geojson']) {
+    for (const path of ['/api/coast/report', '/api/coast/ocean', '/api/coast/history?county=slo', '/coast-data/data/coast-wide/range.bin', '/coast-data/data/coast-wide/c--122880--155648-32.bin', '/coast-data/data/coast3d/chart-model.json']) {
       assert.equal(coastTarget(new URL(request(path).url)).url.origin, 'https://fish-report.g4651.workers.dev', path);
     }
     for (const path of ['/api/coast/report?county=monterey', '/api/coast/report?region=monterey-point-sur', '/api/coast/report?region=constructor', '/api/coast/report?region=morro-bay&region=monterey-point-sur', '/api/coast/trips', '/api/coast/admin', '/api/coast/habitat/tiles?region=constructor', '/coast-data/data/government-habitat/private.bin', '/coast-data/data/habitat-government/private.bin', '/coast-data/artifacts/private.json', '/coast-data/data/%67overnment-habitat/private.bin', '/coast-data/data/coast-wide/%2e%2e/private.json', '/coast-data/data/coast-wide/escape%252fprivate.bin', '/coast-data/data/coast-wide/a.bin?url=https://other.test/', '/coast-data/data/coast-wide/a.bin?release=bad']) assert.equal(coastTarget(new URL(request(path).url)), null, path);
@@ -41,27 +41,27 @@ for (const [label, store, feeds] of [['no R2', null, undefined], ['empty R2', fa
   });
 
   test(`${label}: range responses retain exact bytes, ETag and original habitat release receipt`, async () => {
-    const r = await serve(request('/api/coast/habitat/tiles?region=morro-bay', {headers:{Range:'bytes=2-4'}}), async req => {
+    const r = await serve(request('/coast-data/data/coast-wide/range.bin', {headers:{Range:'bytes=2-4'}}), async req => {
       assert.equal(req.headers.get('Range'), 'bytes=2-4');
       return new Response(new Uint8Array([3,4,5]), {status:206,headers:{'Content-Range':'bytes 2-4/10',ETag:'"original"','X-Fish-Habitat-Release':'a'.repeat(64), 'Set-Cookie':'private=1'}});
     });
     assert.equal(r.status,206); assert.deepEqual([...new Uint8Array(await r.arrayBuffer())],[3,4,5]);
     assert.equal(r.headers.get('ETag'),'"original"'); assert.equal(r.headers.get('X-Fish-Habitat-Release'),'a'.repeat(64));
     assert.equal(r.headers.get('Set-Cookie'),null);
-    for (const range of ['bytes=0-', 'bytes=-8', 'bytes=4-2', 'bytes=0-99999999999999999999', 'bytes=0-2097152']) {
-      assert.equal((await serve(request('/api/coast/habitat/tiles?region=morro-bay',{headers:{Range:range}}), async()=>{throw Error('Must not fetch');})).status,416);
+    for (const range of ['bytes=0-', 'bytes=-8', 'bytes=4-2', 'bytes=0-99999999999999999999', 'bytes=0-8388608']) {
+      assert.equal((await serve(request('/coast-data/data/coast-wide/range.bin',{headers:{Range:range}}), async()=>{throw Error('Must not fetch');})).status,416);
     }
   });
 
   test(`${label}: range downgrade, changed offsets and wrong lengths are refused`, async () => {
     for (const [status, range, bytes] of [[200,'bytes 2-4/10',[3,4,5]],[206,'bytes 1-3/10',[3,4,5]],[206,'bytes 2-4/10',[3,4]]]) {
-      const r = await serve(request('/api/coast/habitat/tiles?region=morro-bay',{headers:{Range:'bytes=2-4'}}), async()=>new Response(new Uint8Array(bytes),{status,headers:{'Content-Range':range}}));
+      const r = await serve(request('/coast-data/data/coast-wide/range.bin',{headers:{Range:'bytes=2-4'}}), async()=>new Response(new Uint8Array(bytes),{status,headers:{'Content-Range':range}}));
       assert.equal(r.status,503);
     }
   });
 
   test(`${label}: HEAD preserves archive identity without a body; writes and private paths never fetch`, async () => {
-    const r=await serve(request('/api/coast/habitat/tiles?region=morro-bay',{method:'HEAD'}),async req=>{
+    const r=await serve(request('/coast-data/data/coast-wide/range.bin',{method:'HEAD'}),async req=>{
       assert.equal(req.method,'HEAD'); return new Response(null,{headers:{'Content-Length':'12000000',ETag:'"archive"'}});
     });
     assert.equal(r.status,200); assert.equal(r.headers.get('Content-Length'),'12000000'); assert.equal(await r.text(),'');
@@ -71,7 +71,7 @@ for (const [label, store, feeds] of [['no R2', null, undefined], ['empty R2', fa
 
   test(`${label}: HEAD rejects inexact ranges and unsafe totals; unsolicited partial responses are unavailable`, async () => {
     for (const [range,size] of [['bytes 99-101/200','3'],['bytes 2-4/10','500'],['bytes 2-4/99999999999999999999','3']]) {
-      const r = await serve(request('/api/coast/habitat/tiles?region=morro-bay',{method:'HEAD',headers:{Range:'bytes=2-4'}}),async()=>new Response(null,{status:206,headers:{'Content-Range':range,'Content-Length':size}}));
+      const r = await serve(request('/coast-data/data/coast-wide/range.bin',{method:'HEAD',headers:{Range:'bytes=2-4'}}),async()=>new Response(null,{status:206,headers:{'Content-Range':range,'Content-Length':size}}));
       assert.equal(r.status,503);
     }
     const r = await serve(request('/coast-data/data/coast-wide/a.bin'),async()=>new Response(new Uint8Array([1]),{status:206,headers:{'Content-Range':'bytes 0-0/10'}}));
@@ -123,7 +123,7 @@ async function published(files, {groups = ['terrain', 'habitat'], pointer} = {})
   return {store: fakeStore(objects), entries};
 }
 const fixture = () => published({'/data/coast-wide/a.bin': {bytes: tile},
-  '/api/habitat/tiles?region=morro-bay': {bytes: tile.map(v => 255 - v), habitatRelease, expiresAt: '2099-01-01T00:00:00Z'}});
+  '/data/coast-wide/range.bin': {bytes: tile.map(v => 255 - v), habitatRelease, expiresAt: '2099-01-01T00:00:00Z'}});
 
 test('R2 assets are served only after their manifest SHA-256 matches, with exact ranges and receipts', async () => {
   const {store, entries} = await fixture();
@@ -131,11 +131,11 @@ test('R2 assets are served only after their manifest SHA-256 matches, with exact
   assert.equal(whole.status, 200); assert.deepEqual(new Uint8Array(await whole.arrayBuffer()), tile);
   assert.equal(whole.headers.get('ETag'), `"sha256-${entries['/data/coast-wide/a.bin'].sha256}"`);
   for (let i = 0; i < 2; i++) {  // the second read uses the verified version's etag
-    const part = await serveCoastData(request(`/api/coast/habitat/tiles?region=morro-bay&release=${habitatRelease}`, {headers: {Range: 'bytes=2-4'}}), noBridge, store);
+    const part = await serveCoastData(request(`/coast-data/data/coast-wide/range.bin?release=${habitatRelease}`, {headers: {Range: 'bytes=2-4'}}), noBridge, store);
     assert.equal(part.status, 206); assert.deepEqual([...new Uint8Array(await part.arrayBuffer())], [253, 252, 251]);
     assert.equal(part.headers.get('Content-Range'), 'bytes 2-4/64'); assert.equal(part.headers.get('X-Fish-Habitat-Release'), habitatRelease);
   }
-  const head = await serveCoastData(request('/api/coast/habitat/tiles?region=morro-bay', {method: 'HEAD'}), noBridge, store);
+  const head = await serveCoastData(request('/coast-data/data/coast-wide/range.bin', {method: 'HEAD'}), noBridge, store);
   assert.equal(head.status, 200); assert.equal(head.headers.get('Content-Length'), '64'); assert.equal(await head.text(), '');
 });
 
@@ -160,14 +160,14 @@ test('wrong ranges, unknown releases and expired entries are refused; encoded pr
   const {store} = await fixture();
   assert.equal((await serveCoastData(request('/coast-data/data/coast-wide/a.bin', {headers: {Range: 'bytes=60-70'}}), noBridge, store)).status, 416);
   assert.equal((await serveCoastData(request('/coast-data/data/coast-wide/a.bin', {headers: {Range: 'bytes=4-'}}), noBridge, store)).status, 416);
-  for (const path of [`/api/coast/habitat/tiles?region=morro-bay&release=${'c'.repeat(64)}`, `/coast-data/data/coast-wide/a.bin?release=${habitatRelease}`])
+  for (const path of [`/coast-data/data/coast-wide/range.bin?release=${'c'.repeat(64)}`, `/coast-data/data/coast-wide/a.bin?release=${habitatRelease}`])
     assert.equal((await serveCoastData(request(path), noBridge, store)).status, 404, path);
   store.reads.length = 0;
   for (const path of ['/coast-data/data/%67overnment-habitat/private.bin', '/coast-data/data/coast-wide/%2e%2e/private.json', '/coast-data/data/coast-wide/escape%252fprivate.bin', '/coast-data/data/habitat-government/current.json', '/coast-data/coast/current.json'])
     assert.equal((await serveCoastData(request(path), noBridge, store)).status, 404, path);
   assert.deepEqual(store.reads, []);
-  const expired = await published({'/api/habitat/tiles?region=morro-bay': {bytes: tile, habitatRelease, expiresAt: '2020-01-01T00:00:00Z'}});
-  assert.equal((await serveCoastData(request('/api/coast/habitat/tiles?region=morro-bay', {method: 'HEAD'}), noBridge, expired.store)).status, 503);
+  const expired = await published({'/data/coast-wide/range.bin': {bytes: tile, habitatRelease, expiresAt: '2020-01-01T00:00:00Z'}});
+  assert.equal((await serveCoastData(request('/coast-data/data/coast-wide/range.bin', {method: 'HEAD'}), noBridge, expired.store)).status, 503);
 });
 
 test('unpublished groups keep the bridge; held or mismatched releases fail closed', async () => {
@@ -194,12 +194,12 @@ test('held releases affect only published groups; the reef context travels with 
 
 test('concurrent first reads of one object hash it once', async () => {
   const cold = tile.map(v => v * 3);  // bytes no earlier test verified
-  const {store, entries} = await published({'/api/habitat/tiles?region=morro-bay': {bytes: cold, habitatRelease, expiresAt: '2099-01-01T00:00:00Z'}});
-  const key = 'coast/objects/' + entries['/api/habitat/tiles?region=morro-bay'].sha256;
+  const {store, entries} = await published({'/data/coast-wide/range.bin': {bytes: cold, habitatRelease, expiresAt: '2099-01-01T00:00:00Z'}});
+  const key = 'coast/objects/' + entries['/data/coast-wide/range.bin'].sha256;
   // Only an unpinned whole read hashes; a request that arrives after the hash has finished reads its pinned etag instead.
   const get = store.get.bind(store), whole = [];
   store.get = (k, options = {}) => { if (k === key && !options.onlyIf && !options.range) whole.push(k); return get(k, options); };
-  const parts = await Promise.all([0, 8, 16, 24].map(start => serveCoastData(request('/api/coast/habitat/tiles?region=morro-bay',
+  const parts = await Promise.all([0, 8, 16, 24].map(start => serveCoastData(request('/coast-data/data/coast-wide/range.bin',
     {headers: {Range: `bytes=${start}-${start + 7}`}}), noBridge, store)));
   assert.deepEqual(parts.map(r => r.status), [206, 206, 206, 206]);
   assert.deepEqual(new Uint8Array(await parts[1].arrayBuffer()), cold.slice(8, 16));
@@ -321,7 +321,7 @@ test('a shared R2 read rejection fails closed, leaves another key running and pe
   assert.deepEqual(f.stats(), {active: 0, peak: 2, bridgeCalls: 0});
 });
 
-test("the renderer's verified-asset and habitat HEAD checks pass against R2 and fail on tampering", async () => {
+test("the renderer verifies terrain assets but cannot restore retired Fish habitat", async () => {
   const {verifiedAsset} = await import('../packages/coast/src/coast3d/regional.ts');
   const {validateHabitatHeads} = await import('../packages/coast/src/map/habitat-lifecycle.ts');
   const {coastPath} = await import('../packages/coast/src/transport.ts');
@@ -331,11 +331,11 @@ test("the renderer's verified-asset and habitat HEAD checks pass against R2 and 
   try {
     const asset = {url: '/data/coast-wide/a.bin', ...entries['/data/coast-wide/a.bin']};
     assert.deepEqual(new Uint8Array(await verifiedAsset(asset)), tile);
-    const archive = entries['/api/habitat/tiles?region=morro-bay'];
+    const archive = entries['/data/coast-wide/range.bin'];
     const region = {regionId: 'morro-bay', ready: true, commercialArchivePermitted: true, license: 'public-domain-us-gov', expiresAt: '2099-01-01T00:00:00Z',
       archiveSha256: archive.sha256, archiveETag: `"sha256-${archive.sha256}"`, archiveBytes: archive.bytes};
     const manifest = {ready: true, expiresAt: '2099-01-01T00:00:00Z', releaseId: habitatRelease, consumerContract: 'fish-habitat-v1', regions: [region]};
-    await validateHabitatHeads(manifest, serve);
+    await assert.rejects(validateHabitatHeads(manifest, serve), /publication changed/, 'retired Fish habitat cannot be restored from old R2 bytes');
     store.objects['coast/objects/' + asset.sha256] = tile.map(v => v ^ 1);
     await assert.rejects(verifiedAsset(asset), /Asset unavailable/);
     await assert.rejects(validateHabitatHeads({...manifest, regions: [{...region, regionId: 'cambria-san-simeon'}]}, serve), /publication changed/);
@@ -734,3 +734,20 @@ test('a feed absent from the current release, or a broken release pointer, falls
   assert.equal((await serveCoastData(request('/api/coast/ocean'), fishOcean, broken, all)).headers.get('X-Coast-Upstream'), 'ocean=fish (unreadable)');
 });
 
+
+
+test('SCB-07-C: retired Fish habitat routes never read storage or upstream, including old release queries and ranges', async () => {
+  const {store} = await published({'/data/skippercast-habitat.geojson': {bytes: tile, habitatRelease}});
+  store.reads.length = 0;
+  for (const path of ['/api/coast/habitat/release', '/api/coast/habitat/tiles?region=morro-bay', '/api/coast/habitat/unknown',
+    '/coast-data/data/skippercast-manifest.json', '/coast-data/data/skippercast-habitat.geojson?release=' + habitatRelease, '/coast-data/data/skippercast-species.json']) {
+    assert.equal(coastTarget(new URL(request(path).url)), null);
+    for (const method of ['GET', 'HEAD']) {
+      const r = await serveCoastData(request(path, {method, headers: {Range: 'bytes=0-1'}}), noBridge, store);
+      assert.equal(r.status, 410); assert.equal(r.headers.get('Cache-Control'), 'no-store');
+      if (method === 'HEAD') assert.equal(await r.text(), '');
+      else assert.equal((await r.json()).status, 'retired');
+    }
+  }
+  assert.deepEqual(store.reads, []);
+});
