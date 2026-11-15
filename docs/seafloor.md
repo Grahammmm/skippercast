@@ -160,7 +160,26 @@ and producer uncertainty, and write a native-resolution COG. Band 1 is **meters
 positive down**; an optional band 2 is producer uncertainty in meters. Do not
 feed these normalized COGs back into an original elevation adapter. No datum
 conversion, reprojection, smoothing or interpolation is performed. The source
-is already a producer-gridded product, not raw soundings. No verified
+is already a producer-gridded product, not raw soundings.
+
+**Geographic originals** (`--format geographic-geotiff`, for example the USACE
+NCMP lidar DEMs on NAD83 + NAVD88 height, EPSG:5498) are the one explicit
+exception, in `seafloor/reproject_geographic.py`. They are first projected,
+once, to California Albers on the source's own datum (NAD83 → EPSG:3310,
+NAD83(2011) → EPSG:6414; any other datum, WGS84 included, is refused, so no
+datum transformation is ever applied). Elevation values, vertical datum and
+units are unchanged and recorded; a declared non-metre unit is refused. Depth
+uses bilinear resampling (classes would use nearest); the output NoData mask is
+exactly the containing-source-pixel image of the source mask, and bilinear
+values are used only where the whole 2×2 kernel is valid. The cell is the
+largest source spacing on the tile in target metres, rounded up to 0.1 m, never
+finer than the source. Output above 150 M pixels is refused. The unchanged
+native adapter then normalizes the projected grid. The receipt's
+`reprojection` block binds the source sha256, every parameter, and the
+projected product's file and content hashes; `native_resolution_m` there is the
+projected cell, not native pixel detail. The cache-key files of the native
+adapter are not edited, so existing COG keys stay valid. Allowlist, CoNED
+inspect-only, promotion and screening gates are unchanged. No verified
 product supplies a separate interpolation mask; that remains explicitly unknown
 and must be addressed by the coverage-stage eligibility rules. Unknown datum
 alone does not block tiers 1–2.

@@ -7,5 +7,8 @@ def ingest(row, bounds, *, root=REPO, fetch=False, local=None):
     if row.get('format') == 'measured-multibeam-grid':
         from .adapters.multibeam_grid import ingest as ingest_grid
         return ingest_grid(row, bounds, root=root, local=local)
+    if row.get('format') == 'geographic-geotiff':
+        from .reproject_geographic import ingest as ingest_geographic
+        return ingest_geographic(row, bounds, root=root, fetch=fetch, local=local)
     from .ingest import ingest as ingest_native
     return ingest_native(row, bounds, root=root, fetch=fetch, local=local)
