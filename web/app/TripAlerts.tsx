@@ -164,6 +164,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const [confirming, setConfirming] = useState(false);
   const privacy = useRef<HTMLDetailsElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const saving = useRef(false), [saveBusy, setSaveBusy] = useState(false);
   const [reuse, setReuse] = useState<{omitted: ReuseOmission[]; date: string; copied: 'all' | 'some' | 'none'} | null>(null);
   const unavailable = !region.forecast_points.length || !region.species.length;
   /** Use again: fills the form from a saved trip's still-available parts, clears the date and focuses it. Sends and saves nothing. */
@@ -197,11 +198,14 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
     const problem = formProblemId(form, dateRange(region.timezone));
     if (problem) { setStatus({id: problem}); return; }
     if (!region.forecast_points.some(point => point.id === form.point) || !region.species.includes(species)) { setStatus({id: 'alerts.status.choose'}); return; }
+    // Synchronous guard: a second submit before the first POST settles (a double tap) would create a second pending alert.
+    if (saving.current) return;
+    saving.current = true; setSaveBusy(true);
     try {
       await api('trips', {method: 'POST', body: JSON.stringify(tripBody(form, region.id, species, saved))});
       setStatus({id: 'alerts.status.saved'});
       void refresh();
-    } catch (error) { fail(error); }
+    } catch (error) { fail(error); } finally { saving.current = false; setSaveBusy(false); }
   };
   const act = (run: () => Promise<unknown>) => () => { run().catch(fail); };
   const remove = (id: string) => act(async () => { await api('trips', {method: 'DELETE', body: JSON.stringify({id})}); void refresh(); });
@@ -248,7 +252,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           <label>{t('alerts.wind', lang)}<input name="wind_limit" type="number" min="1" max="30" defaultValue={limits.wind} required /></label>
           <label>{t('alerts.gust', lang)}<input name="gust_limit" type="number" min="1" max="40" defaultValue={limits.gust} required /></label>
           <label>{t('alerts.sea', lang)}<input name="sea_limit" type="number" min="0.5" max="10" step="0.5" defaultValue={limits.sea} required /></label>
-          <Button type="submit" variant="primary" disabled={unavailable}>{t('alerts.save', lang)}</Button>
+          <Button type="submit" variant="primary" disabled={unavailable || saveBusy}>{t('alerts.save', lang)}</Button>
         </form>
         <p id="reuse-status" role="status" class="small">{reuse ? reuseStatus(reuse.omitted, lang) : ''}</p>
         <p class="small" id="trip-boat-note">{reuse && reuse.copied !== 'none' ? reuseLimitsNote(readableDate(reuse.date, lang, region.timezone), reuse.copied, p === 'boat', lang) : p !== 'boat'
