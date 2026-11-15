@@ -296,10 +296,25 @@ async function shell(event) {
     // The v2 app opens offline only from a pack that saved it (FE-51).
     if (path === V2_SHELL) return fromPack(event.request, error, self.location.origin + V2_SHELL);
     if (!/^\/(?:index\.html)?$/.test(path)) throw error;
-    const saved = await (await caches.open(SHELL_CACHE)).match('/');
+    const name = await servingShell();
+    const saved = name && await (await caches.open(name)).match('/');
     if (!saved) throw error;
     return saved;
   }
+}
+
+/** The shell cache that answers offline: this build's if complete, else the newest retained complete one (never a partial cache). */
+async function servingShell() {
+  const names = await caches.keys();
+  const order = [SHELL_CACHE, ...names.filter(n => n.startsWith(SHELL_PREFIX) && n !== SHELL_CACHE).reverse()];
+  for (const name of order) if (await (await caches.open(name)).match('/')) return name;
+  return null;
+}
+
+/** After a network failure, a request's copy in a retained complete shell (the one serving the landing), or undefined. */
+async function retained(request) {
+  const name = await servingShell();
+  return name && name !== SHELL_CACHE ? (await caches.open(name)).match(request, {ignoreSearch: true}) : undefined;
 }
 
 async function cacheFirst(request) {
@@ -307,7 +322,7 @@ async function cacheFirst(request) {
   const hit = await cache.match(request, {ignoreSearch: true});
   if (hit) return hit;
   let response;
-  try { response = await fetch(request); } catch (error) { return fromPack(request, error); }
+  try { response = await fetch(request); } catch (error) { return await retained(request) || fromPack(request, error); }
   // A fingerprinted name never changes content, so it can join this build's cache.
   if (storable(response) && FINGERPRINTED.test(new URL(request.url).pathname)) cache.put(request, response.clone()).catch(() => {});
   return response;
@@ -326,7 +341,7 @@ async function tile(event) {
 async function precached(request) {
   const hit = await (await caches.open(SHELL_CACHE)).match(request, {ignoreSearch: true});
   if (hit) return hit;
-  try { return await fetch(request); } catch (error) { return fromPack(request, error); }
+  try { return await fetch(request); } catch (error) { return await retained(request) || fromPack(request, error); }
 }
 
 /** After a network failure: the newest pack copy (a v2 pack's page, hashed files and glyphs), marked offline, or the failure. */
@@ -384,8 +399,14 @@ async function install() {
   try { await precacheShell(); } catch (error) { console.warn('SkipperCast offline shell not stored:', error?.message || error); }
 }
 
-async function activate() {
+/** Drop superseded shells, but only once this build's shell is complete: until then the last complete one stays. */
+async function pruneShells() {
+  if (!(await shellReady())) return;
   for (const name of await caches.keys()) if (name.startsWith(SHELL_PREFIX) && name !== SHELL_CACHE) await caches.delete(name);
+}
+
+async function activate() {
+  await pruneShells();
   await self.clients.claim();
 }
 
@@ -397,6 +418,7 @@ self.addEventListener('message', event => {
   if (type === 'skippercast-offline-status' && event.source) {
     event.source.postMessage({type: 'skippercast-offline', savedAt: servedFromCache.get(event.source.id) || null});
     event.waitUntil(shellReady().then(ready => ready || precacheShell().then(shellReady)).catch(() => false)
+      .then(async ready => { if (ready) await pruneShells().catch(() => {}); return ready; })
       .then(ready => event.source.postMessage({type: 'skippercast-shell', ready, build: BUILD})));
   }
 });
