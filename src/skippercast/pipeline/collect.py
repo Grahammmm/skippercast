@@ -170,18 +170,24 @@ def source(ident, name, kind, url, max_age, loader, now, previous=None, client_f
               "max_age_hours": max_age, "status": "failed", "data": None}
     try:
         data = loader(client)
-        result.update(data=data, status="ok", last_success_at=stamp(), data_retrieved_at=stamp())
+        # Loader output stays provisional until every post-load check has passed.
+        fresh = dict(data=data, status="ok", last_success_at=stamp(), data_retrieved_at=stamp())
         sample = data.get("sample_at") or data.get("issued_at")
         if sample:
             age = age_hours(sample, now)
             if age is None or age < -1 or age > max_age:
-                result.update(status="stale", issue="Source time is outside this product's freshness window")
+                fresh.update(status="stale", issue="Source time is outside this product's freshness window")
         if data.get("total_cells") and data.get("valid_cells") == 0:
-            result.update(status="missing", issue="No usable cells in this regional grid; no gap filling applied")
+            fresh.update(status="missing", issue="No usable cells in this regional grid; no gap filling applied")
         if kind in ("page-watch", "pdf-watch"):
+            new_hash = data["content_sha256"]
             old_hash = (previous or {}).get("data", {}).get("content_sha256") if (previous or {}).get("data") else None
-            result["changed_since_previous"] = old_hash != data["content_sha256"] if old_hash else None
+            fresh["changed_since_previous"] = old_hash != new_hash if old_hash else None
+        result.update(fresh)
     except Exception as error:
+        for key in ("last_success_at", "data_retrieved_at", "changed_since_previous"):
+            result.pop(key, None)
+        result.update(status="failed", data=None)
         result["issue"] = f"{type(error).__name__}: {str(error)[:220]}"
         if previous and previous.get("data"):
             result.update(status="retained", data=previous["data"], last_success_at=previous.get("last_success_at"),

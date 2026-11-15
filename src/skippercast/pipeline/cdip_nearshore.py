@@ -291,7 +291,8 @@ def fetch(session, url):
 
 def _retained(previous, binding, now):
     """The previous published record for this site, unchanged, while its fetch is under RETAIN_FOR old."""
-    for site in (previous or {}).get("nearshore") or []:
+    sites = previous.get("nearshore") if isinstance(previous, dict) else None
+    for site in sites if isinstance(sites, list) else []:  # only a list can lend; anything else is no record
         if not isinstance(site, dict) or site.get("id") != binding["id"]:
             continue
         fetched = parse_time(site.get("fetchedAt"))
@@ -315,7 +316,10 @@ def collect_site(session, binding, now, previous=None):
         return site, status
     except Exception as error:  # one site's failure must not block the others
         message = (str(error) or type(error).__name__)[:300]
-        kept = _retained(previous, binding, now)
+        try:
+            kept = _retained(previous, binding, now)
+        except Exception:  # a bad saved record must not replace the original fetch error or escape
+            kept = None
         if kept:
             message += f"; kept the previous record fetched {kept['fetchedAt']}"
         status.update(outcome="error", fetchedAt=fetched_at, error=message)
