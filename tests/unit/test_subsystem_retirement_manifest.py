@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import subprocess
+import time
 
 import pytest
 
@@ -142,7 +143,35 @@ def manifest():
     return json.loads(MANIFEST.read_text())
 
 
-def test_manifest_schema_version_and_unknown_fields(manifest):
+def have_commit(sha):
+    return subprocess.run(['git', 'cat-file', '-e', f'{sha}^{{commit}}'], cwd=ROOT,
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
+
+@pytest.fixture
+def frozen_manifest(manifest):
+    """The manifest, with its frozen source commit present in the object store.
+
+    CI checks out a shallow clone (fetch-depth 1 or 2), which lacks this older commit, so
+    fetch just that commit (the remote allows fetching a reachable SHA). Parallel workers may
+    race on the shallow lock; the commit check decides, not the fetch exit status. With no
+    remote or history the history-bound checks skip; a full CI run then fails on the
+    unexpected skip, so a broken fetch is never silent.
+    """
+    sha = manifest['source_commit']
+    for attempt in range(5):
+        if have_commit(sha):
+            return manifest
+        subprocess.run(['git', 'fetch', '--no-tags', '--depth=1', 'origin', sha], cwd=ROOT,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120)
+        time.sleep(attempt)
+    if have_commit(sha):
+        return manifest
+    pytest.skip(f'frozen source commit {sha[:12]} is not in this clone and could not be fetched')
+
+
+def test_manifest_schema_version_and_unknown_fields(frozen_manifest):
+    manifest = frozen_manifest
     validate_manifest(manifest)
     for field, value in [('schema_version', 2), ('schema_version', True), ('extra', 1), ('source_commit', 'stale')]:
         bad = copy.deepcopy(manifest)
@@ -168,7 +197,8 @@ def test_migration_hashes_match_disk_and_detect_edit(manifest, tmp_path):
         validate_migrations(manifest['migrations'] + [manifest['migrations'][0]], ROOT, current)
 
 
-def test_every_owner_prefix_resolves_and_no_overlap(manifest):
+def test_every_owner_prefix_resolves_and_no_overlap(frozen_manifest):
+    manifest = frozen_manifest
     tracked = git('ls-tree', '-r', '--name-only', manifest['source_commit']).splitlines()
     validate_owners(manifest['owners'], tracked)
     for prefix, message in [('absent-source/', 'empty prefix'), (manifest['owners'][0]['path_prefixes'][0], 'overlap')]:
