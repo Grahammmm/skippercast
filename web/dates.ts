@@ -33,7 +33,8 @@ export function readableDate(iso: string, lang: Language | string, timeZone: str
   try {
     const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
     const utcNoon = Date.UTC(y, mo - 1, d, 12);
-    if (new Date(utcNoon).getUTCDate() !== d) return iso;   // 2026-02-31 is not a day
+    const check = new Date(utcNoon);
+    if (check.getUTCFullYear() !== y || check.getUTCMonth() !== mo - 1 || check.getUTCDate() !== d) return iso;   // 2026-02-31 and 2026-13-10 are not days: never print a rolled-over one
     // Noon of that day in `timeZone` (not of UTC), so the printed day never slips across the zone's offset.
     const zoned = Object.fromEntries(new Intl.DateTimeFormat('en-US', {timeZone, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric'})
       .formatToParts(utcNoon).map(x => [x.type, Number(x.value)])) as Record<string, number>;
