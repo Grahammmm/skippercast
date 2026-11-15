@@ -121,6 +121,11 @@ def export(region, out: str, *, source: str = "aisstream", window: tuple[int, in
     return counts
 
 
+def _units(text: str) -> int:
+    """UTF-16 code units, as JavaScript counts them (no encoding, so lone surrogates are fine)."""
+    return sum(2 if ord(c) > 0xFFFF else 1 for c in text)
+
+
 def _label(x, lo: int, hi: int) -> tuple[dict | None, str | None]:
     """A proposed label normalised, or the reason it is refused (labels.ts ``addLabel``, plus the export window)."""
     if not isinstance(x, dict):
@@ -139,7 +144,7 @@ def _label(x, lo: int, hi: int) -> tuple[dict | None, str | None]:
     if x.get("label") not in LABELS:
         return None, f"label must be one of {', '.join(LABELS)}"
     basis = x["basis"].strip() if isinstance(x.get("basis"), str) else ""
-    if not 2 <= len(basis) <= MAX_BASIS:
+    if not 2 <= _units(basis) <= MAX_BASIS:   # the Worker's JavaScript .length: UTF-16 code units
         return None, f"basis is required (2 to {MAX_BASIS} characters)"
     if s < lo or e > hi:
         return None, "the range must fall within the trip's export window"

@@ -84,8 +84,10 @@ def read_subset(body, bounds, path, day):
         required = {"time", "lat", "lon", "altitude", "chl_oci"}
         if not required <= nc.variables.keys():
             raise ValueError("NOAA chlorophyll subset lacks required fields")
-        t, lat, lon = (nc.variables[k][:].copy() for k in ("time", "lat", "lon"))
         chl = nc.variables["chl_oci"]
+        if any(hasattr(chl, a) for a in ("scale_factor", "add_offset")):
+            raise ValueError("NOAA chlorophyll packed variables unsupported")
+        t, lat, lon = (nc.variables[k][:].copy() for k in ("time", "lat", "lon"))
         if len(t) != 1 or len(lat) < 1 or len(lon) < 1 or chl.shape != (1, 1, len(lat), len(lon)):
             raise ValueError("NOAA chlorophyll axes changed")
         if chl.units != b"mg m^-3" or chl.standard_name != b"mass_concentration_of_chlorophyll_a_in_sea_water" or abs(float(chl._FillValue) + 32767) > .01:

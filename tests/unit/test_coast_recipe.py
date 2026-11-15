@@ -36,7 +36,7 @@ PINS = {
     'src/skippercast/coastal/prefetch.py': 'b5f39a73be33f251fac799427a482b02b12433b2027813209b611e0e74ba5550',
     'regions/morro-bay/region.json': '26812352608f4775d0890a9545e1d483980b746e102d88b93e23f1371d20efb3',
     'regions/cambria-san-simeon/region.json': 'df5f53c542af95b6fd1c66309a93a3c90f95f592403683af2674400549ba3f22',
-    'regions/south-big-sur-san-simeon/region.json': 'd3510f89c50850ecac327ea9241573b800a7aff5a01666170f81647f37358896',
+    'regions/south-big-sur-san-simeon/region.json': '7e3cdf02b9c96f21704738988b1714f7f7d65412d22114a654f10c2ccb563ec9',
     'regions/santa-cruz-monterey-bay/region.json': 'b9406619766f9df23ea80434f1eaed7ef188ccf0316b5ed0519dfb38bc7260ee',
 }
 

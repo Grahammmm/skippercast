@@ -58,7 +58,10 @@ export async function verifyJobToken(token:unknown,policy:JobPolicy,...rest:[Fet
     const load=async():Promise<ExternalJSON[]|false>=>{
       stage='jwks-fetch';const response=await fetcher(issuer+'/.well-known/jwks',{signal:AbortSignal.timeout(10000),redirect:'manual'});
       if(!response.ok){console.warn('Scheduler key discovery failed',{status:response.status});return false;}const text=await response.text();if(text.length>50000)return false;
-      stage='jwks-key';const keys=JSON.parse(text).keys;if(!Array.isArray(keys))throw Error('Key set has no keys array');jwksCache={keys,at:now};return keys;
+      stage='jwks-key';const keys=JSON.parse(text).keys;if(!Array.isArray(keys))throw Error('Key set has no keys array');
+      // Structural admission: every row must be a JWK object, else the whole set is unavailable and nothing is cached.
+      if(keys.some(k=>typeof k!=='object'||k===null||Array.isArray(k))){console.warn('Scheduler key discovery malformed');return false;}
+      jwksCache={keys,at:now};return keys;
     };
     const pick=(keys:ExternalJSON[])=>keys.find((k:ExternalJSON)=>k.kid===header.kid&&k.kty==='RSA'&&k.use==='sig'&&k.alg==='RS256');
     let keys=jwksCache&&now>=jwksCache.at&&now-jwksCache.at<JWKS_TTL_S?jwksCache.keys:undefined,fetched=false;

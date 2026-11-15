@@ -1,0 +1,398 @@
+[
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "cambria-san-simeon"
+  ],
+  "region": "cambria-san-simeon",
+  "horizon": "now",
+  "mode": "txt",
+  "start_utc": "2026-11-15T20:23:10Z",
+  "end_utc": "2026-11-15T20:23:13Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-cambria-san-simeon-now.txt",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--json",
+   "cambria-san-simeon"
+  ],
+  "region": "cambria-san-simeon",
+  "horizon": "now",
+  "mode": "json",
+  "start_utc": "2026-11-15T20:23:13Z",
+  "end_utc": "2026-11-15T20:23:14Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-cambria-san-simeon-now.json",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "south-big-sur-san-simeon"
+  ],
+  "region": "south-big-sur-san-simeon",
+  "horizon": "now",
+  "mode": "txt",
+  "start_utc": "2026-11-15T20:23:14Z",
+  "end_utc": "2026-11-15T20:23:17Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-south-big-sur-san-simeon-now.txt",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--json",
+   "south-big-sur-san-simeon"
+  ],
+  "region": "south-big-sur-san-simeon",
+  "horizon": "now",
+  "mode": "json",
+  "start_utc": "2026-11-15T20:23:17Z",
+  "end_utc": "2026-11-15T20:23:18Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-south-big-sur-san-simeon-now.json",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "big-sur-coast"
+  ],
+  "region": "big-sur-coast",
+  "horizon": "now",
+  "mode": "txt",
+  "start_utc": "2026-11-15T20:23:18Z",
+  "end_utc": "2026-11-15T20:23:21Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-big-sur-coast-now.txt",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--json",
+   "big-sur-coast"
+  ],
+  "region": "big-sur-coast",
+  "horizon": "now",
+  "mode": "json",
+  "start_utc": "2026-11-15T20:23:21Z",
+  "end_utc": "2026-11-15T20:23:22Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-big-sur-coast-now.json",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "monterey-point-sur"
+  ],
+  "region": "monterey-point-sur",
+  "horizon": "now",
+  "mode": "txt",
+  "start_utc": "2026-11-15T20:23:22Z",
+  "end_utc": "2026-11-15T20:23:24Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-monterey-point-sur-now.txt",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--json",
+   "monterey-point-sur"
+  ],
+  "region": "monterey-point-sur",
+  "horizon": "now",
+  "mode": "json",
+  "start_utc": "2026-11-15T20:23:24Z",
+  "end_utc": "2026-11-15T20:23:26Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-monterey-point-sur-now.json",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "point-arguello-conception"
+  ],
+  "region": "point-arguello-conception",
+  "horizon": "now",
+  "mode": "txt",
+  "start_utc": "2026-11-15T20:23:26Z",
+  "end_utc": "2026-11-15T20:23:28Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-point-arguello-conception-now.txt",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--json",
+   "point-arguello-conception"
+  ],
+  "region": "point-arguello-conception",
+  "horizon": "now",
+  "mode": "json",
+  "start_utc": "2026-11-15T20:23:28Z",
+  "end_utc": "2026-11-15T20:23:29Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-point-arguello-conception-now.json",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "morro-bay"
+  ],
+  "region": "morro-bay",
+  "horizon": "now",
+  "mode": "txt",
+  "start_utc": "2026-11-15T20:23:29Z",
+  "end_utc": "2026-11-15T20:23:31Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-morro-bay-now.txt",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--json",
+   "morro-bay"
+  ],
+  "region": "morro-bay",
+  "horizon": "now",
+  "mode": "json",
+  "start_utc": "2026-11-15T20:23:31Z",
+  "end_utc": "2026-11-15T20:23:32Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-morro-bay-now.json",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--rules-through",
+   "2027-01-31",
+   "cambria-san-simeon"
+  ],
+  "region": "cambria-san-simeon",
+  "horizon": "through-2027-01-31",
+  "mode": "txt",
+  "start_utc": "2026-11-15T20:23:32Z",
+  "end_utc": "2026-11-15T20:23:33Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-cambria-san-simeon-through-2027-01-31.txt",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--rules-through",
+   "2027-01-31",
+   "--json",
+   "cambria-san-simeon"
+  ],
+  "region": "cambria-san-simeon",
+  "horizon": "through-2027-01-31",
+  "mode": "json",
+  "start_utc": "2026-11-15T20:23:33Z",
+  "end_utc": "2026-11-15T20:23:34Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-cambria-san-simeon-through-2027-01-31.json",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--rules-through",
+   "2027-01-31",
+   "south-big-sur-san-simeon"
+  ],
+  "region": "south-big-sur-san-simeon",
+  "horizon": "through-2027-01-31",
+  "mode": "txt",
+  "start_utc": "2026-11-15T20:23:34Z",
+  "end_utc": "2026-11-15T20:23:35Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-south-big-sur-san-simeon-through-2027-01-31.txt",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--rules-through",
+   "2027-01-31",
+   "--json",
+   "south-big-sur-san-simeon"
+  ],
+  "region": "south-big-sur-san-simeon",
+  "horizon": "through-2027-01-31",
+  "mode": "json",
+  "start_utc": "2026-11-15T20:23:35Z",
+  "end_utc": "2026-11-15T20:23:36Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-south-big-sur-san-simeon-through-2027-01-31.json",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--rules-through",
+   "2027-01-31",
+   "big-sur-coast"
+  ],
+  "region": "big-sur-coast",
+  "horizon": "through-2027-01-31",
+  "mode": "txt",
+  "start_utc": "2026-11-15T20:23:36Z",
+  "end_utc": "2026-11-15T20:23:37Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-big-sur-coast-through-2027-01-31.txt",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--rules-through",
+   "2027-01-31",
+   "--json",
+   "big-sur-coast"
+  ],
+  "region": "big-sur-coast",
+  "horizon": "through-2027-01-31",
+  "mode": "json",
+  "start_utc": "2026-11-15T20:23:37Z",
+  "end_utc": "2026-11-15T20:23:37Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-big-sur-coast-through-2027-01-31.json",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--rules-through",
+   "2027-01-31",
+   "monterey-point-sur"
+  ],
+  "region": "monterey-point-sur",
+  "horizon": "through-2027-01-31",
+  "mode": "txt",
+  "start_utc": "2026-11-15T20:23:37Z",
+  "end_utc": "2026-11-15T20:23:38Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-monterey-point-sur-through-2027-01-31.txt",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--rules-through",
+   "2027-01-31",
+   "--json",
+   "monterey-point-sur"
+  ],
+  "region": "monterey-point-sur",
+  "horizon": "through-2027-01-31",
+  "mode": "json",
+  "start_utc": "2026-11-15T20:23:38Z",
+  "end_utc": "2026-11-15T20:23:39Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-monterey-point-sur-through-2027-01-31.json",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--rules-through",
+   "2027-01-31",
+   "point-arguello-conception"
+  ],
+  "region": "point-arguello-conception",
+  "horizon": "through-2027-01-31",
+  "mode": "txt",
+  "start_utc": "2026-11-15T20:23:39Z",
+  "end_utc": "2026-11-15T20:23:40Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-point-arguello-conception-through-2027-01-31.txt",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--rules-through",
+   "2027-01-31",
+   "--json",
+   "point-arguello-conception"
+  ],
+  "region": "point-arguello-conception",
+  "horizon": "through-2027-01-31",
+  "mode": "json",
+  "start_utc": "2026-11-15T20:23:40Z",
+  "end_utc": "2026-11-15T20:23:41Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-point-arguello-conception-through-2027-01-31.json",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--rules-through",
+   "2027-01-31",
+   "morro-bay"
+  ],
+  "region": "morro-bay",
+  "horizon": "through-2027-01-31",
+  "mode": "txt",
+  "start_utc": "2026-11-15T20:23:41Z",
+  "end_utc": "2026-11-15T20:23:42Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-morro-bay-through-2027-01-31.txt",
+  "stderr_nonempty": false
+ },
+ {
+  "argv": [
+   "node",
+   "scripts/check_region_promotion.mjs",
+   "--rules-through",
+   "2027-01-31",
+   "--json",
+   "morro-bay"
+  ],
+  "region": "morro-bay",
+  "horizon": "through-2027-01-31",
+  "mode": "json",
+  "start_utc": "2026-11-15T20:23:42Z",
+  "end_utc": "2026-11-15T20:23:43Z",
+  "exit": 0,
+  "stdout_file": "SC1114-02-morro-bay-through-2027-01-31.json",
+  "stderr_nonempty": false
+ }
+]

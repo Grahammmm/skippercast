@@ -136,6 +136,19 @@ def index_url(model, cycle, step, base=ECMWF_AWS):
     return ecmwf_url(model, cycle, step, base)[:-len('.grib2')] + '.index'
 
 
+def _published(model, cycle):
+    """Whether the final-step index exists; ECMWF tries the AWS mirror, then the portal, if AWS errors."""
+    if model.family == 'gfs':
+        return exists(index_url(model, cycle, model.steps[-1]))
+    for base in (ECMWF_AWS, ECMWF_PORTAL):
+        try:
+            if exists(index_url(model, cycle, model.steps[-1], base)):
+                return True
+        except Exception:
+            continue
+    return False
+
+
 def latest_cycle(model, now=None, lookback_hours=48):
     """Newest initialization whose final forecast step is published."""
     now = now or datetime.now(timezone.utc)
@@ -144,7 +157,7 @@ def latest_cycle(model, now=None, lookback_hours=48):
         cycle = start - timedelta(hours=back)
         if cycle.hour not in model.cycles or cycle > now - timedelta(hours=model.cycle_delay_hours - 1):
             continue
-        if exists(index_url(model, cycle, model.steps[-1])):
+        if _published(model, cycle):
             return cycle
     return None
 

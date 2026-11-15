@@ -1,0 +1,26 @@
+[
+ {
+  "url": "https://skippercast.com/regions/point-arguello-conception/regulations-startup.json",
+  "fetched_utc": "2026-11-15T20:23:52Z",
+  "status": 200,
+  "bytes": 24333,
+  "file": "SC1114-02-pa-regulations-startup.json",
+  "method": "GET"
+ },
+ {
+  "url": "https://skippercast.com/api/daily?region=point-arguello-conception&part=regulations",
+  "fetched_utc": "2026-11-15T20:23:52Z",
+  "status": 200,
+  "bytes": 39320,
+  "file": "SC1114-02-pa-api-daily-regulations.json",
+  "method": "GET"
+ },
+ {
+  "url": "https://skippercast.com/api/health",
+  "fetched_utc": "2026-11-15T20:23:52Z",
+  "status": 200,
+  "bytes": 141,
+  "file": "SC1114-02-api-health.json",
+  "method": "GET"
+ }
+]
