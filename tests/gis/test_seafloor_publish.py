@@ -1,6 +1,7 @@
 """Offline publication, private recovery and revision/expiry gate regressions."""
 from datetime import timedelta
 import gzip
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -11,11 +12,11 @@ from unittest.mock import patch
 
 from skippercast import http
 from skippercast.platform.contracts import atomic_json, read_json
-from skippercast.seafloor import publish, state_cache, jobs
+from skippercast.seafloor import publish, rough_first, state_cache, jobs
 from skippercast.seafloor.io import sha256
 from skippercast.seafloor.verify import verify_public
 from tests import http_fixture
-from tests._support import NOW
+from tests._support import NOW, ROOT
 
 
 class Missing(Exception):
@@ -403,6 +404,154 @@ class PrivateRecoveryTests(unittest.TestCase):
             (Path(second)/receipt.relative_to(root)).unlink()
             with self.assertRaisesRegex(ValueError, 'checksum'):
                 state_cache.restore(s3, 'b', second, 'r01', include_cache=False)
+
+
+def _pb(num, wire, payload):
+    """One protobuf field (varint or length-delimited) for the synthetic MVT tiles below."""
+    def varint(n):
+        out = bytearray()
+        while True:
+            out.append((n & 127) | (128 if n > 127 else 0))
+            n >>= 7
+            if not n:
+                return bytes(out)
+    return varint(num << 3 | wire) + (varint(payload) if wire == 0 else varint(len(payload)) + payload)
+
+
+def mvt(ids, pad=0, layer='habitat'):
+    """A gzip MVT tile whose `layer` holds one feature per id, padded with hard-to-compress text to grow its size."""
+    values = [*ids, ''.join(hashlib.sha256(b'%d-%d' % (pad, i)).hexdigest() for i in range(pad // 64 + 1))]
+    body = _pb(1, 2, layer.encode()) + _pb(15, 0, 2) + _pb(3, 2, b'id') + _pb(3, 2, b'pad')
+    body += b''.join(_pb(4, 2, _pb(1, 2, v.encode())) for v in values)
+    for i, _ in enumerate(ids):
+        body += _pb(2, 2, _pb(2, 2, bytes([0, i, 1, len(ids)])) + _pb(3, 0, 3))
+    return gzip.compress(_pb(3, 2, body), mtime=9)
+
+
+OPENING = [(10, 167, 404), (10, 168, 404)]
+ROUGH_ADDRESSES = [(8, 41, 101), (9, 83, 202), *OPENING, (11, 336, 809)]
+DETAIL_ADDRESSES = [(12, 672, 1618), (13, 1344, 3236), (14, 2688, 6472), (15, 5377, 12944)]
+
+
+def control_tiles():
+    return {**{a: mvt(['a', 'b', 'c'], pad=4000+a[0]) for a in ROUGH_ADDRESSES},
+            **{a: mvt(['a', 'b', 'c', 'd'], pad=300+a[0]) for a in DETAIL_ADDRESSES}}
+
+
+def rough_tiles():
+    tiles = control_tiles()
+    tiles.update({a: mvt(['a', 'b', 'c'], pad=1500+a[0]) for a in ROUGH_ADDRESSES})
+    return tiles
+
+
+def pmtiles(path, tiles):
+    from scripts.build_bathy_tiles import write_pmtiles
+    write_pmtiles(path, tiles, metadata={}, bounds=(-121.2, 35.1, -120.7, 35.6), minzoom=8, maxzoom=15,
+                  center=(10, -120.95, 35.35))
+
+
+class RoughFirstGateTests(unittest.TestCase):
+    """R4-SC-09-F1c: the corrected size gate (approved reference sizes, proposal revision 2 section 4)."""
+
+    def build(self, region, candidate, *, listed=True, control=None):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        if listed:
+            (root/'catalog').mkdir(parents=True)
+            (root/'catalog/seafloor-rough-first.json').write_bytes((ROOT/'catalog/seafloor-rough-first.json').read_bytes())
+        atomic_json(root/'dist/data/seafloor-ledger.json', {'reference': {}, 'reaches': []})
+        atomic_json(root/'catalog/surveys.json', {'surveys': [{'id': 'native', 'url': 'https://example.test/s'}]})
+        geometry = {'type': 'Polygon', 'coordinates': [[[-121, 35], [-120.99, 35], [-120.99, 35.01], [-121, 35]]]}
+        layers = {'cells': [], 'habitat': [{'type': 'Feature', 'geometry': geometry, 'properties': publish.flat_properties(
+            {'id': 'a', 'terrain': {'grade': 'A', 'score': 90}, 'fit': {'lingcod': 3}, 'source_ids': ['native'],
+             'screen': {'status': 'pass'}})}]}
+        calls = []
+
+        def archive(tool, layers, path, **kwargs):
+            calls.append(kwargs)
+            pmtiles(path, candidate if kwargs.get('coarse_first') else (control or control_tiles()))
+        before = (root/'catalog/seafloor-rough-first.json').read_bytes() if listed else None
+        with patch.object(publish, 'region_layers', return_value=(layers, {}, NOW+timedelta(days=1))), \
+                patch('scripts.build_map_tiles.build_vector_archive', side_effect=archive):
+            try:
+                result = publish.build(region, root=root, tool='fixture', now=NOW)
+            except rough_first.GateFailure as error:
+                result = error
+        if listed:
+            self.assertEqual((root/'catalog/seafloor-rough-first.json').read_bytes(), before, 'never rebaselined')
+        receipt = read_json(root/'var/seafloor/publication'/f'{region}-tiles.json')
+        return root, result, receipt, calls
+
+    def test_listed_region_publishes_rough_first_only_after_passing_against_the_same_run_control(self):
+        root, (folder, manifest), receipt, calls = self.build('morro-bay', rough_tiles())
+        self.assertEqual(calls, [{**calls[0], 'precise': True}, {**calls[0], 'precise': True, 'coarse_first': True}])
+        self.assertNotIn('coarse_first', calls[0], 'the control archive is today\'s builder')
+        self.assertEqual(manifest['rough_first'], {'maxzoom': 11, 'detail_minzoom': 12})
+        self.assertEqual({p.name for p in folder.iterdir()} - {'manifest.json', 'ledger.json', 'habitat-export.geojson.gz'},
+                         {'seafloor-morro-bay.pmtiles'}, 'only the accepted candidate; the control stays private')
+        self.assertTrue(receipt['pass'])
+        self.assertEqual((receipt['mode'], receipt['failed']), ('rough-first', []))
+        self.assertEqual(receipt['archive']['sha256'], manifest['archive_sha256'])
+        self.assertEqual(receipt['reference_sha256'], sha256(root/'catalog/seafloor-rough-first.json'))
+        sizes = receipt['gate']['item1_rough_sizes']['per_zoom']
+        self.assertEqual({z: row['ceiling'] for z, row in sizes.items()}, {'8': 480750, '9': 493994, '10': 644988, '11': 924959})
+        self.assertEqual(receipt['gate']['item1_rough_sizes']['opening_view']['ceiling'], 388642)
+        self.assertEqual(receipt['gate']['item3_detail_identical_z12_15']['identical'], 4)
+        self.assertEqual(receipt['archive']['per_zoom']['10']['tiles'], 2)
+        self.assertIn('Rough-first gate: PASS', rough_first.summary(receipt))
+
+    def test_any_failed_item_fails_closed_before_upload(self):
+        detail = DETAIL_ADDRESSES[1]
+        cases = {
+            'one byte different at z13': ({**rough_tiles(), detail: rough_tiles()[detail][:-1]+bytes([rough_tiles()[detail][-1] ^ 1])},
+                                          'item3_detail_identical_z12_15'),
+            'a z12-15 tile missing': ({k: v for k, v in rough_tiles().items() if k != DETAIL_ADDRESSES[0]},
+                                      'item3_detail_identical_z12_15'),
+            'z8 over its ceiling': ({**rough_tiles(), ROUGH_ADDRESSES[0]: mvt(['a', 'b', 'c'], pad=0) + bytes(480751)},
+                                    'item1_rough_sizes'),
+            'a rough zoom gone (anomaly floor)': ({k: v for k, v in rough_tiles().items() if k[0] != 9}, 'item1_rough_sizes'),
+            'a habitat id lost at z10': ({**rough_tiles(), **{a: mvt(['a', 'b'], pad=1500) for a in OPENING}},
+                                         'item4_content_z9_11'),
+        }
+        for name, (candidate, item) in cases.items():
+            with self.subTest(name):
+                root, error, receipt, _ = self.build('morro-bay', candidate)
+                self.assertIsInstance(error, rough_first.GateFailure)
+                self.assertIn('nothing published, no rebaseline', str(error))
+                self.assertFalse(receipt['pass'])
+                self.assertIn(item, receipt['failed'])
+                self.assertFalse((root/'var/seafloor/public/morro-bay/seafloor-morro-bay.pmtiles').exists())
+                self.assertFalse((root/'var/seafloor/public/morro-bay/manifest.json').exists())
+                self.assertIn('FAIL: nothing published', rough_first.summary(receipt))
+
+    def test_unreadable_candidate_fails_closed(self):
+        receipt = rough_first.evaluate('morro-bay', b'PMTiles\x03' + bytes(200), b'not an archive',
+                                       rough_first.load_reference(ROOT, 'morro-bay'))
+        self.assertFalse(receipt['pass'])
+        self.assertEqual(receipt['failed'], ['unreadable archive'])
+
+    def test_unlisted_region_keeps_todays_archive_and_still_records_sizes(self):
+        _, (folder, manifest), receipt, calls = self.build('big-sur-coast', rough_tiles(), listed=False)
+        self.assertEqual(len(calls), 1)
+        self.assertNotIn('coarse_first', calls[0])
+        self.assertNotIn('rough_first', manifest)
+        self.assertEqual((receipt['mode'], receipt['gate'], receipt['pass']), ('control', None, True))
+        self.assertEqual(receipt['archive']['sha256'], manifest['archive_sha256'])
+        self.assertEqual(receipt['archive']['per_zoom']['12'], {'tiles': 1, 'bytes': len(control_tiles()[DETAIL_ADDRESSES[0]])})
+
+    def test_reference_is_the_approved_a1_sizes_and_a_malformed_entry_never_disables_the_gate(self):
+        reference = rough_first.load_reference(ROOT, 'morro-bay')
+        self.assertEqual(reference['rough_zoom_bytes'], {'8': 464493, '9': 477289, '10': 623177, '11': 893681})
+        self.assertEqual((reference['opening_view']['bytes'], reference['margin_per_mille']), (375500, 35))
+        self.assertIsNone(rough_first.load_reference(ROOT, 'big-sur-coast'))
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertIsNone(rough_first.load_reference(tmp, 'morro-bay'))
+            broken = json.loads((ROOT/rough_first.REFERENCE_FILE).read_text())
+            del broken['regions']['morro-bay']['rough_zoom_bytes']['9']
+            atomic_json(Path(tmp)/rough_first.REFERENCE_FILE, broken)
+            with self.assertRaisesRegex(ValueError, 'Invalid rough-first reference'):
+                rough_first.load_reference(tmp, 'morro-bay')
 
 
 if __name__ == '__main__':

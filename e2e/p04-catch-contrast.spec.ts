@@ -260,7 +260,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // no class, token, catch markup, paint, contrast(), assertion or threshold change. Rebind only MapStage.tsx.
   // R4-SC-09 review fix: the Chart host's aria-busy also covers the aerial preview (aerialSoft) after the first idle;
   // an attribute on the Chart host only, which BODY09 never mounts. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "8944f248861c10bc16203cd9e0052770d3f7106f01e3c02cf03863009047c5b8",
+  // R4-SC-09-F1c: MapStage.tsx imports seafloorRough and PresentationToggle adds a Chart-only "Rough seafloor" status
+  // paragraph on the existing app-stage-note class while the rough seafloor is drawn. BODY09 mounts Reports/CatchCards,
+  // never MapStage or PresentationToggle; no CSS, token, class, catch markup, paint, contrast(), assertion or threshold
+  // change. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "27dbfafcd0f8b219308d58a6dabb154e855df7e544773bc7aebfc74e6e49e995",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   "web/tokens.css": "56f9708cfa02f651680a2bc02bd3d9080f65dec849aea6888f6bfc52508a5775",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
