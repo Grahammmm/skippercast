@@ -218,11 +218,11 @@
     },
     "groundtruth": {
       "status": "research",
-      "reason": "South Big Sur\u2013San Simeon is a draft source-discovery package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
+      "reason": "South Big Sur\u2013San Simeon is a limited preview package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
     },
     "kelp": {
       "status": "research",
-      "reason": "South Big Sur\u2013San Simeon is a draft source-discovery package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
+      "reason": "South Big Sur\u2013San Simeon is a limited preview package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
     },
     "protected-areas": {
       "status": "partial",
@@ -258,11 +258,11 @@
     },
     "surface-currents": {
       "status": "research",
-      "reason": "South Big Sur\u2013San Simeon is a draft source-discovery package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
+      "reason": "South Big Sur\u2013San Simeon is a limited preview package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
     },
     "subsurface-ocean": {
       "status": "research",
-      "reason": "South Big Sur\u2013San Simeon is a draft source-discovery package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
+      "reason": "South Big Sur\u2013San Simeon is a limited preview package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
     },
     "sea-temperature": {
       "status": "partial",
@@ -274,11 +274,11 @@
     },
     "species-occurrence": {
       "status": "research",
-      "reason": "South Big Sur\u2013San Simeon is a draft source-discovery package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
+      "reason": "South Big Sur\u2013San Simeon is a limited preview package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
     },
     "catch-effort": {
       "status": "research",
-      "reason": "South Big Sur\u2013San Simeon is a draft source-discovery package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
+      "reason": "South Big Sur\u2013San Simeon is a limited preview package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
     },
     "charter-identity": {
       "status": "missing",
@@ -286,23 +286,23 @@
     },
     "ais-history": {
       "status": "research",
-      "reason": "South Big Sur\u2013San Simeon is a draft source-discovery package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
+      "reason": "South Big Sur\u2013San Simeon is a limited preview package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
     },
     "harbor-access": {
       "status": "research",
-      "reason": "South Big Sur\u2013San Simeon is a draft source-discovery package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
+      "reason": "South Big Sur\u2013San Simeon is a limited preview package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
     },
     "wind-ensemble": {
       "status": "research",
-      "reason": "South Big Sur\u2013San Simeon is a draft source-discovery package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
+      "reason": "South Big Sur\u2013San Simeon is a limited preview package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
     },
     "wave-ensemble": {
       "status": "research",
-      "reason": "South Big Sur\u2013San Simeon is a draft source-discovery package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
+      "reason": "South Big Sur\u2013San Simeon is a limited preview package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
     },
     "forecast-verification": {
       "status": "research",
-      "reason": "South Big Sur\u2013San Simeon is a draft source-discovery package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
+      "reason": "South Big Sur\u2013San Simeon is a limited preview package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
     }
   },
   "assets": {
