@@ -1,21 +1,12 @@
 name: Map, screen and publish seafloor
 
+# F1C-MEASURE STAGE-ONLY copy (branch rb/f1c-measure, never merged). The daily schedule
+# is removed. The push trigger below fires only for a push to main, which this branch
+# never reaches, and even then nothing would run: the four live jobs (prepare, reaches,
+# publish, ledger) are disabled with `if: false`, and `measure` runs only for a
+# workflow_dispatch on a non-main ref. `measure` uploads receipt.json and nothing else.
 on:
-  schedule:
-    - cron: '23 10 * * *'
   workflow_dispatch:
-    inputs:
-      region:
-        description: Region to advance (blank means entire catalog scope)
-        type: string
-        default: ''
-      reach:
-        description: Optional reach; its whole region is republished
-        type: string
-      max_new:
-        description: Maximum previously unprocessed reaches to add per run (0 refreshes only)
-        type: number
-        default: 3
   push:
     branches: [main]
     paths:
@@ -38,13 +29,15 @@ concurrency:
 
 env:
   PYTHONPATH: src:.
+  SEAFLOOR_STAGE_ONLY: '1'
   # R2-only token when configured (docs/cloudflare.md); the deploy token is the fallback.
   CLOUDFLARE_API_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
 jobs:
   prepare:
-    if: github.ref == 'refs/heads/main'
+    # STAGE-ONLY: disabled (live manifest hold + state save). Was: github.ref == 'refs/heads/main'
+    if: false
     runs-on: ${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 60
     outputs:
@@ -92,7 +85,8 @@ jobs:
 
   reaches:
     needs: prepare
-    if: needs.prepare.outputs.has_work == 'true'
+    # STAGE-ONLY: disabled (private reach state saves). Was: needs.prepare.outputs.has_work == 'true'
+    if: false
     runs-on: ${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}
     # Three independently timed 60-minute reaches plus job setup/cleanup.
     timeout-minutes: 195
@@ -121,7 +115,8 @@ jobs:
 
   publish:
     needs: [prepare, reaches]
-    if: always() && needs.prepare.result == 'success' && needs.prepare.outputs.has_work == 'true'
+    # STAGE-ONLY: disabled (bucket put of archive + manifest). Was: always() && needs.prepare.result == 'success' && ...
+    if: false
     runs-on: ${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 60
     strategy:
@@ -188,7 +183,8 @@ jobs:
 
   ledger:
     needs: [prepare, publish]
-    if: always() && needs.prepare.result == 'success' && needs.prepare.outputs.has_work == 'true'
+    # STAGE-ONLY: disabled (ledger PR, ci.yml dispatch). Was: always() && needs.prepare.result == 'success' && ...
+    if: false
     runs-on: ${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     permissions:
@@ -263,3 +259,51 @@ jobs:
           if result['failures'] or os.environ['PUBLICATION_RESULT'] != 'success':
               raise SystemExit('Some stages failed; completed reaches and coverage checkpoints were retained. See the run summary.')
           PY
+
+  # F1C-MEASURE: the only runnable job. It restores private state with read-only R2 calls,
+  # builds the control (Rk) and rough-first (Rc) archives into var/seafloor/measure on the
+  # runner, and uploads receipt.json alone. No bucket put, no deploy, no catalog/ledger write,
+  # no PR, no dispatch: permissions are contents: read, checkout keeps no credentials, and
+  # skippercast.seafloor.measure wraps every R2 client so only get/head/list calls work.
+  measure:
+    if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+    runs-on: ${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 150
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: requirements-*.txt
+      - run: python -m pip install -r requirements-seafloor.txt
+      - name: Validate manifest and required runtime
+        run: |
+          python -c "from skippercast.seafloor.manifest import load_manifest; load_manifest()"
+          python -m skippercast.seafloor.rights
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: felt/tippecanoe
+          ref: 4f2621186acfec33b63ddf636f665623c0fef2dd
+          path: var/tools/tippecanoe
+          persist-credentials: false
+      - name: Build pinned PMTiles encoder (v2.82.0)
+        run: make -C var/tools/tippecanoe -j2
+      - name: Stage-only build and size receipt (read-only R2, nothing published)
+        env:
+          TIPPECANOE: var/tools/tippecanoe/tippecanoe
+        run: |
+          mkdir -p var/seafloor
+          python -m skippercast.seafloor.measure --out var/seafloor/receipt.json
+      - name: Upload the size receipt only (never an archive; the repository is public)
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: f1c-measure-receipt
+          path: var/seafloor/receipt.json
+          if-no-files-found: error
+          retention-days: 14
