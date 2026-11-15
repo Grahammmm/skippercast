@@ -54,6 +54,18 @@ test('warm files omit deferred CSS URL references but retain styles, fonts and o
   assert.ok(reachable(manifest, ['app.html']).has(`/${panel}`), 'offline packs still include referenced panel styles');
 });
 
+test('SCB-12: the mandatory shell behind the bootstrap still warms, excluding optional renderer chunks', () => {
+  const manifest = {
+    'app.html': {file: 'assets/boot.1111111111.js', dynamicImports: ['../web/app/main.tsx', '../web/map/maplibre.js']},
+    '../web/app/main.tsx': {file: 'assets/main.2222222222.js', imports: ['shared'], dynamicImports: ['planner']},
+    shared: {file: 'assets/shared.3333333333.js'},
+    planner: {file: 'assets/planner.4444444444.js'},
+    '../web/map/maplibre.js': {file: 'assets/maplibre.5555555555.js'},
+    'landing.html': {file: 'assets/landing.6666666666.js', imports: ['shared']},
+  };
+  assert.deepEqual(appWarm(manifest), ['/assets/boot.1111111111.js', '/assets/main.2222222222.js']);
+});
+
 test('the build refuses a worker without the build placeholder', async () => {
   const dir = await site();
   await writeFile(join(dir, 'sw.js'), 'self.x=1');
@@ -81,6 +93,8 @@ test('only-v2 files leave the install precache; the v2 list is the app graph wit
   await mkdir(join(dir, '.vite'), {recursive: true});
   await mkdir(join(dir, 'basemap/glyphs/dm-sans-medium'), {recursive: true});
   await writeFile(join(dir, 'basemap/glyphs/dm-sans-medium/0-255.pbf'), 'pbf');
+  await mkdir(join(dir, 'basemap/glyphs/v/0123456789abcdef/dm-sans-medium'), {recursive: true});
+  await writeFile(join(dir, 'basemap/glyphs/v/0123456789abcdef/dm-sans-medium/0-255.pbf'), 'pbf');
   await writeFile(join(dir, 'basemap/glyphs/DM-SANS-OFL.txt'), 'licence');
   await writeFile(join(dir, '.vite/manifest.json'), JSON.stringify(manifest));
   for (const e of Object.values(manifest)) for (const f of [e.file, ...(e.css || []), ...(e.assets || [])]) await writeFile(join(dir, f), '');
@@ -94,7 +108,8 @@ test('only-v2 files leave the install precache; the v2 list is the app graph wit
   assert.deepEqual(out.v2.assets, [...reachable(manifest, ['app.html'], new Set(['../web/map/terrain.js']))].sort());
   assert.deepEqual(out.v2.assets, ['/assets/app.1111111111.js', '/assets/app.2222222222.css', '/assets/font.3333333333.woff2', '/assets/maplibre-gl-worker.7777777777.js',
     '/assets/maplibre.6666666666.js', '/assets/shared.5555555555.js']);
-  assert.deepEqual(out.v2.static, ['/basemap/glyphs/dm-sans-medium/0-255.pbf']);
+  // R4-SC-08: the pack stores the content-versioned glyphs the style loads, not the unversioned copies.
+  assert.deepEqual(out.v2.static, ['/basemap/glyphs/v/0123456789abcdef/dm-sans-medium/0-255.pbf']);
 });
 
 // #497: '/' is the landing; its first paint joins the install list, MapLibre does not.

@@ -329,7 +329,7 @@ function serveDist(url) {
   return existsSync(file) ? {ok: true, json: async () => JSON.parse(readFileSync(file, 'utf8'))} : {ok: false, status: 404, json: async () => ({})};
 }
 
-function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}, overlayPalette, flyoverGate} = {}) {
+function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}, overlayPalette, flyoverGate, idleReady} = {}) {
   const fake = library(), land = terrain();
   const host = {dataset: {}};
   const fetches = [];
@@ -340,7 +340,7 @@ function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}
   };
   terrainFailed.value = false; chartFailed.value = false; chartMark.value = null; unavailable.value = [];
   const stage = createStage({host: {dataset: {}, shadowRoot: {replaceChildren() {}}}, load: async () => land.module, center: () => [35.37, -120.86], doc: doc(), viewDelay: 0,
-    overlayPalette, renderers: [() => createChart({host, load: async () => fake.module, fetchFn, palette: () => sentinel, page: () => PAGE, viewDelay: 0, flyoverGate})]});
+    overlayPalette, renderers: [() => createChart({host, load: async () => fake.module, fetchFn, palette: () => sentinel, page: () => PAGE, viewDelay: 0, flyoverGate, idleReady})]});
   return {fake, land, host, stage, fetches};
 }
 
@@ -391,6 +391,21 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   assert.equal(map.visibility[ENC_LAYER], 'none');
   stage.destroy();
   assert.equal(map.removed, true, 'the stage destroys its renderers');
+});
+
+test('SCB-12: a canvas with deferred imagery is not the first complete frame or a flyover', async t => {
+  t.mock.method(console, 'warn', () => {});
+  const nav = browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  let ready = false;
+  const run = chartStage({idleReady: () => ready, flyoverGate: linked => ({reduced: false, saveData: false, hidden: false, linked, seen: false})});
+  t.after(() => run.stage.destroy());
+  await tick(); await tick();
+  const [map] = run.fake.maps;
+  map.fire('idle');
+  assert.equal(run.host.dataset.flyover, undefined);
+  ready = true;
+  map.fire('idle');
+  assert.equal(run.host.dataset.flyover, 'flying');
 });
 
 test('the first idle of a home-framed Chart flies once (#646); a linked view or a closed gate never does', async t => {

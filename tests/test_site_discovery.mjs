@@ -50,11 +50,12 @@ test('the pages served at two paths each name one canonical; the map and private
   assert.deepEqual(canonical(app), []);
   assert.equal(meta(app, 'name', 'description').length, 1);
   assert.deepEqual(canonical(read('sources.html')), [`${ORIGIN}/sources`]);
+  assert.deepEqual(canonical(read('privacy.html')), [`${ORIGIN}/privacy`]);
   for (const page of ['admin.html', 'chat.html', 'my-data.html', 'upload.html']) assert.deepEqual(meta(read(page), 'name', 'robots'), ['noindex'], `${page} stays out of search`);
 });
 
 test('the .html legal and research pages name one self-referencing canonical', () => {
-  for (const page of ['licenses.html', 'species-research.html'])
+  for (const page of ['terms.html', 'licenses.html', 'species-research.html'])
     assert.deepEqual(canonical(read(page)), [`${ORIGIN}/${page}`], page);
 });
 
@@ -70,7 +71,7 @@ test('robots.txt allows crawling and names the sitemap; the sitemap lists only i
   for (const path of ['/coverage', '/skill']) assert.equal(locs.filter(loc => loc === `${ORIGIN}${path}`).length, 1, `${path} is listed once`);
   for (const alias of ['/coverage.html', '/skill.html']) assert.ok(!locs.includes(`${ORIGIN}${alias}`), `${alias} is not listed; the page is served at its extensionless path`);
   // Every entry is a page in dist (by its served path) or a server-rendered public page, and none is noindex.
-  const served = {'/': 'landing.html', '/sources': 'sources.html', '/status': 'status.html', '/coverage': 'coverage.html', '/skill': 'skill.html'};
+  const served = {'/': 'landing.html', '/sources': 'sources.html', '/status': 'status.html', '/privacy': 'privacy.html', '/coverage': 'coverage.html', '/skill': 'skill.html'};
   const serverPages = new Set(['/report', '/about', '/methodology']);
   for (const loc of locs) {
     assert.ok(loc.startsWith(`${ORIGIN}/`), loc);

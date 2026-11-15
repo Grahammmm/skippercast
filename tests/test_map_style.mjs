@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import {existsSync, readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {PALETTE_TOKENS, coastPalette, readPalette} from '../web/map/palette.ts';
-import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE, LABEL_FONT, LABEL_MIN_ZOOM, basemapStyle} from '../web/map/style.ts';
+import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE, GLYPH_VERSION, LABEL_FONT, LABEL_MIN_ZOOM, basemapStyle} from '../web/map/style.ts';
+import {glyphVersion} from '../scripts/client-build.mjs';
 import {FILES, themes} from '../scripts/check_contrast.mjs';
 import {lintFile} from '../scripts/check_tokens.mjs';
 import {decodeTile} from '../dist/seafloor-data.js';
@@ -78,9 +79,10 @@ test('the attribution reads "© OpenStreetMap contributors, © Protomaps"', () =
   }
 });
 
-test('labels use the self-hosted DM Sans glyphs and the style needs no sprite', () => {
+test('labels use the self-hosted DM Sans glyphs and the style needs no sprite', async () => {
   for (const style of Object.values(styles)) {
-    assert.equal(style.glyphs, `${OPTIONS.assets}glyphs/{fontstack}/{range}.pbf`);
+    // R4-SC-08: the glyph URL carries the glyph set's content version, which the committed files hash to.
+    assert.equal(style.glyphs, `${OPTIONS.assets}glyphs/v/${GLYPH_VERSION}/{fontstack}/{range}.pbf`);
     assert.equal(style.sprite, undefined);
     for (const layer of symbols(style)) {
       assert.deepEqual(layer.layout['text-font'], [LABEL_FONT]);
@@ -94,6 +96,8 @@ test('labels use the self-hosted DM Sans glyphs and the style needs no sprite', 
     assert.ok(head.includes(LABEL_FONT) && head.includes(range), `${path} names its font stack and range`);
   }
   assert.ok(existsSync(new URL(`../dist/basemap/glyphs/DM-SANS-OFL.txt`, import.meta.url)), 'the OFL travels with the glyphs');
+  assert.equal((await glyphVersion(new URL('../dist/basemap/glyphs', import.meta.url).pathname))?.version, GLYPH_VERSION,
+    'GLYPH_VERSION names the committed glyph files');
 });
 
 // The filter operators the style uses, evaluated against a decoded MVT feature.

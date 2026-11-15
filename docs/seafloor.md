@@ -602,6 +602,38 @@ to its tile grid and may split polygons across tiles. Deduplicate by `id`.
 **Tile geometry is for display, not navigation or GPX boundary export.** Use
 canonical screened geometry through a separately reviewed export path.
 
+#### Rough-first archives (R4-SC-09-F1c)
+
+A region listed in `catalog/seafloor-rough-first.json` (today only `morro-bay`)
+publishes a rough-first archive, so a slow phone draws a rough seafloor before
+the full detail arrives. Its z8–11 tiles carry `habitat` only, built with
+tippecanoe's default detail and simplification (outlines up to about 17 m off);
+its z12–15 tiles are the precise build, byte for byte. Its manifest adds
+`"rough_first": {"maxzoom": 11, "detail_minzoom": 12}`. The Chart then reads the
+view's z10 tiles first, draws them under the label **"Rough seafloor — full
+detail loading"**, and replaces them with the z12 detail; a failed detail read
+leaves the rough view and the label. Every other region publishes the same
+archive as before and its manifest has no `rough_first`.
+
+The publisher builds the control archive and the rough-first candidate from the
+same layers in the same run and publishes the candidate only if it passes the
+size gate (`src/skippercast/seafloor/rough_first.py`, the F1c REPLAN proposal's
+section 4 policy, approved by G on 2026-11-14):
+
+1. z8–11 payload bytes, and the opening view's two z10 tiles, at or under the
+   approved reference sizes (variant A1 of the F1a experiment) plus 3.5 %; each
+   of z8–11 at least 0.15 of the control's bytes.
+2. Every z12–15 tile byte-identical to the control's, with the same tile set.
+3. z9–11 keep every habitat id and at least 99 % of the feature occurrences.
+
+Any failure, or an archive the gate cannot read, raises before anything is
+uploaded: the region stays held, as for any failed build. The gate never edits
+its reference; changing a reference size is a rebaseline that needs G first.
+Every build writes `var/seafloor/publication/<region>-tiles.json` (per-zoom
+sizes, hashes and, for rough-first, each gate item). The publish job adds it to
+the run summary and keeps it as the `seafloor-size-receipt-<region>` artifact:
+sizes and hashes only, never the archive.
+
 ### Failure behavior and storage
 
 The publisher re-runs input validation and checks output hashes before encoding.

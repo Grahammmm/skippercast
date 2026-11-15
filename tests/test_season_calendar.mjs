@@ -27,7 +27,10 @@ test('committed dates never extrapolate earlier months or next year; December 31
   assert.ok(s.months.slice(9).every(m => m.state === 'open'));
   assert.equal(s.revision, committed.reviewed_at);
   assert.ok(s.link.href.startsWith('https://wildlife.ca.gov/'));
-  assert.ok(seasonYear(committed, 'lingcod', region, 2027).months.every(m => m.state === 'not-reviewed'));
+  // R4-SC-04: the registry now runs to 2027-03-31; Jan-Mar 2027 lingcod is closed (T14 CCR 27.40), everything after is unreviewed.
+  const next = seasonYear(committed, 'lingcod', region, 2027).months;
+  assert.ok(next.slice(0, 3).every(m => m.state === 'closed'));
+  assert.ok(next.slice(3).every(m => m.state === 'not-reviewed'));
   const d = data(); d.valid_from = '2026-09-21'; d.valid_through = '2026-09-21';
   assert.equal(month(d, 9).state, 'not-reviewed', '21st is reviewed, other days are not');
   d.valid_from = '2026-09-01'; d.valid_through = '2026-09-30';

@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {stripJsonComments, deployConfig, customDomains, features, advisorVars, fleetVars, FLEET_VARS, coastVars, COAST_VARS, ADVISOR_SECRETS, DEPLOY_PUBLIC_VARS, deploySnapshot, deploySummary} from '../scripts/wrangler_config.mjs';
+import {stripJsonComments, deployConfig, customDomains, features, advisorVars, fleetVars, FLEET_VARS, coastVars, COAST_VARS, ADVISOR_SECRETS, DEPLOY_PUBLIC_VARS, SECRET_NAME, deploySnapshot, deploySummary} from '../scripts/wrangler_config.mjs';
 
 const PUBLIC_SWITCHES = ['COAST_FEEDS', 'ENABLE_QUEUES', 'ENABLE_ANALYTICS', 'ENABLE_ADVISOR',
   'TEXT_ADVISOR_ENABLED', 'ADVISOR_REPLIES_ENABLED', 'ADVISOR_SOCIAL_ENABLED', 'ADVISOR_INBOX_ENABLED',
@@ -24,6 +24,20 @@ test('public deploy receipt is an explicit allow-list, never all vars or a prefi
   assert.doesNotMatch(JSON.stringify(snapshot) + deploySummary(snapshot), /private-value/);
   for (const bad of ['', undefined, 'a'.repeat(39), 'a'.repeat(41), 'G'.repeat(40)])
     assert.throws(() => deploySnapshot(bad, PRIVATE_VARS), /full commit SHA/);
+});
+
+test('the public deploy receipt can never emit a name that looks like a secret', () => {
+  assert.ok(DEPLOY_PUBLIC_VARS.includes('COAST_FEEDS'));
+  for (const name of DEPLOY_PUBLIC_VARS) assert.doesNotMatch(name, /secret|token|key|password/i, name);
+  assert.doesNotMatch(DEPLOY_PUBLIC_VARS.join(' '), SECRET_NAME);
+  // Hostile environment: credential-looking names set to values, including the ones the workflow handles.
+  const hostile = Object.fromEntries(['CLOUDFLARE_API_TOKEN', 'ANTHROPIC_API_KEY', 'ADVISOR_PHONE_KEY', 'META_APP_SECRET',
+    'BLUEBUBBLES_PASSWORD', 'VAPID_PRIVATE_KEY', 'COAST_TOKEN', 'FLEET_API_KEY', 'ENABLE_SECRET_THING', 'SECRET_ADVISOR_WEBHOOK_TOKEN']
+    .map(name => [name, 'leak-me']));
+  const snapshot = deploySnapshot('e'.repeat(40), {...hostile, COAST_FEEDS: 'ocean'});
+  for (const name of Object.keys(snapshot.variables)) assert.doesNotMatch(name, SECRET_NAME, name);
+  assert.doesNotMatch(JSON.stringify(snapshot) + deploySummary({...snapshot, variables: {...snapshot.variables, ...hostile}}), /leak-me/);
+  assert.equal(snapshot.variables.COAST_FEEDS, 'ocean');
 });
 
 test('receipt distinguishes unset from false; summary re-filters and escapes table values', () => {
@@ -59,6 +73,8 @@ test('snapshot CLI and successful-deploy summary use the same file and selected 
     const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
     assert.match(workflow, /node "\$CONTROLLER\/scripts\/wrangler_config.mjs" --snapshot "\$DEPLOY_SHA" dist\/client\/deploy.json/);
     assert.match(workflow, /Summarize the deployed production switches\n        if: steps.deploy.outputs.deployed == 'true' && steps.smoke.outcome == 'success'\n        run: node "\$CONTROLLER\/scripts\/wrangler_config.mjs" --summary dist\/client\/deploy.json/);
+    // The same receipt is kept per run, only after a smoke-tested deploy, named for the selected commit.
+    assert.match(workflow, /Keep the deployed switches snapshot as a run artifact\n        if: steps.deploy.outputs.deployed == 'true' && steps.smoke.outcome == 'success'\n(?:        #[^\n]*\n)?        continue-on-error: true\n        uses: actions\/upload-artifact@[0-9a-f]{40}[^\n]*\n        with:\n(?:          #[^\n]*\n)?          name: deploy-json-\$\{\{ needs.source.outputs.sha \}\}\n          path: dist\/client\/deploy.json\n          if-no-files-found: error\n/);
   } finally { rmSync(dir, {recursive: true, force: true}); }
 });
 

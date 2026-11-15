@@ -134,6 +134,9 @@ test('visual-only resize and scroll are bounded, duplicate events and cancelled 
 test('non-target controls, separate Plan search and desktop keep their ordinary layout', async ({page, v2, isMobile}) => {
   await v2.open('app', AREA);
   if (!isMobile) {
+    // The source guard reveals the first answer above the map after startup.
+    // Measure the ordinary layout only once that answer is visible.
+    await expect(page.locator('.app-first-answer')).toBeVisible();
     const search = page.locator('.app-target-search');
     const before = await page.locator('.app-stage').boundingBox();
     await search.fill('salm');

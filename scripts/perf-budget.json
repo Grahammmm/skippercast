@@ -80,6 +80,10 @@
           "reason": "Lowered 1,064,000 to 1,059,000 (SC1407-10, #1762 M5). The trip planner, offline pack, basemap ranges and coastal snapshots moved from web/trip.ts to web/trip-runtime.ts, loaded on first use, so the app's first load no longer carries them. Vite manifest static closure of app.html: 1,007,939 bytes on this branch merged with main 1deba4ec (SC1407-09 and the earlier entries included); ceiling = ceil(1,007,939 x 1.05 / 1,000) x 1,000."
         },
         {
+          "max_bytes": 1061000,
+          "reason": "SCB-12: raise only app_js by 2,000 bytes for the Vite-native parallel bootstrap and startup imagery latch. The corrected checker includes the mandatory dynamic main.tsx shell and its static closure, measuring 1,060,776 raw bytes rather than the misleading 4.5 KB bootstrap alone. This is 1,776 bytes over the previous 1,059,000 ceiling; new ceiling 1,061,000 retains a 224-byte margin. The measured canvas improves from 7.610 s to 4.865 s median; verdict is 692 ms later, explicitly documented for review. No gzip, CSS, data, largest-file or other budget changes."
+        },
+        {
           "max_bytes": 1111000,
           "reason": "Budget drift, raised by the budget-drift bot (SC-CI-2 first run on main 114079ae1; earlier hand-set ceilings left 0.1% to 2.3% margins). App page (brief, map) scripts (first load): main measures 1,057,712 bytes, 99.9% of the 1,059,000 byte budget; ceiling = ceil(1,057,712 x 1.05 / 1,000) x 1,000 = 1,111,000 (5.0% headroom)."
         }

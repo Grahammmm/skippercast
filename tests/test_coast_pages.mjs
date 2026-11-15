@@ -1,7 +1,7 @@
 import {readableReportURL} from '../web/readable-links.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {existsSync,readFileSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
 globalThis.REGIONS={};
 globalThis.DEPLOYMENT={allowed_origins:['https://skippercast.com']};
 const {coastFeeds,serveCoastData}=await import('../server/coast-data.ts');
@@ -40,6 +40,15 @@ test('the readable report names the county it covers, not all of Central Califor
   assert.doesNotMatch(html,/Central California/,query);
  }
  assert.match(template,/<title>San Luis Obispo County coastal report · SkipperCast<\/title>/);
+});
+test('the readable report H1 and opening sentence name the county and the Central Coast (SC-AUDIT-11)',async()=>{
+ const gap=options({...report,observations:[null]});
+ for(const [label,opts,status] of [['report',options(),200],['gap',gap,503]]){
+  const response=await serveCoastPage(request('/report'),opts),html=await response.text();
+  assert.equal(response.status,status,label);
+  assert.match(html,/<h1>San Luis Obispo County coastal report<\/h1><p class="lede">This report covers San Luis Obispo County on the Central Coast \(Morro Bay and Cambria–San Simeon\) only\. Nothing here covers the rest of California\.<\/p>/,label);
+  assert.equal((html.match(/<h1>/g)||[]).length,1,label);
+ }
 });
 test('original Fish aliases preserve profile, target, geographic binding and exact hour',()=>{
  const result=selection('?area=north&mode=spear&species=gopher&hour=2026-10-07T12:00:00Z');
@@ -120,11 +129,10 @@ test('legacy area aliases must agree with the reviewed binding at explicit map p
  }
 });
 
-test('the removed draft privacy and terms pages are not pages and no shell links them',async()=>{
+test('Fish privacy path serves the complete existing notice under either UI switch',async()=>{
  const {shellFor}=await import('../server/routes/assets.ts');
- assert.equal(shellFor('/privacy',new URLSearchParams()),undefined);
- for(const page of ['privacy.html','terms.html'])assert.equal(existsSync(new URL('../dist/'+page,import.meta.url)),false,page);
- assert.doesNotMatch(template,/href="\/?(?:privacy|terms)(?:\.html)?"/);
+ assert.equal(shellFor('/privacy',new URLSearchParams()),'/privacy.html');
+ assert.match(readFileSync(new URL('../dist/privacy.html',import.meta.url),'utf8'),/Privacy|privacy/);
 });
 
 test('admitted overview source selection opens readable report and returns to the same overview',()=>{
@@ -147,14 +155,7 @@ test('FE-86 restyle keeps every text node of the readable and information pages 
  for(const path of ['/report','/report?region=','/report?region=morro-bay&hour=2026-10-07T13:00Z','/methodology','/about']){
   const render=async shell=>textNodes(await(await serveCoastPage(request(path),{...options(),template:shell})).text());
   const old=await render(before),current=await render(template),at=old.indexOf('About');
-  // The draft privacy and terms pages were removed on 2026-11-12: their links and the sentence that led to one are gone.
-  const legal=new Set(['Privacy','Complete privacy notice','Read the complete privacy notice','Terms']),expected=[];
-  for(const node of [...old.slice(0,at+1),'How it’s built',...old.slice(at+1)]){
-   if(legal.has(node)){if(/^\s*·\s*$/.test(expected.at(-1)??''))expected.pop();continue;}
-   if(node==='.'&&expected.at(-1)==='Public report reads do not require an account.')continue;
-   expected.push(node.startsWith('Public report reads do not require an account.')?'Public report reads do not require an account.':node);
-  }
-  assert.ok(old.length>12&&at>0,path);assert.deepEqual(current,expected,path);
+  assert.ok(old.length>12&&at>0,path);assert.deepEqual(current,[...old.slice(0,at+1),'How it’s built',...old.slice(at+1)],path);
  }
 });
 test('FE-86 template links web/tokens.css and its sheet reads only token names',()=>{

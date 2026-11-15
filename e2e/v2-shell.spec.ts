@@ -690,6 +690,8 @@ for (const lang of ['en', 'es']) {
 for (const [percent, scale] of [[125, 1.25], [150, 1.5]] as const) {
   test(`UXFIX-05: root text size ${percent}% grows the text ${scale}x and nothing clips or scrolls sideways`, async ({page, pageErrors, v2}) => {
     await v2.open('app', AREA);
+    // Measure the real brief, not the async bootstrap's empty host.
+    await expect(page.locator('.ui-sheet h1, aside.app-brief h1')).toBeVisible();
     const sample = () => page.evaluate(() => {
       const px = (selector: string) => { const el = document.querySelector(selector); return el ? parseFloat(getComputedStyle(el).fontSize) : NaN; };
       return {body: px('body'), headline: px('.ui-sheet h1, aside.app-brief h1'), location: px('.app-location')};

@@ -104,6 +104,34 @@
       "rejected": {
         "46259": "Santa Lucia Escarpment (CDIP 222) is a wave-only deep-water buoy 117 km from 46028; it reports no wind, so it cannot stand in for the role's wind reading."
       }
+    },
+    {
+      "region": "shelter-cove-north-mendocino",
+      "role": "nearshore_buoy",
+      "primary": "46213",
+      "backup": "46022",
+      "distance_km": 50.42,
+      "primary_coordinates": [
+        40.291,
+        -124.748
+      ],
+      "backup_coordinates": [
+        40.716,
+        -124.54
+      ],
+      "exposure": "Open-coast deep-water buoys off far northern California: Cape Mendocino (CDIP 094, 17 NM off the cape) and Eel River (NDBC, 17 NM west-southwest of Eureka). Both face the same northwest swell and wind.",
+      "reason": "Shelter Cove's nearshore role is a distant northern wave reference, not a reading at the launch or the reef. Cape Mendocino 46213 stopped reporting on 2026-11-08 (its NDBC station page says No Recent Reports), which left the live feed with four critical sources about 140 h stale (issue #1770). Eel River 46022 is the nearest open-coast buoy of the same exposure that still reports, and it is a full weather buoy: it adds wind and pressure that 46213 never reported, and water temperature is reported only part of the time. It is a different place about 50 km north-northeast, so wave height and direction can differ from 46213; the label names 46022 whenever it serves. Same-hour samples 2026-11-08 02:20-02:30Z: 46213 2.8 m at 13 s from 283 deg, water 17.5 C; 46022 3.0 m at 14 s from 310 deg, water 16.2 C. The existing offshore role 46014 (Point Arena, about 90 km south of Shelter Cove) stays as it is, so the two roles keep reading different places.",
+      "endpoints": [
+        "https://www.ndbc.noaa.gov/data/realtime2/46213.txt",
+        "https://www.ndbc.noaa.gov/data/realtime2/46022.txt",
+        "https://www.ndbc.noaa.gov/data/realtime2/46022.spec"
+      ],
+      "observed_primary_sample_at": "2026-11-08T02:30:00Z",
+      "observed_backup_sample_at": "2026-11-14T01:00:00Z",
+      "rejected": {
+        "46244": "Humboldt Bay North Spit (CDIP 168) is a nearshore shelf buoy about 75 km north of 46213, off the Humboldt Bay entrance; its shallow-water exposure differs from the deep-water 46213 and it already serves Trinidad-Klamath's nearshore role.",
+        "46014": "Point Arena is already this region's offshore role; naming it twice would show one place under two labels."
+      }
     }
   ],
   "unconfigured_policy": "Keep all other roles single-station in this bounded rollout: an adjacent station is not evidence of comparable exposure, and offshore wind buoys are not substitutes for CDIP nearshore wave sensors. Never substitute tide heights across a headland, harbor or island without a separate review.",
@@ -158,7 +186,7 @@
     },
     {
       "id": "shelter-cove-north-mendocino",
-      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+      "reason": "Nearshore buoy chain configured above (46213 then 46022). Offshore 46014 (Point Arena, about 90 km south of Shelter Cove, reports now) and tide 9418024 (historical station, predictions only) stay single-station: no reviewed backup of comparable exposure."
     },
     {
       "id": "south-big-sur-san-simeon",

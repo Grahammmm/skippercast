@@ -50,14 +50,15 @@ export type Reading =
 /** geo-screen's search bound (its FAR_M, not exported): a closure whose box is further than this from the place is not measured there. */
 const SEARCH_BOUND_M = 20000;
 /** The nearest held closure to the fix with no search bound: the minimum finite distance (the first of equal ones), its name and metres to a tenth. */
-function nearestHeld(fix: Fix, features: readonly {properties?: {NAME?: string; FULLNAME?: string}; geometry: unknown}[]): {name: string | null; distanceM: number} | null {
+function nearestHeld(fix: Fix, features: readonly {properties?: {NAME?: string; FULLNAME?: string}; geometry: unknown}[]): {name: string | null; distanceM: number; touching: boolean} | null {
   const point = pointGeometry(fix.longitude, fix.latitude);
   let best: {name: string | null; d: number} | null = null;
   for (const f of features) {
     const d = distanceM(point, f.geometry);
     if (d !== null && Number.isFinite(d) && (!best || d < best.d)) best = {name: f.properties?.FULLNAME || f.properties?.NAME || null, d};
   }
-  return best && {name: best.name, distanceM: Math.round(best.d * 10) / 10};
+  // `touching` is the exact raw distance of 0; the displayed tenth-metre value can read 0 for a point that is a few centimetres outside.
+  return best && {name: best.name, distanceM: Math.round(best.d * 10) / 10, touching: best.d === 0};
 }
 
 /**
@@ -79,7 +80,7 @@ export function readingFor(fix: Fix, screen: HeldScreen | null | undefined): Rea
   // A reach that touches geo-screen's 20 km search bound would be cut short by it (a closer closure can sit past the bound, or beside a farther
   // one it did measure), so the nearest closure is measured again over every held feature, with the same helper, rounding and name fallback.
   const near = reach >= SEARCH_BOUND_M ? nearestHeld(fix, held.features) : null;
-  const inside = verdict.inside || near?.distanceM === 0, name = near ? near.name : verdict.name, metres = near ? near.distanceM : verdict.distanceM;
+  const inside = verdict.inside || near?.touching === true, name = near ? near.name : verdict.name, metres = near ? near.distanceM : verdict.distanceM;
   const where = inside ? 'inside' : metres !== null && metres <= reach ? 'near' : 'outside';
   const missing = held.missing ?? [], clock = held.clock ?? (held.current ? 'ok' : 'old');
   if (missing.length && where === 'outside') return {kind: 'incomplete', fix, missing, clock, checkedAt: held.checked_at};

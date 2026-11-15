@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "about": "Regions that publish a rough-first seafloor archive (z8-11 habitat only, default simplification; z12-15 unchanged) and the approved reference sizes their size gate uses. Read by src/skippercast/seafloor/rough_first.py. The pipeline never edits this file. Changing a reference size or the margin is a rebaseline: it needs G's approval first. A region not listed here publishes today's archive.",
+  "policy": "F1c REPLAN proposal revision 2, section 4 (proposed tolerance policy, approved by G 2026-11-14): Rc <= reference x (1 + margin) at z8-11 and for the opening view; Rc/Rk >= anomaly_floor at z8-11; z12-15 tiles byte-identical to the in-run control build; z9-11 keep every habitat id and at least occurrence_floor of the feature occurrences.",
+  "regions": {
+    "morro-bay": {
+      "reference": "R4-SC-09-F1a variant A1 (reports/r4-sc-09-f1/EXPERIMENT.md lines 72 to 76): compressed tile payload bytes per zoom.",
+      "measured": "F1C-MEASURE run 43664445259 at 6eb3a46b (build only, nothing published): Rc z8 299790, z9 459943, z10 595557, z11 837887 B; opening view 351624 B; z12-15 1075 of 1075 tiles identical to the control build.",
+      "rough_zoom_bytes": {"8": 464493, "9": 477289, "10": 623177, "11": 893681},
+      "opening_view": {"tiles": ["10/167/404", "10/168/404"], "bytes": 375500},
+      "margin_per_mille": 35,
+      "anomaly_floor": 0.15,
+      "occurrence_floor": 0.99
+    }
+  }
+}

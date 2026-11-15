@@ -57,18 +57,25 @@ const state = {region: scenario.region, coast: scenario.coast ?? null, shownPres
 globalThis.__stub = (from, name) => {
   if (name in state) return {get value() { return state[name]; }, set value(v) { state[name] = v; }, peek: () => state[name]};
   if (name === 'NARROW_QUERY') return '(max-width: 1023px)';
+  if (name === 'MAP_WAIT_MAX_MS') return 0;  // main.tsx's release timer then fires at once (releaseMap is a stand-in), so the process ends
   if (name === 'savedHomeURL') return () => { events.push('savedHome'); return new Promise(() => {}); };
+  // SCB-11 (web/map-ready.ts): the map's downloads wait for the first verdict; a held page queues the warm until released.
+  if (name === 'holdMap') return () => { holds++; };
+  if (name === 'whenMapMayLoad') return fn => { if (scenario.held) waiting.push(fn); else fn(); };
   return (...args) => { if (['render', 'startTrip'].includes(name)) events.push(name); return () => {}; };
 };
+let holds = 0;
+const waiting = [];
 await import(scenario.main);
 events.push('bootstrap:done');
+if (scenario.held) { await new Promise(resolve => setTimeout(resolve, 20)); events.push('release'); for (const fn of waiting.splice(0)) fn(); }
 let chart = null;
 if (scenario.chart) {
   try { chart = (await import(scenario.chart)) === (await import(scenario.chart)) ? 'loaded' : 'two modules'; }
   catch (error) { chart = 'failed: ' + error.message; }
 }
 await new Promise(resolve => setTimeout(resolve, 30));
-process.stdout.write(JSON.stringify({events, rejections, chart}));
+process.stdout.write(JSON.stringify({events, rejections, chart, holds}));
 `;
 
 let bundle;
@@ -101,7 +108,15 @@ test('bootstrap_warms_once_after_render_before_trip_start', async t => {
     const r = await page(t, {href, region: 'test-coast'});
     assert.deepEqual(r.events, ['render', 'wrapper:import', 'startTrip', 'bootstrap:done', 'wrapper:evaluate'], href);
     assert.deepEqual(r.rejections, [], href);
+    assert.equal(r.holds, 1, `${href}: a page that opens on a region holds the map's downloads for its first verdict`);
   }
+});
+
+test('scb11_held_map_warms_only_once_released', async t => {
+  const r = await page(t, {href: 'https://s.test/map?region=test-coast', region: 'test-coast', held: true});
+  assert.deepEqual(r.events, ['render', 'startTrip', 'bootstrap:done', 'release', 'wrapper:import', 'wrapper:evaluate']);
+  assert.equal(r.holds, 1);
+  assert.equal((await page(t, {href: 'https://s.test/map', region: null})).holds, 0, 'a page with no region holds nothing');
 });
 
 test('bootstrap_skips_non_chart_or_unresolved_entry', async t => {

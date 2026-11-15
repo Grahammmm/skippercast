@@ -78,7 +78,8 @@ test('language_choice_reload_and_opposing_link: the choice survives a reload, al
   await expect(menu.spanish).toHaveAttribute('aria-pressed', 'true');
   expect(page.url(), 'the address is untouched').toBe(address);
   await page.reload();
-  expect(await htmlLang(page)).toBe('es');
+  // The parallel bootstrap no longer makes document load an app-readiness signal.
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
   await expect(page.getByText(PLANNING.es).first()).toBeAttached();
   menu = await openMenu(page, isMobile);
   await expect(menu.spanish).toHaveAttribute('aria-pressed', 'true');
@@ -95,14 +96,14 @@ test('language_choice_reload_and_opposing_link: the choice survives a reload, al
   expect(page.url()).toBe(before.replace('lang=en', 'lang=es'));
   expect(await kept(page), 'no reload and no new document').toBe(true);
   await page.reload();
-  expect(await htmlLang(page)).toBe('es');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
 
   // The inverse, from an address that says Español.
   menu = await openMenu(page, isMobile);
   await menu.english.click();
   expect(page.url()).toBe(before);
   await page.reload();
-  expect(await htmlLang(page)).toBe('en');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   expect(pageErrors).toEqual([]);
 });
 

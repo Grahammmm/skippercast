@@ -102,16 +102,20 @@ export const metrics: MiddlewareHandler<AppEnv> = async (c, next) => {
   let status = 500;
   try { await next(); status = c.res.status; }
   finally {
-    const env = c.env;
-    if (env?.ANALYTICS) {
-      const route = routeOf(c), sampled = route.startsWith('/feeds') && status < 400;
-      if (!sampled || Math.random() < 1 / FEED_SAMPLE) {
-        const cache = status < 500 ? c.res.headers.get('X-SC-Cache') : null;
-        const colo = (c.req.raw as {cf?: {colo?: unknown}}).cf?.colo;
-        const id = c.get('requestId');
-        writePoint(env, 'request', {blobs: [route, c.req.method, cache === 'hit' || cache === 'miss' ? cache : 'none', typeof colo === 'string' ? colo : '', id ? (await hash(id)).slice(0, 16) : ''],
-          doubles: [status, Date.now() - started, sampled ? FEED_SAMPLE : 1]});
+    // Best-effort: any failure preparing the point omits it. No return or rethrow here, so the
+    // downstream response, or the exception escaping `next()`, completes exactly as it was.
+    try {
+      const env = c.env;
+      if (env?.ANALYTICS) {
+        const route = routeOf(c), sampled = route.startsWith('/feeds') && status < 400;
+        if (!sampled || Math.random() < 1 / FEED_SAMPLE) {
+          const cache = status < 500 ? c.res.headers.get('X-SC-Cache') : null;
+          const colo = (c.req.raw as {cf?: {colo?: unknown}}).cf?.colo;
+          const id = c.get('requestId');
+          writePoint(env, 'request', {blobs: [route, c.req.method, cache === 'hit' || cache === 'miss' ? cache : 'none', typeof colo === 'string' ? colo : '', id ? (await hash(id)).slice(0, 16) : ''],
+            doubles: [status, Date.now() - started, sampled ? FEED_SAMPLE : 1]});
+        }
       }
-    }
+    } catch { /* analytics must never fail a request */ }
   }
 };

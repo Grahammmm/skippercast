@@ -89,10 +89,19 @@
     "airport_name": "Little River Airport \u00b7 distant southern land reference; no confirmed Shelter Cove METAR",
     "nearshore_buoy": "46213",
     "nearshore_buoy_name": "Cape Mendocino wave buoy \u00b7 distant northern reference",
-    "nearshore_buoy_note": "About 40.291\u00b0N, 124.748\u00b0W in deep water; not a Shelter Cove launch or nearshore reef sensor.",
+    "nearshore_buoy_note": "About 40.291\u00b0N, 124.748\u00b0W in deep water; not a Shelter Cove launch or nearshore reef sensor. If it stops reporting, 46022 Eel River (about 50 km north-northeast, also open-coast deep water) serves as the named backup and the feed says which station it used.",
     "offshore_buoy": "46014",
     "offshore_buoy_name": "Point Arena buoy \u00b7 distant southern reference",
-    "offshore_buoy_note": "About 39.225\u00b0N, 123.980\u00b0W; not independent local Shelter Cove conditions."
+    "offshore_buoy_note": "About 39.225\u00b0N, 123.980\u00b0W; not independent local Shelter Cove conditions.",
+    "roles": {
+      "nearshore_buoy": {
+        "stations": [
+          "46213",
+          "46022"
+        ],
+        "evidence": "catalog/station-failover.json"
+      }
+    }
   },
   "mpa": {
     "bounds": [
@@ -247,7 +256,7 @@
     },
     "wave-observations": {
       "status": "partial",
-      "reason": "NDBC 46213 and 46014 returned observations in rehearsal, but are distant northern and southern references rather than Shelter Cove sensors."
+      "reason": "NDBC 46213 and 46014 returned observations in rehearsal, but are distant northern and southern references rather than Shelter Cove sensors. 46022 Eel River is the reviewed backup for 46213."
     },
     "weather-observations": {
       "status": "partial",
@@ -349,10 +358,19 @@
         "airport_name": "Little River Airport \u00b7 distant southern land reference; no confirmed Shelter Cove METAR",
         "nearshore_buoy": "46213",
         "nearshore_buoy_name": "Cape Mendocino wave buoy \u00b7 distant northern reference",
-        "nearshore_buoy_note": "About 40.291\u00b0N, 124.748\u00b0W in deep water; not a Shelter Cove launch or nearshore reef sensor.",
+        "nearshore_buoy_note": "About 40.291\u00b0N, 124.748\u00b0W in deep water; not a Shelter Cove launch or nearshore reef sensor. If it stops reporting, 46022 Eel River (about 50 km north-northeast, also open-coast deep water) serves as the named backup and the feed says which station it used.",
         "offshore_buoy": "46014",
         "offshore_buoy_name": "Point Arena buoy \u00b7 distant southern reference",
-        "offshore_buoy_note": "About 39.225\u00b0N, 123.980\u00b0W; not independent local Shelter Cove conditions."
+        "offshore_buoy_note": "About 39.225\u00b0N, 123.980\u00b0W; not independent local Shelter Cove conditions.",
+        "roles": {
+          "nearshore_buoy": {
+            "stations": [
+              "46213",
+              "46022"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
       },
       "marine_zones": {
         "coastal": "PZZ455",

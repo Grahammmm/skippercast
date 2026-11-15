@@ -106,10 +106,10 @@ export function currentPort(ports: readonly Port[], region: string | null, saved
   return linkedPort(ports, region, linkedId) ?? inRegion.find(port => port.id === savedId) ?? inRegion[0] ?? null;
 }
 
-/** Exact fragments a home resolution keeps: the account dialog and the trip planner (SC2252-15's app shortcut). */
-const KEPT_HASHES: readonly string[] = ['#account', '#export'];
+/** Exact fragments a home resolution keeps: the account dialog, the trip planner (SC2252-15's app shortcut) and a trip-alert tap's saved-trip alerts. */
+const KEPT_HASHES: readonly string[] = ['#account', '#export', '#alerts'];
 /**
- * The app with `params` replacing the area keys; unrelated parameters, an exact #account or #export and one
+ * The app with `params` replacing the area keys; unrelated parameters, an exact #account, #export or #alerts and one
  * exact view=conditions (SC2252-15's app shortcut) stay. A camera view, any other or a repeated view is dropped.
  */
 function appURL(href: string, params: Record<string, string | undefined>): string {
@@ -123,6 +123,8 @@ function appURL(href: string, params: Record<string, string | undefined>): strin
 /** The app at `port`: /map?region=…&port=…(&profile=…). */
 export const portURL = (href: string, port: Port, profile?: Profile | null): string =>
   appURL(href, {region: port.region, port: port.id, profile: isProfile(profile) ? profile : undefined});
+/** A region choice drops the previous port, camera, target and local area. */
+export const regionURL = (href: string, region: string): string => appURL(href, {region});
 /** "Explore the coast": the app over the central coast with no port. */
 export const exploreURL = (href: string): string => appURL(href, {coast: 'central'});
 
