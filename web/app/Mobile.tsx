@@ -199,7 +199,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
       const top = Math.max(bounds.top + body.clientTop, viewport.offsetTop);
       const bottom = Math.min(bounds.top + body.clientTop + body.clientHeight, viewport.offsetTop + viewport.height);
       if (body.scrollHeight > body.clientHeight) {
-        // scrollTop can quantize a fractional delta; round outward so shorter unavailable content never clips the focused field.
+        // Round outward: scrollTop snaps to whole pixels, so a fractional step leaves the field clipped.
         body.scrollTop += field.bottom > bottom ? Math.ceil(field.bottom - bottom) : field.top < top ? Math.floor(field.top - top) : 0;
       }
     };

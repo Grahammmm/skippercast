@@ -41,6 +41,15 @@ test('the readable report names the county it covers, not all of Central Califor
  }
  assert.match(template,/<title>San Luis Obispo County coastal report · SkipperCast<\/title>/);
 });
+test('the readable report H1 and opening sentence name the county and the Central Coast (SC-AUDIT-11)',async()=>{
+ const gap=options({...report,observations:[null]});
+ for(const [label,opts,status] of [['report',options(),200],['gap',gap,503]]){
+  const response=await serveCoastPage(request('/report'),opts),html=await response.text();
+  assert.equal(response.status,status,label);
+  assert.match(html,/<h1>San Luis Obispo County coastal report<\/h1><p class="lede">This report covers San Luis Obispo County on the Central Coast \(Morro Bay and Cambria–San Simeon\) only\. Nothing here covers the rest of California\.<\/p>/,label);
+  assert.equal((html.match(/<h1>/g)||[]).length,1,label);
+ }
+});
 test('original Fish aliases preserve profile, target, geographic binding and exact hour',()=>{
  const result=selection('?area=north&mode=spear&species=gopher&hour=2026-10-07T12:00:00Z');
  assert.equal(result.context.regionId,'cambria-san-simeon');assert.equal(result.context.profile,'spear');assert.equal(result.context.target,'gopher');assert.equal(result.context.at.toISOString(),at);assert.match(result.workspace,/region=cambria-san-simeon/);

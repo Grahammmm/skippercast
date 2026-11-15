@@ -38,6 +38,8 @@ export const SEAFLOOR_LAYERS = [SEAFLOOR_CELLS, SEAFLOOR_FILL, SEAFLOOR_LINE, SE
 export const SEAFLOOR_PICK = SEAFLOOR_FILL;
 /** v1's data zoom, the `?view=` zoom it draws from and its tile cap (dist/seafloor-layer.js). */
 export const TILE_ZOOM = 12, MIN_VIEW_ZOOM = 10, MAX_TILES = 64;
+/** R4-SC-09: seafloor tile ranges in flight at once (see createSeafloor's slot()). */
+export const TILE_PARALLEL = 2;
 export const RETRY_DELAYS = [30000, 60000, 120000, 240000, 300000] as const;
 /** The only ledger status whose reach may draw (src/skippercast/seafloor/publish.py). */
 export const SCREENED = 'habitat-screened';
@@ -355,8 +357,11 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
   let manifest: Gate['manifest'] | null = null, pub: Publication | null = null, archive: ArchiveReader | null = null, header: ArchiveHeader | null = null;
   // `drawn` holds the selectable features; `filled` says whether the source holds anything, cells included.
   // `cells` holds the drawn coverage cells, read only by a click that picks nothing else (#706).
-  let archiveKey = '', drawn = new Map<string, SeafloorFeature>(), cells: SeafloorFeature[] = [], view = 'terrain', filled = false;
+  let archiveKey = '', drawn = new Map<string, SeafloorFeature>(), cells: SeafloorFeature[] = [], view = 'terrain', filled = false, marked = false;
   const tiles = new Map<string, Promise<Tile>>();
+  // R4-SC-09: the tile ranges in flight and those waiting for a slot.
+  let active = 0;
+  const waiting: {key: string; rank: number; start: () => void}[] = [];
   const publish = (s: Partial<SeafloorState>) => { seafloorState.value = {...OFF, ...s}; };
   const cancel = () => { if (timer !== null) clearTimer(timer); timer = null; };
   const schedule = (ms: number) => { cancel(); timer = setTimer(() => { timer = null; void enable(true); }, ms); };
@@ -442,9 +447,16 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     const wanted = tilesForBounds(box, Math.min(TILE_ZOOM, head.maxZoom)) as [number, number, number][];
     if (wanted.length > MAX_TILES) return clear('Zoom in to load seafloor candidates');
     const token = ++loading;
+    // R4-SC-09: this view's ranges outrank any older view's still waiting, and the centre's go first (asked in that
+    // order; read back in tilesForBounds' order, so the drawn features are the same as before).
+    const zw = Math.min(TILE_ZOOM, head.maxZoom), span = 2 ** zw, lat = ((box[1] + box[3]) / 2) * Math.PI / 180;
+    const tx = ((box[0] + box[2]) / 2 + 180) / 360 * span, ty = (1 - Math.log(Math.tan(lat) + 1 / Math.cos(lat)) / Math.PI) / 2 * span;
+    const asked = new Map<[number, number, number], Promise<Tile>>();
+    [...wanted].sort((a, b) => Math.hypot(a[1] + 0.5 - tx, a[2] + 0.5 - ty) - Math.hypot(b[1] + 0.5 - tx, b[2] + 0.5 - ty))
+      .forEach((t, i) => asked.set(t, tile(reader, t[0], t[1], t[2], token * (MAX_TILES + 1) + MAX_TILES - i)));
     let parts: Tile[];
     try {
-      parts = await Promise.all(wanted.map(([z, x, y]) => tile(reader, z, x, y)));
+      parts = await Promise.all(wanted.map(t => asked.get(t)!));
     } catch {
       if (token === loading) ready('Seafloor candidates could not load · try again');
       return;
@@ -460,6 +472,8 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     drawn = new Map(habitat.map(f => [f.id, f])); cells = admittedCells;
     engine.setData(SEAFLOOR_SOURCE, collection([...cells, ...habitat], view));
     filled = cells.length + habitat.length > 0;
+    // R4-SC-09: when the first view's seafloor is handed to the map (the speed runs read it beside the Chart's first idle).
+    if (!marked) { marked = true; try { performance.mark('skippercast-seafloor-drawn'); } catch { /* no timing API */ } }
     const ranked = habitat.filter(f => f.kind === 'candidate').length, deeper = admitted.length - inDepth.length, graded = inDepth.length - habitat.length;
     const search = habitat.filter(f => f.kind === 'search').length, interpreted = habitat.filter(f => f.kind === 'interpreted').length;
     const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
@@ -474,11 +488,15 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     });
   }
 
-  function tile(reader: ArchiveReader, z: number, x: number, y: number): Promise<Tile> {
+  function tile(reader: ArchiveReader, z: number, x: number, y: number, rank = 0): Promise<Tile> {
     const key = `${z}/${x}/${y}`;
     let pending = tiles.get(key);
-    if (!pending) {
-      pending = reader.getZxy(z, x, y).then(t => {
+    if (pending) { const queued = waiting.find(w => w.key === key); if (queued && queued.rank < rank) queued.rank = rank; }
+    else {
+      pending = slot(key, rank).then(() => {
+        if (!alive) throw new Error('Seafloor layer destroyed');
+        return reader.getZxy(z, x, y);
+      }).finally(release).then(t => {
         if (!t) return {habitat: [], cells: []};
         const decoded = decodeTile(new Uint8Array(t.data));
         return {habitat: tileFeatures(decoded, 'habitat', z, x, y) as TileFeature[], cells: tileFeatures(decoded, 'cells', z, x, y) as TileFeature[]};
@@ -488,6 +506,21 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
       tiles.set(key, mine);
     }
     return pending;
+  }
+  /**
+   * R4-SC-09: at most TILE_PARALLEL tile ranges in flight, so the first view's seafloor (one 609 KB Morro Bay tile among
+   * nine) does not crowd the map's own base tiles off a slow link. A waiting range with the higher rank goes first: the
+   * latest view's ranges before an older view's, and nearer the view's centre before farther.
+   */
+  function slot(key: string, rank: number): Promise<void> {
+    if (active < TILE_PARALLEL) { active++; return Promise.resolve(); }
+    return new Promise(start => { waiting.push({key, rank, start}); });
+  }
+  function release(): void {
+    if (!waiting.length) { active--; return; }
+    let best = 0;
+    for (let i = 1; i < waiting.length; i++) if (waiting[i]!.rank > waiting[best]!.rank) best = i;
+    waiting.splice(best, 1)[0]!.start();
   }
 
   const on = computed(() => layers.value.includes('seafloor'));

@@ -158,3 +158,107 @@ test('/map\'s early script starts the reads at once, unless the app is already r
   const main = read('web/app/main.tsx');
   assert.ok(main.indexOf('.skippercastApp = true;') >= 0 && main.indexOf('.skippercastApp = true;') < main.indexOf('\ninstallDegradedWatch();'));
 });
+
+// A read that is not compatible (other credentials or redirect handling) asks the network itself and leaves the started
+// answer for the first compatible read. Started calls on a morro-bay page: 1 region.json, 2 daily, 3 conditions, 4 forecast, 5 report.
+const REPORT = '/api/coast/report';
+const text = async promise => (await promise).text();
+
+test('credentials_mismatch_keeps_first_matching_answer', async () => {
+  const {calls, page} = scope();
+  startEarlyReads(page);
+  assert.equal(await text(page.fetch(REPORT, {credentials: 'same-origin', redirect: 'error'})), '6');
+  assert.equal(await text(page.fetch(REPORT, {credentials: 'include', redirect: 'error'})), '7');
+  assert.deepEqual(calls[5].init, {credentials: 'same-origin', redirect: 'error'}, 'the bypass reaches the network unchanged');
+  assert.equal(await text(page.fetch(REPORT, {credentials: 'omit', redirect: 'error'})), '5', 'the original answer, not a new one');
+  assert.equal(await text(page.fetch(REPORT, {credentials: 'omit', redirect: 'error'})), '8', 'handed over once');
+  // A region read whose early default is same-origin.
+  assert.equal(await text(page.fetch('/regions/morro-bay/region.json', {credentials: 'omit'})), '9');
+  assert.equal(await text(page.fetch('/regions/morro-bay/region.json', {credentials: 'include'})), '10');
+  assert.equal(await text(page.fetch('/regions/morro-bay/region.json')), '1');
+  assert.equal(await text(page.fetch('/regions/morro-bay/region.json')), '11');
+  assert.equal(calls.length, 11);
+});
+
+test('redirect_mismatch_keeps_first_matching_answer', async () => {
+  const {calls, page} = scope();
+  startEarlyReads(page);
+  assert.equal(await text(page.fetch(REPORT, {credentials: 'omit', redirect: 'follow'})), '6');
+  assert.equal(await text(page.fetch(REPORT, {credentials: 'omit', redirect: 'manual'})), '7');
+  assert.equal(await text(page.fetch(REPORT)), '8', 'both fields differ (defaults compared)');
+  assert.equal(await text(page.fetch(REPORT, {credentials: 'omit', redirect: 'error'})), '5');
+  assert.equal(calls.length, 8);
+});
+
+test('bypass_sequence_preserves_once_only_handoff', async () => {
+  const {calls, page} = scope();
+  startEarlyReads(page);
+  const mismatches = [{credentials: 'include', redirect: 'error'}, {credentials: 'omit'}, {credentials: 'omit', redirect: 'error', cache: 'reload'},
+    {credentials: 'omit', redirect: 'error', headers: {'x-test': '1'}}, {credentials: 'omit', redirect: 'error', method: 'POST', body: 'x'}];
+  for (const [i, init] of mismatches.entries()) {
+    assert.equal(await text(page.fetch(REPORT, init)), String(6 + i));
+    assert.equal(calls.at(-1).url, REPORT, 'forwarded as given');
+    assert.ok(calls.at(-1).init === init, 'forwarded as given');
+  }
+  assert.equal(await text(page.fetch('/api/forecast?region=morro-bay')), '4', 'another URL keeps its own answer');
+  assert.equal(await text(page.fetch(new Request(new URL(REPORT, PAGE), {credentials: 'omit', redirect: 'error'}))), '11', 'a Request object is not a handoff');
+  assert.equal(await text(page.fetch(REPORT, {credentials: 'omit', redirect: 'error'})), '5');
+  assert.equal(await text(page.fetch(REPORT, {credentials: 'omit', redirect: 'error'})), '12');
+  assert.equal(calls.length, 12);
+});
+
+test('concurrent_matches_cannot_share_the_body', async () => {
+  const pending = [];
+  const page = {location: {href: PAGE}, fetch: (input, init = {}) => new Promise(resolve => pending.push({input, init, resolve}))};
+  startEarlyReads(page);
+  assert.equal(pending.length, 5);
+  const bypass = page.fetch(REPORT, {credentials: 'same-origin', redirect: 'error'});
+  const first = page.fetch(REPORT, {credentials: 'omit', redirect: 'error'});
+  const second = page.fetch(REPORT, {credentials: 'omit', redirect: 'error'});
+  assert.equal(pending.length, 7, 'the bypass and the second compatible call asked the network; the first took the started answer');
+  pending[4].resolve(new Response('early')); pending[5].resolve(new Response('bypass')); pending[6].resolve(new Response('fresh'));
+  assert.deepEqual(await Promise.all([text(bypass), text(first), text(second)]), ['bypass', 'early', 'fresh']);
+});
+
+test('mismatch_never_renews_original_ttl', async () => {
+  let now = 1000;
+  const edge = scope();
+  startEarlyReads(edge.page, 'morro-bay', () => now);
+  now = 1000 + EARLY_READ_TTL_MS;
+  assert.equal(await text(edge.page.fetch(REPORT, {credentials: 'include', redirect: 'error'})), '6');
+  assert.equal(await text(edge.page.fetch(REPORT, {credentials: 'omit', redirect: 'error'})), '5', 'exactly the time to live still takes it');
+  const late = scope();
+  now = 1000;
+  startEarlyReads(late.page, 'morro-bay', () => now);
+  now = 1000 + EARLY_READ_TTL_MS - 1;
+  assert.equal(await text(late.page.fetch(REPORT, {credentials: 'include', redirect: 'error'})), '6');
+  now = 1000 + EARLY_READ_TTL_MS + 1;
+  assert.equal(await text(late.page.fetch(REPORT, {credentials: 'omit', redirect: 'error'})), '7', 'the bypass did not extend the life of the answer');
+  assert.equal(await text(late.page.fetch(REPORT, {credentials: 'omit', redirect: 'error'})), '8');
+});
+
+test('abort_and_failed_early_read_contract_stays_intact', async () => {
+  const {calls, page} = scope();
+  startEarlyReads(page);
+  const gone = new AbortController();
+  gone.abort(new Error('left the page'));
+  const init = {credentials: 'include', redirect: 'error', signal: gone.signal};
+  await assert.rejects(page.fetch(REPORT, init), /left the page/);
+  assert.ok(calls.at(-1).init === init && calls.length === 6, 'an incompatible aborted call is forwarded unchanged');
+  assert.equal(await text(page.fetch(REPORT, {credentials: 'omit', redirect: 'error'})), '5', 'and did not consume the early answer');
+  // A failed early read is still the app's failure when it takes it, with no silent retry.
+  const failing = {location: {href: PAGE}, fetch: () => { asked += 1; return Promise.reject(new TypeError('offline')); }};
+  let asked = 0;
+  const unhandled = [], record = error => unhandled.push(error);
+  process.on('unhandledRejection', record);
+  try {
+    startEarlyReads(failing);
+    assert.equal(asked, 5);
+    await assert.rejects(failing.fetch(REPORT, {credentials: 'include', redirect: 'error'}), /offline/);
+    await new Promise(resolve => setTimeout(resolve, 10));
+    assert.equal(unhandled.length, 0);
+    assert.equal(asked, 6, 'the bypass asked the network itself');
+    await assert.rejects(failing.fetch(REPORT, {credentials: 'omit', redirect: 'error'}), /offline/);
+    assert.equal(asked, 6, 'the started failure went to its caller, with no silent retry');
+  } finally { process.off('unhandledRejection', record); }
+});

@@ -221,3 +221,14 @@ swaps in the `png32` form once, under its own source id; a failed png32 draw sta
 off and on, another region or another engine starts at jpgpng again. `dist/app.html` preconnects (anonymous, as MapLibre
 fetches) to `https://imagery.nationalmap.gov`, which the CSP already allows. `scripts/measure_startup.mjs` records JSON
 only, so it does not measure imagery; any imagery comparison needs its own response listener.
+
+R4-SC-09: the map page's first view of the Aerial base is a preview. `web/map/aerial.ts` asks the same template at
+`size=256,256` (each 512 px tile at a quarter of the pixels; Morro Bay's opening four tiles measured 280 KB instead of
+1.14 MB, all PNG because each holds open water). Once the Chart has first settled and the seafloor's first view has
+landed, or `SHARP_WAIT_MAX_MS` (10 s) after that settle, the full 512 px source is added above the preview, and the
+preview is removed at the next map `idle`. The png32 fallback keeps the stage it failed in. A base turned off and on
+after the first view, another region or another engine draws the full image at once. The seafloor layer
+(`web/map/seafloor.ts`) asks at most `TILE_PARALLEL` (2) tile ranges at once, the latest view's and the centre's first,
+so its large z12 tiles (one 609 KB tile in Morro Bay's opening view) share the link with the basemap tiles rather than
+holding it. Its coarser zooms are not lighter (the published archive keeps full detail at z8-z11: 2.11 MB at z11 against
+2.16 MB at z12), so the first view still reads z12. Timings: `reports/perf/R4-SC-09.md`.
