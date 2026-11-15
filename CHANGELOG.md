@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- R4-SC-09-F1c: on a slow phone the Morro Bay seafloor now shows a rough version first, labelled "Rough seafloor — full detail loading", and the full detail replaces it a few seconds later. The rough view shows the habitat outlines only (simplified, up to about 17 m off; no survey cells) until the detail arrives; close-up detail (zoom 12 and above) is unchanged, byte for byte, and the map file is about a quarter smaller. The map file is republished by the seafloor job after this merges, and only if it passes the approved size gate (sizes at or under the approved reference sizes plus 3.5 %, close-up tiles identical to today's build, every habitat id kept at the rough zooms); if it fails, nothing is uploaded and the Morro Bay seafloor layer stays held ("updating") like any failed seafloor build until it is fixed. Other regions are unchanged.
+
 - E2E-TARGET-EDIT-1: on a phone, the target search field being edited above the keyboard stays visible when the sheet's header or content grows later (for example when page data arrives slowly). The sheet now brings the field back into view whenever its header or content changes size while you type, not only when the keyboard or focus changes.
 
 - SC-AUDIT-2c (#2184): apply G's signed Central Coast rules review under the v4 source fingerprints through December 31, 2026. Salmon stays closed for the remainder of 2026; Dungeness is restricted by the signed trap prohibition. Policy-A keeps proposals as also-check links and the health advisory blocking Dungeness only. Vandenberg maritime access remains on hold; fresh daily source checks and location-specific restrictions still apply.
