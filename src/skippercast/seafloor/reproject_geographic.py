@@ -281,6 +281,42 @@ def provenance(receipt):
 
 
 FORMAT = 'geographic-geotiff'
+OUT_OF_DOMAIN = 'geographic-depth-out-of-domain'
+# Admission domain of this route: the product's 300 ft (91.44 m) depth interval, at the float32
+# precision the native normalization uses. Equality is admitted, anything strictly deeper is held.
+MIN_ELEVATION_M = float(np.float32(-91.44))
+SCAN_WINDOW = 512
+
+
+def scan_depth_domain(dataset):
+    """Scan every valid original elevation in bounded windows; return (violations, minimum).
+
+    Masked (NoData) and nonfinite samples are excluded, as everywhere else in this module. The raw
+    source is read, not a resampled product, so a bilinear kernel cannot dilute an artifact first.
+    """
+    violations, minimum = 0, None
+    for row in range(0, dataset.height, SCAN_WINDOW):
+        for col in range(0, dataset.width, SCAN_WINDOW):
+            window = Window(col, row, min(SCAN_WINDOW, dataset.width - col),
+                            min(SCAN_WINDOW, dataset.height - row))
+            values = dataset.read(1, window=window, masked=True).compressed().astype('float64')
+            values = values[np.isfinite(values)]
+            if values.size:
+                low = float(values.min())
+                minimum = low if minimum is None else min(minimum, low)
+                violations += int((values < MIN_ELEVATION_M).sum())
+    return violations, minimum
+
+
+def check_depth_domain(dataset, source_id, source_sha256):
+    """Refuse (before any resampling or cache reuse) a source holding an out-of-domain elevation."""
+    violations, minimum = scan_depth_domain(dataset)
+    if violations:
+        raise ValueError(
+            f'{OUT_OF_DOMAIN}: source {source_id} (sha256 {source_sha256}) holds {violations} valid '
+            f'elevation(s) below the admission limit {MIN_ELEVATION_M:.8f} m (observed minimum '
+            f'{minimum:.4f} m); held by refusal, not masked, clipped or admitted. Human quality '
+            'review of the original is required.')
 
 
 def ingest(row, bounds, *, root=None, fetch=False, local=None):
@@ -307,6 +343,8 @@ def ingest(row, bounds, *, root=None, fetch=False, local=None):
     with usgs_geotiff.open_source(source, row) as dataset:
         if not geographic(dataset):
             raise ValueError('geographic-geotiff rows must hold a geographic raster; use usgs-geotiff')
+        plan(dataset)       # header, CRS, unit and size refusals keep their meaning and come first
+        check_depth_domain(dataset, row['id'], source_sha256)
         projected = prepare(dataset, source_sha256, source.parent, member=row['archive_member'])
     # The projected product is a bare TIFF whatever container the original came in. Its url
     # only names the cached copy's container (fetch_source keys the extension off it), so the
