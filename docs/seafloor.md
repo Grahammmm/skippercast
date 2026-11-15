@@ -184,6 +184,21 @@ product supplies a separate interpolation mask; that remains explicitly unknown
 and must be addressed by the coverage-stage eligibility rules. Unknown datum
 alone does not block tiers 1–2.
 
+**Geographic admission hold.** Before any resampling or cache reuse, the
+`geographic-geotiff` route scans every valid original elevation (512×512
+windows, the whole admitted tile, not just the requested reach). One valid
+elevation strictly below the float32 value of −91.44 m (the 300 ft interval) refuses
+the whole source with the stable reason `geographic-depth-out-of-domain`; the
+message carries the limit, observed minimum, count and source id/hash, never a
+path. NoData-masked and nonfinite samples are ignored, positive land elevations
+are untouched, and a value equal to the limit is admitted. The hold is a refusal,
+not a masked or clipped value: nothing is edited, interpolated or
+auto-accepted, no receipt or draft is produced for the held source, and a warm
+projected or normalized cache cannot bypass it. This is deliberately
+conservative: a genuinely deeper survey is held too and needs human quality
+review (and a separate deeper-data policy) before it can be admitted. A refusal
+is review-required; it neither proves suitability nor clears rights.
+
 Variable-resolution BAG overviews are rejected until a native-refinement adapter
 exists. Coarse default overview pixels must never masquerade as fine native
 depth. The legacy strict BAG metadata parser is unchanged for existing callers;

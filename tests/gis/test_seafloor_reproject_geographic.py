@@ -292,12 +292,17 @@ def ramp_values():
     return ramp(WEST + (cols + .5) * RES, NORTH - (rows + .5) * RES).astype('float32')
 
 
-def write_values(path, values, *, nodata=-3.4028234663852886e38, dtype='float32', width=COLS, height=ROWS):
+def write_values(path, values, *, nodata=-3.4028234663852886e38, dtype='float32', width=COLS, height=ROWS,
+                 units=None, scale=None):
     profile = dict(driver='GTiff', width=width, height=height, count=1, dtype=dtype,
                    transform=from_origin(WEST, NORTH, RES, RES), nodata=nodata,
                    crs=CRS.from_user_input('EPSG:5498').to_wkt())
     with rasterio.open(path, 'w', **profile) as out:
+        if scale:
+            out.scales = (scale,)       # before the data: GTiff drops it when set after, with NoData
         out.write(values.astype(dtype), 1)
+        if units:
+            out.units = (units,)
     return path
 
 
@@ -464,7 +469,7 @@ class NcmpOutlierHoldTests(unittest.TestCase):
                     write_values(self.root / 'seam.tif', edited, nodata=nodata, dtype=dtype,
                                  width=big_cols, height=big_rows)
                     with rasterio.open(self.root / 'seam.tif') as ds:
-                        self.assertEqual(rg.scan_depth_domain(ds), (1, float(deep)), index)
+                        self.assertEqual(rg.scan_depth_domain(ds), (1, float(np.dtype(dtype).type(deep))), index)
         # Real route on an integer tile whose sentinel is masked and whose valid sample is too deep.
         values = np.full((ROWS, COLS), -20)
         values[:, :7] = -32768
@@ -478,13 +483,7 @@ class NcmpOutlierHoldTests(unittest.TestCase):
         def variant(name, **header):
             values = ramp_values()
             values[60, 100] = -889.6
-            path = write_values(self.root / f'{name}.tif', values)
-            with rasterio.open(path, 'r+') as out:
-                if 'units' in header:
-                    out.units = (header['units'],)
-                if 'scale' in header:
-                    out.scales = (header['scale'],)
-            return path
+            return write_values(self.root / f'{name}.tif', values, **header)
 
         wgs84 = self.root / 'wgs84.tif'
         values = ramp_values()
