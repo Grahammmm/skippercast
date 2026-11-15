@@ -15,6 +15,7 @@ import {feedURL} from '../../dist/feeds.js';
 import {dailyPartPath} from '../../dist/offline-core.js';
 import {createLiveMpaReader, readLiveMpa} from '../../dist/live-mpa.js';
 import {sharedFetch} from '../shared-fetch.ts';
+import {mapMayLoad} from '../map-ready.ts';
 import {hasCoastTerrain} from '../coast-context.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt} from '../profile.ts';
 import {grade, habitat, navigate, profile, region, selection, species, withParams} from '../state.ts';
@@ -284,7 +285,8 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
       const id = region.value, current = ++run;
       markData.value = null; markScreen.value = CHECKING; clearTimeout(recheck);
       // SC2007-01: a failed region.json read ends the check as unavailable (marks withheld), never "Checking…" for the visit.
-      if (id) read(id, current).catch(error => { if (current === run) { setScreen({areas: null, checkedAt: null, live: false}); onError('marks', error); } });
+      // SCB-11: the marks, their protected-area screen and the live boundary query wait for the first verdict (web/map-ready.ts).
+      if (id && mapMayLoad.value) read(id, current).catch(error => { if (current === run) { setScreen({areas: null, checkedAt: null, live: false}); onError('marks', error); } });
     }),
     effect(() => {
       const id = habitat.value, r = region.value, s = coastSpecies(species.value, profile.value), depthLimitFt = terrainDepthLimitFt(profile.value);

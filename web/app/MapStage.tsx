@@ -15,10 +15,11 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
-import {createAerial} from '../map/aerial.ts';
+import {aerialSoft, createAerial, createImageryStartup, createSharpStart} from '../map/aerial.ts';
 import {createCharterGrounds} from '../map/charter-grounds.ts';
 import {createShore} from '../map/shore.ts';
 import {chartFailed, createChart, unavailable} from '../map/chart.ts';
+import {seafloorRough, seafloorState} from '../map/seafloor.ts';
 import {createCommercialAis} from '../map/commercial-ais.ts';
 import {createDepthContours} from '../map/depth-contours.ts';
 import {createClouds} from '../map/clouds.ts';
@@ -34,14 +35,14 @@ import {createChlorophyll} from '../map/chlorophyll.ts';
 import {createSwell} from '../map/swell.ts';
 import {createPreviewLayers} from '../map/preview-layers.ts';
 import {createStations} from '../map/stations.ts';
-import {dailyFeed} from '../brief/Brief.tsx';
+import {dailyFeed, verdictEpoch} from '../brief/Brief.tsx';
 import {mapFirstIdle} from '../map-ready.ts';
 import {createWind} from '../map/wind.ts';
 import type {HourClock} from '../clock.ts';
 import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked, terrainReason} from '../map/stage.ts';
 import {language, t, type StringId} from '../i18n.ts';
 import {poster, posterPlacement} from '../map/poster.ts';
-import {profile, region, species} from '../state.ts';
+import {base, profile, region, species} from '../state.ts';
 import {cancelWaypointPlacement, placementRefused, verdictLine, waypointPlacement} from '../waypoint-placement.ts';
 import {currentRegionInfo, zone} from './App.tsx';
 import {MAP_ID} from './SkipLinks.tsx';
@@ -58,6 +59,8 @@ export const mapUnavailable = computed(() => chartFailed.value && shownPresentat
 
 /** RF2115-5: the visit's first Chart is shown and has neither drawn its first idle frame nor failed. Visit-wide, one-way (web/map-ready.ts): never restarts after the first idle. */
 export const chartLoading = computed(() => shownPresentation.value === 'chart' && !chartFailed.value && !mapFirstIdle.value);
+/** R4-SC-09: the Chart host stays aria-busy after that first idle while the aerial base is still the first view's preview. */
+const chartBusy = computed(() => chartLoading.value || (shownPresentation.value === 'chart' && !chartFailed.value && aerialSoft.value));
 
 /** The Chart could not start: say so, and offer a reload of the current page (the same address) as the only retry. */
 export function MapUnavailable() {
@@ -80,6 +83,7 @@ export function PresentationToggle() {
       <p class="app-stage-note" data-chart-loading-status role="status" aria-live="polite" aria-atomic="true">{loading ? t('stage.loadingChart', lang) : ''}</p>
       <p id={NOTE_ID} class="app-stage-note" role="status">{blocked === null ? '' : terrainReason(blocked, lang)}</p>
       {armed ? <p class="app-stage-note" role="status">{t('stage.placePrompt', lang)} {refused ? <>{refused}. </> : null}<Button size="sm" variant="quiet" onClick={cancelWaypointPlacement}>{t('stage.cancelWaypoint', lang)}</Button></p> : null}
+      {shown === 'chart' && seafloorRough.value ? <p class="app-stage-note" data-seafloor-rough role="status">{t('stage.seafloorRough', lang)}</p> : null}
       <div role="group" aria-label={t('stage.presentation', lang)} class="ui-segmented">
         {PRESENTATIONS.map(p => {
           const off = p.value !== 'chart' && !!blocked;
@@ -136,22 +140,30 @@ export function MapStage({children, clock}: {children?: ComponentChildren; clock
   const terrainHost = useRef<HTMLDivElement>(null), chartHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const place = () => regionPlace(currentRegionInfo(), profile.value, species.value ?? '');
+    // SCB-12: an early canvas must not flood the brief's link with large aerial tiles.
+    // Release once, even when the brief settles as failed/timed out; refreshes never detach imagery.
+    const imagery = createImageryStartup(() => verdictEpoch.value?.sealed === true);
+    const aerialWaiting = computed(() => !imagery.ready.value && base.value === 'aerial' && !!currentRegionInfo()?.aerial);
+    // R4-SC-09: the first view's aerial base is a quarter-pixel preview; the full image follows once the map has first
+    // settled and the seafloor's first view has landed (or SHARP_WAIT_MAX_MS after that settle), so the two do not share the link.
+    const sharp = createSharpStart(() => mapFirstIdle.value, () => seafloorState.value.status === 'checking');
     const stage = createStage({host: terrainHost.current!, palette, overlayPalette, center: () => currentRegionInfo()?.center ?? null, zone, clock,
       renderers: [() => createChart({host: chartHost.current!, zone, place,
+        idleReady: () => !aerialWaiting.value,
         layers: [engine => createChlorophyll({engine}), engine => createSwell({engine, zone, place}), engine => createContrast({engine, zone, place}), engine => createFronts({engine, place}), engine => createWind({engine, zone}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
           engine => createStations({engine, zone, feed: () => dailyFeed.value}),
-          engine => createAerial({engine, offer: () => currentRegionInfo()?.aerial ?? null}), engine => createDepthContours({engine, host: chartHost.current!}),
+          engine => createAerial({engine: computed(() => aerialWaiting.value ? null : engine.value), offer: () => currentRegionInfo()?.aerial ?? null, sharp: () => sharp.ready.value}), engine => createDepthContours({engine, host: chartHost.current!}),
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
           engine => createReach({engine, host: chartHost.current!}),
           engine => createPlanningRouteLayer({engine, host: chartHost.current!}),
           engine => createPreviewLayers({engine, failures: {list: unavailable, clear: layer => { unavailable.value = unavailable.peek().filter(l => l !== layer); }}})]})]});
-    return () => stage.destroy();
+    return () => { imagery.destroy(); sharp.destroy(); stage.destroy(); };
   }, [clock]);
   const shown = shownPresentation.value, lang = language.value, failed = mapUnavailable.value;
   return (
     <section class="app-stage" tabIndex={-1} aria-label={t('stage.map', lang)} id={MAP_ID}>
       <div class="app-map" hidden={shown !== 'chart'}>
-        <div class="app-chart" ref={chartHost} hidden={chartFailed.value} aria-busy={chartLoading.value ? 'true' : 'false'} />
+        <div class="app-chart" ref={chartHost} hidden={chartFailed.value} aria-busy={chartBusy.value ? 'true' : 'false'} />
         {failed ? <MapUnavailable /> : <ChartPoster />}
       </div>
       <div class="app-terrain" ref={terrainHost} tabIndex={-1} hidden={shown === 'chart'} data-coast-theme="tokens" />

@@ -44,6 +44,7 @@ async function load() {
   await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {WhereToLook, boatPicks, listedBoatPicks, currentRanking, pickRun, routeAfterPaint, routeWhyText} from './web/brief/WhereToLook.tsx';
       export {launchPoints} from './web/launches.ts';
+      export {reefPublication} from './web/ranking.ts';
       export {launchChoice} from './web/reach.ts';
       export {markData, markScreen} from './web/map/marks.ts';
       export {effect} from '@preact/signals';
@@ -186,7 +187,7 @@ test('the Boat list renders by water on an open-water product; the range title s
 
 // ---- SC2207-05: Kayak from its chosen launch -------------------------------------------------------------------------
 
-// A target the reef publication does not gate, so currentRanking reads the atlas this test supplies.
+// Explicit Save-Data deferral keeps this route fixture on its atlas places.
 const GRID = 32, N4 = 4096, TARGET = 'cabezon-shallow-reef';
 const tileCell = (col, row) => ({latitude: Math.atan(Math.sinh(Math.PI * (1 - 2 * (1616 + (row + 0.5) / GRID) / N4))) * 180 / Math.PI, longitude: (671 + (col + 0.5) / GRID) / N4 * 360 - 180});
 const coastFixture = JSON.parse(readFileSync(new URL('./fixtures/land-water/coast.json', import.meta.url), 'utf8'));
@@ -303,6 +304,7 @@ test('Kayak: currentRanking starts from the chosen launch; a second launch, regi
   try {
     m.region.value = 'morro-bay'; m.profile.value = 'kayak'; m.species.value = TARGET; m.reachRange.value = {kayak: 10};
     m.markData.value = {...DATA, atlas: {...DATA.atlas, targets}}; m.markScreen.value = CHECKED;
+    m.reefPublication.value = {state: 'offer', region: 'morro-bay', bytes: null, why: 'save-data'};
     m.landWater.value = READY(model);
     m.launchPoints.value = {region: 'morro-bay', points: [LAUNCH_A, LAUNCH_B]};
     // No launch chosen, a launch no longer listed, and another region's list: no launch origin (the home/loading fallback).
@@ -340,7 +342,7 @@ test('Kayak: currentRanking starts from the chosen launch; a second launch, regi
     assert.equal(cap.calls.length, ROUTE_BUDGET);
   } finally {
     m.profile.value = 'boat'; m.region.value = null; m.species.value = null; m.reachRange.value = {}; m.launchChoice.value = {}; m.launchPoints.value = null;
-    m.markData.value = null; m.landWater.value = IDLE;
+    m.markData.value = null; m.landWater.value = IDLE; m.reefPublication.value = {state: 'idle'};
   }
 });
 

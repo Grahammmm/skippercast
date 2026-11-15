@@ -15,12 +15,13 @@ await build({stdin: {resolveDir: process.cwd(), loader: 'ts', contents: `
   export {PresentationToggle} from './web/app/MapStage.tsx';
   export {mapFirstIdle} from './web/map-ready.ts';
   export {chartFailed} from './web/map/chart.ts';
+  export {seafloorRough} from './web/map/seafloor.ts';
   export {setLanguage} from './web/i18n.ts';
   export * as state from './web/state.ts';
   export {h, render} from 'preact';
   export {act} from 'preact/test-utils';`}, bundle: true, format: 'esm', platform: 'node',
 outfile: out, jsx: 'automatic', jsxImportSource: 'preact', logLevel: 'silent', plugins: preparedRendererPlugins});
-const {PresentationToggle, mapFirstIdle, chartFailed, setLanguage, state, h, render, act} = await import(pathToFileURL(out).href);
+const {PresentationToggle, mapFirstIdle, chartFailed, seafloorRough, setLanguage, state, h, render, act} = await import(pathToFileURL(out).href);
 test.after(() => rm(dir, {recursive: true, force: true}));
 
 class Element {
@@ -90,5 +91,25 @@ test('failure clears the cue; terrain hides it and switching to Chart shows it o
     assert.equal(text(node()), '', 'terrain shown: nothing spoken');
     await act(() => { state.syncFromURL(CHART); });
     assert.equal(text(node()), 'Loading the map…');
+  });
+});
+
+// R4-SC-09-F1c: while a rough-first archive's rough layer is drawn and its detail is not, the Chart says so over the map.
+test('the rough seafloor label shows on the Chart while seafloorRough holds, in the page language, and goes with it', async () => {
+  await withMount(CHART, async ({root}) => {
+    const label = () => find(root, n => n.attrs?.['data-seafloor-rough'] !== undefined)[0];
+    await act(() => { mapFirstIdle.value = true; chartFailed.value = false; seafloorRough.value = false; });
+    assert.equal(label(), undefined, 'no label without a rough layer');
+    await act(() => { seafloorRough.value = true; });
+    assert.equal(text(label()), 'Rough seafloor — full detail loading');
+    assert.equal(label().attrs.role, 'status');
+    await act(() => setLanguage('es', {storage: none, doc: null}));
+    assert.equal(text(label()), 'Fondo marino aproximado — cargando el detalle completo');
+    await act(() => { state.syncFromURL('https://s.test/map?region=morro-bay&presentation=2d'); });
+    assert.equal(label(), undefined, 'the terrain presentations draw no seafloor tiles');
+    await act(() => { state.syncFromURL(CHART); });
+    assert.ok(label());
+    await act(() => { seafloorRough.value = false; });
+    assert.equal(label(), undefined, 'the label goes once the detail has drawn');
   });
 });

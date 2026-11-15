@@ -12,6 +12,12 @@ export const BASEMAP_ATTRIBUTION = '© OpenStreetMap contributors, © Protomaps'
 export const BASEMAP_SOURCE = 'basemap';
 /** Self-hosted glyphs: DM Sans Medium SDF ranges (scripts/basemap/build_glyphs.py). */
 export const LABEL_FONT = 'dm-sans-medium';
+/**
+ * R4-SC-08: the glyph set's content version (scripts/client-build.mjs glyphVersion over
+ * dist/basemap/glyphs). The build publishes the ranges under glyphs/v/<this>/, kept a year,
+ * and fails when the glyph files no longer hash to it: change it with the glyph files.
+ */
+export const GLYPH_VERSION = 'fa6d395935b147f1';
 export const LABEL_MIN_ZOOM = 9;
 
 /** FE-10's pointer to the current basemap archive, under the page's /feeds/ route. */
@@ -135,7 +141,7 @@ export function basemapStyle(palette: Palette, {archive, assets, variant = 'day'
   return {
     version: 8,
     name: `SkipperCast basemap (${variant})`,
-    glyphs: `${assets}glyphs/{fontstack}/{range}.pbf`,
+    glyphs: `${assets}glyphs/v/${GLYPH_VERSION}/{fontstack}/{range}.pbf`,
     sources: {[BASEMAP_SOURCE]: {type: 'vector', url: `pmtiles://${archive}`, attribution: BASEMAP_ATTRIBUTION}},
     layers: layers.filter((layer): layer is BasemapLayer => layer !== false),
   };

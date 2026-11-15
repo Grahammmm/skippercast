@@ -7,7 +7,7 @@ import test from 'node:test';
 import {FLY_STOPPERS, createEngine} from '../web/map/engine.ts';
 import {DEFAULT_TURN, FLYOVER_KEY, MAX_TILT, MAX_TURN, bearingTo, flyoverLegs, flyoverSeen, flyoverTurn, markFlyoverSeen, mayFly} from '../web/map/flyover.ts';
 
-const OPEN = {reduced: false, saveData: false, hidden: false, linked: false, seen: false};
+const OPEN = {smallScreen: false, reduced: false, saveData: false, hidden: false, linked: false, seen: false};
 const CENTER = {latitude: 35.37, longitude: -120.95}, HARBOR = {latitude: 35.37, longitude: -120.86};
 
 test('every gate must be open to fly', () => {

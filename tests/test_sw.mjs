@@ -245,11 +245,61 @@ test('a failed precache does not fail the install (push must still work)', async
 
 test('activate removes older shells and keeps saved data and trip packs', async () => {
   const worker = loadWorker();
-  for (const name of ['sc-shell-old1234567', 'sc-shell-dev', 'sc-data', 'sc-pack-morro-bay-1']) await worker.storage.open(name);
+  for (const name of ['sc-shell-old1234567', 'sc-data', 'sc-pack-morro-bay-1']) await worker.storage.open(name);
+  await (await worker.storage.open('sc-shell-dev')).put(ORIGIN + '/', new Response('complete landing'));
   const waits = [];
   worker.listeners.activate.forEach(fn => fn({waitUntil: p => waits.push(p)}));
   await Promise.all(waits);
   assert.deepEqual((await worker.storage.keys()).sort(), ['sc-data', 'sc-pack-morro-bay-1', 'sc-shell-dev']);
+});
+
+// SCP3-08: an interrupted update keeps the last complete offline landing.
+const runLifecycle = async (worker, type) => { const waits = []; worker.listeners[type].forEach(fn => fn({waitUntil: p => waits.push(p)})); await Promise.all(waits); };
+const seedOldShell = async (worker, name = 'sc-shell-old1234567') => {
+  const old = await worker.storage.open(name);
+  await old.put(ORIGIN + '/', new Response('old landing'));
+  await old.put(ORIGIN + '/assets/landing.1111111111.js', new Response('old code'));
+};
+
+test('a failed new precache keeps the last complete landing and its hashed asset offline; push install, /map, data and packs unaffected', async () => {
+  const worker = loadWorker({network: () => new Response('no', {status: 500})});
+  await seedOldShell(worker);
+  for (const name of ['sc-data', 'sc-pack-morro-bay-1']) await worker.storage.open(name);
+  await assert.doesNotReject(runLifecycle(worker, 'install'), 'push-worker install still succeeds');
+  await runLifecycle(worker, 'activate');
+  assert.deepEqual((await worker.storage.keys()).sort(), ['sc-data', 'sc-pack-morro-bay-1', 'sc-shell-dev', 'sc-shell-old1234567']);
+  worker.context.fetch = async () => { throw new TypeError('offline'); };
+  assert.equal(await (await dispatch(worker, nav('/?region=morro-bay'))).text(), 'old landing');
+  assert.equal(await (await dispatch(worker, get('/assets/landing.1111111111.js'))).text(), 'old code');
+  await assert.rejects(dispatch(worker, nav('/map')), /offline/, 'the landing cache never opens /map');
+  await assert.rejects(dispatch(worker, get('/assets/other.2222222222.js')), /offline/);
+});
+
+test('a partial new cache cannot replace the complete old shell; a complete one does and prunes it', async () => {
+  const worker = loadWorker();
+  await seedOldShell(worker);
+  await (await worker.storage.open('sc-shell-dev')).put(ORIGIN + '/assets/landing.3333333333.js', new Response('stray new code'));
+  await runLifecycle(worker, 'activate');
+  assert.ok((await worker.storage.keys()).includes('sc-shell-old1234567'), 'old shell kept while the new one has no landing');
+  assert.equal(await (await dispatch(worker, nav('/'))).text(), 'old landing');
+  await (await worker.storage.open('sc-shell-dev')).put(ORIGIN + '/', new Response('new landing'));
+  await runLifecycle(worker, 'activate');
+  assert.ok(!(await worker.storage.keys()).includes('sc-shell-old1234567'), 'pruned once the new shell is complete');
+  assert.equal(await (await dispatch(worker, nav('/'))).text(), 'new landing');
+});
+
+test('a later successful precache (page message) prunes the retained shell', async () => {
+  let online = false;
+  const manifest = {schema_version: 1, build: 'dev', shells: ['/'], assets: [], static: []};
+  const worker = loadWorker({network: request => { if (!online) throw new TypeError('offline'); return new URL(request.url).pathname === '/precache.json' ? Response.json(manifest) : new Response('new landing'); }});
+  await seedOldShell(worker);
+  const send = async () => { const waits = []; worker.listeners.message.forEach(fn => fn({data: {type: 'skippercast-offline-status'}, source: worker.client, waitUntil: p => waits.push(p)})); await Promise.all(waits); };
+  await send();
+  assert.ok((await worker.storage.keys()).includes('sc-shell-old1234567'), 'offline precache fails: old shell kept');
+  online = true;
+  await send();
+  assert.ok(!(await worker.storage.keys()).includes('sc-shell-old1234567'));
+  assert.equal(worker.messages.at(-1).ready, true);
 });
 
 test('precacheList accepts only same-origin paths from a valid manifest', () => {

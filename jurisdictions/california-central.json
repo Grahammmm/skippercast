@@ -260,8 +260,15 @@
   ],
   "required_source_ids": [
     "rules-inseason",
-    "rules-health",
-    "rules-book",
-    "rules-proposals"
+    "rules-book"
+  ],
+  "species_required_source_ids": {
+    "dungeness": [
+      "rules-health"
+    ]
+  },
+  "also_check_source_ids": [
+    "rules-proposals",
+    "rules-health"
   ]
 }

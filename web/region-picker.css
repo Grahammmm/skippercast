@@ -1,0 +1,10 @@
+/* Shared by the landing and the app's existing port dialog. */
+.region-picker-entry { max-width: 100%; margin-block: var(--space-3); color: var(--text); }
+.region-picker-entry > summary { min-height: var(--touch-min); cursor: pointer; }
+.region-picker { display: grid; gap: var(--space-3); min-width: 0; }
+.region-picker select { width: 100%; min-width: 0; min-height: var(--touch-min); color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-md); font: inherit; padding: var(--space-2); }
+.region-picker p, .region-picker h3, .region-picker dl { margin: 0; }
+.region-picker dl > div { margin-block: var(--space-2); }
+.region-picker dt { font-weight: var(--weight-semibold); }
+.region-picker dd { margin-inline-start: 0; color: var(--muted); }
+.region-picker p, .region-picker dd, .region-picker code { overflow-wrap: anywhere; font-size: var(--text-13); }

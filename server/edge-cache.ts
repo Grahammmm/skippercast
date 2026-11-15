@@ -41,8 +41,13 @@ export type WaitUntil = {waitUntil(promise: Promise<unknown>): void} | undefined
 
 export async function store(cache: Cache | null, key: Request, response: Response, ctx: WaitUntil): Promise<void> {
   if (!cache || response.status !== 200) return;
-  const write = cache.put(key, response).catch(() => console.warn('Edge cache write unavailable'));
-  if (ctx?.waitUntil) ctx.waitUntil(write); else await write;
+  const warn = () => console.warn('Edge cache write unavailable');
+  // The write is optional: a put() that throws before returning a promise is
+  // as harmless as one that rejects, and so is a context that cannot register it.
+  let write: Promise<void>;
+  try { write = Promise.resolve(cache.put(key, response)).catch(warn); } catch { warn(); return; }
+  try { if (ctx?.waitUntil) { ctx.waitUntil(write); return; } } catch { warn(); }
+  await write;
 }
 
 /**

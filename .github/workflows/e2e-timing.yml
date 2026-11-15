@@ -1,0 +1,83 @@
+name: E2E timing (advisory)
+
+# CI-PARITY-1. The SCB-02 phone timing journey (e2e/v2-flyover.spec.ts) measures input latency
+# on a shared runner, so its numbers move with the host. It does not gate a pull request or main
+# (ci.yml's e2e job runs the same projects on every event and never runs this journey). Here it
+# runs once a night, three times over, on its own. The job reports and never gates: the test step
+# is continue-on-error, the summary step cannot fail, and the job ends `success` whatever the
+# timing says. It is not a required check and it never turns main red.
+on:
+  # A minute that is not ci.yml's "0 9 * * *", so the two runs do not start together.
+  schedule:
+    - cron: "23 10 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  timing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 10
+          dest: ${{ runner.temp }}/setup-pnpm
+      - name: Install locked web dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build Worker and public assets
+        run: pnpm build
+      - name: Install Playwright's Chromium (with system libraries)
+        run: pnpm exec playwright install --with-deps chromium
+      # The one step that can go red. Its outcome is reported below, never enforced.
+      - name: SCB-02 timing journey, phone project, three repeats (advisory)
+        id: timing
+        continue-on-error: true
+        env:
+          E2E_WIDE: "1"
+          E2E_TIMING: "1"
+        run: pnpm e2e e2e/v2-flyover.spec.ts --project=phone --repeat-each=3
+      - name: Report timing (never fails the job)
+        if: always()
+        env:
+          TIMING_OUTCOME: ${{ steps.timing.outcome }}
+        run: |
+          json=test-results/e2e-run.json
+          {
+            echo "## E2E timing (advisory)"
+            echo
+            echo "Test step outcome: \`$TIMING_OUTCOME\`. This job reports only; it never gates."
+            echo
+            if [ -f "$json" ]; then
+              echo "| passed | failed | flaky | skipped |"
+              echo "| --- | --- | --- | --- |"
+              jq -r '.stats | "| \(.expected // 0) | \(.unexpected // 0) | \(.flaky // 0) | \(.skipped // 0) |"' "$json" || echo "| ? | ? | ? | ? |"
+              echo
+              echo "### SCB-02 lines"
+              echo
+              echo '```'
+              lines=$(jq -r '[.. | objects | select(has("stdout")) | .stdout[]? | .text? // empty] | .[]' "$json" | grep -h "SCB-02" | sed 's/ \[{.*//' || true)
+              echo "${lines:-(no SCB-02 timing lines in the report)}"
+              echo '```'
+            else
+              echo "No test-results/e2e-run.json was written (the run did not reach the reporter)."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY" || true
+          exit 0
+      - name: Keep per-test JSON
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-timing-json
+          path: test-results/e2e-run.json
+          if-no-files-found: warn
+          retention-days: 15

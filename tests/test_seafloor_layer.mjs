@@ -11,13 +11,15 @@ import {readFileSync} from 'node:fs';
 import {PMTiles} from 'pmtiles';
 import {decodeTile as decodeV2, dedupeById as dedupeV2, manifestState, tileFeatures as tileFeaturesV2} from '../dist/seafloor-data.js';
 import {
-  EXPIRED, INCOMPLETE, NO_PUBLICATION, SEAFLOOR_LAYERS, SEAFLOOR_SOURCE, admitCell, admitHabitat, createSeafloor, fitKey, legendKey,
+  EXPIRED, INCOMPLETE, NO_PUBLICATION, ROUGH_ZOOM, SEAFLOOR_LAYERS, SEAFLOOR_SOURCE, TILE_PARALLEL, admitCell, admitHabitat, createSeafloor, fitKey, legendKey,
+  roughFirst, seafloorRough,
   cellBasis, publicationRights, seafloorLayers, seafloorMark, seafloorState, seafloorView, surveyList, surveySummary, toneOf, viewBounds,
 } from '../web/map/seafloor.ts';
 import {clickMark} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {camera} from '../web/map/stage.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
+import {signal} from '@preact/signals';
 
 const FIXTURE = readFileSync(new URL('./fixtures/seafloor/chart.pmtiles', import.meta.url));
 // Reads and feed answers still in flight (not counting ones a test holds on purpose); settle() waits for them.
@@ -149,7 +151,7 @@ async function settle() {
   for (let quiet = 0, limit = Date.now() + 10_000; quiet < 4 && Date.now() < limit;) { await turn(); quiet = inflight ? 0 : quiet + 1; }
 }
 /** A seafloor layer over the fixture with injected feeds, clock and timers. */
-function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers = 'seafloor', target = '', bounds = null} = {}) {
+function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers = 'seafloor', target = '', bounds = null, startReady, reader = null} = {}) {
   configureStore({v2: true, storage: null});
   const url = layers => `${PAGE_V2}?region=morro-bay&profile=${profile}&layers=${layers}${target ? `&target=${target}` : ''}`;
   syncFromURL(url(layers));
@@ -162,8 +164,9 @@ function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers =
     async fire() { const [id, t] = rig.timers.entries().next().value; rig.timers.delete(id); t.fn(); await settle(); },
   };
   rig.layer = createSeafloor({
+    startReady,
     engine: {setVisible: (id, on) => rig.calls.push(['visible', id, on]), setData: (id, data) => { rig.calls.push(['data', id, data.features.length]); rig.data = data; }},
-    open: url => { rig.opened.push(url); return fixtureReader(rig.tileHold, bounds); }, size: () => ({width: 1000, height: 700}), page: () => PAGE_V2, now: () => rig.clock,
+    open: url => { rig.opened.push(url); return reader ?? fixtureReader(rig.tileHold, bounds); }, size: () => ({width: 1000, height: 700}), page: () => PAGE_V2, now: () => rig.clock,
     setTimer: (fn, delay) => { const id = ++rig.next; rig.timers.set(id, {fn, delay}); return id; }, clearTimer: id => rig.timers.delete(id),
     fetchFn: async url => {
       rig.requests.push(url);
@@ -180,6 +183,20 @@ function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers =
 }
 const deferred = () => { let release; const promise = new Promise(resolve => { release = resolve; }); return {promise, release}; };
 const drawnIds = rig => rig.data.features.map(f => f.properties.id).sort();
+
+test('SCB-12: deferred seafloor requests still run the unchanged publication gate on release', async t => {
+  const ready = signal(false);
+  const rig = seafloorRig({startReady: () => ready.value, manifest: {status: 'held'}});
+  t.after(() => rig.layer.destroy());
+  await settle();
+  assert.deepEqual(rig.requests, []);
+  assert.equal(seafloorState.value.status, 'checking');
+  ready.value = true;
+  await settle();
+  assert.deepEqual(rig.requests, ['/feeds/tiles/seafloor/manifest-morro-bay.json']);
+  assert.equal(seafloorState.value.status, 'held');
+  assert.deepEqual(rig.opened, [], 'a held publication never opens an archive');
+});
 
 test('v2: toggling Seafloor adds and removes exactly its layers; held reaches and held features never draw', async t => {
   const rig = seafloorRig({layers: 'currents'});
@@ -405,4 +422,129 @@ test('v2: a cell reads only where nothing more specific is picked, and goes with
   off.layers('currents');
   await settle();
   assert.equal(off.layer.cellAt(CELL_ONLY), null, 'off withdraws the cells');
+});
+
+// R4-SC-09: at most TILE_PARALLEL tile ranges in flight, the view's centre first, a newer view's before an older one's;
+// what draws is the same as reading every tile at once.
+test('R4-SC-09: seafloor tiles load TILE_PARALLEL at a time, centre first and newest view first, and draw the same features', async t => {
+  const BOUNDS = {minLon: -122, minLat: 34.5, maxLon: -120, maxLat: 36};
+  const reference = seafloorRig({bounds: BOUNDS});
+  await settle();
+  const expected = drawnIds(reference);
+  reference.layer.destroy();
+
+  const base = fixtureReader(null, BOUNDS), asked = [], waiting = [];
+  let active = 0, most = 0;
+  const reader = {
+    getHeader: () => base.getHeader(),
+    getZxy(z, x, y) {
+      asked.push(`${z}/${x}/${y}`); most = Math.max(most, ++active);
+      const gate = deferred();
+      waiting.push(gate.release);
+      return gate.promise.then(() => base.getZxy(z, x, y)).finally(() => { active--; });
+    },
+  };
+  const rig = seafloorRig({bounds: BOUNDS, reader});
+  t.after(() => rig.layer.destroy());
+  await settle();
+  assert.equal(TILE_PARALLEL, 2);
+  assert.equal(asked.length, TILE_PARALLEL, 'only TILE_PARALLEL ranges asked at once');
+  const centre = [Math.floor((-120.948 + 180) / 360 * 4096), Math.floor((1 - Math.asinh(Math.tan(35.353 * Math.PI / 180)) / Math.PI) / 2 * 4096)];
+  assert.equal(asked[0], `12/${centre[0]}/${centre[1]}`, 'the tile under the view\'s centre first');
+
+  // Another view while the first one's ranges wait: its tiles go before the older view's that have not started.
+  camera.value = {latitude: 35.30, longitude: -121.10, zoom: 13};
+  await settle();
+  const moved = [Math.floor((-121.10 + 180) / 360 * 4096), Math.floor((1 - Math.asinh(Math.tan(35.30 * Math.PI / 180)) / Math.PI) / 2 * 4096)];
+  waiting.shift()();
+  await settle();
+  assert.equal(asked[TILE_PARALLEL], `12/${moved[0]}/${moved[1]}`, 'the new view\'s centre takes the freed slot');
+
+  camera.value = {latitude: 35.353, longitude: -120.948, zoom: 13};
+  for (let i = 0; i < 200 && waiting.length; i++) { waiting.shift()(); await settle(); }
+  assert.equal(waiting.length, 0);
+  assert.ok(most <= TILE_PARALLEL, `never more than ${TILE_PARALLEL} in flight (saw ${most})`);
+  assert.deepEqual(drawnIds(rig), expected, 'the same features as reading every tile at once');
+  assert.equal(seafloorState.value.status, 'ready');
+});
+
+// R4-SC-09-F1c: a rough-first archive (its manifest names rough_first) draws its rough z10 layer first, labelled, and the
+// z12 detail replaces it; a failed detail read leaves the rough view and its label. Without rough_first nothing changes.
+// The rough tile is synthetic: one square over the whole z10 tile carrying fixture-candidate-a's own properties.
+const pbVarint = n => { const out = []; do { out.push((n % 128) | (n >= 128 ? 128 : 0)); n = Math.floor(n / 128); } while (n); return out; };
+const pbField = (number, value) => typeof value === 'number' ? [...pbVarint(number * 8), ...pbVarint(value)]
+  : [...pbVarint(number * 8 + 2), ...pbVarint(value.length), ...value];
+const pbText = s => [...new TextEncoder().encode(s)];
+const pbDouble = v => { const b = new DataView(new ArrayBuffer(8)); b.setFloat64(0, v, true); return [...pbVarint(3 * 8 + 1), ...new Uint8Array(b.buffer)]; };
+const pbValue = v => typeof v === 'string' ? pbField(1, pbText(v)) : typeof v === 'boolean' ? pbField(7, v ? 1 : 0)
+  : Number.isInteger(v) && v >= 0 ? pbField(5, v) : pbDouble(v);
+function roughTile(properties) {
+  const keys = Object.keys(properties).filter(k => properties[k] !== null && properties[k] !== undefined), zz = n => (n << 1) ^ (n >> 31);
+  const square = [1 | (1 << 3), zz(0), zz(0), 2 | (3 << 3), zz(4096), zz(0), zz(0), zz(4096), zz(-4096), zz(0), 7 | (1 << 3)];
+  const feature = pbField(2, [...pbField(1, 1), ...pbField(2, keys.flatMap((k, i) => [...pbVarint(i), ...pbVarint(i)])), ...pbField(3, 3), ...pbField(4, square.flatMap(pbVarint))]);
+  return Uint8Array.from(pbField(3, [...pbField(15, 2), ...pbField(1, pbText('habitat')), ...feature,
+    ...keys.flatMap(k => pbField(3, pbText(k))), ...keys.flatMap(k => pbField(4, pbValue(properties[k]))), ...pbField(5, 4096)]));
+}
+const ROUGH = {rough_first: {maxzoom: 11, detail_minzoom: 12}};
+
+test('R4-SC-09-F1c: a rough-first archive shows its labelled rough layer first; the detail replaces it, and a failed detail read keeps the label', async t => {
+  assert.deepEqual([roughFirst(ROUGH), roughFirst({}), roughFirst(null), roughFirst({rough_first: {maxzoom: 12, detail_minzoom: 12}}),
+    roughFirst({rough_first: {maxzoom: 11, detail_minzoom: 13}})], [true, false, false, false, false]);
+  const {habitat} = await fixtureFeatures();
+  const rough = roughTile(habitat.find(f => f.properties.id === 'fixture-candidate-a').properties);
+  const full = (await fixtureFeatures()).habitat.length;
+  assert.ok(full > 1);
+  const roughReader = (detail) => {
+    const base = fixtureReader(), asked = [];
+    return {asked, getHeader: () => base.getHeader(), async getZxy(z, x, y) {
+      asked.push(z);
+      if (z === ROUGH_ZOOM) return {data: rough.buffer.slice(rough.byteOffset, rough.byteOffset + rough.byteLength)};
+      return detail(() => base.getZxy(z, x, y));
+    }};
+  };
+
+  // The detail waits: the rough layer draws, habitat only, with the label on.
+  const gate = deferred();
+  const reader = roughReader(async read => { await gate.promise; return read(); });
+  const rig = seafloorRig({manifest: ROUGH, reader});
+  t.after(() => rig.layer.destroy());
+  await settle();
+  assert.equal(reader.asked[0], ROUGH_ZOOM, 'the rough tiles are asked first');
+  assert.equal(seafloorRough.value, true, 'labelled while only the rough layer is drawn');
+  assert.deepEqual(drawnIds(rig), ['fixture-candidate-a'], 'rough habitat only; cells come with the detail');
+  assert.equal(seafloorState.value.status, 'ready');
+  assert.match(seafloorState.value.note, /^Rough outlines; full detail loading · 1 candidate in view · unverified; nominal depth/);
+  assert.equal(rig.layer.mark('fixture-candidate-a').name, 'Habitat candidate, unverified', 'the rough candidate keeps its card');
+  gate.release();
+  await settle();
+  assert.equal(seafloorRough.value, false, 'the label goes once the z12 detail has drawn');
+  assert.deepEqual(drawnIds(rig), ['cell:3310:fx:1', 'fixture-candidate-a', 'fixture-candidate-deep', 'fixture-interpreted', 'fixture-search']);
+  assert.equal(seafloorState.value.note, '2 candidates in view · 1 unranked search area · 1 unranked interpreted area · unverified; nominal depth');
+  // After the detail has drawn, a new view reads detail only, as before.
+  const before = reader.asked.length;
+  camera.value = {latitude: 35.352, longitude: -120.947, zoom: 13};
+  await settle();
+  assert.ok(!reader.asked.slice(before).includes(ROUGH_ZOOM), 'no rough read once the detail has drawn');
+  assert.equal(seafloorRough.value, false);
+  rig.layer.destroy();
+
+  // A failed detail read leaves the rough view and its label, and says so.
+  const failing = roughReader(async () => { throw new Error('range failed'); });
+  const broken = seafloorRig({manifest: ROUGH, reader: failing});
+  t.after(() => broken.layer.destroy());
+  await settle();
+  assert.equal(seafloorRough.value, true, 'the label stays on when the detail fails');
+  assert.deepEqual(drawnIds(broken), ['fixture-candidate-a']);
+  assert.match(seafloorState.value.note, /^Rough outlines; full detail loading · .* · full detail could not load · try again$/);
+  broken.layer.destroy();
+  assert.equal(seafloorRough.value, false, 'destroy clears the label');
+
+  // Without rough_first (today's archives) nothing rough is read or labelled.
+  const plain = roughReader(read => read());
+  const today = seafloorRig({reader: plain});
+  t.after(() => today.layer.destroy());
+  await settle();
+  assert.ok(plain.asked.length > 0 && !plain.asked.includes(ROUGH_ZOOM));
+  assert.equal(seafloorRough.value, false);
+  assert.equal(drawnIds(today).length, 5);
 });

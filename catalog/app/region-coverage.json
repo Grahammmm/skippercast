@@ -1,0 +1,169 @@
+{
+  "checked_at": "2026-11-13T22:32:27Z",
+  "audit": "SCB-01",
+  "audit_csv_sha256": "9f0d93f09623446438a33715144e0c827379d704e39d9050e46ffa025e2cddc3",
+  "source_revision": "114079ae129e0e08fcdb7f5bf9ec66f33ea3fe60",
+  "regions": [
+    [
+      "crescent-city",
+      "Crescent City & Del Norte",
+      "preview",
+      "none",
+      "declared-detail"
+    ],
+    [
+      "trinidad-klamath",
+      "Trinidad to Klamath River",
+      "preview",
+      "none",
+      "overview"
+    ],
+    [
+      "humboldt-bay-cape-mendocino",
+      "Humboldt Bay to Cape Mendocino",
+      "preview",
+      "none",
+      "declared-detail"
+    ],
+    [
+      "shelter-cove-north-mendocino",
+      "Shelter Cove to Fort Bragg",
+      "preview",
+      "none",
+      "declared-detail"
+    ],
+    [
+      "fort-bragg-point-arena",
+      "Fort Bragg to Point Arena",
+      "preview",
+      "none",
+      "declared-detail"
+    ],
+    [
+      "point-arena-bodega",
+      "Point Arena to northern Sonoma",
+      "preview",
+      "none",
+      "declared-detail"
+    ],
+    [
+      "bodega-point-reyes",
+      "Bodega Bay to Point Reyes",
+      "preview",
+      "none",
+      "declared-detail"
+    ],
+    [
+      "point-reyes-pigeon",
+      "Point Reyes to Pigeon Point",
+      "preview",
+      "none",
+      "declared-detail"
+    ],
+    [
+      "santa-cruz-monterey-bay",
+      "Pigeon Point to Monterey Bay",
+      "preview",
+      "held",
+      "declared-detail"
+    ],
+    [
+      "monterey-point-sur",
+      "Monterey Peninsula to Point Sur",
+      "preview",
+      "partial",
+      "declared-detail"
+    ],
+    [
+      "big-sur-coast",
+      "Big Sur outer coast",
+      "preview",
+      "partial",
+      "declared-detail"
+    ],
+    [
+      "south-big-sur-san-simeon",
+      "South Big Sur to San Simeon",
+      "preview",
+      "partial",
+      "declared-detail"
+    ],
+    [
+      "cambria-san-simeon",
+      "Cambria–San Simeon",
+      "preview",
+      "partial",
+      "declared-detail"
+    ],
+    [
+      "morro-bay",
+      "Morro Bay & Avila",
+      "active",
+      "partial",
+      "declared-detail"
+    ],
+    [
+      "point-arguello-conception",
+      "Point Sal to Point Conception",
+      "preview",
+      "partial",
+      "declared-detail"
+    ],
+    [
+      "santa-barbara-channel",
+      "Santa Barbara Channel",
+      "draft",
+      "none",
+      "declared-detail"
+    ],
+    [
+      "channel-islands-north",
+      "Northern Channel Islands",
+      "draft",
+      "none",
+      "declared-detail"
+    ],
+    [
+      "santa-monica-palos-verdes",
+      "Santa Monica Bay–Palos Verdes",
+      "draft",
+      "none",
+      "declared-detail"
+    ],
+    [
+      "san-pedro-orange-county",
+      "San Pedro Bay–Orange County",
+      "draft",
+      "none",
+      "declared-detail"
+    ],
+    [
+      "southern-california",
+      "Southern California",
+      "preview",
+      "none",
+      "declared-detail"
+    ],
+    [
+      "outer-islands-borderland",
+      "Outer islands and Borderland",
+      "draft",
+      "none",
+      "declared-detail"
+    ],
+    [
+      "san-diego",
+      "San Diego",
+      "draft",
+      "none",
+      "declared-detail"
+    ]
+  ],
+  "columns": [
+    "id",
+    "name",
+    "lifecycle",
+    "habitat",
+    "basemap"
+  ]
+}

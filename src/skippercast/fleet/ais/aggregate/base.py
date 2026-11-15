@@ -113,7 +113,7 @@ def _optional_number(raw: Mapping[str, Any], key: str, *, integer: bool = False,
 
 def _resolution_by_kind(plain: Mapping[str, Any], base: float | None) -> dict[str, float]:
     """``resolution_by_kind``: fishing kind to a cell edge at least ``base`` and a whole multiple of it."""
-    raw = plain.get("resolution_by_kind") or {}
+    raw = plain.get("resolution_by_kind", {})  # default only an omitted key: a present falsy non-object must refuse
     if not isinstance(raw, Mapping):
         raise ValueError("thresholds.aggregate.resolution_by_kind must be an object")
     out = {}

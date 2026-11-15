@@ -116,7 +116,8 @@
     --landing-dots-h: calc(4 * var(--touch-min) + 3 * var(--space-1));   /* four rows of layer links */
     --landing-credit-h: calc(2 * var(--text-11) * var(--leading-body));   /* the shoreline credit's two lines */
     --landing-readout-h: calc(var(--text-11) * var(--leading-body) + 2 * var(--space-2) + var(--landing-tiles-h) + var(--landing-foot-h));
-    --landing-form-h: calc(2 * var(--space-4) + 2px + var(--text-18) * var(--leading-heading) + var(--touch-min) + var(--landing-results-h) + 1.2 * var(--text-13) + var(--landing-actions-h) + var(--landing-note-h) + 5 * var(--space-3));
+    /* SCB-16: the closed region entry is one touch row and one more form gap. */
+    --landing-form-h: calc(2 * var(--space-4) + 2px + var(--text-18) * var(--leading-heading) + 2 * var(--touch-min) + var(--landing-results-h) + 1.2 * var(--text-13) + var(--landing-actions-h) + var(--landing-note-h) + 6 * var(--space-3));
   }
   .landing-slot { display: block; }
   .landing-slot--readout { min-height: var(--landing-readout-h); }

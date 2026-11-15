@@ -66,17 +66,37 @@ interface Extras {
   progress(phase: string, done: number, total: number): void;
 }
 
+/**
+ * The interval a 206 answer really covers, or null when it is not the requested slice: one `bytes START-END/TOTAL` (TOTAL decimal or `*`)
+ * starting at the requested offset and ending at the requested end. A shorter END is a genuine range only at the archive's known EOF
+ * (a known TOTAL, END = TOTAL - 1, the request reaching TOTAL or beyond); the length is never inferred from Content-Length.
+ */
+function answeredRange(header: string | null, offset: number, end: number): {start: number; end: number} | null {
+  const m = /^\s*bytes (\d+)-(\d+)\/(\d+|\*)\s*$/.exec(header ?? '');
+  if (!m) return null;
+  const start = Number(m[1]), last = Number(m[2]), total = m[3] === '*' ? null : Number(m[3]);
+  if (![start, last].every(Number.isSafeInteger) || (total !== null && !Number.isSafeInteger(total)) || start !== offset || last < start || last > end) return null;
+  if (total !== null && total <= last) return null;
+  return last === end || (total !== null && last === total - 1 && end >= total) ? {start, end: last} : null;
+}
+
 /** A PMTiles source that keeps each byte range it reads under offline-core.js `basemapRangeKey`. */
 export function rangeRecorder(url: string, put: Extras['put'], signal: AbortSignal, key: (url: string, range: string) => string | null): Source {
   return {
     getKey: () => url,
     async getBytes(offset, length, s, etag) {
-      const range = `bytes=${offset}-${offset + length - 1}`, at = key(url, range);
+      if (![offset, length].every(Number.isSafeInteger) || offset < 0 || length < 1 || length - 1 > Number.MAX_SAFE_INTEGER - offset) throw new Error(`Basemap range bytes=${offset}+${length}: not a valid range`);
+      const end = offset + length - 1;
+      const range = `bytes=${offset}-${end}`, at = key(url, range);
       const response = await fetch(url, {headers: {range}, credentials: 'omit', signal: s ?? signal});
       // Only the exact range, live: a whole archive or a saved answer is never stored.
       if (!at || response.status !== 206 || response.headers.has('X-SC-Offline')) { void response.body?.cancel(); throw new Error(`Basemap range ${range}: HTTP ${response.status}`); }
+      // And only the slice that was asked for: the answer's own interval and byte count must match before anything is written.
+      const got = answeredRange(response.headers.get('Content-Range'), offset, end);
+      if (!got) { void response.body?.cancel(); throw new Error(`Basemap range ${range}: the answer is not that range`); }
       const data = await response.arrayBuffer(), tag = response.headers.get('ETag');
-      if (data.byteLength > length || (etag && tag && tag !== etag)) throw new Error('The basemap archive changed while saving.');
+      if (etag && tag && tag !== etag) throw new Error('The basemap archive changed while saving.');
+      if (data.byteLength !== got.end - got.start + 1) throw new Error(`Basemap range ${range}: the answer is the wrong length`);
       await put(at, data, response.headers);
       return {data, etag: tag && !tag.startsWith('W/') ? tag : undefined};
     },
@@ -123,15 +143,22 @@ export async function oceanPhase({put, signal, progress}: Pick<Extras, 'put' | '
 }
 
 /** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, the published shoreline, land-water and depth-contour files, the startup copies (#617), tiles and, last, the ocean phase. */
-async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds: number[], place: Parameters<typeof oceanPhase>[1]) {
+export async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds: number[], place: Parameters<typeof oceanPhase>[1]) {
   const page = location.href, misses: string[] = [];
+  // The app's own page and files are mandatory: a pack without them cannot open offline, so a failure here throws and savePack keeps the older pack.
+  const list = await fetch('/precache.json', {cache: 'no-cache', signal}).then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+    .catch(error => { throw signal.aborted ? error : new Error(`the app files could not be listed (${error?.message ?? error}). Saved regions are unchanged.`); }) as {build?: unknown; v2?: {assets?: unknown; static?: unknown}} | null;
+  const declared = [...Array.isArray(list?.v2?.assets) ? list.v2.assets : [], ...Array.isArray(list?.v2?.static) ? list.v2.static : []];
+  const hashed = declared.filter((p): p is string => typeof p === 'string' && /^\/(?!\/)/.test(p));
+  if (typeof list?.build !== 'string' || !list.build || !Array.isArray(list.v2?.assets) || !list.v2.assets.length || hashed.length !== declared.length) throw new Error('the app files list is not usable. Saved regions are unchanged.');
   const tideURLs = await tideSelection.packURLs(id);
   await saveTidePack(tideURLs, put, signal);
-  const list = await fetch('/precache.json', {cache: 'no-cache', signal}).then(r => r.ok ? r.json() : null, () => null) as {build?: string; v2?: {assets?: unknown[]; static?: unknown[]}} | null;
-  const hashed = [...list?.v2?.assets ?? [], ...list?.v2?.static ?? []].filter((p): p is string => typeof p === 'string' && /^\/(?!\/)/.test(p));
-  const files = packFiles(id, page, hashed);
+  const files = packFiles(id, page, hashed), required = new Set([V2_SHELL, ...hashed].map(p => new URL(p, page).href));
   let done = 0;
-  for (const [url, key, init] of files) { await store(url, key, init, misses); progress('shell', ++done, files.length); }
+  for (const [url, key, init] of files) {
+    if (!await store(url, key, init, misses) && required.has(new URL(url).href)) throw new Error(`the app file ${new URL(url).pathname} could not be saved. Saved regions are unchanged.`);
+    progress('shell', ++done, files.length);
+  }
   const [archive, {basemapRangeKey, planBasemap}] = await Promise.all([basemapArchive((...a) => fetch(...a), page), import('../dist/offline-core.js')]);
   const plan = planBasemap(bounds) as {tiles: {z: number; x: number; y: number}[]; minZoom: number; maxZoom: number | null};
   let saved = 0, tile = 0;
@@ -145,7 +172,7 @@ async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds
     }
   }
   const ocean = await oceanPhase({put, signal, progress}, place);
-  return {build: list?.build ?? null, shell: {saved: files.length - misses.filter(m => !m.startsWith('basemap')).length, requested: files.length},
+  return {build: list.build, shell: {saved: files.length - misses.filter(m => !m.startsWith('basemap')).length, requested: files.length},
     basemap: {archive: archive ? new URL(archive).pathname : null, saved, planned: plan.tiles.length, min_zoom: plan.minZoom, max_zoom: plan.maxZoom}, missing: misses.slice(0, 50), ocean};
 }
 

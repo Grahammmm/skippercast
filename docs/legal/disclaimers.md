@@ -6,7 +6,7 @@ This file is the single source for the caveats SkipperCast must show for legal r
 
 Where these appear (guide §10.6):
 
-1. the terms of use (the draft page `dist/terms.html` was removed on 2026-11-12; see the roadmap; its full text, sections 2–5 and 9–10, is in git history);
+1. the [terms of use](../../dist/terms.html) (full text, sections 2–5 and 9–10);
 2. one first-launch acknowledgement (short form of all four; not yet built);
 3. one persistent footer line: **“Planning aid · not a navigation chart”** (brief footer `BriefFooter` and the landing footer);
 4. the Export sheet, before a chartplotter file is downloaded (C1 and C4 short forms).

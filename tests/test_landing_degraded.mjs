@@ -168,7 +168,8 @@ test('4: installDegradedWatch twice in one page: one network call per read, the 
     assert.equal(code.match(/^installDegradedWatch\(\);/gm)?.length, 1, `${entry}: one install`);
     assert.match(code, /^import \{installDegradedWatch\} from '\.\.\/degraded\.ts';$/m);
     const scripts = [...(await readFile(join(ROOT, page), 'utf8')).matchAll(/<script type="module" src="([^"]+)"/g)].map(m => m[1]);
-    assert.deepEqual(scripts, [`../${entry}`], `${page} loads only its own entry`);
+    assert.deepEqual(scripts, [entry === 'web/app/main.tsx' ? '../web/app/boot.ts' : `../${entry}`], `${page} loads only its own bootstrap`);
+    if (entry === 'web/app/main.tsx') assert.match(await readFile(join(ROOT, 'web/app/boot.ts'), 'utf8'), /import\('\.\/main\.tsx'\)/, 'bootstrap loads the shell that installs the watch');
   }
 });
 

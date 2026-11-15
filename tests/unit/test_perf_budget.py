@@ -95,6 +95,27 @@ def test_first_load_counts_static_imports_only(tree):
     assert res["data"]["bytes"] == 200
 
 
+def test_parallel_app_shell_stays_in_first_load_budget(tree, tmp_path):
+    client = tree / "dist/client"
+    path = client / ".vite/manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["app.html"] = {"file": "assets/boot.js", "dynamicImports": ["../web/app/main.tsx", "map.js"]}
+    manifest["../web/app/main.tsx"] = manifest["landing.html"]
+    (client / "assets/boot.js").write_bytes(b"b" * 10)
+    path.write_text(json.dumps(manifest))
+    b = budget(js=159)
+    for key in ["js", "css"]:
+        b["budgets"][key]["entry"] = "app.html"
+    res = cpb.measure(tree, b)
+    assert res["js"]["bytes"] == 160  # bootstrap + shell + shared, not the optional 900-byte map
+    assert res["css"]["bytes"] == 30
+    assert "OVER BUDGET: Landing scripts" in run(tree, b, tmp_path).stdout
+    del manifest["../web/app/main.tsx"]
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(KeyError):
+        cpb.measure(tree, b)  # a lost mandatory-shell manifest entry fails closed
+
+
 def test_pass(tree, tmp_path):
     r = run(tree, budget(), tmp_path)
     assert r.returncode == 0, r.stdout

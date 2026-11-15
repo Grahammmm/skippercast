@@ -38,6 +38,13 @@ export const SEAFLOOR_LAYERS = [SEAFLOOR_CELLS, SEAFLOOR_FILL, SEAFLOOR_LINE, SE
 export const SEAFLOOR_PICK = SEAFLOOR_FILL;
 /** v1's data zoom, the `?view=` zoom it draws from and its tile cap (dist/seafloor-layer.js). */
 export const TILE_ZOOM = 12, MIN_VIEW_ZOOM = 10, MAX_TILES = 64;
+/** R4-SC-09: seafloor tile ranges in flight at once (see createSeafloor's slot()). */
+export const TILE_PARALLEL = 2;
+/**
+ * R4-SC-09-F1c: the zoom read first from a rough-first archive (its manifest names `rough_first`): habitat outlines only,
+ * generalised up to about 17 m, labelled until the TILE_ZOOM detail has drawn. The opening Morro Bay view is two z10 tiles.
+ */
+export const ROUGH_ZOOM = 10;
 export const RETRY_DELAYS = [30000, 60000, 120000, 240000, 300000] as const;
 /** The only ledger status whose reach may draw (src/skippercast/seafloor/publish.py). */
 export const SCREENED = 'habitat-screened';
@@ -317,6 +324,22 @@ export interface SeafloorState {
 }
 const OFF: SeafloorState = Object.freeze({status: 'off', note: '', view: 'terrain', fit: null, surveys: [], credits: [], drawn: 0});
 export const seafloorState = signal<SeafloorState>(OFF);
+/** R4-SC-09-F1c: true while the drawn seafloor is a rough-first archive's rough layer and its full detail has not drawn (the stage labels it). */
+export const seafloorRough = signal(false);
+/** Whether a manifest publishes a rough-first archive whose rough layer this layer can read first (src/skippercast/seafloor/rough_first.py). */
+export function roughFirst(manifest: Pick<Manifest, 'rough_first'> | null | undefined): boolean {
+  const r = manifest?.rough_first as {maxzoom?: unknown; detail_minzoom?: unknown} | null | undefined;
+  return !!r && typeof r === 'object' && typeof r.maxzoom === 'number' && r.maxzoom >= ROUGH_ZOOM && r.maxzoom < TILE_ZOOM
+    && r.detail_minzoom === TILE_ZOOM;
+}
+/** Whether a feature's outline reaches into a [west, south, east, north] box (its coordinates' extent). */
+function touches(f: TileFeature, [w = 0, s = 0, e = 0, n = 0]: readonly number[]): boolean {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const polygon of f.geometry.coordinates) for (const ring of polygon) for (const [x = 0, y = 0] of ring) {
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+  }
+  return x1 >= w && x0 <= e && y1 >= s && y0 <= n;
+}
 /** Terrain grade or the target's species fit; species fit draws only where the publication carries it. */
 export const seafloorView = signal<'terrain' | 'fit'>('fit');
 
@@ -325,6 +348,8 @@ export interface ArchiveReader {getHeader(): Promise<ArchiveHeader>; getZxy(z: n
 export interface SeafloorEngine {setVisible(layerId: string, visible: boolean): void; setData(sourceId: string, data: SeafloorCollection): void}
 export interface SeafloorOptions {
   engine: SeafloorEngine;
+  /** SCB-12: a reactive startup-only gate; publication checks still run unchanged when released. */
+  startReady?: () => boolean;
   /** A PMTiles reader for the archive's absolute URL. */
   open(url: string): ArchiveReader;
   /** The Chart's size in CSS pixels. */
@@ -341,6 +366,8 @@ export interface SeafloorOptions {
 export interface Manifest {
   readonly region: string; readonly archive_sha256: string; readonly expires_at: string;
   readonly ledger_sha256?: unknown; readonly source_attribution?: unknown; readonly source_use_notice?: unknown;
+  /** R4-SC-09-F1c: present when the archive is rough-first (`{maxzoom: 11, detail_minzoom: 12}`). */
+  readonly rough_first?: unknown;
 }
 type Gate = {state: string; reason: string; published?: boolean; manifest?: Manifest};
 type Tile = {habitat: TileFeature[]; cells: TileFeature[]};
@@ -353,17 +380,22 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
   let manifest: Gate['manifest'] | null = null, pub: Publication | null = null, archive: ArchiveReader | null = null, header: ArchiveHeader | null = null;
   // `drawn` holds the selectable features; `filled` says whether the source holds anything, cells included.
   // `cells` holds the drawn coverage cells, read only by a click that picks nothing else (#706).
-  let archiveKey = '', drawn = new Map<string, SeafloorFeature>(), cells: SeafloorFeature[] = [], view = 'terrain', filled = false;
+  let archiveKey = '', drawn = new Map<string, SeafloorFeature>(), cells: SeafloorFeature[] = [], view = 'terrain', filled = false, marked = false;
+  // R4-SC-09-F1c: whether this archive's TILE_ZOOM detail has drawn; until then a rough-first archive draws its rough layer first.
+  let detailed = false, markedDetail = false;
   const tiles = new Map<string, Promise<Tile>>();
+  // R4-SC-09: the tile ranges in flight and those waiting for a slot.
+  let active = 0;
+  const waiting: {key: string; rank: number; start: () => void}[] = [];
   const publish = (s: Partial<SeafloorState>) => { seafloorState.value = {...OFF, ...s}; };
   const cancel = () => { if (timer !== null) clearTimer(timer); timer = null; };
   const schedule = (ms: number) => { cancel(); timer = setTimer(() => { timer = null; void enable(true); }, ms); };
   function hide(): void {
     if (shown) for (const id of SEAFLOOR_LAYERS) engine.setVisible(id, false);
     if (shown || filled) { engine.setData(SEAFLOOR_SOURCE, EMPTY); o.onHide?.(); }
-    shown = false; filled = false; drawn = new Map(); cells = [];
+    shown = false; filled = false; drawn = new Map(); cells = []; detailed = false; seafloorRough.value = false;
   }
-  function drop(): void { archive = null; header = null; archiveKey = ''; tiles.clear(); }
+  function drop(): void { archive = null; header = null; archiveKey = ''; tiles.clear(); detailed = false; }
   function fail(status: SeafloorStatus, reason: string, retry: boolean): void {
     state = status; drop(); hide();
     const delay = retry ? RETRY_DELAYS[attempt++] : undefined;
@@ -389,6 +421,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     if (!on.peek() || !id) { state = 'off'; publish(OFF); return; }
     if (!retry) attempt = 0;
     publish({status: 'checking', note: 'Checking seafloor publication…'});
+    if (o.startReady && !o.startReady()) return;
     const gate = await loadManifest(id, fetchFn, now()) as Gate;
     if (request !== enabling) return;
     if (gate.state !== 'ready' || !gate.manifest) {
@@ -424,7 +457,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     const at = camera.peek(), head = header, reader = archive, admit = pub;
     if (!at || !head || !reader || !admit) return;
     const ready = (note: string, more: Partial<SeafloorState> = {}) => publish({status: 'ready', note, ...more});
-    const clear = (note: string) => { if (filled) { engine.setData(SEAFLOOR_SOURCE, EMPTY); filled = false; drawn = new Map(); cells = []; o.onHide?.(); } ready(note); };
+    const clear = (note: string) => { seafloorRough.value = false; if (filled) { engine.setData(SEAFLOOR_SOURCE, EMPTY); filled = false; drawn = new Map(); cells = []; o.onHide?.(); } ready(note); };
     // v1's status lines (dist/seafloor-layer.js before FE-61), with v2's "candidates": the counts, and the caveat in view.
     // The candidate count is the publisher's per-status habitat_counts.habitat; layers.habitat also counts unranked areas.
     const m = manifest as {habitat_counts?: {habitat?: number}; reach_inputs?: Record<string, unknown>} | null;
@@ -439,14 +472,53 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     const wanted = tilesForBounds(box, Math.min(TILE_ZOOM, head.maxZoom)) as [number, number, number][];
     if (wanted.length > MAX_TILES) return clear('Zoom in to load seafloor candidates');
     const token = ++loading;
+    // R4-SC-09: this view's ranges outrank any older view's still waiting, and the centre's go first (asked in that
+    // order; read back in tilesForBounds' order, so the drawn features are the same as before).
+    // R4-SC-09-F1c: until this archive's detail has drawn once, a rough-first archive's rough tiles for the view are
+    // asked first and outrank the detail ones; they draw, labelled, while the detail loads, and the detail replaces them.
+    const base = token * (2 * MAX_TILES + 1);
+    const roughWanted = !detailed && roughFirst(manifest) && head.maxZoom >= TILE_ZOOM
+      ? tilesForBounds(box, ROUGH_ZOOM) as [number, number, number][] : [];
+    const roughParts = roughWanted.length && roughWanted.length <= MAX_TILES
+      ? Promise.all(roughWanted.map((t, i) => tile(reader, t[0], t[1], t[2], base + 2 * MAX_TILES - i))) : null;
+    const zw = Math.min(TILE_ZOOM, head.maxZoom), span = 2 ** zw, lat = ((box[1] + box[3]) / 2) * Math.PI / 180;
+    const tx = ((box[0] + box[2]) / 2 + 180) / 360 * span, ty = (1 - Math.log(Math.tan(lat) + 1 / Math.cos(lat)) / Math.PI) / 2 * span;
+    const asked = new Map<[number, number, number], Promise<Tile>>();
+    [...wanted].sort((a, b) => Math.hypot(a[1] + 0.5 - tx, a[2] + 0.5 - ty) - Math.hypot(b[1] + 0.5 - tx, b[2] + 0.5 - ty))
+      .forEach((t, i) => asked.set(t, tile(reader, t[0], t[1], t[2], base + MAX_TILES - i)));
+    const full = Promise.all(wanted.map(t => asked.get(t)!));
+    let roughDrawn = false;
+    if (roughParts) {
+      let fullDone = false;
+      full.then(() => { fullDone = true; }, () => { /* read below */ });
+      let rough: Tile[] | null = null;
+      try { rough = await roughParts; } catch { rough = null; /* no rough view; the detail still loads */ }
+      if (token !== loading || !current()) return;
+      if (rough && !fullDone) {
+        // Only the outlines that reach into the view, so the counts stay "in view"; rough tiles carry no cells.
+        render(rough.map(t => ({habitat: t.habitat.filter(f => touches(f, box)), cells: []})), true);
+        roughDrawn = true;
+      }
+    }
     let parts: Tile[];
     try {
-      parts = await Promise.all(wanted.map(([z, x, y]) => tile(reader, z, x, y)));
+      parts = await full;
     } catch {
-      if (token === loading) ready('Seafloor candidates could not load · try again');
+      if (token !== loading) return;
+      // A failed detail read leaves the rough view and its label up; say the detail did not load.
+      if (roughDrawn) publish({...seafloorState.peek(), note: `${seafloorState.peek().note} · full detail could not load · try again`});
+      else ready('Seafloor candidates could not load · try again');
       return;
     }
     if (token !== loading || !current()) return;
+    render(parts, false);
+  }
+
+  /** Draw one view's tiles: the rough layer of a rough-first archive (`rough`), or the TILE_ZOOM detail. */
+  function render(parts: Tile[], rough: boolean): void {
+    const admit = pub!;
+    const m = manifest as {reach_inputs?: Record<string, unknown>} | null;
+    const reaches = Object.keys(m?.reach_inputs ?? {}).length;
     const p = profile.peek(), limit = depthLimitFt(p);
     const admitted = (dedupeById(parts.flatMap(t => t.habitat)) as TileFeature[]).map(f => admitHabitat(f, admit)).filter(f => f !== null);
     const inDepth = admitted.filter(f => withinDepth(p, Number.isFinite(f.properties.depth_min_ft) ? f.properties.depth_min_ft as number : null));
@@ -457,25 +529,36 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     drawn = new Map(habitat.map(f => [f.id, f])); cells = admittedCells;
     engine.setData(SEAFLOOR_SOURCE, collection([...cells, ...habitat], view));
     filled = cells.length + habitat.length > 0;
+    seafloorRough.value = rough;
+    if (!rough) detailed = true;
+    // R4-SC-09: when the first view's seafloor is handed to the map (the speed runs read it beside the Chart's first idle).
+    if (!marked) { marked = true; try { performance.mark('skippercast-seafloor-drawn'); } catch { /* no timing API */ } }
+    // R4-SC-09-F1c: when the first view's full detail is handed to the map, after a rough view or without one.
+    if (!rough && !markedDetail) { markedDetail = true; try { performance.mark('skippercast-seafloor-detail'); } catch { /* no timing API */ } }
     const ranked = habitat.filter(f => f.kind === 'candidate').length, deeper = admitted.length - inDepth.length, graded = inDepth.length - habitat.length;
     const search = habitat.filter(f => f.kind === 'search').length, interpreted = habitat.filter(f => f.kind === 'interpreted').length;
     const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
-    ready([`${plural(ranked, 'candidate')} in view`, search ? plural(search, 'unranked search area') : '',
+    publish({status: 'ready', note: [rough ? 'Rough outlines; full detail loading' : '', `${plural(ranked, 'candidate')} in view`,
+      search ? plural(search, 'unranked search area') : '',
       interpreted ? plural(interpreted, 'unranked interpreted area') : '', 'unverified; nominal depth',
       deeper ? `${deeper} deeper than the ${PROFILE_TABLE[p].label} limit (${limit} ft nominal) left out` : '',
       graded ? `${graded} below grade ${g === 'a' ? 'A' : 'B'} or unranked left out` : '',
-      reaches ? `${reaches} published reach inputs in this region` : ''].filter(Boolean).join(' · '), {
+      reaches ? `${reaches} published reach inputs in this region` : ''].filter(Boolean).join(' · '),
       view: view === 'terrain' ? 'terrain' : 'fit', fit: fit ? fitName(fit) : null, drawn: habitat.length + cells.length,
       surveys: [...new Set(habitat.map(f => `${f.survey.id} (${f.survey.year})`))].sort(),
       credits: [...new Set([...habitat, ...cells].flatMap(f => f.rights.map(r => r.credit)))],
     });
   }
 
-  function tile(reader: ArchiveReader, z: number, x: number, y: number): Promise<Tile> {
+  function tile(reader: ArchiveReader, z: number, x: number, y: number, rank = 0): Promise<Tile> {
     const key = `${z}/${x}/${y}`;
     let pending = tiles.get(key);
-    if (!pending) {
-      pending = reader.getZxy(z, x, y).then(t => {
+    if (pending) { const queued = waiting.find(w => w.key === key); if (queued && queued.rank < rank) queued.rank = rank; }
+    else {
+      pending = slot(key, rank).then(() => {
+        if (!alive) throw new Error('Seafloor layer destroyed');
+        return reader.getZxy(z, x, y);
+      }).finally(release).then(t => {
         if (!t) return {habitat: [], cells: []};
         const decoded = decodeTile(new Uint8Array(t.data));
         return {habitat: tileFeatures(decoded, 'habitat', z, x, y) as TileFeature[], cells: tileFeatures(decoded, 'cells', z, x, y) as TileFeature[]};
@@ -486,10 +569,25 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     }
     return pending;
   }
+  /**
+   * R4-SC-09: at most TILE_PARALLEL tile ranges in flight, so the first view's seafloor (one 609 KB Morro Bay tile among
+   * nine) does not crowd the map's own base tiles off a slow link. A waiting range with the higher rank goes first: the
+   * latest view's ranges before an older view's, and nearer the view's centre before farther.
+   */
+  function slot(key: string, rank: number): Promise<void> {
+    if (active < TILE_PARALLEL) { active++; return Promise.resolve(); }
+    return new Promise(start => { waiting.push({key, rank, start}); });
+  }
+  function release(): void {
+    if (!waiting.length) { active--; return; }
+    let best = 0;
+    for (let i = 1; i < waiting.length; i++) if (waiting[i]!.rank > waiting[best]!.rank) best = i;
+    waiting.splice(best, 1)[0]!.start();
+  }
 
   const on = computed(() => layers.value.includes('seafloor'));
   const disposers = [
-    effect(() => { on.value; region.value; untracked(() => void enable()); }),
+    effect(() => { on.value; region.value; o.startReady?.(); untracked(() => void enable()); }),
     effect(() => { camera.value; shownPresentation.value; profile.value; ownSpearDepthFt.value; species.value; grade.value; seafloorView.value; untracked(() => void draw()); }),
   ];
   return {
@@ -504,7 +602,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
       if (!alive) return;
       alive = false; ++enabling; ++loading; cancel();
       for (const dispose of disposers) dispose();
-      drop(); drawn = new Map(); cells = []; seafloorState.value = OFF;
+      drop(); drawn = new Map(); cells = []; seafloorState.value = OFF; seafloorRough.value = false;
     },
   };
 }
