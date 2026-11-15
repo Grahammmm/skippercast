@@ -109,9 +109,20 @@ function parseRange(header: string | null, size: number): {start: number; end: n
   return start <= end && start < size ? {start, end} : 'invalid';
 }
 
-/** Serve bytes with HTTP Range support (PMTiles reads by range). */
+/** If-Range (RFC 9110 13.1.5): true when Range may be honored. A strong entity-tag must equal the strong current ETag; an HTTP-date must
+ *  equal the modification time to the second and only counts when that time is known. Weak, malformed or stale validators fail. */
+const ETAG_ONE = /^(W\/)?"[\x21\x23-\x7e\x80-\xff]*"$/;
+function ifRangeHolds(value: string | null, etag: string | null | undefined, modified: number | undefined): boolean {
+  if (value === null) return true;
+  if (ETAG_ONE.test(value)) return !value.startsWith('W/') && !!etag && !etag.startsWith('W/') && value === etag;
+  const date = parseHttpDate(value);
+  return Number.isFinite(date) && modified !== undefined && Number.isFinite(modified) && Math.floor(date / 1000) === Math.floor(modified / 1000);
+}
+
+/** Serve bytes with HTTP Range support (PMTiles reads by range). A failed If-Range ignores Range: whole 200, no Content-Range. */
 export function rangeResponse(bytes: Uint8Array, request: Request, headers: Headers): Response {
-  const size = bytes.byteLength, range = parseRange(request.headers.get('Range'), size);
+  const size = bytes.byteLength, held = ifRangeHolds(request.headers.get('If-Range'), headers.get('ETag'), parseHttpDate(headers.get('Last-Modified') ?? ''));
+  const range = held ? parseRange(request.headers.get('Range'), size) : null;
   headers.set('Accept-Ranges', 'bytes');
   if (range === 'invalid') { headers.set('Content-Range', `bytes */${size}`); return new Response(null, {status: 416, headers}); }
   if (!range) { headers.set('Content-Length', String(size)); return new Response(bytes, {status: 200, headers}); }
@@ -273,7 +284,7 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
     // Seafloor archives are gated on a live publication receipt and never cached.
     const fill = edge.cache && !seafloor ? edgeFill(edge.cache, request, key, logicalKey, headers, ctx, build, selected) : undefined;
     const conditional = conditionalHeaders(request);
-    const object = await selected.get(key, {range: request.headers, onlyIf: conditional}) as R2Object | R2ObjectBody | null;
+    let object = await selected.get(key, {range: request.headers, onlyIf: conditional}) as R2Object | R2ObjectBody | null;
     if (object) {
       if (publication && object.customMetadata?.sha256 !== expectedHash) {
         return new Response('Seafloor archive revision unavailable', {status: 503, headers});
@@ -289,16 +300,26 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
       }
       if (edge.cache) headers.set('X-SC-Cache', 'miss');
       if (!('body' in object)) return new Response(null, {status: 304, headers});
+      if (object.range && request.headers.has('Range') && !ifRangeHolds(request.headers.get('If-Range'), object.httpEtag, object.uploaded instanceof Date ? object.uploaded.getTime() : undefined)) {
+        // If-Range failed: ignore Range and send the whole file, read only at the ETag just checked so no two versions are joined.
+        await (object.body as ReadableStream | null)?.cancel().catch(() => {});
+        const whole = await selected.get(key, {onlyIf: new Headers({'If-Match': object.httpEtag})}) as R2Object | R2ObjectBody | null;
+        if (!whole || !('body' in whole) || whole.httpEtag !== object.httpEtag) {
+          if (whole && 'body' in whole) await (whole.body as ReadableStream | null)?.cancel().catch(() => {});
+          return new Response('Feed object changed; retry', {status: 503, headers: {'Cache-Control': 'no-store', 'Retry-After': '1'}});
+        }
+        object = whole;
+      }
       if (object.range && request.headers.has('Range')) {
         const {offset = 0, length = object.size - offset} = object.range as {offset?: number; length?: number};
         headers.set('Content-Range', `bytes ${offset}-${offset + length - 1}/${object.size}`);
         headers.set('Content-Length', String(length));
         if (fill) { const filled = fill({size: object.size, range: object.range}).catch(() => {}); if (ctx?.waitUntil) ctx.waitUntil(filled); else await filled; }
-        return new Response(object.body, {status: 206, headers});
+        return new Response((object as R2ObjectBody).body, {status: 206, headers});
       }
       headers.set('Content-Length', String(object.size));
       if (fill && object.size <= EDGE_CACHE_MAX_BYTES) {
-        const [reply, keep] = (object.body as ReadableStream).tee();
+        const [reply, keep] = ((object as R2ObjectBody).body as ReadableStream).tee();
         await fill({size: object.size, httpEtag: object.httpEtag, body: keep});
         return new Response(reply, {status: 200, headers});
       }
@@ -315,6 +336,7 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
     if (!response?.ok) return new Response('Not found', {status: 404, headers});
     headers.set('Cache-Control', cacheControl);
     headers.set('X-Feed-Source', 'assets');
+    for (const name of ['ETag', 'Last-Modified']) if (response.headers.has(name)) headers.set(name, response.headers.get(name)!);  // If-Range validators from the same bytes
     return rangeResponse(new Uint8Array(await response.arrayBuffer()), request, headers);
   }
   // No bucket bound (local dev, or past the cost ceiling): the feed is unavailable, never fetched elsewhere.
