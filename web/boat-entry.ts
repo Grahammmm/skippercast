@@ -134,8 +134,9 @@ export function carryAsk(url: string, session: AskStorage | null = browserSessio
 export function takeAsk(href: string, session: AskStorage | null = browserSession()): boolean {
   let ask = false;
   try {
-    if (session?.getItem(ASK_KEY)) { session.removeItem(ASK_KEY); ask = true; }
-  } catch { /* nothing carried */ }
+    // Admit the carried ask before the best-effort cleanup, so a failed removal cannot revoke it.
+    if (session?.getItem(ASK_KEY)) { ask = true; session.removeItem(ASK_KEY); }
+  } catch { /* nothing carried, or the mark could not be removed */ }
   try {
     if (new URL(href).searchParams.get(ASK_PARAM) === 'ask') ask = true;
   } catch { /* not a URL */ }
