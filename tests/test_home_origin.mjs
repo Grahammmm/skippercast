@@ -107,7 +107,8 @@ test('the brief: pending while ports load, then the home port; Kayak\'s chosen l
   Object.defineProperty(globalThis, 'localStorage', {configurable: true, value: {getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: k => store.delete(k)}});
   try {
     m.region.value = 'morro-bay'; m.profile.value = 'boat'; m.markData.value = DATA; m.markScreen.value = SCREEN;
-    m.reefPublication.value = {state: 'unavailable', region: 'morro-bay'};
+    // Explicit Save-Data deferral retains atlas ranking; failed habitat no longer does.
+    m.reefPublication.value = {state: 'offer', region: 'morro-bay', bytes: null, why: 'save-data'};
     let r = m.currentRanking(NOW);
     assert.equal(r.empty, 'Finding your home port…'); assert.equal(r.label, 'Survey reef atlas'); assert.equal(r.harbor, undefined);
     await m.loadRegionPorts('morro-bay', async () => PORTS);

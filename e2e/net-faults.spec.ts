@@ -63,7 +63,10 @@ async function stubBaselineAnswers(page: Page, v2: V2) {
     ? route.fulfill({json: {...feed, part: 'brief', catch_probability: null, bite_score: null}}) : route.fallback());
   await v2.feed('**/feeds/conditions/regions/morro-bay/latest.json', feed);   // the conditions feed, read beside the daily one
   await v2.feed('**/feeds/tiles/basemap/manifest.json', {});   // no archive key: the Aerial base draws, no archive is fetched
-  await v2.feed('**/feeds/tiles/seafloor/manifest-morro-bay.json', {status: 'held', region: 'morro-bay'});   // layer hidden, nothing to fetch
+  // Reviewed habitat reads one control manifest per coast region (web/map/coast-ranking.js HABITAT_REGIONS, SCB-07-C); each is a held stub:
+  // layer hidden, nothing to fetch, and no same-origin 404 for the budget below to count.
+  for (const region of ['morro-bay', 'cambria-san-simeon', 'monterey-point-sur', 'point-arguello-conception'])
+    await v2.feed(`**/feeds/tiles/seafloor/manifest-${region}.json`, {status: 'held', region});
 }
 
 /**
