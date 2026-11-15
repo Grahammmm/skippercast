@@ -266,6 +266,9 @@ async function packRun({id = 'test-coast', manifestStatus = 200, feedOpts, fail,
     if (abortOn?.(url)) controller.abort();
     if (u.pathname === '/regions/index.json') return Response.json({default_region: id, regions: [{id, config: `regions/${id}/region.json`}]});
     if (u.pathname === `/regions/${id}/region.json`) return Response.json(config);
+    // SCP3-06: the app's manifest and its required shell files (v2Pack refuses a save without them).
+    if (u.pathname === '/precache.json') return Response.json({build: 'b1', v2: {assets: ['/assets/app.js']}});
+    if (['/map', '/assets/app.js'].includes(u.pathname)) return new Response('shell');
     if (url === `${base}habitat-dynamics.json`) return manifestStatus === 200 ? Response.json(feed.manifest) : new Response('no', {status: manifestStatus});
     const tile = feed.tiles.find(t => url === base + t.record.path);
     return tile ? new Response(tile.bytes) : new Response('Not found', {status: 404});
