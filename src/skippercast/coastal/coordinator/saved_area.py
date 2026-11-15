@@ -23,10 +23,42 @@ SAVED_AREA_A_NATIVE_GRID = MappingProxyType(dict(
     valid_fraction=1,
 ))
 
-def require_saved_area_a_native_grid(facts, window):
-    """Refuse unless the native facts match saved-area A exactly; name the first differing field."""
+# Offline compatibility only: no grant consumer selects this pin automatically.
+STRICT_FINAL_A = MappingProxyType(dict(SAVED_AREA_A_NATIVE_GRID,
+    window=(3762, 3488, 128, 128),
+    transform=(2.0, 0.0, 728615.0, 0.0, -2.0, 3819179.0)))
+STRICT_FINAL_A_CONTRACT = 'coastal-saved-area-strict-final-a-grid-v1'
+
+
+def _scope_grid(grid_contract, window):
+    """Recognize one exact software-reviewed scope; never issue science/run authority."""
+    if grid_contract is None:
+        return SAVED_AREA_A_NATIVE_GRID
+    from .ordered_trial import LARGER_SCOPE, LARGER_WINDOWS, LARGER_AFFINE
+    expected = dict(schema=STRICT_FINAL_A_CONTRACT, scope=LARGER_SCOPE,
+                    support_policy='strict', window_set=LARGER_WINDOWS,
+                    full_grid_transform=LARGER_AFFINE)
+    if not isinstance(grid_contract, dict) or grid_contract != expected:
+        raise ValueError('recognized reviewed strict final-A grid/scope contract required')
+    col, row, width, height = LARGER_WINDOWS[0]
+    a, b, x, d, e, y = LARGER_AFFINE
+    transform = (a, b, x + a*col + b*row, d, e, y + d*col + e*row)
+    if ((col, row, width, height) != STRICT_FINAL_A['window']
+            or transform != STRICT_FINAL_A['transform']
+            or window != list(STRICT_FINAL_A['window'])):
+        raise ValueError('strict final-A window/full-grid affine pin differs')
+    return STRICT_FINAL_A
+
+
+def require_saved_area_a_native_grid(facts, window, *, grid_contract=None):
+    """Check synthetic/offline grid compatibility; default remains ORIGINAL A.
+
+    The optional exact contract is not a grant, attestation or live adoption API.
+    Unknown/partial scopes refuse before even inspecting facts. validate_adoption
+    deliberately continues to call this without a contract; final-A adoption is HOLD.
+    """
+    g=_scope_grid(grid_contract, window)
     from pyproj import CRS
-    g=SAVED_AREA_A_NATIVE_GRID
     h=facts['header'];c=CRS.from_user_input(h['horizontal_crs']);c=c.source_crs if c.is_bound else c
     # Same order and comparisons as the original single condition, evaluated lazily.
     checks=(('shape',lambda:h['shape']!=list(g['shape'])),
