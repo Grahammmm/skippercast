@@ -24,21 +24,44 @@ function data(at = now) {
 test("all seven species have local limits and correct initial season states", () => {
   const d = data();
   assert.ok(validRegulations(d, region));
-  for (const id of Object.keys(d.species)) assert.equal(state(d, id).status, id === "dungeness" ? "closed" : "open");
+  for (const id of Object.keys(d.species)) assert.equal(state(d, id).status, id === "dungeness" || id === "salmon" ? "closed" : "open"); // Sep 21: salmon closed for the rest of 2026, crab opens Nov 7
   assert.match(d.species.halibut.bag, /^5 /);
   assert.match(d.species.albacore.bag, /^25 /);
   assert.match(d.species.rockfish.details.join(" "), /1 copper, 2 canary/);
 });
-test("seasons roll at Pacific midnight; crab is only scheduled", () => {
+test("seasons roll at Pacific midnight; crab opens Nov 7 with its trap restriction; salmon stays closed", () => {
   for (const [date, species, expected] of [
-    ["2026-10-01T06:59:00Z", "salmon", "open"],
+    ["2026-10-01T06:59:00Z", "salmon", "closed"],
     ["2026-10-01T07:00:00Z", "salmon", "closed"],
-    ["2026-11-07T08:00:00Z", "dungeness", "scheduled"],
-    ["2027-01-01T08:00:00Z", "lingcod", "unknown"],
+    ["2026-11-07T07:59:00Z", "dungeness", "closed"],
+    ["2026-11-07T08:00:00Z", "dungeness", "restricted"],
+    ["2027-01-01T08:00:00Z", "lingcod", "closed"], // Jan 1-Mar 31 is closed (T14 CCR 27.40(b)(1)); R4-SC-04
   ]) {
     const at = Date.parse(date);
     assert.equal(state(data(at), species, at).status, expected);
   }
+});
+test("R4-SC-04: 2027 dates run to the reviewed end (2027-03-31) and read 'Check rules' after it", () => {
+  assert.equal(original.valid_through, "2027-03-31");
+  assert.ok(original.valid_through >= "2027-01-17", "a 12-18 GO needs valid_through >= GO + 30 days");
+  const at = (day) => Date.parse(`${day}T20:00:00Z`);
+  for (const [day, species, expected] of [
+    ["2027-01-01", "lingcod", "closed"], ["2027-03-31", "lingcod", "closed"],
+    ["2027-01-01", "rockfish", "closed"], ["2027-03-31", "rockfish", "closed"],
+    ["2027-01-01", "halibut", "open"], ["2027-03-31", "halibut", "open"],
+    ["2027-01-01", "albacore", "open"], ["2027-03-31", "albacore", "open"],
+    ["2027-01-01", "bluefin", "open"], ["2027-03-31", "bluefin", "open"],
+    ["2027-01-01", "salmon", "closed"], ["2027-03-31", "salmon", "closed"],
+    ["2027-01-01", "dungeness", "restricted"], ["2027-03-31", "dungeness", "restricted"],
+    ["2027-04-01", "lingcod", "unknown"], ["2027-04-01", "halibut", "unknown"], ["2027-04-01", "dungeness", "unknown"], ["2027-04-01", "salmon", "unknown"],
+  ]) {
+    const t = at(day);
+    assert.equal(state(data(t), species, t).status, expected, `${species} on ${day}`);
+  }
+  // Dungeness after Jan 1 must not claim traps are allowed or still banned: it sends the angler to CDFW.
+  const t = at("2027-01-15"), crab = state(data(t), "dungeness", t);
+  assert.match(crab.reason, /check CDFW before setting a trap/);
+  assert.match(crab.reason, /Jun 30, 2027/);
 });
 test("stale, changed, missing, retained, unreviewed and mismatched evidence withhold open", () => {
   for (const edit of [
@@ -77,10 +100,10 @@ test("combined reef selector keeps both legal limits and does not mask an unveri
 });
 test('a latitude-limited season asks for a fishing location and its band is validated', () => {
   const d = data();
-  d.species.salmon.windows[0].geography = {kind: 'latitude-band', south: 35.0, north: 35.4, source_id: 'rules-salmon', note: 'Open only between reviewed latitude lines.'};
-  assert.equal(state(d, 'salmon').status, 'unknown');
-  assert.equal(state(d, 'salmon').label, 'Choose fishing location');
-  d.species.salmon.windows[0].geography.north = 91;
+  d.species.halibut.windows[0].geography = {kind: 'latitude-band', south: 35.0, north: 35.4, source_id: 'rules-central', note: 'Open only between reviewed latitude lines.'};
+  assert.equal(state(d, 'halibut').status, 'unknown');
+  assert.equal(state(d, 'halibut').label, 'Choose fishing location');
+  d.species.halibut.windows[0].geography.north = 91;
   assert.equal(validRegulations(d, region), false);
 });
 test("summary leads with status, bag, size, depth, verified date and one link", () => {
