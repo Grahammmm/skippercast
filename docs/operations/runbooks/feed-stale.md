@@ -49,7 +49,7 @@ export RAW=https://raw.githubusercontent.com/Grahammmm/skippercast
    ```bash
    gh run view <run-id> --log-failed | tail -80
    ```
-   - *Test the live conditions pipeline* failed: a change on `main` broke a live test (`python scripts/run_core_tests.py --scope live`). Go to Fix 2.
+   - The live job no longer runs tests. If a live test broke on `main`, the CI `check` or `survey-science` run for that commit is red (reproduce locally with `python scripts/run_core_tests.py --scope live`). Go to Fix 2.
    - `Cycle N did not publish cleanly` with a Python traceback from `refresh_regions.py`: one region or source raised. On `main`, `live_cycle.sh` runs under `set -e`, so one failing region stops publication for every region (PR #34, [P2-04], isolates regions). Go to Fix 2.
    - `git push` to `conditions` rejected: someone else pushed to the branch, or the workflow lost `contents: write`. Re-dispatch (Fix 1); if it repeats, inspect `git ls-remote origin conditions` and the workflow `permissions:` block.
    - `R2 publish failed` or `could not verify CLOUDFLARE_API_TOKEN`: on `main` this is only a warning and the GitHub copy is current, but the Cloudflare site keeps serving the older R2 copy. After PR #30 merges it fails the cycle. Go to the [R2 outage runbook](r2-outage.md) and, for a bad token, [secrets rotation](secrets-rotation.md).
