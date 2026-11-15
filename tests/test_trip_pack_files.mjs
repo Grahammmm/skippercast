@@ -256,6 +256,17 @@ test('SCP3-06: a failed /map or declared JS/CSS/static file refuses the save and
   }
 });
 
+test('SCP3-06: a failed declared file written with ./ segments still refuses the save and keeps the older pack', async () => {
+  const pre = manifest({v2: {assets: ['/assets/./app.js', '/assets/x/../app.css'], static: ['/sw-static.js']}});
+  for (const path of ['/assets/app.js', '/assets/app.css']) {
+    const r = await runV2({pre, fail: [path]});
+    assert.ok(r.error, `${path}: the save is refused`);
+    assert.match(String(r.error.message), new RegExp(path.replace('.', '\\.')));
+    assert.equal(kept(r), OLD_PACK, `${path}: only the older pack remains`);
+    assert.ok(PACK_META in Object.fromEntries(r.caches.map.get(OLD_PACK).map), `${path}: the older pack keeps its meta`);
+  }
+});
+
 test('SCP3-06: a complete shell commits, replaces the older pack, and a missing shoreline stays a reported miss', async () => {
   const r = await run({listed: [NAMES.shore], v2: true, seed: seedOld, answers: {[NAMES.shore]: 404}, serve: serveShell()});
   assert.equal(r.error, undefined, String(r.error));

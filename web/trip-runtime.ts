@@ -156,7 +156,7 @@ export async function v2Pack({store, put, signal, progress}: Extras, id: string,
   const files = packFiles(id, page, hashed), required = new Set([V2_SHELL, ...hashed].map(p => new URL(p, page).href));
   let done = 0;
   for (const [url, key, init] of files) {
-    if (!await store(url, key, init, misses) && required.has(url)) throw new Error(`the app file ${new URL(url).pathname} could not be saved. Saved regions are unchanged.`);
+    if (!await store(url, key, init, misses) && required.has(new URL(url).href)) throw new Error(`the app file ${new URL(url).pathname} could not be saved. Saved regions are unchanged.`);
     progress('shell', ++done, files.length);
   }
   const [archive, {basemapRangeKey, planBasemap}] = await Promise.all([basemapArchive((...a) => fetch(...a), page), import('../dist/offline-core.js')]);
