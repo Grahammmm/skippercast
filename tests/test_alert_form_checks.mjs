@@ -206,6 +206,6 @@ test('reuse_sends_nothing_until_explicit_save: filling the form makes no request
   assert.ok(handler.length > 100 && !/api\(|refresh|ack\(|fetch|localStorage|sessionStorage|enablePush|location|submit|requestSubmit/.test(handler), 'Use again only fills the form');
   const save = src.slice(src.indexOf('const save = async'), src.indexOf('const act = '));
   assert.ok(save.indexOf('region.forecast_points.some') > save.indexOf('formProblem') && save.indexOf("api('trips'") > save.indexOf('region.species.includes'), 'save checks the current area and species before the one request');
-  assert.match(src, /<Button type="submit" variant="primary" disabled=\{unavailable\}>\{t\('alerts\.save', lang\)\}<\/Button>/);
+  assert.match(src, /<Button type="submit" variant="primary" disabled=\{unavailable \|\| saveBusy\}>\{t\('alerts\.save', lang\)\}<\/Button>/);
   assert.equal(JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings['alerts.save'].en, 'Save this fishing window');
 });
