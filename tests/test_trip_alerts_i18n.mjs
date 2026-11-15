@@ -152,6 +152,13 @@ test('UXFIX-07 readableDate: Tue 10 Nov / mar 10 nov in the region zone; the DST
   assert.equal(alerts.tripLine({id: 't', date: '2026-11-10', point: 'p', species: 's', start_hour: 7, end_hour: 13}, undefined, 'en', 'Pacific/Auckland'), 'Tue 10 Nov · p · s · 7:00–13:00');
 });
 
+test('SCP3-12 readableDate: a month or day that rolls over stays as given; a real leap day reads normally', () => {
+  const LA = 'America/Los_Angeles';
+  for (const lang of ['en', 'es']) for (const bad of ['2026-00-10', '2026-13-10', '2026-02-29', '2026-02-31']) assert.equal(readableDate(bad, lang, LA), bad, `${lang} ${bad}`);
+  assert.equal(readableDate('2028-02-29', 'en', LA), 'Tue 29 Feb');
+  assert.equal(alerts.tripLine({id: 't', date: '2026-13-10', point: 'p', species: 's', start_hour: 7, end_hour: 13}, undefined, 'en', LA), '2026-13-10 · p · s · 7:00–13:00');
+});
+
 test('UXFIX-07 readableInstant: a stored timestamp reads as its day in the region zone, not the browser zone (comfort history)', () => {
   const LA = 'America/Los_Angeles', at = '2026-11-10T01:00:00Z';   // 17:00 on Mon 9 Nov in Los Angeles; Tue 10 Nov in UTC
   assert.equal(readableInstant(at, 'en', LA), 'Mon 9 Nov');
