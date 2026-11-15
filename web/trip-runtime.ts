@@ -143,15 +143,22 @@ export async function oceanPhase({put, signal, progress}: Pick<Extras, 'put' | '
 }
 
 /** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, the published shoreline, land-water and depth-contour files, the startup copies (#617), tiles and, last, the ocean phase. */
-async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds: number[], place: Parameters<typeof oceanPhase>[1]) {
+export async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds: number[], place: Parameters<typeof oceanPhase>[1]) {
   const page = location.href, misses: string[] = [];
+  // The app's own page and files are mandatory: a pack without them cannot open offline, so a failure here throws and savePack keeps the older pack.
+  const list = await fetch('/precache.json', {cache: 'no-cache', signal}).then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+    .catch(error => { throw signal.aborted ? error : new Error(`the app files could not be listed (${error?.message ?? error}). Saved regions are unchanged.`); }) as {build?: unknown; v2?: {assets?: unknown; static?: unknown}} | null;
+  const declared = [...Array.isArray(list?.v2?.assets) ? list.v2.assets : [], ...Array.isArray(list?.v2?.static) ? list.v2.static : []];
+  const hashed = declared.filter((p): p is string => typeof p === 'string' && /^\/(?!\/)/.test(p));
+  if (typeof list?.build !== 'string' || !list.build || !Array.isArray(list.v2?.assets) || !list.v2.assets.length || hashed.length !== declared.length) throw new Error('the app files list is not usable. Saved regions are unchanged.');
   const tideURLs = await tideSelection.packURLs(id);
   await saveTidePack(tideURLs, put, signal);
-  const list = await fetch('/precache.json', {cache: 'no-cache', signal}).then(r => r.ok ? r.json() : null, () => null) as {build?: string; v2?: {assets?: unknown[]; static?: unknown[]}} | null;
-  const hashed = [...list?.v2?.assets ?? [], ...list?.v2?.static ?? []].filter((p): p is string => typeof p === 'string' && /^\/(?!\/)/.test(p));
-  const files = packFiles(id, page, hashed);
+  const files = packFiles(id, page, hashed), required = new Set([V2_SHELL, ...hashed].map(p => new URL(p, page).href));
   let done = 0;
-  for (const [url, key, init] of files) { await store(url, key, init, misses); progress('shell', ++done, files.length); }
+  for (const [url, key, init] of files) {
+    if (!await store(url, key, init, misses) && required.has(url)) throw new Error(`the app file ${new URL(url).pathname} could not be saved. Saved regions are unchanged.`);
+    progress('shell', ++done, files.length);
+  }
   const [archive, {basemapRangeKey, planBasemap}] = await Promise.all([basemapArchive((...a) => fetch(...a), page), import('../dist/offline-core.js')]);
   const plan = planBasemap(bounds) as {tiles: {z: number; x: number; y: number}[]; minZoom: number; maxZoom: number | null};
   let saved = 0, tile = 0;
@@ -165,7 +172,7 @@ async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds
     }
   }
   const ocean = await oceanPhase({put, signal, progress}, place);
-  return {build: list?.build ?? null, shell: {saved: files.length - misses.filter(m => !m.startsWith('basemap')).length, requested: files.length},
+  return {build: list.build, shell: {saved: files.length - misses.filter(m => !m.startsWith('basemap')).length, requested: files.length},
     basemap: {archive: archive ? new URL(archive).pathname : null, saved, planned: plan.tiles.length, min_zoom: plan.minZoom, max_zoom: plan.maxZoom}, missing: misses.slice(0, 50), ocean};
 }
 

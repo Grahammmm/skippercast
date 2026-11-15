@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
-import {packFiles} from '../web/trip-runtime.ts';
+import {packFiles, v2Pack} from '../web/trip-runtime.ts';
 import {publishedChartFiles} from '../web/chart-files.ts';
 import {getRegion} from '../dist/region.js';
 import {savePack} from '../dist/offline-pack.js';
@@ -97,7 +97,7 @@ class FakeCaches {
 }
 
 /** One savePack run. `listed`: the published chart_files (null: unknown). `answers`: side-file name -> body string, 404, 'throw' or 'offline' (the worker's saved answer). */
-async function run({listed, answers = {}, seed, abortOn, sessionStart = 0} = {}) {
+async function run({listed, answers = {}, seed, abortOn, sessionStart = 0, v2, serve} = {}) {
   const saved = {caches: globalThis.caches, location: globalThis.location, document: globalThis.document, fetch: globalThis.fetch};
   const had = Object.fromEntries(Object.keys(saved).map(k => [k, k in globalThis]));
   const caches = new FakeCaches(), controller = new AbortController(), unplanned = [];
@@ -119,11 +119,13 @@ async function run({listed, answers = {}, seed, abortOn, sessionStart = 0} = {})
       if (a === 'offline') return new Response('old', {headers: {'X-SC-Offline': '2026-10-01T00:00:00.000Z'}});
       return new Response(a ?? `body of ${side.get(url)}`);
     }
+    const served = serve?.(url);
+    if (served) return served;
     if (others.has(url)) return new Response('file');
     unplanned.push(url);
     throw new TypeError('unplanned request ' + url);
   };
-  const more = async ({store, signal}) => {
+  const more = v2 ? extras => v2Pack(extras, ID, getRegion().bounds, {id: ID, center: [35.37, -120.86]}) : async ({store, signal}) => {
     const misses = [], files = packFiles(ID, PAGE, []);
     for (const [url, key, init] of files) await store(url, key, init, misses);
     return {shell: {saved: files.length - misses.length, requested: files.length}, missing: misses, signal: signal.aborted};
@@ -217,4 +219,49 @@ test('SC2037-05: the dist savePack, run alone, makes no storage persist call (th
     if (had) Object.defineProperty(globalThis, 'navigator', had); else Reflect.deleteProperty(globalThis, 'navigator');
   }
   assert.deepEqual(calls, {persist: 0, persisted: 0});
+});
+
+// ---- SCP3-06: the real v2Pack needs its manifest and app shell, or the older pack stays ----
+
+const OLD_PACK = `sc-pack-${ID}-1`;
+const manifest = (over = {}) => ({build: 'b1', v2: {assets: ['/assets/app.js', '/assets/app.css'], static: ['/sw-static.js']}, ...over});
+const seedOld = async caches => { await (await caches.open(OLD_PACK)).put(PACK_META, new Response('{"old":true}')); };
+/** One real savePack + v2Pack run with the old pack seeded. `pre`: the /precache.json answer (a body, 404 or 'throw'); `fail`: URL paths that answer 500. */
+const serveShell = ({pre = manifest(), fail = []} = {}) => url => {
+  const path = new URL(url).pathname;
+  if (path === '/precache.json') { if (pre === 'throw') throw new TypeError('transport error'); return pre === 404 ? new Response('no', {status: 404}) : new Response(typeof pre === 'string' ? pre : JSON.stringify(pre)); }
+  if (fail.includes(path)) return new Response('bad', {status: 500});
+  if (['/map', '/assets/app.js', '/assets/app.css', '/sw-static.js'].includes(path)) return new Response('shell ' + path);
+  return undefined;
+};
+const runV2 = opts => run({listed: [], v2: true, seed: seedOld, serve: serveShell(opts)});
+const kept = r => [...r.caches.map.keys()].join();
+
+test('SCP3-06: an unreadable or unusable precache manifest refuses the save and keeps the older pack', async () => {
+  for (const [label, pre] of [['network error', 'throw'], ['404', 404], ['invalid JSON', '{not json'], ['no build id', manifest({build: ''})], ['no v2', {build: 'b1'}],
+    ['empty assets', manifest({v2: {assets: [], static: ['/sw-static.js']}})], ['a declared path that is not a path', manifest({v2: {assets: ['/assets/app.js', 'https://x.test/a.js']}})]]) {
+    const r = await runV2({pre});
+    assert.ok(r.error, `${label}: the save is refused`);
+    assert.equal(kept(r), OLD_PACK, `${label}: only the older pack remains`);
+    assert.ok(PACK_META in Object.fromEntries(r.caches.map.get(OLD_PACK).map), `${label}: the older pack keeps its meta`);
+  }
+});
+
+test('SCP3-06: a failed /map or declared JS/CSS/static file refuses the save and keeps the older pack', async () => {
+  for (const path of ['/map', '/assets/app.js', '/assets/app.css', '/sw-static.js']) {
+    const r = await runV2({fail: [path]});
+    assert.ok(r.error, `${path}: the save is refused`);
+    assert.match(String(r.error.message), new RegExp(path.replace('.', '\\.')));
+    assert.equal(kept(r), OLD_PACK, `${path}: only the older pack remains`);
+  }
+});
+
+test('SCP3-06: a complete shell commits, replaces the older pack, and a missing shoreline stays a reported miss', async () => {
+  const r = await run({listed: [NAMES.shore], v2: true, seed: seedOld, answers: {[NAMES.shore]: 404}, serve: serveShell()});
+  assert.equal(r.error, undefined, String(r.error));
+  assert.equal(r.meta.v2.build, 'b1');
+  assert.ok(r.name && r.name !== OLD_PACK && !r.caches.map.has(OLD_PACK), 'the new pack replaced the older one');
+  for (const p of ['/map', '/assets/app.js', '/assets/app.css', '/sw-static.js']) assert.ok(ORIGIN + p in r.stored, p);
+  assert.ok(r.meta.v2.missing.includes(urlOf(NAMES.shore)), 'the shoreline is a reported miss');
+  assert.equal(r.meta.v2.shell.requested - r.meta.v2.shell.saved, 1);
 });
