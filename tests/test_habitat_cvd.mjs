@@ -13,7 +13,7 @@ import {
   habitatCvdReport, habitatFillAlpha, linearRgbToLab, linearToSrgb, rawThemes, simulateCvd, srgbToLinear, themes,
 } from '../scripts/check_contrast.mjs';
 import {PALETTE_TOKENS, coastPalette, readPalette} from '../web/map/palette.ts';
-import {basemapStyle, mapControl} from '../web/map/style.ts';
+import {GLYPH_VERSION, basemapStyle, mapControl} from '../web/map/style.ts';
 import {GEOLOGY_PICK, SURVEY_PICK, markStyle} from '../web/map/marks.ts';
 import {contoursOverlay, DEPTH_HIT, DEPTH_LABEL, DEPTH_LINE, DEPTH_EDGE} from '../web/map/depth-contours.ts';
 import {windOverlay} from '../web/map/wind.ts';
@@ -480,10 +480,12 @@ const PRE_MGL15 = {
 test('today_except_classes: day and night basemap, every overlay and every legend swatch resolve exactly as before, apart from the four classes', () => {
   const OPTIONS = {archive: 'https://example.test/tiles/basemap/ca-coast.pmtiles', assets: 'https://example.test/basemap/'}, empty = {type: 'FeatureCollection', features: []};
   const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+  // R4-SC-08 moved only the glyph URL under its content version; the pins predate it, so compare with the old URL.
+  const basemap = (p, variant) => { const style = basemapStyle(p, {...OPTIONS, variant}); return {...style, glyphs: style.glyphs.replace(`/v/${GLYPH_VERSION}/`, '/')}; };
   for (const theme of ['dark', 'light']) {
     const p = paletteOf(theme, OLD_CLASSES[theme]);
     const got = {
-      basemapDay: digest(basemapStyle(p, {...OPTIONS, variant: 'day'})), basemapNight: digest(basemapStyle(p, {...OPTIONS, variant: 'night'})), markStyle: digest(markStyle(p)),
+      basemapDay: digest(basemap(p, 'day')), basemapNight: digest(basemap(p, 'night')), markStyle: digest(markStyle(p)),
       contours: digest(contoursOverlay(p, empty)), wind: digest(windOverlay(p)), stations: digest(stationOverlay(p)), ranked: digest(rankedStyle(p)), coastline: digest(coastlineLayers(p)),
       mpa: digest(mpaLayers(p)), seafloor: digest(seafloorLayers(p)), coastPalette: digest(coastPalette(p)),
       legend: digest(['en', 'es'].map(lang => LAYERS.map(e => [e.id, layerCopy(e.id, lang).legend.map(r => [r.label, r.swatch ? p[r.swatch] : null])]))),
