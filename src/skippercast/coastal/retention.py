@@ -100,7 +100,9 @@ class Retention:
             state=self.read()
             observed={slot:0 for slot in state['reservations']}
             control=0
-            for directory,dirs,files in os.walk(self.root,followlinks=False):
+            def unreadable(error):
+                raise ValueError('incomplete retention directory scan; refusing partial inventory') from error
+            for directory,dirs,files in os.walk(self.root,followlinks=False,onerror=unreadable):
                 for name in (*dirs,*files):
                     path=Path(directory)/name
                     kind=path.lstat()
