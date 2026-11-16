@@ -72,10 +72,12 @@ and `validate.check` (not used here) are unchanged.
 
 The recipe-delta acceptance test and runner pin the hardened `validate_recipe.py`
 <!-- pin refreshed for OC-STATE slug admission -->
-bytes (`50d8f1e36e5edf9974d121d29349bd821c8bf08e2d3eaf20526b2bc7162b736f`)
+bytes (`8057735f6b4048c8cb762c12bac326d22901e3801e2ac470966b3289a8774da8`)
 in place of their original producer pin. This is an intentional producer revision,
 not a change to the frozen recipe/schema fixtures or their pins. The delta
 behavior and producer-contract tests still run against the actual validator.
+JSON nested beyond the interpreter's recursion limit yields an INVALID row
+(`input nesting exceeds supported depth`) and the CLI continues with the next recipe.
 
 ## Tests and acceptance
 
