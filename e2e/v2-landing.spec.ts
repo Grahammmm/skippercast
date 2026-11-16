@@ -580,6 +580,8 @@ test('Explore the coast takes the profile step with nothing to warm, and Save-Da
   await step.getByRole('button', {name: 'Change port'}).click();
   const input = page.getByLabel('Where are you launching?');
   await input.fill('morro');
+  // The input is interactive before the async port directory arrives; Enter submits only a rendered match.
+  await expect(page.locator('.landing [data-port]')).toHaveText([/Morro Bay/]);
   await input.press('Enter');
   await expect(step.locator('[role="status"]')).toHaveText('');
   expect(requests.filter(p => /atlas-marks|search-plan-index|poster\.svg|\/api\/forecast/.test(p)), 'Save-Data: no warm-up').toEqual([]);
