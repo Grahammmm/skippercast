@@ -425,3 +425,28 @@ ALL PASS
 This Python gate is not the browser pair, the full CI tier, or independent review.
 Builder release ends at the authorized report push/PR; downstream ship-queue owns
 CI and review (named review route: opus-coder), not a claimed repair or deployment.
+
+## Subsequent CI evidence — retirement-history RETURN (2026-11-15)
+
+This addendum addresses the separate required-check RETURN at
+`91565f8e5ca657471dffe6bc999a04746ddd2d9d`; it does not replace the original
+source receipts or resolve the local browser-environment gap above.
+
+In [run 43776387890](https://github.com/Grahammmm/skippercast/actions/runs/43776387890),
+the two frozen-inventory tests failed because the shallow checkout lacked
+`351e321dd8c7b3ef82b149d2bb9476fbe337e180`. The `survey-science` gate then
+correctly rejected `CHECK: failure`, despite `TESTS: success`.
+Main's fixes `af8d688e204a8e9501b57a68d2ced193feb2672c` and
+`4a84e938b42e0014363438d5b531dddf323eaa25` provision that immutable source
+before core/full-tier tests; the tests remain offline and missing CI history
+fails rather than skips. Neither the manifest nor the gate is relaxed here.
+
+[Run 43785858179](https://github.com/Grahammmm/skippercast/actions/runs/43785858179)
+at `03e02a63e682955083cd5826505e7efb78f1ac86` reports successful
+`check (3.13)` (job `133033274603`) and `survey-science` (job `133035032342`).
+Those are prior-head results, not proof of a later head or a local browser run.
+A separate depth-2 clone at that same source reproduced the missing-history
+CI fixture errors (12 passed, 2 errors); fetching exactly the workflow's frozen
+source made the unchanged retirement-manifest module pass all 14 tests.
+Current main `877615d718619fd9ca15e068e9b2dd1a9da992ac` was merged before
+this revalidation; final-head checks still belong to the downstream merge gate.
