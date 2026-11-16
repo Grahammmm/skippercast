@@ -18,8 +18,8 @@ def setup():
     with tempfile.TemporaryDirectory(prefix='synthetic-', dir=PACKAGE / 'fixtures') as directory:
         root = Path(directory)
         receipt = json.loads((PACKAGE / 'fixtures/held-handoff.json').read_text())
-        def run(doc=None, edit=None, samples=None):
-            doc = deepcopy(receipt if doc is None else doc)
+        def run(doc=receipt, edit=None, samples=None):
+            doc = deepcopy(doc)
             raw = module.refs.canonical(doc)
             for name in ('first.json', 'second.json'):
                 (root / name).write_bytes(raw)
@@ -32,7 +32,8 @@ def setup():
             result = module.handoff(doc, posted, admitted_refs=refs,
                 bindings={'queue:synthetic': str(root)}, admitted_samples=samples)
             assert (root / 'first.json').read_bytes() == before
-            assert result['input_receipt'] == doc and result['attempt_history'] == doc['attempt_history']
+            assert result['input_receipt'] == doc
+            assert result['attempt_history'] == (doc['attempt_history'] if isinstance(doc, dict) else None)
             return result
         yield receipt, run
 
@@ -95,6 +96,50 @@ def test_terminal_status_preserved_and_mapping_conflict_held(setup, status):
     receipt['stages']['map'] = {'status': 'PASS', 'count': 0}
     result = run(receipt)
     assert result['integrity_holds'] and result['map_count'] is None
+
+
+@pytest.mark.parametrize('field', ['stages', 'acquire', 'qualify', 'map'])
+@pytest.mark.parametrize('value', [None, [], 'invalid', 1, False])
+def test_verified_malformed_stage_shapes_are_integrity_holds(setup, field, value):
+    receipt, run = setup
+    receipt['status'] = 'COMPLETED'
+    receipt['stages'] = {s: {'status': 'PASS', 'count': 1}
+                         for s in ('acquire', 'qualify', 'map')}
+    if field == 'stages':
+        receipt['stages'] = value
+    else:
+        receipt['stages'][field] = value
+    result = run(receipt)
+    assert result['state'] == 'HELD' and result['review'] == 'REVIEW_REQUIRED'
+    assert result['integrity_holds'] == [f'{field} must be an object']
+    assert all(result[k] is None for k in ('qualification_count', 'map_count', 'mask',
+        'valid_cells_by_band', 'deepest_mapped_cell_m'))
+    assert result['quality'] == 'unavailable' and not result['visual_certified']
+
+
+@pytest.mark.parametrize('value', [None, [], 'invalid', 1, False])
+def test_malformed_receipt_shape_is_integrity_hold(setup, value):
+    _, run = setup
+    result = run(value)
+    assert result['state'] == 'HELD' and result['review'] == 'REVIEW_REQUIRED'
+    assert result['integrity_holds'] == ['receipt must be an object']
+    assert all(result[k] is None for k in ('acquire_count', 'qualification_count', 'map_count',
+        'mask', 'valid_cells_by_band', 'deepest_mapped_cell_m'))
+
+
+@pytest.mark.parametrize('stage', ['acquire', 'qualify'])
+def test_unrun_null_stages_preserve_terminal_hold(setup, stage):
+    receipt, run = setup
+    if stage == 'acquire':
+        receipt['stages'].update(qualify=None, map=None)
+    else:
+        receipt['status'] = 'COMPLETED'
+        receipt['stages'] = {'acquire': {'status': 'PASS', 'count': 1},
+                             'qualify': {'status': 'HOLD'}, 'map': None}
+    result = run(receipt)
+    assert result['state'] == 'HELD' and not result['integrity_holds']
+    assert result['acquire_count'] == (0 if stage == 'acquire' else 1)
+    assert result['qualification_count'] is None and result['map_count'] is None
 
 
 def test_mapping_requires_independently_admitted_samples_and_matching_identity(setup):

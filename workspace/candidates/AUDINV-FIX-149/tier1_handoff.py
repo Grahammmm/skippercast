@@ -51,10 +51,13 @@ def handoff(receipt, posted_manifest, *, admitted_refs, bindings, admitted_sampl
            'qualification_count': None, 'map_count': None, 'mask': None,
            'valid_cells_by_band': None, 'deepest_mapped_cell_m': None,
            'quality': 'unavailable', 'visual_certified': False,
-           'native_sources': {'status': 'AS_RECORDED', 'refs': deepcopy(receipt.get('native_sources', []))}}
+           'native_sources': {'status': 'AS_RECORDED', 'refs': []}}
     for key in ('attempt', 'window_key', 'status', 'attempt_history'):
-        out[key] = deepcopy(receipt.get(key))
+        out[key] = deepcopy(receipt.get(key)) if isinstance(receipt, dict) else None
     try:
+        if not isinstance(receipt, dict):
+            raise ValueError('receipt must be an object')
+        out['native_sources']['refs'] = deepcopy(receipt.get('native_sources', []))
         admitted, posted = _index(admitted_refs), _index(posted_manifest)
         if admitted != posted:
             raise ValueError('posted path/hash/bytes tuples differ from admission')
@@ -65,7 +68,11 @@ def handoff(receipt, posted_manifest, *, admitted_refs, bindings, admitted_sampl
         if not receipt.get('attempt') or not receipt.get('window_key'):
             raise ValueError('missing attempt/window identity')
         stages = receipt.get('stages', {})
+        if not isinstance(stages, dict):
+            raise ValueError('stages must be an object')
         acquire = stages.get('acquire', {})
+        if not isinstance(acquire, dict):
+            raise ValueError('acquire must be an object')
         count = acquire.get('count')
         if count is not None and (type(count) is not int or count < 0):
             raise ValueError('invalid measured acquire count')
@@ -77,6 +84,8 @@ def handoff(receipt, posted_manifest, *, admitted_refs, bindings, admitted_sampl
             return out
         for stage, target in (('qualify', 'qualification_count'), ('map', 'map_count')):
             entry = stages.get(stage, {})
+            if not isinstance(entry, dict):
+                raise ValueError(f'{stage} must be an object')
             if entry.get('status') != 'PASS':
                 if stage == 'qualify' and stages.get('map') not in (None, {}):
                     raise ValueError('map claimed after qualification HOLD')

@@ -7,9 +7,9 @@
     "src/skippercast/coastal/__init__.py": "5f66276dd825d15954220dbf19ec5d0ed1a176d29c38989b24aff7d190bb8fd2"
   },
   "candidate_files": {
-    "tier1_handoff.py": "bd608682b1c05dc24d5b18340ea27d10181a3336eeb59d952c78593408304993",
+    "tier1_handoff.py": "2ad384de0896d250b9175b370b246c8d9386750b3441de3c74698c1ed35fa147",
     "depth_bands.py": "8bb6837c5676a26c0e1f65ee86cf53b19fc4bb27ee04ef7ac2579d254310cbf4",
-    "tests/test_tier1_handoff.py": "0fe89c6893a8f8d14092c8b81f18bf37ec8940817e4bd26e72f4996b315dbd0d",
+    "tests/test_tier1_handoff.py": "d6d9f65d1688e2e547292f27e88bb3e5afa3c4b57263bbdfca53f8273a076ab1",
     "tests/test_depth_bands.py": "3a86d716665e4aa58e6386a6736c7e193399a3c8822977223b2a4e3ed45dda40",
     "fixtures/held-handoff.json": "0f7673e35e51e4124d0f81d51a414484479a6c4dbaa4eb6d041ca682a0e7de22",
     "fixtures/posted-manifest.json": "161ab8a54521b33b5243b39230a827f8776c627bb1bd3219e0cb98fdf8ab9cf7"
