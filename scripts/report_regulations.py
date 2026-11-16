@@ -28,7 +28,7 @@ def report(root):
         regions = json.loads((root / 'regions/index.json').read_text())['regions']
         if not isinstance(regions, list):
             raise TypeError('regions is not a list')
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as exc:
+    except (OSError, UnicodeDecodeError, ValueError, RecursionError, KeyError, TypeError) as exc:
         raise SystemExit(f'regions/index.json unreadable: {type(exc).__name__}') from None
     lines = ['## Regulation coverage', '']
     needs_attention = False
@@ -48,7 +48,7 @@ def report(root):
             section, attention = _region_lines(ident, json.loads((root / 'regions' / ident / 'regulations-health.json').read_text()))
         except FileNotFoundError:
             problem = 'missing'
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError, AttributeError) as exc:
+        except (OSError, UnicodeDecodeError, ValueError, RecursionError, KeyError, TypeError, AttributeError) as exc:
             problem = f'unreadable ({type(exc).__name__}: {str(exc)[:120]})'
         else:
             lines.extend(section)
