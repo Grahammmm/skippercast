@@ -103,7 +103,7 @@ def read_subset(body, bounds, expected_time, resolution):
                 if not (south - resolution[0] <= y <= north + resolution[0] and west - resolution[1] <= x <= east + resolution[1]):
                     raise ValueError("NOAA HFRNet cell outside requested bounds")
                 eastward, northward, sites, dilution = (float(a[0, i, j]) for a in arrays)
-                sites = int(sites) if 0 <= sites <= 100 else None
+                sites = int(sites) if 0 <= sites <= 100 and sites == int(sites) else None
                 valid = sites is not None and sites >= 2 and all(math.isfinite(vv) and abs(vv) <= 5 for vv in (eastward, northward))
                 dilution = round(dilution, 4) if math.isfinite(dilution) and 0 <= dilution <= 100 else None
                 rows.append({"time": sample.isoformat(timespec="seconds").replace("+00:00", "Z"),
