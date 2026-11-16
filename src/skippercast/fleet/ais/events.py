@@ -3,7 +3,7 @@
 One event per fishing segment (``drift-anchor``, ``troll-slow`` or
 ``troll-pelagic``), of the segment's own kind; ``uncertain`` segments are not
 fishing and yield none. Its point is the component-wise
-median of the segment's fixes and its ``radius_m`` the 90th-percentile
+median of the segment's fixes (longitudes unwrapped for a compact cluster across +/-180) and its ``radius_m`` the 90th-percentile
 (nearest-rank) distance from that point. Fixes inside any harbor geofence are
 left out of both: ``classify`` merges a short dip into a geofence into the
 surrounding fishing run, and that dip must not drag the point into the harbor.
@@ -100,10 +100,18 @@ def segment_geometry(segment: Segment, tolerance_m: float) -> str | None:
 
 
 def median_point(points: Sequence[tuple[float, float]]) -> tuple[float, float]:
-    """Component-wise median (lat, lon)."""
+    """Component-wise median (lat, lon); a compact cluster across +/-180 is unwrapped so its longitude stays local."""
     if not points:
         raise ValueError("median of no points")
-    return median(p[0] for p in points), median(p[1] for p in points)
+    lat = median(p[0] for p in points)
+    lons = [p[1] for p in points]
+    if max(lons) - min(lons) <= 180:
+        return lat, median(lons)
+    shifted = [lon + 360 if lon < 0 else lon for lon in lons]
+    if max(shifted) - min(shifted) >= 180:
+        return lat, median(lons)
+    lon = median(shifted)
+    return lat, lon - 360 if lon >= 180 else lon
 
 
 def p90_radius_m(points: Sequence[tuple[float, float]], centre: tuple[float, float]) -> float:
