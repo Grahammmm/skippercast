@@ -170,7 +170,11 @@ def read_mask(cycle, http=None):
     if blob is None:
         raise FileNotFoundError(url)
     grid, lats, lons = decode_one(blob)
-    return lats, lons, grid < 0.5, url, hashlib.sha256(blob).hexdigest()
+    import numpy as np
+    grid = np.asarray(grid, dtype=float)
+    # A land fraction is a finite value in [0, 1]; anything else (sentinels, NaN, inf) is never sea.
+    sea = np.isfinite(grid) & (grid >= 0.0) & (grid <= 1.0) & (grid < 0.5)
+    return lats, lons, sea, url, hashlib.sha256(blob).hexdigest()
 
 
 AXIS_TOLERANCE_DEGREES = 1e-6      # representation noise only; never a relative tolerance on longitude
