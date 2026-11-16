@@ -196,8 +196,11 @@ def main(argv=None):
         return 2
     new, old = [], []
     for path in test_files():
-        with open(os.path.join(ROOT, path), encoding="utf-8", errors="replace") as handle:
-            lines = handle.read().splitlines()
+        try:
+            with open(os.path.join(ROOT, path), encoding="utf-8", errors="replace") as handle:
+                lines = handle.read().splitlines()
+        except FileNotFoundError:
+            continue  # a parallel test's temporary file listed by the walk and removed before it was read
         for first, last, kind in classify_spans(lines):
             # A wrapped statement is new when any line it covers was added or changed.
             is_new = any(number in added.get(path, ()) for number in range(first, last + 1))
