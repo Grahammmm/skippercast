@@ -336,9 +336,12 @@ def sync_directory(path):
     try:os.fsync(fd)
     finally:os.close(fd)
 
+def _scan_refused(error):
+    raise ValueError("incomplete output directory scan refused") from error
+
 def output_tree_bytes(output):
     observed=0
-    for folder,dirs,names in os.walk(output,followlinks=False):
+    for folder,dirs,names in os.walk(output,followlinks=False,onerror=_scan_refused):
         for name in dirs+names:
             info=(Path(folder)/name).lstat()
             if stat.S_ISLNK(info.st_mode):raise ValueError("symlink output tree rejected")
@@ -448,7 +451,7 @@ def resource_inventory(retained_root,scratch_root):
     for role,root,cap in roots:
         total=files=links=0
         if root.exists():
-            for folder,dirs,names in os.walk(root,followlinks=False):
+            for folder,dirs,names in os.walk(root,followlinks=False,onerror=_scan_refused):
                 for name in dirs+names:
                     path=Path(folder)/name;info=path.lstat()
                     if stat.S_ISLNK(info.st_mode):links+=1
