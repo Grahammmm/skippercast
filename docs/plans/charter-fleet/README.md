@@ -279,3 +279,27 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   every command and workflow input they name exists. They run on request over
   the existing GitHub schedules; Hermes scheduling, Telegram alerts, the host
   check and the status scripts are still gaps of #468 and #469.
+- 2026-11-16: AISWATCH-1: registry read-back after
+  [AISJOIN-1 #1185](https://github.com/Grahammmm/skippercast/pull/1185) and
+  [AISFIX-1 #1207](https://github.com/Grahammmm/skippercast/pull/1207), corroborated routing
+  and a 14-day local watch (counts only). All four post-merge registry runs
+  ([41492038203](https://github.com/Grahammmm/skippercast/actions/runs/41492038203),
+  [41513442560](https://github.com/Grahammmm/skippercast/actions/runs/41513442560),
+  [42690228935](https://github.com/Grahammmm/skippercast/actions/runs/42690228935),
+  [43943867308](https://github.com/Grahammmm/skippercast/actions/runs/43943867308))
+  skipped `fcc-uls`: `data.fcc.gov` answers the fleet client's robots.txt with an
+  Akamai 403, which `fleet/net.py` correctly reads as disallowed. No FCC candidate
+  reached the resolver, so 0 MMSIs were written and the live guard was not exercised;
+  `fcc-uls` is a standing known gap. Registry after the 2026-11-16 run: 352 rows, 0
+  with an MMSI; 16 local rows (Morro Bay 11, Port San Luis 5), 0 with an MMSI. An
+  offline dry run of 2026-11-03 `main` on the 2026-10-25 FCC ship file: 65 fuzzy matches at or
+  above `auto_merge` go to review and 0 are written; 98 key hits on 35 vessels (every
+  key from OSINT, 1 local) go to review as `uncorroborated-key`; 9 vessels, none local,
+  would gain an MMSI on an exact licensee-city match. 3 local boats passed the identity
+  rules on an exact licensee-city match and went to the owner's set-mmsi queue
+  (private); 2 identified boats were held under the corroboration rule; 4 stay excluded
+  by settled decisions. Watch 2026-11-02T18:19Z to 2026-11-16T18:19Z: no local event.
+  0 local watch entries (watch.json 19 then 20 watched, none local), 0 local events, 0
+  messages from the FCC-identified local MMSIs and 0 stored positions in the Morro Bay /
+  Avila box, while the feed delivered statics every day of the window. Consistent with
+  the known receiver-coverage gap at Morro Bay and Port San Luis.
