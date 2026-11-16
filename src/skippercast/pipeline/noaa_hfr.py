@@ -75,6 +75,8 @@ def read_subset(body, bounds, expected_time, resolution):
             raise ValueError("NOAA HFRNet packed variables unsupported")
         t, lat, lon = (nc.variables[k][:].copy() for k in ("time", "lat", "lon"))
         u, v, n, hdop = (nc.variables[k] for k in ("u", "v", "number_of_sites", "hdop"))
+        if lat.ndim != 1 or lon.ndim != 1 or np.unique(lat).size != lat.size or np.unique(lon).size != lon.size:
+            raise ValueError("NOAA HFRNet axes changed")
         shape = (1, len(lat), len(lon))
         if len(t) != 1 or not len(lat) or not len(lon) or any(x.shape != shape for x in (u, v, n, hdop)):
             raise ValueError("NOAA HFRNet axes changed")
