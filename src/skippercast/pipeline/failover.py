@@ -19,7 +19,7 @@ def fresh(row, now):
         try:
             start = datetime.fromisoformat(data["coverage_start"].replace("Z", "+00:00"))
             end = datetime.fromisoformat(data["coverage_end"].replace("Z", "+00:00"))
-            if start > now + timedelta(days=1) or end < now:
+            if start > end or start > now + timedelta(days=1) or end < now:
                 return False
         except (KeyError, TypeError, ValueError):
             return False

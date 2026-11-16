@@ -45,8 +45,8 @@ class FreshBoundsTests(TestCase):
     def test_valid_boundaries_unchanged(self):
         self.assertTrue(fresh(row(end=iso(timedelta(0))), NOW))
         self.assertFalse(fresh(row(end=iso(-timedelta(seconds=1))), NOW))
-        self.assertTrue(fresh(row(start=iso(timedelta(days=1))), NOW))
-        self.assertFalse(fresh(row(start=iso(timedelta(days=1, seconds=1))), NOW))
+        self.assertTrue(fresh(row(start=iso(timedelta(days=1)), end=iso(timedelta(days=2))), NOW))
+        self.assertFalse(fresh(row(start=iso(timedelta(days=1, seconds=1)), end=iso(timedelta(days=2))), NOW))
         self.assertTrue(fresh(row(start="2026-09-28T05:00:00-07:00", end="2026-09-29T05:00:00+00:00"), NOW))
 
 
