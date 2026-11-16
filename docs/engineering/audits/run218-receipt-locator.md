@@ -10,7 +10,7 @@ No rerender, no fresh run, no render allowance, no attachment or send, no review
 | Field | Value | Basis |
 | --- | --- | --- |
 | Card | T13 `t_189fbd03` (done) | `skills/skippercast-discover-coastal-sources/references/coastal-pipeline.md:303` |
-| Run | run 218 (deepseek), render PASS 07:18Z | `/home/user/agent-work/NEXT-ITERATION.md:310,322` (historical notes) |
+| Run | run 218 (deepseek), render PASS 07:18Z | `$HOME/agent-work/NEXT-ITERATION.md:310,322` (historical notes; `$HOME` replaces the private local home root) |
 | Receipt locator | `outputs/t13-four128-terrain-acceptance-20261020/t13-receipt.json` (relative private-store locator) | coastal-pipeline.md:303 |
 | Full receipt hash | `d80ecebab98004e79c6bb4d5b7c6015fed21f442c64ef0283dee714b22b80e94` | task spec; the tracked doc itself gives only prefix `d80ecebab980` |
 | Recorded facts | PASS, 4 cores, 0 held, generated `2026-10-20T07:18:22Z`, renderer `ed28dc69` | coastal-pipeline.md:303 |
