@@ -6,7 +6,7 @@
 // read-only. TA-S4: the week calendar above the list (WeekCalendar: every slot
 // of the content calendar with the posts in it, empty slots marked, and the
 // other scheduled or posted posts). Per-post stats come with TA-S7.
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
 import {POST_KINDS, POST_STATUSES, getCalendar, getPosts} from './api.ts';
 import type {CalendarWeek, DecisionResult, Post, QueueItem, WeekPost} from './api.ts';
@@ -73,33 +73,48 @@ export function WeekCalendar({refresh}: {refresh: unknown}) {
   );
 }
 
+interface PostsPage {key: string; posts: Post[]; next: string | null; state: 'loading' | 'ready' | 'failed'}
+const NO_POSTS: Post[] = [];
+
 export function PostsView() {
   const [status, setStatus] = useState('draft');
   const [kind, setKind] = useState('');
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [next, setNext] = useState<string | null>(null);
-  const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
+  const key = `${status}\u0000${kind}`;
+  const [page, setPage] = useState<PostsPage>({key, posts: NO_POSTS, next: null, state: 'loading'});
   const [notice, setNotice] = useState('');
+  // Request ownership: the rendered filter scope, a generation bumped on every scope change and a sequence bumped on every load, so only
+  // the newest request of the current scope may publish (a late old-filter response, even draft -> approved -> draft, is refused).
+  const own = useRef({key, gen: 0, seq: 0, live: true});
+  if (own.current.key !== key) { own.current.key = key; own.current.gen += 1; own.current.seq += 1; }
+  // Data of another scope is never shown or used for a cursor: until this scope's first page arrives it is loading.
+  const {posts, next, state} = page.key === key ? page : {posts: NO_POSTS, next: null, state: 'loading' as const};
 
   async function load(cursor: string | null = null): Promise<void> {
-    if (!cursor) setState('loading');
+    const o = own.current;
+    if (!o.live || o.key !== key) return;
+    const {gen} = o;
+    const seq = ++o.seq;
+    const current = (): boolean => o.live && o.gen === gen && o.seq === seq;
+    const here = (p: PostsPage): PostsPage => (p.key === key ? p : {key, posts: NO_POSTS, next: null, state: 'loading'});
+    if (!cursor) setPage(p => ({...here(p), state: 'loading'}));
     try {
-      const page = await getPosts(status, kind, cursor);
-      setPosts(all => (cursor ? [...all, ...page.posts] : page.posts));
-      setNext(page.next);
-      setState('ready');
-    } catch { setState('failed'); }
+      const result = await getPosts(status, kind, cursor);
+      if (current()) setPage(p => ({key, posts: cursor ? [...here(p).posts, ...result.posts] : result.posts, next: result.next, state: 'ready'}));
+    } catch { if (current()) setPage(p => ({...here(p), state: 'failed'})); }
   }
+  useEffect(() => { own.current.live = true; return () => { own.current.live = false; }; }, []);
   useEffect(() => { void load(); }, [status, kind]);
 
   function decided(result: DecisionResult): void {
+    if (!own.current.live || own.current.key !== key) return;
     setNotice(result.repeated ? COPY.alreadyDecided(COPY.statuses[result.review.status].toLowerCase()) : COPY.decided(COPY.statuses[result.review.status].toLowerCase()));
     void load();
     requestAnimationFrame(() => document.getElementById('posts-heading')?.focus());
   }
 
   function changed(post: Post, message: string): void {
-    setPosts(all => all.map(p => (p.id === post.id ? post : p)));
+    if (!own.current.live || own.current.key !== key) return;
+    setPage(p => (p.key === key ? {...p, posts: p.posts.map(x => (x.id === post.id ? post : x))} : p));
     setNotice(message);
   }
 
