@@ -12,7 +12,9 @@ _spec = importlib.util.spec_from_file_location('candidate_section', ROOT / 'sour
 extractor = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(extractor)
 NAME = re.compile(r'([0-9]{4})\.(user|internal)\.md')
-INJECTION = re.compile(r'^ {0,3}#{1,6}[ \t]+(?:Unreleased|Internal|v?\d+\.\d+\.\d+)(?:\s|$)', re.I)
+INJECTION = re.compile(
+    r'^ {0,3}#{1,6}[ \t]+(?:Unreleased|Internal|v?\d+\.\d+\.\d+'
+    r'(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)(?:\s|$)', re.I)
 BULLET = re.compile(r'^ {0,3}(?:[-+*]|[0-9]+[.)])[ \t]+\S')
 
 

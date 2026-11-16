@@ -9,9 +9,9 @@
   ],
   "fixtures": "All changelog fixtures are synthetic, not copied live records.",
   "candidate_sha256": {
-    "scripts/changelog_fragments.py": "99129285acb426fdf22af4efb1f28eaa3b0d5ab2bbe631bd2eb18b9f9984cd1f",
+    "scripts/changelog_fragments.py": "1bfee9ebbbdaeef00964cc3d0fbcc4ba57ebf62d2140a7eca029823db4d23774",
     "sources/changelog_section.py": "3a565455ed87c8f76172c9c8487c2c84b5d7f0f0cab90b56432258b98167b2e1",
-    "tests/contract/test_changelog_fragments.py": "748cf47f48ce37dc349d52624797689dc79f4dc34b6f3f6cd9ec0267e45da039",
+    "tests/contract/test_changelog_fragments.py": "43b90d17cbf3485ed4b1c42201599c6d1ece4b44a0252fe5e7bb327f2186fdf2",
     "tests/fixtures/changelog/base.md": "4e1fec8910d61d32e0205dc1550af47269f22825a3c2d425bc895d692cd94175",
     "tests/fixtures/changelog/expected.md": "d756d421ade6d348e4dd8041116c9092b4d91be5a3a5a8b68a9842b8b77276ff",
     "tests/fixtures/changelog/fragments/0001.user.md": "fd6a0a37f77fc8bc944e040bba2400dc90cc530b53571753dd69925c500b4dff",

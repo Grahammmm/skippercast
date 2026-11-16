@@ -116,6 +116,24 @@ def test_fragment_refusals_are_atomic(sandbox, body):
     assert snapshot(fragments) == before and base.read_bytes() == BASE.encode()
 
 
+@pytest.mark.parametrize('version', ['v1.2.3-rc.1', '1.2.3-rc.1', 'v1.2.3+build.1',
+    '1.2.3+build.1', 'v1.2.3-rc.1+build.1', '1.2.3-rc.1+build.1'])
+@pytest.mark.parametrize('title', ['', ' — 2026-01-01'])
+def test_release_version_heading_refusal_is_atomic(sandbox, version, title):
+    fragments = sandbox / 'fragments'; fragments.mkdir()
+    (fragments / '0001.user.md').write_text('- Valid first\n', encoding='utf-8')
+    (fragments / '0002.internal.md').write_text(
+        f'- New note\n## {version}{title}\n- Injected release\n', encoding='utf-8')
+    base = sandbox / 'base.md'; base.write_bytes(BASE.encode())
+    before = snapshot(fragments)
+    with pytest.raises(ValueError, match='Fragment heading injection'):
+        m.aggregate(BASE, fragments)
+    result = cli(base, fragments)
+    assert result.returncode == 1 and result.stdout == b''
+    assert result.stderr == b'Fragment heading injection\n'
+    assert snapshot(fragments) == before and base.read_bytes() == BASE.encode()
+
+
 @pytest.mark.parametrize('bad', ['0001.internal.md', '1.user.md', '0002.private.md',
     '0002.user.txt', '../0002.user.md', 'symlink', 'directory', 'fifo', 'linked-dir', 'missing-dir'])
 def test_names_types_duplicates_and_traversal(sandbox, bad):
