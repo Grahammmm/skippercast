@@ -99,6 +99,11 @@ test('visual-only resize and scroll are bounded, duplicate events and cancelled 
   await v2.open('app', AREA);
   const sheet = page.locator('.app-sheet'), search = sheet.locator('.app-target-search');
   await page.locator('.ui-sheet-handle').press('End');
+  // E2E-FLAKE-1: the synthetic keyboard below is one burst of events, so the sheet must have finished its own move to
+  // full first (as the short-viewport tests above wait). Sent while its transform/max-height/padding transitions still
+  // ran, the one reveal measured a moving sheet and left the field a few px below the body (main run 43544110721).
+  await expect(sheet).toHaveAttribute('data-detent', 'full');
+  await sheet.evaluate(async el => { await Promise.all(el.getAnimations({subtree: true}).map(a => a.finished)); });
   await search.focus();
   // Synthetic visual-only keyboard shrink: layout viewport deliberately stays tall.
   await page.evaluate(() => {

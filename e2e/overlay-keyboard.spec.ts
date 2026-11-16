@@ -5,7 +5,7 @@
 // The account dialog signed in is driven against stubbed /api/session and /api/auth/passkeys: nothing is stored, no passkey ceremony runs.
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import type {Page} from '@playwright/test';
+import type {Locator, Page} from '@playwright/test';
 import {test, expect} from './fixtures.ts';
 
 const read = (file: string) => JSON.parse(readFileSync(join(import.meta.dirname, '..', 'web', file), 'utf8'));
@@ -60,7 +60,26 @@ test.describe('overlay keyboard contract (R-P1)', () => {
     });
     // The share link falls back to the manual field when the clipboard is unavailable, which is the overlay under test.
     await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', {value: undefined}));
+    // E2E-FLAKE-1: count each native dialog's close events (capture, because close does not bubble). See nextClose below.
+    await page.addInitScript(() => {
+      const closes = new WeakMap<Element, number>();
+      (window as unknown as {dialogCloses: WeakMap<Element, number>}).dialogCloses = closes;
+      document.addEventListener('close', event => {
+        const target = event.target;
+        if (target instanceof HTMLDialogElement) closes.set(target, (closes.get(target) ?? 0) + 1);
+      }, true);
+    });
   });
+  /** E2E-FLAKE-1: Escape (or a scrim click) drops a native dialog's `open` and returns focus at once, but Chrome fires its
+   * `close` event later, and the app's open state follows that event. Reopening before it arrives is a no-op click, and the
+   * late event then closes the state: run 43544110721 ended there (no dialog, focus on the trigger). Taken while `overlay`
+   * is open, this returns a wait for that dialog's own next close event. */
+  async function nextClose(overlay: Locator) {
+    const dialog = (await overlay.elementHandle())!;
+    const count = () => dialog.evaluate(el => (window as unknown as {dialogCloses: WeakMap<Element, number>}).dialogCloses.get(el) ?? 0);
+    const before = await count();
+    return () => expect.poll(count, {message: 'the dialog\'s close event reached the app'}).toBeGreaterThan(before);
+  }
 
   for (const lang of ['en', 'es']) {
     for (const c of CASES) {
@@ -84,15 +103,20 @@ test.describe('overlay keyboard contract (R-P1)', () => {
           for (let i = 0; i < 10; i++) { await page.keyboard.press('Tab'); expect(await trapped(), `Tab ${i + 1} stays inside`).toBe(true); }
           for (let i = 0; i < 3; i++) { await page.keyboard.press('Shift+Tab'); expect(await trapped(), `Shift+Tab ${i + 1} stays inside`).toBe(true); }
         }
+        const native = c.overlay.startsWith('dialog');
+        let closed = native ? await nextClose(overlay) : null;
         await page.keyboard.press('Escape');
         await expect(overlay).toBeHidden();
         await expect(opener, 'focus returns to the opener').toBeFocused();
+        await closed?.();
         if (c.scrim) {
           await c.open(page, lang);
           await expect(overlay).toBeVisible();
+          closed = native ? await nextClose(overlay) : null;
           await page.mouse.click(4, 4);
           await expect(overlay, 'a scrim click closes it').toBeHidden();
           await expect(opener, 'focus returns to the opener after a scrim click').toBeFocused();
+          await closed?.();
         }
         expect(pageErrors).toEqual([]);
       });

@@ -275,7 +275,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           <p style={{whiteSpace: 'pre-line'}}>{toText(digest, lang)}</p>
           <p class="small">{t('alerts.weekendNote', lang)}</p>
         </section> : null}
-        {trips ? <SavedTrips recaps={tripRecaps(trips.trips, trips.events, feedback ?? [], dateRange(DEFAULT_ZONE).min, catchRead.entries)} names={names} remove={remove} useAgain={useAgain} read={catchRead} events={trips.events} timeZone={region.timezone} /> : <div id="saved-trips" />}
+        {trips ? <SavedTrips recaps={tripRecaps(trips.trips, trips.events, feedback ?? [], dateRange(region.timezone).min, catchRead.entries, region.timezone)} names={names} remove={remove} useAgain={useAgain} read={catchRead} events={trips.events} timeZone={region.timezone} /> : <div id="saved-trips" />}
         {trips?.events.length ? (
           <details id="alert-history">
             <summary>{t('alerts.recent', lang, {n: trips.events.length})}</summary>
