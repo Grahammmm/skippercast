@@ -111,7 +111,7 @@ def parse_ecmwf_index(text):
         if not line.strip():
             continue
         row = json.loads(line)
-        if row.get('levtype', 'sfc') != 'sfc' and 'levelist' in row:
+        if row.get('levtype', 'sfc') != 'sfc':
             continue
         out.setdefault(row['param'], (row['_offset'], row['_offset'] + row['_length'] - 1))
     return out
