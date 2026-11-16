@@ -7,7 +7,7 @@ import importlib.util
 import sqlite3
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from pathlib import Path
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
@@ -241,6 +241,109 @@ class ScheduleEvidenceTests(unittest.TestCase):
                 result = se.collect_run(None, db, Path(tmp), now=datetime(2026, 10, 1, tzinfo=timezone.utc))
                 self.assertEqual(result["status"], "skipped-locked")
                 self.assertFalse(db.exists())
+
+
+class CollectorAlarmLifecycleTests(unittest.TestCase):
+    NOW = datetime(2026, 10, 1, tzinfo=timezone.utc)
+
+    def run_collect(self, tmp, *, opener=None, timer_error=None, init_error=None, close_error=None):
+        calls = []
+        previous = object()
+        handlers = []
+
+        def fake_signal(signum, handler):
+            calls.append(("signal", handler))
+            handlers.append(handler)
+            return previous
+
+        def fake_timer(which, seconds):
+            calls.append(("timer", seconds))
+            if timer_error is not None and seconds:
+                raise timer_error
+
+        conn = MagicMock()
+        if close_error is not None:
+            conn.close.side_effect = close_error
+        db = Path(tmp) / "CA" / "evidence.sqlite3"
+        patches = [patch.object(se.signal, "signal", side_effect=fake_signal),
+                   patch.object(se.signal, "setitimer", side_effect=fake_timer),
+                   patch.object(se.FleetSession, "for_region", side_effect=AssertionError("client reached"))]
+        if opener is not None:
+            patches.append(patch.object(se, "open_database", side_effect=opener))
+        else:
+            patches.append(patch.object(se, "open_database", return_value=conn))
+        if init_error is not None:
+            patches.append(patch.object(se, "init_sources", side_effect=init_error))
+        for item in patches:
+            item.start()
+            self.addCleanup(item.stop)
+        error = None
+        try:
+            se.collect_run(SimpleNamespace(id="CA"), db, Path(tmp), now=self.NOW)
+        except BaseException as caught:  # noqa: BLE001 - propagation is the assertion
+            error = caught
+        return error, calls, previous, handlers, conn, db
+
+    def assert_restored(self, calls, previous):
+        self.assertEqual(calls[-2], ("timer", 0))
+        self.assertIs(calls[-1][1], previous)
+        self.assertIn(("timer", se.DEFAULT_DEADLINE_SECONDS), calls)
+
+    def test_database_open_failure_restores_alarm(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "evidence.sqlite3"
+            db.mkdir()
+            calls, previous = [], object()
+            with patch.object(se.signal, "signal", side_effect=lambda n, h: calls.append(("signal", h)) or previous), \
+                 patch.object(se.signal, "setitimer", side_effect=lambda w, s: calls.append(("timer", s))), \
+                 patch.object(se.FleetSession, "for_region", side_effect=AssertionError("client reached")):
+                with self.assertRaises(sqlite3.OperationalError):
+                    se.collect_run(SimpleNamespace(id="CA"), db, Path(tmp), now=self.NOW)
+            self.assert_restored(calls, previous)
+
+    def test_database_open_baseexception_restores_alarm(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            error, calls, previous, _h, conn, _db = self.run_collect(tmp, opener=KeyboardInterrupt())
+            self.assertIsInstance(error, KeyboardInterrupt)
+            self.assert_restored(calls, previous)
+            conn.close.assert_not_called()
+
+    def test_timer_arm_failure_restores_handler(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            sentinel = OSError("synthetic setitimer failure")
+            error, calls, previous, _h, _c, _db = self.run_collect(tmp, timer_error=sentinel)
+            self.assertIs(error, sentinel)
+            self.assertEqual(calls[-2], ("timer", 0))
+            self.assertIs(calls[-1][1], previous)
+            se.open_database.assert_not_called()
+
+    def test_close_failure_still_restores_alarm(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            error, calls, previous, _h, conn, _db = self.run_collect(
+                tmp, init_error=RuntimeError("body failure"), close_error=ValueError("close failure"))
+            self.assertIsInstance(error, ValueError)
+            self.assertEqual(conn.close.call_count, 1)
+            self.assert_restored(calls, previous)
+
+    def test_body_failure_restores_alarm_and_closes_once(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            error, calls, previous, _h, conn, _db = self.run_collect(tmp, init_error=RuntimeError("body failure"))
+            self.assertIsInstance(error, RuntimeError)
+            self.assertEqual(conn.close.call_count, 1)
+            self.assert_restored(calls, previous)
+
+    def test_lock_contention_does_not_touch_signals(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "evidence.sqlite3"
+            with db.with_suffix(".sqlite3.lock").open("a") as lock, \
+                 patch.object(se.signal, "signal") as sig, patch.object(se.signal, "setitimer") as timer, \
+                 patch.object(se, "open_database") as opener:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                result = se.collect_run(None, db, Path(tmp), now=self.NOW)
+            self.assertEqual(result["status"], "skipped-locked")
+            sig.assert_not_called()
+            timer.assert_not_called()
+            opener.assert_not_called()
 
 
 def observation():
