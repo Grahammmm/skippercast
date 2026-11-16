@@ -59,6 +59,40 @@ def test_valid_grid_prints_identity_and_pixel_cap_refuses(tmp_path, capsys):
     assert err.value.field == 'pixels'
 
 
+META = {'count': 1, 'crs_wkt': 'X', 'crs_projected': True, 'crs_linear_units': 'metre', 'driver': 'GTiff',
+        'transform': [1.0, 0.0, 5.0, 0.0, -1.0, 7.0], 'width': 100, 'height': 100}
+KW = dict(window=None, vertical_datum='undeclared', vertical_unit='metre', vertical_sign='elevation-up')
+NAN, INF = float('nan'), float('inf')
+
+
+def test_valid_metadata_still_passes():
+    out = _load().check_grid(dict(META), **KW)
+    assert out['cell_m'] == 1.0 and out['pixels'] == 10000
+
+
+@pytest.mark.parametrize('tf', [[NAN, 0, 5, 0, -1, 7], [1, 0, 5, 0, NAN, 7], [1, 0, NAN, 0, -1, 7], [1, 0, 5, 0, -1, NAN],
+                                [INF, 0, 5, 0, -INF, 7], [1, 0, 5, 0, -1], [True, 0, 5, 0, -1, 7]])
+def test_bad_transform_refused(tf):
+    mod = _load()
+    with pytest.raises(mod.Refused) as err:
+        mod.check_grid({**META, 'transform': tf}, **KW)
+    assert err.value.field == 'transform'
+
+
+@pytest.mark.parametrize('size', [{'width': 0}, {'height': 0}, {'width': True}, {'width': -1}])
+def test_bad_size_refused(size):
+    mod = _load()
+    with pytest.raises(mod.Refused) as err:
+        mod.check_grid({**META, **size}, **KW)
+    assert err.value.field == 'size'
+
+
+def test_missing_file_is_one_line_exit_2(capsys):
+    assert _load().main(['/nonexistent.tif', *OK]) == 2
+    lines = capsys.readouterr().err.strip().splitlines()
+    assert len(lines) == 1 and lines[0].startswith('preflight refused: read:')
+
+
 def test_script_does_not_import_seafloor():
     imports = [ln for ln in SCRIPT.read_text().splitlines() if re.match(r'\s*(import|from)\s', ln)]
     assert imports and not any('skippercast' in ln for ln in imports)
