@@ -4,7 +4,7 @@
   "spec_checked_main_sha": "0991fc70d212c9405f7b174950cb3fa4d7c6846d",
   "builder_base_main_sha": "d75aa3a52",
   "installed_script": {
-    "path": "/home/user/agent-work/t08a/fresh_admission.py",
+    "path": "~/agent-work/t08a/fresh_admission.py",
     "sha256": "220027359d9bc8072d7c3d29a30e8b2f9e31bbb126c0531f5d361fc76a8ef6cf",
     "bytes_lines": 360
   },

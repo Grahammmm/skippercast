@@ -1,6 +1,6 @@
 # AUDINV-FIX-057 missing-reviewer regression (CANDIDATE ONLY)
 
-Regression-only package for the installed `/home/user/agent-work/t08a/fresh_admission.py`
+Regression-only package for the installed `~/agent-work/t08a/fresh_admission.py`
 nested helper `supersedes(n)` (lines 227-228, script sha256 `220027359d9b...ef6cf`).
 It is not an installed replacement and edits no installed admission file.
 
