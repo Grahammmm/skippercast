@@ -76,6 +76,14 @@ def _declared_missing(chl, values):
     return np.isin(values, marker.ravel())
 
 
+def _fill_declared(chl):
+    """True only for a finite numeric scalar _FillValue near the known -32767 sentinel."""
+    fill = np.asarray(getattr(chl, "_FillValue", None))
+    if fill.ndim != 0 or fill.dtype.kind not in "iuf" or not np.isfinite(fill):
+        return False
+    return abs(float(fill) + 32767) <= .01
+
+
 def read_subset(body, bounds, path, day):
     west, south, east, north = _bounds(bounds)
     if not body.startswith(b"CDF\x01"):
@@ -90,7 +98,7 @@ def read_subset(body, bounds, path, day):
         t, lat, lon = (nc.variables[k][:].copy() for k in ("time", "lat", "lon"))
         if len(t) != 1 or len(lat) < 1 or len(lon) < 1 or chl.shape != (1, 1, len(lat), len(lon)):
             raise ValueError("NOAA chlorophyll axes changed")
-        if chl.units != b"mg m^-3" or chl.standard_name != b"mass_concentration_of_chlorophyll_a_in_sea_water" or abs(float(chl._FillValue) + 32767) > .01:
+        if chl.units != b"mg m^-3" or chl.standard_name != b"mass_concentration_of_chlorophyll_a_in_sea_water" or not _fill_declared(chl):
             raise ValueError("NOAA chlorophyll units or fill value changed")
         if nc.variables["time"].units != b"seconds since 1970-01-01 00:00:00Z":
             raise ValueError("NOAA chlorophyll time units changed")
