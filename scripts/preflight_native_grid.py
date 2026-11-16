@@ -65,12 +65,17 @@ def check_grid(meta, *, window, vertical_datum, vertical_unit, vertical_sign, ma
     if not meta.get('crs_wkt') or not meta.get('crs_projected') \
             or str(meta.get('crs_linear_units', '')).lower() not in METRE[:2]:
         raise Refused('crs', 'need a projected CRS with metre linear units')
-    a, b, _c, d, e, _f = meta['transform']
+    tf = meta['transform']
+    if len(tf) != 6 or not all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in tf):
+        raise Refused('transform', 'transform values must be finite numbers')
+    a, b, _c, d, e, _f = tf
     if b != 0 or d != 0 or a <= 0 or e >= 0:
         raise Refused('axis', 'grid must be north-up and unrotated (b=d=0, a>0, e<0)')
     if abs(abs(a) - abs(e)) > 1e-9:
         raise Refused('cell', f'cells are not square ({abs(a)} x {abs(e)})')
     width, height = meta['width'], meta['height']
+    if any(not isinstance(v, int) or isinstance(v, bool) or v < 1 for v in (width, height)):
+        raise Refused('size', 'grid must have at least one row and one column')
     win = _parse_window(window, width, height) if window is not None else [0, 0, width, min(strip_rows, height)]
     pixels = win[2] * win[3]
     if pixels > max_pixels:
@@ -128,6 +133,15 @@ def main(argv=None):
         digest, size = sha256_file(args.path)
     except Refused as err:
         print(f'preflight refused: {err}', file=sys.stderr)
+        return 2
+    except Exception as err:  # OSError, or rasterio.errors.RasterioIOError (imported lazily, as raster_meta does)
+        try:
+            from rasterio.errors import RasterioIOError
+        except ImportError:
+            RasterioIOError = OSError
+        if not isinstance(err, (OSError, RasterioIOError)):
+            raise
+        print(f'preflight refused: read: {type(err).__name__}', file=sys.stderr)
         return 2
     print(json.dumps({'preflight': 'pass', 'path': args.path, 'sha256': digest, 'bytes': size,
                       **{k: v for k, v in out.items() if k != 'preflight'}}, sort_keys=True))
