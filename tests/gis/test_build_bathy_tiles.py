@@ -641,6 +641,38 @@ class NativeManifestCliTests(unittest.TestCase):
                 self.assertNotIn('Traceback', err, name)
                 ropen.assert_not_called()
 
+    def test_invalid_native_grid_names_entry_index(self):
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest = root / 'm.json'
+            entries = []
+            for name, res, count, crs in (
+                ('valid', 2, 1, 'EPSG:3310'),
+                ('coarse', 10, 1, 'EPSG:3310'),
+                ('multiband', 2, 2, 'EPSG:3310'),
+                ('geographic', 2, 1, 'EPSG:4326'),
+            ):
+                path = root / f'{name}.tif'
+                with rasterio.open(path, 'w', driver='GTiff', width=2, height=2, count=count,
+                                   dtype='float32', crs=crs, nodata=NODATA,
+                                   transform=from_origin(0, 10, res, res)) as ds:
+                    ds.write(np.full((count, 2, 2), -25, 'float32'))
+                entries.append({'id': name, 'path': str(path), 'resolution_m': res})
+            for invalid in entries[1:]:
+                with self.subTest(grid=invalid['id']):
+                    manifest.write_text(json.dumps([entries[0], invalid]))
+                    err = io.StringIO()
+                    with contextlib.redirect_stderr(err):
+                        code = bt.main(['--source', entries[0]['path'],
+                                        '--native-manifest', str(manifest)])
+                    self.assertEqual(code, 2)
+                    self.assertEqual(err.getvalue(), 'build_bathy_tiles: native manifest: entry 1: '
+                                     'native grid must be a single-band <=2 m or 5 m projected metre grid\n')
+                    self.assertEqual(sorted(p.name for p in root.iterdir()),
+                                     ['coarse.tif', 'geographic.tif', 'm.json', 'multiband.tif', 'valid.tif'])
+
     def test_missing_grid_file_names_entry_index(self):
         import contextlib
         import io

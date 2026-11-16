@@ -442,7 +442,7 @@ def load_native_manifest(path):
             if (not (0 < resolution <= 2.0 or resolution == 5.0) or ds.count != 1 or not ds.crs.is_projected
                     or not math.isclose(ds.crs.linear_units_factor[1], 1.0)
                     or not np.allclose(ds.res, resolution, atol=0.01)):
-                raise ValueError('native grid must be a single-band <=2 m or 5 m projected metre grid')
+                raise ValueError(f'entry {i}: native grid must be a single-band <=2 m or 5 m projected metre grid')
             source['bounds'] = transform_bounds(ds.crs, 'EPSG:4326', *ds.bounds, densify_pts=21)
     # Coarser native first; finer grids win. Stable source IDs settle equal-resolution ties.
     return sorted(sources, key=lambda s: (-s['resolution_m'], s['id']))
