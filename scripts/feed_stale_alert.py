@@ -127,8 +127,10 @@ def load_events(path, stale_flag):
     alerts, as a single `freshness-check` event: fail closed, never silent."""
     try:
         report = json.loads(Path(path).read_text())
-        events = report.get("stale_feeds", [])
-        stale = bool(report.get("stale"))
+        if not isinstance(report, dict) or not isinstance(report.get("stale"), bool) \
+                or not isinstance(report.get("stale_feeds"), list):
+            raise ValueError("report envelope needs a boolean `stale` and a list `stale_feeds`")
+        events, stale = report["stale_feeds"], report["stale"]
     except (OSError, ValueError):
         events, stale = [], stale_flag == "true"
     if stale and not events:

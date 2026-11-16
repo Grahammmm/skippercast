@@ -3,6 +3,8 @@ import contextlib
 import copy
 import io
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -180,6 +182,28 @@ class PytestReportInputsTest(unittest.TestCase):
     def test_duplicate_run_receipt_still_refused(self):
         with self.assertRaisesRegex(ValueError, 'duplicate run receipt'):
             pytest_report.ci_budget([RUN, RUN])
+
+
+    def test_duplicate_ci_receipts_named_by_main(self):
+        path = self.write('runs.json', json.dumps([RUN, RUN]))
+        self.assert_refused(['--ci-runs', path], path, 'duplicate run receipt')
+
+    def test_nonadjacent_duplicate_is_also_refused(self):
+        other = copy.deepcopy(RUN)
+        other['databaseId'] = 2
+        changed = copy.deepcopy(RUN)
+        changed['jobs'][0]['name'] = 'renamed'
+        path = self.write('runs.json', json.dumps([RUN, other, changed]))
+        self.assert_refused(['--ci-runs', path], path, 'duplicate run receipt')
+
+    def test_duplicate_cli_exits_two_without_traceback(self):
+        path = self.write('runs.json', json.dumps([RUN, RUN]))
+        script = Path(pytest_report.__file__)
+        proc = subprocess.run([sys.executable, str(script), '--ci-runs', str(path)],
+                              capture_output=True, text=True, check=False)
+        self.assertEqual(proc.returncode, 2)
+        self.assertEqual(proc.stdout, '')
+        self.assertEqual(proc.stderr, f'pytest_report: {path}: duplicate run receipt\n')
 
 
 if __name__ == '__main__':
