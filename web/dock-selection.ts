@@ -77,9 +77,10 @@ export function createDockSelection(options: DockSelectionOptions = {}): DockSel
   };
 
   function settle(g: number): void {
-    timer = null;
     const p = preview.peek();
+    // An obsolete callback is side-effect-free: it must not erase the replacement timer's handle.
     if (!p || g !== generation || p.generation !== g) return;
+    timer = null;
     // A stale callback (unmounted, or the URL, region or pair moved) commits nothing.
     if (holders === 0 || p.context !== untracked(context)) { cancel(); return; }
     // The page went hidden before its visibilitychange handler ran: drop the preview, never publish it.
