@@ -101,7 +101,7 @@ export function targetEvidence(t: TargetLike, atlas?: AtlasLike | null, sourceNa
     // Only the sentence written here is tagged; a published terrain_interpretation is never translated, even when it reads the same.
     ...(t.terrain_interpretation === undefined ? {[GENERATED]: {key: 'survey'} as ReasonCopy} : {})};
   const m = t.recorded_validation?.closed_or_screened_area_clearance_m ?? t.qualification?.closure_clearance_m;
-  const screen: Tagged[] = atlas?.source_validation_date && typeof m === 'number' && m > 0
+  const screen: Tagged[] = atlas?.source_validation_date && typeof m === 'number' && Number.isFinite(m) && m > 0
     ? [{area: t.id, kind: 'screen', date: atlas.source_validation_date, source: atlas.title ?? 'Survey reef atlas', text: `Passed the protected-area check with ${Math.round(m)} m clearance.`,
       [GENERATED]: {key: 'clearance', m: Math.round(m)} as ReasonCopy}] : [];
   return [survey, ...screen];
