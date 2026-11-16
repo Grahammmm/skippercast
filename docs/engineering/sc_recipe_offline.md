@@ -44,6 +44,12 @@ traceback. Validation is now unconditionally offline for every metadata root.
    and still for unused branches, through an offline resolver built exactly
    like the validator's (retrieval refused). Its target must be a usable
    schema:
+   - `schema reference not admitted: duplicate anchor at ...` when two
+     different schema nodes declare the same `$anchor`/`$dynamicAnchor` name
+     (the pointer names the later declaring keyword), whether or not any
+     reference uses it, so the verdict never depends on member order. One
+     node declaring both keywords with the same name is a single identity;
+     names are compared exactly (no case folding);
    - `schema reference not admitted: local target is not a schema at ...`
      when it resolves to a string, array, number or null (for example
      `#/title`, `#/required`, `#/examples/0`);
@@ -71,8 +77,8 @@ The committed v1 schema bytes, its constraints, the optional dependency policy
 and `validate.check` (not used here) are unchanged.
 
 The recipe-delta acceptance test and runner pin the hardened `validate_recipe.py`
-<!-- pin refreshed for OC-STATE slug admission -->
-bytes (`50d8f1e36e5edf9974d121d29349bd821c8bf08e2d3eaf20526b2bc7162b736f`)
+<!-- pin refreshed for OC-STATE slug admission and RF0410-4 duplicate anchor identity -->
+bytes (`137fae283cfca2d194956d33e2680a556e98f99fc1ede3dd8f972c0f91715116`)
 in place of their original producer pin. This is an intentional producer revision,
 not a change to the frozen recipe/schema fixtures or their pins. The delta
 behavior and producer-contract tests still run against the actual validator.
