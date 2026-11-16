@@ -63,7 +63,13 @@ export function checkGpx(xml: string, expected: {waypoints: number}, screen?: un
       const root = readAttributes(attrs), only = (key: string): string | undefined => { const found = root.list.filter(([k]) => k === key); return found.length === 1 ? found[0]![1] : undefined; };
       if (name !== 'gpx' || !root.ok || only('version') !== '1.1' || only('xmlns') !== 'http://www.topografix.com/GPX/1/1') fail('Expected GPX 1.1 root');
     }
-    for (const [, value] of readAttributes(attrs).list) decode(value);
+    // Literal XML-name uniqueness per element; root version/xmlns and wpt/trkpt lat/lon duplicates keep their own diagnostics.
+    const seen = new Set<string>(), own = new Set(!stack.length ? ['version', 'xmlns'] : name === 'wpt' || name === 'trkpt' ? ['lat', 'lon'] : []);
+    for (const [key, value] of readAttributes(attrs).list) {
+      decode(value);
+      if (seen.has(key) && !own.has(key)) fail('Duplicate XML attribute');
+      seen.add(key);
+    }
     if (name === 'wpt' || name === 'trkpt') {
       const read = readAttributes(attrs), pair: number[] = [];
       if (!read.ok) fail(`Malformed ${name} attributes`);
