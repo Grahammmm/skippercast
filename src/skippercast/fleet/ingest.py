@@ -35,6 +35,9 @@ from __future__ import annotations
 
 from dataclasses import asdict
 import json
+import os
+import stat
+import tempfile
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
 from urllib.parse import urlencode
@@ -109,8 +112,37 @@ def _jsonl(path: Path) -> list[dict]:
 
 
 def write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
+    """Write one JSON object per line, replacing ``path`` only once the whole payload is written and closed.
+
+    A failed write leaves any previous file intact (and an absent one absent); the staging file is private to this call.
+    """
     rows = list(rows)
-    path.write_text("".join(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
+    payload = "".join(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n" for r in rows).encode("utf-8")
+    try:
+        mode = stat.S_IMODE(path.stat().st_mode) if path.is_file() else 0o600
+    except OSError:
+        mode = 0o600
+    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    try:
+        try:
+            fh = os.fdopen(fd, "wb")
+        except BaseException:
+            # Ownership transfers only when fdopen returns a file object.
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            raise
+        with fh:
+            fh.write(payload)
+        os.chmod(tmp, mode)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
     return len(rows)
 
 

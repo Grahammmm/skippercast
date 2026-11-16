@@ -198,14 +198,23 @@ def seasonal(annual):
 def decode(body):
     if body[:2] != b"\x1f\x8b":
         return body.decode("utf-8")
-    decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
-    try:
-        text = decoder.decompress(body, MAX_DECODED + 1)
-    except (zlib.error, EOFError) as error:  # a corrupt archive fails its year, not the run
-        raise ValueError(f"Corrupt NOAA gzip archive: {error}") from error
-    if decoder.unconsumed_tail or len(text) > MAX_DECODED or not decoder.eof:
-        raise ValueError("NOAA archive exceeds the decoded budget or is truncated")
-    return text.decode("utf-8")
+    parts, size, rest = [], 0, body
+    while rest:
+        if rest[0] == 0:  # only terminal all-zero padding may follow the last member
+            if rest.strip(b"\0"):
+                raise ValueError("Corrupt NOAA gzip archive: trailing data after gzip member")
+            break
+        decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        try:
+            chunk = decoder.decompress(rest, MAX_DECODED - size + 1)  # aggregate budget; never 0 (unlimited)
+        except (zlib.error, EOFError) as error:  # a corrupt archive fails its year, not the run
+            raise ValueError(f"Corrupt NOAA gzip archive: {error}") from error
+        size += len(chunk)
+        if decoder.unconsumed_tail or size > MAX_DECODED or not decoder.eof:
+            raise ValueError("NOAA archive exceeds the decoded budget or is truncated")
+        parts.append(chunk)
+        rest = decoder.unused_data
+    return b"".join(parts).decode("utf-8")
 
 
 def fetch(session, url, role, year=None):
