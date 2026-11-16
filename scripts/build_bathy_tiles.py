@@ -403,15 +403,41 @@ def feather_tier(coarse, native, ground, feather_m=FEATHER_M):
     return result, valid
 
 
+def _manifest_entries(path):
+    """Read and shape-check the manifest before any raster is opened; raise ValueError."""
+    try:
+        sources = json.loads(Path(path).read_text())
+    except (OSError, ValueError) as e:
+        raise ValueError(f'cannot read {path}: {type(e).__name__}') from None
+    if not isinstance(sources, list) or not sources:
+        raise ValueError('native manifest must be a nonempty list')
+    seen = set()
+    for i, s in enumerate(sources):
+        if not isinstance(s, dict):
+            raise ValueError(f'entry {i}: must be an object')
+        for key in ('id', 'path'):
+            if not isinstance(s.get(key), str) or not s[key]:
+                raise ValueError(f'entry {i}: {key} must be a non-empty string')
+        if s['id'] in seen:
+            raise ValueError(f'entry {i}: duplicate id')
+        seen.add(s['id'])
+        r = s.get('resolution_m')
+        if isinstance(r, bool) or not isinstance(r, (int, float)) or not math.isfinite(r):
+            raise ValueError(f'entry {i}: resolution_m must be a finite number')
+    return sources
+
+
 def load_native_manifest(path):
     """Local input paths only; archived metadata never contains those host paths."""
     import rasterio
     from rasterio.warp import transform_bounds
-    sources = json.loads(Path(path).read_text())
-    if not isinstance(sources, list) or not sources:
-        raise ValueError('native manifest must be a nonempty list')
-    for source in sources:
-        with rasterio.open(source['path']) as ds:
+    sources = _manifest_entries(path)
+    for i, source in enumerate(sources):
+        try:
+            ds = rasterio.open(source['path'])
+        except rasterio.errors.RasterioIOError:
+            raise ValueError(f'entry {i}: cannot open grid file') from None
+        with ds:
             resolution = float(source['resolution_m'])
             if (not (0 < resolution <= 2.0 or resolution == 5.0) or ds.count != 1 or not ds.crs.is_projected
                     or not math.isclose(ds.crs.linear_units_factor[1], 1.0)
@@ -642,12 +668,16 @@ def main(argv=None):
     parser.add_argument('--minzoom', type=int, default=MINZOOM)
     parser.add_argument('--maxzoom', type=int, default=None)
     args = parser.parse_args(argv)
-    native_sources = load_native_manifest(args.native_manifest) if args.native_manifest else []
-    if args.maxzoom is None:
-        args.maxzoom = 15 if any(s['resolution_m'] <= 2 for s in native_sources) else MAXZOOM
     if not Path(args.source).is_file():
         print(f'build_bathy_tiles: source not found: {args.source}', file=sys.stderr)
         return 2
+    try:
+        native_sources = load_native_manifest(args.native_manifest) if args.native_manifest else []
+    except ValueError as e:
+        print(f'build_bathy_tiles: native manifest: {e}', file=sys.stderr)
+        return 2
+    if args.maxzoom is None:
+        args.maxzoom = 15 if any(s['resolution_m'] <= 2 for s in native_sources) else MAXZOOM
     if not 0 <= args.minzoom <= args.maxzoom <= 15:
         print('build_bathy_tiles: need 0 <= minzoom <= maxzoom <= 15', file=sys.stderr)
         return 2
