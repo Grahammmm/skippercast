@@ -124,7 +124,16 @@ def write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
         mode = 0o600
     fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
     try:
-        with os.fdopen(fd, "wb") as fh:
+        try:
+            fh = os.fdopen(fd, "wb")
+        except BaseException:
+            # Ownership transfers only when fdopen returns a file object.
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            raise
+        with fh:
             fh.write(payload)
         os.chmod(tmp, mode)
         os.replace(tmp, path)

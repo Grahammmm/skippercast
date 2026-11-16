@@ -74,6 +74,33 @@ class WriteJsonlAtomicTest(unittest.TestCase):
                 ingest.write_jsonl(self.target, NEW_ROWS)
         self.assertEqual(self.names(), [])
 
+    def test_fdopen_failure_closes_acquired_descriptor(self):
+        before = self.seed()
+        opened = []
+        error = MemoryError("wrapper allocation failed")
+
+        def fail_fdopen(fd, mode):
+            opened.append(fd)
+            raise error
+
+        with mock.patch.object(ingest.os, "fdopen", side_effect=fail_fdopen):
+            with self.assertRaises(MemoryError) as cm:
+                ingest.write_jsonl(self.target, NEW_ROWS)
+        self.assertIs(cm.exception, error)
+        self.assertEqual(len(opened), 1)
+        try:
+            with self.assertRaises(OSError) as closed:
+                os.fstat(opened[0])
+            self.assertEqual(closed.exception.errno, errno.EBADF)
+        finally:
+            # Release the leaked descriptor when exercising the unfixed implementation.
+            try:
+                os.close(opened[0])
+            except OSError:
+                pass
+        self.assertEqual(self.target.read_bytes(), before)
+        self.assertEqual(self.names(), ["candidates.jsonl"])
+
     def test_close_failure_is_atomic(self):
         before = self.seed()
         err = OSError(errno.EIO, "close failed")
