@@ -70,6 +70,17 @@ def _targets(path: str) -> dict[str, int]:
     return dict(document)
 
 
+def _min_free_gb(text: str) -> float:
+    # NaN or a negative floor would make `free < floor` never true and silently switch the disk guard off.
+    try:
+        value = float(text)
+    except ValueError:
+        value = float("nan")
+    if not 0 <= value <= 100000:
+        raise argparse.ArgumentTypeError("--min-free-gb must be a number of gigabytes from 0 to 100000")
+    return value
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--region", required=True)
@@ -78,7 +89,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--targets", required=True, help="private JSON file {\"A\": mmsi, ...}")
     parser.add_argument("--ports", default=DEFAULT_PORTS, help="comma-separated port ids whose geofences count as home")
     parser.add_argument("--workdir", help="where the temporary day download goes")
-    parser.add_argument("--min-free-gb", type=float, default=50.0)
+    parser.add_argument("--min-free-gb", type=_min_free_gb, default=50.0)
     parser.add_argument("--private-out", help="write per-label day lists here (mode 0600)")
     return parser
 
