@@ -82,6 +82,31 @@ Client check passed: 140 hashed assets, 16 pages, 82 page references and 828 scr
 
 Restored the file; rebuild passed again (build 391fd2209a); no tracked file changed.
 
+## CI follow-up: frozen inventory source (2026-11-15)
+
+The RETURN on `5b0dd6a0ecc11c86028c40de67d8574268918185` names
+Actions run `43774644104`: both core Python checks failed because the
+retirement-manifest tests could not resolve frozen source
+`351e321dd8c7b3ef82b149d2bb9476fbe337e180`; `survey-science` then failed
+its prerequisite-evidence gate. This was not a bundle or module-inventory defect.
+
+Main's existing CI setup restores that exact Git snapshot before offline tests
+in both the core job and full-tier survey job. PR head
+`a317cd6bdbd64825abb8601a4411700d8ac5cd9e` already inherited the fix:
+Actions run `43786187127` passed `check (3.11)`, `check (3.13)` and
+`survey-science`. Those results belong to that head, not to subsequent commits.
+
+Rechecked after merging main `c4d94da6186fb4f34e4f89c0c66cb42abdc39038`:
+in a separate depth-2 clone of merge head
+`8cf9beeb761f86e64f8f95fc31b28ad436ac4811`, with `CI=1`, the unchanged
+`tests/unit/test_subsystem_retirement_manifest.py` produced **12 passed,
+2 errors** before the frozen source was fetched. Fetching the exact source
+from the GitHub origin with `git fetch --no-tags --depth=1 origin
+351e321dd8c7b3ef82b149d2bb9476fbe337e180` restored **14 passed** (Python
+3.12.3). No skips, frozen hashes, ownership assertions, tests or workflow
+configuration were changed for this follow-up. This verifies the shallow-clone
+failure and remedy; it does not rerun the historical bundle measurements above.
+
 ## Closing line
 
 No module is unreferenced; nothing to remove. (`morning-outlook.js` is the only module that adds no code to the shipped bundle, and it is kept alive by tests and the `tomorrow.js` import; any change to it belongs in a separate unit under the retire/delete HOLD.)
