@@ -256,7 +256,7 @@ Machine-valid output remains review-required, not semantic acceptance.
   accuracy, NOT overall production acceptance.
 - T15c-c report v2: `outputs/t15-clean-reruns-20261020/COAST-PROD-report-v2.json`
   (`d602cebb6d0a`) and `outputs/t15-clean-reruns-20261020/COAST-PROD-report-v2.md`
-  (`2f676e52306d7`), t_af0d9ada. Driver exit 0, `PASS`; dry-run exit 0.
+  (`2f676e52306d`), t_af0d9ada. Driver exit 0, `PASS`; dry-run exit 0.
   Verbatim plan/driver statuses: `01 PASS, 02 PASS, 03 PASS, 04 PASS, 05 PASS, 06 PASS`.
   Independently approved for bounded evidence mapping and report accuracy, not
   end-to-end production or publication acceptance.

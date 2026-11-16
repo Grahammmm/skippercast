@@ -89,6 +89,10 @@ jobs:
       REPORT: ${{ matrix.part == 'pr' && 'pytest-survey' || format('pytest-survey-{0}', matrix.part) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Full-tier tests validate the same frozen inventory as the core job.
+      - name: Fetch frozen inventory source for offline validation
+        if: github.event_name != 'pull_request'
+        run: git fetch --no-tags --depth=1 origin 351e321dd8c7b3ef82b149d2bb9476fbe337e180
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
@@ -115,6 +119,13 @@ jobs:
           fi
       - name: Runner CPU (CI-speed measurement)
         run: nproc && lscpu | grep -E '^(Model name|CPU\(s\))'
+      # The full suite includes tests/unit/test_subsystem_retirement_manifest.py (see `check`).
+      - name: Frozen retirement-manifest history
+        if: github.event_name != 'pull_request'
+        run: |
+          sha=$(python3 -c "import json; print(json.load(open('docs/engineering/subsystem-retirement.manifest.json'))['source_commit'])")
+          git cat-file -e "$sha^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$sha"
+          git cat-file -e "$sha^{commit}" || { echo "::error::frozen source commit $sha is not available"; exit 1; }
       - name: Full Python suite, part ${{ matrix.part }} (every layer, GIS required)
         if: github.event_name != 'pull_request'
         env:
@@ -294,6 +305,11 @@ jobs:
         with:
           # The synthetic merge commit and its first parent: the deterministic-test lint diffs HEAD^1..HEAD.
           fetch-depth: 2
+      # The frozen subsystem-retirement.manifest.json source is older than this
+      # shallow checkout. Fetch that exact snapshot before the offline tests;
+      # keep its hashes/ownership assertions and the small checkout unchanged.
+      - name: Fetch frozen inventory source for offline validation
+        run: git fetch --no-tags --depth=1 origin 351e321dd8c7b3ef82b149d2bb9476fbe337e180
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python }}
@@ -306,6 +322,15 @@ jobs:
         run: python scripts/check_e2e_pins.py
       - name: Install test tools
         run: python -m pip install -r requirements-test.txt
+      # tests/unit/test_subsystem_retirement_manifest.py reads the frozen source commit named in
+      # its manifest. This shallow checkout lacks it, so fetch it once here, before the parallel
+      # workers start. The step fails the job if the commit cannot be supplied; the tests never skip.
+      - name: Frozen retirement-manifest history
+        if: needs.changes.outputs.core != 'false'
+        run: |
+          sha=$(python3 -c "import json; print(json.load(open('docs/engineering/subsystem-retirement.manifest.json'))['source_commit'])")
+          git cat-file -e "$sha^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$sha"
+          git cat-file -e "$sha^{commit}" || { echo "::error::frozen source commit $sha is not available"; exit 1; }
       # No survey/GIS packages here: the gis/ test directories run in survey-science.
       # Unit, contract, integration and claims tests run on both Pythons.
       - name: Python tests without GIS packages

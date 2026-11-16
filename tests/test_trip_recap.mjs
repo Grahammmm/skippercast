@@ -346,3 +346,14 @@ test('saved_plan_empty_and_malformed_are_honest', async () => {
     assert.match(second, /Saved leg totals: 3\.75 nm/, 'other rows still render');
   }
 });
+
+test('reports group by the region zone when one is passed; the default stays Pacific; bad dates still skipped', () => {
+  const feedback = [report('2026-11-10T20:00:00Z'), report('unparsable')];
+  const auckland = tripRecaps([trip('nz', '2026-11-11'), trip('la', '2026-11-10')], [], feedback, '2026-12-01', [], 'Pacific/Auckland').past;
+  assert.deepEqual(auckland[0].reports, [feedback[0]]);
+  assert.deepEqual(auckland[1].reports, []);
+  const pacific = tripRecaps([trip('nz', '2026-11-11'), trip('la', '2026-11-10')], [], feedback, '2026-12-01').past;
+  assert.deepEqual(pacific[0].reports, []);
+  assert.deepEqual(pacific[1].reports, [feedback[0]]);
+  assert.throws(() => tripRecaps([], [], feedback, today, [], 'Not/AZone'), RangeError);
+});
