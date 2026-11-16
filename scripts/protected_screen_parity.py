@@ -13,6 +13,7 @@ import gzip
 import json
 import subprocess
 import sys
+import zlib
 import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -27,23 +28,48 @@ def _chunk(args):
     return ps.verdicts(boundary, bounds, reefs)
 
 
-def main():
+def _positive(text):
+    try:
+        n = int(text)
+    except ValueError:
+        n = 0
+    if n < 1:
+        raise argparse.ArgumentTypeError('must be a whole number of 1 or more')
+    return n
+
+
+def _read_export(name, path):
+    try:
+        raw = Path(path).read_bytes()
+        data = json.loads(gzip.decompress(raw) if path.endswith('.gz') else raw)
+        if not isinstance(data, dict) or not isinstance(data.get('features'), list):
+            raise ValueError('not an object with a features list')
+    except (OSError, EOFError, ValueError, zlib.error) as e:     # BadGzipFile and JSONDecodeError are subclasses
+        print(f'{name}: cannot read export {path}: {e}', file=sys.stderr)
+        sys.exit(2)
+    return data
+
+
+def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument('export')
     ap.add_argument('--oracle')
-    ap.add_argument('--limit', type=int)
-    ap.add_argument('--workers', type=int, default=4)
+    ap.add_argument('--limit', type=_positive)
+    ap.add_argument('--workers', type=_positive, default=4)
     ap.add_argument('--region', default='morro-bay')
-    a = ap.parse_args()
-    raw = Path(a.export).read_bytes()
-    export = json.loads(gzip.decompress(raw) if a.export.endswith('.gz') else raw)
+    a = ap.parse_args(argv)
+    loaded = ps.load_screen(REPO, a.region)
+    if loaded is None:
+        print(f'protected-screen-parity: no protected screen for region {a.region}', file=sys.stderr)
+        sys.exit(2)
+    bounds, boundary, files = loaded
+    export = _read_export('protected-screen-parity', a.export)
     features = export['features'][:a.limit] if a.limit else export['features']
     oracle_path = Path(a.oracle or f'/tmp/protected-screen-oracle-{a.region}.json')
     if not a.oracle:
         cmd = ['node', str(REPO/'scripts/protected_screen_oracle.mjs'), a.export, str(oracle_path)] + (['--limit', str(a.limit)] if a.limit else [])
         subprocess.run(cmd, check=True)
     oracle = json.loads(oracle_path.read_text())
-    bounds, boundary, files = ps.load_screen(REPO, a.region)
     reefs = [(f['properties']['id'], f['geometry'], f['properties']['waypoint']['longitude'], f['properties']['waypoint']['latitude'])
              for f in features]
     t0 = time.time()

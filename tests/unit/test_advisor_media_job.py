@@ -508,6 +508,36 @@ def stored_as(upright_image, orientation):
     return stored
 
 
+class MaxRoundsTests(unittest.TestCase):
+    def test_bad_max_rounds_exits_2_before_the_credential_check(self):
+        for value in ('0', '-1', '101', 'x', '1.5'):
+            with self.subTest(value=value), mock.patch.dict(os.environ, {}, clear=True), \
+                    mock.patch('builtins.print') as printed, self.assertRaises(SystemExit) as stop, \
+                    mock.patch('sys.stderr', io.StringIO()):
+                mj.main(['--max-rounds', value])
+            self.assertEqual(stop.exception.code, 2)
+            printed.assert_not_called()
+
+    def test_run_refuses_a_bad_count_without_calling_the_api(self):
+        for value in (0, -3, 101, True, '3'):
+            api = FakeApi([])
+            api.pending = mock.Mock()
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                mj.run(api, FakeR2(), {}, None, max_rounds=value, log=lambda *_: None)  # type: ignore
+            api.pending.assert_not_called()
+
+    def test_one_round_polls_once_and_100_is_accepted(self):
+        api = FakeApi([])
+        counter = iter(range(1000))
+        api.pending = mock.Mock(side_effect=lambda: {'media': [{'id': next(counter)}], 'graphics': []})
+        with mock.patch.object(mj, 'derive_media', side_effect=mj.Transient('later')):
+            mj.run(api, FakeR2(), {}, None, max_rounds=1, log=lambda *_: None)
+            self.assertEqual(api.pending.call_count, 1)
+            api.pending.reset_mock()
+            mj.run(api, FakeR2(), {}, None, max_rounds=100, log=lambda *_: None)
+            self.assertEqual(api.pending.call_count, 100)
+
+
 @unittest.skipUnless(HAVE_PILLOW, NO_PILLOW)
 class OrientationTests(unittest.TestCase):
     """The Worker strips a JPEG's EXIF and passes its Orientation in the work list; the job turns the pixels upright."""

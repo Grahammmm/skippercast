@@ -1,8 +1,6 @@
 """RF1130-9: ft/m/kt/nmi conversion literals live only in skippercast/util/units.py and the named ALLOW list."""
 import ast
-import io
 import tempfile
-import tokenize
 import unittest
 from pathlib import Path
 
@@ -12,7 +10,6 @@ SRC, OWNER, LIVE = ROOT / "src" / "skippercast", "util/units.py", "live loop"
 # Compared by value: .3048, 1852.0 and 1_852 match; 18520, 0.30481 and 3.280841 do not.
 VALUES = {float(s) for s in "3.28084 3.280839895 3.2808398950131 1.943844 1.94384449 1.943844492 1.9438444924 1.9438444924406 0.3048 1.852 1852".split()}
 ALLOW = {  # path under src/skippercast -> why its literal stays; delete the entry when the module reads util.units
-    **{f"pipeline/{name}.py": LIVE for name in ("coast_report",)},
     "platform/bottom_targets.py": "seafloor cache-key file pinned by tests/contract/test_seafloor_key_files.py",
     **{f"{name}.py": "seafloor/** push starts the seafloor publication workflow" for name in (
         "seafloor/habitat", "seafloor/search_areas")},
@@ -25,11 +22,11 @@ def scan(root, allow=ALLOW):  # failure messages for the package tree at root; [
     problems = [f"remove {rel} from ALLOW (no such file)" for rel in sorted(allow) if not (root / rel).is_file()]
     for path in sorted(root.rglob("*.py")):
         rel = path.relative_to(root).as_posix()
-        try:  # NUMBER tokens only, so comments and strings never match
-            ast.parse(text := path.read_text(encoding="utf-8"))
-            tokens = tokenize.generate_tokens(io.StringIO(text).readline)
-            lines = [t.start[0] for t in tokens if t.type == tokenize.NUMBER and ast.literal_eval(t.string) in VALUES]
-        except (UnicodeDecodeError, SyntaxError, ValueError, tokenize.TokenError) as exc:
+        try:  # numeric Constant nodes (incl. f-string replacement fields on 3.11); comments, strings and text never match
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            nodes = [n for n in ast.walk(tree) if isinstance(n, ast.Constant) and type(n.value) in (int, float) and n.value in VALUES]
+            lines = [n.lineno for n in sorted(nodes, key=lambda n: (n.lineno, n.col_offset))]
+        except (UnicodeDecodeError, SyntaxError, ValueError) as exc:
             problems.append(f"{rel}: cannot scan ({type(exc).__name__})")
             continue
         if rel in allow and not lines:
@@ -83,3 +80,27 @@ class UnitsGuardTests(unittest.TestCase):
     def test_undecodable_or_broken_file_is_a_named_failure(self):
         found = self.tree({"bad.py": b"x = '\xff'\n", "broken.py": "def f(:\n    return 0.3048\n", "ok.py": "x = 1\n"})
         self.assertEqual(found, ["bad.py: cannot scan (UnicodeDecodeError)", "broken.py: cannot scan (SyntaxError)"])
+
+    def lines_of(self, src, allow=None):
+        return [int(p.split(":")[1]) for p in self.tree({"a.py": src}, allow)]
+
+    def test_fstring_expression_factors_are_reported_on_their_lines(self):
+        src = ('a = f"{v * 0.3048}"\nb = f"{v:{1852}}"\nc = f"{v * 1.943_844:.1f}"\nd = f"{v * 3.28084e0}"\n'
+               'e = f"""x\n{v *\n 1.852}\nz"""\n')
+        self.assertEqual(self.lines_of(src), [1, 2, 3, 4, 7])
+
+    def test_fstring_text_is_not_code(self):
+        src = 'a = f"0.3048 {{1852}} {v}"\nb = f"{v:1852}"\nc = f"{\'0.3048\'}"\nd = f"{v:>{18520}}"\n'
+        self.assertEqual(self.lines_of(src), [])
+
+    def test_occurrences_are_reported_in_source_order(self):
+        self.assertEqual(self.lines_of('x = f"{a * 0.3048}" + f"{b * 1852}" + 1.852\ny = 0.3048\n'), [1, 1, 1, 2])
+
+    def test_owner_and_allow_contract_with_fstring_factors(self):
+        allow = {"p/live.py": LIVE}
+        self.assertEqual(self.tree({"p/live.py": 'x = f"{v * 0.3048}"\n', OWNER: 'x = f"{v * 0.3048}"\n'}, allow), [])
+        self.assertEqual(self.tree({"p/live.py": 'x = f"0.3048 {v}"\n'}, allow),
+                         ["remove p/live.py from ALLOW (no conversion literal left)"])
+
+    def test_non_float_int_constants_stay_clean(self):
+        self.assertEqual(self.lines_of('a = 0.30481\nb = 1852j\nc = True\nd = "1852"\ne = f"{v * 0.30481}"\n'), [])

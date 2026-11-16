@@ -275,18 +275,22 @@ test('the terrain receives the dock\'s hour', async ({page, pageErrors, v2, isMo
 
 test('play steps hours, stops at the end of the horizon and pauses when the page is hidden', async ({page, pageErrors, v2, isMobile}) => {
   test.skip(isMobile, 'the play button is the desktop dock\'s');
-  const end = horizonStart() + 168 * HOUR_MS;
+  // Keep both navigations in the same horizon: a load across a UTC hour boundary
+  // would otherwise make the requested start hour stale and correctly disable Play.
+  const start = horizonStart();
+  await page.clock.setFixedTime(new Date(start));
+  const end = start + 168 * HOUR_MS;
   await v2.open('app', {region: 'morro-bay', hour: hourParam(end - 2 * HOUR_MS)});
   await page.getByRole('button', {name: 'Play'}).click();
   await expect(page.getByRole('button', {name: 'Pause'})).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', {name: 'Play'})).toBeVisible({timeout: 10_000});
   expect(Date.parse(urlHour(page)!), 'stopped on the horizon\'s last hour').toBeGreaterThanOrEqual(end);
   await page.waitForTimeout(1500);
-  expect(Date.parse(urlHour(page)!)).toBeLessThanOrEqual(horizonStart() + 168 * HOUR_MS);
+  expect(Date.parse(urlHour(page)!)).toBeLessThanOrEqual(end);
 
-  await page.goto(v2.url('app', {region: 'morro-bay', hour: hourParam(horizonStart())}));
+  await page.goto(v2.url('app', {region: 'morro-bay', hour: hourParam(start)}));
   await page.getByRole('button', {name: 'Play'}).click();
-  await expect.poll(() => urlHour(page)).not.toBe(hourParam(horizonStart()));
+  await expect.poll(() => urlHour(page)).not.toBe(hourParam(start));
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', {configurable: true, get: () => true});
     document.dispatchEvent(new Event('visibilitychange'));

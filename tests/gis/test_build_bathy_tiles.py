@@ -595,5 +595,100 @@ class NativeTierTests(unittest.TestCase):
         self.assertLess(float(np.abs(bt.ridge_signal(left, left == NODATA)[20:-20, 20:-20]).max()), 1e-4)
 
 
+class NativeManifestCliTests(unittest.TestCase):
+    def _run(self, source, manifest, patches=True):
+        import contextlib
+        import io
+        from unittest import mock
+        err = io.StringIO()
+        with mock.patch.object(rasterio, 'open') as ropen, contextlib.redirect_stderr(err):
+            code = bt.main(['--source', str(source), '--native-manifest', str(manifest)])
+        return code, err.getvalue(), ropen
+
+    def test_missing_source_wins_and_manifest_not_read(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(bt, 'load_native_manifest') as load:
+                code, err, _ = self._run(Path(tmp) / 'nope.tif', Path(tmp) / 'bad.json')
+            load.assert_not_called()
+            self.assertEqual(code, 2)
+            self.assertIn('source not found', err)
+
+    def test_bad_manifests_exit_2_one_line_without_opening_rasters(self):
+        bad = {
+            'notjson': 'not json', 'dict': '{}', 'empty': '[]', 'scalar': '[1]',
+            'noid': '[{"path": "a.tif", "resolution_m": 1}]',
+            'dup': '[{"id": "a", "path": "a.tif", "resolution_m": 1}, {"id": "a", "path": "b.tif", "resolution_m": 1}]',
+            'path5': '[{"id": "a", "path": 5, "resolution_m": 1}]',
+            'resstr': '[{"id": "a", "path": "a.tif", "resolution_m": "1"}]',
+            'restrue': '[{"id": "a", "path": "a.tif", "resolution_m": true}]',
+            'resnan': '[{"id": "a", "path": "a.tif", "resolution_m": NaN}]',
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / 'src.tif'
+            source.write_bytes(b'x')
+            cases = {name: root / f'{name}.json' for name in bad}
+            for name, text in bad.items():
+                cases[name].write_text(text)
+            cases['missing'] = root / 'missing.json'
+            cases['directory'] = root
+            for name, manifest in cases.items():
+                code, err, ropen = self._run(source, manifest)
+                self.assertEqual(code, 2, name)
+                self.assertEqual(len(err.strip().splitlines()), 1, (name, err))
+                self.assertIn('native manifest:', err, name)
+                self.assertNotIn('Traceback', err, name)
+                ropen.assert_not_called()
+
+    def test_invalid_native_grid_names_entry_index(self):
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest = root / 'm.json'
+            entries = []
+            for name, res, count, crs in (
+                ('valid', 2, 1, 'EPSG:3310'),
+                ('coarse', 10, 1, 'EPSG:3310'),
+                ('multiband', 2, 2, 'EPSG:3310'),
+                ('geographic', 2, 1, 'EPSG:4326'),
+            ):
+                path = root / f'{name}.tif'
+                with rasterio.open(path, 'w', driver='GTiff', width=2, height=2, count=count,
+                                   dtype='float32', crs=crs, nodata=NODATA,
+                                   transform=from_origin(0, 10, res, res)) as ds:
+                    ds.write(np.full((count, 2, 2), -25, 'float32'))
+                entries.append({'id': name, 'path': str(path), 'resolution_m': res})
+            for invalid in entries[1:]:
+                with self.subTest(grid=invalid['id']):
+                    manifest.write_text(json.dumps([entries[0], invalid]))
+                    err = io.StringIO()
+                    with contextlib.redirect_stderr(err):
+                        code = bt.main(['--source', entries[0]['path'],
+                                        '--native-manifest', str(manifest)])
+                    self.assertEqual(code, 2)
+                    self.assertEqual(err.getvalue(), 'build_bathy_tiles: native manifest: entry 1: '
+                                     'native grid must be a single-band <=2 m or 5 m projected metre grid\n')
+                    self.assertEqual(sorted(p.name for p in root.iterdir()),
+                                     ['coarse.tif', 'geographic.tif', 'm.json', 'multiband.tif', 'valid.tif'])
+
+    def test_missing_grid_file_names_entry_index(self):
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / 'src.tif'
+            source.write_bytes(b'x')
+            manifest = root / 'm.json'
+            manifest.write_text(json.dumps([{'id': 'a', 'path': str(root / 'gone.tif'), 'resolution_m': 1}]))
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                code = bt.main(['--source', str(source), '--native-manifest', str(manifest)])
+            self.assertEqual(code, 2)
+            self.assertIn('entry 0', err.getvalue())
+            self.assertEqual(len(err.getvalue().strip().splitlines()), 1)
+
+
 if __name__ == '__main__':
     unittest.main()

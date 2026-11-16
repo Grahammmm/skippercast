@@ -694,6 +694,8 @@ def render_graphic(item, r2, spec, number, log=print):
 
 def run(api, r2, spec, number, max_rounds=20, log=print):
     """Process pending work until the list is empty (or only items already tried remain). Returns counts."""
+    if type(max_rounds) is not int or not 1 <= max_rounds <= 100:
+        raise ValueError('max_rounds must be an int from 1 to 100')
     counts = {'media': 0, 'graphics': 0, 'videos': 0, 'failed': 0, 'transient': 0}
     tried = set()
     for _ in range(max_rounds):
@@ -732,9 +734,19 @@ def run(api, r2, spec, number, max_rounds=20, log=print):
     return counts
 
 
+def _rounds(text):
+    try:
+        number = int(text)
+    except ValueError:
+        number = 0
+    if not 1 <= number <= 100:
+        raise argparse.ArgumentTypeError('--max-rounds must be a whole number from 1 to 100')
+    return number
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument('--max-rounds', type=int, default=20)
+    parser.add_argument('--max-rounds', type=_rounds, default=20)
     args = parser.parse_args(argv)
     token, account = os.environ.get('R2_ADVISOR_TOKEN'), os.environ.get('CLOUDFLARE_ACCOUNT_ID')
     if not token or not account:
