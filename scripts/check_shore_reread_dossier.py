@@ -42,7 +42,7 @@ PROSE_PATHS = ('approval.statement', 'holds')
 
 
 def _ok_hash(v):
-    return isinstance(v, str) and bool(HEX64.match(v))
+    return isinstance(v, str) and bool(HEX64.fullmatch(v))
 
 
 def _walk(node, path=''):
@@ -240,7 +240,7 @@ def check(doc):
         errors.append('schemaVersion 1, kind shore-reread-dossier and stage M1a required')
     if doc.get('region') != 'morro-bay':
         errors.append('region must be morro-bay')
-    if not HEX40.match(str(doc.get('inspectedGitSha'))):
+    if not HEX40.fullmatch(str(doc.get('inspectedGitSha'))):
         errors.append('inspectedGitSha must be a 40-hex commit')
     at = doc.get('acquiredAt') or {}
     if not (ISO_Z.match(str(at.get('first'))) and ISO_Z.match(str(at.get('last')))):
