@@ -80,7 +80,8 @@ export const feedPath = (url: string | undefined, region = DEFAULT_REGION): stri
 function newest(source: Source | undefined, key: string, unit: string): {row: Row; at: number} | null {
   const units = source?.data?.units ?? {};
   if (units[key] !== unit) return null;
-  const rows = (source?.data?.observations ?? []).filter(r => r && (unit === '-' ? typeof r[key] === 'string' : finite(r[key]))).map(row => ({row, at: time(row.time)}));
+  const observations = source?.data?.observations;
+  const rows = (Array.isArray(observations) ? observations : []).filter(r => r && (unit === '-' ? typeof r[key] === 'string' : finite(r[key]))).map(row => ({row, at: time(row.time)}));
   return rows.filter(r => Number.isFinite(r.at)).sort((a, b) => b.at - a.at)[0] ?? null;
 }
 
@@ -149,7 +150,8 @@ export const tideURL = (station: string): string =>
 
 /** Tide: the latest observed water level and whether it rose over the last two hours; `note` is the region's own caveat for the station. */
 export function tideReading(response: unknown, station: string, stationName?: string, now = Date.now(), note?: string, lang: Language = 'en'): Reading {
-  const rows = ((response as {data?: {t?: unknown; v?: unknown}[]})?.data ?? [])
+  const data = (response as {data?: unknown})?.data;
+  const rows = (Array.isArray(data) ? data as {t?: unknown; v?: unknown}[] : [])
     .map(r => ({at: coopsTime(r?.t), v: typeof r?.v === 'string' && r.v.trim() ? Number(r.v) : NaN}))
     .filter(r => Number.isFinite(r.at) && Number.isFinite(r.v)).sort((a, b) => a.at - b.at);
   const last = rows.at(-1), first = rows[0];
