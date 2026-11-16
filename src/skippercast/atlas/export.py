@@ -36,6 +36,12 @@ def coordinate(value):
     require(-180 <= lon <= 180 and -90 <= lat <= 90, "Coordinate outside WGS84 bounds")
 
 
+def recorded_numbers(*values):
+    require(all(isinstance(x, (int, float)) and not isinstance(x, bool)
+                and (isinstance(x, int) or math.isfinite(x)) for x in values),
+            "Invalid recorded numeric evidence")
+
+
 def index_unique(rows, label):
     result = {r["id"]: r for r in rows}
     require(len(result) == len(rows), f"Duplicate {label} IDs")
@@ -66,6 +72,9 @@ def validate(data):
         require(row["rank"] == 1 + sum(s > score for s in scores), "Incorrect subset rank")
         check = row["recorded_validation"]
         require(check["native_circle_has_gap"] is False, "Target has missing native depth evidence")
+        recorded_numbers(check["native_center_depth_ft"],
+                         check["native_100m_circle_min_depth_ft"],
+                         check["native_100m_circle_max_depth_ft"])
         require(0 < check["native_center_depth_ft"] <= 200, "Target exceeds source-depth ceiling")
         require(0 < check["native_100m_circle_min_depth_ft"]
                 <= check["native_100m_circle_max_depth_ft"] <= 200,
@@ -82,6 +91,8 @@ def validate(data):
             require(row["source_id"] in sources, "Unknown geometry source")
             check = row["recorded_validation"]
             require(check["missing_depth"] is False, "Geometry has incomplete depth evidence")
+            recorded_numbers(check["minimum_ft"], check["maximum_ft"],
+                             check["closure_clearance_m"])
             require(0 < check["minimum_ft"] <= check["maximum_ft"] <= 195,
                     "Geometry fails recorded conservative source-depth screen")
             require(check["closure_clearance_m"] >= 500,
