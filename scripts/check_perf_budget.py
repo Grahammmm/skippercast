@@ -136,10 +136,12 @@ def validate_budget(budget: dict) -> list[str]:
             continue
         for h in hist:
             if not isinstance(h, dict) or not _pos_int(h.get("max_bytes")) or not str(h.get("reason", "")).strip():
-                problems.append(f"{name}: every history entry needs an integer max_bytes and a reason")
+                problems.append(f"{name}: every history entry needs a positive integer max_bytes and a reason")
                 break
         else:
-            if not _pos_int(spec.get("max_bytes")) or spec["max_bytes"] != hist[-1]["max_bytes"]:
+            if not _pos_int(spec.get("max_bytes")):
+                problems.append(f"{name}: max_bytes must be a positive integer")
+            elif spec["max_bytes"] != hist[-1]["max_bytes"]:
                 problems.append(
                     f"{name}: max_bytes {spec.get('max_bytes')} does not match the last history entry "
                     f"({hist[-1]['max_bytes']}). To change a budget, add a new history entry with the new "
