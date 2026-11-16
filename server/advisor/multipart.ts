@@ -14,7 +14,7 @@ const MAX_HEADERS = 8192;
 /** The boundary from a multipart/form-data Content-Type, or null. */
 export function boundaryOf(contentType: string | null): string | null {
   if (!contentType || !/^multipart\/form-data\s*;/i.test(contentType)) return null;
-  const m = contentType.match(/;\s*boundary=(?:"([^"]{1,70})"|([^\s;"]{1,70}))/i);
+  const m = contentType.match(/;\s*boundary=(?:"([^"]{1,70})"|([^\s;"]{1,70}))(?=[ \t]*(?:;|$))/i);
   return m ? (m[1] ?? m[2] ?? null) : null;
 }
 
