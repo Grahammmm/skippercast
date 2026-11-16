@@ -108,6 +108,8 @@ def ndbc(body, station, spectral=False):
     keys, units = lines[0].lstrip("#").split(), lines[1].lstrip("#").split()
     if keys[:5] != ["YY", "MM", "DD", "hh", "mm"] or units[:5] != ["yr", "mo", "dy", "hr", "mn"]:
         raise ValueError("NDBC timestamp fields or units changed")
+    if len(keys) != len(set(keys)):  # a repeated column would silently overwrite its earlier observation
+        raise ValueError("Duplicate NDBC column names")
     required = {"WVHT", "SwH", "SwP", "WWH", "WWP"} if spectral else {"WVHT", "DPD", "WTMP", "WSPD"}
     if not required.issubset(keys):
         raise ValueError("NDBC columns changed")
