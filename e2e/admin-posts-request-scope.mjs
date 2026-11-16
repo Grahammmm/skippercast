@@ -161,6 +161,64 @@ test('current_first_page_more_and_refresh_keep_working', () => run(async t => {
   assert.equal(await t.page.evaluate(() => window.pending.filter(x => x.url.startsWith('/api/admin/posts/calendar')).length) >= 1, true);
 }));
 
+test('abandoned_decision_cannot_publish_after_filter_round_trip', () => run(async t => {
+  await t.asked(q('draft'));
+  await t.reply(q('draft'), 0, {posts: [post('d1', 'draft', {review_id: 'rv1'})], next: null});
+  await t.page.getByRole('button', {name: 'Approve', exact: true}).click();
+  await t.asked('/api/admin/reviews/rv1');
+  await t.select(0, 'approved');
+  await t.asked(q('approved'));
+  await t.select(0, 'draft');
+  await t.asked(q('draft'), 1);
+  await t.reply('/api/admin/reviews/rv1', 0, {review: {id: 'rv1', status: 'approved'}});
+  await t.settle();
+  assert.equal(await t.page.locator('.admin-view > .admin-notice').textContent(), '', 'no abandoned approval notice');
+  assert.equal(await t.page.evaluate(() => window.pending.filter(x => x.url === '/api/admin/posts?status=draft').length), 2, 'no abandoned reload superseding the current request');
+  await t.reply(q('draft'), 1, {posts: [post('d2', 'draft', {caption: 'Current draft'})], next: 'current-cursor'});
+  await t.page.getByText('Current draft', {exact: true}).waitFor();
+  assert.equal(await t.more().count(), 1, 'the current request still owns its cursor');
+  // A decision started in this generation still refreshes and announces success.
+  await t.select(0, 'approved');
+  await t.asked(q('approved'), 1);
+  await t.select(0, 'draft');
+  await t.asked(q('draft'), 2);
+  await t.reply(q('draft'), 2, {posts: [post('d3', 'draft', {review_id: 'rv3'})], next: null});
+  await t.page.getByRole('button', {name: 'Approve', exact: true}).click();
+  await t.asked('/api/admin/reviews/rv3');
+  await t.reply('/api/admin/reviews/rv3', 0, {review: {id: 'rv3', status: 'approved'}});
+  await t.asked(q('draft'), 3);
+  assert.equal(await t.page.locator('.admin-view > .admin-notice').textContent(), 'Marked approved.');
+}));
+
+test('abandoned_change_cannot_publish_after_filter_round_trip', () => run(async t => {
+  await t.asked(q('draft'));
+  await t.select(0, 'approved');
+  await t.asked(q('approved'));
+  await t.reply(q('approved'), 0, {posts: [post('a1', 'approved', {caption: 'Original caption'})], next: null});
+  await t.page.locator('input[type="datetime-local"]').fill('2026-12-01T12:00');
+  await t.page.getByRole('button', {name: 'Save time', exact: true}).click();
+  await t.asked('/api/admin/posts/a1/schedule');
+  await t.select(1, 'story');
+  await t.asked(q('approved', 'story'));
+  await t.select(1, '');
+  await t.asked(q('approved'), 1);
+  await t.reply(q('approved'), 1, {posts: [post('a1', 'approved', {caption: 'Current caption'})], next: 'current-cursor'});
+  await t.page.getByText('Current caption', {exact: true}).waitFor();
+  await t.reply('/api/admin/posts/a1/schedule', 0, {post: post('a1', 'scheduled', {caption: 'Abandoned caption'})});
+  await t.settle();
+  assert.equal(await t.page.locator('.admin-view > .admin-notice').textContent(), '', 'no abandoned change notice');
+  assert.ok((await t.text()).includes('Current caption'));
+  assert.ok(!(await t.text()).includes('Abandoned caption'));
+  assert.equal(await t.more().count(), 1);
+  // The current generation may still change the row and announce it.
+  await t.page.locator('input[type="datetime-local"]').fill('2026-12-02T12:00');
+  await t.page.getByRole('button', {name: 'Save time', exact: true}).click();
+  await t.asked('/api/admin/posts/a1/schedule', 1);
+  await t.reply('/api/admin/posts/a1/schedule', 1, {post: post('a1', 'scheduled', {caption: 'Current saved caption'})});
+  await t.page.getByText('Current saved caption', {exact: true}).waitFor();
+  assert.notEqual(await t.page.locator('.admin-view > .admin-notice').textContent(), '');
+}));
+
 test('abandoned_list_callback_and_unmount_do_not_publish', () => run(async t => {
   await t.asked(q('draft'));
   await t.reply(q('draft'), 0, {posts: [post('d1', 'draft', {caption: 'Draft one', review_id: 'rv1'})], next: null});

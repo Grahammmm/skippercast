@@ -86,6 +86,7 @@ export function PostsView() {
   // the newest request of the current scope may publish (a late old-filter response, even draft -> approved -> draft, is refused).
   const own = useRef({key, gen: 0, seq: 0, live: true});
   if (own.current.key !== key) { own.current.key = key; own.current.gen += 1; own.current.seq += 1; }
+  const generation = own.current.gen;
   // Data of another scope is never shown or used for a cursor: until this scope's first page arrives it is loading.
   const {posts, next, state} = page.key === key ? page : {posts: NO_POSTS, next: null, state: 'loading' as const};
 
@@ -106,14 +107,14 @@ export function PostsView() {
   useEffect(() => { void load(); }, [status, kind]);
 
   function decided(result: DecisionResult): void {
-    if (!own.current.live || own.current.key !== key) return;
+    if (!own.current.live || own.current.key !== key || own.current.gen !== generation) return;
     setNotice(result.repeated ? COPY.alreadyDecided(COPY.statuses[result.review.status].toLowerCase()) : COPY.decided(COPY.statuses[result.review.status].toLowerCase()));
     void load();
     requestAnimationFrame(() => document.getElementById('posts-heading')?.focus());
   }
 
   function changed(post: Post, message: string): void {
-    if (!own.current.live || own.current.key !== key) return;
+    if (!own.current.live || own.current.key !== key || own.current.gen !== generation) return;
     setPage(p => (p.key === key ? {...p, posts: p.posts.map(x => (x.id === post.id ? post : x))} : p));
     setNotice(message);
   }

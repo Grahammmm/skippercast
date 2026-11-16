@@ -226,6 +226,11 @@ jobs:
       # variable from github.event_name here; tests/test_ci_e2e_parity.mjs fails if it does (CI-PARITY-1).
       # The SCB-02 timing journey is not part of this job; it has its own advisory nightly run
       # (.github/workflows/e2e-timing.yml).
+      # This mounted-component suite needs Chromium, absent from the Node-only
+      # check jobs. Run it once, in the existing browser tier, without skips.
+      - name: Admin Posts request ownership (serverless Chromium)
+        if: matrix.shard == 1
+        run: node --test e2e/admin-posts-request-scope.mjs
       - name: Browser flows and accessibility (serious and critical axe violations fail)
         env:
           E2E_WIDE: '1'
