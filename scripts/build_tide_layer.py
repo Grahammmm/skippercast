@@ -72,6 +72,26 @@ def layer_name(value):
     return value
 
 
+def _days(text):
+    try:
+        value = int(text)
+    except ValueError:
+        value = 0
+    if value < 1:
+        raise argparse.ArgumentTypeError('--days must be a whole number of 1 or more')
+    return value
+
+
+def _lon(text):
+    try:
+        value = float(text)
+    except ValueError:
+        value = math.nan
+    if not (math.isfinite(value) and -180 <= value <= 180):
+        raise argparse.ArgumentTypeError('longitude must be a finite number from -180 to 180')
+    return value
+
+
 def select_stations(stations, bands, lon_range=DEFAULT_LON):
     """CO-OPS prediction stations whose point falls in a sector band (south edge inclusive)."""
     out = []
@@ -134,6 +154,8 @@ def build(sectors_file, ids, name, now, days, fetch=http_json, lon_range=None, p
     bands = sector_bounds(sectors_file, ids)
     listing = fetch(STATIONS_URL)
     chosen = select_stations(listing['stations'], bands, lon_range)
+    if not chosen:
+        raise SystemExit('no CO-OPS station inside the sector bands and longitude window; nothing fetched')
     begin = (now - dt.timedelta(days=1)).date()
     end = (now + dt.timedelta(days=days)).date()
     stations, failed = [], []
@@ -172,15 +194,17 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--name', default='central-coast', type=layer_name, help='lowercase letters, digits, hyphens')
     ap.add_argument('--sectors', default=CENTRAL_COAST, help='ids from catalog/coastal-sectors.json')
-    ap.add_argument('--lon-min', type=float, help='override the longitude window (west edge)')
-    ap.add_argument('--lon-max', type=float, help='override the longitude window (east edge)')
-    ap.add_argument('--days', type=int, default=8, help='days ahead (the app fetches 8)')
+    ap.add_argument('--lon-min', type=_lon, help='override the longitude window (west edge)')
+    ap.add_argument('--lon-max', type=_lon, help='override the longitude window (east edge)')
+    ap.add_argument('--days', type=_days, default=8, help='days ahead (the app fetches 8)')
     ap.add_argument('--output', help='default var/tide/tide-layer-<name>.json')
     args = ap.parse_args(argv)
     now = dt.datetime.now(dt.timezone.utc).replace(second=0, microsecond=0)
     ids = args.sectors.split(',')
     lon = default_lon(ids)
     lon = (lon[0] if args.lon_min is None else args.lon_min, lon[1] if args.lon_max is None else args.lon_max)
+    if not lon[0] < lon[1]:
+        ap.error('--lon-min must be west of (less than) --lon-max')
     doc = build(ROOT / 'catalog' / 'coastal-sectors.json', ids, args.name, now, args.days, lon_range=lon)
     out = args.output or ROOT / 'var' / 'tide' / f'tide-layer-{args.name}.json'
     write_private(doc, out)
