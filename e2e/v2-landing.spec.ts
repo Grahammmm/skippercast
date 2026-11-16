@@ -580,8 +580,7 @@ test('Explore the coast takes the profile step with nothing to warm, and Save-Da
   await step.getByRole('button', {name: 'Change port'}).click();
   const input = page.getByLabel('Where are you launching?');
   await input.fill('morro');
-  // The directory can still be loading after Explore → Change port. Enter
-  // submits only a rendered match, so wait for it before choosing the port.
+  // The input is interactive before the async port directory arrives; Enter submits only a rendered match.
   await expect(page.locator('.landing [data-port]')).toHaveText([/Morro Bay/]);
   await input.press('Enter');
   await expect(step.locator('[role="status"]')).toHaveText('');

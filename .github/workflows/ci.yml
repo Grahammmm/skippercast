@@ -59,7 +59,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Core suite and GIS layer passed
+      - name: Roll-up gate (fails closed; names the failed prerequisite)
         env:
           EVENT: ${{ github.event_name }}
           GATE: ${{ needs.changes.result }}
