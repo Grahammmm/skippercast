@@ -383,6 +383,8 @@ class HTTPCache:
             meta = json.loads(meta_path.read_text())
         except (OSError, ValueError):
             return None
+        if not isinstance(meta, dict):
+            return None
         return meta if meta.get("url") == url and (meta.get("etag") or meta.get("last_modified")) else None
 
     def body(self, url: str, meta: dict, limit: int | None = None) -> bytes | None:
