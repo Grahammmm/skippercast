@@ -137,6 +137,29 @@ class NaisPresenceTest(unittest.TestCase):
         self.assertEqual(code, 3)
         self.assertEqual(len(source.calls), 1)
 
+    def test_min_free_gb_must_be_finite_and_in_range(self):
+        for bad in ("nan", "-nan", "inf", "-1", "100001", "abc"):
+            with self.subTest(bad=bad), mock.patch.object(nais, "_free_gb") as free, \
+                    redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as caught:
+                self.run_check({}, extra=[f"--min-free-gb={bad}"])
+            self.assertEqual(caught.exception.code, 2)
+            free.assert_not_called()
+
+    def test_min_free_gb_bounds_parse_and_guard_still_trips(self):
+        for good in ("0", "100000"):
+            self.assertEqual(nais._parser().parse_args(
+                ["--region", "CA", "--from", "2026-01-12", "--to", "2026-01-12", "--targets", "t",
+                 "--min-free-gb", good]).min_free_gb, float(good))
+        code, text, source = self.run_check({}, extra=["--min-free-gb", "50"], free=mock.Mock(free=10 * 10**9))
+        self.assertEqual(code, 3)
+        self.assertIn("stopped: 10 GB free, below 50 GB", text)
+        self.assertEqual(source.calls, [])
+
+    def test_min_free_gb_default_is_50(self):
+        args = nais._parser().parse_args(
+            ["--region", "CA", "--from", "2026-01-12", "--to", "2026-01-12", "--targets", "t"])
+        self.assertEqual(args.min_free_gb, 50.0)
+
     def test_bad_arguments_exit_2(self):
         def code_of(first, last, targets=None):
             if targets is not None:
