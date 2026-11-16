@@ -35,7 +35,7 @@ def fenced_lines(lines):
 
 def section(text, version):
     version = version[1:] if version.startswith('v') else version
-    if not re.fullmatch(r'\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?', version):
+    if not re.fullmatch(r'\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+(?:\+[0-9A-Za-z.-]+)?|\+[0-9A-Za-z.-]+)?', version):
         raise ValueError(f'Not a release version: {version}')
     heading = re.compile(r'^## v?' + re.escape(version) + r'(?:\s|$)')
     lines, body, inside = text.splitlines(), [], False
