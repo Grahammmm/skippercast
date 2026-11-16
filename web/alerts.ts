@@ -209,13 +209,13 @@ export async function readRecapCatchLog(fetchFn: typeof fetch = fetch, signal?: 
   return {entries, complete: false};
 }
 
-/** Group private records by Pacific trip date; later array entries win within each assessment kind. Catch-log rows join only by exact trip id. */
-export function tripRecaps(trips: SavedTrip[], events: AlertEvent[], feedback: Feedback[], today: string, entries: CatchLogEntry[] = []): {
+/** Group private records by trip date in the region's zone (Pacific by default); later array entries win within each assessment kind. Catch-log rows join only by exact trip id. */
+export function tripRecaps(trips: SavedTrip[], events: AlertEvent[], feedback: Feedback[], today: string, entries: CatchLogEntry[] = [], timeZone: string = DEFAULT_ZONE): {
   upcoming: SavedTrip[]; past: {trip: SavedTrip; final: AlertEvent | null; reports: Feedback[]; catches: CatchLogEntry[]}[];
 } {
   const logged = new Map<string, CatchLogEntry[]>();
   for (const entry of entries) if (entry.trip_id) logged.set(entry.trip_id, [...(logged.get(entry.trip_id) ?? []), entry]);
-  const days = new Intl.DateTimeFormat('en-CA', {timeZone: DEFAULT_ZONE});
+  const days = new Intl.DateTimeFormat('en-CA', {timeZone});
   const reports = new Map<string, Feedback[]>();
   for (const report of feedback) {
     const at = new Date(report.observed_at);
