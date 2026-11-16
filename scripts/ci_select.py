@@ -20,7 +20,11 @@ AREAS = ('core', 'survey', 'web')
 def load_map():
     data = json.loads(MAP.read_text())
     for rule in data['rules']:
-        if not rule['patterns'] or not rule['areas'] or set(rule['areas']) - set(AREAS):
+        patterns = rule['patterns']
+        # A scalar string would otherwise iterate character by character as globs.
+        if (not isinstance(patterns, list) or not patterns
+                or not all(isinstance(p, str) and p for p in patterns)
+                or not rule['areas'] or set(rule['areas']) - set(AREAS)):
             raise ValueError('invalid affected-area map')
     return data
 
