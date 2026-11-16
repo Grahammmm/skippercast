@@ -35,7 +35,7 @@ def _ascii(text: str) -> str:
 def roman_to_int(token: str) -> int | None:
     """1-39 for a roman numeral of I, V and X, else None."""
     token = token.upper()
-    if not token or not ROMAN.match(token):
+    if not token or not ROMAN.fullmatch(token):
         return None
     total = 0
     for char, after in zip(token, token[1:] + " "):
