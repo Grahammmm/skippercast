@@ -53,6 +53,8 @@ def _load(path):
         raise ValueError(f'{path.name}: cannot read: {error.strerror or error}') from error
     except json.JSONDecodeError as error:
         raise ValueError(f'{path.name}: not valid JSON (line {error.lineno} column {error.colno})') from error
+    except RecursionError as error:
+        raise ValueError(f'{path.name}: JSON nesting exceeds parser limit') from error
 
 
 def _shape(planned, detail):
