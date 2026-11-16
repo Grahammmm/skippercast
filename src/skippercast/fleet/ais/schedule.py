@@ -57,7 +57,7 @@ __all__ = ["SCHEDULE", "Rules", "Correlation", "rules", "span_days", "correlate"
            "load_report_days", "precision", "main"]
 
 SCHEDULE = "schedule-correlation"
-DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 FEED_TIMEOUT_S = 30
 log = logging.getLogger("skippercast.fleet.ais.schedule")
 
@@ -148,7 +148,11 @@ def report_days(rows: Iterable[Mapping], vessels: Iterable[Mapping], landing: Ma
     out: dict[str, set[str]] = {}
     for r in rows:
         day, boat, label = r.get("date"), r.get("boat"), r.get("port")
-        if not (isinstance(day, str) and DATE.match(day) and isinstance(boat, str) and isinstance(label, str)):
+        if not (isinstance(day, str) and DATE.fullmatch(day) and isinstance(boat, str) and isinstance(label, str)):
+            continue
+        try:
+            date.fromisoformat(day)   # impossible calendar days (02-30, year 0) are not evidence
+        except ValueError:
             continue
         hits = names.get(name_norm(boat), set())
         if len(hits) != 1:
