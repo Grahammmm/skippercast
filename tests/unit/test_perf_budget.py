@@ -203,3 +203,48 @@ def test_unreadable_budget_file_is_one_problem_line(tmp_path, content, capsys):
     assert cpb.main(["--budget", str(f)]) == 1
     out = capsys.readouterr().out
     assert out.count("BUDGET FILE PROBLEM") == 1 and "Traceback" not in out
+
+
+BAD_CEILINGS = [0, -1, True, False, 1.0, "1", None]
+
+
+@pytest.mark.parametrize("v", BAD_CEILINGS)
+def test_bad_current_ceiling_with_valid_history_is_named(v):
+    b = budget()
+    b["budgets"]["js"]["max_bytes"] = v
+    assert cpb.validate_budget(b) == ["js: max_bytes must be a positive integer"]
+
+
+def test_true_current_ceiling_does_not_pass_by_equality_with_history_one():
+    b = {"budgets": {"js": entry(1)}}
+    b["budgets"]["js"]["max_bytes"] = True
+    assert cpb.validate_budget(b) == ["js: max_bytes must be a positive integer"]
+
+
+@pytest.mark.parametrize("v", BAD_CEILINGS)
+def test_bad_earlier_history_entry_is_caught_even_if_last_is_valid(v):
+    b = budget()
+    b["budgets"]["js"]["history"].insert(0, {"max_bytes": v, "reason": "old"})
+    assert cpb.validate_budget(b) == ["js: every history entry needs a positive integer max_bytes and a reason"]
+
+
+@pytest.mark.parametrize("v", [0, True])
+def test_main_refuses_bad_ceiling_before_measure_or_render(tmp_path, monkeypatch, capsys, v):
+    b = budget()
+    b["budgets"]["js"]["max_bytes"] = v
+    b["budgets"]["js"]["history"][-1]["max_bytes"] = v
+    f = tmp_path / "b.json"
+    f.write_text(json.dumps(b))
+
+    def boom(*a, **k):
+        raise AssertionError("measure/render must not run")
+
+    monkeypatch.setattr(cpb, "measure", boom)
+    monkeypatch.setattr(cpb, "render", boom)
+    assert cpb.main(["--root", str(tmp_path), "--budget", str(f)]) == 1
+    out = capsys.readouterr().out
+    assert "BUDGET FILE PROBLEM" in out and "positive integer" in out and "Traceback" not in out
+
+
+def test_large_positive_ceiling_is_valid():
+    assert cpb.validate_budget({"budgets": {"js": entry(10**12)}}) == []
