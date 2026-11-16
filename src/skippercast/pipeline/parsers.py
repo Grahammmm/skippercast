@@ -80,7 +80,7 @@ def charter_reports(body, day, url, *, ports):
             catches.append({"species": key, "label": label, "count": int(count_match[1].replace(",", "")),
                             "disposition": disposition})
         # A blank or changed count cell must not silently become a zero catch.
-        if catch and not re.search(r"\d|no fish|no catch", catch, re.I):
+        if not re.search(r"\d|no fish|no catch", catch, re.I):
             raise ValueError("Unrecognized local catch cell")
         name = plain(boat[1])
         identity = f"{day}|{name}|{trip_type}|{ground}"
