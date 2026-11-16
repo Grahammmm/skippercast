@@ -60,10 +60,13 @@ def test_bad_workers_or_limit_exit_2_with_no_work(env, bad, capsys):
         assert e.value.code == 2 and not out.exists()
 
 
-def test_unknown_region_is_one_named_error_before_node(env):
+def test_unknown_region_is_one_named_error_before_node(env, capsys):
     with pytest.raises(SystemExit) as e:
         env['parity'].main([env['export'], '--region', 'nowhere'])
-    assert e.value.code == 'protected-screen-parity: no protected screen for region nowhere' and not env['calls']
+    assert e.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.err == 'protected-screen-parity: no protected screen for region nowhere\n'
+    assert captured.out == '' and not env['calls']
 
 
 def _bad_exports(tmp):
@@ -73,13 +76,16 @@ def _bad_exports(tmp):
 
 
 @pytest.mark.parametrize('which', ['parity', 'slim'])
-def test_unreadable_export_is_one_stderr_line(env, which):
+def test_unreadable_export_is_one_stderr_line(env, which, capsys):
     for path in _bad_exports(env['tmp']):
         args = [path, '--region', 'bay'] if which == 'parity' else [path, str(env['tmp']/'o'), '--region', 'bay']
         with pytest.raises(SystemExit) as e:
             env[which].main(args)
-        msg = str(e.value.code)
-        assert '\n' not in msg and f'cannot read export {path}:' in msg
+        assert e.value.code == 2
+        captured = capsys.readouterr()
+        assert captured.out == '' and len(captured.err.splitlines()) == 1
+        msg = captured.err
+        assert f'cannot read export {path}:' in msg
         assert msg.startswith('protected-screen-parity:' if which == 'parity' else 'reef_slim_build:')
     assert not env['calls'] and not (env['tmp']/'o').exists()
 

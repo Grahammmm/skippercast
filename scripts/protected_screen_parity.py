@@ -45,7 +45,8 @@ def _read_export(name, path):
         if not isinstance(data, dict) or not isinstance(data.get('features'), list):
             raise ValueError('not an object with a features list')
     except (OSError, EOFError, ValueError, zlib.error) as e:     # BadGzipFile and JSONDecodeError are subclasses
-        sys.exit(f'{name}: cannot read export {path}: {e}')
+        print(f'{name}: cannot read export {path}: {e}', file=sys.stderr)
+        sys.exit(2)
     return data
 
 
@@ -59,7 +60,8 @@ def main(argv=None):
     a = ap.parse_args(argv)
     loaded = ps.load_screen(REPO, a.region)
     if loaded is None:
-        sys.exit(f'protected-screen-parity: no protected screen for region {a.region}')
+        print(f'protected-screen-parity: no protected screen for region {a.region}', file=sys.stderr)
+        sys.exit(2)
     bounds, boundary, files = loaded
     export = _read_export('protected-screen-parity', a.export)
     features = export['features'][:a.limit] if a.limit else export['features']

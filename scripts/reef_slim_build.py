@@ -36,7 +36,8 @@ def _read_export(name, path):
         if not isinstance(data, dict) or not isinstance(data.get('features'), list):
             raise ValueError('not an object with a features list')
     except (OSError, EOFError, ValueError, zlib.error) as e:     # BadGzipFile and JSONDecodeError are subclasses
-        sys.exit(f'{name}: cannot read export {path}: {e}')
+        print(f'{name}: cannot read export {path}: {e}', file=sys.stderr)
+        sys.exit(2)
     return data
 
 
