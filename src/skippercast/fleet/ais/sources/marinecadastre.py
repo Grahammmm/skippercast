@@ -212,6 +212,21 @@ def _columns(header: list[str]) -> dict[str, int]:
     return found
 
 
+def _strict_rows(text: Iterable[str]) -> Iterator[list[str]]:
+    """CSV records, refusing broken quoting (unclosed or junk after a closing quote) instead of recovering a row.
+
+    The message names the physical line only: never row content, which can hold a vessel or position."""
+    reader = csv.reader(text, strict=True)
+    while True:
+        try:
+            record = next(reader)
+        except StopIteration:
+            return
+        except csv.Error:
+            raise MalformedFile(f"malformed MarineCadastre CSV near line {reader.line_num}") from None
+        yield record
+
+
 def parse_rows(text: Iterable[str], day: date, bbox: Bbox, mmsis: set[int] | None = None,
                counts: MutableMapping[str, int] | None = None) -> Iterator[AisMessage]:
     """Normalised records from the lines of one day's CSV (module docstring), as they are read."""
@@ -222,7 +237,7 @@ def parse_rows(text: Iterable[str], day: date, bbox: Bbox, mmsis: set[int] | Non
     first = round(datetime(day.year, day.month, day.day, tzinfo=timezone.utc).timestamp() * 1000)
     last = first + 86_400_000
     wanted = None if mmsis is None else {str(m) for m in mmsis}
-    rows = csv.reader(text)
+    rows = _strict_rows(text)
     header = next(rows, None)
     if header is None:
         raise MalformedFile("empty file")
