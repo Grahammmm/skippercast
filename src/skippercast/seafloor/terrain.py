@@ -3,6 +3,9 @@
 Depth is positive down. BPI is neighboring mean depth minus local depth, so
 raised ground is positive. Square windows approximate the named BPI radii.
 """
+import math
+import numbers
+
 import numpy as np
 from scipy.ndimage import binary_erosion, uniform_filter
 
@@ -18,9 +21,20 @@ def _validate_support_mask(valid):
         raise ValueError('Invalid terrain support mask: expected a 2D boolean array')
 
 
+def _validate_resolution(resolution_m):
+    ok = isinstance(resolution_m, numbers.Real) and not isinstance(resolution_m, (bool, np.bool_))
+    try:
+        ok = ok and math.isfinite(resolution_m) and resolution_m > 0
+    except OverflowError:
+        ok = False
+    if not ok:
+        raise ValueError('Invalid terrain resolution: expected a finite positive real number')
+
+
 def derivatives(depth, valid, resolution_m):
     _validate_support_mask(valid)
-    if resolution_m <= 0 or depth.ndim != 2 or depth.shape != valid.shape:
+    _validate_resolution(resolution_m)
+    if depth.ndim != 2 or depth.shape != valid.shape:
         raise ValueError('Invalid terrain grid')
     good = valid & np.isfinite(depth)
     supported = binary_erosion(good, structure=np.ones((3, 3)), border_value=0)
