@@ -115,10 +115,27 @@ def statements(lines):
             for first, last, only_string in spans if "\n".join(text_lines[first - 1:last]).strip()]
 
 
-def has_pragma(lines, first, last):
-    if any(PRAGMA.search(line) for line in lines[first - 1:last]):
-        return True
-    return first > 1 and lines[first - 2].strip().startswith("#") and bool(PRAGMA.search(lines[first - 2]))
+def pragma_comments(lines):
+    """({rows with a real pragma COMMENT token}, {rows that hold only such a comment}) for one file (1-based rows).
+
+    Only tokenize.COMMENT tokens count, so a string that contains the marker exempts nothing. A file that stops
+    tokenizing keeps the comments seen before the error."""
+    rows, comment_only = set(), set()
+    try:
+        for token in tokenize.generate_tokens(io.StringIO("\n".join(lines) + "\n").readline):
+            if token.type == tokenize.COMMENT and PRAGMA.match(token.string):
+                row, col = token.start
+                rows.add(row)
+                if not lines[row - 1][:col].strip():
+                    comment_only.add(row)
+    except (tokenize.TokenError, SyntaxError):
+        pass
+    return rows, comment_only
+
+
+def has_pragma(pragmas, first, last):
+    rows, comment_only = pragmas
+    return any(first <= row <= last for row in rows) or (first - 1) in comment_only
 
 
 def classify_spans(lines):
@@ -130,8 +147,9 @@ def classify_spans(lines):
     frozen = any(FROZEN_NAMES.search(code) or FROZEN_PATCH.search(calls) for _, _, _, code, _, calls in stmts)
     guarded = any(VERSION_GUARD_CODE.search(code) or VERSION_GUARD_PATCH.search(calls) for _, _, _, code, _, calls in stmts)
     hits = []
+    pragmas = pragma_comments(lines)
     for first, last, text, code, _, _ in stmts:
-        if has_pragma(lines, first, last):
+        if has_pragma(pragmas, first, last):
             continue
         found = set()
         for pattern, kind in ((CLOCK, "clock"), (PORT, "port")):
