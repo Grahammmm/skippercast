@@ -124,6 +124,12 @@ test('the known list is well-formed: every entry has a kind, a reason, an execut
 for (const view of APP_VIEWS) {
   test(`WCAG 2.1 AA: ${view} view`, async ({page, v2, pageErrors}, info) => {
     void pageErrors;
+    if (view === 'history') {
+      // Audit the loaded record offline, not an upstream-dependent Worker read.
+      const history = JSON.parse(readFileSync(join(import.meta.dirname, '../tests/fixtures/coast/history.json'), 'utf8'));
+      await page.clock.setFixedTime(new Date(history.generatedAt));
+      await page.route('**/api/coast/history*', route => route.fulfill({json: history}));
+    }
     await v2.open('app', {view, region: 'morro-bay'});
     const heading = HEADINGS[view];
     await expect(heading ? page.getByRole('heading', {name: heading, exact: true}) : page.locator(HEADING_IDS[view] ?? 'h1, h2').first()).toBeVisible();
