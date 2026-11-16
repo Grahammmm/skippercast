@@ -102,6 +102,8 @@ def write(path, value):
 
 
 def epoch(now):
+    if isinstance(now, bool):
+        raise ValueError('boolean clock is invalid')
     if isinstance(now, datetime):
         if now.tzinfo is None:
             raise ValueError('aware clock required')
