@@ -87,6 +87,9 @@ def read_subset(body, bounds, path, day):
         chl = nc.variables["chl_oci"]
         if any(hasattr(chl, a) for a in ("scale_factor", "add_offset")):
             raise ValueError("NOAA chlorophyll packed variables unsupported")
+        axes = ("time", "altitude", "lat", "lon")
+        if chl.dimensions != axes or any(nc.variables[k].dimensions != (k,) for k in axes) or nc.variables["altitude"].shape != (1,):
+            raise ValueError("NOAA chlorophyll axes changed")
         t, lat, lon = (nc.variables[k][:].copy() for k in ("time", "lat", "lon"))
         if len(t) != 1 or len(lat) < 1 or len(lon) < 1 or chl.shape != (1, 1, len(lat), len(lon)):
             raise ValueError("NOAA chlorophyll axes changed")
