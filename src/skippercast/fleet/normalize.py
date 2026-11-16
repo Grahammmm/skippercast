@@ -112,6 +112,8 @@ def phone_e164(text: str | None, country: str = "1") -> str | None:
         return None
     main = re.split(r"(?i)\s*(?:x|ext\.?|extension)\s*\d+\s*$", text.strip())[0]
     digits = re.sub(r"\D", "", main)
+    if not digits.isascii():  # Arabic-Indic, fullwidth etc. digits: refuse, never a mixed-script key
+        return None
     if main.startswith("+"):
         number = "+" + digits
     elif len(digits) == 10:
