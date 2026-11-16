@@ -293,6 +293,16 @@ def write_exports(data, output):
     return summary
 
 
+def _unique_members(pairs):
+    """Build an object, refusing a repeated member name instead of replacing it."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate atlas JSON key")
+        result[key] = value
+    return result
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=["validate", "export"])
@@ -302,7 +312,7 @@ def main(argv=None):
     if args.action == "export" and args.output is None:
         parser.error("export requires --output pointing to a new directory")
     try:
-        data = json.loads(args.data.read_text(encoding="utf-8"))
+        data = json.loads(args.data.read_text(encoding="utf-8"), object_pairs_hook=_unique_members)
         result = validate(data) if args.action == "validate" else write_exports(data, args.output)
     except (OSError, ValueError, KeyError, TypeError) as error:
         parser.exit(1, f"Atlas operation failed: {error}\n")
