@@ -203,7 +203,11 @@ def main(argv=None):
         if not isinstance(runs, list) or not all(isinstance(run, dict) for run in runs):
             print(f'pytest_report: {args.ci_runs}: expected a JSON list of run objects', file=sys.stderr)
             return 2
-        text, ok = ci_budget(runs)
+        try:
+            text, ok = ci_budget(runs)
+        except ValueError as error:
+            print(f'pytest_report: {args.ci_runs}: {error}', file=sys.stderr)
+            return 2
         sys.stdout.write(text)
         return 0 if ok else 1
     if not args.junit:
