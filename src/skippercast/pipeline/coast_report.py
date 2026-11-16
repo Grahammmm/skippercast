@@ -28,7 +28,7 @@ from zoneinfo import ZoneInfo
 
 from .. import http
 from ..platform.contracts import atomic_json
-from ..util.units import FT_PER_M, KT_PER_MS
+from ..util.units import FT_PER_M, KT_PER_MS, M_PER_NMI
 from .coast_snapshots import COUNTY, REGION, _ms, _number, _read
 from .goes_frames import MAX_MS, MIN_MS, iso
 
@@ -44,6 +44,7 @@ DAILY_URL = f"https://raw.githubusercontent.com/Grahammmm/skippercast/data/regio
 CATALOG_URL = "https://github.com/Grahammmm/skippercast/blob/a481da68923649db6fda277af4bd6f40813f6436/catalog/sources.json"
 HOSTS = ("api.weather.gov", "api.tidesandcurrents.noaa.gov", "raw.githubusercontent.com")
 FT, KT, HOUR, DAY = round(FT_PER_M, 9), round(KT_PER_MS, 9), 3_600_000, 86_400_000  # 9 places: the published feed's precision, unchanged
+KMH_PER_KT = M_PER_NMI / 1000  # km/h per knot (1.852 exactly; deliberately unrounded)
 FIELDS = (("windKnots", "windSpeed", "knots"), ("gustKnots", "windGust", "knots"), ("waveFt", "waveHeight", "feet"),
           ("wavePeriodS", "wavePeriod", "seconds"), ("swellFt", "primarySwellHeight", "feet"),
           ("swellPeriodS", "primarySwellPeriod", "seconds"), ("windWaveFt", "windWaveHeight", "feet"),
@@ -95,7 +96,7 @@ def convert(value, uom, target):
     if target == "fahrenheit":
         return value * 1.8 + 32 if unit == "degC" else value if unit == "degF" else None
     if target == "knots" and unit == "km_h-1":
-        return value / 1.852
+        return value / KMH_PER_KT
     scale = UNITS[target].get(unit)
     return None if scale is None or (target == "percent" and not 0 <= value <= 100) else value * scale
 
