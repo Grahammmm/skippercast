@@ -84,6 +84,10 @@ test('a closed dialog\'s late autofill cannot abort Create in the dialog that re
   await expect(page.locator('.account-card')).toHaveCount(0);
   await page.evaluate(() => { location.hash = '#account'; });   // dialog B
   await expect(page.locator('#account-create')).toBeEnabled({timeout: 30_000});
+  // B's options are not held. Let its own autofill reach the native API before Create:
+  // the library awaits another support check internally, so merely receiving B's options
+  // does not mean its ceremony has started. Only A's held answer should race B's Create.
+  await expect.poll(async () => JSON.parse(await page.evaluate(() => sessionStorage.getItem('autofill-log') ?? '[]'))).toEqual([{afterCreate: false}]);
 
   const registering = page.waitForRequest(r => r.url().endsWith('/api/auth/register/options'));
   await page.locator('#account-create').click();
