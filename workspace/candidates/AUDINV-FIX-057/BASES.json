@@ -1,0 +1,23 @@
+{
+  "unit": "AUDINV-FIX-057",
+  "candidate_only": true,
+  "spec_checked_main_sha": "0991fc70d212c9405f7b174950cb3fa4d7c6846d",
+  "builder_base_main_sha": "d75aa3a52",
+  "installed_script": {
+    "path": "/home/user/agent-work/t08a/fresh_admission.py",
+    "sha256": "220027359d9bc8072d7c3d29a30e8b2f9e31bbb126c0531f5d361fc76a8ef6cf",
+    "bytes_lines": 360
+  },
+  "helper": {
+    "name": "supersedes",
+    "nesting": "nested function in the installed script's main flow",
+    "installed_lines": [227, 228],
+    "extraction_method": "sed -n 227,228p, with the 4-space indent removed; AST-located, never imported or run",
+    "snapshot_path": "sources/supersedes.py",
+    "snapshot_sha256": "b758340cc96b86ace19c801b4ed61174888b437c0905f2753b1de51e7b4d1c49"
+  },
+  "fixtures": {
+    "tests/supersedes_fixture.py": "created by the tests; synthetic PRIOR documents are written under pytest tmp_path only"
+  },
+  "note": "Candidate-local hashes must follow changed candidate bytes. Tests read only the snapshot, never the live installed script."
+}
