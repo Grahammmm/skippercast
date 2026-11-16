@@ -60,7 +60,12 @@ def _fresh(at, now, hours):
 
 
 def _number(value):
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:  # an integer too large to convert to float is not an admitted number
+        return False
 
 
 def _frames(data, kind, fields, issued, now):
