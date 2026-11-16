@@ -123,7 +123,7 @@ def pragma_comments(lines):
     rows, comment_only = set(), set()
     try:
         for token in tokenize.generate_tokens(io.StringIO("\n".join(lines) + "\n").readline):
-            if token.type == tokenize.COMMENT and PRAGMA.match(token.string):
+            if token.type == tokenize.COMMENT and PRAGMA.search(token.string):
                 row, col = token.start
                 rows.add(row)
                 if not lines[row - 1][:col].strip():

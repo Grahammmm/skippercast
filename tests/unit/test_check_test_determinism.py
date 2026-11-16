@@ -66,6 +66,14 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(kinds("#" + PRAGMA.lstrip(" #"), NOW), [])
         self.assertEqual(kinds(NOW + "  # determinism-ok:"), ["clock"])  # a reason is required
 
+    def test_pragma_after_another_comment_directive(self):
+        comment = "  # noqa: E501" + PRAGMA
+        for statement in (EPOCH, PORT_KW, PY_ASSERT):
+            with self.subTest(statement=statement):
+                self.assertEqual(kinds(statement + comment), [])
+                self.assertEqual(kinds(comment, statement), [])
+                self.assertEqual(kinds(statement + "  # noqa: E501  # determinism-ok:"), kinds(statement))
+
     def test_fixed_ports_are_flagged_and_port_zero_is_not(self):
         for line in (BIND, HTTP, PORT_KW, PORT_FLAG):
             self.assertEqual(kinds(line), ["port"], line)
