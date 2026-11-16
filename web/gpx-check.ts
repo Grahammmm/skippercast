@@ -25,7 +25,7 @@ const xmlCharacter = (n: number): boolean => n === 9 || n === 10 || n === 13 || 
 export function checkGpx(xml: string, expected: {waypoints: number}, screen?: unknown): {ok: true; screen: PlaceVerdict[]} | {ok: false; problems: string[]; screen: PlaceVerdict[]} {
   const problems: string[] = [], fail = (s: string): void => { if (!problems.includes(s)) problems.push(s); };
   if (!/^<\?xml\s+[^?]*\?>/.test(xml)) fail('Missing XML declaration');
-  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/u.test(xml)) fail('XML-forbidden control character');
+  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/u.test(xml) || /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/.test(xml)) fail('XML-forbidden control character');
   const stack: string[] = [], names = new Set<string>();
   const coordinates: {latitude: number; longitude: number}[] = [];
   let roots = 0, count = 0, cursor = 0, waypoint = false, waypointName = false;
