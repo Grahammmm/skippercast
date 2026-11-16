@@ -194,6 +194,38 @@ def _current(startup: dict, key: str):
     return node if isinstance(node, int) else None
 
 
+class MeasurementError(ValueError):
+    """A supplied --client-measurements file that cannot be trusted; the message names the field."""
+
+
+def _count(value: object, field: str) -> None:
+    if type(value) is not int or value < 0:
+        raise MeasurementError(f"{field} must be a non-negative integer byte count, got {value!r}")
+
+
+def load_client_measurements(path: Path) -> dict:
+    """Read and fully validate check_client.mjs output; raise MeasurementError before anything is proposed or written."""
+    try:
+        meas = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:  # includes JSONDecodeError and UnicodeDecodeError
+        raise MeasurementError(f"cannot read JSON ({type(exc).__name__}: {exc})") from None
+    if not isinstance(meas, dict):
+        raise MeasurementError("root must be a JSON object")
+    for section in ("precache", "bundles"):
+        if section in meas and not isinstance(meas[section], dict):
+            raise MeasurementError(f"{section} must be an object")
+    for name in ("install", "pack_shell"):
+        if name in meas.get("precache", {}):
+            _count(meas["precache"][name], f"precache.{name}")
+    for page, entry in meas.get("bundles", {}).items():
+        if not isinstance(entry, dict):
+            raise MeasurementError(f"bundles.{page} must be an object")
+        for kind in ("js", "css"):
+            if kind in entry:
+                _count(entry[kind], f"bundles.{page}.{kind}")
+    return meas
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=(__doc__ or "").split("\n")[0])
     ap.add_argument("--root", type=Path, default=REPO, help="repository root with the build (dist/client)")
@@ -214,7 +246,13 @@ def main(argv: list[str] | None = None) -> int:
     if not (args.root / cpb.MANIFEST).is_file():
         print(f"Build output missing ({cpb.MANIFEST}). Run `pnpm build` first.")
         return 1
-    meas = json.loads(args.client_measurements.read_text()) if args.client_measurements else None
+    meas = None
+    if args.client_measurements:
+        try:
+            meas = load_client_measurements(args.client_measurements)
+        except MeasurementError as exc:
+            print(f"CLIENT MEASUREMENTS PROBLEM: {args.client_measurements}: {exc}")
+            return 1
     cause = clean_cause(args.cause)
     props = propose(args.root, meas, cause)
     if not props:

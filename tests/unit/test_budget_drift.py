@@ -209,3 +209,111 @@ def test_pull_request_body_names_every_row_and_the_rollback(repo_copy, tmp_path,
     props = bd.propose(tmp_path, {"precache": {"pack_shell": near}}, "abc1234567 A feature")
     body = bd.body_markdown(props, "abc1234567 A feature", tmp_path)
     assert "precache/pack_shell_raw_max" in body and f"{near:,}" in body and "abc1234567 A feature" in body and "Roll back" in body
+
+
+# ---- --client-measurements admission (RF0500-5)
+
+@pytest.fixture
+def cli(repo_copy, tmp_path, monkeypatch):
+    """Isolated CLI: a fake build manifest and a perf measurement far over its budget, so any reached proposal would write."""
+    root = tmp_path / "root"
+    (root / bd.cpb.MANIFEST).parent.mkdir(parents=True)
+    (root / bd.cpb.MANIFEST).write_text("{}")
+    calls = []
+    monkeypatch.setattr(bd.cpb, "measure", lambda r, budget: {n: {"bytes": 10**9, "files": []} for n in budget["budgets"]})
+    monkeypatch.setattr(bd, "propose", lambda *a, **k: calls.append("propose") or [])
+    pack = json.loads(bd.STARTUP_FILE.read_text())["precache"]["pack_shell_raw_max"]
+
+    def run(content, *extra, name="m.json", real_propose=False):
+        if real_propose:
+            monkeypatch.undo()
+            monkeypatch.setattr(bd, "PERF_FILE", repo_copy / "perf-budget.json")
+            monkeypatch.setattr(bd, "STARTUP_FILE", repo_copy / "startup-budget.json")
+            monkeypatch.setattr(bd.cpb, "measure", lambda r, budget: {n: {"bytes": 10**9, "files": []} for n in budget["budgets"]})
+        path = tmp_path / name
+        if isinstance(content, bytes):
+            path.write_bytes(content)
+        elif content is not None:
+            path.write_text(content if isinstance(content, str) else json.dumps(content))
+        before = (bd.PERF_FILE.read_bytes(), bd.STARTUP_FILE.read_bytes())
+        body = tmp_path / "body.md"
+        rc = bd.main(["--root", str(root), "--client-measurements", str(path), "--apply", "--body-out", str(body), *extra])
+        return rc, path, before, body, calls, pack
+    return run
+
+
+BAD_CONTENT = [
+    "null", "[]", "[1]", '""', '"x"', "0", "false", '{"precache":null}', '{"precache":[]}', '{"precache":[1]}', '{"precache":5}',
+    '{"precache":false}', '{"bundles":null}', '{"bundles":[1]}', '{"bundles":true}', '{"bundles":{"app.html":null}}',
+    '{"bundles":{"app.html":[]}}', '{"bundles":{"zzz":5}}', "{bad", "", "{\"precache\":{\"install\":NaN}}",
+    '{"precache":{"install":Infinity}}', b"\xff\xfe\x00",
+]
+BAD_COUNTS = ["null", "true", "false", "-1", '"5"', "1.5", "NaN", "Infinity", "-Infinity"]
+LEAVES = ["precache.install", "precache.pack_shell", "bundles.app.html.js", "bundles.landing.html.css"]
+
+
+def leaf_doc(leaf, raw):
+    if leaf.startswith("precache."):
+        return '{"precache":{"%s":%s}}' % (leaf.split(".", 1)[1], raw)
+    page, kind = leaf[len("bundles."):].rsplit(".", 1)
+    return '{"bundles":{"%s":{"%s":%s}}}' % (page, kind, raw)
+
+
+@pytest.mark.parametrize("content", BAD_CONTENT)
+def test_bad_root_or_shape_exits_1_and_writes_nothing(cli, capsys, content):
+    rc, path, before, body, calls, _ = cli(content)
+    out = capsys.readouterr().out
+    assert rc == 1 and f"CLIENT MEASUREMENTS PROBLEM: {path}:" in out
+    assert calls == [] and "DRIFT" not in out and "No budget drift" not in out and "Traceback" not in out
+    assert (bd.PERF_FILE.read_bytes(), bd.STARTUP_FILE.read_bytes()) == before and not body.exists()
+
+
+@pytest.mark.parametrize("leaf", LEAVES)
+@pytest.mark.parametrize("raw", BAD_COUNTS)
+def test_bad_byte_count_names_the_field(cli, capsys, leaf, raw):
+    rc, path, before, body, calls, _ = cli(leaf_doc(leaf, raw))
+    out = capsys.readouterr().out
+    assert rc == 1 and leaf in out and calls == [] and not body.exists()
+    assert (bd.PERF_FILE.read_bytes(), bd.STARTUP_FILE.read_bytes()) == before
+
+
+def test_invalid_later_entry_after_a_drifting_valid_one_applies_nothing(cli, capsys):
+    pack = json.loads(bd.STARTUP_FILE.read_text())["precache"]["pack_shell_raw_max"]
+    doc = {"precache": {"pack_shell": pack, "install": "9"}}
+    rc, path, before, body, calls, _ = cli(doc, real_propose=True)
+    assert rc == 1 and "precache.install" in capsys.readouterr().out and not body.exists()
+    assert (bd.PERF_FILE.read_bytes(), bd.STARTUP_FILE.read_bytes()) == before
+
+
+def test_existing_body_file_is_untouched_on_failure(cli, tmp_path, capsys):
+    (tmp_path / "body.md").write_text("old body")
+    rc, *_ = cli("[1]")
+    assert rc == 1 and (tmp_path / "body.md").read_text() == "old body"
+
+
+def test_unreadable_inputs_report_without_traceback(cli, tmp_path, capsys):
+    (tmp_path / "adir").mkdir()
+    for name in ("missing.json", "adir"):
+        rc, path, *_ = cli(None, name=name)
+        out = capsys.readouterr().out
+        assert rc == 1 and f"CLIENT MEASUREMENTS PROBLEM: {path}:" in out and "Traceback" not in out
+
+
+@pytest.mark.parametrize("content", ["{}", '{"precache":{},"bundles":{}}', '{"bundles":{"unknown.html":{}}}',
+                                      '{"precache":{"install":0},"meta":{"x":null},"extra":[1]}',
+                                      '{"bundles":{"app.html":{"js":0}}}'])
+def test_valid_partial_measurements_are_accepted(cli, content):
+    rc, path, _, _, calls, _ = cli(content)
+    assert rc == 0 and calls == ["propose"]
+
+
+def test_valid_measurement_still_proposes_and_raises(cli, capsys):
+    pack = json.loads(bd.STARTUP_FILE.read_text())["precache"]["pack_shell_raw_max"]
+    rc, *_ = cli({"precache": {"pack_shell": pack}}, real_propose=True)
+    out = capsys.readouterr().out
+    assert rc == 0 and "DRIFT precache/pack_shell_raw_max" in out and "Applied" in out
+
+
+def test_check_ignores_a_bad_measurements_path(tmp_path, capsys):
+    assert bd.main(["--check", "--client-measurements", str(tmp_path / "nope.json")]) == 0
+    assert "consistent" in capsys.readouterr().out
