@@ -10,6 +10,7 @@ import gzip
 import hashlib
 import json
 import sys
+import zlib
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -18,15 +19,35 @@ from skippercast.seafloor.protected_screen import stamp  # noqa: E402
 from skippercast.seafloor.slim import write_slim  # noqa: E402
 
 
-def main():
+def _positive(text):
+    try:
+        n = int(text)
+    except ValueError:
+        n = 0
+    if n < 1:
+        raise argparse.ArgumentTypeError('must be a whole number of 1 or more')
+    return n
+
+
+def _read_export(name, path):
+    try:
+        raw = Path(path).read_bytes()
+        data = json.loads(gzip.decompress(raw) if path.endswith('.gz') else raw)
+        if not isinstance(data, dict) or not isinstance(data.get('features'), list):
+            raise ValueError('not an object with a features list')
+    except (OSError, EOFError, ValueError, zlib.error) as e:     # BadGzipFile and JSONDecodeError are subclasses
+        sys.exit(f'{name}: cannot read export {path}: {e}')
+    return data
+
+
+def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument('export')
     ap.add_argument('out')
     ap.add_argument('--region', default='morro-bay')
-    ap.add_argument('--limit', type=int)
-    a = ap.parse_args()
-    raw = Path(a.export).read_bytes()
-    data = json.loads(gzip.decompress(raw) if a.export.endswith('.gz') else raw)
+    ap.add_argument('--limit', type=_positive)
+    a = ap.parse_args(argv)
+    data = _read_export('reef_slim_build', a.export)
     if a.limit:
         data['features'] = data['features'][:a.limit]
     out = Path(a.out)
