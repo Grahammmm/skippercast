@@ -164,8 +164,14 @@ def _check_references(schema):
     $schema are identifiers, not fetch instructions. Keywords inside data
     positions such as const/enum are refused conservatively as well.
     """
-    anchors = {node[key] for _, node in _walk(schema) if isinstance(node, dict)
-               for key in ANCHOR_KEYWORDS if isinstance(node.get(key), str)}
+    anchors = {}    # anchor name -> location of the one node declaring it
+    for parts, node in _walk(schema):
+        if not isinstance(node, dict):
+            continue
+        for key in ANCHOR_KEYWORDS:
+            if isinstance(node.get(key), str):
+                if anchors.setdefault(node[key], parts) != parts:
+                    raise RecipeError(NOT_ADMITTED + 'duplicate anchor at ' + _location(parts + (key,)))
     admitted = []
     for parts, node in _walk(schema):
         if not isinstance(node, dict):
