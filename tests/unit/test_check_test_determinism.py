@@ -249,6 +249,18 @@ class DiffModeTest(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("::error file=tests/unit/test_wrapped.py,line=5,title=Deterministic-test lint (port)", out)
 
+    def test_a_file_removed_between_the_walk_and_the_read_is_skipped(self):
+        # Parallel tests create and delete temporary files under tests/; the whole-tree scan must not crash on one.
+        real = lint.test_files
+
+        def with_vanished():
+            yield "tests/unit/test_vanished_by_a_parallel_worker.py"
+            yield from real()
+
+        with mock.patch.object(lint, "ROOT", str(self.root)), mock.patch.object(lint, "test_files", with_vanished):
+            code, out = self.run_lint()
+        self.assertEqual(code, 0, out)
+
     def test_an_unresolvable_base_fails_closed(self):
         code, out = self.run_lint("--base", "no-such-ref")
         self.assertEqual(code, 2, out)
