@@ -179,7 +179,7 @@ def main():
         if path.suffix == ".md":
             for raw in LINK.findall(text):
                 url = urlsplit(raw.strip("<>"))
-                if url.scheme or not url.path:
+                if url.scheme or url.netloc or not url.path:
                     continue
                 target = (path.parent / unquote(url.path)).resolve()
                 if not target.is_relative_to(ROOT) or not target.exists():

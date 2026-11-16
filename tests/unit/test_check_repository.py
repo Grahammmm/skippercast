@@ -257,5 +257,58 @@ class RepositoryTests(unittest.TestCase):
             self.assertNotIn(UNLISTED, printed)
 
 
+class MarkdownLinkTests(unittest.TestCase):
+    def run_main(self, readme, files=('guide.md', 'a b.md')):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'root'
+            (root / 'catalog/advisor').mkdir(parents=True)
+            (root / check_repository.FIXTURE_HANDLES).write_bytes((ROOT / check_repository.FIXTURE_HANDLES).read_bytes())
+            for name in files:
+                (root / name).write_text('ok\n')
+            (root / 'README.md').write_text(readme)
+            (Path(tmp) / 'outside.md').write_text('x\n')
+            with mock.patch.object(check_repository, 'ROOT', root), mock.patch('sys.stderr') as err, mock.patch('sys.stdout'):
+                code = check_repository.main()
+            return code, ''.join(str(c.args[0]) for c in err.write.call_args_list if c.args)
+
+    def test_network_path_links_are_external(self):
+        for dest in ('//docs.example.test/guide.md', '//docs.example.test/deep/missing.md?view=1#part',
+                     '<//docs.example.test/deep/missing.md>', 'https://docs.example.test/deep/missing.md'):
+            with self.subTest(dest=dest):
+                code, printed = self.run_main(f'[x]({dest})\n')
+                self.assertEqual((code, printed), (0, ''))
+
+    def test_local_links_still_checked(self):
+        self.assertEqual(self.run_main('[g](guide.md)\n')[0], 0)
+        code, printed = self.run_main('[m](missing.md)\n')
+        self.assertEqual(code, 1)
+        self.assertIn('README.md: missing or external local link missing.md', printed)
+        code, printed = self.run_main('[n](//docs.example.test/g.md) [m](missing.md)\n')
+        self.assertEqual(code, 1)
+        self.assertIn('link missing.md', printed)
+        self.assertNotIn('docs.example.test', printed)
+
+    def test_root_relative_and_parent_escape_are_not_external(self):
+        code, printed = self.run_main('[g](/guide.md)\n')
+        self.assertEqual(code, 1)
+        self.assertIn('link /guide.md', printed)
+        code, printed = self.run_main('[o](../outside.md)\n')
+        self.assertEqual(code, 1)
+        self.assertIn('link ../outside.md', printed)
+
+    def test_empty_fragment_and_encoded_local_controls(self):
+        self.assertEqual(self.run_main('[a]() [b](#section) [c](a%20b.md)\n')[0], 0)
+        code, printed = self.run_main('[c](no%20such.md)\n')
+        self.assertEqual(code, 1)
+        self.assertIn('link no%20such.md', printed)
+
+    def test_external_link_does_not_disable_privacy_scan(self):
+        secret = 'ghp_' + 'A1b2' * 8
+        code, printed = self.run_main(f'[n](//docs.example.test/g.md)\n{secret}\n')
+        self.assertEqual(code, 1)
+        self.assertIn('README.md: possible GitHub credential', printed)
+        self.assertNotIn(secret, printed)
+
+
 if __name__ == '__main__':
     unittest.main()
