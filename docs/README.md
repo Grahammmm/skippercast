@@ -59,6 +59,7 @@ Dated audit, rollout, source-request and review records live in [archive/](archi
 | [engineering/api-reference.md](engineering/api-reference.md) | Every HTTP route the Worker answers, with examples |
 | [engineering/telemetry.md](engineering/telemetry.md) | Client funnel events and error reports: what is sent, when nothing is, retention |
 | [engineering/testing.md](engineering/testing.md) | Test layers, what each covers and how to add a fixture |
+| [engineering/subsystem-retirement.md](engineering/subsystem-retirement.md) | 19-01 candidate-only ownership, migration hashes and held runtime facts |
 | [engineering/adr/](engineering/adr/README.md) | Architecture decision records |
 | [plans/text-advisor/](plans/text-advisor/README.md) | Build plan for the Text Advisor (iMessage/SMS fishing advisor, skipper intake, social pipeline, admin): decisions, architecture, data model, task breakdown |
 | [plans/pelagic-context/design.md](plans/pelagic-context/design.md) | Design only: per-species pelagic context that follows the selected hour, with no score, and the validation test any search priority must pass first |
