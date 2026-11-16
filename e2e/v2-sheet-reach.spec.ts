@@ -178,6 +178,10 @@ test('sheet_padding_does_not_relayout_drag_or_change_peek_policy: height and edg
 for (const [width, height] of SIZES) {
   test(`day_chips_pinned_in_hour_strip: ${width}x${height} one control, in view at half and full, a tap changes the day and not the scroll`, async ({page, pageErrors, isMobile}) => {
     test.skip(!isMobile, 'phone layout only');
+    // A day tap is a dock preview that the shared hour clock drops when the UTC hour turns before it settles
+    // (web/dock-selection.ts observe). Real time let a tap at hh:59:59 vanish (main run 43853535925), so the
+    // clock is pinned mid-hour on an ordinary day, as v2-shell's HOUR_CASES do.
+    await page.clock.setFixedTime(new Date('2026-10-12T19:30:00Z'));
     await openSignedOut(page, width, height);
     const days = page.locator('[role="group"][aria-label="Day"]');
     await expect(days, 'exactly one day control on the phone page').toHaveCount(1);

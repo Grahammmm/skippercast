@@ -27,7 +27,8 @@ const localHour = (ms: number, tz: string) =>
 export function disagreements(forecast: ConditionsForecast, now: Date, tz: string, days = 3): Disagreement[] {
   const {times: listed, read} = feedReader(forecast, now), today = dateKey(now, tz), out: Disagreement[] = [];
   // A finite epoch can still be outside the Date range (or overflow to Infinity in ms): skip just that hour.
-  const times = listed.filter(ms => finite(ms) && Number.isFinite(new Date(ms).getTime()));
+  // Distinct instants only: a repeated clock entry must not count one independent model sample twice.
+  const times = [...new Set(listed.filter(ms => finite(ms) && Number.isFinite(new Date(ms).getTime())))];
   for (let i = 0; i < days; i++) {
     const date = new Date(Date.parse(`${today}T12:00:00Z`) + i * DAY).toISOString().slice(0, 10);
     const rows = times.filter(ms => dateKey(new Date(ms), tz) === date && localHour(ms, tz) >= DEFAULT_START_HOUR && localHour(ms, tz) < WINDOW_END_HOUR)

@@ -10,6 +10,7 @@ caches and brief propagation; any other outcome exits non-zero.
 """
 import argparse
 import json
+import math
 import sys
 import time
 from urllib.parse import urlsplit, urlunsplit, urlencode
@@ -67,6 +68,8 @@ def main(argv=None):
     parser.add_argument('--attempts', type=int, default=8)
     parser.add_argument('--delay', type=float, default=15.0, help='seconds between attempts')
     args = parser.parse_args(argv)
+    if not math.isfinite(args.delay) or args.delay < 0:
+        parser.error('--delay must be finite and non-negative')
     ok, message = verify(args.url, args.run_id, args.published_at or None, attempts=args.attempts, delay=args.delay)
     if ok:
         print(f'Verified: {message}')

@@ -66,6 +66,14 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(kinds("#" + PRAGMA.lstrip(" #"), NOW), [])
         self.assertEqual(kinds(NOW + "  # determinism-ok:"), ["clock"])  # a reason is required
 
+    def test_pragma_after_another_comment_directive(self):
+        comment = "  # noqa: E501" + PRAGMA
+        for statement in (EPOCH, PORT_KW, PY_ASSERT):
+            with self.subTest(statement=statement):
+                self.assertEqual(kinds(statement + comment), [])
+                self.assertEqual(kinds(comment, statement), [])
+                self.assertEqual(kinds(statement + "  # noqa: E501  # determinism-ok:"), kinds(statement))
+
     def test_fixed_ports_are_flagged_and_port_zero_is_not(self):
         for line in (BIND, HTTP, PORT_KW, PORT_FLAG):
             self.assertEqual(kinds(line), ["port"], line)
@@ -140,6 +148,34 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(kinds("s.bind((", "    '127.0.0.1', " + PORT_NUMBER + ",", "))" + PRAGMA), [])
         self.assertEqual(kinds("# determinism-ok: fixed on purpose", "s.bind((", "    '127.0.0.1', " + PORT_NUMBER + ",", "))"), [])
 
+    def test_a_string_holding_the_marker_is_not_a_pragma(self):
+        text = "# determinism-ok: example"
+        strings = ['"' + text + '"', "'" + text + "'", 'r"' + text + '"', 'b"' + text + '"',
+                   '"""' + text + '"""', 'f"' + text + ' {n}"']
+        for literal in strings:
+            self.assertEqual(kinds(EPOCH + "; note = " + literal), ["clock"], literal)
+            self.assertEqual(kinds("note = " + literal, EPOCH), ["clock"], literal)
+            self.assertEqual(kinds(PORT_KW + "; note = " + literal), ["port"], literal)
+            self.assertEqual(kinds(PY_ASSERT + "; note = " + literal), ["version"], literal)
+        self.assertEqual(kinds(EPOCH + "; note = '" + text + "'" + PRAGMA), [])  # a real comment still exempts
+
+    def test_real_comments_keep_their_scope(self):
+        self.assertEqual(kinds("def f():", "    # determinism-ok: indented reason", "    " + NOW), [])
+        self.assertEqual(kinds("x = foo(", "    " + NOW + ",", "    1,  # determinism-ok: wrapped reason", ")"), [])
+        self.assertEqual(kinds(NOW + "  # determinism-ok: ab"), ["clock"])  # too short a reason
+        self.assertEqual(kinds("x = 1  # determinism-ok: trailing on the previous statement", NOW), ["clock"])
+        self.assertEqual(kinds("# determinism-ok: a blank line breaks the scope", "", NOW), ["clock"])
+
+    def test_marker_text_in_an_embedded_script_does_not_hide_its_clock_reads(self):
+        script = ["SCRIPT = '''", "# determinism-ok: inside the string", EPOCH, "'''"]
+        self.assertEqual(classify_spans(script), [(3, 3, "clock")])
+        self.assertEqual(classify_spans(script[:-1] + [script[-1] + PRAGMA]), [])
+
+    def test_a_tokenizer_failure_is_not_a_blanket_allow(self):
+        text = "# determinism-ok: example"
+        self.assertEqual(kinds("note = '" + text + "'; " + EPOCH, "broken = (", "  1"), ["clock"])
+        self.assertEqual(kinds(EPOCH + PRAGMA, NOW, "broken = ("), ["clock"])  # the real comment keeps its own line only
+
 
 class DiffModeTest(unittest.TestCase):
     def setUp(self):
@@ -200,6 +236,22 @@ class DiffModeTest(unittest.TestCase):
         self.write("tests/unit/test_new.py", [NOW + PRAGMA])
         self.git("add", "-A")
         self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "pragma")
+        code, out = self.run_lint("--base", "HEAD^1")
+        self.assertEqual(code, 0, out)
+
+    def test_a_marker_string_cannot_bypass_diff_mode(self):
+        self.write("tests/unit/test_new.py", [EPOCH + "; note = '# determinism-ok: example'"])
+        self.git("add", "-A")
+        self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "string")
+        code, out = self.run_lint("--base", "HEAD^1")
+        self.assertEqual(code, 1, out)
+        self.assertIn("::error file=tests/unit/test_new.py,line=1", out)
+        code, out = self.run_lint("--base", "HEAD^1", "--warn-only")
+        self.assertEqual(code, 0, out)
+        self.assertIn("::warning file=tests/unit/test_new.py,line=1", out)
+        self.write("tests/unit/test_new.py", [EPOCH + "; note = 'x'" + PRAGMA])
+        self.git("add", "-A")
+        self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "comment")
         code, out = self.run_lint("--base", "HEAD^1")
         self.assertEqual(code, 0, out)
 
