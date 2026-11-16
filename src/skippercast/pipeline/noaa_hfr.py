@@ -12,7 +12,7 @@ from scipy.io import netcdf_file
 
 def _numeric_values(variable):
     """Mask declared numeric sentinels in the stored domain before qualification."""
-    raw = variable[:].copy()
+    raw = variable[...].copy()
     missing = np.zeros(raw.shape, dtype=bool)
     for attr in ("_FillValue", "missing_value"):
         markers = np.asarray(getattr(variable, attr, []))
@@ -113,7 +113,7 @@ def read_subset(body, bounds, expected_time, resolution):
                              "number_of_sites": sites, "hdop": dilution})
         if not rows:
             raise ValueError("Empty NOAA HFRNet subset")
-        depth = nc.variables["depth"].data
+        depth = _numeric_values(nc.variables["depth"])
         if depth.size != 1 or not math.isfinite(float(depth.flat[0])):
             raise ValueError("NOAA HFRNet depth changed")
         valid_count = sum(r["water_u"] is not None and r["water_v"] is not None for r in rows)

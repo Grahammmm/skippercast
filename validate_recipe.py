@@ -390,10 +390,12 @@ def main(argv=None):
         try:
             result = validate_recipe(read_json(path), workspace_root=args.workspace_root,
                                      metadata_root=args.metadata_root)
-        except (ValueError, OSError, KeyError, TypeError) as error:
+        except (ValueError, OSError, KeyError, TypeError, RecursionError) as error:
             failed = True
+            message = ('input nesting exceeds supported depth'
+                       if isinstance(error, RecursionError) else str(error))
             result = {'path': str(path), 'status': 'INVALID', 'valid': False,
-                      'error': str(error), 'semantic_approval': False, 'execution_allowed': False}
+                      'error': message, 'semantic_approval': False, 'execution_allowed': False}
         results.append(result)
     print(json.dumps(results, sort_keys=True, allow_nan=False))
     return 1 if failed else 0

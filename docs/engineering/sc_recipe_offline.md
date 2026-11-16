@@ -77,11 +77,13 @@ The committed v1 schema bytes, its constraints, the optional dependency policy
 and `validate.check` (not used here) are unchanged.
 
 The recipe-delta acceptance test and runner pin the hardened `validate_recipe.py`
-<!-- pin refreshed for OC-STATE slug admission and RF0410-4 duplicate anchor identity -->
-bytes (`137fae283cfca2d194956d33e2680a556e98f99fc1ede3dd8f972c0f91715116`)
+<!-- pin refreshed for OC-STATE slug admission, RF0410-3 nesting containment and RF0410-4 duplicate anchor identity -->
+bytes (`b05b9981ea27c72ccd6c873cc64848a61b06ca2e5185c5042afb7e839427a689`)
 in place of their original producer pin. This is an intentional producer revision,
 not a change to the frozen recipe/schema fixtures or their pins. The delta
 behavior and producer-contract tests still run against the actual validator.
+JSON nested beyond the interpreter's recursion limit yields an INVALID row
+(`input nesting exceeds supported depth`) and the CLI continues with the next recipe.
 
 ## Tests and acceptance
 
