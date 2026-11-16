@@ -47,16 +47,21 @@ Before final validation, separate `git fetch origin` and
 `git merge --no-edit --signoff origin/main` succeeded (already up to date).
 Remote main and local origin/main both resolved to the frozen base above.
 
-## Executed acceptance (full stdout/stderr)
+## Executed acceptance (stdout/stderr; local roots normalized)
+
+Local absolute roots in the historical commands, cwd labels and warnings below
+are represented by `${CANDIDATE_ROOT}` (that run's clone root) and `${AGENT_WORK}`
+(the local operator-tool directory). Only those path prefixes are normalized;
+command arguments, test results and other output are unchanged.
 
 Every command below ran from the same candidate clone. The provisioned venv
 imports this clone's src (worktree-env verified it); no installed-source fallback.
 The memcap wrapper keeps every test/check within the existing 8G cap.
 
 
-### `/home/user/agent-work/bin/memcap -- .venv/bin/python -m pytest -q tests/gis/test_coastal_saved_area_scope_grid.py tests/gis/test_coastal_saved_area_native_grid.py tests/unit/test_coastal_saved_area_horizon.py tests/unit/test_coastal_saved_area_paths.py tests/unit/test_coastal_governed_discovery_deadline.py`
+### `${AGENT_WORK}/bin/memcap -- .venv/bin/python -m pytest -q tests/gis/test_coastal_saved_area_scope_grid.py tests/gis/test_coastal_saved_area_native_grid.py tests/unit/test_coastal_saved_area_horizon.py tests/unit/test_coastal_saved_area_paths.py tests/unit/test_coastal_governed_discovery_deadline.py`
 
-Cwd: `/home/user/.hermes/kanban/boards/skippercast/workspaces/t_c8c9714d/repo`
+Cwd: `${CANDIDATE_ROOT}`
 
 Exit: 0
 
@@ -66,15 +71,15 @@ stdout:
 ................................................            [100%]
 =============================== warnings summary ===============================
 tests/gis/test_coastal_saved_area_scope_grid.py::test_final_pin_uses_a_row_not_whole_block_upper_left
-  /home/user/.hermes/kanban/boards/skippercast/workspaces/t_c8c9714d/repo/tests/gis/test_coastal_saved_area_scope_grid.py:56: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+  ${CANDIDATE_ROOT}/tests/gis/test_coastal_saved_area_scope_grid.py:56: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
     assert tuple(full * Affine.translation(*FINAL[:2]))[:6] == saved_area.STRICT_FINAL_A['transform']
 
 tests/gis/test_coastal_saved_area_scope_grid.py::test_final_pin_uses_a_row_not_whole_block_upper_left
-  /home/user/.hermes/kanban/boards/skippercast/workspaces/t_c8c9714d/repo/tests/gis/test_coastal_saved_area_scope_grid.py:57: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+  ${CANDIDATE_ROOT}/tests/gis/test_coastal_saved_area_scope_grid.py:57: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
     assert tuple(full * Affine.translation(3762, 3360))[:6] != saved_area.STRICT_FINAL_A['transform']
 
 tests/gis/test_coastal_saved_area_scope_grid.py::test_final_pin_uses_a_row_not_whole_block_upper_left
-  /home/user/.hermes/kanban/boards/skippercast/workspaces/t_c8c9714d/repo/tests/gis/test_coastal_saved_area_scope_grid.py:60: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+  ${CANDIDATE_ROOT}/tests/gis/test_coastal_saved_area_scope_grid.py:60: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
     final_facts['header']['transform'] = list(full * Affine.translation(3762, 3360))[:6]
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
@@ -85,9 +90,9 @@ stderr:
 ```text
 ```
 
-### `/home/user/agent-work/bin/memcap -- .venv/bin/python -m unittest tests.contract.test_test_layout tests.contract.test_research_boundary -v`
+### `${AGENT_WORK}/bin/memcap -- .venv/bin/python -m unittest tests.contract.test_test_layout tests.contract.test_research_boundary -v`
 
-Cwd: `/home/user/.hermes/kanban/boards/skippercast/workspaces/t_c8c9714d/repo`
+Cwd: `${CANDIDATE_ROOT}`
 
 Exit: 0
 
@@ -120,9 +125,9 @@ Ran 16 tests in 8.052s
 OK
 ```
 
-### `/home/user/agent-work/bin/memcap -- python3 /home/user/agent-work/bin/sc-ci-local-check.py /home/user/.hermes/kanban/boards/skippercast/workspaces/t_c8c9714d/repo`
+### `${AGENT_WORK}/bin/memcap -- python3 ${AGENT_WORK}/bin/sc-ci-local-check.py ${CANDIDATE_ROOT}`
 
-Cwd: `/home/user/.hermes/kanban/boards/skippercast/workspaces/t_c8c9714d/repo`
+Cwd: `${CANDIDATE_ROOT}`
 
 Exit: 0
 
@@ -138,9 +143,9 @@ stderr:
 ```text
 ```
 
-### `/home/user/agent-work/bin/memcap -- .venv/bin/python scripts/check_e2e_pins.py`
+### `${AGENT_WORK}/bin/memcap -- .venv/bin/python scripts/check_e2e_pins.py`
 
-Cwd: `/home/user/.hermes/kanban/boards/skippercast/workspaces/t_c8c9714d/repo`
+Cwd: `${CANDIDATE_ROOT}`
 
 Exit: 0
 
@@ -153,9 +158,9 @@ stderr:
 ```text
 ```
 
-### `/home/user/agent-work/bin/memcap -- .venv/bin/python scripts/check_test_determinism.py --base origin/main`
+### `${AGENT_WORK}/bin/memcap -- .venv/bin/python scripts/check_test_determinism.py --base origin/main`
 
-Cwd: `/home/user/.hermes/kanban/boards/skippercast/workspaces/t_c8c9714d/repo`
+Cwd: `${CANDIDATE_ROOT}`
 
 Exit: 0
 
@@ -186,9 +191,9 @@ stderr:
 ```text
 ```
 
-### `/home/user/agent-work/bin/memcap -- .venv/bin/python -m ruff check src/skippercast/coastal/coordinator/saved_area.py`
+### `${AGENT_WORK}/bin/memcap -- .venv/bin/python -m ruff check src/skippercast/coastal/coordinator/saved_area.py`
 
-Cwd: `/home/user/.hermes/kanban/boards/skippercast/workspaces/t_c8c9714d/repo`
+Cwd: `${CANDIDATE_ROOT}`
 
 Exit: 0
 
@@ -203,7 +208,7 @@ stderr:
 
 ### `git diff --check`
 
-Cwd: `/home/user/.hermes/kanban/boards/skippercast/workspaces/t_c8c9714d/repo`
+Cwd: `${CANDIDATE_ROOT}`
 
 Exit: 0
 
