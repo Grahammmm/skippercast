@@ -33,7 +33,7 @@ with open(os.path.join(ROOT, "pyproject.toml"), "rb") as _handle:
     TEST_DIRS = tuple(tomllib.load(_handle)["tool"]["pytest"]["ini_options"]["testpaths"])
 PRAGMA = re.compile(r"#\s*determinism-ok:\s*\S{3,}")
 
-CLOCK = re.compile(r"\b(?:datetime|date)\.(?:now|utcnow|today)\(|\btime\.(?:time|time_ns)\(")
+CLOCK = re.compile(r"\b(?:datetime|date)\.(?:now|utcnow|today)\s*\(|\btime\.(?:time|time_ns)\s*\(")
 _CLOCK_NAMES = r"(?:time|time_ns|datetime|date|clock|now|utcnow|today)"
 # Freeze evidence is read from code only (comments, docstrings and string contents are blanked), so a comment such as
 # "do not use freezegun" excuses nothing; a patch counts only when its TARGET is a clock (patch("time.sleep") is not).
