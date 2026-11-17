@@ -4,11 +4,12 @@
 // advisor, alerts and offline notes read, and adds `display` metadata: the same branches as a finite list
 // of app phrases. This adapter, used only by the brief page, says those phrases from the catalogue. It
 // never parses the English line, so a station, buoy or site name (a `literal` part) is never translated.
-// English returns the original string untouched.
+// English with the default wind unit returns the original string untouched.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import {num, t, type Language, type StringId} from '../i18n.ts';
 import {ageText} from '../confidence.ts';
+import {WIND_SPEED} from '../units.ts';
 import type {BriefTile, GapDisplay, SourceGap, TileDetailPart} from './types.ts';
 
 const SEP = ' · ';
@@ -24,10 +25,11 @@ const band = (value: string, lang: Language) => t(BAND[lower(value)]!, lang);
 const side = (value: 'onshore' | 'offshore' | 'cross-shore', lang: Language) => t(SIDE[value], lang);
 
 /** One part of a detail line, said in `lang`. */
-export function partText(part: TileDetailPart, lang: Language): string {
+export function partText(part: TileDetailPart, lang: Language, wind: keyof typeof WIND_SPEED = 'kt'): string {
   switch (part.kind) {
     case 'literal': return part.text;
-    case 'gust': return part.value === null ? t('tile.detail.unknownGust', lang) : t('tile.detail.gust', lang, {value: num(part.value, lang)});
+    case 'gust': return part.value === null ? t('tile.detail.unknownGust', lang) : t('tile.detail.gust', lang, {
+      value: num(part.value * WIND_SPEED[wind].factor, lang, wind === 'kt' ? 1 : 0), unit: WIND_SPEED[wind].label});
     case 'direction': return t('tile.detail.direction', lang, {direction: part.value});
     case 'windSide': return side(part.side, lang);
     case 'kayakWind': return part.side ? t('tile.detail.kayakWindSide', lang, {band: band(part.band, lang), side: side(part.side, lang)}) : band(part.band, lang);
@@ -51,10 +53,10 @@ export function partText(part: TileDetailPart, lang: Language): string {
   }
 }
 
-/** The line under a tile's reading. English (and a tile without display metadata) is the model's own `.detail`. */
-export function tileDetailText(tile: BriefTile, lang: Language = 'en'): string {
-  if (lang === 'en' || !tile.display) return tile.detail;
-  return tile.display.parts.map(part => partText(part, lang)).filter(Boolean).join(SEP);
+/** The line under a tile's reading; keep the original when no translation or conversion is needed. */
+export function tileDetailText(tile: BriefTile, lang: Language = 'en', wind: keyof typeof WIND_SPEED = 'kt'): string {
+  if (!tile.display || (lang === 'en' && wind === 'kt')) return tile.detail;
+  return tile.display.parts.map(part => partText(part, lang, wind)).filter(Boolean).join(SEP);
 }
 
 /** The tide series' empty wording (web/tides.ts TIDE_UNAVAILABLE and TIDE_NO_CURVE); the sparkline reads it in SC1137-03. */

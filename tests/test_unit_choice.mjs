@@ -19,6 +19,7 @@ async function load(raw = null, blocked = false) {
       export {fToC} from './web/units.ts';
       export {Tiles, tileProps, emptyTiles} from './web/brief/Tiles.tsx';
       export {UnitChoice} from './web/app/UnitChoice.tsx';
+      export {hourlyCells, overLimits} from './web/hourly-table.ts';
       export {language} from './web/i18n.ts';
       export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent',
@@ -47,7 +48,7 @@ test('units_default_fahrenheit and remembered choice, duplicate selection and sw
   try {
     assert.equal(m.units.value.temp, 'F'); assert.equal(m.tileProps(water(59.9)).reading, '59.9');
     assert.equal(m.tileProps(water()).unit, '°F');
-    m.setUnits({temp: 'C'}); m.setUnits({temp: 'C'}); assert.equal(saved.get(KEY), '{"temp":"C"}');
+    m.setUnits({temp: 'C'}); m.setUnits({temp: 'C'}); assert.equal(saved.get(KEY), '{"temp":"C","wind":"kt"}');
     const reloaded = await load(saved.get(KEY));
     try { assert.equal(reloaded.m.units.value.temp, 'C'); } finally { reloaded.restore(); }
     m.setUnits({temp: 'F'}); assert.equal(m.tileProps(water()).reading, '59');
@@ -74,5 +75,61 @@ test('units_missing_reading and units_spanish_decimal: empty and numeric reading
     assert.ok(html.includes('Temperatura') && html.includes('aria-pressed="true"') && html.includes('°C'));
     const account = await readFile(join(ROOT, 'web/app/AccountMenu.tsx'), 'utf8');
     assert.match(account, /<LanguageChoice\s*\/>\s*<UnitChoice\s*\/>/);
+  } finally { restore(); }
+});
+
+test('wind_tile_mph: stale readings convert in full and compact tiles; missing gusts stay unknown', async () => {
+  const {m, restore} = await load();
+  const wind = Object.freeze({...water(10, 'stale'), id: 'wind', unit: 'kt', detail: 'gust 15 kt · from NW',
+    display: {parts: [{kind: 'gust', value: 15}, {kind: 'direction', value: 'NW'}]}});
+  try {
+    m.setUnits({wind: 'mph'});
+    for (const compact of [false, true]) {
+      const p = m.tileProps(wind, compact);
+      assert.equal(`${p.reading} ${p.unit}`, '12 mph'); assert.equal(p.stale, true);
+      assert.equal(p.detail, compact ? undefined : 'gust 17 mph · from NW');
+    }
+    assert.equal(m.tileProps(wind, false, false, 'es').detail, 'ráfaga 17 mph · desde NW');
+    const missing = m.tileProps({...wind, value: null, display: {parts: [{kind: 'gust', value: null}]}});
+    assert.equal(missing.reading, '—'); assert.equal(missing.detail, 'gust unknown');
+    assert.equal(m.emptyTiles(false)[0].unit, 'mph');
+    m.setUnits({wind: 'kt'}); assert.equal(m.tileProps(wind).detail, wind.detail);
+  } finally { restore(); }
+});
+
+const windRow = Object.freeze({wind: 10, windFrom: 315, gust: 15, seas: 2, swell: {h: null}, second: {h: null},
+  chop: {h: null}, tide: null, visibilityMi: null, score: null});
+test('wind_hourly_kmh and wind_default_knots: only the wind and gust cells change', async () => {
+  const {m, restore} = await load();
+  try {
+    assert.equal(m.hourlyCells(windRow).join('|'), '10 kt from NW|15 kt|2.0 ft|—|—|—|—|—|—');
+    assert.equal(m.hourlyCells(windRow, 'en', 'kmh').join('|'), '19 km/h from NW|28 km/h|2.0 ft|—|—|—|—|—|—');
+    assert.equal(m.hourlyCells({...windRow, wind: null, gust: null}, 'es', 'kmh').slice(0, 2).join('|'), '—|—');
+  } finally { restore(); }
+});
+
+test('wind_limits_unchanged: 16 kt exceeds 15 kt in every display unit, but 15 kt does not', async () => {
+  const {m, restore} = await load();
+  try {
+    for (const wind of ['kt', 'mph', 'kmh']) {
+      m.setUnits({wind});
+      assert.equal(m.overLimits({...windRow, wind: 16}, {wind: 15}).wind, true);
+      assert.equal(m.overLimits({...windRow, wind: 15}, {wind: 15}).wind, false);
+    }
+  } finally { restore(); }
+});
+
+test('wind preference migration, invalid and duplicate choices, and the Spanish control', async () => {
+  const {m, saved, restore} = await load('{"temp":"C"}');
+  try {
+    assert.equal(m.units.value.wind, 'kt');
+    m.setUnits({wind: 'kmh'}); m.setUnits({wind: 'kmh'}); m.setUnits({wind: 'm/s'});
+    assert.equal(m.units.value.wind, 'kmh'); assert.equal(m.units.value.temp, 'C');
+    m.language.value = 'es';
+    assert.match(m.render(m.h(m.UnitChoice)), /Velocidad del viento.*aria-pressed="true"[^>]*>km\/h/);
+    const reloaded = await load(saved.get(KEY));
+    try { assert.equal(reloaded.m.units.value.wind, 'kmh'); } finally { reloaded.restore(); }
+    const bad = await load('{"temp":"C","wind":"m/s"}');
+    try { assert.equal(bad.m.units.value.wind, 'kt'); assert.equal(bad.m.units.value.temp, 'C'); } finally { bad.restore(); }
   } finally { restore(); }
 });
