@@ -62,8 +62,8 @@ export async function readLogPage(cursor = null) {
 
 // A deliberate CSV export is complete only at an explicit final page (at most 2,000 route rows).
 export const CSV_PAGE_CAP = 10;
-const csvFailure = () => Error('incomplete catch log');
-const csvTripsFailure = () => Object.assign(Error('unreadable trip dates'), {csvTrips: true});
+const csvFailure = () => Error();
+const csvTripsFailure = () => Object.assign(Error(), {csvTrips: true});
 function validateCsvEntry(row) {
   if (!row || typeof row.id !== 'string' || !row.id ||
     typeof row.started_at !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(row.started_at) ||
