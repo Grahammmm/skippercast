@@ -26,7 +26,7 @@ concurrency:
 jobs:
   basemap:
     if: github.ref == 'refs/heads/main'
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.DATA_RUNNER_LIGHT || vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 60
     permissions:
       contents: read

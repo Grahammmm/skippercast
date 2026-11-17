@@ -12,7 +12,7 @@ import {gzipSync} from 'node:zlib';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {preparedRendererPlugins, rendererPlugins} from './helpers/esbuild-url.mjs';
-import {catalogueProblems, COVERED} from '../scripts/check_copy.mjs';
+import {catalogueProblems, coverageProblems, COVERED} from '../scripts/check_copy.mjs';
 import {RAIL_IDS} from '../web/profile.ts';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 
@@ -45,7 +45,11 @@ async function load() {
       export {Verdict, dailyFeed, regionalForecast} from './web/brief/Brief.tsx';
       export {parseConditionsForecast} from './web/conditions.ts';
       export {regionInfo, createRegionReader} from './web/app/App.tsx';
-      export {hour, day, profile} from './web/state.ts';
+      export {hour, day, profile, appView} from './web/state.ts';
+      export {Desktop} from './web/app/Desktop.tsx';
+      export {NightCredit, nightState} from './web/landing/NightMap.tsx';
+      export {currentsState} from './web/map/currents.ts';
+      export {ShorelineCredit} from './web/landing/Shoreline.tsx';
       export {loadLimits, savedLimits} from './web/limits.ts';
       export {COPY} from './web/ports.ts';
       export {PROFILE_NOTES, PROFILE_TABLE} from './web/profile.ts';
@@ -62,6 +66,36 @@ async function load() {
 async function inLang(m, lang, fn) { m.language.value = lang; try { return await fn(); } finally { m.language.value = 'en'; } }
 const port = (id, name, status = 'active') => ({id, name, region: id, status, forecast_point: id, forecast_name: name, match: [35, -120]});
 const noop = () => {};
+
+test('landing_credits_spanish and credits_english_identical: names stay literal and unavailable maps credit nothing', async () => {
+  const m = await load(), before = m.currentsState.value, state = m.nightState.value;
+  const basis = 'NOAA WCOFS <source> & {name}';
+  try {
+    for (const lang of ['es', 'en', 'es']) await inLang(m, lang, () => {
+      m.nightState.value = 'ready'; m.currentsState.value = {...before, drawn: {}, basis};
+      const html = m.render(m.h(m.NightCredit));
+      assert.ok(html === `<p class="landing-credit" data-credit="basemap">${lang === 'es' ? 'Mapa base' : 'Basemap'}: © OpenStreetMap contributors, © Protomaps.</p><p class="landing-credit" data-credit="currents">${lang === 'es' ? 'Corrientes' : 'Currents'}: NOAA WCOFS &lt;source> &amp; {name}</p>`, 'translated prefixes, exact attribution, safe interpolation');
+      assert.ok(m.render(m.h(m.ShorelineCredit)) === `<p class="landing-credit">${lang === 'es' ? 'Línea costera' : 'Shoreline'}: NOAA National Geodetic Survey · CUSP shoreline, ${lang === 'es' ? 'levantada en' : 'surveyed'} 1994–2010.</p>`, 'exact shoreline source and years');
+      m.currentsState.value = {...before, drawn: null};
+      assert.doesNotMatch(m.render(m.h(m.NightCredit)), /data-credit="currents"/, 'withdrawn/expired currents have no credit');
+      for (const unavailable of ['loading', 'failed']) { m.nightState.value = unavailable; assert.equal(m.render(m.h(m.NightCredit)), ''); }
+    });
+  } finally { m.currentsState.value = before; m.nightState.value = state; }
+});
+
+test('desktop_fleet_label_spanish: pane follows the language, including a switch back to English', async () => {
+  const m = await load(), view = m.appView.value;
+  try {
+    m.appView.value = 'fleet';
+    for (const [lang, label] of [['es', 'Flota'], ['en', 'Fleet'], ['es', 'Flota']])
+      assert.match(await inLang(m, lang, () => m.render(m.h(m.Desktop, {now: NOW}))), new RegExp(`<aside class="app-brief" aria-label="${label}">`));
+  } finally { m.appView.value = view; }
+});
+
+test('deferred_lists_moved: all three surfaces are covered without catalogue or coverage problems', () => {
+  assert.equal(coverageProblems().length, 0); assert.equal(catalogueProblems().length, 0);
+  for (const path of ['web/app/Desktop.tsx', 'web/landing/NightMap.tsx', 'web/landing/Shoreline.tsx']) assert.ok(COVERED.includes(path), path);
+});
 
 // ---- language: the same resolution as web/i18n.ts, set before anything mounts ----
 

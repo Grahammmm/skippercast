@@ -57,13 +57,20 @@ export interface Evidence {
   readonly fresh?: boolean; readonly coverage?: number; readonly reasonKind?: ReasonKind;
 }
 
+/** The feed marked its charter-report section not available (source stale): no trip facts, and never a count of zero. */
+export interface EvidenceNotAvailable {readonly notAvailable: true; readonly lastSourceDay: string | null}
+export const isNotAvailable = (e: Evidence | EvidenceNotAvailable | null): e is EvidenceNotAvailable => !!e && 'notAvailable' in e;
+
 type FeedCatch = {species?: unknown; label?: unknown; count?: unknown; disposition?: unknown};
 type FeedReport = {date: string; boat: string; port?: string; ground?: string; anglers?: number | null; source_url?: string; catches?: FeedCatch[]};
 
 /** v1's evidence for `species` over the daily feed, its five latest trips as rows; null when the feed is not this region's or fails v1's schema check. */
-export function evidenceFrom(data: unknown, region: string, species: string, now = Date.now()): Evidence | null {
+export function evidenceFrom(data: unknown, region: string, species: string, now = Date.now()): Evidence | EvidenceNotAvailable | null {
   const feed = data as {region_id?: string; generated_at: string} | null;
   if (!validFeed(data) || feed?.region_id !== region) return null;
+  // The collector marks a stale charter source not available: show that, never an evidence row of zero trips.
+  const section = (data as {charter_reports?: {status?: unknown; last_source_day?: unknown}}).charter_reports;
+  if (section?.status === 'not_available') return {notAvailable: true, lastSourceDay: typeof section.last_source_day === 'string' ? section.last_source_day : null};
   const e = reportEvidence(data, species, now);
   const rows = (e.reports as FeedReport[]).slice(0, 5).map(r => {
     const items = (r.catches ?? []).filter(c => matchesTargetSpecies(c.species, species) && Number(c.count) > 0)
@@ -126,7 +133,7 @@ export function chartersFrom(evidence: {audit_date?: unknown; grounds?: unknown}
 }
 
 export interface ReportsData {
-  readonly discussions: Discussions; readonly evidence: Evidence | null; readonly watch: Watch | null; readonly charters: Charters | null;
+  readonly discussions: Discussions; readonly evidence: Evidence | EvidenceNotAvailable | null; readonly watch: Watch | null; readonly charters: Charters | null;
 }
 export interface ReportsInput {readonly region: string; readonly species: string; readonly charters?: string | null; readonly now?: number}
 
