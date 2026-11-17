@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {isDeepStrictEqual} from 'node:util';
 import {loadReadout} from '../web/landing/readings.ts';
+import {prepareCatalogue} from '../web/i18n.ts';
+
+await prepareCatalogue('es');
 
 const NOW = Date.parse('2026-10-07T20:00:00Z');
 const ago = min => new Date(NOW - min * 60000).toISOString();
@@ -31,7 +34,26 @@ for (const lang of ['en', 'es']) {
     test(`null region metadata matches the empty-object control (${lang}, data=${withData})`, async () => {
       const control = await run({}, lang, withData);
       const got = await run(null, lang, withData);
-      assert.equal(got.out.readings.length, 4);
+      const [wind, swell, water, level] = got.out.readings;
+      assert.deepEqual(got.out.readings.map(r => r.id), ['wind', 'swell', 'water', 'tide']);
+      assert.equal(got.out.place, 'Morro Bay & Avila');
+      const none = lang === 'es' ? 'Sin lectura' : 'No reading';
+      const unavailable = lang === 'es' ? 'no disponible' : 'unavailable';
+      if (withData) {
+        assert.deepEqual([wind.reading, wind.unit, wind.source, wind.stale], ['14', 'kt', 'NDBC 46028 · 20 min', false]);
+        assert.deepEqual([level.reading, level.unit, level.detail, level.source, level.stale],
+          [lang === 'es' ? '3' : '3.0', 'ft', lang === 'es' ? 'subiendo' : 'rising', 'NOAA 9412110 · 6 min', false]);
+        assert.deepEqual(got.out.feed, {age: '12 min', stale: false});
+        for (const missing of [swell, water]) {
+          assert.deepEqual([missing.reading, missing.unit, missing.source, missing.stale], [none, undefined, `NDBC — · ${unavailable}`, true]);
+        }
+      } else {
+        assert.deepEqual(got.out.feed, {age: null, stale: true});
+        assert.deepEqual(got.out.readings.map(r => [r.reading, r.unit, r.source, r.stale]), [
+          [none, undefined, `NDBC — · ${unavailable}`, true], [none, undefined, `NDBC — · ${unavailable}`, true],
+          [none, undefined, `NDBC — · ${unavailable}`, true], [none, undefined, `NOAA 9412110 · ${unavailable}`, true],
+        ]);
+      }
       same(got.out, control.out, 'readout');
       same(got.urls, control.urls, 'urls');
       assert.equal(got.urls.length, 3);
@@ -40,11 +62,28 @@ for (const lang of ['en', 'es']) {
   }
 }
 
-test('healthy region metadata still selects its tide station and name', async () => {
-  const info = {name: ' Synthetic bay ', stations: {tide: 'synthetic-station'}};
-  const copy = JSON.parse(JSON.stringify(info));
-  const {out, urls} = await run(info, 'en');
-  assert.equal(out.place, 'Synthetic bay');
-  assert.ok(urls.some(u => u.includes('synthetic-station')), urls.join());
-  same(info, copy, 'input not mutated');
-});
+for (const lang of ['en', 'es']) {
+  test(`healthy region metadata forwards custom feed, tide details and language (${lang})`, async () => {
+    const info = {
+      name: ' Synthetic bay ',
+      conditions_feed: 'https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/custom/synthetic.json',
+      stations: {tide: 'synthetic-station', tide_name: 'Synthetic pier', tide_note: ' Synthetic reference only. '},
+    };
+    const copy = JSON.parse(JSON.stringify(info));
+    const {out, urls} = await run(info, lang);
+    assert.equal(out.place, 'Synthetic bay');
+    assert.deepEqual(urls, [
+      'regions/central-coast/region.json',
+      '/feeds/conditions/custom/synthetic.json',
+      'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_level&application=SkipperCast&station=synthetic-station&range=2&datum=MLLW&time_zone=gmt&units=english&format=json',
+    ]);
+    const level = out.readings[3];
+    assert.deepEqual([level.label, level.reading, level.detail, level.source, level.stale],
+      [lang === 'es' ? 'Marea' : 'Tide', lang === 'es' ? '3' : '3.0', lang === 'es' ? 'subiendo' : 'rising', 'NOAA synthetic-station · 6 min', false]);
+    assert.equal(level.basis, lang === 'es'
+      ? 'Nivel del agua observado en Synthetic pier, en pies sobre la bajamar media inferior, cada 6 minutos; desactualizado después de 1 h. Synthetic reference only.'
+      : 'Observed water level at Synthetic pier, in feet above mean lower low water, every 6 minutes; stale after 1 h. Synthetic reference only.');
+    assert.equal(out.readings[1].reading, lang === 'es' ? 'Sin lectura' : 'No reading');
+    same(info, copy, 'input not mutated');
+  });
+}
