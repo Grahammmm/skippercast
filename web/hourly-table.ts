@@ -14,6 +14,7 @@ import type {Series} from '../packages/coast/src/charts/series.ts';
 import {feedReader, RUN_MAX_MS} from './brief/verdict.ts';
 import {readingsAt, type ConditionsForecast} from './conditions.ts';
 import {localParts} from './hour.ts';
+import {t, type Language, type StringId} from './i18n.ts';
 import {compass} from './landing/readings.ts';
 import {sample} from './map/forecast-grid.ts';
 import type {ComfortLimits, LimitField} from '../packages/coast/src/limits.ts';
@@ -62,11 +63,12 @@ export function hourlyTable(f: ConditionsForecast | null, tide: Series | null, d
 const fix = (v: number | null, digits: number, unit: string) => v === null ? '—' : `${v.toFixed(digits)}${unit}`;
 
 /** A row's cells after the time: wind, gust, seas, swell, second swell, chop, tide, visibility, score ("*" marks a limited estimate). */
-export function hourlyCells(r: HourlyRow): string[] {
+export function hourlyCells(r: HourlyRow, lang: Language = 'en'): string[] {
+  const from = (value: string, deg: number) => t('hourly.from', lang, {value, dir: t(`compass.${compass(deg)}` as StringId, lang)});
   const swell = r.swell.h === null ? '—' : `${fix(r.swell.h, 1, ' ft')} · ${fix(r.swell.period, 0, ' s')} · ${fix(r.swell.from, 0, '°')}`;
   const chop = r.chop.h === null ? '—' : `${fix(r.chop.h, 1, ' ft')} · ${fix(r.chop.period, 0, ' s')}`;
-  const wind = r.wind !== null && r.windFrom !== null ? `${fix(r.wind, 0, ' kt')} from ${compass(r.windFrom)}` : fix(r.wind, 0, ' kt');
-  const second = r.second.h !== null && r.second.h > 0 && r.second.from !== null ? `${fix(r.second.h, 1, ' ft')} · from ${compass(r.second.from)}` : '—';
+  const wind = r.wind !== null && r.windFrom !== null ? from(fix(r.wind, 0, ' kt'), r.windFrom) : fix(r.wind, 0, ' kt');
+  const second = r.second.h !== null && r.second.h > 0 && r.second.from !== null ? from(`${fix(r.second.h, 1, ' ft')} ·`, r.second.from) : '—';
   return [wind, fix(r.gust, 0, ' kt'), fix(r.seas, 1, ' ft'), swell, second, chop, fix(r.tide, 1, ' ft'), fix(r.visibilityMi, 1, ' mi'),
     r.score === null ? '—' : `${r.score.toFixed(1)}${r.limited ? '*' : ''}`];
 }
