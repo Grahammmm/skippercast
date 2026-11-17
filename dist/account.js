@@ -417,6 +417,9 @@ export function logSpotOptionsHTML(rows, copy) {
   const t = asCopy(copy);
   return `<option value="">${esc(t('account.log.noSpot'))}</option>` + rows.map(row => `<option value="${esc(row.id)}">${esc(spotName(row.name, t))}</option>`).join('');
 }
+// Expand the shortest round-tripping number string when tiny values use exponential notation.
+const spotCoordinateText = value => String(value).replace(/^(-?)(\d)(?:\.(\d+))?e-(\d+)$/, (_, sign, digit, fraction = '', exponent) =>
+  `${sign}0.${'0'.repeat(Number(exponent) - 1)}${digit}${fraction}`);
 /** Ephemeral choice: redraw/restore never fills; a deliberate known selection fills only the coordinate boxes. */
 export function createLogSpotChoice({$, copy, invalidate}) {
   const select = $('#log-spot'), wrapper = $('#log-spot-choice');
@@ -432,7 +435,7 @@ export function createLogSpotChoice({$, copy, invalidate}) {
     invalidate();
     for (const f of ['lat', 'lon']) {
       const box = $('#log-' + f), error = $('#log-' + f + '-error');
-      box.value = String(row[f]); box.removeAttribute('aria-invalid');
+      box.value = spotCoordinateText(row[f]); box.removeAttribute('aria-invalid');
       error.textContent = ''; error.hidden = true;
     }
   });

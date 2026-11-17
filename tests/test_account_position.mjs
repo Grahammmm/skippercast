@@ -186,6 +186,17 @@ test('saved_spot_choice_fills_only_coordinates and serializers never expand the 
     assert.ok(!JSON.stringify(body).includes('PRIVATE SENTINEL'));
   }
 });
+test('saved spot tiny coordinates fill decimal text and save without precision loss', () => {
+  for (const [lat, lon] of [[1e-7, -1.234567890123456e-9], [-Number.MIN_VALUE, Number.MIN_VALUE], [1e-6, -1e-6]]) {
+    const f = choiceForm(); f.choice.update([{id: 'tiny', name: 'Tiny', lat, lon}]); f.select('tiny');
+    assert.match(f.lat.value, /^-?\d+(\.\d+)?$/);
+    assert.match(f.lon.value, /^-?\d+(\.\d+)?$/);
+    const fields = {started: '2026-01-01T00:00:00Z', outcome: 'blank', lat: f.lat.value, lon: f.lon.value};
+    for (const body of [logBody(fields), logEditBody(fields)]) {
+      assert.equal(body.lat, lat); assert.equal(body.lon, lon);
+    }
+  }
+});
 test('saved_spot_none_preserves_coordinates; manual input clears only selection and accuracy', () => {
   const f = choiceForm(); f.choice.update(SPOTS); f.lat.value = '01.23456789'; f.lon.value = '-002';
   f.select(''); assert.equal(f.lat.value, '01.23456789'); assert.equal(f.lon.value, '-002');
