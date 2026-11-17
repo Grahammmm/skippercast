@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC-NEXT-05: choose °F or °C for the brief's water temperature in the account menu, remembered on this device. Comparisons, charts and exports keep °F.
+
 - SC1607-06: the private catch log can fill its editable position boxes from one of your saved spots. Choosing none keeps the entered position; private spot notes are never copied, and nothing is saved until you press Save.
 
 - MGL-19: seafloor `plan` and `run` now accept `--scope-config` for a reviewed noncentral scope file. Such work is private, physical-only and held for screening, never published, and never touches any ledger; ordinary noncentral runs stay refused. Retained central private seafloor caches will recompute once because the run code changed; nothing is regenerated here. See `docs/seafloor-second-scope.md`.
