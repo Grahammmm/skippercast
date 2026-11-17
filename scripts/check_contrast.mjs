@@ -630,7 +630,7 @@ export const SURFACE_SOURCE_SHA256 = {
   "panelCss": "4558cd4edb0be1827ef6c00523a05b1c8eae84b0d0d81a93c33d5e12e4c66fa9",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   // MB-05 recolours light map-only roles, reduces habitat fill opacity and adds contour/no-survey tokens; MB-20 only adds light-theme flow, MPA, SST and swell colours; chrome text, panel and legend-glass paint stay unchanged.
-  "tokensCss": "7260defc1f3da09d863a1f939161471485aa9606289b5053856ea56915668234",
+  "tokensCss": "77ead150a38cae7e4f245cb51f42fddf8c6abd7f1638b1406ab34f41a69692ff",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
   // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.
