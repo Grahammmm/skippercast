@@ -12,6 +12,7 @@ import {language, localeOf, t, type Language, type StringId} from '../../i18n.ts
 import {hasOwnLimits, limitsFor} from '../../limits.ts';
 import {profile} from '../../state.ts';
 import type {BoatFactors} from '../../score.ts';
+import {units} from '../../unit-choice.ts';
 import {hourText, localParts, selectHour, zoneName} from '../TimeDock.tsx';
 import './hourly-table.css';
 
@@ -47,7 +48,7 @@ export function HourlyTable({forecast, tide, at, tz, now}: {forecast: Conditions
             {rows.map((r, ri) => (
               <tr key={r.at} data-at={r.at} aria-current={r.ms === at ? 'true' : undefined} class={r.ms === at ? 'is-current' : undefined}>
                 <th scope="row"><button type="button" onClick={() => selectHour(now, tz, r.ms)}>{label(r.ms)}</button></th>
-                {hourlyCells(r, lang).map((c, i) => {
+                {hourlyCells(r, lang, units.value.wind).map((c, i) => {
                   const f = (['wind', 'gust', 'seas'] as const)[i];
                   return <td key={i} class="ui-mono">{cellText(c, lang)}{f && limits && marked[ri]![f] ? <span class="app-hourly-over" role="img" aria-label={t(`hourly.over.${f}`, lang, {limit: String(limits[f])})}> ▲</span> : null}</td>;
                 })}
