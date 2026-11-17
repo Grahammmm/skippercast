@@ -99,6 +99,8 @@ def located_reports(coast, reports, now, policy):
             publisher=report.get('original_publisher_id')
             if not isinstance(publisher,str) or not publisher or report.get('publisher_review')!='reviewed' or urlsplit(url).scheme!='https': continue
             for catch in report['catches']:
+                # A malformed catch row is skipped alone; it must not abandon later valid catches.
+                if not isinstance(catch, dict) or not isinstance(catch.get('species'), str): continue
                 ident = catch['species']
                 count = catch.get('count')
                 # Booleans are ints and inf compares > 0; neither is a catch count. No ceiling; ints are never float-converted.

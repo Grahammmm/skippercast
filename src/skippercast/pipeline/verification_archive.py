@@ -58,6 +58,13 @@ def _safe_path(directory, relative):
     return path
 
 
+def _manifest_present(path):
+    # Refuse links (even dangling) before is_file() can mistake them for absence.
+    if path.is_symlink():
+        raise ValueError('Verification manifest is linked or exceeds its size bound')
+    return path.is_file()
+
+
 def _read_json(path, limit):
     refusal = ValueError('Verification manifest is linked or exceeds its size bound')
     if path.is_symlink():
@@ -122,7 +129,7 @@ def load_archive(directory, region_id, required=False, *, manifest_name='verific
     if manifest_name not in ('verification-state.json', 'verification-state.previous.json'):
         raise ValueError('Invalid verification manifest filename')
     path = directory / manifest_name
-    if not path.is_file():
+    if not _manifest_present(path):
         if required:
             raise ValueError('Prior regional feed exists but its verification archive is missing')
         return {'schema_version': 1, 'region_id': region_id, 'forecasts': [], 'observations': []}
@@ -212,7 +219,7 @@ def write_archive(directory, region_id, forecasts, observations, now, previous_d
     previous_directory = Path(previous_directory) if previous_directory else directory
     previous_path = previous_directory / 'verification-state.json'
     previous = None
-    if previous_path.is_file():
+    if _manifest_present(previous_path):
         prior = _read_json(previous_path, MAX_LEGACY_BYTES)
         if prior.get('region_id') != region_id:
             raise ValueError('Previous archive region mismatch')
@@ -252,7 +259,7 @@ def prune_archive(directory):
     """After publishing/copying a region, retain both complete manifest generations."""
     directory = Path(directory)
     current_path = directory / 'verification-state.json'
-    if not current_path.is_file():
+    if not _manifest_present(current_path):
         return 0
     current = _read_json(current_path, MAX_LEGACY_BYTES)
     if current.get('schema_version') == 1:
@@ -260,7 +267,7 @@ def prune_archive(directory):
     keep = set()
     for name in ('verification-state.json', 'verification-state.previous.json'):
         path = directory / name
-        if not path.is_file():
+        if not _manifest_present(path):
             continue
         manifest = _read_json(path, MAX_MANIFEST_BYTES)
         load_archive(directory, current.get('region_id'), required=True, manifest_name=name)

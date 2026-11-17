@@ -289,7 +289,7 @@ def parse_retry_after(value: str | None, now: float | None = None) -> float | No
     if value is None:
         return None
     value = value.strip()
-    if value.isdigit():
+    if value and value.isascii() and value.isdigit():
         return float(value)
     try:
         moment = email.utils.parsedate_to_datetime(value)
