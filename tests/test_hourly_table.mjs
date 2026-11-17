@@ -162,7 +162,7 @@ const {boatFactors} = await import('../dist/boat-handling.js');
 const {createHash} = await import('node:crypto');
 const PINNED = 'df00e2a835648398384ca1d54715546b47cd2dd8e6311659d9dcbd2119cbd30f';
 const SMALL = Object.freeze({sea: 0.6, wind: 0.6, chopPeriod: 8});
-const dump = ({rows, note}) => JSON.stringify({note, rows, cells: rows.map(hourlyCells)});
+const dump = ({rows, note}) => JSON.stringify({note, rows, cells: rows.map(row => hourlyCells(row))});
 
 test('MYB-2b: a non-reference boat rates every row with rateComfort(hour, boat), and differently from the reference', () => {
   const f = forecast(NORMAL), now = nowAt(NORMAL), read = feedReader(f, now).read;
