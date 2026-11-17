@@ -126,7 +126,9 @@ def regs_startup(registry, source, region):
 def mercator(longitude, latitude, zoom=POSTER_ZOOM):
     """Web Mercator world pixels at `zoom` for 512-pixel tiles (MapLibre's)."""
     size = 512 * 2 ** zoom
-    sin = math.sin(math.radians(latitude))
+    # Polar WGS84 latitudes are valid; they render at the finite Web Mercator world edge.
+    limit = math.degrees(math.atan(math.sinh(math.pi)))
+    sin = math.sin(math.radians(max(-limit, min(limit, latitude))))
     return (longitude + 180) / 360 * size, (0.5 - math.log((1 + sin) / (1 - sin)) / (4 * math.pi)) * size
 
 

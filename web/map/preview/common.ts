@@ -13,7 +13,11 @@ export async function getJson(ctx: PreviewContext, path: string): Promise<unknow
 
 export const hoursOld = (iso: string, now: Date): number => (now.getTime() - Date.parse(iso)) / HOUR;
 export const ageText = (hours: number): string => hours >= 48 ? `${Math.round(hours / 24)} days old` : `${hours.toFixed(1)} h old`;
-export const utc = (iso: string): string => `${iso.slice(0, 16).replace('T', ' ')} UTC`;
+export const utc = (iso: string): string => {
+  const ms = Date.parse(iso);
+  const text = Number.isFinite(ms) ? new Date(ms).toISOString() : iso;
+  return `${text.slice(0, 16).replace('T', ' ')} UTC`;
+};
 
 /** Usable when the time parses, is not in the future (5 min of clock slack) and is within `limitHours`. */
 export const freshWithin = (iso: unknown, limitHours: number, now: Date): iso is string =>
