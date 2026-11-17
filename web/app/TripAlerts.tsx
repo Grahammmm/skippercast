@@ -17,7 +17,7 @@ import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {language, t, type Language, type StringId} from '../i18n.ts';
 import {
-  alertDate, alertNames, alertSpecies, AlertCopyError, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, deviceStatus, latestCheck, deviceButtons, deviceLine, type DeviceStatus, eventLine, feedbackPhase, formProblemId, latestTripEvent, assessmentTimeOrNull, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotificationsId, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
+  alertDate, alertNames, alertSpecies, AlertCopyError, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, localSubscription, sendTestNotification, deviceStatus, latestCheck, deviceButtons, deviceLine, type DeviceStatus, eventLine, feedbackPhase, formProblemId, latestTripEvent, assessmentTimeOrNull, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotificationsId, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
   feedbackSummary, feedbackDate, type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type ReuseOmission, type SavedTrip, type TripPlanSummary,
 } from '../alerts.ts';
 
@@ -137,6 +137,23 @@ export function SavedTrips({recaps, names, remove, useAgain, read = {loading: fa
       </article>)}
     </> : null}
   </div>;
+}
+
+/** Never infer permission to test from browser state alone. The route rechecks the row at send time. */
+function TestNotification({device, stopping, say, refresh}: {device: DeviceStatus | null; stopping: boolean; say: (s: Say) => void; refresh: () => void}) {
+  const sending = useRef(false), [busy, setBusy] = useState(false), lang = language.value;
+  const send = async () => {
+    if (device !== 'confirmed' || stopping || sending.current) return;
+    sending.current = true; setBusy(true);
+    try {
+      const subscription = await localSubscription(navigator);
+      if (!subscription) throw new AlertCopyError('alerts.device.notSending');
+      await sendTestNotification(subscription.endpoint);
+      say({id: 'alerts.test.sent'});
+    } catch (error) { say(sayError(error)); }
+    finally { sending.current = false; setBusy(false); refresh(); }
+  };
+  return device === 'confirmed' ? <Button size="sm" disabled={busy || stopping} onClick={() => void send()}>{t('alerts.test.send', lang)}</Button> : null;
 }
 
 function SignedIn({session, region, boat, target}: {session: SessionAnswer; region: RegionAlerts; boat: Boat; target: string | null}) {
@@ -317,6 +334,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           : t('alerts.noteReference', lang)}</p>
         <p class="small">{t('alerts.purpose', lang)}</p>
         <div class="inavx-actions">
+          <TestNotification device={device} stopping={stopping} say={setStatus} refresh={() => { setDevice(null); checkDevice(); }} />
           {deviceButtons(device).enable ? <Button size="sm" onClick={() => { enablePush(session.publicKey).then(() => setStatus({id: 'alerts.status.enabled'}), fail).finally(checkDevice); }}>{t('alerts.enable', lang)}</Button> : null}
           {(['device', 'all'] as const).filter(scope => scope === 'all' || deviceButtons(device).stopDevice).map(scope => <Button key={scope} size="sm" disabled={stopping} onClick={() => { setStopping(true); stopNotificationsId(scope).then(id => setStatus({id}), fail).finally(() => { setStopping(false); checkDevice(); }); }}>{t(scope === 'device' ? 'alerts.stopDevice' : 'alerts.stopAll', lang)}</Button>)}
         </div>

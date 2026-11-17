@@ -419,6 +419,11 @@ export async function deviceStatus(fetchFn: typeof fetch = fetch, nav: PushNavig
   } catch { return 'unchecked'; }
 }
 
+/** Send only to the named device; the server independently checks ownership and its daily budget. */
+export async function sendTestNotification(endpoint: string, fetchFn: typeof fetch = fetch): Promise<void> {
+  await api('subscription/test', {method: 'POST', body: JSON.stringify({endpoint})}, fetchFn);
+}
+
 /** The catalogue id of the sheet's line for each state. */
 export const DEVICE_LINE_ID: Readonly<Record<DeviceStatus, StringId>> = {
   confirmed: 'alerts.device.confirmed',
