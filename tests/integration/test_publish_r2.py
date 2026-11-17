@@ -119,6 +119,20 @@ class SyncTests(unittest.TestCase):
             self.assertEqual(obj['CacheControl'], 'public, max-age=60')
 
 
+class ReservedPrefixTests(unittest.TestCase):
+    def test_tiles_relief_is_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / 'relief').mkdir(); (Path(d) / 'relief' / 'a.pmtiles').write_text('x')
+            (Path(d) / 'ok.json').write_text('{}')
+            with self.assertRaises(SystemExit):
+                publish_r2.sync_legacy(object(), 'feeds', d, 'tiles')
+            with self.assertRaises(SystemExit):
+                publish_r2.sync(object(), 'feeds', d, 'tiles/relief')
+
+    def test_other_tiles_keys_are_not_refused(self):
+        publish_r2.refuse_reserved('tiles', ['basemap/a.pmtiles', 'reliefmap/x'])
+
+
 class WiringTests(unittest.TestCase):
     def test_forecast_job_syncs_r2_even_when_tiles_are_unchanged(self):
         script = (ROOT / 'scripts' / 'publish_forecasts.sh').read_text()
