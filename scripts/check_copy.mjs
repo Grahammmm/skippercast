@@ -259,7 +259,7 @@ export function lintFile(path, source) {
 export const CATALOGUE = 'catalog/app/strings.json';
 export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/FirstAnswerLine.tsx', 'web/app/RulesCard.tsx', 'web/brief/verdict-copy.ts', 'web/brief/WhereToLook.tsx', 'web/brief/ranking-copy.ts', 'web/brief/Run.tsx', 'web/brief/EntranceCurrent.tsx', 'web/app/LanguageChoice.tsx', 'web/brief/Tiles.tsx', 'web/brief/tile-copy.ts', 'web/brief/TideStationControl.tsx', 'web/brief/TideSpark.tsx', 'web/brief/tide-copy.ts', 'web/brief/MarkForecast.tsx', 'web/brief/remaining-copy.ts', 'web/ui/Guard.tsx', 'web/ui/Popover.tsx', 'web/degraded-notice.tsx', 'web/degraded.ts', 'web/app/MapStage.tsx',
   'web/landing/RegionPicker.tsx', 'web/RegionPickerEntry.tsx', 'web/landing/main.tsx', 'web/landing/copy.ts', 'web/landing/Landing.tsx', 'web/landing/PortInput.tsx', 'web/landing/ProfileStep.tsx', 'web/landing/Readout.tsx', 'web/landing/readings.ts', 'web/landing/live-verdict.ts', 'web/app/FirstRun.tsx', 'web/app/LimitsPanel.tsx',
-  'web/app/Masthead.tsx', 'web/app/Mobile.tsx', 'web/app/SkipLinks.tsx', 'web/app/CommandBar.tsx', 'web/app/AccountMenu.tsx',
+  'web/app/Desktop.tsx', 'web/landing/NightMap.tsx', 'web/landing/Shoreline.tsx', 'web/app/Masthead.tsx', 'web/app/Mobile.tsx', 'web/app/SkipLinks.tsx', 'web/app/CommandBar.tsx', 'web/app/AccountMenu.tsx',
   'web/app/TimeDock.tsx', 'web/ui/Dock.tsx', 'web/season.ts', 'web/app/SeasonStrip.tsx',
   'web/map/layers.ts', 'web/app/rail.ts', 'web/app/LayerRail.tsx', 'web/app/Legend.tsx',
   'web/app/Planner.tsx', 'web/app/Trip.tsx', 'web/app/PositionCheck.tsx', 'web/app/PositionView.tsx', 'web/position-check.ts', 'web/trip-ocean-lines.ts', 'web/planner-copy.ts',
@@ -281,8 +281,9 @@ export function fragmentCopy(value) {
   for (const m of value.matchAll(/\b(?:title|aria-label|placeholder)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) out.push({value: m[1] ?? m[2], index: m.index});
   return out;
 }
-/** Server wire tokens (compared, never shown), allowed only in the one file that compares them. */
+/** Server wire tokens and developer-only diagnostics (never shown), allowed only in their own file. */
 export const WIRE_OK = new Map([['web/saved-spots.ts', new Set(['you can keep at most 100 saved spots; remove one first'])],
+  ['web/landing/NightMap.tsx', new Set(['Night map unavailable; the static shoreline stays.', 'no basemap archive', 'no region frame for  X'])],
   ['web/reports.ts', new Set(['Broad regional name'])]]);
 
 /** Catalogue problems under `root`: ids without an es value, unknown ids in t() calls, bare prose literals in covered files. No catalogue, nothing to check. */
@@ -309,12 +310,9 @@ export const NOT_COVERED = {
   'web/app/PreviewLayers.tsx': 'MAPLIVE-1 owner-only private map previews; admin-only research wording marked lang="en", outside the Spanish scope like the admin views (#1512)',
   'web/app/App.tsx': 'composition and region loading; no visible text of its own',
   'web/app/CoastMarkup.tsx': 'renders the coast package\'s chart markup, whose labels are drawn in packages/coast; deferred, not translated here',
-  'web/app/Desktop.tsx': 'desktop layout composition; its only literals are the Brief and Fleet pane aria-labels, deferred',
   'web/app/EnglishDetail.tsx': 'wraps official English text in lang="en"; the one prefix it adds already comes from the catalogue',
   'web/app/main.tsx': 'bootstrap that mounts the app and wires state; no visible text',
   'web/app/views/FleetAdmin.tsx': 'admin-only fleet activity panel; admin views are outside the Spanish scope (#1512)',
-  'web/landing/NightMap.tsx': 'night map canvas is aria-hidden; its Basemap and Currents credit lines are English, deferred',
-  'web/landing/Shoreline.tsx': 'decorative shoreline SVG (aria-hidden); its English shoreline credit sentence is deferred',
 };
 
 const canonicalPath = p => typeof p === 'string' && p !== '' && !p.startsWith('/') && !p.includes('\\') && !/^[A-Za-z]:/.test(p) && p.split('/').every(seg => seg !== '' && seg !== '.' && seg !== '..');

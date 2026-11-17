@@ -48,7 +48,7 @@ export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Dat
     <aside class="app-brief" id={BRIEF_ID} tabIndex={-1} aria-label={t('shell.brief', language.value)} data-basis={brief?.basis}>
       {/* SC-LAUNCH-3: the lead names its own day (tomorrow until a time is chosen); the eyebrow heads the evidence for the dock's day. */}
       <Guard name="verdict"><Verdict now={now} /></Guard>
-      <span class="ui-eyebrow">{brief ? brief.label : 'Today\'s brief'}</span>
+      <span class="ui-eyebrow">{brief ? brief.label : t('shell.todayBrief', language.value)}</span>
       <Guard name="tiles"><BriefTiles brief={brief} dense /></Guard>
       <Guard name="details"><Details brief={brief} /></Guard>
       <Guard name="tide"><TideSpark brief={brief} now={now} /></Guard>
@@ -66,7 +66,7 @@ export function Desktop({now: fixedNow, clock}: {now?: Date; clock?: HourClock} 
   const now = useHourNow(fixedNow, clock);
   return (
     <main class="app-main">
-      {appView.value === 'fleet' ? <aside class="app-brief" aria-label="Fleet"><Guard name="fleet"><Fleet /></Guard></aside> : <Brief now={now} />}
+      {appView.value === 'fleet' ? <aside class="app-brief" aria-label={t('shell.fleet', language.value)}><Guard name="fleet"><Fleet /></Guard></aside> : <Brief now={now} />}
       <MapStage clock={clock}>
         {appView.value === 'conditions' ? <Guard name="conditions"><Conditions now={now} /></Guard> : appView.value === 'history' ? <Guard name="history"><History now={now} /></Guard> : <>{mapUnavailable.value ? null : <div class="app-chrome-left"><Guard name="mark-card"><MarkCard /></Guard><Guard name="legend"><Legend /></Guard></div>}<Guard name="layer-rail"><LayerRail /></Guard></>}
         <Guard name="time-dock"><TimeDock now={now} /></Guard>

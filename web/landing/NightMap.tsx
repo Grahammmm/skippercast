@@ -27,6 +27,7 @@ import {COASTLINE_SOURCE} from '../map/layers.ts';
 import {readPalette, type Palette} from '../map/palette.ts';
 import {terrainHour} from '../map/stage.ts';
 import {BASEMAP_ATTRIBUTION, basemapArchive, basemapStyle} from '../map/style.ts';
+import {language, t} from './i18n.ts';
 
 /** The order the landing looks for a fresh frame in: the forecast (the app's proposed boat default, #482), then observed HF radar. */
 export const NIGHT_SOURCES = ['wcofs', 'hfr-6', 'hfr-1'] as const satisfies readonly CurrentChoice[];
@@ -165,8 +166,8 @@ export function NightCredit() {
   const currents = currentsState.value;
   return (
     <>
-      <p class="landing-credit" data-credit="basemap">Basemap: {BASEMAP_ATTRIBUTION}.</p>
-      {currents.drawn ? <p class="landing-credit" data-credit="currents">Currents: {currents.basis}</p> : null}
+      <p class="landing-credit" data-credit="basemap">{t('landing.credit.basemap', language.value, {attribution: BASEMAP_ATTRIBUTION})}</p>
+      {currents.drawn ? <p class="landing-credit" data-credit="currents">{t('landing.credit.currents', language.value, {basis: currents.basis})}</p> : null}
     </>
   );
 }
