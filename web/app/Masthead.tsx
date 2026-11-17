@@ -16,7 +16,7 @@ import {appView, navigate, region, withParams, type AppView} from '../state.ts';
 import {currentRegionInfo, freshness, regionLoad, retryRegion} from './App.tsx';
 import {manualRefresh, refreshBriefNow} from '../brief/Brief.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
-import {DegradedNotice} from '../degraded-notice.tsx';
+import {DegradedNotice as SharedDegradedNotice} from '../degraded-notice.tsx';
 import {loadRegionPorts} from '../ports.ts';
 import {currentRegionPreview} from '../region-preview.ts';
 
@@ -116,8 +116,8 @@ export function FreshnessDot() {
   );
 }
 
-// SC1322-06: the notice lives in web/degraded-notice.tsx, shared with the landing; /map's imports are unchanged.
-export {DegradedNotice};
+// SC-NEXT-01: keep the app reader here, outside the landing's static graph.
+export function DegradedNotice() { return <SharedDegradedNotice translate={t} />; }
 
 /**
  * The chat entry: nothing until the shared session read (web/account.ts ensureSession, the one the account menu
