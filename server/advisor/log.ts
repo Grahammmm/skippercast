@@ -20,7 +20,7 @@ export function redact(value: unknown, depth = 0): unknown {
   if (typeof value === 'string') return value.replace(NANP, '[redacted]').replace(PHONE, '[redacted]');
   if (value === null || typeof value !== 'object') return typeof value === 'bigint' ? redact(String(value), depth) : value;
   if (depth >= MAX_DEPTH) return '[truncated]';
-  if (value instanceof Error) return {name: value.name, message: redact(value.message, depth + 1)};
+  if (value instanceof Error) return {name: redact(value.name, depth + 1), message: redact(value.message, depth + 1)};
   if (Array.isArray(value)) return value.map(v => redact(v, depth + 1));
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(value)) out[redact(k, depth + 1) as string] = redact(v, depth + 1);

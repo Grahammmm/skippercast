@@ -140,6 +140,8 @@ def clean_url(url: str | None) -> str | None:
         return None
     if parts.scheme.lower() != "https" or not host or parts.username or parts.password:
         return None
+    if any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in host):
+        return None
     try:
         port = parts.port
     except ValueError:
