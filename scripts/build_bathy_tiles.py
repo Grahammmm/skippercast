@@ -7,7 +7,9 @@
 Writes `var/seafloor/tiles/morro-bay-seafloor-deep-medium.pmtiles` (override with `--output`), zooms 8-13,
 256 px web-mercator PNG tiles, and prints the file size, zoom range and tile count. Medium relief
 is the default. A native manifest adds <=2 m or 5 m projected metre grids at nominal depths 0-300 ft,
-feathered across 40 m of overlap; z14-15 is emitted only on tiles containing native <=2 m support.
+feathered across 40 m of overlap; z14-15 requires native <=2 m/5 m support. Zooms 16-17
+require <=1 m native support in nominal 0-20 m water; z18 is not emitted. Coarser areas
+retain their last supported zoom; pixel spacing is not a claim of finer survey accuracy.
 Native manifest entries require id, path, resolution_m, source_file and archive_sha256. Datum and
 uncertainty limitations remain: this renderer does not vertically reconcile the surveys.
 
@@ -377,6 +379,8 @@ def warp_window(elevation, src_transform, src_crs, z, x, y, pad=PAD):
 
 
 SHALLOW_M = 300 * 0.3048
+DETAIL_M = 20.0
+NATIVE_MAXZOOM = 17
 FEATHER_M = 40.0
 
 
@@ -448,14 +452,14 @@ def load_native_manifest(path):
     return sorted(sources, key=lambda s: (-s['resolution_m'], s['id']))
 
 
-def mask_native(values, nodata=None):
+def mask_native(values, nodata=None, limit_m=SHALLOW_M):
     """Native cells outside the shallow-only contract (finite, not nodata, 0 to -300 ft) become NODATA.
 
     Applied to the source cells BEFORE area averaging, so land, deep water and nodata cells can never
     average into an apparently valid shallow pixel (nor feed relief or z14-15 native support).
     """
     values = np.asarray(values, dtype=np.float32)
-    keep = np.isfinite(values) & (values != NODATA) & (values <= 0) & (values >= -SHALLOW_M)
+    keep = np.isfinite(values) & (values != NODATA) & (values <= 0) & (values >= -limit_m)
     if nodata is not None and np.isfinite(nodata):
         keep &= values != np.float32(nodata)
     return np.where(keep, values, np.float32(NODATA)).astype(np.float32)
@@ -488,7 +492,7 @@ def coverage(elevation, cell_m, native_sources):
             'background': background, 'native': native}
 
 
-def warp_native(source, z, x, y, pad):
+def warp_native(source, z, x, y, pad, limit_m=SHALLOW_M):
     import rasterio
     from rasterio.transform import array_bounds
     from rasterio.warp import Resampling, reproject, transform_bounds
@@ -515,41 +519,50 @@ def warp_native(source, z, x, y, pad):
         # ds.nodata (possibly None) says, so a masked shallow-looking cell cannot average in or
         # qualify z14-15 native support.
         values = np.where(ds.read_masks(1, window=window) == 0, np.float32(NODATA), values)
-        values = mask_native(values, ds.nodata)
+        values = mask_native(values, ds.nodata, limit_m)
         reproject(values, dest, src_transform=ds.window_transform(window), src_crs=ds.crs,
                   src_nodata=NODATA, dst_transform=transform, dst_crs='EPSG:3857',
                   dst_nodata=NODATA, resampling=Resampling.average, init_dest_nodata=True)
     return dest, ground
 
 
-def tiered_windows(elevation, src_transform, src_crs, bounds, z, sources, pad):
-    """Native shallow coverage at z14-15 only; coarse raster continues through z13 elsewhere."""
+def tiered_windows(elevation, src_transform, src_crs, bounds, z, sources, pad, native_support=None):
+    """Background through z13; native 2/5 m through z15; <=1 m at 0-20 m through z17.
+
+    Support counts describe source support in emitted tile cores, not halos or blended background.
+    Sources can overlap; these counts are not additive or a claim of vertical accuracy.
+    """
+    if z <= MAXZOOM:
+        return zoom_windows(elevation, src_transform, src_crs, bounds, z, pad)
+    if z > NATIVE_MAXZOOM:
+        return {}
+    sources = [s for s in sources if s['resolution_m'] <= (1 if z > 15 else 5)]
+    limit_m = DETAIL_M if z > 15 else SHALLOW_M
     out = {}
-    if z > MAXZOOM:
-        candidates = set()
-        for source in sources:
-            if source['resolution_m'] <= 2:
-                xs, ys = tile_range(source['bounds'], z)
-                candidates.update((x, y) for x in xs for y in ys)
-    else:
-        xs, ys = tile_range(bounds, z)
-        candidates = ((x, y) for x in xs for y in ys)
+    candidates = set()
+    for source in sources:
+        xs, ys = tile_range(source['bounds'], z)
+        candidates.update((x, y) for x in xs for y in ys)
     for x, y in sorted(candidates):
         _, ground = tile_grid(z, x, y)
         halo = pad + math.ceil(FEATHER_M / ground) + 2
         window, ground = warp_window(elevation, src_transform, src_crs, z, x, y, halo)
         fine_support = np.zeros(window.shape, dtype=bool)
+        core = (slice(halo, -halo), slice(halo, -halo))
         for source in sources:
             xs, ys = tile_range(source['bounds'], z)
             # Include adjoining native tiles for their halo, even if this tile has no core coverage.
             if x < xs.start - 1 or x > xs.stop or y < ys.start - 1 or y > ys.stop:
                 continue
-            native, _ = warp_native(source, z, x, y, halo)
+            native, _ = warp_native(source, z, x, y, halo, limit_m)
             window, valid = feather_tier(window, native, ground)
-            if source['resolution_m'] <= 2:
-                fine_support |= valid
-        core = (slice(halo, -halo), slice(halo, -halo))
-        if z > MAXZOOM and not fine_support[core].any():
+            fine_support |= valid
+            pixels = int(np.count_nonzero(valid[core]))
+            if pixels and native_support is not None:
+                entry = native_support.setdefault(source['id'], {
+                    'id': source['id'], 'resolution_m': source['resolution_m'], 'tiles': 0})
+                entry['tiles'] += 1
+        if not fine_support[core].any():
             continue
         invalid = ~np.isfinite(window) | (window == NODATA)
         if (~invalid[core]).any():
@@ -627,13 +640,22 @@ def output_for(variant, directory=None):
     return directory / DEFAULT_OUTPUT.name if variant == 'base' else directory / variant / DEFAULT_OUTPUT.name
 
 
-def build(source, output, minzoom=MINZOOM, maxzoom=MAXZOOM, log=print, variant='medium', native_sources=None,
+def supported_maxzoom(sources):
+    """Locked D6 delivery caps, not an inference of finer survey accuracy."""
+    return NATIVE_MAXZOOM if any(s['resolution_m'] <= 1 for s in sources) else 15 if sources else MAXZOOM
+
+
+def build(source, output, minzoom=MINZOOM, maxzoom=None, log=print, variant='medium', native_sources=None,
           label='Morro Bay', coverage_json=None):
     import rasterio
     from rasterio.warp import transform_bounds
     enhance = ENHANCE[variant]
     pad = pad_for(enhance)
     native_sources = native_sources or []
+    cap = supported_maxzoom(native_sources)
+    maxzoom = cap if maxzoom is None else min(maxzoom, cap)
+    if not 0 <= minzoom <= maxzoom <= NATIVE_MAXZOOM:
+        raise ValueError('zoom range has no supported levels')
     with rasterio.open(source) as ds:
         if ds.crs.to_epsg() != 3310 or ds.count != 1:
             raise ValueError(f'expected one band in EPSG:3310, got {ds.crs} with {ds.count} bands')
@@ -647,14 +669,21 @@ def build(source, output, minzoom=MINZOOM, maxzoom=MAXZOOM, log=print, variant='
         bounds = (min(bounds[0], b[0]), min(bounds[1], b[1]), max(bounds[2], b[2]), max(bounds[3], b[3]))
     if not (elevation[elevation != NODATA] <= 0).all():
         log('warning: source has cells at or above zero elevation; they are drawn with the shallowest colour')
-    tiles = {}
+    tiles, support_by_zoom = {}, {}
     for z in range(minzoom, maxzoom + 1):
-        windows = (tiered_windows(elevation, src_transform, src_crs, bounds, z, native_sources, pad)
-                   if native_sources else zoom_windows(elevation, src_transform, src_crs, bounds, z, pad))
+        support = {}
+        windows = tiered_windows(elevation, src_transform, src_crs, bounds, z, native_sources, pad, support)
+        support_by_zoom[str(z)] = {
+            'tiles': len(windows), 'limit_m': DETAIL_M if z > 15 else SHALLOW_M,
+            'sources': sorted(support.values(), key=lambda s: (s['resolution_m'], s['id']))}
         if windows:
             tiles.update(render_zoom(windows, z, enhance))
         log(f'zoom {z}: {len(windows)} tiles')
     centre = ((bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2)
+    if not tiles:
+        raise ValueError('no survey support in requested zoom range')
+    # Header and metadata describe the levels actually written, not manifest potential.
+    minzoom, maxzoom = min(t[0] for t in tiles), max(t[0] for t in tiles)
     metadata = {
         'name': f'SkipperCast {label} seafloor (Deep)' + ('' if variant == 'base' else f', relief {variant}'),
         'description': 'Styled raster of the 10 m Morro Bay survey: cmocean deep ramp, nonlinear depth stretch and '
@@ -668,6 +697,9 @@ def build(source, output, minzoom=MINZOOM, maxzoom=MAXZOOM, log=print, variant='
                                            'depth_semantics', 'release_date') if k in s}
                            for s in native_sources],
         'shallow_limit_m': SHALLOW_M, 'feather_m': FEATHER_M if native_sources else 0,
+        'native_support_by_zoom': support_by_zoom,
+        'native_support_basis': 'source support in emitted tile cores; overlapping, not additive; '
+                                'z16-17 requires <=1 m at nominal 0-20 m; background through z13',
         'minzoom': minzoom, 'maxzoom': maxzoom, 'bounds': [round(v, 6) for v in bounds],
         'center': [round(centre[0], 6), round(centre[1], 6), 10],
     }
@@ -712,9 +744,9 @@ def main(argv=None):
         print(f'build_bathy_tiles: native manifest: {e}', file=sys.stderr)
         return 2
     if args.maxzoom is None:
-        args.maxzoom = 15 if any(s['resolution_m'] <= 2 for s in native_sources) else MAXZOOM
-    if not 0 <= args.minzoom <= args.maxzoom <= 15:
-        print('build_bathy_tiles: need 0 <= minzoom <= maxzoom <= 15', file=sys.stderr)
+        args.maxzoom = supported_maxzoom(native_sources)
+    if not 0 <= args.minzoom <= args.maxzoom <= NATIVE_MAXZOOM:
+        print('build_bathy_tiles: need 0 <= minzoom <= maxzoom <= 17', file=sys.stderr)
         return 2
     if args.variant == 'all' and args.output:
         print('build_bathy_tiles: --variant all writes the default file names; drop --output', file=sys.stderr)
@@ -723,8 +755,12 @@ def main(argv=None):
         print('build_bathy_tiles: --variant all requires dropping --coverage-json', file=sys.stderr)
         return 2
     for variant in (ENHANCE if args.variant == 'all' else [args.variant]):
-        build(args.source, Path(args.output) if args.output else output_for(variant), args.minzoom, args.maxzoom,
-              variant=variant, native_sources=native_sources, label=args.label, coverage_json=args.coverage_json)
+        try:
+            build(args.source, Path(args.output) if args.output else output_for(variant), args.minzoom, args.maxzoom,
+                  variant=variant, native_sources=native_sources, label=args.label, coverage_json=args.coverage_json)
+        except ValueError as e:
+            print(f'build_bathy_tiles: {e}', file=sys.stderr)
+            return 2
     return 0
 
 
