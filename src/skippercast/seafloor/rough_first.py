@@ -123,6 +123,8 @@ def read_tiles(data):
     h = struct.unpack_from('<11Q', data, 8)
     if data[97] != 2:
         raise ValueError('expected gzip internal compression')
+    if h[6] + h[7] > len(data):
+        raise ValueError('declared tile data extends beyond archive')
     tiles = {}
 
     def walk(offset, length, depth=0):
@@ -144,6 +146,8 @@ def read_tiles(data):
             if not run:
                 walk(h[4] + off, size, depth + 1)
                 continue
+            if size <= 0 or off < 0 or off + size > h[7]:
+                raise ValueError('tile payload span outside declared tile data')
             for k in range(run):
                 tiles[_zxy(tid + k)] = data[h[6] + off:h[6] + off + size]
     walk(h[0], h[1])
