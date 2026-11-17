@@ -156,7 +156,7 @@ const response = (data, more = 'false', next = null, status = 200) => ({ok: stat
   json: async () => data, headers: new Headers({...more === null ? {} : {'X-SC-Catch-Log-Has-More': more}, ...next === null ? {} : {'X-SC-Catch-Log-Next-Cursor': next}})});
 const nativeCreate = document.createElement;
 async function close() { await $('.home-port-close')?.fire('click'); }
-async function setup({log = async () => response({entries: []}), trips = async () => response({trips: []}), lang = 'en', broken = ''} = {}) {
+async function setup({log = async () => response({entries: []}), trips = async () => response({trips: []}), logout = async () => response({}), lang = 'en', broken = ''} = {}) {
   await close(); requests = []; blobs = []; clicks = []; revoked = []; anchors = []; exporting = false; logRead = log; tripRead = trips; construction = broken;
   globalThis.Blob = class extends originals.Blob { constructor(parts, options) { if (construction === 'blob') throw Error('synthetic blob failure'); super(parts, options); blobs.push(this); } };
   URL.createObjectURL = () => { if (construction === 'url') throw Error('synthetic URL failure'); return 'blob:synthetic-csv'; };
@@ -171,6 +171,7 @@ async function setup({log = async () => response({entries: []}), trips = async (
     requests.push({url, method: options.method, body: options.body});
     if (url.startsWith('/api/catch-log')) return exporting ? logRead(url, options) : response({entries: [row('visible')]}, 'true', 'display-only-cursor');
     if (url === '/api/trips') return exporting ? tripRead() : response({trips: []});
+    if (url === '/api/auth/logout') return logout();
     const data = {'/api/session': {signedIn: true, signIn: '/#account', user: {}}, '/api/auth/passkeys': {passkeys: []}, '/api/spots': {spots: []}, '/api/auth/sessions': {sessions: []}};
     assert.ok(Object.hasOwn(data, url), 'only existing account GETs'); return response(data[url]);
   };
@@ -246,6 +247,28 @@ test('closing_discards_late_export', async () => {
     assert.equal($('#log-csv-status').textContent, ''); assert.equal(oldStatus.textContent, catalog['account.log.csv.loading'].en);
     await download(); assert.equal(clicks.length, 1); await cleaned();
   }
+});
+test('failed_logout_never_revives_pending_export', async () => {
+  const trip = deferred(), logout = deferred(); let reads = 0;
+  await setup({trips: () => ++reads === 1 ? trip.promise : response({trips: []}), logout: () => logout.promise});
+  exporting = true; const pending = $('#log-download-csv').fire('click'); await tick();
+  const signout = $('#account-signout').fire('click'); await tick();
+  logout.resolve(response({}, 'false', null, 503)); await signout;
+  trip.resolve(response({trips: []})); await pending;
+  assert.equal(blobs.length, 0); assert.equal(clicks.length, 0);
+  assert.equal($('#log-download-csv').disabled, false);
+  await download(); assert.equal(clicks.length, 1); await cleaned();
+});
+test('failed_logout_restores_retry_after_export_settles', async () => {
+  const trip = deferred(), logout = deferred(); let reads = 0;
+  await setup({trips: () => ++reads === 1 ? trip.promise : response({trips: []}), logout: () => logout.promise});
+  exporting = true; const pending = $('#log-download-csv').fire('click'); await tick();
+  const signout = $('#account-signout').fire('click'); await tick();
+  trip.resolve(response({trips: []})); await pending;
+  assert.equal(blobs.length, 0); assert.equal(clicks.length, 0);
+  logout.resolve(response({}, 'false', null, 503)); await signout;
+  assert.equal($('#log-download-csv').disabled, false);
+  await download(); assert.equal(clicks.length, 1); await cleaned();
 });
 test('construction_failures_clean_and_allow_retry', async () => {
   for (const broken of ['blob', 'url', 'anchor', 'click']) {

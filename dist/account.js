@@ -130,11 +130,12 @@ export function catchLogCsv(entries, trips) {
   return CSV_HEADER + lines.map(line => line + '\r\n').join('');
 }
 /** Wire the real button once per render. No reads until clicked and no raw records retained after the attempt. */
-function wireCsvDownload($, t, live) {
+function wireCsvDownload($, t, isLive) {
   const button = $('#log-download-csv'), status = $('#log-csv-status');
-  let pending = false;
+  let pending = false, generation = 0;
   button.addEventListener('click', async () => {
-    if (pending || !live()) return;
+    if (pending || !isLive()) return;
+    const attempt = generation, live = () => generation === attempt && isLive();
     pending = true; button.disabled = true; status.textContent = t('account.log.csv.loading');
     let url = null, anchor = null;
     try {
@@ -157,9 +158,13 @@ function wireCsvDownload($, t, live) {
       // Let the browser dispatch the download before releasing its URL, including construction/click failures.
       if (anchor || url) setTimeout(() => { try { anchor?.remove(); } finally { if (url) URL.revokeObjectURL(url); } }, 0);
       pending = false;
-      if (live()) button.disabled = false;
+      if (isLive()) button.disabled = false;
     }
   });
+  return {
+    invalidate: () => { generation++; },
+    restore: () => { if (isLive() && !pending) button.disabled = false; }
+  };
 }
 
 /**
@@ -936,7 +941,7 @@ export async function openAccount(options = {}) {
     let editing = null, tripRegion = null, logPos = null;   // logPos: the position control, wired below
     const live = () => open === self && list.isConnected;
     let leaving = false;
-    wireCsvDownload($, t, () => live() && !leaving);
+    const csvDownload = wireCsvDownload($, t, () => live() && !leaving);
     // Metadata is independent of saved-trip requests; a late answer never replaces a typed field or another render.
     void import('./region.js').then(m => m.getRegion()).then(region => {
       if (!live()) return;
@@ -1198,8 +1203,8 @@ export async function openAccount(options = {}) {
       } catch (error) { if (open === self) status(passkeyMessage(error, t)); }
     });
     $('#account-signout').addEventListener('click', async () => {
-      leaving = true;
-      try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { leaving = false; status(passkeyMessage(error, t)); }
+      leaving = true; csvDownload.invalidate();
+      try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { leaving = false; csvDownload.restore(); status(passkeyMessage(error, t)); }
     });
     $('#account-delete').addEventListener('click', async event => {
       if (!await confirmInPage(event.currentTarget, t('account.del.confirm'), t('account.del.yes'), t)) return;
