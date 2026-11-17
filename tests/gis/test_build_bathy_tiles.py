@@ -264,6 +264,81 @@ class BuildTests(unittest.TestCase):
             self.assertEqual(bt.main(['--source', str(path), '--minzoom', '9', '--maxzoom', '3']), 2)
 
 
+class CoverageTests(unittest.TestCase):
+    def test_archive_records_zero_to_300ft_coverage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _, metadata, _, _ = read_archive(BuildTests.build_once(directory, minzoom=12, maxzoom=12))
+        detail = metadata['detail_coverage']
+        self.assertEqual(detail['background'], {'cells': 6333, 'cell_m': 10, 'km2': 0.6333})
+        self.assertEqual(detail['limit_m'], 91.44)
+        self.assertIn('sources can overlap, so do not add them', detail['basis'])
+        self.assertEqual(detail['native'], [])
+
+    def test_coverage_excludes_land_deep_and_nodata(self):
+        values = np.array([[5, -91.44, -91.45, np.nan, NODATA, 0, -30]], dtype='float32')
+        self.assertEqual(bt.coverage(values, 10, [])['background'],
+                         {'cells': 3, 'cell_m': 10, 'km2': 0.0003})
+        self.assertEqual(bt.coverage(values, (10, 20), [])['background'],
+                         {'cells': 3, 'cell_m': 10, 'cell_y_m': 20, 'km2': 0.0006})
+
+    def test_native_coverage_uses_the_shallow_mask_and_own_cell_size(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base, fine, output, sidecar = (root / n for n in ('base.tif', 'fine.tif', 'a.pmtiles', 'c.json'))
+            write_survey(base)
+            values = np.full((32, 32), -25, dtype='float32')
+            values[:, 16:] = -100  # half deep; a nodata stripe removes 32 shallow cells
+            values[:, 15] = -7
+            values[0, 0] = -91.44
+            with rasterio.open(fine, 'w', driver='GTiff', width=32, height=32, count=1,
+                               dtype='float32', crs='EPSG:3310', nodata=-7, tiled=True,
+                               blockxsize=16, blockysize=16,
+                               transform=from_origin(-121800, -288200, 2, 2)) as ds:
+                ds.write(values, 1)
+                valid = np.full((32, 32), 255, dtype='uint8')
+                valid[0, 1] = 0  # GDAL-invalid shallow cell must not count either
+                ds.write_mask(valid)
+            manifest = root / 'native.json'
+            manifest.write_text(json.dumps([{'id': 'synthetic', 'path': str(fine), 'resolution_m': 2}]))
+            bt.build(base, output, 12, 12, log=lambda *_: None,
+                     native_sources=bt.load_native_manifest(manifest), coverage_json=sidecar)
+            _, metadata, _, _ = read_archive(output)
+            self.assertEqual(metadata['detail_coverage']['native'],
+                             [{'id': 'synthetic', 'resolution_m': 2, 'cells': 479, 'km2': 0.0019}])
+            self.assertNotIn(str(root), json.dumps(metadata))
+            self.assertNotIn(str(root), sidecar.read_text())
+
+    def test_coverage_json_matches_metadata_and_names_archive(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, output, sidecar = (root / n for n in ('base.tif', 'a.pmtiles', 'coverage.json'))
+            write_survey(source)
+            sidecar.write_text('stale')
+            self.assertEqual(bt.main(['--source', str(source), '--output', str(output),
+                                      '--minzoom', '12', '--maxzoom', '12', '--coverage-json', str(sidecar)]), 0)
+            _, metadata, _, _ = read_archive(output)
+            expected = dict(metadata['detail_coverage'], archive=output.name)
+            self.assertEqual(json.loads(sidecar.read_text()), expected)
+            self.assertEqual(sidecar.read_text(), json.dumps(expected, indent=2, sort_keys=True) + '\n')
+            self.assertFalse(list(root.glob('*.part')))
+
+    def test_coverage_json_with_variant_all_is_refused(self):
+        import contextlib
+        import io
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, sidecar = root / 'base.tif', root / 'coverage.json'
+            write_survey(source)
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err), mock.patch.object(bt, 'DEFAULT_OUTPUT', root / 'a.pmtiles'):
+                code = bt.main(['--source', str(source), '--variant', 'all', '--coverage-json', str(sidecar)])
+            self.assertEqual(code, 2)
+            self.assertEqual(len(err.getvalue().strip().splitlines()), 1)
+            self.assertIn('--coverage-json', err.getvalue())
+            self.assertEqual(sorted(p.name for p in root.iterdir()), ['base.tif'])
+
+
 class EnhancementTests(unittest.TestCase):
     SIZE = bt.TILE + 2 * bt.ENHANCED_PAD
 
