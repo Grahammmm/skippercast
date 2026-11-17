@@ -154,6 +154,9 @@ test.describe('individual comfort reports', () => {
     missing = false; held = undefined;
     await history.getByRole('button').click(); await expect.poll(() => held).toBeDefined();
     await page.keyboard.press('Escape');
+    // Native dialog close is queued: wait for its onClose to unmount the sheet
+    // before resolving the pending write, rather than racing that event.
+    await page.locator('#trip-alerts').waitFor({state: 'detached'});
     const before = reads;
     await held!.fulfill({json: {deleted: true}});
     await page.getByRole('dialog', {name: 'Trip alerts'}).waitFor({state: 'hidden'});
