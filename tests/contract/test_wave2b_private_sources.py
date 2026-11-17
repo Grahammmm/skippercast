@@ -1,14 +1,13 @@
 """The wave 2B catalogue records acquisition, never public-display permission."""
 import json
-from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
+from skippercast.platform.contracts import load_catalogs
+from tests._support import ROOT
 
 
 class Wave2BPrivateSourcesTests(unittest.TestCase):
     def test_all_fifty_archives_stay_restricted_and_unbound(self):
-        from skippercast.platform.contracts import load_catalogs
         _, sources = load_catalogs(ROOT)
         rows = [s for s in sources.values() if s.get('acquisition_wave') == 'wave2b']
         self.assertEqual(len(rows), 50)
@@ -20,8 +19,8 @@ class Wave2BPrivateSourcesTests(unittest.TestCase):
                 self.assertEqual(row['review_status'], 'restricted')
                 self.assertEqual(row['rights']['license'], 'unresolved')
                 self.assertEqual(row['usage'], 'private-use only')
-                self.assertFalse(row['publication_allowed'])
-                self.assertFalse(row['rights']['redistribution_reviewed'])
+                self.assertIs(row['publication_allowed'], False)
+                self.assertIs(row['rights']['redistribution_reviewed'], False)
                 self.assertEqual(row['rights']['commercial_use'], 'unknown')
                 self.assertTrue(row['archive_url'].startswith('https://data.ngdc.noaa.gov/platforms/ocean/ships/'))
         for path in (ROOT / 'regions').glob('*/region.json'):
