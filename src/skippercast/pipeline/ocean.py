@@ -160,6 +160,8 @@ def spectral_rows(text):
         bins=[(float(f),float(value)) for value,f in re.findall(r'([\d.eE+-]+)\s*\(([\d.eE+-]+)\)',line)]
         if not bins:continue
         if any(not math.isfinite(f) or f<=0 for f,_ in bins):raise ValueError('Invalid spectral frequency')
+        # Equal numeric labels (0.020 vs 0.0200) would silently overwrite a measurement in dict().
+        if len({f for f,_ in bins})!=len(bins):raise ValueError('Duplicate spectral frequency')
         result[epoch]=dict(bins)
         if len(result)>=12:break
     if not result:raise ValueError('No spectral observations')
