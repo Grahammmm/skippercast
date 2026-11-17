@@ -57,7 +57,8 @@ const briefSource = ([key, source]: [string, ExternalJSON]) => !NOT_BRIEF.has(ke
 
 /** The checks the app applies to the whole daily feed (dist/bite-evidence.js validFeed, dist/region.js acceptsFeed). */
 export function validDailyFeed(feed: ExternalJSON, regionId: string): boolean {
-  return (feed?.region_id === regionId || (!feed?.region_id && regionId === 'morro-bay')) &&
+  if (!feed || typeof feed !== 'object' || Array.isArray(feed)) return false;
+  return (feed.region_id === regionId || (!feed.region_id && regionId === 'morro-bay')) &&
     feed.schema_version === 1 && Number.isFinite(Date.parse(feed.generated_at)) &&
     !!feed.sources && typeof feed.sources === 'object' && !Array.isArray(feed.sources) && Array.isArray(feed.reports) &&
     !!feed.health && feed.catch_probability === null && feed.bite_score === null;
