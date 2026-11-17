@@ -9,7 +9,7 @@ Read `docs/regions.md` and `catalog/data-needs.json` in the user's SkipperCast r
 
 Read `docs/region-pipeline.md` for the complete rollout and model-use policy. Routine collection and validation use deterministic code; a small/fast assistant may prepare candidates and notes, while ambiguous legal, rights or scientific changes require explicit review. Do not make routine refreshes depend on an LLM.
 
-For bathymetry contours, the region runs through [`skippercast-region-process`](../skippercast-region-process/SKILL.md): intake, build, review and publish with a ledger row and named human gates. This checklist stays the bindings and rules checklist.
+For depth shading, contours, detail labels and 3D, add the region to `~/agent-work/bin/localmapq/regions.tsv` and let `skippercast-relief-pipeline` (skill lands in SKILLS-1b; link it then) run it (no region code, no hand-built tiles). The relief shows for draft regions too (it is keyed by region id and drawn by viewport); promotion from draft is still this checklist's legal/rights work. This checklist stays the bindings and rules checklist.
 
 For California, begin with `docs/archive/statewide-buildout.md` and the matching entry in `catalog/coastal-sectors.json`. The dated NOAA survey-discovery feed lists intersecting BAG survey leads, not verified bottom coverage. Inspect exact native BAG cells and the original report before considering any lead for a target. Keep the sector status as discovery even if one partial package has point candidates within it.
 
@@ -27,6 +27,6 @@ Run `PYTHONPATH=src python -m skippercast.platform validate --region <id>` and t
 
 Check the mobile map and a selected target/area. Show one bottom view only when supporting data exist; source gaps must be visible. Avoid new sidebar lists or dense landing content. Keep code changes in shared components and data differences in the regional package.
 
-Use the existing publishing and update workflows within the task's authorization. Document rollout readiness, withheld capabilities, data refresh ownership and rollback. Do not call a region fully covered because the shared software can load it.
+Use the existing publishing and update workflows within the task's authorization; map data goes live only through the relief pipeline's release review, G's publication scope and the normal on-merge deploy. Document rollout readiness, withheld capabilities, data refresh ownership and rollback. Do not call a region fully covered because the shared software can load it.
 
 For ocean intelligence and private alerts, follow `docs/regional-intelligence.md` and `docs/production-operations.md`. Bind each intelligence role to an approved provider; check actual HFR/current coverage and horizon. Add an adapter when the provider differs. Verify station coordinates, sensor height, ecology scope and the deployment’s immutable GitHub identity policy. Preview conditions do not qualify new fishing targets.

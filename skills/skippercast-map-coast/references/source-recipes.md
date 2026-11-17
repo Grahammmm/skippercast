@@ -343,8 +343,10 @@ noncommercial use and the navigation/for-profit restrictions. The shared
 source terms. Unknown or conflicting contributors block release. A for-profit
 deployment profile cannot use this permission without express producer approval.
 
-Do not promote private CSUMB rows until map and export consumers display the
-credits/notices. Then transfer hash-verified private physics without recomputing
+Do not promote private CSUMB rows until (1) the catalog rights row records a
+cleared licence for public display (G 2026-11-17: CSUMB tiles private until the
+licence is clear; t_ee707e55) and (2) map and export consumers display the
+credits/notices. MBARI research-only grids are never public inputs. Then transfer hash-verified private physics without recomputing
 unchanged scientific inputs, apply current whole-polygon spatial screening,
 and verify live features and export notes. A source-use contract is independent
 of MPA clearance, measured coverage and proof of fish presence. See the
