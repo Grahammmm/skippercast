@@ -33,7 +33,7 @@ export function continuousTriangles(n:number):Uint32Array{
  const out=new Uint32Array((n-1)**2*6);let i=0;for(let z=0;z<n-1;z++)for(let x=0;x<n-1;x++){const a=z*n+x;out.set([a,a+n,a+1,a+1,a+n,a+n+1],i);i+=6;}return out;
 }
 export function chooseTiles(tiles:RegionTile[],x:number,z:number,span:number,limit=100):RegionTile[]{
- const radius=Math.max(6500,Math.min(45000,span*.85));return tiles.filter(t=>Math.hypot(t.x+t.width/2-x,t.z+t.width/2-z)<radius).sort((a,b)=>Math.hypot(a.x+a.width/2-x,a.z+a.width/2-z)-Math.hypot(b.x+b.width/2-x,b.z+b.width/2-z)).slice(0,limit);
+ const radius=Math.max(6500,Math.min(45000,span*.85));return tiles.filter(t=>Math.hypot(Math.max(t.x-x,0,x-t.x-t.width),Math.max(t.z-z,0,z-t.z-t.width))<radius).sort((a,b)=>Math.hypot(a.x+a.width/2-x,a.z+a.width/2-z)-Math.hypot(b.x+b.width/2-x,b.z+b.width/2-z)).slice(0,limit);
 }
 export function reefBindingMatches(context:{regions:{regionId:string;archiveSha256:string;exportSha256:string}[];expiresAt:string},manifest:{regions:{regionId:string;archiveSha256:string;exportSha256?:string}[]},now=Date.now()):boolean{
  return Date.parse(context.expiresAt)>now&&context.regions.length===manifest.regions.length&&new Set(context.regions.map(r=>r.regionId)).size===context.regions.length&&new Set(manifest.regions.map(m=>m.regionId)).size===manifest.regions.length&&context.regions.every(r=>manifest.regions.some(m=>m.regionId===r.regionId&&m.archiveSha256===r.archiveSha256&&m.exportSha256===r.exportSha256));
