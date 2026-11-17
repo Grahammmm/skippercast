@@ -74,8 +74,8 @@ function currentForecast(report:Report,areaId:string,at:Date,now:Date):{hour:For
 function nearshoreSample(site:NearshoreSite,at:Date,now:Date):NearshoreHour|undefined{
  const issue=now.getTime()-fieldClock(site.issuedAt),retrieval=now.getTime()-fieldClock(site.fetchedAt);
  if(site.availability!=='available'||site.freshness!=='current'||!Number.isFinite(issue)||!Number.isFinite(retrieval)||issue<-300000||issue>=48*HOUR||retrieval<-300000||retrieval>=3*HOUR)return undefined;
- const frames=site.hours.filter(item=>Number.isFinite(fieldClock(item.at))).sort((a,b)=>fieldClock(a.at)-fieldClock(b.at)),first=frames[0],last=frames.at(-1),selected=at.getTime(),declared=fieldClock(site.validThrough);
- if(!first||!last||selected<fieldClock(first.at)||selected>fieldClock(last.at)||(Number.isFinite(declared)&&selected>declared))return undefined;
+ const frames=site.hours.filter(item=>Number.isFinite(fieldClock(item.at))).sort((a,b)=>fieldClock(a.at)-fieldClock(b.at)),first=frames[0],last=frames.at(-1),selected=at.getTime(),declared=fieldClock(site.validThrough),hasEnd=site.validThrough!==undefined&&site.validThrough!==null;
+ if(!first||!last||selected<fieldClock(first.at)||selected>fieldClock(last.at)||(hasEnd&&!(selected<=declared)))return undefined;
  return frames.filter(item=>Math.abs(fieldClock(item.at)-selected)<=1.5*HOUR).sort((a,b)=>Math.abs(fieldClock(a.at)-selected)-Math.abs(fieldClock(b.at)-selected))[0];
 }
 function reportMarkup(report:Report,selection:ReadableSelection,now:Date):string{
