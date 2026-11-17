@@ -1,12 +1,9 @@
 """Winkler prefix bonus applies only when the Jaro score exceeds 0.7."""
 
-import sys
 import unittest
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
-from skippercast.fleet.normalize import jaro_winkler, name_similarity  # noqa: E402
+from skippercast.fleet.normalize import jaro_winkler, name_similarity
 
 WEAK_A, WEAK_B = "EXAMPLEAAAAAA", "EXAMPLEZZZZZZ"
 # 7 matches, 13 chars each, no transpositions: (7/13 + 7/13 + 1) / 3
