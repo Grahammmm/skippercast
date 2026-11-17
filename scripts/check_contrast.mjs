@@ -61,9 +61,10 @@ const V2 = FILES['web/tokens.css'];
 
 // Custom properties declared directly inside the rule whose selector matches.
 function block(css, selector) {
-  const start = css.indexOf(`${selector} {`);
-  if (start < 0) throw Error(`tokens.css: missing ${selector}`);
-  const open = css.indexOf('{', start);
+  // RF2000-8: any CSS whitespace (or none) may precede the brace; the selector must start at a rule-header boundary.
+  const found = new RegExp(`(?<![^\\s{};])${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{`).exec(css);
+  if (!found) throw Error(`tokens.css: missing ${selector}`);
+  const open = found.index + found[0].length - 1;
   const body = css.slice(open + 1, css.indexOf('}', open));
   return Object.fromEntries([...body.matchAll(/--([a-z0-9-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)].map(m => [m[1], m[2].toLowerCase()]));
 }
