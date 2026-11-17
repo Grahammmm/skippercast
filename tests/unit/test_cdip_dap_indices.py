@@ -24,6 +24,16 @@ class ChunkOffsetTests(TestCase):
             with self.subTest(label), self.assertRaises(ValueError):
                 cdip.parse_dap_ascii(body(*lines))
 
+    def test_empty_indexed_chunks_are_refused(self):
+        for label, lines, size in (
+            ("duplicate start", ("[0],", "[0], 1, 2, 3, 4"), 4),
+            ("past end", ("[0], 1, 2, 3, 4,", "[4],"), 4),
+            ("empty middle", ("[0], 1, 2,", "[2],", "[2], 3, 4"), 4),
+            ("zero length", ("[0],",), 0),
+        ):
+            with self.subTest(label), self.assertRaises(ValueError):
+                cdip.parse_dap_ascii(body(*lines, size=size))
+
     def test_contiguous_indexed_chunks_preserve_values(self):
         for label, lines in (("two chunks", ("[0], 1, 2,", "[2], 3, 4")),
                              ("one-value chunks", ("[0], 1,", "[1], 2,", "[2], 3,", "[3], 4")),
