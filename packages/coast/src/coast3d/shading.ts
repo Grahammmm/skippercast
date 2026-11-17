@@ -49,7 +49,9 @@ export function depthWindow(samples:Float32Array|readonly number[],waterReferenc
 export function contourInterval(windowMetres:number,finestSpacingM:number):{minor:number;index:number}{
  const span=Number.isFinite(windowMetres)&&windowMetres>0?windowMetres:MIN_WINDOW_M,floor=Number.isFinite(finestSpacingM)&&finestSpacingM>0?finestSpacingM*SPACING_FACTOR:0;
  const steps=CONTOUR_STEPS_FT.map(ft=>ft*FOOT),allowed=steps.filter(m=>m>=floor);
- const pick=allowed.find(m=>span/m<=20)??allowed.at(-1)??steps.at(-1)!;
+ // Every preset below the floor: round the floor itself up to a whole foot, never below it.
+ let coarse=Math.ceil(floor/FOOT)*FOOT;while(coarse<floor)coarse+=FOOT;
+ const pick=allowed.find(m=>span/m<=20)??allowed.at(-1)??coarse;
  return {minor:pick,index:pick*5};
 }
 

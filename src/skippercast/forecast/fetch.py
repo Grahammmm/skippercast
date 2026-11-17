@@ -155,6 +155,8 @@ def _published(model, cycle):
 def latest_cycle(model, now=None, lookback_hours=48):
     """Newest initialization whose final forecast step is published."""
     now = now or datetime.now(timezone.utc)
+    if now.tzinfo is not None:  # equivalent aware clocks select the same UTC cycle
+        now = now.astimezone(timezone.utc)
     start = now.replace(minute=0, second=0, microsecond=0)
     for back in range(0, lookback_hours + 1):
         cycle = start - timedelta(hours=back)
