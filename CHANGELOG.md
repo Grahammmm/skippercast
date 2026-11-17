@@ -3,6 +3,8 @@
 ## Unreleased
 
 - SC-NEXT-08: the data status page follows the saved or browser language, with Spanish headings, table labels and freshness notes; source names and freshness rules are unchanged.
+
+- SC1822-11: remove an individual private comfort report without deleting your account; history labels the latest-100 cap and latest-five display, with report dates in the opened region's time zone.
 - SC-NEXT-05: choose °F or °C for the brief's water temperature in the account menu, remembered on this device. Comparisons, charts and exports keep °F.
 
 - SC2037-13: saved-trip alerts offer a test notification only after the server confirms this account holds this device. Tests use the trip-alert sender, are limited to three attempts per account per UTC day, and create no saved assessment or delivery receipt.
