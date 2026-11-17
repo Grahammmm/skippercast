@@ -188,9 +188,13 @@ def _fields(data):
             value, pos = _varint(data, pos)
         elif wire == 2:
             size, pos = _varint(data, pos)
+            if pos + size > len(data):
+                raise ValueError('truncated protobuf payload')
             value, pos = data[pos:pos + size], pos + size
         elif wire in (1, 5):
             size = 8 if wire == 1 else 4
+            if pos + size > len(data):
+                raise ValueError('truncated protobuf payload')
             value, pos = data[pos:pos + size], pos + size
         else:
             raise ValueError('unsupported protobuf wire type')

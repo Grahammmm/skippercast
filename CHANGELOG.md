@@ -3,6 +3,7 @@
 ## Unreleased
 
 - SC-NEXT-08: the data status page follows the saved or browser language, with Spanish headings, table labels and freshness notes; source names and freshness rules are unchanged.
+- SC-NEXT-05: choose °F or °C for the brief's water temperature in the account menu, remembered on this device. Comparisons, charts and exports keep °F.
 
 - SC2037-13: saved-trip alerts offer a test notification only after the server confirms this account holds this device. Tests use the trip-alert sender, are limited to three attempts per account per UTC day, and create no saved assessment or delivery receipt.
 - SC1607-06: the private catch log can fill its editable position boxes from one of your saved spots. Choosing none keeps the entered position; private spot notes are never copied, and nothing is saved until you press Save.
