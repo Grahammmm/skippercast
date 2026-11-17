@@ -18,8 +18,10 @@ export const landingId = id =>
 
 /** {path: text} of the three tables for a parsed catalogue, in catalogue order; throws on an id with no English or no Spanish. */
 export function projections(catalog) {
+  const map = catalog?.strings, isMap = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+  if (!isMap(catalog) || !isMap(map) || Object.keys(map).length === 0) throw Error('The catalogue strings map must be a non-empty object of ids');
   const en = {}, es = {}, landing = {};
-  for (const [id, entry] of Object.entries(catalog?.strings ?? {})) {
+  for (const [id, entry] of Object.entries(map)) {
     if (typeof entry?.en !== 'string' || entry.en === '') throw Error(`${id}: no English string in the catalogue`);
     if (typeof entry.es !== 'string' || entry.es === '') throw Error(`${id}: no Spanish string in the catalogue`);
     en[id] = {en: entry.en};
