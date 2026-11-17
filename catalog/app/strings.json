@@ -2426,6 +2426,8 @@
     "account.log.method": {"en": "Method", "es": "Método"},
     "account.log.trip": {"en": "Trip", "es": "Viaje"},
     "account.optional": {"en": "(optional)", "es": "(opcional)"},
+    "account.log.atSpot": {"en": "At a saved spot", "es": "En un sitio guardado"},
+    "account.log.noSpot": {"en": "None — keep entered position", "es": "Ninguno — conservar la ubicación introducida"},
     "account.log.noTrip": {"en": "No trip", "es": "Sin viaje"},
     "account.log.lat": {"en": "Latitude", "es": "Latitud"},
     "account.log.lon": {"en": "Longitude", "es": "Longitud"},
