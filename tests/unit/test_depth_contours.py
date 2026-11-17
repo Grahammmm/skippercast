@@ -376,3 +376,57 @@ def test_publish_refuses_an_impossible_date_before_writing_either_form(tmp_path)
     assert (out / 'depth-contours.geojson').read_text() == 'full-sentinel'
     assert (out / 'depth-contours-overview.geojson').read_text() == 'overview-sentinel'
     assert list(fresh.iterdir()) == []
+
+
+def _v2_collection():
+    c = collection()
+    p = c['provenance']
+    p.pop('interval_ft')
+    p.pop('index_ft')
+    p.update(set='ft-v2', shelf_limit_ft=300, index_depths_ft=[60, 150, 300], intervals=[
+        {'minzoom': 8, 'depths_ft': [60, 120, 180, 240, 300]},
+        {'minzoom': 11, 'depths_ft': [30, 90, 150, 210, 270]},
+        {'minzoom': 13, 'depths_ft': [10, 20, 40, 50, 70, 80, 100]},
+        {'minzoom': 15, 'depths_ft': [5, 15, 25], 'native_max_cell_m': 2},
+    ])
+    p['sources'][0]['native_cell_m'] = 2
+    c['features'][0]['properties'].update(minzoom=11, estimated=True, maxzoom=14)
+    c['features'][1]['properties'].update(minzoom=11, estimated=True)
+    c['features'][2]['properties'].update(minzoom=8, index=False)
+    native = {**c['features'][0], 'id': 'survey-a-5ft-native', 'properties': {
+        **c['features'][0]['properties'], 'depth_ft': 5, 'minzoom': 15}}
+    native['properties'].pop('maxzoom')
+    c['features'].append(native)
+    p['features'] += 1
+    return c
+
+
+def test_publish_v2_preserves_the_zoom_contract_and_leaves_native_detail_out_of_overview(tmp_path):
+    c = _v2_collection()
+    (tmp_path / 'catalog/depth-contours').mkdir(parents=True)
+    (tmp_path / 'catalog/depth-contours/test-bay.geojson').write_text(json.dumps(c))
+    dc.publish_depth_contours(tmp_path, REGION, tmp_path, SOURCES)
+    full = json.loads((tmp_path / 'depth-contours.geojson').read_text())
+    overview = json.loads((tmp_path / 'depth-contours-overview.geojson').read_text())
+    assert full['features'] == c['features']
+    assert [f['properties'] for f in overview['features']] == [f['properties'] for f in c['features'][:-1]]
+    for form in (full, overview):
+        assert form['provenance']['set'] == 'ft-v2' and form['provenance']['intervals'] == c['provenance']['intervals']
+        assert form['provenance']['review_expires'] == '2027-09-26'
+
+
+@pytest.mark.parametrize('edit,message', [
+    (lambda c: c['provenance'].update(set='ft-v3'), 'unknown contour set'),
+    (lambda c: c['provenance']['intervals'].pop(), 'incomplete provenance'),
+    (lambda c: c['features'][0]['properties'].update(depth_ft=330), 'invalid ft-v2'),
+    (lambda c: c['features'][0]['properties'].update(maxzoom=15), 'invalid ft-v2'),
+    (lambda c: c['features'][1]['properties'].update(index=False), 'invalid ft-v2'),
+    (lambda c: c['features'][-1]['properties'].update(minzoom=13), 'invalid ft-v2'),
+    (lambda c: c['features'][-1]['properties'].update(estimated=False), 'invalid ft-v2'),
+    (lambda c: c['provenance']['sources'][0].update(native_cell_m=5), 'invalid ft-v2'),
+])
+def test_v2_check_refuses_misleading_depth_or_zoom_metadata(edit, message):
+    c = _v2_collection()
+    edit(c)
+    with pytest.raises(ValueError, match=message):
+        dc.check_contours(c, REGION, SOURCES)

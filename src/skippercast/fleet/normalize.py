@@ -86,6 +86,8 @@ def jaro_winkler(a: str, b: str, prefix_scale: float = 0.1) -> float:
     b_seq = [c for c, hit in zip(b, b_hit) if hit]
     transpositions = sum(x != y for x, y in zip(a_seq, b_seq)) / 2
     jaro = (matches / len(a) + matches / len(b) + (matches - transpositions) / matches) / 3
+    if jaro <= 0.7:  # Winkler prefix bonus only applies to strong Jaro matches
+        return jaro
     prefix = 0
     for x, y in zip(a[:4], b[:4]):
         if x != y:

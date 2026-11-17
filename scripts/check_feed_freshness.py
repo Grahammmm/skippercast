@@ -151,8 +151,9 @@ def degraded_sources(feed, critical_kinds=None):
 
 
 def past_limit(row, limit_hours):
-    """A critical source degraded past the limit, or with no data time at all."""
-    return row["status"] != "ok" and row["critical"] and (row["age_hours"] is None or row["age_hours"] > limit_hours)
+    """A critical source degraded past the limit (a status-ok backup counts), or with no data time."""
+    degraded = row["status"] != "ok" or bool(row.get("fallback_for"))
+    return degraded and row["critical"] and (row["age_hours"] is None or row["age_hours"] > limit_hours)
 
 
 def failing_kinds(feed, limit_hours, critical_kinds=None):
