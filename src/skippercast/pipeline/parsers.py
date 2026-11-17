@@ -3,6 +3,7 @@
 from datetime import date, datetime, timezone
 import hashlib
 import html
+from html.parser import HTMLParser
 import math
 import re
 from urllib.parse import urljoin
@@ -276,9 +277,23 @@ def watch_content_v4(body):
     cleaned = re.sub(r"<(script|style)\b[^>]*>.*?</\1>", "", body, flags=re.S | re.I)
     mains = re.findall(r"<main\b[^>]*>(.*?)</main>", cleaned, flags=re.S | re.I)
     scope = mains[0] if len(mains) == 1 else cleaned
-    links = sorted({html.unescape(value) for _, value in re.findall(r'''<a\b[^>]*?\bhref\s*=\s*(["'])(.*?)\1''', scope, re.I | re.S)
+    collector = _AnchorHrefs()
+    collector.feed(scope)
+    links = sorted({value for value in collector.hrefs
                     if value and not value.startswith(('#', 'javascript:', 'mailto:', 'tel:'))})
     return plain(scope) + '\nDOCUMENT LINKS\n' + '\n'.join(links)
+
+
+class _AnchorHrefs(HTMLParser):
+    """Collect the real href attribute of each <a> start tag (never data-href or attribute text)."""
+
+    def __init__(self):
+        super().__init__()
+        self.hrefs = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            self.hrefs.extend(value for name, value in attrs if name == "href" and value is not None)
 
 
 def watch_content(body):
