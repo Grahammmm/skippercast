@@ -635,6 +635,8 @@
     "menu.language": {"en": "Language", "es": "Idioma"},
     "menu.language.en": {"en": "English", "es": "English"},
     "menu.language.es": {"en": "Español", "es": "Español"},
+    "install.action": {"en": "Install the app", "es": "Instalar la aplicación"},
+    "install.iosHint": {"en": "To install, tap Share, then Add to Home Screen.", "es": "Para instalar, toca Compartir y luego Añadir a pantalla de inicio."},
     "language.loadFailed": {"en": "Spanish could not load, so the page stays in English.", "es": "No se pudo cargar el español, así que la página sigue en inglés."},
     "language.retrySpanish": {"en": "Try Español again", "es": "Volver a intentar en español"},
     "landing.hero.eyebrow": {"en": "Central California coast · live readings", "es": "Costa de California central · lecturas en vivo"},
