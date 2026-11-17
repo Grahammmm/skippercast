@@ -55,10 +55,12 @@ export function acceptsHtml(accept: string | null): boolean {
   for (const range of (accept ?? '').split(',')) {
     const [type = '', ...params] = range.split(';').map(part => part.trim());
     if (type.toLowerCase() !== 'text/html') continue;
-    let q = 1;
+    let q = 1, seenQ = false;
     for (const param of params) {
       const m = /^q\s*=\s*(.*)$/i.exec(param);
       if (!m) continue;
+      if (seenQ) return false; // a repeated weight could overwrite an exclusion: refuse
+      seenQ = true;
       if (!/^(?:0(?:\.\d{0,3})?|1(?:\.0{0,3})?)$/.test(m[1]!)) return false;
       q = Number(m[1]);
     }
