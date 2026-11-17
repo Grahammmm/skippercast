@@ -61,10 +61,10 @@ export async function leadInputs(db: D1Database, scope: {sql: string; args: (str
   const ops = `SELECT o.id FROM fleet_operators o WHERE ${scope.sql}`;
   const [reports, social, ais, ids] = await Promise.all([
     db.prepare(`SELECT v.operator_id AS op,
-        COUNT(DISTINCT CASE WHEN r.report_kind='landing' AND t.local_date>=? THEN t.id END) AS volume,
-        COUNT(DISTINCT CASE WHEN t.local_date>? THEN CAST((julianday(?)-julianday(t.local_date))/7 AS INTEGER) END) AS weeks
+        COUNT(DISTINCT CASE WHEN r.report_kind='landing' AND t.local_date>=? AND t.local_date<=? THEN t.id END) AS volume,
+        COUNT(DISTINCT CASE WHEN t.local_date>? AND t.local_date<=? THEN CAST((julianday(?)-julianday(t.local_date))/7 AS INTEGER) END) AS weeks
       FROM fleet_trip_reports r JOIN fleet_trips t ON t.id=r.trip_id JOIN fleet_vessels v ON v.id=t.vessel_id
-      WHERE v.operator_id IN (${ops}) GROUP BY v.operator_id`).bind(volumeFrom, weeksFrom, today, ...scope.args).all<{op: string; volume: number; weeks: number}>(),
+      WHERE v.operator_id IN (${ops}) GROUP BY v.operator_id`).bind(volumeFrom, today, weeksFrom, today, today, ...scope.args).all<{op: string; volume: number; weeks: number}>(),
     db.prepare(`SELECT v.operator_id AS op, MAX(f.field LIKE 'social.%') AS social FROM fleet_vessel_facts f JOIN fleet_vessels v ON v.id=f.vessel_id
       WHERE f.source_id='operator-site' AND f.superseded_at IS NULL AND v.operator_id IN (${ops}) GROUP BY v.operator_id`).bind(...scope.args).all<{op: string; social: number}>(),
     db.prepare(`SELECT v.operator_id AS op, MAX(w.last_seen_at>=? AND w.last_seen_at<=?) AS seen FROM fleet_ais_watch w JOIN fleet_vessels v ON v.id=w.vessel_id
