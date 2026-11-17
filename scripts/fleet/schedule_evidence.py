@@ -192,10 +192,22 @@ def trip_projection(departure, candidate, region: FleetRegion, binding, retrieve
     return_local = return_utc = return_possible = None
     return_uncertainty = "no-return-time-published"
     if departure_local and duration and duration > 0:
-        return_local_dt = departure_local + timedelta(hours=duration)
-        return_local = return_local_dt.isoformat(timespec="minutes")
-        return_utc, return_possible, resolved = resolve_local(return_local_dt, zone)
-        return_uncertainty = "derived-from-published-duration; " + resolved
+        # Add elapsed hours to each departure instant in UTC, never to the wall clock.
+        starts = [departure_utc] if departure_utc else json.loads(departure_possible or "[]")
+        fmt = lambda value: value.isoformat(timespec="minutes").replace("+00:00", "Z")  # noqa: E731
+        ends = sorted({fmt(datetime.fromisoformat(s.replace("Z", "+00:00")) + timedelta(hours=duration))
+                       for s in starts})
+        if not ends:
+            return_uncertainty = "derived-from-published-duration; unresolved-departure"
+        else:
+            walls = {datetime.fromisoformat(e.replace("Z", "+00:00")).astimezone(zone)
+                     .replace(tzinfo=None).isoformat(timespec="minutes") for e in ends}
+            return_local = walls.pop() if len(walls) == 1 else None
+            if len(ends) == 1:
+                return_utc, resolved = ends[0], "minute-precision-local-schedule"
+            else:
+                return_possible, resolved = canonical(ends), "ambiguous-local-time"
+            return_uncertainty = "derived-from-published-duration; " + resolved
     landing = next((x for x in region.landings if x.id == candidate.landing_hint), None)
     port = next((x for x in region.ports if x.id == candidate.port_hint), None)
     source_url = departure.source_url

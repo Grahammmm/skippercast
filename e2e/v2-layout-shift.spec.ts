@@ -4,7 +4,18 @@
 // The test records every layout-shift entry from the first byte, waits for the parts that used to move (not for a fixed time), and bounds
 //   (a) the shifts that touch the masthead or the command bar (they now hold still), and
 //   (b) the total, loosely: the brief's own tiles and verdict still change height as live data arrives, and that is not asserted away here.
+import type {Page} from '@playwright/test';
 import {test, expect} from './fixtures.ts';
+
+// Resolves once the legend column and the legend report the same heights on two reads one animation-frame pair apart (a settled layout, not a sleep).
+async function settled(page: Page) {
+  const read = () => page.evaluate(() => new Promise<string>(done => requestAnimationFrame(() => requestAnimationFrame(() => {
+    const h = (sel: string) => document.querySelector(sel)!.getBoundingClientRect().height;
+    done(`${h('.app-chrome-left')}/${h('.app-chrome-left > .app-legend')}`);
+  }))));
+  let last = '';
+  await expect.poll(async () => { const now = await read(), same = now === last; last = now; return same; }, {message: 'the legend column stops moving'}).toBe(true);
+}
 
 const SHELL_SHIFT_LIMIT = 0.03;     // masthead + command bar: about 0.012 after the fix (a 4 px nudge), 0.6 to 1.6 before (laptop)
 const TOTAL_LIMIT = {phone: 0.1, laptop: 0.3};   // about 0.01 and 0.03 to 0.12 after the fix; 0.01 and 0.85 before
@@ -41,6 +52,7 @@ test('the legend reserve gives way to a selected-mark card on a short-ish deskto
   await expect(page.locator('.app-legend-mpa')).toBeVisible();
   // The MPA key appears before the source guard reveals the answer above this short map.
   await expect(page.locator('.app-first-answer')).toBeVisible();
+  await settled(page);   // the 90% loading reserve has settled before the card arrives
   // Stand in for the selected-mark card: same class and place in the column as the real one.
   await page.locator('.app-chrome-left').evaluate(col => {
     const card = document.createElement('section');
@@ -48,6 +60,7 @@ test('the legend reserve gives way to a selected-mark card on a short-ish deskto
     card.textContent = 'Selected mark';
     col.insertBefore(card, col.firstChild);
   });
+  await settled(page);   // the legend has given way beside the card
   const box = await page.evaluate(() => {
     const col = document.querySelector('.app-chrome-left')!.getBoundingClientRect();
     const legend = document.querySelector('.app-chrome-left > .app-legend')!.getBoundingClientRect();
