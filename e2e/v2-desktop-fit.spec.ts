@@ -76,6 +76,9 @@ test('a day chosen below the fold reveals its chip in the strip and moves no anc
   await page.evaluate(() => {
     const stage = document.querySelector<HTMLElement>('.app-stage')!, dock = document.querySelector<HTMLElement>('.app-dock')!;
     document.body.style.minHeight = '2400px';
+    // The test measures what the app's script scrolls. Chrome's scroll anchoring also moves the document when a status
+    // line (such as the "hour updating" note) appears above the viewport after the click, which is not an app scroll.
+    for (const el of [document.documentElement, document.body, stage]) el.style.overflowAnchor = 'none';
     stage.style.overflow = 'auto';
     dock.style.position = 'relative';
     dock.style.marginTop = '1600px';
