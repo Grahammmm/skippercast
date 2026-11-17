@@ -590,10 +590,27 @@ def run_stage(run: StageRun, *, clock: Callable[[], datetime] = utc_now,
             prev = None
         if prev is not None and validate_receipt(prev, region.id, run.stage, run.scope):
             prev = None
-        same = prev if prev is not None and prev['generation'] == gen else None
+        # Keep prior generations in the same atomic receipt as the current attempt.
+        # Thus a crash cannot advance one without preserving the other.
+        history = prev.get('generation_history', {}) if prev else {}
+        if not isinstance(history, dict) or any(
+                not isinstance(key, str) or not isinstance(doc, dict)
+                or validate_receipt(doc, region.id, run.stage, run.scope)
+                or doc['generation'] != key for key, doc in history.items()):
+            return result('blocked', gen, 'generation history malformed')
+        history = dict(history)
+        if prev is not None:
+            history[prev['generation']] = {k: v for k, v in prev.items() if k != 'generation_history'}
+        same = history.get(gen)
+
+        def save(doc):
+            write_json_atomic(receipt_path, dict(doc, generation_history=history))
+
         if same is not None and same['status'] == 'held':
+            if prev is not None and prev['generation'] != gen:
+                save(same)
             return result('held', gen, same.get('held_reason') or 'held')
-        if same is not None and same['status'] == 'ok':
+        if same is not None and prev is not None and prev['generation'] == gen and same['status'] == 'ok':
             verdict = _verify_ok(region, same, memo)
             if verdict.done:
                 return result('done', gen, 'no work: receipt ok, outputs re-hash, upstream current')
@@ -612,7 +629,7 @@ def run_stage(run: StageRun, *, clock: Callable[[], datetime] = utc_now,
         base['host'] = host(region.dir)
         if attempt > MAX_ATTEMPTS:
             reason = f'attempt limit ({MAX_ATTEMPTS}) reached for generation {gen[:12]}'
-            write_json_atomic(receipt_path, dict(base, attempt=MAX_ATTEMPTS, status='held',
+            save(dict(base, attempt=MAX_ATTEMPTS, status='held',
                                                  held_reason=reason, error=None, ended=iso(started)))
             return result('held', gen, reason)
 
@@ -621,7 +638,7 @@ def run_stage(run: StageRun, *, clock: Callable[[], datetime] = utc_now,
         for stale in sorted(target.parent.glob(f'{glob.escape(target.name)}.tmp-*')):
             if stale.is_dir() and not stale.is_symlink():
                 stale.rename(_aside(target, f'failed-{stamp}-recovered-{stale.name.rsplit("-", 1)[-1]}'))
-        write_json_atomic(receipt_path, base)  # the attempt is on record before any work starts
+        save(base)  # the attempt is on record before any work starts
 
         tmp = target.with_name(f'{target.name}.tmp-{os.getpid()}')
         tmp.mkdir()
@@ -634,7 +651,7 @@ def run_stage(run: StageRun, *, clock: Callable[[], datetime] = utc_now,
             if tmp.exists():
                 tmp.rename(failed_dir)
             reason = str(exc) or 'held by the stage'
-            write_json_atomic(receipt_path, dict(base, status='held', held_reason=reason, error=None,
+            save(dict(base, status='held', held_reason=reason, error=None,
                                                  ended=iso(clock()), failed_dir=region.record(failed_dir)))
             return result('held', gen, reason)
         except BaseException as exc:
@@ -644,7 +661,7 @@ def run_stage(run: StageRun, *, clock: Callable[[], datetime] = utc_now,
             rc = exc.code if isinstance(exc, SystemExit) and isinstance(exc.code, int) and exc.code else 1
             last = attempt >= MAX_ATTEMPTS
             reason = f'{MAX_ATTEMPTS} attempts failed for generation {gen[:12]}: {error}' if last else None
-            write_json_atomic(receipt_path, dict(base, status='held' if last else 'failed', held_reason=reason,
+            save(dict(base, status='held' if last else 'failed', held_reason=reason,
                                                  error=error, rc=rc, ended=iso(clock()),
                                                  failed_dir=region.record(failed_dir)))
             if not isinstance(exc, Exception):
@@ -658,5 +675,5 @@ def run_stage(run: StageRun, *, clock: Callable[[], datetime] = utc_now,
         doc = dict(base, status='ok', rc=0, error=None, ended=iso(clock()), outputs=outputs)
         if metrics:
             doc['metrics'] = metrics
-        write_json_atomic(receipt_path, doc)
+        save(doc)
         return result('ok', gen, f'{len(outputs)} outputs, attempt {attempt}')

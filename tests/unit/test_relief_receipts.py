@@ -193,6 +193,26 @@ def test_failed_build_leaves_no_output_and_is_kept_as_failed(tmp_path):
     assert fixed.state == 'ok' and receipt(region, 'solo')['attempt'] == 1
 
 
+def test_attempts_survive_switching_generations(tmp_path):
+    region = receipts.Region(tmp_path / 'out', 'tiny')
+    calls = []
+
+    def bad(out):
+        calls.append('A')
+        raise RuntimeError('failed')
+
+    a = simple(region, bad)
+    b = simple(region, lambda out: (out / 'ok').write_text('ok'), params={'generation': 'B'})
+    assert run(a).state == 'failed'
+    assert run(b).state == 'ok'
+    assert run(a).state == 'held'
+    assert receipt(region, 'solo')['attempt'] == 2
+    assert run(b).state == 'ok'
+    assert run(a).state == 'held'
+    assert calls == ['A', 'A']
+    assert receipts.check(region, 'solo').state == 'held'
+
+
 def test_failure_over_an_existing_output_keeps_the_old_output(tiny):
     before = (tiny.dir / 'select' / 'selection.json').read_bytes()
 
