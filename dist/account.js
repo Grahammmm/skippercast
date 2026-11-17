@@ -399,6 +399,19 @@ export function logTripOptionsHTML(trips, region) {
 }
 const noTrip = t => `<option value="">${esc(t('account.log.noTrip'))}</option>`;
 
+/** Published names for this region's exact species IDs; suggestions only, never a free-text allowlist. */
+export function logSpeciesOptionsHTML(region) {
+  if (!Array.isArray(region?.species)) return '';
+  const targets = Array.isArray(region.target_options) ? region.target_options : [], seen = new Set(), options = [];
+  for (const id of region.species) {
+    if (typeof id !== 'string' || !id.trim() || seen.has(id)) continue;
+    seen.add(id);
+    const name = targets.find(item => item?.id === id && typeof item.name === 'string' && item.name.trim())?.name ?? id;
+    if (name.length <= 60) options.push(`<option value="${esc(name)}"></option>`);
+  }
+  return options.join('');
+}
+
 /** A choice never retains a private note or an owner field. One malformed row refuses the whole projection. */
 export function projectLogSpots(rows) {
   if (!Array.isArray(rows)) return null;
@@ -453,7 +466,7 @@ const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'
       <label for="log-ended">${esc(t('account.log.ended'))}</label><input id="log-ended" type="datetime-local" step="any" />
       <label for="log-outcome">${esc(t('account.log.what'))}</label><select id="log-outcome"><option value="blank">${esc(t('account.outcome.blank'))}</option><option value="fish">${esc(t('account.outcome.fish'))}</option><option value="unknown">${esc(t('account.outcome.unknown'))}</option></select>
       <label for="log-count">${esc(t('account.log.count'))}</label><input id="log-count" type="number" min="1" max="9999" step="1" />
-      <label for="log-species">${esc(t('account.log.species'))}</label><input id="log-species" type="text" maxlength="60" />
+      <label for="log-species">${esc(t('account.log.species'))}</label><input id="log-species" type="text" maxlength="60" /><datalist id="log-species-suggestions"></datalist>
       <label for="log-method">${esc(t('account.log.method'))}</label><input id="log-method" type="text" maxlength="40" />
       <label for="log-trip">${esc(t('account.log.trip'))} <span class="account-hint">${esc(t('account.optional'))}</span></label><select id="log-trip">${noTrip(t)}</select>
       <div id="log-spot-choice" hidden><label for="log-spot">${esc(t('account.log.atSpot'))} <span class="account-hint">${esc(t('account.optional'))}</span></label><select id="log-spot">${logSpotOptionsHTML([], t)}</select></div>
@@ -817,6 +830,13 @@ export async function openAccount(options = {}) {
     // SC1137-11: `editing` is {id, original, draft, pending} while the log form holds a correction (draft: the create form as it was).
     let editing = null, tripRegion = null, logPos = null;   // logPos: the position control, wired below
     const live = () => open === self && list.isConnected;
+    // Metadata is independent of saved-trip requests; a late answer never replaces a typed field or another render.
+    void import('./region.js').then(m => m.getRegion()).then(region => {
+      if (!live()) return;
+      const options = logSpeciesOptionsHTML(region);
+      $('#log-species-suggestions').innerHTML = options;
+      if (options) $('#log-species').setAttribute('list', 'log-species-suggestions');
+    }).catch(() => {});   // No region metadata: the existing free-text box is unchanged.
     const FORM_FIELDS = ['started', 'ended', 'outcome', 'count', 'species', 'method', 'trip', 'lat', 'lon', 'note'];
     const spotChoice = createLogSpotChoice({$, copy: t, invalidate: () => logPos.invalidate()});
     const readForm = () => ({...Object.fromEntries(FORM_FIELDS.map(n => [n, $('#log-' + n).value])), spot: spotChoice.selected});
