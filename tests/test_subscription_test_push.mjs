@@ -152,7 +152,7 @@ test('client sends only the named endpoint and propagates refusal words', async 
 
 // Render the actual button and call its actual handler; the test-only export changes no production source.
 const dir = await mkdtemp(join(tmpdir(), 'test-push-ui-')), out = join(dir, 'ui.mjs');
-await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `export {TestNotification} from './web/app/TripAlerts.tsx'; export {h, options} from 'preact'; export {render} from 'preact-render-to-string';`}, bundle: true, platform: 'node', format: 'esm', outfile: out, jsx: 'automatic', jsxImportSource: 'preact', logLevel: 'silent', plugins: [{name: 'test-button', setup(b) { b.onLoad({filter: /\/TripAlerts\.tsx$/}, async ({path}) => ({contents: await readFile(path, 'utf8') + '\nexport {TestNotification};', loader: 'tsx'})); }}]});
+await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `export {TestNotification, Said} from './web/app/TripAlerts.tsx'; export {language} from './web/i18n.ts'; export {h, options} from 'preact'; export {render} from 'preact-render-to-string';`}, bundle: true, platform: 'node', format: 'esm', outfile: out, jsx: 'automatic', jsxImportSource: 'preact', logLevel: 'silent', plugins: [{name: 'test-button', setup(b) { b.onLoad({filter: /\/TripAlerts\.tsx$/}, async ({path}) => ({contents: await readFile(path, 'utf8') + '\nexport {TestNotification, Said};', loader: 'tsx'})); }}]});
 const ui = await import(pathToFileURL(out).href);
 test.after(() => rm(dir, {recursive: true, force: true}));
 function button(device, extra = {}) {
@@ -173,6 +173,19 @@ test('rendered sheet button: shown only for server-confirmed, not browser-only, 
   }
   const state = await deviceStatus(async () => { throw Error('offline'); }, nav, {permission: 'granted'});
   assert.equal(button(state).html, '');
+});
+
+test('test notification copy follows the page language', () => {
+  try {
+    for (const [lang, label, message] of [
+      ['en', 'Send a test notification', 'Test notification accepted by the push service. Check this device for it.'],
+      ['es', 'Enviar una notificación de prueba', 'El servicio de notificaciones aceptó la prueba. Búscala en este dispositivo.'],
+    ]) {
+      ui.language.value = lang;
+      assert.ok(button('confirmed').html.includes(label));
+      assert.ok(ui.render(ui.h(ui.Said, {say: {id: 'alerts.test.sent'}, lang})).includes(message));
+    }
+  } finally { ui.language.value = 'en'; }
 });
 
 test('button handler: double tap sends once, reports result/refusal, refreshes status; missing local subscription never sends', async t => {
