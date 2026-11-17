@@ -436,6 +436,80 @@ class EnhancementTests(unittest.TestCase):
 
 
 class NativeTierTests(unittest.TestCase):
+    def test_locked_native_zoom_and_core_support(self):
+        """D6: 1 m/0-20 m reaches z17; deep/invalid/halo-only and coarse grids do not."""
+        from rasterio.warp import Resampling, reproject
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root / 'base.tif'
+            write_survey(base, size=120, west_nodata=0)
+            for resolution, depth, masked, expected_max in (
+                (1, -10, False, 17), (0.995, -10, False, 17), (1, -20, False, 17),
+                (1, -20.01, False, 15), (1, -10, True, 13),
+                (2, -10, False, 15), (5, -10, False, 15),
+            ):
+                with self.subTest(resolution=resolution, depth=depth, masked=masked):
+                    size = int(600 / resolution)
+                    values = np.full((size, size), depth, dtype='float32')
+                    # A 150 m support patch, surrounded by land/deep whose average looks shallow.
+                    values[:, size // 4:] = np.where(np.arange(size - size // 4) % 2, 40, -60)
+                    transform = from_origin(-121800, -288200, resolution, resolution)
+                    path = root / 'native.tif'
+                    valid = np.full(values.shape, 0 if masked else 255, dtype='uint8')
+                    with rasterio.open(path, 'w', driver='GTiff', width=size, height=size, count=1,
+                                       dtype='float32', crs='EPSG:3310', transform=transform, nodata=NODATA) as ds:
+                        ds.write(values, 1)
+                        ds.write_mask(valid)
+                    manifest = root / 'native.json'
+                    manifest.write_text(json.dumps([{'id': 'fixture', 'path': str(path),
+                                                     'resolution_m': resolution}]))
+                    sources = bt.load_native_manifest(manifest)
+                    output = root / 'deep.pmtiles'
+                    self.assertEqual(bt.main(['--source', str(base), '--output', str(output),
+                                              '--minzoom', '13', '--native-manifest', str(manifest)]), 0)
+                    header, metadata, tiles, _ = read_archive(output)
+                    self.assertEqual(header['maxzoom'], expected_max)
+                    self.assertEqual(metadata['maxzoom'], expected_max)
+                    self.assertFalse(any(t >= sum(4 ** i for i in range(18)) for t in tiles))
+                    # Independent full-source warp of the validity/depth mask, no production
+                    # window/halo/mask_native helper: exact emitted core IDs and tile counts.
+                    for z in (14, 15, 16, 17):
+                        xs, ys = bt.tile_range(sources[0]['bounds'], z)
+                        limit = 20 if z > 15 else 91.44
+                        keep = (valid != 0) & (values <= 0) & (values >= -limit)
+                        support_values = np.where(keep, values, NODATA).astype('float32')
+                        expected = set()
+                        if z <= (17 if resolution <= 1 else 15):
+                            for x in xs:
+                                for y in ys:
+                                    dest = np.full((256, 256), NODATA, dtype='float32')
+                                    tile_transform, _ = bt.tile_grid(z, x, y, pad=0)
+                                    reproject(support_values, dest, src_transform=transform, src_crs='EPSG:3310',
+                                              src_nodata=NODATA, dst_transform=tile_transform, dst_crs='EPSG:3857',
+                                              dst_nodata=NODATA, resampling=Resampling.average)
+                                    count = int(np.count_nonzero(dest != NODATA))
+                                    if count:
+                                        expected.add(bt.tile_id(z, x, y))
+
+                        start, end = sum(4 ** i for i in range(z)), sum(4 ** i for i in range(z + 1))
+                        self.assertEqual({t for t in tiles if start <= t < end}, expected)
+                        if str(z) in metadata['native_support_by_zoom']:
+                            detail = metadata['native_support_by_zoom'][str(z)]
+                            self.assertEqual(detail['tiles'], len(expected))
+                            self.assertEqual(detail['sources'], ([{'id': 'fixture', 'resolution_m': resolution,
+                                                                  'tiles': len(expected)}]
+                                                                if expected else []))
+                    if expected_max == 17:
+                        self.assertLess(len(expected), len(xs) * len(ys))  # unsupported cores omitted
+                    # Explicit requests cannot promote coarse/background grids beyond their cap.
+                    bt.build(base, output, 13, 18, log=lambda *_: None, native_sources=sources)
+                    self.assertEqual(read_archive(output)[0]['maxzoom'], expected_max)
+            bt.build(base, output, 13, 18, log=lambda *_: None)
+            self.assertEqual(read_archive(output)[0]['maxzoom'], 13)
+            original = output.read_bytes()
+            self.assertEqual(bt.main(['--source', str(base), '--output', str(output), '--maxzoom', '18']), 2)
+            self.assertEqual(output.read_bytes(), original)
+
     def test_feather_is_monotonic_without_a_false_ridge_and_keeps_holes(self):
         coarse = np.full((120, 160), -30, dtype='float32')
         native = np.full(coarse.shape, NODATA, dtype='float32')
