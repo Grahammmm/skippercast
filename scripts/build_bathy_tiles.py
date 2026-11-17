@@ -461,6 +461,33 @@ def mask_native(values, nodata=None):
     return np.where(keep, values, np.float32(NODATA)).astype(np.float32)
 
 
+def coverage(elevation, cell_m, native_sources):
+    """Nominal shallow source-cell coverage, not a union or datum qualification.
+
+    cell_m is square spacing or (x, y) spacing for a rectangular background.
+    """
+    import rasterio
+    x, y = (cell_m, cell_m) if np.isscalar(cell_m) else cell_m
+    x, y = abs(float(x)), abs(float(y))
+    cells = int(np.count_nonzero(mask_native(elevation) != NODATA))
+    background = {'cells': cells, 'cell_m': x, 'km2': round(cells * x * y / 1e6, 4)}
+    if x != y:
+        background['cell_y_m'] = y
+    native = []
+    for source in native_sources:
+        cells = 0
+        with rasterio.open(source['path']) as ds:
+            for _, window in ds.block_windows(1):
+                values = ds.read(1, window=window)
+                values = np.where(ds.read_masks(1, window=window) == 0, np.float32(NODATA), values)
+                cells += int(np.count_nonzero(mask_native(values, ds.nodata) != NODATA))
+            native.append({'id': source['id'], 'resolution_m': source['resolution_m'], 'cells': cells,
+                           'km2': round(cells * abs(ds.res[0] * ds.res[1]) / 1e6, 4)})
+    return {'limit_m': SHALLOW_M,
+            'basis': 'cells inside nominal 0-300 ft per source; sources can overlap, so do not add them',
+            'background': background, 'native': native}
+
+
 def warp_native(source, z, x, y, pad):
     import rasterio
     from rasterio.transform import array_bounds
@@ -601,7 +628,7 @@ def output_for(variant, directory=None):
 
 
 def build(source, output, minzoom=MINZOOM, maxzoom=MAXZOOM, log=print, variant='medium', native_sources=None,
-          label='Morro Bay'):
+          label='Morro Bay', coverage_json=None):
     import rasterio
     from rasterio.warp import transform_bounds
     enhance = ENHANCE[variant]
@@ -650,8 +677,15 @@ def build(source, output, minzoom=MINZOOM, maxzoom=MAXZOOM, log=print, variant='
         metadata['description'] = ('Native <=2 m/5 m shallow surveys where supplied, background where supplied; '
                                    '40 m elevation overlap feather. Transparent = no survey. Vertical '
                                    'references as supplied, not datum-corrected; research preview, NOT FOR NAVIGATION.')
+    metadata['detail_coverage'] = coverage(elevation, (src_transform.a, src_transform.e), native_sources)
     write_pmtiles(output, tiles, metadata=metadata, bounds=bounds, minzoom=minzoom, maxzoom=maxzoom,
                   center=(10, centre[0], centre[1]))
+    if coverage_json is not None:
+        sidecar = Path(coverage_json)
+        part = sidecar.with_name(sidecar.name + '.part')
+        part.write_text(json.dumps(dict(metadata['detail_coverage'], archive=Path(output).name),
+                                   indent=2, sort_keys=True) + '\n')
+        part.replace(sidecar)
     size = Path(output).stat().st_size
     log(f'{output}: {size / 1e6:.1f} MB, zooms {minzoom}-{maxzoom}, {len(tiles)} tiles, relief {variant}')
     return size
@@ -661,6 +695,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     parser.add_argument('--source', required=True, help='elevation GeoTIFF (EPSG:3310, metres, positive up)')
     parser.add_argument('--output', default=None, help='archive path (one variant only; default var/seafloor/tiles/...)')
+    parser.add_argument('--coverage-json', help='local coverage JSON sidecar (one variant only)')
     parser.add_argument('--native-manifest', help='local JSON list of native grid paths and source provenance')
     parser.add_argument('--label', default='Morro Bay', help='survey sector name in archive metadata')
     parser.add_argument('--variant', default='medium', choices=[*ENHANCE, 'all'],
@@ -684,9 +719,12 @@ def main(argv=None):
     if args.variant == 'all' and args.output:
         print('build_bathy_tiles: --variant all writes the default file names; drop --output', file=sys.stderr)
         return 2
+    if args.variant == 'all' and args.coverage_json:
+        print('build_bathy_tiles: --variant all requires dropping --coverage-json', file=sys.stderr)
+        return 2
     for variant in (ENHANCE if args.variant == 'all' else [args.variant]):
         build(args.source, Path(args.output) if args.output else output_for(variant), args.minzoom, args.maxzoom,
-              variant=variant, native_sources=native_sources, label=args.label)
+              variant=variant, native_sources=native_sources, label=args.label, coverage_json=args.coverage_json)
     return 0
 
 
