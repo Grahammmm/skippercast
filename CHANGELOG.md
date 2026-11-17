@@ -4,6 +4,8 @@
 
 - SC-NEXT-08: the data status page follows the saved or browser language, with Spanish headings, table labels and freshness notes; source names and freshness rules are unchanged.
 
+- SC-MAPQ-NATIVE-ZOOM-1: private relief builds retain 1 m shallow-survey detail through zoom 17 only on tiles with nominal 0–20 m support. Native 2 m/5 m tiles stop at zoom 15; background stops at 13. Archive metadata reports actual per-zoom native support; no surveys or archives are published by this change.
+
 - SC1822-11: remove an individual private comfort report without deleting your account; history labels the latest-100 cap and latest-five display, with report dates in the opened region's time zone.
 
 - SC-NEXT-05: choose °F or °C for the brief's water temperature in the account menu, remembered on this device. Comparisons, charts and exports keep °F.
