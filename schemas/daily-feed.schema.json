@@ -90,6 +90,16 @@
       }
     },
     "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "charter_reports": {
+      "type": "object",
+      "required": ["status", "reason", "last_source_day"],
+      "properties": {
+        "status": {"const": "not_available"},
+        "reason": {"const": "source_stale"},
+        "last_source_day": {"anyOf": [{"$ref": "common.schema.json#/$defs/date"}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    },
     "health": {
       "type": "object",
       "required": ["status", "critical_available", "recent_report_days_ok", "sources_ok", "sources_total", "issues"],
@@ -99,7 +109,8 @@
         "recent_report_days_ok": {"type": "integer", "minimum": 0},
         "sources_ok": {"type": "integer", "minimum": 0},
         "sources_total": {"type": "integer", "minimum": 0},
-        "issues": {"$ref": "common.schema.json#/$defs/string_list"}
+        "issues": {"$ref": "common.schema.json#/$defs/string_list"},
+        "degraded_reasons": {"$ref": "common.schema.json#/$defs/string_list"}
       }
     }
   },

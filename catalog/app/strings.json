@@ -2294,6 +2294,8 @@
     "reports.cards.link": {"en": "coast report", "es": "informe costero"},
     "reports.cards.post": {"en": ".", "es": "."},
     "reports.cards.unsafe": {"en": "The fleet catch counts in this report failed a check and are not shown.", "es": "Los conteos de capturas de la flota de este informe no pasaron una comprobación y no se muestran."},
+    "reports.evidence.not_available": {"en": "Not available. The charter report source has not updated recently, so no catch counts are shown.", "es": "No disponible. La fuente de reportes de charters no se ha actualizado recientemente, por lo que no se muestran capturas."},
+    "reports.evidence.not_available_since": {"en": "Not available. The charter report source has not updated since {date}, so no catch counts are shown.", "es": "No disponible. La fuente de reportes de charters no se actualiza desde {date}, por lo que no se muestran capturas."},
     "reports.evidence.unavailable": {"en": "The daily evidence feed for this region is unavailable. No catch score is assumed.", "es": "La fuente diaria de evidencia de esta región no está disponible. No se supone ninguna puntuación de captura."},
     "reports.evidence.eyebrow": {"en": "Evidence for recent activity", "es": "Evidencia de actividad reciente"},
     "reports.trips.one": {"en": "{n} reported trip", "es": "{n} viaje reportado"},

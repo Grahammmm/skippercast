@@ -289,6 +289,10 @@ def check_feed(name, public, github, now, fetch=fetch_json, max_age_hours=None, 
         label = config["label"] + ("" if feed is public_feed else " (GitHub copy)")
         source_bits, source_lines = source_verdict(feed, config["critical_degraded_hours"], label, health["critical_kinds"])
         lines += source_lines
+        reasons = (feed.get("health") or {}).get("degraded_reasons") if isinstance(feed.get("health"), dict) else None
+        if isinstance(reasons, list) and reasons:
+            # A section the feed itself marks not available: reported, never a stale or failing result.
+            lines.append(f"{config['label']} is degraded by design: " + "; ".join(str(r) for r in reasons) + ".")
     return (0 if ok else STALE) | source_bits, "\n".join(lines)
 
 
