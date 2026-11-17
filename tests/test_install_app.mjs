@@ -29,6 +29,11 @@ function offer(win, prompt = async () => ({outcome: 'accepted'})) {
 }
 function html(win) { return m.render(m.h(m.InstallApp, {win})); }
 function click(win) { return m.InstallApp({win}).props.children.props.onClick(); }
+test('watchInstall defaults to the browser window', () => {
+  const win = new EventTarget(); globalThis.window = win;
+  try { m.watchInstall(); const event = offer(win); assert.equal(m.installable.value, event); }
+  finally { delete globalThis.window; m.installable.value = null; }
+});
 test('install_event_kept: prevents the prompt and repeated watches do not duplicate listeners', () => {
   const win = browser(); m.watchInstall(win);
   const event = new Event('beforeinstallprompt'); let prevented = 0;

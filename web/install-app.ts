@@ -11,7 +11,7 @@ export function isStandalone(win: Window): boolean {
 export function isIosSafari(ua: string): boolean {
   return /iPhone|iPad|iPod/.test(ua) && /Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
 }
-export function watchInstall(win: Window): void {
+export function watchInstall(win: Window = window): void {
   if (watched.has(win)) return;
   watched.add(win);
   win.addEventListener('beforeinstallprompt', event => {

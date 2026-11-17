@@ -239,7 +239,7 @@ test('SC-NEXT-03: install entry follows offline and the app watches before rende
   assert.match(source, /import \{InstallApp\} from '\.\/InstallApp\.tsx'/);
   assert.match(source, /accountMenu\.offline[\s\S]*?<InstallApp \/>/);
   const main = readFileSync(new URL('../web/app/main.tsx', import.meta.url), 'utf8');
-  assert.ok(main.indexOf('watchInstall(window)') < main.indexOf('render(<App'));
+  assert.ok(main.indexOf('watchInstall()') >= 0 && main.indexOf('watchInstall()') < main.indexOf('render(<App'));
 });
 
 test('SC0707-07: accountLabel follows the language and passes an account name through untouched', () => {

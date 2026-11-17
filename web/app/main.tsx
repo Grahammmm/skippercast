@@ -26,7 +26,7 @@ import {holdMap, MAP_WAIT_MAX_MS, releaseMap, whenMapMayLoad} from '../map-ready
 // SCB-11: the page's early script (./early.ts) starts the first verdict's reads only while the app has not started its own.
 (globalThis as {skippercastApp?: boolean}).skippercastApp = true;
 // SC-LAUNCH-4: before any read, so every response's cost-ceiling mark reaches the notice.
-watchInstall(window);
+watchInstall();
 installDegradedWatch();
 configureStore({v2: true});
 loadCoordinateFormat();
