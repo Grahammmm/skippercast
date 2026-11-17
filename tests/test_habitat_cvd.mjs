@@ -51,7 +51,7 @@ function withTokens(css, theme, overrides) {
   return theme === 'dark' ? next + light : dark + next;
 }
 const oldPaletteCss = () => withTokens(withTokens(TOKENS, 'dark', OLD_CLASSES.dark), 'light', OLD_CLASSES.light);
-const alphas = {dark: ALPHA_Z13, light: ALPHA_Z13};
+const alphas = {dark: ALPHA_Z13, light: ALPHA_Z13 * 0.75};
 
 // ── independent math vectors ────────────────────────────────────────────────────────────────────────────────────
 
@@ -132,7 +132,7 @@ test('all_pairs_all_simulations_both_themes: every unordered pair, every simulat
   }
   for (const r of report.results) {
     assert.equal(r.threshold, HABITAT_MIN_DELTA_E[r.kind]);
-    assert.equal(r.alpha, r.kind === 'solid' ? 1 : ALPHA_Z13);
+    assert.equal(r.alpha, r.kind === 'solid' ? 1 : alphas[r.theme]);
     assert.ok(r.deltaE >= r.threshold, `${r.theme} ${r.simulation} ${r.pair} ${r.kind}: ${r.deltaE}`);
   }
   assert.deepEqual(HABITAT_MIN_DELTA_E, {solid: 12, fill: 6});
@@ -170,11 +170,16 @@ test('old_hard_mixed_regression: the pre-MGL-15 dark palette fails the gate wher
 
 // ── the alpha is the renderer's ─────────────────────────────────────────────────────────────────────────────────
 
+test('light theme reduces habitat opacity to the approved multiplier', () => {
+  assert.equal(paletteOf('light').mapHabitatOpacity, '0.75');
+  near(habitatFillAlpha(markStyle, readPalette, RAW.light, SURVEY_PICK), ALPHA_Z13 * 0.75, 1e-15, 'light survey fill');
+});
+
 test('renderer_alpha_not_rounded: the checker reads the real survey fill at zoom 13 and distinguishes 0.25', () => {
   for (const theme of ['dark', 'light']) {
     const layer = markStyle(paletteOf(theme)).habitat.find(l => l.id === SURVEY_PICK);
     const alpha = evaluateZoomRamp(layer.paint['fill-opacity'], 13);
-    near(alpha, ALPHA_Z13, 1e-15, 'renderer alpha at z13');
+    near(alpha, alphas[theme], 1e-15, 'renderer alpha at z13');
     assert.notEqual(alpha, 0.25);
     assert.equal(habitatFillAlpha(markStyle, readPalette, RAW[theme], SURVEY_PICK), alpha);
   }
@@ -263,7 +268,7 @@ test('checker_compatibility: --habitat-cvd passes on the final tokens and fails 
     assert.match(good.stdout, /Habitat CVD check passed: 96 rows/);
     assert.equal(good.stdout.split('\n').filter(l => l.startsWith('PASS ')).length, 96);
     assert.match(good.stdout, /PASS dark protanopia rock\/mixed solid alpha 1: dE2000 [\d.]+ \([\d.]+\) >= 12/);
-    assert.match(good.stdout, /PASS light deuteranopia soft\/kelp fill alpha 0\.24666666666666667: dE2000 [\d.]+ \([\d.]+\) >= 6/);
+    assert.match(good.stdout, /PASS light deuteranopia soft\/kelp fill alpha 0\.185: dE2000 [\d.]+ \([\d.]+\) >= 6/);
     const copy = cli('--habitat-cvd', put('final.css', TOKENS));
     assert.equal(copy.status, 0, copy.stderr);
     const old = cli('--habitat-cvd', put('old.css', oldPaletteCss()));
@@ -299,7 +304,7 @@ test('checker_compatibility: the default run still refuses the same transparent 
   } finally { rmSync(dir, {recursive: true, force: true}); }
   const t = themes(TOKENS);
   assert.equal(t.dark['map-water'], '#07131d');
-  assert.equal(t.light['hab-kelp'], '#207053');
+  assert.equal(t.light['hab-kelp'], '#297653');
 });
 
 // ── role split ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -458,14 +463,14 @@ test('today_except_classes: map-only defaults equal the chrome roles the map use
     // MB-05: the light map roles listed here were deliberately moved off the chrome roles (MAP-DESIGN-LOCK 10.2).
     const lightMoved = new Set(['map-land', 'map-park', 'map-road', 'map-road-minor', 'map-boundary', 'map-label', 'map-coast']);
     for (const [token, chrome] of Object.entries(alias)) if (theme === 'dark' || !lightMoved.has(token)) assert.equal(RAW[theme][token], RAW[theme][chrome], `${theme} --${token} is --${chrome}`);
-    for (const token of ['map-label-opacity', 'map-road-opacity', 'map-habitat-opacity', 'map-contour-width']) assert.equal(RAW[theme][token], '1', `${theme} --${token}`);
+    for (const token of ['map-label-opacity', 'map-road-opacity', 'map-habitat-opacity', 'map-contour-width']) assert.equal(RAW[theme][token], theme === 'light' && token === 'map-habitat-opacity' ? '0.75' : '1', `${theme} --${token}`);
     for (const name of HABITAT_CLASSES) assert.notEqual(RAW[theme][`hab-${name}`], undefined);
   }
 });
 
 // MB-05: the light pins were re-taken after MAP-DESIGN-LOCK 10.2 moved the light land, park, road, boundary, label and coast tokens (dark pins unchanged).
 // sha256 of each module's JSON output under each theme's resolved tokens, taken from main 9312858 (before MGL-15; legend re-taken after SC1407-15 added the planning-route swatch), with the four
-// habitat tokens set back to their old class colours. A different hash means something other than the four classes moved.
+// habitat tokens set back to their old class colours and the habitat multiplier to 1. A different hash means another property moved.
 const PRE_MGL15 = {
   dark: {basemapDay: '4c3bc2f4888541e7279e39d822ed576c0b69703e0bfd9539c74b3da2df869ced', basemapNight: 'bcd35d05c97dac8ee923eeabc227cbf6f55466faedb2498c9a124245f8a648c0',
     markStyle: 'ea4bf9a688dd566c5dd776e5ec731ed1433bec2a67c5efc987441dc5bca9e07b', contours: '00340163df880b797d9a2d7618277d8d46435e711ae3eeed649b149286a7896c',
@@ -486,7 +491,7 @@ test('today_except_classes: day and night basemap, every overlay and every legen
   // R4-SC-08 moved only the glyph URL under its content version; the pins predate it, so compare with the old URL.
   const basemap = (p, variant) => { const style = basemapStyle(p, {...OPTIONS, variant}); return {...style, glyphs: style.glyphs.replace(`/v/${GLYPH_VERSION}/`, '/')}; };
   for (const theme of ['dark', 'light']) {
-    const p = paletteOf(theme, OLD_CLASSES[theme]);
+    const p = paletteOf(theme, {...OLD_CLASSES[theme], 'map-habitat-opacity': '1'});
     const got = {
       basemapDay: digest(basemap(p, 'day')), basemapNight: digest(basemap(p, 'night')), markStyle: digest(markStyle(p)),
       contours: digest(contoursOverlay(p, empty)), wind: digest(windOverlay(p)), stations: digest(stationOverlay(p)), ranked: digest(rankedStyle(p)), coastline: digest(coastlineLayers(p)),

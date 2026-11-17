@@ -611,8 +611,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // UXFIX-12 only moves the .chart-overflow:focus-visible ring out of a media block (same 2 px ring, now at all widths); no unfocused paint changed.
   "panelCss": "4558cd4edb0be1827ef6c00523a05b1c8eae84b0d0d81a93c33d5e12e4c66fa9",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
-  // MB-05 only recolours the light map-only roles and adds contour and no-survey map tokens; no chrome text, panel or legend-glass token changed.
-  "tokensCss": "a72a5422ad3bac487e7f37145e698c13c53a496f314c08252348a465931fdf30",
+  // MB-05 recolours light map-only roles, reduces habitat fill opacity and adds contour/no-survey tokens; chrome text, panel and legend-glass paint stay unchanged.
+  "tokensCss": "5532bc9452b85f33e202b215ca36b4acd7b4fb8aac2727adf9f5235570cec7fa",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
   // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.
