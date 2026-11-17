@@ -354,7 +354,7 @@ export async function answer(kind, params, store, now = Math.floor(Date.now() / 
 
 // Open-Meteo-compatible /data/<model>/static/meta.json
 export async function meta(model, store) {
-  if (!MODELS[model]) throw new QueryError('Unknown model');
+  if (!Object.hasOwn(MODELS, model)) throw new QueryError('Unknown model');
   const manifest = await store.manifest(model);
   if (!manifest?.meta) throw new QueryError('Model not yet published');
   return {...manifest.meta, provider: manifest.provider, source: manifest.documentation, cycle_iso: manifest.cycle_iso};
