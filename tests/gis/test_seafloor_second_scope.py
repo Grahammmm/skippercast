@@ -296,6 +296,19 @@ def test_warm_reuse_old_key_miss_corruption_and_interrupted_checkpoint(root):
         plan(root, physical_only=True, scope_config=config)
 
 
+def test_plan_does_not_credit_receipt_with_missing_outputs(root):
+    build(root)
+    config = root/'catalog/demo-scope.json'
+    run_module.run(REACH, root=root, physical_only=True, scope_config=config)
+    folder = scope_dir(root)/'private-reaches'/REACH
+    assert plan(root, physical_only=True, scope_config=config)['reaches'][0]['processed']
+    mutate(folder/'run.json', lambda d: d.update(outputs={'cells.json': d['outputs']['cells.json']}))
+    (folder/'terrain.json').unlink()
+    pending = plan(root, physical_only=True, scope_config=config)
+    assert not pending['reaches'][0]['processed']
+    assert pending['new_reaches'] == [REACH]
+
+
 def test_plan_count_validation_and_held_default(root):
     build(root)
     config = root/'catalog/demo-scope.json'

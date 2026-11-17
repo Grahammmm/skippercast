@@ -11,6 +11,9 @@ from .io import sha256
 from .scope_paths import resolve_scope
 
 REFERENCE_FILES = ('seafloor-ledger.json', 'reaches.json', 'cells.json')
+# The complete run.json output inventory produced by run.run.
+RUN_OUTPUTS = frozenset(('cells.json', 'terrain.json', 'habitat.geojson', 'atlas-comparison.json',
+                         'held.geojson', 'candidates.geojson', 'physical.json'))
 
 
 def _load(path, what):
@@ -121,7 +124,7 @@ def private_progress(context, manifest):
                 or any(current.get(r.get('id')) != r for r in inputs['sources'])):
             continue
         outputs = receipt.get('outputs')
-        if not isinstance(outputs, dict) or not outputs:
+        if not isinstance(outputs, dict) or set(outputs) != RUN_OUTPUTS:
             continue
         for name, expected in outputs.items():
             if Path(name).name != name or not (folder/name).is_file() or sha256(folder/name) != expected:
