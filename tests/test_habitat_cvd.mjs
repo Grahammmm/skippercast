@@ -455,12 +455,15 @@ test('today_except_classes: map-only defaults equal the chrome roles the map use
   const alias = {'map-water': 'bg', 'map-land': 'panel', 'map-park': 'panel-2', 'map-road': 'line', 'map-road-minor': 'panel-2', 'map-boundary': 'line', 'map-label': 'muted',
     'map-halo': 'bg', 'map-ink': 'text', 'map-ink-halo': 'bg', 'map-coast': 'muted', 'map-contour': 'depth-1', 'mark-ring': 'mint'};
   for (const theme of ['dark', 'light']) {
-    for (const [token, chrome] of Object.entries(alias)) assert.equal(RAW[theme][token], RAW[theme][chrome], `${theme} --${token} is --${chrome}`);
+    // MB-05: the light map roles listed here were deliberately moved off the chrome roles (MAP-DESIGN-LOCK 10.2).
+    const lightMoved = new Set(['map-land', 'map-park', 'map-road', 'map-road-minor', 'map-boundary', 'map-label', 'map-coast']);
+    for (const [token, chrome] of Object.entries(alias)) if (theme === 'dark' || !lightMoved.has(token)) assert.equal(RAW[theme][token], RAW[theme][chrome], `${theme} --${token} is --${chrome}`);
     for (const token of ['map-label-opacity', 'map-road-opacity', 'map-habitat-opacity', 'map-contour-width']) assert.equal(RAW[theme][token], '1', `${theme} --${token}`);
     for (const name of HABITAT_CLASSES) assert.notEqual(RAW[theme][`hab-${name}`], undefined);
   }
 });
 
+// MB-05: the light pins were re-taken after MAP-DESIGN-LOCK 10.2 moved the light land, park, road, boundary, label and coast tokens (dark pins unchanged).
 // sha256 of each module's JSON output under each theme's resolved tokens, taken from main 9312858 (before MGL-15; legend re-taken after SC1407-15 added the planning-route swatch), with the four
 // habitat tokens set back to their old class colours. A different hash means something other than the four classes moved.
 const PRE_MGL15 = {
@@ -470,12 +473,12 @@ const PRE_MGL15 = {
     ranked: '5f4127c8c0d72021a8285e8dba62acf1e60e1a21f044ff0fca925ff4f3d66c8c', coastline: 'ba45dddc66343939c5869bf19d43cf62f43797ad54e86f6899ada7bfc7d51d3a',
     mpa: 'ec0211f82aa47296adaedd43b08910d776b99bf7b0cdcda64f4c5f10febc9367', seafloor: 'dc2f2708205ac09f4b0f2e50c9f434d85fbab23f3827933af731607a5c1ecb7f',
     coastPalette: '6dc9df3acfc5197dc77636fa4d3bb3b4dc4711155b9ded4a33e7ebb6e5ce3fab', legend: '8ba22780365f22f0cfcd38f121423c8a8f7d910c21b771cbb99a16679b8b3f6c'},
-  light: {basemapDay: 'd808bc498fdc45f2afb6a1e78fa9fe0a44a24bd41ebd933e9aaa93b9acf63ea6', basemapNight: 'e06ca75e8eee8e3d3cc39b35d0d6f3c78404603525d097cc19b68c351c8b8c95',
-    markStyle: '809d30a296625c020206b7c6d6dfdf5fceb15c878ece7c68e87622d385baab25', contours: '02807f64e2f88064e66e7ff212445e02c00ab4a51220ecac6ffcae312a6c8ce6',
-    wind: 'fcc72707149c69fd25582f517d81f968536cc73d011d46e8a7711170e698a475', stations: 'a8fbbc67164a536694a7c71b042a290847f5edcdb7caaf8f35801b5f58f00261',
-    ranked: '1d31b678781879b866ea49adafe7e877f5ff19219639ad66f1b1c6500e66b1c1', coastline: 'a0a3e42e80196c3f02c5f912c53b0e635ec2635b3d204b354ab52d63df702dad',
-    mpa: '28aac4da0865d837142fb538317a8d01da24ffa4566e8f2c01f917482f581b43', seafloor: 'e3b06a039c89eb28a9fc8f2fa1935b59c350940bcbc99c6d0c05fda3e0d786b4',
-    coastPalette: '94883d376f41ef9d69047d7a6820f0de872bec5fdf149ec1da59c9c587da0ea8', legend: '7ccd143ff8b59aa72011d96bdc8b3abce7cac6b8511199680d09ef7dbc8d1a40'},
+  light: {basemapDay: 'e2fddacc2a3344c7dd1e0e9a3402f0123c47c1660606263510b6a0fdfd7144f2', basemapNight: 'e06ca75e8eee8e3d3cc39b35d0d6f3c78404603525d097cc19b68c351c8b8c95',
+    markStyle: '809d30a296625c020206b7c6d6dfdf5fceb15c878ece7c68e87622d385baab25', contours: '44367672c1c5a7a4e65fc7fca2f52747fa2be9a391d923ffe916b61af045dcff',
+    wind: 'fcc72707149c69fd25582f517d81f968536cc73d011d46e8a7711170e698a475', stations: 'e64d698c19c4989afb104f504e95c2df46a2b91c80bebbf7978a905613d3ca94',
+    ranked: '1d31b678781879b866ea49adafe7e877f5ff19219639ad66f1b1c6500e66b1c1', coastline: '359de78dddcdaff201f895087e33c9c8b99e2a5647df486268a0d8c56a248ed8',
+    mpa: '28aac4da0865d837142fb538317a8d01da24ffa4566e8f2c01f917482f581b43', seafloor: 'ce5756009be496de0072e7b66c216db27aa05020049aaccfdbccb787a0c8df39',
+    coastPalette: '19dd9879dbee4907251ac533211ccd8fa8518195a58428cc48fc64570087bacb', legend: '6b286ff378a9a80ee1a818c1e6b2cb32e3223929b681b65be2645bc7351d89f0'},
 };
 test('today_except_classes: day and night basemap, every overlay and every legend swatch resolve exactly as before, apart from the four classes', () => {
   const OPTIONS = {archive: 'https://example.test/tiles/basemap/ca-coast.pmtiles', assets: 'https://example.test/basemap/'}, empty = {type: 'FeatureCollection', features: []};
