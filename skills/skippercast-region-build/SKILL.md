@@ -58,7 +58,7 @@ Terrain is not built by this skill. See `docs/operations/coast-statewide-runshee
 ## Golden case
 
 `morro-bay` (real run M2) over the three USGS GeoTIFFs: `candidate/morro-bay.geojson` must equal the committed
-`catalog/depth-contours/morro-bay.geojson` in features **and** provenance: run `scripts/golden_compare.py morro-bay --run <dir>`.
+`catalog/depth-contours/morro-bay.geojson` in features **and** provenance: run `python3 skills/skippercast-region-build/scripts/golden_compare.py morro-bay --run <dir>`.
 Any verdict other than `equal` is a spec-gap note naming the keys it lists.
 
 ## Changelog

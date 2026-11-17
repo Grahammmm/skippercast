@@ -22,6 +22,8 @@ For a website assignment, deliver a visible improvement using its reviewed
 terrain and, when paired imagery is requested, reviewed imagery. For a private
 terrain assignment, deliver and review the selected data-only preview. Keep the task to rendering and presentation. Offline maps, product consolidation, forecast work, habitat expansion and unrelated source discovery are outside this workflow unless the user changes its scope.
 
+Website 3D uses the relief pipeline's R5d terrain release (regional.ts grids with masks; no hole bridging). Defaults (G 2026-11-17): vertical exaggeration 2×, feet labels, dark and light themes (screenshot both).
+
 ## Select one useful slice
 
 Resume the repository instructions and existing ledger. First read the [upstream mapping handoff](references/mapping-handoff.md). Use only completed reviewed outputs from the designated mapping session. The
@@ -46,7 +48,7 @@ only the affected review plus normal exact-head release checks.
 
 ## Use cheap, bounded implementation
 
-For an uncalibrated routine task, start with one available `gpt-6-luna` worker at low effort; if unavailable, use an available small model after a task-specific fixture check. Do not assume provider subscriptions or buy access. For comparable tasks, reuse the cheapest setting supported by accepted actual evidence; retain the last successful setting as fallback. Give it a brief of at most 250 words and five relevant paths, exact ownership and acceptance checks. Fork no conversation history; let it read additional targeted dependencies when necessary. The coordinator owns integration, browser verification and releases. Use scripts for extraction, builds, tests and waiting, rather than agents for these tasks.
+For an uncalibrated routine task, start with the routine lane named in WORKER-GUIDE.md (today sonnet-coder-gopus); if unavailable, use an available small model after a task-specific fixture check. Do not assume provider subscriptions or buy access. For comparable tasks, reuse the cheapest setting supported by accepted actual evidence; retain the last successful setting as fallback. Give it a brief of at most 250 words and five relevant paths, exact ownership and acceptance checks. Fork no conversation history; let it read additional targeted dependencies when necessary. The coordinator owns integration, browser verification and releases. Use scripts for extraction, builds, tests and waiting, rather than agents for these tasks.
 
 When a failure produces no new evidence, change approach or narrow the task. Escalate a model-caused implementation failure to `gpt-6.1-sol` medium with the saved reproduction and failed attempt. Missing data, permissions or services need a different action, not a stronger model. Reuse accepted evidence and avoid duplicate discovery.
 
@@ -64,7 +66,7 @@ shoreline, reef and regional scale across desktop and phone. Reuse unaffected vi
 
 ## Review, deploy and improve
 
-After stopping, use an independent `gpt-6-astra` medium reviewer with the bounded diff, screenshots, source receipts, check results and action log. It assesses visual quality, data honesty, correctness and avoidable rework, then recommends a small skill correction supported by evidence. Resolve blocking findings before release; if more implementation is needed, carry it into the next authorized run. Follow repository merge/deployment gates. After the deadline, save results and existing job handles. Release requires the task's explicit publication scope; this skill does not authorize it.
+After stopping, use the independent reviewer named by current review routing (cross-family preferred; G 2026-11-16: Sonnet or Terra review) with the bounded diff, screenshots, source receipts, check results and action log. It assesses visual quality, data honesty, correctness and avoidable rework, then recommends a small skill correction supported by evidence. Resolve blocking findings before release; if more implementation is needed, carry it into the next authorized run. Follow repository merge/deployment gates. After the deadline, save results and existing job handles. Release requires the task's explicit publication scope; this skill does not authorize it.
 
 Keep one receipt: objective/region; start/deadline/stop; changed paths; visible result and data-supported area; before/after views; attempted/passed checks; review findings; live jobs; blockers/next action; available model, token, time and rework evidence. Do not invent unavailable usage or claim a cheapest proven setting from a simulation. Read [calibration](references/calibration.md) only for the end-of-run audit and model evidence.
 
