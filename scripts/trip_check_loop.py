@@ -12,6 +12,7 @@ Exit status is non-zero when any check failed, which marks only this job red.
 """
 import argparse
 import json
+import math
 import os
 import subprocess
 import sys
@@ -83,6 +84,10 @@ def main(argv=None):
                         help='wait after a new head so the R2 copy the site serves is current')
     parser.add_argument('--once', action='store_true', help='stop after the first check (push-triggered runs)')
     args = parser.parse_args(argv)
+    for flag, value in (('--budget-minutes', args.budget_minutes), ('--poll-seconds', args.poll_seconds),
+                        ('--settle-seconds', args.settle_seconds)):
+        if not (math.isfinite(value) and value >= 0):
+            parser.error(f'argument {flag}: must be finite and non-negative, got {value}')
     checks, failures = watch(head=lambda: remote_head(args.branch), finished=refresh_finished, check=check_trips,
                              sleep=time.sleep, clock=time.monotonic,
                              deadline=time.monotonic() + args.budget_minutes * 60,

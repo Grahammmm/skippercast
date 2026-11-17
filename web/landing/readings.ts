@@ -179,7 +179,7 @@ export async function loadReadout(fetchFn: typeof fetch = fetch, region = DEFAUL
     if (!response.ok) throw Error(`${url} ${response.status}`);
     return response.json();
   };
-  const info = await json(`regions/${encodeURIComponent(region)}/region.json`).catch(() => ({})) as RegionStations;
+  const info = await json(`regions/${encodeURIComponent(region)}/region.json`).catch(() => ({})) as RegionStations | null ?? {};  // RF2040-10: JSON null metadata takes the empty fallback
   const station = info.stations?.tide ?? '9412110';
   const [feed, tide] = await Promise.all([json(feedPath(info.conditions_feed, region)).catch(() => null), json(tideURL(station)).catch(() => null)]);
   const at = now();

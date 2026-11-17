@@ -211,7 +211,9 @@ def fleet_line(rows, issue, now):
         row = rows[0]
         try:
             pushed = datetime.fromisoformat(str(row.get('pushed_at')).replace(' ', 'T').replace('Z', '+00:00'))
-            since = max(0.0, (now - (pushed if pushed.tzinfo else pushed.replace(tzinfo=timezone.utc))).total_seconds())
+            since = (now - (pushed if pushed.tzinfo else pushed.replace(tzinfo=timezone.utc))).total_seconds()
+            if since < 0:  # a push dated after the report time is not evidence of a fresh heartbeat
+                since = None
         except ValueError:
             since = None
         beat, messages = number(row.get('heartbeat_age_s')), number(row.get('messages_24h'))

@@ -50,9 +50,12 @@ def clean_url(value):
 
 
 def normalize(raw, region, query, now, lookback):
-    version = str(raw.get("schema_version", ""))
+    version = str(raw.get("schema_version", "")) if isinstance(raw, dict) else ""
     if version.split(".")[0] != "1" or not isinstance(raw.get("results"), list) or not isinstance(raw.get("source_status"), dict):
         raise ValueError("Unexpected last30days agent JSON contract")
+    for index, r in enumerate(raw["results"]):
+        if not isinstance(r, dict):
+            raise ValueError("Malformed last30days result at position " + str(index))
     lower = now - timedelta(days=lookback)
     items = []
     for r in raw["results"]:

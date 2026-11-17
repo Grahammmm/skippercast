@@ -59,6 +59,8 @@ def decode_probabilities(body, points):
 def wave_probabilities(client,region,now):
     root='https://nomads.ncep.noaa.gov/pub/data/nccf/com/gens/prod/';base=None;names=[];cycle=None
     # A newly created directory may still be empty or incomplete. Require a complete horizon.
+    # Provider cycles are UTC; an equivalent zoned clock must pick the same run (aware input only).
+    if now.tzinfo is not None:now=now.astimezone(timezone.utc)
     rounded=now.replace(hour=(now.hour//6)*6,minute=0,second=0,microsecond=0)
     for hours_back in (0,6,12,18,24):
         candidate=rounded-timedelta(hours=hours_back)

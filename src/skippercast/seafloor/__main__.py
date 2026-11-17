@@ -14,6 +14,7 @@ def main():
     planning.add_argument('--max-new', type=int, default=3)
     planning.add_argument('--json', action='store_true')
     planning.add_argument('--physical-only', action='store_true', help='Include reviewed private sources; never grants publication')
+    planning.add_argument('--scope-config', type=Path, help='Explicit scope config; noncentral plans are private and held unless --physical-only')
     review = commands.add_parser('review-source', help='Checkpoint a bounded completed discovery test; never qualifies a survey')
     review.add_argument('--source', required=True)
     review.add_argument('--reaches', nargs='+', required=True)
@@ -41,10 +42,17 @@ def main():
     add.add_argument('--url', required=True)
     add.add_argument('--id')
     add.add_argument('--bounds', type=float, nargs=4, required=True, metavar=('W', 'S', 'E', 'N'))
-    add.add_argument('--format', choices=('bag', 'usgs-geotiff', 'arcgrid'))
+    add.add_argument('--format', choices=('bag', 'usgs-geotiff', 'arcgrid', 'geographic-geotiff'))
     add.add_argument('--member', default='unknown')
     add.add_argument('--local', type=Path)
     add.add_argument('--fetch', action='store_true')
+    local_import = commands.add_parser(
+        'import-local', help='Copy reviewed originals from a hash-verified local download root into the cache')
+    local_import.add_argument('--ids', nargs='+', help='Survey IDs to import (default: usable and physical-only rows)')
+    for sub, required in ((add, False), (local_import, True)):
+        sub.add_argument('--local-root', type=Path, required=required,
+                         help='Directory of downloaded originals with a geofetch catalog')
+        sub.add_argument('--local-catalog', type=Path, help='Catalog path (default <local-root>/_geofetch/catalog.jsonl)')
     restore = commands.add_parser('restore-reference', help='Rebuild verified private cells without changing the ledger')
     restore.add_argument('--fetch', action='store_true')
     process = commands.add_parser('run', help='Measure native coverage and rank held habitat candidates')
@@ -52,7 +60,7 @@ def main():
     process.add_argument('--physical-only', action='store_true', help='Cache measured habitat before legal review; never publish')
     process.add_argument('--force', action='store_true')
     process.add_argument('--fetch', action='store_true', help='Fetch missing reviewed originals; pinned hashes still required')
-    process.add_argument('--scope-config', type=Path, help='Explicit scope config; non-central processing fails closed pending scoped source and screen contracts')
+    process.add_argument('--scope-config', type=Path, help='Explicit scope config; noncentral runs need --physical-only, stay private and held, and never publish')
     for command in ('reaches', 'ledger'):
         sub = commands.add_parser(command)
         sub.add_argument('--region')
@@ -80,7 +88,8 @@ def main():
             return
         if args.command == 'plan':
             from .rollout import plan, report
-            result = plan(region=args.region, max_new=args.max_new, physical_only=args.physical_only)
+            result = plan(root=REPO, region=args.region, max_new=args.max_new,
+                          physical_only=args.physical_only, scope_config=args.scope_config)
             print(json.dumps(result, indent=2) if args.json else report(result))
             return
         if args.command == 'publish':
@@ -114,14 +123,9 @@ def main():
             print(f'Restored verified reference cells: {restore_reference(fetch=args.fetch)}')
             return
         if args.command == 'run':
-            if args.scope_config:
-                from .scope_paths import resolve_scope
-                _, paths = resolve_scope(REPO, scope_config=args.scope_config)
-                if not paths.is_central_default:
-                    raise ValueError('Non-central processing is disabled until scoped source, physical and screen contracts are reviewed')
             from .run import run
-            receipt, reused = run(args.reach, force=args.force, fetch=args.fetch,
-                                  physical_only=args.physical_only)
+            receipt, reused = run(args.reach, root=REPO, force=args.force, fetch=args.fetch,
+                                  physical_only=args.physical_only, scope_config=args.scope_config)
             print(json.dumps({'unchanged': reused, **receipt['ledger_summary']}, indent=2))
             return
         if args.command == 'promote-survey':
@@ -130,9 +134,24 @@ def main():
             return
         if args.command == 'add-survey':
             from .draft import add_survey
+            local_root = None
+            if args.local_root is not None:
+                from .local_sources import LocalSourceRoot
+                local_root = LocalSourceRoot(args.local_root, args.local_catalog)
+            elif args.local_catalog is not None:
+                parser.error('--local-catalog requires --local-root')
             path = add_survey(args.url, args.bounds, ident=args.id, format_name=args.format,
-                              member=args.member, local=args.local, fetch=args.fetch)
+                              member=args.member, local=args.local, fetch=args.fetch, local_root=local_root)
             print(f'Candidate draft: {path}. Review rights and metadata before manifest promotion.')
+            return
+        if args.command == 'import-local':
+            from .local_sources import LocalSourceRoot, import_manifest
+            from .manifest import load_manifest
+            report = import_manifest(load_manifest(REPO)['surveys'], REPO/'var/seafloor/cache',
+                                     LocalSourceRoot(args.local_root, args.local_catalog), ids=args.ids)
+            print(json.dumps(report, indent=2))
+            if report['refused']:
+                raise ValueError(f"{len(report['refused'])} local original(s) refused; nothing cached for them")
             return
         if args.command == 'reaches':
             from .scope_paths import resolve_scope

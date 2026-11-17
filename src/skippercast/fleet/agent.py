@@ -97,7 +97,7 @@ def _boat(vessel: Mapping[str, Any]) -> dict:
 
 def manifests(region: str, run_id: str, run_dir: Path, created_at: str, chosen, batch_size: int = BATCH_SIZE) -> list[dict]:
     """The batch manifests for ``chosen`` (``select``'s output), at most ``batch_size`` (<= 20) boats each."""
-    if not 1 <= batch_size <= BATCH_SIZE:
+    if type(batch_size) is not int or not 1 <= batch_size <= BATCH_SIZE:  # bool, float, str, None: refused, never coerced
         raise ValueError(f"batch_size must be 1-{BATCH_SIZE}")
     run_dir = Path(run_dir)
     var = run_dir.parents[2]  # <FLEET_VAR>/<region>/runs/<run_id>

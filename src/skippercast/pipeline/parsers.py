@@ -211,6 +211,8 @@ def erddap_query(meta, variables, bounds, stride):
 def erddap_grid(data, meta, variables, kind):
     table = data["table"]
     keys, units = table["columnNames"], table["columnUnits"]
+    if len(set(keys)) != len(keys):
+        raise ValueError("Duplicate ERDDAP column names")
     unit_map = dict(zip(keys, units))
     required = {"time", "latitude", "longitude", *variables}
     if not required.issubset(keys) or unit_map.get("time") != "UTC":

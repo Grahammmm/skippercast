@@ -24,7 +24,9 @@ def geometry_roles(spec):
     return ('segment','native_interest')
 
 def _finite(values,n):
-    return isinstance(values,list) and len(values)==n and all(type(v) in (int,float) and math.isfinite(v) for v in values)
+    if not (isinstance(values,list) and len(values)==n and all(type(v) in (int,float) for v in values)):return False
+    try:return all(math.isfinite(v) for v in values)
+    except OverflowError:return False  # int too large for a float is not finite geometry
 def rectangle(bounds,source,target):
     from pyproj import Transformer
     from shapely.geometry import Polygon

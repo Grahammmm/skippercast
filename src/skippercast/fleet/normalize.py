@@ -112,6 +112,8 @@ def phone_e164(text: str | None, country: str = "1") -> str | None:
         return None
     main = re.split(r"(?i)\s*(?:x|ext\.?|extension)\s*\d+\s*$", text.strip())[0]
     digits = re.sub(r"\D", "", main)
+    if not digits.isascii():  # Arabic-Indic, fullwidth etc. digits: refuse, never a mixed-script key
+        return None
     if main.startswith("+"):
         number = "+" + digits
     elif len(digits) == 10:
@@ -137,6 +139,8 @@ def clean_url(url: str | None) -> str | None:
     except ValueError:
         return None
     if parts.scheme.lower() != "https" or not host or parts.username or parts.password:
+        return None
+    if any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in host):
         return None
     try:
         port = parts.port

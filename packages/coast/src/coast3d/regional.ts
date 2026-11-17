@@ -36,7 +36,7 @@ export function chooseTiles(tiles:RegionTile[],x:number,z:number,span:number,lim
  const radius=Math.max(6500,Math.min(45000,span*.85));return tiles.filter(t=>Math.hypot(t.x+t.width/2-x,t.z+t.width/2-z)<radius).sort((a,b)=>Math.hypot(a.x+a.width/2-x,a.z+a.width/2-z)-Math.hypot(b.x+b.width/2-x,b.z+b.width/2-z)).slice(0,limit);
 }
 export function reefBindingMatches(context:{regions:{regionId:string;archiveSha256:string;exportSha256:string}[];expiresAt:string},manifest:{regions:{regionId:string;archiveSha256:string;exportSha256?:string}[]},now=Date.now()):boolean{
- return Date.parse(context.expiresAt)>now&&context.regions.length===manifest.regions.length&&context.regions.every(r=>manifest.regions.some(m=>m.regionId===r.regionId&&m.archiveSha256===r.archiveSha256&&m.exportSha256===r.exportSha256));
+ return Date.parse(context.expiresAt)>now&&context.regions.length===manifest.regions.length&&new Set(context.regions.map(r=>r.regionId)).size===context.regions.length&&new Set(manifest.regions.map(m=>m.regionId)).size===manifest.regions.length&&context.regions.every(r=>manifest.regions.some(m=>m.regionId===r.regionId&&m.archiveSha256===r.archiveSha256&&m.exportSha256===r.exportSha256));
 }
 export function rankedHabitat(features:any[],field:string|null,now=Date.now()):any[]{
  return features.filter(f=>f?.properties?.exportable===true&&f.properties.screen_status==='pass'&&Date.parse(f.properties.screen_expires_at)>now&&(!field||f.properties[field]>=2)&&f.geometry?.type==='Polygon').sort((a,b)=>(field?b.properties[field]-a.properties[field]:0)||b.properties.terrain_score-a.properties.terrain_score||String(a.id??a.properties.id).localeCompare(String(b.id??b.properties.id)));

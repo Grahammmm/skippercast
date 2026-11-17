@@ -13,7 +13,8 @@ export function alertInstant(value: string | null | undefined): Date | null {
   const m = typeof value === 'string' ? ISO.exec(value.trim()) : null;
   if (!m) return null;
   const [y, mo, d, h, mi, s, oh, om] = m.slice(1).map(x => Number(x ?? 0));
-  const lastDay = new Date(Date.UTC(y!, mo!, 0)).getUTCDate();   // day 0 of the next month: this month's last day
+  const leap = y! % 4 === 0 && (y! % 100 !== 0 || y! % 400 === 0);   // literal Gregorian year (Date.UTC remaps 0-99 to 1900s)
+  const lastDay = mo === 2 ? (leap ? 29 : 28) : [4, 6, 9, 11].includes(mo!) ? 30 : 31;
   if (mo! < 1 || mo! > 12 || d! < 1 || d! > lastDay || h! > 23 || mi! > 59 || s! > 59 || oh! > 23 || om! > 59) return null;
   const at = Date.parse(m[0]);
   return Number.isFinite(at) ? new Date(at) : null;

@@ -84,9 +84,14 @@ test('a day chosen below the fold reveals its chip in the strip and moves no anc
     window.scrollTo(0, 120);
     stage.scrollTop = 40;
   });
-  const before = await page.evaluate(() => ({y: window.scrollY, stage: document.querySelector('.app-stage')!.scrollTop}));
   const last = strip.locator('.ui-chip').nth(7);
-  await last.dispatchEvent('click');
+  // Snapshot immediately before the click in the same browser task: asynchronous page layout may
+  // otherwise move the document between two Playwright commands, before the interaction begins.
+  const before = await last.evaluate(chip => {
+    const position = {y: window.scrollY, stage: document.querySelector('.app-stage')!.scrollTop};
+    chip.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, composed: true}));
+    return position;
+  });
   await expect(last).toHaveAttribute('aria-pressed', 'true');
   await page.waitForTimeout(300);
   const after = await page.evaluate(() => {

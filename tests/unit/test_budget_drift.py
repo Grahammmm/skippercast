@@ -317,3 +317,58 @@ def test_valid_measurement_still_proposes_and_raises(cli, capsys):
 def test_check_ignores_a_bad_measurements_path(tmp_path, capsys):
     assert bd.main(["--check", "--client-measurements", str(tmp_path / "nope.json")]) == 0
     assert "consistent" in capsys.readouterr().out
+
+
+# ---- non-object drift_history entries (RF1501-1)
+
+GOOD = {"budget": "precache/pack_shell_raw_max", "max_bytes": 0, "reason": "ok"}
+
+
+def set_history(entries):
+    startup = json.loads(bd.STARTUP_FILE.read_text())
+    startup["drift_history"] = [dict(e, max_bytes=_cur(startup)) if e is GOOD else e for e in entries]
+    bd.STARTUP_FILE.write_text(json.dumps(startup))
+
+
+def _cur(startup):
+    return startup["precache"]["pack_shell_raw_max"]
+
+
+@pytest.mark.parametrize("bad", [None, "", "x", [], [1], 7, True, False])
+def test_startup_history_nonobject_entries_report_problems(repo_copy, bad):
+    set_history([bad])
+    problems = bd.check_files()
+    assert problems and any("drift_history" in p for p in problems)
+
+
+@pytest.mark.parametrize("entries", [[GOOD, None], [None, GOOD], [GOOD, None, GOOD], [GOOD, "x", [], GOOD]])
+def test_startup_history_mixed_entries_do_not_hide_invalid_shape(repo_copy, entries):
+    set_history(entries)
+    problems = bd.check_files()
+    assert len([p for p in problems if "drift_history entry needs" in p]) == sum(e is not GOOD for e in entries)
+
+
+def test_startup_history_shape_error_cli_is_read_only(repo_copy, tmp_path, monkeypatch, capsys):
+    set_history([GOOD, None])
+    boom = lambda *a, **k: pytest.fail("must return before proposing or writing")  # noqa: E731
+    for fn in ("propose", "apply_perf", "apply_startup", "body_markdown"):
+        monkeypatch.setattr(bd, fn, boom)
+    existing, absent = tmp_path / "existing.md", tmp_path / "absent.md"
+    existing.write_bytes(b"keep")
+    before = (bd.PERF_FILE.read_bytes(), bd.STARTUP_FILE.read_bytes())
+    for extra in ([], ["--apply", "--body-out", str(existing)], ["--apply", "--body-out", str(absent)]):
+        assert bd.main(extra or ["--check"]) == 1
+        out = capsys.readouterr().out
+        assert "BUDGET FILE PROBLEM" in out and "drift_history" in out and "consistent" not in out
+    assert (bd.PERF_FILE.read_bytes(), bd.STARTUP_FILE.read_bytes()) == before
+    assert existing.read_bytes() == b"keep" and not absent.exists()
+
+
+def test_startup_history_valid_controls_preserved(repo_copy, capsys):
+    for entries in ([], [GOOD], [GOOD, GOOD]):
+        set_history(entries)
+        assert bd.check_files() == []
+        assert bd.main(["--check"]) == 0
+        assert "Budget files consistent." in capsys.readouterr().out
+    set_history([{"budget": "no/such", "max_bytes": 1, "reason": "r"}, {"budget": "precache/pack_shell_raw_max", "max_bytes": 1, "reason": ""}])
+    assert len(bd.check_files()) == 2

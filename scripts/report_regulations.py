@@ -9,6 +9,8 @@ REGION_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}')
 
 
 def _region_lines(ident, data):
+    if not isinstance(data['valid_for_current_date'], bool):
+        raise ValueError('valid_for_current_date must be a boolean')
     legal_review = data['rules_review_status'] == 'reviewed' and data['valid_for_current_date']
     affected = [p['name'] for p in data['species'].values() if p['issues'] or not legal_review]
     areas = [p['name'] for p in data['areas'].values() if p['issues'] or not legal_review]

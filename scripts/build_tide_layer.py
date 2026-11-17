@@ -124,6 +124,8 @@ def parse_extremes(payload):
         out.append({'t': stamp, 'type': row['type'], 'v': round(height, 3)})
     out.sort(key=lambda r: r['t'])
     for a, b in zip(out, out[1:]):
+        if a['t'] == b['t']:   # two predictions for one instant: refuse the table, never pick, drop or average
+            raise ValueError('duplicate tide timestamp at ' + b['t'])
         if a['type'] == b['type']:   # a tide table alternates; two highs in a row means a missing row
             raise ValueError('extremes do not alternate at ' + b['t'])
     return out

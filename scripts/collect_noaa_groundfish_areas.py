@@ -68,6 +68,7 @@ def selected_layers(layers):
         if category:
             wanted.append((row['id'], name, category))
     if (len({name for _, name, _ in wanted}) != len(wanted)
+            or len({ident for ident, _, _ in wanted}) != len(wanted)
             or sum(category == 'GEA' for _, _, category in wanted) < 10
             or not any(name.startswith('GEA_Cordell_Bank_20260623') for _, name, _ in wanted)
             or sum(category == 'CCA' for _, _, category in wanted) < 2

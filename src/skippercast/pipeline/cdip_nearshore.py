@@ -177,8 +177,17 @@ def parse_dap_ascii(text):
         lines = group.splitlines()
         array = re.fullmatch(r"(\w+)\[(\d+)\]", lines[0].strip())
         if array:
-            joined = " ".join(re.sub(r"^\s*(?:\[\d+\])+\s*,?\s*", "", line) for line in lines[1:])
-            values = [v.strip() for v in joined.split(",") if v.strip()]
+            texts, consumed = [], 0
+            for line in lines[1:]:
+                index = re.match(r"\s*((?:\[\d+\])+)\s*,?\s*", line)
+                text_part = line[index.end():] if index else line
+                chunk_size = len([v for v in text_part.split(",") if v.strip()])
+                if index and (index.group(1).count("[") != 1 or int(index.group(1)[1:-1]) != consumed
+                              or consumed >= int(array.group(2)) or not chunk_size):
+                    raise ValueError(f"Misaligned CDIP array chunk: {array.group(1)}")
+                consumed += chunk_size
+                texts.append(text_part)
+            values = [v.strip() for v in " ".join(texts).split(",") if v.strip()]
             if len(values) != int(array.group(2)):
                 raise ValueError(f"Incomplete CDIP array: {array.group(1)}")
             if array.group(1) in result:

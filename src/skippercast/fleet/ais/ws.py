@@ -134,7 +134,10 @@ class WebSocket:
                 continue
             if opcode == OP_CLOSE:
                 code = struct.unpack("!H", payload[:2])[0] if len(payload) >= 2 else None
-                reason = payload[2:].decode("utf-8", errors="replace")
+                try:
+                    reason = payload[2:].decode("utf-8")
+                except UnicodeDecodeError:
+                    raise ProtocolError("close reason is not UTF-8") from None
                 await self._shutdown(payload[:2])
                 raise ConnectionClosed(code, reason)
             if opcode in (OP_TEXT, OP_BINARY):

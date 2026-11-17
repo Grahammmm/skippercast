@@ -180,14 +180,14 @@ def publish(root, session, now=None, regions=None):
 
     Returns {region id: source outcome, or "kept" when the published file is recent enough}.
     """
-    now = now or datetime.now(timezone.utc)
+    explicit, now = now, now or datetime.now(timezone.utc)  # an explicit clock also stamps the feed
     outcomes = {}
     for region_id in regions or sorted(BINDINGS):
         path = Path(root) / "regions" / region_id / "beach-health.json"
         if not due(path, now):
             outcomes[region_id] = "kept"
             continue
-        feed = collect(region_id, session)
+        feed = collect(region_id, session, explicit)
         atomic_json(path, feed)
         outcomes[region_id] = feed["sources"][0]["outcome"]
     return outcomes

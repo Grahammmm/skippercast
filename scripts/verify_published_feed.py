@@ -70,6 +70,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if not math.isfinite(args.delay) or args.delay < 0:
         parser.error('--delay must be finite and non-negative')
+    if args.attempts < 1:
+        parser.error('--attempts must be a positive integer')
     ok, message = verify(args.url, args.run_id, args.published_at or None, attempts=args.attempts, delay=args.delay)
     if ok:
         print(f'Verified: {message}')

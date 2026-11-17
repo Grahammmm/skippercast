@@ -52,7 +52,8 @@ EVENT_KINDS = FISHING_KINDS
 def iso_utc(ms: int) -> str:
     """Epoch milliseconds as ``YYYY-MM-DDTHH:MM:SS.mmmZ`` (the registry's ``iso_ms`` form)."""
     moment = datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
-    return moment.strftime("%Y-%m-%dT%H:%M:%S.") + f"{int(ms) % 1000:03d}Z"
+    # strftime("%Y") is platform-dependent (unpadded below year 1000); format the year explicitly.
+    return f"{moment.year:04d}" + moment.strftime("-%m-%dT%H:%M:%S.") + f"{int(ms) % 1000:03d}Z"
 
 
 def from_iso(text: str) -> int:
