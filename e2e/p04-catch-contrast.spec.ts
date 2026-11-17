@@ -408,8 +408,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // renders Reports with preact from these pins, but no CSS, token, font or catch markup source changes; the
   // measured colours come from the pinned styles above. Reports never mounts MapStage, so maplibre-gl and three
   // are not loaded. contrast(), assertions and thresholds are untouched. Rebind only these two.
-  "package.json": "83cef009e623dee19207f8ebc741b0604766989616387917901c5c654561edb3",
-  "pnpm-lock.yaml": "c9cf4a7e91697552fadd98575e199cf3be17d7fbdafd83949865222573cb736a",
+  // #2490: dependency versions and lockfile resolutions changed; BODY09 still
+  // bundles and measures the real Reports paint with unchanged inputs and gates.
+  // Rebind both manifests and rerun the rendered contrast and fail-closed controls.
+  "package.json": "1a0f80f659e1edda323fe90947fbd5093f1d642b484f15f8e264b23cb2b09aec",
+  "pnpm-lock.yaml": "c13839dc5adfd7fda24886a1fec77e6404c18e4dedc236a58f06caf8a542e707",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {

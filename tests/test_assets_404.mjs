@@ -59,6 +59,20 @@ test('the page is small, static and links back to /map and /', () => {
   assert.doesNotMatch(PAGE, /<script|<form|<style|https?:\/\//i);
 });
 
+test('not_found_has_spanish_block', async () => {
+  const response = await call('/old/link', {headers: HTML});
+  assert.equal(response.status, 404); assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  const body = await response.text(), spanish = body.match(/<section lang="es"[^>]*>([\s\S]*?)<\/section>/)?.[1];
+  assert.ok(spanish, 'the served page has a Spanish section');
+  assert.match(spanish, /<h2\b[^>]*>Esta página no está aquí\.<\/h2>/);
+  assert.match(spanish, /El enlace puede ser antiguo o estar mal escrito\./);
+  assert.match(spanish, /<a href="\/map"[^>]*>Abrir el mapa<\/a>/);
+  assert.match(spanish, /<a href="\/"[^>]*>Inicio<\/a>/);
+  assert.ok(body.indexOf('<section lang="es"') > body.indexOf('>Home</a>'), 'Spanish follows English');
+  assert.match(body, /<title>Page not found · Página no encontrada · SkipperCast<\/title>/);
+  assert.doesNotMatch(body, /<script\b/i);
+});
+
 test('unknown_page_get_is_branded_but_still_404', async () => {
   for (const path of ['/nope', '/old/link', '/old/link.html', '/old.release.html', '/old.release.v2.html', '/old/link/', '/nope?x=1&y=<b>', '/apiary', '/Nope']) await assertBranded(await call(path, {headers: HTML}), path);
   const page = await (await call('/nope?q=zzzmarker', {headers: HTML})).text();
