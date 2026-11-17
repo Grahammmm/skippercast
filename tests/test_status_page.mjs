@@ -184,3 +184,80 @@ test('each status table sits in its own keyboard-reachable, named scroller with 
   assert.match(wraps[0][2], /<th scope="row">A<\/th><td><time datetime="2026-11-01T20:00:00Z">2026-11-01 20:00<\/time> \(30 min ago\)<\/td>/);
   assert.equal(renderRows([]), '');
 });
+
+// SC-NEXT-08: synthetic locale cases; the digest was measured on the pre-change main.
+import * as statusPage from '../dist/status-page.js';
+import {createHash} from 'node:crypto';
+import {mkdtempSync, mkdirSync, writeFileSync, rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {spawnSync} from 'node:child_process';
+
+test('status_page_english_identical: missing, stale and coast rows preserve main bytes', () => {
+  const cases = [{},{"conditions":{"published_at":"2026-11-01T20:00:00Z"},"index":{"regions":[]},"data":{"sources":{"a":{"id":"a","name":"Literal <name>","kind":"grid","status":"stale"}}}},{"coast":{}}];
+  const html = cases.map(f => renderRows(statusRows(f, NOW))).join('\n') + renderCoverage();
+  assert.equal(createHash('sha256').update(html).digest('hex'), 'fb51026b6ccad35b0eff093f069d45d3a59855deadc7e2550f5acee06bb21b70');
+});
+
+test('status_page_spanish: remembered choice and browser fallback translate static hosts before feeds', async () => {
+  const html = readFileSync(new URL('../dist/status.html', import.meta.url), 'utf8');
+  const hosts = [...html.matchAll(/data-i18n(?:-lead|-aria)?="([^"]+)"/g)].map(m => ({id: m[1], textContent: '', firstChild: {nodeValue: ''}, getAttribute: () => m[1], setAttribute(k, v) { this[k] = v; }}));
+  assert.ok(hosts.some(h => h.id === 'status.heading'), 'the actual page marks its heading');
+  for (const stored of ['es', null, 'en', 'unsupported']) {
+    const doc = {documentElement: {lang: 'en'}, querySelectorAll: () => hosts};
+    const lang = await statusPage.initStatusPage(doc, {storage: {getItem: () => stored}, languages: ['es-MX'], doc});
+    assert.equal(lang, stored === 'en' || stored === 'unsupported' ? 'en' : 'es');
+    assert.equal(doc.documentElement.lang, lang);
+    if (lang === 'es') assert.equal(hosts.find(h => h.id === 'status.heading').textContent, 'Estado de los datos');
+  }
+  assert.match(html, /<noscript>[\s\S]*lang="es"/, 'Spanish explanation is available even without JavaScript');
+});
+
+test('status_page_names_as_published: Spanish wrappers never translate source values or expand markup', async () => {
+  await statusPage.initStatusPage({querySelectorAll: () => []}, {search: '?lang=es', storage: null});
+  const feeds = fresh();
+  feeds.data.sources.sst.name = 'Live conditions <source> & {n}';
+  const rows = statusRows(feeds, NOW, 'es'), html = renderRows(rows, 'es');
+  for (const word of ['Condiciones en vivo', 'Datos', 'Última publicación correcta (UTC)', 'Dentro del intervalo', 'hace']) assert.ok(html.includes(word), word);
+  assert.ok(html.includes('Live conditions &lt;source&gt; &amp; {n}'), 'source name is a literal value');
+  assert.match(html, /Boyas: Morro Bay/);
+  assert.match(renderCoverage(undefined, 'es'), /NOAA GEFS 0.25° wind ensemble members/);
+  assert.doesNotMatch(renderCoverage(undefined, 'es'), /Fetched by your browser|Fixed release|freshness check/);
+});
+
+test('status_page_spanish_failure_paths: expired, missing, future, backup and duplicate rollups keep their verdicts', async () => {
+  await statusPage.initStatusPage({querySelectorAll: () => []}, {search: '?lang=es', storage: null});
+  const feeds = fresh();
+  feeds.conditions = regionFeed(5); feeds.index = null;
+  feeds.data.sources.sst.last_success_at = hoursAgo(-48);
+  feeds.data.sources['mpa-a'].last_success_at = hoursAgo(50);
+  feeds.data.sources['mpa-b'].last_success_at = hoursAgo(50);
+  feeds.data.sources['catches-2'].fallback_for = 'primary';
+  const rows = statusRows(feeds, NOW, 'es'), html = renderRows(rows, 'es');
+  assert.equal(rows.map(r => r.state).join(), statusRows(feeds, NOW).map(r => r.state).join(), 'locale cannot change freshness');
+  for (const word of ['Fuera de plazo', 'No se puede leer', 'el reloj o la marca de tiempo', 'lista de regiones', '2 de 2 fuera de plazo', 'estación de respaldo']) assert.ok(html.includes(word), word);
+  assert.doesNotMatch(html, /Overdue|not current|backup station|in the future|not readable/);
+  const unavailable = renderRows(statusRows({coast: {}}, NOW, 'es'), 'es');
+  assert.match(unavailable, />ninguna<|>ninguna<\//);
+  assert.doesNotMatch(unavailable, /Cannot be read|none<|data table/);
+});
+
+test('status_slice_check: CLI detects missing Spanish and stale status slice without writing', () => {
+  const root = mkdtempSync(join(tmpdir(), 'status-slice-'));
+  try {
+    for (const dir of ['scripts', 'catalog/app', 'web/landing', 'dist']) mkdirSync(join(root, dir), {recursive: true});
+    writeFileSync(join(root, 'scripts/build_landing_strings.mjs'), readFileSync(new URL('../scripts/build_landing_strings.mjs', import.meta.url)));
+    const catalog = {strings: {'status.heading': {en: 'Data status', es: 'Estado de los datos'}}};
+    const run = (...args) => spawnSync(process.execPath, [join(root, 'scripts/build_landing_strings.mjs'), ...args], {encoding: 'utf8'});
+    writeFileSync(join(root, 'catalog/app/strings.json'), JSON.stringify(catalog));
+    assert.equal(run().status, 0);
+    const slice = join(root, 'dist/status-strings.generated.json');
+    assert.ok(readFileSync(slice, 'utf8').includes('status.heading'));
+    writeFileSync(slice, '{}\n');
+    assert.match(run('--check').stderr, /Stale .*status-strings/);
+    assert.equal(readFileSync(slice, 'utf8'), '{}\n');
+    delete catalog.strings['status.heading'].es;
+    writeFileSync(join(root, 'catalog/app/strings.json'), JSON.stringify(catalog));
+    assert.match(run('--check').stderr, /status.heading: no Spanish/);
+  } finally { rmSync(root, {recursive: true, force: true}); }
+});

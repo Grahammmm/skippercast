@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Data status · SkipperCast</title>
+    <title data-i18n="status.title">Data status · SkipperCast</title>
     <link rel="canonical" href="https://skippercast.com/status" />
     <meta name="description" content="Check when SkipperCast’s published data sources last updated and which sources are outside their expected intervals." />
     <meta name="color-scheme" content="dark" />
@@ -12,25 +12,25 @@
     <link rel="stylesheet" href="coast-readable.css" />
   </head>
   <body class="coast-readable">
-    <a class="skip-link" href="#status-content">Skip to data status</a>
+    <a class="skip-link" href="#status-content" data-i18n="status.skip">Skip to data status</a>
     <header>
       <a class="brand" href="./">SkipperCast</a>
-      <nav aria-label="Public information"><a href="./">Back to the map</a><a href="/sources">Sources</a><a href="/methodology">Methods</a><a href="/about">About</a></nav>
+      <nav data-i18n-aria="status.nav.public" aria-label="Public information"><a href="./" data-i18n="status.nav.map">Back to the map</a><a href="/sources" data-i18n="status.nav.sources">Sources</a><a href="/methodology" data-i18n="status.nav.methods">Methods</a><a href="/about" data-i18n="status.nav.about">About</a></nav>
     </header>
     <main id="status-content">
-      <h1>Data status</h1>
-      <p>
+      <h1 data-i18n="status.heading">Data status</h1>
+      <p data-i18n-lead="status.intro">
         When a layer is missing or looks old, this page shows whether the data
         behind it was published on time. Each row is the last successful publish
         of a data source, how long it may go without one, and whether it is inside
         that time. Checked in your browser at <span id="status-checked">…</span>.
       </p>
-      <p><a href="/coverage.html">Coverage map</a></p>
-      <p><a href="/skill">Forecast skill: how often our forecast was right</a></p>
-      <div id="status-rows"><p>Loading the published feeds…</p></div>
-      <noscript><p>This page reads the published feeds in your browser and needs JavaScript.</p></noscript>
-      <h2>What this page does not show</h2>
-      <p>
+      <p><a href="/coverage.html" data-i18n="status.nav.coverage">Coverage map</a></p>
+      <p><a href="/skill" data-i18n="status.nav.skill">Forecast skill: how often our forecast was right</a></p>
+      <div id="status-rows"><p data-i18n="status.loading">Loading the published feeds…</p></div>
+      <noscript><p>This page reads the published feeds in your browser and needs JavaScript. <span lang="es">Esta página consulta las fuentes publicadas en tu navegador y necesita JavaScript.</span></p></noscript>
+      <h2 data-i18n="status.notShown">What this page does not show</h2>
+      <p data-i18n="status.notShownIntro">
         These sources have no freshness row. The freshness check does not watch
         the first group yet; the others are not published on a schedule.
       </p>
