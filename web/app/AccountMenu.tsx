@@ -19,6 +19,8 @@ import {offlineOpen, openTrip, tripIds} from '../trip.ts';
 import {tourTransition, type TourAction, type TourState} from '../tour.ts';
 import {ControlsTour} from './ControlsTour.tsx';
 import {LanguageChoice} from './LanguageChoice.tsx';
+import {UnitChoice} from './UnitChoice.tsx';
+import {InstallApp} from './InstallApp.tsx';
 
 /** The catalogue id of the line under the account heading, by session state. */
 const ACCOUNT_LINE: Readonly<Record<Session['state'], StringId>> = {
@@ -119,6 +121,7 @@ export function AccountMenu({inline = false, top = false}: {inline?: boolean; to
           <Button size="sm" variant="quiet" onClick={run(openBoatSheet)}>{t('accountMenu.exactBoat', lang)}</Button>
         </section>
         <LanguageChoice />
+        <UnitChoice />
         <section aria-labelledby={`${id}-coordinates`}>
           <h2 id={`${id}-coordinates`} class="ui-eyebrow">{t('accountMenu.coordinates', lang)}</h2>
           <p>{t('accountMenu.coordinatesNote', lang)}</p>
@@ -136,6 +139,7 @@ export function AccountMenu({inline = false, top = false}: {inline?: boolean; to
             <li><Button size="sm" variant="quiet" icon="pin" disabled={!regionId} onClick={run(openTrip)}>
               {t('accountMenu.trip', lang)}{tripIds.value.length ? ` · ${t('accountMenu.tripSaved', lang, {n: tripIds.value.length})}` : ''}</Button></li>
             <li><Button size="sm" variant="quiet" icon="download" disabled={!regionId} onClick={run(() => { offlineOpen.value = true; })}>{t('accountMenu.offline', lang)}</Button></li>
+            <InstallApp />
             <li><Button size="sm" variant="quiet" onClick={run(() => tourAction('replay'))}>{t('accountMenu.replay', lang)}</Button></li>
             <li><a href="downloads/spot-notes.html" target="_blank" rel="noopener"><Icon name="download" size={16} />{t('accountMenu.spotNotes', lang)}</a></li>
           </ul>

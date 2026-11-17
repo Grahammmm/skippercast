@@ -5,6 +5,7 @@
 // /map with no region or coast (FE-08, § 7) opens the saved home (a port v1
 // or v2 saved, or a /coast place, FE-83), else the landing; the chooser
 // itself never opens on its own.
+import {watchInstall} from '../install-app.ts';
 import {render} from 'preact';
 import {effect} from '@preact/signals';
 import {initReadyLanguage} from '../i18n.ts';
@@ -25,6 +26,7 @@ import {holdMap, MAP_WAIT_MAX_MS, releaseMap, whenMapMayLoad} from '../map-ready
 // SCB-11: the page's early script (./early.ts) starts the first verdict's reads only while the app has not started its own.
 (globalThis as {skippercastApp?: boolean}).skippercastApp = true;
 // SC-LAUNCH-4: before any read, so every response's cost-ceiling mark reaches the notice.
+watchInstall();
 installDegradedWatch();
 configureStore({v2: true});
 loadCoordinateFormat();
