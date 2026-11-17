@@ -120,12 +120,19 @@ def bbox(value):
 
 
 def indexed(document, key):
+    if not isinstance(document, dict):
+        raise ValueError(f"Invalid {key} catalog: expected an object")
     if document.get("schema_version") != 1:
         raise ValueError(f"Unsupported {key} schema")
+    rows = document.get(key)
+    if not isinstance(rows, list):
+        raise ValueError(f"Invalid {key} catalog: expected a list")
     result = {}
-    for item in document[key]:
+    for item in rows:
+        if not isinstance(item, dict):
+            raise ValueError(f"Invalid {key} catalog: expected object rows")
         ident = item.get("id", "")
-        if not ID.fullmatch(ident) or ident in result:
+        if not isinstance(ident, str) or not ID.fullmatch(ident) or ident in result:
             raise ValueError(f"Invalid or duplicate {key} id: {ident}")
         result[ident] = item
     return result
