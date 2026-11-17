@@ -22,6 +22,13 @@ const storage = (context: BrowserContext, port: string, profile: string) => cont
   if (!sessionStorage.getItem('seeded')) { localStorage.setItem(k1, v1); localStorage.setItem(k2, v2); sessionStorage.setItem('seeded', '1'); }
 }, [PORT_KEY, port, PROFILE_KEY, profile]);
 
+// On a failed round trip keep what the page held (status text, recorded copies) so a CI-only flake can be named from the trace.
+test.afterEach(async ({page}, info) => {
+  if (info.status === 'passed' || !info.title.startsWith('round trip')) return;
+  const state = {status: await status(page).textContent({timeout: 1000}).catch(() => null), copies: await copies(page).catch(() => null)};
+  await info.attach('share-state', {body: JSON.stringify(state), contentType: 'application/json'});
+});
+
 test('round trip: a link made at San Diego opens San Diego, today and Kayak for someone saved at Santa Barbara', async ({page, context, browser, baseURL, pageErrors, v2}) => {
   await stubShare(context);
   await storage(context, 'san-diego', 'kayak');
@@ -30,6 +37,7 @@ test('round trip: a link made at San Diego opens San Diego, today and Kayak for 
   await expect(status(page)).toHaveText('Link copied');
   await press(page);
   await expect(status(page)).toHaveCount(1);
+  await expect.poll(async () => (await copies(page)).length, {message: 'the second press records its copy'}).toBe(2);
   const [link, again] = await copies(page);
   expect(again, 'a second press gives the same link').toBe(link);
   const url = new URL(link!);
@@ -47,6 +55,7 @@ test('round trip: a link made at San Diego opens San Diego, today and Kayak for 
   const errors: string[] = [];
   them.on('pageerror', e => errors.push(String(e)));
   await them.goto(url.pathname + url.search + '&ui=v2');
+  await expect(portButton(them)).toBeVisible();
   await expect(portButton(them)).toHaveAttribute('aria-label', 'Change port (San Diego)');
   await expect(them.locator('[aria-label="Profile"] [aria-pressed="true"]')).toHaveText('Kayak');
   await expect(them.locator('.app-window, [aria-label="Day"] [aria-pressed="true"]').first()).toContainText('Today');
