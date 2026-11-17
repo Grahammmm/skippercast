@@ -53,6 +53,7 @@ const page = new URL(scenario.href);
 globalThis.location = {href: page.href, pathname: page.pathname, search: page.search, hash: page.hash, replace() { events.push('location:replace'); }};
 globalThis.document = {getElementById: id => id === 'app' && scenario.host ? {replaceChildren() {}} : null};
 globalThis.matchMedia = () => ({matches: false, addEventListener() {}});
+globalThis.window = globalThis; // main's install watcher receives the synthetic browser window.
 const state = {region: scenario.region, coast: scenario.coast ?? null, shownPresentation: scenario.presentation, regionInfo: null, regionPlans: null, narrow: false, profile: 'boat', species: null};
 globalThis.__stub = (from, name) => {
   if (name in state) return {get value() { return state[name]; }, set value(v) { state[name] = v; }, peek: () => state[name]};
