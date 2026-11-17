@@ -23,7 +23,7 @@ test('the notice retention and limits equal the constants in the server', () => 
   assert.equal(tripDays, 90); assert.equal(feedbackDays, 365);
   has(`Removed ${tripDays} days after the trip date`);
   has(`Alerts we sent you and delivery records .{0,60}${tripDays} days`);
-  has(`${feedbackDays} days\\.`);
+  has(`Deleted ${feedbackDays} days after the rating, when you remove the report, or when you delete your account records\\.`);
   has(`Until they expire \\(${sessionDays} days after last use\\)`);
   has(`keeps you signed in for ${sessionDays} days`);
   has(`display name \\(up to ${nameChars} characters\\)`);

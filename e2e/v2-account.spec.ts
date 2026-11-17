@@ -64,6 +64,11 @@ test.describe('individual comfort reports', () => {
     await page.route('**/api/comfort/*', r => { writes.push(r.request().url()); expect(r.request().method()).toBe('DELETE'); expect(r.request().postData()).toBeNull(); held = r; });
     const history = await comfortSheet(page, v2, isMobile), button = history.getByRole('button').first();
     const url = page.url();
+    const exposed: string[] = [];
+    page.on('request', request => {
+      const u = new URL(request.url());
+      if (!u.pathname.startsWith('/api/comfort')) exposed.push(u.search + (request.postData() ?? ''));
+    });
     await button.focus(); await page.keyboard.press('Enter');
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0]).toContain('/api/comfort/opaque%2Fid%25');
@@ -91,6 +96,7 @@ test.describe('individual comfort reports', () => {
     await expect(page.locator('#saved-trips')).not.toContainText('2/10');
     await expect(page.locator('#saved-trips [data-comfort-id]')).toHaveCount(0);
     expect(page.url()).toBe(url);
+    expect(exposed.join('\n')).not.toMatch(/opaque|observed_at|"rating"|"context"/);
   });
 
   test('keyboard removal focuses next, previous, then the summary; successful reads backfill', async ({page, v2, isMobile}) => {
@@ -138,6 +144,13 @@ test.describe('individual comfort reports', () => {
     await expect(page.locator('#comfort-status')).toHaveText('This report is no longer available. Refresh your reports and try again.');
     await expect(history.getByRole('button')).toBeEnabled();
     await expect(history.getByRole('button')).toHaveCount(1);
+    failRead = false; rows = [];
+    await history.getByRole('button').click();
+    await expect(history).toContainText('0 private reports.');
+    await expect(page.locator('#comfort-status')).toHaveText('This report is no longer available. Refresh your reports and try again.');
+    rows = [report('closing')];
+    await page.getByRole('button', {name: 'Save private feedback'}).click();
+    await expect(history.getByRole('button')).toBeEnabled();
     missing = false; held = undefined;
     await history.getByRole('button').click(); await expect.poll(() => held).toBeDefined();
     await page.keyboard.press('Escape');
