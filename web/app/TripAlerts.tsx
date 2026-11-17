@@ -13,6 +13,8 @@ import {sharedFetch} from '../shared-fetch.ts';
 import {profile} from '../state.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 import {tripCalendar} from '../trip-calendar.ts';
+// Regenerate from the public region configs with node scripts/build_trip_calendar_regions.mjs.
+import calendarRegions from '../trip-calendar-regions.generated.json';
 import {readableDate} from '../dates.ts';
 import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
@@ -122,11 +124,14 @@ export function SavedTrips({recaps, names, remove, useAgain, read = {loading: fa
   const calendar = (trip: SavedTrip) => {
     setCalendarFailed(false);
     try {
-      const known = regionId !== undefined && trip.region === regionId;
+      const current = trip.region !== undefined && trip.region === regionId;
+      const region = calendarRegions.find(r => r.id === trip.region);
+      const tripNames = current ? names : region ? alertNames(region) : {point: new Map<string, string>(), species: new Map<string, string>()};
+      const zone = current ? timeZone : region?.timezone ?? DEFAULT_ZONE;
       const targets = Array.isArray(trip.targets) && trip.targets.length && trip.targets.every(id => typeof id === 'string') ? trip.targets as string[] : [trip.species];
-      const file = tripCalendar(trip, {areaName: known ? names.point.get(trip.point) : undefined,
-        speciesNames: targets.map(id => known ? names.species.get(id) ?? id : id), limits: savedTripLimits(trip, lang),
-        appUrl: location.origin, now: new Date(), timeZone: known ? timeZone : DEFAULT_ZONE, lang});
+      const file = tripCalendar(trip, {areaName: tripNames.point.get(trip.point),
+        speciesNames: targets.map(id => tripNames.species.get(id) ?? id), limits: savedTripLimits(trip, lang),
+        appUrl: location.origin, now: new Date(), timeZone: zone, lang});
       const url = URL.createObjectURL(new Blob([file], {type: 'text/calendar;charset=utf-8'}));
       try {
         const a = document.createElement('a');

@@ -1,13 +1,14 @@
 // Synthetic saved trips only. No provider, account, network or calendar access.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp, rm} from 'node:fs/promises';
+import {mkdtemp, readFile, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {escapeText, foldLine, zonedInstant, tripCalendar} from '../web/trip-calendar.ts';
+import {calendarRegions} from '../scripts/build_trip_calendar_regions.mjs';
 
 const trip = {id: 'synthetic-123', region: 'test-region', point: 'test-area', species: 'reef', targets: ['reef', 'retired-species'], date: '2026-11-14', start_hour: 7, end_hour: 13, wind_limit: 9, gust_limit: 14, sea_limit: 2.5};
 const opts = {areaName: 'Test area', speciesNames: ['Rockfish', 'retired-species'], limits: 'Saved limits: wind 9 kt · gust 14 kt · sea 2.5 ft', appUrl: 'https://example.test', now: new Date('2026-11-10T12:34:56Z'), timeZone: 'America/Los_Angeles'};
@@ -81,6 +82,10 @@ test('UID stable on duplicate exports, unique by trip; retired area fallback; pr
   assert.doesNotMatch(a, /GEO|35\.123456|120\.654321|PRIVATE/);
 });
 
+test('offline calendar names track all published region configs', async () => {
+  assert.deepEqual(JSON.parse(await readFile('web/trip-calendar-regions.generated.json', 'utf8')), await calendarRegions());
+});
+
 test('upcoming-only action downloads the local file, uses the known region zone, cleans URLs, sends nothing', async t => {
   const dir = await mkdtemp(join(tmpdir(), 'trip-ics-'));
   try {
@@ -140,6 +145,14 @@ test('upcoming-only action downloads the local file, uses the known region zone,
       assert.match(unfold(await blobs[4].text()), /SUMMARY:Horario de pesca: Test area/);
       assert.match(unfold(await blobs[4].text()), /no una autorización para el viaje/);
       assert.equal(globalThis.fetch.mock.callCount(), 0);
+      language.value = 'en';
+      draw([{...trip, region: 'morro-bay', point: 'north', species: 'reef', targets: ['reef', 'retired-species']}]);
+      await action().onClick();
+      const other = await blobs[5].text();
+      assert.equal(line(other, 'SUMMARY'), 'SUMMARY:Fishing window: Point Estero');
+      assert.ok(line(other, 'DESCRIPTION').includes('Lingcod & rockfish · retired-species'));
+      assert.equal(line(other, 'DTSTART'), 'DTSTART:20261114T150000Z');
+      assert.equal(globalThis.fetch.mock.callCount(), 0, 'cross-region export sends nothing');
     } finally {
       language.value = 'en';
       for (const [key, descriptor] of [['document', oldDocument], ['location', oldLocation]]) {
