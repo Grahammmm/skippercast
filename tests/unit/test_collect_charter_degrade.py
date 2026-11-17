@@ -40,6 +40,8 @@ def fake_source(ok_days):
 
 
 def build(monkeypatch, ok_days):
+    # The fake source never calls its loader, and the real grid loaders import scipy (absent from the no-GIS lane).
+    monkeypatch.setattr(collect, 'grid_loader', lambda kind, bounds=None, config=None: None)
     monkeypatch.setattr(collect, 'source', fake_source(ok_days))
     return collect.collect(NOW)
 
