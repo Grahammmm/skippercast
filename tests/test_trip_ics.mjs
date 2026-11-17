@@ -41,6 +41,7 @@ test('repeated hour chooses first occurrence; missing hour moves through spring 
   for (const date of ['2026-02-30', 'bad', '2026-1-01']) assert.throws(() => zonedInstant(date, 7, opts.timeZone), RangeError);
   for (const hour of [-1, 24, 1.5, NaN]) assert.throws(() => zonedInstant(trip.date, hour, opts.timeZone), RangeError);
   assert.throws(() => tripCalendar({...trip, end_hour: 7}, opts), RangeError);
+  assert.throws(() => tripCalendar({...trip, date: '2026-03-08', start_hour: 2, end_hour: 3}, opts), RangeError, 'the skipped hour must not create a zero-duration event');
 });
 
 test('TEXT escaping prevents injected content lines and preserves CRLF/CR/LF as text', () => {
@@ -130,6 +131,9 @@ test('upcoming-only action downloads the local file, uses the known region zone,
       const unknown = await blobs[3].text();
       assert.equal(line(unknown, 'DTSTART'), 'DTSTART:20261114T150000Z', 'unknown region uses DEFAULT_ZONE, not the opened region');
       assert.equal(line(unknown, 'SUMMARY'), 'SUMMARY:Fishing window: test-area');
+      draw([{...trip, date: '2026-03-08', start_hour: 2, end_hour: 3}], {recaps: {upcoming: [{...trip, date: '2026-03-08', start_hour: 2, end_hour: 3}], past: []}, timeZone: 'America/Los_Angeles'});
+      assert.doesNotThrow(() => action().onClick(), 'a bad stored window reports failure rather than throwing from the action');
+      assert.equal(blobs.length, 4, 'a skipped-hour-only window creates no invalid event or download');
       await prepareCatalogue('es'); language.value = 'es';
       assert.match(draw([trip]), /Añadir al calendario/);
       action('Añadir al calendario').onClick();

@@ -42,6 +42,7 @@ export type CalendarOptions = {areaName?: string; speciesNames: string[]; limits
 export function tripCalendar(trip: SavedTrip, {areaName, speciesNames, limits, appUrl, now, timeZone = DEFAULT_ZONE, lang = 'en'}: CalendarOptions): string {
   if (!(trip.end_hour > trip.start_hour)) throw new RangeError('Invalid trip window');
   const start = zonedInstant(trip.date, trip.start_hour, timeZone), end = zonedInstant(trip.date, trip.end_hour, timeZone);
+  if (!(end > start)) throw new RangeError('Trip window has no elapsed time');
   const description = [t('alerts.plan.targets', lang, {names: speciesNames.join(' · ')}), limits, t('alerts.calendar.caveat', lang)].join('\n');
   return [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//SkipperCast//Saved trip//EN', 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT',

@@ -2228,6 +2228,7 @@
     "alerts.deleteAria": {"en": "Delete the trip on {date} at {point}", "es": "Eliminar el viaje del {date} en {point}"},
     "alerts.again": {"en": "Use again", "es": "Usar de nuevo"},
     "alerts.calendar.add": {"en": "Add to calendar", "es": "Añadir al calendario"},
+    "alerts.calendar.failed": {"en": "Could not make the calendar file for this window. Check the date and hours, then try again.", "es": "No se pudo crear el archivo de calendario para este horario. Revisa la fecha y las horas e inténtalo de nuevo."},
     "alerts.calendar.summary": {"en": "Fishing window: {area}", "es": "Horario de pesca: {area}"},
     "alerts.calendar.caveat": {"en": "Trip alerts are a forecast read, not a clearance for the trip.", "es": "Las alertas del viaje son una lectura del pronóstico, no una autorización para el viaje."},
     "alerts.againAria": {"en": "Use again: trip on {date} at {point}", "es": "Usar de nuevo: viaje del {date} en {point}"},

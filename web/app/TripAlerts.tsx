@@ -110,6 +110,7 @@ function SavedPlan({plan, lang}: {plan: TripPlanSummary; lang: Language}) {
 
 export function SavedTrips({recaps, names, remove, useAgain, read = {loading: false, complete: true}, events = [], timeZone = DEFAULT_ZONE, regionId}: {recaps: ReturnType<typeof tripRecaps>; names: AlertNames; remove: (id: string) => () => void; useAgain: (trip: SavedTrip) => void; read?: CatchRead; events?: AlertEvent[]; timeZone?: string; regionId?: string}) {
   const lang = language.value, only = englishOnly(lang);
+  const [calendarFailed, setCalendarFailed] = useState(false);
   const standing = (trip: SavedTrip) => {
     const e = latestTripEvent(events, trip.id), at = e ? assessmentTimeOrNull(e, timeZone, lang) : null;
     const when = e && (at === null ? t('alerts.timeUnavailable', lang) : <time dateTime={e.created_at}>{at}</time>);
@@ -119,17 +120,22 @@ export function SavedTrips({recaps, names, remove, useAgain, read = {loading: fa
   const again = (trip: SavedTrip) => <Button type="button" size="sm" variant="quiet" onClick={() => useAgain(trip)} aria-label={t('alerts.againAria', lang, {date: readableDate(trip.date, lang, timeZone), point: names.point.get(trip.point) ?? trip.point})}>{t('alerts.again', lang)}</Button>;
   const planOf = (trip: SavedTrip) => { const s = tripPlanSummary(trip, names, lang); return s ? <SavedPlan plan={s} lang={lang} /> : null; };
   const calendar = (trip: SavedTrip) => {
-    const known = regionId !== undefined && trip.region === regionId;
-    const targets = Array.isArray(trip.targets) && trip.targets.length && trip.targets.every(id => typeof id === 'string') ? trip.targets as string[] : [trip.species];
-    const file = tripCalendar(trip, {areaName: known ? names.point.get(trip.point) : undefined,
-      speciesNames: targets.map(id => known ? names.species.get(id) ?? id : id), limits: savedTripLimits(trip, lang),
-      appUrl: location.origin, now: new Date(), timeZone: known ? timeZone : DEFAULT_ZONE, lang});
-    const url = URL.createObjectURL(new Blob([file], {type: 'text/calendar;charset=utf-8'}));
-    const a = document.createElement('a');
-    a.href = url; a.download = `skippercast-trip-${trip.date}.ics`; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setCalendarFailed(false);
+    try {
+      const known = regionId !== undefined && trip.region === regionId;
+      const targets = Array.isArray(trip.targets) && trip.targets.length && trip.targets.every(id => typeof id === 'string') ? trip.targets as string[] : [trip.species];
+      const file = tripCalendar(trip, {areaName: known ? names.point.get(trip.point) : undefined,
+        speciesNames: targets.map(id => known ? names.species.get(id) ?? id : id), limits: savedTripLimits(trip, lang),
+        appUrl: location.origin, now: new Date(), timeZone: known ? timeZone : DEFAULT_ZONE, lang});
+      const url = URL.createObjectURL(new Blob([file], {type: 'text/calendar;charset=utf-8'}));
+      try {
+        const a = document.createElement('a');
+        a.href = url; a.download = `skippercast-trip-${trip.date}.ics`; a.click();
+      } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+    } catch { setCalendarFailed(true); }
   };
   return <div id="saved-trips">
+    {calendarFailed ? <p role="status">{t('alerts.calendar.failed', lang)}</p> : null}
     {!recaps.upcoming.length && !recaps.past.length ? <p>{t('alerts.none', lang)}</p> : null}
     {recaps.upcoming.length ? <><h3>{t('alerts.upcoming', lang)}</h3>{recaps.upcoming.map(trip => {
       const row = <p key={trip.id}><strong>{tripLine(trip, names, lang, timeZone)}</strong> {deletion(trip)} {again(trip)} <Button type="button" size="sm" variant="quiet" onClick={() => calendar(trip)}>{t('alerts.calendar.add', lang)}</Button>{standing(trip)}</p>;
