@@ -34,7 +34,7 @@ export function validJobClaims(c:ExternalJSON,policy:JobPolicy,now=Date.now()/10
   return c.iss===issuer&&c.aud===policy.public_origin+scope.audiencePath&&[subject,immutable].includes(c.sub)&&
     c.repository===s.repository&&c.repository_id===s.repository_id&&c.repository_owner_id===s.owner_id&&c.ref===s.ref&&
     refs.includes(c.workflow_ref)&&['schedule','workflow_dispatch','push'].includes(c.event_name)&&
-    [c.exp,c.nbf,c.iat].every(Number.isFinite)&&c.exp>now&&c.nbf<=now+30&&c.iat<=now+30&&c.exp-c.iat<=600&&
+    [c.exp,c.nbf,c.iat].every(Number.isFinite)&&c.exp>now&&c.nbf<=now+30&&c.iat<=now+30&&c.exp>c.iat&&c.exp-c.iat<=600&&
     typeof c.jti==='string'&&c.jti.length>0&&c.jti.length<200;
 }
 /**
