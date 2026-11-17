@@ -16,11 +16,13 @@ const out = join(await mkdtemp(join(tmpdir(), 'landing-degraded-')), 'm.mjs');
 await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: `
   export {LandingApp, LiveVerdict} from './web/landing/Landing.tsx';
   export {DegradedNotice} from './web/degraded-notice.tsx';
-  export {degraded, installDegradedWatch} from './web/degraded.ts';
+  export {degraded, installDegradedWatch, degradedText} from './web/degraded.ts';
+  export {t as landingT, language, prepareCatalogue} from './web/landing/i18n.ts';
+  export {t as appT} from './web/i18n.ts';
   export {render as html} from 'preact-render-to-string';
   export {h, render} from 'preact';`},
 bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact'});
-const {LandingApp, LiveVerdict, DegradedNotice, degraded, installDegradedWatch, html, h, render} = await import(pathToFileURL(out).href);
+const {LandingApp, LiveVerdict, DegradedNotice, degraded, installDegradedWatch, degradedText, landingT, appT, language, prepareCatalogue, html, h, render} = await import(pathToFileURL(out).href);
 
 // A DOM just big enough for preact (as test_landing_port_retry.mjs).
 class Node {
@@ -65,7 +67,7 @@ test('1: not degraded: the verdict renders exactly as before and the landing sho
   degraded.value = null;
   assert.equal(html(h(LiveVerdict, {v: V})), LIVE_HTML, 'the verdict snapshot is unchanged');
   assert.equal(html(h(LiveVerdict, {v: V, saved: false})), LIVE_HTML);
-  assert.equal(html(h(DegradedNotice)), '', 'no notice while live');
+  assert.equal(html(h(DegradedNotice, {translate: appT})), '', 'no notice while live');
   const string = html(h(LandingApp, {href: 'https://s.test/', navigate: () => {}, load: false}));
   assert.doesNotMatch(string, /data-degraded|saved copies/);
   const fetchPage = page(() => new Response('', {status: 404}));
@@ -90,7 +92,7 @@ test('2: a 503 cost-ceiling reply seen by the watch: /map\'s notice above the ve
     const [notice] = notices(root);
     assert.ok(notice, 'the notice is on the landing');
     assert.equal(text(notice), 'Live data is paused for today to keep SkipperCast free; some readings are saved copies.');
-    assert.equal(html(h(DegradedNotice)), MAP_NOTICE, 'the same element and words as /map');
+    assert.equal(html(h(DegradedNotice, {translate: appT})), MAP_NOTICE, 'the same element and words as /map');
     const verdict = verdictOf(root), kids = notice.parentNode.childNodes;
     assert.ok(verdict && kids.indexOf(notice) < kids.indexOf(verdict), 'the notice sits above the verdict');
     assert.equal(verdict.attrs['data-degraded'], 'cost-ceiling');
@@ -160,7 +162,7 @@ test('4: installDegradedWatch twice in one page: one network call per read, the 
     assert.equal(calls, 1, 'the page\'s fetch ran once');
     assert.equal(got, response, 'the same response object');
     assert.deepEqual(degraded.peek(), {since: null}, 'the same state as one install');
-    assert.equal(html(h(DegradedNotice)), MAP_NOTICE, 'one notice, /map\'s words');
+    assert.equal(html(h(DegradedNotice, {translate: appT})), MAP_NOTICE, 'one notice, /map\'s words');
   } finally { degraded.value = null; }
   // The landing and /map are separate documents, each installing the watch once at the top of its entry.
   for (const [entry, page] of [['web/landing/main.tsx', 'dist/landing.html'], ['web/app/main.tsx', 'dist/app.html']]) {
@@ -179,7 +181,51 @@ test('the landing installs the watch before its first read, and its entry chunk 
   for (const first of [/^initTelemetry\(\);$/m, /^(?:  )?void savedPortTarget\(/m, /^(?:  )?mount\(/m]) assert.ok(install > 0 && install < code.search(first), `before ${first}`);
   const result = await build({entryPoints: [join(ROOT, 'web/landing/main.tsx')], bundle: true, splitting: true, format: 'esm', platform: 'browser', outdir: join(await mkdtemp(join(tmpdir(), 'landing-degraded-chunks-')), 'out'),
     write: false, metafile: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins, external: ['*.css']});
-  const entry = Object.values(result.metafile.outputs).find(o => o.entryPoint?.endsWith('web/landing/main.tsx')), inputs = Object.keys(entry.inputs);
+  const outputs = result.metafile.outputs, inputs = [], seen = new Set();
+  function visit(key) {
+    if (seen.has(key)) return;
+    seen.add(key); inputs.push(...Object.keys(outputs[key].inputs));
+    for (const dep of outputs[key].imports) if (dep.kind === 'import-statement' && !dep.external) visit(dep.path);
+  }
+  visit(Object.keys(outputs).find(key => outputs[key].entryPoint?.endsWith('web/landing/main.tsx')));
   for (const mod of ['web/degraded.ts', 'web/degraded-notice.tsx']) assert.ok(inputs.includes(mod), `${mod} is in the landing entry`);
-  for (const mod of ['web/app/Masthead.tsx', 'web/app/App.tsx']) assert.ok(!inputs.includes(mod), `${mod} stays out of the landing`);
+  for (const mod of ['web/app/Masthead.tsx', 'web/app/App.tsx', 'web/i18n.ts', 'web/strings.en.generated.json']) assert.ok(!inputs.includes(mod), `${mod} stays out of the landing`);
+});
+
+
+test('landing_notice_uses_landing_reader: injected reader and no app catalogue in the static graph', async () => {
+  const calls = [], translate = (...args) => { calls.push(args); return 'SYNTHETIC NOTICE'; };
+  degraded.value = {since: null};
+  try {
+    assert.match(html(h(DegradedNotice, {translate})), />SYNTHETIC NOTICE<\/p>/);
+    assert.equal(calls[0][0], 'shared.degraded.saved');
+    degraded.value = null;
+    assert.equal(html(h(DegradedNotice, {translate: () => assert.fail('live reads no words')})), '');
+  } finally { degraded.value = null; }
+  for (const file of ['web/degraded.ts', 'web/degraded-notice.tsx'])
+    assert.doesNotMatch(await readFile(join(ROOT, file), 'utf8'), /from ['"]\.\/i18n\.ts['"]/);
+});
+
+test('landing_notice_spanish and app_notice_unchanged: real readers, fixed clock, and locale', async () => {
+  const catalogue = JSON.parse(await readFile(join(ROOT, 'catalog/app/strings.json'), 'utf8')).strings;
+  await prepareCatalogue('es');
+  const since = '2026-10-05T20:00:00.000Z';
+  try {
+    for (const lang of ['es', 'en']) for (const at of [null, since]) {
+      language.value = lang; degraded.value = {since: at};
+      const id = at ? 'shared.degraded.savedAt' : 'shared.degraded.saved';
+      const time = new Date(since).toLocaleString(lang === 'es' ? 'es' : 'en-US', {weekday: 'short', hour: 'numeric', minute: '2-digit'});
+      const expected = catalogue[id][lang].replace('{time}', time);
+      assert.ok(html(h(DegradedNotice, {translate: landingT})).includes(expected));
+      assert.equal(degradedText({since: at}, appT, () => 'TIME', lang), catalogue[id][lang].replace('{time}', 'TIME'));
+    }
+  } finally { language.value = 'en'; degraded.value = null; }
+});
+
+test('landing_slice_has_notice_ids', async () => {
+  const source = await readFile(join(ROOT, 'web/degraded.ts'), 'utf8');
+  const slice = JSON.parse(await readFile(join(ROOT, 'web/landing/strings.generated.json'), 'utf8'));
+  const ids = [...source.matchAll(/(?:t|translate)\('(shared\.degraded\.[^']+)'/g)].map(m => m[1]);
+  assert.equal(new Set(ids).size, 2);
+  for (const id of ids) assert.ok(slice[id]?.en, id);
 });

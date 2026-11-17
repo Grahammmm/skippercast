@@ -399,6 +399,52 @@ export function logTripOptionsHTML(trips, region) {
 }
 const noTrip = t => `<option value="">${esc(t('account.log.noTrip'))}</option>`;
 
+/** A choice never retains a private note or an owner field. One malformed row refuses the whole projection. */
+export function projectLogSpots(rows) {
+  if (!Array.isArray(rows)) return null;
+  const ids = new Set(), out = [];
+  for (const row of rows) {
+    if (!row || typeof row.id !== 'string' || !row.id || ids.has(row.id) ||
+      typeof row.lat !== 'number' || !Number.isFinite(row.lat) || !(row.lat > -90 && row.lat < 90) ||
+      typeof row.lon !== 'number' || !Number.isFinite(row.lon) || !(row.lon > -180 && row.lon < 180)) return null;
+    ids.add(row.id); out.push({id: row.id, name: row.name, lat: row.lat, lon: row.lon});
+  }
+  return out;
+}
+const spotName = (name, t) => String(name ?? '').replace(/[\u0000-\u001f\ufffe\uffff]/g, '').trim() || t('account.spots.unnamed');
+/** Escaped exact ids, cleaned display names, and nothing else from a spot. */
+export function logSpotOptionsHTML(rows, copy) {
+  const t = asCopy(copy);
+  return `<option value="">${esc(t('account.log.noSpot'))}</option>` + rows.map(row => `<option value="${esc(row.id)}">${esc(spotName(row.name, t))}</option>`).join('');
+}
+// Expand the shortest round-tripping number string when tiny values use exponential notation.
+const spotCoordinateText = value => String(value).replace(/^(-?)(\d)(?:\.(\d+))?e-(\d+)$/, (_, sign, digit, fraction = '', exponent) =>
+  `${sign}0.${'0'.repeat(Number(exponent) - 1)}${digit}${fraction}`);
+/** Ephemeral choice: redraw/restore never fills; a deliberate known selection fills only the coordinate boxes. */
+export function createLogSpotChoice({$, copy, invalidate}) {
+  const select = $('#log-spot'), wrapper = $('#log-spot-choice');
+  let rows = [];
+  const restore = id => { select.value = rows.some(row => row.id === id) ? id : ''; };
+  const update = source => {
+    const want = select.value; rows = projectLogSpots(source) ?? [];
+    select.innerHTML = logSpotOptionsHTML(rows, copy); wrapper.hidden = !rows.length; restore(want);
+  };
+  select.addEventListener('change', () => {
+    const row = rows.find(row => row.id === select.value);
+    if (!row) { select.value = ''; return; }
+    invalidate();
+    for (const f of ['lat', 'lon']) {
+      const box = $('#log-' + f), error = $('#log-' + f + '-error');
+      box.value = spotCoordinateText(row[f]); box.removeAttribute('aria-invalid');
+      error.textContent = ''; error.hidden = true;
+    }
+  });
+  for (const f of ['lat', 'lon']) $('#log-' + f).addEventListener('input', () => {
+    select.value = ''; $('#log-position-status').textContent = '';
+  });
+  return {update, restore, get selected() { return select.value; }};
+}
+
 const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'))}</h2>
     <p class="home-port-fine">${esc(t('account.log.fine'))}</p>
     <form id="log-form" autocomplete="off">
@@ -410,6 +456,7 @@ const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'
       <label for="log-species">${esc(t('account.log.species'))}</label><input id="log-species" type="text" maxlength="60" />
       <label for="log-method">${esc(t('account.log.method'))}</label><input id="log-method" type="text" maxlength="40" />
       <label for="log-trip">${esc(t('account.log.trip'))} <span class="account-hint">${esc(t('account.optional'))}</span></label><select id="log-trip">${noTrip(t)}</select>
+      <div id="log-spot-choice" hidden><label for="log-spot">${esc(t('account.log.atSpot'))} <span class="account-hint">${esc(t('account.optional'))}</span></label><select id="log-spot">${logSpotOptionsHTML([], t)}</select></div>
       ${positionFieldHTML('log', 'lat', esc(t('account.log.lat')), esc(t('account.optional.private')), chosenFormat(), t)}
       ${positionFieldHTML('log', 'lon', esc(t('account.log.lon')), esc(t('account.optional.private')), chosenFormat(), t)}
       ${positionControlsHTML('log', t)}
@@ -426,7 +473,7 @@ const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'
 /** One saved spot as list HTML. Name, note and verdict are escaped, so markup in them shows as plain text. */
 export function spotItemHTML(spot, verdict, format = chosenFormat(), copy) {
   const t = asCopy(copy);
-  const name = String(spot.name ?? '').replace(/[\u0000-\u001f\ufffe\uffff]/g, '').trim() || t('account.spots.unnamed');
+  const name = spotName(spot.name, t);
   return `<li data-spot-row="${esc(spot.id)}"><span>${esc(name)} · ${esc(formatCoordinates(spot.lat, spot.lon, format))}</span>${verdict?.text ? `<p class="account-hint">${esc(verdict.text)}</p>` : ''}${spot.note ? `<p class="account-hint">${esc(spot.note)}</p>` : ''}
     <button type="button" data-edit-spot="${esc(spot.id)}">${esc(t('account.spotEdit.edit'))}</button> <button type="button" data-remove-spot="${esc(spot.id)}">${esc(t('account.remove'))}</button></li>`;
 }
@@ -771,7 +818,8 @@ export async function openAccount(options = {}) {
     let editing = null, tripRegion = null, logPos = null;   // logPos: the position control, wired below
     const live = () => open === self && list.isConnected;
     const FORM_FIELDS = ['started', 'ended', 'outcome', 'count', 'species', 'method', 'trip', 'lat', 'lon', 'note'];
-    const readForm = () => Object.fromEntries(FORM_FIELDS.map(n => [n, $('#log-' + n).value]));
+    const spotChoice = createLogSpotChoice({$, copy: t, invalidate: () => logPos.invalidate()});
+    const readForm = () => ({...Object.fromEntries(FORM_FIELDS.map(n => [n, $('#log-' + n).value])), spot: spotChoice.selected});
     const writeForm = values => { for (const n of FORM_FIELDS) $('#log-' + n).value = values[n] ?? ''; };
     const clearPositionErrors = () => { for (const f of ['lat', 'lon']) { const err = $(`#log-${f}-error`); err.textContent = ''; err.hidden = true; $('#log-' + f).removeAttribute('aria-invalid'); } };
     const drawLog = () => {
@@ -795,15 +843,15 @@ export async function openAccount(options = {}) {
       tripSelect.value = want;
     };
     const focusEdit = id => { [...list.querySelectorAll('[data-edit-log]')].find(b => b.dataset.editLog === id)?.focus(); };
-    const leaveEdit = (focusId) => {
+    const leaveEdit = (focusId, restoreChoice = true) => {
       const e = editing; editing = null; if (!e) return;
       logPos.invalidate();
-      renderTripOptions(e.draft.trip); writeForm(e.draft); clearPositionErrors();
+      renderTripOptions(e.draft.trip); writeForm(e.draft); spotChoice.restore(restoreChoice ? e.draft.spot : ''); clearPositionErrors();
       drawLog(); if (focusId) focusEdit(focusId);
     };
     const openEdit = id => {
       const row = entries?.find(r => r.id === id); if (!row || editing) return;
-      const draft = readForm(); logPos.invalidate();
+      const draft = readForm(); logPos.invalidate(); spotChoice.restore('');
       editing = {id, draft, pending: false, original: {...row}};
       renderTripOptions(row.trip_id || '');
       writeForm({started: localInputValue(row.started_at), ended: localInputValue(row.ended_at), outcome: row.outcome, count: row.outcome === 'fish' ? String(row.count) : '',
@@ -832,7 +880,7 @@ export async function openAccount(options = {}) {
           // The stored row replaces this one where it stands, then the loaded rows are put back in the log's order; pages and cursor stay as they are.
           const i = entries.findIndex(r => r.id === saved.id); if (i >= 0) entries[i] = saved;
           sortLogEntries(entries);
-          logStatus.textContent = ''; leaveEdit(saved.id); status(t('account.log.updated'));
+          logStatus.textContent = ''; leaveEdit(saved.id, false); status(t('account.log.updated'));
         });
       } catch (error) { if (mine()) { e.pending = false; logStatus.textContent = error?.local ? error.message : passkeyMessage(error, t); drawLog(); } }
     };
@@ -900,7 +948,7 @@ export async function openAccount(options = {}) {
       try {
         await submitPositionForm($, 'log', () => logBody({started: field('started'), ended: field('ended'), outcome: field('outcome'), count: field('count'), species: field('species'), method: field('method'), trip_id: field('trip'), lat: field('lat'), lon: field('lon'), note: field('note')}, t), async body => {
           await api('catch-log', {method: 'POST', body});
-          logPos.invalidate(); $('#log-form').reset(); await showLog(); status(t('account.log.saved'));
+          logPos.invalidate(); $('#log-form').reset(); spotChoice.restore(''); await showLog(); status(t('account.log.saved'));
         });
       } catch (error) { status(error?.local ? error.message : passkeyMessage(error, t)); }
     });
@@ -914,12 +962,16 @@ export async function openAccount(options = {}) {
       const gen = ++loadGen; loading = true; editor = null; syncSpotPos();
       try {
         const rows = (await api('spots')).spots;
-        const verdicts = await spotVerdicts(rows, await spotScreen(), t);
-        if (gen !== loadGen || open !== self) return;   // a newer read or a confirmed edit has already answered
+        if (gen !== loadGen || !live()) return;
+        spotChoice.update(rows);   // private coordinates do not wait for the separate planning screen
+        let verdicts;
+        try { verdicts = await spotVerdicts(rows, await spotScreen(), t); }
+        catch { verdicts = rows.map(() => ({status: 'unavailable', text: t('account.spots.unchecked')})); }
+        if (gen !== loadGen || !live()) return;
         spotRows = rows; spotReadings = verdicts;
         spotList.innerHTML = spotRows.map((s, i) => spotItemHTML(s, verdicts[i], undefined, t)).join('');
-      } catch (error) { if (gen === loadGen) status(passkeyMessage(error, t)); }
-      finally { if (gen === loadGen) loading = false; }
+      } catch (error) { if (gen === loadGen && live()) { spotChoice.update(null); status(passkeyMessage(error, t)); } }
+      finally { if (gen === loadGen && live()) loading = false; }
     };
     // SC1137-09: edit a spot's name and note in its own row. One editor at a time; a draft is only the form's own fields.
     const rowOf = id => [...spotList.children].find(li => li.dataset.spotRow === id);
@@ -961,7 +1013,7 @@ export async function openAccount(options = {}) {
       const j = spotRows.findIndex(s => s.id === saved.id); if (j >= 0) spotRows[j] = saved;
       const reread = loading; loadGen++; loading = false;
       if (editor === e) { editor = null; syncSpotPos(); }
-      if (open === self && token) { redrawRow(saved.id, true); status(t('account.spotEdit.saved')); }
+      if (live() && token) { spotChoice.update(spotRows); redrawRow(saved.id, true); status(t('account.spotEdit.saved')); }
       spotsChanged();
       if (reread && open === self) showSpots();
     };
