@@ -225,6 +225,21 @@
   --hab-mixed: #5731e9;
   --hab-soft: #8a6800;
   --hab-kelp: #297653;
+  /* MB-20: today's conditions overlays on the light water. The dark values are pale and vanish on --map-water;
+     these are darker (flow, MPA lines >= 3:1, checked by scripts/check_contrast.mjs). SST keeps its cold-to-warm
+     order and swell its lighter-with-height order (stops stay >= 3:1 on the water). */
+  --flow: #0a6b5c;
+  --flow-fast: #7a4d00;
+  --mpa-fill: #c9733a;
+  --mpa-line: #b0541c;
+  --sst-2: #1c9a96;
+  --sst-3: #5a9a3c;
+  --sst-4: #b08a10;
+  --sst-5: #cf5f35;
+  --swell-0: #0e3a6a;
+  --swell-1: #1a5a9a;
+  --swell-2: #2d78bd;
+  --swell-3: #4b95d3;
   --elev-1: 0 1px 2px rgb(0 0 0 / 0.12);
   --elev-2: 0 6px 18px rgb(0 0 0 / 0.14);
   --elev-3: 0 16px 40px rgb(0 0 0 / 0.2);
