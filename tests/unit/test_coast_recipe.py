@@ -30,7 +30,7 @@ STATUSES = {'usgs-point-buchon': 'approved', 'usgs-morro-bay': 'approved',
             'usgs-point-estero': 'approved', 'usgs-san-simeon': 'approved',
             'noaa-bag': 'approved', 'csumb-cambria': 'restricted'}
 PINS = {
-    'catalog/sources.json': 'fb131160ea88e6790a6f91a702604aa0cf2a01c7481b9ca28dddf7bf77914ba5',
+    'catalog/sources.json': '2bfdcaabd640cd48aa8dd0cec56526ad77841de0f125472d3e29c6062d033ed1',
     'catalog/coastal-sectors.json': 'bb876ebb25357c91e02d4984b2f353e88be86560a9fb87b15ac0573b416f2378',
     'research/scripts/build_coast_prefetch_plan.py': 'dfcee06d7f92f5030fdbcfd1bfadfadf2245b99b61949e366304f9d88f880c92',
     'src/skippercast/coastal/prefetch.py': 'b5f39a73be33f251fac799427a482b02b12433b2027813209b611e0e74ba5550',
