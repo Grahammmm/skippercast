@@ -36,8 +36,9 @@ export const PUBLIC_GROUNDS = grounds.regions as unknown as Record<string, Publi
 /** The catalog target whose methods cover a species: itself, its group (lingcod -> reef), or its parent's group (vermilion -> reef). */
 export function targetFor(speciesKey: string): string | null {
   const key = PARENT.get(speciesKey) ?? speciesKey;
-  if (PRIMARY[key] || METHODS[key]) return key;
-  for (const [id, t] of Object.entries(TARGETS)) if (t.source_species.includes(key) && (PRIMARY[id] || METHODS[id])) return id;
+  const has = (id: string) => Object.hasOwn(PRIMARY, id) || Object.hasOwn(METHODS, id);
+  if (has(key)) return key;
+  for (const [id, t] of Object.entries(TARGETS)) if (t.source_species.includes(key) && has(id)) return id;
   return null;
 }
 
