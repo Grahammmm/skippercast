@@ -96,7 +96,7 @@
       "properties": {
         "status": {"const": "not_available"},
         "reason": {"const": "source_stale"},
-        "last_source_day": {"anyOf": [{"$ref": "common.schema.json#/$defs/date"}, {"type": "null"}]}
+        "last_source_day": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}
       },
       "additionalProperties": false
     },
@@ -110,7 +110,7 @@
         "sources_ok": {"type": "integer", "minimum": 0},
         "sources_total": {"type": "integer", "minimum": 0},
         "issues": {"$ref": "common.schema.json#/$defs/string_list"},
-        "degraded_reasons": {"$ref": "common.schema.json#/$defs/string_list"}
+        "degraded_reasons": {"type": "array", "items": {"type": "string"}}
       }
     }
   },

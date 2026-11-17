@@ -105,9 +105,7 @@ def test_schema_describes_the_new_section_and_reason_list():
 
 
 def test_freshness_check_reports_the_degraded_reason_without_failing(monkeypatch):
-    import sys
-    sys.path.insert(0, str(ROOT / 'scripts'))
-    import check_feed_freshness as check
+    from scripts import check_feed_freshness as check
     feed = build(monkeypatch, days(3, offset=4))
     feed.update(published_at=STAMP, run_id='fixture')
     status, message = check.check_feed('data', 'fixture://public', 'fixture://github', NOW, fetch=lambda *a, **k: feed)
