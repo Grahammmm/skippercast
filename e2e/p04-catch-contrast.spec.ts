@@ -333,7 +333,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // section URLs as 503 below, retaining unavailable sections and the strict
   // unexpected-request guard; catch markup, paint and controls stay unchanged.
   // RF2115-7: Reports.tsx only passes the matching region's zone to its timestamp labels (date-only dates stay UTC); catch markup, paint and contrast are unchanged. Rebound.
-  "web/app/views/Reports.tsx": "80191b511a22f75fb9122389336cd98017c8794ac8be5e284edb53edee111b96",
+  // SC-FEED-DEGRADE-1: EvidenceSection adds a stale-source unavailable message; CatchCards,
+  // catch markup, styles, paint, contrast thresholds and fail-closed controls remain unchanged.
+  "web/app/views/Reports.tsx": "83d974c8c816c88db815aa250a11c45ef09bc184f421118ad08a52211b734578",
   "web/app/CoastMarkup.tsx": "3d318379ff1194b26f68adadb523db08c21829ff71cf5e7cfe2ac903821f0efc",
   "packages/coast/src/ui/catches.ts": "a25442909c360171a11e5087f629de8cec94a358fc7bff877adce9dffbc0999f",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
@@ -406,8 +408,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // renders Reports with preact from these pins, but no CSS, token, font or catch markup source changes; the
   // measured colours come from the pinned styles above. Reports never mounts MapStage, so maplibre-gl and three
   // are not loaded. contrast(), assertions and thresholds are untouched. Rebind only these two.
-  "package.json": "83cef009e623dee19207f8ebc741b0604766989616387917901c5c654561edb3",
-  "pnpm-lock.yaml": "c9cf4a7e91697552fadd98575e199cf3be17d7fbdafd83949865222573cb736a",
+  // #2490: dependency versions and lockfile resolutions changed; BODY09 still
+  // bundles and measures the real Reports paint with unchanged inputs and gates.
+  // Rebind both manifests and rerun the rendered contrast and fail-closed controls.
+  "package.json": "1a0f80f659e1edda323fe90947fbd5093f1d642b484f15f8e264b23cb2b09aec",
+  "pnpm-lock.yaml": "c13839dc5adfd7fda24886a1fec77e6404c18e4dedc236a58f06caf8a542e707",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {
