@@ -17,6 +17,16 @@ import {PROFILE_TABLE} from '../web/profile.ts';
 import {COVERED, catalogueProblems} from '../scripts/check_copy.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
+test('saved-spot catch choice has exact English and Spanish copy and reuses the unnamed fallback', () => {
+  for (const [id, en, es] of [
+    ['account.log.atSpot', 'At a saved spot', 'En un sitio guardado'],
+    ['account.log.noSpot', 'None — keep entered position', 'Ninguno — conservar la ubicación introducida'],
+    ['account.spots.unnamed', 'Unnamed spot', 'Sitio sin nombre'],
+  ]) {
+    assert.equal(t(id, 'en'), en); assert.equal(t(id, 'es'), es);
+    assert.equal(catalogue.strings[id].en.match(/\{\w+\}/g)?.join() ?? '', catalogue.strings[id].es.match(/\{\w+\}/g)?.join() ?? '');
+  }
+});
 const NOW = new Date('2026-09-30T16:00:00Z'); // 9 am PDT; tomorrow is 1 October
 const vars = text => [...new Set([...text.matchAll(/\{(\w+)\}/g)].map(m => m[1]))].sort();
 

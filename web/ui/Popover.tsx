@@ -7,7 +7,7 @@
 // "basis" by default, or an info icon with that label.
 import type {ComponentChildren} from 'preact';
 import {Icon} from './icons.tsx';
-import {language, t} from '../i18n.ts';
+import {language, t} from '../landing/i18n.ts';
 
 export type PopoverProps = {
   /** The summary text; the default reads "basis". */
