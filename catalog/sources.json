@@ -2516,6 +2516,2107 @@
       "allowed_hosts": [
         "gis.ngdc.noaa.gov"
       ]
+    },
+    {
+      "id": "csumb-ventresca-cc2-blocka01",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockA01",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA01_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA01_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockA01; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockA01",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockA01/multibeam/data/version2/products/CC2_BlockA01_additional_products.tar.gz",
+      "expected_archive_bytes": 345592759,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blocka02",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockA02",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA02_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA02_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockA02; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockA02",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockA02/multibeam/data/version2/products/CC2_BlockA02_additional_products.tar.gz",
+      "expected_archive_bytes": 122727451,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blocka03",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockA03",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA03_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA03_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockA03; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockA03",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockA03/multibeam/data/version2/products/CC2_BlockA03_additional_products.tar.gz",
+      "expected_archive_bytes": 285676473,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blocka04",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockA04",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA04_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA04_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockA04; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockA04",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockA04/multibeam/data/version2/products/CC2_BlockA04_additional_products.tar.gz",
+      "expected_archive_bytes": 382296676,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blocka05",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockA05",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA05_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA05_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockA05; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockA05",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockA05/multibeam/data/version2/products/CC2_BlockA05_additional_products.tar.gz",
+      "expected_archive_bytes": 353097643,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blocka07",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockA07",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA07_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA07_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockA07; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockA07",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockA07/multibeam/data/version2/products/CC2_BlockA07_additional_products.tar.gz",
+      "expected_archive_bytes": 363995389,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blocka08",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockA08",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA08_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA08_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockA08; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockA08",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockA08/multibeam/data/version2/products/CC2_BlockA08_additional_products.tar.gz",
+      "expected_archive_bytes": 331997055,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blocka09",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockA09",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA09_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA09_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockA09; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockA09",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockA09/multibeam/data/version2/products/CC2_Block09_additional_products.tar.gz",
+      "expected_archive_bytes": 382100156,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blocka10",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockA10",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA10_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA10_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockA10; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockA10",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockA10/multibeam/data/version2/products/CC2_Block10_additional_products.tar.gz",
+      "expected_archive_bytes": 445910619,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blocka11",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockA11",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA11_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA11_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockA11; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockA11",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockA11/multibeam/data/version2/products/CC2_BlockA11_additional_products.tar.gz",
+      "expected_archive_bytes": 477832192,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blockb01",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockB01",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB01_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB01_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockB01; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockB01",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockB01/multibeam/data/version2/products/CC2_BlockB01_additional_products.tar.gz",
+      "expected_archive_bytes": 525838683,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blockb02",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockB02",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB02_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB02_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockB02; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockB02",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockB02/multibeam/data/version2/products/CC2_BlockB02_additional_products.tar.gz",
+      "expected_archive_bytes": 419066169,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blockb03",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockB03",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB03_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB03_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockB03; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockB03",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockB03/multibeam/data/version2/products/CC2_BlockB03_additional_products.tar.gz",
+      "expected_archive_bytes": 420091485,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blockb04",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockB04",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB04_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB04_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockB04; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockB04",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockB04/multibeam/data/version2/products/CC2_BlockB04_additional_products.tar.gz",
+      "expected_archive_bytes": 349900547,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blockb05",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockB05",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB05_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB05_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockB05; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockB05",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockB05/multibeam/data/version2/products/CC2_BlockB05_additional_products.tar.gz",
+      "expected_archive_bytes": 427132753,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blockb06",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockB06",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB06_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB06_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockB06; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockB06",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockB06/multibeam/data/version2/products/CC2_BlockB06_additional_products.tar.gz",
+      "expected_archive_bytes": 502461336,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blockb07",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockB07",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB07_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB07_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockB07; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockB07",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockB07/multibeam/data/version2/products/CC2_BlockB07_additional_products.tar.gz",
+      "expected_archive_bytes": 427829121,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blockb08",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockB08",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB08_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB08_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockB08; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockB08",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockB08/multibeam/data/version2/products/CC2_BlockB08_additional_products.tar.gz",
+      "expected_archive_bytes": 451706168,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blockb09",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockB09",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB09_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB09_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockB09; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockB09",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockB09/multibeam/data/version2/products/CC2_BlockB09_additional_products.tar.gz",
+      "expected_archive_bytes": 411090632,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blockb10",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockB10",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB10_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB10_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockB10; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockB10",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockB10/multibeam/data/version2/products/CC2_BlockB10_additional_products.tar.gz",
+      "expected_archive_bytes": 486547931,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blockb11",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockB11",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB11_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB11_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockB11; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockB11",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockB11/multibeam/data/version2/products/CC2_BlockB11_additional_products.tar.gz",
+      "expected_archive_bytes": 478300816,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blockb12",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockB12",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB12_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB12_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockB12; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockB12",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockB12/multibeam/data/version2/products/CC2_BlockB12_additional_products.tar.gz",
+      "expected_archive_bytes": 391997862,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc2-blockb13-14",
+      "name": "CSUMB SFML NCEI ventresca/CC2_BlockB13-14",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB13-14_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB13-14_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC2_BlockB13-14; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC2_BlockB13-14",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC2_BlockB13-14/multibeam/data/version2/products/CC2_BlockB13-14_additional_products.tar.gz",
+      "expected_archive_bytes": 303450139,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc-blocka00",
+      "name": "CSUMB SFML NCEI ventresca/CC_BlockA00",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA00_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA00_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC_BlockA00; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission.",
+        "NCEI ISO request returned HTTP 404; archived version1 contextual metadata supplies no version2 reuse authorization."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC_BlockA00",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC_BlockA00/multibeam/data/version2/products/CC_BlockA00_additional_products.tar.gz",
+      "expected_archive_bytes": 573780123,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc-blocka02",
+      "name": "CSUMB SFML NCEI ventresca/CC_BlockA02",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA02_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA02_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC_BlockA02; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC_BlockA02",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC_BlockA02/multibeam/data/version2/products/CC_BlockA02_additional_products.tar.gz",
+      "expected_archive_bytes": 324536643,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc-blocka03",
+      "name": "CSUMB SFML NCEI ventresca/CC_BlockA03",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA03_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA03_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC_BlockA03; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC_BlockA03",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC_BlockA03/multibeam/data/version2/products/CC_BlockA03_additional_products.tar.gz",
+      "expected_archive_bytes": 520260647,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc-blocka05",
+      "name": "CSUMB SFML NCEI ventresca/CC_BlockA05",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA05_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA05_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC_BlockA05; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC_BlockA05",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC_BlockA05/multibeam/data/version2/products/CC_BlockA05_additional_products.tar.gz",
+      "expected_archive_bytes": 509030511,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc-blocka06",
+      "name": "CSUMB SFML NCEI ventresca/CC_BlockA06",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA06_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA06_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC_BlockA06; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC_BlockA06",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC_BlockA06/multibeam/data/version2/products/CC_BlockA06_additional_products.tar.gz",
+      "expected_archive_bytes": 719350173,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc-blocka07",
+      "name": "CSUMB SFML NCEI ventresca/CC_BlockA07",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA07_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA07_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC_BlockA07; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC_BlockA07",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC_BlockA07/multibeam/data/version2/products/CC_BlockA07_additional_products.tar.gz",
+      "expected_archive_bytes": 719191668,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc-blocka08",
+      "name": "CSUMB SFML NCEI ventresca/CC_BlockA08",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA08_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA08_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC_BlockA08; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC_BlockA08",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC_BlockA08/multibeam/data/version2/products/CC_BlockA08_additional_products.tar.gz",
+      "expected_archive_bytes": 518670666,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc-blocka09",
+      "name": "CSUMB SFML NCEI ventresca/CC_BlockA09",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA09_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA09_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC_BlockA09; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC_BlockA09",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC_BlockA09/multibeam/data/version2/products/CC_BlockA09_additional_products.tar.gz",
+      "expected_archive_bytes": 680368993,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc-blocka10",
+      "name": "CSUMB SFML NCEI ventresca/CC_BlockA10",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA10_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA10_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC_BlockA10; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC_BlockA10",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC_BlockA10/multibeam/data/version2/products/CC_BlockA10_additional_products.tar.gz",
+      "expected_archive_bytes": 644817096,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-cc-blocka11",
+      "name": "CSUMB SFML NCEI ventresca/CC_BlockA11",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA11_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA11_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/CC_BlockA11; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-CC_BlockA11",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CC_BlockA11/multibeam/data/version2/products/CC_BlockA11_additional_products.tar.gz",
+      "expected_archive_bytes": 628945160,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-montereycanyon",
+      "name": "CSUMB SFML NCEI ventresca/MontereyCanyon",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MontereyCanyon_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MontereyCanyon_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/MontereyCanyon; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-MontereyCanyon",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/MontereyCanyon/multibeam/data/version2/products/MontereyCanyon_additional_products.tar.gz",
+      "expected_archive_bytes": 12002563,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-pge-north",
+      "name": "CSUMB SFML NCEI ventresca/PGE_North",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PGE_North_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PGE_North_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/PGE_North; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-PGE_North",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_North/multibeam/data/version2/products/PGE_North_additional_products.tar.gz",
+      "expected_archive_bytes": 283918441,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-pge-south",
+      "name": "CSUMB SFML NCEI ventresca/PGE_South",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PGE_South_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PGE_South_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/PGE_South; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-PGE_South",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_South/multibeam/data/version2/products/PGE_South_additional_products.tar.gz",
+      "expected_archive_bytes": 1479539208,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-point-buchon",
+      "name": "CSUMB SFML NCEI ventresca/Point_Buchon",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PointBuchon_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PointBuchon_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/Point_Buchon; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-Point_Buchon",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/products/Pt_Buchon_additional_products.tar.gz",
+      "expected_archive_bytes": 355500290,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-point-buchon-control",
+      "name": "CSUMB SFML NCEI ventresca/Point_Buchon_Control",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PointBuchon_Control_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PointBuchon_Control_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/Point_Buchon_Control; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-Point_Buchon_Control",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/products/Pt_Buchon_control_additional_products.tar.gz",
+      "expected_archive_bytes": 515493040,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-presidioshoals",
+      "name": "CSUMB SFML NCEI ventresca/PresidioShoals",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PresidioShoals_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PresidioShoals_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/PresidioShoals; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-PresidioShoals",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PresidioShoals/multibeam/data/version2/products/PresidioShoals_additional_products.tar.gz",
+      "expected_archive_bytes": 111952418,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-sanfranciscomouth",
+      "name": "CSUMB SFML NCEI ventresca/SanFranciscoMouth",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SanFranciscoMouth_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SanFranciscoMouth_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/SanFranciscoMouth; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-SanFranciscoMouth",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SanFranciscoMouth/multibeam/data/version2/products/SanFranciscoMouth_additional_products.tar.gz",
+      "expected_archive_bytes": 3677102863,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-sanpablobay",
+      "name": "CSUMB SFML NCEI ventresca/SanPabloBay",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SanPabloBay_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SanPabloBay_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/SanPabloBay; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-SanPabloBay",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SanPabloBay/multibeam/data/version2/products/SanPabloBay_additional_products.tar.gz",
+      "expected_archive_bytes": 573066166,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-soquelcanyon",
+      "name": "CSUMB SFML NCEI ventresca/SoquelCanyon",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SoquelCanyon_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SoquelCanyon_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/SoquelCanyon; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-SoquelCanyon",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SoquelCanyon/multibeam/data/version2/products/SoquelCanyon_additional_products.tar.gz",
+      "expected_archive_bytes": 36912480,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-ventresca-suisunbay",
+      "name": "CSUMB SFML NCEI ventresca/SuisunBay",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SuisunBay_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SuisunBay_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey ventresca/SuisunBay; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-ventresca-SuisunBay",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SuisunBay/multibeam/data/version2/products/SuisunBay_additional_products.tar.gz",
+      "expected_archive_bytes": 180087964,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-harold-heath-bss-block13",
+      "name": "CSUMB SFML NCEI harold_heath/BSS_Block13",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:BSS_Block13_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:BSS_Block13_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey harold_heath/BSS_Block13; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-harold_heath-BSS_Block13",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block13/multibeam/data/version2/products/BSS_Block13_additional_products.tar.gz",
+      "expected_archive_bytes": 164289176,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-harold-heath-montereypeninsula",
+      "name": "CSUMB SFML NCEI harold_heath/MontereyPeninsula",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MontereyPeninsula_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MontereyPeninsula_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey harold_heath/MontereyPeninsula; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-harold_heath-MontereyPeninsula",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/MontereyPeninsula/multibeam/data/version2/products/MontereyPeninsula_additional_products.tar.gz",
+      "expected_archive_bytes": 10187368,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-macginitie-mackerricher",
+      "name": "CSUMB SFML NCEI macginitie/MacKerricher",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MacKerricher_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MacKerricher_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey macginitie/MacKerricher; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-macginitie-MacKerricher",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/MacKerricher/multibeam/data/version2/products/MacKerricher_additional_products.tar.gz",
+      "expected_archive_bytes": 86798059,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-macginitie-montereybay-holefill",
+      "name": "CSUMB SFML NCEI macginitie/MontereyBay_HoleFill",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MontereyBay_HoleFill_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MontereyBay_HoleFill_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey macginitie/MontereyBay_HoleFill; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-macginitie-MontereyBay_HoleFill",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/MontereyBay_HoleFill/multibeam/data/version2/products/MontereyBay_additional_products.tar.gz",
+      "expected_archive_bytes": 1177404130,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-macginitie-mosslandingharbor",
+      "name": "CSUMB SFML NCEI macginitie/MossLandingHarbor",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MossLandingHarbor_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MossLandingHarbor_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey macginitie/MossLandingHarbor; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-macginitie-MossLandingHarbor",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/MossLandingHarbor/multibeam/data/version2/products/MossLandingHarbor_additional_products.tar.gz",
+      "expected_archive_bytes": 2054006,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-macginitie-ptcabrillo",
+      "name": "CSUMB SFML NCEI macginitie/PtCabrillo",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PtCabrillo_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PtCabrillo_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey macginitie/PtCabrillo; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-macginitie-PtCabrillo",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/PtCabrillo/multibeam/data/version2/products/PointCabrillo_additional_products.tar.gz",
+      "expected_archive_bytes": 209362236,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
+    },
+    {
+      "id": "csumb-macginitie-scypresspoint",
+      "name": "CSUMB SFML NCEI macginitie/SCypressPoint",
+      "provider": "CSUMB Seafloor Mapping Lab (NOAA NCEI distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SCypressPoint_Multibeam/xml",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
+        "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SCypressPoint_Multibeam/xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
+        "scope": "private-use only",
+        "redistribution_reviewed": false
+      },
+      "authenticity": {
+        "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
+        "transport": "HTTPS; exact official NCEI hosts only"
+      },
+      "coverage_note": "Survey macginitie/SCypressPoint; footprint, native resolution and measured coverage require private census.",
+      "limitations": [
+        "private-use only; no public tiles, imagery, targets or redistribution.",
+        "Not for navigation.",
+        "Embedded producer constraints remain unresolved; acquisition does not establish reuse permission."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ncei.noaa.gov"
+      ],
+      "acquisition_id": "csumb-macginitie-SCypressPoint",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/SCypressPoint/multibeam/data/version2/products/SCypressPoint_additional_products.tar.gz",
+      "expected_archive_bytes": 260675963,
+      "acquisition_wave": "wave2b",
+      "publication_allowed": false,
+      "usage": "private-use only"
     }
   ]
 }
