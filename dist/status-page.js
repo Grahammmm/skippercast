@@ -20,6 +20,7 @@ export async function initStatusPage(doc, env) {
   const lang = await initReadyLanguage(env);
   if (doc.documentElement) doc.documentElement.lang = lang;
   if (lang === 'en') return lang;
+  doc.title = t('title', lang);
   for (const [attr, apply] of [['data-i18n', (el, value) => { el.textContent = value; }], ['data-i18n-lead', (el, value) => { el.firstChild.nodeValue = value + ' '; }], ['data-i18n-aria', (el, value) => { el.setAttribute('aria-label', value); }]]) {
     for (const el of doc.querySelectorAll('[' + attr + ']')) apply(el, lookup(STRINGS, el.getAttribute(attr), lang));
   }
