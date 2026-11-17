@@ -2,6 +2,12 @@
   "schema_version": 1,
   "description": "Every user-facing string of the map app's Spanish-covered surfaces (BF-spanish-app: the first answer, the brief, the rules cards), in English and Spanish. web/i18n.ts t(id, lang, vars) reads this file; {name} is a variable. The Spanish is written, never generated at run time. Regulation numbers, species scientific names, port names, source names and the registry's own rule wording are NOT in this file and are never translated: where a card shows rule wording it stays English and says so (rules.english). scripts/check_copy.mjs fails on an id with no Spanish value, on an unknown id in a t() call, and on a bare prose literal in the covered files. To cover another surface: add its ids here (en and es), replace its literals with t(id, lang), and add the file to COVERED in scripts/check_copy.mjs.",
   "strings": {
+    "account.log.csv.download": {"en": "Download log (CSV)", "es": "Descargar registro (CSV)"},
+    "account.log.csv.loading": {"en": "Reading your log…", "es": "Leyendo tu registro…"},
+    "account.log.csv.limit": {"en": "Downloads read up to 10 pages (2,000 entries). If older entries cannot be read, no file is downloaded.", "es": "Las descargas leen hasta 10 páginas (2000 entradas). Si no se pueden leer las entradas anteriores, no se descarga ningún archivo."},
+    "account.log.csv.incomplete": {"en": "Older entries could not be read. Nothing was downloaded. Try again.", "es": "No se pudieron leer las entradas anteriores. No se descargó nada. Vuelve a intentarlo."},
+    "account.log.csv.tripsFailed": {"en": "Saved trip dates could not be read. Nothing was downloaded. Try again.", "es": "No se pudieron leer las fechas de los viajes guardados. No se descargó nada. Vuelve a intentarlo."},
+    "account.log.csv.done": {"en": "Downloaded your catch log as CSV.", "es": "Se descargó tu registro de capturas en CSV."},
     "keepAwake.failed": {"en": "Could not keep the screen on. Try again.", "es": "No se pudo mantener la pantalla encendida. Inténtalo de nuevo."},
     "keepAwake.label": {"en": "Keep screen on", "es": "Mantener la pantalla encendida"},
     "landing.regions.browse": {"en": "Browse California regions and coverage", "es": "Ver regiones de California y su cobertura"},
