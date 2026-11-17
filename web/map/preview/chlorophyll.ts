@@ -12,6 +12,9 @@ export function readChlorophyll(raw: unknown): ChlDoc {
   if (!d || !Array.isArray(d.bounds) || d.bounds.length !== 4 || !d.bounds.every(Number.isFinite) || typeof d.sample_at !== 'string'
     || !(Number(d.max_age_hours) > 0) || !Array.isArray(d.style?.legend) || d.style.legend.length < 2
     || !d.style.legend.every(stop => Array.isArray(stop) && Number.isFinite(stop[0]) && stop[0] > 0 && typeof stop[1] === 'string')) throw new Error('chlorophyll file is not valid');
+  const [w, s, e, n] = d.bounds;
+  // One non-wrapping rectangle: west < east, south < north, inside the world. Never swapped, clamped or wrapped.
+  if (!(w >= -180 && w < e && e <= 180 && s >= -90 && s < n && n <= 90)) throw new Error('chlorophyll file is not valid');
   return d as ChlDoc;
 }
 
