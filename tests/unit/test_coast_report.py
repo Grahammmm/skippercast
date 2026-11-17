@@ -221,7 +221,13 @@ class Sources(TestCase):
         hours = report()["forecasts"][1]["hours"]
         self.assertEqual((hours[0]["at"], hours[-1]["at"], len(hours)), ("2026-10-08T21:00:00.000Z", "2026-10-10T20:00:00.000Z", 48))
         first = hours[0]
-        self.assertAlmostEqual(first["windKnots"], 14.8 / 1.852)
+        self.assertAlmostEqual(first["windKnots"], 14.8 / cr.KMH_PER_KT)
+        self.assertEqual(cr.convert(14.8, "wmoUnit:km_h-1", "knots"), 14.8 / 1.852)  # byte-identical to the old literal
+        for v in (0, 0.1, 299.9):
+            self.assertEqual(cr.convert(v, "wmoUnit:km_h-1", "knots"), v / 1.852)
+        for bad in (True, float("nan")):
+            self.assertIsNone(cr.convert(bad, "wmoUnit:km_h-1", "knots"))
+        self.assertIsNone(cr.convert(14.8, "wmoUnit:km_h-1", "feet"))
         self.assertAlmostEqual(first["waveFt"], 1.22 * cr.FT)
         self.assertAlmostEqual(first["airTempF"], 16.1 * 1.8 + 32)
         self.assertIsNone(hours[-1]["cloudCoverPct"])  # 140 % is not a percentage; never clamped

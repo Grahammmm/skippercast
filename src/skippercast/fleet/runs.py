@@ -46,7 +46,7 @@ class Run:
     def __init__(self, region: str, run_id: str | None = None, var: Path | None = None):
         self.region = region
         self.id = run_id or new_run_id()
-        if not RUN_ID.match(self.id):
+        if not RUN_ID.fullmatch(self.id):
             raise ValueError(f"run id {self.id!r} does not match YYYYMMDDTHHMMSSZ-xxxxxx")
         self.var = Path(var) if var is not None else fleet_var()
         self.dir = self.var / region / "runs" / self.id

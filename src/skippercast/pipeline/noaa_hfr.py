@@ -12,7 +12,7 @@ from scipy.io import netcdf_file
 
 def _numeric_values(variable):
     """Mask declared numeric sentinels in the stored domain before qualification."""
-    raw = variable[:].copy()
+    raw = variable[...].copy()
     missing = np.zeros(raw.shape, dtype=bool)
     for attr in ("_FillValue", "missing_value"):
         markers = np.asarray(getattr(variable, attr, []))
@@ -103,7 +103,7 @@ def read_subset(body, bounds, expected_time, resolution):
                 if not (south - resolution[0] <= y <= north + resolution[0] and west - resolution[1] <= x <= east + resolution[1]):
                     raise ValueError("NOAA HFRNet cell outside requested bounds")
                 eastward, northward, sites, dilution = (float(a[0, i, j]) for a in arrays)
-                sites = int(sites) if 0 <= sites <= 100 else None
+                sites = int(sites) if 0 <= sites <= 100 and sites == int(sites) else None
                 valid = sites is not None and sites >= 2 and all(math.isfinite(vv) and abs(vv) <= 5 for vv in (eastward, northward))
                 dilution = round(dilution, 4) if math.isfinite(dilution) and 0 <= dilution <= 100 else None
                 rows.append({"time": sample.isoformat(timespec="seconds").replace("+00:00", "Z"),
@@ -113,7 +113,7 @@ def read_subset(body, bounds, expected_time, resolution):
                              "number_of_sites": sites, "hdop": dilution})
         if not rows:
             raise ValueError("Empty NOAA HFRNet subset")
-        depth = nc.variables["depth"].data
+        depth = _numeric_values(nc.variables["depth"])
         if depth.size != 1 or not math.isfinite(float(depth.flat[0])):
             raise ValueError("NOAA HFRNet depth changed")
         valid_count = sum(r["water_u"] is not None and r["water_v"] is not None for r in rows)

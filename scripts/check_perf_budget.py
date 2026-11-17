@@ -117,20 +117,31 @@ def measure(root: Path, budget: dict) -> dict[str, dict]:
     return out
 
 
+def _pos_int(v) -> bool:
+    return type(v) is int and v > 0
+
+
 def validate_budget(budget: dict) -> list[str]:
-    """Problems with the budget file itself (a changed number needs a written reason)."""
+    """Problems with the budget file itself (a changed number needs a written reason). Never raises."""
+    if not isinstance(budget, dict) or not isinstance(budget.get("budgets"), dict) or not budget["budgets"]:
+        return ['budget file must be a JSON object with a "budgets" object']
     problems = []
     for name, spec in budget["budgets"].items():
+        if not isinstance(spec, dict):
+            problems.append(f"{name}: must be an object")
+            continue
         hist = spec.get("history") or []
-        if not hist:
+        if not hist or not isinstance(hist, list):
             problems.append(f"{name}: needs a non-empty history list with a reason")
             continue
         for h in hist:
-            if not isinstance(h.get("max_bytes"), int) or not str(h.get("reason", "")).strip():
-                problems.append(f"{name}: every history entry needs an integer max_bytes and a reason")
+            if not isinstance(h, dict) or not _pos_int(h.get("max_bytes")) or not str(h.get("reason", "")).strip():
+                problems.append(f"{name}: every history entry needs a positive integer max_bytes and a reason")
                 break
         else:
-            if spec.get("max_bytes") != hist[-1]["max_bytes"]:
+            if not _pos_int(spec.get("max_bytes")):
+                problems.append(f"{name}: max_bytes must be a positive integer")
+            elif spec["max_bytes"] != hist[-1]["max_bytes"]:
                 problems.append(
                     f"{name}: max_bytes {spec.get('max_bytes')} does not match the last history entry "
                     f"({hist[-1]['max_bytes']}). To change a budget, add a new history entry with the new "
@@ -191,7 +202,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--root", type=Path, default=REPO, help="repository root to measure")
     ap.add_argument("--budget", type=Path, default=DEFAULT_BUDGET, help="budget file")
     args = ap.parse_args(argv)
-    budget = json.loads(args.budget.read_text())
+    try:
+        budget = json.loads(args.budget.read_text())
+    except (OSError, ValueError) as e:
+        print(f"BUDGET FILE PROBLEM:\n  cannot read {args.budget}: {type(e).__name__}")
+        return 1
     problems = validate_budget(budget)
     if problems:
         print("BUDGET FILE PROBLEM:\n  " + "\n  ".join(problems))

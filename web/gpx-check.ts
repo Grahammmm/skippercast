@@ -25,7 +25,7 @@ const xmlCharacter = (n: number): boolean => n === 9 || n === 10 || n === 13 || 
 export function checkGpx(xml: string, expected: {waypoints: number}, screen?: unknown): {ok: true; screen: PlaceVerdict[]} | {ok: false; problems: string[]; screen: PlaceVerdict[]} {
   const problems: string[] = [], fail = (s: string): void => { if (!problems.includes(s)) problems.push(s); };
   if (!/^<\?xml\s+[^?]*\?>/.test(xml)) fail('Missing XML declaration');
-  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/u.test(xml)) fail('XML-forbidden control character');
+  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/u.test(xml) || /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/.test(xml)) fail('XML-forbidden control character');
   const stack: string[] = [], names = new Set<string>();
   const coordinates: {latitude: number; longitude: number}[] = [];
   let roots = 0, count = 0, cursor = 0, waypoint = false, waypointName = false;
@@ -63,7 +63,13 @@ export function checkGpx(xml: string, expected: {waypoints: number}, screen?: un
       const root = readAttributes(attrs), only = (key: string): string | undefined => { const found = root.list.filter(([k]) => k === key); return found.length === 1 ? found[0]![1] : undefined; };
       if (name !== 'gpx' || !root.ok || only('version') !== '1.1' || only('xmlns') !== 'http://www.topografix.com/GPX/1/1') fail('Expected GPX 1.1 root');
     }
-    for (const [, value] of readAttributes(attrs).list) decode(value);
+    // Literal XML-name uniqueness per element; root version/xmlns and wpt/trkpt lat/lon duplicates keep their own diagnostics.
+    const seen = new Set<string>(), own = new Set(!stack.length ? ['version', 'xmlns'] : name === 'wpt' || name === 'trkpt' ? ['lat', 'lon'] : []);
+    for (const [key, value] of readAttributes(attrs).list) {
+      decode(value);
+      if (seen.has(key) && !own.has(key)) fail('Duplicate XML attribute');
+      seen.add(key);
+    }
     if (name === 'wpt' || name === 'trkpt') {
       const read = readAttributes(attrs), pair: number[] = [];
       if (!read.ok) fail(`Malformed ${name} attributes`);

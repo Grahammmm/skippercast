@@ -33,6 +33,12 @@ class UnitsTests(unittest.TestCase):
             for key in ("MINIMUM_DEPTH_FT", "MAXIMUM_DEPTH_FT"):
                 self.assertEqual((feet := ast.literal_eval(names[key])) * units.M_PER_FT, feet * 0.3048, (path, key))
 
+    def test_pipeline_has_no_unit_factor_literals(self):  # RF2325-1: factors live in util.units only
+        banned = {1.852, 0.3048, 3.28084, 1.94384, 0.514444}
+        for path in sorted((SRC / "pipeline").glob("*.py")):
+            hits = [n.lineno for n in ast.walk(ast.parse(path.read_text(encoding="utf-8"))) if isinstance(n, ast.Constant) and isinstance(n.value, float) and n.value in banned]
+            self.assertEqual(hits, [], f"{path.name}: unit factor literal; import it from skippercast.util.units")
+
     def test_ais_rounding_holds_but_tolerance_boundary_flips_so_match_keeps_its_literal(self):
         self.assertEqual([L for L in LENGTHS if round(L * units.FT_PER_M, 1) != round(L * 3.28084, 1)], [])
         self.assertEqual(match.FT_PER_M, 3.28084)  # spec Design: a changed verdict keeps the literal

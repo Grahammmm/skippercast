@@ -131,10 +131,11 @@ export function TimeDock({now = new Date()}: {now?: Date} = {}) {
   }, [playing, tz]);
   // The day strip scrolls sideways on narrow stages: keep the chosen chip in view, in the strip only (SC1722-19).
   const dock = useRef<HTMLDivElement>(null);
+  // Async verdict words change chip widths even when the selected day stays the same.
   useEffect(() => {
     const strip = dock.current?.querySelector<HTMLElement>('.ui-segmented') ?? null;
     revealDockDay(strip, strip?.querySelector<HTMLElement>('[aria-pressed="true"]') ?? null);
-  }, [state.day, lang]);
+  }, [state.day, lang, answers]);
   const at = (i: number): number => state.hours[i] ?? state.at;
   return (
     <div class="app-dock" ref={dock}>

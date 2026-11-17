@@ -23,6 +23,9 @@ def camera_projection(vertices, vertical_exaggeration=1.0):
     points = np.asarray(vertices, dtype=np.float64).copy()
     if points.ndim != 2 or points.shape[1] != 3 or not len(points):
         raise ValueError("camera_xyz_vertices_required")
+    # NaN/inf would poison min/max centering and matmul; refuse the whole matrix, never salvage.
+    if not np.isfinite(points).all():
+        raise ValueError("camera_finite_vertices_required")
     if not math.isfinite(float(vertical_exaggeration)) or float(vertical_exaggeration) <= 0:
         raise ValueError("camera_vertical_exaggeration_invalid")
     points[:, 2] *= float(vertical_exaggeration)

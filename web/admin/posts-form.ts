@@ -16,13 +16,15 @@ export function localInput(iso: string | null): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? '' : `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-const LOCAL = /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/;
+const LOCAL = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/;
 /** A datetime-local value (the browser's zone) as ISO; null when empty (clear the schedule); undefined when
  *  unreadable (not YYYY-MM-DDTHH:MM[:SS[.sss]], or no such day): leave the schedule as it is. */
 export function fromLocalInput(value: string): string | null | undefined {
   if (!value) return null;
   const m = LOCAL.exec(value), d = new Date(value);
   if (!m || Number.isNaN(d.getTime()) || d.getFullYear() !== Number(m[1]) || d.getMonth() + 1 !== Number(m[2]) || d.getDate() !== Number(m[3])) return undefined;
+  // A nonexistent clock time (DST gap) is normalised by Date to a different wall time: refuse it.
+  if (d.getHours() !== Number(m[4]) || d.getMinutes() !== Number(m[5]) || d.getSeconds() !== Number(m[6] ?? 0) || d.getMilliseconds() !== Number((m[7] ?? '').padEnd(3, '0'))) return undefined;
   return d.toISOString();
 }
 

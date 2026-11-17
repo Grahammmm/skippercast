@@ -111,9 +111,12 @@ def parse_ecmwf_index(text):
         if not line.strip():
             continue
         row = json.loads(line)
-        if row.get('levtype', 'sfc') != 'sfc' and 'levelist' in row:
+        if row.get('levtype', 'sfc') != 'sfc':
             continue
-        out.setdefault(row['param'], (row['_offset'], row['_offset'] + row['_length'] - 1))
+        offset, length = row['_offset'], row['_length']
+        if any(type(n) is not int for n in (offset, length)) or offset < 0 or length < 1:
+            raise ValueError('Invalid ECMWF index byte range')
+        out.setdefault(row['param'], (offset, offset + length - 1))
     return out
 
 

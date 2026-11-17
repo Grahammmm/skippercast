@@ -686,6 +686,13 @@ def assess_ais(conn: sqlite3.Connection, state_path: Path, fleet_var: Path, regi
     return inserted, processed
 
 
+def _disarm_alarm(old_alarm) -> None:
+    try:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+    finally:
+        signal.signal(signal.SIGALRM, old_alarm)
+
+
 def collect_run(region: FleetRegion, db_path: Path, fleet_var: Path, max_pages: int = DEFAULT_MAX_PAGES,
                 deadline_seconds: int = DEFAULT_DEADLINE_SECONDS, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
@@ -701,8 +708,12 @@ def collect_run(region: FleetRegion, db_path: Path, fleet_var: Path, max_pages: 
         except BlockingIOError:
             return {"status": "skipped-locked", "pages_reviewed": 0}
         old_alarm = signal.signal(signal.SIGALRM, lambda _signum, _frame: (_ for _ in ()).throw(TimeoutError("collector deadline reached")))
-        signal.setitimer(signal.ITIMER_REAL, deadline_seconds)
-        conn = open_database(db_path)
+        try:
+            signal.setitimer(signal.ITIMER_REAL, deadline_seconds)
+            conn = open_database(db_path)
+        except BaseException:
+            _disarm_alarm(old_alarm)
+            raise
         try:
             init_sources(conn, region)
             with conn:
@@ -810,9 +821,10 @@ def collect_run(region: FleetRegion, db_path: Path, fleet_var: Path, max_pages: 
                               type(error).__name__[:60], run_id))
             raise
         finally:
-            conn.close()
-            signal.setitimer(signal.ITIMER_REAL, 0)
-            signal.signal(signal.SIGALRM, old_alarm)
+            try:
+                conn.close()
+            finally:
+                _disarm_alarm(old_alarm)
 
 
 def count_report(db_path: Path) -> dict:

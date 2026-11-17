@@ -116,7 +116,13 @@ def _receipt_ok(run):
         hash(run['databaseId']), run['status'], run['conclusion'], [job['name'] for job in run['jobs']]
         [job['status'] for job in run['jobs'] if job.get('conclusion') != 'skipped']
         dates = [run['createdAt'], run['updatedAt'], *(j[k] for j in run['jobs'] for k in ('startedAt', 'completedAt') if j.get(k))]
-        return all(datetime.fromisoformat(d.replace('Z', '+00:00')).tzinfo is not None for d in dates)
+        if not all(datetime.fromisoformat(d.replace('Z', '+00:00')).tzinfo is not None for d in dates):
+            return False
+        # Closed interval: run.createdAt <= job.startedAt <= job.completedAt <= run.updatedAt (instants).
+        when = lambda text: datetime.fromisoformat(text.replace('Z', '+00:00'))
+        created, updated = when(run['createdAt']), when(run['updatedAt'])
+        return all(created <= when(j['startedAt']) <= when(j['completedAt']) <= updated
+                   for j in run['jobs'] if j.get('conclusion') != 'skipped')
     except (AttributeError, KeyError, TypeError, ValueError):
         return False
 
@@ -197,7 +203,11 @@ def main(argv=None):
         if not isinstance(runs, list) or not all(isinstance(run, dict) for run in runs):
             print(f'pytest_report: {args.ci_runs}: expected a JSON list of run objects', file=sys.stderr)
             return 2
-        text, ok = ci_budget(runs)
+        try:
+            text, ok = ci_budget(runs)
+        except ValueError as error:
+            print(f'pytest_report: {args.ci_runs}: {error}', file=sys.stderr)
+            return 2
         sys.stdout.write(text)
         return 0 if ok else 1
     if not args.junit:

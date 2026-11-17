@@ -72,14 +72,14 @@ def probe(base, path, timeout=TIMEOUT):
                     expires = datetime.fromisoformat(manifest['expires_at'].replace('Z', '+00:00'))
                     ok = (manifest['status'] == 'ready' and manifest['region'] == region
                           and expires.tzinfo is not None and expires > datetime.now(timezone.utc))
-                except (ValueError, KeyError, TypeError, AttributeError):
+                except (ValueError, KeyError, TypeError, AttributeError, RecursionError):
                     ok = False
                 if not ok:
                     return {'path': path, 'status': 200, 'error': 'habitat unavailable'}
             if path == "/api/health":
                 try:
                     ok = isinstance(json.loads(response.read(1 << 20)), dict)
-                except ValueError:
+                except (ValueError, RecursionError):
                     ok = False
                 if not ok:
                     return {"path": path, "status": 200, "error": "not JSON"}

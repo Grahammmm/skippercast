@@ -6,7 +6,8 @@ import type {Source} from 'pmtiles';
 import {loadManifest} from '../dist/seafloor-data.js';
 import {BASEMAP_MANIFEST, basemapArchive} from './map/chart.ts';
 import {shorelineOverviewURL, shorelineURL} from './map/coastline.ts';
-import {chartFileListed} from './chart-files.ts';
+import {effect} from '@preact/signals';
+import {chartFileListed, publishedChartFiles} from './chart-files.ts';
 import {landWaterLinesURL, landWaterURL} from './land-water.ts';
 import {depthContoursOverviewURL, depthContoursURL} from './map/depth-contours.ts';
 import {atlasMarksURL, planIndexURL} from './startup-forms.ts';
@@ -108,8 +109,9 @@ export function rangeRecorder(url: string, put: Extras['put'], signal: AbortSign
  * overview depth contours the region publishes, then the startup copies (#617) and `hashed`. A fixed allowlist, each gated on its own name in the
  * region's published `chart_files` (an unknown list fails open, as chartFileListed decides); poster.svg and any other name are never saved.
  */
-export function packFiles(id: string, page: string, hashed: readonly string[]): [string, string, RequestInit][] {
-  const origin = new URL(page).origin, listed = (name: string, url: string): string[] => chartFileListed(id, name) ? [url] : [];
+export function packFiles(id: string, page: string, hashed: readonly string[], files?: readonly string[] | null): [string, string, RequestInit][] {
+  // `files` (undefined: the shared signal decides, as before; an array: that captured list; null: unknown, fail open) is the snapshot v2Pack waited for.
+  const origin = new URL(page).origin, listed = (name: string, url: string): string[] => (files === undefined ? chartFileListed(id, name) : !Array.isArray(files) || files.includes(name)) ? [url] : [];
   return [[origin + V2_SHELL, origin + V2_SHELL, {}],
     ...[BASEMAP_MANIFEST, ...listed('shoreline.geojson', shorelineURL(id)), ...listed('shoreline-overview.geojson', shorelineOverviewURL(id)),
       ...listed('land-water.json', landWaterURL(id)), ...listed('land-water-lines.json', landWaterLinesURL(id)),
@@ -142,9 +144,31 @@ export async function oceanPhase({put, signal, progress}: Pick<Extras, 'put' | '
   return manifestStatus === 404 && !saved.manifest.stored ? {schema_version: 1, path: 'none', manifest: saved.manifest, layers: {}, bytes: 0, cap_bytes: saved.cap_bytes} : {schema_version: 1, path: 'regional', ...saved};
 }
 
+/**
+ * One-shot wait for `id`'s Chart publication metadata when it is pending as a save begins: resolves a frozen copy of the settled list (null: it named
+ * none, fail open). Another region or a null replacement, or an abort (its own reason), rejects, so a superseded save is abandoned, never revived.
+ */
+function settledChartFiles(id: string, signal: AbortSignal): Promise<readonly string[] | null> {
+  return new Promise((resolve, reject) => {
+    let done = false, stop: (() => void) | undefined;
+    const end = (settle: () => void): void => { if (done) return; done = true; signal.removeEventListener('abort', onAbort); stop?.(); settle(); };
+    const onAbort = (): void => end(() => reject(signal.reason ?? new DOMException('This operation was aborted', 'AbortError')));
+    if (signal.aborted) return onAbort();
+    signal.addEventListener('abort', onAbort, {once: true});
+    stop = effect(() => {
+      const published = publishedChartFiles.value;
+      if (done || published?.region === id && published.pending === true) return;
+      end(() => published?.region === id ? resolve(Array.isArray(published.files) ? Object.freeze([...published.files]) : null) : reject(new DOMException('The region changed while its files were pending', 'AbortError')));
+    });
+    if (done) stop();
+  });
+}
+
 /** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, the published shoreline, land-water and depth-contour files, the startup copies (#617), tiles and, last, the ocean phase. */
 export async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds: number[], place: Parameters<typeof oceanPhase>[1]) {
   const page = location.href, misses: string[] = [];
+  // Publication metadata for this region still pending: no request until it settles, so an unpublished side file is never asked for.
+  const pending = publishedChartFiles.peek(), chartFiles = pending?.region === id && pending.pending === true ? await settledChartFiles(id, signal) : undefined;
   // The app's own page and files are mandatory: a pack without them cannot open offline, so a failure here throws and savePack keeps the older pack.
   const list = await fetch('/precache.json', {cache: 'no-cache', signal}).then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
     .catch(error => { throw signal.aborted ? error : new Error(`the app files could not be listed (${error?.message ?? error}). Saved regions are unchanged.`); }) as {build?: unknown; v2?: {assets?: unknown; static?: unknown}} | null;
@@ -153,7 +177,7 @@ export async function v2Pack({store, put, signal, progress}: Extras, id: string,
   if (typeof list?.build !== 'string' || !list.build || !Array.isArray(list.v2?.assets) || !list.v2.assets.length || hashed.length !== declared.length) throw new Error('the app files list is not usable. Saved regions are unchanged.');
   const tideURLs = await tideSelection.packURLs(id);
   await saveTidePack(tideURLs, put, signal);
-  const files = packFiles(id, page, hashed), required = new Set([V2_SHELL, ...hashed].map(p => new URL(p, page).href));
+  const files = packFiles(id, page, hashed, chartFiles), required = new Set([V2_SHELL, ...hashed].map(p => new URL(p, page).href));
   let done = 0;
   for (const [url, key, init] of files) {
     if (!await store(url, key, init, misses) && required.has(new URL(url).href)) throw new Error(`the app file ${new URL(url).pathname} could not be saved. Saved regions are unchanged.`);

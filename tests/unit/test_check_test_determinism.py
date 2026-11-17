@@ -66,6 +66,14 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(kinds("#" + PRAGMA.lstrip(" #"), NOW), [])
         self.assertEqual(kinds(NOW + "  # determinism-ok:"), ["clock"])  # a reason is required
 
+    def test_pragma_after_another_comment_directive(self):
+        comment = "  # noqa: E501" + PRAGMA
+        for statement in (EPOCH, PORT_KW, PY_ASSERT):
+            with self.subTest(statement=statement):
+                self.assertEqual(kinds(statement + comment), [])
+                self.assertEqual(kinds(comment, statement), [])
+                self.assertEqual(kinds(statement + "  # noqa: E501  # determinism-ok:"), kinds(statement))
+
     def test_fixed_ports_are_flagged_and_port_zero_is_not(self):
         for line in (BIND, HTTP, PORT_KW, PORT_FLAG):
             self.assertEqual(kinds(line), ["port"], line)
@@ -140,6 +148,62 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(kinds("s.bind((", "    '127.0.0.1', " + PORT_NUMBER + ",", "))" + PRAGMA), [])
         self.assertEqual(kinds("# determinism-ok: fixed on purpose", "s.bind((", "    '127.0.0.1', " + PORT_NUMBER + ",", "))"), [])
 
+    def test_a_string_holding_the_marker_is_not_a_pragma(self):
+        text = "# determinism-ok: example"
+        strings = ['"' + text + '"', "'" + text + "'", 'r"' + text + '"', 'b"' + text + '"',
+                   '"""' + text + '"""', 'f"' + text + ' {n}"']
+        for literal in strings:
+            self.assertEqual(kinds(EPOCH + "; note = " + literal), ["clock"], literal)
+            self.assertEqual(kinds("note = " + literal, EPOCH), ["clock"], literal)
+            self.assertEqual(kinds(PORT_KW + "; note = " + literal), ["port"], literal)
+            self.assertEqual(kinds(PY_ASSERT + "; note = " + literal), ["version"], literal)
+        self.assertEqual(kinds(EPOCH + "; note = '" + text + "'" + PRAGMA), [])  # a real comment still exempts
+
+    def test_real_comments_keep_their_scope(self):
+        self.assertEqual(kinds("def f():", "    # determinism-ok: indented reason", "    " + NOW), [])
+        self.assertEqual(kinds("x = foo(", "    " + NOW + ",", "    1,  # determinism-ok: wrapped reason", ")"), [])
+        self.assertEqual(kinds(NOW + "  # determinism-ok: ab"), ["clock"])  # too short a reason
+        self.assertEqual(kinds("x = 1  # determinism-ok: trailing on the previous statement", NOW), ["clock"])
+        self.assertEqual(kinds("# determinism-ok: a blank line breaks the scope", "", NOW), ["clock"])
+
+    def test_marker_text_in_an_embedded_script_does_not_hide_its_clock_reads(self):
+        script = ["SCRIPT = '''", "# determinism-ok: inside the string", EPOCH, "'''"]
+        self.assertEqual(classify_spans(script), [(3, 3, "clock")])
+        self.assertEqual(classify_spans(script[:-1] + [script[-1] + PRAGMA]), [])
+
+    def test_a_tokenizer_failure_is_not_a_blanket_allow(self):
+        text = "# determinism-ok: example"
+        self.assertEqual(kinds("note = '" + text + "'; " + EPOCH, "broken = (", "  1"), ["clock"])
+        self.assertEqual(kinds(EPOCH + PRAGMA, NOW, "broken = ("), ["clock"])  # the real comment keeps its own line only
+
+    def test_whitespace_before_the_opening_parenthesis_is_still_a_clock_read(self):
+        names = ("datetime" + ".now", "datetime" + ".utcnow", "datetime" + ".today",
+                 "date" + ".today", "time" + ".time", "time" + ".time_ns")
+        for name in names:
+            for gap in ("", " ", "   ", "\t"):
+                line = "stamp = " + name + gap + "()"
+                self.assertEqual(kinds(line), ["clock"], repr(line))
+
+    def test_a_newline_gap_before_the_parenthesis_keeps_the_real_line_span(self):
+        wrapped = ["stamp = (", "    time" + ".time", "    ()", ")"]
+        self.assertEqual(classify_spans(wrapped), [(2, 3, "clock")])
+
+    def test_spaced_durations_and_bare_references_are_not_clock_reads(self):
+        self.assertEqual(kinds("a = time.monotonic ()", "b = time.perf_counter ()", "c = time" + ".time",
+                               "# " + "time" + ".time ()", '"""', "time" + ".time ()", '"""'), [])
+
+    def test_spaced_clock_reads_in_an_embedded_script_are_still_scanned(self):
+        spaced = "t0 = time" + ".time ()"
+        self.assertEqual(classify_spans(["SCRIPT = '''", spaced, "'''"]), [(2, 2, "clock")])
+
+    def test_freezers_and_pragmas_still_exempt_a_spaced_clock_read(self):
+        spaced = "t0 = time" + ".time ()"
+        self.assertEqual(kinds("from freezegun import freeze_time", spaced), [])
+        self.assertEqual(kinds(spaced + PRAGMA), [])
+        self.assertEqual(kinds("#" + PRAGMA.lstrip(" #"), spaced), [])
+        self.assertEqual(kinds('with patch("time.sleep"):', spaced), ["clock"])
+        self.assertEqual(kinds(spaced + "; note = '# determinism-ok: example'"), ["clock"])
+
 
 class DiffModeTest(unittest.TestCase):
     def setUp(self):
@@ -203,6 +267,71 @@ class DiffModeTest(unittest.TestCase):
         code, out = self.run_lint("--base", "HEAD^1")
         self.assertEqual(code, 0, out)
 
+    def test_a_marker_string_cannot_bypass_diff_mode(self):
+        self.write("tests/unit/test_new.py", [EPOCH + "; note = '# determinism-ok: example'"])
+        self.git("add", "-A")
+        self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "string")
+        code, out = self.run_lint("--base", "HEAD^1")
+        self.assertEqual(code, 1, out)
+        self.assertIn("::error file=tests/unit/test_new.py,line=1", out)
+        code, out = self.run_lint("--base", "HEAD^1", "--warn-only")
+        self.assertEqual(code, 0, out)
+        self.assertIn("::warning file=tests/unit/test_new.py,line=1", out)
+        self.write("tests/unit/test_new.py", [EPOCH + "; note = 'x'" + PRAGMA])
+        self.git("add", "-A")
+        self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "comment")
+        code, out = self.run_lint("--base", "HEAD^1")
+        self.assertEqual(code, 0, out)
+
+    def test_a_newly_added_spaced_clock_read_fails_diff_mode(self):
+        for gap in (" ", ""):
+            self.write("tests/unit/test_new.py", ["stamp = time" + ".time" + gap + "()"])
+            self.git("add", "-A")
+            self.git("-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", "spaced")
+            code, out = self.run_lint("--base", "HEAD^1")
+            self.assertEqual(code, 1, out)
+            self.assertIn("new=1 existing=2", out)
+            self.assertIn("::error file=tests/unit/test_new.py,line=1,title=Deterministic-test lint (clock)", out)
+            code, out = self.run_lint("--base", "HEAD^1", "--warn-only")
+            self.assertEqual(code, 0, out)
+            self.assertIn("::warning file=tests/unit/test_new.py,line=1", out)
+            code, out = self.run_lint()
+            self.assertEqual(code, 0, out)
+            self.write("tests/unit/test_new.py", ["stamp = 1"])
+            self.git("add", "-A")
+            self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "reset")
+
+    def test_a_spaced_clock_read_with_a_pragma_passes_diff_mode(self):
+        self.write("tests/unit/test_new.py", ["stamp = time" + ".time ()" + PRAGMA])
+        self.git("add", "-A")
+        self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "pragma")
+        code, out = self.run_lint("--base", "HEAD^1")
+        self.assertEqual(code, 0, out)
+
+    def test_an_unchanged_spaced_clock_read_is_only_an_existing_warning(self):
+        spaced = ["stamp = time" + ".time ()", "x = 1"]
+        self.write("tests/unit/test_spaced.py", spaced)
+        self.git("add", "-A")
+        self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "spaced")
+        self.write("tests/unit/test_spaced.py", spaced + ["y = 2"])
+        self.git("add", "-A")
+        self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "beside")
+        code, out = self.run_lint("--base", "HEAD^1")
+        self.assertEqual(code, 0, out)
+        self.assertIn("new=0 existing=3", out)
+
+    def test_editing_the_parenthesis_line_of_a_newline_gapped_clock_read_fails(self):
+        wrapped = ["stamp = (", "    time" + ".time", "    ()", ")"]
+        self.write("tests/unit/test_wrapped.py", wrapped)
+        self.git("add", "-A")
+        self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "wrapped")
+        self.write("tests/unit/test_wrapped.py", wrapped[:2] + ["    ( )", ")"])
+        self.git("add", "-A")
+        self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "paren line")
+        code, out = self.run_lint("--base", "HEAD^1")
+        self.assertEqual(code, 1, out)
+        self.assertIn("::error file=tests/unit/test_wrapped.py,line=2,title=Deterministic-test lint (clock)", out)
+
     def test_a_pure_rename_adds_no_lines(self):
         self.git("mv", "tests/unit/test_old.py", "tests/unit/test_renamed.py")
         self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "rename")
@@ -248,6 +377,18 @@ class DiffModeTest(unittest.TestCase):
         code, out = self.run_lint("--base", "HEAD^1")
         self.assertEqual(code, 1, out)
         self.assertIn("::error file=tests/unit/test_wrapped.py,line=5,title=Deterministic-test lint (port)", out)
+
+    def test_a_file_removed_between_the_walk_and_the_read_is_skipped(self):
+        # Parallel tests create and delete temporary files under tests/; the whole-tree scan must not crash on one.
+        real = lint.test_files
+
+        def with_vanished():
+            yield "tests/unit/test_vanished_by_a_parallel_worker.py"
+            yield from real()
+
+        with mock.patch.object(lint, "ROOT", str(self.root)), mock.patch.object(lint, "test_files", with_vanished):
+            code, out = self.run_lint()
+        self.assertEqual(code, 0, out)
 
     def test_an_unresolvable_base_fails_closed(self):
         code, out = self.run_lint("--base", "no-such-ref")

@@ -2,24 +2,34 @@
 // id from a review item or a boat (#contact/<id>); there is deliberately no
 // search by phone number. Its fields (never the number), its boats, the last 50
 // messages, the export link and block / unblock.
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
 import {ApiError, getContact, setBlocked, when} from './api.ts';
 import type {ContactDetail} from './api.ts';
 
+// Keyed by id so a new contact starts with fresh state: nothing loaded for the
+// previous contact can be shown or acted on under the new one.
 export function ContactView({id}: {id: string}) {
+  return <ContactDetailView key={id} id={id} />;
+}
+
+function ContactDetailView({id}: {id: string}) {
   const [detail, setDetail] = useState<ContactDetail | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'failed'>('loading');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
-  async function load(): Promise<void> {
-    setState('loading');
-    try { setDetail(await getContact(id)); setState('ready'); }
-    catch (e) { setState(e instanceof ApiError && e.status === 404 ? 'missing' : 'failed'); }
-  }
-  useEffect(() => { void load(); }, [id]);
+  // Only the mounted view of this contact may publish; cleanup retires it.
+  const live = useRef(true);
+  useEffect(() => {
+    live.current = true;
+    getContact(id).then(
+      d => { if (live.current) { setDetail(d); setState('ready'); } },
+      e => { if (live.current) setState(e instanceof ApiError && e.status === 404 ? 'missing' : 'failed'); },
+    );
+    return () => { live.current = false; };
+  }, [id]);
 
   async function toggle(): Promise<void> {
     if (!detail || busy) return;
@@ -27,10 +37,11 @@ export function ContactView({id}: {id: string}) {
     try {
       const blocked = detail.contact.status !== 'blocked';
       const result = await setBlocked(id, blocked);
+      if (!live.current) return;
       setDetail({...detail, contact: {...detail.contact, status: result.status}});
       setNotice(COPY.contactStatus[result.status as keyof typeof COPY.contactStatus] ?? result.status);
-    } catch (e) { setError(e instanceof ApiError && e.status !== 500 ? e.message : COPY.decisionFailed); }
-    finally { setBusy(false); }
+    } catch (e) { if (live.current) setError(e instanceof ApiError && e.status !== 500 ? e.message : COPY.decisionFailed); }
+    finally { if (live.current) setBusy(false); }
   }
 
   const c = detail?.contact;

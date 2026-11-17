@@ -80,7 +80,7 @@ def charter_reports(body, day, url, *, ports):
             catches.append({"species": key, "label": label, "count": int(count_match[1].replace(",", "")),
                             "disposition": disposition})
         # A blank or changed count cell must not silently become a zero catch.
-        if catch and not re.search(r"\d|no fish|no catch", catch, re.I):
+        if not re.search(r"\d|no fish|no catch", catch, re.I):
             raise ValueError("Unrecognized local catch cell")
         name = plain(boat[1])
         identity = f"{day}|{name}|{trip_type}|{ground}"
@@ -108,6 +108,8 @@ def ndbc(body, station, spectral=False):
     keys, units = lines[0].lstrip("#").split(), lines[1].lstrip("#").split()
     if keys[:5] != ["YY", "MM", "DD", "hh", "mm"] or units[:5] != ["yr", "mo", "dy", "hr", "mn"]:
         raise ValueError("NDBC timestamp fields or units changed")
+    if len(keys) != len(set(keys)):  # a repeated column would silently overwrite its earlier observation
+        raise ValueError("Duplicate NDBC column names")
     required = {"WVHT", "SwH", "SwP", "WWH", "WWP"} if spectral else {"WVHT", "DPD", "WTMP", "WSPD"}
     if not required.issubset(keys):
         raise ValueError("NDBC columns changed")

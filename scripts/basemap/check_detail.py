@@ -46,14 +46,49 @@ def check_detail(planned, detail, root=regions.ROOT):
     return coverage
 
 
+def _load(path):
+    try:
+        return json.loads(path.read_text())
+    except OSError as error:
+        raise ValueError(f'{path.name}: cannot read: {error.strerror or error}') from error
+    except json.JSONDecodeError as error:
+        raise ValueError(f'{path.name}: not valid JSON (line {error.lineno} column {error.colno})') from error
+    except RecursionError as error:
+        raise ValueError(f'{path.name}: JSON nesting exceeds parser limit') from error
+
+
+def _shape(planned, detail):
+    """Name the file and field of a misshaped saved plan, or return None."""
+    if not isinstance(planned, dict):
+        return 'plan.json: not a JSON object'
+    for key in ('overview', 'detail'):
+        if not isinstance(planned.get(key), dict):
+            return f'plan.json: "{key}" must be an object'
+    if not isinstance(planned.get('regions'), list):
+        return 'plan.json: "regions" must be a list'
+    for i, box in enumerate(planned['regions']):
+        bbox = box.get('bbox') if isinstance(box, dict) else None
+        if (not isinstance(box, dict) or not isinstance(box.get('id'), str)
+                or not isinstance(bbox, list) or len(bbox) != 4
+                or not all(isinstance(v, (int, float)) and not isinstance(v, bool)
+                           and v == v for v in bbox)):
+            return f'plan.json: regions[{i}] must be an object with a string "id" and a 4-number "bbox"'
+    if not isinstance(detail, dict):
+        return 'detail.geojson: not a JSON object'
+    return None
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dir', type=Path, help='Check saved extraction settings instead of current defaults')
     args = parser.parse_args(argv)
     try:
         if args.dir:
-            planned = json.loads((args.dir / 'plan.json').read_text())
-            detail = json.loads((args.dir / 'detail.geojson').read_text())
+            planned = _load(args.dir / 'plan.json')
+            detail = _load(args.dir / 'detail.geojson')
+            problem = _shape(planned, detail)
+            if problem:
+                raise ValueError(problem)
         else:
             boxes = regions.region_boxes()
             planned = {'overview': {'maxzoom': regions.OVERVIEW_MAXZOOM},

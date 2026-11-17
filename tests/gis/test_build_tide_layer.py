@@ -173,5 +173,39 @@ class BuildTests(unittest.TestCase):
                 btl.layer_name(bad)
 
 
+class CliWindowTests(unittest.TestCase):
+    def _refused(self, argv):
+        with mock.patch.object(btl, 'http_json') as fetch, mock.patch.object(btl, 'build') as build:
+            with mock.patch('sys.stderr'), self.assertRaises(SystemExit) as cm:
+                btl.main(argv)
+        self.assertEqual(cm.exception.code, 2, argv)
+        fetch.assert_not_called()
+        build.assert_not_called()
+
+    def test_bad_days_and_longitudes_refused_before_any_fetch(self):
+        for argv in (['--days', '0'], ['--days', '-1'], ['--days', 'x'],
+                     ['--lon-min', 'nan'], ['--lon-max', 'inf'], ['--lon-min', '-181'],
+                     ['--lon-min', '-120', '--lon-max', '-122'], ['--lon-min', '-100']):
+            self._refused(argv)
+
+    def test_no_station_in_window_fetches_only_the_list(self):
+        with tempfile.TemporaryDirectory() as d:
+            sectors = Path(d) / 's.json'
+            sectors.write_text(json.dumps(SECTORS))
+            urls = []
+            def fetch(url):
+                urls.append(url)
+                return LISTING
+            with self.assertRaises(SystemExit) as cm:
+                btl.build(sectors, ['morro-conception'], 'x', dt.datetime(2026, 11, 7, tzinfo=dt.timezone.utc), 8,
+                          fetch=fetch, lon_range=(-100.0, -99.0), pause=0)
+            self.assertEqual(urls, [btl.STATIONS_URL])
+            self.assertIn('nothing fetched', str(cm.exception))
+
+    def test_valid_days_accepted(self):
+        for text, want in (('1', 1), ('8', 8)):
+            self.assertEqual(btl._days(text), want)
+
+
 if __name__ == '__main__':
     unittest.main()

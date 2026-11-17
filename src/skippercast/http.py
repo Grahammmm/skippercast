@@ -383,6 +383,8 @@ class HTTPCache:
             meta = json.loads(meta_path.read_text())
         except (OSError, ValueError):
             return None
+        if not isinstance(meta, dict):
+            return None
         return meta if meta.get("url") == url and (meta.get("etag") or meta.get("last_modified")) else None
 
     def body(self, url: str, meta: dict, limit: int | None = None) -> bytes | None:
@@ -446,6 +448,16 @@ class _Hop:
 def full_jitter(base: float, cap: float, rand: Callable[[], float]) -> Callable[[int], float]:
     """Delay before retry n (1-based): uniform in [0, min(cap, base * 2**(n-1))]."""
     return lambda retry: rand() * min(cap, base * 2 ** (retry - 1))
+
+
+def _origin(url: str) -> tuple:
+    parts = urlsplit(url)
+    scheme = parts.scheme.lower()
+    try:
+        port = parts.port or {"http": 80, "https": 443}.get(scheme)
+    except ValueError:
+        port = None
+    return scheme, (parts.hostname or "").lower(), port
 
 
 class Session:
@@ -679,6 +691,7 @@ class Session:
                sink: BinaryIO | None, follow: bool | str, allowlist: Allowlist | None,
                prefixes: tuple[str, ...] | None, truncate: bool = False, data: bytes | None = None) -> _Hop:
         current = url
+        origin = _origin(url)
         for _ in range(self.max_redirects + 1):
             self.check_url(current, allowlist, prefixes)
             hop = self._hop(method, current, headers, timeout, limit, sink, truncate, data)
@@ -690,6 +703,9 @@ class Session:
             if not follow:
                 raise ContractError(f"Redirect refused: {current} -> {location}")
             current = urljoin(current, location)
+            if origin is not None and _origin(current) != origin:  # credentials never leave their origin
+                origin = None
+                headers = {k: v for k, v in headers.items() if k.lower() not in ("authorization", "cookie")}
             if (hop.status == 303 and method != "HEAD") or (hop.status in (301, 302) and method == "POST"):
                 method, data = "GET", None  # a form POST is re-requested as a GET without its body
                 headers = {k: v for k, v in headers.items() if k.lower() != "content-type"}

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "scope": "reviewed-bluetopo-central-coast-source-sample",
-  "scheme_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/_BlueTopo_Tile_Scheme/BlueTopo_Tile_Scheme_20260924_191855.gpkg",
-  "scheme_sha256": "62db77bda8ce8deea24b4824c78e204f727ff434f1d91450cb8acfea5e188dcc",
+  "scheme_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/_BlueTopo_Tile_Scheme/BlueTopo_Tile_Scheme_20261109_115701.gpkg",
+  "scheme_sha256": "0f8694701ca4c432d2d5ee174e2f3e6dfde004ee64b5770bb265c8dc5ea5bd9b",
   "tile_ids": ["BH4545C2", "BH4525C2", "BH44P5CD"],
   "fishing_target": false
 }

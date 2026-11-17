@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- RF0422-6: the GPX delivery check now refuses a file in which any element repeats an attribute name (for example two `creator` or `extra` attributes), which is not valid XML. Valid exports and the existing coordinate and root checks are unchanged.
+- RF0422-5: the GPX delivery check now refuses a file containing a stray half of an emoji-style character (an unpaired UTF-16 surrogate), which is not valid XML; properly paired characters such as 🐟 are still accepted. Nothing else about the check changes.
+- RF0015-17: the "models disagree" note now counts each forecast hour once. One hour that appeared twice in the forecast's time list no longer counts as two hours of disagreement; this corrects the count only, not forecast accuracy.
+- RF2345-16: Save for offline waits for a region's pending Chart file list before saving the optional shoreline, land-water and depth-contour files, so a file the region does not publish is never requested or reported missing; cancelling or switching region while it waits abandons the save and keeps your older offline map.
 - SCP3-04: the water-colour (chlorophyll) layer now refuses a NOAA file whose chlorophyll values are stored in a scaled or offset encoding, instead of showing the raw storage numbers as real chlorophyll measurements. Unencoded files, cells the source marks missing, and the fall-back to an older file are unchanged.
 - SCP3-06: Save for offline now keeps your last working offline map when the app's own page or files cannot be saved (or their list cannot be read), instead of replacing it with a pack that cannot open. A missing shoreline or basemap tile is still reported as missing without failing the save.
 - SCP3-10: tapping a trip-alert notification still opens your saved-trip alerts after the app finds your home port; the `#alerts` fragment is kept alongside `#account` and `#export`, and any other fragment is still dropped.

@@ -34,8 +34,8 @@ FIXTURE = FIXTURES / 'sc_recipe_delta'
 SCHEMA = 'schemas/coast-recipe-v1.schema.json'
 # Validator pin refreshed for SC-RECIPE-OFFLINE; snapshot pins remain unchanged.
 SOURCE_PINS = {
-    # pin refreshed for OC-STATE slug admission
-    'validate_recipe.py': '50d8f1e36e5edf9974d121d29349bd821c8bf08e2d3eaf20526b2bc7162b736f',
+    # OC-STATE slug admission; RF0410-3 nesting containment; RF0410-4 anchor identity
+    'validate_recipe.py': 'b05b9981ea27c72ccd6c873cc64848a61b06ca2e5185c5042afb7e839427a689',
     SCHEMA: 'a659d136536a553043fac917473428ae0c6e51bdb179cc66bdd295e09ebf1593',
     'regions/morro-bay/coast.json': 'dbe6ffebea0e6d4321c949ae42329db487448a251af695f060c1092366b6bc47',
     # repinned for NB-SC-06, NB-SC-07 and NB-SC-08: test_coast_recipe.py carries the new morro-bay and cambria region.json pins

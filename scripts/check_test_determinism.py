@@ -33,7 +33,7 @@ with open(os.path.join(ROOT, "pyproject.toml"), "rb") as _handle:
     TEST_DIRS = tuple(tomllib.load(_handle)["tool"]["pytest"]["ini_options"]["testpaths"])
 PRAGMA = re.compile(r"#\s*determinism-ok:\s*\S{3,}")
 
-CLOCK = re.compile(r"\b(?:datetime|date)\.(?:now|utcnow|today)\(|\btime\.(?:time|time_ns)\(")
+CLOCK = re.compile(r"\b(?:datetime|date)\.(?:now|utcnow|today)\s*\(|\btime\.(?:time|time_ns)\s*\(")
 _CLOCK_NAMES = r"(?:time|time_ns|datetime|date|clock|now|utcnow|today)"
 # Freeze evidence is read from code only (comments, docstrings and string contents are blanked), so a comment such as
 # "do not use freezegun" excuses nothing; a patch counts only when its TARGET is a clock (patch("time.sleep") is not).
@@ -115,10 +115,27 @@ def statements(lines):
             for first, last, only_string in spans if "\n".join(text_lines[first - 1:last]).strip()]
 
 
-def has_pragma(lines, first, last):
-    if any(PRAGMA.search(line) for line in lines[first - 1:last]):
-        return True
-    return first > 1 and lines[first - 2].strip().startswith("#") and bool(PRAGMA.search(lines[first - 2]))
+def pragma_comments(lines):
+    """({rows with a real pragma COMMENT token}, {rows that hold only such a comment}) for one file (1-based rows).
+
+    Only tokenize.COMMENT tokens count, so a string that contains the marker exempts nothing. A file that stops
+    tokenizing keeps the comments seen before the error."""
+    rows, comment_only = set(), set()
+    try:
+        for token in tokenize.generate_tokens(io.StringIO("\n".join(lines) + "\n").readline):
+            if token.type == tokenize.COMMENT and PRAGMA.search(token.string):
+                row, col = token.start
+                rows.add(row)
+                if not lines[row - 1][:col].strip():
+                    comment_only.add(row)
+    except (tokenize.TokenError, SyntaxError):
+        pass
+    return rows, comment_only
+
+
+def has_pragma(pragmas, first, last):
+    rows, comment_only = pragmas
+    return any(first <= row <= last for row in rows) or (first - 1) in comment_only
 
 
 def classify_spans(lines):
@@ -130,8 +147,9 @@ def classify_spans(lines):
     frozen = any(FROZEN_NAMES.search(code) or FROZEN_PATCH.search(calls) for _, _, _, code, _, calls in stmts)
     guarded = any(VERSION_GUARD_CODE.search(code) or VERSION_GUARD_PATCH.search(calls) for _, _, _, code, _, calls in stmts)
     hits = []
+    pragmas = pragma_comments(lines)
     for first, last, text, code, _, _ in stmts:
-        if has_pragma(lines, first, last):
+        if has_pragma(pragmas, first, last):
             continue
         found = set()
         for pattern, kind in ((CLOCK, "clock"), (PORT, "port")):
@@ -196,8 +214,11 @@ def main(argv=None):
         return 2
     new, old = [], []
     for path in test_files():
-        with open(os.path.join(ROOT, path), encoding="utf-8", errors="replace") as handle:
-            lines = handle.read().splitlines()
+        try:
+            with open(os.path.join(ROOT, path), encoding="utf-8", errors="replace") as handle:
+                lines = handle.read().splitlines()
+        except FileNotFoundError:
+            continue  # a parallel test's temporary file listed by the walk and removed before it was read
         for first, last, kind in classify_spans(lines):
             # A wrapped statement is new when any line it covers was added or changed.
             is_new = any(number in added.get(path, ()) for number in range(first, last + 1))

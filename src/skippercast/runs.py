@@ -259,11 +259,13 @@ def validate(document):
             raise ValueError(f"Run manifest is missing {key}")
     if document["status"] not in ("ok", "degraded", "failed"):
         raise ValueError("Invalid run status")
-    if not isinstance(document["sources"], dict) or not all(isinstance(r, dict) and "status" in r
-                                                             for r in document["sources"].values()):
+    def status_row(row):  # nested statuses are report dictionary keys: nonempty text only
+        return isinstance(row, dict) and isinstance(row.get("status"), str) and bool(row["status"])
+
+    if not isinstance(document["sources"], dict) or not all(status_row(r) for r in document["sources"].values()):
         raise ValueError("Run manifest sources must map ids to status rows")
     regions = document.get("regions", {})  # optional: added for the regional refresh jobs
-    if not isinstance(regions, dict) or not all(isinstance(r, dict) and "status" in r for r in regions.values()):
+    if not isinstance(regions, dict) or not all(status_row(r) for r in regions.values()):
         raise ValueError("Run manifest regions must map ids to status rows")
     # Every shape report.render() reads; messages name the field and never echo the value.
     for key in ("inputs", "outputs"):

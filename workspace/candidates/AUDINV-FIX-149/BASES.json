@@ -1,0 +1,19 @@
+{
+  "checked_main": "0991fc70d212c9405f7b174950cb3fa4d7c6846d",
+  "sources": {
+    "skills/coast-campaign-shared/scripts/coast_refs.py": "743de43a57b87b9b91a5a5c33511967d4106fda4e919ba029b540c1838f5bcb2",
+    "src/skippercast/coastal/vertical.py": "22979806a8e54f337e6b5b50fd5774d6a07fa1ef9190eb76f5eafb4bcd38f4a4",
+    "src/skippercast/__init__.py": "d88d2f50e3f84ce0ca00e5cee76ce55112681dff6505e0ce5614a2e4bd31e9b0",
+    "src/skippercast/coastal/__init__.py": "5f66276dd825d15954220dbf19ec5d0ed1a176d29c38989b24aff7d190bb8fd2"
+  },
+  "candidate_files": {
+    "tier1_handoff.py": "2ad384de0896d250b9175b370b246c8d9386750b3441de3c74698c1ed35fa147",
+    "depth_bands.py": "8bb6837c5676a26c0e1f65ee86cf53b19fc4bb27ee04ef7ac2579d254310cbf4",
+    "tests/test_tier1_handoff.py": "d6d9f65d1688e2e547292f27e88bb3e5afa3c4b57263bbdfca53f8273a076ab1",
+    "tests/test_depth_bands.py": "3a86d716665e4aa58e6386a6736c7e193399a3c8822977223b2a4e3ed45dda40",
+    "fixtures/held-handoff.json": "0f7673e35e51e4124d0f81d51a414484479a6c4dbaa4eb6d041ca682a0e7de22",
+    "fixtures/posted-manifest.json": "161ab8a54521b33b5243b39230a827f8776c627bb1bd3219e0cb98fdf8ab9cf7"
+  },
+  "historical_helpers": "Not imported, executed, copied or modified; historical excerpts are spec provenance only.",
+  "scope": "Candidate only. Synthetic fixtures. No native sources reread. Receipt and this manifest excluded from self-hashing."
+}

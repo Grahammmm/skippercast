@@ -1,0 +1,10 @@
+{
+  "synthetic": true,
+  "attempt": "synthetic-failed-attempt-1",
+  "window_key": "synthetic-window-0",
+  "status": "HOLD",
+  "attempt_history": [{"attempt": "synthetic-failed-attempt-1", "status": "FAILED", "charge": "retained-no-refund"}],
+  "stages": {"acquire": {"status": "HOLD", "count": 0, "holds": ["native_support_empty", "vertical_units_unobserved"]}},
+  "native_sources": [{"path": "never-open-native.tif", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bytes": 100}],
+  "unrelated_object_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+}

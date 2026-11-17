@@ -35,7 +35,7 @@ def _ascii(text: str) -> str:
 def roman_to_int(token: str) -> int | None:
     """1-39 for a roman numeral of I, V and X, else None."""
     token = token.upper()
-    if not token or not ROMAN.match(token):
+    if not token or not ROMAN.fullmatch(token):
         return None
     total = 0
     for char, after in zip(token, token[1:] + " "):
@@ -112,6 +112,8 @@ def phone_e164(text: str | None, country: str = "1") -> str | None:
         return None
     main = re.split(r"(?i)\s*(?:x|ext\.?|extension)\s*\d+\s*$", text.strip())[0]
     digits = re.sub(r"\D", "", main)
+    if not digits.isascii():  # Arabic-Indic, fullwidth etc. digits: refuse, never a mixed-script key
+        return None
     if main.startswith("+"):
         number = "+" + digits
     elif len(digits) == 10:

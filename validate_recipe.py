@@ -164,8 +164,14 @@ def _check_references(schema):
     $schema are identifiers, not fetch instructions. Keywords inside data
     positions such as const/enum are refused conservatively as well.
     """
-    anchors = {node[key] for _, node in _walk(schema) if isinstance(node, dict)
-               for key in ANCHOR_KEYWORDS if isinstance(node.get(key), str)}
+    anchors = {}    # anchor name -> location of the one node declaring it
+    for parts, node in _walk(schema):
+        if not isinstance(node, dict):
+            continue
+        for key in ANCHOR_KEYWORDS:
+            if isinstance(node.get(key), str):
+                if anchors.setdefault(node[key], parts) != parts:
+                    raise RecipeError(NOT_ADMITTED + 'duplicate anchor at ' + _location(parts + (key,)))
     admitted = []
     for parts, node in _walk(schema):
         if not isinstance(node, dict):
@@ -384,10 +390,12 @@ def main(argv=None):
         try:
             result = validate_recipe(read_json(path), workspace_root=args.workspace_root,
                                      metadata_root=args.metadata_root)
-        except (ValueError, OSError, KeyError, TypeError) as error:
+        except (ValueError, OSError, KeyError, TypeError, RecursionError) as error:
             failed = True
+            message = ('input nesting exceeds supported depth'
+                       if isinstance(error, RecursionError) else str(error))
             result = {'path': str(path), 'status': 'INVALID', 'valid': False,
-                      'error': str(error), 'semantic_approval': False, 'execution_allowed': False}
+                      'error': message, 'semantic_approval': False, 'execution_allowed': False}
         results.append(result)
     print(json.dumps(results, sort_keys=True, allow_nan=False))
     return 1 if failed else 0

@@ -12,6 +12,8 @@ const EDGE = 8;
 export function openBandPadding(host: Box, covers: readonly Box[], minBand = 160): {top: number; bottom: number; left: 0; right: 0} {
   const height = host.bottom - host.top, width = host.right - host.left;
   let top = 0, bottom = 0;
+  // A host with a non-finite coordinate, or a non-finite / nonpositive size (also from overflow), defines no band.
+  if (![host.top, host.bottom, host.left, host.right, height, width].every(Number.isFinite) || !(height > 0) || !(width > 0)) return {top, bottom, left: 0, right: 0};
   if (!(height >= minBand)) return {top, bottom, left: 0, right: 0};
   for (const c of covers) {
     if (![c.top, c.bottom, c.left, c.right].every(Number.isFinite)) continue;

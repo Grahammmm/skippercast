@@ -252,6 +252,9 @@ def read_runs(region: FleetRegion, var: Path) -> list[dict]:
             if (directory / "report.json").is_file() else {}
         enrich = json.loads((directory / "enrich-code.json").read_text(encoding="utf-8")) \
             if (directory / "enrich-code.json").is_file() else {}
+        for name, document in (("state.json", state), ("report.json", report), ("enrich-code.json", enrich)):
+            if not isinstance(document, dict):
+                raise ValueError(f"run {name} must contain a JSON object")
         calls = sum(int(b.get("searches") or 0) + int(b.get("details") or 0)
                     for k, b in (enrich.get("bindings") or {}).items() if k in places and isinstance(b, dict))
         out.append({"id": state.get("run_id", directory.name), "created_at": state.get("created_at"),

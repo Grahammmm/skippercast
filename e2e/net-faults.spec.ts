@@ -59,6 +59,18 @@ function calmForecast() {
 async function stubBaselineAnswers(page: Page, v2: V2) {
   const feed = dailyFeed();
   await page.route('**/api/forecast?*', route => route.fulfill({json: calmForecast()}));
+  // The map's current layer reads the ocean snapshot too. Keep this baseline offline:
+  // an empty, valid packet draws no currents without depending on the live coast bridge.
+  await page.route('**/api/coast/ocean', route => route.fulfill({json: {
+    schemaVersion: 1, countyId: 'slo', generatedAt: feed.generated_at, currents: [], cloud: null, sources: [],
+  }}));
+  // Morro Bay reads the coast report early (web/early-reads.ts REPORT_REGIONS). Unstubbed, the local Worker's bridge fetches upstream and
+  // answers 503 whenever that fetch fails, which counted as a console-budget finding (main red twice on 2026-11-16). Same offline shape as above:
+  // an empty, valid report (web/coast-data.ts validBody) that never depends on a live upstream.
+  await page.route('**/api/coast/report', route => route.fulfill({json: {
+    schemaVersion: 1, countyId: 'slo', generatedAt: feed.generated_at, forecasts: [], observations: [], tides: [], tideEvents: [], alerts: [],
+    catches: [], sources: [], visibility: {status: 'unknown', feet: null, observedAt: null, sourceUrl: null},
+  }}));
   await page.route('**/api/daily?*', route => new URL(route.request().url()).searchParams.get('part') === 'brief'
     ? route.fulfill({json: {...feed, part: 'brief', catch_probability: null, bite_score: null}}) : route.fallback());
   await v2.feed('**/feeds/conditions/regions/morro-bay/latest.json', feed);   // the conditions feed, read beside the daily one

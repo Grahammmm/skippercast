@@ -9,6 +9,7 @@ from fnmatch import fnmatchcase
 import json
 import os
 from pathlib import Path, PurePosixPath
+import re
 import subprocess
 import sys
 
@@ -19,7 +20,11 @@ AREAS = ('core', 'survey', 'web')
 def load_map():
     data = json.loads(MAP.read_text())
     for rule in data['rules']:
-        if not rule['patterns'] or not rule['areas'] or set(rule['areas']) - set(AREAS):
+        patterns = rule['patterns']
+        # A scalar string would otherwise iterate character by character as globs.
+        if (not isinstance(patterns, list) or not patterns
+                or not all(isinstance(p, str) and p for p in patterns)
+                or not rule['areas'] or set(rule['areas']) - set(AREAS)):
             raise ValueError('invalid affected-area map')
     return data
 
@@ -101,6 +106,50 @@ def fixtures():
     print(f'{count + 1} selector/evidence fixtures passed')
 
 
+GATE_NAMES = ('GATE', 'CORE', 'SURVEY', 'WEB', 'CHECK', 'TESTS')
+# Result variable -> the upstream job it reports (for the readable summary).
+UPSTREAM_JOBS = (('GATE', 'changes'), ('CHECK', 'check'), ('TESTS', 'survey-tests'))
+DECISIVE = ('failure', 'cancelled')
+
+
+def clean(value):
+    """Untrusted workflow value -> short inert token (never a command, heading or markup)."""
+    value = str(value)
+    return value if re.fullmatch(r'[A-Za-z0-9_.-]{0,32}', value) else '<invalid>'
+
+
+def gate(event, environ=None, stdout=None, stderr=None):
+    """Diagnostic CLI around evidence(), which alone decides pass/fail.
+
+    An exact upstream failed/cancelled job already carries the decisive failure, so name
+    it readably instead of a second unparseable ::error annotation. Anything else that
+    evidence() refuses (skipped/missing/malformed) stays an explicit contract error.
+    Always nonzero when evidence() refuses; never a skip.
+    """
+    environ = os.environ if environ is None else environ
+    stdout = sys.stdout if stdout is None else stdout
+    stderr = sys.stderr if stderr is None else stderr
+    got = {name: environ.get(name, '') for name in GATE_NAMES}
+    if evidence(event, *got.values()):
+        print('Required selected-area evidence passed; DCO is checked independently.', file=stdout)
+        return 0
+    decisive = [(job, clean(got[var])) for var, job in UPSTREAM_JOBS if got[var] in DECISIVE]
+    if decisive:
+        print('survey-science is not green because an upstream job did not succeed: '
+              + ', '.join(f'{job} = {result}' for job, result in decisive) + '.\n'
+              'The failing job reports the cause; this roll-up only restates it.', file=stdout)
+        title = 'Upstream job did not succeed'
+    else:
+        print('::error::Required evidence incomplete (selector/contract): '
+              + ', '.join(f'{name}={clean(value)}' for name, value in got.items()), file=stderr)
+        title = 'Required evidence incomplete'
+    if summary := environ.get('GITHUB_STEP_SUMMARY'):
+        with open(summary, 'a') as stream:
+            stream.write(f'**survey-science: {title}**\n\n- `EVENT` = `{clean(event)}`\n')
+            stream.write(''.join(f'- `{name}` = `{clean(value)}`\n' for name, value in got.items()))
+    return 1
+
+
 def main():
     parser = argparse.ArgumentParser(description=(__doc__ or '').splitlines()[0])
     parser.add_argument('--event', default=os.environ.get('EVENT', 'pull_request'))
@@ -113,13 +162,7 @@ def main():
         fixtures()
         return 0
     if args.gate:
-        names = ('GATE', 'CORE', 'SURVEY', 'WEB', 'CHECK', 'TESTS')
-        values = [os.environ.get(name, '') for name in names]
-        if not evidence(args.event, *values):
-            print('::error::Required evidence incomplete: ' + str(dict(zip(names, values))))
-            return 1
-        print('Required selected-area evidence passed; DCO is checked independently.')
-        return 0
+        return gate(args.event)
     # Git lookup failure cannot narrow the tier. A map/parse error fails the job,
     # so the required evidence gate cannot manufacture a successful classification.
     if args.event == 'pull_request':

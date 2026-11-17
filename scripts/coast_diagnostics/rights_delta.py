@@ -44,7 +44,7 @@ _HEX64 = re.compile(r"[0-9a-f]{64}")
 
 
 class InvalidJSON(ValueError):
-    """Duplicate keys, nonfinite numbers, bad UTF-8 or malformed JSON."""
+    """Duplicate keys, nonfinite numbers, bad UTF-8, malformed JSON or decoder nesting exhaustion."""
 
 
 class Refused(Exception):
@@ -76,6 +76,8 @@ def parse_json_strict(data):
         return json.loads(text, object_pairs_hook=_no_duplicates, parse_constant=_no_constant)
     except InvalidJSON:
         raise
+    except RecursionError as error:
+        raise InvalidJSON("JSON nesting exceeds parser limit") from error
     except ValueError as error:
         raise InvalidJSON("malformed JSON") from error
 
