@@ -69,7 +69,10 @@ def _time(value):
 
 def cases(paths):
     for path in paths:
-        for case in ET.parse(path).getroot().iter('testcase'):
+        root = ET.parse(path).getroot()
+        if root.tag not in {'testsuite', 'testsuites'}:
+            raise ET.ParseError(f'unsupported JUnit root {root.tag!r}')
+        for case in root.iter('testcase'):
             outcome = 'passed'
             reason = None
             for child in case:
