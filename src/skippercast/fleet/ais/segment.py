@@ -255,10 +255,13 @@ def _make_trip(positions, ports, depart_port, return_port, departed_at, returned
                 distance_nm=round(distance, 6), max_offshore_nm=round(offshore, 6))
 
 
-def _keep(trip: Trip, th: ActivityThresholds) -> bool:
+def _keep(trip: Trip, ports: Sequence[Geofence], th: ActivityThresholds) -> bool:
     if trip.status == "open":
         return True
-    return trip.duration_min >= th.min_trip_minutes and trip.max_offshore_nm > th.min_trip_offshore_nm
+    if trip.duration_min < th.min_trip_minutes:
+        return False
+    # Compare the unrounded distance: max_offshore_nm is a six-decimal display value.
+    return any(offshore_nm(ports, p.lat, p.lon) > th.min_trip_offshore_nm for p in trip.positions)
 
 
 def split_trips(positions: Iterable[AisPosition], ports: Sequence[Geofence], thresholds: ActivityThresholds, *,
@@ -330,4 +333,4 @@ def split_trips(positions: Iterable[AisPosition], ports: Sequence[Geofence], thr
     if not in_port and current:
         status = "truncated" if started_unknown or now - current[0].ts > th.max_open_ms(vessel_class) else "open"
         trips.append(_make_trip(current, ports, depart_port, None, current[0].ts, current[-1].ts, status))
-    return [trip for trip in trips if _keep(trip, th)]
+    return [trip for trip in trips if _keep(trip, ports, th)]
