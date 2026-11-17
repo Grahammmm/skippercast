@@ -1,14 +1,7 @@
 """Over-age status-ok backup sources count toward a whole-kind critical outage."""
-import importlib.util
-import sys
 import unittest
-from pathlib import Path
 
-_path = Path(__file__).resolve().parents[2] / "scripts" / "check_feed_freshness.py"
-_spec = importlib.util.spec_from_file_location("check_feed_freshness_backups_under_test", _path)
-cff = importlib.util.module_from_spec(_spec)
-sys.modules[_spec.name] = cff
-_spec.loader.exec_module(cff)
+from scripts import check_feed_freshness as cff
 
 BUILT = "2026-01-01T12:00:00Z"
 
