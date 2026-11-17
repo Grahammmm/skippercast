@@ -48,7 +48,7 @@ export async function api<T = Record<string, unknown>>(path: string, options: Re
   const r = await fetchFn('/api/' + path, {signal: AbortSignal.timeout(20000), ...options, headers: {'Content-Type': 'application/json', ...options.headers as Record<string, string>}});
   let data: {error?: string} & Record<string, unknown>;
   try { data = await r.json() as typeof data; } catch { throw new AlertCopyError('alerts.err.personal'); }
-  if (!r.ok) throw data.error ? Error(data.error) : new AlertCopyError('alerts.err.request');
+  if (!r.ok) throw Object.assign(data.error ? Error(data.error) : new AlertCopyError('alerts.err.request'), {status: r.status});
   return data as T;
 }
 
@@ -151,7 +151,20 @@ export const reuseLimitsNote = (date: string, copied: 'all' | 'some', boat: bool
   `${t(copied === 'all' ? 'alerts.reuse.all' : 'alerts.reuse.some', lang, {date})} ${t(boat ? 'alerts.reuse.boat' : 'alerts.reuse.noBoat', lang)}`;
 
 export type AlertEvent = {id: string | number; trip_id?: string; kind: string; status: string; message: string; created_at?: string};
-export type Feedback = {observed_at: string; rating: number; context: string};
+export type Feedback = {id?: string; observed_at: string; rating: number; context: string};
+
+/** A bounded read, never a lifetime total or proof that older rows exist. */
+export const feedbackSummary = (count: number, lang: Language = 'en'): string =>
+  t(count >= 100 ? 'alerts.comfort.capped' : count === 1 ? 'alerts.comfort.one' : 'alerts.comfort.count', lang, {n: count});
+
+/** Report dates follow the opened region, not the browser or the report's stored region. */
+export function feedbackDate(observedAt: string, timeZone: string = DEFAULT_ZONE, locale = 'en-US'): string {
+  const date = new Date(observedAt);
+  if (!Number.isFinite(date.getTime())) return t('alerts.comfort.noDate', locale);
+  const options: Intl.DateTimeFormatOptions = {year: 'numeric', month: 'short', day: 'numeric', timeZone: timeZone || DEFAULT_ZONE};
+  try { return new Intl.DateTimeFormat(locale, options).format(date); }
+  catch { return new Intl.DateTimeFormat(locale, {...options, timeZone: DEFAULT_ZONE}).format(date); }
+}
 
 /** The recap's minimal projection of one private catch-log row (the signed-in GET /api/catch-log answer): no coordinates, note, owner, method or species. */
 export type CatchLogEntry = {id: string; trip_id: string | null; started_at: string; outcome: 'fish' | 'blank' | 'unknown'; count: number};

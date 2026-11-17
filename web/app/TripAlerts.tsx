@@ -12,13 +12,13 @@ import {Button} from '../ui/Button.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
 import {profile} from '../state.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
-import {readableDate, readableInstant} from '../dates.ts';
+import {readableDate} from '../dates.ts';
 import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {language, t, type Language, type StringId} from '../i18n.ts';
 import {
   alertDate, alertNames, alertSpecies, AlertCopyError, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, deviceStatus, latestCheck, deviceButtons, deviceLine, type DeviceStatus, eventLine, feedbackPhase, formProblemId, latestTripEvent, assessmentTimeOrNull, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotificationsId, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
-  type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type ReuseOmission, type SavedTrip, type TripPlanSummary,
+  feedbackSummary, feedbackDate, type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type ReuseOmission, type SavedTrip, type TripPlanSummary,
 } from '../alerts.ts';
 
 type SessionAnswer = {signedIn?: boolean; signIn?: unknown; publicKey?: string | null};
@@ -161,6 +161,18 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const [feedback, setFeedback] = useState<Feedback[] | null>(null);
   const [catchRead, setCatchRead] = useState<RecapCatchLog & {loading: boolean}>({entries: [], complete: false, loading: true});
   const [comfortStatus, setComfortStatus] = useState<Say>(null);
+  const comfortPending = useRef(false), [comfortBusy, setComfortBusy] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const feedbackRead = useRef(0), live = useRef(true);
+  const history = useRef<HTMLDivElement>(null), historySummary = useRef<HTMLParagraphElement>(null);
+  const focusAfterRemoval = useRef<string[] | null>(null);
+  useEffect(() => {
+    if (comfortBusy || !focusAfterRemoval.current) return;
+    const buttons = [...(history.current?.querySelectorAll<HTMLButtonElement>('[data-comfort-id]') ?? [])];
+    const next = focusAfterRemoval.current.map(id => buttons.find(b => b.dataset.comfortId === id)).find(Boolean);
+    (next ?? historySummary.current)?.focus();
+    focusAfterRemoval.current = null;
+  }, [feedback, comfortBusy]);
   const [confirming, setConfirming] = useState(false);
   const privacy = useRef<HTMLDetailsElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -181,8 +193,19 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const keep = () => { setConfirming(false); requestAnimationFrame(() => privacy.current?.querySelector<HTMLButtonElement>('[data-delete-account]')?.focus()); };
   const fail = (error: unknown) => setStatus(sayError(error));
   const refresh = () => api<{trips: SavedTrip[]; events: AlertEvent[]}>('trips').then(setTrips, fail);
-  const refreshFeedback = () => api<{feedback: Feedback[]}>('comfort').then(d => setFeedback(d.feedback), () => {});
-  useEffect(() => { void refresh(); void refreshFeedback(); }, []);
+  const refreshFeedback = async () => {
+    const mine = ++feedbackRead.current;
+    try {
+      const d = await api<{feedback: Feedback[]}>('comfort');
+      if (live.current && mine === feedbackRead.current) setFeedback(d.feedback);
+      return true;
+    } catch { return false; }
+  };
+  useEffect(() => {
+    live.current = true;
+    void refresh(); void refreshFeedback();
+    return () => { live.current = false; ++feedbackRead.current; };
+  }, []);
   // GET /api/catch-log: this person's own log, read page by page (readRecapCatchLog) once per mount for the past-trip recap.
   // Closing the dialog aborts the chain; a stopped read keeps what it read and says so instead of implying nothing was logged.
   useEffect(() => {
@@ -225,12 +248,41 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   });
   const sendComfort = async (event: TargetedSubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (comfortPending.current) return;
+    comfortPending.current = true; setComfortBusy(true); ++feedbackRead.current;
     const f = new FormData(event.currentTarget);
     try {
       await api('comfort', {method: 'POST', body: JSON.stringify(comfortBody(region.id, Number(f.get('rating')), String(f.get('phase'))))});
+      if (!live.current) return;
       setComfortStatus({id: 'alerts.status.comfort'});
-      void refreshFeedback();
-    } catch (error) { setComfortStatus(sayError(error)); }
+      await refreshFeedback();
+    } catch (error) { if (live.current) setComfortStatus(sayError(error)); }
+    finally { comfortPending.current = false; if (live.current) setComfortBusy(false); }
+  };
+  const removeComfort = async (id: string) => {
+    if (!id || comfortPending.current) return;
+    comfortPending.current = true; setComfortBusy(true); setRemoving(id); ++feedbackRead.current;
+    const visible = (feedback ?? []).slice(0, 5).filter(f => f.id);
+    const index = visible.findIndex(f => f.id === id);
+    const focusIds = [...visible.slice(index + 1), ...visible.slice(0, index).reverse()].map(f => f.id!);
+    try {
+      await api(`comfort/${encodeURIComponent(id)}`, {method: 'DELETE'});
+      if (!live.current) return;
+      setFeedback(rows => rows?.filter(f => f.id !== id) ?? []);
+      focusAfterRemoval.current = focusIds;
+      setComfortStatus({id: 'alerts.comfort.removed'});
+      if (!await refreshFeedback() && live.current) setComfortStatus({id: 'alerts.comfort.refreshFailed'});
+    } catch (error) {
+      if (!live.current) return;
+      focusAfterRemoval.current = [id];
+      if ((error as {status?: number}).status === 404) {
+        setComfortStatus({id: 'alerts.comfort.unavailable'});
+        await refreshFeedback();
+      } else setComfortStatus(sayError(error));
+    } finally {
+      comfortPending.current = false;
+      if (live.current) { setComfortBusy(false); setRemoving(null); }
+    }
   };
 
   return (
@@ -302,13 +354,22 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
         <form id="comfort-form" class="insight-form" onSubmit={e => void sendComfort(e)}>
           <label>{t('alerts.comfort.phase', lang)}<select name="phase"><option value="outbound">{t('alerts.comfort.outbound', lang)}</option><option value="fishing">{t('alerts.comfort.fishing', lang)}</option><option value="return">{t('alerts.comfort.return', lang)}</option></select></label>
           <label>{t('alerts.comfort.rating', lang)}<input name="rating" type="number" min="1" max="10" defaultValue="7" required /></label>
-          <Button type="submit">{t('alerts.comfort.save', lang)}</Button>
+          <Button type="submit" disabled={comfortBusy}>{t('alerts.comfort.save', lang)}</Button>
         </form>
         <p id="comfort-status" role="status"><Said say={comfortStatus} lang={lang} /></p>
         {feedback ? (
-          <div id="comfort-history">
-            <p class="small">{t('alerts.comfort.history', lang, {n: feedback.length})}</p>
-            {feedback.slice(0, 5).map((f, i) => <p key={i}>{readableInstant(f.observed_at, lang, region.timezone)} · {f.rating}/10 · {feedbackPhase(f, lang)}</p>)}
+          <div id="comfort-history" ref={history}>
+            <p class="small" ref={historySummary} tabIndex={-1}>{feedbackSummary(feedback.length, lang)}</p>
+            {feedback.length > 5 ? <p class="small">{t('alerts.comfort.latestFive', lang)}</p> : null}
+            <p class="small">{t('alerts.comfort.history', lang)}</p>
+            {feedback.slice(0, 5).map((f, i) => {
+              const date = feedbackDate(f.observed_at, region.timezone, lang === 'es' ? 'es' : 'en-US');
+              return <p key={f.id || i}>{date} · {f.rating}/10 · {feedbackPhase(f, lang)}{' '}
+                {f.id ? <Button size="sm" variant="quiet" data-comfort-id={f.id} disabled={comfortBusy}
+                  aria-label={t('alerts.comfort.removeAria', lang, {date, rating: f.rating})}
+                  onClick={() => void removeComfort(f.id!)}>{t(removing === f.id ? 'alerts.comfort.removing' : 'alerts.comfort.remove', lang)}</Button> : null}
+              </p>;
+            })}
           </div>
         ) : null}
       </details>
