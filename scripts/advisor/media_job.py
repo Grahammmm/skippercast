@@ -556,8 +556,11 @@ def strip_command(ffmpeg, source, out, hevc=False):
 
 def probe(ffprobe, path, run=None):
     """ffprobe's format and streams as JSON; Unreadable('probe-failed') when it cannot read the file."""
-    result = (run or subprocess.run)([ffprobe, '-v', 'error', '-show_format', '-show_streams', '-of', 'json', str(path)],
-                 capture_output=True, timeout=120, check=False)
+    try:
+        result = (run or subprocess.run)([ffprobe, '-v', 'error', '-show_format', '-show_streams', '-of', 'json', str(path)],
+                     capture_output=True, timeout=120, check=False)
+    except subprocess.TimeoutExpired:
+        raise Unreadable('probe-timeout') from None
     if result.returncode:
         raise Unreadable('probe-failed')
     try:
