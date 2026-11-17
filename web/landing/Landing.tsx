@@ -11,7 +11,7 @@
 // "Explore the coast" takes the same second step with nothing to warm. No map
 // engine loads here (FE-25 adds the live map after first paint).
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {carryAsk} from '../boat-entry.ts';
+import {carryAsk} from '../boat-ask.ts';
 import {exploreURL, loadPorts, portURL, savePort, type Port} from '../ports.ts';
 import type {Profile} from '../profile.ts';
 import {PortInput} from './PortInput.tsx';
@@ -153,7 +153,7 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
         ? <ProfileStep place={choice.place} warm={choice.port ? warmth : null} current={initialProfile} onChoose={finish} onBack={restart} />
         : <PortInput ports={ports} onChoose={choose} onExplore={explore} onRetry={failed ? loadList : undefined} autoFocus={back} />}
       {/* SC1322-06: /map's cost-ceiling notice, above the verdict, which then reads as saved copies; nothing while live. */}
-      <DegradedNotice />
+      <DegradedNotice translate={t} />
       {answer ? <LiveVerdict v={answer} saved={degraded.value !== null} /> : null}
     </>
   );
