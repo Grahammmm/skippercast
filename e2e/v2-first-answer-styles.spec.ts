@@ -16,9 +16,6 @@ const FISHABLE_ROLE = {yes: 'mint', marginal: 'amber', no: 'coral', unknown: 'mu
 type Fishable = keyof typeof FISHABLE_ROLE;
 
 test.beforeEach(async ({page}) => {
-  // The verdict guard waits for the bound coast report too. Keep these layout
-  // checks offline instead of leaving that Worker request waiting on upstream.
-  await page.route('**/api/coast/report', route => route.fulfill({status: 503, json: {error: 'Offline UI test'}}));
   await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
 });
 
