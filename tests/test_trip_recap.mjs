@@ -325,7 +325,7 @@ test('saved_plan_order_totals_do_not_mutate_and_hide_positions_and_status', asyn
   const full = draw([planned('p', '2026-11-03', goodPlan())]);
   assert.doesNotMatch(full, /35\.1|120\.|PRIVATE-NOTE|SENTINEL|stop-\d|launch/i);
   assert.doesNotMatch(full, />(Cancel|Done|Activate)</);
-  assert.equal((full.match(/<button/g) ?? []).length, 2, 'only Delete and Use again');
+  assert.equal((full.match(/<button/g) ?? []).length, 3, 'Delete, Use again and Add to calendar');
 });
 
 test('saved_plan_empty_and_malformed_are_honest', async () => {

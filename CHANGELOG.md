@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC2037-14: upcoming saved trips offer Add to calendar, a browser-made .ics file with the region's dated fishing window, targets and saved comfort limits; no positions, spots or notes are included or sent.
+
 - SC1822-11: remove an individual private comfort report without deleting your account; history labels the latest-100 cap and latest-five display, with report dates in the opened region's time zone.
 
 - SC-NEXT-05: choose °F or °C for the brief's water temperature in the account menu, remembered on this device. Comparisons, charts and exports keep °F.
