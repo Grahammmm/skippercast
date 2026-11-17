@@ -17,7 +17,7 @@ export function UnitChoice() {
     </div>
   </section><section aria-labelledby={`${id}-wind`}>
     <h2 id={`${id}-wind`} class="ui-eyebrow">{t('units.wind.speed', lang)}</h2>
-    <div class="app-account-presets">{(['kt', 'mph', 'kmh'] as const).map(wind =>
+    <div class="app-account-presets app-account-presets--wind">{(['kt', 'mph', 'kmh'] as const).map(wind =>
       <Button key={wind} size="sm" pressed={current.wind === wind} onClick={choose({wind})}>{t(`units.wind.${wind}`, lang)}</Button>)}
     </div>
   </section></>;
