@@ -13,7 +13,9 @@
 //
 // Erasable syntax only: the node tests import it by type stripping.
 import {signal} from '@preact/signals';
-import {localeOf, t, type Language} from './i18n.ts';
+import {localeOf, type Language} from './i18n-core.ts';
+
+export type DegradedTranslate = (id: 'shared.degraded.saved' | 'shared.degraded.savedAt', lang?: Language, vars?: Readonly<Record<string, string | number>>) => string;
 
 export const DEGRADED_HEADER = 'X-SC-Degraded';
 export const LAST_KNOWN_HEADER = 'X-SC-Last-Known-At';
@@ -53,7 +55,7 @@ export function installDegradedWatch(scope: {fetch?: typeof fetch} = globalThis)
 }
 
 /** The notice's words for `state` in `lang` (English when omitted); null while live. `time` formats a saved copy's ISO time. */
-export function degradedText(state: Degraded, time?: (iso: string) => string, lang?: Language): string | null {
+export function degradedText(state: Degraded, t: DegradedTranslate, time?: (iso: string) => string, lang?: Language): string | null {
   if (!state) return null;
   return state.since ? t('shared.degraded.savedAt', lang ?? 'en', {time: (time ?? ((iso: string) => localTime(iso, lang)))(state.since)}) : t('shared.degraded.saved', lang ?? 'en');
 }
