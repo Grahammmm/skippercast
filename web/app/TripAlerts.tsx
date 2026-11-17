@@ -126,7 +126,8 @@ export function SavedTrips({recaps, names, remove, useAgain, read = {loading: fa
     try {
       const current = trip.region !== undefined && trip.region === regionId;
       const region = calendarRegions.find(r => r.id === trip.region);
-      const tripNames = current ? names : region ? alertNames(region) : {point: new Map<string, string>(), species: new Map<string, string>()};
+      const noNames = new Map<string, string>();
+      const tripNames = current ? names : region ? alertNames(region) : {point: noNames, species: noNames};
       const zone = current ? timeZone : region?.timezone ?? DEFAULT_ZONE;
       const targets = Array.isArray(trip.targets) && trip.targets.length && trip.targets.every(id => typeof id === 'string') ? trip.targets as string[] : [trip.species];
       const file = tripCalendar(trip, {areaName: tripNames.point.get(trip.point),
