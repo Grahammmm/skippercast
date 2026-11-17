@@ -71,7 +71,9 @@ def compile_coasts(root=REPO):
         for ident in dict.fromkeys(region['targets'] + region['watch']):
             target = {'id': ident, **targets[ident]}
             target['name'] = region.get('target_labels', {}).get(ident, target['name'])
-            records = [species[s] for s in target['source_species'] if s in species]
+            if not all(isinstance(s, str) and s in species for s in target['source_species']):
+                raise ValueError(f"Unknown coastal target source species: {ident} source_species")
+            records = [species[s] for s in target['source_species']]
             target['note'] = target.get('note') or ' '.join(s['claims'][0]['claim'] for s in records)
             target['sources'] = list(dict.fromkeys([target['source_url']] if target.get('source_url') else [c['source_url'] for s in records for c in s['claims']]))
             options.append(target)
