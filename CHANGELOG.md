@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC2037-13: saved-trip alerts offer a test notification only after the server confirms this account holds this device. Tests use the trip-alert sender, are limited to three attempts per account per UTC day, and create no saved assessment or delivery receipt.
+
 - MGL-19: seafloor `plan` and `run` now accept `--scope-config` for a reviewed noncentral scope file. Such work is private, physical-only and held for screening, never published, and never touches any ledger; ordinary noncentral runs stay refused. Retained central private seafloor caches will recompute once because the run code changed; nothing is regenerated here. See `docs/seafloor-second-scope.md`.
 - RF0422-6: the GPX delivery check now refuses a file in which any element repeats an attribute name (for example two `creator` or `extra` attributes), which is not valid XML. Valid exports and the existing coordinate and root checks are unchanged.
 - RF0422-5: the GPX delivery check now refuses a file containing a stray half of an emoji-style character (an unpaired UTF-16 surrogate), which is not valid XML; properly paired characters such as 🐟 are still accepted. Nothing else about the check changes.
