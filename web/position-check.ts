@@ -97,7 +97,10 @@ export type PositionResult = {located: {ok: false; reason: 'unsupported' | 'deni
  */
 export async function checkPosition(loadScreen: () => Promise<HeldScreen | null>, geolocation?: Pick<Geolocation, 'getCurrentPosition'> | null): Promise<PositionResult> {
   // Both start now; the loader's rejection is caught at once so a failure while the permission prompt is open is never unhandled.
-  const reading = readPosition(geolocation), screen = loadScreen().catch(() => null);
+  // A loader that throws before returning a promise is the same failure: no boundaries.
+  const reading = readPosition(geolocation);
+  let screen: Promise<HeldScreen | null>;
+  try { screen = Promise.resolve(loadScreen()).catch(() => null); } catch { screen = Promise.resolve(null); }
   const located = await reading;
   // A failed read is already the answer: boundaries cannot change it, so they are not waited for (the loader finishes on its own).
   if (!located.ok) return {located};
