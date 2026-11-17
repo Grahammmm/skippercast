@@ -92,6 +92,15 @@ export function validateTripPlan(input:ExternalJSON,region:Region,species:string
   return {launch_point:launch??null,targets,plan:validatePlanBody(input.plan),status};
 }
 export function pushConfigured(env:Env):boolean{return Boolean(env.VAPID_PUBLIC_KEY&&env.VAPID_PRIVATE_KEY);}
+/** One Web Push attempt, shared by trip delivery and device tests. No events, receipts or subscription writes. */
+export async function sendPush(env:Env,s:SubscriptionRow,data:{title:string;body:string;eventId:string;url:string}):Promise<{status:'accepted'|'expired'|'failed'|'uncertain';httpStatus:number|null}>{
+  try{
+    const payload=await buildPushPayload({data:JSON.stringify(data),options:{ttl:3600}},
+      {endpoint:s.endpoint,expirationTime:null,keys:{p256dh:s.p256dh,auth:s.auth}},{subject:deployment.public_origin,publicKey:env.VAPID_PUBLIC_KEY as string,privateKey:env.VAPID_PRIVATE_KEY as string});
+    const response=await fetch(s.endpoint,{...payload,redirect:'manual',signal:AbortSignal.timeout(12000)});
+    return {status:response.ok?'accepted':response.status===404||response.status===410?'expired':'failed',httpStatus:response.status};
+  }catch{return {status:'uncertain',httpStatus:null};}
+}
 /** A receipt is sent again only when push failed with 429 or 5xx and fewer than 3 attempts were used. */
 export function retryable(status:string,httpStatus:number|null,attempt:number):boolean{
   return status==='failed'&&(httpStatus===429||httpStatus!==null&&httpStatus>=500&&httpStatus<=599)&&attempt<3;
@@ -117,14 +126,8 @@ async function deliver(env:Env,event:AlertEventRow):Promise<boolean>{
     const id=ids[last];
     const claim=await db(env).prepare('INSERT OR IGNORE INTO delivery_receipts(id,event_id,subscription_id,status,attempt_at) VALUES(?,?,?,?,?)').bind(id,event.id,s.id,'sending',new Date().toISOString()).run();
     if(!claim.meta.changes)continue;
-    let status='uncertain',httpStatus:number|null=null;
-    try{
-      const payload=await buildPushPayload({data:JSON.stringify({title:'SkipperCast trip update',body:event.message.slice(0,1600),eventId:event.id,url:'/#forecast'}),options:{ttl:3600}},
-        {endpoint:s.endpoint,expirationTime:null,keys:{p256dh:s.p256dh,auth:s.auth}},{subject:deployment.public_origin,publicKey:env.VAPID_PUBLIC_KEY as string,privateKey:env.VAPID_PRIVATE_KEY as string});
-      const response=await fetch(s.endpoint,{...payload,redirect:'manual',signal:AbortSignal.timeout(12000)});httpStatus=response.status;
-      status=response.ok?'accepted':response.status===404||response.status===410?'expired':'failed';
-      if(status==='expired')await db(env).prepare('DELETE FROM subscriptions WHERE id=?').bind(s.id).run();
-    }catch{status='uncertain';}
+    let {status,httpStatus}=await sendPush(env,s,{title:'SkipperCast trip update',body:event.message.slice(0,1600),eventId:event.id,url:'/#forecast'});
+    if(status==='expired'){try{await db(env).prepare('DELETE FROM subscriptions WHERE id=?').bind(s.id).run();}catch{status='uncertain';}}
     await db(env).prepare('UPDATE delivery_receipts SET status=?,http_status=? WHERE id=?').bind(status,httpStatus,id).run();
     if(status==='accepted')delivered=true;else if(retryable(status,httpStatus,last+1))retry=true;
   }

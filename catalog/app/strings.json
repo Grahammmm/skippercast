@@ -2232,6 +2232,8 @@
     "alerts.noteSavedUnnamed": {"en": "Limits start from your saved boat; alerts judge wind chop for it too.", "es": "Los límites parten de tu embarcación guardada; las alertas también evalúan para ella las olas cortas generadas por el viento."},
     "alerts.noteReference": {"en": "Limits start from the reference 23 ft boat. Set your boat to tailor them.", "es": "Los límites parten de la embarcación de referencia de 23 ft. Configura tu embarcación para adaptarlos."},
     "alerts.purpose": {"en": "Uses the selected target species. These alerts assess the saved area's weather window and reviewed rules; they do not plan navigation or predict catches.", "es": "Usa la especie objetivo seleccionada. Estas alertas evalúan la ventana meteorológica del área guardada y las reglas revisadas; no planifican la navegación ni predicen capturas."},
+    "alerts.test.send": {"en": "Send a test notification", "es": "Enviar una notificación de prueba"},
+    "alerts.test.sent": {"en": "Test notification accepted by the push service. Check this device for it.", "es": "El servicio de notificaciones aceptó la prueba. Búscala en este dispositivo."},
     "alerts.enable": {"en": "Enable notifications on this device", "es": "Activar notificaciones en este dispositivo"},
     "alerts.stopDevice": {"en": "Stop notifications on this device", "es": "Detener notificaciones en este dispositivo"},
     "alerts.stopAll": {"en": "Stop on all devices", "es": "Detener en todos los dispositivos"},
