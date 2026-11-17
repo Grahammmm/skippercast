@@ -606,6 +606,11 @@ class Session:
         while True:
             chunk = response.read(CHUNK)
             if not chunk:
+                # A real HTTPResponse counts down its declared Content-Length; a positive
+                # remainder at EOF is a truncated transfer, not a complete body.
+                remaining = getattr(response, "length", None)
+                if isinstance(remaining, int) and remaining > 0:
+                    raise http.client.IncompleteRead(b"", remaining)
                 break
             size += len(chunk)
             if limit is not None and size > limit:
