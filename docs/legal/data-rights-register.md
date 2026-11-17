@@ -127,7 +127,7 @@ Rules for every row ([design § 17](../plans/charter-fleet/design.md#17-privacy-
 
 ## Catalog sources
 
-One row per entry in `catalog/sources.json`. "Where used" lists usages found by the CI gate (asset paths are relative to `dist/`; `region.json:*` rows are runtime bindings present in every published region). "Licence" is the redistribution review already recorded in the catalog.
+One row per entry in `catalog/sources.json`, except for the grouped CSUMB NCEI wave below. "Where used" lists usages found by the CI gate (asset paths are relative to `dist/`; `region.json:*` rows are runtime bindings present in every published region). "Licence" is the redistribution review already recorded in the catalog.
 
 | Dataset | Source id | Licence | Attribution required | Commercial use OK | Where used in app | Action | Owner |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -199,6 +199,17 @@ One row per entry in `catalog/sources.json`. "Where used" lists usages found by 
 | Open-Meteo forecast, marine and ensemble APIs (free tier) | `open-meteo-api` | CC BY 4.0 | yes | **no** | none (snapshot replaced FSC-01) | [Blocker B1](#b1--open-meteo-free-api-resolved) | Owner |
 | Protomaps basemap (OpenStreetMap vector tiles), self-hosted coastal extract | `protomaps-basemap` | ODbL-1.0 | yes | **unknown** | Not shipped yet: `tiles/basemap/ca-coast-<build>.pmtiles` on R2 (FE-10), read by the v2 Chart from FE-11 | Drafted by FE-10, **owner to confirm**: ODbL allows commercial use with attribution, but the whole archive is publicly downloadable from `/feeds/tiles/basemap/`, so it is redistributed as an ODbL derivative database (attribution and ODbL notice kept with it; the extract itself offered under ODbL, share-alike). Self-hosting removes the [B6](#b6--openstreetmap-tile-service) tile-service question, not this one | Owner |
 | NOAA NGS Continually Updated Shoreline Product (CUSP) | `noaa-cusp-shoreline` | US public domain (NOAA-created features only) | yes | yes | `regions/morro-bay/shoreline.geojson` (beside the region package, not in `region.json` assets; read by the v2 Chart from FE-11) | Drafted by FE-10, **owner to confirm**: the importer keeps only features whose creator is NOAA; review each new region's held creators before importing it | Owner |
+
+### CSUMB SFML at NCEI — wave 2B (private-use only)
+
+These entries identify the archive selection, not a claim that all 50 archives were acquired. The licence is unresolved, commercial use is unknown, and none is bound to an app region or asset. Retain CSUMB SFML and individual survey contributor credits. NCEI hosting does not resolve producer rights; public display and redistribution of archives or derivatives remain on hold pending separate rights review and owner approval. Private census use waits for the E2E-02 normalise stage. The operator-local `CSUMB-LICENCE.md` retains the per-survey evidence, including the missing ISO record for CC_BlockA00.
+
+- Ventresca, CC2 A: `csumb-ventresca-cc2-blocka01`, `csumb-ventresca-cc2-blocka02`, `csumb-ventresca-cc2-blocka03`, `csumb-ventresca-cc2-blocka04`, `csumb-ventresca-cc2-blocka05`, `csumb-ventresca-cc2-blocka07`, `csumb-ventresca-cc2-blocka08`, `csumb-ventresca-cc2-blocka09`, `csumb-ventresca-cc2-blocka10`, `csumb-ventresca-cc2-blocka11`.
+- Ventresca, CC2 B: `csumb-ventresca-cc2-blockb01`, `csumb-ventresca-cc2-blockb02`, `csumb-ventresca-cc2-blockb03`, `csumb-ventresca-cc2-blockb04`, `csumb-ventresca-cc2-blockb05`, `csumb-ventresca-cc2-blockb06`, `csumb-ventresca-cc2-blockb07`, `csumb-ventresca-cc2-blockb08`, `csumb-ventresca-cc2-blockb09`, `csumb-ventresca-cc2-blockb10`, `csumb-ventresca-cc2-blockb11`, `csumb-ventresca-cc2-blockb12`, `csumb-ventresca-cc2-blockb13-14`.
+- Ventresca, CC: `csumb-ventresca-cc-blocka00`, `csumb-ventresca-cc-blocka02`, `csumb-ventresca-cc-blocka03`, `csumb-ventresca-cc-blocka05`, `csumb-ventresca-cc-blocka06`, `csumb-ventresca-cc-blocka07`, `csumb-ventresca-cc-blocka08`, `csumb-ventresca-cc-blocka09`, `csumb-ventresca-cc-blocka10`, `csumb-ventresca-cc-blocka11`.
+- Ventresca, other surveys: `csumb-ventresca-montereycanyon`, `csumb-ventresca-pge-north`, `csumb-ventresca-pge-south`, `csumb-ventresca-point-buchon`, `csumb-ventresca-point-buchon-control`, `csumb-ventresca-presidioshoals`, `csumb-ventresca-sanfranciscomouth`, `csumb-ventresca-sanpablobay`, `csumb-ventresca-soquelcanyon`, `csumb-ventresca-suisunbay`.
+- Harold Heath: `csumb-harold-heath-bss-block13`, `csumb-harold-heath-montereypeninsula`.
+- MacGinitie: `csumb-macginitie-mackerricher`, `csumb-macginitie-montereybay-holefill`, `csumb-macginitie-mosslandingharbor`, `csumb-macginitie-ptcabrillo`, `csumb-macginitie-scypresspoint`.
 
 ## Web and code dependencies
 

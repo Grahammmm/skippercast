@@ -12,12 +12,13 @@ import {language, localeOf, t, type Language, type StringId} from '../../i18n.ts
 import {hasOwnLimits, limitsFor} from '../../limits.ts';
 import {profile} from '../../state.ts';
 import type {BoatFactors} from '../../score.ts';
+import {units} from '../../unit-choice.ts';
 import {hourText, localParts, selectHour, zoneName} from '../TimeDock.tsx';
 import './hourly-table.css';
 
 const HEADERS: readonly StringId[] = ['hourly.h.wind', 'hourly.h.gust', 'hourly.h.seas', 'hourly.h.swell', 'hourly.h.second', 'hourly.h.chop', 'hourly.h.tide', 'hourly.h.vis', 'hourly.h.score'];
-/** A table cell in `lang`: English is hourlyCells' own text; Spanish says "desde" and writes the decimal comma, the digits unchanged. */
-const cellText = (cell: string, lang: Language): string => lang === 'en' ? cell : cell.replace(/ from /, ` ${t('hourly.from', lang)} `).replace(/(\d)\.(\d)/g, '$1,$2');
+/** Direction words come from hourlyCells; Spanish writes the decimal comma, the digits unchanged. */
+const cellText = (cell: string, lang: Language): string => lang === 'en' ? cell : cell.replace(/(\d)\.(\d)/g, '$1,$2');
 
 export function HourlyTable({forecast, tide, at, tz, now}: {forecast: ConditionsForecast | null; tide: Series | null; at: number; tz: string; now: Date}) {
   const lang = language.value;
@@ -47,7 +48,7 @@ export function HourlyTable({forecast, tide, at, tz, now}: {forecast: Conditions
             {rows.map((r, ri) => (
               <tr key={r.at} data-at={r.at} aria-current={r.ms === at ? 'true' : undefined} class={r.ms === at ? 'is-current' : undefined}>
                 <th scope="row"><button type="button" onClick={() => selectHour(now, tz, r.ms)}>{label(r.ms)}</button></th>
-                {hourlyCells(r).map((c, i) => {
+                {hourlyCells(r, lang, units.value.wind).map((c, i) => {
                   const f = (['wind', 'gust', 'seas'] as const)[i];
                   return <td key={i} class="ui-mono">{cellText(c, lang)}{f && limits && marked[ri]![f] ? <span class="app-hourly-over" role="img" aria-label={t(`hourly.over.${f}`, lang, {limit: String(limits[f])})}> ▲</span> : null}</td>;
                 })}
