@@ -221,7 +221,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // are unchanged; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
   // SC1922-03: Masthead.tsx renders Location's Retry through the shared Button (ui-button--quiet ui-button--sm); BODY09 mounts Reports/CatchCards, never Masthead. No catch markup, token or paint change. Rebind only Masthead.tsx.
   // SC1922-08: Masthead.tsx's FreshnessDot gains a Refresh Button and a status line inside the chip, beside the unchanged age span; BODY09 mounts Reports/CatchCards, never Masthead. No token, catch markup or catch paint change (the CSS is the app.css chip rule and appended block, bound below). Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "4f233466f19c5a174d2b94c3a2b22ad748c44c7b80b3fd5b9f2b0e3744ac3466",
+  // SC-NEXT-01: inject the unchanged app reader into the shared notice; BODY09 never mounts Masthead.
+  // No markup, CSS, token, paint, contrast assertion or threshold changes; refresh only this source hash.
+  "web/app/Masthead.tsx": "9489af976eeb801dbf0d9309d1f49db0da4773b5a7ff987d7168fde7316c61f7",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
