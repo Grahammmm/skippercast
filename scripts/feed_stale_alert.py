@@ -131,7 +131,7 @@ def load_events(path, stale_flag):
                 or not isinstance(report.get("stale_feeds"), list):
             raise ValueError("report envelope needs a boolean `stale` and a list `stale_feeds`")
         events, stale = report["stale_feeds"], report["stale"]
-    except (OSError, ValueError):
+    except (OSError, ValueError, RecursionError):  # RecursionError: report JSON nested past the decoder limit
         events, stale = [], stale_flag == "true"
     if stale and not events:
         events = [{"feed": CHECK_FEED, "last_published": None,
