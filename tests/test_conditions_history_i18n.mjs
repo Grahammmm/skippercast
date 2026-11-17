@@ -169,6 +169,7 @@ test('profile caveats: each profile reads its own Spanish sentence in the Condit
 
 test('hourly_es_dst_and_missing: Spanish headers and notes; the repeated November hour keeps every row and both zone labels', () => {
   const en = renderHourly('en'), es = renderHourly('es');
+  // This view-level regression must follow the localized wind direction, not the old English compass abbreviation.
   for (const text of ['Hora por hora, ', 'Tabla hora por hora, desplazable', '>Hora<', 'Viento (kt · desde)', 'Ráfaga (kt)', 'Oleaje (ft)', 'Mar de fondo (ft · s · desde)', 'Segundo mar de fondo (ft · desde)', 'Olas de viento (ft · s)',
     'Marea (donde hay informe local)', 'Visibilidad (mi)', 'Puntuación de comodidad (0–10)', '8 kt desde el ONO', '4,2 ft', '3,1 ft · 14 s · 290°']) assert.ok(es.includes(text), text);
   assert.equal((es.match(/data-at=/g) ?? []).length, 25);
