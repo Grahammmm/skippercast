@@ -399,7 +399,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SCB-11: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // MAIN-RED-5: only the appCss surface binding/comment changed; contrast calculations and gates unchanged.
   // MAIN-RED-7: only the appCss surface binding/comment changed; contrast calculations and gates unchanged.
-  "scripts/check_contrast.mjs": "4f38c7e1a2accb5a279cda72fbb934a724642794c833960db14d53a5eb20782b",
+  // RF2000-8: check_contrast.mjs changes only selector-to-brace whitespace matching in block(); production CSS, contrast() and rendered results unchanged. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "e7341728cf0cc5cfc841378b6c99befeae9c21262dc828d8119907c319433032",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
