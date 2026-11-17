@@ -198,13 +198,15 @@ export async function planningBrief(env: Env, args: {port: string; date?: string
   let landing: Activity['landing'] = {available: false, label: t(language, 'landing_label'), trips: 0, boats: 0, days: 0, window: null};
   let confidence: Confidence = 'Insufficient';
   const daily = await dailyFeed(region, read);
-  if (daily && feedKey && feedKey !== 'dungeness') {
+  // A feed that marks its charter section not available has no trip facts: never report zero trips from it.
+  const chartersGone = (daily as {charter_reports?: {status?: unknown}} | null)?.charter_reports?.status === 'not_available';
+  if (daily && !chartersGone && feedKey && feedKey !== 'dungeness') {
     const names = new Set(landingNames(port).map(n => n.toLowerCase()));
     const portFeed = {...daily, reports: (daily.reports as LandingReport[]).filter(r => names.has(String(r.port ?? '').toLowerCase()))};
     const ev = reportEvidence(portFeed, feedKey, opts.now, null, tz);
     confidence = ev.confidence;
     landing = {available: true, label: t(language, 'landing_label'), trips: ev.reports.length, boats: ev.boats, days: ev.days, window: {from: ev.start, to: ev.end}};
-  } else if (daily) landing = {...landing, available: true};
+  } else if (daily && !chartersGone) landing = {...landing, available: true};
   if (confidence === 'Insufficient' && skipper.some(r => r.counts.some(c => (c.kept ?? 0) > 0 || (c.released ?? 0) > 0))) confidence = 'Low';
   if (!CONFIDENCE_WORDS.includes(confidence)) confidence = 'Insufficient';
 

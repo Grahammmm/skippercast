@@ -391,12 +391,25 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
                                 "Daily observations are not a seven-day bite forecast or live entrance clearance."]}
     last_seven = [sources.get("catches-" + (local_day - timedelta(days=i)).isoformat(), {}) for i in range(1, 8)]
     coverage = sum(s.get("status") == "ok" for s in last_seven)
-    critical = (coverage >= 5 if region["landing_names"] else True) and any(sources[k]["status"] == "ok" for k in ("buoy-" + stations["nearshore_buoy"], "buoy-" + stations["offshore_buoy"]))
+    charter_stale = bool(region["landing_names"]) and coverage < 5
+    critical = any(sources[k]["status"] == "ok" for k in ("buoy-" + stations["nearshore_buoy"], "buoy-" + stations["offshore_buoy"]))
     issues = [s["id"] for s in sources.values() if s["status"] != "ok" or s.get("fallback_for")]
-    snapshot["health"] = {"status": "ok" if not issues else "degraded" if critical else "failed",
+    status = "ok" if not issues else "degraded" if critical else "failed"
+    snapshot["health"] = {"status": status,
                           "critical_available": critical, "recent_report_days_ok": coverage,
                           "sources_ok": sum(s["status"] == "ok" for s in sources.values()),
                           "sources_total": len(sources), "issues": issues}
+    if charter_stale:
+        # Charter reports are one section, not the whole feed: say so plainly, publish no
+        # trips (never zero catch, never an inferred zero), and keep every other section.
+        seen = sorted(s["id"][len("catches-"):] for s in sources.values()
+                      if s["id"].startswith("catches-") and s.get("status") == "ok" and s.get("data"))
+        snapshot["reports"] = []
+        snapshot["charter_reports"] = {"status": "not_available", "reason": "source_stale",
+                                       "last_source_day": seen[-1] if seen else None}
+        snapshot["health"]["degraded_reasons"] = ["charter_reports: source_stale"]
+        if critical:
+            snapshot["health"]["status"] = "degraded"
     validate(snapshot)
     return snapshot
 
@@ -412,6 +425,10 @@ def validate(snapshot):
         parsers.iso_time(snapshot["published_at"])
     if snapshot.get("catch_probability") is not None or snapshot.get("bite_score") is not None:
         raise ValueError("Uncalibrated catch probability must remain absent")
+    section = snapshot.get("charter_reports")
+    if section is not None:
+        if section.get("status") != "not_available" or snapshot["reports"]:
+            raise ValueError("Unavailable charter section must carry no trip records")
     ids = [r["id"] for r in snapshot["reports"]]
     if len(ids) != len(set(ids)):
         raise ValueError("Duplicate trip records")
