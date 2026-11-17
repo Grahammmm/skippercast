@@ -93,6 +93,8 @@ def validate_candidate(data, root=REPO):
     interval = []
     for key in ("coverage_start", "coverage_end"):
         value = data["temporal"].get(key)
+        if value is not None and not isinstance(value, str):
+            raise ValueError(f"{key} must be a string or null")
         if value:
             if len(value) == 10:
                 interval.append((date.fromisoformat(value), False))
