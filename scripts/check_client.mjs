@@ -140,7 +140,13 @@ for (const [page, budget] of Object.entries(budgets)) {
   measured.push(`${page} js ${size.js} B, css ${size.css} B gzipped`);
   measurements.bundles[page] = size;
   for (const kind of ['js', 'css']) {
-    const max = budget[`${kind}_gzip_max`];
+    const key = `${kind}_gzip_max`;
+    // An omitted ceiling is optional; a present one must be a finite number >= 0 (never silently disabled).
+    if (Object.hasOwn(budget ?? {}, key) && !(typeof budget[key] === 'number' && Number.isFinite(budget[key]) && budget[key] >= 0)) {
+      problems.push(`${page}: ${key} must be a finite number >= 0, got ${JSON.stringify(budget[key]) ?? String(budget[key])} (${budgetFile})`);
+      continue;
+    }
+    const max = budget?.[key];
     nearBudget(`${page} initial ${kind === 'js' ? 'JavaScript' : 'CSS'} (gzipped)`, size[kind], max);
     if (Number.isFinite(max) && size[kind] > max) problems.push(`${page}: initial ${kind === 'js' ? 'JavaScript' : 'CSS'} ${size[kind]} B gzipped exceeds its budget of ${max} B (${budgetFile})`);
   }
