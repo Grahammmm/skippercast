@@ -24,6 +24,7 @@ from rasterio.shutil import copy as raster_copy
 from rasterio.warp import transform_bounds
 
 NODATA = -999999.0
+BAND_LIMIT_M = 300 * 0.3048
 LABEL = 'NOT FOR NAVIGATION — research preview; review required'
 
 
@@ -258,6 +259,7 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
              '-ot', 'Float32', '-dstnodata', NODATA, '-co', 'TILED=YES',
              '-co', 'COMPRESS=DEFLATE', '-co', 'BIGTIFF=IF_SAFER'])
     counts = {str(row['code']): 0 for row in sources}
+    band_counts = dict(counts)
     stats = dict(grid_cells=cells, valid_cells=0, hole_cells=0, overlap_cells=0,
                  extra_source_cell_observations=0, minimum_elevation_m=None, maximum_elevation_m=None)
     contributor_work, support_work = work / 'contributor.tif', work / 'support_count.tif'
@@ -296,6 +298,9 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
                 low, high = float(elevation[valid].min()), float(elevation[valid].max())
                 stats['minimum_elevation_m'] = min(low, stats['minimum_elevation_m']) if stats['minimum_elevation_m'] is not None else low
                 stats['maximum_elevation_m'] = max(high, stats['maximum_elevation_m']) if stats['maximum_elevation_m'] is not None else high
+            in_band = valid & (elevation <= 0) & (elevation >= np.float32(-BAND_LIMIT_M))
+            for code, count in zip(*np.unique(chosen[in_band], return_counts=True)):
+                band_counts[str(code)] += int(count)
             unique, freq = np.unique(chosen, return_counts=True)
             for code, count in zip(unique, freq):
                 if code:
@@ -323,6 +328,10 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
                     priority='finest native resolution first; lexical id ties; GDAL last-valid stack reversed',
                     resampling='nearest (no cross-source interpolation)', gdal_version=rasterio.__gdal_version__,
                     sources=sources, outputs=outputs, stats=stats, contributor_cells=counts,
+                    band_0_300ft=dict(limit_m=91.44, cells=sum(band_counts.values()),
+                                      km2=round(sum(band_counts.values()) * 100 / 1e6, 4),
+                                      contributor_cells=band_counts,
+                                      note='10 m cells whose chosen elevation is 0 to -91.44 m; holes (land or unsurveyed) are not classified'),
                     limitations=['Hole cells include land and unsurveyed water; no water mask was supplied.',
                                  'No seamless vertical-datum reconciliation is claimed; constant offsets are not VDatum.',
                                  'Unstated datum uses zero offset and is explicitly unresolved.',
