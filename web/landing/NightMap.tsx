@@ -128,7 +128,7 @@ export function NightMap({page, region, onState, load = loadLibrary, fetchFn = (
     const fail = (why: unknown): void => {
       if (!alive) return;
       alive = false;
-      console.warn('Night map unavailable; the static shoreline stays.', why);
+      console.warn(t('landing.night.unavailable', 'en'), why);
       setTimeout(stop, 0);
       set('failed');
     };
@@ -137,7 +137,7 @@ export function NightMap({page, region, onState, load = loadLibrary, fetchFn = (
         const [library, archive, info] = await Promise.all([load(), basemapArchive(fetchFn, page), nightRegion(region, fetchFn, page)]);
         const el = host.current;
         if (!alive || !el) return;
-        if (!archive || !info) { fail(!archive ? 'no basemap archive' : `no region frame for ${region}`); return; }
+        if (!archive || !info) { fail(!archive ? 'basemap-missing' : `region-frame-missing:${region}`); return; }
         const palette = readPalette();
         let drawn = false;
         engine = createEngine(library, {

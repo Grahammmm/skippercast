@@ -281,9 +281,8 @@ export function fragmentCopy(value) {
   for (const m of value.matchAll(/\b(?:title|aria-label|placeholder)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) out.push({value: m[1] ?? m[2], index: m.index});
   return out;
 }
-/** Server wire tokens and developer-only diagnostics (never shown), allowed only in their own file. */
+/** Server wire tokens (compared, never shown), allowed only in the one file that compares them. */
 export const WIRE_OK = new Map([['web/saved-spots.ts', new Set(['you can keep at most 100 saved spots; remove one first'])],
-  ['web/landing/NightMap.tsx', new Set(['Night map unavailable; the static shoreline stays.', 'no basemap archive', 'no region frame for  X'])],
   ['web/reports.ts', new Set(['Broad regional name'])]]);
 
 /** Catalogue problems under `root`: ids without an es value, unknown ids in t() calls, bare prose literals in covered files. No catalogue, nothing to check. */
