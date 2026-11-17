@@ -77,7 +77,9 @@ export function evaluatePortAlert(limits: Thresholds, forecast: RegionalForecast
   if (!forecast) return {state: 'no-data', ...base};
   if (!Number.isFinite(now)) return {state: 'stale', ...base};
   const issued = Date.parse(forecast.issuedAt), fetched = Date.parse(forecast.fetchedAt);
-  if (!Number.isFinite(issued) || !Number.isFinite(fetched) || now - issued > MAX_RUN_AGE_HOURS * HOUR_MS || now - fetched > MAX_FETCH_AGE_HOURS * HOUR_MS) return {state: 'stale', ...base};
+  // A source clock more than 5 minutes ahead of evaluation is not a readable run (same skew rule as the map and brief forecast readers).
+  const ahead = now + 5 * 60_000;
+  if (!Number.isFinite(issued) || !Number.isFinite(fetched) || issued > ahead || fetched > ahead || now - issued > MAX_RUN_AGE_HOURS * HOUR_MS || now - fetched > MAX_FETCH_AGE_HOURS * HOUR_MS) return {state: 'stale', ...base};
   const start = Math.floor(now / HOUR_MS) * HOUR_MS, end = start + WINDOW_HOURS * HOUR_MS;
   const exceedances: Exceedance[] = [], peak: PortAlert['peak'] = {windKt: null, swellFt: null};
   const seen = new Set<string>();
