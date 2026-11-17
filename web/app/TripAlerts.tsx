@@ -3,8 +3,8 @@
 // dist/trip-alerts.js. Same /api/ calls, the same saved records, the same
 // limits from the saved boat and the same copy; the delete confirmation is in
 // the page, never window.confirm. Styles: web/app/account.css (.app-alerts).
-// Most sheet words use the shared catalogue; test-notification copy stays local to this feature.
-// What the server wrote (assessment messages, hazard notes, its error bodies) is shown as received, in
+// SC0922-12: the sheet's own words come from the string catalogue and follow the page language when they are
+// drawn. What the server wrote (assessment messages, hazard notes, its error bodies) is shown as received, in
 // English; in Spanish the sheet says so once and marks those texts lang="en".
 import {useEffect, useId, useMemo, useRef, useState} from 'preact/hooks';
 import type {TargetedSubmitEvent} from 'preact';
@@ -24,11 +24,7 @@ import {
 type SessionAnswer = {signedIn?: boolean; signIn?: unknown; publicKey?: string | null};
 type Boat = {factors: BoatFactors; saved: {boat?: {name?: unknown}} | null};
 /** A status line kept as what it is, so a language change redraws it: a catalogue id of this sheet's own words, or text from outside (the server, the browser) shown as received. */
-type Say = {id: StringId | 'alerts.test.sent'} | {literal: string} | null;
-const testCopy = {
-  en: {send: 'Send a test notification', sent: 'Test notification accepted by the push service. Check this device for it.'},
-  es: {send: 'Enviar una notificación de prueba', sent: 'El servicio de notificaciones aceptó la prueba. Búscala en este dispositivo.'},
-} as const;
+type Say = {id: StringId} | {literal: string} | null;
 type Loaded =
   | {state: 'loading'} | {state: 'error'; say: Say} | {state: 'offline'} | {state: 'disabled'}
   | {state: 'signed-out'; href: string}
@@ -42,7 +38,7 @@ const englishOnly = (lang: Language) => lang === 'es' ? 'en' : undefined;
 /** A status line in the page language; outside text is marked lang="en" in Spanish. */
 function Said({say, lang}: {say: Say; lang: Language}) {
   if (!say) return <>{''}</>;
-  if ('id' in say) return <>{say.id === 'alerts.test.sent' ? testCopy[lang].sent : t(say.id, lang)}</>;
+  if ('id' in say) return <>{t(say.id, lang)}</>;
   return lang === 'es' ? <span lang="en">{say.literal}</span> : <>{say.literal}</>;
 }
 
@@ -157,7 +153,7 @@ function TestNotification({device, stopping, say, refresh}: {device: DeviceStatu
     } catch (error) { say(sayError(error)); }
     finally { sending.current = false; setBusy(false); refresh(); }
   };
-  return device === 'confirmed' ? <Button size="sm" disabled={busy || stopping} onClick={() => void send()}>{testCopy[lang].send}</Button> : null;
+  return device === 'confirmed' ? <Button size="sm" disabled={busy || stopping} onClick={() => void send()}>{t('alerts.test.send', lang)}</Button> : null;
 }
 
 function SignedIn({session, region, boat, target}: {session: SessionAnswer; region: RegionAlerts; boat: Boat; target: string | null}) {

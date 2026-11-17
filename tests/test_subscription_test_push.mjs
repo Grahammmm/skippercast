@@ -152,7 +152,7 @@ test('client sends only the named endpoint and propagates refusal words', async 
 
 // Render the actual button and call its actual handler; the test-only export changes no production source.
 const dir = await mkdtemp(join(tmpdir(), 'test-push-ui-')), out = join(dir, 'ui.mjs');
-await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `export {TestNotification, Said} from './web/app/TripAlerts.tsx'; export {language} from './web/i18n.ts'; export {h, options} from 'preact'; export {render} from 'preact-render-to-string';`}, bundle: true, platform: 'node', format: 'esm', outfile: out, jsx: 'automatic', jsxImportSource: 'preact', logLevel: 'silent', plugins: [{name: 'test-button', setup(b) { b.onLoad({filter: /\/TripAlerts\.tsx$/}, async ({path}) => ({contents: await readFile(path, 'utf8') + '\nexport {TestNotification, Said};', loader: 'tsx'})); }}]});
+await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `export {TestNotification, Said} from './web/app/TripAlerts.tsx'; export {language, prepareCatalogue} from './web/i18n.ts'; export {h, options} from 'preact'; export {render} from 'preact-render-to-string';`}, bundle: true, platform: 'node', format: 'esm', outfile: out, jsx: 'automatic', jsxImportSource: 'preact', logLevel: 'silent', plugins: [{name: 'test-button', setup(b) { b.onLoad({filter: /\/TripAlerts\.tsx$/}, async ({path}) => ({contents: await readFile(path, 'utf8') + '\nexport {TestNotification, Said};', loader: 'tsx'})); }}]});
 const ui = await import(pathToFileURL(out).href);
 test.after(() => rm(dir, {recursive: true, force: true}));
 function button(device, extra = {}) {
@@ -175,7 +175,8 @@ test('rendered sheet button: shown only for server-confirmed, not browser-only, 
   assert.equal(button(state).html, '');
 });
 
-test('test notification copy follows the page language', () => {
+test('test notification copy follows the page language', async () => {
+  await ui.prepareCatalogue('es');
   try {
     for (const [lang, label, message] of [
       ['en', 'Send a test notification', 'Test notification accepted by the push service. Check this device for it.'],
