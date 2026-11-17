@@ -18,7 +18,11 @@ let mod;
 async function load() {
   if (mod) return mod;
   const out = join(await mkdtemp(join(tmpdir(), 'degraded-')), 'degraded.mjs');
-  await build({entryPoints: [join(ROOT, 'web/degraded.ts')], bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent'});
+  await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: `
+    export * from './web/degraded.ts';
+    import {degradedText as text} from './web/degraded.ts';
+    import {t} from './web/i18n.ts';
+    export const degradedText = (state, time, lang) => text(state, t, time, lang);`}, bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent'});
   mod = await import(pathToFileURL(out).href);
   return mod;
 }
