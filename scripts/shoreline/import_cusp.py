@@ -115,6 +115,8 @@ def decode_tile(data):
         data = inflate.decompress(data, MAX_TILE_BYTES * 8)
         if inflate.unconsumed_tail:
             raise ValueError('CUSP tile inflates beyond the size cap')
+        if not inflate.eof:
+            raise ValueError('CUSP gzip tile is incomplete')
     layers = []
     for number, raw in fields(data):
         if number != 3:
