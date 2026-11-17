@@ -186,4 +186,4 @@ def test_skill_md_ec_delta_keeps_sections_and_golden_case():
     assert [line[3:] for line in text.splitlines() if line.startswith("## ")] == ["Inputs", "Steps", "Outputs", "Never", "Terrain", "Golden case", "Changelog"]
     assert text.split("## Golden case\n\n")[1].split("\n\n## ")[0] == "`morro-bay` (real run M2) over the three USGS GeoTIFFs: " \
         "`candidate/morro-bay.geojson` must equal the committed\n`catalog/depth-contours/morro-bay.geojson` in features **and** provenance: " \
-        "run `python3 skills/skippercast-region-build/scripts/golden_compare.py morro-bay --run <dir>`.\nAny verdict other than `equal` is a spec-gap note naming the keys it lists."
+        "run `scripts/golden_compare.py morro-bay --run <dir>`.\nAny verdict other than `equal` is a spec-gap note naming the keys it lists."

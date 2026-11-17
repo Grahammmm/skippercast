@@ -33,6 +33,8 @@ Reads a run folder's checked `INTAKE.csv`, preflights each GeoTIFF row, then run
    Fix the input in a new run folder; never edit a candidate by hand.
 4. Read `BUILD.json` `not_built`: `skip`/`missing-file` rows, `unsupported-adapter:<a>`, `multi-file-source:<id>:<n>`, `bag-survey-id-unknown`.
 5. Hand the run folder to `skippercast-region-review` (`region_review.py <dir>`).
+   For the golden case below, run its script from `skills/skippercast-region-build`, or from the repository root invoke
+   `python3 skills/skippercast-region-build/scripts/golden_compare.py morro-bay --run <dir>`.
 
 ## Outputs
 
@@ -58,7 +60,7 @@ Terrain is not built by this skill. See `docs/operations/coast-statewide-runshee
 ## Golden case
 
 `morro-bay` (real run M2) over the three USGS GeoTIFFs: `candidate/morro-bay.geojson` must equal the committed
-`catalog/depth-contours/morro-bay.geojson` in features **and** provenance: run `python3 skills/skippercast-region-build/scripts/golden_compare.py morro-bay --run <dir>`.
+`catalog/depth-contours/morro-bay.geojson` in features **and** provenance: run `scripts/golden_compare.py morro-bay --run <dir>`.
 Any verdict other than `equal` is a spec-gap note naming the keys it lists.
 
 ## Changelog

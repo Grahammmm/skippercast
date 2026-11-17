@@ -102,15 +102,16 @@ def test_script_is_file_only_and_record_pr_sets_merged_not_published(tmp_path):
     assert ",merged," in w[2].read_text() and "published" not in w[2].read_text().split("\n", 1)[1]
 
 
-def test_published_needs_a_passing_live_receipt_for_the_same_build(tmp_path):
+def test_published_needs_a_passing_live_receipt_for_the_same_build(tmp_path, capsys):
     w = world(tmp_path)
     sha = json.loads((w[1] / "BUILD.json").read_text())["build_sha256"]
     args = ["--record-pr", str(w[1]), "--pr", "1234", "--published-at", "2026-11-05", "--ledger", str(w[2])]
-    for receipt in ({"status": "FAIL", "build_sha256": sha}, {"status": "PASS", "build_sha256": "0" * 64}, {"status": "PASS"}):
+    for receipt in ([], None, "PASS", 1, {"status": "FAIL", "build_sha256": sha}, {"status": "PASS", "build_sha256": "0" * 64}, {"status": "PASS"}):
         live = tmp_path / "live.json"
         live.write_text(json.dumps(receipt))
         assert rp.main([*args, "--live-receipt", str(live)]) == 1
-        assert w[2].read_text() == ROWS
+        assert "--live-receipt is not a PASS for this build sha256 (state stays unchanged)" in capsys.readouterr().err
+        assert w[2].read_bytes() == ROWS.encode()
     live.write_text(json.dumps({"status": "PASS", "build_sha256": sha}))
     assert rp.main(["--record-pr", str(w[1]), "--pr", "1234", "--live-receipt", str(live), "--ledger", str(w[2])]) == 1
     assert w[2].read_text() == ROWS

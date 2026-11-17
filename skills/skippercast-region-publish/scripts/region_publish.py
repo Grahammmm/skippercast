@@ -252,7 +252,7 @@ def main(argv=None, run=default_run, loader=default_loader):
             rid, changes = build['region_id'], {'pr': args.pr, 'state': 'merged'}
             if args.live_receipt:
                 live = json.loads(Path(os.path.expanduser(args.live_receipt)).read_text())
-                if live.get('status') != 'PASS' or not build.get('build_sha256') or live.get('build_sha256') != build['build_sha256']:
+                if not isinstance(live, dict) or live.get('status') != 'PASS' or not build.get('build_sha256') or live.get('build_sha256') != build['build_sha256']:
                     raise ValueError('--live-receipt is not a PASS for this build sha256 (state stays unchanged)')
                 if not args.published_at:
                     raise ValueError('--live-receipt needs --published-at YYYY-MM-DD')
