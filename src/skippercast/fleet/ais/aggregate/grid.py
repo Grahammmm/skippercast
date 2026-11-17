@@ -11,6 +11,7 @@ square is the cell. ``cell_id`` is ``g<edge>:<row>:<col>``, and map.ts reads the
 from __future__ import annotations
 
 import math
+from decimal import Decimal
 from typing import Iterable
 
 from ..events import Event
@@ -50,7 +51,15 @@ def grid_cell(lat: float, lon: float, resolution_m: float) -> tuple[str, float, 
     d_lon = resolution_m / (METRES_PER_DEG * max(math.cos(math.radians(centre_lat)), 0.01))
     col = math.floor(lon / d_lon)
     centre_lon = (col + 0.5) * d_lon
-    return f"g{resolution_m:g}:{row}:{col}", centre_lat, centre_lon
+    return f"g{_edge_text(resolution_m)}:{row}:{col}", centre_lat, centre_lon
+
+
+def _edge_text(resolution_m: float) -> str:
+    """The legacy ``:g`` spelling when it round-trips exactly, else fixed-point decimal (map.ts takes no exponent)."""
+    text = f"{resolution_m:g}"
+    if float(text) == resolution_m:
+        return text
+    return format(Decimal(str(resolution_m)), "f")
 
 
 class Grid:
