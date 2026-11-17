@@ -48,7 +48,9 @@ command. Future survey runs will reuse cell IDs `3310:<x-index>:<y-index>`.
 ### What the denominator measures
 
 [NOAA BlueTopo](https://nauticalcharts.noaa.gov/data/bluetopo.html) is a compilation,
-not an independent original survey. We pin the 2026-09-24 tile scheme by SHA-256
+not an independent original survey. We pin the 2026-11-09 tile scheme by SHA-256
+(re-pinned from the 2026-09-24 scheme, whose object NOAA removed; retrieval
+record: `docs/seafloor-bluetopo-scheme-repin.md`)
 and select all 252 tile footprints intersecting the configured search box.
 Per-tile delivered dates, URLs and publisher checksums are in the ledger.
 Four bounded workers read elevation overviews at approximately 32 m spacing;
@@ -110,15 +112,92 @@ separate private extraction receipt hashes its selected member. Original files,
 COGs, drafts and full receipts stay in ignored `var/seafloor/`. The manifest
 stores a small native inspection and rights receipt.
 
+### Local source root (downloaded originals with a geofetch catalog)
+
+A bulk download of originals can stand in for the network transfer. The root is
+a directory plus a geofetch `catalog.jsonl` (default
+`<root>/_geofetch/catalog.jsonl`, or `--local-catalog PATH`); each row carries
+`id`, `url`, `sha256`, `size` and `dest` relative to the root. It changes only
+where the bytes come from:
+
+- the source URL must still pass the reviewed allowlist in `fetch.py`
+  (`bluetopo` and `/modeling/` stay refused), so a downloaded file is a
+  reviewed original only if its publisher URL is reviewed. The allowlist
+  compares URL text with reviewed dataset prefixes, so only the canonical form
+  counts (`fetch.canonical_source_url`): dot segments (`..`, `.`), empty
+  segments, percent escapes, backslashes, queries, fragments, user info, ports
+  and upper-case hosts refuse, because a client may resolve them into another
+  dataset folder. Fetch and local import refuse such a URL, and promotion, the
+  manifest validator and `physical_source()` refuse or skip it as habitat depth;
+- the catalog checksum and size must equal the repo pin when the manifest row
+  has one; a conflict refuses the file before any copy. The pin belongs to the
+  URL, not the product: `add-survey` applies the pin of every existing manifest
+  row with the same URL, so a new `--id` or `--member` cannot avoid it, and rows
+  that pin different checksums for one URL refuse;
+- the selected local file is hashed on every import and must match the catalog
+  checksum (and so the pin), even when the cache already holds those bytes; a
+  mismatch caches nothing and keeps any verified cache entry;
+- `dest` must stay inside the root (no `..`, absolute paths or escaping links),
+  and duplicate catalog rows for one URL must agree.
+
+Catalog ids map to repo source ids by exact URL. Two entry points:
+
+```bash
+# new candidate from a downloaded file; the draft records local_catalog_id
+python ~/agent-work/bin/seafloor-cli.py --checkout . add-survey --url <publisher URL> --id <survey id> \
+  --bounds W S E N --local-root /path/to/downloads
+# seed the cache for qualified rows so `run` needs no --fetch; prints the
+# source-id -> catalog-id mapping and exits 1 if any file was refused
+python ~/agent-work/bin/seafloor-cli.py --checkout . import-local --local-root /path/to/downloads [--ids <survey id> ...]
+```
+
+`--local-root` cannot be combined with `--local` or `--fetch`. A URL missing from
+the catalog is an error for `add-survey`, never a silent network fallback.
+Promotion, rights review, screening and publication gates are unchanged.
+
 Adapters read native 512-pixel chunks with a 100 m seam margin, preserve no-data
 and producer uncertainty, and write a native-resolution COG. Band 1 is **meters
 positive down**; an optional band 2 is producer uncertainty in meters. Do not
 feed these normalized COGs back into an original elevation adapter. No datum
 conversion, reprojection, smoothing or interpolation is performed. The source
-is already a producer-gridded product, not raw soundings. No verified
+is already a producer-gridded product, not raw soundings.
+
+**Geographic originals** (`--format geographic-geotiff`, for example the USACE
+NCMP lidar DEMs on NAD83 + NAVD88 height, EPSG:5498) are the one explicit
+exception, in `seafloor/reproject_geographic.py`. They are first projected,
+once, to California Albers on the source's own datum (NAD83 → EPSG:3310,
+NAD83(2011) → EPSG:6414; any other datum, WGS84 included, is refused, so no
+datum transformation is ever applied). Elevation values, vertical datum and
+units are unchanged and recorded; a declared non-metre unit is refused. Depth
+uses bilinear resampling (classes would use nearest); the output NoData mask is
+exactly the containing-source-pixel image of the source mask, and bilinear
+values are used only where the whole 2×2 kernel is valid. The cell is the
+largest source spacing on the tile in target metres, rounded up to 0.1 m, never
+finer than the source. Output above 150 M pixels is refused. The unchanged
+native adapter then normalizes the projected grid. The receipt's
+`reprojection` block binds the source sha256, every parameter, and the
+projected product's file and content hashes; `native_resolution_m` there is the
+projected cell, not native pixel detail. The cache-key files of the native
+adapter are not edited, so existing COG keys stay valid. Allowlist, CoNED
+inspect-only, promotion and screening gates are unchanged. No verified
 product supplies a separate interpolation mask; that remains explicitly unknown
 and must be addressed by the coverage-stage eligibility rules. Unknown datum
 alone does not block tiers 1–2.
+
+**Geographic admission hold.** Before any resampling or cache reuse, the
+`geographic-geotiff` route scans every valid original elevation (512×512
+windows, the whole admitted tile, not just the requested reach). One valid
+elevation strictly below the float32 value of −91.44 m (the 300 ft interval) refuses
+the whole source with the stable reason `geographic-depth-out-of-domain`; the
+message carries the limit, observed minimum, count and source id/hash, never a
+path. NoData-masked and nonfinite samples are ignored, positive land elevations
+are untouched, and a value equal to the limit is admitted. The hold is a refusal,
+not a masked or clipped value: nothing is edited, interpolated or
+auto-accepted, no receipt or draft is produced for the held source, and a warm
+projected or normalized cache cannot bypass it. This is deliberately
+conservative: a genuinely deeper survey is held too and needs human quality
+review (and a separate deeper-data policy) before it can be admitted. A refusal
+is review-required; it neither proves suitability nor clears rights.
 
 Variable-resolution BAG overviews are rejected until a native-refinement adapter
 exists. Coarse default overview pixels must never masquerade as fine native
