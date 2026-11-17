@@ -169,7 +169,7 @@ async function boundedBytes(body: ReadableStream<Uint8Array>, max: number): Prom
 /** Keep `response` (a 200 or 206 served normally) as the last-known copy of `request`. */
 export async function keepLastKnown(request: Request, response: Response, ctx: WaitUntil, now = Date.now()): Promise<void> {
   if ((response.status !== 200 && response.status !== 206) || !response.body) return;
-  if (/no-store|private/.test(response.headers.get('Cache-Control') || '') || response.headers.has('Set-Cookie')) return;
+  if (/no-store|private/i.test(response.headers.get('Cache-Control') || '') || response.headers.has('Set-Cookie')) return;
   // A stated length is checked up front; with none (the JSON APIs) the copy is read with the same bound.
   const stated = response.headers.get('Content-Length'), length = Number(stated);
   if (stated !== null && (!(length > 0) || length > LAST_KNOWN_MAX_BYTES)) return;
