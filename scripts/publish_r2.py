@@ -159,13 +159,14 @@ def upload_run_manifests(s3, bucket, root):
 def sync_legacy(s3, bucket, source, prefix):
     """Upload changed files (data first, pointers last), delete removed ones, store the index."""
     index_key = f'{prefix}/{INDEX}'
-    refuse_reserved(prefix, scan(source))
+    local = scan(source)
+    refuse_reserved(prefix, local)
     try:
         remote = json.loads(s3.get_object(Bucket=bucket, Key=index_key)['Body'].read())
     except s3.exceptions.NoSuchKey:
         remote = {}
-    local = scan(source)
     uploads, deletions = plan(local, remote)
+    refuse_reserved(prefix, deletions)
     data_files = [k for k in uploads if not POINTER.search(k)]
     pointers = [k for k in uploads if POINTER.search(k)]
 

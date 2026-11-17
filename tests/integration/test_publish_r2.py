@@ -120,6 +120,58 @@ class SyncTests(unittest.TestCase):
 
 
 class ReservedPrefixTests(unittest.TestCase):
+    def test_reserved_index_key_refuses_deletion_before_any_write(self):
+        import io
+
+        class Store:
+            class exceptions:
+                class NoSuchKey(Exception):
+                    pass
+
+            def __init__(self):
+                self.writes = []
+
+            def get_object(self, **kwargs):
+                return {'Body': io.BytesIO(json.dumps({'relief/old.pmtiles': 'old'}).encode())}
+
+            def put_object(self, **kwargs):
+                self.writes.append(kwargs)
+
+            def delete_objects(self, **kwargs):
+                self.writes.append(kwargs)
+
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / 'ok.json').write_text('{}')
+            store = Store()
+            with self.assertRaisesRegex(SystemExit, 'tiles/relief/old.pmtiles'):
+                publish_r2.sync_legacy(store, 'feeds', d, 'tiles')
+            self.assertEqual(store.writes, [])
+
+    def test_file_added_after_scan_never_enters_upload_plan(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / 'ok.json').write_text('{}')
+
+            class Store:
+                class exceptions:
+                    class NoSuchKey(Exception):
+                        pass
+
+                def __init__(self):
+                    self.keys = []
+
+                def get_object(self, **kwargs):
+                    (root / 'relief').mkdir()
+                    (root / 'relief' / 'late.pmtiles').write_text('private')
+                    raise self.exceptions.NoSuchKey()
+
+                def put_object(self, **kwargs):
+                    self.keys.append(kwargs['Key'])
+
+            store = Store()
+            publish_r2.sync_legacy(store, 'feeds', root, 'tiles')
+            self.assertEqual(sorted(store.keys), ['tiles/.r2-sync.json', 'tiles/ok.json'])
+
     def test_tiles_relief_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / 'relief').mkdir(); (Path(d) / 'relief' / 'a.pmtiles').write_text('x')

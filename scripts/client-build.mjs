@@ -54,14 +54,14 @@ const PRIVATE_OUTPUT = /(?:^|\/)(?:morro-bay-seafloor-deep(?:-[a-z]+)?\.(?:pmtil
 // fails the build instead of being copied. Add a name here only with its rights cleared.
 export const PUBLIC_PMTILES = new Set(['tiles/morro-bay-reef-outlines.pmtiles', 'tiles/socal-survey-habitat.pmtiles']);
 
-/** True to copy `from` (under `src`); throws on a *.pmtiles that is neither private-skipped nor allowlisted. */
+/** True to copy `from` (under `src`); throws on any unallowlisted *.pmtiles. */
 function keepStatic(src, from) {
   const posix = from.split(sep).join('/');
-  if (PRIVATE_OUTPUT.test(posix)) return false;
   if (/\.pmtiles$/i.test(posix)) {
     const rel = relative(src, from).split(sep).join('/');
     if (!PUBLIC_PMTILES.has(rel)) throw Error(`refusing to publish ${rel}: *.pmtiles under dist/ must be on PUBLIC_PMTILES (scripts/client-build.mjs)`);
   }
+  if (PRIVATE_OUTPUT.test(posix)) return false;
   return true;
 }
 
