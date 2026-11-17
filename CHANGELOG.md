@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC2037-14: upcoming saved trips offer Add to calendar, a browser-made .ics file with the region's dated fishing window, targets and saved comfort limits; no positions, spots or notes are included or sent.
+
 - SC-MAPQ-NATIVE-ZOOM-1: private relief builds retain 1 m shallow-survey detail through zoom 17 only on tiles with nominal 0–20 m support. Native 2 m/5 m tiles stop at zoom 15; background stops at 13. Archive metadata reports actual per-zoom native support; no surveys or archives are published by this change.
 
 - SC1822-11: remove an individual private comfort report without deleting your account; history labels the latest-100 cap and latest-five display, with report dates in the opened region's time zone.
