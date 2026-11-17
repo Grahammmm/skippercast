@@ -170,7 +170,7 @@ test('UXFIX-07 readableInstant: a stored timestamp reads as its day in the regio
   for (const bad of ['', 'soon']) assert.equal(readableInstant(bad, 'en', LA), bad, bad);
   assert.equal(readableInstant(at, 'en', 'Not/AZone'), at, 'an unknown zone does not throw');
   const source = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
-  assert.match(source, /readableInstant\(f\.observed_at, lang, region\.timezone\)/, 'the comfort history uses the region zone');
+  assert.match(source, /feedbackDate\(f\.observed_at, region\.timezone, lang === 'es' \? 'es' : 'en-US'\)/, 'the comfort history uses the region zone');
   assert.doesNotMatch(source, /toLocaleDateString/, 'no browser-zone date left in the alerts dialog');
 });
 
