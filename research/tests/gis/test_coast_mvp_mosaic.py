@@ -100,3 +100,33 @@ def test_duplicate_ids(tmp_path):
     table.write_text(json.dumps(doc))
     with pytest.raises(ValueError, match='unique'):
         load_sources(table)
+
+
+def test_band_counts_only_cells_inside_0_to_300ft(tmp_path):
+    region, table = fixture(tmp_path)
+    band = mosaic(region, table, tmp_path / 'result', reserve_gib=0)['band_0_300ft']
+    assert band['cells'] == 50
+    assert band['contributor_cells'] == {'1': 50, '2': 0}
+    assert band['km2'] == 0.005
+
+
+def test_band_edges_are_inclusive_and_land_is_excluded(tmp_path):
+    region, table = fixture(tmp_path)
+    a = np.full((10, 10), -200, dtype='float32')
+    a[5, :4] = [0, -91.44, -91.45, 2]
+    path = tmp_path / 'edge.tif'
+    with rasterio.open(path, 'w', driver='GTiff', width=10, height=10, count=1, dtype='float32',
+                       nodata=-9999, crs='EPSG:3310', transform=from_origin(-100, 0, 10, 10)) as grid:
+        grid.write(a, 1)
+    row = dict(json.loads(table.read_text())['sources'][0], id='edge', path=str(path), sha256=file_hash(path),
+               resolution_m=10, vertical_datum='NAVD88', vertical_offset_m=0, value_convention='elevation_positive_up')
+    table.write_text(json.dumps({'schema_version': 1, 'sources': [row]}))
+    assert mosaic(region, table, tmp_path / 'edge_out', reserve_gib=0)['band_0_300ft']['cells'] == 2
+
+
+def test_band_sum_never_exceeds_valid_cells(tmp_path):
+    region, table = fixture(tmp_path)
+    manifest = mosaic(region, table, tmp_path / 'result', reserve_gib=0)
+    band = manifest['band_0_300ft']
+    assert band['cells'] <= manifest['stats']['valid_cells']
+    assert band['cells'] == sum(band['contributor_cells'].values())
