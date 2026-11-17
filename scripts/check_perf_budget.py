@@ -135,7 +135,12 @@ def validate_budget(budget: dict) -> list[str]:
             problems.append(f"{name}: needs a non-empty history list with a reason")
             continue
         for h in hist:
-            if not isinstance(h, dict) or not _pos_int(h.get("max_bytes")) or not str(h.get("reason", "")).strip():
+            if (
+                not isinstance(h, dict)
+                or not _pos_int(h.get("max_bytes"))
+                or not isinstance(h.get("reason"), str)
+                or not h["reason"].strip()
+            ):
                 problems.append(f"{name}: every history entry needs a positive integer max_bytes and a reason")
                 break
         else:
