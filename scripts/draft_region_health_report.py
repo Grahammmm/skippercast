@@ -68,6 +68,9 @@ def _shape(evidence, rules):
     for name, key, ok in checks:
         if not ok:
             raise Unreadable(f'{name}: {key} missing or wrong type')
+    listed = set(issues)
+    if any(source['status'] in ('failed', 'retained') and ident not in listed for ident, source in sources.items()):
+        raise Unreadable('latest.json: health.issues omits failed or retained sources')
 
 
 def main(argv=None):

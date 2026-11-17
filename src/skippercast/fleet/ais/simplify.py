@@ -142,6 +142,8 @@ def decode_polyline(encoded: str, precision: int = PRECISION) -> list[Point]:
     """(lat, lon) points of a Google encoded polyline; ``[]`` when malformed (as ``map.ts`` does)."""
     factor = 10 ** precision
     index, lat, lon, out = 0, 0, 0, []
+    # Widest zigzag varint a 360-degree delta needs at this scale (never below the old 30-bit ceiling).
+    max_shift = max(30, 5 * (((720 * factor).bit_length() - 1) // 5))
 
     def next_value():
         nonlocal index
@@ -151,7 +153,7 @@ def decode_polyline(encoded: str, precision: int = PRECISION) -> list[Point]:
                 return None
             byte = ord(encoded[index]) - 63
             index += 1
-            if byte < 0 or byte > 63 or shift > 30:
+            if byte < 0 or byte > 63 or shift > max_shift:
                 return None
             result |= (byte & 0x1F) << shift
             shift += 5

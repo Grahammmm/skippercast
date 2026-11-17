@@ -94,6 +94,12 @@ The daily feed is stale past its own `schedule.max_delay_hours` (36 hours today)
 
 Nothing to roll back for a restart. If a fix PR made things worse, revert it through a PR; the next push-triggered cycle republishes. The `conditions` branch keeps its history, so a bad generation is replaced by the next good cycle; do not force-push the branch by hand.
 
+## Coast report source
+
+Run `node scripts/check_coast_report_source.mjs` (one read-only GET of `/api/coast/report`; `--from-file <saved headers>` reads a saved block instead). It prints one line per `X-Coast-Upstream` source, then `PASS` (report reads `skippercast`) or `FAIL: ...` naming each source still on Fish or a missing header; exit 2 means the report could not be read.
+Rollback: remove `report` from the `COAST_FEEDS` repository variable and redeploy (G taps the variable in GitHub mobile).
+The command and this section change no switch.
+
 ## Escalate
 
 - The owner, if a fix needs a secret, a workflow permission or a merge.

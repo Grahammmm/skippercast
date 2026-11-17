@@ -289,7 +289,7 @@ def parse_retry_after(value: str | None, now: float | None = None) -> float | No
     if value is None:
         return None
     value = value.strip()
-    if value.isdigit():
+    if value and value.isascii() and value.isdigit():
         return float(value)
     try:
         moment = email.utils.parsedate_to_datetime(value)
@@ -606,6 +606,11 @@ class Session:
         while True:
             chunk = response.read(CHUNK)
             if not chunk:
+                # A real HTTPResponse counts down its declared Content-Length; a positive
+                # remainder at EOF is a truncated transfer, not a complete body.
+                remaining = getattr(response, "length", None)
+                if isinstance(remaining, int) and remaining > 0:
+                    raise http.client.IncompleteRead(b"", remaining)
                 break
             size += len(chunk)
             if limit is not None and size > limit:
