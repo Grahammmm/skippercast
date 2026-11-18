@@ -361,6 +361,15 @@ def _copy_previous_tiles(layer, prior_dir, target):
         if dest.resolve() != (prior_dir/name).resolve(): shutil.copyfile(prior_dir/name, dest)
 
 
+def _cache_binding(region_id, bounds, ident, source_id, cfg, max_age):
+    # Keep the reviewed request out of the manifest; tile hashes only bind grid bytes.
+    # Changes to built-in adapter products or request semantics must also bump METHOD.
+    identity = {key: cfg.get(key) for key in ("adapter", "request", "rights", "allowed_hosts", "name", "documentation_url")}
+    encoded = json.dumps([METHOD, region_id, bounds, ident, source_id, max_age, identity],
+                         sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return hashlib.sha256(encoded.encode()).hexdigest()
+
+
 def run(region_id, output, previous_root=None, now=None):
     now = now or datetime.now(timezone.utc); output = Path(output)
     region = load_region(region_id); _, catalog = load_catalogs()
@@ -368,7 +377,7 @@ def run(region_id, output, previous_root=None, now=None):
     prior_path = prior_dir/"habitat-dynamics.json" if prior_dir else None
     previous = read_json(prior_path) if prior_path and prior_path.is_file() else {}
     if previous and (previous.get("schema_version") != 1 or previous.get("region_id") != region_id or previous.get("bounds") != region["bounds"] or previous.get("method") != METHOD):
-        raise ValueError("Previous habitat product has incompatible identity, bounds or method")
+        previous = {}
     jobs = []
     for kind, ident in (("sst", "sst-analysis"), ("chlorophyll", "chlorophyll-observation")):
         source_id = region["pipeline_sources"].get(kind); cfg = catalog[source_id]
@@ -387,6 +396,13 @@ def run(region_id, output, previous_root=None, now=None):
     layers, sources = {}, {}
     for ident, source_id, cfg, max_age, loader in jobs:
         old_layer = previous.get("layers", {}).get(ident); old_source = previous.get("sources", {}).get(ident)
+        binding = _cache_binding(region_id, region["bounds"], ident, source_id, cfg, max_age)
+        provenance = {"id": ident, "source_id": source_id, "cache_binding": binding}
+        # Legacy or mismatched rows cannot authorize either reuse or retention.
+        if not (old_layer and old_source
+                and all(old_layer.get(k) == old_source.get(k) == v for k, v in provenance.items())
+                and old_source.get("rights") == cfg["rights"]):
+            old_layer = old_source = None
         # Six-hour product cache retains source clocks and receipts. It is not a new observation.
         recent = old_source and old_source.get("status") in ("ok", "missing") and old_layer and 0 <= epoch(now)-epoch(old_source.get("checked_at")) < 6*3600
         if recent:
@@ -394,21 +410,21 @@ def run(region_id, output, previous_root=None, now=None):
             layers[ident] = old_layer; sources[ident] = {**old_source, "reused": True}; continue
         result = source(ident, cfg["name"], "forecast" if ident.startswith("wcofs") else "analysis" if ident.startswith("sst") else "observation", cfg["documentation_url"], max_age, loader, now)
         data = result.pop("data")
-        sources[ident] = {**result, "source_id": source_id, "rights": cfg["rights"]}
+        row = sources[ident] = {**result, **provenance, "rights": cfg["rights"]}
+        row["last_populated_at"] = old_source.get("last_populated_at") if old_source else None
         if data:
-            layer = {**data, "id": ident, "source_id": source_id, "status": result["status"], "max_age_hours": max_age}
+            layer = {**data, **provenance, "status": result["status"], "max_age_hours": max_age}
+            if layer.get("valid_cells", 0) > 0:
+                row["last_populated_at"] = layer.get("issued_at") or layer.get("sample_at")
             layers[ident] = publish_tiles(layer, target, region_id)
         elif old_layer and old_source:
             try:
                 _copy_previous_tiles(old_layer, prior_dir, target)
                 layers[ident] = {**old_layer, "status": "retained"}
-                sources[ident].update(status="retained", data_retrieved_at=old_source.get("data_retrieved_at"), last_success_at=old_source.get("last_success_at"))
+                row.update(status="retained", data_retrieved_at=old_source.get("data_retrieved_at"), last_success_at=old_source.get("last_success_at"))
             except (OSError, ValueError) as error:
-                sources[ident]["retention_issue"] = str(error)
-    for key, row in sources.items():
-        layer = layers.get(key, {})
-        fresh = layer and not row.get("reused") and layer.get("status") != "retained" and layer.get("valid_cells", 0) > 0
-        row["last_populated_at"] = (layer.get("issued_at") or layer.get("sample_at")) if fresh else (previous.get("sources", {}).get(key) or {}).get("last_populated_at")
+                row["retention_issue"] = str(error)
+
     # A cloud-masked but successfully decoded scene is an ecological coverage
     # gap, not a broken acquisition job. Stale source clocks remain failures.
     issues = [key for key, s in sources.items() if s["status"] not in ("ok", "missing")]
