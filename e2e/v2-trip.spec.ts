@@ -133,6 +133,7 @@ test('the ranked export runs in v2: best reefs, complete outlines and a download
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({path: `test-results/${info.project.name}-v2-trip.png`});
   const gpx = await download(page);
+  expect(gpx).toMatch(/<time>[^<]+<\/time>/);
   expect(gpx.match(/<wpt /g)).toHaveLength(20);
   expect(gpx.match(/<trk>/g)).toHaveLength(20);
   expect(gpx).toContain('<name>01 Reef 90-120ft</name>');
@@ -184,18 +185,6 @@ test('the ranked plan survives a reload, shows its reefs as Chart pins, and chan
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeHidden();
   await expect.poll(() => new URL(page.url()).hash, 'the dialog\'s close event drops the hash').toBe('');
-  expect(pageErrors).toEqual([]);
-});
-
-// FE-61: v1's planner, which this compared byte for byte, is gone; the v2 file keeps v1's 20 ranked reef spots.
-test('the ranked selection downloads a GPX of the 20 ranked reef spots', async ({page, pageErrors, v2, isMobile}) => {
-  const reefs = await rankedReefs(page);
-  await v2.open('app', AREA);
-  await openPlan(page, isMobile);
-  await rankBest(page, reefs.gate);
-  const fromV2 = await download(page);
-  expect(fromV2).toMatch(/<time>[^<]+<\/time>/);
-  expect(fromV2.match(/<wpt\b/g)?.length).toBe(20);
   expect(pageErrors).toEqual([]);
 });
 

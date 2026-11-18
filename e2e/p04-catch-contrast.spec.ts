@@ -166,6 +166,10 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // assertions and thresholds untouched. Rebind those two exact hashes.
 // SC1722-14 changes field typography/layout only; no colour, alpha, backing or contrast threshold changes.
 // SC1922-04: shared preview disclosure and appended layout; catch/legend paint and contrast math unchanged.
+// DATA-LIVE-9 (#2753, public bottom relief): MapStage.tsx swaps the admin depth-shading chip for a Chart-only
+// relief gate (layers.ts reliefWanted) and a status note on the existing `.app-stage-note` class. No CSS, token or
+// colour change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(), assertions and thresholds are
+// untouched. Rebind only MapStage.tsx.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC2207-01 (#1501): species.ts changes only Plan.source_links' type member from href to url.
   // The interface is erased at runtime; Reports/CatchCards markup, styles, paint and source data
@@ -267,11 +271,12 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // never MapStage or PresentationToggle; no CSS, token, class, catch markup, paint, contrast(), assertion or threshold
   // change. Rebind only MapStage.tsx.
   // MB-08: Reports/CatchCards mounts neither the Chart-only depth shading control nor its layer. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "2cc4ac589807f61354da30d86cba22d4d193b1bdecb93bd3b9c92a60f7dfe5bc",
+  "web/app/MapStage.tsx": "07c9cf39e007a91e0784c31cdcdc6248946b7f4c55fa21c301f020265cfd877a",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   // MB-05: light map-only colours and habitat opacity change; Reports catch text and backing do not use these roles.
   // MB-20: only light-theme overlay roles (--flow*, --mpa-fill/line, --swell-0..3, --contrast-1/2) change; Reports catch text and backing do not use them.
-  "web/tokens.css": "8f446f0460e526be276e901d15c7b728c62ab28e9adcce82b85148c1a0ae9ed6",
+  // MB-22 adds Chart-only survey ink, halo and tints; Reports catch paint is unchanged.
+  "web/tokens.css": "3d2a47d465afd1b920d91ea1519c03420a5925ca0790aafffffffef768194e32",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   // UXFIX-05: tokens.css only turns the eight --text-* font sizes from px into the same sizes in rem (identical at a 16 px root); no colour, paint, gradient, catch markup, assertion or threshold changes, so BODY09 stays applicable. Rebind web/tokens.css and the check_contrast.mjs surface-source pin only.
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
@@ -408,7 +413,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MB-05 adds contour checks and rebinds map-only tokens; RF2000-8 corrects selector-to-brace whitespace matching. Contrast calculations and Reports catch assertions are unchanged.
   // MB-20 adds the additive overlay-line gate (checkOverlayLines, 3:1 on --map-water) and rebinds the tokensCss surface hash; contrast() and every existing check are unchanged.
   // SCA-317: checker only rebinds the History target-size stylesheet hash; contrast math is unchanged.
-  "scripts/check_contrast.mjs": "f72754f01a4cb39317b8541a1a243216fc2a9ce476117a142e6067d4ece3f4f3",
+  // MB-22 rebinds only the tokensCss surface hash. BODY09 paint, contrast logic and assertions are unchanged.
+  "scripts/check_contrast.mjs": "34d9ae03792419b02db7d5fa3157d3161eba8b718259e70fd8e660c927aae4d0",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.

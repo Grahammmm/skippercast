@@ -156,6 +156,23 @@ def test_derivative_fails_closed(builder, geographic_twin, tmp_path, failure):
     assert not out.exists()
 
 
+def test_original_grid_needs_an_affirmative_public_display_before_any_read(builder, geographic_twin, tmp_path, monkeypatch):
+    # Contract: a non-held build of an ORIGINAL (un-normalised) grid publishes only a source whose registry row
+    # says public_display 'allowed'. Believable bug: treating a missing public_display as clearance for original
+    # grids (only normalised ones were gated), or opening the raster before refusing.
+    import rasterio
+
+    run, source = builder
+    projected = geographic_twin[0]
+    del source['rights']['public_display']
+    calls = []
+    monkeypatch.setattr(rasterio, 'open', lambda *a, **k: calls.append(a))
+    out = tmp_path / 'refused.geojson'
+    with pytest.raises(SystemExit, match=f'{SOURCE} is not cleared for public display'):
+        run(projected, out)
+    assert calls == [] and not out.exists()
+
+
 def test_standalone_normalized_native_detail_only_over_measured_support(builder, geographic_twin, tmp_path):
     # Protects: the standalone --set v2 --normalized-sidecar path must apply the grid's support.tif like the region
     # stage does. A bug that omits the support raster traces z14+ native detail across cells marked interpolated
