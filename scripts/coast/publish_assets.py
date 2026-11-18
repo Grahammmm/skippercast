@@ -19,6 +19,7 @@ Every source behind a group must be an approved `catalog/sources.json` row with
 before any asset is downloaded. See docs/coastal-service.md.
 """
 import argparse
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import hashlib
@@ -42,6 +43,7 @@ REEF_CONTEXT = '/data/coast-wide/reef-context.json'
 DECLARED = {'terrain': ['usgs-naip'], 'habitat': []}
 PUBLIC_PATH = re.compile(r'^/data/(?:coast-wide|coast3d)/[A-Za-z0-9_.-]+\.(?:json|bin|png|jpg)$')
 SHA = re.compile(r'^[a-f0-9]{64}$')
+DOI = re.compile(r'(?:https://doi\.org/)?(10\.[0-9]{4,9}/[a-z0-9][a-z0-9._;()/:-]*)', re.I | re.ASCII)
 
 
 def group_of(path):
@@ -61,14 +63,27 @@ def get(path, origin=ORIGIN, headers=None):
         return response.status, dict(response.headers), response.read()
 
 
+def _doi(value):
+    match = DOI.fullmatch(value)
+    return match[1].lower() if match else None
+
+
 def catalog_ids(urls, catalog):
-    """{url: catalog id or None}: matched by DOI, else by the row's documentation or terms URL prefix."""
+    """Resolve an exact catalog ID, complete DOI or exact documented product URL to one row."""
+    counts = Counter(row['id'] for row in catalog)
+    terms = {(row.get('rights', {}).get('terms_url') or '').strip() for row in catalog}
+    documents = [(row['id'], (row.get('documentation_url') or '').strip()) for row in catalog]
     found = {}
     for url in urls:
-        doi = re.search(r'10\.5066[/-](P9[A-Z0-9]+)', url)
-        hits = [s['id'] for s in catalog if (doi and doi.group(1) in (s.get('documentation_url') or '')) or any(
-            prefix and url.startswith(prefix) for prefix in (s.get('documentation_url'), s.get('rights', {}).get('terms_url')))]
-        found[url] = hits[0] if len(hits) == 1 else None
+        identity = url.strip()
+        doi = _doi(identity)
+        # A terms URL is not a product key, even if copied into documentation_url.
+        # A complete DOI is independently identifying, but only from documentation, never from terms.
+        hits = [source for source, document in documents
+                if identity == source
+                or (doi and doi == _doi(document))
+                or (not doi and identity == document and identity not in terms)]
+        found[url] = hits[0] if len(hits) == 1 and counts[hits[0]] == 1 else None
     return found
 
 
