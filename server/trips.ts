@@ -46,7 +46,7 @@ export type TripStatus='draft'|'planned'|'done'|'cancelled';
 export const TRIP_STATUSES:readonly TripStatus[]=['draft','planned','done','cancelled'];
 export const EXPORT_FORMATS=['gpx','text','garmin','lowrance','simrad','raymarine','inavx','navionics'] as const;
 export interface TripSpot {id:string;name:string;lat:number;lon:number;order:number;notes:string;depth_ft:number|null}
-export interface TripLeg {from:string;to:string;nm:number;minutes:number}
+export interface TripLeg {from:string;to:string;nm:number;minutes:number;basis?:'water'|'straight';screen?:{inside:boolean;screened:boolean;near?:true}}
 export interface TripWindow {depart:string|null;return_by:string|null;hours:number[]}
 export interface TripExport {format:typeof EXPORT_FORMATS[number];sha256:string;exported_at:string}
 export interface TripPlanBody {spots:TripSpot[];legs:TripLeg[];window:TripWindow;exports:TripExport[]}
@@ -65,7 +65,14 @@ function validatePlanBody(plan:ExternalJSON):TripPlanBody|null{
   });
   const legs=list(plan.legs,PLAN_LIMITS.legs,'legs').map((l):TripLeg=>{
     if(!l||typeof l!=='object')throw new ClientError('invalid leg');
-    return {from:cleanText(l.from,80),to:cleanText(l.to,80),nm:num(l.nm,0,300,'leg distance'),minutes:num(l.minutes,0,1440,'leg minutes')};
+    const leg:TripLeg={from:cleanText(l.from,80),to:cleanText(l.to,80),nm:num(l.nm,0,300,'leg distance'),minutes:num(l.minutes,0,1440,'leg minutes')};
+    const {basis,screen}=l;
+    if(basis===undefined&&screen===undefined)return leg; // legacy, not assumed to be water-routed
+    if(basis!=='water'&&basis!=='straight')throw new ClientError('invalid leg basis');
+    if(!screen||typeof screen!=='object'||Array.isArray(screen)||typeof screen.inside!=='boolean'||typeof screen.screened!=='boolean'
+      ||(screen.inside&&!screen.screened)||(screen.near!==undefined&&(screen.near!==true||!screen.screened||screen.inside)))throw new ClientError('invalid leg screen');
+    // Save-time preview metadata only; never persist boundary names, offsets or geometry.
+    return {...leg,basis,screen:{inside:screen.inside,screened:screen.screened,...(screen.near===true?{near:true as const}:{})}};
   });
   const w=plan.window??{};if(typeof w!=='object'||Array.isArray(w))throw new ClientError('invalid window');
   const clock=(v:unknown,what:string):string|null=>{if(v===undefined||v===null||v==='')return null;if(typeof v!=='string'||!CLOCK.test(v))throw new ClientError('invalid '+what);return v;};

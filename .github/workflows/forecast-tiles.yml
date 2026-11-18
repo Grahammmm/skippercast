@@ -46,18 +46,99 @@ jobs:
       - name: Read the published tiles back like the daily pipeline does
         env:
           PYTHONPATH: src
+          # raw.githubusercontent.com caches for a few minutes: retry a bounded number of times.
+          READBACK_ATTEMPTS: "8"
+          READBACK_DELAY_SECONDS: "60"
+          BUILD_REPORT: var/forecast-build.json
         run: |
-          sleep 60  # raw.githubusercontent.com caches for a few minutes
           python - <<'PY'
+          import json, os, pathlib, sys, tempfile, time
           from datetime import datetime, timezone
+          from skippercast.forecast import local as forecast_local
           from skippercast.pipeline.collect import model_loader, Client
+          from skippercast.util.time import stamp
           points = [("Estero Bay", 35.36, -120.94), ("Point Buchon", 35.24, -120.94)]
-          for model in ("gfs_global", "ecmwf_ifs025", "ncep_gfswave016", "ecmwf_wam"):
-              url, load = model_loader(model, points)
-              result = load(Client(datetime.now(timezone.utc)))
+          attempts = int(os.environ.get("READBACK_ATTEMPTS", "8"))
+          delay = float(os.environ.get("READBACK_DELAY_SECONDS", "60"))
+          report = json.load(open(os.environ.get("BUILD_REPORT", "var/forecast-build.json")))["models"]
+
+          def read(model):
+              # Fetch the manifest and the sampled tiles ONCE into a staging directory, then
+              # sample that same copy: the cycle checked below belongs to the very tiles whose
+              # hours are counted. A fresh manifest cached in front of a stale tile is caught here.
+              with tempfile.TemporaryDirectory() as staging:
+                  root = pathlib.Path(staging)
+                  client = Client(datetime.now(timezone.utc))
+                  forecast_local._stage(client, [model], [(p[1], p[2]) for p in points], root)
+                  tiles = sorted((root / model / "tiles").glob("*.json"))
+                  if not tiles:
+                      raise ValueError(f"{model}: no sampled tile was published")
+                  (root / "index.json").write_text("{}")
+                  previous = os.environ.get("SKIPPERCAST_FORECAST_ROOT")
+                  os.environ["SKIPPERCAST_FORECAST_ROOT"] = str(root)
+                  try:
+                      url, load = model_loader(model, points)
+                      result = load(client)  # unit and shape checks live in the loader
+                  finally:
+                      if previous is None:
+                          os.environ.pop("SKIPPERCAST_FORECAST_ROOT", None)
+                      else:
+                          os.environ["SKIPPERCAST_FORECAST_ROOT"] = previous
+                  generations = set()
+                  for tile in tiles:
+                      cycle = json.loads(tile.read_text()).get("cycle")
+                      generations.add(stamp(datetime.fromtimestamp(cycle, timezone.utc)) if type(cycle) is int else f"invalid:{cycle!r}")
               hourly = result["points"][0]["hourly"]
               key = "wind_speed_10m" if "wind_speed_10m" in hourly else "wave_height"
               filled = sum(v is not None for v in hourly[key])
-              print(f"{model}: cycle {result['sample_at']}, {filled}/{len(hourly[key])} hours of {key}")
-              assert filled > 100, model
+              assert filled > 100, f"{model}: only {filled} hours of {key}"
+              # One cycle only counts when the manifest AND every sampled tile carry it.
+              cycle = result["sample_at"]
+              if generations != {cycle}:
+                  cycle = f"{cycle} (manifest) with tiles at {', '.join(sorted(generations))}"
+              return cycle, filled, len(hourly[key]), key
+
+          # Models this build produced or confirmed must read back at exactly that cycle.
+          # A model whose build failed and kept the previous tiles is retained, not fresh:
+          # it is shape-checked and reported separately, never relabelled as this build.
+          expected, retained, failed = {}, [], []
+          for model in ("gfs_global", "ecmwf_ifs025", "ncep_gfswave016", "ecmwf_wam"):
+              state = report.get(model) or {"status": "failed", "issue": "absent from build report"}
+              if state.get("status") == "ok":
+                  expected[model] = state["cycle"]
+              elif state.get("kept_previous"):
+                  retained.append(model)
+              else:
+                  failed.append(model)
+          pending = dict(expected)
+          for attempt in range(1, attempts + 1):
+              for model in list(pending):
+                  try:
+                      cycle, filled, total, key = read(model)
+                  except Exception as error:
+                      print(f"attempt {attempt}/{attempts} {model}: not readable yet ({error})")
+                      continue
+                  if cycle == pending[model]:
+                      print(f"{model}: this build ({report[model]['state']}) cycle {cycle}, {filled}/{total} hours of {key}")
+                      del pending[model]
+                  else:
+                      print(f"attempt {attempt}/{attempts} {model}: published cycle {cycle}, build expects {pending[model]}")
+              if not pending or attempt == attempts:
+                  break
+              time.sleep(delay)
+          bad = False
+          for model in retained:
+              try:
+                  cycle, filled, total, key = read(model)
+                  print(f"{model}: RETAINED previous build, cycle {cycle} (not this build), {filled}/{total} hours of {key}")
+              except Exception as error:
+                  print(f"::error title=Forecast model {model}::retained tiles unreadable: {error}")
+                  bad = True
+          for model in failed:
+              print(f"::error title=Forecast model {model}::build failed with nothing retained")
+              bad = True
+          for model, cycle in pending.items():
+              print(f"::error title=Forecast model {model}::published cycle does not match this build ({cycle})")
+              bad = True
+          sys.exit(1 if bad else 0)
           PY
