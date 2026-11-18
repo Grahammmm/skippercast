@@ -199,7 +199,9 @@ def apply(path, detect_path, out_dir):
     if missing.any(): raise Refused(f'uncorrected {int(missing.sum())} cells', code=3)
 
     out.mkdir(parents=True, exist_ok=True)
-    with rasterio.open(out / 'corrected.tif', 'w', **meta) as dst:
+    # The receipt hashes only the TIFF, so its validity mask must be internal even
+    # when the caller or an older GDAL defaults to external .msk files.
+    with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=True), rasterio.open(out / 'corrected.tif', 'w', **meta) as dst:
         dst.write(after, 1)
         # Carry only declarations actually present; never qualify an unlabeled input by rewriting it.
         if has_unit: dst.set_band_unit(1, 'm')
