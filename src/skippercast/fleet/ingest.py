@@ -33,13 +33,14 @@ sink, ``GET /api/fleet/jobs/snapshot`` (paged, OIDC) for the Worker.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import asdict
 import json
 import os
 import stat
 import tempfile
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any, Callable, IO, Iterable, Iterator, Mapping, TypeVar
 from urllib.parse import urlencode
 from urllib.request import Request
 
@@ -111,13 +112,12 @@ def _jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
-    """Write one JSON object per line, replacing ``path`` only once the whole payload is written and closed.
+_Output = TypeVar("_Output", bound=IO[Any])
 
-    A failed write leaves any previous file intact (and an absent one absent); the staging file is private to this call.
-    """
-    rows = list(rows)
-    payload = "".join(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n" for r in rows).encode("utf-8")
+
+@contextmanager
+def _atomic_output(path: Path, open_fd: Callable[[int], _Output]) -> Iterator[_Output]:
+    """Stage one private file next to its destination and replace only after a successful close."""
     try:
         mode = stat.S_IMODE(path.stat().st_mode) if path.is_file() else 0o600
     except OSError:
@@ -125,7 +125,7 @@ def write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
     fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
     try:
         try:
-            fh = os.fdopen(fd, "wb")
+            fh = open_fd(fd)
         except BaseException:
             # Ownership transfers only when fdopen returns a file object.
             try:
@@ -134,7 +134,7 @@ def write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
                 pass
             raise
         with fh:
-            fh.write(payload)
+            yield fh
         os.chmod(tmp, mode)
         os.replace(tmp, path)
     except BaseException:
@@ -143,6 +143,14 @@ def write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
         except OSError:
             pass
         raise
+
+
+def write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
+    """Atomically write one JSON object per line with UTF-8 characters unescaped."""
+    rows = list(rows)
+    payload = "".join(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n" for r in rows).encode("utf-8")
+    with _atomic_output(path, lambda fd: os.fdopen(fd, "wb")) as handle:
+        handle.write(payload)
     return len(rows)
 
 

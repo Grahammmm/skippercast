@@ -7,7 +7,7 @@
 For each model: find the newest complete cycle; if it is already published,
 reuse the previous tiles; otherwise download the needed fields for every
 forecast hour, cut the California box, and write 1-degree tiles plus a
-manifest. A model that fails keeps its previous tiles and reports the issue.
+manifest. A model that fails reports the issue and retains only verified tiles.
 """
 import argparse
 import base64
@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 import json
 import math
 from pathlib import Path
+import re
 import shutil
 import sys
 import time
@@ -294,19 +295,57 @@ def manifest_for(model, cycle, times, keys, lats, lons, built_at, seconds):
     }
 
 
+def _verified_previous(model_dir, model_id, *, expected_cycle=None):
+    """Return the manifest only when every listed tile belongs to that generation."""
+
+    try:
+        path = model_dir / 'manifest.json'
+        if not path.is_file():
+            return None
+        manifest = json.loads(path.read_text(encoding='utf-8'))
+        if (not isinstance(manifest, dict) or manifest.get('model') != model_id
+                or manifest.get('schema_version') != SCHEMA):
+            return None
+        cycle = manifest.get('cycle')
+        if type(cycle) is not int or (expected_cycle is not None and cycle != expected_cycle):
+            return None
+        if manifest.get('cycle_iso') != stamp(datetime.fromtimestamp(cycle, timezone.utc)):
+            return None
+        if not isinstance(manifest.get('built_at'), str) or not manifest['built_at']:
+            return None
+        keys = manifest.get('tiles')
+        if not isinstance(keys, list) or not keys:
+            return None
+        if any(not isinstance(key, str) or not re.fullmatch(r'-?[0-9]+_-?[0-9]+', key) for key in keys):
+            return None
+        if len(set(keys)) != len(keys):
+            return None
+        for key in keys:
+            path = model_dir / 'tiles' / f'{key}.json'
+            if not path.is_file():
+                return None
+            tile = json.loads(path.read_text(encoding='utf-8'))
+            if (not isinstance(tile, dict) or tile.get('schema_version') != SCHEMA
+                    or tile.get('model') != model_id or tile.get('key') != key
+                    or type(tile.get('cycle')) is not int or tile['cycle'] != cycle):
+                return None
+    except (OSError, ValueError, OverflowError):
+        return None
+    return manifest
+
+
 def build_one(model, output, previous, force, log):
     target = output / model.id
-    prior_manifest = previous / model.id / 'manifest.json' if previous else None
-    prior = json.loads(prior_manifest.read_text()) if prior_manifest and prior_manifest.is_file() else None
     cycle = latest_cycle(model)
     if cycle is None:
         raise RuntimeError('no complete cycle published in the last 48 hours')
-    if prior and prior.get('cycle') == int(cycle.timestamp()) and not force:
-        if target.resolve() != (previous / model.id).resolve():
-            shutil.rmtree(target, ignore_errors=True)
-            shutil.copytree(previous / model.id, target)
-        log(f'{model.id}: {stamp(cycle)} already built; reusing')
-        return prior, 'current'
+    if previous is not None and not force:
+        source = previous / model.id
+        prior = _verified_previous(source, model.id, expected_cycle=int(cycle.timestamp()))
+        if prior is not None:
+            _copy_previous(source, target)
+            log(f'{model.id}: {stamp(cycle)} already built; reusing')
+            return prior, 'current'
     started = time.time()
     times, lats, lons, cubes, sea = fetch_model(model, cycle, log=log)
     staging = output / f'.{model.id}.staging'
@@ -322,6 +361,12 @@ def build_one(model, output, previous, force, log):
     return manifest, 'built'
 
 
+def _copy_previous(source, target):
+    if target.resolve() != source.resolve():
+        shutil.rmtree(target, ignore_errors=True)
+        shutil.copytree(source, target)
+
+
 def build(output, previous=None, models=None, force=False, log=log_err, run=None):
     """Build every model; `run` (a skippercast.runs.RunManifest) receives one source row per model."""
     output.mkdir(parents=True, exist_ok=True)
@@ -333,15 +378,17 @@ def build(output, previous=None, models=None, force=False, log=log_err, run=None
             manifest, state = build_one(model, output, previous, force, log)
             status[model_id] = {'status': 'ok', 'state': state, 'cycle': manifest['cycle_iso'],
                                 'built_at': manifest['built_at'], 'tiles': len(manifest['tiles'])}
-        except Exception as error:  # keep the previous generation; report
+        except Exception as error:  # keep a verified previous generation; report the failed attempt
             log(f'{model_id}: FAILED: {error}')
             kept = False
-            if previous and (previous / model_id / 'manifest.json').is_file():
-                target = output / model_id
-                if target.resolve() != (previous / model_id).resolve():
-                    shutil.rmtree(target, ignore_errors=True)
-                    shutil.copytree(previous / model_id, target)
+            source = previous / model_id if previous is not None else None
+            if source is not None and _verified_previous(source, model_id) is not None:
+                _copy_previous(source, output / model_id)
                 kept = True
+            else:
+                target = output / model_id
+                if target.exists():
+                    shutil.rmtree(target)
             status[model_id] = {'status': 'failed', 'issue': str(error)[:300], 'kept_previous': kept}
             if run is not None:
                 run.source(model_id, 'failed', error_class=type(error).__name__, kept_previous=kept,
