@@ -12,10 +12,13 @@ def build(paired, closure, enc):
             or enc.get("scope") != "monterey-original-300-enc-danger-screen"
             or any(source.get("fishing_target") is not False for source in (paired, closure, enc))):
         raise ValueError("Unexpected original Monterey research receipt")
+    for source in (paired, closure, enc):
+        ids = [row["context_id"] for row in source["outlines"]]
+        if len(ids) != paired["outline_count"] or len(set(ids)) != len(ids):
+            raise ValueError("Source reviews have duplicate or missing outline rows")
     by_closure = {row["context_id"]: row for row in closure["outlines"]}
     by_enc = {row["context_id"]: row for row in enc["outlines"]}
-    if (len(by_closure) != paired["outline_count"] or len(by_enc) != paired["outline_count"]
-            or set(by_closure) != set(by_enc)
+    if (set(by_closure) != set(by_enc)
             or set(by_closure) != {row["context_id"] for row in paired["outlines"]}):
         raise ValueError("Source reviews do not contain the same full outlines")
     rows = []

@@ -16,9 +16,10 @@ punctuation ignored; the known spellings are in ``COLUMN_SETS``):
 | home port or port of operation | ``port_hint`` when it names a port of the region |
 | CPFV crab trap validation | fact ``cdfw.crab_trap_validation`` (true/false) |
 
-A licensee that is not an entity (no LLC, Inc., Corp. or similar suffix) is an
-individual's name and is dropped: it never reaches a candidate, a fact or the
-report (only a count). The file itself stays under ``<FLEET_VAR>`` and never
+A licensee must have a business suffix (LLC, Inc., Corp. or similar) and no
+sign of a personal name, such as DBA, care-of, estate, trustee or a comma
+within the name before the suffix. Withheld values never reach the candidate,
+facts or report (only a count). The file stays under ``<FLEET_VAR>`` and never
 enters git.
 
 A fact needs an https ``source_url``; a file has none, so it is the agency's
@@ -81,9 +82,10 @@ COLUMN_SETS: Mapping[str, Mapping[str, tuple[str, ...]]] = {
 REQUIRED = {"cdfw-cpfv-v1": ("vessel_name",), "scout-candidates-v1": tuple(COLUMN_SETS["scout-candidates-v1"])}
 ONE_OF = {"cdfw-cpfv-v1": ("fg_number", "licence_number"), "scout-candidates-v1": ()}
 
-# A licensee kept as operator_business: a business entity. Trusts and estates are often an individual's, so not kept.
+# CDFW's business suffixes and additional markers for free-text licensees.
 ENTITY = re.compile(r"\b(?:L\.?\s?L\.?\s?C|INC(?:ORPORATED)?|CORP(?:ORATION)?|CO(?:MPANY)?|LTD|LIMITED|L\.?\s?L\.?\s?P"
                     r"|L\.?\s?P|PLLC|P\.?\s?C)\b\.?\s*$", re.IGNORECASE)
+LICENSEE_PERSON_MARKERS = re.compile(r"\b(?:CARE[ -]OF|ESTATE)\b")
 IDENT = re.compile(r"[^A-Z0-9]")
 TRUE = {"y", "yes", "true", "1", "x", "issued"}
 FALSE = {"n", "no", "false", "0", ""}
@@ -98,8 +100,13 @@ def _key(header: str) -> str:
 
 
 def is_entity(name: str) -> bool:
-    """True for a business licensee (``Sea Example Sportfishing, LLC``); False for an individual's name."""
-    return bool(ENTITY.search(" ".join((name or "").split())))
+    """Allow a company suffix but withhold personal or mixed licensee labels."""
+    name = " ".join((name or "").upper().split())
+    suffix = ENTITY.search(name)
+    if not suffix or PERSON_MARKERS.search(name) or LICENSEE_PERSON_MARKERS.search(name):
+        return False
+    # A comma immediately before the suffix is normal, unlike "SURNAME, GIVEN LLC".
+    return "," not in name[:suffix.start()].rstrip().removesuffix(",")
 
 
 def _ident(value: str) -> str | None:

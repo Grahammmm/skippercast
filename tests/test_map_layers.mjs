@@ -326,7 +326,7 @@ function terrain() {
 /** The published file under dist/ for a page-relative URL (the region packages FE-19's protected areas read), or a 404. */
 function serveDist(url) {
   const file = new URL(`../dist${new URL(url).pathname}`, import.meta.url);
-  return existsSync(file) ? {ok: true, json: async () => JSON.parse(readFileSync(file, 'utf8'))} : {ok: false, status: 404, json: async () => ({})};
+  return existsSync(file) ? new Response(readFileSync(file)) : {ok: false, status: 404, json: async () => ({})};
 }
 
 function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}, overlayPalette, flyoverGate, idleReady} = {}) {

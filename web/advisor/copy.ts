@@ -174,6 +174,7 @@ export const ADMIN_COPY = {
   collaborators: 'Collaborators (up to 3 usernames, comma-separated)',
   userTags: 'Tagged in the photo (usernames, comma-separated; tagged at the centre)',
   scheduledFor: 'Schedule (optional, your local time)',
+  invalidSchedule: 'Choose a valid local time for the schedule.',
   notScheduled: 'The next free calendar slot of its kind, or the next 15-minute run',
   hold: 'Held',
   approvedBy: (when: string): string => `Approved ${when}`,

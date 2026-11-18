@@ -47,12 +47,13 @@ def validate_regional_rules(region, root, now=None):
 
 
 def compile_shore_habitat(root, regions):
-    """Copy each reviewed catalog/shore-habitat/<id>.geojson into its published region package.
+    """Reconcile the managed shore layer for each region in this build.
 
-    The file is validated (schema, region id, coordinates inside the region) and copied
-    byte for byte; its review dates are the importer's and are never changed here."""
+    Reviewed inputs are validated and copied byte for byte, preserving review dates.
+    A region without an input must not retain its previous build's shore layer."""
     from .. import validate
     known = {r['id']: r for r in regions}
+    copied = set()
     for path in sorted((root / 'catalog/shore-habitat').glob('*.geojson')):
         region = known.get(path.stem)
         if region is None:
@@ -67,6 +68,13 @@ def compile_shore_habitat(root, regions):
         if not all(west <= x <= east and south <= y <= north for x, y in points):
             raise ValueError(f'Shore habitat {path.name} lies outside the {region["id"]} bounds')
         shutil.copyfile(path, root / 'dist/regions' / region['id'] / 'shore-habitat.geojson')
+        copied.add(region['id'])
+    # Reconcile only known output names, after processing the current inputs.
+    for region_id in sorted(known.keys() - copied):
+        output = root.resolve() / 'dist/regions' / region_id
+        if output.resolve() != output:
+            raise ValueError(f'Shore habitat output directory is not a direct staging path: {region_id}')
+        (output / 'shore-habitat.geojson').unlink(missing_ok=True)
 
 
 def build(root=REPO, now=None):

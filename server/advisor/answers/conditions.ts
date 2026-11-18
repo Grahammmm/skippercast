@@ -78,6 +78,16 @@ function sample(data: Feed, key: string, time: number, unit: string, end: number
   return h[key][i];
 }
 
+/**
+ * SCA-055: model rows are indexed by the feed's ordered requested points, not by the region manifest. Sample a manifest
+ * index only when the feed asked for exactly the manifest's points, in order, at the same coordinates (the saved-trip
+ * reader's check in server/alert-policy.ts assessTrip); otherwise a port could be rated with another point's weather.
+ */
+export function forecastPointsMatch(feed: Feed, region: Region): boolean {
+  const expected = region.forecast_points.map(p => [p.id, p.latitude, p.longitude]);
+  return JSON.stringify(feed?.forecast?.requested_points) === JSON.stringify(expected);
+}
+
 export interface Hour extends FeedHour {time: number}
 
 /** One hour at one forecast point: GFS wind and GFS-Wave partitions, with ECMWF wind and WAM seas as the second opinion. */
@@ -166,6 +176,7 @@ export function windowConditions(feed: Feed, region: Region, pointId: string, da
     swell_ft: null, swell_period_s: null, swell_from: null, comfort: COMFORT_WORD.unknown, models_agree: null});
   const point = region.forecast_points.findIndex(p => p.id === pointId);
   if (point < 0 || feed?.region_id !== region.id) return empty('regional forecast unavailable');
+  if (!forecastPointsMatch(feed, region)) return empty('forecast locations do not match this regional release');
   const times: number[] = (feed?.forecast?.models?.gfs_global?.data?.[point]?.hourly?.time ?? []).filter((t: unknown) => {
     if (!finite(t)) return false;
     const p = localParts(t * 1000, region.timezone);

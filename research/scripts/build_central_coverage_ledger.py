@@ -36,6 +36,10 @@ def read(path):
     return json.loads(Path(path).read_text())
 
 
+def regions_without_qualified_targets(rows):
+    return [row["region_id"] for row in rows if row["fishing_coordinate_status"] == "none-qualified"]
+
+
 def build(root):
     root = Path(root)
     existing = read(root / "dist/data/atlas.json")
@@ -104,10 +108,11 @@ def build(root):
         shallow, deeper, legacy_research = 0, 0, 0
         for target in targets:
             neighborhood = target.get("neighborhood_depth_ft")
-            if not isinstance(neighborhood, list) or len(neighborhood) != 2 or not all(
-                isinstance(value, (int, float)) and math.isfinite(value) for value in neighborhood
-            ):
-                raise ValueError(f"Target lacks complete depth patch: {region_id}/{target.get('id')}")
+            if (not isinstance(neighborhood, list) or len(neighborhood) != 2
+                    or not all(type(value) is int or (type(value) is float and math.isfinite(value))
+                               for value in neighborhood)
+                    or not 0 < neighborhood[0] <= neighborhood[1]):
+                raise ValueError(f"Target lacks a valid depth patch: {region_id}/{target.get('id')}")
             upper = neighborhood[1]
             if target.get("research_only") or target.get("depth_qualified") is False:
                 if (target.get("research_only") is not True
@@ -116,14 +121,21 @@ def build(root):
                     raise ValueError(f"Contradictory research-only depth status: {region_id}/{target.get('id')}")
                 legacy_research += 1
                 continue
+            review = target.get("depth_qualification")
+            deeper_reviewed = (200 < upper <= 300 and atlas.get("fishing_depth_limit_ft", 0) >= 300
+                               and isinstance(review, dict) and review.get("status") == "reviewed")
+            qualified = (
+                target.get("depth_qualified") is True and target.get("vertical_datum") == "MLLW"
+                and (upper <= 200 or deeper_reviewed)
+            )
+            if not qualified:
+                reason = ("Unreviewed >200 ft target" if upper > 200 and not deeper_reviewed
+                          else "Target lacks qualified depth evidence")
+                raise ValueError(f"{reason}: {region_id}/{target.get('id')}")
             if upper <= 200:
                 shallow += 1
-            elif upper <= 300 and atlas.get("fishing_depth_limit_ft", 0) >= 300 and target.get(
-                "depth_qualification", {}
-            ).get("status") == "reviewed":
-                deeper += 1
             else:
-                raise ValueError(f"Unreviewed >200 ft target: {region_id}/{target.get('id')}")
+                deeper += 1
         needs = {n["id"]: n["status"] for n in coverage["needs"] if n["id"] in CRITICAL}
         row = {
             "region_id": region_id,
@@ -212,7 +224,7 @@ def build(root):
             "qualified_targets_200_to_300ft": sum(r["qualified_targets_200_to_300ft"] for r in rows),
             "legacy_research_candidates": sum(r["legacy_research_candidates"] for r in rows),
             "research_only_outlines": sum(r["research_only_habitat_outlines"] for r in rows),
-            "regions_without_qualified_targets": sum(not r["qualified_targets_at_or_under_200ft"] for r in rows),
+            "regions_without_qualified_targets": len(regions_without_qualified_targets(rows)),
         },
         "regions": rows,
         "warning": "Browsing extents do not measure seabed survey coverage. Research outlines and legacy candidates are not depth-qualified fishing coordinates. The 132 Morro–Avila source-raster vertical datums remain unresolved. " +

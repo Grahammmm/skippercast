@@ -30,7 +30,7 @@ jobs:
   # Conservative shared-data/unknown fallback; explicit area omissions only.
   # Rename/delete paths are included. Non-PR events select the full tier.
   changes:
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       survey: ${{ steps.filter.outputs.survey }}
@@ -55,7 +55,7 @@ jobs:
   survey-science:
     needs: [changes, survey-tests, check]
     if: ${{ !cancelled() }}
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -75,9 +75,7 @@ jobs:
     # main, merge queue, nightly and dispatch. `survey-science` gates on it.
     needs: changes
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.survey == 'true') }}
-    # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
-    # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     # Pull requests keep one `pr` leg. The full tier runs as parallel parts: the two
     # slowest coast modules alone, everything else in `rest` (AUD-SC7). The gate
     # reads the aggregate result, which is success only when every leg passes.
@@ -179,9 +177,7 @@ jobs:
     # Four shards (CI-3, G 2026-11-13): each of the two shards still spent 13 to 14 minutes in the
     # test step with Playwright's 4 workers already using the runner's 4 CPUs, so more runners is
     # the lever. Each shard is its own check, e2e (1) to e2e (4); all four must pass.
-    # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
-    # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
       # Every shard must report its own verdict. bin/mergegate.py reads a cancelled check as
@@ -206,11 +202,7 @@ jobs:
       - name: Build Worker and public assets
         run: pnpm build
       - name: Install Playwright's Chromium (with system libraries on GitHub-hosted runners)
-        if: runner.environment == 'github-hosted'
         run: pnpm exec playwright install --with-deps chromium
-      - name: Install Playwright's Chromium (self-hosted; the host already has its libraries)
-        if: runner.environment != 'github-hosted'
-        run: pnpm exec playwright install chromium
       # Playwright splits its own test list, so the shards together run exactly the suite
       # `playwright test` ran as one job: same specs, same projects, same assertions.
       - name: Restore nightly quarantine clock (read-only; PRs never save it)
@@ -256,7 +248,7 @@ jobs:
     # no write token/PR/publication, and a missing/failed shard earns no green day.
     needs: e2e
     if: always() && github.event_name == 'schedule'
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -295,9 +287,7 @@ jobs:
     needs: changes
     # A broken selector runs conservative tests, but cannot pass the final gate.
     if: ${{ !cancelled() }}
-    # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
-    # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     strategy:
       # Every leg reports: a 3.11 failure must not cancel 3.13 and hide its result.
       fail-fast: false
