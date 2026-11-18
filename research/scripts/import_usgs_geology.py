@@ -16,6 +16,26 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from skippercast.platform.contracts import REPO, load_region, atomic_json, read_json, within
 
 
+CATALOG = REPO / "catalog" / "usgs-sansimeon-geology.json"
+
+
+def authenticate_archive(path, catalog):
+    """Return the archive digest only if it equals the reviewed release digest."""
+    actual = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    if actual != catalog["archive_sha256"]:
+        raise ValueError("San Simeon geology ZIP digest differs from the reviewed release; review the source before rebuilding")
+    return actual
+
+
+def require_metric_crs(crs, catalog):
+    """Metric exclusions and area cutoffs assume the reviewed projected CRS in metres."""
+    expected = CRS.from_user_input(catalog["shapefile_crs"])
+    if not (crs == expected or crs.to_epsg() == expected.to_epsg()) or not crs.is_projected \
+            or any(a.unit_name not in ("metre", "meter") for a in crs.axis_info):
+        raise ValueError("San Simeon geology .prj is not the reviewed metric CRS " + catalog["shapefile_crs"])
+    return crs
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--region", required=True)
@@ -25,12 +45,13 @@ def main():
     # This provider adapter deliberately accepts only this documented release.
     if "usgs-san-simeon" not in region["source_bindings"]["substrate"]:
         raise ValueError("San Simeon geology is not bound to this region")
+    digest=authenticate_archive(args.zip, read_json(CATALOG))
     with zipfile.ZipFile(args.zip) as z:
         stem="Geology_SanSimeon"
         if any(info.file_size>25_000_000 for info in z.infolist()):
             raise ValueError("Archive member too large")
         reader=shapefile.Reader(**{key:io.BytesIO(z.read(stem+"."+key)) for key in ("shp","shx","dbf")})
-        crs=CRS.from_wkt(z.read(stem+".prj").decode())
+        crs=require_metric_crs(CRS.from_wkt(z.read(stem+".prj").decode()), read_json(CATALOG))
         forward=Transformer.from_crs(4326,crs,always_xy=True).transform
         inverse=Transformer.from_crs(crs,4326,always_xy=True).transform
         extent=transform(forward,box(*region["fishing_bounds"]))
@@ -59,7 +80,7 @@ def main():
                     "publication_year":2015,"depth_qualified":False,"fishing_target":False}})
     result={"type":"FeatureCollection","schema_version":1,"region_id":region["id"],"features":features,
         "source":{"id":"usgs-san-simeon","url":"https://pubs.usgs.gov/sim/3327/downloads/Geology_SanSimeon.zip",
-        "sha256":hashlib.sha256(args.zip.read_bytes()).hexdigest(),"publication_year":2015,
+        "sha256":digest,"publication_year":2015,
         "attribution":"U.S. Geological Survey, Watt and others, SIM 3327 (2015)",
         "derivation":"WGS84 reprojection; regional crop; dissolve adjacent units; 8 m simplification; 100 m MPA exclusion; minimum 0.025 km² pieces.",
         "limitations":"Regional geological interpretation, not depth-qualified habitat, catch evidence, boulder measurements or navigation. Sediment veneers may cover bedrock; no depth is inferred."}}
