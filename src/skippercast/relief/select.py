@@ -98,17 +98,17 @@ def public_rights(registry):
         return 'unknown', 'no_unambiguous_registry_binding', None
     rights = registry.get('rights', {})
     display = rights.get('public_display')
-    owner = rights.get('owner_public_display', {})
     if display == 'excluded':
         return 'excluded', 'registry_excluded', None
+    # The operative decision covers display, not technical review or raw
+    # redistribution. An owner record explains an allowance but cannot grant it.
+    if display != 'allowed':
+        return 'private', 'registry_public_display_not_allowed', None
+    owner = rights.get('owner_public_display') or {}
     basis = owner.get('basis')
     if owner.get('decision') == 'allowed' and isinstance(basis, str) and basis.strip():
         return 'public', 'registry_owner_public_display_allowed', basis
-    if display == 'allowed' or (display is None and registry.get('review_status') == 'approved'
-                                and registry.get('publication_allowed') is not False
-                                and rights.get('commercial_use') == 'allowed'):
-        return 'public', 'registry_public_display_allowed', None
-    return 'private', 'registry_public_display_not_allowed', None
+    return 'public', 'registry_public_display_allowed', None
 
 
 def caps_index(doc):

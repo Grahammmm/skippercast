@@ -55,10 +55,12 @@ def row_for(raw, source_id, **kwargs):
     return dict(path=str(raw), id=source_id, kind='elevation', admissible_now=True, **kwargs)
 
 
-def registry_row(source_id, display='allowed', owner=False):
-    rights = dict(attribution='Synthetic source fixture', public_display=display,
+def registry_row(source_id, display: str | None = 'allowed', owner=False, **status):
+    rights = dict(attribution='Synthetic source fixture', commercial_use='allowed',
                   **({'owner_public_display': dict(decision='allowed', basis=BASIS)} if owner else {}))
-    return dict(id=source_id, documentation_url='https://example.org/survey', rights=rights)
+    if display is not None:
+        rights['public_display'] = display
+    return dict(id=source_id, documentation_url='https://example.org/survey', rights=rights, **status)
 
 
 def normalized(cache, raw, values, classes=None, cell=1):
@@ -103,8 +105,12 @@ def test_region_manifests_select_rights_priority_and_certified_area(tmp_path):
                             provenance_id='8657-void-fill' if ident == 'usgs-coned-ca-8657' else None,
                             provenance_class='measured' if ident == 'nominal-1m' else 'unknown',
                             rights_class='private'))
-        registry.append(registry_row(ident, 'private' if ident == 'usgs-morro-bay' else 'allowed',
-                                     owner=ident == 'usgs-morro-bay'))
+        if ident == 'usgs-morro-bay':
+            # Display is allowed even though the source cannot be redistributed
+            # and its terms have not been approved in the registry.
+            registry.append(registry_row(ident, owner=True, review_status='restricted', publication_allowed=False))
+        else:
+            registry.append(registry_row(ident))
     geographic = raster(tmp_path / 'geographic.tif', grid, crs='EPSG:4326')
     rows.append(dict(row_for(geographic, 'geographic'), admissible_now=False,
                      hold_reason='requires_projected_metre_grid'))
@@ -113,6 +119,12 @@ def test_region_manifests_select_rights_priority_and_certified_area(tmp_path):
     absent = tmp_path / 'does-not-exist.tif'
     rows.append(row_for(absent, 'mbari-seafloor-mapping', rights_class='public'))
     registry.append(registry_row('mbari-seafloor-mapping', 'excluded', owner=True))
+    # Neither an owner note nor approved raw redistribution replaces the
+    # operative display field. These must be skipped before file access.
+    rows.append(row_for(tmp_path / 'owner-note-only.tif', 'owner-note-only'))
+    registry.append(registry_row('owner-note-only', 'private', owner=True))
+    rows.append(row_for(tmp_path / 'no-display-decision.tif', 'no-display-decision'))
+    registry.append(registry_row('no-display-decision', display=None, review_status='approved', publication_allowed=True))
     census = put(region / 'census.json', dict(summary={'region': 'morro-bay'}, files=rows[::-1]))
     put(tmp_path / 'registry.json', {'sources': registry})
 
@@ -137,6 +149,9 @@ def test_region_manifests_select_rights_priority_and_certified_area(tmp_path):
     report = {Path(s['path']).stem: s for s in read(selected / 'selection.json')['files']}
     assert len(report) == len(rows)
     assert report['does-not-exist']['reason'] == 'registry_excluded'
+    for ident in ('owner-note-only', 'no-display-decision'):
+        assert (report[ident]['decision'], report[ident]['reason']) == (
+            'skipped', 'registry_public_display_not_allowed')
     assert report['geographic']['reason'] == 'no_admissible_normalized_twin'
     assert report['certified']['certified_area_m2_by_depth_band'] == {'0-20m': 1, '20-91.44m': 2}
     assert report['deep-only']['certified_area_m2_by_depth_band'] == {'0-20m': 0, '20-91.44m': 2}
