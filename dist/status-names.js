@@ -134,4 +134,8 @@ export const SOURCE_NAMES = Object.freeze({
   "usgs-3dep-1m-dem": "USGS 3DEP 1 m bare-earth DEM",
   "usgs-southern-cascadia-p9c5dbmr": "USGS Southern Cascadia 30 m composite bathymetry (v2.0)",
   "mbari-seafloor-mapping": "MBARI direct seafloor mapping products",
+  "usgs-of2005-1170-nanphab": "USGS OFR 2005-1170 habitat polygons, North Anacapa Passage",
+  "usgs-of2005-1170-sanahab": "USGS OFR 2005-1170 habitat polygons, South Anacapa Island",
+  "usgs-of2005-1170-sanphab": "USGS OFR 2005-1170 habitat polygons, South Anacapa Passage",
+  "usgs-of2005-1170-secruhab": "USGS OFR 2005-1170 habitat polygons, Southeast Santa Cruz Island",
 });
