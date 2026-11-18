@@ -109,7 +109,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
       <h3 class="ui-eyebrow">{t('conditions.tides', lang)}</h3>
       {brief?.tideEvents.length ? (
         <ul class="app-conditions-tides">
-          {brief.tideEvents.map(e => <li key={e.at}>{t(e.type === 'H' ? 'conditions.tide.high' : 'conditions.tide.low', lang)} <span class="ui-mono">{timeText(e.at, tz, false, lang)} · {fixed(e.heightFt, 1, lang)} ft {brief.tideDatum}</span></li>)}
+          {brief.tideEvents.map(e => <li key={e.at}>{t(e.type === 'H' ? 'conditions.tide.high' : 'conditions.tide.low', lang)} <span class="ui-mono">{timeText(e.at, tz, false, lang)}{brief.tideDatum ? ` · ${fixed(e.heightFt, 1, lang)} ft ${brief.tideDatum}` : null}</span></li>)}
         </ul>
       ) : <p class="app-empty">{t('conditions.tide.none', lang, {day: dayName(state.at, tz, lang) || t('conditions.tide.day', lang)})}</p>}
       <p class="app-conditions-daylight">{daylightText(brief?.date === state.day ? brief : currentBrief(now, selected), state.day, tz, lang)}</p>
