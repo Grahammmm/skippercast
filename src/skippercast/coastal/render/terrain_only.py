@@ -4,6 +4,7 @@ Only byte-bound, already-derived GeoTIFFs and a separate scientific review are
 read. Source hashes are provenance, never source locations or reader commands.
 """
 import argparse
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
 from importlib.resources import files
 import io
@@ -510,27 +511,65 @@ def preview(root, acceptance, *, output_dir, now, style=None, minimum_valid_unti
     return result
 
 
+_CONSOLE_COUNTS = ('support_cells', 'vertices', 'triangles')
+# Only exact, fixed codes may leave the CLI. Schema errors and OS errors can
+# contain private values and paths, even when their prefix looks familiar.
+_CONSOLE_HOLDS = frozenset({
+    'invalid_arguments', 'terrain_only_dependency:jsonschema',
+    'cli_json_regular_file_required', 'cli_json_byte_bound', 'cli_json_duplicate_key',
+    'cli_json_nonfinite:NaN', 'cli_json_nonfinite:Infinity', 'cli_json_nonfinite:-Infinity',
+    'cli_json_nonfinite:overflow', 'cli_json_object_required',
+    'unknown_style_control', 'invalid_style_enum', 'locked_depth_range_required',
+    'locked_depth_range_requires_locked_mode',
+    *(f'invalid_style_{name}' for name in DEFAULT_STYLE),
+})
+
+
+class _ConsoleParser(argparse.ArgumentParser):
+    def error(self, message):
+        raise ValueError('invalid_arguments')
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = _ConsoleParser(description=__doc__, prog='terrain_only')
     parser.add_argument('--root',type=Path,required=True)
     parser.add_argument('--acceptance',type=Path,required=True)
     parser.add_argument('--output-dir',required=True)
     parser.add_argument('--style',type=Path)
     parser.add_argument('--context-only',action='store_true')
-    args = parser.parse_args(argv)
+    summary: dict[str, object] = dict(schema='coastal-terrain-only-console-v1', state='held', holds=[],
+        counts=dict.fromkeys(_CONSOLE_COUNTS, 0), receipt_content_sha256=None,
+        source_accessed=False, imagery_used=False, internal_diagnostic=True,
+        publication_prohibited=True, website='held', habitat='unassessed')
+    context_digest = None
     try:
-        acceptance = bounded_json(args.acceptance)
-        if args.context_only:
-            print(context(acceptance))
+        args = parser.parse_args(argv)
+        # Library diagnostics (e.g. raster-reader warnings) are not console output.
+        with open(os.devnull, 'w') as sink, redirect_stdout(sink), redirect_stderr(sink):
+            acceptance = bounded_json(args.acceptance)
+            if args.context_only:
+                context_digest = context(acceptance)
+            else:
+                result = preview(args.root, acceptance, output_dir=args.output_dir,
+                                 now=datetime.now(timezone.utc),
+                                 style=bounded_json(args.style) if args.style else None)
+                counts = {key: result[key] for key in _CONSOLE_COUNTS}
+                if result['state'] != 'done' or any(type(n) is not int or n < 0 for n in counts.values()):
+                    raise ValueError('invalid_render_summary')
+                # Hash canonical receipt content, not the file's trailing newline.
+                summary.update(state='done', counts=counts, receipt_content_sha256=digest(result))
+        if context_digest is not None:
+            print(context_digest)
             return 0
-        result = preview(args.root,acceptance,output_dir=args.output_dir,now=datetime.now(timezone.utc),
-                         style=bounded_json(args.style) if args.style else None)
-        print(json.dumps(result,sort_keys=True,allow_nan=False))
-        return 0
-    except (ValueError,KeyError,TypeError,OSError) as error:
-        print(json.dumps(dict(schema=RESULT,state='held',holds=[str(error)],source_accessed=False,
-            imagery_used=False,internal_diagnostic=True,publication_prohibited=True,website='held',habitat='unassessed')))
-        return 2
+    except Exception as error:  # CLI boundary: never print a private exception or traceback.
+        reason = 'render_failed'
+        if type(error) is ValueError and len(error.args) == 1:
+            code = error.args[0]
+            if type(code) is str and code in _CONSOLE_HOLDS:
+                reason = code
+        summary['holds'] = [reason]
+    print(json.dumps(summary, sort_keys=True, allow_nan=False))
+    return 0 if summary['state'] == 'done' else 2
 
 
 if __name__ == '__main__':
