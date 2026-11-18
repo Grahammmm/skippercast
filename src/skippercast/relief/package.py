@@ -164,7 +164,9 @@ def release_layers(doc: dict) -> list[dict]:
     if paths != sorted(set(paths)) or ARCHIVE not in paths:
         raise ReleaseError('release layers must be sorted and unique and include relief.pmtiles')
     digest_rows = [row for row in rows if row['path'] == DIGEST_ROOT]
-    if doc.get('digest_root_sha256') != (digest_rows[0]['sha256'] if digest_rows else None):
+    if not digest_rows:
+        raise ReleaseError('relief digest root is required in release layers')
+    if doc.get('digest_root_sha256') != digest_rows[0]['sha256']:
         raise ReleaseError('digest root is not bound to its release layer')
     return rows
 
