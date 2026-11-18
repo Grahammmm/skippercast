@@ -20,5 +20,10 @@ export function UnitChoice() {
     <div class="app-account-presets app-account-presets--wind">{(['kt', 'mph', 'kmh'] as const).map(wind =>
       <Button key={wind} size="sm" pressed={current.wind === wind} onClick={choose({wind})}>{t(`units.wind.${wind}`, lang)}</Button>)}
     </div>
+  </section><section aria-labelledby={`${id}-height`}>
+    <h2 id={`${id}-height`} class="ui-eyebrow">{t('units.height.label', lang)}</h2>
+    <div class="app-account-presets">{(['ft', 'm'] as const).map(height =>
+      <Button key={height} size="sm" pressed={current.height === height} onClick={choose({height})}>{t(`units.height.${height}`, lang)}</Button>)}
+    </div>
   </section></>;
 }
