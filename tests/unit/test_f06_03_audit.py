@@ -24,7 +24,7 @@ SYNTHETIC = "Synthetic test terrain — not survey measurements"
 WARNINGS = ("INTERNAL DIAGNOSTIC · NOT FOR NAVIGATION · PUBLICATION PROHIBITED", "WEBSITE HELD · HABITAT UNASSESSED")
 # Every measured-data claim the page body/script can show; none may appear for a non-real input.
 CLAIMS = ("measured sample tile", "Accepted mesh", "accepted depth mesh", "between measured samples",
-          "Measured mode", "original measured triangles", ">Measured<")
+          "Measured mode", "original measured triangles", ">Measured<", "Measured caps", "Measured view")
 REVIEW = "coastal-terrain-only-science-review-v1"
 
 
@@ -51,12 +51,15 @@ def test_negative_control_synthetic_payload_is_labelled_synthetic_everywhere():
     page = _text(_payload(True, synthetic=True))
     assert SYNTHETIC in _heading(page)
     _assert_no_measured_claim(page)
+    # Runtime legend/contour copy is neutral, but the internal mode value stays 'Measured'.
+    assert 'value="Measured"' in page and "'Original-triangles caps: " in page and "'Original-triangles view uses" in page
 
 
 def test_valid_control_reviewed_real_payload_keeps_measured_wording():
     page = _text(_payload(True, synthetic=False))
     assert "measured sample tile" in _heading(page) and "Synthetic test terrain" not in page
-    assert all(claim in page for claim in ("between measured samples", "Measured mode", ">Measured<"))
+    assert all(claim in page for claim in ("between measured samples", "Measured mode", ">Measured<",
+                                           "original measured triangles", "Measured caps", "Measured view"))
     assert all(w in page for w in WARNINGS)
 
 

@@ -280,6 +280,20 @@ NEUTRAL_COPY = (
     ('interpolation estimate between measured samples', 'interpolation estimate between grid samples'),
     ('Measured mode shows original triangles', 'Original-triangles mode shows original triangles'),
 )
+# Runtime legend/contour-status copy in the UI script; the internal mode value 'Measured' is kept.
+UI_NEUTRAL_COPY = (
+    ('original measured triangles', 'original triangles'),
+    ("'Measured caps: ", "'Original-triangles caps: "),
+    ("'Measured view uses the original", "'Original-triangles view uses the original"),
+)
+
+
+def _neutralise(text, pairs):
+    for old, new in pairs:
+        if old not in text:
+            raise ValueError('neutral_copy_anchor_missing')
+        text = text.replace(old, new)
+    return text
 
 
 def _positively_real(data):
@@ -326,16 +340,13 @@ def html(data, style=None):
     ui = (module/'terrain_demo_ui.js').read_text()
     encoded = json.dumps(data, sort_keys=True, separators=(',', ':'), allow_nan=False)
     encoded = encoded.replace('&', '\\u0026').replace('<', '\\u003c').replace('>', '\\u003e')
-    script = 'const TERRAIN_STYLE=' + json.dumps(style_config(style), sort_keys=True, separators=(',', ':')) + ';\nconst TERRAIN_PAYLOAD=' + encoded + ';\n' + core + '\n' + (ui if _positively_real(data) else ui.replace('original measured triangles', 'original triangles'))
+    script = 'const TERRAIN_STYLE=' + json.dumps(style_config(style), sort_keys=True, separators=(',', ':')) + ';\nconst TERRAIN_PAYLOAD=' + encoded + ';\n' + core + '\n' + (ui if _positively_real(data) else _neutralise(ui, UI_NEUTRAL_COPY))
     def csp_hash(text):
         return "'sha256-" + base64.b64encode(hashlib.sha256(text.encode()).digest()).decode() + "'"
     csp = "default-src 'none'; script-src " + csp_hash(script) + "; style-src " + csp_hash(CSS) + "; connect-src 'none'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
     body = BODY.replace(MEASURED_LABEL, heading_label(data), 1)
     if not _positively_real(data):
-        for old, new in NEUTRAL_COPY:
-            if old not in body:
-                raise ValueError('neutral_copy_anchor_missing')
-            body = body.replace(old, new)
+        body = _neutralise(body, NEUTRAL_COPY)
     document = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="' + csp + '"><title>Internal terrain diagnostic</title><style>' + CSS + '</style></head><body>' + body + '<script>' + script + '</script></body></html>\n'
     result = document.encode('utf-8')
     if len(result) > MAX_HTML_BYTES:

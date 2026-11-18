@@ -12,7 +12,8 @@ import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 const dir = await mkdtemp(join(tmpdir(), 'map-loading-'));
 const out = join(dir, 'component.mjs');
 await build({stdin: {resolveDir: process.cwd(), loader: 'ts', contents: `
-  export {PresentationToggle} from './web/app/MapStage.tsx';
+  export {PresentationToggle, reliefDrawn} from './web/app/MapStage.tsx';
+  export {beginWaypointPlacement, cancelWaypointPlacement} from './web/waypoint-placement.ts';
   export {mapFirstIdle} from './web/map-ready.ts';
   export {chartFailed} from './web/map/chart.ts';
   export {seafloorRough} from './web/map/seafloor.ts';
@@ -21,7 +22,7 @@ await build({stdin: {resolveDir: process.cwd(), loader: 'ts', contents: `
   export {h, render} from 'preact';
   export {act} from 'preact/test-utils';`}, bundle: true, format: 'esm', platform: 'node',
 outfile: out, jsx: 'automatic', jsxImportSource: 'preact', logLevel: 'silent', plugins: preparedRendererPlugins});
-const {PresentationToggle, mapFirstIdle, chartFailed, seafloorRough, setLanguage, state, h, render, act} = await import(pathToFileURL(out).href);
+const {PresentationToggle, reliefDrawn, beginWaypointPlacement, cancelWaypointPlacement, mapFirstIdle, chartFailed, seafloorRough, setLanguage, state, h, render, act} = await import(pathToFileURL(out).href);
 test.after(() => rm(dir, {recursive: true, force: true}));
 
 class Element {
@@ -112,4 +113,25 @@ test('the rough seafloor label shows on the Chart while seafloorRough holds, in 
     await act(() => { seafloorRough.value = false; });
     assert.equal(label(), undefined, 'the label goes once the detail has drawn');
   });
+});
+
+// DATA-LIVE-9 / RETURN 1. Contract: the relief's honesty line (estimated · blank = no survey data · NOT FOR NAVIGATION)
+// shows for exactly as long as the relief is drawn, including while waypoint placement is armed. Believable bug: hiding the
+// note on arming (it was `armed ? null : <DepthShadingNote />`) leaves a drawn relief with no honesty line.
+test('the relief honesty line stays while waypoint placement is armed and goes only when the relief is retired', async () => {
+  await withMount(CHART, async ({root}) => {
+    const note = () => find(root, n => n.attrs?.['data-bottom-relief-note'] !== undefined)[0];
+    await act(() => { mapFirstIdle.value = true; chartFailed.value = false; reliefDrawn.value = false; });
+    assert.equal(note(), undefined, 'nothing drawn: nothing said');
+    await act(() => { reliefDrawn.value = true; });
+    assert.match(text(note()), /^Depth shading: estimated.*blank = no survey data.*NOT FOR NAVIGATION$/);
+    await act(() => { beginWaypointPlacement('morro-bay', () => {}); });
+    assert.ok(note(), 'armed with the relief drawn: the honesty line is still shown');
+    assert.match(text(note()), /NOT FOR NAVIGATION/);
+    await act(() => { cancelWaypointPlacement(); });
+    assert.ok(note(), 'disarmed: still shown while the relief is drawn');
+    await act(() => { beginWaypointPlacement('morro-bay', () => {}); reliefDrawn.value = false; });
+    assert.equal(note(), undefined, 'relief retired while armed: the line goes with it');
+    await act(() => { cancelWaypointPlacement(); });
+  }).finally(() => { reliefDrawn.value = false; cancelWaypointPlacement(); });
 });
