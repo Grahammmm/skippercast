@@ -69,9 +69,9 @@ function watchBottomRelief(engine: ReadonlySignal<Engine | null>) {
     if (!e || !id || shownPresentation.value !== 'chart' || appView.value !== 'coast' || !previewAccess() || !depthShadingOn.value || !basemapAvailable.value) return;
     let cancelled = false, handle: {destroy(): void} | undefined;
     clearUnavailable(BOTTOM_RELIEF);
-    void Promise.all([import('../map/bottom-relief.ts'), import('../map/maplibre.js')]).then(([relief, {lib}]) => {
+    void import('../map/bottom-relief.ts').then(relief => {
       if (cancelled) return;
-      handle = relief.attachBottomRelief({engine: e, region: id, library: lib,
+      handle = relief.attachBottomRelief({engine: e, region: id,
         seafloorOn: () => layers.value.includes('seafloor'),
         fieldOn: () => layers.value.includes('water-temp') || layers.value.includes('chlorophyll') ||
           previewOn.value.some(layer => layer === 'sst' || layer === 'chlorophyll'),

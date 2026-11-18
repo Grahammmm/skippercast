@@ -24,7 +24,7 @@ const readTile: AddProtocolAction = ({url}, {signal}) => {
 interface ReliefOptions {
   engine: Engine;
   region: string;
-  library: {addProtocol(name: string, action: AddProtocolAction): void};
+  library?: {addProtocol(name: string, action: AddProtocolAction): void};
   seafloorOn(): boolean;
   fieldOn(): boolean;
   unavailable(error: unknown): void;
@@ -78,9 +78,13 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
     }});
     // MapLibre uses the pointer's bounds and zoom limits, not a loose TileJSON
     // returned by the object. The header is read only when the first tile is wanted.
-    if (!libraries.has(o.library)) {
-      o.library.addProtocol(SCHEME, readTile);
-      libraries.add(o.library);
+    // Load through the same deferred renderer boundary as the Chart. The
+    // running Chart already has this module; Reports never loads it.
+    const library = o.library ?? (await import('./maplibre.js')).lib;
+    signal.throwIfAborted();
+    if (!libraries.has(library)) {
+      library.addProtocol(SCHEME, readTile);
+      libraries.add(library);
     }
     let checked: ReturnType<typeof archive.getHeader> | undefined;
     readers.set(token, async (z, x, y, request) => {
