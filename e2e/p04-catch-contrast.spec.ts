@@ -326,7 +326,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SCB-16: scoped picker rules only; never mounted or requested by Reports.
   "web/region-picker.css": "ebc4fcaed679f3017e83921334f5c9ef5a10e70b7aed04eef6a995a0da75e6af",
   // UXFIX-12: panel.css moves the existing .chart-overflow:focus-visible outline out of its max-width:760px media block so it applies at every width; it paints only on keyboard focus of the history/forecast chart wrappers, never in the Reports catch sheet, so no counted catch paint or contrast changes. Rebound from the final bytes.
-  "packages/coast/panel.css": "4558cd4edb0be1827ef6c00523a05b1c8eae84b0d0d81a93c33d5e12e4c66fa9",
+  // SCA-317: only the History disclosure target height changes; Reports catch paint is unchanged.
+  "packages/coast/panel.css": "8eaf2e7f806030b9c760c2c04cd9e3e232f9e4c56d196fdae005ee6607382e9a",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
@@ -406,7 +407,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MAIN-RED-7: only the appCss surface binding/comment changed; contrast calculations and gates unchanged.
   // MB-05 adds contour checks and rebinds map-only tokens; RF2000-8 corrects selector-to-brace whitespace matching. Contrast calculations and Reports catch assertions are unchanged.
   // MB-20 adds the additive overlay-line gate (checkOverlayLines, 3:1 on --map-water) and rebinds the tokensCss surface hash; contrast() and every existing check are unchanged.
-  "scripts/check_contrast.mjs": "cd1b96f378aa604ddf7a90dfe76c1945844fa8d9d97323b0a98f300671b3aa2d",
+  // SCA-317: checker only rebinds the History target-size stylesheet hash; contrast math is unchanged.
+  "scripts/check_contrast.mjs": "f72754f01a4cb39317b8541a1a243216fc2a9ce476117a142e6067d4ece3f4f3",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
