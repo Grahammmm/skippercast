@@ -64,3 +64,77 @@ dbTest('a contact with only unconfirmed rows is not a recipient of a confirmed r
   assert.deepEqual(f.replies, {outbound: 1, contacts: 1, per_contact: 1}, 'the legacy count would have been 3 rows over 3 contacts');
   assert.equal(f.unconfirmed_replies.pending, 2);
 });
+
+// ---- The admin view must show it (SCA-214 review return) ----
+// Contract protected: an operator looking at the Funnel during a relay outage sees the pending count and the
+// held/sending/unknown split beside the confirmed replies, not just "0 replies".
+// Bug that fails it: an API that carries unconfirmed_replies while web/admin/funnel.tsx renders only replies.outbound.
+// Real adminFunnel output feeds the real FunnelView (Preact bundled in memory); only the DOM and fetch are fakes.
+const {mkdtemp, rm} = await import('node:fs/promises');
+const {tmpdir} = await import('node:os');
+const {join} = await import('node:path');
+const {pathToFileURL} = await import('node:url');
+const {build} = await import('esbuild');
+const dir = await mkdtemp(join(tmpdir(), 'funnel-view-'));
+const bundle = join(dir, 'component.mjs');
+await build({stdin: {resolveDir: process.cwd(), loader: 'ts', contents: `
+  export {FunnelView} from './web/admin/funnel.tsx';
+  export {ADMIN_COPY} from './web/advisor/copy.ts';
+  export {h, render} from 'preact';
+  export {act} from 'preact/test-utils';`}, bundle: true, format: 'esm', platform: 'node',
+  outfile: bundle, jsx: 'automatic', jsxImportSource: 'preact', logLevel: 'silent'});
+const {FunnelView, ADMIN_COPY: COPY, h, render, act} = await import(pathToFileURL(bundle).href);
+test.after(() => rm(dir, {recursive: true, force: true}));
+
+class Node_ {
+  constructor(name, data) {
+    Object.assign(this, {localName: name, nodeName: name.toUpperCase(), nodeType: data === undefined ? 1 : 3, data, childNodes: [], parentNode: null, attrs: {}, on: {}, style: {}});
+  }
+  get firstChild() { return this.childNodes[0] ?? null; }
+  get nextSibling() { return this.parentNode?.childNodes[this.parentNode.childNodes.indexOf(this) + 1] ?? null; }
+  insertBefore(child, ref) {
+    child.parentNode?.removeChild(child);
+    this.childNodes.splice(ref ? this.childNodes.indexOf(ref) : this.childNodes.length, 0, child);
+    child.parentNode = this; return child;
+  }
+  appendChild(child) { return this.insertBefore(child, null); }
+  removeChild(child) { this.childNodes.splice(this.childNodes.indexOf(child), 1); child.parentNode = null; return child; }
+  remove() { this.parentNode?.removeChild(this); }
+  setAttribute(key, value) { this.attrs[key] = String(value); }
+  removeAttribute(key) { delete this.attrs[key]; }
+  addEventListener(type, fn) { this.on[type] = fn; }
+  removeEventListener(type) { delete this.on[type]; }
+}
+globalThis.document = {createElement: name => new Node_(name), createElementNS: (_, name) => new Node_(name), createTextNode: data => new Node_('#text', String(data))};
+const text = node => node.nodeType === 3 ? node.data : node.childNodes.map(text).join('');
+const all = (node, pred) => [...(pred(node) ? [node] : []), ...node.childNodes.flatMap(n => all(n, pred))];
+
+/** Mount FunnelView against a synthetic /api/admin/funnel body; returns {label: value} for every dt/dd pair. */
+async function viewOf(body) {
+  globalThis.fetch = async () => ({ok: true, status: 200, json: async () => body});
+  const root = new Node_('div');
+  await act(() => render(h(FunnelView, {}), root));
+  await act(() => new Promise(resolve => setImmediate(resolve)));
+  const stats = {};
+  for (const dt of all(root, n => n.localName === 'dt')) stats[text(dt)] = text(dt.nextSibling);
+  return {stats, body: text(root)};
+}
+
+dbTest('the Funnel view shows an all-held outage as no replies and a visible pending count', async () => {
+  const {db} = fixture([['c1', 'held'], ['c1', 'held'], ['c2', 'held'], ['c3', 'sending'], ['c3', 'unknown'], ['c4', 'failed']]);
+  const {stats, body} = await viewOf(JSON.parse(JSON.stringify(await funnel(db))));
+  assert.equal(stats[COPY.repliesSent], '0');
+  assert.equal(stats[COPY.repliesPerContact], '—');
+  assert.equal(stats[COPY.repliesPending], '5');
+  assert.deepEqual([stats[COPY.repliesHeld], stats[COPY.repliesSending], stats[COPY.repliesUnknown]], ['3', '1', '1']);
+  assert.ok(!(COPY.repliesOther in stats), 'the "other" row stays hidden while it is zero');
+  assert.ok(body.includes(COPY.repliesSentNote), 'sent is described as accepted, not delivered');
+});
+
+dbTest('positive control: sent rows show as replies, with zero pending when nothing is outstanding', async () => {
+  const {db} = fixture([['c1', 'sent'], ['c1', 'sent'], ['c2', 'sent'], ['c2', 'sent']]);
+  const {stats} = await viewOf(JSON.parse(JSON.stringify(await funnel(db))));
+  assert.equal(stats[COPY.repliesSent], '4');
+  assert.equal(stats[COPY.repliesPerContact], '2.0');
+  assert.deepEqual([stats[COPY.repliesPending], stats[COPY.repliesHeld], stats[COPY.repliesSending], stats[COPY.repliesUnknown]], ['0', '0', '0', '0']);
+});
