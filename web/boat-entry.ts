@@ -59,10 +59,14 @@ function saveLength(value: string, storage: StoreStorage | null): boolean {
   let saved: {boat: Record<string, unknown>} | null = null;
   // A failed read must not look like an empty store: let it throw, so the saved boat is never overwritten.
   const raw = storage.getItem(BOAT_KEY);
-  try {
-    const stored = JSON.parse(raw || 'null');
-    if (stored && stored.schema_version === 1 && stored.boat && typeof stored.boat === 'object') saved = stored;
-  } catch { saved = null; }
+  // Only a genuinely empty key gets defaults. Any other value that is not a readable v1 boat (malformed JSON, a
+  // newer schema) is left byte for byte as it is: throw, so the caller says the boat was not saved (F13-07).
+  if (raw !== null && raw.trim() !== '') {
+    let stored: {schema_version?: unknown; boat?: unknown} | null;
+    try { stored = JSON.parse(raw); } catch { throw new Error('unreadable saved boat'); }
+    if (!stored || stored.schema_version !== 1 || !stored.boat || typeof stored.boat !== 'object') throw new Error('unreadable saved boat');
+    saved = stored as {boat: Record<string, unknown>};
+  }
   const next = saved
     ? {...saved, boat: {...saved.boat, loa_ft: loa, ...(autoName(saved.boat.name) ? {name} : {})}}
     : {schema_version: 1, boat: normalize({name, loa_ft: loa}), query: '', preset: null, saved_at: new Date().toISOString(), lookup: null};
