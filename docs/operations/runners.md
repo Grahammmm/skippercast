@@ -30,8 +30,8 @@ variable can be moved by changing that variable:
 
 | Runner or variable | Workflows | Unset (default) | Set to `skippercast` |
 | --- | --- | --- | --- |
-| Literal `ubuntu-latest` | `budget-drift.yml`, `buoy-history.yml`, `feed-freshness.yml`, `live-conditions.yml` (all 4 jobs), `ops-report.yml`, `regional-legal-review.yml` | Always GitHub-hosted | Not configurable |
-| `DATA_RUNNER` | advisor media, coast assets, fleet AIS processor and listener install, fleet registry, fleet OSINT; fallback for `DATA_RUNNER_LIGHT` | advisor, coast and fleet jobs skip; LIGHT jobs use `ubuntu-latest` if `DATA_RUNNER_LIGHT` is also unset | our runners (free minutes) |
+| Literal `ubuntu-latest` | `advisor-media.yml`, `budget-drift.yml`, `buoy-history.yml`, `coast-assets.yml`, `feed-freshness.yml`, `live-conditions.yml` (all 4 jobs), `ops-report.yml`, `regional-legal-review.yml` | Always GitHub-hosted | Not configurable |
+| `DATA_RUNNER` | fleet AIS processor and listener install, fleet registry, fleet OSINT; fallback for `DATA_RUNNER_LIGHT` | fleet jobs skip; LIGHT jobs use `ubuntu-latest` if `DATA_RUNNER_LIGHT` is also unset | our runners (free minutes) |
 | `DATA_RUNNER_LIGHT` | the portable CPU-heavy subset: daily data, research daily, research substrate, research fish survey, draft-region health and rehearsal, forecast tiles, basemap | falls back to `DATA_RUNNER`, then `ubuntu-latest` | e.g. `ubuntu-latest` moves only these to GitHub-hosted runners (free on a public repo) while the rest stay on `DATA_RUNNER` |
 | `SEAFLOOR_RUNNER` | seafloor preparation, reach processing and publication | `ubuntu-latest` | a verified dedicated runner label |
 | `CI_RUNNER` | `ci.yml` (check, e2e, survey-science) | `ubuntu-latest` | our runners only when `CI_SELF_HOSTED_READY=true` |
@@ -110,9 +110,9 @@ Steps:
   GitHub storage (500 MB free on the Free plan). The research workflows upload the most;
   shorten their `retention-days` if the storage bill appears.
 - Secrets used by jobs on the box: `R2_PUBLISH_TOKEN` (or the deploy token as fallback),
-  `R2_ADVISOR_TOKEN` (the advisor media job, below), `AISSTREAM_API_KEY` (the fleet AIS
-  listener, below), `GOOGLE_PLACES_API_KEY` (the fleet registry run, below), `CLOUDFLARE_ACCOUNT_ID` and the Actions `GITHUB_TOKEN`. Keep the box patched and its SSH key-only; `docs/legal/threat-model.md`
-  lists it as an asset once it exists.
+  `AISSTREAM_API_KEY` (the fleet AIS listener, below), `GOOGLE_PLACES_API_KEY` (the fleet
+  registry run, below), `CLOUDFLARE_ACCOUNT_ID` and the Actions `GITHUB_TOKEN`. Keep the
+  box patched and its SSH key-only; `docs/legal/threat-model.md` lists it as an asset.
 
 ## The advisor media job
 
@@ -126,8 +126,9 @@ read and write) when something becomes pending, at most once a minute, and its c
 every 15 minutes while anything still is. A run takes seconds to a few minutes and holds one
 runner instance; its concurrency group keeps it to one run at a time.
 
-It runs only on the box: the job's `if` needs `ENABLE_ADVISOR=true` and a non-empty
-`DATA_RUNNER`, so with either unset a dispatch is skipped and costs nothing. It needs:
+It runs on GitHub-hosted `ubuntu-latest` only when `ENABLE_ADVISOR=true`. If the variable
+is unset, a dispatch skips the job without allocating a runner. The workflow installs
+`ffmpeg` (which includes `ffprobe`) before running the media job. It needs:
 
 | Name | Kind | What |
 | --- | --- | --- |
@@ -135,7 +136,7 @@ It runs only on the box: the job's `if` needs `ENABLE_ADVISOR=true` and a non-em
 | `CLOUDFLARE_ACCOUNT_ID` | secret | Already set for the data jobs. |
 | `ADVISOR_NUMBER` | variable | The advisor's number for the Story footer (shown as (805) 555-0100); without it the footer reads `skippercast.com/text`. |
 | `ADVISOR_PUBLIC_BASE` | variable, optional | Where the job calls the Worker; default `https://skippercast.com`. |
-| `ffmpeg` and `ffprobe` | on the box's `PATH` | Required for videos (`sudo apt install ffmpeg` on Ubuntu or Debian, `brew install ffmpeg` on macOS). The job copies each video's streams without metadata (`-map_metadata -1 -map_chapters -1 -c copy -movflags +faststart`, no data tracks), checks with `ffprobe` and an atom walk that no `location`, `©xyz` or `com.apple.quicktime.location.ISO6709` tag is left, and uploads `advisor/derived/<id>/video.mp4`. Without ffmpeg each video is reported `no-ffmpeg`: it can never be approved, posted or served (the admin card says why), and the run's log warns. After installing it, put those videos back in the list with `UPDATE advisor_media SET derived_at=NULL, derived_error=NULL WHERE kind='video' AND derived_error='no-ffmpeg'` (`wrangler d1 execute`), and the next dispatch strips them. |
+| `ffmpeg` and `ffprobe` | workflow-installed tools | Required for videos. The job copies each video's streams without metadata (`-map_metadata -1 -map_chapters -1 -c copy -movflags +faststart`, no data tracks), checks with `ffprobe` and an atom walk that no `location`, `©xyz` or `com.apple.quicktime.location.ISO6709` tag is left, and uploads `advisor/derived/<id>/video.mp4`. If the media job runs without these tools, each video is reported `no-ffmpeg`: it can never be approved, posted or served (the admin card says why), and the run's log warns. Once the tools are available, put those videos back in the list with `UPDATE advisor_media SET derived_at=NULL, derived_error=NULL WHERE kind='video' AND derived_error='no-ffmpeg'` (`wrangler d1 execute`), and the next dispatch strips them. |
 
 The job proves who it is with a GitHub OIDC token for the audience
 `https://skippercast.com/api/advisor/jobs`; `deployments/production.json`

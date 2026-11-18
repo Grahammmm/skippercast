@@ -73,9 +73,10 @@ class RunnerSwitchTests(unittest.TestCase):
     # fleet-health.yml alerts when Hermes (the data runner) is down, so it cannot run there (charter-fleet design § 4).
     # e2e-timing.yml measures input latency, so it stays on the same GitHub-hosted runner class every night (CI-PARITY-1).
     HOSTED_ONLY = {
-        'budget-drift.yml', 'buoy-history.yml', 'dco.yml', 'deploy-cloudflare.yml',
-        'e2e-timing.yml', 'feed-freshness.yml', 'fleet-health.yml', 'live-conditions.yml',
-        'ops-report.yml', 'regional-legal-review.yml', 'release.yml',
+        'advisor-media.yml', 'budget-drift.yml', 'buoy-history.yml', 'coast-assets.yml',
+        'dco.yml', 'deploy-cloudflare.yml', 'e2e-timing.yml', 'feed-freshness.yml',
+        'fleet-health.yml', 'live-conditions.yml', 'ops-report.yml', 'regional-legal-review.yml',
+        'release.yml',
     }
 
     # ci.yml is the one pull_request workflow that can reach the box. A pull request from a
