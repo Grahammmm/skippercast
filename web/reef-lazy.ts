@@ -118,4 +118,4 @@ export async function acceptReefLoad(region: string, loader?: Parameters<typeof 
 
 /** "Load fishing spots (about 15 MB) on Wi-Fi": the size rounded to whole MB (1 MB = 1,000,000 bytes, as download sizes are quoted), at least 1. */
 export const offerMegabytes = (bytes: number | null | undefined): number | null =>
-  typeof bytes === 'number' && bytes > 0 ? Math.max(1, Math.round(bytes / 1e6)) : null;
+  typeof bytes === 'number' && Number.isFinite(bytes) && bytes > 0 ? Math.max(1, Math.round(bytes / 1e6)) : null;

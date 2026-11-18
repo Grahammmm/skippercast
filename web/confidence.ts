@@ -72,7 +72,7 @@ export function depthBadge(t: TargetEvidence, datumLabel?: string): Badge {
   if (t.depth_qualified === true && q?.full_geometry_screened === true
       && namedDatum(t.vertical_datum) && (q.native_datum == null || q.native_datum === t.vertical_datum)
       && finite(q.maximum_product_uncertainty_m) && q.maximum_product_uncertainty_m >= 0)
-    return {...base, state: 'qualified', why: {text: qualifiedDepth(t.vertical_datum!, q.maximum_product_uncertainty_m, q.planning_margin_m)}};
+    return {...base, state: 'qualified', why: {text: qualifiedDepth(t.vertical_datum!, q.maximum_product_uncertainty_m, finite(q.planning_margin_m) ? q.planning_margin_m : undefined)}};
   return {...base, state: 'estimated', why: {text: t.evidence_status || `Vertical datum: ${datumLabel || t.vertical_datum || 'not recorded'}.`}};
 }
 
