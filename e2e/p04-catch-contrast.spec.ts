@@ -269,7 +269,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/app/MapStage.tsx": "27dbfafcd0f8b219308d58a6dabb154e855df7e544773bc7aebfc74e6e49e995",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   // MB-05: light map-only colours and habitat opacity change; Reports catch text and backing do not use these roles.
-  "web/tokens.css": "5532bc9452b85f33e202b215ca36b4acd7b4fb8aac2727adf9f5235570cec7fa",
+  // MB-20: only light-theme overlay roles (--flow*, --mpa-fill/line, --sst-2..5, --swell-0..3, --contrast-1/2) change; Reports catch text and backing do not use them.
+  "web/tokens.css": "77ead150a38cae7e4f245cb51f42fddf8c6abd7f1638b1406ab34f41a69692ff",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   // UXFIX-05: tokens.css only turns the eight --text-* font sizes from px into the same sizes in rem (identical at a 16 px root); no colour, paint, gradient, catch markup, assertion or threshold changes, so BODY09 stays applicable. Rebind web/tokens.css and the check_contrast.mjs surface-source pin only.
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
@@ -401,7 +402,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MAIN-RED-5: only the appCss surface binding/comment changed; contrast calculations and gates unchanged.
   // MAIN-RED-7: only the appCss surface binding/comment changed; contrast calculations and gates unchanged.
   // MB-05 adds contour checks and rebinds map-only tokens; RF2000-8 corrects selector-to-brace whitespace matching. Contrast calculations and Reports catch assertions are unchanged.
-  "scripts/check_contrast.mjs": "ae9b15794c821a29cc1b7cb32ad82604dae1a62dc02cdf0a689b701a42883aa0",
+  // MB-20 adds the additive overlay-line gate (checkOverlayLines, 3:1 on --map-water) and rebinds the tokensCss surface hash; contrast() and every existing check are unchanged.
+  "scripts/check_contrast.mjs": "852492e1ebe5e6d43d7ecd4a9b41b5364041486db10a6f27d1c36e68392480cb",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
