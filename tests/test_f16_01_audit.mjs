@@ -1,6 +1,5 @@
-// F16-01 / SCA-548: synthetic shoreline, no place data, network, or file export.
-// node --test tests/test_f16_01_audit.mjs                         (positive control)
-// node tests/test_f16_01_audit.mjs --baseline                    (also checks the open SCA-205 gap)
+// F16-01 / SCA-205: synthetic shoreline, no place data, network, or file export.
+// node --test tests/test_f16_01_audit.mjs
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {geometryCoveredByBounds} from '../dist/geo-screen.js';
@@ -66,38 +65,39 @@ function unconfirmed(model, lines, points) {
   });
 }
 
-test('F16-01: all-water leg exports both stops and water-only connectors', () => {
-  const water = model('w1024'), result = build(water, null, [start, end]);
-  const points = readGpx(result.gpx);
-  assert.deepEqual([points[0], points.at(-1)], [start, end]);
-  assert.deepEqual(unconfirmed(water, null, points), []);
-});
+for (const [name, shoreline, lines, from] of [
+  ['all-water leg', model('w1024'), null, start],
+  ['confirmed passage through mixed cells', model('m1024'), spitLines, point(12.01, 16.01)],
+]) {
+  test(`F16-01: ${name} exports both stops and water-only connectors`, () => {
+    const points = readGpx(build(shoreline, lines, [from, end]).gpx);
+    assert.deepEqual([points[0], points.at(-1)], [from, end]);
+    assert.deepEqual(unconfirmed(shoreline, lines, points), []);
+  });
+}
 
-// Not enrolled as a failing required check. A future fix can refuse the leg or
-// export only a screened water path, leaving any shore transfer out of the GPX.
-if (process.argv.includes('--baseline')) {
-  for (const [name, shoreline, lines, state] of [
-    ['land stop beside water', model('w522l1w501'), null, 'land'],
-    ['water stop across a spit', model('m1024'), spitLines, 'water'],
-    ['unresolved mixed cell beside water', model('w522m1w501'), null, 'unknown'],
-  ]) {
-    for (const [side, stops] of [['departure', [start, end]], ['arrival', [end, start]]]) {
-      test(`F16-01: ${name} at ${side} must not export an unconfirmed connector`, t => {
-        assert.equal(placeOf(shoreline, lines, start).state, state);
-        assert.equal(placeOf(shoreline, lines, end).state, 'water');
-        let result;
-        try {
-          result = build(shoreline, lines, stops);
-        } catch (err) {
-          // Do not treat an exception such as a missing dependency or exhausted node budget as a pass.
-          assert.match(err.message, /^Planning route unavailable for leg 1 \((start-not-water|end-not-water|no-route|lines-needed)\)\./);
-          t.diagnostic(`GPX refused: ${err.message}`);
-          return;
-        }
-        const violations = unconfirmed(shoreline, lines, readGpx(result.gpx));
-        t.diagnostic(JSON.stringify({stop: state, nm: Number(result.nm.toFixed(3)), violations}));
-        assert.deepEqual(violations, [], 'GPX contains a segment not confirmed as water by the shoreline fixture');
-      });
-    }
+for (const [name, shoreline, lines, state] of [
+  ['land stop beside water', model('w522l1w501'), null, 'land'],
+  ['water stop across a spit', model('m1024'), spitLines, 'water'],
+  ['unresolved mixed cell beside water', model('w522m1w501'), null, 'unknown'],
+]) {
+  for (const [side, stops] of [['departure', [start, end]], ['arrival', [end, start]]]) {
+    test(`F16-01: ${name} at ${side} must not export an unconfirmed connector`, t => {
+      assert.equal(placeOf(shoreline, lines, start).state, state);
+      assert.equal(placeOf(shoreline, lines, end).state, 'water');
+      let result;
+      try {
+        result = build(shoreline, lines, stops);
+      } catch (err) {
+        // Do not treat an exception such as a missing dependency or exhausted node budget as a pass.
+        const reason = state === 'unknown' ? 'lines-needed' : side === 'departure' ? 'start-not-water' : 'end-not-water';
+        assert.match(err.message, new RegExp(`^Planning route unavailable for leg 1 \\(${reason}\\)\\.`));
+        t.diagnostic(`GPX refused: ${err.message}`);
+        return;
+      }
+      const violations = unconfirmed(shoreline, lines, readGpx(result.gpx));
+      t.diagnostic(JSON.stringify({stop: state, nm: Number(result.nm.toFixed(3)), violations}));
+      assert.deepEqual(violations, [], 'GPX contains a segment not confirmed as water by the shoreline fixture');
+    });
   }
 }
