@@ -211,17 +211,17 @@ def qualified_subset_satisfies(report, qualification):
             and set(gate["gaps"]) <= {"bathymetry", "substrate"})
 
 
-def validate_qualified_scope(region, atlas, root, *, bottom_index=None):
+def validate_qualified_scope(region, atlas, root, *, bottom_index=None, catalogs=None):
     """Return limited readiness, or fail closed on an inconsistent release."""
     if not region.get("assets", {}).get("target_qualification"):
         return None
     try:
-        return _validate(region, atlas, Path(root), bottom_index=bottom_index)
+        return _validate(region, atlas, Path(root), bottom_index=bottom_index, catalogs=catalogs)
     except (KeyError, TypeError, AttributeError, IndexError) as exc:
         raise ValueError("Incomplete or malformed qualified subset release") from exc
 
 
-def _validate(region, atlas, root, *, bottom_index=None):
+def _validate(region, atlas, root, *, bottom_index=None, catalogs=None):
     ident = region["id"]
     asset = region["assets"]["target_qualification"]
     _require(asset.startswith(f"regions/{ident}/"), "Qualification must belong to its region")
@@ -263,7 +263,7 @@ def _validate(region, atlas, root, *, bottom_index=None):
     _require(_digest(habitat_path) == config["habitat_sha256"] == quality["habitat_sha256"],
              "Survey substrate input changed; rebuild required")
     _identity(read_json(habitat_path), ident, "substrate input")
-    _, catalog = load_catalogs(root)
+    _, catalog = load_catalogs(root) if catalogs is None else catalogs
     protected = region["source_bindings"].get("protected-areas", [])
     _require(region.get("coverage", {}).get("protected-areas", {}).get("status") == "ready"
              and any(catalog[s]["review_status"] == "approved" for s in protected),

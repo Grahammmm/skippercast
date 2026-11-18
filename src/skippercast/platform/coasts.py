@@ -34,9 +34,9 @@ def _check_advisories(region):
         seen.add(a['target'])
 
 
-def compile_coasts(root=REPO):
+def compile_coasts(root=REPO, *, catalogs=None):
     directory = read_json(root / 'catalog/coasts.json')
-    needs,sources=load_catalogs(root)
+    needs, sources = load_catalogs(root) if catalogs is None else catalogs
     for need,ident in directory['source_bindings'].items():
         provider=sources.get(ident,{})
         if need not in needs or need not in provider.get('needs',[]) or provider.get('review_status')!='approved':

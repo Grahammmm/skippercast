@@ -174,12 +174,15 @@ def load_catalogs(root=REPO):
 DEFAULT_REGION = "morro-bay"
 
 
-def load_region(ident, root=REPO):
+def load_region(ident, root=REPO, *, catalogs=None):
+    """Load a region, optionally reusing this build's validated ``load_catalogs`` result."""
     if not ID.fullmatch(ident):
         raise ValueError("Invalid region id")
     root = Path(root)
     region = read_json(root / "regions" / ident / "region.json")
-    validate_region(region, *load_catalogs(root), root=root)
+    if catalogs is None:
+        catalogs = load_catalogs(root)
+    validate_region(region, *catalogs, root=root)
     if region["id"] != ident:
         raise ValueError("Region directory and id differ")
     return region
@@ -414,8 +417,9 @@ def need_status(region, needs, sources):
     return result
 
 
-def requirement_report(region, root=REPO):
-    needs, sources = load_catalogs(root)
+def requirement_report(region, root=REPO, *, catalogs=None):
+    """Evaluate requirements against the build's validated catalogs, or load them fresh."""
+    needs, sources = load_catalogs(root) if catalogs is None else catalogs
     statuses = need_status(region, needs, sources)
     gates = {}
     for item in statuses:
