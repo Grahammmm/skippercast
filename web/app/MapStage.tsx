@@ -10,7 +10,7 @@
 // FE-80: in 2D and 3D the terrain's zoom, reset and top view are the stage's own
 // buttons, styled as the Chart's MapLibre zoom group and placed where it sits.
 import type {ComponentChildren} from 'preact';
-import {computed} from '@preact/signals';
+import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Chip} from '../ui/Chip.tsx';
@@ -18,7 +18,7 @@ import type {Presentation} from '../coast-context.ts';
 import {aerialSoft, createAerial, createImageryStartup, createSharpStart} from '../map/aerial.ts';
 import {createCharterGrounds} from '../map/charter-grounds.ts';
 import {createShore} from '../map/shore.ts';
-import {chartFailed, createChart, unavailable} from '../map/chart.ts';
+import {chartFailed, createChart, markUnavailable, unavailable} from '../map/chart.ts';
 import {seafloorRough, seafloorState} from '../map/seafloor.ts';
 import {createCommercialAis} from '../map/commercial-ais.ts';
 import {createDepthContours} from '../map/depth-contours.ts';
@@ -33,7 +33,9 @@ import {createFronts} from '../map/fronts.ts';
 import {createWaterTemp} from '../map/sst.ts';
 import {createChlorophyll} from '../map/chlorophyll.ts';
 import {createSwell} from '../map/swell.ts';
-import {createPreviewLayers} from '../map/preview-layers.ts';
+import {createPreviewLayers, previewAccess, previewOn, togglePreview} from '../map/preview-layers.ts';
+import type {Engine} from '../map/engine.ts';
+import {BOTTOM_RELIEF} from '../map/layers.ts';
 import {createStations} from '../map/stations.ts';
 import {dailyFeed, verdictEpoch} from '../brief/Brief.tsx';
 import {mapFirstIdle} from '../map-ready.ts';
@@ -42,7 +44,7 @@ import type {HourClock} from '../clock.ts';
 import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked, terrainReason} from '../map/stage.ts';
 import {language, t, type StringId} from '../i18n.ts';
 import {poster, posterPlacement} from '../map/poster.ts';
-import {base, profile, region, species} from '../state.ts';
+import {appView, base, layers, profile, region, species} from '../state.ts';
 import {cancelWaypointPlacement, placementRefused, verdictLine, waypointPlacement} from '../waypoint-placement.ts';
 import {currentRegionInfo, zone} from './App.tsx';
 import {MAP_ID} from './SkipLinks.tsx';
@@ -53,6 +55,45 @@ export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> 
 /** SC1352-06: each presentation's catalogue label, shown in the page's language at render; PRESENTATIONS stays the English compatibility list. */
 const PRESENTATION_IDS: Readonly<Record<Presentation, StringId>> = {chart: 'stage.chart', '2d': 'stage.2d', '3d': 'stage.3d'};
 const NOTE_ID = 'app-stage-note';
+
+// Like the other private previews, this choice is off by default and is never saved
+// or shared. The older Morro study preview and this regional base are exclusive.
+const depthShading = signal(false);
+const depthShadingOn = computed(() => depthShading.value && !previewOn.value.includes('seafloor'));
+const clearUnavailable = (layer: string) => { unavailable.value = unavailable.peek().filter(l => l !== layer); };
+const basemapAvailable = computed(() => !unavailable.value.includes('basemap'));
+
+function watchBottomRelief(engine: ReadonlySignal<Engine | null>) {
+  return {destroy: effect(() => {
+    const e = engine.value, id = region.value;
+    if (!e || !id || shownPresentation.value !== 'chart' || appView.value !== 'coast' || !previewAccess() || !depthShadingOn.value || !basemapAvailable.value) return;
+    let cancelled = false, handle: {destroy(): void} | undefined;
+    clearUnavailable(BOTTOM_RELIEF);
+    void Promise.all([import('../map/bottom-relief.ts'), import('../map/maplibre.js')]).then(([relief, {lib}]) => {
+      if (cancelled) return;
+      handle = relief.attachBottomRelief({engine: e, region: id, library: lib,
+        seafloorOn: () => layers.value.includes('seafloor'),
+        fieldOn: () => layers.value.includes('water-temp') || layers.value.includes('chlorophyll') ||
+          previewOn.value.some(layer => layer === 'sst' || layer === 'chlorophyll'),
+        unavailable: error => markUnavailable(BOTTOM_RELIEF, error)});
+    }).catch(error => { if (!cancelled) markUnavailable(BOTTOM_RELIEF, error); });
+    return () => { cancelled = true; handle?.destroy(); clearUnavailable(BOTTOM_RELIEF); };
+  })};
+}
+
+function DepthShadingPreview() {
+  if (!previewAccess() || shownPresentation.value !== 'chart') return null;
+  const on = depthShadingOn.value, lang = language.value, label = t('layer.relief.label', lang);
+  return <div class="app-stage-note">
+    <Chip on={on} onClick={() => {
+      if (!previewAccess()) return;
+      if (!on) togglePreview('seafloor', false);
+      depthShading.value = !on;
+    }}>{label} ({t('shell.regionPreview.label', lang)})</Chip>
+    {on && (!basemapAvailable.value || unavailable.value.includes(BOTTOM_RELIEF))
+      ? <p role="status">{t('tile.source.unavailable', lang, {source: label})}</p> : null}
+  </div>;
+}
 
 /** RF1925-2: the selected Chart could not start (chartFailed is a sticky start-up failure; a working 2D or 3D terrain is not a failed map). The one test every map-only control shares. */
 export const mapUnavailable = computed(() => chartFailed.value && shownPresentation.value === 'chart');
@@ -84,6 +125,7 @@ export function PresentationToggle() {
       <p id={NOTE_ID} class="app-stage-note" role="status">{blocked === null ? '' : terrainReason(blocked, lang)}</p>
       {armed ? <p class="app-stage-note" role="status">{t('stage.placePrompt', lang)} {refused ? <>{refused}. </> : null}<Button size="sm" variant="quiet" onClick={cancelWaypointPlacement}>{t('stage.cancelWaypoint', lang)}</Button></p> : null}
       {shown === 'chart' && seafloorRough.value ? <p class="app-stage-note" data-seafloor-rough role="status">{t('stage.seafloorRough', lang)}</p> : null}
+      {armed ? null : <DepthShadingPreview />}
       <div role="group" aria-label={t('stage.presentation', lang)} class="ui-segmented">
         {PRESENTATIONS.map(p => {
           const off = p.value !== 'chart' && !!blocked;
@@ -156,7 +198,8 @@ export function MapStage({children, clock}: {children?: ComponentChildren; clock
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
           engine => createReach({engine, host: chartHost.current!}),
           engine => createPlanningRouteLayer({engine, host: chartHost.current!}),
-          engine => createPreviewLayers({engine, failures: {list: unavailable, clear: layer => { unavailable.value = unavailable.peek().filter(l => l !== layer); }}})]})]});
+          watchBottomRelief,
+          engine => createPreviewLayers({engine, failures: {list: unavailable, clear: clearUnavailable}})]})]});
     return () => { imagery.destroy(); sharp.destroy(); stage.destroy(); };
   }, [clock]);
   const shown = shownPresentation.value, lang = language.value, failed = mapUnavailable.value;
