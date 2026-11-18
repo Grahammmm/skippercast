@@ -4,13 +4,13 @@ import importlib.util
 import io
 import json
 import zipfile
-from pathlib import Path
 
 import pytest
 
+from tests._support import ROOT
+
 pytestmark = pytest.mark.gis
 
-ROOT = Path(__file__).resolve().parents[2]
 SQ = [(700000, 3940000), (700400, 3940000), (700400, 3940400), (700000, 3940400), (700000, 3940000)]
 
 
