@@ -137,7 +137,34 @@ Only after a port ([port to Twilio](advisor-port-to-twilio.md)). Twilio console 
 
 ## Meta secrets (Text Advisor)
 
-- `META_PAGE_TOKEN`: run `node scripts/advisor/meta-token.mjs` again ([09 § Setup](../../plans/text-advisor/09-social.md)) for a fresh never-expiring Page token, `gh secret set META_PAGE_TOKEN` and `$W secret put META_PAGE_TOKEN --name skippercast`, check **Admin → Health** shows Meta configured and the quota read works, then revoke the old one: Facebook **Settings → Business integrations** (remove and re-add the app) or change the password of the Facebook account that issued it, which invalidates its Page tokens.
+- `META_PAGE_TOKEN` (owner only): choose a new file in private local storage, never in the repository, `/tmp`, a synced folder (iCloud, Dropbox, Google Drive), or a shared drive.
+
+  ```bash
+  TOKEN_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/skippercast-private"
+  mkdir -p "$TOKEN_DIR"
+  chmod 700 "$TOKEN_DIR"
+  TOKEN_FILE="$TOKEN_DIR/meta-page-token-$(date -u +%Y%m%dT%H%M%SZ)"
+  ```
+
+  Keep `META_APP_ID` and `META_APP_SECRET` in the environment, never in command arguments. From the checkout, run `node scripts/advisor/meta-token.mjs --token-file "$TOKEN_FILE"` for a fresh Page token ([09 § Setup](../../plans/text-advisor/09-social.md)). The script prints the Page id, Instagram user id, token expiry, quota and account type; it never prints the Page token. It refuses an existing file or symlink: use a new name every run. If the run fails or exits 1 (for example, a non-Business account), use `rm -f -- "$TOKEN_FILE"` to remove any file left by that run. Do not import after a failed run.
+
+  Import only by redirecting the file into the secret command. Use the GitHub command for setup; on rotation, use both commands:
+
+  ```bash
+  gh secret set META_PAGE_TOKEN --repo Grahammmm/skippercast < "$TOKEN_FILE"
+  $W secret put META_PAGE_TOKEN --name skippercast < "$TOKEN_FILE"
+  ```
+
+  Never `cat` or `echo` the token, open the file in an editor or pager, copy the token to the clipboard, pass it with `--body`, or paste it into chat, issues, notes or a recording.
+
+  After **Admin → Health** shows Meta configured and the quota read works, remove the local file and confirm it is gone:
+
+  ```bash
+  rm -- "$TOKEN_FILE"
+  test ! -e "$TOKEN_FILE" && echo removed
+  ```
+
+  On rotation, only then revoke the old token: Facebook **Settings → Business integrations** (remove and re-add the app) or change the password of the Facebook account that issued it, which invalidates its Page tokens.
 - `META_APP_SECRET`: Meta app dashboard → **App settings → Basic → App secret → Reset**. The old secret stops at once: set the new one with `$W secret put META_APP_SECRET --name skippercast` straight away (webhooks fail their signature check and `appsecret_proof` calls fail until then), then `gh secret set META_APP_SECRET`.
 - `META_VERIFY_TOKEN`: any new random string (`openssl rand -hex 24`); set it as the secret and in the app's **Webhooks** settings, then press **Verify and save** there.
 
