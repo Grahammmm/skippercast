@@ -38,6 +38,8 @@ export function yardsFromShore(p: {latitude: number; longitude: number}, lines: 
   let best = Infinity;
   for (const line of lines) {
     for (let i = 1; i < line.length; i++) {
+      // RF2021-11: an unsplit seam jump (raw longitude delta over 180) has no supported flat projection; skip it, never bridge it.
+      if (Math.abs(line[i]![0]! - line[i - 1]![0]!) > 180) continue;
       // RF1500-22: +180 and -180 are one meridian, so also try the intact segment shifted by -360/+360 degrees
       // (both endpoints together, never wrapped separately) and keep the nearest.
       for (const shift of [0, -360, 360]) {
