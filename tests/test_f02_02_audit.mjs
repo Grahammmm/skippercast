@@ -9,19 +9,11 @@
 //                     never exceeds 100 binds.
 //   affected control  `contractGaps` reports each gap of a synthetic observation shaped like the failure (statement over
 //                     the cap, backlog left, shared original deleted, graphic files dropped before their keys).
-//   baseline receipt  the real prune at the shipped chunk (500) is printed as a diagnostic (gaps listed, not asserted),
-//                     so the fixture stays green before and after the product fix.
+//   weekly regression the real prune at the shipped chunk must meet the same contract without a caller override.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
 import {advisorDatabase, fakeBucket, sqliteUnavailable} from './_advisor_d1.mjs';
-
-const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
-globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
-globalThis.DEPLOYMENT = read('../deployments/production.json');
-globalThis.SHELLS = {'/': '/index.0123456789.html'};
-globalThis.BUILD_ID = 'build-test';
-const {runRetention, RETENTION_CHUNK} = await import('../server/advisor/retention.ts');
+import {runRetention} from '../server/advisor/retention.ts';
 
 const dbTest = (name, fn) => test(name, {skip: sqliteUnavailable || false}, fn);
 const BIND_CAP = 100, DAY = 86400000;
@@ -74,7 +66,8 @@ async function observe(expired, graphics, deps, run = runRetention) {
     outcome, maxBinds: stats.maxBinds, keyBeforeFiles: stats.keyBeforeFiles,
     expiredLeft: n("SELECT COUNT(*) FROM advisor_media WHERE id LIKE 'e%' AND r2_key<>''"),
     originalsLeft: [...s.bucket.store].filter(k => k.startsWith('advisor/media/c/e')).length,
-    sharedKept: s.bucket.store.has('advisor/media/c/shared.jpg'),
+    sharedKept: s.bucket.store.has('advisor/media/c/shared.jpg') && n("SELECT COUNT(*) FROM advisor_media WHERE id='shared-new' AND r2_key='advisor/media/c/shared.jpg'") === 1,
+    sharedExpiredLeft: n("SELECT COUNT(*) FROM advisor_media WHERE id='shared-old' AND r2_key<>''"),
     graphicKeysLeft: n("SELECT COUNT(*) FROM job_state WHERE key LIKE 'advisor.graphic.%'"),
     graphicFilesLeft: [...s.bucket.store].filter(k => k.startsWith('advisor/posts/')).length,
   };
@@ -131,10 +124,12 @@ dbTest('affected control: a key-first prune that ends with keys and files both g
   assert.deepEqual(contractGaps(o), ['graphic keys deleted while their files still existed (1 statements)']);
 });
 
-dbTest('baseline receipt: the shipped chunk against 51 / 500 expired originals and 101 orphan graphic requests (diagnostic only)', async () => {
-  for (const expired of [51, 500]) {
+for (const expired of [51, 500]) {
+  dbTest(`weekly regression: ${expired} distinct expired originals and 101 orphan graphic requests clear at the default chunk`, async t => {
     const o = await observe(expired, 101, {});
-    console.log(`F02-02 baseline (chunk ${RETENTION_CHUNK}, ${expired} originals, 101 graphic): ${JSON.stringify(o)} gaps=${JSON.stringify(contractGaps(o))}`);
-    assert.ok(Array.isArray(contractGaps(o)));
-  }
-});
+    t.diagnostic(`maximum binds: ${o.maxBinds}`);
+    assert.deepEqual(contractGaps(o), []);
+    // At 500 distinct originals the extra shared row is beyond the unchanged weekly limit.
+    if (expired === 51) assert.equal(o.sharedExpiredLeft, 0, 'expire the old reference without deleting the shared object');
+  });
+}
