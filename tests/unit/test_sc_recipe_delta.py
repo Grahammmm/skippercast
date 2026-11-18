@@ -44,7 +44,7 @@ SOURCE_PINS = {
     # Scope amendment: fix card t_57d66a92 SCOPE-3 authorizes this transitive pin only;
     # the exact-byte assertion, frozen snapshots and publication state are unchanged.
     # Wave 2B: rebind the exact recipe test bytes after the source catalogue pin refresh.
-    'tests/unit/test_coast_recipe.py': 'b57cde0c1a03ad853cc4e2e724b2515a1fe99af050a685af00de4bd1c1f91614',
+    'tests/unit/test_coast_recipe.py': '32b35407d830ce4ad4f9bdc54fbc378f4486b380995c19ae3e8fce3f3eb5bed6',
 }
 # Exactly the metadata files the existing validator reads for one recipe.
 READ_SET = {SCHEMA, 'catalog/sources.json', 'catalog/coastal-sectors.json',
