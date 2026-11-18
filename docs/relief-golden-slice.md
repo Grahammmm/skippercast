@@ -1,43 +1,61 @@
 # Relief golden slice (SC-MAP-GOLDEN-1)
 
-One command proves the whole relief pipeline on a small fixed slice before anything runs at statewide scale.
-Run it **after every stage merge**; a red or unwired run blocks the next stage card.
+Run this offline check after a relief stage merges. A failed or unwired stage
+makes the run RED. A green synthetic run checks the pipeline, not survey
+accuracy, browser rendering, publication, or production capacity.
 
-```
-python3 scripts/relief/golden_slice.py [--work DIR] [--max-wait-min N] [--forecast-km2 KM2]
+```sh
+~/agent-work/bin/memcap -- python3 scripts/relief/golden_slice.py --work /path/to/fresh-work
 ```
 
-- **Slice.** Box W -120.872, S 35.368, E -120.850, N 35.380 (about 2.7 km2 around Morro Rock). Six held rasters
-  are read in place and read-only: NOAA MRR22_089/090/093/094 (1 m), NCMP 2015 10SFE9416 (1 m, geographic) and
-  BlueTopo BH4585BW (4 m), all under `/mnt/agentorange-backup/seafloor-data`. Nothing is committed from there.
-- **Stages.** inventory, normalize, select, mosaic, tiles, contours, release, qa. The table prints each stage as
-  `REAL` (repo code) or `THIN` (stand-in kept in `golden_slice.py`). Today mosaic, tiles and contours are real
-  (`coast_mosaic.py`, `build_bathy_tiles.py`, `build_depth_contours.py` plus `coast_contours.py`); the rest are thin.
-  Preview needs a browser and is reported SKIPPED.
-- **A merged stage must be wired.** If `src/skippercast/relief/<stage>.py` exists and the stage is not in
-  `REAL_ADAPTERS`, the stage shows `UNWIRED` and the run is RED. Add an adapter that calls the real stage, drop
-  the thin function, rerun.
-- **Receipts and rerun.** `<work>/stages/<stage>.json` (schema `sc-golden-receipt/1`: generation, upstream
-  generations, wall seconds, peak RSS, output sha256s). A rerun with unchanged inputs and code reports every stage
-  `DONE (no work)`; a changed code or input hash reruns that stage and everything downstream. Two failed attempts
-  on one generation hold the stage.
-- **Known gaps.** The E2E-PROOF-1 findings are named checks: `XFAIL` is expected and printed every run; a check
-  that starts to pass prints `FLIPPED`, the signal that its card landed (move it into the must-pass list). The
-  exit code ignores XFAIL and FLIPPED, never hides them, and is non-zero for any failed stage or must-pass check.
-- **Runtime forecast.** The last table prints seconds per km2 per stage; `--forecast-km2` multiplies it. It is a
-  floor (fixed overhead is included, overlap and memory growth are not).
-- **Load rules.** Each stage runs at `nice 19` and `ionice idle`, one at a time, and waits (default 10 minutes)
-  while load5 is at or above 24 or free disk is under the floors (`/` 250 GB, backup 400 GB). Nothing is
-  downloaded, uploaded or published; `/mnt/privatevault` is refused. The default work dir is
-  `$HOME/agent-work/golden-slice/w1`.
-- **Interpreter.** Needs numpy and rasterio; it re-executes under the shared skippercast venv python
-  (`$GOLDEN_VENV_PY`, default `~/repos/skippercast/.venv/bin/python`) when the current interpreter lacks them.
+- **Default: `--slice synthetic`.** On the fixed Morro Bay box (W -120.872,
+  S 35.368, E -120.850, N 35.380; about 2.7 km²), rasterio generates six
+  seeded 128×128 rasters in `<work>/fixture/`: four projected NOAA-like 1 m
+  grids, one geographic NCMP-like grid at about 1 m, and one projected BlueTopo-like
+  4 m, three-band grid. No held pixels are copied or read, including the CSMP
+  ZIP inventory; the default does not inspect the backup mount. No binaries are committed.
+- **Heavy mode: `--slice morro-bay` is unavailable by design.** Before any
+  stage or held-data access, `/proc/self/cgroup` must name a `mapjob-` systemd
+  service and `pgrep -f` must find no competing `coast_mosaic.py`,
+  `build_bathy_tiles.py`, or `run_bounded.py` process. Missing or failed admission
+  is a non-zero exit, without waiting or retrying. The installed `localmapq`
+  has no golden-slice dispatch, so there is no supported launch path. Only
+  the scheduler owner can add one. The process check is a snapshot, not a
+  host-wide lock: a launcher bypassing `localmapq` could start after the check.
+  The original heavy load5 and disk floors still apply if a dispatch is added.
+- **Stages:** inventory → normalize → select → mosaic → tiles → contours →
+  release → QA → preview. `REAL` runs repository code; `THIN` is a stand-in.
+  Preview is `SKIPPED` only while `src/skippercast/relief/preview.py` is absent.
+  Any merged stage module without a `REAL_ADAPTERS` entry produces `UNWIRED`
+  and RED. Its wiring card should supply the real adapter and update the stage test.
+- **Rights and support are separate.** The selector reads the exact DEM
+  catalogue rows. The local public scope requires an approved row, commercial
+  use and public display allowed, and `publication_allowed: true`; it does
+  not publish anything. Only two synthetic grids carry positive per-cell
+  support evidence. The tiler and QA use their masked native copies for
+  detail; valid but uncertified cells (including interpolated geographic
+  cells) remain estimated background. The legacy tiler can still paint
+  background in a detail tile. QA counts this as outside measured support, not
+  as measured coverage. Held inputs have no admitted per-cell evidence here.
+- **Receipts:** `<work>/stages/<stage>.json` records input generations, output
+  hashes, wall time and peak RSS. An unchanged run reuses valid receipts.
+  Default work is `$HOME/agent-work/golden-slice/w1/<slice>`; use separate work
+  directories for the two modes. Stages run sequentially with `nice 19`, idle
+  I/O priority where available, and one compute thread. Synthetic work needs
+  1 GiB free on its own work volume. Use a GIS interpreter with numpy, rasterio,
+  and the repository survey dependencies; `GOLDEN_VENV_PY` can select a fallback
+  interpreter if the invoking Python lacks numpy/rasterio.
+- **Known gaps:** `XFAIL` is an observed mismatch, `FLIPPED` a pass, and
+  `UNKNOWN` inconclusive. The equal-resolution probe compares the actual mosaic
+  contributor with the actual tiler winner using identical synthetic source IDs.
+  A synthetic `FLIPPED` is evidence for that case, not automatic promotion to a
+  mandatory check. Synthetic runtime does not forecast production runtime.
 
 ## Candidate text for the mapping skill (not installed; for the policy owner)
 
-> **Required check after every relief stage merge.** From the merged `main`, run
-> `python3 scripts/relief/golden_slice.py` and paste its stage table, the must-pass checks and the known-gap
-> list into the merge card. It must exit 0. Read the REAL/THIN column: if a stage you just merged still shows
-> THIN or UNWIRED, wire it into the golden slice in the same card. A known gap that prints FLIPPED belongs to a
-> card that landed: promote it to a must-pass check. Never start a statewide run while the golden slice is red.
-> The runtime rates feed the compute forecast; do not guess statewide time from anything else.
+> **Required check after every relief stage merge.** From merged `main`, run
+> `~/agent-work/bin/memcap -- python3 scripts/relief/golden_slice.py`. Paste the
+> stage table, must-pass checks and known gaps into the merge card. It must exit
+> zero. If the just-merged stage is unwired, add its real adapter in the stage
+> card. Review any flipped gap before promoting it. Do not use synthetic timing
+> or green status as approval to start a statewide run.
