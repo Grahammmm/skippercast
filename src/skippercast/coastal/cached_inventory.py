@@ -394,6 +394,7 @@ def produce(root,plan,output,*,now,horizon,plan_descriptor=None):
         # Content is pinned to the durable intent below; any third link, other inode or other name still holds.
         both=[manifest.lstat(),pending.lstat()] if os.path.lexists(manifest) and os.path.lexists(pending) else []
         linked_pair=bool(both) and all(stat.S_ISREG(i.st_mode) and i.st_nlink==2 for i in both) and (both[0].st_dev,both[0].st_ino)==(both[1].st_dev,both[1].st_ino)
+        if both and not linked_pair:raise ValueError("owned regular inventory artifact required: result names must be one inode with link count two")
         for path in (checkpoint,manifest,admission,intent,pending):
             if linked_pair and path in (manifest,pending):continue
             if path.exists() and (not path.is_file() or path.stat().st_nlink!=1):raise ValueError("owned regular inventory artifact required")

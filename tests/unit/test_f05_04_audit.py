@@ -122,11 +122,18 @@ def test_symlinked_pending_is_not_a_linked_pair(env, tmp_path):
     out, *_ = env
     os.symlink(out / "usable-inputs.json", out / "usable-inputs.pending")
     before = {p.name for p in out.iterdir()}
-    result = None
-    try:
-        result = rerun(env)
-    except ValueError:
-        pass
-    # Whatever the pre-existing policy does with a symlink, it must never be treated as recovery.
-    assert result is None or result["status"] != "completed_recovered"
-    assert {p.name for p in out.iterdir()} == before and env[2] == []
+    with pytest.raises(ValueError, match="symlink output tree rejected"):
+        rerun(env)
+    assert {p.name for p in out.iterdir()} == before and os.path.islink(out / "usable-inputs.pending") and env[2] == []
+
+
+def test_distinct_single_link_pending_with_identical_bytes_holds(env):
+    out, *_ = env
+    payload = (out / "usable-inputs.json").read_bytes()
+    (out / "usable-inputs.pending").write_bytes(payload)
+    assert (out / "usable-inputs.json").stat().st_ino != (out / "usable-inputs.pending").stat().st_ino
+    assert (out / "usable-inputs.json").stat().st_nlink == 1 and (out / "usable-inputs.pending").stat().st_nlink == 1
+    before = snapshot(out)
+    with pytest.raises(ValueError, match="owned regular inventory artifact required"):
+        rerun(env)
+    assert snapshot(out) == before and env[2] == []
