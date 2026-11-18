@@ -10,8 +10,11 @@ backoff, conditional-GET cache) and adds, for every fleet fetch:
   host off the allowlist is refused the same way);
 - robots.txt per host for the ``SkipperCast`` user agent (``urllib.robotparser``,
   cached 24 h), checked for the first URL and every redirect target. A transport
-  error, timeout, 401/403 or 5xx means disallowed; a 404 or other 4xx means no
-  robots.txt (allowed). Redirects are followed by hand, at most 5 hops, and only
+  error, timeout, 401/403, 429 or 5xx means disallowed; a 404 or other 4xx means no
+  robots.txt (allowed). A 429 (still rate-limited after the HTTP layer's bounded
+  retries) is not evidence of "no rules": the host's content is skipped with reason
+  ``robots-rate-limited`` and the lookup is retried only after ``ROBOTS_LIMITED_TTL``
+  seconds, not cached for 24 h. Redirects are followed by hand, at most 5 hops, and only
   to ``https`` ``/robots.txt`` on an allowlisted host; a redirect anywhere else
   (an ``http://`` error page, another path or host) means no robots.txt, as a 4xx;
   more than 5 hops fails closed;
@@ -36,6 +39,7 @@ from .config import FleetRegion, off_limits_host
 ROBOTS_AGENT = "SkipperCast"
 ROBOTS_TTL = 24 * 3600
 ROBOTS_HOPS = 5  # redirects followed for robots.txt
+ROBOTS_LIMITED_TTL = 300  # seconds a rate-limited (429) robots lookup stays unavailable before one retry
 
 
 class OffLimits(http.DisallowedHost):
@@ -99,6 +103,7 @@ class FleetSession:
         self.skips: list[dict] = []
         self._next: dict[str, float] = {}
         self._robots: dict[str, tuple[float, RobotFileParser | None]] = {}
+        self._robots_limited: set[str] = set()  # hosts whose last robots lookup ended in a 429
         self._checked: str | None = None  # the URL whose robots.txt get() already checked
         self._internal_robots = False  # True only while _fetch_robots runs its own policy lookup
 
@@ -126,7 +131,7 @@ class FleetSession:
         host = (urlsplit(url).hostname or "").lower()
         if not self._internal_robots:  # only our own policy lookup is uncounted, never a content /robots.txt
             if url != self._checked and not self._robots_allows(url, host):
-                raise _HopRefused("robots", f"robots.txt disallows {url}")
+                raise _HopRefused(self._robots_reason(host), f"robots.txt disallows {url}")
             if self.used.get(host, 0) >= self.budget:
                 raise _HopRefused("budget", f"{self.budget} requests to {host} this run")
             self.used[host] = self.used.get(host, 0) + 1
@@ -170,6 +175,9 @@ class FleetSession:
                     return parser
                 current = target
                 continue
+            if response.status == 429:  # rate-limited, not "no rules": unavailable, retried after a cooldown
+                self._robots_limited.add(host)
+                return None
             if response.status in (401, 403) or response.status >= 500:
                 parser.disallow_all = True
             elif response.status >= 400:
@@ -179,9 +187,14 @@ class FleetSession:
             return parser
         return None  # too many redirects: fail closed
 
+    def _robots_reason(self, host: str) -> str:
+        return "robots-rate-limited" if host in self._robots_limited else "robots"
+
     def _robots_allows(self, url: str, host: str) -> bool:
         cached = self._robots.get(host)
-        if cached is None or self.clock() - cached[0] > ROBOTS_TTL:
+        ttl = ROBOTS_LIMITED_TTL if host in self._robots_limited else ROBOTS_TTL
+        if cached is None or self.clock() - cached[0] > ttl:
+            self._robots_limited.discard(host)
             cached = self._robots[host] = (self.clock(), self._fetch_robots(host))
         return cached[1] is not None and cached[1].can_fetch(ROBOTS_AGENT, url)
 
@@ -203,7 +216,7 @@ class FleetSession:
         if self.used.get(host, 0) >= self.budget:
             raise self._skip(url, "budget", f"{self.budget} requests to {host} this run")
         if not self._robots_allows(url, host):
-            raise self._skip(url, "robots", host)
+            raise self._skip(url, self._robots_reason(host), host)
         self._checked = url
         try:
             return self.session.request(method, url, allowed_hosts=self.hosts, **options)
