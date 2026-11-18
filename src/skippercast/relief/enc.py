@@ -22,6 +22,8 @@ MANIFEST = 'ENC-EXTRACT.json'
 KINDS = ('WRECKS', 'OBSTRN', 'UWTROC')
 MILITARY = frozenset({'san-clemente', 'san-nicolas'})
 NOTICE = 'NOT FOR NAVIGATION'
+# ENC-EXTRACT.md Gates: the only permitted depth label for any emitted ENC depth.
+DEPTH_LABEL = 'Estimate from chart soundings'
 PRIVATE = {'private_only': True, 'publication_allowed': False}
 
 
@@ -107,7 +109,7 @@ def _rows(path, raw, reach, kind):
             if type(depth) not in (int, float) or not isfinite(depth):
                 raise ValueError(f'{at}: invalid chart depth')
             # Preserve the native unit and positive-down sign; no datum conversion.
-            props.update(chart_depth=depth, depth_label='chart depth',
+            props.update(chart_depth=depth, depth_label=DEPTH_LABEL,
                          chart_depth_unit_code=src.get('enc_depth_unit_code'))
         lnam = src.get('LNAM')
         yield lnam if isinstance(lnam, str) else None, geom, props

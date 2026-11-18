@@ -107,7 +107,7 @@ def test_regional_hazards_build_and_replay(extract, tmp_path):
         return {'type': 'Feature', 'geometry': {'type': geometry, 'coordinates': coords},
                 'properties': {**properties, 'kind': kind, **extra}}
 
-    expected = [feature('WRECKS', 'Point', [1, 1], chart_depth=12.5, depth_label='chart depth',
+    expected = [feature('WRECKS', 'Point', [1, 1], chart_depth=12.5, depth_label='Estimate from chart soundings',
                         chart_depth_unit_code=1)] * 2
     expected += [feature('UWTROC', 'LineString', [[0, 0.5], [2, 0.5]]),
                  feature('UWTROC', 'LineString', [[1.5, 1.5], [1.9, 1.5]]),
