@@ -1,5 +1,4 @@
-// MB-08: chart-only research depth shading. Pointer selection does not verify
-// the tile bytes; that is E2E-17, required before public enablement.
+// MB-08: chart-only research depth shading. E2E-17 verifies each returned tile.
 import {effect} from '@preact/signals';
 import type {AddProtocolAction, LayerSpecification} from 'maplibre-gl';
 import {PMTiles, TileType} from 'pmtiles';
@@ -7,6 +6,7 @@ import type {Engine} from './engine.ts';
 import {BOTTOM_RELIEF} from './layers.ts';
 import {readPalette} from './palette.ts';
 import {resolveRelief} from './relief-data.ts';
+import {reliefVerifier} from './relief-verify.ts';
 import {BASEMAP_SOURCE, basemapStyle} from './style.ts';
 
 const SCHEME = 'bottom-relief';
@@ -86,8 +86,12 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
       library.addProtocol(SCHEME, readTile);
       libraries.add(library);
     }
+    const verify = reliefVerifier(a, page, fetchFn, signal);
     let checked: ReturnType<typeof archive.getHeader> | undefined;
     readers.set(token, async (z, x, y, request) => {
+      if (z < a.minzoom || z > a.maxzoom) throw tileMissing();
+      request.throwIfAborted();
+      signal.throwIfAborted();
       let tile;
       try {
         const h = await (checked ??= archive.getHeader());
@@ -101,8 +105,17 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
         if (!request.aborted) fail(error);
         throw error;
       }
-      // A deliberate hole in a sparse zoom is not a failed range. This 404
-      // lets MapLibre overzoom a coarser tile if present; empty remains empty.
+      try {
+        await verify(z, x, y, tile?.data);
+      } catch (error) {
+        // The index is shared across tile requests; a pan's cancellation
+        // cannot mask an integrity failure. Region teardown still cancels it.
+        fail(error);
+        throw error;
+      }
+      request.throwIfAborted();
+      signal.throwIfAborted();
+      // Only an authenticated hole allows MapLibre to use a parent tile.
       if (!tile) throw tileMissing();
       return {data: tile.data};
     });
