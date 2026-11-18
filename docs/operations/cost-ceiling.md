@@ -81,17 +81,30 @@ under its own key prefix: `/feeds/*` on `FEED_LIMITER`
 
 `research/scripts/measure_session_cost.mjs` records the requests three visitor
 sessions make on the real site, each in a fresh browser profile with a phone
-viewport (`research/scripts/measure_session_cost.mjs:8-12`):
+viewport:
 
 - **first-run**: the landing page, then a port chosen;
 - **brief**: a returning visitor opening the Boat brief for Morro Bay;
 - **map**: the map, panned and zoomed, with three layers switched on.
 
-It sorts each response into `worker` (the Worker ran), `asset` (static-asset
-routing answered it for free) and `third-party`
-(`research/scripts/measure_session_cost.mjs:13-18`). It does not replay R2 or
-D1 operations: those are read from the Worker's code path per request
-(`research/scripts/measure_session_cost.mjs:20-22`).
+Use an intact `dist/client` from the reference build. The recorder reads its
+build ID from `precache.json` and compares it with same-origin `/api/health`
+before and after each session and the build stamp on captured documents. The
+health probes are not session traffic. A missing or conflicting ID, changed
+observed revision, an incomplete session, or a fingerprinted bundle absent
+from the reference makes the entire receipt ineligible for cost estimates
+(exit 1). Do not interpret
+`unclassified` traffic as either paid requests or zero paid requests. Retry
+with the matching build after the deployment stabilizes. These observations
+can detect a build change, but cannot prove that nothing changed between
+observations.
+
+For a match, the recorder uses the local file list to attribute same-origin
+responses to `asset` or `worker`, and keeps other origins as `third-party`.
+Receipts keep counts and body bytes (with missing-byte counts) by route class,
+attribution and HTTP status, not full URLs, queries or headers. They do not
+measure billing or replay R2 or D1 operations: operation estimates are read
+from the Worker's code paths.
 
 **No capture output is recorded in this repository**, so nothing on this page
 was measured here. The only recorded run is the pre-merge capture described in
