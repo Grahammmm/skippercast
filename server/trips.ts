@@ -241,7 +241,7 @@ function tally(trips:TripRow[],results:{outcome:TripOutcome;created:boolean}[]):
 
 /** One page of 25 due trips after `cursor` (the manual and fallback path: POST /api/jobs/check). */
 export async function checkTrips(env:Env,cursor=''):Promise<CheckResult>{
-  const now=Date.now(),trips=(await db(env).prepare(`SELECT * FROM trips WHERE ${DUE} AND id>? ORDER BY id LIMIT 25`).bind(retryCutoff(now),cursor).all<TripRow>()).results;
+  const now=Date.now(),trips=(await db(env).prepare(`SELECT * FROM trips WHERE id>? AND ${DUE} ORDER BY id LIMIT 25`).bind(cursor,retryCutoff(now)).all<TripRow>()).results;
   const feeds:FeedCache=new Map(),results=[];
   for(const trip of trips)results.push(await checkTrip(env,trip,now,feeds));
   await prune(env,now);
