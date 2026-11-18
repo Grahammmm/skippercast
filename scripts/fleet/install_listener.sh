@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install, update or roll back the SkipperCast fleet AIS listener (design.md section 10, CF-42).
 #
-#   AISSTREAM_API_KEY=<key> bash scripts/fleet/install_listener.sh --region CA   # deploy this checkout's HEAD
+#   bash scripts/fleet/install_listener.sh --region CA   # deploy this checkout's HEAD
 #   bash scripts/fleet/install_listener.sh --region CA --rollback [<sha>]        # back to a kept revision
 #
 # Runs as the data runner's user; .github/workflows/fleet-ais-listener.yml calls it on
@@ -24,8 +24,8 @@
 # SKIPPERCAST_GIT_SHA in the env file, reinstalls that revision's unit, restarts and runs the
 # same heartbeat check. Runbook: docs/operations/runbooks/fleet-ais-down.md.
 #
-# The aisstream key is never traced or printed: no xtrace, and the shell only tests that the
-# variable is non-empty; Python reads it from the environment and writes the env file.
+# The aisstream key is never traced or printed. Python uses AISSTREAM_API_KEY when non-empty,
+# otherwise it reuses the key in the existing env file. Rollback always uses the file.
 # Owner, once per box: `sudo loginctl enable-linger <runner user>` so the user's systemd
 # manager runs without a login session.
 set +x
@@ -85,50 +85,41 @@ preflight() {
     || die "no user systemd manager for $(id -un) (owner step: sudo loginctl enable-linger $(id -un))"
 }
 
-# check_key: fail early, without showing it, on a key the env file could not hold as written.
-check_key() {
-  "$PYTHON" - <<'PY'
+# listener_env [<sha> <fleet var>]: validate the key before building, then use the
+# same lookup when writing the 0600 env file at activation. Never export the file's key.
+listener_env() {
+  "$PYTHON" - "$ENV_FILE" "$MODE" "$@" <<'PY'
 import os
 import re
 import sys
 
-if not re.fullmatch(r"[A-Za-z0-9._~+/=-]{8,512}", os.environ.get("AISSTREAM_API_KEY", "").strip()):
-    sys.exit("install_listener: AISSTREAM_API_KEY has unexpected characters (value not shown)")
-PY
-}
-
-# write_env <sha>: the env file, 0600, written atomically. The key comes from the
-# environment on install, or from the existing file on rollback; it is never printed.
-write_env() {
-  mkdir -p "$CONFIG_DIR"
-  chmod 0700 "$CONFIG_DIR"
-  "$PYTHON" - "$ENV_FILE" "$1" "$FLEET_VAR" "$MODE" <<'PY'
-import os
-import re
-import sys
-
-path, sha, fleet_var, mode = sys.argv[1:5]
-values = {}
-if mode == "rollback":
+path, mode, *write_args = sys.argv[1:]
+key = "" if mode == "rollback" else os.environ.get("AISSTREAM_API_KEY", "")
+if not key:
     try:
         with open(path, encoding="utf-8") as handle:
             for line in handle:
-                name, sep, value = line.rstrip("\n").partition("=")
-                if sep and not name.startswith("#"):
-                    values[name.strip()] = value.strip()
+                name, sep, value = line.partition("=")
+                if sep and name.strip() == "AISSTREAM_API_KEY":
+                    key = value.strip()
     except FileNotFoundError:
-        sys.exit("install_listener: no env file to roll back with; run a full install")
-    key = values.get("AISSTREAM_API_KEY", "")
-else:
-    key = os.environ.get("AISSTREAM_API_KEY", "").strip()
-if not key:
-    sys.exit("install_listener: no aisstream key (owner step: add the AISSTREAM_API_KEY secret)")
+        if mode == "rollback":
+            sys.exit("install_listener: no env file to roll back with; run a full install")
+    except (OSError, UnicodeError):
+        sys.exit("install_listener: cannot read fleet-ais.env (contents not shown)")
+    if not key:
+        if mode == "rollback":
+            sys.exit("install_listener: no AISSTREAM_API_KEY in fleet-ais.env; run a full install")
+        sys.exit("install_listener: no AISSTREAM_API_KEY in the environment or fleet-ais.env (owner step: supply the key)")
+key = key.strip()
 if not re.fullmatch(r"[A-Za-z0-9._~+/=-]{8,512}", key):
     sys.exit("install_listener: AISSTREAM_API_KEY has unexpected characters (value not shown)")
+if not write_args:
+    sys.exit(0)
+sha, fleet_var = write_args
 if not re.fullmatch(r"/[^\s\"'\\$`#]*", fleet_var):
     sys.exit("install_listener: SKIPPERCAST_FLEET_VAR must be an absolute path without spaces or quotes")
-values.update(AISSTREAM_API_KEY=key, SKIPPERCAST_FLEET_VAR=fleet_var, SKIPPERCAST_GIT_SHA=sha)
-body = "".join(f"{name}={values[name]}\n" for name in ("AISSTREAM_API_KEY", "SKIPPERCAST_FLEET_VAR", "SKIPPERCAST_GIT_SHA"))
+body = f"AISSTREAM_API_KEY={key}\nSKIPPERCAST_FLEET_VAR={fleet_var}\nSKIPPERCAST_GIT_SHA={sha}\n"
 tmp = f"{path}.tmp-{os.getpid()}"
 fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
 try:
@@ -143,6 +134,12 @@ except BaseException:
         os.unlink(tmp)
     raise
 PY
+}
+
+write_env() {
+  mkdir -p "$CONFIG_DIR"
+  chmod 0700 "$CONFIG_DIR"
+  listener_env "$1" "$FLEET_VAR"
 }
 
 # listed <name> [<item>...]: 0 when <name> is one of the items.
@@ -303,8 +300,7 @@ prune() {
 
 preflight
 if [ "$MODE" = install ]; then
-  [ -n "${AISSTREAM_API_KEY:-}" ] || die "AISSTREAM_API_KEY is not set (owner step: add the repository secret)"
-  check_key
+  listener_env
 fi
 mkdir -p "$APP"
 
