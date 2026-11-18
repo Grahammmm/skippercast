@@ -15,6 +15,7 @@ An input validity mask is kept in corrected.tif. A machine-valid receipt is revi
 """
 import argparse
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import sys
@@ -27,6 +28,11 @@ from scipy import ndimage
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / 'src'))
 from skippercast.platform import seafloor_ec as ec  # noqa: E402
+
+_spec = importlib.util.spec_from_file_location('preflight_native_grid', Path(__file__).with_name('preflight_native_grid.py'))
+assert _spec and _spec.loader
+preflight = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(preflight)
 
 OUTPUTS = ('corrected.tif', 'provenance.tif', 'EC-APPLY.json')
 EIGHT = np.ones((3, 3), dtype=bool)
@@ -123,6 +129,10 @@ def apply(path, detect_path, out_dir):
 
     with rasterio.open(path) as ds:
         if ds.driver != 'GTiff': raise Refused(f'driver {ds.driver} (GeoTIFF only)')
+        try:
+            has_unit, has_sign = preflight.check_ec_vertical(ds, require_declared=False)
+        except preflight.Refused as exc:
+            raise Refused(str(exc)) from None
         band, nodata = ds.read(1, masked=True), ds.nodata
         own_mask = MaskFlags.per_dataset in ds.mask_flag_enums[0]  # an explicit validity mask: kept in the output
         z = band.data
@@ -191,6 +201,9 @@ def apply(path, detect_path, out_dir):
     out.mkdir(parents=True, exist_ok=True)
     with rasterio.open(out / 'corrected.tif', 'w', **meta) as dst:
         dst.write(after, 1)
+        # Carry only declarations actually present; never qualify an unlabeled input by rewriting it.
+        if has_unit: dst.set_band_unit(1, 'm')
+        if has_sign: dst.update_tags(1, vertical_sign='elevation-up')
         if own_mask: dst.write_mask(valid | treated)  # untreated invalid cells stay invalid; only fills promote
     pmeta = {**{k: v for k, v in meta.items() if k != 'predictor'}, 'dtype': 'uint8', 'nodata': 255}
     with rasterio.open(out / 'provenance.tif', 'w', **pmeta) as dst:

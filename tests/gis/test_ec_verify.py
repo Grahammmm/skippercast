@@ -36,6 +36,9 @@ def _tif(path, values, crs='EPSG:32610', dtype='float32', nodata=-9999.0, driver
         ds.write(np.asarray(values, dtype=dtype), 1)
         if dtype == 'uint8':
             ds.update_tags(EC_VERSION='1.0', SKIPPERCAST_EC_CODES=json.dumps(dict(EC.CODES)))
+        elif driver == 'GTiff':
+            ds.set_band_unit(1, 'm')
+            ds.update_tags(1, vertical_sign='elevation-up')
     return path
 
 
