@@ -100,9 +100,12 @@ def restore(s3, bucket, root, name, *, include_cache=True):
         raise ValueError('Private state scope mismatch')
     base = Path(root)/'var/seafloor'
     _preflight_restore(base, name, data.get('files'))
-    if name == 'shared' and not any(e['path'] == 'screen/refresh-failure.json' for e in data['files']):
-        (base/'screen/refresh-failure.json').unlink(missing_ok=True)
-    for entry in data['files']:
+    entries = data['files']
+    marker = 'screen/refresh-failure.json'
+    if name == 'shared':
+        # Keep the local hold while restoring the other payloads, regardless of inventory order.
+        entries = sorted(entries, key=lambda entry: entry['path'] == marker)
+    for entry in entries:
         if not allowed(name, entry['path']) or not re.fullmatch('[a-f0-9]{64}', entry['sha256']):
             raise ValueError('Unreviewed private restore path')
         # Bookkeeping uses checked reach receipts, not original survey bytes.
@@ -117,6 +120,8 @@ def restore(s3, bucket, root, name, *, include_cache=True):
         restore_private(s3, bucket, path, entry['sha256'])
         if path.stat().st_size != entry['bytes']:
             raise ValueError('Private restore size mismatch')
+    if name == 'shared' and not any(entry['path'] == marker for entry in entries):
+        (base/marker).unlink(missing_ok=True)
     return True
 
 
