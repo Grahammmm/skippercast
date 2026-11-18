@@ -1,15 +1,8 @@
 """F11-16: interpreted habitat keeps the catalogued canonical ``year``."""
 import pytest
 
-pytest.importorskip('shapely')
-pytest.importorskip('pyproj')
-
-from shapely.geometry import box  # noqa: E402
-
-from skippercast.seafloor import bedrock_habitat as bh, classified_habitat as ch  # noqa: E402
-
 POLICY = {'id': 'fixture-v1', 'metadata_sha256': 'c' * 64}
-BEDROCK_POLICY = {**POLICY, 'interpretation_method': bh.METHOD}
+BINDING = {'row': {'id': 'classes'}}
 
 
 def _row(**extra):
@@ -18,18 +11,26 @@ def _row(**extra):
     return row
 
 
-BINDING = {'row': {'id': 'classes'}}
-
-
 def _classified_year(row):
+    from shapely.geometry import box
+    from skippercast.seafloor import classified_habitat as ch
     return ch.features_for([box(0, 0, 50, 50)], 'fixture', POLICY, row,
                            BINDING)['features'][0]['properties']['source_year']
 
 
 def _bedrock_year(row):
+    from shapely.geometry import box
+    from skippercast.seafloor import bedrock_habitat as bh
     patch = bh.Patch('1', 'Jo', box(0, 0, 50, 50), 2500, 'EPSG:3310')
-    return bh.features_for([patch], 'fixture', BEDROCK_POLICY, row,
+    policy = {**POLICY, 'interpretation_method': bh.METHOD}
+    return bh.features_for([patch], 'fixture', policy, row,
                            BINDING)['features'][0]['properties']['source_year']
+
+
+@pytest.fixture(autouse=True)
+def _survey_stack():
+    pytest.importorskip('shapely')
+    pytest.importorskip('pyproj')
 
 
 @pytest.mark.parametrize('year_of', [_classified_year, _bedrock_year])
