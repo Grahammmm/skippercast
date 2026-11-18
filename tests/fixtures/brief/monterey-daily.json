@@ -15,6 +15,7 @@
    "data": {
     "station": "46042",
     "sample_at": "2026-10-08T20:40:00Z",
+    "units": {"WVHT": "m", "DPD": "sec", "WTMP": "degC", "WSPD": "m/s", "GST": "m/s", "MWD": "degT"},
     "observations": [
      {
       "time": "2026-10-08T20:40:00Z",

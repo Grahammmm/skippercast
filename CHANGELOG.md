@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- SC2037-15: upcoming saved trips show the season status for each target on the trip date, with the last rules check and an official link. Unconfirmed rules never show as open.
 - SC1607-08: download the complete private catch log as formula-safe CSV, up to 10 pages (2,000 entries); incomplete reads produce no file.
 - SC-NEXT-08: the data status page follows the saved or browser language, with Spanish headings, table labels and freshness notes; source names and freshness rules are unchanged.
 - SC-NEXT-12: choose feet or metres for swell, seas and tide heights on the brief tiles and hourly table. Limits, printed heights and exports stay in feet.
