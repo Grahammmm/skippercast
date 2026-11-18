@@ -14,24 +14,29 @@ that to ``dist/regions/<region>/shore-habitat.geojson``.
   fresh download cannot renew a source, access or legal review.
 
     python scripts/collect_shore_habitat.py                       # download, write the asset
-    python scripts/collect_shore_habitat.py --save-sources DIR    # also keep the raw responses
+    python scripts/collect_shore_habitat.py --save-sources var/shore/snapshot
     python scripts/collect_shore_habitat.py --sources DIR         # offline rebuild from saved responses
 
 An offline rebuild verifies each saved response against its recorded sha256 and
 the selected region's source URL, and keeps the recorded fetch times, so it
 reproduces the committed asset byte for byte.
-Saved responses hold the full inventory (photos, phones), so keep them under var/.
+Saved responses hold the full inventory. --save-sources accepts only real,
+owner-only directories under this checkout's ignored var/ tree (created if
+missing). Existing shared directories and links are refused, not modified.
 """
 import argparse
+from contextlib import ExitStack
 from datetime import datetime, timezone
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import stat
 import sys
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
+from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
@@ -45,6 +50,7 @@ RULES = 'https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central'
 MAX_BYTES = 8_000_000
 ACCESS_FIELDS = 'OBJECTID,Name,O_PUBLIC,AccessType,Archived,Date_Closd,ClosureCom'
 SOURCE_FILES = {'noaa': 'noaa-esi-shoreline.json', 'access': 'ccc-access-points.json', 'terms': 'ccc-access-item.json'}
+RECEIPT_FILE = 'receipts.json'
 
 # Dated human reviews, carried from fish's shore source review of 2026-10-03
 # (shore-source-review-2026-10-03.json in the fish repository), pending owner
@@ -156,7 +162,7 @@ def load_saved(directory, region, now):
     directory = Path(directory)
     urls = source_urls(region)
     try:
-        receipts = json.loads((directory / 'receipts.json').read_text(encoding='utf-8'))
+        receipts = json.loads((directory / RECEIPT_FILE).read_text(encoding='utf-8'))
     except (OSError, UnicodeDecodeError, ValueError, RecursionError):
         raise ValueError('Unreadable saved receipts: receipts.json') from None
     if not isinstance(receipts, dict):
@@ -321,7 +327,7 @@ def load_added(directory, region, now):
     SC1952-07 receipt (a subset, not the full response), and the access and terms receipts are that dossier's."""
     directory = Path(directory)
     try:
-        receipts = json.loads((directory / 'receipts.json').read_text(encoding='utf-8'))
+        receipts = json.loads((directory / RECEIPT_FILE).read_text(encoding='utf-8'))
     except (OSError, UnicodeDecodeError, ValueError, RecursionError):
         raise ValueError('Unreadable saved receipts: receipts.json') from None
     if not isinstance(receipts, dict):
@@ -344,6 +350,64 @@ def load_added(directory, region, now):
     return bodies, {k: receipts[k] for k in ('noaa', 'access', 'terms')}
 
 
+def _private_save_fd(directory, output, stack):
+    """Preflight the raw destination and keep it open across source collection."""
+    directory = directory.absolute()
+    private = ROOT / 'var'
+    served = Path(os.path.realpath(ROOT / 'dist'))
+    if ('..' in directory.parts or directory == private or not directory.is_relative_to(private)
+            or directory.is_relative_to(served) or served.is_relative_to(directory)):
+        raise ValueError('--save-sources must be in a private subdirectory of this checkout’s var/, outside dist/')
+
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    fd = os.open(ROOT, flags)
+    stack.callback(os.close, fd)
+    parts = directory.relative_to(ROOT).parts
+    for index, part in enumerate(parts):
+        try:
+            try:
+                os.mkdir(part, 0o700, dir_fd=fd)
+            except FileExistsError:
+                pass
+            fd = os.open(part, flags, dir_fd=fd)
+        except OSError as error:
+            raise ValueError(f'--save-sources cannot open directory component {part}: {error.strerror}') from None
+        stack.callback(os.close, fd)
+        info = os.fstat(fd)
+        if info.st_uid != os.geteuid() or info.st_mode & 0o022:
+            raise ValueError('--save-sources requires owner-controlled directory components below the checkout')
+        if index == len(parts) - 1 and stat.S_IMODE(info.st_mode) != 0o700:
+            raise ValueError('--save-sources requires an owner-only destination directory (mode 0700)')
+
+    resolved_output = Path(os.path.realpath(output))
+    for name in (*SOURCE_FILES.values(), RECEIPT_FILE):
+        if resolved_output == directory / name:
+            raise ValueError('--output cannot replace a --save-sources artifact')
+        try:
+            info = os.stat(name, dir_fd=fd, follow_symlinks=False)
+        except FileNotFoundError:
+            continue
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_uid != os.geteuid():
+            raise ValueError(f'--save-sources refuses linked or non-owner regular files: {name}')
+    return fd
+
+
+def _write_private(fd, name, data):
+    tmp = f'.{name}.{uuid4().hex}.tmp'
+    handle_fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=fd)
+    try:
+        with os.fdopen(handle_fd, 'wb') as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, name, src_dir_fd=fd, dst_dir_fd=fd)
+    finally:
+        try:
+            os.unlink(tmp, dir_fd=fd)
+        except FileNotFoundError:
+            pass
+
+
 def _write_atomic(path, data):
     tmp = path.with_name('.' + path.name + f'.{os.getpid()}.tmp')
     try:
@@ -361,7 +425,7 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument('--region', default='morro-bay', choices=sorted(SITES))
     p.add_argument('--sources', type=Path, help='rebuild offline from responses saved by --save-sources')
-    p.add_argument('--save-sources', type=Path, help='keep the raw responses and receipts here (use var/)')
+    p.add_argument('--save-sources', type=Path, help='archive raw responses and receipts in an owner-only subdirectory of var/')
     p.add_argument('--output', type=Path)
     p.add_argument('--add-site', choices=[ADDED_SITE], help='offline: add one run to the committed package from --sources, keeping the legacy runs byte for byte')
     args = p.parse_args(argv)
@@ -374,23 +438,24 @@ def main(argv=None):
 
 def run(args):
     output = args.output or ROOT / 'catalog/shore-habitat' / f'{args.region}.geojson'
-    if args.add_site:
-        if not args.sources or args.save_sources:
-            raise ValueError('--add-site needs --sources and no --save-sources')
-        bodies, receipts = load_added(args.sources, args.region, datetime.now(timezone.utc))
-        asset = add_site(args.region, args.add_site, json.loads(output.read_bytes()), bodies, receipts)
-    else:
-        if args.sources:
-            bodies, receipts = load_saved(args.sources, args.region, datetime.now(timezone.utc))
+    if args.add_site and (not args.sources or args.save_sources):
+        raise ValueError('--add-site needs --sources and no --save-sources')
+    with ExitStack() as stack:
+        saved = _private_save_fd(args.save_sources, output, stack) if args.save_sources else None
+        if args.add_site:
+            bodies, receipts = load_added(args.sources, args.region, datetime.now(timezone.utc))
+            asset = add_site(args.region, args.add_site, json.loads(output.read_bytes()), bodies, receipts)
         else:
-            bodies, receipts = download(args.region)
-        asset = build_asset(args.region, bodies, receipts)
-    validate.check('shore-habitat', asset)
-    if args.save_sources:
-        args.save_sources.mkdir(parents=True, exist_ok=True)
-        for key, name in SOURCE_FILES.items():
-            _write_atomic(args.save_sources / name, bodies[key])
-        _write_atomic(args.save_sources / 'receipts.json', (json.dumps(receipts, indent=1) + '\n').encode())
+            if args.sources:
+                bodies, receipts = load_saved(args.sources, args.region, datetime.now(timezone.utc))
+            else:
+                bodies, receipts = download(args.region)
+            asset = build_asset(args.region, bodies, receipts)
+        validate.check('shore-habitat', asset)
+        if saved is not None:
+            for key, name in SOURCE_FILES.items():
+                _write_private(saved, name, bodies[key])
+            _write_private(saved, RECEIPT_FILE, (json.dumps(receipts, indent=1) + '\n').encode())
     output.parent.mkdir(parents=True, exist_ok=True)
     _write_atomic(output, (json.dumps(asset, ensure_ascii=False, separators=(',', ':')) + '\n').encode('utf-8'))
     vertices = sum(len(line) for f in asset['features'] for line in f['geometry']['coordinates'])

@@ -23,8 +23,9 @@ Run (repository root)::
     python research/scripts/rematch_ais_names.py --resolved RUN/resolved.jsonl --state SNAPSHOT/state.sqlite \\
         --out PRIVATE_DIR [--prior-join AISBULK/join.json]
 
-Standard output is counts only. ``--out`` (outside the repository) receives ``pairs.json`` and ``pairs.md`` with
-MMSIs and call signs (private) and ``pr-table.md`` without them (for the PR body).
+Standard output is counts only. ``pr-table.md`` and ``rule-table.md`` contain the same aggregate rule counts.
+Keep ``pairs.json``, ``pairs.md``, ``ports.json`` and ``ports.md`` for private review only. All files are
+written with owner-only permissions to ``--out`` (outside the repository).
 """
 from __future__ import annotations
 
@@ -445,19 +446,6 @@ def _cell(v) -> str:
     return str(v if v not in (None, "", []) else "-").replace("|", "/").replace("\n", " ")
 
 
-def pr_table(rep: dict) -> str:
-    """The new-pair table for a PR body: no MMSIs and no call signs (only whether one is broadcast)."""
-    lines = ["| Our name | Port | AIS name | Call sign broadcast | Type | Length m | Rule | Role | Home-port days | Status |",
-             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
-    for p in sorted(rep["pairs"], key=lambda p: (RULE_ORDER.index(p["rule"]), p["port_id"], p["our_name"])):
-        lines.append("| " + " | ".join(_cell(x) for x in (
-            p["our_name"], p["port_id"], p["ais_name"], "yes" if p["call_sign"] else "no", p["ship_type"],
-            p["length_m"], p["rule"], p["role"], p["home_port_days"],
-            p["status"] + (f" ({'; '.join(p['ambiguity'])})" if p["ambiguity"] else "")
-            + (f" [{'; '.join(p['conflicts'])}]" if p["conflicts"] else ""))) + " |")
-    return "\n".join(lines) + "\n"
-
-
 def private_table(rep: dict) -> str:
     lines = ["| Our name | Port | AIS name | MMSI | Call sign | Type | Length m | Rule | Role | Status | Support | Other ports |",
              "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
@@ -497,7 +485,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, required=True, help="private directory outside the repository")
     args = parser.parse_args(argv)
     if J._inside_repository(args.out):
-        parser.error("--out must be outside the repository: the pair table holds MMSIs")
+        parser.error("--out must be outside the repository: the pair files contain private vessel data")
     before = _sha256(args.state)
     registry = [json.loads(s) for s in args.resolved.read_text().splitlines() if s.strip()]
     statics, presence, window = J.load_ais(args.state)
@@ -506,18 +494,19 @@ def main(argv: list[str] | None = None) -> int:
     after = _sha256(args.state)
     proof = {"ais_state_sha256_before": before, "ais_state_sha256_after": after, "unchanged": before == after,
              "opened": "mode=ro", "presence_window": window}
-    rep["counts"]["ais_state_read_only_proof"] = proof
-    args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "pairs.json").write_text(json.dumps(rep, indent=1, default=str))
-    (args.out / "pairs.md").write_text(private_table(rep))
-    (args.out / "pr-table.md").write_text(pr_table(rep))
-    (args.out / "rule-table.md").write_text(rule_table(rep))
-    (args.out / "ports.json").write_text(json.dumps(rep["ports"], indent=1))
+    counts = rep["counts"]
+    private_rep = {**rep, "counts": {**counts, "ais_state_read_only_proof": proof}}
+    args.out.mkdir(mode=0o700, parents=True, exist_ok=True)
+    J._write_private(args.out / "pairs.json", json.dumps(private_rep, indent=1, default=str))
+    J._write_private(args.out / "pairs.md", private_table(rep))
+    rules = rule_table(rep)
+    J._write_private(args.out / "pr-table.md", rules)
+    J._write_private(args.out / "rule-table.md", rules)
+    J._write_private(args.out / "ports.json", json.dumps(rep["ports"], indent=1))
     head = list(rep["ports"][0])
-    (args.out / "ports.md").write_text("| " + " | ".join(head) + " |\n| " + " | ".join("---" for _ in head) + " |\n"
-                                       + "".join("| " + " | ".join(str(p[h]) for h in head) + " |\n"
-                                                 for p in rep["ports"]))
-    print(json.dumps(rep["counts"], indent=1, sort_keys=True))
+    J._write_private(args.out / "ports.md", "| " + " | ".join(head) + " |\n| " + " | ".join("---" for _ in head) + " |\n"
+                     + "".join("| " + " | ".join(str(p[h]) for h in head) + " |\n" for p in rep["ports"]))
+    print(json.dumps(counts, indent=1, sort_keys=True))
     return 0 if before == after else 1
 
 
