@@ -9,6 +9,7 @@ from unittest import TestCase, mock
 from skippercast.http import FakeSession
 from skippercast.pipeline import beach_health as bh
 from tests._support import FIXTURES as _FIXTURES
+from tests.unit.test_beach_health import routes as beach_routes
 
 NOW = datetime(2026, 10, 8, 15, tzinfo=timezone.utc)
 FIXTURES = _FIXTURES / "sp101_beach_cache_clock"
@@ -123,7 +124,8 @@ class RegressionTests(TestCase):
     def test_publish_keeps_healthy_cache_with_injected_fake(self):
         path = Path(self.tmp.name) / "regions/morro-bay/beach-health.json"
         path.parent.mkdir(parents=True)
-        path.write_bytes(json.dumps(BASE, separators=(",", ":")).encode("utf-8"))
+        # SCA-279: a kept cache must be a usable edition (site rows, bound source), not only a recent ok clock.
+        path.write_bytes(json.dumps(bh.collect("morro-bay", FakeSession(beach_routes()), NOW), separators=(",", ":")).encode("utf-8"))
         original = path.read_bytes()
         session = FakeSession({})
         self.assertEqual(bh.publish(self.tmp.name, session, NOW, regions=["morro-bay"]),
