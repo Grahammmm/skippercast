@@ -3,7 +3,10 @@
   "required_checks": [
     {"context": "survey-science", "app_id": 15368},
     {"context": "check (3.13)", "app_id": 15368},
-    {"context": "e2e", "app_id": 15368},
+    {"context": "e2e (1)", "app_id": 15368},
+    {"context": "e2e (2)", "app_id": 15368},
+    {"context": "e2e (3)", "app_id": 15368},
+    {"context": "e2e (4)", "app_id": 15368},
     {"context": "sign-off", "app_id": 15368}
   ]
 }
