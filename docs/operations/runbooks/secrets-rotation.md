@@ -144,12 +144,9 @@ Only after a port ([port to Twilio](advisor-port-to-twilio.md)). Twilio console 
   mkdir -p "$TOKEN_DIR"
   chmod 700 "$TOKEN_DIR"
   TOKEN_FILE="$TOKEN_DIR/meta-page-token-$(date -u +%Y%m%dT%H%M%SZ)-$$"
-  if [ -e "$TOKEN_FILE" ] || [ -L "$TOKEN_FILE" ]; then echo "in use, choose another name"; else echo "name is free"; fi
   ```
 
-  Run the script only if that printed `name is free`. If it printed `in use`, do not run it and do not delete anything: set `TOKEN_FILE` to another new name and check again. Only a file at a name that was free before the run may be removed by the failure cleanup below.
-
-  Keep `META_APP_ID` and `META_APP_SECRET` in the environment, never in command arguments. From the checkout, run `node scripts/advisor/meta-token.mjs --token-file "$TOKEN_FILE"` for a fresh Page token ([09 § Setup](../../plans/text-advisor/09-social.md)). The script prints the Page id, Instagram user id, token expiry, quota and account type; it never prints the Page token. It refuses an existing file or symlink: use a new name every run. If the run fails or exits 1 (for example, a non-Business account), do not import. Because the check above found the name free, a regular file now at `$TOKEN_FILE` was left by this run (a partial write); remove it with `if [ -f "$TOKEN_FILE" ] && [ ! -L "$TOKEN_FILE" ]; then rm -- "$TOKEN_FILE"; fi`. Never run that cleanup for a name the check reported as `in use`, or one you did not check: the script refuses to overwrite, so that file belongs to an earlier run.
+  Keep `META_APP_ID` and `META_APP_SECRET` in the environment, never in command arguments. From the checkout, run `node scripts/advisor/meta-token.mjs --token-file "$TOKEN_FILE"` for a fresh Page token ([09 § Setup](../../plans/text-advisor/09-social.md)). The script prints the Page id, Instagram user id, token expiry, quota and account type; it never prints the Page token. It creates the file itself, exclusively and owner-only, only after every check has passed, and refuses an existing file or symlink: use a new name every run. If the run fails or exits 1 (for example, a non-Business account), do not import; no token file exists at that point. If it fails while writing the file, the script removes the partial file it created and says so. Do not delete `$TOKEN_FILE` by hand after a failed run. A name that looked free earlier can be taken by another run before the script opens it, and a path check cannot tell that file from yours. If the script says the file "was not created by this run", leave it alone, check it with `ls -l` only (never open it) and use a new name.
 
   Import only by redirecting the file into the secret command. Use the GitHub command for setup; on rotation, use both commands:
 

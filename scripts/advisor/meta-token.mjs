@@ -24,7 +24,7 @@
 // call carries appsecret_proof (server/advisor/social/meta.ts graph()).
 import {createInterface} from 'node:readline/promises';
 import {randomBytes} from 'node:crypto';
-import {open} from 'node:fs/promises';
+import {open, lstat, unlink} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 
 const root = new URL('../../', import.meta.url);
@@ -126,18 +126,27 @@ export async function tokenExpiry({appId, appSecret, token, fetcher = fetch}) {
   return typeof r?.data?.expires_at === 'number' ? r.data.expires_at : null;
 }
 
-async function savePageToken(path, token) {
+export async function savePageToken(path, token) {
+  let file;
   try {
-    // Exclusive creation refuses existing files, devices, pipes and symlinks.
-    const file = await open(path, 'wx', 0o600);
-    try {
-      const info = await file.stat();
-      if (!info.isFile() || (info.mode & 0o777) !== 0o600 || info.uid !== process.geteuid()) throw Error();
-      await file.writeFile(token);
-    } finally { await file.close(); }
+    // Exclusive creation refuses existing files, devices, pipes and symlinks. A refusal means the
+    // file at `path` is not ours: it is never touched, and nothing below runs.
+    file = await open(path, 'wx', 0o600);
   } catch {
-    throw Error('Could not save the Page token. --token-file must name a new owner-only file in private local storage. If this run created a partial file, remove it.');
+    throw Error('Could not save the Page token. --token-file must name a new owner-only file in private local storage. The file there, if any, was not created by this run and was left untouched.');
   }
+  try {
+    const info = await file.stat();
+    if (!info.isFile() || (info.mode & 0o777) !== 0o600 || info.uid !== process.geteuid()) throw Error();
+    await file.writeFile(token);
+  } catch {
+    // Ownership is established by the open descriptor: remove the path only while it is still that very file.
+    try {
+      const mine = await file.stat(), now = await lstat(path);
+      if (now.dev === mine.dev && now.ino === mine.ino) await unlink(path);
+    } catch { /* leave it for manual inspection */ }
+    throw Error('Could not save the Page token. This run created the file and removed it; start again with a new --token-file name.');
+  } finally { await file.close(); }
 }
 
 export async function main(argv, {env = process.env, fetcher = fetch, ask, log = console.log} = {}) {

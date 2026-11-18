@@ -8,7 +8,7 @@
 // the META_* secrets. All offline: a fake fetch answers.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
+import {readFileSync, mkdtempSync, rmSync, writeFileSync, existsSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -273,6 +273,32 @@ test('meta-token.mjs: dialog and code handling, token exchange, and setup checks
   assert.equal(bad, 1);
   assert.match(lines.join('\n'), /not BUSINESS/);
   await assert.rejects(script.main(['--token-file', join(dir, 'no-app-token')], {env: {}, fetcher, ask, log: () => {}}), /META_APP_ID/);
+});
+
+// Contract: meta-token.mjs never deletes a token file it did not create. Bug caught: a file another run made
+// after the caller's "is the name free" check (the script's exclusive open then refuses it) being removed by
+// failure cleanup; or the script's own partial file being left behind. Ownership comes from the open descriptor.
+test('meta-token.mjs: a destination created before the exclusive open is refused and kept; a failed write removes only its own file', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'meta-token-own-'));
+  t.after(() => rmSync(dir, {recursive: true, force: true}));
+  const out = [];
+  const code = 'AQPLACEHOLDERCODE0123456789';
+  const env = {META_APP_ID: '100000000000999', META_APP_SECRET: SECRET};
+  const raced = join(dir, 'raced-token');
+  const {fetcher} = fakeFetch([fixture('oauth-short'), fixture('oauth-long'), fixture('me-accounts'), {id: IG, username: 'skippercast'}, fixture('publishing-limit'), fixture('debug-token-never')]);
+  // The other run creates the file while this run waits for the pasted address: after any free-name check, before the open.
+  const ask = async () => {
+    writeFileSync(raced, 'other run token\n', {mode: 0o600});
+    const state = new URL(out.find(l => l.includes('dialog/oauth')).trim()).searchParams.get('state');
+    return `${script.DEFAULT_REDIRECT}?code=${code}&state=${state}`;
+  };
+  await assert.rejects(quiet(() => script.main(['--token-file', raced], {env, fetcher, ask, log: l => out.push(l)})), /not created by this run/);
+  assert.equal(readFileSync(raced, 'utf8'), 'other run token\n');
+
+  // A write that fails after this run created the file removes that file (and only that one).
+  const mine = join(dir, 'mine-token');
+  await assert.rejects(script.savePageToken(mine, 12345), /created the file and removed it/);
+  assert.equal(existsSync(mine), false);
 });
 
 test('deploy wiring: the workflow passes the META_* secrets, and the deploy uploads each only when set (META_IG_TOKEN stays out)', () => {
