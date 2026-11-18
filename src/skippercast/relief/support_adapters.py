@@ -12,9 +12,12 @@ Only NOAA's own per-cell coverage flags certify a cell (E2E-PIPELINE §3a):
   that depths whose contributor has ``bathy_coverage`` False are interpolated,
   that bathymetry measurements are where it is True, and that ``coverage`` False
   forces ``bathy_coverage`` False (bluetopo_faq.html, bluetopo_specs.html).
-* BAG / VR BAG: the optional georeferenced metadata layer with the same fields
-  (profile NOAA-OCS-2022.10; ``BAG_root/georef_metadata/<layer>/keys`` per node,
-  ``varres_keys`` per refinement node, ``values`` records; BAG FSD Appendix A).
+* BAG / VR BAG: the optional georeferenced metadata layer of the Elevation layer
+  with the same fields (profile NOAA-OCS-2022.10;
+  ``BAG_root/georef_metadata/Elevation/keys`` per node, ``varres_keys`` per
+  refinement node, ``values`` records; BAG FSD Appendix A). Metadata is
+  layer-specific: an Uncertainty layer's table, or a layer stating another profile
+  type, is never read, and support stays 2.
 
 A cell without evidence stays 2: no evidence file or layer, key 0, a code the
 table does not list, a missing flag, or ``bathy_coverage`` True without
@@ -34,6 +37,7 @@ from .normalize import SupportAdapter
 
 INTERPOLATED, UNKNOWN, MEASURED = 1, 2, 3
 LOWERING_SURVEY_IDS = ('.interpolated', 'chart', 'generalization')
+ELEVATION_LAYER, PROFILE, PROFILE_ATTRIBUTE = 'Elevation', 'NOAA-OCS-2022.10', 'Metadata Profile Type'
 
 
 def text(value):
@@ -121,11 +125,24 @@ def bluetopo_classify(ds, grid, evidence):
 
 
 def coverage_layer(root):
+    """The Elevation layer's NOAA-OCS-2022.10 georeferenced metadata, else None.
+
+    Each ``georef_metadata`` group describes the BAG layer of the same name, so only
+    ``georef_metadata/Elevation`` can say what was measured at an elevation node; an
+    Uncertainty (or any other layer's) table is never read. A stated profile type other
+    than the documented one gives the columns no documented meaning: no evidence.
+    """
     group = root.get('georef_metadata')
-    found = [layer for layer in (group.values() if isinstance(group, h5py.Group) else ())
-             if isinstance(layer, h5py.Group) and 'keys' in layer and 'values' in layer
-             and {'coverage', 'bathy_coverage'} <= set(layer['values'].dtype.names or ())]
-    return found[0] if len(found) == 1 else None  # absent or ambiguous: no evidence
+    layer = group.get(ELEVATION_LAYER) if isinstance(group, h5py.Group) else None
+    if not (isinstance(layer, h5py.Group) and 'keys' in layer and 'values' in layer):
+        return None
+    if not {'coverage', 'bathy_coverage'} <= set(layer['values'].dtype.names or ()):
+        return None
+    for holder in (layer, layer['keys'], layer['values']):
+        stated = holder.attrs.get(PROFILE_ATTRIBUTE)
+        if stated is not None and text(stated.item() if isinstance(stated, np.ndarray) else stated).strip('\0 ') != PROFILE:
+            return None
+    return layer
 
 
 def bag_classify(ds, grid, evidence):

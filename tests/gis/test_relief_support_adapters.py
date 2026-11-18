@@ -101,13 +101,15 @@ def test_bluetopo_contributor_coverage_classes_through_normalize(tmp_path):
         sa.bluetopo_classify(ds, grid, (wrong,))
 
 
-def add_georef_layer(path, keys, records, vr_keys=None):
+def add_georef_layer(path, keys, records, vr_keys=None, layer_name='Elevation', profile=None):
     fields = [('coverage', 'u1'), ('bathy_coverage', 'u1'), ('source_survey_id', h5py.string_dtype())]
     table = np.array([(0, 0, '')] + list(records), dtype=fields)
     with h5py.File(path, 'r+') as bag:
-        layer = bag['BAG_root'].create_group('georef_metadata/Elevation')
+        layer = bag['BAG_root'].create_group(f'georef_metadata/{layer_name}')
         layer.create_dataset('keys', data=np.asarray(keys, dtype='u4'))
         layer.create_dataset('values', data=table)
+        if profile is not None:
+            layer['keys'].attrs[sa.PROFILE_ATTRIBUTE] = profile
         if vr_keys is not None:
             layer.create_dataset('varres_keys', data=np.asarray(vr_keys, dtype='u4'))
 
@@ -132,6 +134,41 @@ def test_regular_bag_georef_metadata_keys_through_normalize(tmp_path):
         np.testing.assert_array_equal(ds.read(1), expected)
     empty, _ = result_files(norm.normalize(plain, tmp_path / 'cache', family=family))
     assert set(values(empty / 'support.tif').compressed()) == {2}
+
+
+# Contract: BAG georeferenced metadata is layer-specific, so only the Elevation
+# layer's NOAA-OCS-2022.10 table can certify elevation nodes; the Uncertainty
+# layer's table, a differently named layer or another stated profile leaves
+# every valid cell 2. Bug caught: taking the one metadata layer that happens to
+# carry coverage flags (here Uncertainty's) and certifying elevation as measured.
+@pytest.mark.parametrize('layer_name, profile, certified', [
+    ('Elevation', 'NOAA-OCS-2022.10', True),
+    ('Elevation', None, True),
+    ('Uncertainty', 'NOAA-OCS-2022.10', False),
+    ('Uncertainty', None, False),
+    ('Nominal_Elevation', None, False),
+    ('Elevation', 'Unknown metadata profile', False),
+    ('Elevation', 'SOME-OTHER-2030.01', False),
+])
+def test_bag_support_reads_only_the_elevation_layers_documented_profile(tmp_path, layer_name, profile, certified):
+    src = tmp_path / 'layered.bag'
+    OriginalBagWindowTests._make_original_bag(src)
+    add_georef_layer(src, np.ones((6, 6)), [(1, 1, 'H13001')], layer_name=layer_name, profile=profile)
+    target, _ = result_files(norm.normalize(src, tmp_path / 'cache', family='NOAA NOS BAG survey'))
+    got = set(values(target / 'support.tif').compressed())
+    assert got == ({3} if certified else {2})
+
+
+# Contract: a BAG carrying both layers uses the Elevation table even when an
+# Uncertainty table with different flags is present. Bug caught: ambiguity
+# between layers resolved by order, or by dropping the Elevation evidence.
+def test_bag_with_both_layers_uses_elevation_metadata(tmp_path):
+    src = tmp_path / 'both.bag'
+    OriginalBagWindowTests._make_original_bag(src)
+    add_georef_layer(src, np.ones((6, 6)), [(1, 0, 'H13002')], layer_name='Elevation')
+    add_georef_layer(src, np.ones((6, 6)), [(1, 1, 'H13001')], layer_name='Uncertainty')
+    target, _ = result_files(norm.normalize(src, tmp_path / 'cache', family='NOAA NOS BAG survey'))
+    assert set(values(target / 'support.tif').compressed()) == {1}
 
 
 # Contract: each VR refinement node takes the record named by its own
