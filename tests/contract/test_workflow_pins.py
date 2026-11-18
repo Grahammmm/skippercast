@@ -68,11 +68,15 @@ if __name__ == '__main__':
 
 
 class RunnerSwitchTests(unittest.TestCase):
-    """Heavy workflows read their runner from a repository variable (docs/operations/runners.md)."""
+    """Check the fixed and variable-based runner assignments in docs/operations/runners.md."""
 
     # fleet-health.yml alerts when Hermes (the data runner) is down, so it cannot run there (charter-fleet design § 4).
     # e2e-timing.yml measures input latency, so it stays on the same GitHub-hosted runner class every night (CI-PARITY-1).
-    HOSTED_ONLY = {'deploy-cloudflare.yml', 'dco.yml', 'release.yml', 'fleet-health.yml', 'e2e-timing.yml'}
+    HOSTED_ONLY = {
+        'budget-drift.yml', 'buoy-history.yml', 'dco.yml', 'deploy-cloudflare.yml',
+        'e2e-timing.yml', 'feed-freshness.yml', 'fleet-health.yml', 'live-conditions.yml',
+        'ops-report.yml', 'regional-legal-review.yml', 'release.yml',
+    }
 
     # ci.yml is the one pull_request workflow that can reach the box. A pull request from a
     # fork, or a Dependabot update (third-party install scripts), stays on GitHub-hosted runners
@@ -102,7 +106,7 @@ class RunnerSwitchTests(unittest.TestCase):
             for line in re.findall(r'^\s*runs-on:\s*(.+?)\s*$', path.read_text(), re.M):
                 if path.name in self.HOSTED_ONLY:
                     if line != 'ubuntu-latest':
-                        wrong.append(f'{path.name}: {line} (deploy, DCO, release and fleet health stay GitHub-hosted)')
+                        wrong.append(f'{path.name}: {line} (expected literal ubuntu-latest)')
                 elif line == 'macos-latest' and path.name == 'research-substrate.yml':
                     continue  # one monthly audit job needs a macOS wheel (pylerc); about 90 billed minutes a month
                 elif line != expected:

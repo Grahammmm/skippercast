@@ -25,12 +25,13 @@ $0.008 a minute (check GitHub's current price list). At the totals above that is
 
 ## The switch: self-hosted runners
 
-Every heavy workflow reads its runner from a repository variable, so moving the jobs is a
-variable change, not a code change:
+Some workflows are pinned to GitHub-hosted runners; only workflows that read a runner
+variable can be moved by changing that variable:
 
-| Variable | Workflows | Unset (default) | Set to `skippercast` |
+| Runner or variable | Workflows | Unset (default) | Set to `skippercast` |
 | --- | --- | --- | --- |
-| `DATA_RUNNER` | live loop, daily data, freshness, ops report, legal review, research, rehearsal, forecast tiles, fleet AIS listener install, fleet registry, fleet OSINT, basemap | `ubuntu-latest` (GitHub-hosted, billed) | our runners (free minutes) |
+| Literal `ubuntu-latest` | `budget-drift.yml`, `buoy-history.yml`, `feed-freshness.yml`, `live-conditions.yml` (all 4 jobs), `ops-report.yml`, `regional-legal-review.yml` | Always GitHub-hosted | Not configurable |
+| `DATA_RUNNER` | advisor media, coast assets, fleet AIS processor and listener install, fleet registry, fleet OSINT; fallback for `DATA_RUNNER_LIGHT` | advisor, coast and fleet jobs skip; LIGHT jobs use `ubuntu-latest` if `DATA_RUNNER_LIGHT` is also unset | our runners (free minutes) |
 | `DATA_RUNNER_LIGHT` | the portable CPU-heavy subset: daily data, research daily, research substrate, research fish survey, draft-region health and rehearsal, forecast tiles, basemap | falls back to `DATA_RUNNER`, then `ubuntu-latest` | e.g. `ubuntu-latest` moves only these to GitHub-hosted runners (free on a public repo) while the rest stay on `DATA_RUNNER` |
 | `SEAFLOOR_RUNNER` | seafloor preparation, reach processing and publication | `ubuntu-latest` | a verified dedicated runner label |
 | `CI_RUNNER` | `ci.yml` (check, e2e, survey-science) | `ubuntu-latest` | our runners only when `CI_SELF_HOSTED_READY=true` |
@@ -67,14 +68,12 @@ onto them until isolation is verified (see [CI readiness gate](#ci-readiness-gat
 ## Setting up the box
 
 One Ubuntu 24.04 machine with 4 vCPU, 8 GB memory and 80 GB disk is enough for four
-runner instances (the live loop, its notify job, the hourly freshness check and one CI
-or seafloor job at a time). Options, ranked:
+runner instances. Options, ranked:
 
 1. **Hetzner Cloud CX32** (4 vCPU, 8 GB, 80 GB, 20 TB traffic): about €7 a month. Any
    region works; the jobs are batch downloads from NOAA and ECMWF, not latency-sensitive.
 2. A machine you already run at home, if it is on 24 hours a day and on a UPS. Free, but
-   a power cut stops the forecast until the Worker watchdog restarts the loop, and
-   `feed-freshness.yml` will open stale-feed issues.
+   a power cut interrupts jobs configured to use the box.
 3. Stay on GitHub-hosted runners and pay. Simplest; the most expensive by a factor of 50.
 
 Steps:
@@ -92,20 +91,21 @@ Steps:
    and `actions/setup-node` inside each job, cached under the runner's work folder.
 4. Check Settings → Actions → Runners shows four idle runners.
 5. Set the repository variables: `gh variable set DATA_RUNNER --body skippercast` and
-   `gh variable set CI_RUNNER --body skippercast`. The next scheduled data run uses the box.
+   `gh variable set CI_RUNNER --body skippercast`. Only jobs configured to use those
+   variables can move to the box; the fixed hosted jobs in the table are unaffected.
    CI remains hosted until the complete readiness checks below pass and you set
    `CI_SELF_HOSTED_READY=true`. To move CI back to hosted runners, delete that readiness
-   variable or set it to `false`; delete `DATA_RUNNER` to move data jobs back.
+   variable or set it to `false`. Unsetting `DATA_RUNNER` returns eligible jobs to their
+   default runner; jobs that require the variable skip instead.
 6. Also turn on `ENABLE_QUEUES=true` (see `docs/cloudflare.md`) so the notify job stops
    running all day; the Worker's cron queues trip checks itself.
 
 ## Keeping it healthy
 
 - The runner service updates itself. Upgrade the host with `apt-get upgrade` monthly.
-- Disk: the live loop and seafloor jobs write under `_work`; `df -h /opt/actions-runner`
+- Disk: jobs on the box write under `_work`; `df -h /opt/actions-runner`
   should stay below 70%. The runner cleans job workspaces; toolchain caches persist.
-- If all four runners are busy, jobs queue instead of failing. The live loop's `next` job
-  is tiny, so it never starves the chain.
+- If all four runners are busy, jobs assigned to the box queue instead of failing.
 - Artifacts and caches (`actions/upload-artifact`, `actions/cache`) still count against
   GitHub storage (500 MB free on the Free plan). The research workflows upload the most;
   shorten their `retention-days` if the storage bill appears.
