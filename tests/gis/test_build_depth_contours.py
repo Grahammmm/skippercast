@@ -28,7 +28,7 @@ def _tif(path, values, x0, y0, cell=2.0, crs='EPSG:32610', dtype='float32', noda
 
 def _sources(*ids, native=2):
     return {i: {'id': i, 'review_status': 'approved', 'needs': ['bathymetry'], 'name': f'Synthetic {i}',
-                'documentation_url': 'https://example.invalid/doc', 'rights': {'attribution': 'Synthetic'},
+                'documentation_url': 'https://example.invalid/doc', 'rights': {'attribution': 'Synthetic', 'public_display': 'allowed'},
                 'survey_year': 2008, 'vertical_datum': None, 'native_resolution_m': native,
                 'reviewed_at': '2026-10-01'} for i in ids}
 
@@ -603,3 +603,17 @@ def test_derived_feet_factor_keeps_shoal_hint_rounding(tmp_path, monkeypatch):
     hints = [f['properties']['shoal_hint_ft'] for f in derived['features'] if f['properties']['kind'] == 'unresolved-area']
     assert hints == [10] and all(type(h) is int for h in hints)
     assert derived == control
+
+
+def test_original_grid_needs_an_affirmative_public_display_before_any_read(tmp_path, monkeypatch):
+    # Contract: a non-held build of an ORIGINAL grid publishes only a source whose registry says public_display
+    # 'allowed'. The believable bug: treating a missing public_display as clearance for non-normalised grids.
+    import rasterio
+    sources = _sources('usgs-a')
+    del sources['usgs-a']['rights']['public_display']
+    a = _tif(tmp_path / 'a.tif', _slope((64, 64)), X0, Y0)
+    calls = []
+    monkeypatch.setattr(rasterio, 'open', lambda *a, **k: calls.append(a))
+    with pytest.raises(SystemExit, match='usgs-a is not cleared for public display'):
+        _run_builder(monkeypatch, {'usgs-a': a}, sources)
+    assert calls == []

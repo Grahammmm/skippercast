@@ -130,8 +130,11 @@ def test_derivative_fails_closed(builder, geographic_twin, tmp_path, failure):
     assert not out.exists()
 
 
-def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp_path, monkeypatch, builder):
+@pytest.mark.parametrize('downgraded_from_col', [None, 50])
+def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp_path, monkeypatch, builder, downgraded_from_col):
     # A valid R4 code alone must not admit a denied source, replace native lines, or evict tiles/zone.
+    # downgraded_from_col protects: cells the support raster marks interpolated (class 2) in a 2 m normalised
+    # grid must not draw z14+ native detail; a bug that ignores support.tif draws it across the whole grid.
     import numpy as np
     import rasterio
     from pyproj import Transformer
@@ -172,13 +175,21 @@ def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp
     coarse = write_grid(tmp_path / 'coarse.tif', np.tile(np.linspace(-1, -120, 20, dtype='float32'), (40, 1)),
                         crs, from_origin(x + 200, y, 10, 10))
 
+    support = tmp_path / 'support.tif'
+    classes = np.full(depths.shape, 3, dtype='uint8')
+    if downgraded_from_col is not None:
+        classes[:, downgraded_from_col:] = 2
+    with rasterio.open(support, 'w', driver='GTiff', count=1, dtype='uint8', height=classes.shape[0],
+                       width=classes.shape[1], crs=crs, transform=native_transform) as ds:
+        ds.write(classes, 1)
+
     def row(ident, grid):
         return {'id': f'{ident}-tile', 'source_id': ident, 'path': str(grid),
                 'sha256': digest(grid) if grid.exists() else 'f' * 64,
                 'rights_class': 'public', 'vertical_offset_m': 0, 'vertical_datum': 'MLLW',
                 'value_convention': 'elevation_positive_up'}
 
-    rows = [{**row(SOURCE, native), 'support_path': str(tmp_path / 'support.tif')},
+    rows = [{**row(SOURCE, native), 'support_path': str(support), 'support_sha256': digest(support)},
             row('coarse', coarse), row('excluded', tmp_path / 'never-open.tif'),
             row('unbound', tmp_path / 'unbound.tif')]
 
@@ -244,3 +255,15 @@ def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp
             assert p['minzoom'] < 14
             assert all(x + 239 <= inverse.transform(*pt)[0] <= x + 361
                        for line in f['geometry']['coordinates'] for pt in line)
+    if downgraded_from_col is not None:
+        cut = x + 2 * downgraded_from_col
+
+        def xs(f):
+            return [inverse.transform(*pt)[0] for line in f['geometry']['coordinates'] for pt in line]
+
+        mine = [f for f in full['features'] if f['properties']['source_id'] == SOURCE]
+        native_lines = [f for f in mine if f['properties']['minzoom'] >= 14]
+        # Measured west cells keep z14+ detail; none appears over interpolated cells (a 2 m cell of tolerance).
+        assert native_lines and all(max(xs(f)) <= cut + 2 for f in native_lines)
+        # The interpolated east keeps its coarse (overview-grade) lines instead of losing them.
+        assert any(f['properties']['minzoom'] < 14 and max(xs(f)) > cut + 10 for f in mine)

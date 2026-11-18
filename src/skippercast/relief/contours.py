@@ -1,5 +1,6 @@
 """R5b: trace the eligible selection into a disjoint, unpublished ft-v2 pair."""
 from collections import defaultdict
+import contextlib
 from importlib.util import module_from_spec, spec_from_file_location
 import json
 
@@ -89,14 +90,29 @@ def plan(ctx):
         side_pin = input_pins.get(ctx.region.record(sidecar)) if sidecar is not None else None
         if sidecar is not None and side_pin is None:
             raise receipts.ReceiptError(f'{ident}: select receipt does not bind the original sidecar')
+        # A normalised grid's support raster says which cells are measured rather than interpolated; native
+        # detail is granted only there, so the raster must be a local file pinned by the selection row.
+        support = None
+        if sidecar is not None:
+            value = row['support_path']
+            support_pin = row.get('support_sha256')
+            if (not isinstance(value, str) or '://' in value or value.startswith('/vsi')
+                    or not isinstance(support_pin, str) or not dc.SHA256.fullmatch(support_pin)):
+                raise receipts.ReceiptError(f'{ident}: selection row does not pin a local support raster')
+            support = (table.parent / value).resolve()
+            if support.is_relative_to('/mnt/privatevault') or not support.is_file():
+                raise receipts.ReceiptError(f'{ident}: expected an admitted local support raster')
+            if receipts.sha256_file(support) != support_pin:
+                raise receipts.ReceiptError(f'{ident}: support raster hash differs from the selection')
         # R4 retains the winning code but runs on mixed source vertical references. Do not admit
         # edited offsets or reinterpret its samples as one shared vertical datum.
         if row['vertical_offset_m'] != 0 or mosaic_rows[tile]['vertical_offset_m'] != 0:
             raise receipts.ReceiptError(f'{ident}: unexpected mosaic vertical offset')
         inputs.append(receipts.Input(grid, f'grid:{tile}'))
-        if sidecar is not None:
+        if sidecar is not None and support is not None:
             inputs.append(receipts.Input(sidecar, f'sidecar:{tile}'))
-        entries.append((row, grid, sidecar, side_pin))
+            inputs.append(receipts.Input(support, f'support:{tile}'))
+        entries.append((row, grid, sidecar, side_pin, support))
     ctx.contour_job = (tool, region, sources, entries, {r['id'] for r in native}, manifest, manifest_path.parent)
     return receipts.Plan(inputs, {'set': 'ft-v2', 'refused_sources': refused})
 
@@ -173,12 +189,14 @@ def trace(job):
     owner = np.full(depth.shape, -1, dtype='int32')
     identities, aligned, fallback = {}, {}, []
     code_to_owner = {code_by_id[row['id']]: i for i, (row, *_paths) in enumerate(entries)}
-    for i, (row, path, sidecar, side_pin) in enumerate(entries):
+    for i, (row, path, sidecar, side_pin, support) in enumerate(entries):
         ident = row['source_id']
         source = sources[ident]
         datum = source.get('vertical_datum')
         if receipts.sha256_file(path) != row['sha256']:
             raise ValueError(f'{ident}: selected grid hash changed')
+        if support is not None and receipts.sha256_file(support) != row['support_sha256']:
+            raise ValueError(f'{ident}: selected support raster hash changed')
         with tool.open_geotiff(path, normalized=True) as grid:
             original, declared = row['sha256'], datum
             if sidecar is not None:
@@ -212,7 +230,7 @@ def trace(job):
     owner[gaps], depth[gaps] = eligible[gaps], -values[gaps] * dc.FEET_PER_M
     runs, listed = defaultdict(list), {}
     for i in np.unique(owner[owner >= 0]):
-        row, path, _, _ = entries[i]
+        row, path, _, _, support = entries[i]
         ident, (original, datum) = row['source_id'], identities[i]
         src = sources[ident]
         entry = listed.setdefault(ident, {'source_id': ident, 'name': src['name'], 'url': src['documentation_url'],
@@ -228,9 +246,12 @@ def trace(job):
         if i in aligned and type(reviewed) in (int, float) and 0 < reviewed <= dc.V2_NATIVE_MAX_CELL_M:
             offset, cell = aligned[i]
             if cell <= dc.V2_NATIVE_MAX_CELL_M and (native_cover := mine & native_water).any():
-                with tool.open_geotiff(path, normalized=True) as grid:
-                    detail = tool.v2_native(grid, offset, native_cover, None)
-                entry['native_cell_m'] = max(cell, reviewed, entry['native_cell_m'] or 0)
+                with tool.open_geotiff(path, normalized=True) as grid, contextlib.ExitStack() as stack:
+                    measured = stack.enter_context(tool.open_geotiff(support, normalized=True)) if support is not None else None
+                    detail = tool.v2_native(grid, offset, native_cover, None, measured)
+                # Native detail only where measured support exists; claim the cell size only if some did.
+                if detail is not None and detail[2] is not None:
+                    entry['native_cell_m'] = max(cell, reviewed, entry['native_cell_m'] or 0)
         rr, = np.nonzero(mine.any(axis=1))
         cc, = np.nonzero(mine.any(axis=0))
         y, x = rr[0], cc[0]

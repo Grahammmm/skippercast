@@ -395,8 +395,14 @@ def geometry_points(geometry):
     return [pt for ring in rings for pt in ring]
 
 
-def v2_native(grid, offset, mine, provenance):
-    """Native depth and the footprint of traceable squares. Never resample or use known EC fills."""
+MEASURED_SUPPORT = 3  # support raster class for a measured (not interpolated/unknown) native cell
+
+
+def v2_native(grid, offset, mine, provenance, support=None):
+    """Native depth and the footprint of traceable squares. Never resample or use known EC fills.
+
+    `support` is an open uint8 support raster aligned cell for cell with `grid`; only cells it marks
+    measured (class 3, not masked) can carry native detail."""
     col, row, n = offset
     rows, = np.nonzero(mine.any(axis=1))
     cols, = np.nonzero(mine.any(axis=0))
@@ -414,10 +420,15 @@ def v2_native(grid, offset, mine, provenance):
     if provenance:
         codes = provenance[0].read(1, window=window, masked=True)
         valid &= codes.filled(PAD) == ec.CODES['measured']
+    if support is not None:
+        if (support.count != 1 or support.dtypes[0] != 'uint8' or support.shape != grid.shape
+                or support.crs != grid.crs or support.transform != grid.transform):
+            raise SystemExit(f'{grid.name}: support raster must be single-band uint8 aligned with the native grid')
+        valid &= (support.read(1, window=window) == MEASURED_SUPPORT) & (support.read_masks(1, window=window) != 0)
     transform = grid.window_transform(window)
     squares = valid[:-1, :-1] & valid[:-1, 1:] & valid[1:, :-1] & valid[1:, 1:]
-    support = polygons(squares, transform @ Affine.translation(0.5, 0.5)) if squares.any() else None
-    return np.where(valid, -values * dc.FEET_PER_M, np.nan), transform, support
+    footprint = polygons(squares, transform @ Affine.translation(0.5, 0.5)) if squares.any() else None
+    return np.where(valid, -values * dc.FEET_PER_M, np.nan), transform, footprint
 
 
 def v2_smooth(depth):
@@ -546,7 +557,8 @@ def main():
         if held and (status not in ('approved', 'candidate') or licence in (None, '', 'unresolved', 'dataset-review-needed')
                      or 'bathymetry' not in sources[ident]['needs']):
             raise SystemExit(f'{ident} cannot be traced, even held: {status}, licence {licence}')
-        if not held and (reason := public_refusal(ident, region, sources, explicit=ident in sidecars)):
+        # Original and normalised grids alike need an affirmative public_display: 'allowed'; silence is not clearance.
+        if not held and (reason := public_refusal(ident, region, sources)):
             raise SystemExit(f'{ident} is {reason}')
     adapters = {ident: 'geotiff' if ident in sidecars else sources[ident].get('adapter', 'geotiff')
                 for ident in order}
