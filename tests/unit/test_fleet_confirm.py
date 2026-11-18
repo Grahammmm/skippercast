@@ -247,7 +247,6 @@ class WithdrawTests(ConfirmBase):
         self.set_registry_mmsi(1, "999777888")
         self.assertEqual([r["state"] for r in self.listing()], ["stale"])
         before = self.ledger().read_bytes()
-        self.assert_refused(self.withdraw(1), "999777888")
         self.assert_refused(self.add(1, method=METHODS[1], on="2026-11-02"))
         self.assertEqual(self.ledger().read_bytes(), before, "the old evidence stays with the old pair")
         # the new pair needs its own confirmation; the stale one stays stale
@@ -258,14 +257,16 @@ class WithdrawTests(ConfirmBase):
         # the count itself (one confirmation per vessel, current MMSI only) is in test_fleet_coverage_status
         self.assertEqual(len(confirm.active_pairs(confirm.load_confirmations("CA", "staging"))), 2, "both rows are un-withdrawn")
 
-    def test_withdraw_of_a_vessel_the_registry_dropped_refuses(self):
+    def test_withdraw_of_a_vessel_the_registry_dropped_still_withdraws(self):
+        # a stale pair (registry MMSI removed) is still withdrawable; the contract is also pinned in test_f08_13_audit
         self.add(1)
         db = sqlite3.connect(self.db)
         db.execute("UPDATE fleet_vessels SET mmsi=NULL WHERE id=?", (VESSELS[1],))
         db.commit()
         db.close()
-        self.assert_refused(self.withdraw(1))
         self.assertEqual([r["state"] for r in self.listing()], ["stale"])
+        self.assertEqual(self.withdraw(1)[0], 0)
+        self.assertEqual([r["state"] for r in self.listing()], ["withdrawn"])
 
 
 class PrivateIoTests(ConfirmBase):
