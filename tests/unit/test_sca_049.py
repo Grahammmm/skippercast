@@ -67,6 +67,20 @@ def test_shared_final_payload_size_failure_preserves_local_hold(tmp_path, marker
     assert marker.read_bytes() == LOCAL_HOLD
 
 
+def test_shared_cached_payload_size_failure_preserves_local_hold(tmp_path, marker):
+    path = 'screen/snapshot.json'
+    cached = tmp_path / 'var/seafloor' / path
+    cached.write_bytes(PAYLOADS[path])
+    s3 = MemoryS3(PAYLOADS, marker, bad_size=path)
+
+    with pytest.raises(ValueError, match='Private restore size mismatch'):
+        restore(s3, 'synthetic', tmp_path, 'shared')
+
+    assert cached.read_bytes() == PAYLOADS[path]
+    assert marker.read_bytes() == LOCAL_HOLD
+    assert s3.observed == []
+
+
 @pytest.mark.parametrize('remote_holds', [False, True], ids=['healthy', 'marker-bearing'])
 def test_successful_shared_restore_applies_remote_hold_last(tmp_path, marker, remote_holds):
     # Put the remote marker first to make sure inventory order cannot apply it early.
