@@ -20,7 +20,7 @@ Three kinds of test, kept apart:
 Everything is synthetic; no Worker, network or real data.
 """
 from contextlib import closing
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 import sqlite3
 
@@ -49,8 +49,11 @@ def required_days(start_ms, end_ms, region, now_ms):
     return [first + timedelta(days=k) for k in range((last - first).days + 1)]
 
 
-def coverage_gaps(store, days):
-    """``{day: reason}`` for every required day the store cannot vouch for; ``{}`` means proven complete."""
+def coverage_gaps(store, days, wanted):
+    """``{day: reason}`` for every required day the store cannot vouch for; ``{}`` means proven complete.
+
+    ``wanted`` is what this run targets (``bf._wanted``: bbox and MMSIs). A manifest ingested for another area or
+    target, or of another schema, is not coverage for this run."""
     gaps = {}
     for day in days:
         path = store.day_path(day)
@@ -63,6 +66,8 @@ def coverage_gaps(store, days):
             gaps[day.isoformat()] = "absent-table"
         elif not bf._manifest_path(store, day).exists():   # retention removes it with the positions it emptied
             gaps[day.isoformat()] = "partly-retained"
+        elif not bf._ingested(store, day, wanted):   # schema_version, bbox and MMSIs must match this run
+            gaps[day.isoformat()] = "mismatched-coverage"
     return gaps
 
 
@@ -84,7 +89,7 @@ class SafetyContractTests(BackfillTestCase):
     """``verdict`` on hand-built observations: it must flag the unsafe outcome and clear the compliant one."""
 
     def test_unsafe_replacement_over_a_gap_is_detected(self):
-        for reason in ("no-file", "partly-retained", "absent-table"):
+        for reason in ("no-file", "partly-retained", "absent-table", "mismatched-coverage"):
             gaps = {"2026-06-22": reason}
             self.assertEqual(verdict(Observation(gaps, (SENT_WINDOW,), prior_survived=False)), (True, False), reason)
             self.assertEqual(verdict(Observation(gaps, (SENT_WINDOW,), prior_survived=True)), (True, False),
@@ -114,19 +119,27 @@ class SafetyContractTests(BackfillTestCase):
 class CoverageControlTests(BackfillTestCase):
     """The live backfill against synthetic archives, one case per coverage state."""
 
-    def observe(self, requested=None, *, context="complete", prior=True):
-        """Backfill 2026-06-20 with ``requested`` day files; ``context`` is the state of the later context days."""
-        start, end = bf.window_ms(DAY, DAY, REGION.timezone)
-        days = required_days(start, end, REGION, NOW)
-        context_days = [d for d in days if d not in (DAY, NEXT)]
-        routes = {day_url(DAY): day_file(), day_url(NEXT): zst([]), **(requested or {})}
-        routes.update({day_url(d): zst([]) for d in context_days})
+    def observe(self, requested=None, *, context="complete", affected="all", prior=True, region=REGION):
+        """Backfill 2026-06-20 with ``requested`` day files. ``context`` is the state of the context days (read by the
+        processor, never asked for by backfill) that ``affected`` names: ``all``, ``lead`` or ``return``."""
+        start, end = bf.window_ms(DAY, DAY, region.timezone)
+        days = required_days(start, end, region, NOW)
+        asked = bf.utc_days(start, end)
+        context_days = [d for d in days if d not in asked]
+        hit = [d for d in context_days if affected == "all" or (affected == "lead") == (d < asked[0])]
+        routes = {day_url(d): zst([]) for d in days}
+        routes[day_url(DAY)] = day_file()
+        routes.update(requested or {})
         source = MarineCadastreSource(session=FakeSession(routes), workdir=self.store.root / "staging")
-        bbox = bf.bbox_of(REGION.ais)
-        if context != "no-file":
-            for day in context_days:
-                bf.ingest_day(source, self.store, day, bbox, {MMSI}, now_ms=NOW)
+        bbox = bf.bbox_of(region.ais)
         for day in context_days:
+            if context == "no-file" and day in hit:
+                continue
+            area = replace(region.ais, north=region.ais.north + 1) if context == "mismatched-area" and day in hit \
+                else region.ais
+            target = {MMSI + 1} if context == "mismatched-target" and day in hit else {MMSI}
+            bf.ingest_day(source, self.store, day, bf.bbox_of(area), target, now_ms=NOW)
+        for day in hit:
             if context == "partly-retained":   # retention emptied the positions and removed the manifest
                 with closing(sqlite3.connect(self.store.day_path(day))) as conn, conn:
                     conn.execute("DELETE FROM positions")
@@ -137,10 +150,11 @@ class CoverageControlTests(BackfillTestCase):
         worker = FakeWorker()
         if prior:
             worker.stored = {PRIOR["id"]: dict(PRIOR)}
-        counts = bf.backfill(REGION, worker, first=DAY, last=DAY, root=self.root, source=source, now_ms=NOW)
+        counts = bf.backfill(region, worker, first=DAY, last=DAY, root=self.root, source=source, now_ms=NOW)
         windows = tuple(w for body in worker.posts("activity", "replace") for w in body["replace"])
         survived = PRIOR["id"] in getattr(worker, "stored", {})
-        return Observation(coverage_gaps(self.store, days), windows, survived), counts, days
+        gaps = coverage_gaps(self.store, days, bf._wanted(bbox, {MMSI}))
+        return Observation(gaps, windows, survived), counts, days
 
     def check(self, obs, expected_gaps):
         """The exact expected gaps are detected, and the verdict agrees with what the live code did."""
@@ -186,10 +200,38 @@ class CoverageControlTests(BackfillTestCase):
         obs, _, days = self.observe(context="absent-table")
         self.check(obs, {d.isoformat(): "absent-table" for d in days if d not in (DAY, NEXT)})
 
+    def test_mismatched_target_or_area_is_not_coverage(self):
+        """A retained context day ingested for another MMSI set or another box has a manifest, but not this run's."""
+        for context in ("mismatched-target", "mismatched-area"):
+            with self.subTest(context):
+                self.setUp()
+                obs, counts, days = self.observe(context=context)
+                self.assertEqual((counts["missing"], counts["failed"]), ([], []))
+                self.check(obs, {d.isoformat(): "mismatched-coverage" for d in days if d not in (DAY, NEXT)})
+
+    def test_missing_lead_context_day_outside_the_window_is_a_gap(self):
+        """Region midnight is UTC midnight, so the hour of lead falls on the day before the requested one."""
+        utc = replace(REGION, timezone="UTC")
+        obs, counts, days = self.observe(region=utc, context="no-file", affected="lead")
+        lead = DAY - timedelta(days=1)
+        self.assertEqual(days[0], lead, "the day before the window is read for lead")
+        self.assertNotIn(lead.isoformat(), [d["day"] for d in counts["days"]], "backfill never asked for the lead day")
+        self.assertEqual((counts["missing"], counts["failed"]), ([], []), "the backfill itself saw nothing wrong")
+        self.check(obs, {lead.isoformat(): "no-file"})
+
+    def test_complete_lead_context_day_leaves_no_gap(self):
+        obs, _, days = self.observe(region=replace(REGION, timezone="UTC"))
+        self.assertEqual(days[0], DAY - timedelta(days=1))
+        self.check(obs, {})
+
     def test_baseline_receipt_is_reported(self):
         """Report, per affected case, what the live code did at this head; a receipt, not a requirement."""
+        utc = replace(REGION, timezone="UTC")
         cases = {"unpublished": {"requested": {day_url(NEXT): (404, b"")}}, "no-file": {"context": "no-file"},
-                 "partly-retained": {"context": "partly-retained"}, "absent-table": {"context": "absent-table"}}
+                 "partly-retained": {"context": "partly-retained"}, "absent-table": {"context": "absent-table"},
+                 "mismatched-target": {"context": "mismatched-target"},
+                 "mismatched-area": {"context": "mismatched-area"},
+                 "lead-no-file": {"region": utc, "context": "no-file", "affected": "lead"}}
         receipt = {}
         for name, options in cases.items():
             with self.subTest(name):
