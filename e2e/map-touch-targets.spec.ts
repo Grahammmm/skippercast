@@ -223,7 +223,10 @@ for (const theme of ['dark', 'light'] as const) {
     await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.35300,-120.94800,13', target: 'lingcod', layers: 'seafloor'});
     await expect(page.locator('html')).toHaveClass(/helm/);
     await page.evaluate(t => { document.documentElement.dataset.theme = t; }, theme);
-    await page.addStyleTag({content: 'html.helm, html.helm body { font-size: 200%; }'});
+    // A same-origin test stylesheet respects style-src-elem 'self'; inline style tags do not.
+    await page.route('**/sca-021-text-size.css', route => route.fulfill({contentType: 'text/css', body: 'html.helm, html.helm body { font-size: 200%; }'}));
+    await page.addStyleTag({url: '/sca-021-text-size.css'});
+    expect(await page.evaluate(() => [getComputedStyle(document.documentElement).fontSize, getComputedStyle(document.body).fontSize])).toEqual(['32px', '64px']);
     if (await page.getByRole('button', {name: 'Layers', exact: true}).isVisible()) await page.getByRole('button', {name: 'Layers', exact: true}).click();
     const row = page.locator('.app-legend-seafloor');
     const title = row.locator('.app-legend-title');
