@@ -34,7 +34,7 @@ PINS = {
     'catalog/sources.json': 'b3e5bca74df78dcda5a53249e804ca46cda6db8860bf59866ee1d3bc8063ac18',
     'catalog/coastal-sectors.json': 'bb876ebb25357c91e02d4984b2f353e88be86560a9fb87b15ac0573b416f2378',
     'research/scripts/build_coast_prefetch_plan.py': 'dfcee06d7f92f5030fdbcfd1bfadfadf2245b99b61949e366304f9d88f880c92',
-    'src/skippercast/coastal/prefetch.py': '026203eea3422b8b97f7e2e041424b20908806253897403be7c8d2f9e9ca3440',
+    'src/skippercast/coastal/prefetch.py': '0d0d65a72050d44310a68473bd288ee2cfbe121d534794dd6b1570143d63bb29',
     'regions/morro-bay/region.json': '26812352608f4775d0890a9545e1d483980b746e102d88b93e23f1371d20efb3',
     'regions/cambria-san-simeon/region.json': 'df5f53c542af95b6fd1c66309a93a3c90f95f592403683af2674400549ba3f22',
     'regions/south-big-sur-san-simeon/region.json': '7e3cdf02b9c96f21704738988b1714f7f7d65412d22114a654f10c2ccb563ec9',
