@@ -429,7 +429,8 @@ def run_batch(path: Path, doc: dict, ctx: dict, state: State) -> str | None:
     batch, run_dir, live = doc["batch_id"], ctx["run_dir"], ctx["live"]
     boats = len(doc["boats"])
     missing = missing_boats(doc, run_dir, ctx["hosts"])
-    if not missing:
+    # A failed session keeps its retry even if it wrote every valid profile: only a clean session may clear the error.
+    if not missing and state.batches.get(batch, {}).get("status") != "failed":
         state.update(batch, status="done", finished_at=now(), error=None, boats=boats, profiles=boats, missing=[])
         return "done"
     remaining = ctx["deadline"] - time.monotonic()
@@ -446,7 +447,7 @@ def run_batch(path: Path, doc: dict, ctx: dict, state: State) -> str | None:
     summary = run_dir / "summaries" / f"{batch}.md"
     out, err = run_dir / "osint" / f"{batch}.json", run_dir / "osint" / f"{batch}.stderr.log"
     session_doc = doc
-    if len(missing) < boats:
+    if 0 < len(missing) < boats:
         session_doc = {**doc, "boats": missing}
         path = out.with_suffix(".resume.json")
         path.write_text(json.dumps(session_doc, indent=2) + "\n", encoding="utf-8")

@@ -99,6 +99,10 @@ if behaviour != "no-profiles":
     for boat in doc["boats"]:
         output = dict(template, region=doc["region"], run_id=doc["run_id"], batch_id=batch, vessel_id=boat["vessel_id"])
         Path(doc["output_dir"], boat["vessel_id"] + ".json").write_text(json.dumps(output))
+if behaviour == "fail-after-write" or (behaviour == "fail-once-after-write" and before == 0):
+    # Every profile is on disk, then the session dies: the failure must still be retried and reported.
+    print(json.dumps({{"type": "result", "subtype": "error_max_turns", "is_error": True, "num_turns": 200}}))
+    sys.exit(1)
 record("ends", {{"batch": batch, "end": time.monotonic()}})
 print(json.dumps({{"type": "result", "subtype": "success", "is_error": False, "num_turns": 7, "result": "done",
                   "permission_denials": []}}))
@@ -315,6 +319,27 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(batches["batch-001"]["error"], "no profiles written")
         self.assertEqual(batches["batch-002"]["error"], "session ended error_max_turns")
         self.assertEqual(batches["batch-003"]["status"], "done")
+
+    def test_a_failed_session_that_wrote_every_profile_is_still_retried_and_reported(self):
+        # Contract: a failed session is retried once and its failure stays on record. Believable bug: the retry
+        # sees every profile valid, marks the batch done without a session and clears exit_code/error.
+        h = self.h
+        h.plan(**{"batch-001": "fail-after-write", "batch-002": "fail-once-after-write"})
+        code, counts = h.run()
+        self.assertEqual(code, 1)
+        self.assertEqual([len(h.calls(b)) for b in ("batch-001", "batch-002")], [2, 2],
+                         "the retry launches a session although every profile is valid")
+        batches = h.state()["osint"]["batches"]
+        one = batches["batch-001"]
+        self.assertEqual((one["status"], one["attempts"], one["exit_code"], one["subtype"], one["error"]),
+                         ("failed", 2, 1, "error_max_turns", "claude exited 1"))
+        self.assertEqual((one["profiles"], one["missing"]), (one["boats"], []))
+        self.assertEqual((batches["batch-002"]["status"], batches["batch-002"]["error"]), ("done", None))
+        self.assertEqual((counts["failed"], counts["done"]), (1, 2))
+
+        # A re-run tries the failed batch again even though its profiles are complete.
+        h.run()
+        self.assertEqual(len(h.calls("batch-001")), 4)
 
     def test_max_batches_limits_the_batches_attempted(self):
         code, counts = self.h.run(max_batches=1)
