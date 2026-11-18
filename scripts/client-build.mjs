@@ -36,8 +36,14 @@ export const IMMUTABLE_ASSETS = '/assets/*\n  Cache-Control: public, max-age=315
 // stay, with the assets' default revalidation, for pages and packs that name them.
 export const GLYPHS = 'basemap/glyphs';
 export const IMMUTABLE_GLYPHS = `/${GLYPHS}/v/*\n  Cache-Control: public, max-age=31536000, immutable\n`;
-// Authored module sources: Vite builds these, so they are never copied raw.
+// Top-level authored module sources: Vite builds these instead of copying them.
 const SOURCE = /\.(?:js|css|html)$/;
+// These nested inputs are bundled by admin.html, chat.html, my-data.html and
+// upload.html. Server-rendered advisor pages reuse chat.html's hashed assets.
+const BUNDLED_ADVISOR_SOURCES = new Set([
+  'advisor/admin.css', 'advisor/chat.css', 'advisor/my-data.js',
+  'advisor/pages.css', 'advisor/upload.css', 'advisor/upload.js',
+]);
 
 export function hashName(name, buildId) {
   const dot = name.lastIndexOf('.');
@@ -57,12 +63,12 @@ export const PUBLIC_PMTILES = new Set(['tiles/morro-bay-reef-outlines.pmtiles', 
 /** True to copy `from` (under `src`); throws on any unallowlisted *.pmtiles. */
 function keepStatic(src, from) {
   const posix = from.split(sep).join('/');
+  const rel = relative(src, from).split(sep).join('/');
   if (/\.pmtiles$/i.test(posix)) {
-    const rel = relative(src, from).split(sep).join('/');
     if (!PUBLIC_PMTILES.has(rel)) throw Error(`refusing to publish ${rel}: *.pmtiles under dist/ must be on PUBLIC_PMTILES (scripts/client-build.mjs)`);
   }
   if (PRIVATE_OUTPUT.test(posix)) return false;
-  return true;
+  return !BUNDLED_ADVISOR_SOURCES.has(rel);
 }
 
 /** Copy dist's static files (everything but module sources, build output and dot-entries). */
