@@ -218,6 +218,43 @@ def gpx_document(data, components):
     return ET.tostring(root, encoding="utf-8", xml_declaration=True) + b"\n"
 
 
+PUBLIC_EVIDENCE_FIELDS = ("missing_depth", "minimum_ft", "maximum_ft", "native_cells",
+                          "closure_clearance_m", "datum")
+PUBLIC_PROPERTIES = {
+    "areas": ("id", "source_id", "source_url", "area_ha", "target_ids", "extent_note",
+              "map_resolution_m", "outline_simplification_m", "research_only"),
+    "drifts": ("id", "source_id", "target_id", "length_m", "bearing_true_axis_deg",
+               "corridor_halfwidth_m", "rough_fraction_in_corridor", "basis", "research_only"),
+}
+
+
+def _public_value(value, listed):
+    """Allowed fields carry only scalars (or, for list fields, a list of scalars): no nested objects."""
+    scalar = (str, int, float, bool, type(None))
+    if listed:
+        return isinstance(value, list) and all(isinstance(v, scalar) for v in value)
+    return isinstance(value, scalar)
+
+
+def public_properties(row, kind):
+    """Reviewed public shape for an area or drift; unknown fields, at any depth, are omitted
+    and an allowed field holding an unexpected object or list is refused."""
+    allowed = PUBLIC_PROPERTIES[kind] + ("recorded_validation",)  # row order kept: shipped bytes unchanged
+    result = {k: v for k, v in row.items() if k in allowed}
+    for key, value in result.items():
+        if key != "recorded_validation" and not _public_value(value, key == "target_ids"):
+            raise ValueError(f"{kind} {row.get('id')}: unexpected shape for public property {key}")
+    if "recorded_validation" in result:
+        evidence = result["recorded_validation"]
+        if not isinstance(evidence, dict):
+            raise ValueError(f"{kind} {row.get('id')}: recorded_validation must be an object")
+        result["recorded_validation"] = {k: v for k, v in evidence.items() if k in PUBLIC_EVIDENCE_FIELDS}
+        for key, value in result["recorded_validation"].items():
+            if not _public_value(value, False):
+                raise ValueError(f"{kind} {row.get('id')}: unexpected shape for recorded_validation.{key}")
+    return result
+
+
 def geojson_document(data):
     features = []
     for row in data["targets"]:
@@ -226,7 +263,7 @@ def geojson_document(data):
     for kind in ("areas", "drifts"):
         for row in data[kind]:
             features.append({"type": "Feature", "geometry": row["geometry"],
-                             "properties": {k: v for k, v in row.items() if k != "geometry"}})
+                             "properties": public_properties(row, kind)})
     return {"type": "FeatureCollection", "features": features}
 
 
