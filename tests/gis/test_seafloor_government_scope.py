@@ -21,7 +21,7 @@ from skippercast.seafloor.ingest import ingest
 from skippercast.seafloor.io import sha256
 from skippercast.seafloor.manifest import qualify_row
 from skippercast.seafloor.substrate import resolve_bindings
-from tests.unit.test_rough_first_tile_spans import archive as valid_pmtiles
+from tests.unit.test_f11_05_audit import valid_archive as valid_pmtiles
 from tests._support import ROOT
 
 ENV = {'SKIPPERCAST_SOURCE_SCOPE': 'government-only', 'SKIPPERCAST_SOURCE_USE': 'for-profit'}

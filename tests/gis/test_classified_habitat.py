@@ -21,7 +21,7 @@ from skippercast.seafloor.screen import screen_candidates
 from skippercast.seafloor.substrate import classify
 from tests.gis.test_seafloor_screen import geo, state as raw_state
 from tests._support import NOW
-from tests.unit.test_rough_first_tile_spans import archive as valid_pmtiles
+from tests.unit.test_f11_05_audit import valid_archive as valid_pmtiles
 
 
 def state(exclusion=None):

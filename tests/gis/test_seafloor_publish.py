@@ -16,7 +16,7 @@ from skippercast.seafloor import publish, rough_first, state_cache, jobs
 from skippercast.seafloor.io import sha256
 from skippercast.seafloor.verify import verify_public
 from tests import http_fixture
-from tests.unit.test_rough_first_tile_spans import archive as valid_pmtiles
+from tests.unit.test_f11_05_audit import valid_archive as valid_pmtiles
 from tests._support import NOW, ROOT
 
 
@@ -449,6 +449,9 @@ def pmtiles(path, tiles):
     from scripts.build_bathy_tiles import write_pmtiles
     write_pmtiles(path, tiles, metadata={}, bounds=(-121.2, 35.1, -120.7, 35.6), minzoom=8, maxzoom=15,
                   center=(10, -120.95, 35.35))
+    data = bytearray(Path(path).read_bytes())
+    data[98:100] = b'\x02\x01'  # the writer labels tiles PNG; these fixtures hold gzip MVT tiles, which the gate now requires
+    Path(path).write_bytes(data)
 
 
 class RoughFirstGateTests(unittest.TestCase):

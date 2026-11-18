@@ -124,6 +124,8 @@ def _zxy(tile_id):
 
 
 READ_ERRORS = (ValueError, struct.error, OSError, EOFError, IndexError, zlib.error)
+SUPPORTED_TILE_TYPE = 1  # Mapbox Vector Tile, what tippecanoe writes and the client map reads
+SUPPORTED_TILE_COMPRESSION = (1, 2)  # none, gzip
 
 
 def read_tiles(data):
@@ -133,6 +135,10 @@ def read_tiles(data):
     h = struct.unpack_from('<11Q', data, 8)
     if data[97] != 2:
         raise ValueError('expected gzip internal compression')
+    if data[98] not in SUPPORTED_TILE_COMPRESSION:  # header byte 98: 1 none, 2 gzip (3 brotli / 4 zstd unsupported)
+        raise ValueError('unsupported tile compression')
+    if data[99] != SUPPORTED_TILE_TYPE:  # header byte 99: 1 = Mapbox Vector Tile
+        raise ValueError('unsupported tile type')
     if h[6] + h[7] > len(data):
         raise ValueError('declared tile data extends beyond archive')
     tiles = {}
@@ -257,6 +263,14 @@ def content(tiles, zooms):
     return out
 
 
+def decode_tiles(data, tiles):
+    """Raise unless every stored tile decodes as a vector tile (gzip when the header says so, then MVT layers)."""
+    for raw in tiles.values():
+        for num, _ in _fields(gzip.decompress(raw) if data[98] == 2 else raw):
+            if num != 3:  # a Mapbox Vector Tile holds layers (field 3) only
+                raise ValueError('tile is not a vector tile')
+
+
 # ---- Receipts ------------------------------------------------------------------------------
 
 def _run():
@@ -275,7 +289,9 @@ def control_receipt(region, data):
     No size gate applies, but the archive must be structurally readable: ``pass`` is False (and the build
     refuses before upload) when it is not, e.g. the PMTiles magic bytes with an invalid header."""
     try:
-        tiles, error = read_tiles(data), None
+        tiles = read_tiles(data)
+        decode_tiles(data, tiles)
+        error = None
     except READ_ERRORS as exc:
         tiles, error = None, type(exc).__name__
     receipt = {'receipt': 'seafloor archive size receipt', 'region': region, 'mode': 'control', **_run(),

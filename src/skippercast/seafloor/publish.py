@@ -237,25 +237,31 @@ def build(region, *, root=REPO, tool=None, now=None):
         description=NOTICE+' Habitat candidate, unverified. Nominal depth; verify on your sounder.', precise=True)
     # R4-SC-09-F1c: a region with an approved rough-first reference publishes the rough-first archive only when it
     # passes the size gate against the control archive built here from the same layers; otherwise nothing is published.
+    # Candidates are built in a staging folder on the same filesystem (outside the public bundle) and only replace
+    # the release archive once accepted, so a rejected build leaves the prior release archive in place.
     reference = rough_first.load_reference(root, region)
-    if reference is None:
-        build_vector_archive(tool, layers, archive, **tiles)
-        receipt = rough_first.control_receipt(region, archive.read_bytes())
-    else:
-        with tempfile.TemporaryDirectory() as tmp:
-            control = Path(tmp)/archive.name
+    stage_root = root/'var/seafloor'
+    stage_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=stage_root, prefix='.stage-') as tmp:
+        staged = Path(tmp)/archive.name
+        if reference is None:
+            build_vector_archive(tool, layers, staged, **tiles)
+            receipt = rough_first.control_receipt(region, staged.read_bytes())
+        else:
+            control = Path(tmp)/'control'/archive.name
             build_vector_archive(tool, layers, control, **tiles)
-            build_vector_archive(tool, layers, archive, **tiles, coarse_first=True)
-            receipt = rough_first.evaluate(region, control.read_bytes(), archive.read_bytes(), reference,
+            build_vector_archive(tool, layers, staged, **tiles, coarse_first=True)
+            receipt = rough_first.evaluate(region, control.read_bytes(), staged.read_bytes(), reference,
                                            reference_sha256=sha256(root/rough_first.REFERENCE_FILE))
-    rough_first.write_receipt(root, region, receipt)
-    if not receipt['pass']:
-        archive.unlink()  # an unaccepted candidate never stays in the public bundle
-        if receipt['mode'] == 'control':
-            raise rough_first.GateFailure(f'Unreadable seafloor archive for {region}: '
-                                          + ', '.join(receipt['failed'])+'; nothing published')
-        raise rough_first.GateFailure(f'Rough-first size gate failed for {region}: '
-                                      + ', '.join(receipt['failed'])+'; nothing published, no rebaseline')
+        rough_first.write_receipt(root, region, receipt)
+        if not receipt['pass']:
+            if receipt['mode'] == 'control':
+                raise rough_first.GateFailure(f'Unreadable seafloor archive for {region}: '
+                                              + ', '.join(receipt['failed'])+'; nothing published')
+            raise rough_first.GateFailure(f'Rough-first size gate failed for {region}: '
+                                          + ', '.join(receipt['failed'])+'; nothing published, no rebaseline')
+        folder.mkdir(parents=True, exist_ok=True)
+        os.replace(staged, archive)
     ledger = read_json(root/'dist/data/seafloor-ledger.json')
     # Canonical screened boundaries, not quantized/clipped MVT fragments.
     # Only public habitat properties and producer URLs accompany them.

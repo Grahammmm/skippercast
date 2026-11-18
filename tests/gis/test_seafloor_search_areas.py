@@ -13,7 +13,7 @@ from skippercast.seafloor import publish
 from skippercast.seafloor.search_areas import assessment, published_contract
 from skippercast.seafloor.screen import screen_candidates
 from tests.gis.test_seafloor_screen import candidate, state, geo
-from tests.unit.test_rough_first_tile_spans import archive as valid_pmtiles
+from tests.unit.test_f11_05_audit import valid_archive as valid_pmtiles
 from tests._support import NOW
 
 

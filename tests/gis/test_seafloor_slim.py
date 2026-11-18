@@ -14,7 +14,7 @@ from skippercast.platform.contracts import atomic_json
 from skippercast.seafloor import publish, slim
 from skippercast.seafloor.io import sha256
 from tests.gis.test_seafloor_publish import Bucket, bundle
-from tests.unit.test_rough_first_tile_spans import archive as valid_pmtiles
+from tests.unit.test_f11_05_audit import valid_archive as valid_pmtiles
 from tests._support import NOW
 
 VERDICT = {'inside': False, 'name': None, 'distanceM': None, 'screened': True}

@@ -35,7 +35,7 @@ def archive(payload=b'ABCD', *, entries=None, section=None, drop=0):
     header = b'PMTiles\x03' + struct.pack('<11Q', 127, len(root), 127 + len(root), 0, 0, 0,
                                           127 + len(root), section, tiles, len(entries), len(entries))
     header = header.ljust(127, b'\0')
-    header = header[:96] + b'\x01\x02' + header[98:]
+    header = header[:96] + b'\x01\x02\x02\x01' + header[100:]  # clustered, gzip directories, gzip MVT tiles
     data = header + root + payload
     return data[:len(data) - drop]
 
