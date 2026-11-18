@@ -12,7 +12,8 @@ GeoTIFF of an approved bathymetry source bound to the region
 (catalog/sources.json, regions/<id>/region.json). For a normalised grid give
 --normalized-sidecar SOURCE_ID=PATH; provenance retains the original digest. With
 --set v2 its native detail also needs --normalized-support SOURCE_ID=PATH (the grid's
-support.tif): only cells it marks measured are traced at native detail.
+support.tif): only cells it marks measured are traced at native detail. The sidecar must
+pin that file as outputs["support.tif"]; a missing pin or a different file is refused.
 For an original `adapter: bag` source, supply one regular NOAA BAG named with its survey:
 `--grid noaa-bag=/path/H12345_MB_2m.bag --bag-survey noaa-bag=H12345`.
 Its SHA-256 is recorded in the output's provenance; local paths never reach
@@ -119,6 +120,18 @@ def normalized_identity(ident, grid, path, reviewed_datum):
         return original, digest, datum if datum != 'unstated' else reviewed_datum
     except (KeyError, OSError, TypeError, ValueError) as exc:
         raise SystemExit(f'{ident}: invalid normalised sidecar: {exc}') from None
+
+
+def verify_support_binding(ident, sidecar_path, support_path):
+    """Refuse a support raster the normalised receipt does not pin: only the receipt's own support.tif may grant native detail."""
+    try:
+        pin = json.loads(Path(sidecar_path).read_text(encoding='utf-8'))['outputs'].get('support.tif')
+    except (AttributeError, KeyError, OSError, TypeError, ValueError):
+        pin = None
+    if not isinstance(pin, str) or not dc.SHA256.fullmatch(pin):
+        raise SystemExit(f'{ident}: the normalised sidecar does not pin outputs[\"support.tif\"], so no support raster can be trusted')
+    if sha256(Path(support_path).expanduser()) != pin:
+        raise SystemExit(f'{ident}: --normalized-support differs from the support.tif the normalised sidecar pins')
 
 
 @contextmanager
@@ -553,6 +566,7 @@ def main():
     for ident, value in supports.items():
         if '://' in value or value.startswith('/vsi') or not Path(value).expanduser().is_file():
             raise SystemExit(f'{ident}: --normalized-support must be an existing local file')
+        verify_support_binding(ident, sidecars[ident], value)
     order = [ident for ident in bound if ident in grids]
     if set(grids) - set(order):
         raise SystemExit(f'Not bathymetry bindings of {region["id"]}: {sorted(set(grids) - set(order))}')
@@ -637,8 +651,15 @@ def main():
             if order[i] in sidecars and order[i] not in supports:
                 raise SystemExit(f'{order[i]}: native detail from a normalised grid needs --normalized-support {order[i]}=PATH '
                                  '(its support raster; interpolated cells are never traced at native detail)')
+        def bound_support(exit_stack, ident):
+            # Re-checked at open time so the bytes traced are the bytes the receipt pins.
+            if ident not in supports:
+                return None
+            verify_support_binding(ident, sidecars[ident], supports[ident])
+            return exit_stack.enter_context(open_geotiff(supports[ident], normalized=True))
+
         native = {i: v2_native(opened[i], offsets[i], (owner == i) & inside & np.isfinite(depth), ecs[i],
-                               stack.enter_context(open_geotiff(supports[order[i]], normalized=True)) if order[i] in supports else None)
+                               bound_support(stack, order[i]))
                   for i in eligible}
     # Unresolved blocks are left out of the union: survey edges run round them as round a gap (they are drawn as areas).
     unresolved = cls == CLASS_INDEX['unresolved']

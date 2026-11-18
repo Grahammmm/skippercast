@@ -98,6 +98,15 @@ def write_support(path, grid, interpolated_from_col=None):
     return path
 
 
+def pin_support(sidecar, support, name='pinned-sidecar.json'):
+    """A copy of the normalised sidecar whose receipt pins `support` as outputs['support.tif']."""
+    doc = json.loads(sidecar.read_bytes())
+    doc['outputs']['support.tif'] = digest(support)
+    pinned = sidecar.with_name(name)
+    pinned.write_text(json.dumps(doc))
+    return pinned
+
+
 def test_normalized_twin_retains_original_identity_and_shelf_lines(builder, geographic_twin, tmp_path):
     # A derivative may not replace the original digest, leak its path or move lines in this planar control.
     from pyproj import Transformer
@@ -108,7 +117,8 @@ def test_normalized_twin_retains_original_identity_and_shelf_lines(builder, geog
     projected, raw, normalized, sidecar = geographic_twin
     expected = run(projected, tmp_path / 'control.geojson')
     output = tmp_path / 'twin.geojson'
-    actual = run(normalized, output, sidecar=sidecar, support=write_support(tmp_path / 'support.tif', normalized))
+    support = write_support(tmp_path / 'support.tif', normalized)
+    actual = run(normalized, output, sidecar=pin_support(sidecar, support), support=support)
     assert actual['provenance']['sources'][0]['sha256'] == digest(raw)
     assert str(tmp_path) not in output.read_text()
     assert actual['provenance']['set'] == 'ft-v2'
@@ -166,10 +176,12 @@ def test_standalone_normalized_native_detail_only_over_measured_support(builder,
         return max(xs_of.transform(*pt)[0] for f in doc['features'] if f['properties']['kind'] == 'contour'
                    and f['properties']['minzoom'] >= 14 for line in f['geometry']['coordinates'] for pt in line)
 
-    full = native_east(run(normalized, tmp_path / 'full.geojson', sidecar=sidecar,
-                           support=write_support(tmp_path / 'measured.tif', normalized)))
-    partial_doc = run(normalized, tmp_path / 'partial.geojson', sidecar=sidecar,
-                      support=write_support(tmp_path / 'partial.tif', normalized, interpolated_from_col=cut_col))
+    measured = write_support(tmp_path / 'measured.tif', normalized)
+    partial_support = write_support(tmp_path / 'partial.tif', normalized, interpolated_from_col=cut_col)
+    full = native_east(run(normalized, tmp_path / 'full.geojson', sidecar=pin_support(sidecar, measured, 'full.json'),
+                           support=measured))
+    partial_sidecar = pin_support(sidecar, partial_support, 'partial.json')
+    partial_doc = run(normalized, tmp_path / 'partial.geojson', sidecar=partial_sidecar, support=partial_support)
     partial = native_east(partial_doc)
     cut = 690000 + 2 * cut_col
     assert full > cut + 20
@@ -178,6 +190,29 @@ def test_standalone_normalized_native_detail_only_over_measured_support(builder,
     assert any(f['properties']['kind'] == 'contour' and f['properties']['minzoom'] < 14
                and max(xs_of.transform(*pt)[0] for line in f['geometry']['coordinates'] for pt in line) > cut + 10
                for f in partial_doc['features'])
+
+    # The support bytes must be the ones the receipt pins. The receipt pins the half-interpolated raster, so an aligned
+    # all-measured substitute (which would restore z14+ detail over interpolated cells), a tampered copy of the pinned
+    # raster and a receipt with no pin at all are each refused before anything is traced.
+    import rasterio
+
+    tampered = tmp_path / 'tampered.tif'
+    tampered.write_bytes(partial_support.read_bytes())
+    with rasterio.open(tampered, 'r+') as ds:
+        classes = ds.read(1)
+        classes[:, cut_col:] = 3
+        ds.write(classes, 1)
+    unpinned = tmp_path / 'unpinned.json'
+    doc = json.loads(sidecar.read_bytes())
+    doc['outputs'].pop('support.tif', None)
+    unpinned.write_text(json.dumps(doc))
+    for label, side, support, reason in (('substituted', partial_sidecar, measured, 'differs from the support.tif'),
+                                         ('tampered', partial_sidecar, tampered, 'differs from the support.tif'),
+                                         ('unpinned', unpinned, measured, 'does not pin')):
+        refused = tmp_path / f'{label}.geojson'
+        with pytest.raises(SystemExit, match=reason):
+            run(normalized, refused, sidecar=side, support=support)
+        assert not refused.exists()
 
     # A support raster that is not cell-for-cell aligned with the grid is refused, not guessed at.
     import numpy as np
@@ -189,7 +224,7 @@ def test_standalone_normalized_native_detail_only_over_measured_support(builder,
                                                       width=ds.width, crs=ds.crs, transform=from_origin(690002, 3915000, 2, 2)) as dst:
         dst.write(np.full((ds.height, ds.width), 3, dtype='uint8'), 1)
     with pytest.raises(SystemExit, match='aligned'):
-        run(normalized, tmp_path / 'shifted.geojson', sidecar=sidecar, support=shifted)
+        run(normalized, tmp_path / 'shifted.geojson', sidecar=pin_support(sidecar, shifted, 'shifted.json'), support=shifted)
 
 
 @pytest.mark.parametrize('downgraded_from_col', [None, 50])
