@@ -71,9 +71,12 @@ test.before(() => { verifySaved = fleetJobs.verify; fleetJobs.verify = async tok
 test.after(() => { fleetJobs.verify = verifySaved; });
 
 test('SCA-017: the limits name only fleet job workflows, and the matrix covers the private reads and mutations', () => {
-  for (const workflow of Object.keys(FLEET_JOB_LIMITS)) assert.ok(FLEET_JOB_SCOPE.workflows.includes(workflow), workflow);
-  assert.deepEqual([...FLEET_JOB_LIMITS[MONITOR]].sort(), [HEALTH, PING]);
-  for (const workflow of PROCESSORS) assert.equal(FLEET_JOB_LIMITS[workflow], undefined, workflow);
+  for (const workflowRef of FLEET_JOB_LIMITS.keys()) {
+    const workflow = workflowRef.split('@')[0].split('/').at(-1);
+    assert.ok(FLEET_JOB_SCOPE.workflows.includes(workflow), workflowRef);
+  }
+  assert.deepEqual([...FLEET_JOB_LIMITS.get(claimsOf(MONITOR).workflow_ref)].sort(), [HEALTH, PING]);
+  for (const workflow of PROCESSORS) assert.equal(FLEET_JOB_LIMITS.has(claimsOf(workflow).workflow_ref), false, workflow);
   for (const route of [HEALTH, 'GET /api/fleet/jobs/snapshot', 'GET /api/fleet/jobs/watch', 'GET /api/fleet/jobs/labels', 'POST /api/fleet/jobs/registry',
     'POST /api/fleet/jobs/activity', 'POST /api/fleet/jobs/heartbeat', 'POST /api/fleet/jobs/watch', 'POST /api/fleet/jobs/labels']) assert.ok(ROUTES.includes(route), route);
 });
