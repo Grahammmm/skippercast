@@ -266,7 +266,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // paragraph on the existing app-stage-note class while the rough seafloor is drawn. BODY09 mounts Reports/CatchCards,
   // never MapStage or PresentationToggle; no CSS, token, class, catch markup, paint, contrast(), assertion or threshold
   // change. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "27dbfafcd0f8b219308d58a6dabb154e855df7e544773bc7aebfc74e6e49e995",
+  // MB-08: Reports/CatchCards mounts neither the Chart-only depth shading control nor its layer. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "2cc4ac589807f61354da30d86cba22d4d193b1bdecb93bd3b9c92a60f7dfe5bc",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   // MB-05: light map-only colours and habitat opacity change; Reports catch text and backing do not use these roles.
   "web/tokens.css": "5532bc9452b85f33e202b215ca36b4acd7b4fb8aac2727adf9f5235570cec7fa",
