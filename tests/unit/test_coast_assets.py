@@ -82,6 +82,15 @@ class RightsGateTests(unittest.TestCase):
                     self.assertEqual(pa.catalog_ids([reference], rows), {reference: None})
                     self.assertEqual(pa.refusals('habitat', [reference], rows), [f'habitat: unknown source {reference}'])
 
+        # Contract: a catalog row with an empty ID never identifies a product. Bug: it resolved to '', which
+        # refusals() filtered out unchecked, so a held row with an exact product URL cleared the group.
+        for empty in ('', '  '):
+            held = {'id': empty, 'documentation_url': product, 'review_status': 'candidate',
+                    'rights': {'commercial_use': 'permission-required'}}
+            with self.subTest(empty_id=repr(empty)):
+                self.assertEqual(pa.catalog_ids([product], [held]), {product: None})
+                self.assertEqual(pa.refusals('habitat', [product], [held]), [f'habitat: unknown source {product}'])
+
         # Even a catalogued URL cannot identify one product if the rows disagree or it's terms-only.
         for reference, extra in ((product, {**row, 'id': 'other-grid'}),
                                  (product, {**row, 'documentation_url': product + '-sibling'}),

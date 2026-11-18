@@ -72,7 +72,9 @@ def catalog_ids(urls, catalog):
     """Resolve an exact catalog ID, complete DOI or exact documented product URL to one row."""
     counts = Counter(row['id'] for row in catalog)
     terms = {(row.get('rights', {}).get('terms_url') or '').strip() for row in catalog}
-    documents = [(row['id'], (row.get('documentation_url') or '').strip()) for row in catalog]
+    # A row with no usable ID can never be the answer: refusals() would drop it without checking its rights.
+    documents = [(row['id'], (row.get('documentation_url') or '').strip()) for row in catalog
+                 if isinstance(row.get('id'), str) and row['id'].strip()]
     found = {}
     for url in urls:
         identity = url.strip()
