@@ -122,6 +122,11 @@
   --map-contour-deep: #e6eff4;
   --map-contour-deep-halo: #07131d;
   --map-nosurvey: #3b5566;
+  --map-survey-ink: #ffffff;
+  --map-survey-halo: #07131d;
+  --map-survey-tint-1: #ffffff;
+  --map-survey-tint-2: #d6e2ea;
+  --map-survey-tint-5: #9fb3bf;
   --mark-ring: #69e0bc;
   --hab-rock: #2d9a9a;
   --hab-mixed: #a199ff;
@@ -218,6 +223,11 @@
   --map-contour-deep: #e6eff4;
   --map-contour-deep-halo: #07131d;
   --map-nosurvey: #9fb3bf;
+  --map-survey-ink: #0b2530;
+  --map-survey-halo: #ffffff;
+  --map-survey-tint-1: #0b5ea8;
+  --map-survey-tint-2: #0b5ea8;
+  --map-survey-tint-5: #0b5ea8;
   --map-habitat-opacity: 0.75;
   --mark-ring: #087354;
   /* Keep all habitat classes distinguishable at the reduced light fill opacity. */
@@ -225,6 +235,21 @@
   --hab-mixed: #5731e9;
   --hab-soft: #8a6800;
   --hab-kelp: #297653;
+  /* MB-20: today's conditions overlays on the light water. The dark values are pale and vanish on --map-water;
+     these are darker (flow, MPA lines >= 3:1, checked by scripts/check_contrast.mjs; the flow dashes stay >= 4:1 as drawn at
+     web/map/flow.ts's 0.7 alpha). Swell keeps its
+     lighter-with-height order (stops stay >= 3:1 on the water); the Temp contrast front ramp ends darker. The SST
+     ramp is not overridden: it is a filled field and must equal packages/coast temperatureColors in every theme. */
+  --flow: #064a3f;
+  --flow-fast: #5c3900;
+  --mpa-fill: #c9733a;
+  --mpa-line: #b0541c;
+  --swell-0: #0e3a6a;
+  --swell-1: #1a5a9a;
+  --swell-2: #2d78bd;
+  --swell-3: #4b95d3;
+  --contrast-1: #a63a8c;
+  --contrast-2: #7a1456;
   --elev-1: 0 1px 2px rgb(0 0 0 / 0.12);
   --elev-2: 0 6px 18px rgb(0 0 0 / 0.14);
   --elev-3: 0 16px 40px rgb(0 0 0 / 0.2);

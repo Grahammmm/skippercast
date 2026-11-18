@@ -10,8 +10,10 @@ import gzip
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
+from uuid import uuid4
 
 from research.scripts.discover_noaa_multibeam_footprints import gap_sectors
 
@@ -20,6 +22,9 @@ COLUMNS = ['beam_longitude', 'beam_latitude', 'positive_down_depth_m',
 MAX_BYTES = 256_000_000
 MAX_ROWS = 2_000_000
 MAX_GAP_QUERY_BYTES = 32_000_000
+PRIVATE_RECEIPTS = Path('var/seafloor/source-review')
+LOG_COUNTS = ('evaluated_beam_rows', 'good_nominal_shallow_rows', 'rejected_flag_rows',
+              'rejected_depth_rows', 'good_shallow_rows_in_gaps')
 
 
 def load_native_gap_query(path, expected_sha256):
@@ -255,6 +260,45 @@ def triage(table, receipt, coverage_folder=None, *, cache_root=None, table_kind=
                               if gap_query is not None else [])]}
 
 
+def open_private_receipt_dir(output):
+    checkout = Path(__file__).resolve().parents[2]
+    if (output.absolute().parent != checkout / PRIVATE_RECEIPTS
+            or output.suffix != '.json'):
+        raise ValueError('Output must be a new JSON file in checkout var/seafloor/source-review/')
+
+    # Walk from the checkout, not the caller's resolved destination: even a
+    # symlink pointing back inside the private tree is not an approved path.
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    directory = os.open(checkout, flags)
+    try:
+        for part in PRIVATE_RECEIPTS.parts:
+            child = os.open(part, flags, dir_fd=directory)
+            os.close(directory)
+            directory = child
+        try:
+            os.stat(output.name, dir_fd=directory, follow_symlinks=False)
+        except FileNotFoundError:
+            return directory
+        raise ValueError('Private receipt output must not already exist')
+    except BaseException:
+        os.close(directory)
+        raise
+
+
+def write_private_receipt(directory, name, result):
+    encoded = json.dumps(result, ensure_ascii=False, allow_nan=False, separators=(',', ':')) + '\n'
+    temporary = f'.beam-triage-{uuid4().hex}.tmp'
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=directory)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            stream.write(encoded)
+        # Install the complete file atomically without replacing an entry that
+        # appeared during triage. Both names are relative to the checked dirfd.
+        os.link(temporary, name, src_dir_fd=directory, dst_dir_fd=directory, follow_symlinks=False)
+    finally:
+        os.unlink(temporary, dir_fd=directory)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--beam-table', type=Path, required=True)
@@ -267,15 +311,26 @@ def main():
     parser.add_argument('--native-gap-query-sha256', help='Required coordinator pin for the saved mask')
     parser.add_argument('--cache-root', type=Path)
     parser.add_argument('--exclude-measured-deep', action='store_true')
-    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True,
+                        help='New JSON file in the existing private checkout var/seafloor/source-review/ directory')
     args = parser.parse_args()
-    result = triage(args.beam_table, args.beam_receipt, args.coverage_folder,
-                    cache_root=args.cache_root, table_kind=args.table_kind,
-                    gap_query=args.native_gap_query, gap_query_sha256=args.native_gap_query_sha256,
-                    exclude_measured_deep=args.exclude_measured_deep)
-    from skippercast.platform.contracts import atomic_json
-    atomic_json(args.output, result)
-    print(json.dumps(result))
+    try:
+        directory = open_private_receipt_dir(args.output)
+    except (OSError, ValueError):
+        parser.error('Output must be a new JSON file in the existing, unaliased private '
+                     'checkout var/seafloor/source-review/ directory')
+    try:
+        result = triage(args.beam_table, args.beam_receipt, args.coverage_folder,
+                        cache_root=args.cache_root, table_kind=args.table_kind,
+                        gap_query=args.native_gap_query, gap_query_sha256=args.native_gap_query_sha256,
+                        exclude_measured_deep=args.exclude_measured_deep)
+        try:
+            write_private_receipt(directory, args.output.name, result)
+        except OSError:
+            parser.error('Could not install the private beam-triage receipt')
+    finally:
+        os.close(directory)
+    print(json.dumps({'schema_version': 1, **{key: result[key] for key in LOG_COUNTS}}))
 
 
 if __name__ == '__main__':

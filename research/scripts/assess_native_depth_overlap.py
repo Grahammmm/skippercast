@@ -38,6 +38,14 @@ def polygons(root, prefix, scope):
     return features
 
 
+def file_sha256(path, chunk_size=1024 * 1024):
+    digest = hashlib.sha256()
+    with open(path, 'rb') as source:
+        while chunk := source.read(chunk_size):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def screen_one(row, cache, source_groups):
     if (row.get('status') != 'ok' or
         row.get('metadata_status') != 'mllw-product-uncertainty-reviewed-by-adapter' or
@@ -46,7 +54,7 @@ def screen_one(row, cache, source_groups):
         return None
     url = row['url']
     local = cache / (row['survey_id'] + '-' + hashlib.sha256(url.encode()).hexdigest()[:16] + '.bag')
-    if not local.is_file() or hashlib.sha256(local.read_bytes()).hexdigest() != row['file_sha256']:
+    if not local.is_file() or file_sha256(local) != row['file_sha256']:
         raise ValueError('Original NOAA BAG is missing or its pinned digest changed: ' + row['survey_id'])
     bounds = box(*row['raster_bounds_wgs84'])
     nearby = {}
