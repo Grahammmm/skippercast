@@ -13,17 +13,30 @@ from shapely.geometry import box
 from skippercast.platform.contracts import bbox
 
 
-def matching_envelope(request_url, bounds):
+def _envelope_coordinates(query):
+    value = query.get('geometry', [])
+    if len(value) != 1:
+        raise ValueError('Discovery sector lacks exact request envelope')
+    coordinates = [float(x) for x in value[0].split(',')]
+    if len(coordinates) != 4 or not coordinates[0] < coordinates[2] or not coordinates[1] < coordinates[3]:
+        raise ValueError('Invalid discovery request envelope')
+    return coordinates
+
+
+def envelope(request_url):
+    west, south, east, north = _envelope_coordinates(parse_qs(urlparse(request_url).query))
+    return box(west, south, east, north)
+
+
+def _matching_envelope(request_url, bounds):
     """Bind the saved request to the same compiled bounds used by NOAA discovery."""
     if not isinstance(request_url, str):
         return None
     try:
         query = parse_qs(urlparse(request_url).query, keep_blank_values=True)
-        geometry = query.get('geometry', [])
-        if (len(geometry) != 1 or query.get('geometryType') != ['esriGeometryEnvelope']
-                or query.get('inSR') != ['4326']):
+        if query.get('geometryType') != ['esriGeometryEnvelope'] or query.get('inSR') != ['4326']:
             return None
-        if [float(value) for value in geometry[0].split(',')] == bbox(bounds):
+        if _envelope_coordinates(query) == bbox(bounds):
             return box(*bounds)
     except (ValueError, OverflowError):
         pass
@@ -64,7 +77,7 @@ def build(audit, discovery, sectors, overlap, holds=None):
         if not item or item['status'] != 'ok':
             rows.append({'sector_id': sector['id'], 'status': 'unavailable', 'issue': (item or {}).get('issue', 'missing discovery')})
             continue
-        region = matching_envelope(item.get('request_url'), sector.get('bounds'))
+        region = _matching_envelope(item.get('request_url'), sector.get('bounds'))
         if region is None:
             rows.append({'sector_id': sector['id'], 'status': 'unavailable',
                          'issue': 'stale or invalid discovery request footprint'})
