@@ -84,6 +84,8 @@ function marineAlertsMarkup(report:Report,areaId:string,at:Date,now:Date):string
  const source=report.sources.find(item=>item.id==='nws-alerts'),age=now.getTime()-fieldClock(source?.fetchedAt);
  // Match the daily brief's alert retrieval window, measured against now, not the selected hour.
  if(source?.outcome!=='ok'||!Number.isFinite(age)||age<-HOUR||age>2*HOUR)return unavailable;
+ // /alerts/active is a snapshot, not an archive of alerts that expired before retrieval.
+ if(at.getTime()<fieldClock(source.fetchedAt))return heading+'<p class="gap">Marine alert source unavailable for this past hour. The active-alert snapshot cannot establish historical coverage. Check the official forecast before planning.</p>';
  if(report.alerts.some(alert=>!alert||typeof alert.event!=='string'||!alert.event.trim()||
   (alert.areaIds!=null&&(!Array.isArray(alert.areaIds)||alert.areaIds.some(id=>typeof id!=='string')))))return unavailable;
  const selected=at.getTime(),alerts=report.alerts.filter(alert=>{

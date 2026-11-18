@@ -125,6 +125,25 @@ test('readable report shows applicable alerts and distinguishes checked empty fr
  }
 });
 
+test('active alert snapshot cannot establish past-hour coverage',async()=>{
+ const yesterday=iso(-24*H);
+ for(const report of [withAlerts([]),withAlerts([alert('old','Storm Warning',{effective:iso(-25*H),expires:iso(-23*H)})])]){
+  const {status,html}=await render(report,`?region=morro-bay&hour=${encodeURIComponent(yesterday)}`);
+  assert.equal(status,200);
+  assert.ok(html.includes(`<code>${yesterday}</code>`));
+  assert.match(html,/Marine alert source unavailable/);
+  assert.doesNotMatch(html,/No active marine alerts were reported/);
+ }
+});
+
+test('historical cutoff uses the snapshot retrieval instant',async()=>{
+ const selected=iso(-H),query=`?region=morro-bay&hour=${encodeURIComponent(selected)}`;
+ const earlier=await render(withAlerts([],{fetchedAt:iso(-H+1)}),query);
+ const equal=await render(withAlerts([],{fetchedAt:selected}),query);
+ assert.match(earlier.html,/Marine alert source unavailable for this past hour/);
+ assert.match(equal.html,/No active marine alerts were reported/);
+});
+
 test('explicit reviewed area and selected hour, not the reference area or wall clock, drive alerts',async()=>{
  const late=iso(6*H),northLater={...A_FUTURE,areaIds:['north']};
  const report=withAlerts([A_OVERLAP,A_OTHER_AREA,northLater]);
