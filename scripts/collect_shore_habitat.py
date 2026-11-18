@@ -23,6 +23,10 @@ reproduces the committed asset byte for byte.
 Saved responses hold the full inventory. --save-sources accepts only real,
 owner-only directories under this checkout's ignored var/ tree (created if
 missing). Existing shared directories and links are refused, not modified.
+
+An Estero Bluffs --add-site rebuild also needs the archived SC1952-07
+ccc-access-points.json alongside ccc-access-estero.json in the private --sources
+directory. The full response is verified there, not downloaded or published.
 """
 import argparse
 from contextlib import ExitStack
@@ -113,6 +117,13 @@ LEGACY_FEATURE_SHA256 = {
 }
 ADDED_SITE = 'estero-bluffs'
 ADD_FILES = {'noaa': 'noaa-esi-shoreline.json', 'access': 'ccc-access-estero.json'}
+# Full access response in the checked-in SC1952-07 shore re-read dossier (2026-11-03).
+# This identifies the parent acquisition, not a digest of the Estero projection.
+ADDED_ACCESS_PARENT = {
+    'fetchedAt': '2026-11-04T08:26:38.645Z',
+    'bytes': 325083,
+    'responseSha256': '4925eff242f1c841d8035ccbefe851b0251e75063e39826f02cd1031d17cacc3',
+}
 
 LIMITATIONS = [
     'Historical shoreline classification; not today’s shoreline or surf channels.',
@@ -322,9 +333,34 @@ def add_site(region, site_id, baseline, bodies, receipts):
     return {**baseline, 'features': legacy + [site_feature(region, site, by_shore, by_access, receipts)]}
 
 
+def _access_subset(body, ids, *, parent=False):
+    """Canonicalize only the fields consumed by the additive access importer."""
+    by_id = {}
+    try:
+        data = parse(body)
+        if data.get('type') != 'FeatureCollection' or not isinstance(data.get('features'), list):
+            raise ValueError
+        for feature in data['features']:
+            props = feature['properties']
+            ident = props['OBJECTID']
+            if parent and ident not in ids:
+                continue
+            if type(ident) is not int or ident not in ids or ident in by_id:
+                raise ValueError
+            geometry = feature['geometry']
+            by_id[ident] = {
+                'type': 'Feature',
+                'properties': {key: props[key] for key in ACCESS_FIELDS.split(',') if key in props},
+                'geometry': {key: geometry[key] for key in ('type', 'coordinates')},
+            }
+        subset = {'type': 'FeatureCollection', 'features': [by_id[ident] for ident in ids]}
+        return json.dumps(subset, sort_keys=True, separators=(',', ':'), allow_nan=False).encode('utf-8')
+    except (KeyError, TypeError, ValueError, RecursionError):
+        raise ValueError('Invalid Estero Bluffs access projection') from None
+
+
 def load_added(directory, region, now):
-    """Saved responses for the additive rebuild: the NOAA window response is hash-checked; access points come from the
-    SC1952-07 receipt (a subset, not the full response), and the access and terms receipts are that dossier's."""
+    """Verify the NOAA window and regenerate the access subset from its pinned parent."""
     directory = Path(directory)
     try:
         receipts = json.loads((directory / RECEIPT_FILE).read_text(encoding='utf-8'))
@@ -347,6 +383,21 @@ def load_added(directory, region, now):
             raise ValueError('Missing or invalid saved source receipt: ' + key)
     if receipts['noaa']['responseSha256'] != hashlib.sha256(bodies['noaa']).hexdigest() or receipts['noaa']['bytes'] != len(bodies['noaa']):
         raise ValueError('Missing or invalid saved source receipt: noaa')
+    expected = {**ADDED_ACCESS_PARENT, 'url': urls['access']}
+    if receipts['access'] != expected:
+        raise ValueError('Saved access receipt does not match the SC1952-07 dossier')
+    try:
+        with (directory / SOURCE_FILES['access']).open('rb') as source:
+            parent = source.read(expected['bytes'] + 1)
+    except OSError:
+        raise ValueError('Missing or unreadable SC1952-07 parent access response') from None
+    if receipt(expected['url'], parent, expected['fetchedAt']) != expected:
+        raise ValueError('Parent access response does not match the SC1952-07 dossier')
+    ids = next(site['access'] for site in SITES[region]['sites'] if site['id'] == ADDED_SITE)
+    rebuilt = _access_subset(parent, ids, parent=True)
+    if _access_subset(bodies['access'], ids) != rebuilt:
+        raise ValueError('Estero Bluffs access subset differs from the SC1952-07 parent response')
+    bodies['access'] = rebuilt
     return bodies, {k: receipts[k] for k in ('noaa', 'access', 'terms')}
 
 
