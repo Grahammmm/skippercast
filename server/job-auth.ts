@@ -1,12 +1,12 @@
 // Short-lived GitHub Actions identity. No scheduler password in a browser or repository.
-import type {Deployment, ExternalJSON} from './types.ts';
+import type {Deployment, ExternalJSON, SchedulerIdentity} from './types.ts';
 
 /** Verified OIDC claims; `jti` keys the per-job request budget. */
 export type JobClaims = ExternalJSON & {jti: string};
 const issuer='https://token.actions.githubusercontent.com';
 const bytes=(s:string):Uint8Array<ArrayBuffer>=>{if(!/^[A-Za-z0-9_-]+$/.test(s))throw Error('Invalid token encoding');return Uint8Array.from(atob(s.replaceAll('-','+').replaceAll('_','/')+'='.repeat((4-s.length%4)%4)),c=>c.charCodeAt(0));};
 const decode=(s:string):ExternalJSON=>JSON.parse(new TextDecoder().decode(bytes(s)));
-type JobPolicy = Pick<Deployment,'scheduler'|'public_origin'>;
+type JobPolicy = Pick<Deployment,'scheduler'|'fleet_scheduler'|'public_origin'>;
 type Fetcher = (url:string,init:RequestInit)=>Promise<Response>;
 /** The validated GitHub key set is reused for an hour; an unknown kid (key rotation) may force one refetch a minute. Seconds, like `now`. */
 const JWKS_TTL_S=3_600,JWKS_REFETCH_COOLDOWN_S=60;
@@ -16,20 +16,20 @@ export function resetJwksCacheForTests():void{jwksCache=undefined;lastForcedRefe
 /**
  * Which job a token may act as (TA-M1): the audience path its token was
  * requested for and the workflow files allowed to hold it. A workflow must also
- * be listed in the deployment's scheduler.workflow or scheduler.workflows, so a
- * route can narrow the policy but never widen it.
+ * be listed for the matching scheduler identity, so a route can narrow its
+ * workflow allowlist but never widen it. Only the fleet scope opts in to the
+ * second identity.
  */
-export interface JobScope {audiencePath:string;workflows:readonly string[]}
+export interface JobScope {audiencePath:string;workflows:readonly string[];includeFleetScheduler?:true}
 const WORKFLOW_DIR='.github/workflows/';
 const workflowPath=(name:string):string=>name.startsWith(WORKFLOW_DIR)?name:WORKFLOW_DIR+name;
 /** The trip check's scope, the default: /api/jobs/check and scheduler.workflow (live-conditions.yml). */
 export const tripCheckScope=(policy:JobPolicy):JobScope=>({audiencePath:'/api/jobs/check',workflows:[policy.scheduler.workflow]});
-export function validJobClaims(c:ExternalJSON,policy:JobPolicy,now=Date.now()/1000,scope:JobScope=tripCheckScope(policy)):boolean{
-  const s=policy.scheduler;
+export function validJobClaims(c:ExternalJSON,policy:JobPolicy,now=Date.now()/1000,scope:JobScope=tripCheckScope(policy),s:SchedulerIdentity=policy.scheduler):boolean{
   const subject=`repo:${s.repository}:ref:${s.ref}`;
   const [owner,repo]=s.repository.split('/') as [string,string];
   const immutable=`repo:${owner}@${s.owner_id}/${repo}@${s.repository_id}:ref:${s.ref}`;
-  const allowed=new Set([s.workflow,...(s.workflows??[])].map(workflowPath));
+  const allowed=new Set([...(s.workflow?[s.workflow]:[]),...(s.workflows??[])].map(workflowPath));
   const refs=scope.workflows.map(workflowPath).filter(w=>allowed.has(w)).map(w=>s.repository+'/'+w+'@'+s.ref);
   return c.iss===issuer&&c.aud===policy.public_origin+scope.audiencePath&&[subject,immutable].includes(c.sub)&&
     c.repository===s.repository&&c.repository_id===s.repository_id&&c.repository_owner_id===s.owner_id&&c.ref===s.ref&&
@@ -53,7 +53,8 @@ export async function verifyJobToken(token:unknown,policy:JobPolicy,...rest:[Fet
     const parts=token.split('.') as [string,string,string];if(parts.length!==3)return false;
     const header=decode(parts[0]),claims=decode(parts[1]);
     if(header.alg!=='RS256'||header.typ!=='JWT'||typeof header.kid!=='string'||header.kid.length>200)return false;
-    if(!validJobClaims(claims,policy,now,scope)){console.warn('Scheduler identity policy mismatch');return false;}
+    const matches=(identity:SchedulerIdentity)=>validJobClaims(claims,policy,now,scope,identity);
+    if(!matches(policy.scheduler)&&!(scope.includeFleetScheduler&&policy.fleet_scheduler&&matches(policy.fleet_scheduler))){console.warn('Scheduler identity policy mismatch');return false;}
     // Fixed GitHub endpoint: no jku, x5u, issuer or key URL supplied by the token is fetched. Only a successful, size-checked, parsed key set is cached.
     const load=async():Promise<ExternalJSON[]|false>=>{
       stage='jwks-fetch';const response=await fetcher(issuer+'/.well-known/jwks',{signal:AbortSignal.timeout(10000),redirect:'manual'});
