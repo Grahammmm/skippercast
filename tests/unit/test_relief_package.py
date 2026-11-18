@@ -216,11 +216,29 @@ def test_envelope_requires_passing_qa_for_current_release(tmp_path, assembly, qa
     assert not (region.dir / 'review' / gen / 'envelope.json').exists()
 
 
-def test_package_and_review_can_precede_digest_producer_but_pointer_cannot(tmp_path, assembly):
-    _, _, _, review, approval = approved(tmp_path / 'out', include_digests=False)
-    assert envelope.verify_chain(approval, review).release['digest_root_sha256'] is None
-    with pytest.raises(package.ReleaseError, match='digest root is required'):
-        envelope.build_pointer(approval, review)
+def test_package_requires_digest_root(tmp_path, assembly, capsys):
+    region, manifest = inputs(tmp_path / 'out', include_digests=False)
+    assert run_package(region, manifest) == 1
+    assert 'digest root' in capsys.readouterr().out
+    assert receipts.check(region, 'package').state == 'failed'
+    assert not list(region.dir.glob('release/*/release.json'))
+
+
+def test_verify_chain_rejects_consistently_approved_release_without_digest_root(tmp_path, assembly):
+    _, release, qa, review, approval = approved(tmp_path / 'out')
+    doc = json.loads(release.read_bytes())
+    doc['layers'] = [row for row in doc['layers'] if not row['path'].startswith('layers/public/relief.digests/')]
+    doc['digest_root_sha256'] = None
+    write_json(release, doc)
+    write_json(qa, json.loads(qa.read_bytes()) | {'release_sha256': sha(release)})
+    review_doc = json.loads(review.read_bytes())
+    review_doc['release']['sha256'] = sha(release)
+    review_doc['qa']['sha256'] = sha(qa)
+    review_doc['layers'] = doc['layers']
+    write_json(review, review_doc)
+    write_json(approval, {'envelope_sha256': sha(review), 'verdict': f'APPROVED release {REGION} envelope={sha(review)}'})
+    with pytest.raises(package.ReleaseError, match='digest root'):
+        envelope.verify_chain(approval, review)
 
 
 @pytest.mark.parametrize(('mutation', 'reason'), [
