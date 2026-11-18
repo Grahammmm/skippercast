@@ -1,5 +1,6 @@
 """Reference integration of run manifests and structured logs: the forecast tile builder."""
 from contextlib import redirect_stderr, redirect_stdout
+from datetime import datetime, timezone
 import io
 import json
 import logging
@@ -31,8 +32,14 @@ class ForecastRunManifest(unittest.TestCase):
         self.cwd = os.getcwd()
         os.chdir(self.root)
         previous = self.root / 'published/ecmwf_wam'
-        previous.mkdir(parents=True)
-        (previous / 'manifest.json').write_text('{"cycle": 1}')
+        tiles = previous / 'tiles'
+        tiles.mkdir(parents=True)
+        cycle = datetime(2026, 9, 28, 12, tzinfo=timezone.utc)
+        identity = {'schema_version': build.SCHEMA, 'model': 'ecmwf_wam', 'cycle': int(cycle.timestamp())}
+        (previous / 'manifest.json').write_text(json.dumps({
+            **identity, 'cycle_iso': build.stamp(cycle), 'built_at': '2026-09-28T15:00:00Z', 'tiles': ['0_0'],
+        }))
+        (tiles / '0_0.json').write_text(json.dumps({**identity, 'key': '0_0'}))
 
     def tearDown(self):
         os.chdir(self.cwd)
