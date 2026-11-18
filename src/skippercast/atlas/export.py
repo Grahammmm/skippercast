@@ -218,6 +218,26 @@ def gpx_document(data, components):
     return ET.tostring(root, encoding="utf-8", xml_declaration=True) + b"\n"
 
 
+PUBLIC_EVIDENCE_FIELDS = ("missing_depth", "minimum_ft", "maximum_ft", "native_cells",
+                          "closure_clearance_m", "datum")
+PUBLIC_PROPERTIES = {
+    "areas": ("id", "source_id", "source_url", "area_ha", "target_ids", "extent_note",
+              "map_resolution_m", "outline_simplification_m", "research_only"),
+    "drifts": ("id", "source_id", "target_id", "length_m", "bearing_true_axis_deg",
+               "corridor_halfwidth_m", "rough_fraction_in_corridor", "basis", "research_only"),
+}
+
+
+def public_properties(row, kind):
+    """Reviewed public shape for an area or drift; unknown fields, at any depth, are omitted."""
+    allowed = PUBLIC_PROPERTIES[kind] + ("recorded_validation",)  # row order kept: shipped bytes unchanged
+    result = {k: v for k, v in row.items() if k in allowed}
+    if "recorded_validation" in result:
+        result["recorded_validation"] = {k: v for k, v in result["recorded_validation"].items()
+                                         if k in PUBLIC_EVIDENCE_FIELDS}
+    return result
+
+
 def geojson_document(data):
     features = []
     for row in data["targets"]:
@@ -226,7 +246,7 @@ def geojson_document(data):
     for kind in ("areas", "drifts"):
         for row in data[kind]:
             features.append({"type": "Feature", "geometry": row["geometry"],
-                             "properties": {k: v for k, v in row.items() if k != "geometry"}})
+                             "properties": public_properties(row, kind)})
     return {"type": "FeatureCollection", "features": features}
 
 
