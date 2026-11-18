@@ -33,6 +33,7 @@ import json
 import os
 from pathlib import Path
 import re
+import subprocess
 import sys
 import tarfile
 from urllib.request import Request, urlopen
@@ -97,6 +98,27 @@ def archive_inventory(path):
     return files
 
 
+def archive_commit(path):
+    """Read the commit Git embedded in the tar, not a later worktree HEAD."""
+    with open(path, 'rb') as archive:
+        result = subprocess.run(['git', 'get-tar-commit-id'], stdin=archive,
+                                capture_output=True, text=True, check=True, timeout=30)
+    commit = result.stdout.strip()
+    if not re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', commit):
+        raise ValueError('Invalid commit in data branch archive')
+    return commit
+
+
+def current_data_commit(worktree):
+    ref = 'refs/heads/data'
+    result = subprocess.run(['git', '-C', worktree, 'ls-remote', '--exit-code', 'origin', ref],
+                            capture_output=True, text=True, check=True, timeout=30)
+    commit, sep, name = result.stdout.rstrip('\n').partition('\t')
+    if not sep or name != ref or not re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', commit):
+        raise ValueError('Invalid response for the origin data branch')
+    return commit
+
+
 def plan(local, remote):
     """(uploads data-first then pointers, deletions) between two {path: sha} maps."""
     changed = [k for k, v in local.items() if remote.get(k) != v]
@@ -138,6 +160,7 @@ def main():
     parser.add_argument('prefix', choices=['conditions', 'data', 'forecasts', 'tiles', 'runs'])
     parser.add_argument('--bucket', default=os.environ.get('R2_BUCKET', 'skippercast-feeds'))
     parser.add_argument('--branch-archive', help='Require staged files to match this committed feed tar')
+    parser.add_argument('--branch-worktree', help='Worktree whose origin holds the data branch')
     args = parser.parse_args()
     refuse_reserved(args.prefix)
     token, account = os.environ.get('CLOUDFLARE_API_TOKEN'), os.environ.get('CLOUDFLARE_ACCOUNT_ID')
@@ -145,6 +168,10 @@ def main():
         print(f'R2 not configured (no CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID); skipped {args.prefix}.')
         return
     options = {}
+    if args.prefix == 'data':
+        if not args.branch_archive or not args.branch_worktree:
+            parser.error('data requires --branch-archive and --branch-worktree')
+        options['branch_source'] = (args.branch_worktree, archive_commit(args.branch_archive))
     if args.branch_archive is not None:
         if args.prefix not in SNAPSHOT_PREFIXES:
             parser.error('--branch-archive requires a snapshot prefix')
@@ -242,7 +269,7 @@ def immutable_object(s3, bucket, key, body, **metadata):
         return s3.get_object(Bucket=bucket, Key=key)
 
 
-def sync(s3, bucket, source, prefix, *, inventory=None):
+def sync(s3, bucket, source, prefix, *, inventory=None, branch_source=None):
     """Publish one verified immutable snapshot, then CAS its sole mutable pointer.
 
     Tiles retain their separate screened publication contract. Old stable keys,
@@ -280,7 +307,8 @@ def sync(s3, bucket, source, prefix, *, inventory=None):
     expected, pointer = attempt(read_current)
     # Freeze the original CAS baseline across retries. Never rebase onto a
     # concurrent release, even after a lost acknowledgment of our own commit.
-    return attempt(lambda: sync_snapshot(s3, bucket, source, prefix, expected, pointer, inventory=inventory))
+    return attempt(lambda: sync_snapshot(s3, bucket, source, prefix, expected, pointer,
+                                         inventory=inventory, branch_source=branch_source))
 
 
 def transport_error(error):
@@ -294,7 +322,7 @@ def transport_error(error):
                               http_errors.TimeoutError))
 
 
-def sync_snapshot(s3, bucket, source, prefix, expected, pointer, *, inventory=None):
+def sync_snapshot(s3, bucket, source, prefix, expected, pointer, *, inventory=None, branch_source=None):
     """Publish against the caller's frozen current-release baseline."""
     pointer_key = f'{prefix}/{CURRENT}'
     # Keep the verified branch inventory even on retry; do not replace it with
@@ -336,9 +364,21 @@ def sync_snapshot(s3, bucket, source, prefix, expected, pointer, *, inventory=No
     stored_snapshot = immutable_object(s3, bucket, snapshot_key, body, ContentType='application/json', CacheControl='no-store')
     if stored_snapshot['Body'].read() != body:
         raise RuntimeError('R2 snapshot read-back mismatch; current release unchanged')
-    if pointer and pointer['generation'] == generation:
+    release = {'schema_version': 1, 'generation': generation}
+    if branch_source is not None:
+        worktree, commit = branch_source
+        # Read origin AFTER capturing the pointer's CAS baseline. A writer
+        # that promoted before that read must already be reflected in Git;
+        # a later promotion invalidates our frozen ETag, even for equal bytes.
+        if current_data_commit(worktree) != commit:
+            return f'R2 {bucket}/{prefix}: data commit {commit} superseded on origin; promotion skipped.'
+        release['source_commit'] = commit
+    if (pointer and pointer['generation'] == generation
+            and (branch_source is None or pointer.get('source_commit') == release['source_commit'])):
         return f'R2 {bucket}/{prefix}: snapshot {generation} unchanged; all object and snapshot bytes verified.'
-    current = json.dumps({'schema_version': 1, 'generation': generation}, separators=(',', ':')).encode()
+    # Bind the source in the private pointer BODY, not object metadata, so a
+    # newer Git commit with identical feed bytes still changes the CAS validator.
+    current = json.dumps(release, separators=(',', ':')).encode()
     # R2 supports conditional PutObject. A concurrent publisher must fail, never
     # silently supersede a release committed since this publisher started.
     condition = {'IfMatch': expected} if expected else {'IfNoneMatch': '*'}

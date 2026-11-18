@@ -143,7 +143,8 @@ export function FleetTripView({id}: {id: string}) {
   if (detail === 'failed') return <p class="admin-error" role="alert">{COPY.failed}</p>;
   const {trip, window: span, segments, labels} = detail;
   const pick = (s: {started_at: string; ended_at: string}): void => { setRange({from: s.started_at, to: s.ended_at}); setNotice(''); setError(''); };
-  const awaiting = labels.some(l => l.labeller.startsWith('agent:'));
+  const reviewedIds = labels.filter(l => l.labeller.startsWith('agent:')).map(l => l.id);
+  const awaiting = reviewedIds.length > 0;
 
   async function act(run: () => Promise<unknown>, done: string): Promise<boolean> {
     if (busy) return false;
@@ -209,7 +210,7 @@ export function FleetTripView({id}: {id: string}) {
       {awaiting ? (
         <p class="admin-hint">{COPY.approveHint}{' '}
           <button type="button" class="admin-button is-primary" disabled={busy}
-            onClick={() => void act(() => postFleet(`trips/${encodeURIComponent(id)}/approve`, {}), COPY.approved)}>{COPY.approve}</button></p>
+            onClick={() => void act(() => postFleet(`trips/${encodeURIComponent(trip.id)}/approve`, {reviewed_ids: reviewedIds}), COPY.approved)}>{COPY.approve}</button></p>
       ) : null}
       {!labels.length ? <p>{COPY.labelsNone}</p> : (
         <div class="admin-scroll" tabIndex={0} role="region" aria-label={COPY.labelsHeading}><table class="admin-counts">
