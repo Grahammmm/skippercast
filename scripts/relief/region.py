@@ -100,8 +100,9 @@ def status(argv):
     for key, verdict in rows:
         doc = verdict.receipt or {}
         gen = str(doc.get('generation') or '-')[:12]
-        ups = ', '.join(f'{u.get("stage")}{"." + u["scope"] if u.get("scope") else ""}@{str(u.get("generation"))[:12]}'
-                        for u in doc.get('upstream') or [] if isinstance(u, dict)) or '-'
+        listed = doc.get('upstream')  # an invalid receipt may hold anything here
+        ups = ', '.join(f'{u.get("stage")}{"." + str(u["scope"]) if u.get("scope") else ""}@{str(u.get("generation"))[:12]}'
+                        for u in (listed if isinstance(listed, list) else []) if isinstance(u, dict)) or '-'
         print(f'  {key:<{width}}  {verdict.state:<8}  gen {gen:<12}  attempt {doc.get("attempt", "-")}  '
               f'<- {ups}  | {verdict.reason}')
     counts = {}

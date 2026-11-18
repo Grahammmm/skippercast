@@ -201,16 +201,54 @@ def test_attempts_survive_switching_generations(tmp_path):
         calls.append('A')
         raise RuntimeError('failed')
 
+    def good(out):
+        calls.append('B')
+        (out / 'ok').write_text('ok')
+
     a = simple(region, bad)
-    b = simple(region, lambda out: (out / 'ok').write_text('ok'), params={'generation': 'B'})
+    b = simple(region, good, params={'generation': 'B'})
     assert run(a).state == 'failed'
     assert run(b).state == 'ok'
     assert run(a).state == 'held'
     assert receipt(region, 'solo')['attempt'] == 2
-    assert run(b).state == 'ok'
+    assert run(b).state == 'done'
     assert run(a).state == 'held'
-    assert calls == ['A', 'A']
+    assert calls == ['A', 'B', 'A']
     assert receipts.check(region, 'solo').state == 'held'
+
+
+def test_a_switch_back_restores_the_intact_success_without_an_attempt(tmp_path):
+    region = receipts.Region(tmp_path / 'out', 'tiny')
+    calls = []
+
+    def bad(out):
+        calls.append('A')
+        raise receipts.Held('needs a person')
+
+    def good(out):
+        calls.append('B')
+        (out / 'ok').write_text('ok')
+
+    a = simple(region, bad)
+    b = simple(region, good, params={'generation': 'B'})
+    assert run(a).state == 'held'
+    assert run(b).state == 'ok'
+    ok = {k: v for k, v in receipt(region, 'solo').items() if k != 'generation_history'}
+    for _ in range(2):  # A -> B twice: B's outputs still match, so B is restored, never rebuilt or held
+        assert run(a).state == 'held' and receipts.check(region, 'solo').state == 'held'
+        restored = run(b)
+        assert (restored.state, restored.exit_code) == ('done', 0) and 'restored' in restored.reason
+        doc = receipt(region, 'solo')
+        assert {k: v for k, v in doc.items() if k != 'generation_history'} == ok
+        assert (doc['status'], doc['attempt']) == ('ok', 1)
+        assert receipts.check(region, 'solo').done
+    assert calls == ['A', 'B']
+    # Changed outputs are not restored: the switch back rebuilds, as attempt 2.
+    assert run(a).state == 'held'
+    (region.dir / 'solo' / 'ok').write_text('edited')
+    rebuilt = run(b)
+    assert rebuilt.state == 'ok' and receipt(region, 'solo')['attempt'] == 2
+    assert calls == ['A', 'B', 'B']
 
 
 def test_failure_over_an_existing_output_keeps_the_old_output(tiny):
@@ -225,7 +263,8 @@ def test_failure_over_an_existing_output_keeps_the_old_output(tiny):
     assert run(broken).state == 'failed'
     assert (tiny.dir / 'select' / 'selection.json').read_bytes() == before
     assert states(tiny)['select'] == 'failed' and states(tiny)['mosaic.public'] == 'stale'
-    assert run(runs['select']).state == 'ok'
+    assert run(runs['select']).state == 'done', 'the intact earlier success is restored without a rebuild'
+    assert receipt(tiny, 'select')['attempt'] == 1
     assert set(states(tiny).values()) == {'done'}
 
 
@@ -281,6 +320,27 @@ def test_crash_mid_stage_leaves_no_half_output(tmp_path):
     recovered = list(region.dir.glob('solo.failed-*-recovered-*'))
     assert len(recovered) == 1 and (recovered[0] / 'half.bin').stat().st_size == 1000
     assert sorted(p.name for p in (region.dir / 'solo').iterdir()) == ['whole.bin']
+
+
+def test_the_second_crash_is_retained_before_the_attempt_limit_holds(tmp_path):
+    script = tmp_path / 'crash.py'
+    script.write_text(CRASH)
+    out = tmp_path / 'out'
+    env = {**os.environ, 'PYTHONPATH': str(ROOT / 'src')}
+    for _ in range(2):
+        proc = subprocess.run([sys.executable, str(script), str(out)],
+                              env=env, capture_output=True, text=True, timeout=120)
+        assert proc.returncode == 9, proc.stderr
+    region = receipts.Region(out, 'tiny')
+    assert len(list(region.dir.glob('solo.tmp-*'))) == 1, 'the second crash swept the first'
+    assert receipt(region, 'solo')['attempt'] == 2
+    calls = []
+    held = run(simple(region, lambda out: calls.append(out)))
+    assert held.state == 'held' and 'attempt limit (2)' in held.reason and calls == []
+    assert not list(region.dir.glob('solo.tmp-*'))
+    recovered = list(region.dir.glob('solo.failed-*-recovered-*'))
+    assert len(recovered) == 2 and all((d / 'half.bin').stat().st_size == 1000 for d in recovered)
+    assert not (region.dir / 'solo').exists()
 
 
 def test_a_running_stage_is_busy_and_shown_as_running(tmp_path):
@@ -407,6 +467,22 @@ def test_status_prints_the_chain(tiny):
 def test_status_of_an_empty_region(tmp_path, capsys):
     assert CLI.main(['status', '--region', 'tiny', '--out', str(tmp_path)]) == 0
     assert 'no stage receipts' in capsys.readouterr().out
+
+
+def test_status_reports_a_receipt_with_a_non_list_upstream(tiny, capsys):
+    doc = dict(receipt(tiny, 'select'), stage='broken', upstream=42)
+    receipts.write_json_atomic(tiny.receipt_path('broken'), doc)
+    rows = dict(receipts.chain(tiny))
+    assert (rows['broken'].state, rows['broken'].reason) == ('invalid', 'upstream malformed')
+    assert all(rows[key].done for key in TINY.ORDER)
+    argv = ['status', '--region', 'tiny', '--out', str(tiny.out_root)]
+    assert CLI.main(argv) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert any(line.split()[:2] == ['broken', 'invalid'] for line in lines)
+    assert lines[-1] == 'chain: 4 done, 1 invalid'
+    assert CLI.main(argv + ['--json']) == 0
+    states = {s['key']: s['state'] for s in json.loads(capsys.readouterr().out)['stages']}
+    assert states == {**{key: 'done' for key in TINY.ORDER}, 'broken': 'invalid'}
 
 
 def test_fixture_grids_are_deterministic_geotiffs():
