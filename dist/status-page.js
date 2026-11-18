@@ -8,6 +8,24 @@
 // are never shown.
 import health from '../catalog/feed-health.json' with {type: 'json'};
 import {SOURCE_NAMES} from './status-names.js';
+import english from './status-strings.generated.json' with {type: 'json'};
+import {lookup} from '../web/i18n-core.ts';
+import {bilingual, initReadyLanguage} from '../web/i18n-catalogue.ts';
+const STRINGS = bilingual(english);
+const t = (id, lang = 'en', vars = {}) => lookup(STRINGS, 'status.' + id, lang, vars);
+const providerLabel = (value, lang) => STRINGS['status.provider.' + String(value).replaceAll(' ', '-')] ? t('provider.' + String(value).replaceAll(' ', '-'), lang) : value;
+
+/** Translate only marked static hosts; English leaves the authored bytes alone. */
+export async function initStatusPage(doc, env) {
+  const lang = await initReadyLanguage(env);
+  if (doc.documentElement) doc.documentElement.lang = lang;
+  if (lang === 'en') return lang;
+  doc.title = t('title', lang);
+  for (const [attr, apply] of [['data-i18n', (el, value) => { el.textContent = value; }], ['data-i18n-lead', (el, value) => { el.firstChild.nodeValue = value + ' '; }], ['data-i18n-aria', (el, value) => { el.setAttribute('aria-label', value); }]]) {
+    for (const el of doc.querySelectorAll('[' + attr + ']')) apply(el, lookup(STRINGS, el.getAttribute(attr), lang));
+  }
+  return lang;
+}
 
 const HOUR = 3_600_000;
 const FUTURE_TOLERANCE = 10 * 60_000;   // scripts/check_feed_freshness.py FUTURE_TOLERANCE
@@ -22,10 +40,10 @@ const clock = value => (typeof value === 'string' && /(Z|[+-]\d\d:?\d\d)$/.test(
 const iso = ms => (Number.isFinite(ms) ? new Date(ms).toISOString() : null);
 
 /** One row: a published thing, when it last succeeded, how often it may lag, and whether it is inside that. */
-function row(group, name, lastMs, expectedHours, now, {degraded = '', note = ''} = {}) {
+function row(group, name, lastMs, expectedHours, now, {degraded = '', note = '', lang = 'en'} = {}) {
   if (Number.isFinite(lastMs) && lastMs - now > FUTURE_TOLERANCE) {
     // The checker rejects a stamp more than 10 minutes ahead as unreadable (clock or stamp error).
-    return {group, name, lastSuccess: iso(lastMs), expectedHours, ageHours: null, state: 'unavailable', note: 'time is in the future (clock or stamp error)'};
+    return {group, name, lastSuccess: iso(lastMs), expectedHours, ageHours: null, state: 'unavailable', note: t('future', lang)};
   }
   const age = Number.isFinite(lastMs) ? Math.max(0, (now - lastMs) / HOUR) : null;
   const state = degraded ? 'degraded' : age === null ? 'unavailable' : age > expectedHours ? 'late' : 'ok';
@@ -35,16 +53,16 @@ function row(group, name, lastMs, expectedHours, now, {degraded = '', note = ''}
 const unreadable = (group, name, expectedHours, note = '') => ({group, name, lastSuccess: null, expectedHours, ageHours: null, state: 'unavailable', note});
 
 /** Whole-feed row from its own publication stamp. */
-function feedRow(group, name, feed, expectedHours, now) {
+function feedRow(group, name, feed, expectedHours, now, lang = 'en') {
   if (!feed || typeof feed !== 'object') return unreadable(group, name, expectedHours);
   const limit = Number(feed.schedule?.max_delay_hours) > 0 ? Number(feed.schedule.max_delay_hours) : expectedHours;
-  return row(group, name, clock(feed.published_at ?? feed.completed_at ?? feed.generated_at), limit, now);
+  return row(group, name, clock(feed.published_at ?? feed.completed_at ?? feed.generated_at), limit, now, {lang});
 }
 
 /** Not current service, as degraded_sources() in scripts/check_feed_freshness.py: any status but ok, or a backup
  * station standing in for its primary (fallback_for), which the checker reports as degraded service. */
 const notCurrent = s => s.status !== 'ok' || Boolean(s.fallback_for);
-const notCurrentLabel = s => (s.status !== 'ok' ? s.status || 'unknown' : 'backup station');
+const notCurrentLabel = (s, lang) => providerLabel(s.status !== 'ok' ? s.status || 'unknown' : 'backup station', lang);
 
 const sourcesOf = feed => Object.values(feed?.sources && typeof feed.sources === 'object' ? feed.sources : {}).filter(s => s && typeof s === 'object');
 
@@ -53,37 +71,26 @@ const RANK = Object.freeze({unavailable: 3, late: 2, ok: 0});
 /** Roll several source objects into one row, judged by its worst member: each source against its own
  * max_age_hours, the row showing the worst (then oldest) one. A reused source (an older landing day kept
  * from an earlier run on purpose) is not judged by its age, only by its status. */
-function rollup(group, name, sources, now, expectedFallback) {
+function rollup(group, name, sources, now, expectedFallback, lang = 'en') {
   if (!sources.length) return unreadable(group, name, expectedFallback);
   const current = sources.filter(s => !s.reused);
   const bad = sources.filter(notCurrent);
-  const each = current.map(s => row(group, name, clock(s.last_success_at), Number(s.max_age_hours) || expectedFallback, now));
+  const each = current.map(s => row(group, name, clock(s.last_success_at), Number(s.max_age_hours) || expectedFallback, now, {lang}));
   if (!each.length) each.push(unreadable(group, name, expectedFallback));
   each.sort((a, b) => RANK[b.state] - RANK[a.state] || (b.ageHours ?? Infinity) - (a.ageHours ?? Infinity));
   const out = {...each[0]};
   const off = each.filter(r => r.state !== 'ok');
   if (bad.length) {
     out.state = 'degraded';
-    out.note = `${bad.length} of ${sources.length} not current (${[...new Set(bad.map(notCurrentLabel))].join(', ')})`;
+    out.note = t('notCurrent', lang, {bad: bad.length, total: sources.length, labels: [...new Set(bad.map(s => notCurrentLabel(s, lang)))].join(', ')});
   } else if (off.length && sources.length > 1) {
-    out.note = `${off.length} of ${sources.length} ${off.every(r => r.state === 'late') ? 'overdue' : 'not readable or overdue'}`;
-  } else if (!off.length && sources.length > 1) out.note = `${sources.length} sources`;
+    out.note = t('off', lang, {bad: off.length, total: sources.length, label: t(off.every(r => r.state === 'late') ? 'overdue' : 'unreadableOrOverdue', lang)});
+  } else if (!off.length && sources.length > 1) out.note = t('sources', lang, {total: sources.length});
   return out;
 }
 
 const FORECAST_NAMES = Object.freeze({'model-gfs_global': 'NOAA wind forecast tiles', 'model-ecmwf_ifs025': 'European wind forecast tiles',
   'model-ncep_gfswave016': 'NOAA wave forecast tiles', 'model-ecmwf_wam': 'European wave forecast tiles'});
-
-const KIND_LABELS = Object.freeze({
-  grid: 'Satellite and radar grids',
-  observation: 'Buoy observations',
-  prediction: 'Tide predictions',
-  advisory: 'Marine advisories',
-  boundaries: 'Protected-area boundaries',
-  forecast: 'Forecast models',
-  'page-watch': 'Fishing-rule and protected-area pages',
-  'charter-reports': 'Landing reports',
-});
 
 const REGION_ID = /^[a-z0-9-]+$/;
 const isObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -99,39 +106,38 @@ function regionEntries(index) {
  * The status rows for what the visitor's browser read.
  * feeds: {conditions, data, index, regions: {id: feed}, coast?: {feed name: feed}} where a feed that failed to load is null/absent.
  */
-export function statusRows(feeds, now = Date.now()) {
+export function statusRows(feeds, now = Date.now(), lang = 'en') {
   const rows = [];
   const live = health.feeds.conditions, daily = health.feeds.data, regional = health.regions;
-  rows.push(feedRow('Live conditions', 'Live conditions feed', feeds.conditions, live.max_age_hours, now));
+  rows.push(feedRow(t('group.live', lang), t('names.live', lang), feeds.conditions, live.max_age_hours, now, lang));
   const entries = regionEntries(feeds.index);
-  if (!entries.length) rows.push(unreadable('Live conditions', 'Regional buoy feeds', regional.max_age_hours, 'the region list could not be read, so no region is shown'));
+  if (!entries.length) rows.push(unreadable(t('group.live', lang), t('names.regional', lang), regional.max_age_hours, t('regionalMissing', lang)));
   for (const entry of entries) {
     const feed = feeds.regions?.[entry.id];
-    if (!feed) { rows.push(unreadable('Live conditions', `Buoys: ${entry.name || entry.id}`, regional.max_age_hours)); continue; }
-    const base = feedRow('Live conditions', `Buoys: ${entry.name || entry.id}`, feed, regional.max_age_hours, now);
+    if (!feed) { rows.push(unreadable(t('group.live', lang), t('buoys', lang, {name: entry.name || entry.id}), regional.max_age_hours)); continue; }
+    const base = feedRow(t('group.live', lang), t('buoys', lang, {name: entry.name || entry.id}), feed, regional.max_age_hours, now, lang);
     const bad = sourcesOf(feed).filter(notCurrent);
     if (bad.length && base.state !== 'unavailable') {
       base.state = 'degraded';
-      base.note = `${bad.length} of ${sourcesOf(feed).length} buoy readings not current (${[...new Set(bad.map(notCurrentLabel))].join(', ')})`;
+      base.note = t('buoyReadings', lang, {bad: bad.length, total: sourcesOf(feed).length, labels: [...new Set(bad.map(s => notCurrentLabel(s, lang)))].join(', ')});
     }
     rows.push(base);
   }
-  rows.push(feedRow('Daily evidence', 'Daily evidence feed', feeds.data, daily.max_age_hours, now));
+  rows.push(feedRow(t('group.daily', lang), t('names.daily', lang), feeds.data, daily.max_age_hours, now, lang));
   const sources = sourcesOf(feeds.data);
   const byKind = new Map();
   // The harbor page (catalog harbor-authority) is a page-watch source too, but not a fishing rule: own row.
   const groupOf = source => (source.kind === 'page-watch' && source.id === 'harbor' ? 'harbor' : source.kind || 'other');
   for (const source of sources) byKind.set(groupOf(source), [...(byKind.get(groupOf(source)) || []), source]);
   for (const [kind, list] of byKind) {
-    if (kind === 'page-watch' || kind === 'charter-reports') { rows.push(rollup('Daily evidence', KIND_LABELS[kind], list, now, daily.max_age_hours)); continue; }
-    for (const source of list) rows.push(rollup('Daily evidence', kind === 'forecast' ? FORECAST_NAMES[source.id] || 'Forecast model tiles' : String(source.name || source.id), [source], now, daily.max_age_hours));
+    if (kind === 'page-watch' || kind === 'charter-reports') { rows.push(rollup(t('group.daily', lang), t('kind.' + kind, lang), list, now, daily.max_age_hours, lang)); continue; }
+    for (const source of list) rows.push(rollup(t('group.daily', lang), kind === 'forecast' ? FORECAST_NAMES[source.id] || 'Forecast model tiles' : String(source.name || source.id), [source], now, daily.max_age_hours, lang));
   }
-  if (!sources.length && feeds.data) rows.push(unreadable('Daily evidence', 'Daily evidence sources', daily.max_age_hours));
-  if (feeds.coast) rows.push(...coastRows(feeds.coast, now));
+  if (!sources.length && feeds.data) rows.push(unreadable(t('group.daily', lang), t('names.empty', lang), daily.max_age_hours));
+  if (feeds.coast) rows.push(...coastRows(feeds.coast, now, lang));
   return rows;
 }
 
-const COAST = 'Morro Bay coast feeds';
 const coastStatus = s => s.status ?? s.outcome;
 // Only these values are shown; anything else in a feed reads as unknown, so no feed text reaches the page.
 const coastLabel = value => (['error', 'pending', 'stale'].includes(value) ? value : 'unknown');
@@ -141,25 +147,26 @@ const coastLabel = value => (['error', 'pending', 'stale'].includes(value) ? val
  * listed source, from that source's own fetchedAt and status/outcome in the feed; history from its generatedAt.
  * coast: {ocean, nearshore, 'water-quality', history}, each parsed JSON or null when it failed to load.
  */
-export function coastRows(coast, now = Date.now()) {
+export function coastRows(coast, now = Date.now(), lang = 'en') {
+  const COAST = t('group.coast', lang);
   const rows = [];
   for (const [feedName, config] of Object.entries(health.coast)) {
     const feed = coast[feedName], limit = config.max_age_hours;
     for (const id of config.sources) {
       const name = SOURCE_NAMES[id] || id;
       if (!feed || typeof feed !== 'object' || Array.isArray(feed)) { rows.push(unreadable(COAST, name, limit)); continue; }
-      if (feedName === 'history') { rows.push(row(COAST, name, clock(feed.generatedAt), limit, now)); continue; }
+      if (feedName === 'history') { rows.push(row(COAST, name, clock(feed.generatedAt), limit, now, {lang})); continue; }
       // The nearshore feed lists one entry per CDIP site (cdip-<site>); they roll up into the one catalog row.
       const members = (Array.isArray(feed.sources) ? feed.sources : []).filter(s => s && typeof s === 'object' &&
         (feedName === 'nearshore' ? String(s.id).startsWith('cdip-') : s.id === id));
-      if (!members.length) { rows.push(unreadable(COAST, name, limit, 'not in the feed')); continue; }
+      if (!members.length) { rows.push(unreadable(COAST, name, limit, t('missingMember', lang))); continue; }
       if (members.length === 1) {
         const status = coastStatus(members[0]);
-        rows.push(row(COAST, name, clock(members[0].fetchedAt), limit, now, {degraded: status === 'ok' ? '' : coastLabel(status)}));
+        rows.push(row(COAST, name, clock(members[0].fetchedAt), limit, now, {degraded: status === 'ok' ? '' : providerLabel(coastLabel(status), lang), lang}));
         continue;
       }
       rows.push(rollup(COAST, name, members.map(s => ({status: coastStatus(s) === 'ok' ? 'ok' : coastLabel(coastStatus(s)),
-        last_success_at: s.fetchedAt, max_age_hours: limit})), now, limit));
+        last_success_at: s.fetchedAt, max_age_hours: limit})), now, limit, lang));
     }
   }
   return rows;
@@ -200,19 +207,19 @@ const text = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;
 const hours = value => (value < 1 ? `${Math.round(value * 60)} min` : `${value < 10 ? value.toFixed(1) : Math.round(value)} h`);
 
 /** The HTML of the table rows, one <section> per group. */
-export function renderRows(rows) {
+export function renderRows(rows, lang = 'en') {
   const groups = [...new Set(rows.map(r => r.group))];
   return groups.map(group => `<h2>${text(group)}</h2>
-<div class="forecast-table-wrap" role="region" tabindex="0" aria-label="${text(group)} data table"><table class="evidence-table status-table"><thead><tr><th scope="col">Data</th><th scope="col">Last successful publish (UTC)</th><th scope="col">Expected within</th><th scope="col">Status</th></tr></thead><tbody>
-${rows.filter(r => r.group === group).map(r => `<tr class="status-${r.state}"><th scope="row">${text(r.name)}</th><td>${r.lastSuccess ? `<time datetime="${text(r.lastSuccess)}">${text(r.lastSuccess.slice(0, 16).replace('T', ' '))}</time>${r.ageHours === null ? '' : ` (${hours(r.ageHours)} ago)`}` : 'none'}</td><td>${hours(r.expectedHours)}</td><td>${text(STATES[r.state])}${r.note ? ` · ${text(r.note)}` : ''}</td></tr>`).join('\n')}
+<div class="forecast-table-wrap" role="region" tabindex="0" aria-label="${text(t('table', lang, {group}))}"><table class="evidence-table status-table"><thead><tr><th scope="col">${text(t('data', lang))}</th><th scope="col">${text(t('last', lang))}</th><th scope="col">${text(t('expected', lang))}</th><th scope="col">${text(t('status', lang))}</th></tr></thead><tbody>
+${rows.filter(r => r.group === group).map(r => `<tr class="status-${r.state}"><th scope="row">${text(r.name)}</th><td>${r.lastSuccess ? `<time datetime="${text(r.lastSuccess)}">${text(r.lastSuccess.slice(0, 16).replace('T', ' '))}</time>${r.ageHours === null ? '' : ` (${text(t('ago', lang, {hours: hours(r.ageHours)}))})`}` : t('none', lang)}</td><td>${hours(r.expectedHours)}</td><td>${text(t('state.' + r.state, lang))}${r.note ? ` · ${text(r.note)}` : ''}</td></tr>`).join('\n')}
 </tbody></table></div>`).join('\n');
 }
 
 /** The not-shown section. */
-export function renderCoverage(names = SOURCE_NAMES) {
+export function renderCoverage(names = SOURCE_NAMES, lang = 'en') {
   const groups = coverageGroups(names);
   return ['scheduled-unwatched', 'browser-direct', 'fixed'].filter(k => groups[k]?.length).map(k =>
-    `<h3>${text(NOT_SHOWN[k])}</h3>\n<ul>${groups[k].map(n => `<li>${text(n)}</li>`).join('')}</ul>`).join('\n');
+    `<h3>${text(t('coverage.' + k, lang))}</h3>\n<ul>${groups[k].map(n => `<li>${text(n)}</li>`).join('')}</ul>`).join('\n');
 }
 
 async function load(url) {
@@ -220,6 +227,7 @@ async function load(url) {
 }
 
 export async function main() {
+  const lang = await initStatusPage(document);
   const coastNames = Object.keys(health.coast);
   const [conditions, data, index, ...coastFeeds] = await Promise.all([load('/feeds/conditions/latest.json'), load('/feeds/data/latest.json'), load('/regions/index.json'),
     ...coastNames.map(name => load(`/feeds/${health.coast[name].path}`))]);
@@ -227,9 +235,9 @@ export async function main() {
   const regions = {};
   await Promise.all(regionEntries(index).map(async entry => { regions[entry.id] = await load(`/feeds/conditions/regions/${encodeURIComponent(entry.id)}/latest.json`); }));
   const now = Date.now();
-  document.getElementById('status-rows').innerHTML = renderRows(statusRows({conditions, data, index, regions, coast}, now));
+  document.getElementById('status-rows').innerHTML = renderRows(statusRows({conditions, data, index, regions, coast}, now, lang), lang);
   document.getElementById('status-checked').textContent = new Date(now).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
-  document.getElementById('status-coverage').innerHTML = renderCoverage();
+  document.getElementById('status-coverage').innerHTML = renderCoverage(undefined, lang);
 }
 
 if (typeof document !== 'undefined' && document.getElementById('status-rows')) main();

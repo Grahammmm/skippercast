@@ -22,6 +22,7 @@ export const PALETTE_TOKENS = {
   // MGL-15: map-only roles (web/tokens.css), so the map and its legend never read the app chrome's tokens.
   mapWater: 'map-water', mapLand: 'map-land', mapPark: 'map-park', mapRoad: 'map-road', mapRoadMinor: 'map-road-minor', mapBoundary: 'map-boundary',
   mapLabel: 'map-label', mapHalo: 'map-halo', mapInk: 'map-ink', mapInkHalo: 'map-ink-halo', mapCoast: 'map-coast', mapContour: 'map-contour',
+  mapContourShallow: 'map-contour-shallow', mapContourShallowHalo: 'map-contour-shallow-halo', mapContourDeep: 'map-contour-deep', mapContourDeepHalo: 'map-contour-deep-halo', mapNosurvey: 'map-nosurvey',
   habRock: 'hab-rock', habMixed: 'hab-mixed', habSoft: 'hab-soft', habKelp: 'hab-kelp', markRing: 'mark-ring',
   mapLabelOpacity: 'map-label-opacity', mapRoadOpacity: 'map-road-opacity', mapHabitatOpacity: 'map-habitat-opacity', mapContourWidth: 'map-contour-width',
 } as const;

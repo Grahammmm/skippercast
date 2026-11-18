@@ -1,9 +1,10 @@
 """Contract failures that could silently mix regions or overstate data coverage."""
 from copy import deepcopy
+import json
 from pathlib import Path
 import tempfile
 from unittest import TestCase
-from skippercast.platform.contracts import REPO, read_json, load_region, requirement_report, public_url, within
+from skippercast.platform.contracts import REPO, load_catalogs, read_json, load_region, requirement_report, public_url, within
 from skippercast.platform.candidate import validate_candidate
 from skippercast.pipeline.settings import settings, previous_for_region
 from skippercast.pipeline.collect import model_loader
@@ -21,6 +22,37 @@ def candidate():
 
 
 class RegionalContracts(TestCase):
+    def test_load_catalogs_validates_explicit_public_display_without_defaulting_legacy_rows(self):
+        source = {
+            'id': 'example-survey', 'documentation_url': 'https://example.org/survey',
+            'needs': ['bathymetry'], 'review_status': 'approved',
+            'rights': {'license': 'public-domain', 'commercial_use': 'allowed', 'attribution_required': False,
+                       'attribution': 'Example producer', 'terms_url': 'https://example.org/terms'},
+        }
+        with tempfile.TemporaryDirectory() as folder:
+            catalog = Path(folder) / 'catalog'
+            catalog.mkdir()
+            (catalog / 'data-needs.json').write_text('{"schema_version":1,"needs":[{"id":"bathymetry"}]}')
+
+            def load(row):
+                (catalog / 'sources.json').write_text(json.dumps({'schema_version': 1, 'sources': [row]}))
+                return load_catalogs(Path(folder))[1]['example-survey']['rights']
+
+            self.assertNotIn('public_display', load(source))
+            for display in ('allowed', 'private', 'excluded'):
+                row = {**source, 'rights': {**source['rights'], 'public_display': display}}
+                self.assertEqual(load(row)['public_display'], display)
+            for display in (True, False, None, [], 'public'):
+                with self.subTest(display=display), self.assertRaisesRegex(ValueError, 'Invalid public_display'):
+                    load({**source, 'rights': {**source['rights'], 'public_display': display}})
+            allowed = {**source, 'rights': {**source['rights'], 'public_display': 'allowed'}}
+            for override in ({'review_status': 'candidate'}, {'publication_allowed': False}):
+                with self.subTest(override=override), self.assertRaisesRegex(ValueError, 'public_display is not cleared'):
+                    load({**allowed, **override})
+            for evidence in ({'attribution': ' '}, {'terms_url': None}):
+                with self.subTest(evidence=evidence), self.assertRaisesRegex(ValueError, 'attribution and terms'):
+                    load({**allowed, 'rights': {**allowed['rights'], **evidence}})
+
     def test_mendocino_preview_withholds_unqualified_fishing_spots(self):
         region = load_region("fort-bragg-point-arena")
         atlas = read_json(REPO / "dist" / region["assets"]["atlas"])

@@ -265,11 +265,11 @@ test('generated_tables_exact_and_stale_check_refuses: the three tables are the c
   for (const id of ['language.loadFailed', 'language.retrySpanish']) assert.ok(Object.hasOwn(landing, id), `${id}: in the landing's first paint`);
 
   const root = await mkdtemp(join(tmpdir(), 'strings-gen-')), base = pathToFileURL(root + '/');
-  await mkdir(join(root, 'catalog/app'), {recursive: true}); await mkdir(join(root, 'web/landing'), {recursive: true});
+  await mkdir(join(root, 'catalog/app'), {recursive: true}); await mkdir(join(root, 'web/landing'), {recursive: true}); await mkdir(join(root, 'dist'), {recursive: true});
   const source = strings => writeFile(join(root, 'catalog/app/strings.json'), JSON.stringify({strings}));
   await source({'x.one': {en: 'One {n}', es: 'Uno {n}'}, 'landing.hero.title': {en: 'Hi', es: 'Hola'}});
   assert.throws(() => generate({check: true, root: base}), error => error.message.includes(COMMAND) && error.message.includes('web/strings.es.generated.json'), 'missing tables are stale');
-  assert.equal(generate({root: base}).length, 3);
+  assert.equal(generate({root: base}).length, 4);
   assert.deepEqual(generate({check: true, root: base}), [], 'fresh tables pass');
   assert.equal(await readFile(join(root, 'web/strings.es.generated.json'), 'utf8'), '{"x.one":"Uno {n}","landing.hero.title":"Hola"}\n');
   assert.equal(await readFile(join(root, 'web/landing/strings.generated.json'), 'utf8'), '{"landing.hero.title":{"en":"Hi"}}\n');
