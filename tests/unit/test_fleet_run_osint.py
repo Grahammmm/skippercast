@@ -596,8 +596,11 @@ class WorkflowTests(unittest.TestCase):
         summary.write_text("")
         outputs.write_text("")
         env = {"PATH": f"{fake_bin}:{os.environ['PATH']}", "REGION": "CA", "RUN_ID": RUN_ID, "CLAUDE_BIN": "/nonexistent",
-               "MAX_BATCHES": "", "GITHUB_STEP_SUMMARY": str(summary), "GITHUB_OUTPUT": str(outputs)}
-        proc = subprocess.run(["bash", "-e", "-c", self.research_step()], env=env, capture_output=True, text=True,
+               "MAX_BATCHES": "", "GITHUB_STEP_SUMMARY": str(summary), "GITHUB_OUTPUT": str(outputs),
+               "FLEET_LOCK": str(Path(tmp) / ".locks" / "fleet-osint.lock")}
+        # This tests how the step handles the runner's status after acquiring the lock.
+        script = "flock() { return 0; }\n" + self.research_step()
+        proc = subprocess.run(["bash", "-e", "-c", script], env=env, capture_output=True, text=True,
                               cwd=tmp, timeout=30)
         return proc, summary.read_text(), outputs.read_text()
 
