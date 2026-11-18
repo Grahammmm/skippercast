@@ -13,8 +13,9 @@ and including ``--through``, in this order::
     normalize select mosaic tiles contours zone digests package qa envelope
 
 Each stage also gets the inputs its own command line requires, as the stage modules declare
-them: ``normalize`` gets ``--source`` (always required) and, when given, ``--family`` and
-``--cache <NORM>``; ``mosaic``, ``tiles`` and ``zone`` get ``--scope <scope>`` (default
+them: ``normalize`` gets ``--source`` (always required), ``--cache <NORM>`` (always: the
+effective cache, resolved once as normalize itself would, so the path the guard checks is the
+path normalize writes) and, when given, ``--family``; ``mosaic``, ``tiles`` and ``zone`` get ``--scope <scope>`` (default
 ``public``) and, when given, ``--region-config FILE`` (the DL-5 seam); ``zone`` also gets
 ``--coarse``, ``--water``, ``--coarse-source`` and ``--coarse-date``; ``package`` gets
 ``--manifest`` and every ``--upstream``; ``envelope`` gets ``--generation`` (the option, else the
@@ -35,7 +36,8 @@ Before every stage (and so before the first) the run is refused, exit 3, while a
 * free space is under 250 GB on ``/`` or under 400 GB on ``/mnt/agentorange-backup``
   (a backup path that is not a mounted filesystem counts as under the floor, whatever the
   free space of the directory's parent filesystem is);
-* ``--out`` or ``--norm`` (default ``$SC_RELIEF_NORM``) is, or resolves to, a path under
+* ``--out`` or the effective normalize cache (``--norm``, else ``$SC_RELIEF_NORM`` even when
+  empty, i.e. the working directory, else the built-in default) is, or resolves to, a path under
   ``/mnt/privatevault``.
 
 Before the first stage, the run is refused with exit 5 when this region already has a run
@@ -71,6 +73,7 @@ import subprocess
 import sys
 import time
 
+DEFAULT_NORM = '/mnt/agentorange-backup/seafloor-relief-cache/_norm'  # normalize's own --cache default
 SCOPED_STAGES = ('mosaic', 'tiles', 'zone')  # DL-5 seam: these take --scope and --region-config
 STAGES = ('normalize', 'select', 'mosaic', 'tiles', 'contours', 'zone', 'digests', 'package', 'qa', 'envelope')
 # Inputs the stage modules require on their own command line (a chain that reaches the stage without
@@ -127,6 +130,19 @@ class Config:
     pid: int = field(default_factory=os.getpid)
 
 
+def effective_norm(option, environ=None):
+    """The normalised-cache root normalize will really write, resolved once.
+
+    Mirrors normalize's own ``--cache`` rule (``src/skippercast/relief/normalize.py``): the option
+    if given, else ``$SC_RELIEF_NORM`` whenever it is *set* (an empty value is kept, and resolves
+    to the working directory, exactly as normalize would have it), else ``DEFAULT_NORM``. The
+    result is absolute; the guard checks this path and it is passed to normalize as ``--cache``.
+    """
+    environ = os.environ if environ is None else environ
+    value = option if option is not None else environ.get('SC_RELIEF_NORM', DEFAULT_NORM)
+    return Path(os.path.abspath(os.path.expanduser(value)))
+
+
 def real(path):
     return Path(os.path.realpath(os.path.abspath(os.path.expanduser(str(path)))))
 
@@ -160,8 +176,9 @@ def stage_extras(args):
     extra = {'normalize': [] if args.source is None else ['--source', args.source]}
     if args.family:
         extra['normalize'] += ['--family', args.family]
-    if args.norm:  # normalize writes its cache here; the guard must watch the path it really uses
-        extra['normalize'] += ['--cache', args.norm]
+    # normalize writes its cache here; always passed (resolved by parse), so the path the guard
+    # checks is the path normalize uses, whatever $SC_RELIEF_NORM holds
+    extra['normalize'] += ['--cache', str(args.norm)]
     for stage in SCOPED_STAGES:
         extra[stage] = ['--scope', args.scope]
         if args.region_config:
@@ -520,8 +537,8 @@ def parse(argv):
                         help='pipeline output root OUT (default $SC_RELIEF_OUT; must exist)')
     parser.add_argument('--through', help='last stage to run (required except for a full dry-run preview): '
                         + ', '.join(STAGES))
-    parser.add_argument('--norm', default=os.environ.get('SC_RELIEF_NORM') or None,
-                        help='normalised-cache root NORM, checked against the private-vault guard only (default $SC_RELIEF_NORM)')
+    parser.add_argument('--norm', help='normalised-cache root NORM: checked against the private-vault guard and passed to '
+                        f'normalize as --cache (default $SC_RELIEF_NORM when set, else {DEFAULT_NORM})')
     parser.add_argument('--scope', default='public', choices=('public', 'private'),
                         help='scope of the scoped stages mosaic, tiles and zone (default public)')
     parser.add_argument('--source', help='normalize input: the source file or directory (always needed: normalize is the first stage)')
@@ -536,7 +553,9 @@ def parse(argv):
     parser.add_argument('--coarse-source', help='zone input: provenance id of --coarse (needed when the chain reaches zone)')
     parser.add_argument('--coarse-date', help='zone input: optional date of --coarse')
     parser.add_argument('--dry-run', action='store_true', help='print the chain and the guard state; run nothing')
-    return parser, parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    args.norm = effective_norm(args.norm)  # resolved once: guarded and forwarded as the very same path
+    return parser, args
 
 
 def main(argv=None, cfg=None):
@@ -554,7 +573,7 @@ def main(argv=None, cfg=None):
     out = Path(os.path.abspath(os.path.expanduser(args.out)))
     if not out.is_dir():
         parser.error(f'--out {out} is not an existing directory')
-    norm = Path(os.path.abspath(os.path.expanduser(args.norm))) if args.norm else None
+    norm = args.norm
     missing = missing_inputs(args, args.through)
     if missing and not full_preview:
         parser.error('; '.join(f'the chain reaches {stage}, which needs {", ".join(flags)}' for stage, flags in missing))

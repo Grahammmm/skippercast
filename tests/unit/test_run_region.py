@@ -29,7 +29,8 @@ ZONE_ARGS = ['--coarse', '/in/coarse.tif', '--water', '/in/water.geojson', '--co
 SOURCE_ARGS = ['--source', '/in/dem']
 PACKAGE_ARGS = ['--manifest', '/in/layers.json', '--upstream', 'tiles:public', '--upstream', 'zone:public']
 GEN = 'a' * 64
-SEAM = {'normalize': SOURCE_ARGS, 'mosaic': ['--scope', 'public'], 'tiles': ['--scope', 'public'],
+NORM_ARGS = ['--cache', RR.DEFAULT_NORM]  # normalize always gets the effective cache; the fixture clears $SC_RELIEF_NORM
+SEAM = {'normalize': [*SOURCE_ARGS, *NORM_ARGS], 'mosaic': ['--scope', 'public'], 'tiles': ['--scope', 'public'],
         'zone': ['--scope', 'public', *ZONE_ARGS], 'package': PACKAGE_ARGS, 'envelope': ['--generation', GEN]}
 STUB = '''\
 import json, os, sys
@@ -138,7 +139,8 @@ def test_scoped_stages_get_scope_config_and_zone_inputs_only(box):
             assert tail == ['--scope', 'private', '--region-config', '/r/region.json', *ZONE_ARGS,
                             '--coarse-date', '2026-01-01']
         else:
-            assert tail == {'normalize': SOURCE_ARGS, 'package': PACKAGE_ARGS, 'envelope': ['--generation', GEN]}.get(stage, [])
+            assert tail == {'normalize': [*SOURCE_ARGS, *NORM_ARGS], 'package': PACKAGE_ARGS,
+                            'envelope': ['--generation', GEN]}.get(stage, [])
 
 
 @pytest.mark.parametrize('drop, through', [
@@ -173,6 +175,67 @@ def test_normalize_gets_source_family_and_the_cache_the_guard_checks(box):
     assert box.run('--family', 'nbs_bluetopo', '--norm', '/n/cache', through='normalize') == 0
     assert box.calls() == [['normalize', '--region', 'morro-bay', '--out', str(box.out), '--source', '/in/dem',
                             '--family', 'nbs_bluetopo', '--cache', '/n/cache']]
+
+
+def _vault_box(box, monkeypatch):
+    """A box whose forbidden root is ``vault``, with the working directory inside it (the case
+    where an empty $SC_RELIEF_NORM resolves to the vault itself)."""
+    vault = box.root / 'vault'
+    vault.mkdir()
+    box.cfg.forbidden_root = str(vault)
+    monkeypatch.chdir(vault)
+    return vault
+
+
+def _refused_norm_run(box, capsys, *args):
+    assert box.run(*args, through='normalize') == 3
+    assert box.ran() == [] and 'norm-root' in capsys.readouterr().out
+
+
+def test_empty_norm_env_resolves_to_the_working_directory_and_is_guarded(box, monkeypatch, capsys):
+    # Contract: the cache the guard checks is the one normalize really writes. normalize reads
+    # $SC_RELIEF_NORM with os.environ.get(name, default), so an empty value is kept and Path('')
+    # is the working directory. Bug caught (second review return): the runner turned the empty
+    # value into "no cache", guarded nothing, and normalize then wrote into a vault cwd.
+    vault = _vault_box(box, monkeypatch)
+    monkeypatch.setenv('SC_RELIEF_NORM', '')
+    _, args = RR.parse(['morro-bay', '--out', str(box.out), '--through', 'normalize', *SOURCE_ARGS])
+    assert args.norm == vault.resolve() and RR.stage_extras(args)['normalize'][-2:] == ['--cache', str(vault.resolve())]
+    _refused_norm_run(box, capsys)
+
+
+def test_default_cache_under_the_forbidden_root_is_refused(box, monkeypatch, capsys):
+    # Contract: with --norm and $SC_RELIEF_NORM both absent, normalize's built-in default cache is
+    # guarded like any other. Bug caught: the default was never checked, as no --cache was passed.
+    box.cfg.forbidden_root = str(RR.DEFAULT_NORM)
+    _refused_norm_run(box, capsys)
+
+
+def test_environment_cache_under_the_forbidden_root_is_refused(box, monkeypatch, capsys):
+    vault = _vault_box(box, monkeypatch)
+    monkeypatch.setenv('SC_RELIEF_NORM', str(vault / 'cache'))
+    _refused_norm_run(box, capsys)
+
+
+def test_the_cache_normalize_receives_is_the_one_the_guard_checked(box, monkeypatch):
+    # Contract: an option beats the environment, the environment beats the default, and the same
+    # absolute path is both guarded and forwarded.
+    monkeypatch.setenv('SC_RELIEF_NORM', '/env/cache')
+    assert box.run(through='normalize') == 0
+    assert box.calls()[-1][-2:] == ['--cache', '/env/cache']
+    assert box.run('--norm', '/opt/cache', through='normalize') == 0
+    assert box.calls()[-1][-2:] == ['--cache', '/opt/cache']
+
+
+def test_default_cache_matches_the_one_normalize_declares():
+    # Contract: DEFAULT_NORM is normalize's own --cache default, read from its source (the module
+    # needs numpy, so it cannot be imported here). Bug caught: the two defaults drifting apart.
+    source = (ROOT / 'src' / 'skippercast' / 'relief' / 'normalize.py').read_text(encoding='utf-8')
+    cache = next(node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.Call)
+                 and isinstance(node.func, ast.Attribute) and node.func.attr == 'add_argument'
+                 and node.args and isinstance(node.args[0], ast.Constant) and node.args[0].value == '--cache')
+    default = next(k.value for k in cache.keywords if k.arg == 'default')
+    assert ast.literal_eval(default.args[1]) == RR.DEFAULT_NORM
 
 
 def test_source_path_under_the_vault_is_refused(box, capsys):
