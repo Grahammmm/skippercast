@@ -43,6 +43,21 @@ const PHONE = {width: 390, height: 844};
 const INDEX = JSON.parse(readFileSync(new URL('../dist/regions/index.json', import.meta.url), 'utf8')) as {regions: {id: string; status: string}[]};
 const statusOf = (id: string): string => INDEX.regions.find(r => r.id === id)?.status ?? 'missing';
 
+/**
+ * SCA-232: is `href` an approved rules destination for this region? HTTPS, no credentials, and a host the region's own committed
+ * `regulatory_authority_hosts` names (the list web/regs.ts `officialURL` enforces). Judged from the string alone: the link is never fetched.
+ * Returns the reason it is refused, or '' when it is approved.
+ */
+export function rulesLinkProblem(href: string | null, hosts: readonly string[]): string {
+  if (!href) return 'the link has no address';
+  let url: URL;
+  try { url = new URL(href); } catch { return `"${href}" is not an address`; }
+  if (url.protocol !== 'https:') return `${url.protocol} is not https`;
+  if (url.username || url.password) return 'the address carries credentials';
+  if (!hosts.includes(url.hostname)) return `${url.hostname} is not one of this region's rules authorities (${hosts.join(', ')})`;
+  return '';
+}
+
 interface Result {check: 'open' | 'verdict' | 'rules' | 'map' | 'fit' | 'errors'; ok: boolean; detail: string}
 
 /** Run one check and record it. A check that throws is a FAIL with the first lines of the error (what was expected, what was seen), never a stop. */
@@ -54,6 +69,10 @@ async function record(results: Result[], check: Result['check'], run: () => Prom
     results.push({check, ok: false, detail: lines.slice(0, 4).join(' / ') || 'failed'});
   }
 }
+
+/** The rules authorities this region's committed package names. */
+const authorityHosts = (id: string): string[] =>
+  (JSON.parse(readFileSync(new URL(`../dist/regions/${id}/region.json`, import.meta.url), 'utf8')) as {regulatory_authority_hosts?: string[]}).regulatory_authority_hosts ?? [];
 
 /** Pull the sheet up to its full detent (the handle's End key) and let its slide finish. */
 async function openFull(page: Page): Promise<void> {
@@ -107,6 +126,17 @@ function overflowProbe(): {page: {scrollWidth: number; clientWidth: number}; out
   }
   return {page: {scrollWidth: document.documentElement.scrollWidth, clientWidth: vw}, out: [...new Set(out)].slice(0, 12), clipped: [...new Set(clipped)].slice(0, 12)};
 }
+
+test('rules link destination check: approved URL passes, an unrelated HTTPS site and non-HTTPS are refused (synthetic, nothing fetched)', () => {
+  const hosts = authorityHosts('morro-bay');
+  expect(hosts.length, 'the region names its rules authorities').toBeGreaterThan(0);
+  expect(rulesLinkProblem('https://wildlife.ca.gov/Conservation/Marine/MPAs', hosts)).toBe('');
+  expect(rulesLinkProblem('https://example.com/fishing-rules', hosts)).not.toBe('');
+  expect(rulesLinkProblem('https://wildlife.ca.gov.evil.example/rules', hosts)).not.toBe('');
+  expect(rulesLinkProblem('http://wildlife.ca.gov/Conservation/Marine/MPAs', hosts)).not.toBe('');
+  expect(rulesLinkProblem('https://user:pw@wildlife.ca.gov/x', hosts)).not.toBe('');
+  expect(rulesLinkProblem(null, hosts)).not.toBe('');
+});
 
 test.describe('Stage 1 region phone smoke', () => {
   test.beforeEach(({}, info) => {
@@ -190,9 +220,11 @@ test.describe('Stage 1 region phone smoke', () => {
         const label = (await badge.innerText()).trim(), state = await badge.getAttribute('data-status');
         expect(label, 'the badge says something').not.toBe('');
         await expect(line.locator('a'), 'the official rules link is on screen').toBeVisible();
-        await expect(line.locator('a')).toHaveAttribute('href', /^https?:\/\//);
+        const href = await line.locator('a').getAttribute('href');
+        const refused = rulesLinkProblem(href, authorityHosts(id));
+        expect(refused, `the official rules link goes to an approved destination for ${id}: ${href}`).toBe('');
         const words = (await line.innerText()).replace(/\s+/g, ' ').trim();
-        return `badge "${label}" (${state}), link ${await line.locator('a').getAttribute('href')}, ${words.length} characters of wording`;
+        return `badge "${label}" (${state}), link ${href}, ${words.length} characters of wording`;
       });
 
       await record(results, 'errors', async () => {
