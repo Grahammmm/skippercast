@@ -89,6 +89,8 @@ def source(ident, kind, status, sample_at=None, retrieved_at=None, checked_at="2
 
 
 def feed_of(*sources, published="2026-09-27T19:37:00Z", **extra):
+    # No sources named: a healthy feed carrying every critical kind (F04-12: an empty feed is a missing group, not a healthy one).
+    sources = sources or tuple(source(f"{kind}-1", kind, "ok", RECENT) for kind in ("observation", "prediction", "advisory", "forecast"))
     return {"published_at": published, "generated_at": published, "sources": {s["id"]: s for s in sources}, **extra}
 
 
@@ -211,7 +213,7 @@ class RunAllTests(unittest.TestCase):
 
     def test_everything_fresh_and_ok_exits_zero(self):
         live = feed_of(source("diablo", "observation", "ok", RECENT))
-        data = feed_of(source("tides", "prediction", "ok"), published="2026-09-27T05:00:00Z")
+        data = feed_of(published="2026-09-27T05:00:00Z")
         status, message = self.run_all(self.feeds(live, data))
         self.assertEqual(status, 0, message)
         self.assertIn("Public conditions feed", message)
