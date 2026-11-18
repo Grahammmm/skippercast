@@ -13,7 +13,9 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT))
 from skippercast.platform.contracts import atomic_json, read_json
+from research.scripts.prepare_regional_mpas import transfer_truncated, validate_response
 
 
 def fetch(url):
@@ -50,7 +52,14 @@ def refresh(region):
         digest = hashlib.sha256(raw).hexdigest()
         if filename == "protected-areas.geojson":
             fresh = json.loads(raw)
-            if fresh.get("exceededTransferLimit") or fresh.get("features") != snapshot["features"]:
+            if transfer_truncated(fresh):
+                raise ValueError("Official MPA response truncated; review required")
+            mpa = config.get("mpa") or {}
+            # Reapply exactly the reviewed repair capture used, then compare.
+            validate_response(fresh, mpa.get("bounds"), mpa.get("minimum_features", 1),
+                              tuple(mpa.get("conservative_union_invalid_names", [])))
+            # mapping() yields tuples; compare in saved (JSON) form.
+            if json.loads(json.dumps(fresh.get("features"))) != snapshot["features"]:
                 raise ValueError("Official MPA geometry changed; review required")
         elif digest != snapshot.get("source_sha256"):
             raise ValueError("Official federal closure coordinates changed; review required")
