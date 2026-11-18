@@ -16,7 +16,8 @@ globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.SHELLS = {'/': '/index.0123456789.html', '/admin.html': '/admin.0123456789.html'};
 globalThis.BUILD_ID = 'build-test';
 const {default: worker} = await import('../server/index.ts');
-const {fleetJobs} = await import('../server/routes/fleet.ts');
+const {fleetJobs, FLEET_JOB_SCOPE} = await import('../server/routes/fleet.ts');
+const {resetJwksCacheForTests} = await import('../server/job-auth.ts');
 const {jobsDeps, PAGE} = await import('../server/fleet/jobs.ts');
 const {MAX_PARAMS} = await import('../server/fleet/registry.ts');
 const ids = await import('../server/fleet/ids.ts');
@@ -56,6 +57,92 @@ test.after(() => { fleetJobs.verify = verifierSaved; jobsDeps.now = clockSaved; 
 
 const env = db => ({ASSETS, DB: db, FLEET_ENABLED: 'true'});
 const AUTH = {Authorization: 'Bearer good'};
+
+// Use the real verifier and route middleware: either a misplaced budget check
+// or a workflow-name-only limit would otherwise let a ping job touch D1.
+test('private fleet OIDC admits data jobs, restricts ping before D1, and denies foreign scopes', async t => {
+  const pair = await crypto.subtle.generateKey({name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256'}, true, ['sign', 'verify']);
+  const jwk = {...await crypto.subtle.exportKey('jwk', pair.publicKey), kid: 'fleet-test', alg: 'RS256', use: 'sig'};
+  t.mock.method(fleetJobs, 'verify', verifierSaved);
+  t.mock.method(globalThis, 'fetch', async url => {
+    assert.equal(url, 'https://token.actions.githubusercontent.com/.well-known/jwks');
+    return Response.json({keys: [jwk]});
+  });
+  resetJwksCacheForTests();
+  t.after(resetJwksCacheForTests);
+  const {scheduler, fleet_scheduler: ops} = DEPLOYMENT;
+  const now = Math.floor(Date.now() / 1000), prefix = '/api/fleet/jobs';
+  const claims = (s, workflow, audience = prefix) => ({
+    iss: 'https://token.actions.githubusercontent.com', aud: ORIGIN + audience, sub: `repo:${s.repository}:ref:${s.ref}`,
+    repository: s.repository, repository_id: s.repository_id, repository_owner_id: s.owner_id, ref: s.ref,
+    workflow_ref: `${s.repository}/.github/workflows/${workflow}@${s.ref}`, event_name: 'workflow_dispatch',
+    iat: now, nbf: now, exp: now + 300, jti: `run-${workflow}`,
+  });
+  const b64 = x => Buffer.from(JSON.stringify(x)).toString('base64url');
+  async function auth(c) {
+    const payload = b64({alg: 'RS256', typ: 'JWT', kid: jwk.kid}) + '.' + b64(c);
+    const signature = Buffer.from(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', pair.privateKey, new TextEncoder().encode(payload))).toString('base64url');
+    return {Authorization: `Bearer ${payload}.${signature}`};
+  }
+  async function call(method, path, c) {
+    const db = {
+      prepare: t.mock.fn(sql => {
+        assert.match(sql, /^INSERT INTO request_limits\(/, 'only the budget may touch D1 on ping');
+        return {bind: () => ({first: async () => ({count: 1})})};
+      }),
+      batch: t.mock.fn(() => assert.fail('unexpected storage batch')),
+    };
+    const response = await worker.fetch(new Request(ORIGIN + path + '?region=CA', {method, headers: await auth(c), body: method === 'POST' ? '{}' : undefined}),
+      {...env(db), TEXT_ADVISOR_ENABLED: 'true'});
+    return {status: response.status, body: await response.json(), calls: db.prepare.mock.callCount() + db.batch.mock.callCount()};
+  }
+  const ping = claims(ops, 'fleet-ping.yml');
+  assert.deepEqual(await call('GET', prefix + '/ping', ping), {status: 200, body: {ok: true, region: 'CA'}, calls: 1});
+  const {db, sql} = database();
+  try {
+    for (const workflow of ['fleet-ais.yml', 'fleet-osint.yml', 'fleet-registry.yml']) {
+      const {status} = await get(db, '?region=CA', await auth(claims(ops, workflow)));
+      assert.equal(status, 200, workflow);
+    }
+  } finally {
+    sql.close();
+  }
+  for (const [method, routes] of [['GET', ['health', 'snapshot', 'watch', 'labels']], ['POST', ['registry', 'activity', 'heartbeat', 'watch', 'labels', 'ping']]]) {
+    for (const route of routes) {
+      const {status, body, calls} = await call(method, `${prefix}/${route}`, ping);
+      assert.deepEqual({status, error: body.error, calls}, {status: 403, error: 'Forbidden', calls: 0}, `${method} ${route}`);
+    }
+  }
+  const invalid = [claims(scheduler, 'fleet-ping.yml'), claims(ops, 'fleet-health.yml'),
+    ...Object.entries({repository_id: '1', repository_owner_id: '2', ref: 'refs/heads/x', event_name: 'pull_request', aud: ORIGIN + '/api/jobs/check'})
+      .map(([key, value]) => ({...ping, [key]: value}))];
+  for (const [i, c] of invalid.entries()) {
+    const {status, calls} = await call('GET', prefix + '/ping', c);
+    assert.deepEqual({status, calls}, {status: 401, calls: 0}, `invalid claims row ${i}`);
+  }
+
+  // A future allowlist edit must not grant access to another scope or to a new
+  // fleet workflow without an explicit route policy.
+  const extra = 'fleet-future.yml';
+  const workflows = FLEET_JOB_SCOPE.workflows;
+  ops.workflows.push('live-conditions.yml', 'advisor-media.yml', extra);
+  FLEET_JOB_SCOPE.workflows = [...workflows, extra];
+  try {
+    const {status, calls} = await call('GET', prefix + '/ping', claims(ops, extra));
+    assert.deepEqual({status, calls}, {status: 403, calls: 0}, 'unclassified verified fleet workflow');
+    for (const [method, path, workflow, aud] of [
+      ['POST', '/api/jobs/check', 'live-conditions.yml', '/api/jobs/check'],
+      ['GET', '/api/advisor/jobs/media', 'advisor-media.yml', '/api/advisor/jobs'],
+    ]) {
+      const {status, calls} = await call(method, path, claims(ops, workflow, aud));
+      assert.deepEqual({status, calls}, {status: 401, calls: 0}, path);
+    }
+  } finally {
+    FLEET_JOB_SCOPE.workflows = workflows;
+    ops.workflows.splice(-3);
+  }
+});
+
 async function post(db, payload, {headers = AUTH, raw} = {}) {
   const response = await worker.fetch(new Request(ORIGIN + '/api/fleet/jobs/registry', {method: 'POST', headers: {'Content-Type': 'application/json', ...headers},
     body: raw ?? JSON.stringify(payload)}), env(db));
