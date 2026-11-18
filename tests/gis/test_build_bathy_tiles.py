@@ -596,12 +596,16 @@ class NativeTierTests(unittest.TestCase):
 
                         start, end = sum(4 ** i for i in range(z)), sum(4 ** i for i in range(z + 1))
                         self.assertEqual({t for t in tiles if start <= t < end}, expected)
-                        if str(z) in metadata['native_support_by_zoom']:
+                        if z <= (17 if resolution <= 1 else 15):  # attempted zoom: row is mandatory
+                            self.assertIn(str(z), metadata['native_support_by_zoom'])
                             detail = metadata['native_support_by_zoom'][str(z)]
                             self.assertEqual(detail['tiles'], len(expected))
                             self.assertEqual(detail['sources'], ([{'id': 'fixture', 'resolution_m': resolution,
                                                                   'tiles': len(expected)}]
                                                                 if expected else []))
+                    cap = 17 if resolution <= 1 else 15
+                    self.assertEqual(sorted(map(int, metadata['native_support_by_zoom'])),
+                                     list(range(13, cap + 1)))
                     if expected_max == 17:
                         self.assertLess(len(expected), len(xs) * len(ys))  # unsupported cores omitted
                     # Explicit requests cannot promote coarse/background grids beyond their cap.
