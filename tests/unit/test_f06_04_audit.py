@@ -99,7 +99,8 @@ def test_missing_or_contradictory_receipts_still_hold(tmp_path, case):
     kept = partial.read_bytes()
     restarted = runner(tmp_path, server, {'schema_version': 1, 'files': [plan_row], 'unresolved': []})
     assert restarted.run() == 2
-    assert [call[1] for call in server.calls] == ['HEAD']  # held at identity check; never a body request
+    # Held before any body request; with a manifest receipt present, before any request at all.
+    assert [call[1] for call in server.calls] == (['HEAD'] if case == 'no-manifest-receipt' else [])
     assert partial.read_bytes() == kept  # preserved for the operator
     assert not (restarted.root / 'noaa-nos' / p.filename(row())).exists()
 
@@ -126,7 +127,7 @@ def test_strong_etag_does_not_repair_a_complete_part_with_bad_receipts(tmp_path)
             plan = {'schema_version': 1, 'files': [plan_row], 'unresolved': []}
         restarted = runner(case_dir, server, plan)
         assert restarted.run() == 2
-        assert [call[1] for call in server.calls] == ['HEAD']
+        assert [call[1] for call in server.calls] == (['HEAD'] if change == 'missing' else [])
         assert partial.read_bytes() == DATA and meta.exists()
         assert not (restarted.root / 'noaa-nos' / p.filename(row())).exists()
 
@@ -190,7 +191,7 @@ def test_oversized_complete_part_is_held_untouched_never_truncated_or_promoted(t
     kept_meta = meta.read_bytes()
     restarted = runner(tmp_path, server)
     assert restarted.run() == 2
-    assert [call[1] for call in server.calls] == ['HEAD']  # never a body request
+    assert server.calls == []  # a manifest receipt exists: hold with no request at all
     assert partial.read_bytes() == DATA + extra and meta.read_bytes() == kept_meta
     assert not (restarted.root / 'noaa-nos' / p.filename(row())).exists()
 
@@ -232,3 +233,22 @@ def test_fetch_has_no_second_promotion_path_for_a_complete_part(tmp_path, monkey
     assert restarted.run() == 2
     assert [call[1] for call in server.calls] == ['HEAD']
     assert partial.read_bytes() == DATA and meta.exists()
+
+
+@pytest.mark.parametrize('validator', ['"v1"', None])
+@pytest.mark.parametrize('cut', [0, 4], ids=['zero-offset', 'earlier-offset'])
+def test_checkpoint_contradicting_a_complete_receipt_holds_without_truncating(tmp_path, validator, cut):
+    # Guards review return 4 (7442596e): a self-consistent .part.json checkpoint at an earlier offset next to
+    # a complete manifest receipt passed the strong-ETag resume path, which truncated the verified suffix.
+    # A manifest receipt means the transfer finished: hold, write nothing, request nothing.
+    server, run, partial, meta = crash_before_rename(tmp_path, validator=validator)
+    data = json.loads(meta.read_text())
+    data.update(bytes=cut, sha256=hashlib.sha256(DATA[:cut]).hexdigest())
+    meta.write_text(json.dumps(data))
+    manifest = run.root / 'noaa-nos/manifest.jsonl'
+    kept = partial.read_bytes(), meta.read_bytes(), manifest.read_bytes()
+    restarted = runner(tmp_path, server)
+    assert restarted.run() == 2
+    assert server.calls == []
+    assert (partial.read_bytes(), meta.read_bytes(), manifest.read_bytes()) == kept
+    assert not (restarted.root / 'noaa-nos' / p.filename(row())).exists()

@@ -447,11 +447,16 @@ class Prefetch:
         reviewed publisher digest (and size, when pinned), URL, final path, the
         manifest receipt and the partial's own receipt, and the file size must equal
         the receipted size exactly (larger or smaller is never promoted or truncated
-        here). Anything else returns None; fetch() then holds a complete checkpoint
-        and otherwise applies the normal identity/validator checks.
+        here). With no manifest receipt it returns None and fetch() applies the
+        normal resume rules. A manifest receipt is only written once the whole file
+        verified, so with one present the outcome is promote or hold: a partial or
+        checkpoint that disagrees with it is never resumed, truncated or re-fetched.
         """
-        if not (record and row.get('sha256') and partial.is_file() and meta_path.is_file()):
+        if not (record and (partial.exists() or meta_path.exists())):
             return None
+        held = Hold('Partial disagrees with its complete manifest receipt; preserve for operator')
+        if not (row.get('sha256') and partial.is_file() and meta_path.is_file()):
+            raise held
         size = partial.stat().st_size
         meta = read_json(meta_path)
         if not (size and (row.get('bytes') is None or row['bytes'] == size)
@@ -461,10 +466,10 @@ class Prefetch:
                 and record.get('path') == str(final.absolute())
                 and record.get('verification') == 'publisher-sha256'
                 and meta.get('final_url') == record.get('final_url')):
-            return None
+            raise held
         sha = digest(partial)
         if not (sha == row['sha256'] == record.get('sha256') == meta.get('sha256')):
-            return None
+            raise held
         record.update(licence=row['licence'], segments=row['segments'])
         self.flush_manifest(row['source'])
         os.replace(partial, final)
@@ -514,9 +519,9 @@ class Prefetch:
                     or partial.stat().st_size < offset):
                 raise Hold('Partial size/hash mismatch; preserve for operator')
             if offset == total:
-                # A complete checkpoint was already offered to finish_receipted_partial() above and
-                # declined: receipts missing/contradictory, unpinned, or size not exactly the
-                # receipted size. Never re-receipt, truncate or promote it here.
+                # No manifest receipt (finish_receipted_partial() decides every receipted
+                # partial), so nothing confirms this complete checkpoint. Never re-receipt,
+                # truncate or promote it here.
                 raise Hold('Complete partial lacks agreeing receipts or exact size; preserve for operator')
             prefix = hashlib.sha256()
             with partial.open('rb') as stream:
