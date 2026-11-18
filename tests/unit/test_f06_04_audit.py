@@ -105,18 +105,26 @@ def test_missing_or_contradictory_receipts_still_hold(tmp_path, case):
 
 
 def test_strong_etag_does_not_repair_a_complete_part_with_bad_receipts(tmp_path):
-    # Guards review return 2: a strong ETag makes offset == total, which used to rewrite the
+    # Guards review returns 2 and 4: a strong ETag makes offset == total, which used to rewrite the
     # manifest and promote a complete .part whose manifest receipt was absent or contradicted.
-    for change in ('missing', 'digest', 'path'):
+    for change in ('missing', 'digest', 'path', 'verification', 'unpinned'):
         case_dir = tmp_path / change
         case_dir.mkdir()
         server, run, partial, meta = crash_before_rename(case_dir, validator='"v1"')
         if change == 'missing':
             (run.root / 'noaa-nos/manifest.jsonl').write_text('')
             (run.mirror / 'noaa-nos.jsonl').write_text('')
+        elif change == 'unpinned':
+            pass  # the plan loses its reviewed publisher digest; both receipts stay intact
         else:
-            edit_receipts(run, **({'sha256': '0' * 64} if change == 'digest' else {'path': str(case_dir / 'x')}))
-        restarted = runner(case_dir, server)
+            edit_receipts(run, **{'digest': {'sha256': '0' * 64}, 'path': {'path': str(case_dir / 'x')},
+                                  'verification': {'verification': 'http-size-and-local-sha256'}}[change])
+        plan = None
+        if change == 'unpinned':
+            plan_row = row()
+            del plan_row['sha256']
+            plan = {'schema_version': 1, 'files': [plan_row], 'unresolved': []}
+        restarted = runner(case_dir, server, plan)
         assert restarted.run() == 2
         assert [call[1] for call in server.calls] == ['HEAD']
         assert partial.read_bytes() == DATA and meta.exists()
@@ -130,7 +138,7 @@ def test_strong_etag_complete_receipted_part_is_still_promoted_without_request(t
     assert Path(receipt(restarted)['path']).read_bytes() == DATA
 
 
-@pytest.mark.parametrize('key', ['sha256', 'bytes', 'path', 'verification'])
+@pytest.mark.parametrize('key', ['sha256', 'bytes', 'path', 'verification', 'final_url'])
 @pytest.mark.parametrize('side', ['primary', 'mirror'])
 def test_conflicting_primary_and_mirror_receipts_hold_and_are_both_preserved(tmp_path, key, side):
     # Guards review return 1: same URL, different identity facts. Neither copy may be flushed
@@ -140,7 +148,8 @@ def test_conflicting_primary_and_mirror_receipts_hold_and_are_both_preserved(tmp
     target = primary if side == 'primary' else mirror
     record = json.loads(target.read_text())
     record[key] = {'sha256': '0' * 64, 'bytes': len(DATA) + 1, 'path': '/elsewhere',
-                   'verification': 'http-size-and-local-sha256'}[key]
+                   'verification': 'http-size-and-local-sha256',
+                   'final_url': 'https://pubs.usgs.gov/other'}[key]
     target.write_text(json.dumps(record, sort_keys=True) + '\n')
     kept = primary.read_bytes(), mirror.read_bytes()
     with pytest.raises(p.Hold, match='contradict'):  # stops the whole run, like the lost-primary hold

@@ -390,7 +390,7 @@ class Prefetch:
             # Same URL, different identity facts: neither copy is authoritative. Hold before any flush.
             for url, other in mirror_records(mirror).items():
                 if any(other.get(key) != records[url].get(key)
-                       for key in ('sha256', 'bytes', 'path', 'verification')):
+                       for key in ('sha256', 'bytes', 'path', 'verification', 'final_url')):
                     raise Hold(f'Primary and mirror receipts contradict each other; preserve both: {mirror}')
         self.records[source] = records
         self.flush_manifest(source)  # repair a stale/missing second copy after a crash
@@ -498,6 +498,8 @@ class Prefetch:
                 raise Hold('Partial size/hash mismatch; preserve for operator')
             if offset == total and not (
                     record and record.get('url') == row['url'] and record.get('bytes') == total
+                    and row.get('sha256') and record.get('sha256') == row['sha256']
+                    and record.get('verification') == 'publisher-sha256'
                     and record.get('sha256') == meta.get('sha256')
                     and record.get('path') == str(final.absolute())
                     and record.get('final_url') == head.final_url):
