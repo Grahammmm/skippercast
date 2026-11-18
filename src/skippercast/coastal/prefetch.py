@@ -199,17 +199,32 @@ class GuardedSink:
         return result
 
 
-def mirror_records(path):
-    """Receipts in a mirror manifest by URL; unparseable lines are stale and carry none."""
-    records = {}
+# Facts that identify a downloaded entity; two receipts for one URL must agree on every one.
+IDENTITY_KEYS = ('final_url', 'sha256', 'bytes', 'path', 'verification')
+
+
+def raw_receipts(path, *, strict):
+    """Every receipt line in file order, never collapsed by URL.
+
+    The primary manifest is strict (a corrupt line raises, as always). A mirror may hold stale
+    lines: unparseable ones carry no receipt.
+    """
+    rows = []
     for line in path.read_text().splitlines():
         try:
             row = json.loads(line)
         except ValueError:
+            if strict:
+                raise
             continue
-        if isinstance(row, dict) and isinstance(row.get('url'), str):
-            records[row['url']] = row
-    return records
+        if strict or (isinstance(row, dict) and isinstance(row.get('url'), str)):
+            rows.append(row)
+    return rows
+
+
+def mirror_records(path):
+    """Receipts in a mirror manifest by URL (last wins); unparseable lines are stale."""
+    return {row['url']: row for row in raw_receipts(path, strict=False)}
 
 
 def mirror_urls(path):
@@ -377,21 +392,21 @@ class Prefetch:
         directory = safe_path(self.root / source)
         directory.mkdir(parents=True, exist_ok=True)
         path = safe_path(directory / 'manifest.jsonl')
-        records = {}
-        if path.exists():
-            for line in path.read_text().splitlines():
-                row = json.loads(line)
-                records[row['url']] = row
         mirror = self.mirror / (source + '.jsonl')
-        if mirror.exists() and set(mirror_urls(mirror)) - set(records):
+        primary_rows = raw_receipts(path, strict=True) if path.exists() else []
+        mirror_rows = raw_receipts(mirror, strict=False) if mirror.exists() else []
+        records = {row['url']: row for row in primary_rows}
+        if set(row['url'] for row in mirror_rows) - set(records):
             # A lost or truncated primary must never erase the only other copy of receipts.
             raise Hold(f'Mirror manifest has receipts the primary lacks; preserve both: {mirror}')
-        if mirror.exists():
-            # Same URL, different identity facts: neither copy is authoritative. Hold before any flush.
-            for url, other in mirror_records(mirror).items():
-                if any(other.get(key) != records[url].get(key)
-                       for key in ('sha256', 'bytes', 'path', 'verification', 'final_url')):
-                    raise Hold(f'Primary and mirror receipts contradict each other; preserve both: {mirror}')
+        # One identity check over every raw line of both copies, before anything is flushed:
+        # two receipts for one URL that differ on any identity fact (within a file or across
+        # files, in any order) mean neither copy is authoritative. Write nothing.
+        seen = {}
+        for row in primary_rows + mirror_rows:
+            identity = tuple(row.get(key) for key in IDENTITY_KEYS)
+            if seen.setdefault(row['url'], identity) != identity:
+                raise Hold(f'Receipts for one URL contradict each other; preserve both: {path} {mirror}')
         self.records[source] = records
         self.flush_manifest(source)  # repair a stale/missing second copy after a crash
 
@@ -426,12 +441,14 @@ class Prefetch:
         return bool(modified and response.get('Last-Modified') not in (None, modified))
 
     def finish_receipted_partial(self, row, final, partial, meta_path, record):
-        """Promote a complete .part left by a crash between receipt and rename.
+        """The ONE decision point for a complete .part (crash between receipt and rename).
 
         No request is made and no ranges are stitched. Every identity must agree:
         reviewed publisher digest (and size, when pinned), URL, final path, the
-        manifest receipt and the partial's own receipt. Anything else returns None
-        so the normal identity/validator checks (and their holds) still apply.
+        manifest receipt and the partial's own receipt, and the file size must equal
+        the receipted size exactly (larger or smaller is never promoted or truncated
+        here). Anything else returns None; fetch() then holds a complete checkpoint
+        and otherwise applies the normal identity/validator checks.
         """
         if not (record and row.get('sha256') and partial.is_file() and meta_path.is_file()):
             return None
@@ -496,15 +513,11 @@ class Prefetch:
             if (type(offset) is not int or not 0 <= offset <= total
                     or partial.stat().st_size < offset):
                 raise Hold('Partial size/hash mismatch; preserve for operator')
-            if offset == total and not (
-                    record and record.get('url') == row['url'] and record.get('bytes') == total
-                    and row.get('sha256') and record.get('sha256') == row['sha256']
-                    and record.get('verification') == 'publisher-sha256'
-                    and record.get('sha256') == meta.get('sha256')
-                    and record.get('path') == str(final.absolute())
-                    and record.get('final_url') == head.final_url):
-                # A complete partial is never silently re-receipted: hold for the operator.
-                raise Hold('Complete partial lacks a matching manifest receipt; preserve for operator')
+            if offset == total:
+                # A complete checkpoint was already offered to finish_receipted_partial() above and
+                # declined: receipts missing/contradictory, unpinned, or size not exactly the
+                # receipted size. Never re-receipt, truncate or promote it here.
+                raise Hold('Complete partial lacks agreeing receipts or exact size; preserve for operator')
             prefix = hashlib.sha256()
             with partial.open('rb') as stream:
                 remaining = offset

@@ -178,3 +178,57 @@ def test_existing_final_collision_hold_is_unchanged(tmp_path):
     restarted = runner(tmp_path, server)
     assert restarted.run() == 2
     assert server.calls == [] and final.read_bytes() == b'someone else' and partial.read_bytes() == DATA
+
+
+@pytest.mark.parametrize('validator', [None, '"v1"'])
+@pytest.mark.parametrize('extra', [b'!', b'x' * 4096], ids=['one-byte', '4k'])
+def test_oversized_complete_part_is_held_untouched_never_truncated_or_promoted(tmp_path, validator, extra):
+    # Guards review return 3a: valid receipts for the first `total` bytes plus an extra suffix used to be
+    # truncated and promoted through the strong-ETag path. The size contradicts the receipts: hold, keep bytes.
+    server, run, partial, meta = crash_before_rename(tmp_path, validator=validator)
+    partial.write_bytes(DATA + extra)
+    kept_meta = meta.read_bytes()
+    restarted = runner(tmp_path, server)
+    assert restarted.run() == 2
+    assert [call[1] for call in server.calls] == ['HEAD']  # never a body request
+    assert partial.read_bytes() == DATA + extra and meta.read_bytes() == kept_meta
+    assert not (restarted.root / 'noaa-nos' / p.filename(row())).exists()
+
+
+@pytest.mark.parametrize('side', ['mirror', 'primary'])
+@pytest.mark.parametrize('contradictory_first', [True, False])
+def test_duplicate_conflicting_receipt_lines_hold_in_either_order_and_write_nothing(
+        tmp_path, side, contradictory_first):
+    # Guards review return 3b: duplicate URL lines were collapsed (last wins) before comparison, so a
+    # contradictory line next to a matching one vanished and flush overwrote the copy. Both orders, both files.
+    server, run, partial, meta = crash_before_rename(tmp_path)
+    primary, mirror = run.root / 'noaa-nos/manifest.jsonl', run.mirror / 'noaa-nos.jsonl'
+    good = primary.read_text()
+    bad = json.dumps({**json.loads(good), 'sha256': '0' * 64}, sort_keys=True) + '\n'
+    target = mirror if side == 'mirror' else primary
+    target.write_text(bad + good if contradictory_first else good + bad)
+    kept = primary.read_bytes(), mirror.read_bytes()
+    with pytest.raises(p.Hold, match='contradict'):
+        runner(tmp_path, server).run()
+    assert server.calls == []
+    assert (primary.read_bytes(), mirror.read_bytes()) == kept  # neither copy flushed over the other
+    assert partial.read_bytes() == DATA and meta.exists()
+
+
+def test_identical_duplicate_receipt_lines_are_not_a_conflict(tmp_path):
+    # Control for the duplicate hold: a repeated, agreeing line is harmless and recovery still works.
+    server, run, partial, meta = crash_before_rename(tmp_path)
+    mirror = run.mirror / 'noaa-nos.jsonl'
+    mirror.write_text(mirror.read_text() * 2)
+    assert runner(tmp_path, server).run() == 0 and server.calls == []
+
+
+def test_fetch_has_no_second_promotion_path_for_a_complete_part(tmp_path, monkeypatch):
+    # Structural guard: if the single validator declines a complete checkpoint, a strong ETag must not let
+    # fetch() promote it by another route. Fails if a second, independently-maintained check comes back.
+    server, run, partial, meta = crash_before_rename(tmp_path, validator='"v1"')
+    monkeypatch.setattr(p.Prefetch, 'finish_receipted_partial', lambda self, *args: None)
+    restarted = runner(tmp_path, server)
+    assert restarted.run() == 2
+    assert [call[1] for call in server.calls] == ['HEAD']
+    assert partial.read_bytes() == DATA and meta.exists()
