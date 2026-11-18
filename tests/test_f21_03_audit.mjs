@@ -1,4 +1,4 @@
-// F21-03 (SCA-532): runner provisioning must preinstall reviewed browser
+// F21-03 (SCA-532/SCA-193): runner provisioning must preinstall reviewed browser
 // dependencies as root and leave the job account no persistent package-management
 // (sudo) grant, so ordinary browser tests pass unprivileged. Offline: reads text
 // only; synthetic scripts are the controls. No host, sudo, apt or network is touched.
@@ -57,23 +57,24 @@ export function packageAdminGrants(script) {
   return out;
 }
 
-// Tiny provisioning model. Root steps install; `sudo -u <user>` steps run as the
-// job account and only succeed for package work if a grant exists.
-export const REVIEWED_DEPS = ['libnss3', 'libatk1.0-0'];
+// Tiny provisioning model, not a shell parser or a live browser check. Count
+// two representative library packages only in a literal root apt install.
+export const REVIEWED_DEPS = ['libnss3', 'libatk1.0-0t64'];
 
 export function provision(script) {
   const state = {installed: new Set(), grants: packageAdminGrants(script), runnerPkgWork: false};
-  for (const raw of script.split('\n')) {
+  for (const raw of script.replace(/\\\n/g, '').split('\n')) {
     const line = raw.trim();
     if (!line || line.startsWith('#')) continue;
-    const isPkgWork = /apt-get\s+install/.test(line) || /install-deps/.test(line);
+    const isPkgWork = /apt-get\s+install|\binstall-deps\b|\s--with-deps\b/.test(line);
     if (!isPkgWork) continue;
     if (/^sudo\s+-u\s/.test(line)) {
       state.runnerPkgWork = true;
-      if (!state.grants.length) continue; // job account cannot do package work without a grant
+      continue;
     }
-    if (/install-deps\s+chromium/.test(line)) REVIEWED_DEPS.forEach(d => state.installed.add(d));
-    for (const d of REVIEWED_DEPS) if (line.includes(d)) state.installed.add(d);
+    if (!/^apt-get\s+install\s+[-\w.+ ]+$/.test(line)) continue;
+    const args = line.split(/\s+/);
+    for (const d of REVIEWED_DEPS) if (args.includes(d)) state.installed.add(d);
   }
   return state;
 }
@@ -92,8 +93,7 @@ export function verdict(script) {
 }
 
 const GRANT = '$USER_NAME ALL=(root) NOPASSWD: /usr/bin/apt-get';
-const PREINSTALL = 'apt-get install -y -q libnss3 libatk1.0-0\nnpx playwright@1 install-deps chromium\n';
-const VALID = `#!/usr/bin/env bash\napt-get update -q\n${PREINSTALL}useradd runner\n`;
+const VALID = '#!/usr/bin/env bash\napt-get update -q\napt-get install -y -q \\\n  libnss3 libatk1.0-0t64\nuseradd runner\n';
 const AFFECTED = `#!/usr/bin/env bash\nuseradd runner\ncat > /etc/sudoers.d/actions-runner <<EOF\n${GRANT}\nEOF\nchmod 0440 /etc/sudoers.d/actions-runner\nsudo -u runner -H bash -c 'npx playwright@1 install-deps chromium'\n`;
 
 test('F21-03 positive control: root preinstall, no grant, unprivileged browser tests pass', () => {
@@ -112,7 +112,7 @@ test('F21-03 negative control: persistent NOPASSWD apt-get grant is detected', (
 });
 
 test('F21-03 empty or missing-provisioning input is not accepted', () => {
-  for (const s of ['', '#!/usr/bin/env bash\nuseradd runner\n']) {
+  for (const s of ['', '#!/usr/bin/env bash\nuseradd runner\n', 'apt-get install libnss3-extra libatk1.0-0']) {
     const v = verdict(s);
     assert.equal(v.ok, false);
     assert.deepEqual(v.browser.missing, REVIEWED_DEPS);
@@ -151,13 +151,18 @@ test('F21-03 detector ignores comments and non-package grants', () => {
   assert.deepEqual(packageAdminGrants(s), []);
 });
 
-// Baseline observation of the real script. `todo` keeps the known gap visible
-// in the report without turning the required check red; remove `todo` once
-// setup.sh preinstalls dependencies as root and drops the sudoers grant.
-test('F21-03 baseline: scripts/runner/setup.sh grants the runner no package administration',
-  {todo: 'F21-03 open: setup.sh writes a NOPASSWD apt-get sudoers grant and runs install-deps as the runner (lines ~50-61)'}, () => {
-    const real = readFileSync(new URL('../scripts/runner/setup.sh', import.meta.url), 'utf8');
-    const v = verdict(real);
-    assert.deepEqual(v.grants, []);
-    assert.equal(v.runnerPkgWork, false);
-  });
+const setup = readFileSync(new URL('../scripts/runner/setup.sh', import.meta.url), 'utf8');
+
+test('F21-03 setup provisions browser libraries without a job-account grant', () => {
+  const v = verdict(setup);
+  assert.deepEqual(v.grants, []);
+  assert.equal(v.runnerPkgWork, false);
+  assert.deepEqual(v.browser, {pass: true, missing: [], privileged: false});
+});
+
+// A re-run that only stops writing the drop-in would leave the old grant active.
+test('F21-03 upgrade revokes the legacy drop-in before package work', () => {
+  const revoke = /^rm -f -- \/etc\/sudoers\.d\/actions-runner$/m.exec(setup);
+  const apt = /^apt-get\s/m.exec(setup);
+  assert.ok(revoke && apt && revoke.index < apt.index);
+});
