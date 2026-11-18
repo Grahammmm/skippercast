@@ -23,6 +23,37 @@ It fails when an asset is bound but unmapped, when a mapping omits a source the 
 
 Adding a new source to `catalog/sources.json` now requires `commercial_use` and `attribution_required` (`skippercast.platform.contracts.load_catalogs` rejects entries without them).
 
+## 2026-11-18 public-display decision (DATA-LIVE-1)
+
+**Basis:** G decision 2026-11-18 (owner-accepted risk; revisit when paid).
+This is an internal decision for display in the free product, not a licence,
+redistribution permission for source files, a change to commercial-use rights,
+or sign-off on a new map artifact. The second decision expressly includes CSUMB
+seafloor and Planet/Kelpwatch after the no-public-use terms were raised. The
+historical terms and pre-decision holds below are retained for the paid review.
+
+`rights.owner_public_display` records this rights decision per source. For
+already approved sources whose display hold was only about terms,
+`rights.public_display` is now `allowed`. On catalogue candidates and the
+restricted CSUMB archive records, the owner decision does not change
+`review_status`, `publication_allowed`, or the raw-data redistribution flags.
+No consumer can use the owner-decision field to bypass those gates. An unset
+display field on a legacy row is not a new grant. MBARI direct products,
+DS1091 interviews, explicit paid-use restrictions, and vessel/privacy holds
+were not cleared. Existing contributor credits, source dates and restrictions
+on what the data can support are unchanged.
+
+| Layer / source group | Region or intended coverage | Effect of this decision |
+| --- | --- | --- |
+| Survey depth contours, full and overview (`usgs-point-buchon`, `usgs-morro-bay`, `usgs-point-estero`) | Morro Bay | Both existing exports pass the explicit display check. Geometry, surveyed limits, datums, source credits and review expiry are unchanged. |
+| Existing B3 atlas, habitat, bottom views, charter outlines, search plans and startup copies | Morro Bay; existing Estero survey context in Cambria–San Simeon; `usgs-csmp-seafloor-character` survey habitat and search plans in Bodega–Point Reyes, Monterey–Point Sur, Point Arena–Bodega, Point Arguello–Conception and Santa Cruz–Monterey Bay | Source eligibility recorded; no new assets, fishing export permissions or region expansions. |
+| NOAA CINMS substrate interpretation and merged NOAA bathymetry | Southern California / Channel Islands, existing survey habitat, search plans, bottom views and qualified-bottom subset | Clears the contributor-terms hold for the NOAA releases themselves. It does not clear separately sourced MBARI data or change any region’s independently reviewed release. |
+| PMEP HAPC habitat context and search plans | Big Sur Coast and South Big Sur–San Simeon | Owner decision recorded for existing context; no catalogue promotion or new export. |
+| Candidate relief (NBS, BlueTopo, CoNED, USACE NCMP, CUDEM, NOAA/NEP 2022 lidar and Southern Cascadia) | Exact tile/subset only: Central, Northern and Southern California / Channel Islands, Morro Bay and Southern Cascadia as applicable | Owner decision recorded; no release from a tile envelope, nominal spacing or unqualified contributors. Exact source selection, coverage/labels and regional QA still required. |
+| Candidate substrate, cameras/observations, ocean and fishery context | No reviewed public map bindings admitted here | Rights decision recorded; no new region or asset enabled. |
+| CSUMB Cambria and the 50 nominated CSUMB SFML wave 2B archives | Cambria–San Simeon and the individual survey areas in the archive records | Decision applies to future qualified display, not downloads, raw archive publication or a regional seafloor asset. No new seafloor goes live from these records. |
+| Kelpwatch canopy / PlanetScope imagery | Existing `kelpwatch` regional bindings are candidate inputs; no separate tracked PlanetScope product or qualified regional imagery in this change | Owner display decision recorded; original Kelpwatch and producer credits must accompany any qualified imagery. No imagery is fetched, promoted or published here. |
+
 ## Launch blockers
 
 Every item here must be closed, licensed or removed before SkipperCast charges money.
@@ -219,7 +250,7 @@ One row per entry in `catalog/sources.json`, except for the grouped CSUMB NCEI w
 
 ### CSUMB SFML at NCEI — wave 2B (private-use only)
 
-These entries identify the archive selection, not a claim that all 50 archives were acquired. The licence is unresolved, commercial use is unknown, and none is bound to an app region or asset. Retain CSUMB SFML and individual survey contributor credits. NCEI hosting does not resolve producer rights; public display and redistribution of archives or derivatives remain on hold pending separate rights review and owner approval. Private census use waits for the E2E-02 normalise stage. The operator-local `CSUMB-LICENCE.md` retains the per-survey evidence, including the missing ISO record for CC_BlockA00.
+These entries identify the archive selection, not a claim that all 50 archives were acquired. The licence is unresolved, commercial use is unknown, and none is bound to an app region or asset. Retain CSUMB SFML and individual survey contributor credits. NCEI hosting does not resolve producer rights. The original decision held public display and redistribution of archives or derivatives pending separate rights review and owner approval; the 2026-11-18 decision above changes the owner’s display policy only. These archive records remain restricted, unbound and ineligible for raw redistribution. Private census use waits for the E2E-02 normalise stage. The operator-local `CSUMB-LICENCE.md` retains the per-survey evidence, including the missing ISO record for CC_BlockA00.
 
 - Ventresca, CC2 A: `csumb-ventresca-cc2-blocka01`, `csumb-ventresca-cc2-blocka02`, `csumb-ventresca-cc2-blocka03`, `csumb-ventresca-cc2-blocka04`, `csumb-ventresca-cc2-blocka05`, `csumb-ventresca-cc2-blocka07`, `csumb-ventresca-cc2-blocka08`, `csumb-ventresca-cc2-blocka09`, `csumb-ventresca-cc2-blocka10`, `csumb-ventresca-cc2-blocka11`.
 - Ventresca, CC2 B: `csumb-ventresca-cc2-blockb01`, `csumb-ventresca-cc2-blockb02`, `csumb-ventresca-cc2-blockb03`, `csumb-ventresca-cc2-blockb04`, `csumb-ventresca-cc2-blockb05`, `csumb-ventresca-cc2-blockb06`, `csumb-ventresca-cc2-blockb07`, `csumb-ventresca-cc2-blockb08`, `csumb-ventresca-cc2-blockb09`, `csumb-ventresca-cc2-blockb10`, `csumb-ventresca-cc2-blockb11`, `csumb-ventresca-cc2-blockb12`, `csumb-ventresca-cc2-blockb13-14`.
