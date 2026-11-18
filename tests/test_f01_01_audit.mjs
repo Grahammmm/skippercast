@@ -134,6 +134,38 @@ dbTest('F01-01 consent revoked between validation and commit leaves every decisi
   s.sql.close();
 });
 
+// Contract: a media rejection that closes related post reviews gives each of them
+// its own audit event in the same batch. Believable bugs: only the media review
+// is audited (the post reviews close with no event and a retry cannot add one), or
+// the events are written outside the batch so an interruption keeps them without the close.
+dbTest('F01-01 rejecting media audits every post review it closes, atomically, and leaves unrelated reviews open', async () => {
+  const s = setup('media');
+  const post = (id, status, media) => s.sql.prepare(`INSERT INTO advisor_posts(id,kind,region,boat_id,media_json,caption,targets_json,status,created_by,created_at,updated_at) VALUES(?,'photo','fixture','b1',?,'C','["instagram"]',?,'engine',?,?)`).run(id, media, status, at, at);
+  const open = (id, ref) => s.sql.prepare("INSERT INTO advisor_reviews(id,kind,ref_id,reason,status,opened_at) VALUES(?,'post',?,'social_draft','open',?)").run(id, ref, at);
+  post('p2', 'approved', '["m1"]'); post('p3', 'draft', '["other"]');
+  open('r1', 'p1'); open('r2', 'p2'); open('r3', 'p3');
+  const events = () => s.sql.prepare('SELECT review_id,kind,decision,actor,decided_at,followup,intent FROM advisor_review_events ORDER BY review_id').all().map(row => ({...row}));
+  const reviews = () => Object.fromEntries(s.sql.prepare("SELECT id,status,note FROM advisor_reviews WHERE id IN ('r1','r2','r3')").all().map(r => [r.id, `${r.status}/${r.note}`]));
+  const untouched = {events: events(), reviews: reviews(), view: s.view()};
+  let steps = 0;
+  for (let i = 0; ; i++) {
+    const broken = {...s.db, batch(qs) {
+      steps = qs.length;
+      return s.db.batch(qs.map((q, n) => ({async run() { const result = await q.run(); if (i === n) throw cut; return result; }})));
+    }};
+    await assert.rejects(s.invoke('reject', {}, {}, broken), e => e === cut);
+    assert.deepEqual({events: events(), reviews: reviews(), view: s.view()}, untouched, `interruption after statement ${i}`);
+    if (i === steps - 1) break;
+  }
+  assert.equal((await s.invoke('reject')).status, 'applied');
+  const wanted = (review_id, kind) => ({review_id, kind, decision: 'rejected', actor: 'text', decided_at: at, followup: null, intent: null});
+  assert.deepEqual(events(), [wanted('r1', 'post'), wanted('r2', 'post'), wanted(REVIEW, 'media')].sort((a, b) => a.review_id < b.review_id ? -1 : 1));
+  assert.deepEqual(reviews(), {r1: 'rejected/photo rejected', r2: 'rejected/photo rejected', r3: 'open/null'});
+  assert.equal((await s.invoke('reject')).status, 'repeated');
+  assert.equal(events().length, 3, 'a retry neither adds nor loses an event');
+  s.sql.close();
+});
+
 dbTest('F01-01 audit is independent of lost console telemetry; deleting a review removes its audit', async () => {
   for (const accepts of [false, true]) {
     const s = setup('rule'), telemetry = [];

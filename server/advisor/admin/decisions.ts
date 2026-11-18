@@ -252,8 +252,15 @@ async function prepareMediaDecision(db: D1Database, id: string, input: DecisionI
       // Close the affected reviews against the same set of draft/approved posts
       // before updating the statuses of those posts, all inside the batch.
       const hasPhoto = "p.status IN ('draft','approved') AND EXISTS (SELECT 1 FROM json_each(p.media_json) WHERE value=?)";
-      writes.push(db.prepare(`UPDATE advisor_reviews SET status='rejected',decided_at=?,note=COALESCE(note,'photo rejected')
-        WHERE kind='post' AND status='open' AND ref_id IN (SELECT p.id FROM advisor_posts p WHERE ${hasPhoto}) AND (${won.sql})`).bind(at, id, ...won.args),
+      // Each such post review is a decision of its own: write its audit event
+      // in this batch, before the review stops being open, so the two commit or
+      // roll back together and a retry (which sees the media review closed)
+      // never has to recreate one.
+      const openPostReview = `FROM advisor_reviews r WHERE r.kind='post' AND r.status='open' AND r.ref_id IN (SELECT p.id FROM advisor_posts p WHERE ${hasPhoto}) AND (${won.sql})`;
+      writes.push(db.prepare(`INSERT INTO advisor_review_events(id,review_id,kind,decision,actor,decided_at)
+        SELECT lower(hex(randomblob(16))),r.id,r.kind,'rejected',?,? ${openPostReview}`).bind(input.by ? 'admin' : 'text', at, id, ...won.args),
+      db.prepare(`UPDATE advisor_reviews SET status='rejected',decided_at=?,decided_by=?,note=COALESCE(note,'photo rejected')
+        WHERE kind='post' AND status='open' AND ref_id IN (SELECT p.id FROM advisor_posts p WHERE ${hasPhoto}) AND (${won.sql})`).bind(at, input.by, id, ...won.args),
       db.prepare(`UPDATE advisor_posts AS p SET status='rejected',error='media_rejected',updated_at=?
         WHERE ${hasPhoto} AND (${won.sql})`).bind(at, id, ...won.args));
     }
