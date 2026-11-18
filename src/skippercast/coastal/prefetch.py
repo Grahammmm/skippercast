@@ -199,17 +199,22 @@ class GuardedSink:
         return result
 
 
-def mirror_urls(path):
-    """URLs receipted in a mirror manifest; unparseable lines are stale and carry none."""
-    urls = []
+def mirror_records(path):
+    """Receipts in a mirror manifest by URL; unparseable lines are stale and carry none."""
+    records = {}
     for line in path.read_text().splitlines():
         try:
             row = json.loads(line)
         except ValueError:
             continue
         if isinstance(row, dict) and isinstance(row.get('url'), str):
-            urls.append(row['url'])
-    return urls
+            records[row['url']] = row
+    return records
+
+
+def mirror_urls(path):
+    """URLs receipted in a mirror manifest."""
+    return list(mirror_records(path))
 
 
 class Prefetch:
@@ -381,6 +386,12 @@ class Prefetch:
         if mirror.exists() and set(mirror_urls(mirror)) - set(records):
             # A lost or truncated primary must never erase the only other copy of receipts.
             raise Hold(f'Mirror manifest has receipts the primary lacks; preserve both: {mirror}')
+        if mirror.exists():
+            # Same URL, different identity facts: neither copy is authoritative. Hold before any flush.
+            for url, other in mirror_records(mirror).items():
+                if any(other.get(key) != records[url].get(key)
+                       for key in ('sha256', 'bytes', 'path', 'verification')):
+                    raise Hold(f'Primary and mirror receipts contradict each other; preserve both: {mirror}')
         self.records[source] = records
         self.flush_manifest(source)  # repair a stale/missing second copy after a crash
 
@@ -485,6 +496,13 @@ class Prefetch:
             if (type(offset) is not int or not 0 <= offset <= total
                     or partial.stat().st_size < offset):
                 raise Hold('Partial size/hash mismatch; preserve for operator')
+            if offset == total and not (
+                    record and record.get('url') == row['url'] and record.get('bytes') == total
+                    and record.get('sha256') == meta.get('sha256')
+                    and record.get('path') == str(final.absolute())
+                    and record.get('final_url') == head.final_url):
+                # A complete partial is never silently re-receipted: hold for the operator.
+                raise Hold('Complete partial lacks a matching manifest receipt; preserve for operator')
             prefix = hashlib.sha256()
             with partial.open('rb') as stream:
                 remaining = offset
