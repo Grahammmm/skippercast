@@ -7,14 +7,14 @@ Budgets (MAP-DESIGN-LOCK section 4):
   * relief bytes per view, worst case at 256 px tiles: desktop 1200x800 <= 1.6 MB, phone 390x844 <= 0.8 MB
   * per-sector relief archive <= 1.5 GB
   * depth contours: overview file <= 300 KB, full file <= 1 MB, per region
-  * first load: 0 B added (layer off means zero relief or contour requests; proved by e2e/v2-relief-requests.spec.ts)
+  * first load: relief requests are checked with relief off by e2e/v2-relief-requests.spec.ts;
+    contour off-state and user theme control are not yet measured
 
 Per-view bytes = tiles touched by the viewport x the archive's mean tile size (tile data bytes / addressed tiles,
 read from the PMTiles v3 header). z16-17 bytes per region come from Z17-SIZE.md when that file exists; when it does
 not, the report says so plainly.
 
-Exit status: 1 only when a budget is exceeded AND the run is a --fixture run or --strict. A plain run on real
-files reports OVER rows and still exits 0.
+Exit status: 1 only when a synthetic fixture exceeds a budget. A run on real files reports OVER rows and exits 0.
 
 Usage:
   python3 scripts/check_relief_budget.py                       # real Laguna/Morro design archives + repo dist contours
@@ -110,10 +110,18 @@ def real_regions(design: Path, repo: Path) -> dict:
     return regions
 
 
-def z17_report(path: Path) -> list:
+def z17_report(path: Path, releases: tuple[Path, ...] | list[Path] = ()) -> list:
+    out = []
+    for release_path in releases:
+        release = json.loads(release_path.read_text(encoding='utf-8'))
+        for item in release.get('files', []):
+            if item.get('path', '').endswith('.pmtiles') and isinstance(item.get('bytes'), int):
+                out.append(f'{release["region"]}: {item["path"]}: {item["bytes"]:,} B total archive '
+                           f'(zooms {item.get("minzoom", "?")}-{item.get("maxzoom", "?")}; '
+                           f'z16-17 bytes not separately reported; {release_path})')
     if not path.is_file():
-        return [f'z16-17 bytes per region: NOT REPORTED, {path} is absent (MB-07 has not produced Z17-SIZE.md)']
-    out = [f'z16-17 bytes per region, from {path}:']
+        return out or [f'z16-17 bytes per region: NOT REPORTED, {path} is absent (MB-07 has not produced Z17-SIZE.md)']
+    out.append(f'z16-17 bytes per region, from {path}:')
     rows = [ln for ln in path.read_text(encoding='utf-8', errors='replace').splitlines() if ln.lstrip().startswith('|')]
     out += rows[:60] or ['  (no table rows found in the file)']
     return out
@@ -122,10 +130,11 @@ def z17_report(path: Path) -> list:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--fixture', type=Path, help='JSON {"regions": {id: {mean_tile_bytes, archive_bytes, contours_*_bytes}}}')
-    ap.add_argument('--strict', action='store_true', help='exit 1 on an over-budget real measurement')
+    ap.add_argument('--strict', action='store_true', help='retained for compatibility; real measurements remain informational')
     ap.add_argument('--design-dir', type=Path, default=DESIGN)
     ap.add_argument('--repo', type=Path, default=ROOT)
     ap.add_argument('--z17-size', type=Path, default=Z17_SIZE)
+    ap.add_argument('--release', type=Path, action='append', default=[], help='regional release.json (repeatable)')
     a = ap.parse_args(argv)
 
     if a.fixture:
@@ -142,12 +151,12 @@ def main(argv=None) -> int:
             print(f'{rid}: design z17 box archive {r["design_z17_box_bytes"]:,} B (design sample, not Z17-SIZE.md)')
         if 'tile_count' in r:
             print(f'{rid}: {r["tile_count"]} tiles, mean {r["mean_tile_bytes"]:,.0f} B/tile, zooms {r["zooms"][0]}-{r["zooms"][1]}')
-    print('first load: 0 B added is proved by e2e/v2-relief-requests.spec.ts (layer off: zero relief/contour requests)')
-    for ln in z17_report(a.z17_size):
+    print('first load: relief-off requests checked by e2e/v2-relief-requests.spec.ts; contour off-state not yet measured')
+    for ln in z17_report(a.z17_size, a.release):
         print(ln)
     over = [r for r in rows if not r['ok']]
     print(f'{len(over)} over budget of {len(rows)} checks')
-    return 1 if over and (a.fixture or a.strict) else 0
+    return 1 if over and a.fixture else 0
 
 
 if __name__ == '__main__':

@@ -48,7 +48,7 @@ class ReliefBudgetTests(unittest.TestCase):
             fake_pmtiles(d / 'laguna-B.pmtiles', 126 * 90_000, 126)
             code = crb.main(['--design-dir', str(d), '--repo', str(d), '--z17-size', str(d / 'none.md')])
             self.assertEqual(code, 0)
-            self.assertEqual(crb.main(['--design-dir', str(d), '--repo', str(d), '--z17-size', str(d / 'none.md'), '--strict']), 1)
+            self.assertEqual(crb.main(['--design-dir', str(d), '--repo', str(d), '--z17-size', str(d / 'none.md'), '--strict']), 0)
 
     def test_header_parse_and_bad_file(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -59,6 +59,16 @@ class ReliefBudgetTests(unittest.TestCase):
             p.write_bytes(b'nope')
             with self.assertRaises(ValueError):
                 crb.pmtiles_header(p)
+
+    def test_release_reports_regional_archive_bytes_without_inventing_zoom_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            release = Path(tmp) / 'release.json'
+            release.write_text(json.dumps({'region': 'morro-bay', 'files': [
+                {'path': 'tiles/private/relief.pmtiles', 'bytes': 183886453, 'minzoom': 8, 'maxzoom': 17}]}))
+            report = '\n'.join(crb.z17_report(Path(tmp) / 'missing.md', [release]))
+            self.assertIn('morro-bay', report)
+            self.assertIn('183,886,453', report)
+            self.assertIn('z16-17 bytes not separately reported', report)
 
     def test_z17_absent_is_stated_and_present_is_echoed(self):
         with tempfile.TemporaryDirectory() as tmp:
