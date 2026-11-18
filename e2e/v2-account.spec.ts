@@ -385,7 +385,7 @@ const exportFile = 'SkipperCast-private-records.json';
 const privateFixture = {catch_log: [{id: 'synthetic-catch'}], spots: [{id: 'synthetic-spot'}]};
 type PrivacyProbe = {release?: () => void; jsonFiles: number};
 
-for (const obsolete of ['close and reopen', 'confirmed deletion'] as const) {
+for (const obsolete of ['close and reopen', 'confirmed deletion', 'confirmed deletion remount'] as const) {
   test(`private JSON export: ${obsolete} cancels the old download; a fresh retry works`, async ({page, v2, isMobile}) => {
     // Hold the first body at the application boundary even if fetch was aborted
     // after the bytes arrived. This exercises the final check before file creation.
@@ -444,6 +444,15 @@ for (const obsolete of ['close and reopen', 'confirmed deletion'] as const) {
       await dialog.getByRole('button', {name: 'Delete my account and records'}).click();
       await dialog.getByRole('button', {name: 'Yes, delete everything'}).click();
       await expect.poll(() => deletion).toBeDefined();
+      if (obsolete === 'confirmed deletion remount') {
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#trip-alerts')).toHaveCount(0);
+        await open();
+        await expect(download, 'deletion stays locked across sheet remount').toBeDisabled();
+        await expect(dialog.getByRole('button', {name: 'Delete my account and records'})).toBeDisabled();
+        await download.dispatchEvent('click');
+        expect(reads, 'a synthetic click cannot start an export during deletion').toBe(1);
+      }
     }
     const files = await page.evaluate(async () => {
       const probe = (window as unknown as {privacyProbe: PrivacyProbe}).privacyProbe;
@@ -456,7 +465,8 @@ for (const obsolete of ['close and reopen', 'confirmed deletion'] as const) {
     if (deletion) {
       await expect(download).toBeDisabled();
       await deletion.fulfill({status: 503, json: {error: 'Synthetic deletion failure'}});
-      await expect(status).toHaveText('Synthetic deletion failure');
+      if (obsolete !== 'confirmed deletion remount') await expect(status).toHaveText('Synthetic deletion failure');
+      await expect(download).toBeEnabled();
     }
     await download.click();
     await expect(status).toHaveText('Synthetic export failure');

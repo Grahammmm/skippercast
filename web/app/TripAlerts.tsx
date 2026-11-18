@@ -7,6 +7,7 @@
 // drawn. What the server wrote (assessment messages, hazard notes, its error bodies) is shown as received, in
 // English; in Spanish the sheet says so once and marks those texts lang="en".
 import {useEffect, useId, useMemo, useRef, useState} from 'preact/hooks';
+import {signal} from '@preact/signals';
 import type {TargetedSubmitEvent} from 'preact';
 import {Button} from '../ui/Button.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
@@ -38,6 +39,8 @@ type Loaded =
   | {state: 'signed-out'; href: string}
   | {state: 'signed-in'; session: SessionAnswer; region: TripRegion; boat: Boat};
 
+// Deletion outlives the sheet; keep its guard until failure or the successful reload.
+const deletingAccount = signal(false);
 const hours = (v: FormDataEntryValue | null) => Number(v);
 const sayError = (error: unknown): Say => error instanceof AlertCopyError ? {id: error.id} : {literal: (error as Error).message};
 /** What a server wrote stays English: in Spanish it is marked as such, and only there. */
@@ -332,7 +335,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   // A native dialog closes before its queued close event unmounts the sheet.
   const sheetOpen = () => live.current && !!privacy.current?.closest('dialog[open]');
   const exportRecords = async () => {
-    if (!sheetOpen() || privacyWork.current) return;
+    if (!sheetOpen() || privacyWork.current || deletingAccount.peek()) return;
     const ctl = new AbortController();
     privacyWork.current = ctl;
     setPrivacyBusy('exporting');
@@ -356,7 +359,8 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   };
   const deleteAll = async () => {
     const pending = privacyWork.current;
-    if (pending === 'deleting') return;
+    if (pending === 'deleting' || deletingAccount.peek()) return;
+    deletingAccount.value = true;
     privacyWork.current = 'deleting';
     pending?.abort();
     setPrivacyBusy('deleting');
@@ -367,6 +371,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
       setTimeout(() => location.reload(), 1200);
     } catch (error) {
       privacyWork.current = null;
+      deletingAccount.value = false;
       setPrivacyBusy(null);
       fail(error);
     }
@@ -469,8 +474,8 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
         <details ref={privacy}>
           <summary>{t('alerts.privacy.summary', lang)}</summary>
           <p>{t('alerts.privacy.body', lang)}</p>
-          <Button size="sm" disabled={privacyBusy !== null} onClick={exportRecords}>{t('alerts.export', lang)}</Button>{' '}
-          <Button data-delete-account size="sm" disabled={confirming || privacyBusy === 'deleting'} onClick={() => setConfirming(true)}>{t('alerts.deleteAccount', lang)}</Button>{' '}
+          <Button size="sm" disabled={privacyBusy !== null || deletingAccount.value} onClick={exportRecords}>{t('alerts.export', lang)}</Button>{' '}
+          <Button data-delete-account size="sm" disabled={confirming || deletingAccount.value} onClick={() => setConfirming(true)}>{t('alerts.deleteAccount', lang)}</Button>{' '}
           <a href="#account">{t('alerts.accountLink', lang)}</a>
           {confirming ? <ConfirmDelete onConfirm={deleteAll} onCancel={keep} /> : null}
         </details>
