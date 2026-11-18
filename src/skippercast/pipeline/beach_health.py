@@ -187,7 +187,7 @@ def _usable_edition(doc, region_id):
                 or not isinstance(row.get("id"), str) or not row["id"] or row["id"] in seen
                 or not _number(row.get("lat")) or not _number(row.get("lon"))
                 or not south <= row["lat"] <= north or not west <= row["lon"] <= east
-                or row.get("sampledAt") is not None or row.get("sampleDateAvailable") is not False
+                or "sampledAt" not in row or row["sampledAt"] is not None or row.get("sampleDateAvailable") is not False
                 or not _usable_row_fields(row, binding)):
             return False
         seen.add(row["id"])

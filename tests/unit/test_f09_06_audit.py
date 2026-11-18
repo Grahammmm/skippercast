@@ -67,7 +67,7 @@ UNUSABLE = {
 }
 # Malformed rows: the BeachWaterQuality fields `parse` always writes, each deleted or given a wrong type.
 # Believable bug: `_usable_edition` checking only identity/geometry, so a half-written row suppresses the poll.
-for _key in ("name", "status", "advisory", "fetchedAt", "stationCode", "areaId"):
+for _key in ("name", "status", "advisory", "sampledAt", "sampleDateAvailable", "fetchedAt", "stationCode", "areaId"):
     UNUSABLE[f"row missing {_key}"] = (lambda key: lambda doc: doc["waterQuality"][0].pop(key))(_key)
 UNUSABLE.update({
     "row name empty": _row("name", "  "),
