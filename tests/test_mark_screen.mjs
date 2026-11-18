@@ -66,7 +66,8 @@ function site({live = null, daily = {}, patch = {}} = {}) {
     }
     const path = at.pathname.slice(1);
     if (path in patch) return ok(patch[path]);
-    return existsSync(new URL(`../dist/${path}`, import.meta.url)) ? ok(read(path)) : down(404);
+    const file = new URL(`../dist/${path}`, import.meta.url);
+    return existsSync(file) ? new Response(readFileSync(file)) : down(404);
   };
 }
 const record = (hoursAgo, data, status = 'ok') => ({status, data_retrieved_at: iso(Date.now() - hoursAgo * HOUR), data});
