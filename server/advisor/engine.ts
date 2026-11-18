@@ -373,11 +373,13 @@ function hasRelatedRules(results: readonly RuleEvidence[], question: string, rep
     return rows.some(row => keys.species.includes(row.species_key) || keys.group.includes(row.species_key));
   };
   if (!supports(asked)) return false;
-  return reply.split(/(?<=[.!?])\s+|\n+/).filter(statesRuleNumber).every(sentence => {
+  let subjects = [asked];
+  return reply.split(/(?<=[.!?])\s+|\n+/).every(sentence => {
+    const named = namedSpecies(sentence);
+    if (named.length) subjects = named;
+    if (!statesRuleNumber(sentence)) return true;
     const place = namedRuleRegion(sentence);
-    if (place && place !== region) return false;
-    const subjects = namedSpecies(sentence);
-    return (subjects.length ? subjects : [asked]).every(supports);
+    return (!place || place === region) && subjects.every(supports);
   });
 }
 

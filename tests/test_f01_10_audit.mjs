@@ -23,6 +23,8 @@ for (const scenario of [
   {name: 'matching row with a numeric claim about a different fish', rows: [['lingcod']], input: {species_key: 'lingcod'}, subject: 'Halibut', seen: ['lingcod'], allowed: false},
   {name: 'matching row cannot support a second named fish', rows: [['lingcod']], input: {species_key: 'lingcod'}, subject: 'Lingcod and cowcod', seen: ['lingcod'], allowed: false},
   {name: 'independent rows support both named fish', rows: [['lingcod'], ['cowcod']], input: {species_key: 'lingcod'}, extraInput: {species_key: 'cowcod'}, subject: 'Lingcod and cowcod', seen: ['lingcod'], allowed: true},
+  {name: 'implicit claim about an unsupported preceding fish', rows: [['lingcod']], input: {species_key: 'lingcod'}, quote: 'Cowcod. Its minimum size must be at least 17 inches (Fixture rules; checked Oct 1).', seen: ['lingcod'], allowed: false},
+  {name: 'implicit claim about a supported preceding fish', rows: [['lingcod'], ['cowcod']], input: {species_key: 'lingcod'}, extraInput: {species_key: 'cowcod'}, quote: 'Cowcod. Its minimum size must be at least 17 inches (Fixture rules; checked Oct 1).', seen: ['lingcod'], allowed: true},
 ]) {
   test(`F01-10: ${scenario.name}`, {skip: sqliteUnavailable || false}, async t => {
     const {sql, db} = advisorDatabase();
@@ -35,7 +37,7 @@ for (const scenario of [
       seed.run(`${species}:${region}`, region, REGIONS[region].jurisdiction_id, species, species,
         '2026-10-01T00:00:00Z', '2026-10-01T00:00:00Z');
     }
-    const quote = `${scenario.subject ?? 'Lingcod'} must be at least 17 inches (Fixture rules; checked Oct 1).`;
+    const quote = scenario.quote ?? `${scenario.subject ?? 'Lingcod'} must be at least 17 inches (Fixture rules; checked Oct 1).`;
     const requests = [];
     const responses = [
       {stop_reason: 'tool_use', content: [
