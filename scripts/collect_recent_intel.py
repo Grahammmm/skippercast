@@ -15,7 +15,7 @@ from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "catalog/recent-intel-watchlist.json"
-GOOD = {"ok", "no-results"}
+GOOD = ("ok", "no-results")
 PLACE_TERMS = {
     "morro-bay": ("morro bay", "avila", "point buchon", "cayucos", "estero bay"),
     "cambria-san-simeon": ("cambria", "san simeon"),
@@ -118,6 +118,7 @@ def gather(config, engine, output, now, previous=None, runner=subprocess.run):
     env["FROM_BROWSER"] = "off"
     env["LAST30DAYS_CONFIG_DIR"] = ""  # documented clean/no-config mode
     env["LAST30DAYS_DEFAULT_SEARCH"] = ",".join(config["source_set"])
+    providers = set(config["source_set"])
     for key, region, query in scheduled:
         path = raw_dir / (key.replace("/", "-") + ".json")
         cmd = [sys.executable, str(engine), query["text"],
@@ -138,12 +139,13 @@ def gather(config, engine, output, now, previous=None, runner=subprocess.run):
             raw = json.loads(path.read_text())
             items = normalize(raw, region, query["id"], now, config["lookback_days"])
             status = raw["source_status"]
-            if any(v not in GOOD for v in status.values()):
-                outcome = "partial"
-            elif not status:
+            completed_providers = {provider for provider in providers if status.get(provider) in GOOD}
+            if not completed_providers:
                 outcome = "failed"
-            else:
+            elif completed_providers == providers:
                 outcome = "ok"
+            else:
+                outcome = "partial"
             checks[key] = {"status": outcome, "source_status": status, "retrieved_at": now.isoformat(),
                            "result_count": len(items)}
             if outcome in ("ok", "partial"):

@@ -1,7 +1,7 @@
 """Original publisher rugose-rock areas, separate from graded terrain physics.
 
 A narrow reviewed opt-in pairs an original categorical grid with valid native
-nominal depth and current Tier 1 reference support. The versioned paired mode
+nominal depth in current Tier 1 planning cells. The versioned paired mode
 is opt-in; absent mode keeps selected-source support. Unknown masks remain
 unknown. This stage adds interpreted outlines, never measurement, ranks or exports.
 """
@@ -41,9 +41,10 @@ PROFILE = 'original-rugose-classified-area-v1'
 POLICY_FILE = 'catalog/classified-habitat-policy.json'
 TO_LOCAL = Transformer.from_crs(4326, 3310, always_xy=True).transform
 SELECTED_SOURCE_SUPPORT = 'selected-source-v1'
+# Keep the existing policy key; its geometry is a union of planning cells.
 PAIRED_REFERENCE_SUPPORT = 'paired-reference-footprint-v1'
-REFERENCE_NOTICE = ('Current measured coverage footprint only; no reference '
-                    'terrain, substrate or species metrics borrowed.')
+REFERENCE_NOTICE = ('Current Tier 1 planning-cell context only; not evidence of measured overlap. '
+                    'No reference terrain, substrate or species metrics borrowed.')
 NEIGHBOR_VERSION = 'planning-neighbor-suppression-v1'
 NEIGHBOR_BUFFER_M = 5  # Deliberately conservative exclusion, not accuracy.
 NATIVE_PAIR_DEDUP_VERSION = 'reviewed-policy-order-native-union-v1'
@@ -356,9 +357,9 @@ def source_context(root, reach, policy, *, fetch=False):
         support_cells = [c for c in cells
                          if c['tier'] == 1 and c['source_id'] == row['id']]
     else:
-        # Reference geometry comes only from current hash-verified Tier 1
-        # baseline cells. extract() still applies the paired source's own
-        # depth, class, nodata and resolution masks inside that footprint.
+        # These hash-verified Tier 1 cells define the planning scope, not the
+        # exact area surveyed by the reference. extract() still applies the
+        # pair's own depth, class, nodata and resolution masks within it.
         support_cells = [c for c in cells if type(c.get('tier')) is int and c['tier'] == 1]
         input_sources = run['inputs'].get('sources')
         if not isinstance(input_sources, list):
@@ -396,8 +397,8 @@ def source_context(root, reach, policy, *, fetch=False):
         reference_support = {'version': PAIRED_REFERENCE_SUPPORT,
             'source_ids': sorted(reference_ids), 'sources': reference_dependencies,
             'meaning': REFERENCE_NOTICE}
-        # The original scientific pair stays distinct. Footprint derivatives
-        # nevertheless retain every reference producer's terms and credits.
+        # The original scientific pair stays distinct. Retain the terms and
+        # credits of every source used to qualify the planning cells.
         rights_by_id = {r['source_id']: r for r in reference_rights}
         rights_by_id.update({r['source_id']: r for r in rights})
         rights = [rights_by_id[ident] for ident in sorted(rights_by_id)]

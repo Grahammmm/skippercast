@@ -266,9 +266,10 @@ export const alertNames = (region: RegionAlerts): AlertNames => ({
 export const tripLine = (trip: SavedTrip, names?: AlertNames, lang: Language = 'en', timeZone: string = DEFAULT_ZONE): string =>
   `${readableDate(trip.date, lang, timeZone)} · ${names?.point.get(trip.point) ?? trip.point} · ${names?.species.get(trip.species) ?? trip.species} · ${trip.start_hour}:00–${trip.end_hour}:00${trip.boat_sea ? ` · ${trip.boat_name || t('alerts.savedBoat', lang)}` : ''}`;
 
-/** What a saved trip's stored plan shows: target names, stop names in saved order and summed leg totals. Never positions, notes or ids. */
+type SavedLeg = {basis: 'unknown'} | {basis: 'water' | 'straight'; from: string; to: string; nm: string; check: 'unchecked' | 'inside' | 'near' | 'no-overlap'};
+/** Saved names, sums and historical leg qualifications. Never positions, notes or ids. */
 export type TripPlanSummary =
-  | {kind: 'saved'; targets: string[]; stops: string[]; totals: {nm: string; minutes: string} | null}
+  | {kind: 'saved'; targets: string[]; stops: string[]; legs: SavedLeg[]; totals: {nm: string; minutes: string} | null}
   | {kind: 'unavailable'};
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -285,15 +286,26 @@ export function tripPlanSummary(trip: SavedTrip, names?: AlertNames, lang: Langu
     spots.push({name: s.name, order: s.order, i});
   }
   let nm = 0, minutes = 0;
+  const legs: SavedLeg[] = [];
   for (const l of plan.legs) {
     if (!isObj(l) || typeof l.nm !== 'number' || typeof l.minutes !== 'number' || !Number.isFinite(l.nm) || !Number.isFinite(l.minutes) || l.nm < 0 || l.minutes < 0) return {kind: 'unavailable'};
-    nm += Math.round(l.nm * 100000); minutes += Math.round(l.minutes * 100000);
+    const units = Math.round(l.nm * 100000);
+    nm += units; minutes += Math.round(l.minutes * 100000);
+    const {basis, screen} = l;
+    if ((basis !== 'water' && basis !== 'straight') || typeof l.from !== 'string' || typeof l.to !== 'string'
+      || !isObj(screen) || typeof screen.inside !== 'boolean' || typeof screen.screened !== 'boolean'
+      || (screen.inside && !screen.screened) || (screen.near !== undefined && (screen.near !== true || !screen.screened || screen.inside))) {
+      legs.push({basis: 'unknown'});
+      continue;
+    }
+    legs.push({basis, from: l.from, to: l.to, nm: fixed5(units),
+      check: !screen.screened ? 'unchecked' : screen.inside ? 'inside' : screen.near === true ? 'near' : 'no-overlap'});
   }
   const ids = Array.isArray(trip.targets) && trip.targets.length && trip.targets.every(t => typeof t === 'string') ? trip.targets as string[] : [trip.species];
   return {kind: 'saved',
     targets: ids.map(id => names?.species.get(id) ?? id),
     stops: spots.sort((a, b) => a.order - b.order || a.i - b.i).map(s => s.name.trim() ? s.name : t('alerts.unnamedStop', lang)),
-    totals: plan.legs.length ? {nm: fixed5(nm), minutes: fixed5(minutes)} : null};
+    legs, totals: legs.length ? {nm: fixed5(nm), minutes: fixed5(minutes)} : null};
 }
 
 /** The assessment kinds and delivery statuses server/trips.ts writes, in plain words: finite maps from the server's own keys to catalogue ids. */

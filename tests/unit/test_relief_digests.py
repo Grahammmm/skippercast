@@ -8,7 +8,7 @@ import struct
 import pytest
 
 from scripts.relief import region as cli
-from skippercast.relief import digests, package, receipts
+from skippercast.relief import digests, package, receipts, tiles
 from tests._support import ROOT
 
 REGION = 'morro-bay'
@@ -35,7 +35,7 @@ def produce(region, payload):
 
     assert receipts.run_stage(receipts.StageRun(
         region, 'tiles', build, 'a' * 64,
-        scope='public', target='layers/public', plan=receipts.Plan(params={'archive': receipts.sha256_bytes(payload)}),
+        scope='public', target=tiles.TARGET, plan=receipts.Plan(params={'archive': receipts.sha256_bytes(payload)}),
     )).state == 'ok'
 
 

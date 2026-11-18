@@ -2,18 +2,37 @@
 import copy
 import os
 from pathlib import Path
+import shutil
 import sqlite3
 import stat
 
 import pytest
 
 from tests.gis.test_coast_segment_close import (
-    ARCHIVE, QUEUE, HEAD, Closed, _closed_template, archive_segment, cache_files, close_common,
+    ARCHIVE, QUEUE, HEAD, Closed, _closed_template, _rebind_cycle, archive_segment, cache_files, close_common,
     closed, exclusive_synthetic_campaign, ledger_module, manifest_of, refs,
     release_args, release_hot_cache,
 )
+from tests.gis.test_coast_sign_off_graph import Cycle
 
 pytestmark = pytest.mark.gis
+
+
+@pytest.fixture(scope='module')
+def _first_round_template(tmp_path_factory):
+    template = tmp_path_factory.mktemp('first-round-template')
+    return template, Cycle(template).round()
+
+
+@pytest.fixture
+def first_round(tmp_path, _first_round_template):
+    # Both matrices start at the same unopened packet; all opens, verdicts and
+    # diagnostic mutations still happen on each test's private copy.
+    source, seed = _first_round_template
+    shutil.copytree(source, tmp_path, dirs_exist_ok=True, symlinks=True)
+    cycle = copy.deepcopy(seed)
+    _rebind_cycle(cycle, source, tmp_path)
+    return cycle
 
 
 @pytest.mark.parametrize('operation', ['archive', 'release'])
@@ -244,9 +263,9 @@ def test_normal_historical_ref_corruption_still_refuses(closed):
 
 
 @pytest.mark.parametrize('case', ['diagnostic', 'diagnostic-corrupt', 'normal-corrupt', 'diagnostic-root', 'current-corrupt'])
-def test_supersedes_preserves_edge_roles(tmp_path, case):
-    from tests.gis.test_coast_sign_off_graph import Cycle, prepare, validator
-    c = Cycle(tmp_path).round()
+def test_supersedes_preserves_edge_roles(first_round, case):
+    from tests.gis.test_coast_sign_off_graph import prepare, validator
+    c = first_round
     if case == 'normal-corrupt':
         previous = c.context_ref
     else:
@@ -281,9 +300,9 @@ def test_supersedes_preserves_edge_roles(tmp_path, case):
 
 @pytest.mark.parametrize('case', ['anchored', 'reordered', 'diagnostic-corrupt',
                                   'normal-history-corrupt', 'unanchored', 'cached-unanchored'])
-def test_open_report_recovers_only_anchored_diagnostic_roles(tmp_path, case):
-    from tests.gis.test_coast_sign_off_graph import Cycle, prepare, validator, opener, writer
-    c = Cycle(tmp_path).round()
+def test_open_report_recovers_only_anchored_diagnostic_roles(first_round, case):
+    from tests.gis.test_coast_sign_off_graph import prepare, validator, opener, writer
+    c = first_round
     normal_ref = c.context_ref
     normal_run = c.context['run']
     diagnostic = copy.deepcopy(c.context)

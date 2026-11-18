@@ -2,6 +2,7 @@
 import gzip
 import hashlib
 import json
+import os
 from pathlib import Path
 import struct
 import tempfile
@@ -13,6 +14,7 @@ import rasterio
 from rasterio.transform import from_origin
 
 from scripts import build_bathy_tiles as bt
+from tests._support import ROOT
 
 NODATA = -999999.0
 
@@ -354,6 +356,7 @@ class CoverageTests(unittest.TestCase):
                          {'cells': 3, 'cell_m': 10, 'cell_y_m': 20, 'km2': 0.0006})
 
     def test_native_coverage_uses_the_shallow_mask_and_own_cell_size(self):
+        from unittest.mock import patch
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             base, fine, output, sidecar = (root / n for n in ('base.tif', 'fine.tif', 'a.pmtiles', 'c.json'))
@@ -372,8 +375,13 @@ class CoverageTests(unittest.TestCase):
                 ds.write_mask(valid)
             manifest = root / 'native.json'
             manifest.write_text(json.dumps([{'id': 'synthetic', 'path': str(fine), 'resolution_m': 2}]))
-            bt.build(base, output, 12, 12, log=lambda *_: None,
-                     native_sources=bt.load_native_manifest(manifest), coverage_json=sidecar)
+            sources = bt.load_native_manifest(manifest)
+            # Even metadata accounting must not read native pixels in a background-only build.
+            with patch.object(rasterio, 'open', wraps=rasterio.open) as opened:
+                bt.build(base, output, 12, 13, log=lambda *_: None, native_sources=sources)
+            self.assertEqual([call.args[0] for call in opened.call_args_list], [base])
+            self.assertEqual(read_archive(output)[1]['detail_coverage']['native'], [])
+            bt.build(base, output, 14, 14, log=lambda *_: None, native_sources=sources, coverage_json=sidecar)
             _, metadata, _, _ = read_archive(output)
             self.assertEqual(metadata['detail_coverage']['native'],
                              [{'id': 'synthetic', 'resolution_m': 2, 'cells': 479, 'km2': 0.0019}])
@@ -547,15 +555,14 @@ class EnhancementTests(unittest.TestCase):
 
 class NativeTierTests(unittest.TestCase):
     def test_locked_native_zoom_and_core_support(self):
-        """D6: 1 m/0-20 m reaches z17; deep/invalid/halo-only and coarse grids do not."""
+        """Without certification, valid native cores qualify z14/15 but never z16/17."""
         from rasterio.warp import Resampling, reproject
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             base = root / 'base.tif'
             write_survey(base, size=120, west_nodata=0)
             for resolution, depth, masked, expected_max in (
-                (1, -10, False, 17), (0.995, -10, False, 17), (1, -20, False, 17),
-                (1, -20.01, False, 15), (1, -10, True, 13),
+                (1, -10, False, 15), (0.995, -10, False, 15), (1, -10, True, 13),
                 (2, -10, False, 15), (5, -10, False, 15),
             ):
                 with self.subTest(resolution=resolution, depth=depth, masked=masked):
@@ -589,7 +596,7 @@ class NativeTierTests(unittest.TestCase):
                         keep = (valid != 0) & (values <= 0) & (values >= -limit)
                         support_values = np.where(keep, values, NODATA).astype('float32')
                         expected = set()
-                        if z <= (17 if resolution <= 1 else 15):
+                        if z <= 15:
                             for x in xs:
                                 for y in ys:
                                     dest = np.full((256, 256), NODATA, dtype='float32')
@@ -603,15 +610,13 @@ class NativeTierTests(unittest.TestCase):
 
                         start, end = sum(4 ** i for i in range(z)), sum(4 ** i for i in range(z + 1))
                         self.assertEqual({t for t in tiles if start <= t < end}, expected)
-                        if z <= (17 if resolution <= 1 else 15):  # attempted zoom: row is mandatory
+                        if z <= 15:  # attempted zoom: row is mandatory
                             detail = metadata['native_support_by_zoom'][str(z)]
                             self.assertEqual(detail['tiles'], len(expected))
                             self.assertEqual(detail['sources'], ([{'id': 'fixture', 'resolution_m': resolution,
                                                                   'tiles': len(expected)}]
                                                                 if expected else []))
-                    assert_attempted_zoom_rows(self, metadata, 13, 17 if resolution <= 1 else 15)
-                    if expected_max == 17:
-                        self.assertLess(len(expected), len(xs) * len(ys))  # unsupported cores omitted
+                    assert_attempted_zoom_rows(self, metadata, 13, 15)
                     # Explicit requests cannot promote coarse/background grids beyond their cap.
                     bt.build(base, output, 13, 18, log=lambda *_: None, native_sources=sources)
                     self.assertEqual(read_archive(output)[0]['maxzoom'], expected_max)
@@ -620,6 +625,73 @@ class NativeTierTests(unittest.TestCase):
             original = output.read_bytes()
             self.assertEqual(bt.main(['--source', str(base), '--output', str(output), '--maxzoom', '18']), 2)
             self.assertEqual(output.read_bytes(), original)
+
+    def test_certification_vetoes_single_uncertified_cells_and_honours_source_cap(self):
+        """A nearest/any-class-3 warp can miss one bad cell; check the actual PMTiles IDs."""
+        from rasterio.warp import transform_bounds
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base, fine, support, manifest, output = (root / n for n in
+                ('base.tif', 'fine.tif', 'support.tif', 'native.json', 'out.pmtiles'))
+            write_survey(base, size=4, west_nodata=0)  # outside the near-equator native clip
+            # 2x2 z16 tiles with a collar. Each bad source cell occupies a different
+            # z16 tile and z17 child, far from the tile edges.
+            x, y = 32768, 32768
+            tile, _ = bt.tile_grid(16, x, y, pad=0)
+            span = bt.TILE * tile.a
+            clip = transform_bounds('EPSG:3857', 'EPSG:4326', tile.c, tile.f - 2 * span,
+                                    tile.c + 2 * span, tile.f)
+            transform = from_origin(tile.c - 10, tile.f + 10, 1, 1)
+            size = int(2 * span) + 21
+            grid = dict(driver='GTiff', width=size, height=size, count=1, crs='EPSG:3857', transform=transform)
+            depth = np.full((size, size), -20, dtype='float32')
+            depth[int(span) + 30, 30] = -20.01  # class 3 below the nominal depth limit
+            classes = np.full(depth.shape, 3, dtype='uint8')
+            classes[30, 31] = 1  # this cell is touched but missed by z16 nearest-neighbour sampling
+            classes[30, int(span) + 30] = 2
+            with rasterio.open(fine, 'w', **grid, dtype='float32', nodata=NODATA) as ds:
+                ds.write(depth, 1)
+            with rasterio.open(support, 'w', **grid, dtype='uint8', nodata=0) as ds:
+                ds.write(classes, 1)
+            args = ['--source', str(base), '--output', str(output), '--native-manifest', str(manifest),
+                    '--variant', 'base', '--minzoom', '15', '--maxzoom', '17', '--clip-bounds', *map(str, clip)]
+            entry = {'id': '1m', 'path': str(fine), 'resolution_m': 1, 'support_path': str(support)}
+
+            def run(*entries):
+                manifest.write_text(json.dumps(entries))
+                self.assertEqual(bt.main(args), 0)
+                return read_archive(output)[:3]
+
+            def zoom_ids(tiles, z):
+                start, end = sum(4 ** i for i in range(z)), sum(4 ** i for i in range(z + 1))
+                return {tid for tid in tiles if start <= tid < end}
+
+            header, meta, tiles = run(entry)
+            self.assertEqual(header['maxzoom'], 17)
+            self.assertEqual(meta['bounds'], list(clip))
+            self.assertEqual(header['bounds'], [round(v, 7) for v in clip])
+            self.assertEqual(zoom_ids(tiles, 15), {bt.tile_id(15, x // 2, y // 2)})  # native collar outside clip
+            self.assertLess(meta['detail_coverage']['native'][0]['cells'], size ** 2)
+            self.assertEqual(zoom_ids(tiles, 16), {bt.tile_id(16, x + 1, y + 1)})
+            rejected = {(2 * x, 2 * y), (2 * x + 2, 2 * y), (2 * x, 2 * y + 2)}
+            self.assertEqual(zoom_ids(tiles, 17), {bt.tile_id(17, tx, ty) for tx in range(2 * x, 2 * x + 4)
+                             for ty in range(2 * y, 2 * y + 4) if (tx, ty) not in rejected})
+            rows = meta['native_support_by_zoom']
+            self.assertEqual([rows[str(z)]['omitted_uncertified'] for z in (16, 17)], [3, 3])
+
+            # No sidecar, or a provenance cap, cannot certify. The 1m source's cap of 16
+            # must hold even when the other entry keeps z17 in the attempt range.
+            header, meta, tiles = run(dict(entry, support_path=None))
+            self.assertEqual(header['maxzoom'], 15)
+            self.assertFalse(zoom_ids(tiles, 16) | zoom_ids(tiles, 17))
+            rows = meta['native_support_by_zoom']
+            self.assertEqual([rows[str(z)]['omitted_uncertified'] for z in (16, 17)], [4, 16])
+            header, meta, tiles = run(dict(entry, max_zoom=16), dict(entry, id='0-unknown', support_class_cap=2))
+            self.assertEqual(header['maxzoom'], 16)
+            self.assertEqual(zoom_ids(tiles, 16), {bt.tile_id(16, x + 1, y + 1)})
+            self.assertFalse(zoom_ids(tiles, 17))
+            self.assertEqual(meta['native_support_by_zoom']['17']['omitted_uncertified'], 16)
 
     def test_feather_is_monotonic_without_a_false_ridge_and_keeps_holes(self):
         coarse = np.full((120, 160), -30, dtype='float32')
@@ -948,6 +1020,46 @@ class NativeManifestCliTests(unittest.TestCase):
             self.assertEqual(code, 2)
             self.assertIn('entry 0', err.getvalue())
             self.assertEqual(len(err.getvalue().strip().splitlines()), 1)
+
+
+STANDALONE_DRIVER = '''\
+import importlib.machinery, runpy, sys
+SRC, SCRIPT = sys.argv[1], sys.argv[2]
+
+
+class OnlyCheckoutSkippercast:
+    """Hide any installed skippercast: only SRC on sys.path may provide the package."""
+
+    @staticmethod
+    def find_spec(name, path=None, target=None):
+        if name == 'skippercast':
+            if SRC not in sys.path:
+                raise ModuleNotFoundError("No module named 'skippercast'", name='skippercast')
+            return importlib.machinery.PathFinder.find_spec(name, [SRC])
+
+
+sys.meta_path.insert(0, OnlyCheckoutSkippercast)
+sys.argv = [SCRIPT, '--help']
+runpy.run_path(SCRIPT, run_name='__main__')
+'''
+
+
+class StandaloneCliTests(unittest.TestCase):
+    def test_help_runs_without_an_installed_package(self):
+        # Contract: the documented `python scripts/build_bathy_tiles.py ...` resolves the
+        # PMTiles writer from this checkout. Bug caught: a bare `import skippercast...` in the
+        # script crashes with ModuleNotFoundError unless the src-layout package is installed.
+        import subprocess
+        import sys
+        root = ROOT
+        with tempfile.TemporaryDirectory() as tmp:
+            driver = Path(tmp) / 'driver.py'
+            driver.write_text(STANDALONE_DRIVER)
+            env = {key: value for key, value in os.environ.items() if key != 'PYTHONPATH'}
+            done = subprocess.run([sys.executable, str(driver), str(root / 'src'), str(root / 'scripts/build_bathy_tiles.py')],
+                                  capture_output=True, text=True, env=env, cwd=tmp)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertIn('--native-manifest', done.stdout)
 
 
 if __name__ == '__main__':
