@@ -24,7 +24,7 @@ described in src/skippercast/platform/depth_contours.py.
 the unchanged default. Use --output or --held-output for private trials.
 """
 import argparse
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 import hashlib
 import importlib.util
 import json
@@ -79,6 +79,20 @@ def sha256(path):
         return hashlib.file_digest(f, 'sha256').hexdigest()
 
 
+def public_refusal(ident, region, sources, *, explicit=True):
+    source = sources.get(ident) or {}
+    display = (source.get('rights') or {}).get('public_display')
+    if (explicit and display != 'allowed') or display in ('private', 'excluded'):
+        return 'not cleared for public display'
+    if source.get('publication_allowed') is False:
+        return 'publication_allowed is false'
+    if source.get('review_status') != 'approved' or 'bathymetry' not in source.get('needs', ()):
+        return 'not an approved bathymetry source'
+    if ident not in region['source_bindings']['bathymetry']:
+        return 'not a static region bathymetry binding'
+    return None
+
+
 def normalized_identity(ident, grid, path, reviewed_datum):
     """Read only the R2 receipt fields needed to bind this derivative to its original."""
     try:
@@ -105,12 +119,16 @@ def normalized_identity(ident, grid, path, reviewed_datum):
         raise SystemExit(f'{ident}: invalid normalised sidecar: {exc}') from None
 
 
+@contextmanager
 def open_geotiff(path, *, normalized):
     if not normalized:
-        return rasterio.open(path)
-    # Only the hashed file may supply pixels, masks or metadata for an R2 derivative.
-    with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR', GDAL_PAM_ENABLED='NO'):
-        return rasterio.open(path, driver='GTiff', sharing=False)
+        with rasterio.open(path) as grid:
+            yield grid
+    else:
+        # Keep the fence active through boundless reads, which can reopen the TIFF.
+        with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR', GDAL_PAM_ENABLED='NO'), \
+                rasterio.open(path, driver='GTiff', sharing=False) as grid:
+            yield grid
 
 
 def native_offsets(grid, lattice, block_m=dc.CELL_M):
@@ -523,13 +541,13 @@ def main():
         rights = source.get('rights') or {}
         status, licence = source['review_status'], rights.get('license')
         display = rights.get('public_display')
-        if display == 'excluded' or (not held and (display == 'private' or source.get('publication_allowed') is False)):
+        if display == 'excluded':
             raise SystemExit(f'{ident} is not cleared for public display')
         if held and (status not in ('approved', 'candidate') or licence in (None, '', 'unresolved', 'dataset-review-needed')
                      or 'bathymetry' not in sources[ident]['needs']):
             raise SystemExit(f'{ident} cannot be traced, even held: {status}, licence {licence}')
-        if not held and (status != 'approved' or 'bathymetry' not in sources[ident]['needs']):
-            raise SystemExit(f'{ident} is not an approved bathymetry source')
+        if not held and (reason := public_refusal(ident, region, sources, explicit=ident in sidecars)):
+            raise SystemExit(f'{ident} is {reason}')
     adapters = {ident: 'geotiff' if ident in sidecars else sources[ident].get('adapter', 'geotiff')
                 for ident in order}
     kinds = set(adapters.values())

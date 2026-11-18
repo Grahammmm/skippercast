@@ -128,3 +128,119 @@ def test_derivative_fails_closed(builder, geographic_twin, tmp_path, failure):
     with pytest.raises(SystemExit, match=reason):
         run(grid, out, sidecar=sidecar)
     assert not out.exists()
+
+
+def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp_path, monkeypatch, builder):
+    # A valid R4 code alone must not admit a denied source, replace native lines, or evict tiles/zone.
+    import numpy as np
+    import rasterio
+    from pyproj import Transformer
+    from rasterio.transform import from_origin
+
+    from skippercast.platform import depth_contours as dc
+    from skippercast.relief import contours, receipts
+
+    region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36], 'source_bindings': {'bathymetry': [SOURCE, 'excluded']}}
+    _, source = builder
+    sources = {SOURCE: source, 'excluded': {**source, 'rights': {**source['rights'], 'public_display': 'excluded'}},
+               'unbound': source, 'coarse': source}
+    region['source_bindings']['bathymetry'].append('coarse')
+    monkeypatch.setattr(contours, 'load_region', lambda *_: region)
+    monkeypatch.setattr(contours, 'load_catalogs', lambda *_: ({}, sources))
+    root = tmp_path / 'repo'
+    config = root / 'regions/morro-bay/region.json'
+    config.parent.mkdir(parents=True)
+    config.write_bytes(receipts.canonical(region))
+    (root / 'catalog').mkdir()
+    (root / 'catalog/sources.json').write_bytes(receipts.canonical(sources))
+    # The CLI uses the checkout for its code digest; only the synthetic registry root is substituted.
+    real_producer = contours.producer()
+    monkeypatch.setattr(contours, 'producer', lambda: real_producer)
+    monkeypatch.setattr(contours, 'repo_root', lambda: root)
+    r = receipts.Region(tmp_path / 'out', region['id'])
+    crs, x, y = 'EPSG:32610', 690000, 3915000
+    native_transform = from_origin(x, y, 2, 2)
+    depths = np.tile(np.linspace(-1, -120, 100, dtype='float32'), (200, 1))
+    original = write_grid(tmp_path / 'original.tif', depths, crs, native_transform)
+    native = write_grid(tmp_path / 'grid.tif', depths + 0.01, crs, native_transform)
+    sidecar = tmp_path / 'sidecar.json'
+    sidecar.write_bytes(receipts.canonical({'schema': 'sc-relief-normalized/1', 'original_sha256': digest(original),
+                                            'outputs': {'grid.tif': digest(native)}, 'units': 'm',
+                                            'value_convention': 'elevation_positive_up', 'vertical_datum': 'MLLW',
+                                            'crs': crs, 'shape': list(depths.shape), 'resolution_m': 2,
+                                            'transform': list(native_transform)[:6]}))
+    coarse = write_grid(tmp_path / 'coarse.tif', np.tile(np.linspace(-1, -120, 20, dtype='float32'), (40, 1)),
+                        crs, from_origin(x + 200, y, 10, 10))
+
+    def row(ident, grid):
+        return {'id': f'{ident}-tile', 'source_id': ident, 'path': str(grid),
+                'sha256': digest(grid) if grid.exists() else 'f' * 64,
+                'rights_class': 'public', 'vertical_offset_m': 0, 'vertical_datum': 'MLLW',
+                'value_convention': 'elevation_positive_up'}
+
+    rows = [{**row(SOURCE, native), 'support_path': str(tmp_path / 'support.tif')},
+            row('coarse', coarse), row('excluded', tmp_path / 'never-open.tif'),
+            row('unbound', tmp_path / 'unbound.tif')]
+
+    def select(out):
+        (out / 'native.json').write_bytes(receipts.canonical(rows[:1]))
+        (out / 'sources.json').write_bytes(receipts.canonical({'schema_version': 1, 'scope': 'public', 'sources': rows}))
+
+    def mosaic(out):
+        data = np.tile(np.linspace(-1, -120, 20, dtype='float32'), (40, 1))
+        block = from_origin(x, y, 10, 10)
+        # R4's admitted native strip is deliberately flat here; its actual contour must come from R3.
+        depth = write_grid(out / 'elevation.tif', np.hstack((data * 0 - 1, data, data)), crs, block)
+        contributor = out / 'contributor.tif'
+        with rasterio.open(contributor, 'w', driver='GTiff', width=60, height=40, count=1, dtype='uint16',
+                           nodata=0, crs=crs, transform=block) as ds:
+            ds.write(np.repeat(np.tile(np.arange(1, 4, dtype='uint16'), (40, 1)), 20, axis=1), 1)
+        manifest = {'segment': r.id, 'region_sha256': digest(config),
+                    'source_table_sha256': digest(r.dir / 'select/sources.json'), 'units': 'm',
+                    'value_convention': 'elevation_positive_up', 'seam_feather': {'feather_m': 40},
+                    'sources': [{**value, 'code': i} for i, value in enumerate(rows, 1)],
+                    'outputs': {'elevation': {'sha256': digest(depth)}, 'contributor': {'sha256': digest(contributor)}}}
+        (out / 'manifest.json').write_bytes(receipts.canonical(manifest))
+
+    select_plan = receipts.Plan([receipts.Input(sidecar, 'normalized-sidecar.json')])
+    assert receipts.run_stage(receipts.StageRun(r, 'select', select, 'a' * 64, plan=select_plan)).state == 'ok'
+    assert receipts.run_stage(receipts.StageRun(r, 'mosaic', mosaic, 'b' * 64, scope='public',
+                                               upstream=[receipts.Ref('select')])).state == 'ok'
+    for name in ('tiles', 'zone'):
+        def sibling(out):
+            (out / 'sentinel').write_text('must survive')
+        assert receipts.run_stage(receipts.StageRun(r, name, sibling, 'c' * 64, scope='public',
+                                                   target=f'layers/public/{name}')).state == 'ok'
+    spec = importlib.util.spec_from_file_location('region_cli', ROOT / 'scripts/relief/region.py')
+    assert spec is not None and spec.loader is not None
+    cli = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cli)
+    args = ['contours', '--out', str(tmp_path / 'out'), '--region', r.id]
+    assert cli.main(args) == 0
+    path = r.receipt_path('contours')
+    first = path.read_bytes()
+    assert cli.main(args) == 0 and path.read_bytes() == first
+    receipt = json.loads(first)
+    assert receipt['status'] == 'ok' and receipt['attempt'] == 1 and receipts.check(r, 'contours').done
+    assert {entry['source_id']: entry['reason'] for entry in receipt['params']['refused_sources']} == {
+        'excluded': 'not cleared for public display', 'unbound': 'not a static region bathymetry binding'}
+    assert receipt['metrics']['mosaic_gap_blocks'] == 12 * 40
+    assert all(receipts.check(r, stage, 'public').done for stage in ('tiles', 'zone'))
+    assert [row['path'] for row in receipt['outputs']] == [
+        'layers/contours/contours-overview.geojson', 'layers/contours/contours.geojson']
+    output = r.dir / 'layers/contours/contours.geojson'
+    full = json.loads(output.read_bytes())
+    dc.check_contours(full, region, sources)
+    assert {s['source_id']: s['sha256'] for s in full['provenance']['sources']} == {
+        SOURCE: digest(original), 'coarse': digest(coarse)}
+    assert str(tmp_path) not in output.read_text()
+    assert {f['properties']['source_id'] for f in full['features']} == {SOURCE, 'coarse'}
+    assert any(f['properties']['source_id'] == SOURCE and f['properties']['minzoom'] >= 14 for f in full['features'])
+    inverse = Transformer.from_crs('EPSG:4326', crs, always_xy=True)
+    for f in full['features']:
+        p = f['properties']
+        assert p['estimated'] and p['depth_ft'] <= 300 and 'name' not in p
+        if p['source_id'] == 'coarse':
+            assert p['minzoom'] < 14
+            assert all(x + 239 <= inverse.transform(*pt)[0] <= x + 361
+                       for line in f['geometry']['coordinates'] for pt in line)
