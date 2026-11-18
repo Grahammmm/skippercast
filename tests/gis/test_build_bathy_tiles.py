@@ -117,6 +117,16 @@ def write_survey(path, size=300, west_nodata=100):
     return elevation
 
 
+def srgb_to_lab(rgb):
+    """D65 sRGB to CIELAB for the design lock's CIE76 ΔE comparison."""
+    srgb = np.asarray(rgb) / 255.0
+    linear = np.where(srgb <= 0.04045, srgb / 12.92, ((srgb + 0.055) / 1.055) ** 2.4)
+    matrix = np.array([[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722], [0.0193, 0.1192, 0.9505]])
+    xyz = linear @ matrix.T / [0.95047, 1, 1.08883]
+    x, y, z = np.moveaxis(np.where(xyz > 0.008856, np.cbrt(xyz), 7.787 * xyz + 16 / 116), -1, 0)
+    return np.stack((116 * y - 16, 500 * (x - y), 200 * (y - z)), axis=-1)
+
+
 class RampTests(unittest.TestCase):
     def test_ramp_is_cmocean_deep(self):
         lut = bt.deep_lut()
@@ -126,21 +136,33 @@ class RampTests(unittest.TestCase):
         self.assertEqual(lut[255].tolist(), [40, 26, 44])        # deep end
         self.assertEqual(bt.deep_colour(np.array([1.0]))[0].tolist(), (lut[255] / 255.0).tolist())
 
-    def test_depth_stretch_matches_the_study_breakpoints(self):
-        canyon = bt.style_for_zoom(11)['bp']
-        position = bt.ramp_position(np.array([-30.0, -60.0, -250.0, -1600.0, -4000.0, 5.0]), canyon)
-        np.testing.assert_allclose(position, [0.0, 0.0, 0.22, 1.0, 1.0, 0.0])
-        near = bt.style_for_zoom(13)['bp']
-        np.testing.assert_allclose(bt.ramp_position(np.array([-10.0, -35.0, -140.0]), near), [0.22, 0.58, 1.0])
+    def test_fixed_depth_stops_interpolate_and_clamp(self):
+        depth_m = np.array([-2.5, 0, 1.5, 3, 6, 10, 15, 20, 30, 45, 60, 91.44, 150, 300, 500, 700, 900])
+        np.testing.assert_allclose(bt.ramp_position(-depth_m),
+                                   [0.03, 0.03, 0.07, 0.11, 0.18, 0.26, 0.35, 0.44, 0.53,
+                                    0.61, 0.68, 0.78, 0.87, 0.94, 0.97, 1.0, 1.0])
+
+    def test_unshaded_gradient_matches_design_legend_at_z10_and_z13(self):
+        # A single plane has uniform illumination; with the base (no exposure) variant,
+        # hillshade subtracts its own median, leaving the unshaded LUT colour in the PNG.
+        size = bt.TILE + 2 * bt.PAD
+        row, col = np.mgrid[:size, :size]
+        window = -0.3048 * (row + col - 2 * bt.PAD)
+        windows = {(0, 0): (window, np.zeros_like(window, dtype=bool), 15.0)}
+        pixels = [decode_png(bt.render_zoom(windows, z)[(z, 0, 0)]) for z in (10, 13)]
+        for feet, hex_rgb in ((0, 'eff8c4'), (20, '9cdca5'), (66, '4e9ea1'), (300, '414583')):
+            with self.subTest(feet=feet):
+                rgb = [p[feet // 2, feet - feet // 2, :3] for p in pixels]
+                lab = srgb_to_lab([*rgb, list(bytes.fromhex(hex_rgb))])
+                self.assertLess(np.linalg.norm(lab[0] - lab[1]), 1.0, rgb)
+                for value in lab[:2]:
+                    self.assertLess(np.linalg.norm(value - lab[2]), 1.0, rgb)
 
     def test_style_follows_zoom(self):
         self.assertEqual(bt.style_for_zoom(8), bt.style_for_zoom(11))
-        self.assertEqual(bt.style_for_zoom(11)['bp'], bt.CANYON['bp'])
         self.assertEqual(bt.style_for_zoom(11)['ve'], 2.2)
-        self.assertEqual(bt.style_for_zoom(13)['bp'], bt.NEARSHORE['bp'])
         self.assertEqual(bt.style_for_zoom(15)['ve'], 6.0)
         mid = bt.style_for_zoom(12)
-        self.assertEqual(mid['bp'][1], (250.0 + 10.0) / 2)
         self.assertAlmostEqual(mid['ve'], 4.1)
 
     def test_lit_slopes_are_brighter_than_shaded_slopes(self):
@@ -211,6 +233,7 @@ class BuildTests(unittest.TestCase):
             self.assertEqual((header['minzoom'], header['maxzoom']), (11, 13))
             self.assertEqual(metadata['format'], 'png')
             self.assertEqual(metadata['type'], 'baselayer')
+            self.assertEqual(metadata['ramp'], 'deep-fixed-v1')
             self.assertIn('NOT FOR NAVIGATION', metadata['description'])
             self.assertNotIn('/home', json.dumps(metadata))
             west, south, east, north = header['bounds']
@@ -227,17 +250,41 @@ class BuildTests(unittest.TestCase):
                 seen_opaque |= bool((alpha == 255).any())
             self.assertTrue(seen_clear and seen_opaque)
 
+    def test_land_mask_keeps_low_ground_and_clears_cells_above_three_metres(self):
+        from rasterio.warp import transform
+
+        with tempfile.TemporaryDirectory() as directory:
+            source, output = (Path(directory) / name for name in ('elevation.tif', 'deep.pmtiles'))
+            grid = from_origin(-122000, -288000, 10, 10)
+            elevation = np.tile(np.repeat(np.array([2.5, 3.0, 3.5], dtype='float32'), 80), (240, 1))
+            with rasterio.open(source, 'w', driver='GTiff', width=240, height=240, count=1,
+                               dtype='float32', crs='EPSG:3310', transform=grid, nodata=NODATA) as ds:
+                ds.write(elevation, 1)
+            z = 13
+            bt.build(source, output, z, z, log=lambda *_: None)
+            _, _, tiles, _ = read_archive(output)
+            for column, expected_alpha in ((40, 255), (120, 255), (200, 0)):
+                with self.subTest(elevation=elevation[120, column]):
+                    east, north = grid @ (column + 0.5, 120.5)
+                    (lon,), (lat,) = transform('EPSG:3310', 'EPSG:4326', [east], [north])
+                    (x,), (y,) = bt.tile_range((lon, lat, lon, lat), z)
+                    tile_grid, _ = bt.tile_grid(z, x, y, pad=0)
+                    xs, ys = transform('EPSG:3310', 'EPSG:3857', [east], [north])
+                    row, col = rasterio.transform.rowcol(tile_grid, xs[0], ys[0])
+                    png = tiles.get(bt.tile_id(z, x, y))
+                    self.assertEqual(decode_png(png)[row, col, 3] if png else 0, expected_alpha)
+
     def test_a_flat_bottom_is_the_plain_ramp_colour_and_nodata_stays_clear(self):
         size = bt.TILE + 2 * bt.PAD
-        window = np.full((size, size), -35.0, dtype='float32')
+        window = np.full((size, size), -20.0, dtype='float32')
         window[:, :size // 2] = NODATA
         invalid = window == NODATA
         tiles = bt.render_zoom({(5, 6): (window, invalid, 15.0)}, 13)
         pixels = decode_png(tiles[(13, 5, 6)])
-        wanted = bt.deep_lut()[int(0.58 * 256)]                     # 35 m is the 0.58 breakpoint of the nearshore stretch
+        wanted = bt.deep_lut()[int(0.44 * 256)]  # the fixed 20 m stop
         east = pixels[:, -1]
         self.assertTrue((east[:, 3] == 255).all())
-        self.assertLessEqual(np.abs(east[:, :3].astype(int) - wanted.astype(int)).max(), 1)
+        self.assertTrue((east[:, :3] == wanted).all())
         self.assertTrue((pixels[:, 0, 3] == 0).all())
 
     def test_deeper_water_is_darker_in_the_ramp(self):
@@ -251,6 +298,24 @@ class BuildTests(unittest.TestCase):
             first = self.build_once(directory, 'a.pmtiles', 12, 12).read_bytes()
             second = self.build_once(directory, 'b.pmtiles', 12, 12).read_bytes()
         self.assertEqual(hashlib.sha256(first).digest(), hashlib.sha256(second).digest())
+
+    def test_enlarged_z15_background_halves_the_average_cell_step(self):
+        from rasterio.warp import Resampling, reproject
+
+        z, x, y = 15, 16384, 16384  # at the equator, 10 projected metres ≈ 10 ground metres
+        target, _ = bt.tile_grid(z, x, y)
+        grid = from_origin(target.c - 20, target.f + 20, 10, 10)
+        elevation = np.tile(-20 - np.arange(130, dtype='float32'), (130, 1))
+        crs = 'EPSG:3857'
+        smooth, _ = bt.warp_window(elevation, grid, crs, z, x, y)
+        average = np.full_like(smooth, NODATA)
+        reproject(elevation, average, src_crs=crs, src_transform=grid, src_nodata=NODATA,
+                  dst_crs=crs, dst_transform=target, dst_nodata=NODATA, resampling=Resampling.average)
+        self.assertTrue((smooth != NODATA).all() and (average != NODATA).all())
+        step = float(np.abs(np.diff(smooth, axis=1)).max())
+        average_step = float(np.abs(np.diff(average, axis=1)).max())
+        self.assertGreater(step, 0.0)  # smoothing must not flatten the gradient
+        self.assertLessEqual(step, average_step / 2, f'{step=} vs {average_step=}')
 
     def test_wrong_crs_or_missing_source_is_refused(self):
         with tempfile.TemporaryDirectory() as directory:
