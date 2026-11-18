@@ -55,11 +55,13 @@ class Box:
         self.unitfeed_stop = root / 'UNITFEED-STOP'
         self.proc = root / 'proc'
         self.proc.mkdir()
+        self.slots = root / 'slots'
         self.free = {'/': 900 * RR.GB, '/mnt/agentorange-backup': 900 * RR.GB}
         self.load = 1.0
         self.cfg = RR.Config(region_py=self.stub_dir / 'region.py', stop_files=(self.local_stop, self.unitfeed_stop),
-                             proc_root=str(self.proc), prefix=(), pid=424242,
-                             load5=lambda: self.load, free_bytes=lambda path: self.free[path])
+                             proc_root=str(self.proc), prefix=(), pid=424242, slot_dir=self.slots,
+                             load5=lambda: self.load, free_bytes=lambda path: self.free[path],
+                             is_mount=lambda path: True)
 
     def codes(self, codes, **extra):
         (self.stub_dir / 'codes.json').write_text(json.dumps({'codes': codes, **extra}))
@@ -213,6 +215,15 @@ def refuse_backup_unreadable(box):
     box.cfg.free_bytes = gone
 
 
+def refuse_backup_unmounted(box):
+    # The mountpoint directory exists on the parent filesystem, which has plenty of free space.
+    plain_dir = box.root / 'backup-mountpoint'
+    plain_dir.mkdir()
+    box.cfg.backup_path = str(plain_dir)
+    box.cfg.is_mount = os.path.ismount  # the real default check
+    box.free[str(plain_dir)] = 900 * RR.GB
+
+
 def refuse_vault_out(box):
     box.cfg.forbidden_root = str(box.out)  # the OUT root itself is "under privatevault"
 
@@ -238,6 +249,7 @@ GUARDS = [
     ('root-disk', refuse_root_disk, 'disk-root'),
     ('backup-disk', refuse_backup_disk, 'disk-backup'),
     ('backup-unreadable', refuse_backup_unreadable, 'disk-backup'),
+    ('backup-unmounted', refuse_backup_unmounted, 'disk-backup'),
     ('vault-out', refuse_vault_out, 'out-root'),
     ('vault-norm', refuse_vault_norm, 'norm-root'),
     ('vault-norm-symlink', refuse_vault_norm_symlink, 'norm-root'),
@@ -348,6 +360,68 @@ def test_two_runs_already_on_the_box_refuse_a_third(box, capsys):
     assert box.ran() == ['normalize', 'select']  # only the earlier allowed run
 
 
+def test_interpreter_options_do_not_hide_a_run(box, capsys):
+    # Contract: `python3 -u run_region.py` (and -X/-W options) counts as a run; `-c`, other scripts and
+    # a bare mention of the name as an argument do not. Bug caught: reading only argv[1] as the script,
+    # so two unbuffered runs were invisible and a third started.
+    box.fake_process(101, 'python3', '-u', '/repo/scripts/relief/run_region.py', 'a')
+    box.fake_process(102, 'python3.14', '-X', 'dev', '-W', 'ignore', 'run_region.py', 'b')
+    box.fake_process(103, 'python3', '-c', 'x', 'run_region.py')
+    box.fake_process(104, 'python3', 'other.py', 'run_region.py')
+    box.fake_process(105, 'python3', '-m', 'pytest', 'run_region.py')
+    assert RR.other_runs(box.cfg) == [101, 102]
+    assert box.run(through='select') == 5 and box.ran() == []
+    assert 'at most 2 at once' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize('unreadable', ['proc-missing', 'cmdline-unreadable'])
+def test_unreadable_process_table_refuses_instead_of_counting_zero(box, capsys, unreadable):
+    # Contract: when the other-run count cannot be established the run is refused (exit 3), not
+    # started. Bug caught: `except OSError: return []`, which let a third run start whenever /proc
+    # could not be read.
+    if unreadable == 'proc-missing':
+        box.cfg.proc_root = str(box.root / 'no-such-proc')
+    else:
+        (box.proc / '101').mkdir()
+        (box.proc / '101' / 'cmdline').mkdir()  # reading it fails with something other than "gone"
+    assert box.run(through='select') == 3
+    assert box.ran() == [] and 'cannot establish how many runs' in capsys.readouterr().out
+    assert box.run('--dry-run') == 0 and 'REFUSE run-cap: cannot establish' in capsys.readouterr().out
+
+
+def test_run_cap_is_atomic_through_slot_locks(box, capsys):
+    # Contract: the box-wide cap is a pair of kernel locks, so it holds with nothing in /proc and
+    # when starts are simultaneous (each start takes a distinct slot or is refused). Bug caught: a
+    # count-then-start check that lets two racing runs both see one other run and both start.
+    first, second = RR.acquire_slot(box.cfg), RR.acquire_slot(box.cfg)
+    try:
+        assert first is not None and second is not None
+        assert RR.acquire_slot(box.cfg) is None  # a third racer gets no slot
+        assert RR.slots_held(box.cfg) == 2
+        assert box.run(through='select') == 5 and box.ran() == []
+        assert 'run slots' in capsys.readouterr().out
+        assert box.run('--dry-run') == 0 and 'REFUSE run-cap' in capsys.readouterr().out
+    finally:
+        os.close(first)
+        os.close(second)
+    assert box.run(through='select') == 0  # slots are free again (and a finished run frees its own)
+    assert box.run(through='select') == 0
+    assert RR.slots_held(box.cfg) == 0
+
+
+@pytest.mark.parametrize('make', ['file', 'symlink'])
+def test_unsafe_slot_directory_refuses(box, capsys, make):
+    # Contract: a slot directory that is not a real private directory of ours cannot be trusted, so
+    # the run is refused (3) rather than started uncapped. Bug caught: ignoring a slot-setup error.
+    if make == 'file':
+        box.slots.write_text('x')
+    else:
+        (box.root / 'elsewhere').mkdir()
+        box.slots.symlink_to(box.root / 'elsewhere')
+    assert box.run(through='select') == 3
+    assert box.ran() == [] and 'cannot take a run slot' in capsys.readouterr().out
+
+
 def test_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
     # Contract: --dry-run shows the commands in order and every guard's state, runs nothing and
     # creates no file or directory (not even the lock). Bug caught: dry run that starts stage one.
@@ -360,7 +434,7 @@ def test_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
     for name in ('stop-file', 'load5', 'disk-root', 'disk-backup', 'out-root', 'norm-root', 'region-lock', 'run-cap'):
         assert f'ok     {name}' in text
     assert 'a real run would start' in text
-    assert box.ran() == [] and box.out_tree() == []
+    assert box.ran() == [] and box.out_tree() == [] and not box.slots.exists()
 
 
 def test_dry_run_reports_a_refusal_without_running(box, capsys):
