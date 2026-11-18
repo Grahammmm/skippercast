@@ -90,6 +90,7 @@ def catalog_ids(urls, catalog):
 def refusals(group, urls, catalog):
     """Reasons this group may not be published; empty when every source is approved for commercial use."""
     rows, problems = {s['id']: s for s in catalog}, []
+    counts = Counter(s['id'] for s in catalog)
     if not urls:  # a manifest that names no source is never treated as cleared
         problems.append(f'{group}: upstream manifest lists no sources')
     ids = set(DECLARED[group])
@@ -99,7 +100,9 @@ def refusals(group, urls, catalog):
         ids.add(source)
     for source in sorted(i for i in ids if i):
         row = rows.get(source)
-        if row is None:
+        if counts[source] > 1:  # duplicate rows never let a later approved row clear an earlier held one
+            problems.append(f'{group}: ambiguous source {source} ({counts[source]} catalog/sources.json rows)')
+        elif row is None:
             problems.append(f'{group}: unknown source {source} (no catalog/sources.json row)')
         elif row.get('review_status') != 'approved' or row.get('rights', {}).get('commercial_use') != 'allowed':
             problems.append(f"{group}: rights held for {source} ({row.get('review_status')}, "

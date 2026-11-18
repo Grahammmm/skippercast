@@ -87,6 +87,14 @@ class RightsGateTests(unittest.TestCase):
         self.assertEqual(pa.refusals('terrain', urls[:1], CATALOG), [])
         self.assertEqual(pa.refusals('terrain', urls[:1], CATALOG[:3]), ['terrain: unknown source usgs-naip (no catalog/sources.json row)'])
 
+    def test_a_duplicate_catalog_id_holds_the_source_even_when_declared(self):
+        # Contract: ambiguous catalog rows never clear a source. Bug: dict(rows) kept the last row, so a
+        # held usgs-naip row followed by an approved one cleared the declared terrain source.
+        held = {**CATALOG[3], 'review_status': 'candidate'}
+        for rows in ([*CATALOG[:3], held, CATALOG[3]], [*CATALOG[:3], CATALOG[3], held]):
+            self.assertEqual(pa.refusals('terrain', ['https://doi.org/10.5066/P9OPEN01'], rows),
+                             ['terrain: ambiguous source usgs-naip (2 catalog/sources.json rows)'])
+
     def test_a_group_whose_manifest_names_no_source_is_refused(self):
         self.assertEqual(pa.refusals('habitat', [], CATALOG), ['habitat: upstream manifest lists no sources'])
         self.assertIn('terrain: upstream manifest lists no sources', pa.refusals('terrain', [], CATALOG))
