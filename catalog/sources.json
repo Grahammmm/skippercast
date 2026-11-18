@@ -15,13 +15,17 @@
       "review_status": "approved",
       "reviewed_at": "2026-09-26",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "public-domain",
         "attribution": "USGS; CSUMB Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
         "terms_url": "https://doi.org/10.5066/P9KBGELE",
         "commercial_use": "permission-required",
         "attribution_required": true,
-        "commercial_note": "USGS release metadata states U.S. public domain, but the CSUMB Seafloor Mapping Lab co-produced the survey and its data-library policy requires express permission for for-profit use. Confirm with CSUMB (or counsel) before paid launch."
+        "commercial_note": "USGS release metadata states U.S. public domain, but the CSUMB Seafloor Mapping Lab co-produced the survey and its data-library policy requires express permission for for-profit use. Confirm with CSUMB (or counsel) before paid launch.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -56,13 +60,17 @@
       "review_status": "approved",
       "reviewed_at": "2026-09-26",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "public-domain",
         "attribution": "USGS; CSUMB Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
         "terms_url": "https://doi.org/10.5066/P9HEZNRO",
         "commercial_use": "permission-required",
         "attribution_required": true,
-        "commercial_note": "USGS release metadata states U.S. public domain, but the CSUMB Seafloor Mapping Lab co-produced the survey and its data-library policy requires express permission for for-profit use. Confirm with CSUMB (or counsel) before paid launch."
+        "commercial_note": "USGS release metadata states U.S. public domain, but the CSUMB Seafloor Mapping Lab co-produced the survey and its data-library policy requires express permission for for-profit use. Confirm with CSUMB (or counsel) before paid launch.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -96,13 +104,17 @@
       "review_status": "approved",
       "reviewed_at": "2026-09-26",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "public-domain",
         "attribution": "USGS; CSUMB Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
         "terms_url": "https://doi.org/10.5066/P9ZSTUK1",
         "commercial_use": "permission-required",
         "attribution_required": true,
-        "commercial_note": "USGS release metadata states U.S. public domain, but the CSUMB Seafloor Mapping Lab co-produced the survey and its data-library policy requires express permission for for-profit use. Confirm with CSUMB (or counsel) before paid launch."
+        "commercial_note": "USGS release metadata states U.S. public domain, but the CSUMB Seafloor Mapping Lab co-produced the survey and its data-library policy requires express permission for for-profit use. Confirm with CSUMB (or counsel) before paid launch.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -207,14 +219,18 @@
       "review_status": "candidate",
       "reviewed_at": "2026-09-24",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "scope": "Public relief held until the exact tile contributor table is cleared.",
         "license": "CC0-1.0 recorded in inspected contributor tables",
         "attribution": "NOAA National Ocean Service, Office of Coast Survey; original contributor identified per cell",
         "terms_url": "https://nauticalcharts.noaa.gov/learn/nbs.html",
         "commercial_use": "allowed",
         "attribution_required": false,
-        "commercial_note": "CC0 1.0 dedication; commercial use allowed. Credit is requested, not legally required. Check each contributor table before use."
+        "commercial_note": "CC0 1.0 dedication; commercial use allowed. Credit is requested, not legally required. Check each contributor table before use.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NOAA NBS project and hash-pinned public NOAA tile scheme, GeoTIFF and contributor table",
@@ -243,14 +259,18 @@
       "review_status": "candidate",
       "reviewed_at": "2026-09-24",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "scope": "Public relief held until the exact tile contributor RAT is cleared.",
         "license": "U.S. public domain/CC0-1.0 product; check each contributor RAT for source restrictions",
         "attribution": "NOAA National Ocean Service, Office of Coast Survey; identify original contributors",
         "terms_url": "https://nauticalcharts.noaa.gov/data/bluetopo_faq.html",
         "commercial_use": "unknown",
         "attribution_required": false,
-        "commercial_note": "Product is public domain/CC0, but individual contributor rasters can carry restrictions; review each RAT before use."
+        "commercial_note": "Product is public domain/CC0, but individual contributor rasters can carry restrictions; review each RAT before use.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NOAA dated tile scheme and SHA-256-verified original GeoTIFF and contributor RAT",
@@ -286,12 +306,17 @@
       "review_status": "candidate",
       "reviewed_at": "2026-09-24",
       "rights": {
+        "public_display": "allowed",
         "license": "metadata-review-needed",
         "attribution": "NOAA Fisheries",
         "terms_url": "https://maps.fisheries.noaa.gov/server/rest/services/WestCoast/USWestCoast_SeafloorInduration_v2017/MapServer",
         "commercial_use": "unknown",
         "attribution_required": false,
-        "commercial_note": "Candidate; metadata rights review not done."
+        "commercial_note": "Candidate; metadata rights review not done.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -326,12 +351,17 @@
       "review_status": "candidate",
       "reviewed_at": "2026-09-21",
       "rights": {
+        "public_display": "allowed",
         "license": "dataset-review-needed",
         "attribution": "U.S. Geological Survey",
         "terms_url": "https://www.usgs.gov/centers/pcmsc/science/california-seafloor-mapping-program-data-collection",
         "commercial_use": "unknown",
         "attribution_required": false,
-        "commercial_note": "Candidate; dataset rights review not done."
+        "commercial_note": "Candidate; dataset rights review not done.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -928,12 +958,17 @@
       "review_status": "candidate",
       "reviewed_at": "2026-09-21",
       "rights": {
+        "public_display": "allowed",
         "license": "dataset-review-needed",
         "attribution": "Regional IOOS associations and model operators",
         "terms_url": "https://www.cencoos.org/",
         "commercial_use": "unknown",
         "attribution_required": false,
-        "commercial_note": "Candidate; operator terms not reviewed."
+        "commercial_note": "Candidate; operator terms not reviewed.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -961,12 +996,17 @@
       "review_status": "candidate",
       "reviewed_at": "2026-09-21",
       "rights": {
+        "public_display": "allowed",
         "license": "ODbL-1.0",
         "attribution": "The Nature Conservancy and Kelpwatch contributors",
         "terms_url": "https://kelpwatch.org/terms",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "commercial_note": "Candidate; ODbL share-alike and site terms not reviewed."
+        "commercial_note": "Candidate; ODbL share-alike and site terms not reviewed.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -996,12 +1036,17 @@
       "review_status": "candidate",
       "reviewed_at": "2026-09-21",
       "rights": {
+        "public_display": "allowed",
         "license": "dataset-review-needed",
         "attribution": "NOAA Fisheries Northwest Fisheries Science Center",
         "terms_url": "https://www.fisheries.noaa.gov/resource/data/fishery-resource-analysis-and-monitoring-division-fram-data-warehouse",
         "commercial_use": "unknown",
         "attribution_required": false,
-        "commercial_note": "Candidate; dataset rights review not done."
+        "commercial_note": "Candidate; dataset rights review not done.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1029,12 +1074,17 @@
       "review_status": "candidate",
       "reviewed_at": "2026-09-21",
       "rights": {
+        "public_display": "allowed",
         "license": "dataset-review-needed",
         "attribution": "Ocean Biodiversity Information System; original data publishers",
         "terms_url": "https://obis.org/manual/access/",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "commercial_note": "Candidate; OBIS records carry per-dataset licences, some CC BY-NC."
+        "commercial_note": "Candidate; OBIS records carry per-dataset licences, some CC BY-NC.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1062,12 +1112,17 @@
       "review_status": "candidate",
       "reviewed_at": "2026-09-21",
       "rights": {
+        "public_display": "allowed",
         "license": "dataset-review-needed",
         "attribution": "Pacific States Marine Fisheries Commission; state survey programs",
         "terms_url": "https://www.recfin.org/",
         "commercial_use": "unknown",
         "attribution_required": false,
-        "commercial_note": "Candidate; terms not reviewed."
+        "commercial_note": "Candidate; terms not reviewed.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1271,13 +1326,17 @@
       "review_status": "restricted",
       "reviewed_at": "2026-09-21",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; California Coastal Conservancy",
         "terms_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block05_mb.html",
         "commercial_use": "permission-required",
         "attribution_required": true,
-        "commercial_note": "Restricted and not published; grid metadata leaves use constraints to CSUMB and the California Coastal Conservancy."
+        "commercial_note": "Restricted and not published; grid metadata leaves use constraints to CSUMB and the California Coastal Conservancy.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1545,14 +1604,18 @@
       "review_status": "approved",
       "reviewed_at": "2026-09-22",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "public-domain",
         "attribution": "NOAA/NOS/NCCOS/CCMA/Biogeography Branch; Moss Landing Marine Laboratory, MMS and UCSB",
         "terms_url": "https://www.fisheries.noaa.gov/inport/item/39578",
-        "scope": "Public NOAA data; attribution required by source use constraints. Public relief held pending review of contributor rights in the mapped derivative; existing approved uses are unchanged.",
+        "scope": "Public NOAA data; attribution required by source use constraints. Previously held pending review of contributor rights in the mapped derivative; the owner decision allows display subject to per-region release QA.",
         "commercial_use": "allowed",
         "attribution_required": false,
-        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Original files obtained from the primary publisher; content hashes and metadata pinned in regional habitat-sources.json. Derived factual habitat geometry retains publisher attribution.",
@@ -1583,14 +1646,18 @@
       "review_status": "approved",
       "reviewed_at": "2026-09-22",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "CC0-1.0",
         "attribution": "Sweeney, E.; Costa, B.; Caldow, C. (2025), NOAA NCEI accession 0304093; NOAA, USGS, MBARI, CSUMB and OET surveys",
         "terms_url": "https://www.ncei.noaa.gov/data/oceans/archive/arc0237/0304093/1.1/data/0-data/4CLCAE-ISO-19115-2.xml",
-        "scope": "CC0-1.0; expressly dedicated in the archive ISO metadata. Public relief held pending contributor review for CSUMB and MBARI inputs. The archived CC0 statement for the merged release is not permission to use a separately sourced contributor grid.",
+        "scope": "CC0-1.0; expressly dedicated in the archive ISO metadata. Previously held pending contributor review for CSUMB and MBARI inputs. The owner decision covers this merged NOAA release only, subject to per-region release QA. The archived CC0 statement for the merged release is not permission to use a separately sourced contributor grid.",
         "commercial_use": "allowed",
         "attribution_required": false,
-        "commercial_note": "CC0 1.0 dedication; commercial use allowed. Credit is requested, not legally required. The archive dedicates the merged product, including CSUMB-contributed surveys, to CC0."
+        "commercial_note": "CC0 1.0 dedication; commercial use allowed. Credit is requested, not legally required. The archive dedicates the merged product, including CSUMB-contributed surveys, to CC0.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Original files obtained from the primary publisher; content hashes and metadata pinned in regional habitat-sources.json. Derived factual habitat geometry retains publisher attribution.",
@@ -1948,7 +2015,12 @@
         "terms_url": "https://csumb.edu/undersea/sfml-data-library/",
         "commercial_use": "permission-required",
         "attribution_required": true,
-        "commercial_note": "Only products whose USGS metadata states public domain and free redistribution are used, but CSMP data were produced with CSUMB, whose data-library policy requires express permission for for-profit use. Confirm with CSUMB (or counsel) before paid launch."
+        "commercial_note": "Only products whose USGS metadata states public domain and free redistribution are used, but CSMP data were produced with CSUMB, whose data-library policy requires express permission for for-profit use. Confirm with CSUMB (or counsel) before paid launch.",
+        "public_display": "allowed",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1976,12 +2048,17 @@
       "review_status": "candidate",
       "reviewed_at": "2026-09-28",
       "rights": {
+        "public_display": "allowed",
         "license": "unreviewed",
         "attribution": "Pacific Marine and Estuarine Fish Habitat Partnership (PMEP)",
         "terms_url": "https://gis.psmfc.org/server/rest/services/PMEP/West_Coast_Nearshore_CMECS_Substrate_Habitat/MapServer/1",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "commercial_note": "Published as habitat context for Big Sur regions, but no licence or terms of use were reviewed. Confirm terms with PSMFC/PMEP before paid launch."
+        "commercial_note": "Published as habitat context for Big Sur regions, but no licence or terms of use were reviewed. Confirm terms with PSMFC/PMEP before paid launch.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Public agency map service",
@@ -2540,7 +2617,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA01_Multibeam/xml",
@@ -2548,7 +2625,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -2583,7 +2664,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA02_Multibeam/xml",
@@ -2591,7 +2672,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -2626,7 +2711,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA03_Multibeam/xml",
@@ -2634,7 +2719,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -2669,7 +2758,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA04_Multibeam/xml",
@@ -2677,7 +2766,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -2712,7 +2805,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA05_Multibeam/xml",
@@ -2720,7 +2813,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -2755,7 +2852,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA07_Multibeam/xml",
@@ -2763,7 +2860,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -2798,7 +2899,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA08_Multibeam/xml",
@@ -2806,7 +2907,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -2841,7 +2946,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA09_Multibeam/xml",
@@ -2849,7 +2954,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -2884,7 +2993,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA10_Multibeam/xml",
@@ -2892,7 +3001,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -2927,7 +3040,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA11_Multibeam/xml",
@@ -2935,7 +3048,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -2970,7 +3087,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB01_Multibeam/xml",
@@ -2978,7 +3095,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3013,7 +3134,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB02_Multibeam/xml",
@@ -3021,7 +3142,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3056,7 +3181,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB03_Multibeam/xml",
@@ -3064,7 +3189,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3099,7 +3228,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB04_Multibeam/xml",
@@ -3107,7 +3236,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3142,7 +3275,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB05_Multibeam/xml",
@@ -3150,7 +3283,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3185,7 +3322,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB06_Multibeam/xml",
@@ -3193,7 +3330,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3228,7 +3369,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB07_Multibeam/xml",
@@ -3236,7 +3377,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3271,7 +3416,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB08_Multibeam/xml",
@@ -3279,7 +3424,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3314,7 +3463,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB09_Multibeam/xml",
@@ -3322,7 +3471,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3357,7 +3510,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB10_Multibeam/xml",
@@ -3365,7 +3518,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3400,7 +3557,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB11_Multibeam/xml",
@@ -3408,7 +3565,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3443,7 +3604,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB12_Multibeam/xml",
@@ -3451,7 +3612,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3486,7 +3651,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB13-14_Multibeam/xml",
@@ -3494,7 +3659,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3529,7 +3698,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA00_Multibeam/xml",
@@ -3537,7 +3706,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3573,7 +3746,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA02_Multibeam/xml",
@@ -3581,7 +3754,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3616,7 +3793,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA03_Multibeam/xml",
@@ -3624,7 +3801,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3659,7 +3840,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA05_Multibeam/xml",
@@ -3667,7 +3848,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3702,7 +3887,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA06_Multibeam/xml",
@@ -3710,7 +3895,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3745,7 +3934,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA07_Multibeam/xml",
@@ -3753,7 +3942,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3788,7 +3981,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA08_Multibeam/xml",
@@ -3796,7 +3989,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3831,7 +4028,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA09_Multibeam/xml",
@@ -3839,7 +4036,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3874,7 +4075,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA10_Multibeam/xml",
@@ -3882,7 +4083,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3917,7 +4122,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA11_Multibeam/xml",
@@ -3925,7 +4130,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -3960,7 +4169,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MontereyCanyon_Multibeam/xml",
@@ -3968,7 +4177,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4003,7 +4216,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PGE_North_Multibeam/xml",
@@ -4011,7 +4224,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4046,7 +4263,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PGE_South_Multibeam/xml",
@@ -4054,7 +4271,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4089,7 +4310,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PointBuchon_Multibeam/xml",
@@ -4097,7 +4318,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4132,7 +4357,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PointBuchon_Control_Multibeam/xml",
@@ -4140,7 +4365,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4175,7 +4404,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PresidioShoals_Multibeam/xml",
@@ -4183,7 +4412,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4218,7 +4451,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SanFranciscoMouth_Multibeam/xml",
@@ -4226,7 +4459,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4261,7 +4498,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SanPabloBay_Multibeam/xml",
@@ -4269,7 +4506,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4304,7 +4545,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SoquelCanyon_Multibeam/xml",
@@ -4312,7 +4553,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4347,7 +4592,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SuisunBay_Multibeam/xml",
@@ -4355,7 +4600,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4390,7 +4639,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:BSS_Block13_Multibeam/xml",
@@ -4398,7 +4647,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4433,7 +4686,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MontereyPeninsula_Multibeam/xml",
@@ -4441,7 +4694,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4476,7 +4733,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MacKerricher_Multibeam/xml",
@@ -4484,7 +4741,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4519,7 +4780,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MontereyBay_HoleFill_Multibeam/xml",
@@ -4527,7 +4788,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4562,7 +4827,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MossLandingHarbor_Multibeam/xml",
@@ -4570,7 +4835,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4605,7 +4874,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PtCabrillo_Multibeam/xml",
@@ -4613,7 +4882,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4648,7 +4921,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
-        "public_display": "private",
+        "public_display": "allowed",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SCypressPoint_Multibeam/xml",
@@ -4656,7 +4929,11 @@
         "attribution_required": true,
         "commercial_note": "private-use only. Acquisition and private measurement/census approved; public display and redistribution are not approved. Government hosting does not resolve producer rights.",
         "scope": "private-use only",
-        "redistribution_reviewed": false
+        "redistribution_reviewed": false,
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official NCEI archive and retained metadata receipts; not a scientific or rights approval",
@@ -4696,8 +4973,12 @@
         "terms_url": "https://www.fisheries.noaa.gov/inport/item/55319",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "public_display": "private",
-        "commercial_note": "Public relief held: metadata describes access and use limitations, but permission for all compiled contributors has not been established. Review contributor lineage before clearing public display."
+        "public_display": "allowed",
+        "commercial_note": "Public relief held: metadata describes access and use limitations, but permission for all compiled contributors has not been established. Review contributor lineage before clearing public display.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official dataset documentation; this row does not validate individual files.",
@@ -4731,8 +5012,12 @@
         "terms_url": "https://www.fisheries.noaa.gov/inport/item/55359",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "public_display": "private",
-        "commercial_note": "Public relief held: metadata describes access and use limitations, but permission for all compiled contributors has not been established. Review contributor lineage before clearing public display."
+        "public_display": "allowed",
+        "commercial_note": "Public relief held: metadata describes access and use limitations, but permission for all compiled contributors has not been established. Review contributor lineage before clearing public display.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official dataset documentation; this row does not validate individual files.",
@@ -4766,8 +5051,12 @@
         "terms_url": "https://www.fisheries.noaa.gov/inport/item/62987",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "public_display": "private",
-        "commercial_note": "Public relief held: metadata describes access and use limitations, but permission for all compiled contributors has not been established. Review contributor lineage before clearing public display."
+        "public_display": "allowed",
+        "commercial_note": "Public relief held: metadata describes access and use limitations, but permission for all compiled contributors has not been established. Review contributor lineage before clearing public display.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official dataset documentation; this row does not validate individual files.",
@@ -4801,8 +5090,12 @@
         "terms_url": "https://www.fisheries.noaa.gov/inport/item/49416",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "public_display": "private",
-        "commercial_note": "Public relief held pending confirmation of reuse terms for this exact delivery. NOAA distribution is not itself a producer licence."
+        "public_display": "allowed",
+        "commercial_note": "Public relief held pending confirmation of reuse terms for this exact delivery. NOAA distribution is not itself a producer licence.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official dataset documentation; this row does not validate individual files.",
@@ -4836,8 +5129,12 @@
         "terms_url": "https://www.fisheries.noaa.gov/inport/item/49651",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "public_display": "private",
-        "commercial_note": "Public relief held pending confirmation of reuse terms for this exact delivery. NOAA distribution is not itself a producer licence."
+        "public_display": "allowed",
+        "commercial_note": "Public relief held pending confirmation of reuse terms for this exact delivery. NOAA distribution is not itself a producer licence.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official dataset documentation; this row does not validate individual files.",
@@ -4871,8 +5168,12 @@
         "terms_url": "https://www.fisheries.noaa.gov/inport/item/51862",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "public_display": "private",
-        "commercial_note": "Public relief held pending confirmation of reuse terms for this exact delivery. NOAA distribution is not itself a producer licence."
+        "public_display": "allowed",
+        "commercial_note": "Public relief held pending confirmation of reuse terms for this exact delivery. NOAA distribution is not itself a producer licence.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official dataset documentation; this row does not validate individual files.",
@@ -4906,8 +5207,12 @@
         "terms_url": "https://www.fisheries.noaa.gov/inport/item/51855",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "public_display": "private",
-        "commercial_note": "Public relief held pending confirmation of reuse terms for this exact delivery. NOAA distribution is not itself a producer licence."
+        "public_display": "allowed",
+        "commercial_note": "Public relief held pending confirmation of reuse terms for this exact delivery. NOAA distribution is not itself a producer licence.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official dataset documentation; this row does not validate individual files.",
@@ -4941,8 +5246,12 @@
         "terms_url": "https://ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem:199919",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "public_display": "private",
-        "commercial_note": "Public relief held: NCEI supplies citation and liability terms, not an explicit licence covering all contributor data in the selected tiles."
+        "public_display": "allowed",
+        "commercial_note": "Public relief held: NCEI supplies citation and liability terms, not an explicit licence covering all contributor data in the selected tiles.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official dataset documentation; this row does not validate individual files.",
@@ -4976,8 +5285,12 @@
         "terms_url": "https://www.fisheries.noaa.gov/inport/item/67998",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "public_display": "private",
-        "commercial_note": "Public relief held pending confirmation of display and redistribution terms for the exact NOAA/NEP delivery."
+        "public_display": "allowed",
+        "commercial_note": "Public relief held pending confirmation of display and redistribution terms for the exact NOAA/NEP delivery.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official dataset documentation; this row does not validate individual files.",
@@ -5011,8 +5324,12 @@
         "terms_url": "https://www.fisheries.noaa.gov/inport/item/67993",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "public_display": "private",
-        "commercial_note": "Public relief held pending confirmation of display and redistribution terms for the exact NOAA/NEP delivery."
+        "public_display": "allowed",
+        "commercial_note": "Public relief held pending confirmation of display and redistribution terms for the exact NOAA/NEP delivery.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official dataset documentation; this row does not validate individual files.",
@@ -5079,8 +5396,12 @@
         "terms_url": "https://cmgds.marine.usgs.gov/data-releases/media/2021/10.5066-P9C5DBMR/2fdf3c2830d545c299168d23d3422a70/SouthernCascadia_30m_bathy_UTM10N_NAD83_metadatav2.xml",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "public_display": "private",
-        "commercial_note": "Public relief held pending use-constraints and contributor review for the composite and its v2.0 source polygons."
+        "public_display": "allowed",
+        "commercial_note": "Public relief held pending use-constraints and contributor review for the composite and its v2.0 source polygons.",
+        "owner_public_display": {
+          "decision": "allowed",
+          "basis": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+        }
       },
       "authenticity": {
         "basis": "Official dataset documentation; this row does not validate individual files.",
