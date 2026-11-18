@@ -24,7 +24,7 @@ class LiveObservationsTests(TestCase):
     def test_retained_source_is_degraded_not_relabelled_current(self):
         stations = {'nearshore_buoy': '00001', 'nearshore_buoy_name': 'Synthetic A',
                     'offshore_buoy': '00002', 'offshore_buoy_name': 'Synthetic offshore'}
-        previous = {'schema_version': 1, 'sources': {'diablo': {
+        previous = {'schema_version': 1, 'region_id': 'synthetic', 'sources': {'diablo': {
             'status': 'ok', 'url': 'https://www.ndbc.noaa.gov/data/realtime2/00001.txt',
             'data': {'station': '00001', 'sample_at': 'old'},
         }}}
