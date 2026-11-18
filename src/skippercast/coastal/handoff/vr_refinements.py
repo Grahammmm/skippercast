@@ -39,7 +39,8 @@ from pathlib import Path
 import re
 from urllib.parse import urlparse
 
-from .common import confined, digest, ref, resolve, validate_derived_geotiff, validate_native_source
+from .common import (confined, digest, read_bag_metadata_text, ref, resolve, validate_derived_geotiff,
+                     validate_native_source)
 
 SCHEMA = 'coastal-vr-refinement-receipt-v1'
 TABLE_CONTRACT = 'coastal-vr-refinement-supergrids-v1'
@@ -136,7 +137,7 @@ def _read_source(root, source_ref, source_row, metadata_sha256):
         for name in ('tracking_list', 'varres_tracking_list'):
             if name in bag_root and bag_root[name].size:
                 raise ValueError('tracked/overridden BAG needs separate review')
-        xml = bag_root['metadata'][:].tobytes().decode('utf-8').rstrip('\0')
+        xml = read_bag_metadata_text(bag_root['metadata'])
         if hashlib.sha256(xml.encode()).hexdigest() != metadata_sha256:
             raise ValueError('BAG embedded metadata hash mismatch')
         metadata = parse_metadata(xml, survey_id)

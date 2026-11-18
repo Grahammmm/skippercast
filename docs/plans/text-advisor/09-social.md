@@ -47,16 +47,15 @@ these):
 3. Meta developer app "SkipperCast Publisher" (type Business), products
    Instagram Graph API + Webhooks + Facebook Login for Business. Add the
    owner as app admin. Stay in Development mode for phases S1–S3.
-4. Run `node scripts/advisor/meta-token.mjs`: opens the Facebook Login
-   dialog with scopes `pages_show_list, pages_read_engagement,
+4. Choose a new `TOKEN_FILE` in [private local storage outside the checkout](../../operations/runbooks/secrets-rotation.md#meta-secrets-text-advisor).
+   Set `META_APP_ID` and `META_APP_SECRET` in the environment (never argv), then run `node scripts/advisor/meta-token.mjs --token-file "$TOKEN_FILE"`.
+   Open the printed Facebook Login URL. The dialog requests `pages_show_list, pages_read_engagement,
    pages_manage_posts, pages_manage_metadata, pages_messaging,
    instagram_basic, instagram_content_publish, instagram_manage_comments,
-   instagram_manage_messages, instagram_manage_insights, business_management`,
-   exchanges for a long-lived token, calls `/me/accounts`, prints the Page
-   id, the Page token and the linked IG user id, and verifies the IG account
-   is `BUSINESS`. The owner puts them in GitHub secrets (`META_PAGE_ID`,
-   `META_PAGE_TOKEN`, `META_IG_USER_ID`), plus `META_APP_ID`,
-   `META_APP_SECRET`, `META_VERIFY_TOKEN`.
+   instagram_manage_messages, instagram_manage_insights, business_management`.
+   The script prints the Page id, linked Instagram user id, token expiry, quota and account type, never the Page token itself.
+   The owner sets `META_PAGE_ID`, `META_IG_USER_ID`, `META_APP_ID`, `META_APP_SECRET` and `META_VERIFY_TOKEN` in GitHub secrets.
+   For `META_PAGE_TOKEN`, [redirect the file into the GitHub secret command and remove it after Admin → Health confirms Meta is configured](../../operations/runbooks/secrets-rotation.md#meta-secrets-text-advisor).
 5. For SP-8/SP-9 (phase S4): Business Verification (legal entity documents),
    App Review submission with the screencast the task produces, then switch
    the app to Live and turn on `ADVISOR_INBOX_ENABLED`. Until then, inbound
@@ -550,13 +549,17 @@ tests. Fixtures in `tests/fixtures/advisor/meta/`.
   `--redirect-uri` overrides), takes the pasted landing address (the `state`
   must match) or a bare code, exchanges it for a short-lived and then a
   long-lived user token, lists `/me/accounts` with the proof, picks the only
-  Page or `--page <id>`, and prints `META_PAGE_ID`, `META_PAGE_TOKEN` and
-  `META_IG_USER_ID`. It checks `content_publishing_limit` with the Page token
-  (proves `instagram_content_publish`), asks for `account_type` and fails on
-  anything but `BUSINESS`; Meta does not document that field for the IG User
-  node on this route, so when it is refused the script says so and asks the
-  owner to confirm Business in the Instagram app. `debug_token` reports whether
-  the Page token expires (`expires_at: 0`). Nothing is written to disk.
+  Page or `--page <id>`, and prints `META_PAGE_ID` and `META_IG_USER_ID`.
+  It checks `content_publishing_limit` with the Page token
+  (proves `instagram_content_publish`) and fails if Meta returns an
+  `account_type` other than `BUSINESS`. Meta does not document that field for
+  the IG User node on this route, so if Meta does not return it, the script
+  asks the owner to confirm Business in the Instagram app. `debug_token` reports whether
+  the Page token expires (`expires_at: 0` means no expiry). The script writes
+  the Page token only after the Business check passes, to the new path given
+  by the required `--token-file`, never to stdout or stderr. It creates the
+  file exclusively (`wx`, mode `0600`), checks its owner and mode, and refuses
+  an existing file or symlink. A known non-Business account exits 1 with no file.
 - **Health.** `GET /api/admin/health` `meta` is `{configured, quota_usage,
   quota_total, checked_at, error}`: not configured makes no call; otherwise one
   `content_publishing_limit` read (one try) at most every 10 minutes, cached in
