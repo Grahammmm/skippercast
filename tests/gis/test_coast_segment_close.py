@@ -45,6 +45,27 @@ QUEUE = 'queue:synthetic'
 ARCHIVE = 'archive:synthetic:close01'
 
 
+def _rebind(obj, src_root, dst_root):
+    def move(value):
+        path = Path(value)
+        if not path.is_relative_to(src_root):
+            raise AssertionError(f'{path} is outside the template root {src_root}')
+        return dst_root / path.relative_to(src_root)
+
+    for key, value in vars(obj).items():
+        if isinstance(value, Path):
+            setattr(obj, key, move(value))
+    obj.bindings = {k: str(move(v)) for k, v in obj.bindings.items()}
+
+
+def _rebind_cycle(c, src_root, dst_root):
+    _rebind(c, src_root, dst_root)
+    c.resolver = type(c.resolver)(c.bindings, allowed_root_ids=c.bindings)
+    # Cycle's roots file is its bindings (no ledger or manifest pins it).
+    c.roots.write_bytes(refs.canonical(c.bindings))
+    assert str(src_root) not in repr(vars(c))
+
+
 class Closed:
     def __init__(self, tmp, *, accept=True):
         c = Cycle(tmp).round(('flag',))
@@ -70,24 +91,10 @@ class Closed:
     @classmethod
     def from_copy(cls, src_root, dst_root, template):
         """Rebind a built template to its copytree under dst_root without rerunning the cycle."""
-        src_root, dst_root = Path(src_root), Path(dst_root)
-
-        def move(value):
-            path = Path(value)
-            if not path.is_relative_to(src_root):
-                raise AssertionError(f'{path} is outside the template root {src_root}')
-            return dst_root / path.relative_to(src_root)
-
         f = copy.deepcopy(template)
-        for obj in (f, f.c):
-            for key, value in list(vars(obj).items()):
-                if isinstance(value, Path):
-                    setattr(obj, key, move(value))
-            obj.bindings = {k: str(move(v)) for k, v in obj.bindings.items()}
-        f.c.resolver = type(f.c.resolver)(f.c.bindings, allowed_root_ids=f.c.bindings)
-        # Cycle's roots file is its bindings (no ledger or manifest pins it): rewrite it as Cycle would.
-        f.c.roots.write_bytes(refs.canonical(f.c.bindings))
-        assert str(src_root) not in repr(vars(f)) + repr(vars(f.c))
+        _rebind_cycle(f.c, src_root, dst_root)
+        _rebind(f, src_root, dst_root)
+        assert str(src_root) not in repr(vars(f))
         return f
 
     def resolver(self):
@@ -133,11 +140,32 @@ def _closed_template(tmp_path_factory):
     return template, built
 
 
+def _copy_closed(seed, destination):
+    template, built = seed
+    shutil.copytree(template, destination, dirs_exist_ok=True, symlinks=True)
+    return Closed.from_copy(template, destination, built)
+
+
 @pytest.fixture
 def closed(tmp_path, _closed_template):
-    template, built = _closed_template
-    shutil.copytree(template, tmp_path, dirs_exist_ok=True, symlinks=True)
-    return Closed.from_copy(template, tmp_path, built)
+    return _copy_closed(_closed_template, tmp_path)
+
+
+@pytest.fixture(scope='module')
+def _archived_template(tmp_path_factory, _closed_template):
+    template = tmp_path_factory.mktemp('archived-template')
+    archived = _copy_closed(_closed_template, template)
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv('COAST_EXCLUSIVE_WRITER', str(archived.queue))
+        archived.archive_now()
+    return template, archived
+
+
+@pytest.fixture
+def archived_for_verification(tmp_path, _archived_template):
+    # Retain the exact archive bytes but give each mutation its own files. Never
+    # use this for release: the manifest pins the seed's hot-cache device/inode.
+    return _copy_closed(_archived_template, tmp_path)
 
 
 def manifest_of(f):
@@ -212,9 +240,8 @@ def test_archive_refuses_insufficient_capacity(closed):
     assert ledger_module.verify(f.ledger)[-1]['kind'] == 'verdict'
 
 
-def test_verify_cli_with_hot_tree_unavailable(closed):
-    f = closed
-    f.archive_now()
+def test_verify_cli_with_hot_tree_unavailable(archived_for_verification):
+    f = archived_for_verification
     only = {ARCHIVE: str(f.archive), 'raw:campaign': str(f.raw)}
     roots = f.tmp / 'archive-roots.json'
     roots.write_bytes(refs.canonical(only))
@@ -237,9 +264,8 @@ def test_verify_cli_with_hot_tree_unavailable(closed):
     validator.validate(release, f.resolver(), root_id=QUEUE)
 
 
-def test_verify_refuses_forbidden_overlap(closed):
-    f = closed
-    f.archive_now()
+def test_verify_refuses_forbidden_overlap(archived_for_verification):
+    f = archived_for_verification
     roots = f.tmp / 'bad-roots.json'
     roots.write_bytes(refs.canonical({ARCHIVE: str(f.archive), 'raw:campaign': str(f.raw), QUEUE: str(f.queue)}))
     done = f.cli('verify_archive.py', '--roots', roots, '--allowed-root-id', ARCHIVE, '--allowed-root-id', 'raw:campaign',
@@ -299,19 +325,17 @@ def missing_raw(f):
     (unmapped_reference, 'unmapped reference|archived row does not pin'),
     (missing_raw, 'No such file|reference'),
 ])
-def test_verify_refuses_and_writes_no_list(closed, mutate, reason):
-    f = closed
-    f.archive_now()
+def test_verify_refuses_and_writes_no_list(archived_for_verification, mutate, reason):
+    f = archived_for_verification
     f.verify()  # positive control on the same archive
     mutate(f)
     with pytest.raises((close_common.Refused, ValueError, OSError), match=reason):
         f.verify()
 
 
-def test_latest_must_fix_refusal_is_the_verdict_gate(closed):
+def test_latest_must_fix_refusal_is_the_verdict_gate(archived_for_verification):
     """Isolate the gate: chain and pins stay valid, only the latest verdict differs."""
-    f = closed
-    f.archive_now()
+    f = archived_for_verification
     latest_must_fix(f)
     rows = ledger_module.verify(f.archive / close_common.SEGMENT_SNAPSHOT)  # chain still valid
     selected = close_common.selected_verdicts(rows[:-1])
