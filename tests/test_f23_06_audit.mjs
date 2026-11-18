@@ -32,7 +32,7 @@ function problems(text) {
     if (!/approximate area/i.test(where.text) || !/synthetic example/i.test(where.text)) out.push('no safe alternative');
   }
   const required = body.filter(i => i.required && i.type !== 'checkboxes').map(i => i.id);
-  if (required.join() !== 'kind,where,shown,expected') out.push(`required fields: ${required}`);
+  if (required.join() !== 'where,expected') out.push(`required fields: ${required}`);
   return out;
 }
 
@@ -50,6 +50,6 @@ test('F23-06 negative control: the original wording is rejected', () => {
 
 test('F23-06 positive control: a region plus official source is enough to submit', () => {
   const body = items(readFileSync(path, 'utf8'));
-  assert.deepEqual(body.filter(i => i.required && i.type !== 'checkboxes').map(i => i.id), ['kind', 'where', 'shown', 'expected']);
+  assert.deepEqual(body.filter(i => i.required && i.type !== 'checkboxes').map(i => i.id), ['where', 'expected']);
   assert.match(body.find(i => i.id === 'expected').text, /official or original source/);
 });

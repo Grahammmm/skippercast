@@ -20,8 +20,6 @@ body:
         - Habitat, depth or spot
         - Source attribution or licence
         - Other
-    validations:
-      required: true
   - type: input
     id: where
     attributes:
@@ -33,9 +31,7 @@ body:
     id: shown
     attributes:
       label: What SkipperCast shows
-      description: Include the date and time you saw it and the freshness label if there was one.
-    validations:
-      required: true
+      description: Optional. Include the date and time you saw it and the freshness label if there was one.
   - type: textarea
     id: expected
     attributes:
