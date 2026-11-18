@@ -196,6 +196,11 @@ def identity(reference, candidate, zooms):
 
 
 def _fields(data):
+    return [(num, value) for num, value, _ in _wire_fields(data)]
+
+
+def _wire_fields(data):
+    """Protobuf (field number, value, wire type) rows; raises ValueError/IndexError on malformed bytes."""
     pos, out = 0, []
     while pos < len(data):
         key, pos = _varint(data, pos)
@@ -214,7 +219,7 @@ def _fields(data):
             value, pos = data[pos:pos + size], pos + size
         else:
             raise ValueError('unsupported protobuf wire type')
-        out.append((num, value))
+        out.append((num, value, wire))
     return out
 
 
@@ -263,12 +268,46 @@ def content(tiles, zooms):
     return out
 
 
+# Mapbox Vector Tile fields this gate checks: number -> required wire type (0 varint, 2 length-delimited).
+_MVT_LAYER = {1: 2, 2: 2, 3: 2, 4: 2, 5: 0, 15: 0}  # name, features, keys, values, extent, version
+_MVT_FEATURE = {1: 0, 2: 2, 3: 0, 4: 2}  # id, tags (packed), geometry type, geometry (packed)
+
+
+def _typed(data, spec, where):
+    """The rows of one protobuf message whose known fields all use the wire type the MVT spec gives them."""
+    rows = _wire_fields(data)
+    for num, _, wire in rows:
+        if num in spec and wire != spec[num]:
+            raise ValueError(f'{where} field {num} has the wrong wire type')
+    return rows
+
+
+def _packed(data):
+    pos = 0
+    while pos < len(data):
+        _, pos = _varint(data, pos)
+
+
 def decode_tiles(data, tiles):
-    """Raise unless every stored tile decodes as a vector tile (gzip when the header says so, then MVT layers)."""
+    """Raise unless every stored tile decodes as a vector tile (gzip when the header says so, then MVT layers).
+
+    Layers (tile field 3) are decoded in turn: each needs a name, and its features must carry correctly typed ids,
+    geometry types and packed tag/geometry varints, so a tile whose layer bytes are truncated or mistyped is refused.
+    """
     for raw in tiles.values():
-        for num, _ in _fields(gzip.decompress(raw) if data[98] == 2 else raw):
-            if num != 3:  # a Mapbox Vector Tile holds layers (field 3) only
+        for num, layer, wire in _wire_fields(gzip.decompress(raw) if data[98] == 2 else raw):
+            if num != 3 or wire != 2:  # a Mapbox Vector Tile holds layers (field 3, length-delimited) only
                 raise ValueError('tile is not a vector tile')
+            rows = _typed(layer, _MVT_LAYER, 'layer')
+            if not any(n == 1 for n, _, _ in rows):
+                raise ValueError('vector tile layer has no name')
+            for n, value, _ in rows:
+                if n == 1:
+                    value.decode('utf-8')
+                elif n == 2:
+                    for fn, fvalue, _ in _typed(value, _MVT_FEATURE, 'feature'):
+                        if fn in (2, 4):
+                            _packed(fvalue)
 
 
 # ---- Receipts ------------------------------------------------------------------------------

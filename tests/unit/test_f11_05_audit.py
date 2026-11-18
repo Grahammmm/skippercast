@@ -4,8 +4,10 @@ Contract: ``control_receipt`` (the ordinary, no-reference branch) passes only a 
 vector archive: valid header (gzip directories, MVT tile type, supported tile compression), readable directories
 and tiles that decode. ``publish.build`` refuses a rejected candidate on both branches and leaves the prior release
 (archive and manifest) in place.
-Believable bug: only the eight magic bytes were trusted, so ``b'PMTiles\\x03' + junk`` recorded ``unreadable``
-yet ``pass=True`` and the build went on to publish an unusable map (or deleted the prior archive while refusing).
+Believable bugs: (1) a tile whose layer bytes are truncated or mistyped (``1a 01 ff``, ``18 01``) passed because only
+the outer field numbers were checked, so an unreadable tile could publish; (2) only the eight magic bytes were trusted,
+so ``b'PMTiles\\x03' + junk`` recorded ``unreadable`` yet ``pass=True`` and the build went on to publish an unusable
+map (or deleted the prior archive while refusing).
 """
 import gzip
 import zlib
@@ -85,6 +87,17 @@ def test_unsupported_tile_header_fails(offset, value, reason):
     b'ABCD',                                           # not gzip although the header says so
     gzip.compress(b'\xff\xff\xff', mtime=0),           # gzip, but not a protobuf vector tile
     gzip.compress(_pb(1, b'habitat'), mtime=0),        # protobuf, but field 1 is not a layer
+    # Nested layer bytes: the outer tile looks like layers, but a layer cannot be decoded.
+    gzip.compress(b'\x1a\x01\xff', mtime=0),               # layer is one truncated varint byte
+    gzip.compress(b'\x18\x01', mtime=0),                   # field 3 is a varint, not a length-delimited layer
+    gzip.compress(_pb(3, b'\x78\x02'), mtime=0),           # layer has a version but no name (field 1)
+    gzip.compress(_pb(3, _pb(1, b'habitat')[:-1]), mtime=0),  # layer name is cut short of its declared length
+    gzip.compress(_pb(3, b'\x08\x07'), mtime=0),           # layer name (field 1) sent as a varint
+    gzip.compress(_pb(3, _pb(1, b'\xff\xfe')), mtime=0),   # layer name is not UTF-8
+    gzip.compress(_pb(3, _pb(1, b'habitat') + b'\x28\x80'), mtime=0),  # layer extent: truncated varint
+    gzip.compress(_pb(3, _pb(1, b'habitat') + b'\x2a\x00'), mtime=0),  # layer extent sent length-delimited
+    gzip.compress(_pb(3, _pb(1, b'habitat') + _pb(2, b'\x20\x01\x22')), mtime=0),  # feature geometry cut off
+    gzip.compress(_pb(3, _pb(1, b'habitat') + _pb(2, _pb(4, b'\x80'))), mtime=0),  # feature geometry: bad packed varint
 ])
 def test_undecodable_tile_payload_fails(payload):
     data = archive(payload)
