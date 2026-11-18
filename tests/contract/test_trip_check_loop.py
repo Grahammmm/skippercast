@@ -284,13 +284,15 @@ class RulesAlarmWorkflowTests(unittest.TestCase):
         }
     '''
 
-    def run_rules(self, **values):
+    def run_rules(self, expect_exit=0, **values):
         workflow = (ROOT / '.github/workflows/feed-freshness.yml').read_text()
         step = workflow.split('      - name: Probe the rules card and alert once when it is blank\n', 1)[1]
         defaults = dict(FAIL_REGION='', PROBE_EXIT='3', EXISTING='0', LIST_FAIL='0')
         defaults.update(values)
         result, log, summary = run_shell(run_block(step), self.MOCKS, **defaults)
-        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.returncode, expect_exit, result.stderr)
+        # A failed issue call is an undelivered alarm; only that fails the run (SCA-310).
+        self.assertEqual('::error title=Fishing rules alarm::' in result.stdout, bool(expect_exit))
         self.assertEqual([line.split('|')[1] for line in log.splitlines() if line.startswith('probe|')],
                          list(self.REGIONS))
         self.assertTrue(all(region in summary for region in self.REGIONS))
@@ -318,7 +320,7 @@ class RulesAlarmWorkflowTests(unittest.TestCase):
         self.assertNotIn('gh|issue edit', log)
 
     def test_issue_list_failure_cannot_create_a_duplicate(self):
-        log = self.run_rules(FAIL_REGION=self.REGIONS[0], LIST_FAIL='1')
+        log = self.run_rules(expect_exit=1, FAIL_REGION=self.REGIONS[0], LIST_FAIL='1')
         self.assertNotIn('gh|issue create', log)
         self.assertNotIn('gh|issue close', log)
 
