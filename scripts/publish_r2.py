@@ -45,6 +45,18 @@ TYPES = {'.json': 'application/json', '.geojson': 'application/json', '.md': 'te
          '.pmtiles': 'application/octet-stream', '.gpx': 'application/gpx+xml', '.html': 'text/html; charset=utf-8'}
 
 
+RESERVED_PREFIXES = ('tiles/relief',)  # E2E-13: only the relief publisher (E2E-12b) may write here
+
+
+def refuse_reserved(prefix, local=()):
+    """Raise if `prefix`, or any key it would write (prefix/key), is under a reserved prefix."""
+    for key in [''] + list(local):
+        full = f'{str(prefix).strip("/")}/{key}'.replace('//', '/').rstrip('/')
+        for reserved in RESERVED_PREFIXES:
+            if full == reserved or full.startswith(reserved + '/'):
+                raise SystemExit(f'refusing to write {full or prefix}: {reserved}/ is reserved for the relief publisher')
+
+
 def digest(path):
     h = hashlib.sha256()
     with open(path, 'rb') as handle:
@@ -100,6 +112,7 @@ def main():
     parser.add_argument('prefix', choices=['conditions', 'data', 'forecasts', 'tiles', 'runs'])
     parser.add_argument('--bucket', default=os.environ.get('R2_BUCKET', 'skippercast-feeds'))
     args = parser.parse_args()
+    refuse_reserved(args.prefix)
     token, account = os.environ.get('CLOUDFLARE_API_TOKEN'), os.environ.get('CLOUDFLARE_ACCOUNT_ID')
     if not token or not account:
         print(f'R2 not configured (no CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID); skipped {args.prefix}.')
@@ -146,12 +159,14 @@ def upload_run_manifests(s3, bucket, root):
 def sync_legacy(s3, bucket, source, prefix):
     """Upload changed files (data first, pointers last), delete removed ones, store the index."""
     index_key = f'{prefix}/{INDEX}'
+    local = scan(source)
+    refuse_reserved(prefix, local)
     try:
         remote = json.loads(s3.get_object(Bucket=bucket, Key=index_key)['Body'].read())
     except s3.exceptions.NoSuchKey:
         remote = {}
-    local = scan(source)
     uploads, deletions = plan(local, remote)
+    refuse_reserved(prefix, deletions)
     data_files = [k for k in uploads if not POINTER.search(k)]
     pointers = [k for k in uploads if POINTER.search(k)]
 
@@ -198,6 +213,7 @@ def sync(s3, bucket, source, prefix):
     Tiles retain their separate screened publication contract. Old stable keys,
     snapshots and blobs are preserved: migration and rollback never delete data.
     """
+    refuse_reserved(prefix)
     if prefix not in SNAPSHOT_PREFIXES:
         return sync_legacy(s3, bucket, source, prefix)
     # One shared retry budget for the daily data publish, not one per object.

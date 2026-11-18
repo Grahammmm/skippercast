@@ -36,18 +36,7 @@ grid_sha256, idx, pixel_window}`.
 
 Run from the checkout with its survey venv (numpy + rasterio are needed for `stats`):
 
-```
-export SC_REPO=$HOME/skippercast-data/2026-10-07-pge-south/repo SC_PY=$SC_REPO/.venv/bin/python
-export COAST_ROOT=$HOME/skippercast-data/coast-campaign
-export COAST_AUTHOR_PROFILE=local-worker COAST_CARD_ID=<card> COAST_CODE_COMMIT=$(git -C $SC_REPO rev-parse HEAD) COAST_SKILL_COMMIT=$(git -C $SC_REPO rev-parse HEAD)
-P=$COAST_ROOT/<seg>/plans/<plan-id>
-$SC_PY skills/coast-local-screen/scripts/local_screen.py stats    --plan-dir $P
-$SC_PY skills/coast-local-screen/scripts/local_screen.py text     --plan-dir $P --endpoint http://127.0.0.1:8003/v1 --model qwen3.8:27b-thinkingcap-q6 --slots 1
-$SC_PY skills/coast-local-screen/scripts/local_screen.py vision   --plan-dir $P --endpoint http://127.0.0.1:8003/v1 --model qwen3.8:27b-thinkingcap-q6 --slots 1
-$SC_PY skills/coast-local-screen/scripts/local_screen.py assemble --plan-dir $P
-# or all four in order:
-$SC_PY skills/coast-local-screen/scripts/local_screen.py all      --plan-dir $P --slots 1
-```
+(Legacy --plan-dir / all recipes removed: SKILL.md lines 50-52 forbid that mode. Use the context/attempt workflow in SKILL.md. Campaign screens are QA adapters, not a second scheduler; scheduling is localmapq.)
 
 Outputs, each written once (O_EXCL, canonical JSON), under `$P/review/tier1/` (or `--out <absolute dir
 under $P/review/>` for a re-screen; an existing file is never overwritten):

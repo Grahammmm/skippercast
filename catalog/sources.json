@@ -15,6 +15,7 @@
       "review_status": "approved",
       "reviewed_at": "2026-09-26",
       "rights": {
+        "public_display": "private",
         "license": "public-domain",
         "attribution": "USGS; CSUMB Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
         "terms_url": "https://doi.org/10.5066/P9KBGELE",
@@ -55,6 +56,7 @@
       "review_status": "approved",
       "reviewed_at": "2026-09-26",
       "rights": {
+        "public_display": "private",
         "license": "public-domain",
         "attribution": "USGS; CSUMB Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
         "terms_url": "https://doi.org/10.5066/P9HEZNRO",
@@ -94,6 +96,7 @@
       "review_status": "approved",
       "reviewed_at": "2026-09-26",
       "rights": {
+        "public_display": "private",
         "license": "public-domain",
         "attribution": "USGS; CSUMB Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
         "terms_url": "https://doi.org/10.5066/P9ZSTUK1",
@@ -204,6 +207,8 @@
       "review_status": "candidate",
       "reviewed_at": "2026-09-24",
       "rights": {
+        "public_display": "private",
+        "scope": "Public relief held until the exact tile contributor table is cleared.",
         "license": "CC0-1.0 recorded in inspected contributor tables",
         "attribution": "NOAA National Ocean Service, Office of Coast Survey; original contributor identified per cell",
         "terms_url": "https://nauticalcharts.noaa.gov/learn/nbs.html",
@@ -238,6 +243,8 @@
       "review_status": "candidate",
       "reviewed_at": "2026-09-24",
       "rights": {
+        "public_display": "private",
+        "scope": "Public relief held until the exact tile contributor RAT is cleared.",
         "license": "U.S. public domain/CC0-1.0 product; check each contributor RAT for source restrictions",
         "attribution": "NOAA National Ocean Service, Office of Coast Survey; identify original contributors",
         "terms_url": "https://nauticalcharts.noaa.gov/data/bluetopo_faq.html",
@@ -1264,6 +1271,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-09-21",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; California Coastal Conservancy",
         "terms_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block05_mb.html",
@@ -1537,10 +1545,11 @@
       "review_status": "approved",
       "reviewed_at": "2026-09-22",
       "rights": {
+        "public_display": "private",
         "license": "public-domain",
         "attribution": "NOAA/NOS/NCCOS/CCMA/Biogeography Branch; Moss Landing Marine Laboratory, MMS and UCSB",
         "terms_url": "https://www.fisheries.noaa.gov/inport/item/39578",
-        "scope": "Public NOAA data; attribution required by source use constraints",
+        "scope": "Public NOAA data; attribution required by source use constraints. Public relief held pending review of contributor rights in the mapped derivative; existing approved uses are unchanged.",
         "commercial_use": "allowed",
         "attribution_required": false,
         "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
@@ -1574,10 +1583,11 @@
       "review_status": "approved",
       "reviewed_at": "2026-09-22",
       "rights": {
+        "public_display": "private",
         "license": "CC0-1.0",
         "attribution": "Sweeney, E.; Costa, B.; Caldow, C. (2025), NOAA NCEI accession 0304093; NOAA, USGS, MBARI, CSUMB and OET surveys",
         "terms_url": "https://www.ncei.noaa.gov/data/oceans/archive/arc0237/0304093/1.1/data/0-data/4CLCAE-ISO-19115-2.xml",
-        "scope": "CC0-1.0; expressly dedicated in the archive ISO metadata",
+        "scope": "CC0-1.0; expressly dedicated in the archive ISO metadata. Public relief held pending contributor review for CSUMB and MBARI inputs. The archived CC0 statement for the merged release is not permission to use a separately sourced contributor grid.",
         "commercial_use": "allowed",
         "attribution_required": false,
         "commercial_note": "CC0 1.0 dedication; commercial use allowed. Credit is requested, not legally required. The archive dedicates the merged product, including CSUMB-contributed surveys, to CC0."
@@ -2529,6 +2539,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA01_Multibeam/xml",
@@ -2571,6 +2582,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA02_Multibeam/xml",
@@ -2613,6 +2625,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA03_Multibeam/xml",
@@ -2655,6 +2668,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA04_Multibeam/xml",
@@ -2697,6 +2711,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA05_Multibeam/xml",
@@ -2739,6 +2754,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA07_Multibeam/xml",
@@ -2781,6 +2797,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA08_Multibeam/xml",
@@ -2823,6 +2840,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA09_Multibeam/xml",
@@ -2865,6 +2883,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA10_Multibeam/xml",
@@ -2907,6 +2926,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockA11_Multibeam/xml",
@@ -2949,6 +2969,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB01_Multibeam/xml",
@@ -2991,6 +3012,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB02_Multibeam/xml",
@@ -3033,6 +3055,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB03_Multibeam/xml",
@@ -3075,6 +3098,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB04_Multibeam/xml",
@@ -3117,6 +3141,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB05_Multibeam/xml",
@@ -3159,6 +3184,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB06_Multibeam/xml",
@@ -3201,6 +3227,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB07_Multibeam/xml",
@@ -3243,6 +3270,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB08_Multibeam/xml",
@@ -3285,6 +3313,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB09_Multibeam/xml",
@@ -3327,6 +3356,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB10_Multibeam/xml",
@@ -3369,6 +3399,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB11_Multibeam/xml",
@@ -3411,6 +3442,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB12_Multibeam/xml",
@@ -3453,6 +3485,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC2_BlockB13-14_Multibeam/xml",
@@ -3495,6 +3528,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA00_Multibeam/xml",
@@ -3538,6 +3572,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA02_Multibeam/xml",
@@ -3580,6 +3615,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA03_Multibeam/xml",
@@ -3622,6 +3658,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA05_Multibeam/xml",
@@ -3664,6 +3701,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA06_Multibeam/xml",
@@ -3706,6 +3744,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA07_Multibeam/xml",
@@ -3748,6 +3787,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA08_Multibeam/xml",
@@ -3790,6 +3830,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA09_Multibeam/xml",
@@ -3832,6 +3873,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA10_Multibeam/xml",
@@ -3874,6 +3916,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:CC_BlockA11_Multibeam/xml",
@@ -3916,6 +3959,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MontereyCanyon_Multibeam/xml",
@@ -3958,6 +4002,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PGE_North_Multibeam/xml",
@@ -4000,6 +4045,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PGE_South_Multibeam/xml",
@@ -4042,6 +4088,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PointBuchon_Multibeam/xml",
@@ -4084,6 +4131,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PointBuchon_Control_Multibeam/xml",
@@ -4126,6 +4174,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PresidioShoals_Multibeam/xml",
@@ -4168,6 +4217,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SanFranciscoMouth_Multibeam/xml",
@@ -4210,6 +4260,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SanPabloBay_Multibeam/xml",
@@ -4252,6 +4303,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SoquelCanyon_Multibeam/xml",
@@ -4294,6 +4346,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SuisunBay_Multibeam/xml",
@@ -4336,6 +4389,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:BSS_Block13_Multibeam/xml",
@@ -4378,6 +4432,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MontereyPeninsula_Multibeam/xml",
@@ -4420,6 +4475,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MacKerricher_Multibeam/xml",
@@ -4462,6 +4518,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MontereyBay_HoleFill_Multibeam/xml",
@@ -4504,6 +4561,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:MossLandingHarbor_Multibeam/xml",
@@ -4546,6 +4604,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:PtCabrillo_Multibeam/xml",
@@ -4588,6 +4647,7 @@
       "review_status": "restricted",
       "reviewed_at": "2026-11-17",
       "rights": {
+        "public_display": "private",
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; retain individual survey contributor credits",
         "terms_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.multibeam:SCypressPoint_Multibeam/xml",
@@ -4617,6 +4677,455 @@
       "acquisition_wave": "wave2b",
       "publication_allowed": false,
       "usage": "private-use only"
+    },
+    {
+      "id": "usgs-coned-ca-8657",
+      "name": "USGS CoNED Central California topobathy DEM",
+      "provider": "USGS CoNED Applications Project (NOAA OCM distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.fisheries.noaa.gov/inport/item/55319",
+      "adapter": "manual",
+      "review_status": "candidate",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "USGS CoNED Applications Project, central California TBDEM; NOAA Office for Coastal Management, Digital Coast 8657",
+        "terms_url": "https://www.fisheries.noaa.gov/inport/item/55319",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "public_display": "private",
+        "commercial_note": "Public relief held: metadata describes access and use limitations, but permission for all compiled contributors has not been established. Review contributor lineage before clearing public display."
+      },
+      "authenticity": {
+        "basis": "Official dataset documentation; this row does not validate individual files.",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Central California. Nominal 1 m compiled grid: source measurements, interpolation and blending.",
+      "limitations": [
+        "Not for navigation.",
+        "A catalog entry or nominal grid size does not certify per-cell measured support."
+      ],
+      "allowed_hosts": [
+        "noaa-nos-coastal-lidar-pds.s3.amazonaws.com",
+        "www.fisheries.noaa.gov"
+      ],
+      "publication_allowed": false
+    },
+    {
+      "id": "usgs-coned-ca-8658",
+      "name": "USGS CoNED Southern California and Channel Islands topobathy DEM",
+      "provider": "USGS CoNED Applications Project (NOAA OCM distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.fisheries.noaa.gov/inport/item/55359",
+      "adapter": "manual",
+      "review_status": "candidate",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "USGS CoNED Applications Project, southern California and Channel Islands TBDEM; NOAA Office for Coastal Management, Digital Coast 8658",
+        "terms_url": "https://www.fisheries.noaa.gov/inport/item/55359",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "public_display": "private",
+        "commercial_note": "Public relief held: metadata describes access and use limitations, but permission for all compiled contributors has not been established. Review contributor lineage before clearing public display."
+      },
+      "authenticity": {
+        "basis": "Official dataset documentation; this row does not validate individual files.",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Southern California and Channel Islands. Nominal 1 m compiled grid: source measurements, interpolation and blending.",
+      "limitations": [
+        "Not for navigation.",
+        "A catalog entry or nominal grid size does not certify per-cell measured support."
+      ],
+      "allowed_hosts": [
+        "noaa-nos-coastal-lidar-pds.s3.amazonaws.com",
+        "www.fisheries.noaa.gov"
+      ],
+      "publication_allowed": false
+    },
+    {
+      "id": "usgs-coned-ca-9181",
+      "name": "USGS CoNED Northern California topobathy DEM",
+      "provider": "USGS CoNED Applications Project (NOAA OCM distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.fisheries.noaa.gov/inport/item/62987",
+      "adapter": "manual",
+      "review_status": "candidate",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "USGS CoNED Applications Project, northern California TBDEM; NOAA Office for Coastal Management, Digital Coast 9181",
+        "terms_url": "https://www.fisheries.noaa.gov/inport/item/62987",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "public_display": "private",
+        "commercial_note": "Public relief held: metadata describes access and use limitations, but permission for all compiled contributors has not been established. Review contributor lineage before clearing public display."
+      },
+      "authenticity": {
+        "basis": "Official dataset documentation; this row does not validate individual files.",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Northern California. Nominal 1 m compiled grid: source measurements, interpolation and blending.",
+      "limitations": [
+        "Not for navigation.",
+        "A catalog entry or nominal grid size does not certify per-cell measured support."
+      ],
+      "allowed_hosts": [
+        "noaa-nos-coastal-lidar-pds.s3.amazonaws.com",
+        "www.fisheries.noaa.gov"
+      ],
+      "publication_allowed": false
+    },
+    {
+      "id": "usace-ncmp-ca-5189",
+      "name": "2014 USACE NCMP California topobathy lidar DEM",
+      "provider": "USACE National Coastal Mapping Program / JALBTCX (NOAA OCM distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.fisheries.noaa.gov/inport/item/49416",
+      "adapter": "manual",
+      "review_status": "candidate",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "USACE NCMP / Joint Airborne Lidar Bathymetry Technical Center of Expertise; NOAA Office for Coastal Management, Digital Coast 5189",
+        "terms_url": "https://www.fisheries.noaa.gov/inport/item/49416",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "public_display": "private",
+        "commercial_note": "Public relief held pending confirmation of reuse terms for this exact delivery. NOAA distribution is not itself a producer licence."
+      },
+      "authenticity": {
+        "basis": "Official dataset documentation; this row does not validate individual files.",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "California coastal bare-earth grid derived from lidar. A raster cell is not itself a bottom return.",
+      "limitations": [
+        "Not for navigation.",
+        "A catalog entry or nominal grid size does not certify per-cell measured support."
+      ],
+      "allowed_hosts": [
+        "noaa-nos-coastal-lidar-pds.s3.amazonaws.com",
+        "www.fisheries.noaa.gov"
+      ],
+      "publication_allowed": false
+    },
+    {
+      "id": "usace-ncmp-ca-4912",
+      "name": "2014 USACE NCMP California topobathy lidar point cloud",
+      "provider": "USACE National Coastal Mapping Program / JALBTCX (NOAA OCM distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.fisheries.noaa.gov/inport/item/49651",
+      "adapter": "manual",
+      "review_status": "candidate",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "USACE NCMP / Joint Airborne Lidar Bathymetry Technical Center of Expertise; NOAA Office for Coastal Management, Digital Coast 4912",
+        "terms_url": "https://www.fisheries.noaa.gov/inport/item/49651",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "public_display": "private",
+        "commercial_note": "Public relief held pending confirmation of reuse terms for this exact delivery. NOAA distribution is not itself a producer licence."
+      },
+      "authenticity": {
+        "basis": "Official dataset documentation; this row does not validate individual files.",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "California coastal lidar returns; shore and valid bottom support depend on the original classification and acquisition.",
+      "limitations": [
+        "Not for navigation.",
+        "A catalog entry or nominal grid size does not certify per-cell measured support."
+      ],
+      "allowed_hosts": [
+        "noaa-nos-coastal-lidar-pds.s3.amazonaws.com",
+        "www.fisheries.noaa.gov"
+      ],
+      "publication_allowed": false
+    },
+    {
+      "id": "usace-ncmp-ca-8482",
+      "name": "2015 USACE NCMP California topobathy lidar DEM",
+      "provider": "USACE National Coastal Mapping Program / JALBTCX (NOAA OCM distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.fisheries.noaa.gov/inport/item/51862",
+      "adapter": "manual",
+      "review_status": "candidate",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "USACE NCMP / Joint Airborne Lidar Bathymetry Technical Center of Expertise; NOAA Office for Coastal Management, Digital Coast 8482",
+        "terms_url": "https://www.fisheries.noaa.gov/inport/item/51862",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "public_display": "private",
+        "commercial_note": "Public relief held pending confirmation of reuse terms for this exact delivery. NOAA distribution is not itself a producer licence."
+      },
+      "authenticity": {
+        "basis": "Official dataset documentation; this row does not validate individual files.",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "California coastal bare-earth grid derived from lidar. A raster cell is not itself a bottom return.",
+      "limitations": [
+        "Not for navigation.",
+        "A catalog entry or nominal grid size does not certify per-cell measured support."
+      ],
+      "allowed_hosts": [
+        "noaa-nos-coastal-lidar-pds.s3.amazonaws.com",
+        "www.fisheries.noaa.gov"
+      ],
+      "publication_allowed": false
+    },
+    {
+      "id": "usace-ncmp-ca-5022",
+      "name": "2015 USACE NCMP California topobathy lidar point cloud",
+      "provider": "USACE National Coastal Mapping Program / JALBTCX (NOAA OCM distributor)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.fisheries.noaa.gov/inport/item/51855",
+      "adapter": "manual",
+      "review_status": "candidate",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "USACE NCMP / Joint Airborne Lidar Bathymetry Technical Center of Expertise; NOAA Office for Coastal Management, Digital Coast 5022",
+        "terms_url": "https://www.fisheries.noaa.gov/inport/item/51855",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "public_display": "private",
+        "commercial_note": "Public relief held pending confirmation of reuse terms for this exact delivery. NOAA distribution is not itself a producer licence."
+      },
+      "authenticity": {
+        "basis": "Official dataset documentation; this row does not validate individual files.",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "California coastal lidar returns; shore and valid bottom support depend on the original classification and acquisition.",
+      "limitations": [
+        "Not for navigation.",
+        "A catalog entry or nominal grid size does not certify per-cell measured support."
+      ],
+      "allowed_hosts": [
+        "noaa-nos-coastal-lidar-pds.s3.amazonaws.com",
+        "www.fisheries.noaa.gov"
+      ],
+      "publication_allowed": false
+    },
+    {
+      "id": "noaa-cudem-ca-ninth-8483",
+      "name": "NOAA NCEI CUDEM California 1/9 arc-second topobathy tiles",
+      "provider": "CIRES at the University of Colorado Boulder / NOAA NCEI",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem:199919",
+      "adapter": "manual",
+      "review_status": "candidate",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "CIRES (2014), CUDEM 1/9 Arc-Second Bathymetric-Topographic Tiles; NOAA NCEI, doi:10.25921/ds9v-ky35. Cite the tile subset and access date.",
+        "terms_url": "https://ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem:199919",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "public_display": "private",
+        "commercial_note": "Public relief held: NCEI supplies citation and liability terms, not an explicit licence covering all contributor data in the selected tiles."
+      },
+      "authenticity": {
+        "basis": "Official dataset documentation; this row does not validate individual files.",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "California subset of Digital Coast 8483; compiled from multiple elevation sources.",
+      "limitations": [
+        "Not for navigation.",
+        "A catalog entry or nominal grid size does not certify per-cell measured support."
+      ],
+      "allowed_hosts": [
+        "ncei.noaa.gov",
+        "noaa-nos-coastal-lidar-pds.s3.amazonaws.com"
+      ],
+      "publication_allowed": false
+    },
+    {
+      "id": "noaa-morro-bay-topobathy-2022-9630",
+      "name": "2022 NOAA Morro Bay topobathy lidar DEM",
+      "provider": "NOAA Office for Coastal Management / Morro Bay National Estuary Program",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.fisheries.noaa.gov/inport/item/67998",
+      "adapter": "manual",
+      "review_status": "candidate",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "NOAA Office for Coastal Management and Morro Bay National Estuary Program, 2022 Morro Bay topobathy lidar DEM, Digital Coast 9630",
+        "terms_url": "https://www.fisheries.noaa.gov/inport/item/67998",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "public_display": "private",
+        "commercial_note": "Public relief held pending confirmation of display and redistribution terms for the exact NOAA/NEP delivery."
+      },
+      "authenticity": {
+        "basis": "Official dataset documentation; this row does not validate individual files.",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Morro Bay mission from June 14, 2022. Survey extent is not valid bathymetric coverage.",
+      "limitations": [
+        "Not for navigation.",
+        "A catalog entry or nominal grid size does not certify per-cell measured support."
+      ],
+      "allowed_hosts": [
+        "noaa-nos-coastal-lidar-pds.s3.amazonaws.com",
+        "www.fisheries.noaa.gov"
+      ],
+      "publication_allowed": false
+    },
+    {
+      "id": "noaa-morro-bay-topobathy-2022-9629",
+      "name": "2022 NOAA Morro Bay topobathy lidar point cloud",
+      "provider": "NOAA Office for Coastal Management / Morro Bay National Estuary Program",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.fisheries.noaa.gov/inport/item/67993",
+      "adapter": "manual",
+      "review_status": "candidate",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "NOAA Office for Coastal Management and Morro Bay National Estuary Program, 2022 Morro Bay topobathy lidar point cloud, Digital Coast 9629",
+        "terms_url": "https://www.fisheries.noaa.gov/inport/item/67993",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "public_display": "private",
+        "commercial_note": "Public relief held pending confirmation of display and redistribution terms for the exact NOAA/NEP delivery."
+      },
+      "authenticity": {
+        "basis": "Official dataset documentation; this row does not validate individual files.",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Morro Bay mission from June 14, 2022. Survey extent is not valid bathymetric coverage.",
+      "limitations": [
+        "Not for navigation.",
+        "A catalog entry or nominal grid size does not certify per-cell measured support."
+      ],
+      "allowed_hosts": [
+        "noaa-nos-coastal-lidar-pds.s3.amazonaws.com",
+        "www.fisheries.noaa.gov"
+      ],
+      "publication_allowed": false
+    },
+    {
+      "id": "usgs-3dep-1m-dem",
+      "name": "USGS 3DEP 1 m bare-earth DEM",
+      "provider": "U.S. Geological Survey",
+      "needs": [],
+      "documentation_url": "https://data.usgs.gov/datacatalog/data/USGS:77ae0551-c61e-4979-aedd-d797abdcde0e",
+      "adapter": "manual",
+      "review_status": "approved",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "Data available from U.S. Geological Survey, National Geospatial Program.",
+        "terms_url": "https://www.usgs.gov/faqs/are-there-any-costs-or-restrictions-usage-data-downloaded-national-map",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "public_display": "allowed",
+        "commercial_note": "USGS identifies The National Map products as public domain and requests acknowledgment. Does not clear third-party copies, a region binding or publication."
+      },
+      "authenticity": {
+        "basis": "Official dataset documentation; this row does not validate individual files.",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Original 1 m 3DEP bare-earth DEM tiles from The National Map only. Land terrain input, not a bathymetric soundings source.",
+      "limitations": [
+        "Not for navigation.",
+        "A catalog entry or nominal grid size does not certify per-cell measured support."
+      ],
+      "allowed_hosts": [
+        "data.usgs.gov",
+        "prd-tnm.s3.amazonaws.com",
+        "www.usgs.gov"
+      ]
+    },
+    {
+      "id": "usgs-southern-cascadia-p9c5dbmr",
+      "name": "USGS Southern Cascadia 30 m composite bathymetry (v2.0)",
+      "provider": "U.S. Geological Survey",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9C5DBMR/",
+      "adapter": "manual",
+      "review_status": "candidate",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "unresolved",
+        "attribution": "Dartnell, Rudebusch, Conrad, Watt and Hill (2026), USGS data release 10.5066/P9C5DBMR, v2.0; retain original survey credits.",
+        "terms_url": "https://cmgds.marine.usgs.gov/data-releases/media/2021/10.5066-P9C5DBMR/2fdf3c2830d545c299168d23d3422a70/SouthernCascadia_30m_bathy_UTM10N_NAD83_metadatav2.xml",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "public_display": "private",
+        "commercial_note": "Public relief held pending use-constraints and contributor review for the composite and its v2.0 source polygons."
+      },
+      "authenticity": {
+        "basis": "Official dataset documentation; this row does not validate individual files.",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Southern Cascadia Margin off Oregon and Northern California; 30 m merged multibeam surface.",
+      "limitations": [
+        "Not for navigation.",
+        "A catalog entry or nominal grid size does not certify per-cell measured support."
+      ],
+      "allowed_hosts": [
+        "cmgds.marine.usgs.gov"
+      ],
+      "publication_allowed": false
+    },
+    {
+      "id": "mbari-seafloor-mapping",
+      "name": "MBARI direct seafloor mapping products",
+      "provider": "Monterey Bay Aquarium Research Institute (MBARI)",
+      "needs": [],
+      "documentation_url": "https://www.mbari.org/technology/seafloor-mapping-auv/",
+      "adapter": "manual",
+      "review_status": "restricted",
+      "reviewed_at": "2026-11-17",
+      "rights": {
+        "license": "mbari-site-terms",
+        "attribution": "Monterey Bay Aquarium Research Institute (MBARI); credit original survey authors.",
+        "terms_url": "https://www.mbari.org/legal/",
+        "commercial_use": "permission-required",
+        "attribution_required": true,
+        "public_display": "excluded",
+        "commercial_note": "Excluded from relief selection and public display. MBARI website terms limit its materials to noncommercial educational use unless expressly authorized; do not infer permission from third-party hosting."
+      },
+      "authenticity": {
+        "basis": "Official dataset documentation; this row does not validate individual files.",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Research reference only. This is a provider-level exclusion, not a survey footprint.",
+      "limitations": [
+        "Not for navigation.",
+        "A catalog entry or nominal grid size does not certify per-cell measured support."
+      ],
+      "allowed_hosts": [
+        "www.mbari.org"
+      ],
+      "publication_allowed": false
     }
   ]
 }

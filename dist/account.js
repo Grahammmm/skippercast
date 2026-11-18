@@ -60,6 +60,113 @@ export async function readLogPage(cursor = null) {
   return {entries: data.entries, nextCursor: more === 'true' ? next : null, hasMore: more === 'true'};
 }
 
+// A deliberate CSV export is complete only at an explicit final page (at most 2,000 route rows).
+export const CSV_PAGE_CAP = 10;
+const csvFailure = () => Error();
+const csvTripsFailure = () => Object.assign(Error(), {csvTrips: true});
+function validateCsvEntry(row) {
+  if (!row || typeof row.id !== 'string' || !row.id ||
+    typeof row.started_at !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(row.started_at) ||
+    !Number.isFinite(Date.parse(row.started_at)) || new Date(row.started_at).toISOString() !== row.started_at ||
+    !['fish', 'blank', 'unknown'].includes(row.outcome) || !Number.isInteger(row.count) || row.count < 0 || row.count > 9999 ||
+    (row.outcome === 'fish' ? row.count < 1 : row.count !== 0)) throw csvFailure();
+  for (const [field, max] of [['species', 60], ['method', 40], ['note', 1000], ['trip_id', 64]]) {
+    const value = row[field];
+    if (value != null && (typeof value !== 'string' || [...value].length > max || (field === 'trip_id' && !value))) throw csvFailure();
+  }
+  const {lat, lon} = row;
+  if (lat == null && lon == null) return;
+  if (typeof lat !== 'number' || typeof lon !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lon) ||
+    !(lat > -90 && lat < 90 && lon > -180 && lon < 180)) throw csvFailure();
+}
+/** Fresh raw cursor walk, independent of the list UI; validate duplicates before first-seen deduplication. */
+export async function readCsvCatchLog(pageReader = readLogPage, isLive = () => true) {
+  const entries = [], ids = new Set(), cursors = new Set();
+  let cursor = null;
+  for (let page = 0; page < CSV_PAGE_CAP; page++) {
+    if (!isLive()) throw csvFailure();
+    const answer = await pageReader(cursor);
+    if (!isLive() || !Array.isArray(answer?.entries) || typeof answer.hasMore !== 'boolean' ||
+      (answer.hasMore ? typeof answer.nextCursor !== 'string' || !answer.nextCursor : answer.nextCursor != null)) throw csvFailure();
+    for (const row of answer.entries) {
+      validateCsvEntry(row);
+      if (!ids.has(row.id)) { ids.add(row.id); entries.push(row); }
+    }
+    if (!answer.hasMore) return entries;
+    if (cursors.has(answer.nextCursor)) throw csvFailure();
+    cursors.add(answer.nextCursor); cursor = answer.nextCursor;
+  }
+  throw csvFailure();
+}
+const CSV_HEADER = 'started_at,outcome,count,species,method,latitude,longitude,trip_date,note\r\n';
+const csvQuote = value => '"' + value.replaceAll('"', '""') + '"';
+const csvUserText = value => {
+  const text = value ?? '';
+  return csvQuote(/^[ \n]*[=+\-@\t\r]/.test(text) ? "'" + text : text);
+};
+/** RFC 4180 bytes: constrained text quoted, user text formula-guarded, numbers left numeric. */
+export function catchLogCsv(entries, trips) {
+  if (!Array.isArray(entries)) throw csvFailure();
+  if (!Array.isArray(trips)) throw csvTripsFailure();
+  const dates = new Map();
+  for (const trip of trips) {
+    if (!trip || typeof trip.id !== 'string' || !trip.id || dates.has(trip.id)) throw csvTripsFailure();
+    dates.set(trip.id, trip.date);
+  }
+  const seen = new Set(), lines = [];
+  for (const row of entries) {
+    validateCsvEntry(row);
+    let date = '';
+    if (row.trip_id && dates.has(row.trip_id)) {
+      date = dates.get(row.trip_id);
+      if (typeof date !== 'string' || !/^\d{4}-\d\d-\d\d$/.test(date) ||
+        !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) throw csvTripsFailure();
+    }
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    lines.push([csvQuote(row.started_at), csvQuote(row.outcome), String(row.count), csvUserText(row.species), csvUserText(row.method),
+      row.lat == null ? '' : spotCoordinateText(row.lat), row.lon == null ? '' : spotCoordinateText(row.lon), csvQuote(date), csvUserText(row.note)].join(','));
+  }
+  return CSV_HEADER + lines.map(line => line + '\r\n').join('');
+}
+/** Wire the real button once per render. No reads until clicked and no raw records retained after the attempt. */
+function wireCsvDownload($, t, isLive) {
+  const button = $('#log-download-csv'), status = $('#log-csv-status');
+  let pending = false, generation = 0;
+  button.addEventListener('click', async () => {
+    if (pending || !isLive()) return;
+    const attempt = generation, live = () => generation === attempt && isLive();
+    pending = true; button.disabled = true; status.textContent = t('account.log.csv.loading');
+    let url = null, anchor = null;
+    try {
+      let trips;
+      try {
+        trips = (await api('trips')).trips;
+        if (!Array.isArray(trips)) throw csvTripsFailure();
+      } catch { throw csvTripsFailure(); }
+      if (!live()) return;
+      const entries = await readCsvCatchLog(readLogPage, live);
+      const csv = catchLogCsv(entries, trips);
+      if (!live()) return;
+      url = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
+      anchor = document.createElement('a'); anchor.href = url; anchor.download = 'SkipperCast-catch-log.csv';
+      document.body.append(anchor); anchor.click();
+      status.textContent = t('account.log.csv.done');
+    } catch (error) {
+      if (live()) status.textContent = t(error?.csvTrips ? 'account.log.csv.tripsFailed' : 'account.log.csv.incomplete');
+    } finally {
+      // Let the browser dispatch the download before releasing its URL, including construction/click failures.
+      if (anchor || url) setTimeout(() => { try { anchor?.remove(); } finally { if (url) URL.revokeObjectURL(url); } }, 0);
+      pending = false;
+      if (isLive()) button.disabled = false;
+    }
+  });
+  return {
+    invalidate: () => { generation++; },
+    restore: () => { if (isLive() && !pending) button.disabled = false; }
+  };
+}
+
 /**
  * The link for the server's `signIn` path. "/#account" becomes "#account" so
  * following it is an in-page hash change: a full load of "/" would drop the
@@ -479,6 +586,9 @@ const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'
     <div class="home-port-actions"><label for="log-filter-outcome">${esc(t('account.log.filter'))}</label><select id="log-filter-outcome"><option value="">${esc(t('account.any'))}</option><option value="fish">${esc(t('account.outcome.fish'))}</option><option value="blank">${esc(t('account.outcome.blank'))}</option><option value="unknown">${esc(t('account.outcome.unknown'))}</option></select>
       <label for="log-filter-species">${esc(t('account.log.filterSpecies'))}</label><select id="log-filter-species"><option value="">${esc(t('account.any'))}</option></select></div>
     <p class="account-hint" id="log-counts" role="status" hidden></p>
+    <div class="home-port-actions"><button type="button" id="log-download-csv" aria-describedby="log-csv-limit">${esc(t('account.log.csv.download'))}</button></div>
+    <p class="account-hint" id="log-csv-limit">${esc(t('account.log.csv.limit'))}</p>
+    <p class="account-hint" role="status" id="log-csv-status"></p>
     <ul class="account-passkeys" id="log-list"></ul>
     <p class="account-hint" id="log-status" role="status"></p>
     <div class="home-port-actions"><button type="button" id="log-retry" hidden>${esc(t('account.log.retry'))}</button><button type="button" id="log-older" hidden>${esc(t('account.log.older'))}</button></div>`;
@@ -830,6 +940,8 @@ export async function openAccount(options = {}) {
     // SC1137-11: `editing` is {id, original, draft, pending} while the log form holds a correction (draft: the create form as it was).
     let editing = null, tripRegion = null, logPos = null;   // logPos: the position control, wired below
     const live = () => open === self && list.isConnected;
+    let leaving = false;
+    const csvDownload = wireCsvDownload($, t, () => live() && !leaving);
     // Metadata is independent of saved-trip requests; a late answer never replaces a typed field or another render.
     void import('./region.js').then(m => m.getRegion()).then(region => {
       if (!live()) return;
@@ -1091,7 +1203,8 @@ export async function openAccount(options = {}) {
       } catch (error) { if (open === self) status(passkeyMessage(error, t)); }
     });
     $('#account-signout').addEventListener('click', async () => {
-      try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { status(passkeyMessage(error, t)); }
+      leaving = true; csvDownload.invalidate();
+      try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { leaving = false; csvDownload.restore(); status(passkeyMessage(error, t)); }
     });
     $('#account-delete').addEventListener('click', async event => {
       if (!await confirmInPage(event.currentTarget, t('account.del.confirm'), t('account.del.yes'), t)) return;
