@@ -705,12 +705,31 @@ class Controller:
             raise ValueError("immutable native admission cutoff")
         return now,mono
 
+    def _permitted(self,state,load_rows,action_ref=None):
+        """Read-only decision shared by status and step: what step would allow next.
+
+        Order is fail-closed: durable stop, an already-recorded action (step only),
+        unresolved admission intent, then the scheduler narrowed by the native-only
+        fence. load_rows() is called only once no earlier gate has answered.
+        """
+        if state["stop_reason"]:return dict(state="stopped",reason=state["stop_reason"])
+        previous=next((x for x in state["intents"] if x["action"]==action_ref),None) if action_ref is not None else None
+        if previous:
+            return previous.get("outcome",dict(state="recovery_required",reason="durable interrupted admission"))
+        if any("outcome" not in x for x in state["intents"]):
+            return dict(state="recovery_required",reason="unresolved durable admission")
+        rows=load_rows();decision=select_next(self.preparation,rows,self.clock())
+        if state.get("native_fenced") and decision.get("stage") in {"acquire","qualify"}:
+            waiting=[i for i,row in enumerate(rows) if row.get("qualify")=="done" and row.get("map") not in TERMINAL]
+            decision=dict(state="ready",stage="map",index=waiting[0]) if waiting else dict(state="native_fenced")
+        return decision
+
     def status(self,adapter):
         if type(adapter) is not RealAdapter:raise TypeError("sealed production adapter required")
         state=self._state();rows=adapter.states(self.preparation)
         observed=inventory(self.preparation)
         return dict(schema=STATE,preparation=self.descriptor,windows=rows,intents=state["intents"],
-            accounting=adapter.accounting(self.preparation),inventory=observed,next=select_next(self.preparation,rows,self.clock()),
+            accounting=adapter.accounting(self.preparation),inventory=observed,next=self._permitted(state,lambda:rows),
             stop_reason=state["stop_reason"],archived=self.clock()>=self.preparation["deadline_epoch"])
 
     def step(self,adapter,action_ref):
@@ -726,17 +745,10 @@ class Controller:
             if self.preparation.get("source_reuse_contract") is not None:
                 raise ValueError("ordered source reuse FD transport is not implemented; execution held")
             require_larger_runtime(self.preparation)
-            if state["stop_reason"]:return dict(state="stopped",reason=state["stop_reason"])
-            previous=next((x for x in state["intents"] if x["action"]==action_ref),None)
-            if previous:
-                return previous.get("outcome",dict(state="recovery_required",reason="durable interrupted admission"))
-            if any("outcome" not in x for x in state["intents"]):
-                return dict(state="recovery_required",reason="unresolved durable admission")
-            adapter.accounting(self.preparation)
-            rows=adapter.states(self.preparation);decision=select_next(self.preparation,rows,self.clock())
-            if state.get("native_fenced") and decision.get("stage") in {"acquire","qualify"}:
-                waiting=[i for i,row in enumerate(rows) if row.get("qualify")=="done" and row.get("map") not in TERMINAL]
-                decision=dict(state="ready",stage="map",index=waiting[0]) if waiting else dict(state="native_fenced")
+            def load_rows():
+                adapter.accounting(self.preparation)
+                return adapter.states(self.preparation)
+            decision=self._permitted(state,load_rows,action_ref)
             if decision["state"]!="ready":return decision
             if action.get("stage")!=decision["stage"] or action.get("index")!=decision["index"]:
                 raise ValueError("action differs from current bounded ordered decision")
