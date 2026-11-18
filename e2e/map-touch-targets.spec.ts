@@ -3,6 +3,8 @@
 // phone top card) and every Conditions model-family option measure at least the computed --touch-min high in both
 // configured projects, keep their words and actions, and an explicit axe target-size scan (WCAG 2.2 AA, which the
 // shared checkA11y tag list omits) finds nothing in the armed placing, failed-region and Conditions states.
+import {createHash} from 'node:crypto';
+import {readFileSync} from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import type {Page} from '@playwright/test';
 import {expect, test} from './fixtures.ts';
@@ -186,5 +188,61 @@ for (const lang of ['en', 'es'] as const) {
       }
       await targetSize(page);
     }
+  });
+}
+
+// SCA-021: Large controls keeps the seafloor key readable. A synthetic seafloor publication (the fixture v2-map.spec.ts
+// serves; never survey data) makes the layer ready; at 360 px, 200% text and in both themes the grade-or-fit title,
+// the tone labels and the missing-data note stay visible and inside the legend, and the colour-by buttons are 48 px.
+const SEAFLOOR = readFileSync(new URL('../tests/fixtures/seafloor/chart.pmtiles', import.meta.url));
+const SEAFLOOR_LEDGER = JSON.stringify({region: 'morro-bay', reaches: [
+  {id: 'morro-bay-fx1', region: 'morro-bay', status: 'habitat-screened'}, {id: 'morro-bay-fx2', region: 'morro-bay', status: 'habitat-held-for-screen'}]});
+async function serveSeafloor(page: Page): Promise<void> {
+  const expires = new Date(Date.now() + 86_400_000).toISOString();
+  await page.route('**/api/coast/**', () => { /* never answered */ });
+  await page.route('**/feeds/tiles/seafloor/manifest-morro-bay.json', route => route.fulfill({headers: {'Cache-Control': 'no-store'}, json: {
+    schema_version: 1, region: 'morro-bay', status: 'ready', expires_at: expires, archive_sha256: 'f'.repeat(64),
+    ledger_sha256: createHash('sha256').update(SEAFLOOR_LEDGER).digest('hex'), source_attribution: ['Fixture Survey Lab'],
+    source_use_notice: 'Retain source-specific terms and credits.', planning_notice: 'Planning only. Not a navigation chart. Check current CDFW regulations.'}}));
+  await page.route('**/feeds/tiles/seafloor/regions/morro-bay/ledger.json', route => route.fulfill({body: SEAFLOOR_LEDGER, contentType: 'application/json'}));
+  await page.route('**/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles', route => {
+    const range = /bytes=(\d+)-(\d+)/.exec(route.request().headers().range ?? '');
+    if (!range) return route.fulfill({body: SEAFLOOR, headers: {'Accept-Ranges': 'bytes'}});
+    const start = Number(range[1]), end = Math.min(Number(range[2]), SEAFLOOR.length - 1);
+    return route.fulfill({status: 206, body: SEAFLOOR.subarray(start, end + 1),
+      headers: {'Content-Range': `bytes ${start}-${end}/${SEAFLOOR.length}`, 'Accept-Ranges': 'bytes', 'Content-Type': 'application/octet-stream'}});
+  });
+}
+
+for (const theme of ['dark', 'light'] as const) {
+  test(`helm_seafloor_key_${theme}: Large controls keeps the grade-or-fit key and missing-data text readable at 360 px, 200% text`, async ({page, pageErrors, v2}) => {
+    void pageErrors;
+    await page.addInitScript(() => { try { localStorage.setItem('skippercast-helm-v1', '1'); } catch { /* storage blocked */ } });
+    await page.setViewportSize({width: 360, height: 740});
+    await serveSeafloor(page);
+    await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.35300,-120.94800,13', target: 'lingcod', layers: 'seafloor'});
+    await expect(page.locator('html')).toHaveClass(/helm/);
+    await page.evaluate(t => { document.documentElement.dataset.theme = t; }, theme);
+    // A same-origin test stylesheet respects style-src-elem 'self'; inline style tags do not.
+    await page.route('**/sca-021-text-size.css', route => route.fulfill({contentType: 'text/css', body: 'html.helm, html.helm body { font-size: 200%; }'}));
+    await page.addStyleTag({url: '/sca-021-text-size.css'});
+    expect(await page.evaluate(() => [getComputedStyle(document.documentElement).fontSize, getComputedStyle(document.body).fontSize])).toEqual(['32px', '64px']);
+    if (await page.getByRole('button', {name: 'Layers', exact: true}).isVisible()) await page.getByRole('button', {name: 'Layers', exact: true}).click();
+    const row = page.locator('.app-legend-seafloor');
+    const title = row.locator('.app-legend-title');
+    await expect(title, 'the key title is visible with Large controls').toBeVisible();
+    await expect(title).toHaveText('Physical habitat fit, not catch probability');
+    await expect(row.locator('.app-key').first(), 'a swatch is explained by its label').toBeVisible();
+    await expect(row.locator('[data-reason="seafloor"]'), 'the missing-data / unverified note stays').toBeVisible();
+    const min = await touchMin(page);
+    const colourBy = row.getByRole('group', {name: 'Colour seafloor by'});
+    for (const h of await heights(page, '.app-legend-seafloor .ui-segmented button')) expect(h).toBeGreaterThanOrEqual(Math.max(min, 48));
+    await colourBy.getByRole('button', {name: 'Terrain grade'}).focus();
+    await page.keyboard.press('Enter');
+    await expect(title).toHaveText('Terrain grade');
+    await expect(row).toContainText('A · most rugged terrain');
+    const legend = (await page.locator('.app-legend').first().boundingBox())!, box = (await title.boundingBox())!;
+    expect(box.x + box.width, 'the title wraps inside the legend').toBeLessThanOrEqual(legend.x + legend.width + 0.5);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), 'no page-level sideways scroll').toBe(true);
   });
 }
