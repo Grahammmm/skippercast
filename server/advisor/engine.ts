@@ -39,7 +39,7 @@ import type {Command} from './intents.ts';
 import {t, both} from './strings.ts';
 import type {StringKey} from './strings.ts';
 import {resolveLinks, portRegion, portName} from './links.ts';
-import {contactRegion, findPort, fold, resolvePort, resolveSpecies} from './answers/resolve.ts';
+import {contactRegion, findPort, fold, namedSpecies, resolvePort, resolveSpecies} from './answers/resolve.ts';
 import {ruleKeys} from './answers/rules.ts';
 import {systemPrompt, REFUSAL_EN, ABUSE_EN} from './prompts/system.ts';
 import {toolsForRole, claudeTools, dispatchTool, isWebOnly} from './tools/index.ts';
@@ -358,16 +358,17 @@ function hasRelatedRules(results: readonly RulesResult[], question: string, repl
   const asked = resolveSpecies(question)?.key;
   if (!asked) return false;
   const region = namedRuleRegion(question) ?? contactRegion(ctx.contact, ctx.settings);
-  const {species, group} = ruleKeys(asked);
-  const related = results.filter(result => result.region === region).flatMap(result => result.rules)
-    .filter(row => species.includes(row.species_key) || group.includes(row.species_key));
-  if (!related.length) return false;
+  const rows = results.filter(result => result.region === region).flatMap(result => result.rules);
+  const supports = (subject: string): boolean => {
+    const keys = ruleKeys(subject);
+    return rows.some(row => keys.species.includes(row.species_key) || keys.group.includes(row.species_key));
+  };
+  if (!supports(asked)) return false;
   return reply.split(/(?<=[.!?])\s+|\n+/).filter(statesRuleNumber).every(sentence => {
     const place = namedRuleRegion(sentence);
     if (place && place !== region) return false;
-    const subject = resolveSpecies(sentence)?.key ?? asked;
-    const keys = ruleKeys(subject);
-    return related.some(row => keys.species.includes(row.species_key) || keys.group.includes(row.species_key));
+    const subjects = namedSpecies(sentence);
+    return (subjects.length ? subjects : [asked]).every(supports);
   });
 }
 

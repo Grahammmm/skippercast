@@ -21,6 +21,8 @@ for (const scenario of [
   {name: 'matching current row', rows: [['lingcod']], input: {species_key: 'lings'}, seen: ['lingcod'], allowed: true},
   {name: 'matching row for an explicitly named region', rows: [['lingcod', 'southern-california']], input: {species_key: 'lingcod', region: 'southern-california'}, place: ' in Southern California', seen: ['lingcod'], allowed: true},
   {name: 'matching row with a numeric claim about a different fish', rows: [['lingcod']], input: {species_key: 'lingcod'}, subject: 'Halibut', seen: ['lingcod'], allowed: false},
+  {name: 'matching row cannot support a second named fish', rows: [['lingcod']], input: {species_key: 'lingcod'}, subject: 'Lingcod and cowcod', seen: ['lingcod'], allowed: false},
+  {name: 'independent rows support both named fish', rows: [['lingcod'], ['cowcod']], input: {species_key: 'lingcod'}, extraInput: {species_key: 'cowcod'}, subject: 'Lingcod and cowcod', seen: ['lingcod'], allowed: true},
 ]) {
   test(`F01-10: ${scenario.name}`, {skip: sqliteUnavailable || false}, async t => {
     const {sql, db} = advisorDatabase();
@@ -36,7 +38,10 @@ for (const scenario of [
     const quote = `${scenario.subject ?? 'Lingcod'} must be at least 17 inches (Fixture rules; checked Oct 1).`;
     const requests = [];
     const responses = [
-      {stop_reason: 'tool_use', content: [{type: 'tool_use', name: 'get_rules', id: 'rule-test', input: scenario.input}]},
+      {stop_reason: 'tool_use', content: [
+        {type: 'tool_use', name: 'get_rules', id: 'rule-test', input: scenario.input},
+        ...(scenario.extraInput ? [{type: 'tool_use', name: 'get_rules', id: 'extra-rule', input: scenario.extraInput}] : []),
+      ]},
       {stop_reason: 'end_turn', content: [{type: 'text', text: `${quote} Ask before you go.`}]},
     ];
     const fetcher = async (_url, init) => {
@@ -56,6 +61,11 @@ for (const scenario of [
     const rules = JSON.parse(recorded.content).rules;
     assert.deepEqual(rules.map(row => row.species_key), scenario.seen);
     for (const row of rules) assert.deepEqual([row.size_min_in, row.stale], [17, false]);
+    if (scenario.extraInput) {
+      const extra = requests[1].messages.at(-1).content[1];
+      assert.equal(extra.tool_use_id, 'extra-rule');
+      assert.deepEqual(JSON.parse(extra.content).rules.map(row => row.species_key), ['cowcod']);
+    }
 
     const reply = result.actions.find(action => action.type === 'send_text')?.text;
     const reviews = result.actions.filter(action => action.type === 'review_open');

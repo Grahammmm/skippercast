@@ -72,6 +72,23 @@ export function resolveSpecies(text: string | null | undefined): {key: string} |
   return found ? {key: found} : null;
 }
 
+/** All distinct species in text, preferring longer names over overlapping shorter aliases. */
+export function namedSpecies(text: string): string[] {
+  const words = fold(text).split(' ');
+  const occupied = new Set<number>();
+  const found = new Set<string>();
+  for (const [phrase, id] of SPECIES_TABLE) {
+    const parts = phrase.split(' ');
+    for (let i = 0; i <= words.length - parts.length; i++) {
+      if (parts.every((part, j) => words[i + j] === part && !occupied.has(i + j))) {
+        found.add(id);
+        parts.forEach((_, j) => occupied.add(i + j));
+      }
+    }
+  }
+  return [...found];
+}
+
 /**
  * TA-I2: a species key only when the whole text is a species word ("lings",
  * "vermilion rockfish", "colorados"), never a word inside a longer phrase, so a
