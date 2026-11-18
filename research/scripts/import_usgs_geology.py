@@ -20,11 +20,12 @@ CATALOG = REPO / "catalog" / "usgs-sansimeon-geology.json"
 
 
 def authenticate_archive(path, catalog):
-    """Return the archive digest only if it equals the reviewed release digest."""
-    actual = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    """Return immutable archive bytes and their reviewed release digest."""
+    archive = Path(path).read_bytes()
+    actual = hashlib.sha256(archive).hexdigest()
     if actual != catalog["archive_sha256"]:
         raise ValueError("San Simeon geology ZIP digest differs from the reviewed release; review the source before rebuilding")
-    return actual
+    return archive, actual
 
 
 def require_metric_crs(crs, catalog):
@@ -45,8 +46,8 @@ def main():
     # This provider adapter deliberately accepts only this documented release.
     if "usgs-san-simeon" not in region["source_bindings"]["substrate"]:
         raise ValueError("San Simeon geology is not bound to this region")
-    digest=authenticate_archive(args.zip, read_json(CATALOG))
-    with zipfile.ZipFile(args.zip) as z:
+    archive,digest=authenticate_archive(args.zip, read_json(CATALOG))
+    with zipfile.ZipFile(io.BytesIO(archive)) as z:
         stem="Geology_SanSimeon"
         if any(info.file_size>25_000_000 for info in z.infolist()):
             raise ValueError("Archive member too large")

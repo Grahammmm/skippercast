@@ -68,6 +68,28 @@ def test_accepted_fixture_keeps_non_target_output(mod, tmp_path, monkeypatch):
                for f in data["features"])
 
 
+def test_replaced_archive_cannot_change_authenticated_geometry(mod, tmp_path, monkeypatch):
+    out, good = setup(mod, tmp_path, monkeypatch, 32610)
+    mod.main()
+    expected = json.loads(out.read_text())
+    assert expected["features"]
+    archive = tmp_path / "g.zip"
+    replacement = tmp_path / "replacement.zip"
+    monkeypatch.setitem(globals(), "SQ", [(x + 10000, y) for x, y in SQ])
+    make_zip(replacement, 32610)
+    assert hashlib.sha256(replacement.read_bytes()).hexdigest() != good
+    authenticate = mod.authenticate_archive
+
+    def swap_after_authentication(path, catalog):
+        result = authenticate(path, catalog)
+        replacement.replace(archive)
+        return result
+
+    monkeypatch.setattr(mod, "authenticate_archive", swap_after_authentication)
+    mod.main()
+    assert json.loads(out.read_text()) == expected
+
+
 def test_different_digest_stops_before_dist(mod, tmp_path, monkeypatch):
     out, _ = setup(mod, tmp_path, monkeypatch, 32610, digest="0" * 64)
     with pytest.raises(ValueError, match="digest"):
