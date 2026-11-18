@@ -282,32 +282,64 @@ def _typed(data, spec, where):
     return rows
 
 
+# MVT Value: string, float, double, int, uint, sint, bool (exactly one is set).
+_MVT_VALUE = {1: 2, 2: 5, 3: 1, 4: 0, 5: 0, 6: 0, 7: 0}
+
+
 def _packed(data):
-    pos = 0
+    """The varints of one packed protobuf field; raises on a truncated varint."""
+    pos, out = 0, []
     while pos < len(data):
-        _, pos = _varint(data, pos)
+        number, pos = _varint(data, pos)
+        out.append(number)
+    return out
+
+
+def _decode_layer(layer):
+    rows = _typed(layer, _MVT_LAYER, 'layer')
+    if not any(n == 1 for n, _, _ in rows):
+        raise ValueError('vector tile layer has no name')
+    keys = values = 0
+    features = []
+    for n, value, _ in rows:
+        if n == 1:
+            value.decode('utf-8')
+        elif n == 2:
+            features.append(_typed(value, _MVT_FEATURE, 'feature'))
+        elif n == 3:  # a tag key is a string
+            value.decode('utf-8')
+            keys += 1
+        elif n == 4:  # an embedded Value message: decode it, and its string member, too
+            fields = _typed(value, _MVT_VALUE, 'value')
+            if len(fields) != 1:
+                raise ValueError('vector tile value must set exactly one member')
+            if fields[0][0] == 1:
+                fields[0][1].decode('utf-8')
+            values += 1
+    for feature in features:
+        for fn, fvalue, _ in feature:
+            if fn == 4:
+                _packed(fvalue)
+            elif fn == 3 and fvalue > 3:  # unknown, point, linestring, polygon
+                raise ValueError('vector tile feature has an unknown geometry type')
+            elif fn == 2:  # tags: (key index, value index) pairs that must point into the layer's tables
+                tags = _packed(fvalue)
+                if len(tags) % 2 or any(k >= keys or v >= values for k, v in zip(tags[::2], tags[1::2])):
+                    raise ValueError('vector tile feature tags do not match the layer keys and values')
 
 
 def decode_tiles(data, tiles):
     """Raise unless every stored tile decodes as a vector tile (gzip when the header says so, then MVT layers).
 
-    Layers (tile field 3) are decoded in turn: each needs a name, and its features must carry correctly typed ids,
-    geometry types and packed tag/geometry varints, so a tile whose layer bytes are truncated or mistyped is refused.
+    Layers (tile field 3) are decoded in turn: each needs a name; its keys, embedded Value messages and features
+    must decode with the wire types the MVT spec gives them, and feature tags must index the layer's own
+    key and value tables, so a tile with truncated, mistyped or dangling nested bytes is refused.
     """
     for raw in tiles.values():
         for num, layer, wire in _wire_fields(gzip.decompress(raw) if data[98] == 2 else raw):
             if num != 3 or wire != 2:  # a Mapbox Vector Tile holds layers (field 3, length-delimited) only
                 raise ValueError('tile is not a vector tile')
-            rows = _typed(layer, _MVT_LAYER, 'layer')
-            if not any(n == 1 for n, _, _ in rows):
-                raise ValueError('vector tile layer has no name')
-            for n, value, _ in rows:
-                if n == 1:
-                    value.decode('utf-8')
-                elif n == 2:
-                    for fn, fvalue, _ in _typed(value, _MVT_FEATURE, 'feature'):
-                        if fn in (2, 4):
-                            _packed(fvalue)
+            _decode_layer(layer)
 
 
 # ---- Receipts ------------------------------------------------------------------------------

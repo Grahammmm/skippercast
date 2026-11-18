@@ -33,6 +33,7 @@ def _pb(num, payload):
 
 # One gzip Mapbox Vector Tile with a single (empty) layer: what a real archive stores per tile.
 MVT = gzip.compress(_pb(3, _pb(1, b'habitat')), mtime=0)
+NAMED = _pb(1, b'habitat')
 MAGIC_ONLY = b'PMTiles\x03' + bytes(200)  # right prefix, zeroed header: compression byte is not gzip
 
 
@@ -98,12 +99,33 @@ def test_unsupported_tile_header_fails(offset, value, reason):
     gzip.compress(_pb(3, _pb(1, b'habitat') + b'\x2a\x00'), mtime=0),  # layer extent sent length-delimited
     gzip.compress(_pb(3, _pb(1, b'habitat') + _pb(2, b'\x20\x01\x22')), mtime=0),  # feature geometry cut off
     gzip.compress(_pb(3, _pb(1, b'habitat') + _pb(2, _pb(4, b'\x80'))), mtime=0),  # feature geometry: bad packed varint
+    # Embedded Value messages (layer field 4) and keys (field 3) are decoded, not just length-checked.
+    gzip.compress(b'\x1a\x08\x0a\x01a\x78\x02\x22\x01\xff', mtime=0),  # value is a truncated protobuf varint
+    gzip.compress(_pb(3, NAMED + _pb(4, b'\x20\x80')), mtime=0),       # value int member: truncated varint
+    gzip.compress(_pb(3, NAMED + _pb(4, _pb(1, b'\xff\xfe'))), mtime=0),  # value string member is not UTF-8
+    gzip.compress(_pb(3, NAMED + _pb(4, b'\x08\x01')), mtime=0),       # value string member sent as a varint
+    gzip.compress(_pb(3, NAMED + _pb(4, b'\x19\x00')), mtime=0),       # value double member: only one byte of eight
+    gzip.compress(_pb(3, NAMED + _pb(4, b'')), mtime=0),               # value sets no member
+    gzip.compress(_pb(3, NAMED + _pb(4, _pb(1, b'a') + b'\x20\x01')), mtime=0),  # value sets two members
+    gzip.compress(_pb(3, NAMED + _pb(3, b'\xff\xfe')), mtime=0),       # tag key is not UTF-8
+    # Feature tags and geometry type must be consistent with the layer.
+    gzip.compress(_pb(3, NAMED + _pb(2, _pb(2, b'\x00\x00'))), mtime=0),  # tags point past empty key/value tables
+    gzip.compress(_pb(3, NAMED + _pb(3, b'k') + _pb(4, _pb(1, b'v')) + _pb(2, _pb(2, b'\x00'))), mtime=0),  # odd tags
+    gzip.compress(_pb(3, NAMED + _pb(3, b'k') + _pb(4, _pb(1, b'v')) + _pb(2, _pb(2, b'\x01\x00'))), mtime=0),  # key 1
+    gzip.compress(_pb(3, NAMED + _pb(2, b'\x18\x09')), mtime=0),       # geometry type 9 does not exist
 ])
 def test_undecodable_tile_payload_fails(payload):
     data = archive(payload)
     assert rough_first.read_tiles(data)  # the directory and spans are structurally fine
     receipt = rough_first.control_receipt('synthetic-region', data)
     assert receipt['pass'] is False and receipt['failed'] == ['unreadable archive']
+
+
+def test_decoded_layer_with_keys_values_and_tags_passes():
+    layer = (NAMED + _pb(3, b'id') + _pb(4, _pb(1, b'abc')) + _pb(4, b'\x20\x05') + _pb(4, b'\x19' + bytes(8))
+             + _pb(2, b'\x08\x07' + _pb(2, b'\x00\x00') + b'\x18\x01' + _pb(4, b'\x09\x01\x02')))
+    receipt = rough_first.control_receipt('synthetic-region', archive(gzip.compress(_pb(3, layer), mtime=0)))
+    assert receipt['pass'] is True and receipt['failed'] == []
 
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
