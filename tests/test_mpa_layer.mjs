@@ -411,7 +411,7 @@ async function components() {
   return ui;
 }
 
-test('the legend row says what the drawing covers, links the official rules and carries the ds582 credit', async () => {
+test('the legend row says what the drawing covers and links the official rules; no dataset credit (MAP-SOURCES-PAGE-1)', async () => {
   const {Legend, MpaRow, mpaState: state, NOTES: notes, LOADING: loading, chartFailed, unavailable: failedLayers, render, h, state: store} = await components();
   store.configureStore({v2: true, storage: null});
   store.syncFromURL(`${PAGE}?region=morro-bay&layers=none`);
@@ -421,8 +421,9 @@ test('the legend row says what the drawing covers, links the official rules and 
   assert.match(row, /<span class="app-swatch" data-layer="mpas" aria-hidden="true"><\/span>Marine protected areas/);
   assert.match(row, /<p class="app-mpa-note">CDFW ds582 snapshot for this region, checked 2026-09-21\.<\/p>/);
   assert.match(row, new RegExp(`<a class="app-mpa-rules" href="${CDFW_MPA_PAGE}" target="_blank" rel="noopener">Official rules and boundaries \\(CDFW\\)</a>`));
-  // The credit sits in the basis disclosure: creator, dataset, licence, and that the selection is SkipperCast's.
-  assert.match(row, /<details class="ui-popover ui-popover--icon"[^>]*>.*Regional selection by SkipperCast from <a href="https:\/\/filelib\.wildlife\.ca\.gov\/public\/BDB\/GIS\/BIOS\/metadata\/DS0582\.html"[^>]*>CDFW\s+Marine Region GIS Lab, California MPAs ds582<\/a>, <a href="https:\/\/creativecommons\.org\/licenses\/by\/4\.0\/"[^>]*>CC BY 4\.0<\/a>\./s);
+  // The basis disclosure says only that the selection is SkipperCast's; the dataset, creator and licence are on the Sources page.
+  assert.match(row, /<details class="ui-popover ui-popover--icon"[^>]*>.*Regional selection by SkipperCast\./s);
+  assert.doesNotMatch(row, /DS0582|creativecommons|CC BY 4\.0|Marine Region GIS Lab/);
   // MapLibre failed to draw the checked data: the row says unavailable, not the check date.
   failedLayers.value = ['mpas'];
   const broken = render(h(MpaRow, {}));

@@ -414,7 +414,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MB-20 adds the additive overlay-line gate (checkOverlayLines, 3:1 on --map-water) and rebinds the tokensCss surface hash; contrast() and every existing check are unchanged.
   // SCA-317: checker only rebinds the History target-size stylesheet hash; contrast math is unchanged.
   // MB-22 rebinds only the tokensCss surface hash. BODY09 paint, contrast logic and assertions are unchanged.
-  "scripts/check_contrast.mjs": "34d9ae03792419b02db7d5fa3157d3161eba8b718259e70fd8e660c927aae4d0",
+  // MAP-SOURCES-PAGE-1: only the legendTsx surface hash and its comment change; contrast math and gates unchanged.
+  "scripts/check_contrast.mjs": "8ca18920e32a19f262954b1ff2317f3a61336cfb752f1e8c6f520cfe37f58fc1",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
