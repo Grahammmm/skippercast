@@ -468,7 +468,7 @@ test('today_except_classes: map-only defaults equal the chrome roles the map use
   }
 });
 
-// MB-20: the light mpa and legend pins were re-taken after the light --mpa-fill/--mpa-line moved (dark pins unchanged).
+// MB-20: the light mpa and legend pins were re-taken after the light --mpa-fill/--mpa-line and --flow/--flow-fast moved (dark pins unchanged).
 // MB-05: the light pins were re-taken after MAP-DESIGN-LOCK 10.2 moved the light land, park, road, boundary, label and coast tokens (dark pins unchanged).
 // sha256 of each module's JSON output under each theme's resolved tokens, taken from main 9312858 (before MGL-15; legend re-taken after SC1407-15 added the planning-route swatch), with the four
 // habitat tokens set back to their old class colours and the habitat multiplier to 1. A different hash means another property moved.
@@ -484,7 +484,7 @@ const PRE_MGL15 = {
     wind: 'fcc72707149c69fd25582f517d81f968536cc73d011d46e8a7711170e698a475', stations: 'e64d698c19c4989afb104f504e95c2df46a2b91c80bebbf7978a905613d3ca94',
     ranked: '1d31b678781879b866ea49adafe7e877f5ff19219639ad66f1b1c6500e66b1c1', coastline: '359de78dddcdaff201f895087e33c9c8b99e2a5647df486268a0d8c56a248ed8',
     mpa: '93650a0be578851dc524c877b3a3659403a4cea0daa1ca834d497311d1e3bd12', seafloor: 'ce5756009be496de0072e7b66c216db27aa05020049aaccfdbccb787a0c8df39',
-    coastPalette: '19dd9879dbee4907251ac533211ccd8fa8518195a58428cc48fc64570087bacb', legend: 'f83e17357e260358827b1281f6b3bce26a3ef340ef140672156ea1c62231c933'},
+    coastPalette: '19dd9879dbee4907251ac533211ccd8fa8518195a58428cc48fc64570087bacb', legend: '7d63fc6d1b4f3df04c0e26f2f2ef02c40fb1e0cf7867994bb1c27f66cfaa3b75'},
 };
 test('today_except_classes: day and night basemap, every overlay and every legend swatch resolve exactly as before, apart from the four classes', () => {
   const OPTIONS = {archive: 'https://example.test/tiles/basemap/ca-coast.pmtiles', assets: 'https://example.test/basemap/'}, empty = {type: 'FeatureCollection', features: []};
