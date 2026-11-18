@@ -20,6 +20,7 @@ import {tourTransition, type TourAction, type TourState} from '../tour.ts';
 import {ControlsTour} from './ControlsTour.tsx';
 import {LanguageChoice} from './LanguageChoice.tsx';
 import {UnitChoice} from './UnitChoice.tsx';
+import {ThemeChoice} from './ThemeChoice.tsx';
 import {InstallApp} from './InstallApp.tsx';
 
 /** The catalogue id of the line under the account heading, by session state. */
@@ -122,6 +123,7 @@ export function AccountMenu({inline = false, top = false}: {inline?: boolean; to
         </section>
         <LanguageChoice />
         <UnitChoice />
+        <ThemeChoice />
         <section aria-labelledby={`${id}-coordinates`}>
           <h2 id={`${id}-coordinates`} class="ui-eyebrow">{t('accountMenu.coordinates', lang)}</h2>
           <p>{t('accountMenu.coordinatesNote', lang)}</p>
