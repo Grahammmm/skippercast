@@ -113,7 +113,10 @@ ENHANCE = {
     'strong': {**BASE_ENHANCE, 've_boost': 0.50, 'gain_boost': 0.35, 'unsharp': 1.6, 'light2': 0.20,
                'curv': 0.35, 'ev': 0.18},
 }
-ENHANCED_PAD = 12            # halo for the blurs: 3 sigma of the widest (4 px) kernel, so tiles still match at seams
+BLUR_MAX_PX = 4.0            # widest local-contrast blur sigma in pixels
+# Halo wider than every kernel, so neighbouring tiles compute identical edge pixels: the widest blur reaches
+# int(4 sigma + 0.5) px (scipy's default truncate), the hillshade gradient one more and one pixel margin.
+ENHANCED_PAD = int(4 * BLUR_MAX_PX + 0.5) + 2
 
 
 def deep_lut():
@@ -211,7 +214,7 @@ def local_contrast(intensity, invalid, ground, enhance):
     if amount <= 0:
         return intensity
     from scipy import ndimage
-    sigma = min(4.0, max(1.0, enhance['sigma_m'] / ground))
+    sigma = min(BLUR_MAX_PX, max(1.0, enhance['sigma_m'] / ground))
     valid = (~invalid).astype(np.float64)
     blur = ndimage.gaussian_filter(intensity * valid, sigma, mode='nearest') \
         / np.maximum(ndimage.gaussian_filter(valid, sigma, mode='nearest'), 1e-6)
@@ -373,9 +376,10 @@ def warp_window(elevation, src_transform, src_crs, z, x, y, pad=PAD):
                          math.hypot(src_transform.b, src_transform.e))
     # At detail zooms, averaging an enlarged grid leaves steps at its cell edges.
     resampling = Resampling.bilinear if z >= 14 and ground < source_spacing else Resampling.average
+    # tolerance=0: exact per-pixel transform, so overlapping halos of neighbouring tiles get identical cells.
     reproject(elevation, dest, src_transform=src_transform, src_crs=src_crs, dst_transform=transform,
               dst_crs='EPSG:3857', src_nodata=NODATA, dst_nodata=NODATA, resampling=resampling,
-              init_dest_nodata=True)
+              init_dest_nodata=True, tolerance=0)
     return dest, ground
 
 
@@ -523,7 +527,7 @@ def warp_native(source, z, x, y, pad, limit_m=SHALLOW_M):
         values = mask_native(values, ds.nodata, limit_m)
         reproject(values, dest, src_transform=ds.window_transform(window), src_crs=ds.crs,
                   src_nodata=NODATA, dst_transform=transform, dst_crs='EPSG:3857',
-                  dst_nodata=NODATA, resampling=Resampling.average, init_dest_nodata=True)
+                  dst_nodata=NODATA, resampling=Resampling.average, init_dest_nodata=True, tolerance=0)
     return dest, ground
 
 
@@ -593,8 +597,9 @@ def relief(window, invalid, ground, ve, lights, enhance):
     return raws, ridge
 
 
-def render_zoom(windows, z, enhance=None):
-    """Two passes: zoom-wide hillshade extremes and median (the study's picture-wide constants), then RGBA."""
+def zoom_shading(windows, z, enhance=None):
+    """Two passes: zoom-wide hillshade extremes and median (the study's picture-wide constants), then the
+    shading intensity of every padded window. Returns (style, {key: intensity}, median)."""
     enhance = enhance or BASE_ENHANCE
     style, lights = style_for_zoom(z, enhance), lights_for(enhance)
     lo = [np.inf] * len(lights)
@@ -620,16 +625,29 @@ def render_zoom(windows, z, enhance=None):
             intensity = intensity + enhance['curv'] * np.tanh(ridge / ridge_scale)
         shaded[key] = intensity
         samples.append(intensity[~invalid][::5])
-    median = float(np.median(np.concatenate(samples)))
+    return style, shaded, float(np.median(np.concatenate(samples)))
+
+
+def window_rgba(window, invalid, intensity, median, style, enhance=None):
+    """RGBA of a whole padded window (halo included); render_zoom keeps only the tile core."""
+    enhance = enhance or BASE_ENHANCE
+    position = ramp_position(window.astype(np.float64))
+    rgb = expose(shade(deep_colour(position), intensity, median, style['gain']), position, enhance['ev'])
+    rgba = np.zeros(window.shape + (4,), dtype=np.uint8)
+    rgba[..., :3] = np.round(rgb * 255).astype(np.uint8)
+    rgba[..., 3] = np.where(invalid, 0, 255)
+    rgba[invalid, :3] = 0          # no survey: transparent, colour irrelevant
+    return rgba
+
+
+def render_zoom(windows, z, enhance=None):
+    """PNG tiles of one zoom; every window's shading is computed over its halo, then cropped to the core."""
+    enhance = enhance or BASE_ENHANCE
+    style, shaded, median = zoom_shading(windows, z, enhance)
     tiles = {}
     for (x, y), (window, invalid, _) in windows.items():
         pad = (window.shape[0] - TILE) // 2
-        position = ramp_position(window.astype(np.float64))
-        rgb = expose(shade(deep_colour(position), shaded[(x, y)], median, style['gain']), position, enhance['ev'])
-        rgba = np.zeros(window.shape + (4,), dtype=np.uint8)
-        rgba[..., :3] = np.round(rgb * 255).astype(np.uint8)
-        rgba[..., 3] = np.where(invalid, 0, 255)
-        rgba[invalid, :3] = 0          # no survey: transparent, colour irrelevant
+        rgba = window_rgba(window, invalid, shaded[(x, y)], median, style, enhance)
         tiles[(z, x, y)] = encode_png(rgba[pad:-pad, pad:-pad])
     return tiles
 
