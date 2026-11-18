@@ -11,7 +11,12 @@ import json
 from pathlib import Path
 import sys
 
-from research.scripts.audit_nbs_modeling_tile import audit
+
+def audit(scheme, tile, cache, *, fetch=False, limit_ft=300):
+    # Import the GIS stack only when screening a tile, not when importing this module.
+    from research.scripts.audit_nbs_modeling_tile import audit as audit_tile
+
+    return audit_tile(scheme, tile, cache, fetch=fetch, limit_ft=limit_ft)
 
 
 CENTRAL_SECTORS = frozenset({'monterey-sur', 'big-sur', 'sur-san-simeon'})
