@@ -447,7 +447,8 @@ def run_batch(path: Path, doc: dict, ctx: dict, state: State) -> str | None:
     summary = run_dir / "summaries" / f"{batch}.md"
     out, err = run_dir / "osint" / f"{batch}.json", run_dir / "osint" / f"{batch}.stderr.log"
     session_doc = doc
-    if 0 < len(missing) < boats:
+    # A failed session with no missing boats still retries, but may not rewrite any profiles.
+    if len(missing) < boats:
         session_doc = {**doc, "boats": missing}
         path = out.with_suffix(".resume.json")
         path.write_text(json.dumps(session_doc, indent=2) + "\n", encoding="utf-8")
