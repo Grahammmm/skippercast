@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from research.lib.paths import ROOT
 from research.scripts import audit_usgs_ds781_metadata as metadata_audit
 from research.scripts.audit_usgs_character_semantics import audit, definitions, metadata_formula_for_class3
 
@@ -27,12 +28,11 @@ TERMS = ('USGS-authored or produced data and information are in the public domai
 
 class CharacterSemanticsTests(unittest.TestCase):
     def test_standalone_help_from_repository_root(self):
-        root = Path(__file__).resolve().parents[2]
         env = os.environ.copy()
         env.pop('PYTHONPATH', None)
         result = subprocess.run(
             [sys.executable, 'research/scripts/audit_usgs_character_semantics.py', '--help'],
-            cwd=root, env=env, capture_output=True, text=True, check=False,
+            cwd=ROOT, env=env, capture_output=True, text=True, check=False,
         )
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn('usage:', result.stdout)
