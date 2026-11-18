@@ -5,9 +5,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {nextShoreChange} from '../web/brief/shore.ts';
+import {prepareCatalogue} from '../web/i18n.ts';
 import {copyText} from '../web/mark-copy.ts';
 import {shownRuns} from '../web/map/shore.ts';
 
+await prepareCatalogue('es'); // Loads the local catalogue; do not measure English fallback.
 const baseline = process.argv.includes('--baseline');
 const hour = 3_600_000;
 const boundary = Date.parse('2026-01-01T03:00:00Z');
@@ -42,8 +44,9 @@ const notice = 'Beach-health notice: Fixture Beach';
 
 test('covered: a fresh closure is confirmed just before its three-hour boundary', t => {
   assert.equal(nextShoreChange(lastClosed, boundary - 1), boundary, 'the county check is the next change');
-  const {label, priority, reasons} = observe(t, covered, lastClosed, boundary - 1);
+  const {label, priority, reasons, spanish} = observe(t, covered, lastClosed, boundary - 1);
   assert.deepEqual({label, priority, reasons}, {label: 'Hold', priority: 0, reasons: [notice]});
+  assert.match(spanish, /aviso.*Fixture Beach/i, 'the confirmed notice reaches the Spanish catalogue');
 });
 
 test('covered: a fresh clean result can clear the preceding hold', t => {
