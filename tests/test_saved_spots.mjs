@@ -15,8 +15,8 @@ globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.BUILD_ID = 'build-test';
 globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html'};
 const {default: deployed} = await import('../server/index.ts');
-const {spotItemHTML, spotBody, exportSpots, spotVerdicts} = await import('../dist/account.js');
-const {initProtectedAreas} = await import('../dist/protected-areas.js');
+const {spotItemHTML, spotBody, exportSpots, spotVerdicts, openAccount} = await import('../dist/account.js');
+const {initProtectedAreas, MPA_QUERY} = await import('../dist/protected-areas.js');
 const {getRegion} = await import('../dist/region.js');
 const {pointInGeometry} = await import('../dist/geo-screen.js');
 const worker = withSessions(deployed), ORIGIN = 'https://skippercast.com';
@@ -481,4 +481,184 @@ test('spot_patch_at_cap_and_interleaved_updates', {timeout: 15000}, async () => 
     assert.equal(down.status, 503); assert.ok(!('name' in down.data));
     assert.equal(row(broken.sql, kept).name, 'kept'); broken.sql.close();
   } finally { console.error = quiet; }
+});
+
+// SCA-001 (C-01, C-15): the account dialog's file exports answer to one lifetime. A synthetic delay holds the GPX export at its
+// protected-area refresh (the dialog opens on a 48 h old snapshot, so Export must re-check live first); while it waits the dialog
+// closes, sign-out starts or a confirmed deletion starts, and nothing is downloaded. A fresh export then still runs every check.
+// Minimal synthetic DOM: it parses the real generated markup; nothing here reaches the network.
+const unescape = s => s.replace(/&(amp|lt|gt|quot|#39);/g, (_, c) => ({amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'"})[c]);
+class Node {
+  constructor(tag) { this.tagName = tag.toUpperCase(); this.attrs = {}; this.children = []; this.parentElement = null; this.listeners = {}; this.value = ''; this.textContent = ''; this.disabled = false; this.hidden = false; }
+  get id() { return this.attrs.id; }
+  set id(v) { this.attrs.id = v; }
+  set className(v) { this.attrs.class = v; }
+  get dataset() { return Object.fromEntries(Object.entries(this.attrs).filter(([k]) => k.startsWith('data-')).map(([k, v]) => [k.slice(5).replace(/-(\w)/g, (_, c) => c.toUpperCase()), v])); }
+  get classList() { return {add() {}, remove() {}, toggle() {}, contains: c => (this.attrs.class ?? '').split(' ').includes(c)}; }
+  setAttribute(k, v) { this.attrs[k] = String(v); }
+  getAttribute(k) { return this.attrs[k] ?? null; }
+  hasAttribute(k) { return k in this.attrs; }
+  removeAttribute(k) { delete this.attrs[k]; }
+  append(child) { child.parentElement = this; this.children.push(child); }
+  after(node) { const kids = this.parentElement.children; node.parentElement = this.parentElement; kids.splice(kids.indexOf(this) + 1, 0, node); }
+  remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(c => c !== this); this.parentElement = null; }
+  get isConnected() { return this === dom.body || Boolean(this.parentElement?.isConnected); }
+  contains(el) { return el === this || this.children.some(c => c.contains(el)); }
+  all() { return this.children.flatMap(c => [c, ...c.all()]); }
+  matches(s) {
+    if (s.startsWith('#')) return this.id === s.slice(1);
+    if (s.startsWith('.')) return this.classList.contains(s.slice(1));
+    const attr = s.match(/^\[([\w-]+)(?:="([^"]*)")?\]$/);
+    if (attr) return attr[2] === undefined ? this.hasAttribute(attr[1]) : this.attrs[attr[1]] === attr[2];
+    return /^\w+$/.test(s) && this.tagName === s.toUpperCase();
+  }
+  closest(s) { let el = this; while (el && !el.matches(s)) el = el.parentElement; return el; }
+  querySelectorAll(s) { return this.all().filter(el => el.matches(s)); }
+  querySelector(s) { return this.querySelectorAll(s)[0] ?? null; }
+  get options() { return this.querySelectorAll('option'); }
+  addEventListener(type, fn) { (this.listeners[type] ??= []).push(fn); }
+  async fire(type, target = this) { for (const fn of this.listeners[type] ?? []) await fn({target, currentTarget: this, preventDefault() {}, stopPropagation() {}}); }
+  focus() { dom.activeElement = this; }
+  reset() { for (const el of this.all()) if (['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)) el.value = el.tagName === 'SELECT' ? el.options[0]?.value ?? '' : ''; }
+  set innerHTML(html) {
+    this._html = html;
+    for (const el of this.children) el.parentElement = null;
+    this.children = [];
+    const stack = [this];
+    for (const match of html.matchAll(/<\/?[a-z][^>]*>|[^<]+/gi)) {
+      const token = match[0];
+      if (!token.startsWith('<')) { stack.at(-1).textContent += unescape(token); continue; }
+      if (token.startsWith('</')) { if (stack.length > 1) stack.pop(); continue; }
+      const el = new Node(token.match(/^<(\w+)/)[1]);
+      for (const attr of token.matchAll(/\s([\w-]+)(?:="([^"]*)")?/g)) el.attrs[attr[1]] = unescape(attr[2] ?? '');
+      el.hidden = el.hasAttribute('hidden'); el.disabled = el.hasAttribute('disabled'); el.value = el.attrs.value ?? '';
+      stack.at(-1).append(el);
+      if (!['INPUT', 'BR', 'HR', 'IMG'].includes(el.tagName)) stack.push(el);
+    }
+    for (const el of this.querySelectorAll('select')) el.value = el.options[0]?.value ?? '';
+  }
+  get innerHTML() { return this._html ?? ''; }
+}
+const dom = {body: new Node('body'), activeElement: null, getElementById: () => null, dispatchEvent() {}};
+const STALE = () => new Date(Date.now() - 48 * 3600000).toISOString();
+const reply = (data, status = 200, more = 'false') => ({ok: status < 400, status, json: async () => data, headers: new Headers({'X-SC-Catch-Log-Has-More': more})});
+const later = () => { let resolve; const promise = new Promise(yes => { resolve = yes; }); return {promise, resolve}; };
+const turn = () => new Promise(resolve => setImmediate(resolve));
+const STORED = [{...saved('Open water'), note: 'SPOTNOTE-stays-private'}, saved('Inside the reserve', INSIDE, 'dialog-in')];
+const DONE_HELD = 'Downloaded 1 spot; 1 left out because of a protected area.';
+
+// One signed-in dialog. `hold.live` (a `later()`) parks the next live protected-area read; `hold.trips` parks the next CSV trip read.
+async function accountDialog({logout = async () => reply({}), erase = async () => reply({})} = {}) {
+  const was = {document: globalThis.document, location: globalThis.location, history: globalThis.history, fetch: globalThis.fetch, Blob: globalThis.Blob, create: URL.createObjectURL, revoke: URL.revokeObjectURL};
+  const d = {hold: {live: null, trips: null}, liveReads: 0, files: [], reloads: 0, unknown: []};
+  dom.body = new Node('body'); dom.activeElement = null;
+  dom.createElement = tag => { const el = new Node(tag); if (tag === 'a') el.click = () => d.files.push({name: el.download, blob: d.blobs.get(el.href)}); return el; };
+  d.blobs = new Map(); let n = 0;
+  Object.assign(globalThis, {document: dom, location: {hash: '', pathname: '/map', search: '', reload: () => { d.reloads++; }}, history: {replaceState() {}}});
+  URL.createObjectURL = blob => { const url = 'blob:synthetic-' + ++n; d.blobs.set(url, blob); return url; };
+  URL.revokeObjectURL = () => {};
+  globalThis.fetch = async (url, options = {}) => {
+    url = String(url);
+    if (url === MPA_QUERY) { d.liveReads++; const held = d.hold.live; d.hold.live = null; if (held) await held.promise; return reply(MPAS); }
+    if (url.endsWith('protected-areas.geojson')) return reply({...MPAS, checked_at: STALE()});
+    if (url === '/api/auth/logout') return logout();
+    if (url === '/api/privacy' && options.method === 'DELETE') return erase();
+    if (url === '/api/trips') { const held = d.hold.trips; d.hold.trips = null; if (held) await held.promise; return reply({trips: []}); }
+    if (url.startsWith('/api/catch-log')) return reply({entries: []});
+    const data = {'/api/session': {signedIn: true, signIn: '/#account', user: {}}, '/api/auth/passkeys': {passkeys: []}, '/api/spots': {spots: STORED}, '/api/auth/sessions': {sessions: []}};
+    if (Object.hasOwn(data, url)) return reply(data[url]);
+    d.unknown.push(url); return reply({}, 404);
+  };
+  d.$ = s => dom.body.querySelector(s);
+  d.status = () => d.$('#account-status').textContent;
+  d.close = async () => { await d.$('.home-port-close')?.fire('click'); };
+  d.restore = async () => { await d.close(); Object.assign(globalThis, {document: was.document, location: was.location, history: was.history, fetch: was.fetch, Blob: was.Blob}); URL.createObjectURL = was.create; URL.revokeObjectURL = was.revoke; };
+  // Starts Export and waits until it is parked on its live protected-area read (the synthetic delay).
+  d.startExport = async () => {
+    d.hold.live = later(); const release = d.hold.live.resolve, before = d.liveReads;
+    const pending = d.$('#spot-export').fire('click');
+    for (let i = 0; i < 50 && d.liveReads === before; i++) await turn();
+    assert.equal(d.liveReads, before + 1, 'the export is waiting on its protected-area refresh');
+    return {pending, release: async () => { release(); await pending; await turn(); }};
+  };
+  d.exportNow = async () => { await d.$('#spot-export').fire('click'); await turn(); };
+  d.confirmDelete = async yes => {
+    const button = d.$('#account-delete'), clicked = button.fire('click'); await turn();
+    const box = button.parentElement.querySelector('.account-confirm');
+    await box.fire('click', box.querySelector(`[data-confirm="${yes ? 'yes' : 'no'}"]`));
+    return {done: clicked};   // wrapped: awaiting the confirmation must not wait for the deletion request itself
+  };
+  await openAccount(); for (let i = 0; i < 5; i++) await turn();
+  assert.ok(d.$('#spot-export') && d.$('#spot-list').children.length === 2, 'the signed-in dialog lists both saved spots');
+  return d;
+}
+// A delivered GPX: one file, the planner's checks held (protected spot left out and named in the status), no note leaves.
+async function fresh(d) {
+  assert.equal(d.files.length, 1, 'one explicit fresh export downloads one file');
+  const [file] = d.files, gpx = await file.blob.text();
+  assert.equal(file.name, 'SkipperCast-saved-spots.gpx'); assert.equal(file.blob.type, 'application/gpx+xml');
+  assert.deepEqual(names(gpx), ['Open water']);
+  assert.ok(!gpx.includes('SPOTNOTE') && !gpx.includes(String(INSIDE.lat)) && !gpx.includes('Inside the reserve'), 'no note and no protected spot in the file');
+  assert.equal(d.status(), DONE_HELD);
+}
+
+test('gpx_export_after_dialog_close_downloads_nothing', async () => {
+  const d = await accountDialog();
+  try {
+    const held = await d.startExport(), status = d.$('#account-status');
+    await d.close(); await held.release();
+    assert.equal(d.files.length, 0, 'no download after close'); assert.equal(d.blobs.size, 0, 'no file was even built');
+    assert.equal(status.textContent, '', 'the closed dialog is not told it downloaded');
+  } finally { await d.restore(); }
+  const again = await accountDialog();
+  try { await again.exportNow(); await fresh(again); assert.deepEqual(again.unknown, []); } finally { await again.restore(); }
+});
+
+test('gpx_export_after_signout_start_downloads_nothing_even_when_logout_fails', async () => {
+  for (const order of ['logout-fails-first', 'logout-fails-after', 'logout-succeeds']) {
+    const out = later(), d = await accountDialog({logout: () => out.promise});
+    try {
+      const held = await d.startExport(), signout = d.$('#account-signout').fire('click'); await turn();
+      const answer = order === 'logout-succeeds' ? reply({}) : reply({error: 'logout unavailable'}, 503);
+      if (order !== 'logout-fails-after') { out.resolve(answer); await signout; }
+      await held.release();
+      if (order === 'logout-fails-after') { out.resolve(answer); await signout; }
+      assert.equal(d.files.length, 0, `${order}: no download once sign-out started`); assert.equal(d.blobs.size, 0);
+      if (order === 'logout-succeeds') {
+        assert.equal(d.reloads, 1);
+        const reads = d.liveReads; await d.exportNow();
+        assert.equal(d.liveReads, reads, 'while signing out, Export starts nothing'); assert.equal(d.files.length, 0);
+      } else {
+        assert.equal(d.status(), 'Logout unavailable.', `${order}: the failure is reported, not a download`);
+        await d.exportNow(); await fresh(d);   // a failed logout keeps the dialog: an explicit new export works
+      }
+    } finally { await d.restore(); }
+  }
+});
+
+test('file_exports_after_confirmed_deletion_start_download_nothing_and_share_one_lifetime', async () => {
+  for (const outcome of ['deletion-fails', 'deletion-succeeds']) {
+    const gone = later(), d = await accountDialog({erase: () => gone.promise});
+    try {
+      // Both account-panel files are in flight: the GPX parked on its refresh, the CSV on its trip read.
+      const gpx = await d.startExport();
+      d.hold.trips = later(); const releaseTrips = d.hold.trips.resolve, csv = d.$('#log-download-csv').fire('click'); await turn();
+      assert.equal(d.$('#log-download-csv').disabled, true, 'the CSV export is in flight');
+      const deleting = (await d.confirmDelete(true)).done; await turn();
+      gone.resolve(outcome === 'deletion-succeeds' ? reply({}) : reply({error: 'deletion unavailable'}, 503)); await deleting;
+      releaseTrips(); await csv; await gpx.release(); await new Promise(resolve => setTimeout(resolve, 5));
+      assert.equal(d.files.length, 0, `${outcome}: neither file is downloaded once a confirmed deletion started`); assert.equal(d.blobs.size, 0);
+      if (outcome === 'deletion-succeeds') { assert.equal(d.reloads, 1); assert.equal(d.status(), 'Your account has been deleted.'); continue; }
+      assert.equal(d.status(), 'Deletion unavailable.'); assert.equal(d.$('#log-download-csv').disabled, false, 'the CSV button is usable again');
+      await d.$('#log-download-csv').fire('click'); await turn();
+      assert.deepEqual(d.files.map(f => f.name), ['SkipperCast-catch-log.csv'], 'a fresh CSV export works after the failed deletion');
+      d.files.length = 0; await d.exportNow(); await fresh(d);
+    } finally { await d.restore(); }
+  }
+  // Positive control: an unconfirmed deletion is not a deletion start, so the parked export still delivers its checked file.
+  const d = await accountDialog({erase: () => assert.fail('no deletion request without confirmation')});
+  try {
+    const held = await d.startExport(); await d.confirmDelete(false); await held.release();
+    await fresh(d);
+  } finally { await d.restore(); }
 });
