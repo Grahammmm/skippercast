@@ -336,11 +336,15 @@ def collect(region_id, mode, session, cache, previous=None, now=None, revalidate
                 recent = {**old["recent"], "stale": not last or now.timestamp() * 1000 - epoch(last) > 3 * HOUR}
                 sources += [s for s in old["sources"] if s["role"] == "recent" and s["outcome"] == "ok"][-1:]
         recent = recent or recent_summary({}, dict.fromkeys(QC_KEYS, 0), now)
-        if mode == "full" and (annual or not old):
-            baseline = seasonal(annual)
-        else:  # recent mode, or every annual archive failed: keep the published baseline and its receipts
+        # An unavailable prior year (even if omitted from the index) is not a documented withdrawal.
+        if old and (not annual or not set(old["baseline"]["years"]).issubset(annual)):
             baseline = old["baseline"]
-            sources += [s for s in old["sources"] if s["role"] == "annual" and s["outcome"] == "ok"] if mode == "full" else []
+            if mode == "full":
+                # Fresh annual successes didn't contribute to the retained aggregate.
+                sources = [s for s in sources if s["role"] != "annual" or s["outcome"] != "ok"]
+                sources += [s for s in old["sources"] if s["role"] == "annual" and s["outcome"] == "ok"]
+        else:
+            baseline = seasonal(annual)
         out.append({"stationId": ident, "name": name, "lat": lat, "lon": lon, "recent": recent, "baseline": baseline,
                     "archive": archive, "sources": sources, "limitations": limitations(ident)})
     if not ok:
