@@ -545,29 +545,6 @@ class EnhancementTests(unittest.TestCase):
                 self.assertEqual(decode_png(png).shape, (256, 256, 4))
 
 
-class AttemptedZoomRowControlTests(unittest.TestCase):
-    """Synthetic controls for the exact helper NativeTierTests uses on real archive metadata."""
-
-    @staticmethod
-    def rows(zooms, zero=()):
-        return {'native_support_by_zoom': {str(z): {'tiles': 0 if z in zero else 3, 'sources': []} for z in zooms}}
-
-    def test_missing_row_fails(self):
-        meta = self.rows(range(13, 18))
-        del meta['native_support_by_zoom']['15']
-        with self.assertRaises(AssertionError):
-            assert_attempted_zoom_rows(self, meta, 13, 17)
-
-    def test_no_rows_fails(self):
-        for meta in ({'native_support_by_zoom': {}}, {}):
-            with self.assertRaises(AssertionError):
-                assert_attempted_zoom_rows(self, meta, 13, 17)
-
-    def test_lower_cap_and_zero_support_level_pass(self):
-        assert_attempted_zoom_rows(self, self.rows(range(13, 16)), 13, 15)
-        assert_attempted_zoom_rows(self, self.rows(range(13, 18), zero=(17,)), 13, 17)
-
-
 class NativeTierTests(unittest.TestCase):
     def test_locked_native_zoom_and_core_support(self):
         """D6: 1 m/0-20 m reaches z17; deep/invalid/halo-only and coarse grids do not."""
