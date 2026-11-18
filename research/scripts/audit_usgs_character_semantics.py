@@ -14,9 +14,14 @@ from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
-from research.scripts.audit_usgs_ds781_metadata import (
-    EXPLICIT_REUSE, matches_redistribution_review, reviewed_redistribution_products,
-)
+if __package__:
+    from .audit_usgs_ds781_metadata import (
+        EXPLICIT_REUSE, matches_redistribution_review, reviewed_redistribution_products,
+    )
+else:
+    from audit_usgs_ds781_metadata import (
+        EXPLICIT_REUSE, matches_redistribution_review, reviewed_redistribution_products,
+    )
 
 
 HOSTS = {"pubs.usgs.gov", "cmgds.marine.usgs.gov"}

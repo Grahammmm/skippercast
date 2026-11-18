@@ -1,6 +1,9 @@
 import hashlib
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -23,6 +26,17 @@ TERMS = ('USGS-authored or produced data and information are in the public domai
 
 
 class CharacterSemanticsTests(unittest.TestCase):
+    def test_standalone_help_from_repository_root(self):
+        root = Path(__file__).resolve().parents[2]
+        env = os.environ.copy()
+        env.pop('PYTHONPATH', None)
+        result = subprocess.run(
+            [sys.executable, 'research/scripts/audit_usgs_character_semantics.py', '--help'],
+            cwd=root, env=env, capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn('usage:', result.stdout)
+
     def inputs(self, xml, *, class_table_status='missing-original-value-table', table=None):
         idinfo = f'<idinfo><useconst>{TERMS}</useconst></idinfo>'.encode()
         raw = xml.replace(b'<metadata>', b'<metadata>' + idinfo)
