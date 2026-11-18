@@ -94,6 +94,8 @@ class ForecastGenerationTest(unittest.TestCase):
                 self.tile.write_bytes(tile_bytes)
                 self._damage(defect)
                 output = self.output / defect
+                (output / MODEL / 'tiles').mkdir(parents=True)
+                (output / MODEL / 'tiles' / 'unverified.json').write_text('{}')
                 row, source = self._build(output)
                 self.assertEqual(row['status'], 'failed')
                 self.assertIn('no complete cycle', row['issue'])
@@ -102,6 +104,22 @@ class ForecastGenerationTest(unittest.TestCase):
                 self.assertEqual(source.args, (MODEL, 'failed'))
                 self.assertFalse(source.kwargs['kept_previous'])
                 self.fetch.assert_not_called()
+
+    def test_failed_model_with_no_previous_is_removed_when_another_builds(self):
+        self.latest.side_effect = lambda model: None if model.id == MODEL else CYCLE
+        axes = self.fetch.return_value[1]
+        sea = self.fetch.return_value[4]
+        cube = next(iter(self.fetch.return_value[3].values()))
+        self.fetch.side_effect = lambda model, cycle, log: (
+            [int(cycle.timestamp())], axes, axes, {model.fields[0].name: cube}, sea,
+        )
+        (self.output / MODEL / 'tiles').mkdir(parents=True)
+        (self.output / MODEL / 'tiles' / 'unverified.json').write_text('{}')
+        result = self.producer.build(self.output, models=[MODEL, 'gfs_global'], log=Mock())
+        self.assertFalse(result['models'][MODEL]['kept_previous'])
+        self.assertEqual(result['models']['gfs_global']['status'], 'ok')
+        self.assertFalse((self.output / MODEL).exists())
+        self.assertTrue((self.output / 'gfs_global' / 'manifest.json').is_file())
 
     def test_complete_same_cycle_is_reused(self):
         row, source = self._build(self.output)

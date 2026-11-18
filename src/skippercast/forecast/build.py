@@ -385,6 +385,10 @@ def build(output, previous=None, models=None, force=False, log=log_err, run=None
             if source is not None and _verified_previous(source, model_id) is not None:
                 _copy_previous(source, output / model_id)
                 kept = True
+            else:
+                target = output / model_id
+                if target.exists():
+                    shutil.rmtree(target)
             status[model_id] = {'status': 'failed', 'issue': str(error)[:300], 'kept_previous': kept}
             if run is not None:
                 run.source(model_id, 'failed', error_class=type(error).__name__, kept_previous=kept,
