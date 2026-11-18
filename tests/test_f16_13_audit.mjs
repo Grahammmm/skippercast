@@ -34,6 +34,18 @@ const bodiesFor = (station, s) => urls => ({...directory(station, urls), [urls[1
 // Contract: refuse (and write nothing) when every row is outside the requested window; otherwise save.
 const contract = (r, wholly) => wholly ? r.outcome === 'refused' && r.puts.length === 0 : r.outcome === 'saved' && r.puts.length === r.urls.length;
 
+// Coverage class of a saved series against the requested window. Cadence-free: a high/low-only station is "full" when its
+// events reach within one tidal half-day (8 h) of both window edges; no six-minute spacing is required.
+const EDGE = 8 * 3600000;
+function coverage(w, times) {
+  const inside = times.filter(t => t >= w.from && t < w.to).sort((a, b) => a - b);
+  if (!inside.length) return 'none';
+  return inside[0] - w.from <= EDGE && w.to - inside.at(-1) <= EDGE ? 'full' : 'partial';
+}
+// A saved result must carry its coverage class, so partial coverage is labelled separately from full.
+const labelled = (r, expected) => r.outcome === 'saved' && r.coverage === expected;
+const hiloTimes = (w, step = 6.2 * 3600000) => { const out = []; for (let t = w.from + 3600000; t < w.to; t += step) out.push(t); return out; };
+
 test('fixture window is the requested NOAA UTC interval', () => {
   const [, hiloURL] = tidePackURLs(R, NOW), w = windowOf(hiloURL);
   assert.ok(Date.parse('2026-10-08T18:00:00Z') >= w.from && Date.parse('2026-10-08T18:00:00Z') < w.to);
@@ -52,6 +64,22 @@ test('valid controls satisfy the contract', async () => {
   assert.ok(contract(partial, false), JSON.stringify(partial));
 });
 
+test('coverage classes: partial is separate from full, with no cadence imposed', () => {
+  const w = windowOf(tidePackURLs(S, NOW)[1]);
+  assert.equal(coverage(w, hiloTimes(w)), 'full', 'sparse high/low-only events spanning the window are full');
+  assert.equal(coverage(w, [w.from + 3600000]), 'partial', 'one early event leaves the rest of the window uncovered');
+  assert.equal(coverage(w, [Date.parse('2026-12-25T18:00:00Z')]), 'none');
+  assert.equal(coverage(w, hiloTimes(w).slice(0, 2)), 'partial');
+});
+
+test('labelling checker detects an unlabelled partial save on synthetic results', () => {
+  const urls = ['a', 'b'], base = {outcome: 'saved', puts: ['a', 'b'], urls};
+  assert.equal(labelled({...base}, 'partial'), false, 'partial save with no label must be detected');
+  assert.equal(labelled({...base, coverage: 'full'}, 'partial'), false, 'partial save labelled full must be detected');
+  assert.equal(labelled({...base, coverage: 'partial'}, 'partial'), true);
+  assert.equal(labelled({...base, coverage: 'full'}, 'full'), true);
+});
+
 test('checker detects the stated gap on synthetic results', () => {
   // independent negative control: fabricated results, no dependence on saveTidePack
   const urls = ['a', 'b'];
@@ -67,4 +95,6 @@ test('affected control: baseline observation only (passes before and after a fix
     const r = await run(station, bodiesFor(station, outWindow));
     t.diagnostic(`${station.type} wholly out-of-window: outcome=${r.outcome} puts=${r.puts.length} contractHolds=${contract(r, true)}`);
   }
+  const part = await run(S, bodiesFor(S, {hiloEvents: [hilo('2026-10-08T18:00', 'H')], points: []}));
+  t.diagnostic(`partial coverage save: outcome=${part.outcome} labelledPartial=${labelled(part, 'partial')}`);
 });
