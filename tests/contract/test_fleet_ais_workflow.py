@@ -13,7 +13,7 @@ SHA = 'a' * 40
 
 
 class FleetAisWorkflowTests(unittest.TestCase):
-    def run_script(self, *, trigger='schedule', cron='', **inputs):
+    def run_script(self, lock_contended=False, /, *, trigger='schedule', cron='', **inputs):
         with tempfile.TemporaryDirectory() as temporary:
             env = {'REGION': 'CA', 'WINDOW_FROM': '', 'WINDOW_TO': '', 'BACKFILL_MONTH': '',
                    'VALIDATE': '', 'LABEL_IMPORT': '', 'SCHEDULE_CRON': cron,
@@ -24,11 +24,20 @@ class FleetAisWorkflowTests(unittest.TestCase):
             # Bash functions replace the actual Python commands with argument receipts.
             # tee only writes the temporary summary. No application or network executes.
             stub = "python() { printf 'PY'; printf '\\t%s' \"$@\"; printf '\\n'; }\n"
+            # Exercise both shell branches without requiring util-linux or waiting 600 seconds.
+            stub += f'flock() {{ return {int(lock_contended)}; }}\n'
             result = subprocess.run(['/bin/bash', '-c', stub + SCRIPT], env=env,
                                     capture_output=True, text=True, timeout=5)
             calls = [line.split('\t')[1:] for line in result.stdout.splitlines() if line.startswith('PY\t')]
             context = [line for line in result.stdout.splitlines() if line.startswith('AIS run kind=')]
             return result, calls, context
+
+    def test_lock_contention_prevents_all_ais_work(self):
+        result, calls, context = self.run_script(True)
+        self.assertEqual(result.returncode, 75, result.stderr)
+        self.assertIn('::error::fleet-ais is held by another run (this or the other repo); not starting', result.stdout)
+        self.assertEqual(calls, [])
+        self.assertEqual(context, [])
 
     def test_two_slots_preserve_half_hour_spacing_across_midnight(self):
         schedule = WORKFLOW.split('  schedule:\n', 1)[1].split('  workflow_dispatch:', 1)[0]

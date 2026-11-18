@@ -477,7 +477,7 @@ function mediaSetup() {
   return {sql, db, bucket};
 }
 
-dbTest('GET /media/<id>.jpg is 404 until the media is approved or posted, then serves it publicly cacheable and noindex', async () => {
+dbTest('GET /media/<id>.jpg is 404 until the media is approved or posted, then serves it with no-store and noindex', async () => {
   const {db, bucket} = mediaSetup(), env = {...ON, DB: db, ADVISOR_MEDIA: bucket};
   const missing = await call('/media/nope.jpg', env), missingBody = await errorBody(missing);
   assert.equal(missing.status, 404);
@@ -489,7 +489,7 @@ dbTest('GET /media/<id>.jpg is 404 until the media is approved or posted, then s
     const response = await call(`/media/${id}.jpg`, env);
     assert.equal(response.status, 200, id);
     assert.equal(response.headers.get('Content-Type'), 'image/jpeg');
-    assert.equal(response.headers.get('Cache-Control'), 'public, max-age=3600');
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
     assert.equal(response.headers.get('X-Robots-Tag'), 'noindex');
     assert.deepEqual(new Uint8Array(await response.arrayBuffer()), stripJpegMetadata(jpeg()).bytes);
   }

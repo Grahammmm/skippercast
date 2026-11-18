@@ -77,6 +77,8 @@ jobs:
           set -euo pipefail
           # Run state, the HTTP cache and staging databases live outside any checkout (design.md section 4).
           var="${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}"
+          # Both sinks share the workflow's cross-repo lock.
+          echo "FLEET_LOCK=$var/.locks/fleet-registry.lock" >> "$GITHUB_ENV"
           # Staging runs keep their own run directories: refresh counts every complete discovery run
           # under <var>/<region>/runs towards `vanished`, so a staging run there would count as a
           # registry run that missed each registry boat.
@@ -90,6 +92,12 @@ jobs:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
         run: |
           set -euo pipefail
+          lock="$FLEET_LOCK"
+          mkdir -p -m 0700 -- "${lock%/*}" || exit 1
+          WAIT=60
+          exec 9>"$lock"
+          flock -w "$WAIT" 9 || { echo "::error::fleet-registry is held by another run (this or the other repo); not starting"; exit 75; }
+          echo "lock fleet-registry acquired"
           if [ -z "$RUN_ID" ]; then
             RUN_ID=$(python -c 'from skippercast.fleet.runs import new_run_id; print(new_run_id())')
           fi

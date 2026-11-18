@@ -117,6 +117,13 @@ def write_survey(path, size=300, west_nodata=100):
     return elevation
 
 
+def assert_attempted_zoom_rows(case, metadata, minzoom, cap):
+    """D8-F01: archive metadata must carry exactly one native-support row per attempted zoom."""
+    rows = metadata.get('native_support_by_zoom')
+    case.assertIsInstance(rows, dict)
+    case.assertEqual(sorted(map(int, rows)), list(range(minzoom, cap + 1)))
+
+
 def srgb_to_lab(rgb):
     """D65 sRGB to CIELAB for the design lock's CIE76 ΔE comparison."""
     srgb = np.asarray(rgb) / 255.0
@@ -596,12 +603,13 @@ class NativeTierTests(unittest.TestCase):
 
                         start, end = sum(4 ** i for i in range(z)), sum(4 ** i for i in range(z + 1))
                         self.assertEqual({t for t in tiles if start <= t < end}, expected)
-                        if str(z) in metadata['native_support_by_zoom']:
+                        if z <= (17 if resolution <= 1 else 15):  # attempted zoom: row is mandatory
                             detail = metadata['native_support_by_zoom'][str(z)]
                             self.assertEqual(detail['tiles'], len(expected))
                             self.assertEqual(detail['sources'], ([{'id': 'fixture', 'resolution_m': resolution,
                                                                   'tiles': len(expected)}]
                                                                 if expected else []))
+                    assert_attempted_zoom_rows(self, metadata, 13, 17 if resolution <= 1 else 15)
                     if expected_max == 17:
                         self.assertLess(len(expected), len(xs) * len(ys))  # unsupported cores omitted
                     # Explicit requests cannot promote coarse/background grids beyond their cap.
