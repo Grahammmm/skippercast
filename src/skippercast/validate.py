@@ -131,7 +131,7 @@ def _validator(kind, directory):
 
     def pattern(validator, patrn, instance, schema):
         if validator.is_type(instance, "string") and not _compiled(patrn).search(instance):
-            yield ValidationError(f"{instance!r} does not match {patrn!r}")
+            yield ValidationError(f"value does not match {patrn!r}")  # never echo the rejected value
 
     Strict = validators.extend(Draft202012Validator, {"pattern": pattern})
     registry = Registry().with_resources((ident, Resource.from_contents(schema))
@@ -201,17 +201,85 @@ def detect_feed(document):
     return matches[0]
 
 
+_RULES = {  # schema rule -> wording built only from the schema's own limit, never from the document
+    "type": "{s} is not of type {v!r}",
+    "enum": "{s} is not one of {v!r}",
+    "const": "{s} does not equal {v!r}",
+    "pattern": "{s} does not match {v!r}",
+    "format": "{s} is not a valid {v!r}",
+    "minLength": "{s} is too short (minimum length {v})",
+    "maxLength": "{s} is too long (maximum length {v})",
+    "minItems": "array is too short (minimum {v} items)",
+    "maxItems": "array is too long (maximum {v} items)",
+    "minProperties": "object has too few properties (minimum {v})",
+    "maxProperties": "object has too many properties (maximum {v})",
+    "minimum": "{s} is less than minimum of {v}",
+    "maximum": "{s} is greater than maximum of {v}",
+    "exclusiveMinimum": "{s} is not greater than {v}",
+    "exclusiveMaximum": "{s} is not less than {v}",
+    "multipleOf": "{s} is not a multiple of {v}",
+    "uniqueItems": "array has non-unique elements",
+}
+
+
+def _declared_keys(error):
+    """Property names the schema itself declares along the failing rule's path (safe to show)."""
+    path, keys, i = list(error.absolute_schema_path), set(), 0
+    while i < len(path):
+        if path[i] == "properties" and i + 1 < len(path) and isinstance(path[i + 1], str):
+            keys.add(path[i + 1])
+            i += 2
+        elif path[i] in ("patternProperties", "dependentSchemas") and i + 1 < len(path):
+            i += 2  # the next step is a pattern or dependency name, not a property
+        else:
+            i += 1
+    return keys
+
+
+def _location(error):
+    """Field path: array positions and schema-declared names; document-supplied keys become <key>."""
+    declared = _declared_keys(error)
+    parts = []
+    for step in error.absolute_path:
+        if isinstance(step, int) and not isinstance(step, bool):
+            parts.append(str(step))
+        else:
+            parts.append(step if isinstance(step, str) and step in declared else "<key>")
+    return "/".join(parts) or "(root)"
+
+
+def _unexpected_count(error):
+    schema, instance = error.schema, error.instance
+    if not isinstance(schema, dict) or not isinstance(instance, dict):
+        return None
+    known, patterns = schema.get("properties") or {}, schema.get("patternProperties") or {}
+    return sum(1 for key in instance if key not in known and not any(_compiled(p).search(key) for p in patterns))
+
+
+def _describe(error):
+    """The failed schema rule in words, without the rejected value or any document-supplied key."""
+    rule, limit = error.validator, error.validator_value
+    subject = "property name" if "propertyNames" in error.absolute_schema_path else "value"
+    if rule == "required":  # the name comes from the schema's `required` list
+        return error.message
+    if rule == "additionalProperties":
+        count = _unexpected_count(error)
+        return "additional properties are not allowed" + (f" ({count} unexpected)" if count is not None else "")
+    if rule in _RULES:
+        return _RULES[rule].format(s=subject, v=limit)[:300]
+    return f"{subject} does not satisfy schema rule {rule!r}"
+
+
 def errors(kind, document, directory=SCHEMA_DIR):
-    """Human-readable validation errors, sorted by location; empty when valid."""
+    """Field-level validation errors (rule and safe location; never the rejected value), sorted by location; empty when valid."""
     if kind == "feed":
         kind = detect_feed(document)
     found = validator(kind, directory).iter_errors(document)
     rows = []
     def order(e):  # array positions compare as numbers (2 before 10), before keys; message breaks ties
-        return [(0, p) if isinstance(p, int) and not isinstance(p, bool) else (1, str(p)) for p in e.absolute_path], e.message
+        return [(0, p) if isinstance(p, int) and not isinstance(p, bool) else (1, str(p)) for p in e.absolute_path], _describe(e)
     for error in sorted(found, key=order):
-        where = "/".join(str(p) for p in error.absolute_path) or "(root)"
-        rows.append(f"{where}: {error.message[:300]}")
+        rows.append(f"{_location(error)}: {_describe(error)}")
     return rows
 
 
@@ -229,7 +297,8 @@ def main(argv=None):
             print(error, file=sys.stderr)
             return 2
         except (OSError, ValueError) as error:  # unreadable, duplicate keys, NaN, undetectable feed
-            print(f"{path}: {type(error).__name__}: {error}", file=sys.stderr)
+            detail = "Duplicate JSON key (name withheld)" if str(error).startswith("Duplicate JSON key:") else error
+            print(f"{path}: {type(error).__name__}: {detail}", file=sys.stderr)
             status = 1
             continue
         if problems:
