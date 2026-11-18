@@ -8,11 +8,10 @@ import re
 import sys
 import textwrap
 import types
-from pathlib import Path
 
-import pytest
+from tests._support import ROOT
 
-WORKFLOW = Path(__file__).resolve().parents[2] / ".github/workflows/forecast-tiles.yml"
+WORKFLOW = ROOT / ".github/workflows/forecast-tiles.yml"
 MODELS = ("gfs_global", "ecmwf_ifs025", "ncep_gfswave016", "ecmwf_wam")
 OLD, NEW = "2026-11-17T12:00:00Z", "2026-11-18T00:00:00Z"
 
