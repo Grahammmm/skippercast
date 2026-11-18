@@ -274,6 +274,20 @@ def test_register_follows_the_contract_usage_scan_and_names_every_runtime_servic
             bsr.collect(ROOT)
 
 
+def test_runtime_service_credits_are_specific_and_never_point_at_missing_text():
+    """Contract: each runtime service prints its own credit; a 'see ... above' pointer is only allowed where that page text exists.
+    Bug caught: the NOAA ENC service pointing readers at a 'Map and software' credit that names only OpenStreetMap."""
+    page = (ROOT / 'dist/sources.html').read_text(encoding='utf-8')
+    software = page.split('<h2>Map and software</h2>')[1].split('<h2', 1)[0]
+    for ident, info in bsr.RUNTIME_SERVICE_INFO.items():
+        assert info.get('credit'), ident
+        if 'see Map and software above' in info['credit']:
+            assert info['provider'].split()[0] in software, ident
+    assert 'Credit: NOAA Office of Coast Survey, Electronic Navigational Charts (ENC)' in page
+    assert 'NOAA ENC Display service</strong>' in page
+    assert 'Credit: see Map and software above' not in page
+
+
 def test_unmapped_live_asset_fails_generation(tmp_path):
     """Contract: an asset with no source mapping stops the build instead of being omitted. Bug caught: silently dropping a layer's sources."""
     root = make_root(tmp_path, [row('a-src')], [region('r1', 'Region One')])

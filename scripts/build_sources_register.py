@@ -49,14 +49,17 @@ INSERT_BEFORE = '<h2>Current official checks</h2>'
 INDENT = '      '
 
 # Services the app calls that have no catalogue row (tests/contract/test_commercial_sources.py RUNTIME_SERVICES).
-# Name, agency and a public page only: their credit text lives in the page's own "Map and software" section.
+# Name, agency, a public page and the credit printed for it. The OpenStreetMap credit points at the page's own "Map and
+# software" section, which does credit OpenStreetMap; that section does not mention NOAA, so the NOAA service names its
+# own credit here (the agency, as the catalogue rows do) instead of pointing at text that is not there.
 RUNTIME_SERVICE_INFO = {
     'osm-tiles': {'name': 'OpenStreetMap standard tiles', 'provider': 'OpenStreetMap contributors',
-                  'provides': 'Base map tiles', 'url': 'https://www.openstreetmap.org/copyright'},
+                  'provides': 'Base map tiles', 'url': 'https://www.openstreetmap.org/copyright',
+                  'credit': '© OpenStreetMap contributors (ODbL); see Map and software above'},
     'noaa-enc-display': {'name': 'NOAA ENC Display service', 'provider': 'NOAA Office of Coast Survey',
-                         'provides': 'Nautical chart display', 'url': 'https://nauticalcharts.noaa.gov/'},
+                         'provides': 'Nautical chart display', 'url': 'https://nauticalcharts.noaa.gov/',
+                         'credit': 'NOAA Office of Coast Survey, Electronic Navigational Charts (ENC)'},
 }
-SERVICE_CREDIT_NOTE = 'see Map and software above'
 
 # Catalogue ``needs`` ids whose rows are held off the page until the named task lands. The task, not this script, owns
 # the credit wording, so a held row prints nothing: no credit, no usage line, no "eligible" line. Releasing a hold is
@@ -224,7 +227,7 @@ def _entry(ident, sources, needs, extra=''):
     row = sources.get(ident)
     if row is None:
         info = RUNTIME_SERVICE_INFO[ident]
-        head, facts, credit = f"{info['name']}", [f"Provides: {info['provides']}"], SERVICE_CREDIT_NOTE
+        head, facts, credit = f"{info['name']}", [f"Provides: {info['provides']}"], info['credit']
         agency, link = info['provider'], info['url']
     else:
         head, agency, link = row['name'], row['provider'], safe_link(row)
