@@ -65,11 +65,35 @@ export const fleetJobs: {verify: (token: string | undefined) => Promise<JobClaim
 };
 const JOB_BUDGET = 240;   // requests a minute per run (jti), as the advisor-media job
 
-/** A fleet job identity, else 401; sets `fleetJob` to the verified claims. */
+/**
+ * SCA-017: the only job routes ('METHOD /path') a FLEET_JOB_SCOPE workflow may
+ * call when it is listed here. The hourly monitor (fleet-health.yml) reads the
+ * health contract (staleness booleans and ages) and may run the identity ping
+ * (no data); nothing else: no private dataset reads (snapshot, watch, labels)
+ * and no mutations. A workflow not listed (registry, OSINT and AIS processor
+ * jobs) keeps every job route.
+ */
+export const FLEET_JOB_LIMITS: Readonly<Record<string, readonly string[]>> = {
+  'fleet-health.yml': ['GET /api/fleet/jobs/health', 'GET /api/fleet/jobs/ping'],
+};
+/** The exact workflow_ref validJobClaims accepts for a workflow file (server/job-auth.ts). */
+const workflowRef = (workflow: string): string =>
+  `${deployment.scheduler.repository}/.github/workflows/${workflow}@${deployment.scheduler.ref}`;
+/** The routes the verified job may call, or undefined when it keeps them all. */
+const jobLimit = (claims: JobClaims): readonly string[] | undefined =>
+  Object.entries(FLEET_JOB_LIMITS).find(([workflow]) => claims.workflow_ref === workflowRef(workflow))?.[1];
+
+/**
+ * A fleet job identity, else 401; a route outside its FLEET_JOB_LIMITS, 403
+ * before any storage work (the request budget included). Sets `fleetJob` to
+ * the verified claims.
+ */
 export const requireFleetJob: MiddlewareHandler<AppEnv> = async (c, next) => {
   const token = c.req.header('Authorization')?.replace(/^Bearer /, '');
   const claims = await fleetJobs.verify(token);
   if (!claims) return json({error: 'Unauthorized'}, 401);
+  const limit = jobLimit(claims);
+  if (limit && !limit.includes(`${c.req.method} ${c.req.path}`)) return json({error: 'Forbidden'}, 403);
   await budget(c.env, 'fleet-job:' + claims.jti, JOB_BUDGET);
   c.set('fleetJob', claims);
   await next();

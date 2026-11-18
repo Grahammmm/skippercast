@@ -235,7 +235,6 @@ export function buildCoastBrief(input: CoastBriefInput): Brief {
 
 export type RegionalPlace = {id: string; name: string; lat: number; lon: number; timezone: string; port?: string};
 
-const num = (value: unknown, scale = 1): number | null => finite(value) ? value * scale : null;
 // Only ok is ok: a retained source is last good data after a failed check, so it reads as an error
 // whose clock is that last good fetch.
 const sourceOk = (source: RegionalSource | undefined) => source?.status === 'ok';
@@ -256,11 +255,22 @@ export function regionalReport(daily: RegionalDailyFeed, forecast: RegionalForec
   const tideBackup = tideStation?.backupFor ? tideStation : null;
   const tideName = tideBackup ? `NOAA ${stationText(tideBackup)}` : tides?.name;
   const tideUrl = tideBackup ? tidePredictionURL(tideBackup.id) : tides?.url;
-  const observations: Observation[] = ((buoy?.data?.observations as Record<string, unknown>[] | undefined) ?? []).map(row => ({
-    stationId: station, observedAt: String(row.time), url: buoyUrl,
-    waveFt: num(row.WVHT, M_TO_FT), wavePeriodS: num(row.DPD), waterTempF: finite(row.WTMP) ? row.WTMP * 9 / 5 + 32 : null,
-    windKnots: num(row.WSPD, MS_TO_KT), gustKnots: num(row.GST, MS_TO_KT), directionDeg: num(row.MWD),
-  }));
+  // pipeline/parsers.py publishes the NDBC header's units in data.units.
+  // No unitless regional format is documented; don't assume units for a missing label.
+  const labels = buoy?.data?.units;
+  const units = labels && typeof labels === 'object' && !Array.isArray(labels) ? labels as Record<string, unknown> : null;
+  const observations: Observation[] = ((buoy?.data?.observations as Record<string, unknown>[] | undefined) ?? []).map(row => {
+    const reading = (field: string, unit: string, scale = 1) => {
+      const value = row[field];
+      return units && Object.hasOwn(units, field) && units[field] === unit && finite(value) ? value * scale : null;
+    };
+    const waterC = reading('WTMP', 'degC');
+    return {
+      stationId: station, observedAt: String(row.time), url: buoyUrl,
+      waveFt: reading('WVHT', 'm', M_TO_FT), wavePeriodS: reading('DPD', 'sec'), waterTempF: waterC === null ? null : waterC * 9 / 5 + 32,
+      windKnots: reading('WSPD', 'm/s', MS_TO_KT), gustKnots: reading('GST', 'm/s', MS_TO_KT), directionDeg: reading('MWD', 'degT'),
+    };
+  });
   const tideEvents: TideEvent[] = ((tides?.data?.predictions as Record<string, unknown>[] | undefined) ?? [])
     .filter(row => finite(row.height_ft) && (row.type === 'H' || row.type === 'L') && typeof row.time === 'string' && Number.isFinite(Date.parse(row.time)))
     .map(row => ({at: String(row.time), heightFt: row.height_ft as number, type: row.type as 'H' | 'L'}));
