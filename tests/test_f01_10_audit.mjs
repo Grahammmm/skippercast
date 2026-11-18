@@ -25,6 +25,11 @@ for (const scenario of [
   {name: 'independent rows support both named fish', rows: [['lingcod'], ['cowcod']], input: {species_key: 'lingcod'}, extraInput: {species_key: 'cowcod'}, subject: 'Lingcod and cowcod', seen: ['lingcod'], allowed: true},
   {name: 'implicit claim about an unsupported preceding fish', rows: [['lingcod']], input: {species_key: 'lingcod'}, quote: 'Cowcod. Its minimum size must be at least 17 inches (Fixture rules; checked Oct 1).', seen: ['lingcod'], allowed: false},
   {name: 'implicit claim about a supported preceding fish', rows: [['lingcod'], ['cowcod']], input: {species_key: 'lingcod'}, extraInput: {species_key: 'cowcod'}, quote: 'Cowcod. Its minimum size must be at least 17 inches (Fixture rules; checked Oct 1).', seen: ['lingcod'], allowed: true},
+  // Rule-29 checkpoint regressions: carried regions and fish fail closed.
+  {name: 'region carried from an earlier sentence without a row there', rows: [['lingcod']], input: {species_key: 'lingcod'}, quote: 'Southern California. Its lingcod must be at least 17 inches (Fixture rules; checked Oct 1).', seen: ['lingcod'], allowed: false},
+  {name: 'region carried from an earlier sentence even with a row there', rows: [['lingcod'], ['lingcod', 'southern-california']], input: {species_key: 'lingcod'}, quote: 'Southern California. Its lingcod must be at least 17 inches (Fixture rules; checked Oct 1).', seen: ['lingcod'], allowed: false},
+  {name: 'fish carried from an earlier sentence without a row', rows: [['lingcod']], input: {species_key: 'lingcod'}, quote: 'Cowcod are slow growers. Lingcod must be at least 17 inches (Fixture rules; checked Oct 1).', seen: ['lingcod'], allowed: false},
+  {name: 'pronoun after two earlier fish', rows: [['lingcod'], ['cowcod']], input: {species_key: 'lingcod'}, extraInput: {species_key: 'cowcod'}, quote: 'Lingcod and cowcod. Its minimum size must be at least 17 inches (Fixture rules; checked Oct 1).', seen: ['lingcod'], allowed: false},
 ]) {
   test(`F01-10: ${scenario.name}`, {skip: sqliteUnavailable || false}, async t => {
     const {sql, db} = advisorDatabase();

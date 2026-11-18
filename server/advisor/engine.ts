@@ -353,34 +353,53 @@ export async function modelTurn(args: {env: Env; settings: AdvisorSettings; syst
   }
 }
 
-/** A recognized region name/id or port in the text, never the model's choice of tool arguments. */
-function namedRuleRegion(text: string): string | null {
+/** Every recognized region name/id or port region in the text, never the model's choice of tool arguments. */
+function namedRuleRegions(text: string): string[] {
   const words = ` ${fold(text)} `;
   const regions = typeof REGIONS === 'undefined' ? {} : REGIONS;
-  return Object.entries(regions).find(([id, region]) =>
-    [id, region.name].some(name => name && words.includes(` ${fold(name)} `)))?.[0] ?? portRegion(findPort(text));
+  const found = new Set(Object.entries(regions)
+    .filter(([id, region]) => [id, region.name].some(name => name && words.includes(` ${fold(name)} `)))
+    .map(([id]) => id));
+  const port = portRegion(findPort(text));
+  if (port) found.add(port);
+  return [...found];
 }
 
-/** Keep the numeric backstop on unless the returned rows apply to the question and the quote. */
+/**
+ * Fail closed (rule-29 checkpoint shape): a numeric rule sentence passes only
+ * when every fish and every region it relies on, named in that sentence or
+ * carried from any earlier sentence of the reply, matches a returned row for
+ * that same fish in that same region. Anything not positively resolved keeps
+ * the backstop: a region other than the checked one anywhere up to the
+ * sentence, more than one fish before a sentence, a fish with no row. Only a
+ * reply that names no fish at all falls back to the question's own fish.
+ */
 function hasRelatedRules(results: readonly RuleEvidence[], question: string, reply: string, ctx: ToolContext, identifiedFish: string | null): boolean {
   if (!results.length) return false;
   const asked = resolveSpecies(question)?.key ?? identifiedFish;
   if (!asked) return false;
-  const region = namedRuleRegion(question) ?? contactRegion(ctx.contact, ctx.settings);
+  const asking = namedRuleRegions(question);
+  if (asking.length > 1) return false;
+  const region = asking[0] ?? contactRegion(ctx.contact, ctx.settings);
   const rows = results.filter(result => result.region === region).flatMap(result => result.rules);
   const supports = (subject: string): boolean => {
     const keys = ruleKeys(subject);
     return rows.some(row => keys.species.includes(row.species_key) || keys.group.includes(row.species_key));
   };
   if (!supports(asked)) return false;
-  let subjects = [asked];
-  return reply.split(/(?<=[.!?])\s+|\n+/).every(sentence => {
+  const fishBefore = new Set<string>(), places = new Set<string>();
+  for (const sentence of reply.split(/(?<=[.!?])\s+|\n+/)) {
     const named = namedSpecies(sentence);
-    if (named.length) subjects = named;
-    if (!statesRuleNumber(sentence)) return true;
-    const place = namedRuleRegion(sentence);
-    return (!place || place === region) && subjects.every(supports);
-  });
+    for (const place of namedRuleRegions(sentence)) places.add(place);
+    if (statesRuleNumber(sentence)) {
+      if ([...places].some(place => place !== region)) return false;
+      if (fishBefore.size > 1) return false;
+      const relied = new Set([...fishBefore, ...named]);
+      if (![...(relied.size ? relied : [asked])].every(supports)) return false;
+    }
+    for (const fish of named) fishBefore.add(fish);
+  }
+  return true;
 }
 
 /** A get_conditions result's advisory line and events, when it says to lead with one. */
