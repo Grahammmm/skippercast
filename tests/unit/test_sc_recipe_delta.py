@@ -43,8 +43,8 @@ SOURCE_PINS = {
     # SC1114-07: test_coast_recipe.py carries the South Big Sur preview-wording pin.
     # Scope amendment: fix card t_57d66a92 SCOPE-3 authorizes this transitive pin only;
     # the exact-byte assertion, frozen snapshots and publication state are unchanged.
-    # Wave 2B: rebind the exact recipe test bytes after the source catalogue pin refresh.
-    'tests/unit/test_coast_recipe.py': 'a240aa0c160ce093994d2b6770c7c08fcfdb20702e850c3b9b70229fa6fa25a6',
+    # DATA-LIVE-1: rebind the exact recipe test bytes after the source display-policy refresh.
+    'tests/unit/test_coast_recipe.py': 'a03789fab6baf6f205abe6dbf55fdedfc6b34ff76e815f4f9064df47ad13310d',
 }
 # Exactly the metadata files the existing validator reads for one recipe.
 READ_SET = {SCHEMA, 'catalog/sources.json', 'catalog/coastal-sectors.json',
