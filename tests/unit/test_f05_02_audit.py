@@ -84,3 +84,22 @@ def test_written_geojson_has_no_annotation(atlas, tmp_path):
     text = (tmp_path / "out" / "atlas.geojson").read_text(encoding="utf-8")
     assert "SYNTHETIC" not in text
     assert json.loads(text)["features"]
+
+
+@pytest.mark.parametrize("kind", ["areas", "drifts"])
+@pytest.mark.parametrize("path", [("recorded_validation", "datum"), ("recorded_validation", "native_cells"),
+                                  ("source_id",), ("basis",), ("extent_note",)])
+def test_allowed_field_cannot_carry_an_object(atlas, kind, path):
+    row = atlas[kind][0]
+    if path[-1] in ("basis", "extent_note") and path[-1] not in row:
+        pytest.skip("field belongs to the other kind")
+    holder = row[path[0]] if len(path) == 2 else row
+    holder[path[-1]] = {"synthetic_internal_note": "SYNTHETIC-NESTED"}
+    with pytest.raises(ValueError):
+        geojson_document(atlas)
+
+
+def test_target_ids_must_be_a_list_of_scalars(atlas):
+    atlas["areas"][0]["target_ids"] = [{"synthetic_internal_note": "SYNTHETIC-NESTED"}]
+    with pytest.raises(ValueError):
+        geojson_document(atlas)

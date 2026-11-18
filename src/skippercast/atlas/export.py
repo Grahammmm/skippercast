@@ -228,13 +228,30 @@ PUBLIC_PROPERTIES = {
 }
 
 
+def _public_value(value, listed):
+    """Allowed fields carry only scalars (or, for list fields, a list of scalars): no nested objects."""
+    scalar = (str, int, float, bool, type(None))
+    if listed:
+        return isinstance(value, list) and all(isinstance(v, scalar) for v in value)
+    return isinstance(value, scalar)
+
+
 def public_properties(row, kind):
-    """Reviewed public shape for an area or drift; unknown fields, at any depth, are omitted."""
+    """Reviewed public shape for an area or drift; unknown fields, at any depth, are omitted
+    and an allowed field holding an unexpected object or list is refused."""
     allowed = PUBLIC_PROPERTIES[kind] + ("recorded_validation",)  # row order kept: shipped bytes unchanged
     result = {k: v for k, v in row.items() if k in allowed}
+    for key, value in result.items():
+        if key != "recorded_validation" and not _public_value(value, key == "target_ids"):
+            raise ValueError(f"{kind} {row.get('id')}: unexpected shape for public property {key}")
     if "recorded_validation" in result:
-        result["recorded_validation"] = {k: v for k, v in result["recorded_validation"].items()
-                                         if k in PUBLIC_EVIDENCE_FIELDS}
+        evidence = result["recorded_validation"]
+        if not isinstance(evidence, dict):
+            raise ValueError(f"{kind} {row.get('id')}: recorded_validation must be an object")
+        result["recorded_validation"] = {k: v for k, v in evidence.items() if k in PUBLIC_EVIDENCE_FIELDS}
+        for key, value in result["recorded_validation"].items():
+            if not _public_value(value, False):
+                raise ValueError(f"{kind} {row.get('id')}: unexpected shape for recorded_validation.{key}")
     return result
 
 
