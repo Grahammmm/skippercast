@@ -390,7 +390,13 @@ def produce(root,plan,output,*,now,horizon,plan_descriptor=None):
         fcntl.flock(held,fcntl.LOCK_EX|fcntl.LOCK_NB)
         checkpoint=output/"checkpoint.json";manifest=output/"usable-inputs.json"
         admission=output/"metadata-admission.json";intent=output/"result-intent.json";pending=output/"usable-inputs.pending"
+        # Interrupted between link(pending,manifest) and pending.unlink(): exactly these two names, one regular inode, link count 2.
+        # Content is pinned to the durable intent below; any third link, other inode or other name still holds.
+        both=[manifest.lstat(),pending.lstat()] if os.path.lexists(manifest) and os.path.lexists(pending) else []
+        linked_pair=bool(both) and all(stat.S_ISREG(i.st_mode) and i.st_nlink==2 for i in both) and (both[0].st_dev,both[0].st_ino)==(both[1].st_dev,both[1].st_ino)
+        if both and not linked_pair:raise ValueError("owned regular inventory artifact required: result names must be one inode with link count two")
         for path in (checkpoint,manifest,admission,intent,pending):
+            if linked_pair and path in (manifest,pending):continue
             if path.exists() and (not path.is_file() or path.stat().st_nlink!=1):raise ValueError("owned regular inventory artifact required")
         catalog_root=str(Path(root).resolve(strict=True))
         identity=digest(dict(plan=plan,now=now,horizon=horizon,plan_descriptor=plan_descriptor,catalog_root=catalog_root))
@@ -422,6 +428,9 @@ def produce(root,plan,output,*,now,horizon,plan_descriptor=None):
             if hashlib.sha256(payload).hexdigest()!=prepared.get("sha256"):raise ValueError("prepared result differs; preserve and hold")
             result=json.loads(payload)
             if result.get("plan_sha256")!=digest(plan) or result.get("now")!=now or result.get("prospective_horizon")!=horizon:raise ValueError("prepared result contract changed")
+            if linked_pair:
+                pending.unlink();sync_directory(output)
+                return dict(status="completed_recovered",manifest_sha256=prepared["sha256"],catalog_metadata_bytes_this_call=0,result=result)
             if manifest.exists():return dict(status="completed_reused",manifest_sha256=prepared["sha256"],catalog_metadata_bytes_this_call=0,result=result)
             os.link(pending,manifest);sync_directory(output);pending.unlink();sync_directory(output)
             return dict(status="completed_recovered",manifest_sha256=prepared["sha256"],catalog_metadata_bytes_this_call=0,result=result)
