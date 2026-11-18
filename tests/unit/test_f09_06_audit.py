@@ -80,6 +80,11 @@ UNUSABLE.update({
     "row fetchedAt not a time": _row("fetchedAt", "yesterday"),
     "row fetchedAt without timezone": _row("fetchedAt", "2026-10-08T15:00:00"),
     "row areaId outside the binding": _row("areaId", "atlantis"),
+    # Believable bug: a set-membership test on an unhashable JSON value raises TypeError and crashes due()/publish().
+    "row areaId a list": _row("areaId", []),
+    "row areaId an object": _row("areaId", {}),
+    "row areaId a non-empty list": _row("areaId", ["morro-bay"]),
+    "row areaId a number": _row("areaId", 3),
     "row not an object": lambda doc: doc["waterQuality"].__setitem__(0, "row"),
 })
 

@@ -207,7 +207,8 @@ def _usable_row_fields(row, binding):
     for key in ("advisory", "stationCode"):
         if key not in row or not (row[key] is None or isinstance(row[key], str)):
             return False
-    if row.get("areaId") not in {area[0] for area in binding["areas"]}:
+    area_id = row.get("areaId")  # JSON may hold a list or object here: test the type before any set membership
+    if not isinstance(area_id, str) or area_id not in {area[0] for area in binding["areas"]}:
         return False
     fetched = row.get("fetchedAt")
     if not isinstance(fetched, str):
