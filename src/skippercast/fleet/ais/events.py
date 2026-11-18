@@ -10,7 +10,9 @@ surrounding fishing run, and that dip must not drag the point into the harbor.
 A fishing segment with no fix outside every geofence yields no event. When the
 median of the remaining fixes itself falls inside a geofence (fixes on opposite
 sides of a harbor), the point is the observed outside fix nearest to that
-median instead, and the radius is measured from the point actually used.
+median instead, and the radius is measured from the point actually used. The
+check is made on the six-decimal point that is emitted; if no candidate is
+outside every geofence once rounded, the event is withheld.
 
 Every event carries ``basis = inferred-from-movement`` (D10): it marks where a
 boat stopped or trolled, never a catch location. ``species_json`` stays null
@@ -126,18 +128,23 @@ def p90_radius_m(points: Sequence[tuple[float, float]], centre: tuple[float, flo
     return distances[max(0, math.ceil(0.9 * len(distances)) - 1)]
 
 
-def outside_centre(points: Sequence[tuple[float, float]], ports: Sequence[Geofence]) -> tuple[float, float]:
-    """The event point for fixes already known to lie outside every geofence.
+def outside_centre(points: Sequence[tuple[float, float]], ports: Sequence[Geofence]) -> tuple[float, float] | None:
+    """The event point, as emitted (rounded to six decimals), for fixes outside every geofence.
 
-    The median of fixes on opposite sides of a harbor can fall inside it, so a
-    median inside a geofence is replaced by the observed fix nearest to it (ties
-    broken by the smaller (lat, lon)): the point stays a real fix, outside every
-    geofence, and the same input always gives the same point.
+    The median of fixes on opposite sides of a harbor can fall inside it, and
+    rounding can nudge a point onto an included geofence edge, so the point
+    checked is the rounded one that is emitted. A median inside a geofence is
+    replaced by the observed fix nearest to it (ties broken by the smaller
+    (lat, lon)) whose rounded form is outside every geofence: the point stays a
+    real fix and the same input always gives the same point. ``None`` when no
+    candidate is outside, so the event is withheld.
     """
-    centre = median_point(points)
-    if port_at(ports, centre[0], centre[1]) is None:
-        return centre
-    return min(points, key=lambda p: (distance_nm(centre[0], centre[1], p[0], p[1]), p))
+    median = median_point(points)
+    for lat, lon in [median, *sorted(points, key=lambda p: (distance_nm(median[0], median[1], p[0], p[1]), p))]:
+        centre = (round(lat, 6), round(lon, 6))
+        if port_at(ports, centre[0], centre[1]) is None:
+            return centre
+    return None
 
 
 # ---------------------------------------------------------------- events
@@ -209,7 +216,10 @@ def build_events(classification: Classification, ports: Sequence[Geofence], cont
         points = [(p.lat, p.lon) for p in segment.positions if port_at(ports, p.lat, p.lon) is None]
         if not points:
             continue
-        lat, lon = outside_centre(points, ports)
+        centre = outside_centre(points, ports)
+        if centre is None:
+            continue
+        lat, lon = centre
         events.append(Event(
             id=event_id(context.trip_id, segment.started_at, kind),
             trip_id=context.trip_id,
@@ -217,8 +227,8 @@ def build_events(classification: Classification, ports: Sequence[Geofence], cont
             vessel_id=context.vessel_id,
             region=context.region,
             kind=kind,
-            lat=round(lat, 6),
-            lon=round(lon, 6),
+            lat=lat,
+            lon=lon,
             radius_m=round(p90_radius_m(points, (lat, lon)), 1),
             started_at=segment.started_at,
             ended_at=segment.ended_at,

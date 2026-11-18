@@ -94,3 +94,21 @@ def test_longitude_seam_opposite_sides_stay_outside_the_harbor():
     # Radius is the great-circle distance across the seam, not a 359.9 degree longitude span.
     assert e.radius_m == round(max(metres((e.lat, e.lon), p) for p in points), 1)
     assert e.radius_m < 12_000
+
+
+# Six-decimal rounding of an emitted point can land on the included geofence edge.
+EDGE = (10.0, -150.0200004)  # outside PORT_A as observed; rounds to (10.0, -150.02), on the west edge
+
+
+def test_rounding_onto_a_harbor_edge_is_not_emitted_boundary_regression():
+    assert not PORT_A.contains(*EDGE) and PORT_A.contains(round(EDGE[0], 6), round(EDGE[1], 6))  # negative control
+    assert _events(_fixes([EDGE])) == []  # only candidate rounds into the harbor: withheld
+
+
+def test_rounded_fallback_skips_a_candidate_that_rounds_into_the_harbor():
+    far_east = (10.0, -149.9)
+    points = [EDGE, EDGE, far_east]  # median is EDGE, which rounds into the harbor
+    [e] = _events(_fixes(points))
+    assert (e.lat, e.lon) == far_east and not PORT_A.contains(e.lat, e.lon)
+    # Radius is measured from the emitted centre.
+    assert e.radius_m == round(ev.p90_radius_m(points, (e.lat, e.lon)), 1)
