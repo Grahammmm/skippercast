@@ -94,7 +94,12 @@ def _read_archive(manifest, archive):
         member = members[0]
         if member.file_size > MAX_RASTER_BYTES:
             raise ValueError('Original USGS GeoTIFF exceeded size bound')
-        raster = bundle.read(member)
+        # Limit inflation as well as advertised size. ZipExtFile's bounded
+        # reads can limit decoder output for stored and DEFLATE entries.
+        if member.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
+            raise ValueError('Unsupported original USGS ZIP compression')
+        with bundle.open(member) as stream:
+            raster = stream.read(member.file_size + 1)
     if hashlib.sha256(raster).hexdigest() != manifest['raster_sha256']:
         raise ValueError('Original USGS GeoTIFF member changed')
     return hashlib.sha256(raw).hexdigest(), raster

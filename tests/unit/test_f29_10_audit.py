@@ -2,7 +2,7 @@
 from hashlib import sha256
 from io import BytesIO
 import json
-from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+from zipfile import ZIP_BZIP2, ZIP_DEFLATED, ZipFile, ZipInfo
 
 import pytest
 
@@ -26,10 +26,10 @@ def source(tmp_path):
     # Opaque synthetic bytes exercise identity at the validation boundary, before GDAL opens the TIFF.
     payload = b'synthetic raster bytes'
 
-    def package(year, content=payload, *, name=manifest['raster_member'], extra=False):
+    def package(year, content=payload, *, name=manifest['raster_member'], extra=False, codec=ZIP_DEFLATED):
         buf = BytesIO()
         with ZipFile(buf, 'w') as archive:
-            archive.writestr(ZipInfo(name, (year, 1, 1, 0, 0, 0)), content, compress_type=ZIP_DEFLATED)
+            archive.writestr(ZipInfo(name, (year, 1, 1, 0, 0, 0)), content, compress_type=codec)
             if extra:
                 archive.writestr('unreviewed-sidecar.aux.xml', b'synthetic sidecar')
         return buf.getvalue()
@@ -59,6 +59,7 @@ def test_timestamp_only_repack_preserves_source_identity(source, tmp_path, year)
     ('extra-member', 'exact original GeoTIFF'),
     ('transport-bound', 'archive exceeded size bound'),
     ('member-bound', 'GeoTIFF exceeded size bound'),
+    ('unbounded-codec', 'Unsupported original USGS ZIP compression'),
 ])
 def test_repackaging_does_not_bypass_source_checks(source, tmp_path, monkeypatch, change, error):
     context, manifest, metadata, payload, package = source
@@ -76,6 +77,8 @@ def test_repackaging_does_not_bypass_source_checks(source, tmp_path, monkeypatch
         monkeypatch.setattr(context, 'MAX_ARCHIVE_BYTES', len(raw) - 1)
     elif change == 'member-bound':
         monkeypatch.setattr(context, 'MAX_RASTER_BYTES', len(payload) - 1)
+    elif change == 'unbounded-codec':
+        raw = package(2021, codec=ZIP_BZIP2)
     archive.write_bytes(raw)
     with pytest.raises(ValueError, match=error):
         context.validate_source(manifest, archive, metadata)
