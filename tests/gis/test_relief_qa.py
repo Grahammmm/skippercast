@@ -14,9 +14,11 @@ from skippercast.relief import envelope, package, qa, receipts, shots
 from tests._support import ROOT
 
 REGION = 'morro-bay'
-ARCHIVE = 'layers/public/relief.pmtiles'
+# Packaged layer paths of the current chain: each producer owns its own leaf under layers/public.
+ARCHIVE = package.ARCHIVE
+DETAIL = 'layers/public/zone/detail.geojson'
 # Faults that need a second, unrelated current public producer of evidence rasters.
-DECOYS = {'decoy_elevation', 'decoy_contributor', 'decoy_proof'}
+DECOYS = {'decoy_elevation', 'decoy_contributor', 'decoy_proof', 'decoy_contours'}
 
 
 def write_json(path, value):
@@ -126,10 +128,14 @@ def setup_case(tmp, monkeypatch, fault):
         tiles.write_pmtiles(out / 'relief.pmtiles', {(z, x, y): tiles.encode_png(rgba)},
                             metadata={'description': desc}, bounds=bounds, minzoom=z, maxzoom=z,
                             center=(z, (bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2))
+
+    def zone(out):
         px, py = grid @ (42, 42)
         geometry = mapping(box(*transform_bounds('EPSG:3857', 'EPSG:4326', px, py + grid.e, px + grid.a, py)))
         write_json(out / 'detail.geojson', {'type': 'FeatureCollection', 'region': REGION,
             'features': [{'type': 'Feature', 'geometry': geometry, 'properties': {'tier': '1m-measured'}}]})
+
+    def contours(out):
         line = {'type': 'LineString', 'coordinates': [[bounds[0], bounds[1]], [bounds[2], bounds[3]]]}
         # Producer-format native replacement and an ancillary survey edge:
         # one counts in the 60-ft tier, the other is not a contour.
@@ -139,10 +145,18 @@ def setup_case(tmp, monkeypatch, fault):
                 {'type': 'Feature', 'properties': {'kind': 'survey-edge', 'minzoom': 8}, 'geometry': line}]})
 
     # The tile producer pins its elevation input and builds from the evidence stage, like the real chain.
+    # Each producer owns a disjoint leaf: tiles/ and zone/ under layers/public, contours under layers/.
     assert receipts.run_stage(receipts.StageRun(
-        region, 'tiles', archive, 'b' * 64, scope='public', target='layers/public',
+        region, 'tiles', archive, 'b' * 64, scope='public', target='layers/public/tiles',
         upstream=[receipts.Ref('evidence', 'public')],
         plan=receipts.Plan([receipts.Input(evidence_dir / 'elevation.tif', 'elevation')]))).state == 'ok'
+    assert receipts.run_stage(receipts.StageRun(
+        region, 'zone', zone, 'e' * 64, scope='public', target='layers/public/zone',
+        upstream=[receipts.Ref('evidence', 'public')])).state == 'ok'
+    # The contour stage is unscoped and is not part of release.json. A decoy-mosaic trace is the fault.
+    traced = receipts.Ref('mosaic', 'public') if fault == 'decoy_contours' else receipts.Ref('evidence', 'public')
+    assert receipts.run_stage(receipts.StageRun(
+        region, 'contours', contours, 'f' * 64, target='layers/contours', upstream=[traced])).state == 'ok'
     sources = [{'id': 'synthetic', 'attribution': 'Synthetic survey', 'rights_class': 'public', 'label': 'measured',
                 'vertical_datum': 'NAVD88', 'survey_dates': ['2020'], 'rights': rights}]
     assembly = tmp / 'assembly.json'
@@ -151,7 +165,7 @@ def setup_case(tmp, monkeypatch, fault):
             {'source_id': 'synthetic', 'min_depth_m': 0, 'max_depth_m': 20, 'resolution_m': .5, 'support_class': 3}]},
         'native_support_by_zoom': {'17': {'tiles': 1, 'limit_m': 20, 'support_class': 3,
                                            'sources': [{'id': 'synthetic', 'tiles': 1, 'resolution_m': .5}]}},
-        'layer_paths': ['layers/public/contours.geojson', 'layers/public/detail.geojson', ARCHIVE]})
+        'layer_paths': [DETAIL, ARCHIVE]})
 
     def run(stage, *argv):
         return cli.main([stage, '--out', str(tmp), '--region', REGION, *map(str, argv)])
@@ -174,9 +188,10 @@ def setup_case(tmp, monkeypatch, fault):
                 layers=[package.layer_record(region.dir, p) for p in sorted(doc['layer_paths'])]))
         assert receipts.run_stage(receipts.StageRun(
             region, 'package', bad_package, 'c' * 64, target='release/{generation}',
-            upstream=[receipts.Ref('tiles', 'public'), receipts.Ref('digests')])).state == 'ok'
+            upstream=[receipts.Ref('tiles', 'public'), receipts.Ref('digests'), receipts.Ref('zone', 'public')])).state == 'ok'
     else:
-        assert run('package', '--manifest', assembly, '--upstream', 'tiles:public', '--upstream', 'digests') == 0
+        assert run('package', '--manifest', assembly, '--upstream', 'tiles:public', '--upstream', 'digests',
+                   '--upstream', 'zone:public') == 0
     gen = receipts.read_receipt(region.receipt_path('package'))['generation']
     release = region.dir / 'release' / gen / 'release.json'
     digest = receipts.sha256_file(release)
@@ -219,6 +234,8 @@ def setup_case(tmp, monkeypatch, fault):
     ('decoy_elevation', "elevation: not the packaged tile producer's elevation input"),
     ('decoy_contributor', 'contributor: not an output of the packaged tile producer'),
     ('decoy_proof', 'proof_z17: not an output of the packaged tile producer'),
+    # Contours are not release layers; only the current contour stage, traced from this mosaic, may supply them.
+    ('decoy_contours', "contours were not traced from the packaged tiles' mosaic"),
     # Capture pack provenance and pixels, not the pack's own inventory claims.
     ('shots_outside_stage', 'shots: pack is not from the current capture stage'),
     ('no_notice', 'no navigation notice text'), ('blank_canvas', 'no rendered Chart content'),
@@ -257,6 +274,14 @@ def test_good_release_is_idempotent_and_envelope_binds_exact_qa(tmp_path, monkey
     assert review['release']['sha256'] == digest
     (pack / summary['shots']['entries'][0]['path']).write_bytes(b'tampered')
     assert not receipts.check(region, 'envelope').done
+
+
+def test_capture_script_binds_the_packaged_layer_paths():
+    # Contract: qa_shots.mjs looks up the archive and detail at the paths release.json lists. Bug: the
+    # old unnested paths are absent from a real package, so capture dies before producing any shot.
+    script = (ROOT / 'scripts/relief/qa_shots.mjs').read_text(encoding='utf-8')
+    assert f"const archive = '{package.ARCHIVE}'" in script
+    assert f"const detailKey = '{qa.DETAIL}'" in script
 
 
 def test_source_edge_across_tile_boundary_uses_actual_paint(tmp_path):

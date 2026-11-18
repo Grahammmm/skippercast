@@ -10,6 +10,10 @@ is a three-band raster (support class, elevation m positive up, native spacing
 m) on that zoom's exact EPSG:3857 pixel lattice, from the current tile producer.
 It describes the final contributing support after any resampling/blending;
 no summary or nominal resolution can substitute for it. Unproved paint fails.
+
+The measured-label footprint is the packaged zone layer (layers/public/zone/detail.geojson). Depth
+contours are not packaged: the current `contours` stage receipt is an implicit upstream, and its
+layers/contours/contours.geojson (pinned as a QA input) must come from the tiles' own mosaic.
 """
 from __future__ import annotations
 
@@ -27,8 +31,10 @@ from skippercast.relief import package, receipts
 from skippercast.seafloor.rough_first import read_tiles
 
 ARCHIVE_BUDGET = 1_500_000_000
-DETAIL = package.LAYERS + 'detail.geojson'
-CONTOURS = package.LAYERS + 'contours.geojson'
+DETAIL = package.LAYERS + 'zone/detail.geojson'  # the zone stage's leaf; packaged in release.json
+# Depth contours are not in release.json (inventory leaves them to the contour channel). QA reads the
+# contour stage's own output and binds it to its current receipt and to the same mosaic as the tiles.
+CONTOURS = 'layers/contours/contours.geojson'
 DEVICES = {'desktop': [1200, 800], 'phone': [390, 844]}
 THEMES = ('dark', 'light')
 WEB_HALF = 20037508.342789244
@@ -320,6 +326,21 @@ def _bind_evidence(region, package_receipt, archive, evidence):
         owners = (mosaics[0],) if role in ('contributor', 'support') else (mosaics[0], tile)
         if role != 'elevation' and not any(owns(doc, ref) for doc in owners):
             raise ValueError(f'{role}: not an output of the packaged tile producer or its elevation producer')
+    return mosaics[0]
+
+
+def _bind_contours(contour, pinned, mosaic):
+    """Require the contour evidence to be the current contour stage's own output, traced from the tiles' mosaic.
+
+    Contours are not release layers, so release.json cannot pin them; the contour receipt does. A
+    contours.geojson from any other writer, an older generation, or a different mosaic cannot supply
+    the contour counts of this release.
+    """
+    if contour.get('scope') is not None or (CONTOURS, pinned) not in {(o['path'], o['sha256']) for o in contour['outputs']}:
+        raise ValueError('contour_count_by_interval_ft: not an output of the current contour stage')
+    if (mosaic['stage'], mosaic.get('scope'), mosaic['generation']) not in {
+            (u['stage'], u.get('scope'), u['generation']) for u in contour['upstream']}:
+        raise ValueError("contour_count_by_interval_ft: contours were not traced from the packaged tiles' mosaic")
 
 
 def _capture_outputs(region, manifest, digest, package_generation):
@@ -445,6 +466,8 @@ def main(argv=None):
             raise ValueError('invalid release generation or sha256')
         region = package.stage_region(args.out, args.region, 'qa')
         refs = [receipts.Ref('package'), *(receipts.Ref.parse(v) for v in args.upstream)]
+        if receipts.Ref('contours') not in refs:
+            refs.append(receipts.Ref('contours'))  # the contour stage's output is the contour evidence
         if (len(set(refs)) != len(refs) or any(r.scope not in (None, 'public') or
                 r.stage in {'qa', 'envelope', 'publish'} for r in refs)):
             raise ValueError('QA needs unique public evidence producer receipts')
@@ -460,7 +483,7 @@ def main(argv=None):
                 **{f'proof_z{z}': p for z, p in fine_paths.items()}}
     if args.support:
         evidence['support'] = args.support
-    inputs = {**evidence, 'shots': args.shots, 'region': contract}
+    inputs = {**evidence, 'contours': region.dir / CONTOURS, 'shots': args.shots, 'region': contract}
     current = {}
 
     def plan(upstream):
@@ -486,8 +509,9 @@ def main(argv=None):
         for row in layers:
             if package.layer_record(region.dir, row['path']) != row:
                 raise ValueError(f'layer_sha256: {row["path"]} does not match release')
-        _bind_evidence(region, upstream, next(r for r in layers if r['path'] == package.ARCHIVE),
-                       {role: (region.record(path), pin[role]) for role, path in evidence.items()})
+        mosaic = _bind_evidence(region, upstream, next(r for r in layers if r['path'] == package.ARCHIVE),
+                                {role: (region.record(path), pin[role]) for role, path in evidence.items()})
+        _bind_contours(current['contours'], pin['contours'], mosaic)
         bounds = _json(contract)['bounds']
         metrics, failures = {}, []
         sources = release.get('sources')
@@ -501,8 +525,6 @@ def main(argv=None):
             paths = {row['path'] for row in layers}
             if DETAIL not in paths:
                 raise ValueError('measured_label_uncertified_cells: release has no detail layer')
-            if CONTOURS not in paths:
-                raise ValueError('contour_count_by_interval_ft: release has no contour layer')
             with ExitStack() as stack:
                 elevation, contributor = (stack.enter_context(rasterio.open(p)) for p in (args.elevation, args.contributor))
                 support = stack.enter_context(rasterio.open(args.support)) if args.support else None
