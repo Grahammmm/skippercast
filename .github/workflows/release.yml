@@ -24,20 +24,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Tag names a released version
-        env:
-          TAG: ${{ inputs.tag || github.ref_name }}
-        run: |
-          git rev-parse --verify --quiet "refs/tags/${TAG}" >/dev/null || { echo "::error::Tag ${TAG} does not exist"; exit 1; }
-          version=$(git show "${TAG}:package.json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')
-          if [ "v${version}" != "${TAG}" ]; then
-            echo "::error::${TAG} points at a commit whose package.json says ${version}"
-            exit 1
-          fi
       - name: Release notes from CHANGELOG.md
         env:
           TAG: ${{ inputs.tag || github.ref_name }}
-        run: python3 scripts/changelog_section.py "$TAG" > "$RUNNER_TEMP/notes.md"
+        # Run the parser from the workflow checkout, not the historical tag.
+        run: python3 -I scripts/changelog_section.py --tagged -- "$TAG" > "$RUNNER_TEMP/notes.md"
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

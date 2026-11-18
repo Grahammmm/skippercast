@@ -2,6 +2,9 @@
 
 Usage: python scripts/changelog_section.py v0.3.0 [--changelog CHANGELOG.md]
 
+With --tagged, resolve the exact Git tag in the current repository and read
+both package.json and CHANGELOG.md from that commit, never from the checkout.
+
 The version may carry a leading "v". The section runs from its "## <version>"
 heading (for example "## 0.3.0 — 2026-09-20") to the next "## " heading and
 includes any "### Internal" subsection. Exits 1 when the section is missing or
@@ -10,12 +13,15 @@ has two headings or the changelog cannot be read. Lines inside a ``` or ~~~
 code fence are body text, never headings; an unclosed fence is refused.
 """
 import argparse
+import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 FENCE = re.compile(r'^ {0,3}(`{3,}|~{3,})(.*)$')
+VERSION = re.compile(r'\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+(?:\+[0-9A-Za-z.-]+)?|\+[0-9A-Za-z.-]+)?')
 
 
 def fenced_lines(lines):
@@ -35,7 +41,7 @@ def fenced_lines(lines):
 
 def section(text, version):
     version = version[1:] if version.startswith('v') else version
-    if not re.fullmatch(r'\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+(?:\+[0-9A-Za-z.-]+)?|\+[0-9A-Za-z.-]+)?', version):
+    if not VERSION.fullmatch(version):
         raise ValueError(f'Not a release version: {version}')
     heading = re.compile(r'^## v?' + re.escape(version) + r'(?:\s|$)')
     lines, body, inside = text.splitlines(), [], False
@@ -57,21 +63,51 @@ def section(text, version):
     return notes
 
 
+def tagged_changelog(tag):
+    if not tag.startswith('v') or not VERSION.fullmatch(tag[1:]):
+        raise ValueError(f'Not a release tag: {tag}')
+
+    def git_read(error, *args):
+        try:
+            return subprocess.run(['git', *args], check=True, capture_output=True).stdout
+        except (subprocess.CalledProcessError, OSError) as exc:
+            raise LookupError(error) from exc
+
+    commit = git_read(f'Tag {tag} does not resolve to a commit',
+                      'rev-parse', '--verify', '--end-of-options', f'refs/tags/{tag}^{{commit}}').strip().decode('ascii')
+
+    def blob(path):
+        data = git_read(f'Cannot read {path} at tag {tag}', 'cat-file', 'blob', f'{commit}:{path}')
+        try:
+            return data.decode('utf-8')
+        except UnicodeDecodeError as exc:
+            raise ValueError(f'{path} at tag {tag} is not UTF-8') from exc
+
+    try:
+        version = json.loads(blob('package.json'))['version']
+    except (json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise ValueError(f'Cannot read the package.json version at tag {tag}') from exc
+    if not isinstance(version, str) or f'v{version}' != tag:
+        raise ValueError(f'{tag} points at a commit with a different package.json version')
+    return blob('CHANGELOG.md')
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('version')
-    parser.add_argument('--changelog', type=Path, default=ROOT / 'CHANGELOG.md')
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument('--changelog', type=Path, default=ROOT / 'CHANGELOG.md')
+    source.add_argument('--tagged', action='store_true', help='read release metadata and notes from the Git tag')
     args = parser.parse_args(argv)
     try:
-        text = args.changelog.read_text(encoding='utf-8')
+        text = tagged_changelog(args.version) if args.tagged else args.changelog.read_text(encoding='utf-8')
+        print(section(text, args.version))
     except UnicodeDecodeError:
         print(f'::error::{args.changelog} is not UTF-8', file=sys.stderr)
         return 1
     except OSError as error:
         print(f'::error::cannot read {args.changelog} ({type(error).__name__})', file=sys.stderr)
         return 1
-    try:
-        print(section(text, args.version))
     except (ValueError, LookupError) as error:
         print(f'::error::{error}', file=sys.stderr)
         return 1
