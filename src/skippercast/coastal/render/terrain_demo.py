@@ -248,6 +248,7 @@ def payload(root, receipt_ref):
         center=((vertices.min(axis=0)+vertices.max(axis=0))/2).tolist(), span=np.ptp(vertices,axis=0).tolist(),
         metadata=dict(crs=scalar('crs'), crs_wkt=scalar('crs_wkt'), affine=affine.tolist(), nodata=scalar('nodata'),
             vertical=block, acceptance=acceptance, render_binding=receipt['render_binding'],
+            review_confirmed=_review_confirmed(root, receipt, acceptance),
             limitations=receipt['limitations'], support_cells=receipt['support_cells'], uncertainty_kind=kind,
             interpolation='planar_supported_triangle_interpolation_visualization_only', **FLAGS))
 
@@ -272,14 +273,50 @@ def style_config(style=None):
 MEASURED_LABEL = 'Accepted mesh · measured sample tile'
 SYNTHETIC_LABEL = 'Synthetic test terrain — not survey measurements'
 UNCONFIRMED_LABEL = 'Terrain provenance unconfirmed — not survey measurements'
+# Measured-data claims in BODY that must not reach a synthetic or unconfirmed page.
+NEUTRAL_COPY = (
+    ('of the accepted depth mesh', 'of the depth mesh'),
+    ('<option>Measured</option>', '<option value="Measured">Original triangles</option>'),
+    ('interpolation estimate between measured samples', 'interpolation estimate between grid samples'),
+    ('Measured mode shows original triangles', 'Original-triangles mode shows original triangles'),
+)
+
+
+def _positively_real(data):
+    metadata = data.get('metadata') if isinstance(data, dict) else None
+    acceptance = metadata.get('acceptance') if isinstance(metadata, dict) else None
+    return (isinstance(acceptance, dict) and acceptance.get('synthetic') is False
+            and metadata.get('review_confirmed') is True)
 
 
 def heading_label(data):
-    """Measured wording only for a positively real input; synthetic or unknown never gets it."""
+    """Measured wording only for a positively real, reviewed input; synthetic or unknown never gets it."""
     metadata = data.get('metadata') if isinstance(data, dict) else None
     acceptance = metadata.get('acceptance') if isinstance(metadata, dict) else None
-    flag = acceptance.get('synthetic') if isinstance(acceptance, dict) else None
-    return SYNTHETIC_LABEL if flag is True else MEASURED_LABEL if flag is False else UNCONFIRMED_LABEL
+    if isinstance(acceptance, dict) and acceptance.get('synthetic') is True:
+        return SYNTHETIC_LABEL
+    return MEASURED_LABEL if _positively_real(data) else UNCONFIRMED_LABEL
+
+
+def _review_confirmed(root, receipt, acceptance):
+    """True only when the hash-bound independent review of a non-synthetic input accepts this exact context.
+
+    Same checks as terrain_only.verify's review binding, re-read from the artifact bytes (no clock:
+    expiry is not judged here, so this labels provenance, not current validity).
+    """
+    try:
+        review = _json(_bytes(root, acceptance.get('scientific_review'), MAX_JSON_BYTES))
+        reference = acceptance['scientific_review']
+        reviewer = review.get('reviewer_id')
+        return (acceptance.get('synthetic') is False and reference.get('contract') == 'coastal-terrain-only-science-review-v1'
+                and review.get('schema') == 'coastal-terrain-only-science-review-v1'
+                and review.get('scope') == 'internal-terrain-only-scientific-review'
+                and review.get('independent') is True and review.get('decision') == 'accept'
+                and review.get('synthetic') is False and review.get('holds_added') == []
+                and review.get('facts_digest') == receipt['acceptance_context_sha256']
+                and isinstance(reviewer, str) and bool(reviewer) and reviewer != acceptance.get('creator_id'))
+    except (ValueError, KeyError, TypeError, AttributeError, OSError):
+        return False
 
 
 def html(data, style=None):
@@ -288,11 +325,17 @@ def html(data, style=None):
     ui = (module/'terrain_demo_ui.js').read_text()
     encoded = json.dumps(data, sort_keys=True, separators=(',', ':'), allow_nan=False)
     encoded = encoded.replace('&', '\\u0026').replace('<', '\\u003c').replace('>', '\\u003e')
-    script = 'const TERRAIN_STYLE=' + json.dumps(style_config(style), sort_keys=True, separators=(',', ':')) + ';\nconst TERRAIN_PAYLOAD=' + encoded + ';\n' + core + '\n' + ui
+    script = 'const TERRAIN_STYLE=' + json.dumps(style_config(style), sort_keys=True, separators=(',', ':')) + ';\nconst TERRAIN_PAYLOAD=' + encoded + ';\n' + core + '\n' + (ui if _positively_real(data) else ui.replace('original measured triangles', 'original triangles'))
     def csp_hash(text):
         return "'sha256-" + base64.b64encode(hashlib.sha256(text.encode()).digest()).decode() + "'"
     csp = "default-src 'none'; script-src " + csp_hash(script) + "; style-src " + csp_hash(CSS) + "; connect-src 'none'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
-    document = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="' + csp + '"><title>Internal terrain diagnostic</title><style>' + CSS + '</style></head><body>' + BODY.replace(MEASURED_LABEL, heading_label(data), 1) + '<script>' + script + '</script></body></html>\n'
+    body = BODY.replace(MEASURED_LABEL, heading_label(data), 1)
+    if not _positively_real(data):
+        for old, new in NEUTRAL_COPY:
+            if old not in body:
+                raise ValueError('neutral_copy_anchor_missing')
+            body = body.replace(old, new)
+    document = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="' + csp + '"><title>Internal terrain diagnostic</title><style>' + CSS + '</style></head><body>' + body + '<script>' + script + '</script></body></html>\n'
     result = document.encode('utf-8')
     if len(result) > MAX_HTML_BYTES:
         raise ValueError('demo_html_byte_bound')
