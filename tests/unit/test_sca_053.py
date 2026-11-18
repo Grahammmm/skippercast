@@ -13,9 +13,6 @@ import sys
 from tempfile import TemporaryDirectory
 from time import perf_counter
 
-if __name__ == "__main__":
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
-
 from skippercast.fleet.ais.process import HOUR, hour_counts
 from skippercast.fleet.ais.sources.base import AisPosition, AisStatic
 from skippercast.fleet.ais.store import AisStore, TABLES, day_of
