@@ -16,6 +16,7 @@ from skippercast.seafloor import publish, rough_first, state_cache, jobs
 from skippercast.seafloor.io import sha256
 from skippercast.seafloor.verify import verify_public
 from tests import http_fixture
+from tests.unit.test_rough_first_tile_spans import archive as valid_pmtiles
 from tests._support import NOW, ROOT
 
 
@@ -86,7 +87,7 @@ class PublicationTests(unittest.TestCase):
             atomic_json(root/'catalog/surveys.json', {'surveys':[{'id':'native','url':'https://example.test/original'}]})
             def archive(tool, layers, path, **kwargs):
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(b'PMTiles\x03fixture')
+                path.write_bytes(valid_pmtiles())
             with patch.object(publish,'region_layers',return_value=(layers,{},NOW+timedelta(days=1))), \
                  patch('scripts.build_map_tiles.build_vector_archive',side_effect=archive):
                 folder, manifest = publish.build('morro-bay', root=root, tool='fixture', now=NOW)
@@ -125,7 +126,7 @@ class PublicationTests(unittest.TestCase):
             seen = {}
             def archive(tool, layers, path, **kwargs):
                 seen.update(kwargs); path.parent.mkdir(parents=True,exist_ok=True)
-                path.write_bytes(b'PMTiles\x03fixture')
+                path.write_bytes(valid_pmtiles())
             with patch.object(publish,'region_layers',return_value=(layers,{},NOW+timedelta(days=1))), \
                  patch('scripts.build_map_tiles.build_vector_archive',side_effect=archive):
                 folder, manifest = publish.build('morro-bay',root=root,tool='fixture',now=NOW)

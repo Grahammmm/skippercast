@@ -13,6 +13,7 @@ from skippercast.seafloor import publish
 from skippercast.seafloor.search_areas import assessment, published_contract
 from skippercast.seafloor.screen import screen_candidates
 from tests.gis.test_seafloor_screen import candidate, state, geo
+from tests.unit.test_rough_first_tile_spans import archive as valid_pmtiles
 from tests._support import NOW
 
 
@@ -77,7 +78,7 @@ class SearchAreaTests(unittest.TestCase):
                 'properties': publish.flat_properties(passed['features'][0]['properties'])}]}
             def archive(tool, values, path, **kwargs):
                 self.assertEqual(len(values['habitat']), 1)
-                path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(b'PMTiles\x03fixture')
+                path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(valid_pmtiles())
             with patch.object(publish, 'region_layers', return_value=(layers, {}, NOW+timedelta(days=1))), \
                     patch('scripts.build_map_tiles.build_vector_archive', side_effect=archive):
                 folder, manifest = publish.build('morro-bay', root=root, tool='fixture', now=NOW)

@@ -14,6 +14,7 @@ from skippercast.platform.contracts import atomic_json
 from skippercast.seafloor import publish, slim
 from skippercast.seafloor.io import sha256
 from tests.gis.test_seafloor_publish import Bucket, bundle
+from tests.unit.test_rough_first_tile_spans import archive as valid_pmtiles
 from tests._support import NOW
 
 VERDICT = {'inside': False, 'name': None, 'distanceM': None, 'screened': True}
@@ -390,7 +391,7 @@ class BuildTests(unittest.TestCase):
             atomic_json(root/'catalog/surveys.json', {'surveys': [{'id': 'native', 'url': 'https://example.test/original'}]})
             def archive(tool, layers, path, **kwargs):
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(b'PMTiles\x03fixture')
+                path.write_bytes(valid_pmtiles())
             def stamp(root_, region, exports):
                 for f in exports: f['properties']['protected_place'] = dict(VERDICT)
                 return {'fingerprint': 'ps2-test', 'version': 2}

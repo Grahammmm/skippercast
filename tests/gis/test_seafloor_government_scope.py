@@ -21,6 +21,7 @@ from skippercast.seafloor.ingest import ingest
 from skippercast.seafloor.io import sha256
 from skippercast.seafloor.manifest import qualify_row
 from skippercast.seafloor.substrate import resolve_bindings
+from tests.unit.test_rough_first_tile_spans import archive as valid_pmtiles
 from tests._support import ROOT
 
 ENV = {'SKIPPERCAST_SOURCE_SCOPE': 'government-only', 'SKIPPERCAST_SOURCE_USE': 'for-profit'}
@@ -219,7 +220,7 @@ class GovernmentScopeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, patch.dict('os.environ', ENV, clear=True):
             root = Path(tmp); _, audit, _, polygon = publication_fixture(root)
             def encode(tool, layers, path, **kwargs):
-                path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(b'PMTiles\x03fixture')
+                path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(valid_pmtiles())
             with patch.object(publish, 'run'), \
                     patch.object(publish, 'load_snapshot', return_value={'status': 'ready',
                         'snapshot': '2026-10-02T00:00:00Z', 'layers': []}), \
