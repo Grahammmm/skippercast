@@ -204,17 +204,30 @@ type LiveMpaRead = (url: string) => Promise<{readonly data: unknown; readonly ch
 const isCollection = (d: {type?: unknown; features?: unknown; region_id?: unknown} | null, region: string): boolean =>
   d?.type === 'FeatureCollection' && Array.isArray(d.features) && (d.region_id === undefined || d.region_id === region);
 
+// Morro Bay is the only legacy atlas without region_id. Pin each reviewed artifact's own bytes;
+// the startup form's derived_from.sha256 describes the *full* atlas, not the copy being loaded.
+const morroAtlasDigests = new Map([
+  ['data/atlas.json', '57e35ad2430f6ca48a9d79e4da4fa2db8ce88ab93758e8565d3d2565ec7529dd'],
+  ['regions/morro-bay/atlas-marks.json', '6677776dec9044c55ae3bed983e4d66a246a5af362963083751d9a86cd8a9e2a'],
+]);
+
+async function matchesDigest(bytes: ArrayBuffer, expected: string): Promise<boolean> {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return [...digest].map(b => b.toString(16).padStart(2, '0')).join('') === expected;
+}
+
 /** Loads each region's layers and restores a `?habitat=` on the Chart; created with the Chart (web/map/chart.ts). */
 export function createMarks(options: MarksOptions = {}): {destroy(): void} {
   const {fetchFn = (...a) => fetch(...a), page = () => location.href, onError = () => {}, resolver = () => import('./coast-habitat.js'), now = Date.now} = options;
   // The Chart passes the page's sharedFetch (chart.ts `shareStatic(sharedFetch)` is that same function): it meets the planner on the page's reader.
   const liveRead: LiveMpaRead = options.liveMpaRead ?? (!options.fetchFn || options.fetchFn === sharedFetch ? readLiveMpa : createLiveMpaReader({fetchFn, now}));
   let run = 0, controller: AbortController | undefined, expiry: ReturnType<typeof setTimeout> | undefined, recheck: ReturnType<typeof setTimeout> | undefined;
-  const json = async (path: string, init: RequestInit = {}): Promise<unknown> => {
+  const fetchAsset = async (path: string, init: RequestInit = {}): Promise<Response> => {
     const response = await fetchFn(new URL(path, page()).href, {...init, signal: AbortSignal.timeout(20000)});
     if (!response.ok) throw new Error(`${path}: ${response.status}`);
-    return response.json();
+    return response;
   };
+  const json = async (path: string, init?: RequestInit): Promise<unknown> => (await fetchAsset(path, init)).json();
   /** Show the screen as of now, and assess it again once its oldest check passes the age limit. */
   const setScreen = (inputs: ScreenInputs): void => {
     clearTimeout(recheck);
@@ -251,28 +264,38 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
       closures: c && {...c, checkedAt: closureCheckedAt(c, check)}});
   }
   async function read(id: string, current: number): Promise<void> {
-    const meta = await json(`regions/${encodeURIComponent(id)}/region.json`) as RegionData;
+    const meta = await json(`regions/${encodeURIComponent(id)}/region.json`) as RegionData | null;
+    if (current !== run) return;
+    if (meta?.id !== id) throw new Error(`region.json is not ${id}'s metadata`);
     void screen(id, meta, current).catch(() => { if (current === run) setScreen({areas: null, checkedAt: null, live: false}); });
-    const part = async <T>(key: string, layer: string, valid: (d: never) => boolean, light?: string): Promise<T | null> => {
+    const readAtlas = async (path: string): Promise<unknown> => {
+      const expected = id === 'morro-bay' ? morroAtlasDigests.get(path) : undefined;
+      const response = await fetchAsset(path);
+      const bytes = expected ? await response.arrayBuffer() : undefined;
+      const atlas = (bytes ? JSON.parse(new TextDecoder().decode(bytes)) : await response.json()) as {region_id?: unknown} | null;
+      if (atlas?.region_id === id || (atlas?.region_id === undefined && bytes && expected && await matchesDigest(bytes, expected))) return atlas;
+      throw new Error(`${path} is not ${id}'s atlas`);
+    };
+    const part = async <T>(key: string, layer: string, valid: (d: never) => boolean, light?: string, load = json): Promise<T | null> => {
       const path = meta.assets?.[key];
       if (!path) return null;
       // #617: the region's startup copy first (web/startup-forms.ts); the full file when the copy is missing or wrong.
-      if (light) try { const d = await json(light); if (valid(d as never)) return d as T; } catch { /* the full file below */ }
+      if (light) try { const d = await load(light); if (valid(d as never)) return d as T; } catch { /* the full file below */ }
       try {
-        const d = await json(path);
+        const d = await load(path);
         if (!valid(d as never)) throw new Error(`${path} is not ${id}'s ${key}`);
         return d as T;
       } catch (error) { if (current === run) onError(layer, error); return null; }
     };
     const [atlas, survey, geology] = await Promise.all([
-      part<Atlas>('atlas', 'marks', (d: Atlas | null) => Array.isArray(d?.targets), atlasMarksURL(id)),
+      part<Atlas>('atlas', 'marks', (d: Atlas | null) => Array.isArray(d?.targets), atlasMarksURL(id), readAtlas),
       part<Survey>('survey_habitat', 'habitat', (d: Survey | null) => isCollection(d, id)),
       part<Geology>('geology', 'habitat', (d: Geology | null) => isCollection(d, id)),
     ]);
     if (current !== run) return;
-    markData.value = {region: {...meta, id}, atlas, survey, geology};
+    markData.value = {region: meta, atlas, survey, geology};
     // CI6-02: the target picker says "ranked by mapped habitat" only where places can be ranked.
-    regionAtlas.value = {region: id, marks: atlas?.targets?.length ?? 0};
+    regionAtlas.value = atlas ? {region: id, marks: atlas.targets.length} : null;
   }
   const disposers = [
     // A link naming both an atlas spot and a terrain habitat keeps the spot, which every presentation shows: one selection.
@@ -283,7 +306,7 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
     }),
     effect(() => {
       const id = region.value, current = ++run;
-      markData.value = null; markScreen.value = CHECKING; clearTimeout(recheck);
+      markData.value = null; regionAtlas.value = null; markScreen.value = CHECKING; clearTimeout(recheck);
       // SC2007-01: a failed region.json read ends the check as unavailable (marks withheld), never "Checking…" for the visit.
       // SCB-11: the marks, their protected-area screen and the live boundary query wait for the first verdict (web/map-ready.ts).
       if (id && mapMayLoad.value) read(id, current).catch(error => { if (current === run) { setScreen({areas: null, checkedAt: null, live: false}); onError('marks', error); } });
