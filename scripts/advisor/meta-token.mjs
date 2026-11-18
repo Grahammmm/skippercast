@@ -126,18 +126,31 @@ export async function tokenExpiry({appId, appSecret, token, fetcher = fetch}) {
   return typeof r?.data?.expires_at === 'number' ? r.data.expires_at : null;
 }
 
-async function savePageToken(path, token) {
+/**
+ * Writes the Page token to a new owner-only file. Exclusive creation refuses existing files, devices, pipes and
+ * symlinks; a refusal means the file at `path` is not ours and it is never touched. After a failed write the
+ * script never deletes by name: a path can be swapped for another run's file between any check and the unlink,
+ * so ownership cannot be proven at deletion time. It empties the file through its own open descriptor instead
+ * (always the file this run created, wherever the name now points) and leaves removal to the owner.
+ */
+export async function savePageToken(path, token) {
+  let file;
   try {
-    // Exclusive creation refuses existing files, devices, pipes and symlinks.
-    const file = await open(path, 'wx', 0o600);
-    try {
-      const info = await file.stat();
-      if (!info.isFile() || (info.mode & 0o777) !== 0o600 || info.uid !== process.geteuid()) throw Error();
-      await file.writeFile(token);
-    } finally { await file.close(); }
+    file = await open(path, 'wx', 0o600);
   } catch {
-    throw Error('Could not save the Page token. --token-file must name a new owner-only file in private local storage. If this run created a partial file, remove it.');
+    throw Error('Could not save the Page token. --token-file must name a new owner-only file in private local storage. The file there, if any, was not created by this run and was left untouched.');
   }
+  try {
+    const info = await file.stat();
+    if (!info.isFile() || (info.mode & 0o777) !== 0o600 || info.uid !== process.geteuid()) throw Error();
+    await file.writeFile(token);
+  } catch {
+    let emptied = true;
+    try { await file.truncate(0); } catch { emptied = false; }
+    throw Error(emptied
+      ? 'Could not save the Page token. This run created a file for it, emptied it, and did not delete anything by name. Check the path with ls -l, remove it yourself only if it is an empty file you made, and start again with a new --token-file name.'
+      : 'Could not save the Page token, and the file this run created could not be emptied: it may hold part of the token. Check the path with ls -l, remove the file yourself if it is yours, and start again with a new --token-file name.');
+  } finally { await file.close(); }
 }
 
 export async function main(argv, {env = process.env, fetcher = fetch, ask, log = console.log} = {}) {
