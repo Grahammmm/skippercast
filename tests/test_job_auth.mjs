@@ -80,6 +80,20 @@ test('a fleet scope accepts the fleet workflows for the fleet audience only, and
   for(const [key,value] of [['repository_id','1'],['ref','refs/heads/other'],['event_name','pull_request'],['exp',now-1]])assert.equal(validJobClaims({...fleet('fleet-ais.yml'),[key]:value},policy,now,fleetScope),false,key);
 });
 
+// A second identity must not bypass issuer, subject, lifetime or replay-key checks.
+test('the private fleet identity uses the same claim rules, including immutable subjects and the 600s cap',()=>{
+  const ops=policy.fleet_scheduler;
+  const ref=ops.ref;
+  const [owner,repo]=ops.repository.split('/');
+  const c={...fleet('fleet-ais.yml'),repository:ops.repository,repository_id:ops.repository_id,repository_owner_id:ops.owner_id,ref,
+    sub:`repo:${owner}@${ops.owner_id}/${repo}@${ops.repository_id}:ref:${ref}`,
+    workflow_ref:`${ops.repository}/.github/workflows/fleet-ais.yml@${ref}`,exp:now+600};
+  const check=x=>validJobClaims(x,policy,now,fleetScope,ops);
+  for(const event_name of ['schedule','workflow_dispatch','push'])assert.equal(check({...c,event_name}),true,event_name);
+  for(const [key,value] of [['iss','https://untrusted.example'],['sub',claims.sub],['iat',now+31],['nbf',now+31],['exp',now+601],['exp',now],['jti','']])
+    assert.equal(check({...c,[key]:value}),false,key);
+});
+
 // JWKS cache: one fetch per hour, forced refetch on an unknown kid at most once a minute, failures never cached.
 test('the GitHub key set is cached, expires, handles rotation and never caches failures',async()=>{
   const b64=x=>Buffer.from(JSON.stringify(x)).toString('base64url');
