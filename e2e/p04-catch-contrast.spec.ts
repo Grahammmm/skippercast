@@ -408,7 +408,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MB-05 adds contour checks and rebinds map-only tokens; RF2000-8 corrects selector-to-brace whitespace matching. Contrast calculations and Reports catch assertions are unchanged.
   // MB-20 adds the additive overlay-line gate (checkOverlayLines, 3:1 on --map-water) and rebinds the tokensCss surface hash; contrast() and every existing check are unchanged.
   // SCA-317: checker only rebinds the History target-size stylesheet hash; contrast math is unchanged.
-  "scripts/check_contrast.mjs": "f72754f01a4cb39317b8541a1a243216fc2a9ce476117a142e6067d4ece3f4f3",
+  "scripts/check_contrast.mjs": "785c54a1a30311074a814a611887eb3578f3eb6ef7eff39bb02a32f3ef9f4b0b",
+  // MAP-SOURCES-PAGE-1: only the legendTsx surface hash and its comment change; contrast math and gates unchanged.
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.

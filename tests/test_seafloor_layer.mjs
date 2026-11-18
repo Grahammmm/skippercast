@@ -119,19 +119,20 @@ test('v2: the mark card names the candidate, its nominal depth, survey and year,
   const [a, , search] = habitat.map(f => admitHabitat(f, PUB));
   const mark = seafloorMark(a, 'fit_lingcod');
   assert.deepEqual({...mark, basis: undefined, copy: undefined, copyTerms: undefined}, {id: 'seafloor:fixture-candidate-a', name: 'Habitat candidate, unverified',
-    kind: 'Terrain grade A · fits lingcod habitat 3 of 3', reading: '41–90 ft nominal', source: 'Survey fixture-survey-2m · 2010 · 2 m grid', basis: undefined,
+    kind: 'Terrain grade A · fits lingcod habitat 3 of 3', reading: '41–90 ft nominal', source: 'Surveyed 2010 · 2 m grid', basis: undefined,
     terms: [{href: 'https://example.org/terms', label: 'Publisher terms'}], copy: undefined, copyTerms: undefined});
   assert.ok(mark.basis.startsWith(a.basis));
-  assert.match(mark.basis, /Fixture Survey Lab Synthetic test credit; never survey data\. Planning only\. Not a navigation chart\. Check current CDFW regulations\.$/);
+  assert.match(mark.basis, /Planning only\. Not a navigation chart\. Check current CDFW regulations\.$/);
+  assert.doesNotMatch(mark.basis, /Fixture Survey Lab|Synthetic test credit/, 'MAP-SOURCES-PAGE-1: the card names no source; the Sources page does');
   assert.equal(seafloorMark(a, 'terrain').kind, 'Terrain grade A');
   assert.equal(seafloorMark(a, 'fit_gopher_rockfish').kind, 'Terrain grade A · gopher rockfish fit unknown');
   assert.equal(seafloorMark(search, 'fit_lingcod').kind, 'Rough-bottom search area · unranked');
   assert.equal(seafloorMark(search, 'fit_lingcod').name, 'Measured rough-bottom search area');
   for (const m of [mark, seafloorMark(search, 'terrain')]) assert.doesNotMatch(Object.values(m).join(' '), FORBIDDEN);
-  // v1's "Publisher terms": one link per distinct page, named by credit when there are several; none without a page.
+  // v1's "Publisher terms": one link per distinct page, no source name on the card (MAP-SOURCES-PAGE-1); none without a page.
   const right = a.rights[0], other = {...right, credit: 'Other Lab', policyURL: 'https://example.net/terms'};
   assert.deepEqual(seafloorMark({...a, rights: [right, {...right, credit: 'Same page'}, other]}, 'terrain').terms, [
-    {href: 'https://example.org/terms', label: 'Publisher terms: Fixture Survey Lab'}, {href: 'https://example.net/terms', label: 'Publisher terms: Other Lab'}]);
+    {href: 'https://example.org/terms', label: 'Publisher terms'}, {href: 'https://example.net/terms', label: 'Publisher terms'}]);
   assert.equal(seafloorMark({...a, rights: [{...right, policyURL: ''}]}, 'terrain').terms, undefined);
 });
 
@@ -388,9 +389,10 @@ test('v2: a drawn coverage cell opens its own card: its survey, year and datum n
   await settle();
   const card = rig.layer.cellAt(CELL_ONLY);
   assert.deepEqual({...card, basis: undefined, copy: undefined}, {id: 'seafloor:cell:3310:fx:1', name: 'Surveyed 250 m cell', kind: 'Survey coverage · no habitat rank',
-    reading: 'Depth not given for this cell', source: 'Survey fixture-survey-2m · year and vertical datum not recorded for this cell', basis: undefined, copy: undefined});
+    reading: 'Depth not given for this cell', source: 'Year and vertical datum not recorded for this cell', basis: undefined, copy: undefined});
   assert.ok(card.basis.startsWith(cellBasis('fixture-survey-2m')), 'the cell\'s own basis');
-  assert.match(card.basis, /Fixture Survey Lab .*Planning only\. Not a navigation chart\./, 'with the publication\'s credits and notice');
+  assert.match(card.basis, /Planning only\. Not a navigation chart\./, 'with the publication\'s notice');
+  assert.doesNotMatch(card.basis, /Fixture Survey Lab/, 'MAP-SOURCES-PAGE-1: no source credit on the card');
   assert.doesNotMatch(`${card.kind} ${card.reading} ${card.source}`, /grade|fits|\bft\b|candidate/i, 'no terrain grade, fit or depth from the habitat branch');
   assert.doesNotMatch(card.basis, FORBIDDEN);
   assert.equal(rig.layer.cellAt(HELD_CELL), null, 'a held reach\'s cell never draws and never opens');

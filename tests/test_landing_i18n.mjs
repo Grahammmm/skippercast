@@ -47,9 +47,8 @@ async function load() {
       export {regionInfo, createRegionReader} from './web/app/App.tsx';
       export {hour, day, profile, appView} from './web/state.ts';
       export {Desktop} from './web/app/Desktop.tsx';
-      export {NightCredit, nightState} from './web/landing/NightMap.tsx';
+      export {NightNote, nightState} from './web/landing/NightMap.tsx';
       export {currentsState} from './web/map/currents.ts';
-      export {ShorelineCredit} from './web/landing/Shoreline.tsx';
       export {loadLimits, savedLimits} from './web/limits.ts';
       export {COPY} from './web/ports.ts';
       export {PROFILE_NOTES, PROFILE_TABLE} from './web/profile.ts';
@@ -67,18 +66,19 @@ async function inLang(m, lang, fn) { m.language.value = lang; try { return await
 const port = (id, name, status = 'active') => ({id, name, region: id, status, forecast_point: id, forecast_name: name, match: [35, -120]});
 const noop = () => {};
 
-test('landing_credits_spanish and credits_english_identical: names stay literal and unavailable maps credit nothing', async () => {
+// Contract (MAP-SOURCES-PAGE-1): the landing footer names no basemap or shoreline source in either language; only the drawn currents' basis note stays,
+// with its translated prefix and a safely escaped, untranslated basis. Bug caught: a source credit returning to the footer, or the basis interpolated unescaped.
+test('landing_notes_spanish and notes_english_identical: no source credit, the currents basis stays literal and an unavailable map notes nothing', async () => {
   const m = await load(), before = m.currentsState.value, state = m.nightState.value;
   const basis = 'NOAA WCOFS <source> & {name}';
   try {
     for (const lang of ['es', 'en', 'es']) await inLang(m, lang, () => {
       m.nightState.value = 'ready'; m.currentsState.value = {...before, drawn: {}, basis};
-      const html = m.render(m.h(m.NightCredit));
-      assert.ok(html === `<p class="landing-credit" data-credit="basemap">${lang === 'es' ? 'Mapa base' : 'Basemap'}: © OpenStreetMap contributors, © Protomaps.</p><p class="landing-credit" data-credit="currents">${lang === 'es' ? 'Corrientes' : 'Currents'}: NOAA WCOFS &lt;source> &amp; {name}</p>`, 'translated prefixes, exact attribution, safe interpolation');
-      assert.ok(m.render(m.h(m.ShorelineCredit)) === `<p class="landing-credit">${lang === 'es' ? 'Línea costera' : 'Shoreline'}: NOAA National Geodetic Survey · CUSP shoreline, ${lang === 'es' ? 'levantada en' : 'surveyed'} 1994–2010.</p>`, 'exact shoreline source and years');
+      const html = m.render(m.h(m.NightNote));
+      assert.ok(html === `<p class="landing-credit" data-credit="currents">${lang === 'es' ? 'Corrientes' : 'Currents'}: NOAA WCOFS &lt;source> &amp; {name}</p>`, 'translated prefix, exact basis, safe interpolation, and no basemap credit');
       m.currentsState.value = {...before, drawn: null};
-      assert.doesNotMatch(m.render(m.h(m.NightCredit)), /data-credit="currents"/, 'withdrawn/expired currents have no credit');
-      for (const unavailable of ['loading', 'failed']) { m.nightState.value = unavailable; assert.equal(m.render(m.h(m.NightCredit)), ''); }
+      assert.doesNotMatch(m.render(m.h(m.NightNote)), /data-credit="currents"/, 'withdrawn/expired currents have no credit');
+      for (const unavailable of ['loading', 'failed']) { m.nightState.value = unavailable; assert.equal(m.render(m.h(m.NightNote)), ''); }
     });
   } finally { m.currentsState.value = before; m.nightState.value = state; }
 });
