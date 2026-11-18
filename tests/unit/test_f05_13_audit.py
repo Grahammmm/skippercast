@@ -12,6 +12,7 @@ numpy/rasterio); the worker's own write, reference and envelope logic is real.
 """
 import contextlib
 import hashlib
+import importlib.util
 import json
 import sys
 import types
@@ -19,7 +20,14 @@ from pathlib import Path
 
 import pytest
 
-from skippercast.coastal.authenticated_v1 import worker
+# worker imports authenticated_v1.supplement, which needs numpy at import time, so the
+# no-GIS lane cannot even collect this module; the survey-science lane runs it.
+# find_spec only locates numpy; it never imports it.
+if importlib.util.find_spec("numpy") is None:
+    pytest.skip("worker imports numpy via authenticated_v1.supplement; no-GIS lane lacks it",
+                allow_module_level=True)
+
+from skippercast.coastal.authenticated_v1 import worker  # noqa: E402
 
 SHA = "a" * 64
 
