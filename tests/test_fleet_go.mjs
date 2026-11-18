@@ -43,6 +43,11 @@ function seed(sql) {
   const insert = sql.prepare(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,website,booking_url,status,profile_status,first_seen_at,last_seen_at,created_at,updated_at)
     VALUES(?,'morro-bay',?,?,?,?,?,?,?,?,?,?,?)`);
   for (const [id, slug, website, booking, status, profile] of VESSELS) insert.run(id, slug, slug.replace(/-/g, ' '), slug, website, booking, status, profile, NOW, NOW, NOW, NOW);
+  // SCA-248: /go/ needs a current displayable fact carrying exactly each stored URL.
+  const fact = sql.prepare(`INSERT INTO fleet_vessel_facts(id,vessel_id,field,value_json,value_key,source_id,source_url,method,confidence,rights,retrieved_at,first_seen_at,last_seen_at)
+    VALUES(?,?,?,?,?,'test','https://landing.example.com/','page',0.9,'facts-only',?,?,?)`);
+  for (const [id, , website, booking] of VESSELS) for (const [field, value] of [['website', website], ['booking_url', booking]])
+    if (value) fact.run(`f-${id}-${field}`, id, field, JSON.stringify(value), field, NOW, NOW, NOW);
 }
 const clicks = sql => sql.prepare('SELECT * FROM fleet_link_clicks ORDER BY vessel_id, target, placement').all().map(r => ({...r}));
 const go = (path, env, init = {}) => worker.fetch(new Request(ORIGIN + path, init), {ASSETS, ...env});
