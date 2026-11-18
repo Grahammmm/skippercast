@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 
 const ROOT = new URL('../', import.meta.url);
 export const COMMAND = 'node scripts/build_landing_strings.mjs';
-export const OUTPUTS = {en: 'web/strings.en.generated.json', es: 'web/strings.es.generated.json', landing: 'web/landing/strings.generated.json'};
+export const OUTPUTS = {en: 'web/strings.en.generated.json', es: 'web/strings.es.generated.json', landing: 'web/landing/strings.generated.json', status: 'dist/status-strings.generated.json'};
 const LANDING_IDS = ['brief.planning', 'brief.terms', 'brief.disclaimer', 'tile.wind', 'tile.swell', 'tile.water', 'tile.tide', 'language.loadFailed', 'language.retrySpanish', 'shared.degraded.saved', 'shared.degraded.savedAt', 'shared.popover.basis', 'shared.popover.sources'];
 
 /** The landing's first-paint ids (the deferred live verdict uses the app reader). */
@@ -20,16 +20,17 @@ export const landingId = id =>
 export function projections(catalog) {
   const map = catalog?.strings, isMap = value => value !== null && typeof value === 'object' && !Array.isArray(value);
   if (!isMap(catalog) || !isMap(map) || Object.keys(map).length === 0) throw Error('The catalogue strings map must be a non-empty object of ids');
-  const en = {}, es = {}, landing = {};
+  const en = {}, es = {}, landing = {}, status = {};
   for (const [id, entry] of Object.entries(map)) {
     if (typeof entry?.en !== 'string' || entry.en === '') throw Error(`${id}: no English string in the catalogue`);
     if (typeof entry.es !== 'string' || entry.es === '') throw Error(`${id}: no Spanish string in the catalogue`);
     en[id] = {en: entry.en};
+    if (id.startsWith('status.')) status[id] = {en: entry.en};
     es[id] = entry.es;
     if (landingId(id)) landing[id] = {en: entry.en};
   }
   const text = value => JSON.stringify(value) + '\n';
-  return {[OUTPUTS.en]: text(en), [OUTPUTS.es]: text(es), [OUTPUTS.landing]: text(landing)};
+  return {[OUTPUTS.en]: text(en), [OUTPUTS.es]: text(es), [OUTPUTS.landing]: text(landing), [OUTPUTS.status]: text(status)};
 }
 
 /** Write the stale tables under `root` (with `check`, write nothing and throw naming them); returns the stale paths. */

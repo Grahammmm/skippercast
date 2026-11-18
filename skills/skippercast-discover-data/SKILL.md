@@ -9,7 +9,7 @@ Start from the requested region and fishing methods, not a familiar provider. Lo
 
 Run `PYTHONPATH=src python -m skippercast.platform needs --region <id>` from that repository. Address the most consequential gaps first: legal geometry and native depth for bottom targets; actual forecast/observation coverage for conditions; effort and sampling for catch claims.
 
-For coastal habitat expansion, use `skippercast-map-coast` to prioritize retained native-mask gaps and executable original survey batches. Legal/source-rights review remains necessary for publication, but missing spatial screens do not stop private physical qualification. Reconcile saved duplicate/deep-only/sparse findings before another download; source counts and envelope overlap are not measured expansion.
+For coastal habitat expansion, use `skippercast-map-coast`; for depth data (relief/contours/3D), new leads go to the data lane and, once held, through skippercast-relief-pipeline R0. Prioritize retained native-mask gaps and executable original survey batches. Legal/source-rights review remains necessary for publication, but missing spatial screens do not stop private physical qualification. Reconcile saved duplicate/deep-only/sparse findings before another download; source counts and envelope overlap are not measured expansion.
 
 Search primary publisher catalogs using the data need plus geographic names, coordinates, management area, harbor and species scientific names. A neighboring region's source is a discovery lead, not evidence of coverage. Inspect exact dataset footprints and variables before binding a source. Distinguish the original producer from a mirror or API broker. Read [source-review.md](references/source-review.md) when evaluating candidates.
 

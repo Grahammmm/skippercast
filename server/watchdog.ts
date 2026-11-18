@@ -18,7 +18,7 @@ export const STALE_MINUTES = 45;
 
 export function feedAgeMinutes(feed: ExternalJSON, now = Date.now()): number {
   const stamp = Date.parse(feed?.completed_at || feed?.generated_at || '');
-  return Number.isFinite(stamp) ? (now - stamp) / 60000 : Infinity;
+  return Number.isFinite(stamp) && stamp - now <= 3600000 ? (now - stamp) / 60000 : Infinity;
 }
 
 const CRITICAL_KINDS = new Set<string>(health.critical_kinds);

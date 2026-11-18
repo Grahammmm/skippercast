@@ -54,7 +54,7 @@ async function runMain(index, {indexFails = false} = {}) {
   const requests = [];
   const els = {};
   const saved = {fetch: globalThis.fetch, document: globalThis.document};
-  globalThis.document = {getElementById: id => (els[id] ||= {innerHTML: '', textContent: 'Loading the published feeds…'})};
+  globalThis.document = {documentElement: {lang: 'en'}, getElementById: id => (els[id] ||= {innerHTML: '', textContent: 'Loading the published feeds…'})};
   globalThis.fetch = async url => {
     requests.push(url);
     if (url === '/regions/index.json') {
