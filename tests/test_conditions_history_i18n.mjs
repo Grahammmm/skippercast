@@ -20,6 +20,7 @@ await build({
   stdin: {resolveDir: ROOT, loader: 'ts', contents: `
     export {Conditions} from './web/app/views/Conditions.tsx';
     export {HourlyTable} from './web/app/views/HourlyTable.tsx';
+    export {setUnits} from './web/unit-choice.ts';
     export {History} from './web/app/views/History.tsx';
     export {historyView} from './packages/coast/src/ui/history.ts';
     export {chart} from './packages/coast/src/charts/series.ts';
@@ -82,6 +83,13 @@ function renderConditions(lang) {
 }
 const renderHourly = lang => { v.language.value = lang; const html = v.render(v.h(v.HourlyTable, {forecast: hourlyForecast(FALL), tide: null, at: FALL_AT, tz: TZ, now: FALL_NOW})); v.language.value = 'en'; return html; };
 const renderHistory = lang => { v.language.value = lang; const html = v.render(v.h(v.History, {now: NOW_H})); v.language.value = 'en'; return html; };
+
+test('hourly view uses the height preference on screen and keeps feet for print', () => {
+  v.setUnits({height: 'm'});
+  try {
+    assert.match(renderHourly('es'), /class="app-screen-height">1,3 m<\/span><span class="app-print-height">4,2 ft<\/span>/);
+  } finally { v.setUnits({height: 'ft'}); }
+});
 const strip = html => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 const attrs = (html, name) => [...html.matchAll(new RegExp(`\\s${name}="([^"]*)"`, 'g'))].map(m => m[1]);
 

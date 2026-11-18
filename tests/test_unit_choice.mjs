@@ -48,7 +48,7 @@ test('units_default_fahrenheit and remembered choice, duplicate selection and sw
   try {
     assert.equal(m.units.value.temp, 'F'); assert.equal(m.tileProps(water(59.9)).reading, '59.9');
     assert.equal(m.tileProps(water()).unit, '°F');
-    m.setUnits({temp: 'C'}); m.setUnits({temp: 'C'}); assert.equal(saved.get(KEY), '{"temp":"C","wind":"kt"}');
+    m.setUnits({temp: 'C'}); m.setUnits({temp: 'C'}); assert.equal(saved.get(KEY), '{"temp":"C","wind":"kt","height":"ft"}');
     const reloaded = await load(saved.get(KEY));
     try { assert.equal(reloaded.m.units.value.temp, 'C'); } finally { reloaded.restore(); }
     m.setUnits({temp: 'F'}); assert.equal(m.tileProps(water()).reading, '59');
@@ -131,5 +131,53 @@ test('wind preference migration, invalid and duplicate choices, and the Spanish 
     try { assert.equal(reloaded.m.units.value.wind, 'kmh'); } finally { reloaded.restore(); }
     const bad = await load('{"temp":"C","wind":"m/s"}');
     try { assert.equal(bad.m.units.value.wind, 'kt'); assert.equal(bad.m.units.value.temp, 'C'); } finally { bad.restore(); }
+  } finally { restore(); }
+});
+
+const heightTile = (id = 'swell', value = 4, state = 'stale') => Object.freeze({
+  ...water(value, state), id, label: id === 'swell' ? 'Swell' : 'Tide', unit: 'ft',
+});
+const heightRow = Object.freeze({...windRow, seas: 3, swell: {h: 4, period: 12, from: 270},
+  second: {h: 2, from: 270}, chop: {h: 1, period: 5}, tide: -0.5, score: 7});
+test('height_tile_metres: stale, missing and negative readings; print retains feet', async () => {
+  const {m, restore} = await load();
+  try {
+    const swell = heightTile();
+    m.setUnits({height: 'm'});
+    for (const compact of [false, true]) {
+      const p = m.tileProps(swell, compact);
+      assert.equal(`${p.reading} ${p.unit}`, '1.2 m'); assert.equal(p.stale, true);
+    }
+    assert.equal(m.tileProps(heightTile('tide', -0.5), false, false, 'es').reading, '-0,2');
+    assert.equal(m.tileProps(heightTile('tide', null, 'unavailable')).reading, '—');
+    assert.equal(m.emptyTiles(false)[3].unit, 'm');
+    assert.match(m.render(m.h(m.Tiles, {tiles: [swell]})), /app-print-height[^>]*>[^]*?ui-reading">4<[^]*?ui-tile-unit">ft</);
+  } finally { restore(); }
+});
+test('height_hourly_metres: converts only height cells and preserves blanks and feet limits', async () => {
+  const {m, restore} = await load();
+  try {
+    assert.equal(m.hourlyCells(heightRow, 'en', 'kt', 'm').join('|'), '10 kt from NW|15 kt|0.9 m|1.2 m · 12 s · 270°|0.6 m · from W|0.3 m · 5 s|-0.2 m|—|7.0');
+    assert.equal(m.hourlyCells({...windRow, seas: null, second: {h: 0, from: 270}}, 'en', 'kt', 'm').slice(2, 7).join('|'), '—|—|—|—|—');
+    for (const [seas, expected] of [[4, false], [4.01, true], [null, false]]) {
+      const row = {...heightRow, seas};
+      assert.equal(m.hourlyCells(row, 'en', 'kt', 'm')[2], seas === null ? '—' : '1.2 m');
+      assert.equal(m.overLimits(row, {seas: 4}).seas, expected);
+    }
+  } finally { restore(); }
+});
+test('height_default_feet: invalid saved value, repeated changes and reload', async () => {
+  const {m, saved, restore} = await load('{"temp":"C","wind":"mph","height":"yards"}');
+  try {
+    assert.equal(m.units.value.height, 'ft');
+    assert.equal(m.hourlyCells(heightRow).join('|'), '10 kt from NW|15 kt|3.0 ft|4.0 ft · 12 s · 270°|2.0 ft · from W|1.0 ft · 5 s|-0.5 ft|—|7.0');
+    m.setUnits({height: 'm'}); m.setUnits({height: 'm'}); m.setUnits({height: 'yards'});
+    assert.equal(saved.get(KEY), '{"temp":"C","wind":"mph","height":"m"}');
+    m.language.value = 'es';
+    assert.match(m.render(m.h(m.UnitChoice)), /Altura del oleaje y la marea.*aria-pressed="true"[^>]*>m</);
+    const reloaded = await load(saved.get(KEY));
+    try { assert.equal(reloaded.m.tileProps(heightTile()).unit, 'm'); } finally { reloaded.restore(); }
+    m.setUnits({height: 'ft'});
+    assert.equal(m.tileProps(heightTile()).reading, '4'); assert.equal(m.tileProps(heightTile()).unit, 'ft');
   } finally { restore(); }
 });
