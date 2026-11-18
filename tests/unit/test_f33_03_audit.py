@@ -3,12 +3,14 @@
 Run ``python -B -m pytest -q tests/unit/test_f33_03_audit.py`` for both
 controls. The module CLI also reports the two original malformed cases.
 """
+import hashlib
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
 
+from research.scripts import summarize_original_camera_chart_lead as camera_module
 from research.scripts.summarize_native_hard_reviews import summarize as summarize_native
 from research.scripts.summarize_original_camera_chart_lead import summarize as summarize_camera
 
@@ -18,7 +20,16 @@ SURVEY = 'SYNTHETIC-REVIEW'
 REPORT = 'https://example.invalid/report.pdf'
 LIMITATION = 'Historical camera rockfish codes are observations, not catch rates or present fish presence.'
 NATIVE_LIMITATION = 'Historical review components are not fishing waypoints, verified fish habitat, or safe navigation areas.'
+INTERPRETATION = 'Historical source observations only.'
 HOLD = 'Synthetic survey remains held for fishing promotion.'
+# The summarizer publishes only pinned, reviewed prose; the synthetic fixture prose is admitted here.
+_SYNTHETIC_PINS = frozenset(hashlib.sha256(text.encode('utf-8')).hexdigest() for text in (INTERPRETATION, HOLD))
+
+
+@pytest.fixture(autouse=True)
+def _admit_synthetic_prose(monkeypatch):
+    monkeypatch.setattr(camera_module, 'REVIEWED_SOURCE_TEXT_SHA256',
+                        camera_module.REVIEWED_SOURCE_TEXT_SHA256 | _SYNTHETIC_PINS)
 
 
 def _geometry():
@@ -32,7 +43,7 @@ def _camera_review():
         'original_bag_url': 'https://example.invalid/original.bag', 'original_bag_sha256': 'a' * 64,
         'original_camera_url': 'https://example.invalid/camera.zip', 'original_camera_sha256': 'b' * 64,
         'survey_report_url': REPORT, 'survey_report_sha256': 'c' * 64,
-        'survey_report_interpretation': 'Historical source observations only.',
+        'survey_report_interpretation': INTERPRETATION,
         'survey_fishing_promotion_hold': HOLD,
         'enc_danger_receipt_checked_at': STAMP, 'enc_danger_queried_layers': 18,
         'enc_danger_features_in_bounded_scope': 0,
@@ -108,7 +119,7 @@ def _assert_camera(summary):
     assert summary['charted_seabed_point_count_by_nature'] == {'rock': 2}
     assert summary['transects'][0]['measured_depth_m_mllw_range'] == [20.0, 21.0]
     assert (summary['survey_report_url'], summary['survey_report_sha256']) == (REPORT, 'c' * 64)
-    assert summary['survey_report_interpretation'] == 'Historical source observations only.'
+    assert summary['survey_report_interpretation'] == INTERPRETATION
     assert summary['survey_fishing_promotion_hold'] == HOLD
     assert summary['limitations'] == [LIMITATION]
     assert summary['fishing_target'] is summary['exportable'] is False
@@ -191,42 +202,41 @@ def test_native_rejects_bad_values_in_known_fields(tmp_path, container, field, v
 
 @pytest.mark.parametrize('field', ['survey_report_interpretation', 'survey_fishing_promotion_hold'])
 @pytest.mark.parametrize('text', [
-    'Private point 38.1234, -123.4567',        # the reviewed leak: decimal degrees
-    'Private point 38.1, -123.4',              # coarse signed pair
+    'Private point 38.1234, -123.4567',        # the first reviewed leak: decimal degrees
+    'Private point 38 07 24 north 123 02 00 west',  # the second: DMS with hemisphere words
+    'Private point thirty-eight degrees north',     # a position spelled in words
     'Private point 38.1 123.4',                # unsigned decimal pair
-    'Located at 38 07 24 N 123 02 W',          # hemisphere letters
-    'Seen at 38\N{DEGREE SIGN}07.4 near the reef',
     'Easting 500000 northing 4200000',
-    'Lat 38 lon 123',
     'Private point {"latitude": 38}',
-    'Line one\nline two',
-    'x' * 2001,
+    HOLD + ' Private point 38 07 24 north 123 02 00 west',  # reviewed text with a position appended
+    'An arbitrary private comment.',
 ])
-def test_camera_source_text_rejects_positions_in_private_prose(field, text):
-    # Protects: the published summary stays coordinate-free even though the
-    # private review's prose fields are free text. Bug: accepting any printable
-    # string publishes a pasted coordinate verbatim.
+def test_camera_source_text_rejects_unreviewed_private_prose(field, text):
+    # Protects: the published summary stays coordinate-free although the private
+    # review's prose fields are free text. Bug: a pattern denylist (twice
+    # bypassed: decimals, then DMS with hemisphere words) or any printable-string
+    # check publishes a pasted coordinate verbatim; only exact reviewed prose may pass.
     review = _camera_review()
     review[field] = text
     with pytest.raises(ValueError, match=field):
         summarize_camera(review)
 
 
-def test_camera_source_text_keeps_reviewed_receipt_prose():
-    # Protects: the stricter fail-closed grammar still admits every committed
-    # reviewed interpretation/hold (depths, distances, dates, 1:200,000), so
-    # re-publication does not silently drop evidence.
-    texts = []
+def test_camera_reviewed_prose_pins_match_committed_receipts():
+    # Protects: the pinned digests are exactly the committed reviewed receipt
+    # prose, and each publishes verbatim. Bug: a stale pin admits text no receipt
+    # carries; a missing pin silently drops reviewed evidence on re-publication.
+    texts = set()
     for path in sorted(Path('research/receipts').glob('*.json')):
         data = json.loads(path.read_text(encoding='utf-8'))
         if isinstance(data, dict) and 'survey_report_interpretation' in data:
-            texts += [data['survey_report_interpretation'], data.get('survey_fishing_promotion_hold')]
-    assert len(texts) >= 8
-    for text in filter(None, texts):
+            texts |= {data['survey_report_interpretation'], data.get('survey_fishing_promotion_hold')} - {None}
+    real_pins = camera_module.REVIEWED_SOURCE_TEXT_SHA256 - _SYNTHETIC_PINS
+    assert {hashlib.sha256(text.encode('utf-8')).hexdigest() for text in texts} == real_pins
+    for text in texts:
         review = _camera_review()
         review['survey_report_interpretation'] = review['survey_fishing_promotion_hold'] = text
-        summary = summarize_camera(review)
-        assert summary['survey_report_interpretation'] == text
+        assert summarize_camera(review)['survey_report_interpretation'] == text
 
 
 def _check_affected(label, summarize, check_evidence):
@@ -244,6 +254,7 @@ def _check_affected(label, summarize, check_evidence):
 
 
 if __name__ == '__main__':
+    camera_module.REVIEWED_SOURCE_TEXT_SHA256 |= _SYNTHETIC_PINS
     camera = _camera_review()
     camera['limitations'].append(_geometry())
     native = _native_review()

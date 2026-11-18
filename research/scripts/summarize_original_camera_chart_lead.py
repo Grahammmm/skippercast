@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import date, datetime
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -24,17 +25,18 @@ BOTTOM_CLASSES = {'rock', 'boulder', 'cobble'}
 # S-57 NATSUR labels from the ENC seabed layers, including comma-separated combinations.
 ENC_NATURES = {'mud', 'clay', 'silt', 'sand', 'stone', 'gravel', 'pebbles',
                'cobbles', 'rock', 'lava', 'coral', 'shells', 'boulder', 'unknown'}
-MAX_SOURCE_TEXT = 2000
-# Shapes a published position can take in prose. Depth, distance and date
-# figures in reviewed reports (18.7 m, 41.5-46.0 m, 1:200,000, 2010) stay legal.
-_POSITION_PATTERNS = tuple(re.compile(p) for p in (
-    r'(?<![\w.])-\d',                              # signed value, e.g. -123.4
-    r'\d{2,3}\.\d{2,}|\d\.\d{3,}',                 # degree-precision decimal
-    r'\d{2,3}\.\d\s*[,;/ ]\s*\d{2,3}\.\d',         # decimal pair
-    r'\d\s*[NSEW]\b|\b[NSEW]\s*\d',                # hemisphere letter with a value
-    r'(?<![\w,])\d{5,}(?![\w,])',                  # bare long digit run (UTM, DMS packed)
-    r'(?i:\b(?:lat|lon|lng|latitude|longitude|easting|northing|utm|mgrs|degrees?|minutes?|seconds?)\b)',
-))
+# Free prose cannot be proven coordinate-free by pattern (a position can be
+# spelled as DMS with hemisphere words, in words, split across sentences), so
+# interpretation and hold text publishes only when its SHA-256 matches prose a
+# person reviewed and committed under research/receipts. A new survey's text is
+# added here, with its receipt, in the same reviewed change.
+REVIEWED_SOURCE_TEXT_SHA256 = frozenset({
+    'd2dcacc45464a5bf90738603d02e5c54159189c813098cb150c10eb3ca5f572e',  # H11730 interpretation (2008, 2010)
+    '074b564ee00665f1708fcc98f62dbdb1006fdd19af08c3daac8881fbdf09c9ea',  # H11876 interpretation
+    '3a9eedd1e88191ac4b0bec774a87ba277b06d6008507756716e4fcc2af3eec7c',  # H11876 fishing-promotion hold
+    '86cde591c17471c1b9daa4f4ceb342edad7c4b3d9f79c2aa5d51937e75ef5244',  # H11971 interpretation
+    '73198e231f0189fdc04f7e0ba187fa7601ecbb84394ec2445d0dc6b05a7c5e68',  # H11971 fishing-promotion hold
+})
 
 
 # Both summary writers use these validators at the private JSON boundary.
@@ -126,13 +128,11 @@ def _class_counts(value, field):
 
 
 def _source_text(value, field):
-    # Interpretation and hold come from the upstream reviewed survey/report pair,
-    # but that pair is private input: publish only prose that cannot carry a
-    # position. Fail closed on anything outside the plain-prose grammar below.
-    if (not isinstance(value, str) or not value.strip() or len(value) > MAX_SOURCE_TEXT
-            or not re.fullmatch(r"[A-Za-z0-9 .,;:'’()%/\u2013-]+", value)
-            or any(pattern.search(value) for pattern in _POSITION_PATTERNS)):
-        raise ValueError(f'{field}: expected coordinate-free source review text')
+    # The private review is untrusted input: fail closed on any prose that is
+    # not exactly a reviewed, committed coordinate-free text.
+    if (not isinstance(value, str)
+            or hashlib.sha256(value.encode('utf-8')).hexdigest() not in REVIEWED_SOURCE_TEXT_SHA256):
+        raise ValueError(f'{field}: expected reviewed coordinate-free source review text')
     return value
 
 
