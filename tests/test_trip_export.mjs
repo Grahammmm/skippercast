@@ -397,6 +397,25 @@ test('loadContourFile to GPX exports only the finest ft-v2 index tracks with sou
   assert.equal(onlySuperseded.counts.contours, 0, 'coarse lines are not a fallback when native lines miss the bounds');
 });
 
+test('ft-v2 exports native and complementary coarse fallback for one index depth', () => {
+  const collection = feetV2Fixture();
+  const fallback = structuredClone(collection.features[0]);
+  delete fallback.properties.maxzoom;
+  fallback.geometry.coordinates = [[-121, 35.25], [-120.9, 35.25]];
+  collection.features.unshift(fallback);
+  const otherClass = structuredClone(fallback);
+  otherClass.properties.provenance = 'interpolated';
+  otherClass.geometry.coordinates = [[-121, 35.26], [-120.9, 35.26]];
+  collection.features.push(otherClass);
+  const result = buildExport(contourRequest({contours: {collection}}));
+  const tracks = [...result.gpx.matchAll(/<trk><name>60 ft contour · native<\/name><desc>[^<]*<\/desc>(.*?)<\/trk>/g)];
+  assert.equal(tracks.length, 1);
+  assert.deepEqual(segmentsIn(tracks[0][1]).sort(), [
+    [[-121, 35.25], [-120.9, 35.25]], [[-121, 35.26], [-120.9, 35.26]], [[-121, 35.3], [-120.9, 35.3]],
+  ]);
+  assert.equal(result.counts.contours, 6);
+});
+
 test('ft-v2 export refuses ambiguous runs and invalid metadata even outside the requested coverage', () => {
   const wrongSource = /Depth contours cannot be exported: a contour does not match its listed source\./;
   const wrongSet = /Depth contours cannot be exported: wrong region, units or interval\./;

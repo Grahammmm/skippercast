@@ -74,7 +74,7 @@ function contourTracks(c,region,bounds,now) {
   if(!Array.isArray(omitted)||omitted.some(o=>!str(o?.source_id)||!str(o.review_status)))throw bad('omitted surveys not listed');
   const tracks=[],unlisted=omittedText(omitted);
   const wrongSource='a contour does not match its listed source',wrongDepth='a contour depth is not a multiple of 30 ft';
-  const finest=new Map(),bounded=new Set();
+  const finest=new Map(),bounded=new Set(),runs=new Set(),grouped=new Map();
   const basis=v2?'an estimated display contour from the reviewed survey grid':'a display contour from averaged survey blocks';
   for(const f of fs){
     const props=f?.properties;
@@ -88,14 +88,25 @@ function contourTracks(c,region,bounds,now) {
       // Pair before filtering by coverage: a superseded run is never a fallback.
       const key=JSON.stringify([source_id,depth_ft]);
       if(Object.hasOwn(props,'maxzoom')){bounded.add(key);continue;}
-      if(finest.has(key))throw bad(wrongSource);
-      finest.set(key,Number.isInteger(minzoom)&&minzoom>=V2_NATIVE_ZOOM);
+      // Native and coarse fallback are complementary; provenance classes may split each tier.
+      const native=Number.isInteger(minzoom)&&minzoom>=V2_NATIVE_ZOOM;
+      const run=JSON.stringify([key,native,props.provenance??'measured']);
+      if(runs.has(run))throw bad(wrongSource);
+      runs.add(run);
+      finest.set(key,Boolean(finest.get(key))||native);
     }else if(!Number.isInteger(depth_ft)||depth_ft<=0||depth_ft%30)throw bad(wrongDepth);
     const g=f.geometry,lines=g?.type==='LineString'?[g.coordinates]:g?.type==='MultiLineString'?g.coordinates:null;
     if(!Array.isArray(lines))throw Error('Invalid export geometry');
     const kept=lines.filter(l=>{const e=extent({coordinates:l});if(e.some(Number.isNaN))throw Error('Invalid export geometry');return overlap(e,bounds);});
-    if(kept.length)tracks.push({name:`${depth_ft} ft contour · ${source_id}`,source:s.name,survey_date,vertical_datum,geometry:{type:'MultiLineString',coordinates:kept},
-      desc:`${s.name}. Surveyed ${survey_date}. Depth below the survey's ${vertical_datum}; ${basis}, not a sounding or chart depth. Lines stop where the reviewed survey grid stops.${unlisted?` Bound surveys not drawn: ${unlisted}`:''} NOT FOR NAVIGATION.`});
+    if(kept.length){
+      const key=JSON.stringify([source_id,depth_ft]),existing=v2&&grouped.get(key);
+      if(existing)existing.geometry.coordinates.push(...kept);
+      else{
+        const track={name:`${depth_ft} ft contour · ${source_id}`,source:s.name,survey_date,vertical_datum,geometry:{type:'MultiLineString',coordinates:kept},
+          desc:`${s.name}. Surveyed ${survey_date}. Depth below the survey's ${vertical_datum}; ${basis}, not a sounding or chart depth. Lines stop where the reviewed survey grid stops.${unlisted?` Bound surveys not drawn: ${unlisted}`:''} NOT FOR NAVIGATION.`};
+        tracks.push(track);if(v2)grouped.set(key,track);
+      }
+    }
   }
   for(const key of bounded)if(!finest.get(key))throw bad(wrongSource);
   return {tracks,omitted};
