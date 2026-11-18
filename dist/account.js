@@ -129,13 +129,29 @@ export function catchLogCsv(entries, trips) {
   }
   return CSV_HEADER + lines.map(line => line + '\r\n').join('');
 }
+/**
+ * SCA-001: the one lifetime every account-panel file export (catch-log CSV, saved-spots GPX) answers to, owned by the
+ * render that drew its buttons. `alive()` says the dialog and render are still current. `begin()` starts an attempt and
+ * returns its own check: false once the dialog closes or repaints, or sign-out or a confirmed account deletion starts,
+ * and never true again for that attempt, even if the sign-out or deletion fails. New attempts wait for every exit to fail.
+ */
+function exportLifetime(alive) {
+  let generation = 0, leaving = 0;
+  return {
+    open: () => !leaving && alive(),
+    begin() { const attempt = generation; return () => attempt === generation && !leaving && alive(); },
+    leave() { leaving++; generation++; },
+    stay() { leaving--; }
+  };
+}
+
 /** Wire the real button once per render. No reads until clicked and no raw records retained after the attempt. */
-function wireCsvDownload($, t, isLive) {
-  const button = $('#log-download-csv'), status = $('#log-csv-status');
-  let pending = false, generation = 0;
+function wireCsvDownload($, t, downloads) {
+  const button = $('#log-download-csv'), status = $('#log-csv-status'), isLive = downloads.open;
+  let pending = false;
   button.addEventListener('click', async () => {
     if (pending || !isLive()) return;
-    const attempt = generation, live = () => generation === attempt && isLive();
+    const live = downloads.begin();
     pending = true; button.disabled = true; status.textContent = t('account.log.csv.loading');
     let url = null, anchor = null;
     try {
@@ -161,10 +177,7 @@ function wireCsvDownload($, t, isLive) {
       if (isLive()) button.disabled = false;
     }
   });
-  return {
-    invalidate: () => { generation++; },
-    restore: () => { if (isLive() && !pending) button.disabled = false; }
-  };
+  return {restore: () => { if (isLive() && !pending) button.disabled = false; }};
 }
 
 /**
@@ -940,8 +953,7 @@ export async function openAccount(options = {}) {
     // SC1137-11: `editing` is {id, original, draft, pending} while the log form holds a correction (draft: the create form as it was).
     let editing = null, tripRegion = null, logPos = null;   // logPos: the position control, wired below
     const live = () => open === self && list.isConnected;
-    let leaving = false;
-    const csvDownload = wireCsvDownload($, t, () => live() && !leaving);
+    const downloads = exportLifetime(live), csvDownload = wireCsvDownload($, t, downloads);
     // Metadata is independent of saved-trip requests; a late answer never replaces a typed field or another render.
     void import('./region.js').then(m => m.getRegion()).then(region => {
       if (!live()) return;
@@ -1177,15 +1189,21 @@ export async function openAccount(options = {}) {
       } catch (error) { status(passkeyMessage(error, t)); }
     });
     $('#spot-export').addEventListener('click', async () => {
+      // SCA-001: the file is bound to this dialog and account: closing it or starting sign-out or deletion drops the attempt.
+      if (!downloads.open()) return;
+      const current = downloads.begin();
       try {
         const screen = await spotScreen();
+        if (!current()) return;
         if (screen && !screen.ready()) await screen.refresh();
+        if (!current()) return;
         const {getRegion} = await import('./region.js'), out = await exportSpots(spotRows, screen, getRegion(), new Date(), t);
+        if (!current()) return;
         const url = URL.createObjectURL(new Blob([out.gpx], {type: 'application/gpx+xml'})), a = document.createElement('a');
         a.href = url; a.download = 'SkipperCast-saved-spots.gpx'; a.click(); URL.revokeObjectURL(url);
         const one = out.exported === 1, vars = {exported: out.exported, withheld: out.withheld};
         status(out.withheld ? (one ? t('account.exp.doneHeld.one', vars) : t('account.exp.doneHeld.other', vars)) : (one ? t('account.exp.done.one', vars) : t('account.exp.done.other', vars)));
-      } catch (error) { status(error?.message || t('account.exp.build')); }
+      } catch (error) { if (current()) status(error?.message || t('account.exp.build')); }
     });
     showSpots();
     $('#account-add').addEventListener('click', async () => {
@@ -1203,12 +1221,13 @@ export async function openAccount(options = {}) {
       } catch (error) { if (open === self) status(passkeyMessage(error, t)); }
     });
     $('#account-signout').addEventListener('click', async () => {
-      leaving = true; csvDownload.invalidate();
-      try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { leaving = false; csvDownload.restore(); status(passkeyMessage(error, t)); }
+      downloads.leave();
+      try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { downloads.stay(); csvDownload.restore(); status(passkeyMessage(error, t)); }
     });
     $('#account-delete').addEventListener('click', async event => {
       if (!await confirmInPage(event.currentTarget, t('account.del.confirm'), t('account.del.yes'), t)) return;
-      try { await api('privacy', {method: 'DELETE', body: {}}); status(t('account.del.done')); finish(); } catch (error) { status(passkeyMessage(error, t)); }
+      downloads.leave();
+      try { await api('privacy', {method: 'DELETE', body: {}}); status(t('account.del.done')); finish(); } catch (error) { downloads.stay(); csvDownload.restore(); status(passkeyMessage(error, t)); }
     });
     for (const button of body.querySelectorAll('[data-remove-passkey]')) button.addEventListener('click', async () => {
       if (!await confirmInPage(button, t('account.pk.confirm'), t('account.pk.confirmYes'), t)) return;
