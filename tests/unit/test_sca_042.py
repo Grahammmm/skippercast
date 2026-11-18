@@ -2,9 +2,10 @@
 
 import sqlite3
 from contextlib import closing
-from pathlib import Path
 
-DRIZZLE = Path(__file__).resolve().parents[2] / "drizzle"
+from tests._support import ROOT
+
+DRIZZLE = ROOT / "drizzle"
 MIGRATION = DRIZZLE / "0018_fleet_event_trip.sql"
 
 # The AIS replace window from server/fleet/activity.ts.
