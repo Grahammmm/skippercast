@@ -35,8 +35,9 @@ export function chlorophyllCells(o: ChlorophyllObservation) {
       [lon + dx / 2, lat + dy / 2], [lon - dx / 2, lat + dy / 2], [lon - dx / 2, lat - dy / 2]]]}}))};
 }
 
-export function chlorophyllOverlay(o: ChlorophyllObservation, p: Palette): Overlay {
-  return {sources: {[ID]: {type: 'geojson', data: chlorophyllCells(o), attribution: layerEntry(ID).attribution}},
+/** `cells` lets a caller that already built the collection for this observation share it (SCA-241). */
+export function chlorophyllOverlay(o: ChlorophyllObservation, p: Palette, cells = chlorophyllCells(o)): Overlay {
+  return {sources: {[ID]: {type: 'geojson', data: cells, attribution: layerEntry(ID).attribution}},
     layers: [{id: ID, type: 'fill', source: ID, paint: {'fill-antialias': false, 'fill-opacity': 0.75,
       'fill-color': ['interpolate', ['linear'], ['log10', ['get', 'value']], -2, p.depth0, -1, p.blue, 0, p.mint, 1, p.amber, 2, p.coral]}}]};
 }
@@ -46,7 +47,8 @@ export function createChlorophyll(o: {engine: ReadonlySignal<Engine | null>; fet
   const on = computed(() => layers.value.includes(ID)), tick = signal(0);
   const feed = signal<{region: string; value: RegionalChlorophyll} | null>(null);
   let abort: AbortController | undefined, requested = '', requestedAt = -Infinity;
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined, built: {o: ChlorophyllObservation; cells: ReturnType<typeof chlorophyllCells>} | undefined;
+  const cellsOf = (obs: ChlorophyllObservation) => (built?.o === obs ? built : built = {o: obs, cells: chlorophyllCells(obs)}).cells;
   const status = computed(() => { void tick.value; return chlorophyllStatus(on.value, feed.value?.region === region.value ? feed.value.value : null, now()); });
   const disposers = [
     effect(() => {
@@ -65,8 +67,9 @@ export function createChlorophyll(o: {engine: ReadonlySignal<Engine | null>; fet
       chlorophyllState.value = s;
       setRailNote(ID, s.note, s.copy?.note);
       if (e) {
-        e.setOverlay(ID, s.drawn ? chlorophyllOverlay(s.drawn, palette()) : null, [SWELL_LAYER, MPA_FILL]);
-        if (s.drawn) e.setData(ID, chlorophyllCells(s.drawn));
+        const cells = s.drawn ? cellsOf(s.drawn) : null;   // one geometry build per observation: source creation and update share it
+        e.setOverlay(ID, s.drawn && cells ? chlorophyllOverlay(s.drawn, palette(), cells) : null, [SWELL_LAYER, MPA_FILL]);
+        if (cells) e.setData(ID, cells);
       }
     }),
     effect(() => {
