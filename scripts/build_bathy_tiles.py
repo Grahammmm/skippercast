@@ -41,9 +41,13 @@ import zlib
 
 import numpy as np
 
-from skippercast.relief.pmtiles_v3 import write_pmtiles as write_pmtiles_v3
-
 ROOT = Path(__file__).resolve().parents[1]
+# The script runs standalone from a checkout; the src-layout package need not be installed.
+if str(ROOT / 'src') not in sys.path:
+    sys.path.insert(0, str(ROOT / 'src'))
+
+from skippercast.relief.pmtiles_v3 import write_pmtiles as write_pmtiles_v3  # noqa: E402
+
 DEFAULT_OUTPUT = ROOT / 'var/seafloor/tiles/morro-bay-seafloor-deep.pmtiles'
 TILE = 256
 PAD = 2                      # halo (pixels) read around each tile so hillshade matches across seams
