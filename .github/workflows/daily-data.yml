@@ -37,19 +37,24 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        id: checkout
       # The forecast sampler shared with the Worker runs on Node.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        id: node
         with:
           node-version: "22"
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        id: python
         with:
           python-version: "3.13"
           # Keep the shared data runner's local pip cache, but do not upload
           # its 17 GB contents after publication: that can exceed this job's
           # 25-minute timeout and cancel an otherwise verified release (#636).
       - name: Install reviewed NOAA NetCDF decoder
+        id: install
         run: python -m pip install -r requirements-sst.txt -r requirements-publish.txt
       - name: Load pinned last30days research engine
+        id: research
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: mvanhorn/last30days-skill
@@ -57,10 +62,12 @@ jobs:
           path: var/last30days-upstream
           persist-credentials: false
       - name: Test evidence parsing and failure handling
+        id: parser
         env:
           PYTHONPATH: src
         run: python -m unittest discover -s tests -t . -p 'test_pipeline*.py' -v
       - name: Load previous published facts
+        id: previous
         run: |
           mkdir -p var/daily
           bash scripts/publish_branch_snapshot.sh --load data var/published
@@ -69,10 +76,12 @@ jobs:
             cp -R var/published/history var/daily/history
           fi
       - name: Collect and validate public sources
+        id: collect
         env:
           PYTHONPATH: src
         run: python scripts/refresh_regions.py daily --output var/daily --previous-root var/published
       - name: Discover recent local fishing discussions
+        id: discussion
         continue-on-error: true
         run: >-
           python scripts/collect_recent_intel.py
@@ -80,23 +89,29 @@ jobs:
           --output var/daily
           --previous var/published/recent-intel.json
       - name: Audit source-document access
+        id: access
         env:
           PYTHONPATH: src
         run: python -m skippercast.platform.source_audit --output var/daily/source-access.json
       - name: Refresh statewide regional and seasonal source checks
+        id: coastal
         env:
           PYTHONPATH: src
         run: python -m skippercast.pipeline.coastal_watch --output var/daily --previous-root var/published --report-root var/daily
       - name: Refresh NOAA federal groundfish areas
+        id: groundfish
         continue-on-error: true
         run: python scripts/collect_noaa_groundfish_areas.py --output var/daily/noaa-federal-areas.json --previous var/published/noaa-federal-areas.json
       - name: Discover NOAA BAG survey leads for all coastal sectors
+        id: surveys
         continue-on-error: true
         run: python scripts/discover_noaa_surveys.py --output var/daily/survey-discovery.json --previous var/published/survey-discovery.json --max-age-days 30
       - name: Inventory original NOAA survey products
+        id: products
         continue-on-error: true
         run: python scripts/audit_noaa_survey_products.py --discovery var/daily/survey-discovery.json --output var/daily/survey-products.json --previous var/published/survey-products.json --max-age-days 30
       - name: Publish an atomic data snapshot
+        id: publish
         env:
           # R2-only token when configured (docs/cloudflare.md); the deploy token is the fallback.
           CLOUDFLARE_API_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
@@ -137,6 +152,7 @@ jobs:
           bash scripts/publish_branch_snapshot.sh data var/published 'Refresh public fishing evidence'
           bash scripts/publish_branch_r2.sh var/published data
       - name: Verify the public site serves this snapshot
+        id: verify
         if: vars.FEEDS_PUBLIC_BASE != ''
         env:
           FEEDS_PUBLIC_BASE: ${{ vars.FEEDS_PUBLIC_BASE }}
@@ -145,6 +161,7 @@ jobs:
           python scripts/verify_published_feed.py "${FEEDS_PUBLIC_BASE%/}/feeds/data/latest.json" \
             "$GITHUB_RUN_ID" --published-at "$published_at"
       - name: Report source health
+        id: report-sources
         run: |
           python - <<'PY'
           import json, os
@@ -181,6 +198,7 @@ jobs:
               raise SystemExit('Core report/observation coverage failed; failure state published for the app.')
           PY
       - name: Report coastal watch health
+        id: report-coastal
         if: always()
         run: |
           python - <<'PY'
@@ -196,6 +214,7 @@ jobs:
           if d['health']['issues']: raise SystemExit('Coastal source issues: '+', '.join(d['health']['issues']))
           PY
       - name: Report federal groundfish area health
+        id: report-groundfish
         if: always()
         run: |
           python - <<'PY'
@@ -209,6 +228,7 @@ jobs:
           if d['status']!='ok': raise SystemExit('Federal groundfish area refresh retained old geometry')
           PY
       - name: Report recent discussion coverage
+        id: report-discussion
         if: always()
         run: |
           python - <<'PY'
@@ -226,9 +246,11 @@ jobs:
               if health['jobs_usable'] == 0: raise SystemExit('No recent discussion source completed; explicit failure status was published.')
           PY
       - name: Report regulation coverage in every region
+        id: report-regulations
         if: always()
         run: python scripts/report_regulations.py --root var/daily
       - name: Report NOAA survey discovery coverage
+        id: report-surveys
         if: always()
         run: |
           python - <<'PY'
@@ -242,6 +264,7 @@ jobs:
           if d['health']['issues']: raise SystemExit('Survey catalog queries failed: '+', '.join(d['health']['issues']))
           PY
       - name: Report NOAA survey product coverage
+        id: report-products
         if: always()
         run: |
           python - <<'PY'
@@ -254,3 +277,33 @@ jobs:
               f.write(f"\n## NOAA original survey products\n{d['health']['status']} · {d['bag_link_count']}/{d['survey_count']} pages link BAG grids · {d['report_link_count']} link descriptive reports · last complete {d.get('last_complete_scan_at') or 'none'}\n")
           if d['health']['issues']: raise SystemExit('Survey product pages failed: '+', '.join(d['health']['issues'][:15]))
           PY
+      - name: Summarize the daily refresh
+        if: always()
+        continue-on-error: true
+        env:
+          # Pass only step outcomes, not logs or the steps context's output payloads.
+          DAILY_STAGE_OUTCOMES: |
+            checkout=${{ steps.checkout.outcome }}
+            node=${{ steps.node.outcome }}
+            python=${{ steps.python.outcome }}
+            install=${{ steps.install.outcome }}
+            research=${{ steps.research.outcome }}
+            parser=${{ steps.parser.outcome }}
+            previous=${{ steps.previous.outcome }}
+            collect=${{ steps.collect.outcome }}
+            discussion=${{ steps.discussion.outcome }}
+            access=${{ steps.access.outcome }}
+            coastal=${{ steps.coastal.outcome }}
+            groundfish=${{ steps.groundfish.outcome }}
+            surveys=${{ steps.surveys.outcome }}
+            products=${{ steps.products.outcome }}
+            publish=${{ steps.publish.outcome }}
+            verify=${{ steps.verify.outcome }}
+            report-sources=${{ steps.report-sources.outcome }}
+            report-coastal=${{ steps.report-coastal.outcome }}
+            report-groundfish=${{ steps.report-groundfish.outcome }}
+            report-discussion=${{ steps.report-discussion.outcome }}
+            report-regulations=${{ steps.report-regulations.outcome }}
+            report-surveys=${{ steps.report-surveys.outcome }}
+            report-products=${{ steps.report-products.outcome }}
+        run: python3 scripts/daily_stage_summary.py
