@@ -12,7 +12,8 @@ A tile frame whose observation time is missing, unparseable, in the future or ol
 feed's `max_age_hours` in catalog/feed-health.json yields no front; that limit has no default.
 Temperatures or errors that are not finite numbers, or outside the sea's range, are refused
 with an `SstFrontError`, as are two different measurements of one grid cell (identical overlaps are
-harmless). This module reads tiles and writes one JSON document; it never
+harmless) and any cell whose position is off the shared lattice by more than the 5-decimal coordinate
+rounding (a displaced cell is never snapped to a neighbour). This module reads tiles and writes one JSON document; it never
 touches the network.
 """
 
@@ -27,6 +28,7 @@ FEED = "sst-fronts"
 KM_PER_DEGREE = 111.195
 TEMP_RANGE_C = (-2.0, 40.0)
 MAX_ERROR_C = 5.0
+COORDINATE_TOLERANCE_DEGREES = 1.01e-5  # tile coordinates carry 5 decimals; the cell and the origin each round by up to 5e-6
 MIN_FRONT_CELLS = 5  # an edge, not a dot: shorter chains are noise
 STEPS = [(di, dj) for di in (-1, 0, 1) for dj in (-1, 0, 1) if (di, dj) != (0, 0)]
 NEEDED = ("latitude", "longitude", "temperature_c", "analysis_error_c")
@@ -125,12 +127,19 @@ def _grid(rows, res):
     # One native origin for the pooled observation; relative steps retain gaps.
     origin_y = min(c[2] for c in measured_cells)
     origin_x = min(c[3] for c in measured_cells)
-    grid = {}
+    grid, displaced = {}, []
+    tolerance = min(COORDINATE_TOLERANCE_DEGREES, res / 10)
     for measured in measured_cells:
         _, _, y, x = measured
-        address = (round((y - origin_y) / res), round((x - origin_x) / res))
+        steps = ((y - origin_y) / res, (x - origin_x) / res)
+        address = (round(steps[0]), round(steps[1]))
         if grid.setdefault(address, measured) != measured:  # identical overlaps are harmless; conflicts never pick a winner
             raise SstFrontError(f"conflicting overlapping measurements at grid address {address}")
+        if any(abs(s - a) * res > tolerance for s, a in zip(steps, address)):
+            displaced.append((y, x))
+    if displaced:  # rounding to the nearest address would silently turn a displaced cell into a nominal neighbour
+        raise SstFrontError(f"{len(displaced)} cell(s), first at latitude {displaced[0][0]}, longitude {displaced[0][1]}, "
+                            f"are off the tile lattice by more than {tolerance:.2g} degrees")
     return grid
 
 
