@@ -26,20 +26,27 @@ Before every stage (and so before the first) the run is refused, exit 3, while a
 * a stop file exists in ``~/agent-work/modes``: ``LOCAL-STOP`` or ``UNITFEED-STOP``;
 * load5 is 24 or more;
 * free space is under 250 GB on ``/`` or under 400 GB on ``/mnt/agentorange-backup``
-  (a missing backup mount counts as under the floor);
+  (a backup path that is not a mounted filesystem counts as under the floor, whatever the
+  free space of the directory's parent filesystem is);
 * ``--out`` or ``--norm`` (default ``$SC_RELIEF_NORM``) is, or resolves to, a path under
   ``/mnt/privatevault``.
 
 Once, before the first stage, the run is refused with exit 5 when this region already has a
 run (an exclusive lock on ``OUT/<region>/.run_region.lock``, released by the kernel if the
-process dies) or when two other ``run_region.py`` processes are already running on the box.
+process dies) or when the box already has two runs. The box-wide cap is enforced atomically:
+a run must hold one of two advisory slot locks (``/tmp/run_region-slots-<uid>/slot-N``, also
+released by the kernel), so two simultaneous starts cannot both pass; the ``/proc`` scan for
+other ``run_region.py`` processes (``python3 -u run_region.py`` included) is a second check.
+When the cap state cannot be established (``/proc`` unreadable, slot directory not safely
+ours) the run is refused, exit 3.
 
 ``--dry-run`` prints the chain and the state of every guard and runs nothing: it creates no
 file or directory. Nothing here downloads, uploads, pushes or publishes, and this script writes
-only the lock file inside ``OUT/<region>/``. The stages themselves keep their own receipts.
+only the lock file inside ``OUT/<region>/`` and the two slot files. The stages themselves keep
+their own receipts.
 
 Exit codes: 0 chain complete (or dry run), 2 usage error or stage not available, 3 a guard
-refused, 5 region already running or two runs already on the box, anything else is the code of
+refused, 5 region already running or two runs already on the box (3 when that cannot be established), anything else is the code of
 the stage that failed.
 """
 import argparse
@@ -50,6 +57,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -86,7 +94,9 @@ class Config:
     backup_floor: int = 400 * GB
     forbidden_root: str = '/mnt/privatevault'
     max_runs: int = 2  # run_region.py processes on the box, this one included
+    slot_dir: Path = Path('/tmp') / f'run_region-slots-{os.getuid()}'  # box-wide: never TMPDIR
     proc_root: str = '/proc'
+    is_mount: object = field(default=os.path.ismount)
     prefix: tuple = ('nice', '-n', '19', 'ionice', '-c3')
     python: str = sys.executable
     load5: object = field(default=_default_load5)
@@ -145,9 +155,13 @@ def check_guards(cfg, out, norm, inputs=()):
         checks.append(('load5', load < cfg.load_max, f'load5 {load:.1f} (refuse at >= {cfg.load_max:g})'))
     except (OSError, ValueError) as exc:
         checks.append(('load5', False, f'cannot read load5: {exc}'))
-    for name, path, floor in (('disk-root', cfg.root_path, cfg.root_floor),
-                              ('disk-backup', cfg.backup_path, cfg.backup_floor)):
+    for name, path, floor, must_mount in (('disk-root', cfg.root_path, cfg.root_floor, False),
+                                          ('disk-backup', cfg.backup_path, cfg.backup_floor, True)):
         try:
+            if must_mount and not cfg.is_mount(path):
+                # an empty mountpoint directory reports its parent filesystem's free space
+                checks.append((name, False, f'{path} is not a mounted filesystem'))
+                continue
             free = int(cfg.free_bytes(path))
             checks.append((name, free >= floor,
                            f'{free / GB:.0f} GB free on {path} (floor {floor // GB} GB)'))
@@ -166,29 +180,107 @@ def check_guards(cfg, out, norm, inputs=()):
     return checks
 
 
+def runs_script(argv):
+    """Whether ``argv`` is ``run_region.py`` itself or a python interpreter running it, with any
+    interpreter options in between (``python3 -u run_region.py``, ``python3 -X dev run_region.py``)."""
+    if not argv:
+        return False
+    head = os.path.basename(argv[0])
+    if head == 'run_region.py':
+        return True
+    if not head.startswith('python'):
+        return False
+    rest = iter(argv[1:])
+    for arg in rest:
+        if arg == '--' or not arg.startswith('-') or arg == '-':
+            if arg == '--':
+                arg = next(rest, '')
+            return os.path.basename(arg) == 'run_region.py'
+        if arg == '-c':
+            return False
+        if arg == '-m':
+            return os.path.basename(next(rest, '')).split('.')[-1] == 'run_region'
+        if arg in ('-W', '-X'):
+            next(rest, None)  # the option's separate value
+    return False
+
+
 def other_runs(cfg):
-    """Pids of the other ``run_region.py`` processes (python or the script itself as argv[0]).
-    A wrapper such as ``timeout`` or ``nice`` is its own pid and is not counted twice."""
+    """Pids of the other ``run_region.py`` processes. A wrapper such as ``timeout`` or ``nice`` is
+    its own pid and is not counted twice. Raises OSError when the process table cannot be read:
+    an unknown count must not be mistaken for zero."""
     found = []
-    try:
-        names = os.listdir(cfg.proc_root)
-    except OSError:
-        return found
-    for name in names:
+    for name in os.listdir(cfg.proc_root):
         if not name.isdigit() or int(name) == cfg.pid:
             continue
         try:
             raw = (Path(cfg.proc_root) / name / 'cmdline').read_bytes()
-        except OSError:
-            continue
+        except (FileNotFoundError, ProcessLookupError):
+            continue  # the process ended between the listing and the read
         argv = [a.decode('utf-8', 'replace') for a in raw.split(b'\0') if a]
-        if not argv:
-            continue
-        head = os.path.basename(argv[0])
-        script = os.path.basename(argv[1]) if len(argv) > 1 else ''
-        if head == 'run_region.py' or (head.startswith('python') and script == 'run_region.py'):
+        if runs_script(argv):
             found.append(int(name))
     return sorted(found)
+
+
+def _slot_dir(cfg, create):
+    """The slot directory, verified to be a real directory of this user that nobody else can write.
+    Returns None when it does not exist and ``create`` is false. Raises OSError otherwise."""
+    path = Path(cfg.slot_dir)
+    if create:
+        try:
+            os.mkdir(path, 0o700)
+        except FileExistsError:
+            pass
+    try:
+        info = os.lstat(path)
+    except FileNotFoundError:
+        if create:
+            raise
+        return None
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o022:
+        raise OSError(errno.EPERM, f'slot directory {path} is not a private directory of this user')
+    return path
+
+
+def slots_held(cfg):
+    """Dry-run probe: how many of the box-wide run slots are locked now. Creates nothing."""
+    directory = _slot_dir(cfg, create=False)
+    held = 0
+    for index in range(cfg.max_runs) if directory else ():
+        try:
+            fd = os.open(directory / f'slot-{index}', os.O_RDONLY | os.O_NOFOLLOW)
+        except FileNotFoundError:
+            continue
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except OSError as exc:
+            if exc.errno not in (errno.EAGAIN, errno.EACCES):
+                raise
+            held += 1
+        finally:
+            os.close(fd)
+    return held
+
+
+def acquire_slot(cfg):
+    """Take one of ``cfg.max_runs`` box-wide advisory slot locks; returns the fd, or None when all
+    are held. The kernel grants each lock to one open file description, so two simultaneous
+    starts cannot both take the last slot, and a dead run frees its slot."""
+    directory = _slot_dir(cfg, create=True)
+    for index in range(cfg.max_runs):
+        fd = os.open(directory / f'slot-{index}', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            os.close(fd)
+            if exc.errno in (errno.EAGAIN, errno.EACCES):
+                continue
+            raise
+        os.ftruncate(fd, 0)
+        os.write(fd, f'pid {cfg.pid}\n'.encode())
+        return fd
+    return None
 
 
 def lock_path(out, region):
@@ -247,10 +339,16 @@ def dry_run(cfg, region, out, norm, through, extra, inputs):
     held = lock_is_held(out, region)
     say(f'  {"REFUSE " if held else "ok     "}region-lock: {lock_path(out, region)} '
         f'{"is held by another run" if held else "is free"}')
-    others = other_runs(cfg)
-    capped = len(others) + 1 > cfg.max_runs
-    say(f'  {"REFUSE " if capped else "ok     "}run-cap: {len(others)} other run_region.py process(es), '
-        f'at most {cfg.max_runs} on the box including this one')
+    try:
+        others = other_runs(cfg)
+        held_slots = slots_held(cfg)
+        capped = len(others) + 1 > cfg.max_runs or held_slots >= cfg.max_runs
+        cap_detail = (f'{len(others)} other run_region.py process(es), {held_slots} run slot(s) held, '
+                      f'at most {cfg.max_runs} on the box including this one')
+    except OSError as exc:
+        capped = True
+        cap_detail = f'cannot establish how many runs are on the box: {exc}'
+    say(f'  {"REFUSE " if capped else "ok     "}run-cap: {cap_detail}')
     say('dry run: ' + ('a real run would be refused now' if refused or held or capped else 'a real run would start')
         + '; nothing was run and nothing was written')
     return 0
@@ -261,15 +359,34 @@ def refusal(cfg, out, norm, inputs):
 
 
 def run_chain(cfg, region, out, norm, through, extra, inputs):
-    others = other_runs(cfg)
+    try:
+        others = other_runs(cfg)
+    except OSError as exc:  # fail closed: an unreadable process table is not "no other runs"
+        say(f'run_region: refused: cannot establish how many runs are on the box: {exc}')
+        return EXIT_REFUSED
     if len(others) + 1 > cfg.max_runs:
         say(f'run_region: refused: {len(others)} other run_region.py process(es) already running '
             f'(pids {", ".join(map(str, others))}); at most {cfg.max_runs} at once')
         return EXIT_RUNNING
-    problems = refusal(cfg, out, norm, inputs)  # before the lock, so a refused run leaves no file behind
+    problems = refusal(cfg, out, norm, inputs)  # before any lock, so a refused run leaves no file behind
     if problems:
         say('run_region: refused before ' + STAGES[0] + ': ' + '; '.join(problems))
         return EXIT_REFUSED
+    try:
+        slot = acquire_slot(cfg)  # the atomic box-wide cap; the /proc scan above is only a second check
+    except OSError as exc:
+        say(f'run_region: refused: cannot take a run slot: {exc}')
+        return EXIT_REFUSED
+    if slot is None:
+        say(f'run_region: refused: {cfg.max_runs} runs already hold the box run slots; at most {cfg.max_runs} at once')
+        return EXIT_RUNNING
+    try:
+        return run_locked(cfg, region, out, norm, through, extra, inputs)
+    finally:
+        os.close(slot)
+
+
+def run_locked(cfg, region, out, norm, through, extra, inputs):
     try:
         fd = acquire_lock(cfg, out, region)
     except (OSError, RuntimeError) as exc:
