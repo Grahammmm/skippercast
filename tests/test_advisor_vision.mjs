@@ -412,7 +412,7 @@ dbTest('Hermes answers are clamped, and a species_key outside the keys sent beco
   const {env} = setup(HERMES_ENV);
   const api = fakeHermes({
     '/vision/v1/vision/fish-id': {candidates: [{species_key: 'yellowtail', label: 'Yellowtail', confidence: 0.7, cues: ['yellow tail']}, {species_key: 'vermilion', label: 'Vermilion rockfish', confidence: 1.4, cues: ['a', 'b', 'c', 'd']}], needs_better_photo: false, reason: null},
-    '/vision/v1/vision/classify': {kind: 'selfie', kind_confidence: -2, has_person: 'yes', person_confidence: 9, has_fish: true, text_present: false, nsfw: false},
+    '/vision/v1/vision/classify': {kind: 'selfie', kind_confidence: -2, has_person: false, person_confidence: 1, has_fish: true, text_present: false, nsfw: false},
   });
   const provider = hermesClient.createHermesVision({fetcher: api.fetcher});
   const {value: f} = await quiet(() => provider.identifyFish(imageOf(png('fish.png')), env, 'morro-bay'));
