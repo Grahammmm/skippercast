@@ -63,14 +63,21 @@ function boatName(boat: NonNullable<SavedBoatLike>, lang: Language): string {
 export const briefHref = (region: string, date: string): string =>
   `/map?region=${encodeURIComponent(region)}&profile=boat&day=${date}`;
 
-/** The coast report the app's brief would bind for `info` (Morro Bay, Cambria), or null when none binds or it cannot be read. */
+/**
+ * The coast report the app's brief would bind for `info` (Morro Bay, Cambria), or null when none binds or it cannot be read.
+ * `saved` is true when the successful report response was a cost-ceiling copy: the report bypasses the verdict's `readInput`
+ * (the bridge reads the page's own fetch), so its provenance is captured here.
+ */
 async function boundReport(info: Parameters<typeof regionPlace>[0]) {
-  const coast = createCoastData({clockEvents: null});
+  let saved = false;
+  const coast = createCoastData({clockEvents: null, onResponse: response => {
+    if (response.ok && response.headers?.get(DEGRADED_HEADER) === 'cost-ceiling') saved = true;
+  }});
   try {
     if (!coast.setPlace(regionPlace(info, 'boat', ''))) return null;
     await coast.load('report');
     const report = coast.coastReport.peek(), binding = coast.coastBinding.peek();
-    return report && binding ? {report: report.data, areaId: binding.areaId} : null;
+    return report && binding ? {report: report.data, areaId: binding.areaId, saved} : null;
   } finally { coast.destroy(); }
 }
 
@@ -93,12 +100,13 @@ export async function loadLandingVerdict(fetchFn: typeof fetch = fetch, now: Dat
   const forecast = read.forecast;
   const tz = info.timezone, hour = leadHour(null, null, now, tz);
   const mine = deviceBoat();
-  const brief = briefFrom({info, feed, forecast, coast, profile: 'boat', hour, limits: mine.limits}, now);
+  const brief = briefFrom({info, feed, forecast, coast: coast && {report: coast.report, areaId: coast.areaId}, profile: 'boat', hour, limits: mine.limits}, now);
   const v = briefVerdict(brief, forecast?.region === info.id ? forecast : null, now, tz, mine.factors, lang);
   if (!brief || !v) return null;
   const date = brief.date ?? dateKey(hour ? new Date(hour) : now, tz), when = leadDayText(date, now, tz, lang);
   return {verdict: v.verdict, word: t(`brief.verdict.${v.verdict}` as StringId, lang), sentence: `${v.limit}${v.held ? ` ${v.held}` : ''}`,
     day: when.charAt(0).toUpperCase() + when.slice(1), date, place: info.name, href: briefHref(info.id, date),
-    saved,
+    // A marked report counts only when the brief actually rated from it.
+    saved: saved || (coast?.saved === true && brief.basis === 'coast-report'),
     boatName: mine.boat ? boatName(mine.boat, lang) : t('landing.boat.reference', lang), boatNote: mine.boat && boatRangeNote(mine.boat.loa_ft) ? t('brief.boat.note', lang) : null};
 }

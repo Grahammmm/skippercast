@@ -203,6 +203,29 @@ test('a bound coast report enters the brief as in the app; a failed one leaves i
   } finally { globalThis.fetch = real; }
 });
 
+test('a verdict rated from a cost-ceiling coast report stays labeled saved when every other input is live', async () => {
+  // Contract: per-verdict provenance covers the coast report too (it is read through the bridge, not readInput).
+  // Bug caught: only feed/forecast marks set `saved`, so a marked report's verdict lost its label once the page warning cleared.
+  const m = await load();
+  const now = new Date(), body = m.coastReportFixture(now.getTime()), real = globalThis.fetch;
+  try {
+    for (const marked of [true, false]) {
+      globalThis.fetch = async () => {
+        const response = new Response(JSON.stringify(body));
+        if (marked) response.headers.set('X-SC-Degraded', 'cost-ceiling');
+        return response;
+      };
+      const v = await m.loadLandingVerdict(feeds(now), now, PAGE);
+      assert.ok(v);
+      assert.equal(v.saved, marked, marked ? 'the marked report labels its verdict saved' : 'a live report leaves it unlabeled');
+      const html = m.render(m.h(m.LiveVerdict, {v, saved: false}));
+      assert.equal(html.includes('From saved copies, not live:'), marked);
+    }
+    globalThis.fetch = async () => new Response('{}', {status: 503, headers: {'X-SC-Degraded': 'cost-ceiling'}});
+    assert.equal((await m.loadLandingVerdict(feeds(now), now, PAGE)).saved, false, 'a failed marked report supplies no input, so no label');
+  } finally { globalThis.fetch = real; }
+});
+
 const SKIFF = {name: 'Wren', loa_ft: 17, layout: 'skiff', hull: 'flat'};
 const CABIN = {name: 'Big Cabin', loa_ft: 32, displacement_lb: 12000, layout: 'pilothouse', hull: 'deep-v'};
 /** The boat the heading names for a visitor with nothing saved. */
