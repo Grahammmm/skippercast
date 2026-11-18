@@ -29,11 +29,12 @@ import os
 from pathlib import Path
 import sys
 
-try:
-    from skippercast.relief import receipts
-except ImportError:  # a plain checkout (the pinned pipeline clone) without `pip install -e .`
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'src'))
-    from skippercast.relief import receipts
+# Prefer this checkout before the first import can cache another editable install.
+source_root = Path(__file__).resolve().parents[2] / 'src'
+if (source_root / 'skippercast' / 'relief' / 'receipts.py').is_file():
+    sys.path.insert(0, str(source_root))
+
+from skippercast.relief import receipts
 
 PACKAGE = 'skippercast.relief'
 # Modules of the package that are never stages, and the CLI's own command names.

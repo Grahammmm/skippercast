@@ -264,7 +264,9 @@ def test_crash_mid_stage_leaves_no_half_output(tmp_path):
     script = tmp_path / 'crash.py'
     script.write_text(CRASH)
     out = tmp_path / 'out'
-    proc = subprocess.run([sys.executable, str(script), str(out)], capture_output=True, text=True, timeout=120)
+    env = {**os.environ, 'PYTHONPATH': str(ROOT / 'src')}
+    proc = subprocess.run([sys.executable, str(script), str(out)],
+                          env=env, capture_output=True, text=True, timeout=120)
     assert proc.returncode == 9, proc.stderr
     region = receipts.Region(out, 'tiny')
     assert not (region.dir / 'solo').exists(), 'no half output under the target name'
