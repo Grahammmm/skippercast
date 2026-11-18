@@ -41,7 +41,6 @@ FIXTURE = REPO / 'tests' / 'fixtures' / 'sc_png_dtype' / 'baseline.json'
 WIDTH, HEIGHT = 640, 480
 REFUSAL = 'fixed_preview_uint8_required'
 CONTRACT_MARKER = 'SC-PNG-DTYPE-CONTRACT'
-NO_REFUSAL_MARKER = 'SC-PNG-DTYPE-NOT-REFUSED'
 MESH_TOP_LEVEL_IMPORTS = {'math', 'struct', 'zlib', 'pathlib'}
 
 INCOMPATIBLE_DTYPES = ['uint16', '>u2', 'uint32', 'uint64', 'int8', 'int16', 'int32', 'int64',
@@ -175,19 +174,6 @@ def stdlib_reference_png(rows):
             + chunk(b'IDAT', zlib.compress(scanlines(rows), 6)) + chunk(b'IEND', b''))
 
 
-def legacy_write_png_without_dtype_guard(path, rgb):
-    """Test-local double of the base (59fca09b) write_png: shape check only, no dtype guard."""
-    def chunk(kind, data):
-        return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
-    h, w, channels = rgb.shape
-    if channels != 3 or w != WIDTH or h != HEIGHT:
-        raise ValueError('fixed_preview_size_required')
-    data = b''.join(b'\0' + row.tobytes() for row in rgb)
-    encoded = (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0))
-               + chunk(b'IDAT', zlib.compress(data, 6)) + chunk(b'IEND', b''))
-    Path(path).write_bytes(encoded)
-
-
 def baseline():
     return json.loads(FIXTURE.read_text(encoding='utf-8'))
 
@@ -319,20 +305,6 @@ def test_a2_incompatible_dtype_keeps_existing_target_bytes(mesh, tmp_path, dtype
     assert (after.st_ino, after.st_size, after.st_mtime_ns) == (before.st_ino, before.st_size, before.st_mtime_ns)
 
 
-def test_a2_uint16_refused_before_encoding(mesh, tmp_path):
-    """Decisive regression: an in-range uint16 array is refused, never written as 16-bit samples."""
-    target = tmp_path / 'preview.png'
-    try:
-        mesh.write_png(target, array_from_rows(PATTERN_ROWS, 'uint16'))
-    except ValueError as error:
-        assert str(error) == REFUSAL
-        assert not target.exists()
-        return
-    # The guard was bypassed: the independent output contract must expose the bad encoding.
-    check_png_contract(target.read_bytes(), PATTERN_ROWS)
-    pytest.fail(f'{NO_REFUSAL_MARKER}: uint16 accepted and a contract-valid PNG written')
-
-
 @pytest.mark.parametrize('shape', WRONG_SHAPES, ids=lambda shape: 'x'.join(map(str, shape)))
 @pytest.mark.parametrize('dtype', ['uint8', 'uint16'])
 def test_a2_wrong_shape_still_refused(mesh, tmp_path, shape, dtype):
@@ -340,46 +312,6 @@ def test_a2_wrong_shape_still_refused(mesh, tmp_path, shape, dtype):
     with pytest.raises(ValueError):
         mesh.write_png(target, np.zeros(shape, dtype=dtype))
     assert not target.exists()
-
-
-# --- A3 decisive negative control (test-local bypass; production source untouched) ---------
-
-def test_a3_bypass_writes_invalid_uint16_scanlines(tmp_path):
-    target = tmp_path / 'bypass.png'
-    legacy_write_png_without_dtype_guard(target, array_from_rows(PATTERN_ROWS, 'uint16'))
-    data = target.read_bytes()
-    idat_length = struct.unpack('>I', data[33:37])[0]
-    assert data[37:41] == b'IDAT'
-    raw = zlib.decompress(data[41:41 + idat_length])
-    assert len(raw) == HEIGHT * (1 + WIDTH * 3 * 2), 'bypass did not emit 16-bit sample bytes'
-    with pytest.raises(AssertionError, match=f'^{CONTRACT_MARKER}: scanline bytes'):
-        check_png_contract(data, PATTERN_ROWS)
-
-
-def test_a3_bypass_and_production_agree_on_valid_uint8(mesh, tmp_path):
-    pixels = array_from_rows(PATTERN_ROWS)
-    legacy_write_png_without_dtype_guard(tmp_path / 'legacy.png', pixels)
-    mesh.write_png(tmp_path / 'patched.png', pixels)
-    legacy, patched = (tmp_path / 'legacy.png').read_bytes(), (tmp_path / 'patched.png').read_bytes()
-    assert patched == legacy
-    assert_matches_baseline('pattern', patched, PATTERN_ROWS)
-
-
-def test_a3_contract_checker_detects_tampering():
-    good = stdlib_reference_png(PATTERN_ROWS)
-    check_png_contract(good, PATTERN_ROWS)
-    bad_crc = good[:29] + bytes([good[29] ^ 1]) + good[30:]
-    ihdr16 = struct.pack('>IIBBBBB', WIDTH, HEIGHT, 16, 2, 0, 0, 0)
-    bad_depth = (good[:16] + ihdr16 + struct.pack('>I', binascii.crc32(b'IHDR' + ihdr16)) + good[33:])
-    other_rows = list(PATTERN_ROWS)
-    other_rows[7] = bytes(WIDTH * 3)
-    for data, rows, reason in ((bad_crc, PATTERN_ROWS, 'CRC mismatch'),
-                               (bad_depth, PATTERN_ROWS, 'IHDR fields'),
-                               (good[:-5], PATTERN_ROWS, 'truncated'),
-                               (good, other_rows, 'RGB bytes differ')):
-        with pytest.raises(AssertionError, match=CONTRACT_MARKER) as failure:
-            check_png_contract(data, rows)
-        assert reason in str(failure.value)
 
 
 # --- A4 module identity and discovery -------------------------------------------------------

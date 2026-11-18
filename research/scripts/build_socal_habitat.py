@@ -12,6 +12,7 @@ import argparse
 import base64
 from collections import Counter
 from datetime import datetime, timezone
+from functools import cache
 import hashlib
 import io
 import json
@@ -21,26 +22,23 @@ import sys
 import tempfile
 import zipfile
 
-import numpy as np
-from pyproj import CRS, Transformer
-import rasterio
-from rasterio.features import geometry_mask, shapes
-from rasterio.windows import Window, from_bounds
-from pyogrio.raw import read as read_vector
-from shapely import make_valid, clip_by_rect, from_wkb
-from shapely.geometry import box, mapping, shape, Point
-from shapely.ops import transform, unary_union
-
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 from skippercast.platform.contracts import atomic_json, read_json
 
 CONFIG = ROOT / "regions/southern-california/habitat-sources.json"
 OUT = ROOT / "dist/regions/southern-california"
-WORK_CRS = CRS.from_epsg(26910)
-TO_WORK = Transformer.from_crs(4326, WORK_CRS, always_xy=True).transform
-TO_GEO = Transformer.from_crs(WORK_CRS, 4326, always_xy=True).transform
+WORK_CRS = 26910
 TRANSFORMATION = "socal-habitat-v1"
+HABITAT_VIEW_PREFIX = "SCI-HAB-"
+HABITAT_ARCHIVE_PREFIX = "CINMS_bathy_merge_2024/"
+
+
+@cache
+def project(source, target):
+    from pyproj import Transformer
+
+    return Transformer.from_crs(source, target, always_xy=True).transform
 
 
 def digest(path: Path) -> str:
@@ -61,7 +59,7 @@ def ensure_inputs(config, cache: Path, fetch: bool, refresh: bool):
     cache.mkdir(parents=True, exist_ok=True)
     bathy = config["sources"]["bathymetry"]
     files = [config["sources"][k] for k in ("substrate", "kelp")]
-    files += [{**f, "url": bathy["url"], "member": "CINMS_bathy_merge_2024/" + f["filename"]}
+    files += [{**f, "url": bathy["url"], "member": HABITAT_ARCHIVE_PREFIX + f["filename"]}
               for f in bathy["files"]]
     receipts = []
     for spec in files:
@@ -115,6 +113,12 @@ def ensure_inputs(config, cache: Path, fetch: bool, refresh: bool):
 
 def vectors(path: Path, field: str, config):
     """Return actual interpreted polygons in the work CRS, preserving native codes."""
+    from pyogrio.raw import read as read_vector
+    from pyproj import CRS, Transformer
+    from shapely import clip_by_rect, from_wkb, make_valid
+    from shapely.geometry import box
+    from shapely.ops import transform, unary_union
+
     with zipfile.ZipFile(path) as archive:
         stem = next(n[:-4] for n in archive.namelist() if n.endswith(".shp"))
         if any(i.file_size > 300_000_000 for i in archive.infolist()):
@@ -147,13 +151,17 @@ def vectors(path: Path, field: str, config):
 
 def exclusions(config):
     """Screen complete geometry, with positive clearance from every closure boundary."""
+    from shapely import make_valid
+    from shapely.geometry import shape
+    from shapely.ops import transform, unary_union
+
     all_polygons, receipts = [], []
     for filename, minimum in (("protected-areas.geojson", 50), ("groundfish-exclusions.geojson", 8)):
         path = OUT / filename
         data = read_json(path)
         if len(data.get("features", [])) < minimum:
             raise ValueError("Missing/incomplete closure snapshot: " + filename)
-        all_polygons += [transform(TO_WORK, make_valid(shape(f["geometry"]))) for f in data["features"]]
+        all_polygons += [transform(project(4326, WORK_CRS), make_valid(shape(f["geometry"]))) for f in data["features"]]
         receipts.append({"filename": filename, "sha256": digest(path), "features": len(data["features"])})
     return unary_union(all_polygons).buffer(config["closure_clearance_m"]), receipts
 
@@ -165,6 +173,14 @@ def depth_mask(spec, island, cache: Path, config):
     a whole. Both min and max are retained; no interpolation or nearest-neighbor
     sample is allowed to claim an entire display cell is shallower than 200ft.
     """
+    import numpy as np
+    from pyproj import CRS, Transformer
+    import rasterio
+    from rasterio.features import shapes
+    from rasterio.windows import Window, from_bounds
+    from shapely.geometry import box, shape
+    from shapely.ops import transform
+
     with rasterio.open(cache / spec["filename"]) as grid:
         source_crs = CRS.from_user_input(spec["documented_crs"])
         if not math.isclose(grid.res[0], spec["cell_m"]) or not math.isclose(grid.res[1], spec["cell_m"]):
@@ -211,6 +227,8 @@ def stored_geometry(geometry):
     that storage precision is not a claim of survey accuracy. It is negligible
     beside the inward depth-mask margin and 75m exclusion clearance.
     """
+    from shapely.geometry import mapping
+
     def rounded(values):
         if isinstance(values, (int, float)):
             return round(values, 7)
@@ -220,12 +238,14 @@ def stored_geometry(geometry):
 
 
 def feature(polygon, kind, island, spec, codes, config, depth_screened=False):
-    geo = transform(TO_GEO, polygon)
+    from shapely.ops import transform
+
+    geo = transform(project(WORK_CRS, 4326), polygon)
     location = geo.representative_point()
     key = hashlib.sha256((island["id"] + kind + polygon.wkb_hex).encode()).hexdigest()[:12]
     labels = {"rock":"mapped hard substrate", "sediment":"mapped soft substrate", "kelp":"historical kelp"}
     return {"type":"Feature", "geometry":stored_geometry(geo), "properties":{
-        "id":"SCI-HAB-" + key, "name":island["name"] + " · " + labels[kind],
+        "id":HABITAT_VIEW_PREFIX + key, "name":island["name"] + " · " + labels[kind],
         "island":island["id"], "island_name":island["name"], "habitat_kind":kind,
         "latitude":round(location.y,7), "longitude":round(location.x,7), "bounds":[round(v,7) for v in geo.bounds],
         "area_km2":round(polygon.area / 1e6, 5), "source_id":spec["id"],
@@ -242,6 +262,11 @@ def feature(polygon, kind, island, spec, codes, config, depth_screened=False):
 
 
 def compile_views(features, config, cache: Path, output: Path):
+    import numpy as np
+    from pyproj import CRS, Transformer
+    import rasterio
+    from rasterio.windows import Window
+
     bathy = config["sources"]["bathymetry"]
     records, sources = {}, {}
     candidates = {}
@@ -253,7 +278,7 @@ def compile_views(features, config, cache: Path, output: Path):
     for spec in bathy["files"]:
         path = cache / spec["filename"]
         sources[spec["filename"]] = {"source_id":bathy["id"], "sha256":spec["sha256"], "bytes":path.stat().st_size,
-            "url":bathy["url"], "archive_member":"CINMS_bathy_merge_2024/"+spec["filename"],
+            "url":bathy["url"], "archive_member":HABITAT_ARCHIVE_PREFIX+spec["filename"],
             "survey_year":"1998–2022", "native_cell_m":spec["cell_m"], "vertical_datum":bathy["vertical_datum"]}
         with rasterio.open(path) as grid:
             crs = CRS.from_user_input(spec["documented_crs"])
@@ -302,7 +327,39 @@ def compile_views(features, config, cache: Path, output: Path):
     return sum(p["status"] == "surveyed" for p in records.values())
 
 
+def install_bottom_views(staged: Path, output: Path, index: dict):
+    """Install the validated habitat fragment without replacing other producers' rows."""
+    index_path = output / "index.json"
+    try:
+        previous = read_json(index_path)
+    except FileNotFoundError:
+        merged = index
+    else:
+        if any(previous[key] != index[key] for key in ("schema_version", "region_id")):
+            raise ValueError("Existing bottom index has a different schema or region")
+        # Habitat owns its feature-ID namespace and the filename-keyed archive members
+        # it emits. A survey may use the same source ID without owning those rows.
+        views = {key: row for key, row in previous["views"].items()
+                 if not key.startswith(HABITAT_VIEW_PREFIX)}
+        sources = {key: row for key, row in previous.get("sources", {}).items()
+                   if row.get("archive_member") != HABITAT_ARCHIVE_PREFIX + key}
+        if sources.keys() & index["sources"].keys():
+            raise ValueError("Habitat source filename collides with another bottom-index source")
+        merged = {**previous, "views": {**views, **index["views"]},
+                  "sources": {**sources, **index["sources"]}}
+
+    for path in sorted(staged.glob("*.json")):
+        if path.name != "index.json":
+            atomic_json(output / path.name, read_json(path))
+    atomic_json(index_path, merged)
+
+
 def main():
+    import numpy as np
+    from shapely import make_valid
+    from shapely.geometry import box, shape
+    from shapely.ops import transform, unary_union
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cache",type=Path,default=ROOT/"var/socal-habitat")
     parser.add_argument("--fetch",action="store_true")
@@ -318,7 +375,7 @@ def main():
     features, summary = [], []
     for island in config["islands"]:
         print("Compile",island["name"],flush=True)
-        roi = transform(TO_WORK,box(*island["bounds"]))
+        roi = transform(project(4326, WORK_CRS),box(*island["bounds"]))
         if island.get("withheld"):
             summary.append({**island,"features":0,"coverage_status":"withheld","gaps":[island["reason"]]})
             continue
@@ -369,7 +426,7 @@ def main():
     if not features:
         raise ValueError("An empty import cannot replace the prior release")
     for f in features:
-        if transform(TO_WORK,shape(f["geometry"])).intersects(closed.buffer(-1)):
+        if transform(project(4326, WORK_CRS),shape(f["geometry"])).intersects(closed.buffer(-1)):
             raise ValueError("Published full geometry intersects closure clearance")
     stage = tempfile.TemporaryDirectory(prefix="validated-habitat-",dir=args.cache)
     stage_path = Path(stage.name)
@@ -398,10 +455,7 @@ def main():
         z = np.frombuffer(base64.b64decode(tile["elevations"]),dtype="<i2")
         if len(z) != 129*129 or z[64*129+64] == -32768:
             raise ValueError("Invalid measured window geometry or masked center")
-    for path in sorted((stage_path/"bottom").glob("*.json")):
-        if path.name != "index.json":
-            atomic_json(OUT/"bottom"/path.name,read_json(path))
-    atomic_json(OUT/"bottom/index.json",index)
+    install_bottom_views(stage_path / "bottom", OUT / "bottom", index)
     atomic_json(OUT/"survey-habitat.geojson",data)
     atomic_json(ROOT/"regions/southern-california/habitat-receipts.json",{
         "schema_version":1,"region_id":config["region_id"],"transformation_version":TRANSFORMATION,
