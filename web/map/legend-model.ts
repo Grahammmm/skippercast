@@ -97,19 +97,28 @@ const REPORTED_AS_ESTIMATED_IN_SHALLOWS: readonly SurveyDetailChipId[] = ['2m', 
  * Which chips are bold (present) and which are greyed (absent).
  *
  * `classesInView`: every class drawn in the view, at any depth.
- * `shallowOnlyClasses`: the subset whose only presence in the view is in 0–66 ft water
- * (the caller knows the band; the decode output does not carry it).
+ * `shallowClasses`: the classes present in 0–66 ft water (the caller knows the band;
+ * the decode output does not carry it). A class may ALSO occur deeper.
+ * `deeperClasses`: the classes present deeper than 66 ft. Shallow and deeper presence
+ * are independent, so one class can be in both sets.
  *
  * 0–66 ft rule (E2E-IMPL-BATCH MB-11 amendment): the band is shown as `1m-measured` or
- * `estimated` only. A 2 m, 5 m or compiled class that is present only in the shallows
- * makes `estimated` bold and its own chip grey; it never shows as `2m` for that band.
- * An interpolated 1 m grid arrives as `estimated` (MB-09) and so never lights
- * `1m-measured`. Without `shallowOnlyClasses` the view is taken as drawn.
+ * `estimated` only. A 2 m, 5 m or compiled class present in the shallows makes
+ * `estimated` bold; it never shows as `2m` for that band. The class's own chip is bold
+ * only if it is also present outside the shallows (deeper, or in view with no band
+ * given). An interpolated 1 m grid arrives as `estimated` (MB-09) and so never lights
+ * `1m-measured`. Without band sets the view is taken as drawn.
  */
-export function surveyDetailChips(classesInView: ReadonlySet<string>, shallowOnlyClasses: ReadonlySet<string> = new Set()): SurveyDetailChip[] {
+export function surveyDetailChips(
+  classesInView: ReadonlySet<string>,
+  shallowClasses: ReadonlySet<string> = new Set(),
+  deeperClasses: ReadonlySet<string> = new Set(),
+): SurveyDetailChip[] {
   const bold = new Set<SurveyDetailChipId>();
-  for (const id of classesInView) if (known(id) && !shallowOnlyClasses.has(id)) bold.add(id);
-  for (const id of shallowOnlyClasses) {
+  // Outside the shallows: deeper classes, and in-view classes the caller did not place in the shallows.
+  for (const id of classesInView) if (known(id) && !shallowClasses.has(id)) bold.add(id);
+  for (const id of deeperClasses) if (known(id)) bold.add(id);
+  for (const id of shallowClasses) {
     if (!known(id)) continue;
     if (REPORTED_AS_ESTIMATED_IN_SHALLOWS.includes(id)) bold.add('estimated');
     else bold.add(id);

@@ -41,6 +41,19 @@ test('2 m that also reaches deeper water keeps its chip; measured 1 m in the sha
   assert.deepEqual(bold(surveyDetailChips(new Set(['1m-measured', '2m']), new Set(['1m-measured', '2m']))), ['1m-measured', 'estimated']);
 });
 
+// Contract: shallow and deeper presence are independent. Bug (review RETURN at 4abe17f): a class in both
+// bands was kept out of the shallow set, so `2m` lit but `estimated` stayed grey for the shallow area.
+test('2 m in both 0-66 ft and deeper water lights both 2m and estimated', () => {
+  const both = new Set(['2m']);
+  assert.deepEqual(bold(surveyDetailChips(new Set(['2m']), both, both)), ['2m', 'estimated']);
+  assert.deepEqual(bold(surveyDetailChips(new Set(), both, both)), ['2m', 'estimated'], 'band sets count even if absent from the view set');
+  // 5 m and compiled behave the same; a deeper-only class does not light estimated.
+  assert.deepEqual(bold(surveyDetailChips(new Set(['5m']), new Set(['5m']), new Set(['5m']))), ['5m', 'estimated']);
+  assert.deepEqual(bold(surveyDetailChips(new Set(['2m']), new Set(), new Set(['2m']))), ['2m']);
+  // A 1 m measured class in both bands is one chip, not two.
+  assert.deepEqual(bold(surveyDetailChips(new Set(['1m-measured']), new Set(['1m-measured']), new Set(['1m-measured']))), ['1m-measured']);
+});
+
 // Contract: only MB-22's decode keys light chips. Bug: a stray key ("1m", "unknown") or a prototype name lights something.
 test('unknown classes light nothing', () => {
   assert.deepEqual(bold(surveyDetailChips(new Set(['1m', 'unknown', 'constructor', '']))), []);
