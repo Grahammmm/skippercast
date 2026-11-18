@@ -82,13 +82,14 @@ position outside every port geofence (at sea). Each run scans
 the store from the last scan to ``now - 10 min``; the first run looks back over
 the discovery retention. Statics the state lacks for an MMSI the Worker has a
 row for are re-read from the store's whole static retention (never rebuilt from
-the row, which has no type or length); with none left, the stored row stands.
+the row, which has no type or length). Schedule outage grace uses the last
+verified matching day for the same MMSI, vessel and home port, kept here only.
 """
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass, replace
-from datetime import datetime, timezone
+from dataclasses import dataclass, field, replace
+from datetime import datetime, timedelta, timezone
 import logging
 import math
 from typing import Any, Iterable, Mapping
@@ -100,7 +101,7 @@ from ..ops import validate_ops
 from ...util import units
 from .events import iso_utc
 from .process import DAY, HOUR, SETTLE_MS, SOURCE_RIGHTS, VesselRef, WorkerError
-from .schedule import SCHEDULE, correlate, load_report_days, rules as schedule_rules
+from .schedule import SCHEDULE, ReportDays, correlate, load_report_days, rules as schedule_rules
 from .watch import write_watch
 
 __all__ = ["SHIP_TYPES", "PRESENCE_DAYS", "STRONG_METHODS", "Static", "Seen", "Decision", "decide", "gate_problem",
@@ -158,6 +159,7 @@ class Decision:
     facts: list[dict]       # fact.upsert operations (method ais, fields ais.*)
     reviews: list[dict]     # review.open operations (kind mmsi)
     targets: dict[int, VesselRef]
+    schedule_days: dict[str, str] = field(default_factory=dict)  # private binding key -> verified local day
 
 
 def _call(value) -> str | None:
@@ -223,6 +225,9 @@ class _Vessel:
     def ref(self) -> VesselRef:
         return VesselRef(self.id, self.vessel_class, self.port_id)
 
+    def schedule_key(self, mmsi: int) -> str:
+        return f"{mmsi}|{self.id}|{self.port_id}"
+
     def length_check(self, static: Static) -> str:
         """``agrees``, ``unknown`` or ``contradicts`` (AIS length more than 20% off the registry's)."""
         if self.length_ft is None or static.length_m is None:
@@ -245,21 +250,27 @@ def _rejected_pairs(reviews: Iterable[Mapping]) -> set[tuple[str, int]]:
 def decide(region, vessels: Iterable[Mapping], reviews: Iterable[Mapping], statics: Mapping[int, Static],
            seen: Mapping[int, Seen], presence: Mapping[int, Mapping[str, int]], prior: Mapping[int, Mapping],
            now_ms: int, *, at_sea: Mapping[int, Iterable[str]] | None = None,
-           reports: Mapping[str, Iterable[str]] | None = None,
-           in_port: Mapping[int, Iterable[str]] | None = None) -> Decision:
+           reports: ReportDays | Mapping[str, Iterable[str]] | None = None,
+           in_port: Mapping[int, Iterable[str]] | None = None,
+           schedule_days: Mapping[str, str] | None = None) -> Decision:
     """Watch rows, ``ais`` facts, ``mmsi`` reviews and targets for one run (module docstring).
 
     ``presence[mmsi][port_id]`` is the number of distinct region-local days in the
     last 30 the MMSI was inside that port's geofence; ``prior`` the Worker's rows by
     MMSI. Rows go out only for MMSIs heard on AIS. ``at_sea[mmsi]`` (region-local
     days at sea) and ``reports[vessel_id]`` (days a landing report named the vessel
-    at its home port) feed stage 4; without both there is no schedule evidence. ``in_port[mmsi]`` are
-the days it was inside a port geofence (contradictions, schedule.py).
+    at its home port) feed stage 4. Live ``ReportDays`` distinguishes unreadable
+    home-port feeds from readable but empty ones; a plain mapping is a supplied
+    history. ``in_port[mmsi]`` lists days inside a port geofence (contradictions).
     """
     auto = float(region.thresholds["match"]["mmsi_auto"])
     rule = schedule_rules(region)
     now = _iso(now_ms)
-    lapse_day = _day(now_ms - rule.lapse_days * DAY, ZoneInfo(region.timezone))
+    local_date = datetime.fromtimestamp(now_ms / 1000, ZoneInfo(region.timezone)).date()
+    today = local_date.isoformat()
+    lapse_day = (local_date - timedelta(days=rule.lapse_days)).isoformat()
+    report_days = reports.days if isinstance(reports, ReportDays) else reports
+    schedule_days = schedule_days or {}
     fleet = [_Vessel(v) for v in vessels if v.get("status") != "excluded"]
     by_id = {v.id: v for v in fleet}
     port_of = {v.id: v.port_id for v in fleet}
@@ -276,6 +287,16 @@ the days it was inside a port geofence (contradictions, schedule.py).
     rejected = _rejected_pairs(reviews)
 
     out = Decision([], [], [], {})
+
+    def port_covered(v: _Vessel) -> bool:
+        return v.port_id is not None and (not isinstance(reports, ReportDays) or v.port_id in reports.covered_ports)
+
+    def outage_day(v: _Vessel, mmsi: int, before: Mapping) -> str | None:
+        verified = schedule_days.get(v.schedule_key(mmsi), "")
+        if (lapse_day <= verified <= today and gate_problem(before) is None
+                and (report_days is None or at_sea is None or not port_covered(v))):
+            return verified
+        return None
 
     def heard(mmsi: int) -> tuple[Static | None, Seen | None]:
         return statics.get(mmsi), seen.get(mmsi)
@@ -416,19 +437,21 @@ the days it was inside a port geofence (contradictions, schedule.py).
             continue
         # Stage 4: the schedule. Unknown statics do not block it; everything else that blocks stage 3 does.
         sched = None
-        if at_sea is not None and reports is not None and v.port_id:
-            sched = correlate(v.id, at_sea.get(mmsi, ()), reports, port_of, rule, (in_port or {}).get(mmsi, ()))
+        if at_sea is not None and report_days is not None and port_covered(v):
+            sched = correlate(v.id, at_sea.get(mmsi, ()), report_days, port_of, rule, (in_port or {}).get(mmsi, ()))
         sched_blockers = [b for b in blockers if b not in UNKNOWN_BLOCKERS]
         if sched is not None and home_days == 0:
             sched_blockers.append("never-in-home-port")
         held = sticky and by_schedule
-        if held and sched is not None and not any(d >= lapse_day for d in sched.matched):
-            held = False   # a watched schedule row with no matched day lately lapses to candidate
+        verified = max((d for d in sched.matched if lapse_day <= d <= today), default=None) if sched else None
+        if held and sched is None:
+            verified = outage_day(v, mmsi, before)   # keep the old date; an outage never advances it
         undone = sched is not None and (bool(sched.rivals) or sched.contradicted)   # also undoes a held row
-        rival = undone and (sched.qualifies or (sticky and by_schedule))
-        if not sched_blockers and not undone and ((sched is not None and sched.qualifies) or held):
+        qualifies = sched is not None and sched.qualifies
+        if verified and not sched_blockers and not undone and (held or qualifies):
             confidence = max(auto, CONFIDENCE[SCHEDULE])
             row(mmsi, v.id, SCHEDULE, confidence, "watched", static, sight)
+            out.schedule_days[v.schedule_key(mmsi)] = verified
             facts(v, mmsi, static, confidence, name_ok=v.names_agree(static), call_ok=v.call_agrees(static))
             out.targets[mmsi] = v.ref
             continue
@@ -436,10 +459,10 @@ the days it was inside a port geofence (contradictions, schedule.py).
         first = sight.first_ms if sight else static.ts
         waited = now_ms - min(first, _ms(before.get("first_seen_at")) or first) >= REVIEW_AFTER_DAYS * DAY
         matched = len(sched.matched) if sched is not None else None
-        if rival:
+        if sched is not None and undone and (qualifies or held):
             review(v, mmsi, static, method, confidence, "schedule-rival" if sched.rivals else "schedule-contradicted",
                    home_days, matched)
-        elif sched is not None and sched.qualifies and sched_blockers:
+        elif qualifies and sched_blockers:
             review(v, mmsi, static, method, confidence, sched_blockers[0], home_days, matched)
         elif (blockers and home_days > 0) or (not v.port_id and waited) or (home_days > 0 and waited):
             review(v, mmsi, static, method, confidence, blockers[0] if blockers else "few-home-port-days", home_days,
@@ -451,7 +474,15 @@ the days it was inside a port geofence (contradictions, schedule.py).
         if mmsi in derived or before.get("status") != "watched":
             continue
         held = owners.get(mmsi, ())
-        if (mmsi not in statics and len(held) == 1 and held[0].id == before.get("vessel_id")
+        if before.get("match_method") == SCHEDULE:
+            v = by_id.get(before.get("vessel_id"))
+            if (mmsi not in statics and not held and v and v.port_id and v.mmsi is None
+                    and (v.id, mmsi) not in rejected and (verified := outage_day(v, mmsi, before))):
+                out.targets[mmsi] = v.ref
+                out.schedule_days[v.schedule_key(mmsi)] = verified
+            else:
+                out.rows.append({**{k: before.get(k) for k in WATCH_COLUMNS}, "mmsi": str(mmsi), "status": "candidate"})
+        elif (mmsi not in statics and len(held) == 1 and held[0].id == before.get("vessel_id")
                 and (held[0].id, mmsi) not in rejected and gate_problem(before) is None):
             # No statics left (expired, or a rebuilt state) for an MMSI the one current registry owner still holds,
             # and that owner is the vessel the established row names: absence of evidence is not disagreement, so
@@ -726,10 +757,11 @@ def match(ctx) -> dict[int, VesselRef]:
         if mmsi not in seen and before.get("first_seen_at"):
             seen[mmsi] = Seen(_ms(before["first_seen_at"]), _ms(before.get("last_seen_at")) or ctx.now_ms,
                               before.get("last_seen_source"), int(before.get("positions_30d") or 0))
-    reports = load_report_days(ctx.region, vessels)   # None when no feed could be read: no schedule evidence
     decision = decide(ctx.region, vessels, reviews, statics, seen, mstate.presence(since), prior, ctx.now_ms,
-                      at_sea=mstate.away(since), reports=reports, in_port=mstate.in_port(since))
+                      at_sea=mstate.away(since), reports=load_report_days(ctx.region, vessels),
+                      in_port=mstate.in_port(since), schedule_days=ctx.state.get("match_schedule_days"))
     pushed = push(ctx, decision)
+    ctx.state.put("match_schedule_days", decision.schedule_days)
     refreshed = refresh_watch(ctx)
     log.info("match: scanned %s; %s; watch.json %s", scanned, pushed, refreshed)
     return decision.targets

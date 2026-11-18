@@ -428,12 +428,12 @@ class RunTests(unittest.TestCase):
 class ScheduleTests(unittest.TestCase):
     """Stage 4, schedule-correlation (N4): at-sea days against landing report days."""
 
-    def decide(self, statics, *, at_sea, reports, presence=None, prior=None, vessels=None):
+    def decide(self, statics, *, at_sea, reports, presence=None, prior=None, vessels=None, schedule_days=None):
         statics = {s.mmsi: s for s in statics}
         seen = {m: Seen(T0 - 20 * DAY, T0, "aisstream", 400) for m in statics}
         presence = {m: {"port-a": 1} for m in statics} if presence is None else presence
         return decide(REGION, fleet() if vessels is None else vessels, (), statics, seen, presence, prior or {}, NOW,
-                      at_sea=at_sea, reports=reports)
+                      at_sea=at_sea, reports=reports, schedule_days=schedule_days)
 
     def rows(self, decision):
         return {int(r["mmsi"]): r for r in decision.rows}
@@ -456,8 +456,9 @@ class ScheduleTests(unittest.TestCase):
         # Four of the five days is not enough.
         four = self.decide([boat], at_sea={CANDIDATE: set(TWO_WEEKS[1:])}, reports={SEA: set(TWO_WEEKS)})
         self.assertEqual(self.rows(four)[CANDIDATE]["status"], "candidate")
-        # Once watched it stays watched while the name matches, even when this run's feed could not be read.
-        sticky = self.decide([boat], at_sea={}, reports=None, prior={CANDIDATE: row})
+        # During an outage, the same binding can stay watched on the saved recent matching day.
+        sticky = self.decide([boat], at_sea={}, reports=None, prior={CANDIDATE: row},
+                             schedule_days=decision.schedule_days)
         self.assertEqual((self.rows(sticky)[CANDIDATE]["status"], self.rows(sticky)[CANDIDATE]["match_method"]),
                          ("watched", "schedule-correlation"))
 
@@ -595,7 +596,8 @@ class ScheduleTests(unittest.TestCase):
                 raise OSError("offline")
             return {"reports": [{"id": "1", "date": "2026-10-01", "boat": "Sea Example", "port": "Morro Bay"}]}
 
-        self.assertEqual(schedule.load_report_days(ca, vessels, fetch=fetch), {SEA: {"2026-10-01"}})
+        self.assertEqual(schedule.load_report_days(ca, vessels, fetch=fetch),
+                         schedule.ReportDays({SEA: {"2026-10-01"}}, frozenset({"morro-bay", "port-san-luis"})))
         self.assertEqual(sorted(fetched), urls)
 
         def down(url):
@@ -633,7 +635,8 @@ class ScheduleTests(unittest.TestCase):
         del mstate
         calls = []
         original = match.load_report_days
-        match.load_report_days = lambda region, vessels: calls.append(len(vessels)) or {SEA: set(TWO_WEEKS)}
+        match.load_report_days = lambda region, vessels: calls.append(len(vessels)) or schedule.ReportDays(
+            {SEA: set(TWO_WEEKS)}, frozenset({"port-a"}))
         try:
             worker = FakeWorker()
             process.run(REGION, worker, root=root, now_ms=NOW)

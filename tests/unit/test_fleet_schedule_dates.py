@@ -53,10 +53,13 @@ class ReportDaysDateTest(unittest.TestCase):
         region = SimpleNamespace()
         mixed = {"reports": [row("2026-02-28"), row("2026-02-30"), row("2026-02-28\n")]}
         bad = {"reports": [row("2026-02-30")]}
-        with mock.patch.object(schedule, "feed_urls", return_value=["u"]), \
+        with mock.patch.object(schedule, "_feed_ports", return_value={"u": {"p1"}}), \
                 mock.patch.object(schedule, "landing_ports", return_value=LANDING):
-            self.assertEqual(schedule.load_report_days(region, [VESSEL], fetch=lambda u: mixed), {"v1": {"2026-02-28"}})
-            self.assertEqual(schedule.load_report_days(region, [VESSEL], fetch=lambda u: bad), {})
+            covered = frozenset({"p1"})
+            self.assertEqual(schedule.load_report_days(region, [VESSEL], fetch=lambda u: mixed),
+                             schedule.ReportDays({"v1": {"2026-02-28"}}, covered))
+            self.assertEqual(schedule.load_report_days(region, [VESSEL], fetch=lambda u: bad),
+                             schedule.ReportDays({}, covered))
 
             def boom(u):
                 raise OSError("down")

@@ -53,7 +53,7 @@ from zoneinfo import ZoneInfo
 from ..normalize import name_norm
 from ...paths import repo_root
 
-__all__ = ["SCHEDULE", "Rules", "Correlation", "rules", "span_days", "correlate", "landing_ports", "report_days",
+__all__ = ["SCHEDULE", "Rules", "Correlation", "ReportDays", "rules", "span_days", "correlate", "landing_ports", "report_days",
            "load_report_days", "precision", "main"]
 
 SCHEDULE = "schedule-correlation"
@@ -169,26 +169,37 @@ def _fetch_json(url: str) -> Any:
         return json.load(response)
 
 
-def feed_urls(region, root: Path | None = None) -> list[str]:
-    """The daily feeds of the coastal regions the fleet region's ports belong to."""
+def _feed_ports(region, root: Path | None = None) -> dict[str, set[str]]:
+    """Daily feed URL -> fleet ports relying on that feed."""
     base = root or repo_root()
-    urls = set()
+    ports: dict[str, set[str]] = {}
     for port in region.ports:
         if not port.region:
             continue
         path = base / "regions" / port.region / "region.json"
         if path.exists() and (url := json.loads(path.read_text()).get("daily_feed")):
-            urls.add(url)
-    return sorted(urls)
+            ports.setdefault(url, set()).add(port.id)
+    return ports
+
+
+def feed_urls(region, root: Path | None = None) -> list[str]:
+    """The daily feeds of the coastal regions the fleet region's ports belong to."""
+    return sorted(_feed_ports(region, root))
+
+
+@dataclass(frozen=True)
+class ReportDays:
+    days: Mapping[str, Iterable[str]]      # vessel ID -> confirmed report days
+    covered_ports: frozenset[str]          # home ports whose own feed returned reports[]
 
 
 def load_report_days(region, vessels: Iterable[Mapping], *, fetch: Callable[[str], Any] = _fetch_json,
-                     root: Path | None = None) -> dict[str, set[str]] | None:
-    """Report days from the region's daily feeds; None when no feed could be read (no schedule evidence)."""
-    urls = feed_urls(region, root)
+                     root: Path | None = None) -> ReportDays | None:
+    """Report days and per-home-port coverage, or None when no feed could be read."""
+    ports = _feed_ports(region, root)
     rows: list[Mapping] = []
-    read = 0
-    for url in urls:
+    covered: set[str] = set()
+    for url, home_ports in sorted(ports.items()):
         try:
             doc = fetch(url)
         except Exception as error:   # noqa: BLE001 - a feed that fails costs only its evidence
@@ -196,10 +207,10 @@ def load_report_days(region, vessels: Iterable[Mapping], *, fetch: Callable[[str
             continue
         if isinstance(doc, Mapping) and isinstance(doc.get("reports"), list):
             rows.extend(r for r in doc["reports"] if isinstance(r, Mapping))
-            read += 1
-    if not read:
+            covered.update(home_ports)
+    if not covered:
         return None
-    return report_days(rows, list(vessels), landing_ports(root))
+    return ReportDays(report_days(rows, vessels, landing_ports(root)), frozenset(covered))
 
 
 # ---------------------------------------------------------------- precision on a history window
