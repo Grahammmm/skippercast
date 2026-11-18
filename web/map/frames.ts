@@ -84,12 +84,13 @@ export const FRAME_PROTOCOL = 'nowcoast-frame';
 const NOWCOAST = 'https://nowcoast.noaa.gov/', SCHEME = `${FRAME_PROTOCOL}://`;
 /** A nowCOAST tile URL on FRAME_PROTOCOL, byte-identical after the scheme; any other origin unchanged. */
 export const pinnedTileUrl = (url: string): string => url.startsWith(NOWCOAST) ? SCHEME + url.slice('https://'.length) : url;
-const hostOf = (url: string): string => { try { return new URL(url).host; } catch { return ''; } };
+// credentials:'omit' does not strip userinfo from the URL, so URL user:pass@ is refused here (RF2021-12).
+const admitted = (url: string): boolean => { try { const u = new URL(url); return u.host === 'nowcoast.noaa.gov' && !u.username && !u.password; } catch { return false; } };
 /** The FRAME_PROTOCOL handler: only host nowcoast.noaa.gov, no credentials; a non-2xx rejects with its status. */
 export function frameProtocol(fetchFn: typeof fetch = (...a) => fetch(...a)) {
   return async (params: {url: string}, abort: AbortController): Promise<{data: ArrayBuffer}> => {
     const url = `https://${params.url.slice(SCHEME.length)}`;
-    if (!params.url.startsWith(SCHEME) || hostOf(url) !== 'nowcoast.noaa.gov') throw new Error('frame host');
+    if (!params.url.startsWith(SCHEME) || !admitted(url)) throw new Error('frame host');
     abort.signal.throwIfAborted();
     const response = await fetchFn(url, {signal: abort.signal, credentials: 'omit'});
     if (!response.ok) throw new Error(String(response.status));
