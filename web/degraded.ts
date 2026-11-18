@@ -50,12 +50,27 @@ function liveRefresh(response: ObservedResponse, now: number, day: number): bool
   return status === 200 && cache === 'miss' && /^\/api\/(daily|forecast|intelligence|habitat)$/.test(path);
 }
 
+/**
+ * The UTC budget day a cost-ceiling response was produced in. The Worker ran
+ * somewhere between the request's start and its arrival, so a request that
+ * crossed midnight may belong to either day. Its Date header says which when
+ * it falls inside that window (clamped for second precision and skew); with no
+ * usable Date the later day wins, since hiding an active ceiling is worse than
+ * showing one a little long.
+ */
+function markedBudgetDay(headers: Headers, now: number, startedAt: number): number {
+  const date = Date.parse(headers.get('Date') ?? '');
+  if (Number.isFinite(date) && date >= startedAt - SKEW_MS && date <= now + SKEW_MS) return utcDay(Math.min(Math.max(date, startedAt), now));
+  return utcDay(now);
+}
+
 /** Publish marks by UTC budget day; retire a prior day's mark only on a live refresh. */
 export function noteResponse(response: ObservedResponse | null | undefined, now: number = Date.now(), startedAt = now): void {
   const headers = response?.headers;
   if (!response || !headers || typeof headers.get !== 'function') return;
   const mark = headers.get(DEGRADED_HEADER);
-  const day = utcDay(startedAt);
+  // A live refresh stays on the request's start day (conservative: a request that crossed midnight retires nothing).
+  const day = mark === 'cost-ceiling' ? markedBudgetDay(headers, now, startedAt) : utcDay(startedAt);
   const current = degraded.peek();
   if (mark !== 'cost-ceiling') {
     if (mark === null && current && day > markedDay && day === utcDay(now) && liveRefresh(response, now, day)) {

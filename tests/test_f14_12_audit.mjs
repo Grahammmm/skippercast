@@ -6,8 +6,9 @@ const yesterday = Date.parse('2026-11-17T23:59:30Z');
 const today = Date.parse('2026-11-18T00:00:30Z');
 const oldSaved = '2026-11-15T12:00:00.000Z';
 const feed = '/feeds/conditions/example.json';
-const marked = since => new Response('{}', {headers: {
+const marked = (since, date) => new Response('{}', {headers: {
   'X-SC-Degraded': 'cost-ceiling', ...(since ? {'X-SC-Last-Known-At': since} : {}),
+  ...(date ? {Date: new Date(date).toUTCString()} : {}),
 }});
 const liveHeaders = ms => ({Date: new Date(ms).toUTCString(), 'X-Feed-Source': 'r2', 'X-SC-Cache': 'miss'});
 
@@ -58,15 +59,35 @@ test('a marked day survives unverified responses but a later live refresh retire
   assert.equal(saved.headers.get('X-SC-Degraded'), 'cost-ceiling');
   assert.equal(saved.headers.get('X-SC-Last-Known-At'), oldSaved);
   assert.equal(await saved.text(), '{}');
-  finishYesterday(marked(oldSaved));
+  finishYesterday(marked(oldSaved, yesterday));
   await pending;
-  assert.equal(degraded.peek(), null, 'a prior-day request finishing late cannot restore the notice');
+  assert.equal(degraded.peek(), null, 'a request the Worker answered before midnight, finishing late, cannot restore the notice');
 
   // The current day can still hit its own ceiling, even if the saved copy
   // it serves is from before midnight. That copy's time is not its budget day.
   await send(marked(oldSaved));
   await send(live);
   assert.deepEqual(degraded.peek(), {since: oldSaved});
+  degraded.value = null;
+
+  // Contract: a request that started before UTC midnight but that the Worker
+  // answered after it belongs to the new budget day (its Date header, or with
+  // no usable Date the arrival day), so it cannot be hidden by a same-day live
+  // read or dropped after a recovery. Believable bug: dating it by its start.
+  for (const [reason, headers] of [['a today Date header', today], ['no Date header', undefined]]) {
+    let crossing;
+    const crossingRead = watchDegraded(() => new Promise(resolve => { crossing = resolve; }));
+    t.mock.timers.setTime(yesterday);
+    const inFlight = crossingRead(feed);
+    t.mock.timers.setTime(today);
+    await send(live); // a same-day live read has already recovered the day
+    crossing(marked(oldSaved, headers));
+    await inFlight;
+    assert.deepEqual(degraded.peek(), {since: oldSaved}, `a midnight-crossing ceiling response with ${reason} is shown after recovery`);
+    await send(reply(feed, liveHeaders(today)));
+    assert.deepEqual(degraded.peek(), {since: oldSaved}, `a same-day live read cannot hide it (${reason})`);
+    degraded.value = null;
+  }
 
   const tomorrow = today + 86_400_000;
   t.mock.timers.setTime(tomorrow);
