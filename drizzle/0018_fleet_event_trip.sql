@@ -1,0 +1,1 @@
+CREATE INDEX `ev_trip` ON `fleet_events` (`trip_id`);

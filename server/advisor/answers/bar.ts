@@ -11,7 +11,7 @@ import ports from '../../../catalog/home-ports.json' with {type: 'json'};
 import {BAR_CHECK, barHours, entranceFor} from '../../../packages/coast/src/bar-conditions.ts';
 import type {ForecastHour, TideEvent} from '../../../packages/coast/src/types.ts';
 import {COMFORT_WORD} from './comfort.ts';
-import {ALERT_CHECK_UNAVAILABLE, readHour, UNRATED_HOURS} from './conditions.ts';
+import {ALERT_CHECK_UNAVAILABLE, forecastPointsMatch, readHour, UNRATED_HOURS} from './conditions.ts';
 import type {DayConditions, Window} from './conditions.ts';
 import {localParts} from './time.ts';
 import type {Region} from '../../types.ts';
@@ -49,7 +49,7 @@ function tideEvents(daily: unknown): TideEvent[] {
 /** The window's hours at the port's forecast point as ForecastHour, mapped as web/conditions.ts does (never a daily rounded range). */
 function windowHours(intel: unknown, region: Region, pointId: string, date: string, window: Window): ForecastHour[] {
   const point = region.forecast_points.findIndex(p => p.id === pointId);
-  if (!isRecord(intel) || intel.region_id !== region.id || point < 0) return [];
+  if (!isRecord(intel) || intel.region_id !== region.id || point < 0 || !forecastPointsMatch(intel, region)) return [];
   const feed = intel as {forecast?: {models?: {gfs_global?: {data?: ({hourly?: {time?: unknown}} | null)[]}}}};
   const times = feed.forecast?.models?.gfs_global?.data?.[point]?.hourly?.time;
   if (!Array.isArray(times)) return [];

@@ -111,8 +111,8 @@ export interface Brief {
   readonly gaps: readonly SourceGap[];
   readonly tides: readonly TidePoint[];
   readonly tideEvents: readonly TideEvent[];
-  /** The tide heights' reference level (MLLW unless the station says otherwise). */
-  readonly tideDatum: string;
+  /** The tide heights' reference level, or null if unverified. Event times can still be known. */
+  readonly tideDatum: string | null;
   readonly sunrise: string | null;
   readonly sunset: string | null;
 }
