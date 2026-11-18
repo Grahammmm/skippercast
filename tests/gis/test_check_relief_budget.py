@@ -70,6 +70,22 @@ class ReliefBudgetTests(unittest.TestCase):
             self.assertIn('183,886,453', report)
             self.assertIn('z16-17 bytes not separately reported', report)
 
+    def test_pipeline_release_is_discovered_and_reported(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            release = root / 'morro-bay' / 'release' / 'generation' / 'release.json'
+            release.parent.mkdir(parents=True)
+            release.write_text(json.dumps({'region': 'morro-bay', 'minzoom': 8, 'maxzoom': 17,
+                                           'layers': [{'path': 'layers/relief.pmtiles', 'bytes': 123456}]}))
+            from contextlib import redirect_stdout
+            from io import StringIO
+            output = StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(crb.main(['--design-dir', str(root), '--repo', str(root),
+                                           '--z17-size', str(root / 'absent.md'), '--release-root', str(root)]), 0)
+            self.assertIn('morro-bay: layers/relief.pmtiles: 123,456 B total archive (zooms 8-17', output.getvalue())
+            self.assertIn('z16-17 bytes not separately reported', output.getvalue())
+
     def test_z17_absent_is_stated_and_present_is_echoed(self):
         with tempfile.TemporaryDirectory() as tmp:
             absent = Path(tmp) / 'Z17-SIZE.md'

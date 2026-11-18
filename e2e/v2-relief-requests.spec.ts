@@ -1,5 +1,6 @@
 // MB-12: first load adds 0 B for the owner-only seafloor relief layer. With the layer off, the app makes no relief
-// request (pointer, archive range read or tile), and a theme toggle makes no request at all.
+// request (pointer, archive range read or tile), and a theme toggle makes no non-telemetry HTTP request.
+// Contours have no off control, so this does not measure their off-state requests.
 // Byte budgets for the layer itself are measured by scripts/check_relief_budget.py; nothing here downloads data.
 import {test, expect} from './fixtures.ts';
 import type {Page} from '@playwright/test';
@@ -32,16 +33,33 @@ test('MB-12: with the relief layer off the app makes no relief request', async (
   expect(pageErrors).toEqual([]);
 });
 
-test('MB-12: a theme toggle with the layer off triggers no request', async ({page, pageErrors, v2}) => {
+test('MB-12: a theme toggle with the layer off triggers no resource request', async ({page, pageErrors, v2, isMobile}) => {
   const all = await openWithOwner(page, v2);
+  await layersSheet(page);
+  await expect(page.getByRole('button', {name: /^Seafloor relief \(medium\)/}).first()).toHaveAttribute('aria-pressed', 'false');
+  if (isMobile) {
+    // Close the layers sheet, then lift the app sheet to reach its account button.
+    await page.getByRole('button', {name: 'Layers', exact: true}).click();
+    await page.locator('.ui-sheet-handle').focus();
+    await page.keyboard.press('End');
+    await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full');
+  }
+  await page.locator('.app-account-trigger').click();
+  const theme = page.getByRole('region', {name: 'Map theme'});
+  await expect(theme).toBeVisible();
+  await page.waitForLoadState('networkidle');
   const before = all.length;
-  for (const theme of ['light', 'dark', 'light']) {
-    await page.evaluate(t => { document.documentElement.dataset.theme = t; }, theme);
-    await page.waitForFunction(t => document.documentElement.dataset.theme === t, theme);
+  for (const choice of ['Light', 'Dark', 'Light']) {
+    const button = theme.getByRole('button', {name: choice, exact: true});
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    if (choice === 'Light') await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    else await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'light');
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   }
   await page.waitForLoadState('networkidle');
-  expect(all.slice(before), 'requests after the theme toggles').toEqual([]);
+  // Telemetry can flush asynchronously, independently of the theme toggle (CI run 44222344613).
+  expect(all.slice(before).filter(r => r !== 'POST /api/telemetry'), 'resource requests after the theme toggles').toEqual([]);
   expect(all.filter(r => RELIEF.test(r.split(' ')[1]))).toEqual([]);
   expect(pageErrors).toEqual([]);
 });

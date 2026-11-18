@@ -7,12 +7,12 @@ Budgets (MAP-DESIGN-LOCK section 4):
   * relief bytes per view, worst case at 256 px tiles: desktop 1200x800 <= 1.6 MB, phone 390x844 <= 0.8 MB
   * per-sector relief archive <= 1.5 GB
   * depth contours: overview file <= 300 KB, full file <= 1 MB, per region
-  * first load: relief requests are checked with relief off by e2e/v2-relief-requests.spec.ts;
-    contour off-state and user theme control are not yet measured
+  * first load and theme changes: relief requests are checked with relief off by e2e/v2-relief-requests.spec.ts;
+    contour off-state is not measured because contours have no off control
 
 Per-view bytes = tiles touched by the viewport x the archive's mean tile size (tile data bytes / addressed tiles,
-read from the PMTiles v3 header). z16-17 bytes per region come from Z17-SIZE.md when that file exists; when it does
-not, the report says so plainly.
+read from the PMTiles v3 header). Release manifests report total archive bytes, not separate z16-17 bytes;
+Z17-SIZE.md provides the latter when available.
 
 Exit status: 1 only when a synthetic fixture exceeds a budget. A run on real files reports OVER rows and exits 0.
 
@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import struct
 import sys
 from pathlib import Path
@@ -114,10 +115,11 @@ def z17_report(path: Path, releases: tuple[Path, ...] | list[Path] = ()) -> list
     out = []
     for release_path in releases:
         release = json.loads(release_path.read_text(encoding='utf-8'))
-        for item in release.get('files', []):
+        for item in release.get('layers', release.get('files', [])):
             if item.get('path', '').endswith('.pmtiles') and isinstance(item.get('bytes'), int):
                 out.append(f'{release["region"]}: {item["path"]}: {item["bytes"]:,} B total archive '
-                           f'(zooms {item.get("minzoom", "?")}-{item.get("maxzoom", "?")}; '
+                           f'(zooms {item.get("minzoom", release.get("minzoom", "?"))}-'
+                           f'{item.get("maxzoom", release.get("maxzoom", "?"))}; '
                            f'z16-17 bytes not separately reported; {release_path})')
     if not path.is_file():
         return out or [f'z16-17 bytes per region: NOT REPORTED, {path} is absent (MB-07 has not produced Z17-SIZE.md)']
@@ -135,6 +137,8 @@ def main(argv=None) -> int:
     ap.add_argument('--repo', type=Path, default=ROOT)
     ap.add_argument('--z17-size', type=Path, default=Z17_SIZE)
     ap.add_argument('--release', type=Path, action='append', default=[], help='regional release.json (repeatable)')
+    ap.add_argument('--release-root', type=Path, default=os.environ.get('SC_RELIEF_OUT'),
+                    help='pipeline output root (default SC_RELIEF_OUT); discovers regional releases')
     a = ap.parse_args(argv)
 
     if a.fixture:
@@ -151,8 +155,12 @@ def main(argv=None) -> int:
             print(f'{rid}: design z17 box archive {r["design_z17_box_bytes"]:,} B (design sample, not Z17-SIZE.md)')
         if 'tile_count' in r:
             print(f'{rid}: {r["tile_count"]} tiles, mean {r["mean_tile_bytes"]:,.0f} B/tile, zooms {r["zooms"][0]}-{r["zooms"][1]}')
-    print('first load: relief-off requests checked by e2e/v2-relief-requests.spec.ts; contour off-state not yet measured')
-    for ln in z17_report(a.z17_size, a.release):
+    print('first load and theme changes: relief-off requests checked by e2e/v2-relief-requests.spec.ts; '
+          'contour requests not measured because contours have no off control')
+    releases = set(a.release)
+    if a.release_root:
+        releases.update(a.release_root.glob('*/release/*/release.json'))
+    for ln in z17_report(a.z17_size, sorted(releases)):
         print(ln)
     over = [r for r in rows if not r['ok']]
     print(f'{len(over)} over budget of {len(rows)} checks')
