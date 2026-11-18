@@ -31,9 +31,8 @@ variable can be moved by changing that variable:
 | Runner or variable | Workflows | Unset (default) | Set to `skippercast` |
 | --- | --- | --- | --- |
 | Literal `ubuntu-latest` | `advisor-media.yml`, `budget-drift.yml`, `buoy-history.yml`, `coast-assets.yml`, `feed-freshness.yml`, `live-conditions.yml` (all 4 jobs), `ops-report.yml`, `regional-legal-review.yml` | Always GitHub-hosted | Not configurable |
-| `DATA_RUNNER` | fleet AIS processor and listener install, fleet registry, fleet OSINT; fallback for `DATA_RUNNER_LIGHT` | fleet jobs skip; LIGHT jobs use `ubuntu-latest` if `DATA_RUNNER_LIGHT` is also unset | our runners (free minutes) |
-| `DATA_RUNNER_LIGHT` | the portable CPU-heavy subset: daily data, research daily, research substrate, research fish survey, draft-region health and rehearsal, forecast tiles, basemap | falls back to `DATA_RUNNER`, then `ubuntu-latest` | e.g. `ubuntu-latest` moves only these to GitHub-hosted runners (free on a public repo) while the rest stay on `DATA_RUNNER` |
-| `SEAFLOOR_RUNNER` | seafloor preparation, reach processing and publication | `ubuntu-latest` | a verified dedicated runner label |
+| Literal `ubuntu-latest` | basemap, daily data, draft-region health and rehearsal, forecast tiles, research daily, research fish survey, research substrate (one job stays on `macos-latest`), seafloor | Always GitHub-hosted | Not configurable |
+| `DATA_RUNNER` | fleet AIS processor and listener install, fleet registry, fleet OSINT | fleet jobs skip | our runners (free minutes) |
 | `CI_RUNNER` | `ci.yml` (check, e2e, survey-science) | `ubuntu-latest` | our runners only when `CI_SELF_HOSTED_READY=true` |
 
 `deploy-cloudflare.yml`, `dco.yml` and `release.yml` stay on GitHub-hosted runners: they
@@ -44,14 +43,14 @@ hosted too, so it can raise the `fleet-ais-stale` issue while the data runner is
 On a public repository anyone's pull request could run code on the box, so no pull
 request from a fork may ever reach it.
 
-**Rule for every workflow that can run on `DATA_RUNNER` or `SEAFLOOR_RUNNER`:** no
+**Rule for every workflow that can run on `DATA_RUNNER`:** no
 `pull_request` or `pull_request_target` trigger. Such a workflow runs on `schedule` (which
 runs `main`), `workflow_dispatch`, `workflow_run`, or `push` limited to `branches: [main]`,
 so only reviewed code reaches the box. Workflows that hold fleet secrets go further: their
 jobs also require `github.ref == 'refs/heads/main'`, so a dispatch from another branch is
 skipped (charter fleet [Q13](../plans/charter-fleet/open-questions.md#q13-self-hosted-fleet-jobs-on-a-public-repository),
 [threat model § 10.4](../legal/threat-model.md) row E). `tests/unit/test_fleet_install_script.py`
-checks the trigger rule for every workflow that names either variable. `ci.yml` is the one
+checks the trigger rule for every workflow that names `DATA_RUNNER`. `ci.yml` is the one
 `pull_request` workflow with a self-hosted switch (`CI_RUNNER`). Its jobs reach the box only
 when `CI_SELF_HOSTED_READY=true` **and** the run is not a pull request from a fork or from
 Dependabot: pushes to `main`, manual dispatches and pull requests from branches in this
@@ -217,8 +216,8 @@ runner label alone does not move CI. Before enabling the gate, verify all of the
    operator's credentials or home directory (SSH keys, cloud and GitHub tokens,
    `~/.config/skippercast/`, password stores). A read-only `GITHUB_TOKEN` does not
    provide this; only host-level separation does.
-2. **Workload isolation.** CI jobs cannot reach the secret-bearing `DATA_RUNNER` and
-   `SEAFLOOR_RUNNER` workloads: not their runner directories, work trees, caches,
+2. **Workload isolation.** CI jobs cannot reach the secret-bearing `DATA_RUNNER`
+   workloads: not their runner directories, work trees, caches,
    environment files or processes.
 3. Browser system dependencies install without an interactive password.
 4. Parallel pnpm installs use separate directories.
@@ -232,11 +231,9 @@ independently.
 
 ## Seafloor isolation
 
-Seafloor refreshes use `SEAFLOOR_RUNNER`, independently of CI and the long-running
-live forecast loop. Leave it unset to use GitHub-hosted Ubuntu. This prevents
-reef publication from waiting behind occupied self-hosted runners. Before setting
-a dedicated self-hosted label, verify that the entire seafloor workflow completes
-on that pool, including source hashes, spatial screens, R2 read-back and public
-archive checks. Unset the variable to return to hosted processing; no checks or
-publication gates are disabled. Existing queued jobs retain their assigned runner;
-rerun an interrupted refresh only after checking its saved progress receipts.
+Seafloor preparation, reach processing and publication are pinned to GitHub-hosted
+Ubuntu, independently of CI and the long-running live forecast loop. This keeps
+reef publication from waiting behind occupied self-hosted runners. Source hashes,
+spatial screens, R2 read-back and public archive checks still apply. Existing queued
+jobs retain their assigned runner; rerun an interrupted refresh only after checking
+its saved progress receipts.
