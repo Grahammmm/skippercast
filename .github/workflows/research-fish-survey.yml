@@ -253,6 +253,16 @@ jobs:
           --access var/review/point-buchon-2009-csumb-access-triage.json
           --output var/review/point-buchon-rov-original-cell-join.json
           --verify research/receipts/point-buchon-rov-original-cell-join.json
+      - name: Screen whole historical ROV research blocks with margin
+        run: >-
+          python research/scripts/audit_point_buchon_rov_access_blocks.py
+          --mpas var/review/point-buchon-cdfw-mpas.geojson
+          --federal var/review/point-buchon-federal-areas.geojson
+          --enc var/review/enc-hazards-point-buchon-open-reference.geojson
+          --private-blocks var/review/point-buchon-rov-100m-blocks.geojson
+          --output var/review/point-buchon-rov-access-triage.json
+      - name: Hold changes to research-only access screen
+        run: python research/scripts/check_point_buchon_rov_access_change.py --current var/review/point-buchon-rov-access-triage.json
       - name: Fetch original USGS Point Buchon CMECS polygons
         run: >-
           curl --fail --location --silent --show-error --retry 2 --max-time 600
@@ -274,16 +284,6 @@ jobs:
           --blocks var/review/point-buchon-2009-csumb-100m-blocks.geojson
           --output var/review/point-buchon-2009-conditional-vdatum-probes.json
           --verify research/receipts/point-buchon-2009-conditional-vdatum-probes.json
-      - name: Screen whole historical ROV research blocks with margin
-        run: >-
-          python research/scripts/audit_point_buchon_rov_access_blocks.py
-          --mpas var/review/point-buchon-cdfw-mpas.geojson
-          --federal var/review/point-buchon-federal-areas.geojson
-          --enc var/review/enc-hazards-point-buchon-open-reference.geojson
-          --private-blocks var/review/point-buchon-rov-100m-blocks.geojson
-          --output var/review/point-buchon-rov-access-triage.json
-      - name: Hold changes to research-only access screen
-        run: python research/scripts/check_point_buchon_rov_access_change.py --current var/review/point-buchon-rov-access-triage.json
       - name: Upload unpublished original-pair review
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
