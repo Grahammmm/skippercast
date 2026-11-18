@@ -781,6 +781,24 @@ test('SCA-005: a fast network answer wins over the saved /map, including denials
   assert.equal(page.headers.get('X-SC-Offline'), SAVED_PAGE_AT);
 });
 
+test('SCA-005: a denial arriving after the timer wins while the saved lookup is pending', async () => {
+  const network = deferred(), lookup = deferred();
+  const worker = loadWorker({network: () => network.promise});
+  await v2Pack(worker);
+  const keys = worker.storage.keys.bind(worker.storage);
+  worker.storage.keys = async () => { await lookup.promise; return keys(); };
+  const opening = watch(dispatch(worker, nav('/map')));
+  try {
+    await pause(1600);
+    network.resolve(new Response('denied', {status: 403}));
+    await pause(50);
+    assert.equal(opening.done, true, 'network denial answers without waiting for the saved lookup');
+    assert.equal(opening.value.status, 403);
+    assert.equal(await opening.value.text(), 'denied');
+    assert.equal(opening.value.headers.get('X-SC-Offline'), null);
+  } finally { lookup.resolve(); }
+});
+
 test('SCA-005: no pack, an unfinished pack, a pack without /map or its saved time, an online visit and the landing claim nothing during a stall', async () => {
   const stamp = {'X-SC-Saved-At': T1};
   const cases = {

@@ -310,8 +310,13 @@ async function savedMapShell(event) {
       if (!('error' in first)) return first.response;
       return fromPack(event.request, first.error, self.location.origin + V2_SHELL);
     }
-    const copy = await saved;
-    if (copy) { network.catch(() => {}); return offlineResponse(copy); }
+    const next = await Promise.race([
+      network.then(response => ({response}), error => ({error})),
+      saved.then(copy => ({copy})),
+    ]);
+    if ('response' in next) return next.response;
+    if ('error' in next) return fromPack(event.request, next.error, self.location.origin + V2_SHELL);
+    if (next.copy) return offlineResponse(next.copy);
     // No eligible saved page: nothing claims coverage; keep waiting for the network as before.
     try { return await network; } catch (error) { return fromPack(event.request, error, self.location.origin + V2_SHELL); }
   } finally { clearTimeout(timer); }
