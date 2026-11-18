@@ -32,6 +32,10 @@
         "scope": {"type": "string"},
         "redistribution_reviewed": {"type": ["boolean", "string"]},
         "commercial_use": {"enum": ["allowed", "prohibited", "permission-required", "unknown"]},
+        "public_display": {
+          "description": "Relief-pipeline rights: allowed is legal eligibility, not release approval; private keeps the source out of public relief; excluded keeps it out of relief selection entirely. Missing does not grant eligibility. Existing product approvals are separate.",
+          "enum": ["allowed", "private", "excluded"]
+        },
         "attribution_required": {"type": "boolean"},
         "commercial_note": {"type": "string"}
       },
@@ -77,5 +81,23 @@
       "rights": {"properties": {"license": {"enum": ["public-domain", "CC0-1.0", "CC-BY-4.0", "CC-BY-NC-4.0", "facts-only"]}}}
     }
   },
+  "allOf": [{
+    "if": {"properties": {"rights": {"required": ["public_display"]}}},
+    "then": {
+      "properties": {"rights": {"properties": {"attribution": {"pattern": "\\S"}}}},
+      "if": {"properties": {"rights": {"properties": {"public_display": {"const": "allowed"}}}}},
+      "then": {
+        "description": "allowed needs an approved review with no explicit publication_allowed:false, or the owner's display decision (rights.owner_public_display, G 2026-11-18). Only the owner decision overrides a publication_allowed:false denial.",
+        "anyOf": [
+          {"properties": {"review_status": {"const": "approved"}, "publication_allowed": {"not": {"const": false}}}},
+          {"properties": {"rights": {"required": ["owner_public_display"], "properties": {"owner_public_display": {
+            "type": "object",
+            "required": ["decision", "basis"],
+            "properties": {"decision": {"const": "allowed"}, "basis": {"const": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"}}
+          }}}}}
+        ]
+      }
+    }
+  }],
   "additionalProperties": true
 }

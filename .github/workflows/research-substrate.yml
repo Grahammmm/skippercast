@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   monterey-original-300-source-screen:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -84,7 +84,7 @@ jobs:
             var/review/monterey-17-bluetopo-contributor-pixels.json
           retention-days: 30
   monterey-original-multibeam-crosssurvey:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -199,7 +199,7 @@ jobs:
             var/review/monterey-2009-beam-2010-video-proximity.json
           retention-days: 30
   central-coverage-and-source-queue:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -374,7 +374,7 @@ jobs:
             var/review/central-300ft-qualification-plan.json
           retention-days: 30
   san-pedro-original-character:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -461,7 +461,7 @@ jobs:
             var/review/san-pedro-rca-screen.json
           retention-days: 30
   usgs-state-waters-catalog:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -496,7 +496,7 @@ jobs:
           path: var/review/usgs-ds781-metadata-review.json
           retention-days: 30
   nos-historical-seabed-samples:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -518,7 +518,7 @@ jobs:
           path: var/review/noaa-seabed-samples-sector-review.json
           retention-days: 30
   reefcheck-historical-observations:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -546,7 +546,7 @@ jobs:
           path: var/review/reefcheck/statewide-observation-audit.json
           retention-days: 30
   original-hard-context-enc-review:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -685,7 +685,7 @@ jobs:
             var/review/bolinas-enc-context-review.json
           retention-days: 30
   bluetopo-source-leads:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -724,7 +724,7 @@ jobs:
             var/review/central-bluetopo-upstream-source-leads.json
           retention-days: 30
   usgs-caldig-deepwater:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -755,7 +755,7 @@ jobs:
           path: var/review/usgs-caldig-v2-native-review.json
           retention-days: 30
   ncei-survey-discovery:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -786,7 +786,7 @@ jobs:
             var/review/noaa-central-multibeam-footprint-leads.json
           retention-days: 30
   csumb-native:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -947,7 +947,7 @@ jobs:
             var/review/bss03-caris-original-tpe-member-lead.json
           retention-days: 30
   central-deepwater:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -983,7 +983,7 @@ jobs:
           path: var/review/noaa-central-deepwater-native-depth-screen.json
           retention-days: 30
   san-miguel-original-habitat:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1424,7 +1424,7 @@ jobs:
           retention-days: 30
 
   hard-footprint-native-depth:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1465,7 +1465,7 @@ jobs:
           retention-days: 30
 
   usgs-sur-arguello-sediment:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1488,7 +1488,7 @@ jobs:
           retention-days: 30
 
   csumb-scc-source-leads:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1519,7 +1519,7 @@ jobs:
           retention-days: 30
 
   h11983-original-point-st-george:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1623,7 +1623,7 @@ jobs:
           retention-days: 30
 
   usgs-ds781-native-character:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

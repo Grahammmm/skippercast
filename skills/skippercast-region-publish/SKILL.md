@@ -21,12 +21,12 @@ skill_version: 1.1
    states the error-correction counts. A run without `ec/` and with `ec: null` publishes exactly as before.
 3. Held: read `<run>/PUBLISH.md` (`HELD: <reason>`, detail, `Next:`) and fix upstream; the work tree is unchanged. Exit 2 is `REPO NOT RESTORED`: stop, tell the operator.
 4. Ready: only `catalog/depth-contours/<id>.geojson` and `dist/` change. Sol medium (or the assigned PR opener) opens the data PR from PUBLISH.md.
-5. Paste `python3 ~/agent-work/bin/mergegate.py Grahammmm/skippercast <n> <head>` in the PR; after merge run `region_publish.py --record-pr <run> --pr <n> --published-at YYYY-MM-DD`.
+5. Paste `python3 ~/agent-work/bin/mergegate.py Grahammmm/skippercast <n> <head>` in the PR; after merge run `region_publish.py --record-pr <run> --pr <n>` (state `merged`); after the live-check passes add `--live-receipt <live.json> --published-at YYYY-MM-DD` for `published`.
 
 ## Outputs
 
 `<run>/PUBLISH.md` (never overwritten); on a pass the copied catalog file and rebuilt `dist/`. Only the region's LEDGER row changes: pass `stage=publish, state=reviewed`
-(verdict `PASS (visual not inspected)` without a capture); held `state=held, held_reason`; `--record-pr` sets `pr`, and with a date `state=published`, `published_at`.
+(verdict `PASS (visual not inspected)` without a capture); held `state=held, held_reason`; `--record-pr` sets `pr` and `state=merged`. `state=published` needs `--live-receipt <live.json>` whose status is PASS for the same build sha256 (plus `--published-at`).
 Held reasons, in check order (they extend the plan's ledger enum): `no-publishable-output`, `build-output-changed`, `publication-held`, `source-candidate:<id>`,
 `source-not-approved:<id>`, `region-draft`, `region-status:<status>`, `build-sha-mismatch` (canonical sorted output path/hash identity changed; rebuild and re-review), `review-missing`, `review-sha-mismatch`, `review-family`, `review-return`, `review-invalid`,
 `ec-receipt-invalid`, `ec-deepened:<id>`, `build-not-reproducible`, `build-touched:<path>`. A refused `publish` source with no other output stays

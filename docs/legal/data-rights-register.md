@@ -23,6 +23,43 @@ It fails when an asset is bound but unmapped, when a mapping omits a source the 
 
 Adding a new source to `catalog/sources.json` now requires `commercial_use` and `attribution_required` (`skippercast.platform.contracts.load_catalogs` rejects entries without them).
 
+## 2026-11-18 public-display decision (DATA-LIVE-1)
+
+**Basis:** G decision 2026-11-18 (owner-accepted risk; revisit when paid).
+This is an internal decision for display in the free product, not a licence,
+redistribution permission for source files, a change to commercial-use rights,
+or sign-off on a new map artifact. The second decision expressly includes CSUMB
+seafloor and Planet/Kelpwatch after the no-public-use terms were raised. The
+historical terms and pre-decision holds below are retained for the paid review.
+
+`rights.owner_public_display` records this rights decision per source, and
+`rights.public_display` is now `allowed` on every source that carries it: the
+already approved sources whose display hold was only about terms, the catalogue
+candidates and the restricted CSUMB archive records (72 rows). The catalogue
+contract accepts `allowed` for a non-approved source only when
+`owner_public_display` carries this basis. The decision does not change
+`review_status`, `publication_allowed` or the raw-data redistribution flags, and
+`publication_allowed: false` does not veto display: it governs raw and
+source-file redistribution only, while `public_display` governs derived display.
+`public_display: allowed` is legal eligibility, not release: independent
+scientific and regional qualification, exact source selection and each
+consumer's own gates still decide what is published. An unset display field on a
+legacy row is not a new grant. MBARI direct products (`mbari-seafloor-mapping`
+stays `excluded`), DS1091 interviews, explicit paid-use restrictions, and
+vessel/privacy holds were not cleared. Existing contributor credits, source
+dates and restrictions on what the data can support are unchanged.
+
+| Layer / source group | Region or intended coverage | Effect of this decision |
+| --- | --- | --- |
+| Survey depth contours, full and overview (`usgs-point-buchon`, `usgs-morro-bay`, `usgs-point-estero`) | Morro Bay | Both existing exports pass the explicit display check. Geometry, surveyed limits, datums, source credits and review expiry are unchanged. |
+| Existing B3 atlas, habitat, bottom views, charter outlines, search plans and startup copies | Morro Bay; existing Estero survey context in Cambria–San Simeon; `usgs-csmp-seafloor-character` survey habitat and search plans in Bodega–Point Reyes, Monterey–Point Sur, Point Arena–Bodega, Point Arguello–Conception and Santa Cruz–Monterey Bay | Source eligibility recorded; no new assets, fishing export permissions or region expansions. |
+| NOAA CINMS substrate interpretation and merged NOAA bathymetry | Southern California / Channel Islands, existing survey habitat, search plans, bottom views and qualified-bottom subset | Clears the contributor-terms hold for the NOAA releases themselves. It does not clear separately sourced MBARI data or change any region’s independently reviewed release. |
+| PMEP HAPC habitat context and search plans | Big Sur Coast and South Big Sur–San Simeon | Owner decision recorded for existing context; no catalogue promotion or new export. |
+| Candidate relief (NBS, BlueTopo, CoNED, USACE NCMP, CUDEM, NOAA/NEP 2022 lidar and Southern Cascadia) | Exact tile/subset only: Central, Northern and Southern California / Channel Islands, Morro Bay and Southern Cascadia as applicable | Owner decision recorded; no release from a tile envelope, nominal spacing or unqualified contributors. Exact source selection, coverage/labels and regional QA still required. |
+| Candidate substrate, cameras/observations, ocean and fishery context | No reviewed public map bindings admitted here | Rights decision recorded; no new region or asset enabled. |
+| CSUMB Cambria and the 50 nominated CSUMB SFML wave 2B archives | Cambria–San Simeon and the individual survey areas in the archive records | Decision applies to future qualified display, not downloads, raw archive publication or a regional seafloor asset. No new seafloor goes live from these records. |
+| Kelpwatch canopy / PlanetScope imagery | Existing `kelpwatch` regional bindings are candidate inputs; no separate tracked PlanetScope product or qualified regional imagery in this change | Owner display decision recorded; original Kelpwatch and producer credits must accompany any qualified imagery. No imagery is fetched, promoted or published here. |
+
 ## Launch blockers
 
 Every item here must be closed, licensed or removed before SkipperCast charges money.
@@ -127,7 +164,7 @@ Rules for every row ([design § 17](../plans/charter-fleet/design.md#17-privacy-
 
 ## Catalog sources
 
-One row per entry in `catalog/sources.json`. "Where used" lists usages found by the CI gate (asset paths are relative to `dist/`; `region.json:*` rows are runtime bindings present in every published region). "Licence" is the redistribution review already recorded in the catalog.
+One row per entry in `catalog/sources.json`, except for the grouped CSUMB NCEI wave below. "Where used" lists usages found by the CI gate (asset paths are relative to `dist/`; `region.json:*` rows are runtime bindings present in every published region). "Licence" is the redistribution review already recorded in the catalog.
 
 | Dataset | Source id | Licence | Attribution required | Commercial use OK | Where used in app | Action | Owner |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -186,7 +223,7 @@ One row per entry in `catalog/sources.json`. "Where used" lists usages found by 
 | NOAA Southern California Groundfish Exclusion Areas | `noaa-socal-gea` | US public domain | no (credit requested) | yes | `regions/southern-california/groundfish-exclusions.geojson` | None | Engineering |
 | NOAA/NCCOS California benthic substrate compilation | `noaa-cinms-substrate-2006` | US public domain | no (credit requested) | yes | `regions/southern-california/search-plans.json`<br>`regions/southern-california/survey-habitat.geojson` | None | Engineering |
 | NCCOS Channel Islands merged multibeam bathymetry | `noaa-cinms-bathymetry-2025` | CC0 1.0 | no (credit requested) | yes | `regions/southern-california/bottom/index.json`<br>`regions/southern-california/qualified-bottom/manifest.json`<br>`regions/southern-california/search-plans.json`<br>`regions/southern-california/survey-habitat.geojson` | None | Engineering |
-| CDFW 2016 aerial kelp canopy and subsurface classification | `cdfw-kelp-2016` | Facts only | yes | yes | `regions/southern-california/search-plans.json`<br>`regions/southern-california/survey-habitat.geojson` | Keep attribution in NOTICE and licences page | Engineering |
+| CDFW 2016 aerial kelp canopy and subsurface classification | `cdfw-kelp-2016` | Facts only | yes | yes | `regions/southern-california/search-plans.json`<br>`regions/southern-california/survey-habitat.geojson` | Keep attribution in NOTICE and licences page. Relief-pipeline `public_display: allowed` (bundled metadata asks only for citation); dated historical context, not release approval | Engineering |
 | NOAA H13093: Vicinity of Anacapa Island | `noaa-h13093` | CC0 1.0 | no (credit requested) | yes | `regions/southern-california/atlas.json`<br>`regions/southern-california/bottom/index.json`<br>`regions/southern-california/qualified-bottom/manifest.json`<br>`regions/southern-california/search-plans.json` | None | Engineering |
 | NOAA H13323: Cavern Point to Smugglers Cove | `noaa-h13323` | CC0 1.0 | no (credit requested) | yes | `regions/southern-california/atlas.json`<br>`regions/southern-california/bottom/index.json`<br>`regions/southern-california/qualified-bottom/manifest.json`<br>`regions/southern-california/search-plans.json` | None | Engineering |
 | NOAA CPC ENSO Diagnostic Discussion | `noaa-cpc-enso` | US public domain | no (credit requested) | yes | Not shipped (catalog or research only) | None | Engineering |
@@ -199,6 +236,34 @@ One row per entry in `catalog/sources.json`. "Where used" lists usages found by 
 | Open-Meteo forecast, marine and ensemble APIs (free tier) | `open-meteo-api` | CC BY 4.0 | yes | **no** | none (snapshot replaced FSC-01) | [Blocker B1](#b1--open-meteo-free-api-resolved) | Owner |
 | Protomaps basemap (OpenStreetMap vector tiles), self-hosted coastal extract | `protomaps-basemap` | ODbL-1.0 | yes | **unknown** | Not shipped yet: `tiles/basemap/ca-coast-<build>.pmtiles` on R2 (FE-10), read by the v2 Chart from FE-11 | Drafted by FE-10, **owner to confirm**: ODbL allows commercial use with attribution, but the whole archive is publicly downloadable from `/feeds/tiles/basemap/`, so it is redistributed as an ODbL derivative database (attribution and ODbL notice kept with it; the extract itself offered under ODbL, share-alike). Self-hosting removes the [B6](#b6--openstreetmap-tile-service) tile-service question, not this one | Owner |
 | NOAA NGS Continually Updated Shoreline Product (CUSP) | `noaa-cusp-shoreline` | US public domain (NOAA-created features only) | yes | yes | `regions/morro-bay/shoreline.geojson` (beside the region package, not in `region.json` assets; read by the v2 Chart from FE-11) | Drafted by FE-10, **owner to confirm**: the importer keeps only features whose creator is NOAA; review each new region's held creators before importing it | Owner |
+| USGS CoNED central California topobathy DEM | `usgs-coned-ca-8657` | unresolved | yes | **unknown** | none | Public relief held pending contributor review | Owner |
+| USGS CoNED southern California and Channel Islands topobathy DEM | `usgs-coned-ca-8658` | unresolved | yes | **unknown** | none | Public relief held pending contributor review | Owner |
+| USGS CoNED northern California topobathy DEM | `usgs-coned-ca-9181` | unresolved | yes | **unknown** | none | Public relief held pending contributor review | Owner |
+| 2014 USACE NCMP California topobathy lidar DEM | `usace-ncmp-ca-5189` | unresolved | yes | **unknown** | none | Confirm reuse terms for the exact delivery | Owner |
+| 2014 USACE NCMP California topobathy lidar point cloud | `usace-ncmp-ca-4912` | unresolved | yes | **unknown** | none | Confirm reuse terms for the exact delivery | Owner |
+| 2015 USACE NCMP California topobathy lidar DEM | `usace-ncmp-ca-8482` | unresolved | yes | **unknown** | none | Confirm reuse terms for the exact delivery | Owner |
+| 2015 USACE NCMP California topobathy lidar point cloud | `usace-ncmp-ca-5022` | unresolved | yes | **unknown** | none | Confirm reuse terms for the exact delivery | Owner |
+| NOAA NCEI CUDEM California 1/9 arc-second topobathy tiles | `noaa-cudem-ca-ninth-8483` | unresolved | yes | **unknown** | none | Public relief held pending tile contributor review | Owner |
+| 2022 NOAA Morro Bay topobathy lidar DEM | `noaa-morro-bay-topobathy-2022-9630` | unresolved | yes | **unknown** | none | Confirm NOAA/NEP display and redistribution terms | Owner |
+| 2022 NOAA Morro Bay topobathy lidar point cloud | `noaa-morro-bay-topobathy-2022-9629` | unresolved | yes | **unknown** | none | Confirm NOAA/NEP display and redistribution terms | Owner |
+| USGS 3DEP original The National Map 1 m bare-earth DEM | `usgs-3dep-1m-dem` | US public domain | no (credit requested) | yes | none | Land terrain only; no third-party copy, region or release approval | Engineering |
+| USGS Southern Cascadia 30 m composite bathymetry (v2.0) | `usgs-southern-cascadia-p9c5dbmr` | unresolved | yes | **unknown** | none | Public relief held pending review of the composite and its contributor polygons | Owner |
+| MBARI direct seafloor mapping products | `mbari-seafloor-mapping` | MBARI site terms | yes | **needs permission** | none | Excluded from relief selection; research reference only | Owner |
+| USGS OFR 2005-1170 habitat polygons, North Anacapa Passage | `usgs-of2005-1170-nanphab` | US public domain | no (credit requested) | yes | none | Habitat context eligible for public display (USGS and NOAA authors; no access or use constraint beyond not for navigation); no region binding or release approval | Engineering |
+| USGS OFR 2005-1170 habitat polygons, South Anacapa Island | `usgs-of2005-1170-sanahab` | US public domain | no (credit requested) | yes | none | Habitat context eligible for public display (USGS and NOAA authors; no access or use constraint beyond not for navigation); no region binding or release approval | Engineering |
+| USGS OFR 2005-1170 habitat polygons, South Anacapa Passage | `usgs-of2005-1170-sanphab` | US public domain | no (credit requested) | yes | none | Habitat context eligible for public display (USGS and NOAA authors; no access or use constraint beyond not for navigation); no region binding or release approval | Engineering |
+| USGS OFR 2005-1170 habitat polygons, Southeast Santa Cruz Island | `usgs-of2005-1170-secruhab` | US public domain | no (credit requested) | yes | none | Habitat context eligible for public display (USGS and NOAA authors; no access or use constraint beyond not for navigation); no region binding or release approval | Engineering |
+
+### CSUMB SFML at NCEI — wave 2B (private-use only)
+
+These entries identify the archive selection, not a claim that all 50 archives were acquired. The licence is unresolved, commercial use is unknown, and none is bound to an app region or asset. Retain CSUMB SFML and individual survey contributor credits. NCEI hosting does not resolve producer rights. The original decision held public display and redistribution of archives or derivatives pending separate rights review and owner approval; the 2026-11-18 decision above changes the owner’s display policy only. These archive records remain restricted, unbound and ineligible for raw redistribution. Private census use waits for the E2E-02 normalise stage. The operator-local `CSUMB-LICENCE.md` retains the per-survey evidence, including the missing ISO record for CC_BlockA00.
+
+- Ventresca, CC2 A: `csumb-ventresca-cc2-blocka01`, `csumb-ventresca-cc2-blocka02`, `csumb-ventresca-cc2-blocka03`, `csumb-ventresca-cc2-blocka04`, `csumb-ventresca-cc2-blocka05`, `csumb-ventresca-cc2-blocka07`, `csumb-ventresca-cc2-blocka08`, `csumb-ventresca-cc2-blocka09`, `csumb-ventresca-cc2-blocka10`, `csumb-ventresca-cc2-blocka11`.
+- Ventresca, CC2 B: `csumb-ventresca-cc2-blockb01`, `csumb-ventresca-cc2-blockb02`, `csumb-ventresca-cc2-blockb03`, `csumb-ventresca-cc2-blockb04`, `csumb-ventresca-cc2-blockb05`, `csumb-ventresca-cc2-blockb06`, `csumb-ventresca-cc2-blockb07`, `csumb-ventresca-cc2-blockb08`, `csumb-ventresca-cc2-blockb09`, `csumb-ventresca-cc2-blockb10`, `csumb-ventresca-cc2-blockb11`, `csumb-ventresca-cc2-blockb12`, `csumb-ventresca-cc2-blockb13-14`.
+- Ventresca, CC: `csumb-ventresca-cc-blocka00`, `csumb-ventresca-cc-blocka02`, `csumb-ventresca-cc-blocka03`, `csumb-ventresca-cc-blocka05`, `csumb-ventresca-cc-blocka06`, `csumb-ventresca-cc-blocka07`, `csumb-ventresca-cc-blocka08`, `csumb-ventresca-cc-blocka09`, `csumb-ventresca-cc-blocka10`, `csumb-ventresca-cc-blocka11`.
+- Ventresca, other surveys: `csumb-ventresca-montereycanyon`, `csumb-ventresca-pge-north`, `csumb-ventresca-pge-south`, `csumb-ventresca-point-buchon`, `csumb-ventresca-point-buchon-control`, `csumb-ventresca-presidioshoals`, `csumb-ventresca-sanfranciscomouth`, `csumb-ventresca-sanpablobay`, `csumb-ventresca-soquelcanyon`, `csumb-ventresca-suisunbay`.
+- Harold Heath: `csumb-harold-heath-bss-block13`, `csumb-harold-heath-montereypeninsula`.
+- MacGinitie: `csumb-macginitie-mackerricher`, `csumb-macginitie-montereybay-holefill`, `csumb-macginitie-mosslandingharbor`, `csumb-macginitie-ptcabrillo`, `csumb-macginitie-scypresspoint`.
 
 ## Web and code dependencies
 

@@ -68,49 +68,51 @@ if __name__ == '__main__':
 
 
 class RunnerSwitchTests(unittest.TestCase):
-    """Heavy workflows read their runner from a repository variable (docs/operations/runners.md)."""
+    """Check the fixed and variable-based runner assignments in docs/operations/runners.md."""
 
     # fleet-health.yml alerts when Hermes (the data runner) is down, so it cannot run there (charter-fleet design § 4).
     # e2e-timing.yml measures input latency, so it stays on the same GitHub-hosted runner class every night (CI-PARITY-1).
-    HOSTED_ONLY = {'deploy-cloudflare.yml', 'dco.yml', 'release.yml', 'fleet-health.yml', 'e2e-timing.yml'}
+    HOSTED_ONLY = {
+        'advisor-media.yml', 'budget-drift.yml', 'buoy-history.yml', 'coast-assets.yml',
+        'dco.yml', 'deploy-cloudflare.yml', 'e2e-timing.yml', 'feed-freshness.yml',
+        'fleet-health.yml', 'live-conditions.yml', 'ops-report.yml', 'regional-legal-review.yml',
+        'release.yml',
+    }
 
-    # ci.yml is the one pull_request workflow that can reach the box. A pull request from a
-    # fork, or a Dependabot update (third-party install scripts), stays on GitHub-hosted runners
-    # even with the readiness gate on (the repo is public).
-    CI_RUNS_ON = (
-        "${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request'"
-        " || github.event.pull_request.head.repo.full_name == github.repository"
-        " && github.event.pull_request.user.login != 'dependabot[bot]')"
-        " && vars.CI_RUNNER || 'ubuntu-latest' }}"
-    )
+    CI_RUNS_ON = 'ubuntu-latest'
 
-    def test_scheduled_and_ci_jobs_run_on_the_switchable_runner(self):
+    # These data jobs must stay on GitHub-hosted Ubuntu regardless of repository variables.
+    LIGHT_RUNS_ON = 'ubuntu-latest'
+    LIGHT_WORKFLOWS = {
+        'basemap.yml', 'daily-data.yml', 'draft-region-health.yml', 'draft-region-rehearsal.yml',
+        'forecast-tiles.yml', 'research-daily.yml', 'research-fish-survey.yml', 'research-substrate.yml',
+    }
+
+    def test_workflow_runner_assignments(self):
         wrong = []
         for path in sorted((ROOT / '.github/workflows').glob('*.y*ml')):
             expected = {
                 'ci.yml': self.CI_RUNS_ON,
-                'seafloor.yml': "${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}",
-            }.get(path.name, "${{ vars.DATA_RUNNER || 'ubuntu-latest' }}")
+                'seafloor.yml': 'ubuntu-latest',
+            }.get(path.name, self.LIGHT_RUNS_ON if path.name in self.LIGHT_WORKFLOWS else "${{ vars.DATA_RUNNER || 'ubuntu-latest' }}")
             for line in re.findall(r'^\s*runs-on:\s*(.+?)\s*$', path.read_text(), re.M):
                 if path.name in self.HOSTED_ONLY:
                     if line != 'ubuntu-latest':
-                        wrong.append(f'{path.name}: {line} (deploy, DCO, release and fleet health stay GitHub-hosted)')
+                        wrong.append(f'{path.name}: {line} (expected literal ubuntu-latest)')
                 elif line == 'macos-latest' and path.name == 'research-substrate.yml':
                     continue  # one monthly audit job needs a macOS wheel (pylerc); about 90 billed minutes a month
                 elif line != expected:
                     wrong.append(f'{path.name}: {line}')
         self.assertEqual(wrong, [])
 
-    def test_ci_survives_shared_hosts_and_passwordless_sudo(self):
-        """Several runner instances share one $HOME on a self-hosted box, and sudo asks for a password there."""
+    def test_ci_uses_job_local_pnpm_and_installs_browser_dependencies(self):
         ci = (ROOT / '.github/workflows/ci.yml').read_text()
         setups = re.findall(r'uses: pnpm/action-setup@[^\n]*\n((?:\s+[^\n]*\n)+?)(?=\s+- )', ci)
         self.assertEqual(len(setups), 2)
         for block in setups:
             self.assertIn('dest: ${{ runner.temp }}/setup-pnpm', block, 'pnpm/action-setup needs a per-job install dir')
-        with_deps = re.findall(r'(?:if: ([^\n]+)\n\s+)?run: pnpm exec playwright install --with-deps', ci)
-        self.assertEqual(with_deps, ["runner.environment == 'github-hosted'"], '--with-deps runs sudo apt-get; only GitHub-hosted runners allow that')
-        self.assertIn("if: runner.environment != 'github-hosted'\n        run: pnpm exec playwright install chromium", ci)
+        installs = re.findall(r'(?:if: ([^\n]+)\n\s+)?run: pnpm exec playwright install ([^\n]+)', ci)
+        self.assertEqual(installs, [('', '--with-deps chromium')], 'CI must install Chromium and its system dependencies unconditionally')
 
     def test_runner_setup_script_pins_the_runner_release(self):
         script = (ROOT / 'scripts/runner/setup.sh').read_text()

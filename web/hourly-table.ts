@@ -14,10 +14,13 @@ import type {Series} from '../packages/coast/src/charts/series.ts';
 import {feedReader, RUN_MAX_MS} from './brief/verdict.ts';
 import {readingsAt, type ConditionsForecast} from './conditions.ts';
 import {localParts} from './hour.ts';
+import {t, type Language, type StringId} from './i18n.ts';
 import {compass} from './landing/readings.ts';
 import {sample} from './map/forecast-grid.ts';
 import type {ComfortLimits, LimitField} from '../packages/coast/src/limits.ts';
 import {rateComfort, REFERENCE_BOAT, type BoatFactors} from './score.ts';
+import {M_PER_FT, WIND_SPEED} from './units.ts';
+import type {Units} from './unit-choice.ts';
 
 const HOUR = 3_600_000, METRES_PER_MILE = 1609.344;
 export const NO_FORECAST = 'No forecast for this day.';
@@ -62,12 +65,16 @@ export function hourlyTable(f: ConditionsForecast | null, tide: Series | null, d
 const fix = (v: number | null, digits: number, unit: string) => v === null ? '—' : `${v.toFixed(digits)}${unit}`;
 
 /** A row's cells after the time: wind, gust, seas, swell, second swell, chop, tide, visibility, score ("*" marks a limited estimate). */
-export function hourlyCells(r: HourlyRow): string[] {
-  const swell = r.swell.h === null ? '—' : `${fix(r.swell.h, 1, ' ft')} · ${fix(r.swell.period, 0, ' s')} · ${fix(r.swell.from, 0, '°')}`;
-  const chop = r.chop.h === null ? '—' : `${fix(r.chop.h, 1, ' ft')} · ${fix(r.chop.period, 0, ' s')}`;
-  const wind = r.wind !== null && r.windFrom !== null ? `${fix(r.wind, 0, ' kt')} from ${compass(r.windFrom)}` : fix(r.wind, 0, ' kt');
-  const second = r.second.h !== null && r.second.h > 0 && r.second.from !== null ? `${fix(r.second.h, 1, ' ft')} · from ${compass(r.second.from)}` : '—';
-  return [wind, fix(r.gust, 0, ' kt'), fix(r.seas, 1, ' ft'), swell, second, chop, fix(r.tide, 1, ' ft'), fix(r.visibilityMi, 1, ' mi'),
+export function hourlyCells(r: HourlyRow, lang: Language = 'en', windUnit: Units['wind'] = 'kt', heightUnit: Units['height'] = 'ft'): string[] {
+  const {factor, label} = WIND_SPEED[windUnit];
+  const speed = (v: number | null) => fix(v === null ? null : v * factor, 0, ` ${label}`);
+  const height = (v: number | null) => fix(heightUnit === 'm' && v !== null ? v * M_PER_FT : v, 1, ` ${heightUnit}`);
+  const from = (value: string, deg: number) => t('hourly.from', lang, {value, dir: t(`compass.${compass(deg)}` as StringId, lang)});
+  const swell = r.swell.h === null ? '—' : `${height(r.swell.h)} · ${fix(r.swell.period, 0, ' s')} · ${fix(r.swell.from, 0, '°')}`;
+  const chop = r.chop.h === null ? '—' : `${height(r.chop.h)} · ${fix(r.chop.period, 0, ' s')}`;
+  const wind = r.wind !== null && r.windFrom !== null ? from(speed(r.wind), r.windFrom) : speed(r.wind);
+  const second = r.second.h !== null && r.second.h > 0 && r.second.from !== null ? from(`${height(r.second.h)} ·`, r.second.from) : '—';
+  return [wind, speed(r.gust), height(r.seas), swell, second, chop, height(r.tide), fix(r.visibilityMi, 1, ' mi'),
     r.score === null ? '—' : `${r.score.toFixed(1)}${r.limited ? '*' : ''}`];
 }
 

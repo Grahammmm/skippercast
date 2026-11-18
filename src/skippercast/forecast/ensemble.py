@@ -54,6 +54,8 @@ ROOT = Path(__file__).resolve().parents[3]
 
 def stamp(moment=None):
     moment = moment or datetime.now(timezone.utc)
+    if moment.tzinfo is not None:
+        moment = moment.astimezone(timezone.utc)
     return moment.strftime('%Y-%m-%dT%H:%M:%SZ')
 
 

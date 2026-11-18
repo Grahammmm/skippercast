@@ -35,7 +35,7 @@ export function TideSpark({brief, now = new Date()}: {brief: Brief | null; now?:
       {brief?.tideEvents.length ? (
         <figcaption>
           <ul class="app-spark-events">
-            {brief.tideEvents.map(e => <li key={e.at}>{t(e.type === 'H' ? 'tideSpark.high' : 'tideSpark.low', lang)} <span class="ui-mono">{eventClock(e.at, tz, lang)} · {fixed(lang === 'en' ? e.heightFt : Number(e.heightFt.toFixed(1)), 1, lang)} ft {brief.tideDatum}</span></li>)}
+            {brief.tideEvents.map(e => <li key={e.at}>{t(e.type === 'H' ? 'tideSpark.high' : 'tideSpark.low', lang)} <span class="ui-mono">{eventClock(e.at, tz, lang)}{brief.tideDatum ? ` · ${fixed(lang === 'en' ? e.heightFt : Number(e.heightFt.toFixed(1)), 1, lang)} ft ${brief.tideDatum}` : null}</span></li>)}
           </ul>
         </figcaption>
       ) : null}

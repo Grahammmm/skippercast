@@ -5,7 +5,7 @@
       "label": "Landing page scripts (first load)",
       "kind": "first_load_js",
       "entry": "landing.html",
-      "max_bytes": 321000,
+      "max_bytes": 100000,
       "history": [
         {
           "max_bytes": 445000,
@@ -26,6 +26,10 @@
         {
           "max_bytes": 321000,
           "reason": "Budget drift, raised by the budget-drift bot (SC-CI-2 first run on main 114079ae1; earlier hand-set ceilings left 0.1% to 2.3% margins). Landing page scripts (first load): main measures 305,509 bytes, 99.8% of the 306,000 byte budget; ceiling = ceil(305,509 x 1.05 / 1,000) x 1,000 = 321,000 (5.1% headroom)."
+        },
+        {
+          "max_bytes": 100000,
+          "reason": "SC-NEXT-01: inject each page's reader into the shared cost-ceiling notice, removing the full English app catalogue from the landing static graph. Measured 95,000 raw bytes after the change versus 308,897 on main def43f14d; ceiling = ceil(95,000 x 1.05 / 1,000) x 1,000. Other budgets unchanged."
         }
       ]
     },

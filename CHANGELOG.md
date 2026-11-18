@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- SC2252-11: open an editable trip alert from the brief's lower-exposure window. Nothing is saved until you press Save.
+- SC-NEXT-09: the coverage and forecast skill pages follow your language choice. Published region and buoy names and forecast scoring are unchanged.
+- SC2037-15: upcoming saved trips show the season status for each target on the trip date, with the last rules check and an official link. Unconfirmed rules never show as open.
+- SC1607-08: download the complete private catch log as formula-safe CSV, up to 10 pages (2,000 entries); incomplete reads produce no file.
+- SC-NEXT-08: the data status page follows the saved or browser language, with Spanish headings, table labels and freshness notes; source names and freshness rules are unchanged.
+- SC-NEXT-12: choose feet or metres for swell, seas and tide heights on the brief tiles and hourly table. Limits, printed heights and exports stay in feet.
+- SC2037-14: upcoming saved trips offer Add to calendar, a browser-made .ics file with the region's dated fishing window, targets and saved comfort limits; no positions, spots or notes are included or sent.
+
+- SC-MAPQ-NATIVE-ZOOM-1: private relief builds retain 1 m shallow-survey detail through zoom 17 only on tiles with nominal 0–20 m support. Native 2 m/5 m tiles stop at zoom 15; background stops at 13. Archive metadata reports actual per-zoom native support; no surveys or archives are published by this change.
+
+- SC1822-11: remove an individual private comfort report without deleting your account; history labels the latest-100 cap and latest-five display, with report dates in the opened region's time zone.
+
+- SC-NEXT-05: choose °F or °C for the brief's water temperature in the account menu, remembered on this device. Comparisons, charts and exports keep °F.
+- SC-NEXT-06: choose knots, mph or km/h for wind and gusts in the brief and hourly table. Limits, verdicts and alerts still use knots.
+
+- SC2037-13: saved-trip alerts offer a test notification only after the server confirms this account holds this device. Tests use the trip-alert sender, are limited to three attempts per account per UTC day, and create no saved assessment or delivery receipt.
+- SC1607-06: the private catch log can fill its editable position boxes from one of your saved spots. Choosing none keeps the entered position; private spot notes are never copied, and nothing is saved until you press Save.
+
 - MGL-19: seafloor `plan` and `run` now accept `--scope-config` for a reviewed noncentral scope file. Such work is private, physical-only and held for screening, never published, and never touches any ledger; ordinary noncentral runs stay refused. Retained central private seafloor caches will recompute once because the run code changed; nothing is regenerated here. See `docs/seafloor-second-scope.md`.
 - RF0422-6: the GPX delivery check now refuses a file in which any element repeats an attribute name (for example two `creator` or `extra` attributes), which is not valid XML. Valid exports and the existing coordinate and root checks are unchanged.
 - RF0422-5: the GPX delivery check now refuses a file containing a stray half of an emoji-style character (an unpaired UTF-16 surrogate), which is not valid XML; properly paired characters such as 🐟 are still accepted. Nothing else about the check changes.

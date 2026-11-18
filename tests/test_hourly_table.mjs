@@ -4,6 +4,7 @@
 // 2026-11-01 falls back.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {isDeepStrictEqual} from 'node:util';
 
 const {hourlyTable, hourlyCells, NO_FORECAST, overLimits} = await import('../web/hourly-table.ts');
 const {t} = await import('../web/i18n.ts');
@@ -161,7 +162,7 @@ const {boatFactors} = await import('../dist/boat-handling.js');
 const {createHash} = await import('node:crypto');
 const PINNED = 'df00e2a835648398384ca1d54715546b47cd2dd8e6311659d9dcbd2119cbd30f';
 const SMALL = Object.freeze({sea: 0.6, wind: 0.6, chopPeriod: 8});
-const dump = ({rows, note}) => JSON.stringify({note, rows, cells: rows.map(hourlyCells)});
+const dump = ({rows, note}) => JSON.stringify({note, rows, cells: rows.map(row => hourlyCells(row))});
 
 test('MYB-2b: a non-reference boat rates every row with rateComfort(hour, boat), and differently from the reference', () => {
   const f = forecast(NORMAL), now = nowAt(NORMAL), read = feedReader(f, now).read;
@@ -223,6 +224,38 @@ test('SC2037-01: compass words use the shared 16-point helper (0 and 359.9 are N
   assert.equal(wind(0), '8 kt from N');
   assert.equal(wind(359.9), '8 kt from N');
   assert.equal(wind(11.25), '8 kt from NNE');
+});
+
+// SC-NEXT-07: language changes direction words, never data, units or scores.
+await (await import('../web/i18n.ts')).prepareCatalogue('es');
+const translatedRow = () => ({...hourlyTable(forecast(NORMAL), null, '2026-06-15', TZ, nowAt(NORMAL)).rows[0],
+  wind: 12, windFrom: 315, second: {h: 2, from: 200}});
+test('hourly_wind_spanish', () => {
+  assert.equal(hourlyCells(translatedRow(), 'es')[0], '12 kt desde el NO');
+  const points = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO'];
+  points.forEach((dir, i) => assert.equal(hourlyCells({...translatedRow(), windFrom: i * 22.5}, 'es')[0], `12 kt desde el ${dir}`));
+});
+test('hourly_second_swell_spanish', () => {
+  const cells = hourlyCells(translatedRow(), 'es');
+  assert.equal(cells[4], '2.0 ft · desde el SSO');
+  assert.ok(cells.every(c => !c.includes('from')));
+});
+test('hourly_english_identical', () => {
+  const expected = ['12 kt from NW', '12 kt', '4.2 ft', '3.1 ft · 14 s · 290°', '2.0 ft · from SSW', '1.5 ft · 5 s', '—', '10.0 mi', translatedRow().score.toFixed(1)];
+  for (const lang of [undefined, 'en']) assert.ok(isDeepStrictEqual(hourlyCells(translatedRow(), lang), expected));
+  for (const [t0, day] of [[NORMAL, '2026-06-15'], [SPRING, '2026-03-08'], [FALL, '2026-11-01']]) {
+    for (const r of hourlyTable(forecast(t0), null, day, TZ, nowAt(t0)).rows) {
+      assert.ok(isDeepStrictEqual(hourlyCells(r, 'en'), hourlyCells(r)));
+      assert.ok(isDeepStrictEqual(hourlyCells(r, 'es').filter((_, i) => i !== 0 && i !== 4), hourlyCells(r).filter((_, i) => i !== 0 && i !== 4)));
+    }
+  }
+});
+test('hourly_missing_direction', () => {
+  for (const lang of ['en', 'es']) {
+    assert.equal(hourlyCells({...translatedRow(), windFrom: null}, lang)[0], '12 kt');
+    assert.equal(hourlyCells({...translatedRow(), wind: null}, lang)[0], '—');
+    for (const second of [{h: 2, from: null}, {h: null, from: 200}, {h: 0, from: 200}]) assert.equal(hourlyCells({...translatedRow(), second}, lang)[4], '—');
+  }
 });
 
 // SC2037-02: marks over the person's own limits (strictly greater, as daily.ts buildDaily overLimit).

@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   nos-historic-seabed-gap:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -31,7 +31,7 @@ jobs:
           path: var/review/nos-seabed-monterey-gap-audit.json
           retention-days: 30
   central-dataone-rov-spot-precision:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -60,7 +60,7 @@ jobs:
           path: var/review/central-dataone-rov-300ft-spot-precision.json
           retention-days: 30
   estero-original-depth-and-independent-character:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -173,7 +173,7 @@ jobs:
             var/review/estero-2012-public-release-inventory.json
           retention-days: 30
   point-buchon-original-pair:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -253,6 +253,16 @@ jobs:
           --access var/review/point-buchon-2009-csumb-access-triage.json
           --output var/review/point-buchon-rov-original-cell-join.json
           --verify research/receipts/point-buchon-rov-original-cell-join.json
+      - name: Screen whole historical ROV research blocks with margin
+        run: >-
+          python research/scripts/audit_point_buchon_rov_access_blocks.py
+          --mpas var/review/point-buchon-cdfw-mpas.geojson
+          --federal var/review/point-buchon-federal-areas.geojson
+          --enc var/review/enc-hazards-point-buchon-open-reference.geojson
+          --private-blocks var/review/point-buchon-rov-100m-blocks.geojson
+          --output var/review/point-buchon-rov-access-triage.json
+      - name: Hold changes to research-only access screen
+        run: python research/scripts/check_point_buchon_rov_access_change.py --current var/review/point-buchon-rov-access-triage.json
       - name: Fetch original USGS Point Buchon CMECS polygons
         run: >-
           curl --fail --location --silent --show-error --retry 2 --max-time 600
@@ -274,16 +284,6 @@ jobs:
           --blocks var/review/point-buchon-2009-csumb-100m-blocks.geojson
           --output var/review/point-buchon-2009-conditional-vdatum-probes.json
           --verify research/receipts/point-buchon-2009-conditional-vdatum-probes.json
-      - name: Screen whole historical ROV research blocks with margin
-        run: >-
-          python research/scripts/audit_point_buchon_rov_access_blocks.py
-          --mpas var/review/point-buchon-cdfw-mpas.geojson
-          --federal var/review/point-buchon-federal-areas.geojson
-          --enc var/review/enc-hazards-point-buchon-open-reference.geojson
-          --private-blocks var/review/point-buchon-rov-100m-blocks.geojson
-          --output var/review/point-buchon-rov-access-triage.json
-      - name: Hold changes to research-only access screen
-        run: python research/scripts/check_point_buchon_rov_access_change.py --current var/review/point-buchon-rov-access-triage.json
       - name: Upload unpublished original-pair review
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -310,7 +310,7 @@ jobs:
             var/review/point-buchon-rov-access-triage.json
           retention-days: 30
   central-rov-deep-reference:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -348,7 +348,7 @@ jobs:
             var/review/monterey-rov-research-overlap.json
           retention-days: 30
   ccfrp-open-reference-context:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -371,7 +371,7 @@ jobs:
           path: var/review/central-ccfrp-area-evidence.json
           retention-days: 30
   central-300-research-priority:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -394,7 +394,7 @@ jobs:
           path: var/review/monterey-300-native-research-queue.json
           retention-days: 30
   noaa-vdatum-monterey-coverage:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -418,7 +418,7 @@ jobs:
           path: var/review/noaa-vdatum-offshore-monterey-samples.json
           retention-days: 30
   cdfw-crfs-historical-rcgl:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -439,7 +439,7 @@ jobs:
           path: var/review/cdfw-crfs-rcgl-2004-2024.json
           retention-days: 30
   cdfw-crfs-all-species-baseline:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -460,7 +460,7 @@ jobs:
           path: var/review/cdfw-crfs-all-2004-2024.json
           retention-days: 30
   noaa-dismap-groundfish:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -307,16 +307,19 @@ export function createSwell(o: SwellOptions): {
     return nearshoreRings(report, report ? data.coastBinding.value?.areaId ?? null : null, terrainHour(hour.value, t, day.value, zone()), t);
   });
   let alive = true, drawnKey = '', drawnFieldKey = '', drawnRingKey = '', drawnShape = '', drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
+  let requestGeneration = 0;
   const withdraw = (owner?: 'swell' | 'nearshore'): void => {
     const id = chartMark.peek()?.id ?? '';
     if (owner ? id.startsWith(`${owner}:`) : /^(?:swell|nearshore):/.test(id)) chartMark.value = null;
   };
 
   async function read(id: string): Promise<void> {
+    const generation = ++requestGeneration;
     const kept = load.peek().region === id ? load.peek().forecast : null, at = now().getTime();
     load.value = {state: 'loading', region: id, forecast: kept, at};
     const next = await loadForecast(id, fetchFn, page());
-    if (!alive || region.peek() !== id) return;
+    // The region can match again after A → B → A, but the request cannot.
+    if (!alive || generation !== requestGeneration || region.peek() !== id) return;
     // A failed refresh keeps the last good feed, whose run leaves through the gate.
     load.value = {state: next || kept ? 'ready' : 'error', region: id, forecast: next ?? kept, at};
   }

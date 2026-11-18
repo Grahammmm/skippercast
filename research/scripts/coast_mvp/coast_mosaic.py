@@ -24,7 +24,12 @@ from rasterio.shutil import copy as raster_copy
 from rasterio.warp import transform_bounds
 
 NODATA = -999999.0
+BAND_LIMIT_M = 300 * 0.3048
 LABEL = 'NOT FOR NAVIGATION — research preview; review required'
+# Seam feather (MB-02): the same 40 m elevation feather as scripts/build_bathy_tiles.py FEATHER_M, applied at
+# every boundary between two contributors (tile edges of one survey family as well as between families).
+FEATHER_M = 40.0
+SEAM_SIGMA_CELLS = 8.0       # along-boundary smoothing of the offset estimate (80 m: offsets between surveys vary slowly)
 
 
 def file_hash(path):
@@ -202,7 +207,127 @@ def normalized_vrt(source, output):
         ET.ElementTree(root).write(output, encoding='utf-8', xml_declaration=True)
 
 
-def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_000_000):
+def _shift(array, axis, step, fill):
+    """array moved by `step` cells along `axis` (out[i] = array[i + step]); vacated cells get `fill`."""
+    out = np.full_like(array, fill)
+    src = [slice(None)] * array.ndim
+    dst = [slice(None)] * array.ndim
+    n = array.shape[axis]
+    if step > 0:
+        src[axis], dst[axis] = slice(step, n), slice(0, n - step)
+    else:
+        src[axis], dst[axis] = slice(0, n + step), slice(-step, n)
+    out[tuple(dst)] = array[tuple(src)]
+    return out
+
+
+def seam_feather(elevation, codes, *, cell_m=10, feather_m=FEATHER_M, sigma_cells=SEAM_SIGMA_CELLS, pairs=None,
+                 count=None):
+    """Blend elevations across every contributor boundary; cells with no survey are never filled.
+
+    At each 4-neighbour edge between two different valid contributors the vertical offset is the step
+    across the edge minus the step the local slope explains (one-sided slopes from the next cell on
+    each side, where that cell has the same contributor). The offset is smoothed along that pair's
+    boundary (gaussian, `sigma_cells`). One smoothstep S across the 2 x `feather_m` band, centred on the
+    boundary, then spreads it: each side moves by about half the offset at the boundary and by nothing
+    at `feather_m`, so a cell whose centre is farther than `feather_m` from a boundary keeps its value
+    exactly. Two abutting tiles need no overlap. This is a display blend, not a vertical-datum
+    reconciliation; the contributor raster keeps the winning source of every cell.
+
+    `pairs` (optional dict) accumulates per-boundary edge counts and offsets for edges whose first cell
+    is inside `count` (a boolean mask of the cells this call owns, default: all).
+    Returns (blended float32 elevation, changed-cell mask).
+    """
+    from scipy import ndimage
+    elevation = np.asarray(elevation, dtype=np.float32)
+    codes = np.asarray(codes)
+    if feather_m <= cell_m / 2 or cell_m <= 0:
+        raise ValueError('feather width must exceed half a cell and cell size must be positive')
+    z = elevation.astype(np.float64)
+    flat = np.arange(z.size).reshape(z.shape)
+    sides = []                     # (own code, other code, flat cell index, half offset toward the other side)
+    for axis in (0, 1):
+        b, cb = _shift(z, axis, 1, np.nan), _shift(codes, axis, 1, 0)
+        edge = (codes > 0) & (cb > 0) & (cb != codes)
+        if not edge.any():
+            continue
+        a2, ca2 = _shift(z, axis, -1, np.nan), _shift(codes, axis, -1, 0)
+        b2, cb2 = _shift(z, axis, 2, np.nan), _shift(codes, axis, 2, 0)
+        slope_a = np.where(ca2 == codes, z - a2, np.nan)[edge]
+        slope_b = np.where(cb2 == cb, b2 - b, np.nan)[edge]
+        both = np.stack([slope_a, slope_b])
+        known = np.isfinite(both).sum(axis=0)
+        slope = np.where(known > 0, np.nansum(both, axis=0) / np.maximum(known, 1), 0.0)
+        delta = (b[edge] - z[edge]) - slope                  # b's surface relative to a's at the edge
+        ca, cbe = codes[edge], cb[edge]
+        ia, ib = flat[edge], _shift(flat, axis, 1, -1)[edge]
+        sides += [(ca, cbe, ia, delta / 2), (cbe, ca, ib, -delta / 2)]
+        if pairs is not None:
+            own = np.ones(len(delta), bool) if count is None else count[edge]
+            lo, hi = np.minimum(ca, cbe)[own], np.maximum(ca, cbe)[own]
+            offset = np.where(ca[own] == lo, delta[own], -delta[own])   # the higher code's surface
+            for key in set(zip(lo.tolist(), hi.tolist())):
+                sel = (lo == key[0]) & (hi == key[1])
+                entry = pairs.setdefault(key, [0, 0.0, 0.0])
+                entry[0] += int(sel.sum())
+                entry[1] += float(offset[sel].sum())
+                entry[2] += float(np.abs(offset[sel]).sum())
+    if not sides:
+        return elevation.copy(), np.zeros(z.shape, dtype=bool)
+    own_code, other_code, cell, half = (np.concatenate(part) for part in zip(*sides))
+    correction = np.zeros(z.shape)
+    for mine, theirs in sorted(set(zip(own_code.tolist(), other_code.tolist()))):
+        sel = (own_code == mine) & (other_code == theirs)
+        total, n = np.zeros(z.size), np.zeros(z.size)
+        np.add.at(total, cell[sel], half[sel])
+        np.add.at(n, cell[sel], 1.0)
+        edge_cells = (n > 0).reshape(z.shape)
+        values = np.where(n > 0, total / np.maximum(n, 1), 0.0).reshape(z.shape)
+        num = ndimage.gaussian_filter(values, sigma_cells, mode='constant')
+        den = ndimage.gaussian_filter(edge_cells.astype(np.float64), sigma_cells, mode='constant')
+        # distance of the cell centre from the boundary line (half a cell beyond the boundary cell's centre)
+        across = (ndimage.distance_transform_edt(~edge_cells) + 0.5) * cell_m
+        target = (codes == mine) & (across < feather_m) & (den > 1e-9)
+        v = (across[target] + feather_m) / (2 * feather_m)
+        correction[target] += 2.0 * (1.0 - v * v * (3.0 - 2.0 * v)) * num[target] / den[target]
+    result = (z + correction).astype(np.float32)
+    result[codes == 0] = elevation[codes == 0]
+    return result, result != elevation
+
+
+def feather_raster(depth_path, codes_path, target_path, *, feather_m=FEATHER_M, block=512):
+    """Windowed seam_feather over whole rasters; each block reads a halo so the result is block-independent."""
+    from rasterio.windows import Window
+    pairs, changed, largest = {}, 0, 0.0
+    # Halo: gaussian radius (scipy truncate 4 sigma) + taper reach + the 2-cell slope stencil + 1 margin.
+    halo = int(4 * SEAM_SIGMA_CELLS + 0.5) + math.ceil(feather_m / 10) + 3
+    with rasterio.open(depth_path) as depth, rasterio.open(codes_path) as codes:
+        profile = depth.profile.copy()
+        with rasterio.open(target_path, 'w', **profile) as out:
+            for row in range(0, depth.height, block):
+                for col in range(0, depth.width, block):
+                    r0, c0 = max(row - halo, 0), max(col - halo, 0)
+                    r1, c1 = min(row + block + halo, depth.height), min(col + block + halo, depth.width)
+                    window = Window(c0, r0, c1 - c0, r1 - r0)
+                    values, chosen = depth.read(1, window=window), codes.read(1, window=window)
+                    core = (slice(row - r0, min(row + block, depth.height) - r0),
+                            slice(col - c0, min(col + block, depth.width) - c0))
+                    own = np.zeros(values.shape, dtype=bool)
+                    own[core] = True
+                    blended, moved = seam_feather(values, chosen, feather_m=feather_m, pairs=pairs, count=own)
+                    changed += int(moved[core].sum())
+                    if moved[core].any():
+                        largest = max(largest, float(np.abs(blended[core] - values[core])[moved[core]].max()))
+                    out.write(blended[core], 1, window=Window(col, row, core[1].stop - core[1].start,
+                                                               core[0].stop - core[0].start))
+    return pairs, changed, largest
+
+
+def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_000_000, feather_m=FEATHER_M):
+    """feather_m=0 turns the seam feather off (hard finest-first boundaries, the pre-MB-02 output)."""
+    if isinstance(feather_m, bool) or not isinstance(feather_m, (int, float)) or not math.isfinite(feather_m) \
+            or not (feather_m == 0 or 5 < feather_m <= 200):
+        raise ValueError('feather_m must be 0 (off) or a finite width above half a cell, at most 200 m')
     region_file, sources_file = Path(region_file).resolve(), Path(sources_file).resolve()
     region = json.loads(region_file.read_text())
     bounds = region['bounds']
@@ -258,6 +383,7 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
              '-ot', 'Float32', '-dstnodata', NODATA, '-co', 'TILED=YES',
              '-co', 'COMPRESS=DEFLATE', '-co', 'BIGTIFF=IF_SAFER'])
     counts = {str(row['code']): 0 for row in sources}
+    band_counts = dict(counts)
     stats = dict(grid_cells=cells, valid_cells=0, hole_cells=0, overlap_cells=0,
                  extra_source_cell_observations=0, minimum_elevation_m=None, maximum_elevation_m=None)
     contributor_work, support_work = work / 'contributor.tif', work / 'support_count.tif'
@@ -292,10 +418,6 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
             stats['hole_cells'] += int((~valid).sum())
             stats['overlap_cells'] += int((coverage > 1).sum())
             stats['extra_source_cell_observations'] += int(np.maximum(coverage.astype('int32') - 1, 0).sum())
-            if nvalid:
-                low, high = float(elevation[valid].min()), float(elevation[valid].max())
-                stats['minimum_elevation_m'] = min(low, stats['minimum_elevation_m']) if stats['minimum_elevation_m'] is not None else low
-                stats['maximum_elevation_m'] = max(high, stats['maximum_elevation_m']) if stats['maximum_elevation_m'] is not None else high
             unique, freq = np.unique(chosen, return_counts=True)
             for code, count in zip(unique, freq):
                 if code:
@@ -305,6 +427,33 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
                              value_convention='elevation_positive_up' if grid is depth else 'source_code_or_count')
     if not stats['valid_cells']:
         raise ValueError('No valid source cells inside segment')
+    seams = dict(feather_m=feather_m, changed_cells=0, max_abs_change_m=0.0, boundaries=[])
+    if feather_m:
+        blended = work / 'elevation-feathered.tif'
+        pairs, seams['changed_cells'], largest = feather_raster(depth_work, contributor_work, blended,
+                                                               feather_m=feather_m)
+        seams['max_abs_change_m'] = round(largest, 4)
+        ids = {row['code']: row['id'] for row in sources}
+        seams['boundaries'] = [dict(sources=[ids[lo], ids[hi]], edges=n, mean_offset_m=round(total / n, 4),
+                                    mean_abs_offset_m=round(absolute / n, 4))
+                               for (lo, hi), (n, total, absolute) in sorted(pairs.items())]
+        with rasterio.open(blended, 'r+') as grid:
+            grid.update_tags(description=LABEL, vertical_reference='mixed_source_references_explicit_offsets_only',
+                             value_convention='elevation_positive_up',
+                             seam_feather=f'{feather_m:g} m elevation feather at contributor boundaries')
+        depth_work = blended
+    # Elevation statistics and the 0-300 ft band describe the delivered (feathered) elevation.
+    with rasterio.open(depth_work) as depth, rasterio.open(contributor_work) as contributor:
+        for _, window in depth.block_windows(1):
+            elevation, chosen = depth.read(1, window=window), contributor.read(1, window=window)
+            valid = chosen > 0
+            if valid.any():
+                low, high = float(elevation[valid].min()), float(elevation[valid].max())
+                stats['minimum_elevation_m'] = min(low, stats['minimum_elevation_m']) if stats['minimum_elevation_m'] is not None else low
+                stats['maximum_elevation_m'] = max(high, stats['maximum_elevation_m']) if stats['maximum_elevation_m'] is not None else high
+            in_band = valid & (elevation <= 0) & (elevation >= np.float32(-BAND_LIMIT_M))
+            for code, count in zip(*np.unique(chosen[in_band], return_counts=True)):
+                band_counts[str(code)] += int(count)
     outputs = {}
     for name, path in [('elevation', depth_work), ('contributor', contributor_work), ('support_count', support_work)]:
         target = output / f'{name}.tif'
@@ -322,9 +471,22 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
                     vertical_reference='mixed_source_references_explicit_offsets_only',
                     priority='finest native resolution first; lexical id ties; GDAL last-valid stack reversed',
                     resampling='nearest (no cross-source interpolation)', gdal_version=rasterio.__gdal_version__,
+                    seam_feather=dict(seams, method='one smoothstep across the 2 x feather_m band centred on every '
+                                                    '4-neighbour boundary between two contributors; the offset is '
+                                                    'estimated per edge (step minus local slope) and smoothed along '
+                                                    'the boundary; cells with no survey are never filled',
+                                      along_boundary_sigma_m=SEAM_SIGMA_CELLS * 10,
+                                      contributor='contributor.tif keeps the winning source of every cell, '
+                                                  'including cells changed by the feather'),
                     sources=sources, outputs=outputs, stats=stats, contributor_cells=counts,
+                    band_0_300ft=dict(limit_m=91.44, cells=sum(band_counts.values()),
+                                      km2=round(sum(band_counts.values()) * 100 / 1e6, 4),
+                                      contributor_cells=band_counts,
+                                      note='10 m cells whose chosen elevation is 0 to -91.44 m; holes (land or unsurveyed) are not classified'),
                     limitations=['Hole cells include land and unsurveyed water; no water mask was supplied.',
                                  'No seamless vertical-datum reconciliation is claimed; constant offsets are not VDatum.',
+                                 'The seam feather is a display blend within feather_m of a source boundary, '
+                                 'not a datum reconciliation; offsets between surveys remain in the data.',
                                  'Unstated datum uses zero offset and is explicitly unresolved.',
                                  'Bounding box is conservatively enclosed in the projected rectangular grid.',
                                  'Not a navigation, rights-clearance, or semantic acceptance.'])
@@ -341,8 +503,11 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--reserve-gib', type=float, default=250)
     parser.add_argument('--max-cells', type=int, default=250_000_000)
+    parser.add_argument('--feather-m', type=float, default=FEATHER_M,
+                        help='seam feather width at contributor boundaries in metres; 0 = hard boundaries')
     args = parser.parse_args()
-    result = mosaic(args.region, args.sources, args.output, reserve_gib=args.reserve_gib, max_cells=args.max_cells)
+    result = mosaic(args.region, args.sources, args.output, reserve_gib=args.reserve_gib, max_cells=args.max_cells,
+                    feather_m=args.feather_m)
     print(json.dumps({'segment': result['segment'], 'status': result['status'], **result['stats']}))
 
 

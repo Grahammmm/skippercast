@@ -31,6 +31,7 @@ import {zone} from './App.tsx';
 import {dayOptions, dockState, readout} from './TimeDock.tsx';
 import {titleCase} from './Masthead.tsx';
 import {LimitsControl} from './LimitsPanel.tsx';
+import {KeepAwake} from './KeepAwake.tsx';
 
 /** A profile's name in `lang` (the catalogue's where.profile.* values; the table's own label is English). */
 const profileName = (p: Profile, lang: Language): string => t(`where.profile.${p}`, lang);
@@ -159,6 +160,7 @@ export function PortControl() {
       <Button icon="pin" class="app-port" aria-label={current ? t('command.changePort', lang, {name: current.name}) : t('command.choosePort', lang)} onClick={() => show('search')}>{current?.name ?? t('command.port', lang)}</Button>
       <IconButton icon="target" label={t('command.useLocation', lang)} onClick={() => show('locate')} />
       <ShareControl />
+      <KeepAwake />
       <PortDialog open={open !== 'closed'} onClose={close}>
         <PortInput ports={ports} autoFocus locate={open === 'locate'} onChoose={port => { close(); choosePort(port); }} onExplore={() => { close(); navigate(exploreURL(location.href)); }} />
       </PortDialog>

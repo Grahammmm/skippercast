@@ -136,7 +136,7 @@ test('digest: Spanish changes the words and the hazard prefix only; stored hazar
     assert.ok(toText(en).includes(word) && text.includes(spanish), word);
   }
   assert.ok(text.includes('something new Nota de peligro: kept'), 'an unknown status stays raw, its note still stored');
-  assert.ok(!text.includes('Nota de peligro: ok'), 'one bad note drops the whole list, as before');
+  assert.ok(text.includes('comprobación incompleta Nota de peligro: ok'), 'one bad note no longer drops the valid ones; the status reads incomplete');
 });
 
 test('UXFIX-07 readableDate: Tue 10 Nov / mar 10 nov in the region zone; the DST day keeps its calendar day; anything unreadable prints as given', () => {
@@ -170,7 +170,7 @@ test('UXFIX-07 readableInstant: a stored timestamp reads as its day in the regio
   for (const bad of ['', 'soon']) assert.equal(readableInstant(bad, 'en', LA), bad, bad);
   assert.equal(readableInstant(at, 'en', 'Not/AZone'), at, 'an unknown zone does not throw');
   const source = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
-  assert.match(source, /readableInstant\(f\.observed_at, lang, region\.timezone\)/, 'the comfort history uses the region zone');
+  assert.match(source, /feedbackDate\(f\.observed_at, region\.timezone, lang === 'es' \? 'es' : 'en-US'\)/, 'the comfort history uses the region zone');
   assert.doesNotMatch(source, /toLocaleDateString/, 'no browser-zone date left in the alerts dialog');
 });
 

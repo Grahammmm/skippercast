@@ -20,7 +20,7 @@ from shapely.geometry import box, mapping, shape
 from shapely.ops import transform, unary_union
 
 from research.scripts.audit_nbs_modeling_tile import audit, contributors, qualified_mask
-from research.scripts.review_nbs_hard_overlap import current_federal, mask_for, original_usgs_class, digest
+from research.scripts.review_nbs_hard_overlap import closure_screen, current_federal, original_usgs_class, digest
 
 
 def compile_context(review, scheme, cache, hard_context, usgs_audit, usgs_cache, mpas, federal,
@@ -72,9 +72,7 @@ def compile_context(review, scheme, cache, hard_context, usgs_audit, usgs_cache,
                 bounds = transform(to_geo, box(*raster.bounds))
                 local_hard = sorted({f["properties"].get("release_id") or f["properties"].get("block_id") for f in hard_features
                                      if shape(f["geometry"]).intersects(bounds)})
-                local_closures = [f for f in mpa_features + geas if shape(f["geometry"]).intersects(bounds)]
-                closure_shapes = [transform(to_native, shape(f["geometry"])) for f in local_closures]
-                closed = mask_for(raster, closure_shapes, buffer_m=100, all_touched=True)
+                closed, buffered, _ = closure_screen(raster, mpa_features + geas, to_native)
                 class3 = np.zeros(closed.shape, dtype=bool)
                 usgs_sources = []
                 for release_id in local_hard:
@@ -102,7 +100,7 @@ def compile_context(review, scheme, cache, hard_context, usgs_audit, usgs_cache,
                                 if areas[index] * abs(raster.res[0] * raster.res[1]) * block * block >= minimum_area_m2)
                 ranked.reverse()
                 omitted += max(0, len(ranked) - max_per_tile)
-                exclusion = unary_union([g.buffer(100) for g in closure_shapes]) if closure_shapes else None
+                exclusion = unary_union(buffered) if buffered else None
                 for pixels, index in ranked[:max_per_tile]:
                     component = labels == index
                     parts = [shape(geometry) for geometry, value in shapes(component.astype("uint8"),

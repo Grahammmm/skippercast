@@ -23,6 +23,7 @@ UNIT = ROOT / 'scripts' / 'fleet' / 'skippercast-fleet-ais@.service'
 WORKFLOW = ROOT / '.github' / 'workflows' / 'fleet-ais-listener.yml'
 RUNBOOK = ROOT / 'docs' / 'operations' / 'runbooks' / 'fleet-ais-down.md'
 KEY = 'synthetic0key0for0tests0only0f00d'
+STORED_KEY = 'synthetic-stored-listener-key='
 BASH = shutil.which('bash')
 GIT = shutil.which('git')
 
@@ -47,14 +48,8 @@ class InstallScriptStaticTests(unittest.TestCase):
         self.assertEqual(code_lines(self.text)[0], 'set +x', 'turn tracing off before anything reads the key')
 
     def test_secret_is_never_echoed(self):
-        expansion = re.compile(r'\$\{?AISSTREAM_API_KEY')
-        for line in code_lines(self.text):
-            for segment in re.split(r'\|\||&&|;|\bthen\b|\belse\b', line):
-                if re.match(r'\s*(echo|printf|note|die|print|cat)\b', segment):
-                    self.assertNotRegex(segment, expansion, line)
-        # The shell's only use of the value is a non-empty test; Python reads it from the environment.
-        uses = [line.strip() for line in code_lines(self.text) if expansion.search(line)]
-        self.assertEqual(uses, ['[ -n "${AISSTREAM_API_KEY:-}" ] || die "AISSTREAM_API_KEY is not set (owner step: add the repository secret)"'])
+        # Python handles the key; the shell must never expand it, even in a test.
+        self.assertNotRegex('\n'.join(code_lines(self.text)), r'\$\{?AISSTREAM_API_KEY')
         self.assertIn('os.environ.get("AISSTREAM_API_KEY"', self.text)
         self.assertIn('0o600', self.text)
 
@@ -102,8 +97,11 @@ class WorkflowTests(unittest.TestCase):
     def test_secret_only_in_the_step_environment(self):
         self.assertEqual(self.text.count('secrets.'), 1)
         self.assertIn('          AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}\n', self.text)
-        run = re.findall(r'^\s+run: (.+)$', self.text, re.M)
-        self.assertEqual(run, ['bash scripts/fleet/install_listener.sh --region "$REGION"'])
+        run = re.findall(r'^ {8}run: (.+(?:\n+ {10}[^\n]*)*)$', self.text, re.M)
+        self.assertEqual(
+            [(script.splitlines()[0], script.rstrip().splitlines()[-1].strip()) for script in run],
+            [('|', 'bash scripts/fleet/install_listener.sh --region "$REGION"')],
+        )
         self.assertNotIn('${{ inputs.region }}', run[0], 'inputs reach the shell through env, not interpolation')
 
 
@@ -237,7 +235,8 @@ class InstallScriptRunTests(unittest.TestCase):
             environ['AISSTREAM_API_KEY'] = key
         command = [BASH, *(['-x'] if trace else []), str(self.repo / 'scripts/fleet/install_listener.sh'), *args]
         result = subprocess.run(command, env=environ, capture_output=True, text=True, timeout=120)
-        self.assertNotIn(KEY, result.stdout + result.stderr, 'the aisstream key reached the output')
+        output = result.stdout + result.stderr
+        self.assertTrue(KEY not in output and STORED_KEY not in output, 'the aisstream key reached the output')
         return result
 
     @property
@@ -251,7 +250,13 @@ class InstallScriptRunTests(unittest.TestCase):
     def env_values(self):
         return dict(line.split('=', 1) for line in self.env_file.read_text(encoding='utf-8').splitlines())
 
+    def seed_env(self, body):
+        self.env_file.parent.mkdir(parents=True)
+        self.env_file.write_text(body, encoding='utf-8')
+        self.env_file.chmod(0o600)
+
     def test_install_writes_a_private_env_file_and_starts_the_unit(self):
+        self.seed_env(f'AISSTREAM_API_KEY={STORED_KEY}\n')
         result = self.run_script('--region', 'CA', trace=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         sha = self.shas[0]
@@ -280,21 +285,44 @@ class InstallScriptRunTests(unittest.TestCase):
         self.assertIn('journalctl --user -u skippercast-fleet-ais@CA.service', self.log.read_text(encoding='utf-8'))
         self.assertIn('--rollback', result.stderr)
 
-    def test_refuses_without_a_key_or_a_user_manager(self):
-        result = self.run_script('--region', 'CA', key=None)
+    def test_install_reuses_the_stored_key_when_env_is_empty(self):
+        self.seed_env(f'AISSTREAM_API_KEY={STORED_KEY}\n')
+        result = self.run_script('--region', 'CA', key='', trace=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.env_values()['AISSTREAM_API_KEY'], STORED_KEY)
+        self.assertEqual(self.env_values()['SKIPPERCAST_GIT_SHA'], self.shas[0])
+        self.assertEqual(stat.S_IMODE(self.env_file.stat().st_mode), 0o600)
+
+    def test_refuses_without_a_key(self):
+        result = self.run_script('--region', 'CA', key='', trace=True)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn('AISSTREAM_API_KEY is not set', result.stderr)
-        self.assertFalse(self.env_file.exists())
+        self.assertIn('no AISSTREAM_API_KEY in the environment or', result.stderr)
+        self.assertEqual(list(self.home.iterdir()), [])
+
+        body = f'# Not a key assignment: {STORED_KEY}\nSKIPPERCAST_GIT_SHA={self.shas[0]}\n'
+        self.seed_env(body)
+        result = self.run_script('--region', 'CA', key='', trace=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('no AISSTREAM_API_KEY in the environment or', result.stderr)
+        self.assertEqual(self.env_file.read_text(encoding='utf-8'), body)
+        self.assertEqual(set(self.home.rglob('*')), {
+            self.home / '.config', self.env_file.parent, self.env_file})
+
+    def test_refuses_without_a_user_manager(self):
         result = self.run_script('--region', 'CA', STUB_NO_MANAGER='1')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('loginctl enable-linger', result.stderr)
         self.assertFalse(self.app.exists())
 
     def test_rejects_a_malformed_key_without_showing_it(self):
-        result = self.run_script('--region', 'CA', key=f'{KEY} "x"')
+        body = f'AISSTREAM_API_KEY={STORED_KEY}\n'
+        self.seed_env(body)
+        result = self.run_script('--region', 'CA', key=f'{KEY} "x"', trace=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('value not shown', result.stderr)
         self.assertNotIn('"x"', result.stdout + result.stderr)
+        self.assertEqual(self.env_file.read_text(encoding='utf-8'), body)
+        self.assertFalse(self.app.exists())
 
     def test_rollback_to_the_previous_revision_keeps_the_key(self):
         self.assertEqual(self.run_script('--region', 'CA').returncode, 0)

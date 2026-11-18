@@ -48,7 +48,7 @@ export async function api<T = Record<string, unknown>>(path: string, options: Re
   const r = await fetchFn('/api/' + path, {signal: AbortSignal.timeout(20000), ...options, headers: {'Content-Type': 'application/json', ...options.headers as Record<string, string>}});
   let data: {error?: string} & Record<string, unknown>;
   try { data = await r.json() as typeof data; } catch { throw new AlertCopyError('alerts.err.personal'); }
-  if (!r.ok) throw data.error ? Error(data.error) : new AlertCopyError('alerts.err.request');
+  if (!r.ok) throw Object.assign(data.error ? Error(data.error) : new AlertCopyError('alerts.err.request'), {status: r.status});
   return data as T;
 }
 
@@ -57,7 +57,7 @@ export const alertDate = (timeZone: string, now: number = Date.now()): string =>
 
 export type RegionAlerts = {
   id: string; timezone: string; species: string[];
-  forecast_points: {id: string; name: string}[];
+  forecast_points: {id: string; name: string; latitude?: number; longitude?: number}[];
   target_options?: {id: string; name: string; group?: string}[];
 };
 export type SpeciesOption = {id: string; name: string; group: string};
@@ -79,11 +79,15 @@ export const dateRange = (timeZone: string, now: number = Date.now()): {min: str
   return {min, max: new Date(Date.parse(min + 'T12:00:00Z') + 7 * 86400000).toISOString().slice(0, 10)};
 };
 
+/** A real calendar date within the same inclusive range used on Save. */
+export function validAlertDate(date: string, range: {min: string; max: string}): boolean {
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(date) ? Date.parse(date + 'T12:00:00Z') : NaN;
+  return Number.isFinite(day) && new Date(day).toISOString().slice(0, 10) === date && date >= range.min && date <= range.max;
+}
+
 /** What the server would refuse first, in plain words, or null; checked before the form is sent. */
 export function formProblemId(form: AlertForm, range: {min: string; max: string}): StringId | null {
-  const day = /^\d{4}-\d{2}-\d{2}$/.test(form.date) ? Date.parse(form.date + 'T12:00:00Z') : NaN;
-  if (!Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== form.date || form.date < range.min || form.date > range.max)
-    return 'alerts.problem.date';
+  if (!validAlertDate(form.date, range)) return 'alerts.problem.date';
   if (!(form.end_hour > form.start_hour)) return 'alerts.problem.window';
   if (!(form.gust_limit >= form.wind_limit)) return 'alerts.problem.gust';
   return null;
@@ -133,11 +137,12 @@ export const reusedLimits = (fields: Reuse['fields']): 'all' | 'some' | 'none' =
 
 /** The alert form as the fill needs it: its named controls (a real HTMLFormElement's `elements` fits). */
 export type FillableForm = {elements: {namedItem(name: string): {value: string; focus?(): void} | null}};
-/** Puts a reuse's fields into the form's own controls, leaves the date empty for the person to choose and focuses it. Touches only the form: no request, no storage. */
-export function fillAlertForm(form: FillableForm, reuse: Reuse): void {
+export type AlertFields = {[K in keyof Reuse['fields']]: Reuse['fields'][K] | ''};
+/** Fills the form's own controls and focuses Date. Use again leaves the date empty. No request or storage. */
+export function fillAlertForm(form: FillableForm, reuse: {fields: AlertFields}, initialDate = ''): void {
   for (const [name, value] of Object.entries(reuse.fields)) { const control = form.elements.namedItem(name); if (control) control.value = String(value); }
   const date = form.elements.namedItem('date');
-  if (date) { date.value = ''; date.focus?.(); }
+  if (date) { date.value = initialDate; date.focus?.(); }
 }
 
 const OMITTED_TEXT: Readonly<Record<ReuseOmission, StringId>> = {
@@ -151,7 +156,20 @@ export const reuseLimitsNote = (date: string, copied: 'all' | 'some', boat: bool
   `${t(copied === 'all' ? 'alerts.reuse.all' : 'alerts.reuse.some', lang, {date})} ${t(boat ? 'alerts.reuse.boat' : 'alerts.reuse.noBoat', lang)}`;
 
 export type AlertEvent = {id: string | number; trip_id?: string; kind: string; status: string; message: string; created_at?: string};
-export type Feedback = {observed_at: string; rating: number; context: string};
+export type Feedback = {id?: string; observed_at: string; rating: number; context: string};
+
+/** A bounded read, never a lifetime total or proof that older rows exist. */
+export const feedbackSummary = (count: number, lang: Language = 'en'): string =>
+  t(count >= 100 ? 'alerts.comfort.capped' : count === 1 ? 'alerts.comfort.one' : 'alerts.comfort.count', lang, {n: count});
+
+/** Report dates follow the opened region, not the browser or the report's stored region. */
+export function feedbackDate(observedAt: string, timeZone: string = DEFAULT_ZONE, locale = 'en-US'): string {
+  const date = new Date(observedAt);
+  if (!Number.isFinite(date.getTime())) return t('alerts.comfort.noDate', locale);
+  const options: Intl.DateTimeFormatOptions = {year: 'numeric', month: 'short', day: 'numeric', timeZone: timeZone || DEFAULT_ZONE};
+  try { return new Intl.DateTimeFormat(locale, options).format(date); }
+  catch { return new Intl.DateTimeFormat(locale, {...options, timeZone: DEFAULT_ZONE}).format(date); }
+}
 
 /** The recap's minimal projection of one private catch-log row (the signed-in GET /api/catch-log answer): no coordinates, note, owner, method or species. */
 export type CatchLogEntry = {id: string; trip_id: string | null; started_at: string; outcome: 'fish' | 'blank' | 'unknown'; count: number};
@@ -248,9 +266,10 @@ export const alertNames = (region: RegionAlerts): AlertNames => ({
 export const tripLine = (trip: SavedTrip, names?: AlertNames, lang: Language = 'en', timeZone: string = DEFAULT_ZONE): string =>
   `${readableDate(trip.date, lang, timeZone)} · ${names?.point.get(trip.point) ?? trip.point} · ${names?.species.get(trip.species) ?? trip.species} · ${trip.start_hour}:00–${trip.end_hour}:00${trip.boat_sea ? ` · ${trip.boat_name || t('alerts.savedBoat', lang)}` : ''}`;
 
-/** What a saved trip's stored plan shows: target names, stop names in saved order and summed leg totals. Never positions, notes or ids. */
+type SavedLeg = {basis: 'unknown'} | {basis: 'water' | 'straight'; from: string; to: string; nm: string; check: 'unchecked' | 'inside' | 'near' | 'no-overlap'};
+/** Saved names, sums and historical leg qualifications. Never positions, notes or ids. */
 export type TripPlanSummary =
-  | {kind: 'saved'; targets: string[]; stops: string[]; totals: {nm: string; minutes: string} | null}
+  | {kind: 'saved'; targets: string[]; stops: string[]; legs: SavedLeg[]; totals: {nm: string; minutes: string} | null}
   | {kind: 'unavailable'};
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -267,15 +286,26 @@ export function tripPlanSummary(trip: SavedTrip, names?: AlertNames, lang: Langu
     spots.push({name: s.name, order: s.order, i});
   }
   let nm = 0, minutes = 0;
+  const legs: SavedLeg[] = [];
   for (const l of plan.legs) {
     if (!isObj(l) || typeof l.nm !== 'number' || typeof l.minutes !== 'number' || !Number.isFinite(l.nm) || !Number.isFinite(l.minutes) || l.nm < 0 || l.minutes < 0) return {kind: 'unavailable'};
-    nm += Math.round(l.nm * 100000); minutes += Math.round(l.minutes * 100000);
+    const units = Math.round(l.nm * 100000);
+    nm += units; minutes += Math.round(l.minutes * 100000);
+    const {basis, screen} = l;
+    if ((basis !== 'water' && basis !== 'straight') || typeof l.from !== 'string' || typeof l.to !== 'string'
+      || !isObj(screen) || typeof screen.inside !== 'boolean' || typeof screen.screened !== 'boolean'
+      || (screen.inside && !screen.screened) || (screen.near !== undefined && (screen.near !== true || !screen.screened || screen.inside))) {
+      legs.push({basis: 'unknown'});
+      continue;
+    }
+    legs.push({basis, from: l.from, to: l.to, nm: fixed5(units),
+      check: !screen.screened ? 'unchecked' : screen.inside ? 'inside' : screen.near === true ? 'near' : 'no-overlap'});
   }
   const ids = Array.isArray(trip.targets) && trip.targets.length && trip.targets.every(t => typeof t === 'string') ? trip.targets as string[] : [trip.species];
   return {kind: 'saved',
     targets: ids.map(id => names?.species.get(id) ?? id),
     stops: spots.sort((a, b) => a.order - b.order || a.i - b.i).map(s => s.name.trim() ? s.name : t('alerts.unnamedStop', lang)),
-    totals: plan.legs.length ? {nm: fixed5(nm), minutes: fixed5(minutes)} : null};
+    legs, totals: legs.length ? {nm: fixed5(nm), minutes: fixed5(minutes)} : null};
 }
 
 /** The assessment kinds and delivery statuses server/trips.ts writes, in plain words: finite maps from the server's own keys to catalogue ids. */
@@ -404,6 +434,11 @@ export async function deviceStatus(fetchFn: typeof fetch = fetch, nav: PushNavig
     const r = await api<{registered?: unknown}>('subscription/status', {method: 'POST', body: JSON.stringify({endpoint: subscription.endpoint})}, fetchFn);
     return r.registered === true ? 'confirmed' : r.registered === false ? 'not-sending' : 'unchecked';
   } catch { return 'unchecked'; }
+}
+
+/** Send only to the named device; the server independently checks ownership and its daily budget. */
+export async function sendTestNotification(endpoint: string, fetchFn: typeof fetch = fetch): Promise<void> {
+  await api('subscription/test', {method: 'POST', body: JSON.stringify({endpoint})}, fetchFn);
 }
 
 /** The catalogue id of the sheet's line for each state. */

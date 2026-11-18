@@ -32,8 +32,8 @@ from uuid import uuid4
 REPO = Path(__file__).resolve().parents[3]
 DEFAULT_ADMITTED = REPO.parent / 'out'
 STAGE_HASHES = {
-    'coast_mosaic': 'f3f600a77722a076811d1ca8ae1723de0bcd2bfc33a2f5f8a99a8a9f3de8f6b4',
-    'coast_contours': 'da1b5c919ceedecbdaf430cf1b50e18dd20494ae27fa95dcf0c3d4402b02f74f',
+    'coast_mosaic': 'b1ff0802604e4be0470a77d2a61e95e33e01545c155abcfa2dcd304a712b6d51',
+    'coast_contours': '47be44283bc2924ef35d292ffc4ed42e82324c05722c52ad274a55918cb8818b',
     'coast_qa': '0c5816fbe3b0f5fe2ca4010bdfcf632d665cec28185a4bfa07b06946cee57235',
     'coast_rights': '76c1e470d2ceeb37b963cb4e738bc12f7c7a50789f10bee20426c7d701954702',
 }
@@ -298,15 +298,17 @@ def runtime_identity():
 
     rasterio/GDAL/PROJ (bundled) and numpy shape every raster stage; the C2
     contour stage additionally projects with pyproj/PROJ and builds geometry
-    with Shapely/GEOS. Values are read from the loaded modules (not metadata
-    files) so the binding reflects what actually runs. No install or update.
+    with Shapely/GEOS. SciPy shapes C1 and C2 seam handling. Values are read
+    from the loaded modules (not metadata files) so the binding reflects
+    what actually runs. No install or update.
     """
     import numpy
     import pyproj
     import rasterio
+    import scipy
     import shapely
     return dict(rasterio=rasterio.__version__, gdal=rasterio.__gdal_version__,
-                rasterio_proj=rasterio.__proj_version__, numpy=numpy.__version__,
+                rasterio_proj=rasterio.__proj_version__, numpy=numpy.__version__, scipy=scipy.__version__,
                 pyproj=pyproj.__version__, pyproj_proj=pyproj.proj_version_str,
                 shapely=shapely.__version__, geos=shapely.geos_version_string)
 

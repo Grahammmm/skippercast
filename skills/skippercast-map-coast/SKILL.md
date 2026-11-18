@@ -213,9 +213,10 @@ Process up to three useful reaches in a bounded batch when each reach has an
 independently qualified source pair, the reaches share a compatible
 interpretation method, the current stage passes for each, and batching will not
 delay a ready positive result. Keep each reach's source fingerprint separate.
-Estimate native pixels, memory, scratch and bytes first. Use the approved
-processing host when local resources are inadequate. Keep private originals and
-geometry there; aggregate receipts suffice for coordination. No routine
+Estimate native pixels, memory, scratch and bytes first. Map compute runs on
+AgentOrange through the local queue (skippercast-relief-pipeline; G 2026-11-17):
+when local resources are inadequate, hold the stage (held receipt) and tell the
+operator; never move private originals or mapping to a cloud host. No routine
 `--force`, blanket cache rebuilds or unrelated downloads.
 
 ```bash

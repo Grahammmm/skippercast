@@ -59,6 +59,22 @@ def check_header(dataset):
         raise ValueError("north_up_grid_required")
 
 
+def require_distinct_pairs(terrain_pixels, imagery_pixels, minimum=4):
+    """Require `minimum` distinct locations on both grids with one-to-one pairing.
+
+    A repeated row is one correspondence, not two, and a location cannot pair
+    with two different locations. This counts distinct pixels only; it does not
+    establish that the controls were independently surveyed.
+    """
+    forward, backward = {}, {}
+    for a, b in zip(terrain_pixels, imagery_pixels):
+        a, b = (float(a[0]), float(a[1])), (float(b[0]), float(b[1]))
+        if forward.setdefault(a, b) != b or backward.setdefault(b, a) != a:
+            raise ValueError("inconsistent_control_pairing")
+    if len(forward) < minimum:
+        raise ValueError("four_distinct_control_pairs_required")
+
+
 def measure_alignment(terrain_path, imagery_path, control_points, *,
                       minimum_overlap=0.95, maximum_residual_cells=0.5, correspondence=None, root=None, now=None, minimum_valid_until=None):
     """Controls are independently corresponding [column,row] pixel centers.
@@ -96,6 +112,7 @@ def measure_alignment(terrain_path, imagery_path, control_points, *,
             tp.append(a)
             ip.append(b)
             controls.append({"terrain_pixel": list(a), "imagery_pixel": list(b)})
+        require_distinct_pairs(tp, ip)
         # Both mappings must span a surface, rather than a single line or corner.
         if any(np.linalg.matrix_rank(np.c_[p, np.ones(len(p))]) < 3 for p in (tp, ip)):
             raise ValueError("noncollinear_controls_required")

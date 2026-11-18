@@ -112,15 +112,23 @@ class SavedSourceRefusals(unittest.TestCase):
 
     def test_success_writes_saved_sources_then_the_asset_whole(self):
         written = []
-        real = importer._write_atomic
-        with mock.patch.dict(os.environ, {'SKIPPERCAST_VALIDATE': 'off'}), \
-                mock.patch.object(importer, '_write_atomic', side_effect=lambda p, d: (written.append(p.name), real(p, d))):
-            result, err, out = self.run_main('--save-sources', str(self.dir / 'saved'))
+        real = os.replace
+
+        def record_replace(source, target, **kwargs):
+            real(source, target, **kwargs)
+            written.append(Path(target).name)
+
+        saved = self.dir.resolve() / 'var/saved'
+        with mock.patch.object(importer, 'ROOT', self.dir.resolve()), \
+                mock.patch.dict(os.environ, {'SKIPPERCAST_VALIDATE': 'off'}), \
+                mock.patch.object(os, 'replace', side_effect=record_replace):
+            result, err, out = self.run_main('--save-sources', str(saved))
         self.assertEqual((result, err), (0, ''))
         self.assertEqual(json.loads(out)['bytes'], self.output.stat().st_size)
         self.assertEqual(written, [*importer.SOURCE_FILES.values(), 'receipts.json', 'morro-bay.geojson'])
-        self.assertEqual(importer.load_saved(self.dir / 'saved', 'morro-bay', datetime(2026, 10, 7, tzinfo=timezone.utc)), (self.bodies, self.receipts))
+        self.assertEqual(importer.load_saved(saved, 'morro-bay', datetime(2026, 10, 7, tzinfo=timezone.utc)), (self.bodies, self.receipts))
         self.assertEqual(self.leftovers(), [])
+        self.assertEqual(list(saved.glob('*.tmp')), [])
 
 
 class WriteAtomic(unittest.TestCase):

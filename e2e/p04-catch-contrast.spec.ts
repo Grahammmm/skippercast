@@ -221,7 +221,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // are unchanged; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
   // SC1922-03: Masthead.tsx renders Location's Retry through the shared Button (ui-button--quiet ui-button--sm); BODY09 mounts Reports/CatchCards, never Masthead. No catch markup, token or paint change. Rebind only Masthead.tsx.
   // SC1922-08: Masthead.tsx's FreshnessDot gains a Refresh Button and a status line inside the chip, beside the unchanged age span; BODY09 mounts Reports/CatchCards, never Masthead. No token, catch markup or catch paint change (the CSS is the app.css chip rule and appended block, bound below). Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "4f233466f19c5a174d2b94c3a2b22ad748c44c7b80b3fd5b9f2b0e3744ac3466",
+  // SC-NEXT-01: inject the unchanged app reader into the shared notice; BODY09 never mounts Masthead.
+  // No markup, CSS, token, paint, contrast assertion or threshold changes; refresh only this source hash.
+  "web/app/Masthead.tsx": "9489af976eeb801dbf0d9309d1f49db0da4773b5a7ff987d7168fde7316c61f7",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
@@ -264,9 +266,13 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // paragraph on the existing app-stage-note class while the rough seafloor is drawn. BODY09 mounts Reports/CatchCards,
   // never MapStage or PresentationToggle; no CSS, token, class, catch markup, paint, contrast(), assertion or threshold
   // change. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "27dbfafcd0f8b219308d58a6dabb154e855df7e544773bc7aebfc74e6e49e995",
+  // MB-08: Reports/CatchCards mounts neither the Chart-only depth shading control nor its layer. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "2cc4ac589807f61354da30d86cba22d4d193b1bdecb93bd3b9c92a60f7dfe5bc",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
-  "web/tokens.css": "56f9708cfa02f651680a2bc02bd3d9080f65dec849aea6888f6bfc52508a5775",
+  // MB-05: light map-only colours and habitat opacity change; Reports catch text and backing do not use these roles.
+  // MB-20: only light-theme overlay roles (--flow*, --mpa-fill/line, --swell-0..3, --contrast-1/2) change; Reports catch text and backing do not use them.
+  // MB-22 adds Chart-only survey ink, halo and tints; Reports catch paint is unchanged.
+  "web/tokens.css": "3d2a47d465afd1b920d91ea1519c03420a5925ca0790aafffffffef768194e32",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   // UXFIX-05: tokens.css only turns the eight --text-* font sizes from px into the same sizes in rem (identical at a 16 px root); no colour, paint, gradient, catch markup, assertion or threshold changes, so BODY09 stays applicable. Rebind web/tokens.css and the check_contrast.mjs surface-source pin only.
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
@@ -316,12 +322,13 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/ui/guard.css": "8e53f065f8f7af23121f7eb346ebeefe571baa21eebf1b6179e27a8b86b74d11",
   // SC2037-04: Brief.tsx imports brief-print.css (only a hidden .app-print-only class and an @media print block; no screen paint); Reports bundles Brief.
   // SC1407-05: brief-print.css adds only .app-hour-guard/.app-hour-settled (display: contents) and .app-hour-updating (muted margin-less line) screen rules plus print-hide rules for the pending dock hour; the Reports catch sheet mounts none of those classes (they wrap the desktop/phone brief verdict), so no counted catch paint changes. Rebound from the final bytes.
-  "web/brief/brief-print.css": "c04bce48a759c7877f4a7a87fb0631178f0fe60bb4eac6aa6a23ed610d4fca6b",
+  "web/brief/brief-print.css": "859660d0a399f688ba5a61661c52c9ae3e5ce8be9c46d934dae8cde19600393f",
   "web/app/views/model-disagreement.css": "c6edfd6e81395b8d5e9fe67e982e399989172765490456f6a28ec036c115b72c",
   // SCB-16: scoped picker rules only; never mounted or requested by Reports.
   "web/region-picker.css": "ebc4fcaed679f3017e83921334f5c9ef5a10e70b7aed04eef6a995a0da75e6af",
   // UXFIX-12: panel.css moves the existing .chart-overflow:focus-visible outline out of its max-width:760px media block so it applies at every width; it paints only on keyboard focus of the history/forecast chart wrappers, never in the Reports catch sheet, so no counted catch paint or contrast changes. Rebound from the final bytes.
-  "packages/coast/panel.css": "4558cd4edb0be1827ef6c00523a05b1c8eae84b0d0d81a93c33d5e12e4c66fa9",
+  // SCA-317: only the History disclosure target height changes; Reports catch paint is unchanged.
+  "packages/coast/panel.css": "8eaf2e7f806030b9c760c2c04cd9e3e232f9e4c56d196fdae005ee6607382e9a",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
@@ -333,12 +340,16 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // section URLs as 503 below, retaining unavailable sections and the strict
   // unexpected-request guard; catch markup, paint and controls stay unchanged.
   // RF2115-7: Reports.tsx only passes the matching region's zone to its timestamp labels (date-only dates stay UTC); catch markup, paint and contrast are unchanged. Rebound.
-  "web/app/views/Reports.tsx": "80191b511a22f75fb9122389336cd98017c8794ac8be5e284edb53edee111b96",
+  // SC-FEED-DEGRADE-1: EvidenceSection adds a stale-source unavailable message; CatchCards,
+  // catch markup, styles, paint, contrast thresholds and fail-closed controls remain unchanged.
+  "web/app/views/Reports.tsx": "83d974c8c816c88db815aa250a11c45ef09bc184f421118ad08a52211b734578",
   "web/app/CoastMarkup.tsx": "3d318379ff1194b26f68adadb523db08c21829ff71cf5e7cfe2ac903821f0efc",
   "packages/coast/src/ui/catches.ts": "a25442909c360171a11e5087f629de8cec94a358fc7bff877adce9dffbc0999f",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   // SC1722-04: explicit load/online retries stay unchanged; untracked commands prevent transport-state feedback in readers. No Reports/CatchCards paint change.
-  "web/coast-data.ts": "5856b2145c7d96285d7b5dce03b923d7b2ebfe9504f16952657c720bf02dab06",
+  // SCA-240: coast-data.ts now classifies a malformed or future X-SC-Offline header as invalid (no saved allowance,
+  // no live label). Transport/cache-age logic only; no Reports/CatchCards markup, paint or contrast change.
+  "web/coast-data.ts": "bbcccb206c83693f5a85e4d06075efd1be7b249009e28a23e66fecdafe0c260e",
   // SC2007-02 (Protected areas Try again): check_contrast.mjs changes only the legendTsx surface hash and its
   // comment; Legend.tsx is not a BODY09 input and Reports never mounts the legend. contrast(), the one export this
   // spec reads, assertions and thresholds are untouched. Rebind only check_contrast.mjs. (Kept beside its pin, not in
@@ -395,7 +406,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SCB-11: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // MAIN-RED-5: only the appCss surface binding/comment changed; contrast calculations and gates unchanged.
   // MAIN-RED-7: only the appCss surface binding/comment changed; contrast calculations and gates unchanged.
-  "scripts/check_contrast.mjs": "4f38c7e1a2accb5a279cda72fbb934a724642794c833960db14d53a5eb20782b",
+  // MB-05 adds contour checks and rebinds map-only tokens; RF2000-8 corrects selector-to-brace whitespace matching. Contrast calculations and Reports catch assertions are unchanged.
+  // MB-20 adds the additive overlay-line gate (checkOverlayLines, 3:1 on --map-water) and rebinds the tokensCss surface hash; contrast() and every existing check are unchanged.
+  // SCA-317: checker only rebinds the History target-size stylesheet hash; contrast math is unchanged.
+  // MB-22 rebinds only the tokensCss surface hash. BODY09 paint, contrast logic and assertions are unchanged.
+  "scripts/check_contrast.mjs": "34d9ae03792419b02db7d5fa3157d3161eba8b718259e70fd8e660c927aae4d0",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
@@ -406,8 +421,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // renders Reports with preact from these pins, but no CSS, token, font or catch markup source changes; the
   // measured colours come from the pinned styles above. Reports never mounts MapStage, so maplibre-gl and three
   // are not loaded. contrast(), assertions and thresholds are untouched. Rebind only these two.
-  "package.json": "83cef009e623dee19207f8ebc741b0604766989616387917901c5c654561edb3",
-  "pnpm-lock.yaml": "c9cf4a7e91697552fadd98575e199cf3be17d7fbdafd83949865222573cb736a",
+  // #2490: dependency versions and lockfile resolutions changed; BODY09 still
+  // bundles and measures the real Reports paint with unchanged inputs and gates.
+  // Rebind both manifests and rerun the rendered contrast and fail-closed controls.
+  "package.json": "1a0f80f659e1edda323fe90947fbd5093f1d642b484f15f8e264b23cb2b09aec",
+  "pnpm-lock.yaml": "c13839dc5adfd7fda24886a1fec77e6404c18e4dedc236a58f06caf8a542e707",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {

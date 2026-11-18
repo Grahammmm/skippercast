@@ -117,6 +117,23 @@ def write_survey(path, size=300, west_nodata=100):
     return elevation
 
 
+def assert_attempted_zoom_rows(case, metadata, minzoom, cap):
+    """D8-F01: archive metadata must carry exactly one native-support row per attempted zoom."""
+    rows = metadata.get('native_support_by_zoom')
+    case.assertIsInstance(rows, dict)
+    case.assertEqual(sorted(map(int, rows)), list(range(minzoom, cap + 1)))
+
+
+def srgb_to_lab(rgb):
+    """D65 sRGB to CIELAB for the design lock's CIE76 ΔE comparison."""
+    srgb = np.asarray(rgb) / 255.0
+    linear = np.where(srgb <= 0.04045, srgb / 12.92, ((srgb + 0.055) / 1.055) ** 2.4)
+    matrix = np.array([[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722], [0.0193, 0.1192, 0.9505]])
+    xyz = linear @ matrix.T / [0.95047, 1, 1.08883]
+    x, y, z = np.moveaxis(np.where(xyz > 0.008856, np.cbrt(xyz), 7.787 * xyz + 16 / 116), -1, 0)
+    return np.stack((116 * y - 16, 500 * (x - y), 200 * (y - z)), axis=-1)
+
+
 class RampTests(unittest.TestCase):
     def test_ramp_is_cmocean_deep(self):
         lut = bt.deep_lut()
@@ -126,21 +143,33 @@ class RampTests(unittest.TestCase):
         self.assertEqual(lut[255].tolist(), [40, 26, 44])        # deep end
         self.assertEqual(bt.deep_colour(np.array([1.0]))[0].tolist(), (lut[255] / 255.0).tolist())
 
-    def test_depth_stretch_matches_the_study_breakpoints(self):
-        canyon = bt.style_for_zoom(11)['bp']
-        position = bt.ramp_position(np.array([-30.0, -60.0, -250.0, -1600.0, -4000.0, 5.0]), canyon)
-        np.testing.assert_allclose(position, [0.0, 0.0, 0.22, 1.0, 1.0, 0.0])
-        near = bt.style_for_zoom(13)['bp']
-        np.testing.assert_allclose(bt.ramp_position(np.array([-10.0, -35.0, -140.0]), near), [0.22, 0.58, 1.0])
+    def test_fixed_depth_stops_interpolate_and_clamp(self):
+        depth_m = np.array([-2.5, 0, 1.5, 3, 6, 10, 15, 20, 30, 45, 60, 91.44, 150, 300, 500, 700, 900])
+        np.testing.assert_allclose(bt.ramp_position(-depth_m),
+                                   [0.03, 0.03, 0.07, 0.11, 0.18, 0.26, 0.35, 0.44, 0.53,
+                                    0.61, 0.68, 0.78, 0.87, 0.94, 0.97, 1.0, 1.0])
+
+    def test_unshaded_gradient_matches_design_legend_at_z10_and_z13(self):
+        # A single plane has uniform illumination; with the base (no exposure) variant,
+        # hillshade subtracts its own median, leaving the unshaded LUT colour in the PNG.
+        size = bt.TILE + 2 * bt.PAD
+        row, col = np.mgrid[:size, :size]
+        window = -0.3048 * (row + col - 2 * bt.PAD)
+        windows = {(0, 0): (window, np.zeros_like(window, dtype=bool), 15.0)}
+        pixels = [decode_png(bt.render_zoom(windows, z)[(z, 0, 0)]) for z in (10, 13)]
+        for feet, hex_rgb in ((0, 'eff8c4'), (20, '9cdca5'), (66, '4e9ea1'), (300, '414583')):
+            with self.subTest(feet=feet):
+                rgb = [p[feet // 2, feet - feet // 2, :3] for p in pixels]
+                lab = srgb_to_lab([*rgb, list(bytes.fromhex(hex_rgb))])
+                self.assertLess(np.linalg.norm(lab[0] - lab[1]), 1.0, rgb)
+                for value in lab[:2]:
+                    self.assertLess(np.linalg.norm(value - lab[2]), 1.0, rgb)
 
     def test_style_follows_zoom(self):
         self.assertEqual(bt.style_for_zoom(8), bt.style_for_zoom(11))
-        self.assertEqual(bt.style_for_zoom(11)['bp'], bt.CANYON['bp'])
         self.assertEqual(bt.style_for_zoom(11)['ve'], 2.2)
-        self.assertEqual(bt.style_for_zoom(13)['bp'], bt.NEARSHORE['bp'])
         self.assertEqual(bt.style_for_zoom(15)['ve'], 6.0)
         mid = bt.style_for_zoom(12)
-        self.assertEqual(mid['bp'][1], (250.0 + 10.0) / 2)
         self.assertAlmostEqual(mid['ve'], 4.1)
 
     def test_lit_slopes_are_brighter_than_shaded_slopes(self):
@@ -211,6 +240,7 @@ class BuildTests(unittest.TestCase):
             self.assertEqual((header['minzoom'], header['maxzoom']), (11, 13))
             self.assertEqual(metadata['format'], 'png')
             self.assertEqual(metadata['type'], 'baselayer')
+            self.assertEqual(metadata['ramp'], 'deep-fixed-v1')
             self.assertIn('NOT FOR NAVIGATION', metadata['description'])
             self.assertNotIn('/home', json.dumps(metadata))
             west, south, east, north = header['bounds']
@@ -227,17 +257,41 @@ class BuildTests(unittest.TestCase):
                 seen_opaque |= bool((alpha == 255).any())
             self.assertTrue(seen_clear and seen_opaque)
 
+    def test_land_mask_keeps_low_ground_and_clears_cells_above_three_metres(self):
+        from rasterio.warp import transform
+
+        with tempfile.TemporaryDirectory() as directory:
+            source, output = (Path(directory) / name for name in ('elevation.tif', 'deep.pmtiles'))
+            grid = from_origin(-122000, -288000, 10, 10)
+            elevation = np.tile(np.repeat(np.array([2.5, 3.0, 3.5], dtype='float32'), 80), (240, 1))
+            with rasterio.open(source, 'w', driver='GTiff', width=240, height=240, count=1,
+                               dtype='float32', crs='EPSG:3310', transform=grid, nodata=NODATA) as ds:
+                ds.write(elevation, 1)
+            z = 13
+            bt.build(source, output, z, z, log=lambda *_: None)
+            _, _, tiles, _ = read_archive(output)
+            for column, expected_alpha in ((40, 255), (120, 255), (200, 0)):
+                with self.subTest(elevation=elevation[120, column]):
+                    east, north = grid @ (column + 0.5, 120.5)
+                    (lon,), (lat,) = transform('EPSG:3310', 'EPSG:4326', [east], [north])
+                    (x,), (y,) = bt.tile_range((lon, lat, lon, lat), z)
+                    tile_grid, _ = bt.tile_grid(z, x, y, pad=0)
+                    xs, ys = transform('EPSG:3310', 'EPSG:3857', [east], [north])
+                    row, col = rasterio.transform.rowcol(tile_grid, xs[0], ys[0])
+                    png = tiles.get(bt.tile_id(z, x, y))
+                    self.assertEqual(decode_png(png)[row, col, 3] if png else 0, expected_alpha)
+
     def test_a_flat_bottom_is_the_plain_ramp_colour_and_nodata_stays_clear(self):
         size = bt.TILE + 2 * bt.PAD
-        window = np.full((size, size), -35.0, dtype='float32')
+        window = np.full((size, size), -20.0, dtype='float32')
         window[:, :size // 2] = NODATA
         invalid = window == NODATA
         tiles = bt.render_zoom({(5, 6): (window, invalid, 15.0)}, 13)
         pixels = decode_png(tiles[(13, 5, 6)])
-        wanted = bt.deep_lut()[int(0.58 * 256)]                     # 35 m is the 0.58 breakpoint of the nearshore stretch
+        wanted = bt.deep_lut()[int(0.44 * 256)]  # the fixed 20 m stop
         east = pixels[:, -1]
         self.assertTrue((east[:, 3] == 255).all())
-        self.assertLessEqual(np.abs(east[:, :3].astype(int) - wanted.astype(int)).max(), 1)
+        self.assertTrue((east[:, :3] == wanted).all())
         self.assertTrue((pixels[:, 0, 3] == 0).all())
 
     def test_deeper_water_is_darker_in_the_ramp(self):
@@ -252,6 +306,24 @@ class BuildTests(unittest.TestCase):
             second = self.build_once(directory, 'b.pmtiles', 12, 12).read_bytes()
         self.assertEqual(hashlib.sha256(first).digest(), hashlib.sha256(second).digest())
 
+    def test_enlarged_z15_background_halves_the_average_cell_step(self):
+        from rasterio.warp import Resampling, reproject
+
+        z, x, y = 15, 16384, 16384  # at the equator, 10 projected metres ≈ 10 ground metres
+        target, _ = bt.tile_grid(z, x, y)
+        grid = from_origin(target.c - 20, target.f + 20, 10, 10)
+        elevation = np.tile(-20 - np.arange(130, dtype='float32'), (130, 1))
+        crs = 'EPSG:3857'
+        smooth, _ = bt.warp_window(elevation, grid, crs, z, x, y)
+        average = np.full_like(smooth, NODATA)
+        reproject(elevation, average, src_crs=crs, src_transform=grid, src_nodata=NODATA,
+                  dst_crs=crs, dst_transform=target, dst_nodata=NODATA, resampling=Resampling.average)
+        self.assertTrue((smooth != NODATA).all() and (average != NODATA).all())
+        step = float(np.abs(np.diff(smooth, axis=1)).max())
+        average_step = float(np.abs(np.diff(average, axis=1)).max())
+        self.assertGreater(step, 0.0)  # smoothing must not flatten the gradient
+        self.assertLessEqual(step, average_step / 2, f'{step=} vs {average_step=}')
+
     def test_wrong_crs_or_missing_source_is_refused(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'wrong.tif'
@@ -262,6 +334,87 @@ class BuildTests(unittest.TestCase):
                 bt.build(path, Path(directory) / 'x.pmtiles', 12, 12, log=lambda *_: None)
             self.assertEqual(bt.main(['--source', str(Path(directory) / 'missing.tif')]), 2)
             self.assertEqual(bt.main(['--source', str(path), '--minzoom', '9', '--maxzoom', '3']), 2)
+
+
+class CoverageTests(unittest.TestCase):
+    def test_archive_records_zero_to_300ft_coverage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _, metadata, _, _ = read_archive(BuildTests.build_once(directory, minzoom=12, maxzoom=12))
+        detail = metadata['detail_coverage']
+        self.assertEqual(detail['background'], {'cells': 6333, 'cell_m': 10, 'km2': 0.6333})
+        self.assertEqual(detail['limit_m'], 91.44)
+        self.assertIn('sources can overlap, so do not add them', detail['basis'])
+        self.assertEqual(detail['native'], [])
+
+    def test_coverage_excludes_land_deep_and_nodata(self):
+        values = np.array([[5, -91.44, -91.45, np.nan, NODATA, 0, -30]], dtype='float32')
+        self.assertEqual(bt.coverage(values, 10, [])['background'],
+                         {'cells': 3, 'cell_m': 10, 'km2': 0.0003})
+        self.assertEqual(bt.coverage(values, (10, 20), [])['background'],
+                         {'cells': 3, 'cell_m': 10, 'cell_y_m': 20, 'km2': 0.0006})
+
+    def test_native_coverage_uses_the_shallow_mask_and_own_cell_size(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base, fine, output, sidecar = (root / n for n in ('base.tif', 'fine.tif', 'a.pmtiles', 'c.json'))
+            write_survey(base)
+            values = np.full((32, 32), -25, dtype='float32')
+            values[:, 16:] = -100  # half deep; a nodata stripe removes 32 shallow cells
+            values[:, 15] = -7
+            values[0, 0] = -91.44
+            with rasterio.open(fine, 'w', driver='GTiff', width=32, height=32, count=1,
+                               dtype='float32', crs='EPSG:3310', nodata=-7, tiled=True,
+                               blockxsize=16, blockysize=16,
+                               transform=from_origin(-121800, -288200, 2, 2)) as ds:
+                ds.write(values, 1)
+                valid = np.full((32, 32), 255, dtype='uint8')
+                valid[0, 1] = 0  # GDAL-invalid shallow cell must not count either
+                ds.write_mask(valid)
+            manifest = root / 'native.json'
+            manifest.write_text(json.dumps([{'id': 'synthetic', 'path': str(fine), 'resolution_m': 2}]))
+            sources = bt.load_native_manifest(manifest)
+            # Even metadata accounting must not read native pixels in a background-only build.
+            with patch.object(rasterio, 'open', wraps=rasterio.open) as opened:
+                bt.build(base, output, 12, 13, log=lambda *_: None, native_sources=sources)
+            self.assertEqual([call.args[0] for call in opened.call_args_list], [base])
+            self.assertEqual(read_archive(output)[1]['detail_coverage']['native'], [])
+            bt.build(base, output, 14, 14, log=lambda *_: None, native_sources=sources, coverage_json=sidecar)
+            _, metadata, _, _ = read_archive(output)
+            self.assertEqual(metadata['detail_coverage']['native'],
+                             [{'id': 'synthetic', 'resolution_m': 2, 'cells': 479, 'km2': 0.0019}])
+            self.assertNotIn(str(root), json.dumps(metadata))
+            self.assertNotIn(str(root), sidecar.read_text())
+
+    def test_coverage_json_matches_metadata_and_names_archive(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, output, sidecar = (root / n for n in ('base.tif', 'a.pmtiles', 'coverage.json'))
+            write_survey(source)
+            sidecar.write_text('stale')
+            self.assertEqual(bt.main(['--source', str(source), '--output', str(output),
+                                      '--minzoom', '12', '--maxzoom', '12', '--coverage-json', str(sidecar)]), 0)
+            _, metadata, _, _ = read_archive(output)
+            expected = dict(metadata['detail_coverage'], archive=output.name)
+            self.assertEqual(json.loads(sidecar.read_text()), expected)
+            self.assertEqual(sidecar.read_text(), json.dumps(expected, indent=2, sort_keys=True) + '\n')
+            self.assertFalse(list(root.glob('*.part')))
+
+    def test_coverage_json_with_variant_all_is_refused(self):
+        import contextlib
+        import io
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, sidecar = root / 'base.tif', root / 'coverage.json'
+            write_survey(source)
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err), mock.patch.object(bt, 'DEFAULT_OUTPUT', root / 'a.pmtiles'):
+                code = bt.main(['--source', str(source), '--variant', 'all', '--coverage-json', str(sidecar)])
+            self.assertEqual(code, 2)
+            self.assertEqual(len(err.getvalue().strip().splitlines()), 1)
+            self.assertIn('--coverage-json', err.getvalue())
+            self.assertEqual(sorted(p.name for p in root.iterdir()), ['base.tif'])
 
 
 class EnhancementTests(unittest.TestCase):
@@ -299,7 +452,7 @@ class EnhancementTests(unittest.TestCase):
         spread = {}
         for variant in bt.ENHANCE:
             pixels = self.render(variant, window, invalid)
-            self.assertTrue((pixels[:, :28, 3] == 0).all())     # no survey stays transparent
+            self.assertTrue((pixels[:, :40 - bt.ENHANCED_PAD, 3] == 0).all())     # no survey stays transparent
             self.assertTrue((pixels[:, 40:, 3] == 255).all())
             spread[variant] = pixels[100:150, 60:200, :3].astype(float).sum(axis=2).std()
         self.assertLess(spread['base'], spread['medium'])
@@ -332,6 +485,44 @@ class EnhancementTests(unittest.TestCase):
         step_within = np.abs(a[:, -2, :3].astype(int) - a[:, -1, :3].astype(int)).mean()
         self.assertLess(step_across, step_within * 1.6 + 2)
 
+    def test_neighbouring_tiles_compute_the_same_edge_pixels(self):
+        # MB-02: the halo is wider than every kernel, so a tile's edge column and the same ground column
+        # in its neighbour's halo (warped from one georeferenced surface, with a survey hole at the edge)
+        # come out within 2/255 of each other.
+        from rasterio.crs import CRS
+        from rasterio.warp import transform as warp_points
+        crs = CRS.from_epsg(3310)
+        n = 800
+        yy, xx = np.mgrid[0:n, 0:n] * 10.0
+        surface = (-40 - 0.01 * xx + 3 * np.sin(xx / 90.0) * np.cos(yy / 70.0)
+                   + 1.5 * np.sin((xx + yy) / 37.0)).astype('float32')
+        transform = from_origin(196000.0, -486000.0, 10, 10)
+        z = 13
+        lon, lat = warp_points(crs, 'EPSG:4326', [200000.0], [-490000.0])
+        xs, ys = bt.tile_range((lon[0], lat[0], lon[0], lat[0]), z)
+        x, y = xs.start, ys.start
+        a_grid, _ = bt.tile_grid(z, x, y, pad=0)
+        edge_x, edge_y = a_grid * (bt.TILE, bt.TILE // 2)        # middle of the shared east edge, EPSG:3857
+        ex, ey = warp_points('EPSG:3857', crs, [edge_x], [edge_y])
+        row, col = int((-486000.0 - ey[0]) // 10), int((ex[0] - 196000.0) // 10)
+        surface[row - 3:row + 3, col - 2:col + 1] = NODATA       # no survey right at the tile join
+        for variant in ('medium', 'strong'):
+            enhance = bt.ENHANCE[variant]
+            pad = bt.pad_for(enhance)
+            windows = {}
+            for key in ((x, y), (x + 1, y)):
+                window, ground = bt.warp_window(surface, transform, crs, z, *key, pad)
+                windows[key] = (window, (window == NODATA) | ~np.isfinite(window), ground)
+            style, shaded, median = bt.zoom_shading(windows, z, enhance)
+            a, b = (bt.window_rgba(windows[k][0], windows[k][1], shaded[k], median, style, enhance)
+                    .astype(int) for k in ((x, y), (x + 1, y)))
+            core = slice(pad, pad + bt.TILE)
+            self.assertTrue((a[core, pad + bt.TILE - 1, 3] == 0).any())    # the hole reaches the edge column
+            for mine, theirs in ((a[core, pad + bt.TILE - 1], b[core, pad - 1]),     # A's last core column
+                                 (b[core, pad], a[core, pad + bt.TILE])):            # B's first core column
+                self.assertTrue(np.array_equal(mine[:, 3], theirs[:, 3]), variant)
+                self.assertLessEqual(int(np.abs(mine[:, :3] - theirs[:, :3]).max()), 2, variant)
+
     def test_outputs_are_named_so_the_public_build_guard_catches_them(self):
         names = {v: bt.output_for(v).name for v in bt.ENHANCE}
         self.assertEqual(names['base'], 'morro-bay-seafloor-deep.pmtiles')
@@ -361,6 +552,145 @@ class EnhancementTests(unittest.TestCase):
 
 
 class NativeTierTests(unittest.TestCase):
+    def test_locked_native_zoom_and_core_support(self):
+        """Without certification, valid native cores qualify z14/15 but never z16/17."""
+        from rasterio.warp import Resampling, reproject
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root / 'base.tif'
+            write_survey(base, size=120, west_nodata=0)
+            for resolution, depth, masked, expected_max in (
+                (1, -10, False, 15), (0.995, -10, False, 15), (1, -10, True, 13),
+                (2, -10, False, 15), (5, -10, False, 15),
+            ):
+                with self.subTest(resolution=resolution, depth=depth, masked=masked):
+                    size = int(600 / resolution)
+                    values = np.full((size, size), depth, dtype='float32')
+                    # A 150 m support patch, surrounded by land/deep whose average looks shallow.
+                    values[:, size // 4:] = np.where(np.arange(size - size // 4) % 2, 40, -60)
+                    transform = from_origin(-121800, -288200, resolution, resolution)
+                    path = root / 'native.tif'
+                    valid = np.full(values.shape, 0 if masked else 255, dtype='uint8')
+                    with rasterio.open(path, 'w', driver='GTiff', width=size, height=size, count=1,
+                                       dtype='float32', crs='EPSG:3310', transform=transform, nodata=NODATA) as ds:
+                        ds.write(values, 1)
+                        ds.write_mask(valid)
+                    manifest = root / 'native.json'
+                    manifest.write_text(json.dumps([{'id': 'fixture', 'path': str(path),
+                                                     'resolution_m': resolution}]))
+                    sources = bt.load_native_manifest(manifest)
+                    output = root / 'deep.pmtiles'
+                    self.assertEqual(bt.main(['--source', str(base), '--output', str(output),
+                                              '--minzoom', '13', '--native-manifest', str(manifest)]), 0)
+                    header, metadata, tiles, _ = read_archive(output)
+                    self.assertEqual(header['maxzoom'], expected_max)
+                    self.assertEqual(metadata['maxzoom'], expected_max)
+                    self.assertFalse(any(t >= sum(4 ** i for i in range(18)) for t in tiles))
+                    # Independent full-source warp of the validity/depth mask, no production
+                    # window/halo/mask_native helper: exact emitted core IDs and tile counts.
+                    for z in (14, 15, 16, 17):
+                        xs, ys = bt.tile_range(sources[0]['bounds'], z)
+                        limit = 20 if z > 15 else 91.44
+                        keep = (valid != 0) & (values <= 0) & (values >= -limit)
+                        support_values = np.where(keep, values, NODATA).astype('float32')
+                        expected = set()
+                        if z <= 15:
+                            for x in xs:
+                                for y in ys:
+                                    dest = np.full((256, 256), NODATA, dtype='float32')
+                                    tile_transform, _ = bt.tile_grid(z, x, y, pad=0)
+                                    reproject(support_values, dest, src_transform=transform, src_crs='EPSG:3310',
+                                              src_nodata=NODATA, dst_transform=tile_transform, dst_crs='EPSG:3857',
+                                              dst_nodata=NODATA, resampling=Resampling.average)
+                                    count = int(np.count_nonzero(dest != NODATA))
+                                    if count:
+                                        expected.add(bt.tile_id(z, x, y))
+
+                        start, end = sum(4 ** i for i in range(z)), sum(4 ** i for i in range(z + 1))
+                        self.assertEqual({t for t in tiles if start <= t < end}, expected)
+                        if z <= 15:  # attempted zoom: row is mandatory
+                            detail = metadata['native_support_by_zoom'][str(z)]
+                            self.assertEqual(detail['tiles'], len(expected))
+                            self.assertEqual(detail['sources'], ([{'id': 'fixture', 'resolution_m': resolution,
+                                                                  'tiles': len(expected)}]
+                                                                if expected else []))
+                    assert_attempted_zoom_rows(self, metadata, 13, 15)
+                    # Explicit requests cannot promote coarse/background grids beyond their cap.
+                    bt.build(base, output, 13, 18, log=lambda *_: None, native_sources=sources)
+                    self.assertEqual(read_archive(output)[0]['maxzoom'], expected_max)
+            bt.build(base, output, 13, 18, log=lambda *_: None)
+            self.assertEqual(read_archive(output)[0]['maxzoom'], 13)
+            original = output.read_bytes()
+            self.assertEqual(bt.main(['--source', str(base), '--output', str(output), '--maxzoom', '18']), 2)
+            self.assertEqual(output.read_bytes(), original)
+
+    def test_certification_vetoes_single_uncertified_cells_and_honours_source_cap(self):
+        """A nearest/any-class-3 warp can miss one bad cell; check the actual PMTiles IDs."""
+        from rasterio.warp import transform_bounds
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base, fine, support, manifest, output = (root / n for n in
+                ('base.tif', 'fine.tif', 'support.tif', 'native.json', 'out.pmtiles'))
+            write_survey(base, size=4, west_nodata=0)  # outside the near-equator native clip
+            # 2x2 z16 tiles with a collar. Each bad source cell occupies a different
+            # z16 tile and z17 child, far from the tile edges.
+            x, y = 32768, 32768
+            tile, _ = bt.tile_grid(16, x, y, pad=0)
+            span = bt.TILE * tile.a
+            clip = transform_bounds('EPSG:3857', 'EPSG:4326', tile.c, tile.f - 2 * span,
+                                    tile.c + 2 * span, tile.f)
+            transform = from_origin(tile.c - 10, tile.f + 10, 1, 1)
+            size = int(2 * span) + 21
+            grid = dict(driver='GTiff', width=size, height=size, count=1, crs='EPSG:3857', transform=transform)
+            depth = np.full((size, size), -20, dtype='float32')
+            depth[int(span) + 30, 30] = -20.01  # class 3 below the nominal depth limit
+            classes = np.full(depth.shape, 3, dtype='uint8')
+            classes[30, 31] = 1  # this cell is touched but missed by z16 nearest-neighbour sampling
+            classes[30, int(span) + 30] = 2
+            with rasterio.open(fine, 'w', **grid, dtype='float32', nodata=NODATA) as ds:
+                ds.write(depth, 1)
+            with rasterio.open(support, 'w', **grid, dtype='uint8', nodata=0) as ds:
+                ds.write(classes, 1)
+            args = ['--source', str(base), '--output', str(output), '--native-manifest', str(manifest),
+                    '--variant', 'base', '--minzoom', '15', '--maxzoom', '17', '--clip-bounds', *map(str, clip)]
+            entry = {'id': '1m', 'path': str(fine), 'resolution_m': 1, 'support_path': str(support)}
+
+            def run(*entries):
+                manifest.write_text(json.dumps(entries))
+                self.assertEqual(bt.main(args), 0)
+                return read_archive(output)[:3]
+
+            def zoom_ids(tiles, z):
+                start, end = sum(4 ** i for i in range(z)), sum(4 ** i for i in range(z + 1))
+                return {tid for tid in tiles if start <= tid < end}
+
+            header, meta, tiles = run(entry)
+            self.assertEqual(header['maxzoom'], 17)
+            self.assertEqual(meta['bounds'], list(clip))
+            self.assertEqual(header['bounds'], [round(v, 7) for v in clip])
+            self.assertEqual(zoom_ids(tiles, 15), {bt.tile_id(15, x // 2, y // 2)})  # native collar outside clip
+            self.assertLess(meta['detail_coverage']['native'][0]['cells'], size ** 2)
+            self.assertEqual(zoom_ids(tiles, 16), {bt.tile_id(16, x + 1, y + 1)})
+            rejected = {(2 * x, 2 * y), (2 * x + 2, 2 * y), (2 * x, 2 * y + 2)}
+            self.assertEqual(zoom_ids(tiles, 17), {bt.tile_id(17, tx, ty) for tx in range(2 * x, 2 * x + 4)
+                             for ty in range(2 * y, 2 * y + 4) if (tx, ty) not in rejected})
+            rows = meta['native_support_by_zoom']
+            self.assertEqual([rows[str(z)]['omitted_uncertified'] for z in (16, 17)], [3, 3])
+
+            # No sidecar, or a provenance cap, cannot certify. The 1m source's cap of 16
+            # must hold even when the other entry keeps z17 in the attempt range.
+            header, meta, tiles = run(dict(entry, support_path=None))
+            self.assertEqual(header['maxzoom'], 15)
+            self.assertFalse(zoom_ids(tiles, 16) | zoom_ids(tiles, 17))
+            rows = meta['native_support_by_zoom']
+            self.assertEqual([rows[str(z)]['omitted_uncertified'] for z in (16, 17)], [4, 16])
+            header, meta, tiles = run(dict(entry, max_zoom=16), dict(entry, id='0-unknown', support_class_cap=2))
+            self.assertEqual(header['maxzoom'], 16)
+            self.assertEqual(zoom_ids(tiles, 16), {bt.tile_id(16, x + 1, y + 1)})
+            self.assertFalse(zoom_ids(tiles, 17))
+            self.assertEqual(meta['native_support_by_zoom']['17']['omitted_uncertified'], 16)
+
     def test_feather_is_monotonic_without_a_false_ridge_and_keeps_holes(self):
         coarse = np.full((120, 160), -30, dtype='float32')
         native = np.full(coarse.shape, NODATA, dtype='float32')

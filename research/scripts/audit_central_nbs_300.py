@@ -9,8 +9,18 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import sys
 
-from research.scripts.audit_nbs_modeling_tile import audit
+
+def audit(scheme, tile, cache, *, fetch=False, limit_ft=300):
+    # Import the GIS stack only when screening a tile, not when importing this module.
+    from research.scripts.audit_nbs_modeling_tile import audit as audit_tile
+
+    return audit_tile(scheme, tile, cache, fetch=fetch, limit_ft=limit_ft)
+
+
+CENTRAL_SECTORS = frozenset({'monterey-sur', 'big-sur', 'sur-san-simeon'})
+EXIT_INCOMPLETE = 3
 
 
 def digest(path):
@@ -22,10 +32,19 @@ def build(review, scheme, cache, *, workers=4, fetch=False):
         raise ValueError('A pinned central coast camera-tile review is required')
     if review.get('scheme_sha256') != digest(scheme) or review.get('failed_tiles'):
         raise ValueError('The source review or tile scheme is incomplete or changed')
+    if review.get('coast') != 'central':
+        raise ValueError('The source review must declare the central coast')
+    review_sectors = review.get('sectors')
+    if not review_sectors or {sector.get('sector_id') for sector in review_sectors} != CENTRAL_SECTORS:
+        raise ValueError('The source review sectors do not match the central coast sectors')
     expected = {}
     sectors = {}
-    for sector in review['sectors']:
+    for sector in review_sectors:
         sector_id = sector['sector_id']
+        if sector_id in sectors:
+            raise ValueError('Duplicate sector ' + sector_id)
+        if not sector['reviewed_tiles']:
+            raise ValueError('No reviewed tiles for sector ' + sector_id)
         sectors[sector_id] = []
         for item in sector['reviewed_tiles']:
             tile = item['tile']
@@ -35,6 +54,12 @@ def build(review, scheme, cache, *, workers=4, fetch=False):
                 raise ValueError('Conflicting pinned source for ' + tile)
             expected[tile] = pair
             sectors[sector_id].append(tile)
+
+    if not expected:
+        raise ValueError('The source review lists no tiles to screen')
+    for key in ('requested_unique_tiles', 'audited_unique_tiles'):
+        if review.get(key) != len(expected):
+            raise ValueError(f'The source review {key} does not match its reviewed tiles')
 
     def screen(tile):
         row = audit(scheme, tile, cache, fetch=fetch, limit_ft=300)
@@ -51,11 +76,12 @@ def build(review, scheme, cache, *, workers=4, fetch=False):
                 results[tile] = job.result()
             except Exception as error:
                 failures[tile] = type(error).__name__ + ': ' + str(error)
+    complete = bool(expected) and not failures and len(results) == len(expected)
     return {
         'schema_version': 1,
         'scope': 'central-nbs-300ft-original-source-screen',
         'reviewed_at': datetime.now(timezone.utc).isoformat(timespec='seconds'),
-        'status': 'complete-source-screen' if not failures else 'incomplete-source-screen',
+        'status': 'complete-source-screen' if complete else 'incomplete-source-screen',
         'depth_ft': [25, 300],
         'scheme_sha256': digest(scheme),
         'source_review_sha256': None,
@@ -77,7 +103,7 @@ def build(review, scheme, cache, *, workers=4, fetch=False):
     }
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--review', type=Path, default=Path('research/receipts/nbs-central-gap-all-camera-tiles-review.json'))
     parser.add_argument('--scheme', type=Path, required=True)
@@ -85,7 +111,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--workers', type=int, default=4)
     parser.add_argument('--fetch', action='store_true')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if not 1 <= args.workers <= 8:
         raise ValueError('workers must be 1–8')
     result = build(json.loads(args.review.read_text()), args.scheme, args.cache,
@@ -96,7 +122,8 @@ def main():
     temporary.write_text(json.dumps(result, indent=2) + '\n')
     temporary.replace(args.output)
     print(result['status'], result['screened_unique_tiles'], '/', result['requested_unique_tiles'])
+    return 0 if result['status'] == 'complete-source-screen' else EXIT_INCOMPLETE
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

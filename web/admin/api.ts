@@ -62,6 +62,7 @@ export interface Funnel {
   contacts: {new: number; sources: string[]; by_day: {day: string; total: number; by_source: Record<string, number>}[]};
   messages: {inbound: number; by_intent: {intent: string; count: number}[]};
   replies: {outbound: number; contacts: number; per_contact: number | null};
+  unconfirmed_replies: {held: number; sending: number; unknown: number; other: number; pending: number};   // SCA-214
   return_rate: {active: number; returning: number; rate: number | null};
   boats: {verified: number; verified_total: number; pending: number; reports_published: number; boats_reporting: number; reports_per_boat: number | null};
   photos: {submitted: number; approved: number};
@@ -138,7 +139,11 @@ export function queuePath(status: string, kind: string, cursor?: string | null):
 }
 
 export const getQueue = (status: string, kind: string, cursor?: string | null): Promise<QueuePage> => call(queuePath(status, kind, cursor));
-export const getHealth = (): Promise<Health> => call('/api/admin/health');
+export async function getHealth(): Promise<Health> {
+  const health = await call<Health>('/api/admin/health', {redirect: 'error'});
+  if (health?.enabled !== true || typeof health.checked_at !== 'string') throw new Error('Invalid admin health response');
+  return health;
+}
 export const decide = (id: string, body: DecisionBody): Promise<DecisionResult> =>
   call(`/api/admin/reviews/${encodeURIComponent(id)}`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
 
@@ -198,13 +203,11 @@ export function fleetPath(path: string, query: Record<string, string | null | un
 }
 export const getFleet = <T>(path: string, query?: Record<string, string | null | undefined>): Promise<T> => call(fleetPath(path, query));
 export const postFleet = <T>(path: string, data: unknown): Promise<T> => postJson(fleetPath(path), data);
-/**
- * Whether the fleet admin is on (CF-31). Every /api/admin/fleet/* path answers 404 while
- * FLEET_ENABLED is off (server/routes/fleet.ts), so the open-review list answering is the flag.
- */
+/** Only the private, no-content capability response enables Fleet navigation. */
 export async function getFleetEnabled(): Promise<boolean> {
-  try { await getFleet('reviews', {status: 'open'}); return true; }
-  catch (e) { if (e instanceof ApiError && (e.status === 404 || e.status === 401)) return false; throw e; }
+  const response = await fetch(fleetPath('capability'), {credentials: 'same-origin', redirect: 'error'});
+  if (response.status === 401 || response.status === 403) throw new ApiError(response.status, `HTTP ${response.status}`);
+  return response.status === 204;
 }
 
 // ---- CF-31: fleet reviews and vessels (server/fleet/admin/reviews.ts, vessels.ts) ----

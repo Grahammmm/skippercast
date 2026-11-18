@@ -13,12 +13,13 @@ const BAD = {
   'missing strings': {}, 'null strings': {strings: null}, 'scalar strings': {strings: 7},
   'string strings': {strings: 'x'}, 'array strings': {strings: [{en: 'a', es: 'b'}]}, 'empty strings': {strings: {}},
 };
-const SENTINEL = {en: 'EN-KEEP\n', es: 'ES-KEEP\n', landing: 'LANDING-KEEP\n'};
+const SENTINEL = {en: 'EN-KEEP\n', es: 'ES-KEEP\n', landing: 'LANDING-KEEP\n', status: 'STATUS-KEEP\n'};
 
 async function fixture(catalogueText, present = true) {
   const root = await mkdtemp(join(tmpdir(), 'catalogue-shape-'));
   await mkdir(join(root, 'catalog/app'), {recursive: true});
   await mkdir(join(root, 'web/landing'), {recursive: true});
+  await mkdir(join(root, 'dist'), {recursive: true});
   await writeFile(join(root, 'catalog/app/strings.json'), catalogueText);
   if (present) for (const key of Object.keys(OUTPUTS)) await writeFile(join(root, OUTPUTS[key]), SENTINEL[key]);
   return {root, base: pathToFileURL(root + '/')};

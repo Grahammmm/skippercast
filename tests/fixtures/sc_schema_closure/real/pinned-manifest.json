@@ -26,11 +26,11 @@
     },
     {
       "path": "schemas/coverage.schema.json",
-      "sha256": "9b2b423c7dca7d66e39cf059d298c0a171354d40732a6d6e8ab0c647f4b95a91"
+      "sha256": "5eebd2c569ee42fc849ffda193f93918e744f0614de547046f7835a303cc17a6"
     },
     {
       "path": "schemas/daily-feed.schema.json",
-      "sha256": "3cd44970a2c0b4627719a995333da38fb1689dd27ebca6259e0f608552a19040"
+      "sha256": "b29dc55327715352e204325bfcf468440810a28d8a4849b3a94da96282bb1c73"
     },
     {
       "path": "schemas/data-needs.schema.json",
@@ -102,7 +102,7 @@
     },
     {
       "path": "schemas/source.schema.json",
-      "sha256": "b2c1301d87fddb2be8cfca10795742bcf02a74a9b36913153ee23bce9052f6b6"
+      "sha256": "ebebab58c20d093c1133565030970f15f32a5b0129814176303b526448721865"
     },
     {
       "path": "schemas/sources-catalog.schema.json",

@@ -3,6 +3,7 @@
 from datetime import date, datetime, timezone
 import hashlib
 import html
+from html.parser import HTMLParser
 import math
 import re
 from urllib.parse import urljoin
@@ -71,12 +72,14 @@ def charter_reports(body, day, url, *, ports):
             count_match = re.match(r"([\d,]+)\s+(.+)", part)
             if not count_match:
                 continue
-            label = re.sub(r"\([^)]*\)", "", count_match[2]).strip()
+            raw_label = count_match[2]
+            released_annotation = re.search(r"\(\s*Released?\s*\)", raw_label, re.I)
+            label = re.sub(r"\([^)]*\)", "", raw_label).strip()
+            label, released_suffix = re.subn(r"\s+Released?$", "", label, flags=re.I)
             key = species_id(label)
             if not key:
                 continue
-            disposition = "released" if re.search(r"release", label, re.I) else "reported"
-            label = re.sub(r"\s+Released?\b", "", label, flags=re.I).strip()
+            disposition = "released" if released_annotation or released_suffix else "reported"
             catches.append({"species": key, "label": label, "count": int(count_match[1].replace(",", "")),
                             "disposition": disposition})
         # A blank or changed count cell must not silently become a zero catch.
@@ -276,9 +279,23 @@ def watch_content_v4(body):
     cleaned = re.sub(r"<(script|style)\b[^>]*>.*?</\1>", "", body, flags=re.S | re.I)
     mains = re.findall(r"<main\b[^>]*>(.*?)</main>", cleaned, flags=re.S | re.I)
     scope = mains[0] if len(mains) == 1 else cleaned
-    links = sorted({html.unescape(value) for _, value in re.findall(r'''<a\b[^>]*?\bhref\s*=\s*(["'])(.*?)\1''', scope, re.I | re.S)
+    collector = _AnchorHrefs()
+    collector.feed(scope)
+    links = sorted({value for value in collector.hrefs
                     if value and not value.startswith(('#', 'javascript:', 'mailto:', 'tel:'))})
     return plain(scope) + '\nDOCUMENT LINKS\n' + '\n'.join(links)
+
+
+class _AnchorHrefs(HTMLParser):
+    """Collect the real href attribute of each <a> start tag (never data-href or attribute text)."""
+
+    def __init__(self):
+        super().__init__()
+        self.hrefs = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            self.hrefs.extend(value for name, value in attrs if name == "href" and value is not None)
 
 
 def watch_content(body):

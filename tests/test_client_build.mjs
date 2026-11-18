@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {execFile} from 'node:child_process';
-import {mkdtemp, mkdir, readdir, readFile, rm, writeFile} from 'node:fs/promises';
+import {mkdtemp, mkdir, readdir, readFile, rm, symlink, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {promisify} from 'node:util';
@@ -58,17 +58,82 @@ test('hashName inserts the build id before the extension', () => {
   assert.equal(hashName('index.html', 'abc1234567'), 'index.abc1234567.html');
 });
 
-test('copyStatic never publishes the local-only seafloor Deep archive, its .part file or the tide layer data', async () => {
+test('copyStatic never publishes local-only seafloor .part files or tide layer data', async () => {
   const src = await mkdtemp(join(tmpdir(), 'sc-static-src-'));
   const out = await mkdtemp(join(tmpdir(), 'sc-static-out-'));
   try {
     await mkdir(join(src, 'tiles'));
-    for (const name of ['morro-bay-seafloor-deep.pmtiles', 'morro-bay-seafloor-deep.part', 'morro-bay-seafloor-deep-mild.pmtiles', 'morro-bay-seafloor-deep-strong.part', 'tide-layer-central-coast.json', 'tide-layer-central-coast.part', 'tide-layer-Central_Coast.json', 'tide-layer-Central_Coast.part', 'ok.pmtiles']) await writeFile(join(src, 'tiles', name), 'x');
+    for (const name of ['morro-bay-seafloor-deep.part', 'morro-bay-seafloor-deep-strong.part', 'tide-layer-central-coast.json', 'tide-layer-central-coast.part', 'tide-layer-Central_Coast.json', 'tide-layer-Central_Coast.part', 'socal-survey-habitat.pmtiles']) await writeFile(join(src, 'tiles', name), 'x');
     await copyStatic(src, out);
-    assert.deepEqual(await readdir(join(out, 'tiles')), ['ok.pmtiles']);
+    assert.deepEqual(await readdir(join(out, 'tiles')), ['socal-survey-habitat.pmtiles']);
   } finally {
     await rm(src, {recursive: true, force: true});
     await rm(out, {recursive: true, force: true});
+  }
+});
+
+test('copyStatic refuses local-only seafloor Deep archives rather than silently skipping them', async () => {
+  const src = await mkdtemp(join(tmpdir(), 'sc-static-src-'));
+  const out = await mkdtemp(join(tmpdir(), 'sc-static-out-'));
+  try {
+    await mkdir(join(src, 'tiles'));
+    for (const name of ['morro-bay-seafloor-deep.pmtiles', 'morro-bay-seafloor-deep-mild.pmtiles']) {
+      await writeFile(join(src, 'tiles', name), 'x');
+      await assert.rejects(copyStatic(src, out), new RegExp(name.replace('.', '\\.')));
+      await rm(join(src, 'tiles', name));
+    }
+  } finally {
+    await rm(src, {recursive: true, force: true});
+    await rm(out, {recursive: true, force: true});
+  }
+});
+
+test('copyStatic fails on a *.pmtiles that is not on the allowlist (E2E-13)', async () => {
+  const src = await mkdtemp(join(tmpdir(), 'sc-static-src-'));
+  const out = await mkdtemp(join(tmpdir(), 'sc-static-out-'));
+  try {
+    await mkdir(join(src, 'tiles'));
+    await writeFile(join(src, 'tiles', 'laguna-seafloor-deep-medium.pmtiles'), 'x');
+    await assert.rejects(copyStatic(src, out), /laguna-seafloor-deep-medium\.pmtiles/);
+  } finally {
+    await rm(src, {recursive: true, force: true});
+    await rm(out, {recursive: true, force: true});
+  }
+});
+
+test('copyStatic refuses raw shore snapshots and linked assets (F20-04)', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'sc-static-shore-'));
+  const src = join(root, 'dist'), out = join(root, 'client'), privateDir = join(root, 'var');
+  const marker = 'SYNTHETIC-RAW-SHORE-MARKER';
+  try {
+    await mkdir(join(src, 'data', 'nested'), {recursive: true});
+    await mkdir(privateDir);
+    await writeFile(join(privateDir, 'ccc-access-points.json'), JSON.stringify({Description: marker}));
+    const publicName = 'data/shore-habitat.geojson';
+    const publicBytes = '{"type":"FeatureCollection","features":[]}';
+    await writeFile(join(src, publicName), publicBytes);
+    await copyStatic(src, out);
+    assert.equal(await readFile(join(out, publicName), 'utf8'), publicBytes);
+    assert.deepEqual((await readdir(out, {recursive: true, withFileTypes: true}))
+      .filter(e => !e.isDirectory()).map(e => e.name), ['shore-habitat.geojson']);
+
+    // A stale archive dropped into dist (including a leftover atomic-write file) must fail, not copy.
+    for (const name of ['ccc-access-points.json', 'data/nested/ccc-access-item.json',
+      'data/nested/ccc-access-estero.json', 'data/nested/noaa-esi-shoreline.json',
+      'data/nested/receipts.json', 'data/nested/.ccc-access-points.json.123.tmp']) {
+      const path = join(src, name);
+      await writeFile(path, marker);
+      await assert.rejects(copyStatic(src, out), {message: `refusing to publish ${name}: raw shore source artifact`});
+      await assert.rejects(readFile(join(out, name)), {code: 'ENOENT'});
+      await rm(path);
+    }
+    // A directory link has no raw filename until followed. Do not stage the link itself.
+    await symlink(privateDir, join(src, 'data', 'alias'), 'dir');
+    await assert.rejects(copyStatic(src, out), /refusing to publish data\/alias: symbolic link/);
+    assert.deepEqual((await readdir(out, {recursive: true, withFileTypes: true}))
+      .filter(e => !e.isDirectory()).map(e => e.name), ['shore-habitat.geojson']);
+  } finally {
+    await rm(root, {recursive: true, force: true});
   }
 });
 

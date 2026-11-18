@@ -1,9 +1,10 @@
 """Contract failures that could silently mix regions or overstate data coverage."""
 from copy import deepcopy
+import json
 from pathlib import Path
 import tempfile
 from unittest import TestCase
-from skippercast.platform.contracts import REPO, read_json, load_region, requirement_report, public_url, within
+from skippercast.platform.contracts import REPO, OWNER_DISPLAY_BASIS, load_catalogs, owner_display_cleared, read_json, load_region, requirement_report, public_url, within
 from skippercast.platform.candidate import validate_candidate
 from skippercast.pipeline.settings import settings, previous_for_region
 from skippercast.pipeline.collect import model_loader
@@ -21,6 +22,94 @@ def candidate():
 
 
 class RegionalContracts(TestCase):
+    def test_load_catalogs_validates_explicit_public_display_without_defaulting_legacy_rows(self):
+        source = {
+            'id': 'example-survey', 'documentation_url': 'https://example.org/survey',
+            'needs': ['bathymetry'], 'review_status': 'approved',
+            'rights': {'license': 'public-domain', 'commercial_use': 'allowed', 'attribution_required': False,
+                       'attribution': 'Example producer', 'terms_url': 'https://example.org/terms'},
+        }
+        with tempfile.TemporaryDirectory() as folder:
+            catalog = Path(folder) / 'catalog'
+            catalog.mkdir()
+            (catalog / 'data-needs.json').write_text('{"schema_version":1,"needs":[{"id":"bathymetry"}]}')
+
+            def load(row):
+                (catalog / 'sources.json').write_text(json.dumps({'schema_version': 1, 'sources': [row]}))
+                return load_catalogs(Path(folder))[1]['example-survey']['rights']
+
+            self.assertNotIn('public_display', load(source))
+            for display in ('allowed', 'private', 'excluded'):
+                row = {**source, 'rights': {**source['rights'], 'public_display': display}}
+                self.assertEqual(load(row)['public_display'], display)
+            for display in (True, False, None, [], 'public'):
+                with self.subTest(display=display), self.assertRaisesRegex(ValueError, 'Invalid public_display'):
+                    load({**source, 'rights': {**source['rights'], 'public_display': display}})
+            allowed = {**source, 'rights': {**source['rights'], 'public_display': 'allowed'}}
+            for override in ({'review_status': 'candidate'}, {'publication_allowed': False}):
+                with self.subTest(override=override), self.assertRaisesRegex(ValueError, 'public_display is not cleared'):
+                    load({**allowed, **override})
+            for evidence in ({'attribution': ' '}, {'terms_url': None}):
+                with self.subTest(evidence=evidence), self.assertRaisesRegex(ValueError, 'attribution and terms'):
+                    load({**allowed, 'rights': {**allowed['rights'], **evidence}})
+
+    def test_owner_display_decision_clears_display_only_with_the_g_basis(self):
+        """Contract: the owner's display decision (not an approved review) is what lets a held source be `allowed`.
+
+        Bugs caught: a candidate flipped without the G basis; a restricted source whose publication_allowed:false
+        still vetoes display (or is silently reset to true); an excluded source that the basis flips back on;
+        a basis that is merely present but wrong.
+        """
+        basis = {'decision': 'allowed', 'basis': OWNER_DISPLAY_BASIS}
+        source = {
+            'id': 'example-survey', 'documentation_url': 'https://example.org/survey',
+            'needs': ['bathymetry'], 'review_status': 'candidate',
+            'rights': {'license': 'unresolved', 'commercial_use': 'unknown', 'attribution_required': False,
+                       'attribution': 'Example producer', 'terms_url': 'https://example.org/terms',
+                       'public_display': 'allowed'},
+        }
+        with tempfile.TemporaryDirectory() as folder:
+            catalog = Path(folder) / 'catalog'
+            catalog.mkdir()
+            (catalog / 'data-needs.json').write_text('{"schema_version":1,"needs":[{"id":"bathymetry"}]}')
+
+            def load(row):
+                (catalog / 'sources.json').write_text(json.dumps({'schema_version': 1, 'sources': [row]}))
+                return load_catalogs(Path(folder))[1]['example-survey']
+
+            def decided(row, **decision):
+                return {**row, 'rights': {**row['rights'], 'owner_public_display': {**basis, **decision}}}
+
+            with self.assertRaisesRegex(ValueError, 'public_display is not cleared'):
+                load(source)
+            for bad in ({'basis': 'someone said so'}, {'decision': 'private'}):
+                with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, 'public_display is not cleared'):
+                    load(decided(source, **bad))
+            self.assertEqual(load(decided(source))['rights']['public_display'], 'allowed')
+            restricted = decided({**source, 'review_status': 'restricted', 'publication_allowed': False})
+            held = load(restricted)
+            self.assertEqual(held['rights']['public_display'], 'allowed')
+            self.assertIs(held['publication_allowed'], False)
+            self.assertEqual(held['review_status'], 'restricted')
+            excluded = decided({**source, 'review_status': 'restricted', 'publication_allowed': False,
+                                'rights': {**source['rights'], 'public_display': 'excluded'}})
+            self.assertEqual(load(excluded)['rights']['public_display'], 'excluded')
+            self.assertFalse(owner_display_cleared(excluded['rights'] | {'owner_public_display': {'decision': 'allowed'}}))
+
+    def test_catalog_flips_only_rows_carrying_the_owner_decision(self):
+        """Contract: the committed catalog applies the owner decision as the operative display value.
+
+        Bug caught: an owner_public_display recorded but public_display left private (the PR #2723 RETURN),
+        or the decision widened onto a row that never carried it (MBARI stays excluded).
+        """
+        _, sources = load_catalogs()
+        for ident, source in sources.items():
+            rights = source['rights']
+            if owner_display_cleared(rights):
+                self.assertEqual(rights.get('public_display'), 'allowed', ident)
+        self.assertEqual(sources['mbari-seafloor-mapping']['rights']['public_display'], 'excluded')
+        self.assertNotIn('owner_public_display', sources['mbari-seafloor-mapping']['rights'])
+
     def test_mendocino_preview_withholds_unqualified_fishing_spots(self):
         region = load_region("fort-bragg-point-arena")
         atlas = read_json(REPO / "dist" / region["assets"]["atlas"])

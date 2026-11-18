@@ -82,6 +82,7 @@ const engineFixture = name => read(`./fixtures/advisor/engine/${name}.json`);
 const ALERT_DAY = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Los_Angeles'}).format(new Date(T0));
 function fixtureFeeds() {
   const daily = read('./fixtures/feeds/daily-latest.json'), intel = read('./fixtures/feeds/intelligence.json');
+  daily.generated_at = new Date(T0 - 3600000).toISOString();   // SCA-059: a current feed at T0
   for (const source of Object.values(daily.sources)) for (const a of source?.data?.alerts ?? [])
     for (const k of ['sent', 'effective', 'onset', 'expires', 'ends']) if (typeof a[k] === 'string') a[k] = ALERT_DAY + a[k].slice(10);
   return async url => /intelligence\.json$/.test(url) ? intel : /latest\.json$/.test(url) ? daily : Promise.reject(Error(`no fixture for ${url}`));
