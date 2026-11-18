@@ -414,6 +414,35 @@ class Prefetch:
         modified = head.get('Last-Modified')
         return bool(modified and response.get('Last-Modified') not in (None, modified))
 
+    def finish_receipted_partial(self, row, final, partial, meta_path, record):
+        """Promote a complete .part left by a crash between receipt and rename.
+
+        No request is made and no ranges are stitched. Every identity must agree:
+        reviewed publisher digest (and size, when pinned), URL, final path, the
+        manifest receipt and the partial's own receipt. Anything else returns None
+        so the normal identity/validator checks (and their holds) still apply.
+        """
+        if not (record and row.get('sha256') and partial.is_file() and meta_path.is_file()):
+            return None
+        size = partial.stat().st_size
+        meta = read_json(meta_path)
+        if not (size and (row.get('bytes') is None or row['bytes'] == size)
+                and record.get('bytes') == size and meta.get('bytes') == size
+                and meta.get('total') == size and meta.get('url') == row['url']
+                and record.get('url') == row['url']
+                and record.get('path') == str(final.absolute())
+                and record.get('verification') == 'publisher-sha256'
+                and meta.get('final_url') == record.get('final_url')):
+            return None
+        sha = digest(partial)
+        if not (sha == row['sha256'] == record.get('sha256') == meta.get('sha256')):
+            return None
+        record.update(licence=row['licence'], segments=row['segments'])
+        self.flush_manifest(row['source'])
+        os.replace(partial, final)
+        meta_path.unlink()
+        return size
+
     def fetch(self, row):
         self.guard()
         directory = self.root / row['source']
@@ -433,6 +462,9 @@ class Prefetch:
                 self.flush_manifest(row['source'])
                 return size
             raise Hold(f'Existing final file lacks matching verified receipt; preserve and investigate: {final}')
+        size = self.finish_receipted_partial(row, final, partial, meta_path, record)
+        if size is not None:
+            return size
 
         headers = {'Accept-Encoding': 'identity'}
         head = self.request('HEAD', row['url'], headers=headers, max_bytes=0)
