@@ -9,6 +9,9 @@ Default reserve 250 GiB, cap 250 million cells. Estimated temporary bytes includ
 materialized source grids and COGs/overviews. Reserve is a preflight, not protection
 against concurrent unrelated writers. Failed runs remain for diagnosis.
 
+After any change to this script or another relief stage, run the golden slice
+(`python3 scripts/relief/golden_slice.py`, see `docs/relief-golden-slice.md`).
+
 ## Source/offset table
 
 JSON: schema_version=1, sources=[...]. Each source requires id (unique safe name),
