@@ -62,7 +62,8 @@ test('v2: only screened, unheld, credited features of ledger-screened reaches ar
     assert.deepEqual(f.rights.map(r => r.credit), ['Fixture Survey Lab'], `${f.id} carries its source rights`);
     assert.equal(f.rights[0].policyURL, 'https://example.org/terms');
   }
-  assert.match(admitted[0].basis, /^Habitat candidate, unverified\. Nominal depth \(NAVD88\); verify on your sounder\. Terrain screening of survey fixture-survey-2m, 2010, on a 2 m grid;/);
+  assert.match(admitted[0].basis, /^Habitat candidate, unverified\. Nominal depth \(NAVD88\); verify on your sounder\. Terrain screening of survey data, 2010, on a 2 m grid;/);
+  assert.doesNotMatch(admitted.map(f => f.basis).join(' '), /fixture-survey-2m/, 'MAP-SOURCES-PAGE-1: no survey identifier in any basis; year, grid and datum stay');
   assert.match(admitted[2].basis, /^Measured rough-bottom search area, unranked: .* Nominal depth \(NAVD88\); search with your sounder\./);
   assert.match(admitted[3].basis, /^Publisher-interpreted rugose-rock habitat area, unranked: .* Within the nominal 25–300 ft band \(vertical datum unknown\); verify on your sounder\./);
   // Each gate on its own: a held reach, a held screen, hold reasons, missing rights, an unpublished status.
@@ -76,10 +77,11 @@ test('v2: only screened, unheld, credited features of ledger-screened reaches ar
   const cell = admitCell(cells[0], PUB);
   assert.deepEqual(cell.rights.map(r => r.credit), ['Fixture Survey Lab']);
   assert.match(cell.basis, /coverage only, with no habitat rank\.$/);
-  // #422 FE-14 follow-up: a cell's basis names its survey; year and datum stay unknown (no revision binding on cells).
-  assert.match(cell.basis, /^Surveyed 250 m cell from survey fixture-survey-2m \(year and vertical datum not recorded for this cell\):/);
+  // #422 FE-14 follow-up: a cell's basis keeps year and datum unknown (no revision binding on cells); it names no survey (MAP-SOURCES-PAGE-1).
+  assert.match(cell.basis, /^Surveyed 250 m cell \(year and vertical datum not recorded for this cell\):/);
+  assert.doesNotMatch(cell.basis, /fixture-survey-2m/, 'no survey identifier in the cell basis');
   assert.equal(cell.survey.year, 'unknown');
-  assert.match(cellBasis('unknown'), /from an unnamed survey \(year and vertical datum not recorded/);
+  assert.equal(cellBasis('unknown'), cellBasis('fixture-survey-2m'), 'the cell basis does not depend on the survey id');
   assert.equal(admitCell(cells[0], {...PUB, rights: publicationRights({source_attribution: ['x']})}), null, 'cells need the publication\'s credits and use notice');
 });
 

@@ -86,16 +86,16 @@ const sid = (key: string): StringId => `mark.layer.seafloor.${key}` as StringId;
 const known = (v: string | number, word: StringId = 'mark.layer.unknown'): CopyVar => v === 'unknown' ? {id: word} : v;
 const SIZE: StringId = 'mark.layer.unknownSize';
 /**
- * A coverage cell's basis: the survey it names (#422 FE-14 follow-up). The public cell carries no year, datum or
- * revision, and a shared survey id in loaded habitat does not prove the same source revision, so both stay unknown.
+ * A coverage cell's basis (#422 FE-14 follow-up). The public cell carries no year, datum or revision, so those stay
+ * unknown. It names no survey: survey identifiers are not shown on the map (MAP-SOURCES-PAGE-1), only the
+ * measurement and uncertainty facts. `sourceId` is kept so callers and the cell record are unchanged.
  */
-export function cellBasis(sourceId: string): string {
-  const survey = sourceId === 'unknown' ? 'an unnamed survey' : `survey ${sourceId}`;
-  return `Surveyed 250 m cell from ${survey} (year and vertical datum not recorded for this cell): at least a quarter of its provisional reference band has valid original survey depth; coverage only, with no habitat rank.`;
+export function cellBasis(_sourceId?: string): string {
+  return 'Surveyed 250 m cell (year and vertical datum not recorded for this cell): at least a quarter of its provisional reference band has valid original survey depth; coverage only, with no habitat rank.';
 }
 
-/** The cell basis as catalogue parts (SC0922-10): the named or the unnamed sentence. */
-export const cellBasisCopy = (sourceId: string): MarkCopyPart[] => [sourceId === 'unknown' ? cp(sid('basis.cellUnnamed')) : cp(sid('basis.cellNamed'), {id: sourceId})];
+/** The cell basis as catalogue parts (SC0922-10). */
+export const cellBasisCopy = (_sourceId?: string): MarkCopyPart[] => [cp(sid('basis.cell'))];
 
 /** A habitat feature that may draw, with its basis and rights, or null for anything held, unscreened or uncredited. */
 export function admitHabitat(feature: TileFeature, pub: Publication): SeafloorFeature | null {
@@ -109,18 +109,17 @@ export function admitHabitat(feature: TileFeature, pub: Publication): SeafloorFe
   if (!rights.length) return null;
   const kind = KINDS[status]!, d = habitatDetails(p);
   const survey = {id: d.source.ids[0] ?? 'unknown', year: d.source.year};
-  const grid = `survey ${survey.id}, ${survey.year}, on a ${d.source.resolution} grid`;
+  const grid = `survey data, ${survey.year}, on a ${d.source.resolution} grid`;
   const coarse = Number(p.resolution_m) > 4 ? ' Broad area, not an individual pile.' : '';
   const basis = kind === 'candidate'
     ? `${HABITAT_LABEL}. Nominal depth (${d.source.datum}); verify on your sounder.${coarse} Terrain screening of ${grid}; fish presence is unverified.`
     : kind === 'search'
       ? `Measured rough-bottom search area, unranked: surrounding measurements cannot support a terrain grade. Nominal depth (${d.source.datum}); search with your sounder. From ${grid}; fish presence is unverified.`
-      : `${d.title}, unranked: terrain grade and species fit are unknown. Within the nominal 25–300 ft band (vertical datum ${d.source.datum}); verify on your sounder. From the publisher's interpretation of ${d.source.ids.join(' and ') || 'its survey'}; fish presence is unverified.`;
-  const where = {id: known(survey.id), year: known(survey.year), resolution: known(d.source.resolution, SIZE)}, datum = known(d.source.datum);
+      : `${d.title}, unranked: terrain grade and species fit are unknown. Within the nominal 25–300 ft band (vertical datum ${d.source.datum}); verify on your sounder. From the publisher's interpretation of its survey; fish presence is unverified.`;
+  const where = {year: known(survey.year), resolution: known(d.source.resolution, SIZE)}, datum = known(d.source.datum);
   const basisCopy = [kind === 'candidate' ? cp(sid(coarse ? 'basis.candidateCoarse' : 'basis.candidate'), {datum, ...where})
     : kind === 'search' ? cp(sid('basis.search'), {datum, ...where})
-      : cp(sid('basis.interpreted'), {title: {id: sid(d.classifiedBedrock ? 'title.bedrock' : 'title.rugose')}, datum,
-        surveys: d.source.ids.length ? d.source.ids.flatMap((x: string, i: number) => i ? [{id: 'mark.layer.and' as StringId}, x] : [x]) : {id: sid('itsSurvey')}})];
+      : cp(sid('basis.interpreted'), {title: {id: sid(d.classifiedBedrock ? 'title.bedrock' : 'title.rugose')}, datum})];
   return {id, kind, reach, properties: p, geometry: feature.geometry, survey, basis, basisCopy, rights};
 }
 

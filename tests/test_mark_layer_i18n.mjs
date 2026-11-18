@@ -176,7 +176,7 @@ test('seafloor_all_evidence_states: full Spanish caveats, raw rights, and nothin
   assert.equal(c.kind, 'Calificación del terreno A · afinidad del hábitat para lingcod: 3 de 3');
   assert.equal(c.reading, '41–90 ft nominales');
   assert.equal(c.source, 'Levantado en 2010 · cuadrícula de 2 m');
-  assert.equal(c.basis, 'Candidato de hábitat, sin verificar. Profundidad nominal (MLLW); verifícala con tu ecosonda. Evaluación del terreno del levantamiento s1, 2010, en una cuadrícula de 2 m; la presencia de peces no está verificada.'
+  assert.equal(c.basis, 'Candidato de hábitat, sin verificar. Profundidad nominal (MLLW); verifícala con tu ecosonda. Evaluación del terreno de los datos del levantamiento, 2010, en una cuadrícula de 2 m; la presencia de peces no está verificada.'
     + ' Solo para planificar. No es una carta de navegación. Revisa el reglamento vigente de CDFW.', 'no source credit on the card (Sources page); default notice translated');
   assert.equal(es('candidate fit unknown').kind, 'Calificación del terreno A · afinidad para cabezon desconocida');
   assert.equal(es('candidate terrain').kind, 'Calificación del terreno A');
@@ -189,24 +189,24 @@ test('seafloor_all_evidence_states: full Spanish caveats, raw rights, and nothin
   assert.equal(none.kind, 'Calificación del terreno desconocida');
   assert.equal(none.reading, 'Profundidad desconocida');
   assert.equal(none.source, 'Levantado en desconocido · cuadrícula de tamaño desconocido');
-  assert.match(none.basis, /Profundidad nominal \(desconocido\); verifícala con tu ecosonda\. Evaluación del terreno del levantamiento desconocido, desconocido, en una cuadrícula de tamaño desconocido;/);
+  assert.match(none.basis, /Profundidad nominal \(desconocido\); verifícala con tu ecosonda\. Evaluación del terreno de los datos del levantamiento, desconocido, en una cuadrícula de tamaño desconocido;/);
   const search = es('search');
   assert.equal(search.name, 'Área de búsqueda de fondo irregular medido');
   assert.equal(search.kind, 'Área de búsqueda de fondo irregular · sin calificar');
-  assert.match(search.basis, /^Área de búsqueda de fondo irregular medido, sin calificar: las mediciones circundantes no permiten asignar una calificación del terreno\. Profundidad nominal \(MLLW\); busca con tu ecosonda\. Del levantamiento s1, 2010, en una cuadrícula de 2 m; la presencia de peces no está verificada\./);
+  assert.match(search.basis, /^Área de búsqueda de fondo irregular medido, sin calificar: las mediciones circundantes no permiten asignar una calificación del terreno\. Profundidad nominal \(MLLW\); busca con tu ecosonda\. De los datos del levantamiento, 2010, en una cuadrícula de 2 m; la presencia de peces no está verificada\./);
   const bedrock = es('interpreted bedrock');
   assert.equal(bedrock.name, 'Área de hábitat de roca expuesta interpretada por el editor');
   assert.equal(bedrock.reading, 'Dentro de la franja nominal de 25–300 ft');
-  assert.match(bedrock.basis, /^Área de hábitat de roca expuesta interpretada por el editor, sin calificar: se desconocen la calificación del terreno y la afinidad para las especies\. Dentro de la franja nominal de 25–300 ft \(datum vertical MLLW\); verifícalo con tu ecosonda\. De la interpretación del editor de s1 y s2; la presencia de peces no está verificada\./);
+  assert.match(bedrock.basis, /^Área de hábitat de roca expuesta interpretada por el editor, sin calificar: se desconocen la calificación del terreno y la afinidad para las especies\. Dentro de la franja nominal de 25–300 ft \(datum vertical MLLW\); verifícalo con tu ecosonda\. De la interpretación del editor de su levantamiento; la presencia de peces no está verificada\./);
   assert.equal(es('interpreted rugose, no survey').name, 'Área de hábitat de roca rugosa interpretada por el editor');
   assert.match(es('interpreted rugose, no survey').basis, /De la interpretación del editor de su levantamiento; la presencia/);
   const cell = es('cell named');
   assert.deepEqual([cell.name, cell.kind, cell.reading], ['Celda de 250 m levantada', 'Cobertura de levantamiento · sin calificación de hábitat', 'No se indica profundidad para esta celda']);
   assert.equal(cell.source, 'Año y datum vertical no registrados para esta celda');
-  assert.match(cell.basis, /^Celda de 250 m levantada a partir del levantamiento csumb-test-2m \(año y datum vertical no registrados para esta celda\): al menos una cuarta parte de su franja de referencia provisional tiene profundidades válidas del levantamiento original; solo cobertura, sin calificación de hábitat\. Solo para planificar\./);
+  assert.match(cell.basis, /^Celda de 250 m levantada \(año y datum vertical no registrados para esta celda\): al menos una cuarta parte de su franja de referencia provisional tiene profundidades válidas del levantamiento original; solo cobertura, sin calificación de hábitat\. Solo para planificar\./);
   assert.doesNotMatch(cell.basis, /Pub Credit/, 'MAP-SOURCES-PAGE-1: no source credit on the card');
   assert.equal(es('cell unnamed').source, 'Año y datum vertical no registrados para esta celda');
-  assert.match(es('cell unnamed').basis, /a partir de un levantamiento sin nombre \(año/);
+  assert.doesNotMatch(es('cell unnamed').basis + cell.basis, /csumb-test-2m|sin nombre|levantamiento [a-z0-9]+-/, 'MAP-SOURCES-PAGE-1: no survey identifier in the cell basis');
   for (const k of ['candidate fit 3', 'search', 'interpreted bedrock', 'cell named']) assert.doesNotMatch(Object.values(es(k)).join(' '), /hotspot|chance|bite|catch rate|productive|best spot/i);
   // A feature built by hand (no metadata) shows its original English in either language.
   const legacy = seafloorMark({...admit({}), basisCopy: undefined}, 'terrain');
