@@ -11,11 +11,10 @@ loaded with ``skippercast.fleet.config``):
 - **In port** means inside any harbor geofence of the region (even-odd ray
   casting from ``config.point_in_polygon``; no GIS dependency).
 - A trip **departs** at the first position outside every geofence after the
-  vessel has been in port, and **returns** at the first position of a stay
-  inside any geofence that is held for ``in_port_debounce_min`` (the next
-  position outside comes at least that long after the first one inside, or
-  the data ends inside after that long). A shorter dip into a geofence does
-  not end the trip; ``classify`` labels it ``in-port``.
+  vessel has been in port, and **returns** at the first position of a run of
+  fixes in the same harbor once a later fix in that run spans at least
+  ``in_port_debounce_min``. A shorter dip into a geofence does not end the
+  trip; ``classify`` labels it ``in-port``.
 - If the positions start at sea the trip has no departure port and is emitted
   ``truncated`` (its start is unknown).
 - A silence at sea longer than ``gap_split_hours`` after which the vessel is next
@@ -298,30 +297,24 @@ def split_trips(positions: Iterable[AisPosition], ports: Sequence[Geofence], thr
         # At sea (in a trip).
         prev = current[-1] if current else None
         if port is not None:
-            if prev is not None and p.ts - prev.ts > split_ms:
+            if prev is not None and where[i - 1] is None and p.ts - prev.ts > split_ms:
                 # Long silence, next seen in port: close at the last position, truncated.
                 trips.append(_make_trip(current, ports, depart_port, None, current[0].ts, prev.ts, "truncated"))
                 in_port, current, last_port = True, [], port
                 i += 1
                 continue
-            # A stay inside: held for the debounce?
+            # Only observed fixes in this harbor count toward the debounce.
             j = i
-            while j + 1 < n and where[j + 1] is not None:
+            while j + 1 < n and where[j + 1] == port:
                 j += 1
-            held_until = rows[j + 1].ts if j + 1 < n else rows[j].ts
-            if held_until - p.ts >= debounce_ms:
+            if j > i and rows[j].ts - p.ts >= debounce_ms:
                 status = "truncated" if started_unknown else "closed"
                 start = current[0].ts if current else p.ts
                 if current:
                     # Only a closed trip (known departure, confirmed return) counts its return leg.
                     trips.append(_make_trip(current, ports, depart_port, port, start, p.ts, status,
                                             return_fix=p if status == "closed" else None))
-                in_port, current, last_port = True, [], where[j]
-                i = j + 1
-                continue
-            if j + 1 >= n:
-                # The data ends inside before the debounce: the trip is still open.
-                current.extend(rows[i:j + 1])
+                in_port, current, last_port = True, [], port
                 i = j + 1
                 continue
             current.extend(rows[i:j + 1])
