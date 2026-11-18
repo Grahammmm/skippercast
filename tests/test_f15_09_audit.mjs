@@ -1,17 +1,16 @@
-// SCA-585 / F15-09: among comparable same-station tide products, selected-time eligibility is tested before the newest
+// SCA-585 / SCA-438 / F15-09: among comparable same-station tide products, selected-time eligibility is tested before the newest
 // retrieval is preferred. Offline synthetic fixture; no network, no real station data.
-// Valid controls must satisfy the contract. The affected control is only *observed* (diagnostic): the test neither
-// asserts the gap is desirable nor fails when it is fixed. A synthetic negative control proves the detector.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import catalog from '../catalog/station-locations.json' with {type: 'json'};
 import {stationPins} from '../web/map/station-model.ts';
 
 const NOW = new Date('2026-10-20T18:00:00Z'), HOUR = 3_600_000;
 const ago = h => new Date(+NOW - h * HOUR).toISOString();
-const region = {id: 'fixture', stations: {tide: '9412553'}};
-const product = (id, patch) => ({id, kind: 'prediction', name: id, url: 'https://example.test', status: 'ok', station: '9412553', checked_at: ago(1), ...patch,
-  data: {station: '9412553', units: 'ft', note: 'Synthetic curve.', ...patch.data}});
+const STATION = 'fixture-tide';
+const region = {id: 'fixture', stations: {tide: STATION}};
+const county = {tideStation: {id: STATION, note: 'Synthetic county report.'}, buoys: [], temperatureStationId: 'fixture-buoy'};
+const product = (id, patch) => ({id, kind: 'prediction', name: id, url: 'https://example.test', status: 'ok', station: STATION, checked_at: ago(1), ...patch,
+  data: {station: STATION, units: 'ft', note: 'Synthetic station feed.', ...patch.data}});
 const ev = (h, v, type) => ({time: ago(h), height_ft: v, type});
 // Newest retrieval, but its coverage starts after the selected time (NOW).
 const NEWER_OUT = product('newer-out', {checked_at: ago(1), data: {datum: 'MSL', coverage_start: ago(-10), coverage_end: ago(-30),
@@ -23,39 +22,40 @@ const OLDER_OUT = product('older-out', {checked_at: ago(20), data: {datum: 'MLLW
   predictions: [ev(-40, 1, 'L'), ev(-50, 4, 'H')]}});
 const OLDER_FRESH = {...OLDER_OK, status: 'ok', checked_at: ago(2), data_retrieved_at: undefined, last_success_at: undefined};
 
-const reading = (...sources) => stationPins({region, catalog, feed: {region_id: 'fixture', sources: Object.fromEntries(sources.map(s => [s.id, s]))}, now: NOW, at: NOW})
-  .find(p => p.key === 'coops:9412553').mark.reading;
+const pin = (sources, report = null) => stationPins({region, catalog: {stations: {}},
+  feed: {region_id: region.id, sources: Object.fromEntries(sources.map(s => [s.id, s]))}, now: NOW, at: NOW, report, county: report ? county : null})
+  .find(p => p.key === `coops:${STATION}`);
 
-// Contract: an eligible product is shown with its OWN time, datum and state; with none eligible, no tide value is shown.
-function contract(text, eligible) {
-  if (!eligible) return /unavailable/i.test(text) && !/Tide (high|low) event:|Tide prediction:/.test(text);
-  const m = text.match(/Tide [a-z ]+: [\d.]+ ft (\S+) · valid (\S+); retrieved (\S+) · (fresh|stale)( \/ last good)?/);
-  return !!m && m[1] === eligible.datum && m[2] === eligible.valid && m[3] === eligible.fetched && m[4] === eligible.state && !!m[5] === eligible.lastGood;
+// Height, type, datum, sample time, retrieval time, and freshness must all come from the selected product.
+function expectReading({mark, stale}, value, valid, fetched, freshness) {
+  assert.ok(mark.reading.startsWith(`Tide ${value} · valid ${valid}; retrieved ${fetched} · ${freshness} · coverage `), mark.reading);
+  assert.equal(stale, freshness.startsWith('stale'));
 }
 
 test('valid controls satisfy the contract', () => {
-  // single eligible product
-  assert.ok(contract(reading(OLDER_FRESH), {datum: 'MLLW', valid: ago(-1), fetched: ago(2), state: 'fresh', lastGood: false}), reading(OLDER_FRESH));
-  // newer product that also covers the time stays preferred, with its own datum
+  expectReading(pin([OLDER_FRESH]), 'high event: 4.0 ft MLLW', ago(-1), ago(2), 'fresh');
   const newerOk = {...NEWER_OUT, data: {...NEWER_OUT.data, coverage_start: ago(5), coverage_end: ago(-5), predictions: [ev(5, 1, 'L'), ev(-1, 5, 'H'), ev(-5, 2, 'L')]}};
-  assert.ok(contract(reading(newerOk, OLDER_OK), {datum: 'MSL', valid: ago(-1), fetched: ago(1), state: 'fresh', lastGood: false}), reading(newerOk, OLDER_OK));
-  // neither qualifies: omitted, no borrowed value
-  assert.ok(contract(reading(NEWER_OUT, OLDER_OUT), null), reading(NEWER_OUT, OLDER_OUT));
+  expectReading(pin([OLDER_OK, newerOk]), 'high event: 5.0 ft MSL', ago(-1), ago(1), 'fresh');
 });
 
-test('checker detects the stated gap on synthetic readings', () => {
-  // independent negative control: fabricated text, no dependence on the station model
-  const older = {datum: 'MLLW', valid: ago(-1), fetched: ago(30), state: 'stale', lastGood: true};
-  assert.equal(contract(`Tide high event: 4.0 ft MLLW · valid ${ago(-10)}; retrieved ${ago(30)} · stale / last good`, older), false, 'older datum/retrieval/state with a borrowed newer event time must be detected');
-  assert.equal(contract('Tide prediction unavailable for selected time; retrieved X', older), false, 'unavailable while an older product qualifies must be detected');
-  assert.equal(contract(`Tide high event: 4.0 ft MSL · valid ${ago(-1)}; retrieved ${ago(1)} · fresh`, older), false, 'borrowed newer datum/time must be detected');
-  assert.equal(contract(`Tide high event: 4.0 ft MLLW · valid ${ago(-1)}; retrieved ${ago(30)} · stale / last good`, older), true);
-  assert.equal(contract('Tide prediction unavailable for selected time; retrieved X', null), true);
+test('skip a newer product outside the selected time; omit the value if neither qualifies', () => {
+  expectReading(pin([NEWER_OUT, OLDER_OK]), 'high event: 4.0 ft MLLW', ago(-1), ago(30), 'stale / last good');
+  const {mark, stale} = pin([NEWER_OUT, OLDER_OUT]);
+  assert.match(mark.reading, /^Tide prediction unavailable for selected time;/);
+  assert.doesNotMatch(mark.reading, / ft .* · valid /);
+  assert.equal(stale, true);
 });
 
-test('affected control: baseline observation only (passes before and after a fix)', t => {
-  // Newer out-of-coverage product + older eligible retained product. Expected after a fix: older product with its own
-  // retrieval time, MLLW datum and "stale / last good". Not asserted, so a correct fix needs no edit here.
-  const text = reading(NEWER_OUT, OLDER_OK);
-  t.diagnostic(`newer out-of-coverage + older eligible: contractHolds=${contract(text, {datum: 'MLLW', valid: ago(-1), fetched: ago(30), state: 'stale', lastGood: true})} reading=${text}`);
+test('coverage alone is insufficient: skip a newer curve gap or an event list with no next event', () => {
+  for (const predictions of [[ev(4, 8), ev(-4, 9)], [ev(4, 8, 'L'), ev(1, 9, 'H')]]) {
+    const gap = {...NEWER_OUT, data: {...NEWER_OUT.data, coverage_start: ago(5), coverage_end: ago(-5), predictions}};
+    expectReading(pin([gap, OLDER_OK]), 'high event: 4.0 ft MLLW', ago(-1), ago(30), 'stale / last good');
+    assert.match(pin([gap, OLDER_OUT]).mark.reading, /^Tide prediction gap;/);
+  }
+});
+
+test('the bound county-report curve can win over an ineligible station-feed event product', () => {
+  const report = {tides: [{at: ago(4), heightFt: 1}, {at: ago(1), heightFt: 2.5}, {at: ago(-4), heightFt: 3}],
+    tideEvents: [{at: ago(-1), heightFt: 7, type: 'H'}], sources: [{kind: 'prediction', fetchedAt: ago(40), outcome: 'ok'}]};
+  expectReading(pin([NEWER_OUT], report), 'prediction: 2.5 ft MLLW', ago(1), ago(40), 'stale');
 });
