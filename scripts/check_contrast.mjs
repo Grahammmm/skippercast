@@ -627,7 +627,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // BF-wcag only adds min-height (24 px target floor) to .text-link, .history-provenance a and .sheet-links a; no paint changed.
   // SC1722-08 only raises the History chart scroller's focus ring to 2 px and adds one .history-measurement-note > summary focus ring; no unfocused paint changed.
   // UXFIX-12 only moves the .chart-overflow:focus-visible ring out of a media block (same 2 px ring, now at all widths); no unfocused paint changed.
-  "panelCss": "4558cd4edb0be1827ef6c00523a05b1c8eae84b0d0d81a93c33d5e12e4c66fa9",
+  // SCA-317: the History disclosure gains a 24 px minimum target height; no paint changes.
+  "panelCss": "8eaf2e7f806030b9c760c2c04cd9e3e232f9e4c56d196fdae005ee6607382e9a",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   // MB-05 recolours light map-only roles, reduces habitat fill opacity and adds contour/no-survey tokens; MB-20 only adds light-theme flow, MPA, swell and contrast colours; chrome text, panel and legend-glass paint stay unchanged.
   "tokensCss": "8f446f0460e526be276e901d15c7b728c62ab28e9adcce82b85148c1a0ae9ed6",

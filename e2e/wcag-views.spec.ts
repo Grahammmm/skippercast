@@ -65,7 +65,7 @@ export async function smallTargets(page: Page): Promise<Finding[]> {
   return page.evaluate(({min}) => {
     const w = window as unknown as {__wcagDescribe: (e: Element) => string; __wcagShown: (e: Element) => boolean; __wcagAll: (s: string) => Element[]};
     const out = new Map<string, {kind: 'target'; rule: string; selector: string}>();
-    for (const el of w.__wcagAll('button, a[href], input:not([type=hidden]), select, [role=button], [role=switch], [role=tab]')) {
+    for (const el of w.__wcagAll('button, a[href], input:not([type=hidden]), select, [role=button], [role=switch], [role=tab], details > summary')) {
       if (!w.__wcagShown(el)) continue;
       const r = el.getBoundingClientRect();
       if (r.width >= min && r.height >= min) continue;
@@ -87,7 +87,7 @@ export async function smallTargets(page: Page): Promise<Finding[]> {
 }
 
 /** Tab through the page (≤40 stops, or until focus returns to a stop already seen or leaves the document): each stop must be
- *  shown and have a drawn outline of at least 2 px (a box-shadow alone no longer counts); the same element twice in a row is a focus trap. */
+ *  shown and have a drawn, non-transparent outline of at least 2 px (a box-shadow alone no longer counts); the same element twice in a row is a focus trap. */
 export async function focusWalk(page: Page): Promise<Finding[]> {
   await page.evaluate(HELPERS);
   await page.evaluate(() => { (window as unknown as {__wcagSeen: Element[]}).__wcagSeen = []; (document.activeElement as HTMLElement | null)?.blur(); });
@@ -100,7 +100,8 @@ export async function focusWalk(page: Page): Promise<Finding[]> {
       if (!el || el === document.body) return null;   // focus left the document
       const seen = w.__wcagSeen.indexOf(el), last = w.__wcagSeen.at(-1) === el;
       w.__wcagSeen.push(el);
-      const cs = getComputedStyle(el), ring = cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 2;
+      const cs = getComputedStyle(el), clear = /^(transparent|rgba\((\s*[\d.]+\s*,){3}\s*0(\.0+)?\s*\)|\w+\(.*\/\s*0(\.0+)?%?\s*\))$/.test(cs.outlineColor.trim()),
+        ring = cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 2 && !clear;   // a fully transparent outline draws nothing
       return {selector: w.__wcagDescribe(el), seen: seen >= 0, trap: last, shown: w.__wcagShown(el), ring};
     });
     if (!s) break;
@@ -191,6 +192,17 @@ test.describe('the gate itself', () => {
       <p><a id="ib" href="#c" style="display:inline-block;width:16px;height:16px">y</a></p>`);
     expect((await smallTargets(page)).map(f => f.selector)).toEqual(['button#tiny', 'a#far', 'a#block', 'a#ib']);
     expect(await page.evaluate(() => document.activeElement === document.body), 'probing focus leaves focus where it was').toBe(true);
+  });
+  test('a native <details> summary is a target: a tiny one fails, a 24 px one does not', async ({page}) => {
+    await page.setContent(`<style>*{margin:0} summary{display:block;padding:0}</style>
+      <details><summary id="tiny" style="width:10px;height:10px"></summary>body</details>
+      <details><summary id="big" style="width:30px;height:30px">more</summary>body</details>`);
+    expect((await smallTargets(page)).map(f => f.selector)).toEqual(['summary#tiny']);
+  });
+  test('focus_walk_rejects_transparent_ring: a fully transparent 2 px outline fails; a drawn one and a translucent one pass', async ({page}) => {
+    await page.setContent(`<style>button:focus{outline:2px solid #08f} .clear:focus{outline:2px solid transparent} .zero:focus{outline:2px solid rgba(0,0,0,0)} .half:focus{outline:2px solid rgba(0,0,0,.5)}</style>
+      <button class="ok">a</button><button class="clear">b</button><button class="zero">c</button><button class="half">d</button>`);
+    expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-indicator', selector: 'button.clear'}, {kind: 'focus', rule: 'focus-indicator', selector: 'button.zero'}]);
   });
   test('the focus walk ends on a cycle, flags missing rings and hidden stops, and fails a trap with its selector', async ({page}) => {
     await page.setContent(`<style>.sr{position:absolute;width:1px;height:1px;overflow:hidden} .sr:focus{position:static;width:auto;height:auto;outline:2px solid}
