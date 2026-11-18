@@ -9,13 +9,13 @@ reviewed) and turns into a failure, to be removed, once the binding exists.
 from copy import deepcopy
 from datetime import datetime, timezone
 import json
-from pathlib import Path
+from tests._support import ROOT
 
 import pytest
 
 from research.scripts import audit_san_miguel_naval_zone as naval
 
-MANIFEST = Path(__file__).resolve().parents[2] / "research" / "catalog" / "san-miguel-naval-danger-zone.json"
+MANIFEST = ROOT / "research" / "catalog" / "san-miguel-naval-danger-zone.json"
 NOW = datetime(2026, 11, 18, tzinfo=timezone.utc)
 
 
