@@ -19,7 +19,10 @@ const input = {region, now: NOW, date: '2026-10-09', stops, unresolved: false, s
 // What a later reader can say about a saved leg. Only an explicit tag counts; an untagged (old) record is unknown.
 const basisOf = l => (l && (l.basis === 'water' || l.basis === 'straight')) ? l.basis : 'unknown';
 // Contract, either outcome: every saved leg carries its basis, or it carries no distance at all (withheld).
-const qualified = l => basisOf(l) !== 'unknown' || !('nm' in l);
+// Qualification = the preview's boundary verdict kept as a historical note (as screened at save time, never a current
+// verdict): {inside, screened} booleans. A basis tag alone is not enough; a straight/water distance also needs it.
+const qualOf = l => (l && l.screen && typeof l.screen.inside === 'boolean' && typeof l.screen.screened === 'boolean') ? 'recorded' : 'none';
+const qualified = l => (basisOf(l) !== 'unknown' && qualOf(l) === 'recorded') || !('nm' in l);
 const contract = legs => legs.length > 0 && legs.every(qualified);
 // Round trip through the JSON the POST body travels as.
 const roundTrip = v => JSON.parse(JSON.stringify(v));
@@ -33,9 +36,11 @@ test('old untagged records read unknown, never water', () => {
 });
 
 test('valid controls satisfy the contract and round-trip both bases', () => {
-  const tagged = roundTrip([{from: 'A', to: 'B', nm: 3.2, minutes: 20, basis: 'water'}, {from: 'B', to: 'C', nm: 4, minutes: 25, basis: 'straight'}]);
+  const sc = {inside: false, name: null, distanceM: null, screened: true};
+  const tagged = roundTrip([{from: 'A', to: 'B', nm: 3.2, minutes: 20, basis: 'water', screen: sc}, {from: 'B', to: 'C', nm: 4, minutes: 25, basis: 'straight', screen: {...sc, inside: true, name: 'Fixture area'}}]);
   assert.ok(contract(tagged));
   assert.deepEqual(tagged.map(basisOf), ['water', 'straight']);
+  assert.deepEqual(tagged.map(l => l.screen.inside), [false, true], 'qualification survives the round trip per leg');
   const withheld = roundTrip([{from: 'A', to: 'B', minutes: 20}]);
   assert.ok(contract(withheld), 'a distance-free leg is acceptable');
 });
@@ -44,6 +49,8 @@ test('checker detects the stated gap on synthetic results', () => {
   // independent negative control: fabricated saved legs, no dependence on buildAlertPlan
   assert.equal(contract([{from: 'A', to: 'B', nm: 3.2, minutes: 20}]), false, 'unqualified distance must be detected');
   assert.equal(contract([{from: 'A', to: 'B', nm: 3.2, minutes: 20, basis: 'water'}, {from: 'B', to: 'C', nm: 4, minutes: 25}]), false, 'one untagged leg must be detected');
+  assert.equal(contract([{from: 'A', to: 'B', nm: 4, minutes: 25, basis: 'straight'}]), false, 'basis tag with lost boundary qualification must be detected');
+  assert.equal(contract([{from: 'A', to: 'B', nm: 4, minutes: 25, basis: 'straight', screen: {}}]), false, 'empty qualification must be detected');
   assert.equal(contract([]), false);
 });
 
@@ -53,5 +60,5 @@ test('affected control: baseline observation only (passes before and after a fix
   // The preview already carries basis per leg (the valid side of the contract).
   assert.deepEqual(r.preview.legList.map(l => l.basis), ['water', 'straight']);
   const saved = roundTrip(r.body.plan.legs);
-  t.diagnostic(`saved legs=${saved.length} keys=${Object.keys(saved[0]).join(',')} bases=${saved.map(basisOf).join(',')} contractHolds=${contract(saved)}`);
+  t.diagnostic(`saved legs=${saved.length} keys=${Object.keys(saved[0]).join(',')} bases=${saved.map(basisOf).join(',')} qualification=${saved.map(qualOf).join(',')} contractHolds=${contract(saved)}`);
 });
