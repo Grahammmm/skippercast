@@ -9,7 +9,6 @@ from pathlib import Path
 import re
 
 from skippercast.paths import repo_root
-from skippercast.platform.contracts import owner_display_cleared
 from skippercast.relief import receipts
 
 RELEASE_SCHEMA = 'sc-relief-release/1'
@@ -116,9 +115,10 @@ def validate_metadata(doc: dict, schema: dict, catalog: dict) -> None:
         rights = registered.get('rights', {})
         license_id = row['rights']['license']
         # A description in the assembly manifest cannot clear a catalog hold.
-        # An explicit publication denial vetoes the release unless the owner's display decision clears it.
+        # An explicit publication denial vetoes the release. The owner's display decision lets a source show
+        # inside its contours; it is not a release authorization and never overrides publication_allowed: false.
         if (_MBARI.search(lineage) or registered.get('review_status') != 'approved'
-                or (registered.get('publication_allowed') is False and not owner_display_cleared(rights))
+                or registered.get('publication_allowed') is False
                 or rights.get('public_display') != 'allowed'
                 or rights.get('license') != license_id or license_id.strip().lower() in _UNKNOWN_LICENSE):
             raise ReleaseError(f'source {sid!r} does not have public display rights')
