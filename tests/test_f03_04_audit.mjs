@@ -31,6 +31,7 @@ for (const [description, fields] of [
   ['person confidence above one', {...clear, person_confidence: 1.1}],
 ]) {
   test(`F03-04: ${description} cannot supply a classification when no fallback is available`, async () => {
+    assert.equal(decideHold(fields), true, 'invalid moderation evidence must hold');
     const {vision, requests} = chain(fields);
     await assert.rejects(vision.classify(image), VisionUnavailable);
     assert.equal(requests(), 1);

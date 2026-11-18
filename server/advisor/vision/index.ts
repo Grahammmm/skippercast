@@ -119,9 +119,9 @@ export function decideAcceptReading(r: Pick<CountBoardReading, 'overall_confiden
   return {accept: r.overall_confidence >= THRESHOLDS.acceptOverall && r.lines.length > 0 && uncertain.length === 0, uncertain};
 }
 
-/** Hold for a human before anything is published (OP-2). */
+/** Hold for a human before anything is published (OP-2); invalid evidence is unknown, not clear. */
 export function decideHold(c: Pick<Classification, 'has_person' | 'person_confidence' | 'nsfw'>): boolean {
-  return (c.has_person && c.person_confidence >= THRESHOLDS.holdPerson) || c.nsfw;
+  return !hasModerationEvidence(c) || (c.has_person && c.person_confidence >= THRESHOLDS.holdPerson) || c.nsfw;
 }
 
 export type FishBand = 'high' | 'medium' | 'ask';
