@@ -10,6 +10,9 @@ The page section ``id="data-sources"`` is built from the reviewed source registe
   provenance map the commercial-use gate already keeps; the two views must agree or generation fails;
 * credits are ``rights.attribution`` verbatim, plus the canonical ``CSUMB_CREDIT`` once, only while a listed source is CSUMB's.
 
+Held rows. A row whose catalogue ``needs`` include an id in ``HELD_NEEDS`` (kelp, until KELP-3) is never listed, live or
+not, and its credit is never printed; that holds even when its ``public_display`` is ``allowed``. The page does not mention it.
+
 Listing rule. A row is listed when ``rights.public_display`` is ``allowed`` (live or not), or when a live layer already
 uses a row that predates the display decision (no ``public_display`` key, no ``publication_allowed: false``). ``private``
 and ``excluded`` rows are never listed, whatever their use. A listed row that no live layer uses sits under "Eligible, not
@@ -54,6 +57,11 @@ RUNTIME_SERVICE_INFO = {
                          'provides': 'Nautical chart display', 'url': 'https://nauticalcharts.noaa.gov/'},
 }
 SERVICE_CREDIT_NOTE = 'see Map and software above'
+
+# Catalogue ``needs`` ids whose rows are held off the page until the named task lands. The task, not this script, owns
+# the credit wording, so a held row prints nothing: no credit, no usage line, no "eligible" line. Releasing a hold is
+# deleting its entry here and regenerating; the register text itself is never edited.
+HELD_NEEDS = {'kelp': 'KELP-3'}
 
 # Layer names for region asset kinds. Presentation only: an unknown kind falls back to its own words.
 LAYER_NAMES = {'ais_evidence': 'AIS evidence', 'commercial_ais': 'Commercial AIS', 'bottom_index': 'Bottom views',
@@ -115,12 +123,23 @@ def is_csumb(row):
     return 'CSUMB' in str(row.get('provider', '')) or 'CSU Monterey Bay' in str(row.get('provider', '')) or str(row.get('id', '')).startswith('csumb-')
 
 
+def held(row):
+    """The release task a row is waiting on, or None. Keyed on the row's own catalogue ``needs``, never on a source id or a credit."""
+    for need in row.get('needs') or ():
+        if need in HELD_NEEDS:
+            return HELD_NEEDS[need]
+    return None
+
+
 def listed(row, live):
     """Display rule (see module docstring). ``private``/``excluded`` never pass, whatever the use.
 
+    A held row (see HELD_NEEDS) never passes either, live or not: nothing about it is printed, no credit and no usage.
     A row without a display decision predates it: it is listed only because a live layer already shows its data to the
     public, so the credit has to be somewhere; an explicit ``publication_allowed: false`` still keeps it off the page.
     """
+    if held(row):
+        return False
     display = (row.get('rights') or {}).get('public_display')
     if display == 'allowed':
         return True

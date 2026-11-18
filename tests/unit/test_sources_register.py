@@ -218,11 +218,32 @@ def test_csumb_credit_is_the_canonical_text_once_and_only_while_csumb_rows_are_l
     assert CSUMB_CREDIT not in hidden and 'data-sources-credits' not in hidden
 
 
-def test_generator_states_no_kelp_credit_of_its_own(tmp_path):
-    """Contract: KELP-3 owns kelp credits. Bug caught: a hand-typed kelp credit in the generator; a kelp row shows only its register attribution."""
-    assert 'kelp' not in (ROOT / 'scripts/build_sources_register.py').read_text().lower()
-    fresh, _ = generated(tmp_path, [row('kelp-src', 'Kelp row', needs=['kelp'])], [region('r1', 'Region One')])
-    assert fresh.count('Credit for kelp-src') == 1
+def test_kelp_rows_are_held_until_kelp_3_and_the_generator_states_no_credit_of_its_own(tmp_path):
+    """Contract: KELP-3 owns kelp credits, so a row needing kelp prints no credit, usage line or eligible line, even when public_display is allowed and a live layer binds it. Bug caught: the credit printed early, or a hand-typed kelp credit or source-id allowlist in the generator."""
+    text = (ROOT / 'scripts/build_sources_register.py').read_text()
+    assert 'Sandoval' not in text and 'cdfw-kelp' not in text  # keyed on catalogue needs, not a copied id or credit
+    assert bsr.HELD_NEEDS == {'kelp': 'KELP-3'}
+    rows = [row('kelp-src', 'Kelp row', needs=['kelp']), row('mixed-src', 'Mixed row', needs=['bathymetry', 'kelp']),
+            row('mpa-src', 'MPA row'), row('cdfw-mpas', 'Bound row')]
+    fresh, summary = generated(tmp_path, rows, [region('r1', 'Region One', bound=True)])
+    assert 'kelp-src' not in fresh and 'mixed-src' not in fresh and 'Kelp row' not in fresh and 'Mixed row' not in fresh
+    assert 'KELP-3' not in fresh and 'kelp' not in section(fresh, 'data-sources-live').lower()
+    assert 'Credit for mpa-src' in fresh and 'Credit for cdfw-mpas' in fresh  # other rows are untouched
+    assert summary['eligible_unused'] == 1 and summary['listed_live'] == 1
+    assert bsr.held(rows[0]) == 'KELP-3' and bsr.held(rows[2]) is None
+
+
+def test_real_page_never_prints_the_cdfw_kelp_credit_or_any_kelp_need_row():
+    """Contract: the committed page carries no row that needs kelp (CDFW 2016 canopy, Kelpwatch) and no Sandoval kelp credit before KELP-3. Bug caught: the hold dropped or the page left stale after regeneration."""
+    page = (ROOT / 'dist/sources.html').read_text()
+    block = page[page.index(bsr.BEGIN):page.index(bsr.END)]
+    data = bsr.collect(ROOT)
+    kelp_rows = [source for source in data['sources'].values() if 'kelp' in source['needs']]
+    assert kelp_rows
+    for source in kelp_rows:
+        assert f"<strong>{bsr._esc(source['name'])}</strong>" not in block, source['id']
+        assert bsr._esc(source['rights']['attribution']) not in block, source['id']
+    assert 'Sandoval' not in block and 'aerial kelp canopy' not in block
 
 
 # ---- drift guards on the real repository ----------------------------------------------------------------------------
@@ -234,7 +255,9 @@ def test_every_displayable_real_source_is_on_the_page_and_no_private_one_is():
     for ident, source in data['sources'].items():
         display = source['rights'].get('public_display')
         mark = f"<strong>{bsr._esc(source['name'])}</strong>"
-        if display == 'allowed':
+        if bsr.held(source):
+            assert mark not in page, ident  # held until its release task (kelp: KELP-3)
+        elif display == 'allowed':
             assert mark in page, ident
             assert f"Credit: {bsr._esc(source['rights']['attribution'])}" in page, ident
         elif display in ('private', 'excluded'):
