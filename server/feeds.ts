@@ -28,6 +28,70 @@ type Snapshot = {generation: string; files: Record<string, string>};
 const SNAPSHOTS = new Set(['conditions', 'data', 'forecasts']);
 const HASH = /^[a-f0-9]{64}$/;
 
+/** Fetch, hash-check and parse one release table. Throws on a missing, corrupt or malformed table. */
+async function loadRelease(selected: Pick<R2Bucket, 'get'>, prefix: string, generation: string): Promise<Snapshot & {bytes: number}> {
+  const object = await selected.get(`${prefix}/.r2-releases/${generation}.json`);
+  if (!object) throw Error('Feed release snapshot unavailable');
+  const bytes = await object.arrayBuffer();
+  const actual = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(x => x.toString(16).padStart(2, '0')).join('');
+  if (actual !== generation) throw Error('Feed release snapshot hash mismatch');
+  const snapshot = JSON.parse(new TextDecoder().decode(bytes));
+  if (snapshot?.schema_version !== 1 || !snapshot.files || typeof snapshot.files !== 'object' || Array.isArray(snapshot.files)) throw Error('Invalid feed release snapshot');
+  return {generation, files: Object.freeze(snapshot.files), bytes: bytes.byteLength};
+}
+
+/**
+ * SCA-032: validated release tables shared across requests in this isolate. A table is named by its generation
+ * (the SHA-256 of its bytes), so a held copy is exactly what a refetch would return. Only the table is shared:
+ * the release pointer is still read per operation (rotation and rollback apply at once), every file object is
+ * still read from R2 (a removed object still fails closed), and a file absent from the table is still missing.
+ * Only a table that passed its hash and schema checks is kept; a failure is never kept. Keys carry the bucket's
+ * namespace, the prefix and the generation; a bucket that cannot hold a namespace tag is read uncached.
+ * Bounded by entry count and by total table bytes. Set RELEASE_CACHE_ENTRIES to 0 to roll back (no sharing).
+ */
+export const RELEASE_CACHE_ENTRIES = 8;
+export const RELEASE_CACHE_BYTES = 8 * 1024 * 1024;
+const releases = new Map<string, {table: Promise<Snapshot>; bytes: number}>();
+// The per-request cost meter (cost-ceiling.ts) wraps the bound bucket in a fresh Proxy with only a `get` trap, so
+// own-property definition and lookup reach the bucket itself: the tag names the bucket, not the wrapper.
+const NAMESPACE = Symbol('skippercast.feedReleaseNamespace');
+let namespaces = 0;
+function namespaceOf(selected: object): number | null {
+  try {
+    if (!Object.hasOwn(selected, NAMESPACE)) Object.defineProperty(selected, NAMESPACE, {value: ++namespaces});
+    const id: unknown = Object.getOwnPropertyDescriptor(selected, NAMESPACE)?.value;
+    return typeof id === 'number' ? id : null;
+  } catch { return null; }  // frozen or exotic store: no sharing, same reads as before
+}
+function trimReleases(): void {
+  let total = 0;
+  for (const held of releases.values()) total += held.bytes;
+  for (const [name, held] of releases) {  // oldest (least recently used) first
+    if (releases.size <= RELEASE_CACHE_ENTRIES && total <= RELEASE_CACHE_BYTES) break;
+    releases.delete(name); total -= held.bytes;
+  }
+}
+function releaseTable(selected: Pick<R2Bucket, 'get'>, prefix: string, generation: string): Promise<Snapshot> {
+  const id = RELEASE_CACHE_ENTRIES > 0 ? namespaceOf(selected) : null;
+  if (id === null) return loadRelease(selected, prefix, generation);
+  const name = `${id}/${prefix}/${generation}`, held = releases.get(name);
+  if (held) { releases.delete(name); releases.set(name, held); return held.table; }
+  const entry = {bytes: 0, table: null as unknown as Promise<Snapshot>};
+  entry.table = loadRelease(selected, prefix, generation).then(({bytes, ...table}) => {
+    if (releases.get(name) === entry) {
+      if (bytes > RELEASE_CACHE_BYTES) releases.delete(name);
+      else { entry.bytes = bytes; trimReleases(); }
+    }
+    return table;
+  }, (error: unknown) => {
+    if (releases.get(name) === entry) releases.delete(name);
+    throw error;
+  });
+  releases.set(name, entry);
+  trimReleases();
+  return entry.table;
+}
+
 /** Capture the bucket and pin each prefix once for a multi-file operation. */
 function resolver(selected: Pick<R2Bucket, 'get'> | null) {
   const snapshots = new Map<string, Promise<Snapshot | null>>();
@@ -39,14 +103,7 @@ function resolver(selected: Pick<R2Bucket, 'get'> | null) {
       if (!pointer) return null; // compatible legacy layout, until the first snapshot
       const current = await pointer.json() as ExternalJSON;
       if (current?.schema_version !== 1 || !HASH.test(current?.generation || '')) throw Error('Invalid feed release pointer');
-      const object = await selected.get(`${prefix}/.r2-releases/${current.generation}.json`);
-      if (!object) throw Error('Feed release snapshot unavailable');
-      const bytes = await object.arrayBuffer();
-      const actual = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(x => x.toString(16).padStart(2, '0')).join('');
-      if (actual !== current.generation) throw Error('Feed release snapshot hash mismatch');
-      const snapshot = JSON.parse(new TextDecoder().decode(bytes));
-      if (snapshot?.schema_version !== 1 || !snapshot.files || typeof snapshot.files !== 'object' || Array.isArray(snapshot.files)) throw Error('Invalid feed release snapshot');
-      return {generation: current.generation, files: snapshot.files};
+      return releaseTable(selected, prefix!, current.generation);
     })());
     const snapshot = await snapshots.get(prefix!)!;
     if (!snapshot) return {key};
