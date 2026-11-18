@@ -57,7 +57,7 @@ export const alertDate = (timeZone: string, now: number = Date.now()): string =>
 
 export type RegionAlerts = {
   id: string; timezone: string; species: string[];
-  forecast_points: {id: string; name: string}[];
+  forecast_points: {id: string; name: string; latitude?: number; longitude?: number}[];
   target_options?: {id: string; name: string; group?: string}[];
 };
 export type SpeciesOption = {id: string; name: string; group: string};
@@ -79,11 +79,15 @@ export const dateRange = (timeZone: string, now: number = Date.now()): {min: str
   return {min, max: new Date(Date.parse(min + 'T12:00:00Z') + 7 * 86400000).toISOString().slice(0, 10)};
 };
 
+/** A real calendar date within the same inclusive range used on Save. */
+export function validAlertDate(date: string, range: {min: string; max: string}): boolean {
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(date) ? Date.parse(date + 'T12:00:00Z') : NaN;
+  return Number.isFinite(day) && new Date(day).toISOString().slice(0, 10) === date && date >= range.min && date <= range.max;
+}
+
 /** What the server would refuse first, in plain words, or null; checked before the form is sent. */
 export function formProblemId(form: AlertForm, range: {min: string; max: string}): StringId | null {
-  const day = /^\d{4}-\d{2}-\d{2}$/.test(form.date) ? Date.parse(form.date + 'T12:00:00Z') : NaN;
-  if (!Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== form.date || form.date < range.min || form.date > range.max)
-    return 'alerts.problem.date';
+  if (!validAlertDate(form.date, range)) return 'alerts.problem.date';
   if (!(form.end_hour > form.start_hour)) return 'alerts.problem.window';
   if (!(form.gust_limit >= form.wind_limit)) return 'alerts.problem.gust';
   return null;
@@ -133,11 +137,12 @@ export const reusedLimits = (fields: Reuse['fields']): 'all' | 'some' | 'none' =
 
 /** The alert form as the fill needs it: its named controls (a real HTMLFormElement's `elements` fits). */
 export type FillableForm = {elements: {namedItem(name: string): {value: string; focus?(): void} | null}};
-/** Puts a reuse's fields into the form's own controls, leaves the date empty for the person to choose and focuses it. Touches only the form: no request, no storage. */
-export function fillAlertForm(form: FillableForm, reuse: Reuse): void {
+export type AlertFields = {[K in keyof Reuse['fields']]: Reuse['fields'][K] | ''};
+/** Fills the form's own controls and focuses Date. Use again leaves the date empty. No request or storage. */
+export function fillAlertForm(form: FillableForm, reuse: {fields: AlertFields}, initialDate = ''): void {
   for (const [name, value] of Object.entries(reuse.fields)) { const control = form.elements.namedItem(name); if (control) control.value = String(value); }
   const date = form.elements.namedItem('date');
-  if (date) { date.value = ''; date.focus?.(); }
+  if (date) { date.value = initialDate; date.focus?.(); }
 }
 
 const OMITTED_TEXT: Readonly<Record<ReuseOmission, StringId>> = {

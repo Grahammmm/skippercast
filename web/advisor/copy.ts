@@ -349,6 +349,12 @@ export const ADMIN_COPY = {
   engagement: 'Engagement',
   inbound: 'Inbound messages',
   repliesSent: 'Replies sent',
+  repliesSentNote: 'Sent means the channel accepted the reply, not that it was delivered or read.',   // SCA-214
+  repliesPending: 'Replies not yet confirmed',
+  repliesHeld: 'Held',
+  repliesSending: 'Sending',
+  repliesUnknown: 'Unknown outcome',
+  repliesOther: 'Other status',
   repliesPerContact: 'Replies per contact',
   returnRate: 'Return rate (active on 2 or more days)',
   boatsSection: 'Boats and reports',
