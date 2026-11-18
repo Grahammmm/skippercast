@@ -2,7 +2,7 @@
 // Contract: approval is bound to an atomic comparison of the displayed label set. A replacement or addition between display and
 // approval returns conflict and approves nothing; an unchanged set approves exactly once.
 // Offline fixture on the real labels.ts and the committed migrations (in-memory node:sqlite). Read-only baseline: it records what
-// approveTrip(db, tripId, owner) does today (it receives only a trip id) and fails if that observation drifts unnoticed.
+// approveTrip does today (it receives only a trip id) and passes once it meets the contract; other drift fails.
 // Protects against: an agent re-importing labels after the owner viewed them and the owner's click relabelling the new set.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -39,8 +39,13 @@ async function approveReviewed(db, tripId, owner, reviewedIds) {
     .bind(owner, APPROVED_PREFIX, tripId, tripId, [...reviewedIds].sort().join(',')).run();
   return result.meta.changes ? {status: 'ok', approved: result.meta.changes} : {status: 'conflict'};
 }
-// Adapter: today's approveTrip receives only the trip id, so the displayed set cannot reach it.
-const approveToday = (db, tripId, owner) => approveTrip(db, tripId, owner).then(r => ({status: r.status, approved: r.value?.approved}));
+// Synthetic defect: relabels every agent proposal on the trip at click time and never looks at the displayed set (the F03-06 shape).
+// It is self-contained, so the negative control keeps working whatever the real handler does.
+async function approveIgnoringDisplayed(db, tripId, owner) {
+  const result = await db.prepare(`UPDATE fleet_segment_labels SET labeller=?,basis=?||labeller||': '||COALESCE(basis,'')
+    WHERE trip_id=? AND labeller LIKE 'agent:%'`).bind(owner, APPROVED_PREFIX, tripId).run();
+  return result.meta.changes ? {status: 'ok', approved: result.meta.changes} : {status: 'conflict'};
+}
 
 // Every way `approve` breaks the contract on the three scenarios (empty list = contract holds).
 async function gaps(approve) {
@@ -68,16 +73,18 @@ test('positive control: approval compared with the displayed set passes all thre
   assert.deepEqual(await gaps(approveReviewed), []);
 });
 
-test('negative control: an approver that ignores the displayed set is detected', {skip}, async () => {
-  const found = await gaps((db, id, owner) => approveToday(db, id, owner));
-  assert.ok(found.some(g => g.startsWith('replacement: ')) && found.some(g => g.startsWith('addition: ')), found.join('; '));
-});
-
-test('baseline: current approveTrip relabels whatever agent labels exist at click time', {skip}, async () => {
-  // Read-only observation of main. If approveTrip gains a reviewed-set parameter it must satisfy the whole contract instead.
-  const found = await gaps((db, id, owner, ids) => approveTrip(db, id, owner, ids).then(r => ({status: r.status, approved: r.value?.approved})));
-  if (approveTrip.length > 3) return assert.deepEqual(found, []);
+test('negative control: a synthetic approver that ignores the displayed set is detected', {skip}, async () => {
+  const found = await gaps(approveIgnoringDisplayed);
   assert.deepEqual(found, [
     'replacement: status ok, not conflict', 'replacement: 1 unseen label(s) approved',
     'addition: status ok, not conflict', 'addition: 3 unseen label(s) approved']);
+});
+
+test('baseline: the real approveTrip either meets the contract or still shows the recorded gap', {skip}, async () => {
+  // Read-only observation of main. The reviewed ids are offered as a fourth argument, which today's handler (trip id and owner only)
+  // ignores. A handler that satisfies the whole contract passes; so does today's observed gap. Any other result is unexplained drift.
+  const found = await gaps((db, id, owner, ids) => approveTrip(db, id, owner, ids).then(r => ({status: r.status, approved: r.value?.approved})));
+  if (found.length) assert.deepEqual(found, [
+    'replacement: status ok, not conflict', 'replacement: 1 unseen label(s) approved',
+    'addition: status ok, not conflict', 'addition: 3 unseen label(s) approved'], 'approveTrip changed but does not meet the contract');
 });
