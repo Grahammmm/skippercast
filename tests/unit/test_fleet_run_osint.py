@@ -3,7 +3,7 @@
 The runner is driven against a fake ``claude`` executable written into a temporary
 directory: it answers ``--version`` and ``auth status``, reads the prompt from stdin,
 records each call (argument list, working directory, environment names) next to itself and
-writes empty profiles for the manifest's boats, or fails, hangs or writes nothing as the
+writes synthetic profiles for the manifest's boats, or fails, hangs or writes nothing as the
 test's plan says. Manifests come from ``agent.manifests`` over invented vessels; nothing
 here reaches the network or a real CLI.
 
@@ -95,8 +95,10 @@ if behaviour == "error-result":
     print(json.dumps({{"type": "result", "subtype": "error_max_turns", "is_error": True, "num_turns": 200}}))
     sys.exit(0)
 if behaviour != "no-profiles":
+    template = json.loads((here / "profile.json").read_text())
     for boat in doc["boats"]:
-        Path(doc["output_dir"], boat["vessel_id"] + ".json").write_text("{{}}")
+        output = dict(template, region=doc["region"], run_id=doc["run_id"], batch_id=batch, vessel_id=boat["vessel_id"])
+        Path(doc["output_dir"], boat["vessel_id"] + ".json").write_text(json.dumps(output))
 record("ends", {{"batch": batch, "end": time.monotonic()}})
 print(json.dumps({{"type": "result", "subtype": "success", "is_error": False, "num_turns": 7, "result": "done",
                   "permission_denials": []}}))
@@ -123,6 +125,19 @@ def vessel(i):
             "vessel_class": "six-pack", "aliases": [], "offerings": [], "last_profiled_at": None}
 
 
+def profile_template():
+    """A schema-valid profile without any account, contact, or location values."""
+    fields = json.loads((ROOT / "schemas/fleet-profile.schema.json").read_text())["properties"]["boat"]
+    boat: dict[str, object] = {
+        key: [] if fields["properties"][key].get("type") == "array" else None for key in fields["required"]
+    }
+    boat.update(social=dict.fromkeys(("instagram", "facebook", "youtube", "tiktok")),
+                catch_reporting={"sources": [], "frequency": None},
+                reputation={"google_rating": None, "google_reviews": None, "other": []},
+                ais=dict.fromkeys(("mmsi", "match_method", "confidence", "last_seen_source", "notes")))
+    return {"schema_version": "1.0.0", "boat": boat, "conflicts": [], "notes": "Synthetic profile"}
+
+
 class Harness:
     """A fleet var with one planned run, a fake claude and the runner's environment."""
 
@@ -143,6 +158,7 @@ class Harness:
         self.claude = self.bin / "claude"
         self.claude.write_text(FAKE.format(python=sys.executable, version=run_osint.CLAUDE_CODE_VERSION))
         self.claude.chmod(0o755)
+        (self.bin / "profile.json").write_text(json.dumps(profile_template()))
         self.environ = {"PATH": f"{self.bin}:{os.environ.get('PATH', '/usr/bin:/bin')}", "HOME": str(self.tmp),
                         "SKIPPERCAST_FLEET_VAR": str(self.var), "CLAUDE_CODE_OAUTH_TOKEN": "test-token-not-real",
                         "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "oidc-request", "ACTIONS_ID_TOKEN_REQUEST_URL": "https://oidc.example/",

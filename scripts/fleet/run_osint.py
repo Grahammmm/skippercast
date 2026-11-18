@@ -12,8 +12,9 @@ session works in the run directory, writes ``profiles/<vessel_id>.json`` and
 ``ingest --profiles <run_dir>/profiles`` then validates and pushes the profiles.
 
 **Resume.** Each batch's status is recorded under ``osint`` in the run's ``state.json``.
-A re-run with the same run id skips ``done`` batches; a batch that fails is retried once
-in the same invocation, and a re-run tries the still-failed ones again.
+A re-run with the same run id skips complete batches. A failed session is retried once
+in the same invocation; a successful but incomplete batch stays ``partial`` until a re-run.
+Both retries and resumes request only boats without valid profiles for this batch.
 
 **Run deadline.** ``--deadline-min`` (300, below ``fleet-osint.yml``'s 360-minute job
 timeout) bounds the whole invocation, so the workflow's Ingest step always runs: no batch
@@ -47,8 +48,8 @@ so the token comes from the environment only. The session's environment is an al
 These flags were checked against ``claude --help`` and the CLI reference for the pinned
 version (``--max-turns`` is documented but not listed by ``--help``).
 
-Exit status: 0 when every batch attempted is done, 1 when any failed after its retry or
-the deadline or a signal stopped the run early (the done ones' profiles can still be
+Exit status: 0 when every batch attempted is done, 1 when any is partial or failed after
+its retry, or the deadline or a signal stopped the run early (validated profiles can still be
 ingested), 2 on a refusal or setup error. Prints
 counts only (no boat names, no agent output): workflow logs are public.
 """
@@ -75,6 +76,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
+from skippercast import validate  # noqa: E402
+from skippercast.fleet import profile  # noqa: E402
 from skippercast.fleet.runs import RUN_ID, fleet_var  # noqa: E402
 
 CLAUDE_CODE_VERSION = "2.1.289"  # npm @anthropic-ai/claude-code; flags below verified against this version
@@ -266,7 +269,8 @@ def command(claude: str, run_dir: Path, cache_dir: Path, agents_file: Path, host
 def prompt(manifest: Path, doc: Mapping[str, Any], summary: Path) -> str:
     return (f"Research the boats in the batch manifest {manifest}. Read it first and follow the manifest contract "
             f"in your instructions: write one profile per boat to {doc['output_dir']}/<vessel_id>.json, validate "
-            f"each with `{VALIDATOR} <file>`, cache fetched pages under {doc['policy']['cache_dir']}, and write the "
+            f"each with `{VALIDATOR} <file>`, leave profiles for boats not in this manifest unchanged, "
+            f"cache fetched pages under {doc['policy']['cache_dir']}, and write the "
             f"batch summary to {summary}. Paths in the manifest that are not absolute (schema, policy.off_limits) "
             f"are relative to {ROOT}. Then reply with your summary.\n")
 
@@ -285,11 +289,36 @@ def load_manifest(path: Path, region: str, run_id: str, run_dir: Path) -> dict:
         problems.append(f"batch_id {doc.get('batch_id')!r} does not match the file name")
     if Path(str(doc.get("output_dir"))).resolve() != (run_dir / "profiles").resolve():
         problems.append("output_dir is not <run_dir>/profiles")
-    if not isinstance((doc.get("policy") or {}).get("cache_dir"), str) or not doc.get("boats"):
-        problems.append("no policy.cache_dir or no boats")
+    if not isinstance((doc.get("policy") or {}).get("cache_dir"), str):
+        problems.append("no policy.cache_dir")
+    boats = doc.get("boats")
+    if not isinstance(boats, list) or not boats or any(
+        not isinstance(b, dict) or not re.fullmatch(r"[0-9a-f]{32}", str(b.get("vessel_id"))) for b in boats
+    ):
+        problems.append("no boats or invalid vessel_id")
     if problems:
         raise ValueError("; ".join(problems))
     return doc
+
+
+def missing_boats(doc: dict, run_dir: Path, hosts: list[str]) -> list[dict]:
+    """Boats without a readable, validated profile bound to this vessel and batch."""
+    missing = []
+    clock = now()
+    for boat in doc["boats"]:
+        vessel_id = boat["vessel_id"]
+        path = run_dir / "profiles" / f"{vessel_id}.json"
+        output = None
+        if not path.is_symlink() and path.is_file():
+            try:
+                output = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                pass  # Absent/unreadable or malformed profiles are work to resume.
+        if (not isinstance(output, dict) or output.get("vessel_id") != vessel_id
+                or any(output.get(key) != doc[key] for key in ("region", "run_id", "batch_id"))
+                or profile.validate_profile(output, hosts) or profile.time_errors(output, clock)):
+            missing.append(boat)
+    return missing
 
 
 class State:
@@ -395,9 +424,14 @@ def _wait(proc: subprocess.Popen, text: str, timeout_s: float) -> tuple[int | No
         return proc.returncode, True
 
 
-def run_batch(path: Path, doc: dict, ctx: dict, state: State) -> bool | None:
-    """True when done, False when failed, None when not started (stopped, or too close to the deadline)."""
+def run_batch(path: Path, doc: dict, ctx: dict, state: State) -> str | None:
+    """Return the recorded status, or None if stopped before starting."""
     batch, run_dir, live = doc["batch_id"], ctx["run_dir"], ctx["live"]
+    boats = len(doc["boats"])
+    missing = missing_boats(doc, run_dir, ctx["hosts"])
+    if not missing:
+        state.update(batch, status="done", finished_at=now(), error=None, boats=boats, profiles=boats, missing=[])
+        return "done"
     remaining = ctx["deadline"] - time.monotonic()
     if live.stop.is_set():
         return None
@@ -411,15 +445,20 @@ def run_batch(path: Path, doc: dict, ctx: dict, state: State) -> bool | None:
     cache_dir.mkdir(parents=True, exist_ok=True)
     summary = run_dir / "summaries" / f"{batch}.md"
     out, err = run_dir / "osint" / f"{batch}.json", run_dir / "osint" / f"{batch}.stderr.log"
+    session_doc = doc
+    if len(missing) < boats:
+        session_doc = {**doc, "boats": missing}
+        path = out.with_suffix(".resume.json")
+        path.write_text(json.dumps(session_doc, indent=2) + "\n", encoding="utf-8")
     cmd = command(ctx["claude"], run_dir, cache_dir, ctx["agents_file"], ctx["hosts"], ctx["max_turns"])
-    code, timed_out = ctx["session"](cmd, prompt(path, doc, summary), run_dir, ctx["env"], out, err, timeout_s,
+    code, timed_out = ctx["session"](cmd, prompt(path, session_doc, summary), run_dir, ctx["env"], out, err, timeout_s,
                                      live=live)
     try:
         result = json.loads(out.read_text(encoding="utf-8") or "{}")
     except (OSError, ValueError):
         result = {}
-    boats = [b["vessel_id"] for b in doc["boats"]]
-    written = [v for v in boats if (run_dir / "profiles" / f"{v}.json").is_file()]
+    missing_ids = sorted(b["vessel_id"] for b in missing_boats(doc, run_dir, ctx["hosts"]))
+    written = boats - len(missing_ids)
     if live.stop.is_set() and (timed_out or code != 0):
         error = f"stopped by {live.reason}"
     elif timed_out and timeout_s < ctx["timeout_s"]:
@@ -431,15 +470,15 @@ def run_batch(path: Path, doc: dict, ctx: dict, state: State) -> bool | None:
         error = f"claude exited {code}"
     elif result.get("is_error") or result.get("subtype") != "success":
         error = f"session ended {result.get('subtype') or 'without a result'}"
-    elif not written:
-        error = "no profiles written"
     else:
         error = None
-    state.update(batch, status="failed" if error else "done", finished_at=now(), exit_code=code, error=error,
-                 boats=len(boats), profiles=len(written), missing=sorted(set(boats) - set(written)),
+    status = "failed" if error else "partial" if missing_ids else "done"
+    state.update(batch, status=status, finished_at=now(), exit_code=code,
+                 error=error or ("no profiles written" if not written else None),
+                 boats=boats, profiles=written, missing=missing_ids,
                  num_turns=result.get("num_turns"), subtype=result.get("subtype"),
                  denials=len(result.get("permission_denials") or ()))
-    return error is None
+    return status
 
 
 def run(region: str, run_id: str, *, claude: str = "claude", parallel: int = DEFAULT_PARALLEL,
@@ -473,13 +512,20 @@ def run(region: str, run_id: str, *, claude: str = "claude", parallel: int = DEF
     state = State(run_dir / "state.json")
     todo, skipped = [], 0
     for path in manifests:
-        if state.batches.get(path.stem, {}).get("status") == "done":
-            skipped += 1
-            continue
         try:
-            todo.append((path, load_manifest(path, region, run_id, run_dir)))
+            doc = load_manifest(path, region, run_id, run_dir)
         except (OSError, ValueError, KeyError) as error:
             state.update(path.stem, status="failed", error=f"invalid manifest: {error}"[:300], finished_at=now())
+            continue
+        if state.batches.get(path.stem, {}).get("status") == "done":
+            # Older runners marked a batch done on file presence alone (or with files missing).
+            missing = missing_boats(doc, run_dir, ctx["hosts"])
+            if not missing:
+                skipped += 1
+                continue
+            state.update(path.stem, status="partial", boats=len(doc["boats"]),
+                         profiles=len(doc["boats"]) - len(missing), missing=sorted(b["vessel_id"] for b in missing))
+        todo.append((path, doc))
     pending = todo[max_batches:] if max_batches is not None else []
     todo = todo[:max_batches] if max_batches is not None else todo
     unstarted: set[str] = set()
@@ -495,16 +541,16 @@ def run(region: str, run_id: str, *, claude: str = "claude", parallel: int = DEF
                     pass
                 results = [future.result() for future in futures]
             unstarted |= {item[0].stem for item, result in zip(todo, results) if result is None}
-            todo = [item for item, result in zip(todo, results) if result is False]
+            todo = [item for item, result in zip(todo, results) if result == "failed"]
     statuses = {p.stem: state.batches.get(p.stem, {}).get("status") for p in manifests}
     values = list(statuses.values())
     stopped = ctx["live"].reason or ("deadline" if ctx["deadline_hit"].is_set() else None)
     counts = {"run_id": run_id, "batches": len(manifests), "skipped_done": skipped,
-              "done": values.count("done"), "failed": values.count("failed"),
+              "done": values.count("done"), "failed": values.count("failed"), "partial": values.count("partial"),
               "not_run": len(pending) + sum(1 for b in unstarted if statuses[b] not in ("done", "failed")),
               "stopped": stopped,
               "profiles": len(list((run_dir / "profiles").glob("*.json")))}
-    return (1 if counts["failed"] or stopped else 0), counts
+    return (1 if counts["failed"] or counts["partial"] or stopped else 0), counts
 
 
 @contextmanager
@@ -573,7 +619,7 @@ def main(argv: list[str] | None = None) -> int:
         code, counts = run(args.region, args.run_id, claude=args.claude, parallel=parallel,
                            max_batches=args.max_batches, timeout_min=args.timeout_min, max_turns=args.max_turns,
                            deadline_min=args.deadline_min, auth_file=args.auth_file)
-    except (Refused, ValueError, OSError) as error:
+    except (Refused, ValueError, OSError, validate.MissingDependency) as error:
         print(f"run_osint: {error}", file=sys.stderr)
         return 2
     print(json.dumps(counts, sort_keys=True))
