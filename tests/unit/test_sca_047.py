@@ -62,15 +62,21 @@ def test_station_rebind_does_not_relabel_failed_observation(live_run, key, suffi
     assert failed["sources"]["offshore"]["status"] == "ok"
 
 
+@pytest.mark.parametrize("has_source_url", [True, False])
 @pytest.mark.parametrize("key", ["diablo", "diablo-spectrum"])
-def test_same_station_and_product_retains_identity_and_original_clocks(live_run, key):
+def test_same_station_and_product_retains_identity_and_original_clocks(live_run, key, has_source_url):
     _, run = live_run
     previous = run(NOW)
+    old = previous["sources"][key]
+    url = old["url"]
+    if not has_source_url:
+        del old["url"]
     failed = run(NOW + timedelta(minutes=30), previous, outage=True)
-    old, row = previous["sources"][key], failed["sources"][key]
+    row = failed["sources"][key]
+    assert row["url"] == url
     assert row["status"] == "retained"
     assert row["data"]["station"] == "00001"
-    for field in ("data", "name", "url", "station_url", "data_retrieved_at", "last_success_at"):
+    for field in ("data", "name", "station_url", "data_retrieved_at", "last_success_at"):
         assert row[field] == old[field]
     assert row["checked_at"] != old["checked_at"]
     assert failed["health"]["status"] == "degraded"

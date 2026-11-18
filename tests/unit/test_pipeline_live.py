@@ -22,14 +22,22 @@ class LiveObservationsTests(TestCase):
         self.assertNotIn('fallback_for', data['sources']['offshore'])
 
     def test_retained_source_is_degraded_not_relabelled_current(self):
-        previous = {'schema_version': 1, 'sources': {'diablo': {'status': 'ok', 'data': {'sample_at': 'old'}}}}
+        stations = {'nearshore_buoy': '00001', 'nearshore_buoy_name': 'Synthetic A',
+                    'offshore_buoy': '00002', 'offshore_buoy_name': 'Synthetic offshore'}
+        previous = {'schema_version': 1, 'sources': {'diablo': {
+            'status': 'ok', 'url': 'https://www.ndbc.noaa.gov/data/realtime2/00001.txt',
+            'data': {'station': '00001', 'sample_at': 'old'},
+        }}}
         def fake_source(ident, name, kind, url, max_age, loader, collected, old):
             if ident == 'diablo':
                 self.assertEqual(old, previous['sources']['diablo'])
                 return {**old, 'status': 'retained'}
             return {'status': 'failed', 'data': None}
-        with patch('skippercast.pipeline.live.source', side_effect=fake_source):
-            data = collect(previous=previous)
+        with (
+            patch('skippercast.pipeline.live.settings', return_value={'region': {'stations': stations}}),
+            patch('skippercast.pipeline.live.source', side_effect=fake_source),
+        ):
+            data = collect(previous=previous, region_id='synthetic')
         self.assertEqual(data['health']['status'], 'degraded')
         self.assertEqual(len(data['health']['issues']), 3)
         self.assertEqual(data['sources']['diablo']['data']['sample_at'], 'old')
