@@ -1,10 +1,11 @@
 """F29-05: contradictory or duplicated outline rows are rejected, whatever their order."""
 import importlib.util
-from pathlib import Path
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parents[2] / "research/scripts/build_monterey_300_review_matrix.py"
+from tests._support import ROOT
+
+SCRIPT = ROOT / "research/scripts/build_monterey_300_review_matrix.py"
 spec = importlib.util.spec_from_file_location("build_monterey_300_review_matrix", SCRIPT)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)

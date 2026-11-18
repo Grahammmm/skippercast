@@ -1,19 +1,20 @@
 """F27-08: a tile is listed as occupied only after an exact polygon hit, not a bbox hit."""
 import importlib.util
 import json
-from pathlib import Path
 from types import SimpleNamespace
 
-import numpy as np
 import pytest
 
+from tests._support import ROOT
+
+np = pytest.importorskip("numpy")
 pytest.importorskip("laspy")
 pytest.importorskip("shapefile")
-pytest.importorskip("pyproj")
+pyproj = pytest.importorskip("pyproj")
 shapely_geometry = pytest.importorskip("shapely.geometry")
-from pyproj import Transformer  # noqa: E402
+Transformer = pyproj.Transformer
 
-SCRIPT = Path(__file__).resolve().parents[2] / "research/scripts/audit_monterey_noaa2612_acoustic_points.py"
+SCRIPT = ROOT / "research/scripts/audit_monterey_noaa2612_acoustic_points.py"
 spec = importlib.util.spec_from_file_location("audit_monterey_noaa2612_acoustic_points", SCRIPT)
 assert spec and spec.loader
 module = importlib.util.module_from_spec(spec)

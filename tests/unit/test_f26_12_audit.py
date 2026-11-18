@@ -5,11 +5,13 @@ from pathlib import Path
 
 import pytest
 
+from tests._support import ROOT
+
 pytest.importorskip("rasterio")
 pytest.importorskip("pyproj")
 pytest.importorskip("shapely")
 
-SCRIPT = Path(__file__).resolve().parents[2] / "research/scripts/assess_native_depth_overlap.py"
+SCRIPT = ROOT / "research/scripts/assess_native_depth_overlap.py"
 spec = importlib.util.spec_from_file_location("assess_native_depth_overlap", SCRIPT)
 assert spec and spec.loader
 module = importlib.util.module_from_spec(spec)
