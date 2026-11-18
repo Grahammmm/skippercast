@@ -23,7 +23,9 @@ PAGES = {blocks_mod.INDEX: b'<a href="OffshoreX/data_catalog_OffshoreX.html">X</
          XML_URL: b'<metadata><bounding><westbc>-122.5</westbc><eastbc>-122.4</eastbc>'
                   b'<southbc>37.2</southbc><northbc>37.4</northbc></bounding></metadata>'}
 INVENTORY = {'scope': 'usgs-state-waters-map-block-links', 'block_count': 1,
-             'blocks': [{'id': 'OffshoreX', 'products': {'bathymetry': [{'metadata_url': XML_URL}]}}]}
+             'health': {'status': 'ok', 'issues': []},
+             'blocks': [{'id': 'OffshoreX', 'catalog_url': CATALOG, 'status': 'ok', 'products': {
+                 'bathymetry': [{'metadata_url': XML_URL, 'archive_url': XML_URL.replace('/metadata/', '/data/').replace('.xml', '.zip')}]}}]}
 # list key -> (module, entry point that takes previous last, row key, leaf URL the fake fetcher can fail)
 SCRIPTS = {'blocks': (blocks_mod, 'discover', 'catalog_url', CATALOG),
            'records': (audit_mod, 'audit', 'metadata_url', XML_URL)}
@@ -34,9 +36,11 @@ def ago(**delta):
 
 
 def fresh(kind, **changes):
-    row = {'id': 'OffshoreX', 'catalog_url': CATALOG, 'products': {}} if kind == 'blocks' else \
-        {'block_id': 'OffshoreX', 'kind': 'bathymetry', 'metadata_url': XML_URL}
-    data = {'schema_version': 1, 'health': {'status': 'ok', 'issues': []}, 'last_complete_scan_at': ago(hours=1), kind: [row]}
+    if kind == 'records':
+        data = audit_mod.audit(INVENTORY, now=datetime.fromisoformat(ago(hours=1)), fetcher=PAGES.__getitem__)
+    else:
+        row = {'id': 'OffshoreX', 'catalog_url': CATALOG, 'products': {}}
+        data = {'schema_version': 1, 'health': {'status': 'ok', 'issues': []}, 'last_complete_scan_at': ago(hours=1), kind: [row]}
     data.update(changes)
     return {key: value for key, value in data.items() if value is not ...}
 

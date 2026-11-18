@@ -20,8 +20,8 @@ LANDING = 'https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9TES
 XML_URL = 'https://cmgds.marine.usgs.gov/data-releases/media/2020/10.5066-P9TEST0/Bathymetry_X_metadata.xml'
 XML = (b'<metadata><bounding><westbc>-122.5</westbc><eastbc>-122.4</eastbc>'
        b'<southbc>37.2</southbc><northbc>37.4</northbc></bounding></metadata>')
-RELEASES = {'scope': 'usgs-state-waters-doi-product-links', 'releases': [
-    {'release_id': 'P9TEST0', 'landing_url': LANDING, 'study_areas': ['X'], 'products': [
+RELEASES = {'scope': 'usgs-state-waters-doi-product-links', 'health': {'status': 'ok', 'issues': []}, 'releases': [
+    {'release_id': 'P9TEST0', 'landing_url': LANDING, 'status': 'ok', 'study_areas': ['X'], 'products': [
         {'kind': 'bathymetry', 'archive_url': XML_URL[:-13] + '.zip', 'metadata_url': XML_URL, 'filename': 'Bathymetry_X.zip'}]}]}
 # list key -> (module, entry point that takes previous last, row key)
 SCRIPTS = {'releases': (doi_mod, 'discover', 'release_id'), 'records': (audit_mod, 'audit', 'metadata_url')}
@@ -32,10 +32,12 @@ def ago(**delta):
 
 
 def fresh(kind, **changes):
-    row = {'release_id': 'P9TEST0', 'doi': 'https://doi.org/10.5066/P9TEST0', 'products': []} if kind == 'releases' else \
-        {'release_id': 'P9TEST0', 'kind': 'bathymetry', 'filename': 'Bathymetry_X.zip', 'metadata_url': XML_URL}
-    data = {'schema_version': 1, 'health': {'status': 'ok', 'issues': []}, 'last_complete_scan_at': ago(hours=1),
-            'additional_sha256': None, kind: [row]}
+    if kind == 'records':
+        data = audit_mod.audit(RELEASES, now=datetime.fromisoformat(ago(hours=1)), fetcher=pages)
+    else:
+        row = {'release_id': 'P9TEST0', 'doi': 'https://doi.org/10.5066/P9TEST0', 'products': []}
+        data = {'schema_version': 1, 'health': {'status': 'ok', 'issues': []}, 'last_complete_scan_at': ago(hours=1),
+                'additional_sha256': None, kind: [row]}
     data.update(changes)
     return {key: value for key, value in data.items() if value is not ...}
 
