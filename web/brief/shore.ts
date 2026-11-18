@@ -5,8 +5,8 @@
 // - Blocked (0): a current protected-area check finds the run or an access point inside.
 // - Hold (0): the protected-area check is not current, the marine alert check is not current
 //   (packages/coast daily.ts: `nws-alerts` fetched OK within 2 h), a marine alert for the area
-//   is in effect or starts within a day, or the county posts a beach-health advisory, closure or
-//   warning for the area (#422: the original Fish shore rules hold for both).
+//   is in effect or starts within a day, or a covered area's county beach-health check is
+//   unavailable or reports an advisory, closure or warning.
 // - No surf model (2): no fresh nearshore model sample covers the area.
 // - Current (3): the protected-area check and nearshore sample are current.
 // The rank orders places to check, not legal permission or a prediction of fish.
@@ -46,8 +46,9 @@ export interface ShoreInputs {
   readonly alertCheck?: boolean;
   /** Marine alerts for the run's area in effect now or within a day (`activeAlerts`), by event name. */
   readonly alerts?: readonly string[];
-  /** The area's beaches under a fresh county advisory, closure or warning (`beachNotices`), by name. */
+  /** The area's beaches under a fresh county advisory, closure or warning, by name. */
   readonly notices?: readonly string[];
+  readonly beachCheck?: 'unsupported' | 'unavailable' | 'clear' | 'notice';
 }
 
 export interface ShoreStatus {
@@ -72,13 +73,17 @@ export const shoreNeverReviewed = (run: Pick<ShoreRunClocks, 'checkedAt' | 'revi
 export const unreviewedNote = (count: number): string =>
   count > 0 ? `${count} shore run${count === 1 ? '' : 's'} not yet reviewed ${count === 1 ? 'is' : 'are'} not shown.` : '';
 
+// Keep this reason in both languages here; this change does not regenerate catalogues.
+const BEACH_CHECK_UNAVAILABLE = {en: 'County beach water-quality check unavailable', es: 'No está disponible la revisión de la calidad del agua de playa del condado'};
+
 /** The run's priority and label at `now`. */
-export function shoreStatus(_run: ShoreRunClocks, {now, inside, conditions, alertCheck = true, alerts = [], notices = []}: ShoreInputs): ShoreStatus {
+export function shoreStatus(_run: ShoreRunClocks, {inside, conditions, alertCheck = true, alerts = [], notices = [], beachCheck}: ShoreInputs): ShoreStatus {
   if (inside && inside.length) return {priority: 0, label: 'Blocked', reasons: [`Inside ${inside.join('; ')}`]};
   const held = [
     ...(inside ? [] : ['Protected-area check not current']),
     ...(alertCheck ? [] : ['Marine alert check not current']),
     ...alerts.map(event => `Marine alert: ${event}`),
+    ...(beachCheck === 'unavailable' ? [BEACH_CHECK_UNAVAILABLE.en] : []),
     ...notices.map(name => `Beach-health notice: ${name}`),
   ];
   if (held.length) return {priority: 0, label: 'Hold', reasons: held};
@@ -119,16 +124,32 @@ export interface ShoreReportPart {
   readonly sources: readonly {readonly id: string; readonly outcome: string; readonly fetchedAt: string}[];
   readonly waterQuality?: readonly ShoreWaterQuality[];
 }
+
+function beachCheckCurrent(report: ShoreReportPart, now: number): boolean {
+  const health = report.sources.find(item => item.id === BEACH_HEALTH_SOURCE);
+  const age = health ? now - Date.parse(health.fetchedAt) : NaN;
+  return health?.outcome === 'ok' && age >= -BEACH_HEALTH_SKEW_MS && age < BEACH_HEALTH_MAX_AGE_MS;
+}
+
+const areaNotices = (report: ShoreReportPart, areaId: string): ShoreWaterQuality[] =>
+  (report.waterQuality ?? []).filter(item => item.areaId === areaId && BEACH_NOTICE_STATUS.test(item.status));
 /**
  * The area's beaches under an advisory, closure or warning, decided as v1 does: from the
  * status, and only while the county source fetched cleanly within 3 h. The advisory text is not
  * the test: the county writes one for open beaches too ("There are no advisory notes at this time.").
  */
 export function beachNotices(report: ShoreReportPart, areaId: string, now: number): ShoreWaterQuality[] {
-  const health = report.sources.find(item => item.id === BEACH_HEALTH_SOURCE);
-  const age = health ? now - Date.parse(health.fetchedAt) : NaN;
-  if (health?.outcome !== 'ok' || !(age >= -BEACH_HEALTH_SKEW_MS && age < BEACH_HEALTH_MAX_AGE_MS)) return [];
-  return (report.waterQuality ?? []).filter(item => item.areaId === areaId && BEACH_NOTICE_STATUS.test(item.status));
+  return beachCheckCurrent(report, now) ? areaNotices(report, areaId) : [];
+}
+
+/** Unlike the notice list alone, this distinguishes a fresh clean check from a lost or unsupported check. */
+export function beachHealthCheck(report: ShoreReportPart | null, regionId: string, areaId: string, now: number):
+  {beachCheck: 'unsupported' | 'unavailable' | 'clear'} | {beachCheck: 'notice'; notices: string[]} {
+  // Match the reviewed county binding in src/skippercast/pipeline/beach_health.py, independent of report contents.
+  if (regionId !== 'morro-bay' || !['north', 'central', 'south'].includes(areaId)) return {beachCheck: 'unsupported'};
+  if (!report || !Array.isArray(report.waterQuality) || !beachCheckCurrent(report, now)) return {beachCheck: 'unavailable'};
+  const notices = areaNotices(report, areaId).map(item => item.name);
+  return notices.length ? {beachCheck: 'notice', notices} : {beachCheck: 'clear'};
 }
 
 /**
@@ -199,13 +220,15 @@ export interface ShoreStatusCopy {readonly reasons: readonly MarkCopyPart[]}
  * The reasons of `status` as catalogue parts, joined by the card with "; ". Rebuilt from the inputs `shoreStatus` was
  * given, in its order; null when the inputs do not reproduce the status (then the reasons stay as written).
  */
-export function shoreStatusCopy({inside, alertCheck = true, alerts = [], notices = []}: Pick<ShoreInputs, 'inside' | 'alertCheck' | 'alerts' | 'notices'>, status: ShoreStatus): ShoreStatusCopy | null {
+export function shoreStatusCopy({inside, alertCheck = true, alerts = [], notices = [], beachCheck}: Pick<ShoreInputs, 'inside' | 'alertCheck' | 'alerts' | 'notices' | 'beachCheck'>, status: ShoreStatus): ShoreStatusCopy | null {
   let reasons: MarkCopyPart[];
   if (status.label === 'Blocked') reasons = [cp(sid('reason.inside'), {areas: (inside ?? []).join('; ')})];
   else if (status.label === 'Hold') {
     reasons = [
       ...(inside ? [] : [cp(sid('reason.mpaNotCurrent'))]), ...(alertCheck ? [] : [cp(sid('reason.alertNotCurrent'))]),
-      ...alerts.map(event => cp(sid('reason.alert'), {event})), ...notices.map(name => cp(sid('reason.notice'), {name})),
+      ...alerts.map(event => cp(sid('reason.alert'), {event})),
+      ...(beachCheck === 'unavailable' ? [BEACH_CHECK_UNAVAILABLE.es] : []),
+      ...notices.map(name => cp(sid('reason.notice'), {name})),
     ];
   } else if (status.label === 'No surf model') reasons = [cp(sid('reason.noSample'))];
   else if (status.label === 'Current') reasons = [cp(sid('reason.current'))];
