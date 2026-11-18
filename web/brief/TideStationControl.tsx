@@ -6,6 +6,9 @@ import {nearestTideStation} from '../tide-stations.ts';
 import {tideSelection as selection} from '../tide-selection.ts';
 import {noticeText, selectionMessage, type TideNotice} from './tide-copy.ts';
 
+// All layouts share the same selection, so an action in one also supersedes a lookup in another.
+let nearestGeneration = 0;
+
 /** Each mounted layout shares the same per-region choice and request state. The control's own statuses are kept as
  * `{id, vars}` and said at render, so a language switch reaches one that is pending or still showing. */
 export function TideStationControl() {
@@ -19,17 +22,19 @@ export function TideStationControl() {
   const stationName = (id: string) => selection.stations.value.find(s => s.id === id)?.name ?? id;
   async function nearest() {
     if (!region) return;
+    const generation = ++nearestGeneration;
+    const isCurrent = () => generation === nearestGeneration && selection.region.peek() === region;
     setBusy(true); setNotice(null);
     try {
       const [rows, ports] = await Promise.all([selection.list(), loadPorts()]);
-      if (selection.region.peek() !== region) return;
+      if (!isCurrent()) return;
       const port = currentPort(ports, region.id, savedPortId());
       const closest = port && nearestTideStation(rows, port.match);
       if (closest) {
         if (selection.choose(closest.id)) { setDraft(null); setNotice({id: 'tideStation.nearest', vars: {port: port!.name, station: closest.name}}); }
       }
       else setNotice({id: 'tideStation.noneAvailable', vars: {}});
-    } catch { setNotice({id: 'tideStation.portFail', vars: {}}); }
+    } catch { if (isCurrent()) setNotice({id: 'tideStation.portFail', vars: {}}); }
     finally { setBusy(false); }
   }
   return <div class="app-tide-station">
@@ -38,21 +43,22 @@ export function TideStationControl() {
       <div role="group" aria-label={t('tideStation.group', lang)}>
         <p>{t('tideStation.saved', lang, {n: selection.saved.value.length})}</p>
         {selection.saved.value.map(id => <div key={id} style={{display: 'flex', flexWrap: 'wrap', gap: '0.25rem'}}>
-          <Button size="sm" pressed={chosen === id} onClick={() => { setNotice(null); setDraft(null); selection.choose(id); }}>{t('tideStation.use', lang, {station: stationName(id)})}</Button>
-          <Button size="sm" variant="quiet" aria-label={t('tideStation.removeAria', lang, {station: stationName(id)})} onClick={() => { setDraft(null); selection.remove(id); setNotice({id: 'tideStation.removed', vars: {station: stationName(id)}}); }}>{t('tideStation.remove', lang)}</Button>
+          <Button size="sm" pressed={chosen === id} onClick={() => { nearestGeneration++; setNotice(null); setDraft(null); selection.choose(id); }}>{t('tideStation.use', lang, {station: stationName(id)})}</Button>
+          <Button size="sm" variant="quiet" aria-label={t('tideStation.removeAria', lang, {station: stationName(id)})} onClick={() => { nearestGeneration++; setDraft(null); selection.remove(id); setNotice({id: 'tideStation.removed', vars: {station: stationName(id)}}); }}>{t('tideStation.remove', lang)}</Button>
         </div>)}
       </div>
       <label>{t('tideStation.predictionLabel', lang)} <select style={{maxWidth: '100%'}} value={candidate} onChange={event => {
         setNotice(null);
         const id = event.currentTarget.value;
         setDraft({region: region.id, id});
-        if (!id) selection.choose(null);
+        if (!id) { nearestGeneration++; selection.choose(null); }
       }}>
         <option value="">{t('tideStation.regionDefault', lang, {region: region.name})}</option>
         {chosen && !station ? <option value={chosen}>{t('tideStation.unavailableOption', lang, {id: chosen})}</option> : null}
         {selection.stations.value.map(s => <option key={s.id} value={s.id}>{s.name} ({s.id})</option>)}
       </select></label>
       <Button size="sm" disabled={!candidate} onClick={() => {
+        nearestGeneration++;
         setNotice(null);
         if (selection.choose(candidate)) { setDraft(null); setNotice({id: 'tideStation.savedActive', vars: {station: stationName(candidate)}}); }
       }}>{t('tideStation.add', lang)}</Button>
