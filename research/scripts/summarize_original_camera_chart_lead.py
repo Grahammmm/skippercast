@@ -24,6 +24,17 @@ BOTTOM_CLASSES = {'rock', 'boulder', 'cobble'}
 # S-57 NATSUR labels from the ENC seabed layers, including comma-separated combinations.
 ENC_NATURES = {'mud', 'clay', 'silt', 'sand', 'stone', 'gravel', 'pebbles',
                'cobbles', 'rock', 'lava', 'coral', 'shells', 'boulder', 'unknown'}
+MAX_SOURCE_TEXT = 2000
+# Shapes a published position can take in prose. Depth, distance and date
+# figures in reviewed reports (18.7 m, 41.5-46.0 m, 1:200,000, 2010) stay legal.
+_POSITION_PATTERNS = tuple(re.compile(p) for p in (
+    r'(?<![\w.])-\d',                              # signed value, e.g. -123.4
+    r'\d{2,3}\.\d{2,}|\d\.\d{3,}',                 # degree-precision decimal
+    r'\d{2,3}\.\d\s*[,;/ ]\s*\d{2,3}\.\d',         # decimal pair
+    r'\d\s*[NSEW]\b|\b[NSEW]\s*\d',                # hemisphere letter with a value
+    r'(?<![\w,])\d{5,}(?![\w,])',                  # bare long digit run (UTM, DMS packed)
+    r'(?i:\b(?:lat|lon|lng|latitude|longitude|easting|northing|utm|mgrs|degrees?|minutes?|seconds?)\b)',
+))
 
 
 # Both summary writers use these validators at the private JSON boundary.
@@ -115,9 +126,13 @@ def _class_counts(value, field):
 
 
 def _source_text(value, field):
-    # Interpretation and hold come from the upstream reviewed survey/report pair.
-    if not isinstance(value, str) or not value.strip() or not value.isprintable() or any(c in value for c in '{}[]'):
-        raise ValueError(f'{field}: expected source review text')
+    # Interpretation and hold come from the upstream reviewed survey/report pair,
+    # but that pair is private input: publish only prose that cannot carry a
+    # position. Fail closed on anything outside the plain-prose grammar below.
+    if (not isinstance(value, str) or not value.strip() or len(value) > MAX_SOURCE_TEXT
+            or not re.fullmatch(r"[A-Za-z0-9 .,;:'’()%/\u2013-]+", value)
+            or any(pattern.search(value) for pattern in _POSITION_PATTERNS)):
+        raise ValueError(f'{field}: expected coordinate-free source review text')
     return value
 
 

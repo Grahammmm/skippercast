@@ -189,6 +189,46 @@ def test_native_rejects_bad_values_in_known_fields(tmp_path, container, field, v
         _native_summary(tmp_path, review)
 
 
+@pytest.mark.parametrize('field', ['survey_report_interpretation', 'survey_fishing_promotion_hold'])
+@pytest.mark.parametrize('text', [
+    'Private point 38.1234, -123.4567',        # the reviewed leak: decimal degrees
+    'Private point 38.1, -123.4',              # coarse signed pair
+    'Private point 38.1 123.4',                # unsigned decimal pair
+    'Located at 38 07 24 N 123 02 W',          # hemisphere letters
+    'Seen at 38\N{DEGREE SIGN}07.4 near the reef',
+    'Easting 500000 northing 4200000',
+    'Lat 38 lon 123',
+    'Private point {"latitude": 38}',
+    'Line one\nline two',
+    'x' * 2001,
+])
+def test_camera_source_text_rejects_positions_in_private_prose(field, text):
+    # Protects: the published summary stays coordinate-free even though the
+    # private review's prose fields are free text. Bug: accepting any printable
+    # string publishes a pasted coordinate verbatim.
+    review = _camera_review()
+    review[field] = text
+    with pytest.raises(ValueError, match=field):
+        summarize_camera(review)
+
+
+def test_camera_source_text_keeps_reviewed_receipt_prose():
+    # Protects: the stricter fail-closed grammar still admits every committed
+    # reviewed interpretation/hold (depths, distances, dates, 1:200,000), so
+    # re-publication does not silently drop evidence.
+    texts = []
+    for path in sorted(Path('research/receipts').glob('*.json')):
+        data = json.loads(path.read_text(encoding='utf-8'))
+        if isinstance(data, dict) and 'survey_report_interpretation' in data:
+            texts += [data['survey_report_interpretation'], data.get('survey_fishing_promotion_hold')]
+    assert len(texts) >= 8
+    for text in filter(None, texts):
+        review = _camera_review()
+        review['survey_report_interpretation'] = review['survey_fishing_promotion_hold'] = text
+        summary = summarize_camera(review)
+        assert summary['survey_report_interpretation'] == text
+
+
 def _check_affected(label, summarize, check_evidence):
     try:
         summary = summarize()
