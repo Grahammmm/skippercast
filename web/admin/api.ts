@@ -62,6 +62,7 @@ export interface Funnel {
   contacts: {new: number; sources: string[]; by_day: {day: string; total: number; by_source: Record<string, number>}[]};
   messages: {inbound: number; by_intent: {intent: string; count: number}[]};
   replies: {outbound: number; contacts: number; per_contact: number | null};
+  unconfirmed_replies: {held: number; sending: number; unknown: number; other: number; pending: number};   // SCA-214
   return_rate: {active: number; returning: number; rate: number | null};
   boats: {verified: number; verified_total: number; pending: number; reports_published: number; boats_reporting: number; reports_per_boat: number | null};
   photos: {submitted: number; approved: number};
