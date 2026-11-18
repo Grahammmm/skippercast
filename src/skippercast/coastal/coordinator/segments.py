@@ -1,11 +1,27 @@
 """Geographic 5 km EPSG:3310 segments on the 250 m planning lattice."""
 import math
+import operator
 
 CELL_M = 5000
 PLANNING_M = 250
 
 
+def _origin(value):
+    """One spelling and type per lattice coordinate: a plain int, in metres."""
+    if isinstance(value, bool):
+        raise ValueError("segment origin must be a number, not a boolean")
+    if isinstance(value, float):
+        if not math.isfinite(value) or value != int(value):
+            raise ValueError("segment origin must be a whole number of metres")
+        return int(value)
+    try:
+        return operator.index(value)
+    except TypeError:
+        raise ValueError("segment origin must be a whole number of metres") from None
+
+
 def segment(x0, y0, *, region):
+    x0, y0 = _origin(x0), _origin(y0)
     if x0 % CELL_M or y0 % CELL_M:
         raise ValueError("segment origin must be on the 5 km lattice")
     return {"schema": "coastal-segment-v1", "segment_id": f"seg:3310:{x0}:{y0}:{CELL_M}",
