@@ -26,6 +26,7 @@ REPO = repo_root()
 PUBLIC_RIGHTS = {"public-domain", "CC0-1.0", "CC-BY-4.0", "CC-BY-NC-4.0", "facts-only"}
 # Redistribution (above) and commercial use are separate questions; see docs/legal/data-rights-register.md.
 COMMERCIAL_USE = {"allowed", "prohibited", "permission-required", "unknown"}
+PUBLIC_DISPLAY = ("allowed", "private", "excluded")
 
 
 class ContractError(ValueError):
@@ -152,6 +153,17 @@ def load_catalogs(root=REPO):
             raise ValueError(f"Unresolved redistribution rights for {ident}")
         if source["rights"].get("commercial_use") not in COMMERCIAL_USE or not isinstance(source["rights"].get("attribution_required"), bool):
             raise ValueError(f"Missing commercial-use review for {ident}")
+        rights = source["rights"]
+        if "public_display" in rights:
+            display = rights["public_display"]
+            if display not in PUBLIC_DISPLAY:
+                raise ValueError(f"Invalid public_display on {ident}")
+            if display == "allowed" and (source["review_status"] != "approved" or source.get("publication_allowed") is False):
+                raise ValueError(f"public_display is not cleared for {ident}")
+            attribution, terms = rights.get("attribution"), rights.get("terms_url")
+            if not isinstance(attribution, str) or not attribution.strip() or not isinstance(terms, str):
+                raise ValueError(f"public_display requires attribution and terms for {ident}")
+            public_url(terms)
         if source.get("bounds"):
             bbox(source["bounds"])
     return needs, sources
