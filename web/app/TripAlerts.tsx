@@ -107,15 +107,24 @@ const catchLine = (c: CatchLogEntry, lang: Language) => c.outcome === 'fish' ? t
 /** The catch-log read's state beside the recap: still reading, or finished with every page (complete) or not. Left out, the recap is drawn as a complete read. */
 export type CatchRead = Pick<RecapCatchLog, 'complete'> & {loading: boolean};
 
-/** The plan saved with an alert, as stored: names and leg totals only, never positions or notes, and not re-checked since it was saved. */
+/** The saved snapshot, not a fresh route or protected-area check. */
 function SavedPlan({plan, lang}: {plan: TripPlanSummary; lang: Language}) {
+  const basisLabel = (basis: 'water' | 'straight' | 'unknown') => t(basis === 'water' ? 'planner.dist.water' : basis === 'straight' ? 'planner.dist.straight' : 'alerts.notRecorded', lang);
+  const checkLabel = (check: 'unchecked' | 'inside' | 'near' | 'no-overlap') => check === 'inside'
+    ? t('run.route.inside', lang, {name: t('where.screen.area', lang)})
+    : t(check === 'unchecked' ? 'run.route.unchecked' : check === 'near' ? 'savedSpots.card.near' : 'savedSpots.card.clear', lang);
   return <div class="small">
     <strong>{t('alerts.plan.title', lang)}</strong> {t('alerts.plan.stale', lang)}
     {plan.kind === 'unavailable' ? <p>{t('alerts.plan.unavailable', lang)}</p> : <>
       <p>{t('alerts.plan.targets', lang, {names: plan.targets.join(' · ')})}</p>
       <p>{t('alerts.plan.stops', lang)}</p>
       {plan.stops.length ? <ol>{plan.stops.map((s, i) => <li key={i}>{s}</li>)}</ol> : <p>{t('alerts.plan.noStops', lang)}</p>}
-      <p>{plan.totals ? t('alerts.plan.totals', lang, {nm: plan.totals.nm, minutes: plan.totals.minutes}) : t('alerts.plan.noLegs', lang)}</p>
+      {plan.totals ? <>
+        <p>{t('alerts.plan.totals', lang, plan.totals)} · {t('shared.popover.basis', lang)}: {[...new Set(plan.legs.map(l => l.basis))].map(basisLabel).join(' / ')}</p>
+        {plan.legs.some(l => l.basis !== 'unknown') ? <ol aria-label={t('planner.alert.legsAria', lang)}>{plan.legs.map((leg, i) =>
+          <li key={i}>{leg.basis === 'unknown' ? basisLabel(leg.basis) : `${leg.from} → ${leg.to} · ${leg.nm} nm ${basisLabel(leg.basis)} · ${checkLabel(leg.check)}`}</li>)}</ol> : null}
+        <p>{t('brief.skill.nav', lang)}</p>
+      </> : <p>{t('alerts.plan.noLegs', lang)}</p>}
     </>}
   </div>;
 }
