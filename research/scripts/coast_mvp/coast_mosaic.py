@@ -3,6 +3,8 @@
 Uses GDALBuildVRT/GDALWarp (the gdalbuildvrt/gdalwarp utility APIs), including
 rasterio's bundled GDAL when the command-line programs are not installed.
 See README.md for the explicit source/vertical-offset contract.
+Optional support_path/support_sha256 bind an aligned R2 support TIFF (0 nodata,
+1 interpolated, 2 unknown, 3 certified); support_class_cap can only lower it.
 """
 from __future__ import annotations
 
@@ -115,6 +117,28 @@ def local_file(value, base):
     return path
 
 
+def load_support(row, base, grid):
+    """Bind support to this exact elevation lattice, never to a source label."""
+    cap = row.get('support_class_cap', 3)
+    if type(cap) is not int or cap not in (1, 2, 3):
+        raise ValueError('support_class_cap must be an integer from 1 to 3')
+    if row.get('support_path') is None and row.get('support_sha256') is None:
+        return
+    path = local_file(row.get('support_path'), base)
+    pin = row.get('support_sha256')
+    if not isinstance(pin, str) or not re.fullmatch('[0-9a-f]{64}', pin):
+        raise ValueError('Every support raster needs an exact lowercase SHA256 pin')
+    if file_hash(path) != pin:
+        raise ValueError(f'Support hash changed: {row["id"]}')
+    with rasterio.open(path) as support:
+        if (support.driver != 'GTiff' or support.dtypes != ('uint8',) or support.nodata != 0
+                or support.scales != (1.0,) or support.offsets != (0.0,)
+                or support.files != [str(path)] or support.crs != grid.crs
+                or support.transform != grid.transform or support.shape != grid.shape):
+            raise ValueError(f'Expected a self-contained aligned uint8 support TIFF with nodata 0: {row["id"]}')
+    row['support_path'] = str(path)
+
+
 def load_sources(path):
     path = Path(path).resolve()
     document = json.loads(path.read_text())
@@ -170,6 +194,7 @@ def load_sources(path):
                 raise ValueError(f'Declared resolution differs from native grid: {ident}')
             if grid.scales[0] != 1 or grid.offsets[0] != 0:
                 raise ValueError('Nontrivial stored band scale/offset requires explicit normalization')
+            load_support(row, path.parent, grid)
             row['source_crs'] = grid.crs.to_string()
             row['native_resolution_m'] = list(grid.res)
         row.update(path=str(source), bytes=source.stat().st_size,
@@ -222,7 +247,7 @@ def _shift(array, axis, step, fill):
 
 
 def seam_feather(elevation, codes, *, cell_m=10, feather_m=FEATHER_M, sigma_cells=SEAM_SIGMA_CELLS, pairs=None,
-                 count=None):
+                 count=None, support_class=None):
     """Blend elevations across every contributor boundary; cells with no survey are never filled.
 
     At each 4-neighbour edge between two different valid contributors the vertical offset is the step
@@ -236,6 +261,7 @@ def seam_feather(elevation, codes, *, cell_m=10, feather_m=FEATHER_M, sigma_cell
 
     `pairs` (optional dict) accumulates per-boundary edge counts and offsets for edges whose first cell
     is inside `count` (a boolean mask of the cells this call owns, default: all).
+    If supplied, `support_class` is lowered in place wherever the feather uses another contributor.
     Returns (blended float32 elevation, changed-cell mask).
     """
     from scipy import ndimage
@@ -246,6 +272,7 @@ def seam_feather(elevation, codes, *, cell_m=10, feather_m=FEATHER_M, sigma_cell
     z = elevation.astype(np.float64)
     flat = np.arange(z.size).reshape(z.shape)
     sides = []                     # (own code, other code, flat cell index, half offset toward the other side)
+    classes_at_edges = []
     for axis in (0, 1):
         b, cb = _shift(z, axis, 1, np.nan), _shift(codes, axis, 1, 0)
         edge = (codes > 0) & (cb > 0) & (cb != codes)
@@ -262,6 +289,12 @@ def seam_feather(elevation, codes, *, cell_m=10, feather_m=FEATHER_M, sigma_cell
         ca, cbe = codes[edge], cb[edge]
         ia, ib = flat[edge], _shift(flat, axis, 1, -1)[edge]
         sides += [(ca, cbe, ia, delta / 2), (cbe, ca, ib, -delta / 2)]
+        if support_class is not None:
+            # Both edge cells and any same-source samples used to estimate slope influence the blend.
+            lowest = np.minimum(support_class, _shift(support_class, axis, 1, 3))
+            for use, step in ((ca2 == codes, -1), (cb2 == cb, 2)):
+                np.minimum(lowest, _shift(support_class, axis, step, 3), out=lowest, where=use)
+            classes_at_edges.extend((lowest[edge], lowest[edge]))
         if pairs is not None:
             own = np.ones(len(delta), bool) if count is None else count[edge]
             lo, hi = np.minimum(ca, cbe)[own], np.maximum(ca, cbe)[own]
@@ -275,6 +308,7 @@ def seam_feather(elevation, codes, *, cell_m=10, feather_m=FEATHER_M, sigma_cell
     if not sides:
         return elevation.copy(), np.zeros(z.shape, dtype=bool)
     own_code, other_code, cell, half = (np.concatenate(part) for part in zip(*sides))
+    edge_classes = np.concatenate(classes_at_edges) if support_class is not None else None
     correction = np.zeros(z.shape)
     for mine, theirs in sorted(set(zip(own_code.tolist(), other_code.tolist()))):
         sel = (own_code == mine) & (other_code == theirs)
@@ -290,18 +324,33 @@ def seam_feather(elevation, codes, *, cell_m=10, feather_m=FEATHER_M, sigma_cell
         target = (codes == mine) & (across < feather_m) & (den > 1e-9)
         v = (across[target] + feather_m) / (2 * feather_m)
         correction[target] += 2.0 * (1.0 - v * v * (3.0 - 2.0 * v)) * num[target] / den[target]
+        if edge_classes is not None and target.any():
+            # Use the same finite neighbourhood as the Gaussian smoother, not the losing
+            # raster at the target pixel (which may be missing for abutting tiles).
+            lowest = np.full(z.size, 3, dtype='uint8')
+            np.minimum.at(lowest, cell[sel], edge_classes[sel])
+            size = 2 * int(4 * sigma_cells + 0.5) + 1
+            lowest = ndimage.minimum_filter(lowest.reshape(z.shape), size=size, mode='constant', cval=3)
+            np.minimum(support_class, lowest, out=support_class, where=target)
     result = (z + correction).astype(np.float32)
     result[codes == 0] = elevation[codes == 0]
     return result, result != elevation
 
 
-def feather_raster(depth_path, codes_path, target_path, *, feather_m=FEATHER_M, block=512):
+def feather_raster(depth_path, codes_path, target_path, *, feather_m=FEATHER_M, block=512,
+                   support_path=None, support_target=None):
     """Windowed seam_feather over whole rasters; each block reads a halo so the result is block-independent."""
     from rasterio.windows import Window
     pairs, changed, largest = {}, 0, 0.0
     # Halo: gaussian radius (scipy truncate 4 sigma) + taper reach + the 2-cell slope stencil + 1 margin.
     halo = int(4 * SEAM_SIGMA_CELLS + 0.5) + math.ceil(feather_m / 10) + 3
-    with rasterio.open(depth_path) as depth, rasterio.open(codes_path) as codes:
+    with ExitStack() as context:
+        depth = context.enter_context(rasterio.open(depth_path))
+        codes = context.enter_context(rasterio.open(codes_path))
+        evidence = evidence_out = None
+        if support_path is not None:
+            evidence = context.enter_context(rasterio.open(support_path))
+            evidence_out = context.enter_context(rasterio.open(support_target, 'w', **evidence.profile))
         profile = depth.profile.copy()
         with rasterio.open(target_path, 'w', **profile) as out:
             for row in range(0, depth.height, block):
@@ -314,12 +363,16 @@ def feather_raster(depth_path, codes_path, target_path, *, feather_m=FEATHER_M, 
                             slice(col - c0, min(col + block, depth.width) - c0))
                     own = np.zeros(values.shape, dtype=bool)
                     own[core] = True
-                    blended, moved = seam_feather(values, chosen, feather_m=feather_m, pairs=pairs, count=own)
+                    classes = evidence.read(1, window=window) if evidence is not None else None
+                    blended, moved = seam_feather(values, chosen, feather_m=feather_m, pairs=pairs, count=own,
+                                                  support_class=classes)
                     changed += int(moved[core].sum())
                     if moved[core].any():
                         largest = max(largest, float(np.abs(blended[core] - values[core])[moved[core]].max()))
-                    out.write(blended[core], 1, window=Window(col, row, core[1].stop - core[1].start,
-                                                               core[0].stop - core[0].start))
+                    dest = Window(col, row, core[1].stop - core[1].start, core[0].stop - core[0].start)
+                    out.write(blended[core], 1, window=dest)
+                    if evidence_out is not None and classes is not None:
+                        evidence_out.write(classes[core], 1, window=dest)
     return pairs, changed, largest
 
 
@@ -351,8 +404,9 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
     while not ancestor.exists():
         ancestor = ancestor.parent
     sources = load_sources(sources_file)
+    support_sources = sum(row.get('support_path') is not None for row in sources)
     # Materialized source grids + final/intermediate COGs and overviews.
-    estimated_bytes = cells * (40 + 4 * len(sources))
+    estimated_bytes = cells * (40 + 4 * len(sources) + (3 + support_sources if support_sources else 0))
     if shutil.disk_usage(ancestor).free - estimated_bytes < reserve_gib * 1024**3:
         raise ValueError('Free-space reserve would be crossed')
     output.mkdir(parents=True)
@@ -360,18 +414,27 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
     work.mkdir()
     gdal = GDAL()
     warped = []
+    warped_support = {}
+    warp_grid = ['-t_srs', 'EPSG:3310', '-te', west, south, east, north, '-tr', 10, 10, '-r', 'near']
     for row in sources:
         normal = work / f'{row["code"]}-normalized.vrt'
         target = work / f'{row["code"]}-warped.tif'
         normalized_vrt(row, normal)
         # Materialize once: lazy warped VRTs can choose different approximation
         # chunks when read through a stack versus direct contributor windows.
-        gdal.run('Warp', target, [normal], ['-of', 'GTiff', '-et', 0,
-                 '-co', 'TILED=YES', '-co', 'COMPRESS=DEFLATE',
-                 '-t_srs', 'EPSG:3310',
-                 '-te', west, south, east, north, '-tr', 10, 10, '-r', 'near',
-                 '-ot', 'Float32', '-dstnodata', NODATA, '-wo', 'INIT_DEST=NO_DATA'])
+        support_path = row.get('support_path')
+        options = ['-of', 'GTiff', '-et', 0, '-co', 'TILED=YES', '-co', 'COMPRESS=DEFLATE',
+                   *warp_grid, '-wo', 'INIT_DEST=NO_DATA']
+        full_res = ['-ovr', 'NONE'] if support_path is not None else []
+        gdal.run('Warp', target, [normal], [*options, *full_res, '-ot', 'Float32', '-dstnodata', NODATA])
         warped.append(target)
+        if support_path is not None:
+            # E2E-03a's minimum is over the elevation kernel's inputs. R4 uses nearest,
+            # so this is exactly one full-resolution cell, not a nearest overview sample.
+            evidence = work / f'{row["code"]}-support.tif'
+            gdal.run('Warp', evidence, [support_path],
+                     [*options, *full_res, '-novshift', '-ot', 'Byte', '-dstnodata', 0])
+            warped_support[row['code']] = evidence
     # GDAL's LAST valid source wins: reverse the finest-first logical priority.
     stack = work / 'priority-stack.vrt'
     gdal.run('BuildVRT', stack, list(reversed(warped)),
@@ -387,6 +450,7 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
     stats = dict(grid_cells=cells, valid_cells=0, hole_cells=0, overlap_cells=0,
                  extra_source_cell_observations=0, minimum_elevation_m=None, maximum_elevation_m=None)
     contributor_work, support_work = work / 'contributor.tif', work / 'support_count.tif'
+    class_work = work / 'support_class.tif' if support_sources else None
     with ExitStack() as context:
         depth = context.enter_context(rasterio.open(depth_work, 'r+'))
         grids = [context.enter_context(rasterio.open(p)) for p in warped]
@@ -394,17 +458,31 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
         profile.update(dtype='uint16', nodata=0)
         contributor = context.enter_context(rasterio.open(contributor_work, 'w', **profile))
         support = context.enter_context(rasterio.open(support_work, 'w', **profile))
+        evidence_grids = {code: context.enter_context(rasterio.open(p)) for code, p in warped_support.items()}
+        class_grid = (context.enter_context(rasterio.open(class_work, 'w', **dict(profile, dtype='uint8')))
+                      if class_work is not None else None)
         for _, window in depth.block_windows(1):
             elevation = depth.read(1, window=window)
             chosen = np.zeros(elevation.shape, dtype='uint16')
             coverage = np.zeros(elevation.shape, dtype='uint16')
             expected = np.full(elevation.shape, NODATA, dtype='float32')
+            classes = np.zeros(elevation.shape, dtype='uint8') if class_grid is not None else None
             for row, grid in zip(sources, grids):
                 values = grid.read(1, window=window)
                 mask = (values != np.float32(NODATA)) & np.isfinite(values)
                 take = mask & (chosen == 0)
                 chosen[take], expected[take] = row['code'], values[take]
                 coverage += mask.astype('uint16')
+                if classes is not None and take.any():
+                    evidence = evidence_grids.get(row['code'])
+                    cap = row.get('support_class_cap', 3)
+                    if evidence is None:
+                        classes[take] = min(2, cap)
+                    else:
+                        sampled = evidence.read(1, window=window)[take]
+                        if np.any(sampled > 3):
+                            raise ValueError(f'Unknown support class: {row["id"]}')
+                        classes[take] = np.minimum(np.where(sampled == 0, 2, sampled), cap)
             valid = chosen > 0
             if not np.array_equal(elevation, expected):
                 bad = elevation != expected
@@ -413,6 +491,8 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
                                  f'expected={expected[bad][:8].tolist()}')
             contributor.write(chosen, 1, window=window)
             support.write(coverage, 1, window=window)
+            if class_grid is not None:
+                class_grid.write(classes, 1, window=window)
             nvalid = int(valid.sum())
             stats['valid_cells'] += nvalid
             stats['hole_cells'] += int((~valid).sum())
@@ -430,8 +510,10 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
     seams = dict(feather_m=feather_m, changed_cells=0, max_abs_change_m=0.0, boundaries=[])
     if feather_m:
         blended = work / 'elevation-feathered.tif'
+        blended_class = work / 'support-class-feathered.tif' if class_work is not None else None
         pairs, seams['changed_cells'], largest = feather_raster(depth_work, contributor_work, blended,
-                                                               feather_m=feather_m)
+                                                               feather_m=feather_m, support_path=class_work,
+                                                               support_target=blended_class)
         seams['max_abs_change_m'] = round(largest, 4)
         ids = {row['code']: row['id'] for row in sources}
         seams['boundaries'] = [dict(sources=[ids[lo], ids[hi]], edges=n, mean_offset_m=round(total / n, 4),
@@ -442,6 +524,7 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
                              value_convention='elevation_positive_up',
                              seam_feather=f'{feather_m:g} m elevation feather at contributor boundaries')
         depth_work = blended
+        class_work = blended_class
     # Elevation statistics and the 0-300 ft band describe the delivered (feathered) elevation.
     with rasterio.open(depth_work) as depth, rasterio.open(contributor_work) as contributor:
         for _, window in depth.block_windows(1):
@@ -455,10 +538,14 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
             for code, count in zip(*np.unique(chosen[in_band], return_counts=True)):
                 band_counts[str(code)] += int(count)
     outputs = {}
-    for name, path in [('elevation', depth_work), ('contributor', contributor_work), ('support_count', support_work)]:
+    deliverables = [('elevation', depth_work), ('contributor', contributor_work), ('support_count', support_work)]
+    if class_work is not None:
+        deliverables.append(('support_class', class_work))
+    for name, path in deliverables:
         target = output / f'{name}.tif'
+        options = {'OVERVIEWS': 'NONE'} if name == 'support_class' else {}
         raster_copy(path, target, driver='COG', compress='DEFLATE', blocksize=512,
-                    overview_resampling='NEAREST', BIGTIFF='IF_SAFER')
+                    overview_resampling='NEAREST', BIGTIFF='IF_SAFER', **options)
         with rasterio.open(target) as grid:
             if grid.tags(ns='IMAGE_STRUCTURE').get('LAYOUT') != 'COG':
                 raise ValueError('Output is not a COG')
