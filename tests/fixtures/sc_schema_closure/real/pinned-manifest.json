@@ -26,7 +26,7 @@
     },
     {
       "path": "schemas/coverage.schema.json",
-      "sha256": "9b2b423c7dca7d66e39cf059d298c0a171354d40732a6d6e8ab0c647f4b95a91"
+      "sha256": "5eebd2c569ee42fc849ffda193f93918e744f0614de547046f7835a303cc17a6"
     },
     {
       "path": "schemas/daily-feed.schema.json",

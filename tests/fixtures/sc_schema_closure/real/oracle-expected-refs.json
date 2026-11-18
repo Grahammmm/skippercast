@@ -3,7 +3,7 @@
     "all_reference_keys": 313,
     "schema_location_references": 313
   },
-  "manifest_sha256": "22a070b55027d96ea58aa8dbdb61c54fdd68fe94126dbd3a9b9c92ba7cffa6a6",
+  "manifest_sha256": "30107c1d33b6407d48cdc874a6a555c4ad7dece6aa97bd4db29a3a6474929d27",
   "oracle": "referencing (python-jsonschema) Registry.crawl + Resolver.lookup, Draft 2020-12 subresources_of; no retrieve",
   "reference_keys_outside_schema_locations": [],
   "references": [

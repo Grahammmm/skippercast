@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkipperCast reviewed relief pointer",
+  "allOf": [{"$ref": "#/$defs/metadata"}],
+  "type": "object",
+  "required": ["schema", "status", "private", "generation", "release_sha256", "envelope_sha256", "sha256", "bytes", "digest_root_sha256", "previous"],
+  "properties": {
+    "schema": {"const": "sc-relief-pointer/1"},
+    "status": {"const": "reviewed"},
+    "private": {"const": false},
+    "generation": {"$ref": "#/$defs/sha256"},
+    "release_sha256": {"$ref": "#/$defs/sha256"},
+    "envelope_sha256": {"$ref": "#/$defs/sha256"},
+    "sha256": {"$ref": "#/$defs/sha256"},
+    "bytes": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+    "digest_root_sha256": {"$ref": "#/$defs/sha256"},
+    "previous": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["generation", "release_sha256", "envelope_sha256", "sha256"],
+          "properties": {
+            "generation": {"$ref": "#/$defs/sha256"},
+            "release_sha256": {"$ref": "#/$defs/sha256"},
+            "envelope_sha256": {"$ref": "#/$defs/sha256"},
+            "sha256": {"$ref": "#/$defs/sha256"}
+          }
+        }
+      ]
+    }
+  },
+  "unevaluatedProperties": false,
+  "$defs": {
+    "sha256": {"type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[a-f0-9]+$"},
+    "text": {"type": "string", "pattern": "\\S"},
+    "zoom": {"type": "integer", "minimum": 8, "maximum": 17},
+    "metadata": {
+      "type": "object",
+      "required": ["region", "bounds", "minzoom", "maxzoom", "sources", "detail_summary", "native_support_by_zoom"],
+      "properties": {
+        "region": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64},
+        "bounds": {
+          "type": "array", "minItems": 4, "maxItems": 4,
+          "prefixItems": [
+            {"type": "number", "minimum": -180, "maximum": 180},
+            {"type": "number", "minimum": -90, "maximum": 90},
+            {"type": "number", "minimum": -180, "maximum": 180},
+            {"type": "number", "minimum": -90, "maximum": 90}
+          ]
+        },
+        "minzoom": {"$ref": "#/$defs/zoom"},
+        "maxzoom": {"$ref": "#/$defs/zoom"},
+        "sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/source"}},
+        "detail_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mask", "depth_bands"],
+          "properties": {
+            "mask": {"const": "transparent-nodata"},
+            "depth_bands": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/depth_band"}}
+          }
+        },
+        "native_support_by_zoom": {
+          "type": "object",
+          "minProperties": 1,
+          "patternProperties": {"^(8|9|1[0-7])$": {"$ref": "#/$defs/zoom_support"}},
+          "additionalProperties": false
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "attribution", "vertical_datum", "survey_dates", "rights_class", "rights"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"},
+        "label": {"$ref": "#/$defs/text"},
+        "attribution": {"$ref": "#/$defs/text"},
+        "vertical_datum": {"$ref": "#/$defs/text"},
+        "survey_dates": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}},
+        "release_date": {"$ref": "#/$defs/text"},
+        "estimated": {"type": "boolean"},
+        "provider": {"$ref": "#/$defs/text"},
+        "source_url": {"$ref": "#/$defs/text"},
+        "rights_class": {"const": "public"},
+        "review_status": {"const": "approved"},
+        "private": {"const": false},
+        "publication_allowed": {"const": true},
+        "rights": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["public_display", "license"],
+          "properties": {
+            "public_display": {"const": "allowed"},
+            "license": {"$ref": "#/$defs/text"},
+            "attribution": {"$ref": "#/$defs/text"},
+            "commercial_use": {"$ref": "#/$defs/text"},
+            "attribution_required": {"type": "boolean"},
+            "terms_url": {"$ref": "#/$defs/text"},
+            "redistribution_reviewed": {"const": true}
+          }
+        }
+      }
+    },
+    "depth_band": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "min_depth_m", "max_depth_m", "resolution_m"],
+      "properties": {
+        "source_id": {"$ref": "#/$defs/text"},
+        "min_depth_m": {"type": "number", "minimum": 0},
+        "max_depth_m": {"type": "number", "exclusiveMinimum": 0},
+        "resolution_m": {"type": "number", "exclusiveMinimum": 0},
+        "support_class": {"enum": [1, 2, 3]}
+      }
+    },
+    "zoom_support": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tiles", "sources"],
+      "properties": {
+        "limit_m": {"enum": [20, 91.44]},
+        "tiles": {"type": "integer", "minimum": 0},
+        "support_class": {"enum": [1, 2, 3]},
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "resolution_m", "tiles"],
+            "properties": {
+              "id": {"$ref": "#/$defs/text"},
+              "resolution_m": {"type": "number", "exclusiveMinimum": 0, "maximum": 5},
+              "tiles": {"type": "integer", "minimum": 1}
+            }
+          }
+        }
+      }
+    }
+  }
+}
