@@ -2,10 +2,10 @@
 
 Contract protected: Controller.status()["next"] and Controller.step() take their
 decision from one read-only function (_permitted), so a durable common hold, an
-unresolved admission intent and the native-only fence (set after mapping
-recovery) read the same in both.
+unresolved admission intent, the native-only fence (set after mapping
+recovery), a source-reuse contract and an unbound native clock read the same in both.
 Believable bug: status calls select_next() directly, so with stop_reason=common_hold
-it said next=ready/acquire while step stopped, and after recovery it advertised a
+it said next=ready/acquire while step stopped (or raised the durable execution hold), and after recovery it advertised a
 native acquire that step would never run (only the source-free drain is allowed).
 """
 from contextlib import nullcontext
@@ -34,7 +34,7 @@ def parts(monkeypatch):
     ctl.root = Path("root")
     ctl.path = Path("root/control/ordered-x.json")
     ctl.descriptor = {"sha256": "p" * 64}
-    ctl.preparation = dict(PREPARATION, source_reuse_contract=None, output_roots=[])
+    ctl.preparation = dict(PREPARATION, source_reuse_contract=None, native_clock_bound=True, output_roots=[])
     ctl.clock = lambda: NOW
     ctl.monotonic = lambda: 0.0
     holder = SimpleNamespace(rows=FRESH, state={})
@@ -100,3 +100,39 @@ def test_stop_wins_over_fence_drain_in_both(parts):
     _arrange(holder, rows=A_QUALIFIED, fenced=True, stop="common_hold")
     assert ctl.status(adapter)["next"] == {"state": "stopped", "reason": "common_hold"}
     assert _step(ctl, adapter) == {"state": "stopped", "reason": "common_hold"}
+
+
+HELD = {
+    "source reuse contract": (dict(source_reuse_contract={"x": 1}), ot.SOURCE_REUSE_HELD),
+    "unbound native clock": (dict(native_clock_bound=False), ot.CLOCK_UNBOUND_HELD),
+}
+
+
+@pytest.mark.parametrize("label", HELD)
+def test_durable_preparation_hold_is_not_a_ready_instruction_in_either(parts, label):
+    """Contract: a preparation hold step raises is reported by status as execution_held, never ready.
+    Bug: status said ready/acquire for a job step rejects (codex return at 33cb303)."""
+    ctl, adapter, holder = parts
+    change, reason = HELD[label]
+    ctl.preparation.update(change)
+    _arrange(holder)
+    assert ctl.status(adapter)["next"] == {"state": "execution_held", "reason": reason}
+    with pytest.raises(ValueError, match="execution held"):
+        ctl.step(adapter, ACTION_REF)
+
+
+def test_unbound_clock_hold_does_not_mask_stop_or_drain_nothing(parts):
+    """An unbound clock only holds a *ready* instruction; stop / fence answers stay what step returns."""
+    ctl, adapter, holder = parts
+    ctl.preparation["native_clock_bound"] = False
+    _arrange(holder, stop="common_hold")
+    assert ctl.status(adapter)["next"] == _step(ctl, adapter) == {"state": "stopped", "reason": "common_hold"}
+    _arrange(holder, fenced=True)
+    assert ctl.status(adapter)["next"] == _step(ctl, adapter) == {"state": "native_fenced"}
+
+
+def test_bound_clock_without_reuse_contract_stays_ready(parts):
+    """Positive control for the holds above: nothing held, so status and step both proceed."""
+    ctl, adapter, holder = parts
+    _arrange(holder)
+    assert ctl.status(adapter)["next"] == dict(state="ready", stage="acquire", index=0)

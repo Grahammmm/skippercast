@@ -149,6 +149,8 @@ def validate_scope_packet(root,grant,packet,*,now,horizon,review=None):
 
 TERMINAL = {"done", "held"}
 COMMON_STOP = {"failed_uncertain", "failed_terminal", "cancelled", "stale"}
+SOURCE_REUSE_HELD = "ordered source reuse FD transport is not implemented; execution held"
+CLOCK_UNBOUND_HELD = "parent boot/monotonic remains unbound; execution held"
 
 def _descriptor(value,contract):
     if (not isinstance(value,dict) or not {"path","sha256","bytes","contract"}<=set(value)
@@ -694,7 +696,7 @@ class Controller:
     def _clock_gate(self,state,*,native=False):
         p=self.preparation;now=_finite(self.clock());mono=_finite(self.monotonic())
         if not p["native_clock_bound"]:
-            raise ValueError("parent boot/monotonic remains unbound; execution held")
+            raise ValueError(CLOCK_UNBOUND_HELD)
         if self.boot()!=p["boot_id"] or not p["start_monotonic"]<=mono<p["start_monotonic"]+3600:
             raise ValueError("immutable parent boot/monotonic deadline")
         if not p["start_epoch"]<=now<p["deadline_epoch"]:
@@ -708,10 +710,16 @@ class Controller:
     def _permitted(self,state,load_rows,action_ref=None):
         """Read-only decision shared by status and step: what step would allow next.
 
-        Order is fail-closed: durable stop, an already-recorded action (step only),
-        unresolved admission intent, then the scheduler narrowed by the native-only
-        fence. load_rows() is called only once no earlier gate has answered.
+        Order is fail-closed: durable preparation hold, durable stop, an already-recorded
+        action (step only), unresolved admission intent, then the scheduler narrowed by
+        the native-only fence, then the unbound native clock on a ready instruction.
+        load_rows() is called only once no earlier gate has answered. An
+        "execution_held" answer is an instruction nobody can run: step raises it,
+        status reports it instead of a ready action. Action-dependent checks (grant,
+        source allowance, clock window) stay in step.
         """
+        if self.preparation.get("source_reuse_contract") is not None:
+            return dict(state="execution_held",reason=SOURCE_REUSE_HELD)
         if state["stop_reason"]:return dict(state="stopped",reason=state["stop_reason"])
         previous=next((x for x in state["intents"] if x["action"]==action_ref),None) if action_ref is not None else None
         if previous:
@@ -722,6 +730,8 @@ class Controller:
         if state.get("native_fenced") and decision.get("stage") in {"acquire","qualify"}:
             waiting=[i for i,row in enumerate(rows) if row.get("qualify")=="done" and row.get("map") not in TERMINAL]
             decision=dict(state="ready",stage="map",index=waiting[0]) if waiting else dict(state="native_fenced")
+        if decision.get("state")=="ready" and not self.preparation.get("native_clock_bound"):
+            return dict(state="execution_held",reason=CLOCK_UNBOUND_HELD)
         return decision
 
     def status(self,adapter):
@@ -743,12 +753,13 @@ class Controller:
                 raise ValueError("all active Store roots must be inventoried")
             inventory(self.preparation)
             if self.preparation.get("source_reuse_contract") is not None:
-                raise ValueError("ordered source reuse FD transport is not implemented; execution held")
+                raise ValueError(SOURCE_REUSE_HELD)
             require_larger_runtime(self.preparation)
             def load_rows():
                 adapter.accounting(self.preparation)
                 return adapter.states(self.preparation)
             decision=self._permitted(state,load_rows,action_ref)
+            if decision["state"]=="execution_held":raise ValueError(decision["reason"])
             if decision["state"]!="ready":return decision
             if action.get("stage")!=decision["stage"] or action.get("index")!=decision["index"]:
                 raise ValueError("action differs from current bounded ordered decision")
@@ -797,7 +808,7 @@ class Controller:
         """Explicit stopped-lease proof only; never recover or retry a native job."""
         if type(adapter) is not RealAdapter or not adapter.mapping:raise TypeError("real mapping Store required")
         if self.preparation.get("source_reuse_contract") is not None:
-            raise ValueError("ordered source reuse FD transport is not implemented; execution held")
+            raise ValueError(SOURCE_REUSE_HELD)
         require_larger_runtime(self.preparation)
         with controller_lock(self.path.with_suffix(".lock")):
             state=self._state()
