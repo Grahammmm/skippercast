@@ -185,7 +185,7 @@ test('each status table sits in its own keyboard-reachable, named scroller with 
   assert.equal(renderRows([]), '');
 });
 
-// SC-NEXT-08: synthetic locale cases; the digest was measured on main d91ad65f after its source-name additions.
+// SC-NEXT-08: synthetic locale cases; the digest was re-measured after E2E-05 added 13 source names to dist/status-names.js.
 import * as statusPage from '../dist/status-page.js';
 import {createHash} from 'node:crypto';
 import {mkdtempSync, mkdirSync, writeFileSync, rmSync} from 'node:fs';
@@ -196,7 +196,7 @@ import {spawnSync} from 'node:child_process';
 test('status_page_english_identical: missing, stale and coast rows preserve main bytes', () => {
   const cases = [{},{"conditions":{"published_at":"2026-11-01T20:00:00Z"},"index":{"regions":[]},"data":{"sources":{"a":{"id":"a","name":"Literal <name>","kind":"grid","status":"stale"}}}},{"coast":{}}];
   const html = cases.map(f => renderRows(statusRows(f, NOW))).join('\n') + renderCoverage();
-  assert.equal(createHash('sha256').update(html).digest('hex'), 'bad05ba06776fc8fc454ccffad88f3d3681500e29fb9aa97e786b2329f3fd5d5');
+  assert.equal(createHash('sha256').update(html).digest('hex'), 'f7fe3f95ea50ec9369f97af3178ab24a43146009127502b67cf011c74eedceab');
 });
 
 test('status_page_spanish: remembered choice and browser fallback translate static hosts before feeds', async () => {
