@@ -124,13 +124,15 @@ test('tide height follows the requested station when an earlier response finishe
     held.set(station, new Promise<void>(resolve => { release = resolve; }));
     return {release};
   };
-  const arrivals: string[] = [];
+  // Per-station counts of requests that reached the route and of responses whose fulfil call has completed.
+  const arrivals: Record<string, number> = {}, delivered: Record<string, number> = {};
   await page.route('**/api/prod/datagetter?*', async route => {
     const station = new URL(route.request().url()).searchParams.get('station') ?? '';
-    arrivals.push(station);
+    arrivals[station] = (arrivals[station] ?? 0) + 1;
     const gate = held.get(station);
     if (gate) { held.delete(station); await gate; }
     await route.fulfill({json: {predictions: [{t: '2026-10-08 21:00', v: heights[station] ?? '0.0', type: 'H'}]}});
+    delivered[station] = (delivered[station] ?? 0) + 1;
   });
   await v2.open('app', {region: 'morro-bay'});
   const root = page.locator(isMobile ? '.app-sheet-brief' : 'aside.app-brief');
@@ -139,16 +141,24 @@ test('tide height follows the requested station when an earlier response finishe
   const picker = root.getByLabel('Prediction station');
   const add = root.getByRole('button', {name: 'Add current station'});
   const tide = root.locator('.ui-tile', {hasText: 'Tide'});
-  const settle = () => page.evaluate(() => new Promise<void>(resolve => setTimeout(resolve, 250)));
+  // Releases a held response, waits until it was really delivered to the page, then lets the page run two frames and a task
+  // so the response handler has processed it before any assertion looks at the tile.
+  const deliver = async (station: string, gate: {release: () => void}) => {
+    const before = delivered[station] ?? 0;
+    gate.release();
+    await expect.poll(() => delivered[station] ?? 0).toBeGreaterThan(before);
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 0)))));
+  };
+  const arrived = async (station: string, count: number) => { await expect.poll(() => arrivals[station] ?? 0).toBeGreaterThanOrEqual(count); };
 
   // Choose North (response held), then Port (answered at once); North answers last.
   const north = hold('9000001');
   await picker.selectOption('9000001'); await add.click();
-  await expect.poll(() => arrivals).toContain('9000001');
+  await arrived('9000001', 1);
   await picker.selectOption('9000002'); await add.click();
   await expect(tide.locator('.ui-tile-source')).toContainText('9000002 Fixture Port');
   await expect(tide.locator('.ui-reading')).toHaveText(heights['9000002']);
-  north.release(); await settle();
+  await deliver('9000001', north);
   await expect(tide.locator('.ui-tile-source')).toContainText('9000002 Fixture Port');
   await expect(tide.locator('.ui-tile-source')).not.toContainText('Fixture North');
   await expect(tide.locator('.ui-reading')).toHaveText(heights['9000002']);
@@ -161,11 +171,13 @@ test('tide height follows the requested station when an earlier response finishe
 
   // Same race on a switch between saved stations: Port held, North chosen afterwards.
   const port = hold('9000002');
+  const portSeen = arrivals['9000002'] ?? 0;
   await saved.getByRole('button', {name: 'Use Fixture Port', exact: true}).click();
+  await arrived('9000002', portSeen + 1);
   await saved.getByRole('button', {name: 'Use Fixture North', exact: true}).click();
   await expect(tide.locator('.ui-tile-source')).toContainText('9000001 Fixture North');
   await expect(tide.locator('.ui-reading')).toHaveText(heights['9000001']);
-  port.release(); await settle();
+  await deliver('9000002', port);
   await expect(tide.locator('.ui-tile-source')).toContainText('9000001 Fixture North');
   await expect(tide.locator('.ui-reading')).toHaveText(heights['9000001']);
   expect(pageErrors).toEqual([]);
