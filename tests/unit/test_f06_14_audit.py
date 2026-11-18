@@ -6,6 +6,9 @@ two individually legal groups over the aggregate cap reach bulk allocation.
 The strict xfail states the wanted outcome (hold with zero TIFFs written) and
 turns into a failure, to be removed, once an aggregate preflight exists.
 """
+import sys
+from types import ModuleType
+
 import pytest
 
 from skippercast.coastal.handoff import vr_refinements as vr
@@ -33,6 +36,14 @@ def test_affected_control_two_legal_lattices_exceed_aggregate_but_pass_bounds():
 
 
 def _emit_with_synthetic_groups(monkeypatch, tmp_path, groups):
+    # emit imports rasterio before the mocked allocation boundary. No raster
+    # operation should be reached in this fixture, even without a GIS install.
+    rasterio = ModuleType("rasterio")
+    transform = ModuleType("rasterio.transform")
+    transform.from_origin = lambda *args: pytest.fail("unexpected raster transform")
+    rasterio.open = lambda *args, **kwargs: pytest.fail("unexpected raster write")
+    monkeypatch.setitem(sys.modules, "rasterio", rasterio)
+    monkeypatch.setitem(sys.modules, "rasterio.transform", transform)
     reached = []
 
     def bulk_fill(_model, group):

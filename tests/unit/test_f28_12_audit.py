@@ -13,6 +13,9 @@ from tests._support import ROOT
 
 import pytest
 
+pytest.importorskip("shapely")
+pytestmark = pytest.mark.gis
+
 from research.scripts import audit_san_miguel_naval_zone as naval
 
 MANIFEST = ROOT / "research" / "catalog" / "san-miguel-naval-danger-zone.json"
