@@ -73,9 +73,10 @@ class RunnerSwitchTests(unittest.TestCase):
     # fleet-health.yml alerts when Hermes (the data runner) is down, so it cannot run there (charter-fleet design § 4).
     # e2e-timing.yml measures input latency, so it stays on the same GitHub-hosted runner class every night (CI-PARITY-1).
     HOSTED_ONLY = {
-        'budget-drift.yml', 'buoy-history.yml', 'dco.yml', 'deploy-cloudflare.yml',
-        'e2e-timing.yml', 'feed-freshness.yml', 'fleet-health.yml', 'live-conditions.yml',
-        'ops-report.yml', 'regional-legal-review.yml', 'release.yml',
+        'advisor-media.yml', 'budget-drift.yml', 'buoy-history.yml', 'coast-assets.yml',
+        'dco.yml', 'deploy-cloudflare.yml', 'e2e-timing.yml', 'feed-freshness.yml',
+        'fleet-health.yml', 'live-conditions.yml', 'ops-report.yml', 'regional-legal-review.yml',
+        'release.yml',
     }
 
     # ci.yml is the one pull_request workflow that can reach the box. A pull request from a
@@ -88,9 +89,8 @@ class RunnerSwitchTests(unittest.TestCase):
         " && vars.CI_RUNNER || 'ubuntu-latest' }}"
     )
 
-    # SC-CI-LIGHT-1: portable CPU-heavy data jobs read DATA_RUNNER_LIGHT first, so they can move to
-    # GitHub-hosted runners alone. Unset, they fall back to DATA_RUNNER exactly as before.
-    LIGHT_RUNS_ON = "${{ vars.DATA_RUNNER_LIGHT || vars.DATA_RUNNER || 'ubuntu-latest' }}"
+    # These data jobs must stay on GitHub-hosted Ubuntu regardless of repository variables.
+    LIGHT_RUNS_ON = 'ubuntu-latest'
     LIGHT_WORKFLOWS = {
         'basemap.yml', 'daily-data.yml', 'draft-region-health.yml', 'draft-region-rehearsal.yml',
         'forecast-tiles.yml', 'research-daily.yml', 'research-fish-survey.yml', 'research-substrate.yml',
@@ -101,7 +101,7 @@ class RunnerSwitchTests(unittest.TestCase):
         for path in sorted((ROOT / '.github/workflows').glob('*.y*ml')):
             expected = {
                 'ci.yml': self.CI_RUNS_ON,
-                'seafloor.yml': "${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}",
+                'seafloor.yml': 'ubuntu-latest',
             }.get(path.name, self.LIGHT_RUNS_ON if path.name in self.LIGHT_WORKFLOWS else "${{ vars.DATA_RUNNER || 'ubuntu-latest' }}")
             for line in re.findall(r'^\s*runs-on:\s*(.+?)\s*$', path.read_text(), re.M):
                 if path.name in self.HOSTED_ONLY:

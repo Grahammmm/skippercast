@@ -21,6 +21,47 @@ def _steps(text):
     return re.split(r'\n(?=      - )', body)
 
 
+def _assert_writer_lock(group, step_name, wait):
+    text = WORKFLOW.with_name(f'{group}.yml').read_text()
+    assert re.search(rf'^concurrency:\n  group: {group}$', text, re.M)
+    step = next(s for s in _steps(text) if s.lstrip().startswith(f'- name: {step_name}\n'))
+    body = step.split('        run: |\n', 1)[1]
+    commands = [line.strip() for line in body.splitlines()
+                if line.strip() and not line.lstrip().startswith(('#', 'set '))]
+    base = '${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}'
+    if group in ('fleet-registry', 'fleet-osint'):
+        locate = next(s for s in _steps(text) if 'var="$var-staging"' in s)
+        assert locate.index(f'var="{base}"') < locate.index(
+            f'echo "FLEET_LOCK=$var/.locks/{group}.lock" >> "$GITHUB_ENV"'
+        ) < locate.index('var="$var-staging"')
+        lock_path = '$FLEET_LOCK'
+    else:
+        lock_path = f'{base}/.locks/{group}.lock'
+    assert commands[:6] == [
+        f'lock="{lock_path}"',
+        'mkdir -p -m 0700 -- "${lock%/*}" || exit 1',
+        f'WAIT={wait}',
+        'exec 9>"$lock"',
+        'flock -w "$WAIT" 9 || { '
+        f'echo "::error::{group} is held by another run (this or the other repo); not starting"; exit 75; }}',
+        f'echo "lock {group} acquired"',
+    ]
+
+
+class FleetWorkflowLockTests(unittest.TestCase):
+    def test_each_writer_takes_its_group_lock_before_work(self):
+        for group, step_name, wait in (
+            ('fleet-ais', 'Process AIS positions', 600),
+            ('fleet-registry', 'Run the registry pipeline', 60),
+            ('fleet-ais-listener', 'Install and restart the listener', 60),
+            ('fleet-osint', 'Plan the batches', 60),
+            ('fleet-osint', 'Research the batches', 60),
+            ('fleet-osint', 'Ingest the profiles', 60),
+        ):
+            with self.subTest(group=group, step=step_name):
+                _assert_writer_lock(group, step_name, wait)
+
+
 class FleetRegistryWorkflowTests(unittest.TestCase):
     def setUp(self):
         self.text = WORKFLOW.read_text()

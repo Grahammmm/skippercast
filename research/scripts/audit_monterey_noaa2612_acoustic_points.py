@@ -128,6 +128,8 @@ def build(root, fetch=False):
             indexes = np.flatnonzero(bounding)
             inside = contains_xy(polygon, x[indexes], y[indexes])
             indexes = indexes[inside]
+            if indexes.size == 0:
+                continue  # bbox hit only (e.g. a point in a hole): not occupied
             row = result[ident]
             row["tile_names"].append(tile)
             row["class13_acoustic_points"] += int(acoustic[indexes].sum())

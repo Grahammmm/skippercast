@@ -13,13 +13,12 @@ import {forecastTime} from '../map/frames.ts';
 import {localeOf, num, t} from '../i18n.ts';
 import type {Language} from '../i18n.ts';
 import type {Brief} from './types.ts';
+import {readWcofs} from './mark-forecast.ts';
 
 const HOUR = 3_600_000;
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
-type Feed = {retrieved?: unknown; currents?: {status?: unknown; source?: unknown; issued_at?: unknown; points?: unknown}};
-/** A WCOFS sample that can be real: five finite numbers, speed of zero or more, a bearing in 0-360 (mark-forecast.ts possibleSample). */
-const possible = (s: unknown): s is number[] => Array.isArray(s) && s.length >= 5 && s.slice(0, 5).every(finite) && s[3]! >= 0 && s[4]! >= 0 && s[4]! <= 360;
+type Feed = {retrieved?: unknown; currents?: Parameters<typeof readWcofs>[0]};
 
 export type OffshoreRead = {sample: OffshoreSample | null; gap: 'status' | 'old' | 'none' | null};
 
@@ -28,16 +27,15 @@ export type OffshoreRead = {sample: OffshoreSample | null; gap: 'status' | 'old'
  * retrieved at most 6 h ago, a listed hour within 90 minutes of `at`). Never interpolated; a gap says which part failed.
  */
 export function offshoreRead(forecast: ConditionsForecast | null, region: string | null, at: number, now: number): OffshoreRead {
-  const feed = forecast && region && forecast.region === region ? forecast.feed as Feed | undefined : undefined;
-  const c = feed?.currents;
-  if (!feed || !c || c.status !== 'ok' || c.source !== 'wcofs' || !Array.isArray(c.points)) return {sample: null, gap: 'status'};
-  const issued = typeof c.issued_at === 'string' ? Date.parse(c.issued_at) : NaN;
-  const row = (c.points as unknown[]).find(p => (p as {point_id?: unknown})?.point_id === forecast!.point.id) as {samples?: unknown} | undefined;
-  const samples = (Array.isArray(row?.samples) ? row.samples : []).filter(possible);
-  const hr = forecastTime([...new Set(samples.map(s => s[0]! * 1000))].sort((a, b) => a - b), issued, finite(feed.retrieved) ? feed.retrieved : NaN, new Date(at), new Date(now));
+  if (!forecast || !region || forecast.region !== region) return {sample: null, gap: 'status'};
+  const feed = forecast.feed as Feed | undefined;
+  const current = readWcofs(feed?.currents, [forecast.point.id]);
+  if (!current) return {sample: null, gap: 'status'};
+  const samples = current.rows[0]?.samples ?? [];
+  const hr = forecastTime([...new Set(samples.map(s => s[0] * 1000))].sort((a, b) => a - b), current.issuedAt, finite(feed?.retrieved) ? feed.retrieved : NaN, new Date(at), new Date(now));
   if (hr === null) return {sample: null, gap: 'old'};
-  const s = samples.find(x => x[0]! * 1000 === hr);
-  return s ? {sample: {speedKn: s[3]!, towardDeg: s[4]!, validAt: hr}, gap: null} : {sample: null, gap: 'none'};
+  const s = samples.find(x => x[0] * 1000 === hr);
+  return s ? {sample: {speedKn: s[3], towardDeg: s[4], validAt: hr}, gap: null} : {sample: null, gap: 'none'};
 }
 
 /** "8 am", "8:25 am" in the region's zone (Spanish: the locale's own clock). */

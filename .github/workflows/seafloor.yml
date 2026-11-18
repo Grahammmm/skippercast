@@ -46,7 +46,7 @@ env:
 jobs:
   prepare:
     if: github.ref == 'refs/heads/main'
-    runs-on: ${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
@@ -94,7 +94,7 @@ jobs:
   reaches:
     needs: prepare
     if: needs.prepare.outputs.has_work == 'true'
-    runs-on: ${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     # Three independently timed 60-minute reaches plus job setup/cleanup.
     timeout-minutes: 195
     strategy:
@@ -123,7 +123,7 @@ jobs:
   publish:
     needs: [prepare, reaches]
     if: always() && needs.prepare.result == 'success' && needs.prepare.outputs.has_work == 'true'
-    runs-on: ${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -207,7 +207,7 @@ jobs:
   ledger:
     needs: [prepare, publish]
     if: always() && needs.prepare.result == 'success' && needs.prepare.outputs.has_work == 'true'
-    runs-on: ${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       actions: write
