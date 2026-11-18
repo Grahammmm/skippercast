@@ -44,17 +44,19 @@ const INDEX = JSON.parse(readFileSync(new URL('../dist/regions/index.json', impo
 const statusOf = (id: string): string => INDEX.regions.find(r => r.id === id)?.status ?? 'missing';
 
 /**
- * SCA-232: is `href` an approved rules destination for this region? HTTPS, no credentials, and a host the region's own committed
- * `regulatory_authority_hosts` names (the list web/regs.ts `officialURL` enforces). Judged from the string alone: the link is never fetched.
- * Returns the reason it is refused, or '' when it is approved.
+ * SCA-232: is `href` an approved rules destination for this region? HTTPS, no credentials, a host the region's own committed
+ * `regulatory_authority_hosts` names (the list web/regs.ts `officialURL` enforces), and exactly one of the `approved` pages (the region's
+ * rules registry source pages plus the CDFW ocean fallback), so an unrelated page on an authority host is refused too. Judged from the
+ * strings alone: the link is never fetched. Returns the reason it is refused, or '' when it is approved.
  */
-export function rulesLinkProblem(href: string | null, hosts: readonly string[]): string {
+export function rulesLinkProblem(href: string | null, hosts: readonly string[], approved: ReadonlySet<string>): string {
   if (!href) return 'the link has no address';
   let url: URL;
   try { url = new URL(href); } catch { return `"${href}" is not an address`; }
   if (url.protocol !== 'https:') return `${url.protocol} is not https`;
   if (url.username || url.password) return 'the address carries credentials';
   if (!hosts.includes(url.hostname)) return `${url.hostname} is not one of this region's rules authorities (${hosts.join(', ')})`;
+  if (!approved.has(url.href)) return `${url.href} is not one of this region's approved rules pages`;
   return '';
 }
 
@@ -73,6 +75,17 @@ async function record(results: Result[], check: Result['check'], run: () => Prom
 /** The rules authorities this region's committed package names. */
 const authorityHosts = (id: string): string[] =>
   (JSON.parse(readFileSync(new URL(`../dist/regions/${id}/region.json`, import.meta.url), 'utf8')) as {regulatory_authority_hosts?: string[]}).regulatory_authority_hosts ?? [];
+
+/** The rules pages this region may link: its committed rules registry's source pages on its authorities, plus web/regs.ts's CDFW ocean fallback. */
+const approvedRulesPages = (id: string): Set<string> => {
+  const assets = JSON.parse(readFileSync(new URL(`../dist/regions/${id}/region.json`, import.meta.url), 'utf8')) as {assets?: {regulations?: string}};
+  const registry = JSON.parse(readFileSync(new URL(`../dist/${assets.assets?.regulations ?? 'data/regulations.json'}`, import.meta.url), 'utf8')) as {sources?: Record<string, {url?: string}>};
+  const hosts = authorityHosts(id), pages = new Set<string>(['https://wildlife.ca.gov/Fishing/Ocean']);
+  for (const {url} of Object.values(registry.sources ?? {})) {
+    try { const u = new URL(String(url)); if (u.protocol === 'https:' && !u.username && !u.password && hosts.includes(u.hostname)) pages.add(u.href); } catch { /* not an address: never approved */ }
+  }
+  return pages;
+};
 
 /** Pull the sheet up to its full detent (the handle's End key) and let its slide finish. */
 async function openFull(page: Page): Promise<void> {
@@ -128,14 +141,18 @@ function overflowProbe(): {page: {scrollWidth: number; clientWidth: number}; out
 }
 
 test('rules link destination check: approved URL passes, an unrelated HTTPS site and non-HTTPS are refused (synthetic, nothing fetched)', () => {
-  const hosts = authorityHosts('morro-bay');
+  const hosts = authorityHosts('morro-bay'), approved = approvedRulesPages('morro-bay');
   expect(hosts.length, 'the region names its rules authorities').toBeGreaterThan(0);
-  expect(rulesLinkProblem('https://wildlife.ca.gov/Conservation/Marine/MPAs', hosts)).toBe('');
-  expect(rulesLinkProblem('https://example.com/fishing-rules', hosts)).not.toBe('');
-  expect(rulesLinkProblem('https://wildlife.ca.gov.evil.example/rules', hosts)).not.toBe('');
-  expect(rulesLinkProblem('http://wildlife.ca.gov/Conservation/Marine/MPAs', hosts)).not.toBe('');
-  expect(rulesLinkProblem('https://user:pw@wildlife.ca.gov/x', hosts)).not.toBe('');
-  expect(rulesLinkProblem(null, hosts)).not.toBe('');
+  const page = [...approved].find(u => u !== 'https://wildlife.ca.gov/Fishing/Ocean');
+  expect(page, 'the registry lists at least one approved rules page').toBeTruthy();
+  expect(rulesLinkProblem('https://wildlife.ca.gov/Fishing/Ocean', hosts, approved)).toBe('');
+  expect(rulesLinkProblem(page!, hosts, approved)).toBe('');
+  expect(rulesLinkProblem('https://wildlife.ca.gov/unrelated-page', hosts, approved), 'an unrelated page on an authority host').not.toBe('');
+  expect(rulesLinkProblem('https://example.com/fishing-rules', hosts, approved)).not.toBe('');
+  expect(rulesLinkProblem('https://wildlife.ca.gov.evil.example/rules', hosts, approved)).not.toBe('');
+  expect(rulesLinkProblem(page!.replace('https:', 'http:'), hosts, approved)).not.toBe('');
+  expect(rulesLinkProblem(page!.replace('https://', 'https://user:pw@'), hosts, approved)).not.toBe('');
+  expect(rulesLinkProblem(null, hosts, approved)).not.toBe('');
 });
 
 test.describe('Stage 1 region phone smoke', () => {
@@ -221,7 +238,7 @@ test.describe('Stage 1 region phone smoke', () => {
         expect(label, 'the badge says something').not.toBe('');
         await expect(line.locator('a'), 'the official rules link is on screen').toBeVisible();
         const href = await line.locator('a').getAttribute('href');
-        const refused = rulesLinkProblem(href, authorityHosts(id));
+        const refused = rulesLinkProblem(href, authorityHosts(id), approvedRulesPages(id));
         expect(refused, `the official rules link goes to an approved destination for ${id}: ${href}`).toBe('');
         const words = (await line.innerText()).replace(/\s+/g, ' ').trim();
         return `badge "${label}" (${state}), link ${href}, ${words.length} characters of wording`;
