@@ -210,7 +210,7 @@ const files = (fail = []) => async url => {
   if (snapshot) return {ok: true, json: async () => read(snapshot)};
   const path = at.pathname.slice(1);
   if (fail.includes(path)) return {ok: false, status: 503, json: async () => ({})};
-  return {ok: true, json: async () => read(path)};
+  return new Response(readFileSync(new URL(`../dist/${path}`, import.meta.url)));
 };
 /** A fake MapLibre map: GeoJSON data per source, and clicks that pick what the test puts under them. */
 function library() {
