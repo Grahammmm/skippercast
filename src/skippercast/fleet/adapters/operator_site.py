@@ -311,12 +311,10 @@ class OperatorSite:
         for parts, links in parsed.phone_blocks:
             label = " ".join(parts)
             phones = links | {"+1" + "".join(match.groups()) for match in PHONE.finditer(label)}
-            if len(phones) != 1:
-                continue  # no number, or ambiguous which number the label belongs to
-            phone, = phones
             if EXCLUDED_LABEL.search(label):
-                found.excluded_phones.add(phone)
-            elif BUSINESS_LABEL.search(label):
+                found.excluded_phones.update(phones)
+            elif len(phones) == 1 and BUSINESS_LABEL.search(label):
+                phone, = phones
                 found.add("phone_business", phone, page, 0.8 if phone in links else 0.7)
         for match in EMAIL_TEXT.finditer(text):
             self._email(match.group(0), page, found, 0.7)

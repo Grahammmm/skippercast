@@ -54,6 +54,17 @@ def test_context_does_not_extend_across_contact_entries():
     assert phones(body) == []
 
 
+@pytest.mark.parametrize("contact", [
+    '<p>Personal, not for booking: (202) 555-0101 and (202) 555-0102</p>',
+    '<p>Personal, not for booking: <a href="tel:202-555-0101">first</a> and '
+    '<a href="tel:202-555-0102">second</a></p>',
+])
+def test_multi_number_exclusion_vetoes_each_duplicate_before_the_site_cap(contact):
+    body = ('<p>Booking line: (202) 555-0101</p><p>Bookings: (202) 555-0102</p>'
+            '<p>Office: (202) 555-0100</p><a href="/contact">Contact</a>')
+    assert phones(body, contact=contact) == [("+1" + "202" + "555" + "0100", 0.7, (), SITE)]
+
+
 def test_explicit_exclusion_vetoes_a_duplicate_before_the_site_cap():
     body = ('<p>Booking line: (202) 555-0101</p><p>Bookings: (202) 555-0100</p>'
             '<p>Reservations: (202) 555-0102</p><p>Office: (202) 555-0103</p>'
