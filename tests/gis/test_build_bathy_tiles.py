@@ -117,6 +117,13 @@ def write_survey(path, size=300, west_nodata=100):
     return elevation
 
 
+def assert_attempted_zoom_rows(case, metadata, minzoom, cap):
+    """D8-F01: archive metadata must carry exactly one native-support row per attempted zoom."""
+    rows = metadata.get('native_support_by_zoom')
+    case.assertIsInstance(rows, dict)
+    case.assertEqual(sorted(map(int, rows)), list(range(minzoom, cap + 1)))
+
+
 def srgb_to_lab(rgb):
     """D65 sRGB to CIELAB for the design lock's CIE76 ΔE comparison."""
     srgb = np.asarray(rgb) / 255.0
@@ -538,6 +545,29 @@ class EnhancementTests(unittest.TestCase):
                 self.assertEqual(decode_png(png).shape, (256, 256, 4))
 
 
+class AttemptedZoomRowControlTests(unittest.TestCase):
+    """Synthetic controls for the exact helper NativeTierTests uses on real archive metadata."""
+
+    @staticmethod
+    def rows(zooms, zero=()):
+        return {'native_support_by_zoom': {str(z): {'tiles': 0 if z in zero else 3, 'sources': []} for z in zooms}}
+
+    def test_missing_row_fails(self):
+        meta = self.rows(range(13, 18))
+        del meta['native_support_by_zoom']['15']
+        with self.assertRaises(AssertionError):
+            assert_attempted_zoom_rows(self, meta, 13, 17)
+
+    def test_no_rows_fails(self):
+        for meta in ({'native_support_by_zoom': {}}, {}):
+            with self.assertRaises(AssertionError):
+                assert_attempted_zoom_rows(self, meta, 13, 17)
+
+    def test_lower_cap_and_zero_support_level_pass(self):
+        assert_attempted_zoom_rows(self, self.rows(range(13, 16)), 13, 15)
+        assert_attempted_zoom_rows(self, self.rows(range(13, 18), zero=(17,)), 13, 17)
+
+
 class NativeTierTests(unittest.TestCase):
     def test_locked_native_zoom_and_core_support(self):
         """D6: 1 m/0-20 m reaches z17; deep/invalid/halo-only and coarse grids do not."""
@@ -597,15 +627,12 @@ class NativeTierTests(unittest.TestCase):
                         start, end = sum(4 ** i for i in range(z)), sum(4 ** i for i in range(z + 1))
                         self.assertEqual({t for t in tiles if start <= t < end}, expected)
                         if z <= (17 if resolution <= 1 else 15):  # attempted zoom: row is mandatory
-                            self.assertIn(str(z), metadata['native_support_by_zoom'])
                             detail = metadata['native_support_by_zoom'][str(z)]
                             self.assertEqual(detail['tiles'], len(expected))
                             self.assertEqual(detail['sources'], ([{'id': 'fixture', 'resolution_m': resolution,
                                                                   'tiles': len(expected)}]
                                                                 if expected else []))
-                    cap = 17 if resolution <= 1 else 15
-                    self.assertEqual(sorted(map(int, metadata['native_support_by_zoom'])),
-                                     list(range(13, cap + 1)))
+                    assert_attempted_zoom_rows(self, metadata, 13, 17 if resolution <= 1 else 15)
                     if expected_max == 17:
                         self.assertLess(len(expected), len(xs) * len(ys))  # unsupported cores omitted
                     # Explicit requests cannot promote coarse/background grids beyond their cap.
