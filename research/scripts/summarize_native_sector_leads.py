@@ -10,16 +10,24 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from shapely.geometry import box
+from skippercast.platform.contracts import bbox
 
 
-def envelope(request_url):
-    value = parse_qs(urlparse(request_url).query).get('geometry', [])
-    if len(value) != 1:
-        raise ValueError('Discovery sector lacks exact request envelope')
-    coordinates = [float(x) for x in value[0].split(',')]
-    if len(coordinates) != 4 or not coordinates[0] < coordinates[2] or not coordinates[1] < coordinates[3]:
-        raise ValueError('Invalid discovery request envelope')
-    return box(*coordinates)
+def matching_envelope(request_url, bounds):
+    """Bind the saved request to the same compiled bounds used by NOAA discovery."""
+    if not isinstance(request_url, str):
+        return None
+    try:
+        query = parse_qs(urlparse(request_url).query, keep_blank_values=True)
+        geometry = query.get('geometry', [])
+        if (len(geometry) != 1 or query.get('geometryType') != ['esriGeometryEnvelope']
+                or query.get('inSR') != ['4326']):
+            return None
+        if [float(value) for value in geometry[0].split(',')] == bbox(bounds):
+            return box(*bounds)
+    except (ValueError, OverflowError):
+        pass
+    return None
 
 
 def build(audit, discovery, sectors, overlap, holds=None):
@@ -56,7 +64,11 @@ def build(audit, discovery, sectors, overlap, holds=None):
         if not item or item['status'] != 'ok':
             rows.append({'sector_id': sector['id'], 'status': 'unavailable', 'issue': (item or {}).get('issue', 'missing discovery')})
             continue
-        region = envelope(item['request_url'])
+        region = matching_envelope(item.get('request_url'), sector.get('bounds'))
+        if region is None:
+            rows.append({'sector_id': sector['id'], 'status': 'unavailable',
+                         'issue': 'stale or invalid discovery request footprint'})
+            continue
         survey_ids = {survey['id'] for survey in item['surveys']}
         associated = [f for f in audit['files'] if f['survey_id'] in survey_ids]
         georeferenced = [f for f in associated if f['status'] == 'ok' and box(*f['raster_bounds_wgs84']).intersects(region)]
@@ -108,7 +120,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--audit', type=Path, default=Path('var/noaa-native-audit-100mb-refined.json'))
     parser.add_argument('--discovery', type=Path, default=Path('dist/data/noaa-survey-discovery.json'))
-    parser.add_argument('--sectors', type=Path, default=Path('catalog/coastal-sectors.json'))
+    parser.add_argument('--sectors', type=Path, default=Path('dist/data/coastal-sectors.json'),
+                        help='Compiled sector catalog used by NOAA discovery')
     parser.add_argument('--overlap', type=Path, default=Path('var/native-depth-overlap-leads-100mb.json'))
     parser.add_argument('--holds', type=Path, default=Path('catalog/noaa-survey-lead-holds.json'))
     parser.add_argument('--output', type=Path, default=Path('var/native-sector-review-leads.json'))
