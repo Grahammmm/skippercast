@@ -4,10 +4,11 @@
 // the real draftActions() + applyEdit() path the consumer runs.
 //
 // Controls (all pass; this file never asserts the defect is desired):
-//   valid control     an observation that kept the published 12 (version, pages version unchanged) has no gaps; a clean
-//                     confirmed correction really changes the published report exactly once (version +1, pages +1).
-//   affected control  a synthetic observation where the uncertain replacement was applied in place (count 21, version +1,
-//                     pages version +1) is reported by `contractGaps`.
+//   valid controls    published 12 kept AND the uncertain replacement staged (pending_confirm) has no gaps; confirming the
+//                     staged proposal changes the published report exactly once (version +1, pages +1) and a retry is a no-op;
+//                     a clean unflagged correction also changes it once.
+//   affected controls in-place application (count 21, version +1, pages +1), a dropped replacement (nothing staged), and a
+//                     confirmation that is missing or applied twice are each reported by contractGaps/confirmGaps.
 //   baseline receipt  the real draftActions()+applyEdit() observation for an uncertain replacement is printed as a
 //                     diagnostic (gaps listed, not asserted), so the fixture stays green before and after the product fix.
 // Protects: published-report integrity. Believable bug it catches: a low-confidence board reading silently overwrites a
@@ -31,12 +32,23 @@ const T0 = Date.parse('2026-10-03T17:00:00Z'), DAY = 86400000, TODAY = '2026-10-
 const SETTINGS = {publicBase: 'https://example.test'};
 const lings = (kept, extra = {}) => ({species_key: 'lingcod', label: 'lings', kept, released: null, ...extra});
 
-/** The contract: the published report after an uncertain replacement is untouched. Returns the gap list. */
+/** The contract: the published report is untouched AND the proposed replacement is staged (not dropped). Returns the gap list. */
 function contractGaps(o) {
   const gaps = [];
   if (!o.publicCountsUnchanged) gaps.push('published counts were replaced by the uncertain reading');
   if (o.version !== 1) gaps.push('published report version changed');
   if (o.pagesVersion !== o.pagesVersionBefore) gaps.push('public pages cache key was bumped');
+  if (o.stagedKept !== '21') gaps.push('uncertain replacement was not staged (dropped)');
+  if (o.stagedStatus !== 'pending_confirm') gaps.push('staged proposal is not awaiting confirmation');
+  return gaps;
+}
+/** The confirmation contract: confirming the staged proposal changes the public report exactly once. */
+function confirmGaps(before, after) {
+  const gaps = [];
+  if (after.kept !== '21') gaps.push('confirmed counts were not published');
+  if (after.version !== before.version + 1) gaps.push('published version did not advance exactly once');
+  if (Number(after.pagesVersion) !== Number(before.pagesVersion) + 1) gaps.push('pages cache key did not advance exactly once');
+  if (after.stagedStatus === 'pending_confirm') gaps.push('staged proposal still pending after confirmation');
   return gaps;
 }
 
@@ -62,14 +74,30 @@ async function replace(s, counts, at) {
     if (a.type === 'report_edit') await quiet(() => R.applyEdit(s.db, {id: 'c1'}, `m${at}`, String(i), a.reportId, a.fields, {reopen: a.reopen === true, publish: a.publish === true}, at));
   return out;
 }
-const observe = (sql, before) => ({publicCountsUnchanged: kept(sql).join() === '12', version: stored(sql).version, pagesVersionBefore: before, pagesVersion: pagesVersion(sql)});
+// Staging model for the fixture: a pending_confirm row of the same boat-day under a distinct source, holding the proposed counts.
+const staged = sql => sql.prepare("SELECT status,counts_json FROM advisor_reports WHERE id='rstaged'").get();
+function stage(sql, counts) {
+  sql.prepare(`INSERT INTO advisor_reports(id,boat_id,contact_id,region,port,report_date,trip_type,anglers,counts_json,source,status,verified,version,confirmed_at,published_at,created_at,updated_at)
+    VALUES('rstaged','b1','c1','morro-bay','morro-bay',?,NULL,22,?,'text-staged','pending_confirm',0,1,NULL,NULL,?,?)`).run(TODAY, JSON.stringify(counts), iso(T0), iso(T0));
+}
+/** Confirm the staged proposal: apply its (now clean) counts to the published report once, then retire the staged row. */
+async function confirmStaged(s, at) {
+  const counts = JSON.parse(staged(s.sql).counts_json).map(({uncertain: _u, ...c}) => c);
+  const r = await quiet(() => R.applyEdit(s.db, {id: 'c1'}, 'mconfirm', '0', 'rpub', {counts}, {}, at));
+  if (r === 'edited') s.sql.prepare("UPDATE advisor_reports SET status='confirmed_applied' WHERE id='rstaged'").run();
+  return r;
+}
+const snapshot = sql => ({kept: kept(sql).join(), version: stored(sql).version, pagesVersion: pagesVersion(sql), stagedStatus: staged(sql)?.status});
+const observe = (sql, before) => ({publicCountsUnchanged: kept(sql).join() === '12', version: stored(sql).version, pagesVersionBefore: before, pagesVersion: pagesVersion(sql),
+  stagedKept: staged(sql) ? JSON.parse(staged(sql).counts_json).map(c => c.kept).join() : null, stagedStatus: staged(sql)?.status ?? null});
 
 test('contractGaps: compliant observation has none; each violated clause is named', () => {
-  const ok = {publicCountsUnchanged: true, version: 1, pagesVersionBefore: '0', pagesVersion: '0'};
+  const ok = {publicCountsUnchanged: true, version: 1, pagesVersionBefore: '0', pagesVersion: '0', stagedKept: '21', stagedStatus: 'pending_confirm'};
   assert.deepEqual(contractGaps(ok), []);
   assert.deepEqual(contractGaps({...ok, publicCountsUnchanged: false}), ['published counts were replaced by the uncertain reading']);
   assert.deepEqual(contractGaps({...ok, version: 2}), ['published report version changed']);
   assert.deepEqual(contractGaps({...ok, pagesVersion: '1'}), ['public pages cache key was bumped']);
+  assert.deepEqual(contractGaps({...ok, stagedKept: null, stagedStatus: null}), ['uncertain replacement was not staged (dropped)', 'staged proposal is not awaiting confirmation']);
 });
 
 dbTest('valid control: a confirmed (clean) correction changes the published report exactly once', async () => {
@@ -81,9 +109,28 @@ dbTest('valid control: a confirmed (clean) correction changes the published repo
   assert.equal(pagesVersion(s.sql), String(Number(before) + 1));
 });
 
-dbTest('valid control: an observation that kept the published 12 has no gaps', () => {
+dbTest('valid control: published 12 kept AND the uncertain replacement staged has no gaps', () => {
+  const s = setup(), before = pagesVersion(s.sql);
+  stage(s.sql, [lings(21, {uncertain: true})]);
+  assert.deepEqual(contractGaps(observe(s.sql, before)), []);
+});
+
+dbTest('valid control: confirming the staged proposal publishes it exactly once; a retried confirm changes nothing', async () => {
   const s = setup();
-  assert.deepEqual(contractGaps(observe(s.sql, pagesVersion(s.sql))), []);
+  stage(s.sql, [lings(21, {uncertain: true})]);
+  const b = snapshot(s.sql);
+  assert.equal(await confirmStaged(s, T0 + 3000), 'edited');
+  const a = snapshot(s.sql);
+  assert.deepEqual(confirmGaps(b, a), []);
+  assert.equal(stored(s.sql).status, 'published');
+  assert.equal(await confirmStaged(s, T0 + 4000), 'retry');   // same message id: idempotent
+  assert.deepEqual(snapshot(s.sql), a);
+});
+
+dbTest('affected control: dropping the uncertain replacement (nothing staged) is detected', () => {
+  const s = setup();
+  assert.deepEqual(contractGaps(observe(s.sql, pagesVersion(s.sql))),
+    ['uncertain replacement was not staged (dropped)', 'staged proposal is not awaiting confirmation']);
 });
 
 dbTest('affected control: a synthetic in-place application of an uncertain replacement is detected', () => {
@@ -91,7 +138,16 @@ dbTest('affected control: a synthetic in-place application of an uncertain repla
   s.sql.prepare("UPDATE advisor_reports SET counts_json=?,version=2 WHERE id='rpub'").run(JSON.stringify([lings(21)]));
   s.sql.prepare("INSERT INTO job_state(key,value,updated_at) VALUES('advisor.pages.version','1',?)").run(iso(T0));
   assert.deepEqual(contractGaps(observe(s.sql, before)),
-    ['published counts were replaced by the uncertain reading', 'published report version changed', 'public pages cache key was bumped']);
+    ['published counts were replaced by the uncertain reading', 'published report version changed', 'public pages cache key was bumped',
+     'uncertain replacement was not staged (dropped)', 'staged proposal is not awaiting confirmation']);
+});
+
+dbTest('affected control: a confirmation that never reaches the public report, or applies twice, is detected', () => {
+  const b = {kept: '12', version: 1, pagesVersion: '0', stagedStatus: 'pending_confirm'};
+  assert.deepEqual(confirmGaps(b, {...b}), ['confirmed counts were not published', 'published version did not advance exactly once',
+    'pages cache key did not advance exactly once', 'staged proposal still pending after confirmation']);
+  assert.deepEqual(confirmGaps(b, {kept: '21', version: 3, pagesVersion: '2', stagedStatus: 'confirmed_applied'}),
+    ['published version did not advance exactly once', 'pages cache key did not advance exactly once']);
 });
 
 dbTest('baseline receipt: the real uncertain-replacement observation against the contract (diagnostic; not asserted)', async t => {
