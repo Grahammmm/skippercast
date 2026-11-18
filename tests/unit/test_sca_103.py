@@ -3,12 +3,16 @@
 The readback step script is extracted from the workflow and run against a fake
 loader, so no network is used.
 """
+from datetime import datetime, timezone
 import json
+import os
+from pathlib import Path
 import re
 import sys
 import textwrap
 import types
 
+from skippercast.forecast import local as forecast_local
 from tests._support import ROOT
 
 WORKFLOW = ROOT / ".github/workflows/forecast-tiles.yml"
@@ -23,23 +27,49 @@ def step_script():
     return textwrap.dedent(match.group(1))
 
 
-def run_readback(monkeypatch, tmp_path, report, published, attempts=3):
-    """published: model -> list (one entry per read) of cycle string or Exception; last entry repeats."""
+def epoch(cycle):
+    return int(datetime.strptime(cycle, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp())
+
+
+def run_readback(monkeypatch, tmp_path, report, published, attempts=3, tiles=None):
+    """published: model -> list (one entry per read) of manifest cycle string or Exception; last entry repeats.
+
+    tiles: model -> list (one entry per read) of the cycles the sampled tile files carry
+    (a string, or a list of strings for several tiles); defaults to the manifest cycle.
+    """
     reads = {m: 0 for m in MODELS}
     sleeps = []
+    tiles = tiles or {}
+
+    def pick(seq, model):
+        return seq[min(reads[model], len(seq) - 1)]
 
     def model_loader(model, points):
         def load(client):
-            seq = published[model]
-            item = seq[min(reads[model], len(seq) - 1)]
+            item = pick(published[model], model)
             reads[model] += 1
             if isinstance(item, Exception):
                 raise item
+            # The readback must sample the one staged copy it checked, not refetch.
+            root = Path(os.environ["SKIPPERCAST_FORECAST_ROOT"])
+            assert (root / "index.json").is_file() and (root / model / "tiles").is_dir()
             wave = model in ("ncep_gfswave016", "ecmwf_wam")
             key = "wave_height" if wave else "wind_speed_10m"
             return {"sample_at": item, "points": [{"hourly": {key: [1.0] * 192}}]}
         return "url", load
 
+    def stage(client, models, points, root):
+        (root / models[0] / "tiles").mkdir(parents=True)
+        manifest = pick(published[models[0]], models[0])
+        if isinstance(manifest, Exception):  # the fetch itself fails
+            reads[models[0]] += 1
+            raise manifest
+        cycles = pick(tiles[models[0]], models[0]) if models[0] in tiles else manifest
+        for n, cycle in enumerate(cycles if isinstance(cycles, list) else [cycles]):
+            tile = {"cycle": epoch(cycle) if isinstance(cycle, str) else cycle}
+            (root / models[0] / "tiles" / f"{n}.json").write_text(json.dumps(tile))
+
+    monkeypatch.setattr(forecast_local, "_stage", stage)
     fake = types.ModuleType("skippercast.pipeline.collect")
     fake.model_loader = model_loader
     fake.Client = lambda now: object()
@@ -82,6 +112,38 @@ def test_delayed_then_matching_succeeds_within_bound(monkeypatch, tmp_path):
     code, reads, sleeps = run_readback(monkeypatch, tmp_path, all_ok(), published)
     assert code == 0
     assert reads["ecmwf_wam"] == 3 and len(sleeps) == 2
+
+
+def test_new_manifest_over_stale_tile_fails(monkeypatch, tmp_path, capsys):
+    # Contract: a model reads back as this build only if the SAMPLED TILES carry the cycle,
+    # not just the separately cached manifest. Bug: manifest at NEW + tile still at OLD passed.
+    tiles = {"gfs_global": [OLD]}
+    code, reads, sleeps = run_readback(monkeypatch, tmp_path, all_ok(), {m: [NEW] for m in MODELS}, tiles=tiles)
+    out = capsys.readouterr().out
+    assert code == 1
+    assert reads["gfs_global"] == 3 and len(sleeps) == 2  # bounded retries
+    assert f"published cycle {NEW} (manifest) with tiles at {OLD}, build expects {NEW}" in out
+    assert "::error title=Forecast model gfs_global::published cycle does not match" in out
+    assert "gfs_global: this build" not in out
+
+
+def test_one_stale_tile_among_current_tiles_fails(monkeypatch, tmp_path):
+    # Bug: checking only the first sampled tile hides an old second tile.
+    code, _, _ = run_readback(monkeypatch, tmp_path, all_ok(), {m: [NEW] for m in MODELS},
+                              tiles={"ecmwf_ifs025": [[NEW, OLD]]})
+    assert code == 1
+
+
+def test_stale_tile_then_matching_tile_succeeds(monkeypatch, tmp_path):
+    code, reads, sleeps = run_readback(monkeypatch, tmp_path, all_ok(), {m: [NEW] for m in MODELS},
+                                       tiles={"ecmwf_wam": [OLD, [NEW, NEW]]})
+    assert code == 0 and reads["ecmwf_wam"] == 2 and len(sleeps) == 1
+
+
+def test_non_integer_tile_cycle_fails(monkeypatch, tmp_path):
+    code, _, _ = run_readback(monkeypatch, tmp_path, all_ok(), {m: [NEW] for m in MODELS},
+                              tiles={"gfs_global": [None]})
+    assert code == 1
 
 
 def test_reused_current_model_must_match_and_is_reported(monkeypatch, tmp_path, capsys):

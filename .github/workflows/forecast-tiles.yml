@@ -52,22 +52,51 @@ jobs:
           BUILD_REPORT: var/forecast-build.json
         run: |
           python - <<'PY'
-          import json, os, sys, time
+          import json, os, pathlib, sys, tempfile, time
           from datetime import datetime, timezone
+          from skippercast.forecast import local as forecast_local
           from skippercast.pipeline.collect import model_loader, Client
+          from skippercast.util.time import stamp
           points = [("Estero Bay", 35.36, -120.94), ("Point Buchon", 35.24, -120.94)]
           attempts = int(os.environ.get("READBACK_ATTEMPTS", "8"))
           delay = float(os.environ.get("READBACK_DELAY_SECONDS", "60"))
           report = json.load(open(os.environ.get("BUILD_REPORT", "var/forecast-build.json")))["models"]
 
           def read(model):
-              url, load = model_loader(model, points)
-              result = load(Client(datetime.now(timezone.utc)))  # unit and shape checks live in the loader
+              # Fetch the manifest and the sampled tiles ONCE into a staging directory, then
+              # sample that same copy: the cycle checked below belongs to the very tiles whose
+              # hours are counted. A fresh manifest cached in front of a stale tile is caught here.
+              with tempfile.TemporaryDirectory() as staging:
+                  root = pathlib.Path(staging)
+                  client = Client(datetime.now(timezone.utc))
+                  forecast_local._stage(client, [model], [(p[1], p[2]) for p in points], root)
+                  tiles = sorted((root / model / "tiles").glob("*.json"))
+                  if not tiles:
+                      raise ValueError(f"{model}: no sampled tile was published")
+                  (root / "index.json").write_text("{}")
+                  previous = os.environ.get("SKIPPERCAST_FORECAST_ROOT")
+                  os.environ["SKIPPERCAST_FORECAST_ROOT"] = str(root)
+                  try:
+                      url, load = model_loader(model, points)
+                      result = load(client)  # unit and shape checks live in the loader
+                  finally:
+                      if previous is None:
+                          os.environ.pop("SKIPPERCAST_FORECAST_ROOT", None)
+                      else:
+                          os.environ["SKIPPERCAST_FORECAST_ROOT"] = previous
+                  generations = set()
+                  for tile in tiles:
+                      cycle = json.loads(tile.read_text()).get("cycle")
+                      generations.add(stamp(datetime.fromtimestamp(cycle, timezone.utc)) if type(cycle) is int else f"invalid:{cycle!r}")
               hourly = result["points"][0]["hourly"]
               key = "wind_speed_10m" if "wind_speed_10m" in hourly else "wave_height"
               filled = sum(v is not None for v in hourly[key])
               assert filled > 100, f"{model}: only {filled} hours of {key}"
-              return result["sample_at"], filled, len(hourly[key]), key
+              # One cycle only counts when the manifest AND every sampled tile carry it.
+              cycle = result["sample_at"]
+              if generations != {cycle}:
+                  cycle = f"{cycle} (manifest) with tiles at {', '.join(sorted(generations))}"
+              return cycle, filled, len(hourly[key]), key
 
           # Models this build produced or confirmed must read back at exactly that cycle.
           # A model whose build failed and kept the previous tiles is retained, not fresh:
