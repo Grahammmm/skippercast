@@ -100,6 +100,17 @@ def test_review_confirmed_refuses_unbound_synthetic_self_or_held_review(tmp_path
     assert _confirmed(tmp_path, _acceptance(tmp_path, review)) is False
 
 
+@pytest.mark.parametrize("creator", [None, "", 7, ["creator-1"]])
+def test_review_confirmed_refuses_missing_or_invalid_creator_identity(tmp_path, creator):
+    # Contract: reviewer != creator is only meaningful with a real creator; a nonempty reviewer must not
+    # differ from a missing creator_id and confirm review (acceptance schema is not validated by payload()).
+    acceptance = _acceptance(tmp_path)
+    acceptance.pop("creator_id")
+    if creator is not None:
+        acceptance["creator_id"] = creator
+    assert _confirmed(tmp_path, acceptance) is False
+
+
 def test_review_confirmed_refuses_missing_tampered_or_synthetic_acceptance(tmp_path):
     good = _acceptance(tmp_path)
     assert _confirmed(tmp_path, {k: v for k, v in good.items() if k != "scientific_review"}) is False
