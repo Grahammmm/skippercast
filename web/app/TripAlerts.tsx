@@ -24,7 +24,7 @@ import {loadRegs, regsData, type RulesRegion} from '../regs.ts';
 import {planRuleLine, ruleSpecies} from './PlanRules.tsx';
 import {RuleReason} from './RuleReason.tsx';
 import type {BriefAlertSeed} from '../brief-alerts.ts';
-import {briefAlertPrefill} from '../brief-alerts.ts';
+import {briefAlertPrefill} from './brief-alert-prefill.ts';
 import {
   alertDate, alertNames, alertSpecies, AlertCopyError, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, localSubscription, sendTestNotification, deviceStatus, latestCheck, deviceButtons, deviceLine, type DeviceStatus, eventLine, feedbackPhase, formProblemId, latestTripEvent, assessmentTimeOrNull, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotificationsId, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
   feedbackSummary, feedbackDate, type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type ReuseOmission, type SavedTrip, type TripPlanSummary,
