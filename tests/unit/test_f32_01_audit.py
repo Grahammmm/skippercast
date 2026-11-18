@@ -1,5 +1,6 @@
 """F32-01: refresh reapplies the reviewed conservative repair before comparing."""
 import copy
+import hashlib
 import json
 
 import pytest
@@ -45,7 +46,7 @@ def pkg(tmp_path, monkeypatch):
     prep.validate_response(captured, BOUNDS, 2, (NAME,))
     assert captured["features"][0]["properties"]["geometry_repair"]
     snapshot = dict(captured, region_id=REGION, source_url=URL, checked_at="2026-01-01T00:00:00Z",
-                    verification_sha256="a" * 64)
+                    verification_sha256=hashlib.sha256(raw_of(original)).hexdigest())
     path = tmp_path / "dist" / config["assets"]["protected_areas"]
     path.parent.mkdir(parents=True)
     path.write_text(json.dumps(snapshot))
@@ -68,7 +69,7 @@ def test_unchanged_nested_shell_refreshes(pkg):
     snap = saved(pkg)
     assert snap["checked_at"] != "2026-01-01T00:00:00Z"
     assert snap["verification_sha256"] == result["sources"][0]["sha256"]
-    assert snap["verification_sha256"] != "a" * 64  # digest of the original raw response
+    assert snap["verification_sha256"] == pkg["snapshot"]["verification_sha256"]  # original-source digest kept
     assert snap["features"] == json.loads(json.dumps(pkg["snapshot"]["features"]))
 
 
@@ -113,5 +114,18 @@ def test_transfer_truncation_is_refused(pkg, where):
         data["properties"] = {"exceededTransferLimit": True}
     before = pkg["path"].read_text()
     with pytest.raises(ValueError):
+        run(pkg, data)
+    assert pkg["path"].read_text() == before
+
+
+def test_same_count_component_replacement_is_held(pkg):
+    # Negative control: a different nested shell replaces the original one; union and count are unchanged.
+    data = copy.deepcopy(pkg["original"])
+    data["features"][0]["geometry"]["coordinates"][1] = [[[2, 2], [3, 2], [3, 3], [2, 3], [2, 2]]]
+    fresh = copy.deepcopy(data)
+    prep.validate_response(fresh, BOUNDS, 2, (NAME,))
+    assert json.loads(json.dumps(fresh["features"])) == json.loads(json.dumps(pkg["snapshot"]["features"]))  # geometry check alone passes
+    before = pkg["path"].read_text()
+    with pytest.raises(ValueError, match="not verifiable"):
         run(pkg, data)
     assert pkg["path"].read_text() == before
