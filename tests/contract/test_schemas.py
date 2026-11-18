@@ -200,7 +200,8 @@ class ContractsCatchDrift(unittest.TestCase):
                  'rights': {**allowed['rights'], 'owner_public_display': decided}}
         self.accepts('source', owned)
         self.rejects('source', {**owned, 'rights': {**owned['rights'], 'owner_public_display': {**decided, 'basis': 'unrecorded'}}})
-        self.accepts('source', {**allowed, 'publication_allowed': False})
+        self.rejects('source', {**allowed, 'publication_allowed': False})
+        self.rejects('source', {**owned, 'rights': {k: v for k, v in owned['rights'].items() if k != 'owner_public_display'}})
         self.rejects('source', {**allowed, 'rights': {**allowed['rights'], 'attribution': ' '}})
 
     def test_region_contract(self):

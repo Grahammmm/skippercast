@@ -102,7 +102,7 @@
     },
     {
       "path": "schemas/source.schema.json",
-      "sha256": "6401818e2469ab63f7915c165423ae84a1a3b4d82d7dec9c70e68ec2b2806b9e"
+      "sha256": "ebebab58c20d093c1133565030970f15f32a5b0129814176303b526448721865"
     },
     {
       "path": "schemas/sources-catalog.schema.json",

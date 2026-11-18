@@ -46,8 +46,9 @@ class RegionalContracts(TestCase):
                 with self.subTest(display=display), self.assertRaisesRegex(ValueError, 'Invalid public_display'):
                     load({**source, 'rights': {**source['rights'], 'public_display': display}})
             allowed = {**source, 'rights': {**source['rights'], 'public_display': 'allowed'}}
-            with self.assertRaisesRegex(ValueError, 'public_display is not cleared'):
-                load({**allowed, 'review_status': 'candidate'})
+            for override in ({'review_status': 'candidate'}, {'publication_allowed': False}):
+                with self.subTest(override=override), self.assertRaisesRegex(ValueError, 'public_display is not cleared'):
+                    load({**allowed, **override})
             for evidence in ({'attribution': ' '}, {'terms_url': None}):
                 with self.subTest(evidence=evidence), self.assertRaisesRegex(ValueError, 'attribution and terms'):
                     load({**allowed, 'rights': {**allowed['rights'], **evidence}})
