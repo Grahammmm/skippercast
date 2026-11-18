@@ -7,6 +7,7 @@ body:
       value: |
         SkipperCast is a planning aid, not a navigation aid or an official source. For current rules always check CDFW and NOAA.
         If a regulation or closure shown in the app is wrong, please report it here and include the official source.
+        Please do not include private fishing marks, personal waypoints, exact private coordinates, trip links or account identifiers. Name the region and a public feature, an approximate area or a synthetic example instead.
   - type: dropdown
     id: kind
     attributes:
@@ -24,8 +25,8 @@ body:
   - type: input
     id: where
     attributes:
-      label: Region and location
-      description: Region name and the spot, forecast point or coordinates.
+      label: Region
+      description: Region name, for example Morro Bay. Optionally add a public feature (named reserve, harbour, buoy), an approximate area, or a synthetic example. Do not give private coordinates or trip links.
     validations:
       required: true
   - type: textarea
