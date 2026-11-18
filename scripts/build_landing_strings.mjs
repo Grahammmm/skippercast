@@ -25,7 +25,7 @@ export function projections(catalog) {
     if (typeof entry?.en !== 'string' || entry.en === '') throw Error(`${id}: no English string in the catalogue`);
     if (typeof entry.es !== 'string' || entry.es === '') throw Error(`${id}: no Spanish string in the catalogue`);
     en[id] = {en: entry.en};
-    if (id.startsWith('status.')) status[id] = {en: entry.en};
+    if (/^(status|coverage|skill)\./.test(id)) status[id] = {en: entry.en};
     es[id] = entry.es;
     if (landingId(id)) landing[id] = {en: entry.en};
   }
