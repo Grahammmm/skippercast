@@ -68,6 +68,20 @@ class RightsGateTests(unittest.TestCase):
                 self.assertEqual(pa.catalog_ids([reference], catalog), {reference: expected})
                 self.assertEqual(bool(pa.refusals('habitat', [reference], catalog)), expected is None)
 
+        # A blank source must not match a catalog row whose documentation or ID is blank or missing; the
+        # publisher reads catalog JSON without schema validation, so an approved blank row cannot clear a group.
+        blank_rows = [{'id': 'blank-doc', 'documentation_url': '', 'review_status': 'approved',
+                       'rights': {'commercial_use': 'allowed', 'terms_url': 'https://example.com/terms'}},
+                      {'id': 'no-doc', 'review_status': 'approved',
+                       'rights': {'commercial_use': 'allowed', 'terms_url': 'https://example.com/terms'}},
+                      {'id': '', 'documentation_url': '  ', 'review_status': 'approved',
+                       'rights': {'commercial_use': 'allowed', 'terms_url': 'https://example.com/terms'}}]
+        for reference in ('', '   '):
+            for rows in ([row], *([blank] for blank in blank_rows), blank_rows):
+                with self.subTest(reference=reference, rows=[r['id'] for r in rows]):
+                    self.assertEqual(pa.catalog_ids([reference], rows), {reference: None})
+                    self.assertEqual(pa.refusals('habitat', [reference], rows), [f'habitat: unknown source {reference}'])
+
         # Even a catalogued URL cannot identify one product if the rows disagree or it's terms-only.
         for reference, extra in ((product, {**row, 'id': 'other-grid'}),
                                  (product, {**row, 'documentation_url': product + '-sibling'}),

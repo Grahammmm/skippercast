@@ -76,6 +76,9 @@ def catalog_ids(urls, catalog):
     found = {}
     for url in urls:
         identity = url.strip()
+        if not identity:  # a blank source identifies no product, even against a row with blank documentation or ID
+            found[url] = None
+            continue
         doi = _doi(identity)
         # A terms URL is not a product key, even if copied into documentation_url.
         # A complete DOI is independently identifying, but only from documentation, never from terms.
