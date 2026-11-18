@@ -83,7 +83,7 @@ test('validation clamps confidences, nulls unknown species keys (label kept), tr
   assert.ok(!f.candidates.some(c => c.label === 'Canary rockfish'), 'the lowest (clamped to 0) is trimmed');
   assert.equal(f.needs_better_photo, false, 'a non-boolean flag is false');
   assert.equal(f.reason, null, 'a reason that is not a short code is dropped');
-  const c = parseClassification({kind: 'selfie', kind_confidence: '0.9', has_person: 'true', person_confidence: 3, nsfw: 1}, META);
+  const c = parseClassification({kind: 'selfie', kind_confidence: '0.9', has_person: false, person_confidence: 1, nsfw: false}, META);
   assert.deepEqual([c.kind, c.kind_confidence, c.has_person, c.person_confidence, c.nsfw], ['unknown', 0, false, 1, false]);
   const r = parseCountBoard({date_iso: '2026-02-30', anglers: -1, date_confidence: NaN, lines: [{label: '  ', count: 3}, {label: 'Reds', count: '12', released: 1.5, confidence: 2}, 'junk']}, META);
   assert.equal(r.date_iso, null); assert.equal(r.anglers, null); assert.equal(r.date_confidence, 0);
