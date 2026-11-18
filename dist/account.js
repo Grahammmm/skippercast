@@ -133,15 +133,15 @@ export function catchLogCsv(entries, trips) {
  * SCA-001: the one lifetime every account-panel file export (catch-log CSV, saved-spots GPX) answers to, owned by the
  * render that drew its buttons. `alive()` says the dialog and render are still current. `begin()` starts an attempt and
  * returns its own check: false once the dialog closes or repaints, or sign-out or a confirmed account deletion starts,
- * and never true again for that attempt, even if the sign-out or deletion fails (`stay()` then lets new attempts start).
+ * and never true again for that attempt, even if the sign-out or deletion fails. New attempts wait for every exit to fail.
  */
 function exportLifetime(alive) {
-  let generation = 0, leaving = false;
+  let generation = 0, leaving = 0;
   return {
     open: () => !leaving && alive(),
     begin() { const attempt = generation; return () => attempt === generation && !leaving && alive(); },
-    leave() { leaving = true; generation++; },
-    stay() { leaving = false; }
+    leave() { leaving++; generation++; },
+    stay() { leaving--; }
   };
 }
 

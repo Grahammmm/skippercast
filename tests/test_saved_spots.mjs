@@ -636,6 +636,27 @@ test('gpx_export_after_signout_start_downloads_nothing_even_when_logout_fails', 
   }
 });
 
+test('overlapping failed account exits block both exports until every request fails', async () => {
+  for (const first of ['logout', 'deletion']) {
+    const out = later(), gone = later(), d = await accountDialog({logout: () => out.promise, erase: () => gone.promise});
+    try {
+      const signout = d.$('#account-signout').fire('click');
+      const deleting = (await d.confirmDelete(true)).done;
+      if (first === 'logout') { out.resolve(reply({error: 'logout unavailable'}, 503)); await signout; }
+      else { gone.resolve(reply({error: 'deletion unavailable'}, 503)); await deleting; }
+      await d.exportNow();
+      await d.$('#log-download-csv').fire('click');
+      assert.equal(d.files.length, 0, `${first} failed while the other exit is pending: no export`);
+      assert.equal(d.blobs.size, 0, 'no file constructed during a pending exit');
+      if (first === 'logout') { gone.resolve(reply({error: 'deletion unavailable'}, 503)); await deleting; }
+      else { out.resolve(reply({error: 'logout unavailable'}, 503)); await signout; }
+      await d.$('#log-download-csv').fire('click'); await turn();
+      assert.deepEqual(d.files.map(f => f.name), ['SkipperCast-catch-log.csv']);
+      d.files.length = 0; await d.exportNow(); await fresh(d);
+    } finally { await d.restore(); }
+  }
+});
+
 test('file_exports_after_confirmed_deletion_start_download_nothing_and_share_one_lifetime', async () => {
   for (const outcome of ['deletion-fails', 'deletion-succeeds']) {
     const gone = later(), d = await accountDialog({erase: () => gone.promise});
