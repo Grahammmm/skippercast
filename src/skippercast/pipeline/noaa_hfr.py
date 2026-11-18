@@ -73,8 +73,16 @@ def read_subset(body, bounds, expected_time, resolution):
             raise ValueError("NOAA HFRNet subset lacks required fields")
         if any(hasattr(nc.variables[k], a) for k in required for a in ("scale_factor", "add_offset")):
             raise ValueError("NOAA HFRNet packed variables unsupported")
-        t, lat, lon = (nc.variables[k][:].copy() for k in ("time", "lat", "lon"))
-        u, v, n, hdop = (nc.variables[k] for k in ("u", "v", "number_of_sites", "hdop"))
+        axes = ("time", "lat", "lon")
+        if any(nc.variables[k].dimensions != (k,) for k in axes):
+            raise ValueError("NOAA HFRNet axes changed")
+        # Shape alone cannot distinguish swapped latitude and longitude on a square grid.
+        fields = ("u", "v", "number_of_sites", "hdop")
+        for k in fields:
+            if nc.variables[k].dimensions != axes:
+                raise ValueError(f"NOAA HFRNet unsupported dimension layout for {k}: expected {axes}")
+        t, lat, lon = (nc.variables[k][:].copy() for k in axes)
+        u, v, n, hdop = (nc.variables[k] for k in fields)
         if lat.ndim != 1 or lon.ndim != 1 or np.unique(lat).size != lat.size or np.unique(lon).size != lon.size:
             raise ValueError("NOAA HFRNet axes changed")
         shape = (1, len(lat), len(lon))
