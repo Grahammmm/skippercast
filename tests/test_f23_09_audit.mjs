@@ -23,6 +23,11 @@ for (const [name, body, stale, unknown = true] of [
   ['wrong name at the expected check count', {...healthy, checks: {heartbeat: fresh, last_message: fresh, processor: fresh}}, true],
   ['missing per-check status', {...healthy, checks: {...checks, heartbeat: {age_s: 60}}}, true],
   ['string per-check status', {...healthy, checks: {...checks, last_message: {...fresh, stale: 'false'}}}, true],
+  // The recovery path must not close an incident on a reply the message builder cannot read.
+  ['missing stale_after_s', {stale: false, checks}, true],
+  ['string stale_after_s', {...healthy, stale_after_s: '10800'}, true],
+  ['missing age_s', {...healthy, checks: {...checks, processed: {stale: false}}}, true],
+  ['string age_s', {...healthy, checks: {...checks, processed: {age_s: '60', stale: false}}}, true],
   ['missing aggregate with complete checks', {stale_after_s: 10800, checks}, true],
   ['string aggregate', {...healthy, stale: 'false'}, true],
   ['aggregate hides a stale check', {...healthy, checks: late}, true],

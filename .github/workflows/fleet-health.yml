@@ -43,10 +43,13 @@ jobs:
             "$BASE/api/fleet/jobs/health?region=$REGION")"
           if [ $? -ne 0 ] || ! stale="$(jq -ers '
             # Require one reply and the exact check set before trusting recovery.
+            # The message needs stale_after_s and every age_s (a number, or null for "never seen").
             select(length == 1) | .[0] | select(type == "object")
-            | select((.checks | type) == "object" and
+            | select((.stale_after_s | type) == "number" and
+                (.checks | type) == "object" and
                 (.checks | keys) == ["heartbeat", "last_message", "processed"] and
-                all(.checks[]; type == "object" and (.stale | type) == "boolean"))
+                all(.checks[]; type == "object" and (.stale | type) == "boolean" and
+                    has("age_s") and ((.age_s | type) == "number" or .age_s == null)))
             | select(.stale == any(.checks[]; .stale))
             | .stale | tostring
           ' 2>/dev/null <<<"$body")"; then
