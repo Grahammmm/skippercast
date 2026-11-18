@@ -32,16 +32,22 @@ or sign-off on a new map artifact. The second decision expressly includes CSUMB
 seafloor and Planet/Kelpwatch after the no-public-use terms were raised. The
 historical terms and pre-decision holds below are retained for the paid review.
 
-`rights.owner_public_display` records this rights decision per source. For
-already approved sources whose display hold was only about terms,
-`rights.public_display` is now `allowed`. On catalogue candidates and the
-restricted CSUMB archive records, the owner decision does not change
-`review_status`, `publication_allowed`, or the raw-data redistribution flags.
-No consumer can use the owner-decision field to bypass those gates. An unset
-display field on a legacy row is not a new grant. MBARI direct products,
-DS1091 interviews, explicit paid-use restrictions, and vessel/privacy holds
-were not cleared. Existing contributor credits, source dates and restrictions
-on what the data can support are unchanged.
+`rights.owner_public_display` records this rights decision per source, and
+`rights.public_display` is now `allowed` on every source that carries it: the
+already approved sources whose display hold was only about terms, the catalogue
+candidates and the restricted CSUMB archive records (72 rows). The catalogue
+contract accepts `allowed` for a non-approved source only when
+`owner_public_display` carries this basis. The decision does not change
+`review_status`, `publication_allowed` or the raw-data redistribution flags, and
+`publication_allowed: false` does not veto display: it governs raw and
+source-file redistribution only, while `public_display` governs derived display.
+`public_display: allowed` is legal eligibility, not release: independent
+scientific and regional qualification, exact source selection and each
+consumer's own gates still decide what is published. An unset display field on a
+legacy row is not a new grant. MBARI direct products (`mbari-seafloor-mapping`
+stays `excluded`), DS1091 interviews, explicit paid-use restrictions, and
+vessel/privacy holds were not cleared. Existing contributor credits, source
+dates and restrictions on what the data can support are unchanged.
 
 | Layer / source group | Region or intended coverage | Effect of this decision |
 | --- | --- | --- |
