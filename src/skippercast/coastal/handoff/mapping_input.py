@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 
 from .common import (confined, digest, load, ref, resolve, review_holds, write, native_container,
-                     validate_native_source, validate_derived_geotiff)
+                     validate_native_source, validate_derived_geotiff, read_bag_metadata_text)
 
 SCHEMA = 'private-mapping-input-v2'
 MAX_CELLS = 262_144
@@ -110,9 +110,7 @@ def observe(root, source_ref, *, window, vertical, source_row=None, metadata_sha
                 bag_root = bag['BAG_root']
                 if 'varres_refinements' in bag_root and bag_root['varres_refinements'].size:
                     raise ValueError('Variable-resolution BAG requires a native-refinement adapter; overview rejected')
-                if bag_root['metadata'].size > 1_000_000:
-                    raise ValueError('Oversized BAG metadata')
-                xml = bag_root['metadata'][:].tobytes().decode().rstrip('\0')
+                xml = read_bag_metadata_text(bag_root['metadata'])
             if hashlib.sha256(xml.encode()).hexdigest() != metadata_sha256:
                 raise ValueError('BAG embedded metadata hash mismatch')
             from urllib.parse import urlparse

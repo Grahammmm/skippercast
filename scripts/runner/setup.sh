@@ -25,6 +25,10 @@ HOME_DIR=/opt/actions-runner
 
 if [ "$(id -u)" -ne 0 ]; then echo "run as root (sudo)" >&2; exit 1; fi
 
+# On upgrades revoke the drop-in written by older versions of this installer.
+# Do this before any package work can fail; leave other sudoers files alone.
+rm -f -- /etc/sudoers.d/actions-runner
+
 echo "== host packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
@@ -33,14 +37,27 @@ apt-get install -y -q --no-install-recommends \
   build-essential libsqlite3-dev zlib1g-dev \
   libicu-dev libkrb5-3 libssl3 libcurl4 \
   python3 python3-venv python3-pip
+
+# Ubuntu 24.04: Playwright 1.65.1 nativeDeps, Chromium and shared tools.
+# Review this list when updating the Playwright pin or the runner image.
+# Jobs install only the browser binary in their own cache, not host packages.
+echo "== Chromium host dependencies"
+apt-get install -y -q --no-install-recommends \
+  libasound2t64 libatk-bridge2.0-0t64 libatk1.0-0t64 libatspi2.0-0t64 \
+  libcairo2 libcups2t64 libdbus-1-3 libdrm2 libgbm1 libglib2.0-0t64 \
+  libnspr4 libnss3 libpango-1.0-0 libx11-6 libxcb1 libxcomposite1 \
+  libxdamage1 libxext6 libxfixes3 libxkbcommon0 libxrandr2 \
+  xvfb fonts-noto-color-emoji fonts-unifont libfontconfig1 libfreetype6 \
+  xfonts-cyrillic xfonts-scalable fonts-liberation fonts-ipafont-gothic \
+  fonts-wqy-zenhei fonts-tlwg-loma-otf fonts-freefont-ttf
+
 # GitHub CLI (used by the freshness monitor and the seafloor ledger PR step).
 if ! command -v gh >/dev/null; then
   curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
   apt-get update -q && apt-get install -y -q gh
 fi
-# Node 22 for `pnpm exec playwright install --with-deps` at setup time; the
-# workflows still bring their own Node through actions/setup-node.
+# Host Node bootstrap; workflows still bring their own Node through actions/setup-node.
 if ! command -v node >/dev/null; then
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y -q nodejs
@@ -50,15 +67,6 @@ corepack enable || true
 echo "== runner user"
 id -u "$USER_NAME" >/dev/null 2>&1 || useradd --system --create-home --home-dir "$HOME_DIR" --shell /bin/bash "$USER_NAME"
 mkdir -p "$HOME_DIR" && chown "$USER_NAME:$USER_NAME" "$HOME_DIR"
-# Playwright's Chromium needs sudo once for its shared libraries; the runner gets
-# password-less sudo only for apt-get so `playwright install --with-deps` works.
-cat > /etc/sudoers.d/actions-runner <<EOF
-$USER_NAME ALL=(root) NOPASSWD: /usr/bin/apt-get
-EOF
-chmod 0440 /etc/sudoers.d/actions-runner
-
-echo "== Chromium shared libraries for the Playwright e2e job"
-sudo -u "$USER_NAME" -H bash -c 'cd ~ && npx --yes playwright@1 install-deps chromium' || echo "playwright install-deps failed; the e2e job installs them itself with sudo apt-get"
 
 echo "== runner binary $RUNNER_VERSION"
 ARCH=$(uname -m); case "$ARCH" in x86_64) RARCH=x64;; aarch64) RARCH=arm64;; *) echo "unsupported arch $ARCH" >&2; exit 1;; esac

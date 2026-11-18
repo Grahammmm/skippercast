@@ -166,6 +166,10 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // assertions and thresholds untouched. Rebind those two exact hashes.
 // SC1722-14 changes field typography/layout only; no colour, alpha, backing or contrast threshold changes.
 // SC1922-04: shared preview disclosure and appended layout; catch/legend paint and contrast math unchanged.
+// DATA-LIVE-9 (#2753, public bottom relief): MapStage.tsx swaps the admin depth-shading chip for a Chart-only
+// relief gate (layers.ts reliefWanted) and a status note on the existing `.app-stage-note` class. No CSS, token or
+// colour change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(), assertions and thresholds are
+// untouched. Rebind only MapStage.tsx.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC2207-01 (#1501): species.ts changes only Plan.source_links' type member from href to url.
   // The interface is erased at runtime; Reports/CatchCards markup, styles, paint and source data
@@ -267,7 +271,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // never MapStage or PresentationToggle; no CSS, token, class, catch markup, paint, contrast(), assertion or threshold
   // change. Rebind only MapStage.tsx.
   // MB-08: Reports/CatchCards mounts neither the Chart-only depth shading control nor its layer. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "2cc4ac589807f61354da30d86cba22d4d193b1bdecb93bd3b9c92a60f7dfe5bc",
+  "web/app/MapStage.tsx": "07c9cf39e007a91e0784c31cdcdc6248946b7f4c55fa21c301f020265cfd877a",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   // MB-05: light map-only colours and habitat opacity change; Reports catch text and backing do not use these roles.
   // MB-20: only light-theme overlay roles (--flow*, --mpa-fill/line, --swell-0..3, --contrast-1/2) change; Reports catch text and backing do not use them.
