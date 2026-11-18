@@ -1,9 +1,5 @@
-// SCA-528 / F03-15: the readable (no-JavaScript) coastal report requires an `alerts` array but
-// its markup (server/coast-pages.ts reportMarkup) never consults it. Offline, synthetic fixture only.
-// The detector below states what a correct page must show; it is checked against a valid control
-// (synthetic HTML that does show it), against deliberately wrong controls, and then replayed on the
-// real page. The baseline test records the current observation and passes either way, so it never
-// asserts that the gap is desired and keeps passing once alerts are rendered.
+// SCA-528 / SCA-188 (F03-15): applicable warnings on the readable coastal report.
+// The offline synthetic controls qualify the detector before replaying it on the real page.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -57,7 +53,7 @@ function gaps(html,want){
  for(const a of want.inapplicable)if(html.includes(a.event)||html.includes(a.url))out.push(`${a.id}: inapplicable alert shown`);
  return out;
 }
-const render=async report=>{const r=await serveCoastPage(new Request('https://skippercast.com/report'),{template,regions,now,fetcher:async()=>new Response(JSON.stringify(report),{headers:{'Content-Type':'application/json'}})});return {status:r.status,html:await r.text()};};
+const render=async (report,query='')=>{const r=await serveCoastPage(new Request('https://skippercast.com/report'+query),{template,regions,now,fetcher:async()=>new Response(JSON.stringify(report),{headers:{'Content-Type':'application/json'}})});return {status:r.status,html:await r.text()};};
 
 test('expectation separates overlapping, expired, future and out-of-area alerts and the source states',()=>{
  const want=expectation(withAlerts(ALL));
@@ -102,25 +98,43 @@ test('negative controls: the detector flags a page that omits, mislabels or over
  assert.ok(gaps('<p>nothing</p>',expectation(withAlerts([]))).includes('verified empty result not stated'));
 });
 
-test('baseline receipt: replay the real readable page (read-only); selection and forecast are retained',async()=>{
- const results={};
- for(const [name,report] of [['applicable',withAlerts(ALL)],['verified-empty',withAlerts([A_EXPIRED,A_OTHER_AREA])],['unavailable',withAlerts([],{outcome:'error'})]]){
-  const {status,html}=await render(report),want=expectation(report),found=gaps(html,want);
+test('readable report shows applicable alerts and distinguishes checked empty from unavailable',async()=>{
+ const starting=alert('start','Storm Warning',{effective:at,areaIds:undefined});
+ const ending=alert('end','Hurricane Force Wind Warning',{expires:at});
+ const unknown=alert('unknown','Brisk Wind Advisory',{effective:'invalid',expires:null});
+ const cases=[
+  ['applicable',withAlerts([...ALL,starting,ending,unknown])],
+  ['verified-empty',withAlerts([A_EXPIRED,A_OTHER_AREA],{fetchedAt:iso(-2*H)})],
+  ['error',withAlerts([],{outcome:'error'})],
+  ['stale with a warning',withAlerts([A_OVERLAP],{fetchedAt:iso(-2*H-1)})],
+  ['future retrieval',withAlerts([],{fetchedAt:iso(H+1)})],
+  ['missing source',{...base,sources:base.sources.filter(s=>s.id!=='nws-alerts')}],
+  ['unreadable alert',withAlerts([{...A_OVERLAP,areaIds:'central'}]),{state:'unavailable',inapplicable:[A_OVERLAP]}],
+ ];
+ for(const [name,report,want=expectation(report)] of cases){
+  const {status,html}=await render(report),found=gaps(html,want);
   assert.equal(status,200,name);
-  // Existing behavior that must be retained.
   assert.match(html,/SLO reference report/,name);assert.match(html,/8 \/ 12 kt/,name);assert.ok(html.includes(at),name);
-  // Never present an expired, future or out-of-area alert on this selection.
-  assert.ok(!found.some(g=>g.endsWith('inapplicable alert shown')),name+': '+found.join('; '));
-  // Baseline observation: either the page already satisfies the expectation, or it reports exactly the
-  // documented omission (no alert event/source/validity, no empty or unavailable statement).
-  results[name]=found;
+  assert.deepEqual(found,[],name);
+  if(name==='applicable'){
+   assert.ok(html.includes(`<time datetime="${A_OVERLAP.effective}">`));
+   assert.ok(html.includes(`<a href="${A_OVERLAP.url}" rel="noopener">NWS alerts</a>`));
+   assert.match(html,/Effective Unknown time; expires Unknown time/);
+  }
+  if(name==='stale with a warning')assert.ok(!html.includes(A_OVERLAP.url));
  }
- console.log('F03-15 baseline gaps by state: '+JSON.stringify(results));
- for(const found of Object.values(results))assert.ok(found.length===0||found.every(g=>/missing|not stated/.test(g)),found.join('; '));
 });
 
-test('selection is unchanged: an area outside the selected report binding does not borrow alerts',async()=>{
- const north=alert('n','Small Craft Advisory',{areaIds:['north']});
- const {html}=await render(withAlerts([north]));
- assert.ok(!html.includes(north.url));
+test('explicit reviewed area and selected hour, not the reference area or wall clock, drive alerts',async()=>{
+ const late=iso(6*H),northLater={...A_FUTURE,areaIds:['north']};
+ const report=withAlerts([A_OVERLAP,A_OTHER_AREA,northLater]);
+ for(const [selected,shown,excluded] of [[at,A_OTHER_AREA,northLater],[late,northLater,A_OTHER_AREA]]){
+  const {status,html}=await render(report,`?region=cambria-san-simeon&area=north&hour=${encodeURIComponent(selected)}`);
+  assert.equal(status,200);
+  assert.match(html,/Sources bound to the selected reviewed map area/);
+  assert.ok(html.includes(`<code>${selected}</code>`));
+  assert.ok(html.includes(shown.url));
+  assert.ok(!html.includes(excluded.url));
+  assert.ok(!html.includes(A_OVERLAP.url));
+ }
 });
