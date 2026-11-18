@@ -143,10 +143,13 @@ Only after a port ([port to Twilio](advisor-port-to-twilio.md)). Twilio console 
   TOKEN_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/skippercast-private"
   mkdir -p "$TOKEN_DIR"
   chmod 700 "$TOKEN_DIR"
-  TOKEN_FILE="$TOKEN_DIR/meta-page-token-$(date -u +%Y%m%dT%H%M%SZ)"
+  TOKEN_FILE="$TOKEN_DIR/meta-page-token-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+  if [ -e "$TOKEN_FILE" ] || [ -L "$TOKEN_FILE" ]; then echo "in use, choose another name"; else echo "name is free"; fi
   ```
 
-  Keep `META_APP_ID` and `META_APP_SECRET` in the environment, never in command arguments. From the checkout, run `node scripts/advisor/meta-token.mjs --token-file "$TOKEN_FILE"` for a fresh Page token ([09 § Setup](../../plans/text-advisor/09-social.md)). The script prints the Page id, Instagram user id, token expiry, quota and account type; it never prints the Page token. It refuses an existing file or symlink: use a new name every run. If the run fails or exits 1 (for example, a non-Business account), use `rm -f -- "$TOKEN_FILE"` to remove any file left by that run. Do not import after a failed run.
+  Run the script only if that printed `name is free`. If it printed `in use`, do not run it and do not delete anything: set `TOKEN_FILE` to another new name and check again. Only a file at a name that was free before the run may be removed by the failure cleanup below.
+
+  Keep `META_APP_ID` and `META_APP_SECRET` in the environment, never in command arguments. From the checkout, run `node scripts/advisor/meta-token.mjs --token-file "$TOKEN_FILE"` for a fresh Page token ([09 § Setup](../../plans/text-advisor/09-social.md)). The script prints the Page id, Instagram user id, token expiry, quota and account type; it never prints the Page token. It refuses an existing file or symlink: use a new name every run. If the run fails or exits 1 (for example, a non-Business account), do not import. Because the check above found the name free, a regular file now at `$TOKEN_FILE` was left by this run (a partial write); remove it with `if [ -f "$TOKEN_FILE" ] && [ ! -L "$TOKEN_FILE" ]; then rm -- "$TOKEN_FILE"; fi`. Never run that cleanup for a name the check reported as `in use`, or one you did not check: the script refuses to overwrite, so that file belongs to an earlier run.
 
   Import only by redirecting the file into the secret command. Use the GitHub command for setup; on rotation, use both commands:
 
