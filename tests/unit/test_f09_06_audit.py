@@ -65,6 +65,23 @@ UNUSABLE = {
     "two sources": lambda doc: doc["sources"].append(copy.deepcopy(doc["sources"][0])),
     "document not an object": None,
 }
+# Malformed rows: the BeachWaterQuality fields `parse` always writes, each deleted or given a wrong type.
+# Believable bug: `_usable_edition` checking only identity/geometry, so a half-written row suppresses the poll.
+for _key in ("name", "status", "advisory", "fetchedAt", "stationCode", "areaId"):
+    UNUSABLE[f"row missing {_key}"] = (lambda key: lambda doc: doc["waterQuality"][0].pop(key))(_key)
+UNUSABLE.update({
+    "row name empty": _row("name", "  "),
+    "row name not text": _row("name", 7),
+    "row status empty": _row("status", ""),
+    "row status not text": _row("status", None),
+    "row advisory not text or null": _row("advisory", 5),
+    "row stationCode not text or null": _row("stationCode", 12),
+    "row fetchedAt not text": _row("fetchedAt", 1760000000),
+    "row fetchedAt not a time": _row("fetchedAt", "yesterday"),
+    "row fetchedAt without timezone": _row("fetchedAt", "2026-10-08T15:00:00"),
+    "row areaId outside the binding": _row("areaId", "atlantis"),
+    "row not an object": lambda doc: doc["waterQuality"].__setitem__(0, "row"),
+})
 
 
 class ReuseValidationTests(TestCase):

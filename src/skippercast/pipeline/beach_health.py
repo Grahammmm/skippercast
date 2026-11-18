@@ -187,10 +187,35 @@ def _usable_edition(doc, region_id):
                 or not isinstance(row.get("id"), str) or not row["id"] or row["id"] in seen
                 or not _number(row.get("lat")) or not _number(row.get("lon"))
                 or not south <= row["lat"] <= north or not west <= row["lon"] <= east
-                or row.get("sampledAt") is not None or row.get("sampleDateAvailable") is not False):
+                or row.get("sampledAt") is not None or row.get("sampleDateAvailable") is not False
+                or not _usable_row_fields(row, binding)):
             return False
         seen.add(row["id"])
     return True
+
+
+def _usable_row_fields(row, binding):
+    """True when the `BeachWaterQuality` fields `parse` always writes are present with the right types.
+
+    `name` and `status` are non-empty text (parse substitutes a placeholder, never an empty value); `advisory` and
+    `stationCode` are text or null, never absent; `fetchedAt` is a timezone-aware ISO time; `areaId` names one of the
+    binding's areas. A missing advisory stays null: it is not evidence the beach is clear.
+    """
+    for key in ("name", "status"):
+        if not _text(row.get(key)):
+            return False
+    for key in ("advisory", "stationCode"):
+        if key not in row or not (row[key] is None or isinstance(row[key], str)):
+            return False
+    if row.get("areaId") not in {area[0] for area in binding["areas"]}:
+        return False
+    fetched = row.get("fetchedAt")
+    if not isinstance(fetched, str):
+        return False
+    try:
+        return datetime.fromisoformat(fetched.replace("Z", "+00:00")).utcoffset() is not None
+    except ValueError:
+        return False
 
 
 def due(path, now, minutes=POLL_MINUTES, region_id=None):
