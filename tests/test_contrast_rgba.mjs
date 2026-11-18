@@ -19,6 +19,7 @@ const CVD_INPUTS = rawThemes(readFileSync(new URL('../web/tokens.css', import.me
 const V2_CSS = `:root {
 ${declarations({...CVD_INPUTS, bg: '#000000', 'bg-deep': '#000000', panel: '#000000', 'panel-2': '#000000',
   'map-ink': '#ffffff', 'map-ink-halo': '#000000', 'map-label': '#ffffff', 'map-halo': '#000000',
+  'map-land': '#000000', 'map-park': '#000000',
   text: '#ffffff', muted: '#ffffff', 'line-strong': '#ffffff', mint: '#ffffff', blue: '#ffffff', coral: '#ffffff', amber: '#ffffff'})}
 }
 :root[data-theme="light"] { }`;
