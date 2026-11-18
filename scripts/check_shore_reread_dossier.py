@@ -217,8 +217,10 @@ def _m2(doc, failed, errors):
     if 'noaa' in failed or 'noaaLayerMetadata' in failed:
         errors.append('m2EsteroBluffs: cannot be proposed when the NOAA layer or its legend was not acquired')
     for k in ('siteSelectionLimits', 'ownerUrl'):
-        if (est.get(k) or {}).get('state') == 'unverifiable':
-            errors.append(f'm2EsteroBluffs.{k}: unverifiable, selection must stay unresolved')
+        # a proposal needs an affirmative read of each prerequisite: failed or unverifiable keeps it unresolved
+        state = (est.get(k) or {}).get('state')
+        if state in ('unverifiable', 'failed'):
+            errors.append(f'm2EsteroBluffs.{k}: {state}, selection must stay unresolved')
     cands = est.get('candidates')
     if not isinstance(cands, list) or not cands:
         errors.append('m2EsteroBluffs: proposed selection needs candidates')

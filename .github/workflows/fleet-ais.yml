@@ -80,6 +80,12 @@ jobs:
           SCHEDULE_CRON: ${{ github.event.schedule }}
         run: |
           set -o pipefail
+          lock="${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}/.locks/fleet-ais.lock"
+          mkdir -p -m 0700 -- "${lock%/*}" || exit 1
+          WAIT=600
+          exec 9>"$lock"
+          flock -w "$WAIT" 9 || { echo "::error::fleet-ais is held by another run (this or the other repo); not starting"; exit 75; }
+          echo "lock fleet-ais acquired"
           fleet_run_kind=normal
           if [ -n "$LABEL_IMPORT" ]; then fleet_run_kind=label-import
           elif [ "$VALIDATE" = "true" ]; then fleet_run_kind=validation

@@ -103,6 +103,8 @@ jobs:
           set -euo pipefail
           # Run state, manifests and profiles live outside any checkout (design.md section 4).
           var="${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}"
+          # Both sinks share the workflow's cross-repo lock.
+          echo "FLEET_LOCK=$var/.locks/fleet-osint.lock" >> "$GITHUB_ENV"
           # Staging runs keep their own directory, as in fleet-registry.yml.
           if [ "$SINK" = staging ]; then var="$var-staging"; fi
           echo "SKIPPERCAST_FLEET_VAR=$var" >> "$GITHUB_ENV"
@@ -111,6 +113,12 @@ jobs:
           RUN_ID: ${{ inputs.run_id }}
         run: |
           set -euo pipefail
+          lock="$FLEET_LOCK"
+          mkdir -p -m 0700 -- "${lock%/*}" || exit 1
+          WAIT=60
+          exec 9>"$lock"
+          flock -w "$WAIT" 9 || { echo "::error::fleet-osint is held by another run (this or the other repo); not starting"; exit 75; }
+          echo "lock fleet-osint acquired"
           if [ -n "$RUN_ID" ]; then
             # A resumed run keeps its manifests, so a batch recorded as done stays the same boats.
             echo "Fleet OSINT run \`$RUN_ID\` (resumed): region \`$REGION\`, sink \`$SINK\`" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -129,6 +137,12 @@ jobs:
           MAX_BATCHES: ${{ inputs.max_batches }}
         run: |
           set -uo pipefail
+          lock="$FLEET_LOCK"
+          mkdir -p -m 0700 -- "${lock%/*}" || exit 1
+          WAIT=60
+          exec 9>"$lock"
+          flock -w "$WAIT" 9 || { echo "::error::fleet-osint is held by another run (this or the other repo); not starting"; exit 75; }
+          echo "lock fleet-osint acquired"
           args=(--region "$REGION" --run-id "$RUN_ID" --claude "$CLAUDE_BIN")
           if [ -n "$MAX_BATCHES" ]; then
             args+=(--max-batches "$MAX_BATCHES")
@@ -147,6 +161,12 @@ jobs:
       - name: Ingest the profiles
         run: |
           set -euo pipefail
+          lock="$FLEET_LOCK"
+          mkdir -p -m 0700 -- "${lock%/*}" || exit 1
+          WAIT=60
+          exec 9>"$lock"
+          flock -w "$WAIT" 9 || { echo "::error::fleet-osint is held by another run (this or the other repo); not starting"; exit 75; }
+          echo "lock fleet-osint acquired"
           run_dir="$SKIPPERCAST_FLEET_VAR/$REGION/runs/$RUN_ID"
           # Validates every profile, refuses and lists the invalid ones (counts in the summary).
           python -m skippercast.fleet ingest --region "$REGION" --sink "$SINK" --run-id "$RUN_ID" \

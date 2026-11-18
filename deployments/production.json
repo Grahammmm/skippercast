@@ -12,6 +12,13 @@
     "workflow": ".github/workflows/live-conditions.yml",
     "workflows": ["live-conditions.yml", "advisor-media.yml", "fleet-registry.yml", "fleet-osint.yml", "fleet-ais.yml", "fleet-health.yml"]
   },
+  "fleet_scheduler": {
+    "repository": "Grahammmm/skippercast-ops",
+    "repository_id": "1462951898",
+    "owner_id": "13221608",
+    "ref": "refs/heads/main",
+    "workflows": ["fleet-registry.yml", "fleet-osint.yml", "fleet-ais.yml", "fleet-ping.yml"]
+  },
   "forecast_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/forecasts",
   "source_use": "noncommercial",
   "monetization": "none"

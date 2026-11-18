@@ -8,7 +8,7 @@
 // the META_* secrets. All offline: a fake fetch answers.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
+import {readFileSync, mkdtempSync, rmSync, writeFileSync, statSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -225,7 +225,7 @@ dbTest('admin health: meta not configured makes no call; configured reads the qu
   assert.ok(!JSON.stringify(stored).includes(TOKEN));
 });
 
-test('meta-token.mjs: the dialog URL has the scopes, the pasted address gives the code, and the run prints the Page id, token and IG id without writing a file', async () => {
+test('meta-token.mjs: dialog and code handling, token exchange, and setup checks', async t => {
   const url = new URL(script.dialogUrl('100000000000999', script.DEFAULT_REDIRECT, 'state123'));
   assert.equal(url.origin + url.pathname, `https://www.facebook.com/${meta.GRAPH_VERSION}/dialog/oauth`);
   assert.equal(url.searchParams.get('scope'), 'pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_metadata,pages_messaging,instagram_basic,instagram_content_publish,instagram_manage_comments,instagram_manage_messages,instagram_manage_insights,business_management');
@@ -237,18 +237,21 @@ test('meta-token.mjs: the dialog URL has the scopes, the pasted address gives th
   assert.equal(script.parseCode(code, 's'), code);
   assert.throws(() => script.parseArgs(['--secret', 'x']), /usage/);
 
+  const dir = mkdtempSync(join(tmpdir(), 'meta-token-'));
+  t.after(() => rmSync(dir, {recursive: true, force: true}));
+  const tokenFile = join(dir, 'page-token');
   const igUnknownField = jsonResponse(fixture('error-unknown-field'), 400);
   const {fetcher, calls} = fakeFetch([fixture('oauth-short'), fixture('oauth-long'), fixture('me-accounts'), igUnknownField, {id: IG, username: 'skippercast'}, fixture('publishing-limit'), fixture('debug-token-never')]);
   const out = [];
   let asked = '';
   const ask = async () => { const state = new URL(out.find(l => l.includes('dialog/oauth')).trim()).searchParams.get('state'); asked = state; return `${script.DEFAULT_REDIRECT}?code=${code}&state=${state}`; };
   const env = {META_APP_ID: '100000000000999', META_APP_SECRET: SECRET};
-  const {value: status} = await quiet(() => script.main([], {env, fetcher, ask, log: l => out.push(l)}));
+  const {value: status} = await quiet(() => script.main(['--token-file', tokenFile], {env, fetcher, ask, log: l => out.push(l)}));
   assert.equal(status, 0);
   assert.ok(asked);
   const text = out.join('\n');
   assert.match(text, /META_PAGE_ID +100000000000001/);
-  assert.match(text, /META_PAGE_TOKEN +EAAB-PLACEHOLDER-PAGE-TOKEN/);
+  assert.equal(readFileSync(tokenFile, 'utf8'), 'EAAB-PLACEHOLDER-PAGE-TOKEN');
   assert.match(text, new RegExp(`META_IG_USER_ID +${IG}`));
   assert.match(text, /does not expire/);
   assert.match(text, /3 of 50/);
@@ -262,15 +265,60 @@ test('meta-token.mjs: the dialog URL has the scopes, the pasted address gives th
   assert.equal(calls[2].params.appsecret_proof, createHmac('sha256', SECRET).update('EAAB-PLACEHOLDER-LONG-USER-TOKEN').digest('hex'));
   assert.equal(calls[5].path, `${meta.GRAPH_BASE}/${IG}/content_publishing_limit`);
   assert.equal(calls[5].params.access_token, 'EAAB-PLACEHOLDER-PAGE-TOKEN');
-  const source = readFileSync(new URL('../scripts/advisor/meta-token.mjs', import.meta.url), 'utf8');
-  assert.doesNotMatch(source, /writeFile|appendFile|createWriteStream/, 'the script never writes the secrets to disk');
+
   // A Creator account fails the run.
   const creator = fakeFetch([fixture('oauth-short'), fixture('oauth-long'), fixture('me-accounts'), {id: IG, username: 'skippercast', account_type: 'MEDIA_CREATOR'}, fixture('publishing-limit'), fixture('debug-token-never')]);
   const lines = [];
-  const {value: bad} = await quiet(() => script.main([], {env, fetcher: creator.fetcher, ask: async () => { const s = new URL(lines.find(l => l.includes('dialog/oauth')).trim()).searchParams.get('state'); return `${script.DEFAULT_REDIRECT}?code=${code}&state=${s}`; }, log: l => lines.push(l)}));
+  const {value: bad} = await quiet(() => script.main(['--token-file', join(dir, 'creator-token')], {env, fetcher: creator.fetcher, ask: async () => { const s = new URL(lines.find(l => l.includes('dialog/oauth')).trim()).searchParams.get('state'); return `${script.DEFAULT_REDIRECT}?code=${code}&state=${s}`; }, log: l => lines.push(l)}));
   assert.equal(bad, 1);
   assert.match(lines.join('\n'), /not BUSINESS/);
-  await assert.rejects(script.main([], {env: {}, fetcher, ask, log: () => {}}), /META_APP_ID/);
+  await assert.rejects(script.main(['--token-file', join(dir, 'no-app-token')], {env: {}, fetcher, ask, log: () => {}}), /META_APP_ID/);
+});
+
+// Contract: meta-token.mjs never deletes a token file it did not create. Bug caught: a file another run made
+// after the caller's "is the name free" check (the script's exclusive open then refuses it) being removed by
+// failure cleanup.
+test('meta-token.mjs: a destination created before the exclusive open is refused and kept', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'meta-token-own-'));
+  t.after(() => rmSync(dir, {recursive: true, force: true}));
+  const out = [];
+  const code = 'AQPLACEHOLDERCODE0123456789';
+  const env = {META_APP_ID: '100000000000999', META_APP_SECRET: SECRET};
+  const raced = join(dir, 'raced-token');
+  const {fetcher} = fakeFetch([fixture('oauth-short'), fixture('oauth-long'), fixture('me-accounts'), {id: IG, username: 'skippercast'}, fixture('publishing-limit'), fixture('debug-token-never')]);
+  // The other run creates the file while this run waits for the pasted address: after any free-name check, before the open.
+  const ask = async () => {
+    writeFileSync(raced, 'other run token\n', {mode: 0o600});
+    const state = new URL(out.find(l => l.includes('dialog/oauth')).trim()).searchParams.get('state');
+    return `${script.DEFAULT_REDIRECT}?code=${code}&state=${state}`;
+  };
+  await assert.rejects(quiet(() => script.main(['--token-file', raced], {env, fetcher, ask, log: l => out.push(l)})), /not created by this run/);
+  assert.equal(readFileSync(raced, 'utf8'), 'other run token\n');
+});
+
+// Contract: failure cleanup never deletes by name. Bugs caught: an lstat-then-unlink losing a file another run
+// swapped in between the two calls; a partial token left readable in this run's file; a message claiming removal
+// that did not happen.
+test('meta-token.mjs: a failed write empties this run\'s file, never deletes by name, and never claims removal', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'meta-token-fail-'));
+  t.after(() => rmSync(dir, {recursive: true, force: true}));
+  // The write fails after part of the token was written; the path still names this run's file.
+  const mine = join(dir, 'mine-token');
+  const partial = async function* () { yield 'PARTIAL-TOKEN'; throw Error('disk full'); };
+  await assert.rejects(script.savePageToken(mine, partial()), e => /emptied it/.test(e.message) && /did not delete anything by name/.test(e.message) && !/removed it/.test(e.message) && /Leave the path untouched/.test(e.message) && /new --token-file name/.test(e.message) && !/remove (it|the file)|ls -l/.test(e.message));
+  assert.equal(statSync(mine).size, 0);
+
+  // Another run swaps in its own file after this run created its own, before any cleanup could run (the window an
+  // lstat-then-unlink would lose): that file survives and only this run's orphaned file is emptied.
+  const swapped = join(dir, 'swapped-token');
+  const swap = async function* () {
+    yield 'PARTIAL-TOKEN';
+    rmSync(swapped);
+    writeFileSync(swapped, 'other run token\n', {mode: 0o600});
+    throw Error('disk full');
+  };
+  await assert.rejects(script.savePageToken(swapped, swap()), /did not delete anything by name/);
+  assert.equal(readFileSync(swapped, 'utf8'), 'other run token\n');
 });
 
 test('deploy wiring: the workflow passes the META_* secrets, and the deploy uploads each only when set (META_IG_TOKEN stays out)', () => {
