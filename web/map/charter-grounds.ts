@@ -124,10 +124,15 @@ export function hatchLines(geometry: Geometry, step = HATCH_STEP): number[][][] 
   return lines;
 }
 
-/** The outlines and their hatching, as the two GeoJSON sources. */
+/** The outline source shared by the Chart and the terrain drape. */
+function groundOutlines(grounds: readonly Ground[]): Collection {
+  return {type: 'FeatureCollection', features: grounds.map(g => ({type: 'Feature', geometry: g.geometry, properties: {id: g.id, label: g.label}}))};
+}
+
+/** The outlines and their hatching, as the two Chart GeoJSON sources. */
 export function groundCollections(grounds: readonly Ground[]): {outlines: Collection; hatch: Collection} {
   return {
-    outlines: {type: 'FeatureCollection', features: grounds.map(g => ({type: 'Feature', geometry: g.geometry, properties: {id: g.id, label: g.label}}))},
+    outlines: groundOutlines(grounds),
     hatch: {type: 'FeatureCollection', features: grounds.map(g => ({type: 'Feature', geometry: {type: 'MultiLineString', coordinates: hatchLines(g.geometry)}, properties: {id: g.id}}))},
   };
 }
@@ -240,7 +245,7 @@ export function createCharterGrounds({engine, fetchFn = (...a) => fetch(...a), p
     // FE-82: the same grounds drape on the terrain (outline and a faint fill; the drape has no hatch); a pick opens the ground's card.
     effect(() => {
       const list = on.value ? shown.value : [];
-      setTerrainLayer(REGISTRY_ID, list.length ? {features: overlayFeatures(groundCollections(list).outlines.features, f => f.properties.id as string),
+      setTerrainLayer(REGISTRY_ID, list.length ? {features: overlayFeatures(groundOutlines(list).features, f => f.properties.id as string),
         pick: id => { const mark = groundPick(id); return mark && chartPick(null, null, mark); }} : null);
     }),
   ];
