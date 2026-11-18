@@ -150,9 +150,9 @@ python -m skippercast.fleet confirm list --region CA --sink staging
 
 - `--method` is one of `operator-statement`, `uscg-documentation-matched-to-operator`, `cdfw-cpfv-licence-matched-to-operator`. Name similarity, AIS type or a home port are not methods.
 - `--evidence-ref` is an opaque token (1-128 of letters, digits, `_`, `-`) that points at evidence you keep elsewhere. Never put a name, contact, path or URL in it; the ledger only records that you say you confirmed it, it does not check the evidence.
-- `add` and `withdraw` read the sink's registry first (read-only) and refuse an MMSI the registry does not hold for that vessel. `--sink worker` reads the Worker's snapshot, so like `coverage-status --sink worker` it works only where the job's OIDC token exists.
+- `add` reads the sink's registry first (read-only) and refuses an MMSI the registry does not hold for that vessel; `withdraw` does not read it (it needs only the exact ledger pair). `--sink worker` reads the Worker's snapshot, so like `coverage-status --sink worker` it works only where the job's OIDC token exists.
 - Dates are `YYYY-MM-DD` and not in the future. An identical `add` or a repeated `withdraw` changes nothing; a different `add` for a standing confirmation is refused (withdraw it first). A withdrawn pair is re-confirmed with a later `add`, which replaces its entry: the ledger holds the current state, not a history.
-- If the registry's MMSI for a vessel changes, the entry is `stale`: it counts for nothing and `withdraw` refuses it too; the evidence is never silently reassigned to the new MMSI. Confirm the new pair separately.
+- If the registry's MMSI for a vessel changes, the entry is `stale`: it counts for nothing and the evidence is never silently reassigned to the new MMSI. Confirm the new pair separately. `withdraw` still accepts the exact stale pair, so old evidence can be revoked and stays withdrawn if the registry's MMSI later returns.
 - `list` prints vessel id, MMSI, method, dates and `active`/`withdrawn`/`stale` only; evidence references are never printed. A corrupt or unreadable ledger stops `coverage-status` before anything is written; it is never read as zero.
 
 ## NAIS transmit check

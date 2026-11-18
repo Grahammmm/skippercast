@@ -8,11 +8,9 @@ production support geometry and reference identity it returns. It separates two
 evidence roles: planning-cell context (cell membership) and measured overlap
 with the verified valid reference geometry.
 
-The affected-control test records a read-only BASELINE OBSERVATION of current
-behavior. It is not a statement that the behavior is desired; when production
-intersects with measured reference geometry or labels the support as
-planning-cell context, the detector reports no gap and this baseline is
-retired in favor of the valid control.
+The regression exercises the native planning-cell contract: the independently
+supported patch in the disjoint quarter may be retained, but must never claim
+measured overlap with the reference survey.
 """
 from pathlib import Path
 import tempfile
@@ -141,21 +139,20 @@ class ReferenceFootprintControls(unittest.TestCase):
                                              meaning='Planning-cell context only; not measured overlap.')}
         self.assertEqual(support_gaps(support, labeled, REFERENCE), [])
 
-    def test_baseline_observation_native_paired_support_is_whole_square(self):
-        # BASELINE OBSERVATION of current production behavior, not desired
-        # behavior: source_context() returns the whole 250 m square as support,
-        # labels it 'measured coverage footprint', and a patch with zero
-        # reference overlap is retained. The detector flags both facts.
+    def test_native_paired_support_is_planning_context_not_measured_overlap(self):
+        # A quarter-coverage winner qualifies the cell for planning, not the
+        # disjoint patch for measured overlap. Do not discard the pair's own
+        # qualifying patch just to avoid overstating the reference evidence.
         identity, support = paired_context(self.cells)
         claim = identity['reference_support']
         self.assertEqual(identity['support_mode'], ch.PAIRED_REFERENCE_SUPPORT)
         self.assertEqual(claim['source_ids'], [REFERENCE_ID])
-        self.assertIn('measured coverage footprint', claim['meaning'].lower())
         self.assertTrue(support.equals(coverage.cell_geometry(CELL)))
-        self.assertAlmostEqual(support.intersection(REFERENCE).area / support.area, .25)
-        self.assertEqual(support_gaps(support, identity, REFERENCE),
-                         ['whole-square-called-measured-footprint'])
+        self.assertEqual(support_gaps(support, identity, REFERENCE), [])
+        self.assertIn('planning-cell context', claim['meaning'].lower())
+        self.assertIn('not evidence of measured overlap', claim['meaning'].lower())
         patches, _ = ch.additional_patches([ON_REFERENCE, OFF_REFERENCE], support, EXISTING)
+        self.assertEqual({p.bounds for p in patches}, {ON_REFERENCE.bounds, OFF_REFERENCE.bounds})
         flagged = unsupported_patches(patches, REFERENCE)
         self.assertEqual(len(flagged), 1)
         self.assertEqual(flagged[0].bounds, OFF_REFERENCE.bounds)
