@@ -39,7 +39,7 @@ import type {Command} from './intents.ts';
 import {t, both} from './strings.ts';
 import type {StringKey} from './strings.ts';
 import {resolveLinks, portRegion, portName} from './links.ts';
-import {contactRegion, findPort, fold, namedSpecies, resolvePort, resolveSpecies} from './answers/resolve.ts';
+import {contactRegion, fold, namedPorts, namedSpecies, resolvePort, resolveSpecies} from './answers/resolve.ts';
 import {ruleKeys} from './answers/rules.ts';
 import {systemPrompt, REFUSAL_EN, ABUSE_EN} from './prompts/system.ts';
 import {toolsForRole, claudeTools, dispatchTool, isWebOnly} from './tools/index.ts';
@@ -360,8 +360,8 @@ function namedRuleRegions(text: string): string[] {
   const found = new Set(Object.entries(regions)
     .filter(([id, region]) => [id, region.name].some(name => name && words.includes(` ${fold(name)} `)))
     .map(([id]) => id));
-  const port = portRegion(findPort(text));
-  if (port) found.add(port);
+  // Every named port, not only the longest match: one unsupported port must not hide behind another.
+  for (const port of namedPorts(text)) found.add(portRegion(port) ?? `port:${port}`);
   return [...found];
 }
 

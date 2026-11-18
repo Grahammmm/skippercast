@@ -73,11 +73,16 @@ export function resolveSpecies(text: string | null | undefined): {key: string} |
 }
 
 /** All distinct species in text, preferring longer names over overlapping shorter aliases. */
-export function namedSpecies(text: string): string[] {
+export const namedSpecies = (text: string): string[] => findAll(SPECIES_TABLE, text);
+
+/** All distinct port ids in text (ids, catalog names, aliases), longer names first. */
+export const namedPorts = (text: string): string[] => findAll(PORT_TABLE, text);
+
+function findAll(table: Table, text: string): string[] {
   const words = fold(text).split(' ');
   const occupied = new Set<number>();
   const found = new Set<string>();
-  for (const [phrase, id] of SPECIES_TABLE) {
+  for (const [phrase, id] of table) {
     const parts = phrase.split(' ');
     for (let i = 0; i <= words.length - parts.length; i++) {
       if (parts.every((part, j) => words[i + j] === part && !occupied.has(i + j))) {

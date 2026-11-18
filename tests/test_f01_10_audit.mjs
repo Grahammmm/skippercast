@@ -30,6 +30,10 @@ for (const scenario of [
   {name: 'region carried from an earlier sentence even with a row there', rows: [['lingcod'], ['lingcod', 'southern-california']], input: {species_key: 'lingcod'}, quote: 'Southern California. Its lingcod must be at least 17 inches (Fixture rules; checked Oct 1).', seen: ['lingcod'], allowed: false},
   {name: 'fish carried from an earlier sentence without a row', rows: [['lingcod']], input: {species_key: 'lingcod'}, quote: 'Cowcod are slow growers. Lingcod must be at least 17 inches (Fixture rules; checked Oct 1).', seen: ['lingcod'], allowed: false},
   {name: 'pronoun after two earlier fish', rows: [['lingcod'], ['cowcod']], input: {species_key: 'lingcod'}, extraInput: {species_key: 'cowcod'}, quote: 'Lingcod and cowcod. Its minimum size must be at least 17 inches (Fixture rules; checked Oct 1).', seen: ['lingcod'], allowed: false},
+  // Every named port counts, not only the longest match.
+  {name: 'two ports in the claim where one lacks rule data', rows: [['lingcod']], input: {species_key: 'lingcod'}, subject: 'Port San Luis and San Diego lingcod', seen: ['lingcod'], allowed: false},
+  {name: 'two ports in the question where one lacks rule data', rows: [['lingcod']], input: {species_key: 'lingcod'}, place: ' at Port San Luis or San Diego', seen: ['lingcod'], allowed: false},
+  {name: 'two ports in the claim that share the supported region', rows: [['lingcod']], input: {species_key: 'lingcod'}, subject: 'Port San Luis and Morro Bay lingcod', seen: ['lingcod'], allowed: true},
 ]) {
   test(`F01-10: ${scenario.name}`, {skip: sqliteUnavailable || false}, async t => {
     const {sql, db} = advisorDatabase();
