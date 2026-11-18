@@ -298,6 +298,15 @@ def decide(region, vessels: Iterable[Mapping], reviews: Iterable[Mapping], stati
             return verified
         return None
 
+    def latest_verified(v: _Vessel, mmsi: int, matched: Iterable[str], held: bool) -> str | None:
+        recent = [d for d in matched if lapse_day <= d <= today]
+        if not recent:
+            return None  # a readable empty feed is not an outage
+        previous = schedule_days.get(v.schedule_key(mmsi), "") if held else ""
+        if lapse_day <= previous <= today:
+            recent.append(previous)
+        return max(recent)
+
     def heard(mmsi: int) -> tuple[Static | None, Seen | None]:
         return statics.get(mmsi), seen.get(mmsi)
 
@@ -443,7 +452,7 @@ def decide(region, vessels: Iterable[Mapping], reviews: Iterable[Mapping], stati
         if sched is not None and home_days == 0:
             sched_blockers.append("never-in-home-port")
         held = sticky and by_schedule
-        verified = max((d for d in sched.matched if lapse_day <= d <= today), default=None) if sched else None
+        verified = latest_verified(v, mmsi, sched.matched, held) if sched else None
         if held and sched is None:
             verified = outage_day(v, mmsi, before)   # keep the old date; an outage never advances it
         undone = sched is not None and (bool(sched.rivals) or sched.contradicted)   # also undoes a held row
@@ -476,8 +485,17 @@ def decide(region, vessels: Iterable[Mapping], reviews: Iterable[Mapping], stati
         held = owners.get(mmsi, ())
         if before.get("match_method") == SCHEDULE:
             v = by_id.get(before.get("vessel_id"))
+            verified = None
             if (mmsi not in statics and not held and v and v.port_id and v.mmsi is None
-                    and (v.id, mmsi) not in rejected and (verified := outage_day(v, mmsi, before))):
+                    and (v.id, mmsi) not in rejected and gate_problem(before) is None):
+                if at_sea is not None and report_days is not None and port_covered(v):
+                    sched = correlate(v.id, at_sea.get(mmsi, ()), report_days, port_of, rule,
+                                      (in_port or {}).get(mmsi, ()))
+                    if presence.get(mmsi, {}).get(v.port_id, 0) > 0 and not sched.rivals and not sched.contradicted:
+                        verified = latest_verified(v, mmsi, sched.matched, True)
+                else:
+                    verified = outage_day(v, mmsi, before)
+            if verified and v:
                 out.targets[mmsi] = v.ref
                 out.schedule_days[v.schedule_key(mmsi)] = verified
             else:

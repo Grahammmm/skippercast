@@ -153,3 +153,35 @@ def test_only_a_verified_matching_day_extends_the_grace_clock(match_run):
     assert run(unverified, matches=[unverified]) == {CANDIDATE}
     assert run(verified + timedelta(days=30), home=False) == {CANDIDATE}
     assert run(verified + timedelta(days=31), home=False) == set()
+
+
+def test_readable_evidence_is_rechecked_without_statics(match_run):
+    run, feeds, worker = match_run
+    feeds["feed-a"] = report("Sea Example", PORT_A, MATCHED)
+    assert run(EVIDENCE_DAY, matches=MATCHED) == {CANDIDATE}
+    assert run(EVIDENCE_DAY + timedelta(days=1), forget_statics=True) == {CANDIDATE}
+    feeds["feed-a"] = {"reports": []}
+    assert run(EVIDENCE_DAY + timedelta(days=2), forget_statics=True) == set()
+    assert worker.watch[str(CANDIDATE)]["status"] == "candidate"
+
+
+def test_readable_rival_evidence_demotes_without_statics(match_run):
+    run, feeds, worker = match_run
+    worker.vessels.append(vessel("rival", "Rival Example"))
+    feeds["feed-a"] = report("Sea Example", PORT_A, MATCHED)
+    assert run(EVIDENCE_DAY, matches=MATCHED) == {CANDIDATE}
+    feeds["feed-a"]["reports"] += report("Rival Example", PORT_A, MATCHED)["reports"]
+    assert run(EVIDENCE_DAY + timedelta(days=1), forget_statics=True) == set()
+    assert worker.watch[str(CANDIDATE)]["status"] == "candidate"
+
+
+@pytest.mark.parametrize("forget_statics", [False, True])
+def test_older_readable_evidence_does_not_reverse_grace_clock(match_run, forget_statics):
+    run, feeds, _ = match_run
+    feeds["feed-a"] = report("Sea Example", PORT_A, MATCHED)
+    assert run(EVIDENCE_DAY, matches=MATCHED) == {CANDIDATE}
+    feeds["feed-a"] = report("Sea Example", PORT_A, [MATCHED[-2]])
+    assert run(EVIDENCE_DAY + timedelta(days=1), forget_statics=forget_statics) == {CANDIDATE}
+    feeds.clear()
+    assert run(EVIDENCE_DAY + timedelta(days=30), home=False, forget_statics=forget_statics) == {CANDIDATE}
+    assert run(EVIDENCE_DAY + timedelta(days=31), home=False, forget_statics=forget_statics) == set()
