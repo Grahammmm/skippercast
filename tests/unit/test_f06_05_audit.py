@@ -76,6 +76,19 @@ def test_expiry_does_not_mask_first_uncertainty_reason(world):
     assert events(store) == []
 
 
+def test_late_dispatcher_failure_after_expiry_keeps_first_hold_and_event(world):
+    store, clock = world
+    lease(store, "j1", "tok1", expires=900.0)
+    assert store.expire() == 1
+    first = events(store)
+    store.uncertain("j1", "tok1", "dispatcher_exited_late")
+    assert tuple(job(store, "j1")) == ("failed_uncertain", '["recovery_required"]')
+    assert events(store) == first and events(store, "failed_uncertain") == []
+    assert store.db.execute("SELECT token FROM leases WHERE job_id='j1'").fetchone()[0] == "tok1"
+    with pytest.raises(FencedLease):
+        store.uncertain("j1", "other-token", "x")
+
+
 def test_late_heartbeat_stays_fenced_and_lease_row_unchanged(world):
     store, clock = world
     lease(store, "j1", "tok1", expires=900.0)
