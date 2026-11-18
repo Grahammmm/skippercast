@@ -1,12 +1,15 @@
 """Offline STAGE contract. No release, Cloudflare credentials, or remote calls."""
 import hashlib
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import io
 import json
 import os
 from pathlib import Path
+import socket
 import stat
 import subprocess
 import sys
+from threading import Thread
 from types import ModuleType, SimpleNamespace
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlsplit
@@ -30,7 +33,14 @@ def network_off(monkeypatch):
     def no_network(*_, **__):
         pytest.fail('fixture attempted a remote call')
 
-    monkeypatch.setattr(stage, '_open', no_network)
+    connect = socket.create_connection
+
+    def loopback_only(address, *args, **kwargs):
+        if address[0] != '127.0.0.1':
+            no_network()
+        return connect(address, *args, **kwargs)
+
+    monkeypatch.setattr(socket, 'create_connection', loopback_only)
     monkeypatch.setattr('botocore.httpsession.URLLib3Session.send', no_network)
 
 
@@ -201,9 +211,9 @@ class LocalS3:
             raise ClientError({'Error': {'Code': 'PreconditionFailed'}, 'ResponseMetadata': {'HTTPStatusCode': 412}}, 'PutObject')
 
 
-def copy(reviewed, github, s3, *, allow_create=True, **updates):
+def copy(reviewed, github, s3, **updates):
     return stage.copy_release(reviewed.pointer | updates, github.client, stage.R2(s3),
-                              allow_create=allow_create, recheck=lambda: s3.calls.append(('recheck', None)))
+                              allow_create=True, recheck=lambda: s3.calls.append(('recheck', None)))
 
 
 @pytest.mark.parametrize('racing_create', [False, True])
@@ -233,24 +243,22 @@ def test_readback_corruption_blocks_without_overwriting(reviewed, monkeypatch, a
     assert [key for op, key in s3.calls if op == 'put'] == ([] if already_exists else [first])
 
 
-def test_manual_deploy_cannot_create_missing_objects(reviewed, monkeypatch):
-    github, s3 = LocalGitHub(reviewed, monkeypatch), LocalS3()
-    with pytest.raises(stage.StageError, match='manual deploy'):
-        copy(reviewed, github, s3, allow_create=False)
-    assert not s3.objects
-
-
 @pytest.mark.parametrize('case, match', [
     ('missing release', '404'), ('foreign release', 'same-repo'), ('swapped tag', 'same-repo'),
     ('missing asset', 'asset list'), ('foreign asset', 'asset identity'), ('truncated asset', 'SHA-256 or size'),
     ('swapped asset', 'SHA-256 or size'), ('oversize asset', 'exceeds expected size'),
     ('unchecked attachment', 'asset identity'), ('bad digest ref', 'digest root reference'),
     ('wrong root from pointer', 'missing GitHub release asset'),
+    ('correct digest short of listed size', 'SHA-256 or size mismatch'),
+    ('archive listing conflicts with pointer size', 'GitHub release asset size is outside its expected bound'),
 ])
 def test_invalid_release_or_asset_never_reaches_r2(reviewed, monkeypatch, case, match):
     # The last bad asset must prevent *every* PUT for this release, not merely its own.
+    # Even with a matching digest, trusting a lying asset length or dropping the
+    # pointer/listing check would miss a size mismatch (or read an unapproved length).
     github, s3 = LocalGitHub(reviewed, monkeypatch), LocalS3()
     rows = github.release['assets']
+    assert isinstance(rows, list)
     archive_url = rows[-1]['url']
     updates = {}
     if case == 'missing release':
@@ -273,6 +281,11 @@ def test_invalid_release_or_asset_never_reaches_r2(reviewed, monkeypatch, case, 
         rows[-1]['name'] = 'approval.json'
     elif case == 'wrong root from pointer':
         updates['digest_root_sha256'] = 'f' * 64
+    elif case == 'correct digest short of listed size':
+        # No pointer length for the chunk; its bytes and digest are unchanged.
+        rows[0]['size'] = len(github.data[rows[0]['url']]) + 1
+    elif case == 'archive listing conflicts with pointer size':
+        updates['bytes'] = len(github.data[archive_url]) + 1
     else:
         root = json.dumps({'chunks': {'../../approval.json': 'a' * 64}}).encode()
         updates['digest_root_sha256'] = digest(root)
@@ -281,10 +294,14 @@ def test_invalid_release_or_asset_never_reaches_r2(reviewed, monkeypatch, case, 
     with pytest.raises((stage.StageError, HTTPError), match=match):
         copy(reviewed, github, s3, **updates)
     assert not s3.calls
+    if case == 'archive listing conflicts with pointer size':
+        assert archive_url not in github.requests
 
 
 @pytest.mark.parametrize('host', ['release-assets.githubusercontent.com', 'untrusted.invalid'])
 def test_asset_redirect_never_forwards_the_github_token(monkeypatch, host):
+    # The application may follow an approved media hop only with a fresh request;
+    # reusing the API request headers would forward Authorization to the CDN.
     requests = []
 
     def respond(request):
@@ -304,6 +321,38 @@ def test_asset_redirect_never_forwards_the_github_token(monkeypatch, host):
             assert stream.read() == b'asset'
         assert requests[1].get_header('Authorization') is None
     assert requests[0].get_header('Authorization') == 'Bearer offline-read-token'
+
+
+def test_real_opener_refuses_redirect_before_forwarding_authorization(monkeypatch):
+    # Application checks need to see the 302; urllib's default redirect handler
+    # would follow Location first and forward the API Authorization header.
+    requests = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            requests.append((self.path, self.headers.get('Authorization')))
+            if self.path == '/initial':
+                self.send_response(302)
+                self.send_header('Location', '/destination')
+                self.end_headers()
+            else:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'{}')
+
+    with HTTPServer(('127.0.0.1', 0), Handler) as server:
+        monkeypatch.setattr(stage, '_API', f'http://127.0.0.1:{server.server_port}')
+        worker = Thread(target=server.serve_forever, kwargs={'poll_interval': 0.01})
+        worker.start()
+        try:
+            with pytest.raises(HTTPError) as caught:
+                stage.GitHubRelease('offline-read-token').metadata('/initial')
+            with caught.value as error:
+                assert error.code == 302
+            assert requests == [('/initial', 'Bearer offline-read-token')]
+        finally:
+            server.shutdown()
+            worker.join()
 
 
 MAIN_ENV = dict(GITHUB_REPOSITORY=stage.REPOSITORY, GITHUB_REF='refs/heads/main', GITHUB_REF_PROTECTED='true',
@@ -334,9 +383,8 @@ def test_event_admission(env, event, mode):
         assert cli.deploy_mode(MAIN_ENV | env, event) == mode
 
 
-def test_exact_git_blobs_and_no_pointer_deploy(reviewed, tmp_path):
-    # Exercise the real Git selection. An empty historical commit must not read
-    # R2 configuration; a dirty file must not replace the selected pointer.
+@pytest.fixture
+def git_tree(tmp_path):
     tree = tmp_path / 'tree'
     tree.mkdir()
 
@@ -345,6 +393,13 @@ def test_exact_git_blobs_and_no_pointer_deploy(reviewed, tmp_path):
                                *args], capture_output=True, text=True, check=True).stdout.strip()
 
     git('init', '-q')
+    return tree, git
+
+
+def test_exact_git_blobs_and_no_pointer_deploy(reviewed, tmp_path, git_tree):
+    # Exercise the real Git selection. An empty historical commit must not read
+    # R2 configuration; a dirty file must not replace the selected pointer.
+    tree, git = git_tree
     git('commit', '--allow-empty', '-qm', 'empty')
     empty_sha = git('rev-parse', 'HEAD')
     event = tmp_path / 'event.json'
@@ -366,6 +421,36 @@ def test_exact_git_blobs_and_no_pointer_deploy(reviewed, tmp_path):
         cli.pointers(tree, empty_sha)
 
 
+@pytest.mark.parametrize('case, match', [
+    ('symlink entry', 'non-regular file'),
+    ('catalog symlink', 'catalogue is not a Git tree'),
+    ('oversize blob', 'pointer path or size'),
+    ('region mismatch', 'region does not match'),
+])
+def test_selection_rejects_untrusted_git_entries(reviewed, git_tree, case, match):
+    # A blob-only mode check can accept symlinks, missing tree validation can
+    # treat a catalog symlink as empty, and valid JSON proves neither bounded
+    # size nor that the blob belongs to the region named by its path.
+    tree, git = git_tree
+    catalog = tree / 'catalog'
+    relief = catalog / 'relief'
+    if case == 'catalog symlink':
+        catalog.symlink_to('elsewhere')
+    else:
+        relief.mkdir(parents=True)
+        if case == 'symlink entry':
+            # Even ignored filenames must be regular; a symlink is also a Git blob.
+            (relief / 'README.md').symlink_to('elsewhere')
+        else:
+            name = 'different-region' if case == 'region mismatch' else REGION
+            padding = ' ' * (1 << 20) if case == 'oversize blob' else ''
+            (relief / f'{name}.json').write_text(json.dumps(reviewed.pointer) + padding)
+    git('add', 'catalog')
+    git('commit', '-qm', 'invalid catalogue fixture')
+    with pytest.raises(stage.StageError, match=match):
+        cli.pointers(tree, git('rev-parse', 'HEAD'))
+
+
 def test_controller_with_pointer_holds_when_dl10_is_missing(reviewed, tmp_path, monkeypatch):
     # The offline build-ahead must not silently become production-ready before DL-10 is present.
     event = tmp_path / 'event.json'
@@ -377,9 +462,12 @@ def test_controller_with_pointer_holds_when_dl10_is_missing(reviewed, tmp_path, 
         cli.run(env, probe=False)
 
 
-def test_controller_uses_selected_sha_for_both_ci_rechecks(reviewed, dl10, tmp_path, monkeypatch):
+@pytest.mark.parametrize('case', ['ci rerun failed', 'manual deploy', 'automatic copy'])
+def test_controller_pins_selected_sha_and_creation_authority(reviewed, dl10, tmp_path, monkeypatch, case):
     # The trigger SHA can differ from the older green ancestor selected by source.
     # An intervening failed rerun blocks the first PUT; a staged release is not authority.
+    # Passing allow_create=True unconditionally would let a manual deploy write
+    # the missing keys that only automatic copy may create.
     github = LocalGitHub(reviewed, monkeypatch)
     s3 = LocalS3()
     selected = 'd' * 40
@@ -399,8 +487,9 @@ def test_controller_uses_selected_sha_for_both_ci_rechecks(reviewed, dl10, tmp_p
         if url.path.endswith('/actions/workflows/ci.yml/runs'):
             sha, = parse_qs(url.query)['head_sha']
             ci_shas.append(sha)
+            failed = case == 'ci rerun failed' and len(ci_shas) == 2
             run = MAIN_EVENT['workflow_run'] | {'head_sha': sha, 'id': 10 + len(ci_shas),
-                                                'conclusion': 'success' if len(ci_shas) == 1 else 'failure'}
+                                                'conclusion': 'failure' if failed else 'success'}
             return Body(json.dumps({'total_count': 1, 'workflow_runs': [run]}).encode())
         return metadata(request)
 
@@ -409,10 +498,56 @@ def test_controller_uses_selected_sha_for_both_ci_rechecks(reviewed, dl10, tmp_p
     event.write_text(json.dumps(MAIN_EVENT))
     env = MAIN_ENV | dict(GITHUB_EVENT_PATH=str(event), STAGE_TREE='synthetic-unused', DEPLOY_SHA=selected,
                           STAGE_GITHUB_READ_TOKEN='offline-only')
-    with pytest.raises(cli.source.SourceError, match='exact-SHA'):
+    if case == 'manual deploy':
+        event.write_text(json.dumps({'inputs': {'action': 'deploy'}}))
+        with pytest.raises(stage.StageError, match='manual deploy'):
+            cli.run(env | {'GITHUB_EVENT_NAME': 'workflow_dispatch'}, probe=False)
+        assert ci_shas == [selected]
+        assert s3.calls == [('get', next(iter(reviewed.objects)))]
+        assert not s3.objects
+    else:
+        if case == 'ci rerun failed':
+            with pytest.raises(cli.source.SourceError, match='exact-SHA'):
+                cli.run(env, probe=False)
+            assert not s3.objects and all(op == 'get' for op, _ in s3.calls)
+        else:
+            cli.run(env, probe=False)
+            assert s3.objects == reviewed.objects
+        assert ci_shas == [selected, selected]
+
+
+@pytest.mark.parametrize('case, match', [
+    ('invalid pointer size', 'invalid relief metadata at bytes'),
+    ('unapproved source', 'does not have public display rights'),
+    ('no public display', 'does not have public display rights'),
+])
+def test_controller_validates_pointer_and_current_rights_before_io(reviewed, dl10, tmp_path, monkeypatch, case, match):
+    # Dropping the controller schema check defers malformed pointer fields to
+    # after CI I/O; dropping metadata validation trusts stale pointer rights.
+    pointer = reviewed.pointer.copy()
+    registry = reviewed.config / 'catalog/sources.json'
+    rows = json.loads(registry.read_text())
+    if case == 'invalid pointer size':
+        pointer['bytes'] = 0  # Pointer-only field, not checked by validate_metadata.
+    elif case == 'unapproved source':
+        rows['sources'][0]['review_status'] = 'pending'
+    else:
+        rows['sources'][0]['rights']['public_display'] = 'private'
+    registry.write_text(json.dumps(rows))
+    monkeypatch.setattr(cli, 'CONTROLLER', reviewed.config)
+    monkeypatch.setattr(cli, 'pointers', lambda *_: [pointer])
+
+    def unexpected_io(*_):
+        pytest.fail('invalid selected pointer reached provider I/O')
+
+    monkeypatch.setattr(stage, '_open', unexpected_io)
+    monkeypatch.setattr(stage.R2, 'connect', unexpected_io)
+    event = tmp_path / 'event.json'
+    event.write_text(json.dumps(MAIN_EVENT))
+    env = MAIN_ENV | dict(GITHUB_EVENT_PATH=str(event), STAGE_TREE='synthetic-unused', DEPLOY_SHA='d' * 40,
+                          STAGE_GITHUB_READ_TOKEN='offline-only')
+    with pytest.raises(package.ReleaseError, match=match):
         cli.run(env, probe=False)
-    assert ci_shas == [selected, selected]
-    assert not s3.objects and all(op == 'get' for op, _ in s3.calls)
 
 
 def test_workflow_requires_stage_success_and_isolates_the_secret_step():
