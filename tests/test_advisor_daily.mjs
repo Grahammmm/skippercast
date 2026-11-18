@@ -50,6 +50,7 @@ function intelInWindow() {
 /** A feed reader over the fixtures; `drop` removes the landing reports, `fail` makes a feed unreadable. */
 function feeds({drop = false, fail = null} = {}) {
   const d = read('./fixtures/feeds/daily-latest.json'), intel = intelInWindow();
+  d.generated_at = '2026-09-28T11:17:00Z';   // SCA-059: a current feed from its 04:17 local run (the fixture was written later that day)
   if (drop) d.reports = [];
   return async url => {
     if (/intelligence\.json$/.test(url)) { if (fail === 'intelligence' || fail === 'both') throw Error('down'); return intel; }
