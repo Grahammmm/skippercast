@@ -7,6 +7,7 @@ from jsonschema import Draft202012Validator, ValidationError
 import pytest
 
 from scripts.relief import region as cli
+from skippercast.platform.contracts import OWNER_DISPLAY_BASIS
 from skippercast.relief import envelope, package, receipts
 from tests._support import ROOT
 
@@ -156,8 +157,9 @@ def test_pointer_schema_round_trip_and_previous(tmp_path, assembly):
         envelope.build_pointer(approval, review, previous=previous | {'region': 'elsewhere'})
 
 
-@pytest.mark.parametrize('change', ['private-source', 'held-catalog-row', 'unknown-source', 'excluded-mbari',
-                                    'out-of-region', 'unlisted-digest', 'unreceipted-layer', 'uncertified-z16'])
+@pytest.mark.parametrize('change', ['private-source', 'held-catalog-row', 'publication-denied', 'publication-denied-owner-cleared',
+                                    'unknown-source',
+                                    'excluded-mbari', 'out-of-region', 'unlisted-digest', 'unreceipted-layer', 'uncertified-z16'])
 def test_package_refuses_ineligible_inputs(tmp_path, assembly, change, capsys):
     region, manifest = inputs(tmp_path / 'out')
     doc = json.loads(manifest.read_bytes())
@@ -169,6 +171,15 @@ def test_package_refuses_ineligible_inputs(tmp_path, assembly, change, capsys):
     elif change == 'held-catalog-row':
         rows['sources'][0]['provider'] = 'CSUMB Seafloor Mapping Lab'
         rows['sources'][0]['rights']['public_display'] = 'private'
+    elif change == 'publication-denied':
+        # Contract: an approved, display-allowed row with an explicit publication denial and no owner display
+        # decision is not releasable. Bug caught: the SCA-126 display decision dropping that veto from the relief gate.
+        rows['sources'][0]['publication_allowed'] = False
+    elif change == 'publication-denied-owner-cleared':
+        # Contract: the owner's display decision is not a release authorization; an explicit publication denial
+        # still blocks the release. Bug caught: the relief gate skipping the veto when owner_public_display is set.
+        rows['sources'][0]['publication_allowed'] = False
+        rows['sources'][0]['rights']['owner_public_display'] = {'decision': 'allowed', 'basis': OWNER_DISPLAY_BASIS}
     elif change == 'unknown-source':
         rows['sources'].clear()
     elif change == 'excluded-mbari':
