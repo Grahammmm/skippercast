@@ -11,8 +11,12 @@ from scripts.check_feed_freshness import PARTIAL, RAW, STALE, main, run_all, ver
 NOW = datetime(2026, 9, 27, 20, 0, tzinfo=timezone.utc)
 LIMIT = timedelta(hours=3)
 BASE = "https://site.example"
-FRESH_DATA = {"published_at": "2026-09-27T05:00:00Z"}
 SUFFIX = "(not an active region; reported, does not fail)"
+# Every critical kind present and ok (F04-12: a feed with no sources is missing its groups, not healthy).
+HEALTHY = {f"{kind}-1": {"id": f"{kind}-1", "kind": kind, "status": "ok", "checked_at": "2026-09-27T19:37:00Z",
+                         "data": {"sample_at": "2026-09-27T19:00:00Z"}}
+           for kind in ("observation", "prediction", "advisory", "forecast")}
+FRESH_DATA = {"published_at": "2026-09-27T05:00:00Z", "sources": HEALTHY}
 
 
 def stamp(delta):
@@ -20,7 +24,7 @@ def stamp(delta):
 
 
 def ahead(**kwargs):
-    return {"published_at": stamp(timedelta(**kwargs))}
+    return {"published_at": stamp(timedelta(**kwargs)), "sources": HEALTHY}
 
 
 def site(feeds, default=None):
@@ -92,7 +96,7 @@ class FutureFeedRunTests(unittest.TestCase):
             self.assertTrue(json.loads(report.read_text())["stale"])
 
     def test_future_region_feed_is_partial_for_preview_and_stale_for_active(self):
-        feeds = {**both("conditions", {"published_at": "2026-09-27T19:37:00Z"}), **both("data", FRESH_DATA),
+        feeds = {**both("conditions", {"published_at": "2026-09-27T19:37:00Z", "sources": HEALTHY}), **both("data", FRESH_DATA),
                  **both("conditions/regions/big-sur-coast", ahead(hours=1))}
         status, message = run_all(BASE, NOW, site(feeds), regions=[("big-sur-coast", False)])
         self.assertEqual(status, PARTIAL, message)
