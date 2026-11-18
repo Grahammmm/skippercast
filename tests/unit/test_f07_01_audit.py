@@ -64,7 +64,8 @@ def coverage_gaps(store, days, wanted):
             tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
         if "positions" not in tables:
             gaps[day.isoformat()] = "absent-table"
-        elif not bf._manifest_path(store, day).exists():   # retention removes it with the positions it emptied
+        elif bf._read_manifest(bf._manifest_path(store, day)).get("positions_complete", True) is not True \
+                or not bf._manifest_path(store, day).exists():   # retention flags the manifest it emptied the positions of
             gaps[day.isoformat()] = "partly-retained"
         elif not bf._ingested(store, day, wanted):   # schema_version, bbox and MMSIs must match this run
             gaps[day.isoformat()] = "mismatched-coverage"
@@ -140,10 +141,11 @@ class CoverageControlTests(BackfillTestCase):
             target = {MMSI + 1} if context == "mismatched-target" and day in hit else {MMSI}
             bf.ingest_day(source, self.store, day, bf.bbox_of(area), target, now_ms=NOW)
         for day in hit:
-            if context == "partly-retained":   # retention emptied the positions and removed the manifest
+            if context == "partly-retained":   # what apply_retention leaves: positions emptied, manifest flagged incomplete
                 with closing(sqlite3.connect(self.store.day_path(day))) as conn, conn:
                     conn.execute("DELETE FROM positions")
-                bf._manifest_path(self.store, day).unlink()
+                manifest_path = bf._manifest_path(self.store, day)
+                bf._write_json(manifest_path, {**bf._read_manifest(manifest_path), "positions_complete": False})
             elif context == "absent-table":
                 with closing(sqlite3.connect(self.store.day_path(day))) as conn, conn:
                     conn.execute("DROP TABLE positions")
