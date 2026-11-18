@@ -91,6 +91,19 @@ class RightsGateTests(unittest.TestCase):
                 self.assertEqual(pa.catalog_ids([product], [held]), {product: None})
                 self.assertEqual(pa.refusals('habitat', [product], [held]), [f'habitat: unknown source {product}'])
 
+        # An approved row must not mask a held row with an unusable ID that names the same product by URL or DOI.
+        doi = 'https://doi.org/10.5066/P9OPEN01'
+        for empty in ('', '  '):
+            for reference, document in ((product, product), (doi, 'https://doi.org/10.5066/p9open01')):
+                masked = {'id': empty, 'documentation_url': document, 'review_status': 'candidate',
+                          'rights': {'commercial_use': 'permission-required'}}
+                approved = {**row, 'documentation_url': document}
+                for mixed in ([approved, masked], [masked, approved]):
+                    with self.subTest(mixed_empty_id=repr(empty), reference=reference, order=[r['id'] for r in mixed]):
+                        self.assertEqual(pa.catalog_ids([reference], mixed), {reference: None})
+                        self.assertEqual(pa.refusals('habitat', [reference], mixed),
+                                         [f'habitat: unknown source {reference}'])
+
         # Even a catalogued URL cannot identify one product if the rows disagree or it's terms-only.
         for reference, extra in ((product, {**row, 'id': 'other-grid'}),
                                  (product, {**row, 'documentation_url': product + '-sibling'}),

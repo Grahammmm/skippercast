@@ -72,9 +72,7 @@ def catalog_ids(urls, catalog):
     """Resolve an exact catalog ID, complete DOI or exact documented product URL to one row."""
     counts = Counter(row['id'] for row in catalog)
     terms = {(row.get('rights', {}).get('terms_url') or '').strip() for row in catalog}
-    # A row with no usable ID can never be the answer: refusals() would drop it without checking its rights.
-    documents = [(row['id'], (row.get('documentation_url') or '').strip()) for row in catalog
-                 if isinstance(row.get('id'), str) and row['id'].strip()]
+    documents = [(row['id'], (row.get('documentation_url') or '').strip()) for row in catalog]
     found = {}
     for url in urls:
         identity = url.strip()
@@ -88,7 +86,10 @@ def catalog_ids(urls, catalog):
                 if identity == source
                 or (doi and doi == _doi(document))
                 or (not doi and identity == document and identity not in terms)]
-        found[url] = hits[0] if len(hits) == 1 and counts[hits[0]] == 1 else None
+        # A matching row with no usable ID can never be the answer (refusals() would drop it without checking its
+        # rights), and it must not be masked by an approved row sharing the product: any such hit fails closed.
+        usable = all(isinstance(source, str) and source.strip() for source in hits)
+        found[url] = hits[0] if usable and len(hits) == 1 and counts[hits[0]] == 1 else None
     return found
 
 
