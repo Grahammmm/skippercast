@@ -255,7 +255,7 @@ export function lintFile(path, source) {
   return findings;
 }
 
-/** The string catalogue (catalog/app/strings.json, en + es) and the files whose user-visible words all come from it. To cover a surface: add its ids, replace its literals with t(id, lang), list its file here. */
+/** The string catalogue (catalog/app/strings.json, en + es) and the files whose user-visible words all come from it. To cover a surface: add its ids, replace its literals with t(id, lang), list its file here. ThemeChoice is included so its new user-visible strings remain subject to copy lint. */
 export const CATALOGUE = 'catalog/app/strings.json';
 export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/FirstAnswerLine.tsx', 'web/app/RulesCard.tsx', 'web/brief/verdict-copy.ts', 'web/brief/WhereToLook.tsx', 'web/brief/ranking-copy.ts', 'web/brief/Run.tsx', 'web/brief/EntranceCurrent.tsx', 'web/app/LanguageChoice.tsx', 'web/app/UnitChoice.tsx', 'web/app/ThemeChoice.tsx', 'web/app/InstallApp.tsx', 'web/brief/Tiles.tsx', 'web/brief/tile-copy.ts', 'web/brief/TideStationControl.tsx', 'web/brief/TideSpark.tsx', 'web/brief/tide-copy.ts', 'web/brief/MarkForecast.tsx', 'web/brief/remaining-copy.ts', 'web/ui/Guard.tsx', 'web/ui/Popover.tsx', 'web/degraded-notice.tsx', 'web/degraded.ts', 'web/app/MapStage.tsx',
   'web/landing/RegionPicker.tsx', 'web/RegionPickerEntry.tsx', 'web/landing/main.tsx', 'web/landing/copy.ts', 'web/landing/Landing.tsx', 'web/landing/PortInput.tsx', 'web/landing/ProfileStep.tsx', 'web/landing/Readout.tsx', 'web/landing/readings.ts', 'web/landing/live-verdict.ts', 'web/app/FirstRun.tsx', 'web/app/LimitsPanel.tsx',
