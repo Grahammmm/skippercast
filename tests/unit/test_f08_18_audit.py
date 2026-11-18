@@ -54,6 +54,25 @@ class RobotsRateLimitedTests(unittest.TestCase):
         self.assertEqual(world.net.get(_url("/b")).body, b"b")  # now cached for the normal 24 h
         self.assertEqual(world.paths().count(("GET", "/robots.txt")), 2)
 
+    def test_cooldown_runs_from_lookup_completion_not_lookup_start(self):
+        # Contract: the rate-limited cooldown is ROBOTS_LIMITED_TTL after the final 429 arrives.
+        # Believable bug: the cache stamp is taken before the lookup, so HTTP retry sleeps
+        # (Retry-After 120 x 2 waits) eat the cooldown and the next request re-looks-up early.
+        world = _World(attempts=3)
+        world.routes[(HOST, "/robots.txt")] = (429, {"Retry-After": "120"}, b"")
+        with self.assertRaises(Skipped):
+            world.net.get(_url("/a"))
+        self.assertGreaterEqual(sum(world.slept), 240)  # the retries really consumed clock time
+        self.assertEqual(world.paths(), [("GET", "/robots.txt")] * 3)
+        world.now[0] += ROBOTS_LIMITED_TTL - 1  # still inside the cooldown measured from the final 429
+        with self.assertRaises(Skipped):
+            world.net.get(_url("/b"))
+        self.assertEqual(world.paths(), [("GET", "/robots.txt")] * 3)  # no new lookup
+        world.now[0] += 2  # past the cooldown: exactly one fresh lookup round
+        with self.assertRaises(Skipped):
+            world.net.get(_url("/b"))
+        self.assertEqual(world.paths(), [("GET", "/robots.txt")] * 6)
+
     def test_429_on_a_followed_robots_redirect_is_also_unavailable(self):
         world = _World(hosts=(HOST, "www." + HOST))
         world.routes[(HOST, "/robots.txt")] = (301, {"Location": _url("/robots.txt", "www." + HOST)}, b"")

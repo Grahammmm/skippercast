@@ -195,7 +195,8 @@ class FleetSession:
         ttl = ROBOTS_LIMITED_TTL if host in self._robots_limited else ROBOTS_TTL
         if cached is None or self.clock() - cached[0] > ttl:
             self._robots_limited.discard(host)
-            cached = self._robots[host] = (self.clock(), self._fetch_robots(host))
+            parser = self._fetch_robots(host)  # may sleep through HTTP retries: stamp after it, not before
+            cached = self._robots[host] = (self.clock(), parser)
         return cached[1] is not None and cached[1].can_fetch(ROBOTS_AGENT, url)
 
     def get(self, url: str, **options: Any) -> http.Response:
