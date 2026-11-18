@@ -32,8 +32,8 @@ variable can be moved by changing that variable:
 | --- | --- | --- | --- |
 | Literal `ubuntu-latest` | `advisor-media.yml`, `budget-drift.yml`, `buoy-history.yml`, `coast-assets.yml`, `feed-freshness.yml`, `live-conditions.yml` (all 4 jobs), `ops-report.yml`, `regional-legal-review.yml` | Always GitHub-hosted | Not configurable |
 | Literal `ubuntu-latest` | basemap, daily data, draft-region health and rehearsal, forecast tiles, research daily, research fish survey, research substrate (one job stays on `macos-latest`), seafloor | Always GitHub-hosted | Not configurable |
+| Literal `ubuntu-latest` | `ci.yml` (all six jobs) | Always GitHub-hosted | Not configurable |
 | `DATA_RUNNER` | fleet AIS processor and listener install, fleet registry, fleet OSINT | fleet jobs skip | our runners (free minutes) |
-| `CI_RUNNER` | `ci.yml` (check, e2e, survey-science) | `ubuntu-latest` | our runners only when `CI_SELF_HOSTED_READY=true` |
 
 `deploy-cloudflare.yml`, `dco.yml` and `release.yml` stay on GitHub-hosted runners: they
 are short (about 1–3 minutes each) and the deploy holds the Cloudflare token, which we
@@ -43,6 +43,8 @@ hosted too, so it can raise the `fleet-ais-stale` issue while the data runner is
 On a public repository anyone's pull request could run code on the box, so no pull
 request from a fork may ever reach it.
 
+CI never moves to a self-hosted runner on a public repo.
+
 **Rule for every workflow that can run on `DATA_RUNNER`:** no
 `pull_request` or `pull_request_target` trigger. Such a workflow runs on `schedule` (which
 runs `main`), `workflow_dispatch`, `workflow_run`, or `push` limited to `branches: [main]`,
@@ -50,19 +52,7 @@ so only reviewed code reaches the box. Workflows that hold fleet secrets go furt
 jobs also require `github.ref == 'refs/heads/main'`, so a dispatch from another branch is
 skipped (charter fleet [Q13](../plans/charter-fleet/open-questions.md#q13-self-hosted-fleet-jobs-on-a-public-repository),
 [threat model § 10.4](../legal/threat-model.md) row E). `tests/unit/test_fleet_install_script.py`
-checks the trigger rule for every workflow that names `DATA_RUNNER`. `ci.yml` is the one
-`pull_request` workflow with a self-hosted switch (`CI_RUNNER`). Its jobs reach the box only
-when `CI_SELF_HOSTED_READY=true` **and** the run is not a pull request from a fork or from
-Dependabot: pushes to `main`, manual dispatches and pull requests from branches in this
-repository (people with write access) use `CI_RUNNER`; a fork's pull request and a
-Dependabot update (whose new packages run install scripts) always run on GitHub-hosted Ubuntu.
-`tests/contract/test_workflow_pins.py` pins that expression. The guarantee CI gives is
-limited: its jobs get no repository secrets injected and a read-only `GITHUB_TOKEN`
-(`permissions: contents: read`). That restricts the token only. It does not stop a job
-from reading files or credentials on the host, and a same-repository branch is a
-write-access trust boundary, not proof that the code was reviewed. The current runners
-run as the operator account and can read the operator's credentials, so CI must not move
-onto them until isolation is verified (see [CI readiness gate](#ci-readiness-gate)).
+checks the trigger rule for every workflow that names `DATA_RUNNER`.
 
 ## Setting up the box
 
@@ -84,18 +74,12 @@ Steps:
    ```bash
    sudo REPO=Grahammmm/skippercast RUNNER_TOKEN=<token> bash scripts/runner/setup.sh
    ```
-   It installs the host packages the workflows expect, Chromium's shared libraries for the
-   Playwright job, and registers four runners (`RUNNERS=4`) as systemd services with the
+   It installs host packages and registers four runners (`RUNNERS=4`) as systemd services with the
    labels `self-hosted,skippercast`. Python and Node still come from `actions/setup-python`
    and `actions/setup-node` inside each job, cached under the runner's work folder.
 4. Check Settings → Actions → Runners shows four idle runners.
-5. Set the repository variables: `gh variable set DATA_RUNNER --body skippercast` and
-   `gh variable set CI_RUNNER --body skippercast`. Only jobs configured to use those
-   variables can move to the box; the fixed hosted jobs in the table are unaffected.
-   CI remains hosted until the complete readiness checks below pass and you set
-   `CI_SELF_HOSTED_READY=true`. To move CI back to hosted runners, delete that readiness
-   variable or set it to `false`. Unsetting `DATA_RUNNER` returns eligible jobs to their
-   default runner; jobs that require the variable skip instead.
+5. Set `DATA_RUNNER` with `gh variable set DATA_RUNNER --body skippercast`. Only the fleet
+   jobs configured to use that variable run on the box; they skip if it is unset.
 6. Also turn on `ENABLE_QUEUES=true` (see `docs/cloudflare.md`) so the notify job stops
    running all day; the Worker's cron queues trip checks itself.
 
@@ -198,36 +182,6 @@ OIDC identity for `/api/fleet/jobs/*`. It uses the Claude subscription only: the
 GitHub secret), and the script exits if `ANTHROPIC_API_KEY` is set. The Claude Code version is
 pinned and installed under `~/.local/share/skippercast/claude-code/`. Setup, flags, reruns and
 failures: [fleet OSINT run](runbooks/fleet-osint.md).
-
-## CI readiness gate
-
-`ci.yml` is written for a shared box: `pnpm/action-setup` installs into
-`${{ runner.temp }}` (several instances share one `$HOME`, and the default
-`~/setup-pnpm` races), and the Playwright step runs `--with-deps` (which calls
-`sudo apt-get`) only on GitHub-hosted runners. On the box, Chromium's shared
-libraries must already be present (Ubuntu 24.04 desktop has them; the setup
-script installs them otherwise).
-
-CI uses GitHub-hosted Ubuntu until `CI_SELF_HOSTED_READY=true` is set alongside
-`CI_RUNNER`, and fork and Dependabot pull requests stay hosted even then. Setting a
-runner label alone does not move CI. Before enabling the gate, verify all of these:
-
-1. **Credential isolation.** The CI runner runs as an account that cannot read the
-   operator's credentials or home directory (SSH keys, cloud and GitHub tokens,
-   `~/.config/skippercast/`, password stores). A read-only `GITHUB_TOKEN` does not
-   provide this; only host-level separation does.
-2. **Workload isolation.** CI jobs cannot reach the secret-bearing `DATA_RUNNER`
-   workloads: not their runner directories, work trees, caches,
-   environment files or processes.
-3. Browser system dependencies install without an interactive password.
-4. Parallel pnpm installs use separate directories.
-5. A complete proof run of the CI suite passes green on the configured runner.
-
-Today's runners run as the operator account and do not meet items 1 and 2, so
-`CI_SELF_HOSTED_READY` stays unset until that isolation is verified and a complete
-proof run is green. Keep the gate disabled while any prerequisite fails. Merging a
-change to `ci.yml` does not enable it. Other data jobs continue to use `DATA_RUNNER`
-independently.
 
 ## Seafloor isolation
 
