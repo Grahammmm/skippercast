@@ -247,12 +247,19 @@ def check_contours(collection, region, sources):
     bindings with its survey date and vertical datum (the source entry also carries the grid hash);
     contours must follow the named feet set (the legacy intervals if unnamed); every point must lie inside the region.
     A held collection (a `publication_held` key anywhere: see check_held_contours) is never publishable.
+    Explicit catalog denials also block publication; legacy sources keep their reviewed policy.
     """
     features = collection.get('features') or []
     parts = [collection, collection.get('provenance') or {}, *features, *(f.get('properties') or {} for f in features)]
     if any(isinstance(part, dict) and 'publication_held' in part for part in parts):
         raise ValueError(f"Depth contours for {region['id']} are held and cannot be published")
     _check(collection, region, sources, {'approved'})
+    for entry in collection['provenance'].get('sources', []):
+        ident = str(entry.get('source_id'))
+        source = sources[ident]
+        display = source.get('rights', {}).get('public_display')
+        if source.get('publication_allowed') is False or display in ('private', 'excluded'):
+            raise ValueError(f"Depth contour source {ident} is not cleared for public display")
 
 
 def held_sources(collection, sources):
@@ -265,8 +272,9 @@ def held_sources(collection, sources):
 def check_held_contours(collection, region, sources):
     """Raise ValueError unless `collection` is a held (private, never published) contour set.
 
-    The same checks as check_contours, except a listed source may be `approved` or `candidate`; the provenance
-    must also say `publication_held: true` and list every non-approved source in `held_sources`.
+    The same shape checks as check_contours, except a listed source may be `approved` or `candidate`;
+    public-display clearance is not required. The provenance must say `publication_held: true`
+    and list every non-approved source in `held_sources`.
     """
     _check(collection, region, sources, {'approved', 'candidate'})
     provenance = collection['provenance']
