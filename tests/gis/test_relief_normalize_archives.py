@@ -100,15 +100,16 @@ def test_arcinfo_bathymetry_with_real_adf(tmp_path, nested):
     # Treating a gzip archive as a TIFF or choosing the first nested product would
     # lose the original AIG depths. Use the repository's tiny upstream GDAL fixture.
     raw = json.loads((FIXTURES / 'seafloor-arcgrid/abc3x1.json').read_text())['files']
-    members = {'ArcViewGrids/fixture_2mbathy/' + name: base64.b64decode(row['base64'])
+    member = 'ArcViewGrids/fixture_2mbath10' if nested else 'ArcViewGrids/fixture_2mbathy'
+    members = {f'{member}/{name}': base64.b64decode(row['base64'])
                for name, row in raw.items()}
-    member = 'ArcViewGrids/fixture_2mbathy'
     if nested:
         stream = BytesIO()
         bundle = 'fixture_2mbathy_hill_slope.zip'
         with ZipFile(stream, 'w') as zipped:
             for name, data in members.items():
                 zipped.writestr(name, data)
+                zipped.writestr(name.replace('2mbath10', '2mhill10'), data)
         members = {bundle: stream.getvalue()}
         member = bundle + '/' + member
     archive = tmp_path / 'products.tar.gz'
@@ -117,6 +118,11 @@ def test_arcinfo_bathymetry_with_real_adf(tmp_path, nested):
             info = tarfile.TarInfo(name)
             info.size = len(data)
             output.addfile(info, BytesIO(data))
+    if nested:
+        # The ZIP's bathymetry label must not admit its sibling hillshade grid.
+        hillshade = member.replace('2mbath10', '2mhill10')
+        with pytest.raises(ValueError, match='bathymetry'):
+            normalize_archive(archive, tmp_path / 'norm', family='csmp', member=hillshade)
     result = normalize_archive(archive, tmp_path / 'norm', family='csmp', member=member)
     grid, support, info = mosaic_row(tmp_path, result, archive)
     assert grid.shape == (1, 3) and info['resolution_m'] == 1

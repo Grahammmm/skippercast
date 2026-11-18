@@ -30,6 +30,8 @@ TIFF = ('.tif', '.tiff')
 FAMILIES = ('csmp', 'cinms', 'lidar-grid')
 CINMS_MEMBER = re.compile(r'CINMS_(Northern|SBI)_(2|4|8|16|24)mXY_.+\.tiff?', re.IGNORECASE)
 BATHY = re.compile(r'bathy|(?:^|[\/_. -])depth', re.IGNORECASE)
+# ArcInfo GRID directory names can abbreviate bathymetry: e.g. *_2mbath10.
+ARCGRID_BATH = re.compile(r'(?:^|[_. -])[0-9]+mbath[0-9]*\Z', re.IGNORECASE)
 OTHER = re.compile(r'back[ _-]?scatter|hill[ _-]?shad|shaded[ _-]?relief|seafloor[ _-]?character|'
                    r'(?:^|[\/_. -])(?:cmecs|slope|counts?)(?:$|[\/_. -])', re.IGNORECASE)
 PRODUCT_TAGS = {'product', 'product_type', 'title', 'long_name', 'raster_role'}
@@ -74,7 +76,8 @@ def select_member(source, family, member):
         raise ValueError('only bathymetry is accepted (not backscatter, hillshade, or count)')
     if family == 'cinms' and not CINMS_MEMBER.fullmatch(leaf):
         raise ValueError('expected a published Northern or SBI CINMS bathymetry tier')
-    if family == 'csmp' and not (BATHY.search(leaf) or (is_zip and BATHY.search(source.name))):
+    bathy = BATHY.search(leaf) or (BATHY.search(source.name) if is_zip else ARCGRID_BATH.search(leaf))
+    if family == 'csmp' and not bathy:
         raise ValueError('archive selection does not identify a bathymetry grid')
     return member, usgs_geotiff if is_zip else arcgrid
 
