@@ -228,19 +228,19 @@ export function surveySummary(surveys: readonly string[]): string {
 /** Every drawn survey with its year, for the basis popover: "Surveys drawn: a (2010), b (2008)." */
 export const surveyList = (surveys: readonly string[]): string => `Surveys drawn: ${surveys.join(', ')}.`;
 
-/** Each distinct https policy page once: the link, and the words naming it (its credit when there are several). */
+/** Each distinct https policy page once: the link and its words. */
 function termLinks(rights: readonly SourceRight[]): {terms: {href: string; label: string}[]; copyTerms: MarkCopyPart[][]} {
   const pages = rights.filter((r, i, all) => r.policyURL && all.findIndex(o => o.policyURL === r.policyURL) === i);
   return {
-    terms: pages.map(r => ({href: r.policyURL, label: pages.length > 1 ? `Publisher terms: ${r.credit}` : 'Publisher terms'})),
-    copyTerms: pages.map(r => [pages.length > 1 ? cp(sid('termsCredit'), {credit: r.credit}) : cp(sid('terms'))]),
+    terms: pages.map(r => ({href: r.policyURL, label: 'Publisher terms'})),
+    copyTerms: pages.map(() => [cp(sid('terms'))]),
   };
 }
-/** The basis with the credits and notice, as the card joins them; the notice is the publication's own text or the code default. */
+/** The basis with the notice, as the card joins them; the notice is the publication's own text or the code default. Source credits are on the Sources page, not the card. */
 const basisParts = (f: SeafloorFeature, notice: string | null): MarkCopyPart[] | undefined =>
-  f.basisCopy && joinParts([f.basisCopy, ...f.rights.map(r => `${r.credit} ${r.notice}`), notice === null ? [cp(sid('notice'))] : notice], ' ');
+  f.basisCopy && joinParts([f.basisCopy, notice === null ? [cp(sid('notice'))] : notice], ' ');
 
-/** The mark card for a drawn feature: what it is, its nominal depth, its survey, and its basis with the source credits. */
+/** The mark card for a drawn feature: what it is, its nominal depth, its survey year and grid, and its basis. */
 export function seafloorMark(f: SeafloorFeature, view: string): ChartMark {
   const d = habitatDetails(f.properties), fit = view === 'terrain' ? null : f.properties[view];
   const kind = f.kind === 'candidate'
@@ -248,7 +248,7 @@ export function seafloorMark(f: SeafloorFeature, view: string): ChartMark {
     : f.kind === 'search' ? 'Rough-bottom search area · unranked' : 'Interpreted rock habitat · unranked';
   const supplied = typeof f.properties.planning_notice === 'string';
   const notice = supplied ? f.properties.planning_notice as string : NOTICE;
-  // v1's "Publisher terms" (#488 dropped it): one link per distinct https page, named by its credit when there are several.
+  // v1's "Publisher terms" (#488 dropped it): one link per distinct https page; no source name on the card (MAP-SOURCES-PAGE-1).
   const {terms, copyTerms} = termLinks(f.rights);
   const kindCopy = f.kind === 'candidate'
     ? joinParts([[cp(sid('kind.grade'), {grade: known(d.grade, 'mark.layer.unknownF')})], view === 'terrain' ? null
@@ -258,33 +258,33 @@ export function seafloorMark(f: SeafloorFeature, view: string): ChartMark {
   const basis = basisParts(f, supplied ? notice : null);
   return {
     id: `seafloor:${f.id}`, name: f.kind === 'candidate' ? HABITAT_LABEL : d.title, kind, reading: d.depth,
-    source: `Survey ${f.survey.id} · ${f.survey.year} · ${d.source.resolution} grid`,
-    basis: [f.basis, ...f.rights.map(r => `${r.credit} ${r.notice}`), notice].join(' '),
+    source: `Surveyed ${f.survey.year} · ${d.source.resolution} grid`,
+    basis: [f.basis, notice].join(' '),
     ...(terms.length ? {terms, copyTerms} : {}),
     copy: {
       name: [cp(sid(d.classifiedBedrock ? 'title.bedrock' : d.classifiedArea ? 'title.rugose' : d.searchArea ? 'title.search' : 'title.candidate'))],
       kind: kindCopy,
       reading: [d.classifiedArea ? cp(sid('depth.band')) : range ? cp(sid('depth.range'), {range}) : cp(sid('depth.unknown'))],
-      source: [cp(sid('source'), {id: known(f.survey.id), year: known(f.survey.year), resolution: known(d.source.resolution, SIZE)})],
+      source: [cp(sid('source'), {year: known(f.survey.year), resolution: known(d.source.resolution, SIZE)})],
       ...(basis ? {basis} : {}),
     },
   };
 }
 
 /**
- * The mark card for a drawn coverage cell (#706): what it is, the survey it names and that the cell records neither
- * year nor vertical datum, with the publication's credits. Coverage only: no depth, grade or fit is read from it.
+ * The mark card for a drawn coverage cell (#706): what it is and that the cell records neither
+ * year nor vertical datum. Coverage only: no depth, grade or fit is read from it.
  */
 export function cellMark(f: SeafloorFeature): ChartMark {
   const {terms, copyTerms} = termLinks(f.rights), basis = basisParts(f, null);
   return {
     id: `seafloor:${f.id}`, name: 'Surveyed 250 m cell', kind: 'Survey coverage · no habitat rank', reading: 'Depth not given for this cell',
-    source: `${f.survey.id === 'unknown' ? 'Unnamed survey' : `Survey ${f.survey.id}`} · year and vertical datum not recorded for this cell`,
-    basis: [f.basis, ...f.rights.map(r => `${r.credit} ${r.notice}`), NOTICE].join(' '),
+    source: 'Year and vertical datum not recorded for this cell',
+    basis: [f.basis, NOTICE].join(' '),
     ...(terms.length ? {terms, copyTerms} : {}),
     copy: {
       name: [cp(sid('cell.name'))], kind: [cp(sid('cell.kind'))], reading: [cp(sid('cell.reading'))],
-      source: [cp(sid('cell.source'), {survey: f.survey.id === 'unknown' ? {id: sid('survey.unnamed')} : {id: sid('survey.named'), vars: {id: f.survey.id}}})],
+      source: [cp(sid('cell.source'))],
       ...(basis ? {basis} : {}),
     },
   };

@@ -36,7 +36,7 @@ import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
 import {openBandPadding, toEdge, type Box} from './open-band.ts';
 import {browserGate, flyoverLegs, markFlyoverSeen, mayFly, type FlyoverGate} from './flyover.ts';
-import {COASTLINE_SOURCE, DENSITY_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SAVED_SPOTS_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
+import {COASTLINE_SOURCE, DENSITY_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SAVED_SPOTS_SOURCE, SEAFLOOR_SOURCE, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
 import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markData, markScreen, markSources, markStyle} from './marks.ts';
 import {IDLE, LOADING, MPA_FILL, MPA_LABEL, MPA_LINE, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState, type MpaResult} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
@@ -215,7 +215,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
             console.warn('Overview shoreline unavailable; loading the full shoreline', error);
             detailRegion = id; drawnShore = shorelineURL(id); engine.peek()?.setData(COASTLINE_SOURCE, new URL(drawnShore, page()).href);
           } else markUnavailable(layer, error);
-        }, attribution: archive ? attributionFor(['basemap']) : undefined,
+        },
         pickLayers: [RANKED_PICK, SAVED_SPOT_PICK, MARK_PICK, SURVEY_PICK, GEOLOGY_PICK, SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL, ...drawn.flatMap(l => l.pick?.ordered ? l.pick.layers : [])],
         pickFirst: () => drawn.flatMap(l => l.pick && !l.pick.ordered ? l.pick.layers : []),
         // RF0850-2: while region.json is loading the style draws no shoreline; the camera effect asks once the list is known.

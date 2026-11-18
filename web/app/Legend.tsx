@@ -3,12 +3,11 @@
 // A registry layer whose source failed (web/map/chart.ts `unavailable`, FE-11)
 // is named here so the gap reads as missing data, never as empty water.
 // Seafloor (FE-14) adds its key for the drawn view (terrain grade or the
-// target's species fit, switchable here), the surveys and years drawn, the
-// credits in its basis, and why nothing draws when the publication is held,
+// target's species fit, switchable here), the survey count and years drawn (the Sources page names them), and why nothing draws when the publication is held,
 // updating or expired.
 // Protected areas (FE-19) are always drawn (on the terrain too since FE-82): their row says what
 // the drawing covers (MpaRow), links the official rules page and carries the
-// ds582 credit in its basis. Where the region has reef marks for the target,
+// regional-selection note in its basis. Where the region has reef marks for the target,
 // the basis also says what the marks' run-time screen checked (#489,
 // web/map/habitat.ts), and a stale or unavailable check adds a visible line
 // saying the marks are withheld; the row stays one line while marks show.
@@ -52,14 +51,14 @@ import {chartFailed, chartMark, retryMpas, unavailable} from '../map/chart.ts';
 import {NOTES, NOTE_COPY, groundsState} from '../map/charter-grounds.ts';
 import {cloudHeld, cloudStamp} from '../map/clouds.ts';
 import {statusText, type StatusPart} from '../map/status-copy.ts';
-import {AIS_CREDIT, aisOn, aisState} from '../map/commercial-ais.ts';
+import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} from '../map/fleet.ts';
 import {currentsState} from '../map/currents.ts';
 import {contourState} from '../map/depth-contours.ts';
 import {chartOnly, drawsIn, layerCopy, layerEntry} from '../map/layers.ts';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
-import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, TRANSIENT_DETAILS, mpaState, shownMpaState} from '../map/mpa.ts';
-import {legendKey, seafloorState, seafloorView, surveyList, surveySummary} from '../map/seafloor.ts';
+import {CDFW_MPA_PAGE, TRANSIENT_DETAILS, mpaState, shownMpaState} from '../map/mpa.ts';
+import {legendKey, seafloorState, seafloorView, surveySummary} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
 import {chlorophyllState} from '../map/chlorophyll.ts';
 import {PALETTE_TOKENS} from '../map/palette.ts';
@@ -110,7 +109,6 @@ function SeafloorRow() {
       {ready ? <span class="app-swatch" data-layer="seafloor" aria-hidden="true"></span> : null}{c.label}
       <Popover iconOnly summary={t('legend.bs.seafloor', lang)}>
         <p>{c.basis}</p>
-        {[...s.credits, ...(s.surveys.length ? [surveyList(s.surveys)] : [])].map(line => <p key={line}><EnglishDetail lang={lang}>{line}</EnglishDetail></p>)}
       </Popover>
       {ready ? (
         <div class="app-legend-detail">
@@ -134,7 +132,6 @@ function TerrainSeafloorRow() {
       <span class="app-swatch" data-layer="seafloor" aria-hidden="true"></span>{t('legend.seafloorTerrain', lang)}
       <Popover iconOnly summary={t('legend.bs.terrain', lang)}>
         <p>{layerCopy('relief', lang).basis}</p>
-        {coverage?.sources.map(s => <p key={s.id}><a href={s.url} target="_blank" rel="noopener">{s.label} · {s.sourceDate}</a></p>)}
       </Popover>
       {shown && coverage?.key ? <p class="app-legend-note" data-key="source-coverage"><EnglishDetail lang={lang}>{coverage.key}</EnglishDetail></p> : null}
       <p class="app-legend-note" data-reason="seafloor">{t('legend.screened', lang, {reason: chartOnly(lang)})}</p>
@@ -162,7 +159,7 @@ export function MpaRow() {
       <span class="app-legend-mpa-head">
         {drawn ? <span class="app-swatch" data-layer="mpas" aria-hidden="true"></span> : null}{c.label}
         <Popover iconOnly summary={t('legend.bs.mpa', lang)}>
-          {c.basis} {s.detail ? <><Status lang={lang} raw={s.detail} parts={s.copy?.reason} /> </> : null}{t('legend.mpa.selection', lang)}<a href={DS582_METADATA} target="_blank" rel="noopener">{t('legend.mpa.dataset', lang)}</a>, <a href={CC_BY_4} target="_blank" rel="noopener">{t('legend.mpa.licence', lang)}</a>.
+          {c.basis} {s.detail ? <><Status lang={lang} raw={s.detail} parts={s.copy?.reason} /> </> : null}{t('legend.mpa.selection', lang)}
           {marks && !withheld ? <p data-reason="marks"><EnglishDetail lang={lang}>{marks}</EnglishDetail></p> : null}
         </Popover>
       </span>
@@ -198,7 +195,6 @@ function ChlorophyllRow() {
       <span class="app-swatch" style={{background: `var(--${PALETTE_TOKENS[row.swatch!]})`}} aria-hidden="true"></span>{row.label}{' '}
     </span>)}</p> : null}
     <p class="app-legend-note ui-mono" data-stamp="chlorophyll"><Status lang={lang} raw={s.note} parts={s.copy?.note} /></p>
-    <p class="app-legend-note">{layerEntry('chlorophyll').attribution}</p>
   </li>;
 }
 
@@ -319,7 +315,7 @@ function FleetRow() {
       {coarseNote('charter-grounds', lang)}
       {ais ? <>
         <p class="app-legend-note app-legend-sub">{a.drawn && chart ? <span class="app-swatch" data-layer="commercial-ais" aria-hidden="true"></span> : null}{layerCopy('commercial-ais', lang).label}
-          <Popover iconOnly summary={t('legend.bs.ais', lang)}>{layerCopy('commercial-ais', lang).basis} <EnglishDetail lang={lang}>{AIS_CREDIT}</EnglishDetail></Popover></p>
+          <Popover iconOnly summary={t('legend.bs.ais', lang)}>{layerCopy('commercial-ais', lang).basis}</Popover></p>
         {!chart ? <p class="app-legend-note" data-reason="commercial-ais">{chartOnly(lang)}</p> : a.note ? <p class="app-legend-note" data-reason="commercial-ais"><Status lang={lang} raw={a.note} parts={a.copy?.note} /></p> : null}
       </> : null}
       {activityAccess.value ? ACTIVITY.filter(name => activityOn.value.includes(name)).map(name => {
@@ -399,7 +395,6 @@ export function DepthContoursRow() {
       {drawn ? <span class="app-swatch" data-layer="depth-contours" aria-hidden="true"></span> : null}{entry.label}
       <Popover iconOnly summary={t('legend.bs.depth', lang)}>
         <p>{entry.basis}</p>
-        {s.sources.map(x => <p key={x.source_id}>{x.name} · {surveyed(x.survey_date)} · {x.vertical_datum}</p>)}
       </Popover>
       {drawn ? <p class="app-legend-note" data-key="depth-contours">{entry.legend[0]?.label}</p> : null}
       {drawn ? <p class="app-legend-note" data-key="depth-contours-edge"><span class="app-swatch" data-layer="depth-contours-edge" aria-hidden="true"></span>{entry.legend[1]?.label}</p> : null}
@@ -413,7 +408,7 @@ export function DepthContoursRow() {
 function StationsRow() {
   const s = stationState.value, rings = nearshoreState.value, lang = language.value, entry = layerCopy('stations', lang);
   return <li class="app-legend-stations">{entry.label}
-    <Popover iconOnly summary={t('legend.bs.stations', lang)}>{entry.basis}<p>{layerEntry('stations').attribution}</p></Popover>
+    <Popover iconOnly summary={t('legend.bs.stations', lang)}>{entry.basis}</Popover>
     <p class="app-legend-note"><Status lang={lang} raw={s.note} parts={s.copy} /></p>
     <ul>{entry.legend.map(row => <li key={row.label}><span class="app-key" aria-hidden="true" style={{background: `var(--${row.swatch})`}} />{row.label}</li>)}</ul>
     <p class="app-legend-note">{rings ? ringSummary(rings, new Date(), lang) : t('legend.ringsUnavailable', lang)}</p>
