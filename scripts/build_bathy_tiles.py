@@ -41,6 +41,8 @@ import zlib
 
 import numpy as np
 
+from skippercast.relief.pmtiles_v3 import write_pmtiles as write_pmtiles_v3
+
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / 'var/seafloor/tiles/morro-bay-seafloor-deep.pmtiles'
 TILE = 256
@@ -824,8 +826,8 @@ def build(source, output, minzoom=MINZOOM, maxzoom=None, log=print, variant='med
     coverage_sources = [s for s in native_sources if maxzoom > MAXZOOM
                         and source_maxzoom(s) >= max(MAXZOOM + 1, minzoom)]
     metadata['detail_coverage'] = coverage(elevation, (src_transform.a, src_transform.e), coverage_sources, clip_bounds)
-    write_pmtiles(output, tiles, metadata=metadata, bounds=bounds, minzoom=minzoom, maxzoom=maxzoom,
-                  center=(10, centre[0], centre[1]))
+    write_pmtiles_v3(output, tiles.items(), metadata=metadata, bounds=bounds, minzoom=minzoom, maxzoom=maxzoom,
+                     center=(10, centre[0], centre[1]))
     if coverage_json is not None:
         sidecar = Path(coverage_json)
         part = sidecar.with_name(sidecar.name + '.part')
