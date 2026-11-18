@@ -10,11 +10,16 @@ import {attachBottomRelief} from '../web/map/bottom-relief.ts';
 const bytes = readFileSync(new URL('./fixtures/basemap/tiny.pmtiles', import.meta.url));
 bytes[99] = 2;
 const payloadOffset = Number(bytes.readBigUInt64LE(56));
-const hash = createHash('sha256').update(bytes).digest('hex');
+const sha = body => createHash('sha256').update(body).digest('hex');
+const hash = sha(bytes);
+const chunkPath = '10/2_6.json';
+const chunk = JSON.stringify([[168, 404, sha(bytes.subarray(payloadOffset))]]);
+const digestRoot = JSON.stringify({chunks: {[chunkPath]: sha(chunk)}});
+const digestRootHash = sha(digestRoot);
 const id = 'synthetic-survey';
 const pointer = region => ({region, status: 'reviewed', private: false, sha256: hash, bytes: bytes.length,
   minzoom: 10, maxzoom: 10, bounds: [-121, 35, -120, 36], release_sha256: 'b'.repeat(64),
-  envelope_sha256: 'c'.repeat(64), digest_root_sha256: 'd'.repeat(64),
+  envelope_sha256: 'c'.repeat(64), digest_root_sha256: digestRootHash,
   sources: [{id, rights_class: 'public', rights: {public_display: 'allowed'}, attribution: 'Synthetic survey',
     label: 'estimated', vertical_datum: 'synthetic', survey_dates: ['2025-01-01']}],
   detail_summary: {mask: 'transparent-nodata', depth_bands: [{source_id: id, resolution_m: 10, min_depth_m: 0, max_depth_m: 90}]},
@@ -44,7 +49,10 @@ function chart(t) {
       async fetchFn(raw, init) {
         const url = new URL(raw);
         fetches.push([url.pathname, init]);
-        if (url.pathname.endsWith('.json')) return Response.json(await reply);
+        const digestPath = `/feeds/tiles/relief/${region}/${hash}.digests/${digestRootHash}/`;
+        if (url.pathname === digestPath + 'root.json') return new Response(digestRoot);
+        if (url.pathname === digestPath + chunkPath) return new Response(chunk);
+        if (url.pathname === `/catalog/relief/${region}.json`) return Response.json(await reply);
         if (breakRange) return new Response(bytes); // full response must never be mistaken for a range
         const [, start, end] = /^bytes=(\d+)-(\d+)$/.exec(init.headers.Range).map(Number);
         return new Response(bytes.subarray(start, end + 1), {status: 206,
