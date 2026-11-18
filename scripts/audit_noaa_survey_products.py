@@ -117,10 +117,6 @@ def _discovery(path):
     return doc, None
 
 
-def _previous(path):
-    return _previous_bytes(path)[:2]
-
-
 def _previous_bytes(path):  # (previous, reason, raw): raw is the one read that was parsed and checked
     if not path:
         return None, None, None

@@ -86,10 +86,6 @@ def _days(text):
     return days
 
 
-def _previous(path):
-    return _previous_bytes(path)[:2]
-
-
 def _previous_bytes(path):  # (previous, reason, raw): raw is the one read that was parsed and checked
     try:  # the is_file() stat can raise too, e.g. PermissionError under an unreadable directory
         if not path or not path.is_file():
