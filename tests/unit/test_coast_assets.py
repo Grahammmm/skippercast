@@ -10,7 +10,7 @@ from scripts.coast import publish_assets as pa
 
 CATALOG = [
     {'id': 'usgs-open', 'review_status': 'approved', 'documentation_url': 'https://doi.org/10.5066/P9OPEN01',
-     'rights': {'commercial_use': 'allowed'}},
+     'rights': {'commercial_use': 'allowed', 'terms_url': 'https://doi.org/10.5066/P9OPEN01'}},
     {'id': 'usgs-held', 'review_status': 'approved', 'documentation_url': 'https://doi.org/10.5066/P9HELD01',
      'rights': {'commercial_use': 'permission-required'}},
     {'id': 'noaa-candidate', 'review_status': 'candidate', 'documentation_url': 'https://example.gov/candidate/',
@@ -43,14 +43,56 @@ def serving(documents, calls):
 
 
 class RightsGateTests(unittest.TestCase):
-    def test_sources_match_by_doi_or_documented_prefix_only(self):
-        found = pa.catalog_ids(['https://media.example.gov/2022/10.5066-P9OPEN01/grid.zip',
-                                'https://example.gov/candidate/H1.bag', 'https://unlisted.example/grid'], CATALOG)
-        self.assertEqual(list(found.values()), ['usgs-open', 'noaa-candidate', None])
+    def test_sources_require_one_exact_product_identity(self):
+        product = 'https://catalog.example.invalid/products/grid'
+        terms = 'https://catalog.example.invalid/terms'
+        row = {'id': 'synthetic-grid', 'documentation_url': product, 'review_status': 'approved',
+               'rights': {'commercial_use': 'allowed', 'terms_url': terms}}
+        catalog = [*CATALOG, row, {'id': 'other-product', 'rights': {'terms_url': 'https://doi.org/10.5066/P9TERMS'}}]
+        # Prefix and substring matching can clear an unreviewed product instead of holding it.
+        for reference, expected in (
+            (' synthetic-grid ', 'synthetic-grid'),
+            (product, 'synthetic-grid'),
+            (product + '-sibling', None),
+            (product + '/other', None),
+            (product + '?product=other', None),
+            (terms, None),
+            ('https://doi.org/10.5066/p9open01', 'usgs-open'),
+            ('10.5066/P9OPEN01', 'usgs-open'),
+            ('https://doi.org/10.5066/P9TERMS', None),
+            ('https://doi.org/10.5066/P9OPEN01B', None),
+            ('https://doi.org/10.5066/P9OPEN01/other', None),
+            ('https://media.example.gov/2022/10.5066-P9OPEN01/grid.zip', None),
+        ):
+            with self.subTest(reference=reference):
+                self.assertEqual(pa.catalog_ids([reference], catalog), {reference: expected})
+                self.assertEqual(bool(pa.refusals('habitat', [reference], catalog)), expected is None)
+
+        # A blank source must not match a catalog row whose documentation or ID is blank or missing; the
+        # publisher reads catalog JSON without schema validation, so an approved blank row cannot clear a group.
+        blank_rows = [{'id': 'blank-doc', 'documentation_url': '', 'review_status': 'approved',
+                       'rights': {'commercial_use': 'allowed', 'terms_url': 'https://example.com/terms'}},
+                      {'id': 'no-doc', 'review_status': 'approved',
+                       'rights': {'commercial_use': 'allowed', 'terms_url': 'https://example.com/terms'}},
+                      {'id': '', 'documentation_url': '  ', 'review_status': 'approved',
+                       'rights': {'commercial_use': 'allowed', 'terms_url': 'https://example.com/terms'}}]
+        for reference in ('', '   '):
+            for rows in ([row], *([blank] for blank in blank_rows), blank_rows):
+                with self.subTest(reference=reference, rows=[r['id'] for r in rows]):
+                    self.assertEqual(pa.catalog_ids([reference], rows), {reference: None})
+                    self.assertEqual(pa.refusals('habitat', [reference], rows), [f'habitat: unknown source {reference}'])
+
+        # Even a catalogued URL cannot identify one product if the rows disagree or it's terms-only.
+        for reference, extra in ((product, {**row, 'id': 'other-grid'}),
+                                 (product, {**row, 'documentation_url': product + '-sibling'}),
+                                 (terms, {**row, 'id': 'other-grid', 'documentation_url': terms})):
+            with self.subTest(reference=reference, extra=extra['id']):
+                self.assertEqual(pa.refusals('habitat', [reference], [*catalog, extra]),
+                                 [f'habitat: unknown source {reference}'])
 
     def test_held_candidate_and_unknown_sources_are_each_refused(self):
         urls = ['https://doi.org/10.5066/P9OPEN01', 'https://doi.org/10.5066/P9HELD01',
-                'https://example.gov/candidate/x', 'https://unlisted.example/grid']
+                'https://example.gov/candidate/', 'https://unlisted.example/grid']
         problems = pa.refusals('terrain', urls, CATALOG)
         self.assertEqual(len(problems), 3)
         self.assertTrue(any('rights held for usgs-held' in p for p in problems))
@@ -58,6 +100,14 @@ class RightsGateTests(unittest.TestCase):
         self.assertTrue(any('unknown source https://unlisted.example/grid' in p for p in problems))
         self.assertEqual(pa.refusals('terrain', urls[:1], CATALOG), [])
         self.assertEqual(pa.refusals('terrain', urls[:1], CATALOG[:3]), ['terrain: unknown source usgs-naip (no catalog/sources.json row)'])
+
+    def test_a_duplicate_catalog_id_holds_the_source_even_when_declared(self):
+        # Contract: ambiguous catalog rows never clear a source. Bug: dict(rows) kept the last row, so a
+        # held usgs-naip row followed by an approved one cleared the declared terrain source.
+        held = {**CATALOG[3], 'review_status': 'candidate'}
+        for rows in ([*CATALOG[:3], held, CATALOG[3]], [*CATALOG[:3], CATALOG[3], held]):
+            self.assertEqual(pa.refusals('terrain', ['https://doi.org/10.5066/P9OPEN01'], rows),
+                             ['terrain: ambiguous source usgs-naip (2 catalog/sources.json rows)'])
 
     def test_a_group_whose_manifest_names_no_source_is_refused(self):
         self.assertEqual(pa.refusals('habitat', [], CATALOG), ['habitat: upstream manifest lists no sources'])
