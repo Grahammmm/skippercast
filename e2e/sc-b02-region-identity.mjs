@@ -109,9 +109,12 @@ async function current(page, id, suffix = '') {
   assert.deepEqual(s.place.localAreas, META[id].map.local_areas);
   if (s.plans) {
     assert.equal(s.plans.region, id);
-    await expect(page.getByRole('option', {name: `Plan ${id}${suffix} · search plan only`, exact: true})).toHaveCount(1);
+    await expect(planOption(page, id, suffix)).toHaveCount(1);
   }
 }
+// One name builder for the positive and the negative checks: the chooser's option reads `<plan name> · search plan only`,
+// so an exact name without that suffix could never match a stale option and would pass vacuously.
+const planOption = (page, id, suffix = '') => page.getByRole('option', {name: `${plan(id, suffix).profiles[`synthetic-${id}${suffix}`].name} · search plan only`, exact: true});
 async function unavailable(page, id, state = 'loading') {
   await expect.poll(async () => (await snapshot(page)).load?.state).toBe(state);
   const s = await snapshot(page);
@@ -360,7 +363,9 @@ test('SC-B02 focused region identity acceptance', {timeout: 180_000}, async t =>
                 return __b02.plans.regionPlans.value;
               }, plan(A, '-direct'));
               assert.equal(direct.region, A);
-              await expect(page.getByRole('option', {name: `Plan ${A}-direct`, exact: true})).toHaveCount(0);
+              // The chooser is populated (B's option is present in the same form), yet A's direct-loaded option is absent.
+              await expect(planOption(page, B)).toHaveCount(1);
+              await expect(planOption(page, A, '-direct')).toHaveCount(0);
               await page.evaluate(() => { void __b02.plans.loadPlans('southern-california'); });
               await waitRead(page, 'search-plan-index', B, 2);
               await answer(page, 'search-plan-index', B, 1, plan(B));
@@ -383,7 +388,7 @@ test('SC-B02 focused region identity acceptance', {timeout: 180_000}, async t =>
               }
               await unavailable(page, B, 'error');
               assert.equal((await snapshot(page)).plans, null);
-              await expect(page.getByRole('option', {name: `Plan ${A}`, exact: true})).toHaveCount(0);
+              await expect(planOption(page, A)).toHaveCount(0);
               const before = await snapshot(page);
               if (scenario === 'stalled B body') {
                 await page.evaluate(() => { __reads.filter(r => r.kind === 'region' && r.id === 'southern-california')[1].bodyResolve({name:'LATE BODY', map:{center:[1,2]}}); });
