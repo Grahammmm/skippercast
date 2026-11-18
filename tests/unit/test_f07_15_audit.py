@@ -18,7 +18,7 @@ np = pytest.importorskip("numpy")
 rasterio = pytest.importorskip("rasterio")
 pytest.importorskip("pyproj")
 pytest.importorskip("shapely")
-from rasterio.transform import from_origin  # noqa: E402
+from_origin = pytest.importorskip("rasterio.transform").from_origin  # no top-level GIS import in unit/
 
 SEGMENT_BBOX = [-120.0, 35.0, -119.9, 35.1]
 UNKNOWN_HOLD = 'no_local_leads_unknown_crs_candidates_unevaluated'
