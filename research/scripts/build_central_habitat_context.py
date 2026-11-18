@@ -27,6 +27,8 @@ REGIONS = (
     "south-big-sur-san-simeon", "cambria-san-simeon",
 )
 PMEP = "https://gis.psmfc.org/server/rest/services/PMEP/West_Coast_Nearshore_CMECS_Substrate_Habitat/MapServer/1/query"
+PMEP_MAX_IDS = 2_000  # Regional safety budget, not the service's transfer limit.
+PMEP_PAGE_SIZE = 50
 TO_METERS = Transformer.from_crs(4326, 32610, always_xy=True).transform
 TO_WGS84 = Transformer.from_crs(32610, 4326, always_xy=True).transform
 
@@ -36,21 +38,64 @@ def read(path):
 
 
 def pmep_features(bounds):
-    params = {
+    scope = {
         "where": "NMFS_HAPC='Rocky Reefs' AND (PMEP_Zone LIKE 'Core Zone%' OR PMEP_Zone LIKE 'Seaward Zone%')",
         "geometry": ",".join(map(str, bounds)), "geometryType": "esriGeometryEnvelope",
-        "inSR": "4326", "spatialRel": "esriSpatialRelIntersects", "outFields":
-        "OBJECTID,CMECS_SC_Name,Induration,NMFS_HAPC,PMEP_Zone,Shape_Area",
+        "inSR": "4326", "spatialRel": "esriSpatialRelIntersects",
+    }
+    feature_params = {
+        "outFields": "OBJECTID,CMECS_SC_Name,Induration,NMFS_HAPC,PMEP_Zone,Shape_Area",
         "returnGeometry": "true", "outSR": "4326", "geometryPrecision": "6",
         "maxAllowableOffset": "0.001", "f": "geojson",
     }
-    url = PMEP + "?" + urlencode(params)
-    with urlopen(Request(url, headers={"User-Agent": "SkipperCast public habitat research"}), timeout=90) as response:
-        raw = response.read()
-    data = json.loads(raw)
-    if data.get("type") != "FeatureCollection" or "features" not in data:
-        raise ValueError("PMEP feature query failed")
-    return data["features"], hashlib.sha256(raw).hexdigest(), url
+    digest = hashlib.sha256()
+
+    def query(**params):
+        url = PMEP + "?" + urlencode({**scope, **params})
+        with urlopen(Request(url, headers={"User-Agent": "SkipperCast public habitat research"}), timeout=90) as response:
+            raw = response.read()
+        data = json.loads(raw)
+        if not isinstance(data, dict) or "error" in data:
+            raise ValueError("PMEP query failed")
+        for metadata in (data, data.get("properties", {})):
+            if not isinstance(metadata, dict) or metadata.get("exceededTransferLimit", False) is not False:
+                raise ValueError("PMEP query truncated or ambiguous")
+        # Bind the exact count, ID inventory and every page, with unambiguous framing.
+        digest.update(len(raw).to_bytes(8, "big"))
+        digest.update(raw)
+        return data
+
+    count = query(f="json", returnCountOnly="true").get("count")
+    if type(count) is not int or not 0 <= count <= PMEP_MAX_IDS:
+        raise ValueError("PMEP count invalid or exceeds regional ID budget")
+    inventory = query(f="json", returnIdsOnly="true")
+    ids = inventory.get("objectIds")
+    if (not isinstance(ids, list) or len(ids) != count
+            or any(type(value) is not int for value in ids) or len(set(ids)) != count):
+        raise ValueError("Incomplete PMEP ID inventory")
+    if count == 0:
+        raise ValueError("PMEP query returned zero features; prior preview retained")
+
+    # Request explicit ID batches rather than relying on the service's row order
+    # or treating a short page as EOF. Any unproven batch holds this region.
+    features = []
+    ids.sort()
+    for start in range(0, count, PMEP_PAGE_SIZE):
+        batch = ids[start:start + PMEP_PAGE_SIZE]
+        page = query(**feature_params, objectIds=",".join(map(str, batch)))
+        rows = page.get("features")
+        if page.get("type") != "FeatureCollection" or not isinstance(rows, list) or len(rows) != len(batch):
+            raise ValueError("Incomplete PMEP feature page")
+        returned = set()
+        for row in rows:
+            props = row.get("properties") if isinstance(row, dict) else None
+            if not isinstance(props, dict) or type(props.get("OBJECTID")) is not int:
+                raise ValueError("Incomplete PMEP feature page: missing or invalid OBJECTID")
+            returned.add(props["OBJECTID"])
+        if returned != set(batch):
+            raise ValueError("Incomplete PMEP feature page: OBJECTIDs do not match requested batch")
+        features.extend(rows)
+    return features, digest.hexdigest(), PMEP + "?" + urlencode({**scope, **feature_params})
 
 
 def build_region(region_id, usgs, usgs_digest):
