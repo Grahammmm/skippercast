@@ -15,6 +15,7 @@ import {PortDialog} from '../landing/PortInput.tsx';
 import {language, t, type StringId} from '../i18n.ts';
 import {accountLabel, boat, choosePreset, ensureSession, followAccountHash, followAlertsHash, loadBoat, openAccountDialog, openBoatSheet, session, type Session} from '../account.ts';
 import {coordinates, region, setCoordinateFormat, species} from '../state.ts';
+import {briefAlertRequest, clearBriefAlerts, type BriefAlertSeed} from '../brief-alerts.ts';
 import {offlineOpen, openTrip, tripIds} from '../trip.ts';
 import {tourTransition, type TourAction, type TourState} from '../tour.ts';
 import {ControlsTour} from './ControlsTour.tsx';
@@ -40,11 +41,15 @@ const FOCUSABLE = 'button:not([disabled]), a[href]';
 
 type AlertsView = typeof import('./TripAlerts.tsx').TripAlerts;
 /** The alerts dialog's body loads on first open, so the app entry carries none of it. */
-function LazyAlerts({regionId}: {regionId: string}) {
+function LazyAlerts({regionId, seed}: {regionId: string; seed?: BriefAlertSeed}) {
   const [View, setView] = useState<{c: AlertsView} | null>(null);
   const [failed, setFailed] = useState(false), lang = language.value;
-  useEffect(() => { import('./TripAlerts.tsx').then(m => setView({c: m.TripAlerts}), () => setFailed(true)); }, []);
-  return View ? <View.c regionId={regionId} target={species.peek()} /> : <p role="status">{t(failed ? 'accountMenu.alertsError' : 'accountMenu.alertsLoading', lang)}</p>;
+  useEffect(() => {
+    let live = true;
+    import('./TripAlerts.tsx').then(m => { if (live) setView({c: m.TripAlerts}); }, () => { if (live) setFailed(true); });
+    return () => { live = false; };
+  }, []);
+  return View ? <View.c regionId={regionId} target={species.peek()} seed={seed} /> : <p role="status">{t(failed ? 'accountMenu.alertsError' : 'accountMenu.alertsLoading', lang)}</p>;
 }
 
 /** `inline`: the panel opens in the flow (the mobile sheet's footer) instead of under the button. `top`: the phone's top-card entry (UXFIX-10), the icon-sized trigger of RF2345-7 at every width, under its own class (`app-account-top-trigger`) so the page still holds one `.app-account-trigger`; its panel exists only while open, so the page never holds two menus' regions. */
@@ -55,13 +60,20 @@ export function AccountMenu({inline = false, top = false}: {inline?: boolean; to
   const root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null), panel = useRef<HTMLDivElement>(null), tourWasOpen = useRef(false);
   const id = useId();
   const s = session.value, b = boat.value, regionId = region.value, lang = language.value;
+  // The phone has both a top trigger and a footer menu. Only the masthead/top instance handles the brief entry.
+  const pending = inline ? null : briefAlertRequest.value;
+  const seed = pending?.region === regionId ? pending : null;
 
   useEffect(() => {
     void ensureSession();
-    const stopAccount = followAccountHash(() => { setOpen(false); setAlerts(false); });
-    const stopAlerts = followAlertsHash(has => has ? setAlerts(true) : setOpen(true), () => region.peek() !== null);
+    const stopAccount = followAccountHash(() => { if (!inline) clearBriefAlerts(); setOpen(false); setAlerts(false); });
+    const stopAlerts = followAlertsHash(has => {
+      if (!inline) clearBriefAlerts();
+      if (has) setAlerts(true); else setOpen(true);
+    }, () => region.peek() !== null);
     return () => { stopAccount(); stopAlerts(); };
   }, []);
+  useEffect(() => { if (seed) { setOpen(false); setAlerts(false); } }, [seed]);
   useEffect(() => {
     if (!open) return;
     void loadBoat().catch(() => undefined);
@@ -78,6 +90,17 @@ export function AccountMenu({inline = false, top = false}: {inline?: boolean; to
   }, [tour]);
 
   const close = () => { setOpen(false); trigger.current?.focus(); };
+  const closeAlerts = () => {
+    if (seed && !clearBriefAlerts(seed)) return;
+    setAlerts(false);
+    if (!seed) { trigger.current?.focus(); return; }
+    // The modal must be gone before the change button can take focus again.
+    requestAnimationFrame(() => {
+      if (briefAlertRequest.peek()) return;
+      if (seed.opener.isConnected) seed.opener.focus();
+      if (document.activeElement !== seed.opener) trigger.current?.focus();
+    });
+  };
   const tourAction = (action: TourAction) => {
     const next = tourTransition(tour, action);
     setTour(next);
@@ -147,8 +170,8 @@ export function AccountMenu({inline = false, top = false}: {inline?: boolean; to
           </ul>
         </section>
       </div>}
-      {alerts && regionId
-        ? <PortDialog open onClose={() => { setAlerts(false); trigger.current?.focus(); }} title={t('accountMenu.alerts', lang)}><LazyAlerts regionId={regionId} /></PortDialog>
+      {(alerts || seed) && regionId
+        ? <PortDialog key={seed?.id ?? 'menu'} open onClose={closeAlerts} title={t('accountMenu.alerts', lang)}><LazyAlerts regionId={regionId} seed={seed ?? undefined} /></PortDialog>
         : null}
       {tour !== null ? <ControlsTour step={tour} act={tourAction} /> : null}
     </div>
