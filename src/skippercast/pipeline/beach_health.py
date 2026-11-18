@@ -163,14 +163,51 @@ def collect(region_id, session, now=None):
             "generatedAt": clock(), "waterQuality": rows, "sources": [source]}
 
 
-def due(path, now, minutes=POLL_MINUTES):
-    """True unless `path` holds a successful fetch from the last `minutes`."""
+def _usable_edition(doc, region_id):
+    """True when `doc` is a successful edition this region's collector could have written.
+
+    A recent clock alone must not keep a wrong-county or row-less file: a missing advisory is not evidence a beach
+    is clear, and `collect` only reports `ok` after `parse` accepted at least one site row.
+    """
+    binding = BINDINGS.get(region_id)
+    if binding is None or not isinstance(doc, dict):
+        return False
+    (west, south), (east, north) = binding["bounds"]
+    sources, rows = doc.get("sources"), doc.get("waterQuality")
+    if (doc.get("schemaVersion") != 1 or doc.get("regionId") != region_id or doc.get("countyId") != binding["countyId"]
+            or not isinstance(sources, list) or len(sources) != 1 or not isinstance(sources[0], dict)
+            or not isinstance(rows, list) or not rows):
+        return False
+    source = sources[0]
+    if (source.get("id") != binding["id"] or source.get("kind") != "observation" or source.get("url") != query_url(binding)):
+        return False
+    seen = set()
+    for row in rows:
+        if (not isinstance(row, dict) or row.get("sourceId") != binding["id"] or row.get("url") != binding["pageUrl"]
+                or not isinstance(row.get("id"), str) or not row["id"] or row["id"] in seen
+                or not _number(row.get("lat")) or not _number(row.get("lon"))
+                or not south <= row["lat"] <= north or not west <= row["lon"] <= east
+                or row.get("sampledAt") is not None or row.get("sampleDateAvailable") is not False):
+            return False
+        seen.add(row["id"])
+    return True
+
+
+def due(path, now, minutes=POLL_MINUTES, region_id=None):
+    """True unless `path` holds a successful fetch from the last `minutes`.
+
+    With `region_id`, the file must also be a usable edition for that region's binding (region, county, source,
+    site rows); otherwise it is due whatever its clock says.
+    """
     try:
-        source = json.loads(Path(path).read_text())["sources"][0]
+        doc = json.loads(Path(path).read_text())
+        source = doc["sources"][0]
         fetched = datetime.fromisoformat(source["fetchedAt"].replace("Z", "+00:00"))
         if fetched.tzinfo is None or fetched.utcoffset() is None:
             return True
     except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError):
+        return True
+    if region_id is not None and not _usable_edition(doc, region_id):
         return True
     return source.get("outcome") != "ok" or not 0 <= (now - fetched).total_seconds() < minutes * 60
 
@@ -184,7 +221,7 @@ def publish(root, session, now=None, regions=None):
     outcomes = {}
     for region_id in regions or sorted(BINDINGS):
         path = Path(root) / "regions" / region_id / "beach-health.json"
-        if not due(path, now):
+        if not due(path, now, POLL_MINUTES, region_id):
             outcomes[region_id] = "kept"
             continue
         feed = collect(region_id, session, explicit)
