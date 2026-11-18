@@ -19,6 +19,9 @@ import {readableDate} from '../dates.ts';
 import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {language, t, type Language, type StringId} from '../i18n.ts';
+import {loadRegs, regsData, type RulesRegion} from '../regs.ts';
+import {planRuleLine, ruleSpecies} from './PlanRules.tsx';
+import {RuleReason} from './RuleReason.tsx';
 import {
   alertDate, alertNames, alertSpecies, AlertCopyError, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, localSubscription, sendTestNotification, deviceStatus, latestCheck, deviceButtons, deviceLine, type DeviceStatus, eventLine, feedbackPhase, formProblemId, latestTripEvent, assessmentTimeOrNull, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotificationsId, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
   feedbackSummary, feedbackDate, type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type ReuseOmission, type SavedTrip, type TripPlanSummary,
@@ -26,12 +29,14 @@ import {
 
 type SessionAnswer = {signedIn?: boolean; signIn?: unknown; publicKey?: string | null};
 type Boat = {factors: BoatFactors; saved: {boat?: {name?: unknown}} | null};
+type TripRegion = RegionAlerts & RulesRegion;
+type TripRules = {region: RulesRegion; data: unknown} | 'failed' | null;
 /** A status line kept as what it is, so a language change redraws it: a catalogue id of this sheet's own words, or text from outside (the server, the browser) shown as received. */
 type Say = {id: StringId} | {literal: string} | null;
 type Loaded =
   | {state: 'loading'} | {state: 'error'; say: Say} | {state: 'offline'} | {state: 'disabled'}
   | {state: 'signed-out'; href: string}
-  | {state: 'signed-in'; session: SessionAnswer; region: RegionAlerts; boat: Boat};
+  | {state: 'signed-in'; session: SessionAnswer; region: TripRegion; boat: Boat};
 
 const hours = (v: FormDataEntryValue | null) => Number(v);
 const sayError = (error: unknown): Say => error instanceof AlertCopyError ? {id: error.id} : {literal: (error as Error).message};
@@ -56,7 +61,7 @@ async function load(regionId: string): Promise<Loaded> {
   }
   const [response, handling] = await Promise.all([sharedFetch(`regions/${encodeURIComponent(regionId)}/region.json`), import('../../dist/boat-handling.js')]);
   if (!response.ok) return {state: 'error', say: {id: 'alerts.err.region'}};
-  return {state: 'signed-in', session, region: await response.json() as RegionAlerts,
+  return {state: 'signed-in', session, region: await response.json() as TripRegion,
     boat: {factors: handling.activeBoatFactors() as BoatFactors, saved: handling.savedBoat() as Boat['saved']}};
 }
 
@@ -110,8 +115,31 @@ function SavedPlan({plan, lang}: {plan: TripPlanSummary; lang: Language}) {
   </div>;
 }
 
-export function SavedTrips({recaps, names, remove, useAgain, read = {loading: false, complete: true}, events = [], timeZone = DEFAULT_ZONE, regionId}: {recaps: ReturnType<typeof tripRecaps>; names: AlertNames; remove: (id: string) => () => void; useAgain: (trip: SavedTrip) => void; read?: CatchRead; events?: AlertEvent[]; timeZone?: string; regionId?: string}) {
+const tripTargets = (trip: SavedTrip): string[] =>
+  Array.isArray(trip.targets) && trip.targets.length && trip.targets.every(id => typeof id === 'string') ? trip.targets as string[] : [trip.species];
+
+function SavedTripRules({trip, rules, lang, now}: {trip: SavedTrip; rules: Exclude<TripRules, 'failed' | null>; lang: Language; now: number}) {
+  // GET /api/trips is account-wide. Never apply this sheet's registry to a trip in another region.
+  const other = trip.region && trip.region !== rules.region.id ? {id: trip.region} : null;
+  const region: RulesRegion = other ?? rules.region;
+  const date = readableDate(trip.date, lang, region.timezone ?? DEFAULT_ZONE);
+  return <>{[...new Set(tripTargets(trip).flatMap(ruleSpecies))].map(id => {
+    const line = planRuleLine(other ? null : rules.data, id, trip.date, region, now, lang);
+    const status = line.kind === 'check' ? 'unknown' : line.status;
+    return <p key={id} class="small" data-status={status}>
+      <strong>{line.name}</strong> · <span class="app-mark-regs-badge" data-status={status}>{line.label}</span>{' '}
+      {line.kind === 'closed' ? `${t('planRules.closedOn', lang, {date})} ` : null}
+      {line.kind === 'check' ? `${t('planRules.check', lang)} ` : null}
+      <RuleReason reason={{text: line.reason, english: line.english, note: line.note}} lang={lang} />{' · '}
+      {line.kind !== 'check' ? `${line.verified} · ` : null}{line.fresh}{' · '}
+      <a href={line.link} target="_blank" rel="noopener" hrefLang={englishOnly(lang)} aria-label={t('rules.link.for', lang, {label: line.linkLabel, name: line.name})}>{line.linkLabel}</a>
+    </p>;
+  })}</>;
+}
+
+export function SavedTrips({recaps, names, remove, useAgain, read = {loading: false, complete: true}, events = [], timeZone = DEFAULT_ZONE, regionId, rules = null}: {recaps: ReturnType<typeof tripRecaps>; names: AlertNames; remove: (id: string) => () => void; useAgain: (trip: SavedTrip) => void; read?: CatchRead; events?: AlertEvent[]; timeZone?: string; regionId?: string; rules?: TripRules}) {
   const lang = language.value, only = englishOnly(lang);
+  const now = Date.now();
   const [calendarFailed, setCalendarFailed] = useState(false);
   const standing = (trip: SavedTrip) => {
     const e = latestTripEvent(events, trip.id), at = e ? assessmentTimeOrNull(e, timeZone, lang) : null;
@@ -129,9 +157,8 @@ export function SavedTrips({recaps, names, remove, useAgain, read = {loading: fa
       const noNames = new Map<string, string>();
       const tripNames = current ? names : region ? alertNames(region) : {point: noNames, species: noNames};
       const zone = current ? timeZone : region?.timezone ?? DEFAULT_ZONE;
-      const targets = Array.isArray(trip.targets) && trip.targets.length && trip.targets.every(id => typeof id === 'string') ? trip.targets as string[] : [trip.species];
       const file = tripCalendar(trip, {areaName: tripNames.point.get(trip.point),
-        speciesNames: targets.map(id => tripNames.species.get(id) ?? id), limits: savedTripLimits(trip, lang),
+        speciesNames: tripTargets(trip).map(id => tripNames.species.get(id) ?? id), limits: savedTripLimits(trip, lang),
         appUrl: location.origin, now: new Date(), timeZone: zone, lang});
       const url = URL.createObjectURL(new Blob([file], {type: 'text/calendar;charset=utf-8'}));
       try {
@@ -143,11 +170,17 @@ export function SavedTrips({recaps, names, remove, useAgain, read = {loading: fa
   return <div id="saved-trips">
     {calendarFailed ? <p role="status">{t('alerts.calendar.failed', lang)}</p> : null}
     {!recaps.upcoming.length && !recaps.past.length ? <p>{t('alerts.none', lang)}</p> : null}
-    {recaps.upcoming.length ? <><h3>{t('alerts.upcoming', lang)}</h3>{recaps.upcoming.map(trip => {
-      const row = <p key={trip.id}><strong>{tripLine(trip, names, lang, timeZone)}</strong> {deletion(trip)} {again(trip)} <Button type="button" size="sm" variant="quiet" onClick={() => calendar(trip)}>{t('alerts.calendar.add', lang)}</Button>{standing(trip)}</p>;
-      const plan = planOf(trip);
-      return plan ? <div key={trip.id}>{row}{plan}</div> : row;
-    })}</> : null}
+    {recaps.upcoming.length ? <>
+      <h3>{t('alerts.upcoming', lang)}</h3>
+      {rules === 'failed' ? <p class="small" role="status">{t('alerts.rules.failed', lang)}</p> : null}
+      {recaps.upcoming.map(trip => {
+        const row = <p key={trip.id}><strong>{tripLine(trip, names, lang, timeZone)}</strong> {deletion(trip)} {again(trip)} <Button type="button" size="sm" variant="quiet" onClick={() => calendar(trip)}>{t('alerts.calendar.add', lang)}</Button>{standing(trip)}</p>;
+        const plan = planOf(trip);
+        const reading = rules && rules !== 'failed' ? <SavedTripRules trip={trip} rules={rules} lang={lang} now={now} /> : null;
+        return plan || reading ? <div key={trip.id}>{row}{reading}{plan}</div> : row;
+      })}
+      {rules && rules !== 'failed' ? <p class="small">{t('planRules.notLegalAdvice', lang)}</p> : null}
+    </> : null}
     {recaps.past.length ? <><h3>{t('alerts.past', lang)}</h3>
       <p class="small">{t('alerts.pastNote', lang)}</p>
       {read.loading ? <p class="small">{t('alerts.catchReading', lang)}</p> : !read.complete ? <p class="small">{t('alerts.catchPartial', lang)}</p> : null}
@@ -180,7 +213,7 @@ function TestNotification({device, stopping, say, refresh}: {device: DeviceStatu
   return device === 'confirmed' ? <Button size="sm" disabled={busy || stopping} onClick={() => void send()}>{t('alerts.test.send', lang)}</Button> : null;
 }
 
-function SignedIn({session, region, boat, target}: {session: SessionAnswer; region: RegionAlerts; boat: Boat; target: string | null}) {
+function SignedIn({session, region, boat, target}: {session: SessionAnswer; region: TripRegion; boat: Boat; target: string | null}) {
   const lang = language.value, only = englishOnly(lang);
   const [p] = useState(() => profile.peek());
   const saved = p === 'boat' ? tripBoat(boat.factors, boat.saved?.boat) : null;
@@ -198,6 +231,16 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const checkDevice = useMemo(() => latestCheck<DeviceStatus>(() => deviceStatus(), setDevice, () => 'unchecked'), []);
   useEffect(checkDevice, []);
   const [trips, setTrips] = useState<{trips: SavedTrip[]; events: AlertEvent[]} | null>(null);
+  const [rulesNeeded, setRulesNeeded] = useState(false), [rules, setRules] = useState<TripRules>(null);
+  useEffect(() => {
+    if (!rulesNeeded) return;
+    let active = true;
+    void loadRegs(region).then(() => {
+      const loaded = regsData.peek();
+      if (active) setRules(loaded?.region === region.id ? {region, data: loaded.data} : 'failed');
+    }, () => { if (active) setRules('failed'); });
+    return () => { active = false; };
+  }, [region.id, rulesNeeded]);
   const digest = trips ? weekendDigest(trips.trips, names, range.min, lang) : null;
   const [feedback, setFeedback] = useState<Feedback[] | null>(null);
   const [catchRead, setCatchRead] = useState<RecapCatchLog & {loading: boolean}>({entries: [], complete: false, loading: true});
@@ -233,7 +276,13 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   /** Cancel returns focus to the button that asked. */
   const keep = () => { setConfirming(false); requestAnimationFrame(() => privacy.current?.querySelector<HTMLButtonElement>('[data-delete-account]')?.focus()); };
   const fail = (error: unknown) => setStatus(sayError(error));
-  const refresh = () => api<{trips: SavedTrip[]; events: AlertEvent[]}>('trips').then(setTrips, fail);
+  const refresh = () => api<{trips: SavedTrip[]; events: AlertEvent[]}>('trips').then(answer => {
+    if (!live.current) return;
+    setTrips(answer);
+    // Latch on the first upcoming trip; refreshing or changing the list does not start a second rules read.
+    const today = dateRange(region.timezone).min;
+    if (answer.trips.some(trip => trip.date >= today)) setRulesNeeded(true);
+  }, fail);
   const refreshFeedback = async () => {
     const mine = ++feedbackRead.current;
     try {
@@ -369,7 +418,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           <p style={{whiteSpace: 'pre-line'}}>{toText(digest, lang)}</p>
           <p class="small">{t('alerts.weekendNote', lang)}</p>
         </section> : null}
-        {trips ? <SavedTrips recaps={tripRecaps(trips.trips, trips.events, feedback ?? [], dateRange(region.timezone).min, catchRead.entries, region.timezone)} names={names} remove={remove} useAgain={useAgain} read={catchRead} events={trips.events} timeZone={region.timezone} regionId={region.id} /> : <div id="saved-trips" />}
+        {trips ? <SavedTrips recaps={tripRecaps(trips.trips, trips.events, feedback ?? [], range.min, catchRead.entries, region.timezone)} names={names} remove={remove} useAgain={useAgain} read={catchRead} events={trips.events} timeZone={region.timezone} regionId={region.id} rules={rules} /> : <div id="saved-trips" />}
         {trips?.events.length ? (
           <details id="alert-history">
             <summary>{t('alerts.recent', lang, {n: trips.events.length})}</summary>
@@ -436,7 +485,7 @@ export function TripAlerts({regionId, target}: {regionId: string; target: string
         : loaded.state === 'offline' ? <p>{t('alerts.offline', lang)}</p>
         : loaded.state === 'disabled' ? <p>{t('alerts.disabled', lang)}</p>
         : loaded.state === 'signed-out' ? <SignedOut href={loaded.href} />
-        : <SignedIn session={loaded.session} region={loaded.region} boat={loaded.boat} target={target} />}
+        : <SignedIn key={loaded.region.id} session={loaded.session} region={loaded.region} boat={loaded.boat} target={target} />}
     </div>
   );
 }

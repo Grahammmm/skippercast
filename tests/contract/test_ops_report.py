@@ -2,6 +2,7 @@
 import io
 import json
 from contextlib import redirect_stdout
+from datetime import datetime, timedelta, timezone
 import tempfile
 import unittest
 from pathlib import Path
@@ -48,6 +49,7 @@ class OpsReportTests(unittest.TestCase):
             self.assertEqual(run([], {'GITHUB_STEP_SUMMARY': str(summary)}, opener_for({}, calls)), 0)
             self.assertEqual(calls, [])
             self.assertIn('skipped', summary.read_text())
+            self.assertIn('batched reads unknown; configured ceiling unknown; headroom unknown', summary.read_text())
 
     def test_queries_the_dataset_for_the_last_day_with_bearer_auth(self):
         seen = []
@@ -78,6 +80,43 @@ class OpsReportTests(unittest.TestCase):
         self.assertIn('| boat_lookup | claude-sonnet-5 | ok | 3 | 3,900 | 900 | 6 |', text)
         self.assertIn('## Cron runs (last 24 h)', text)
         self.assertIn('_No data points in this window._', text)
+        self.assertIn('batched reads unknown; configured ceiling unknown; headroom unknown', text)
+        self.assertIn('degraded duration unknown', text)
+
+    def test_local_r2_meter_reports_utc_headroom_without_querying_or_writing_summary(self):
+        # The operator is still on October 4 locally, while the meter has rolled to October 5 UTC.
+        now = datetime(2026, 10, 4, 18, tzinfo=timezone(-timedelta(hours=7)))
+        seen = []
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()) as stdout:
+            summary = Path(tmp) / 'summary.md'
+            env = dict(ENV, GITHUB_STEP_SUMMARY=str(summary), GITHUB_REPOSITORY='example/skippercast')
+            self.assertEqual(ops_report.main(
+                ['--r2-meter', '2026-10-05', '249400', '250000'], env,
+                opener=opener_for({}, seen), github_opener=opener_for({}, seen), now=now,
+            ), 0)
+            self.assertFalse(summary.exists(), 'operator-supplied counts stay local')
+        self.assertEqual(seen, [])
+        text = stdout.getvalue()
+        self.assertIn('2026-10-05 UTC', text)
+        self.assertIn('249,400 batched reads; configured ceiling 250,000; 600 reads of recorded headroom', text)
+        self.assertIn('may omit pending reads', text)
+        self.assertIn('degraded duration unknown', text)
+
+    def test_local_r2_meter_keeps_unknown_inputs_distinct_from_measured_zero(self):
+        now = datetime(2026, 10, 5, 10, tzinfo=timezone.utc)
+        cases = [
+            (('2026-10-04', '299400', '300000'), 'batched reads unknown; configured ceiling unknown; headroom unknown'),
+            (('2026-10-05', 'NaN', '300000'), 'batched reads unknown; configured ceiling 300,000; headroom unknown'),
+            (('2026-10-05', '299400', 'unknown'), '299,400 batched reads; configured ceiling unknown; headroom unknown'),
+            (('2026-10-05', '299400', 'off'), '299,400 batched reads; configured ceiling off; headroom not applicable'),
+            (('2026-10-05', '0', '300000'), '0 batched reads; configured ceiling 300,000; 300,000 reads of recorded headroom'),
+            (('2026-10-05', '300001', '300000'), '300,001 batched reads; configured ceiling 300,000; headroom exhausted (1 over ceiling)'),
+        ]
+        for meter, expected in cases:
+            with self.subTest(meter=meter), redirect_stdout(io.StringIO()) as stdout:
+                self.assertEqual(ops_report.main(['--r2-meter', *meter], {}, now=now), 0)
+                self.assertIn(expected, stdout.getvalue())
+                self.assertIn('degraded duration unknown', stdout.getvalue())
 
     def test_report_shows_the_client_funnel_in_order_and_the_top_client_errors(self):
         answers = {
@@ -124,7 +163,6 @@ class OpsReportTests(unittest.TestCase):
         self.assertEqual(run([], dict(ENV), opener_for(denied, [])), 1)
 
     def test_fleet_ais_line_gives_heartbeat_age_messages_and_the_open_issue(self):
-        from datetime import datetime, timezone
         answers = {'fleet_ais': [{'region': 'CA', 'pushed_at': '2026-10-05 09:00:00', 'heartbeat_age_s': '1800',
                                   'last_message_age_s': 1790, 'messages_24h': '512000'}]}
         issues = []
