@@ -46,12 +46,13 @@ export function violations({review, post, media, audits}) {
   if (post.status === 'approved' && media.publish_state !== 'approved') out.push('approved post without its photo approved');
   if (review.status !== 'open' && audits.length !== 1) out.push(`${audits.length} audit results for a closed review`);
   if (review.status === 'open' && audits.length) out.push('audit result for an open review');
-  if (audits.length === 1 && wanted && audits[0] !== wanted) out.push(`audit says ${audits[0]}, post is ${post.status}`);
+  const said = audits.map(a => ({approved: 'approved', edited: 'approved', rejected: 'rejected'}[a] ?? a));
+  if (audits.length === 1 && wanted && said[0] !== wanted) out.push(`audit says ${audits[0]}, review is ${review.status}`);
   return out;
 }
 
 // ---- valid control: persist the winning intent first, then resume it idempotently ----
-const STAGES = ['intent', 'post', 'media', 'close'];
+const STAGES = ['intent', 'post', 'media', 'close', 'audit'];
 function model() {
   const s = {intent: null, post: 'draft', media: 'queued', review: 'open', audits: [], effects: []};
   const interrupted = new Error('interrupted');
@@ -65,8 +66,10 @@ function model() {
     stop('post');
     if (win !== 'reject' && s.media !== 'approved') { s.media = 'approved'; s.effects.push('media:approved'); }
     stop('media');
-    if (s.review === 'open') { s.review = win === 'reject' ? 'rejected' : 'approved'; s.audits.push(s.review); }
-    stop('close');
+    if (s.review === 'open') s.review = win === 'reject' ? 'rejected' : 'approved';
+    stop('close');                               // review closed, audit not yet emitted
+    if (s.review !== 'open' && !s.audits.length) s.audits.push(s.review);   // resume emits the missing audit once
+    stop('audit');
     return s.review;
   }
   const view = () => ({review: {status: s.review}, post: {status: s.post}, media: {publish_state: s.media}, audits: [...s.audits]});
@@ -97,7 +100,14 @@ test('F01-01 negative control: the checker flags the stated gaps', () => {
   // the loser acted before it lost: review says approved, post rejected, photo published
   assert.deepEqual(violations({...ok, post: {status: 'rejected'}}),
     ['review approved but post rejected', 'rejected post published its photo']);
-  assert.ok(violations({...ok, audits: ['rejected']}).includes('audit says rejected, post is approved'));
+  assert.ok(violations({...ok, audits: ['rejected']}).includes('audit says rejected, review is approved'));
+  // interruption between the review close and the audit: closed review, no audit result
+  assert.deepEqual(violations({...ok, audits: []}), ['0 audit results for a closed review']);
+  // the audit is read from the actual logged line, never inferred from the review status
+  const line = decision => JSON.stringify({level: 'info', event: 'advisor_review_decided', decision, scope: 'advisor'});
+  assert.deepEqual(parseAudits([line('approved'), 'other noise']), ['approved']);
+  assert.deepEqual(violations({...ok, audits: parseAudits([line('approved')])}), []);
+  assert.ok(violations({...ok, audits: parseAudits([line('rejected')])}).includes('audit says rejected, review is approved'), 'a mismatched logged result is detected');
   // two audit results for one review
   assert.ok(violations({...ok, audits: ['approved', 'rejected']}).includes('2 audit results for a closed review'));
 });
@@ -126,17 +136,23 @@ async function audited(lines, fn) {
   const saved = console.log, log = []; console.log = (...a) => log.push(a.join(' '));
   try { return await fn(); } finally { console.log = saved; lines.push(...log.filter(l => l.includes('advisor_review_decided'))); }
 }
-const auditsOf = (lines, sql) => {
-  const status = sql.prepare('SELECT status FROM advisor_reviews WHERE id=?').get(REVIEW).status;
-  return lines.filter(l => l.includes('advisor_review_decided')).map(() => status);
-};
+/** The decisions actually logged by advisor_review_decided (JSON lines), one entry per line. */
+export function parseAudits(lines) {
+  const out = [];
+  for (const l of lines) {
+    let o; try { o = JSON.parse(l); } catch { continue; }
+    if (o && o.event === 'advisor_review_decided') out.push(String(o.decision));
+  }
+  return out;
+}
+const auditsOf = lines => parseAudits(lines);
 
 dbTest('F01-01 baseline: a lone decision on a valid draft satisfies the invariants (positive control on the real code)', async () => {
   for (const decision of ['approve', 'reject']) {
     const {sql, env} = setup(), lines = [];
     const outcome = await audited(lines, () => decide(env, decision, []));
     assert.equal(outcome.status, 'applied');
-    assert.deepEqual(violations({...observe(sql), audits: auditsOf(lines, sql)}), [], decision);
+    assert.deepEqual(violations({...observe(sql), audits: auditsOf(lines)}), [], decision);
   }
 });
 
@@ -144,8 +160,8 @@ dbTest('F01-01 baseline receipt: opposite decisions interleaved on the current c
   for (const order of [['approve', 'reject'], ['reject', 'approve']]) {
     const {sql, env} = setup(), lines = [];
     const results = await audited(lines, () => Promise.all(order.map(d => decide(env, d, []))));
-    const v = violations({...observe(sql), audits: auditsOf(lines, sql)});
-    t.diagnostic(`interleave ${order.join('+')}: statuses=${results.map(r => r.status).join(',')} state=${JSON.stringify(observe(sql))} audits=${auditsOf(lines, sql).length} violations=${JSON.stringify(v)}`);
+    const v = violations({...observe(sql), audits: auditsOf(lines)});
+    t.diagnostic(`interleave ${order.join('+')}: statuses=${results.map(r => r.status).join(',')} state=${JSON.stringify(observe(sql))} audits=${auditsOf(lines).length} violations=${JSON.stringify(v)}`);
     assert.ok(Array.isArray(v));
   }
 });
@@ -157,8 +173,22 @@ dbTest('F01-01 baseline receipt: interruption before the review closes, then a r
     const cut = {prepare: q => { if (/^UPDATE advisor_reviews SET status=/.test(q)) throw new Error('interrupted before close'); return db.prepare(q); }, batch: qs => db.batch(qs)};
     await audited(lines, () => quiet(() => decide(env, decision, [], cut)).catch(e => assert.match(e.message, /interrupted before close/)));
     const retry = await audited(lines, () => decide(env, decision, []));
-    const v = violations({...observe(sql), audits: auditsOf(lines, sql)});
+    const v = violations({...observe(sql), audits: auditsOf(lines)});
     t.diagnostic(`interrupt ${decision}: retry=${retry.status}${retry.error ? ` (${retry.error})` : ''} state=${JSON.stringify(observe(sql))} violations=${JSON.stringify(v)}`);
+    assert.ok(Array.isArray(v));
+  }
+});
+
+dbTest('F01-01 baseline receipt: interruption between the review close and the audit line, then a retry, on the current code', async t => {
+  for (const decision of ['approve', 'reject']) {
+    const {sql, env} = setup(), lines = [];
+    // The close commits; the process dies as the audit line is about to be written.
+    const saved = console.log; let armed = true;
+    console.log = (...a) => { const l = a.join(' '); if (armed && l.includes('advisor_review_decided')) { armed = false; throw new Error('interrupted before audit'); } };
+    try { await decide(env, decision, []); } catch (e) { assert.match(e.message, /interrupted before audit/); } finally { console.log = saved; }
+    const retry = await audited(lines, () => decide(env, decision, []));
+    const v = violations({...observe(sql), audits: auditsOf(lines)});
+    t.diagnostic(`audit-gap ${decision}: retry=${retry.status} state=${JSON.stringify(observe(sql))} audits=${auditsOf(lines).length} violations=${JSON.stringify(v)}`);
     assert.ok(Array.isArray(v));
   }
 });
