@@ -19,7 +19,7 @@
 // to a module, stylesheet or page gives a new id (and a new service worker).
 import {createHash} from 'node:crypto';
 import {cp, readdir, readFile, rename, rm, writeFile} from 'node:fs/promises';
-import {join, resolve, sep} from 'node:path';
+import {join, relative, resolve, sep} from 'node:path';
 import {build} from 'vite';
 import {clientConfig, pages} from '../vite.config.mjs';
 import {writePrecache} from './precache.mjs';
@@ -49,6 +49,22 @@ export function hashName(name, buildId) {
 // even if someone points --output into dist/.
 const PRIVATE_OUTPUT = /(?:^|\/)(?:morro-bay-seafloor-deep(?:-[a-z]+)?\.(?:pmtiles|part)|tide-layer-[^/]*\.(?:json|part))$/;
 
+// E2E-13: defence in depth. Only these dist/tiles archives may ship; any other
+// *.pmtiles under dist/ (e.g. a relief or CSUMB-derived laguna-seafloor-deep-medium.pmtiles)
+// fails the build instead of being copied. Add a name here only with its rights cleared.
+export const PUBLIC_PMTILES = new Set(['tiles/morro-bay-reef-outlines.pmtiles', 'tiles/socal-survey-habitat.pmtiles']);
+
+/** True to copy `from` (under `src`); throws on any unallowlisted *.pmtiles. */
+function keepStatic(src, from) {
+  const posix = from.split(sep).join('/');
+  if (/\.pmtiles$/i.test(posix)) {
+    const rel = relative(src, from).split(sep).join('/');
+    if (!PUBLIC_PMTILES.has(rel)) throw Error(`refusing to publish ${rel}: *.pmtiles under dist/ must be on PUBLIC_PMTILES (scripts/client-build.mjs)`);
+  }
+  if (PRIVATE_OUTPUT.test(posix)) return false;
+  return true;
+}
+
 /** Copy dist's static files (everything but module sources, build output and dot-entries). */
 export async function copyStatic(src, out, {only} = {}) {
   for (const entry of await readdir(src, {withFileTypes: true})) {
@@ -56,7 +72,7 @@ export async function copyStatic(src, out, {only} = {}) {
     if (name === 'client' || name === 'server' || name.startsWith('.')) continue;
     if (entry.isFile() && SOURCE.test(name) && !STABLE.has(name)) continue;
     if (only && !only(name)) continue;
-    await cp(join(src, name), join(out, name), {recursive: true, filter: from => !PRIVATE_OUTPUT.test(from.split(sep).join('/'))});
+    await cp(join(src, name), join(out, name), {recursive: true, filter: from => keepStatic(src, from)});
   }
 }
 

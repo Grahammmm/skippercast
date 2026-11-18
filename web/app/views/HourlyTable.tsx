@@ -14,6 +14,7 @@ import {profile} from '../../state.ts';
 import type {BoatFactors} from '../../score.ts';
 import {units} from '../../unit-choice.ts';
 import {hourText, localParts, selectHour, zoneName} from '../TimeDock.tsx';
+import '../../brief/brief-print.css';
 import './hourly-table.css';
 
 const HEADERS: readonly StringId[] = ['hourly.h.wind', 'hourly.h.gust', 'hourly.h.seas', 'hourly.h.swell', 'hourly.h.second', 'hourly.h.chop', 'hourly.h.tide', 'hourly.h.vis', 'hourly.h.score'];
@@ -21,7 +22,7 @@ const HEADERS: readonly StringId[] = ['hourly.h.wind', 'hourly.h.gust', 'hourly.
 const cellText = (cell: string, lang: Language): string => lang === 'en' ? cell : cell.replace(/(\d)\.(\d)/g, '$1,$2');
 
 export function HourlyTable({forecast, tide, at, tz, now}: {forecast: ConditionsForecast | null; tide: Series | null; at: number; tz: string; now: Date}) {
-  const lang = language.value;
+  const lang = language.value, {wind, height} = units.value;
   const box = useRef<HTMLDivElement>(null);
   const local = localParts(new Date(at), tz), {rows, note} = hourlyTable(forecast, tide, local.day, tz, now, activeBoatFactors() as BoatFactors);
   useEffect(() => {
@@ -45,15 +46,20 @@ export function HourlyTable({forecast, tide, at, tz, now}: {forecast: Conditions
           {caption}
           <thead><tr><th scope="col">{t('hourly.time', lang)}</th>{HEADERS.map(h => <th key={h} scope="col">{t(h, lang)}</th>)}</tr></thead>
           <tbody>
-            {rows.map((r, ri) => (
-              <tr key={r.at} data-at={r.at} aria-current={r.ms === at ? 'true' : undefined} class={r.ms === at ? 'is-current' : undefined}>
-                <th scope="row"><button type="button" onClick={() => selectHour(now, tz, r.ms)}>{label(r.ms)}</button></th>
-                {hourlyCells(r, lang, units.value.wind).map((c, i) => {
-                  const f = (['wind', 'gust', 'seas'] as const)[i];
-                  return <td key={i} class="ui-mono">{cellText(c, lang)}{f && limits && marked[ri]![f] ? <span class="app-hourly-over" role="img" aria-label={t(`hourly.over.${f}`, lang, {limit: String(limits[f])})}> ▲</span> : null}</td>;
-                })}
-              </tr>
-            ))}
+            {rows.map((r, ri) => {
+              const feet = height === 'm' ? hourlyCells(r, lang, wind) : null;
+              return (
+                <tr key={r.at} data-at={r.at} aria-current={r.ms === at ? 'true' : undefined} class={r.ms === at ? 'is-current' : undefined}>
+                  <th scope="row"><button type="button" onClick={() => selectHour(now, tz, r.ms)}>{label(r.ms)}</button></th>
+                  {hourlyCells(r, lang, wind, height).map((c, i) => {
+                    const f = (['wind', 'gust', 'seas'] as const)[i];
+                    const print = feet?.[i];
+                    const reading = print && print !== c ? <><span class="app-screen-height">{cellText(c, lang)}</span><span class="app-print-height">{cellText(print, lang)}</span></> : cellText(c, lang);
+                    return <td key={i} class="ui-mono">{reading}{f && limits && marked[ri]![f] ? <span class="app-hourly-over" role="img" aria-label={t(`hourly.over.${f}`, lang, {limit: String(limits[f])})}> ▲</span> : null}</td>;
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

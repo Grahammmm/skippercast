@@ -2,6 +2,7 @@
 // RF1935-4: appended focus-only layout; contrast paint, roles and thresholds unchanged.
 // MGL-15: adds the offline habitat class CVD pair gate (exported helpers, `--habitat-cvd`, and the default run) and the two map text pairs;
 // every legacy check, threshold, exit and transparent refusal is unchanged.
+// MB-05: adds the map label on land and park pairs, the contour ink on depth ramp gate and the reported no-survey hatch pair; nothing earlier changed.
 // WCAG 2.x contrast check for the documented text/background token pairs, in
 // both themes of web/tokens.css (v2, dark default; design.md § 5). Fails under 4.5:1.
 // FE-61 Accept 2 retired v1 dist/tokens.css once no page loaded it.
@@ -18,7 +19,53 @@ export const PAIRS_V2 = [
   // MGL-15: the map-only text roles, each on its own halo.
   ['map-ink', 'map-ink-halo', 'map text on its halo'],
   ['map-label', 'map-halo', 'map labels on their halo'],
+  // MB-05 (MAP-DESIGN-LOCK 10.2): place labels sit on the land and park fills, which the light theme now darkens.
+  ['map-label', 'map-land', 'map labels on land'],
+  ['map-label', 'map-park', 'map labels on parks'],
 ];
+// MB-05 (MAP-DESIGN-LOCK 10.1, 10.2): the depth ramp is the same in both themes, so contour label inks are checked on its stops.
+// Stops are the unshaded legend colours at 0, 10, 20, 33, 50, 66, 100, 150, 200, 300 and 300+ ft; the shallow ink serves lines and labels
+// <= 100 ft (the first seven stops), the deep ink those deeper (the last four). The gate is WCAG 1.4.11 large-text/graphics 3:1.
+export const DEPTH_RAMP_B = ['#eff8c4', '#c4e9af', '#9cdca5', '#75cca3', '#59b4a4', '#4e9ea1', '#45869c', '#407197', '#3e6094', '#414583', '#2e2348'];
+export const CONTOUR_INK_MIN = 3;
+export const CONTOUR_INKS = [['map-contour-shallow', DEPTH_RAMP_B.slice(0, 7), 'contour ink <= 100 ft'], ['map-contour-deep', DEPTH_RAMP_B.slice(7), 'contour ink > 100 ft']];
+// The no-survey hatch on open water is reported, not gated (design 10.3 measured 1.88 dark and 2.16 light; the hatch is a pattern, not text).
+export const HATCH_PAIR = ['map-nosurvey', 'map-water', 'no-survey hatch on water (reported, not gated)'];
+export function checkMapContours(css, spec = V2) {
+  const failures = [], rows = [];
+  for (const [name, tokens] of Object.entries(themes(css, spec))) {
+    for (const [ink, stops, use] of CONTOUR_INKS) {
+      if (!tokens[ink]) { failures.push(`${name}: --${ink} is not a hex colour token`); continue; }
+      for (const stop of stops) {
+        const ratio = contrast(tokens[ink], stop);
+        rows.push(`${name.padEnd(5)} --${ink} on ramp ${stop}: ${ratio.toFixed(2)}:1 (${use}, minimum ${CONTOUR_INK_MIN}:1)`);
+        if (ratio < CONTOUR_INK_MIN) failures.push(`${name}: --${ink} ${tokens[ink]} on ramp ${stop} is ${ratio.toFixed(2)}:1, below ${CONTOUR_INK_MIN}:1 (${use})`);
+      }
+    }
+    const [fg, bg, use] = HATCH_PAIR;
+    if (!tokens[fg] || !tokens[bg]) failures.push(`${name}: --${fg} or --${bg} is not a hex colour token`);
+    else rows.push(`${name.padEnd(5)} --${fg} on --${bg}: ${contrast(tokens[fg], tokens[bg]).toFixed(2)}:1 (${use})`);
+  }
+  return {failures, rows};
+}
+
+// MB-20: the existing conditions overlays draw lines and particles straight on --map-water; WCAG 1.4.11 graphics 3:1 in both themes.
+export const OVERLAY_MIN = 3;
+export const OVERLAY_PAIRS = [['flow', 'wind and current particles'], ['flow-fast', 'fast wind and current particles'], ['mpa-line', 'protected-area outline and label']]
+  .map(([fg, use]) => [fg, 'map-water', use]);
+export function checkOverlayLines(css, spec = V2) {
+  const failures = [], rows = [];
+  for (const [name, tokens] of Object.entries(themes(css, spec))) {
+    for (const [fg, bg, use] of OVERLAY_PAIRS) {
+      if (!tokens[fg] || !tokens[bg]) { failures.push(`${name}: --${fg} or --${bg} is not a hex colour token`); continue; }
+      const ratio = contrast(tokens[fg], tokens[bg]);
+      rows.push(`${name.padEnd(5)} --${fg} on --${bg}: ${ratio.toFixed(2)}:1 (${use}, minimum ${OVERLAY_MIN}:1)`);
+      if (ratio < OVERLAY_MIN) failures.push(`${name}: --${fg} ${tokens[fg]} on --${bg} ${tokens[bg]} is ${ratio.toFixed(2)}:1, below ${OVERLAY_MIN}:1 (${use})`);
+    }
+  }
+  return {failures, rows};
+}
+
 // UXFIX-04: input and select borders are non-text UI, held to WCAG 1.4.11 (3:1), not the 4.5:1 text floor.
 export const NON_TEXT_MIN = 3;
 export const NON_TEXT_PAIRS = ['panel', 'panel-2'].map(bg => ['line-strong', bg, 'input and select border']);
@@ -31,9 +78,10 @@ const V2 = FILES['web/tokens.css'];
 
 // Custom properties declared directly inside the rule whose selector matches.
 function block(css, selector) {
-  const start = css.indexOf(`${selector} {`);
-  if (start < 0) throw Error(`tokens.css: missing ${selector}`);
-  const open = css.indexOf('{', start);
+  // RF2000-8: any CSS whitespace (or none) may precede the brace; the selector must start at a rule-header boundary.
+  const found = new RegExp(`(?<![^\\s{};])${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{`).exec(css);
+  if (!found) throw Error(`tokens.css: missing ${selector}`);
+  const open = found.index + found[0].length - 1;
   const body = css.slice(open + 1, css.indexOf('}', open));
   return Object.fromEntries([...body.matchAll(/--([a-z0-9-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)].map(m => [m[1], m[2].toLowerCase()]));
 }
@@ -581,7 +629,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // UXFIX-12 only moves the .chart-overflow:focus-visible ring out of a media block (same 2 px ring, now at all widths); no unfocused paint changed.
   "panelCss": "4558cd4edb0be1827ef6c00523a05b1c8eae84b0d0d81a93c33d5e12e4c66fa9",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
-  "tokensCss": "56f9708cfa02f651680a2bc02bd3d9080f65dec849aea6888f6bfc52508a5775",
+  // MB-05 recolours light map-only roles, reduces habitat fill opacity and adds contour/no-survey tokens; MB-20 only adds light-theme flow, MPA, swell and contrast colours; chrome text, panel and legend-glass paint stay unchanged.
+  "tokensCss": "8f446f0460e526be276e901d15c7b728c62ab28e9adcce82b85148c1a0ae9ed6",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
   // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.
@@ -728,6 +777,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     if (process.argv.includes('--verbose')) console.log(rows.map(r => `${file}: ${r}`).join('\n'));
     if (failures.length) { failed = true; console.error(`Contrast check failed in ${file}:\n  ${failures.join('\n  ')}`); }
     count += rows.length;
+  }
+  if (!named.length) {
+    const contours = checkMapContours(readFileSync(new URL('web/tokens.css', root), 'utf8'));
+    if (process.argv.includes('--verbose')) console.log(contours.rows.map(r => `web/tokens.css: ${r}`).join('\n'));
+    if (contours.failures.length) { failed = true; console.error(`Contour ink check failed in web/tokens.css:\n  ${contours.failures.join('\n  ')}`); }
+    const overlays = checkOverlayLines(readFileSync(new URL('web/tokens.css', root), 'utf8'));
+    if (process.argv.includes('--verbose')) console.log(overlays.rows.map(r => `web/tokens.css: ${r}`).join('\n'));
+    if (overlays.failures.length) { failed = true; console.error(`Overlay line check failed in web/tokens.css:\n  ${overlays.failures.join('\n  ')}`); }
   }
   if (!named.length) {
     const {failures, rows} = checkBridge(readFileSync(new URL(BRIDGE, root), 'utf8'), readFileSync(new URL('web/tokens.css', root), 'utf8'));

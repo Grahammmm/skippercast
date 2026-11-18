@@ -71,6 +71,13 @@ export interface DailyInputs {
   rules: DailyRule[];
 }
 
+const mixedDailyFeeds = ({feeds}: DailyInputs): boolean => feeds.daily !== feeds.intelligence;
+
+/** A surviving feed is new evidence, not a reason to replay cached hazard prose. */
+export function canUseDailyCache(inputs: DailyInputs, storedHash: string, currentHash: string): boolean {
+  return !mixedDailyFeeds(inputs) && (storedHash === currentHash || !inputs.feeds.daily);
+}
+
 interface ReportRow {id: string; version: number; report_date: string; trip_type: string | null; anglers: number | null; counts_json: string; verified: number; boat_name: string}
 function counts(json: string): DailySkipperReport['counts'] {
   try {
@@ -220,7 +227,9 @@ export function composeDaily(inputs: DailyInputs, language: Language): string {
     body.push(t(language, 'daily_no_skipper'));
     for (const a of landing.slice(0, 2)) body.push(a.trips === 1 ? t(language, 'daily_landing_one', {species: speciesWords(a, language), label: a.confidence}) : t(language, 'daily_landing', {trips: a.trips, species: speciesWords(a, language), label: a.confidence}));
   }
-  return [`${inputs.port_name}, ${dateWords(inputs.date, language)}:`, ...advisories, ...body, conditions,
+  const heading = `${inputs.port_name}, ${dateWords(inputs.date, language)}:`;
+  const lead = mixedDailyFeeds(inputs) ? [...advisories, heading] : [heading, ...advisories];
+  return [...lead, ...body, conditions,
     t(language, 'daily_link', {target: `port:${inputs.port}`})].join(' ');
 }
 
@@ -310,13 +319,11 @@ export async function dailyAnswer(env: Env, port: string, date: string, language
   const inputs = await dailyInputs(env, port, date, deps, now);
   const hash = await hashInputs(inputs);
   const row = await db.prepare('SELECT text_en,text_es,inputs_hash,generated_at FROM advisor_daily_answers WHERE key=?').bind(key).first<{text_en: string; text_es: string; inputs_hash: string; generated_at: string}>();
-  if (row && row.inputs_hash === hash) return {port, date, text: language === 'es' ? row.text_es : row.text_en, text_en: row.text_en, text_es: row.text_es, inputs_hash: hash, generated_at: row.generated_at, source: 'cache'};
-  // A feed that failed to load changes the hash but is no new information: today's stored answer stands until the
-  // feeds are back (a published report deletes the row, intake/reports.ts, so a new report is never hidden by this).
-  if (row && (!inputs.feeds.daily || !inputs.feeds.intelligence)) return {port, date, text: language === 'es' ? row.text_es : row.text_en, text_en: row.text_en, text_es: row.text_es, inputs_hash: row.inputs_hash, generated_at: row.generated_at, source: 'cache'};
+  if (row && canUseDailyCache(inputs, row.inputs_hash, hash)) return {port, date, text: language === 'es' ? row.text_es : row.text_en, text_en: row.text_en, text_es: row.text_es, inputs_hash: row.inputs_hash, generated_at: row.generated_at, source: 'cache'};
 
   const link = `{{link:port:${port}}}`;
-  if (options.generate === false) {
+  // Compose from the surviving evidence, without spending on or storing a partial answer.
+  if (options.generate === false || mixedDailyFeeds(inputs)) {
     const en = capped(composeDaily(inputs, 'en'), settings.publicBase), es = capped(composeDaily(inputs, 'es'), settings.publicBase);
     return {port, date, text: language === 'es' ? es : en, text_en: en, text_es: es, inputs_hash: hash, generated_at: new Date(now).toISOString(), source: 'composed'};
   }
