@@ -34,20 +34,23 @@ class ValidateListingTest(unittest.TestCase):
                          ["sources/2", "sources/10", "sources/11"])
 
     def test_ints_before_keys_at_one_depth_then_next_key(self):
-        found = [SimpleNamespace(absolute_path=deque(path), message="bad") for path in (["b"], ["a", "x"], ["a", 0])]
+        schema_path = deque(["properties", "a", "properties", "x", "properties", "b"])  # names the schema declares
+        found = [SimpleNamespace(absolute_path=deque(path), absolute_schema_path=schema_path, validator="type", validator_value="string")
+                 for path in (["b"], ["a", "x"], ["a", 0])]
         with mock.patch.object(validate, "validator", return_value=SimpleNamespace(iter_errors=lambda doc: found)):
-            self.assertEqual(validate.errors("region", {}), ["a/0: bad", "a/x: bad", "b: bad"])
+            bad = "value is not of type 'string'"
+            self.assertEqual(validate.errors("region", {}), [f"a/0: {bad}", f"a/x: {bad}", f"b: {bad}"])
 
     def test_two_errors_at_one_location_ordered_by_message(self):
         document = {"id": 1, "sources": ["zzzzz", "zzzzz", "ab"]}
         first = self.errors(document)
-        self.assertEqual(first, ["sources/2: 'ab' does not match '^z'", "sources/2: 'ab' is too short"])
+        self.assertEqual(first, ["sources/2: value does not match '^z'", "sources/2: value is too short (minimum length 5)"])
         self.assertEqual(self.errors(document), first)
 
     def test_root_error_listed_first(self):
         rows = self.errors({"sources": ["zzzzz", 3]})
         self.assertEqual(rows[0], "(root): 'id' is a required property")
-        self.assertEqual(rows[1:], ["sources/1: 3 is not of type 'string'"])
+        self.assertEqual(rows[1:], ["sources/1: value is not of type 'string'"])
 
     def run_cli(self, *documents):
         paths = []
@@ -73,7 +76,7 @@ class ValidateListingTest(unittest.TestCase):
                 self.assertEqual(out, [])
                 self.assertEqual(err[0], f"{paths[0]}: {count} schema error(s)")
                 self.assertEqual(len([line for line in err if line.startswith("  sources/")]), 50)
-                self.assertEqual(err[1:51], [f"  sources/{n}: 0 is not of type 'string'" for n in range(50)])
+                self.assertEqual(err[1:51], [f"  sources/{n}: value is not of type 'string'" for n in range(50)])
                 self.assertEqual(err[51:], [more] if more else [])
 
     def test_cli_valid_file(self):
