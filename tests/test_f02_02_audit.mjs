@@ -30,13 +30,21 @@ const ago = days => new Date(NOW - days * DAY).toISOString();
 const quiet = async fn => { const s = {log: console.log, warn: console.warn, error: console.error}; console.log = console.warn = console.error = () => {}; try { return await fn(); } finally { Object.assign(console, s); } };
 
 /** The D1 adapter with the project's per-statement bind budget: over the cap fails like D1's "too many SQL variables". */
-function guard(db, stats) {
+function guard(db, stats, bucket) {
   return {
     prepare(query) {
       const st = db.prepare(query);
+      let args = [];
       return {
-        bind(...a) { stats.maxBinds = Math.max(stats.maxBinds, a.length); if (a.length > BIND_CAP) throw Error('too many SQL variables'); st.bind(...a); return this; },
-        first: () => st.first(), all: () => st.all(), run: () => st.run(),
+        bind(...a) { args = a; stats.maxBinds = Math.max(stats.maxBinds, a.length); if (a.length > BIND_CAP) throw Error('too many SQL variables'); st.bind(...a); return this; },
+        first: () => st.first(), all: () => st.all(),
+        run() {
+          // Ordering probe: a graphic-key delete that executes while any of its files is still in the bucket.
+          if (bucket && /^\s*DELETE FROM job_state/i.test(query)) {
+            for (const key of args) { const id = String(key).slice('advisor.graphic.'.length); if ([...bucket.store].some(k => k.startsWith(`advisor/posts/${id}/`))) { stats.keyBeforeFiles++; break; } }
+          }
+          return st.run();
+        },
       };
     },
     batch: qs => db.batch(qs),
@@ -57,13 +65,13 @@ function seed(expired, graphics) {
 }
 
 /** Run the real prune and describe what happened (never throws). */
-async function observe(expired, graphics, deps) {
-  const s = seed(expired, graphics), stats = {maxBinds: 0, overCap: 0};
-  const env = {DB: guard(s.db, stats), ADVISOR_MEDIA: s.bucket};
-  const outcome = await quiet(() => runRetention(env, NOW, deps).then(() => 'ok', e => e.message));
+async function observe(expired, graphics, deps, run = runRetention) {
+  const s = seed(expired, graphics), stats = {maxBinds: 0, overCap: 0, keyBeforeFiles: 0};
+  const env = {DB: guard(s.db, stats, s.bucket), ADVISOR_MEDIA: s.bucket};
+  const outcome = await quiet(() => run(env, NOW, deps).then(() => 'ok', e => e.message));
   const n = q => Number(s.sql.prepare(q).get()['COUNT(*)']);
   return {
-    outcome, maxBinds: stats.maxBinds,
+    outcome, maxBinds: stats.maxBinds, keyBeforeFiles: stats.keyBeforeFiles,
     expiredLeft: n("SELECT COUNT(*) FROM advisor_media WHERE id LIKE 'e%' AND r2_key<>''"),
     originalsLeft: [...s.bucket.store].filter(k => k.startsWith('advisor/media/c/e')).length,
     sharedKept: s.bucket.store.has('advisor/media/c/shared.jpg'),
@@ -81,17 +89,19 @@ function contractGaps(o) {
   if (!o.sharedKept) gaps.push('an original still referenced by a non-expired row was deleted');
   if (o.graphicKeysLeft || o.graphicFilesLeft) gaps.push(`orphan graphic requests left (${o.graphicKeysLeft} keys, ${o.graphicFilesLeft} files)`);
   if (o.graphicKeysLeft === 0 && o.graphicFilesLeft) gaps.push('graphic keys dropped before their files');
+  if (o.keyBeforeFiles) gaps.push(`graphic keys deleted while their files still existed (${o.keyBeforeFiles} statements)`);
   return gaps;
 }
 
-const compliant = {outcome: 'ok', maxBinds: 82, expiredLeft: 0, originalsLeft: 0, sharedKept: true, graphicKeysLeft: 0, graphicFilesLeft: 0};
-const defective = {outcome: 'too many SQL variables', maxBinds: 102, expiredLeft: 51, originalsLeft: 51, sharedKept: true, graphicKeysLeft: 101, graphicFilesLeft: 0};
+const compliant = {outcome: 'ok', maxBinds: 82, expiredLeft: 0, originalsLeft: 0, sharedKept: true, graphicKeysLeft: 0, graphicFilesLeft: 0, keyBeforeFiles: 0};
+const defective = {outcome: 'too many SQL variables', maxBinds: 102, expiredLeft: 51, originalsLeft: 51, sharedKept: true, graphicKeysLeft: 101, graphicFilesLeft: 0, keyBeforeFiles: 0};
 
 test('F02-02 contract: the compliant model has no gaps; the defective model reports each one', () => {
   assert.deepEqual(contractGaps(compliant), []);
   assert.deepEqual(contractGaps(defective), [
     'prune failed: too many SQL variables', 'a statement bound 102 values (cap 100)',
     'expired media backlog left (51 rows, 51 originals)', 'orphan graphic requests left (101 keys, 0 files)']);
+  assert.deepEqual(contractGaps({...compliant, keyBeforeFiles: 2}), ['graphic keys deleted while their files still existed (2 statements)']);
   assert.deepEqual(contractGaps({...compliant, sharedKept: false}), ['an original still referenced by a non-expired row was deleted']);
   assert.deepEqual(contractGaps({...compliant, graphicFilesLeft: 3}), ['orphan graphic requests left (0 keys, 3 files)', 'graphic keys dropped before their files']);
 });
@@ -100,6 +110,7 @@ for (const [expired, graphics] of [[51, 101], [500, 101]]) {
   dbTest(`valid control: ${expired} distinct expired originals and ${graphics} orphan graphic requests clear under the ${BIND_CAP}-bind cap (chunk 40)`, async () => {
     const o = await observe(expired, graphics, {chunk: 40});
     assert.deepEqual(contractGaps(o), []);
+    assert.equal(o.keyBeforeFiles, 0);
     assert.ok(o.maxBinds <= BIND_CAP && o.maxBinds > 0, `max binds ${o.maxBinds}`);
   });
 }
@@ -107,6 +118,17 @@ for (const [expired, graphics] of [[51, 101], [500, 101]]) {
 dbTest('affected control: a statement past the cap is what the bind-counting adapter rejects (the gap is detectable)', async () => {
   const stats = {maxBinds: 0, overCap: 0}, {db} = seed(0, 0);
   assert.throws(() => guard(db, stats).prepare('SELECT 1').bind(...Array(BIND_CAP + 2).fill('x')), /too many SQL variables/);
+});
+
+dbTest('affected control: a key-first prune that ends with keys and files both gone is still detected (ordering, not just end state)', async () => {
+  const keyFirst = async env => {
+    const keys = (await env.DB.prepare("SELECT key FROM job_state WHERE key LIKE 'advisor.graphic.%' ORDER BY key LIMIT ?").bind(40).all()).results.map(r => r.key);
+    await env.DB.prepare(`DELETE FROM job_state WHERE key IN (${keys.map(() => '?').join(',')})`).bind(...keys).run();
+    for (const k of keys) await env.ADVISOR_MEDIA.delete([...env.ADVISOR_MEDIA.store].filter(f => f.startsWith(`advisor/posts/${k.slice('advisor.graphic.'.length)}/`)));
+  };
+  const o = await observe(0, 30, {}, keyFirst);
+  assert.equal(o.graphicKeysLeft, 0); assert.equal(o.graphicFilesLeft, 0);
+  assert.deepEqual(contractGaps(o), ['graphic keys deleted while their files still existed (1 statements)']);
 });
 
 dbTest('baseline receipt: the shipped chunk against 51 / 500 expired originals and 101 orphan graphic requests (diagnostic only)', async () => {
