@@ -177,6 +177,9 @@ def import_retained(store,*,source_root,source_db,plan_ref,now,deadline,adoption
             baselines=plan.get('baselines',[]),producer_proofs=predicted,
             imported_artifacts=list(all_refs.values()),deadline_epoch=deadline.timestamp(),
             source_volume_allowance_bytes=0,native_requests_allowance=0)
+        # The adopted manifest also carries the adoption and execution grant identity;
+        # size the final-equivalent document here, before any retained copy or spend.
+        if adoption is not None:preview.update(saved_area_adoption=adoption,execution_grant_identity=grant_identity(grant))
         if parent:preview.update(parent_grant=plan['parent_grant'],original_window_count=parent['window_count'],parent_window_set=parent['window_set'])
         _managed_metadata_bytes(preview,'sourcefree manifest')
 

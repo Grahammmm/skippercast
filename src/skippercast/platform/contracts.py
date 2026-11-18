@@ -27,6 +27,16 @@ PUBLIC_RIGHTS = {"public-domain", "CC0-1.0", "CC-BY-4.0", "CC-BY-NC-4.0", "facts
 # Redistribution (above) and commercial use are separate questions; see docs/legal/data-rights-register.md.
 COMMERCIAL_USE = {"allowed", "prohibited", "permission-required", "unknown"}
 PUBLIC_DISPLAY = ("allowed", "private", "excluded")
+# The owner's display decision (G, 2026-11-18). It clears derived public display of a source whose
+# review is still open or whose publication_allowed is false; it never changes review_status or publication_allowed.
+# Without it, an explicit publication_allowed:false still vetoes `allowed` (the pre-existing veto).
+OWNER_DISPLAY_BASIS = "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"
+
+
+def owner_display_cleared(rights):
+    """True when `rights` carries the owner's allowed public-display decision with the G basis."""
+    decision = rights.get("owner_public_display")
+    return isinstance(decision, dict) and decision.get("decision") == "allowed" and decision.get("basis") == OWNER_DISPLAY_BASIS
 
 
 class ContractError(ValueError):
@@ -158,7 +168,7 @@ def load_catalogs(root=REPO):
             display = rights["public_display"]
             if display not in PUBLIC_DISPLAY:
                 raise ValueError(f"Invalid public_display on {ident}")
-            if display == "allowed" and (source["review_status"] != "approved" or source.get("publication_allowed") is False):
+            if display == "allowed" and not owner_display_cleared(rights) and (source["review_status"] != "approved" or source.get("publication_allowed") is False):
                 raise ValueError(f"public_display is not cleared for {ident}")
             attribution, terms = rights.get("attribution"), rights.get("terms_url")
             if not isinstance(attribution, str) or not attribution.strip() or not isinstance(terms, str):
