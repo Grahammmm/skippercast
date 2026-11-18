@@ -473,7 +473,7 @@ def features_for(patches, reach, policy, row, binding, *, reference_support=None
         polygon(mapping(geo))  # No repair, buffer, simplified shells or lost holes.
         features.append({'type': 'Feature', 'geometry': mapping(geo), 'properties': {
             'id': f'classified-{reach}-{policy["id"]}-{index}', 'reach': reach,
-            'source_ids': [row['id'], binding['row']['id']], 'source_year': row.get('survey_year', 'unknown'),
+            'source_ids': [row['id'], binding['row']['id']], 'source_year': row.get('year') or row.get('survey_year') or 'unknown',
             'resolution_m': row['resolution_m'], 'vertical_datum': row['vertical_datum'],
             'terrain': 'unknown', 'fit': {'lingcod': 'unknown', 'rockfish-reef': 'unknown'},
             'depth_min_ft': 25, 'depth_max_ft': 300, 'depth_basis': 'nominal-band',

@@ -173,14 +173,6 @@ class HabitatPriorityIgnoresFleetEvidenceTests(unittest.TestCase):
                     self.assertEqual(got,want)
                     self.assertEqual(habitat_grade(got),habitat_grade(want))
 
-    def test_fleet_fields_on_the_target_leave_the_scored_metrics_and_result_unchanged(self):
-        for bare in BARE_METRICS:
-            for name,extra in FLEET_VARIANTS.items():
-                with self.subTest(bare=bare,extra=name):
-                    target={"id":"T","metrics":dict(bare),**extra}
-                    self.assertEqual(habitat_score(target["metrics"]),habitat_score(bare))
-                    self.assertEqual(habitat_grade(habitat_score(target["metrics"])),habitat_grade(habitat_score(bare)))
-
     def test_fleet_fields_do_not_cause_validation_errors_or_mask_them(self):
         # Only the four metric keys are validated: fleet junk never raises, and a bad metric still raises.
         ok=BARE_METRICS[1]

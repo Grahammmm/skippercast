@@ -90,7 +90,7 @@ test('land separating the ends is no-route; a node budget too small is too-far',
   assert.ok(waterRoute(open, null, cell(2, 2), cell(29, 29)).ok);
 });
 
-test('ends that are not water: land beyond SNAP_M, an unserved tile, outside bounds, no position, no product', () => {
+test('ends that are not water: land, an unserved tile, outside bounds, no position, no product', () => {
   const model = product({[COAST]: paint([['l', 0, 0, 15, 31]])}), water = cell(24, 16);
   assert.equal(why(waterRoute(model, null, cell(4, 16), water)), 'start-not-water');
   assert.equal(why(waterRoute(model, null, water, cell(16, 16, 672))), 'end-not-water');
@@ -98,11 +98,10 @@ test('ends that are not water: land beyond SNAP_M, an unserved tile, outside bou
   assert.equal(why(waterRoute(model, null, {latitude: NaN, longitude: -120.95}, water)), 'start-not-water');
   assert.equal(why(waterRoute(model, null, water, null)), 'end-not-water');
   assert.equal(why(waterRoute(null, null, water, water)), 'no-product');
-  // A berth on the shore (land within SNAP_M of water) snaps to the nearest water centre.
-  const berth = cell(15, 16), r = waterRoute(model, null, berth, water);
-  assert.ok(r.ok, JSON.stringify(r));
-  assert.ok(distanceNm(berth, r.points[0]) * 1852 <= SNAP_M && r.nm >= distanceNm(berth, water));
-  allWater(model, null, r.points);
+  // A nearby water centre cannot make a land berth into a water stop.
+  const berth = cell(15, 16);
+  assert.equal(why(waterRoute(model, null, berth, water)), 'start-not-water');
+  assert.equal(why(waterRoute(model, null, water, berth)), 'end-not-water');
 });
 
 test('mixed cells as the only passage: lines-needed without lines, a route with them, never one when they failed', () => {
@@ -233,8 +232,8 @@ test('smoothing: no shortcut through mixed cells without lines, and none across 
   assert.ok(r.nm > distanceNm(cell(16, 8), cell(16, 24)) * 1.1, `${r.nm}`);
 });
 
-test('smoothing: a berth on the shore keeps its snapped first and last vertex, whichever way it is routed', () => {
-  const model = product({[COAST]: paint([['l', 0, 0, 15, 31]])}), berth = cell(15, 16), water = cell(24, 16);
+test('smoothing: a berth just offshore keeps its snapped first and last vertex, whichever way it is routed', () => {
+  const model = product({[COAST]: paint([['l', 0, 0, 15, 31]])}), berth = {...cell(16, 16), longitude: lonOf(671 + 16.05 / G)}, water = cell(24, 16);
   const there = waterRoute(model, null, berth, water), back = waterRoute(model, null, water, berth);
   assert.ok(there.ok && back.ok);
   assert.equal(JSON.stringify(there.points[0]), JSON.stringify(back.points[back.points.length - 1]));

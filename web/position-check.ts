@@ -38,7 +38,7 @@ export type Clock = 'ok' | 'old' | 'future' | 'unknown';
 export type Reading =
   /** No boundary data on this device (nothing saved and no connection, or the screen could not load). Never "clear". */
   | {kind: 'no-boundaries'}
-  /** The position lies outside the area the boundary file was asked for: not checked, never "clear". */
+  /** The point or its accuracy footprint extends beyond the area held on this device: never "clear". */
   | {kind: 'not-covered'; fix: Fix}
   /** Some configured boundary layer is not on this device, and nothing held puts the position inside or near a closure: "outside" and "nearest closure" would be claims about data we lack. */
   | {kind: 'incomplete'; fix: Fix; missing: readonly string[]; clock: Clock; checkedAt: string | null}
@@ -61,9 +61,25 @@ function nearestHeld(fix: Fix, features: readonly {properties?: {NAME?: string; 
   return best && {name: best.name, distanceM: Math.round(best.d * 10) / 10, touching: best.d === 0};
 }
 
+function coversAccuracy(screen: HeldScreen, {latitude, longitude, accuracyM}: Fix): boolean {
+  // Zero uses the already screened point. No reported radius is flagged separately as low accuracy.
+  if (accuracyM === null || accuracyM === 0) return true;
+  const radians = Math.PI / 180, lat = latitude * radians;
+  // The minimum WGS84 radius of curvature (rounded down) gives a spherical cap that contains the footprint.
+  const radius = accuracyM / 6_335_439;
+  if (Math.abs(lat) + radius >= Math.PI / 2) return false; // No held envelope covers a pole.
+  const dy = radius / radians, dx = Math.asin(Math.sin(radius) / Math.cos(lat)) / radians;
+  const west = longitude - dx, east = longitude + dx, south = latitude - dy, north = latitude + dy;
+  // Check its bounding rectangle using the planner's existing coverage test (which also adds the planning halo).
+  try {
+    return screen.coversGeometry?.({type: 'Polygon', coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]]}) === true;
+  } catch { return false; }
+}
+
 /**
  * inside: the point touches or lies in a closure. near: it is within the planning margin (geo-screen PLANNING_MARGIN_M) of one, counting the
- * reported accuracy as extra margin so a fix that could be across the line is never called outside. outside: otherwise.
+ * reported accuracy as extra margin so a fix that could be across the line is never called outside. With no such hit, outside requires
+ * coverage of the reported accuracy footprint, not just the centre.
  * `distanceM` is geo-screen's metres to the nearest closure (null when none is within its 20 km search).
  * With a layer missing, inside and near still stand (a closure we hold is a closure), but outside is refused (`incomplete`).
  */
@@ -84,6 +100,7 @@ export function readingFor(fix: Fix, screen: HeldScreen | null | undefined): Rea
   const where = inside ? 'inside' : metres !== null && metres <= reach ? 'near' : 'outside';
   const missing = held.missing ?? [], clock = held.clock ?? (held.current ? 'ok' : 'old');
   if (missing.length && where === 'outside') return {kind: 'incomplete', fix, missing, clock, checkedAt: held.checked_at};
+  if (where === 'outside' && !coversAccuracy(screen, fix)) return {kind: 'not-covered', fix};
   return {kind: 'checked', fix, where, name, distanceM: metres, lowAccuracy: fix.accuracyM === null || fix.accuracyM > LOW_ACCURACY_M,
     stale: !held.current, missing, clock, checkedAt: held.checked_at};
 }

@@ -86,13 +86,16 @@ def test_written_geojson_has_no_annotation(atlas, tmp_path):
     assert json.loads(text)["features"]
 
 
-@pytest.mark.parametrize("kind", ["areas", "drifts"])
-@pytest.mark.parametrize("path", [("recorded_validation", "datum"), ("recorded_validation", "native_cells"),
-                                  ("source_id",), ("basis",), ("extent_note",)])
+SHARED_PATHS = [("recorded_validation", "datum"), ("recorded_validation", "native_cells"), ("source_id",)]
+# Each kind carries one free-text field the other does not; pair it with its own kind only,
+# so no case needs a skip (the full run fails on any skip outside the allowlist).
+KIND_PATHS = ([("areas", p) for p in SHARED_PATHS + [("extent_note",)]]
+              + [("drifts", p) for p in SHARED_PATHS + [("basis",)]])
+
+
+@pytest.mark.parametrize("kind,path", KIND_PATHS)
 def test_allowed_field_cannot_carry_an_object(atlas, kind, path):
     row = atlas[kind][0]
-    if path[-1] in ("basis", "extent_note") and path[-1] not in row:
-        pytest.skip("field belongs to the other kind")
     holder = row[path[0]] if len(path) == 2 else row
     holder[path[-1]] = {"synthetic_internal_note": "SYNTHETIC-NESTED"}
     with pytest.raises(ValueError):

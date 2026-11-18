@@ -2,7 +2,7 @@ name: Copy coast assets to R2
 
 # FE-85: copy reviewed terrain, imagery and habitat assets from the Fish Worker
 # into SkipperCast's R2 store with a SHA-256 manifest (docs/coastal-service.md).
-# Manual only, on the owner's runner. The rights check runs first and refuses
+# Manual only, from main. The rights check runs first and refuses
 # unknown or rights-held sources before any asset is downloaded; the R2 token
 # is visible only to the upload step.
 on:
@@ -26,8 +26,8 @@ concurrency:
 
 jobs:
   publish:
-    if: github.ref == 'refs/heads/main' && vars.DATA_RUNNER != ''
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
       contents: read

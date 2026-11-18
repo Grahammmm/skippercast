@@ -97,8 +97,11 @@ class WorkflowTests(unittest.TestCase):
     def test_secret_only_in_the_step_environment(self):
         self.assertEqual(self.text.count('secrets.'), 1)
         self.assertIn('          AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}\n', self.text)
-        run = re.findall(r'^\s+run: (.+)$', self.text, re.M)
-        self.assertEqual(run, ['bash scripts/fleet/install_listener.sh --region "$REGION"'])
+        run = re.findall(r'^ {8}run: (.+(?:\n+ {10}[^\n]*)*)$', self.text, re.M)
+        self.assertEqual(
+            [(script.splitlines()[0], script.rstrip().splitlines()[-1].strip()) for script in run],
+            [('|', 'bash scripts/fleet/install_listener.sh --region "$REGION"')],
+        )
         self.assertNotIn('${{ inputs.region }}', run[0], 'inputs reach the shell through env, not interpolation')
 
 
