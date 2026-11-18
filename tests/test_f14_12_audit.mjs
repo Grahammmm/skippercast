@@ -34,6 +34,10 @@ test('a marked day survives unverified responses but a later live refresh retire
   await send(reply(feed, liveHeaders(yesterday)));
   assert.deepEqual(degraded.peek(), {since: oldSaved}, 'not even a same-day live read clears the mark');
 
+  // A response the Worker answered well before midnight (more than the skew
+  // allowance, so unambiguously yesterday's budget) and that finishes late.
+  const staleAt = yesterday - 10 * 60_000;
+  t.mock.timers.setTime(staleAt);
   let finishYesterday;
   const pending = watchDegraded(() => new Promise(resolve => { finishYesterday = resolve; }))(feed);
   t.mock.timers.setTime(today);
@@ -59,7 +63,7 @@ test('a marked day survives unverified responses but a later live refresh retire
   assert.equal(saved.headers.get('X-SC-Degraded'), 'cost-ceiling');
   assert.equal(saved.headers.get('X-SC-Last-Known-At'), oldSaved);
   assert.equal(await saved.text(), '{}');
-  finishYesterday(marked(oldSaved, yesterday));
+  finishYesterday(marked(oldSaved, staleAt + 1000));
   await pending;
   assert.equal(degraded.peek(), null, 'a request the Worker answered before midnight, finishing late, cannot restore the notice');
 
@@ -70,11 +74,18 @@ test('a marked day survives unverified responses but a later live refresh retire
   assert.deepEqual(degraded.peek(), {since: oldSaved});
   degraded.value = null;
 
-  // Contract: a request that started before UTC midnight but that the Worker
-  // answered after it belongs to the new budget day (its Date header, or with
-  // no usable Date the arrival day), so it cannot be hidden by a same-day live
-  // read or dropped after a recovery. Believable bug: dating it by its start.
-  for (const [reason, headers] of [['a today Date header', today], ['no Date header', undefined]]) {
+  // Contract: a request that started before UTC midnight and arrived after it
+  // is a current-day mark unless its Date proves otherwise beyond clock skew
+  // (SKEW_MS): a Date near midnight, even one before it, cannot tell which
+  // clock the Worker's budget used. Such a mark cannot be hidden by a same-day
+  // live read or dropped after a recovery. Believable bugs: dating it by its
+  // start, or trusting a skewed Date that reads a few seconds before midnight.
+  for (const [reason, headers] of [
+    ['a today Date header', today],
+    ['no Date header', undefined],
+    ['a Date 40 s before midnight (clock skew)', yesterday + 20_000],
+    ['a Date just inside the skew allowance', Date.parse('2026-11-17T23:55:30Z')],
+  ]) {
     let crossing;
     const crossingRead = watchDegraded(() => new Promise(resolve => { crossing = resolve; }));
     t.mock.timers.setTime(yesterday);

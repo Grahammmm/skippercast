@@ -53,15 +53,17 @@ function liveRefresh(response: ObservedResponse, now: number, day: number): bool
 /**
  * The UTC budget day a cost-ceiling response was produced in. The Worker ran
  * somewhere between the request's start and its arrival, so a request that
- * crossed midnight may belong to either day. Its Date header says which when
- * it falls inside that window (clamped for second precision and skew); with no
- * usable Date the later day wins, since hiding an active ceiling is worse than
- * showing one a little long.
+ * crossed midnight may belong to either day. The Worker's clock may differ
+ * from the page's by up to SKEW_MS, so its Date header proves the earlier day
+ * only when it lies more than SKEW_MS before that midnight; any nearer Date
+ * (or none) is ambiguous and the later day wins, since hiding an active
+ * ceiling is worse than showing one a little long.
  */
 function markedBudgetDay(headers: Headers, now: number, startedAt: number): number {
+  const arrival = utcDay(now);
   const date = Date.parse(headers.get('Date') ?? '');
-  if (Number.isFinite(date) && date >= startedAt - SKEW_MS && date <= now + SKEW_MS) return utcDay(Math.min(Math.max(date, startedAt), now));
-  return utcDay(now);
+  if (utcDay(startedAt) === arrival || !Number.isFinite(date) || date < startedAt - SKEW_MS) return arrival;
+  return date + SKEW_MS < arrival * 86_400_000 ? utcDay(Math.max(date, startedAt)) : arrival;
 }
 
 /** Publish marks by UTC budget day; retire a prior day's mark only on a live refresh. */
