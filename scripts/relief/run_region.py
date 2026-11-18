@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Guarded per-region runner for the relief pipeline (DATA-LIVE-6; E2E-PIPELINE §1-§3).
 
-    run_region.py <region> --out <OUT> --through <stage> [--norm <NORM>] [--scope public]
-                  [--region-config FILE] [--coarse TIF --water GEOJSON --coarse-source ID [--coarse-date D]]
-                  [--dry-run]
+    run_region.py <region> --out <OUT> --through <stage> --source SRC [--norm <NORM>] [--family F]
+                  [--scope public] [--region-config FILE]
+                  [--coarse TIF --water GEOJSON --coarse-source ID [--coarse-date D]]
+                  [--manifest JSON --upstream STAGE[:SCOPE] ...] [--generation SHA256] [--dry-run]
     run_region.py <region> --out <OUT> --dry-run  # preview the full chain without stage inputs
 
 Runs ``region.py <stage> --region <region> --out <OUT>`` for every stage of the chain up to
@@ -11,11 +12,15 @@ and including ``--through``, in this order::
 
     normalize select mosaic tiles contours zone digests package qa envelope
 
-``mosaic``, ``tiles`` and ``zone`` also get ``--scope <scope>`` (default ``public``) and, when
-given, ``--region-config FILE`` (the DL-5 seam); ``zone`` also gets ``--coarse``, ``--water``,
-``--coarse-source`` and ``--coarse-date``, and a chain that reaches ``zone`` without the first
-three is a usage error before anything runs. Those input paths are checked against the
-private-vault guard like OUT.
+Each stage also gets the inputs its own command line requires, as the stage modules declare
+them: ``normalize`` gets ``--source`` (always required) and, when given, ``--family`` and
+``--cache <NORM>``; ``mosaic``, ``tiles`` and ``zone`` get ``--scope <scope>`` (default
+``public``) and, when given, ``--region-config FILE`` (the DL-5 seam); ``zone`` also gets
+``--coarse``, ``--water``, ``--coarse-source`` and ``--coarse-date``; ``package`` gets
+``--manifest`` and every ``--upstream``; ``envelope`` gets ``--generation`` (the option, else the
+generation of the package receipt left by the package stage of this chain). A chain that reaches
+a stage without its required inputs is a usage error before anything runs. Those input paths
+are checked against the private-vault guard like OUT.
 
 Each stage is a subprocess under ``nice -n 19 ionice -c3``. The run stops at the first stage
 that exits non-zero, names that stage and its code, and exits with the same code (a code
@@ -56,6 +61,7 @@ import argparse
 from dataclasses import dataclass, field
 import errno
 import fcntl
+import json
 import os
 from pathlib import Path
 import re
@@ -67,7 +73,12 @@ import time
 
 SCOPED_STAGES = ('mosaic', 'tiles', 'zone')  # DL-5 seam: these take --scope and --region-config
 STAGES = ('normalize', 'select', 'mosaic', 'tiles', 'contours', 'zone', 'digests', 'package', 'qa', 'envelope')
+# Inputs the stage modules require on their own command line (a chain that reaches the stage without
+# them is a usage error before anything runs). envelope's --generation is not here: it is read from
+# the package receipt when not given.
+STAGE_INPUTS = {'normalize': ('source',), 'zone': ('coarse', 'water', 'coarse-source'), 'package': ('manifest', 'upstream')}
 REGION_ID = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')  # the same rule as skippercast.relief.receipts
+HEX64 = re.compile(r'[0-9a-f]{64}')
 LOCK_NAME = '.run_region.lock'
 GB = 10 ** 9
 STOP_FILE_NAMES = ('LOCAL-STOP', 'UNITFEED-STOP')
@@ -142,9 +153,15 @@ def stage_command(cfg, stage, region, out, extra=None):
 
 
 def stage_extras(args):
-    """Per-stage extra arguments for the DL-5 consumer seam: ``--scope`` (default public) and
-    ``--region-config`` for mosaic, tiles and zone; zone also takes its three local inputs."""
-    extra = {}
+    """Per-stage extra arguments: the inputs the stage modules themselves require (normalize
+    ``--source``, zone ``--coarse``/``--water``/``--coarse-source``, package ``--manifest`` and
+    ``--upstream``, envelope ``--generation``), plus the DL-5 seam, ``--scope`` (default public)
+    and ``--region-config`` for mosaic, tiles and zone."""
+    extra = {'normalize': [] if args.source is None else ['--source', args.source]}
+    if args.family:
+        extra['normalize'] += ['--family', args.family]
+    if args.norm:  # normalize writes its cache here; the guard must watch the path it really uses
+        extra['normalize'] += ['--cache', args.norm]
     for stage in SCOPED_STAGES:
         extra[stage] = ['--scope', args.scope]
         if args.region_config:
@@ -152,7 +169,33 @@ def stage_extras(args):
     for name in ('coarse', 'water', 'coarse-source', 'coarse-date'):
         if value := getattr(args, name.replace('-', '_')):
             extra['zone'] += [f'--{name}', value]
+    if args.manifest:
+        extra['package'] = ['--manifest', args.manifest]
+    for ref in args.upstream or ():
+        extra.setdefault('package', []).extend(['--upstream', ref])
+    if args.generation:
+        extra['envelope'] = ['--generation', args.generation]
     return extra
+
+
+def missing_inputs(args, through):
+    """``[(stage, [flag, ...])]`` for every stage of the chain whose required inputs were not given."""
+    rows = []
+    for stage in chain_through(through):
+        names = [name for name in STAGE_INPUTS.get(stage, ()) if not getattr(args, name.replace('-', '_'))]
+        if names:
+            rows.append((stage, [f'--{name}' for name in names]))
+    return rows
+
+
+def package_generation(out, region):
+    """The current package receipt's generation (envelope's ``--generation``), or None."""
+    try:
+        doc = json.loads((Path(out) / region / 'stages' / 'package.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return None
+    value = doc.get('generation') if isinstance(doc, dict) else None
+    return value if isinstance(value, str) and HEX64.fullmatch(value) else None
 
 
 def check_guards(cfg, out, norm, inputs=()):
@@ -349,13 +392,16 @@ def say(text):
 def dry_run(cfg, region, out, norm, through, extra, inputs, missing):
     say(f'run_region dry run: region {region}, through {through}, out {out}')
     say('chain (in order, each as a subprocess under ' + ' '.join(cfg.prefix) + '):')
+    shown = dict(extra)
+    if 'envelope' not in shown:
+        shown['envelope'] = ['--generation', '<generation of the current package receipt>']
     for index, stage in enumerate(chain_through(through), 1):
-        say(f'  {index:>2}. {" ".join(stage_command(cfg, stage, region, out, extra))}')
+        say(f'  {index:>2}. {" ".join(stage_command(cfg, stage, region, out, shown))}')
     say('not run: ' + ', '.join(STAGES[STAGES.index(through) + 1:]) if through != STAGES[-1] else 'not run: (none)')
     say('guards (re-checked before every stage):')
     refused = bool(missing)
-    if missing:
-        say('  REFUSE zone inputs: a real run through zone needs ' + ', '.join(missing))
+    for stage, flags in missing:
+        say(f'  REFUSE {stage} inputs: a real run through {through} needs ' + ', '.join(flags))
     for name, ok, detail in check_guards(cfg, out, norm, inputs):
         say(f'  {"ok     " if ok else "REFUSE "}{name}: {detail}')
         refused = refused or not ok
@@ -434,7 +480,15 @@ def run_locked(cfg, region, out, norm, through, extra, inputs):
                 code, detail = cap
                 say(f'run_region: refused before {stage}: {detail}')
                 return code
-            command = stage_command(cfg, stage, region, out, extra)
+            stage_args = extra
+            if stage == 'envelope' and 'envelope' not in extra:
+                generation = package_generation(out, region)
+                if generation is None:
+                    say('run_region: STOPPED before envelope: no --generation given and no valid generation in the '
+                        f'package receipt {Path(out) / region / "stages" / "package.json"}')
+                    return EXIT_USAGE
+                stage_args = {**extra, 'envelope': ['--generation', generation]}
+            command = stage_command(cfg, stage, region, out, stage_args)
             say(f'run_region: stage {stage}: ' + ' '.join(command))
             started = time.monotonic()
             try:
@@ -470,6 +524,12 @@ def parse(argv):
                         help='normalised-cache root NORM, checked against the private-vault guard only (default $SC_RELIEF_NORM)')
     parser.add_argument('--scope', default='public', choices=('public', 'private'),
                         help='scope of the scoped stages mosaic, tiles and zone (default public)')
+    parser.add_argument('--source', help='normalize input: the source file or directory (always needed: normalize is the first stage)')
+    parser.add_argument('--family', help='normalize option: inventory family key (default: normalize\'s own, dem)')
+    parser.add_argument('--manifest', help='package input: public layer inventory and metadata JSON (needed when the chain reaches package)')
+    parser.add_argument('--upstream', action='append',
+                        help='package input: a contributing stage[:scope]; repeat as needed (needed when the chain reaches package)')
+    parser.add_argument('--generation', help='envelope input: release generation (default: the current package receipt\'s)')
     parser.add_argument('--region-config', help='region config file for mosaic, tiles and zone (default: regions/<id>/region.json)')
     parser.add_argument('--coarse', help='zone input: EPSG:3310 coarse elevation TIFF (needed when the chain reaches zone)')
     parser.add_argument('--water', help='zone input: reviewed WGS84 ocean-water GeoJSON (needed when the chain reaches zone)')
@@ -495,13 +555,12 @@ def main(argv=None, cfg=None):
     if not out.is_dir():
         parser.error(f'--out {out} is not an existing directory')
     norm = Path(os.path.abspath(os.path.expanduser(args.norm))) if args.norm else None
-    missing = []
-    if 'zone' in chain_through(args.through):
-        missing = [f'--{n}' for n in ('coarse', 'water', 'coarse-source') if not getattr(args, n.replace('-', '_'))]
-        if missing and not full_preview:
-            parser.error(f'the chain reaches zone, which needs {", ".join(missing)}')
+    missing = missing_inputs(args, args.through)
+    if missing and not full_preview:
+        parser.error('; '.join(f'the chain reaches {stage}, which needs {", ".join(flags)}' for stage, flags in missing))
     extra = stage_extras(args)
-    inputs = [Path(os.path.abspath(os.path.expanduser(p))) for p in (args.region_config, args.coarse, args.water) if p]
+    inputs = [Path(os.path.abspath(os.path.expanduser(p)))
+              for p in (args.source, args.region_config, args.coarse, args.water, args.manifest) if p]
     if args.dry_run:
         return dry_run(cfg, args.region, out, norm, args.through, extra, inputs, missing)
     try:

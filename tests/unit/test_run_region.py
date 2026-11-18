@@ -4,6 +4,7 @@ The runner is the only thing between a held-data build and the shared box, so ea
 contract a careless edit could break. region.py is replaced by a stub that logs its argv and
 exits with a scripted code; no test starts a real stage.
 """
+import ast
 import importlib.util
 import json
 import os
@@ -25,7 +26,11 @@ def _load():
 RR = _load()
 STAGE_ORDER = ['normalize', 'select', 'mosaic', 'tiles', 'contours', 'zone', 'digests', 'package', 'qa', 'envelope']
 ZONE_ARGS = ['--coarse', '/in/coarse.tif', '--water', '/in/water.geojson', '--coarse-source', 'src-1']
-SEAM = {'mosaic': ['--scope', 'public'], 'tiles': ['--scope', 'public'], 'zone': ['--scope', 'public', *ZONE_ARGS]}
+SOURCE_ARGS = ['--source', '/in/dem']
+PACKAGE_ARGS = ['--manifest', '/in/layers.json', '--upstream', 'tiles:public', '--upstream', 'zone:public']
+GEN = 'a' * 64
+SEAM = {'normalize': SOURCE_ARGS, 'mosaic': ['--scope', 'public'], 'tiles': ['--scope', 'public'],
+        'zone': ['--scope', 'public', *ZONE_ARGS], 'package': PACKAGE_ARGS, 'envelope': ['--generation', GEN]}
 STUB = '''\
 import json, os, sys
 here = os.path.dirname(os.path.abspath(__file__))
@@ -80,10 +85,18 @@ class Box:
         directory.mkdir()
         (directory / 'cmdline').write_bytes(b'\0'.join(a.encode() for a in argv) + b'\0')
 
-    def run(self, *args, region='morro-bay', through='envelope', zone_inputs=True):
-        reaches_zone = STAGE_ORDER.index(through) >= STAGE_ORDER.index('zone')
-        extra = ZONE_ARGS if reaches_zone and zone_inputs else []
+    def run(self, *args, region='morro-bay', through='envelope', generation=True):
+        """Run the chain with every input the stages up to ``through`` require (envelope's
+        generation too, unless ``generation`` is false: then it is read from the package receipt)."""
+        reaches = lambda stage: STAGE_ORDER.index(through) >= STAGE_ORDER.index(stage)
+        extra = [*SOURCE_ARGS, *(ZONE_ARGS if reaches('zone') else []), *(PACKAGE_ARGS if reaches('package') else []),
+                 *(['--generation', GEN] if generation and reaches('envelope') else [])]
         return RR.main([region, '--out', str(self.out), '--through', through, *extra, *args], self.cfg)
+
+    def package_receipt(self, generation):
+        path = self.out / 'morro-bay' / 'stages' / 'package.json'
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({'generation': generation}))
 
     def out_tree(self):
         return sorted(str(p.relative_to(self.out)) for p in self.out.rglob('*'))
@@ -98,7 +111,8 @@ def box(tmp_path, monkeypatch):
 
 def test_chain_order_and_stage_arguments(box, capsys):
     # Contract: the ten stages run in the fixed upstream-first order, each as `region.py <stage>
-    # --region <id> --out <OUT>`. Bug caught: a reordered tuple or a dropped/renamed stage.
+    # --region <id> --out <OUT>` plus that stage's own required inputs (SEAM). Bug caught: a
+    # reordered tuple or a dropped/renamed stage.
     assert box.run() == 0
     assert box.calls() == [[stage, '--region', 'morro-bay', '--out', str(box.out), *SEAM.get(stage, [])]
                            for stage in STAGE_ORDER]
@@ -124,20 +138,109 @@ def test_scoped_stages_get_scope_config_and_zone_inputs_only(box):
             assert tail == ['--scope', 'private', '--region-config', '/r/region.json', *ZONE_ARGS,
                             '--coarse-date', '2026-01-01']
         else:
-            assert tail == []
+            assert tail == {'normalize': SOURCE_ARGS, 'package': PACKAGE_ARGS, 'envelope': ['--generation', GEN]}.get(stage, [])
 
 
-@pytest.mark.parametrize('drop', ['--coarse', '--water', '--coarse-source'])
-def test_chain_reaching_zone_without_its_inputs_is_a_usage_error_before_any_stage(box, drop):
-    # Contract: zone's mandatory inputs are checked up front. Bug caught: running normalize..tiles
-    # for hours and only then failing zone on a missing flag. A chain that stops before zone needs none.
-    args = list(ZONE_ARGS)
-    index = args.index(drop)
-    del args[index:index + 2]
+@pytest.mark.parametrize('drop, through', [
+    ('--coarse', 'zone'), ('--water', 'zone'), ('--coarse-source', 'zone'),
+    ('--source', 'normalize'), ('--source', 'tiles'),
+    ('--manifest', 'package'), ('--upstream', 'package'),
+])
+def test_chain_reaching_a_stage_without_its_inputs_is_a_usage_error_before_any_stage(box, drop, through):
+    # Contract: every stage's mandatory inputs are checked up front. Bugs caught: the first review
+    # return (normalize started without --source, so even `--through normalize` exited 2), and
+    # running normalize..tiles for hours before zone/package fails on a missing flag. A chain that
+    # stops before the stage needs none of its inputs.
+    args = []
+    flags = [*SOURCE_ARGS, *ZONE_ARGS, *PACKAGE_ARGS]
+    for flag, value in zip(flags[::2], flags[1::2]):  # every option here takes one value
+        if flag != drop:  # --upstream is repeatable: this drops all of its uses
+            args += [flag, value]
     with pytest.raises(SystemExit) as stop:
-        RR.main(['morro-bay', '--out', str(box.out), '--through', 'zone', *args], box.cfg)
-    assert stop.value.code == 2 and box.ran() == []
-    assert box.run(through='tiles', zone_inputs=False) == 0
+        RR.main(['morro-bay', '--out', str(box.out), '--through', through, *args], box.cfg)
+    assert stop.value.code == 2 and box.ran() == [] and box.out_tree() == []
+
+
+def test_chains_that_stop_before_a_stage_do_not_need_its_inputs(box):
+    assert RR.main(['morro-bay', '--out', str(box.out), '--through', 'tiles', *SOURCE_ARGS], box.cfg) == 0
+    assert box.ran() == ['normalize', 'select', 'mosaic', 'tiles']
+
+
+def test_normalize_gets_source_family_and_the_cache_the_guard_checks(box):
+    # Contract: normalize's own CLI (--source required, --family, --cache) is fed from the runner's
+    # options, and --norm is forwarded as --cache so the vault guard watches the path normalize
+    # really writes. Bug caught: --norm guarded but a different default cache used.
+    assert box.run('--family', 'nbs_bluetopo', '--norm', '/n/cache', through='normalize') == 0
+    assert box.calls() == [['normalize', '--region', 'morro-bay', '--out', str(box.out), '--source', '/in/dem',
+                            '--family', 'nbs_bluetopo', '--cache', '/n/cache']]
+
+
+def test_source_path_under_the_vault_is_refused(box, capsys):
+    # Contract: the private-vault guard also covers --source/--manifest. Bug caught: a public run
+    # normalizing straight off the vault.
+    box.cfg.forbidden_root = str(box.root / 'vault')
+    assert RR.main(['morro-bay', '--out', str(box.out), '--through', 'normalize',
+                    '--source', str(box.root / 'vault' / 'dem')], box.cfg) == 3
+    assert box.ran() == [] and 'input-path' in capsys.readouterr().out
+
+
+def test_envelope_generation_is_read_from_the_package_receipt(box):
+    # Contract: envelope's required --generation is the package receipt's generation unless given.
+    # Bug caught: a full chain that can never reach envelope because the value is only known after
+    # package ran.
+    box.package_receipt('b' * 64)
+    assert box.run(generation=False) == 0
+    assert box.calls()[-1] == ['envelope', '--region', 'morro-bay', '--out', str(box.out), '--generation', 'b' * 64]
+
+
+@pytest.mark.parametrize('receipt', [None, 'not-a-generation'])
+def test_envelope_without_a_usable_generation_stops_before_it_runs(box, capsys, receipt):
+    # Contract: no generation (no receipt, or a malformed one) stops the run before envelope starts.
+    if receipt:
+        box.package_receipt(receipt)
+    assert box.run(generation=False) == 2
+    assert box.ran() == STAGE_ORDER[:-1]
+    assert 'STOPPED before envelope' in capsys.readouterr().out
+
+
+def _declared(path):
+    """``{flag: required}`` for every literal ``--flag`` a module adds to an argparse parser."""
+    flags = {}
+    for node in ast.walk(ast.parse(path.read_text(encoding='utf-8'))):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == 'add_argument'
+                and node.args and isinstance(node.args[0], ast.Constant) and str(node.args[0].value).startswith('--')):
+            required = any(k.arg == 'required' and isinstance(k.value, ast.Constant) and k.value.value is True
+                           for k in node.keywords)
+            flags[node.args[0].value] = flags.get(node.args[0].value, False) or required
+    return flags
+
+
+def test_runner_arguments_match_what_the_real_stage_parsers_declare(box):
+    # Contract: the arguments the runner builds for each stage are the ones that stage's real
+    # module declares: everything it requires is supplied and nothing it does not know is passed
+    # (region.py exits 2 on either). Read from the sources, because the stages import numpy and
+    # rasterio and so cannot be dispatched here. Bug caught: the first review return, a runner
+    # starting normalize without its required --source.
+    relief = ROOT / 'src' / 'skippercast' / 'relief'
+    shared = {'digests': ['package.py'], 'package': ['package.py'], 'envelope': ['package.py'], 'tiles': ['mosaic.py'],
+              'zone': ['mosaic.py']}
+    _, args = RR.parse(['morro-bay', '--out', str(box.out), '--through', 'envelope', *SOURCE_ARGS, '--family', 'dem',
+                        '--norm', '/n', *ZONE_ARGS, '--region-config', '/r.json', *PACKAGE_ARGS, '--generation', GEN])
+    extra = RR.stage_extras(args)
+    checked = []
+    for stage in RR.STAGES:
+        module = relief / f'{stage}.py'
+        if not module.exists():  # select, contours, qa: not on this checkout; region.py reports them as exit 2
+            continue
+        checked.append(stage)
+        known = {}
+        for path in (module, *(relief / name for name in shared.get(stage, ())), ROOT / 'scripts' / 'relief' / 'region.py'):
+            known.update(_declared(path))
+        given = {token for token in RR.stage_command(box.cfg, stage, 'morro-bay', box.out, extra) if token.startswith('--')}
+        required = {flag for flag, needed in _declared(module).items() if needed}
+        assert required <= given, f'{stage} requires {sorted(required - given)}'
+        assert given <= set(known), f'{stage} is given {sorted(given - set(known))} which it does not declare'
+    assert {'normalize', 'mosaic', 'tiles', 'zone', 'digests', 'package', 'envelope'} <= set(checked)
 
 
 def test_runs_under_nice_and_ionice_idle(box):
@@ -301,7 +404,7 @@ def test_input_paths_under_the_vault_are_refused(box, capsys):
     # public run reading --coarse straight off the vault.
     box.cfg.forbidden_root = str(box.root / 'vault')
     args = ['--coarse', str(box.root / 'vault' / 'c.tif'), '--water', '/in/w.geojson', '--coarse-source', 's']
-    assert RR.main(['morro-bay', '--out', str(box.out), '--through', 'zone', *args], box.cfg) == 3
+    assert RR.main(['morro-bay', '--out', str(box.out), '--through', 'zone', *SOURCE_ARGS, *args], box.cfg) == 3
     assert box.ran() == [] and 'input-path' in capsys.readouterr().out
 
 
@@ -499,7 +602,8 @@ def test_dry_run_without_through_previews_full_chain_only(box, capsys, partial):
     text = capsys.readouterr().out
     lines = [line for line in text.splitlines() if re.match(r'\s+\d+\. ', line)]
     assert [line.split()[3] for line in lines] == STAGE_ORDER
-    assert 'REFUSE zone inputs' in text and 'a real run would be refused' in text
+    assert 'REFUSE zone inputs' in text and 'REFUSE normalize inputs' in text and 'a real run would be refused' in text
+    assert '--generation <generation of the current package receipt>' in text
     with pytest.raises(SystemExit) as stop:
         RR.main(args, box.cfg)
     assert stop.value.code == 2  # real runs still require --through
