@@ -60,7 +60,7 @@ const NOTE_ID = 'app-stage-note';
 // `ready` (web/map/bottom-relief.ts), is on by default and has no admin gate or toggle. The older Morro study
 // preview, which an admin can still turn on, takes the Chart instead (web/map/layers.ts `reliefWanted`).
 /** True from the relief's first draw until it is retired; the honesty line shows only while something is drawn. */
-const reliefDrawn = signal(false);
+export const reliefDrawn = signal(false);
 const clearUnavailable = (layer: string) => { unavailable.value = unavailable.peek().filter(l => l !== layer); };
 const basemapAvailable = computed(() => !unavailable.value.includes('basemap'));
 
@@ -124,7 +124,7 @@ export function PresentationToggle() {
       <p id={NOTE_ID} class="app-stage-note" role="status">{blocked === null ? '' : terrainReason(blocked, lang)}</p>
       {armed ? <p class="app-stage-note" role="status">{t('stage.placePrompt', lang)} {refused ? <>{refused}. </> : null}<Button size="sm" variant="quiet" onClick={cancelWaypointPlacement}>{t('stage.cancelWaypoint', lang)}</Button></p> : null}
       {shown === 'chart' && seafloorRough.value ? <p class="app-stage-note" data-seafloor-rough role="status">{t('stage.seafloorRough', lang)}</p> : null}
-      {armed ? null : <DepthShadingNote />}
+      <DepthShadingNote />
       <div role="group" aria-label={t('stage.presentation', lang)} class="ui-segmented">
         {PRESENTATIONS.map(p => {
           const off = p.value !== 'chart' && !!blocked;
