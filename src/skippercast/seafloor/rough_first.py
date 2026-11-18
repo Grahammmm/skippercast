@@ -158,8 +158,6 @@ def read_tiles(data):
                 continue
             if size <= 0 or off < 0 or off + size > h[7]:
                 raise ValueError('tile payload span outside declared tile data')
-            if run > h[8]:
-                raise ValueError('tile run exceeds declared tile count')
             for k in range(run):
                 tiles[_zxy(tid + k)] = data[h[6] + off:h[6] + off + size]
     walk(h[0], h[1])

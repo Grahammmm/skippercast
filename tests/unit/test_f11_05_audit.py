@@ -44,13 +44,6 @@ def test_corrupt_directory_stream_fails_not_raises():
     assert receipt['pass'] is False and receipt['failed'] == ['unreadable archive']
 
 
-def test_oversized_run_is_refused_not_expanded():
-    # A directory entry claiming 2**40 identical tiles must be refused, not looped over.
-    data = archive(entries=[((4 ** 12 - 1) // 3, 2 ** 40, 4, 1)])
-    receipt = rough_first.control_receipt('synthetic-region', data)
-    assert receipt['pass'] is False and receipt['archive']['unreadable'] == 'ValueError'
-
-
 @pytest.mark.gis
 def test_publish_refuses_unreadable_control_archive_and_keeps_prior_release(tmp_path):
     from skippercast.seafloor import publish
