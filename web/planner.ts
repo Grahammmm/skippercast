@@ -366,10 +366,10 @@ export function createPlanner(deps: PlannerDeps) {
   }
   function preset(scope: Preset): void {
     if (scope === 'filtered' && !allowResearch.value) { scopeStatus.value = 'Enable Research-coordinate export to use filtered research references.'; return; }
-    revision++;
-    // The ranked plan is dropped in the page; storage keeps it until the next save, so a reload after "selection is retained" still restores it, as in v1.
-    batch(() => { filtersDirty.value = false; restorePending.value = false; unrank(); draft.value = {...draft.value, rankedPlan: null}; });
+    // No map width: nothing changes but the message, so the page keeps the ranked plan and both export blockers storage would restore.
     if (scope === 'map' && !map.getSize().x) { scopeStatus.value = 'Open the map to choose an area first. Your selection is retained.'; return; }
+    revision++;
+    batch(() => { filtersDirty.value = false; restorePending.value = false; unrank(); draft.value = {...draft.value, rankedPlan: null}; });
     const targets = presetTargets({scope, targets: tripAtlas.value.targets, visible: deps.getVisible(), allowResearch: allowResearch.value,
       contains: (t: Target) => map.getBounds().contains([t.latitude, t.longitude])});
     batch(() => {

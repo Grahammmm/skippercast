@@ -13,15 +13,13 @@ retain their last supported zoom; pixel spacing is not a claim of finer survey a
 Native manifest entries require id, path, resolution_m, source_file and archive_sha256. Datum and
 uncertainty limitations remain: this renderer does not vertically reconcile the surveys.
 
-The look is "style 2, Deep" of the map style study (G decision 2026-11-06): the cmocean
-`deep` ramp over a nonlinear depth stretch, lit by a four-direction hillshade. The study's
-renderer used one fixed crop per picture; tiles cover every zoom, so the depth breakpoints and
-the vertical exaggeration follow the zoom (the study's canyon values at zoom 11 and below, its
-nearshore values at zoom 13, linear in between: a 1000 px wide canyon view picks zoom 11 tiles and
-a 1650 px nearshore view picks zoom 13 tiles, as the study's two pictures did).
+The look is "Deep": the cmocean `deep` ramp with fixed depth stops at every zoom, lit by a
+four-direction hillshade. Vertical exaggeration still increases from the study's canyon setting
+at zoom 11 and below to its nearshore setting at zoom 13.
 
-The source raster (EPSG:3310, elevation metres, positive up, all negative here) stays the
-source of truth; tiles are only a delivery format. A cell with no survey is fully transparent,
+The source raster (EPSG:3310, elevation metres, positive up) stays the source of truth; tiles
+are only a delivery format. Cells above +3 m NAVD88 in the background mosaic are masked before
+resampling (no vertical conversion is performed here). A cell with no survey is fully transparent,
 never filled with a depth: the raster's nodata is only filled *inside the hillshade window*
 (nearest valid value) so the survey edge does not cast a fake cliff, and the filled cells are
 discarded afterwards. The raster is gitignored and its rights need review before publication, so
@@ -49,6 +47,7 @@ TILE = 256
 PAD = 2                      # halo (pixels) read around each tile so hillshade matches across seams
 ORIGIN = 20037508.342789244  # web-mercator half-width, metres
 NODATA = -999999.0
+LAND_LIMIT_M = 3.0         # NAVD88 for normalized background mosaics
 MINZOOM, MAXZOOM = 8, 13     # 10 m cells are ~15.6 m/px at zoom 13; deeper zooms only overzoom
 EARTH = 6378137.0
 
@@ -81,20 +80,18 @@ DEEP_HEX = (
     '32254131254030243e30233d2f223b2f223a2e21392d20372d1f362c1f342b1e332b1d322a1c30291c2f281b2d281a2c',
 )
 
-# Depth stretch (depth in metres -> ramp position 0..1) and vertical exaggeration, copied from
-# bathy.py CFG/CROPS of the map style study. Linear interpolation of the breakpoints between
-# zoom CANYON_ZOOM and zoom NEARSHORE_ZOOM keeps shelf detail in close and canyon depth in the wide view.
-BN = (0.0, 0.22, 0.42, 0.58, 0.74, 0.9, 1.0)
-CANYON = {'bp': (60.0, 250.0, 400.0, 550.0, 750.0, 1000.0, 1600.0), 've': 2.2}
-NEARSHORE = {'bp': (0.0, 10.0, 20.0, 35.0, 55.0, 85.0, 140.0), 've': 6.0}
+# Ramp B (MAP-DESIGN-LOCK §1.2): fixed depths in metres -> cmocean LUT positions.
+RAMP_DEPTH_M = (0.0, 1.5, 3.0, 6.0, 10.0, 15.0, 20.0, 30.0, 45.0, 60.0, 91.44, 150.0, 300.0, 700.0)
+RAMP_POSITIONS = (0.03, 0.07, 0.11, 0.18, 0.26, 0.35, 0.44, 0.53, 0.61, 0.68, 0.78, 0.87, 0.94, 1.00)
+# Vertical exaggeration still follows the canyon/nearshore settings of the map style study.
+CANYON_VE, NEARSHORE_VE = 2.2, 6.0
 CANYON_ZOOM, NEARSHORE_ZOOM = 11, 13
 # (azimuth deg, weight); altitude 38 deg. Same as bathy.py `multi`.
 LIGHTS = ((225.0, 0.2), (315.0, 0.4), (270.0, 0.2), (360.0, 0.2))
 ALTITUDE = 38.0
 BLEND_GAIN = 1.8
 
-# MAPSTYLE-2 relief enhancement (contrast and exposure only; ramp, depth stretch and the no-survey
-# transparency are untouched). `base` is the MAPSTYLE-1 look, byte for byte. Controls:
+# MAPSTYLE-2 relief enhancement (contrast and exposure only; shared ramp and mask). Controls:
 #   ve_boost / gain_boost  fractional rise of vertical exaggeration / hillshade strength, ramped in
 #                          from 0 at zoom 11 to full at zoom 13 (the shelf zooms)
 #   unsharp, sigma_m, clip local-contrast boost on the shading: amount, blur radius in ground metres
@@ -116,7 +113,10 @@ ENHANCE = {
     'strong': {**BASE_ENHANCE, 've_boost': 0.50, 'gain_boost': 0.35, 'unsharp': 1.6, 'light2': 0.20,
                'curv': 0.35, 'ev': 0.18},
 }
-ENHANCED_PAD = 12            # halo for the blurs: 3 sigma of the widest (4 px) kernel, so tiles still match at seams
+BLUR_MAX_PX = 4.0            # widest local-contrast blur sigma in pixels
+# Halo wider than every kernel, so neighbouring tiles compute identical edge pixels: the widest blur reaches
+# int(4 sigma + 0.5) px (scipy's default truncate), the hillshade gradient one more and one pixel margin.
+ENHANCED_PAD = int(4 * BLUR_MAX_PX + 0.5) + 2
 
 
 def deep_lut():
@@ -129,12 +129,11 @@ def zoom_ramp(zoom):
 
 
 def style_for_zoom(zoom, enhance=None):
-    """Depth breakpoints, vertical exaggeration and hillshade gain for a zoom level."""
+    """Vertical exaggeration and hillshade gain for a zoom level."""
     enhance = enhance or BASE_ENHANCE
     t = zoom_ramp(zoom)
-    bp = tuple(a + (b - a) * t for a, b in zip(CANYON['bp'], NEARSHORE['bp']))
-    ve = CANYON['ve'] + (NEARSHORE['ve'] - CANYON['ve']) * t
-    return {'bp': bp, 've': ve * (1.0 + enhance['ve_boost'] * t), 'gain': BLEND_GAIN * (1.0 + enhance['gain_boost'] * t)}
+    ve = CANYON_VE + (NEARSHORE_VE - CANYON_VE) * t
+    return {'ve': ve * (1.0 + enhance['ve_boost'] * t), 'gain': BLEND_GAIN * (1.0 + enhance['gain_boost'] * t)}
 
 
 def lights_for(enhance=None):
@@ -150,9 +149,9 @@ def pad_for(enhance=None):
     return PAD if enhance == BASE_ENHANCE else ENHANCED_PAD
 
 
-def ramp_position(elevation, bp):
-    """Nonlinear depth stretch: shelf detail kept, canyon depth kept (bathy.py `nd`)."""
-    return np.interp(-elevation, bp, BN)
+def ramp_position(elevation):
+    """Interpolate the fixed depth stops, clamping beyond either end of the ramp."""
+    return np.interp(-elevation, RAMP_DEPTH_M, RAMP_POSITIONS)
 
 
 def deep_colour(position):
@@ -215,7 +214,7 @@ def local_contrast(intensity, invalid, ground, enhance):
     if amount <= 0:
         return intensity
     from scipy import ndimage
-    sigma = min(4.0, max(1.0, enhance['sigma_m'] / ground))
+    sigma = min(BLUR_MAX_PX, max(1.0, enhance['sigma_m'] / ground))
     valid = (~invalid).astype(np.float64)
     blur = ndimage.gaussian_filter(intensity * valid, sigma, mode='nearest') \
         / np.maximum(ndimage.gaussian_filter(valid, sigma, mode='nearest'), 1e-6)
@@ -368,13 +367,19 @@ def tile_grid(z, x, y, pad=PAD):
 
 
 def warp_window(elevation, src_transform, src_crs, z, x, y, pad=PAD):
+    """Warp the background only; native survey resampling is handled by warp_native."""
     from rasterio.warp import Resampling, reproject
     transform, ground = tile_grid(z, x, y, pad)
     size = TILE + 2 * pad
     dest = np.full((size, size), NODATA, dtype=np.float32)
+    source_spacing = max(math.hypot(src_transform.a, src_transform.d),
+                         math.hypot(src_transform.b, src_transform.e))
+    # At detail zooms, averaging an enlarged grid leaves steps at its cell edges.
+    resampling = Resampling.bilinear if z >= 14 and ground < source_spacing else Resampling.average
+    # tolerance=0: exact per-pixel transform, so overlapping halos of neighbouring tiles get identical cells.
     reproject(elevation, dest, src_transform=src_transform, src_crs=src_crs, dst_transform=transform,
-              dst_crs='EPSG:3857', src_nodata=NODATA, dst_nodata=NODATA, resampling=Resampling.average,
-              init_dest_nodata=True)
+              dst_crs='EPSG:3857', src_nodata=NODATA, dst_nodata=NODATA, resampling=resampling,
+              init_dest_nodata=True, tolerance=0)
     return dest, ground
 
 
@@ -522,7 +527,7 @@ def warp_native(source, z, x, y, pad, limit_m=SHALLOW_M):
         values = mask_native(values, ds.nodata, limit_m)
         reproject(values, dest, src_transform=ds.window_transform(window), src_crs=ds.crs,
                   src_nodata=NODATA, dst_transform=transform, dst_crs='EPSG:3857',
-                  dst_nodata=NODATA, resampling=Resampling.average, init_dest_nodata=True)
+                  dst_nodata=NODATA, resampling=Resampling.average, init_dest_nodata=True, tolerance=0)
     return dest, ground
 
 
@@ -592,8 +597,9 @@ def relief(window, invalid, ground, ve, lights, enhance):
     return raws, ridge
 
 
-def render_zoom(windows, z, enhance=None):
-    """Two passes: zoom-wide hillshade extremes and median (the study's picture-wide constants), then RGBA."""
+def zoom_shading(windows, z, enhance=None):
+    """Two passes: zoom-wide hillshade extremes and median (the study's picture-wide constants), then the
+    shading intensity of every padded window. Returns (style, {key: intensity}, median)."""
     enhance = enhance or BASE_ENHANCE
     style, lights = style_for_zoom(z, enhance), lights_for(enhance)
     lo = [np.inf] * len(lights)
@@ -619,16 +625,29 @@ def render_zoom(windows, z, enhance=None):
             intensity = intensity + enhance['curv'] * np.tanh(ridge / ridge_scale)
         shaded[key] = intensity
         samples.append(intensity[~invalid][::5])
-    median = float(np.median(np.concatenate(samples)))
+    return style, shaded, float(np.median(np.concatenate(samples)))
+
+
+def window_rgba(window, invalid, intensity, median, style, enhance=None):
+    """RGBA of a whole padded window (halo included); render_zoom keeps only the tile core."""
+    enhance = enhance or BASE_ENHANCE
+    position = ramp_position(window.astype(np.float64))
+    rgb = expose(shade(deep_colour(position), intensity, median, style['gain']), position, enhance['ev'])
+    rgba = np.zeros(window.shape + (4,), dtype=np.uint8)
+    rgba[..., :3] = np.round(rgb * 255).astype(np.uint8)
+    rgba[..., 3] = np.where(invalid, 0, 255)
+    rgba[invalid, :3] = 0          # no survey: transparent, colour irrelevant
+    return rgba
+
+
+def render_zoom(windows, z, enhance=None):
+    """PNG tiles of one zoom; every window's shading is computed over its halo, then cropped to the core."""
+    enhance = enhance or BASE_ENHANCE
+    style, shaded, median = zoom_shading(windows, z, enhance)
     tiles = {}
     for (x, y), (window, invalid, _) in windows.items():
         pad = (window.shape[0] - TILE) // 2
-        position = ramp_position(window.astype(np.float64), style['bp'])
-        rgb = expose(shade(deep_colour(position), shaded[(x, y)], median, style['gain']), position, enhance['ev'])
-        rgba = np.zeros(window.shape + (4,), dtype=np.uint8)
-        rgba[..., :3] = np.round(rgb * 255).astype(np.uint8)
-        rgba[..., 3] = np.where(invalid, 0, 255)
-        rgba[invalid, :3] = 0          # no survey: transparent, colour irrelevant
+        rgba = window_rgba(window, invalid, shaded[(x, y)], median, style, enhance)
         tiles[(z, x, y)] = encode_png(rgba[pad:-pad, pad:-pad])
     return tiles
 
@@ -661,14 +680,13 @@ def build(source, output, minzoom=MINZOOM, maxzoom=None, log=print, variant='med
             raise ValueError(f'expected one band in EPSG:3310, got {ds.crs} with {ds.count} bands')
         nodata = ds.nodata if ds.nodata is not None else NODATA
         elevation = ds.read(1).astype(np.float32)
-        elevation[~np.isfinite(elevation) | (elevation == np.float32(nodata))] = NODATA
+        elevation[~np.isfinite(elevation) | (elevation == np.float32(nodata)) | (elevation > LAND_LIMIT_M)] = NODATA
         src_transform, src_crs = ds.transform, ds.crs
         bounds = transform_bounds(ds.crs, 'EPSG:4326', *ds.bounds, densify_pts=21)
     for native in native_sources:
         b = native['bounds']
         bounds = (min(bounds[0], b[0]), min(bounds[1], b[1]), max(bounds[2], b[2]), max(bounds[3], b[3]))
-    if not (elevation[elevation != NODATA] <= 0).all():
-        log('warning: source has cells at or above zero elevation; they are drawn with the shallowest colour')
+
     tiles, support_by_zoom = {}, {}
     for z in range(minzoom, maxzoom + 1):
         support = {}
@@ -686,11 +704,11 @@ def build(source, output, minzoom=MINZOOM, maxzoom=None, log=print, variant='med
     minzoom, maxzoom = min(t[0] for t in tiles), max(t[0] for t in tiles)
     metadata = {
         'name': f'SkipperCast {label} seafloor (Deep)' + ('' if variant == 'base' else f', relief {variant}'),
-        'description': 'Styled raster of the 10 m Morro Bay survey: cmocean deep ramp, nonlinear depth stretch and '
+        'description': 'Styled raster of the 10 m Morro Bay survey: cmocean deep ramp with fixed depth stops and '
                        'four-direction hillshade. Transparent = no survey. Mixed vertical references; '
                        'research preview, NOT FOR NAVIGATION.',
         'attribution': 'USGS California Seafloor Mapping Program and other public surveys (via SkipperCast); colours: cmocean',
-        'type': 'baselayer', 'format': 'png', 'version': '1', 'relief_variant': variant,
+        'type': 'baselayer', 'format': 'png', 'version': '1', 'ramp': 'deep-fixed-v1', 'relief_variant': variant,
         'relief_settings': enhance,
         'native_sources': [{k: s[k] for k in ('id', 'resolution_m', 'source_file', 'archive_sha256',
                                            'survey_id', 'survey_dates', 'vertical_datum', 'source_url',
@@ -731,7 +749,7 @@ def main(argv=None):
     parser.add_argument('--native-manifest', help='local JSON list of native grid paths and source provenance')
     parser.add_argument('--label', default='Morro Bay', help='survey sector name in archive metadata')
     parser.add_argument('--variant', default='medium', choices=[*ENHANCE, 'all'],
-                        help='relief enhancement: base (MAPSTYLE-1 look), mild, medium, strong, or all four')
+                        help='relief enhancement: base (unenhanced), mild, medium, strong, or all four')
     parser.add_argument('--minzoom', type=int, default=MINZOOM)
     parser.add_argument('--maxzoom', type=int, default=None)
     args = parser.parse_args(argv)

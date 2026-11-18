@@ -116,6 +116,12 @@
   --map-ink-halo: #07131d;
   --map-coast: #8ba5b7;
   --map-contour: #2b9c9c;
+  /* MAP-DESIGN-LOCK 10.2: contour line and label inks with their halos (same in both themes, they sit on the shared depth ramp), and the no-survey hatch. */
+  --map-contour-shallow: #0b2530;
+  --map-contour-shallow-halo: #f4f8f9;
+  --map-contour-deep: #e6eff4;
+  --map-contour-deep-halo: #07131d;
+  --map-nosurvey: #3b5566;
   --mark-ring: #69e0bc;
   --hab-rock: #2d9a9a;
   --hab-mixed: #a199ff;
@@ -197,21 +203,43 @@
   --coral: #b8402a;
   --amber: #8a5a00;
   --map-water: #f4f8f9;
-  --map-land: #ffffff;
-  --map-park: #e9f0f4;
-  --map-road: #cfdbe2;
-  --map-road-minor: #e9f0f4;
-  --map-boundary: #cfdbe2;
-  --map-label: #4a6373;
+  --map-land: #dcd8ce;
+  --map-park: #d3d7c9;
+  --map-road: #ffffff;
+  --map-road-minor: #f1efe9;
+  --map-boundary: #b9c2c8;
+  --map-label: #3d5566;
   --map-halo: #f4f8f9;
   --map-ink: #0b2530;
   --map-ink-halo: #f4f8f9;
-  --map-coast: #4a6373;
+  --map-coast: #3d5566;
+  --map-contour-shallow: #0b2530;
+  --map-contour-shallow-halo: #f4f8f9;
+  --map-contour-deep: #e6eff4;
+  --map-contour-deep-halo: #07131d;
+  --map-nosurvey: #9fb3bf;
+  --map-habitat-opacity: 0.75;
   --mark-ring: #087354;
-  --hab-rock: #00a8ba;
-  --hab-mixed: #5344e9;
-  --hab-soft: #895900;
-  --hab-kelp: #207053;
+  /* Keep all habitat classes distinguishable at the reduced light fill opacity. */
+  --hab-rock: #009db7;
+  --hab-mixed: #5731e9;
+  --hab-soft: #8a6800;
+  --hab-kelp: #297653;
+  /* MB-20: today's conditions overlays on the light water. The dark values are pale and vanish on --map-water;
+     these are darker (flow, MPA lines >= 3:1, checked by scripts/check_contrast.mjs; the flow dashes stay >= 4:1 as drawn at
+     web/map/flow.ts's 0.7 alpha). Swell keeps its
+     lighter-with-height order (stops stay >= 3:1 on the water); the Temp contrast front ramp ends darker. The SST
+     ramp is not overridden: it is a filled field and must equal packages/coast temperatureColors in every theme. */
+  --flow: #064a3f;
+  --flow-fast: #5c3900;
+  --mpa-fill: #c9733a;
+  --mpa-line: #b0541c;
+  --swell-0: #0e3a6a;
+  --swell-1: #1a5a9a;
+  --swell-2: #2d78bd;
+  --swell-3: #4b95d3;
+  --contrast-1: #a63a8c;
+  --contrast-2: #7a1456;
   --elev-1: 0 1px 2px rgb(0 0 0 / 0.12);
   --elev-2: 0 6px 18px rgb(0 0 0 / 0.14);
   --elev-3: 0 16px 40px rgb(0 0 0 / 0.2);

@@ -37,9 +37,38 @@ def source_url(bounds: list[float]) -> str:
     })
 
 
+def transfer_truncated(data: dict) -> bool:
+    """ArcGIS reports truncation at the top level or under properties."""
+    props = data.get("properties")
+    return bool(data.get("exceededTransferLimit")
+                or (isinstance(props, dict) and props.get("exceededTransferLimit")))
+
+
+def repair_feature(feature: dict, name: str, geom, allowed_repairs: tuple[str, ...]):
+    """Apply the one reviewed conservative repair; shared by capture and refresh."""
+    if geom.is_valid or name not in allowed_repairs or geom.geom_type != "MultiPolygon":
+        return geom
+    # Some CDFW GeoJSON exports serialize nested polygon shells as
+    # overlapping MultiPolygon members. Unioning every original member
+    # retains its entire prohibited footprint, including the nested
+    # member, rather than turning it into a hole or dropping it.
+    members = list(geom.geoms)
+    if not members or any(not member.is_valid or member.is_empty for member in members):
+        raise ValueError("CDFW MPA repair has invalid original components")
+    repaired = unary_union(members)
+    if (not repaired.is_valid or repaired.is_empty
+            or repaired.geom_type not in ("Polygon", "MultiPolygon")
+            or any(not repaired.covers(member) for member in members)):
+        raise ValueError("CDFW MPA conservative union did not preserve every component")
+    feature["geometry"] = mapping(repaired)
+    feature["properties"]["geometry_repair"] = "conservative_union_of_original_components"
+    feature["properties"]["original_component_count"] = len(members)
+    return repaired
+
+
 def validate_response(data: dict, bounds: list[float], minimum: int,
                       allowed_repairs: tuple[str, ...] = ()) -> list[dict]:
-    if data.get("type") != "FeatureCollection" or data.get("exceededTransferLimit"):
+    if data.get("type") != "FeatureCollection" or transfer_truncated(data):
         raise ValueError("CDFW MPA response is incomplete or not GeoJSON")
     features = data.get("features")
     if not isinstance(features, list) or len(features) < minimum:
@@ -52,23 +81,7 @@ def validate_response(data: dict, bounds: list[float], minimum: int,
         geom = shape(feature.get("geometry"))
         if not isinstance(name, str) or not name.strip() or name in seen:
             raise ValueError("CDFW MPA identity missing or duplicated")
-        if not geom.is_valid and name in allowed_repairs and geom.geom_type == "MultiPolygon":
-            # Some CDFW GeoJSON exports serialize nested polygon shells as
-            # overlapping MultiPolygon members. Unioning every original member
-            # retains its entire prohibited footprint, including the nested
-            # member, rather than turning it into a hole or dropping it.
-            members = list(geom.geoms)
-            if not members or any(not member.is_valid or member.is_empty for member in members):
-                raise ValueError("CDFW MPA repair has invalid original components")
-            repaired = unary_union(members)
-            if (not repaired.is_valid or repaired.is_empty
-                    or repaired.geom_type not in ("Polygon", "MultiPolygon")
-                    or any(not repaired.covers(member) for member in members)):
-                raise ValueError("CDFW MPA conservative union did not preserve every component")
-            feature["geometry"] = mapping(repaired)
-            feature["properties"]["geometry_repair"] = "conservative_union_of_original_components"
-            feature["properties"]["original_component_count"] = len(members)
-            geom = repaired
+        geom = repair_feature(feature, name, geom, allowed_repairs)
         if geom.geom_type not in ("Polygon", "MultiPolygon") or not geom.is_valid or geom.is_empty:
             raise ValueError("CDFW MPA polygon invalid")
         if not geom.intersects(region):

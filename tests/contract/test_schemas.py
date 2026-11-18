@@ -187,6 +187,16 @@ class ContractsCatchDrift(unittest.TestCase):
         self.rejects('source', approved)
         self.rejects('source', {**source, 'review_status': 'maybe'})
 
+    def test_public_display_schema_rejects_unsafe_declarations(self):
+        source = load(ROOT / 'catalog/sources.json')['sources'][0]
+        for display in (False, 'public', None):
+            self.rejects('source', {**source, 'rights': {**source['rights'], 'public_display': display}})
+        allowed = {**source, 'rights': {**source['rights'], 'public_display': 'allowed'}}
+        self.accepts('source', allowed)
+        self.rejects('source', {**allowed, 'review_status': 'candidate'})
+        self.rejects('source', {**allowed, 'publication_allowed': False})
+        self.rejects('source', {**allowed, 'rights': {**allowed['rights'], 'attribution': ' '}})
+
     def test_region_contract(self):
         region = load(ROOT / 'regions/morro-bay/region.json')
         for mutate in (lambda r: r.pop('stations'),

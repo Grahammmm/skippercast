@@ -12,6 +12,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
+import {effect} from '@preact/signals';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {validDailyPart as v1DailyPart} from '../dist/daily-feed.js';
@@ -22,7 +23,7 @@ import {
   CHECKING, SCREEN_MAX_AGE_MS, SCREEN_NOTES, acceptsFeed, assessScreen, closureCheckedAt, freshCheck, validDailyPart, withheld, withheldCard,
 } from '../web/map/habitat.ts';
 import {MARKS_SOURCE, SELECTION_SOURCE} from '../web/map/layers.ts';
-import {createMarks, markNote, markScreen, markSources, spotCard} from '../web/map/marks.ts';
+import {createMarks, markData, markNote, markScreen, markSources, spotCard} from '../web/map/marks.ts';
 import {CDFW_MPA_PAGE, MPA_SERVICE, NOAA_GEA_PAGE, loadMpas, mpaQuery, validMpas} from '../web/map/mpa.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
 
@@ -34,7 +35,16 @@ const MORRO = read('regions/morro-bay/region.json'), ATLAS = read('data/atlas.js
 const SOCAL = read('regions/southern-california/region.json'), SOCAL_ATLAS = read('regions/southern-california/atlas.json');
 const SOCAL_MPAS = read('regions/southern-california/protected-areas.geojson'), GEAS = read('regions/southern-california/groundfish-exclusions.geojson');
 const iso = ms => new Date(ms).toISOString();
-const settle = async () => { for (let i = 0; i < 8; i++) await new Promise(resolve => setImmediate(resolve)); };
+// The screen and the byte-verified atlas finish independently; wait for both, not a fixed number of ticks.
+async function settle() {
+  let dispose;
+  try {
+    await new Promise((resolve, reject) => {
+      AbortSignal.timeout(2000).addEventListener('abort', () => reject(new Error('Mark layers did not settle')), {once: true});
+      dispose = effect(() => { if (markData.value && markScreen.value !== CHECKING) resolve(); });
+    });
+  } finally { dispose?.(); }
+}
 /** Words that would read a mark as cleared to fish. */
 const VERDICT = /\b(?:allowed|permitted|legal to|you may|you can|open to fishing|clear of|safe to)\b/i;
 
@@ -66,7 +76,8 @@ function site({live = null, daily = {}, patch = {}} = {}) {
     }
     const path = at.pathname.slice(1);
     if (path in patch) return ok(patch[path]);
-    return existsSync(new URL(`../dist/${path}`, import.meta.url)) ? ok(read(path)) : down(404);
+    const file = new URL(`../dist/${path}`, import.meta.url);
+    return existsSync(file) ? new Response(readFileSync(file)) : down(404);
   };
 }
 const record = (hoursAgo, data, status = 'ok') => ({status, data_retrieved_at: iso(Date.now() - hoursAgo * HOUR), data});

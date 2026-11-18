@@ -34,6 +34,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import tarfile
 from urllib.request import Request, urlopen
 
 INDEX = '.r2-sync.json'
@@ -45,18 +46,55 @@ TYPES = {'.json': 'application/json', '.geojson': 'application/json', '.md': 'te
          '.pmtiles': 'application/octet-stream', '.gpx': 'application/gpx+xml', '.html': 'text/html; charset=utf-8'}
 
 
-def digest(path):
+RESERVED_PREFIXES = ('tiles/relief',)  # E2E-13: only the relief publisher (E2E-12b) may write here
+
+
+def refuse_reserved(prefix, local=()):
+    """Raise if `prefix`, or any key it would write (prefix/key), is under a reserved prefix."""
+    for key in [''] + list(local):
+        full = f'{str(prefix).strip("/")}/{key}'.replace('//', '/').rstrip('/')
+        for reserved in RESERVED_PREFIXES:
+            if full == reserved or full.startswith(reserved + '/'):
+                raise SystemExit(f'refusing to write {full or prefix}: {reserved}/ is reserved for the relief publisher')
+
+
+def stream_digest(handle):
     h = hashlib.sha256()
-    with open(path, 'rb') as handle:
-        for block in iter(lambda: handle.read(1 << 20), b''):
-            h.update(block)
+    for block in iter(lambda: handle.read(1 << 20), b''):
+        h.update(block)
     return h.hexdigest()
+
+
+def digest(path):
+    with open(path, 'rb') as handle:
+        return stream_digest(handle)
+
+
+def publishable(path):
+    return '.git' not in path.parts and path.name != INDEX
 
 
 def scan(root):
     root = Path(root)
     return {p.relative_to(root).as_posix(): digest(p) for p in sorted(root.rglob('*'))
-            if p.is_file() and '.git' not in p.relative_to(root).parts and p.name != INDEX}
+            if publishable(p.relative_to(root)) and p.is_file()}
+
+
+def archive_inventory(path):
+    """Hash the file inventory from the archive, independently of extraction."""
+    files = {}
+    with tarfile.open(path, 'r:') as archive:
+        for member in archive:
+            if member.isdir() or not publishable(Path(member.name)):
+                continue
+            if not member.isfile() or member.name in files:
+                raise ValueError(f'Unexpected member in branch archive: {member.name!r}')
+            source = archive.extractfile(member)
+            if source is None:
+                raise ValueError(f'Unreadable member in branch archive: {member.name!r}')
+            with source:
+                files[member.name] = stream_digest(source)
+    return files
 
 
 def plan(local, remote):
@@ -99,16 +137,26 @@ def main():
     parser.add_argument('source')
     parser.add_argument('prefix', choices=['conditions', 'data', 'forecasts', 'tiles', 'runs'])
     parser.add_argument('--bucket', default=os.environ.get('R2_BUCKET', 'skippercast-feeds'))
+    parser.add_argument('--branch-archive', help='Require staged files to match this committed feed tar')
     args = parser.parse_args()
+    refuse_reserved(args.prefix)
     token, account = os.environ.get('CLOUDFLARE_API_TOKEN'), os.environ.get('CLOUDFLARE_ACCOUNT_ID')
     if not token or not account:
         print(f'R2 not configured (no CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID); skipped {args.prefix}.')
         return
+    options = {}
+    if args.branch_archive is not None:
+        if args.prefix not in SNAPSHOT_PREFIXES:
+            parser.error('--branch-archive requires a snapshot prefix')
+        inventory = archive_inventory(args.branch_archive)
+        if not inventory or scan(args.source) != inventory:
+            raise ValueError('Staged feed files do not match the branch archive; upload skipped')
+        options['inventory'] = inventory
     s3 = client(token, account)
     if args.prefix == 'runs':
         print(upload_run_manifests(s3, args.bucket, args.source))
     else:
-        print(sync(s3, args.bucket, args.source, args.prefix))
+        print(sync(s3, args.bucket, args.source, args.prefix, **options))
 
 
 def run_manifest_keys(root):
@@ -146,12 +194,14 @@ def upload_run_manifests(s3, bucket, root):
 def sync_legacy(s3, bucket, source, prefix):
     """Upload changed files (data first, pointers last), delete removed ones, store the index."""
     index_key = f'{prefix}/{INDEX}'
+    local = scan(source)
+    refuse_reserved(prefix, local)
     try:
         remote = json.loads(s3.get_object(Bucket=bucket, Key=index_key)['Body'].read())
     except s3.exceptions.NoSuchKey:
         remote = {}
-    local = scan(source)
     uploads, deletions = plan(local, remote)
+    refuse_reserved(prefix, deletions)
     data_files = [k for k in uploads if not POINTER.search(k)]
     pointers = [k for k in uploads if POINTER.search(k)]
 
@@ -192,12 +242,13 @@ def immutable_object(s3, bucket, key, body, **metadata):
         return s3.get_object(Bucket=bucket, Key=key)
 
 
-def sync(s3, bucket, source, prefix):
+def sync(s3, bucket, source, prefix, *, inventory=None):
     """Publish one verified immutable snapshot, then CAS its sole mutable pointer.
 
     Tiles retain their separate screened publication contract. Old stable keys,
     snapshots and blobs are preserved: migration and rollback never delete data.
     """
+    refuse_reserved(prefix)
     if prefix not in SNAPSHOT_PREFIXES:
         return sync_legacy(s3, bucket, source, prefix)
     # One shared retry budget for the daily data publish, not one per object.
@@ -229,7 +280,7 @@ def sync(s3, bucket, source, prefix):
     expected, pointer = attempt(read_current)
     # Freeze the original CAS baseline across retries. Never rebase onto a
     # concurrent release, even after a lost acknowledgment of our own commit.
-    return attempt(lambda: sync_snapshot(s3, bucket, source, prefix, expected, pointer))
+    return attempt(lambda: sync_snapshot(s3, bucket, source, prefix, expected, pointer, inventory=inventory))
 
 
 def transport_error(error):
@@ -243,10 +294,12 @@ def transport_error(error):
                               http_errors.TimeoutError))
 
 
-def sync_snapshot(s3, bucket, source, prefix, expected, pointer):
+def sync_snapshot(s3, bucket, source, prefix, expected, pointer, *, inventory=None):
     """Publish against the caller's frozen current-release baseline."""
     pointer_key = f'{prefix}/{CURRENT}'
-    local = scan(source)
+    # Keep the verified branch inventory even on retry; do not replace it with
+    # a later scan that could silently drop a path. put_blob rechecks the bytes.
+    local = scan(source) if inventory is None else inventory
     if not local:
         raise ValueError('Refusing to publish an empty snapshot')
     if any(any(part.startswith('.r2-') for part in Path(key).parts) for key in local):

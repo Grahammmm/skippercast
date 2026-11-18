@@ -48,11 +48,21 @@ export interface TargetEvidence {
   } | null;
 }
 
-const UNNAMED_DATUM = /unverified|not recorded|unknown/i;
-
-/** A datum the survey actually names (MLLW, NAVD88), not a placeholder. */
-function namedDatum(value: string | null | undefined): boolean {
-  return typeof value === 'string' && value.trim() !== '' && !UNNAMED_DATUM.test(value);
+/** Resolve whole names from the BAG survey parser (platform/bottom_targets.py)
+ * and reviewed USGS metadata, not free-text descriptions or display labels. */
+function canonicalSurveyDatum(value: string | null | undefined): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  switch (value.trim().toLowerCase().replace(/\s+/g, ' ')) {
+    case 'mllw':
+    case 'mllw depth':
+    case 'mean lower low water': return 'MLLW';
+    case 'navd88':
+    case 'north american vertical datum 1988':
+    case 'north american vertical datum of 1988': return 'NAVD88';
+    case 'msl':
+    case 'mean sea level': return 'MSL';
+    default: return undefined;
+  }
 }
 
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
@@ -69,10 +79,11 @@ export function depthBadge(t: TargetEvidence, datumLabel?: string): Badge {
   // The caveat's lead ("Research-only location.") is the answer line's marker, so the why starts at its text.
   if (t.research_only) return {...base, state: 'estimated', why: {text: RESEARCH_ONLY_LOCATION.text}, open: true};
   const q = t.qualification;
+  const datum = canonicalSurveyDatum(t.vertical_datum);
   if (t.depth_qualified === true && q?.full_geometry_screened === true
-      && namedDatum(t.vertical_datum) && (q.native_datum == null || q.native_datum === t.vertical_datum)
+      && datum && datum === canonicalSurveyDatum(q.native_datum)
       && finite(q.maximum_product_uncertainty_m) && q.maximum_product_uncertainty_m >= 0)
-    return {...base, state: 'qualified', why: {text: qualifiedDepth(t.vertical_datum!, q.maximum_product_uncertainty_m, q.planning_margin_m)}};
+    return {...base, state: 'qualified', why: {text: qualifiedDepth(datum, q.maximum_product_uncertainty_m, finite(q.planning_margin_m) ? q.planning_margin_m : undefined)}};
   return {...base, state: 'estimated', why: {text: t.evidence_status || `Vertical datum: ${datumLabel || t.vertical_datum || 'not recorded'}.`}};
 }
 

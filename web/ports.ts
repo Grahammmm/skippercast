@@ -85,7 +85,7 @@ export function listPorts(ports: readonly Port[], query: string, showAll = false
 
 /** The nearest port within `maxNm` of a position (v1's rule, great-circle nautical miles), or null. */
 export function closestPort(ports: readonly Port[], latitude: number, longitude: number, maxNm = MAX_MATCH_NM): Port | null {
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
   const rad = Math.PI / 180;
   const nm = ([lat, lon]: readonly [number, number]): number => {
     const h = Math.sin((lat - latitude) * rad / 2) ** 2 + Math.cos(latitude * rad) * Math.cos(lat * rad) * Math.sin((lon - longitude) * rad / 2) ** 2;

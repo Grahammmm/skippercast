@@ -67,6 +67,8 @@ export interface LayerEntry {
 
 export const COASTLINE_SOURCE = 'coastline';
 export const ENC_SOURCE = 'enc';
+/** Owner-only Chart overlay, not the terrain's `relief` entry or the Seafloor type rail. */
+export const BOTTOM_RELIEF = 'bottom-relief';
 /** The seafloor publication's admitted features (web/map/seafloor.ts, FE-14). */
 export const SEAFLOOR_SOURCE = 'seafloor';
 /** FE-18's GeoJSON sources (web/map/marks.ts): survey habitat, geology, atlas reef marks and the selection. */
