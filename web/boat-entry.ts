@@ -64,7 +64,9 @@ function saveLength(value: string, storage: StoreStorage | null): boolean {
   if (raw !== null && raw.trim() !== '') {
     let stored: {schema_version?: unknown; boat?: unknown} | null;
     try { stored = JSON.parse(raw); } catch { throw new Error('unreadable saved boat'); }
-    if (!stored || stored.schema_version !== 1 || !stored.boat || typeof stored.boat !== 'object') throw new Error('unreadable saved boat');
+    // The envelope and its boat must both be plain records: an array is typeof 'object' but is not a boat.
+    const record = (value: unknown): boolean => typeof value === 'object' && value !== null && !Array.isArray(value);
+    if (!record(stored) || stored!.schema_version !== 1 || !record(stored!.boat)) throw new Error('unreadable saved boat');
     saved = stored as {boat: Record<string, unknown>};
   }
   const next = saved

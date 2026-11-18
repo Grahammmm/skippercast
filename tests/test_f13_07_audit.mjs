@@ -39,6 +39,9 @@ const unreadable = {
   'schema 1 without a boat': JSON.stringify({schema_version: 1, query: 'x'}),
   'JSON null literal': 'null',
   'non-record JSON': '[1,2,3]',
+  // Believable bug: typeof [] === 'object' let an array pass as the v1 boat, which was then rewritten as an object.
+  'v1 envelope whose boat is an array': JSON.stringify({schema_version: 1, boat: [{name: 'Ruby', loa_ft: 23}]}),
+  'v1 envelope whose boat is a string': JSON.stringify({schema_version: 1, boat: 'Ruby'}),
 };
 for (const [label, bytes] of Object.entries(unreadable)) {
   test(`negative control: ${label} is preserved byte for byte and a notice is shown`, () => {
