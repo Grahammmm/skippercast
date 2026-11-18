@@ -366,6 +366,17 @@ dbTest('consent revoked (05 § Consent): every draft and approved post of the bo
 
 // ---- propose_post ----------------------------------------------------------------------------------
 
+dbTest('propose_post: partial cached moderation evidence opens a media review', async () => {
+  const {sql, env} = setup();
+  const ctx = {env, contact: sql.prepare("SELECT * FROM advisor_contacts WHERE id='c1'").get(), db: env.DB,
+    message: {id: 'in-tool', created_at: iso(T0)}, deps: {}, language: 'en', settings: advisorSettings(env), now: T0};
+  addMedia(sql, {id: 'partial', state: 'private', classification: JSON.stringify({classify: {kind: 'scenery'}})});
+  const out = await proposePost.run({media_id: 'partial'}, ctx);
+  assert.equal(out.result.drafted, true);
+  assert.deepEqual(out.actions, [{type: 'media_queue', mediaId: 'partial'},
+    {type: 'review_open', kind: 'media', refId: 'partial', reason: 'has_person'}]);
+});
+
 dbTest('propose_post: the contact\'s own boat photo; no consent says how to give it; a private photo is queued (with its has_person review), a queued one drafted, with the hint', async () => {
   const {sql, env} = setup();
   const ctx = () => ({env, contact: sql.prepare("SELECT * FROM advisor_contacts WHERE id='c1'").get(), message: {id: 'in-tool', created_at: iso(T0)}, deps: {}, db: env.DB,
