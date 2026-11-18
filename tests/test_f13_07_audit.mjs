@@ -1,7 +1,7 @@
 // SCA-291 / F13-07: saving the first-use boat length must not overwrite a saved boat it cannot read or understand.
 // Required suite: node --test tests/test_f13_07_audit.mjs
-// Contract protected: only a genuinely empty key gets the default boat; a malformed or future-schema record keeps its
-// exact bytes and the result says the boat was not saved; a valid v1 edit keeps its unrelated fields.
+// Contract protected: only a genuinely empty key gets the default boat; a malformed, whitespace-only, array-boat or
+// future-schema record keeps its exact bytes and the result gives the recovery notice; a valid v1 edit keeps its unrelated fields.
 // Believable bug it catches: JSON.parse failure or schema_version !== 1 falling into the new-boat branch, so a bare
 // length replaces the whole value and reports boat:true. Synthetic in-memory storage only: no browser or network.
 import assert from 'node:assert/strict';
@@ -39,15 +39,32 @@ const unreadable = {
   'schema 1 without a boat': JSON.stringify({schema_version: 1, query: 'x'}),
   'JSON null literal': 'null',
   'non-record JSON': '[1,2,3]',
+  'array-valued boat': JSON.stringify({schema_version: 1, boat: ['custom']}),
+  'string-valued boat': JSON.stringify({schema_version: 1, boat: 'Ruby'}),
+  'whitespace-only value': '  \n ',
 };
 for (const [label, bytes] of Object.entries(unreadable)) {
   test(`negative control: ${label} is preserved byte for byte and a notice is shown`, () => {
     const {storage, result} = save({[KEY]: bytes});
     assert.equal(storage.getItem(KEY), bytes);
     assert.equal(result.boat, false);
-    assert.deepEqual(result.notices, [ENTRY_COPY.failed]);
+    assert.deepEqual(result.notices, [ENTRY_COPY.unreadable]);
   });
 }
+
+test('the recovery notice says the saved boat is unreadable or newer, left unchanged, and how to recover', () => {
+  assert.notEqual(ENTRY_COPY.unreadable, ENTRY_COPY.failed);
+  assert.match(ENTRY_COPY.unreadable, /unreadable|could not be read/i);
+  assert.match(ENTRY_COPY.unreadable, /newer/i);
+  assert.match(ENTRY_COPY.unreadable, /unchanged/i);
+  assert.match(ENTRY_COPY.unreadable, /update|clear/i);
+});
+
+test('a storage that throws on read still gets the plain save-failed notice', () => {
+  const storage = {getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('unreachable'); }};
+  const result = saveFirstUse({lengthFt: '25', profile: 'boat'}, storage);
+  assert.deepEqual(result, {boat: false, notices: [ENTRY_COPY.failed]});
+});
 
 // Positive controls.
 test('valid control: a genuinely empty key gets the default boat', () => {

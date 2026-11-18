@@ -453,7 +453,7 @@ test('boat_unreadable_json_is_kept_and_only_an_empty_key_gets_defaults', async (
     const boatStore = flaky({'skippercast-boat-v1': stored}, 'never');
     const before = m.boatSaved.value;
     const result = m.saveFirstUse({lengthFt: '20', profile: 'boat'}, boatStore);
-    assert.ok(util.isDeepStrictEqual(result, {boat: false, notices: [m.ENTRY_COPY.failed]}), `${stored}: ${JSON.stringify(result)}`);
+    assert.ok(util.isDeepStrictEqual(result, {boat: false, notices: [m.ENTRY_COPY.unreadable]}), `${stored}: ${JSON.stringify(result)}`);
     assert.equal(boatStore.map.get('skippercast-boat-v1'), stored);
     assert.equal(boatStore.writes.length, 0);
     assert.equal(m.boatSaved.value, before, `${stored}: no signal`);
