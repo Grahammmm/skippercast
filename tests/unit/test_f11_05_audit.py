@@ -15,6 +15,7 @@ from unittest.mock import patch
 import pytest
 
 from skippercast.seafloor import rough_first
+from tests._support import ROOT
 from tests.unit.test_rough_first_tile_spans import archive
 
 
@@ -29,8 +30,36 @@ def _pb(num, payload):
     return varint(num << 3 | 2) + varint(len(payload)) + payload
 
 
-# One gzip Mapbox Vector Tile with a single (empty) layer: what a real archive stores per tile.
-MVT = gzip.compress(_pb(3, _pb(1, b'habitat')), mtime=0)
+def _varint_bytes(n):
+    out = bytearray()
+    while True:
+        out.append((n & 127) | (128 if n > 127 else 0))
+        n >>= 7
+        if not n:
+            return out
+
+
+def _field(num, value):  # a varint field
+    return bytes(_varint_bytes(num << 3)) + bytes(_varint_bytes(value))
+
+
+def _layer(*, name=b'habitat', version=2, keys=(b'id',), values=(_pb(1, b'x'),), features=None, extra=b''):
+    """One MVT layer: a polygon feature tagged id=x with a closed-ring geometry unless `features` overrides."""
+    if features is None:
+        geometry = bytes(_varint_bytes(1 | 1 << 3)) + bytes([2, 2]) + bytes(_varint_bytes(2 | 2 << 3)) + bytes([2, 0, 0, 2]) \
+            + bytes(_varint_bytes(7 | 1 << 3))
+        features = [_pb(2, bytes([0, 0])) + _field(3, 3) + _pb(4, geometry)]
+    body = (_pb(1, name) if name is not None else b'') + (_field(15, version) if version is not None else b'')
+    body += b''.join(_pb(3, k) for k in keys) + b''.join(_pb(4, v) for v in values)
+    return body + b''.join(_pb(2, f) for f in features) + extra
+
+
+def _tile(layer):
+    return gzip.compress(_pb(3, layer), mtime=0)
+
+
+# One gzip Mapbox Vector Tile with a single layer holding one polygon feature: what a real archive stores per tile.
+MVT = _tile(_layer())
 MAGIC_ONLY = b'PMTiles\x03' + bytes(200)  # right prefix, zeroed header: compression byte is not gzip
 
 
@@ -91,6 +120,71 @@ def test_undecodable_tile_payload_fails(payload):
     assert rough_first.read_tiles(data)  # the directory and spans are structurally fine
     receipt = rough_first.control_receipt('synthetic-region', data)
     assert receipt['pass'] is False and receipt['failed'] == ['unreadable archive']
+
+
+def _malformed_layers():
+    ok_geometry = bytes([1 | 1 << 3, 2, 2])
+    return {
+        'truncated layer payload': gzip.compress(b'\x1a\x01\xff', mtime=0),  # field 3, length 1, a lone 0xff
+        'overlong layer length': gzip.compress(b'\x1a\x7f' + _layer(), mtime=0),
+        'layer without a name': _tile(_layer(name=None)),
+        'layer name not utf-8': _tile(_layer(name=b'\xff\xfe')),
+        'layer version missing': _tile(_layer(version=None)),
+        'layer version unknown': _tile(_layer(version=9)),
+        'name field is a varint': gzip.compress(_pb(3, _field(1, 1) + _field(15, 2)), mtime=0),
+        'tag indexes a missing key': _tile(_layer(features=[_pb(2, bytes([5, 0]))])),
+        'tag indexes a missing value': _tile(_layer(features=[_pb(2, bytes([0, 5]))])),
+        'odd tag list': _tile(_layer(features=[_pb(2, bytes([0]))])),
+        'unknown geometry type': _tile(_layer(features=[_field(3, 9)])),
+        'geometry unknown command': _tile(_layer(features=[_pb(4, bytes([5]))])),
+        'geometry parameters missing': _tile(_layer(features=[_pb(4, bytes([1 | 2 << 3, 2, 2]))])),
+        'geometry must start with MoveTo': _tile(_layer(features=[_pb(4, bytes([2 | 1 << 3, 2, 2]))])),
+        'point with a LineTo': _tile(_layer(features=[_field(3, 1) + _pb(4, ok_geometry + bytes([2 | 1 << 3, 2, 2]))])),
+        'value with two fields': _tile(_layer(values=[_pb(1, b'x') + _pb(1, b'y')])),
+        'value string not utf-8': _tile(_layer(values=[_pb(1, b'\xff')])),
+        'feature field with the wrong wire type': _tile(_layer(features=[_pb(1, b'x')])),
+    }
+
+
+@pytest.mark.parametrize('name', list(_malformed_layers()))
+def test_malformed_layer_payload_fails(name):
+    data = archive(_malformed_layers()[name])
+    assert rough_first.read_tiles(data)  # directory and spans are fine; only the tile body is malformed
+    receipt = rough_first.control_receipt('synthetic-region', data)
+    assert receipt['pass'] is False and receipt['failed'] == ['unreadable archive']
+
+
+def test_uncompressed_tiles_are_parsed_too():
+    data = bytearray(archive(_pb(3, _layer())))
+    data[98] = 1  # header: tiles stored uncompressed
+    assert rough_first.control_receipt('synthetic-region', bytes(data))['pass'] is True
+    data = bytearray(archive(b'\x1a\x01\xff'))
+    data[98] = 1
+    assert rough_first.control_receipt('synthetic-region', bytes(data))['pass'] is False
+
+
+def _evaluate(control, candidate):
+    reference = rough_first.load_reference(ROOT, 'morro-bay')
+    with patch.object(rough_first, 'read_tiles', side_effect=[control, candidate]):
+        return rough_first.evaluate('morro-bay', b'c', b'r', reference)
+
+
+@pytest.mark.parametrize('zoom', [8, 12, 13, 14, 15])
+def test_rough_first_fails_when_a_tile_is_corrupt_in_both_archives(zoom):
+    """The detail zooms 12-15 compare byte-for-byte, so an identically corrupt tile used to pass the gate."""
+    good = {(z, 0, 0): MVT for z in (8, 9, 10, 11, 12, 13, 14, 15)}
+    corrupt = {**good, (zoom, 0, 0): gzip.compress(b'\x1a\x01\xff', mtime=0)}
+    receipt = _evaluate(corrupt, corrupt)
+    assert receipt['pass'] is False and receipt['failed'] == ['unreadable archive']
+    assert receipt['error'].startswith('unreadable archive: ')
+    # Only the candidate corrupt is rejected as well.
+    assert _evaluate(good, corrupt)['failed'] == ['unreadable archive']
+    assert _evaluate(corrupt, good)['failed'] == ['unreadable archive']
+
+
+def test_rough_first_decodes_every_zoom_before_the_gate_items_run():
+    good = {(z, 0, 0): MVT for z in (8, 9, 10, 11, 12, 13, 14, 15)}
+    assert 'unreadable archive' not in _evaluate(good, good)['failed']
 
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)

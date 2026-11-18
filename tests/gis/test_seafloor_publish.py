@@ -508,7 +508,7 @@ class RoughFirstGateTests(unittest.TestCase):
     def test_any_failed_item_fails_closed_before_upload(self):
         detail = DETAIL_ADDRESSES[1]
         cases = {
-            'one byte different at z13': ({**rough_tiles(), detail: rough_tiles()[detail][:-1]+bytes([rough_tiles()[detail][-1] ^ 1])},
+            'one byte different at z13': ({**rough_tiles(), detail: rough_tiles()[detail][:4]+bytes([rough_tiles()[detail][4] ^ 1])+rough_tiles()[detail][5:]},
                                           'item3_detail_identical_z12_15'),
             'a z12-15 tile missing': ({k: v for k, v in rough_tiles().items() if k != DETAIL_ADDRESSES[0]},
                                       'item3_detail_identical_z12_15'),

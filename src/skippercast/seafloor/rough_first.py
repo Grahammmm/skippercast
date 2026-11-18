@@ -195,7 +195,8 @@ def identity(reference, candidate, zooms):
             'first_different': ['/'.join(map(str, k)) for k in sorted(differ + sorted(keys_a ^ keys_b))[:20]]}
 
 
-def _fields(data):
+def _wire_fields(data):
+    """[(field number, wire type, value)]: an int for a varint, bytes for fixed-width and length-delimited fields."""
     pos, out = 0, []
     while pos < len(data):
         key, pos = _varint(data, pos)
@@ -214,8 +215,12 @@ def _fields(data):
             value, pos = data[pos:pos + size], pos + size
         else:
             raise ValueError('unsupported protobuf wire type')
-        out.append((num, value))
+        out.append((num, wire, value))
     return out
+
+
+def _fields(data):
+    return [(num, value) for num, _, value in _wire_fields(data)]
 
 
 def habitat_ids(raw):
@@ -263,12 +268,100 @@ def content(tiles, zooms):
     return out
 
 
+def _packed(raw):
+    out, pos = [], 0
+    while pos < len(raw):
+        value, pos = _varint(raw, pos)
+        out.append(value)
+    return out
+
+
+def _expect(rows, spec, what):
+    """Each known field must arrive with its declared wire type (0 varint, 2 length-delimited, 1/5 fixed)."""
+    for num, wire, value in rows:
+        if num in spec and wire not in spec[num]:
+            raise ValueError(f'{what} field {num} has the wrong wire type')
+        if num in spec and wire in (1, 5) and len(value) != (8 if wire == 1 else 4):
+            raise ValueError(f'{what} field {num} has the wrong width')
+
+
+def _mvt_value(raw):
+    rows = _wire_fields(raw)
+    _expect(rows, {1: (2,), 2: (5,), 3: (1,), 4: (0,), 5: (0,), 6: (0,), 7: (0,)}, 'value')
+    if len(rows) != 1 or rows[0][0] > 7 or rows[0][0] < 1:
+        raise ValueError('a vector tile value holds exactly one of fields 1-7')
+    if rows[0][0] == 1:
+        rows[0][2].decode()
+
+
+def _mvt_geometry(commands, kind):
+    """Command integers of one feature: MoveTo(1)/LineTo(2) take 2 parameters per repeat, ClosePath(7) none."""
+    pos, seen = 0, []
+    while pos < len(commands):
+        command, count = commands[pos] & 7, commands[pos] >> 3
+        pos += 1
+        if command in (1, 2):
+            if count < 1:
+                raise ValueError('geometry command with no repeats')
+            pos += 2 * count
+        elif command == 7:
+            if count != 1:
+                raise ValueError('ClosePath repeats exactly once')
+        else:
+            raise ValueError('unknown geometry command')
+        seen.append(command)
+    if pos != len(commands):
+        raise ValueError('geometry parameters run past the command list')
+    if seen and seen[0] != 1:
+        raise ValueError('geometry must start with MoveTo')
+    if kind == 1 and set(seen) != {1}:
+        raise ValueError('point geometry holds MoveTo only')
+    if kind == 2 and 7 in seen:
+        raise ValueError('linestring geometry has no ClosePath')
+
+
+def _mvt_feature(raw, keys, values):
+    rows = _wire_fields(raw)
+    _expect(rows, {1: (0,), 2: (2,), 3: (0,), 4: (2,)}, 'feature')
+    kind = next((v for n, _, v in rows if n == 3), 0)
+    if kind > 3:
+        raise ValueError('unknown geometry type')
+    for num, _, value in rows:
+        if num == 2:
+            tags = _packed(value)
+            if len(tags) % 2 or any(k >= keys for k in tags[::2]) or any(v >= values for v in tags[1::2]):
+                raise ValueError('feature tags do not index the layer keys and values')
+        elif num == 4:
+            _mvt_geometry(_packed(value), kind)
+
+
+def _mvt_layer(raw):
+    rows = _wire_fields(raw)
+    _expect(rows, {1: (2,), 2: (2,), 3: (2,), 4: (2,), 5: (0,), 15: (0,)}, 'layer')
+    if sum(n == 1 for n, _, _ in rows) != 1 or not next(v for n, _, v in rows if n == 1):
+        raise ValueError('a vector tile layer needs exactly one name')
+    if next((v for n, _, v in rows if n == 15), None) not in (1, 2):
+        raise ValueError('unsupported or missing vector tile version')
+    for n, _, value in rows:
+        if n in (1, 3):
+            value.decode()
+    keys, values = sum(n == 3 for n, _, _ in rows), [v for n, _, v in rows if n == 4]
+    for value in values:
+        _mvt_value(value)
+    for n, _, value in rows:
+        if n == 2:
+            _mvt_feature(value, keys, len(values))
+
+
 def decode_tiles(data, tiles):
-    """Raise unless every stored tile decodes as a vector tile (gzip when the header says so, then MVT layers)."""
+    """Raise unless every stored tile decodes as a vector tile: gunzip when the header says so, then parse each
+    layer, feature, tag and geometry list of the protobuf, not only the outer fields."""
+    gzipped = data[98:99] != b'\x01'  # read_tiles admits only none (1) and gzip (2)
     for raw in tiles.values():
-        for num, _ in _fields(gzip.decompress(raw) if data[98] == 2 else raw):
-            if num != 3:  # a Mapbox Vector Tile holds layers (field 3) only
+        for num, wire, layer in _wire_fields(gzip.decompress(raw) if gzipped else raw):
+            if num != 3 or wire != 2:  # a Mapbox Vector Tile holds layers (field 3) only
                 raise ValueError('tile is not a vector tile')
+            _mvt_layer(layer)
 
 
 # ---- Receipts ------------------------------------------------------------------------------
@@ -309,6 +402,8 @@ def evaluate(region, control_data, candidate_data, reference, *, reference_sha25
                'reference_file': REFERENCE_FILE, 'reference_sha256': reference_sha256}
     try:
         rk_tiles, rc_tiles = read_tiles(control_data), read_tiles(candidate_data)
+        decode_tiles(control_data, rk_tiles)  # every zoom of both archives must decode, whatever the gate items cover
+        decode_tiles(candidate_data, rc_tiles)
     except READ_ERRORS as exc:
         receipt.update(control=_archive(control_data, None), archive=_archive(candidate_data, None),
                        error=f'unreadable archive: {type(exc).__name__}', gate={}, failed=['unreadable archive'],
