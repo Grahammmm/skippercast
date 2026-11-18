@@ -149,7 +149,9 @@ export function beachHealthCheck(report: ShoreReportPart | null, regionId: strin
   if (regionId !== 'morro-bay' || !['north', 'central', 'south'].includes(areaId)) return {beachCheck: 'unsupported'};
   if (!report || !Array.isArray(report.waterQuality) || !beachCheckCurrent(report, now)) return {beachCheck: 'unavailable'};
   const notices = areaNotices(report, areaId).map(item => item.name);
-  return notices.length ? {beachCheck: 'notice', notices} : {beachCheck: 'clear'};
+  if (notices.length) return {beachCheck: 'notice', notices};
+  if (report.waterQuality.some(item => item.areaId === areaId && item.status.trim().toLowerCase() === 'unknown')) return {beachCheck: 'unavailable'};
+  return {beachCheck: 'clear'};
 }
 
 /**

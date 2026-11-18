@@ -51,6 +51,18 @@ test('covered: a fresh clean result can clear the preceding hold', () => {
   assert.deepEqual({label, priority}, {label: 'Current', priority: 3});
 });
 
+test('covered: an unknown county reading cannot clear a preceding closure', () => {
+  const unknown = report(covered, county(boundary), [beach('Unknown')]);
+  assert.equal(beachHealthCheck(unknown, covered.region, covered.areaId, boundary).beachCheck, 'unavailable');
+  const {label, priority, reasons} = observe(covered, unknown, boundary);
+  assert.deepEqual({label, priority}, {label: 'Hold', priority: 0});
+  assert.match(reasons.join(' '), /county.*water-quality check unavailable/i);
+  const otherArea = {...beach('Unknown'), areaId: 'north'};
+  assert.equal(beachHealthCheck(report(covered, county(boundary), [otherArea]), covered.region, covered.areaId, boundary).beachCheck, 'clear');
+  assert.deepEqual(beachHealthCheck(report(covered, county(boundary), [beach('Unknown'), beach('Closed')]), covered.region, covered.areaId, boundary),
+    {beachCheck: 'notice', notices: ['Fixture Beach']});
+});
+
 test('unsupported: the county binding is specific to both region and area', () => {
   for (const area of [{...covered, areaId: 'fixture-outside-area'}, {...covered, region: 'fixture-outside-county'}]) {
     // Even a notice with the same area ID from another region must not apply.
