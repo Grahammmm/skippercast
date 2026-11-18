@@ -16,8 +16,8 @@ Only NOAA's own per-cell coverage flags certify a cell (E2E-PIPELINE §3a):
   with the same fields (profile NOAA-OCS-2022.10;
   ``BAG_root/georef_metadata/Elevation/keys`` per node, ``varres_keys`` per
   refinement node, ``values`` records; BAG FSD Appendix A). Metadata is
-  layer-specific: an Uncertainty layer's table, or a layer stating another profile
-  type, is never read, and support stays 2.
+  layer-specific: an Uncertainty layer's table, a layer stating another profile
+  type, or one stating no profile at all is never read, and support stays 2.
 
 A cell without evidence stays 2: no evidence file or layer, key 0, a code the
 table does not list, a missing flag, or ``bathy_coverage`` True without
@@ -130,7 +130,9 @@ def coverage_layer(root):
     Each ``georef_metadata`` group describes the BAG layer of the same name, so only
     ``georef_metadata/Elevation`` can say what was measured at an elevation node; an
     Uncertainty (or any other layer's) table is never read. A stated profile type other
-    than the documented one gives the columns no documented meaning: no evidence.
+    than the documented one, or no stated profile at all, gives the columns no documented
+    meaning (the FSD makes the profile type optional and the record definition free-form,
+    so matching field names alone prove nothing): no evidence.
     """
     group = root.get('georef_metadata')
     layer = group.get(ELEVATION_LAYER) if isinstance(group, h5py.Group) else None
@@ -138,11 +140,13 @@ def coverage_layer(root):
         return None
     if not {'coverage', 'bathy_coverage'} <= set(layer['values'].dtype.names or ()):
         return None
+    stated = []
     for holder in (layer, layer['keys'], layer['values']):
-        stated = holder.attrs.get(PROFILE_ATTRIBUTE)
-        if stated is not None and text(stated.item() if isinstance(stated, np.ndarray) else stated).strip('\0 ') != PROFILE:
-            return None
-    return layer
+        value = holder.attrs.get(PROFILE_ATTRIBUTE)
+        if value is not None:
+            stated.append(text(value.item() if isinstance(value, np.ndarray) else value).strip('\0 '))
+    # Affirmative evidence only: at least one statement, and every statement is the documented profile.
+    return layer if stated and all(s == PROFILE for s in stated) else None
 
 
 def bag_classify(ds, grid, evidence):

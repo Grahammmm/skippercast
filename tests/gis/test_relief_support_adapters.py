@@ -101,7 +101,7 @@ def test_bluetopo_contributor_coverage_classes_through_normalize(tmp_path):
         sa.bluetopo_classify(ds, grid, (wrong,))
 
 
-def add_georef_layer(path, keys, records, vr_keys=None, layer_name='Elevation', profile=None):
+def add_georef_layer(path, keys, records, vr_keys=None, layer_name='Elevation', profile=sa.PROFILE):
     fields = [('coverage', 'u1'), ('bathy_coverage', 'u1'), ('source_survey_id', h5py.string_dtype())]
     table = np.array([(0, 0, '')] + list(records), dtype=fields)
     with h5py.File(path, 'r+') as bag:
@@ -136,14 +136,17 @@ def test_regular_bag_georef_metadata_keys_through_normalize(tmp_path):
     assert set(values(empty / 'support.tif').compressed()) == {2}
 
 
-# Contract: BAG georeferenced metadata is layer-specific, so only the Elevation
-# layer's NOAA-OCS-2022.10 table can certify elevation nodes; the Uncertainty
-# layer's table, a differently named layer or another stated profile leaves
-# every valid cell 2. Bug caught: taking the one metadata layer that happens to
-# carry coverage flags (here Uncertainty's) and certifying elevation as measured.
+# Contract: BAG georeferenced metadata is layer-specific and its flags only have a
+# documented meaning under a stated NOAA-OCS-2022.10 profile (the FSD makes the
+# profile type optional), so only an Elevation table affirmatively stating that
+# profile can certify elevation nodes; the Uncertainty layer's table, a differently
+# named layer, an absent profile (coverage-named fields alone) or another stated
+# profile leaves every valid cell 2. Bug caught: taking the one metadata layer that
+# happens to carry coverage flags (here Uncertainty's), or trusting field names with
+# no stated profile, and certifying elevation as measured.
 @pytest.mark.parametrize('layer_name, profile, certified', [
     ('Elevation', 'NOAA-OCS-2022.10', True),
-    ('Elevation', None, True),
+    ('Elevation', None, False),
     ('Uncertainty', 'NOAA-OCS-2022.10', False),
     ('Uncertainty', None, False),
     ('Nominal_Elevation', None, False),
