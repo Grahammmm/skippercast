@@ -1,10 +1,10 @@
 """Source envelopes measured from all vertices in the four EPSG:26910 layers."""
 import json
-from pathlib import Path
+from tests._support import ROOT
 
 
 def test_habitat_catalog_bounds_cover_source_vertices():
-    rows = json.loads((Path(__file__).resolve().parents[2] / 'catalog/sources.json').read_text())['sources']
+    rows = json.loads((ROOT / 'catalog/sources.json').read_text())['sources']
     sources = {row['id']: row for row in rows}
     # WGS84 extrema, transformed from every source polygon vertex (always_xy).
     extrema = {
