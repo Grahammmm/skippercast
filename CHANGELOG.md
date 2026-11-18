@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- SC2252-11: open an editable trip alert from the brief's lower-exposure window. Nothing is saved until you press Save.
 - SC-NEXT-09: the coverage and forecast skill pages follow your language choice. Published region and buoy names and forecast scoring are unchanged.
 - SC2037-15: upcoming saved trips show the season status for each target on the trip date, with the last rules check and an official link. Unconfirmed rules never show as open.
 - SC1607-08: download the complete private catch log as formula-safe CSV, up to 10 pages (2,000 entries); incomplete reads produce no file.
