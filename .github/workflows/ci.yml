@@ -15,7 +15,7 @@ on:
 
 # CI policy R12 (fast PR tier). Pull requests run lint/type checks, the core
 # affected core/web areas on 3.11 and 3.13 (main's Pythons), affected GIS without
-# three slow coast modules, and e2e (G 2026-11-02).
+# three slow coast modules, and e2e when the selector includes web consumers.
 # Push to main, the merge queue, the nightly schedule and dispatches run the
 # full tier: the full GIS-required suite and e2e.
 # Obsolete PR revisions are cancelled; main, scheduled and dispatched runs never are.
@@ -167,26 +167,20 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
   e2e:
+    name: e2e (1)
     # Browser tests (P4-09a): Playwright + axe against the built site under
     # `wrangler dev` (e2e/serve.mjs), at 390x844 and 1280x800 plus the five wide sizes (E2E_WIDE).
-    # Runs on pull requests too (G 2026-11-02), so e2e breakage is caught before main. A pull
-    # request runs the same projects as main (CI-PARITY-1).
-    # Sharded 1/2 + 2/2 (2026-11-03): the single job was 903s median / 1157s p90 and was the long
-    # pole of a 7-check pull request. The two shards run concurrently, so the same specs finish in
-    # about half the wall clock. Nothing is skipped and no assertion is dropped.
-    # Four shards (CI-3, G 2026-11-13): each of the two shards still spent 13 to 14 minutes in the
-    # test step with Playwright's 4 workers already using the runner's 4 CPUs, so more runners is
-    # the lever. Each shard is its own check, e2e (1) to e2e (4); all four must pass.
+    # Job-level skips consume no runner. Explicit names preserve all four required
+    # contexts even on a skip (GitHub evaluates job if before expanding a matrix).
+    # A missing/failed selector does not authorize omission; changes and the roll-up
+    # still gate the merge. Non-PR runs always retain the full browser suite.
+    needs: changes
+    if: &run-e2e ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.web != 'false') }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    strategy:
-      # Every shard must report its own verdict. bin/mergegate.py reads a cancelled check as
-      # pending and blocks on it, so a failure in one shard must not cancel the others: that would
-      # turn one red shard into one red plus blocking checks.
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
-    steps:
+    env:
+      SHARD: '1'
+    steps: &browser-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -211,7 +205,7 @@ jobs:
           path: test-results/quarantine-state.json
           key: e2e-clock-v1-${{ hashFiles('e2e/flaky.tsv') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: e2e-clock-v1-${{ hashFiles('e2e/flaky.tsv') }}-
-      # The divisor is the matrix size, so the shard list is the only number to change.
+
       # E2E_WIDE adds the five extra screen sizes (playwright.config.ts). It is '1' for every event
       # (pull_request, merge_group, push, schedule, workflow_dispatch): a pull request and main run
       # the same projects, so main never runs a test a pull request cannot run. Never set an E2E_*
@@ -221,17 +215,17 @@ jobs:
       # This mounted-component suite needs Chromium, absent from the Node-only
       # check jobs. Run it once, in the existing browser tier, without skips.
       - name: Admin Posts request ownership (serverless Chromium)
-        if: matrix.shard == 1
+        if: env.SHARD == '1'
         run: node --test e2e/admin-posts-request-scope.mjs
       - name: Browser flows and accessibility (serious and critical axe violations fail)
         env:
           E2E_WIDE: '1'
-        run: pnpm e2e --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+        run: pnpm e2e --shard="$SHARD/4"
       - name: Keep per-test JSON even when the shard fails
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: e2e-json-${{ matrix.shard }}
+          name: e2e-json-${{ env.SHARD }}
           path: test-results/e2e-run.json
           if-no-files-found: error
           retention-days: 15
@@ -240,13 +234,40 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           # One name per shard: upload-artifact v7 refuses a duplicate name.
-          name: e2e-results-${{ matrix.shard }}
+          name: e2e-results-${{ env.SHARD }}
           path: test-results/
           retention-days: 7
+  e2e-2:
+    name: e2e (2)
+    needs: changes
+    if: *run-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SHARD: '2'
+    steps: *browser-steps
+  e2e-3:
+    name: e2e (3)
+    needs: changes
+    if: *run-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SHARD: '3'
+    steps: *browser-steps
+  e2e-4:
+    name: e2e (4)
+    needs: changes
+    if: *run-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SHARD: '4'
+    steps: *browser-steps
   e2e-flake-rates:
     # Accounting only, in the existing nightly schedule. No tests are duplicated,
     # no write token/PR/publication, and a missing/failed shard earns no green day.
-    needs: e2e
+    needs: [e2e, e2e-2, e2e-3, e2e-4]
     if: always() && github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 5
