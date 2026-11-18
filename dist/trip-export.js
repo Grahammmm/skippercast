@@ -57,27 +57,47 @@ const overlap=(a,b)=>a[0]<=b[2]&&a[2]>=b[0]&&a[1]<=b[3]&&a[3]>=b[1];
 const validPoint=t=>Number.isFinite(t.latitude)&&Math.abs(t.latitude)<=90&&Number.isFinite(t.longitude)&&Math.abs(t.longitude)<=180;
 // Published index depth contours (U4): one track per (source, depth). Fails closed for the whole export.
 const omittedText=list=>list.filter(o=>o.review_status!=='approved').map(o=>`${o.source_id} (${o.review_status})`).join(', ');
+const V2_INDEX_FT=[60,150,300],V2_NATIVE_ZOOM=14;
 function contourTracks(c,region,bounds,now) {
   const bad=r=>Error(`Depth contours cannot be exported: ${r}. Turn off depth contour tracks or reload the region.`);
   const p=c?.provenance,fs=c?.features,str=v=>typeof v==='string'&&v.trim()!=='',expires=p?.review_expires;
   if(c?.type!=='FeatureCollection'||!Array.isArray(fs))throw bad('not a published contour file');
-  if(!p||p.region_id!==region.id||p.units!=='ft'||p.interval_ft!==30)throw bad('wrong region, units or interval');
-  if([c,p,...fs,...fs.map(f=>f?.properties)].some(o=>o&&typeof o==='object'&&Object.hasOwn(o,'publicationHeld')))throw bad('held or research material');
+  const v2=p?.set==='ft-v2',index=p?.index_depths_ft;
+  if(!p||p.region_id!==region.id||p.units!=='ft'||(v2
+    ? Object.hasOwn(p,'interval_ft')||p.shelf_limit_ft!==300||!Array.isArray(index)||index.length!==V2_INDEX_FT.length||!V2_INDEX_FT.every((d,i)=>index[i]===d)
+    : Object.hasOwn(p,'set')||p.interval_ft!==30))throw bad('wrong region, units or interval');
+  if([c,p,...fs,...fs.map(f=>f?.properties)].some(o=>o&&typeof o==='object'
+    &&(Object.hasOwn(o,'publicationHeld')||Object.hasOwn(o,'publication_held'))))throw bad('held or research material');
   if(typeof expires!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(expires)||now.toISOString().slice(0,10)>expires)throw bad('source review expired or undated');
   const sources=p.sources,omitted=p.sources_omitted;
   if(!Array.isArray(sources)||!sources.length||sources.some(s=>!str(s?.source_id)||!str(s.name)||!str(s.survey_date)||!str(s.vertical_datum)))throw bad('sources incomplete');
   if(!Array.isArray(omitted)||omitted.some(o=>!str(o?.source_id)||!str(o.review_status)))throw bad('omitted surveys not listed');
   const tracks=[],unlisted=omittedText(omitted);
-  for(const f of fs.filter(f=>f?.properties?.kind==='contour'&&f.properties.index===true)){
-    const {source_id,survey_date,vertical_datum,depth_ft}=f.properties,s=sources.find(s=>s.source_id===source_id);
-    if(!s||s.survey_date!==survey_date||s.vertical_datum!==vertical_datum)throw bad('a contour does not match its listed source');
-    if(!Number.isInteger(depth_ft)||depth_ft<=0||depth_ft%30)throw bad('a contour depth is not a multiple of 30 ft');
+  const wrongSource='a contour does not match its listed source',wrongDepth='a contour depth is not a multiple of 30 ft';
+  const finest=new Map(),bounded=new Set();
+  const basis=v2?'an estimated display contour from the reviewed survey grid':'a display contour from averaged survey blocks';
+  for(const f of fs){
+    const props=f?.properties;
+    if(props?.kind!=='contour')continue;
+    const {source_id,survey_date,vertical_datum,depth_ft,minzoom}=props;
+    if(v2&&props.index!==V2_INDEX_FT.includes(depth_ft))throw bad(wrongDepth);
+    if(props.index!==true)continue;
+    const s=sources.find(s=>s.source_id===source_id);
+    if(!s||s.survey_date!==survey_date||s.vertical_datum!==vertical_datum)throw bad(wrongSource);
+    if(v2){
+      // Pair before filtering by coverage: a superseded run is never a fallback.
+      const key=JSON.stringify([source_id,depth_ft]);
+      if(Object.hasOwn(props,'maxzoom')){bounded.add(key);continue;}
+      if(finest.has(key))throw bad(wrongSource);
+      finest.set(key,Number.isInteger(minzoom)&&minzoom>=V2_NATIVE_ZOOM);
+    }else if(!Number.isInteger(depth_ft)||depth_ft<=0||depth_ft%30)throw bad(wrongDepth);
     const g=f.geometry,lines=g?.type==='LineString'?[g.coordinates]:g?.type==='MultiLineString'?g.coordinates:null;
     if(!Array.isArray(lines))throw Error('Invalid export geometry');
     const kept=lines.filter(l=>{const e=extent({coordinates:l});if(e.some(Number.isNaN))throw Error('Invalid export geometry');return overlap(e,bounds);});
     if(kept.length)tracks.push({name:`${depth_ft} ft contour · ${source_id}`,source:s.name,survey_date,vertical_datum,geometry:{type:'MultiLineString',coordinates:kept},
-      desc:`${s.name}. Surveyed ${survey_date}. Depth below the survey's ${vertical_datum}; a display contour from averaged survey blocks, not a sounding or chart depth. Lines stop where the reviewed survey grid stops.${unlisted?` Bound surveys not drawn: ${unlisted}`:''} NOT FOR NAVIGATION.`});
+      desc:`${s.name}. Surveyed ${survey_date}. Depth below the survey's ${vertical_datum}; ${basis}, not a sounding or chart depth. Lines stop where the reviewed survey grid stops.${unlisted?` Bound surveys not drawn: ${unlisted}`:''} NOT FOR NAVIGATION.`});
   }
+  for(const key of bounded)if(!finest.get(key))throw bad(wrongSource);
   return {tracks,omitted};
 }
 // SC1322-08: a fresh named hit says which protected area; a stale or unnamed check keeps the generic refusal (null).

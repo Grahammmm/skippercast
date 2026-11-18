@@ -337,6 +337,109 @@ test('held or incomplete contour provenance is refused for the whole export', ()
   assert.throws(() => buildExport(contourRequest({contours: {collection: MORRO}, now: new Date('2027-09-27T00:00:00Z')})), /Depth contours cannot be exported/);
 });
 
+function feetV2Fixture() {
+  const identity = {survey_date: '2024', vertical_datum: 'MLLW'};
+  const sources = [
+    {...identity, source_id: 'native', name: 'Native survey', native_cell_m: 2},
+    {...identity, source_id: 'coarse', name: 'Coarse survey', native_cell_m: 16},
+  ];
+  const index_depths_ft = [60, 150, 300];
+  const run = (source_id, depth_ft, minzoom, lat, zoom = {}) => ({
+    type: 'Feature', properties: {...identity, source_id, kind: 'contour', depth_ft,
+      index: index_depths_ft.includes(depth_ft), estimated: true, minzoom, ...zoom},
+    geometry: {type: 'LineString', coordinates: [[-121, lat], [-120.9, lat]]},
+  });
+  return {
+    type: 'FeatureCollection',
+    provenance: {region_id: MORRO_REGION.id, units: 'ft', set: 'ft-v2', shelf_limit_ft: 300, index_depths_ft,
+      intervals: [
+        {minzoom: 8, depths_ft: [60, 120, 180, 240, 300]},
+        {minzoom: 11, depths_ft: [30, 90, 150, 210, 270]},
+        {minzoom: 13, depths_ft: [10, 20, 40, 50, 70, 80, 100]},
+        {minzoom: 15, depths_ft: [5, 15, 25], native_max_cell_m: 2},
+      ], sources, review_expires: '2027-09-22',
+      sources_omitted: [{source_id: 'held-grid', review_status: 'candidate'}, {source_id: 'approved-grid', review_status: 'approved'}]},
+    features: [
+      ...index_depths_ft.flatMap(depth => [
+        run('native', depth, depth === 150 ? 11 : 8, 35.2, {maxzoom: 14}),
+        run('coarse', depth, depth === 150 ? 11 : 8, 35.4),
+        run('native', depth, 14, 35.3),
+      ]),
+      run('native', 5, 15, 35.21), run('coarse', 10, 13, 35.21),
+      run('coarse', 30, 11, 35.21), run('coarse', 90, 11, 35.21),
+    ],
+  };
+}
+
+test('loadContourFile to GPX exports only the finest ft-v2 index tracks with source notes', async () => {
+  const fixture = feetV2Fixture();
+  const contours = await loadContourFile(MORRO_REGION.id, '2026-09-22',
+    async () => new Response(JSON.stringify(fixture)), () => 'https://skippercast.test/app/');
+  assert.ok(contours.collection, contours.refused);
+  const result = buildExport(contourRequest({contours}));
+  const tracks = [...result.gpx.matchAll(/<trk><name>(\d+ ft contour · [^<]+)<\/name><desc>([^<]*)<\/desc>(.*?)<\/trk>/g)];
+  assert.equal(result.counts.contours, 6);
+  const expected = [60, 150, 300].flatMap(depth => ['coarse', 'native'].map(source => `${depth} ft contour · ${source}`));
+  assert.deepEqual(tracks.map(([, name]) => name).sort(), expected.sort());
+  const notes = offlineNotes(result, MORRO_REGION, {name: 'test', date: '2026-09-22'});
+  assert.match(notes, /<h2>Depth contour tracks<\/h2>.*Bound surveys not drawn: held-grid \(candidate\).*not for navigation/);
+  assert.doesNotMatch(notes, /approved-grid/);
+  for (const [, name, desc, segments] of tracks) {
+    const native = name.endsWith('native'), lat = native ? 35.3 : 35.4;
+    assert.deepEqual(segmentsIn(segments), [[[-121, lat], [-120.9, lat]]]);
+    const source = native ? 'Native survey' : 'Coarse survey';
+    assert.match(desc, /Surveyed 2024\..*MLLW.*estimated.*not a sounding or chart depth\. Lines stop where the reviewed survey grid stops\./);
+    assert.ok(desc.startsWith(`${source}.`));
+    assert.match(desc, /Bound surveys not drawn: held-grid \(candidate\) NOT FOR NAVIGATION\.$/);
+    assert.ok(notes.includes(`<li>${name} · ${source}. Surveyed 2024; datum: MLLW.</li>`));
+  }
+  const onlySuperseded = buildExport(contourRequest({contours, bounds: [-121.1, 35.19, -120.8, 35.205]}));
+  assert.equal(onlySuperseded.counts.contours, 0, 'coarse lines are not a fallback when native lines miss the bounds');
+});
+
+test('ft-v2 export refuses ambiguous runs and invalid metadata even outside the requested coverage', () => {
+  const wrongSource = /Depth contours cannot be exported: a contour does not match its listed source\./;
+  const wrongSet = /Depth contours cannot be exported: wrong region, units or interval\./;
+  const wrongDepth = /Depth contours cannot be exported: a contour depth is not a multiple of 30 ft\./;
+  for (const [label, edit, reason] of [
+    ['duplicate finest run', c => c.features.push(c.features[2]), wrongSource],
+    ['missing native run', c => c.features.splice(2, 1), wrongSource],
+    ['non-native partner', c => { c.features[2].properties.minzoom = 8; }, wrongSource],
+    ['mismatched survey date on bounded run', c => { c.features[0].properties.survey_date = '2023'; }, wrongSource],
+    ['unlisted source', c => { c.features[2].properties.source_id = 'unknown'; }, wrongSource],
+    ['incorrect datum', c => { c.features[2].properties.vertical_datum = 'NAVD88'; }, wrongSource],
+    ['missing source field', c => { delete c.provenance.sources[0].name; }, /Depth contours cannot be exported: sources incomplete\./],
+    ['missing omitted surveys', c => { delete c.provenance.sources_omitted; }, /Depth contours cannot be exported: omitted surveys not listed\./],
+    ['expired review', c => { c.provenance.review_expires = '2026-09-21'; }, /Depth contours cannot be exported: source review expired or undated\./],
+    ['wrong region', c => { c.provenance.region_id = 'different-region'; }, wrongSet],
+    ['wrong units', c => { c.provenance.units = 'm'; }, wrongSet],
+    ['interval_ft present', c => { c.provenance.interval_ft = 30; }, wrongSet],
+    ['unknown set with otherwise v1 interval', c => Object.assign(c.provenance, {set: 'ft-v3', interval_ft: 30}), wrongSet],
+    ['wrong shelf limit', c => { c.provenance.shelf_limit_ft = 600; }, wrongSet],
+    ['wrong index depths', c => { c.provenance.index_depths_ft = [150, 60, 300]; }, wrongSet],
+    ['flagged depth outside index set', c => { c.features[2].properties.depth_ft = 90; }, wrongDepth],
+    ['index depth not flagged', c => { c.features[0].properties.index = false; }, wrongDepth],
+  ]) {
+    const collection = feetV2Fixture();
+    edit(collection);
+    assert.throws(() => buildExport(contourRequest({bounds: [0, 0, 1, 1], contours: {collection}})), reason, label);
+  }
+});
+
+test('both contour sets refuse either hold key even when false or on a non-index line', () => {
+  for (const fixture of [MORRO, feetV2Fixture()]) {
+    for (const marker of ['publication_held', 'publicationHeld']) {
+      const collection = structuredClone(fixture);
+      const minor = collection.features.find(f => f.properties.kind === 'contour' && !f.properties.index);
+      for (const record of [collection, collection.provenance, minor, minor.properties]) {
+        record[marker] = false;
+        assert.throws(() => buildExport(contourRequest({contours: {collection}})), /Depth contours cannot be exported: held or research material\./);
+        delete record[marker];
+      }
+    }
+  }
+});
+
 const SHA = 'a'.repeat(64);
 const planWith = priorities => JSON.stringify({ids: ['a', 'ranked-only', 'a'], name: 'Keep me', date: '2028-02-29', avoidScope: 'region', rankedPlan: {sha256: SHA, species: 'reef', priorities}});
 
