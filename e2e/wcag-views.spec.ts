@@ -15,7 +15,7 @@ type Kind = 'axe' | 'focus' | 'target';
 interface Finding {kind: Kind; rule: string; selector: string}
 interface Known extends Finding {view: string; project: string; reason: string; ref: string}
 const KINDS: readonly string[] = ['axe', 'focus', 'target'];
-const MIN = 24, MAX_STOPS = 40;
+const MIN = 24, MAX_STOPS = 128;  // Desktop views can exceed 40 stops even with data unavailable.
 /** A heading each view shows once rendered (also in its 503 forecast state); a view not listed waits for any h1/h2. */
 const HEADINGS: Record<string, string> = {coast: 'Where to look', conditions: 'Conditions', history: 'Recorded history', fleet: 'Fleet', reports: 'Reports'};
 /** Views whose heading text is the selected target (PlanView.tsx), so they wait for the heading's id instead. */
@@ -86,29 +86,52 @@ export async function smallTargets(page: Page): Promise<Finding[]> {
   }, {min: MIN});
 }
 
-/** Tab through the page (≤40 stops, or until focus returns to a stop already seen or leaves the document): each stop must be
- *  shown and have a drawn, non-transparent outline of at least 2 px (a box-shadow alone no longer counts); the same element twice in a row is a focus trap. */
-export async function focusWalk(page: Page): Promise<Finding[]> {
+/** Check up to MAX_STOPS stops for a visible, drawn ≥2 px outline, then probe one more Tab for completion.
+ *  A document walk must exit to browser chrome. To audit an intentional modal wrap, pass the full expected sequence of
+ *  stop descriptions and enter with the first stop focused. Only a wrap to the first stop in that same open modal passes. */
+export async function focusWalk(page: Page, modalCycle?: readonly string[]): Promise<Finding[]> {
   await page.evaluate(HELPERS);
-  await page.evaluate(() => { (window as unknown as {__wcagSeen: Element[]}).__wcagSeen = []; (document.activeElement as HTMLElement | null)?.blur(); });
+  await page.evaluate((inModal) => {
+    (window as unknown as {__wcagSeen: Element[]}).__wcagSeen = [];
+    if (inModal) return;
+    // Blurring a control leaves Chromium's sequential focus start there, not at the start of the document.
+    const body = document.body, tabindex = body.getAttribute('tabindex');
+    body.tabIndex = -1;
+    body.focus({preventScroll: true});
+    if (tabindex === null) body.removeAttribute('tabindex'); else body.setAttribute('tabindex', tabindex);
+  }, modalCycle !== undefined);
   const out = new Map<string, Finding>();
-  for (let stop = 0; stop < MAX_STOPS; stop++) {
-    await page.keyboard.press('Tab');
+  const visited: string[] = [];
+  let sameModal = true;
+  const add = (rule: string, selector: string) => out.set(`${rule} ${selector}`, {kind: 'focus', rule, selector});
+  for (let stop = 0; stop <= MAX_STOPS; stop++) {
+    if (!modalCycle || stop > 0) await page.keyboard.press('Tab');
     const s = await page.evaluate(() => {
       const w = window as unknown as {__wcagDescribe: (e: Element) => string; __wcagShown: (e: Element) => boolean; __wcagSeen: Element[]; __wcagActive: () => Element | null};
       const el = w.__wcagActive();   // inside an open shadow root (CoastMarkup), the focused element, not its host
-      if (!el || el === document.body) return null;   // focus left the document
+      if (!el || el === document.body || el === document.documentElement) return {boundary: true as const, exited: !document.hasFocus()};
+      const first = w.__wcagSeen[0] ?? el, modal = el.closest('dialog:modal');
       const seen = w.__wcagSeen.indexOf(el), last = w.__wcagSeen.at(-1) === el;
       w.__wcagSeen.push(el);
       const cs = getComputedStyle(el), clear = /^(transparent|rgba\((\s*[\d.]+\s*,){3}\s*0(\.0+)?\s*\)|\w+\(.*\/\s*0(\.0+)?%?\s*\))$/.test(cs.outlineColor.trim()),
         ring = cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 2 && !clear;   // a fully transparent outline draws nothing
-      return {selector: w.__wcagDescribe(el), seen: seen >= 0, trap: last, shown: w.__wcagShown(el), ring};
+      return {boundary: false as const, selector: w.__wcagDescribe(el), seen, last, modal: !!modal && first.closest('dialog:modal') === modal, shown: w.__wcagShown(el), ring};
     });
-    if (!s) break;
-    if (s.trap) { out.set(`trap ${s.selector}`, {kind: 'focus', rule: 'focus-trap', selector: s.selector}); break; }
-    if (s.seen) break;
-    if (!s.shown) out.set(`hidden ${s.selector}`, {kind: 'focus', rule: 'focus-not-visible', selector: s.selector});
-    else if (!s.ring) out.set(`ring ${s.selector}`, {kind: 'focus', rule: 'focus-indicator', selector: s.selector});
+    if (s.boundary) {
+      if (!s.exited || modalCycle) add('focus-walk-incomplete', visited.at(-1) ?? 'body');
+      break;
+    }
+    sameModal &&= s.modal;
+    if (s.seen >= 0) {
+      const documentedWrap = modalCycle && sameModal && s.seen === 0 && !s.last
+        && visited.length === modalCycle.length && visited.every((selector, i) => selector === modalCycle[i]);
+      if (!documentedWrap) add('focus-trap', s.selector);
+      break;
+    }
+    if (stop === MAX_STOPS) { add('focus-walk-incomplete', s.selector); break; }
+    visited.push(s.selector);
+    if (!s.shown) add('focus-not-visible', s.selector);
+    else if (!s.ring) add('focus-indicator', s.selector);
   }
   return [...out.values()];
 }
@@ -204,7 +227,7 @@ test.describe('the gate itself', () => {
       <button class="ok">a</button><button class="clear">b</button><button class="zero">c</button><button class="half">d</button>`);
     expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-indicator', selector: 'button.clear'}, {kind: 'focus', rule: 'focus-indicator', selector: 'button.zero'}]);
   });
-  test('the focus walk ends on a cycle, flags missing rings and hidden stops, and fails a trap with its selector', async ({page}) => {
+  test('the focus walk flags missing rings and fails a same-stop trap with its selector', async ({page}) => {
     await page.setContent(`<style>.sr{position:absolute;width:1px;height:1px;overflow:hidden} .sr:focus{position:static;width:auto;height:auto;outline:2px solid}
       button:focus{outline:2px solid} .bare:focus{outline:none}</style><a class="sr" href="#m">Skip</a><button class="ok">a</button><button class="bare">b</button>`);
     expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-indicator', selector: 'button.bare'}]);
@@ -215,6 +238,47 @@ test.describe('the gate itself', () => {
     await page.setContent(`<style>button:focus{outline:2px solid}</style><div id="h"></div><button class="z">z</button><script>
       document.getElementById('h').attachShadow({mode: 'open'}).innerHTML = '<style>button:focus{outline:2px solid}</style><button class="a">a</button><button class="b" style="outline:none">b</button>';</script>`);
     expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-indicator', selector: 'button.b'}]);
+  });
+  test('focus walk rejects a two-stop loop that strands the next control', async ({page}) => {
+    await page.setContent(`<style>button:focus{outline:2px solid}</style>
+      <button id="first">First</button><button id="loop">Loop</button><button>Unreachable</button>
+      <script>document.querySelector('#loop').onkeydown = e => {
+        if (e.key === 'Tab') { e.preventDefault(); document.querySelector('#first').focus(); }
+      };</script>`);
+    expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-trap', selector: 'button#first'}]);
+  });
+  test('focus walk rejects scripted blur instead of mistaking it for a document exit', async ({page}) => {
+    await page.setContent(`<style>button:focus{outline:2px solid}</style><button id="first">First</button><button>Next</button>
+      <script>document.querySelector('#first').onkeydown = e => {
+        if (e.key === 'Tab') { e.preventDefault(); e.target.blur(); }
+      };</script>`);
+    expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-walk-incomplete', selector: 'button#first'}]);
+  });
+  test('focus walk checks a missing ring past the old 40-stop limit', async ({page}) => {
+    await page.setContent('<style>button:focus{outline:2px solid}</style>' + '<button>Stop</button>'.repeat(40)
+      + '<button id="later" style="outline:none">Stop 41</button><button id="last">Last</button>');
+    await page.locator('#last').focus(); // A document walk must restart, not resume from the previous stop.
+    expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-indicator', selector: 'button#later'}]);
+  });
+  test('focus walk requires a document exit at the stop limit, not just good rings', async ({page}) => {
+    const complete = '<style>button:focus{outline:2px solid}</style>' + '<button>Stop</button>'.repeat(MAX_STOPS);
+    await page.setContent(complete);
+    expect(await focusWalk(page)).toEqual([]);
+    await page.setContent(complete + '<button id="later">One more stop</button>');
+    expect(await focusWalk(page)).toEqual([{kind: 'focus', rule: 'focus-walk-incomplete', selector: 'button#later'}]);
+  });
+  test('focus walk allows only the documented cycle of an open modal', async ({page}) => {
+    await page.setContent(`<style>button:focus{outline:2px solid}</style><button>Outside</button>
+      <dialog><button id="first">First</button><button id="last">Last</button><button id="skipped" hidden>Third</button></dialog>
+      <script>document.querySelector('dialog').showModal();
+      document.querySelector('#last').onkeydown = e => {
+        if (e.key === 'Tab') { e.preventDefault(); document.querySelector('#first').focus(); }
+      };</script>`);
+    expect(await focusWalk(page, ['button#first', 'button#last'])).toEqual([]);
+    await page.locator('#skipped').evaluate(el => el.removeAttribute('hidden'));
+    await page.locator('#first').focus();
+    expect(await focusWalk(page, ['button#first', 'button#last', 'button#skipped']))
+      .toEqual([{kind: 'focus', rule: 'focus-trap', selector: 'button#first'}]);
   });
   test('focus_walk_rejects_one_pixel_and_shadow_only: a 1 px outline and a shadow-only ring fail; an explicit 2 px outline passes', async ({page}) => {
     await page.setContent(`<style>button:focus{outline:2px solid} .thin:focus{outline:1px solid;box-shadow:0 0 0 3px #08f} .shadow:focus{outline:none;box-shadow:0 0 0 3px #08f}</style>
