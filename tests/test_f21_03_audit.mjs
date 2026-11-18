@@ -14,18 +14,44 @@ const WRITE_OP = /(?:>|\btee\b|\bcp\b|\binstall\b|\bmv\b|\bsed\s+-i|\bprintf\b|\
 // bare `ALL` command spec is also package administration.
 const GRANT_RE = new RegExp(String.raw`^\s*['"]?[\w$%{}@.-]+\s+\S+=\s*(?:\([^)]*\))?\s*(?:[A-Z]+:\s*)*(?:.*[\s/,]${PKG}\b.*|ALL)\s*['"]?\s*$`);
 
-// Fail closed: a rule line (heredoc body, echo/printf argument) is returned as a
-// grant; a write to a sudoers path through a form we cannot parse (cp, install,
-// sed -i, tee of a variable ...) is returned as UNPARSED-SUDOERS-WRITE.
+// A sudoers line we can positively prove is not package administration: a
+// literal user/host rule or Defaults line with no variable/command substitution
+// in the command part and no ALL command spec.
+const RULE_SHAPE = /^['"]?([\w$%{}@.-]+)\s+(\S+)=\s*(.*?)['"]?$/;
+function provablySafeSudoersLine(text) {
+  const t = text.trim().replace(/^['"]|['"]$/g, '').trim();
+  if (!t || t.startsWith('#')) return true;
+  if (/^Defaults\b/.test(t)) return !/[$`]/.test(t);
+  const m = RULE_SHAPE.exec(text.trim());
+  if (!m) return false;
+  const cmd = m[3];
+  return !/[$`]/.test(cmd) && !GRANT_RE.test(text.trim()) && !/\bALL\s*$/.test(cmd);
+}
+
+// Fail closed: a rule line is returned as a grant; any write to a sudoers path
+// whose content is not provably safe (variable, cp/install/mv/sed -i, piped
+// input, heredoc body with expansions) is returned as UNPARSED-SUDOERS-WRITE.
 export function packageAdminGrants(script) {
   const out = [];
+  let heredoc = null; // {delim, sudoers}
   for (const raw of script.split('\n')) {
     const line = raw.trim();
+    if (heredoc) {
+      if (line === heredoc.delim) { heredoc = null; continue; }
+      if (!line || line.startsWith('#')) continue;
+      if (GRANT_RE.test(line)) out.push(line);
+      else if (heredoc.sudoers && !provablySafeSudoersLine(line)) out.push(`UNPARSED-SUDOERS-WRITE: ${line}`);
+      continue;
+    }
     if (!line || line.startsWith('#')) continue;
     const body = line.replace(/^(?:echo|printf)\s+(?:-\w+\s+)?/, '').replace(/\s*(?:\|\s*(?:sudo\s+)?tee\b.*|>>?\s*\S+)\s*$/, '');
+    const sudoers = /\/etc\/sudoers/.test(line);
+    const hd = /<<-?\s*['"]?(\w+)['"]?/.exec(line);
+    if (hd) heredoc = {delim: hd[1], sudoers};
     if (GRANT_RE.test(body)) { out.push(line); continue; }
-    if (/\/etc\/sudoers/.test(line) && WRITE_OP.test(line) && !/\bvisudo\b|\bchmod\b|\bchown\b/.test(line)) {
-      if (/\b(?:cp|install|mv|sed)\b/.test(line) || !/<<|>|\btee\b/.test(line)) out.push(`UNPARSED-SUDOERS-WRITE: ${line}`);
+    if (sudoers && WRITE_OP.test(line) && !/\bvisudo\b|\bchmod\b|\bchown\b/.test(line) && !hd) {
+      const inline = /^(?:sudo\s+)?(?:echo|printf)\b/.test(line) && provablySafeSudoersLine(body);
+      if (!inline) out.push(`UNPARSED-SUDOERS-WRITE: ${line}`);
     }
   }
   return out;
@@ -110,6 +136,12 @@ test('F21-03 grants without NOPASSWD or written via echo/printf/tee/cp/install/s
     'cp ./runner-sudoers /etc/sudoers.d/actions-runner\n',
     'install -m 0440 runner.sudoers /etc/sudoers.d/actions-runner\n',
     'sed -i "s/^#runner.*/runner ALL=(root) NOPASSWD: ALL/" /etc/sudoers.d/a\n',
+    'echo "$rule" > /etc/sudoers.d/actions-runner\n',
+    'printf \'%s\\n\' "$rule" | tee /etc/sudoers.d/actions-runner\n',
+    'cat > /etc/sudoers.d/a <<EOF\n$rule\nEOF\n',
+    'cat > /etc/sudoers.d/a <<EOF\nrunner ALL=(root) NOPASSWD: $PKGCMD\nEOF\n',
+    'generate_rules | tee /etc/sudoers.d/a\n',
+    'cat rules.txt > /etc/sudoers.d/a\n',
   ];
   for (const f of forms) assert.notDeepEqual(packageAdminGrants(f), [], f);
 });
