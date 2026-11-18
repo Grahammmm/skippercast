@@ -72,13 +72,24 @@ def validate(data):
         require(row["rank"] == 1 + sum(s > score for s in scores), "Incorrect subset rank")
         check = row["recorded_validation"]
         require(check["native_circle_has_gap"] is False, "Target has missing native depth evidence")
-        recorded_numbers(check["native_center_depth_ft"],
-                         check["native_100m_circle_min_depth_ft"],
-                         check["native_100m_circle_max_depth_ft"])
-        require(0 < check["native_center_depth_ft"] <= 200, "Target exceeds source-depth ceiling")
-        require(0 < check["native_100m_circle_min_depth_ft"]
-                <= check["native_100m_circle_max_depth_ft"] <= 200,
-                "Target neighborhood exceeds source-depth ceiling")
+        center = check["native_center_depth_ft"]
+        low = check["native_100m_circle_min_depth_ft"]
+        high = check["native_100m_circle_max_depth_ft"]
+        recorded_numbers(center, low, high)
+        require(0 < center <= 200, "Target exceeds source-depth ceiling")
+        require(0 < low <= high <= 200, "Target neighborhood exceeds source-depth ceiling")
+        require(low <= center <= high, "Recorded center is outside its native neighborhood")
+
+        # All target renderers use these display fields. The historical edition
+        # rounds the center to the nearest foot (ties to even) and the range
+        # outward to whole feet; exact recorded depths also agree with evidence.
+        limits = row["neighborhood_depth_ft"]
+        require(isinstance(limits, (list, tuple)) and len(limits) == 2,
+                "Displayed depth range must have two endpoints")
+        shown = (row["center_depth_ft"], *limits)
+        recorded_numbers(*shown)
+        require(shown in ((center, low, high), (round(center), math.floor(low), math.ceil(high))),
+                "Displayed target depths disagree with recorded evidence")
         for area_id in row["area_ids"]:
             require(area_id in areas and row["id"] in areas[area_id]["target_ids"],
                     "Broken target-to-area reference")

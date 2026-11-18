@@ -411,7 +411,7 @@ export const fleetEvents=sqliteTable('fleet_events',{
   basis:text('basis').notNull().default('inferred-from-movement'),source:text('source').notNull(),rights:text('rights').notNull(),
   classifierVersion:text('classifier_version').notNull(),speciesJson:text('species_json'),
 },t=>[index('ev_region_time').on(t.region,t.startedAt),index('ev_vessel').on(t.vesselId,t.startedAt),
-  index('ev_season').on(t.region,t.season,t.kind)]);
+  index('ev_season').on(t.region,t.season,t.kind),index('ev_trip').on(t.tripId)]);
 
 // Binned events from an aggregate module (grid, later h3).
 // id sha256(module|params_hash|season|season_part|kind|cell)[:32]; rights is the most
