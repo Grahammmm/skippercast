@@ -8,7 +8,7 @@
 // the META_* secrets. All offline: a fake fetch answers.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync, mkdtempSync, rmSync, writeFileSync, existsSync} from 'node:fs';
+import {readFileSync, mkdtempSync, rmSync, writeFileSync, statSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -277,8 +277,8 @@ test('meta-token.mjs: dialog and code handling, token exchange, and setup checks
 
 // Contract: meta-token.mjs never deletes a token file it did not create. Bug caught: a file another run made
 // after the caller's "is the name free" check (the script's exclusive open then refuses it) being removed by
-// failure cleanup; or the script's own partial file being left behind. Ownership comes from the open descriptor.
-test('meta-token.mjs: a destination created before the exclusive open is refused and kept; a failed write removes only its own file', async t => {
+// failure cleanup.
+test('meta-token.mjs: a destination created before the exclusive open is refused and kept', async t => {
   const dir = mkdtempSync(join(tmpdir(), 'meta-token-own-'));
   t.after(() => rmSync(dir, {recursive: true, force: true}));
   const out = [];
@@ -294,11 +294,31 @@ test('meta-token.mjs: a destination created before the exclusive open is refused
   };
   await assert.rejects(quiet(() => script.main(['--token-file', raced], {env, fetcher, ask, log: l => out.push(l)})), /not created by this run/);
   assert.equal(readFileSync(raced, 'utf8'), 'other run token\n');
+});
 
-  // A write that fails after this run created the file removes that file (and only that one).
+// Contract: failure cleanup never deletes by name. Bugs caught: an lstat-then-unlink losing a file another run
+// swapped in between the two calls; a partial token left readable in this run's file; a message claiming removal
+// that did not happen.
+test('meta-token.mjs: a failed write empties this run\'s file, never deletes by name, and never claims removal', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'meta-token-fail-'));
+  t.after(() => rmSync(dir, {recursive: true, force: true}));
+  // The write fails after part of the token was written; the path still names this run's file.
   const mine = join(dir, 'mine-token');
-  await assert.rejects(script.savePageToken(mine, 12345), /created the file and removed it/);
-  assert.equal(existsSync(mine), false);
+  const partial = async function* () { yield 'PARTIAL-TOKEN'; throw Error('disk full'); };
+  await assert.rejects(script.savePageToken(mine, partial()), e => /emptied it/.test(e.message) && /did not delete anything by name/.test(e.message) && !/removed it/.test(e.message));
+  assert.equal(statSync(mine).size, 0);
+
+  // Another run swaps in its own file after this run created its own, before any cleanup could run (the window an
+  // lstat-then-unlink would lose): that file survives and only this run's orphaned file is emptied.
+  const swapped = join(dir, 'swapped-token');
+  const swap = async function* () {
+    yield 'PARTIAL-TOKEN';
+    rmSync(swapped);
+    writeFileSync(swapped, 'other run token\n', {mode: 0o600});
+    throw Error('disk full');
+  };
+  await assert.rejects(script.savePageToken(swapped, swap()), /did not delete anything by name/);
+  assert.equal(readFileSync(swapped, 'utf8'), 'other run token\n');
 });
 
 test('deploy wiring: the workflow passes the META_* secrets, and the deploy uploads each only when set (META_IG_TOKEN stays out)', () => {
