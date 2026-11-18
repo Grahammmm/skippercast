@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {briefAlertPrefill} from '../web/app/brief-alert-prefill.ts';
+import {briefAlertPrefill} from '../web/brief-alerts.ts';
 
 const region = {id: 'fixture', timezone: 'America/Los_Angeles', species: ['reef'], forecast_points: [
   {id: 'incomplete', name: 'Incomplete', latitude: 35},

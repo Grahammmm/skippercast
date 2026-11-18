@@ -864,7 +864,7 @@ export function LowerExposure({brief}: {brief: BriefModel | null}) {
       {w ? <><span class="ui-mono">{clock(w.start, tz, lang)}–{clock(w.end, tz, lang)}</span> · {w.label}. {[caveat, own].filter(Boolean).join('. ')}</> : t(brief.limits?.custom ? 'brief.lower.custom' : 'brief.lower.none', lang)}
     </p>
     {w && id && (!shown || shown.id === id) && p === profile.value && session.value.state === 'signed-in'
-      ? <Button class="app-window-alert" type="button" size="sm" variant="quiet" onClick={event => {
+      ? <Button class="app-window-alert app-print-button" type="button" size="sm" variant="quiet" onClick={event => {
         const planned = plannerPort.peek();
         const home = homePortOrigin(id, regionPorts.peek(), planned?.region === id ? planned.id : null, savedPortId());
         const {wind, gust, seas} = limitsFor(p);

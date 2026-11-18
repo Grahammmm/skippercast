@@ -12,7 +12,7 @@
 @media print {
   .app-masthead, .app-command, .app-stage, .app-chrome-left, .app-rail, .app-legend, .app-dock,
   .app-sheet-hour, .app-sheet-layers, .app-sheet-menus, .app-top, .app-tabs, .ui-sheet-edge,
-  dialog, [role="dialog"], .app-firstrun, .app-print-button, .app-reports-link, .app-first-answer-more, .app-window-alert,
+  dialog, [role="dialog"], .app-firstrun, .app-print-button, .app-reports-link, .app-first-answer-more,
   .app-screen-height {
     display: none !important;
   }
