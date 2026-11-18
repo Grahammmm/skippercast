@@ -13,6 +13,8 @@ Normalize units and timestamps explicitly. Preserve native datum, spatial footpr
 
 For seafloor habitat, retain physical-only outputs and their hash-bound caches independently of publication rights and spatial screens. Use the mapping skill’s bounded recipes; do not invalidate unchanged terrain for a legal-only refresh. A derived grid’s spacing does not establish native sonar resolution or complete support.
 
+For held bathymetry/lidar files (any CRS, BAG, zip/ArcInfo, lidar grids), do not import by hand: the relief pipeline's R0 inventory and R2 normaliser admit them (skippercast-relief-pipeline). A new format = one normaliser adapter + fixture in a PR.
+
 Legal data use the review gate in `docs/regulations.md`. Collection creates evidence, not approval. Read changed documents and record the inspected fingerprint with an approve/hold conclusion; do not reset baselines merely because HTTP succeeded. Match source URL and normalizer to the jurisdiction contract. Retain unavailable-source holds, effective dates, timed openers and the approved legal-content fingerprint. Use the supported eCFR API with bounded compression and its separate current-through date.
 
 Validate the regional snapshot before publication: region identity, schema, finite values, coordinate order and bounds, complete page/cursor coverage, source rights, relationships and required legal/depth screens. Test changes that affect these invariants with offline failure fixtures. A source endpoint that returns HTML instead of the expected product is a failure even when HTTP status is 200.
