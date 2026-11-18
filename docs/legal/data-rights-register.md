@@ -199,6 +199,19 @@ One row per entry in `catalog/sources.json`, except for the grouped CSUMB NCEI w
 | Open-Meteo forecast, marine and ensemble APIs (free tier) | `open-meteo-api` | CC BY 4.0 | yes | **no** | none (snapshot replaced FSC-01) | [Blocker B1](#b1--open-meteo-free-api-resolved) | Owner |
 | Protomaps basemap (OpenStreetMap vector tiles), self-hosted coastal extract | `protomaps-basemap` | ODbL-1.0 | yes | **unknown** | Not shipped yet: `tiles/basemap/ca-coast-<build>.pmtiles` on R2 (FE-10), read by the v2 Chart from FE-11 | Drafted by FE-10, **owner to confirm**: ODbL allows commercial use with attribution, but the whole archive is publicly downloadable from `/feeds/tiles/basemap/`, so it is redistributed as an ODbL derivative database (attribution and ODbL notice kept with it; the extract itself offered under ODbL, share-alike). Self-hosting removes the [B6](#b6--openstreetmap-tile-service) tile-service question, not this one | Owner |
 | NOAA NGS Continually Updated Shoreline Product (CUSP) | `noaa-cusp-shoreline` | US public domain (NOAA-created features only) | yes | yes | `regions/morro-bay/shoreline.geojson` (beside the region package, not in `region.json` assets; read by the v2 Chart from FE-11) | Drafted by FE-10, **owner to confirm**: the importer keeps only features whose creator is NOAA; review each new region's held creators before importing it | Owner |
+| USGS CoNED central California topobathy DEM | `usgs-coned-ca-8657` | unresolved | yes | **unknown** | none | Public relief held pending contributor review | Owner |
+| USGS CoNED southern California and Channel Islands topobathy DEM | `usgs-coned-ca-8658` | unresolved | yes | **unknown** | none | Public relief held pending contributor review | Owner |
+| USGS CoNED northern California topobathy DEM | `usgs-coned-ca-9181` | unresolved | yes | **unknown** | none | Public relief held pending contributor review | Owner |
+| 2014 USACE NCMP California topobathy lidar DEM | `usace-ncmp-ca-5189` | unresolved | yes | **unknown** | none | Confirm reuse terms for the exact delivery | Owner |
+| 2014 USACE NCMP California topobathy lidar point cloud | `usace-ncmp-ca-4912` | unresolved | yes | **unknown** | none | Confirm reuse terms for the exact delivery | Owner |
+| 2015 USACE NCMP California topobathy lidar DEM | `usace-ncmp-ca-8482` | unresolved | yes | **unknown** | none | Confirm reuse terms for the exact delivery | Owner |
+| 2015 USACE NCMP California topobathy lidar point cloud | `usace-ncmp-ca-5022` | unresolved | yes | **unknown** | none | Confirm reuse terms for the exact delivery | Owner |
+| NOAA NCEI CUDEM California 1/9 arc-second topobathy tiles | `noaa-cudem-ca-ninth-8483` | unresolved | yes | **unknown** | none | Public relief held pending tile contributor review | Owner |
+| 2022 NOAA Morro Bay topobathy lidar DEM | `noaa-morro-bay-topobathy-2022-9630` | unresolved | yes | **unknown** | none | Confirm NOAA/NEP display and redistribution terms | Owner |
+| 2022 NOAA Morro Bay topobathy lidar point cloud | `noaa-morro-bay-topobathy-2022-9629` | unresolved | yes | **unknown** | none | Confirm NOAA/NEP display and redistribution terms | Owner |
+| USGS 3DEP original The National Map 1 m bare-earth DEM | `usgs-3dep-1m-dem` | US public domain | no (credit requested) | yes | none | Land terrain only; no third-party copy, region or release approval | Engineering |
+| USGS Southern Cascadia 30 m composite bathymetry (v2.0) | `usgs-southern-cascadia-p9c5dbmr` | unresolved | yes | **unknown** | none | Public relief held pending review of the composite and its contributor polygons | Owner |
+| MBARI direct seafloor mapping products | `mbari-seafloor-mapping` | MBARI site terms | yes | **needs permission** | none | Excluded from relief selection; research reference only | Owner |
 
 ### CSUMB SFML at NCEI — wave 2B (private-use only)
 
