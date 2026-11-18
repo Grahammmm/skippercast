@@ -16,8 +16,10 @@ been checked yet runs scripts/check_saved_trips.py once; the first read counts
 too, so a watcher that starts after this run already published still checks
 it. An earlier run's generation, or one already checked, is a no-op. A failed
 or unreadable read is unknown, never "no new publication". The watcher stops
-once the refresh job has finished and one more edge-cache window has passed
-(so its last publication is seen), after --once, or at the time budget.
+once the refresh job has finished, one more edge-cache window has passed and
+a receipt read has been taken after that window (so its last publication is
+seen even when settling and a check ran past it), after --once, or at the
+time budget.
 Exit status is non-zero when any check failed, which marks only this job red.
 """
 import argparse
@@ -93,6 +95,7 @@ def watch(*, generation, run_id, finished, check, sleep, clock, deadline, poll, 
         # before the refresh job ended is still seen and checked.
         if stop_at is None and finished():
             stop_at = clock() + linger
+        read_at = clock()
         current = generation()
         unknown = current is None
         if current is not None and current[0] == run_id and current not in checked:
@@ -106,8 +109,10 @@ def watch(*, generation, run_id, finished, check, sleep, clock, deadline, poll, 
                 print('::error title=Trip check failed::delivery was not confirmed; the feed was not affected.', flush=True)
             if once:
                 break
+        if stop_at is not None and read_at >= stop_at:
+            break  # this read was taken after the linger window: nothing newer can be unseen
         if stop_at is not None and clock() >= stop_at:
-            break
+            continue  # settling and a check ran past the window: read the receipt once more before stopping
         sleep(poll)
     return checks, failures, unknown
 

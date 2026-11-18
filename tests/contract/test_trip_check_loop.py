@@ -31,7 +31,7 @@ def gen(cycle):
     return RUN, cycle
 
 
-def run_watch(reads, finished_after=None, results=None, once=False, budget=10_000, linger=0):
+def run_watch(reads, finished_after=None, results=None, once=False, budget=10_000, linger=0, check_seconds=0):
     """reads: public receipt per poll, (run_id, published_at) or None when unknown."""
     clock, reads, polls, checked = Clock(), list(reads), [0], []
     results = list(results or [])
@@ -45,6 +45,7 @@ def run_watch(reads, finished_after=None, results=None, once=False, budget=10_00
 
     def check():
         checked.append(clock.now)
+        clock.now += check_seconds
         return results.pop(0) if results else True
     counts = watch(generation=generation, run_id=RUN, finished=finished, check=check, sleep=clock.sleep,
                    clock=clock, deadline=budget, poll=60, settle=90, linger=linger, once=once)
@@ -71,6 +72,24 @@ class WatchTests(unittest.TestCase):
                 (checks, _, _), _, now = run_watch(reads, finished_after=1, linger=120)
                 self.assertEqual(checks, expected)
                 self.assertLessEqual(now, 120 + 90)
+
+    def test_final_receipt_is_read_after_a_check_runs_past_the_linger_window(self):
+        # Contract: the watcher never stops on a receipt read older than the linger window. Bug caught: refresh
+        # already finished, the first read saw cached A, settle (90 s) + a failed check (30 s) reached the 120 s
+        # deadline and the loop exited without reading the final generation B the edge serves after 60 s.
+        (checks, failures, unknown), checked, now = run_watch(
+            [gen('a'), gen('b')], finished_after=1, linger=120, results=[False, True], check_seconds=30)
+        self.assertEqual((checks, failures, unknown), (2, 1, False))
+        self.assertEqual(checked, [90, 120 + 90])  # b read at 120 (after the window), settled, checked
+        self.assertEqual(now, 120 + 90 + 30)
+
+    def test_final_read_after_the_window_that_sees_nothing_new_stops_without_another_poll(self):
+        # Bug caught: an extra read/poll after the final read would let a never-ending linger run to the budget.
+        (checks, _, unknown), checked, now = run_watch(
+            [gen('a')], finished_after=1, linger=120, check_seconds=30)
+        self.assertEqual((checks, unknown), (1, False))
+        self.assertEqual(checked, [90])
+        self.assertEqual(now, 120)  # one read at 120, then stop
 
     def test_failed_delivery_is_counted_and_later_publications_are_still_checked(self):
         (checks, failures, _), _, _ = run_watch([PRIOR, gen('a'), gen('b')], results=[False, True], finished_after=3)
