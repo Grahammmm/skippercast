@@ -254,10 +254,12 @@ const count = (v: unknown): number => typeof v === 'number' && Number.isFinite(v
 class BudgetSpent extends Error { constructor() { super('advisor turn budget spent'); this.name = 'BudgetSpent'; } }
 
 export interface ModelTurn {
-  text: string; toolsCalled: string[]; rules: RulesResult[]; identifiedFishRules: boolean; actions: Action[]; outcome: 'ok' | 'tool_loop' | 'budget';
+  text: string; toolsCalled: string[]; rules: RuleEvidence[]; identifiedFish: string | null; actions: Action[]; outcome: 'ok' | 'tool_loop' | 'budget';
   /** TA-A2: the first get_conditions result with an advisory: its line (reply language) and events, for the advisory backstop. */
   advisory?: {line: string; events: string[]} | null;
 }
+
+interface RuleEvidence {region: string; rules: {species_key: string}[]}
 
 /**
  * Claude with tools: at most MAX_TOOL_ROUNDS executed tool rounds; a fifth
@@ -277,8 +279,8 @@ export async function modelTurn(args: {env: Env; settings: AdvisorSettings; syst
   const messages = [...args.messages];
   const request = {model: settings.model, max_tokens: MAX_TOKENS, temperature: TEMPERATURE, system: args.system, tools: claudeTools(tools), messages};
   const toolsCalled: string[] = [], actions: Action[] = [];
-  const rules: RulesResult[] = [];
-  let identifiedFishRules = false, rounds = 0, pauses = 0, lastText = '', carry = '';
+  const rules: RuleEvidence[] = [];
+  let identifiedFish: string | null = null, rounds = 0, pauses = 0, lastText = '', carry = '';
   let advisory: ModelTurn['advisory'] = null;
 
   async function call(): Promise<ApiResponse> {
@@ -320,8 +322,8 @@ export async function modelTurn(args: {env: Env; settings: AdvisorSettings; syst
         continue;
       }
       const uses = content.filter(b => b.type === 'tool_use' && typeof b.id === 'string' && typeof b.name === 'string');
-      if (data.stop_reason !== 'tool_use' || !uses.length) return {text: lastText, toolsCalled, rules, identifiedFishRules, actions, outcome: 'ok', advisory};
-      if (rounds >= MAX_TOOL_ROUNDS) return {text: lastText, toolsCalled, rules, identifiedFishRules, actions, outcome: 'tool_loop', advisory};
+      if (data.stop_reason !== 'tool_use' || !uses.length) return {text: lastText, toolsCalled, rules, identifiedFish, actions, outcome: 'ok', advisory};
+      if (rounds >= MAX_TOOL_ROUNDS) return {text: lastText, toolsCalled, rules, identifiedFish, actions, outcome: 'tool_loop', advisory};
       rounds++;
       const results: unknown[] = [];
       for (const use of uses) {
@@ -329,8 +331,15 @@ export async function modelTurn(args: {env: Env; settings: AdvisorSettings; syst
         toolsCalled.push(use.name!);
         const ruleResult = use.name === 'get_rules' && !out.isError ? out.result as RulesResult | null : null;
         if (Array.isArray(ruleResult?.rules) && ruleResult.rules.length) rules.push(ruleResult);
-        // TA-I3: identify_fish quotes the rules table too (06 § fish ID step 3); a current row counts, a stale one does not.
-        if (use.name === 'identify_fish' && !out.isError && (out.result as {rules?: {stale?: boolean} | null})?.rules?.stale === false) identifiedFishRules = true;
+        // Fish ID reads rules in the contact region; only its current returned rows support claims.
+        if (use.name === 'identify_fish' && !out.isError) {
+          const fish = out.result as {candidates?: {species_key: string | null}[]; rules?: {species_key: string; stale: boolean} | null; second_rules?: {species_key: string; stale: boolean} | null};
+          const current = [fish.rules, fish.second_rules].filter((row): row is {species_key: string; stale: boolean} => !!row && row.stale === false);
+          if (current.length) {
+            rules.push({region: contactRegion(ctx.contact, ctx.settings), rules: current});
+            identifiedFish ??= fish.candidates?.[0]?.species_key ?? null;
+          }
+        }
         // TA-A2: a planning turn whose conditions carry an advisory must lead with it (AD-4); runTurn checks the reply.
         if (use.name === 'get_conditions' && !out.isError && !advisory) advisory = advisoryOf(out.result);
         if (out.actions) actions.push(...out.actions);
@@ -339,7 +348,7 @@ export async function modelTurn(args: {env: Env; settings: AdvisorSettings; syst
       messages.push({role: 'assistant', content}, {role: 'user', content: results});
     }
   } catch (error) {
-    if (error instanceof BudgetSpent) return {text: lastText, toolsCalled, rules, identifiedFishRules, actions, outcome: 'budget', advisory};
+    if (error instanceof BudgetSpent) return {text: lastText, toolsCalled, rules, identifiedFish, actions, outcome: 'budget', advisory};
     throw error;
   }
 }
@@ -353,9 +362,9 @@ function namedRuleRegion(text: string): string | null {
 }
 
 /** Keep the numeric backstop on unless the returned rows apply to the question and the quote. */
-function hasRelatedRules(results: readonly RulesResult[], question: string, reply: string, ctx: ToolContext): boolean {
+function hasRelatedRules(results: readonly RuleEvidence[], question: string, reply: string, ctx: ToolContext, identifiedFish: string | null): boolean {
   if (!results.length) return false;
-  const asked = resolveSpecies(question)?.key;
+  const asked = resolveSpecies(question)?.key ?? identifiedFish;
   if (!asked) return false;
   const region = namedRuleRegion(question) ?? contactRegion(ctx.contact, ctx.settings);
   const rows = results.filter(result => result.region === region).flatMap(result => result.rules);
@@ -591,7 +600,7 @@ async function answerTurn(input: EngineInput): Promise<EngineResult> {
   }
   if (!reply && comment) return done(actions.filter(a => a.type === 'review_open' || a.type === 'contact_update'), 'comment.unanswered', {usage, model: settings.model});
   if (!reply) reply = t(language, 'not_understood');
-  if (!turn.identifiedFishRules && !hasRelatedRules(turn.rules, text, reply, ctx)) {
+  if (!hasRelatedRules(turn.rules, text, reply, ctx, turn.identifiedFish)) {
     const guarded = rulesGuard(reply, language);
     if (guarded.fired) {
       reply = guarded.text;
