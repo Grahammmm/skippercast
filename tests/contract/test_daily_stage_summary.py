@@ -1,7 +1,10 @@
 """Daily Actions failure attribution and read-only release reporting, offline."""
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
+import subprocess
+import textwrap
 import re
 import tempfile
 import unittest
@@ -50,6 +53,27 @@ class DailyStageSummaryTests(unittest.TestCase):
         self.assertIn("Public site verification: not run", summary)
         self.assertNotIn("First failed stage: Report", summary)
         return summary
+
+    def test_checkout_failure_writes_summary_in_empty_workspace(self):
+        text = WORKFLOW.read_text(encoding="utf-8")
+        block = text.split("      - name: Summarize the daily refresh\n", 1)[1]
+        self.assertIn("CHECKOUT_OUTCOME: ${{ steps.checkout.outcome }}", block)
+        self.assertIn("PUBLISH_OUTCOME: ${{ steps.publish.outcome }}", block)
+        run = block.split("        run: ", 1)[1]
+        script = textwrap.dedent(run[2:]) if run.startswith("|\n") else run.splitlines()[0]
+        summary = self.root / "summary.md"
+        env = os.environ | {
+            "GITHUB_STEP_SUMMARY": str(summary),
+            "CHECKOUT_OUTCOME": "failure",
+            "PUBLISH_OUTCOME": "skipped",
+            "DAILY_STAGE_OUTCOMES": "checkout=failure\npublish=skipped\n",
+        }
+        result = subprocess.run(["bash", "-e", "-c", script], cwd=self.root, env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        content = summary.read_text(encoding="utf-8")
+        self.assertIn("First failed stage: Check out workflow sources", content)
+        self.assertIn("Release (data branch): retained — this run did not advance the pointer", content)
+        self.assertIn("Previous data-branch generation: unknown", content)
 
     def test_parser_failure_precedes_coverage_and_does_not_advance_pointer(self):
         # A file on disk is not proof that this run loaded or collected it.

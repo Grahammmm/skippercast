@@ -281,6 +281,8 @@ jobs:
         if: always()
         continue-on-error: true
         env:
+          CHECKOUT_OUTCOME: ${{ steps.checkout.outcome }}
+          PUBLISH_OUTCOME: ${{ steps.publish.outcome }}
           # Pass only step outcomes, not logs or the steps context's output payloads.
           DAILY_STAGE_OUTCOMES: |
             checkout=${{ steps.checkout.outcome }}
@@ -306,4 +308,23 @@ jobs:
             report-regulations=${{ steps.report-regulations.outcome }}
             report-surveys=${{ steps.report-surveys.outcome }}
             report-products=${{ steps.report-products.outcome }}
-        run: python3 scripts/daily_stage_summary.py
+        run: |
+          if [ "$CHECKOUT_OUTCOME" = success ] && [ -f scripts/daily_stage_summary.py ]; then
+            python3 scripts/daily_stage_summary.py
+          else
+            # No checkout (or no script): use only fixed labels, never workspace files.
+            first=unknown
+            if [ "$CHECKOUT_OUTCOME" = failure ]; then first='Check out workflow sources'; fi
+            release=unknown
+            if [ "$PUBLISH_OUTCOME" = skipped ]; then release='retained — this run did not advance the pointer'; fi
+            {
+              printf '\n## Daily evidence refresh\n\n'
+              printf -- '- First failed stage: %s\n' "$first"
+              printf -- '- Previous data-branch generation: unknown\n'
+              printf -- '- Previous generation age at summary time: unknown\n'
+              printf -- '- Affected regions (degraded or failed in this attempt): unknown\n'
+              printf -- '- Release (data branch): %s\n' "$release"
+              printf -- '- Public site verification: unknown\n'
+              printf '\nStep outcomes identify a stage, not a cause or conditions freshness. See the [feed freshness runbook](https://github.com/Grahammmm/skippercast/blob/main/docs/operations/runbooks/feed-stale.md).\n'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
