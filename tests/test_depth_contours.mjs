@@ -6,6 +6,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {signal} from '@preact/signals';
+import {prepareCatalogue} from '../web/i18n.ts';
+import {resolveMarkCopy} from '../web/mark-copy.ts';
 import {
   DEPTH_BOTTOM, DEPTH_EDGE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LABEL_MINOR, DEPTH_LINE, DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DETAIL_ZOOM, INDEX_FT, INTERVAL_FT, NOTES,
   assessContours, contourMark, contourState, contoursFor, contoursOverlay, createDepthContours, depthContoursOverviewURL, depthContoursURL, omittedNote,
@@ -161,11 +163,12 @@ function setup(t, {files, today = Date.parse(`${TODAY}T18:00:00Z`)} = {}) {
     if (!(path in files)) return {ok: false, status: 404, json: async () => ({})};
     return {ok: true, status: 200, json: async () => clone(files[path])};
   };
+  let latest;
   const engine = signal({setOverlay: (layer, o, before) => calls.push(['overlay', layer, o && o.layers.map(l => l.id), before ?? null]),
-    setData: (id, data) => calls.push(['data', id, data.features.length])});
+    setData: (id, data) => { latest = data; calls.push(['data', id, data.features.length]); }});
   const layer = createDepthContours({engine, fetchFn, page: () => location.href, palette: () => sentinel, now: () => today});
   t.after(() => { layer.destroy(); camera.value = null; });
-  return {asked, calls, layer};
+  return {asked, calls, layer, visible: () => latest?.features ?? []};
 }
 const FILES = {[depthContoursOverviewURL('morro-bay')]: OVERVIEW, [depthContoursURL('morro-bay')]: FULL};
 
@@ -418,4 +421,110 @@ test('contour_invalid_expiry_never_exports: the trip export refuses the file, an
   assert.ok('collection' in await loadContourFile('morro-bay', exp, respond(FULL), page), 'last day exports');
   const next = new Date(Date.parse(`${exp}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
   assert.ok(typeof (await loadContourFile('morro-bay', next, respond(FULL), page)).refused === 'string', 'next day refused');
+});
+
+// Published MB-03 pair: one ≤2 m patch and a separate 5 m-only patch.
+const V2_TABLE = [
+  {minzoom: 8, depths_ft: [60, 120, 180, 240, 300]},
+  {minzoom: 11, depths_ft: [30, 90, 150, 210, 270]},
+  {minzoom: 13, depths_ft: [10, 20, 40, 50, 70, 80, 100]},
+  {minzoom: 15, depths_ft: [5, 15, 25], native_max_cell_m: 2},
+];
+const fixtureSource = (source_id, native_cell_m) => ({source_id, native_cell_m, name: `Fixture ${source_id}`, survey_date: '2025', vertical_datum: 'NAVD88'});
+function v2Fixture(overview = false) {
+  const sources = [fixtureSource('native', 2), fixtureSource('coarse', 5)];
+  const feature = (s, props) => ({type: 'Feature', geometry: {type: 'LineString', coordinates: [[-121, 35.3], [-120.95, 35.3]]},
+    properties: {source_id: s.source_id, survey_date: s.survey_date, vertical_datum: s.vertical_datum, ...props}});
+  const features = sources.flatMap(s => [feature(s, {kind: 'survey-edge', minzoom: 8, index: false}), ...V2_TABLE.flatMap(({minzoom, depths_ft}) =>
+    depths_ft.flatMap(depth_ft => {
+      const p = {kind: 'contour', depth_ft, minzoom, index: [60, 150, 300].includes(depth_ft), estimated: true};
+      const native = s.native_cell_m === 2;
+      if (overview && minzoom >= 13 || minzoom === 15 && !native) return [];
+      if (minzoom === 15) return [feature(s, p)];
+      return native ? [feature(s, {...p, maxzoom: 14}), ...overview ? [] : [feature(s, {...p, minzoom: 14})]] : [feature(s, p)];
+    }))]);
+  return {type: 'FeatureCollection', features, provenance: {set: 'ft-v2', region_id: 'morro-bay', units: 'ft', shelf_limit_ft: 300,
+    intervals: structuredClone(V2_TABLE), index_depths_ft: [60, 150, 300], sources, sources_omitted: [], review_expires: '2027-10-20'}};
+}
+
+test('ft-v2 selects published depths and labels, replaces coarse runs at z14, and never exposes a hidden tap target', async t => {
+  await prepareCatalogue('es');
+  const full = v2Fixture(), overview = v2Fixture(true);
+  const {asked, calls, layer, visible} = setup(t, {files: {[depthContoursOverviewURL('morro-bay')]: overview, [depthContoursURL('morro-bay')]: full}});
+  const depths = (source, labelled = false) => visible().map(f => f.properties)
+    .filter(p => p.kind === 'contour' && p.source_id === source && (!labelled || p.contour_label)).map(p => p.depth_ft).sort((a, b) => a - b);
+  const move = async zoom => { camera.value = {...camera.value, zoom}; await flush(); };
+  const z8 = [60, 120, 180, 240, 300];
+  const z11 = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300];
+  const z13 = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 180, 210, 240, 270, 300];
+  const z15 = [5, 10, 15, 20, 25, ...z13.slice(2)];
+  const tap = (source, depth) => layer.pick.mark(DEPTH_HIT, visible().find(f => f.properties.source_id === source && f.properties.depth_ft === depth)?.properties);
+  for (const [zoom, native, coarse, labels, sample, interval] of [
+    [8, z8, z8, [300], 60, 60], [11, z11, z11, z11, 60, 30], [13, z13, z13, z11, 100, 10],
+    [14, z13, z13, z11, 100, 10], [15, z15, z13, z15, 15, 5], [8, z8, z8, [300], 300, 60],
+  ]) {
+    await move(zoom);
+    assert.deepEqual(depths('native'), native, `≤2 m lines at z${zoom}`);
+    assert.deepEqual(depths('coarse'), coarse, `5 m-only lines at z${zoom}`);
+    assert.deepEqual(depths('native', true), labels, `desktop labels at z${zoom}`);
+    assert.deepEqual(depths('coarse', true), zoom === 8 ? [300] : z11);
+    assert.equal(visible().filter(f => f.properties.kind === 'survey-edge').length, 2);
+    const mark = tap('native', sample);
+    assert.match(mark.kind, new RegExp(`every ${interval} ft$`));
+    assert.match(resolveMarkCopy(mark, 'es').kind, new RegExp(`cada ${interval} ft$`));
+    assert.match(mark.reading, /Estimated: .* NAVD88; not a sounding or a chart depth/);
+    assert.equal(mark.basis, 'Not for navigation.');
+    if (zoom === 13) assert.match(tap('coarse', 120).kind, /every 30 ft$/);
+    if (zoom >= 14) assert.ok(visible().filter(f => f.properties.source_id === 'native' && f.properties.kind === 'contour')
+      .every(f => f.properties.minzoom >= 14 && f.properties.maxzoom === undefined));
+    if (zoom === 15) assert.match(tap('coarse', 20).kind, /every 10 ft$/);
+  }
+  const hidden = full.features.find(f => f.properties.depth_ft === 5);
+  assert.equal(layer.pick.mark(DEPTH_HIT, hidden.properties), null);
+  const before = calls.length;
+  await move(8.9);
+  assert.equal(calls.length, before, 'no source update within a zoom tier');
+  await move(18);
+  assert.deepEqual(visible(), [], 'no ft-v2 contours at z18');
+  assert.deepEqual(asked, [depthContoursOverviewURL('morro-bay'), depthContoursURL('morro-bay')]);
+});
+
+test('ft-v2 refuses wrong region, units, expiry, unsupported detail, or wrong indices', () => {
+  const fixture = v2Fixture();
+  assert.equal(assessContours(fixture, 'morro-bay', '2027-10-20').status, 'drawn');
+  assert.equal(assessContours(fixture, 'morro-bay', '2027-10-21').status, 'withheld');
+  assert.equal(assessContours(fixture, 'another-region', TODAY).status, 'failed');
+  for (const [what, edit] of [
+    ['metres', f => { f.provenance.units = 'm'; }],
+    ['impossible date', f => { f.provenance.review_expires = '2026-11-31'; }],
+    ['held', f => { f.provenance.publication_held = true; }],
+    ['unknown set', f => { f.provenance.set = 'ft-v3'; f.provenance.interval_ft = 30; }],
+    ['ambiguous legacy interval', f => { f.provenance.interval_ft = 30; }],
+    ['wrong table', f => { f.provenance.intervals[3].minzoom = 14; }],
+    ['deeper than 300 ft', f => { f.features.find(x => x.properties.depth_ft === 300).properties.depth_ft = 330; }],
+    ['incorrect index', f => { f.features.find(x => x.properties.depth_ft === 60).properties.index = false; }],
+    ['untagged native line', f => { delete f.features.find(x => x.properties.depth_ft === 5).properties.minzoom; }],
+    ['too-early native line', f => { f.features.find(x => x.properties.depth_ft === 5).properties.minzoom = 14; }],
+    ['5 m native claim', f => { f.provenance.sources[0].native_cell_m = 5; }],
+  ]) {
+    const data = clone(fixture); edit(data);
+    assert.deepEqual(assessContours(data, 'morro-bay', TODAY), FAILED_SHAPE, what);
+  }
+});
+
+test('ft-v2 uses the shallow ink and halo through 100 ft, with independent index weights', () => {
+  const {data} = assessContours(v2Fixture(), 'morro-bay', TODAY);
+  const {layers} = contoursOverlay(sentinel, data);
+  const line = layers.find(l => l.id === DEPTH_LINE).paint;
+  const label = layers.find(l => l.id === DEPTH_LABEL);
+  const cutoff = ['<=', ['number', ['get', 'depth_ft']], 100];
+  const index = ['==', ['get', 'index'], true];
+  assert.deepEqual(line['line-color'], ['case', cutoff, 'token(map-contour-shallow)', 'token(map-contour-deep)']);
+  assert.deepEqual(line['line-width'], ['case', index, 1.4, 0.7]);
+  assert.deepEqual(line['line-opacity'], ['case', index, 0.75, 0.38]);
+  assert.deepEqual(label.paint['text-color'], line['line-color']);
+  assert.deepEqual(label.paint['text-halo-color'], ['case', cutoff, 'token(map-contour-shallow-halo)', 'token(map-contour-deep-halo)']);
+  assert.equal(label.paint['text-halo-width'], 1.4);
+  assert.equal(label.layout['text-size'], 11);
+  assert.equal(label.layout['symbol-spacing'], 480);
 });
