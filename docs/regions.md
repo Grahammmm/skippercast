@@ -51,8 +51,9 @@ The Point Sal–Point Conception Central preview binds distinct [NWS PZZ645/670 
 ```bash
 # Optional GIS environment: numpy, rasterio, shapely, pyproj, pyshp.
 python research/scripts/import_usgs_geology.py --region cambria-san-simeon --zip /local/Geology_SanSimeon.zip
-python research/scripts/build_bottom_views.py --region morro-bay --manifest /local/survey-manifest.json
 ```
+
+For the [private Morro Bay bottom-view rebuild](seabed-views.md#private-morro-bay-rebuild), use the pinned original GeoTIFFs and `--held-output`. The raster datum remains unverified; the report's MLLW reference does not qualify these tiles or targets for fishing.
 
 Use `$skippercast-discover-data`, `$skippercast-ingest-data`, and `$skippercast-add-region` for future work. Their maintained sources live under `skills/`; `python research/scripts/install_research_skills.py` installs them into the current user's Codex skills folder. Run the system skill validator on the installed copies when available.
 

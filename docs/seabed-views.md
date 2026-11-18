@@ -2,13 +2,33 @@
 
 Every one of the 132 existing reef targets has a measured USGS survey window. Clicking a target loads one small numeric tile and draws an oblique relief image or a north-up depth image. No generative image model invents rocks, crevices, fish, vegetation or substrate textures.
 
-The compiler reads the original 2008 USGS Point Buchon, Morro Bay and Point Estero bathymetry grids: WGS84 UTM zone 10, 2 m cells, signed metre elevations referenced to MLLW. It extracts 129 × 129 cells around the nearest target cell, retains missing-data masks, and quantizes elevation to 0.1 m for compact transfer. That encoding precision is not survey accuracy. A window spans 256 m (about 840 ft), distinct from the qualified fishing footprint.
+The compiler reads the original 2008 USGS Point Buchon, Morro Bay and Point Estero bathymetry grids: WGS84 UTM zone 10, 2 m cells, and signed metre elevations on an **unverified source datum**. The [USGS report review](../research/catalog/usgs-morro-report-datum-source.json) distinguishes the report's MLLW depths from the original rasters, which do not declare that datum. The compiler extracts 129 × 129 cells around the nearest target cell, retains missing-data masks, and quantizes elevations to 0.1 m for compact transfer without a datum conversion. That encoding precision is not survey accuracy. A window spans 256 m (about 840 ft); it does not qualify a fishing footprint.
 
 The browser checks the tile's SHA-256, region and target identity. It renders one image on demand, avoiding the cost of loading all seabed tiles on a phone. The relief view draws a 4 m mesh with **2× vertical scale**; the grid-north-up image retains 2 m drawing cells. The caption identifies native resolution, survey year, source-grid coverage and datum. Missing cells remain blank. Cross-section bearings follow source grid north, not true or magnetic north. The target ring is centered on the nearest native cell; the stored subcell offset is under a cell width.
 
 Relief can distinguish a ridge, slope, depression or uneven patch at supported scales. Native pixel size does not prove boulder detection or physical rock dimensions. Backscatter and geological interpretation also do not establish individual boulders without appropriate resolution and ground truth. This image is historical bathymetry, not a contemporary photograph or a navigation surface. Surrounding window depths may exceed the user's fishing limit; only qualified target geometry carries the depth screen.
 
-The local manifest contains source paths, source IDs, survey years and datums. Paths are never copied into public output. Each public index retains source-file digest, source URL and tile digests, so a different region can supply a different approved native grid through the same process. Candidate/restricted sources are rejected. This adapter requires square metre-based cells at 2 m or finer and MLLW; add a separately validated adapter for other datums/resolutions instead of silently treating them as equivalent.
+### Private Morro Bay rebuild
+
+Use the optional GIS environment and the original local GeoTIFFs. The manifest maps the atlas source keys to the reviewed catalog IDs:
+
+```json
+{
+  "sources": {
+    "PointBuchon": {"path": "/local/buchon.tif", "source_id": "usgs-point-buchon", "survey_year": 2008, "vertical_datum": "unverified source datum"},
+    "MorroBay": {"path": "/local/morro.tif", "source_id": "usgs-morro-bay", "survey_year": 2008, "vertical_datum": "unverified source datum"},
+    "PointEstero": {"path": "/local/estero.tif", "source_id": "usgs-point-estero", "survey_year": 2008, "vertical_datum": "unverified source datum"}
+  }
+}
+```
+
+```bash
+python research/scripts/build_bottom_views.py --region morro-bay --manifest /local/survey-manifest.json --held-output /local/new-private-bottom-build
+```
+
+Use a new output directory outside the checkout, under a private parent. Before writing any tiles, the compiler rejects a conflicting datum (including `MLLW`), a mismatched source binding, or bytes that do not match the pinned original TIFF SHA-256. The output under `regions/morro-bay/bottom/` inside that directory includes an index and numeric tiles marked `research_only`, with the same unverified datum on both. Do not copy this output into `dist`; the rebuild does not change the atlas, qualify a fishing depth or target, or clear a release hold.
+
+The adapter still requires approved, region-bound sources and square metre-based cells at 2 m or finer. The existing path for separately qualified MLLW inputs is unchanged. The index records source and tile digests and source URLs, not local input paths.
 
 Areas without supporting native data show an explicit unavailable message. In particular, San Simeon's smoothed 10 m contours and regional geology cannot generate the same detailed bottom view. There is no decorative stand-in that could be mistaken for measured terrain.
 
