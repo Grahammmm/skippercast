@@ -81,6 +81,44 @@ test('no coast report loaded at a bound place falls back to the regional brief',
   assert.equal(brief.localReport.available, false);
 });
 
+function dailyWithBuoy(row, units) {
+  const sources = montereyDaily.sources;
+  const buoy = sources['buoy-46042'];
+  const data = {station: buoy.data.station, units, observations: [{time: new Date(now.getTime() - 600_000).toISOString(), ...row}]};
+  return {...montereyDaily, sources: {...sources, 'buoy-46042': {...buoy, data}}};
+}
+
+test('regional water shows 15 degC as 59 °F, but does not turn a fresh 59 degF into a reading', () => {
+  const water = (value, units) => tile(buildRegionalBrief({
+    ...regional, daily: dailyWithBuoy({WTMP: value}, units), profile: 'boat', date, now,
+  }), 'water');
+  const valid = water(15, {WTMP: 'degC'});
+  assert.deepEqual([valid.value, valid.unit, valid.state, valid.ageMs], [59, '°F', 'fresh', 600_000]);
+  for (const units of [{WTMP: 'degF'}, {WTMP: 'kelvin'}, {WTMP: 1}, {}, undefined, null, 'degC']) {
+    const invalid = water(59, units);
+    assert.deepEqual([invalid.value, invalid.state, invalid.ageMs], [null, 'unavailable', null], JSON.stringify(units));
+  }
+});
+
+test('regional buoy units are checked per field, preserving independent observations', () => {
+  const row = {WVHT: 2, DPD: 11, WTMP: 15, WSPD: 4, GST: 6, MWD: 295};
+  const units = {WVHT: 'm', DPD: 'sec', WTMP: 'degC', WSPD: 'm/s', GST: 'm/s', MWD: 'degT'};
+  const read = labels => {
+    const {report: converted} = regionalReport(dailyWithBuoy(row, labels), null, montereyPlace);
+    const {waveFt, wavePeriodS, waterTempF, windKnots, gustKnots, directionDeg} = converted.observations[0];
+    const round = value => value === null ? null : Number(value.toFixed(2));
+    return {waveFt: round(waveFt), wavePeriodS, waterTempF, windKnots: round(windKnots), gustKnots: round(gustKnots), directionDeg};
+  };
+  const valid = {waveFt: 6.56, wavePeriodS: 11, waterTempF: 59, windKnots: 7.78, gustKnots: 11.66, directionDeg: 295};
+  assert.deepEqual(read(units), valid);
+  for (const [key, wrongUnit, field] of [
+    ['WVHT', 'ft', 'waveFt'], ['DPD', 'min', 'wavePeriodS'], ['WTMP', 'degF', 'waterTempF'],
+    ['WSPD', 'kt', 'windKnots'], ['GST', 'kt', 'gustKnots'], ['MWD', 'degM', 'directionDeg'],
+  ]) {
+    assert.deepEqual(read({...units, [key]: wrongUnit}), {...valid, [field]: null}, key);
+  }
+});
+
 test('acceptance 3: a tile past its limit is stale and keeps its age', () => {
   const later = new Date(now.getTime() + TILE_LIMIT_MS.water + 60 * 60_000);
   const brief = buildRegionalBrief({...regional, profile: 'boat', date, now: later});

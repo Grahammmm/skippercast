@@ -52,6 +52,10 @@ const local = (page: Page, value: string) => page.evaluate(v => new Date(v).toIS
 
 test('edit_fills_the_log_form_and_saves_the_whole_entry_in_place', async ({page, pageErrors, v2}) => {
   const stub = await stubAccount(page);
+  // The seeded start, captured before any edit: the stub's PATCH merges the submitted body into the row, so reading the row
+  // afterwards would compare the submitted value with itself.
+  const seededStart = stub.rows[1]!.started_at;
+  expect(seededStart).toBe('2026-05-31T23:00:00.000Z');
   const card = await openAccount(page, v2);
   const items = card.locator('#log-list li');
   await items.nth(1).getByRole('button', {name: 'Edit'}).click();
@@ -80,7 +84,7 @@ test('edit_fills_the_log_form_and_saves_the_whole_entry_in_place', async ({page,
   await expect(card.locator('#account-status')).toHaveText('Entry updated.');
   expect(stub.patches).toHaveLength(1);
   expect(stub.patches[0]!.url).toMatch(/\/api\/catch-log\/e001$/);
-  expect(stub.patches[0]!.body).toEqual({started_at: stub.rows[1]!.started_at, ended_at: '2026-05-31T22:30:00.500Z', outcome: 'fish', count: 5, species: 'Lingcod <b>x</b>',
+  expect(stub.patches[0]!.body).toEqual({started_at: seededStart, ended_at: '2026-05-31T22:30:00.500Z', outcome: 'fish', count: 5, species: 'Lingcod <b>x</b>',
     method: 'jig', trip_id: 'trip-a', lat: 35.25, lon: -120.75, note: null});
   await expect(items).toHaveCount(200);
   await expect(items.nth(1)).toContainText('Lingcod <b>x</b>');
@@ -100,7 +104,7 @@ test('edit_fills_the_log_form_and_saves_the_whole_entry_in_place', async ({page,
   await card.locator('#log-lat').fill(''); await card.locator('#log-lon').fill('');
   await card.getByRole('button', {name: 'Save changes'}).click();
   await expect(card.locator('#account-status')).toHaveText('Entry updated.');
-  expect(stub.patches[1]!.body).toEqual({started_at: stub.rows[1]!.started_at, ended_at: null, outcome: 'blank', count: 0, species: 'Lingcod <b>x</b>', method: 'jig', trip_id: null, lat: null, lon: null, note: null});
+  expect(stub.patches[1]!.body).toEqual({started_at: seededStart, ended_at: null, outcome: 'blank', count: 0, species: 'Lingcod <b>x</b>', method: 'jig', trip_id: null, lat: null, lon: null, note: null});
   expect(pageErrors).toEqual([]);
 });
 

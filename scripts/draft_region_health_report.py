@@ -13,6 +13,7 @@ import re
 from pathlib import Path
 
 PAST_DAY_REPORT = 'catches-'
+SOURCE_STATUSES = ('ok', 'stale', 'missing', 'failed', 'retained')
 # Exception type name (the part of a collector issue before the first ': ') -> class. The rest can
 # hold provider page text: only the class is printed, plus the status of http.HTTPStatusError ('HTTP 503 from host').
 ERROR_CLASSES = {name: cls for cls, names in (
@@ -50,8 +51,8 @@ def _read(path):
         raise Unreadable(f'{path.name}: unreadable JSON') from None
 
 
-def _shape(evidence, rules):
-    """Raise Unreadable naming the first missing or wrongly typed key, never the file content."""
+def _validate(evidence, rules, region):
+    """Name invalid fields without echoing receipt values."""
     def get(obj, key):
         return obj.get(key) if isinstance(obj, dict) else None
     health, sources, issues = get(evidence, 'health'), get(evidence, 'sources'), get(get(evidence, 'health'), 'issues')
@@ -72,6 +73,21 @@ def _shape(evidence, rules):
     if any(source['status'] in ('failed', 'retained') and ident not in listed for ident, source in sources.items()):
         raise Unreadable('latest.json: health.issues omits failed or retained sources')
 
+    for name, receipt in (('latest.json', evidence), ('regulations-health.json', rules)):
+        if receipt.get('region_id') != region:
+            raise Unreadable(f'{name}: region_id does not match the requested region')
+    if not sources:
+        raise Unreadable('latest.json: sources must not be empty')
+    if any(row['status'] not in SOURCE_STATUSES for row in sources.values()):
+        raise Unreadable('latest.json: sources status is not recognized')
+    if get(health, 'sources_total') != len(sources):
+        raise Unreadable('latest.json: health.sources_total does not match the source rows')
+    ok = sum(row['status'] == 'ok' for row in sources.values())
+    if get(health, 'sources_ok') != ok:
+        raise Unreadable('latest.json: health.sources_ok does not match the ok source rows')
+    if get(health, 'critical_available') and not ok:
+        raise Unreadable('latest.json: health.critical_available requires at least one ok source')
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Report draft region legal and source health.')
@@ -89,7 +105,7 @@ def main(argv=None):
         raise SystemExit('Draft collector produced no regional receipt')
     try:
         evidence, rules = _read(root / 'latest.json'), _read(root / 'regulations-health.json')
-        _shape(evidence, rules)
+        _validate(evidence, rules, region)
     except Unreadable as bad:
         with open(args.summary, 'a') as out:
             out.write(f'## {region} draft rehearsal\nDraft evidence unreadable: {bad}\n')

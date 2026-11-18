@@ -12,6 +12,12 @@ stored in the last 24 hours and whether a `fleet-ais-stale` issue is open (read
 from the GitHub API for $GITHUB_REPOSITORY). Prints a Markdown report and appends
 it to $GITHUB_STEP_SUMMARY when set.
 
+For a local-only R2 summary, pass --r2-meter UTC_DAY READS CEILING. Use today's
+UTC date and the count from the cost meter's D1 row (the optional owner check
+in docs/operations/cost-ceiling.md), plus the configured ceiling for that day.
+Use 'unknown' for missing values or 'off' for an explicitly disabled ceiling.
+This mode prints only to stdout; it doesn't query any service.
+
 Needs CF_ANALYTICS_TOKEN (an API token with Account · Account Analytics · Read)
 and CLOUDFLARE_ACCOUNT_ID. Without them it prints why and exits 0, so the
 scheduled workflow stays green until the owner opts in. A query the API
@@ -232,6 +238,29 @@ def fleet_line(rows, issue, now):
     return 'Fleet AIS: ' + '; '.join(parts) + '.'
 
 
+def r2_meter_line(now, snapshot=None):
+    day = now.astimezone(timezone.utc).date().isoformat()
+    reads = ceiling = None
+    disabled = False
+    if snapshot and snapshot[0] == day:
+        _, count, limit = snapshot
+        if re.fullmatch(r'[0-9]{1,19}', count):
+            reads = int(count)
+        if re.fullmatch(r'[1-9][0-9]{0,11}', limit):
+            ceiling = int(limit)
+        disabled = limit == 'off'
+    reads_text = 'batched reads unknown' if reads is None else f'{reads:,} batched reads'
+    ceiling_text = 'off' if disabled else 'unknown' if ceiling is None else f'{ceiling:,}'
+    headroom = 'headroom not applicable' if disabled else 'headroom unknown'
+    if reads is not None and ceiling is not None:
+        remaining = ceiling - reads
+        headroom = (f'{remaining:,} reads of recorded headroom' if remaining >= 0
+                    else f'headroom exhausted ({-remaining:,} over ceiling)')
+    return (f'R2 read meter ({day} UTC): {reads_text}; configured ceiling {ceiling_text}; {headroom}; '
+            'degraded duration unknown (the meter does not record transition times). '
+            'Batched counts may omit pending reads and are not billing totals.')
+
+
 def report(results, fleet_issue='', now=None):
     out = ['# SkipperCast operations report', '']
     routes = results.get('routes') or []
@@ -260,7 +289,14 @@ def report(results, fleet_issue='', now=None):
 
 def main(argv=None, environ=None, opener=urlopen, github_opener=urlopen, now=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.parse_args(argv)
+    parser.add_argument('--r2-meter', nargs=3, metavar=('UTC_DAY', 'READS', 'CEILING'),
+                        help='print only the local R2 summary from the documented D1 aggregate and configured ceiling; '
+                             'use unknown for missing values or off for an explicitly disabled ceiling')
+    args = parser.parse_args(argv)
+    now = now or datetime.now(timezone.utc)
+    if args.r2_meter:
+        print(r2_meter_line(now, args.r2_meter))
+        return 0
     environ = os.environ if environ is None else environ
     token, account = environ.get('CF_ANALYTICS_TOKEN', '').strip(), environ.get('CLOUDFLARE_ACCOUNT_ID', '').strip()
     summary = environ.get('GITHUB_STEP_SUMMARY')
@@ -270,7 +306,7 @@ def main(argv=None, environ=None, opener=urlopen, github_opener=urlopen, now=Non
         print(text, end='')
         if summary:
             with open(summary, 'a') as handle:
-                handle.write(text)
+                handle.write(text + '\n' + r2_meter_line(now) + '\n')
         return 0
     results = {}
     for key, sql in QUERIES.items():
@@ -294,7 +330,8 @@ def main(argv=None, environ=None, opener=urlopen, github_opener=urlopen, now=Non
     print(text)
     if summary:
         with open(summary, 'a') as handle:
-            handle.write(text + '\n')
+            # The scheduled report has no admitted input for the aggregate D1 count or the ceiling.
+            handle.write(text + '\n' + r2_meter_line(now) + '\n')
     return 0
 
 

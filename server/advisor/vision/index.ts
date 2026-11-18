@@ -3,7 +3,7 @@
 // the provider chain.
 //
 //   visionChain(env, deps).classify(image)
-//     -> advisor_media.classification_json has a `classify` result? return it (no provider call)
+//     -> advisor_media.classification_json has a `classify` result with valid safety fields? return it (no provider call)
 //     -> the original is over 4.5 MB, or HEIC/HEIF? read the media job's public.jpg instead (TA-M1)
 //     -> still over 4.5 MB (no public.jpg yet)? throw MediaTooLarge (the consumer waited for it, TA-M1)
 //     -> for each provider in ADVISOR_VISION_PROVIDERS order:
@@ -28,6 +28,7 @@ import {PROTECTED} from './species.ts';
 import type {ProtectedSpecies} from './species.ts';
 import {createClaudeVision} from './claude.ts';
 import {createHermesVision} from './hermes.ts';
+import {hasModerationEvidence} from './validate.ts';
 import {MediaTooLarge, UnsupportedImage, ProviderNotConfigured, VisionCapReached, VisionUnavailable} from './errors.ts';
 import type {ClaudeVisionDeps} from './claude.ts';
 // TA-M1: the derived public.jpg an oversized or HEIC original is read through.
@@ -118,9 +119,9 @@ export function decideAcceptReading(r: Pick<CountBoardReading, 'overall_confiden
   return {accept: r.overall_confidence >= THRESHOLDS.acceptOverall && r.lines.length > 0 && uncertain.length === 0, uncertain};
 }
 
-/** Hold for a human before anything is published (OP-2). */
+/** Hold for a human before anything is published (OP-2); invalid evidence is unknown, not clear. */
 export function decideHold(c: Pick<Classification, 'has_person' | 'person_confidence' | 'nsfw'>): boolean {
-  return (c.has_person && c.person_confidence >= THRESHOLDS.holdPerson) || c.nsfw;
+  return !hasModerationEvidence(c) || (c.has_person && c.person_confidence >= THRESHOLDS.holdPerson) || c.nsfw;
 }
 
 export type FishBand = 'high' | 'medium' | 'ask';
@@ -226,7 +227,7 @@ export function visionChain(env: Env, deps: VisionDeps = {}): VisionChain {
 
   async function run<M extends VisionMethod>(method: M, input: ImageInput, call: (p: VisionProvider, image: ImageInput) => Promise<Results[M]>): Promise<Results[M]> {
     const hit = await cached(env, input.media_id, method);
-    if (hit) return hit;
+    if (hit && (method !== 'classify' || hasModerationEvidence(hit))) return hit;
     let image = once(input);
     let size = (await image.bytes()).byteLength;
     if (size > THRESHOLDS.maxImageBytes || (HEIF_MIMES as readonly string[]).includes(input.mime)) {

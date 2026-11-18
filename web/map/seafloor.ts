@@ -453,6 +453,8 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
   }
 
   async function draw(): Promise<void> {
+    // Even a view that cannot draw supersedes pending renders; their tiles can still be cached.
+    const token = ++loading;
     if (!alive || state !== 'ready' || !current() || shownPresentation.peek() !== 'chart') return;
     const at = camera.peek(), head = header, reader = archive, admit = pub;
     if (!at || !head || !reader || !admit) return;
@@ -471,7 +473,6 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     if (box[0] >= box[2] || box[1] >= box[3]) return clear('No published seafloor survey in this view · the rest of the coast is not assessed');
     const wanted = tilesForBounds(box, Math.min(TILE_ZOOM, head.maxZoom)) as [number, number, number][];
     if (wanted.length > MAX_TILES) return clear('Zoom in to load seafloor candidates');
-    const token = ++loading;
     // R4-SC-09: this view's ranges outrank any older view's still waiting, and the centre's go first (asked in that
     // order; read back in tilesForBounds' order, so the drawn features are the same as before).
     // R4-SC-09-F1c: until this archive's detail has drawn once, a rough-first archive's rough tiles for the view are

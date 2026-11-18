@@ -130,7 +130,10 @@ export function admitSnapshot<P extends CoastProduct>(product: P, body: unknown,
   if (!validSnapshot(product, body)) return 'invalid';
   const generated = Date.parse(body.generatedAt);
   if (generated > now + CLOCK_SKEW_MS) return 'invalid';
-  const saved = savedAt !== null && Number.isFinite(Date.parse(savedAt)) ? savedAt : null;
+  // Absent marker: a network read. Present: it must be a real time no later than now (plus skew), or a report is refused.
+  const savedMs = savedAt === null ? null : Date.parse(savedAt);
+  if (product === 'report' && savedMs !== null && (!Number.isFinite(savedMs) || savedMs > now + CLOCK_SKEW_MS)) return 'invalid';
+  const saved = savedMs !== null && Number.isFinite(savedMs) && savedMs <= now + CLOCK_SKEW_MS ? savedAt : null;
   const expires = generated + snapshotLimit(product, saved);
   if (expires <= now) return 'expired';
   return {product, data: body, generatedAt: body.generatedAt, receivedAt: new Date(now).toISOString(), savedAt: saved, expiresAt: new Date(expires).toISOString()};
