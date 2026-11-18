@@ -146,7 +146,7 @@ Only after a port ([port to Twilio](advisor-port-to-twilio.md)). Twilio console 
   TOKEN_FILE="$TOKEN_DIR/meta-page-token-$(date -u +%Y%m%dT%H%M%SZ)-$$"
   ```
 
-  Keep `META_APP_ID` and `META_APP_SECRET` in the environment, never in command arguments. From the checkout, run `node scripts/advisor/meta-token.mjs --token-file "$TOKEN_FILE"` for a fresh Page token ([09 § Setup](../../plans/text-advisor/09-social.md)). The script prints the Page id, Instagram user id, token expiry, quota and account type; it never prints the Page token. It creates the file itself, exclusively and owner-only, only after every check has passed, and refuses an existing file or symlink: use a new name every run. If the run fails or exits 1 (for example, a non-Business account), do not import; no token file exists at that point. If it fails while writing the file, the script does not delete anything by name (another run could have taken that path in the meantime): it empties the file it created through its own open handle and says so, but the empty file may still be at `$TOKEN_FILE`. Check it with `ls -l` only; remove it yourself only if it is an empty file you made, and use a new name. If the script says the file "was not created by this run", leave it alone, check it with `ls -l` only (never open it) and use a new name. Never run `rm` on `$TOKEN_FILE` after a failed run.
+  Keep `META_APP_ID` and `META_APP_SECRET` in the environment, never in command arguments. From the checkout, run `node scripts/advisor/meta-token.mjs --token-file "$TOKEN_FILE"` for a fresh Page token ([09 § Setup](../../plans/text-advisor/09-social.md)). The script prints the Page id, Instagram user id, token expiry, quota and account type; it never prints the Page token. It creates the file itself, exclusively and owner-only, only after every check has passed, and refuses an existing file or symlink: use a new name every run. If the run fails or exits 1 (for example, a non-Business account), do not import; no token file exists at that point. If it fails while writing the file, the script truncates the file it created through its own open handle and does not delete anything by name (another run could have taken that path in the meantime), so an emptied file may remain at `$TOKEN_FILE`. If that truncation also fails, the script warns that the file may still hold part of the token. In either case leave the path untouched: do not import from it, do not open it, do not run `rm` on it, and start again with a new `$TOKEN_FILE` name; if the script warned that part of the token may remain, also rotate the token again. If the script says the file "was not created by this run", it belongs to someone else: leave it untouched and use a new name.
 
   Import only by redirecting the file into the secret command. Use the GitHub command for setup; on rotation, use both commands:
 
@@ -157,7 +157,7 @@ Only after a port ([port to Twilio](advisor-port-to-twilio.md)). Twilio console 
 
   Never `cat` or `echo` the token, open the file in an editor or pager, copy the token to the clipboard, pass it with `--body`, or paste it into chat, issues, notes or a recording.
 
-  After **Admin → Health** shows Meta configured and the quota read works, remove the local file and confirm it is gone:
+  After a run that succeeded, you imported from it and **Admin → Health** shows Meta configured and the quota read works, remove that local file and confirm it is gone (never after a failed run):
 
   ```bash
   rm -- "$TOKEN_FILE"

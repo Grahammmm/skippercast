@@ -148,8 +148,8 @@ export async function savePageToken(path, token) {
     let emptied = true;
     try { await file.truncate(0); } catch { emptied = false; }
     throw Error(emptied
-      ? 'Could not save the Page token. This run created a file for it, emptied it, and did not delete anything by name. Check the path with ls -l, remove it yourself only if it is an empty file you made, and start again with a new --token-file name.'
-      : 'Could not save the Page token, and the file this run created could not be emptied: it may hold part of the token. Check the path with ls -l, remove the file yourself if it is yours, and start again with a new --token-file name.');
+      ? 'Could not save the Page token. This run created a file for it, emptied it, and did not delete anything by name. Leave the path untouched (it may now belong to another run) and start again with a new --token-file name.'
+      : 'Could not save the Page token, and the file this run created could not be emptied: it may hold part of the token. Leave the path untouched (it may now belong to another run), start again with a new --token-file name, and rotate the Page token (re-run this script for a fresh one and revoke the old) because part of it may be on disk.');
   } finally { await file.close(); }
 }
 

@@ -14,7 +14,10 @@ the feed was built. A critical kind (buoys including their spectra, alerts,
 tides, forecast models; see catalog/feed-health.json) fails the check only when
 every source of that kind in one feed is degraded past the feed's limit: one
 buoy out while another reports is a partial outage, reported but not failed.
-Other kinds only warn.
+Other kinds only warn. A feed also lists the critical kinds it must carry (`required_kinds` in
+catalog/feed-health.json): a required kind with no source at all is missing, not healthy, and
+fails the check like a wholly degraded kind; a critical kind the feed does not list is not
+applicable to it and stays quiet when absent.
 
 Besides the top-level live feed (the default region's alias) and the daily
 feed, each published region's live feed (`conditions/regions/<id>/latest.json`,
@@ -156,8 +159,34 @@ def past_limit(row, limit_hours):
     return degraded and row["critical"] and (row["age_hours"] is None or row["age_hours"] > limit_hours)
 
 
-def failing_kinds(feed, limit_hours, critical_kinds=None):
-    """Critical kinds whose every source in this feed is degraded past limit_hours, sorted.
+def required_kinds_of(config, critical_kinds=None):
+    """The critical kinds a feed must carry at least one source of (its `required_kinds`), sorted.
+
+    A critical kind that is not listed is not applicable to that feed: absent, it stays quiet. A feed
+    that lists none (or a test config without the key) expects nothing. A malformed or non-critical
+    entry raises ValueError, so a typo cannot silently turn the check off.
+    """
+    declared = config.get("required_kinds", []) if isinstance(config, dict) else []
+    critical = set(HEALTH["critical_kinds"] if critical_kinds is None else critical_kinds)
+    if not isinstance(declared, list) or not all(isinstance(kind, str) and kind in critical for kind in declared):
+        raise ValueError("required_kinds must be a list of critical kinds")
+    return sorted(set(declared))
+
+
+def missing_kinds(feed, required_kinds):
+    """Required kinds with no source at all in this feed: the group was never assembled.
+
+    An unreadable feed (not an object) reports nothing here; its age check already fails it.
+    """
+    if not isinstance(feed, dict):
+        return []
+    present = {source.get("kind") for _, source in feed_sources(feed)}
+    return sorted(kind for kind in required_kinds if kind not in present)
+
+
+def failing_kinds(feed, limit_hours, critical_kinds=None, required_kinds=()):
+    """Critical kinds that fail in this feed, sorted: every source degraded past limit_hours, or a
+    required kind with no source in the feed at all (see missing_kinds).
 
     Spectral buoy sources (`buoy-<id>-spectrum`) are kind observation, so one buoy's
     spectrum reporting keeps the observation kind alive.
@@ -168,20 +197,24 @@ def failing_kinds(feed, limit_hours, critical_kinds=None):
             over[row["kind"]] = over.get(row["kind"], 0) + 1
     for _, source in feed_sources(feed):
         totals[source.get("kind")] = totals.get(source.get("kind"), 0) + 1
-    return sorted(kind for kind, count in over.items() if count == totals.get(kind))
+    degraded = {kind for kind, count in over.items() if count == totals.get(kind)}
+    return sorted(degraded | set(missing_kinds(feed, required_kinds)))
 
 
-def source_verdict(feed, limit_hours, label, critical_kinds=None):
+def source_verdict(feed, limit_hours, label, critical_kinds=None, required_kinds=()):
     """Return (status bits, lines) for a feed's sources.
 
     DEGRADED when every source of a critical kind is degraded past limit_hours (or has no
-    data time); PARTIAL when some critical sources are past the limit while others of their
-    kind are not; 0 otherwise. Every degraded source is listed either way.
+    data time), or when a kind this feed requires has no source at all (missing, not merely
+    degraded; healthy sibling kinds are named as still reporting); PARTIAL when some critical
+    sources are past the limit while others of their kind are not; 0 otherwise. Every degraded
+    source is listed either way. A critical kind the feed does not require is quiet when absent.
     """
     rows = degraded_sources(feed, critical_kinds)
-    if not rows:
+    missing = missing_kinds(feed, required_kinds)
+    if not rows and not missing:
         return 0, []
-    failing = set(failing_kinds(feed, limit_hours, critical_kinds))
+    failing = set(failing_kinds(feed, limit_hours, critical_kinds, required_kinds))
     lines, partial = [], 0
     for row in rows:
         over = past_limit(row, limit_hours)
@@ -193,7 +226,16 @@ def source_verdict(feed, limit_hours, label, critical_kinds=None):
         backup = f", backup {row['station']} for {row['fallback_for']} (degraded service)" if row.get("fallback_for") else ""
         lines.append(f"- {mark} {row['id']} ({row['kind']}): {row['status']}{backup}, {age_text} ({role})")
     if failing:
-        head = f"{label}: every {', '.join(sorted(failing))} source degraded past {limit_hours:g} h."
+        out = sorted(failing - set(missing))
+        parts = []
+        if out:
+            parts.append(f"every {', '.join(out)} source degraded past {limit_hours:g} h")
+        if missing:
+            alive = sorted(set(required_kinds) - failing)
+            parts.append(f"required {', '.join(missing)} source group missing from the feed"
+                         + (f" (partial coverage: {', '.join(alive)} still reporting)" if alive else ""))
+        head = f"{label}: {'; '.join(parts)}."
+        lines = [f"- FAIL ({kind}): MISSING, no {kind} source in the feed (required for this feed)" for kind in missing] + lines
     elif partial:
         head = (f"{label}: {partial} critical source(s) degraded past {limit_hours:g} h while others of "
                 "the same kind are not (partial outage; reported, does not fail).")
@@ -288,7 +330,8 @@ def check_feed(name, public, github, now, fetch=fetch_json, max_age_hours=None, 
     source_bits = 0
     if feed is not None:
         label = config["label"] + ("" if feed is public_feed else " (GitHub copy)")
-        source_bits, source_lines = source_verdict(feed, config["critical_degraded_hours"], label, health["critical_kinds"])
+        source_bits, source_lines = source_verdict(feed, config["critical_degraded_hours"], label, health["critical_kinds"],
+                                                   required_kinds_of(config, health["critical_kinds"]))
         lines += source_lines
         reasons = (feed.get("health") or {}).get("degraded_reasons") if isinstance(feed.get("health"), dict) else None
         if isinstance(reasons, list) and reasons:
@@ -332,7 +375,8 @@ def check_region(region, critical, base, now, fetch=fetch_json, health=None, eve
         line += " (not an active region; reported, does not fail)"
     bits, lines = 0 if ok else STALE if critical else PARTIAL, [line]
     if isinstance(feed, dict):
-        source_bits, source_lines = source_verdict(feed, config["critical_degraded_hours"], label, health["critical_kinds"])
+        source_bits, source_lines = source_verdict(feed, config["critical_degraded_hours"], label, health["critical_kinds"],
+                                                   required_kinds_of(config, health["critical_kinds"]))
         # A preview region's whole-kind outage is reported like its stale feed: a partial outage.
         bits |= source_bits if critical else (PARTIAL if source_bits else 0)
         lines += source_lines

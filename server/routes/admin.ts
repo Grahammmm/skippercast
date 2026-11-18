@@ -45,7 +45,7 @@
 //   GET  /api/admin/fleet/ais/health   ?region=   fleet/admin/ais-health.ts (CF-35)
 //   GET  /api/admin/fleet/trips        ?region= &labelled=all|yes|no|agent|approved &cursor=   fleet/admin/labels.ts (CF-48): trip labelling
 //   GET  /api/admin/fleet/trips/:id, POST /api/admin/fleet/trips/:id/labels {started_at, ended_at, label, basis}, POST /api/admin/fleet/labels/:id/delete
-//   POST /api/admin/fleet/trips/:id/approve   the trip's agent labels become the signed-in admin's (N7)
+//   POST /api/admin/fleet/trips/:id/approve   {reviewed_ids}: the reviewed agent labels become the signed-in admin's (N7)
 import {Hono} from 'hono';
 import {json, body} from '../http.ts';
 import {requireAdmin, adminUser, NOT_FOUND} from '../middleware/admin.ts';
@@ -331,7 +331,10 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
   admin.get('/api/admin/fleet/trips/:id', async c => found(await tripDetail(c.env.DB!, c.req.param('id'))));
   admin.post('/api/admin/fleet/trips/:id/labels', async c => answer(await addLabel(c.env.DB!, c.req.param('id'), await body(c.req.raw, 4096), c.var.owner, stamp())));
   admin.post('/api/admin/fleet/labels/:id/delete', async c => answer(await deleteLabel(c.env.DB!, c.req.param('id'))));
-  admin.post('/api/admin/fleet/trips/:id/approve', async c => answer(await approveTrip(c.env.DB!, c.req.param('id'), c.var.owner)));   // N7
+  admin.post('/api/admin/fleet/trips/:id/approve', async c => {   // N7
+    const {reviewed_ids} = await body(c.req.raw);
+    return answer(await approveTrip(c.env.DB!, c.req.param('id'), c.var.owner, reviewed_ids));
+  });
 
   admin.post('/api/admin/contacts/:id/block', async c => {
     const input = await body(c.req.raw, 1024);
