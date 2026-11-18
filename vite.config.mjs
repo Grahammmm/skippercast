@@ -14,6 +14,7 @@
 // their stable URLs the same way (the manifest names its icons by path).
 import {existsSync, readdirSync} from 'node:fs';
 import {basename, resolve} from 'node:path';
+import {build as esbuild} from 'esbuild';
 import {defineConfig} from 'vite';
 
 /** Every page (NAME.html) directly in `root` is an entry. */
@@ -155,6 +156,44 @@ function earlyScripts(root) {
   };
 }
 
+// A classic head script must run before the parser reaches the body, not
+// merely before DOMContentLoaded like a deferred module. Bundle it alone so
+// it cannot wait on a shared chunk, and track the HTML reference in the page's
+// manifest graph for startup budgets, landing warm-up and offline packs.
+function themeBoot(root) {
+  const source = resolve(root, '../web/theme-boot.ts');
+  let ref;
+  return {
+    name: 'skippercast:theme-boot',
+    apply: 'build',
+    async buildStart() {
+      this.addWatchFile(source);
+      const {outputFiles: [script]} = await esbuild({
+        stdin: {contents: 'import {bootTheme} from "./theme-boot.ts"; bootTheme();', resolveDir: resolve(root, '../web')},
+        bundle: true, format: 'iife', minify: true, write: false,
+      });
+      ref = this.emitFile({type: 'asset', name: 'theme-boot.js', source: script.contents});
+    },
+    generateBundle: {
+      order: 'post',
+      handler(_, bundle) {
+        const file = this.getFileName(ref);
+        const page = bundle['app.html'];
+        const manifest = bundle['.vite/manifest.json'];
+        const graph = JSON.parse(manifest.source.toString());
+        // Vite doesn't inspect the classic script we add below. Include it
+        // as a static dependency of the HTML, not a separate app entry.
+        const key = '_theme-boot.js';
+        graph[key] = {file};
+        graph['app.html'].imports = [...(graph['app.html'].imports || []), key];
+        manifest.source = JSON.stringify(graph, null, 2);
+        const tag = `<script src="./${file}"></script>`;
+        page.source = page.source.toString().replace(/(<head>\s*(?:<meta charset="[^"]*"\s*\/?>\s*)?)/i, `$1${tag}\n    `);
+      },
+    },
+  };
+}
+
 /** The client build for authored pages in `root`, written to `outDir`. */
 export function clientConfig({root = resolve(import.meta.dirname, 'dist'), outDir = resolve(root, 'client')} = {}) {
   return {
@@ -162,7 +201,8 @@ export function clientConfig({root = resolve(import.meta.dirname, 'dist'), outDi
     base: './',
     publicDir: false,
     logLevel: 'warn',
-    plugins: [staticRefs(), pageStyles(root), maplibreCss(), earlyScripts(root)],
+    plugins: [staticRefs(), pageStyles(root), maplibreCss(), earlyScripts(root),
+      ...(existsSync(resolve(root, 'app.html')) && existsSync(resolve(root, '../web/theme-boot.ts')) ? [themeBoot(root)] : [])],
     // Preact islands in web/ (P4-01b): JSX compiles to preact/jsx-runtime.
     oxc: {jsx: {runtime: 'automatic', importSource: 'preact'}},
     build: {
