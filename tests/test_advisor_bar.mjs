@@ -44,7 +44,7 @@ function feed({region = REGION, pointId = 'central', over = {}, by = () => ({}),
     hourly: {time: order, ...Object.fromEntries(keys.filter(([k]) => !drop.includes(k)).map(([k, src]) => [k, order.map(t => v(t)[src ?? k])]))}});
   const model = keys => ({meta: {last_run_initialisation_time: now / 1000 - ageH * 3600}, data: Array.from({length: index + 1}, (_, i) => i === index ? series(keys) : null)});
   const wave = ['wave_height', 'wave_period', 'wind_wave_height', 'wind_wave_period', 'swell_wave_height', 'swell_wave_period', 'swell_wave_direction', 'secondary_swell_wave_height', 'secondary_swell_wave_direction'].map(k => [k]);
-  return {region_id: region.id, completed_at: new Date(now - 3600000).toISOString(), forecast: {models: {
+  return {region_id: region.id, completed_at: new Date(now - 3600000).toISOString(), forecast: {requested_points: region.forecast_points.map(p => [p.id, p.latitude, p.longitude]), models: {
     gfs_global: model([['wind_speed_10m'], ['wind_gusts_10m'], ['wind_direction_10m']]),
     ncep_gfswave016: model(wave),
     ecmwf_ifs025: model([['wind_speed_10m', 'ecmwf_wind'], ['wind_gusts_10m', 'ecmwf_gust']]),
