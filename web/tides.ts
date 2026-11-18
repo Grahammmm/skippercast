@@ -50,16 +50,16 @@ export function tideTrend(points: readonly TidePoint[], at: string | number): Ti
 export interface TideDay {
   readonly tides: readonly TidePoint[];
   readonly tideEvents: readonly TideEvent[];
-  readonly tideDatum: string;
+  readonly tideDatum: string | null;
   readonly sunrise: string | null;
   readonly sunset: string | null;
 }
 
-/** The arguments of `chart()` for the day's sparkline, as briefing.ts `tideChart` builds them; null with fewer than two points. */
+/** The arguments of `chart()` for the day's sparkline; null without a datum or two points. */
 export function sparkArgs(day: TideDay, selected: string, tz: string, colour = TIDE_COLOUR):
   [Series[], string, string, string, string, {mini: boolean; sunrise: string | null; sunset: string | null}] | null {
   const first = day.tides[0], last = day.tides.at(-1);
-  if (day.tides.length < 2 || !first || !last) return null;
+  if (!day.tideDatum || day.tides.length < 2 || !first || !last) return null;
   const heights = [...day.tides, ...day.tideEvents].map(p => p.heightFt).filter(Number.isFinite);
   const min = heights.length ? Math.min(...heights) : 0, max = (heights.length ? Math.max(...heights) : 5) + 0.3;
   const row: Series = {label: 'Tide', unit: `ft ${day.tideDatum}`, color: colour, points: day.tides.map(p => ({at: p.at, value: p.heightFt})), gapMs: TREND_STEP_MS, min, max};
