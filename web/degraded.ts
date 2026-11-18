@@ -7,9 +7,10 @@
 // (DegradedNotice, web/app/Masthead.tsx). installDegradedWatch wraps the
 // page's own fetch once, so every reader is covered without each one knowing
 // about the ceiling: the feeds, the brief, the Chart and the PMTiles ranges
-// the map reads on the main thread. The state lasts for the page: the
-// ceiling holds until the UTC day ends. A Last-Known-At before 2020 or more
-// than SKEW_MS past the page's clock is no time, so it cannot date the notice.
+// the map reads on the main thread. The ceiling holds until the UTC day ends;
+// only a verified live feed on a later day retires the old notice. A
+// Last-Known-At before 2020 or more than SKEW_MS past the page's clock is no
+// time, so it cannot date the notice.
 //
 // Erasable syntax only: the node tests import it by type stripping.
 import {signal} from '@preact/signals';
@@ -22,19 +23,53 @@ export const LAST_KNOWN_HEADER = 'X-SC-Last-Known-At';
 /** The earliest believable saved-copy time, and how far past the page's clock one may be (clock skew). */
 export const EARLIEST = Date.UTC(2020, 0, 1), SKEW_MS = 5 * 60_000;
 
-/** Null while every response is live; else the oldest saved copy's time (ISO), or null when none was a saved copy. */
+/** Null when there is no active notice; else the marked day's oldest saved-copy time (ISO), if known. */
 export type Degraded = {since: string | null} | null;
 export const degraded = signal<Degraded>(null);
 
-/** Publish the cost-ceiling mark of `response`, if it has one; the oldest saved copy wins. */
-export function noteResponse(response: Pick<Response, 'headers'> | null | undefined, now: number = Date.now()): void {
+type ObservedResponse = Pick<Response, 'headers'> & Partial<Pick<Response, 'status' | 'type' | 'url'>>;
+const utcDay = (ms: number): number => Math.floor(ms / 86_400_000);
+let markedDay = -Infinity;
+// An older in-flight mark cannot restore a notice after a verified recovery.
+let recoveredDay = -Infinity;
+
+/** The Worker's live path, not a static asset, saved copy, or cached public read. */
+function liveRefresh(response: ObservedResponse, now: number, day: number): boolean {
+  const {headers, status, type, url} = response;
+  if (type !== 'basic' || (status !== 200 && status !== 206) || !url) return false;
+  if (headers.has(LAST_KNOWN_HEADER) || headers.has('X-SC-Offline') || headers.has('X-SC-Saved-At')) return false;
+  const age = headers.get('Age');
+  if (age !== null && age !== '0') return false;
+  const date = Date.parse(headers.get('Date') ?? '');
+  if (utcDay(date) !== day || date > now + SKEW_MS) return false;
+  let path: string;
+  try { path = new URL(url).pathname; } catch { return false; }
+  const cache = headers.get('X-SC-Cache');
+  // Mirror the positive provenance already emitted by server/feeds.ts and server/routes/public.ts.
+  if (path.startsWith('/feeds/')) return headers.get('X-Feed-Source') === 'r2' && cache !== 'hit';
+  return status === 200 && cache === 'miss' && /^\/api\/(daily|forecast|intelligence|habitat)$/.test(path);
+}
+
+/** Publish marks by UTC budget day; retire a prior day's mark only on a live refresh. */
+export function noteResponse(response: ObservedResponse | null | undefined, now: number = Date.now(), startedAt = now): void {
   const headers = response?.headers;
-  if (!headers || typeof headers.get !== 'function' || headers.get(DEGRADED_HEADER) !== 'cost-ceiling') return;
+  if (!response || !headers || typeof headers.get !== 'function') return;
+  const mark = headers.get(DEGRADED_HEADER);
+  const day = utcDay(startedAt);
+  const current = degraded.peek();
+  if (mark !== 'cost-ceiling') {
+    if (mark === null && current && day > markedDay && day === utcDay(now) && liveRefresh(response, now, day)) {
+      recoveredDay = day;
+      degraded.value = null;
+    }
+    return;
+  }
+  if (day < recoveredDay || (current && day < markedDay)) return;
   const at = headers.get(LAST_KNOWN_HEADER), time = at ? Date.parse(at) : NaN;
   const since = Number.isFinite(time) && time >= EARLIEST && time <= now + SKEW_MS ? new Date(time).toISOString() : null;
-  const current = degraded.peek();
-  if (current && (!since || (current.since && current.since <= since))) return;
-  degraded.value = {since: since ?? current?.since ?? null};
+  if (current && day === markedDay && (!since || (current.since && current.since <= since))) return;
+  markedDay = day;
+  degraded.value = {since};
 }
 
 const wrapped = new WeakSet<typeof fetch>();
@@ -42,7 +77,10 @@ const wrapped = new WeakSet<typeof fetch>();
 /** `fetchFn`, publishing the cost-ceiling mark of every response it returns; the response itself is untouched. */
 export function watchDegraded(fetchFn: typeof fetch): typeof fetch {
   if (wrapped.has(fetchFn)) return fetchFn;
-  const watched = ((...args: Parameters<typeof fetch>) => fetchFn(...args).then(response => { noteResponse(response); return response; })) as typeof fetch;
+  const watched = ((...args: Parameters<typeof fetch>) => {
+    const startedAt = Date.now();
+    return fetchFn(...args).then(response => { noteResponse(response, Date.now(), startedAt); return response; });
+  }) as typeof fetch;
   wrapped.add(watched);
   return watched;
 }

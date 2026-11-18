@@ -18,6 +18,7 @@ import {boatBasisName, customBoatName, boatRangeNote, type SavedBoatLike} from '
 import {num, t, type Language, type StringId} from '../i18n.ts';
 import {createCoastData} from '../coast-data.ts';
 import {loadConditionsForecast} from '../conditions.ts';
+import {DEGRADED_HEADER} from '../degraded.ts';
 import {parseLimits, type ComfortLimits} from '../limits.ts';
 import {regionPlace} from '../map/currents.ts';
 import {readStored, STORAGE_KEYS} from '../state.ts';
@@ -26,6 +27,8 @@ import {DEFAULT_REGION} from './readings.ts';
 export type LandingVerdict = {verdict: DayVerdict; word: string; sentence: string; day: string; date: string; place: string; href: string;
   /** The boat the verdict rates: the saved boat's name (or \"your <n> ft boat\"), else \"reference 23 ft boat\". */
   boatName: string;
+  /** A successful input arrived as a saved copy; the page-wide notice may clear independently. */
+  saved?: boolean;
   /** The standing model caveat, only for a saved boat outside the reference range; null otherwise. */
   boatNote?: string | null};
 
@@ -78,7 +81,13 @@ async function boundReport(info: Parameters<typeof regionPlace>[0]) {
 export async function loadLandingVerdict(fetchFn: typeof fetch = fetch, now: Date = new Date(), page: string = location.href, lang: Language = 'en'): Promise<LandingVerdict | null> {
   const info = await createRegionReader(fetchFn)(DEFAULT_REGION).catch(() => null);
   if (!info || info === REGION_MISSING) return null;
-  const [feed, read, coast] = await Promise.all([loadDailyFeed(info.id, fetchFn), loadConditionsForecast(info.id, info.center, fetchFn, page), boundReport(info).catch(() => null)]);
+  let saved = false;
+  const readInput: typeof fetch = async (...args) => {
+    const response = await fetchFn(...args);
+    if (response.ok && response.headers?.get(DEGRADED_HEADER) === 'cost-ceiling') saved = true;
+    return response;
+  };
+  const [feed, read, coast] = await Promise.all([loadDailyFeed(info.id, readInput), loadConditionsForecast(info.id, info.center, readInput, page), boundReport(info).catch(() => null)]);
   // A forecast that could not be read is not a weather answer: the optional landing section stays absent, never Unknown.
   if (read.state !== 'loaded') return null;
   const forecast = read.forecast;
@@ -90,5 +99,6 @@ export async function loadLandingVerdict(fetchFn: typeof fetch = fetch, now: Dat
   const date = brief.date ?? dateKey(hour ? new Date(hour) : now, tz), when = leadDayText(date, now, tz, lang);
   return {verdict: v.verdict, word: t(`brief.verdict.${v.verdict}` as StringId, lang), sentence: `${v.limit}${v.held ? ` ${v.held}` : ''}`,
     day: when.charAt(0).toUpperCase() + when.slice(1), date, place: info.name, href: briefHref(info.id, date),
+    saved,
     boatName: mine.boat ? boatName(mine.boat, lang) : t('landing.boat.reference', lang), boatNote: mine.boat && boatRangeNote(mine.boat.loa_ft) ? t('brief.boat.note', lang) : null};
 }
