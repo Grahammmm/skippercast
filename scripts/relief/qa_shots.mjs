@@ -153,9 +153,14 @@ async function capture(browser, archives, device, width, height, theme, zoom) {
     if (error || errors.length) throw new Error(error || errors[0]);
     const notice = page.getByText('NOT FOR NAVIGATION · MB-08 Chart QA', {exact: true});
     if (!(await notice.isVisible()) || !(await page.locator('main canvas').isVisible())) throw new Error('missing notice or Chart canvas');
+    // The box lets QA check the notice's actual pixels in the PNG rather than trust the flag below.
+    const box = await notice.boundingBox();
+    if (!box) throw new Error('notice has no box');
+    const x = Math.max(0, Math.floor(box.x)), y = Math.max(0, Math.floor(box.y));
+    const notice_box = [x, y, Math.min(width, Math.ceil(box.x + box.width)) - x, Math.min(height, Math.ceil(box.y + box.height)) - y];
     const path = `shots/${theme}-${device}-z${zoom}.png`;
     const png = await page.screenshot({path: join(folder, path)});
-    shots.push({path, sha256: sha(png), theme, device, zoom, viewport: [width, height], navigation_visible: true});
+    shots.push({path, sha256: sha(png), theme, device, zoom, viewport: [width, height], navigation_visible: true, notice_box});
   } catch (error) {
     throw new Error(`${theme}/${device}/z${zoom}: ${errors[0] || error.message}`, {cause: error});
   } finally { await ctx.close(); }

@@ -1,8 +1,11 @@
 """R7: measure the packaged relief bytes, then hand them to the review envelope.
 
-Take fixed-camera shots with qa_shots.mjs first, then pass its shots.json here.
+Take fixed-camera shots with `region.py shots` (it runs qa_shots.mjs under a receipt) first, then pass
+its shots.json here; a pack that the capture stage did not produce for this release is refused, and
+each capture must show the navigation notice and rendered Chart pixels.
 Mosaic elevation (NAVD88, positive up), contributor IDs and support classes
-must come from current public stage receipts. For z16–17, --fine-proof Z PATH
+must be outputs of the packaged tile producer's elevation input (see _bind_evidence). For z16–17,
+--fine-proof Z PATH
 is a three-band raster (support class, elevation m positive up, native spacing
 m) on that zoom's exact EPSG:3857 pixel lattice, from the current tile producer.
 It describes the final contributing support after any resampling/blending;
@@ -30,6 +33,7 @@ DEVICES = {'desktop': [1200, 800], 'phone': [390, 844]}
 THEMES = ('dark', 'light')
 WEB_HALF = 20037508.342789244
 MEASURED_TIERS = {'1m-measured', '2m', '5m'}
+NOTICE_MIN = (100, 10)  # px: the smallest box that can hold the NOT FOR NAVIGATION line
 
 
 def _json(path):
@@ -167,7 +171,7 @@ def _raster_metrics(path, release, region_bounds, elevation, contributor, fine):
     from rasterio.warp import transform_bounds
 
     sizes = defaultdict(list)
-    painted = transparent = land = land_paint = outside = uncertified = seam_n = 0
+    painted = transparent = land = land_paint = outside = uncertified = unevidenced = seam_n = 0
     seam_max = 0.0
     edges = {}
 
@@ -216,8 +220,14 @@ def _raster_metrics(path, release, region_bounds, elevation, contributor, fine):
                 grid = _tile_grid(z, x, y)
                 with WarpedVRT(elevation, crs='EPSG:3857', transform=grid, width=256, height=256,
                                dtype='float32', nodata=float('nan')) as vrt:
-                    is_land = vrt.read(1) > 3  # MB-01: +3 m NAVD88 mask
+                    elevation_m = vrt.read(1)
+                # Nodata and cells outside the evidence grid warp to NaN, which is neither land nor
+                # sea. Such paint has no land-mask proof and fails on its own, instead of silently
+                # counting as non-land.
+                has_evidence = np.isfinite(elevation_m)
+                is_land = has_evidence & (elevation_m > 3)  # MB-01: +3 m NAVD88 mask
                 painted += int(np.count_nonzero(opaque))
+                unevidenced += int(np.count_nonzero(opaque & ~has_evidence))
                 transparent += int(np.count_nonzero(~opaque))
                 land += int(np.count_nonzero(is_land))
                 land_paint += int(np.count_nonzero(opaque & is_land))
@@ -257,8 +267,8 @@ def _raster_metrics(path, release, region_bounds, elevation, contributor, fine):
 
     metrics = dict(land_leak_pct=100 * land_paint / land if land else 0.0, land_pixels=land,
                    painted_land_pixels=land_paint, transparent_share=transparent / (painted + transparent),
-                   painted_pixels=painted, bounds_vs_region=dict(ok=bounds_ok, archive=header_bounds,
-                       declared=declared, region=region_bounds, painted_outside=outside),
+                   painted_pixels=painted, painted_without_land_evidence=unevidenced,
+                   bounds_vs_region=dict(ok=bounds_ok, archive=header_bounds, declared=declared, region=region_bounds, painted_outside=outside),
                    seam_delta_lstar={'max': round(seam_max, 6) if seam_n else None, 'edge_pairs': seam_n,
                                      'zoom': seam_zoom, 'basis': 'mosaic contributor boundaries'},
                    z16plus_uncertified_pixels=uncertified, archive_bytes=archive_size, archive_budget_bytes=ARCHIVE_BUDGET,
@@ -267,19 +277,115 @@ def _raster_metrics(path, release, region_bounds, elevation, contributor, fine):
                    zooms_ok=([min(sizes), max(sizes)] == [release['minzoom'], release['maxzoom']]
                              == header_zooms and max(sizes) <= 17))
     failures = [name for name, failed in (
-        ('land_leak_pct', land_paint), ('painted_pixels', not painted), ('bounds_vs_region', not bounds_ok),
+        ('land_leak_pct', land_paint), ('painted_without_land_evidence', unevidenced),
+        ('painted_pixels', not painted), ('bounds_vs_region', not bounds_ok),
         ('seam_delta_lstar', seam_max > 3 + 1e-5), ('z16plus_uncertified_pixels', uncertified),
         ('zooms_ok', not metrics['zooms_ok'])) if failed]
     return metrics, failures
 
 
-def _shots(manifest, digest, release, out_dir):
+def _current_upstream(region, row):
+    """The verified current receipt that a receipt's upstream row names."""
+    verdict = receipts.check(region, row['stage'], row.get('scope'))
+    if not verdict.done or verdict.receipt['generation'] != row['generation']:
+        raise ValueError(f'{row["stage"]}: upstream receipt is not done and current')
+    return verdict.receipt
+
+
+def _bind_evidence(region, package_receipt, archive, evidence):
+    """Require every evidence raster to belong to the producer of the packaged tiles.
+
+    The packaged relief.pmtiles must be an output of exactly one current upstream receipt of the
+    package (the tile producer). QA's elevation must be that producer's own elevation input, byte for
+    byte. Contributor and support must come from the receipt that produced that elevation; fine-zoom
+    proofs from that receipt or from the tile producer. Another current public stage's rasters, or a
+    proof of different source data, cannot certify these tiles.
+    """
+    def owns(doc, ref):
+        return any((o['path'], o['sha256']) == ref for o in doc['outputs'])
+
+    makers = [doc for doc in (_current_upstream(region, row) for row in package_receipt['upstream'])
+              if owns(doc, (package.ARCHIVE, archive['sha256']))]
+    if len(makers) != 1 or makers[0].get('scope') not in (None, 'public'):
+        raise ValueError('elevation: the packaged tiles have no single current public tile producer')
+    tile = makers[0]
+    pinned = [i for i in tile['inputs'] if i['role'] == 'elevation']
+    if len(pinned) != 1 or evidence['elevation'] != (pinned[0]['path'], pinned[0]['sha256']):
+        raise ValueError("elevation: not the packaged tile producer's elevation input")
+    mosaics = [doc for doc in (_current_upstream(region, row) for row in tile['upstream'])
+               if owns(doc, evidence['elevation'])]
+    if len(mosaics) != 1 or mosaics[0].get('scope') not in (None, 'public'):
+        raise ValueError('elevation: the tile producer input has no single current public producer')
+    for role, ref in evidence.items():
+        owners = (mosaics[0],) if role in ('contributor', 'support') else (mosaics[0], tile)
+        if role != 'elevation' and not any(owns(doc, ref) for doc in owners):
+            raise ValueError(f'{role}: not an output of the packaged tile producer or its elevation producer')
+
+
+def _capture_outputs(region, manifest, digest, package_generation):
+    """Outputs of the current capture-stage receipt that the pack must come from.
+
+    A pack is accepted as MB-08 evidence only when `region.py shots` (the repo capture script run under
+    a receipt) produced it from this exact release; a hand-built or foreign pack has no such receipt.
+    """
+    verdict = receipts.check(region, 'shots')
+    doc = verdict.receipt
+    if (not verdict.done or doc is None or doc.get('scope') is not None
+            or {(u['stage'], u.get('scope'), u['generation']) for u in doc['upstream']}
+            != {('package', None, package_generation)}
+            or not any(i['role'] == 'release' and i['sha256'] == digest for i in doc['inputs'])):
+        raise ValueError('shots: pack is not from the current capture stage receipt for this release')
+    outputs = {o['path']: o['sha256'] for o in doc['outputs']}
+    if outputs.get(region.record(manifest)) != receipts.sha256_file(manifest):
+        raise ValueError('shots: shots.json is not an output of the capture stage receipt')
+    return outputs
+
+
+def _check_rendering(data, row):
+    """Decode a capture and require visible chart content and an inked navigation notice.
+
+    The capture script records the notice element's box. Pixels must show text-like ink there and
+    non-uniform rendering elsewhere, so a blank or placeholder image cannot carry the claim.
+    """
+    import numpy as np
+    from rasterio.errors import NotGeoreferencedWarning
+    from rasterio.io import MemoryFile
+
+    width, height = DEVICES[row['device']]
+    with warnings.catch_warnings(), MemoryFile(data, ext='.png') as memory:
+        warnings.simplefilter('ignore', NotGeoreferencedWarning)
+        with memory.open(driver='PNG') as image:
+            if image.dtypes[0] != 'uint8' or image.count not in (3, 4) or image.shape != (height, width):
+                raise ValueError('shots: expected an 8-bit RGB or RGBA capture at the viewport size')
+            rgb = image.read([1, 2, 3])
+    box = row.get('notice_box')
+    if (not isinstance(box, list) or len(box) != 4 or any(type(v) is not int for v in box)
+            or box[2] < NOTICE_MIN[0] or box[3] < NOTICE_MIN[1] or box[0] < 0 or box[1] < 0
+            or box[0] + box[2] > width or box[1] + box[3] > height):
+        raise ValueError('shots: capture has no usable navigation notice box')
+    x, y, w, h = box
+    light = _lstar(rgb)
+    notice = light[y:y + h, x:x + w]
+    ink = np.abs(notice - np.median(notice)) > 25  # lettering against its panel
+    if not 0.02 <= ink.mean() <= 0.6:
+        raise ValueError('shots: capture shows no navigation notice text in its notice box')
+    chart = np.ones(light.shape, dtype=bool)
+    chart[y:y + h, x:x + w] = False
+    rest = light[chart]
+    packed = (rgb[0].astype('uint32') << 16) | (rgb[1].astype('uint32') << 8) | rgb[2]
+    colours = np.unique(packed[chart]).size
+    if (np.abs(rest - np.median(rest)) > 3).mean() < 0.002 or colours < 8:
+        raise ValueError('shots: capture shows no rendered Chart content')
+
+
+def _shots(region, manifest, digest, release, out_dir, package_generation):
     doc = _json(manifest)
     if doc.get('release_sha256') != digest:
         raise ValueError('release_sha256: screenshot pack refers to another release')
     if doc.get('renderer') != 'mb08-chart' or type(doc.get('shots')) is not list:
         raise ValueError('shots: expected labelled MB-08 Chart evidence')
-    photos, seen = [], set()
+    outputs = _capture_outputs(region, manifest, digest, package_generation)
+    photos, seen, hashes = [], set(), set()
     lo, hi = release['minzoom'], release['maxzoom']
     cameras = sorted({z for z in (lo, 10, 13, 15, hi) if lo <= z <= hi})
     center = doc.get('center')
@@ -295,14 +401,19 @@ def _shots(manifest, digest, release, out_dir):
         if (key not in expected or key in seen or row['path'] != relative or row['viewport'] != DEVICES[d]
                 or row.get('navigation_visible') is not True):
             raise ValueError('shots: invalid, duplicate or unlabelled camera/theme/device shot')
-        data = package.artifact_path(manifest.parent, relative).read_bytes()
+        path = package.artifact_path(manifest.parent, relative)
+        data = path.read_bytes()
         sha = receipts.sha256_bytes(data)
         if (row['sha256'] != sha or data[:16] != b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR'
                 or list(struct.unpack_from('>II', data, 16)) != DEVICES[d]):
             raise ValueError('shots: bytes, format or viewport differs from the shot inventory')
+        if outputs.get(region.record(path)) != sha or sha in hashes:
+            raise ValueError('shots: capture is not a distinct output of the capture stage receipt')
+        _check_rendering(data, row)
         (out_dir / relative).write_bytes(data)
         photos.append(row)
         seen.add(key)
+        hashes.add(sha)
     if seen != expected:
         raise ValueError('shots: missing camera/theme/device combinations')
     return {'renderer': doc['renderer'], 'center': center, 'cameras': cameras, 'entries': photos}
@@ -371,14 +482,12 @@ def main(argv=None):
         release = package.decode_document(raw)
         if (release.get('schema'), release.get('region'), release.get('generation')) != (package.RELEASE_SCHEMA, region.id, gen):
             raise ValueError('release_sha256: wrong release identity')
-        producers = {(row['path'], row['sha256']) for key, doc in current.items() if key != 'package' for row in doc['outputs']}
-        for role, path in evidence.items():
-            if (region.record(path), pin[role]) not in producers:
-                raise ValueError(f'{role}: must be an output from a current public evidence producer')
         layers = package.release_layers(release)
         for row in layers:
             if package.layer_record(region.dir, row['path']) != row:
                 raise ValueError(f'layer_sha256: {row["path"]} does not match release')
+        _bind_evidence(region, upstream, next(r for r in layers if r['path'] == package.ARCHIVE),
+                       {role: (region.record(path), pin[role]) for role, path in evidence.items()})
         bounds = _json(contract)['bounds']
         metrics, failures = {}, []
         sources = release.get('sources')
@@ -413,7 +522,7 @@ def main(argv=None):
                 metrics['not_for_navigation'] = release.get('disclaimer') == package.DISCLAIMER and raster['navigation_archive']
                 if not metrics['not_for_navigation']:
                     failures.append('not_for_navigation')
-        photos = _shots(args.shots, digest, release, out_dir)
+        photos = _shots(region, args.shots, digest, release, out_dir, gen)
         # Catch evidence drift during QA; the envelope will independently rehash all release layers.
         for role, path in inputs.items():
             if receipts.sha256_file(path) != pin[role]:
