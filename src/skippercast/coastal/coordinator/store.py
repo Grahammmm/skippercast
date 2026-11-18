@@ -801,7 +801,10 @@ class Store:
 
     def expire(self):
         with self.transaction():
-            rows = self.db.execute("SELECT * FROM leases WHERE expires<=?", (self.clock(),)).fetchall()
+            # Expiry is a transition: a job already failed_uncertain keeps its lease (the fence),
+            # first hold reason and first event until explicit recovery(); later ticks add nothing.
+            rows = self.db.execute("SELECT l.* FROM leases l JOIN jobs j USING(job_id) "
+                                   "WHERE l.expires<=? AND j.state!='failed_uncertain'", (self.clock(),)).fetchall()
             for row in rows:
                 # A dead parent can leave live grandchildren: explicit recovery always.
                 self.db.execute("UPDATE jobs SET state='failed_uncertain',holds_json=? WHERE job_id=?", (json.dumps(["recovery_required"]), row["job_id"]))
