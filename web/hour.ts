@@ -87,7 +87,7 @@ export function nearestHour(hours: readonly number[], hourOfDay: number, tz: str
   let best: number | null = null, gap = Infinity;
   for (const at of hours) {
     const d = Math.abs(localParts(new Date(at), tz).hour - hourOfDay);
-    if (d < gap) { best = at; gap = d; }
+    if (d < gap || (d === gap && best !== null && at < best)) { best = at; gap = d; }
   }
   return best;
 }

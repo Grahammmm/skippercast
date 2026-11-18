@@ -139,9 +139,9 @@ function datasetKey(input) {
   return ['tides', p.get('station'), p.get('interval'), p.get('datum'), p.get('units'), p.get('time_zone')].join('|');
 }
 
-/** The newest saved copy of a request across the data cache and every trip pack. */
-async function newestSaved(request, key = request) {
-  const names = (await caches.keys()).filter(n => n === DATA_CACHE || n.startsWith(PACK_PREFIX));
+/** The newest saved copy of a request across the data cache (unless packsOnly) and every committed trip pack. */
+async function newestSaved(request, key = request, packsOnly = false) {
+  const names = (await caches.keys()).filter(n => (!packsOnly && n === DATA_CACHE) || n.startsWith(PACK_PREFIX));
   const url = new URL(typeof key === 'string' ? key : key.url);
   // Static region files are sometimes requested with a ?v= tag; APIs and feeds are matched exactly.
   const loose = url.origin === self.location.origin && /^\/(?:regions|data)\//.test(url.pathname);
@@ -288,13 +288,46 @@ async function networkFirstCoastal(event){
  }
 }
 
+// SCA-005: how long an explicit saved-map opening (/map with a committed pack that saved it) waits on a hung
+// network before the saved page answers. A network answer that arrives first, of any status, always wins.
+// The v2 app opens offline only from a pack that saved it (FE-51); the landing '/' keeps waiting for the network.
+const SAVED_MAP_WAIT_MS = 1500;
+
+/** The committed pack's saved /map page if it carries its saved time, else null. sc-data and unfinished packs never count. */
+async function savedMapPage(request) {
+  const saved = await newestSaved(request, self.location.origin + V2_SHELL, true).catch(() => null);
+  return saved && saved.status === 200 && Number.isFinite(Date.parse(saved.headers.get(SAVED_HEADER) || '')) ? saved : null;
+}
+
+/** /map: the network, unless it stalls past SAVED_MAP_WAIT_MS while a committed pack holds the page; a failure falls back as before. */
+async function savedMapShell(event) {
+  const network = fetch(event.request), saved = savedMapPage(event.request);
+  let timer;
+  const stalled = new Promise(resolve => { timer = setTimeout(resolve, SAVED_MAP_WAIT_MS, 'stalled'); });
+  try {
+    const first = await Promise.race([network.then(response => ({response}), error => ({error})), stalled]);
+    if (first !== 'stalled') {
+      if (!('error' in first)) return first.response;
+      return fromPack(event.request, first.error, self.location.origin + V2_SHELL);
+    }
+    const next = await Promise.race([
+      network.then(response => ({response}), error => ({error})),
+      saved.then(copy => ({copy})),
+    ]);
+    if ('response' in next) return next.response;
+    if ('error' in next) return fromPack(event.request, next.error, self.location.origin + V2_SHELL);
+    if (next.copy) return offlineResponse(next.copy);
+    // No eligible saved page: nothing claims coverage; keep waiting for the network as before.
+    try { return await network; } catch (error) { return fromPack(event.request, error, self.location.origin + V2_SHELL); }
+  } finally { clearTimeout(timer); }
+}
+
 async function shell(event) {
+  if (new URL(event.request.url).pathname === V2_SHELL) return savedMapShell(event);
   try {
     return await fetch(event.request);
   } catch (error) {
     const path = new URL(event.request.url).pathname;
-    // The v2 app opens offline only from a pack that saved it (FE-51).
-    if (path === V2_SHELL) return fromPack(event.request, error, self.location.origin + V2_SHELL);
     if (!/^\/(?:index\.html)?$/.test(path)) throw error;
     const name = await servingShell();
     const saved = name && await (await caches.open(name)).match('/');
