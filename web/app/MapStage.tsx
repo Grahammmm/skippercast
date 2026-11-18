@@ -33,9 +33,9 @@ import {createFronts} from '../map/fronts.ts';
 import {createWaterTemp} from '../map/sst.ts';
 import {createChlorophyll} from '../map/chlorophyll.ts';
 import {createSwell} from '../map/swell.ts';
-import {createPreviewLayers, previewAccess, previewOn, togglePreview} from '../map/preview-layers.ts';
+import {createPreviewLayers, previewOn} from '../map/preview-layers.ts';
 import type {Engine} from '../map/engine.ts';
-import {BOTTOM_RELIEF} from '../map/layers.ts';
+import {BOTTOM_RELIEF, reliefWanted} from '../map/layers.ts';
 import {createStations} from '../map/stations.ts';
 import {dailyFeed, verdictEpoch} from '../brief/Brief.tsx';
 import {mapFirstIdle} from '../map-ready.ts';
@@ -56,17 +56,19 @@ export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> 
 const PRESENTATION_IDS: Readonly<Record<Presentation, StringId>> = {chart: 'stage.chart', '2d': 'stage.2d', '3d': 'stage.3d'};
 const NOTE_ID = 'app-stage-note';
 
-// Like the other private previews, this choice is off by default and is never saved
-// or shared. The older Morro study preview and this regional base are exclusive.
-const depthShading = signal(false);
-const depthShadingOn = computed(() => depthShading.value && !previewOn.value.includes('seafloor'));
+// DATA-LIVE-9: the regional bottom relief is public. It draws only for a region whose reviewed pointer resolves
+// `ready` (web/map/bottom-relief.ts), is on by default and has no admin gate or toggle. The older Morro study
+// preview, which an admin can still turn on, takes the Chart instead (web/map/layers.ts `reliefWanted`).
+/** True from the relief's first draw until it is retired; the honesty line shows only while something is drawn. */
+const reliefDrawn = signal(false);
 const clearUnavailable = (layer: string) => { unavailable.value = unavailable.peek().filter(l => l !== layer); };
 const basemapAvailable = computed(() => !unavailable.value.includes('basemap'));
 
 function watchBottomRelief(engine: ReadonlySignal<Engine | null>) {
   return {destroy: effect(() => {
     const e = engine.value, id = region.value;
-    if (!e || !id || shownPresentation.value !== 'chart' || appView.value !== 'coast' || !previewAccess() || !depthShadingOn.value || !basemapAvailable.value) return;
+    if (!e || !id || !reliefWanted({presentation: shownPresentation.value, view: appView.value, basemapAvailable: basemapAvailable.value,
+      studyPreviewOn: previewOn.value.includes('seafloor')})) return;
     let cancelled = false, handle: {destroy(): void} | undefined;
     clearUnavailable(BOTTOM_RELIEF);
     void import('../map/bottom-relief.ts').then(relief => {
@@ -75,24 +77,21 @@ function watchBottomRelief(engine: ReadonlySignal<Engine | null>) {
         seafloorOn: () => layers.value.includes('seafloor'),
         fieldOn: () => layers.value.includes('water-temp') || layers.value.includes('chlorophyll') ||
           previewOn.value.some(layer => layer === 'sst' || layer === 'chlorophyll'),
-        unavailable: error => markUnavailable(BOTTOM_RELIEF, error)});
-    }).catch(error => { if (!cancelled) markUnavailable(BOTTOM_RELIEF, error); });
-    return () => { cancelled = true; handle?.destroy(); clearUnavailable(BOTTOM_RELIEF); };
+        ready: () => { reliefDrawn.value = true; },
+        // No `ready` pointer is normal (most regions have none yet): nothing was promised, so nothing is said.
+        // Only a relief that was drawn and then failed its checks is reported.
+        unavailable: error => { const was = reliefDrawn.peek(); reliefDrawn.value = false; if (was) markUnavailable(BOTTOM_RELIEF, error); }});
+    }).catch(() => { /* the module did not load: nothing was drawn or promised, so nothing is said */ });
+    return () => { cancelled = true; handle?.destroy(); reliefDrawn.value = false; clearUnavailable(BOTTOM_RELIEF); };
   })};
 }
 
-function DepthShadingPreview() {
-  if (!previewAccess() || shownPresentation.value !== 'chart') return null;
-  const on = depthShadingOn.value, lang = language.value, label = t('layer.relief.label', lang);
-  return <div class="app-stage-note">
-    <Chip on={on} onClick={() => {
-      if (!previewAccess()) return;
-      if (!on) togglePreview('seafloor', false);
-      depthShading.value = !on;
-    }}>{label} ({t('shell.regionPreview.label', lang)})</Chip>
-    {on && (!basemapAvailable.value || unavailable.value.includes(BOTTOM_RELIEF))
-      ? <p role="status">{t('tile.source.unavailable', lang, {source: label})}</p> : null}
-  </div>;
+/** The relief's honesty line, with no source names (those live on the sources page), while it is drawn; a status if it fails after drawing. */
+function DepthShadingNote() {
+  if (shownPresentation.value !== 'chart') return null;
+  const lang = language.value;
+  if (unavailable.value.includes(BOTTOM_RELIEF)) return <p class="app-stage-note" role="status">{t('tile.source.unavailable', lang, {source: t('layer.relief.label', lang)})}</p>;
+  return reliefDrawn.value ? <p class="app-stage-note" data-bottom-relief-note role="status">{t('layer.relief.shading', lang)}</p> : null;
 }
 
 /** RF1925-2: the selected Chart could not start (chartFailed is a sticky start-up failure; a working 2D or 3D terrain is not a failed map). The one test every map-only control shares. */
@@ -125,7 +124,7 @@ export function PresentationToggle() {
       <p id={NOTE_ID} class="app-stage-note" role="status">{blocked === null ? '' : terrainReason(blocked, lang)}</p>
       {armed ? <p class="app-stage-note" role="status">{t('stage.placePrompt', lang)} {refused ? <>{refused}. </> : null}<Button size="sm" variant="quiet" onClick={cancelWaypointPlacement}>{t('stage.cancelWaypoint', lang)}</Button></p> : null}
       {shown === 'chart' && seafloorRough.value ? <p class="app-stage-note" data-seafloor-rough role="status">{t('stage.seafloorRough', lang)}</p> : null}
-      {armed ? null : <DepthShadingPreview />}
+      {armed ? null : <DepthShadingNote />}
       <div role="group" aria-label={t('stage.presentation', lang)} class="ui-segmented">
         {PRESENTATIONS.map(p => {
           const off = p.value !== 'chart' && !!blocked;

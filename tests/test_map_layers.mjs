@@ -7,7 +7,7 @@ import util from 'node:util';
 import {existsSync, readFileSync} from 'node:fs';
 import test from 'node:test';
 import {RAIL_IDS} from '../web/profile.ts';
-import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, attributionFor, drapeStyle, drawsIn, layerEntry, layersIn, railLayers, setTerrainLayer, sourceLayer, terrainLayers} from '../web/map/layers.ts';
+import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, attributionFor, reliefWanted, drapeStyle, drawsIn, layerEntry, layersIn, railLayers, setTerrainLayer, sourceLayer, terrainLayers} from '../web/map/layers.ts';
 import {COAST_OVERLAY_COLORS} from '../packages/coast/src/palette.ts';
 import {groundsOverlay} from '../web/map/charter-grounds.ts';
 import {markData, markScreen, markStyle} from '../web/map/marks.ts';
@@ -1027,4 +1027,18 @@ test('chart_closed_pick_context_never_picks: with the Chart still mounted but an
     settlePicks();
     assert.equal(chartMark.value.name, 'Shoreline', 'back on the coast an isolated click selects');
   } finally { appView.value = 'coast'; cancelWaypointPlacement(); stage.destroy(); }
+});
+
+// Contract: DATA-LIVE-9. The bottom relief is public: the gate takes no admin/preview-access input, so a signed-out visitor is
+// asked for the same overlay as an owner, and the pointer (not a session) decides whether anything draws. Its honesty line is
+// fixed copy with no source names. Believable bugs: re-adding an admin gate; wording drifting to a source credit.
+test('relief gate is public on the coast Chart; the honesty line names no source', () => {
+  const base = {presentation: 'chart', view: 'coast', basemapAvailable: true, studyPreviewOn: false};
+  assert.equal(reliefWanted(base), true);
+  for (const edit of [{presentation: '2d'}, {presentation: '3d'}, {view: 'fleet'}, {basemapAvailable: false}, {studyPreviewOn: true}])
+    assert.equal(reliefWanted({...base, ...edit}), false, JSON.stringify(edit));
+  const row = JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings['layer.relief.shading'];
+  assert.equal(row.en, 'Depth shading: estimated from survey grids · blank = no survey data · NOT FOR NAVIGATION');
+  assert.match(row.es, /NAVEGACI/);
+  assert.doesNotMatch(row.en + row.es, /csumb|sfml|mbari|usgs|noaa|planet|attribution|credit/i);
 });
