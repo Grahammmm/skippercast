@@ -22,6 +22,7 @@ class LiveObservationsTests(TestCase):
         self.assertNotIn('fallback_for', data['sources']['offshore'])
 
     def test_retained_source_is_degraded_not_relabelled_current(self):
+        # Retention now requires matching station and product identity in the old row.
         stations = {'nearshore_buoy': '00001', 'nearshore_buoy_name': 'Synthetic A',
                     'offshore_buoy': '00002', 'offshore_buoy_name': 'Synthetic offshore'}
         previous = {'schema_version': 1, 'region_id': 'synthetic', 'sources': {'diablo': {
