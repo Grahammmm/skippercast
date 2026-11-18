@@ -4,6 +4,7 @@
     run_region.py <region> --out <OUT> --through <stage> [--norm <NORM>] [--scope public]
                   [--region-config FILE] [--coarse TIF --water GEOJSON --coarse-source ID [--coarse-date D]]
                   [--dry-run]
+    run_region.py <region> --out <OUT> --dry-run  # preview the full chain without stage inputs
 
 Runs ``region.py <stage> --region <region> --out <OUT>`` for every stage of the chain up to
 and including ``--through``, in this order::
@@ -23,20 +24,22 @@ main yet) is reported as "not available" and stops the run there.
 
 Before every stage (and so before the first) the run is refused, exit 3, while any of these hold:
 
-* a stop file exists in ``~/agent-work/modes``: ``LOCAL-STOP`` or ``UNITFEED-STOP``;
-* load5 is 24 or more;
+* a stop file exists in ``~/agent-work/modes``: ``LOCAL-STOP`` or ``UNITFEED-STOP``, or
+  its absence cannot be established;
+* CPU pressure (``some avg60`` in ``/proc/pressure/cpu``) is 25% or more, or unavailable;
 * free space is under 250 GB on ``/`` or under 400 GB on ``/mnt/agentorange-backup``
   (a backup path that is not a mounted filesystem counts as under the floor, whatever the
   free space of the directory's parent filesystem is);
 * ``--out`` or ``--norm`` (default ``$SC_RELIEF_NORM``) is, or resolves to, a path under
   ``/mnt/privatevault``.
 
-Once, before the first stage, the run is refused with exit 5 when this region already has a
-run (an exclusive lock on ``OUT/<region>/.run_region.lock``, released by the kernel if the
+Before the first stage, the run is refused with exit 5 when this region already has a run
+(an exclusive lock on ``OUT/<region>/.run_region.lock``, released by the kernel if the
 process dies) or when the box already has two runs. The box-wide cap is enforced atomically:
 a run must hold one of two advisory slot locks (``/tmp/run_region-slots-<uid>/slot-N``, also
-released by the kernel), so two simultaneous starts cannot both pass; the ``/proc`` scan for
-other ``run_region.py`` processes (``python3 -u run_region.py`` included) is a second check.
+released by the kernel), so two simultaneous starts cannot both take the last slot. The slot is
+held throughout the chain, and the supplemental ``/proc`` scan for other ``run_region.py``
+processes (``python3 -u run_region.py`` included) is repeated before every stage.
 When the cap state cannot be established (``/proc`` unreadable, slot directory not safely
 ours) the run is refused, exit 3.
 
@@ -67,14 +70,25 @@ STAGES = ('normalize', 'select', 'mosaic', 'tiles', 'contours', 'zone', 'digests
 REGION_ID = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')  # the same rule as skippercast.relief.receipts
 LOCK_NAME = '.run_region.lock'
 GB = 10 ** 9
+STOP_FILE_NAMES = ('LOCAL-STOP', 'UNITFEED-STOP')
 
 EXIT_USAGE = 2  # also: region.py reports an unknown stage with 2
 EXIT_REFUSED = 3
 EXIT_RUNNING = 5
 
 
-def _default_load5():
-    return os.getloadavg()[1]
+def cpu_some_avg60(proc_root):
+    """Read the kernel's 60-second CPU pressure percentage, not the load average."""
+    for line in (Path(proc_root) / 'pressure' / 'cpu').read_text(encoding='ascii').splitlines():
+        row = line.split()
+        if row and row[0] == 'some':
+            values = [sample.removeprefix('avg60=') for sample in row[1:] if sample.startswith('avg60=')]
+            if len(values) == 1:
+                value = float(values[0])
+                if 0 <= value <= 100:
+                    return value
+            break
+    raise ValueError('missing or invalid some avg60')
 
 
 def _default_free_bytes(path):
@@ -85,9 +99,8 @@ def _default_free_bytes(path):
 class Config:
     """Every host-dependent value, so a test can point it at a temporary directory."""
     region_py: Path = Path(__file__).resolve().with_name('region.py')
-    stop_files: tuple = (Path.home() / 'agent-work' / 'modes' / 'LOCAL-STOP',
-                         Path.home() / 'agent-work' / 'modes' / 'UNITFEED-STOP')
-    load_max: float = 24.0
+    stop_files: tuple = tuple(Path.home() / 'agent-work' / 'modes' / name for name in STOP_FILE_NAMES)
+    cpu_pressure_max: float = 25.0
     root_path: str = '/'
     root_floor: int = 250 * GB
     backup_path: str = '/mnt/agentorange-backup'
@@ -99,7 +112,6 @@ class Config:
     is_mount: object = field(default=os.path.ismount)
     prefix: tuple = ('nice', '-n', '19', 'ionice', '-c3')
     python: str = sys.executable
-    load5: object = field(default=_default_load5)
     free_bytes: object = field(default=_default_free_bytes)
     pid: int = field(default_factory=os.getpid)
 
@@ -137,10 +149,9 @@ def stage_extras(args):
         extra[stage] = ['--scope', args.scope]
         if args.region_config:
             extra[stage] += ['--region-config', args.region_config]
-    if args.coarse:
-        extra['zone'] += ['--coarse', args.coarse, '--water', args.water, '--coarse-source', args.coarse_source]
-        if args.coarse_date:
-            extra['zone'] += ['--coarse-date', args.coarse_date]
+    for name in ('coarse', 'water', 'coarse-source', 'coarse-date'):
+        if value := getattr(args, name.replace('-', '_')):
+            extra['zone'] += [f'--{name}', value]
     return extra
 
 
@@ -148,13 +159,23 @@ def check_guards(cfg, out, norm, inputs=()):
     """Every start/continue guard as ``[(name, ok, detail)]``. Never raises on a host quirk:
     a value that cannot be read is a refusal."""
     checks = []
-    present = [str(p) for p in cfg.stop_files if Path(p).exists()]
-    checks.append(('stop-file', not present, ', '.join(present) + ' present' if present else 'none present'))
+    stops = []
+    for path in cfg.stop_files:
+        try:
+            Path(path).lstat()  # only a missing entry is absent; even a dangling symlink is a stop
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            stops.append(f'cannot check {path}: {exc}')
+        else:
+            stops.append(f'{path} present')
+    checks.append(('stop-file', not stops, '; '.join(stops) or 'none present'))
     try:
-        load = float(cfg.load5())
-        checks.append(('load5', load < cfg.load_max, f'load5 {load:.1f} (refuse at >= {cfg.load_max:g})'))
+        pressure = cpu_some_avg60(cfg.proc_root)
+        checks.append(('cpu-pressure', pressure < cfg.cpu_pressure_max,
+                       f'some avg60 {pressure:g}% (refuse at >= {cfg.cpu_pressure_max:g}%)'))
     except (OSError, ValueError) as exc:
-        checks.append(('load5', False, f'cannot read load5: {exc}'))
+        checks.append(('cpu-pressure', False, f'cannot read some avg60: {exc}'))
     for name, path, floor, must_mount in (('disk-root', cfg.root_path, cfg.root_floor, False),
                                           ('disk-backup', cfg.backup_path, cfg.backup_floor, True)):
         try:
@@ -325,14 +346,16 @@ def say(text):
     print(text, flush=True)
 
 
-def dry_run(cfg, region, out, norm, through, extra, inputs):
+def dry_run(cfg, region, out, norm, through, extra, inputs, missing):
     say(f'run_region dry run: region {region}, through {through}, out {out}')
     say('chain (in order, each as a subprocess under ' + ' '.join(cfg.prefix) + '):')
     for index, stage in enumerate(chain_through(through), 1):
         say(f'  {index:>2}. {" ".join(stage_command(cfg, stage, region, out, extra))}')
     say('not run: ' + ', '.join(STAGES[STAGES.index(through) + 1:]) if through != STAGES[-1] else 'not run: (none)')
     say('guards (re-checked before every stage):')
-    refused = False
+    refused = bool(missing)
+    if missing:
+        say('  REFUSE zone inputs: a real run through zone needs ' + ', '.join(missing))
     for name, ok, detail in check_guards(cfg, out, norm, inputs):
         say(f'  {"ok     " if ok else "REFUSE "}{name}: {detail}')
         refused = refused or not ok
@@ -358,16 +381,22 @@ def refusal(cfg, out, norm, inputs):
     return [f'{name}: {detail}' for name, ok, detail in check_guards(cfg, out, norm, inputs) if not ok]
 
 
-def run_chain(cfg, region, out, norm, through, extra, inputs):
+def run_cap_refusal(cfg):
     try:
         others = other_runs(cfg)
     except OSError as exc:  # fail closed: an unreadable process table is not "no other runs"
-        say(f'run_region: refused: cannot establish how many runs are on the box: {exc}')
-        return EXIT_REFUSED
+        return EXIT_REFUSED, f'cannot establish how many runs are on the box: {exc}'
     if len(others) + 1 > cfg.max_runs:
-        say(f'run_region: refused: {len(others)} other run_region.py process(es) already running '
-            f'(pids {", ".join(map(str, others))}); at most {cfg.max_runs} at once')
-        return EXIT_RUNNING
+        return (EXIT_RUNNING, f'{len(others)} other run_region.py process(es) already running '
+                f'(pids {", ".join(map(str, others))}); at most {cfg.max_runs} at once')
+    return None
+
+
+def run_chain(cfg, region, out, norm, through, extra, inputs):
+    if cap := run_cap_refusal(cfg):
+        code, detail = cap
+        say(f'run_region: refused: {detail}')
+        return code
     problems = refusal(cfg, out, norm, inputs)  # before any lock, so a refused run leaves no file behind
     if problems:
         say('run_region: refused before ' + STAGES[0] + ': ' + '; '.join(problems))
@@ -401,6 +430,10 @@ def run_locked(cfg, region, out, norm, through, extra, inputs):
             if problems:
                 say(f'run_region: refused before {stage}: ' + '; '.join(problems))
                 return EXIT_REFUSED
+            if cap := run_cap_refusal(cfg):
+                code, detail = cap
+                say(f'run_region: refused before {stage}: {detail}')
+                return code
             command = stage_command(cfg, stage, region, out, extra)
             say(f'run_region: stage {stage}: ' + ' '.join(command))
             started = time.monotonic()
@@ -431,7 +464,8 @@ def parse(argv):
     parser.add_argument('region', help='region id (a line of regions.tsv)')
     parser.add_argument('--out', default=os.environ.get('SC_RELIEF_OUT') or None, required=not os.environ.get('SC_RELIEF_OUT'),
                         help='pipeline output root OUT (default $SC_RELIEF_OUT; must exist)')
-    parser.add_argument('--through', required=True, help='last stage to run: ' + ', '.join(STAGES))
+    parser.add_argument('--through', help='last stage to run (required except for a full dry-run preview): '
+                        + ', '.join(STAGES))
     parser.add_argument('--norm', default=os.environ.get('SC_RELIEF_NORM') or None,
                         help='normalised-cache root NORM, checked against the private-vault guard only (default $SC_RELIEF_NORM)')
     parser.add_argument('--scope', default='public', choices=('public', 'private'),
@@ -448,6 +482,11 @@ def parse(argv):
 def main(argv=None, cfg=None):
     cfg = cfg or Config()
     parser, args = parse(sys.argv[1:] if argv is None else list(argv))
+    full_preview = args.dry_run and args.through is None
+    if full_preview:
+        args.through = STAGES[-1]
+    elif args.through is None:
+        parser.error('the following arguments are required: --through')
     if not REGION_ID.fullmatch(args.region):
         parser.error(f'bad region id {args.region!r}: lower-case letters, digits and hyphens')
     if args.through not in STAGES:
@@ -456,14 +495,15 @@ def main(argv=None, cfg=None):
     if not out.is_dir():
         parser.error(f'--out {out} is not an existing directory')
     norm = Path(os.path.abspath(os.path.expanduser(args.norm))) if args.norm else None
+    missing = []
     if 'zone' in chain_through(args.through):
         missing = [f'--{n}' for n in ('coarse', 'water', 'coarse-source') if not getattr(args, n.replace('-', '_'))]
-        if missing:
+        if missing and not full_preview:
             parser.error(f'the chain reaches zone, which needs {", ".join(missing)}')
     extra = stage_extras(args)
     inputs = [Path(os.path.abspath(os.path.expanduser(p))) for p in (args.region_config, args.coarse, args.water) if p]
     if args.dry_run:
-        return dry_run(cfg, args.region, out, norm, args.through, extra, inputs)
+        return dry_run(cfg, args.region, out, norm, args.through, extra, inputs, missing)
     try:
         return run_chain(cfg, args.region, out, norm, args.through, extra, inputs)
     except KeyboardInterrupt:

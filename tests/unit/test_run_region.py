@@ -55,12 +55,14 @@ class Box:
         self.unitfeed_stop = root / 'UNITFEED-STOP'
         self.proc = root / 'proc'
         self.proc.mkdir()
+        self.pressure_cpu = self.proc / 'pressure' / 'cpu'
+        self.pressure_cpu.parent.mkdir()
+        self.pressure_cpu.write_text('some avg10=1.00 avg60=1.00 avg300=1.00 total=1000\n')
         self.slots = root / 'slots'
         self.free = {'/': 900 * RR.GB, '/mnt/agentorange-backup': 900 * RR.GB}
-        self.load = 1.0
         self.cfg = RR.Config(region_py=self.stub_dir / 'region.py', stop_files=(self.local_stop, self.unitfeed_stop),
                              proc_root=str(self.proc), prefix=(), pid=424242, slot_dir=self.slots,
-                             load5=lambda: self.load, free_bytes=lambda path: self.free[path],
+                             free_bytes=lambda path: self.free[path],
                              is_mount=lambda path: True)
 
     def codes(self, codes, **extra):
@@ -195,12 +197,30 @@ def refuse_unitfeed_stop(box):
     box.unitfeed_stop.write_text('x')
 
 
-def refuse_load(box):
-    box.load = 24.0
+def refuse_stop_unreadable(box):
+    # A non-directory parent makes the stop path uncheckable (ENOTDIR), not absent.
+    parent = box.root / 'broken-modes'
+    parent.touch()
+    box.cfg.stop_files = (parent / 'UNITFEED-STOP',)
+
+
+def refuse_pressure(box):
+    # The exact boundary refuses even if avg10, avg300 and the full row are all low.
+    box.pressure_cpu.write_text('some avg10=0.00 avg60=25.00 avg300=0.00 total=1000\n'
+                                'full avg10=0.00 avg60=0.00 avg300=0.00 total=0\n')
+
+
+def refuse_pressure_unreadable(box):
+    box.pressure_cpu.unlink()
+    box.pressure_cpu.mkdir()  # open for reading fails regardless of the test user's privileges
+
+
+def refuse_pressure_unavailable(box):
+    box.pressure_cpu.write_text('full avg10=0.00 avg60=0.00 avg300=0.00 total=0\n')
 
 
 def refuse_root_disk(box):
-    box.free['/'] = 249 * RR.GB
+    box.free['/'] = 249_000_000_000  # decimal bytes; no dependency on the implementation's units
 
 
 def refuse_backup_disk(box):
@@ -245,8 +265,11 @@ def refuse_vault_norm_symlink(box):
 GUARDS = [
     ('LOCAL-STOP', refuse_stop_file, 'stop-file'),
     ('UNITFEED-STOP', refuse_unitfeed_stop, 'stop-file'),
-    ('load', refuse_load, 'load5'),
-    ('root-disk', refuse_root_disk, 'disk-root'),
+    ('stop-unreadable', refuse_stop_unreadable, 'stop-file'),
+    ('cpu-avg60-at-25', refuse_pressure, 'cpu-pressure'),
+    ('cpu-unreadable', refuse_pressure_unreadable, 'cpu-pressure'),
+    ('cpu-no-some-row', refuse_pressure_unavailable, 'cpu-pressure'),
+    ('root-249-decimal-gb', refuse_root_disk, 'disk-root'),
     ('backup-disk', refuse_backup_disk, 'disk-backup'),
     ('backup-unreadable', refuse_backup_unreadable, 'disk-backup'),
     ('backup-unmounted', refuse_backup_unmounted, 'disk-backup'),
@@ -260,7 +283,8 @@ GUARDS = [
 def test_each_guard_refuses_before_the_first_stage(box, capsys, trip, guard):
     # Contract: every guard alone refuses (exit 3) before stage one, names itself, runs nothing and
     # leaves no lock/dir behind. Bug caught: a guard dropped, inverted, or checked only after
-    # `normalize` had already started loading the disk. Boundaries: load 24.0 refuses, floors are strict.
+    # `normalize` started. Mapgate bugs: using <= 25, the wrong PSI window/row, treating unavailable
+    # pressure or an unreadable stop as clear, or admitting 249 decimal GB on root.
     box.norm = None
     trip(box)
     args = ['--norm', str(box.norm)] if box.norm else []
@@ -282,14 +306,15 @@ def test_input_paths_under_the_vault_are_refused(box, capsys):
 
 
 def test_guards_pass_at_the_boundary_values(box):
-    # Contract: load5 23.9 and exactly the disk floors are allowed (>= floor, < 24).
-    box.load = 23.9
-    box.free.update({'/': 250 * RR.GB, '/mnt/agentorange-backup': 400 * RR.GB})
+    # Contract: some avg60 below 25 and exactly the decimal disk floors are allowed. Bug caught:
+    # a different PSI window, rounding to 25 before comparing, or using binary GB / exclusive floors.
+    box.pressure_cpu.write_text('some avg10=40.00 avg60=24.99 avg300=50.00 total=1000\n')
+    box.free.update({'/': 250_000_000_000, '/mnt/agentorange-backup': 400_000_000_000})
     assert box.run(through='select') == 0
 
 
-@pytest.mark.parametrize('trip', [refuse_stop_file, refuse_load, refuse_root_disk, refuse_backup_disk],
-                         ids=['stop-file', 'load', 'root-disk', 'backup-disk'])
+@pytest.mark.parametrize('trip', [refuse_stop_file, refuse_pressure, refuse_root_disk, refuse_backup_disk],
+                         ids=['stop-file', 'cpu-pressure', 'root-disk', 'backup-disk'])
 def test_guards_are_rechecked_before_every_stage(box, capsys, monkeypatch, trip):
     # Contract: a guard that trips while a stage runs stops the run before the next stage. Bug
     # caught: checking guards once at start (a 10-stage run would then ignore a later LOCAL-STOP).
@@ -374,6 +399,34 @@ def test_interpreter_options_do_not_hide_a_run(box, capsys):
     assert 'at most 2 at once' in capsys.readouterr().out
 
 
+@pytest.mark.parametrize('proc_change, expected, reason', [
+    ('extra-run', 5, 'at most 2 at once'),
+    ('unreadable-cmdline', 3, 'cannot establish how many runs'),
+])
+def test_process_count_is_rechecked_between_stages(box, monkeypatch, capsys, proc_change, expected, reason):
+    # Contract: holding a slot does not substitute for checking legacy runners or a broken /proc
+    # before the next stage. Bug caught: retaining the process-table check only at startup.
+    box.fake_process(101, 'python3', 'run_region.py', 'other')
+    run = RR.subprocess.run
+
+    def change_proc_after_stage(*args, **kwargs):
+        result = run(*args, **kwargs)
+        if proc_change == 'extra-run':
+            box.fake_process(102, 'python3', 'run_region.py', 'third')
+        else:
+            cmdline = box.proc / '101' / 'cmdline'
+            cmdline.unlink()
+            cmdline.mkdir()
+        return result
+
+    monkeypatch.setattr(RR.subprocess, 'run', change_proc_after_stage)
+    assert box.run(through='select') == expected
+    assert box.ran() == ['normalize']
+    text = capsys.readouterr().out
+    assert 'refused before select:' in text and reason in text
+    assert RR.slots_held(box.cfg) == 0
+
+
 @pytest.mark.parametrize('unreadable', ['proc-missing', 'cmdline-unreadable'])
 def test_unreadable_process_table_refuses_instead_of_counting_zero(box, capsys, unreadable):
     # Contract: when the other-run count cannot be established the run is refused (exit 3), not
@@ -431,9 +484,25 @@ def test_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
     assert [line.split()[3] for line in lines] == ['normalize', 'select', 'mosaic']  # '<n>. python region.py <stage>'
     assert '--scope public' in lines[2] and '--scope' not in lines[0]
     assert 'not run: tiles, contours, zone, digests, package, qa, envelope' in text
-    for name in ('stop-file', 'load5', 'disk-root', 'disk-backup', 'out-root', 'norm-root', 'region-lock', 'run-cap'):
+    for name in ('stop-file', 'cpu-pressure', 'disk-root', 'disk-backup', 'out-root', 'norm-root', 'region-lock', 'run-cap'):
         assert f'ok     {name}' in text
     assert 'a real run would start' in text
+    assert box.ran() == [] and box.out_tree() == [] and not box.slots.exists()
+
+
+@pytest.mark.parametrize('partial', [[], ['--coarse', '/in/coarse.tif']], ids=['bare', 'partial-zone-inputs'])
+def test_dry_run_without_through_previews_full_chain_only(box, capsys, partial):
+    # Contract: the bare dry run prints all ten stages without launching or writing. Bugs caught:
+    # requiring --through/zone inputs for that preview or crashing while formatting partial inputs.
+    args = ['morro-bay', '--out', str(box.out), *partial]
+    assert RR.main([*args, '--dry-run'], box.cfg) == 0
+    text = capsys.readouterr().out
+    lines = [line for line in text.splitlines() if re.match(r'\s+\d+\. ', line)]
+    assert [line.split()[3] for line in lines] == STAGE_ORDER
+    assert 'REFUSE zone inputs' in text and 'a real run would be refused' in text
+    with pytest.raises(SystemExit) as stop:
+        RR.main(args, box.cfg)
+    assert stop.value.code == 2  # real runs still require --through
     assert box.ran() == [] and box.out_tree() == [] and not box.slots.exists()
 
 
