@@ -308,13 +308,14 @@ def _review_confirmed(root, receipt, acceptance):
         review = _json(_bytes(root, acceptance.get('scientific_review'), MAX_JSON_BYTES))
         reference = acceptance['scientific_review']
         reviewer = review.get('reviewer_id')
-        return (acceptance.get('synthetic') is False and reference.get('contract') == 'coastal-terrain-only-science-review-v1'
+        creator = acceptance.get('creator_id')  # reviewer != creator proves nothing without a real creator identity
+        return (isinstance(creator, str) and bool(creator) and acceptance.get('synthetic') is False and reference.get('contract') == 'coastal-terrain-only-science-review-v1'
                 and review.get('schema') == 'coastal-terrain-only-science-review-v1'
                 and review.get('scope') == 'internal-terrain-only-scientific-review'
                 and review.get('independent') is True and review.get('decision') == 'accept'
                 and review.get('synthetic') is False and review.get('holds_added') == []
                 and review.get('facts_digest') == receipt['acceptance_context_sha256']
-                and isinstance(reviewer, str) and bool(reviewer) and reviewer != acceptance.get('creator_id'))
+                and isinstance(reviewer, str) and bool(reviewer) and reviewer != creator)
     except (ValueError, KeyError, TypeError, AttributeError, OSError):
         return False
 
