@@ -160,17 +160,32 @@ export async function loadKelp(resolver: () => Promise<unknown> | unknown, now: 
 
 export interface KelpLayerSpec {
   readonly id: string; readonly type: 'fill' | 'line'; readonly source: string; readonly 'source-layer': string;
+  readonly filter: ExpressionSpecification;
   readonly layout?: Record<string, unknown>; readonly paint: Record<string, unknown>;
 }
 
-/** Dots, then the outline. Colours come from the `--hab-kelp` role; both draw nothing without tiles. */
-export function kelpLayers(p: Palette): KelpLayerSpec[] {
+/** The one view a layer draws: the sensor, season and year the label names (normally `KelpLayer.newest`). */
+export type KelpView = Pick<KelpProduct, 'sensor' | 'season' | 'year'>;
+
+/** Keeps only the selected view's features, so a source holding several products is never blended. */
+export function kelpFilter(view: KelpView): ExpressionSpecification {
+  return ['all', ['==', ['get', 'sensor'], view.sensor], ['==', ['get', 'season'], view.season], ['==', ['get', 'year'], view.year]];
+}
+
+/**
+ * Dots, then the outline, both filtered to `view` (the same view `resolveKelp` labels; pass
+ * `layer.newest`). The view is required: an unfiltered layer would draw every product in the
+ * source under a label that describes only one. Colours come from the `--hab-kelp` role; both
+ * draw nothing without tiles.
+ */
+export function kelpLayers(p: Palette, view: KelpView): KelpLayerSpec[] {
   const width: ExpressionSpecification = ['interpolate', ['linear'], ['zoom'], 13, 0.6, 16, 1.4];
+  const filter = kelpFilter(view);
   return [
     // The image itself is the theme's colour (`themePatterns`), so a switch replaces it in place.
-    {id: KELP_DOTS, type: 'fill', source: KELP_SOURCE, 'source-layer': KELP_SOURCE_LAYER,
+    {id: KELP_DOTS, type: 'fill', source: KELP_SOURCE, 'source-layer': KELP_SOURCE_LAYER, filter,
       paint: {'fill-pattern': KELP_DOTS_IMAGE, 'fill-opacity': 0.9, 'fill-antialias': false}},
-    {id: KELP_OUTLINE, type: 'line', source: KELP_SOURCE, 'source-layer': KELP_SOURCE_LAYER, layout: {'line-join': 'round'},
+    {id: KELP_OUTLINE, type: 'line', source: KELP_SOURCE, 'source-layer': KELP_SOURCE_LAYER, filter, layout: {'line-join': 'round'},
       paint: {'line-color': p.habKelp, 'line-width': width, 'line-opacity': 0.9}},
   ];
 }
