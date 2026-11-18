@@ -7,9 +7,11 @@ Run on the processing host, with the survey stack (requirements-survey.txt):
         --grid usgs-morro-bay=/path/Bathymetry_OffshoreMorroBay.tif \\
         --grid usgs-point-estero=/path/Bathymetry_OffshorePointEstero.tif
 
-Each grid must be the original producer GeoTIFF of an approved bathymetry
-source bound to the region (catalog/sources.json, regions/<id>/region.json),
-or for an `adapter: bag` source one regular NOAA BAG, named with its survey:
+Each grid must be an original producer GeoTIFF or a hash-bound normalised
+GeoTIFF of an approved bathymetry source bound to the region
+(catalog/sources.json, regions/<id>/region.json). For a normalised grid give
+--normalized-sidecar SOURCE_ID=PATH; provenance retains the original digest.
+For an original `adapter: bag` source, supply one regular NOAA BAG named with its survey:
 `--grid noaa-bag=/path/H12345_MB_2m.bag --bag-survey noaa-bag=H12345`.
 Its SHA-256 is recorded in the output's provenance; local paths never reach
 the output. The output is catalog/depth-contours/<id>.geojson (or --output PATH, outside the
@@ -22,9 +24,10 @@ described in src/skippercast/platform/depth_contours.py.
 the unchanged default. Use --output or --held-output for private trials.
 """
 import argparse
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 import hashlib
 import importlib.util
+import json
 from pathlib import Path
 import re
 import sys
@@ -62,6 +65,7 @@ EDGE_MIN_LENGTH_M = 200
 CONTOUR_TOLERANCE_M = 3
 V2_COARSE_TOLERANCE_M = 6
 V2_DECIMALS = 6
+NORMALIZED_DATUMS = {'MLLW', 'NAVD88', 'MSL', 'EGM2008', 'unstated', 'instantaneous_sea_level'}
 # P4's preflight (check_grid / Refused), loaded from beside this script: it imports nothing from seafloor/.
 _spec = importlib.util.spec_from_file_location('preflight_native_grid', Path(__file__).with_name('preflight_native_grid.py'))
 preflight = importlib.util.module_from_spec(_spec)
@@ -73,6 +77,58 @@ BAG_DATUM = ' BAG surveys: the datum each BAG\'s metadata declares, copied as de
 def sha256(path):
     with open(path, 'rb') as f:
         return hashlib.file_digest(f, 'sha256').hexdigest()
+
+
+def public_refusal(ident, region, sources, *, explicit=True):
+    source = sources.get(ident) or {}
+    display = (source.get('rights') or {}).get('public_display')
+    if (explicit and display != 'allowed') or display in ('private', 'excluded'):
+        return 'not cleared for public display'
+    if source.get('publication_allowed') is False:
+        return 'publication_allowed is false'
+    if source.get('review_status') != 'approved' or 'bathymetry' not in source.get('needs', ()):
+        return 'not an approved bathymetry source'
+    if ident not in region['source_bindings']['bathymetry']:
+        return 'not a static region bathymetry binding'
+    return None
+
+
+def normalized_identity(ident, grid, path, reviewed_datum):
+    """Read only the R2 receipt fields needed to bind this derivative to its original."""
+    try:
+        side = json.loads(Path(path).read_text(encoding='utf-8'))
+        original = side['original_sha256']
+        digest = side['outputs']['grid.tif']
+        datum = side['vertical_datum']
+        if (side['schema'] != 'sc-relief-normalized/1' or side['units'] != 'm'
+                or side['value_convention'] != 'elevation_positive_up'
+                or datum not in NORMALIZED_DATUMS
+                or not dc.SHA256.fullmatch(original) or not dc.SHA256.fullmatch(digest)):
+            raise ValueError('expected a hash-bound normalised metre elevation grid')
+        if (grid.driver != 'GTiff' or grid.count != 1 or grid.scales[0] != 1 or grid.offsets[0] != 0
+                or grid.crs != rasterio.crs.CRS.from_user_input(side['crs'])
+                or list(grid.shape) != side['shape'] or list(grid.transform)[:6] != side['transform']
+                or any(abs(cell - side['resolution_m']) > 1e-9 for cell in grid.res)):
+            raise ValueError('normalised sidecar geometry mismatch')
+        if sha256(grid.name) != digest:
+            raise ValueError('normalised grid hash mismatch')
+        if datum != 'unstated' and reviewed_datum not in (None, dc.UNVERIFIED_DATUM, datum):
+            raise ValueError('normalised datum differs from the reviewed original')
+        return original, digest, datum if datum != 'unstated' else reviewed_datum
+    except (KeyError, OSError, TypeError, ValueError) as exc:
+        raise SystemExit(f'{ident}: invalid normalised sidecar: {exc}') from None
+
+
+@contextmanager
+def open_geotiff(path, *, normalized):
+    if not normalized:
+        with rasterio.open(path) as grid:
+            yield grid
+    else:
+        # Keep the fence active through boundless reads, which can reopen the TIFF.
+        with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR', GDAL_PAM_ENABLED='NO'), \
+                rasterio.open(path, driver='GTiff', sharing=False) as grid:
+            yield grid
 
 
 def native_offsets(grid, lattice, block_m=dc.CELL_M):
@@ -339,8 +395,14 @@ def geometry_points(geometry):
     return [pt for ring in rings for pt in ring]
 
 
-def v2_native(grid, offset, mine, provenance):
-    """Native depth and the footprint of traceable squares. Never resample or use known EC fills."""
+MEASURED_SUPPORT = 3  # support raster class for a measured (not interpolated/unknown) native cell
+
+
+def v2_native(grid, offset, mine, provenance, support=None):
+    """Native depth and the footprint of traceable squares. Never resample or use known EC fills.
+
+    `support` is an open uint8 support raster aligned cell for cell with `grid`; only cells it marks
+    measured (class 3, not masked) can carry native detail."""
     col, row, n = offset
     rows, = np.nonzero(mine.any(axis=1))
     cols, = np.nonzero(mine.any(axis=0))
@@ -358,10 +420,15 @@ def v2_native(grid, offset, mine, provenance):
     if provenance:
         codes = provenance[0].read(1, window=window, masked=True)
         valid &= codes.filled(PAD) == ec.CODES['measured']
+    if support is not None:
+        if (support.count != 1 or support.dtypes[0] != 'uint8' or support.shape != grid.shape
+                or support.crs != grid.crs or support.transform != grid.transform):
+            raise SystemExit(f'{grid.name}: support raster must be single-band uint8 aligned with the native grid')
+        valid &= (support.read(1, window=window) == MEASURED_SUPPORT) & (support.read_masks(1, window=window) != 0)
     transform = grid.window_transform(window)
     squares = valid[:-1, :-1] & valid[:-1, 1:] & valid[1:, :-1] & valid[1:, 1:]
-    support = polygons(squares, transform @ Affine.translation(0.5, 0.5)) if squares.any() else None
-    return np.where(valid, -values * dc.FEET_PER_M, np.nan), transform, support
+    footprint = polygons(squares, transform @ Affine.translation(0.5, 0.5)) if squares.any() else None
+    return np.where(valid, -values * dc.FEET_PER_M, np.nan), transform, footprint
 
 
 def v2_smooth(depth):
@@ -439,6 +506,8 @@ def main():
     p.add_argument('--region', required=True)
     p.add_argument('--set', choices=('v1', 'v2'), default='v1', help='Feet contour set (default: v1).')
     p.add_argument('--grid', action='append', required=True, metavar='SOURCE_ID=PATH')
+    p.add_argument('--normalized-sidecar', action='append', default=[], metavar='SOURCE_ID=PATH',
+                   help='The R2 sidecar.json for a --grid normalised GeoTIFF.')
     p.add_argument('--bag-survey', action='append', default=[], metavar='SOURCE_ID=SURVEY_ID',
                    help='The survey id of the one BAG file given for an adapter: bag source (required for each).')
     group = p.add_mutually_exclusive_group()
@@ -463,26 +532,36 @@ def main():
     region = load_region(args.region)
     _, sources = load_catalogs()
     bound = region['source_bindings']['bathymetry']
-    grids, surveys, provs = {}, {}, {}
-    for pairs, items in ((grids, args.grid), (surveys, args.bag_survey), (provs, args.provenance)):
+    grids, surveys, provs, sidecars = {}, {}, {}, {}
+    for pairs, items in ((grids, args.grid), (surveys, args.bag_survey), (provs, args.provenance),
+                         (sidecars, args.normalized_sidecar)):
         for ident, value in (item.split('=', 1) for item in items):
             if ident in pairs:
                 raise SystemExit(f'{ident} given twice; one file per source per build')
             pairs[ident] = value
     for ident in sorted(set(provs) - set(grids)):
         raise SystemExit(f'{ident}: --provenance is only for a source given with --grid')
+    if set(sidecars) - set(grids):
+        raise SystemExit('--normalized-sidecar is only for a source given with --grid')
     order = [ident for ident in bound if ident in grids]
     if set(grids) - set(order):
         raise SystemExit(f'Not bathymetry bindings of {region["id"]}: {sorted(set(grids) - set(order))}')
     # Every grid's approval is checked before any grid is opened or hashed.
     for ident in order:
-        status, licence = sources[ident]['review_status'], (sources[ident].get('rights') or {}).get('license')
+        source = sources[ident]
+        rights = source.get('rights') or {}
+        status, licence = source['review_status'], rights.get('license')
+        display = rights.get('public_display')
+        if display == 'excluded':
+            raise SystemExit(f'{ident} is not cleared for public display')
         if held and (status not in ('approved', 'candidate') or licence in (None, '', 'unresolved', 'dataset-review-needed')
                      or 'bathymetry' not in sources[ident]['needs']):
             raise SystemExit(f'{ident} cannot be traced, even held: {status}, licence {licence}')
-        if not held and (status != 'approved' or 'bathymetry' not in sources[ident]['needs']):
-            raise SystemExit(f'{ident} is not an approved bathymetry source')
-    adapters = {ident: sources[ident].get('adapter', 'geotiff') for ident in order}
+        # Original and normalised grids alike need an affirmative public_display: 'allowed'; silence is not clearance.
+        if not held and (reason := public_refusal(ident, region, sources)):
+            raise SystemExit(f'{ident} is {reason}')
+    adapters = {ident: 'geotiff' if ident in sidecars else sources[ident].get('adapter', 'geotiff')
+                for ident in order}
     kinds = set(adapters.values())
     for ident in order:
         if adapters[ident] not in ('geotiff', 'bag'):
@@ -494,26 +573,33 @@ def main():
     for ident in sorted(set(surveys) - {i for i in order if adapters[i] == 'bag'}):
         raise SystemExit(f'{ident}: --bag-survey is only for a bag source given with --grid')
     # Each grid's identity: the reviewed catalog entry for a GeoTIFF; for a BAG its own metadata, never converted.
-    identity = {}
+    identity, original_hashes, grid_hashes = {}, {}, {}
     for ident in order:
         if adapters[ident] == 'bag':
             identity[ident] = bag_identity(ident, grids[ident], surveys[ident], sources[ident])
             continue
-        native = sources[ident].get('native_resolution_m')
-        with rasterio.open(grids[ident]) as grid:
+        reviewed = sources[ident]
+        native, datum = reviewed.get('native_resolution_m'), reviewed.get('vertical_datum')
+        with open_geotiff(grids[ident], normalized=ident in sidecars) as grid:
             res = grid.res
+            if ident in sidecars:
+                original_hashes[ident], grid_hashes[ident], datum = normalized_identity(ident, grid, sidecars[ident], datum)
             ec_version = check_provenance(ident, grid, provs[ident]) if ident in provs else None
         # The provenance labels each grid with the reviewed native cell; a resample must not carry that label.
-        if not isinstance(native, (int, float)) or any(abs(r - native) > 1e-9 for r in res):
+        if ident not in sidecars and (not isinstance(native, (int, float)) or any(abs(r - native) > 1e-9 for r in res)):
             raise SystemExit(f'{ident}: grid cell {res} differs from reviewed native_resolution_m {native}')
-        identity[ident] = {'name': sources[ident]['name'], 'survey_date': str(sources[ident]['survey_year']),
-                           'vertical_datum': sources[ident].get('vertical_datum') or dc.UNVERIFIED_DATUM,
+        if ident in sidecars:
+            # Reprojection must not upgrade the original source's detail eligibility.
+            native = max(res[0], native) if isinstance(native, (int, float)) else None
+        identity[ident] = {'name': reviewed['name'], 'survey_date': str(reviewed['survey_year']),
+                           'vertical_datum': datum or dc.UNVERIFIED_DATUM,
                            'native_cell_m': native, 'extra': {'ec_version': ec_version} if ec_version else {}}
-    hashes = {ident: sha256(grids[ident]) for ident in order}
-    if len(set(hashes.values())) != len(hashes):
+    hashes = {ident: original_hashes[ident] if ident in sidecars else sha256(grids[ident]) for ident in order}
+    if len(set(hashes.values())) != len(hashes) or len({grid_hashes.get(i, hashes[i]) for i in order}) != len(order):
         raise SystemExit('Two --grid sources are the same file; each binding needs its own survey grid')
     with ExitStack() as stack:
-        opened = [stack.enter_context(open_grid(ident, grids[ident], surveys.get(ident))) for ident in order]
+        opened = [stack.enter_context(open_geotiff(grids[ident], normalized=True) if ident in sidecars
+                                      else open_grid(ident, grids[ident], surveys.get(ident))) for ident in order]
         crs = horizontal(opened)
         # Reads are clipped to the region (plus one block): a coast-wide BAG is never read whole.
         west, south, east, north = transform_bounds('EPSG:4326', crs, *region['bounds'], densify_pts=21)
@@ -534,6 +620,7 @@ def main():
         inside = inside_blocks(transformer, lattice, region['bounds'], block_m)
         native = {i: v2_native(g, offsets[i], (owner == i) & inside & np.isfinite(depth), ecs[i])
                   for i, g in enumerate(opened) if v2 and g.res[0] <= dc.V2_NATIVE_MAX_CELL_M
+                  and (order[i] not in sidecars or (identity[order[i]]['native_cell_m'] or float('inf')) <= dc.V2_NATIVE_MAX_CELL_M)
                   and ((owner == i) & inside & np.isfinite(depth)).any()}
     # Unresolved blocks are left out of the union: survey edges run round them as round a gap (they are drawn as areas).
     unresolved = cls == CLASS_INDEX['unresolved']
@@ -617,7 +704,7 @@ def main():
         'coordinate_decimals': decimals, 'simplify_tolerance_m': V2_COARSE_TOLERANCE_M if v2 else CONTOUR_TOLERANCE_M,
         'edge': {'tolerance_m': EDGE_TOLERANCE_M, 'min_length_m': EDGE_MIN_LENGTH_M,
                  'note': 'The outline of all the surveys\' supported blocks together; seams between surveys are not edges.'},
-        'datum_note': 'Depths are below each survey\'s own vertical datum.' + (USGS_DATUM if 'geotiff' in kinds else '')
+        'datum_note': 'Depths are below each survey\'s own vertical datum.' + (USGS_DATUM if 'geotiff' in kinds and not sidecars else '')
                       + (BAG_DATUM if 'bag' in kinds else '') + ' Not converted or certified.',
         'method': f'Native cells are merged in the region\'s binding order (the first survey with valid water wins each cell); '
                   f'each {dc.CELL_M} m block is their mean and counts only when all of them are valid water. Marching squares '
