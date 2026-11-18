@@ -70,8 +70,8 @@ async function verdict(page: Page, cdp: CDPSession, started: number, label: stri
   await test.step(`${label}: verdict word within the funnel budget (throttled)`, async () => {
     // The clock stops on an accepted verdict word, not on a placeholder: a placeholder inside the budget followed by a
     // late word must fail, so the accepted-word assertion itself carries the budget while the throttle is still on.
-    await expect(word).toBeVisible({timeout: FUNNEL_BUDGET_MS});
-    await expect(word).toHaveText(/^(Comfortable|Marginal|Rough)$/, {timeout: Math.max(1, FUNNEL_BUDGET_MS - (Date.now() - started))});
+    // The locator itself carries the accepted text, so a hidden placeholder that later receives a word cannot pass.
+    await expect(word.filter({hasText: /^(Comfortable|Marginal|Rough)$/})).toBeVisible({timeout: Math.max(1, FUNNEL_BUDGET_MS - (Date.now() - started))});
     const elapsed = Date.now() - started;
     console.log(`FUNNEL ${label}: ${elapsed} ms`);
     expect(elapsed).toBeLessThanOrEqual(FUNNEL_BUDGET_MS);
