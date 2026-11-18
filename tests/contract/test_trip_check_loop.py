@@ -23,13 +23,21 @@ class Clock:
         return self.now
 
 
-def run_watch(heads, finished_after=None, results=None, once=False, budget=10_000):
-    """heads: branch head per poll (first entry is the baseline)."""
-    clock, heads, polls, checked = Clock(), list(heads), [0], []
+RUN = 'run-7'
+PRIOR = ('run-6', 'p')  # the generation an earlier run published
+
+
+def gen(cycle):
+    return RUN, cycle
+
+
+def run_watch(reads, finished_after=None, results=None, once=False, budget=10_000, linger=0, check_seconds=0):
+    """reads: public receipt per poll, (run_id, published_at) or None when unknown."""
+    clock, reads, polls, checked = Clock(), list(reads), [0], []
     results = list(results or [])
 
-    def head():
-        return heads.pop(0) if len(heads) > 1 else heads[0]
+    def generation():
+        return reads.pop(0) if len(reads) > 1 else reads[0]
 
     def finished():
         polls[0] += 1
@@ -37,44 +45,69 @@ def run_watch(heads, finished_after=None, results=None, once=False, budget=10_00
 
     def check():
         checked.append(clock.now)
+        clock.now += check_seconds
         return results.pop(0) if results else True
-    counts = watch(head=head, finished=finished, check=check, sleep=clock.sleep, clock=clock,
-                   deadline=budget, poll=60, settle=90, once=once)
+    counts = watch(generation=generation, run_id=RUN, finished=finished, check=check, sleep=clock.sleep,
+                   clock=clock, deadline=budget, poll=60, settle=90, linger=linger, once=once)
     return counts, checked, clock.now
 
 
 class WatchTests(unittest.TestCase):
     def test_checks_once_per_new_publication_after_settling(self):
-        (checks, failures), checked, _ = run_watch(['a', 'a', 'b', 'b', 'c'], finished_after=6)
-        self.assertEqual((checks, failures), (2, 0))
-        self.assertEqual(checked[0], 60 * 2 + 90)  # second poll saw b, then waited for R2
-
-    def test_no_publication_means_no_check(self):
-        (checks, _), checked, _ = run_watch(['a'], finished_after=3)
-        self.assertEqual((checks, checked), (0, []))
+        (checks, failures, unknown), checked, _ = run_watch(
+            [PRIOR, PRIOR, gen('a'), gen('a'), gen('b')], finished_after=5)
+        self.assertEqual((checks, failures, unknown), (2, 0, False))
+        self.assertEqual(checked[0], 60 * 2 + 90)  # third read saw a, then settled
 
     def test_stops_when_refresh_finishes_after_checking_its_last_publication(self):
-        # The refresh job pushed "b" and finished before the same poll read them.
-        (checks, _), _, now = run_watch(['a', 'b'], finished_after=1)
+        # The refresh job published "a" and finished before the same poll read them.
+        (checks, _, _), _, now = run_watch([PRIOR, gen('a')], finished_after=2)
         self.assertEqual(checks, 1)
         self.assertLess(now, 1000)
 
+    def test_keeps_reading_for_the_linger_window_after_refresh_finishes(self):
+        # An edge may serve the last generation up to a cache window after the job ends.
+        for reads, expected in (([PRIOR, PRIOR, gen('a')], 1), ([PRIOR, PRIOR, PRIOR, gen('a')], 0)):
+            with self.subTest(reads=len(reads)):
+                (checks, _, _), _, now = run_watch(reads, finished_after=1, linger=120)
+                self.assertEqual(checks, expected)
+                self.assertLessEqual(now, 120 + 90)
+
+    def test_final_receipt_is_read_after_a_check_runs_past_the_linger_window(self):
+        # Contract: the watcher never stops on a receipt read older than the linger window. Bug caught: refresh
+        # already finished, the first read saw cached A, settle (90 s) + a failed check (30 s) reached the 120 s
+        # deadline and the loop exited without reading the final generation B the edge serves after 60 s.
+        (checks, failures, unknown), checked, now = run_watch(
+            [gen('a'), gen('b')], finished_after=1, linger=120, results=[False, True], check_seconds=30)
+        self.assertEqual((checks, failures, unknown), (2, 1, False))
+        self.assertEqual(checked, [90, 120 + 90])  # b read at 120 (after the window), settled, checked
+        self.assertEqual(now, 120 + 90 + 30)
+
+    def test_final_read_after_the_window_that_sees_nothing_new_stops_without_another_poll(self):
+        # Bug caught: an extra read/poll after the final read would let a never-ending linger run to the budget.
+        (checks, _, unknown), checked, now = run_watch(
+            [gen('a')], finished_after=1, linger=120, check_seconds=30)
+        self.assertEqual((checks, unknown), (1, False))
+        self.assertEqual(checked, [90])
+        self.assertEqual(now, 120)  # one read at 120, then stop
+
     def test_failed_delivery_is_counted_and_later_publications_are_still_checked(self):
-        (checks, failures), _, _ = run_watch(['a', 'b', 'c'], results=[False, True], finished_after=3)
+        (checks, failures, _), _, _ = run_watch([PRIOR, gen('a'), gen('b')], results=[False, True], finished_after=3)
         self.assertEqual((checks, failures), (2, 1))
 
     def test_once_stops_after_the_first_check(self):
-        (checks, _), _, _ = run_watch(['a', 'b', 'c'], once=True)
+        (checks, _, _), _, _ = run_watch([gen('a'), gen('b'), gen('c')], once=True)
         self.assertEqual(checks, 1)
 
     def test_budget_bounds_the_job_when_refresh_state_is_unknown(self):
-        (checks, _), _, now = run_watch(['a'], budget=600)
-        self.assertEqual(checks, 0)
+        (checks, _, unknown), _, now = run_watch([PRIOR], budget=600)
+        self.assertEqual((checks, unknown), (0, False))
         self.assertLessEqual(now, 660)
 
-    def test_unknown_head_is_not_a_publication(self):
-        (checks, _), _, _ = run_watch(['a', None, 'a'], finished_after=3)
-        self.assertEqual(checks, 0)
+    def test_unknown_read_is_not_a_publication_and_a_seen_generation_is_not_rechecked(self):
+        # Includes an edge briefly serving the older generation again.
+        (checks, _, unknown), _, _ = run_watch([gen('a'), None, gen('b'), gen('a'), gen('b')], finished_after=5)
+        self.assertEqual((checks, unknown), (2, False))
 
 
 def jobs(workflow):
