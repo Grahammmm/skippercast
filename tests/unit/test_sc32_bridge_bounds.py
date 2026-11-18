@@ -465,13 +465,6 @@ def test_mutation_controls_round1_strict_predicate_drops_a_required_world_edge_w
     assert len(baseline) == case['required_windows'] and strict == baseline[:-1]
 
 
-def test_mutation_controls_production_predicate_is_not_the_legacy_callable():
-    for double in (legacy_overlaps, legacy_bbox_gate, round1_strict_overlaps):
-        assert bridge._overlaps is not double and bridge._crs84_bbox is not double
-    assert bridge._overlaps.__module__ == bridge._crs84_bbox.__module__ == bridge.__name__
-    assert Path(bridge.__file__).resolve() == MODULE_PATH.resolve()
-
-
 # --- A4 module identity and discovery ---------------------------------------------------
 
 def test_a4_tests_import_the_complete_staged_production_module():

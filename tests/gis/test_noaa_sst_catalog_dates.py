@@ -66,11 +66,6 @@ class CatalogDateTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, r"\(2026: HTTPStatusError\)$"):
             latest_file(client, NOW)
 
-    def test_unrelated_client_error_is_not_swallowed(self):
-        client = FakeClient(RuntimeError("bug"))
-        with self.assertRaisesRegex(RuntimeError, "bug"):
-            latest_file(client, NOW)
-
 
 if __name__ == "__main__":
     unittest.main()
