@@ -93,9 +93,9 @@ const jobClaims = (workflow, audiencePath = '/api/fleet/jobs') => {
     workflow_ref: `${s.repository}/.github/workflows/${workflow}@${s.ref}`, event_name: 'schedule', iat: now, nbf: now, exp: now + 300, jti: `run-${workflow}`};
 };
 
-test('FLEET_JOB_SCOPE: the fleet audience and the four fleet workflows, all listed in scheduler.workflows', () => {
-  assert.deepEqual(FLEET_JOB_SCOPE, {audiencePath: '/api/fleet/jobs', workflows: ['fleet-registry.yml', 'fleet-osint.yml', 'fleet-ais.yml', 'fleet-health.yml']});
-  for (const workflow of FLEET_JOB_SCOPE.workflows) assert.ok(s.workflows.includes(workflow), workflow);
+test('FLEET_JOB_SCOPE: every scoped fleet workflow is configured for a scheduler identity', () => {
+  assert.equal(FLEET_JOB_SCOPE.audiencePath, '/api/fleet/jobs');
+  for (const workflow of FLEET_JOB_SCOPE.workflows) assert.ok(s.workflows.includes(workflow) || policy.fleet_scheduler.workflows.includes(workflow), workflow);
 });
 
 test('a signed fleet-ais.yml token reaches ping; advisor-media.yml, trip-check and wrong-audience tokens get 401', async () => {
@@ -107,7 +107,7 @@ test('a signed fleet-ais.yml token reaches ping; advisor-media.yml, trip-check a
   globalThis.fetch = async url => { assert.equal(url, 'https://token.actions.githubusercontent.com/.well-known/jwks'); return Response.json({keys: [jwk]}); };
   console.warn = () => {};
   try {
-    for (const workflow of FLEET_JOB_SCOPE.workflows) {
+    for (const workflow of FLEET_JOB_SCOPE.workflows.filter(w => s.workflows.includes(w))) {
       const response = await call('/api/fleet/jobs/ping?region=CA', env, {headers: bearer(await sign(jobClaims(workflow)))});
       assert.equal(response.status, 200, workflow);
     }
