@@ -21,6 +21,7 @@ from skippercast.seafloor.screen import screen_candidates
 from skippercast.seafloor.substrate import classify
 from tests.gis.test_seafloor_screen import geo, state as raw_state
 from tests._support import NOW
+from tests.unit.test_rough_first_tile_spans import archive as valid_pmtiles
 
 
 def state(exclusion=None):
@@ -713,7 +714,7 @@ class ClassifiedTests(unittest.TestCase):
             atomic_json(root/'catalog/surveys.json',{'surveys':[]})
             seen={}
             def archive(tool,value,path,**kwargs):
-                seen.update(value);path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b'PMTilesfixture')
+                seen.update(value);path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(valid_pmtiles())
             with patch.object(publish,'region_layers',return_value=(layers,{},NOW+timedelta(days=1))), \
                  patch('scripts.build_map_tiles.build_vector_archive',side_effect=archive):
                 folder,manifest=publish.build('fixture',root=root,tool='fixture',now=NOW)
