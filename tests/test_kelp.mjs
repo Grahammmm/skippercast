@@ -146,7 +146,7 @@ test('paints: both themes take every colour from the palette, and themePaint tar
   // or a themePaint edit naming a layer/property kelpLayers never created (restyle would skip it silently).
   const colours = {};
   for (const theme of ['dark', 'light']) {
-    const p = palette(theme), layers = kelpLayers(p), edits = themePaint(p);
+    const p = palette(theme), layers = kelpLayers(p, planet(2024)), edits = themePaint(p);
     assert.deepEqual(layers.map(l => l.id), ['kelp-dots', 'kelp-outline']);
     for (const l of layers) {
       assert.equal(l['source-layer'], KELP_SOURCE_LAYER);
@@ -167,6 +167,36 @@ test('paints: both themes take every colour from the palette, and themePaint tar
     colours[theme] = outline.paint['line-color'];
   }
   assert.notEqual(colours.dark, colours.light);
+});
+
+// Just enough of the MapLibre expression language for the filter kelpLayers builds: all / == / get.
+const matches = (expr, props) => {
+  const [op, ...args] = expr;
+  if (op === 'all') return args.every(a => matches(a, props));
+  if (op === '==') return args.map(a => Array.isArray(a) ? props[a[1]] : a).reduce((x, y) => x === y);
+  throw new Error(`unsupported expression ${op}`);
+};
+
+test('layers: both layers draw only the selected view, so Planet September is not blended with Landsat summer', () => {
+  // Contract: the label describes one view and the map draws only that view (KELP-ACCESS §6, "never blended").
+  // Bug: layers with no filter drawing every product in the `kelp` source under a label that names only the newest.
+  const layer = ready(pointer([planet(2024), landsat(2024, 'summer')]), at('2024-11-18'));
+  assert.equal(layer.newest.sensor, 'Planet 3 m');
+  const features = [
+    {sensor: 'Planet 3 m', season: 'september', year: 2024},
+    {sensor: 'Landsat 30 m', season: 'summer', year: 2024},
+    {sensor: 'Planet 3 m', season: 'september', year: 2023},
+    {sensor: 'Landsat 30 m', season: 'fall', year: 2024},
+  ];
+  const layers = kelpLayers(palette('dark'), layer.newest);
+  assert.equal(layers.length, 2);
+  for (const l of layers) {
+    assert.ok(l.filter, `${l.id} has a filter`);
+    assert.deepEqual(features.filter(f => matches(l.filter, f)), [features[0]], l.id);
+  }
+  // The Landsat view selects only Landsat features; the same year and season on the other sensor stays out.
+  const landsatLayers = kelpLayers(palette('dark'), resolveKelp(pointer([landsat(2024, 'summer')]), at('2024-11-18')).layer.newest);
+  for (const l of landsatLayers) assert.deepEqual(features.filter(f => matches(l.filter, f)), [features[1]], l.id);
 });
 
 test('no colour literals in the module', () => {
