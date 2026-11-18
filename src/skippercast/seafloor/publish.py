@@ -251,6 +251,9 @@ def build(region, *, root=REPO, tool=None, now=None):
     rough_first.write_receipt(root, region, receipt)
     if not receipt['pass']:
         archive.unlink()  # an unaccepted candidate never stays in the public bundle
+        if receipt['mode'] == 'control':
+            raise rough_first.GateFailure(f'Unreadable seafloor archive for {region}: '
+                                          + ', '.join(receipt['failed'])+'; nothing published')
         raise rough_first.GateFailure(f'Rough-first size gate failed for {region}: '
                                       + ', '.join(receipt['failed'])+'; nothing published, no rebaseline')
     ledger = read_json(root/'dist/data/seafloor-ledger.json')

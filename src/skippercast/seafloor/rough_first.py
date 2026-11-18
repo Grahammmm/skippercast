@@ -36,6 +36,7 @@ from pathlib import Path
 import re
 import struct
 import sys
+import zlib
 
 from skippercast.platform.contracts import REPO, atomic_json, read_json
 
@@ -122,6 +123,9 @@ def _zxy(tile_id):
     return z, x, y
 
 
+READ_ERRORS = (ValueError, struct.error, OSError, EOFError, IndexError, zlib.error)
+
+
 def read_tiles(data):
     """{(z, x, y): stored tile bytes} for a PMTiles v3 archive with gzip directories."""
     if data[:8] != b'PMTiles\x03' or len(data) < 127:
@@ -154,6 +158,8 @@ def read_tiles(data):
                 continue
             if size <= 0 or off < 0 or off + size > h[7]:
                 raise ValueError('tile payload span outside declared tile data')
+            if run > h[8]:
+                raise ValueError('tile run exceeds declared tile count')
             for k in range(run):
                 tiles[_zxy(tid + k)] = data[h[6] + off:h[6] + off + size]
     walk(h[0], h[1])
@@ -266,15 +272,19 @@ def _archive(data, tiles):
 
 
 def control_receipt(region, data):
-    """Sizes of the control archive a region not listed for rough-first publishes; no gate applies."""
+    """Sizes of the control archive a region not listed for rough-first publishes.
+
+    No size gate applies, but the archive must be structurally readable: ``pass`` is False (and the build
+    refuses before upload) when it is not, e.g. the PMTiles magic bytes with an invalid header."""
     try:
         tiles, error = read_tiles(data), None
-    except (ValueError, struct.error, OSError, EOFError, IndexError) as exc:
+    except READ_ERRORS as exc:
         tiles, error = None, type(exc).__name__
     receipt = {'receipt': 'seafloor archive size receipt', 'region': region, 'mode': 'control', **_run(),
-               'archive': _archive(data, tiles), 'gate': None, 'pass': True}
+               'archive': _archive(data, tiles), 'gate': None, 'failed': [], 'pass': error is None}
     if error:
         receipt['archive']['unreadable'] = error
+        receipt['failed'] = ['unreadable archive']
     return receipt
 
 
@@ -285,7 +295,7 @@ def evaluate(region, control_data, candidate_data, reference, *, reference_sha25
                'reference_file': REFERENCE_FILE, 'reference_sha256': reference_sha256}
     try:
         rk_tiles, rc_tiles = read_tiles(control_data), read_tiles(candidate_data)
-    except (ValueError, struct.error, OSError, EOFError, IndexError) as exc:
+    except READ_ERRORS as exc:
         receipt.update(control=_archive(control_data, None), archive=_archive(candidate_data, None),
                        error=f'unreadable archive: {type(exc).__name__}', gate={}, failed=['unreadable archive'],
                        **{'pass': False})
@@ -380,6 +390,9 @@ def summary(receipt):
             lines.append(f"z12-15 identical to the control build: {detail['identical']} of "
                          f"{detail['addressed_reference']} tiles.")
     else:
+        if not receipt.get('pass'):
+            lines += ['', 'Archive check: FAIL, nothing published (' + ', '.join(
+                receipt.get('failed') or ['unreadable archive']) + ').']
         lines += ['', '| Zoom | Tiles | Payload B |', '| ---: | ---: | ---: |']
         for z, row in sorted((archive.get('per_zoom') or {}).items(), key=lambda item: int(item[0])):
             lines.append(f"| {z} | {row['tiles']} | {row['bytes']} |")
