@@ -7,6 +7,7 @@
 // drawn. What the server wrote (assessment messages, hazard notes, its error bodies) is shown as received, in
 // English; in Spanish the sheet says so once and marks those texts lang="en".
 import {useEffect, useId, useMemo, useRef, useState} from 'preact/hooks';
+import {signal} from '@preact/signals';
 import type {TargetedSubmitEvent} from 'preact';
 import {Button} from '../ui/Button.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
@@ -38,6 +39,8 @@ type Loaded =
   | {state: 'signed-out'; href: string}
   | {state: 'signed-in'; session: SessionAnswer; region: TripRegion; boat: Boat};
 
+// Deletion outlives the sheet; keep its guard until failure or the successful reload.
+const deletingAccount = signal(false);
 const hours = (v: FormDataEntryValue | null) => Number(v);
 const sayError = (error: unknown): Say => error instanceof AlertCopyError ? {id: error.id} : {literal: (error as Error).message};
 /** What a server wrote stays English: in Spanish it is marked as such, and only there. */
@@ -259,6 +262,8 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   }, [feedback, comfortBusy]);
   const [confirming, setConfirming] = useState(false);
   const privacy = useRef<HTMLDetailsElement>(null);
+  const privacyWork = useRef<AbortController | 'deleting' | null>(null);
+  const [privacyBusy, setPrivacyBusy] = useState<'exporting' | 'deleting' | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const saving = useRef(false), [saveBusy, setSaveBusy] = useState(false);
   const [reuse, setReuse] = useState<{omitted: ReuseOmission[]; date: string; copied: 'all' | 'some' | 'none'} | null>(null);
@@ -294,7 +299,10 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   useEffect(() => {
     live.current = true;
     void refresh(); void refreshFeedback();
-    return () => { live.current = false; ++feedbackRead.current; };
+    return () => {
+      live.current = false; ++feedbackRead.current;
+      if (privacyWork.current !== 'deleting') privacyWork.current?.abort();
+    };
   }, []);
   // GET /api/catch-log: this person's own log, read page by page (readRecapCatchLog) once per mount for the past-trip recap.
   // Closing the dialog aborts the chain; a stopped read keeps what it read and says so instead of implying nothing was logged.
@@ -324,18 +332,50 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const act = (run: () => Promise<unknown>) => () => { run().catch(fail); };
   const remove = (id: string) => act(async () => { await api('trips', {method: 'DELETE', body: JSON.stringify({id})}); void refresh(); });
   const ack = (id: AlertEvent['id']) => act(async () => { await api('events/ack', {method: 'POST', body: JSON.stringify({id})}); void refresh(); });
-  const exportRecords = act(async () => {
-    const d = await api('privacy'), url = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)], {type: 'application/json'}));
-    const a = document.createElement('a');
-    a.href = url; a.download = 'SkipperCast-private-records.json'; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  });
-  const deleteAll = act(async () => {
+  // A native dialog closes before its queued close event unmounts the sheet.
+  const sheetOpen = () => live.current && !!privacy.current?.closest('dialog[open]');
+  const exportRecords = async () => {
+    if (!sheetOpen() || privacyWork.current || deletingAccount.peek()) return;
+    const ctl = new AbortController();
+    privacyWork.current = ctl;
+    setPrivacyBusy('exporting');
+    setStatus(null);
+    const current = () => privacyWork.current === ctl && sheetOpen() && !ctl.signal.aborted;
+    try {
+      const d = await api('privacy', {signal: AbortSignal.any([ctl.signal, AbortSignal.timeout(20000)])});
+      if (!current()) return;
+      const url = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)], {type: 'application/json'}));
+      try {
+        const a = document.createElement('a');
+        a.href = url; a.download = 'SkipperCast-private-records.json'; a.click();
+      } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+    } catch (error) { if (current()) fail(error); }
+    finally {
+      if (privacyWork.current === ctl) {
+        privacyWork.current = null;
+        if (sheetOpen()) setPrivacyBusy(null);
+      }
+    }
+  };
+  const deleteAll = async () => {
+    const pending = privacyWork.current;
+    if (pending === 'deleting' || deletingAccount.peek()) return;
+    deletingAccount.value = true;
+    privacyWork.current = 'deleting';
+    pending?.abort();
+    setPrivacyBusy('deleting');
     setConfirming(false);
-    await api('privacy', {method: 'DELETE'});
-    setStatus({id: 'alerts.status.deleted'});
-    setTimeout(() => location.reload(), 1200);
-  });
+    try {
+      await api('privacy', {method: 'DELETE'});
+      setStatus({id: 'alerts.status.deleted'});
+      setTimeout(() => location.reload(), 1200);
+    } catch (error) {
+      privacyWork.current = null;
+      deletingAccount.value = false;
+      setPrivacyBusy(null);
+      fail(error);
+    }
+  };
   const sendComfort = async (event: TargetedSubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (comfortPending.current) return;
@@ -434,8 +474,8 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
         <details ref={privacy}>
           <summary>{t('alerts.privacy.summary', lang)}</summary>
           <p>{t('alerts.privacy.body', lang)}</p>
-          <Button size="sm" onClick={exportRecords}>{t('alerts.export', lang)}</Button>{' '}
-          <Button data-delete-account size="sm" disabled={confirming} onClick={() => setConfirming(true)}>{t('alerts.deleteAccount', lang)}</Button>{' '}
+          <Button size="sm" disabled={privacyBusy !== null || deletingAccount.value} onClick={exportRecords}>{t('alerts.export', lang)}</Button>{' '}
+          <Button data-delete-account size="sm" disabled={confirming || deletingAccount.value} onClick={() => setConfirming(true)}>{t('alerts.deleteAccount', lang)}</Button>{' '}
           <a href="#account">{t('alerts.accountLink', lang)}</a>
           {confirming ? <ConfirmDelete onConfirm={deleteAll} onCancel={keep} /> : null}
         </details>

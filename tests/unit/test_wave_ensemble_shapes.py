@@ -146,8 +146,10 @@ class WaveProbabilitiesIsolationTests(unittest.TestCase):
             return wave_ensemble.wave_probabilities(FakeClient(bodies), REGION, NOW)
 
     def test_malformed_file_isolated_from_valid_sibling(self):
-        bodies = {"f000": b"GRIB-good", "f003": b"GRIB-bad", "f168": b"GRIB-good"}
-        table = {b"GRIB-good": [message(1, 0)], b"GRIB-bad": [message(1, 0, latitudes=[35.0])]}
+        bodies = {"f000": b"GRIB-first", "f003": b"GRIB-bad", "f168": b"GRIB-last"}
+        table = {b"GRIB-first": [message(1, 0, validityTime=0)],
+                 b"GRIB-bad": [message(1, 0, latitudes=[35.0])],
+                 b"GRIB-last": [message(1, 0, validityDate=20261116, validityTime=0)]}
         result = self.wave(bodies, table)
         self.assertEqual(len(result["frames"]), 2)
         self.assertEqual([f["points"][0]["percent"] for f in result["frames"]], [50.0, 50.0])
