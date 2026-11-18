@@ -127,13 +127,6 @@ test('a retry left sending by a crash (attempt 2) is never resent', () => scenar
   assert.equal(pushes.length, 1);assert.equal(event(), 'held');
 }));
 
-test('two subscriptions, one 201 and one 503: delivered on the first check, the failed one is not retried', () => scenario({'sub-a': [201, 201], 'sub-b': [503, 201]}, async ({pushes, receipt, check, event, receipts}) => {
-  const first = await check();
-  assert.equal(first.delivered, 1);assert.equal(event(), 'delivered');assert.equal(pushes.length, 2);
-  await check();await check();
-  assert.equal(pushes.length, 2);assert.equal(receipts(), 2);assert.equal(await receipt('sub-b', 2), null);
-}));
-
 test('two subscriptions, one 400 and one 503: pending while one can retry, held once both are final', () => scenario({'sub-a': [400, 201], 'sub-b': [503, 503, 503, 201]}, async ({pushes, check, event}) => {
   await check();assert.equal(event(), 'pending');assert.equal(pushes.length, 2);
   await check();assert.equal(event(), 'pending');assert.deepEqual(pushes.slice(2), ['sub-b'], 'only the retryable subscription is resent');

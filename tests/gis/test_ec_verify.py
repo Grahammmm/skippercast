@@ -36,6 +36,9 @@ def _tif(path, values, crs='EPSG:32610', dtype='float32', nodata=-9999.0, driver
         ds.write(np.asarray(values, dtype=dtype), 1)
         if dtype == 'uint8':
             ds.update_tags(EC_VERSION='1.0', SKIPPERCAST_EC_CODES=json.dumps(dict(EC.CODES)))
+        elif driver == 'GTiff':
+            ds.set_band_unit(1, 'm')
+            ds.update_tags(1, vertical_sign='elevation-up')
     return path
 
 
@@ -70,6 +73,35 @@ def _run(tmp_path, out, bs=(), a_source='usgs-a', a_datum='MLLW', extra=()):
     assert EC.check_receipt('ec-verify-v1', receipt) == []
     with rasterio.open(tmp_path / out / 'provenance.tif') as p, rasterio.open(tmp_path / out / 'shoal_hint.tif') as h:
         return receipt, p.read(1), h.read(1)
+
+
+def test_apply_internal_mask_stays_self_contained_under_external_mask_default(tmp_path):
+    from tests.gis import test_ec_apply as apply_test
+
+    values = apply_test._grid()
+    valid = np.ones(values.shape, dtype=bool)
+    valid[28, 5] = False
+    with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=True):
+        source = apply_test._tif(tmp_path / 'input.tif', values, mask=valid)
+        with rasterio.open(source, 'r+') as ds:
+            ds.set_band_unit(1, 'm')
+            ds.update_tags(1, vertical_sign='elevation-up')
+    assert not (tmp_path / 'input.tif.msk').exists()
+    detect = apply_test._detect(source, tmp_path, source_id='usgs-a')
+    with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=False):
+        assert apply_test._run(source, detect, tmp_path / 'a') == 0
+    assert sorted(p.name for p in (tmp_path / 'a').iterdir()) == [
+        'EC-APPLY.json', 'corrected.tif', 'provenance.tif']
+    with rasterio.open(tmp_path / 'a/corrected.tif') as ds:
+        corrected, mask = ds.read(1), ds.read_masks(1)
+        assert mask[28, 5] == 0 and mask[5, 5] == 255
+    (tmp_path / 'entries.json').write_text(json.dumps(ENTRIES))
+    noise = 0.1 * np.sin(np.arange(values.size).reshape(values.shape))
+    b = _tif(tmp_path / 'b.tif', corrected + 0.3 + noise, x0=700000)
+    receipt, prov, _ = _run(tmp_path, 'out', [(b, 'usgs-b', 'MLLW')])
+    assert receipt['disposition'] == 'VERIFY'
+    assert receipt['pairs'][0]['verified_cells'] == values.size - 1
+    assert prov[28, 5] == 0 and prov[5, 5] == 30
 
 
 def test_slope_verifies_patch_and_spike_conflict_with_shoal_hint_and_reruns_identically(tmp_path):

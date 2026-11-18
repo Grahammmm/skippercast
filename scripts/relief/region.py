@@ -29,11 +29,12 @@ import os
 from pathlib import Path
 import sys
 
-try:
-    from skippercast.relief import receipts
-except ImportError:  # a plain checkout (the pinned pipeline clone) without `pip install -e .`
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'src'))
-    from skippercast.relief import receipts
+# Prefer this checkout before the first import can cache another editable install.
+source_root = Path(__file__).resolve().parents[2] / 'src'
+if (source_root / 'skippercast' / 'relief' / 'receipts.py').is_file():
+    sys.path.insert(0, str(source_root))
+
+from skippercast.relief import receipts
 
 PACKAGE = 'skippercast.relief'
 # Modules of the package that are never stages, and the CLI's own command names.
@@ -99,8 +100,9 @@ def status(argv):
     for key, verdict in rows:
         doc = verdict.receipt or {}
         gen = str(doc.get('generation') or '-')[:12]
-        ups = ', '.join(f'{u.get("stage")}{"." + u["scope"] if u.get("scope") else ""}@{str(u.get("generation"))[:12]}'
-                        for u in doc.get('upstream') or [] if isinstance(u, dict)) or '-'
+        listed = doc.get('upstream')  # an invalid receipt may hold anything here
+        ups = ', '.join(f'{u.get("stage")}{"." + str(u["scope"]) if u.get("scope") else ""}@{str(u.get("generation"))[:12]}'
+                        for u in (listed if isinstance(listed, list) else []) if isinstance(u, dict)) or '-'
         print(f'  {key:<{width}}  {verdict.state:<8}  gen {gen:<12}  attempt {doc.get("attempt", "-")}  '
               f'<- {ups}  | {verdict.reason}')
     counts = {}

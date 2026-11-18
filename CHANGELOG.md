@@ -2,7 +2,11 @@
 
 ## Unreleased
 
+- SC-NEXT-09: the coverage and forecast skill pages follow your language choice. Published region and buoy names and forecast scoring are unchanged.
+- SC2037-15: upcoming saved trips show the season status for each target on the trip date, with the last rules check and an official link. Unconfirmed rules never show as open.
+- SC1607-08: download the complete private catch log as formula-safe CSV, up to 10 pages (2,000 entries); incomplete reads produce no file.
 - SC-NEXT-08: the data status page follows the saved or browser language, with Spanish headings, table labels and freshness notes; source names and freshness rules are unchanged.
+- SC-NEXT-12: choose feet or metres for swell, seas and tide heights on the brief tiles and hourly table. Limits, printed heights and exports stay in feet.
 - SC2037-14: upcoming saved trips offer Add to calendar, a browser-made .ics file with the region's dated fishing window, targets and saved comfort limits; no positions, spots or notes are included or sent.
 
 - SC-MAPQ-NATIVE-ZOOM-1: private relief builds retain 1 m shallow-survey detail through zoom 17 only on tiles with nominal 0–20 m support. Native 2 m/5 m tiles stop at zoom 15; background stops at 13. Archive metadata reports actual per-zoom native support; no surveys or archives are published by this change.

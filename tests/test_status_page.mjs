@@ -185,7 +185,8 @@ test('each status table sits in its own keyboard-reachable, named scroller with 
   assert.equal(renderRows([]), '');
 });
 
-// SC-NEXT-08: synthetic locale cases; the digest was measured on main d91ad65f after its source-name additions.
+// SC-NEXT-08: synthetic locale cases; the digest was re-measured after E2E-05 added 13 source names to dist/status-names.js,
+// and again after the four USGS OFR 2005-1170 habitat names were added (t_79eb52a3).
 import * as statusPage from '../dist/status-page.js';
 import {createHash} from 'node:crypto';
 import {mkdtempSync, mkdirSync, writeFileSync, rmSync} from 'node:fs';
@@ -196,7 +197,7 @@ import {spawnSync} from 'node:child_process';
 test('status_page_english_identical: missing, stale and coast rows preserve main bytes', () => {
   const cases = [{},{"conditions":{"published_at":"2026-11-01T20:00:00Z"},"index":{"regions":[]},"data":{"sources":{"a":{"id":"a","name":"Literal <name>","kind":"grid","status":"stale"}}}},{"coast":{}}];
   const html = cases.map(f => renderRows(statusRows(f, NOW))).join('\n') + renderCoverage();
-  assert.equal(createHash('sha256').update(html).digest('hex'), 'bad05ba06776fc8fc454ccffad88f3d3681500e29fb9aa97e786b2329f3fd5d5');
+  assert.equal(createHash('sha256').update(html).digest('hex'), '3706033e0041f4dfa32453dc0a39545d4049b99c43174924d42024d8c05703a4');
 });
 
 test('status_page_spanish: remembered choice and browser fallback translate static hosts before feeds', async () => {

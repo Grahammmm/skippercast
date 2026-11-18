@@ -44,4 +44,11 @@ jobs:
           REGION: ${{ inputs.region }}
           # Only in this step's environment; the script never traces or prints it.
           AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
-        run: bash scripts/fleet/install_listener.sh --region "$REGION"
+        run: |
+          lock="${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}/.locks/fleet-ais-listener.lock"
+          mkdir -p -m 0700 -- "${lock%/*}" || exit 1
+          WAIT=60
+          exec 9>"$lock"
+          flock -w "$WAIT" 9 || { echo "::error::fleet-ais-listener is held by another run (this or the other repo); not starting"; exit 75; }
+          echo "lock fleet-ais-listener acquired"
+          bash scripts/fleet/install_listener.sh --region "$REGION"
