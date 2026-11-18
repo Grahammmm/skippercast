@@ -305,7 +305,7 @@ test('meta-token.mjs: a failed write empties this run\'s file, never deletes by 
   // The write fails after part of the token was written; the path still names this run's file.
   const mine = join(dir, 'mine-token');
   const partial = async function* () { yield 'PARTIAL-TOKEN'; throw Error('disk full'); };
-  await assert.rejects(script.savePageToken(mine, partial()), e => /emptied it/.test(e.message) && /did not delete anything by name/.test(e.message) && !/removed it/.test(e.message));
+  await assert.rejects(script.savePageToken(mine, partial()), e => /emptied it/.test(e.message) && /did not delete anything by name/.test(e.message) && !/removed it/.test(e.message) && /Leave the path untouched/.test(e.message) && /new --token-file name/.test(e.message) && !/remove (it|the file)|ls -l/.test(e.message));
   assert.equal(statSync(mine).size, 0);
 
   // Another run swaps in its own file after this run created its own, before any cleanup could run (the window an
