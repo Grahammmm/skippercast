@@ -4,6 +4,10 @@ import copy
 
 import pytest
 
+pytest.importorskip('pyproj')
+pytest.importorskip('shapely')
+pytestmark = pytest.mark.gis
+
 from research.scripts import audit_central_atlas_closures as m
 from tests._support import NOW as FIXED_NOW
 
@@ -54,6 +58,26 @@ def _run(a, ids=True):
 
 def test_complete_fixture_is_clear():
     assert _run(_atlas())['all_geometry_clear_of_screen_buffers'] is True
+
+
+@pytest.mark.parametrize('bad_id', [None, ['T0']])
+def test_invalid_id_withholds_clearance(bad_id):
+    a = _atlas()
+    if bad_id is None:
+        del a['targets'][0]['id']
+    else:
+        a['targets'][0]['id'] = bad_id
+    r = _run(a)
+    assert not r['all_geometry_clear_of_screen_buffers']
+    assert r['sections']['targets']['completeness']['invalid_id_count'] == 1
+    assert r['sections']['targets']['completeness']['missing_ids'] == ['T0']
+
+
+def test_invalid_projected_target_is_rejected():
+    a = _atlas()
+    a['targets'][0]['latitude'] = 95
+    with pytest.raises(ValueError, match='Invalid.*geometry'):
+        _run(a)
 
 
 def test_repeated_single_target_not_clear():

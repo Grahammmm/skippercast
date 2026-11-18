@@ -8,6 +8,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 from pathlib import Path
 
 from pyproj import Transformer
@@ -45,7 +46,8 @@ def completeness(name, items, expected_ids=None):
     ids = [i.get('id') if isinstance(i, dict) else None for i in items]
     seen, dupes = set(), set()
     for i in ids:
-        (dupes if i in seen else seen).add(i)
+        if isinstance(i, str) and i:
+            (dupes if i in seen else seen).add(i)
     bad_ids = sum(1 for i in ids if not isinstance(i, str) or not i)
     wrong = [str(i) for item, i in zip(items, ids) if not _valid_shape(name, item)]
     want_n = EXPECTED_COUNTS[name]
@@ -88,13 +90,20 @@ def audit(atlas, mpa, federal, expected_ids=None, expected_atlas_sha256=None, at
         report = completeness(name, items, expected_ids)
         rows = []
         for item in items:
-            if not _valid_shape(name, item):
+            if (not _valid_shape(name, item) or not isinstance(item.get('id'), str)
+                    or not item['id']):
                 continue  # reported in completeness; nothing to screen
             geom = (Point(item['longitude'], item['latitude']) if name == 'targets'
                     else shape(item['geometry']))
             if geom.is_empty or not geom.is_valid:
                 raise ValueError('Invalid atlas geometry: ' + str(item.get('id')))
-            distance = float(transform(project, geom).distance(closed))
+            projected = transform(project, geom)
+            if (projected.is_empty or not projected.is_valid
+                    or not all(math.isfinite(v) for v in projected.bounds)):
+                raise ValueError('Invalid projected atlas geometry: ' + str(item['id']))
+            distance = float(projected.distance(closed))
+            if not math.isfinite(distance):
+                raise ValueError('Invalid geometry clearance: ' + str(item['id']))
             rows.append({'id': item['id'], 'clearance_m': round(distance, 1),
                          'held': distance < clearance})
         sections[name] = {'count': len(rows), 'screen_buffer_m': clearance,
