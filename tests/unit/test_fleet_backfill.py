@@ -410,8 +410,11 @@ class RetentionTests(BackfillTestCase):
         rows = dump(self.store, DAY)
         self.assertEqual(rows["positions"], [])
         self.assertTrue(rows["statics"], "statics last static_days")
-        self.assertFalse((self.store.root / "days" / "2026-06-20.json").exists(),
+        self.assertFalse(bf._ingested(self.store, DAY, bf._wanted(BBOX, [MMSI])),
                          "positions gone: the next backfill downloads the day again")
+        record = json.loads((self.store.root / "days" / "2026-06-20.json").read_text())
+        self.assertEqual(record, {"ingested_ms": now, "positions_complete": False},
+                         "retain the clock, not the expired selection metadata")
         result = bf.apply_retention(self.store, self.LIMITS, now + 91 * 86_400_000)
         self.assertEqual(sorted(result["deleted"]), ["2026-06-20", "2026-06-21"])
         self.assertEqual(list(self.store.raw_dir.iterdir()), [])

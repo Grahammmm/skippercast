@@ -16,15 +16,18 @@ REVIEW = 'Draft evidence needs review before regional promotion'
 EXTRA = 'Past-day landing reports that failed: 1 (left to the 5-of-7 coverage gate).\n'
 
 
-def write(tmp_path, sources, critical=True, review=()):
+def write(tmp_path, sources, critical=None, review=()):
     root = tmp_path / 'rehearsal' / REGION / 'regions' / REGION
     root.mkdir(parents=True)
     issues = [ident for ident, status in sources.items() if status != 'ok']
-    evidence = {'health': {'sources_ok': len(sources) - len(issues), 'sources_total': len(sources),
+    if critical is None:
+        critical = 'ok' in sources.values()
+    evidence = {'region_id': REGION,
+                'health': {'sources_ok': len(sources) - len(issues), 'sources_total': len(sources),
                            'issues': issues, 'critical_available': critical},
                 'sources': {ident: {'status': status} for ident, status in sources.items()}}
     (root / 'latest.json').write_text(json.dumps(evidence))
-    (root / 'regulations-health.json').write_text(json.dumps({'review_required': list(review)}))
+    (root / 'regulations-health.json').write_text(json.dumps({'region_id': REGION, 'review_required': list(review)}))
     return evidence
 
 
@@ -176,7 +179,8 @@ def test_retained_source_uses_its_own_issue(tmp_path, capsys):
 
 
 def test_missing_and_stale_get_no_class_line(tmp_path, capsys):
-    write_issues(tmp_path, {'harbor': ('missing', 'ValueError: x'), 'tides': ('stale', 'HTTPStatusError: HTTP 500')})
+    write_issues(tmp_path, {'harbor': ('missing', 'ValueError: x'), 'tides': ('stale', 'HTTPStatusError: HTTP 500'),
+                            'buoy': ('ok', None)})
     code, summary = run(tmp_path)
     assert capsys.readouterr().out == ''
     assert code == 0 and '- harbor\n- tides\n' in summary and ': ' not in summary.split('clearance.\n')[1]

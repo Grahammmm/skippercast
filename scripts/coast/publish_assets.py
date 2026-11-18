@@ -92,19 +92,25 @@ def refusals(group, urls, catalog):
     return problems
 
 
-def assets(value, out):
-    """Every {url, sha256, bytes} asset and every bare public path referenced inside a manifest."""
+def assets(value, out, problems):
+    """Collect terrain references, retaining every declared pin across all indexes."""
     if isinstance(value, dict):
-        if isinstance(value.get('url'), str) and SHA.match(str(value.get('sha256', ''))):
-            out[value['url']] = {'sha256': value['sha256'], 'bytes': value.get('bytes')}
+        path = value.get('url')
+        if isinstance(path, str) and group_of(path) == 'terrain':
+            entry = out.setdefault(path, {})
+            for field in ('sha256', 'bytes'):
+                pin = value.get(field)
+                if pin is None or (field == 'sha256' and not SHA.match(str(pin))):
+                    continue
+                if entry.setdefault(field, pin) != pin:
+                    problems.append(f'terrain: {path} has conflicting upstream {field} pins')
         for item in value.values():
-            assets(item, out)
+            assets(item, out, problems)
     elif isinstance(value, list):
         for item in value:
-            assets(item, out)
-    elif isinstance(value, str) and PUBLIC_PATH.match(value):
+            assets(item, out, problems)
+    elif isinstance(value, str) and group_of(value) == 'terrain':
         out.setdefault(value, {})
-    return out
 
 
 def pinned(data):
@@ -157,12 +163,15 @@ def plan(groups, origin=ORIGIN, catalog=None, now=None):
         for path in TERRAIN_SOURCES:  # each document must name its own sources
             problems += refusals('terrain', sorted({s['url'] for s in indexes[path].get('sources') or []}), catalog)
         for index in indexes.values():
-            wanted.update({k: v for k, v in assets(index, {}).items() if group_of(k) == 'terrain'})
+            assets(index, wanted, problems)
         # The copied indexes are the exact bytes whose references were enumerated and rights-checked.
         for path, data in raw.items():
-            if wanted.get(path, {}).get('sha256') not in (None, pinned(data)['sha256']):
+            expected, actual = wanted.get(path, {}), pinned(data)
+            if expected.get('sha256') not in (None, actual['sha256']):
                 problems.append(f'terrain: {path} differs from the digest the chart model declares')
-            wanted[path] = pinned(data)
+            elif expected.get('bytes') not in (None, actual['bytes']):
+                problems.append(f'terrain: {path} differs from the byte count the upstream index declares')
+            wanted[path] = actual
     if 'habitat' in groups:
         found, entries = habitat_plan(origin, catalog, now)
         problems += found

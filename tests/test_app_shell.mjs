@@ -136,8 +136,8 @@ test('startup region reader shares parsed cold work and refuses distinct-key sat
   const second = reader('b');
   await assert.rejects(reader('c'), /saturated/);
   assert.equal(calls.length, 2);
-  gates.get('regions/a/region.json').resolve(new Response(JSON.stringify({name: 'A', map: {center: [1, 2]}})));
-  gates.get('regions/b/region.json').resolve(new Response(JSON.stringify({name: 'B', map: {center: [3, 4]}})));
+  gates.get('regions/a/region.json').resolve(new Response(JSON.stringify({id: 'a', name: 'A', map: {center: [1, 2]}})));
+  gates.get('regions/b/region.json').resolve(new Response(JSON.stringify({id: 'b', name: 'B', map: {center: [3, 4]}})));
   assert.equal((await first).name, 'A');
   assert.equal((await same).id, 'a');
   assert.equal((await second).id, 'b');
@@ -149,15 +149,15 @@ test('startup region reader bounds body work and holds non-cooperative slots', a
   let reads = 0, signal;
   const reader = createRegionReader(async (_url, init) => {
     reads++; signal = init.signal;
-    return {ok: true, json: () => body.promise};
+    return reads === 1 ? {ok: true, json: () => body.promise} : Response.json({id: 'b', name: 'B', map: {center: [1, 2]}});
   }, {limit: 1, timeoutMs: 15});
   await assert.rejects(reader('a'));
   assert.equal(signal.aborted, true);
   await assert.rejects(reader('b'), /saturated/);
   assert.equal(reads, 1);
-  body.resolve({name: 'Late A', map: {center: [1, 2]}});
+  body.resolve({id: 'a', name: 'Late A', map: {center: [1, 2]}});
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal((await reader('b')).name, 'Late A');
+  assert.equal((await reader('b')).name, 'B');
   assert.equal(reads, 2);
 });
 
@@ -167,7 +167,7 @@ test('RF0850-2: a region change marks its chart file list pending until loadRegi
   state.syncFromURL(`${ORIGIN}?region=rf0850-a`);
   assert.deepEqual(publishedChartFiles.peek(), {region: 'rf0850-a', files: null, pending: true}, 'pending, not null: the Chart waits');
   const json = body => async () => new Response(JSON.stringify(body));
-  await loadRegion('rf0850-a', json({name: 'A', map: {center: [1, 2]}, chart_files: []}));
+  await loadRegion('rf0850-a', json({id: 'rf0850-a', name: 'A', map: {center: [1, 2]}, chart_files: []}));
   assert.deepEqual(publishedChartFiles.peek(), {region: 'rf0850-a', files: []});
   state.syncFromURL(`${ORIGIN}?region=rf0850-b`);
   assert.deepEqual(publishedChartFiles.peek(), {region: 'rf0850-b', files: null, pending: true});
@@ -198,9 +198,9 @@ test('app region publication shares a cold read but only the latest selection pu
   state.syncFromURL(`${ORIGIN}?region=southern-california`);
   const south = loadRegion('southern-california', fetcher);
   await new Promise(resolve => setImmediate(resolve));
-  gates.get('regions/southern-california/region.json').resolve(new Response(JSON.stringify({name: 'South', map: {center: [3, 4]}})));
+  gates.get('regions/southern-california/region.json').resolve(new Response(JSON.stringify({id: 'southern-california', name: 'South', map: {center: [3, 4]}})));
   assert.equal((await south).name, 'South');
-  gates.get('regions/morro-bay/region.json').resolve(new Response(JSON.stringify({name: 'Obsolete A', map: {center: [1, 2]}})));
+  gates.get('regions/morro-bay/region.json').resolve(new Response(JSON.stringify({id: 'morro-bay', name: 'Obsolete A', map: {center: [1, 2]}})));
   assert.equal(await latest, null);
   assert.equal(regionInfo.peek().name, 'South');
   assert.deepEqual(regionLoad.peek(), {id: 'southern-california', state: 'ready'});
@@ -216,7 +216,7 @@ test('app region timeout withdraws metadata and a reload retry can recover', asy
   const fetcher = async (_url, init) => {
     inits.push(init);
     return inits.length === 1 ? {ok: true, json: () => body.promise} :
-      new Response(JSON.stringify({name: 'Recovered', map: {center: [1, 2]}}));
+      new Response(JSON.stringify({id: 'morro-bay', name: 'Recovered', map: {center: [1, 2]}}));
   };
   const pending = loadRegion('morro-bay', fetcher);
   await new Promise(resolve => setImmediate(resolve));
@@ -227,7 +227,7 @@ test('app region timeout withdraws metadata and a reload retry can recover', asy
   assert.equal(inits[0].signal.aborted, true);
   assert.equal((await loadRegion('morro-bay', fetcher, true)).name, 'Recovered');
   assert.equal(inits[1].cache, 'reload');
-  body.resolve({name: 'Too late', map: {center: [8, 9]}});
+  body.resolve({id: 'morro-bay', name: 'Too late', map: {center: [8, 9]}});
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(regionInfo.peek().name, 'Recovered');
 });
@@ -280,7 +280,7 @@ test('app startup fixture baseline records cold/warm cache reads without a speed
   const fetcher = async url => {
     if (!cache.has(url)) {
       downloads++;
-      cache.set(url, JSON.stringify({name: 'Local fixture', map: {center: [1, 2]}}));
+      cache.set(url, JSON.stringify({id: 'morro-bay', name: 'Local fixture', map: {center: [1, 2]}}));
     }
     return new Response(cache.get(url));
   };
@@ -296,8 +296,8 @@ test('app startup fixture baseline records cold/warm cache reads without a speed
 
 test('startup region reader rejects invalid metadata and allows a later same-key retry', async () => {
   const {createRegionReader} = await load();
-  const bodies = [{}, {name: 'Invalid', map: {center: [null, 2]}},
-    {name: 'Valid', map: {center: [1, 2]}}];
+  const bodies = [{id: 'fixture'}, {id: 'fixture', name: 'Invalid', map: {center: [null, 2]}},
+    {id: 'fixture', name: 'Valid', map: {center: [1, 2]}}];
   const reader = createRegionReader(async () => new Response(JSON.stringify(bodies.shift())));
   assert.equal(await reader('fixture'), null);
   assert.equal(await reader('fixture'), null);
@@ -307,7 +307,8 @@ test('startup region reader rejects invalid metadata and allows a later same-key
 test('startup region reader keeps region.json chart_files only when it is a list of names (RF0850-1)', async () => {
   const {createRegionReader} = await load();
   const base = {name: 'R', map: {center: [1, 2]}};
-  const bodies = [{...base, chart_files: ['poster.svg']}, {...base, chart_files: []}, base, {...base, chart_files: 'poster.svg'}, {...base, chart_files: ['a', 2]}];
+  const bodies = [{...base, id: 'r1', chart_files: ['poster.svg']}, {...base, id: 'r2', chart_files: []}, {...base, id: 'r3'},
+    {...base, id: 'r4', chart_files: 'poster.svg'}, {...base, id: 'r5', chart_files: ['a', 2]}];
   const reader = createRegionReader(async () => new Response(JSON.stringify(bodies.shift())), {limit: 1});
   assert.deepEqual((await reader('r1')).chartFiles, ['poster.svg']);
   assert.deepEqual((await reader('r2')).chartFiles, [], 'an empty list is a list');
@@ -752,17 +753,17 @@ test('loadRegion fills the masthead from regions/<id>/region.json and leaves pla
   const {loadRegion, regionInfo, regionUnavailable, render, h, App, state} = await load();
   const fetched = [];
   const area = {id: 'estero-bay', name: 'Estero Bay', bounds: [-121.05, 35.32, -120.78, 35.47]};
-  const ok = async url => { fetched.push(url); return {ok: true, json: async () => ({name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965], local_areas: [area, {id: 7}, null]}})}; };
+  const ok = async url => { fetched.push(url); return {ok: true, json: async () => ({id: 'morro-bay', name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965], local_areas: [area, {id: 7}, null]}})}; };
   // The reviewed local areas come along for the coast report binding (FE-15's currents packet); malformed ones are dropped.
   assert.deepEqual(await loadRegion('morro-bay', ok), {id: 'morro-bay', name: 'Morro Bay & Avila', center: [35.34, -120.965], timezone: TZ, localAreas: [area]});
   assert.deepEqual(fetched, ['regions/morro-bay/region.json']);
   assert.deepEqual(regionUnavailable.value, {region: 'morro-bay', targets: {}});
   // CI6-02: the region's unavailable targets reach the target picker; malformed reasons are dropped.
-  const named = async () => ({ok: true, json: async () => ({name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965], unavailable_targets: {lobster: 'Not in this region\u2019s researched list.', bad: 3}}})});
+  const named = async () => ({ok: true, json: async () => ({id: 'morro-bay', name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965], unavailable_targets: {lobster: 'Not in this region\u2019s researched list.', bad: 3}}})});
   assert.deepEqual((await loadRegion('morro-bay', named)).unavailableTargets, {lobster: 'Not in this region\u2019s researched list.'});
   assert.deepEqual(regionUnavailable.value, {region: 'morro-bay', targets: {lobster: 'Not in this region\u2019s researched list.'}});
   // SC-LAUNCH-3: a region that names its jurisdiction carries the fields web/regs.ts reads, for the brief's legality line.
-  const ruled = async () => ({ok: true, json: async () => ({name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965]}, jurisdiction_id: 'california-central', species: ['reef', 'salmon'], assets: {regulations: 'data/regulations.json'}})});
+  const ruled = async () => ({ok: true, json: async () => ({id: 'morro-bay', name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965]}, jurisdiction_id: 'california-central', species: ['reef', 'salmon'], assets: {regulations: 'data/regulations.json'}})});
   assert.deepEqual((await loadRegion('morro-bay', ruled)).rules, {id: 'morro-bay', timezone: TZ, species: ['reef', 'salmon'], jurisdiction_id: 'california-central', regulatory_authority_hosts: undefined, assets: {regulations: 'data/regulations.json'}});
   state.configureStore({storage: memory()});
   state.syncFromURL(`${ORIGIN}?region=morro-bay`);

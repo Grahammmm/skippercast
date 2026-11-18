@@ -50,10 +50,11 @@ function intelInWindow() {
 /** A feed reader over the fixtures; `drop` removes the landing reports, `fail` makes a feed unreadable. */
 function feeds({drop = false, fail = null} = {}) {
   const d = read('./fixtures/feeds/daily-latest.json'), intel = intelInWindow();
+  d.generated_at = '2026-09-28T11:17:00Z';   // SCA-059: a current feed from its 04:17 local run (the fixture was written later that day)
   if (drop) d.reports = [];
   return async url => {
-    if (/intelligence\.json$/.test(url)) { if (fail === 'intelligence') throw Error('down'); return intel; }
-    if (/latest\.json$/.test(url)) { if (fail === 'daily') throw Error('down'); return d; }
+    if (/intelligence\.json$/.test(url)) { if (fail === 'intelligence' || fail === 'both') throw Error('down'); return intel; }
+    if (/latest\.json$/.test(url)) { if (fail === 'daily' || fail === 'both') throw Error('down'); return d; }
     throw Error(`no fixture for ${url}`);
   };
 }
@@ -267,18 +268,27 @@ dbTest('the model failing (HTTP 500), no API key, or the global LLM cap: the com
   }
 });
 
-dbTest('a feed that fails to load does not replace today\'s stored answer; without a stored answer the degraded one is made', async () => {
+dbTest('one failed feed composes without replacing the stored answer; total outage still keeps it', async () => {
   const {sql, env} = setup();
   twoReports(sql);
   const {value: good} = await quiet(() => dailyAnswer(env, 'morro-bay', DATE, 'en', {feeds: feeds(), fetcher: fakeApi([fixture('generate-skipper-reports')]).fetcher, clock: () => NOW}));
+  const before = stored(sql);
   for (const fail of ['daily', 'intelligence']) {
-    const kept = await dailyAnswer(env, 'morro-bay', DATE, 'en', {feeds: feeds({fail}), fetcher: noModel, clock: () => NOW});
-    assert.deepEqual([kept.source, kept.text], ['cache', good.text_en], fail);
+    const degraded = await dailyAnswer(env, 'morro-bay', DATE, 'en', {feeds: feeds({fail}), fetcher: noModel, clock: () => NOW});
+    assert.equal(degraded.source, 'composed', fail);
+    assert.match(degraded.text, /Example Boat One reported yesterday/);
+    assert.deepEqual(stored(sql), before, fail);
   }
+  const kept = await dailyAnswer(env, 'morro-bay', DATE, 'en', {feeds: feeds({fail: 'both'}), fetcher: noModel, clock: () => NOW});
+  assert.deepEqual([kept.source, kept.text], ['cache', good.text_en]);
   sql.prepare('DELETE FROM advisor_daily_answers').run();
-  const {value: degraded} = await quiet(() => dailyAnswer(env, 'morro-bay', DATE, 'en', {feeds: feeds({fail: 'intelligence'}), fetcher: fakeApi([{status: 529, body: {}}]).fetcher, clock: () => NOW}));
+  const api = fakeApi([]);
+  const degraded = await dailyAnswer(env, 'morro-bay', DATE, 'en', {feeds: feeds({fail: 'intelligence'}), fetcher: api.fetcher, clock: () => NOW});
   assert.equal(degraded.source, 'composed');
+  assert.match(degraded.text_en, /^SMALL CRAFT ADVISORY posted for today\./);
   assert.match(degraded.text_en, /Today's forecast isn't in yet\./);
+  assert.deepEqual(api.requests, []);
+  assert.equal(stored(sql), undefined);
 });
 
 test('composeDaily and acceptable on hand-built inputs: the 06 example passes, and every text is plain', () => {

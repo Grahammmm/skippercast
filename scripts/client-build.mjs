@@ -18,7 +18,7 @@
 // The build id hashes every page and every hashed asset name, so any change
 // to a module, stylesheet or page gives a new id (and a new service worker).
 import {createHash} from 'node:crypto';
-import {cp, readdir, readFile, rename, rm, writeFile} from 'node:fs/promises';
+import {cp, lstat, readdir, readFile, rename, rm, writeFile} from 'node:fs/promises';
 import {join, relative, resolve, sep} from 'node:path';
 import {build} from 'vite';
 import {clientConfig, pages} from '../vite.config.mjs';
@@ -36,8 +36,14 @@ export const IMMUTABLE_ASSETS = '/assets/*\n  Cache-Control: public, max-age=315
 // stay, with the assets' default revalidation, for pages and packs that name them.
 export const GLYPHS = 'basemap/glyphs';
 export const IMMUTABLE_GLYPHS = `/${GLYPHS}/v/*\n  Cache-Control: public, max-age=31536000, immutable\n`;
-// Authored module sources: Vite builds these, so they are never copied raw.
+// Top-level authored module sources: Vite builds these instead of copying them.
 const SOURCE = /\.(?:js|css|html)$/;
+// These nested inputs are bundled by admin.html, chat.html, my-data.html and
+// upload.html. Server-rendered advisor pages reuse chat.html's hashed assets.
+const BUNDLED_ADVISOR_SOURCES = new Set([
+  'advisor/admin.css', 'advisor/chat.css', 'advisor/my-data.js',
+  'advisor/pages.css', 'advisor/upload.css', 'advisor/upload.js',
+]);
 
 export function hashName(name, buildId) {
   const dot = name.lastIndexOf('.');
@@ -49,24 +55,32 @@ export function hashName(name, buildId) {
 // even if someone points --output into dist/.
 const PRIVATE_OUTPUT = /(?:^|\/)(?:morro-bay-seafloor-deep(?:-[a-z]+)?\.(?:pmtiles|part)|tide-layer-[^/]*\.(?:json|part))$/;
 
+// collect_shore_habitat.py raw archives, receipts and interrupted atomic writes.
+const RAW_SHORE = /(?:^|\/)(?:\.)?(?:ccc-access-(?:points|item|estero)|noaa-esi-shoreline|receipts)\.json(?:\.[0-9a-f]+\.tmp)?$/i;
+
 // E2E-13: defence in depth. Only these dist/tiles archives may ship; any other
 // *.pmtiles under dist/ (e.g. a relief or CSUMB-derived laguna-seafloor-deep-medium.pmtiles)
 // fails the build instead of being copied. Add a name here only with its rights cleared.
 export const PUBLIC_PMTILES = new Set(['tiles/morro-bay-reef-outlines.pmtiles', 'tiles/socal-survey-habitat.pmtiles']);
 
-/** True to copy `from` (under `src`); throws on any unallowlisted *.pmtiles. */
-function keepStatic(src, from) {
+/** True to copy `from` (under `src`); throws on raw shore data, links or unallowlisted *.pmtiles. */
+async function keepStatic(src, from) {
   const posix = from.split(sep).join('/');
+  const rel = relative(src, from).split(sep).join('/');
+  if (RAW_SHORE.test(rel)) throw Error(`refusing to publish ${rel}: raw shore source artifact`);
   if (/\.pmtiles$/i.test(posix)) {
-    const rel = relative(src, from).split(sep).join('/');
     if (!PUBLIC_PMTILES.has(rel)) throw Error(`refusing to publish ${rel}: *.pmtiles under dist/ must be on PUBLIC_PMTILES (scripts/client-build.mjs)`);
   }
   if (PRIVATE_OUTPUT.test(posix)) return false;
+  if (BUNDLED_ADVISOR_SOURCES.has(rel)) return false;
+  // A link can expose a whole private directory without naming a raw artifact.
+  if ((await lstat(from)).isSymbolicLink()) throw Error(`refusing to publish ${rel}: symbolic link`);
   return true;
 }
 
 /** Copy dist's static files (everything but module sources, build output and dot-entries). */
 export async function copyStatic(src, out, {only} = {}) {
+  if ((await lstat(src)).isSymbolicLink()) throw Error('refusing to publish from a symbolic link as the static root');
   for (const entry of await readdir(src, {withFileTypes: true})) {
     const name = entry.name;
     if (name === 'client' || name === 'server' || name.startsWith('.')) continue;

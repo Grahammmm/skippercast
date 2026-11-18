@@ -24,7 +24,9 @@ Rules (E2E-PIPELINE §3):
 2. **Done** = the receipt has status ``ok``, every output re-hashes (size and sha256) to the
    receipt, and every upstream generation equals the generation in the *current* upstream
    receipt, which is itself done. A stage run is additionally a no-op only when its newly
-   computed generation equals the receipt's.
+   computed generation equals the receipt's; when it equals an earlier ``ok`` receipt kept in
+   ``generation_history`` whose outputs still re-hash and whose upstream is current, that
+   receipt is restored as the current one without a rebuild or a new attempt.
 3. **Write then rename.** A run builds into ``<target>.tmp-<pid>`` and renames it to
    ``<target>`` only after the build returned; an existing ``<target>`` is moved aside to
    ``<target>.old-<stamp>`` first, never written in place. A failed attempt is kept as
@@ -329,7 +331,8 @@ def validate_receipt(doc: Mapping, region: str, stage: str, scope: str | None) -
             and isinstance(o.get('bytes'), int) for o in outputs):
         return 'outputs malformed'
     if not isinstance(upstream, list) or not all(
-            isinstance(u, dict) and isinstance(u.get('stage'), str) and isinstance(u.get('generation'), str)
+            isinstance(u, dict) and isinstance(u.get('stage'), str) and isinstance(u.get('scope'), (str, type(None)))
+            and isinstance(u.get('generation'), str) and HEX64.fullmatch(u['generation'])
             for u in upstream):
         return 'upstream malformed'
     if not isinstance(doc.get('attempt'), int) or doc['attempt'] < 1:
@@ -476,8 +479,13 @@ def chain(region: Region) -> list[tuple[str, Verdict]]:
     verdicts = {Ref(s, sc).key: check(region, s, sc, memo=memo) for s, sc in region.keys()}
     needs = {}
     for key, verdict in verdicts.items():
-        ups = (verdict.receipt or {}).get('upstream') or []
-        needs[key] = {Ref(u.get('stage', ''), u.get('scope')).key for u in ups if isinstance(u, dict)} & set(verdicts)
+        ups = (verdict.receipt or {}).get('upstream')
+        if not isinstance(ups, list):  # an invalid receipt (verdict 'invalid') may hold anything
+            ups = []
+        # skip malformed entries (non-str stage/scope): check() already reports them invalid
+        needs[key] = {Ref(u['stage'], u.get('scope')).key for u in ups if isinstance(u, dict)
+                      and isinstance(u.get('stage'), str) and isinstance(u.get('scope'), (str, type(None)))
+                      } & set(verdicts)
     order: list[str] = []
     while needs:
         ready = sorted(k for k, deps in needs.items() if not deps - set(order))
@@ -606,17 +614,32 @@ def run_stage(run: StageRun, *, clock: Callable[[], datetime] = utc_now,
         def save(doc):
             write_json_atomic(receipt_path, dict(doc, generation_history=history))
 
+        attempt = same['attempt'] + 1 if same is not None else 1
+        started = clock()
+        stamp = f'{started.astimezone(timezone.utc):%Y%m%dT%H%M%SZ}-a{attempt}-p{os.getpid()}'
+        target.parent.mkdir(parents=True, exist_ok=True)
+        # Retain a crashed attempt's half-written directory before any early return (held,
+        # restored or attempt limit), so the last crash's directory never stays a .tmp-*.
+        for stale in sorted(target.parent.glob(f'{glob.escape(target.name)}.tmp-*')):
+            if stale.is_dir() and not stale.is_symlink():
+                stale.rename(_aside(target, f'failed-{stamp}-recovered-{stale.name.rsplit("-", 1)[-1]}'))
+
         if same is not None and same['status'] == 'held':
             if prev is not None and prev['generation'] != gen:
                 save(same)
             return result('held', gen, same.get('held_reason') or 'held')
-        if same is not None and prev is not None and prev['generation'] == gen and same['status'] == 'ok':
+        if prev is not None and same is not None and same['status'] == 'ok':
+            # The current receipt, or an earlier success of this generation (after a switch to
+            # another one and back): when its outputs still re-hash and its upstream is current,
+            # it is restored as the current receipt without a rebuild or a new attempt.
             verdict = _verify_ok(region, same, memo)
             if verdict.done:
+                if prev['generation'] != gen:
+                    save(same)
+                    return result('done', gen, 'no work: earlier ok receipt restored, outputs re-hash, '
+                                               'upstream current')
                 return result('done', gen, 'no work: receipt ok, outputs re-hash, upstream current')
-        attempt = same['attempt'] + 1 if same is not None else 1
 
-        started = clock()
         base = {
             'schema': SCHEMA, 'region': region.id, 'stage': run.stage, 'scope': run.scope,
             'generation': gen, 'inputs': inputs, 'upstream': upstream_rows,
@@ -633,11 +656,6 @@ def run_stage(run: StageRun, *, clock: Callable[[], datetime] = utc_now,
                                                  held_reason=reason, error=None, ended=iso(started)))
             return result('held', gen, reason)
 
-        stamp = f'{started.astimezone(timezone.utc):%Y%m%dT%H%M%SZ}-a{attempt}-p{os.getpid()}'
-        target.parent.mkdir(parents=True, exist_ok=True)
-        for stale in sorted(target.parent.glob(f'{glob.escape(target.name)}.tmp-*')):
-            if stale.is_dir() and not stale.is_symlink():
-                stale.rename(_aside(target, f'failed-{stamp}-recovered-{stale.name.rsplit("-", 1)[-1]}'))
         save(base)  # the attempt is on record before any work starts
 
         tmp = target.with_name(f'{target.name}.tmp-{os.getpid()}')
