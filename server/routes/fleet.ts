@@ -54,10 +54,11 @@ export const fleetGate: MiddlewareHandler<AppEnv> = async (c, next) => {
 
 // The Hermes workflows (§ 12) call /api/fleet/jobs/* with a GitHub Actions OIDC
 // token requested for the audience <public_origin>/api/fleet/jobs; each workflow
-// must also be listed in deployments/production.json scheduler.workflows.
+// must also be listed for its repository identity in deployments/production.json.
 export const FLEET_JOB_SCOPE: JobScope = {
   audiencePath: '/api/fleet/jobs',
-  workflows: ['fleet-registry.yml', 'fleet-osint.yml', 'fleet-ais.yml', 'fleet-health.yml'],
+  workflows: ['fleet-registry.yml', 'fleet-osint.yml', 'fleet-ais.yml', 'fleet-health.yml', 'fleet-ping.yml'],
+  includeFleetScheduler: true,
 };
 /** Test seam: the token check (default: verifyJobToken with FLEET_JOB_SCOPE). */
 export const fleetJobs: {verify: (token: string | undefined) => Promise<JobClaims | false>} = {
@@ -70,18 +71,17 @@ const JOB_BUDGET = 240;   // requests a minute per run (jti), as the advisor-med
  * call when it is listed here. The hourly monitor (fleet-health.yml) reads the
  * health contract (staleness booleans and ages) and may run the identity ping
  * (no data); nothing else: no private dataset reads (snapshot, watch, labels)
- * and no mutations. A workflow not listed (registry, OSINT and AIS processor
- * jobs) keeps every job route.
+ * and no mutations. The private ping workflow may only run the identity ping.
  */
-export const FLEET_JOB_LIMITS: Readonly<Record<string, readonly string[]>> = {
-  'fleet-health.yml': ['GET /api/fleet/jobs/health', 'GET /api/fleet/jobs/ping'],
-};
-/** The exact workflow_ref validJobClaims accepts for a workflow file (server/job-auth.ts). */
-const workflowRef = (workflow: string): string =>
-  `${deployment.scheduler.repository}/.github/workflows/${workflow}@${deployment.scheduler.ref}`;
-/** The routes the verified job may call, or undefined when it keeps them all. */
-const jobLimit = (claims: JobClaims): readonly string[] | undefined =>
-  Object.entries(FLEET_JOB_LIMITS).find(([workflow]) => claims.workflow_ref === workflowRef(workflow))?.[1];
+export const FLEET_JOB_LIMITS: ReadonlyMap<string, readonly string[]> = new Map([
+  ['Grahammmm/skippercast/.github/workflows/fleet-health.yml@refs/heads/main', ['GET /api/fleet/jobs/health', 'GET /api/fleet/jobs/ping']],
+  ['Grahammmm/skippercast-ops/.github/workflows/fleet-ping.yml@refs/heads/main', ['GET /api/fleet/jobs/ping']],
+]);
+// Independent of the identity allowlist: adding a private workflow must not grant data access.
+const privateScheduler = deployment.fleet_scheduler;
+const privateDataWorkflows = new Set(privateScheduler ? ['fleet-registry.yml', 'fleet-osint.yml', 'fleet-ais.yml'].map(
+  workflow => `${privateScheduler.repository}/.github/workflows/${workflow}@${privateScheduler.ref}`,
+) : []);
 
 /**
  * A fleet job identity, else 401; a route outside its FLEET_JOB_LIMITS, 403
@@ -92,8 +92,10 @@ export const requireFleetJob: MiddlewareHandler<AppEnv> = async (c, next) => {
   const token = c.req.header('Authorization')?.replace(/^Bearer /, '');
   const claims = await fleetJobs.verify(token);
   if (!claims) return json({error: 'Unauthorized'}, 401);
-  const limit = jobLimit(claims);
-  if (limit && !limit.includes(`${c.req.method} ${c.req.path}`)) return json({error: 'Forbidden'}, 403);
+  const limit = FLEET_JOB_LIMITS.get(claims.workflow_ref);
+  const forbidden = limit ? !limit.includes(`${c.req.method} ${c.req.path}`)
+    : privateScheduler && claims.repository === privateScheduler.repository && !privateDataWorkflows.has(claims.workflow_ref);
+  if (forbidden) return json({error: 'Forbidden'}, 403);
   await budget(c.env, 'fleet-job:' + claims.jti, JOB_BUDGET);
   c.set('fleetJob', claims);
   await next();
