@@ -1,8 +1,7 @@
 // Charted routes (FSC-04): a water-only route from the region's harbor to a chosen place, around land
 // (headlands, Morro Rock, the breakwater), on the region's land-water product (web/land-water.ts). It is a
 // planning sum on the NOAA shoreline, not a navigation route or passage plan; the shoreline is not a
-// navigation boundary. It passes only where the product says water, so never over land, the 25 m edge band
-// or unknown cells, and returns its length in nm, or a named reason when no route can be computed.
+// navigation boundary. The search screens for water and returns length in nm or a named failure.
 //
 // The search grid splits each zoom-12 product cell into 4×4 sub-cells (~60 m) and joins tiles by global
 // sub-cell index (x = tileX·grid·4 + col, y = tileY·grid·4 + row). A sub-cell is passable when its centre
@@ -24,7 +23,7 @@ import {M_PER_NMI} from './units.ts';
 
 /** Most sub-cells one search expands before it gives up (`too-far`). */
 export const MAX_NODES = 400_000;
-/** How far (m) a start or end may snap to the nearest passable sub-cell centre (berths and marks sit at the shore). */
+/** How far (m) a start or end may connect to a passable sub-cell centre. */
 export const SNAP_M = 300;
 
 export interface RoutePoint {readonly latitude: number; readonly longitude: number}
@@ -42,6 +41,23 @@ const fail = (reason: RouteFailure): Route => ({ok: false, reason});
 type Item = [number, number, number];
 const less = (a: Item, b: Item): boolean => a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]);
 const toLat = (fy: number, n: number): number => Math.atan(Math.sinh(Math.PI * (1 - 2 * fy / n))) * 180 / Math.PI;
+const gridX = (lon: number, size: number): number => (lon + 180) / 360 * size;
+const gridY = (lat: number, size: number): number => (1 - Math.asinh(Math.tan(lat * Math.PI / 180)) / Math.PI) / 2 * size;
+const cosLat = (lat: number): number => Math.cos(lat * Math.PI / 180);
+
+/** Does any shoreline segment meet this closed rectangle (all in shoreline units)? */
+function hitsBox(segments: Float64Array, west: number, south: number, east: number, north: number): boolean {
+  for (let i = 0; i < segments.length; i += 4) {
+    const ax = segments[i]!, ay = segments[i + 1]!, bx = segments[i + 2]!, by = segments[i + 3]!;
+    if (Math.max(ax, bx) < west || Math.min(ax, bx) > east || Math.max(ay, by) < south || Math.min(ay, by) > north) continue;
+    if (ax === bx) return true;
+    const left = (west - ax) / (bx - ax), right = (east - ax) / (bx - ax);
+    const a = ay + (by - ay) * Math.max(0, Math.min(left, right));
+    const b = ay + (by - ay) * Math.min(1, Math.max(left, right));
+    if (Math.max(a, b) >= south && Math.min(a, b) <= north) return true;
+  }
+  return false;
+}
 
 /** Point classifications and per-tile line subsets, per product and lines object (null and false keyed apart). */
 type Shared = {readonly memo: Map<number, number>; readonly near: Map<string, LandWaterLines>};
@@ -120,17 +136,53 @@ export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines |
     return allowed.get(id) ? v : 0;
   };
   const centre = (id: number): RoutePoint => at(4 * (id % size) + 2, 4 * Math.floor(id / size) + 2);
-  // The nearest passable sub-cell centre within SNAP_M of p (first in row order on a tie), or -1.
+  // Screen the actual lon/lat connector, not just its endpoints. Each short piece is enclosed in a box;
+  // cover the entire box to catch even a sliver of land or unknown at a grid corner between samples.
+  const connectorWater = (p: RoutePoint, c: RoutePoint): boolean => {
+    const dx = c.longitude - p.longitude, dy = c.latitude - p.latitude;
+    const polar = Math.max(Math.abs(p.latitude), Math.abs(c.latitude));
+    const equatorial = p.latitude * c.latitude <= 0 ? 0 : Math.min(Math.abs(p.latitude), Math.abs(c.latitude));
+    const steps = Math.max(1, Math.ceil(111320 * Math.hypot(dx * cosLat(equatorial), dy) / (model.edgeM / 4)));
+    const mx = model.edgeM * UNIT / (111320 * cosLat(polar)), my = model.edgeM * UNIT / 110540;
+    const g = model.grid, cells = n * g, eps = 1e-8; // include both sides of a cell boundary (float round-off)
+    let lon = p.longitude, lat = p.latitude;
+    for (let i = 1; i <= steps; i++) {
+      const nextLon = p.longitude + dx * i / steps, nextLat = p.latitude + dy * i / steps;
+      const west = Math.min(lon, nextLon), east = Math.max(lon, nextLon);
+      const south = Math.min(lat, nextLat), north = Math.max(lat, nextLat);
+      for (let x = Math.floor(gridX(west, cells) - eps); x <= Math.floor(gridX(east, cells) + eps); x++) {
+        for (let y = Math.floor(gridY(north, cells) - eps); y <= Math.floor(gridY(south, cells) + eps); y++) {
+          const tx = Math.floor(x / g), ty = Math.floor(y / g);
+          const cell = model.tiles.get(`${model.zoom}/${tx}/${ty}`)?.[(y - ty * g) * g + x - tx * g];
+          if (cell === 'w') continue;
+          if (cell !== 'm') return false;
+          if (!lines) { if (lines === null) sawMixed = true; return false; }
+          const part = subset(lines, tx, ty);
+          const mid = {longitude: (west + east) / 2, latitude: (south + north) / 2};
+          // Parity cannot change inside the box without crossing a parity segment. The padded rectangle
+          // encloses the 25 m edge band around every point in the piece, including at its highest latitude.
+          if (hitsBox(part.edge, west * UNIT - mx, south * UNIT - my, east * UNIT + mx, north * UNIT + my)
+            || hitsBox(part.parity, west * UNIT, south * UNIT, east * UNIT, north * UNIT)
+            || linesPlace(model, part, mid).state !== 'water') return false;
+        }
+      }
+      lon = nextLon; lat = nextLat;
+    }
+    return true;
+  };
+  // Nearest passable centre with a screened connector within SNAP_M (first in row order on a tie), or -1.
   const snap = (p: RoutePoint): number => {
     if (!Number.isFinite(p?.latitude) || !Number.isFinite(p?.longitude) || Math.abs(p.latitude) > 85) return -1;
-    const fx = (p.longitude + 180) / 360 * size, fy = (1 - Math.asinh(Math.tan(p.latitude * Math.PI / 180)) / Math.PI) / 2 * size;
-    const r = Math.ceil(SNAP_M / (2 * Math.PI * EARTH_M * Math.cos(p.latitude * Math.PI / 180) / size)) + 1;
+    const stop = placeOf(model, lines, p);
+    if (stop.state !== 'water') { sawMixed = stop.state === 'unknown' && stop.reason === 'pending'; return -1; }
+    const fx = gridX(p.longitude, size), fy = gridY(p.latitude, size);
+    const r = Math.ceil(SNAP_M / (2 * Math.PI * EARTH_M * cosLat(p.latitude) / size)) + 1;
     let best = -1, bestM = Infinity;
     for (let gy = Math.floor(fy) - r; gy <= Math.floor(fy) + r; gy++) {
       for (let gx = Math.floor(fx) - r; gx <= Math.floor(fx) + r; gx++) {
         if (gx < 0 || gy < 0 || gx >= size || gy >= size) continue;
-        const m = distanceNm(p, centre(gy * size + gx)) * M_PER_NMI;
-        if (m <= SNAP_M && m < bestM && cellWater(gx, gy) && (!allows || allows([p, centre(gy * size + gx)]))) { best = gy * size + gx; bestM = m; }
+        const id = gy * size + gx, c = centre(id), m = distanceNm(p, c) * M_PER_NMI;
+        if (m <= SNAP_M && m < bestM && cellWater(gx, gy) && connectorWater(p, c) && (!allows || allows([p, c]))) { best = id; bestM = m; }
       }
     }
     return best;
