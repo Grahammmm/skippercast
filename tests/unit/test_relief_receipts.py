@@ -485,6 +485,22 @@ def test_status_reports_a_receipt_with_a_non_list_upstream(tiny, capsys):
     assert states == {**{key: 'done' for key in TINY.ORDER}, 'broken': 'invalid'}
 
 
+@pytest.mark.parametrize('bad', [{'stage': [], 'generation': 'a' * 64},
+                                 {'stage': 'select', 'scope': {}, 'generation': 'a' * 64},
+                                 {'stage': {'x': 1}, 'generation': 'a' * 64}])
+def test_status_reports_a_receipt_with_a_malformed_upstream_entry(tiny, capsys, bad):
+    doc = dict(receipt(tiny, 'select'), stage='broken', upstream=[bad])
+    receipts.write_json_atomic(tiny.receipt_path('broken'), doc)
+    rows = dict(receipts.chain(tiny))  # must not raise
+    assert rows['broken'].state == 'invalid'
+    assert all(rows[key].done for key in TINY.ORDER)
+    argv = ['status', '--region', 'tiny', '--out', str(tiny.out_root)]
+    assert CLI.main(argv) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert any(line.split()[:2] == ['broken', 'invalid'] for line in lines)
+    assert lines[-1] == 'chain: 4 done, 1 invalid'
+
+
 def test_fixture_grids_are_deterministic_geotiffs():
     grids = TINY.grids()
     assert sorted(grids) == ['bluetopo_like_3band.tif', 'geographic_1m.tif', 'projected_1m.tif']

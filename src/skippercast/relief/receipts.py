@@ -331,7 +331,8 @@ def validate_receipt(doc: Mapping, region: str, stage: str, scope: str | None) -
             and isinstance(o.get('bytes'), int) for o in outputs):
         return 'outputs malformed'
     if not isinstance(upstream, list) or not all(
-            isinstance(u, dict) and isinstance(u.get('stage'), str) and isinstance(u.get('generation'), str)
+            isinstance(u, dict) and isinstance(u.get('stage'), str) and isinstance(u.get('scope'), (str, type(None)))
+            and isinstance(u.get('generation'), str) and HEX64.fullmatch(u['generation'])
             for u in upstream):
         return 'upstream malformed'
     if not isinstance(doc.get('attempt'), int) or doc['attempt'] < 1:
@@ -481,7 +482,10 @@ def chain(region: Region) -> list[tuple[str, Verdict]]:
         ups = (verdict.receipt or {}).get('upstream')
         if not isinstance(ups, list):  # an invalid receipt (verdict 'invalid') may hold anything
             ups = []
-        needs[key] = {Ref(u.get('stage', ''), u.get('scope')).key for u in ups if isinstance(u, dict)} & set(verdicts)
+        # skip malformed entries (non-str stage/scope): check() already reports them invalid
+        needs[key] = {Ref(u['stage'], u.get('scope')).key for u in ups if isinstance(u, dict)
+                      and isinstance(u.get('stage'), str) and isinstance(u.get('scope'), (str, type(None)))
+                      } & set(verdicts)
     order: list[str] = []
     while needs:
         ready = sorted(k for k, deps in needs.items() if not deps - set(order))
