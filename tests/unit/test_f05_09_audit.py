@@ -8,10 +8,8 @@ inside a polygon hole passes containment. All coordinates are invented synthetic
 """
 import pytest
 
-pytest.importorskip("shapely")
+box = pytest.importorskip("shapely.geometry").box  # survey stack; keeps the layout contract's top-level-import rule
 pytest.importorskip("pyproj")
-
-from shapely.geometry import box  # noqa: E402
 
 from skippercast.coastal.authenticated_v1.planner import geometry_in_target  # noqa: E402
 
