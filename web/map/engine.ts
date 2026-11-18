@@ -87,6 +87,10 @@ export interface MapView {
 export interface Overlay {
   readonly sources: Readonly<Record<string, MapLibre.SourceSpecification>>;
   readonly layers: readonly MapLibre.LayerSpecification[];
+  readonly pattern?: {readonly id: string; readonly image: ImageData; readonly pixelRatio: number};
+  readonly control?: HTMLElement;
+  /** Open-water fallback, after the existing Chart pick and its waypoint handling. */
+  readonly inspect?: {readonly layer: string; show(properties: Record<string, unknown>): void};
   /** RF1935-3: the first source error removes this overlay's layers and sources and is reported once; nothing re-adds the same object. */
   readonly stopOnError?: boolean;
 }
@@ -184,6 +188,11 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
 
   // The overlays drawn now, by registry layer (FE-22), so their source errors route to that layer.
   const overlays = new Map<string, Overlay>();
+  const controls = new Map<string, MapLibre.IControl>();
+  function removeControl(layer: string): void {
+    const control = controls.get(layer);
+    if (control) { map.removeControl(control); controls.delete(layer); }
+  }
   const overlayOf = (sourceId: string | undefined): string | null =>
     sourceId === undefined ? null : [...overlays].find(([, o]) => sourceId in o.sources)?.[0] ?? null;
 
@@ -196,6 +205,8 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     failed.add(overlay);
     for (const l of overlay.layers) if (map.getLayer(l.id)) map.removeLayer(l.id);
     for (const id of Object.keys(overlay.sources)) { if (map.getSource(id)) map.removeSource(id); retired.add(id); }
+    if (overlay.pattern && map.hasImage(overlay.pattern.id)) map.removeImage(overlay.pattern.id);
+    removeControl(layer);
     overlays.delete(layer);
   }
 
@@ -249,6 +260,14 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       const query = (ids: readonly string[]) => { const layers = ids.filter(id => map.getLayer(id)); return layers.length ? map.queryRenderedFeatures(event.point, {layers})[0] : undefined; };
       const feature = query(options.pickFirst?.() ?? []) ?? query(options.pickLayers ?? []);
       const layer = feature?.layer.id ?? null, properties = feature ? feature.properties as Record<string, unknown> : null;
+      let inspect: (() => void) | undefined;
+      if (!feature) for (const [owner, {inspect: candidate}] of overlays) {
+        const hit = candidate && query([candidate.layer]);
+        if (hit) {
+          inspect = () => { if (overlays.get(owner)?.inspect === candidate) candidate.show(hit.properties); };
+          break;
+        }
+      }
       const at = event.lngLat ? {lon: event.lngLat.lng, lat: event.lngLat.lat} : null;
       // A pickContext that answers null means picking is closed (Chart hidden, or not the shown view): it never accepts a pick, at the click or at dispatch.
       const gated = !!options.pickContext, context = options.pickContext?.();
@@ -258,6 +277,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
         const now = options.pickContext?.();
         if (destroyed || moving || (gated && now === null) || now !== context) return;
         pick(layer, properties, at);
+        if (inspect && options.pickContext?.() === context) inspect();
       }, PICK_SETTLE_MS);
     });
   }
@@ -283,10 +303,22 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     for (const id of Object.keys(overlay?.sources ?? {})) retired.delete(id);
     const old = overlays.get(layer), next = overlay ?? {sources: {}, layers: []};
     for (const l of old?.layers ?? []) if (!next.layers.some(n => n.id === l.id) && map.getLayer(l.id)) map.removeLayer(l.id);
+    if (old?.pattern && old.pattern.id !== overlay?.pattern?.id && map.hasImage(old.pattern.id)) map.removeImage(old.pattern.id);
+    const pattern = overlay?.pattern;
+    if (pattern && !map.hasImage(pattern.id)) map.addImage(pattern.id, pattern.image, {pixelRatio: pattern.pixelRatio});
     for (const id of Object.keys(old?.sources ?? {})) if (!(id in next.sources) && map.getSource(id)) map.removeSource(id);
     for (const [id, source] of Object.entries(next.sources)) if (!map.getSource(id)) map.addSource(id, source);
     const under = ([] as string[]).concat(before ?? []).find(id => map.getLayer(id));
     for (const l of next.layers) if (!map.getLayer(l.id)) map.addLayer(l, under);
+    if (old?.control !== overlay?.control) {
+      removeControl(layer);
+      const element = overlay?.control;
+      if (element) {
+        const control = {onAdd: () => element, onRemove: () => element.remove()};
+        map.addControl(control, 'top-right');
+        controls.set(layer, control);
+      }
+    }
     if (overlay) overlays.set(layer, overlay); else overlays.delete(layer);
   };
   const fade = (layerId: string, opacity: number): void => { if (map.getLayer(layerId)) map.setPaintProperty(layerId, 'raster-opacity', opacity); };
