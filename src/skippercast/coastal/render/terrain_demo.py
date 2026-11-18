@@ -269,6 +269,19 @@ def style_config(style=None):
     return config
 
 
+MEASURED_LABEL = 'Accepted mesh · measured sample tile'
+SYNTHETIC_LABEL = 'Synthetic test terrain — not survey measurements'
+UNCONFIRMED_LABEL = 'Terrain provenance unconfirmed — not survey measurements'
+
+
+def heading_label(data):
+    """Measured wording only for a positively real input; synthetic or unknown never gets it."""
+    metadata = data.get('metadata') if isinstance(data, dict) else None
+    acceptance = metadata.get('acceptance') if isinstance(metadata, dict) else None
+    flag = acceptance.get('synthetic') if isinstance(acceptance, dict) else None
+    return SYNTHETIC_LABEL if flag is True else MEASURED_LABEL if flag is False else UNCONFIRMED_LABEL
+
+
 def html(data, style=None):
     module = Path(__file__).parent
     core = (module/'terrain_demo_core.js').read_text()
@@ -279,7 +292,7 @@ def html(data, style=None):
     def csp_hash(text):
         return "'sha256-" + base64.b64encode(hashlib.sha256(text.encode()).digest()).decode() + "'"
     csp = "default-src 'none'; script-src " + csp_hash(script) + "; style-src " + csp_hash(CSS) + "; connect-src 'none'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
-    document = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="' + csp + '"><title>Internal terrain diagnostic</title><style>' + CSS + '</style></head><body>' + BODY + '<script>' + script + '</script></body></html>\n'
+    document = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="' + csp + '"><title>Internal terrain diagnostic</title><style>' + CSS + '</style></head><body>' + BODY.replace(MEASURED_LABEL, heading_label(data), 1) + '<script>' + script + '</script></body></html>\n'
     result = document.encode('utf-8')
     if len(result) > MAX_HTML_BYTES:
         raise ValueError('demo_html_byte_bound')
