@@ -260,6 +260,11 @@ class TeckReports:
 
     def directory(self, binding: "Binding", ctx: RunContext, client: collect.Client) -> Iterator[DirectoryEntry]:
         """Every boat card of the binding's directory, following the pager."""
+        for page in self.directory_pages(binding, ctx, client):
+            yield from page.entries
+
+    def directory_pages(self, binding: "Binding", ctx: RunContext, client: collect.Client) -> Iterator[DirectoryPage]:
+        """Each directory listing page in turn; ``page.url`` is where its cards were seen."""
         url: str | None = urljoin(binding.params["base"].rstrip("/") + "/", binding.params["directory"].lstrip("/"))
         seen: set[str] = set()
         while url:
@@ -269,7 +274,7 @@ class TeckReports:
                 raise LayoutError(url, f"directory pager runs past {MAX_PAGES} pages")
             seen.add(url)
             page = parse_directory(client.get(url), url)
-            yield from page.entries
+            yield page
             url = page.next_url
 
     def discover(self, binding: "Binding", ctx: RunContext) -> Iterable[Candidate]:
@@ -281,17 +286,17 @@ class TeckReports:
             _record(ctx, binding.params.get("base", ""), "unsupported-role", "dedupe-index")
             return []
         client = teck_client(ctx)
-        found: list[DirectoryEntry] = []
+        found: dict[DirectoryEntry, str] = {}  # card -> the listing page it was first seen on
         try:
-            for entry in self.directory(binding, ctx, client):
-                found.append(entry)
+            for listing in self.directory_pages(binding, ctx, client):
+                for entry in listing.entries:
+                    found.setdefault(entry, listing.url)
         except Skipped:
             pass  # FleetSession recorded why (robots, off-limits, budget); keep the pages already read
         except http.SourceError as error:
             _record(ctx, binding.params["base"], "fetch-error", str(error))
-        entries = list(dict.fromkeys(found))
         candidates, failed, read = [], 0, 0
-        for entry in entries:
+        for entry, listing_url in found.items():
             page = None
             try:
                 page = parse_boat_page(client.get(entry.url), entry.url)
@@ -304,7 +309,7 @@ class TeckReports:
                 _record(ctx, entry.url, "layout", error.detail)
             except (http.SourceError, ValueError) as error:
                 _record(ctx, entry.url, "fetch-error", str(error))
-            candidates.append(self.candidate(binding, ctx, entry, page))
+            candidates.append(self.candidate(binding, ctx, entry, page, listing_url))
         if failed and failed * 2 >= read:
             raise LayoutError(binding.params["base"], f"{failed} of {read} boat pages have no readable 'Boat Information' block")
         return candidates
@@ -313,8 +318,12 @@ class TeckReports:
         return ()
 
     def candidate(self, binding: "Binding", ctx: RunContext, entry: DirectoryEntry,
-                  page: BoatPage | None) -> Candidate:
+                  page: BoatPage | None, listing_url: str | None = None) -> Candidate:
+        """``listing_url`` is the directory page the card was read from. Card facts cite it, never the
+        boat URL, which is only an identifier unless that page was actually read (``page``); a caller
+        that passes no listing gets the boat URL, as before."""
         retrieved = ctx.clock()
+        card_url = listing_url or entry.url
 
         def fact(field: str, value: Any, confidence: float, url: str) -> Fact:
             return Fact(field=field, value=value, source_id=binding.id, source_url=url, method="page",
@@ -323,20 +332,22 @@ class TeckReports:
         landing_text = (page.landing if page else None) or entry.landing
         if page is None:
             name = _SUFFIX.sub("", entry.name).strip() or entry.name
-            facts = [fact("name", name, 0.8, entry.url), fact("catch_reporting.report_name", entry.name, 0.8, entry.url)]
+            facts = [fact("name", name, 0.8, card_url), fact("catch_reporting.report_name", entry.name, 0.8, card_url)]
             if entry.landing:
-                facts.append(fact("landing", entry.landing, 0.7, entry.url))
+                facts.append(fact("landing", entry.landing, 0.7, card_url))
             port = None
         else:
             name = page.name
             facts = [fact("name", page.name, 0.9, page.url), fact("catch_reporting.report_name", page.report_name, 0.9, page.url)]
-            for field, value, confidence in (
-                    ("landing", landing_text, 0.8), ("port", page.city, 0.7), ("length_ft", page.length_ft, 0.7),
-                    ("beam_ft", page.beam_ft, 0.7), ("year_built", page.year_built, 0.7),
-                    ("passengers_max", page.passengers_max, 0.7), ("bunks", page.bunks, 0.6),
-                    ("catch_reporting.last_report_date", page.last_report_date, 0.9)):
+            landing_url = page.url if page.landing else card_url  # a landing filled from the card was read on the listing
+            for field, value, confidence, url in (
+                    ("landing", landing_text, 0.8, landing_url), ("port", page.city, 0.7, page.url),
+                    ("length_ft", page.length_ft, 0.7, page.url), ("beam_ft", page.beam_ft, 0.7, page.url),
+                    ("year_built", page.year_built, 0.7, page.url), ("passengers_max", page.passengers_max, 0.7, page.url),
+                    ("bunks", page.bunks, 0.6, page.url),
+                    ("catch_reporting.last_report_date", page.last_report_date, 0.9, page.url)):
                 if value is not None:
-                    facts.append(fact(field, value, confidence, page.url))
+                    facts.append(fact(field, value, confidence, url))
             port = page.city
         landing_id = match_landing(ctx.region, landing_text)
         port_id = next((x.port for x in ctx.region.landings if x.id == landing_id), None) or match_port(ctx.region, port)
