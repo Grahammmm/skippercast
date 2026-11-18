@@ -32,6 +32,9 @@ export XDG_RUNTIME_DIR=/run/user/$(id -u)
 5. **Dispatch once.** `gh workflow run fleet-ais-listener.yml --repo Grahammmm/skippercast -f region=CA`, then `gh run watch`. The run copies the revision, builds the virtualenv, writes the env file, restarts the unit and passes only when the heartbeat shows messages within 90 seconds (the first heartbeat comes at start, the second 60 seconds later with the first minute's counts).
 
 To deploy a later `main`, dispatch the workflow again. It never runs on a push or a schedule.
+The installer prefers a non-empty `AISSTREAM_API_KEY` from its environment. If it is unset or
+empty, the installer reuses the key in `~/.config/skippercast/fleet-ais.env`. With no key in
+either place, it stops before building or restarting the listener.
 
 ## Diagnose, in this order
 
