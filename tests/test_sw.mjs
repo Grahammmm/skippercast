@@ -736,3 +736,93 @@ test('RF1540-4: empty, malformed, null and wrong-schema metadata skip that pack;
     assert.equal(await (await dispatch(worker, get('/data/regulations.json'))).text(), 'data', 'sc-data without metadata still beats an older pack');
   }
 });
+
+// SCA-005: an explicit saved-map opening (/map with a committed pack that saved it) waits on a hung network only
+// SAVED_MAP_WAIT_MS (1.5 s); an answer that arrives first wins; nothing else claims saved coverage. Synthetic fixtures only.
+const deferred = () => { let resolve, reject; const promise = new Promise((y, n) => { resolve = y; reject = n; }); return {promise, resolve, reject}; };
+const watch = promise => { const state = {done: false}; promise.then(value => Object.assign(state, {done: true, value}), error => Object.assign(state, {done: true, error})); return state; };
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+const SAVED_PAGE_AT = '2026-10-09T01:00:00.000Z';
+
+test('SCA-005: a 6 s network stall opens the committed saved /map within 2 s, marked with its saved time', async () => {
+  const timers = [];
+  const stall = () => new Promise(resolve => { timers.push(setTimeout(() => resolve(new Response('late live')), 6000)); });
+  const worker = loadWorker({network: stall});
+  await v2Pack(worker);
+  try {
+    for (const path of ['/map?region=morro-bay', '/map?view=conditions']) {
+      const started = performance.now();
+      const page = await dispatch(worker, nav(path));
+      const elapsed = performance.now() - started;
+      assert.ok(elapsed < 2000, `${path}: answered in ${Math.round(elapsed)} ms`);
+      assert.ok(elapsed >= 1400, `${path}: the network had its ${Math.round(elapsed)} ms first`);
+      assert.equal(await page.text(), 'v2 page', path);
+      assert.equal(page.headers.get('X-SC-Offline'), SAVED_PAGE_AT, `${path}: marked with the saved time, never as live`);
+    }
+  } finally { timers.forEach(clearTimeout); }
+  assert.equal(vm.runInContext('SAVED_MAP_WAIT_MS', worker.context), 1500);
+});
+
+test('SCA-005: a fast network answer wins over the saved /map, including denials and HTTP errors', async () => {
+  for (const status of [200, 403, 404, 503]) {
+    const worker = loadWorker({network: () => pause(50).then(() => new Response(`live ${status}`, {status}))});
+    await v2Pack(worker);
+    const started = performance.now();
+    const page = await dispatch(worker, nav('/map?region=morro-bay'));
+    assert.ok(performance.now() - started < 1000, `${status}: not held for the bound`);
+    assert.equal(page.status, status);
+    assert.equal(await page.text(), `live ${status}`, `${status}: the network answer is never replaced with the saved page`);
+    assert.equal(page.headers.get('X-SC-Offline'), null);
+  }
+  const failed = loadWorker();
+  await v2Pack(failed);
+  const page = await dispatch(failed, nav('/map'));
+  assert.equal(await page.text(), 'v2 page', 'a fast failure still opens the saved page at once');
+  assert.equal(page.headers.get('X-SC-Offline'), SAVED_PAGE_AT);
+});
+
+test('SCA-005: no pack, an unfinished pack, a pack without /map or its saved time, an online visit and the landing claim nothing during a stall', async () => {
+  const stamp = {'X-SC-Saved-At': T1};
+  const cases = {
+    'no pack': async () => {},
+    'unfinished pack': async w => { await (await w.storage.open('sc-pack-morro-bay-2')).put(ORIGIN + '/map', new Response('unfinished page', {headers: stamp})); },
+    'committed pack without /map': async w => { await commit(w, 'sc-pack-morro-bay-2', 'morro-bay'); await keep(w, 'sc-pack-morro-bay-2', '/data/regulations.json', T1, 'rules'); },
+    'saved page without its saved time': async w => { await commit(w, 'sc-pack-morro-bay-2', 'morro-bay'); await (await w.storage.open('sc-pack-morro-bay-2')).put(ORIGIN + '/map', new Response('undated page')); },
+    'prior online visit (sc-data only)': async w => { await keep(w, 'sc-data', '/map', T1, 'visited page'); },
+    'landing /': async w => { await (await w.storage.open('sc-shell-dev')).put(ORIGIN + '/', new Response('landing')); await v2Pack(w); },
+  };
+  const runs = await Promise.all(Object.entries(cases).map(async ([label, setup]) => {
+    const network = deferred(), worker = loadWorker({network: () => network.promise});
+    await setup(worker);
+    const state = watch(dispatch(worker, nav(label === 'landing /' ? '/' : '/map?region=morro-bay')));
+    return {label, network, state};
+  }));
+  await pause(1900);
+  for (const {label, state} of runs) assert.equal(state.done, false, `${label}: still waiting for the network past the bound`);
+  for (const {network} of runs) network.resolve(new Response('late live'));
+  await pause(20);
+  for (const {label, state} of runs) {
+    assert.ok(state.done && !state.error, label);
+    assert.equal(await state.value.text(), 'late live', `${label}: the late network answer is served`);
+    assert.equal(state.value.headers.get('X-SC-Offline'), null, label);
+  }
+});
+
+test('SCA-005: a stall that ends in failure falls back as before: no pack fails, a committed pack still opens', async () => {
+  const none = deferred(), bare = loadWorker({network: () => none.promise});
+  const failing = watch(dispatch(bare, nav('/map')));
+  await pause(1700);
+  assert.equal(failing.done, false);
+  none.reject(new TypeError('offline'));
+  await pause(20);
+  assert.match(String(failing.error), /offline/, 'nothing saved: the failure is not hidden');
+  const late = deferred(), worker = loadWorker({network: () => late.promise});
+  const opening = watch(dispatch(worker, nav('/map')));
+  await pause(1700);
+  assert.equal(opening.done, false, 'no saved page at the bound: still waiting');
+  await v2Pack(worker); // committed while the network still hangs
+  late.reject(new TypeError('offline'));
+  await pause(20);
+  assert.equal(await opening.value.text(), 'v2 page', 'the failure fallback checks the packs again');
+  assert.equal(opening.value.headers.get('X-SC-Offline'), SAVED_PAGE_AT);
+});
