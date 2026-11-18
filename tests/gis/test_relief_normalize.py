@@ -215,6 +215,28 @@ def test_zone_boundary_falls_back_to_california_albers(tmp_path):
     assert sidecar['crs'] == 'EPSG:3310'
 
 
+# Contract: the chosen CRS is always a real UTM projection. EPSG has NAD83(2011)
+# UTM only for zones 1-19N; a "6329 + zone" rule once returned the compound
+# EPSG:6349 for zone 20, which cannot be transformed to.
+@pytest.mark.parametrize('geographic,lon,expected', [
+    ('EPSG:6318', -69, 'EPSG:6348'),   # zone 19: last NAD83(2011) UTM zone
+    ('EPSG:6318', -63, 'EPSG:32620'),  # zone 20: WGS 84 UTM fallback
+    ('EPSG:6318', -45, 'EPSG:32623'),  # zone 23
+    ('EPSG:4269', -63, 'EPSG:26920'),  # plain NAD83 does have zones 20-23
+])
+def test_nad83_utm_selection_is_a_valid_projected_crs(geographic, lon, expected):
+    bounds = (lon - 0.01, 40.0, lon + 0.01, 40.01)
+    chosen = norm.target_crs(norm.CRS.from_string(geographic), bounds)
+    assert chosen.to_string() == expected and chosen.is_projected and chosen.utm_zone
+
+
+def test_nad83_2011_zone_20_normalizes(tmp_path):
+    src = tif(tmp_path / 'z20.tif', np.zeros((16, 16), dtype='float32'),
+              from_origin(-63.0, 40.0, 0.000009, 0.000009), 'EPSG:6318')
+    _, sidecar = result_files(norm.normalize(src, tmp_path / 'cache'))
+    assert sidecar['crs'] == 'EPSG:32620'
+
+
 def test_regular_bag_uses_elevation_not_uncertainty(tmp_path):
     from tests.gis.test_regular_bag_native_window import OriginalBagWindowTests
 

@@ -87,10 +87,12 @@ def target_crs(source, bounds):
         boundary = -180 + (zone - 1) * 6
         if west >= boundary - 1e-9 and east <= boundary + 6 + 1e-9:
             geographic = source.geodetic_crs
-            if south >= 0 and 1 <= zone <= 23:
-                nad83_prefix = {4269: 26900, 6318: 6329}.get(geographic.to_epsg())
-                if nad83_prefix is not None:
-                    return CRS.from_epsg(nad83_prefix + zone)
+            # (code base, last zone): EPSG defines NAD83 UTM zones 1-23N but
+            # NAD83(2011) UTM zones only 1-19N (6330-6348); zones 20-23 for
+            # NAD83(2011) fall through to the WGS 84 UTM zone below.
+            nad83_utm = {4269: (26900, 23), 6318: (6329, 19)}.get(geographic.to_epsg())
+            if south >= 0 and nad83_utm is not None and 1 <= zone <= nad83_utm[1]:
+                return CRS.from_epsg(nad83_utm[0] + zone)
             return CRS.from_epsg((32600 if south >= 0 else 32700) + zone)
     return CRS.from_epsg(3310)
 
