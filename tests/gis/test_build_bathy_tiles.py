@@ -439,7 +439,7 @@ class EnhancementTests(unittest.TestCase):
         spread = {}
         for variant in bt.ENHANCE:
             pixels = self.render(variant, window, invalid)
-            self.assertTrue((pixels[:, :28, 3] == 0).all())     # no survey stays transparent
+            self.assertTrue((pixels[:, :40 - bt.ENHANCED_PAD, 3] == 0).all())     # no survey stays transparent
             self.assertTrue((pixels[:, 40:, 3] == 255).all())
             spread[variant] = pixels[100:150, 60:200, :3].astype(float).sum(axis=2).std()
         self.assertLess(spread['base'], spread['medium'])
@@ -471,6 +471,44 @@ class EnhancementTests(unittest.TestCase):
         step_across = np.abs(a[:, -1, :3].astype(int) - b[:, 0, :3].astype(int)).mean()
         step_within = np.abs(a[:, -2, :3].astype(int) - a[:, -1, :3].astype(int)).mean()
         self.assertLess(step_across, step_within * 1.6 + 2)
+
+    def test_neighbouring_tiles_compute_the_same_edge_pixels(self):
+        # MB-02: the halo is wider than every kernel, so a tile's edge column and the same ground column
+        # in its neighbour's halo (warped from one georeferenced surface, with a survey hole at the edge)
+        # come out within 2/255 of each other.
+        from rasterio.crs import CRS
+        from rasterio.warp import transform as warp_points
+        crs = CRS.from_epsg(3310)
+        n = 800
+        yy, xx = np.mgrid[0:n, 0:n] * 10.0
+        surface = (-40 - 0.01 * xx + 3 * np.sin(xx / 90.0) * np.cos(yy / 70.0)
+                   + 1.5 * np.sin((xx + yy) / 37.0)).astype('float32')
+        transform = from_origin(196000.0, -486000.0, 10, 10)
+        z = 13
+        lon, lat = warp_points(crs, 'EPSG:4326', [200000.0], [-490000.0])
+        xs, ys = bt.tile_range((lon[0], lat[0], lon[0], lat[0]), z)
+        x, y = xs.start, ys.start
+        a_grid, _ = bt.tile_grid(z, x, y, pad=0)
+        edge_x, edge_y = a_grid * (bt.TILE, bt.TILE // 2)        # middle of the shared east edge, EPSG:3857
+        ex, ey = warp_points('EPSG:3857', crs, [edge_x], [edge_y])
+        row, col = int((-486000.0 - ey[0]) // 10), int((ex[0] - 196000.0) // 10)
+        surface[row - 3:row + 3, col - 2:col + 1] = NODATA       # no survey right at the tile join
+        for variant in ('medium', 'strong'):
+            enhance = bt.ENHANCE[variant]
+            pad = bt.pad_for(enhance)
+            windows = {}
+            for key in ((x, y), (x + 1, y)):
+                window, ground = bt.warp_window(surface, transform, crs, z, *key, pad)
+                windows[key] = (window, (window == NODATA) | ~np.isfinite(window), ground)
+            style, shaded, median = bt.zoom_shading(windows, z, enhance)
+            a, b = (bt.window_rgba(windows[k][0], windows[k][1], shaded[k], median, style, enhance)
+                    .astype(int) for k in ((x, y), (x + 1, y)))
+            core = slice(pad, pad + bt.TILE)
+            self.assertTrue((a[core, pad + bt.TILE - 1, 3] == 0).any())    # the hole reaches the edge column
+            for mine, theirs in ((a[core, pad + bt.TILE - 1], b[core, pad - 1]),     # A's last core column
+                                 (b[core, pad], a[core, pad + bt.TILE])):            # B's first core column
+                self.assertTrue(np.array_equal(mine[:, 3], theirs[:, 3]), variant)
+                self.assertLessEqual(int(np.abs(mine[:, :3] - theirs[:, :3]).max()), 2, variant)
 
     def test_outputs_are_named_so_the_public_build_guard_catches_them(self):
         names = {v: bt.output_for(v).name for v in bt.ENHANCE}
