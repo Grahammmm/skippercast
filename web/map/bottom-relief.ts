@@ -32,6 +32,7 @@ interface ReliefOptions {
   seafloorOn(): boolean;
   fieldOn(): boolean;
   unavailable(error: unknown): void;
+  ready?(): void;
   page?: string;
   fetchFn?: typeof fetch;
   /** Already verified against the selected archive's release binding. Until
@@ -39,14 +40,15 @@ interface ReliefOptions {
   surveyDetail?: unknown;
 }
 
-/** The caller creates this only on the visible, explicitly enabled admin Chart,
- * and destroys it on a region/gate/presentation change. No fallback pointer. */
+/** The caller creates this on the Chart (web/map/layers.ts `reliefWanted`; signed-out users included) and destroys it on a
+ * region/gate/presentation change. No fallback pointer. Nothing is drawn, and no archive or tile is requested, unless the
+ * region's pointer resolves `ready`; `ready` fires once the overlay is drawn, `unavailable` on any failure. */
 export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
   const page = o.page ?? location.href, fetchFn = o.fetchFn ?? fetch;
   const abort = new AbortController(), token = String(++serial), source = `${BOTTOM_RELIEF}-${token}`;
   const survey = `${source}-survey`;
   const root = document.documentElement;
-  let disposePaint: (() => void) | undefined, observer: MutationObserver | undefined, drawn = false;
+  let disposePaint: (() => void) | undefined, observer: MutationObserver | undefined, drawn = false, announced = false;
   function destroy() {
     abort.abort();
     readers.delete(token);
@@ -175,9 +177,9 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
           'line-opacity': light ? 1 : 0.85}});
 
       drawn = true;
+      // No source or attribution text on the map (G 2026-11-18); credits live on the sources page.
       o.engine.setOverlay(BOTTOM_RELIEF, {stopOnError: true, sources: {[source]: {type: 'raster', tileSize: 256,
-        tiles: [`${SCHEME}://${token}/{z}/{x}/{y}`], minzoom: a.minzoom, maxzoom: a.maxzoom, bounds: [...a.bounds],
-        attribution: a.sources.map(s => s.attribution).join(' · ')},
+        tiles: [`${SCHEME}://${token}/{z}/{x}/{y}`], minzoom: a.minzoom, maxzoom: a.maxzoom, bounds: [...a.bounds]},
         ...hatch && detail ? {[survey]: {type: 'geojson', data: detail}} : {}}, layers,
         ...hatch && control ? {pattern: {id: pattern, image: hatch, pixelRatio: SURVEY_HATCH_PIXEL_RATIO}, control,
           inspect: {layer: hit, show(properties) {
@@ -189,6 +191,7 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
               basis: typeof properties.date === 'string' ? properties.date : ''});
           }}} : {}}, 'boundaries');
       setDetail();
+      if (!announced) { announced = true; o.ready?.(); }
     };
     disposePaint = effect(() => draw(o.seafloorOn(), o.fieldOn()));
     observer = new MutationObserver(() => draw(o.seafloorOn(), o.fieldOn()));

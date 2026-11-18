@@ -73,6 +73,8 @@ def _payload(receipt,mesh):
         center=((vertices.min(axis=0)+vertices.max(axis=0))/2).tolist(),span=np.ptp(vertices,axis=0).tolist(),
         metadata=dict(crs=mesh['crs'],crs_wkt=mesh['crs_wkt'],affine=mesh['affine'],nodata=mesh['nodata'],
             vertical=mesh['vertical'],acceptance=receipt['acceptance'],render_binding=receipt['render_binding'],
+            # _prepare ran terrain.verify first: it raised unless an independent, bound, accepting review exists.
+            review_confirmed=True,
             limitations=receipt['limitations'],support_cells=receipt['support_cells'],
             uncertainty_kind=mesh['uncertainty_kind'],
             interpolation='planar_supported_triangle_interpolation_visualization_only',**FLAGS))
