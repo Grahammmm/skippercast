@@ -7,7 +7,10 @@ median of the segment's fixes (longitudes unwrapped for a compact cluster across
 (nearest-rank) distance from that point. Fixes inside any harbor geofence are
 left out of both: ``classify`` merges a short dip into a geofence into the
 surrounding fishing run, and that dip must not drag the point into the harbor.
-A fishing segment with no fix outside every geofence yields no event.
+A fishing segment with no fix outside every geofence yields no event. When the
+median of the remaining fixes itself falls inside a geofence (fixes on opposite
+sides of a harbor), the point is the observed outside fix nearest to that
+median instead, and the radius is measured from the point actually used.
 
 Every event carries ``basis = inferred-from-movement`` (D10): it marks where a
 boat stopped or trolled, never a catch location. ``species_json`` stays null
@@ -41,7 +44,7 @@ from .segment import BASIS, ActivityThresholds, Geofence, distance_nm, port_at
 from .simplify import simplify_encode
 
 __all__ = ["BASIS", "EVENT_KINDS", "Event", "TripContext", "build_events", "event_id", "from_iso", "iso_utc",
-           "median_point", "p90_radius_m", "season_of", "segment_geometry", "segment_id", "simplify_tolerance_m",
+           "median_point", "outside_centre", "p90_radius_m", "season_of", "segment_geometry", "segment_id", "simplify_tolerance_m",
            "trip_id"]
 
 EVENT_KINDS = FISHING_KINDS
@@ -123,6 +126,20 @@ def p90_radius_m(points: Sequence[tuple[float, float]], centre: tuple[float, flo
     return distances[max(0, math.ceil(0.9 * len(distances)) - 1)]
 
 
+def outside_centre(points: Sequence[tuple[float, float]], ports: Sequence[Geofence]) -> tuple[float, float]:
+    """The event point for fixes already known to lie outside every geofence.
+
+    The median of fixes on opposite sides of a harbor can fall inside it, so a
+    median inside a geofence is replaced by the observed fix nearest to it (ties
+    broken by the smaller (lat, lon)): the point stays a real fix, outside every
+    geofence, and the same input always gives the same point.
+    """
+    centre = median_point(points)
+    if port_at(ports, centre[0], centre[1]) is None:
+        return centre
+    return min(points, key=lambda p: (distance_nm(centre[0], centre[1], p[0], p[1]), p))
+
+
 # ---------------------------------------------------------------- events
 
 @dataclass(frozen=True)
@@ -192,7 +209,7 @@ def build_events(classification: Classification, ports: Sequence[Geofence], cont
         points = [(p.lat, p.lon) for p in segment.positions if port_at(ports, p.lat, p.lon) is None]
         if not points:
             continue
-        lat, lon = median_point(points)
+        lat, lon = outside_centre(points, ports)
         events.append(Event(
             id=event_id(context.trip_id, segment.started_at, kind),
             trip_id=context.trip_id,
