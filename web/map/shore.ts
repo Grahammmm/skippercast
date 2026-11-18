@@ -11,7 +11,7 @@
 // rule, packages/coast viewer `loadShore`), and neither is a run never reviewed (null clocks; counted in
 // `shoreState.unreviewed`, said as "not yet reviewed", never as expired or current); only a protected-area check that is
 // not current, a marine alert check that is not current (or no coast report), a marine
-// alert for the area or a county beach-health notice holds
+// alert for the area or an unavailable county beach-health check or notice holds
 // guidance (web/brief/shore.ts); a run or
 // access point inside a protected area is blocked and draws muted without pins.
 // Review age does not set priority; all original dates remain visible on the card.
@@ -22,7 +22,7 @@ import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import type {Report} from '../../packages/coast/src/types.ts';
 import {closureHits} from '../../dist/geo-screen.js';
-import {activeAlerts, alertCheckCurrent, beachNotices, nextShoreChange, shoreGuidance, shoreNeverReviewed, shoreGuidanceCopy, shoreLabelCopy, shoreReviewCopy, shoreReviewLines, shoreShown, shoreStatus, shoreStatusCopy, rankRuns, type ShoreRunClocks, type ShoreStatus, type ShoreStatusCopy} from '../brief/shore.ts';
+import {activeAlerts, alertCheckCurrent, beachHealthCheck, nextShoreChange, shoreGuidance, shoreNeverReviewed, shoreGuidanceCopy, shoreLabelCopy, shoreReviewCopy, shoreReviewLines, shoreShown, shoreStatus, shoreStatusCopy, rankRuns, type ShoreRunClocks, type ShoreStatus, type ShoreStatusCopy} from '../brief/shore.ts';
 import {cp, joinParts} from '../mark-copy.ts';
 import {zone} from '../app/region-info.ts';
 import type {StringId} from '../i18n.ts';
@@ -88,7 +88,7 @@ export function shownRuns(pkg: ShorePackage | null, screen: MarkScreen, report: 
       now, inside: insideAreas(run, screen), conditions: !!report && freshNearshore(report, area, new Date(now)).length > 0,
       alertCheck: !!report && alertCheckCurrent(report, now),
       alerts: report ? activeAlerts(report.alerts ?? [], area, now).map(a => a.event) : [],
-      notices: report ? beachNotices(report, area, now).map(n => n.name) : []};
+      ...beachHealthCheck(report, run.properties.region, area, now)};
     const status = shoreStatus(run.properties, inputs), copy = shoreStatusCopy(inputs, status);
     return {run, name: run.properties.name, status, ...(copy ? {copy} : {})};
   }));
