@@ -29,11 +29,13 @@ def builder(monkeypatch):
     monkeypatch.setattr(module, 'load_catalogs', lambda: ({}, {SOURCE: source}))
     monkeypatch.setattr(module, 'load_region', lambda _: region)
 
-    def run(grid, out, *, sidecar=None):
+    def run(grid, out, *, sidecar=None, support=None):
         argv = ['build_depth_contours.py', '--region', region['id'], '--set', 'v2',
                 '--grid', f'{SOURCE}={grid}', '--output', str(out)]
         if sidecar is not None:
             argv.extend(('--normalized-sidecar', f'{SOURCE}={sidecar}'))
+        if support is not None:
+            argv.extend(('--normalized-support', f'{SOURCE}={support}'))
         monkeypatch.setattr(sys, 'argv', argv)
         module.main()
         return json.loads(out.read_bytes())
@@ -82,6 +84,20 @@ def geographic_twin(tmp_path):
     return projected, raw, normalized, sidecar
 
 
+def write_support(path, grid, interpolated_from_col=None):
+    import numpy as np
+    import rasterio
+
+    with rasterio.open(grid) as ds:
+        classes = np.full((ds.height, ds.width), 3, dtype='uint8')
+        if interpolated_from_col is not None:
+            classes[:, interpolated_from_col:] = 2
+        with rasterio.open(path, 'w', driver='GTiff', count=1, dtype='uint8', height=ds.height, width=ds.width,
+                           crs=ds.crs, transform=ds.transform) as out:
+            out.write(classes, 1)
+    return path
+
+
 def test_normalized_twin_retains_original_identity_and_shelf_lines(builder, geographic_twin, tmp_path):
     # A derivative may not replace the original digest, leak its path or move lines in this planar control.
     from pyproj import Transformer
@@ -92,7 +108,7 @@ def test_normalized_twin_retains_original_identity_and_shelf_lines(builder, geog
     projected, raw, normalized, sidecar = geographic_twin
     expected = run(projected, tmp_path / 'control.geojson')
     output = tmp_path / 'twin.geojson'
-    actual = run(normalized, output, sidecar=sidecar)
+    actual = run(normalized, output, sidecar=sidecar, support=write_support(tmp_path / 'support.tif', normalized))
     assert actual['provenance']['sources'][0]['sha256'] == digest(raw)
     assert str(tmp_path) not in output.read_text()
     assert actual['provenance']['set'] == 'ft-v2'
@@ -128,6 +144,52 @@ def test_derivative_fails_closed(builder, geographic_twin, tmp_path, failure):
     with pytest.raises(SystemExit, match=reason):
         run(grid, out, sidecar=sidecar)
     assert not out.exists()
+
+
+def test_standalone_normalized_native_detail_only_over_measured_support(builder, geographic_twin, tmp_path):
+    # Protects: the standalone --set v2 --normalized-sidecar path must apply the grid's support.tif like the region
+    # stage does. A bug that omits the support raster traces z14+ native detail across cells marked interpolated
+    # (class 2); a bug that lets the support be optional silently does the same when the flag is forgotten.
+    from pyproj import Transformer
+
+    run, _ = builder
+    _, _, normalized, sidecar = geographic_twin
+    out = tmp_path / 'unsupported.geojson'
+    with pytest.raises(SystemExit, match='needs --normalized-support'):
+        run(normalized, out, sidecar=sidecar)
+    assert not out.exists()
+
+    cut_col = 50
+    xs_of = Transformer.from_crs('EPSG:4326', 'EPSG:32610', always_xy=True)
+
+    def native_east(doc):
+        return max(xs_of.transform(*pt)[0] for f in doc['features'] if f['properties']['kind'] == 'contour'
+                   and f['properties']['minzoom'] >= 14 for line in f['geometry']['coordinates'] for pt in line)
+
+    full = native_east(run(normalized, tmp_path / 'full.geojson', sidecar=sidecar,
+                           support=write_support(tmp_path / 'measured.tif', normalized)))
+    partial_doc = run(normalized, tmp_path / 'partial.geojson', sidecar=sidecar,
+                      support=write_support(tmp_path / 'partial.tif', normalized, interpolated_from_col=cut_col))
+    partial = native_east(partial_doc)
+    cut = 690000 + 2 * cut_col
+    assert full > cut + 20
+    assert partial <= cut + 2
+    # The interpolated side keeps coarse (overview-grade) contours rather than losing its lines.
+    assert any(f['properties']['kind'] == 'contour' and f['properties']['minzoom'] < 14
+               and max(xs_of.transform(*pt)[0] for line in f['geometry']['coordinates'] for pt in line) > cut + 10
+               for f in partial_doc['features'])
+
+    # A support raster that is not cell-for-cell aligned with the grid is refused, not guessed at.
+    import numpy as np
+    import rasterio
+    from rasterio.transform import from_origin
+
+    shifted = tmp_path / 'shifted.tif'
+    with rasterio.open(normalized) as ds, rasterio.open(shifted, 'w', driver='GTiff', count=1, dtype='uint8', height=ds.height,
+                                                      width=ds.width, crs=ds.crs, transform=from_origin(690002, 3915000, 2, 2)) as dst:
+        dst.write(np.full((ds.height, ds.width), 3, dtype='uint8'), 1)
+    with pytest.raises(SystemExit, match='aligned'):
+        run(normalized, tmp_path / 'shifted.geojson', sidecar=sidecar, support=shifted)
 
 
 @pytest.mark.parametrize('downgraded_from_col', [None, 50])

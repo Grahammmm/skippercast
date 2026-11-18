@@ -10,7 +10,9 @@ Run on the processing host, with the survey stack (requirements-survey.txt):
 Each grid must be an original producer GeoTIFF or a hash-bound normalised
 GeoTIFF of an approved bathymetry source bound to the region
 (catalog/sources.json, regions/<id>/region.json). For a normalised grid give
---normalized-sidecar SOURCE_ID=PATH; provenance retains the original digest.
+--normalized-sidecar SOURCE_ID=PATH; provenance retains the original digest. With
+--set v2 its native detail also needs --normalized-support SOURCE_ID=PATH (the grid's
+support.tif): only cells it marks measured are traced at native detail.
 For an original `adapter: bag` source, supply one regular NOAA BAG named with its survey:
 `--grid noaa-bag=/path/H12345_MB_2m.bag --bag-survey noaa-bag=H12345`.
 Its SHA-256 is recorded in the output's provenance; local paths never reach
@@ -508,6 +510,9 @@ def main():
     p.add_argument('--grid', action='append', required=True, metavar='SOURCE_ID=PATH')
     p.add_argument('--normalized-sidecar', action='append', default=[], metavar='SOURCE_ID=PATH',
                    help='The R2 sidecar.json for a --grid normalised GeoTIFF.')
+    p.add_argument('--normalized-support', action='append', default=[], metavar='SOURCE_ID=PATH',
+                   help='The support.tif (uint8, class 3 = measured) aligned with a --normalized-sidecar grid; required for '
+                   'its z14+ native detail, which is drawn only over measured cells.')
     p.add_argument('--bag-survey', action='append', default=[], metavar='SOURCE_ID=SURVEY_ID',
                    help='The survey id of the one BAG file given for an adapter: bag source (required for each).')
     group = p.add_mutually_exclusive_group()
@@ -532,9 +537,9 @@ def main():
     region = load_region(args.region)
     _, sources = load_catalogs()
     bound = region['source_bindings']['bathymetry']
-    grids, surveys, provs, sidecars = {}, {}, {}, {}
+    grids, surveys, provs, sidecars, supports = {}, {}, {}, {}, {}
     for pairs, items in ((grids, args.grid), (surveys, args.bag_survey), (provs, args.provenance),
-                         (sidecars, args.normalized_sidecar)):
+                         (sidecars, args.normalized_sidecar), (supports, args.normalized_support)):
         for ident, value in (item.split('=', 1) for item in items):
             if ident in pairs:
                 raise SystemExit(f'{ident} given twice; one file per source per build')
@@ -543,6 +548,11 @@ def main():
         raise SystemExit(f'{ident}: --provenance is only for a source given with --grid')
     if set(sidecars) - set(grids):
         raise SystemExit('--normalized-sidecar is only for a source given with --grid')
+    if set(supports) - set(sidecars):
+        raise SystemExit('--normalized-support is only for a source given with --grid and --normalized-sidecar')
+    for ident, value in supports.items():
+        if '://' in value or value.startswith('/vsi') or not Path(value).expanduser().is_file():
+            raise SystemExit(f'{ident}: --normalized-support must be an existing local file')
     order = [ident for ident in bound if ident in grids]
     if set(grids) - set(order):
         raise SystemExit(f'Not bathymetry bindings of {region["id"]}: {sorted(set(grids) - set(order))}')
@@ -618,10 +628,18 @@ def main():
         transformer = Transformer.from_crs(crs, 'EPSG:4326', always_xy=True)
         # Blocks outside the region are not traced but stay in the union: no survey edge along the clip.
         inside = inside_blocks(transformer, lattice, region['bounds'], block_m)
-        native = {i: v2_native(g, offsets[i], (owner == i) & inside & np.isfinite(depth), ecs[i])
-                  for i, g in enumerate(opened) if v2 and g.res[0] <= dc.V2_NATIVE_MAX_CELL_M
-                  and (order[i] not in sidecars or (identity[order[i]]['native_cell_m'] or float('inf')) <= dc.V2_NATIVE_MAX_CELL_M)
-                  and ((owner == i) & inside & np.isfinite(depth)).any()}
+        eligible = [i for i, g in enumerate(opened) if v2 and g.res[0] <= dc.V2_NATIVE_MAX_CELL_M
+                    and (order[i] not in sidecars or (identity[order[i]]['native_cell_m'] or float('inf')) <= dc.V2_NATIVE_MAX_CELL_M)
+                    and ((owner == i) & inside & np.isfinite(depth)).any()]
+        # A normalised grid's support raster says which cells are measured rather than interpolated; native detail is
+        # granted only there (as in the region stage), so a normalised source cannot draw it without that evidence.
+        for i in eligible:
+            if order[i] in sidecars and order[i] not in supports:
+                raise SystemExit(f'{order[i]}: native detail from a normalised grid needs --normalized-support {order[i]}=PATH '
+                                 '(its support raster; interpolated cells are never traced at native detail)')
+        native = {i: v2_native(opened[i], offsets[i], (owner == i) & inside & np.isfinite(depth), ecs[i],
+                               stack.enter_context(open_geotiff(supports[order[i]], normalized=True)) if order[i] in supports else None)
+                  for i in eligible}
     # Unresolved blocks are left out of the union: survey edges run round them as round a gap (they are drawn as areas).
     unresolved = cls == CLASS_INDEX['unresolved']
     union = polygons((owner >= 0) & ~unresolved, block)
