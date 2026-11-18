@@ -10,7 +10,7 @@ import type {BriefTile, TileId} from './types.ts';
 import {language, num, t, type Language, type StringId} from '../i18n.ts';
 import {tileDetailText, tileSourceName} from './tile-copy.ts';
 import {units} from '../unit-choice.ts';
-import {fToC, WIND_SPEED} from '../units.ts';
+import {fToC, M_PER_FT, WIND_SPEED} from '../units.ts';
 
 const LOOK: Readonly<Record<TileId, {icon: IconName; hue: TileHue}>> = {
   wind: {icon: 'wind', hue: 'mint'}, swell: {icon: 'wave', hue: 'blue'}, water: {icon: 'temperature', hue: 'coral'}, tide: {icon: 'tide', hue: 'amber'},
@@ -55,12 +55,15 @@ export function tileProps(tile: BriefTile, compact = false, dense = false, lang:
   const unit = wind !== 'kt' ? WIND_SPEED[wind].label : celsius ? '°C' : tile.unit;
   const value = tile.value === null ? null : wind !== 'kt' ? Math.round(tile.value * WIND_SPEED[wind].factor) : celsius ? Math.round(fToC(tile.value) * 10) / 10 : tile.value;
   const reading = value === null ? '—' : lang === 'en' ? String(value) : num(value === 0 ? 0 : value, lang, 1);
+  const metres = tile.unit === 'ft' && units.value.height === 'm';
+  const metric = metres && value !== null ? (value * M_PER_FT).toFixed(1) : '—';
+  const measurement = metres ? {reading: lang === 'es' ? metric.replace('.', ',') : metric, unit: 'm', printReading: {reading, unit}} : {reading, unit};
   if (compact) {
-    return {label: tile.label, ...LOOK[tile.id], reading, unit,
+    return {label: tile.label, ...LOOK[tile.id], ...measurement,
       source: sourceLine(shown, true, lang), stale: tile.state === 'stale'};
   }
   return {
-    label: tile.label, ...LOOK[tile.id], reading, unit, detail: tileDetailText(tile, lang, wind),
+    label: tile.label, ...LOOK[tile.id], ...measurement, detail: tileDetailText(tile, lang, wind),
     source: sourceLine(shown, dense, lang), stale: tile.state === 'stale',
     basis: <>{t(`tile.basis.${tile.id}` as StringId, lang)}{datum ? (datum === 'MLLW' ? t('tile.basis.referenceMllw', lang) : t('tile.basis.reference', lang, {datum: String(datum)})) : ''}{t('tile.basis.source', lang)}{name}.{tile.lastGood ? t('tile.basis.lastGood', lang) : ''}{t('tile.basis.staleAfter', lang, {hours: Math.round(tile.limitMs / 3_600_000)})}</>,
   };
@@ -69,11 +72,12 @@ export function tileProps(tile: BriefTile, compact = false, dense = false, lang:
 /** The four tiles in their empty state; the swell source follows the profile (§ 8). */
 export function emptyTiles(nearshore: boolean, lang: Language = 'en'): TileProps[] {
   const swell = nearshore ? 'nearshore' : 'offshore';
+  const height: Pick<TileProps, 'reading' | 'unit' | 'printReading'> = units.value.height === 'm' ? {reading: '—', unit: 'm', printReading: {reading: '—', unit: 'ft'}} : {reading: '—', unit: 'ft'};
   return [
     {label: 'Wind', ...LOOK.wind, reading: '—', unit: WIND_SPEED[units.value.wind].label, source: 'NWS —', basis: t('tile.empty.basis.wind', lang)},
-    {label: 'Swell', ...LOOK.swell, reading: '—', unit: 'ft', source: t(`tile.empty.source.${swell}` as StringId, lang), basis: t(`tile.empty.basis.${swell}` as StringId, lang)},
+    {label: 'Swell', ...LOOK.swell, ...height, source: t(`tile.empty.source.${swell}` as StringId, lang), basis: t(`tile.empty.basis.${swell}` as StringId, lang)},
     {label: 'Water', ...LOOK.water, reading: '—', unit: units.value.temp === 'C' ? '°C' : '°F', source: t('tile.empty.source.buoy', lang), basis: t('tile.empty.basis.water', lang)},
-    {label: 'Tide', ...LOOK.tide, reading: '—', unit: 'ft', source: t('tile.empty.source.station', lang), basis: t('tile.empty.basis.tide', lang)},
+    {label: 'Tide', ...LOOK.tide, ...height, source: t('tile.empty.source.station', lang), basis: t('tile.empty.basis.tide', lang)},
   ];
 }
 
