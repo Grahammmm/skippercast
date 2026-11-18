@@ -1,10 +1,24 @@
 """F26-05 offline controls: atlas completeness must gate the all-clear."""
-from datetime import datetime, timezone
+from datetime import datetime
 import copy
 
-from research.scripts import audit_central_atlas_closures as m
+import pytest
 
-NOW = datetime.now(timezone.utc).isoformat()
+from research.scripts import audit_central_atlas_closures as m
+from tests._support import NOW as FIXED_NOW
+
+NOW = FIXED_NOW.isoformat()
+
+
+class _FixedDatetime(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return FIXED_NOW
+
+
+@pytest.fixture(autouse=True)
+def _fixed_clock(monkeypatch):
+    monkeypatch.setattr(m, 'datetime', _FixedDatetime)
 
 
 def _sq(x, y, d=0.001):
