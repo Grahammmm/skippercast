@@ -5,10 +5,10 @@ already holds the first creation yields the SAME vessel id and slug (no second p
 distinct reviewed namesake still gets its own id.  Believable bug: ``_Resolver.create`` sees the first creation's
 id in the snapshot and appends ``~<hash>``, minting a second id for the same decision.
 
-Layout: the checker ``one_vessel`` is proven on synthetic good/bad observations (positive and negative control);
-the real resolver replay is an ``expectedFailure`` (an unexpected pass fails the run) so CI stays green while the gap
-is open and the marker must be removed once the resolver is fixed.  All data is invented (example.com names, made-up fingerprints).
+The checker ``one_vessel`` is proven on synthetic good/bad observations (positive and negative control).
+All resolver inputs are invented (example.com names, made-up fingerprints).
 """
+from dataclasses import replace
 import unittest
 
 from skippercast.fleet import ops
@@ -57,7 +57,9 @@ class ResolverReplay(unittest.TestCase):
     def test_first_pass_and_same_snapshot_rerun_are_stable(self):
         candidate, review, result, vessel = self.first_pass()
         again = resolve(Snapshot([], [review]), [candidate], CONFIG, NOW)
-        self.assertEqual(one_vessel([result.created[0], again.created[0]], [vessel["slug"], vessel["slug"]]), [])
+        (got,) = of(again, "vessel.upsert")
+        self.assertEqual(one_vessel([result.created[0], again.created[0]], [vessel["slug"], got["slug"]]), [])
+        ops.validate_op(vessel, 0, CONFIG.region)
 
     def test_distinct_reviewed_namesake_gets_separate_id(self):
         # Guard: the fix must not collapse genuinely different boats that share a name.
@@ -68,14 +70,35 @@ class ResolverReplay(unittest.TestCase):
         self.assertEqual(len(second.created), 1)
         self.assertNotEqual(second.created[0], vessel["id"])
 
-    @unittest.expectedFailure  # F09-04 open: replay mints a second id; remove once resolve.create reuses the creation
-    def test_replay_over_snapshot_with_first_creation_keeps_one_vessel(self):
-        candidate, review, result, vessel = self.first_pass()
-        replay = resolve(snapshot_with(vessel, review), [candidate], CONFIG, NOW)
-        got = replay.assignments[fingerprint(candidate)]
-        slugs = [vessel["slug"]] + [o["slug"] for o in of(replay, "vessel.upsert") if o["id"] == got]
-        self.assertEqual(one_vessel([vessel["id"], got], slugs), [])
+    def test_distinct_reviews_with_colliding_base_keys_keep_separate_ids(self):
+        # Same name/port and matching keys: a base-key lookup alone would conflate these decisions.
+        candidate, _, _, vessel = self.first_pass()
+        other = replace(candidate, record_id="other")
+        review = decided_new(other)
+        first = resolve(Snapshot([], [review]), [other], CONFIG, NOW)
+        second = resolve(snapshot_with(vessel, review), [other], CONFIG, NOW)
+        self.assertEqual(len(second.created), 1)
+        self.assertEqual(second.created, first.created)
+        self.assertNotEqual(second.created[0], vessel["id"])
+        (namesake,) = of(second, "vessel.upsert")
+        self.assertNotEqual(namesake["slug"], vessel["slug"])
+        snap = Snapshot(snapshot_with(vessel, review).vessels + snapshot_with(namesake, review).vessels, [review])
+        replay = resolve(snap, [other], CONFIG, NOW)
         self.assertEqual(replay.created, [])
+        (got,) = of(replay, "vessel.upsert")
+        self.assertEqual((got["id"], got["slug"]), (namesake["id"], namesake["slug"]))
+
+    def test_replay_over_snapshot_with_first_creation_keeps_one_vessel(self):
+        candidate, review, _, vessel = self.first_pass()
+        snapshot = snapshot_with(vessel, review)
+        # A source can later supply a port for the same record, changing the base key but not the decision.
+        for replayed in (candidate, replace(candidate, port_hint="port-san-luis")):
+            with self.subTest(port=replayed.port_hint):
+                replay = resolve(snapshot, [replayed], CONFIG, NOW)
+                (got,) = of(replay, "vessel.upsert")
+                self.assertEqual(one_vessel([vessel["id"], got["id"]], [vessel["slug"], got["slug"]]), [])
+                self.assertEqual(replay.assignments[fingerprint(replayed)], vessel["id"])
+                self.assertEqual(replay.created, [])
 
 
 if __name__ == "__main__":
