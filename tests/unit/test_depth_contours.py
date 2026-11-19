@@ -137,11 +137,11 @@ def test_publish_writes_both_forms_with_the_age_limit_and_enforces_the_budget(tm
     assert full['provenance']['review_expires'] == '2027-09-26' and full['provenance']['review_days'] == 365
     assert json.loads((out / 'depth-contours-overview.geojson').read_text())['provenance']['review_expires'] == '2027-09-26'
     monkeypatch.setattr(dc, 'MAX_BYTES', 100)
+    fresh = tmp_path / 'fresh'
     with pytest.raises(ValueError, match='over its 100-byte budget'):
-        dc.publish_depth_contours(root, REGION, out, SOURCES)
-    assert not (out / 'depth-contours.geojson').exists(), 'an over-budget form is not left behind'
+        dc.publish_depth_contours(root, REGION, fresh, SOURCES)
+    assert not (fresh / 'depth-contours.geojson').exists(), 'an over-budget form is not left behind'
     (root / 'catalog/depth-contours/test-bay.geojson').unlink()
-    (out / 'depth-contours.geojson').write_text('{}')
     assert dc.publish_depth_contours(root, REGION, out, SOURCES) is None
     assert not (out / 'depth-contours.geojson').exists() and not (out / 'depth-contours-overview.geojson').exists(), 'stale copies removed'
 
