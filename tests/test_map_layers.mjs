@@ -305,7 +305,7 @@ function terrain() {
       fake.sets++; fake.overlays.set(id, overlay);
       return fake.silent ? null : {cell: 1, step: fake.coarse.has(id) ? 3 : 1, coarsened: fake.coarse.has(id)};
     }, removeOverlay: id => fake.overlays.delete(id)};
-  for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'selectHabitat', 'setVisible']) handle[name] = () => true;
+  for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'selectHabitat', 'setVisible', 'setRelief']) handle[name] = () => true;
   fake.module = {styles: [], mountCoast(_host, options) { fake.options = options; return handle; }};
   return fake;
 }
