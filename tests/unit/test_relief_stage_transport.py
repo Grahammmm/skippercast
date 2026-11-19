@@ -1,4 +1,5 @@
 """Offline STAGE contract. No release, Cloudflare credentials, or remote calls."""
+from dataclasses import replace
 import hashlib
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import io
@@ -10,7 +11,7 @@ import stat
 import subprocess
 import sys
 from threading import Thread
-from types import ModuleType, SimpleNamespace
+from types import SimpleNamespace
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlsplit
 
@@ -19,7 +20,7 @@ import pytest
 import yaml
 
 from scripts.relief import stage_release as cli
-from skippercast.relief import envelope, package, stage_transport as stage
+from skippercast.relief import envelope, package, publish, stage_transport as stage
 from tests._support import ROOT
 from tests.unit.test_relief_package import CHUNK, LAYERS, REGION, approved, assembly  # noqa: F401
 
@@ -62,26 +63,6 @@ def reviewed(tmp_path, assembly, monkeypatch):
                            scope=scope, pointer=pointer, objects=objects, config=assembly)
 
 
-@pytest.fixture
-def dl10(reviewed, monkeypatch):
-    """Replace only the unmerged planner. The E2E-12a review chain is real."""
-    standin = ModuleType('skippercast.relief.publish')
-
-    def plan(release_dir, approval, review, *, scope_path):
-        chain = envelope.verify_chain(approval, review)
-        assert release_dir == reviewed.release.parent
-        if scope_path.read_text().strip() not in ('ALL', chain.release['region']):
-            raise package.ReleaseError('fixture scope refuses region')
-        keys = dict(zip((CHUNK, package.DIGEST_ROOT, package.ARCHIVE), reviewed.objects))
-        objects = tuple(SimpleNamespace(path=row['path'], key=keys[row['path']], sha256=row['sha256'], size=row['bytes'])
-                        for row in chain.release['layers'] if row['path'] in keys)
-        return SimpleNamespace(region_dir=chain.region_dir, envelope_sha256=chain.envelope_sha256, objects=objects)
-
-    standin.plan = plan
-    monkeypatch.setitem(sys.modules, standin.__name__, standin)
-    return standin
-
-
 def prepare(reviewed, output, issuer, **updates):
     return stage.prepare_release(reviewed.release.parent, reviewed.review, scope_path=reviewed.scope,
                                  pointer=reviewed.pointer | updates, approval_from_queue=issuer, output=output)
@@ -91,7 +72,7 @@ def asset_name(key, data):
     return digest(data) + Path(key).suffix
 
 
-def test_stage_emits_only_checked_public_assets_after_queue_lookup(reviewed, dl10, tmp_path):
+def test_stage_emits_only_checked_public_assets_after_queue_lookup(reviewed, tmp_path):
     # A local inventory-only or basename-driven exporter could leak the extra zone/QA inputs.
     def issuer(region, sha):
         assert (region, sha) == (REGION, digest(reviewed.review.read_bytes()))
@@ -107,8 +88,9 @@ def test_stage_emits_only_checked_public_assets_after_queue_lookup(reviewed, dl1
         prepare(reviewed, output, lambda *_: reviewed.approval)
 
 
-@pytest.mark.parametrize('case', ['issuer', 'approval', 'scope', 'pointer', 'inventory', 'send-time'])
-def test_stage_refuses_before_exposing_assets(reviewed, dl10, tmp_path, monkeypatch, case):
+@pytest.mark.parametrize('case', ['issuer', 'approval', 'wrong-region', 'wrong-envelope', 'missing-scope',
+                                 'out-of-scope', 'pointer', 'inventory', 'send-time'])
+def test_stage_refuses_before_exposing_assets(reviewed, tmp_path, monkeypatch, case):
     # A plausible on-disk approval or stale plan cannot substitute for current queue/chain evidence.
     resolve = lambda *_: reviewed.approval
     updates = {}
@@ -117,36 +99,49 @@ def test_stage_refuses_before_exposing_assets(reviewed, dl10, tmp_path, monkeypa
         def resolve(*_):
             raise stage.StageError('designated queue has no positive R8 record')
         match = 'queue'
-    elif case == 'approval':
+    elif case in {'approval', 'wrong-region', 'wrong-envelope'}:
         document = json.loads(reviewed.approval.read_text())
-        reviewed.approval.write_text(json.dumps(document | {'verdict': 'RETURN'}))
+        sha = digest(reviewed.review.read_bytes())
+        verdict = {
+            'approval': 'RETURN',
+            'wrong-region': f'APPROVED release elsewhere envelope={sha}',
+            'wrong-envelope': f'APPROVED release {REGION} envelope={"f" * 64}',
+        }[case]
+        returned = tmp_path / 'returned-record.json'
+        returned.write_text(json.dumps(document | {'verdict': verdict}))
+        resolve = lambda *_: returned
         match = 'verdict'
-    elif case == 'scope':
+    elif case == 'missing-scope':
+        reviewed.scope.unlink()
+        match = 'cannot read RELIEF-PUBLISH-SCOPE'
+    elif case == 'out-of-scope':
         reviewed.scope.write_text('elsewhere\n')
-        match = 'scope'
+        match = 'not in RELIEF-PUBLISH-SCOPE'
     elif case == 'pointer':
         updates['release_sha256'] = 'f' * 64
         match = 'pointer differs'
-    else:
-        original = dl10.plan
+    elif case == 'inventory':
+        original = publish.plan
 
         def changed_plan(*args, **kwargs):
             plan = original(*args, **kwargs)
-            if case == 'inventory':
-                plan.objects = tuple(obj for obj in plan.objects if obj.path != CHUNK)
-            return plan
+            return replace(plan, objects=tuple(obj for obj in plan.objects if obj.path != CHUNK))
 
-        monkeypatch.setattr(dl10, 'plan', changed_plan)
-        match = 'inventory' if case == 'inventory' else 'local stage'
-        if case == 'send-time':
-            build_pointer = envelope.build_pointer
+        # Only this branch needs a faulty planner: the real one rejects missing chunks.
+        monkeypatch.setattr(publish, 'plan', changed_plan)
+        match = 'inventory'
+    else:
+        match = 'local stage'
+        build_pointer = envelope.build_pointer
 
-            def change_after_review(*args):
-                pointer = build_pointer(*args)
-                (reviewed.region.dir / package.ARCHIVE).write_bytes(b'corrupted post-check')
-                return pointer
+        def change_after_review(*args):
+            pointer = build_pointer(*args)
+            (reviewed.region.dir / package.ARCHIVE).write_bytes(b'corrupted post-check')
+            return pointer
 
-            monkeypatch.setattr(envelope, 'build_pointer', change_after_review)
+        monkeypatch.setattr(envelope, 'build_pointer', change_after_review)
+    if case in {'issuer', 'approval', 'wrong-region', 'wrong-envelope', 'missing-scope', 'out-of-scope'}:
+        monkeypatch.setattr(stage, 'TemporaryDirectory', lambda **_: pytest.fail('created a staging directory before authorization'))
     with pytest.raises((stage.StageError, package.ReleaseError), match=match):
         prepare(reviewed, tmp_path / 'not-staged', resolve, **updates)
     assert not (tmp_path / 'not-staged').exists()
@@ -214,6 +209,22 @@ class LocalS3:
 def copy(reviewed, github, s3, **updates):
     return stage.copy_release(reviewed.pointer | updates, github.client, stage.R2(s3),
                               allow_create=True, recheck=lambda: s3.calls.append(('recheck', None)))
+
+
+def test_real_planner_stage_assets_can_be_copied_from_the_reviewed_pointer(reviewed, tmp_path, monkeypatch):
+    # Producer/consumer replay: independently fabricated release assets would
+    # hide a planner-to-stage naming or digest mismatch at the hosted copy boundary.
+    reviewed.scope.write_text(f'{REGION}\n')
+    output = tmp_path / 'checked-assets'
+    tag = prepare(reviewed, output, lambda *_: reviewed.approval)
+    github, s3 = LocalGitHub(reviewed, monkeypatch), LocalS3()
+    assert github.release['tag_name'] == tag
+    rows = github.release['assets']
+    assert isinstance(rows, list)
+    for row in rows:
+        github.data[row['url']] = (output / row['name']).read_bytes()
+    assert copy(reviewed, github, s3) == len(reviewed.objects)
+    assert s3.objects == reviewed.objects
 
 
 @pytest.mark.parametrize('racing_create', [False, True])
@@ -463,7 +474,7 @@ def test_controller_with_pointer_holds_when_dl10_is_missing(reviewed, tmp_path, 
 
 
 @pytest.mark.parametrize('case', ['ci rerun failed', 'manual deploy', 'automatic copy'])
-def test_controller_pins_selected_sha_and_creation_authority(reviewed, dl10, tmp_path, monkeypatch, case):
+def test_controller_pins_selected_sha_and_creation_authority(reviewed, tmp_path, monkeypatch, case):
     # The trigger SHA can differ from the older green ancestor selected by source.
     # An intervening failed rerun blocks the first PUT; a staged release is not authority.
     # Passing allow_create=True unconditionally would let a manual deploy write
@@ -521,7 +532,7 @@ def test_controller_pins_selected_sha_and_creation_authority(reviewed, dl10, tmp
     ('unapproved source', 'does not have public display rights'),
     ('no public display', 'does not have public display rights'),
 ])
-def test_controller_validates_pointer_and_current_rights_before_io(reviewed, dl10, tmp_path, monkeypatch, case, match):
+def test_controller_validates_pointer_and_current_rights_before_io(reviewed, tmp_path, monkeypatch, case, match):
     # Dropping the controller schema check defers malformed pointer fields to
     # after CI I/O; dropping metadata validation trusts stale pointer rights.
     pointer = reviewed.pointer.copy()

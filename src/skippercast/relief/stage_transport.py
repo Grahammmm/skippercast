@@ -6,6 +6,7 @@ not the GitHub release, an upload receipt, or any user-supplied inventory.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from contextlib import closing, contextmanager
 from dataclasses import dataclass
 import hashlib
@@ -93,15 +94,22 @@ def _checked(stream, obj, size, *, phase, output=None):
         raise StageError(f'{phase}: SHA-256 or size mismatch')
 
 
-def prepare_release(release_dir, envelope, *, scope_path, pointer, approval_from_queue, output):
+def prepare_release(release_dir, envelope, *, scope_path, pointer,
+                    approval_from_queue: Callable[[str, str], Path], output):
     """Local only: emit checked assets into a *new* directory; no release API writes.
 
-    ``approval_from_queue(region, envelope_sha)`` must authenticate the designated
-    completed R8 card and return its trusted approval record path (or raise). It
-    is supplied by the trusted launcher, never by a CLI argument or staged receipt.
+    The attended R8 handoff owner (astra-orchestrator) supplies
+    ``approval_from_queue(region, envelope_sha256) -> Path``. The callable must
+    authenticate the region's designated R8 verifier card (assigned to
+    codex-reviewer, status done, with the exact verdict line
+    ``APPROVED release <region> envelope=<envelope_sha256>``), then return that
+    generation's ``review/<generation>/approval.json`` or raise. Chain checks
+    verify the recorded verdict and bytes, not the reviewer's identity. A CLI
+    path, release label, copied verdict or upload receipt cannot confer authority.
+    ``scope_path`` must be the installed, operator-owned RELIEF-PUBLISH-SCOPE.
     The stage directory enters view only after every staged file checks.
     """
-    from skippercast.relief import envelope as review, publish  # DL-10, pending on main
+    from skippercast.relief import envelope as review, publish
 
     package.validate_schema(pointer, package.pointer_schema())
     approval = approval_from_queue(pointer['region'], pointer['envelope_sha256'])
