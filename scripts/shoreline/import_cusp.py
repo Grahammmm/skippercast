@@ -325,14 +325,24 @@ def main(argv=None, *, root=ROOT, get=fetch):
     for region_id, box in boxes.items():  # a repeated id is one region
         collection = extract(region_id, box, get=get)
         path, p = out / f'{region_id}.geojson', collection['provenance']
+        covered = set()
         try:  # features in the current file: 0 when there is none; unreadable counts as some
-            have = len(json.loads(path.read_text())['features']) if path.exists() else 0
-        except (OSError, ValueError, KeyError, TypeError):
+            prior = json.loads(path.read_text()) if path.exists() else {'features': []}
+            have = len(prior['features'])
+            receipts = prior.get('provenance', {}).get('tile_receipts', [])
+            covered.update(r['tile'] for r in receipts if isinstance(r, dict) and isinstance(r.get('tile'), str))
+            covered.update(f['properties']['source_tile'] for f in prior['features']
+                           if isinstance(f, dict) and isinstance(f.get('properties'), dict)
+                           and isinstance(f['properties'].get('source_tile'), str))
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
             have = 'unreadable content'
+        missing_covered = sorted(covered.intersection(p['unavailable_tiles'])) if covered else []
         if not p['tile_receipts']:
             reason = f"NOAA served none of {p['requested_tiles']} tiles"
         elif p['features'] == 0 and have != 0 and not args.allow_empty:
             reason = f'0 features where the current file has {have}'
+        elif missing_covered:
+            reason = f"previously covered tiles unavailable: {', '.join(missing_covered)}"
         else:
             out.mkdir(parents=True, exist_ok=True)
             tmp = path.with_name(f'.{path.name}.{os.getpid()}.tmp')

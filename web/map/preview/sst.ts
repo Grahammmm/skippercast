@@ -4,6 +4,7 @@
 import type {Overlay} from '../engine.ts';
 import type {Palette} from '../palette.ts';
 import {PREVIEW_DATA, type PreviewAttach} from '../preview-layers.ts';
+import {paintEdits} from '../theme-restyle.ts';
 import {ageText, BEFORE_APP_LAYERS, expireWhenStale, freshWithin, getJson, handle, hoursOld, utc} from './common.ts';
 
 export const SST_CELLS = 'preview-sst-cells', SST_BREAKS = 'preview-sst-breaks', SST_HALO = 'preview-sst-break-halo', SST_LINES = 'preview-sst-break-line';
@@ -20,17 +21,21 @@ export function readSst(raw: unknown): SstDoc {
 }
 
 /** The strong-break line is the token text colour over a token dark under-stroke, so it reads on every band. */
+const sstLayers = (p: Pick<Palette, 'text' | 'bgDeep'>): Overlay['layers'] => [
+  {id: SST_CELLS, type: 'fill', source: SST_CELLS, paint: {'fill-color': ['get', 'colour'], 'fill-opacity': 0.82, 'fill-antialias': false}},
+  {id: SST_HALO, type: 'line', source: SST_BREAKS, paint: {'line-color': p.text, 'line-width': 2.4}},
+  {id: SST_LINES, type: 'line', source: SST_BREAKS, paint: {'line-color': p.bgDeep, 'line-width': 0.5}},
+];
+
+/** The cell colours come from the file, so only the two break lines follow the theme; a switch edits their paints in place. */
 export function sstOverlay(d: SstDoc, p: Pick<Palette, 'text' | 'bgDeep'>): Overlay {
   return {
     sources: {
       [SST_CELLS]: {type: 'geojson', data: d.cells as never, attribution: 'NOAA CoastWatch / GHRSST'},
       [SST_BREAKS]: {type: 'geojson', data: d.breaks as never},
     },
-    layers: [
-      {id: SST_CELLS, type: 'fill', source: SST_CELLS, paint: {'fill-color': ['get', 'colour'], 'fill-opacity': 0.82, 'fill-antialias': false}},
-      {id: SST_HALO, type: 'line', source: SST_BREAKS, paint: {'line-color': p.text, 'line-width': 2.4}},
-      {id: SST_LINES, type: 'line', source: SST_BREAKS, paint: {'line-color': p.bgDeep, 'line-width': 0.5}},
-    ],
+    layers: sstLayers(p),
+    themePaint: q => paintEdits(sstLayers(q)),
   };
 }
 

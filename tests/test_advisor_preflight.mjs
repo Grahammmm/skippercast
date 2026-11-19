@@ -117,3 +117,13 @@ test('judgeRules: every pilot species needs an active, fresh, sourced row; retir
   assert.deepEqual(problems.map(p => p.split(':')[0]), ['rockfish', 'lingcod', 'cabezon', 'halibut']);
   assert.match(problems[3], /no row/);
 });
+
+// Contract: judgeRules only accepts a reviewed_at that is a real calendar instant in the window.
+// Bug caught: Date.parse rolls '2026-09-31' to 1 Oct, so malformed evidence passed as fresh.
+test('judgeRules: an impossible calendar date or clock time in reviewed_at is not a valid review', () => {
+  const judge = reviewed_at => judgeRules([rule('rockfish', {reviewed_at})], NOW, ['rockfish']);
+  for (const bad of ['2026-09-31T00:00:00Z', '2026-02-30T00:00:00.000Z', '2026-13-01T00:00:00Z', '2026-10-10T24:00:00Z', '2026-10-10T00:60:00Z', '2026-10-10T00:00:00+25:00', 'garbage', 20261010, null]) {
+    assert.equal(judge(bad).length, 1, `${bad} must not count as a review`);
+  }
+  for (const good of [fresh, '2026-10-10T00:00:00Z', '2026-10-10', '2026-10-10T08:30:00-07:00']) assert.deepEqual(judge(good), [], `${good} is a real, fresh review`);
+});

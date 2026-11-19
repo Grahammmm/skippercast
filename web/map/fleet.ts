@@ -29,6 +29,7 @@ import type {Engine, MapView, Overlay} from './engine.ts';
 import {layerEntry} from './layers.ts';
 import {markData} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
+import {paintEdits} from './theme-restyle.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 import {claimLine, type FleetClaim} from '../fleet.ts';
 
@@ -93,21 +94,26 @@ export function activityCollections(v1: V1, results: Partial<Record<Activity, La
   };
 }
 
-/** Heat under tracks under events, every colour the --fleet token. */
+const activityLayers = (p: Palette): MapLibre.LayerSpecification[] => {
+  const fleet = p.amber;
+  return [
+    {id: HEAT, type: 'fill', source: FLEET_SOURCE.heat, paint: {'fill-color': fleet, 'fill-opacity': ['get', 'opacity'], 'fill-outline-color': fleet}},
+    {id: TRACKS, type: 'line', source: FLEET_SOURCE.tracks, filter: ['!', ['get', 'dashed']], layout: {'line-join': 'round', 'line-cap': 'round'},
+      paint: {'line-color': fleet, 'line-width': ['get', 'width'], 'line-opacity': ['get', 'opacity']}},
+    {id: TRACKS_DASHED, type: 'line', source: FLEET_SOURCE.tracks, filter: ['get', 'dashed'],
+      paint: {'line-color': fleet, 'line-width': ['get', 'width'], 'line-opacity': ['get', 'opacity'], 'line-dasharray': [3, 3]}},
+    {id: EVENTS, type: 'circle', source: FLEET_SOURCE.events, paint: {'circle-radius': ['get', 'radius'], 'circle-color': fleet,
+      'circle-opacity': ['case', ['get', 'drift'], 0.55, 0.05], 'circle-stroke-color': fleet, 'circle-stroke-width': ['case', ['get', 'drift'], 1, 2.5],
+      'circle-stroke-opacity': ['case', ['get', 'planning'], 0.45, 1]}},
+  ] as MapLibre.LayerSpecification[];
+};
+
+/** Heat under tracks under events, every colour the --fleet token. A theme switch edits the paints in place; its themePaint reads no feature data (privacy unchanged: admin-only). */
 export function activityOverlay(p: Palette, data: Record<Activity, Collection>): Overlay {
-  const fleet = p.amber, src = (name: Activity) => ({type: 'geojson', data: data[name]} as MapLibre.SourceSpecification);
+  const src = (name: Activity) => ({type: 'geojson', data: data[name]} as MapLibre.SourceSpecification);
   return {
     sources: {[FLEET_SOURCE.heat]: src('heat'), [FLEET_SOURCE.tracks]: src('tracks'), [FLEET_SOURCE.events]: src('events')},
-    layers: [
-      {id: HEAT, type: 'fill', source: FLEET_SOURCE.heat, paint: {'fill-color': fleet, 'fill-opacity': ['get', 'opacity'], 'fill-outline-color': fleet}},
-      {id: TRACKS, type: 'line', source: FLEET_SOURCE.tracks, filter: ['!', ['get', 'dashed']], layout: {'line-join': 'round', 'line-cap': 'round'},
-        paint: {'line-color': fleet, 'line-width': ['get', 'width'], 'line-opacity': ['get', 'opacity']}},
-      {id: TRACKS_DASHED, type: 'line', source: FLEET_SOURCE.tracks, filter: ['get', 'dashed'],
-        paint: {'line-color': fleet, 'line-width': ['get', 'width'], 'line-opacity': ['get', 'opacity'], 'line-dasharray': [3, 3]}},
-      {id: EVENTS, type: 'circle', source: FLEET_SOURCE.events, paint: {'circle-radius': ['get', 'radius'], 'circle-color': fleet,
-        'circle-opacity': ['case', ['get', 'drift'], 0.55, 0.05], 'circle-stroke-color': fleet, 'circle-stroke-width': ['case', ['get', 'drift'], 1, 2.5],
-        'circle-stroke-opacity': ['case', ['get', 'planning'], 0.45, 1]}},
-    ] as MapLibre.LayerSpecification[],
+    layers: activityLayers(p), themePaint: q => paintEdits(activityLayers(q)),
   };
 }
 

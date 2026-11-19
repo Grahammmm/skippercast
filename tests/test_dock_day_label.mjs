@@ -35,8 +35,9 @@ function surfaces(clock, expected) {
 }
 const cases = [
   ['2026-10-31T23:00Z', 'Today · 4 pm', 'Hoy · 16'],
-  ['2026-11-01T08:00Z', 'Tomorrow · 1 am', 'Mañana · 1'],
-  ['2026-11-01T09:00Z', 'Tomorrow · 1 am', 'Mañana · 1'],
+  // SCA-413: the repeated fall-back hour names its zone, so the two 1 am instants never share a label.
+  ['2026-11-01T08:00Z', 'Tomorrow · 1 am PDT', 'Mañana · 1 PDT'],
+  ['2026-11-01T09:00Z', 'Tomorrow · 1 am PST', 'Mañana · 1 PST'],
   ['2026-11-03T14:00Z', 'Tue · 6 am', 'mar · 6'],
   ['2026-11-07T14:00Z', 'Sat 7 · 6 am', 'sáb 7 · 6'],
   ['2026-10-30T20:00Z', '10-30 · 1 pm · outside the forecast', '10-30 · 13 · fuera del pronóstico'],
@@ -57,6 +58,7 @@ test('spring gap, noon/midnight and region rather than host day', () => {
     ['2026-03-07T20:00Z', '2026-03-08T09:00Z', TZ, 'Tomorrow · 1 am', 'Mañana · 1'],
     ['2026-03-07T20:00Z', '2026-03-08T10:00Z', TZ, 'Tomorrow · 3 am', 'Mañana · 3'],
     ['2026-11-01T06:30Z', '2026-11-01T07:00Z', TZ, 'Tomorrow · 12 am', 'Mañana · 0'],
+    ['2026-10-31T19:00Z', '2026-11-01T10:00Z', TZ, 'Tomorrow · 2 am', 'Mañana · 2'],   // only the repeated hour names a zone
     ['2026-11-01T06:30Z', '2026-11-01T07:00Z', 'UTC', 'Today · 7 am', 'Hoy · 7'],
     ['2026-10-31T19:00Z', '2026-11-01T20:00Z', TZ, 'Tomorrow · 12 pm', 'Mañana · 12'],
   ]) {
@@ -78,14 +80,14 @@ test('preview stays bilingual through duplicate, settlement, invalid and cancell
   t.after(() => { delete globalThis.location; delete globalThis.history; });
   const at = Date.parse('2026-11-01T09:00Z');
   m.requestDockHour(now, TZ, at);
-  surfaces(now, 'Tomorrow · 1 am');
+  surfaces(now, 'Tomorrow · 1 am PST');
   t.mock.timers.tick(60);
-  m.language.value = 'es'; surfaces(now, 'Mañana · 1');
+  m.language.value = 'es'; surfaces(now, 'Mañana · 1 PST');
   assert.equal(m.requestDockHour(now, TZ, at), true);
   assert.equal(m.requestDockHour(now, TZ, at + 1), false);
   assert.equal(m.state.hour.value, null); assert.equal(writes, 0);
   t.mock.timers.tick(40);
-  surfaces(now, 'Mañana · 1');
+  surfaces(now, 'Mañana · 1 PST');
   assert.equal(m.state.hour.value, '2026-11-01T09:00Z');
   assert.equal(m.state.day.value, '2026-11-01'); assert.equal(writes, 1);
   m.requestDockDay(now, TZ, '2026-11-03', m.previewDockState(now, TZ));

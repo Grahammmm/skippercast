@@ -24,6 +24,7 @@ export const MODELS = {
 const DEFAULT_MODELS = {forecast: ['gfs_global'], marine: ['ncep_gfswave016']};
 const MISSING = -32768;
 const HOUR = 3600;
+const DAY = 24 * HOUR;
 const MARINE_VARS = ['wave', 'wind_wave', 'swell_wave', 'secondary_swell_wave'].flatMap(p =>
   ['height', 'period', 'direction'].map(q => `${p}_${q}`)).concat(['wave_peak_period']);
 const FORECAST_VARS = ['wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m', 'visibility', 'precipitation',
@@ -184,10 +185,20 @@ function zoneClock(zone) {
     },
   };
 }
-function localMidnight(clock, now) {
-  const offset = clock.offset(now);
-  const local = now + offset, midnight = local - (((local % 86400) + 86400) % 86400);
-  return midnight - clock.offset(midnight - offset);
+// Convert a wall-clock midnight to an epoch. Prefer its first occurrence if
+// clocks roll back over midnight; if midnight is skipped, use the transition.
+function midnightEpoch(clock, midnight) {
+  const before = midnight - clock.offset(midnight - DAY);
+  if (before + clock.offset(before) === midnight) return before;
+  const after = midnight - clock.offset(midnight + DAY);
+  if (after + clock.offset(after) === midnight) return after;
+  let lo = after, hi = before;
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (mid + clock.offset(mid) < midnight) lo = mid;
+    else hi = mid;
+  }
+  return hi;
 }
 function isoLocal(epoch, clock) {
   return new Date((epoch + clock.offset(epoch)) * 1000).toISOString().slice(0, 16);
@@ -317,10 +328,14 @@ export async function answer(kind, params, store, now = Math.floor(Date.now() / 
   const started = Date.now();
   const q = parseQuery(kind, params);
   const clock = zoneClock(q.zone);
-  const start = localMidnight(clock, now);
-  const targets = Array.from({length: q.days * 24}, (_, i) => start + i * HOUR);
+  const offset = clock.offset(now);
+  const midnight = Math.floor((now + offset) / DAY) * DAY;
+  const start = midnightEpoch(clock, midnight);
+  const end = midnightEpoch(clock, midnight + q.days * DAY);
+  const targets = [];
+  for (let epoch = start; epoch < end; epoch += HOUR) targets.push(epoch);
   const outputTimes = q.unixtime ? targets : targets.map(t => isoLocal(t, clock));
-  const offset = clock.offset(now), abbreviation = clock.abbreviation(now);
+  const abbreviation = clock.abbreviation(now);
   const manifests = Object.fromEntries(await Promise.all(q.models.map(async m => [m, await store.manifest(m)])));
   const tiles = new Map();
   const results = [];

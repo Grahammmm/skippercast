@@ -24,6 +24,7 @@ from research.scripts.audit_point_buchon_original_pair import EXPECTED_CLASS, or
 from research.scripts.audit_point_buchon_rov_access_blocks import (
     MARGIN_M, closures, feature_fingerprint,
 )
+from research.scripts.audit_san_diego_substrate_lead import resolve_audit_destinations
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -38,7 +39,7 @@ def source_blocks(archive, class_zip):
         raise ValueError("Original CSUMB or USGS source bytes changed")
     with tempfile.TemporaryDirectory() as temp:
         extract_grids(archive, Path(temp))
-        with rasterio.open(original_tiff(class_zip)) as character:
+        with rasterio.open(original_tiff(class_zip, "character")[0]) as character:
             source = character.read(1)
             to_usgs = Transformer.from_crs("EPSG:26910", "EPSG:32610", always_xy=True)
             for name, spacing, minimum_m, maximum_m in GRIDS:
@@ -153,6 +154,7 @@ def main():
     parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-buchon-2009-csumb-access-triage.json")
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
+    private_blocks, output = resolve_audit_destinations(args.private_blocks, args.output, root=ROOT)
     blocks = source_blocks(args.archive, args.character)
     source_paths = {"archive": args.archive, "character": args.character,
                     "mpas": args.mpas, "federal": args.federal, "enc": args.enc}
@@ -161,10 +163,10 @@ def main():
     report["input_sha256"] = {key: sha256_file(path) for key, path in source_paths.items()}
     if args.verify and stable(report) != stable(json.loads(args.verify.read_text())):
         raise ValueError("Point Buchon original-cell access result changed; review before publication")
-    args.private_blocks.parent.mkdir(parents=True, exist_ok=True)
-    args.private_blocks.write_text(json.dumps(private, separators=(",", ":")) + "\n")
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    private_blocks.parent.mkdir(parents=True, exist_ok=True)
+    private_blocks.write_text(json.dumps(private, separators=(",", ":")) + "\n")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(report["totals"])
 
 

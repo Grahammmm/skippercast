@@ -40,6 +40,7 @@ source, survey date and datum. Coordinates have 5 decimals (about 1 m).
 """
 from datetime import date, timedelta
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import math
 import re
 
@@ -240,6 +241,19 @@ def _survey_date(value):
     return True
 
 
+class _ContoursHeld(ValueError):
+    """An explicit publication hold on the region's contour import."""
+
+
+def _bound_bathymetry(ident, source, bound, allowed):
+    return ident in bound and source.get('review_status') in allowed and 'bathymetry' in source.get('needs', [])
+
+
+def _public_display_allowed(source):
+    display = source.get('rights', {}).get('public_display')
+    return source.get('publication_allowed') is not False and display not in ('private', 'excluded')
+
+
 def check_contours(collection, region, sources):
     """Raise ValueError unless `collection` is an in-region contour set from approved, bound survey grids.
 
@@ -252,13 +266,11 @@ def check_contours(collection, region, sources):
     features = collection.get('features') or []
     parts = [collection, collection.get('provenance') or {}, *features, *(f.get('properties') or {} for f in features)]
     if any(isinstance(part, dict) and 'publication_held' in part for part in parts):
-        raise ValueError(f"Depth contours for {region['id']} are held and cannot be published")
+        raise _ContoursHeld(f"Depth contours for {region['id']} are held and cannot be published")
     _check(collection, region, sources, {'approved'})
     for entry in collection['provenance'].get('sources', []):
         ident = str(entry.get('source_id'))
-        source = sources[ident]
-        display = source.get('rights', {}).get('public_display')
-        if source.get('publication_allowed') is False or display in ('private', 'excluded'):
+        if not _public_display_allowed(sources[ident]):
             raise ValueError(f"Depth contour source {ident} is not cleared for public display")
 
 
@@ -300,7 +312,7 @@ def _check(collection, region, sources, allowed):
     listed = {str(s.get('source_id')): s for s in provenance.get('sources', [])}
     for ident, entry in listed.items():
         reviewed = sources.get(ident) or {}
-        if ident not in bound or reviewed.get('review_status') not in allowed or 'bathymetry' not in reviewed.get('needs', []):
+        if not _bound_bathymetry(ident, reviewed, bound, allowed):
             raise ValueError(f"Depth contour source {ident} is not an approved bathymetry binding of {region['id']}")
         if not SHA256.fullmatch(str(entry.get('sha256'))) or not _survey_date(entry.get('survey_date')) \
                 or not entry.get('vertical_datum'):
@@ -433,12 +445,43 @@ def review_expires(collection, sources):
     return (min(reviewed) + timedelta(days=SOURCE_REVIEW_DAYS)).isoformat()
 
 
+def _uses_withdrawn_source(path, region, sources):
+    # Check the previous generation's source IDs, not the incoming import's or the informational omitted list.
+    try:
+        previous = read_json(path)
+    except (FileNotFoundError, ValueError):
+        return False  # No identifiable prior contour publication at this path.
+    provenance = previous.get('provenance') if isinstance(previous, dict) else None
+    if not isinstance(provenance, dict) or provenance.get('region_id') != region['id']:
+        return False
+    bound = set(region.get('source_bindings', {}).get('bathymetry', []))
+    for entry in provenance.get('sources', []):
+        ident = str(entry.get('source_id'))
+        source = sources.get(ident) or {}
+        if not _bound_bathymetry(ident, source, bound, {'approved'}) or not _public_display_allowed(source):
+            return True
+    return False
+
+
+def _stage_and_replace(full, overview, collection, light, region_id):
+    full.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(dir=full.parent) as staging:
+        staging = Path(staging)
+        for path, value, budget in ((full, collection, MAX_BYTES), (overview, light, OVERVIEW_MAX_BYTES)):
+            size = atomic_json(staging / path.name, value)['bytes']
+            if size > budget:
+                raise ValueError(f"{path.name} for {region_id} is {size} bytes, over its {budget}-byte budget")
+        for path in (full, overview):
+            (staging / path.name).replace(path)
+
+
 def publish_depth_contours(root, region, output, sources):
-    """Write the checked import and its overview form to `output`; remove stale copies when there is none.
+    """Check both byte budgets before replacing the contour pair in `output`.
 
     Both forms carry `review_expires`, the date the Chart withholds them from (the layer's age limit), and
     `sources_omitted`, the region's bound surveys the file does not draw, with their catalog review_status.
-    Returns the published paths (full, overview) or None. Raises ValueError when a form is over its byte budget.
+    Returns the published paths (full, overview), or None and removes both files if the import is absent.
+    On refusal, keep the old pair unless the import is explicitly held or the old layer uses a withdrawn source.
     """
     source = Path(root) / 'catalog/depth-contours' / f"{region['id']}.geojson"
     full, overview = Path(output) / 'depth-contours.geojson', Path(output) / 'depth-contours-overview.geojson'
@@ -446,22 +489,26 @@ def publish_depth_contours(root, region, output, sources):
         full.unlink(missing_ok=True)
         overview.unlink(missing_ok=True)
         return None
-    collection = read_json(source)
-    check_contours(collection, region, sources)
-    # The three stamped keys are dropped from the catalog provenance first, so they always land last, in this order:
-    # the published bytes then do not depend on where (or whether) the catalog file carries them.
-    stamped = ('review_expires', 'review_days', 'sources_omitted')
-    collection = {**collection, 'provenance': {**{k: v for k, v in collection['provenance'].items() if k not in stamped},
-                                               'review_expires': review_expires(collection, sources),
-                                               'review_days': SOURCE_REVIEW_DAYS, 'sources_omitted': omitted_sources(
-                                                   region, sources, [s['source_id'] for s in collection['provenance']['sources']])}}
-    light = overview_contours(collection)
-    check_contours(light, region, sources)
-    for path, value, budget in ((full, collection, MAX_BYTES), (overview, light, OVERVIEW_MAX_BYTES)):
-        receipt = atomic_json(path, value)
-        if receipt['bytes'] > budget:
-            path.unlink()
-            raise ValueError(f"{path.name} for {region['id']} is {receipt['bytes']} bytes, over its {budget}-byte budget")
+    try:
+        collection = read_json(source)
+        check_contours(collection, region, sources)
+        # Append stamped keys in fixed order, regardless of where they appeared in the catalog provenance.
+        stamped = ('review_expires', 'review_days', 'sources_omitted')
+        provenance = collection['provenance']
+        collection = {**collection, 'provenance': {
+            **{k: v for k, v in provenance.items() if k not in stamped},
+            'review_expires': review_expires(collection, sources),
+            'review_days': SOURCE_REVIEW_DAYS,
+            'sources_omitted': omitted_sources(region, sources, [s['source_id'] for s in provenance['sources']]),
+        }}
+        light = overview_contours(collection)
+        check_contours(light, region, sources)
+        _stage_and_replace(full, overview, collection, light, region['id'])
+    except ValueError as error:
+        if isinstance(error, _ContoursHeld) or any(_uses_withdrawn_source(path, region, sources) for path in (full, overview)):
+            full.unlink(missing_ok=True)
+            overview.unlink(missing_ok=True)
+        raise
     return f"regions/{region['id']}/depth-contours.geojson", f"regions/{region['id']}/depth-contours-overview.geojson"
 
 
