@@ -91,7 +91,7 @@ def build(rov_path: Path = ROV, archive: Path = ARCHIVE,
     reference_rows = 0
     with tempfile.TemporaryDirectory() as temp:
         extract_grids(archive, Path(temp))
-        with rasterio.open(original_tiff(character)) as classes, \
+        with rasterio.open(original_tiff(character, "character")[0]) as classes, \
              rasterio.open(Path(temp) / "ArcViewGrids" / GRIDS[0][0]) as shallow, \
              rasterio.open(Path(temp) / "ArcViewGrids" / GRIDS[1][0]) as deep, \
              rov_path.open(newline="", encoding="utf-8-sig") as stream:
