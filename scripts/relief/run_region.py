@@ -161,6 +161,14 @@ def spelled(value):
     return os.path.join(os.getcwd(), os.path.expanduser(str(value)))
 
 
+def fine_zoom(parser, zoom):
+    """The bare integer zoom (``'16'`` or ``'17'``) qa's ``--fine-proof`` parses with ``int()``; ``z16`` is accepted too."""
+    match = re.fullmatch(r'[zZ]?(16|17)', zoom)
+    if not match:
+        parser.error(f'--qa-fine-proof ZOOM must be 16 or 17 (or z16/z17), not {zoom!r}')
+    return match.group(1)
+
+
 def real(path):
     return Path(os.path.realpath(spelled(path)))
 
@@ -619,7 +627,7 @@ def parse(argv):
                         'take the shots after package, then run qa and envelope)')
     parser.add_argument('--qa-support', help='qa option: mosaic support_class TIFF')
     parser.add_argument('--qa-fine-proof', nargs=2, action='append', metavar=('ZOOM', 'PATH'),
-                        help='qa option: z16/z17 fine-support raster; repeat per zoom')
+                        help='qa option: fine-support raster for zoom 16 or 17 (z16/z17 also accepted; qa receives 16/17); repeat per zoom')
     parser.add_argument('--region-config', help='region config file for mosaic, tiles and zone (default: regions/<id>/region.json)')
     parser.add_argument('--coarse', help='zone input: EPSG:3310 coarse elevation TIFF (needed when the chain reaches zone)')
     parser.add_argument('--water', help='zone input: reviewed WGS84 ocean-water GeoJSON (needed when the chain reaches zone)')
@@ -633,7 +641,7 @@ def parse(argv):
         if getattr(args, name):
             setattr(args, name, spelled(getattr(args, name)))
     if args.qa_fine_proof:
-        args.qa_fine_proof = [(zoom, spelled(path)) for zoom, path in args.qa_fine_proof]
+        args.qa_fine_proof = [(fine_zoom(parser, zoom), spelled(path)) for zoom, path in args.qa_fine_proof]
     return parser, args
 
 

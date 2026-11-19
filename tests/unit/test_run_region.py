@@ -555,6 +555,32 @@ def test_qa_file_options_are_guarded_by_the_path_the_child_receives(box, monkeyp
         assert not RR.under(forwarded, vault)
 
 
+@pytest.mark.parametrize('spelling, forwarded', [('z16', '16'), ('Z17', '17'), ('16', '16'), ('17', '17')])
+def test_qa_fine_proof_forwards_the_integer_zoom_qa_parses(box, spelling, forwarded):
+    # Contract: qa's own parser does ``int(zoom)`` on ``--fine-proof ZOOM PATH``, so the runner must hand it the
+    # bare 16/17 whichever spelling the operator used. Bug caught: forwarding ``z16`` unchanged made qa exit 2
+    # (ValueError) before any check ran (review return on #2887).
+    argv = ['morro-bay', '--out', str(box.out), '--through', 'qa', *SOURCE_ARGS, *ZONE_ARGS, *PACKAGE_ARGS,
+            '--qa-elevation', '/in/elev.tif', '--qa-contributor', '/in/contrib.tif', '--qa-shots', '/in/shots.json',
+            '--qa-fine-proof', spelling, '/in/fine.tif', '--generation', GEN, '--release-sha256', SHA]
+    assert RR.main(argv, box.cfg) == 0
+    child = _qa_child_args(box)
+    at = child.index('--fine-proof')
+    assert child[at + 1:at + 3] == [forwarded, '/in/fine.tif']
+
+
+@pytest.mark.parametrize('spelling', ['18', 'z15', 'sixteen', '016', ''])
+def test_qa_fine_proof_rejects_other_zooms_before_anything_runs(box, spelling):
+    # Contract: only the zooms qa accepts (16, 17) pass; anything else is a usage error before a stage runs.
+    # Bug caught: an unvalidated zoom reached qa late and failed after earlier stages had already run.
+    argv = ['morro-bay', '--out', str(box.out), '--through', 'qa', *SOURCE_ARGS, *ZONE_ARGS, *PACKAGE_ARGS,
+            '--qa-elevation', '/in/elev.tif', '--qa-contributor', '/in/contrib.tif', '--qa-shots', '/in/shots.json',
+            '--qa-fine-proof', spelling, '/in/fine.tif', '--generation', GEN, '--release-sha256', SHA]
+    with pytest.raises(SystemExit) as stop:
+        RR.main(argv, box.cfg)
+    assert stop.value.code == 2 and box.ran() == []
+
+
 def test_guards_pass_at_the_boundary_values(box):
     # Contract: some avg60 below 25 and exactly the decimal disk floors are allowed. Bug caught:
     # a different PSI window, rounding to 25 before comparing, or using binary GB / exclusive floors.
