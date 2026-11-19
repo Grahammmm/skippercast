@@ -80,8 +80,9 @@ def screen(record, cache, fetch=False):
         starts = selected['index'].astype('int64')
         ends = starts + selected['dimensions_x'].astype('int64') * selected['dimensions_y'].astype('int64')
         order = np.argsort(starts)
-        if (starts[order][0] != 0 or np.any(starts[order][1:] != ends[order][:-1])
-                or ends[order][-1] > values.shape[1]):
+        used_end = int(ends[order[-1]])
+        if (starts[order[0]] != 0 or np.any(ends <= starts)
+                or np.any(starts[order][1:] != ends[order][:-1]) or used_end > values.shape[1]):
             raise ValueError('Original refinement cells are incomplete or overlapping')
         resolution = np.maximum(selected['resolution_x'], selected['resolution_y'])
         if not np.all(np.isfinite(resolution) & (resolution > 0)):
@@ -90,8 +91,9 @@ def screen(record, cache, fetch=False):
         nearshore_count = 0
         min_elevation = float('inf')
         max_elevation = float('-inf')
-        for start in range(0, values.shape[1], 500_000):
-            batch = values[0, start:min(start + 500_000, values.shape[1])]
+        # Validated supergrids cover [0, used_end); unused trailing capacity is not soundings.
+        for start in range(0, used_end, 500_000):
+            batch = values[0, start:min(start + 500_000, used_end)]
             depth = batch['depth']
             valid = depth[np.isfinite(depth) & (depth < 0) & (depth > -3000)]
             if not len(valid):
@@ -107,7 +109,7 @@ def screen(record, cache, fetch=False):
                 'survey_start': record['survey_start'], 'survey_end': record['survey_end'],
                 'source_report_url': record['source_report_url'],
                 'original_refinement_grids': len(selected),
-                'original_refinement_records': int(values.shape[1]),
+                'original_refinement_records': used_end,
                 'measured_depth_cells': valid_count,
                 'shallowest_elevation_m_mllw': round(max_elevation, 3),
                 'deepest_elevation_m_mllw': round(min_elevation, 3),
