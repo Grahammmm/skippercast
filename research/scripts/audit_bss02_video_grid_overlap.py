@@ -73,7 +73,8 @@ def inspect(bss_spec, video_manifest, bss_cache, video_cache, download_video=Fal
             mask = grid.read_masks(1) > 0
             depth = grid.read(1)
             terrain = habitat.read(1, masked=True)
-            rough = (~np.ma.getmaskarray(terrain)
+            terrain_unknown = np.ma.getmaskarray(terrain)
+            rough = (~terrain_unknown
                      & np.isin(terrain.data, (-1, -31, -101, -201)))
             to_grid = Transformer.from_crs('EPSG:4326', grid.crs, always_xy=True)
             counts = Counter()
@@ -84,6 +85,11 @@ def inspect(bss_spec, video_manifest, bss_cache, video_cache, download_video=Fal
                 if not item.shape.points:
                     continue
                 x, y = to_grid.transform(*item.shape.points[0])
+                # Include points just outside the raster for proximity only.
+                if (grid.bounds.left - SEARCH_RADIUS_M <= x <= grid.bounds.right + SEARCH_RADIUS_M
+                        and grid.bounds.bottom - SEARCH_RADIUS_M <= y <= grid.bounds.top + SEARCH_RADIUS_M
+                        and near_valid_pixel(mask, grid, x, y)):
+                    counts['camera_records_within_100m_of_valid_depth_pixel'] += 1
                 if not (grid.bounds.left <= x < grid.bounds.right
                         and grid.bounds.bottom < y <= grid.bounds.top):
                     continue
@@ -109,7 +115,9 @@ def inspect(bss_spec, video_manifest, bss_cache, video_cache, download_video=Fal
                         observed_depths.append(source_depth)
                         if bottom in ('rock', 'boulder', 'cobble'):
                             counts['rock_boulder_cobble_windows_in_band'] += 1
-                            if rough[r, c]:
+                            if terrain_unknown[r, c]:
+                                counts['rock_boulder_cobble_windows_unknown_derived_class'] += 1
+                            elif rough[r, c]:
                                 counts['rock_boulder_cobble_windows_on_derived_rough_class'] += 1
                             else:
                                 counts['rock_boulder_cobble_windows_off_derived_rough_class'] += 1
@@ -123,8 +131,6 @@ def inspect(bss_spec, video_manifest, bss_cache, video_cache, download_video=Fal
                             counts['lingcod_positive_windows_in_band'] += 1
                         if row.get('LINE'):
                             lines.add(str(row['LINE']))
-                if near_valid_pixel(mask, grid, x, y):
-                    counts['camera_records_within_100m_of_valid_depth_pixel'] += 1
     return {
         'schema_version': 1,
         'scope': survey_id.replace('BSS_Block', 'bss').lower() + '-original-video-vs-populated-grid',
@@ -147,6 +153,7 @@ def inspect(bss_spec, video_manifest, bss_cache, video_cache, download_video=Fal
             'rock_boulder_cobble_windows_in_band',
             'rock_boulder_cobble_windows_on_derived_rough_class',
             'rock_boulder_cobble_windows_off_derived_rough_class',
+            'rock_boulder_cobble_windows_unknown_derived_class',
             'rock_boulder_cobble_windows_within_10m_of_derived_rough_class',
             'rock_boulder_cobble_windows_within_25m_of_derived_rough_class',
             'rockfish_positive_windows_in_band', 'lingcod_positive_windows_in_band')},
