@@ -26,6 +26,11 @@ import os
 from pathlib import Path
 import re
 
+if __package__:
+    from .refresh_enc_hazards import validate_feature_geometries
+else:  # Direct CLI invocation by research-daily.yml.
+    from refresh_enc_hazards import validate_feature_geometries
+
 SCOPES = ("santa-barbara-island", "point-reyes-tomales", "h11967-greenwood-tile")
 EXPECTED_RECEIPTS = 18
 RUN_STATUS_SUFFIX = ".run-status.json"
@@ -57,9 +62,15 @@ def resolve_invocation(explicit=None, environ=None):
 
 
 def snapshot_ok(data, scope):
-    return (data.get("status") == "charted-danger-screen-only"
-            and data.get("scope_id") == scope
-            and len(data.get("query_receipts", [])) == EXPECTED_RECEIPTS)
+    if (not isinstance(data, dict) or data.get("status") != "charted-danger-screen-only"
+            or data.get("scope_id") != scope or not isinstance(data.get("query_receipts"), list)
+            or len(data["query_receipts"]) != EXPECTED_RECEIPTS):
+        return False
+    try:
+        validate_feature_geometries(data.get("features"), data.get("bounds"))
+    except ValueError:
+        return False
+    return True
 
 
 def receipt_unavailable(data, scope):
