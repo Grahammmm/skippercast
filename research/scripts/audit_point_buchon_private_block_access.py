@@ -57,6 +57,14 @@ def audit(inputs):
     enc_bounds = transform(project, box(*enc["bounds"]))
     mpa_query_bounds = transform(project, box(*MPA_QUERY_BOUNDS))
     tree = STRtree(hazards)
+
+    def has_hazard_within(block, margin):
+        xmin, ymin, xmax, ymax = block.bounds
+        # The expanded envelope only shortlists candidates; its corners can
+        # be farther from the block than the requested margin.
+        search = box(xmin - margin, ymin - margin, xmax + margin, ymax + margin)
+        return any(block.distance(hazards[int(i)]) <= margin for i in tree.query(search))
+
     groups = {}
     for key in ("rov_blocks", "terrain_blocks"):
         blocks = [shape(f["geometry"]) for f in inputs[key]["features"]]
@@ -74,8 +82,8 @@ def audit(inputs):
             "mpa": mpa_counts,
             "any_mpa_intersection": sum(any(b.intersects(p) for p in mpas.values()) for b in blocks),
             "any_mpa_within_100m": sum(any(b.distance(p) <= 100 for p in mpas.values()) for b in blocks),
-            "any_enc_feature_within_100m": sum(len(tree.query(b.buffer(100))) > 0 for b in blocks),
-            "any_enc_feature_within_250m": sum(len(tree.query(b.buffer(250))) > 0 for b in blocks),
+            "any_enc_feature_within_100m": sum(has_hazard_within(b, 100) for b in blocks),
+            "any_enc_feature_within_250m": sum(has_hazard_within(b, 250) for b in blocks),
             "legal_route_hazard_gate_satisfied": False,
             "fishing_target": False,
         }
