@@ -503,12 +503,13 @@ export async function applyRegistry(db: D1Database, request: RegistryRequest, ro
     }
     for (const s of upserts(db, kind, mine.map(r => stored(r, request)), now)) { statements.push(s); owners.push(kind); }
     if (kind !== 'fact.upsert') continue;
-    // A newer value from the same source supersedes the facts it names (same vessel and field, still
-    // current, and not seen after this one), so an older replay never supersedes a newer fact.
+    // A newer value from the same source supersedes the facts it names (same vessel, field and source,
+    // still current, and not seen after this one): an older replay never supersedes a newer fact, and a
+    // second source's current fact for the field is never retired by this one.
     for (const r of mine) {
       if (!r.supersedes?.length) continue;
-      statements.push(db.prepare(`UPDATE fleet_vessel_facts SET superseded_at=?,superseded_by=? WHERE vessel_id=? AND field=? AND superseded_at IS NULL
-        AND retrieved_at<=? AND id IN (${marks(r.supersedes.length)})`).bind(r.cols.retrieved_at!, r.id, r.cols.vessel_id!, r.cols.field!, r.cols.retrieved_at!, ...r.supersedes));
+      statements.push(db.prepare(`UPDATE fleet_vessel_facts SET superseded_at=?,superseded_by=? WHERE vessel_id=? AND field=? AND source_id=? AND superseded_at IS NULL
+        AND retrieved_at<=? AND id IN (${marks(r.supersedes.length)})`).bind(r.cols.retrieved_at!, r.id, r.cols.vessel_id!, r.cols.field!, r.cols.source_id!, r.cols.retrieved_at!, ...r.supersedes));
       owners.push(kind);
     }
   }

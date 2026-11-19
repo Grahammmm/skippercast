@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {createFeedReader, feedKey, rangeResponse, readBucketJSON, readFeed, serveFeed, useBucket} from '../server/feeds.ts';
-import {CRITICAL_DEGRADED_HOURS, criticalDegraded, dataAgeHours, degradedSources, failingKinds, feedAgeMinutes, watchdog} from '../server/watchdog.ts';
+import {CRITICAL_DEGRADED_HOURS, DAILY_REQUIRED_KINDS, LIVE_REQUIRED_KINDS, criticalDegraded, dataAgeHours, degradedSources, failingKinds, feedAgeMinutes, missingKinds, watchdog} from '../server/watchdog.ts';
 import {feedURL, withFeeds} from '../dist/feeds.js';
 
 const RAW = 'https://raw.githubusercontent.com/Grahammmm/skippercast/';
@@ -134,6 +134,38 @@ test('watchdog reports critical sources degraded past the shared limit, as the f
     const quieter = await watchdog({}, Date.parse('2026-09-28T14:00:00Z'));
     assert.deepEqual([quieter.degraded, quieter.failing_kinds], [['offshore'], []]);
     assert.match(warned[1][0], /critical sources degraded \(partial\)/);
+  } finally { console.warn = warn; useBucket({}); }
+});
+
+test('F04-12: a required source group absent from the feed is missing, not healthy; an optional absent group stays quiet', async () => {
+  // Contract: the Worker reads the same reviewed per-feed expectations (catalog/feed-health.json required_kinds) as
+  // scripts/check_feed_freshness.py. Believable bug: failingKinds counted only sources present in the feed, so a dropped group never failed.
+  const built = '2026-09-28T13:40:00Z';
+  const src = (id, kind) => ({id, kind, status: 'ok', checked_at: built, data: {sample_at: '2026-09-28T13:00:00Z'}});
+  const live = {completed_at: built, generated_at: built, sources: {diablo: src('diablo', 'observation')}};
+  assert.deepEqual(LIVE_REQUIRED_KINDS, ['observation']);
+  assert.deepEqual([...DAILY_REQUIRED_KINDS], ['observation', 'prediction', 'advisory', 'forecast']);
+  // Positive control: the live feed carries buoys only, so absent advisory/prediction/forecast groups are not applicable.
+  assert.deepEqual(missingKinds(live), []);
+  assert.deepEqual(failingKinds(live), []);
+  // Negative control: a daily-shaped feed that dropped its advisory group is flagged with a fresh stamp and a healthy sibling.
+  const daily = {...live, sources: {diablo: src('diablo', 'observation'), tides: src('tides', 'prediction'), model: src('model', 'forecast')}};
+  assert.deepEqual(missingKinds(daily, DAILY_REQUIRED_KINDS), ['advisory']);
+  assert.deepEqual(failingKinds(daily, 12, DAILY_REQUIRED_KINDS), ['advisory']);
+  assert.deepEqual(failingKinds(daily), [], 'the live expectation does not require advisories');
+  assert.deepEqual(missingKinds({...live, sources: {}}), ['observation']);
+  assert.deepEqual(missingKinds(null), [], 'an unreadable feed is the age check\'s business');
+  const warn = console.warn; const warned = [];
+  console.warn = (...args) => warned.push(args);
+  try {
+    useBucket({FEEDS: fakeBucket({'conditions/latest.json': JSON.stringify({...live, sources: {alerts: src('alerts', 'advisory')}})})});
+    const result = await watchdog({}, Date.parse('2026-09-28T14:00:00Z'));
+    assert.deepEqual([result.action, result.missing_kinds, result.failing_kinds], ['none', ['observation'], ['observation']]);
+    assert.match(warned[0][0], /required source group missing/);
+    useBucket({FEEDS: fakeBucket({'conditions/latest.json': JSON.stringify(live)})});
+    warned.length = 0;
+    assert.deepEqual((await watchdog({}, Date.parse('2026-09-28T14:00:00Z'))).missing_kinds, []);
+    assert.equal(warned.length, 0);
   } finally { console.warn = warn; useBucket({}); }
 });
 

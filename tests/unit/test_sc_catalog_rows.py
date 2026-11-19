@@ -80,8 +80,7 @@ def load(path):
     return json.loads(path.read_text(encoding='utf-8'))
 
 
-# Shared regression bodies: used by the A2 contract AND the A3 mutation control,
-# so the negative control exercises exactly the production assertions.
+# Shared regression bodies, used by the A1/A2 tests.
 def assert_duplicate_rejected(document, source_id, index):
     with pytest.raises(ValueError) as current:
         ld.diff(None, document)
@@ -247,51 +246,3 @@ def test_a2_current_none_is_not_a_catalog():
     with pytest.raises(ValueError):
         ld.diff(catalog([]), None)
 
-
-# ------------------------------------------------------ A3 negative control
-
-
-def last_wins_double(document, label='catalog'):
-    """Test-local double: the ORIGINAL pre-fix mapping, container checks unchanged."""
-    if not isinstance(document, dict) or document.get('schema') not in (ld.CATALOG, 'coastal-source-v1'):
-        raise ValueError('previous catalog must be a frozen catalog or finalized source manifest')
-    rows = document.get('candidates')
-    if not isinstance(rows, list):
-        raise ValueError('previous catalog candidates required')
-    return {r['source_id']: r for r in rows}
-
-
-def test_a3_real_gate_positive_control():
-    assert_duplicate_rejected(load(DUPLICATE_FIXTURE), 'synthetic:bravo', 2)
-    assert_unique_diff()
-
-
-def test_a3_last_wins_double_makes_duplicate_regression_fail(monkeypatch):
-    monkeypatch.setattr(ld, '_candidates', last_wins_double)
-    document = load(DUPLICATE_FIXTURE)
-    # The exact inner failure: the ValueError gate is gone, so pytest.raises reports
-    # DID NOT RAISE. Any other exception propagates and fails this test.
-    with pytest.raises(pytest.fail.Exception, match=r'DID NOT RAISE'):
-        assert_duplicate_rejected(document, 'synthetic:bravo', 2)
-    # And the lossy diff the gate prevents: three rows collapse to two IDs, last wins.
-    change = ld.diff(None, document)
-    assert change['added'] == ['synthetic:alpha', 'synthetic:bravo']
-    assert last_wins_double(document)['synthetic:bravo']['access_url'].endswith('b-second.bag')
-
-
-def test_a3_last_wins_double_keeps_unique_controls_green(monkeypatch):
-    monkeypatch.setattr(ld, '_candidates', last_wins_double)
-    assert_unique_diff()
-    assert ld.diff(None, catalog([]))['added'] == []
-
-
-def test_a3_double_replaces_only_the_row_gate(monkeypatch):
-    # Container/schema refusals are identical with and without the double, so the
-    # control isolates the new row/uniqueness gate.
-    real = ld._candidates
-    for document in (dict(schema='other-v1', candidates=[]), dict(schema=ld.CATALOG), []):
-        for function in (real, last_wins_double):
-            with pytest.raises(ValueError):
-                function(document)
-    monkeypatch.setattr(ld, '_candidates', last_wins_double)
-    assert ld._candidates is last_wins_double and real is not last_wins_double

@@ -80,6 +80,7 @@ export function PostEditor({post, idBase, busy, onSubmit, onCancel}: {post: Post
   const [collaborators, setCollaborators] = useState(post.collaborators.join(', '));
   const [tags, setTags] = useState(post.user_tags.map(t => t.username).join(', '));
   const [schedule, setSchedule] = useState(localInput(post.scheduled_for));
+  const [invalidSchedule, setInvalidSchedule] = useState(false);
   const story = post.kind === 'story';
   const id = (name: string): string => `${idBase}-${name}`;
   const counts = {length: Array.from(caption).length, hashtags: (caption.match(/(?:^|[^\p{L}\p{N}_&#])#[\p{L}\p{N}_]+/gu) ?? []).length,
@@ -87,6 +88,11 @@ export function PostEditor({post, idBase, busy, onSubmit, onCancel}: {post: Post
 
   function save(event: Event): void {
     event.preventDefault();
+    // postEdits omits an unreadable schedule; that must not become an approval.
+    if (fromLocalInput(schedule) === undefined) {
+      setInvalidSchedule(true);
+      return;
+    }
     const patch = postEdits(post, {caption, targets, collaborators, tags, schedule});
     void onSubmit(Object.keys(patch).length ? {decision: 'edit', patch} : {decision: 'approve'});
   }
@@ -119,8 +125,11 @@ export function PostEditor({post, idBase, busy, onSubmit, onCancel}: {post: Post
         </label>
       ) : null}
       <label for={id('schedule')}>{COPY.scheduledFor}
-        <input id={id('schedule')} type="datetime-local" value={schedule} onInput={e => setSchedule((e.currentTarget as HTMLInputElement).value)} />
+        <input id={id('schedule')} type="datetime-local" value={schedule}
+          aria-invalid={invalidSchedule || undefined} aria-describedby={invalidSchedule ? id('schedule-error') : undefined}
+          onInput={e => { setSchedule((e.currentTarget as HTMLInputElement).value); setInvalidSchedule(false); }} />
       </label>
+      {invalidSchedule ? <p id={id('schedule-error')} class="admin-error" role="alert">{COPY.invalidSchedule}</p> : null}
       <div class="admin-actions">
         <button type="submit" class="admin-button is-primary" disabled={busy || !targets.length}>{COPY.saveApprove}</button>
         <button type="button" class="admin-button" onClick={onCancel}>{COPY.cancel}</button>

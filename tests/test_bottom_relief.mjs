@@ -10,11 +10,16 @@ import {attachBottomRelief} from '../web/map/bottom-relief.ts';
 const bytes = readFileSync(new URL('./fixtures/basemap/tiny.pmtiles', import.meta.url));
 bytes[99] = 2;
 const payloadOffset = Number(bytes.readBigUInt64LE(56));
-const hash = createHash('sha256').update(bytes).digest('hex');
+const sha = body => createHash('sha256').update(body).digest('hex');
+const hash = sha(bytes);
+const chunkPath = '10/2_6.json';
+const chunk = JSON.stringify([[168, 404, sha(bytes.subarray(payloadOffset))]]);
+const digestRoot = JSON.stringify({chunks: {[chunkPath]: sha(chunk)}});
+const digestRootHash = sha(digestRoot);
 const id = 'synthetic-survey';
 const pointer = region => ({region, status: 'reviewed', private: false, sha256: hash, bytes: bytes.length,
   minzoom: 10, maxzoom: 10, bounds: [-121, 35, -120, 36], release_sha256: 'b'.repeat(64),
-  envelope_sha256: 'c'.repeat(64), digest_root_sha256: 'd'.repeat(64),
+  envelope_sha256: 'c'.repeat(64), digest_root_sha256: digestRootHash,
   sources: [{id, rights_class: 'public', rights: {public_display: 'allowed'}, attribution: 'Synthetic survey',
     label: 'estimated', vertical_datum: 'synthetic', survey_dates: ['2025-01-01']}],
   detail_summary: {mask: 'transparent-nodata', depth_bands: [{source_id: id, resolution_m: 10, min_depth_m: 0, max_depth_m: 90}]},
@@ -30,7 +35,7 @@ function chart(t) {
     getComputedStyle: () => ({getPropertyValue: key => key.endsWith('opacity') ? '1' : `${root.dataset.theme ?? 'dark'}:${key}`}),
     MutationObserver: class { constructor(cb) { themeChanged = cb; } observe() {} disconnect() { themeChanged = null; } },
   });
-  const errors = [], fetches = [], handles = [];
+  const errors = [], fetches = [], handles = [], readies = [];
   const seafloor = signal(false), field = signal(false);
   let overlay, before, protocol, breakRange = false;
   const engine = {
@@ -40,11 +45,14 @@ function chart(t) {
   const library = {addProtocol(_, action) { protocol = action; }};
   const start = (region, reply = pointer(region)) => {
     const handle = attachBottomRelief({engine, region, library, page: 'https://chart.test/map',
-      seafloorOn: () => seafloor.value, fieldOn: () => field.value, unavailable: e => errors.push(e.message),
+      seafloorOn: () => seafloor.value, fieldOn: () => field.value, unavailable: e => errors.push(e.message), ready: () => readies.push(region),
       async fetchFn(raw, init) {
         const url = new URL(raw);
         fetches.push([url.pathname, init]);
-        if (url.pathname.endsWith('.json')) return Response.json(await reply);
+        const digestPath = `/feeds/tiles/relief/${region}/${hash}.digests/${digestRootHash}/`;
+        if (url.pathname === digestPath + 'root.json') return new Response(digestRoot);
+        if (url.pathname === digestPath + chunkPath) return new Response(chunk);
+        if (url.pathname === `/catalog/relief/${region}.json`) { const body = await reply; return body instanceof Response ? body : Response.json(body); }
         if (breakRange) return new Response(bytes); // full response must never be mistaken for a range
         const [, start, end] = /^bytes=(\d+)-(\d+)$/.exec(init.headers.Range).map(Number);
         return new Response(bytes.subarray(start, end + 1), {status: 206,
@@ -55,7 +63,7 @@ function chart(t) {
   };
   t.after(() => { handles.reverse().forEach(h => h.destroy()); Object.assign(globalThis, old); });
   const tile = (url, x = 168) => Promise.resolve().then(() => protocol({url: url.replace('{z}/{x}/{y}', `10/${x}/404`)}, new AbortController()));
-  return {start, tile, errors, fetches, seafloor, field, breakRange: () => { breakRange = true; },
+  return {start, tile, errors, fetches, readies, seafloor, field, breakRange: () => { breakRange = true; },
     theme(value) { root.dataset.theme = value; themeChanged?.(); },
     get overlay() { return overlay; }, get before() { return before; },
     get template() { return Object.values(overlay.sources)[0].tiles[0]; }};
@@ -135,4 +143,38 @@ test('land, parks and coast cover the raster; theme and field paints preserve th
   assert.equal(c.overlay.layers[0].paint['raster-saturation'], 0);
   assert.equal(c.overlay.layers[0].paint['raster-brightness-max'], 1);
   assert.equal(c.fetches.length, count);
+});
+
+// Contract: DATA-LIVE-9 / E2E-16. The overlay is public: attach takes no admin input, and a region draws relief only when
+// its pointer resolves ready. Believable bugs: drawing or probing the archive without a pointer; a refusal drawn anyway;
+// source or attribution text leaking onto the map through the raster source.
+test('a region without a ready pointer draws nothing and requests no archive or tile', async t => {
+  const c = chart(t);
+  c.start('no-pointer', new Response('', {status: 404}));
+  c.start('unreviewed', {...pointer('unreviewed'), status: 'held'});
+  c.start('private', {...pointer('private'), private: true});
+  c.start('mbari', {...pointer('mbari'), sources: [{...pointer('x').sources[0], id: 'mbari-survey'}]});
+  await tick();
+  assert.equal(c.overlay, undefined);
+  assert.deepEqual(c.readies, []);
+  assert.deepEqual(c.fetches.map(([url]) => url).sort(), ['/catalog/relief/mbari.json', '/catalog/relief/no-pointer.json',
+    '/catalog/relief/private.json', '/catalog/relief/unreviewed.json']);
+});
+
+test('a CSUMB-lineage pointer under the G 2026-11-18 basis draws once, with no source or attribution text on the map', async t => {
+  const c = chart(t);
+  const p = pointer('csumb-region');
+  p.sources = [{...p.sources[0], id: 'csumb-ventresca-cc2', provider: 'CSUMB SFML', attribution: 'CSUMB Seafloor Mapping Lab',
+    publication_allowed: false, review_status: 'restricted', rights: {public_display: 'allowed', license: 'unresolved'}}];
+  p.detail_summary.depth_bands[0].source_id = 'csumb-ventresca-cc2';
+  c.start('csumb-region', p);
+  await tick();
+  assert.deepEqual(c.readies, ['csumb-region']);
+  assert.ok(c.overlay);
+  c.theme('light'); c.field.value = true; // a repaint is not a second announcement
+  assert.deepEqual(c.readies, ['csumb-region']);
+  const drawn = JSON.stringify(c.overlay);
+  assert.equal(Object.values(c.overlay.sources)[0].attribution, undefined);
+  assert.doesNotMatch(drawn, /csumb|sfml|mbari|attribution|synthetic survey|license|licence/i);
+  assert.deepEqual(c.errors, []);
 });

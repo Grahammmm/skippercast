@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import hashlib
+from io import BytesIO
 import json
 import math
 from pathlib import Path
@@ -30,6 +31,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_usgs_statewide_context import mpa_union
 
 
+SOURCE_ID = 'usgs-point-sur-arguello-sediment-thickness-2019'
+MAX_ARCHIVE_BYTES = 20_000_000
+MAX_RASTER_BYTES = 128_000_000
+
+
 def digest(path):
     h = hashlib.sha256()
     with path.open('rb') as stream:
@@ -38,19 +44,13 @@ def digest(path):
     return h.hexdigest()
 
 
-def download_missing(url, path, expected_sha256, maximum_bytes):
-    """Fetch a missing pinned original; changed provider bytes require review."""
-    if path.is_file():
-        if digest(path) != expected_sha256:
-            raise ValueError('Existing original USGS download digest changed')
-        return
+def _fetch_verified(url, path, maximum_bytes, verify):
     parsed = urlsplit(url)
     if parsed.scheme != 'https' or parsed.hostname != 'www.sciencebase.gov':
         raise ValueError('Unapproved original USGS download host')
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + '.tmp')
     size = 0
-    h = hashlib.sha256()
     try:
         with urlopen(Request(url, headers={'User-Agent': 'SkipperCast-source-review/1.0'}), timeout=90) as source, temporary.open('wb') as target:
             if urlsplit(source.url).scheme != 'https':
@@ -59,19 +59,62 @@ def download_missing(url, path, expected_sha256, maximum_bytes):
                 size += len(block)
                 if size > maximum_bytes:
                     raise ValueError('Original USGS download exceeded size bound')
-                h.update(block)
                 target.write(block)
-        if h.hexdigest() != expected_sha256:
-            raise ValueError('Original USGS provider bytes changed; human review required')
+        verify(temporary)
         temporary.replace(path)
     finally:
         temporary.unlink(missing_ok=True)
 
 
+def download_missing(url, path, expected_sha256, maximum_bytes):
+    """Fetch a missing pinned original; changed provider bytes require review."""
+    if path.is_file():
+        if digest(path) != expected_sha256:
+            raise ValueError('Existing original USGS download digest changed')
+        return
+
+    def verify(temporary):
+        if digest(temporary) != expected_sha256:
+            raise ValueError('Original USGS provider bytes changed; human review required')
+
+    _fetch_verified(url, path, maximum_bytes, verify)
+
+
+def _read_archive(manifest, archive):
+    # ScienceBase regenerates ZIP timestamps. Admit only the reviewed TIFF,
+    # with no sidecars or duplicate entries, and retain the actual ZIP hash.
+    with archive.open('rb') as stream:
+        raw = stream.read(MAX_ARCHIVE_BYTES + 1)
+    if len(raw) > MAX_ARCHIVE_BYTES:
+        raise ValueError('Original USGS archive exceeded size bound')
+    with zipfile.ZipFile(BytesIO(raw)) as bundle:
+        members = bundle.infolist()
+        if len(members) != 1 or members[0].filename != manifest['raster_member']:
+            raise ValueError('Expected only the exact original GeoTIFF in USGS archive')
+        member = members[0]
+        if member.file_size > MAX_RASTER_BYTES:
+            raise ValueError('Original USGS GeoTIFF exceeded size bound')
+        # Limit inflation as well as advertised size. ZipExtFile's bounded
+        # reads can limit decoder output for stored and DEFLATE entries.
+        if member.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
+            raise ValueError('Unsupported original USGS ZIP compression')
+        with bundle.open(member) as stream:
+            raster = stream.read(member.file_size + 1)
+    if hashlib.sha256(raster).hexdigest() != manifest['raster_sha256']:
+        raise ValueError('Original USGS GeoTIFF member changed')
+    return hashlib.sha256(raw).hexdigest(), raster
+
+
+def download_archive_missing(manifest, path):
+    if manifest.get('id') != SOURCE_ID:
+        raise ValueError('Original USGS source changed')
+    if not path.is_file():
+        _fetch_verified(manifest['archive_url'], path, MAX_ARCHIVE_BYTES,
+                        lambda temporary: _read_archive(manifest, temporary))
+
+
 def validate_source(manifest, archive, metadata):
-    if (manifest.get('id') != 'usgs-point-sur-arguello-sediment-thickness-2019'
-            or digest(archive) != manifest['archive_sha256']
-            or digest(metadata) != manifest['metadata_sha256']):
+    if manifest.get('id') != SOURCE_ID or digest(metadata) != manifest['metadata_sha256']:
         raise ValueError('Original USGS source or pinned metadata digest changed')
     root = ET.parse(metadata).getroot()
     checks = {
@@ -85,11 +128,7 @@ def validate_source(manifest, archive, metadata):
     if ('Sediment Thickness' not in root.findtext('.//idinfo/citation/citeinfo/title', '')
             or 'public domain' not in root.findtext('.//idinfo/useconst', '').lower()):
         raise ValueError('Original USGS publication/rights are unreviewed')
-    with zipfile.ZipFile(archive) as bundle:
-        name = manifest['raster_member']
-        members = [item.filename for item in bundle.infolist() if item.filename.lower().endswith('.tif')]
-        if members != [name] or hashlib.sha256(bundle.read(name)).hexdigest() != manifest['raster_sha256']:
-            raise ValueError('Original USGS GeoTIFF member changed')
+    return _read_archive(manifest, archive)
 
 
 def thin_mask(values, nodata, maximum_m):
@@ -119,12 +158,11 @@ def display_parts(original, excluded, minimum_area_m2):
 
 
 def build(manifest, archive, metadata, mpas, sectors):
-    validate_source(manifest, archive, metadata)
+    transport_sha256, raster_bytes = validate_source(manifest, archive, metadata)
     if mpas.get('scope') != 'california-coast-directory' or len(sectors) < 19:
         raise ValueError('Complete statewide MPA snapshot and sectors are required')
     excluded_geo = mpa_union(mpas)
-    path = f"zip://{archive.resolve()}!{manifest['raster_member']}"
-    with rasterio.open(path) as raster:
+    with rasterio.io.MemoryFile(raster_bytes) as memory, memory.open() as raster:
         if (raster.count != 1 or raster.crs != CRS.from_epsg(32610)
                 or not all(abs(v - manifest['native_resolution_m']) < .001 for v in raster.res)
                 or raster.width < 3000 or raster.height < 4000):
@@ -174,7 +212,7 @@ def build(manifest, archive, metadata, mpas, sectors):
             'compiled_at': datetime.now(timezone.utc).isoformat(),
             'source': {'id': manifest['id'], 'publication_url': manifest['publication_url'],
                        'archive_url': manifest['archive_url'],
-                       'archive_sha256': manifest['archive_sha256'],
+                       'archive_sha256': transport_sha256,  # Transport provenance, not an identity pin.
                        'raster_sha256': manifest['raster_sha256'],
                        'metadata_url': manifest['metadata_url'],
                        'metadata_sha256': manifest['metadata_sha256'],
@@ -204,7 +242,7 @@ def main():
     a = p.parse_args()
     manifest = json.loads(a.manifest.read_text())
     if a.download_missing:
-        download_missing(manifest['archive_url'], a.archive, manifest['archive_sha256'], 20_000_000)
+        download_archive_missing(manifest, a.archive)
         download_missing(manifest['metadata_url'], a.metadata, manifest['metadata_sha256'], 1_000_000)
     result = build(manifest, a.archive, a.metadata,
                    json.loads(a.mpas.read_text()), json.loads(a.sectors.read_text())['sectors'])

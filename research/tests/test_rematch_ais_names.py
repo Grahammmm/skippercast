@@ -190,7 +190,7 @@ class ReadOnly(unittest.TestCase):
                 code = M.main(["--resolved", str(resolved), "--state", str(state), "--out", str(out)])
             self.assertEqual(code, 0)
             self.assertEqual(hashlib.sha256(state.read_bytes()).hexdigest(), before)
-            counts = json.loads(buf.getvalue())
+            counts = json.loads((out / "pairs.json").read_text())["counts"]
             self.assertTrue(counts["ais_state_read_only_proof"]["unchanged"])
             self.assertNotIn("999000001", buf.getvalue())
             self.assertNotIn("999000001", (out / "pr-table.md").read_text())
