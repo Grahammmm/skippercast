@@ -71,10 +71,11 @@ a vessel this run's candidates were assigned to.
 
 Only an admin fact may be null; a null from any other source is ignored.
 
-Vessel ids are ``sha256(region:creation_key)[:32]`` with the strongest key at
-creation (``uscg:``, ``reg:``, ``hin:``, ``mmsi:``, ``cs:``, else
-``name-port:<slug>|<port>``). Slugs are unique against every snapshot vessel
-slug, every advisor boat slug and the slugs created in this run.
+Vessel ids are ``sha256(region:creation_key)[:32]``. Decided new-vessel
+reviews use ``review:<id>``; unreviewed creations use the strongest key
+(``uscg:``, ``reg:``, ``hin:``, ``mmsi:``, ``cs:``, else ``name-port:<slug>|<port>``).
+Slugs are unique against every snapshot vessel slug, every advisor boat slug
+and the slugs created in this run.
 
 ``fact.upsert`` operations carry no ``supersedes``; superseding is ingest's
 (design section 9). Offerings, departures and the change kinds other than
@@ -503,7 +504,12 @@ class _Resolver:
         if review.get("status") == "decided" and action == "same-vessel" and decision.get("vessel_id") in self.vessels:
             return self.assign(cand, self.vessels[decision["vessel_id"]], 1.0)
         if review.get("status") == "decided" and action == "new-vessel":
-            return self.create(cand)
+            # The review survives changes to the candidate's name, port and matching keys.
+            key = f"review:{review['id']}"
+            vessel = self.vessels.get(ops.vessel_id(self.config.region, key))
+            if vessel is not None:
+                return self.assign(cand, vessel, 1.0)
+            return self.create(cand, key=key)
         self.assignments[cand.fp] = None
         self.skipped.append({"fingerprint": cand.fp, "reason": f"merge review {review['id']} {review.get('status')}"
                              + (f" ({action})" if action else "")})
@@ -556,12 +562,13 @@ class _Resolver:
         self.review_ids.append(ops.review_id("merge", cand.fp))
         self.assignments[cand.fp] = None
 
-    def create(self, cand: _Cand) -> None:
-        kind = next((k for k in KEY_ORDER if k in cand.keys), None)
-        key = (f"{KEY_PREFIX[kind]}:{cand.keys[kind]}" if kind
-               else f"name-port:{slugify(cand.name)}|{cand.port or '-'}")
-        if ops.vessel_id(self.config.region, key) in self.vessels:
-            key += "~" + ops.sha256(cand.fp)[:8]
+    def create(self, cand: _Cand, *, key: str | None = None) -> None:
+        if key is None:
+            kind = next((k for k in KEY_ORDER if k in cand.keys), None)
+            key = (f"{KEY_PREFIX[kind]}:{cand.keys[kind]}" if kind
+                   else f"name-port:{slugify(cand.name)}|{cand.port or '-'}")
+            if ops.vessel_id(self.config.region, key) in self.vessels:
+                key += "~" + ops.sha256(cand.fp)[:8]
         vid = ops.vessel_id(self.config.region, key)
         vessel = _Vessel(vid, self.new_slug(cand), cand.name, cand.norm, {}, None, None, None, {}, frozenset(), None, key)
         self._add(vessel)
