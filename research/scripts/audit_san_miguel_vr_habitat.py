@@ -16,7 +16,7 @@ from shapely.geometry import box, mapping, shape
 from shapely.ops import transform, unary_union
 from shapely.strtree import STRtree
 
-from research.scripts.audit_san_miguel_original_habitat import read_usgs
+from research.scripts.audit_san_miguel_original_habitat import read_usgs, read_verification_receipt
 from research.scripts.audit_san_miguel_naval_zone import danger_polygon
 from research.scripts.screen_vr_native_depth import fine_grid_rows
 from research.scripts.screen_vr_original_hard import exclusions
@@ -182,6 +182,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--verify', type=Path)
     args = parser.parse_args()
+    expected = read_verification_receipt(parser, args.output, args.verify)
     manifest = json.loads(args.manifest.read_text())
     result = review(manifest, args.usgs_cache, args.bag_cache,
                     json.loads(args.mpas.read_text()), json.loads(args.federal.read_text()),
@@ -192,7 +193,6 @@ def main():
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + '\n')
     if args.verify:
-        expected = json.loads(args.verify.read_text())
         if stable(expected) != stable(result):
             raise SystemExit('Original San Miguel VR source review changed')
     print(json.dumps(result['counts']))

@@ -63,7 +63,7 @@ for (const [id, port] of Object.entries(portAliases.ports as Record<string, {lan
   for (const name of port.landing_names ?? []) landingPort.set(name.toLowerCase(), id);
 
 /** Landing rows of the daily feeds of `ports`' regions dated on or after `from`; feeds that fail are counted, not thrown. */
-export async function landingRows(ports: Iterable<string>, from: string): Promise<{rows: LandingRow[]; feeds: number; unavailable: number}> {
+export async function landingRows(ports: Iterable<string>, from: string): Promise<{rows: LandingRow[]; conflictedIds: string[]; feeds: number; unavailable: number}> {
   const wanted = new Set(ports), urls = new Set<string>();
   for (const port of wanted) { const url = regions[portRegion.get(port) ?? '']?.daily_feed; if (url) urls.add(url); }
   const loaded = await Promise.allSettled([...urls].map(url => pairingDeps.readFeed(url)));
@@ -82,8 +82,12 @@ export async function landingRows(ports: Iterable<string>, from: string): Promis
       else if (previous && (previous.norm !== norm || previous.port !== port || previous.date !== r.date)) identities.set(r.id, null);
     }
   }
-  const rows = [...identities.values()].filter((row): row is LandingRow => row !== null);
-  return {rows, feeds: urls.size, unavailable: loaded.filter(r => r.status !== 'fulfilled' || !Array.isArray(r.value?.reports)).length};
+  const rows: LandingRow[] = [], conflictedIds: string[] = [];
+  for (const [id, row] of identities) {
+    if (row === null) conflictedIds.push(id);
+    else rows.push(row);
+  }
+  return {rows, conflictedIds, feeds: urls.size, unavailable: loaded.filter(r => r.status !== 'fulfilled' || !Array.isArray(r.value?.reports)).length};
 }
 
 const ADVISOR_JOIN = `JOIN advisor_boats b ON b.fleet_vessel_id=t.vessel_id
@@ -117,7 +121,7 @@ const LANDING_WITH = `WITH l AS (SELECT json_extract(value,'$.id') id, json_extr
       ranked AS (SELECT t.id trip_id, h.id, ROW_NUMBER() OVER (PARTITION BY h.id ${ONE_TRIP}) rn
         FROM hits h JOIN sole s ON s.id=h.id
         JOIN fleet_trips t ON t.vessel_id=h.vessel_id AND t.local_date=h.date AND h.port IN (t.depart_port_id,t.return_port_id))`;
-const chunks = (rows: LandingRow[]): string[] => {
+const chunks = (rows: LandingRow[] | string[]): string[] => {
   const out: string[] = [];
   for (let i = 0; i < rows.length; i += LANDING_CHUNK) out.push(JSON.stringify(rows.slice(i, i + LANDING_CHUNK)));
   return out;
@@ -129,9 +133,13 @@ export const landingPairs = (db: D1Database, region: string, scope: TripScope, r
     SELECT x.trip_id,'landing',x.id,'alias-port-date',?,? FROM ranked x
     WHERE x.rn=1 AND x.trip_id IN (SELECT t.id FROM fleet_trips t WHERE ${scope.sql})`).bind(json, region, region, CONFIDENCE.landing, now, ...scope.args));
 
-/** Statements removing landing pairings of the trips in `scope` whose report is one of `rows` but no longer pairs with that trip (another trip outranks it, or its name became ambiguous). Reports missing from `rows`, such as those of a feed that could not be read, keep their pairings. */
-export const landingPrune = (db: D1Database, region: string, scope: TripScope, rows: LandingRow[]): D1PreparedStatement[] =>
-  chunks(rows).map(json => db.prepare(`${LANDING_WITH}
+/** Remove contradicted pairs and pairs no longer ranked first in `scope`. Unseen IDs, including those from unavailable feeds, keep their pairs. */
+export const landingPrune = (db: D1Database, region: string, scope: TripScope, rows: LandingRow[], conflictedIds: string[] = []): D1PreparedStatement[] => [
+  ...chunks(rows).map(json => db.prepare(`${LANDING_WITH}
     DELETE FROM fleet_trip_reports WHERE report_kind='landing' AND trip_id IN (SELECT t.id FROM fleet_trips t WHERE ${scope.sql})
       AND report_ref IN (SELECT id FROM l)
-      AND NOT EXISTS (SELECT 1 FROM ranked x WHERE x.rn=1 AND x.trip_id=fleet_trip_reports.trip_id AND x.id=fleet_trip_reports.report_ref)`).bind(json, region, region, ...scope.args));
+      AND NOT EXISTS (SELECT 1 FROM ranked x WHERE x.rn=1 AND x.trip_id=fleet_trip_reports.trip_id AND x.id=fleet_trip_reports.report_ref)`).bind(json, region, region, ...scope.args)),
+  ...chunks(conflictedIds).map(json => db.prepare(`DELETE FROM fleet_trip_reports WHERE report_kind='landing'
+    AND trip_id IN (SELECT t.id FROM fleet_trips t WHERE ${scope.sql})
+    AND report_ref IN (SELECT value FROM json_each(?))`).bind(...scope.args, json)),
+];

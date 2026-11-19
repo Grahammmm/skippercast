@@ -1,13 +1,13 @@
 """F21-16: synthetic NAIS coverage controls; no archive or registry access.
 
-Run `python -B -m tests.unit.test_f21_16_audit` for the read-only baseline
-comparison (exit 1 on a gap). Normal pytest checks the fixture contract only.
+Run `python -B -m tests.unit.test_f21_16_audit` for a count-only comparison
+(exit 1 on a gap). Pytest replays the same cases against the report.
 """
 from datetime import date, datetime
 from io import StringIO
+import re
 from types import SimpleNamespace
 from unittest.mock import patch
-from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -25,24 +25,14 @@ CASES = (
 )
 
 
-def _reference(unavailable):
-    required = {day: set(nais.utc_days(*nais.window_ms(day, day, ZONE))) for day in LOCAL}
-    complete = set(UTC) - ({UTC[1]} if unavailable else set())
-    checked = sum(files <= complete for files in required.values())
-    positive = {HEARD.astimezone(ZoneInfo(ZONE)).date()} & required.keys()
-    return required, (len(required), checked, len(required) - checked, len(positive))
-
-
 @pytest.mark.parametrize('_name,unavailable,expected', CASES, ids=[case[0] for case in CASES])
 def test_shared_utc_archive_controls_local_day_denominator(_name, unavailable, expected):
     # A lost UTC archive straddles two Pacific days; presence in the part that
     # was read still counts as positive, but cannot make either day complete.
-    required, counts = _reference(unavailable)
-    assert required == {day: set(UTC[i:i + 2]) for i, day in enumerate(LOCAL)}
-    assert counts == expected
+    assert _reported_counts(unavailable) == expected
 
 
-def _baseline(unavailable):
+def _reported_counts(unavailable):
     calls = []
     mmsi = 999000001
 
@@ -66,7 +56,9 @@ def _baseline(unavailable):
     text = out.getvalue()
     assert code == 0 and calls == list(UTC)
     assert f'UTC day files read: {4 - bool(unavailable)} of 4.' in text
-    assert f'({ZONE} days, {len(LOCAL)} days)' in text
+    coverage = re.search(r'Local days requested: (\d+)\. Partial/unknown local days: (\d+)\.', text)
+    assert coverage is not None
+    requested, incomplete = map(int, coverage.groups())
     if unavailable is nais.DayNotPublished:
         assert f'Missing (not published): {UTC[1]}' in text
     if unavailable is nais.CorruptDay:
@@ -75,17 +67,14 @@ def _baseline(unavailable):
     row = next(line for line in text.splitlines() if line.startswith('| A |'))
     cells = dict(zip((c.strip() for c in header.strip('|').split('|')),
                      (c.strip() for c in row.strip('|').split('|')), strict=True))
-    checked = int(cells['Days checked'])
-    # Normalize the legacy report for comparison; no missing count is treated
-    # as explicit partial-day evidence. When all files are read there is none.
-    return (len(LOCAL), checked, len(LOCAL) - checked, int(cells['Days heard anywhere in region']))
+    return (requested, int(cells['Days fully checked']), incomplete, int(cells['Days heard anywhere in region']))
 
 
 def _replay():
     gap = False
     print('Counts: requested, fully checked, partial/unknown, positive')
     for name, unavailable, expected in CASES:
-        actual = _baseline(unavailable)
+        actual = _reported_counts(unavailable)
         gap |= actual != expected
         print(f'{name}: {"PASS" if actual == expected else "GAP"}; expected {expected}, observed {actual}')
     return int(gap)

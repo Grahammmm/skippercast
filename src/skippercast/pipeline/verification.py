@@ -3,6 +3,7 @@
 Version-one archive rows remain readable. New metadata improves their interpretation;
 it never turns a retrospectively downloaded forecast into a prospective prediction.
 """
+from bisect import bisect_left, bisect_right
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from itertools import combinations
@@ -247,6 +248,8 @@ def verify(records, observations, now, stations=None):
             diagnostics['rejected_observations'] += 1
             continue
         by_station[(row['station'], variable)].append(row)
+    for series in by_station.values():
+        series.sort(key=lambda o: o['time'])
     unique = {}
     for row in records:
         if not all(number(row.get(k)) for k in ('time', 'cycle', 'acquired_at', 'value')):
@@ -282,10 +285,18 @@ def verify(records, observations, now, stations=None):
             group['spatial_excluded'] += 1
             diagnostics['grid_too_distant'] += 1
             continue
-        candidates = [o for o in by_station.get((f['station'], f['variable']), [])
-                      if abs(o['time'] - f['time']) <= MATCH_SECONDS and o['time'] > f['acquired_at']]
+        series = by_station.get((f['station'], f['variable']), ())
+        valid_time = f['time']
+
+        def offset(o):
+            return o['time'] - valid_time
+
+        # Search by signed offset to retain the original floating-point boundary.
+        start = bisect_left(series, -MATCH_SECONDS, key=offset)
+        stop = bisect_right(series, MATCH_SECONDS, lo=start, key=offset)
+        candidates = [o for o in series[start:stop] if o['time'] > f['acquired_at']]
         # A midpoint observation may fit two hours. Within a run, count it once.
-        candidates.sort(key=lambda o: (abs(o['time'] - f['time']), o['time']))
+        candidates.sort(key=lambda o: (abs(offset(o)), o['time']))
         obs = next((o for o in candidates if (f['model'], f['cycle'], *_identity(o)) not in used_observations), None)
         if obs is None:
             if f['time'] + MATCH_SECONDS > now:
@@ -312,7 +323,8 @@ def verify(records, observations, now, stations=None):
         quality = Counter(r['observation'].get('qa', 'legacy_unrecorded') for r in rows)
         height_match = variable != 'wind_speed_10m' or all(r['observation'].get('measurement_height_m') == 10 for r in rows)
         derived_wind = variable == 'wind_speed_10m' and any(r['observation'].get('reference_type') == 'derived_10m' for r in rows)
-        observation_latest = max((o['time'] for o in by_station.get((station, variable), [])), default=None)
+        series = by_station.get((station, variable))
+        observation_latest = series[-1]['time'] if series else None
         forecast_latest = max((f['acquired_at'] for f in group['forecasts']), default=None)
         fresh = (observation_latest is not None and now - observation_latest <= 3 * 3600 and
                  forecast_latest is not None and now - forecast_latest <= 36 * 3600)
@@ -349,7 +361,7 @@ def verify(records, observations, now, stations=None):
     eligible = sum(g['eligible_forecasts'] for g in result)
     usable = sum(g['support']['usable_for_model_comparison'] for g in result)
     valid_keys = {(r['forecast']['station'], r['forecast']['variable'], r['forecast']['time']) for r in matches}
-    latest_observation = max((r['time'] for rows in by_station.values() for r in rows), default=None)
+    latest_observation = max((series[-1]['time'] for series in by_station.values()), default=None)
     latest_forecast = max((r['acquired_at'] for r in unique.values() if r['acquired_at'] <= now), default=None)
     stale = (latest_forecast is not None and now - latest_forecast > 36 * 3600) or (latest_observation is not None and now - latest_observation > 3 * 3600)
     summary_status = 'stale evidence' if stale else 'descriptive evidence' if usable else 'collecting history'

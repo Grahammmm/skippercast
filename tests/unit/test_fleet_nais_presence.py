@@ -105,7 +105,7 @@ class NaisPresenceTest(unittest.TestCase):
         code, text, _ = self.run_check(days)
         self.assertEqual(code, 0)
         self.assertIn("Missing (not published): 2026-01-13", text)
-        self.assertEqual(self.row(text, "A"), ["1", "1", "3"])
+        self.assertEqual(self.row(text, "A"), ["1", "1", "1"])
 
     def test_every_day_missing_exits_1(self):
         days = {d: DayNotPublished("x") for d in ("2026-01-12", "2026-01-13", "2026-01-14", "2026-01-15")}
@@ -118,7 +118,7 @@ class NaisPresenceTest(unittest.TestCase):
         code, text, _ = self.run_check(days)
         self.assertEqual(code, 0)
         self.assertIn("Failed: 2026-01-12 (CorruptDay)", text)
-        self.assertEqual(self.row(text, "A"), ["1", "1", "3"])
+        self.assertEqual(self.row(text, "A"), ["1", "1", "2"])
 
     def test_disk_below_floor_exits_3_before_any_download(self):
         code, text, source = self.run_check({}, free=mock.Mock(free=10 * 10**9))

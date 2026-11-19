@@ -9,6 +9,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from urllib.request import urlopen
 
 import h5py
@@ -38,14 +39,47 @@ def file_sha256(path):
     return digest.hexdigest()
 
 
-def fetch(path, url, expected):
-    if not path.exists():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with urlopen(url, timeout=90) as response, path.open("wb") as out:
-            for chunk in iter(lambda: response.read(1024 * 1024), b""):
+# Match the 100 MB ceiling used by the NOAA BAG envelope review.
+ORIGINAL_MAX_BYTES = 100_000_000
+
+
+def install_original(path, expected, open_response, *, max_bytes, required_url=None):
+    """Stage a single authorized transfer, then install without replacing a cache entry."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(prefix=".original-", dir=path.parent) as folder:
+        staged = Path(folder) / "download"
+        with open_response() as response, staged.open("wb") as out:
+            if required_url is not None and response.url != required_url:
+                raise ValueError(f"Unexpected source redirect: {path.name}")
+            declared = response.headers.get("Content-Length")
+            size = int(declared) if declared is not None else None
+            if size is not None and not 0 < size <= max_bytes:
+                raise ValueError(f"Source size outside review limit: {path.name}")
+            limit = size if size is not None else max_bytes
+            remaining = limit
+            while chunk := response.read(min(1024 * 1024, remaining + 1)):
+                remaining -= len(chunk)
+                if remaining < 0:
+                    raise ValueError(f"Source exceeds transfer size limit: {path.name}")
                 out.write(chunk)
-    if file_sha256(path) != expected:
-        raise ValueError(f"Original BAG changed: {path.name}")
+            if size is not None and remaining:
+                raise ValueError(f"Source transfer incomplete: {path.name}")
+        if file_sha256(staged) != expected:
+            raise ValueError(f"Original source digest changed: {path.name}")
+        try:
+            path.hardlink_to(staged)
+        except FileExistsError:
+            # Another writer installed a file while we streamed. Never replace it.
+            if file_sha256(path) != expected:
+                raise ValueError(f"Original cached source changed: {path.name}") from None
+
+
+def fetch(path, url, expected):
+    if path.exists():
+        if file_sha256(path) != expected:
+            raise ValueError(f"Original BAG changed: {path.name}")
+        return
+    install_original(path, expected, lambda: urlopen(url, timeout=90), max_bytes=ORIGINAL_MAX_BYTES)
 
 
 def summarize_cells(elevation, uncertainty, *, fill_elevation, fill_uncertainty):
