@@ -632,7 +632,8 @@ export const SURFACE_SOURCE_SHA256 = {
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   // MB-05 recolours light map-only roles, reduces habitat fill opacity and adds contour/no-survey tokens; MB-20 only adds light-theme flow, MPA, swell and contrast colours; chrome text, panel and legend-glass paint stay unchanged.
   // MB-14 only adds the 3D sky, horizon and fog tokens in both themes; no existing token, chrome text, panel or legend-glass paint changes.
-  "tokensCss": "cf17f90e35d9ff29956a8b5605c3e6afeaa479a086f275642625c04d8c049b6b",
+  // MB-11 adds Ramp B and native legend paint roles only.
+  "tokensCss": "192713b6ac7bbdc472986630f7ebfb7f0f856f00f492a153d9d4010500fea16c",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
   // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.
@@ -675,7 +676,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // no colour, opacity, backing or text role changed and the cited line numbers above are unmoved. Rebound from the final bytes.
   // MAIN-RED-5: pointer-event routing only; no paint, backing, opacity or text role changes.
   // MAIN-RED-7: one landscape-phone (max-height: 500px) sheet-footer link spacing rule (margin, side padding, min-width); no colour, opacity, backing or text role changed. Rebound from the final bytes.
-  "appCss": "ea47a308ed3ed26a56558714894a22425f65244a647fc22916e9e73bdbb92591",
+  // MB-11 changes the native legend glass and keys; both native text roles below use its new backing.
+  "appCss": "0b82fdd43853e76e54c14dc8df48094cdd012598a61157086e12cd64387ab297",
   // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
   // UXFIX-10 only appends a scoped .app-account[data-top] block at the end of app.css (the phone top-card account button: icon size, hidden label, open-state text/panel colour, z-index);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved.
@@ -704,7 +706,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // SCFEAT-FRESH-1 adds an "Updates: cadence" line under each drawn layer row and the protected-areas row, using the existing app-legend-note text role (copy only); no backing, opacity, token or threshold changed.
   // SC1407-15: planning-route row uses existing text/muted glass roles; no paint math, thresholds or backing changed.
   // MAP-SOURCES-PAGE-1: source and credit lines leave the Legend (the Sources page names them); no backing, opacity, token or threshold changed.
-  "legendTsx": "b124e893f0fc80856f637afc790d4648b544187a410a494cedb3d907fd0dbfb1"
+  // MB-11 adds the relief ramp, survey key and warning; no text is drawn over a swatch.
+  "legendTsx": "b770216253091828b2f4debb665d40968a078ba8b05e60448b99d37ec51c8718"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
@@ -716,17 +719,20 @@ export function checkSurfaceSource(sources) {
     }
     const bridgeBody = sources.bridgeCss.replace(/\/\*[\s\S]*?\*\//g, '').match(/\{([^}]*)\}/)[1];
     const roles = Object.fromEntries([...bridgeBody.matchAll(/--coast-([a-z0-9-]+):\s*([^;]+);/g)].map(m => [m[1], m[2]]));
-    for (const [theme, tokens] of Object.entries(themes(sources.tokensCss, FILES['web/tokens.css']))) {
+    for (const [theme, tokens] of Object.entries(rawThemes(sources.tokensCss))) {
       const resolve = role => resolveRgba(roles[role], tokens);
       const panel = resolve('panel'), glass = resolve('panel-glass'), sheen = resolve('sheen');
-      const nativeGlass = resolveRgba('color-mix(in srgb, var(--panel) 92%, transparent)', tokens);
+      // MB-11 changes the native panel backing. Ramp and survey chips are
+      // decorative swatches beside (never beneath) their labels. The new title,
+      // button and bold keys use text; absent classes and the warning use muted.
+      const nativeGlass = resolveRgba('var(--map-legend-panel)', tokens);
       for (const [id, role, surface, alphaRange, backingMin, backingMax, binding] of [
         ['legend-title', 'text', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:807-824; bridge:21,26'],
         ['legend-labels', 'muted', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:858-868,2678-2684; bridge:21,27'],
         ['sheen-text', 'text', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,26'],
         ['sheen-muted', 'muted', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,27'],
-        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,173,213,227; Legend.tsx:394'],
-        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:173,194,242; Legend.tsx:111,245,394'],
+        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css .app-legend / .app-relief-chips strong'],
+        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css .app-legend-note / .app-relief-chips > span'],
       ]) {
         const foreground = resolve(role);
         results.push({theme, id, binding, foreground, surface,

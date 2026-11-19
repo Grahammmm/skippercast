@@ -1028,7 +1028,8 @@ test('relief gate is public on the coast Chart; the honesty line names no source
   for (const edit of [{presentation: '2d'}, {presentation: '3d'}, {view: 'fleet'}, {basemapAvailable: false}, {studyPreviewOn: true}])
     assert.equal(reliefWanted({...base, ...edit}), false, JSON.stringify(edit));
   const row = JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings['layer.relief.shading'];
-  assert.equal(row.en, 'Depth shading: estimated from survey grids · blank = no survey data · NOT FOR NAVIGATION');
+  // MB-11 copy update: the honesty line no longer carries "blank = no survey data" (same change as tests/test_map_loading_status.mjs).
+  assert.equal(row.en, 'Depth shading: estimated from survey grids · NOT FOR NAVIGATION');
   assert.match(row.es, /NAVEGACI/);
   assert.doesNotMatch(row.en + row.es, /csumb|sfml|mbari|usgs|noaa|planet|attribution|credit/i);
 });

@@ -405,7 +405,7 @@ jobs:
       # Size budget (SC-PERF-BUDGET-1): file sizes only, no network, no timing. Raising a budget
       # needs a written reason in scripts/perf-budget.json (docs/operations/perf-budget.md).
       # From 97% of a budget the check warns but passes; the budget-drift bot (budget-drift.yml)
-      # raises the ceiling on main, so a feature pull request does not have to (SC-CI-2).
+      # checks main every six hours and proposes raises, so a feature PR with headroom does not have to (SC-CI-2).
       - name: Size budget (first-load files and brief data)
         if: matrix.python == '3.13'
         run: |

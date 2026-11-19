@@ -35,6 +35,7 @@ import {createChlorophyll} from '../map/chlorophyll.ts';
 import {createSwell} from '../map/swell.ts';
 import {createPreviewLayers, previewOn} from '../map/preview-layers.ts';
 import type {Engine} from '../map/engine.ts';
+import type {SurveyDetailView} from '../map/bottom-relief.ts';
 import {BOTTOM_RELIEF, reliefWanted} from '../map/layers.ts';
 import {createStations} from '../map/stations.ts';
 import {dailyFeed, verdictEpoch} from '../brief/Brief.tsx';
@@ -66,6 +67,7 @@ phoneQuery?.addEventListener('change', event => { phone.value = event.matches; }
 // preview, which an admin can still turn on, takes the Chart instead (web/map/layers.ts `reliefWanted`).
 /** True from the relief's first draw until it is retired; the honesty line shows only while something is drawn. */
 export const reliefDrawn = signal(false);
+export const reliefSurveyView = signal<SurveyDetailView | null>(null);
 const clearUnavailable = (layer: string) => { unavailable.value = unavailable.peek().filter(l => l !== layer); };
 const basemapAvailable = computed(() => !unavailable.value.includes('basemap'));
 
@@ -82,6 +84,7 @@ function watchBottomRelief(engine: ReadonlySignal<Engine | null>) {
         seafloorOn: () => layers.value.includes('seafloor'),
         fieldOn: () => layers.value.includes('water-temp') || layers.value.includes('chlorophyll') ||
           previewOn.value.some(layer => layer === 'sst' || layer === 'chlorophyll'),
+        surveyView: view => { reliefSurveyView.value = view; },
         ready: () => { reliefDrawn.value = true; },
         // No `ready` pointer is normal (most regions have none yet): nothing was promised, so nothing is said.
         // Only a relief that was drawn and then failed its checks is reported.
