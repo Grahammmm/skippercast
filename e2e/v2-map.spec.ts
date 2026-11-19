@@ -457,19 +457,28 @@ test('the Chart shows only a touch-sized Sources link on a phone and on the desk
 
 test('Chart → 3D → Chart keeps the centre within one zoom step', async ({page, v2}) => {
   await holdCoastData(page);
+  (await syntheticTerrain(page)).release();
   await v2.open('app', {...PLACE, presentation: 'chart'});
   const chart = page.locator('.app-chart');
   await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
   const before = viewOf(await chart.getAttribute('data-view'));
   await toggle(page, '3D').click();
-  await expect(page.locator('.app-terrain')).toBeVisible();
+  const host = page.locator('.app-terrain');
+  const canvas = host.locator('canvas');
+  await expect(canvas).toBeVisible();
+  await expect(host.locator('#loading')).toHaveCount(0);
+  // The renderer reports user moves to the link. Pan out and back without changing the entry zoom.
+  await canvas.press('ArrowLeft');
+  await canvas.press('ArrowRight');
+  const entryZoom = before.zoom - 0.5;
+  await expect.poll(() => viewOf(params(page).view).zoom, {message: 'the link records the half-step wider 3D entry zoom'}).toBe(entryZoom);
   await toggle(page, 'Chart').click();
   await expect(chart).toBeVisible();
   const after = viewOf(await chart.getAttribute('data-view'));
   expect(Math.abs(after.latitude - before.latitude)).toBeLessThan(0.01);
   expect(Math.abs(after.longitude - before.longitude)).toBeLessThan(0.01);
   expect(Math.abs(after.zoom - before.zoom)).toBeLessThanOrEqual(1);
-  expect(viewOf(params(page).view).zoom, 'the link keeps the place').toBeCloseTo(before.zoom, 0);
+  await expect.poll(() => viewOf(params(page).view).zoom, {message: 'the link keeps the settled zoom on return to Chart'}).toBe(entryZoom);
 });
 
 // Seafloor (FE-14): a synthetic publication (tests/fixtures/seafloor/chart.pmtiles, built by

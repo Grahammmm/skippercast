@@ -659,7 +659,10 @@ test('MB-14 fallback: 2 s under 24 fps on a loaded 3D view goes back to 2D in pl
   doc.set(true); frames(10, 5000); doc.set(false);
   assert.equal(nav.params().get('presentation'), '3d', 'a hidden page is not timed');
   const entries = nav.stack.length;
-  frames(15, FPS_WINDOW_MS + 200);
+  // With no browser-test opt-out, even 23 fps must trigger the stage fallback once the full window elapses.
+  frames(23, FPS_WINDOW_MS - 100);
+  assert.equal(nav.params().get('presentation'), '3d', 'the default stage waits a full window before falling back');
+  frames(23, 300);
   assert.equal(nav.params().get('presentation'), '2d'); assert.equal(fpsFallback.value, true);
   assert.equal(shownPresentation.value, '2d'); assert.equal(fake.last('setPerspective'), '2d');
   assert.equal(nav.stack.length, entries, 'the link is rewritten in place: Back does not return to the slow view');

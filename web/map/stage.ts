@@ -403,12 +403,14 @@ export function createStage(options: StageOptions): Stage {
   let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined, noticeTimer: ReturnType<typeof setTimeout> | undefined;
   // MB-14: the 3D frame watch (armed once the terrain has loaded), the entry camera's bookkeeping and the theme last painted.
   let fpsArmed = false, last3d: Camera | undefined, lastBearing: number | undefined, lastShown: string | undefined, entryPending = false, painted: StageTheme | undefined = typeof document === 'undefined' ? undefined : rootTheme();
+  // Synthetic browser terrain tests opt out of timing software WebGL; other sessions keep the 24 fps floor.
+  const ignoreFps = (globalThis as {__skippercastE2eIgnoreTerrainFps?: boolean}).__skippercastE2eIgnoreTerrainFps === true;
   const monitor = createFrameMonitor(() => {
     // Slow 3D goes back to 2D, with a notice. The link is rewritten in place, so Back does not return to the slow view.
     if (!alive || shownPresentation.peek() !== '3d') return;
     fpsFallback.value = true; clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { fpsFallback.value = false; }, FALLBACK_NOTICE_MS);
     setParams({presentation: '2d'});
-  });
+  }, ignoreFps ? 0 : MIN_FPS);
   // Without ?hour= the terrain shows the current whole hour; the shared clock moves it on at each hour boundary, with the dock.
   const clock = options.clock ?? (options.now ? createHourClock({read: options.now, doc}) : appClock);
   const releaseClock = clock.retain();
