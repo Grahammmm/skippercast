@@ -854,6 +854,7 @@
 "boatEntry.seas":{"en":"Seas limit (ft)"},
 "boatEntry.limitsHint":{"en":"Blank keeps the default"},
 "boatEntry.failed":{"en":"Could not save the boat in this browser."},
+"boatEntry.unreadable":{"en":"Your saved boat could not be read here (damaged, or saved by a newer version), so it was left unchanged and the new length was not saved. Update the app, or clear this site's data in your browser settings to start over."},
 "boatEntry.save":{"en":"Save boat"},
 "boatEntry.skip":{"en":"Not now"},
 "boatEntry.windSaved":{"en":"Wind limit saved as {n} kt."},

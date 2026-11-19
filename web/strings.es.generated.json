@@ -854,6 +854,7 @@
 "boatEntry.seas":"Límite de oleaje (ft)",
 "boatEntry.limitsHint":"En blanco se conserva el valor predeterminado",
 "boatEntry.failed":"No se pudo guardar el barco en este navegador.",
+"boatEntry.unreadable":"No se pudo leer tu barco guardado aquí (dañado o guardado por una versión más nueva), así que se dejó sin cambios y no se guardó la nueva eslora. Actualiza la app o borra los datos de este sitio en los ajustes del navegador para empezar de nuevo.",
 "boatEntry.save":"Guardar barco",
 "boatEntry.skip":"Ahora no",
 "boatEntry.windSaved":"Límite de viento guardado en {n} kt.",
