@@ -56,9 +56,9 @@ export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs 
   return (id: string, retry = false): Promise<RegionInfo | typeof REGION_MISSING | null> => admission.read(`${retry ? 'retry' : 'cached'}:${id}`, async signal => {
     const response = await fetchFn(`regions/${encodeURIComponent(id)}/region.json`, {signal, ...(retry ? {cache: 'reload' as const} : {})});
     if (!response.ok) { void response.body?.cancel().catch(() => {}); return response.status === 404 ? REGION_MISSING : null; }
-    const json = await response.json() as {name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}; chart_files?: unknown}
+    const json = await response.json() as {id?: unknown; name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}; chart_files?: unknown}
       & Omit<RulesRegion, 'id' | 'assets'>;
-    if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
+    if (!json || typeof json !== 'object' || Array.isArray(json) || json.id !== id) return null;
     const center = json.map?.center;
     if (typeof json.name !== 'string' || !validCenter(center)) return null;
     const timezone = json.timezone === undefined ? DEFAULT_ZONE : validZone(json.timezone) ? json.timezone : null;

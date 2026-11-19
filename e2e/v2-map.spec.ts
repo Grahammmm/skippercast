@@ -1294,7 +1294,7 @@ test('a region without published contours shows no depth-contour key', async ({p
 // water in CURRENT_VIEW, from a run issued six hours before the current hour. The primary swell alternates
 // between about 3 and 7 ft from hour to hour, its period crosses 12 and 13 s, and it comes from the west-northwest.
 async function serveForecast(page: Page, {region = 'morro-bay', issuedHoursAgo = 6, points = 'grid'}: {region?: string; issuedHoursAgo?: number; points?: 'grid' | 'scattered'} = {}) {
-  const now = Date.now(), issued = horizonStart() - issuedHoursAgo * HOUR_MS, times = Array.from({length: 60}, (_, k) => issued / 1000 + k * 3600);
+  const now = Date.now(), start = Math.floor(now / HOUR_MS) * HOUR_MS, issued = start - issuedHoursAgo * HOUR_MS, times = Array.from({length: 60}, (_, k) => issued / 1000 + k * 3600);
   const requested: [string, number, number][] = [], data: unknown[] = [];
   for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) {
     requested.push([`p-${j}-${i}`, +(35.10 + j * 0.2 + (points === 'scattered' ? i * 0.01 : 0)).toFixed(2), +(-121.30 + i * 0.2).toFixed(2)]);
@@ -1303,15 +1303,19 @@ async function serveForecast(page: Page, {region = 'morro-bay', issuedHoursAgo =
   }
   await page.route(new RegExp(`/api/forecast\\?region=${region}$`), route => route.fulfill({json: {region_id: region, requested_points: requested, retrieved: now - 600_000,
     models: {ncep_gfswave016: {data, meta: {last_run_initialisation_time: issued / 1000, data_end_time: times.at(-1)}}}}}));
+  return {now, start};
 }
 
 test('Swell draws the model grid as a field with period lines and strokes, names the run, follows the hour and leaves when off', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
-  await serveForecast(page);
+  const {now, start} = await serveForecast(page);
+  // Keep the model's age and forecast horizon on the same sampled clock even
+  // if setup or assertions run across an hour boundary. Timers keep advancing.
+  await page.clock.setFixedTime(new Date(now));
   // The terrain stays held, but its unrelated report must settle the desktop source guard.
   await page.route('**/api/coast/report', route => route.fulfill({status: 503, json: {error: 'Offline swell test'}}));
   // Tomorrow has all 24 hours, so the slider can always step.
-  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'none', hour: hourParam(horizonStart() + 24 * HOUR_MS)});
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'none', hour: hourParam(start + 24 * HOUR_MS)});
   if (!narrow(page)) await expect(page.locator('.app-first-answer')).toBeVisible();
   // Sample the same geographic point, not cached page pixels: the first answer, dock and canvas scrolling move it.
   const probe = () => chartPoint(page, CURRENT_VIEW, SWELL_POINT.lon, SWELL_POINT.lat);

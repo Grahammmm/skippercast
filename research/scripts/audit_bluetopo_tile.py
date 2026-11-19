@@ -42,13 +42,17 @@ def audit(scheme, tile, cache, *, fetch=False, min_survey_year=1990):
             raise ValueError("BlueTopo bands changed")
         if "navd88" not in raster.crs.to_wkt().lower():
             raise ValueError("BlueTopo vertical datum is not NAVD88")
-        elevation, uncertainty, contributor = raster.read()
-        observed = set(np.unique(contributor[np.isfinite(contributor)]).astype(int))
+        bands = raster.read(masked=True)
+        elevation, uncertainty, contributor = bands.data
+        valid = (~np.ma.getmaskarray(bands).any(axis=0)
+                 & np.isfinite(elevation) & np.isfinite(uncertainty) & np.isfinite(contributor)
+                 & (uncertainty >= 0))
+        # Masked or otherwise invalid cells can carry fill codes, not provenance.
+        observed = set(np.unique(contributor[valid]))
         if observed - set(sources):
             raise ValueError("BlueTopo RAT does not identify all contributor codes")
         measured = {key for key, value in sources.items() if is_measured_survey(value)}
         recent = {key for key in measured if item_year(sources[key]["survey_date_end"]) >= min_survey_year}
-        valid = np.isfinite(elevation) & np.isfinite(uncertainty)
         measured_mask = valid & np.isin(contributor, list(measured))
         recent_mask = valid & np.isin(contributor, list(recent))
         below_navd88 = valid & (elevation < 0)

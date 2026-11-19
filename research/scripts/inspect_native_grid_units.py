@@ -84,7 +84,7 @@ def geometry(dataset, bounds, max_pixels):
 
 
 def inspect(path, bounds, *, value_convention, vertical_datum, max_pixels=25_000_000):
-    """Inspect caller-declared metre values. No inferred vertical datum/units."""
+    """Inspect unpacked, caller-declared metre values. No inferred datum/units."""
     if value_convention not in {'elevation-m-positive-up', 'depth-m-positive-down'}:
         raise ValueError('Declare the source metre-value convention explicitly')
     if not isinstance(vertical_datum, str) or not vertical_datum.strip():
@@ -96,6 +96,9 @@ def inspect(path, bounds, *, value_convention, vertical_datum, max_pixels=25_000
     with rasterio.open(path) as dataset:
         if dataset.count != 1:
             raise ValueError('Inspection requires an original single-band grid')
+        # Rasterio returns stored samples without applying the band scale/offset.
+        if dataset.scales != (1,) or dataset.offsets != (0,):
+            raise ValueError('Unsupported native grid packing: scale/offset must be 1/0')
         window, crs, description = geometry(dataset, bounds, max_pixels)
         if window.width > 1_048_576:
             raise ValueError('Native row exceeds read bound; select a narrower window')

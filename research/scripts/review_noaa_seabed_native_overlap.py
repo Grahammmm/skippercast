@@ -77,6 +77,9 @@ def review(raw_dir, sample_audit, regular_audit, cache, sectors, mpa_snapshot, b
         path = cache / name
         if not path.is_file():
             raise ValueError('Exact original BAG cache file missing: ' + name)
+        # A disjoint envelope is evidence only if it comes from the reviewed BAG.
+        if digest(path) != file['bag_sha256']:
+            raise ValueError('Original NOAA BAG bytes changed: ' + name)
         with rasterio.open(path) as raster:
             crs = CRS.from_wkt(raster.crs.to_wkt())
             parts = crs.sub_crs_list
@@ -94,8 +97,6 @@ def review(raw_dir, sample_audit, regular_audit, cache, sectors, mpa_snapshot, b
                         hits.append((ident, row, col))
             if not hits:
                 continue
-            if digest(path) != file['bag_sha256']:
-                raise ValueError('Original NOAA BAG bytes changed: ' + name)
             source_files_with_hits.add(name)
             for ident, row, col in hits:
                 record = indexed[ident]

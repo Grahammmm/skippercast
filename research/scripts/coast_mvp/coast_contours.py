@@ -289,6 +289,26 @@ def nearest_terrain(values, valid, source_affine, source_crs, tile_affine):
     return warped
 
 
+def contour_support(valid, ids, feather, cell_m):
+    """Exclude the C1 display-feather footprint without changing terrain support."""
+    width = feather.get('feather_m', 0)
+    if not width or feather.get('changed_cells') == 0:
+        return valid
+    edges = np.zeros(ids.shape, dtype=bool)
+    for before, after in ((np.s_[:-1, :], np.s_[1:, :]), (np.s_[:, :-1], np.s_[:, 1:])):
+        a, b = ids[before], ids[after]
+        seam = (a > 0) & (b > 0) & (a != b)
+        edges[before] |= seam
+        edges[after] |= seam
+    if not edges.any():
+        return valid
+    from scipy.ndimage import distance_transform_edt
+
+    # C1 measures from a seam-adjacent centre plus half a cell. The union
+    # of all seam edges conservatively bounds its per-contributor corrections.
+    return valid & ((distance_transform_edt(~edges) + 0.5) * cell_m >= width)
+
+
 def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_000, max_tiles=64):
     """Build bounded local preview. Manifest uses C1 sources[].code/resolution_m."""
     if not isinstance(zoom, int) or not 0 <= zoom <= 18:
@@ -328,8 +348,9 @@ def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_
         tiles = tile_range(mercator, zoom)
         if len(tiles) > max_tiles:
             raise ValueError('Terrain tile cap exceeded')
+        supported = contour_support(valid, ids, metadata.get('seam_feather', {}), min(grid.res))
         masks = {}
-        for geom, code in shapes(np.where(valid, ids, 0).astype('int32'), transform=grid.transform):
+        for geom, code in shapes(np.where(supported, ids, 0).astype('int32'), transform=grid.transform):
             if code:
                 masks.setdefault(int(code), []).append(shape(geom))
         masks = {code: unary_union(polygons) for code, polygons in masks.items()}
@@ -340,25 +361,31 @@ def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_
         features = []
         with tempfile.TemporaryDirectory(dir=output) as temporary:
             temporary = Path(temporary)
-            clean = temporary / 'supported.tif'
             profile = grid.profile.copy()
             profile.update(count=1, dtype='float32', nodata=-999999)
-            with rasterio.open(clean, 'w', **profile) as target:
-                target.write(np.where(valid, values, -999999).astype('float32'), 1)
-            raw = temporary / 'raw.geojson'
-            engine.contours(clean, raw, depths, -999999)
-            by_source = {code: [] for code in masks}
-            for feature in json.loads(raw.read_text())['features']:
-                line = shape(feature['geometry'])
-                depth = round(-feature['properties']['elevation_m'] / FOOT)
-                for code, mask in masks.items():
+            for code, mask in masks.items():
+                # Clip alone cannot undo interpolation across a survey jump.
+                # Other contributors must be nodata before GDAL sees the grid.
+                own = supported & (ids == code)
+                own_values = values[own]
+                if own_values.min() == own_values.max():
+                    continue
+                clean = temporary / 'supported.tif'
+                raw = temporary / 'raw.geojson'
+                with rasterio.open(clean, 'w', **profile) as target:
+                    target.write(np.where(own, values, -999999).astype('float32'), 1)
+                engine.contours(clean, raw, depths, -999999)
+                entries = []
+                for feature in json.loads(raw.read_text())['features']:
+                    line = shape(feature['geometry'])
+                    depth = round(-feature['properties']['elevation_m'] / FOOT)
                     for segment in clipped_parts(line, mask):
                         if segment.length:
-                            by_source[code].append((depth, segment))
-            for code, entries in by_source.items():
+                            entries.append((depth, segment))
+                clean.unlink()
+                raw.unlink()
                 if not entries:
                     continue
-                mask = masks[code]
                 simplified = simplify_contours([line for _, line in entries], tolerance)
                 for (depth, _), segment in zip(entries, simplified):
                     # Final clip prevents simplification chords spanning holes.
@@ -414,7 +441,8 @@ def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_
                       simplification='per-line topology-preserving, half-cell tolerance; a line reverts to unsimplified if another line in the contributor touches or lies inside an area its simplification sweeps across',
                       contour_crs='EPSG:4326', tile_scheme='XYZ',
                       terrain_template='terrain/{z}/{x}/{y}.png', vector_template='vector/{z}/{x}/{y}.pbf',
-                      limitations=['Synthetic/local preview only; no datum reconciliation or seam acceptance.'])
+                      limitations=['Synthetic/local preview only; no datum reconciliation or seam acceptance.',
+                                   'Contours use same-contributor cells only, excluding C1 display feathering.'])
         (output / 'manifest.json').write_text(json.dumps(result, indent=2) + '\n')
         return result
 

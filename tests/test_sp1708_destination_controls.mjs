@@ -26,6 +26,11 @@ function seed(sql, bookingUrl) {
   sql.prepare(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,website,booking_url,status,profile_status,first_seen_at,last_seen_at,created_at,updated_at)
   VALUES(?,'morro-bay',?,'sp1708 example','sp1708 example','https://site.example.com/',?,'active','listed',?,?,?,?)`)
     .run(cases.vessel.id, cases.vessel.slug, bookingUrl, NOW, NOW, NOW, NOW);
+  // SCA-248: /go/ now needs a current displayable fact carrying exactly the stored URL.
+  const fact = sql.prepare(`INSERT INTO fleet_vessel_facts(id,vessel_id,field,value_json,value_key,source_id,source_url,method,confidence,rights,retrieved_at,first_seen_at,last_seen_at)
+    VALUES(?,?,?,?,?,'test','https://landing.example.com/','page',0.9,'facts-only',?,?,?)`);
+  fact.run('f-sp1708-site', cases.vessel.id, 'website', JSON.stringify('https://site.example.com/'), 'site', NOW, NOW, NOW);
+  if (bookingUrl) fact.run('f-sp1708-book', cases.vessel.id, 'booking_url', JSON.stringify(bookingUrl), 'book', NOW, NOW, NOW);
 }
 const clicks = sql => sql.prepare('SELECT * FROM fleet_link_clicks').all();
 const go = (path, env, init={}) => deployed.fetch(new Request(ORIGIN+path,init),{ASSETS,...env});

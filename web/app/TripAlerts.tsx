@@ -23,6 +23,8 @@ import {language, t, type Language, type StringId} from '../i18n.ts';
 import {loadRegs, regsData, type RulesRegion} from '../regs.ts';
 import {planRuleLine, ruleSpecies} from './PlanRules.tsx';
 import {RuleReason} from './RuleReason.tsx';
+import type {BriefAlertSeed} from '../brief-alerts.ts';
+import {briefAlertPrefill} from './brief-alert-prefill.ts';
 import {
   alertDate, alertNames, alertSpecies, AlertCopyError, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, localSubscription, sendTestNotification, deviceStatus, latestCheck, deviceButtons, deviceLine, type DeviceStatus, eventLine, feedbackPhase, formProblemId, latestTripEvent, assessmentTimeOrNull, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotificationsId, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
   feedbackSummary, feedbackDate, type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type ReuseOmission, type SavedTrip, type TripPlanSummary,
@@ -105,15 +107,24 @@ const catchLine = (c: CatchLogEntry, lang: Language) => c.outcome === 'fish' ? t
 /** The catch-log read's state beside the recap: still reading, or finished with every page (complete) or not. Left out, the recap is drawn as a complete read. */
 export type CatchRead = Pick<RecapCatchLog, 'complete'> & {loading: boolean};
 
-/** The plan saved with an alert, as stored: names and leg totals only, never positions or notes, and not re-checked since it was saved. */
+/** The saved snapshot, not a fresh route or protected-area check. */
 function SavedPlan({plan, lang}: {plan: TripPlanSummary; lang: Language}) {
+  const basisLabel = (basis: 'water' | 'straight' | 'unknown') => t(basis === 'water' ? 'planner.dist.water' : basis === 'straight' ? 'planner.dist.straight' : 'alerts.notRecorded', lang);
+  const checkLabel = (check: 'unchecked' | 'inside' | 'near' | 'no-overlap') => check === 'inside'
+    ? t('run.route.inside', lang, {name: t('where.screen.area', lang)})
+    : t(check === 'unchecked' ? 'run.route.unchecked' : check === 'near' ? 'savedSpots.card.near' : 'savedSpots.card.clear', lang);
   return <div class="small">
     <strong>{t('alerts.plan.title', lang)}</strong> {t('alerts.plan.stale', lang)}
     {plan.kind === 'unavailable' ? <p>{t('alerts.plan.unavailable', lang)}</p> : <>
       <p>{t('alerts.plan.targets', lang, {names: plan.targets.join(' · ')})}</p>
       <p>{t('alerts.plan.stops', lang)}</p>
       {plan.stops.length ? <ol>{plan.stops.map((s, i) => <li key={i}>{s}</li>)}</ol> : <p>{t('alerts.plan.noStops', lang)}</p>}
-      <p>{plan.totals ? t('alerts.plan.totals', lang, {nm: plan.totals.nm, minutes: plan.totals.minutes}) : t('alerts.plan.noLegs', lang)}</p>
+      {plan.totals ? <>
+        <p>{t('alerts.plan.totals', lang, plan.totals)} · {t('shared.popover.basis', lang)}: {[...new Set(plan.legs.map(l => l.basis))].map(basisLabel).join(' / ')}</p>
+        {plan.legs.some(l => l.basis !== 'unknown') ? <ol aria-label={t('planner.alert.legsAria', lang)}>{plan.legs.map((leg, i) =>
+          <li key={i}>{leg.basis === 'unknown' ? basisLabel(leg.basis) : `${leg.from} → ${leg.to} · ${leg.nm} nm ${basisLabel(leg.basis)} · ${checkLabel(leg.check)}`}</li>)}</ol> : null}
+        <p>{t('brief.skill.nav', lang)}</p>
+      </> : <p>{t('alerts.plan.noLegs', lang)}</p>}
     </>}
   </div>;
 }
@@ -216,17 +227,17 @@ function TestNotification({device, stopping, say, refresh}: {device: DeviceStatu
   return device === 'confirmed' ? <Button size="sm" disabled={busy || stopping} onClick={() => void send()}>{t('alerts.test.send', lang)}</Button> : null;
 }
 
-function SignedIn({session, region, boat, target}: {session: SessionAnswer; region: TripRegion; boat: Boat; target: string | null}) {
+function SignedIn({session, region, boat, target, seed}: {session: SessionAnswer; region: TripRegion; boat: Boat; target: string | null; seed?: BriefAlertSeed}) {
   const lang = language.value, only = englishOnly(lang);
-  const [p] = useState(() => profile.peek());
+  const [p] = useState(() => seed?.profile ?? profile.peek());
   const saved = p === 'boat' ? tripBoat(boat.factors, boat.saved?.boat) : null;
   // Own Boat limits are absolute, so they start the form as saved (clamped to the server's ranges) and are never scaled by the boat's factors.
   // Decided once at mount: a later signal change must not replace typed thresholds or make the note describe another source.
   const [{ownBoatLimits, limits}] = useState(() => {
-    const own = p === 'boat' && hasOwnLimits('boat');
-    return {ownBoatLimits: own, limits: own || p !== 'boat' ? profileTripDefaults(limitsFor(p)) : tripDefaults(boat.factors)};
+    const own = seed ? seed.ownLimits : hasOwnLimits(p) ? limitsFor(p) : null;
+    return {ownBoatLimits: p === 'boat' && !!own, limits: own || p !== 'boat' ? profileTripDefaults(own ?? limitsFor(p, {})) : tripDefaults(boat.factors)};
   });
-  const choice = alertSpecies(region, target, lang), names = useMemo(() => alertNames(region), [region]), range = dateRange(region.timezone);
+  const choice = alertSpecies(region, seed?.target ?? target, lang), names = useMemo(() => alertNames(region), [region]), range = dateRange(region.timezone);
   const [species, setSpecies] = useState(choice.value);
   const [status, setStatus] = useState<Say>(null);
   const [stopping, setStopping] = useState(false);
@@ -265,6 +276,14 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const privacyWork = useRef<AbortController | 'deleting' | null>(null);
   const [privacyBusy, setPrivacyBusy] = useState<'exporting' | 'deleting' | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [prefillNotes, setPrefillNotes] = useState<StringId[]>([]);
+  // The lazy body is keyed by the opening request, not by language or a background read.
+  useEffect(() => {
+    if (!seed || !formRef.current) return;
+    const prefill = briefAlertPrefill(seed, region);
+    fillAlertForm(formRef.current as unknown as FillableForm, prefill, prefill.date);
+    setPrefillNotes(prefill.notes);
+  }, []);
   const saving = useRef(false), [saveBusy, setSaveBusy] = useState(false);
   const [reuse, setReuse] = useState<{omitted: ReuseOmission[]; date: string; copied: 'all' | 'some' | 'none'} | null>(null);
   // Also unavailable while a Save POST is pending, so the button cannot be pressed twice (existing test pins disabled={unavailable}).
@@ -275,6 +294,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
     if (!form) return;
     fillAlertForm(form as unknown as FillableForm, r);
     if (r.species !== null) setSpecies(r.species);
+    setPrefillNotes([]);
     setStatus(null);
     setReuse({omitted: r.omitted, date: trip.date, copied: reusedLimits(r.fields)});
   };
@@ -427,9 +447,15 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
       </label>
       <details class="insight-card" open>
         <summary>{t('alerts.myAlerts', lang)}</summary>
-        <form id="save-alert" ref={formRef} class="insight-form" onSubmit={e => void save(e)}>
+        <form id="save-alert" ref={formRef} class="insight-form" onSubmit={e => void save(e)} onInput={e => {
+          const field = e.target as HTMLInputElement | HTMLSelectElement;
+          if (!field.value || !field.validity?.valid) return;
+          const note = field.name === 'date' ? 'alerts.problem.date' : field.name === 'point' ? 'alerts.prefill.area'
+            : (field.name === 'start_hour' || field.name === 'end_hour') && new FormData(e.currentTarget).get(field.name === 'start_hour' ? 'end_hour' : 'start_hour') ? 'alerts.prefill.hours' : null;
+          if (note && prefillNotes.includes(note)) setPrefillNotes(prefillNotes.filter(id => id !== note));
+        }}>
           <label>{t('alerts.date', lang)}<input name="date" type="date" defaultValue={alertDate(region.timezone)} min={range.min} max={range.max} required /></label>
-          <label>{t('alerts.area', lang)}<select name="point">{region.forecast_points.map(point => <option key={point.id} value={point.id}>{point.name}</option>)}</select></label>
+          <label>{t('alerts.area', lang)}<select name="point" required={!!seed}>{seed ? <option value="" disabled /> : null}{region.forecast_points.map(point => <option key={point.id} value={point.id}>{point.name}</option>)}</select></label>
           <label>{t('alerts.from', lang)}<input name="start_hour" type="number" min="0" max="22" defaultValue="7" required /></label>
           <label>{t('alerts.until', lang)}<input name="end_hour" type="number" min="1" max="23" defaultValue="13" required /></label>
           <label>{t('alerts.wind', lang)}<input name="wind_limit" type="number" min="1" max="30" defaultValue={limits.wind} required /></label>
@@ -437,6 +463,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           <label>{t('alerts.sea', lang)}<input name="sea_limit" type="number" min="0.5" max="10" step="0.5" defaultValue={limits.sea} required /></label>
           <Button type="submit" variant="primary" disabled={unavailable}>{t('alerts.save', lang)}</Button>
         </form>
+        {seed ? <p class="small" role="status">{prefillNotes.map(id => t(id, lang)).join(' ')}</p> : null}
         <p id="reuse-status" role="status" class="small">{reuse ? reuseStatus(reuse.omitted, lang) : ''}</p>
         <p class="small" id="trip-boat-note">{reuse && reuse.copied !== 'none' ? reuseLimitsNote(readableDate(reuse.date, lang, region.timezone), reuse.copied, p === 'boat', lang) : p !== 'boat'
           ? t('alerts.noteNonBoat', lang, {profile: t(`where.profile.${p}` as StringId, lang)})
@@ -509,7 +536,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
 }
 
 /** The alerts dialog's body for `regionId`; the alert species starts on the app's target when the region lists it. */
-export function TripAlerts({regionId, target}: {regionId: string; target: string | null}) {
+export function TripAlerts({regionId, target, seed}: {regionId: string; target: string | null; seed?: BriefAlertSeed}) {
   const [loaded, setLoaded] = useState<Loaded>({state: 'loading'});
   const lang = language.value;
   useEffect(() => {
@@ -525,7 +552,7 @@ export function TripAlerts({regionId, target}: {regionId: string; target: string
         : loaded.state === 'offline' ? <p>{t('alerts.offline', lang)}</p>
         : loaded.state === 'disabled' ? <p>{t('alerts.disabled', lang)}</p>
         : loaded.state === 'signed-out' ? <SignedOut href={loaded.href} />
-        : <SignedIn key={loaded.region.id} session={loaded.session} region={loaded.region} boat={loaded.boat} target={target} />}
+        : <SignedIn key={loaded.region.id} session={loaded.session} region={loaded.region} boat={loaded.boat} target={target} seed={seed?.region === loaded.region.id ? seed : undefined} />}
     </div>
   );
 }

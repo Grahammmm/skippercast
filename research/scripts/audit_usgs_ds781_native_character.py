@@ -13,7 +13,9 @@ from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 import zipfile
 
-from research.scripts.inspect_usgs_native_grids import inspect_archive
+from research.scripts.audit_usgs_ds781_metadata import (
+    EXPLICIT_REUSE, matches_redistribution_review, reviewed_redistribution_products,
+)
 
 MAX_ARCHIVE = 180_000_000
 HOSTS = {'pubs.usgs.gov', 'cmgds.marine.usgs.gov'}
@@ -51,8 +53,9 @@ def audit(inventory, metadata, cache, *, selected=None, workers=3, fetcher=downl
             or metadata.get('scope') != 'usgs-ds781-original-fgdc-metadata-triage'):
         raise ValueError('Complete DS781 catalog and metadata triage required')
     by_url = {row['archive_url']: row for row in metadata['records']}
-    if len(by_url) != metadata['record_count']:
+    if len(by_url) != len(metadata['records']) or len(by_url) != metadata['record_count']:
         raise ValueError('Duplicate original archive metadata')
+    reviewed = reviewed_redistribution_products()
     tasks = []
     for area in inventory['map_areas']:
         if selected and area['name'] not in selected:
@@ -75,7 +78,10 @@ def audit(inventory, metadata, cache, *, selected=None, workers=3, fetcher=downl
         lead = {'map_area': area['name'], 'planning_sector_ids': area['planning_sector_ids'],
                 'archive_url': url, 'catalog_url': area['catalog_url'],
                 'metadata_url': meta.get('xml_url'), 'metadata_sha256': meta.get('metadata_sha256')}
-        if meta['status'] != 'reviewed' or meta.get('rights_evidence') != 'explicit-public-domain-redistribution':
+        if (meta.get('rights_evidence') != EXPLICIT_REUSE
+                or meta.get('map_area') != area['name'] or meta.get('kind') != product['kind']
+                or meta.get('metadata_url') != product.get('metadata_url')
+                or not matches_redistribution_review(meta, reviewed)):
             return {**lead, 'status': 'held', 'issue': 'Original metadata or reuse rights not reviewed'}
         path = cache / (hashlib.sha256(url.encode()).hexdigest()[:24] + '.zip')
         try:
@@ -91,6 +97,8 @@ def audit(inventory, metadata, cache, *, selected=None, workers=3, fetcher=downl
             # measured pixel totals, never a full-coverage polygon.
             legacy = {'kind': 'seafloor_character', 'bounds': {
                 'westbc': -130, 'eastbc': -115, 'southbc': 30, 'northbc': 43}}
+            from research.scripts.inspect_usgs_native_grids import inspect_archive
+
             raster = inspect_archive(path, legacy, product['description'])
             return {**lead, 'status': 'ok', 'archive_sha256': digest,
                     'archive_bytes': path.stat().st_size, **raster}

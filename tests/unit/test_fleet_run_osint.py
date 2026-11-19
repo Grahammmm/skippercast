@@ -78,6 +78,15 @@ record("calls", {{"batch": batch, "argv": args, "cwd": os.getcwd(), "env": sorte
                  "token": os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"), "prompt": prompt,
                  "config_dir": os.environ.get("CLAUDE_CONFIG_DIR"), "pid": os.getpid(),
                  "start": time.monotonic()}})
+barrier = plan.get("_barrier")
+if barrier:
+    # Rendezvous: do not finish until `barrier` sessions have started, so overlap never depends on timing.
+    marks = here / "barrier"
+    marks.mkdir(exist_ok=True)
+    (marks / str(os.getpid())).write_text("")
+    give_up = time.monotonic() + 30
+    while len(list(marks.iterdir())) < int(barrier) and time.monotonic() < give_up:
+        time.sleep(0.01)
 time.sleep(float(plan.get("_sleep", 0)))
 if behaviour == "hang-tree":
     import subprocess
@@ -221,7 +230,7 @@ class BatchTests(unittest.TestCase):
 
     def test_batches_run_in_parallel_up_to_the_limit(self):
         h = Harness(Path(self._tmp.name) / "wide", boats=8, batch_size=2)
-        h.plan(_sleep=0.6)
+        h.plan(_sleep=0.3, _barrier=2)  # two sessions must be running together before either ends
         code, _counts = h.run(parallel=2)
         self.assertEqual(code, 0)
         starts = sorted(c["start"] for c in h.calls())
@@ -596,8 +605,11 @@ class WorkflowTests(unittest.TestCase):
         summary.write_text("")
         outputs.write_text("")
         env = {"PATH": f"{fake_bin}:{os.environ['PATH']}", "REGION": "CA", "RUN_ID": RUN_ID, "CLAUDE_BIN": "/nonexistent",
-               "MAX_BATCHES": "", "GITHUB_STEP_SUMMARY": str(summary), "GITHUB_OUTPUT": str(outputs)}
-        proc = subprocess.run(["bash", "-e", "-c", self.research_step()], env=env, capture_output=True, text=True,
+               "MAX_BATCHES": "", "GITHUB_STEP_SUMMARY": str(summary), "GITHUB_OUTPUT": str(outputs),
+               "FLEET_LOCK": str(Path(tmp) / ".locks" / "fleet-osint.lock")}
+        # This tests how the step handles the runner's status after acquiring the lock.
+        script = "flock() { return 0; }\n" + self.research_step()
+        proc = subprocess.run(["bash", "-e", "-c", script], env=env, capture_output=True, text=True,
                               cwd=tmp, timeout=30)
         return proc, summary.read_text(), outputs.read_text()
 
