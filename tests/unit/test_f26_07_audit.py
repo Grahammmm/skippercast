@@ -5,7 +5,13 @@ from unittest.mock import patch
 import tarfile
 from zipfile import ZipFile
 
-import numpy as np
+import pytest
+
+np = pytest.importorskip('numpy')
+pytest.importorskip('rasterio')
+pytest.importorskip('pyproj')
+pytest.importorskip('shapefile')
+pytest.importorskip('shapely')
 from rasterio.transform import from_origin
 
 from research.scripts import audit_bss02_video_grid_overlap as audit
