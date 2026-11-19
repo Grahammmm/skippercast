@@ -39,17 +39,29 @@ ROCKFISH = ("Copper_rf", "Gopher_rf", "Vermilion_rf", "Canary_rf",
             "Quillback_rf", "Yelloweye_rf", "Brown_rf")
 MARGINS = (0, 10, 25)
 LOWER_M, UPPER_M = 60.96, 91.44
+HOLD_FIELDS = {"mpa", "gea", "charted_danger"}
 
 
-def checked_blocks(path: Path):
-    data = json.loads(path.read_text())
+def checked_blocks(path: Path, expected_sha256):
+    raw = path.read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest != expected_sha256:
+        raise ValueError("Private Point Buchon research blocks do not match the access receipt")
+    data = json.loads(raw)
     if data.get("crs") != "EPSG:32610" or len(data.get("features", [])) != 181:
         raise ValueError("Private Point Buchon research block frame changed")
     features = data["features"]
     if any(f["properties"].get("fishing_target") is not False
            or f["properties"].get("exportable") is not False for f in features):
         raise ValueError("Research-only block release gate changed")
-    return features, [shape(f["geometry"]) for f in features]
+    partial_clear = []
+    for feature in features:
+        holds = feature["properties"].get("review_holds")
+        if (not isinstance(holds, dict) or holds.keys() != HOLD_FIELDS
+                or any(type(value) is not bool for value in holds.values())):
+            raise ValueError("Private Point Buchon block has incomplete or invalid review holds")
+        partial_clear.append(not any(holds.values()))
+    return digest, partial_clear, [shape(f["geometry"]) for f in features]
 
 
 def source_depth_at(point, shallow, deep):
@@ -78,7 +90,8 @@ def build(rov_path: Path = ROV, archive: Path = ARCHIVE,
             or access.get("qualified_waypoints") != 0
             or access.get("fishing_target") is not False):
         raise ValueError("Point Buchon partial access screen changed")
-    features, geometries = checked_blocks(block_path)
+    blocks_digest, partial_clear, geometries = checked_blocks(
+        block_path, access.get("private_research_blocks_sha256"))
     tree = STRtree(geometries)
     to_depth = Transformer.from_crs("EPSG:32610", "EPSG:26910", always_xy=True)
     counts = {m: Counter() for m in MARGINS}
@@ -137,13 +150,12 @@ def build(rov_path: Path = ROV, archive: Path = ARCHIVE,
                 lingcod = float(row["Lingcod"]) > 0
                 rockfish = any(float(row[key]) > 0 for key in ROCKFISH)
                 visual_hard = float(row["Propn_Hard"]) >= 0.5
-                partial_access_clear = not any(features[block_id]["properties"]["review_holds"].values())
                 for margin in MARGINS:
                     if edge < margin:
                         continue
                     c = counts[margin]
                     c["subunits_in_blocks"] += 1
-                    c["partial_access_clear_subunits"] += partial_access_clear
+                    c["partial_access_clear_subunits"] += partial_clear[block_id]
                     c["source_observed_majority_hard_subunits"] += visual_hard
                     c["source_lingcod_positive_subunits"] += lingcod
                     c["source_rockfish_positive_subunits"] += rockfish
@@ -176,9 +188,7 @@ def build(rov_path: Path = ROV, archive: Path = ARCHIVE,
         summaries[str(margin)] = {
             **dict(sorted(c.items())),
             "distinct_research_blocks": len(block_ids[margin]),
-            "partial_access_clear_blocks": sum(
-                not any(features[i]["properties"]["review_holds"].values())
-                for i in block_ids[margin]),
+            "partial_access_clear_blocks": sum(partial_clear[i] for i in block_ids[margin]),
             "distinct_transect_labels": len(transects[margin]),
             "observation_years": sorted(years[margin]),
             "original_grid_minus_rov_observed_depth_m_range": [
@@ -192,10 +202,11 @@ def build(rov_path: Path = ROV, archive: Path = ARCHIVE,
         "original_csumb_archive_sha256": ARCHIVE_SHA256,
         "original_usgs_character_sha256": EXPECTED_CLASS,
         "publisher_character_accuracy": class_accuracy,
-        "private_research_blocks_sha256": hashlib.sha256(block_path.read_bytes()).hexdigest(),
+        "private_research_blocks_sha256": blocks_digest,
+        # Keep the historical aggregate fingerprint distinct from the verified private digest.
         "partial_access_screen_sha256": hashlib.sha256(json.dumps({
             key: value for key, value in access.items()
-            if key not in ("source_checked_at", "input_sha256")
+            if key not in ("source_checked_at", "input_sha256", "private_research_blocks_sha256")
         }, sort_keys=True).encode()).hexdigest(),
         "source_rows_checked": source_rows,
         "central_open_reference_rows_checked": reference_rows,
