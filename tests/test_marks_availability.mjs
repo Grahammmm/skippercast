@@ -144,3 +144,20 @@ test('marks-availability: fleet empty vs invalid, without fetching an off option
   assert.deepEqual(verdicts(), ['no-product', 'empty', 'failed']);
   assert.equal(overlays.size, 0);
 });
+
+// Contract: an AIS cell missing a field the picker card reads is a failed asset, not a ready one.
+// Bug caught: validating only id, coordinates and geometry reported `ready`, then selecting a cell without
+// `apparent_fishing_hours` threw in aisMark (`hours(undefined)`).
+const AIS_CELL = read('data/commercial-ais-effort.geojson').features[0];
+for (const field of ['apparent_fishing_hours', 'days_with_apparent_fishing', 'active_dates_utc', 'label', 'gear_label', 'resolution_note', 'fishing_location_confidence', 'vessel_count_note']) {
+  test(`marks-availability: AIS cell without ${field} is failed`, async t => {
+    const ais = 'test/cells.json', {[field]: _dropped, ...properties} = AIS_CELL.properties;
+    const {overlays} = setup(t, CAMBRIA, {
+      [metaPath(CAMBRIA)]: () => json(meta(CAMBRIA, {commercial_ais: ais})),
+      [ais]: () => json({type: 'FeatureCollection', features: [{...AIS_CELL, properties}]}),
+    });
+    await flush();
+    assert.equal(aisAvailability.value, 'failed');
+    assert.equal(overlays.size, 0);
+  });
+}

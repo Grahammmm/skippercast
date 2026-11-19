@@ -110,6 +110,18 @@ export function aisMark(p: AisProps): ChartMark {
   };
 }
 
+/** A published cell is usable only when every field the screen, the heat and the picker card read is present and well-typed;
+ * anything less is a failed asset, not a ready one that throws when the cell is selected (`hours(undefined)`). */
+const text = (v: unknown): boolean => typeof v === 'string';
+const count = (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v);
+export const cellOk = (f: AisFeature | null | undefined): boolean => {
+  const p: Partial<Record<keyof AisProps, unknown>> | undefined = f?.properties;
+  return f?.type === 'Feature' && !!f.geometry && !!p && typeof p.id === 'string'
+    && count(p.latitude) && count(p.longitude) && count(p.days_with_apparent_fishing) && count(p.apparent_fishing_hours)
+    && Array.isArray(p.active_dates_utc) && p.active_dates_utc.every(text)
+    && [p.label, p.gear_label, p.resolution_note, p.fishing_location_confidence, p.vessel_count_note].every(text);
+};
+
 /** The Fleet entry's option (v1's "Show commercial AIS areas"): off by default. */
 export const aisOn = signal(false);
 export interface AisState {readonly offered: boolean; readonly drawn: number; readonly note: string; readonly copy?: StatusCopy}
@@ -120,8 +132,7 @@ export const aisAvailability: ReadonlySignal<OverlayAvailability | null> = aisCh
 /** Draws the cells while the Fleet entry and its option are on; created with the Chart (web/map/chart.ts `layers`). */
 export function createCommercialAis({engine, fetchFn = (...a) => fetch(...a), page = () => location.href, palette = () => readPalette()}: FleetLayerOptions) {
   const load = assetLoader<AisCollection>(fetchFn, page, d => (d as AisCollection | null)?.type === 'FeatureCollection' && Array.isArray((d as AisCollection).features)
-    && (d as AisCollection).features.every(f => f?.type === 'Feature' && typeof f.properties?.id === 'string'
-      && Number.isFinite(f.properties.latitude) && Number.isFinite(f.properties.longitude) && !!f.geometry));
+    && (d as AisCollection).features.every(cellOk));
   const loaded = signal<{binding: NonNullable<typeof markData.value>; data: AisCollection | null} | null>(null);
   const on = computed(() => layers.value.includes('fleet') && aisOn.value);
   const binding = computed(() => { const m = markData.value; return m?.region.id === region.value ? m : null; });
