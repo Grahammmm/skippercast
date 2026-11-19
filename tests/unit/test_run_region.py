@@ -29,9 +29,13 @@ ZONE_ARGS = ['--coarse', '/in/coarse.tif', '--water', '/in/water.geojson', '--co
 SOURCE_ARGS = ['--source', '/in/dem']
 PACKAGE_ARGS = ['--manifest', '/in/layers.json', '--upstream', 'tiles:public', '--upstream', 'zone:public']
 GEN = 'a' * 64
+SHA = 'c' * 64
+QA_ARGS = ['--qa-elevation', '/in/elev.tif', '--qa-contributor', '/in/contrib.tif', '--qa-shots', '/in/shots.json']
+QA_SEAM = ['--generation', GEN, '--release-sha256', SHA, '--elevation', '/in/elev.tif', '--contributor', '/in/contrib.tif',
+           '--shots', '/in/shots.json', '--upstream', 'tiles:public', '--upstream', 'zone:public']
 NORM_ARGS = ['--cache', RR.DEFAULT_NORM]  # normalize always gets the effective cache; the fixture clears $SC_RELIEF_NORM
 SEAM = {'normalize': [*SOURCE_ARGS, *NORM_ARGS], 'mosaic': ['--scope', 'public'], 'tiles': ['--scope', 'public'],
-        'zone': ['--scope', 'public', *ZONE_ARGS], 'package': PACKAGE_ARGS, 'envelope': ['--generation', GEN]}
+        'zone': ['--scope', 'public', *ZONE_ARGS], 'package': PACKAGE_ARGS, 'qa': QA_SEAM, 'envelope': ['--generation', GEN]}
 STUB = '''\
 import json, os, sys
 here = os.path.dirname(os.path.abspath(__file__))
@@ -86,18 +90,20 @@ class Box:
         directory.mkdir()
         (directory / 'cmdline').write_bytes(b'\0'.join(a.encode() for a in argv) + b'\0')
 
-    def run(self, *args, region='morro-bay', through='envelope', generation=True):
-        """Run the chain with every input the stages up to ``through`` require (envelope's
-        generation too, unless ``generation`` is false: then it is read from the package receipt)."""
+    def run(self, *args, region='morro-bay', through='envelope', generation=True, release=True):
+        """Run the chain with every input the stages up to ``through`` require (the generation and qa's
+        release hash too, unless ``generation``/``release`` is false: then they are read from the package receipt)."""
         reaches = lambda stage: STAGE_ORDER.index(through) >= STAGE_ORDER.index(stage)
         extra = [*SOURCE_ARGS, *(ZONE_ARGS if reaches('zone') else []), *(PACKAGE_ARGS if reaches('package') else []),
+                 *(QA_ARGS if reaches('qa') else []), *(['--release-sha256', SHA] if release and reaches('qa') else []),
                  *(['--generation', GEN] if generation and reaches('envelope') else [])]
         return RR.main([region, '--out', str(self.out), '--through', through, *extra, *args], self.cfg)
 
-    def package_receipt(self, generation):
+    def package_receipt(self, generation, release_sha=None):
         path = self.out / 'morro-bay' / 'stages' / 'package.json'
         path.parent.mkdir(parents=True)
-        path.write_text(json.dumps({'generation': generation}))
+        outputs = [{'path': f'release/{generation}/release.json', 'sha256': release_sha}] if release_sha else []
+        path.write_text(json.dumps({'generation': generation, 'outputs': outputs}))
 
     def out_tree(self):
         return sorted(str(p.relative_to(self.out)) for p in self.out.rglob('*'))
@@ -139,7 +145,7 @@ def test_scoped_stages_get_scope_config_and_zone_inputs_only(box):
             assert tail == ['--scope', 'private', '--region-config', '/r/region.json', *ZONE_ARGS,
                             '--coarse-date', '2026-01-01']
         else:
-            assert tail == {'normalize': [*SOURCE_ARGS, *NORM_ARGS], 'package': PACKAGE_ARGS,
+            assert tail == {'normalize': [*SOURCE_ARGS, *NORM_ARGS], 'package': PACKAGE_ARGS, 'qa': QA_SEAM,
                             'envelope': ['--generation', GEN]}.get(stage, [])
 
 
@@ -147,14 +153,15 @@ def test_scoped_stages_get_scope_config_and_zone_inputs_only(box):
     ('--coarse', 'zone'), ('--water', 'zone'), ('--coarse-source', 'zone'),
     ('--source', 'normalize'), ('--source', 'tiles'),
     ('--manifest', 'package'), ('--upstream', 'package'),
+    ('--qa-elevation', 'qa'), ('--qa-contributor', 'qa'), ('--qa-shots', 'qa'),
 ])
 def test_chain_reaching_a_stage_without_its_inputs_is_a_usage_error_before_any_stage(box, drop, through):
     # Contract: every stage's mandatory inputs are checked up front. Bugs caught: the first review
     # return (normalize started without --source, so even `--through normalize` exited 2), and
-    # running normalize..tiles for hours before zone/package fails on a missing flag. A chain that
+    # running normalize..tiles for hours before zone/package/qa fails on a missing flag. A chain that
     # stops before the stage needs none of its inputs.
     args = []
-    flags = [*SOURCE_ARGS, *ZONE_ARGS, *PACKAGE_ARGS]
+    flags = [*SOURCE_ARGS, *ZONE_ARGS, *PACKAGE_ARGS, *QA_ARGS]
     for flag, value in zip(flags[::2], flags[1::2]):  # every option here takes one value
         if flag != drop:  # --upstream is repeatable: this drops all of its uses
             args += [flag, value]
@@ -247,6 +254,27 @@ def test_source_path_under_the_vault_is_refused(box, capsys):
     assert box.ran() == [] and 'input-path' in capsys.readouterr().out
 
 
+def test_qa_generation_and_release_hash_are_read_from_the_package_receipt(box):
+    # Contract: qa's required --generation and --release-sha256 are the package receipt's generation and
+    # the hash it records for release/<generation>/release.json unless given. Bug caught: qa started
+    # without them (it exits 2: the red main this replaced) or with a hash of some other file.
+    box.package_receipt('b' * 64, release_sha='d' * 64)
+    assert box.run(generation=False, release=False, through='qa') == 0
+    assert box.calls()[-1][5:9] == ['--generation', 'b' * 64, '--release-sha256', 'd' * 64]
+
+
+@pytest.mark.parametrize('receipt, release_sha', [(None, None), ('not-a-generation', None), ('b' * 64, None)],
+                         ids=['no-receipt', 'malformed-generation', 'no-release-hash'])
+def test_qa_without_a_usable_generation_or_release_hash_stops_before_it_runs(box, capsys, receipt, release_sha):
+    # Contract: no generation or release hash (no receipt, a malformed generation, a receipt that does not
+    # list release.json) stops the run before qa starts. Bug caught: qa started with a guessed value.
+    if receipt:
+        box.package_receipt(receipt, release_sha)
+    assert box.run(generation=False, release=False) == 2
+    assert box.ran() == STAGE_ORDER[:-2]
+    assert 'STOPPED before qa' in capsys.readouterr().out
+
+
 def test_envelope_generation_is_read_from_the_package_receipt(box):
     # Contract: envelope's required --generation is the package receipt's generation unless given.
     # Bug caught: a full chain that can never reach envelope because the value is only known after
@@ -256,25 +284,27 @@ def test_envelope_generation_is_read_from_the_package_receipt(box):
     assert box.calls()[-1] == ['envelope', '--region', 'morro-bay', '--out', str(box.out), '--generation', 'b' * 64]
 
 
-@pytest.mark.parametrize('receipt', [None, 'not-a-generation'])
-def test_envelope_without_a_usable_generation_stops_before_it_runs(box, capsys, receipt):
-    # Contract: no generation (no receipt, or a malformed one) stops the run before envelope starts.
-    if receipt:
-        box.package_receipt(receipt)
-    assert box.run(generation=False) == 2
-    assert box.ran() == STAGE_ORDER[:-1]
-    assert 'STOPPED before envelope' in capsys.readouterr().out
-
-
 def _declared(path):
-    """``{flag: required}`` for every literal ``--flag`` a module adds to an argparse parser."""
+    """``{flag: required}`` for every ``--flag`` a module adds to an argparse parser: literal ones, and those a
+    ``for name in ('a', 'b'):`` loop adds as ``f'--{name}'``."""
     flags = {}
+
+    def add(call, value):
+        required = any(k.arg == 'required' and isinstance(k.value, ast.Constant) and k.value.value is True
+                       for k in call.keywords)
+        flags[value] = flags.get(value, False) or required
+
     for node in ast.walk(ast.parse(path.read_text(encoding='utf-8'))):
         if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == 'add_argument'
                 and node.args and isinstance(node.args[0], ast.Constant) and str(node.args[0].value).startswith('--')):
-            required = any(k.arg == 'required' and isinstance(k.value, ast.Constant) and k.value.value is True
-                           for k in node.keywords)
-            flags[node.args[0].value] = flags.get(node.args[0].value, False) or required
+            add(node, node.args[0].value)
+        elif isinstance(node, ast.For) and isinstance(node.iter, ast.Tuple) and isinstance(node.target, ast.Name):
+            names = [e.value for e in node.iter.elts if isinstance(e, ast.Constant)]
+            for call in ast.walk(node):
+                if (isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute) and call.func.attr == 'add_argument'
+                        and call.args and ast.unparse(call.args[0]) == f"f'--{{{node.target.id}}}'"):
+                    for name in names:
+                        add(call, f'--{name}')
     return flags
 
 
@@ -286,14 +316,16 @@ def test_runner_arguments_match_what_the_real_stage_parsers_declare(box):
     # starting normalize without its required --source.
     relief = ROOT / 'src' / 'skippercast' / 'relief'
     shared = {'digests': ['package.py'], 'package': ['package.py'], 'envelope': ['package.py'], 'tiles': ['mosaic.py'],
-              'zone': ['mosaic.py']}
+              'zone': ['mosaic.py'], 'qa': ['package.py']}
     _, args = RR.parse(['morro-bay', '--out', str(box.out), '--through', 'envelope', *SOURCE_ARGS, '--family', 'dem',
-                        '--norm', '/n', *ZONE_ARGS, '--region-config', '/r.json', *PACKAGE_ARGS, '--generation', GEN])
+                        '--norm', '/n', *ZONE_ARGS, '--region-config', '/r.json', *PACKAGE_ARGS, *QA_ARGS,
+                        '--generation', GEN, '--release-sha256', SHA])
     extra = RR.stage_extras(args)
+    extra['qa'] = [*RR.qa_release(box.out, 'morro-bay', extra), *extra['qa']]  # added when qa starts, as run_locked does
     checked = []
     for stage in RR.STAGES:
         module = relief / f'{stage}.py'
-        if not module.exists():  # select, contours, qa: not on this checkout; region.py reports them as exit 2
+        if not module.exists():  # select, contours: not on this checkout; region.py reports them as exit 2
             continue
         checked.append(stage)
         known = {}
@@ -303,7 +335,7 @@ def test_runner_arguments_match_what_the_real_stage_parsers_declare(box):
         required = {flag for flag, needed in _declared(module).items() if needed}
         assert required <= given, f'{stage} requires {sorted(required - given)}'
         assert given <= set(known), f'{stage} is given {sorted(given - set(known))} which it does not declare'
-    assert {'normalize', 'mosaic', 'tiles', 'zone', 'digests', 'package', 'envelope'} <= set(checked)
+    assert {'normalize', 'mosaic', 'tiles', 'zone', 'digests', 'package', 'qa', 'envelope'} <= set(checked)
 
 
 def test_runs_under_nice_and_ionice_idle(box):
