@@ -20,6 +20,7 @@ from shapely.ops import transform, unary_union
 
 from research.scripts.audit_monterey_300_closures import official_query_envelope, safe_union
 from research.scripts.audit_point_buchon_original_pair import CLASS_NAMES, LOWER_M, UPPER_M, original_tiff
+from research.scripts.audit_san_diego_substrate_lead import resolve_audit_destinations
 from research.scripts.build_central_rov_depth_evidence import source_bytes
 from research.scripts.refresh_enc_hazards import LAYERS, SERVICES
 
@@ -194,6 +195,7 @@ def main():
     parser.add_argument("--private-blocks", type=Path, default=ROOT / "var/review/point-buchon-rov-100m-blocks.geojson")
     parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-buchon-rov-access-triage.json")
     args = parser.parse_args()
+    private_blocks, output = resolve_audit_destinations(args.private_blocks, args.output, root=ROOT)
     pin = json.loads((ROOT / "research/catalog/central-rov-2024-source.json").read_text())
     blocks = source_blocks(args.bathy, args.character, args.rov, pin)
     mpas, federal, enc = (json.loads(path.read_text()) for path in (args.mpas, args.federal, args.enc))
@@ -201,10 +203,10 @@ def main():
     report["input_sha256"] = {"bathy": sha256(args.bathy), "character": sha256(args.character),
                               "rov": sha256(args.rov), "mpas": sha256(args.mpas),
                               "federal": sha256(args.federal), "enc": sha256(args.enc)}
-    args.private_blocks.parent.mkdir(parents=True, exist_ok=True)
-    args.private_blocks.write_text(json.dumps(private, separators=(",", ":")) + "\n")
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    private_blocks.parent.mkdir(parents=True, exist_ok=True)
+    private_blocks.write_text(json.dumps(private, separators=(",", ":")) + "\n")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(report["totals"])
 
 
