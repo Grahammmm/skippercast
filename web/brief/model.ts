@@ -63,6 +63,7 @@ function nearest<T extends {at: string}>(points: readonly T[], at: number): T | 
 }
 
 export type BriefContext = {report: Report; county: County; area: Area; profile: Profile; now: Date; at?: string; reports?: readonly LandingReport[]; port?: string | readonly string[]; tideDatum?: Brief['tideDatum'];
+  charterReports?: RegionalDailyFeed['charter_reports'];
   /** The primary buoy's id when the regional feed's buoy reading came from a backup station (#554). */
   buoyBackupFor?: string | null;
   /** The feed sources behind the brief that are not ok (sourceGaps); none when absent. */
@@ -146,11 +147,16 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     tideSource, tideSource?.fetchedAt ?? null, TILE_LIMIT_MS.tide, now, tideSource?.outcome === 'error',
     {parts: tideParts, ...(datum && (curvePoint || nextEvent) ? {datum} : {}), ...(tideSource ? {} : {sourceMissing: true})});
 
+  const charter = context.charterReports;
+  // The publisher's outage wins over any retained rows that would otherwise count.
+  const fleet: Brief['fleet'] = charter?.status === 'not_available'
+    ? {notAvailable: true, lastSourceDay: typeof charter.last_source_day === 'string' ? charter.last_source_day : null}
+    : fleetLine(context.reports ?? [], context.port ?? [], county.timezone, now);
   return {
     basis, profile, date: daily.date, label: daily.label, provisional: daily.provisional,
     headline: daily.headline, deck: daily.summary, status: daily.status, confidence: daily.confidence,
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
-    notice: beachNotice(report, area, now), fleet: fleetLine(context.reports ?? [], context.port ?? [], county.timezone, now),
+    notice: beachNotice(report, area, now), fleet,
     localReport: basis === 'coast-report' ? {available: true, text: LOCAL_REPORT_LINE.available} : {available: false, text: LOCAL_REPORT_LINE.unavailable},
     spear: daily.spear, shore: daily.shore, bar: daily.bar, kayak: daily.kayak, limits: daily.limits, alerts: daily.alerts, missing: daily.missing, gaps: context.gaps ?? [], tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
   };
@@ -233,7 +239,7 @@ export function buildCoastBrief(input: CoastBriefInput): Brief {
   const report = chlorophyll ? {...input.report, chlorophyll} : input.report;
   const daily = buildDaily(report, input.county, area, input.profile, input.date, input.now, input.limits);
   // The coast report producer requests both the curve and events in MLLW (pipeline/coast_report.py).
-  return briefFromDaily(daily, 'coast-report', {...input, report, area, tideDatum: 'MLLW', gaps: reportGaps(report, input.county, area, input.now)});
+  return briefFromDaily(daily, 'coast-report', {...input, report, area, tideDatum: 'MLLW', charterReports: input.daily?.charter_reports, gaps: reportGaps(report, input.county, area, input.now)});
 }
 
 export type RegionalPlace = {id: string; name: string; lat: number; lon: number; timezone: string; port?: string};
@@ -310,7 +316,7 @@ export function buildRegionalBrief(input: RegionalBriefInput): Brief {
   const {report, county, area, tideDatum, buoyBackupFor} = regionalReport(input.daily, input.forecast, input.place);
   const daily = buildDaily(report, county, area, input.profile, input.date, input.now, input.limits);
   return briefFromDaily(daily, 'regional', {report, county, area, profile: input.profile, now: input.now, at: input.at, reports: input.daily.reports ?? [], port: input.daily.landing_names ?? input.place.port, tideDatum, buoyBackupFor,
-    gaps: sourceGaps(input.daily, input.now)});
+    charterReports: input.daily.charter_reports, gaps: sourceGaps(input.daily, input.now)});
 }
 
 /** The station a feed source reads: its configured station, its data's, else the NDBC file its URL names. */
