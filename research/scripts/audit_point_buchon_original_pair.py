@@ -30,16 +30,19 @@ LOWER_M, UPPER_M = 200 / 3.280839895, 300 / 3.280839895
 CLASS_NAMES = {1: "soft_flat", 2: "hard_flat", 3: "hard_rugose"}
 
 
-def original_tiff(archive):
-    if hashlib.sha256(archive.read_bytes()).hexdigest() != (
-        EXPECTED_BATHY if "Bathymetry" in archive.name else EXPECTED_CLASS
-    ):
-        raise ValueError(f"Original USGS archive hash changed: {archive}")
+def original_tiff(archive, role):
+    """Authenticate the requested raster role, independent of its local name."""
+    expected = {"bathy": EXPECTED_BATHY, "character": EXPECTED_CLASS}
+    if role not in expected:
+        raise ValueError(f"Unknown USGS raster role: {role}")
+    digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+    if digest != expected[role]:
+        raise ValueError(f"Original USGS {role} archive hash changed: {archive}")
     with zipfile.ZipFile(archive) as source:
         names = [name for name in source.namelist() if name.lower().endswith(".tif")]
         if len(names) != 1:
             raise ValueError("Expected one original GeoTIFF")
-        return f"zip://{archive.resolve()}!{names[0]}"
+        return f"zip://{archive.resolve()}!{names[0]}", digest
 
 
 def verify_semantics(metadata):
@@ -122,7 +125,8 @@ def aggregate(bathy_zip, class_zip, class_metadata, bathy_metadata, rov_csv, rov
     source_bytes(rov_csv, rov_pin)
     metadata_hash = verify_semantics(class_metadata)
     bathy_metadata_hash = verify_bathy_processing(bathy_metadata)
-    bathy_path, class_path = original_tiff(bathy_zip), original_tiff(class_zip)
+    bathy_path, bathy_hash = original_tiff(bathy_zip, "bathy")
+    class_path, class_hash = original_tiff(class_zip, "character")
     paired = defaultdict(lambda: {"cells": 0, "area_m2": 0,
                                   "cells_from_under_80m_2m_source": 0,
                                   "cells_from_at_or_over_80m_5m_source": 0})
@@ -227,7 +231,7 @@ def aggregate(bathy_zip, class_zip, class_metadata, bathy_metadata, rov_csv, rov
     return {"schema_version": 1, "scope": "point-buchon-original-paired-200-300ft-research",
             "fishing_target": False, "exportable": False, "qualified_waypoints": 0,
             "source_release": "https://doi.org/10.5066/P9KBGELE",
-            "bathy_archive_sha256": EXPECTED_BATHY, "character_archive_sha256": EXPECTED_CLASS,
+            "bathy_archive_sha256": bathy_hash, "character_archive_sha256": class_hash,
             "character_metadata_sha256": metadata_hash,
             "publisher_character_accuracy": published_character_accuracy(class_metadata),
             "bathymetry_metadata_sha256": bathy_metadata_hash,
