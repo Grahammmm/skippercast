@@ -1418,8 +1418,8 @@ test('in 3D the terrain options sit in the Seafloor entry; keyboard reaches each
   const relief = options.getByRole('slider', {name: /Seabed relief/});
   await relief.focus();
   await page.keyboard.press('ArrowRight');
-  await expect(relief).toHaveValue('6');
-  await expect(options.getByText('×6')).toBeVisible();
+  await expect(relief).toHaveValue('3');
+  await expect(options.getByText('×3')).toBeVisible();
   for (const name of ['Water & channels', 'Depth contours · adapt to view', 'Fixed depth colours', 'Source coverage', 'Reefs & species pins']) {
     const box = options.getByRole('checkbox', {name});
     await box.focus();
