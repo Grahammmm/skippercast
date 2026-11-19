@@ -6,50 +6,185 @@ it cannot become a target, score, navigation route or chartplotter export.
 from __future__ import annotations
 
 import argparse
+from datetime import date, datetime
+import hashlib
 import json
+import math
 from pathlib import Path
+import re
+
+
+CAMERA_LIMITATIONS = (
+    'Charted seabed symbols and any charted seabed areas are generalized, dated source observations; a nearby symbol or area does not delineate the camera-observed patch.',
+    'Selected ENC danger classes returning zero do not certify safe navigation or an approach route.',
+    'Historical camera rockfish codes are observations, not catch rates or present fish presence.',
+    'The MPA screen is a dated geometry snapshot; exact current local rules, access and protected-area boundaries remain separate gates.',
+    'No fishing coordinate, rating, plan or export is approved by this source-lead review.',
+)
+BOTTOM_CLASSES = {'rock', 'boulder', 'cobble'}
+# S-57 NATSUR labels from the ENC seabed layers, including comma-separated combinations.
+ENC_NATURES = {'mud', 'clay', 'silt', 'sand', 'stone', 'gravel', 'pebbles',
+               'cobbles', 'rock', 'lava', 'coral', 'shells', 'boulder', 'unknown'}
+# Free prose cannot be proven coordinate-free by pattern (a position can be
+# spelled as DMS with hemisphere words, in words, split across sentences), so
+# interpretation and hold text publishes only when its SHA-256 matches prose a
+# person reviewed and committed under research/receipts. A new survey's text is
+# added here, with its receipt, in the same reviewed change.
+REVIEWED_SOURCE_TEXT_SHA256 = frozenset({
+    'd2dcacc45464a5bf90738603d02e5c54159189c813098cb150c10eb3ca5f572e',  # H11730 interpretation (2008, 2010)
+    '074b564ee00665f1708fcc98f62dbdb1006fdd19af08c3daac8881fbdf09c9ea',  # H11876 interpretation
+    '3a9eedd1e88191ac4b0bec774a87ba277b06d6008507756716e4fcc2af3eec7c',  # H11876 fishing-promotion hold
+    '86cde591c17471c1b9daa4f4ceb342edad7c4b3d9f79c2aa5d51937e75ef5244',  # H11971 interpretation
+    '73198e231f0189fdc04f7e0ba187fa7601ecbb84394ec2445d0dc6b05a7c5e68',  # H11971 fishing-promotion hold
+})
+
+
+# Both summary writers use these validators at the private JSON boundary.
+def count(value, field):
+    if type(value) is not int or value < 0:
+        raise ValueError(f'{field}: expected a nonnegative integer count')
+    return value
+
+
+def measurement(value, field):
+    if type(value) not in (int, float) or (type(value) is float and not math.isfinite(value)):
+        raise ValueError(f'{field}: expected a finite measurement')
+    return value
+
+
+def _matching_text(value, field, pattern):
+    if not isinstance(value, str) or not re.fullmatch(pattern, value):
+        raise ValueError(f'{field}: invalid source review field')
+    return value
+
+
+def public_id(value, field):
+    return _matching_text(value, field, r'[A-Za-z0-9][A-Za-z0-9_.-]*')
+
+
+def iso_date(value, field):
+    _matching_text(value, field, r'\d{4}-\d{2}-\d{2}')
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        raise ValueError(f'{field}: expected an ISO date') from None
+    return value
+
+
+def timestamp(value, field):
+    try:
+        if isinstance(value, str) and datetime.fromisoformat(value).utcoffset() is not None:
+            return value
+    except ValueError:
+        pass
+    raise ValueError(f'{field}: expected a timezone-qualified ISO timestamp')
+
+
+def source_url(value, field):
+    # Source-credit links have no credentials, query parameters or fragments.
+    return _matching_text(value, field, r'https://[A-Za-z0-9.-]+/[A-Za-z0-9._~/%+-]+')
+
+
+def sha256(value, field):
+    return _matching_text(value, field, r'[a-fA-F0-9]{64}')
+
+
+def pair(value, field, validate):
+    if not isinstance(value, list) or len(value) != 2:
+        raise ValueError(f'{field}: expected a pair')
+    return [validate(item, field) for item in value]
+
+
+def project(row, fields):
+    if not isinstance(row, dict):
+        raise ValueError('Expected a review object')
+    result = {}
+    for field, validate in fields.items():
+        if field not in row:
+            raise ValueError(f'{field}: required review evidence is missing')
+        result[field] = validate(row[field], field)
+    return result
+
+
+def _range(value, field):
+    lo, hi = pair(value, field, measurement)
+    if lo > hi:
+        raise ValueError(f'{field}: expected an ordered range')
+    return [lo, hi]
+
+
+def _class_counts(value, field):
+    if not isinstance(value, dict):
+        raise ValueError(f'{field}: expected seabed class counts')
+    result = {}
+    for label, total in value.items():
+        if not isinstance(label, str) or (
+            label not in BOTTOM_CLASSES if field == 'bottom_classes'
+            else any(part.strip() not in ENC_NATURES for part in label.split(','))
+        ):
+            raise ValueError(f'{field}: expected reviewed seabed class labels')
+        result[label] = count(total, field)
+    return result
+
+
+def _source_text(value, field):
+    # The private review is untrusted input: fail closed on any prose that is
+    # not exactly a reviewed, committed coordinate-free text.
+    if (not isinstance(value, str)
+            or hashlib.sha256(value.encode('utf-8')).hexdigest() not in REVIEWED_SOURCE_TEXT_SHA256):
+        raise ValueError(f'{field}: expected reviewed coordinate-free source review text')
+    return value
+
+
+def _limitations(value):
+    if not isinstance(value, list) or not value or any(item not in CAMERA_LIMITATIONS for item in value):
+        raise ValueError('limitations: expected reviewed camera limitations')
+    return [CAMERA_LIMITATIONS[CAMERA_LIMITATIONS.index(item)] for item in value]
 
 
 def summarize(review: dict) -> dict:
+    if not isinstance(review, dict):
+        raise ValueError('Expected a camera review object')
     transects = review.get('transects')
     if (review.get('fishing_target') is not False
             or review.get('exportable') is not False
-            or review.get('enc_danger_queried_layers') != 18
+            or type(review.get('enc_danger_queried_layers')) is not int
+            or review['enc_danger_queried_layers'] != 18
             or not review.get('survey_report_interpretation')
             or not review.get('survey_report_sha256')
             or not review.get('cdfw_mpa_retrieved_at')
-            or not isinstance(transects, list) or not transects
-            or sum(row['historical_rocky_camera_windows'] for row in transects)
-               != review.get('historical_camera_windows')):
+            or not isinstance(transects, list) or not transects):
         raise ValueError('An exact, report-reviewed, complete research review is required')
-    allowed = (
-        'date', 'line', 'historical_rocky_camera_windows',
-        'historical_rockfish_positive_windows', 'bottom_classes',
-        'measured_depth_m_mllw_range', 'product_uncertainty_m_range',
-        'nearest_charted_rock_symbol_m_range', 'nearest_charted_danger_m_min',
-        'nearest_cdfw_mpa_boundary_m_min', 'within_100m_mpa_review_buffer',
-    )
-    rows = [{key: row[key] for key in allowed} for row in transects]
+    rows = [project(row, {
+        'date': iso_date, 'line': public_id,
+        'historical_rocky_camera_windows': count,
+        'historical_rockfish_positive_windows': lambda v, f: None if v is None else count(v, f),
+        'bottom_classes': _class_counts,
+        'measured_depth_m_mllw_range': _range, 'product_uncertainty_m_range': _range,
+        'nearest_charted_rock_symbol_m_range': _range,
+        'nearest_charted_danger_m_min': lambda v, f: None if v is None else measurement(v, f),
+        'nearest_cdfw_mpa_boundary_m_min': measurement, 'within_100m_mpa_review_buffer': count,
+    }) for row in transects]
+    total = count(review.get('historical_camera_windows'), 'historical_camera_windows')
+    if sum(row['historical_rocky_camera_windows'] for row in rows) != total:
+        raise ValueError('An exact, report-reviewed, complete research review is required')
     result = {
         'schema_version': 1,
         'scope': 'original-camera-bag-chart-research-summary',
-        'survey_id': review['survey_id'],
-        'reviewed_at': review['reviewed_at'],
-        'original_bag_url': review['original_bag_url'],
-        'original_bag_sha256': review['original_bag_sha256'],
-        'original_camera_url': review['original_camera_url'],
-        'original_camera_sha256': review['original_camera_sha256'],
-        'survey_report_url': review['survey_report_url'],
-        'survey_report_sha256': review['survey_report_sha256'],
-        'survey_report_interpretation': review['survey_report_interpretation'],
-        'survey_fishing_promotion_hold': review['survey_fishing_promotion_hold'],
-        'enc_danger_receipt_checked_at': review['enc_danger_receipt_checked_at'],
-        'enc_danger_queried_layers': review['enc_danger_queried_layers'],
-        'enc_danger_features_in_bounded_scope': review['enc_danger_features_in_bounded_scope'],
-        'charted_seabed_point_count_by_nature': review['charted_seabed_point_count_by_nature'],
-        'charted_seabed_area_count_by_nature': review['charted_seabed_area_count_by_nature'],
-        'cdfw_mpa_retrieved_at': review['cdfw_mpa_retrieved_at'],
-        'historical_camera_windows': review['historical_camera_windows'],
+        **project(review, {
+            'survey_id': public_id, 'reviewed_at': timestamp,
+            'original_bag_url': source_url, 'original_bag_sha256': sha256,
+            'original_camera_url': source_url, 'original_camera_sha256': sha256,
+            'survey_report_url': source_url, 'survey_report_sha256': sha256,
+            'survey_report_interpretation': _source_text,
+            'survey_fishing_promotion_hold': lambda v, f: None if v is None else _source_text(v, f),
+            'enc_danger_receipt_checked_at': timestamp, 'enc_danger_queried_layers': count,
+            'enc_danger_features_in_bounded_scope': count,
+            'charted_seabed_point_count_by_nature': _class_counts,
+            'charted_seabed_area_count_by_nature': _class_counts,
+            'cdfw_mpa_retrieved_at': timestamp,
+        }),
+        'historical_camera_windows': total,
         'transects': rows,
         'fishing_target': False,
         'exportable': False,
@@ -59,7 +194,7 @@ def summarize(review: dict) -> dict:
             'Refresh complete CDFW MPAs and federal restrictions, then verify the exact site, method and date under local rules.',
             'Review approach route, harbor entrance and current conditions before any fishing-plan promotion.',
         ],
-        'limitations': review['limitations'],
+        'limitations': _limitations(review.get('limitations')),
     }
     encoded = json.dumps(result)
     if any(key in encoded for key in ('camera_position_bounds', '"latitude"', '"longitude"')):
