@@ -37,6 +37,35 @@ def near_valid_pixel(mask, grid, x, y, radius_m=SEARCH_RADIUS_M):
     return bool(np.any(np.hypot(cx - x, cy - y) <= radius_m))
 
 
+UNKNOWN_KEY = 'rock_boulder_cobble_windows_unknown_derived_class'
+OFF_KEY = 'rock_boulder_cobble_windows_off_derived_rough_class'
+
+
+def legacy_view(receipt):
+    """Show a split receipt the way reviewed receipts written before the split did.
+
+    Those receipts counted masked (unknown) habitat cells inside the "off derived
+    rough class" total. Folding unknown back into off lets a new receipt be
+    compared with them without rewriting their reviewed aggregates.
+    """
+    folded = dict(receipt)
+    folded[OFF_KEY] = receipt[OFF_KEY] + folded.pop(UNKNOWN_KEY)
+    return folded
+
+
+def receipt_matches_baseline(receipt, baseline):
+    """Full-dictionary comparison against a reviewed baseline receipt.
+
+    A baseline with the unknown-class key is compared exactly. A historical
+    baseline without it is compared after folding unknown into off, so every
+    other aggregate must still match exactly and the on/in-band totals still
+    constrain the split.
+    """
+    if UNKNOWN_KEY in baseline:
+        return receipt == baseline
+    return legacy_view(receipt) == baseline
+
+
 def inspect(bss_spec, video_manifest, bss_cache, video_cache, download_video=False):
     survey_id = bss_spec['survey_id']
     if survey_id not in ('BSS_Block01', 'BSS_Block02', 'BSS_Block03',
@@ -178,7 +207,7 @@ def main():
                 if source['survey_id'] == args.survey_id)
     receipt = inspect(spec, json.loads(args.video_manifest.read_text()), args.bss_cache,
                       args.video_cache, args.download_video)
-    if args.verify and receipt != json.loads(args.verify.read_text()):
+    if args.verify and not receipt_matches_baseline(receipt, json.loads(args.verify.read_text())):
         raise ValueError('Original video/grid overlap changed; review before publication')
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_suffix('.partial')
