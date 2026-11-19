@@ -1,5 +1,4 @@
-"""Public fleet registry authorization and operator runbook contracts."""
-import json
+"""Fleet registry operator runbook contracts. Job auth is covered by test_fleet_jobs.mjs."""
 import re
 import unittest
 
@@ -7,12 +6,6 @@ from tests._support import ROOT
 
 RUNBOOK = ROOT / 'docs' / 'operations' / 'runbooks' / 'fleet-registry.md'
 
-
-class FleetRegistryAuthorizationTests(unittest.TestCase):
-    def test_registry_is_in_the_public_scheduler_and_route_scope(self):
-        policy = json.loads((ROOT / 'deployments' / 'production.json').read_text())
-        self.assertIn('fleet-registry.yml', policy['scheduler']['workflows'])
-        self.assertIn("'fleet-registry.yml'", (ROOT / 'server' / 'routes' / 'fleet.ts').read_text())
 
 class FleetRegistryRunbookTests(unittest.TestCase):
     def setUp(self):

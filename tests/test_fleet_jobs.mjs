@@ -60,7 +60,8 @@ const AUTH = {Authorization: 'Bearer good'};
 
 // Use the real verifier and route middleware: either a misplaced budget check
 // or a workflow-name-only limit would otherwise let a ping job touch D1.
-test('private fleet OIDC admits data jobs, restricts ping before D1, and denies foreign scopes', async t => {
+test('fleet OIDC admits only private data jobs, restricts private ping before D1, and denies foreign scopes', async t => {
+  const dataWorkflows = ['fleet-ais.yml', 'fleet-osint.yml', 'fleet-registry.yml'];
   const pair = await crypto.subtle.generateKey({name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256'}, true, ['sign', 'verify']);
   const jwk = {...await crypto.subtle.exportKey('jwk', pair.publicKey), kid: 'fleet-test', alg: 'RS256', use: 'sig'};
   t.mock.method(fleetJobs, 'verify', verifierSaved);
@@ -100,12 +101,17 @@ test('private fleet OIDC admits data jobs, restricts ping before D1, and denies 
   assert.deepEqual(await call('GET', prefix + '/ping', ping), {status: 200, body: {ok: true, region: 'CA'}, calls: 1});
   const {db, sql} = database();
   try {
-    for (const workflow of ['fleet-ais.yml', 'fleet-osint.yml', 'fleet-registry.yml']) {
+    for (const workflow of dataWorkflows) {
       const {status} = await get(db, '?region=CA', await auth(claims(ops, workflow)));
       assert.equal(status, 200, workflow);
     }
   } finally {
     sql.close();
+  }
+  // A stale transition allowance must not let a retired public data workflow reach even the job budget.
+  for (const workflow of dataWorkflows) {
+    const {status, body, calls} = await call('GET', prefix + '/ping', claims(scheduler, workflow));
+    assert.deepEqual({status, error: body.error, calls}, {status: 401, error: 'Unauthorized', calls: 0}, workflow);
   }
   for (const [method, routes] of [['GET', ['health', 'snapshot', 'watch', 'labels']], ['POST', ['registry', 'activity', 'heartbeat', 'watch', 'labels', 'ping']]]) {
     for (const route of routes) {
@@ -124,9 +130,9 @@ test('private fleet OIDC admits data jobs, restricts ping before D1, and denies 
   // A future allowlist edit must not grant access to another scope or to a new
   // fleet workflow without an explicit route policy.
   const extra = 'fleet-future.yml';
-  const workflows = FLEET_JOB_SCOPE.workflows;
+  const workflows = FLEET_JOB_SCOPE.fleetSchedulerWorkflows;
   ops.workflows.push('live-conditions.yml', 'advisor-media.yml', extra);
-  FLEET_JOB_SCOPE.workflows = [...workflows, extra];
+  FLEET_JOB_SCOPE.fleetSchedulerWorkflows = [...workflows, extra];
   try {
     const {status, calls} = await call('GET', prefix + '/ping', claims(ops, extra));
     assert.deepEqual({status, calls}, {status: 403, calls: 0}, 'unclassified verified fleet workflow');
@@ -138,7 +144,7 @@ test('private fleet OIDC admits data jobs, restricts ping before D1, and denies 
       assert.deepEqual({status, calls}, {status: 401, calls: 0}, path);
     }
   } finally {
-    FLEET_JOB_SCOPE.workflows = workflows;
+    FLEET_JOB_SCOPE.fleetSchedulerWorkflows = workflows;
     ops.workflows.splice(-3);
   }
 });
