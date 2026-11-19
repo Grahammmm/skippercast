@@ -718,8 +718,12 @@ def render_graphic(item, r2, spec, number, log=print):
     if meta is not None and meta.get(META) == digest and _dims(meta):
         width, height = _dims(meta)
         slides = [f'{stem}-{i}.jpg' for i in range(1, int(meta.get('slides', '0') or 0) + 1)]
-        log(f'graphic {item["id"]}: unchanged, skipped')
-        return {'graphic_id': item['id'], 'keys': {'public': out, **({'slides': slides} if slides else {})}, 'width': width, 'height': height}
+        # Slides are written before the cover, so a failed cover write can leave a slide from a
+        # newer render beside an older matching cover: accept the hit only if every slide matches too.
+        slide_metas = [r2.head(key) for key in slides]
+        if all(m is not None and m.get(META) == digest and _dims(m) for m in slide_metas):
+            log(f'graphic {item["id"]}: unchanged, skipped')
+            return {'graphic_id': item['id'], 'keys': {'public': out, **({'slides': slides} if slides else {})}, 'width': width, 'height': height}
     photos = []
     for body, mime, orientation, max_side in inputs:
         photo = decode(body, mime, orientation)
