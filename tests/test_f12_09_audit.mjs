@@ -4,13 +4,13 @@ import {build} from 'esbuild';
 
 // Mount the real Queue and its API client. Only the DOM and transport are fakes.
 const {outputFiles: [bundle]} = await build({stdin: {resolveDir: process.cwd(), contents: `
-  export {Queue} from './web/admin/queue.tsx';
+  export {Queue, focusReview} from './web/admin/queue.tsx';
   export {ApiError, getQueue, getFleetEnabled} from './web/admin/api.ts';
   export {ADMIN_COPY as COPY} from './web/advisor/copy.ts';
   export {h, render} from 'preact';
   export {act} from 'preact/test-utils';
 `}, bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'automatic', jsxImportSource: 'preact'});
-const {Queue, ApiError, getQueue, getFleetEnabled, COPY, h, render, act} =
+const {Queue, focusReview, ApiError, getQueue, getFleetEnabled, COPY, h, render, act} =
   await import(`data:text/javascript;base64,${Buffer.from(bundle.contents).toString('base64')}`);
 
 class Element {
@@ -121,4 +121,18 @@ test('Queue renders empty only for a valid empty page', async t => {
     fetchMock.mockImplementation(async () => Response.json({enabled: true}));
     assert.equal(await getFleetEnabled(), false);
   });
+});
+
+// Contract: after a decision, focus lands where the A/E/R handler lives. Bug caught: focusing only the outer
+// list item leaves an already-expanded next review without keyboard shortcuts (they are on the nested card).
+test('focusReview focuses the expanded ReviewCard, else the list item, else the heading', () => {
+  const focused = [];
+  const el = name => ({focus: () => focused.push(name)});
+  const expanded = {...el('item-1'), querySelector: selector => { assert.equal(selector, 'article.admin-card'); return el('card-1'); }};
+  const collapsed = {...el('item-2'), querySelector: () => null};
+  const doc = {getElementById: id => ({'review-1': expanded, 'review-2': collapsed, 'queue-heading': el('heading')})[id] ?? null};
+  focusReview(doc, '1');
+  focusReview(doc, '2');
+  focusReview(doc, undefined);
+  assert.deepEqual(focused, ['card-1', 'item-2', 'heading']);
 });

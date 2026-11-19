@@ -16,6 +16,13 @@ import type {Post} from './api.ts';
 
 const cardId = (id: string): string => `review-${id}`;
 
+/** Focus the review that should take the keyboard next. A review the user already expanded holds its shortcut handler on the nested ReviewCard article, so focus that card; the outer list item (collapsed review) or the heading are the fallbacks. */
+export function focusReview(doc: Pick<Document, 'getElementById'>, id: string | undefined): void {
+  const outer = id ? doc.getElementById(cardId(id)) : null;
+  const target = outer ? outer.querySelector<HTMLElement>('article.admin-card') ?? outer : doc.getElementById('queue-heading');
+  target?.focus();
+}
+
 /** Detail lives only inside the open card, not in page state or a shared cache. */
 export function AdminDisclosure<T>({load, children}: {load: () => Promise<T>; children: (value: T) => ComponentChildren}) {
   const [open, setOpen] = useState(false);
@@ -66,7 +73,7 @@ export function Queue() {
     if (result.held) parts.push(COPY.heldTexts);
     setNotice(parts.join(' '));
     const following = stays ? item : rest[Math.min(index, rest.length - 1)];
-    requestAnimationFrame(() => document.getElementById(following ? cardId(following.id) : 'queue-heading')?.focus());
+    requestAnimationFrame(() => focusReview(document, following?.id));
   }
 
   return (
