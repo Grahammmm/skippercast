@@ -73,7 +73,8 @@ test.after(() => { fleetJobs.verify = verifySaved; });
 test('SCA-017: the limits name only fleet job workflows, and the matrix covers the private reads and mutations', () => {
   for (const workflowRef of FLEET_JOB_LIMITS.keys()) {
     const workflow = workflowRef.split('@')[0].split('/').at(-1);
-    assert.ok(FLEET_JOB_SCOPE.workflows.includes(workflow), workflowRef);
+    const workflows = workflowRef.startsWith(`${S.repository}/`) ? FLEET_JOB_SCOPE.workflows : FLEET_JOB_SCOPE.fleetSchedulerWorkflows;
+    assert.ok(workflows.includes(workflow), workflowRef);
   }
   assert.deepEqual([...FLEET_JOB_LIMITS.get(claimsOf(MONITOR).workflow_ref)].sort(), [HEALTH, PING]);
   for (const workflow of PROCESSORS) assert.equal(FLEET_JOB_LIMITS.has(claimsOf(workflow).workflow_ref), false, workflow);

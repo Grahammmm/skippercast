@@ -57,8 +57,8 @@ export const fleetGate: MiddlewareHandler<AppEnv> = async (c, next) => {
 // must also be listed for its repository identity in deployments/production.json.
 export const FLEET_JOB_SCOPE: JobScope = {
   audiencePath: '/api/fleet/jobs',
-  workflows: ['fleet-registry.yml', 'fleet-osint.yml', 'fleet-ais.yml', 'fleet-health.yml', 'fleet-ping.yml'],
-  includeFleetScheduler: true,
+  workflows: ['fleet-health.yml'],
+  fleetSchedulerWorkflows: ['fleet-registry.yml', 'fleet-osint.yml', 'fleet-ais.yml', 'fleet-ping.yml'],
 };
 /** Test seam: the token check (default: verifyJobToken with FLEET_JOB_SCOPE). */
 export const fleetJobs: {verify: (token: string | undefined) => Promise<JobClaims | false>} = {
