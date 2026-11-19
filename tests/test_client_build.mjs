@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {execFile} from 'node:child_process';
-import {mkdtemp, mkdir, readdir, readFile, rm, writeFile} from 'node:fs/promises';
+import {mkdtemp, mkdir, readdir, readFile, rm, symlink, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {promisify} from 'node:util';
@@ -98,6 +98,42 @@ test('copyStatic fails on a *.pmtiles that is not on the allowlist (E2E-13)', as
   } finally {
     await rm(src, {recursive: true, force: true});
     await rm(out, {recursive: true, force: true});
+  }
+});
+
+test('copyStatic refuses raw shore snapshots and linked assets (F20-04)', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'sc-static-shore-'));
+  const src = join(root, 'dist'), out = join(root, 'client'), privateDir = join(root, 'var');
+  const marker = 'SYNTHETIC-RAW-SHORE-MARKER';
+  try {
+    await mkdir(join(src, 'data', 'nested'), {recursive: true});
+    await mkdir(privateDir);
+    await writeFile(join(privateDir, 'ccc-access-points.json'), JSON.stringify({Description: marker}));
+    const publicName = 'data/shore-habitat.geojson';
+    const publicBytes = '{"type":"FeatureCollection","features":[]}';
+    await writeFile(join(src, publicName), publicBytes);
+    await copyStatic(src, out);
+    assert.equal(await readFile(join(out, publicName), 'utf8'), publicBytes);
+    assert.deepEqual((await readdir(out, {recursive: true, withFileTypes: true}))
+      .filter(e => !e.isDirectory()).map(e => e.name), ['shore-habitat.geojson']);
+
+    // A stale archive dropped into dist (including a leftover atomic-write file) must fail, not copy.
+    for (const name of ['ccc-access-points.json', 'data/nested/ccc-access-item.json',
+      'data/nested/ccc-access-estero.json', 'data/nested/noaa-esi-shoreline.json',
+      'data/nested/receipts.json', 'data/nested/.ccc-access-points.json.123.tmp']) {
+      const path = join(src, name);
+      await writeFile(path, marker);
+      await assert.rejects(copyStatic(src, out), {message: `refusing to publish ${name}: raw shore source artifact`});
+      await assert.rejects(readFile(join(out, name)), {code: 'ENOENT'});
+      await rm(path);
+    }
+    // A directory link has no raw filename until followed. Do not stage the link itself.
+    await symlink(privateDir, join(src, 'data', 'alias'), 'dir');
+    await assert.rejects(copyStatic(src, out), /refusing to publish data\/alias: symbolic link/);
+    assert.deepEqual((await readdir(out, {recursive: true, withFileTypes: true}))
+      .filter(e => !e.isDirectory()).map(e => e.name), ['shore-habitat.geojson']);
+  } finally {
+    await rm(root, {recursive: true, force: true});
   }
 });
 

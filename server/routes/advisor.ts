@@ -309,7 +309,8 @@ advisorPublic.post('/api/advisor/upload', async c => {
 
 const MEDIA_FILE = /^([\w-]{1,64})(\.story)?\.(jpg|png|mp4)$/;
 const EXT_MIME: Record<string, string> = {jpg: 'image/jpeg', png: 'image/png'};
-const MEDIA_HEADERS = {'Cache-Control': 'public, max-age=3600', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'};
+// Approval can be withdrawn, so every request must reach the current permission check.
+const MEDIA_HEADERS = {'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'};
 
 /**
  * One `Range: bytes=` header against an object of `size` bytes (a single range:

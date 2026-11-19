@@ -128,8 +128,12 @@ def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000
         temporary.unlink(missing_ok=True)
 
 
-def restore_private(s3, bucket, destination, expected, *, max_bytes=2_000_000_000):
-    """Optional private R2 restore; credentials/client are supplied by the job."""
+def restore_private(s3, bucket, destination, expected, *, max_bytes=2_000_000_000, size=None):
+    """Optional private R2 restore; credentials/client are supplied by the job.
+
+    ``size`` is the inventory's declared byte count; when given, the staged file must match
+    it as well as the hash before it replaces ``destination``.
+    """
     if not re.fullmatch(r'[a-f0-9]{64}', expected):
         raise ValueError('Invalid private cache checksum')
     destination = Path(destination)
@@ -138,14 +142,16 @@ def restore_private(s3, bucket, destination, expected, *, max_bytes=2_000_000_00
     destination.parent.mkdir(parents=True, exist_ok=True)
     try:
         with s3.get_object(Bucket=bucket, Key=key)['Body'] as stream, temporary.open('wb') as output:
-            size = 0
+            received = 0
             for chunk in iter(lambda: stream.read(1024 * 1024), b''):
-                size += len(chunk)
-                if size > max_bytes:
+                received += len(chunk)
+                if received > max_bytes:
                     raise ValueError('Private source exceeds byte limit')
                 output.write(chunk)
         if sha256(temporary) != expected:
             raise ValueError('Private source cache checksum mismatch')
+        if size is not None and received != size:
+            raise ValueError('Private restore size mismatch')
         temporary.replace(destination)
     finally:
         temporary.unlink(missing_ok=True)

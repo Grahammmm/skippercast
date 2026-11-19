@@ -166,6 +166,10 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // assertions and thresholds untouched. Rebind those two exact hashes.
 // SC1722-14 changes field typography/layout only; no colour, alpha, backing or contrast threshold changes.
 // SC1922-04: shared preview disclosure and appended layout; catch/legend paint and contrast math unchanged.
+// DATA-LIVE-9 (#2753, public bottom relief): MapStage.tsx swaps the admin depth-shading chip for a Chart-only
+// relief gate (layers.ts reliefWanted) and a status note on the existing `.app-stage-note` class. No CSS, token or
+// colour change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(), assertions and thresholds are
+// untouched. Rebind only MapStage.tsx.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC2207-01 (#1501): species.ts changes only Plan.source_links' type member from href to url.
   // The interface is erased at runtime; Reports/CatchCards markup, styles, paint and source data
@@ -267,11 +271,12 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // never MapStage or PresentationToggle; no CSS, token, class, catch markup, paint, contrast(), assertion or threshold
   // change. Rebind only MapStage.tsx.
   // MB-08: Reports/CatchCards mounts neither the Chart-only depth shading control nor its layer. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "2cc4ac589807f61354da30d86cba22d4d193b1bdecb93bd3b9c92a60f7dfe5bc",
+  "web/app/MapStage.tsx": "07c9cf39e007a91e0784c31cdcdc6248946b7f4c55fa21c301f020265cfd877a",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   // MB-05: light map-only colours and habitat opacity change; Reports catch text and backing do not use these roles.
   // MB-20: only light-theme overlay roles (--flow*, --mpa-fill/line, --swell-0..3, --contrast-1/2) change; Reports catch text and backing do not use them.
-  "web/tokens.css": "8f446f0460e526be276e901d15c7b728c62ab28e9adcce82b85148c1a0ae9ed6",
+  // MB-22 adds Chart-only survey ink, halo and tints; Reports catch paint is unchanged.
+  "web/tokens.css": "3d2a47d465afd1b920d91ea1519c03420a5925ca0790aafffffffef768194e32",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   // UXFIX-05: tokens.css only turns the eight --text-* font sizes from px into the same sizes in rem (identical at a 16 px root); no colour, paint, gradient, catch markup, assertion or threshold changes, so BODY09 stays applicable. Rebind web/tokens.css and the check_contrast.mjs surface-source pin only.
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
@@ -326,7 +331,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SCB-16: scoped picker rules only; never mounted or requested by Reports.
   "web/region-picker.css": "ebc4fcaed679f3017e83921334f5c9ef5a10e70b7aed04eef6a995a0da75e6af",
   // UXFIX-12: panel.css moves the existing .chart-overflow:focus-visible outline out of its max-width:760px media block so it applies at every width; it paints only on keyboard focus of the history/forecast chart wrappers, never in the Reports catch sheet, so no counted catch paint or contrast changes. Rebound from the final bytes.
-  "packages/coast/panel.css": "4558cd4edb0be1827ef6c00523a05b1c8eae84b0d0d81a93c33d5e12e4c66fa9",
+  // SCA-317: only the History disclosure target height changes; Reports catch paint is unchanged.
+  "packages/coast/panel.css": "8eaf2e7f806030b9c760c2c04cd9e3e232f9e4c56d196fdae005ee6607382e9a",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
@@ -345,7 +351,12 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "a25442909c360171a11e5087f629de8cec94a358fc7bff877adce9dffbc0999f",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   // SC1722-04: explicit load/online retries stay unchanged; untracked commands prevent transport-state feedback in readers. No Reports/CatchCards paint change.
-  "web/coast-data.ts": "5856b2145c7d96285d7b5dce03b923d7b2ebfe9504f16952657c720bf02dab06",
+  // SCA-240: coast-data.ts now classifies a malformed or future X-SC-Offline header as invalid (no saved allowance,
+  // no live label). Transport/cache-age logic only; no Reports/CatchCards markup, paint or contrast change.
+  // SCA-294: coast-data.ts adds an optional onResponse observer called with each bridge response before its body is
+  // read (the landing verdict keeps the response provenance). Transport hook only; admission, statuses and cache are
+  // unchanged, and no Reports/CatchCards markup, paint or contrast change. Rebound from the final bytes.
+  "web/coast-data.ts": "4eb847082e54a104f5ba64c501943fa8df6099e9821b58f5229893789369bc21",
   // SC2007-02 (Protected areas Try again): check_contrast.mjs changes only the legendTsx surface hash and its
   // comment; Legend.tsx is not a BODY09 input and Reports never mounts the legend. contrast(), the one export this
   // spec reads, assertions and thresholds are untouched. Rebind only check_contrast.mjs. (Kept beside its pin, not in
@@ -404,7 +415,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MAIN-RED-7: only the appCss surface binding/comment changed; contrast calculations and gates unchanged.
   // MB-05 adds contour checks and rebinds map-only tokens; RF2000-8 corrects selector-to-brace whitespace matching. Contrast calculations and Reports catch assertions are unchanged.
   // MB-20 adds the additive overlay-line gate (checkOverlayLines, 3:1 on --map-water) and rebinds the tokensCss surface hash; contrast() and every existing check are unchanged.
-  "scripts/check_contrast.mjs": "cd1b96f378aa604ddf7a90dfe76c1945844fa8d9d97323b0a98f300671b3aa2d",
+  // SCA-317: checker only rebinds the History target-size stylesheet hash; contrast math is unchanged.
+  // MB-22 rebinds only the tokensCss surface hash. BODY09 paint, contrast logic and assertions are unchanged.
+  "scripts/check_contrast.mjs": "34d9ae03792419b02db7d5fa3157d3161eba8b718259e70fd8e660c927aae4d0",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.

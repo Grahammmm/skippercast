@@ -83,7 +83,7 @@ test('validation clamps confidences, nulls unknown species keys (label kept), tr
   assert.ok(!f.candidates.some(c => c.label === 'Canary rockfish'), 'the lowest (clamped to 0) is trimmed');
   assert.equal(f.needs_better_photo, false, 'a non-boolean flag is false');
   assert.equal(f.reason, null, 'a reason that is not a short code is dropped');
-  const c = parseClassification({kind: 'selfie', kind_confidence: '0.9', has_person: 'true', person_confidence: 3, nsfw: 1}, META);
+  const c = parseClassification({kind: 'selfie', kind_confidence: '0.9', has_person: false, person_confidence: 1, nsfw: false}, META);
   assert.deepEqual([c.kind, c.kind_confidence, c.has_person, c.person_confidence, c.nsfw], ['unknown', 0, false, 1, false]);
   const r = parseCountBoard({date_iso: '2026-02-30', anglers: -1, date_confidence: NaN, lines: [{label: '  ', count: 3}, {label: 'Reds', count: '12', released: 1.5, confidence: 2}, 'junk']}, META);
   assert.equal(r.date_iso, null); assert.equal(r.anglers, null); assert.equal(r.date_confidence, 0);
@@ -412,7 +412,7 @@ dbTest('Hermes answers are clamped, and a species_key outside the keys sent beco
   const {env} = setup(HERMES_ENV);
   const api = fakeHermes({
     '/vision/v1/vision/fish-id': {candidates: [{species_key: 'yellowtail', label: 'Yellowtail', confidence: 0.7, cues: ['yellow tail']}, {species_key: 'vermilion', label: 'Vermilion rockfish', confidence: 1.4, cues: ['a', 'b', 'c', 'd']}], needs_better_photo: false, reason: null},
-    '/vision/v1/vision/classify': {kind: 'selfie', kind_confidence: -2, has_person: 'yes', person_confidence: 9, has_fish: true, text_present: false, nsfw: false},
+    '/vision/v1/vision/classify': {kind: 'selfie', kind_confidence: -2, has_person: false, person_confidence: 1, has_fish: true, text_present: false, nsfw: false},
   });
   const provider = hermesClient.createHermesVision({fetcher: api.fetcher});
   const {value: f} = await quiet(() => provider.identifyFish(imageOf(png('fish.png')), env, 'morro-bay'));

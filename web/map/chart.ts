@@ -38,13 +38,13 @@ import {openBandPadding, toEdge, type Box} from './open-band.ts';
 import {browserGate, flyoverLegs, markFlyoverSeen, mayFly, type FlyoverGate} from './flyover.ts';
 import {COASTLINE_SOURCE, DENSITY_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SAVED_SPOTS_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
 import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markData, markScreen, markSources, markStyle} from './marks.ts';
-import {IDLE, LOADING, MPA_FILL, MPA_LABEL, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState, type MpaResult} from './mpa.ts';
+import {IDLE, LOADING, MPA_FILL, MPA_LABEL, MPA_LINE, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState, type MpaResult} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {RANKED_PICK, RANKED_PIN, drawnSpots, rankedFeatures, rankedMark, rankedStyle, rankedZoom, zoomToGroup} from './ranked.ts';
 import {SAVED_SPOT_PICK, createSavedSpotLayer, pickSavedSpot, savedSpotStyle} from './saved-spots.ts';
 import {SEAFLOOR_PICK, createSeafloor, seafloorLayers, seafloorSource} from './seafloor.ts';
 import {BASEMAP_MANIFEST, BASEMAP_SOURCE, basemapArchive, basemapStyle} from './style.ts';
-import {camera, cameraParam, parseCamera, shownPresentation, type Camera} from './stage.ts';
+import {camera, cameraParam, parseCamera, shownPresentation, terrainPick, type Camera} from './stage.ts';
 
 /** FE-10's manifest reader moved to style.ts with the basemap (FE-25 reads it on the landing without the Chart). */
 export {BASEMAP_MANIFEST, basemapArchive};
@@ -149,7 +149,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   // The marks, the protected areas and the masthead read the same region files: one request each (the startup budget).
   const fetchFn = shareStatic(options.fetchFn ?? sharedFetch);
   const engine = signal<Engine | null>(null);
-  const mpas = signal<{region: string; data: MpaResult['data']} | null>(null);
+  const mpas = signal<MpaResult['data'] | null>(null);
+  let mpaTicket = 0;
   let mounting = false, alive = true, applied = '', drawnRegion: string | null = null, seafloor: ReturnType<typeof createSeafloor> | null = null;
   // #617: the shoreline file drawn now, and the region whose full shoreline has loaded (kept on zooming out: no second request).
   let drawnShore = '', detailRegion: string | null = null;
@@ -227,6 +228,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
           if (layer === SAVED_SPOT_PICK) { pickSavedSpot(properties, mark => { chartMark.value = mark; }); return; }
           // A grouped ranked pin zooms to its spots and keeps the selection, as v1's does (#495).
           if (layer === RANKED_PICK && zoomToGroup(properties)) return;
+          // Rendered tiles and settling clicks may still refer to the previous source data.
+          if (layer === MPA_FILL && properties?.mpaTicket !== mpaTicket) return;
           const other = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null
             : layer === MPA_FILL ? mpaMark(properties) : layer === RANKED_PICK ? rankedMark(properties)
             : drawn.find(l => layer !== null && l.pick?.layers.includes(layer))?.pick?.mark(layer!, properties) ?? null;
@@ -315,8 +318,14 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     // The region's protected areas, checked before they draw; a region change replaces them. They load with the
     // region, whatever the presentation, because the terrain drapes the same areas (FE-82).
     // The legend's Try again (retryMpas) reloads them for the same region after a failed read (SC2007-02). SCB-11: after the first verdict.
-    effect(() => { const id = region.value; retryMpas.value; if (id && mapMayLoad.value) void loadRegionMpas(id); }),
-    effect(() => { const e = engine.value, m = mpas.value; if (e && m && m.region === region.value) e.setData(MPA_SOURCE, m.data); }),
+    effect(() => { const id = region.value; retryMpas.value; if (mapMayLoad.value) void loadRegionMpas(id); }),
+    effect(() => {
+      const e = engine.value, data = mpas.value;
+      if (!e) return;
+      e.setData(MPA_SOURCE, data ?? mpaSource().data);
+      // Hide immediately while MapLibre processes the empty source in its worker.
+      for (const layer of [MPA_FILL, MPA_LINE, MPA_LABEL]) e.setVisible(layer, !!data?.features.length);
+    }),
     effect(() => { host.dataset.mpa = mpaState.value.status; }),
     // A new link selection (a mark, a terrain pick, Back) replaces the Chart's own: one selection at a time.
     effect(() => { if (selection.value || habitat.value) chartMark.value = null; }),
@@ -336,13 +345,18 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       if (shown && !spots.some(s => s.id === shown)) chartMark.value = null;
     }),
   ];
-  async function loadRegionMpas(id: string): Promise<void> {
-    mpaState.value = LOADING;
+  async function loadRegionMpas(id: string | null): Promise<void> {
+    const ticket = ++mpaTicket;
+    mpas.value = null;
+    if (chartMark.peek()?.id.startsWith('mpa:')) chartMark.value = null;
+    if (terrainPick.peek()?.id.startsWith('mpa:')) terrainPick.value = null;
+    mpaState.value = id ? LOADING : IDLE;
     unavailable.value = unavailable.peek().filter(layer => layer !== 'mpas');
     setTerrainLayer('mpas', null);
+    if (!id) return;
     const {state, data} = await loadMpas(id, fetchFn, page());
-    if (!alive || region.peek() !== id) return;
-    mpas.value = {region: id, data};
+    if (!alive || ticket !== mpaTicket || region.peek() !== id) return;
+    mpas.value = {...data, features: data.features.map(f => ({...f, properties: {...f.properties as Record<string, unknown>, mpaTicket: ticket}}))};
     mpaState.value = state;
     if (state.status === 'unavailable') markUnavailable('mpas', new Error(state.detail));
     // A terrain pick of an area opens the same card as the Chart's click (mpaMark of the same feature).

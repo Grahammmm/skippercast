@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import test from 'node:test';
 import {setImmediate} from 'node:timers/promises';
@@ -57,9 +58,10 @@ test('enqueue failure waits for pruning, releases its claim and retries only on 
   const {run, drain, points} = fixture(t);
   const sql = new DatabaseSync(':memory:');
   t.after(() => sql.close());
-  sql.exec(`CREATE TABLE job_state (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT);
-            CREATE TABLE trips (owner TEXT, enabled INTEGER, final_delivered_at TEXT);
-            INSERT INTO trips VALUES ('synthetic-owner', 1, NULL);`);
+  const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
+  for (const {tag} of JSON.parse(read('../drizzle/meta/_journal.json')).entries) sql.exec(read(`../drizzle/${tag}.sql`));
+  sql.exec(`INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,created_at)
+            VALUES ('synthetic-trip','synthetic-owner','fixture','point','reef','2026-10-06',7,13,8,12,3,'2026-10-05T19:00:00Z');`);
   const prune = Promise.withResolvers();
   const attempted = Promise.withResolvers();
   const DB = {

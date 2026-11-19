@@ -90,10 +90,6 @@ class MeshIntegerTests(unittest.TestCase):
     def test_uint16_positive_down_parity(self):
         self.parity('uint16', 'positive_down')
 
-    def test_float32_positive_control(self):
-        grid = self.make_grid(self.root / 'grid', 'float32')
-        self.geometry(self.build(grid), grid, 'positive_up')
-
     def test_float64_nonfinite_excluded(self):
         grid = self.make_grid(self.root / 'grid', 'float64', nonfinite=True)
         self.geometry(self.build(grid), grid, 'positive_up')

@@ -127,6 +127,20 @@
       "when": 1793768877931,
       "tag": "0017_saved_spots",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1794967365326,
+      "tag": "0018_fleet_event_trip",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1795033446278,
+      "tag": "0019_advisor_review_events",
+      "breakpoints": true
     }
   ]
 }
