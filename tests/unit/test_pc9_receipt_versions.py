@@ -45,7 +45,7 @@ def test_two_window_run_keeps_v1_bytes_and_one_cells_record_per_window(world, sy
     w = world
     receipt = enqueue(w)
     summary = run(w)
-    assert receipt['schema'] == 'coast-enqueue-receipt-v1' and summary['schema'] == 'coast-run-summary-v1'
+    assert receipt['schema'] == 'coast-enqueue-receipt-v1' and summary['schema'] == 'coast-run-summary-v3'
     paths = ('plans/pilot01/bridge/enqueue-receipt.json', 'plans/pilot01/runs/run-00.json')
     before = {p: (w.root / p).read_bytes() for p in paths}
     for p in paths:  # PC9 native v1 wire format matches its exact native schema
@@ -69,6 +69,8 @@ def test_two_window_run_keeps_v1_bytes_and_one_cells_record_per_window(world, sy
         assert record['unknown'] == ['depth_m.p80'] and record['absent'] == []
     assert run_doc['store_status_evidence']['kind'] == 'legacy_embedded'
     assert run_doc['store_status_evidence']['independent_snapshot'] is False
+    # v3 embeds run-scoped counts; the evidence binds exactly those bytes, nothing synthesized.
+    assert run_doc['store_status_evidence']['status_sha256'] == refs.object_digest(summary['store_status'])
 
 
 def test_zero_based_continuations_convert_against_converted_predecessor(world, synthetic_dispatch, monkeypatch):
