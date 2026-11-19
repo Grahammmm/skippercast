@@ -32,17 +32,23 @@ for (const action of ['actions/cache', 'actions/upload-artifact']) {
   });
 }
 
-test('public CI can only record the hold, even without private runner configuration', () => {
+test('public CI only checks committed receipts and records the hold, without a private runner', () => {
   const job = workflow.match(/^  csumb-native:\n((?:^(?: {4}[^\n]*|)\n)+)/m);
   assert.ok(job, 'the hold must remain visible in the workflow');
-  // A checkout, fetch, or artifact step here would turn this back into a processing job.
-  assert.deepEqual(job[1].split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#')), [
-    'runs-on: ubuntu-latest',
-    'steps:',
-    '- name: Report licence hold (SCA-137)',
-    'run: |',
-    'printf \'%s\\n\' \'SCA-137: CSUMB native survey processing skipped; no approved private runner or storage route.\' >> "$GITHUB_STEP_SUMMARY"',
-  ]);
+  const [header, ...steps] = job[1].split(/^      - /m);
+  assert.deepEqual(header.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#')),
+    ['runs-on: ubuntu-latest', 'timeout-minutes: 45', 'steps:']);
+  // Allowlist, not a denylist: any fetch, cache, artifact or audit-script step
+  // added here would turn this back into an off-box processing job.
+  const allowed = [
+    /^uses: actions\/checkout@[0-9a-f]{40} # \S+\n$/,
+    /^uses: actions\/setup-python@[0-9a-f]{40} # \S+\n {8}with:\n {10}python-version: "3\.12"\n$/,
+    /^name: Install pinned native-grid reader\n {8}run: python -m pip install -r requirements-survey\.txt\n$/,
+    /^name: Verify native-grid receipts stay out of fishing targets\n {8}env:\n {10}PYTHONPATH: src:\.\n {8}run: python -m unittest(?: research\.tests\.[\w.]+)+ -v\n$/,
+    /^name: Report licence hold \(SCA-137\)\n {8}run: \|\n {10}printf '%s\\n' 'SCA-137: CSUMB native survey processing skipped; no approved private runner or storage route\.' >> "\$GITHUB_STEP_SUMMARY"\n$/,
+  ];
+  assert.equal(steps.length, allowed.length);
+  steps.forEach((step, index) => assert.match(step, allowed[index]));
 });
 
 test('the permit for coordinate-free source-use receipts is unaffected', () => {
