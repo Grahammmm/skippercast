@@ -8,10 +8,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import re
 
 from skippercast.seafloor.io import sha256
 
-from research.scripts.audit_nbs_modeling_tile import audit, scheme_row
+from research.scripts.audit_nbs_modeling_tile import (
+    SCREEN_METHOD, audit, scheme_row, screen_parameters,
+)
 
 
 def atomic_json(path, value):
@@ -39,13 +42,27 @@ def validate(inventory, scheme):
 def run_one(lead, scheme, cache, receipts, fetch):
     tile = lead['tile']
     receipt_path = receipts / f'{tile}.json'
+    row = scheme_row(scheme, tile)
+    raster_hash = row['GeoTIFF_SHA256_Checksum']
+    rat_hash = row['RAT_SHA256_Checksum']
+    if not all(isinstance(value, str) and re.fullmatch(r'[0-9a-fA-F]{64}', value)
+               for value in (raster_hash, rat_hash)):
+        raise ValueError('Missing or invalid pinned tile hashes: ' + tile)
+    result = None
     if receipt_path.exists():
-        previous = json.loads(receipt_path.read_text())
-        if previous.get('tile') == tile and previous.get('scheme_sha256') == sha256(scheme):
+        try:
+            previous = json.loads(receipt_path.read_text())
+        except (ValueError, UnicodeError):
+            previous = None
+        if (isinstance(previous, dict) and previous.get('tile') == tile
+                and previous.get('scheme_sha256') == sha256(scheme)
+                and previous.get('raster_sha256') == raster_hash.lower()
+                and previous.get('rat_sha256') == rat_hash.lower()
+                and previous.get('screen_method') == SCREEN_METHOD
+                and previous.get('screen') == screen_parameters()
+                and isinstance(previous.get('counts'), dict)):
             result = previous
-        else:
-            raise ValueError('Stale or mismatched receipt: ' + tile)
-    else:
+    if result is None:
         result = audit(scheme, tile, cache, fetch=fetch)
         atomic_json(receipt_path, result)
     return {'tile': tile, 'coasts': lead['coasts'],
