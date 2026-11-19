@@ -53,7 +53,7 @@ def source_blocks(bathy_zip, character_zip, rov_csv, rov_pin):
                                   "centers_on_at_or_over_80m_5m_source": 0,
                                   "classes": Counter(), "years": set()})
     seen = set()
-    with rasterio.open(original_tiff(bathy_zip)) as bathy, rasterio.open(original_tiff(character_zip)) as character:
+    with rasterio.open(original_tiff(bathy_zip, "bathy")[0]) as bathy, rasterio.open(original_tiff(character_zip, "character")[0]) as character:
         if (bathy.shape != character.shape or bathy.transform != character.transform
                 or str(bathy.crs) != "EPSG:32610" or character.crs != bathy.crs):
             raise ValueError("Original Point Buchon survey grids changed")
