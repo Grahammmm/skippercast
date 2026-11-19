@@ -13,7 +13,7 @@ import rasterio
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repository root, for research.*
 from research.scripts.discover_usgs_doi_releases import official
-from research.scripts.inspect_usgs_native_grids import inspect_archive, MAX_ARCHIVE_BYTES
+from research.scripts.inspect_usgs_native_grids import GRID_KINDS, MAX_ARCHIVE_BYTES, inspect_archive, inspection_summary
 
 
 def download(url,path,ident,landing):
@@ -37,13 +37,17 @@ def inspect(releases,metadata,cache,*,fetcher=download,max_workers=3):
     if releases.get('scope')!='usgs-state-waters-doi-product-links' or metadata.get('scope')!='usgs-state-waters-doi-native-metadata':
         raise ValueError('Invalid USGS DOI source inventory')
     meta={row['metadata_url']:row for row in metadata['records'] if row['status']=='ok'}
-    tasks=[]
+    tasks, omissions = [], []
     for release in releases['releases']:
         if release['status']!='ok':continue
         for product in release['products']:
-            if product['kind'] not in {'bathymetry','seafloor_character'}:continue
+            if product['kind'] not in GRID_KINDS:continue
             record=meta.get(product['metadata_url'])
             if record:tasks.append((release,product,record))
+            else:
+                omissions.append({'release_id': release['release_id'], 'kind': product['kind'],
+                                  'archive_url': product['archive_url'], 'metadata_url': product['metadata_url'],
+                                  'issue': 'No successful original metadata audit'})
     def one(task):
         release,product,record=task
         ident=release['release_id'];url=product['archive_url']
@@ -68,13 +72,10 @@ def inspect(releases,metadata,cache,*,fetcher=download,max_workers=3):
                 rows.append({'release_id':release['release_id'],'kind':product['kind'],
                              'archive_url':product['archive_url'],'metadata_url':record['metadata_url'],
                              'status':'failed','issue':str(error)[:180]})
-    rows.sort(key=lambda row:(row['release_id'],row['kind'],row['archive_url']))
-    issues=[row['archive_url'] for row in rows if row['status']!='ok']
     return {'schema_version':1,'scope':'usgs-state-waters-doi-native-grid-audit',
             'collected_at':datetime.now(timezone.utc).isoformat(),
             'method':'Original DOI-linked USGS ZIP and native GeoTIFF pixel inspection. Historical seabed evidence only; no depth-datum conversion, fish prediction or legal clearance.',
-            'product_count':len(rows),'inspected_count':len(rows)-len(issues),
-            'health':{'status':'ok' if not issues else 'degraded','issues':issues},'products':rows}
+            **inspection_summary(rows, omissions, 'release_id')}
 
 
 def main():
