@@ -45,6 +45,7 @@ import {SAVED_SPOT_PICK, createSavedSpotLayer, pickSavedSpot, savedSpotStyle} fr
 import {SEAFLOOR_PICK, createSeafloor, seafloorLayers, seafloorSource} from './seafloor.ts';
 import {BASEMAP_MANIFEST, BASEMAP_SOURCE, basemapArchive, basemapStyle} from './style.ts';
 import {camera, cameraParam, parseCamera, shownPresentation, terrainPick, type Camera} from './stage.ts';
+import {basemapThemePaint, paintEdits} from './theme-restyle.ts';
 
 /** FE-10's manifest reader moved to style.ts with the basemap (FE-25 reads it on the landing without the Chart). */
 export {BASEMAP_MANIFEST, basemapArchive};
@@ -93,6 +94,14 @@ export function chartStyle(o: ChartStyleOptions): MapLibre.StyleSpecification {
   layers.push({id: ENC_LAYER, type: 'raster', source: ENC_SOURCE, minzoom: ENC_MIN_ZOOM - ZOOM_OFFSET, layout: {visibility: o.base === 'chart' ? 'visible' : 'none'}});
   layers.push(...mpaLayers(o.palette), ...marks.habitat, ...seafloorLayers(o.palette), ...marks.marks, ...ranked.layers, ...saved.layers, ...coastlineLayers(o.palette));
   return {...style, sources, layers} as unknown as MapLibre.StyleSpecification;
+}
+
+/** The theme paints for the Chart's static layers not handled by the engine's basemap provider. */
+export function chartThemePaint(palette: Palette) {
+  const basemap = new Set(basemapThemePaint(palette).map(({layer}) => layer));
+  const page = 'https://chart.invalid/';
+  const {layers} = chartStyle({palette, archive: `${page}basemap.pmtiles`, page, region: 'theme', base: 'chart', shoreline: 'shoreline.geojson'});
+  return paintEdits(layers.filter(({id}) => id !== ENC_LAYER && !basemap.has(id)));
 }
 
 /** Mark a registry layer unavailable once. */
@@ -247,6 +256,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
           }
         },
       });
+      // The style owns these layers and their order; the overlay only registers their paint provider.
+      e.setOverlay('chart-style-theme', {sources: {}, layers: [], themePaint: chartThemePaint});
       // Before `engine` is set: its effect would otherwise send the style's own shoreline again (a second 0.6 MB request).
       drawnRegion = id;
       engine.value = e;

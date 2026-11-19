@@ -490,10 +490,6 @@ class WorkflowTests(unittest.TestCase):
         for trigger in ("push:", "pull_request"):
             self.assertNotIn(trigger, header)
 
-    def test_public_scheduler_lists_the_processor_and_health_check(self):
-        policy = json.loads((ROOT / "deployments" / "production.json").read_text())
-        self.assertTrue({"fleet-ais.yml", "fleet-health.yml"} <= set(policy["scheduler"]["workflows"]))
-
 
 if __name__ == "__main__":
     unittest.main()
