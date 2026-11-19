@@ -12,7 +12,7 @@ import {contrastOverlay} from '../web/map/contrast.ts';
 import {fieldTexture} from '../web/map/field.ts';
 import {parseForecast, WAVE_MODEL} from '../web/map/forecast-grid.ts';
 import {frontsOverlay} from '../web/map/fronts.ts';
-import {ramps, readPalette} from '../web/map/palette.ts';
+import {PALETTE_TOKENS, ramps, readPalette} from '../web/map/palette.ts';
 import {analysisStatus, createWaterTemp, waterTempOverlay} from '../web/map/sst.ts';
 import {HEIGHT_SCALE, createSwell, swellOverlay, swellPartition, swellState} from '../web/map/swell.ts';
 import {windOverlay} from '../web/map/wind.ts';
@@ -20,6 +20,7 @@ import {configureStore, syncFromURL} from '../web/state.ts';
 import {runThemePaintOracle, assertThemePaintOracle, fakeMap} from './theme-paint-oracle.mjs';
 import {NEARSHORE_HIT, NEARSHORE_LAYER, ringHitLayer, ringLayer} from '../web/map/nearshore.ts';
 import {paintEdits, restyle} from '../web/map/theme-restyle.ts';
+import {createEngine} from '../web/map/engine.ts';
 
 const css = readFileSync(new URL('../web/tokens.css', import.meta.url), 'utf8');
 const colours = themes(css), controls = {'map-road-opacity': '0.65', 'map-label-opacity': '0.75'};
@@ -217,3 +218,53 @@ for (const [name, body, field] of [['rings only', {region_id: 'morro-bay', retri
     assert.ok(ringEdits.length >= 6, 'ring edits are present');
   });
 }
+
+// Contract: a theme that changes while the style is still loading leaves the swell texture in the FINAL theme. The
+// overlay and its first (dark) texture are queued by the real engine; the switch to light comes before `style.load`;
+// the engine installs the overlay (its `themePaint` repaints the texture light) and then must not flush the older
+// queued dark texture over it. Bug: the flush wins, so the light chart shows a dark swell field until the next switch,
+// while the closure's bookkeeping already says "light" (so nothing repaints it).
+test('swell: a theme switch before the style loads leaves the light texture, not the queued dark one', async t => {
+  t.mock.timers.enable({apis: ['setTimeout']});
+  browser(`${PAGE}?region=morro-bay&layers=swell&hour=2026-10-09T20:00Z`);
+  swellPartition.value = 'primary';
+  const dataset = {theme: 'dark'}, tokens = new Map(Object.entries(PALETTE_TOKENS).map(([key, token]) => [`--${token}`, key]));
+  const globals = {document: {documentElement: {dataset}}, getComputedStyle: () => ({getPropertyValue: name => palettes[dataset.theme][tokens.get(name)]}),
+    MutationObserver: class { observe() {} disconnect() {} }};
+  const old = Object.fromEntries(Object.keys(globals).map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  Object.assign(globalThis, globals);
+  t.after(() => { for (const [key, desc] of Object.entries(old)) { if (desc) Object.defineProperty(globalThis, key, desc); else delete globalThis[key]; } });
+  const maps = [];
+  class FakeMap {
+    constructor(options) { this.handlers = {}; this.sources = {}; this.layers = options.style.layers.map(l => l.id); this.images = []; this.keyboard = this.touchZoomRotate = {disableRotation() {}}; maps.push(this); }
+    on(type, fn) { (this.handlers[type] ??= []).push(fn); }
+    fire(type) { for (const fn of this.handlers[type] ?? []) fn({}); }
+    addControl() {}
+    getLayer(id) { return this.layers.includes(id) ? {} : undefined; }
+    getSource(id) { return this.sources[id]; }
+    addSource(id, spec) { const map = this; this.sources[id] = {spec, updateImage(o) { map.images.push([id, o]); }, setData() {}}; }
+    removeSource(id) { delete this.sources[id]; }
+    addLayer(l) { this.layers.push(l.id); }
+    removeLayer(id) { this.layers = this.layers.filter(l => l !== id); }
+    setPaintProperty() {}
+    hasImage() { return false; }
+    addImage() {}
+    updateImage() {}
+    remove() {}
+  }
+  const control = class {}, module = {lib: {Map: FakeMap, NavigationControl: control, ScaleControl: control, AttributionControl: control, setWorkerUrl() {}, addProtocol() {}},
+    workerUrl: '/w.js', Protocol: class { constructor() { this.tile = () => {}; } }};
+  const eng = createEngine(module, {host: {}, style: {version: 8, sources: {}, layers: [{id: 'water'}]}, camera: {latitude: 35.3, longitude: -120.9, zoom: 10}, onMove() {}, onLayerError() {}});
+  const [map] = maps;
+  const s = createSwell({engine: signal(eng), zone: () => TZ, fetchFn: async () => ({ok: true, json: async () => feed()}), page: () => PAGE, palette: () => palettes[dataset.theme], now: () => NOW});
+  t.after(() => s.destroy());
+  await flush();
+  const frame = swellState.value.drawn;
+  assert.ok(frame && map.images.length === 0, 'the overlay and its dark texture are queued: nothing is painted before the style loads');
+
+  dataset.theme = 'light';
+  map.fire('style.load');
+  const shown = map.images.at(-1)[1].image, light = fieldTexture(frame.field, HEIGHT_SCALE, ramps(palettes.light).swell, v => v[0]);
+  assert.ok(same(shown, light), 'the last pixels painted are the light ramp\'s');
+  assert.ok(!same(shown, fieldTexture(frame.field, HEIGHT_SCALE, ramps(palettes.dark).swell, v => v[0])), 'and not the queued dark ones');
+});

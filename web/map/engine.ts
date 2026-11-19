@@ -359,15 +359,21 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     const image = typeof ImageData === 'function' ? new ImageData(t.data, t.width, t.height) : t as unknown as ImageData;
     (map.getSource(sourceId) as MapLibre.ImageSource | undefined)?.updateImage({image, coordinates: t.coordinates});
   };
+  // The queue being flushed by `style.load`, so a texture an overlay writes while it is installed (its `themePaint`
+  // repainting for a theme that changed before the style loaded) replaces the older queued one rather than being overwritten by it.
+  let flushing: {images: Map<string, FieldTexture>} | null = null;
   map.on('style.load', () => {
     const pending = early;
     early = null;
-    applyTheme();
-    pending?.overlays.forEach(({overlay, before}, layer) => draw(layer, overlay, before));
-    pending?.visible.forEach((visible, layerId) => show(layerId, visible));
-    pending?.data.forEach((data, sourceId) => fill(sourceId, data));
-    pending?.opacity.forEach((opacity, layerId) => fade(layerId, opacity));
-    pending?.images.forEach((texture, sourceId) => paint(sourceId, texture));
+    flushing = pending;
+    try {
+      applyTheme();
+      pending?.overlays.forEach(({overlay, before}, layer) => draw(layer, overlay, before));
+      pending?.visible.forEach((visible, layerId) => show(layerId, visible));
+      pending?.data.forEach((data, sourceId) => fill(sourceId, data));
+      pending?.opacity.forEach((opacity, layerId) => fade(layerId, opacity));
+      pending?.images.forEach((texture, sourceId) => paint(sourceId, texture));
+    } finally { flushing = null; }
   });
 
   // The flyover (#646): max pitch rises only while it flies; each leg starts at the last one's moveend.
@@ -435,7 +441,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     },
     setImage(sourceId, texture) {
       if (early && !map.getSource(sourceId)) early.images.set(sourceId, texture);
-      else { early?.images.delete(sourceId); paint(sourceId, texture); }
+      else { early?.images.delete(sourceId); flushing?.images.delete(sourceId); paint(sourceId, texture); }
     },
     destroy() { destroyed = true; cancelPick(); retired.clear(); flight?.(); resize?.disconnect(); themeObserver?.disconnect(); map.remove(); },
   };
