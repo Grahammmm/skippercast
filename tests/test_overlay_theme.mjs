@@ -14,6 +14,7 @@ import {sstOverlay} from '../web/map/preview/sst.ts';
 import {reachOverlay} from '../web/map/reach.ts';
 import {shoreCollections, shoreOverlay} from '../web/map/shore.ts';
 import {stationOverlay} from '../web/map/stations.ts';
+import {swellOverlay} from '../web/map/swell.ts';
 import {appView, current, hour, presentation} from '../web/state.ts';
 import {assertThemePaintOracle} from './theme-paint-oracle.mjs';
 
@@ -83,6 +84,18 @@ test('sst preview: the break lines follow the theme; the cell colours stay the f
 test('nearshore rings: nearshoreThemePaint equals a fresh ring build in both themes', () => {
   // Contract: the rings mount inside Swell's overlay, whose themePaint spreads this in. Bug: ring colours left stale (blue ring on the other theme's water).
   assertThemePaintOracle({build: p => ({layers: [ringHitLayer(p), ringLayer(p)]}), provider: {themePaint: nearshoreThemePaint}, palettes});
+});
+
+test('swell overlay mounts the rings\' themePaint: the overlay the engine installs restyles its rings in place', () => {
+  // Contract: the overlay swell.ts hands to engine.setOverlay (not just the nearshore helper) carries the ring paints, which the engine applies on a theme switch.
+  // Bug: the helper exists but swellOverlay never sets themePaint, so visible rings keep the previous theme's blue stroke.
+  const ringIds = [ringHitLayer(palettes.dark), ringLayer(palettes.dark)].map(l => l.id);
+  for (const field of [false, true]) {
+    const build = p => { const o = swellOverlay(p, {field, rings: true}); return {layers: o.layers.filter(l => ringIds.includes(l.id))}; };
+    assert.equal(typeof swellOverlay(palettes.dark, {field, rings: true}).themePaint, 'function', `field=${field}`);
+    const report = assertThemePaintOracle({build, provider: swellOverlay(palettes.dark, {field, rings: true}), palettes});
+    assert.ok(report.steps.every(s => s.mismatches.length === 0), `field=${field}`);
+  }
 });
 
 test('theme-invariant inventory: aerial, clouds and the preview chlorophyll, currents and seafloor layers use no palette', () => {

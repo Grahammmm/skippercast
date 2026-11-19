@@ -46,7 +46,7 @@ import {layerEntry, setRailNote} from './layers.ts';
 import {pair, sp, type StatusCopy, type StatusPart} from './status-copy.ts';
 import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {MPA_FILL} from './mpa.ts';
-import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, ringHitLayer, ringLayer, ringMark, type Rings} from './nearshore.ts';
+import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, nearshoreThemePaint, ringHitLayer, ringLayer, ringMark, type Rings} from './nearshore.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
 import {LABEL_FONT} from './style.ts';
@@ -250,7 +250,8 @@ export function swellOverlay(p: Palette, {field = true, rings = false}: {field?:
     ],
   };
   if (!rings) return drawn;
-  return {sources: {...field ? drawn.sources : {}, [NEARSHORE_SOURCE]: empty}, layers: [...field ? drawn.layers : [], ringHitLayer(p), ringLayer(p)]};
+  // The rings restyle in place on a theme switch (THEME-ROUTE): the engine runs the installed overlay's themePaint.
+  return {sources: {...field ? drawn.sources : {}, [NEARSHORE_SOURCE]: empty}, layers: [...field ? drawn.layers : [], ringHitLayer(p), ringLayer(p)], themePaint: nearshoreThemePaint};
 }
 
 /** The mark card's reading at a clicked point inside the drawn field, or null outside it. */
