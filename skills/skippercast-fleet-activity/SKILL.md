@@ -57,16 +57,16 @@ the public repository: those `gh` commands take `--repo Grahammmm/skippercast`.
 
 `fleet-ais.yml` keeps one pending run in its concurrency group: a newer
 dispatch or the next scheduled run cancels the pending one. Dispatch one at a
-time, check with `gh run list --workflow fleet-ais.yml --event workflow_dispatch --limit 1`
-that it started, and wait for it (`gh run watch <run id>`) before the next.
+time, check with `gh run list --repo Grahammmm/skippercast-ops --workflow fleet-ais.yml --event workflow_dispatch --limit 1`
+that it started, and wait for it (`gh run watch <run id> --repo Grahammmm/skippercast-ops`) before the next.
 
 ## Modes
 
 ### `cycle` (daily)
 
-1. Health: `gh run list --workflow fleet-ais.yml --limit 10 --json databaseId,status,conclusion,createdAt,url`,
-   the same for `fleet-health.yml`, and
-   `gh issue list --label fleet-ais-stale --state open`. An open stale issue
+1. Health: `gh run list --repo Grahammmm/skippercast-ops --workflow fleet-ais.yml --limit 10 --json databaseId,status,conclusion,createdAt,url`,
+   `gh run list --repo Grahammmm/skippercast --workflow fleet-health.yml --limit 10 --json databaseId,status,conclusion,createdAt,url`, and
+   `gh issue list --repo Grahammmm/skippercast --label fleet-ais-stale --state open`. An open stale issue
    is a stop condition.
 2. Watch list: `python -m skippercast.fleet.ais watch-check --region <id>`
    (read only; counts by status and method).
@@ -74,7 +74,7 @@ that it started, and wait for it (`gh run watch <run id>`) before the next.
    size only. Report the backup as a gap.
 4. Aggregation needs no dispatch: every `ais process` run rebuilds the heat
    cells of the seasons it touched. Take trip and cell counts from the last
-   processor run's summary (`gh run view <run id> --log`).
+   processor run's summary (`gh run view <run id> --repo Grahammmm/skippercast-ops --log`).
 5. Validation, *on the runner*, when label copies exist under
    `<FLEET_VAR>/<id>/ais/validation/`:
    `python -m skippercast.fleet.ais validate --region <id> --offline --labeller admin`.
@@ -88,7 +88,7 @@ that it started, and wait for it (`gh run watch <run id>`) before the next.
 
 ### `backfill <month>`
 
-`gh workflow run fleet-ais.yml -f backfill_month=<YYYY-MM>`: NOAA
+`gh workflow run fleet-ais.yml --repo Grahammmm/skippercast-ops -f backfill_month=<YYYY-MM>`: NOAA
 MarineCadastre history for one month per dispatch, up to 150 minutes each;
 wait for it before the next month. Every row is tagged `noaa-planning-only`
 and stays off paid surfaces. Unlabelled backfill positions are deleted 30
@@ -96,14 +96,14 @@ days after ingest, so labelling follows promptly.
 
 ### `reprocess <from> <to>`
 
-`gh workflow run fleet-ais.yml -f from=<YYYY-MM-DD> -f to=<YYYY-MM-DD>`:
+`gh workflow run fleet-ais.yml --repo Grahammmm/skippercast-ops -f from=<YYYY-MM-DD> -f to=<YYYY-MM-DD>`:
 re-runs that window of departures with the current classifier, for example
 after a threshold change merges. Positions older than the raw store's
 retention are gone; reprocess those months from a backfill instead.
 
 ### `validate`
 
-`gh workflow run fleet-ais.yml -f validate=true` syncs the labels and their
+`gh workflow run fleet-ais.yml --repo Grahammmm/skippercast-ops -f validate=true` syncs the labels and their
 copies and writes the report to the run summary. Or, *on the runner*:
 `python -m skippercast.fleet.ais validate --region <id> --offline`. Report
 fishing precision and recall overall and per mode against the targets (0.8
