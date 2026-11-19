@@ -66,14 +66,21 @@ def main():
         raise ValueError('Reviewed footprint inventory required')
     ids = {source for tile in inventory['tiles'] for source in tile['source_ids']}
     sources = []
-    for path, cache, id_key in ((args.usgs_audit, args.usgs_cache, 'release_id'),
-                                (args.map_audit, args.map_cache, 'block_id')):
-        audit = json.loads(path.read_text())
-        for original in audit['products']:
-            if (original.get(id_key) in ids and original.get('kind') == 'seafloor_character'
-                    and original.get('status') == 'ok'):
-                sources.append(({**original, 'release_id': original[id_key]}, cache))
-    results, failures = [], []
+    if ids:
+        for path, cache, id_key in ((args.usgs_audit, args.usgs_cache, 'release_id'),
+                                    (args.map_audit, args.map_cache, 'block_id')):
+            try:
+                audit = json.loads(path.read_text())
+            except FileNotFoundError:
+                continue  # Unmatched requested IDs are recorded as holds below.
+            for original in audit['products']:
+                if (original.get(id_key) in ids and original.get('kind') == 'seafloor_character'
+                        and original.get('status') == 'ok'):
+                    sources.append(({**original, 'release_id': original[id_key]}, cache))
+    missing = ids - {row['release_id'] for row, _ in sources}
+    results = []
+    failures = [{'release_id': ident, 'archive_sha256': None,
+                 'error': 'No successful original seafloor-character audit'} for ident in sorted(missing)]
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         jobs = {executor.submit(fetch, row, cache): row for row, cache in sources}
         for future in as_completed(jobs):
@@ -84,15 +91,18 @@ def main():
                 failures.append({'release_id': row['release_id'],
                                  'archive_sha256': row['archive_sha256'],
                                  'error': f'{type(exc).__name__}: {exc}'})
+    # A source can have more than one audited archive; all must verify for
+    # that source to count as verified. Keep individual archive outcomes.
+    failed_ids = {row['release_id'] for row in failures}
     report = {'schema_version': 1, 'scope': 'original-usgs-hard-footprint-class-archive-fetch',
-              'requested': len(sources), 'verified': len(results), 'failed': len(failures),
-              'status': 'complete' if not failures else 'partial',
+              'requested': len(ids), 'verified': len(ids - failed_ids), 'failed': len(failed_ids),
+              'status': 'empty' if not ids else 'partial' if failures else 'complete',
               'fishing_target': False, 'exportable': False,
               'archives': sorted(results, key=lambda r: (r['release_id'], r['archive_sha256'])),
-              'failures': sorted(failures, key=lambda r: (r['release_id'], r['archive_sha256']))}
+              'failures': sorted(failures, key=lambda r: (r['release_id'], r['archive_sha256'] or ''))}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + '\n')
-    print(report['verified'], '/', report['requested'], 'verified;', report['failed'], 'failed')
+    print(f"{report['status']}: {report['verified']} / {report['requested']} sources verified; {report['failed']} held")
     if failures:
         raise SystemExit(1)
 
