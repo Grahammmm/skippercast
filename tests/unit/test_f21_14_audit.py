@@ -1,18 +1,15 @@
-"""SCA-593: regional boundary and freshness controls (invented features only).
+"""SCA-593/446: synthetic regional parity and separate freshness controls.
 
-Run as a module with NumPy, Node 22+ and locked web dependencies for the
-read-only baseline comparison.
-Pytest exercises the Python side without requiring Node in the Python jobs.
+Run as a module with NumPy, Node 22+ and locked web dependencies to replay
+both real engines offline. Pytest exercises the Python input pin without Node.
 """
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
-import hashlib
+import base64
 import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 from tempfile import TemporaryDirectory
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -22,7 +19,8 @@ from tests._support import ROOT
 REGIONS = ('fixture-west', 'fixture-east')
 NOW = '2000-01-03T00:00:00Z'
 STALE = '2000-01-01T00:00:00Z'
-INSIDE = {REGIONS[0]: True, REGIONS[1]: False}
+LATER = '2000-01-03T01:00:00Z'
+INSIDE = dict(zip(REGIONS, (True, False), strict=True))
 
 
 def _write(path, doc):
@@ -31,175 +29,128 @@ def _write(path, doc):
     return path
 
 
+def _asset(root, region):
+    return root / 'dist/data' / f'{region}.geojson'
+
+
+def _boundary(x, name):
+    return {'type': 'Feature', 'properties': {'NAME': name}, 'geometry': {
+        'type': 'Polygon', 'coordinates': [[[x-1, -1], [x+1, -1], [x+1, 1], [x-1, 1], [x-1, -1]]]}}
+
+
 def _fixture(root):
     for i, region in enumerate(REGIONS):
-        x = 4 * i
-        asset = f'data/{region}.geojson'
+        assets = {'protected_areas': f'data/{region}.geojson'}
+        if i:
+            assets['closures'] = 'data/extra.geojson'
+            _write(root / 'dist' / assets['closures'], {
+                'type': 'FeatureCollection', 'checked_at': NOW, 'region_id': region,
+                'features': [_boundary(6, 'Additional exclusion')]})
         _write(root / 'dist/regions' / region / 'region.json', {
             'schema_version': 1, 'id': region, 'forecast_points': [{'id': 'fixture'}],
-            'assets': {'protected_areas': asset},
-            'mpa': {'bounds': [-10, -10, 10, 10], 'minimum_features': 1}})
-        _write(root / 'dist' / asset, {
-            'type': 'FeatureCollection', 'checked_at': NOW, 'features': [{
-                'type': 'Feature', 'properties': {'NAME': region}, 'geometry': {
-                    'type': 'Polygon', 'coordinates': [[[x-1, -1], [x+1, -1], [x+1, 1], [x-1, 1], [x-1, -1]]]}}]})
+            'assets': assets, 'mpa': {'bounds': [-10 + i, -10, 10, 10], 'minimum_features': 1}})
+        _write(_asset(root, region), {'type': 'FeatureCollection', 'checked_at': NOW,
+                                    'features': [_boundary(4 * i, region)]})
     return _write(root / 'export.geojson', {'type': 'FeatureCollection', 'features': [{
         'type': 'Feature', 'geometry': {'type': 'Point', 'coordinates': [0, 0]},
         'properties': {'id': 'reef', 'waypoint': {'longitude': 0, 'latitude': 0}}}]})
 
 
-def _selection(root, region, export):
-    from skippercast.seafloor import protected_screen as ps
-
-    loaded = ps.load_screen(root, region)
-    assert loaded is not None, f'no boundary for {region}'
-    bounds, boundary, (relative,) = loaded
-    artifact = root / 'dist' / relative
-    raw = artifact.read_bytes()
-    doc = json.loads(raw)
-    assert doc['features'] == boundary  # the exact selected file must feed both engines
-    feature, = json.loads(export.read_bytes())['features']
-    verdict = ps.verdicts(boundary, bounds, [('reef', feature['geometry'], 0, 0)])['reef']
-    assert verdict['screened'] and verdict['inside'] is INSIDE[region]
-    return artifact, hashlib.sha256(raw).hexdigest()
-
-
-def _current(path, now):
-    checked = datetime.fromisoformat(json.loads(path.read_bytes())['checked_at'])
-    return -timedelta(minutes=5) <= datetime.fromisoformat(now) - checked <= timedelta(hours=36)
-
-
 @pytest.mark.gis
-def test_regional_selection_resolves_distinct_artifacts_and_verdicts(tmp_path):
-    export = _fixture(tmp_path)
-    west, east = (_selection(tmp_path, region, export) for region in REGIONS)
-    assert west[0] != east[0] and west[1] != east[1]
+def test_regional_selection_pins_ordered_exact_artifact_bytes_and_clock(tmp_path):
+    from scripts import protected_screen_parity as parity
 
-
-# A file-based Node bootstrap freezes the clock and initializes the synthetic
-# region before importing the real browser screen (its envelope is import-time).
-BOOT = '''
-import {createHash} from 'node:crypto';
-import {readFileSync, writeFileSync} from 'node:fs';
-import {pathToFileURL} from 'node:url';
-const [mode, config, now, entry, input, out, ...args] = process.argv.slice(2);
-const RealDate = Date;
-globalThis.Date = class extends RealDate {
-  constructor(...args) { super(...(args.length ? args : [now])); }
-  static now() { return RealDate.parse(now); }
-};
-globalThis.fetch = () => { throw Error('offline fixture: unexpected fetch'); };
-globalThis.CustomEvent = class {};
-globalThis.document = {getElementById: () => ({classList: {toggle() {}}}), dispatchEvent() {}};
-const region = JSON.parse(readFileSync(config));
-const {setRegion} = await import('./dist/region.js');
-setRegion(region);
-if (mode === 'legacy') {
-  process.argv = [process.execPath, entry, input, out, ...args];
-  await import(pathToFileURL(entry).href);
-} else {
-  const raw = readFileSync(entry);
-  const {initProtectedAreas} = await import('./dist/protected-areas.js');
-  const {screenPlace} = await import('./dist/geo-screen.js');
-  const screen = await initProtectedAreas(null, () => {}, async url => {
-    if (url !== region.assets.protected_areas) throw Error('wrong artifact request');
-    return JSON.parse(raw);  // no freshening or reserialization of the input bytes
-  });
-  const {geometry} = JSON.parse(readFileSync(input)).features[0];
-  const verdicts = screen.ready() ? {reef: screenPlace(screen, {
-    latitude: 0, longitude: 0, geometries: [geometry],
-  })} : {};
-  writeFileSync(out, JSON.stringify({fingerprint: screen.fingerprint(), verdicts, ms: 0,
-    ready: screen.ready(), sha256: createHash('sha256').update(raw).digest('hex')}));
-}
-'''
+    _fixture(tmp_path)
+    now = 946857600000  # NOW in epoch milliseconds
+    with patch.object(parity, 'REPO', tmp_path):
+        for i, region in enumerate(REGIONS):
+            loaded = parity._pin(region, now)
+            assert loaded is not None
+            bounds, features, current, packet = loaded
+            pinned = json.loads(packet)
+            assert current and pinned['now'] == now and pinned['region']['id'] == region
+            paths = [_asset(tmp_path, region)]
+            if i:
+                paths.append(tmp_path / 'dist/data/extra.geojson')
+            assert {key: base64.b64decode(raw) for key, raw in pinned['assets'].items()} == {
+                path.relative_to(tmp_path / 'dist').as_posix(): path.read_bytes() for path in paths}
+            assert [parity.ps.feature_name(f) for f in features] == [region] + (['Additional exclusion'] if i else [])
+            verdict = parity.ps.verdicts(features, bounds, [('reef', {'type': 'Point', 'coordinates': [0, 0]}, 0, 0)])['reef']
+            assert verdict['screened'] and verdict['inside'] is INSIDE[region]
 
 
 def _stage_node(root):
-    # Copy just the real CLI so its fixed default reads the *synthetic* west
-    # artifact. The browser code itself is imported unchanged from the checkout.
+    # A hard-coded default would see the synthetic west asset, not live data.
     scripts = root / 'scripts'
     scripts.mkdir()
     oracle = scripts / 'protected_screen_oracle.mjs'
     shutil.copyfile(ROOT / 'scripts' / oracle.name, oracle)
+    shutil.copyfile(ROOT / 'scripts/protected_screen_parity.py', scripts / 'protected_screen_parity.py')
+    (root / 'src').symlink_to(ROOT / 'src', target_is_directory=True)
     for name in ('region.js', 'protected-areas.js', 'geo-screen.js'):
-        (root / 'dist' / name).symlink_to(ROOT / 'dist' / name)
-    default = root / 'dist/data/protected-areas.geojson'
-    default.symlink_to(f'{REGIONS[0]}.geojson')
-    boot = root / 'boot.mjs'
-    boot.write_text(BOOT, encoding='utf-8')
-    return oracle, boot
+        # Keep real module identity even when Node preserves symlinks.
+        source = (ROOT / 'dist' / name).as_uri()
+        (root / 'dist' / name).write_text(f'export * from {json.dumps(source)};\n')
+    (root / 'dist/data/protected-areas.geojson').symlink_to(f'{REGIONS[0]}.geojson')
 
 
-def _baseline(root):
-    from scripts import protected_screen_parity as parity
-
-    export = _fixture(root)
-    oracle, boot = _stage_node(root)
-    out = root / 'oracle.json'
-
-    def node(mode, region, entry, input_path, *args):
-        config = root / 'dist/regions' / region / 'region.json'
-        run = subprocess.run(['node', str(boot), mode, str(config), NOW, str(entry),
-                              str(input_path), str(out), *args], capture_output=True, text=True, timeout=30)
-        if run.stdout:
-            print(run.stdout, end='')
-        return run
-
-    gap = False
+def _regional_parity(root, compare):
+    # Default-region reuse or import-time envelope binding breaks east;
+    # losing the supplemental closure also changes east's fingerprint.
+    saved = []
     for region in REGIONS:
-        asset, digest = _selection(root, region, export)
-        assert _current(asset, NOW)
-        # A reference process loads the same requested bytes and test clock.
-        node('reference', region, asset, export).check_returncode()
-        reference = json.loads(out.read_bytes())
-        assert reference['ready'] and reference['sha256'] == digest
-        args = [str(export), '--region', region, '--workers', '1']
-        with patch.multiple(parity, REPO=root, ProcessPoolExecutor=ThreadPoolExecutor):
-            print(f'{region}: same-byte reference (sha256={digest})', flush=True)
-            assert parity.main([*args, '--oracle', str(out)]) == 0
-            default_output = f'/tmp/protected-screen-oracle-{region}.json'
+        out = root / f'{region}.json'
+        assert compare(region, NOW, '--limit', '1', '--write-oracle', str(out)).returncode == 0
+        record = json.loads(out.read_bytes())
+        verdict = record['verdicts']['reef']
+        assert verdict['screened'] and verdict['inside'] is INSIDE[region]
+        saved.append(record['inputSha256'])
+        assert compare(region, NOW, '--oracle', str(out)).returncode == 0
+    assert saved[0] != saved[1]
+    print('regional parity: two matching fingerprints, different pinned inputs and inside verdicts', flush=True)
 
-            def run_oracle(cmd, *, check):
-                exe, entry, input_path, output, *rest = cmd
-                assert check and (exe, entry, input_path, output) == (
-                    'node', str(oracle), str(export), str(out))
-                result = node('legacy', REGIONS[0], entry, input_path, *rest)
-                assert result.returncode == 0, result.stderr
+    # Changes invisible to the geometry fingerprint must still invalidate reuse.
+    west = REGIONS[0]
+    out = root / f'{west}.json'
+    wrong_clock = compare(west, LATER, '--oracle', str(out))
+    assert wrong_clock.returncode == 1 and 'oracle inputs or test clock do not match' in wrong_clock.stderr
+    asset = _asset(root, west)
+    asset.write_bytes(asset.read_bytes() + b'\n')
+    wrong_bytes = compare(west, NOW, '--oracle', str(out))
+    assert wrong_bytes.returncode == 1 and 'oracle inputs or test clock do not match' in wrong_bytes.stderr
+    print('oracle reuse: changed clock and whitespace-only boundary change refused', flush=True)
 
-            # Relocate only the hard-coded output path and supply a synthetic
-            # default region; the production comparator still picks its argv.
-            with patch.multiple(parity, Path=lambda p: out if p == default_output else Path(p),
-                                subprocess=SimpleNamespace(run=run_oracle)):
-                code = parity.main(args)
-            print(f'{region}: {"PASS" if code == 0 else "GAP"}; baseline parity exit {code}')
-            if region == REGIONS[0]:
-                assert code == 0, 'default-region positive control failed'
-            gap |= code != 0
 
-    # Separate freshness control: explicitly pass the stale bytes to the
-    # real oracle, so timestamp laundering cannot be mistaken for wrong region.
-    west = root / 'dist/data' / f'{REGIONS[0]}.geojson'
-    stale = _write(root / 'stale.geojson', {**json.loads(west.read_bytes()), 'checked_at': STALE})
-    assert not _current(stale, NOW)
-    node('reference', REGIONS[0], stale, export).check_returncode()
-    reference = json.loads(out.read_bytes())
-    assert not reference['ready'] and not reference['verdicts']
-    assert reference['sha256'] == hashlib.sha256(stale.read_bytes()).hexdigest()
-    out.unlink()
-    result = node('legacy', REGIONS[0], oracle, export, '--boundaries', str(stale))
-    if result.returncode:
-        assert 'oracle screen is not current' in result.stderr, result.stderr
-        assert not out.exists(), 'stale refusal left an oracle result'
-        print('stale: oracle refused')
-    else:
-        actual = json.loads(out.read_bytes())
-        assert actual['fingerprint'] and actual['verdicts']['reef']['screened']
-        print('stale: GAP; fixed-clock reference withheld verdict, baseline emitted a screened verdict')
-        gap = True
-    return int(gap)
+def _stale_parity(root, compare):
+    # Keep the region, geometries and clock fixed; only the stored check time
+    # changes. The real browser oracle must refuse, not stamp the file current.
+    west = REGIONS[0]
+    asset = _asset(root, west)
+    _write(asset, {**json.loads(asset.read_bytes()), 'checked_at': STALE})
+    out = root / 'stale.json'
+    generated = compare(west, NOW, '--write-oracle', str(out))
+    assert generated.returncode == 1 and 'oracle screen is not current' in generated.stderr
+    assert not out.exists()
+    reused = compare(west, NOW, '--oracle', str(root / f'{west}.json'))
+    assert reused.returncode == 1 and 'boundary snapshot is not current' in reused.stderr
+    print('stale parity: Node refused the original timestamp; Python refused cached verdicts', flush=True)
+
+
+def _replay(root):
+    export = _fixture(root)
+    _stage_node(root)
+
+    def compare(region, now, *args):
+        result = subprocess.run([sys.executable, str(root / 'scripts/protected_screen_parity.py'), str(export),
+                                 '--region', region, '--workers', '1', '--at', now, *args],
+                                capture_output=True, text=True, timeout=30)
+        print(f'{region}: exit {result.returncode}\n{result.stdout}{result.stderr}', end='', flush=True)
+        return result
+
+    _regional_parity(root, compare)
+    _stale_parity(root, compare)
 
 
 if __name__ == '__main__':
     with TemporaryDirectory(prefix='f21-14-') as scratch:
-        raise SystemExit(_baseline(Path(scratch)))
+        _replay(Path(scratch))
