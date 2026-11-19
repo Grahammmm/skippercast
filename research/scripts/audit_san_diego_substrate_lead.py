@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+from stat import S_ISREG
 import urllib.parse
 import urllib.request
 
@@ -19,11 +20,34 @@ from pyproj import Transformer
 from shapely.geometry import Point, shape
 from shapely.ops import transform
 
-from research.scripts.audit_usgs_video_observations import open_original_zip
-
+ROOT = Path(__file__).resolve().parents[2]
 LAYER = 'https://gis.cnra.ca.gov/arcgis/rest/services/Ocean/CSMW_San_Diego_Nearshore_Seafloor_Substrate/MapServer/0'
 BOUNDS = (-117.35, 32.77, -117.30, 32.85)
 BAG_SUFFIX = 'H11876_MB_2m_MLLW_2of5.bag'
+
+
+def resolve_audit_destinations(private_path, report_path, *, root):
+    """Validate the output pair before reading inputs or generating private data."""
+    private_root = root / 'var/review'
+    private = private_path.resolve()
+    report = report_path.resolve()
+    # Do not trust a redirected var/review, or a public path aliasing it.
+    if private_root not in private.parents or private_path.absolute() != private:
+        raise ValueError('Private polygons must remain in var/review without path aliases')
+    if private.is_relative_to(report) or report.is_relative_to(private):
+        raise ValueError('Private and aggregate outputs must be distinct files')
+    for path in (private, report):
+        try:
+            info = path.stat()
+        except FileNotFoundError:
+            continue
+        except NotADirectoryError as exc:
+            raise ValueError('Audit outputs must name regular files') from exc
+        if not S_ISREG(info.st_mode):
+            raise ValueError('Audit outputs must name regular files')
+        if path == private and info.st_nlink > 1:
+            raise ValueError('Private polygons cannot be written through a hard link')
+    return private, report
 
 
 def fetch(url):
@@ -80,6 +104,8 @@ def query(bounds=BOUNDS):
 
 
 def review(features, receipt, pair, camera_raw, invalid_ids=()):
+    from research.scripts.audit_usgs_video_observations import open_original_zip
+
     if pair['camera_archive_sha256'] != hashlib.sha256(camera_raw).hexdigest() \
             or not pair['bag_url'].endswith(BAG_SUFFIX):
         raise ValueError('Original camera/BAG identity changed')
@@ -128,21 +154,20 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--pairs', type=Path, default=Path('research/receipts/noaa-statewide-regular-camera-review.json'))
     p.add_argument('--camera-cache', type=Path, default=Path('var/usgs-video-cache/c0111sc_video_observations.zip'))
-    p.add_argument('--raw-output', type=Path, default=Path('var/review/cnra-sandag-la-jolla-substrate.geojson'))
+    p.add_argument('--raw-output', type=Path, default=ROOT / 'var/review/cnra-sandag-la-jolla-substrate.geojson')
     p.add_argument('--output', type=Path, default=Path('research/receipts/cnra-sandag-la-jolla-substrate-review.json'))
     a = p.parse_args()
+    raw_output, output = resolve_audit_destinations(a.raw_output, a.output, root=ROOT)
     rows = json.loads(a.pairs.read_text())['pair_reviews']
     matches = [r for r in rows if r['survey_id'] == 'H11876' and r['bag_url'].endswith(BAG_SUFFIX)]
     if len(matches) != 1:
         raise ValueError('One reviewed H11876 original BAG pair required')
     features, receipt, raw, invalid_ids = query()
     result = review(features, receipt, matches[0], a.camera_cache.read_bytes(), invalid_ids)
-    if not a.raw_output.resolve().is_relative_to(Path('var/review').resolve()):
-        raise ValueError('Unreviewed raw polygons must remain in var/review')
-    a.raw_output.parent.mkdir(parents=True, exist_ok=True)
-    a.raw_output.write_bytes(raw)
-    a.output.parent.mkdir(parents=True, exist_ok=True)
-    a.output.write_text(json.dumps(result, indent=2) + '\n')
+    raw_output.parent.mkdir(parents=True, exist_ok=True)
+    raw_output.write_bytes(raw)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps({'source_polygon_count': result['source_polygon_count'],
         'source_classes': result['source_classes'], 'fishing_target': False}))
 
