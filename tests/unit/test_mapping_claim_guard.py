@@ -352,6 +352,26 @@ class MappingClaimGuardTests(unittest.TestCase):
                                        "publication_artifact": recorded_artifact}, actor="coordinator-a")
             self.assertEqual(path.read_bytes(), before)
 
+    def test_producer_evidence_cannot_alias_the_checkpoint_it_is_recorded_in(self):
+        # Contract: a published checkpoint must still validate after the atomic
+        # rewrite. Evidence pinned to the checkpoint's own pre-update bytes
+        # passes the SHA check, then breaks it; the believable bug is update_job
+        # returning success on a checkpoint that immediately fails validation.
+        for alias in ("checkpoint.json", "./checkpoint.json", "symlink.json", "hardlink.json"):
+            with self.subTest(alias=alias), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                path, refs, contents = publication_fixture(root)
+                (root / "symlink.json").symlink_to(path)
+                (root / "hardlink.json").hardlink_to(path)
+                evidence = {"path": alias, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+                refs["rights"] = pinned_file(root, refs["rights"]["path"],
+                                             json.dumps(dict(contents["rights"], evidence=evidence)).encode())
+                before = path.read_bytes()
+                with self.assertRaisesRegex(GuardError, "must not be the checkpoint itself"):
+                    update_job(path, "a", {"state": "published", "publication_receipts": refs},
+                               actor="coordinator-a")
+                self.assertEqual(path.read_bytes(), before)
+
     def test_checkpoint_symlink_alias_is_rejected_without_replacing_target(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

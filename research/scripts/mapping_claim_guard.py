@@ -151,8 +151,13 @@ def _stop_proof(identity: dict[str, Any] | None, proof: Any,
                     for k in EXECUTION_FIELDS))
 
 
-def validate_checkpoint(checkpoint: dict[str, Any], *, base_dir: Path | None = None) -> None:
-    """Validate coordinator and exclusive active claims in one handoff object."""
+def validate_checkpoint(checkpoint: dict[str, Any], *, base_dir: Path | None = None,
+                        checkpoint_path: Path | None = None) -> None:
+    """Validate coordinator and exclusive active claims in one handoff object.
+
+    Pass checkpoint_path (the file this object is persisted to) so publication
+    evidence that aliases the checkpoint itself is refused.
+    """
     coordinator = _required(checkpoint, "coordinator")
     jobs = checkpoint.get("jobs")
     if not isinstance(jobs, list):
@@ -184,7 +189,7 @@ def validate_checkpoint(checkpoint: dict[str, Any], *, base_dir: Path | None = N
             _source_ids(job)
             active.append(job)
         if state == "published":
-            _require_publication_receipts(job, base_dir)
+            _require_publication_receipts(job, base_dir, checkpoint_path)
     for i, job in enumerate(active):
         for other in active[i + 1:]:
             if _overlaps(job, other):
@@ -195,8 +200,21 @@ def validate_checkpoint(checkpoint: dict[str, Any], *, base_dir: Path | None = N
     _ = coordinator
 
 
-def _pinned_publication_file(ref: Any, root: Path, label: str, *, receipt: bool = False) -> bytes | None:
-    """Verify an exact {path, sha256} reference; parse only bytes we verified."""
+def _same_file(a: Path, b: Path) -> bool:
+    try:
+        return os.path.samefile(a, b)
+    except OSError:  # the checkpoint is absent, so nothing can alias it
+        return False
+
+
+def _pinned_publication_file(ref: Any, root: Path, label: str, *, receipt: bool = False,
+                             checkpoint_path: Path | None = None) -> bytes | None:
+    """Verify an exact {path, sha256} reference; parse only bytes we verified.
+
+    A reference must not be the checkpoint itself (by path, symlink or hard
+    link): recording the transition rewrites those bytes, so the pin could not
+    survive the update it authorises.
+    """
     if (not isinstance(ref, dict) or ref.keys() != {"path", "sha256"}
             or not isinstance(ref["path"], str) or not ref["path"].strip()
             or not isinstance(ref["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", ref["sha256"])):
@@ -205,6 +223,8 @@ def _pinned_publication_file(ref: Any, root: Path, label: str, *, receipt: bool 
     try:
         if not path.is_file():
             raise GuardError(f"{label} is not a regular file")
+        if checkpoint_path is not None and _same_file(path, checkpoint_path):
+            raise GuardError(f"{label} must not be the checkpoint itself")
         with path.open("rb") as stream:
             if not stream.read(1):
                 raise GuardError(f"{label} is empty")
@@ -218,7 +238,8 @@ def _pinned_publication_file(ref: Any, root: Path, label: str, *, receipt: bool 
     return raw
 
 
-def _require_publication_receipts(job: dict[str, Any], base_dir: Path | None) -> None:
+def _require_publication_receipts(job: dict[str, Any], base_dir: Path | None,
+                                  checkpoint_path: Path | None = None) -> None:
     """Check coordinator attestations of existing producer evidence, not approval.
 
     Pin the exact artifact (or complete release manifest) in publication_artifact
@@ -237,10 +258,11 @@ def _require_publication_receipts(job: dict[str, Any], base_dir: Path | None) ->
         raise GuardError("publication evidence requires a positive job attempt")
     root = base_dir or Path.cwd()
     artifact = _required(job, "publication_artifact")
-    _pinned_publication_file(artifact, root, "publication artifact")
+    _pinned_publication_file(artifact, root, "publication artifact", checkpoint_path=checkpoint_path)
     for kind in sorted(PUBLICATION_KINDS):
         label = f"{kind} receipt"
-        raw = _pinned_publication_file(refs[kind], root, label, receipt=True)
+        raw = _pinned_publication_file(refs[kind], root, label, receipt=True,
+                                       checkpoint_path=checkpoint_path)
         try:
             content = json.loads(raw or b"")
         except (ValueError, RecursionError) as exc:
@@ -251,7 +273,8 @@ def _require_publication_receipts(job: dict[str, Any], base_dir: Path | None) ->
                 or not isinstance(content.get("job_id"), str) or not content["job_id"].strip()
                 or any(content.get(k) != v for k, v in expected.items())):
             raise GuardError(f"{label} does not attest PASS for this job, attempt and artifact")
-        _pinned_publication_file(content.get("evidence"), root, f"{kind} producer evidence")
+        _pinned_publication_file(content.get("evidence"), root, f"{kind} producer evidence",
+                                 checkpoint_path=checkpoint_path)
 
 
 @contextmanager
@@ -348,7 +371,7 @@ def update_job(path: str | Path, job_id: str, patch: dict[str, Any], *, actor: s
         else:
             job["execution_claim"] = dict(identity)
         job.update(patch)
-        validate_checkpoint(checkpoint, base_dir=checkpoint_path.parent)
+        validate_checkpoint(checkpoint, base_dir=checkpoint_path.parent, checkpoint_path=checkpoint_path)
         _atomic_write(checkpoint_path, checkpoint)
         return checkpoint
 
@@ -376,7 +399,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         data = json.loads(args.checkpoint.read_text(encoding="utf-8"))
-        validate_checkpoint(data, base_dir=args.checkpoint.parent)
+        validate_checkpoint(data, base_dir=args.checkpoint.parent, checkpoint_path=args.checkpoint)
     except (OSError, json.JSONDecodeError, GuardError) as exc:
         parser.error(str(exc))
     print(f"valid checkpoint: {len(data['jobs'])} jobs")
