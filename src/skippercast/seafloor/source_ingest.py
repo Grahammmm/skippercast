@@ -1,4 +1,5 @@
 """Route reviewed source formats without invalidating legacy native COG keys."""
+import contextlib
 import fcntl
 import hashlib
 from pathlib import Path
@@ -6,17 +7,38 @@ from pathlib import Path
 from skippercast.platform.contracts import REPO, bbox
 
 
-def ingest(row, bounds, *, root=REPO, fetch=False, local=None):
-    bbox(list(bounds))
-    # Locks live beside, not inside, the content-addressed cache so a refused
-    # import leaves the cache tree untouched. Keep the lock inode after closing:
-    # deleting it can split waiters across two inodes. Hold it through receipt
-    # installation in every adapter.
+@contextlib.contextmanager
+def _import_lock(root, row):
+    """Serialize importers that share a cache bucket, whatever URL named the source.
+
+    Every original, working TIFF and normalized output lives in
+    ``cache/<source sha256>/``, so the reviewed source SHA is the shared
+    identity: two reviewed URLs for the same bytes (or two rows, bounds or
+    adapters over them) must not run at once. A draft row whose SHA is still
+    ``unknown`` cannot name its bucket before download, so it takes the gate
+    exclusively and runs alone; known-SHA imports hold it shared and run in
+    parallel with each other. Locks live beside, not inside, the cache so a
+    refused import leaves the cache tree untouched. Lock inodes are kept after
+    closing: deleting one can split waiters across two inodes. Always take the
+    gate before the bucket lock so ordering cannot deadlock.
+    """
     locks = Path(root) / 'var/seafloor/import-locks'
     locks.mkdir(parents=True, exist_ok=True)
-    source_key = hashlib.sha256(row['url'].encode()).hexdigest()
-    with (locks / (source_key + '.lock')).open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    sha = row.get('sha256')
+    known = isinstance(sha, str) and len(sha) == 64 and set(sha) <= set('0123456789abcdef')
+    with contextlib.ExitStack() as stack:
+        gate = stack.enter_context((locks / 'unknown-source.gate').open('a'))
+        fcntl.flock(gate, fcntl.LOCK_SH if known else fcntl.LOCK_EX)
+        if known:
+            bucket = stack.enter_context((locks / (hashlib.sha256(sha.encode()).hexdigest() + '.lock')).open('a'))
+            fcntl.flock(bucket, fcntl.LOCK_EX)
+        yield
+
+
+def ingest(row, bounds, *, root=REPO, fetch=False, local=None):
+    bbox(list(bounds))
+    # Hold the lock through receipt installation in every adapter.
+    with _import_lock(root, row):
         return _ingest(row, bounds, root=root, fetch=fetch, local=local)
 
 

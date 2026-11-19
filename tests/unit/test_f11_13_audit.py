@@ -109,7 +109,10 @@ def test_routed_normalizers_commit_once_and_preserve_prior_pair(tmp_path, monkey
         first = pool.submit(source_ingest.ingest, row, bounds, root=tmp_path, local=source)
         try:
             assert copying.wait(10)
-            second = pool.submit(source_ingest.ingest, row, bounds, root=tmp_path, local=source)
+            # A different reviewed URL for the same source id and bytes shares the
+            # bucket, key and .working.tif/.part.tif, so it must wait on the same lock.
+            mirror = dict(row, url='https://cmgds.marine.usgs.gov/mirror/synthetic.tif')
+            second = pool.submit(source_ingest.ingest, mirror, bounds, root=tmp_path, local=source)
             assert contended.wait(10)
             assert len(copies) == 1
         finally:
@@ -138,3 +141,33 @@ def test_routed_normalizers_commit_once_and_preserve_prior_pair(tmp_path, monkey
     assert set(bucket.iterdir()) == committed.keys()
     assert {path: path.read_bytes() for path in committed} == committed
     assert source_ingest.ingest(row, bounds, root=tmp_path) == (saved, False, True)
+
+
+def _try_lock(path, operation):
+    with path.open('a') as handle:
+        try:
+            fcntl.flock(handle, operation | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return False
+        fcntl.flock(handle, fcntl.LOCK_UN)
+        return True
+
+
+def test_import_lock_is_keyed_by_source_sha_not_url(tmp_path):
+    # Contract: importers sharing a cache bucket are serialized whatever URL named
+    # the source; keying by URL let two mirrors of the same bytes run together and
+    # delete each other's .working.tif. Unknown-SHA drafts cannot name their bucket,
+    # so they run alone while known-SHA imports of other buckets still overlap.
+    locks = tmp_path / 'var/seafloor/import-locks'
+    gate = locks / 'unknown-source.gate'
+    sha = 'a' * 64
+    bucket = locks / (hashlib.sha256(sha.encode()).hexdigest() + '.lock')
+    row = dict(url='https://pubs.usgs.gov/a.tif', sha256=sha)
+    with source_ingest._import_lock(tmp_path, row):
+        mirror = dict(row, url='https://cmgds.marine.usgs.gov/mirror.tif')
+        assert mirror['sha256'] == sha and not _try_lock(bucket, fcntl.LOCK_EX)
+        assert _try_lock(gate, fcntl.LOCK_SH)            # other known sources overlap
+        assert not _try_lock(gate, fcntl.LOCK_EX)        # an unknown draft waits for all
+    with source_ingest._import_lock(tmp_path, dict(row, sha256='unknown')):
+        assert not _try_lock(gate, fcntl.LOCK_SH)        # the unknown draft runs alone
+    assert _try_lock(bucket, fcntl.LOCK_EX) and _try_lock(gate, fcntl.LOCK_EX)
