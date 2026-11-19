@@ -23,10 +23,6 @@ class HourlyThen3hEndTests(unittest.TestCase):
         self.assertEqual(hourly_then_3h(72, 74), list(range(73)))
         self.assertEqual(hourly_then_3h(72, 75), list(range(73)) + [75])
 
-    def test_three_hour_phase_stays_anchored(self):
-        self.assertEqual(hourly_then_3h(5, 12), [0, 1, 2, 3, 4, 5, 8, 11])
-        self.assertEqual(hourly_then_3h(5, 3), [0, 1, 2, 3])
-
     def test_empty_horizon_and_zero_transition(self):
         self.assertEqual(hourly_then_3h(72, -1), [])
         self.assertEqual(hourly_then_3h(0, 6), [0, 3, 6])

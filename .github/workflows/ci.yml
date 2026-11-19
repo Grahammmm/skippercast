@@ -7,17 +7,17 @@ on:
   # Merge queue: required checks must also report on the queued merge commit.
   merge_group:
     types: [checks_requested]
-  # Nightly full tier (CI policy R12): the slow suites also run on main pushes.
+  # Keep the nightly run in addition to per-revision checks.
   schedule:
     - cron: "0 9 * * *"
   # Bot pull requests opened with GITHUB_TOKEN (seafloor.yml) dispatch this run.
   workflow_dispatch:
 
-# CI policy R12 (fast PR tier). Pull requests run lint/type checks, the core
-# affected core/web areas on 3.11 and 3.13 (main's Pythons), affected GIS without
-# three slow coast modules, and e2e when the selector includes web consumers.
-# Push to main, the merge queue, the nightly schedule and dispatches run the
-# full tier: the full GIS-required suite and e2e.
+# CI policy R12 (hosted full suite before merge, G 2026-11-17). Pull requests,
+# main pushes, merge groups, nightly runs and dispatches all run the full
+# GIS-required Python suite. e2e runs on every event except a pull request whose
+# successful selector reports no web consumers. The non-GIS `check` matrix is
+# unchanged: PRs still select affected core/web areas on Python 3.11 and 3.13.
 # Obsolete PR revisions are cancelled; main, scheduled and dispatched runs never are.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   # Conservative shared-data/unknown fallback; explicit area omissions only.
-  # Rename/delete paths are included. Non-PR events select the full tier.
+  # Rename/delete paths are included. Non-PR events select every area.
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -49,8 +49,8 @@ jobs:
           EVENT: ${{ github.event_name }}
         run: python3 scripts/ci_select.py
   # Required check (branch protection requires the `survey-science` context).
-  # Unless the run is cancelled, it reports and passes only when `check` passed on
-  # every Python and `survey-tests` passed, or a successful PR selector omitted GIS.
+  # Unless the run is cancelled, it reports and requires the selector, both
+  # `check` legs and every part of `survey-tests` to pass.
   # Missing/failed/cancelled prerequisites remain non-success in an active run.
   survey-science:
     needs: [changes, survey-tests, check]
@@ -68,28 +68,30 @@ jobs:
           SURVEY: ${{ needs.changes.outputs.survey }}
           TESTS: ${{ needs.survey-tests.result }}
           CHECK: ${{ needs.check.result }}
-        run: python3 scripts/ci_select.py --gate
+        run: |
+          # A valid no-survey PR selection still requires the full survey matrix.
+          # Leave malformed or empty selections for the existing gate to reject.
+          if [ "$EVENT" = pull_request ] && [ "$SURVEY" = false ] && { [ "$CORE" = true ] || [ "$WEB" = true ]; }; then
+            export SURVEY=true
+          fi
+          python3 scripts/ci_select.py --gate
   survey-tests:
-    # On a pull request it runs the GIS layer when the gate says the change can
-    # reach it; a website-only pull request skips it. The full suite runs on
-    # main, merge queue, nightly and dispatch. `survey-science` gates on it.
     needs: changes
-    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.survey == 'true') }}
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    # Pull requests keep one `pr` leg. The full tier runs as parallel parts: the two
-    # slowest coast modules alone, everything else in `rest` (AUD-SC7). The gate
+    # Every event uses the same parallel parts: the two slowest coast modules
+    # alone, everything else in `rest` (AUD-SC7). The gate
     # reads the aggregate result, which is success only when every leg passes.
     strategy:
       fail-fast: false
       matrix:
-        part: ${{ github.event_name == 'pull_request' && fromJSON('["pr"]') || fromJSON('["close-safety", "segment-close", "rest"]') }}
+        part: [close-safety, segment-close, rest]
     env:
-      REPORT: ${{ matrix.part == 'pr' && 'pytest-survey' || format('pytest-survey-{0}', matrix.part) }}
+      REPORT: pytest-survey-${{ matrix.part }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Full-tier tests validate the same frozen inventory as the core job.
       - name: Fetch frozen inventory source for offline validation
-        if: github.event_name != 'pull_request'
         run: git fetch --no-tags --depth=1 origin 351e321dd8c7b3ef82b149d2bb9476fbe337e180
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
@@ -105,10 +107,10 @@ jobs:
         run: python -m pip install -e . -r requirements-survey.txt -r requirements-ocean.txt -r requirements-publish.txt -r requirements-test.txt
       - name: Rebuild and validate species search footprints
         # Geometry tests already belong to the selected GIS suite below.
-        if: matrix.part == 'pr' || matrix.part == 'rest'
+        if: matrix.part == 'rest'
         run: python scripts/build_search_plans.py
       - name: Committed search plans match their sources
-        if: matrix.part == 'pr' || matrix.part == 'rest'
+        if: matrix.part == 'rest'
         run: |
           if ! git diff --quiet; then
             echo "::error::Rebuilt search plans differ from the commit. Run 'python scripts/build_search_plans.py' and commit the result; do not edit dist/ by hand."
@@ -119,13 +121,11 @@ jobs:
         run: nproc && lscpu | grep -E '^(Model name|CPU\(s\))'
       # The full suite includes tests/unit/test_subsystem_retirement_manifest.py (see `check`).
       - name: Frozen retirement-manifest history
-        if: github.event_name != 'pull_request'
         run: |
           sha=$(python3 -c "import json; print(json.load(open('docs/engineering/subsystem-retirement.manifest.json'))['source_commit'])")
           git cat-file -e "$sha^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$sha"
           git cat-file -e "$sha^{commit}" || { echo "::error::frozen source commit $sha is not available"; exit 1; }
       - name: Full Python suite, part ${{ matrix.part }} (every layer, GIS required)
-        if: github.event_name != 'pull_request'
         env:
           SKIPPERCAST_REQUIRE_GIS: "1"
           PART: ${{ matrix.part }}
@@ -139,21 +139,10 @@ jobs:
             *) echo "::error::Unknown full-suite part '$PART'"; exit 1 ;;
           esac
           python -m pytest -n 4 --dist load --durations=15 --junitxml="$RUNNER_TEMP/$REPORT.xml" $args
-      # PR tier: the core layers already run in `check`, and three coast modules take
-      # about 30 of the full suite's 40 minutes; they run on main and nightly.
-      - name: GIS layer, slow coast modules excluded (pull request tier)
-        if: github.event_name == 'pull_request'
-        env:
-          SKIPPERCAST_REQUIRE_GIS: "1"
-        run: >-
-          python -m pytest -m gis -n 4 --dist load --durations=15 --junitxml="$RUNNER_TEMP/$REPORT.xml"
-          --ignore=tests/gis/test_coast_close_safety.py
-          --ignore=tests/gis/test_coast_segment_close.py
-          --ignore=tests/gis/test_coast_sign_off_graph.py
       - name: Test summary; fail on any skip outside the private-cache allowlist
         if: always()
         env:
-          TITLE: ${{ github.event_name == 'pull_request' && 'Python, GIS layer, PR tier (survey-science)' || format('Python, full suite part {0} (survey-science)', matrix.part) }}
+          TITLE: Python, full suite part ${{ matrix.part }} (survey-science)
         run: |
           junit="$RUNNER_TEMP/$REPORT.xml"
           if [ ! -f "$junit" ]; then echo "::error::pytest wrote no JUnit report"; exit 1; fi
