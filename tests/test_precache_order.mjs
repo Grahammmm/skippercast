@@ -19,6 +19,12 @@ async function site(sw = `${BUILD_PLACEHOLDER}\nself.addEventListener('push',()=
   if (sw !== null) await writeFile(join(dir, 'sw.js'), sw);
   await writeFile(join(dir, 'manifest.webmanifest'), '{}');
   await writeFile(join(dir, 'app-icon-192.png'), 'png');
+  await mkdir(join(dir, '.vite'), {recursive: true});
+  await writeFile(join(dir, '.vite/manifest.json'), JSON.stringify({
+    'app.html': {file: 'assets/app.abcdef0123.js'},
+    'landing.html': {file: 'assets/index.0123456789.js'},
+    '../web/app/early.ts': {file: 'assets/early.1111111111.js'},
+  }));
   return dir;
 }
 
