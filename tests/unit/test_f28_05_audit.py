@@ -3,11 +3,14 @@
 import hashlib
 import zipfile
 
-import numpy as np
 import pytest
-import rasterio
-from rasterio.io import MemoryFile
-from rasterio.transform import from_origin
+
+np = pytest.importorskip("numpy")
+pytest.importorskip("rasterio")
+pytest.importorskip("pyproj")
+pytest.importorskip("shapely")
+MemoryFile = pytest.importorskip("rasterio.io").MemoryFile
+from_origin = pytest.importorskip("rasterio.transform").from_origin
 
 from research.scripts import audit_point_buchon_original_pair as pair
 from research.scripts import audit_point_buchon_ncei_beam_overlap as beam
