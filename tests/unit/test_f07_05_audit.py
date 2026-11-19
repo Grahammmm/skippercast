@@ -140,3 +140,39 @@ def test_preexisting_log_handler_and_raw_fd_writes_stay_off_console(tmp_path, mo
     assert code == 2 and PRIVATE not in stdout + stderr and str(tmp_path) not in stdout + stderr
     assert json.loads(stdout) == expected('held', ['terrain_only_dependency:jsonschema'], EMPTY_COUNTS, None)
     assert 'after-main-log-still-works' in stderr
+
+
+@pytest.mark.parametrize('exits', ['raises', 'returns'])
+def test_retained_buffered_stream_writes_never_flush_to_console(tmp_path, monkeypatch, capfd, exits):
+    """Contract: a stream retained from before `main` cannot leak buffered text after fds are restored.
+
+    A caller (or logging handler) holding the original buffered sys.stdout/sys.stderr writes into its
+    buffer during preview; if the buffer is only flushed after fd 1/2 are restored, the private text
+    reaches the console and corrupts the one-line JSON summary. Failing bug: flush after restore.
+    """
+    (tmp_path / 'acceptance.json').write_text('{}')
+    streams = {name: open(fd, 'w', encoding='utf-8', closefd=False) for name, fd in (('stdout', 1), ('stderr', 2))}
+    monkeypatch.setattr(sys, 'stdout', streams['stdout'])
+    monkeypatch.setattr(sys, 'stderr', streams['stderr'])
+
+    def leak(*args, **kwargs):
+        for stream in streams.values():  # no flush: text stays buffered until someone flushes
+            stream.write(f'{PRIVATE}-buffered\n')
+        if exits == 'raises':
+            raise ValueError('terrain_only_dependency:jsonschema')
+        return dict(state='done', **EMPTY_COUNTS)
+
+    monkeypatch.setattr(terrain_only, 'preview', leak)
+    try:
+        code = terrain_only.main(cli_args(tmp_path))
+        streams['stdout'].flush()
+        streams['stderr'].flush()
+    finally:
+        monkeypatch.undo()
+    stdout, stderr = capfd.readouterr()
+    assert PRIVATE not in stdout + stderr and not stderr
+    summary = json.loads(stdout)  # exactly one JSON line: no stray text before it
+    if exits == 'raises':
+        assert code == 2 and summary == expected('held', ['terrain_only_dependency:jsonschema'], EMPTY_COUNTS, None)
+    else:
+        assert code == 0 and summary['state'] == 'done' and summary['counts'] == EMPTY_COUNTS

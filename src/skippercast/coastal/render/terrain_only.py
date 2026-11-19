@@ -540,11 +540,18 @@ def _quiet_console():
     original stream, and any writer using the file descriptor directly. So also
     disable logging records (no handler runs) and point fds 1 and 2 at the null device.
     """
-    for stream in (sys.stdout, sys.stderr):
-        try:
-            stream.flush()
-        except (AttributeError, OSError, ValueError):
-            pass
+    # Streams a caller or logging handler may still hold: their buffers are only written
+    # when flushed, so they must be flushed while the descriptors still point at the sink.
+    retained = (sys.stdout, sys.stderr, sys.__stdout__, sys.__stderr__)
+
+    def flush_retained():
+        for stream in retained:
+            try:
+                stream.flush()
+            except (AttributeError, OSError, ValueError):
+                pass
+
+    flush_retained()  # earlier output belongs to the console; flush it before the redirect
     saved = []
     previous_disable = logging.root.manager.disable
     logging.disable(logging.CRITICAL)
@@ -561,6 +568,7 @@ def _quiet_console():
                 with redirect_stdout(sink), redirect_stderr(sink):
                     yield
             finally:
+                flush_retained()  # also on exceptional exits, before fds are restored
                 for fd, original in saved:
                     os.dup2(original, fd)
                     os.close(original)
