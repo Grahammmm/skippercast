@@ -78,7 +78,7 @@ Every spec names its inputs. Specs 01–06 and 08 use only sources SkipperCast a
 
 ## References bundled with the specs
 
-- Map inspiration: [skippercast_inspiration.md](../inspiration/skippercast_inspiration.md) and [skippercast_inspiration.json](../inspiration/skippercast_inspiration.json), plus [palettes.json](../inspiration/palettes.json), [cmocean_stops.json](../inspiration/cmocean_stops.json) and the images beside that file. Specs cite `docs/research/inspiration/skippercast_inspiration.json`.
+- Map inspiration: [skippercast_inspiration.md](../inspiration/skippercast_inspiration.md) and [skippercast_inspiration.json](../inspiration/skippercast_inspiration.json), plus [palettes.json](../inspiration/palettes.json) and [cmocean_stops.json](../inspiration/cmocean_stops.json). Specs cite `docs/research/inspiration/skippercast_inspiration.json`. Each example keeps its public post link. The posted images are not in the repository.
 - Competitor analysis: [competitors.md](../competitors/competitors.md) and [competitors.json](../competitors/competitors.json). Screenshots are not in the repository; see the package limits in [../README.md](../README.md#package-limits).
 - [references/README.md](references/README.md) points at those folders.
 - `rea-evidence/`: rea web-bundle evidence for the two competitor pages analysed. The bundles keep the path they were written to on the research box.
