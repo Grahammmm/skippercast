@@ -252,3 +252,30 @@ def test_checkpoint_contradicting_a_complete_receipt_holds_without_truncating(tm
     assert server.calls == []
     assert (partial.read_bytes(), meta.read_bytes(), manifest.read_bytes()) == kept
     assert not (restarted.root / 'noaa-nos' / p.filename(row())).exists()
+
+
+@pytest.mark.parametrize('validator', ['"v1"', None])
+@pytest.mark.parametrize('bad', ['missing', 'null', 'blank', 'not-a-url'])
+def test_receipts_without_a_valid_final_url_hold_even_when_they_agree(tmp_path, validator, bad):
+    # Guards review return 6 (11b94bde): meta.get('final_url') == record.get('final_url') passed when both
+    # were None, so a .part with no redirect-target evidence was promoted. Absent or malformed final URLs
+    # in the checkpoint and both manifest copies (all equal to each other) must hold, request nothing.
+    server, run, partial, meta = crash_before_rename(tmp_path, validator=validator)
+    primary, mirror = run.root / 'noaa-nos/manifest.jsonl', run.mirror / 'noaa-nos.jsonl'
+
+    def damage(path):
+        data = json.loads(path.read_text())
+        data.pop('final_url', None)
+        if bad != 'missing':
+            data['final_url'] = {'null': None, 'blank': '', 'not-a-url': 'no-scheme/path'}[bad]
+        return data
+
+    for path in (primary, mirror):
+        path.write_text(json.dumps(damage(path), sort_keys=True) + '\n')
+    meta.write_text(json.dumps(damage(meta)))
+    kept = partial.read_bytes(), meta.read_bytes(), primary.read_bytes(), mirror.read_bytes()
+    restarted = runner(tmp_path, server)
+    assert restarted.run() == 2
+    assert server.calls == []
+    assert (partial.read_bytes(), meta.read_bytes(), primary.read_bytes(), mirror.read_bytes()) == kept
+    assert not (restarted.root / 'noaa-nos' / p.filename(row())).exists()

@@ -203,6 +203,17 @@ class GuardedSink:
 IDENTITY_KEYS = ('final_url', 'sha256', 'bytes', 'path', 'verification')
 
 
+def valid_final_url(value):
+    """A receipt's final URL is evidence only when present as an absolute http(s) URL.
+
+    Two missing (None == None) or malformed values must never count as agreeing.
+    """
+    if not isinstance(value, str) or value != value.strip() or not value:
+        return False
+    parts = urlsplit(value)
+    return parts.scheme in ('http', 'https') and bool(parts.netloc) and not parts.fragment
+
+
 def raw_receipts(path, *, strict):
     """Every receipt line in file order, never collapsed by URL.
 
@@ -465,6 +476,7 @@ class Prefetch:
                 and record.get('url') == row['url']
                 and record.get('path') == str(final.absolute())
                 and record.get('verification') == 'publisher-sha256'
+                and valid_final_url(meta.get('final_url'))
                 and meta.get('final_url') == record.get('final_url')):
             raise held
         sha = digest(partial)
