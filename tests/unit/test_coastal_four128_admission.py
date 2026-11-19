@@ -252,12 +252,21 @@ def test_historical_replay_fixture_stays_off_host_archive(tmp_path, monkeypatch)
     # A relinked fixture or an accidental fallback to the host archive
     # must not make replay depend on the maintainer machine.
     assert HISTORICAL_REPLAY.resolve().is_relative_to(ROOT / 'tests/fixtures')
-    archive_path = Path.home() / 'skippercast-data' / 'synthetic-denial-probe.json'
+    probe = 'synthetic-denial-probe.json'
+    archive_path = Path.home() / 'skippercast-data/2026-10-07-pge-south/outputs' / probe
     with monkeypatch.context() as patch:
         fence_replay_io(patch, tmp_path)
         for read in (open, io.open, Path.read_bytes):
             with pytest.raises(AssertionError, match='outside tmp_path/fixtures'):
                 read(archive_path)
+    # Once the replay-specific patch is gone, even an unrelated unmarked test
+    # opening a host receipt (directly or via a symlink) must fail before I/O.
+    alias = tmp_path / 'archive'
+    alias.symlink_to(archive_path.parent, target_is_directory=True)
+    for path in (archive_path, alias / probe, Path.home() / 'agent-work/t08a' / probe):
+        for read in (open, Path.read_bytes):
+            with pytest.raises(AssertionError, match='host archive access requires'):
+                read(path)
 
 
 def test_renderer_refuses_author_or_wrong_validity(tmp_path):
@@ -348,11 +357,14 @@ def test_bad_ledger_refused(tmp_path, bad):
         resources.load_charge_ledger(p)
 
 
-def test_signed_bytes_binding_and_original_projection():
-    p = Path(resources.CHARGE_LEDGER['head']['path']).expanduser()
-    # Always test refusal, even on CI without the archived signed document.
+def test_signed_bytes_binding_refuses_unsigned_document():
     with pytest.raises(ValueError, match='charge ledger head'):
         resources.budget_limits_bytes(adm.encoded(amendment()))
+
+
+@pytest.mark.host_archive
+def test_signed_bytes_binding_and_original_projection():
+    p = Path(resources.CHARGE_LEDGER['head']['path']).expanduser()
     if p.is_file():
         raw = p.read_bytes()
         assert resources.budget_limits_bytes(raw) == resources.budget_limits(amendment())
