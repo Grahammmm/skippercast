@@ -7,10 +7,10 @@
 // JSON of the value.
 //
 // Canonical JSON (shared with Python): object keys sorted by code point, no
-// whitespace, non-ASCII left as is, numbers as JavaScript prints them (an integral
-// float is written without '.0': Python must pass int(x) for those). Python:
-// json.dumps(v, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False).
-// Key order is by code point (as sort_keys); NaN/Infinity/undefined throw, as Python refuses them.
+// whitespace, non-ASCII left as is. Numbers use ECMAScript's shortest binary64
+// representation (fixed notation down to 1e-6, -0 as 0). Non-finite numbers and
+// integers outside ±(2^53 - 1) are refused so rounded integers cannot share IDs.
+// This contract applies to new writes; existing stored ids are not rewritten.
 import {sha256} from '../advisor/ids.ts';
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | {[key: string]: JsonValue};
@@ -23,7 +23,10 @@ const byCodePoint = (a: string, b: string): number => {
 /** The canonical JSON text of a value (sorted keys, no whitespace). */
 export function canonicalJson(value: JsonValue): string {
   const v: unknown = value;
-  if (typeof v === 'number' && !Number.isFinite(v)) throw new TypeError('canonicalJson: number is not finite');
+  if (typeof v === 'number') {
+    if (!Number.isFinite(v)) throw new TypeError('canonicalJson: number is not finite');
+    if (Number.isInteger(v) && !Number.isSafeInteger(v)) throw new TypeError('canonicalJson: number is not a safe integer');
+  }
   if (v === undefined || typeof v === 'function' || typeof v === 'symbol' || typeof v === 'bigint') throw new TypeError('canonicalJson: not a JSON value');
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) return '[' + Array.from(value, item => canonicalJson(item)).join(',') + ']';
