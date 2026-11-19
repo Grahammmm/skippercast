@@ -71,15 +71,15 @@ IDENTITY_ONLY_FIELDS = {'identity_provenance', 'run_author_provenance', 'posted_
 WORKFLOW_EDGES = {
     'context': 'coast-review-context-v1', 'admission': 'coast-admission-v1',
     'enqueue': versions.ENQUEUE_V2, 'run': versions.RUN_V2,
-    'legacy_enqueue': versions.ENQUEUE_V1, 'legacy_run': versions.RUN_V1,
+    'legacy_enqueue': versions.ENQUEUE_V1, 'legacy_run': versions.NATIVE_RUNS,
     'tier1': 'coast-tier1-screen-v1', 'open_report': 'coast-open-report-v1',
     'packet': 'coast-review-packet-v1', 'verdict_file': 'coast-review-verdict-v1',
     'routing': 'coast-review-routing-v1', 'manifest': 'coast-archive-manifest-v1',
     'job': native.STORE_JOB, 'result': 'coastal-stage-result-v1',
 }
-# Native PC9 records keep their v1 IDs and are validated by legacy(), never by
+# Native PC9 records (v1 IDs, plus the v3 run summary) are validated by legacy(), never by
 # the generic shared edge walk (their nested keys have native meanings).
-LEGACY = {versions.ENQUEUE_V1, versions.RUN_V1, versions.INTENT_V1}
+LEGACY = {versions.ENQUEUE_V1, versions.RUN_V1, versions.RUN_V3, versions.INTENT_V1}
 CONTINUABLE = {'deadline', 'max_ticks', 'not_claimable'}
 
 
@@ -87,12 +87,16 @@ def validate_schema(value):
     if not isinstance(value, dict) or not isinstance(value.get('schema'), str):
         raise ValueError('workflow receipt needs a schema')
     name = value['schema']
-    if not name.startswith('coast-') or not name.endswith(('-v1', '-v2')) or '/' in name or '\\' in name:
-        raise ValueError('unknown workflow schema')
-    path = SCHEMAS / (name + '.schema.json')
-    if not path.is_file():
-        raise ValueError('unknown workflow schema: ' + name)
-    definition = loads(path.read_bytes())
+    if name == versions.RUN_V3:
+        # Native v3 is a code-derived overlay of the pinned v1 file (no new schema file in the family).
+        definition = versions.run_v3_schema(loads((SCHEMAS / (versions.RUN_V1 + '.schema.json')).read_bytes()))
+    else:
+        if not name.startswith('coast-') or not name.endswith(('-v1', '-v2')) or '/' in name or '\\' in name:
+            raise ValueError('unknown workflow schema')
+        path = SCHEMAS / (name + '.schema.json')
+        if not path.is_file():
+            raise ValueError('unknown workflow schema: ' + name)
+        definition = loads(path.read_bytes())
     Draft202012Validator.check_schema(definition)
     validator = Draft202012Validator(definition, format_checker=FormatChecker())
     errors = sorted(validator.iter_errors(value), key=lambda e: str(list(e.path)))
@@ -214,6 +218,12 @@ class GraphValidator:
         if structured and ref['bytes'] > 32 * 1024 * 1024:
             raise ValueError('structured receipt exceeds 32 MiB validation bound')
         raw = self.resolver.read(ref, retain=bool(structured))
+        if isinstance(contract, tuple):
+            # One native family, several explicit wire versions: bind the edge to the version it carries.
+            candidate = loads(raw)
+            if not isinstance(candidate, dict) or candidate.get('schema') not in contract:
+                raise ValueError('reference contract mismatch: ' + ' | '.join(contract))
+            contract = candidate['schema']
         if contract in (raw_provenance_contracts.ROW, raw_provenance_contracts.SNAPSHOT):
             rows = raw_provenance_contracts.parse_rows(raw, single=contract == raw_provenance_contracts.ROW)
             self.verified.add((canonical(ref), scope, contract))
@@ -768,10 +778,13 @@ class GraphValidator:
             if doc['sequence'] != 0:
                 raise ValueError('legacy run sequence is zero-based')
         else:
-            previous = edge(doc['continuation_of'], versions.RUN_V1)
+            # A v3 run may continue a v1 predecessor written before the version change; v1 stays v1-only.
+            previous = edge(doc['continuation_of'], versions.RUN_V1 if name == versions.RUN_V1 else versions.NATIVE_RUNS)
             if (previous['enqueue'] != doc['enqueue'] or previous['stop_reason'] not in CONTINUABLE
                     or doc['sequence'] != previous['sequence'] + 1):
                 raise ValueError('legacy continuation not authorized')
+        if name == versions.RUN_V3 and doc['windows_sha256'] != object_digest(doc['windows']):
+            raise ValueError('native v3 run per-window details digest mismatch')
         for window in doc['windows']:
             for info in window['stages'].values():
                 if info['state'] == 'missing':
@@ -785,7 +798,7 @@ class GraphValidator:
         # treated as an independently produced or store-consistent snapshot.
 
     def run_v2(self, doc):
-        legacy = self.reference(doc['legacy_run'], contract=versions.RUN_V1)
+        legacy = self.reference(doc['legacy_run'], contract=versions.NATIVE_RUNS)
         enqueue = self.reference(doc['enqueue'], contract=versions.ENQUEUE_V2)
         if versions.typed(legacy['enqueue']) != enqueue['legacy_enqueue']:
             raise ValueError('v2 run enqueue differs from legacy run enqueue')

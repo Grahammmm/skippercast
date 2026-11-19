@@ -13,7 +13,10 @@ which this adapter derives deterministically from those original bytes:
   aggregated, averaged or selected across windows;
 * PC9's embedded `store_status` is carried only as `store_status_evidence`
   with kind `legacy_embedded`, bound to the original run receipt. It is NOT an
-  independently produced or store-consistent snapshot;
+  independently produced or store-consistent snapshot. In v1 it is the global
+  queue dump; native v3 (`coast-run-summary-v3`, SCA-358) embeds run-scoped
+  counts (`coastal-coordinator-scope-v1`) there instead, so the digest binds
+  exactly what the native receipt carries and nothing is synthesized;
 * `sequence` stays zero-based exactly as PC9 run-00 / continuations.
 """
 from coast_refs import REF_KEYS, object_digest
@@ -22,6 +25,9 @@ ENQUEUE_V1 = 'coast-enqueue-receipt-v1'
 ENQUEUE_V2 = 'coast-enqueue-receipt-v2'
 RUN_V1 = 'coast-run-summary-v1'
 RUN_V2 = 'coast-run-summary-v2'
+RUN_V3 = 'coast-run-summary-v3'  # native successor of v1: run-scoped store counts, digest-bound windows
+NATIVE_RUNS = (RUN_V1, RUN_V3)
+SCOPE = 'coastal-coordinator-scope-v1'
 INTENT_V1 = 'coast-enqueue-intent-v1'
 CELLS_CONTRACT = 'coastal-terrain-summary-v1'
 STAGES = ('acquire', 'qualify', 'map', 'render')
@@ -107,10 +113,34 @@ def window_cells(index, window):
     return record
 
 
+def run_v3_schema(v1):
+    """The native v3 run-summary schema, derived from the unchanged v1 schema.
+
+    Only three things differ: the version, `store_status` (run-scoped counts,
+    never foreign rows) and the `windows_sha256` digest of the inline windows;
+    `problems` is bounded (the writer lists at most 64 plus one omitted-count line).
+    """
+    schema = {**v1, '$id': 'urn:skippercast:' + RUN_V3}
+    count = {'minimum': 0, 'type': 'integer'}
+    def closed(**fields):
+        return {'additionalProperties': False, 'type': 'object', 'properties': fields, 'required': sorted(fields)}
+    properties = dict(v1['properties'], schema={'enum': [RUN_V3]},
+                      problems=dict(v1['properties']['problems'], maxItems=65),
+                      windows_sha256={'pattern': '^[0-9a-f]{64}$', 'type': 'string'})
+    properties['store_status'] = closed(
+        schema={'enum': [SCOPE]}, store={'enum': ['present', 'uninitialized']},
+        lineage_jobs={'additionalProperties': count, 'type': 'object'},
+        lineage_charges=closed(rows=count, requests=count, bytes=count),
+        foreign=closed(jobs=count, queued_jobs=count, charges=count),
+        events=count, last_tick_epoch={'anyOf': [{'type': 'number'}, {'type': 'null'}]})
+    schema.update(properties=properties, required=v1['required'] + ['windows_sha256'])
+    return schema
+
+
 def run_v2(legacy, legacy_ref, enqueue_ref, previous_ref=None):
-    """Shared v2 run summary for one original PC9 v1 run receipt."""
-    if legacy.get('schema') != RUN_V1:
-        raise ValueError('adapter requires coast-run-summary-v1')
+    """Shared v2 run summary for one original PC9 v1 or v3 run receipt."""
+    if legacy.get('schema') not in (RUN_V1, RUN_V3):
+        raise ValueError('adapter requires coast-run-summary-v1 or coast-run-summary-v3')
     if (legacy['continuation_of'] is None) != (previous_ref is None):
         raise ValueError('continuation must convert against the converted predecessor')
     windows, partition = [], {state: [] for state in STATES}
