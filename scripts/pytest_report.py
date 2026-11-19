@@ -44,6 +44,9 @@ ALLOWED_SKIPS = frozenset({
     'Private coordinate fixture absent in CI',
     'Private reference grid absent; committed ledger tested separately',
     'Private review blocks (var/review, gitignored) are only on the maintainer machine',
+    # Four128 original metadata is private; synthetic replay, accounting,
+    # selection and output-overlap checks run independently of the archive.
+    'Host archive test; set SC_ARCHIVE_TESTS=1 to run',
     # SC-4's retained source checkout is not distributed in CI; committed inventory
     # identities, counts and handoff paths are checked without it in the same file.
     'Retained coastal source snapshot unavailable; committed inventory checked separately',
