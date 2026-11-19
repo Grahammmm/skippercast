@@ -28,7 +28,7 @@ export const LEGACY_LOOK = 'deep-fixed-v1';
 const VERSION = /^[a-z0-9.-]{1,64}$/;
 /**
  * MSK-2 (STYLE-PIPELINE-DESIGN rev 2 § 6): the look key a pointer's tiles were baked with, which the legend's depth chips
- * follow. The optional member is `style: {baked, contours, habitat|null, built_with}`; the key is its baked digest. Absent:
+ * follow. The optional member is `style: {baked, contours|null, habitat|null, built_with}`; the key is its baked digest. Absent:
  * LEGACY_LOOK. Present but malformed: null (an unknown look, never the default), so the legend shows no chips rather than
  * another version's. It does not refuse the relief: the tiles are still the reviewed tiles.
  */
@@ -37,7 +37,7 @@ export function reliefLook(pointer: Record<string, unknown>): string | null {
   if (style === undefined) return LEGACY_LOOK;
   if (!record(style) || Object.keys(style).sort().join() !== 'baked,built_with,contours,habitat') return null;
   const {baked, contours, habitat, built_with} = style;
-  return hash(baked) && hash(contours) && (habitat === null || hash(habitat)) && typeof built_with === 'string' && VERSION.test(built_with)
+  return hash(baked) && (contours === null || hash(contours)) && (habitat === null || hash(habitat)) && typeof built_with === 'string' && VERSION.test(built_with)
     ? baked : null;
 }
 

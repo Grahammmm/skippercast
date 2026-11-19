@@ -196,10 +196,10 @@ def pointer_look(item):
     if style is None:
         return LEGACY_LOOK
     keys = {"baked", "contours", "habitat", "built_with"}
-    habitat = style.get("habitat") if isinstance(style, dict) else None
     if (not isinstance(style, dict) or set(style) != keys
-            or not all(isinstance(style[k], str) and DIGEST.fullmatch(style[k]) for k in ("baked", "contours"))
-            or not (habitat is None or isinstance(habitat, str) and DIGEST.fullmatch(habitat))
+            or not (isinstance(style["baked"], str) and DIGEST.fullmatch(style["baked"]))
+            or not all(style[k] is None or isinstance(style[k], str) and DIGEST.fullmatch(style[k])
+                       for k in ("contours", "habitat"))
             or not isinstance(style["built_with"], str) or not VERSION_ID.fullmatch(style["built_with"])):
         raise ValueError("invalid style member")
     return style["baked"]

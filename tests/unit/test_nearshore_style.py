@@ -3,6 +3,7 @@
 from hashlib import sha256
 import json
 from math import sqrt
+import re
 import shutil
 import subprocess
 import sys
@@ -86,6 +87,96 @@ def test_generator_check_matches_checkout():
     assert result.returncode == 0, result.stderr
 
 
+def copy_generator(tmp_path):
+    paths = [GEN, "src/skippercast/__init__.py", "src/skippercast/style/__init__.py", RELEASE,
+             "style/index.json", "style/groups.json", "web/tokens.css",
+             "web/map/nearshore-style.gen.ts", "packages/coast/src/palette.ts"]
+    for name in paths:
+        dest = tmp_path / name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / name, dest)
+
+
+def add_version(root, version, edit, status="rolling"):
+    """Release a copy of v1.0.0 as `version` after `edit`, registered in index.json without digests."""
+    tokens = json.loads((root / RELEASE).read_bytes())
+    tokens["version"] = version  # a paint key
+    edit(tokens)
+    raw = json.dumps(tokens).encode()
+    (root / f"style/{version}.json").write_bytes(raw)
+    manifest = root / "style/index.json"
+    index = json.loads(manifest.read_bytes())
+    index["versions"][version] = {"file": f"{version}.json", "sha256": sha256(raw).hexdigest(), "status": status}
+    manifest.write_text(json.dumps(index), encoding="utf-8")
+
+
+def generate(root):
+    return subprocess.run([sys.executable, GEN], cwd=root, capture_output=True, text=True)
+
+
+def looks(root):
+    ts = (root / "web/map/nearshore-style.gen.ts").read_text(encoding="utf-8")
+    return json.loads(re.search(r"(?s)export const NEARSHORE_LOOKS = (\{.*?\n\}) as const;", ts)[1])
+
+
+DEFAULT_BAKED = json.loads((ROOT / "style/index.json").read_bytes())["versions"]["nearshore-v1.0.0"]["digests"]["baked"]
+
+
+def test_paint_only_bump_shares_one_look(tmp_path):
+    # MSK-2 amendment A3 case 1: a paint-only version draws the same relief, so it must not fork the legend chips.
+    copy_generator(tmp_path)
+    css_before = (tmp_path / "web/tokens.css").read_bytes()
+    add_version(tmp_path, "nearshore-v1.0.1",
+                lambda t: t["overlays"]["field_opacity_by_zoom"][0].__setitem__(1, 0.7))
+    result = generate(tmp_path)
+    assert result.returncode == 0, result.stderr
+    table = looks(tmp_path)
+    assert set(table) == {DEFAULT_BAKED, "deep-fixed-v1"}
+    assert table[DEFAULT_BAKED]["versions"] == ["nearshore-v1.0.0", "nearshore-v1.0.1"]
+    assert (tmp_path / "web/tokens.css").read_bytes() == css_before
+    assert check(tmp_path).returncode == 0
+
+
+def test_baked_bump_adds_a_second_look_with_its_own_colours(tmp_path):
+    # A3 case 2: a baked change is a new look; regions still on the old tiles keep the old chips.
+    copy_generator(tmp_path)
+    add_version(tmp_path, "nearshore-v1.1.0", lambda t: t["depth_ramp"]["stops_ft"][0].__setitem__(1, "#EAF8F5"))
+    result = generate(tmp_path)
+    assert result.returncode == 0, result.stderr
+    table = looks(tmp_path)
+    (new,) = set(table) - {DEFAULT_BAKED, "deep-fixed-v1"}
+    assert table[new]["versions"] == ["nearshore-v1.1.0"]
+    prefix = f"--skn-look-{new[:12]}-depth-"
+    assert table[new]["chips"][0]["cssVar"] == f"{prefix}0"
+    assert table[DEFAULT_BAKED]["chips"][0]["cssVar"] == "--skn-depth-ns-0"
+    css = (tmp_path / "web/tokens.css").read_text(encoding="utf-8")
+    assert f"  {prefix}0: #EAF8F5;\n" in css
+    assert new in (tmp_path / "packages/coast/src/palette.ts").read_text(encoding="utf-8")
+    assert check(tmp_path).returncode == 0
+
+
+@pytest.mark.parametrize("where", ["pointer", "previous"])
+def test_check_refuses_a_pointer_whose_look_left_the_index(tmp_path, where):
+    # A3: retiring a version while a pointer (or the lineage it can roll back to) names its look strands the legend.
+    copy_generator(tmp_path)
+    style_member = {"baked": "f" * 64, "contours": None, "habitat": None, "built_with": "nearshore-v0.9.0"}
+    pointer = {"region": "fixture"}
+    if where == "pointer":
+        pointer["style"] = style_member
+    else:
+        pointer["previous"] = {"style": style_member}
+    relief = tmp_path / "catalog/relief"
+    relief.mkdir(parents=True)
+    (relief / "fixture.json").write_text(json.dumps(pointer), encoding="utf-8")
+    result = check(tmp_path)
+    assert result.returncode == 1
+    assert f"catalog/relief/fixture.json: {where} look {'f' * 64} is missing from LOOKS" in result.stderr
+    # contours null is a valid member: naming the released look passes.
+    style_member["baked"] = DEFAULT_BAKED
+    (relief / "fixture.json").write_text(json.dumps(pointer), encoding="utf-8")
+    assert check(tmp_path).returncode == 0, check(tmp_path).stderr
+
+
 @pytest.mark.parametrize(("drift", "diagnostic"), [
     ("release", "sha256 mismatch"),
     ("unassigned", "unassigned style key: rock_piles.future_knob"),
@@ -94,13 +185,7 @@ def test_generator_check_matches_checkout():
 ])
 def test_generator_check_refuses_drift_without_writing(tmp_path, drift, diagnostic):
     # Independently trip the raw-byte pin, group coverage, digest and projection checks.
-    paths = [GEN, "src/skippercast/__init__.py", "src/skippercast/style/__init__.py", RELEASE,
-             "style/index.json", "style/groups.json", "web/tokens.css",
-             "web/map/nearshore-style.gen.ts", "packages/coast/src/palette.ts"]
-    for name in paths:
-        dest = tmp_path / name
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(ROOT / name, dest)
+    copy_generator(tmp_path)
 
     release = tmp_path / RELEASE
     manifest = tmp_path / "style/index.json"

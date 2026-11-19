@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import {globSync, readFileSync} from 'node:fs';
 import test from 'node:test';
 import {fileURLToPath} from 'node:url';
+import {lookDepthKey} from '../web/map/legend-model.ts';
+import {NEARSHORE_LOOKS, NEARSHORE_STYLE_DIGESTS} from '../web/map/nearshore-style.gen.ts';
 import {LEGACY_LOOK, resolveRelief, selectReliefArchives} from '../web/map/relief-data.ts';
 
 const morro = 'morro-bay';
@@ -216,4 +218,16 @@ test('the style member resolves a look key or an unknown look, never a refusal',
     {...style, habitat: 'x'}, {...style, built_with: 'Nearshore v1'}, {...style, built_with: 'n'.repeat(65)}]) {
     assert.equal(look({style: bad}), null, JSON.stringify(bad));
   }
+});
+
+// Frozen shape (rule-29 checkpoint t_1ed6dc7c): `contours` may be null (tiles built without a contour group). Believable
+// bug: a strict 64-hex check on contours turns such a pointer into an unknown look and hides the depth key.
+test('a style member with contours null still keys the kit depth chips', () => {
+  const style = {baked: NEARSHORE_STYLE_DIGESTS.baked, contours: null, habitat: null, built_with: 'nearshore-v1.0.0'};
+  const r = resolveRelief(morro, {...pointer(), style});
+  assert.equal(r.status, 'ready');
+  assert.equal(r.archive.look, NEARSHORE_STYLE_DIGESTS.baked);
+  const key = lookDepthKey(r.archive.look, 'dark', NEARSHORE_LOOKS);
+  assert.equal(key.status, 'chips');
+  assert.deepEqual(key.chips.map(c => c.feet), [0, 10, 20, 30, 45, 60, 80, 100, 130, 160, 200, 250, 300, 300]);
 });
