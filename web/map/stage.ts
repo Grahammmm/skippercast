@@ -223,7 +223,7 @@ const pageHidden = signal(false);
 export type StageTheme = 'light' | 'dark';
 /** How a stage hears a theme change: the notify returns once the repaint settled; the result stops listening. */
 export type ThemeSubscribe = (notify: (theme: StageTheme) => Promise<void>) => () => void;
-const rootTheme = (): StageTheme => typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+const rootTheme = (): StageTheme => typeof document !== 'undefined' && document.documentElement?.dataset?.theme === 'light' ? 'light' : 'dark';
 /**
  * The default subscription: the Settings choice (themeChoice) and the OS scheme while Auto is chosen. Both write the root's
  * `data-theme` before they notify, so the theme read here is already the effective one. No observer of the attribute itself.
