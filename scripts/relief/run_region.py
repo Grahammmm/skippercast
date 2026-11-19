@@ -5,6 +5,8 @@
                   [--scope public] [--region-config FILE]
                   [--coarse TIF --water GEOJSON --coarse-source ID [--coarse-date D]]
                   [--manifest JSON --upstream STAGE[:SCOPE] ...] [--generation SHA256] [--dry-run]
+                  [--qa-elevation TIF --qa-contributor TIF --qa-shots JSON [--qa-support TIF]
+                   [--qa-fine-proof ZOOM TIF ...] [--release-sha256 SHA256]]
     run_region.py <region> --out <OUT> --dry-run  # preview the full chain without stage inputs
 
 Runs ``region.py <stage> --region <region> --out <OUT>`` for every stage of the chain up to
@@ -18,7 +20,11 @@ effective cache, resolved once as normalize itself would, so the path the guard 
 path normalize writes) and, when given, ``--family``; ``mosaic``, ``tiles`` and ``zone`` get ``--scope <scope>`` (default
 ``public``) and, when given, ``--region-config FILE`` (the DL-5 seam); ``zone`` also gets
 ``--coarse``, ``--water``, ``--coarse-source`` and ``--coarse-date``; ``package`` gets
-``--manifest`` and every ``--upstream``; ``envelope`` gets ``--generation`` (the option, else the
+``--manifest`` and every ``--upstream``; ``qa`` gets ``--elevation``, ``--contributor`` and ``--shots``
+(from ``--qa-elevation``, ``--qa-contributor``, ``--qa-shots``), the optional ``--support`` and
+``--fine-proof``, every ``--upstream`` again (qa's public evidence producers) and ``--generation`` and
+``--release-sha256`` (the options, else the package receipt's generation and its release.json hash;
+no value stops the run before qa); ``envelope`` gets ``--generation`` (the option, else the
 generation of the package receipt left by the package stage of this chain). A chain that reaches
 a stage without its required inputs is a usage error before anything runs. Those input paths
 are checked against the private-vault guard like OUT.
@@ -79,10 +85,15 @@ STAGES = ('normalize', 'select', 'mosaic', 'tiles', 'contours', 'zone', 'digests
 # Inputs the stage modules require on their own command line (a chain that reaches the stage without
 # them is a usage error before anything runs). envelope's --generation is not here: it is read from
 # the package receipt when not given.
-STAGE_INPUTS = {'normalize': ('source',), 'zone': ('coarse', 'water', 'coarse-source'), 'package': ('manifest', 'upstream')}
+STAGE_INPUTS = {'normalize': ('source',), 'zone': ('coarse', 'water', 'coarse-source'), 'package': ('manifest', 'upstream'),
+                'qa': ('qa-elevation', 'qa-contributor', 'qa-shots')}
 REGION_ID = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')  # the same rule as skippercast.relief.receipts
 HEX64 = re.compile(r'[0-9a-f]{64}')
 LOCK_NAME = '.run_region.lock'
+QA_SHA_KEY = 'qa-release-sha256'  # a key of the extras dict that is not a stage: the explicit --release-sha256
+# file-valued options: fixed once by parse() so the guard and the stage see the same spelling
+PATH_OPTIONS = ('source', 'region_config', 'coarse', 'water', 'manifest',
+                'qa_elevation', 'qa_contributor', 'qa_shots', 'qa_support')
 GB = 10 ** 9
 STOP_FILE_NAMES = ('LOCAL-STOP', 'UNITFEED-STOP')
 
@@ -143,8 +154,23 @@ def effective_norm(option, environ=None):
     return Path(os.path.abspath(os.path.expanduser(value)))
 
 
+def spelled(value):
+    """The absolute filesystem spelling of an input path, ``~`` expanded and made absolute against the
+    working directory WITHOUT collapsing ``..`` (a ``link/..`` must still be resolved by the OS, so it
+    is the same path the guard resolves and the stage opens)."""
+    return os.path.join(os.getcwd(), os.path.expanduser(str(value)))
+
+
+def fine_zoom(parser, zoom):
+    """The bare integer zoom (``'16'`` or ``'17'``) qa's ``--fine-proof`` parses with ``int()``; ``z16`` is accepted too."""
+    match = re.fullmatch(r'[zZ]?(16|17)', zoom)
+    if not match:
+        parser.error(f'--qa-fine-proof ZOOM must be 16 or 17 (or z16/z17), not {zoom!r}')
+    return match.group(1)
+
+
 def real(path):
-    return Path(os.path.realpath(os.path.abspath(os.path.expanduser(str(path)))))
+    return Path(os.path.realpath(spelled(path)))
 
 
 def under(path, root):
@@ -192,6 +218,18 @@ def stage_extras(args):
         extra.setdefault('package', []).extend(['--upstream', ref])
     if args.generation:
         extra['envelope'] = ['--generation', args.generation]
+    # qa also takes --generation and --release-sha256 (explicit, else read from the package receipt when
+    # qa starts: see qa_release); the rest is fixed before the chain starts
+    extra['qa'] = [] if args.qa_elevation is None else ['--elevation', args.qa_elevation]
+    extra['qa'] += [] if args.qa_contributor is None else ['--contributor', args.qa_contributor]
+    extra['qa'] += [] if args.qa_shots is None else ['--shots', args.qa_shots]
+    if args.qa_support:
+        extra['qa'] += ['--support', args.qa_support]
+    for zoom, path in args.qa_fine_proof or ():
+        extra['qa'] += ['--fine-proof', zoom, path]
+    for ref in args.upstream or ():  # the public evidence producers: the same stages that fed package
+        extra['qa'] += ['--upstream', ref]
+    extra[QA_SHA_KEY] = args.release_sha256
     return extra
 
 
@@ -213,6 +251,31 @@ def package_generation(out, region):
         return None
     value = doc.get('generation') if isinstance(doc, dict) else None
     return value if isinstance(value, str) and HEX64.fullmatch(value) else None
+
+
+def package_release_sha256(out, region, generation):
+    """The sha256 the package receipt records for ``release/<generation>/release.json``, or None."""
+    try:
+        doc = json.loads((Path(out) / region / 'stages' / 'package.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return None
+    rows = doc.get('outputs') if isinstance(doc, dict) else None
+    for row in rows if isinstance(rows, list) else ():
+        if isinstance(row, dict) and row.get('path') == f'release/{generation}/release.json':
+            value = row.get('sha256')
+            return value if isinstance(value, str) and HEX64.fullmatch(value) else None
+    return None
+
+
+def qa_release(out, region, extra):
+    """qa's ``--generation`` and ``--release-sha256``: the explicit values, else the package receipt's.
+    ``None`` when either cannot be established (the run stops before qa)."""
+    given = extra.get('envelope')
+    generation = given[1] if given else package_generation(out, region)
+    if generation is None:
+        return None
+    digest = extra.get(QA_SHA_KEY) or package_release_sha256(out, region, generation)
+    return None if digest is None else ['--generation', generation, '--release-sha256', digest]
 
 
 def check_guards(cfg, out, norm, inputs=()):
@@ -412,6 +475,8 @@ def dry_run(cfg, region, out, norm, through, extra, inputs, missing):
     shown = dict(extra)
     if 'envelope' not in shown:
         shown['envelope'] = ['--generation', '<generation of the current package receipt>']
+    shown['qa'] = ['--generation', shown['envelope'][1], '--release-sha256',
+                   extra.get(QA_SHA_KEY) or '<sha256 of release.json in the current package receipt>', *shown['qa']]
     for index, stage in enumerate(chain_through(through), 1):
         say(f'  {index:>2}. {" ".join(stage_command(cfg, stage, region, out, shown))}')
     say('not run: ' + ', '.join(STAGES[STAGES.index(through) + 1:]) if through != STAGES[-1] else 'not run: (none)')
@@ -505,6 +570,13 @@ def run_locked(cfg, region, out, norm, through, extra, inputs):
                         f'package receipt {Path(out) / region / "stages" / "package.json"}')
                     return EXIT_USAGE
                 stage_args = {**extra, 'envelope': ['--generation', generation]}
+            if stage == 'qa':
+                release = qa_release(out, region, extra)
+                if release is None:
+                    say('run_region: STOPPED before qa: no --generation/--release-sha256 given and none readable '
+                        f'from the package receipt {Path(out) / region / "stages" / "package.json"}')
+                    return EXIT_USAGE
+                stage_args = {**extra, 'qa': [*release, *extra['qa']]}
             command = stage_command(cfg, stage, region, out, stage_args)
             say(f'run_region: stage {stage}: ' + ' '.join(command))
             started = time.monotonic()
@@ -546,7 +618,16 @@ def parse(argv):
     parser.add_argument('--manifest', help='package input: public layer inventory and metadata JSON (needed when the chain reaches package)')
     parser.add_argument('--upstream', action='append',
                         help='package input: a contributing stage[:scope]; repeat as needed (needed when the chain reaches package)')
-    parser.add_argument('--generation', help='envelope input: release generation (default: the current package receipt\'s)')
+    parser.add_argument('--generation', help='qa and envelope input: release generation (default: the current package receipt\'s)')
+    parser.add_argument('--release-sha256', help='qa input: sha256 of release/<generation>/release.json (default: the one the current '
+                        'package receipt records)')
+    parser.add_argument('--qa-elevation', help='qa input: mosaic elevation TIFF (needed when the chain reaches qa)')
+    parser.add_argument('--qa-contributor', help='qa input: mosaic contributor-id TIFF (needed when the chain reaches qa)')
+    parser.add_argument('--qa-shots', help='qa input: shots.json from `region.py shots` for this release (needed when the chain reaches qa; '
+                        'take the shots after package, then run qa and envelope)')
+    parser.add_argument('--qa-support', help='qa option: mosaic support_class TIFF')
+    parser.add_argument('--qa-fine-proof', nargs=2, action='append', metavar=('ZOOM', 'PATH'),
+                        help='qa option: fine-support raster for zoom 16 or 17 (z16/z17 also accepted; qa receives 16/17); repeat per zoom')
     parser.add_argument('--region-config', help='region config file for mosaic, tiles and zone (default: regions/<id>/region.json)')
     parser.add_argument('--coarse', help='zone input: EPSG:3310 coarse elevation TIFF (needed when the chain reaches zone)')
     parser.add_argument('--water', help='zone input: reviewed WGS84 ocean-water GeoJSON (needed when the chain reaches zone)')
@@ -555,6 +636,12 @@ def parse(argv):
     parser.add_argument('--dry-run', action='store_true', help='print the chain and the guard state; run nothing')
     args = parser.parse_args(argv)
     args.norm = effective_norm(args.norm)  # resolved once: guarded and forwarded as the very same path
+    # every file input is likewise fixed once here: the spelling the guard resolves is the spelling forwarded
+    for name in PATH_OPTIONS:
+        if getattr(args, name):
+            setattr(args, name, spelled(getattr(args, name)))
+    if args.qa_fine_proof:
+        args.qa_fine_proof = [(fine_zoom(parser, zoom), spelled(path)) for zoom, path in args.qa_fine_proof]
     return parser, args
 
 
@@ -578,8 +665,9 @@ def main(argv=None, cfg=None):
     if missing and not full_preview:
         parser.error('; '.join(f'the chain reaches {stage}, which needs {", ".join(flags)}' for stage, flags in missing))
     extra = stage_extras(args)
-    inputs = [Path(os.path.abspath(os.path.expanduser(p)))
-              for p in (args.source, args.region_config, args.coarse, args.water, args.manifest) if p]
+    # the very spellings stage_extras forwards (parse fixed them), so guard and child see one path
+    inputs = [Path(p) for p in (*(getattr(args, name) for name in PATH_OPTIONS),
+                                *(path for _, path in args.qa_fine_proof or ())) if p]
     if args.dry_run:
         return dry_run(cfg, args.region, out, norm, args.through, extra, inputs, missing)
     try:
