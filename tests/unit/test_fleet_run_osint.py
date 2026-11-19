@@ -37,7 +37,6 @@ _spec.loader.exec_module(run_osint)
 
 RUN_ID = "20261011T101700Z-abcdef"
 AGENT_MD = ROOT / ".claude/agents/charter-osint.md"
-WORKFLOW = ROOT / ".github/workflows/fleet-osint.yml"
 RUNBOOK = ROOT / "docs/operations/runbooks/fleet-osint.md"
 HOSTS = [h["host"] for h in json.loads((ROOT / "catalog/fleet/off-limits.json").read_text())["hosts"]]
 
@@ -604,88 +603,7 @@ class AgentContractTests(unittest.TestCase):
                 run_osint.agent_definition(drifted)
 
 
-class WorkflowTests(unittest.TestCase):
-    def setUp(self):
-        self.text = WORKFLOW.read_text()
-        self.header = "\n".join(line for line in self.text.split("\njobs:", 1)[0].splitlines()
-                                if not line.lstrip().startswith("#"))
-
-    def test_never_triggers_on_pull_request(self):
-        on = re.search(r"\non:\n((?:[ \t].*\n?)*)", self.header + "\n").group(1)
-        self.assertEqual(re.findall(r"^  ([a-z_]+):", on, re.M), ["schedule", "workflow_dispatch"])
-        for trigger in ("pull_request", "pull_request_target", "push:", "workflow_run"):
-            self.assertNotIn(trigger, self.header)
-        self.assertIn('- cron: "17 10 * * 0"', on)
-        self.assertEqual(re.findall(r"^      ([a-z_]+):\n", on, re.M), ["region", "mode", "sink", "max_batches", "run_id"])
-
-    def test_dark_main_only_on_our_runner_with_least_privilege(self):
-        self.assertIn("if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != '' && github.ref == 'refs/heads/main'",
-                      self.text)
-        self.assertEqual(re.findall(r"^\s*runs-on:\s*(.+?)\s*$", self.text, re.M),
-                         ["${{ vars.DATA_RUNNER || 'ubuntu-latest' }}"])
-        self.assertIn("permissions: {}", self.header)
-        granted = sorted(re.sub(r"\s*#.*", "", line).strip() for line in
-                         re.search(r"\n    permissions:\n((?:      .*\n)+)", self.text).group(1).splitlines())
-        self.assertEqual(granted, ["contents: read", "id-token: write"])
-        self.assertNotIn("secrets.", self.text, "the subscription token stays on the box, not in GitHub")
-        self.assertNotIn("ANTHROPIC_API_KEY:", self.text)
-        self.assertIn("persist-credentials: false", self.text)
-        self.assertIn("group: fleet-osint", self.header)
-
-    def test_inputs_reach_the_shell_only_through_the_environment(self):
-        for line in self.text.split("\njobs:", 1)[1].splitlines():
-            if "${{" in line:
-                self.assertRegex(line.strip(), r"^(?:[A-Z_]+|runs-on|group): \$\{\{ [^}]+ \}\}$", line)
-
-    def test_plans_researches_with_the_pinned_cli_and_ingests(self):
-        self.assertIn("python scripts/fleet/run_osint.py --print-cli-version", self.text)
-        self.assertIn('"@anthropic-ai/claude-code@$version"', self.text)
-        self.assertIn('plan-agent --region "$REGION" --sink "$SINK" --run-id "$RUN_ID" --mode "$MODE"', self.text)
-        self.assertIn('python scripts/fleet/run_osint.py "${args[@]}"', self.text)
-        self.assertIn('--profiles "$run_dir/profiles"', self.text)
-        self.assertIn("FLEET_OSINT_PARALLEL: ${{ vars.FLEET_OSINT_PARALLEL || '3' }}", self.text)
-        self.assertNotIn("GITHUB_WORKSPACE", self.text)
-
-    def research_step(self):
-        """The `run:` script of the Research step, as GitHub hands it to `bash -e {0}`."""
-        step = re.search(r"- name: Research the batches\n(?:        .*\n)*?        run: \|\n((?:          .*\n)+)", self.text)
-        return "".join(line[10:] for line in step.group(1).splitlines(keepends=True))
-
-    def run_research_step(self, tmp, runner_rc):
-        """Run the step's script with a fake run_osint.py that prints counts and exits ``runner_rc``."""
-        fake_bin = Path(tmp) / "bin"
-        fake_bin.mkdir(exist_ok=True)
-        fake = fake_bin / "python"
-        fake.write_text(f"#!/bin/sh\necho '{{\"batches\": 2, \"done\": 1, \"failed\": 1}}'\nexit {runner_rc}\n")
-        fake.chmod(0o755)
-        summary, outputs = Path(tmp) / "summary.md", Path(tmp) / "outputs.txt"
-        summary.write_text("")
-        outputs.write_text("")
-        env = {"PATH": f"{fake_bin}:{os.environ['PATH']}", "REGION": "CA", "RUN_ID": RUN_ID, "CLAUDE_BIN": "/nonexistent",
-               "MAX_BATCHES": "", "GITHUB_STEP_SUMMARY": str(summary), "GITHUB_OUTPUT": str(outputs),
-               "FLEET_LOCK": str(Path(tmp) / ".locks" / "fleet-osint.lock")}
-        # This tests how the step handles the runner's status after acquiring the lock.
-        script = "flock() { return 0; }\n" + self.research_step()
-        proc = subprocess.run(["bash", "-e", "-c", script], env=env, capture_output=True, text=True,
-                              cwd=tmp, timeout=30)
-        return proc, summary.read_text(), outputs.read_text()
-
-    def test_the_research_step_continues_to_ingest_when_some_batches_failed(self):
-        # The job's Ingest step runs on exit 0 and 1 (then `Fail when a batch failed` reads rc); only 2 stops it.
-        with tempfile.TemporaryDirectory() as tmp:
-            for runner_rc, step_rc in ((0, 0), (1, 0), (2, 2)):
-                with self.subTest(runner_rc=runner_rc):
-                    proc, summary, outputs = self.run_research_step(tmp, runner_rc)
-                    self.assertEqual(proc.returncode, step_rc, proc.stderr)
-                    self.assertIn('"done": 1', summary, "the counts reach the step summary")
-                    self.assertIn(f"rc={runner_rc}\n", outputs, "the fail step reads the runner's status")
-        self.assertIn("if: steps.osint.outputs.rc == '1'", self.text)
-
-    def test_the_run_deadline_leaves_the_job_time_to_ingest(self):
-        (job,) = [int(m) for m in re.findall(r"^    timeout-minutes: (\d+)$", self.text, re.M)]
-        # The deadline, one cut session's grace, and at least half an hour for setup and Ingest.
-        self.assertLessEqual(run_osint.DEFAULT_DEADLINE_MIN + run_osint.KILL_GRACE_S / 60 + 30, job)
-
+class RunbookTests(unittest.TestCase):
     def test_the_pin_is_documented_with_its_flags(self):
         runbook = RUNBOOK.read_text(encoding="utf-8")
         self.assertIn(f"`{run_osint.CLAUDE_CODE_VERSION}`", runbook)

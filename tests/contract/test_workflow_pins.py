@@ -68,41 +68,16 @@ if __name__ == '__main__':
 
 
 class RunnerSwitchTests(unittest.TestCase):
-    """Check the fixed and variable-based runner assignments in docs/operations/runners.md."""
-
-    # fleet-health.yml alerts when Hermes (the data runner) is down, so it cannot run there (charter-fleet design § 4).
-    # e2e-timing.yml measures input latency, so it stays on the same GitHub-hosted runner class every night (CI-PARITY-1).
-    HOSTED_ONLY = {
-        'advisor-media.yml', 'budget-drift.yml', 'buoy-history.yml', 'coast-assets.yml',
-        'dco.yml', 'deploy-cloudflare.yml', 'e2e-timing.yml', 'feed-freshness.yml',
-        'fleet-health.yml', 'live-conditions.yml', 'ops-report.yml', 'regional-legal-review.yml',
-        'release.yml',
-    }
-
-    CI_RUNS_ON = 'ubuntu-latest'
-
-    # These data jobs must stay on GitHub-hosted Ubuntu regardless of repository variables.
-    LIGHT_RUNS_ON = 'ubuntu-latest'
-    LIGHT_WORKFLOWS = {
-        'basemap.yml', 'daily-data.yml', 'draft-region-health.yml', 'draft-region-rehearsal.yml',
-        'forecast-tiles.yml', 'research-daily.yml', 'research-fish-survey.yml', 'research-substrate.yml',
-    }
+    """Check the public GitHub-hosted runner assignments in docs/operations/runners.md."""
 
     def test_workflow_runner_assignments(self):
         wrong = []
         for path in sorted((ROOT / '.github/workflows').glob('*.y*ml')):
-            expected = {
-                'ci.yml': self.CI_RUNS_ON,
-                'seafloor.yml': 'ubuntu-latest',
-            }.get(path.name, self.LIGHT_RUNS_ON if path.name in self.LIGHT_WORKFLOWS else "${{ vars.DATA_RUNNER || 'ubuntu-latest' }}")
             for line in re.findall(r'^\s*runs-on:\s*(.+?)\s*$', path.read_text(), re.M):
-                if path.name in self.HOSTED_ONLY:
-                    if line != 'ubuntu-latest':
-                        wrong.append(f'{path.name}: {line} (expected literal ubuntu-latest)')
-                elif line == 'macos-latest' and path.name == 'research-substrate.yml':
+                if line == 'macos-latest' and path.name == 'research-substrate.yml':
                     continue  # one monthly audit job needs a macOS wheel (pylerc); about 90 billed minutes a month
-                elif line != expected:
-                    wrong.append(f'{path.name}: {line}')
+                if line != 'ubuntu-latest':
+                    wrong.append(f'{path.name}: {line} (expected literal ubuntu-latest)')
         self.assertEqual(wrong, [])
 
     def test_ci_uses_job_local_pnpm_and_installs_browser_dependencies(self):

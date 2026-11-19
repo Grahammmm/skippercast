@@ -1,131 +1,18 @@
-"""The charter fleet registry workflow keeps the shape design.md section 9 and runners.md require (CF-18).
-
-Weekly (Mon 09:47 UTC) and on dispatch (region, sink, steps; run_id to resume), no
-pull_request trigger, dark until ENABLE_FLEET, only on our own runner and only from
-main, the OIDC identity the Worker pins, the Places key only in the pipeline step, run
-state outside the checkout, and a runbook for the first run, reruns and staging runs.
-"""
+"""Public fleet registry authorization and operator runbook contracts."""
 import json
 import re
 import unittest
 
 from tests._support import ROOT
 
-WORKFLOW = ROOT / '.github' / 'workflows' / 'fleet-registry.yml'
 RUNBOOK = ROOT / 'docs' / 'operations' / 'runbooks' / 'fleet-registry.md'
 
 
-def _steps(text):
-    """Each `- name:` / `- uses:` step of the job, as text."""
-    body = text.split('\n    steps:\n', 1)[1]
-    return re.split(r'\n(?=      - )', body)
-
-
-def _assert_writer_lock(group, step_name, wait):
-    text = WORKFLOW.with_name(f'{group}.yml').read_text()
-    assert re.search(rf'^concurrency:\n  group: {group}$', text, re.M)
-    step = next(s for s in _steps(text) if s.lstrip().startswith(f'- name: {step_name}\n'))
-    body = step.split('        run: |\n', 1)[1]
-    commands = [line.strip() for line in body.splitlines()
-                if line.strip() and not line.lstrip().startswith(('#', 'set '))]
-    base = '${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}'
-    if group in ('fleet-registry', 'fleet-osint'):
-        locate = next(s for s in _steps(text) if 'var="$var-staging"' in s)
-        assert locate.index(f'var="{base}"') < locate.index(
-            f'echo "FLEET_LOCK=$var/.locks/{group}.lock" >> "$GITHUB_ENV"'
-        ) < locate.index('var="$var-staging"')
-        lock_path = '$FLEET_LOCK'
-    else:
-        lock_path = f'{base}/.locks/{group}.lock'
-    assert commands[:6] == [
-        f'lock="{lock_path}"',
-        'mkdir -p -m 0700 -- "${lock%/*}" || exit 1',
-        f'WAIT={wait}',
-        'exec 9>"$lock"',
-        'flock -w "$WAIT" 9 || { '
-        f'echo "::error::{group} is held by another run (this or the other repo); not starting"; exit 75; }}',
-        f'echo "lock {group} acquired"',
-    ]
-
-
-class FleetWorkflowLockTests(unittest.TestCase):
-    def test_each_writer_takes_its_group_lock_before_work(self):
-        for group, step_name, wait in (
-            ('fleet-ais', 'Process AIS positions', 600),
-            ('fleet-registry', 'Run the registry pipeline', 60),
-            ('fleet-ais-listener', 'Install and restart the listener', 60),
-            ('fleet-osint', 'Plan the batches', 60),
-            ('fleet-osint', 'Research the batches', 60),
-            ('fleet-osint', 'Ingest the profiles', 60),
-        ):
-            with self.subTest(group=group, step=step_name):
-                _assert_writer_lock(group, step_name, wait)
-
-
-class FleetRegistryWorkflowTests(unittest.TestCase):
-    def setUp(self):
-        self.text = WORKFLOW.read_text()
-        # Comments removed, so prose such as "No pull_request trigger" is not read as a trigger.
-        self.header = '\n'.join(line for line in self.text.split('\njobs:', 1)[0].splitlines()
-                                if not line.lstrip().startswith('#'))
-
-    def test_weekly_and_dispatch_only(self):
-        on = re.search(r'\non:\n((?:[ \t].*\n?)*)', self.header + '\n').group(1)
-        self.assertEqual(re.findall(r'^  ([a-z_]+):', on, re.M), ['schedule', 'workflow_dispatch'])
-        self.assertIn('- cron: "47 9 * * 1"', on)
-        for trigger in ('pull_request', 'push:', 'workflow_run'):
-            self.assertNotIn(trigger, self.header)
-        inputs = re.findall(r'^      ([a-z_]+):\n', on, re.M)
-        self.assertEqual(inputs, ['region', 'sink', 'steps', 'run_id'])
-        self.assertRegex(on, r'sink:\n(?:        .*\n)*?        options:\n          - worker\n          - staging\n')
-
-    def test_dark_main_only_and_never_hosted(self):
-        self.assertIn("if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != '' && github.ref == 'refs/heads/main'",
-                      self.text)
-        self.assertEqual(re.findall(r'^\s*runs-on:\s*(.+?)\s*$', self.text, re.M),
-                         ["${{ vars.DATA_RUNNER || 'ubuntu-latest' }}"])
-        self.assertEqual(self.text.count('\n  run:\n'), 1, 'one job')
-
-    def test_identity_and_least_privilege(self):
-        self.assertIn('permissions: {}', self.header)
-        granted = sorted(re.sub(r'\s*#.*', '', line).strip() for line in
-                         re.search(r'\n    permissions:\n((?:      .*\n)+)', self.text).group(1).splitlines())
-        self.assertEqual(granted, ['contents: read', 'id-token: write'])
-        self.assertEqual(self.text.count('permissions:'), 2)
-        self.assertIn('group: fleet-registry', self.header)
-        self.assertIn('cancel-in-progress: false', self.header)
-        self.assertIn('persist-credentials: false', self.text)
+class FleetRegistryAuthorizationTests(unittest.TestCase):
+    def test_registry_is_in_the_public_scheduler_and_route_scope(self):
         policy = json.loads((ROOT / 'deployments' / 'production.json').read_text())
         self.assertIn('fleet-registry.yml', policy['scheduler']['workflows'])
         self.assertIn("'fleet-registry.yml'", (ROOT / 'server' / 'routes' / 'fleet.ts').read_text())
-
-    def test_runs_the_pipeline_with_state_outside_the_checkout(self):
-        self.assertIn('python -m pip install -e ".[fleet]"', self.text)
-        steps = _steps(self.text)
-        locate = next(s for s in steps if 'name: Locate the run state' in s)
-        self.assertIn('var="${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}"', locate)
-        self.assertIn('if [ "$SINK" = staging ]; then var="$var-staging"; fi', locate)
-        self.assertIn('echo "SKIPPERCAST_FLEET_VAR=$var" >> "$GITHUB_ENV"', locate)
-        self.assertNotIn('GITHUB_WORKSPACE', self.text)
-        pipeline = next(s for s in steps if 'name: Run the registry pipeline' in s)
-        self.assertIn('args=(run --region "$REGION" --sink "$SINK" --run-id "$RUN_ID")', pipeline)
-        self.assertIn('args+=(--steps "$STEPS")', pipeline)
-        self.assertIn("REGION: ${{ inputs.region || vars.FLEET_REGION || 'CA' }}", self.text)
-        self.assertIn("SINK: ${{ inputs.sink || 'worker' }}", self.text)
-        coverage = next(s for s in steps if 'name: Report charter identity coverage' in s)
-        self.assertIn('coverage-status --region "$REGION" --sink "$SINK"', coverage)
-        self.assertNotIn('--apply', re.sub(r'#.*', '', self.text), 'region files change only through a PR')
-
-    def test_inputs_reach_the_shell_only_through_the_environment(self):
-        for line in self.text.split('\njobs:', 1)[1].splitlines():
-            if '${{' in line:
-                self.assertRegex(line.strip(), r'^(?:[A-Z_]+|runs-on|group): \$\{\{ [^}]+ \}\}$', line)
-
-    def test_places_key_only_in_the_pipeline_step(self):
-        self.assertEqual(self.text.count('secrets.'), 1)
-        pipeline = next(s for s in _steps(self.text) if 'name: Run the registry pipeline' in s)
-        self.assertIn('GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}', pipeline)
-
 
 class FleetRegistryRunbookTests(unittest.TestCase):
     def setUp(self):

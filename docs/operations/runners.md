@@ -2,7 +2,7 @@
 
 SkipperCast's compute is GitHub Actions. On a public repository the minutes are free; on a
 private one they are billed, and the live forecast loop alone runs about 24 hours a day.
-This page records the numbers and the switch that moves the heavy jobs to a box we own.
+This page records the numbers and separates the public hosted jobs from the private fleet jobs.
 
 ## What the jobs cost on GitHub-hosted runners
 
@@ -23,36 +23,26 @@ A private repository on the Free plan includes 2,000 Linux minutes a month, then
 $0.008 a minute (check GitHub's current price list). At the totals above that is roughly
 **$400–750 a month**. Paid plans add only 1,000–50,000 minutes, so no plan makes this cheap.
 
-## The switch: self-hosted runners
+## Public hosted jobs and private fleet runners
 
-Some workflows are pinned to GitHub-hosted runners; only workflows that read a runner
-variable can be moved by changing that variable:
+All workflows in public `Grahammmm/skippercast` use GitHub-hosted runners. No public
+workflow reads a runner-selection variable.
 
-| Runner or variable | Workflows | Unset (default) | Set to `skippercast` |
-| --- | --- | --- | --- |
-| Literal `ubuntu-latest` | `advisor-media.yml`, `budget-drift.yml`, `buoy-history.yml`, `coast-assets.yml`, `feed-freshness.yml`, `live-conditions.yml` (all 4 jobs), `ops-report.yml`, `regional-legal-review.yml` | Always GitHub-hosted | Not configurable |
-| Literal `ubuntu-latest` | basemap, daily data, draft-region health and rehearsal, forecast tiles, research daily, research fish survey, research substrate (one job stays on `macos-latest`), seafloor | Always GitHub-hosted | Not configurable |
-| Literal `ubuntu-latest` | `ci.yml` (all six jobs) | Always GitHub-hosted | Not configurable |
-| `DATA_RUNNER` | fleet AIS processor and listener install, fleet registry, fleet OSINT | fleet jobs skip | our runners (free minutes) |
+Every public job uses `ubuntu-latest` except one monthly research-substrate job, which
+uses `macos-latest`.
 
 `deploy-cloudflare.yml`, `dco.yml` and `release.yml` stay on GitHub-hosted runners: they
 are short (about 1–3 minutes each) and the deploy holds the Cloudflare token, which we
 would rather not hand to a long-lived box. `fleet-health.yml` (under a minute, hourly) stays
 hosted too, so it can raise the `fleet-ais-stale` issue while the data runner is down.
 
-On a public repository anyone's pull request could run code on the box, so no pull
-request from a fork may ever reach it.
-
-CI never moves to a self-hosted runner on a public repo.
-
-**Rule for every workflow that can run on `DATA_RUNNER`:** no
-`pull_request` or `pull_request_target` trigger. Such a workflow runs on `schedule` (which
-runs `main`), `workflow_dispatch`, `workflow_run`, or `push` limited to `branches: [main]`,
-so only reviewed code reaches the box. Workflows that hold fleet secrets go further: their
-jobs also require `github.ref == 'refs/heads/main'`, so a dispatch from another branch is
-skipped (charter fleet [Q13](../plans/charter-fleet/open-questions.md#q13-self-hosted-fleet-jobs-on-a-public-repository),
-[threat model § 10.4](../legal/threat-model.md) row E). `tests/unit/test_fleet_install_script.py`
-checks the trigger rule for every workflow that names `DATA_RUNNER`.
+The fleet AIS processor and listener install, registry and OSINT workflows run on
+self-hosted runners registered to private `Grahammmm/skippercast-ops`. The jobs require
+`ENABLE_FLEET=true` and the private repo's `main`, and check out public SkipperCast `main`
+for the scripts and Python package. They have no `pull_request` or `pull_request_target`
+triggers. Their workflow and lock contracts are tested in `skippercast-ops` (charter fleet
+[Q13](../plans/charter-fleet/open-questions.md#q13-self-hosted-fleet-jobs-on-a-public-repository),
+[threat model § 10.4](../legal/threat-model.md) row E).
 
 ## Setting up the box
 
@@ -65,23 +55,12 @@ runner instances. Options, ranked:
    a power cut interrupts jobs configured to use the box.
 3. Stay on GitHub-hosted runners and pay. Simplest; the most expensive by a factor of 50.
 
-Steps:
+Use the operator instructions in private `skippercast-ops` to register fleet runners.
+Do not register runners to the public repository. The stock `scripts/runner/setup.sh`
+defaults do not describe the private fleet setup.
 
-1. Create the box; SSH in as root.
-2. In the repository: Settings → Actions → Runners → New self-hosted runner → copy the
-   registration token (it expires in an hour).
-3. Run the setup script from a checkout (or paste it in):
-   ```bash
-   sudo REPO=Grahammmm/skippercast RUNNER_TOKEN=<token> bash scripts/runner/setup.sh
-   ```
-   It installs host packages and registers four runners (`RUNNERS=4`) as systemd services with the
-   labels `self-hosted,skippercast`. Python and Node still come from `actions/setup-python`
-   and `actions/setup-node` inside each job, cached under the runner's work folder.
-4. Check Settings → Actions → Runners shows four idle runners.
-5. Set `DATA_RUNNER` with `gh variable set DATA_RUNNER --body skippercast`. Only the fleet
-   jobs configured to use that variable run on the box; they skip if it is unset.
-6. Also turn on `ENABLE_QUEUES=true` (see `docs/cloudflare.md`) so the notify job stops
-   running all day; the Worker's cron queues trip checks itself.
+Separately, `ENABLE_QUEUES=true` (see `docs/cloudflare.md`) stops the hosted notify job
+from running all day; the Worker's cron queues trip checks itself.
 
 ## Keeping it healthy
 
@@ -92,10 +71,9 @@ Steps:
 - Artifacts and caches (`actions/upload-artifact`, `actions/cache`) still count against
   GitHub storage (500 MB free on the Free plan). The research workflows upload the most;
   shorten their `retention-days` if the storage bill appears.
-- Secrets used by jobs on the box: `R2_PUBLISH_TOKEN` (or the deploy token as fallback),
-  `AISSTREAM_API_KEY` (the fleet AIS listener, below), `GOOGLE_PLACES_API_KEY` (the fleet
-  registry run, below), `CLOUDFLARE_ACCOUNT_ID` and the Actions `GITHUB_TOKEN`. Keep the
-  box patched and its SSH key-only; `docs/legal/threat-model.md` lists it as an asset.
+- Fleet secrets used by jobs on the box include `AISSTREAM_API_KEY` (listener install,
+  below) and `GOOGLE_PLACES_API_KEY` (registry, below). Keep the box patched and its
+  SSH key-only; `docs/legal/threat-model.md` lists it as an asset.
 
 ## The advisor media job
 
@@ -133,12 +111,11 @@ errors leave items pending and the next dispatch retries them.
 The charter fleet's AIS listener (CF-41, [design.md § 10](../plans/charter-fleet/design.md#10-ais-listener))
 is not a job: aisstream has no replay, so it runs all the time as a **user** systemd unit of the
 runner user, `skippercast-fleet-ais@<REGION>` (`scripts/fleet/skippercast-fleet-ais@.service`).
-`fleet-ais-listener.yml` installs and updates it. That workflow has no schedule and no push
-trigger: the owner dispatches it (`gh workflow run fleet-ais-listener.yml -f region=CA`), it needs
-`ENABLE_FLEET=true` and a non-empty `DATA_RUNNER` (so it never runs on a GitHub-hosted runner),
-runs only from `main`, and its token can only read the repository (`contents: read`).
+`fleet-ais-listener.yml` in private `skippercast-ops` installs and updates it. It has no
+schedule or push trigger: the owner dispatches it in the private repo. It needs
+`ENABLE_FLEET=true`, runs only from `main`, and uses `contents: read`.
 
-`scripts/fleet/install_listener.sh` copies the dispatched revision to
+`scripts/fleet/install_listener.sh` copies the checked-out public revision to
 `~/.local/share/skippercast/app/<sha>` with its own virtualenv (the `fleet` extra, built on the
 box's `python3`, 3.11 or newer; Ubuntu 24.04 ships 3.12 and `setup.sh` installs `python3-venv`),
 points `app/current` at it, writes `~/.config/skippercast/fleet-ais.env` with mode 0600, restarts
@@ -159,11 +136,12 @@ Optional Morro Bay receive-only receiver (plan only, nothing bought): [fleet AIS
 
 ## The fleet registry run
 
-`fleet-registry.yml` (CF-18, [design.md § 9](../plans/charter-fleet/design.md#9-ingest-and-refresh))
+`fleet-registry.yml` in private `skippercast-ops` (CF-18,
+[design.md § 9](../plans/charter-fleet/design.md#9-ingest-and-refresh))
 runs the charter fleet registry pipeline (`python -m skippercast.fleet run`: discover, resolve,
 enrich-code, ingest, refresh) every Monday at 09:47 UTC and on dispatch (`region`, `sink`, `steps`,
-and `run_id` to resume a run). Like the listener install it needs `ENABLE_FLEET=true` and a
-non-empty `DATA_RUNNER`, and runs only from `main`. Its token reads the repository and requests an
+and `run_id` to resume a run). Like the listener install it needs `ENABLE_FLEET=true`
+and runs only from `main`. Its token reads the repository and requests an
 OIDC identity (`id-token: write`) for `/api/fleet/jobs/*`; the Worker answers those routes only
 while `FLEET_ENABLED` is on. Run state lives in `~/.local/share/skippercast/fleet` (staging runs:
 `fleet-staging`), never in the checkout. `GOOGLE_PLACES_API_KEY` (secret, owner step, optional)
@@ -172,11 +150,12 @@ runs and publishing coverage: [fleet registry run](runbooks/fleet-registry.md).
 
 ## The fleet OSINT run
 
-`fleet-osint.yml` (CF-21, [design.md § 8](../plans/charter-fleet/design.md#8-the-osint-agent-step))
+`fleet-osint.yml` in private `skippercast-ops` (CF-21,
+[design.md § 8](../plans/charter-fleet/design.md#8-the-osint-agent-step))
 plans OSINT batch manifests, researches each batch as a headless `claude -p` session with the
 `charter-osint` agent (`scripts/fleet/run_osint.py`) and ingests the profiles, every Sunday at
 10:17 UTC and on dispatch (`region`, `mode`, `sink`, `max_batches`, and `run_id` to resume). It
-needs `ENABLE_FLEET=true` and a non-empty `DATA_RUNNER`, runs only from `main`, and requests an
+needs `ENABLE_FLEET=true`, runs only from `main`, and requests an
 OIDC identity for `/api/fleet/jobs/*`. It uses the Claude subscription only: the owner saves a
 `claude setup-token` token in `~/.config/skippercast/claude.env` (mode 0600, on the box, not a
 GitHub secret), and the script exits if `ANTHROPIC_API_KEY` is set. The Claude Code version is

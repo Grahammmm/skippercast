@@ -1,8 +1,8 @@
 """The AIS listener's deployment keeps the shape CF-42 requires (design.md section 10).
 
-Static checks on scripts/fleet/install_listener.sh, the unit template and
-fleet-ais-listener.yml, then the script run end to end against a throwaway git
-repository and a fake HOME, with `systemctl` and `journalctl` stubbed on PATH (no
+Static checks on scripts/fleet/install_listener.sh and the unit template, then
+the script run end to end against a throwaway git repository and a fake HOME,
+with `systemctl` and `journalctl` stubbed on PATH (no
 systemd, no network, no pip download: the fake revision's `fleet` extra is empty).
 """
 import os
@@ -20,7 +20,6 @@ from tests._support import ROOT
 
 SCRIPT = ROOT / 'scripts' / 'fleet' / 'install_listener.sh'
 UNIT = ROOT / 'scripts' / 'fleet' / 'skippercast-fleet-ais@.service'
-WORKFLOW = ROOT / '.github' / 'workflows' / 'fleet-ais-listener.yml'
 RUNBOOK = ROOT / 'docs' / 'operations' / 'runbooks' / 'fleet-ais-down.md'
 KEY = 'synthetic0key0for0tests0only0f00d'
 STORED_KEY = 'synthetic-stored-listener-key='
@@ -69,63 +68,6 @@ class InstallScriptStaticTests(unittest.TestCase):
                      'Restart=always', 'RestartSec=10', 'MemoryMax=512M', 'WantedBy=default.target'):
             self.assertIn(f'\n{line}\n', unit)
         self.assertNotIn('AISSTREAM_API_KEY=', unit, 'the key lives only in the 0600 env file')
-
-
-class WorkflowTests(unittest.TestCase):
-    def setUp(self):
-        self.text = WORKFLOW.read_text(encoding='utf-8')
-        self.header = '\n'.join(line for line in self.text.split('\njobs:', 1)[0].splitlines()
-                                if not line.lstrip().startswith('#'))
-
-    def test_dispatch_only(self):
-        self.assertRegex(self.header, r'\non:\n  workflow_dispatch:\n')
-        for trigger in ('schedule:', 'push:', 'pull_request', 'workflow_run'):
-            self.assertNotIn(trigger, self.header)
-
-    def test_least_privilege_on_our_runner(self):
-        self.assertIn('permissions: {}', self.header)
-        grants = re.findall(r'^\s+([a-z-]+): (read|write)\b', self.text.split('\njobs:', 1)[1], re.M)
-        self.assertEqual(grants, [('contents', 'read')])
-        self.assertIn("if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != '' && github.ref == 'refs/heads/main'",
-                      self.text, 'only main: the key never reaches unreviewed code')
-        self.assertEqual(re.findall(r'^\s*runs-on:\s*(.+?)\s*$', self.text, re.M),
-                         ["${{ vars.DATA_RUNNER || 'ubuntu-latest' }}"])
-        self.assertIn('persist-credentials: false', self.text)
-        self.assertIn('cancel-in-progress: false', self.header)
-        self.assertIn('  group: fleet-ais-listener\n', self.header)
-
-    def test_secret_only_in_the_step_environment(self):
-        self.assertEqual(self.text.count('secrets.'), 1)
-        self.assertIn('          AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}\n', self.text)
-        run = re.findall(r'^ {8}run: (.+(?:\n+ {10}[^\n]*)*)$', self.text, re.M)
-        self.assertEqual(
-            [(script.splitlines()[0], script.rstrip().splitlines()[-1].strip()) for script in run],
-            [('|', 'bash scripts/fleet/install_listener.sh --region "$REGION"')],
-        )
-        self.assertNotIn('${{ inputs.region }}', run[0], 'inputs reach the shell through env, not interpolation')
-
-
-class SelfHostedTriggerTests(unittest.TestCase):
-    """docs/operations/runners.md: no pull request reaches a workflow that can run on our runners."""
-
-    def test_no_pull_request_trigger_on_runner_workflows(self):
-        checked, wrong = [], []
-        for path in sorted((ROOT / '.github' / 'workflows').glob('*.y*ml')):
-            text = path.read_text(encoding='utf-8')
-            if not re.search(r'vars\.(DATA_RUNNER|SEAFLOOR_RUNNER)', text):
-                continue
-            checked.append(path.name)
-            header = '\n'.join(line for line in text.split('\njobs:', 1)[0].splitlines()
-                                if not line.lstrip().startswith('#'))
-            on = re.search(r'\non:\n((?:[ \t].*\n?)*)', header + '\n')
-            triggers = re.findall(r'^  ([a-z_]+):', on.group(1), re.M) if on else ['<unparsed>']
-            for trigger in triggers:
-                if trigger not in ('schedule', 'workflow_dispatch', 'workflow_run', 'push'):
-                    wrong.append(f'{path.name}: {trigger}')
-            if 'push' in triggers and not re.search(r'^  push:\n    branches: \[main\]\n', on.group(1), re.M):
-                wrong.append(f'{path.name}: push not limited to main')
-        self.assertIn('fleet-ais-listener.yml', checked)
-        self.assertEqual(wrong, [])
 
 
 class RunbookTests(unittest.TestCase):

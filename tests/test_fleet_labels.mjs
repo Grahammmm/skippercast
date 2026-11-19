@@ -4,10 +4,7 @@
 // stubbed. Synthetic throughout: invented boats, 999xxxxxx MMSIs, made-up admin and agent ids.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
-import {spawnSync} from 'node:child_process';
-import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {readFileSync} from 'node:fs';
 import {advisorDatabase, sqliteUnavailable} from './_advisor_d1.mjs';
 import {withSessions} from './fixtures/test-sessions.mjs';
 
@@ -348,41 +345,6 @@ test('N7: the owner approves a trip\'s agent labels; the list filters and flags 
   assert.match(view, /awaiting: 'Awaiting approval'/);
   assert.match(view, /postFleet\(`trips\/\$\{encodeURIComponent\(trip\.id\)\}\/approve`, \{reviewed_ids: reviewedIds\}\)/);
   assert.match(view, /t\.agent_labels \? <span class="admin-reason">\{COPY\.awaiting\}<\/span>/);
-});
-
-test('N7: fleet-ais.yml label_import runs `label import` on a file under FLEET_VAR, alone', () => {
-  const text = readFileSync(new URL('../.github/workflows/fleet-ais.yml', import.meta.url), 'utf8');
-  assert.match(text, /\n {6}label_import:\n/);
-  assert.equal(text.split('inputs.label_import').length - 1, 1, 'the input reaches the script through the environment');
-  assert.doesNotMatch(text, /(contents|actions|issues|pull-requests): write/);
-  // Run the step's script with a stand-in python that records its arguments.
-  const start = text.indexOf('        run: |\n', text.indexOf('- name: Process AIS positions'));
-  const script = text.slice(start + '        run: |\n'.length).split('\n').map(l => l.slice(10)).join('\n');
-  const dir = mkdtempSync(join(tmpdir(), 'fleet-ais-')), bin = join(dir, 'bin'), fleetVar = join(dir, 'var');
-  mkdirSync(bin); mkdirSync(join(fleetVar, 'labels'), {recursive: true});
-  writeFileSync(join(bin, 'python'), `#!/bin/sh\necho "$@" >> "${join(dir, 'calls')}"\n`, {mode: 0o755});
-  writeFileSync(join(fleetVar, 'labels', 'proposed.json'), '{}');
-  const run = env => {
-    rmSync(join(dir, 'calls'), {force: true});
-    const r = spawnSync('bash', ['-e', '-c', script], {encoding: 'utf8', env: {PATH: `${bin}:${process.env.PATH}`, HOME: dir,
-      SKIPPERCAST_FLEET_VAR: fleetVar, GITHUB_STEP_SUMMARY: join(dir, 'summary'), REGION: 'CA', WINDOW_FROM: '', WINDOW_TO: '', BACKFILL_MONTH: '',
-      VALIDATE: 'false', LABEL_IMPORT: '', ...env}});
-    return {status: r.status, err: r.stdout + r.stderr, calls: existsSync(join(dir, 'calls')) ? readFileSync(join(dir, 'calls'), 'utf8') : ''};
-  };
-  try {
-    assert.deepEqual(run({LABEL_IMPORT: 'labels/proposed.json'}), {status: 0, err: 'lock fleet-ais acquired\nAIS run kind=label-import trigger=unknown cron=none source=unknown\n',
-      calls: `-m skippercast.fleet.ais label import ${join(fleetVar, 'labels', 'proposed.json')}\n`});
-    for (const env of [{WINDOW_FROM: '2026-01-01'}, {BACKFILL_MONTH: '2026-01'}, {VALIDATE: 'true'}]) {
-      const r = run({LABEL_IMPORT: 'labels/proposed.json', ...env});
-      assert.deepEqual([r.status, r.calls], [2, ''], JSON.stringify(env));
-      assert.match(r.err, /label_import runs alone/);
-    }
-    for (const path of [join(fleetVar, 'labels', 'proposed.json'), '../var/labels/proposed.json', 'labels/../labels/proposed.json', '..', 'labels/missing.json']) {
-      const r = run({LABEL_IMPORT: path});
-      assert.deepEqual([r.status, r.calls], [2, ''], path);
-    }
-    assert.match(run({}).calls, /^-m skippercast\.fleet\.ais process --region CA\n/, 'a normal run is unchanged');
-  } finally { rmSync(dir, {recursive: true, force: true}); }
 });
 
 // ---- RF0844-8: a written day that is not on the calendar is refused, never rolled into the next month ----
