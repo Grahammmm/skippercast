@@ -279,7 +279,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MB-20: only light-theme overlay roles (--flow*, --mpa-fill/line, --swell-0..3, --contrast-1/2) change; Reports catch text and backing do not use them.
   // MB-22 adds Chart-only survey ink, halo and tints; Reports catch paint is unchanged.
   // MB-11: Chart legend colours/layout only (ramp-B chips, survey-detail chips, dim note); Reports catch text and backing do not use them. Rebind only tokens.css.
-  "web/tokens.css": "f19461672d1d4d71e8d010513090c436ea57b283b8878fe89a09ad5ae2943886",
+  // MSK-1 adds only unused --skn-* variables. Reports catch markup, paint and thresholds are unchanged; rebind tokens.css only.
+  "web/tokens.css": "b33922749186e5307b93bcd39238e7cb170f0e3e020870a59f98c99cbf691a23",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   // UXFIX-05: tokens.css only turns the eight --text-* font sizes from px into the same sizes in rem (identical at a 16 px root); no colour, paint, gradient, catch markup, assertion or threshold changes, so BODY09 stays applicable. Rebind web/tokens.css and the check_contrast.mjs surface-source pin only.
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
@@ -423,7 +424,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MB-22 rebinds only the tokensCss surface hash. BODY09 paint, contrast logic and assertions are unchanged.
   // MAP-SOURCES-PAGE-1: only the legendTsx surface hash and its comment change; contrast math and gates unchanged.
   // MB-11: contrast check gains the legend chip/panel pairs only; no existing pair, assertion or threshold changes. Rebind only check_contrast.mjs.
-  "scripts/check_contrast.mjs": "15100c475818b2f231fac83216b523c71666afcbd6eb60dea7b8dce8af113af8",
+  // MSK-1: only tokensCss source digest/comment changed in the checker; no contrast logic changed.
+  "scripts/check_contrast.mjs": "9c797b857492a7a0f17ed6c594647ab06c7e1519132fce5d2b1c3caef8c10b65",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
