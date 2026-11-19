@@ -2,7 +2,7 @@
 
 Every document in `docs/`, grouped by who it is for. Start with the [architecture](architecture.md) for how the system fits together, or the [web app guide](web-app.md) for what it does.
 
-Dated audit, rollout, source-request and review records live in [archive/](archive/README.md). They are the evidence trail behind coverage decisions, not descriptions of current product behaviour, and nothing in them is a product claim on its own. When a living document needs one of their conclusions, it states the conclusion itself and links the log as evidence. [research/morro-bay-tuna.md](research/morro-bay-tuna.md) is a dated method note for the Morro Bay tuna search overlay.
+Dated audit, rollout, source-request and review records live in [archive/](archive/README.md). They are the evidence trail behind coverage decisions, not descriptions of current product behaviour, and nothing in them is a product claim on its own. When a living document needs one of their conclusions, it states the conclusion itself and links the log as evidence. [research/](research/README.md) indexes the Hermes feature-research package (specs, inspiration, competitors, ingest guides) and the Morro Bay tuna method note.
 
 ## Product: what the app does
 
@@ -64,6 +64,7 @@ Dated audit, rollout, source-request and review records live in [archive/](archi
 | [plans/text-advisor/](plans/text-advisor/README.md) | Build plan for the Text Advisor (iMessage/SMS fishing advisor, skipper intake, social pipeline, admin): decisions, architecture, data model, task breakdown |
 | [plans/pelagic-context/design.md](plans/pelagic-context/design.md) | Design only: per-species pelagic context that follows the selected hour, with no score, and the validation test any search priority must pass first |
 | [plans/offline-ocean-coverage.md](plans/offline-ocean-coverage.md) | Proposal: explicit SST/current coverage in offline chart packs (caps, partial-coverage metadata, age/hash gates, tests); regional tiles kept apart from coastal snapshots |
+| [research/](research/README.md) | Feature research for Hermes: build specs and recommended order, map inspiration, competitor notes and ingest guides. Start at [research/specs/README.md](research/specs/README.md) |
 
 Also for engineers: [AGENTS.md](../AGENTS.md) (branch, PR and rebuild rules), [CONTRIBUTING.md](../CONTRIBUTING.md) and [CHANGELOG.md](../CHANGELOG.md).
 

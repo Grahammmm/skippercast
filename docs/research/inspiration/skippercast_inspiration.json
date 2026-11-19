@@ -1,0 +1,1194 @@
+{
+ "generated": "2026-11-19",
+ "page_url": "https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1e20-0348-4d90-aa88-24beb1bcb358",
+ "project": "SkipperCast",
+ "skippercast": {
+  "found": true,
+  "repo": "https://github.com/Grahammmm/skippercast",
+  "site": "https://skippercast.com",
+  "summary": "Phone-first fishing map and ocean forecast for boat anglers on California's Central Coast (v0.8; Morro Bay & Avila active, 15 preview regions). MapLibre GL + PMTiles over a self-hosted Protomaps basemap (Night/Day), ENC chart, 2D/3D terrain via Three.",
+  "layers_from_repo": [
+   "basemap",
+   "aerial",
+   "ENC chart",
+   "terrain relief",
+   "water temperature (+0.5 °F contours)",
+   "temperature contrast cells",
+   "chlorophyll",
+   "swell field (0–15 ft, period isolines, direction strokes)",
+   "wind arrows",
+   "depth contours (30 ft)",
+   "MPAs",
+   "habitat",
+   "shore runs",
+   "seafloor",
+   "charter grounds",
+   "commercial AIS",
+   "fleet",
+   "currents streamlines (WCOFS/HF radar)",
+   "clouds",
+   "coastline glow"
+  ],
+  "tokens_night": {
+   "--bg": "#07131d",
+   "--bg-deep": "#020b12",
+   "--depth-0": "#7fd9c8",
+   "--depth-1": "#2b9c9c",
+   "--depth-2": "#1f5f8f",
+   "--depth-3": "#1d2f6e",
+   "--sst-0": "#244f9d",
+   "--sst-1": "#188eb5",
+   "--sst-2": "#39c6c2",
+   "--sst-3": "#a6dda0",
+   "--sst-4": "#efd477",
+   "--sst-5": "#f18a65",
+   "--swell-0": "#163555",
+   "--swell-1": "#2b68a6",
+   "--swell-2": "#73bfff",
+   "--swell-3": "#e0f0ff",
+   "--flow": "#dffcf6",
+   "--flow-fast": "#fff0bf"
+  },
+  "note": "The phrases 'subsea weather' and 'raw general base layer map' do not appear in the public repo; mapped here to the closest layers (currents/water temp; basemap + ENC + seafloor). Source: README.md, docs/web-app.md, docs/plans/front-end/design.md §9, web/tokens.css."
+ },
+ "ranked_examples": [
+  {
+   "rank": 1,
+   "key": "seascape",
+   "handle": "@berttemme",
+   "x_post": "https://x.com/berttemme/status/2122834956829458858",
+   "title": "Open Waters Seascape: global seafloor chart tiles",
+   "layers": [
+    "bathymetry",
+    "nautical chart base",
+    "raw base map"
+   ],
+   "image": "images/berttemme_2122834956829458858_0.jpg",
+   "links": [
+    "https://openwaters.io/charts/seascape/",
+    "https://github.com/openwatersio/seascape",
+    "https://tiles.openwaters.io/seascape/style.json"
+   ],
+   "why": "Ocean-first map: continuous depth shading, hillshade, contours and spot soundings from a 34-source mosaic (GEBCO, EMODnet, NOAA S-102, CUDEM). Islands read as sculpted relief rising from smooth blue gradients. Served as MapLibre tiles.",
+   "style": {
+    "palette_hex": [
+     "#1d4a7d",
+     "#1f5187",
+     "#2b5d91",
+     "#386593",
+     "#527ba3",
+     "#9ab0b3"
+    ],
+    "colormap": "Monochrome blue depth ramp (light shallow to dark deep); README offers ?shading=relief|bands (ENC depth-area bands)",
+    "layering": "OSM raster base (optional) > raster-dem colour relief > hillshade > depare depth areas > contour lines > soundings and labels",
+    "typography": "Contour and sounding labels from vector tiles; units switch via ?unit=m|ft|fm",
+    "data_density": "Medium: dense contours at zoom, soundings only at high zoom",
+    "motion": "Static",
+    "lighting_shading": "Raster-DEM hillshade on Terrarium-encoded depth; optional 3D via map.setTerrain",
+    "tools_technique": "MapLibre GL raster-dem (encoding: terrarium) + MVT vectors (depare, contours, soundings); build pipeline BSD-3; tiles CC BY 4.0"
+   },
+   "skippercast_mapping": "Raw base layer: drop-in or reference for SkipperCast's seafloor/depth contours; the ?safety= hazard shading and fathom/feet ladders match boat use",
+   "image_canvas_asset": "asset:e1.jpg"
+  },
+  {
+   "rank": 2,
+   "key": "dalke_s102",
+   "handle": "@chris_dalke",
+   "x_post": "https://x.com/chris_dalke/status/2121710455756296521",
+   "title": "NOAA S-102 gridded bathymetry, web-rendered",
+   "layers": [
+    "bathymetry",
+    "nautical chart base"
+   ],
+   "image": "images/chris_dalke_2121710455756296521_0.jpg",
+   "links": [
+    "https://zydromarine.com"
+   ],
+   "why": "High-resolution S-102 grid shaded with a soft cyan-to-navy ramp; channels, sand waves and shoals read like a photograph of the seabed. Land is flat green so the water carries the detail.",
+   "style": {
+    "palette_hex": [
+     "#7cc0e0",
+     "#66b2d6",
+     "#3d8fc5",
+     "#287ab8",
+     "#1f6bac",
+     "#16589c",
+     "#0b3a79"
+    ],
+    "colormap": "Cyan to navy sequential (close to a Blues ramp), shallow = light",
+    "layering": "Flat land fill > depth colour > hillshade multiply",
+    "typography": "Minimal; no labels in shot",
+    "data_density": "High detail, low clutter",
+    "motion": "Static",
+    "lighting_shading": "Strong seafloor hillshade on high-res grid",
+    "tools_technique": "Author's own map stack (renderer not named in this post; he builds ocean map infra at Zydro); data NOAA S-102"
+   },
+   "skippercast_mapping": "Raw base layer and seafloor: the same look for Central Coast where S-102/BlueTopo grids exist",
+   "image_canvas_asset": "asset:e2.jpg"
+  },
+  {
+   "rank": 3,
+   "key": "dalke_chart",
+   "handle": "@chris_dalke",
+   "x_post": "https://x.com/chris_dalke/status/2112187736354615745",
+   "title": "Nautical charts × elevation",
+   "layers": [
+    "nautical chart base",
+    "bathymetry",
+    "land relief"
+   ],
+   "image": "images/chris_dalke_2112187736354615745_0.jpg",
+   "links": [
+    "https://zydromarine.com"
+   ],
+   "why": "ENC-style chart (pale water, blue shallow bands, depth contours) merged with land relief, so the chart reads as terrain, not paper.",
+   "style": {
+    "palette_hex": [
+     "#ecf5f7",
+     "#d4e9ee",
+     "#c8dde4",
+     "#9bbca6",
+     "#75a167",
+     "#75a871"
+    ],
+    "colormap": "ENC-like: pale water, blue shoal band, green land",
+    "layering": "Land relief > water fill > shoal band > contour lines",
+    "typography": "Chart-style sans labels",
+    "data_density": "Medium",
+    "motion": "Video demo (pan/zoom)",
+    "lighting_shading": "Land hillshade under ENC colours",
+    "tools_technique": "Custom WebGL renderer; ENC + elevation"
+   },
+   "skippercast_mapping": "Base map day variant: put relief under the ENC chart layer instead of a flat raster",
+   "image_canvas_asset": "asset:e3.jpg"
+  },
+  {
+   "rank": 4,
+   "key": "monterey",
+   "handle": "@tylermorganwall",
+   "x_post": "https://x.com/tylermorganwall/status/1329428971843366914",
+   "title": "Monterey Bay drained (rayshader + rayrender)",
+   "layers": [
+    "bathymetry",
+    "3D seafloor"
+   ],
+   "image": "images/tylermorganwall_1329428971843366914_0.jpg",
+   "links": [
+    "https://github.com/tylermorganwall/rayshader",
+    "https://github.com/tylermorganwall/rayrender",
+    "https://www.rayshader.com"
+   ],
+   "why": "Path-traced 3D of Monterey Canyon (SkipperCast's coast) with the water removed: soft sand tones and raytraced shadows make the canyon walls read instantly.",
+   "style": {
+    "palette_hex": [
+     "#ecdcc5",
+     "#d9c8b4",
+     "#c1b3a5",
+     "#af9b88",
+     "#937f72"
+    ],
+    "colormap": "Monochrome sand/beige",
+    "layering": "DEM mesh > raytraced shading; no overlays",
+    "typography": "None",
+    "data_density": "Low clutter, one subject",
+    "motion": "Video fly-through",
+    "lighting_shading": "Path-traced soft shadows",
+    "tools_technique": "R: rayshader (sphere_shade, ray_shade, plot_3d) + rayrender"
+   },
+   "skippercast_mapping": "3D terrain view: 'drained ocean' preset for the Seafloor 3D presentation; hero image for landing",
+   "image_canvas_asset": "asset:e4.jpg"
+  },
+  {
+   "rank": 5,
+   "key": "blacksea",
+   "handle": "@tylermorganwall",
+   "x_post": "https://x.com/tylermorganwall/status/1515122509775048715",
+   "title": "Black Sea bathymetry in 3D",
+   "layers": [
+    "bathymetry",
+    "3D seafloor"
+   ],
+   "image": "images/tylermorganwall_1515122509775048715_0.jpg",
+   "links": [
+    "https://github.com/tylermorganwall/rayshader"
+   ],
+   "why": "Block-diagram map with translucent blue water over a deep basin; land is green-shaded relief. Reads as a physical object.",
+   "style": {
+    "palette_hex": [
+     "#396c86",
+     "#606c51",
+     "#6f7b58",
+     "#4d5f52",
+     "#869a97"
+    ],
+    "colormap": "Blue water over green/olive relief",
+    "layering": "Relief mesh > transparent water plane > base slab",
+    "typography": "Small title strip",
+    "data_density": "Low",
+    "motion": "Companion video (1515158357879013382) with realtime fly-through",
+    "lighting_shading": "Raytraced shadows, translucent water",
+    "tools_technique": "rayshader render_water + render_highquality"
+   },
+   "skippercast_mapping": "3D view: translucent water plane at 0 m over the bathymetry mesh",
+   "image_canvas_asset": "asset:e5.jpg"
+  },
+  {
+   "rank": 6,
+   "key": "atlantic_hex",
+   "handle": "@researchremora",
+   "x_post": "https://x.com/researchremora/status/1722674175922307456",
+   "title": "Beneath the Atlantic: hexagon bathymetry",
+   "layers": [
+    "bathymetry"
+   ],
+   "image": "images/researchremora_1722674175922307456_0.jpg",
+   "links": [
+    "https://github.com/tylermorganwall/rayshader"
+   ],
+   "why": "Most-liked bathymetry render found (627 likes). Lavender-blue depth with cream shelves, extruded hexagons and soft shadows; poster typography.",
+   "style": {
+    "palette_hex": [
+     "#fff9c2",
+     "#fbf2c2",
+     "#efe7c1",
+     "#dad4c1",
+     "#bebdbf",
+     "#99a2c0",
+     "#8192bf"
+    ],
+    "colormap": "Cream (shallow) to lavender-blue (deep)",
+    "layering": "Hex-binned depth > extrusion > raytraced shadow > title",
+    "typography": "Spaced serif caps title (BENEATH THE / ATLANTIC OCEAN)",
+    "data_density": "Medium (hex grid)",
+    "motion": "Static",
+    "lighting_shading": "rayshader high-quality render, low sun",
+    "tools_technique": "R: rayshader (data source not stated in post)"
+   },
+   "skippercast_mapping": "Landing/hero art and a 'poster' export style; the cream-to-lavender ramp suits the Night theme",
+   "image_canvas_asset": "asset:e6.jpg"
+  },
+  {
+   "rank": 7,
+   "key": "null_currents",
+   "handle": "@cambecc",
+   "x_post": "https://x.com/cambecc/status/428915614501986304",
+   "title": "earth.nullschool ocean currents",
+   "layers": [
+    "currents"
+   ],
+   "image": "images/cambecc_428915614501986304_0.png",
+   "links": [
+    "https://earth.nullschool.net/#current/ocean/surface/currents/orthographic",
+    "https://github.com/cambecc/earth"
+   ],
+   "why": "The reference for animated flow: thousands of fading particle trails over a speed-coloured field on a dark globe. The Gulf Stream pops in green/yellow.",
+   "style": {
+    "palette_hex": [
+     "#282d51",
+     "#2b3162",
+     "#303884",
+     "#3d5075",
+     "#648e75",
+     "#303030"
+    ],
+    "colormap": "Speed ramp dark navy > teal > green > yellow over #303030 land",
+    "layering": "Dark land > speed colour overlay > animated particle trails > coastlines",
+    "typography": "Tiny monospace HUD ('earth' menu)",
+    "data_density": "High particle density, no labels",
+    "motion": "Particle advection with fading trails",
+    "lighting_shading": "None (flat)",
+    "tools_technique": "D3 + canvas particles (open-source 'earth' repo); OSCAR currents"
+   },
+   "skippercast_mapping": "Currents: SkipperCast already draws canvas streamlines; add fading trails and a speed colour field under them",
+   "image_canvas_asset": "asset:e7.png"
+  },
+  {
+   "rank": 8,
+   "key": "null_waves",
+   "handle": "@cambecc",
+   "x_post": "https://x.com/cambecc/status/552117215483289600",
+   "title": "earth.nullschool ocean waves",
+   "layers": [
+    "waves/swell"
+   ],
+   "image": "images/cambecc_552117215483289600_0.png",
+   "links": [
+    "https://earth.nullschool.net/#current/ocean/primary/waves/overlay=significant_wave_height/orthographic",
+    "https://github.com/cambecc/earth"
+   ],
+   "why": "Significant wave height as colour with a separate wave-period animation type, so height and direction read together.",
+   "style": {
+    "palette_hex": [
+     "#272829",
+     "#303235",
+     "#33576e",
+     "#506d76",
+     "#74877e",
+     "#4f5869"
+    ],
+    "colormap": "Muted blue-grey low > red/yellow high (storm core)",
+    "layering": "Land > SWH overlay > animated wave-direction particles",
+    "typography": "Minimal HUD",
+    "data_density": "High",
+    "motion": "Animated particles keyed to peak wave period",
+    "lighting_shading": "None",
+    "tools_technique": "earth (open-source, canvas animation)"
+   },
+   "skippercast_mapping": "Swell: animate the direction strokes at period speed over the 0–15 ft field",
+   "image_canvas_asset": "asset:e8.png"
+  },
+  {
+   "rank": 9,
+   "key": "nelson_contours",
+   "handle": "@John_M_Nelson",
+   "x_post": "https://x.com/John_M_Nelson/status/1977768379080483230",
+   "title": "Trippy contour maps of the ocean floor",
+   "layers": [
+    "bathymetry"
+   ],
+   "image": "images/John_M_Nelson_1977768379080483230_0.jpg",
+   "links": [
+    "https://www.youtube.com/watch?v=FVwIba9Ko-k",
+    "https://www.esri.com/arcgis-blog/products/arcgis-pro/mapping/how-to-make-this-seafloor-map/"
+   ],
+   "why": "Stacked, shadowed contour bands in teal-to-lime make the seafloor look terraced and tactile.",
+   "style": {
+    "palette_hex": [
+     "#051844",
+     "#0a4160",
+     "#047488",
+     "#149b93",
+     "#23b19b",
+     "#5ac37e",
+     "#b6e78c"
+    ],
+    "colormap": "Navy > teal > lime (close to cmocean deep reversed)",
+    "layering": "Banded depth fill > per-band drop shadow > highlight edge",
+    "typography": "None",
+    "data_density": "Medium",
+    "motion": "Static (how-to video)",
+    "lighting_shading": "Drop shadows per contour band (illuminated contours)",
+    "tools_technique": "ArcGIS Pro; Esri how-to blog for his seafloor map (blog returns 403 to automated checks)"
+   },
+   "skippercast_mapping": "Depth contours: shadowed 'terraced' contours as an optional style for the 30 ft contour layer",
+   "image_canvas_asset": "asset:e9.jpg"
+  },
+  {
+   "rank": 10,
+   "key": "chl_globe",
+   "handle": "@maptheclouds",
+   "x_post": "https://x.com/maptheclouds/status/1688459964166139904",
+   "title": "Chlorophyll globe (Three.js)",
+   "layers": [
+    "chlorophyll/ocean colour"
+   ],
+   "image": "images/maptheclouds_1688459964166139904_0.jpg",
+   "links": [
+    "https://maptheclouds.com/playground/threejs/chlorophyll/",
+    "https://neo.gsfc.nasa.gov/view.php?datasetId=MY1DMM_CHLORA"
+   ],
+   "why": "12 months of MODIS chlorophyll on an interactive globe; clean light page, black land so the bloom colours carry.",
+   "style": {
+    "palette_hex": [
+     "#4b85a7",
+     "#dcd8d8",
+     "#e1dedf",
+     "#eae8e9"
+    ],
+    "colormap": "Blue-green chlorophyll ramp on white page (exact stops on the live page)",
+    "layering": "Black land > chlorophyll texture > title/legend",
+    "typography": "Centered sans title, month strip",
+    "data_density": "Low clutter",
+    "motion": "12-month animation",
+    "lighting_shading": "None",
+    "tools_technique": "Three.js shaders; NASA NEO Aqua MODIS"
+   },
+   "skippercast_mapping": "Chlorophyll layer: log-scale ramp and monthly loop",
+   "image_canvas_asset": "asset:e10.jpg"
+  },
+  {
+   "rank": 11,
+   "key": "wet_bathy",
+   "handle": "@geo_spatialist",
+   "x_post": "https://x.com/geo_spatialist/status/1293225065983680512",
+   "title": "Wet/shiny bathymetry on a historic map",
+   "layers": [
+    "bathymetry"
+   ],
+   "image": "images/geo_spatialist_1293225065983680512_0.jpg",
+   "links": [],
+   "why": "Bathymetry rendered with specular gloss so the water looks wet, under a historic topo map. Shows how lighting alone sells 'water'.",
+   "style": {
+    "palette_hex": [
+     "#d4e2de",
+     "#bbd1d0",
+     "#acc8ca",
+     "#88aea2",
+     "#829872",
+     "#627351"
+    ],
+    "colormap": "Muted sage/aqua",
+    "layering": "Scanned map texture draped on DEM > glossy water material",
+    "typography": "Original map typography",
+    "data_density": "Medium",
+    "motion": "Static",
+    "lighting_shading": "Specular highlights on water surface",
+    "tools_technique": "Blender (b3d) + ArcGIS Pro (per author's other posts)"
+   },
+   "skippercast_mapping": "3D terrain: low-roughness water material in the Three scene",
+   "image_canvas_asset": "asset:e11.jpg"
+  },
+  {
+   "rank": 12,
+   "key": "sst_japan",
+   "handle": "@CopernicusEU",
+   "x_post": "https://x.com/CopernicusEU/status/1778755407864803561",
+   "title": "SST off Japan (Copernicus Marine)",
+   "layers": [
+    "sea surface temperature"
+   ],
+   "image": "images/CopernicusEU_1778755407864803561_0.jpg",
+   "links": [
+    "https://marine.copernicus.eu/access-data"
+   ],
+   "why": "Kuroshio eddies and fronts in a full-spectrum SST ramp over dark land; the fronts are what anglers look for.",
+   "style": {
+    "palette_hex": [
+     "#2f213a",
+     "#3b3c5a",
+     "#496cc3",
+     "#ebc93b",
+     "#e3742c",
+     "#d13307",
+     "#99200f"
+    ],
+    "colormap": "Rainbow-like (purple > blue > yellow > red); swap for cmocean thermal",
+    "layering": "Dark land > SST field > coast > legend",
+    "typography": "Legend top-left",
+    "data_density": "High",
+    "motion": "Static",
+    "lighting_shading": "None",
+    "tools_technique": "Copernicus Marine products"
+   },
+   "skippercast_mapping": "Water temp: show fronts (like SkipperCast's contrast cells); use a perceptual ramp",
+   "image_canvas_asset": "asset:e12.jpg"
+  },
+  {
+   "rank": 13,
+   "key": "qgis_wind",
+   "handle": "@hansakwast",
+   "x_post": "https://x.com/hansakwast/status/1812934083019960771",
+   "title": "Hurricane Beryl wind mesh (QGIS)",
+   "layers": [
+    "wind/weather"
+   ],
+   "image": "images/hansakwast_1812934083019960771_0.jpg",
+   "links": [
+    "https://youtu.be/p4lRqgFUyx0",
+    "https://github.com/GispoCoding/GlobeBuilder"
+   ],
+   "why": "White streamline 'brush' traces over a dark basemap; the hurricane eye pops. Time and height controllers animate it.",
+   "style": {
+    "palette_hex": [
+     "#080c13",
+     "#0b111a",
+     "#0d1826",
+     "#161f2b",
+     "#193130",
+     "#eeeeee"
+    ],
+    "colormap": "White traces on near-black",
+    "layering": "Dark basemap > white wind traces",
+    "typography": "None",
+    "data_density": "High trace density",
+    "motion": "Temporal + vertical controllers (time and level)",
+    "lighting_shading": "None",
+    "tools_technique": "QGIS 3.38 mesh layer (NetCDF from Copernicus ECMWF); video tutorial linked"
+   },
+   "skippercast_mapping": "Wind arrows: replace arrows with white streak traces on Night base",
+   "image_canvas_asset": "asset:e13.jpg"
+  },
+  {
+   "rank": 14,
+   "key": "tides",
+   "handle": "@bryancsk",
+   "x_post": "https://x.com/bryancsk/status/1486633527298834435",
+   "title": "World tidal amplitude (GOT99.2 co-tidal chart)",
+   "layers": [
+    "tides"
+   ],
+   "image": "images/bryancsk_1486633527298834435_0.png",
+   "links": [
+    "https://www.windy.com/articles/major-sea-currents-update-high-resolution-and-new-tidal-currents-15650"
+   ],
+   "why": "Classic NASA/GSFC GOT99.2 co-tidal chart: amplitude colours with white phase lines radiating from amphidromic points.",
+   "style": {
+    "palette_hex": [
+     "#53557f",
+     "#53a0ba",
+     "#43b3b4",
+     "#81db74",
+     "#09ce75",
+     "#b0afac"
+    ],
+    "colormap": "Blue > green > yellow > red amplitude (cm)",
+    "layering": "Grey land > amplitude fill > white co-phase lines",
+    "typography": "Small axis labels, horizontal legend bar",
+    "data_density": "Medium",
+    "motion": "Static",
+    "lighting_shading": "None",
+    "tools_technique": "NASA/GSFC GOT99.2 tide model"
+   },
+   "skippercast_mapping": "Tides: a regional co-phase/amplitude overlay explains why tide timing differs along the coast",
+   "image_canvas_asset": "asset:e14.png"
+  },
+  {
+   "rank": 15,
+   "key": "salinity",
+   "handle": "@NASAEarthData",
+   "x_post": "https://x.com/NASAEarthData/status/1838320659593650177",
+   "title": "SMAP sea surface salinity animation",
+   "layers": [
+    "salinity"
+   ],
+   "image": "images/NASAEarthData_1838320659593650177_0.jpg",
+   "links": [
+    "https://podaac.jpl.nasa.gov/animations/Sea-Surface-Salinity-8-Day-Running-Mean-from-SMAP-RSS-V6.0-2015-2024"
+   ],
+   "why": "Globe with a vivid salinity ramp, a vertical legend and running date stamp.",
+   "style": {
+    "palette_hex": [
+     "#19183a",
+     "#272b4b",
+     "#333f68",
+     "#9ce469",
+     "#9f9671"
+    ],
+    "colormap": "Blue > green > yellow > red (PSU); cmocean haline is the perceptual fix",
+    "layering": "Space background > globe > SSS texture > date + legend",
+    "typography": "Rotated title, vertical colour bar",
+    "data_density": "Medium",
+    "motion": "8-day running mean animation",
+    "lighting_shading": "Globe shading",
+    "tools_technique": "NASA PO.DAAC (RSS SMAP L3 V6)"
+   },
+   "skippercast_mapping": "Future salinity layer: haline ramp + date stamp",
+   "image_canvas_asset": "asset:e15.jpg"
+  },
+  {
+   "rank": 16,
+   "key": "seaice",
+   "handle": "@CMEMS_EU",
+   "x_post": "https://x.com/CMEMS_EU/status/1829436415735730368",
+   "title": "Arctic sea ice thickness (MyOcean viewer)",
+   "layers": [
+    "sea ice"
+   ],
+   "image": "images/CMEMS_EU_1829436415735730368_0.jpg",
+   "links": [
+    "https://myocean.marine.copernicus.eu",
+    "https://marine.copernicus.eu"
+   ],
+   "why": "Navy-to-ice-white ramp on a black ocean, thin coastlines; the ice reads cold and clean.",
+   "style": {
+    "palette_hex": [
+     "#020411",
+     "#040613",
+     "#212121",
+     "#333946",
+     "#97c1cf"
+    ],
+    "colormap": "Matches cmocean ice (#040613 > #eafdfd)",
+    "layering": "Dark base > ice thickness raster > coastlines > legend",
+    "typography": "Small legend bar top-left, UTC time stamp",
+    "data_density": "Low",
+    "motion": "Month comparison",
+    "lighting_shading": "None",
+    "tools_technique": "Copernicus MyOcean Viewer"
+   },
+   "skippercast_mapping": "Not a Central Coast layer; shows the ice ramp to reuse for any 'cold' layer",
+   "image_canvas_asset": "asset:e16.jpg"
+  },
+  {
+   "rank": 17,
+   "key": "olci_chl",
+   "handle": "@VittorioBrando",
+   "x_post": "https://x.com/VittorioBrando/status/1515320217689333766",
+   "title": "Sentinel-3 OLCI chlorophyll at 300 m",
+   "layers": [
+    "chlorophyll/ocean colour"
+   ],
+   "image": "images/VittorioBrando_1515320217689333766_0.jpg",
+   "links": [
+    "https://marine.copernicus.eu"
+   ],
+   "why": "Bloom filaments at 300 m with a green ramp on black; shows the fine structure SkipperCast's chlorophyll layer could show offshore.",
+   "style": {
+    "palette_hex": [
+     "#020102",
+     "#151a19",
+     "#1e473d",
+     "#247263",
+     "#208c6f",
+     "#539f65"
+    ],
+    "colormap": "Black > teal-green > yellow (like cmocean algae)",
+    "layering": "Black background > chl raster > coast",
+    "typography": "Viewer UI",
+    "data_density": "High",
+    "motion": "Static",
+    "lighting_shading": "None",
+    "tools_technique": "Copernicus Marine (Sentinel-3 OLCI)"
+   },
+   "skippercast_mapping": "Chlorophyll: 300 m OLCI over a Night base",
+   "image_canvas_asset": "asset:e17.jpg"
+  },
+  {
+   "rank": 18,
+   "key": "weatherlayers_waves",
+   "handle": "@robhawkes",
+   "x_post": "https://x.com/robhawkes/status/1429454366688350209",
+   "title": "Significant wave height shader (WeatherLayers)",
+   "layers": [
+    "waves/swell"
+   ],
+   "image": "images/robhawkes_1429454366688350209_0.jpg",
+   "links": [
+    "https://weatherlayers.com",
+    "https://github.com/weatherlayers/weatherlayers-gl"
+   ],
+   "why": "Magenta wave heights glow on deep navy, a neon look that suits a dark UI.",
+   "style": {
+    "palette_hex": [
+     "#000000",
+     "#000e3a",
+     "#011a39",
+     "#021d39",
+     "#37007e"
+    ],
+    "colormap": "Navy > purple > magenta",
+    "layering": "Black base > SWH shader",
+    "typography": "None",
+    "data_density": "Low",
+    "motion": "Animation planned (custom shader)",
+    "lighting_shading": "Glow",
+    "tools_technique": "Three.js shader via react-three-fiber; data via WeatherLayers"
+   },
+   "skippercast_mapping": "Swell: glow-style high-sea emphasis on Night theme",
+   "image_canvas_asset": "asset:e18.jpg"
+  },
+  {
+   "rank": 19,
+   "key": "sqrt_depth",
+   "handle": "@rsimmon",
+   "x_post": "https://x.com/rsimmon/status/423826706462289922",
+   "title": "Square-root depth scaling tip",
+   "layers": [
+    "bathymetry"
+   ],
+   "image": "images/rsimmon_423826706462289922_0.png",
+   "links": [],
+   "why": "Shows the ex-NASA designer's trick: colour by sqrt(depth) with a ColorBrewer Blues ramp so shelves and slopes both get colour range.",
+   "style": {
+    "palette_hex": [
+     "#d5e6f2",
+     "#98c4dd",
+     "#7ab0d1",
+     "#5ba3d0",
+     "#477fa5",
+     "#343434"
+    ],
+    "colormap": "ColorBrewer Blues on sqrt(depth)",
+    "layering": "Dark land > sqrt-scaled depth fill",
+    "typography": "None",
+    "data_density": "Low",
+    "motion": "Static",
+    "lighting_shading": "None",
+    "tools_technique": "Value transform before colour mapping"
+   },
+   "skippercast_mapping": "Depth colour: apply sqrt scaling to --depth-0..3 stops",
+   "image_canvas_asset": "asset:e19.png"
+  },
+  {
+   "rank": 20,
+   "key": "helene_sst",
+   "handle": "@NASAEarth",
+   "x_post": "https://x.com/NASAEarth/status/1839719154074386743",
+   "title": "Warm water fuelling Hurricane Helene",
+   "layers": [
+    "weather over ocean",
+    "sea surface temperature"
+   ],
+   "image": "images/NASAEarth_1839719154074386743_0.jpg",
+   "links": [],
+   "why": "Storm track (dotted, time-labelled) over a deep-red SST field with grey land; storm and ocean on one map.",
+   "style": {
+    "palette_hex": [
+     "#380e14",
+     "#520e1b",
+     "#640b1f",
+     "#930425",
+     "#e5e5e5"
+    ],
+    "colormap": "Dark reds (like cmocean amp) for warm water",
+    "layering": "Grey land > SST field > track points > labels > legend",
+    "typography": "Clean sans annotations, bottom legend",
+    "data_density": "Low",
+    "motion": "Static",
+    "lighting_shading": "None",
+    "tools_technique": "NASA Earth Observatory style"
+   },
+   "skippercast_mapping": "Weather: storm/alert track over the SST field",
+   "image_canvas_asset": "asset:e20.jpg"
+  }
+ ],
+ "more_examples": [
+  {
+   "handle": "@giswqs",
+   "x_post": "https://x.com/giswqs/status/1813927403322020041",
+   "what": "MapLibre tutorial: ocean bathymetry in 3D (notebook + demo)",
+   "links": [
+    "https://leafmap.org/maplibre/ocean_bathymetry/",
+    "https://maps.gishub.org/maplibre/ocean_bathymetry.html",
+    "https://youtu.be/SLHwMbZox9o",
+    "https://github.com/opengeos/leafmap"
+   ]
+  },
+  {
+   "handle": "@protomaps",
+   "x_post": "https://x.com/protomaps/status/1588061193130119168",
+   "what": "MapLibre raster-DEM terrain + bathymetry from one 30 GB PMTiles file on R2 (SkipperCast's stack)",
+   "links": [
+    "https://pmtiles.io/examples/maplibre_raster_dem.html",
+    "https://github.com/protomaps/PMTiles",
+    "https://github.com/protomaps/basemaps"
+   ]
+  },
+  {
+   "handle": "@maptheclouds",
+   "x_post": "https://x.com/maptheclouds/status/2037952865113923667",
+   "what": "GFS wind with GPU particles (mourner's WebGL Wind)",
+   "links": [
+    "https://maptheclouds.com/playground/30-day-map-challenge-2022/windy-sky/",
+    "https://github.com/mapbox/webgl-wind"
+   ]
+  },
+  {
+   "handle": "@maptheclouds",
+   "x_post": "https://x.com/maptheclouds/status/2042648807385505849",
+   "what": "North-pole Arctic bathymetry (IBCAO)",
+   "links": [
+    "https://maptheclouds.com/playground/30-day-map-challenge-2023/arctic-ocean/"
+   ]
+  },
+  {
+   "handle": "@John_M_Nelson",
+   "x_post": "https://x.com/John_M_Nelson/status/1886795687745994955",
+   "what": "Ocean currents in Spilhaus one-world-ocean projection (video)",
+   "links": []
+  },
+  {
+   "handle": "@John_M_Nelson",
+   "x_post": "https://x.com/John_M_Nelson/status/1608466398547972097",
+   "what": "Tharp/Berann-style oblique seafloor",
+   "links": []
+  },
+  {
+   "handle": "@Windycom",
+   "x_post": "https://x.com/Windycom/status/1367063392612192259",
+   "what": "Windy tidal currents layer launch",
+   "links": [
+    "https://www.windy.com/articles/major-sea-currents-update-high-resolution-and-new-tidal-currents-15650"
+   ]
+  },
+  {
+   "handle": "@Windycom",
+   "x_post": "https://x.com/Windycom/status/1970742543101943984",
+   "what": "Typhoon Ragasa wind visual",
+   "links": [
+    "https://www.windy.com"
+   ]
+  },
+  {
+   "handle": "@CMEMS_EU",
+   "x_post": "https://x.com/CMEMS_EU/status/1884881741619302744",
+   "what": "Hurricane Milton wind vectors (arrows over speed)",
+   "links": [
+    "https://marine.copernicus.eu"
+   ]
+  },
+  {
+   "handle": "@CopernicusEU",
+   "x_post": "https://x.com/CopernicusEU/status/1075714196153737216",
+   "what": "Significant wave height animation, California storm",
+   "links": []
+  },
+  {
+   "handle": "@cambecc",
+   "x_post": "https://x.com/cambecc/status/1367052864867028994",
+   "what": "SST palette tweak reveals sea ice",
+   "links": [
+    "https://earth.nullschool.net"
+   ]
+  },
+  {
+   "handle": "@jscarto",
+   "x_post": "https://x.com/jscarto/status/1238197191031828482",
+   "what": "Hawaii with subtle bathymetry",
+   "links": []
+  },
+  {
+   "handle": "@jscarto",
+   "x_post": "https://x.com/jscarto/status/1296258822894428160",
+   "what": "Baltic phytoplankton vortices (Landsat)",
+   "links": [
+    "https://earthobservatory.nasa.gov/images/147135/beguiling-bloom-in-the-baltic-sea"
+   ]
+  },
+  {
+   "handle": "@mnturkistani",
+   "x_post": "https://x.com/mnturkistani/status/2118630303056990316",
+   "what": "Red Sea as a Victorian sounding chart (fathoms, hachures, compass rose)",
+   "links": []
+  },
+  {
+   "handle": "@marineregions",
+   "x_post": "https://x.com/marineregions/status/2121917878660403314",
+   "what": "Inverted GEBCO colours with maritime boundaries",
+   "links": [
+    "https://www.marineregions.org"
+   ]
+  },
+  {
+   "handle": "@joewdavies",
+   "x_post": "https://x.com/joewdavies/status/1423721771568619524",
+   "what": "Europe topography + bathymetry in Blender",
+   "links": []
+  },
+  {
+   "handle": "@chris_dalke",
+   "x_post": "https://x.com/chris_dalke/status/2112649348467355860",
+   "what": "Custom WebGL 3D globe renderer (ECEF, LOD separate from XYZ tiles)",
+   "links": []
+  },
+  {
+   "handle": "@chris_dalke",
+   "x_post": "https://x.com/chris_dalke/status/2111566995842023743",
+   "what": "Heavy hillshade + contour island",
+   "links": []
+  },
+  {
+   "handle": "@rsimmon",
+   "x_post": "https://x.com/rsimmon/status/1046533815487758336",
+   "what": "Berann/Heezen/Tharp Ocean Floor map (LoC hi-res)",
+   "links": [
+    "https://www.loc.gov/item/2010586277/"
+   ]
+  }
+ ],
+ "per_layer": [
+  {
+   "layer": "Raw base map / nautical chart base",
+   "skippercast": "Protomaps basemap (Night/Day), ENC chart raster z>=10, coastline glow",
+   "top": [
+    "seascape",
+    "dalke_chart",
+    "dalke_s102"
+   ],
+   "copy": "Seascape-style depth relief + contours + soundings under the ENC; land relief under chart colours; keep land flat when the water is the subject",
+   "cmocean": "deep (reversed) or ColorBrewer Blues on sqrt(depth)"
+  },
+  {
+   "layer": "Bathymetry / seafloor 3D",
+   "skippercast": "Terrain relief 2D/3D (Three), seafloor candidates, depth contours every 30 ft",
+   "top": [
+    "monterey",
+    "atlantic_hex",
+    "nelson_contours"
+   ],
+   "copy": "Raytraced soft shadows, translucent water plane, shadowed contour bands, sqrt depth scaling",
+   "cmocean": "deep, topo"
+  },
+  {
+   "layer": "Currents / flow (subsea weather)",
+   "skippercast": "Canvas streamlines (WCOFS, HF radar), --flow #dffcf6",
+   "top": [
+    "null_currents"
+   ],
+   "copy": "Fading particle trails over a speed-coloured field; dark land; trails clipped by land mask",
+   "cmocean": "speed or tempo"
+  },
+  {
+   "layer": "Sea surface temperature",
+   "skippercast": "Water temp field, 0.5 °F contours, contrast cells",
+   "top": [
+    "sst_japan",
+    "helene_sst"
+   ],
+   "copy": "Make fronts and eddies the subject; perceptual ramp; storm track overlay",
+   "cmocean": "thermal; balance for anomaly"
+  },
+  {
+   "layer": "Waves / swell (sea conditions)",
+   "skippercast": "Swell field 0–15 ft, dashed period isolines, direction strokes",
+   "top": [
+    "null_waves",
+    "weatherlayers_waves"
+   ],
+   "copy": "Animate direction strokes at period speed; glow for high seas on Night",
+   "cmocean": "dense or amp"
+  },
+  {
+   "layer": "Wind / weather over ocean",
+   "skippercast": "Wind arrows, clouds raster, marine alerts",
+   "top": [
+    "qgis_wind",
+    "helene_sst"
+   ],
+   "copy": "White streak traces on dark base instead of arrows; storm track + time labels",
+   "cmocean": "speed for magnitude"
+  },
+  {
+   "layer": "Chlorophyll / ocean colour",
+   "skippercast": "Chlorophyll layer in draw order (daily feed)",
+   "top": [
+    "olci_chl",
+    "chl_globe"
+   ],
+   "copy": "Log-scale green ramp over black/dark base; monthly loop",
+   "cmocean": "algae"
+  },
+  {
+   "layer": "Tides",
+   "skippercast": "Tide curve/sparkline (Port San Luis), tide tiles",
+   "top": [
+    "tides"
+   ],
+   "copy": "Amplitude fill + white co-phase lines; Windy-style tidal current particles",
+   "cmocean": "tempo or haline for amplitude"
+  },
+  {
+   "layer": "Salinity",
+   "skippercast": "Not in repo",
+   "top": [
+    "salinity"
+   ],
+   "copy": "Haline ramp + running date stamp",
+   "cmocean": "haline"
+  },
+  {
+   "layer": "Sea ice",
+   "skippercast": "Not relevant to Central Coast",
+   "top": [
+    "seaice"
+   ],
+   "copy": "Ice ramp on near-black",
+   "cmocean": "ice"
+  },
+  {
+   "layer": "Subsurface temperature / thermocline",
+   "skippercast": "Not in repo (Graham's 'subsea weather' may cover it)",
+   "top": [],
+   "copy": "No strong X example found; Copernicus Marine and PO.DAAC publish the data. Gap.",
+   "cmocean": "thermal + depth slider"
+  }
+ ],
+ "shortlist": [
+  {
+   "n": 1,
+   "key": "seascape",
+   "layer": "Raw base map + depth contours",
+   "what": "Adopt or mimic the Open Waters Seascape stack: Terrarium raster-dem relief + hillshade + MVT contours/soundings in MapLibre (same stack SkipperCast already uses). Try ?shading=bands for an ENC look and ?unit=ft."
+  },
+  {
+   "n": 2,
+   "key": "null_currents",
+   "layer": "Currents (subsea weather)",
+   "what": "Upgrade the existing canvas streamlines to fading particle trails over a speed-coloured field (cmocean speed), keeping --flow #dffcf6 for the trails."
+  },
+  {
+   "n": 3,
+   "key": "dalke_s102",
+   "layer": "Seafloor / base",
+   "what": "Strong hillshade on the highest-res grid (S-102/BlueTopo) with a 7-stop cyan-to-navy ramp on sqrt(depth) (rsimmon tip); flat land."
+  },
+  {
+   "n": 4,
+   "key": "null_waves",
+   "layer": "Sea conditions (swell)",
+   "what": "Animate swell direction strokes at a speed tied to period; keep the 0–15 ft field; add a glow for the top band on Night."
+  },
+  {
+   "n": 5,
+   "key": "monterey",
+   "layer": "3D terrain view",
+   "what": "Rayshader-style 'drained' Monterey/Morro Bay preset: soft shadows, ambient occlusion, translucent water plane at 0 m in the Three scene."
+  }
+ ],
+ "follow": [
+  {
+   "handle": "@chris_dalke",
+   "why": "Builds ocean map infra (Zydro); S-102, ENC + elevation, custom WebGL"
+  },
+  {
+   "handle": "@tylermorganwall",
+   "why": "rayshader/rayrender author; 3D bathymetry"
+  },
+  {
+   "handle": "@researchremora",
+   "why": "Most-liked rayshader bathymetry posters"
+  },
+  {
+   "handle": "@cambecc",
+   "why": "earth.nullschool: currents, waves, SST"
+  },
+  {
+   "handle": "@John_M_Nelson",
+   "why": "Seafloor styling how-tos, Spilhaus ocean maps"
+  },
+  {
+   "handle": "@maptheclouds",
+   "why": "Open WebGL/Three.js ocean and wind demos with live links"
+  },
+  {
+   "handle": "@geo_spatialist",
+   "why": "Blender 3D renders with bathymetry"
+  },
+  {
+   "handle": "@hansakwast",
+   "why": "QGIS mesh/temporal wind and ocean tutorials"
+  },
+  {
+   "handle": "@giswqs",
+   "why": "MapLibre/leafmap tutorials incl. 3D bathymetry"
+  },
+  {
+   "handle": "@protomaps",
+   "why": "PMTiles/MapLibre terrain (SkipperCast's stack)"
+  },
+  {
+   "handle": "@rsimmon",
+   "why": "Colour/palette craft for Earth data"
+  },
+  {
+   "handle": "@jscarto",
+   "why": "Ex-NASA Earth Observatory cartography"
+  },
+  {
+   "handle": "@Windycom",
+   "why": "Benchmark consumer marine layers"
+  },
+  {
+   "handle": "@CMEMS_EU",
+   "why": "Copernicus Marine data visuals"
+  }
+ ],
+ "cmocean_stops": {
+  "deep": [
+   "#fdfecc",
+   "#a5dfa7",
+   "#5dbaa4",
+   "#488e9e",
+   "#3e6495",
+   "#3f396c",
+   "#281a2c"
+  ],
+  "thermal": [
+   "#042333",
+   "#2c3395",
+   "#744992",
+   "#b15f82",
+   "#eb7958",
+   "#fbb43d",
+   "#e8fa5b"
+  ],
+  "haline": [
+   "#2a186c",
+   "#14439c",
+   "#206e8b",
+   "#3c9387",
+   "#5ab978",
+   "#aad85c",
+   "#fdef9a"
+  ],
+  "algae": [
+   "#d7f9d0",
+   "#a2d595",
+   "#64b463",
+   "#129450",
+   "#126e45",
+   "#1a482f",
+   "#122414"
+  ],
+  "speed": [
+   "#fffdcd",
+   "#e1cd73",
+   "#aaac20",
+   "#5f920c",
+   "#187328",
+   "#144b2a",
+   "#172313"
+  ],
+  "amp": [
+   "#f1edec",
+   "#dfbcb0",
+   "#d08b73",
+   "#c0583b",
+   "#a62225",
+   "#730e27",
+   "#3c0912"
+  ],
+  "balance": [
+   "#181c43",
+   "#0c5ebe",
+   "#75aabe",
+   "#f1eceb",
+   "#d08b73",
+   "#a52125",
+   "#3c0912"
+  ],
+  "ice": [
+   "#040613",
+   "#292851",
+   "#3f4b96",
+   "#427bb7",
+   "#61a8c7",
+   "#9cd4da",
+   "#eafdfd"
+  ],
+  "tempo": [
+   "#fff6f4",
+   "#c3d1ba",
+   "#7db390",
+   "#2a937f",
+   "#156d73",
+   "#1c455b",
+   "#151d44"
+  ],
+  "topo": [
+   "#281a2c",
+   "#3e6394",
+   "#5dbaa4",
+   "#0d2514",
+   "#566635",
+   "#c69f50",
+   "#f9fde4"
+  ],
+  "dense": [
+   "#e6f1f1",
+   "#a2cee2",
+   "#76a4e5",
+   "#7871d5",
+   "#7642a5",
+   "#621d62",
+   "#360e24"
+  ]
+ },
+ "gaps": [
+  "No strong X example found for subsurface temperature/thermocline maps",
+  "X search has no engagement filter and keyword results were noisy; examples came mainly from targeted account searches",
+  "Some accounts not found or suspended: pinakographos (Daniel Huffman), milos_agathon (suspended), fusedio, NASA_PACE; Sean Conway's handle not confirmed",
+  "esri.com and blog.mapbox.com links return 403 to automated checks (bot blocking, not 404)",
+  "Palettes are sampled from the posted images (median-cut), so they approximate the source colours"
+ ]
+}

@@ -1,0 +1,2376 @@
+{
+ "generated": "2026-11-19",
+ "prepared_for": "Graham / Hermes agent",
+ "skippercast_context": {
+  "source": "Repo github.com/Grahammmm/skippercast at commit fa9c3581 (2026-11-19), README.md, docs/roadmap.md ('What ships now'), docs/web-app.md, docs/boat-profile.md, web/map/layers.ts, catalog/app/strings.json; live site https://skippercast.com (HTTP 200).",
+  "what_it_is": "Phone-first web app (v0.8, pre-beta): fishing map + ocean forecast for boat anglers on California's Central Coast. MapLibre + PMTiles on a self-hosted Protomaps basemap, NOAA ENC chart, 2D/3D terrain. Morro Bay & Avila active; 15 regions preview; 6 SoCal draft. Bottomfish/reef focus (habitat candidates, rules), not offshore pelagics.",
+  "has": [
+   "Per-layer basis sentence with source, product/grid and age; layers withheld past age limits; /status data-freshness page",
+   "Forecast skill page (/skill) and in-brief measured-skill line vs buoys",
+   "Shareable links that reopen region, port, profile, day, hour, target, view, layers, base",
+   "7-day hourly time dock (169 samples) scrubs/plays forecast layers; Conditions view compares NOAA (GFS/GFS-Wave) vs ECMWF (IFS/WAM) and states disagreement",
+   "Boat profile (AI spec lookup or manual) scaling an hourly conditions score; day verdict Comfortable/Marginal/Rough/Unknown with the limiting factor",
+   "Layers: water temp + 0.5 °F contours, SST contrast, SST fronts with uncertainty band, chlorophyll (NOAA OCI, dated), currents (WCOFS / HF radar, animated), swell, wind, clouds, seafloor habitat, relief, depth contours, MPAs, charter grounds, commercial AIS",
+   "Where to look: ranked habitat places with up to 3 dated, sourced reasons",
+   "Boat run: run time at your cruise speed by water route, turn-back time, bar-crossing leave-by/be-back-by at Morro Bay",
+   "Saved-trip alerts (passkey account) when the assessment materially changes and the day before; home-port alert",
+   "Saved spots (up to 100), private catch/effort log, comfort feedback",
+   "Offline trip pack (ENC tiles + data, service worker); GPX/share-sheet/offline-notes export; every exported place screened against protected areas",
+   "Rules cards and season calendar from CDFW; Reports view (dated catch cards, charter evidence); English + Spanish",
+   "Text Advisor (SMS/Instagram advisor, skipper reports, fish ID, daily 'what's biting') built but switched off"
+  ],
+  "lacks_not_found_in_repo": [
+   "Tap-to-read on every layer at once: today one reading at a time for water temp, contrast, currents, fronts and swell, and none for chlorophyll or wind. No user-adjustable colour ramp: the SST ramp auto-fits the analysis range but can't be fitted to the view or set by hand.",
+   "Playback of past days for observed layers (time dock runs forward hourly; History view is station history only)",
+   "Chlorophyll edges and eddy detection (fronts exist for SST only); sea surface height/altimetry",
+   "Subsurface temperature, thermocline, mixed layer depth, salinity, dissolved oxygen",
+   "Threshold alerts on a saved spot's water, and new-satellite-pass alerts",
+   "Heading-dependent ride (boat model explicitly ignores heading); ride/track recording that feeds the boat model",
+   "Conditions recorded at each catch (catch log stores outcome + optional position only)",
+   "Fuel estimate (explicitly left to the skipper); GPX import in the UI (a parser exists in web/gpx-waypoints.ts, unwired)",
+   "Native App Store / Google Play apps; broad active coverage (one active region vs competitors' 15–34)",
+   "Offshore pelagic species modes / habitat suitability (by design it ranks habitat, not catch odds)"
+  ],
+  "note": "Graham's phrases 'subsea weather' and 'raw general base layer map' don't appear in the repo; the closest layers are currents/water temp and basemap + ENC + seafloor."
+ },
+ "apps": [
+  {
+   "rank": 1,
+   "id": "ridescore",
+   "name": "RideScore (Solitary Labs)",
+   "tier": "new (iOS Oct 28, 2026)",
+   "category": "Boat-specific sea-conditions comfort forecast",
+   "links": {
+    "website": "https://solitarylabs.com/ridescore",
+    "app_store": "https://apps.apple.com/us/app/ridescore-marine-forecast/id6814978445",
+    "support": "https://solitarylabs.com/support",
+    "ads_tracker": "https://appmarketspy.com/app/ridescore-marine-forecast-6814978445"
+   },
+   "pricing": "Free tier; Pro $12.99/mo or $99.99/yr (App Store US IAP list).",
+   "rating": "4.2 (5 ratings, App Store US)",
+   "target": "Coastal/offshore powerboaters in US East, Gulf, West Coasts, Hawaii, PR/USVI, Bahamas, Bermuda.",
+   "core": [
+    "One comfort score per hour for YOUR boat, 11 days out, painted on the map (tap boat chip to re-score map)",
+    "Wind, gusts, waves, swell, tide, current, first/last light under the score",
+    "Ride Rose: how the ride changes with heading (head/beam/following seas)",
+    "Helm: live gauges during a ride vs forecast; report for every trip led by its roughest 10 minutes; shareable card",
+    "BoatScore: roughest water the boat can run before 'Rough'; 'Tested in' Calm/Moderate/Rough",
+    "Pro learns your boat from recorded rides; rides uploaded to improve the forecast",
+    "Offline forecast around you; spots with calmest windows; alerts; NWS advisories; radar, currents, sea-temp maps"
+   ],
+   "differentiators": [
+    "Phone-sensor ride telemetry feeds back into the forecast model",
+    "Same ruler for harbor and blue water",
+    "Running Facebook/Instagram ads now (AppMarketSpy: 4 active US ads)"
+   ],
+   "borrow": [
+    "Personalized sea-state score per vessel",
+    "Heading-dependent 'Ride Rose'",
+    "Forecast-vs-felt trip report from device telemetry"
+   ],
+   "relevance": 9,
+   "quality": 9,
+   "threat": 9,
+   "why": "Does what SkipperCast's boat verdict does, plus heading and ride recording, natively and already advertising on Instagram.",
+   "image": "images/composites/ridescore.jpg",
+   "images_raw": [
+    "images/ridescore-1.jpg",
+    "images/ridescore-2.jpg",
+    "images/ridescore-3.jpg",
+    "images/ridescore-web-og.png"
+   ],
+   "total": 27,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Boat profile scaling an hourly conditions score",
+     "Day verdict with limiting factor",
+     "Comfort feedback API (calibration path)",
+     "Saved-trip alerts"
+    ],
+    "skippercast_lacks": [
+     "Heading-dependent Ride Rose",
+     "Ride recording with live gauges that learns the boat",
+     "11-day horizon (SkipperCast: 7)",
+     "Score painted across the whole map per hour",
+     "Native iOS app; whole US coast coverage"
+    ]
+   }
+  },
+  {
+   "rank": 2,
+   "id": "fish-or-pass",
+   "name": "Fish or Pass (Set Sale Marine)",
+   "tier": "new (web app, 2026)",
+   "category": "Daily Bite Score + verdict (SoCal)",
+   "links": {
+    "website": "https://www.fishorpass.com/",
+    "how_it_works": "https://www.fishorpass.com/how-it-works",
+    "pricing": "https://www.fishorpass.com/pricing",
+    "disclaimer": "https://www.fishorpass.com/score-disclaimer"
+   },
+   "pricing": "Angler $149/yr after 7-day trial (card up front); Captain $249/yr announced, not for sale yet.",
+   "rating": "n/a (web app; no App Store listing found)",
+   "target": "Southern California saltwater anglers (private boats, charters, pier/shore) from 9 home ports; 7 graded species.",
+   "core": [
+    "Bite Score 0–100 + one-word verdict: Catching / Fishing / Pass, per patch of water and species",
+    "Six signals: recent activity, water temp & breaks, structure & depth, kelp & bait, sea conditions, tide & current",
+    "Confidence indicator on every read; yesterday's card graded against actual catches",
+    "Saved boat + range: unreachable water greys out for today's sea state",
+    "Water temp, chlorophyll, temp breaks, kelp, bathymetry overlays; MPA + regulation overlay; go/no-go sea-state call",
+    "No-account demo running on a real sample day"
+   ],
+   "differentiators": [
+    "Self-grading accuracy loop shown to users",
+    "Hyper-local (one bight, 7 species) with port guides",
+    "Roadmap shown openly on the pricing table (SOON rows)"
+   ],
+   "borrow": [
+    "Confidence indicator per cell",
+    "Grey-out water you can't reach today",
+    "Public 'how we did yesterday' scorecard"
+   ],
+   "relevance": 10,
+   "quality": 8,
+   "threat": 9,
+   "why": "Same California coast and same honesty stance, but already scores the whole SoCal Bight per species, where SkipperCast's SoCal is still preview/draft.",
+   "image": "images/fish-or-pass-og.png",
+   "images_raw": [
+    "images/fish-or-pass-og.png"
+   ],
+   "total": 27,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Forecast skill page vs buoys (similar honesty)",
+     "MPA + CDFW rules cards and season calendar",
+     "Habitat, bathymetry, water temp, chlorophyll layers",
+     "Boat range (Reach layer)"
+    ],
+    "skippercast_lacks": [
+     "Species bite score and Catching/Fishing/Pass verdict",
+     "Grading yesterday's call against what boats caught",
+     "Coverage of the whole SoCal Bight today (SkipperCast's SoCal is preview/draft)"
+    ]
+   }
+  },
+  {
+   "rank": 3,
+   "id": "salty-offshore",
+   "name": "Salty Offshore",
+   "tier": "new (iOS Jun 2025; Android Aug 2026)",
+   "category": "Offshore ocean-data planning + logbook",
+   "links": {
+    "website": "https://saltyoffshore.com/",
+    "app_store": "https://apps.apple.com/us/app/salty-offshore/id6741581379",
+    "google_play": "https://play.google.com/store/apps/details?id=com.saltyoffshore.android",
+    "pricing": "https://saltyoffshore.com/buy/compare",
+    "web_app": "https://saltyoffshore.com/app"
+   },
+   "pricing": "Basic $99.99/yr (1 region, 3 datasets) · Pro $199.99/yr or $24.99/mo (2 regions, 5 datasets) · Elite $500/yr (all regions, 10 datasets) · AIS add-on $9.99. 7-day trial on Pro/Elite. Source: saltyoffshore.com/buy/compare + App Store IAP list.",
+   "rating": "5.0 (15 ratings, App Store US)",
+   "target": "Offshore captains and serious recreational offshore crews; 34 regions on five continents.",
+   "core": [
+    "SST, water color/chlorophyll, currents, sea surface height, salinity with depth, subsurface temp, dissolved oxygen, mixed layer depth, FSLE fronts, phytoplankton",
+    "Overlay two datasets on one chart; temperature breaks and eddies outlined",
+    "Water Playback of recent satellite passes; weather (wind, gusts, pressure, radar)",
+    "Shaded relief + depth contours; AIS vessels; live buoys; bite windows and tides",
+    "Trip Tracker, hands-free logging via Lock Screen/Siri, end-of-trip summary",
+    "Conditions at every bite, trip analysis, season patterns, waypoint history",
+    "Condition alerts at a waypoint; new-satellite-pass alerts; offline maps; GPX import/export",
+    "Share a map link that opens the exact region, layers, ranges and satellite frame"
+   ],
+   "differentiators": [
+    "Closes the loop: plan on ocean data → record the trip → see the water at every bite → season patterns",
+    "Deepest subsurface stack of the new entrants (DO, MLD, subsurface temp, FSLE)",
+    "User-tunable color ranges and saved layer setups"
+   ],
+   "borrow": [
+    "Exact-view share links (layers + range + frame)",
+    "Condition alerts: 'tell me when the water at this waypoint hits X'",
+    "Conditions-at-every-bite logbook",
+    "New-satellite-pass alerts with coverage % per pass"
+   ],
+   "relevance": 9,
+   "quality": 9,
+   "threat": 8,
+   "why": "Closest analog to SkipperCast's multi-layer map, and ahead of it on subsurface data, playback and a logbook that records conditions.",
+   "image": "images/composites/salty-offshore.jpg",
+   "images_raw": [
+    "images/salty-offshore-1.jpg",
+    "images/salty-offshore-2.jpg",
+    "images/salty-offshore-3.jpg",
+    "images/salty-web-og.png"
+   ],
+   "total": 26,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Multi-layer map with SST, chlorophyll, currents, fronts, relief, contours",
+     "Share links",
+     "Saved spots, catch log, offline pack, GPX export"
+    ],
+    "skippercast_lacks": [
+     "Subsurface stack (subsurface temp, MLD, DO, salinity, SSH)",
+     "Satellite-pass playback",
+     "Conditions at every bite + season patterns",
+     "Waypoint threshold alerts and new-pass alerts",
+     "GPX import; native apps; 34 regions"
+    ]
+   }
+  },
+  {
+   "rank": 4,
+   "id": "fishare",
+   "name": "Fishare (Fishare Pro)",
+   "tier": "new (iOS Jul 2026)",
+   "category": "Offshore SST/ocean charts + habitat score",
+   "links": {
+    "website": "https://fishare.app/offshore-pro",
+    "app_store": "https://apps.apple.com/us/app/fishare-offshore-sst-charts/id6783726939",
+    "hsi": "https://fishare.app/hsi/"
+   },
+   "pricing": "Fishare Pro US$8.99/mo or US$79/yr on web (App Store IAP lists $8.99 and $79.99); forecast, map, tides, logbook free. 7-day trial, no card.",
+   "rating": "No ratings yet (App Store US)",
+   "target": "Bluewater anglers across 15 regions (US NE canyons, Gulf, West Coast, Hawaii, Baja, Caribbean, AU/NZ, Japan, UK & Ireland, etc.).",
+   "core": [
+    "Every VIIRS/AVHRR SST pass of last 72h drawn as seen (clouds left as holes), checked hourly, break auto-found and labelled",
+    "24h/72h composites, hourly GOES/Himawari frames, daily gap-filled field with isotherms",
+    "Scrub back 7 days and forward 5 days on one timeline; 30-day pass history",
+    "Eddies drawn as closed break lines on the SST map with °C step; SSH with labelled contours; current vectors",
+    "Temperature at 25/50/75/100/150/200 m, checked against Argo floats, labelled as model output",
+    "Chlorophyll-a + 250 m VIIRS true colour; per-species habitat score (HSI) re-scored hourly",
+    "Tap anywhere for the actual value; GPX import; GO TO bearing/distance/ETA; one-tap share of the current pass"
+   ],
+   "differentiators": [
+    "Radical data honesty: observed vs model labelled; no accuracy claims",
+    "Pass-level SST instead of only composites",
+    "Cheapest full offshore stack ($79/yr, all regions)"
+   ],
+   "borrow": [
+    "Auto-labelled fronts with °C-delta chips",
+    "Depth ladder UI that re-renders the whole field per depth, with stamped legend (T@50M °C)",
+    "Past+future on one scrubber",
+    "Tap-to-read exact value"
+   ],
+   "relevance": 9,
+   "quality": 9,
+   "threat": 7,
+   "why": "Best-in-class SST UX with honest labelling at a low price; ahead on look-back playback, eddies and depth layers.",
+   "image": "images/composites/fishare.jpg",
+   "images_raw": [
+    "images/fishare-1.jpg",
+    "images/fishare-2.jpg",
+    "images/fishare-3.jpg",
+    "images/fishare-web-og.jpg"
+   ],
+   "total": 25,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "SST fronts with uncertainty band, SST contrast, chlorophyll",
+     "Honest source/age labelling and withholding",
+     "Forward 7-day time dock"
+    ],
+    "skippercast_lacks": [
+     "Pass-by-pass SST with clouds as holes",
+     "7-day look-back on the same scrubber",
+     "Eddies, SSH, subsurface temp at depth",
+     "Tap-to-read on all layers at once",
+     "Species habitat score"
+    ]
+   }
+  },
+  {
+   "rank": 5,
+   "id": "fish-mapping-siriusxm",
+   "name": "SiriusXM Fish Mapping (OceanBytes)",
+   "tier": "relaunched Nov 2, 2026 (established brand)",
+   "category": "Satellite fish-finding layers + AI hot zones",
+   "links": {
+    "press_release": "https://investor.siriusxm.com/news-events/press-releases/detail/2316/siriusxm-launches-all-new-fish-mapping-app-with-enhanced",
+    "app_store": "https://apps.apple.com/us/app/fish-mapping/id6450968706",
+    "website": "https://www.siriusxm.com/fishmapping"
+   },
+   "pricing": "App-only: 1-Week Mobile+Desktop $24.99 · Annual Mobile $199 · Annual Mobile+Desktop $299 (App Store US IAP list). Included for SiriusXM Marine satellite subscribers.",
+   "rating": "4.2 (5 ratings, App Store US)",
+   "target": "Offshore anglers, incl. existing SiriusXM Marine hardware owners.",
+   "core": [
+    "Daily AI Hot Zones + oceanographer recommendations twice weekly",
+    "Sea temp, plankton, salinity, currents, thermocline, altimetry, true color, bathymetry",
+    "Front Finder: filter conditions to locate ideal areas",
+    "Desktop + mobile"
+   ],
+   "differentiators": [
+    "Commercial-fisheries data provider (OceanBytes) + human oceanographer curation",
+    "Distribution via SiriusXM Marine chartplotter ecosystem"
+   ],
+   "borrow": [
+    "Human-in-the-loop expert annotations over AI zones",
+    "Front Finder filter UI (set thresholds, see matching water)",
+    "Thermocline layer"
+   ],
+   "relevance": 8,
+   "quality": 7,
+   "threat": 8,
+   "why": "Big-brand relaunch with AI zones and thermocline; sets a price anchor at $199–$299/yr.",
+   "image": "images/composites/fish-mapping-siriusxm.jpg",
+   "images_raw": [
+    "images/fish-mapping-siriusxm-1.jpg",
+    "images/fish-mapping-siriusxm-2.jpg",
+    "images/fish-mapping-siriusxm-3.jpg"
+   ],
+   "total": 23,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "SST fronts, chlorophyll, currents"
+    ],
+    "skippercast_lacks": [
+     "Thermocline, salinity, altimetry, plankton",
+     "Threshold 'Front Finder' filter",
+     "Expert-curated recommendations"
+    ]
+   }
+  },
+  {
+   "rank": 6,
+   "id": "fishtrack",
+   "name": "FishTrack (Surfline/Wavetrak)",
+   "tier": "established",
+   "category": "Offshore SST/chlorophyll charts",
+   "links": {
+    "website": "https://fishtrack.com/",
+    "app_store": "https://apps.apple.com/us/app/fishtrack-charts-forecasts/id952022603",
+    "google_play": "https://play.google.com/store/apps/details?id=com.fishtrack.android",
+    "x": "https://x.com/FishTrack"
+   },
+   "pricing": "Premium $14.99/mo or $95.99/yr (App Store US); web $79.99/yr option listed.",
+   "rating": "4.6 (6,278 ratings, App Store US)",
+   "target": "Mass-market offshore anglers.",
+   "core": [
+    "Cloud-free and latest SST, chlorophyll, true colour",
+    "Overlays: currents, bathymetry, SSH",
+    "Tides, moon, 7-day marine forecast, hot spots, routes, offline charts"
+   ],
+   "differentiators": [
+    "Scale + Surfline forecast stack"
+   ],
+   "borrow": [
+    "Clean overlay toggling on top of imagery"
+   ],
+   "relevance": 8,
+   "quality": 7,
+   "threat": 7,
+   "why": "The incumbent most new entrants position against; large install base.",
+   "image": "images/composites/g-offshore-incumbents.jpg",
+   "images_raw": [
+    "images/fishtrack-1.png",
+    "images/fishtrack-2.png",
+    "images/fishtrack-3.png"
+   ],
+   "total": 22,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "SST, chlorophyll, currents, contours for its one region"
+    ],
+    "skippercast_lacks": [
+     "Native apps, broad coverage, true-colour imagery, SSH"
+    ]
+   }
+  },
+  {
+   "rank": 7,
+   "id": "rigline",
+   "name": "Rigline Offshore",
+   "tier": "new (iOS Dec 2025)",
+   "category": "Ranked hotspots + explainable analytics",
+   "links": {
+    "website": "https://riglineoffshore.com/",
+    "analytics": "https://riglineoffshore.com/features/fishing-analytics",
+    "app_store": "https://apps.apple.com/us/app/rigline-offshore/id6756441138",
+    "reddit_feedback": "https://www.reddit.com/r/offshorefishing/comments/1rdu7qc/has_anyone_tested_rigline_offshore_curious_if_it/"
+   },
+   "pricing": "Free (no IAP on App Store US as of today).",
+   "rating": "5.0 (13 ratings, App Store US)",
+   "target": "Offshore + inshore anglers in 25 offshore regions (Atlantic, Gulf, Pacific, Hawaii, Baja) and 8 estuaries.",
+   "core": [
+    "Up to 30 ranked hotspots per region, each with its top-3 drivers (e.g. convergence+shear, shelf-break proximity, SST front strength), trend and run streak",
+    "Species modes: mahi, wahoo, tunas, marlin, sailfish, daytime swordfish",
+    "48h weedline outlook; Gulf Stream current band",
+    "Inshore hotspots on a 100 m grid; 7-day bite forecast with hourly feeding windows",
+    "Deep Analytics weighs SST fronts, chlorophyll, currents, SLA, bathymetry, salinity, upwelling, MLD"
+   ],
+   "differentiators": [
+    "'Analytics that show their work': each score decomposed into drivers",
+    "Free while competitors charge $100–$500/yr"
+   ],
+   "borrow": [
+    "Driver breakdown chips on every score",
+    "Weedline/sargassum drift outlook",
+    "Species mode toggle that re-ranks the map"
+   ],
+   "relevance": 8,
+   "quality": 7,
+   "threat": 7,
+   "why": "Free, explainable hotspot ranking built from the same layers; strong pattern for SkipperCast's decision layer.",
+   "image": "images/composites/rigline.jpg",
+   "images_raw": [
+    "images/rigline-1.jpg",
+    "images/rigline-2.jpg",
+    "images/rigline-3.jpg",
+    "images/rigline-web-og.jpg"
+   ],
+   "total": 22,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Ranked places with up to 3 dated reasons (Where to look)"
+    ],
+    "skippercast_lacks": [
+     "Per-score driver weights and trend/streak",
+     "Pelagic species modes",
+     "Weedline drift outlook",
+     "Hourly bite windows"
+    ]
+   }
+  },
+  {
+   "rank": 8,
+   "id": "predictwind",
+   "name": "PredictWind",
+   "tier": "established",
+   "category": "Marine weather + routing",
+   "links": {
+    "website": "https://forecast.predictwind.com/en/features-packages-and-pricing/",
+    "app_store": "https://apps.apple.com/us/app/predictwind-marine-forecasts/id477048487",
+    "x": "https://x.com/PredictWind",
+    "help": "https://help.predictwind.com/en/articles/8563285-predictwind-subscriptions-differences-between-standard-and-professional"
+   },
+   "pricing": "Basic $29/yr · Standard $249/yr · Professional $499/yr (App Store US IAP list).",
+   "rating": "4.8 (32,918 ratings, App Store US)",
+   "target": "Cruisers, racers, passage makers.",
+   "core": [
+    "Multi-model wind/wave forecasts, weather routing, departure planning",
+    "SST maps, high-res tidal currents",
+    "Professional: boat-motion data (roll, vertical acceleration, slamming), AI polars, GRIBs"
+   ],
+   "differentiators": [
+    "Boat-motion forecast (slamming incidence)"
+   ],
+   "borrow": [
+    "Departure planner comparing several start days",
+    "Motion/slam metric for sea conditions"
+   ],
+   "relevance": 7,
+   "quality": 9,
+   "threat": 6,
+   "why": "Gold standard for weather UX; motion metrics overlap SkipperCast sea conditions.",
+   "image": "images/composites/g-weather.jpg",
+   "images_raw": [
+    "images/predictwind-1.jpg",
+    "images/predictwind-2.jpg",
+    "images/predictwind-3.jpg"
+   ],
+   "total": 22,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Model comparison (NOAA vs ECMWF)"
+    ],
+    "skippercast_lacks": [
+     "Departure planner across days",
+     "Vessel-motion (slam/roll) forecast",
+     "Weather routing"
+    ]
+   }
+  },
+  {
+   "rank": 9,
+   "id": "bluefronts",
+   "name": "BlueFronts",
+   "tier": "new (iOS Apr 2026)",
+   "category": "Offshore charting + on-demand front detection",
+   "links": {
+    "app_store": "https://apps.apple.com/us/app/bluefronts-offshore-fishing/id6757767815",
+    "google_play": "https://play.google.com/store/apps/details?id=com.bluefronts.app"
+   },
+   "pricing": "Plus $19.99/mo or $159.99/yr · Pro $29.99/mo or $239.99/yr (App Store US IAP list). Free tier includes one SST dataset + weather.",
+   "rating": "5.0 (3 ratings, App Store US)",
+   "target": "Saltwater offshore anglers, global coverage with no locked regions.",
+   "core": [
+    "SST, chlorophyll, altimetry, currents (particles), wind, waves",
+    "BlueFronts Reports: draw a box → on-demand detection of SST fronts, chlorophyll edges, convergence, shear, eddies",
+    "SST palette auto-scales to the current view; tap legend to rescale",
+    "Offshore wind turbines layer; platforms + Sentinel-1 imagery to verify rig location; wrecks & reefs",
+    "NOAA buoys; point weather; range/bearing marks"
+   ],
+   "differentiators": [
+    "User-drawn analysis box",
+    "Auto-scaling color ramp to local view",
+    "Radar satellite (Sentinel-1) verification of structures"
+   ],
+   "borrow": [
+    "Auto-scale palette to viewport",
+    "Draw-a-box analysis report",
+    "Current particles animation"
+   ],
+   "relevance": 8,
+   "quality": 7,
+   "threat": 6,
+   "why": "Small but sharp UX ideas (auto-scaling SST, box reports) that map directly onto SkipperCast's rendering.",
+   "image": "images/composites/bluefronts.jpg",
+   "images_raw": [
+    "images/bluefronts-1.jpg",
+    "images/bluefronts-2.jpg",
+    "images/bluefronts-3.jpg"
+   ],
+   "total": 21,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "SST fronts and contrast",
+     "Currents animation",
+     "Buoy/station readings"
+    ],
+    "skippercast_lacks": [
+     "Viewport auto-scaling SST ramp",
+     "Draw-a-box front/edge/eddy report",
+     "Chlorophyll-edge and shear detection",
+     "Platform/wreck layers"
+    ]
+   }
+  },
+  {
+   "rank": 10,
+   "id": "windy",
+   "name": "Windy.com",
+   "tier": "established",
+   "category": "Global weather visualization",
+   "links": {
+    "website": "https://www.windy.com/",
+    "app_store": "https://apps.apple.com/us/app/windy-com-weather-radar/id1161387262",
+    "google_play": "https://play.google.com/store/apps/details?id=com.windyty.android"
+   },
+   "pricing": "Premium $24.99–$29.99/yr (App Store US IAP list).",
+   "rating": "4.8 (80,670 ratings, App Store US)",
+   "target": "Everyone incl. sailors, surfers, pilots.",
+   "core": [
+    "50+ animated layers, multiple models, particles",
+    "Premium: 1-hour steps, longer forecasts, alerts, route planner"
+   ],
+   "differentiators": [
+    "Visual benchmark for animated particle layers"
+   ],
+   "borrow": [
+    "Particle wind/current animation and model switcher"
+   ],
+   "relevance": 7,
+   "quality": 9,
+   "threat": 5,
+   "why": "The visual bar users will compare SkipperCast's weather layer against.",
+   "image": "images/composites/g-weather.jpg",
+   "images_raw": [
+    "images/windy-1.jpg",
+    "images/windy-2.jpg",
+    "images/windy-3.jpg"
+   ],
+   "total": 21,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Animated currents"
+    ],
+    "skippercast_lacks": [
+     "Particle wind/swell animation",
+     "Model switcher on the map"
+    ]
+   }
+  },
+  {
+   "rank": 11,
+   "id": "sealegs-ai",
+   "name": "SeaLegs AI + DeepCast",
+   "tier": "new (iOS Sep 2025)",
+   "category": "AI marine weather + AI fishing reports",
+   "links": {
+    "website": "https://www.sealegs.ai/deepcast/",
+    "app_store": "https://apps.apple.com/us/app/sealegs-ai-marine-forecasts/id6739193930"
+   },
+   "pricing": "Plus $5.99/mo or $49.99/yr · Pro $9.99/mo or $79.99/yr · DeepCast report $4.99 single; 10-pack $39.99 (sealegs.ai). Ocean map free, no account.",
+   "rating": "4.8 (71 ratings, App Store US)",
+   "target": "Boaters, sailors and offshore anglers; US East/Gulf/West, Caribbean, Central America, Mediterranean.",
+   "core": [
+    "AI marine forecast from ECMWF+GFS+ICON in plain English for a route/departure",
+    "DeepCast AI fishing report: inshore/midshore/offshore zones, annotated SST/CHL maps, GPS spots, tactics, downloadable PDF",
+    "Free interactive map: SST, chlorophyll, eddies, currents, thermal fronts, thermocline, depth contours",
+    "GPS tracking"
+   ],
+   "differentiators": [
+    "Pay-per-report pricing ($4.99) vs $90 legacy reports",
+    "Free map as funnel"
+   ],
+   "borrow": [
+    "Plain-English multi-model briefing",
+    "Offline PDF report export"
+   ],
+   "relevance": 7,
+   "quality": 7,
+   "threat": 6,
+   "why": "Shows the AI-interpretation layer users now expect on top of raw ocean maps.",
+   "image": "images/composites/sealegs-ai.jpg",
+   "images_raw": [
+    "images/sealegs-ai-1.jpg",
+    "images/sealegs-ai-2.jpg",
+    "images/sealegs-ai-3.jpg",
+    "images/sealegs-deepcast-og.jpg"
+   ],
+   "total": 20,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Plain-language day verdict; NOAA vs ECMWF disagreement in words",
+     "Text Advisor built (dark)"
+    ],
+    "skippercast_lacks": [
+     "Live AI report for any port/date with PDF export",
+     "Three-model blend incl. ICON"
+    ]
+   }
+  },
+  {
+   "rank": 12,
+   "id": "ripcharts",
+   "name": "RipCharts",
+   "tier": "established",
+   "category": "Offshore SST/chlorophyll/altimetry",
+   "links": {
+    "website": "https://www.ripcharts.com/register.aspx",
+    "app_store": "https://apps.apple.com/us/app/ripcharts/id993060891",
+    "google_play": "https://play.google.com/store/apps/details?id=com.ripcharts.android"
+   },
+   "pricing": "Per region: $169.99/yr in-app (App Store US); US/Baja package $229.99. Web Standard ~$99/yr per search summary (not confirmed).",
+   "rating": "4.8 (492 ratings, App Store US)",
+   "target": "Offshore anglers by region (US, Baja, AU, NZ).",
+   "core": [
+    "SST, chlorophyll, altimetry; customizable SST range",
+    "Premium: app, offline maps, sub-surface SST, 5-day SST forecast"
+   ],
+   "differentiators": [
+    "5-day SST forecast; sub-surface SST"
+   ],
+   "borrow": [
+    "Live range slider on SST palette"
+   ],
+   "relevance": 7,
+   "quality": 7,
+   "threat": 6,
+   "why": "Respected incumbent; range slider and SST forecast are table stakes now.",
+   "image": "images/composites/g-offshore-incumbents.jpg",
+   "images_raw": [
+    "images/ripcharts-1.png",
+    "images/ripcharts-2.png",
+    "images/ripcharts-3.png"
+   ],
+   "total": 20,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "SST, chlorophyll"
+    ],
+    "skippercast_lacks": [
+     "User range slider on SST palette",
+     "5-day SST forecast",
+     "Sub-surface SST"
+    ]
+   }
+  },
+  {
+   "rank": 13,
+   "id": "satfish",
+   "name": "SatFish (Bloodydecks)",
+   "tier": "established",
+   "category": "Offshore satellite charts",
+   "links": {
+    "website": "https://www.satfish.com/",
+    "v2": "https://www.satfish.com/offshore-fishing-maps-faster-more-powerful-satfish-v2/",
+    "app_store": "https://apps.apple.com/us/app/satfish-fishing-app/id1499577732"
+   },
+   "pricing": "$129/yr, all regions, 30-day free trial (satfish.com).",
+   "rating": "4.6 (374 ratings, App Store US)",
+   "target": "Offshore anglers.",
+   "core": [
+    "High-res + cloud-free SST, chlorophyll, true colour, bathymetry, currents, buoys, 5-day wind",
+    "v2.0: adjustable SST/chl ranges, history playback, shared waypoints, offline caching"
+   ],
+   "differentiators": [
+    "Low price for all regions"
+   ],
+   "borrow": [
+    "History playback"
+   ],
+   "relevance": 7,
+   "quality": 6,
+   "threat": 6,
+   "why": "Mainstream SST app that has already shipped playback and range controls.",
+   "image": "images/composites/g-offshore-incumbents.jpg",
+   "images_raw": [
+    "images/satfish-1.jpg",
+    "images/satfish-2.jpg",
+    "images/satfish-3.jpg"
+   ],
+   "total": 19,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "SST, chlorophyll, currents, buoys, offline"
+    ],
+    "skippercast_lacks": [
+     "History playback",
+     "Adjustable SST/chl ranges",
+     "Shared waypoints"
+    ]
+   }
+  },
+  {
+   "rank": 14,
+   "id": "fishdope",
+   "name": "Fishdope (Bloodydecks)",
+   "tier": "established",
+   "category": "SoCal reports + SST",
+   "links": {
+    "website": "https://www.fishdope.com/",
+    "app_store": "https://apps.apple.com/us/app/fishdope-fishing-app/id760423612"
+   },
+   "pricing": "$199/yr (fishdope.com FAQ).",
+   "rating": "4.7 (571 ratings, App Store US)",
+   "target": "Southern California offshore anglers.",
+   "core": [
+    "Daily reports, hot-bite locations, spotter-plane reports",
+    "SST, cloud-free SST, daily chlorophyll"
+   ],
+   "differentiators": [
+    "Spotter-plane intel"
+   ],
+   "borrow": [
+    "Human intel pins on the chart"
+   ],
+   "relevance": 7,
+   "quality": 6,
+   "threat": 6,
+   "why": "Shows paid demand for human fishing intel layered on SST.",
+   "image": "images/composites/g-offshore-incumbents.jpg",
+   "images_raw": [
+    "images/fishdope-1.jpg",
+    "images/fishdope-2.jpg",
+    "images/fishdope-3.jpg"
+   ],
+   "total": 19,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Reports view with dated catch cards"
+    ],
+    "skippercast_lacks": [
+     "Daily written SoCal reports, spotter-plane intel"
+    ]
+   }
+  },
+  {
+   "rank": 15,
+   "id": "gulfwire",
+   "name": "GulfWire (Gulfwire LLC)",
+   "tier": "new (iOS Nov 6, 2026)",
+   "category": "Gulf offshore community reports + Pro ocean maps",
+   "links": {
+    "website": "https://gulfwire.net/",
+    "pro": "https://gulfwire.net/pro",
+    "about": "https://gulfwire.net/about/",
+    "support": "https://gulfwire.net/support",
+    "app_store": "https://apps.apple.com/us/app/gulfwire/id6806878832"
+   },
+   "pricing": "Pro $19.99/mo or $149.99/yr (App Store US IAP list and gulfwire.net/support). Base app free.",
+   "rating": "No ratings yet (App Store US)",
+   "target": "Gulf of Mexico (plus East Coast, Bahamas) offshore/billfish crews and tournament boats.",
+   "core": [
+    "Community offshore fishing reports with photos/comments; species filters (blue/white marlin, sailfish, swordfish)",
+    "Boat profiles, season catch totals, yearly billfish standings",
+    "Pro: SST, HD chlorophyll, salinity, sargassum, altimetry, currents",
+    "Track My Boat (private, foreground-only); verified drillship positions",
+    "Route & fuel planner: waypoints → distance, time, fuel burn, remaining fuel"
+   ],
+   "differentiators": [
+    "Social/tournament layer (standings, boat profiles) on top of ocean data",
+    "Sargassum layer + drillship positions for Gulf rigs",
+    "Very explicit 'observational, not forecast' labelling"
+   ],
+   "borrow": [
+    "Route + fuel estimate from user's speed/burn",
+    "Sargassum layer",
+    "Boat leaderboards for community stickiness"
+   ],
+   "relevance": 6,
+   "quality": 6,
+   "threat": 5,
+   "why": "Gulf-only, so little overlap; its fuel planner and community feed are the borrowable parts.",
+   "image": "images/composites/gulfwire.jpg",
+   "images_raw": [
+    "images/gulfwire-1.jpg",
+    "images/gulfwire-2.jpg",
+    "images/gulfwire-3.jpg",
+    "images/gulfwire-web-og.png"
+   ],
+   "note": "X handle @GulfWire is an unrelated Arabic news account, not this app.",
+   "total": 17,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Ocean layers (SST, chlorophyll, currents)",
+     "Run time and turn-back time"
+    ],
+    "skippercast_lacks": [
+     "Fuel burn/remaining estimate",
+     "Sargassum layer",
+     "Public community report feed and boat standings"
+    ]
+   }
+  },
+  {
+   "rank": 16,
+   "id": "bigblue",
+   "name": "BigBlue (GeoPelagic)",
+   "tier": "established-niche (iOS 2023)",
+   "category": "Pro/commercial offshore charts, desktop + mobile",
+   "links": {
+    "website": "https://www.geopelagic.com/",
+    "pricing": "https://www.geopelagic.com/pricing.html",
+    "app_store": "https://apps.apple.com/us/app/bigblue-offshore-fishing/id6446953932",
+    "google_play": "https://play.google.com/store/apps/details?id=com.geopelagic.bigblue"
+   },
+   "pricing": "Sport/Commercial/Fleet plans with 3/6/20 device licences (prices not captured); App Store IAPs listed at $9.99–$14.99 (periods not shown).",
+   "rating": "not captured",
+   "target": "Commercial and tournament crews.",
+   "core": [
+    "Hourly GOES SST; MODIS/VIIRS/PACE colour + chlorophyll; currents, wind, waves, SLA, bathymetry",
+    "HUD speed/distance, great-circle lines, auto offline maps",
+    "Desktop app with AIS/NMEA instrument connectivity"
+   ],
+   "differentiators": [
+    "PACE hyperspectral chlorophyll; wheelhouse desktop with NMEA"
+   ],
+   "borrow": [
+    "Hourly geostationary SST frames",
+    "NMEA/AIS feed into the map"
+   ],
+   "relevance": 6,
+   "quality": 7,
+   "threat": 4,
+   "why": "Pro-grade data cadence (hourly SST) worth noting; SkipperCast already carries dated commercial AIS.",
+   "image": null,
+   "images_raw": [],
+   "total": 17,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Chart + terrain, AIS layer (dated commercial)"
+    ],
+    "skippercast_lacks": [
+     "Hourly geostationary SST",
+     "NMEA/live AIS instrument input"
+    ]
+   }
+  },
+  {
+   "rank": 17,
+   "id": "boatngo",
+   "name": "BoatNGo (+ FishNGo)",
+   "tier": "new (iOS Feb 2026)",
+   "category": "Boat-specific GO/CAUTION/NO-GO + nav + fishing",
+   "links": {
+    "website": "https://boatngo.app/how-it-works",
+    "app_store": "https://apps.apple.com/us/app/boatngo-marine-weather/id6759305866",
+    "google_play": "https://play.google.com/store/apps/details?id=com.boatngo.app"
+   },
+   "pricing": "Pro $59.99/yr (App Store US IAP list). Free tier: today's score with usage limits.",
+   "rating": "5.0 (8 ratings, App Store US)",
+   "target": "Recreational boaters, inland lakes to offshore.",
+   "core": [
+    "Score from wind, waves, wave period adjusted for boat type + length → GO/CAUTION/NO-GO",
+    "7-day outlook comparing 8-hour departure windows; flags rough hours an average hides",
+    "Forecast tabs: overview, radar, wind, waves, tide; Vector Nav map",
+    "FishNGo: explore, species, setup, my trip"
+   ],
+   "differentiators": [
+    "Departure-window comparison that exposes hidden rough hours"
+   ],
+   "borrow": [
+    "'Worst hour in window' callout next to an average score"
+   ],
+   "relevance": 6,
+   "quality": 6,
+   "threat": 5,
+   "why": "Same score-for-your-boat idea as RideScore at a lower price; window comparison is a good UX detail.",
+   "image": "images/composites/boatngo.jpg",
+   "images_raw": [
+    "images/boatngo-1.jpg",
+    "images/boatngo-2.jpg",
+    "images/boatngo-3.jpg",
+    "images/boatngo-web-og.jpg"
+   ],
+   "total": 17,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Boat-scaled conditions score + verdict; 7-day hourly view"
+    ],
+    "skippercast_lacks": [
+     "Side-by-side departure-window comparison (the brief already names the worst hour)"
+    ]
+   }
+  },
+  {
+   "rank": 18,
+   "id": "buoyweather",
+   "name": "Buoyweather (Surfline/Wavetrak)",
+   "tier": "established",
+   "category": "Marine point forecasts",
+   "links": {
+    "website": "https://www.buoyweather.com/",
+    "app_store": "https://apps.apple.com/us/app/buoyweather-marine-forecasts/id686664992"
+   },
+   "pricing": "Premium $14.99/mo or $79.99–$95.99/yr (App Store US IAP list).",
+   "rating": "4.7 (1,252 ratings, App Store US)",
+   "target": "Offshore boaters.",
+   "core": [
+    "Pick-a-point wind/wave forecasts, 16-day premium",
+    "Live cams, route forecasting, ocean-current maps"
+   ],
+   "differentiators": [
+    "Pick-any-point offshore forecast"
+   ],
+   "borrow": [
+    "Route forecast (conditions along a line)"
+   ],
+   "relevance": 6,
+   "quality": 6,
+   "threat": 5,
+   "why": "Classic offshore point forecast; route forecast pattern.",
+   "image": "images/composites/g-weather.jpg",
+   "images_raw": [
+    "images/buoyweather-1.jpg",
+    "images/buoyweather-2.jpg",
+    "images/buoyweather-3.jpg"
+   ],
+   "total": 17,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Run time by water route; port conditions"
+    ],
+    "skippercast_lacks": [
+     "Forecast along a route line",
+     "Live cams"
+    ]
+   }
+  },
+  {
+   "rank": 19,
+   "id": "surfline",
+   "name": "Surfline",
+   "tier": "established",
+   "category": "Surf/sea-conditions forecasts + cams",
+   "links": {
+    "website": "https://www.surfline.com/",
+    "app_store": "https://apps.apple.com/us/app/surfline-wave-surf-reports/id393782096",
+    "google_play": "https://play.google.com/store/apps/details?id=com.surfline.android",
+    "x": "https://x.com/surfline"
+   },
+   "pricing": "Premium $15.99/mo or $119.99/yr; with ads $69.99/yr (App Store US).",
+   "rating": "4.7 (30,721 ratings, App Store US)",
+   "target": "Surfers.",
+   "core": [
+    "Live cams + rewind",
+    "16-day spot forecasts, swell spectra, wave energy, expert summaries"
+   ],
+   "differentiators": [
+    "Cams + forecaster commentary"
+   ],
+   "borrow": [
+    "Swell spectra visual",
+    "Human forecaster summary line"
+   ],
+   "relevance": 5,
+   "quality": 9,
+   "threat": 3,
+   "why": "Best swell visualization; different audience.",
+   "image": "images/composites/g-weather.jpg",
+   "images_raw": [
+    "images/surfline-1.jpg",
+    "images/surfline-2.jpg",
+    "images/surfline-3.jpg"
+   ],
+   "total": 17,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Swell layer with period isolines"
+    ],
+    "skippercast_lacks": [
+     "Swell spectrum view; forecaster summaries"
+    ]
+   }
+  },
+  {
+   "rank": 20,
+   "id": "navionics",
+   "name": "Navionics Boating (Garmin)",
+   "tier": "established",
+   "category": "Charts + navigation",
+   "links": {
+    "app_store": "https://apps.apple.com/us/app/navionics-boating/id744920098",
+    "google_play": "https://play.google.com/store/apps/details?id=it.navionics.singleAppMarineLakesHD"
+   },
+   "pricing": "US & Canada $49.99/yr (App Store US IAP list); other regions $49.99–$69.99.",
+   "rating": "2.9 (2,361 ratings, App Store US)",
+   "target": "All boaters.",
+   "core": [
+    "Nautical charts, 1-ft HD contours, relief shading, routes, tracks, chartplotter sync"
+   ],
+   "differentiators": [
+    "Chart data + Garmin ecosystem"
+   ],
+   "borrow": [
+    "Relief shading + dense contours for base map"
+   ],
+   "relevance": 6,
+   "quality": 7,
+   "threat": 4,
+   "why": "Base-map benchmark; low ratings show room for a better UX.",
+   "image": "images/composites/g-navigation.jpg",
+   "images_raw": [
+    "images/navionics-1.png",
+    "images/navionics-2.png",
+    "images/navionics-3.png"
+   ],
+   "total": 17,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "ENC chart, relief, 30 ft contours"
+    ],
+    "skippercast_lacks": [
+     "Navigation-grade routing and chartplotter sync"
+    ]
+   }
+  },
+  {
+   "rank": 21,
+   "id": "cobia",
+   "name": "Cobia",
+   "tier": "new (iOS May 2026)",
+   "category": "AI fishing guide + gamified catches",
+   "links": {
+    "website": "https://cobia.app/",
+    "app_store": "https://apps.apple.com/us/app/cobia-ai-fishing-guide-log/id6761017204",
+    "google_play": "https://play.google.com/store/apps/details?id=app.cobia.android"
+   },
+   "pricing": "Free (Cups have prize pools).",
+   "rating": "5.0 (14 ratings, App Store US)",
+   "target": "Inshore, freshwater and offshore anglers; Florida first.",
+   "core": [
+    "Strike Zones: scores every pocket of water vs tide, wind, bottom; heat moves with the tide",
+    "Daily briefing score /100 with reasons; AI guide chat that knows your tackle box",
+    "Offshore hotspots (SE Florida/Bahamas) at temp breaks/colour edges",
+    "Verified-catch feed, Slams, Duels, Cups, Fishdex (600+ species), leaderboards",
+    "Spot privacy: irreversible pin fuzzing"
+   ],
+   "differentiators": [
+    "Gamification + verified in-camera catches",
+    "Irreversible location obfuscation for shared catches"
+   ],
+   "borrow": [
+    "Animated score heatmap that moves with tide",
+    "Privacy-preserving pin fuzzing"
+   ],
+   "relevance": 5,
+   "quality": 7,
+   "threat": 4,
+   "why": "Retention mechanics and tide-animated scoring worth borrowing; less of a data-layer rival.",
+   "image": "images/composites/cobia.jpg",
+   "images_raw": [
+    "images/cobia-1.jpg",
+    "images/cobia-2.jpg",
+    "images/cobia-3.jpg"
+   ],
+   "total": 16,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Catch log; rules; Reports view"
+    ],
+    "skippercast_lacks": [
+     "Gamified verified catches and leaderboards",
+     "Tide-animated suitability heatmap",
+     "AI chat live to users (SkipperCast's advisor is dark)"
+    ]
+   }
+  },
+  {
+   "rank": 22,
+   "id": "skeetercast",
+   "name": "SkeeterCast",
+   "tier": "new (iOS May 2026)",
+   "category": "Coastal weather + fishing intelligence + AI captain",
+   "links": {
+    "website": "https://skeetercast.com/",
+    "app_store": "https://apps.apple.com/us/app/skeetercast/id6766407078",
+    "google_play": "https://play.google.com/store/apps/details?id=com.skeetercast.app"
+   },
+   "pricing": "Free; premium unlocks 'V3.2' high-res model (price not shown on pages read).",
+   "rating": "5.0 (12 ratings, App Store US)",
+   "target": "Atlantic + Gulf coastal anglers, Maine to Texas (18 states).",
+   "core": [
+    "ML city forecasts for 25,000+ zips; NEXRAD HD radar (160 stations); nowcasts",
+    "SST, chlorophyll, currents, SSH anomaly, wave forecasts",
+    "Captain Steve AI: species scoring, strike times, chat, voice forecasts",
+    "2,308 reefs with bathymetry; USACE channel surveys; inlet conditions",
+    "Buddies, group chat, GPS track sharing, AES-256 encrypted private spots"
+   ],
+   "differentiators": [
+    "Own ML weather model; voice forecasts",
+    "Inshore bathymetry from USACE surveys"
+   ],
+   "borrow": [
+    "Voice briefings",
+    "Inlet-condition cards"
+   ],
+   "relevance": 6,
+   "quality": 6,
+   "threat": 4,
+   "why": "Bundles weather, ocean layers and AI for the same coastal user; broad but less polished.",
+   "image": "images/composites/skeetercast.jpg",
+   "images_raw": [
+    "images/skeetercast-1.jpg",
+    "images/skeetercast-2.jpg",
+    "images/skeetercast-3.jpg"
+   ],
+   "total": 16,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Bar-crossing window at Morro Bay; buoy and station readings"
+    ],
+    "skippercast_lacks": [
+     "NEXRAD radar layer",
+     "Voice briefings",
+     "Live AI chat"
+    ]
+   }
+  },
+  {
+   "rank": 23,
+   "id": "seastatus",
+   "name": "SeaStatus: Launch Conditions",
+   "tier": "new (iOS Sep 2026)",
+   "category": "Ramp-based Go/Caution/No-go",
+   "links": {
+    "app_store": "https://apps.apple.com/us/app/seastatus-launch-conditions/id6811217650",
+    "listing_mirror": "https://www.appbrain.com/appstore/seastatus-launch-conditions/ios-6811217650"
+   },
+   "pricing": "Pro $3.99/mo or $39.99/yr (App Store US IAP list).",
+   "rating": "5.0 (4 ratings, App Store US)",
+   "target": "Trailer boaters launching from a specific ramp (skiffs, bay boats, pontoons).",
+   "core": [
+    "Status per waterway the ramp reaches (river, ICW, nearshore) from NDBC buoys + CO-OPS tides",
+    "Best launch window today; NWS marine warnings",
+    "Pro: 7-day outlook, Route Check, Trip mode (keeps re-checking and flags deterioration), live cameras"
+   ],
+   "differentiators": [
+    "Ramp as the unit of planning",
+    "Trip-mode monitoring while underway"
+   ],
+   "borrow": [
+    "Underway deterioration alerts",
+    "Per-waterway status instead of one regional number"
+   ],
+   "relevance": 6,
+   "quality": 6,
+   "threat": 4,
+   "why": "Tiny but clever framing; trip-mode monitoring is a cheap, high-value alert pattern.",
+   "image": "images/composites/seastatus.jpg",
+   "images_raw": [
+    "images/seastatus-1.jpg",
+    "images/seastatus-2.jpg",
+    "images/seastatus-3.jpg"
+   ],
+   "total": 16,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Saved-trip alerts that fire when the assessment changes"
+    ],
+    "skippercast_lacks": [
+     "Underway 'trip mode' re-checking while on the water",
+     "Live camera feeds"
+    ]
+   }
+  },
+  {
+   "rank": 24,
+   "id": "savvy-navvy",
+   "name": "Savvy Navvy",
+   "tier": "established",
+   "category": "'Google Maps for boats'",
+   "links": {
+    "website": "https://www.savvy-navvy.com/pricing",
+    "app_store": "https://apps.apple.com/us/app/savvy-navvy-boat-navigation/id1479182650"
+   },
+   "pricing": "Premium $99/yr; US charts $129/yr; Premium Plus global $169/yr (App Store US IAP list).",
+   "rating": "4.7 (8,483 ratings, App Store US)",
+   "target": "Leisure boaters/sailors.",
+   "core": [
+    "Simplified charts, auto routing with tide/weather, AIS, tidal stream atlas"
+   ],
+   "differentiators": [
+    "Consumer-grade simplicity"
+   ],
+   "borrow": [
+    "Simplified clean base style"
+   ],
+   "relevance": 5,
+   "quality": 8,
+   "threat": 3,
+   "why": "Design reference for a calm, uncluttered base map.",
+   "image": "images/composites/g-navigation.jpg",
+   "images_raw": [
+    "images/savvy-navvy-1.png",
+    "images/savvy-navvy-2.png",
+    "images/savvy-navvy-3.png"
+   ],
+   "total": 16,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Phone-first layout"
+    ],
+    "skippercast_lacks": [
+     "Auto-routing with tide/weather"
+    ]
+   }
+  },
+  {
+   "rank": 25,
+   "id": "orca",
+   "name": "Orca",
+   "tier": "established",
+   "category": "Navigation + weather routing",
+   "links": {
+    "website": "https://getorca.com/",
+    "help_pricing": "https://help.getorca.com/en/articles/6541858-subscription-prices-and-functionality",
+    "app_store": "https://apps.apple.com/us/app/orca-boat-gps-charts-routes/id1514423198"
+   },
+   "pricing": "Orca Plus $44.99; Smart Navigation $89.99–$159.99 (App Store US IAP list).",
+   "rating": "4.6 (418 ratings, App Store US)",
+   "target": "Sailors/cruisers.",
+   "core": [
+    "Vector charts, sail/engine routing, animated weather, instruments, autopilot control"
+   ],
+   "differentiators": [
+    "Modern vector chart rendering"
+   ],
+   "borrow": [
+    "Vector chart typography"
+   ],
+   "relevance": 5,
+   "quality": 8,
+   "threat": 3,
+   "why": "Rendering reference for a modern vector base layer.",
+   "image": "images/composites/g-navigation.jpg",
+   "images_raw": [
+    "images/orca-1.png",
+    "images/orca-2.png",
+    "images/orca-3.png"
+   ],
+   "total": 16,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Vector basemap (Protomaps)"
+    ],
+    "skippercast_lacks": [
+     "Routing, instruments"
+    ]
+   }
+  },
+  {
+   "rank": 26,
+   "id": "hiltons",
+   "name": "Hilton's Realtime-Navigator (RT-Nav)",
+   "tier": "established",
+   "category": "Offshore imagery + offline nav",
+   "links": {
+    "website": "https://realtime-navigator.com/",
+    "app_store": "https://apps.apple.com/us/app/rt-nav/id586307815"
+   },
+   "pricing": "1 week $49.99 · 1 month $99.99 · 1 year $199.99 (App Store US IAP list).",
+   "rating": "3.0 (8 ratings, App Store US)",
+   "target": "Offshore/tournament captains.",
+   "core": [
+    "SST, chlorophyll, true colour, surface currents, altimetry, salinity imagery",
+    "Offline navigation over imagery with GPS, waypoints, routes"
+   ],
+   "differentiators": [
+    "Weekly tournament pricing"
+   ],
+   "borrow": [
+    "Short-term (weekly) pass pricing"
+   ],
+   "relevance": 6,
+   "quality": 5,
+   "threat": 4,
+   "why": "Legacy pro tool; weekly pass is a pricing idea.",
+   "image": "images/composites/g-offshore-incumbents.jpg",
+   "images_raw": [
+    "images/hiltons-rtnav-1.png",
+    "images/hiltons-rtnav-2.png",
+    "images/hiltons-rtnav-3.png"
+   ],
+   "total": 15,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Offline trip pack"
+    ],
+    "skippercast_lacks": [
+     "Offline navigation over imagery; weekly pass pricing"
+    ]
+   }
+  },
+  {
+   "rank": 27,
+   "id": "wavve",
+   "name": "Wavve Boating",
+   "tier": "established",
+   "category": "Draft-aware nav",
+   "links": {
+    "website": "https://www.wavveboating.com/features/",
+    "app_store": "https://apps.apple.com/us/app/wavve-boating-gps-map-chart/id1241140495",
+    "google_play": "https://play.google.com/store/apps/details?id=com.wavve.boating.gps"
+   },
+   "pricing": "$11.99/mo or $69.99/yr (App Store US).",
+   "rating": "4.7 (6,683 ratings, App Store US)",
+   "target": "Recreational boaters.",
+   "core": [
+    "Charts colored by your boat's draft with live tide depth, auto-routing, community spots"
+   ],
+   "differentiators": [
+    "Draft-personalized depth colouring"
+   ],
+   "borrow": [
+    "Recolour base map by vessel draft + current tide"
+   ],
+   "relevance": 5,
+   "quality": 7,
+   "threat": 3,
+   "why": "Simple, powerful personalization of the base layer.",
+   "image": "images/composites/g-navigation.jpg",
+   "images_raw": [
+    "images/wavve-1.jpg",
+    "images/wavve-2.jpg",
+    "images/wavve-3.jpg"
+   ],
+   "total": 15,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Depth contours and relief"
+    ],
+    "skippercast_lacks": [
+     "Recolouring by vessel draft + live tide"
+    ]
+   }
+  },
+  {
+   "rank": 28,
+   "id": "ripvision-ai",
+   "name": "RipVision AI",
+   "tier": "new (web, Oceania)",
+   "category": "Species habitat suitability maps",
+   "links": {
+    "website": "https://ripvisionai.com/"
+   },
+   "pricing": "not shown",
+   "rating": "n/a (web)",
+   "target": "Offshore anglers in Australia, NZ, Fiji, Western Pacific.",
+   "core": [
+    "Daily HSI for Southern Bluefin, Yellowfin, Mahi (0–1)",
+    "NASA MUR SST 0.02°, MODIS chlorophyll, Copernicus SSH, currents with animated flow lines",
+    "Hillshade toggle, 50–2000 m isobaths, GEBCO bathymetry"
+   ],
+   "differentiators": [
+    "Publishes every layer's source, range and palette"
+   ],
+   "borrow": [
+    "Layer spec sheet (source, resolution, range, palette) shown in-app"
+   ],
+   "relevance": 5,
+   "quality": 6,
+   "threat": 3,
+   "why": "Good model for documenting each layer's source and palette.",
+   "image": null,
+   "images_raw": [],
+   "total": 14,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Per-layer basis sentence with source and age",
+     "Relief + contours"
+    ],
+    "skippercast_lacks": [
+     "Species habitat suitability maps",
+     "Animated flow-line trails length control"
+    ]
+   }
+  },
+  {
+   "rank": 29,
+   "id": "roffs",
+   "name": "ROFFS",
+   "tier": "established",
+   "category": "Expert-written offshore analyses",
+   "links": {
+    "website": "https://roffs.com/product/offshore/"
+   },
+   "pricing": "$90 per analysis; bundles e.g. 18 for $1,377 (roffs.com).",
+   "rating": "n/a",
+   "target": "Tournament and charter captains.",
+   "core": [
+    "Oceanographer-interpreted analysis charts for a requested area/date"
+   ],
+   "differentiators": [
+    "Human expert interpretation"
+   ],
+   "borrow": [
+    "Expert-annotated chart as a premium add-on"
+   ],
+   "relevance": 5,
+   "quality": 6,
+   "threat": 3,
+   "why": "The $90 benchmark AI-report startups undercut.",
+   "image": null,
+   "images_raw": [],
+   "total": 14,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Where to look reasons"
+    ],
+    "skippercast_lacks": [
+     "Expert-annotated analysis chart product"
+    ]
+   }
+  },
+  {
+   "rank": 30,
+   "id": "fishbrain",
+   "name": "Fishbrain",
+   "tier": "established",
+   "category": "Fishing social network + maps",
+   "links": {
+    "website": "https://fishbrain.com/pro",
+    "app_store": "https://apps.apple.com/us/app/fishbrain-fishing-app/id477967747",
+    "google_play": "https://play.google.com/store/apps/details?id=com.fishbrain.app"
+   },
+   "pricing": "Pro $79.99/yr, $41.99/qtr, $12.99–$14.99/mo (App Store US IAP list).",
+   "rating": "4.7 (77,363 ratings, App Store US)",
+   "target": "Mass-market anglers (mostly freshwater/inshore).",
+   "core": [
+    "Catch social feed, exact catch locations (Pro), Garmin HD depth maps, BiteTime, spot prediction, regulations"
+   ],
+   "differentiators": [
+    "Huge catch dataset"
+   ],
+   "borrow": [
+    "Catch heatmap layer"
+   ],
+   "relevance": 3,
+   "quality": 7,
+   "threat": 3,
+   "why": "Scale benchmark; little offshore ocean data.",
+   "image": "images/composites/g-fishing-social.jpg",
+   "images_raw": [
+    "images/fishbrain-1.png",
+    "images/fishbrain-2.png",
+    "images/fishbrain-3.png"
+   ],
+   "total": 13,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Private catch log"
+    ],
+    "skippercast_lacks": [
+     "Catch-location heatmap, social feed"
+    ]
+   }
+  },
+  {
+   "rank": 31,
+   "id": "fishing-points",
+   "name": "Fishing Points",
+   "tier": "established",
+   "category": "Fishing map + forecasts",
+   "links": {
+    "website": "https://fishingpoints.app/premium/",
+    "app_store": "https://apps.apple.com/us/app/fishing-points-map-forecast/id1203032512"
+   },
+   "pricing": "Premium $9.99/mo or $49.99/yr (App Store US IAP list).",
+   "rating": "4.7 (31,077 ratings, App Store US)",
+   "target": "Anglers worldwide.",
+   "core": [
+    "Fish activity, tide, wave, weather, solunar forecasts up to 3 months; nautical charts; radar; river flow"
+   ],
+   "differentiators": [
+    "Long-range solunar/tide planning"
+   ],
+   "borrow": [
+    "Long-horizon tide calendar"
+   ],
+   "relevance": 4,
+   "quality": 6,
+   "threat": 3,
+   "why": "Popular tide/solunar reference for SkipperCast's tides layer.",
+   "image": "images/composites/g-fishing-social.jpg",
+   "images_raw": [
+    "images/fishing-points-1.jpg",
+    "images/fishing-points-2.jpg",
+    "images/fishing-points-3.jpg"
+   ],
+   "total": 13,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Tide curve and events, moon phase"
+    ],
+    "skippercast_lacks": [
+     "Months-ahead tide/solunar calendar"
+    ]
+   }
+  },
+  {
+   "rank": 32,
+   "id": "aqua-map",
+   "name": "Aqua Map",
+   "tier": "established",
+   "category": "Charts + USACE surveys",
+   "links": {
+    "website": "https://www.aquamap.app/support/faq",
+    "app_store": "https://apps.apple.com/us/app/aqua-map-boating/id919552329"
+   },
+   "pricing": "Master $24.99/yr + charts (US & Canada $14.99/yr) (App Store US IAP list).",
+   "rating": "4.7 (13,895 ratings, App Store US)",
+   "target": "ICW cruisers.",
+   "core": [
+    "Charts, USACE survey overlays updated weekly, crowd notes"
+   ],
+   "differentiators": [
+    "USACE surveys"
+   ],
+   "borrow": [
+    "Survey-date stamps on depth data"
+   ],
+   "relevance": 4,
+   "quality": 6,
+   "threat": 2,
+   "why": "Shows value of dated survey overlays on a base map.",
+   "image": "images/composites/g-navigation.jpg",
+   "images_raw": [
+    "images/aqua-map-1.png",
+    "images/aqua-map-2.jpg",
+    "images/aqua-map-3.png"
+   ],
+   "total": 12,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Relief and depth contours"
+    ],
+    "skippercast_lacks": [
+     "USACE survey-date overlays"
+    ]
+   }
+  },
+  {
+   "rank": 33,
+   "id": "go-or-no",
+   "name": "Go or No? Marine Boat Weather",
+   "tier": "new (iOS Jul 2026)",
+   "category": "Free 1–10 boat-safety score",
+   "links": {
+    "app_store": "https://apps.apple.com/us/app/go-or-no-marine-boat-weather/id6787124767"
+   },
+   "pricing": "Free, no account, no ads.",
+   "rating": "1.0 (1 rating, App Store US)",
+   "target": "Small-boat, sail and kayak users wanting one answer.",
+   "core": [
+    "1–10 score + GO/CAUTION/NO-GO adapted to vessel type, length, engines, hp",
+    "'Now vs later' line (e.g. 'Light chop now — choppy by mid-afternoon')",
+    "Tap verdict to see reasons, numbers, charts",
+    "Dark glare-friendly helm design; NOAA tides; Open-Meteo weather"
+   ],
+   "differentiators": [
+    "Free, privacy-first"
+   ],
+   "borrow": [
+    "One-line 'now vs later' trend sentence",
+    "Helm-friendly dark mode"
+   ],
+   "relevance": 5,
+   "quality": 4,
+   "threat": 2,
+   "why": "Low traction, but the 'now vs later' sentence is a free UX win.",
+   "image": "images/composites/go-or-no.jpg",
+   "images_raw": [
+    "images/go-or-no-1.jpg",
+    "images/go-or-no-2.jpg",
+    "images/go-or-no-3.jpg"
+   ],
+   "total": 11,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Verdict with the reason; boat profile"
+    ],
+    "skippercast_lacks": [
+     "One-line 'now vs later' trend sentence"
+    ]
+   }
+  },
+  {
+   "rank": 34,
+   "id": "pathr",
+   "name": "Pathr Navigation",
+   "tier": "new (iOS Jun 2026)",
+   "category": "Vessel-aware routing",
+   "links": {
+    "app_store": "https://apps.apple.com/us/app/pathr-navigation/id6758675708"
+   },
+   "pricing": "Premium $14.99/mo or $99.99/yr (App Store US IAP list).",
+   "rating": "5.0 (5 ratings, App Store US)",
+   "target": "Recreational boaters.",
+   "core": [
+    "Routing using draft/limits, NOAA chart features, AIS, weather overlays, seabed overlays for anchoring"
+   ],
+   "differentiators": [
+    "Seabed type for anchoring"
+   ],
+   "borrow": [
+    "Seabed/bottom-type overlay"
+   ],
+   "relevance": 4,
+   "quality": 5,
+   "threat": 2,
+   "why": "New nav entrant; seabed overlay idea for base layer.",
+   "image": "images/composites/g-fishing-social.jpg",
+   "images_raw": [
+    "images/pathr-1.jpg",
+    "images/pathr-2.jpg",
+    "images/pathr-3.jpg"
+   ],
+   "total": 11,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Water route over land-water screen (not navigation)"
+    ],
+    "skippercast_lacks": [
+     "Draft-aware routing; seabed type for anchoring"
+    ]
+   }
+  },
+  {
+   "rank": 35,
+   "id": "deckee",
+   "name": "DECKEE",
+   "tier": "established (AU-centric)",
+   "category": "Boating maps, weather, safety",
+   "links": {
+    "website": "https://deckee.com/",
+    "app_store": "https://apps.apple.com/us/app/deckee-boating-maps-weather/id1402262696",
+    "google_play": "https://play.google.com/store/apps/details?id=com.deckee.app"
+   },
+   "pricing": "Free core; optional Supporters Club (price not captured).",
+   "rating": "3.2 (19 ratings, App Store US)",
+   "target": "Australian boaters/paddlers.",
+   "core": [
+    "Marine maps, ramps, weather, official alerts, live GPS sharing, trip logging"
+   ],
+   "differentiators": [
+    "Government partnerships"
+   ],
+   "borrow": [
+    "Official alerts on map"
+   ],
+   "relevance": 3,
+   "quality": 5,
+   "threat": 2,
+   "why": "Safety/alerts patterns; small US footprint.",
+   "image": "images/composites/g-navigation.jpg",
+   "images_raw": [
+    "images/deckee-1.jpg",
+    "images/deckee-2.jpg",
+    "images/deckee-3.jpg"
+   ],
+   "total": 10,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Rules and protected areas"
+    ],
+    "skippercast_lacks": [
+     "Official alert overlays on the map"
+    ]
+   }
+  },
+  {
+   "rank": 36,
+   "id": "salinity",
+   "name": "Salinity",
+   "tier": "pre-launch (waitlist)",
+   "category": "Boating app: bottom relief + engine monitoring",
+   "links": {
+    "website": "https://salinity.live/",
+    "x": "https://x.com/SalinityLive"
+   },
+   "pricing": "Free waitlist; nothing charged today.",
+   "rating": "n/a",
+   "target": "Boat owners with NMEA networks (Florida focus).",
+   "core": [
+    "Full-screen bottom relief chart (coming)",
+    "Engine monitoring that learns each engine's normal (built, not shipped)",
+    "Tides, weather, regs, MOB alarm, emergency plan; public roadmap with honest statuses"
+   ],
+   "differentiators": [
+    "Listen-only boat-network telemetry"
+   ],
+   "borrow": [
+    "Learned-normal anomaly alerts from telemetry",
+    "Two base-map colour modes (Structure vs Classic)"
+   ],
+   "relevance": 5,
+   "quality": 3,
+   "threat": 2,
+   "why": "Not shipped; telemetry anomaly alerts are a different angle from SkipperCast's public-data layers.",
+   "image": "images/salinity-og.jpg",
+   "images_raw": [
+    "images/salinity-og.jpg"
+   ],
+   "total": 10,
+   "vs_skippercast": {
+    "skippercast_has": [
+     "Bottom relief, tides, rules"
+    ],
+    "skippercast_lacks": [
+     "Engine/NMEA telemetry anomaly alerts"
+    ]
+   }
+  }
+ ],
+ "ranked": [
+  {
+   "rank": 1,
+   "name": "RideScore (Solitary Labs)",
+   "scores": {
+    "relevance": 9,
+    "feature_quality": 9,
+    "threat_inspiration": 9,
+    "total_of_30": 27
+   },
+   "reason": "Does what SkipperCast's boat verdict does, plus heading and ride recording, natively and already advertising on Instagram."
+  },
+  {
+   "rank": 2,
+   "name": "Fish or Pass (Set Sale Marine)",
+   "scores": {
+    "relevance": 10,
+    "feature_quality": 8,
+    "threat_inspiration": 9,
+    "total_of_30": 27
+   },
+   "reason": "Same California coast and same honesty stance, but already scores the whole SoCal Bight per species, where SkipperCast's SoCal is still preview/draft."
+  },
+  {
+   "rank": 3,
+   "name": "Salty Offshore",
+   "scores": {
+    "relevance": 9,
+    "feature_quality": 9,
+    "threat_inspiration": 8,
+    "total_of_30": 26
+   },
+   "reason": "Closest analog to SkipperCast's multi-layer map, and ahead of it on subsurface data, playback and a logbook that records conditions."
+  },
+  {
+   "rank": 4,
+   "name": "Fishare (Fishare Pro)",
+   "scores": {
+    "relevance": 9,
+    "feature_quality": 9,
+    "threat_inspiration": 7,
+    "total_of_30": 25
+   },
+   "reason": "Best-in-class SST UX with honest labelling at a low price; ahead on look-back playback, eddies and depth layers."
+  },
+  {
+   "rank": 5,
+   "name": "SiriusXM Fish Mapping (OceanBytes)",
+   "scores": {
+    "relevance": 8,
+    "feature_quality": 7,
+    "threat_inspiration": 8,
+    "total_of_30": 23
+   },
+   "reason": "Big-brand relaunch with AI zones and thermocline; sets a price anchor at $199–$299/yr."
+  },
+  {
+   "rank": 6,
+   "name": "FishTrack (Surfline/Wavetrak)",
+   "scores": {
+    "relevance": 8,
+    "feature_quality": 7,
+    "threat_inspiration": 7,
+    "total_of_30": 22
+   },
+   "reason": "The incumbent most new entrants position against; large install base."
+  },
+  {
+   "rank": 7,
+   "name": "Rigline Offshore",
+   "scores": {
+    "relevance": 8,
+    "feature_quality": 7,
+    "threat_inspiration": 7,
+    "total_of_30": 22
+   },
+   "reason": "Free, explainable hotspot ranking built from the same layers; strong pattern for SkipperCast's decision layer."
+  },
+  {
+   "rank": 8,
+   "name": "PredictWind",
+   "scores": {
+    "relevance": 7,
+    "feature_quality": 9,
+    "threat_inspiration": 6,
+    "total_of_30": 22
+   },
+   "reason": "Gold standard for weather UX; motion metrics overlap SkipperCast sea conditions."
+  },
+  {
+   "rank": 9,
+   "name": "BlueFronts",
+   "scores": {
+    "relevance": 8,
+    "feature_quality": 7,
+    "threat_inspiration": 6,
+    "total_of_30": 21
+   },
+   "reason": "Small but sharp UX ideas (auto-scaling SST, box reports) that map directly onto SkipperCast's rendering."
+  },
+  {
+   "rank": 10,
+   "name": "Windy.com",
+   "scores": {
+    "relevance": 7,
+    "feature_quality": 9,
+    "threat_inspiration": 5,
+    "total_of_30": 21
+   },
+   "reason": "The visual bar users will compare SkipperCast's weather layer against."
+  },
+  {
+   "rank": 11,
+   "name": "SeaLegs AI + DeepCast",
+   "scores": {
+    "relevance": 7,
+    "feature_quality": 7,
+    "threat_inspiration": 6,
+    "total_of_30": 20
+   },
+   "reason": "Shows the AI-interpretation layer users now expect on top of raw ocean maps."
+  },
+  {
+   "rank": 12,
+   "name": "RipCharts",
+   "scores": {
+    "relevance": 7,
+    "feature_quality": 7,
+    "threat_inspiration": 6,
+    "total_of_30": 20
+   },
+   "reason": "Respected incumbent; range slider and SST forecast are table stakes now."
+  },
+  {
+   "rank": 13,
+   "name": "SatFish (Bloodydecks)",
+   "scores": {
+    "relevance": 7,
+    "feature_quality": 6,
+    "threat_inspiration": 6,
+    "total_of_30": 19
+   },
+   "reason": "Mainstream SST app that has already shipped playback and range controls."
+  },
+  {
+   "rank": 14,
+   "name": "Fishdope (Bloodydecks)",
+   "scores": {
+    "relevance": 7,
+    "feature_quality": 6,
+    "threat_inspiration": 6,
+    "total_of_30": 19
+   },
+   "reason": "Shows paid demand for human fishing intel layered on SST."
+  },
+  {
+   "rank": 15,
+   "name": "GulfWire (Gulfwire LLC)",
+   "scores": {
+    "relevance": 6,
+    "feature_quality": 6,
+    "threat_inspiration": 5,
+    "total_of_30": 17
+   },
+   "reason": "Gulf-only, so little overlap; its fuel planner and community feed are the borrowable parts."
+  },
+  {
+   "rank": 16,
+   "name": "BigBlue (GeoPelagic)",
+   "scores": {
+    "relevance": 6,
+    "feature_quality": 7,
+    "threat_inspiration": 4,
+    "total_of_30": 17
+   },
+   "reason": "Pro-grade data cadence (hourly SST) worth noting; SkipperCast already carries dated commercial AIS."
+  },
+  {
+   "rank": 17,
+   "name": "BoatNGo (+ FishNGo)",
+   "scores": {
+    "relevance": 6,
+    "feature_quality": 6,
+    "threat_inspiration": 5,
+    "total_of_30": 17
+   },
+   "reason": "Same score-for-your-boat idea as RideScore at a lower price; window comparison is a good UX detail."
+  },
+  {
+   "rank": 18,
+   "name": "Buoyweather (Surfline/Wavetrak)",
+   "scores": {
+    "relevance": 6,
+    "feature_quality": 6,
+    "threat_inspiration": 5,
+    "total_of_30": 17
+   },
+   "reason": "Classic offshore point forecast; route forecast pattern."
+  },
+  {
+   "rank": 19,
+   "name": "Surfline",
+   "scores": {
+    "relevance": 5,
+    "feature_quality": 9,
+    "threat_inspiration": 3,
+    "total_of_30": 17
+   },
+   "reason": "Best swell visualization; different audience."
+  },
+  {
+   "rank": 20,
+   "name": "Navionics Boating (Garmin)",
+   "scores": {
+    "relevance": 6,
+    "feature_quality": 7,
+    "threat_inspiration": 4,
+    "total_of_30": 17
+   },
+   "reason": "Base-map benchmark; low ratings show room for a better UX."
+  },
+  {
+   "rank": 21,
+   "name": "Cobia",
+   "scores": {
+    "relevance": 5,
+    "feature_quality": 7,
+    "threat_inspiration": 4,
+    "total_of_30": 16
+   },
+   "reason": "Retention mechanics and tide-animated scoring worth borrowing; less of a data-layer rival."
+  },
+  {
+   "rank": 22,
+   "name": "SkeeterCast",
+   "scores": {
+    "relevance": 6,
+    "feature_quality": 6,
+    "threat_inspiration": 4,
+    "total_of_30": 16
+   },
+   "reason": "Bundles weather, ocean layers and AI for the same coastal user; broad but less polished."
+  },
+  {
+   "rank": 23,
+   "name": "SeaStatus: Launch Conditions",
+   "scores": {
+    "relevance": 6,
+    "feature_quality": 6,
+    "threat_inspiration": 4,
+    "total_of_30": 16
+   },
+   "reason": "Tiny but clever framing; trip-mode monitoring is a cheap, high-value alert pattern."
+  },
+  {
+   "rank": 24,
+   "name": "Savvy Navvy",
+   "scores": {
+    "relevance": 5,
+    "feature_quality": 8,
+    "threat_inspiration": 3,
+    "total_of_30": 16
+   },
+   "reason": "Design reference for a calm, uncluttered base map."
+  },
+  {
+   "rank": 25,
+   "name": "Orca",
+   "scores": {
+    "relevance": 5,
+    "feature_quality": 8,
+    "threat_inspiration": 3,
+    "total_of_30": 16
+   },
+   "reason": "Rendering reference for a modern vector base layer."
+  },
+  {
+   "rank": 26,
+   "name": "Hilton's Realtime-Navigator (RT-Nav)",
+   "scores": {
+    "relevance": 6,
+    "feature_quality": 5,
+    "threat_inspiration": 4,
+    "total_of_30": 15
+   },
+   "reason": "Legacy pro tool; weekly pass is a pricing idea."
+  },
+  {
+   "rank": 27,
+   "name": "Wavve Boating",
+   "scores": {
+    "relevance": 5,
+    "feature_quality": 7,
+    "threat_inspiration": 3,
+    "total_of_30": 15
+   },
+   "reason": "Simple, powerful personalization of the base layer."
+  },
+  {
+   "rank": 28,
+   "name": "RipVision AI",
+   "scores": {
+    "relevance": 5,
+    "feature_quality": 6,
+    "threat_inspiration": 3,
+    "total_of_30": 14
+   },
+   "reason": "Good model for documenting each layer's source and palette."
+  },
+  {
+   "rank": 29,
+   "name": "ROFFS",
+   "scores": {
+    "relevance": 5,
+    "feature_quality": 6,
+    "threat_inspiration": 3,
+    "total_of_30": 14
+   },
+   "reason": "The $90 benchmark AI-report startups undercut."
+  },
+  {
+   "rank": 30,
+   "name": "Fishbrain",
+   "scores": {
+    "relevance": 3,
+    "feature_quality": 7,
+    "threat_inspiration": 3,
+    "total_of_30": 13
+   },
+   "reason": "Scale benchmark; little offshore ocean data."
+  },
+  {
+   "rank": 31,
+   "name": "Fishing Points",
+   "scores": {
+    "relevance": 4,
+    "feature_quality": 6,
+    "threat_inspiration": 3,
+    "total_of_30": 13
+   },
+   "reason": "Popular tide/solunar reference for SkipperCast's tides layer."
+  },
+  {
+   "rank": 32,
+   "name": "Aqua Map",
+   "scores": {
+    "relevance": 4,
+    "feature_quality": 6,
+    "threat_inspiration": 2,
+    "total_of_30": 12
+   },
+   "reason": "Shows value of dated survey overlays on a base map."
+  },
+  {
+   "rank": 33,
+   "name": "Go or No? Marine Boat Weather",
+   "scores": {
+    "relevance": 5,
+    "feature_quality": 4,
+    "threat_inspiration": 2,
+    "total_of_30": 11
+   },
+   "reason": "Low traction, but the 'now vs later' sentence is a free UX win."
+  },
+  {
+   "rank": 34,
+   "name": "Pathr Navigation",
+   "scores": {
+    "relevance": 4,
+    "feature_quality": 5,
+    "threat_inspiration": 2,
+    "total_of_30": 11
+   },
+   "reason": "New nav entrant; seabed overlay idea for base layer."
+  },
+  {
+   "rank": 35,
+   "name": "DECKEE",
+   "scores": {
+    "relevance": 3,
+    "feature_quality": 5,
+    "threat_inspiration": 2,
+    "total_of_30": 10
+   },
+   "reason": "Safety/alerts patterns; small US footprint."
+  },
+  {
+   "rank": 36,
+   "name": "Salinity",
+   "scores": {
+    "relevance": 5,
+    "feature_quality": 3,
+    "threat_inspiration": 2,
+    "total_of_30": 10
+   },
+   "reason": "Not shipped; telemetry anomaly alerts are a different angle from SkipperCast's public-data layers."
+  }
+ ],
+ "feature_recommendations": [
+  {
+   "order": 1,
+   "feature": "Full tap-to-read + adjustable colour ramps",
+   "detail": "Tap any point for the exact water temp, chlorophyll, swell or current value; range slider and 'fit to view' on the legend.",
+   "inspired_by": [
+    "Fishare",
+    "BlueFronts",
+    "RipCharts",
+    "SatFish v2",
+    "Salty Offshore"
+   ],
+   "why": "Partly shipped: web/map/chart.ts reads one value at a tap for water temp, contrast, currents, fronts and swell, and none for chlorophyll or wind. The SST ramp auto-fits the analysis range, but users can't fit it to the view or set it. Cheapest upgrade to every raster layer.",
+   "effort": "S",
+   "layers": [
+    "water temp",
+    "chlorophyll",
+    "swell",
+    "currents"
+   ],
+   "status": "new gap"
+  },
+  {
+   "order": 2,
+   "feature": "Look-back playback for observed layers",
+   "detail": "Extend the time dock 3–7 days into the past for SST, fronts and chlorophyll so users watch a front move, then continue into the forecast.",
+   "inspired_by": [
+    "Fishare",
+    "Salty Offshore",
+    "SatFish v2"
+   ],
+   "why": "The time dock only runs forward hourly; History is station-only.",
+   "effort": "M",
+   "layers": [
+    "water temp",
+    "SST fronts",
+    "chlorophyll"
+   ],
+   "status": "extends shipped time dock"
+  },
+  {
+   "order": 3,
+   "feature": "Water-condition alerts on saved spots + new-data alerts",
+   "detail": "'Tell me when water at this spot is above 58 °F' and 'new chlorophyll sample landed', on the existing passkey account and alert pipeline.",
+   "inspired_by": [
+    "Salty Offshore",
+    "SeaStatus"
+   ],
+   "why": "Saved-trip alerts already exist; spot thresholds reuse that plumbing.",
+   "effort": "M",
+   "layers": [
+    "water temp",
+    "chlorophyll",
+    "swell"
+   ],
+   "status": "extends shipped alerts"
+  },
+  {
+   "order": 4,
+   "feature": "Heading-aware comfort + learn from rides",
+   "detail": "Add a heading rose to the boat verdict and use comfort feedback (and optional phone-motion ride recording) to calibrate the boat multipliers.",
+   "inspired_by": [
+    "RideScore",
+    "PredictWind (motion data)"
+   ],
+   "why": "docs/boat-profile.md says the model ignores heading and names comfort feedback as the calibration path. Comfort feedback already stores heading, phase, wind, sea and period. RideScore ships both.",
+   "effort": "M",
+   "layers": [
+    "sea conditions (swell, wind)"
+   ],
+   "status": "extends shipped boat profile"
+  },
+  {
+   "order": 5,
+   "feature": "Chlorophyll edges, eddies and SSH",
+   "detail": "Add detected chlorophyll edges and eddy outlines beside the existing SST fronts, plus a sea-surface-height layer.",
+   "inspired_by": [
+    "Fishare",
+    "BlueFronts",
+    "SiriusXM Fish Mapping",
+    "Salty Offshore"
+   ],
+   "why": "SST fronts and contrast already ship with uncertainty bands; the other edges are missing.",
+   "effort": "M",
+   "layers": [
+    "chlorophyll",
+    "currents / subsea"
+   ],
+   "status": "extends shipped SST fronts"
+  },
+  {
+   "order": 6,
+   "feature": "Conditions at each catch",
+   "detail": "When a catch-log entry has a position and time, store the layer values there (temp, chlorophyll, swell, current, tide) and show them back; optional track recording.",
+   "inspired_by": [
+    "Salty Offshore",
+    "RideScore"
+   ],
+   "why": "Catch log stores outcome + optional position only; joining it to layers builds SkipperCast's own evidence.",
+   "effort": "M",
+   "layers": [
+    "all layers"
+   ],
+   "status": "extends shipped catch log"
+  },
+  {
+   "order": 7,
+   "feature": "Subsurface depth ladder (if 'subsea weather' means below-surface)",
+   "detail": "Temperature at 10–100 m, thermocline/MLD, salinity, labelled as model output, switched like a depth slider.",
+   "inspired_by": [
+    "Fishare",
+    "Salty Offshore Elite",
+    "SiriusXM Fish Mapping",
+    "RipCharts"
+   ],
+   "why": "Not in the repo; its water-temp basis says it is 'neither bottom temperature nor a forecast'. Confirm Graham's intent first.",
+   "effort": "L",
+   "layers": [
+    "subsea weather"
+   ],
+   "status": "new gap; confirm scope"
+  },
+  {
+   "order": 8,
+   "feature": "Small trip-plan gaps: GPX import, optional fuel estimate",
+   "detail": "Import waypoints from chartplotters; optional fuel = run distance × burn the user enters.",
+   "inspired_by": [
+    "Salty Offshore",
+    "GulfWire",
+    "BoatNGo"
+   ],
+   "why": "GPX export, run time and a worst-hour line in the brief already exist. A GPX waypoint parser exists (web/gpx-waypoints.ts) but no UI uses it. Fuel is deliberately left to the skipper today.",
+   "effort": "S",
+   "layers": [
+    "base map",
+    "sea conditions"
+   ],
+   "status": "extends shipped planner"
+  },
+  {
+   "order": 9,
+   "feature": "Launch the built Text Advisor / AI briefing",
+   "detail": "Owner launch steps only; it already covers reports, rules, fish ID and daily 'what's biting'.",
+   "inspired_by": [
+    "SeaLegs AI",
+    "SkeeterCast",
+    "Cobia"
+   ],
+   "why": "Competitors ship AI briefings now; SkipperCast's is built but dark.",
+   "effort": "S",
+   "layers": [
+    "all layers"
+   ],
+   "status": "built, not launched"
+  },
+  {
+   "order": 10,
+   "feature": "Coverage and distribution",
+   "detail": "Move preview regions to active (SoCal first, where Fish or Pass operates) and consider a store-listed wrapper app.",
+   "inspired_by": [
+    "Fish or Pass",
+    "Salty Offshore",
+    "RideScore"
+   ],
+   "why": "One active region vs 15–34 for competitors; every rival here is in the App Store.",
+   "effort": "L",
+   "layers": [
+    "all layers"
+   ],
+   "status": "roadmap item"
+  }
+ ],
+ "not_found_or_caveats": [
+  {
+   "name": "@GulfWire on X",
+   "searched": "X user lookup",
+   "result": "Handle belongs to an unrelated Arabic Gulf news account, not the GulfWire fishing app. No official X account for the app found."
+  },
+  {
+   "name": "Fish or Pass / RideScore on X",
+   "searched": "X user lookup @fishorpass, @ridescoreapp, @solitarylabs; keyword search",
+   "result": "No accounts found; no X posts mention them. RideScore's Facebook/Instagram ads are confirmed via AppMarketSpy (4 active US ads)."
+  },
+  {
+   "name": "Not checked in this pass",
+   "searched": "—",
+   "result": "Tides Near Me, BassForecast, Anglers Edge, Seapilot, Salt Strong were not verified in this pass (lower relevance to offshore/subsea mapping). Macoui and Marine Metrics turned up on Product Hunt but were not reviewed."
+  }
+ ],
+ "x_signal": [
+  {
+   "post": "https://x.com/meraloji18127/status/2055932827766538286",
+   "note": "Indie Android app scoring any spot from NOAA SST, EMODnet depth, Open-Meteo (800+ species). Small account; signal that solo devs are building 'score any spot' apps."
+  },
+  {
+   "post": "https://x.com/SalinityLive/status/2115920674514522553",
+   "note": "Salinity: listen-only boat-network app (engine/battery telemetry)."
+  },
+  {
+   "post": "https://x.com/PPCLAND/status/2117360039170359327",
+   "note": "Coverage of SiriusXM Fish Mapping app at $199/yr without a satellite plan."
+  },
+  {
+   "post": "https://x.com/chris_dalke/status/2100575549647196259",
+   "note": "Opinion: 'weather/fishing app market has commoditized; value is in producing new, better data' — supports SkipperCast's raw-telemetry angle."
+  }
+ ],
+ "method": "Web search, App Store US listings (iTunes lookup API: ratings, release dates, IAP prices scraped from apps.apple.com), Google Play URL checks, company websites, X full-archive search via public reads, Reddit and Product Hunt results via web search. Prices are as listed on the cited source on 2026-11-19; App Store IAP lists don't always show billing periods. Effort ratings are estimates.",
+ "page_url": "https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/5bf1a2db-7cec-45e9-b192-deeae716534a",
+ "image_dir": "docs/research/competitors/images (App Store and website screenshots). Composite strips cited as images/composites/ were used on the canvas page and are not in this repository.",
+ "already_shipped_dropped_from_recs": [
+  "Freshness/provenance labelling (basis sentences, /status, withholding)",
+  "Shareable exact-view links",
+  "Forward hourly time scrubber + model comparison",
+  "Vessel profile + personal comfort verdict",
+  "SST front detection with uncertainty",
+  "Base map: ENC, relief, contours, MPAs, habitat, 2D/3D",
+  "Offline pack + GPX export",
+  "Explainable ranked places with dated reasons",
+  "Public forecast scorecard (/skill)"
+ ],
+ "skippercast_links": {
+  "repo": "https://github.com/Grahammmm/skippercast",
+  "site": "https://skippercast.com",
+  "roadmap": "https://github.com/Grahammmm/skippercast/blob/main/docs/roadmap.md",
+  "web_app_doc": "https://github.com/Grahammmm/skippercast/blob/main/docs/web-app.md"
+ },
+ "revision": "v2 2026-11-19: SkipperCast facts from repo replace assumptions; recs re-ordered; rankings re-scored for California focus. | 2026-11-19: corrected tap-to-read, worst-hour, GPX parser and comfort-feedback claims after spec pass",
+ "specs": {
+  "dir": "docs/research/specs",
+  "readme": "docs/research/specs/README.md",
+  "index": "docs/research/specs/specs.json"
+ }
+}
