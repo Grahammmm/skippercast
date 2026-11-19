@@ -56,7 +56,8 @@ import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} fr
 import {currentsState} from '../map/currents.ts';
 import {contourState} from '../map/depth-contours.ts';
 import {chartOnly, drawsIn, layerCopy, layerEntry} from '../map/layers.ts';
-import {contourCopy} from '../map/legend-model.ts';
+import {contourCopy, depthChips, shallowBand, surveyDetailChips, SURVEY_DETAIL_TITLE_ID} from '../map/legend-model.ts';
+import {reliefDrawn, reliefSurveyView} from './MapStage.tsx';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CDFW_MPA_PAGE, TRANSIENT_DETAILS, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveySummary} from '../map/seafloor.ts';
@@ -429,6 +430,33 @@ function ShoreRow() {
   return note ? <li class="app-legend-shore"><p class="app-legend-note" data-reason="shore-runs"><EnglishDetail lang={lang}>{note}</EnglishDetail></p></li> : null;
 }
 
+function ReliefRow() {
+  if (shownPresentation.value !== 'chart' || !reliefDrawn.value) return null;
+  const lang = language.value, survey = reliefSurveyView.value;
+  const swatch = (token: ReturnType<typeof depthChips>[number]['token']) => ({backgroundColor: `var(--${PALETTE_TOKENS[token]})`});
+  // CSS supplies the ring so it follows the effective theme without a render.
+  return <li class="app-legend-relief">
+    <strong>{t('legend.relief.depth', lang)}</strong>
+    <ul class="app-relief-depths">{depthChips('dark').map(chip => <li key={chip.token}>
+      <span class="app-relief-depth-swatch" style={swatch(chip.token)} aria-hidden="true" />{chip.feet}{chip.orMore ? '+' : ''}
+    </li>)}</ul>
+    <p class="app-relief-band"><span class="app-relief-depth-swatch" style={swatch(shallowBand('dark').token)} aria-hidden="true" />{t('legend.relief.band', lang)}</p>
+    {survey ? <>
+      <strong>{t(SURVEY_DETAIL_TITLE_ID, lang)}</strong>
+      <button class="app-relief-survey" type="button" aria-pressed={survey.shown} onClick={survey.toggle}>
+        <span>{t('legend.surveyDetail.show', lang)}</span>
+        <span class="app-relief-chips">{surveyDetailChips(survey.classes).map(chip => {
+          const label = t(chip.labelId as StringId, lang);
+          return <span key={chip.id} data-survey-chip={chip.id}>
+            <span class="app-relief-survey-swatch" aria-hidden="true" />{chip.bold ? <strong>{label}</strong> : label}
+          </span>;
+        })}</span>
+      </button>
+    </> : null}
+    {layers.value.includes('seafloor') ? <p class="app-legend-note">{t('legend.relief.dimmed', lang)}</p> : null}
+  </li>;
+}
+
 /** SCFEAT-FRESH-1: the layer's update cadence and age limit, one wording for every row (web/map/freshness.ts). */
 const Cadence = ({id, lang}: {id: string; lang: Language}) => <li class="app-legend-cadence" data-cadence={id}><p class="app-legend-note">{cadenceLine(id, lang)}</p></li>;
 
@@ -449,6 +477,7 @@ export function Legend() {
     <section class="app-legend" aria-label={t('legend.title', lang)}>
       <span class="ui-eyebrow">{t('legend.title', lang)}</span>
       <ul>
+        <ReliefRow />
         {on.map(e => <Fragment key={e.id}>{legendRow(e, shown, lang)}{drawsIn(e.id, shown) ? <Cadence id={e.id} lang={lang} /> : null}</Fragment>)}
         <PreviewLegendRows />
         <PlanningRouteRow />
@@ -461,6 +490,7 @@ export function Legend() {
         <Cadence id="mpas" lang={lang} />
       </ul>
       {unavailable.value.filter(id => id !== 'mpas' && !id.startsWith('preview-')).map(id => <p key={id} class="app-empty" data-unavailable={id}>{t('rail.unavailable', lang, {label: layerCopy(id, lang).label})}</p>)}
+      <footer class="app-legend-note app-legend-warning">{t('legend.notForNav', lang)}</footer>
     </section>
   );
 }

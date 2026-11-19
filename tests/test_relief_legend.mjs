@@ -4,22 +4,24 @@ import test from 'node:test';
 import {build} from 'esbuild';
 import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
 
-// Contract: the rendered row follows the validated file, not a region default.
-// A missing state projection or stale v1 legend would mislabel the ft-v2 full file.
-test('contour legend follows the loaded set in English and Spanish', async () => {
-  const root = new URL('../', import.meta.url);
-  const {outputFiles: [out]} = await build({stdin: {resolveDir: root.pathname, loader: 'ts', contents: `
+const root = new URL('../', import.meta.url);
+const {outputFiles: [out]} = await build({stdin: {resolveDir: root.pathname, loader: 'ts', contents: `
     export {signal} from '@preact/signals';
     export {h} from 'preact';
     export {render} from 'preact-render-to-string';
-    export {DepthContoursRow} from './web/app/Legend.tsx';
+    export {DepthContoursRow, Legend} from './web/app/Legend.tsx';
+    export {reliefDrawn, reliefSurveyView} from './web/app/MapStage.tsx';
     export {createDepthContours, contourState, depthContoursURL} from './web/map/depth-contours.ts';
     export {camera} from './web/map/stage.ts';
     export {publishedChartFiles} from './web/chart-files.ts';
     export {language, t} from './web/i18n.ts';
     export {configureStore, syncFromURL} from './web/state.ts';`},
   bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
-  const m = await import(`data:text/javascript;base64,${Buffer.from(out.contents).toString('base64')}`);
+const m = await import(`data:text/javascript;base64,${Buffer.from(out.contents).toString('base64')}`);
+
+// The rendered row follows the validated file, not a region default.
+// A missing state projection or stale v1 legend would mislabel the ft-v2 full file.
+test('contour legend follows the loaded set in English and Spanish', async () => {
   const v1 = JSON.parse(await readFile(new URL('dist/regions/morro-bay/depth-contours-overview.geojson', root), 'utf8'));
   const v2 = {type: 'FeatureCollection', provenance: {
     region_id: 'morro-bay', units: 'ft', set: 'ft-v2', shelf_limit_ft: 300,
@@ -64,4 +66,35 @@ test('contour legend follows the loaded set in English and Spanish', async () =>
       assert.doesNotMatch(m.t('planner.layer.contours.text', lang), /\b150\b/);
     }
   } finally { layer.destroy(); }
+});
+
+// Check the actual UI wiring: a hard-coded list would not follow a viewport
+// change; an unavailable input must not render a "no survey" claim.
+test('the Chart legend keys only the verified classes in view', () => {
+  m.configureStore({v2: true, storage: null});
+  m.syncFromURL('https://s.test/map?region=morro-bay&presentation=chart');
+  m.reliefDrawn.value = true;
+  const render = () => m.render(m.h(m.Legend));
+  const bold = html => [...html.matchAll(/data-survey-chip="([^"]+)"[^>]*><span[^>]*><\/span><strong>/g)].map(match => match[1]);
+  try {
+    assert.doesNotMatch(render(), /app-relief-survey/);
+    for (const lang of ['en', 'es']) {
+      m.language.value = lang;
+      m.reliefSurveyView.value = {classes: new Set(['2m', 'none']), shown: false, toggle() {}};
+      let html = render();
+      assert.deepEqual(bold(html), ['2m', 'none']);
+      assert.match(html, /aria-pressed="false"/);
+      assert.equal([...html.matchAll(/class="app-relief-depth-swatch"/g)].length, 12, 'eleven depths and the shallow band');
+      assert.match(html, /300\+<\/li>/);
+      assert.match(html, /0–66 ft \(0–20 m\)/);
+      assert.ok(html.includes(m.t('legend.notForNav', lang)));
+      m.reliefSurveyView.value = {classes: new Set(['estimated']), shown: true, toggle() {}};
+      html = render();
+      assert.deepEqual(bold(html), ['estimated']);
+      assert.match(html, /aria-pressed="true"/);
+    }
+  } finally {
+    m.reliefDrawn.value = false;
+    m.reliefSurveyView.value = null;
+  }
 });

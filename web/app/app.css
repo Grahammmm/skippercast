@@ -189,7 +189,8 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
    screen; the scroll padding (two wrapped button rows) keeps a link focused by Tab from scrolling in under that row. */
 .app-chrome-left > .app-mark { scroll-padding-bottom: calc(2 * var(--touch-min) + 3 * var(--space-3)); }
 .app-chrome-left > .app-mark .app-mark-actions { position: sticky; bottom: calc(-1 * var(--space-3)); z-index: 1; padding-block: var(--space-2); border-top: 1px solid var(--line); background: var(--panel); }
-.app-legend { position: absolute; left: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); min-width: 160px; max-width: 280px; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); }
+.app-legend { position: absolute; left: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); min-width: 160px; max-width: 280px; padding: var(--space-2) var(--space-3); border: 1px solid var(--map-legend-border); border-radius: var(--radius-md); background: var(--map-legend-panel); color: var(--text); box-shadow: var(--elev-2); }
+:root[data-theme="light"] .app-legend { box-shadow: var(--elev-1); }
 .app-legend ul { margin: var(--space-1) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-13); }
 .app-legend li { display: flex; align-items: center; gap: var(--space-2); }
 .app-legend li.app-legend-stations { min-width: 0; flex-direction: column; align-items: stretch; overflow-wrap: anywhere; }
@@ -204,6 +205,24 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-swatch[data-layer="seafloor"] { background: linear-gradient(90deg, var(--depth-0), var(--depth-3)); }
 .app-swatch[data-layer="depth-contours"] { height: 0; border-top: 2px solid var(--map-contour); }
 .app-swatch[data-layer="depth-contours-edge"] { height: 0; border-top: 1px dashed var(--map-label); }
+.app-legend li.app-legend-relief { align-items: stretch; flex-direction: column; }
+.app-legend .app-relief-depths { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); margin: 0; }
+.app-relief-depths li { flex-direction: column; gap: 0; font-variant-numeric: tabular-nums; font-size: var(--text-11); }
+.app-relief-depth-swatch { width: 100%; height: var(--space-3); border-radius: var(--radius-sm); box-shadow: inset 0 0 0 1px var(--map-legend-depth-ring); }
+.app-relief-band { display: flex; align-items: center; gap: var(--space-1); margin: 0; }
+.app-relief-band .app-relief-depth-swatch { flex: 0 0 var(--space-6); }
+.app-relief-survey { display: grid; gap: var(--space-1); min-height: var(--touch-min); padding: var(--space-1); border: 1px solid var(--map-legend-chip-border); border-radius: var(--radius-sm); background: transparent; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.app-relief-survey[aria-pressed="true"] { border-color: var(--focus); }
+.app-relief-chips { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
+.app-relief-chips > span { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--muted); }
+.app-relief-chips strong { color: var(--text); }
+.app-relief-survey-swatch { width: var(--space-3); height: var(--space-3); border: 1px solid var(--map-legend-chip-border); border-radius: var(--radius-sm); }
+[data-survey-chip="1m-measured"] .app-relief-survey-swatch { background: var(--map-legend-chip-1); }
+[data-survey-chip="2m"] .app-relief-survey-swatch { background: var(--map-legend-chip-2); }
+[data-survey-chip="5m"] .app-relief-survey-swatch { background: var(--map-legend-chip-5); }
+[data-survey-chip="4-16m-compiled"] .app-relief-survey-swatch { background: var(--map-legend-chip-compiled); }
+[data-survey-chip="none"] .app-relief-survey-swatch { background: repeating-linear-gradient(135deg, var(--map-legend-chip-hatch) 0 1px, var(--map-legend-chip-gap) 1px 4px); }
+.app-legend-warning { margin-top: var(--space-2); text-transform: uppercase; }
 .app-swatch[data-layer="planning-route"] { height: 0; border-top: 2px dashed var(--amber); }
 .app-swatch[data-layer="trip-ranked"] { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--mint); }
 .app-swatch[data-layer="marks-density"] { border-radius: var(--radius-pill); background: radial-gradient(circle, var(--depth-0), var(--depth-1) 45%, transparent 75%); }
