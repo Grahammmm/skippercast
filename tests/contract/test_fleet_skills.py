@@ -5,7 +5,8 @@ prose an
 agent follows on the data runner's host. A renamed CLI step, flag, workflow input or
 runbook would break them silently, so every `python -m skippercast.fleet ...` and
 `python -m skippercast.fleet.ais ...` they name is checked against the real parsers,
-every `gh workflow run <file> -f <input>=` against the workflow's dispatch inputs, and
+every `gh workflow run <file> -f <input>=` against the workflow's dispatch inputs (pinned below for the
+fleet jobs, which live in the private ops repository), and
 every runbook path against docs/operations/runbooks. The skills carry no registry data:
 no email, phone number, 9-digit number (an MMSI) or URL outside the allowed hosts.
 """
@@ -37,6 +38,17 @@ URL = re.compile(r'https?://([^/\s`)>\]]+)')
 EMAIL = re.compile(r'[\w.+-]+@[\w-]+(?:\.[\w-]+)+')
 PHONE = re.compile(r'(?<![\w-])(?:\+?1[ .-]?)?\(?\d{3}\)?[ .-]\d{3}[ .-]\d{4}(?!\d)')
 NINE_DIGITS = re.compile(r'(?<!\d)\d{9}(?!\d)')
+
+# The fleet jobs run from the private Grahammmm/skippercast-ops repository (SC-RUNNER-OFFPUBLIC-2), so
+# their workflow files leave this checkout. Their dispatch inputs, pinned from skippercast-ops 0a9e02b9,
+# keep the skills' `gh workflow run ... -f <input>=` lines checked; update both together.
+PRIVATE_REPO = 'Grahammmm/skippercast-ops'
+PRIVATE_FLEET_INPUTS = {
+    'fleet-ais.yml': {'backfill_month', 'from', 'to', 'validate', 'label_import'},
+    'fleet-osint.yml': {'region', 'mode', 'sink', 'max_batches', 'run_id'},
+    'fleet-registry.yml': {'region', 'sink', 'steps', 'run_id'},
+    'fleet-ais-listener.yml': {'region'},
+}
 
 
 def skill_text(name):
@@ -154,6 +166,7 @@ class FleetSkillTests(unittest.TestCase):
 
     def test_every_named_workflow_and_input_exists(self):
         inputs = {path.name: dispatch_inputs(path) for path in WORKFLOWS.glob('*.yml')}
+        inputs.update(PRIVATE_FLEET_INPUTS)
         every = set().union(*(names for names in inputs.values() if names))
         for name, text in self.texts.items():
             for workflow in WORKFLOW_FILE.findall(text):
@@ -166,6 +179,13 @@ class FleetSkillTests(unittest.TestCase):
             for value in INPUT.findall(text):
                 with self.subTest(skill=name, input=value):
                     self.assertIn(value, every)
+
+    def test_fleet_job_commands_target_the_private_repository(self):
+        # Guards an agent dispatching or reading fleet jobs in the public repository, which holds none.
+        for name, text in self.texts.items():
+            if set(WORKFLOW_FILE.findall(text)) & set(PRIVATE_FLEET_INPUTS):
+                with self.subTest(skill=name):
+                    self.assertIn(f'--repo {PRIVATE_REPO}', text)
 
     def test_every_named_runbook_exists(self):
         for name, text in self.texts.items():
