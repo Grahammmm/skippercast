@@ -107,3 +107,36 @@ def test_argument_error_does_not_echo_private_tokens(tmp_path, capsys):
     stdout, stderr = capsys.readouterr()
     assert not stderr
     assert json.loads(stdout) == expected('held', ['invalid_arguments'], EMPTY_COUNTS, None)
+
+
+def test_preexisting_log_handler_and_raw_fd_writes_stay_off_console(tmp_path, monkeypatch, capfd):
+    """Contract: library diagnostics never reach the console, even past Python stream swaps.
+
+    A rasterio-style logger handler created before `main` keeps the original stderr and
+    a C library writes straight to fd 2; swapping sys.stdout/sys.stderr alone leaks both.
+    """
+    import logging
+    import os
+
+    (tmp_path / 'acceptance.json').write_text('{}')
+    logger = logging.getLogger('rasterio.synthetic')
+    handler = logging.StreamHandler(sys.stderr)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
+    def leak(*args, **kwargs):
+        logger.warning('%s', tmp_path / PRIVATE)
+        os.write(2, f'{PRIVATE}\n'.encode())
+        os.write(1, f'{PRIVATE}\n'.encode())
+        raise ValueError('terrain_only_dependency:jsonschema')
+
+    monkeypatch.setattr(terrain_only, 'preview', leak)
+    try:
+        code = terrain_only.main(cli_args(tmp_path))
+        logger.warning('after-main-log-still-works')  # logging restored after the held summary
+    finally:
+        logger.removeHandler(handler)
+    stdout, stderr = capfd.readouterr()
+    assert code == 2 and PRIVATE not in stdout + stderr and str(tmp_path) not in stdout + stderr
+    assert json.loads(stdout) == expected('held', ['terrain_only_dependency:jsonschema'], EMPTY_COUNTS, None)
+    assert 'after-main-log-still-works' in stderr

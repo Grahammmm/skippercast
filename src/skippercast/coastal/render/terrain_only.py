@@ -4,15 +4,17 @@ Only byte-bound, already-derived GeoTIFFs and a separate scientific review are
 read. Source hashes are provenance, never source locations or reader commands.
 """
 import argparse
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
 from importlib.resources import files
 import io
 import json
+import logging
 import math
 import os
 from pathlib import Path
 import stat
+import sys
 import tempfile
 import zipfile
 
@@ -530,6 +532,42 @@ class _ConsoleParser(argparse.ArgumentParser):
         raise ValueError('invalid_arguments')
 
 
+@contextmanager
+def _quiet_console():
+    """Silence library diagnostics at every console boundary, not just sys streams.
+
+    Swapping sys.stdout/sys.stderr misses a logging handler that already holds the
+    original stream, and any writer using the file descriptor directly. So also
+    disable logging records (no handler runs) and point fds 1 and 2 at the null device.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.flush()
+        except (AttributeError, OSError, ValueError):
+            pass
+    saved = []
+    previous_disable = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    try:
+        with open(os.devnull, 'w') as sink:
+            for fd in (1, 2):
+                try:
+                    original = os.dup(fd)
+                except OSError:  # no such descriptor (embedded interpreter): streams still redirected
+                    continue
+                saved.append((fd, original))
+                os.dup2(sink.fileno(), fd)
+            try:
+                with redirect_stdout(sink), redirect_stderr(sink):
+                    yield
+            finally:
+                for fd, original in saved:
+                    os.dup2(original, fd)
+                    os.close(original)
+    finally:
+        logging.disable(previous_disable)
+
+
 def main(argv=None):
     parser = _ConsoleParser(description=__doc__, prog='terrain_only')
     parser.add_argument('--root',type=Path,required=True)
@@ -545,7 +583,7 @@ def main(argv=None):
     try:
         args = parser.parse_args(argv)
         # Library diagnostics (e.g. raster-reader warnings) are not console output.
-        with open(os.devnull, 'w') as sink, redirect_stdout(sink), redirect_stderr(sink):
+        with _quiet_console():
             acceptance = bounded_json(args.acceptance)
             if args.context_only:
                 context_digest = context(acceptance)
