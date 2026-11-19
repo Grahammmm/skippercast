@@ -154,3 +154,36 @@ def test_failed_run_does_not_seal_edition(run):
     good = Upstream()
     run(good, '--edition', 'reviewed-A')
     assert good.calls
+
+
+def test_new_edition_over_fewer_tiles_does_not_vouch_for_the_rest(run, monkeypatch):
+    # Contract: a tile is reused only if it was itself fetched under the requested edition.
+    # Bug caught: sealing edition B after a run over a subset marked the whole cache as B,
+    # so an unrefetched edition-A tile was served as edition B.
+    both, only_first = {'northern': {(100, 100), (100, 101)}}, {'northern': {(100, 100)}}
+    selection = {}
+    monkeypatch.setattr(m, 'sector_tiles', lambda sectors: selection['now'])
+    selection['now'] = both
+    run(Upstream(code=1), '--edition', 'reviewed-A')
+    selection['now'] = only_first
+    run(Upstream(code=2), '--edition', 'reviewed-B')
+    assert manifest(run.cache)['edition'] == 'reviewed-B'
+
+    selection['now'] = both
+    third = Upstream(code=2)
+    audit = run(third, '--edition', 'reviewed-B')
+    assert [u.rsplit('/', 2)[-2:] for u in third.calls] == [['100', '101']]
+    assert {t['col']: t['reused'] for t in audit['tiles']} == {100: True, 101: False}
+    assert audit['coasts']['northern']['hard_cells'] == 0
+
+
+def test_cached_tile_whose_bytes_no_longer_match_its_stamp_is_refetched(run):
+    # Bug caught: a blob replaced after stamping (partial write, manual edit) still served as the edition.
+    run(Upstream(code=1), '--edition', 'reviewed-A')
+    blobs = sorted(run.cache.rglob('*.lerc'))
+    assert blobs
+    blobs[0].write_bytes(lerc_tile(2))
+    refetch = Upstream(code=1)
+    audit = run(refetch, '--edition', 'reviewed-A')
+    assert len(refetch.calls) == 1
+    assert sum(t['reused'] for t in audit['tiles']) == audit['requested_tiles'] - 1

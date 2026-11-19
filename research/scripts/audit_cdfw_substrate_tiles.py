@@ -109,17 +109,44 @@ def sector_tiles(sectors):
     return by_coast
 
 
-def inspect_tile(row, col, cache, reuse=False):
+def tile_stamp(path):
+    return path.with_name(path.name + '.edition')
+
+
+def stamped_edition(path, blob):
+    """The edition this exact cached blob was fetched under, or None when unproven."""
+    try:
+        stamp = json.loads(tile_stamp(path).read_text())
+    except (OSError, ValueError):
+        return None
+    if isinstance(stamp, dict) and stamp.get('sha256') == hashlib.sha256(blob).hexdigest():
+        return stamp.get('edition')
+    return None
+
+
+def inspect_tile(row, col, cache, edition=None, reuse=False):
+    """Audit one tile, reusing the cached blob only if it was fetched under ``edition``.
+
+    The grid-level manifest edition says what the last complete run sealed, but a
+    run over fewer sectors refetches only its own tiles. So each tile carries its
+    own stamp (edition + blob hash) and an unstamped or other-edition tile is
+    refetched even when the manifest matches.
+    """
     path = cache / str(LEVEL) / str(row) / f'{col}.lerc'
     url = f'{BASE}/tile/{LEVEL}/{row}/{col}'
-    if not (reuse and path.exists()):
+    reused = reuse and edition is not None and path.exists() and stamped_edition(path, path.read_bytes()) == edition
+    if not reused:
         request = urllib.request.Request(url, headers={'User-Agent': 'SkipperCast/0.3 public substrate source audit'})
         with urllib.request.urlopen(request, timeout=35) as response:
             blob = response.read()
         if not blob.startswith(b'Lerc2') or len(blob) > 500000:
             raise ValueError(f'Unexpected LERC tile {row}/{col}')
         path.parent.mkdir(parents=True, exist_ok=True)
+        # Drop the old stamp first so a crash mid-write cannot leave new bytes under an old edition.
+        tile_stamp(path).unlink(missing_ok=True)
         path.write_bytes(blob)
+        if edition is not None:
+            tile_stamp(path).write_text(json.dumps({'edition': edition, 'sha256': hashlib.sha256(blob).hexdigest()}) + '\n')
     blob = path.read_bytes()
     result = lerc.decode(blob)
     if result[0] != 0 or result[1].shape != (256, 256) or (result[2] is not None and result[2].shape != (256, 256)):
@@ -129,7 +156,7 @@ def inspect_tile(row, col, cache, reuse=False):
         raise ValueError(f'Unexpected CDFW substrate code {row}/{col}')
     return {'row': row, 'col': col, 'sha256': hashlib.sha256(blob).hexdigest(),
             'hard_cells': int(np.count_nonzero(values == 1)),
-            'soft_cells': int(np.count_nonzero(values == 2)), 'bytes': len(blob)}
+            'soft_cells': int(np.count_nonzero(values == 2)), 'bytes': len(blob), 'reused': reused}
 
 
 def main():
@@ -150,7 +177,7 @@ def main():
     tiles = set().union(*by_coast.values())
     found, failures = [], []
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
-        pending = {pool.submit(inspect_tile, row, col, args.cache, reuse): (row, col) for row, col in sorted(tiles)}
+        pending = {pool.submit(inspect_tile, row, col, args.cache, args.edition, reuse): (row, col) for row, col in sorted(tiles)}
         for future in as_completed(pending):
             try:
                 found.append(future.result())
@@ -159,7 +186,7 @@ def main():
     found.sort(key=lambda item: (item['row'], item['col']))
     output = {'scope': 'cdfw-ds3091-40m-tile-audit', 'checked_at': datetime.now(timezone.utc).isoformat(),
               'metadata_url': METADATA, 'service_url': BASE, 'crs': 'EPSG:3310',
-              'resolution_m': RESOLUTION_M, 'grid_identity': identity, 'cache_reused': reuse,
+              'resolution_m': RESOLUTION_M, 'grid_identity': identity, 'cache_reused': any(item['reused'] for item in found),
               'class_meaning': {'1': 'predicted hard', '2': 'predicted soft'},
               'limits': ['Rugosity proxy, not direct bottom geology or fish presence.',
                          'Coarse resampling and interpolated shallow white zones; no precise rock edge.',
