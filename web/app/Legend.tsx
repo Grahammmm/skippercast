@@ -56,6 +56,8 @@ import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} fr
 import {currentsState} from '../map/currents.ts';
 import {contourState} from '../map/depth-contours.ts';
 import {chartOnly, drawsIn, layerCopy, layerEntry} from '../map/layers.ts';
+import {contourCopy, depthChips, shallowBand, surveyDetailChips, SURVEY_DETAIL_TITLE_ID} from '../map/legend-model.ts';
+import {reliefDrawn, reliefSurveyView} from './MapStage.tsx';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CDFW_MPA_PAGE, TRANSIENT_DETAILS, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveySummary} from '../map/seafloor.ts';
@@ -386,19 +388,21 @@ export function DensityRow() {
 
 /** The depth contours (CI6-13): the key and surveys while they draw, or why they do not; nothing where none are published. */
 export function DepthContoursRow() {
-  const s = contourState.value, lang = language.value, entry = layerCopy('depth-contours', lang);
+  const s = contourState.value, lang = language.value, copy = contourCopy(s.set);
   if (shownPresentation.value !== 'chart' || !['drawn', 'withheld', 'failed'].includes(s.status)) return null;
   const drawn = s.status === 'drawn';
   const surveyed = (date: string) => t('legend.surveyed', lang, {date});
   return (
     <li class="app-legend-depth-contours">
-      {drawn ? <span class="app-swatch" data-layer="depth-contours" aria-hidden="true"></span> : null}{entry.label}
-      <Popover iconOnly summary={t('legend.bs.depth', lang)}>
-        <p>{entry.basis}</p>
-      </Popover>
-      {drawn ? <p class="app-legend-note" data-key="depth-contours">{entry.legend[0]?.label}</p> : null}
-      {drawn ? <p class="app-legend-note" data-key="depth-contours-edge"><span class="app-swatch" data-layer="depth-contours-edge" aria-hidden="true"></span>{entry.legend[1]?.label}</p> : null}
-      {drawn ? <p class="app-legend-note ui-mono" data-stamp="depth-contours">{[...new Set(s.sources.map(x => `${surveyed(x.survey_date)} · ${x.vertical_datum}`))].join('; ')} · {t('legend.notForNav', lang)}</p> : null}
+      {drawn ? <span class="app-swatch" data-layer="depth-contours" aria-hidden="true"></span> : null}{t(copy.label as StringId, lang)}
+      {drawn ? <>
+        <Popover iconOnly summary={t(copy.summary as StringId, lang)}>
+          <p>{t(copy.basis as StringId, lang)}</p>
+        </Popover>
+        <p class="app-legend-note" data-key="depth-contours">{t(copy.legend[0] as StringId, lang)}</p>
+        <p class="app-legend-note" data-key="depth-contours-edge"><span class="app-swatch" data-layer="depth-contours-edge" aria-hidden="true"></span>{t(copy.legend[1] as StringId, lang)}</p>
+        <p class="app-legend-note ui-mono" data-stamp="depth-contours">{[...new Set(s.sources.map(x => `${surveyed(x.survey_date)} · ${x.vertical_datum}`))].join('; ')} · {t(copy.notForNavigation, lang)}</p>
+      </> : null}
       {s.note ? <p class="app-legend-note" data-reason="depth-contours"><EnglishDetail lang={lang}>{s.note}</EnglishDetail></p> : null}
     </li>
   );
@@ -426,6 +430,33 @@ function ShoreRow() {
   return note ? <li class="app-legend-shore"><p class="app-legend-note" data-reason="shore-runs"><EnglishDetail lang={lang}>{note}</EnglishDetail></p></li> : null;
 }
 
+function ReliefRow() {
+  if (shownPresentation.value !== 'chart' || !reliefDrawn.value) return null;
+  const lang = language.value, survey = reliefSurveyView.value;
+  const swatch = (token: ReturnType<typeof depthChips>[number]['token']) => ({backgroundColor: `var(--${PALETTE_TOKENS[token]})`});
+  // CSS supplies the ring so it follows the effective theme without a render.
+  return <li class="app-legend-relief">
+    <strong>{t('legend.relief.depth', lang)}</strong>
+    <ul class="app-relief-depths">{depthChips('dark').map(chip => <li key={chip.token}>
+      <span class="app-relief-depth-swatch" style={swatch(chip.token)} aria-hidden="true" />{chip.feet}{chip.orMore ? '+' : ''}
+    </li>)}</ul>
+    <p class="app-relief-band"><span class="app-relief-depth-swatch" style={swatch(shallowBand('dark').token)} aria-hidden="true" />{t('legend.relief.band', lang)}</p>
+    {survey ? <>
+      <strong>{t(SURVEY_DETAIL_TITLE_ID, lang)}</strong>
+      <button class="app-relief-survey" type="button" aria-pressed={survey.shown} onClick={survey.toggle}>
+        <span>{t('legend.surveyDetail.show', lang)}</span>
+        <span class="app-relief-chips">{surveyDetailChips(survey.classes).map(chip => {
+          const label = t(chip.labelId as StringId, lang);
+          return <span key={chip.id} data-survey-chip={chip.id}>
+            <span class="app-relief-survey-swatch" aria-hidden="true" />{chip.bold ? <strong>{label}</strong> : label}
+          </span>;
+        })}</span>
+      </button>
+    </> : null}
+    {layers.value.includes('seafloor') ? <p class="app-legend-note">{t('legend.relief.dimmed', lang)}</p> : null}
+  </li>;
+}
+
 /** SCFEAT-FRESH-1: the layer's update cadence and age limit, one wording for every row (web/map/freshness.ts). */
 const Cadence = ({id, lang}: {id: string; lang: Language}) => <li class="app-legend-cadence" data-cadence={id}><p class="app-legend-note">{cadenceLine(id, lang)}</p></li>;
 
@@ -446,6 +477,7 @@ export function Legend() {
     <section class="app-legend" aria-label={t('legend.title', lang)}>
       <span class="ui-eyebrow">{t('legend.title', lang)}</span>
       <ul>
+        <ReliefRow />
         {on.map(e => <Fragment key={e.id}>{legendRow(e, shown, lang)}{drawsIn(e.id, shown) ? <Cadence id={e.id} lang={lang} /> : null}</Fragment>)}
         <PreviewLegendRows />
         <PlanningRouteRow />
@@ -458,6 +490,7 @@ export function Legend() {
         <Cadence id="mpas" lang={lang} />
       </ul>
       {unavailable.value.filter(id => id !== 'mpas' && !id.startsWith('preview-')).map(id => <p key={id} class="app-empty" data-unavailable={id}>{t('rail.unavailable', lang, {label: layerCopy(id, lang).label})}</p>)}
+      <footer class="app-legend-note app-legend-warning">{t('legend.notForNav', lang)}</footer>
     </section>
   );
 }

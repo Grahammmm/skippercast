@@ -787,6 +787,8 @@ async function mediaTurn(f: FlowContext, boat: ContactBoat): Promise<EngineResul
       actions.push(say(f.settings, f.language, 'media_unavailable')); intent = 'media.unreadable'; continue;
     }
     if (decideCountBoard(c) && !reported) {
+      // An old or unassigned board must not create or replace this boat's report.
+      if (row.boat_id !== boat.id) continue;
       let reading: CountBoardReading | null = null;
       try { reading = await vision.readCountBoard(imageOf(f.env, row)); } catch (error) { advisorLog('warn', 'advisor_vision_failed', {name: (error as Error)?.name ?? 'Error'}); }
       if (!reading || !decideReadingUsable(reading)) { actions.push(say(f.settings, f.language, 'report_board_unreadable')); intent = 'report.board_unreadable'; continue; }
