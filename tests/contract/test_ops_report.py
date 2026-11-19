@@ -24,9 +24,16 @@ def opener_for(answers, seen):
     def opener(request, timeout):
         sql = request.data.decode()
         seen.append((request.full_url, request.get_header('Authorization'), sql))
+        if sql == ops_report.QUERIES['route_totals'] and 'request' in answers and isinstance(answers['request'], list):
+            rows = answers['request']
+            totals = [{'requests': sum(float(r['requests']) for r in rows),
+                       's5xx': sum(float(r['s5xx']) for r in rows)}] if rows else []
+            return FakeResponse(json.dumps({'data': totals}).encode())
         for key, rows in answers.items():
             if f"index1 = '{key}'" in sql:
                 if isinstance(rows, Exception):
+                    if isinstance(rows, HTTPError):
+                        rows.fp.seek(0)
                     raise rows
                 return FakeResponse(json.dumps({'meta': [], 'data': rows, 'rows': len(rows)}).encode())
         return FakeResponse(b'{"data": []}')
