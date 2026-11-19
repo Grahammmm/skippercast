@@ -9,11 +9,9 @@
 // Erasable syntax only: tests/test_legend_model.mjs imports this file by type stripping.
 //
 // ── Depth chips ─────────────────────────────────────────────────────────────────
-// Ramp B has no palette token yet (§ 10.2: "relief PNG (no token)"), and web/ may not
-// hold colour literals (scripts/check_tokens.mjs). The chips therefore name a token:
-// `depthB0` … `depthB10` (CSS `--depth-b-0` … `--depth-b-10`). MB-11b adds them to
-// PALETTE_TOKENS and web/tokens.css with the § 1.2 / § 10.2 values, identical in both
-// themes (§ 10.1). `depthChips` resolves `color` only when it is handed a palette.
+// web/ may not hold colour literals (scripts/check_tokens.mjs), so a chip names the
+// generated custom property that colours it (`lookDepthKey` below); the ramp-B and
+// nearshore chip colours are identical in both themes (§ 10.1).
 //
 // ── Survey-detail chips ─────────────────────────────────────────────────────────
 // Input keys are MB-22's decode output (web/map/survey-detail.ts): the per-footprint
@@ -36,6 +34,8 @@
 //                                    survey, date and datum; not for navigation.")
 // MB-11b may point `planner` at one reworded shared id instead (the amendment drops
 // "every 150 ft" for both sets); this model keeps v1 on today's id until it does.
+import type {NearshoreStyle} from './nearshore-paint.ts';
+import {NEARSHORE_LOOKS, NEARSHORE_STYLE} from './nearshore-style.gen.ts';
 
 export type ContourSet = 'v1' | 'ft-v2';
 export type LegendTheme = 'dark' | 'light';
@@ -45,40 +45,67 @@ export const NOT_FOR_NAVIGATION_ID = 'legend.notForNav';
 
 // ── Depth chips ──────────────────────────────────────────────────────────────────
 
-/** Palette keys MB-11b adds for ramp B, shallow to deep. */
-export const RAMP_B_TOKENS = ['depthB0', 'depthB1', 'depthB2', 'depthB3', 'depthB4', 'depthB5',
-  'depthB6', 'depthB7', 'depthB8', 'depthB9', 'depthB10'] as const;
-export type RampBToken = typeof RAMP_B_TOKENS[number];
-
-/** § 1.2 legend depths in feet: 0, 10, 20, 33, 50, 66, 100, 150, 200, 300, then 300+. */
-const RAMP_B_FEET = [0, 10, 20, 33, 50, 66, 100, 150, 200, 300, 300] as const;
 /** The 0–66 ft (0–20 m) spearfishing band ends at the 66 ft chip. */
 export const SHALLOW_BAND_FT = 66;
 
-export type DepthChip = {
-  token: RampBToken;
+// ── Depth chips by look (MSK-2, STYLE-PIPELINE-DESIGN rev 2 § 6) ─────────────────
+// The chips follow the look the region's relief tiles were baked with (web/map/relief-data.ts `reliefLook`): the
+// pointer's baked digest, or `deep-fixed-v1` (ramp B: § 1.2 depths 0, 10, 20, 33, 50, 66, 100, 150, 200, 300 and
+// 300+ on `--depth-b-0` … `--depth-b-10`) for a pointer without a `style` member. The generated
+// NEARSHORE_LOOKS table (scripts/style/gen_style.py) holds every active or rolling look, so during a roll-forward or a
+// rollback each region's legend shows its own tiles' colours. An unknown or invalid look fails closed: no chips (and
+// no band swatch) and one row saying the key is unavailable; never another look's chips.
+
+type LookTable = Readonly<Record<string, {readonly chips: readonly {readonly depth_ft: number; readonly cssVar: string}[]; readonly plus300: string}>>;
+export type LookChip = {
   /** The legend depth in feet; for the last chip, the depth it exceeds. */
   feet: number;
-  /** True for the deepest chip ("300+"). */
   orMore: boolean;
   /** Light theme draws the chips with a 1 px inset ring (§ 10.2). */
   ring: boolean;
-  /** The token's value when a palette was supplied; never a literal of this module. */
-  color?: string;
+  /** The generated custom property that colours the chip (a `--skn-*` or `--depth-b-*` name). */
+  cssVar: string;
 };
+export type DepthKey =
+  | {status: 'chips'; chips: LookChip[]; band: {cssVar: string; fromFeet: number; toFeet: number; ring: boolean}}
+  | {status: 'unavailable'; rowId: typeof LOOK_UNAVAILABLE_ID};
+export const LOOK_UNAVAILABLE_ID = 'legend.relief.lookUnavailable';
 
-export function depthChips(theme: LegendTheme, palette?: Readonly<Partial<Record<RampBToken, string>>>): DepthChip[] {
-  return RAMP_B_TOKENS.map((token, i) => {
-    const chip: DepthChip = {token, feet: RAMP_B_FEET[i] ?? 0, orMore: i === RAMP_B_TOKENS.length - 1, ring: theme === 'light'};
-    const color = palette?.[token];
-    if (color !== undefined) chip.color = color;
-    return chip;
-  });
+export function lookDepthKey(look: string | null, theme: LegendTheme, looks: LookTable = NEARSHORE_LOOKS): DepthKey {
+  const entry = look !== null && Object.hasOwn(looks, look) ? looks[look] : undefined;
+  if (!entry?.chips.length) return {status: 'unavailable', rowId: LOOK_UNAVAILABLE_ID};
+  const ring = theme === 'light';
+  const chips = [...entry.chips.map(c => ({feet: c.depth_ft, orMore: false, ring, cssVar: c.cssVar})),
+    {feet: entry.chips.at(-1)!.depth_ft, orMore: true, ring, cssVar: entry.plus300}];
+  return {status: 'chips', chips, band: {cssVar: entry.chips[0]!.cssVar, fromFeet: 0, toFeet: SHALLOW_BAND_FT, ring}};
 }
 
-/** The "0–66 ft (0–20 m)" bar: the 0 ft colour, with the same light-theme ring. */
-export function shallowBand(theme: LegendTheme): {token: RampBToken; fromFeet: number; toFeet: number; ring: boolean} {
-  return {token: RAMP_B_TOKENS[0], fromFeet: 0, toFeet: SHALLOW_BAND_FT, ring: theme === 'light'};
+// ── Nearshore rows (MSK-2) ───────────────────────────────────────────────────────
+// Each row shows only when the region's data says the feature is present (pointer, contour or habitat metadata); with
+// no flags, no row. The producers that set these flags are MSK-4 (pointer) and MSK-6 (habitat vectors).
+
+export type NearshoreFlags = Readonly<{
+  /** Rock piles drawn from a substrate survey, and from relief alone (no substrate survey). */
+  pilesSurveyed?: boolean;
+  pilesFromRelief?: boolean;
+  /** The hard-bottom edge's substrate source: its cell size and year. */
+  hardEdge?: Readonly<{cell_m: number; year: number | string}>;
+  /** The survey cell size where the view is finer than the data. */
+  resolution_m?: number;
+}>;
+export type NearshoreRow = {id: string; vars?: Record<string, string | number>; cssVar?: string};
+
+export function nearshoreRows(flags: NearshoreFlags, style: Pick<NearshoreStyle, 'rock_piles' | 'bottom_type'> = NEARSHORE_STYLE): NearshoreRow[] {
+  const rows: NearshoreRow[] = [];
+  if (flags.pilesSurveyed === true) rows.push({id: 'legend.relief.pileSurveyed', cssVar: style.rock_piles.fill});
+  if (flags.pilesFromRelief === true) rows.push({id: 'legend.relief.pileRelief', cssVar: style.rock_piles.fill});
+  const edge = flags.hardEdge;
+  if (edge && Number.isFinite(edge.cell_m) && edge.cell_m > 0 && String(edge.year).trim()) {
+    rows.push({id: 'legend.relief.hardEdge', vars: {cell: edge.cell_m, year: edge.year}, cssVar: style.bottom_type.hard_edge.color});
+  }
+  const cell = flags.resolution_m;
+  if (typeof cell === 'number' && Number.isFinite(cell) && cell > 0) rows.push({id: 'legend.relief.resolution', vars: {cell}});
+  return rows;
 }
 
 // ── Survey-detail chips ──────────────────────────────────────────────────────────

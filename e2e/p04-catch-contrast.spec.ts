@@ -273,7 +273,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MB-08: Reports/CatchCards mounts neither the Chart-only depth shading control nor its layer. Rebind only MapStage.tsx.
   // MB-11: the Chart legend gains depth-ramp/survey-detail chips; BODY09 mounts Reports/CatchCards, never MapStage. No catch
   // markup, paint, contrast(), assertion or threshold change. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "9f184910b8ff4fec1059c997c2d2f8b8f39a5f94283209583264a94373d9d768",
+  // MSK-2: MapStage only passes the relief look and nearshore flags to the legend; Reports never mounts it. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "35b3f3877ea77ecbdd22a28e327bc967e8d1515fca31af8cc37b2bcb12202d5a",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   // MB-05: light map-only colours and habitat opacity change; Reports catch text and backing do not use these roles.
   // MB-20: only light-theme overlay roles (--flow*, --mpa-fill/line, --swell-0..3, --contrast-1/2) change; Reports catch text and backing do not use them.
@@ -425,7 +426,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MAP-SOURCES-PAGE-1: only the legendTsx surface hash and its comment change; contrast math and gates unchanged.
   // MB-11: contrast check gains the legend chip/panel pairs only; no existing pair, assertion or threshold changes. Rebind only check_contrast.mjs.
   // MSK-1: only tokensCss source digest/comment changed in the checker; no contrast logic changed.
-  "scripts/check_contrast.mjs": "9c797b857492a7a0f17ed6c594647ab06c7e1519132fce5d2b1c3caef8c10b65",
+  // MSK-2: only the legendTsx surface hash and its comment changed; contrast() untouched. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "984345a6008777666c8b4d15c3cf7579378401c02b209afb8d6c830273f5f238",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.

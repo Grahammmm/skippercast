@@ -7,6 +7,7 @@ import {chartMark} from './chart.ts';
 import type {Engine} from './engine.ts';
 import {BOTTOM_RELIEF} from './layers.ts';
 import {chartPick} from './marks.ts';
+import {fieldDesaturation} from './nearshore-paint.ts';
 import {language, t, type StringId} from '../i18n.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {resolveRelief} from './relief-data.ts';
@@ -40,7 +41,8 @@ interface ReliefOptions {
   seafloorOn(): boolean;
   fieldOn(): boolean;
   unavailable(error: unknown): void;
-  ready?(): void;
+  /** Fires once the overlay is drawn, with the look its tiles were baked with (relief-data.ts `reliefLook`) for the legend. */
+  ready?(look: string | null): void;
   page?: string;
   fetchFn?: typeof fetch;
   /** Already verified against the selected archive's release binding. Until
@@ -175,9 +177,11 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
     }
     const buildLayers = (p: Palette, light: boolean, seafloor: boolean, field: boolean) => {
       const land = basemapStyle(p, {archive: '', assets: ''}).layers.filter(l => l.id === 'earth' || l.id === 'parks');
+      // MSK-2 (kit overlays.base_desaturation_when_field_on): a colour field desaturates the relief rather than fading it, so
+      // the relief keeps its shape under the field. Seafloor type's stronger dimming (MAP-DESIGN-LOCK § 2.2/§ 10.2) still wins.
       const layers: LayerSpecification[] = [{id: source, type: 'raster', source, minzoom: a.minzoom - 1,
-        paint: {'raster-resampling': 'linear', 'raster-fade-duration': 0, 'raster-opacity': field ? 0.6 : 1,
-          'raster-saturation': seafloor ? -0.8 : 0, 'raster-brightness-min': seafloor && light ? 0.30 : 0,
+        paint: {'raster-resampling': 'linear', 'raster-fade-duration': 0, 'raster-opacity': 1,
+          'raster-saturation': seafloor ? -0.8 : field ? fieldDesaturation() : 0, 'raster-brightness-min': seafloor && light ? 0.30 : 0,
           'raster-brightness-max': seafloor && !light ? 0.75 : 1}}];
       const detailLayers = hasDetail ? surveyDetailLayers(survey, survey, pattern, p, light) : [];
       if (hasDetail) layers.push(...detailLayers, {id: hit, type: 'fill', source: survey, paint: {'fill-opacity': 0}});
@@ -219,7 +223,7 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
       setDetail();
     });
     updateView();
-    if (!signal.aborted) o.ready?.();
+    if (!signal.aborted) o.ready?.(a.look);
   }
   void start().catch(fail);
   return {destroy};

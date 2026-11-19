@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {globSync, readFileSync} from 'node:fs';
 import test from 'node:test';
 import {fileURLToPath} from 'node:url';
-import {resolveRelief, selectReliefArchives} from '../web/map/relief-data.ts';
+import {LEGACY_LOOK, resolveRelief, selectReliefArchives} from '../web/map/relief-data.ts';
 
 const morro = 'morro-bay';
 const draft = 'channel-islands-north';
@@ -200,4 +200,20 @@ test('z16–17 require certified 1 m water pixels in the shallow band; z18 is ne
     assert.deepEqual(resolveRelief(morro, candidate), unavailable('unknown-resolution'));
   }
   assert.deepEqual(resolveRelief(morro, {...p, maxzoom: 18}), unavailable('metadata'));
+});
+
+// MSK-2 contract (MSK-2 amendment rev 2 A1): the pointer's optional `style` member names the look its tiles were baked with.
+// Only a complete, well-formed member yields its baked digest; anything else is an unknown look (null), never the default
+// look and never a refusal of the reviewed tiles. Believable bugs: a partial or extra-keyed member trusted, or a bad
+// member silently mapped to the legacy ramp-B legend.
+test('the style member resolves a look key or an unknown look, never a refusal', () => {
+  const style = {baked: sha('e'), contours: sha('f'), habitat: sha('1'), built_with: 'nearshore-v1.0.1'};
+  const look = extra => { const r = resolveRelief(morro, {...pointer(), ...extra}); assert.equal(r.status, 'ready'); return r.archive.look; };
+  assert.equal(look({}), LEGACY_LOOK);
+  assert.equal(look({style}), sha('e'));
+  assert.equal(look({style: {...style, habitat: null}}), sha('e'));
+  for (const bad of [null, 'nearshore-v1.0.0', {...style, extra: 1}, {...style, baked: 'E'.repeat(64)}, {...style, contours: undefined},
+    {...style, habitat: 'x'}, {...style, built_with: 'Nearshore v1'}, {...style, built_with: 'n'.repeat(65)}]) {
+    assert.equal(look({style: bad}), null, JSON.stringify(bad));
+  }
 });

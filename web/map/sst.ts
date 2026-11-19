@@ -46,6 +46,8 @@ import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {COAST_NOT_SAVED, COAST_OFFLINE_COPY, NOT_SAVED, TILES_NOT_SAVED, TILES_OFFLINE_COPY, watchOffline} from './offline.ts';
 import {pair, sp, type StatusCopy} from './status-copy.ts';
 import {MPA_FILL} from './mpa.ts';
+import {fieldOpacity, kitMinZoom} from './nearshore-paint.ts';
+import {NEARSHORE_STYLE} from './nearshore-style.gen.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
 import {LABEL_FONT} from './style.ts';
@@ -59,7 +61,6 @@ export const CONTOUR_SOURCE = 'water-temp-contours';
 export const SST_LAYER = 'water-temp';
 export const CONTOUR_LAYER = 'water-temp-contours';
 export const CONTOUR_LABELS = 'water-temp-labels';
-export const SST_OPACITY = 0.8;
 const HOUR = 3_600_000;
 /** fish's `live(…, 72)`: an analysis, and its retrieval, under 72 hours old and at most 5 minutes ahead. */
 export const MAX_AGE_MS = 72 * HOUR;
@@ -183,22 +184,24 @@ function judge(sst: SurfaceTemperature, product: string, limit: number, at: Date
 }
 
 /**
- * packages/coast `fieldContours` every 0.5 °F across `range`, joined into lines per level (field.ts
- * `isolines`); whole degrees are `major` and carry their label with the unit.
+ * packages/coast `fieldContours` every kit `overlays.sst_isoline_step_f` (0.5 °F) across `range`, joined into lines per level
+ * (field.ts `isolines`); whole degrees are `major` and carry their label with the unit.
  */
-export function contourLines(field: SurfaceField, range: readonly [number, number]): ReturnType<typeof isolines> {
-  const levels = Array.from({length: (range[1] - range[0]) * 2 + 1}, (_, i) => range[0] + i / 2);
+export function contourLines(field: SurfaceField, range: readonly [number, number], step: number = NEARSHORE_STYLE.overlays.sst_isoline_step_f): ReturnType<typeof isolines> {
+  const levels = Array.from({length: Math.round((range[1] - range[0]) / step) + 1}, (_, i) => range[0] + i * step);
   return isolines(field, levels, level => { const major = Number.isInteger(level); return {label: `${major ? level : level.toFixed(1)} °F`, major}; });
 }
 
-/** The texture, its contours and their labels, under the protected areas (§ 9 order); filled by setImage and setData. A live theme switch re-runs the same layer builder with the new palette (`themePaint`); ids and sources stay. */
+/** The texture, its contours and their labels, under the protected areas (§ 9 order); filled by setImage and setData. A live theme switch re-runs the same layer builder with the new palette (`themePaint`); ids and sources stay.
+ * MSK-2: the texture's opacity follows the kit's field opacity by zoom, and the isotherms draw from the kit's isoline zoom. */
 function waterTempLayers(p: Palette): Overlay['layers'] {
   const width: MapLibre.ExpressionSpecification = ['interpolate', ['linear'], ['zoom'], 7, 0.5, 12, 1.2];
+  const isolines = kitMinZoom(NEARSHORE_STYLE.overlays.isolines_from_zoom);
   return [
-    {id: SST_LAYER, type: 'raster', source: SST_SOURCE, paint: {'raster-opacity': SST_OPACITY, 'raster-resampling': 'linear', 'raster-fade-duration': 0}},
-    {id: CONTOUR_LAYER, type: 'line', source: CONTOUR_SOURCE, layout: {'line-join': 'round'},
+    {id: SST_LAYER, type: 'raster', source: SST_SOURCE, paint: {'raster-opacity': fieldOpacity() as MapLibre.ExpressionSpecification, 'raster-resampling': 'linear', 'raster-fade-duration': 0}},
+    {id: CONTOUR_LAYER, type: 'line', source: CONTOUR_SOURCE, minzoom: isolines, layout: {'line-join': 'round'},
       paint: {'line-color': p.text, 'line-width': width, 'line-opacity': ['case', ['get', 'major'], 0.5, 0.25]}},
-    {id: CONTOUR_LABELS, type: 'symbol', source: CONTOUR_SOURCE, filter: ['get', 'major'],
+    {id: CONTOUR_LABELS, type: 'symbol', source: CONTOUR_SOURCE, minzoom: isolines, filter: ['get', 'major'],
       layout: {'symbol-placement': 'line', 'symbol-spacing': 360, 'text-field': ['get', 'label'], 'text-font': [LABEL_FONT], 'text-size': 11},
       paint: {'text-color': p.text, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
   ];

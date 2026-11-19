@@ -56,8 +56,8 @@ import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} fr
 import {currentsState} from '../map/currents.ts';
 import {contourState} from '../map/depth-contours.ts';
 import {chartOnly, drawsIn, layerCopy, layerEntry} from '../map/layers.ts';
-import {contourCopy, depthChips, shallowBand, surveyDetailChips, SURVEY_DETAIL_TITLE_ID} from '../map/legend-model.ts';
-import {reliefDrawn, reliefSurveyView} from './MapStage.tsx';
+import {contourCopy, lookDepthKey, nearshoreRows, surveyDetailChips, SURVEY_DETAIL_TITLE_ID} from '../map/legend-model.ts';
+import {reliefDrawn, reliefFeatures, reliefLook, reliefSurveyView} from './MapStage.tsx';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CDFW_MPA_PAGE, TRANSIENT_DETAILS, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveySummary} from '../map/seafloor.ts';
@@ -433,14 +433,21 @@ function ShoreRow() {
 function ReliefRow() {
   if (shownPresentation.value !== 'chart' || !reliefDrawn.value) return null;
   const lang = language.value, survey = reliefSurveyView.value;
-  const swatch = (token: ReturnType<typeof depthChips>[number]['token']) => ({backgroundColor: `var(--${PALETTE_TOKENS[token]})`});
+  // MSK-2: the chips follow the drawn tiles' look; an unknown look shows no colour key at all (legend-model.ts lookDepthKey).
+  const key = lookDepthKey(reliefLook.value, 'dark');
+  const swatch = (cssVar: string) => ({backgroundColor: `var(${cssVar})`});
   // CSS supplies the ring so it follows the effective theme without a render.
   return <li class="app-legend-relief">
     <strong>{t('legend.relief.depth', lang)}</strong>
-    <ul class="app-relief-depths">{depthChips('dark').map(chip => <li key={chip.token}>
-      <span class="app-relief-depth-swatch" style={swatch(chip.token)} aria-hidden="true" />{chip.feet}{chip.orMore ? '+' : ''}
-    </li>)}</ul>
-    <p class="app-relief-band"><span class="app-relief-depth-swatch" style={swatch(shallowBand('dark').token)} aria-hidden="true" />{t('legend.relief.band', lang)}</p>
+    {key.status === 'chips' ? <>
+      <ul class="app-relief-depths">{key.chips.map(chip => <li key={`${chip.cssVar}${chip.orMore ? '+' : ''}`} data-depth-chip={chip.cssVar}>
+        <span class="app-relief-depth-swatch" style={swatch(chip.cssVar)} aria-hidden="true" />{chip.feet}{chip.orMore ? '+' : ''}
+      </li>)}</ul>
+      <p class="app-relief-band"><span class="app-relief-depth-swatch" style={swatch(key.band.cssVar)} aria-hidden="true" />{t('legend.relief.band', lang)}</p>
+    </> : <p class="app-legend-note" data-depth-key="unavailable">{t(key.rowId, lang)}</p>}
+    {nearshoreRows(reliefFeatures.value).map(row => <p key={row.id} class="app-relief-band" data-nearshore-row={row.id}>
+      {row.cssVar ? <span class="app-relief-depth-swatch" style={swatch(row.cssVar)} aria-hidden="true" /> : null}{t(row.id as StringId, lang, row.vars)}
+    </p>)}
     {survey ? <>
       <strong>{t(SURVEY_DETAIL_TITLE_ID, lang)}</strong>
       <button class="app-relief-survey" type="button" aria-pressed={survey.shown} onClick={survey.toggle}>

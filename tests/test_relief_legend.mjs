@@ -10,7 +10,7 @@ const {outputFiles: [out]} = await build({stdin: {resolveDir: root.pathname, loa
     export {h} from 'preact';
     export {render} from 'preact-render-to-string';
     export {DepthContoursRow, Legend} from './web/app/Legend.tsx';
-    export {reliefDrawn, reliefSurveyView} from './web/app/MapStage.tsx';
+    export {reliefDrawn, reliefLook, reliefSurveyView} from './web/app/MapStage.tsx';
     export {createDepthContours, contourState, depthContoursURL} from './web/map/depth-contours.ts';
     export {camera} from './web/map/stage.ts';
     export {publishedChartFiles} from './web/chart-files.ts';
@@ -74,6 +74,7 @@ test('the Chart legend keys only the verified classes in view', () => {
   m.configureStore({v2: true, storage: null});
   m.syncFromURL('https://s.test/map?region=morro-bay&presentation=chart');
   m.reliefDrawn.value = true;
+  m.reliefLook.value = 'deep-fixed-v1';
   const render = () => m.render(m.h(m.Legend));
   const bold = html => [...html.matchAll(/data-survey-chip="([^"]+)"[^>]*><span[^>]*><\/span><strong>/g)].map(match => match[1]);
   try {

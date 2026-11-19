@@ -46,6 +46,7 @@ import {layerEntry, setRailNote} from './layers.ts';
 import {pair, sp, type StatusCopy, type StatusPart} from './status-copy.ts';
 import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {MPA_FILL} from './mpa.ts';
+import {fieldOpacity} from './nearshore-paint.ts';
 import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, nearshoreThemePaint, ringHitLayer, ringLayer, ringMark, type Rings} from './nearshore.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
@@ -62,7 +63,6 @@ export const ISOLINE_LAYER = 'swell-period';
 export const ISOLINE_LABELS = 'swell-period-labels';
 export const STROKE_CASING = 'swell-direction-casing';
 export const STROKE_LAYER = 'swell-direction';
-export const SWELL_OPACITY = 0.75;
 /** The texture's scale in feet: fixed, so the same colour is the same height at every hour. */
 export const HEIGHT_SCALE: readonly [number, number] = [0, 15];
 /** Blended from-direction vectors shorter than this mean the corners disagree: no stroke, "mixed" in a reading. */
@@ -248,7 +248,8 @@ function swellParts(p: Palette, {field = true, rings = false}: {field?: boolean;
   const drawn: Overlay = {
     sources: {[SWELL_SOURCE]: {type: 'image', coordinates: [[0, 1], [1, 1], [1, 0], [0, 0]]}, [ISOLINE_SOURCE]: empty, [STROKE_SOURCE]: empty},
     layers: [
-      {id: SWELL_LAYER, type: 'raster', source: SWELL_SOURCE, paint: {'raster-opacity': SWELL_OPACITY, 'raster-resampling': 'linear', 'raster-fade-duration': 0}},
+      // MSK-2: a coarse colour field, so its opacity follows the kit's field opacity by zoom (strong offshore, faint close in).
+      {id: SWELL_LAYER, type: 'raster', source: SWELL_SOURCE, paint: {'raster-opacity': fieldOpacity() as MapLibre.ExpressionSpecification, 'raster-resampling': 'linear', 'raster-fade-duration': 0}},
       {id: ISOLINE_LAYER, type: 'line', source: ISOLINE_SOURCE, layout: {'line-join': 'round'},
         paint: {'line-color': p.text, 'line-width': width(0.6, 1.2), 'line-opacity': 0.45, 'line-dasharray': [3, 2]}},
       {id: ISOLINE_LABELS, type: 'symbol', source: ISOLINE_SOURCE,
