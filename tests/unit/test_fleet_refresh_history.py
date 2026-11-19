@@ -14,6 +14,7 @@ from skippercast.fleet.adapters.base import RunContext
 from skippercast.fleet.ingest import snapshot_to_dict
 from skippercast.fleet.refresh import detect, refresh
 from skippercast.fleet.resolve import Snapshot
+from skippercast.fleet.runs import Run
 
 NOW = "2026-09-20T00:00:00.000Z"  # 50 days after LAST_SEEN: the 45-day threshold is met
 LAST_SEEN = "2026-08-01T00:00:00.000Z"
@@ -99,6 +100,8 @@ class DetectAsOfTests(unittest.TestCase):
 
 
 class FakeSink:
+    name = "staging"
+
     def __init__(self):
         self.applied = []
 
@@ -118,31 +121,33 @@ class RefreshReplayTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         self.region = SimpleNamespace(thresholds={"refresh": {"vanished_after_runs": 3, "vanished_after_days": 45}})
-        current = self.root / "runs" / "r-current"
+        current = self.record_ingest(NOW).dir
         write(current / "ingest-snapshot.json", {"now": NOW, "snapshot": snapshot_to_dict(Snapshot([vessel()]))})
-        write(current / "discover.json", {"complete": True, "at": NOW})
         (current / "ingest-ops.jsonl").write_text("", encoding="utf-8")
-        self.discover("r-aug", EARLIER)
+        self.record_ingest(EARLIER)
         self.ctx = RunContext(self.region, None, current, lambda: NOW)
 
-    def discover(self, name, at, complete=True):
-        write(self.root / "runs" / name / "discover.json", {"complete": complete, "at": at})
+    def record_ingest(self, at, complete=True):
+        run = Run("CA", at.replace("-", "").replace(":", "").split(".")[0] + "Z-000001", var=self.root)
+        run.step_started("ingest", FakeSink.name)
+        run.step_finished("ingest", {"registry_at": at, "listing_complete": int(complete)})
+        return run
 
     def test_saved_refresh_replay_ignores_later_directories(self):
         sink = FakeSink()
         first = refresh(self.ctx, sink)
         self.assertEqual((first["vanished_reviews"], first["changes"], first["complete"]), (0, 0, 1))
-        for n, at in enumerate(LATER):
-            self.discover(f"r-later-{n}", at)
-        self.discover("r-later-partial", "2026-11-02T00:00:00.000Z", complete=False)
+        for at in LATER:
+            self.record_ingest(at)
+        self.record_ingest("2026-11-02T00:00:00.000Z", complete=False)
         again = refresh(self.ctx, sink)
         self.assertEqual(again, first)
         self.assertEqual(sink.applied, [])
 
     def test_earlier_directories_still_open_the_review(self):
-        self.discover("r-aug-2", "2026-08-10T00:00:00.000Z")
-        for n, at in enumerate(LATER):
-            self.discover(f"r-later-{n}", at)
+        self.record_ingest("2026-08-10T00:00:00.000Z")
+        for at in LATER:
+            self.record_ingest(at)
         sink = FakeSink()
         result = refresh(self.ctx, sink)
         self.assertEqual((result["vanished_reviews"], result["kinds"]), (1, {"vanished": 1}))
