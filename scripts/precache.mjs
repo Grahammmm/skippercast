@@ -96,7 +96,13 @@ export function installAssets(manifest, files) {
 
 export async function precacheManifest(dir, buildId) {
   const top = (await readdir(dir, {withFileTypes: true})).filter(e => e.isFile()).map(e => e.name).sort();
-  const manifest = JSON.parse(await readFile(join(dir, '.vite/manifest.json'), 'utf8').catch(() => '{}'));
+  const manifest = JSON.parse(await readFile(join(dir, '.vite/manifest.json'), 'utf8'));
+  for (const root of [...V2_PAGES, APP_EARLY]) {
+    if (!manifest || typeof manifest !== 'object' || !Object.hasOwn(manifest, root) ||
+        !manifest[root] || typeof manifest[root].file !== 'string' || !manifest[root].file) {
+      throw new Error(`Vite manifest is missing required root: ${root}`);
+    }
+  }
   const glyphs = await readdir(join(dir, 'basemap/glyphs'), {recursive: true}).catch(() => []);
   return {
     schema_version: 1,
