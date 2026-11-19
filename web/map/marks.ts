@@ -20,6 +20,7 @@ import {hasCoastTerrain} from '../coast-context.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt} from '../profile.ts';
 import {grade, habitat, navigate, profile, region, selection, species, withParams} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
+import {ZOOM_OFFSET} from './engine.ts';
 import {
   CHECKING, EMPTY, acceptsFeed, assessScreen, atlasCard, closureCheckedAt, geologyCard, geologyFeatures, markFeatures, markShown, receiptCard, surveyCard,
   markAreas, surveyFeatures, terrainCard, terrainDetailCard, validDailyPart, withheld, withheldCard,
@@ -41,6 +42,8 @@ export const GEOLOGY_PICK = 'geology-fill';
 const MIN_ZOOM = 9;
 /** The `?view=` zoom below which the marks read as a density instead (#620). */
 export const DENSITY_BELOW_VIEW_ZOOM = MIN_ZOOM + 1;
+/** App z12 is the first unclustered zoom and the first individual depth labels. */
+const DETAIL_ZOOM = 12 - ZOOM_OFFSET;
 
 /** The region's published layers; null while they load. */
 export const markData = signal<MarkData | null>(null);
@@ -155,13 +158,16 @@ export function densityLayer(p: Palette) {
 }
 
 /** The Chart's FE-18 sources and layers, coloured from the palette: habitat fills and geology go in § 9's habitat slot, the density, marks and the selection near the top. */
-export function markStyle(p: Palette) {
+export function markStyle(p: Palette, phone = typeof matchMedia === 'function' && matchMedia('(width < 1024px)').matches) {
   const source = () => ({type: 'geojson', data: EMPTY});
   const kind = ['match', ['get', 'kind'], 'rock', p.habRock, 'mixed', p.habMixed, 'sediment', p.habSoft, 'kelp', p.habKelp, p.habMixed];
   // The habitat fill multiplier (1 = the ramp below as drawn), never past 0.6.
   const k = mapControl(p.mapHabitatOpacity, 'map-habitat-opacity', 'positive'), fill = (o: number) => Math.min(0.6, o * k);
   return {
-    sources: {[SURVEY_SOURCE]: source(), [GEOLOGY_SOURCE]: source(), [DENSITY_SOURCE]: source(), [MARKS_SOURCE]: source(), [SELECTION_SOURCE]: source()},
+    sources: {[SURVEY_SOURCE]: source(), [GEOLOGY_SOURCE]: source(), [DENSITY_SOURCE]: source(),
+      [MARKS_SOURCE]: {...source(), cluster: true, clusterMaxZoom: DETAIL_ZOOM - 1, clusterRadius: phone ? 50 : 42,
+        // Give a cluster the same badge field as a spot; its badge is the count, not species fit.
+        clusterProperties: {fit: ['+', 1]}}, [SELECTION_SOURCE]: source()},
     habitat: [
       {id: SURVEY_PICK, type: 'fill', source: SURVEY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 9, fill(0.12), 12, fill(0.22), 15, fill(0.3)]}},
       {id: 'survey-habitat-line', type: 'line', source: SURVEY_SOURCE, minzoom: 11,
@@ -171,14 +177,16 @@ export function markStyle(p: Palette) {
     ],
     marks: [
       densityLayer(p),
-      {id: MARK_PICK, type: 'circle', source: MARKS_SOURCE, minzoom: MIN_ZOOM, paint: {'circle-radius': 22, 'circle-color': p.bg, 'circle-opacity': 0}},
+      {id: MARK_PICK, type: 'circle', source: MARKS_SOURCE, minzoom: MIN_ZOOM, filter: ['!', ['has', 'point_count']],
+        paint: {'circle-radius': 22, 'circle-color': p.bg, 'circle-opacity': 0}},
       {id: 'marks-ring', type: 'circle', source: MARKS_SOURCE, minzoom: MIN_ZOOM,
-        paint: {'circle-radius': 9, 'circle-color': p.mapInkHalo, 'circle-opacity': 0.75, 'circle-stroke-color': p.markRing, 'circle-stroke-width': 2}},
+        paint: {'circle-radius': ['case', ['has', 'point_count'], ['step', ['get', 'point_count'], 13, 10, 17, 30, 22], 7],
+          'circle-color': p.mapInkHalo, 'circle-opacity': 0.75, 'circle-stroke-color': p.markRing, 'circle-stroke-width': 2}},
       {id: 'marks-fit', type: 'symbol', source: MARKS_SOURCE, minzoom: MIN_ZOOM, filter: ['has', 'fit'],
         layout: {'text-field': ['get', 'fit'], 'text-font': [LABEL_FONT], 'text-size': 11, 'text-allow-overlap': true, 'text-ignore-placement': true},
         paint: {'text-color': p.mapInk}},
-      {id: 'marks-depth', type: 'symbol', source: MARKS_SOURCE, minzoom: 12, filter: ['has', 'depth'],
-        layout: {'text-field': ['get', 'depth'], 'text-font': [LABEL_FONT], 'text-size': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 12],
+      {id: 'marks-depth', type: 'symbol', source: MARKS_SOURCE, minzoom: DETAIL_ZOOM, filter: ['has', 'depth'],
+        layout: {'text-field': ['get', 'depth'], 'text-font': [LABEL_FONT], 'text-size': ['interpolate', ['linear'], ['zoom'], DETAIL_ZOOM, 10, 15, 12],
           'text-offset': [0, 1.6], 'text-anchor': 'top', 'text-optional': true},
         paint: {'text-color': p.mapInk, 'text-halo-color': p.mapInkHalo, 'text-halo-width': 1.2}},
       {id: 'selection-ring', type: 'circle', source: SELECTION_SOURCE, paint: {'circle-radius': 15, 'circle-opacity': 0, 'circle-stroke-color': p.mapInk, 'circle-stroke-width': 2.5}},

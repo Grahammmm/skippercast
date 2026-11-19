@@ -172,7 +172,9 @@ test('web/map/coast-habitat.js is packages/coast\'s resolver: an unknown species
 test('the Chart style draws habitat in its § 9 slot and marks under the coastline, from the palette, with 44 px mark targets', () => {
   const style = chartStyle({palette: sentinel, archive: null, page: PAGE, region: 'morro-bay', base: 'night'});
   const ids = style.layers.map(l => l.id);
-  for (const source of [SURVEY_SOURCE, GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE]) assert.deepEqual(style.sources[source], {type: 'geojson', data: EMPTY}, source);
+  for (const source of [SURVEY_SOURCE, GEOLOGY_SOURCE, SELECTION_SOURCE]) assert.deepEqual(style.sources[source], {type: 'geojson', data: EMPTY}, source);
+  const {type, data, cluster, clusterMaxZoom, clusterRadius} = style.sources[MARKS_SOURCE];
+  assert.deepEqual({type, data, cluster, clusterMaxZoom, clusterRadius}, {type: 'geojson', data: EMPTY, cluster: true, clusterMaxZoom: 10, clusterRadius: 42});
   // § 9: MPAs (FE-19), then habitat, the seafloor (FE-14), marks and the selection, the coastline on top.
   const at = id => ids.indexOf(id);
   assert.deepEqual(ids.slice(at(SURVEY_PICK), at(SURVEY_PICK) + 4), [SURVEY_PICK, 'survey-habitat-line', GEOLOGY_PICK, 'geology-line']);
