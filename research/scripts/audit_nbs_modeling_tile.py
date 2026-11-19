@@ -17,6 +17,16 @@ from skippercast.platform.bottom_targets import cells_qualified
 from skippercast.seafloor.io import sha256, verified_file
 
 
+# Increment whenever the qualification algorithm or its fixed policy changes.
+SCREEN_METHOD = "nbs-modeling-source-screen-v1"
+
+
+def screen_parameters(max_uncertainty_m=1.0, min_survey_year=1990, limit_ft=200):
+    return {"depth_ft": [25, limit_ft], "max_uncertainty_m": max_uncertainty_m,
+            "min_survey_year": min_survey_year, "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": True}
+
+
 def scheme_row(scheme, tile):
     with sqlite3.connect(scheme) as db:
         table = db.execute("SELECT table_name FROM gpkg_contents WHERE data_type='features'").fetchone()
@@ -97,9 +107,8 @@ def audit(scheme, tile, cache, *, fetch=False, max_uncertainty_m=1.0, min_survey
             "raster_url": row["GeoTIFF_Link"], "raster_sha256": raster_digest,
             "rat_url": row["RAT_Link"], "rat_sha256": rat_digest,
             "vertical_datum": "MLLW", "raster_crs_wkt": crs, "resolution_m": resolution,
-            "screen": {"depth_ft": [25, limit_ft], "max_uncertainty_m": max_uncertainty_m,
-                       "min_survey_year": min_survey_year, "planning_depth_margin_m": 2,
-                       "measured_contributor_flags_required": True},
+            "screen_method": SCREEN_METHOD,
+            "screen": screen_parameters(max_uncertainty_m, min_survey_year, limit_ft),
             "counts": counts,
             "qualified_contributors": [{"survey_id": source_rows[value]["source_survey_id"],
                                          "survey_date_end": source_rows[value]["survey_date_end"],
