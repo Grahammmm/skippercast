@@ -1,14 +1,16 @@
 """F33-03: offline controls for coordinate-free research summaries.
 
-Run ``python -B -m pytest -q tests/unit/test_f33_03_audit.py`` for valid
-controls. Run ``python -B -m tests.unit.test_f33_03_audit`` separately for
-malformed controls: reject the review or omit its geometry while retaining
-valid evidence. Exit 1 reports a contract gap, not a desired baseline.
+Run ``python -B -m pytest -q tests/unit/test_f33_03_audit.py`` for both
+controls. The module CLI also reports the two original malformed cases.
 """
+import hashlib
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
+
+from research.scripts import summarize_original_camera_chart_lead as camera_module
 from research.scripts.summarize_native_hard_reviews import summarize as summarize_native
 from research.scripts.summarize_original_camera_chart_lead import summarize as summarize_camera
 
@@ -18,7 +20,16 @@ SURVEY = 'SYNTHETIC-REVIEW'
 REPORT = 'https://example.invalid/report.pdf'
 LIMITATION = 'Historical camera rockfish codes are observations, not catch rates or present fish presence.'
 NATIVE_LIMITATION = 'Historical review components are not fishing waypoints, verified fish habitat, or safe navigation areas.'
+INTERPRETATION = 'Historical source observations only.'
 HOLD = 'Synthetic survey remains held for fishing promotion.'
+# The summarizer publishes only pinned, reviewed prose; the synthetic fixture prose is admitted here.
+_SYNTHETIC_PINS = frozenset(hashlib.sha256(text.encode('utf-8')).hexdigest() for text in (INTERPRETATION, HOLD))
+
+
+@pytest.fixture(autouse=True)
+def _admit_synthetic_prose(monkeypatch):
+    monkeypatch.setattr(camera_module, 'REVIEWED_SOURCE_TEXT_SHA256',
+                        camera_module.REVIEWED_SOURCE_TEXT_SHA256 | _SYNTHETIC_PINS)
 
 
 def _geometry():
@@ -32,7 +43,7 @@ def _camera_review():
         'original_bag_url': 'https://example.invalid/original.bag', 'original_bag_sha256': 'a' * 64,
         'original_camera_url': 'https://example.invalid/camera.zip', 'original_camera_sha256': 'b' * 64,
         'survey_report_url': REPORT, 'survey_report_sha256': 'c' * 64,
-        'survey_report_interpretation': 'Historical source observations only.',
+        'survey_report_interpretation': INTERPRETATION,
         'survey_fishing_promotion_hold': HOLD,
         'enc_danger_receipt_checked_at': STAMP, 'enc_danger_queried_layers': 18,
         'enc_danger_features_in_bounded_scope': 0,
@@ -41,7 +52,7 @@ def _camera_review():
         'historical_camera_windows': 2, 'fishing_target': False, 'exportable': False,
         'limitations': [LIMITATION],
         'transects': [{
-            'date': '2000-01-01', 'line': 'synthetic-line', 'bottom_classes': ['rock'],
+            'date': '2000-01-01', 'line': 'synthetic-line', 'bottom_classes': {'rock': 2},
             'historical_rocky_camera_windows': 2, 'historical_rockfish_positive_windows': 1,
             'measured_depth_m_mllw_range': [20.0, 21.0], 'product_uncertainty_m_range': [0.1, 0.2],
             'nearest_charted_rock_symbol_m_range': [8.0, 9.0], 'nearest_charted_danger_m_min': None,
@@ -53,7 +64,7 @@ def _camera_review():
 def _native_review():
     return {
         'scope': 'native-noaa-usgs-hard-bottom-review', 'survey_id': SURVEY,
-        'survey_dates': ['2000-01-01', '2000-01-02'], 'compiled_at': STAMP,
+        'survey_dates': ['2000-01-01T03:04:05', '2000-01-02T06:07:08'], 'compiled_at': STAMP,
         'noaa_bag_url': 'https://example.invalid/native.bag', 'noaa_bag_sha256': 'd' * 64,
         'survey_report_url': REPORT, 'survey_report_sha256': 'c' * 64,
         'usgs_sources': [{
@@ -104,9 +115,11 @@ def _assert_camera(summary):
     assert summary['survey_id'] == SURVEY
     assert summary['historical_camera_windows'] == 2
     assert summary['transects'][0]['line'] == 'synthetic-line'
+    assert summary['transects'][0]['bottom_classes'] == {'rock': 2}
+    assert summary['charted_seabed_point_count_by_nature'] == {'rock': 2}
     assert summary['transects'][0]['measured_depth_m_mllw_range'] == [20.0, 21.0]
     assert (summary['survey_report_url'], summary['survey_report_sha256']) == (REPORT, 'c' * 64)
-    assert summary['survey_report_interpretation'] == 'Historical source observations only.'
+    assert summary['survey_report_interpretation'] == INTERPRETATION
     assert summary['survey_fishing_promotion_hold'] == HOLD
     assert summary['limitations'] == [LIMITATION]
     assert summary['fishing_target'] is summary['exportable'] is False
@@ -115,8 +128,10 @@ def _assert_camera(summary):
 def _assert_native(summary):
     survey, = summary['surveys']
     assert survey['survey_id'] == SURVEY
+    assert survey['survey_dates'] == _native_review()['survey_dates']
     assert survey['counts'] == _native_review()['counts']
     assert survey['retained_component_area_m2'] == 2800
+    assert survey['bag_tracking_history'] == _native_review()['bag_tracking_history']
     assert survey['usgs_sources'] == _native_review()['usgs_sources']
     assert (survey['survey_report_url'], survey['survey_report_sha256']) == (REPORT, 'c' * 64)
     assert survey['fishing_target'] is survey['exportable'] is survey['legal_clearance'] is False
@@ -137,6 +152,93 @@ def test_native_valid_aggregate_keeps_evidence_and_omits_features(tmp_path):
     _assert_native(summary)
 
 
+def test_camera_limitations_only_use_reviewed_text():
+    # An otherwise valid review cannot pass through objects or unreviewed prose.
+    for extra in (_geometry(), 'An arbitrary private comment.'):
+        camera = _camera_review()
+        camera['limitations'].append(extra)
+        assert _check_affected('camera', lambda: summarize_camera(camera), _assert_camera) == 0
+
+
+@pytest.mark.parametrize('field,value', [
+    ('line', _geometry()),
+    ('bottom_classes', {'rock': _geometry()}),
+    ('product_uncertainty_m_range', [0.1, _geometry()]),
+    ('measured_depth_m_mllw_range', [21.0, 20.0]),
+    ('nearest_charted_danger_m_min', float('nan')),
+    ('within_100m_mpa_review_buffer', True),
+])
+def test_camera_rejects_misbound_transect_values(field, value):
+    # Merely selecting the transect's keys still accepts bad values under those keys.
+    review = _camera_review()
+    review['transects'][0][field] = value
+    with pytest.raises(ValueError, match=field):
+        summarize_camera(review)
+
+
+@pytest.mark.parametrize('container', ['counts', 'bag_tracking_history', 'usgs_sources'])
+def test_native_projects_only_known_nested_fields(tmp_path, container):
+    # Whole-object copies reintroduce private data even when known fields are valid.
+    review = _native_review()
+    obj = review[container][0] if container == 'usgs_sources' else review[container]
+    obj['geometry'] = _geometry()
+    assert _check_affected(container, lambda: _native_summary(tmp_path, review), _assert_native) == 0
+
+
+@pytest.mark.parametrize('container,field,value', [
+    ('counts', 'retained_components', True),
+    ('bag_tracking_history', 'maximum_depth_revision_m', _geometry()),
+    ('usgs_sources', 'original_resolution_m', [_geometry(), 2]),
+    ('usgs_sources', 'archive_sha256', 'not-a-digest'),
+])
+def test_native_rejects_bad_values_in_known_fields(tmp_path, container, field, value):
+    # Selecting keys alone could still leak their nested values or bless bad provenance.
+    review = _native_review()
+    obj = review[container][0] if container == 'usgs_sources' else review[container]
+    obj[field] = value
+    with pytest.raises(ValueError, match=field):
+        _native_summary(tmp_path, review)
+
+
+@pytest.mark.parametrize('field', ['survey_report_interpretation', 'survey_fishing_promotion_hold'])
+@pytest.mark.parametrize('text', [
+    'Private point 38.1234, -123.4567',        # the first reviewed leak: decimal degrees
+    'Private point 38 07 24 north 123 02 00 west',  # the second: DMS with hemisphere words
+    'Private point thirty-eight degrees north',     # a position spelled in words
+    'Private point 38.1 123.4',                # unsigned decimal pair
+    'Easting 500000 northing 4200000',
+    'Private point {"latitude": 38}',
+    HOLD + ' Private point 38 07 24 north 123 02 00 west',  # reviewed text with a position appended
+    'An arbitrary private comment.',
+])
+def test_camera_source_text_rejects_unreviewed_private_prose(field, text):
+    # Protects: the published summary stays coordinate-free although the private
+    # review's prose fields are free text. Bug: a pattern denylist (twice
+    # bypassed: decimals, then DMS with hemisphere words) or any printable-string
+    # check publishes a pasted coordinate verbatim; only exact reviewed prose may pass.
+    review = _camera_review()
+    review[field] = text
+    with pytest.raises(ValueError, match=field):
+        summarize_camera(review)
+
+
+def test_camera_reviewed_prose_pins_match_committed_receipts():
+    # Protects: the pinned digests are exactly the committed reviewed receipt
+    # prose, and each publishes verbatim. Bug: a stale pin admits text no receipt
+    # carries; a missing pin silently drops reviewed evidence on re-publication.
+    texts = set()
+    for path in sorted(Path('research/receipts').glob('*.json')):
+        data = json.loads(path.read_text(encoding='utf-8'))
+        if isinstance(data, dict) and 'survey_report_interpretation' in data:
+            texts |= {data['survey_report_interpretation'], data.get('survey_fishing_promotion_hold')} - {None}
+    real_pins = camera_module.REVIEWED_SOURCE_TEXT_SHA256 - _SYNTHETIC_PINS
+    assert {hashlib.sha256(text.encode('utf-8')).hexdigest() for text in texts} == real_pins
+    for text in texts:
+        review = _camera_review()
+        review['survey_report_interpretation'] = review['survey_fishing_promotion_hold'] = text
+        assert summarize_camera(review)['survey_report_interpretation'] == text
+
+
 def _check_affected(label, summarize, check_evidence):
     try:
         summary = summarize()
@@ -152,6 +254,7 @@ def _check_affected(label, summarize, check_evidence):
 
 
 if __name__ == '__main__':
+    camera_module.REVIEWED_SOURCE_TEXT_SHA256 |= _SYNTHETIC_PINS
     camera = _camera_review()
     camera['limitations'].append(_geometry())
     native = _native_review()

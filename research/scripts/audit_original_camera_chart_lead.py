@@ -19,6 +19,7 @@ from shapely.ops import transform
 from research.scripts.audit_usgs_video_observations import open_original_zip
 from research.scripts.build_usgs_statewide_context import mpa_union
 from research.scripts.refresh_enc_hazards import BASE, fetch_json, query_layer
+from research.scripts.summarize_original_camera_chart_lead import CAMERA_LIMITATIONS
 
 SERVICES = (('enc_harbour', 'Harbor'), ('enc_approach', 'Approach'), ('enc_coastal', 'Coastal'))
 
@@ -111,12 +112,7 @@ def audit(pair, camera_raw, enc, mpa_snapshot, report, report_raw):
         'cdfw_mpa_retrieved_at': mpa_snapshot['sources']['mpas']['data_retrieved_at'],
         'transects': rows, 'historical_camera_windows': sum(r['historical_rocky_camera_windows'] for r in rows),
         'fishing_target': False, 'exportable': False,
-        'limitations': [
-            'Charted seabed symbols and any charted seabed areas are generalized, dated source observations; a nearby symbol or area does not delineate the camera-observed patch.',
-            'Selected ENC danger classes returning zero do not certify safe navigation or an approach route.',
-            'Historical camera rockfish codes are observations, not catch rates or present fish presence.',
-            'The MPA screen is a dated geometry snapshot; exact current local rules, access and protected-area boundaries remain separate gates.',
-            'No fishing coordinate, rating, plan or export is approved by this source-lead review.']}
+        'limitations': list(CAMERA_LIMITATIONS)}
 
 
 def main():

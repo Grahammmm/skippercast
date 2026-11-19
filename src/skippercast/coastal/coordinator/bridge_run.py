@@ -228,6 +228,43 @@ def _preflight_checked(root, db, binding):
     return reasons
 
 
+def _window_footprint(window, affine, geographic):
+    from shapely.geometry import Polygon
+
+    col, row, width, height = window
+    a, b, c, d, e, f = affine
+    corners = [(col, row), (col+width, row), (col+width, row+height), (col, row+height)]
+    xs, ys = [], []
+    for start, end in zip(corners, corners[1:]+corners[:1]):
+        for step in range(41):
+            px = start[0] + (end[0]-start[0])*step/41
+            py = start[1] + (end[1]-start[1])*step/41
+            xs.append(a*px+b*py+c)
+            ys.append(d*px+e*py+f)
+    edge = list(zip(*geographic.transform(xs, ys)))
+    if (any(not (-180 <= lon <= 180 and -90 <= lat <= 90) for lon, lat in edge)
+            or any(abs(p[0] - q[0]) > 180 for p, q in zip(edge, edge[1:] + edge[:1]))):
+        return None
+    footprint = Polygon(edge)
+    return footprint if footprint.is_valid and not footprint.is_empty else None
+
+
+def _native_window_set_problem(selection, affine, geographic, segment_box):
+    """Check all canonical tiles from the bound grid, not just submitted ones."""
+    tiling = selection["tiling"]  # Already validated and bound to the grid; at most 64 × 64 tiles.
+    tiles = catalog_bridge._canonical_tiles(tiling["tile"], tiling["width"], tiling["height"], tiling["origin"])
+    expected = []
+    for tile in tiles:
+        footprint = _window_footprint(tile, affine, geographic)
+        if footprint is None:
+            return "completeness unverified: invalid or wrapping native tile footprint"
+        if footprint.intersection(segment_box).area > 0:
+            expected.append(tile)
+    if expected != selection["windows"]:
+        return "windows must match segment-bbox tiles from the native affine, in row-major order"
+    return None
+
+
 def _bind_window(position, job, window, item, grids, record, campaign, keys):
     """Bind one ordered expansion item, before any queue or output is created.
 
@@ -283,7 +320,8 @@ def _bind_window(position, job, window, item, grids, record, campaign, keys):
     # Prove the native pixel-centre owner; an admission label is not geography.
     from pyproj import Transformer
     col, row, width, height = window["pixel_window"]
-    a, b, c, d, e, f = definition["affine_transform"]
+    affine = definition["affine_transform"]
+    a, b, c, d, e, f = affine
     if (any(type(definition[k]) is not int or definition[k] <= 0 for k in ("width", "height", "tile_width", "tile_height"))
             or any(not isinstance(v, (int, float)) or not math.isfinite(v) for v in (a, b, c, d, e, f))
             or col+width > definition["width"] or row+height > definition["height"]):
@@ -298,20 +336,19 @@ def _bind_window(position, job, window, item, grids, record, campaign, keys):
         refuse("owner", "window/grid/owner binding mismatch")
     if owner["segment_id"] != record["segment_id"]:
         refuse("owner", "pixel centre owner mismatch")
-    from shapely.geometry import Polygon, box
+    from shapely.geometry import box
     geographic = Transformer.from_crs(definition["raster_crs"], "OGC:CRS84", always_xy=True)
-    corners = [(col, row), (col+width, row), (col+width, row+height), (col, row+height)]
-    edge = []
-    for start, end in zip(corners, corners[1:]+corners[:1]):
-        for step in range(41):
-            px = start[0] + (end[0]-start[0])*step/41
-            py = start[1] + (end[1]-start[1])*step/41
-            edge.append(geographic.transform(a*px+b*py+c, d*px+e*py+f))
-    footprint = Polygon(edge)
-    if (not footprint.is_valid or footprint.is_empty
+    footprint = _window_footprint(native_window, affine, geographic)
+    segment_box = box(*record["bbox_crs84"])
+    if (footprint is None
             or footprint.intersection(box(*campaign["bbox_crs84"])).area <= 0
-            or footprint.intersection(box(*record["bbox_crs84"])).area <= 0):
+            or footprint.intersection(segment_box).area <= 0):
         refuse("footprint", "window footprint does not overlap campaign/owner")
+    # Only the first window of each set needs the full membership check.
+    # CRS84-degree grids already bind the plan's rectangles to their affine.
+    if is_set and index == 0 and not catalog_bridge._is_crs84_degree_grid(definition["raster_crs"]):
+        if problem := _native_window_set_problem(selection, affine, geographic, segment_box):
+            refuse("native window-set completeness", problem)
     try:
         native = _verify(item["root"], job["input_manifest"], item["root_id"])
         expected_native = catalog_bridge.native_job(item["plan"], selection, decision,

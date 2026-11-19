@@ -51,15 +51,21 @@ def fit_terrain(elevation: np.ndarray, uncertainty: np.ndarray, dx: np.ndarray,
 def sample(raster, lon: float, lat: float, projector: Transformer, *, radius_m=25) -> dict:
     x, y = projector.transform(lon, lat)
     row, col = raster.index(x, y)
-    pad = int(np.ceil(radius_m / min(raster.res))) + 1
+    grid = raster.transform
+    inverse = ~grid
+    # Bound the circle in pixel space, with room for the camera's subcell offset.
+    pixels_per_m = max(hypot(inverse.a, inverse.b), hypot(inverse.d, inverse.e))
+    pad = int(np.ceil(radius_m * pixels_per_m)) + 1
     if row < pad or col < pad or row + pad >= raster.height or col + pad >= raster.width:
         raise ValueError('Camera window touches original BAG edge')
     window = Window(col - pad, row - pad, 2 * pad + 1, 2 * pad + 1)
     elevation = raster.read(1, window=window)
     uncertainty = raster.read(2, window=window)
-    offsets = np.arange(-pad, pad + 1)
-    dx = np.broadcast_to(offsets[None, :] * raster.res[0], elevation.shape)
-    dy = np.broadcast_to(offsets[:, None] * raster.res[1], elevation.shape)
+    offsets = np.arange(-pad, pad + 1) + 0.5
+    cols = col + offsets[None, :]
+    rows = row + offsets[:, None]
+    dx = grid.a * cols + grid.b * rows + grid.c - x
+    dy = grid.d * cols + grid.e * rows + grid.f - y
     within = dx * dx + dy * dy <= radius_m * radius_m
     return fit_terrain(elevation, uncertainty, dx, dy, within,
                        resolution_m=max(raster.res))
