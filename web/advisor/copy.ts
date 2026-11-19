@@ -57,7 +57,7 @@ export const CHAT_COPY = {
   uploading: 'Adding the photo…',
   thinking: 'Thinking…',
   stillThinking: 'Still thinking. This one takes a moment.',
-  pending: 'That is taking longer than usual. Ask again in a minute.',
+  pending: 'The reply took too long to finish.',
   failed: 'The message did not go through. Check your connection and try again.',
   limited: 'Too many messages at once. Wait a minute, then try again.',
   photoTooLarge: 'That photo is over 8 MB. Pick a smaller one.',
