@@ -185,7 +185,7 @@ export interface CurrentsOptions {
   /** For the regional feed of a place with no local report. */
   fetchFn?: typeof fetch;
   page?: () => string;
-  /** The drawn frame was withdrawn (off, another source or hour, its deadline, or the Chart left): a reading of it is stale. */
+  /** The drawn frame was withdrawn or the camera changed: a reading of the old drawing is stale. */
   onHide?: () => void;
   /** The source to draw; by default the rail's `?current=`. The landing's night map (FE-25) picks its own. */
   source?: () => CurrentChoice;
@@ -233,6 +233,8 @@ export function createCurrents(o: CurrentsOptions): Currents {
   const drawnKey = computed(() => { const d = status.value.drawn; return d ? `${d.field.id}|${d.field.fetchedAt}|${d.frame.validAt}` : ''; });
 
   let base: HTMLCanvasElement | null = null, dash: HTMLCanvasElement | null = null, paths: FlowPath[] = [];
+  // Bound to this view and its last drawing, never to the underlying wet grid alone.
+  let pickable: ((x: number, y: number) => boolean) | null = null;
   let frameId = 0, last = 0, moving = false, timer: ReturnType<typeof setTimeout> | undefined, unlisten: (() => void)[] = [], shownKey = '';
   const dpr = (): number => Math.min(2, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1);
   const colours = () => { const p = o.palette(); return {flow: p.flow, fast: p.flowFast}; };
@@ -261,6 +263,7 @@ export function createCurrents(o: CurrentsOptions): Currents {
     mark(running() ? 'animated' : 'paused');
   }
   function clear(): void {
+    pickable = null;
     stop();
     paths = [];
     for (const c of [base, dash]) if (c) context(c);
@@ -285,7 +288,14 @@ export function createCurrents(o: CurrentsOptions): Currents {
     paths = flowPaths(screenVector(d.surface, view.unproject, land), width, height, fastSpeed(d.frame));
     const ctx = context(base);
     if (ctx) drawBase(ctx, paths, colours(), d.frame.cells.map(c => view.project(c.lon, c.lat)).filter(p => !land(p.x, p.y)));
+    pickable = (x, y) => x >= 0 && x < width && y >= 0 && y < height && !land(x, y);
     start();
+  }
+
+  function cameraChanged(): void {
+    const hadDrawing = pickable !== null;
+    clear();
+    if (hadDrawing) o.onHide?.();
   }
 
   const visibility = (): void => { hidden.value = !!doc?.hidden; tick.value++; if (hidden.peek()) stop(); else start(); };
@@ -330,12 +340,12 @@ export function createCurrents(o: CurrentsOptions): Currents {
       shownKey = key;
       if (key) {
         if (!unlisten.length) unlisten = [
-          view.on('movestart', () => { moving = true; clear(); }),
+          view.on('movestart', () => { moving = true; cameraChanged(); }),
           // `idle`, not `moveend`: the basemap's land in view has loaded by then, so the mask is complete.
           view.on('idle', () => { moving = false; rebuild(); }),
-          view.on('resize', rebuild),
+          view.on('resize', () => { cameraChanged(); rebuild(); }),
         ];
-        // Until the map is idle the land in view may be missing: draw then.
+        // Until the map is idle the land in view may be missing: draw and allow picks then.
         moving = view.busy();
         rebuild();
       } else {
@@ -349,9 +359,12 @@ export function createCurrents(o: CurrentsOptions): Currents {
   return {
     reading(at) {
       const d = status.peek().drawn;
-      return d && shown.peek() ? currentMark(d, d.surface, at, zone(), now()) : null;
+      if (!d || !shown.peek() || !pickable) return null;
+      const {x, y} = view.project(at.lon, at.lat);
+      return pickable(x, y) ? currentMark(d, d.surface, at, zone(), now()) : null;
     },
     destroy() {
+      pickable = null;
       connection.destroy();
       for (const dispose of disposers) dispose();
       for (const off of unlisten) off();
