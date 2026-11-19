@@ -12,7 +12,9 @@
 // reuses the shared whole-file cache. A
 // failed or non-OK read is forgotten, so the next caller asks again. An OK
 // body is read whole before the share is kept: a body that breaks mid-transfer
-// fails that read like a transport failure and is forgotten too. A body that
+// fails that read like a transport failure and is forgotten too. A shared
+// transfer that stalls before or during that read expires independently of
+// any caller's signal. A body that
 // arrives whole but fails a caller's read (malformed JSON) is forgotten when
 // that read rejects, so a retry fetches the file again (SC2007-02).
 //
@@ -20,6 +22,7 @@
 
 const STATIC = /^\/(?:regions|data)\/[^?#]+\.(?:geo)?json$/;
 const FRESH = new Set(['no-store', 'no-cache', 'reload']);
+const SHARED_TRANSFER_MS = 30_000;
 const wrapped = new WeakMap<typeof fetch, typeof fetch>();
 
 const pageBase = (): string => (globalThis as {location?: {href?: string}}).location?.href ?? 'http://localhost/';
@@ -67,6 +70,24 @@ function watchBody(response: Response, forget: () => void): Response {
   return response;
 }
 
+async function readStatic(fetchFn: typeof fetch, input: RequestInfo | URL, init: RequestInit): Promise<Response> {
+  const transfer = new AbortController();
+  const {signal} = transfer;
+  const timer = setTimeout(() => transfer.abort(new DOMException('Shared static transfer timed out', 'TimeoutError')), SHARED_TRANSFER_MS);
+  try {
+    const response = fetchFn(input, {...init, signal}).then(async response => {
+      signal.throwIfAborted();
+      // Read an OK body whole (from a clone) before sharing; a double with no body or clone is shared as is.
+      if (response.ok && response.body != null && typeof response.clone === 'function') await response.clone().arrayBuffer();
+      return response;
+    });
+    // Bound the cache entry even if a fetch implementation does not honor its signal.
+    return await untilAborted(response, signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** `fetchFn`, sharing one request per committed static JSON file; the same wrapper for the same `fetchFn`. */
 export function shareStatic(fetchFn: typeof fetch): typeof fetch {
   const existing = wrapped.get(fetchFn);
@@ -79,12 +100,7 @@ export function shareStatic(fetchFn: typeof fetch): typeof fetch {
     if (!key) return fetchFn(input, init);
     let read = reads.get(key);
     if (!read) {
-      const {signal: _signal, ...rest} = init;
-      const own = fetchFn(input, rest).then(async response => {
-        // Read an OK body whole (from a clone) before sharing; a double with no body or clone is shared as is.
-        if (response.ok && response.body != null && typeof response.clone === 'function') await response.clone().arrayBuffer();
-        return response;
-      });
+      const own = readStatic(fetchFn, input, init);
       reads.set(key, own);
       own.then(response => { if (!response.ok) forget(key, own); }, () => forget(key, own));
       read = own;

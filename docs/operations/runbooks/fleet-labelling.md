@@ -1,6 +1,6 @@
 # Runbook: label trips for the AIS classifier's validation
 
-**When:** after a MarineCadastre backfill month has run (`fleet-ais.yml` `backfill_month`), or when live trips need labels. The classifier needs at least 30 labelled trips (at least 10 pelagic, and at least 5 salmon trips in season) before anyone else sees a heat map ([graph.md N7](../../plans/charter-fleet/graph.md#n7--labelled-validation-set)).
+**When:** after a MarineCadastre backfill month has run (the private `fleet-ais.yml` `backfill_month` in `Grahammmm/skippercast-ops`), or when live trips need labels. The classifier needs at least 30 labelled trips (at least 10 pelagic, and at least 5 salmon trips in season) before anyone else sees a heat map ([graph.md N7](../../plans/charter-fleet/graph.md#n7--labelled-validation-set)).
 **Owner:** the repository owner approves every agent-proposed label. An agent with a shell on the data runner runs the export and writes the proposals.
 **Setup reference:** [design.md § 11 Validation](../../plans/charter-fleet/design.md#11-ais-processor), `src/skippercast/fleet/ais/label.py`, `src/skippercast/fleet/ais/validate.py`.
 
@@ -56,7 +56,7 @@ python -m skippercast.fleet.ais label import "$SKIPPERCAST_FLEET_VAR/CA/ais/labe
 
 ## 3. Import
 
-`label import` (without `--dry-run`) posts each trip to `POST /api/fleet/jobs/labels`, which replaces that agent's labels on the trip. The route needs a `fleet-ais.yml` job identity, so the import runs through the workflow: dispatch it with `label_import` set to the proposals path relative to FLEET_VAR (`CA/ais/labelling/2026-01/proposals.json`). Run from a shell, it stops with "no job token here". (The route and the input come with N7b, #581.)
+`label import` (without `--dry-run`) posts each trip to `POST /api/fleet/jobs/labels`, which replaces that agent's labels on the trip. The route needs a private `fleet-ais.yml` job identity, so the import runs through that workflow in `Grahammmm/skippercast-ops`: dispatch it there with `label_import` set to the proposals path relative to FLEET_VAR (`CA/ais/labelling/2026-01/proposals.json`). Run from a shell, it stops with "no job token here". (The route and the input come with N7b, #581.)
 
 Nothing is posted if any entry fails the local checks. The Worker checks again against D1 (the trip's window, overlaps with other labellers' labels); a refusal stops the import at that trip, earlier trips stay imported, and the error says how many were posted. Fix the entry and re-run: each post replaces that agent's labels, so trips already imported come out the same. Drop trips the owner has already approved from the file first: their labels are no longer the agent's, and the Worker refuses the overlap.
 
@@ -66,6 +66,6 @@ In the admin labelling view (`#fleet-labels`, filter *awaiting approval*: `GET /
 
 ## 5. Score
 
-Dispatch `fleet-ais.yml` with `validate` checked. The run syncs the labels and their raw copies and writes the report to the run summary: trips scored, labels by labeller kind, fishing precision and recall overall and per mode against the target (0.8 and 0.7), the labelled fishing minutes the classifier called transit (`transit_lost`), and trips by dominant labelled mode, departure port and month (`coverage`). To score approved labels only, run on the runner after that dispatch (or a scheduled run) has synced the labels: `python -m skippercast.fleet.ais validate --region CA --offline --labeller admin`, in a shell set up as in step 1. Without `--offline` a shell run stops with "no job token here".
+Dispatch the private `fleet-ais.yml` (`Grahammmm/skippercast-ops`) with `validate` checked. The run syncs the labels and their raw copies and writes the report to the run summary: trips scored, labels by labeller kind, fishing precision and recall overall and per mode against the target (0.8 and 0.7), the labelled fishing minutes the classifier called transit (`transit_lost`), and trips by dominant labelled mode, departure port and month (`coverage`). To score approved labels only, run on the runner after that dispatch (or a scheduled run) has synced the labels: `python -m skippercast.fleet.ais validate --region CA --offline --labeller admin`, in a shell set up as in step 1. Without `--offline` a shell run stops with "no job token here".
 
 Copy the counts and scores, and nothing else, to the README Status log and [#570](https://github.com/Grahammmm/skippercast/issues/570).

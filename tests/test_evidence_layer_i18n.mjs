@@ -56,7 +56,7 @@ test('evidence_card_language_round_trip: English is byte-identical to the produc
   assert.equal(sg.name, ground.label);
   assert.ok(sg.kind.endsWith(ground.precision)); assert.ok(sg.basis.includes(ground.location_confidence)); assert.ok(sg.basis.includes(ground.boundary_note)); assert.ok(sg.basis.includes(`«${ground.reported_ground}»`));
   const sa = es(a);
-  assert.equal(sa.name, cell.label); assert.ok(sa.source.startsWith(cell.attribution)); assert.ok(sa.source.includes(cell.active_dates_utc.join(', ')));
+  assert.equal(sa.name, cell.label); assert.ok(!sa.source.includes(cell.attribution), 'MAP-SOURCES-PAGE-1: the card names no source'); assert.ok(sa.source.includes(cell.active_dates_utc.join(', ')));
   for (const raw of [cell.gear_label, cell.fishing_location_confidence, cell.vessel_count_note, cell.resolution_note]) assert.ok(sa.basis.includes(raw), raw);
   const sf = es(f);
   assert.equal(sf.source.slice(0, 'Fixture product'.length), 'Fixture product');
@@ -141,9 +141,9 @@ test('front_card_and_basis: age words use the same buckets; the safety statement
   assert.ok(basis.text.includes('observado hace 6 horas'));
   assert.ok(basis.text.includes('la posición es incierta según el error declarado del propio análisis dividido por la intensidad del frente, a cada lado de la línea.'));
   assert.ok(basis.text.includes('Se retira al superar su límite de antigüedad de 48 horas. Solo agua superficial; un frente es un borde para orientar la búsqueda, no un pez ni un lugar de captura.'));
-  assert.ok(basis.text.endsWith(' Crédito: NOAA CoastWatch.'));
+  assert.ok(basis.text.endsWith('no un pez ni un lugar de captura.'));
+  assert.ok(!basis.text.includes('NOAA CoastWatch') && !basis.text.includes('Crédito'), 'MAP-SOURCES-PAGE-1: the basis carries no credit; the Sources page does');
   const noCredit = frontsStatus(true, {state: 'ready', doc: readFronts(frontsDoc(6, {credit: ''}), 'test-coast')}, NOW);
-  assert.ok(!statusText(noCredit.basis, noCredit.copy.basis, 'es').text.includes('Crédito'));
   assert.equal(statusIn(noCredit.copy.basis, 'en'), noCredit.basis);
   const mark = frontsMark(s.drawn, {lon: -120.9, lat: 35.1}, NOW);
   const sm = es(mark);

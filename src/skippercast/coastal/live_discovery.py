@@ -27,9 +27,11 @@ import hashlib
 import importlib.util
 import json
 import os
-from pathlib import Path
 import time
 import urllib.parse
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 from ..http import default_allowlist
 from ..paths import repo_root
@@ -51,7 +53,8 @@ LISTING_SUFFIXES = (".bag", ".bag.gz", ".tif", ".tiff", ".zip", ".xml", ".nc")
 NETCDF_SUFFIX = ".nc"
 THREDDS_FILE_SERVICE = "fileServer"
 SCRIPT = Path("skills/skippercast-discover-coastal-sources/scripts/discover.py")
-DIFF_FIELDS = ("access_url", "metadata", "extent", "rejection_reasons", "unknowns", "terrain")
+DIFF_FIELDS = ("access_url", "metadata", "extent", "rejection_reasons", "unknowns", "terrain", "habitat", "render")
+SCOPE_FIELDS = ("region", "source_revision", "policy_revision", "method_revision", "plan_sha256")
 
 
 def _sha(data):
@@ -253,16 +256,80 @@ def _candidates(document, label="catalog"):
     return by_id
 
 
-def diff(previous, current, previous_ref=None):
+def _scope(document):
+    if document["schema"] == "coastal-source-v1" and (
+        document.get("status") != "FINALIZED" or document.get("added_queries")
+    ):
+        # A linked query can extend a manifest's plan without changing its original hash.
+        return None
+    identity = tuple(document.get(f) for f in SCOPE_FIELDS)
+    bbox = document.get("bbox")
+    if not all(isinstance(v, str) and v.strip() for v in identity) or not (
+        isinstance(bbox, list) and len(bbox) == 4 and all(type(v) in (int, float) for v in bbox)
+        and -180 <= bbox[0] < bbox[2] <= 180 and -90 <= bbox[1] < bbox[3] <= 90
+    ):
+        return None
+    return (*identity, bbox)
+
+
+def _comparison_scope(previous, current):
+    if previous is None:
+        return "no_previous"
+    before, after = _scope(previous), _scope(current)
+    if before is None or after is None:
+        return "unknown_scope"
+    if before != after:
+        return "different_scope"
+    if all(c.get("discovery_complete") is True and c.get("bounded_plan_finished") is True
+           and c.get("unattempted_queries") == [] for c in (previous, current)):
+        return "complete"
+    return "incomplete"
+
+
+def _instant(value):
+    if isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value)
+        except ValueError:
+            return None
+        if parsed.utcoffset() is not None:
+            return parsed
+    return None
+
+
+def _expiry(row, catalog):
+    raw = row.get("expires_at")
+    provenance = row.get("provenance")
+    checked = _instant(provenance.get("checked_at")) if isinstance(provenance, dict) else None
+    closes = _instant(catalog.get("checked_until", catalog.get("stopped_at")))
+    expires = _instant(raw)
+    # Compare TTL and freshness as recorded at freeze, not a routine refresh of
+    # both timestamps or the wall clock at the time a diff is replayed.
+    lifetime = expires - checked if expires is not None and checked is not None else raw
+    expired = expires <= closes if expires is not None and closes is not None else None
+    return lifetime, expired
+
+
+def diff(previous, current, previous_ref=None) -> dict[str, Any]:
+    """Compare observed rows in matching scopes; absence requires two complete checks."""
     old = _candidates(previous, "previous") if previous is not None else {}
     new = _candidates(current, "current")
-    changed = sorted(k for k in set(old) & set(new)
-                     if any(old[k].get(f) != new[k].get(f) for f in DIFF_FIELDS))
+    scope = _comparison_scope(previous, current)
+    shared = old.keys() & new.keys() if scope in ("complete", "incomplete") else set()
+    missing = old.keys() - shared
+    changed = []
+    for source_id in sorted(shared):
+        before, after = old[source_id], new[source_id]
+        fields = [f for f in DIFF_FIELDS if before.get(f) != after.get(f)]
+        if _expiry(before, previous) != _expiry(after, current):
+            fields.append("expires_at")
+        if fields:
+            changed.append(dict(source_id=source_id, fields=fields))
     return dict(schema=DIFF, previous=previous_ref, current_catalog_id=current.get("catalog_id"),
-                added=sorted(set(new) - set(old)), removed=sorted(set(old) - set(new)),
-                changed=[dict(source_id=k, fields=[f for f in DIFF_FIELDS if old[k].get(f) != new[k].get(f)])
-                         for k in changed],
-                unchanged=len(set(old) & set(new)) - len(changed),
+                comparison_scope=scope, added=sorted(new.keys() - old.keys()),
+                removed=sorted(missing) if scope == "complete" else [],
+                not_rechecked=sorted(missing) if scope != "complete" else [],
+                changed=changed, unchanged=len(shared) - len(changed),
                 note="Catalog metadata diff only; no candidate is accepted for mapping or rendering.")
 
 
@@ -380,6 +447,7 @@ def run(plan, out, *, previous=None, root=None, allowlist=None, clock=time.time,
                    manifest=dict(path=manifest_path.name, sha256=_sha(manifest_bytes), bytes=len(manifest_bytes)),
                    catalog_id=catalog["catalog_id"], outputs=outputs,
                    diff_summary=dict(added=len(change["added"]), removed=len(change["removed"]),
+                                     not_rechecked=len(change["not_rechecked"]),
                                      changed=len(change["changed"]), unchanged=change["unchanged"]),
                    review_required=True, mapping_accepted=False, execution_authorized=False,
                    model_usage=manifest.get("model_usage"))

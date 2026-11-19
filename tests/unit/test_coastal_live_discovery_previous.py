@@ -128,7 +128,8 @@ def test_accepted_snapshot_is_hashed_and_opened_once(tmp_path, monkeypatch, sche
     change = json.loads((tmp_path / "live" / "catalog-diff.json").read_text())
     assert change["previous"]["sha256"] == hashlib.sha256(raw).hexdigest()
     assert change["previous"]["bytes"] == len(raw)
-    assert change["removed"] == ["ncei:é retired"] and len(change["added"]) == 2
+    assert change["removed"] == [] and len(change["added"]) == 2
+    assert change["not_rechecked"] == ["ncei:é retired"]
     assert receipt["review_required"] is True and receipt["execution_authorized"] is False
 
 

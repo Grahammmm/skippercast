@@ -27,8 +27,11 @@ def hilo(*rows):
     return {'predictions': [{'t': t, 'v': str(v), 'type': k} for t, v, k in rows]}
 
 
-GOOD = hilo(('2026-11-07 03:00', 5.5, 'H'), ('2026-11-07 09:10', -0.1, 'L'), ('2026-11-07 15:30', 5.0, 'H'),
-            ('2026-11-07 21:40', 0.8, 'L'))
+# Cover the fixture's inclusive Nov 6–15 UTC request, not just the day it was fetched.
+GOOD = hilo(*((f'2026-11-{day:02d} {time}', height, kind)
+              for day in range(6, 16)
+              for time, height, kind in (('03:00', 5.5, 'H'), ('09:10', -0.1, 'L'),
+                                         ('15:30', 5.0, 'H'), ('21:40', 0.8, 'L'))))
 
 
 def _refuse_constant(name):

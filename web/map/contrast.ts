@@ -125,7 +125,7 @@ export function contrastBasis(d: DrawnContrast, now: Date, tz: string): string {
   const grid = d.spacingDeg[0] > d.nativeResolutionDeg ? `${deg(d.nativeResolutionDeg)} grid sampled every ${deg(d.spacingDeg[0])}` : `${deg(d.nativeResolutionDeg)} grid`;
   return `${d.product} daily analysis on a ${grid}, for ${dayText(d.analysedAt, tz)} (${age(now.getTime() - Date.parse(d.analysedAt))} old), partly interpolated, with gaps under cloud filled. `
     + `Drawn in °F per nautical mile only in the ${d.cells.length} of ${d.judged} cells where the change across neighbouring cells exceeds their summed analysis error, `
-    + `and withheld past its ${Math.round(d.limitMs / HOUR)}-hour age limit. Surface water only; a contrast cell is not a fish or catch location.${d.credit ? ` Credit: ${d.credit}.` : ''}`;
+    + `and withheld past its ${Math.round(d.limitMs / HOUR)}-hour age limit. Surface water only; a contrast cell is not a fish or catch location.`;
 }
 
 const stale = (product: string, analysedAt: string, limit: number, tz: string): ContrastStatus => {

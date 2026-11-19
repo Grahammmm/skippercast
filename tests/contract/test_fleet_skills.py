@@ -5,7 +5,8 @@ prose an
 agent follows on the data runner's host. A renamed CLI step, flag, workflow input or
 runbook would break them silently, so every `python -m skippercast.fleet ...` and
 `python -m skippercast.fleet.ais ...` they name is checked against the real parsers,
-every `gh workflow run <file> -f <input>=` against the workflow's dispatch inputs, and
+every `gh workflow run <file> -f <input>=` against the workflow's dispatch inputs (pinned below for the
+fleet jobs, which live in the private ops repository), and
 every runbook path against docs/operations/runbooks. The skills carry no registry data:
 no email, phone number, 9-digit number (an MMSI) or URL outside the allowed hosts.
 """
@@ -38,9 +39,38 @@ EMAIL = re.compile(r'[\w.+-]+@[\w-]+(?:\.[\w-]+)+')
 PHONE = re.compile(r'(?<![\w-])(?:\+?1[ .-]?)?\(?\d{3}\)?[ .-]\d{3}[ .-]\d{4}(?!\d)')
 NINE_DIGITS = re.compile(r'(?<!\d)\d{9}(?!\d)')
 
+# The fleet jobs run from the private Grahammmm/skippercast-ops repository (SC-RUNNER-OFFPUBLIC-2), so
+# their workflow files leave this checkout. Their dispatch inputs, pinned from skippercast-ops 0a9e02b9,
+# keep the skills' `gh workflow run ... -f <input>=` lines checked; update both together.
+PRIVATE_REPO = 'Grahammmm/skippercast-ops'
+PUBLIC_REPO = 'Grahammmm/skippercast'
+GH_COMMAND = re.compile(r'`(gh (?:run|workflow|issue) [^`\n]*)`')
+REPO_FLAG = re.compile(r'--repo (\S+)')
+PRIVATE_FLEET_INPUTS = {
+    'fleet-ais.yml': {'backfill_month', 'from', 'to', 'validate', 'label_import'},
+    'fleet-osint.yml': {'region', 'mode', 'sink', 'max_batches', 'run_id'},
+    'fleet-registry.yml': {'region', 'sink', 'steps', 'run_id'},
+    'fleet-ais-listener.yml': {'region'},
+}
+
 
 def skill_text(name):
     return (ROOT / 'skills' / name / 'SKILL.md').read_text(encoding='utf-8')
+
+
+def wrong_repo_commands(text):
+    """The `gh run|workflow|issue` commands whose own --repo is missing or is the wrong repository.
+
+    Issues and the hourly `fleet-health.yml` stay in the public repository; every other
+    fleet job, and the run ids taken from them (`gh run watch|view`), live in the private one.
+    """
+    wrong = []
+    for command in GH_COMMAND.findall(text):
+        public = command.startswith('gh issue') or 'fleet-health.yml' in command
+        repo = REPO_FLAG.search(command)
+        if not repo or repo.group(1) != (PUBLIC_REPO if public else PRIVATE_REPO):
+            wrong.append(command)
+    return wrong
 
 
 def front_matter(text):
@@ -154,6 +184,7 @@ class FleetSkillTests(unittest.TestCase):
 
     def test_every_named_workflow_and_input_exists(self):
         inputs = {path.name: dispatch_inputs(path) for path in WORKFLOWS.glob('*.yml')}
+        inputs.update(PRIVATE_FLEET_INPUTS)
         every = set().union(*(names for names in inputs.values() if names))
         for name, text in self.texts.items():
             for workflow in WORKFLOW_FILE.findall(text):
@@ -166,6 +197,14 @@ class FleetSkillTests(unittest.TestCase):
             for value in INPUT.findall(text):
                 with self.subTest(skill=name, input=value):
                     self.assertIn(value, every)
+
+    def test_fleet_job_commands_target_the_private_repository(self):
+        # Guards an agent dispatching or reading fleet jobs in the public repository, which holds none:
+        # every single `gh run|workflow|issue` command carries its own --repo, not just the skill somewhere.
+        for name in ('skippercast-fleet-registry', 'skippercast-fleet-activity'):
+            with self.subTest(skill=name):
+                self.assertTrue(GH_COMMAND.findall(self.texts[name]), 'no gh commands found')
+                self.assertEqual(wrong_repo_commands(self.texts[name]), [])
 
     def test_every_named_runbook_exists(self):
         for name, text in self.texts.items():
@@ -196,6 +235,13 @@ class FleetSkillTests(unittest.TestCase):
         self.assertFalse(NINE_DIGITS.search('2026-10-12 and 1234567890'))
         self.assertFalse(PHONE.search('from 2026-01-01 to 2026-06-30'))
         self.assertNotIn('no-such-step', self.steps)
+        self.assertEqual(wrong_repo_commands(f'`gh workflow run fleet-ais.yml --repo {PRIVATE_REPO} -f validate=true`'), [])
+        self.assertEqual(wrong_repo_commands(f'`gh issue list --repo {PUBLIC_REPO} --state open`'), [])
+        for bad in ('`gh workflow run fleet-ais.yml -f validate=true`', '`gh run list --workflow fleet-ais.yml`',
+                    '`gh run watch <run id>`', f'`gh run list --repo {PUBLIC_REPO} --workflow fleet-ais.yml`',
+                    f'`gh run list --repo {PRIVATE_REPO} --workflow fleet-health.yml`',
+                    f'`gh issue list --repo {PRIVATE_REPO} --state open`'):
+            self.assertTrue(wrong_repo_commands(bad), bad)
 
 
 if __name__ == '__main__':

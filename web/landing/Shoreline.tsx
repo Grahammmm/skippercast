@@ -5,7 +5,6 @@
 // landing.css. Decorative, so hidden from assistive technology. FE-25 keeps
 // it as the fallback under the live map.
 import {SHORELINE} from './shoreline-path.ts';
-import {language, t} from './i18n.ts';
 
 export function Shoreline() {
   return (
@@ -19,11 +18,4 @@ export function Shoreline() {
       <path class="landing-shore-line" d={SHORELINE.d} />
     </svg>
   );
-}
-
-/** The footer credit, from the generated module, so it always names the drawn extract's source and survey years. */
-export function ShorelineCredit() {
-  const [first, last] = [SHORELINE.sourceYears[0], SHORELINE.sourceYears.at(-1)];
-  const years = first === last ? first : `${first}–${last}`;
-  return <p class="landing-credit">{t('landing.credit.shoreline', language.value, {attribution: SHORELINE.attribution, years})}</p>;
 }

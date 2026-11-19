@@ -65,7 +65,7 @@ def _manifest_present(path):
     return path.is_file()
 
 
-def _read_json(path, limit):
+def _read_json(path, limit, *, bound_v2=False):
     refusal = ValueError('Verification manifest is linked or exceeds its size bound')
     if path.is_symlink():
         raise refusal
@@ -82,7 +82,10 @@ def _read_json(path, limit):
         body = stream.read(limit + 1)
     if len(body) > limit:
         raise refusal
-    return json.loads(body)
+    data = json.loads(body)
+    if bound_v2 and len(body) > MAX_MANIFEST_BYTES and data.get('schema_version') == SCHEMA_VERSION:
+        raise ValueError('Invalid verification shard manifest')
+    return data
 
 
 def _shard_bytes(directory, entry):
@@ -92,14 +95,16 @@ def _shard_bytes(directory, entry):
     size = path.stat().st_size
     if size > MAX_COMPRESSED_BYTES or size != entry.get('compressed_bytes'):
         raise ValueError('Verification shard compressed size mismatch')
-    compressed = path.read_bytes()
+    with path.open('rb') as stream:
+        compressed = stream.read(MAX_COMPRESSED_BYTES + 1)
+    if len(compressed) != size:
+        raise ValueError('Verification shard compressed size mismatch')
     if _digest(compressed) != entry.get('sha256'):
         raise ValueError('Verification shard checksum mismatch')
     return compressed
 
 
-def _decode(directory, region_id, entry):
-    compressed = _shard_bytes(directory, entry)
+def _decode(compressed, region_id, entry):
     with gzip.GzipFile(fileobj=io.BytesIO(compressed), mode='rb') as stream:
         raw = stream.read(MAX_RAW_BYTES + 1)
     if len(raw) > MAX_RAW_BYTES or len(raw) != entry.get('raw_bytes') or _digest(raw) != entry.get('raw_sha256'):
@@ -123,6 +128,45 @@ def _decode(directory, region_id, entry):
     return rows
 
 
+def _row_order(row):
+    return row['time'], row['id']
+
+
+def _collect_shards(data, region_id, read, *, order=None):
+    if data.get('region_id') != region_id:
+        raise ValueError('Prior verification archive belongs to another region')
+    if data.get('schema_version') != SCHEMA_VERSION or data.get('storage') != 'gzip-shards-v1':
+        raise ValueError('Unknown verification archive format')
+    if not isinstance(data.get('shards'), list):
+        raise ValueError('Invalid verification shard manifest')
+    output = {'forecasts': [], 'observations': []}
+    paths = set()
+    for entry in data['shards']:
+        if not isinstance(entry, dict) or entry.get('kind') not in output or entry.get('path') in paths:
+            raise ValueError('Invalid or duplicate verification shard entry')
+        paths.add(entry['path'])
+        output[entry['kind']].extend(read(entry))
+    for kind, rows in output.items():
+        if len(rows) != data.get(kind + '_count'):
+            raise ValueError('Verification archive total count mismatch')
+        rows.sort(key=order)
+    return output
+
+
+def _checked_order(compressed, region_id, entry, decoded):
+    # Callers must authenticate the on-disk bytes for this reference first.
+    # Store only order keys (not rows or gzips), so validating each manifest
+    # still checks counts, required row keys and sortability across its shards.
+    identity = region_id, entry['path']
+    if identity not in decoded:
+        keys = [_row_order(row) for row in _decode(compressed, region_id, entry)]
+        decoded[identity] = entry, keys
+    saved, keys = decoded[identity]
+    if saved != entry:
+        raise ValueError('Verification shard metadata mismatch between generations')
+    return keys
+
+
 def load_archive(directory, region_id, required=False, *, manifest_name='verification-state.json'):
     """Return v1-shaped rows from either a legacy archive or verified v2 shards."""
     directory = Path(directory)
@@ -134,29 +178,17 @@ def load_archive(directory, region_id, required=False, *, manifest_name='verific
             raise ValueError('Prior regional feed exists but its verification archive is missing')
         return {'schema_version': 1, 'region_id': region_id, 'forecasts': [], 'observations': []}
     # v1 may be large during migration, but all new manifests are bounded.
-    data = _read_json(path, MAX_LEGACY_BYTES)
+    data = _read_json(path, MAX_LEGACY_BYTES, bound_v2=True)
     if data.get('region_id') != region_id:
         raise ValueError('Prior verification archive belongs to another region')
     if data.get('schema_version') == 1:
         if not all(isinstance(data.get(kind), list) for kind in ('forecasts', 'observations')):
             raise ValueError('Incomplete legacy verification archive')
         return data
-    if data.get('schema_version') != SCHEMA_VERSION or data.get('storage') != 'gzip-shards-v1':
-        raise ValueError('Unknown verification archive format')
-    if path.stat().st_size > MAX_MANIFEST_BYTES or not isinstance(data.get('shards'), list):
-        raise ValueError('Invalid verification shard manifest')
-    output = {'schema_version': 1, 'region_id': region_id, 'forecasts': [], 'observations': []}
-    paths = set()
-    for entry in data['shards']:
-        if not isinstance(entry, dict) or entry.get('kind') not in ('forecasts', 'observations') or entry.get('path') in paths:
-            raise ValueError('Invalid or duplicate verification shard entry')
-        paths.add(entry['path'])
-        output[entry['kind']].extend(_decode(directory, region_id, entry))
-    for kind in ('forecasts', 'observations'):
-        if len(output[kind]) != data.get(kind + '_count'):
-            raise ValueError('Verification archive total count mismatch')
-        output[kind].sort(key=lambda row: (row['time'], row['id']))
-    return output
+
+    rows = _collect_shards(data, region_id, lambda entry: _decode(_shard_bytes(directory, entry), region_id, entry),
+                           order=_row_order)
+    return {'schema_version': 1, 'region_id': region_id, **rows}
 
 
 def _write_payload(directory, metadata, rows):
@@ -212,15 +244,16 @@ def _write_generation(directory, region_id, forecasts, observations, now):
 
 
 def write_archive(directory, region_id, forecasts, observations, now, previous_directory=None):
-    """Write current plus one prior generation; prune only managed unreferenced blobs."""
+    """Write and prune in a caller-isolated directory, retaining two generations."""
     directory = Path(directory)
     if not SAFE_ID.fullmatch(region_id):
         raise ValueError('Invalid verification region identifier')
     previous_directory = Path(previous_directory) if previous_directory else directory
     previous_path = previous_directory / 'verification-state.json'
     previous = None
+    decoded = {}
     if _manifest_present(previous_path):
-        prior = _read_json(previous_path, MAX_LEGACY_BYTES)
+        prior = _read_json(previous_path, MAX_LEGACY_BYTES, bound_v2=True)
         if prior.get('region_id') != region_id:
             raise ValueError('Previous archive region mismatch')
         if prior.get('schema_version') == 1:
@@ -228,17 +261,23 @@ def write_archive(directory, region_id, forecasts, observations, now, previous_d
             previous = _write_generation(directory, region_id, old['forecasts'], old['observations'], now)
             previous['migrated_from_schema_version'] = 1
         elif prior.get('schema_version') == SCHEMA_VERSION and prior.get('storage') == 'gzip-shards-v1':
-            # Validate the full previous generation before preserving it. A
-            # corrupt old archive must not become an apparently successful run.
-            load_archive(previous_directory, region_id, required=True)
-            previous = prior
-            for entry in prior['shards']:
-                dest = _safe_path(directory, entry['path'])
+            # Validate the prior manifest before installing either generation.
+            # Copy the very bytes just checked, not a separate read of the source.
+            same_directory = directory.resolve() == previous_directory.resolve()
+
+            def preserve(entry):
                 data = _shard_bytes(previous_directory, entry)
-                if not dest.exists():
-                    _atomic_bytes(dest, data)
-                elif _digest(dest.read_bytes()) != entry['sha256']:
-                    raise ValueError('Existing immutable verification shard differs')
+                keys = _checked_order(data, region_id, entry, decoded)
+                if not same_directory:
+                    dest = _safe_path(directory, entry['path'])
+                    if not dest.exists():
+                        _atomic_bytes(dest, data)
+                    elif _digest(dest.read_bytes()) != entry['sha256']:
+                        raise ValueError('Existing immutable verification shard differs')
+                return keys
+
+            _collect_shards(prior, region_id, preserve)
+            previous = prior
         else:
             raise ValueError('Unknown prior verification archive format')
     current = _write_generation(directory, region_id, forecasts, observations, now)
@@ -251,26 +290,37 @@ def write_archive(directory, region_id, forecasts, observations, now, previous_d
     if previous_bytes is not None:
         _atomic_bytes(directory / 'verification-state.previous.json', previous_bytes)
     _atomic_bytes(directory / 'verification-state.json', current_bytes)
-    prune_archive(directory)
+    _prune_archive(directory, decoded)
     return current
 
 
 def prune_archive(directory):
-    """After publishing/copying a region, retain both complete manifest generations."""
-    directory = Path(directory)
+    """Retain both complete generations after copying, with no concurrent writers."""
+    return _prune_archive(Path(directory), {})
+
+
+def _prune_archive(directory, decoded):
     current_path = directory / 'verification-state.json'
     if not _manifest_present(current_path):
         return 0
     current = _read_json(current_path, MAX_LEGACY_BYTES)
     if current.get('schema_version') == 1:
         return 0
+    region_id = current.get('region_id')
+
+    def check(entry):
+        # Re-read and verify the destination even if these bytes decoded earlier
+        # in the write or in the other generation. Prior success is not a file check.
+        compressed = _shard_bytes(directory, entry)
+        return _checked_order(compressed, region_id, entry, decoded)
+
     keep = set()
     for name in ('verification-state.json', 'verification-state.previous.json'):
         path = directory / name
         if not _manifest_present(path):
             continue
         manifest = _read_json(path, MAX_MANIFEST_BYTES)
-        load_archive(directory, current.get('region_id'), required=True, manifest_name=name)
+        _collect_shards(manifest, region_id, check)
         keep.update(entry['path'] for entry in manifest['shards'])
     deleted = 0
     archive = directory / 'verification-archive'

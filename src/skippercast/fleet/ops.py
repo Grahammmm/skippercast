@@ -67,8 +67,32 @@ REGION, RUN_ID = _re(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$"), _re(r"
 
 # ---- canonical JSON and ids (server/fleet/ids.ts) ------------------------------------
 
+_MAX_SAFE_INTEGER = (1 << 53) - 1
+
+
+def _number_json(value: int | float) -> str:
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError("number is not finite")
+    if isinstance(value, int) or value.is_integer():
+        if abs(value) > _MAX_SAFE_INTEGER:
+            raise ValueError("number is not a safe integer")
+        return str(int(value))  # includes both signs of zero
+
+    # Python and ECMAScript choose the shortest round-tripping binary64 digits
+    # (closest, ties to even), but use different fixed/exponent cutoffs.
+    digits, sep, exponent = float.__repr__(value).partition("e")
+    if not sep:
+        return digits
+    exp = int(exponent)
+    if exp < -6:
+        return f"{digits}e{exp}"  # no zero padding on the exponent
+    # All remaining exponent forms are fractions in the fixed-notation band.
+    sign = "-" if value < 0 else ""
+    return sign + "0." + "0" * (-exp - 1) + digits.lstrip("-").replace(".", "")
+
+
 def plain(value: Any) -> Any:
-    """Integral floats as ints, recursively, so JSON text matches JavaScript's number printing."""
+    """Normalize integral floats for the wire and scalar columns."""
     if isinstance(value, float) and math.isfinite(value) and value.is_integer():
         return int(value)
     if isinstance(value, dict):
@@ -79,7 +103,16 @@ def plain(value: Any) -> Any:
 
 
 def canonical_json(value: Any) -> str:
-    return json.dumps(plain(value), sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    """Match Worker JSON: sorted string keys, UTF-8, finite binary64 and safe integers."""
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return _number_json(value)
+    if isinstance(value, dict):
+        if not all(isinstance(k, str) for k in value):
+            raise TypeError("JSON object keys must be strings")
+        return "{" + ",".join(f"{canonical_json(k)}:{canonical_json(value[k])}" for k in sorted(value)) + "}"
+    if isinstance(value, (list, tuple)):
+        return "[" + ",".join(map(canonical_json, value)) + "]"
+    return json.dumps(value, ensure_ascii=False, allow_nan=False)
 
 
 def sha256(text: str) -> str:
