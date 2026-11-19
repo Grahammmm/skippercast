@@ -37,7 +37,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 1. Open Waters Seascape: global seafloor chart tiles — @berttemme
 - Post: https://x.com/berttemme/status/2122834956829458858
 - Links: https://openwaters.io/charts/seascape/, https://github.com/openwatersio/seascape, https://tiles.openwaters.io/seascape/style.json
-- Image: [berttemme_2122834956829458858_0.jpg](images/berttemme_2122834956829458858_0.jpg)
 - Layers: bathymetry, nautical chart base, raw base map
 - Why: Ocean-first map: continuous depth shading, hillshade, contours and spot soundings from a 34-source mosaic (GEBCO, EMODnet, NOAA S-102, CUDEM). Islands read as sculpted relief rising from smooth blue gradients. Served as MapLibre tiles.
 - Palette: #1d4a7d #1f5187 #2b5d91 #386593 #527ba3 #9ab0b3 (Monochrome blue depth ramp (light shallow to dark deep); README offers ?shading=relief|bands (ENC depth-area bands))
@@ -52,7 +51,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 2. NOAA S-102 gridded bathymetry, web-rendered — @chris_dalke
 - Post: https://x.com/chris_dalke/status/2121710455756296521
 - Links: https://zydromarine.com
-- Image: [chris_dalke_2121710455756296521_0.jpg](images/chris_dalke_2121710455756296521_0.jpg)
 - Layers: bathymetry, nautical chart base
 - Why: High-resolution S-102 grid shaded with a soft cyan-to-navy ramp; channels, sand waves and shoals read like a photograph of the seabed. Land is flat green so the water carries the detail.
 - Palette: #7cc0e0 #66b2d6 #3d8fc5 #287ab8 #1f6bac #16589c #0b3a79 (Cyan to navy sequential (close to a Blues ramp), shallow = light)
@@ -67,7 +65,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 3. Nautical charts × elevation — @chris_dalke
 - Post: https://x.com/chris_dalke/status/2112187736354615745
 - Links: https://zydromarine.com
-- Image: [chris_dalke_2112187736354615745_0.jpg](images/chris_dalke_2112187736354615745_0.jpg)
 - Layers: nautical chart base, bathymetry, land relief
 - Why: ENC-style chart (pale water, blue shallow bands, depth contours) merged with land relief, so the chart reads as terrain, not paper.
 - Palette: #ecf5f7 #d4e9ee #c8dde4 #9bbca6 #75a167 #75a871 (ENC-like: pale water, blue shoal band, green land)
@@ -82,7 +79,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 4. Monterey Bay drained (rayshader + rayrender) — @tylermorganwall
 - Post: https://x.com/tylermorganwall/status/1329428971843366914
 - Links: https://github.com/tylermorganwall/rayshader, https://github.com/tylermorganwall/rayrender, https://www.rayshader.com
-- Image: [tylermorganwall_1329428971843366914_0.jpg](images/tylermorganwall_1329428971843366914_0.jpg)
 - Layers: bathymetry, 3D seafloor
 - Why: Path-traced 3D of Monterey Canyon (SkipperCast's coast) with the water removed: soft sand tones and raytraced shadows make the canyon walls read instantly.
 - Palette: #ecdcc5 #d9c8b4 #c1b3a5 #af9b88 #937f72 (Monochrome sand/beige)
@@ -97,7 +93,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 5. Black Sea bathymetry in 3D — @tylermorganwall
 - Post: https://x.com/tylermorganwall/status/1515122509775048715
 - Links: https://github.com/tylermorganwall/rayshader
-- Image: [tylermorganwall_1515122509775048715_0.jpg](images/tylermorganwall_1515122509775048715_0.jpg)
 - Layers: bathymetry, 3D seafloor
 - Why: Block-diagram map with translucent blue water over a deep basin; land is green-shaded relief. Reads as a physical object.
 - Palette: #396c86 #606c51 #6f7b58 #4d5f52 #869a97 (Blue water over green/olive relief)
@@ -112,7 +107,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 6. Beneath the Atlantic: hexagon bathymetry — @researchremora
 - Post: https://x.com/researchremora/status/1722674175922307456
 - Links: https://github.com/tylermorganwall/rayshader
-- Image: [researchremora_1722674175922307456_0.jpg](images/researchremora_1722674175922307456_0.jpg)
 - Layers: bathymetry
 - Why: Most-liked bathymetry render found (627 likes). Lavender-blue depth with cream shelves, extruded hexagons and soft shadows; poster typography.
 - Palette: #fff9c2 #fbf2c2 #efe7c1 #dad4c1 #bebdbf #99a2c0 #8192bf (Cream (shallow) to lavender-blue (deep))
@@ -127,7 +121,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 7. earth.nullschool ocean currents — @cambecc
 - Post: https://x.com/cambecc/status/428915614501986304
 - Links: https://earth.nullschool.net/#current/ocean/surface/currents/orthographic, https://github.com/cambecc/earth
-- Image: [cambecc_428915614501986304_0.png](images/cambecc_428915614501986304_0.png)
 - Layers: currents
 - Why: The reference for animated flow: thousands of fading particle trails over a speed-coloured field on a dark globe. The Gulf Stream pops in green/yellow.
 - Palette: #282d51 #2b3162 #303884 #3d5075 #648e75 #303030 (Speed ramp dark navy > teal > green > yellow over #303030 land)
@@ -142,7 +135,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 8. earth.nullschool ocean waves — @cambecc
 - Post: https://x.com/cambecc/status/552117215483289600
 - Links: https://earth.nullschool.net/#current/ocean/primary/waves/overlay=significant_wave_height/orthographic, https://github.com/cambecc/earth
-- Image: [cambecc_552117215483289600_0.png](images/cambecc_552117215483289600_0.png)
 - Layers: waves/swell
 - Why: Significant wave height as colour with a separate wave-period animation type, so height and direction read together.
 - Palette: #272829 #303235 #33576e #506d76 #74877e #4f5869 (Muted blue-grey low > red/yellow high (storm core))
@@ -157,7 +149,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 9. Trippy contour maps of the ocean floor — @John_M_Nelson
 - Post: https://x.com/John_M_Nelson/status/1977768379080483230
 - Links: https://www.youtube.com/watch?v=FVwIba9Ko-k, https://www.esri.com/arcgis-blog/products/arcgis-pro/mapping/how-to-make-this-seafloor-map/
-- Image: [John_M_Nelson_1977768379080483230_0.jpg](images/John_M_Nelson_1977768379080483230_0.jpg)
 - Layers: bathymetry
 - Why: Stacked, shadowed contour bands in teal-to-lime make the seafloor look terraced and tactile.
 - Palette: #051844 #0a4160 #047488 #149b93 #23b19b #5ac37e #b6e78c (Navy > teal > lime (close to cmocean deep reversed))
@@ -172,7 +163,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 10. Chlorophyll globe (Three.js) — @maptheclouds
 - Post: https://x.com/maptheclouds/status/1688459964166139904
 - Links: https://maptheclouds.com/playground/threejs/chlorophyll/, https://neo.gsfc.nasa.gov/view.php?datasetId=MY1DMM_CHLORA
-- Image: [maptheclouds_1688459964166139904_0.jpg](images/maptheclouds_1688459964166139904_0.jpg)
 - Layers: chlorophyll/ocean colour
 - Why: 12 months of MODIS chlorophyll on an interactive globe; clean light page, black land so the bloom colours carry.
 - Palette: #4b85a7 #dcd8d8 #e1dedf #eae8e9 (Blue-green chlorophyll ramp on white page (exact stops on the live page))
@@ -187,7 +177,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 11. Wet/shiny bathymetry on a historic map — @geo_spatialist
 - Post: https://x.com/geo_spatialist/status/1293225065983680512
 - Links: none beyond the post
-- Image: [geo_spatialist_1293225065983680512_0.jpg](images/geo_spatialist_1293225065983680512_0.jpg)
 - Layers: bathymetry
 - Why: Bathymetry rendered with specular gloss so the water looks wet, under a historic topo map. Shows how lighting alone sells 'water'.
 - Palette: #d4e2de #bbd1d0 #acc8ca #88aea2 #829872 #627351 (Muted sage/aqua)
@@ -202,7 +191,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 12. SST off Japan (Copernicus Marine) — @CopernicusEU
 - Post: https://x.com/CopernicusEU/status/1778755407864803561
 - Links: https://marine.copernicus.eu/access-data
-- Image: [CopernicusEU_1778755407864803561_0.jpg](images/CopernicusEU_1778755407864803561_0.jpg)
 - Layers: sea surface temperature
 - Why: Kuroshio eddies and fronts in a full-spectrum SST ramp over dark land; the fronts are what anglers look for.
 - Palette: #2f213a #3b3c5a #496cc3 #ebc93b #e3742c #d13307 #99200f (Rainbow-like (purple > blue > yellow > red); swap for cmocean thermal)
@@ -217,7 +205,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 13. Hurricane Beryl wind mesh (QGIS) — @hansakwast
 - Post: https://x.com/hansakwast/status/1812934083019960771
 - Links: https://youtu.be/p4lRqgFUyx0, https://github.com/GispoCoding/GlobeBuilder
-- Image: [hansakwast_1812934083019960771_0.jpg](images/hansakwast_1812934083019960771_0.jpg)
 - Layers: wind/weather
 - Why: White streamline 'brush' traces over a dark basemap; the hurricane eye pops. Time and height controllers animate it.
 - Palette: #080c13 #0b111a #0d1826 #161f2b #193130 #eeeeee (White traces on near-black)
@@ -232,7 +219,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 14. World tidal amplitude (GOT99.2 co-tidal chart) — @bryancsk
 - Post: https://x.com/bryancsk/status/1486633527298834435
 - Links: https://www.windy.com/articles/major-sea-currents-update-high-resolution-and-new-tidal-currents-15650
-- Image: [bryancsk_1486633527298834435_0.png](images/bryancsk_1486633527298834435_0.png)
 - Layers: tides
 - Why: Classic NASA/GSFC GOT99.2 co-tidal chart: amplitude colours with white phase lines radiating from amphidromic points.
 - Palette: #53557f #53a0ba #43b3b4 #81db74 #09ce75 #b0afac (Blue > green > yellow > red amplitude (cm))
@@ -247,7 +233,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 15. SMAP sea surface salinity animation — @NASAEarthData
 - Post: https://x.com/NASAEarthData/status/1838320659593650177
 - Links: https://podaac.jpl.nasa.gov/animations/Sea-Surface-Salinity-8-Day-Running-Mean-from-SMAP-RSS-V6.0-2015-2024
-- Image: [NASAEarthData_1838320659593650177_0.jpg](images/NASAEarthData_1838320659593650177_0.jpg)
 - Layers: salinity
 - Why: Globe with a vivid salinity ramp, a vertical legend and running date stamp.
 - Palette: #19183a #272b4b #333f68 #9ce469 #9f9671 (Blue > green > yellow > red (PSU); cmocean haline is the perceptual fix)
@@ -262,7 +247,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 16. Arctic sea ice thickness (MyOcean viewer) — @CMEMS_EU
 - Post: https://x.com/CMEMS_EU/status/1829436415735730368
 - Links: https://myocean.marine.copernicus.eu, https://marine.copernicus.eu
-- Image: [CMEMS_EU_1829436415735730368_0.jpg](images/CMEMS_EU_1829436415735730368_0.jpg)
 - Layers: sea ice
 - Why: Navy-to-ice-white ramp on a black ocean, thin coastlines; the ice reads cold and clean.
 - Palette: #020411 #040613 #212121 #333946 #97c1cf (Matches cmocean ice (#040613 > #eafdfd))
@@ -277,7 +261,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 17. Sentinel-3 OLCI chlorophyll at 300 m — @VittorioBrando
 - Post: https://x.com/VittorioBrando/status/1515320217689333766
 - Links: https://marine.copernicus.eu
-- Image: [VittorioBrando_1515320217689333766_0.jpg](images/VittorioBrando_1515320217689333766_0.jpg)
 - Layers: chlorophyll/ocean colour
 - Why: Bloom filaments at 300 m with a green ramp on black; shows the fine structure SkipperCast's chlorophyll layer could show offshore.
 - Palette: #020102 #151a19 #1e473d #247263 #208c6f #539f65 (Black > teal-green > yellow (like cmocean algae))
@@ -292,7 +275,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 18. Significant wave height shader (WeatherLayers) — @robhawkes
 - Post: https://x.com/robhawkes/status/1429454366688350209
 - Links: https://weatherlayers.com, https://github.com/weatherlayers/weatherlayers-gl
-- Image: [robhawkes_1429454366688350209_0.jpg](images/robhawkes_1429454366688350209_0.jpg)
 - Layers: waves/swell
 - Why: Magenta wave heights glow on deep navy, a neon look that suits a dark UI.
 - Palette: #000000 #000e3a #011a39 #021d39 #37007e (Navy > purple > magenta)
@@ -307,7 +289,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 19. Square-root depth scaling tip — @rsimmon
 - Post: https://x.com/rsimmon/status/423826706462289922
 - Links: none beyond the post
-- Image: [rsimmon_423826706462289922_0.png](images/rsimmon_423826706462289922_0.png)
 - Layers: bathymetry
 - Why: Shows the ex-NASA designer's trick: colour by sqrt(depth) with a ColorBrewer Blues ramp so shelves and slopes both get colour range.
 - Palette: #d5e6f2 #98c4dd #7ab0d1 #5ba3d0 #477fa5 #343434 (ColorBrewer Blues on sqrt(depth))
@@ -322,7 +303,6 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 ### 20. Warm water fuelling Hurricane Helene — @NASAEarth
 - Post: https://x.com/NASAEarth/status/1839719154074386743
 - Links: none beyond the post
-- Image: [NASAEarth_1839719154074386743_0.jpg](images/NASAEarth_1839719154074386743_0.jpg)
 - Layers: weather over ocean, sea surface temperature
 - Why: Storm track (dotted, time-labelled) over a deep-red SST field with grey land; storm and ocean on one map.
 - Palette: #380e14 #520e1b #640b1f #930425 #e5e5e5 (Dark reds (like cmocean amp) for warm water)
@@ -393,4 +373,4 @@ Page: https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/7eef1
 - X search has no engagement filter and keyword results were noisy; examples came mainly from targeted account searches
 - Some accounts not found or suspended: pinakographos (Daniel Huffman), milos_agathon (suspended), fusedio, NASA_PACE; Sean Conway's handle not confirmed
 - esri.com and blog.mapbox.com links return 403 to automated checks (bot blocking, not 404)
-- Palettes are sampled from the posted images (median-cut), so they approximate the source colours
+- Palettes are sampled from the posted images (median-cut), so they approximate the source colours (the images themselves are not in the repository)

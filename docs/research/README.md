@@ -9,8 +9,8 @@ The [`research/`](../../research/README.md) directory at the repository root is 
 | Folder | What it holds |
 | --- | --- |
 | [specs/](specs/README.md) | Ten feature specs in the rea format (`spec.md`, `plan.md`, `tasks.md` per feature), plus a generated `NN-slug.md` for each. Edit the directory files. `specs.json` is the machine-readable index. |
-| [inspiration/](inspiration/skippercast_inspiration.md) | Map-visual inspiration from public X posts: the write-up, the JSON, sampled palettes (`palettes.json`), cmocean stops (`cmocean_stops.json`) and the downloaded images. |
-| [competitors/](competitors/competitors.md) | Competitive notes on 36 marine apps, the JSON, and App Store and website screenshots. |
+| [inspiration/](inspiration/skippercast_inspiration.md) | Map-visual inspiration from public X posts: the write-up, the JSON, sampled palettes (`palettes.json`) and cmocean stops (`cmocean_stops.json`). Each example links to its public X post. |
+| [competitors/](competitors/competitors.md) | Competitive notes on 36 marine apps, and the JSON. Each app links to its own listing and site. |
 | [data-sources/](data-sources/README.md) | Ingest guides for sources those apps use: endpoints, auth, licence notes and download steps. |
 
 ## Build order
@@ -26,8 +26,6 @@ The full table, dependency graph and ground rules are in [specs/README.md](specs
 
 Sample files named in the data-source guides (the 2026-11-19 NetCDF, GRIB and CSV pulls) are not in the repository. The guides keep the endpoints and the download steps.
 
-Competitor `image` fields that point at `images/composites/` refer to canvas strips from the research page. Those strips are not in this repository. The raw screenshots are in [competitors/images/](competitors/images).
+No screenshots or other third-party images are in this repository. The research used App Store and website screenshots and X post images, and their reuse terms are unresolved, so `CONTRIBUTING.md` keeps them out. The competitor and inspiration JSON files carry no image paths; the inspiration examples keep the public X post link and the competitors keep their own listing and site links. The palettes in `inspiration/palettes.json` are numeric colour samples, not copies of the pictures.
 
 The rea tool checkout used while writing the specs is not in the repository. Its evidence bundles are in [specs/rea-evidence/](specs/rea-evidence).
-
-The images are reference screenshots: 155 files, about 33 MB. This repository has no Git LFS. Each binary file is pinned by SHA-256 in `scripts/web-vendor-sha256.json`, which `scripts/check_repository.py` requires. They are third-party pictures from X posts and app listings. Confirm reuse before a product surface displays one.

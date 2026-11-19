@@ -63,7 +63,6 @@
     "nautical chart base",
     "raw base map"
    ],
-   "image": "images/berttemme_2122834956829458858_0.jpg",
    "links": [
     "https://openwaters.io/charts/seascape/",
     "https://github.com/openwatersio/seascape",
@@ -100,7 +99,6 @@
     "bathymetry",
     "nautical chart base"
    ],
-   "image": "images/chris_dalke_2121710455756296521_0.jpg",
    "links": [
     "https://zydromarine.com"
    ],
@@ -137,7 +135,6 @@
     "bathymetry",
     "land relief"
    ],
-   "image": "images/chris_dalke_2112187736354615745_0.jpg",
    "links": [
     "https://zydromarine.com"
    ],
@@ -172,7 +169,6 @@
     "bathymetry",
     "3D seafloor"
    ],
-   "image": "images/tylermorganwall_1329428971843366914_0.jpg",
    "links": [
     "https://github.com/tylermorganwall/rayshader",
     "https://github.com/tylermorganwall/rayrender",
@@ -208,7 +204,6 @@
     "bathymetry",
     "3D seafloor"
    ],
-   "image": "images/tylermorganwall_1515122509775048715_0.jpg",
    "links": [
     "https://github.com/tylermorganwall/rayshader"
    ],
@@ -241,7 +236,6 @@
    "layers": [
     "bathymetry"
    ],
-   "image": "images/researchremora_1722674175922307456_0.jpg",
    "links": [
     "https://github.com/tylermorganwall/rayshader"
    ],
@@ -276,7 +270,6 @@
    "layers": [
     "currents"
    ],
-   "image": "images/cambecc_428915614501986304_0.png",
    "links": [
     "https://earth.nullschool.net/#current/ocean/surface/currents/orthographic",
     "https://github.com/cambecc/earth"
@@ -311,7 +304,6 @@
    "layers": [
     "waves/swell"
    ],
-   "image": "images/cambecc_552117215483289600_0.png",
    "links": [
     "https://earth.nullschool.net/#current/ocean/primary/waves/overlay=significant_wave_height/orthographic",
     "https://github.com/cambecc/earth"
@@ -346,7 +338,6 @@
    "layers": [
     "bathymetry"
    ],
-   "image": "images/John_M_Nelson_1977768379080483230_0.jpg",
    "links": [
     "https://www.youtube.com/watch?v=FVwIba9Ko-k",
     "https://www.esri.com/arcgis-blog/products/arcgis-pro/mapping/how-to-make-this-seafloor-map/"
@@ -382,7 +373,6 @@
    "layers": [
     "chlorophyll/ocean colour"
    ],
-   "image": "images/maptheclouds_1688459964166139904_0.jpg",
    "links": [
     "https://maptheclouds.com/playground/threejs/chlorophyll/",
     "https://neo.gsfc.nasa.gov/view.php?datasetId=MY1DMM_CHLORA"
@@ -415,7 +405,6 @@
    "layers": [
     "bathymetry"
    ],
-   "image": "images/geo_spatialist_1293225065983680512_0.jpg",
    "links": [],
    "why": "Bathymetry rendered with specular gloss so the water looks wet, under a historic topo map. Shows how lighting alone sells 'water'.",
    "style": {
@@ -447,7 +436,6 @@
    "layers": [
     "sea surface temperature"
    ],
-   "image": "images/CopernicusEU_1778755407864803561_0.jpg",
    "links": [
     "https://marine.copernicus.eu/access-data"
    ],
@@ -482,7 +470,6 @@
    "layers": [
     "wind/weather"
    ],
-   "image": "images/hansakwast_1812934083019960771_0.jpg",
    "links": [
     "https://youtu.be/p4lRqgFUyx0",
     "https://github.com/GispoCoding/GlobeBuilder"
@@ -517,7 +504,6 @@
    "layers": [
     "tides"
    ],
-   "image": "images/bryancsk_1486633527298834435_0.png",
    "links": [
     "https://www.windy.com/articles/major-sea-currents-update-high-resolution-and-new-tidal-currents-15650"
    ],
@@ -551,7 +537,6 @@
    "layers": [
     "salinity"
    ],
-   "image": "images/NASAEarthData_1838320659593650177_0.jpg",
    "links": [
     "https://podaac.jpl.nasa.gov/animations/Sea-Surface-Salinity-8-Day-Running-Mean-from-SMAP-RSS-V6.0-2015-2024"
    ],
@@ -584,7 +569,6 @@
    "layers": [
     "sea ice"
    ],
-   "image": "images/CMEMS_EU_1829436415735730368_0.jpg",
    "links": [
     "https://myocean.marine.copernicus.eu",
     "https://marine.copernicus.eu"
@@ -618,7 +602,6 @@
    "layers": [
     "chlorophyll/ocean colour"
    ],
-   "image": "images/VittorioBrando_1515320217689333766_0.jpg",
    "links": [
     "https://marine.copernicus.eu"
    ],
@@ -652,7 +635,6 @@
    "layers": [
     "waves/swell"
    ],
-   "image": "images/robhawkes_1429454366688350209_0.jpg",
    "links": [
     "https://weatherlayers.com",
     "https://github.com/weatherlayers/weatherlayers-gl"
@@ -686,7 +668,6 @@
    "layers": [
     "bathymetry"
    ],
-   "image": "images/rsimmon_423826706462289922_0.png",
    "links": [],
    "why": "Shows the ex-NASA designer's trick: colour by sqrt(depth) with a ColorBrewer Blues ramp so shelves and slopes both get colour range.",
    "style": {
@@ -719,7 +700,6 @@
     "weather over ocean",
     "sea surface temperature"
    ],
-   "image": "images/NASAEarth_1839719154074386743_0.jpg",
    "links": [],
    "why": "Storm track (dotted, time-labelled) over a deep-red SST field with grey land; storm and ocean on one map.",
    "style": {

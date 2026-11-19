@@ -72,13 +72,6 @@
    "quality": 9,
    "threat": 9,
    "why": "Does what SkipperCast's boat verdict does, plus heading and ride recording, natively and already advertising on Instagram.",
-   "image": "images/composites/ridescore.jpg",
-   "images_raw": [
-    "images/ridescore-1.jpg",
-    "images/ridescore-2.jpg",
-    "images/ridescore-3.jpg",
-    "images/ridescore-web-og.png"
-   ],
    "total": 27,
    "vs_skippercast": {
     "skippercast_has": [
@@ -133,10 +126,6 @@
    "quality": 8,
    "threat": 9,
    "why": "Same California coast and same honesty stance, but already scores the whole SoCal Bight per species, where SkipperCast's SoCal is still preview/draft.",
-   "image": "images/fish-or-pass-og.png",
-   "images_raw": [
-    "images/fish-or-pass-og.png"
-   ],
    "total": 27,
    "vs_skippercast": {
     "skippercast_has": [
@@ -193,13 +182,6 @@
    "quality": 9,
    "threat": 8,
    "why": "Closest analog to SkipperCast's multi-layer map, and ahead of it on subsurface data, playback and a logbook that records conditions.",
-   "image": "images/composites/salty-offshore.jpg",
-   "images_raw": [
-    "images/salty-offshore-1.jpg",
-    "images/salty-offshore-2.jpg",
-    "images/salty-offshore-3.jpg",
-    "images/salty-web-og.png"
-   ],
    "total": 26,
    "vs_skippercast": {
     "skippercast_has": [
@@ -254,13 +236,6 @@
    "quality": 9,
    "threat": 7,
    "why": "Best-in-class SST UX with honest labelling at a low price; ahead on look-back playback, eddies and depth layers.",
-   "image": "images/composites/fishare.jpg",
-   "images_raw": [
-    "images/fishare-1.jpg",
-    "images/fishare-2.jpg",
-    "images/fishare-3.jpg",
-    "images/fishare-web-og.jpg"
-   ],
    "total": 25,
    "vs_skippercast": {
     "skippercast_has": [
@@ -310,12 +285,6 @@
    "quality": 7,
    "threat": 8,
    "why": "Big-brand relaunch with AI zones and thermocline; sets a price anchor at $199–$299/yr.",
-   "image": "images/composites/fish-mapping-siriusxm.jpg",
-   "images_raw": [
-    "images/fish-mapping-siriusxm-1.jpg",
-    "images/fish-mapping-siriusxm-2.jpg",
-    "images/fish-mapping-siriusxm-3.jpg"
-   ],
    "total": 23,
    "vs_skippercast": {
     "skippercast_has": [
@@ -358,12 +327,6 @@
    "quality": 7,
    "threat": 7,
    "why": "The incumbent most new entrants position against; large install base.",
-   "image": "images/composites/g-offshore-incumbents.jpg",
-   "images_raw": [
-    "images/fishtrack-1.png",
-    "images/fishtrack-2.png",
-    "images/fishtrack-3.png"
-   ],
    "total": 22,
    "vs_skippercast": {
     "skippercast_has": [
@@ -409,13 +372,6 @@
    "quality": 7,
    "threat": 7,
    "why": "Free, explainable hotspot ranking built from the same layers; strong pattern for SkipperCast's decision layer.",
-   "image": "images/composites/rigline.jpg",
-   "images_raw": [
-    "images/rigline-1.jpg",
-    "images/rigline-2.jpg",
-    "images/rigline-3.jpg",
-    "images/rigline-web-og.jpg"
-   ],
    "total": 22,
    "vs_skippercast": {
     "skippercast_has": [
@@ -460,12 +416,6 @@
    "quality": 9,
    "threat": 6,
    "why": "Gold standard for weather UX; motion metrics overlap SkipperCast sea conditions.",
-   "image": "images/composites/g-weather.jpg",
-   "images_raw": [
-    "images/predictwind-1.jpg",
-    "images/predictwind-2.jpg",
-    "images/predictwind-3.jpg"
-   ],
    "total": 22,
    "vs_skippercast": {
     "skippercast_has": [
@@ -512,12 +462,6 @@
    "quality": 7,
    "threat": 6,
    "why": "Small but sharp UX ideas (auto-scaling SST, box reports) that map directly onto SkipperCast's rendering.",
-   "image": "images/composites/bluefronts.jpg",
-   "images_raw": [
-    "images/bluefronts-1.jpg",
-    "images/bluefronts-2.jpg",
-    "images/bluefronts-3.jpg"
-   ],
    "total": 21,
    "vs_skippercast": {
     "skippercast_has": [
@@ -561,12 +505,6 @@
    "quality": 9,
    "threat": 5,
    "why": "The visual bar users will compare SkipperCast's weather layer against.",
-   "image": "images/composites/g-weather.jpg",
-   "images_raw": [
-    "images/windy-1.jpg",
-    "images/windy-2.jpg",
-    "images/windy-3.jpg"
-   ],
    "total": 21,
    "vs_skippercast": {
     "skippercast_has": [
@@ -609,13 +547,6 @@
    "quality": 7,
    "threat": 6,
    "why": "Shows the AI-interpretation layer users now expect on top of raw ocean maps.",
-   "image": "images/composites/sealegs-ai.jpg",
-   "images_raw": [
-    "images/sealegs-ai-1.jpg",
-    "images/sealegs-ai-2.jpg",
-    "images/sealegs-ai-3.jpg",
-    "images/sealegs-deepcast-og.jpg"
-   ],
    "total": 20,
    "vs_skippercast": {
     "skippercast_has": [
@@ -656,12 +587,6 @@
    "quality": 7,
    "threat": 6,
    "why": "Respected incumbent; range slider and SST forecast are table stakes now.",
-   "image": "images/composites/g-offshore-incumbents.jpg",
-   "images_raw": [
-    "images/ripcharts-1.png",
-    "images/ripcharts-2.png",
-    "images/ripcharts-3.png"
-   ],
    "total": 20,
    "vs_skippercast": {
     "skippercast_has": [
@@ -702,12 +627,6 @@
    "quality": 6,
    "threat": 6,
    "why": "Mainstream SST app that has already shipped playback and range controls.",
-   "image": "images/composites/g-offshore-incumbents.jpg",
-   "images_raw": [
-    "images/satfish-1.jpg",
-    "images/satfish-2.jpg",
-    "images/satfish-3.jpg"
-   ],
    "total": 19,
    "vs_skippercast": {
     "skippercast_has": [
@@ -747,12 +666,6 @@
    "quality": 6,
    "threat": 6,
    "why": "Shows paid demand for human fishing intel layered on SST.",
-   "image": "images/composites/g-offshore-incumbents.jpg",
-   "images_raw": [
-    "images/fishdope-1.jpg",
-    "images/fishdope-2.jpg",
-    "images/fishdope-3.jpg"
-   ],
    "total": 19,
    "vs_skippercast": {
     "skippercast_has": [
@@ -800,13 +713,6 @@
    "quality": 6,
    "threat": 5,
    "why": "Gulf-only, so little overlap; its fuel planner and community feed are the borrowable parts.",
-   "image": "images/composites/gulfwire.jpg",
-   "images_raw": [
-    "images/gulfwire-1.jpg",
-    "images/gulfwire-2.jpg",
-    "images/gulfwire-3.jpg",
-    "images/gulfwire-web-og.png"
-   ],
    "note": "X handle @GulfWire is an unrelated Arabic news account, not this app.",
    "total": 17,
    "vs_skippercast": {
@@ -852,8 +758,6 @@
    "quality": 7,
    "threat": 4,
    "why": "Pro-grade data cadence (hourly SST) worth noting; SkipperCast already carries dated commercial AIS.",
-   "image": null,
-   "images_raw": [],
    "total": 17,
    "vs_skippercast": {
     "skippercast_has": [
@@ -895,13 +799,6 @@
    "quality": 6,
    "threat": 5,
    "why": "Same score-for-your-boat idea as RideScore at a lower price; window comparison is a good UX detail.",
-   "image": "images/composites/boatngo.jpg",
-   "images_raw": [
-    "images/boatngo-1.jpg",
-    "images/boatngo-2.jpg",
-    "images/boatngo-3.jpg",
-    "images/boatngo-web-og.jpg"
-   ],
    "total": 17,
    "vs_skippercast": {
     "skippercast_has": [
@@ -939,12 +836,6 @@
    "quality": 6,
    "threat": 5,
    "why": "Classic offshore point forecast; route forecast pattern.",
-   "image": "images/composites/g-weather.jpg",
-   "images_raw": [
-    "images/buoyweather-1.jpg",
-    "images/buoyweather-2.jpg",
-    "images/buoyweather-3.jpg"
-   ],
    "total": 17,
    "vs_skippercast": {
     "skippercast_has": [
@@ -986,12 +877,6 @@
    "quality": 9,
    "threat": 3,
    "why": "Best swell visualization; different audience.",
-   "image": "images/composites/g-weather.jpg",
-   "images_raw": [
-    "images/surfline-1.jpg",
-    "images/surfline-2.jpg",
-    "images/surfline-3.jpg"
-   ],
    "total": 17,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1028,12 +913,6 @@
    "quality": 7,
    "threat": 4,
    "why": "Base-map benchmark; low ratings show room for a better UX.",
-   "image": "images/composites/g-navigation.jpg",
-   "images_raw": [
-    "images/navionics-1.png",
-    "images/navionics-2.png",
-    "images/navionics-3.png"
-   ],
    "total": 17,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1077,12 +956,6 @@
    "quality": 7,
    "threat": 4,
    "why": "Retention mechanics and tide-animated scoring worth borrowing; less of a data-layer rival.",
-   "image": "images/composites/cobia.jpg",
-   "images_raw": [
-    "images/cobia-1.jpg",
-    "images/cobia-2.jpg",
-    "images/cobia-3.jpg"
-   ],
    "total": 16,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1128,12 +1001,6 @@
    "quality": 6,
    "threat": 4,
    "why": "Bundles weather, ocean layers and AI for the same coastal user; broad but less polished.",
-   "image": "images/composites/skeetercast.jpg",
-   "images_raw": [
-    "images/skeetercast-1.jpg",
-    "images/skeetercast-2.jpg",
-    "images/skeetercast-3.jpg"
-   ],
    "total": 16,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1176,12 +1043,6 @@
    "quality": 6,
    "threat": 4,
    "why": "Tiny but clever framing; trip-mode monitoring is a cheap, high-value alert pattern.",
-   "image": "images/composites/seastatus.jpg",
-   "images_raw": [
-    "images/seastatus-1.jpg",
-    "images/seastatus-2.jpg",
-    "images/seastatus-3.jpg"
-   ],
    "total": 16,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1219,12 +1080,6 @@
    "quality": 8,
    "threat": 3,
    "why": "Design reference for a calm, uncluttered base map.",
-   "image": "images/composites/g-navigation.jpg",
-   "images_raw": [
-    "images/savvy-navvy-1.png",
-    "images/savvy-navvy-2.png",
-    "images/savvy-navvy-3.png"
-   ],
    "total": 16,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1262,12 +1117,6 @@
    "quality": 8,
    "threat": 3,
    "why": "Rendering reference for a modern vector base layer.",
-   "image": "images/composites/g-navigation.jpg",
-   "images_raw": [
-    "images/orca-1.png",
-    "images/orca-2.png",
-    "images/orca-3.png"
-   ],
    "total": 16,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1305,12 +1154,6 @@
    "quality": 5,
    "threat": 4,
    "why": "Legacy pro tool; weekly pass is a pricing idea.",
-   "image": "images/composites/g-offshore-incumbents.jpg",
-   "images_raw": [
-    "images/hiltons-rtnav-1.png",
-    "images/hiltons-rtnav-2.png",
-    "images/hiltons-rtnav-3.png"
-   ],
    "total": 15,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1348,12 +1191,6 @@
    "quality": 7,
    "threat": 3,
    "why": "Simple, powerful personalization of the base layer.",
-   "image": "images/composites/g-navigation.jpg",
-   "images_raw": [
-    "images/wavve-1.jpg",
-    "images/wavve-2.jpg",
-    "images/wavve-3.jpg"
-   ],
    "total": 15,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1391,8 +1228,6 @@
    "quality": 6,
    "threat": 3,
    "why": "Good model for documenting each layer's source and palette.",
-   "image": null,
-   "images_raw": [],
    "total": 14,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1430,8 +1265,6 @@
    "quality": 6,
    "threat": 3,
    "why": "The $90 benchmark AI-report startups undercut.",
-   "image": null,
-   "images_raw": [],
    "total": 14,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1469,12 +1302,6 @@
    "quality": 7,
    "threat": 3,
    "why": "Scale benchmark; little offshore ocean data.",
-   "image": "images/composites/g-fishing-social.jpg",
-   "images_raw": [
-    "images/fishbrain-1.png",
-    "images/fishbrain-2.png",
-    "images/fishbrain-3.png"
-   ],
    "total": 13,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1511,12 +1338,6 @@
    "quality": 6,
    "threat": 3,
    "why": "Popular tide/solunar reference for SkipperCast's tides layer.",
-   "image": "images/composites/g-fishing-social.jpg",
-   "images_raw": [
-    "images/fishing-points-1.jpg",
-    "images/fishing-points-2.jpg",
-    "images/fishing-points-3.jpg"
-   ],
    "total": 13,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1553,12 +1374,6 @@
    "quality": 6,
    "threat": 2,
    "why": "Shows value of dated survey overlays on a base map.",
-   "image": "images/composites/g-navigation.jpg",
-   "images_raw": [
-    "images/aqua-map-1.png",
-    "images/aqua-map-2.jpg",
-    "images/aqua-map-3.png"
-   ],
    "total": 12,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1598,12 +1413,6 @@
    "quality": 4,
    "threat": 2,
    "why": "Low traction, but the 'now vs later' sentence is a free UX win.",
-   "image": "images/composites/go-or-no.jpg",
-   "images_raw": [
-    "images/go-or-no-1.jpg",
-    "images/go-or-no-2.jpg",
-    "images/go-or-no-3.jpg"
-   ],
    "total": 11,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1639,12 +1448,6 @@
    "quality": 5,
    "threat": 2,
    "why": "New nav entrant; seabed overlay idea for base layer.",
-   "image": "images/composites/g-fishing-social.jpg",
-   "images_raw": [
-    "images/pathr-1.jpg",
-    "images/pathr-2.jpg",
-    "images/pathr-3.jpg"
-   ],
    "total": 11,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1682,12 +1485,6 @@
    "quality": 5,
    "threat": 2,
    "why": "Safety/alerts patterns; small US footprint.",
-   "image": "images/composites/g-navigation.jpg",
-   "images_raw": [
-    "images/deckee-1.jpg",
-    "images/deckee-2.jpg",
-    "images/deckee-3.jpg"
-   ],
    "total": 10,
    "vs_skippercast": {
     "skippercast_has": [
@@ -1727,10 +1524,6 @@
    "quality": 3,
    "threat": 2,
    "why": "Not shipped; telemetry anomaly alerts are a different angle from SkipperCast's public-data layers.",
-   "image": "images/salinity-og.jpg",
-   "images_raw": [
-    "images/salinity-og.jpg"
-   ],
    "total": 10,
    "vs_skippercast": {
     "skippercast_has": [
@@ -2349,7 +2142,7 @@
  ],
  "method": "Web search, App Store US listings (iTunes lookup API: ratings, release dates, IAP prices scraped from apps.apple.com), Google Play URL checks, company websites, X full-archive search via public reads, Reddit and Product Hunt results via web search. Prices are as listed on the cited source on 2026-11-19; App Store IAP lists don't always show billing periods. Effort ratings are estimates.",
  "page_url": "https://cursor.com/canvas/store-0c376c2f-e405-4dea-a9cb-a3cbd0b9a208/5bf1a2db-7cec-45e9-b192-deeae716534a",
- "image_dir": "docs/research/competitors/images (App Store and website screenshots). Composite strips cited as images/composites/ were used on the canvas page and are not in this repository.",
+ "image_dir": "Not in this repository: the App Store and website screenshots and the composite strips used on the canvas page are third-party images with unresolved reuse terms, so none are committed. Each app's `links` point at its own listing and site.",
  "already_shipped_dropped_from_recs": [
   "Freshness/provenance labelling (basis sentences, /status, withholding)",
   "Shareable exact-view links",
