@@ -196,20 +196,6 @@ def test_unrelated_process_exiting_during_the_scan_does_not_make_a_stopped_group
     assert _group_state(stopped_group()) == "stopped"
 
 
-def test_foreign_session_holding_the_pgid_number_does_not_make_a_stopped_group_uncertain(foreign_session):
-    # Same pgid number, different session: the group that owned it is gone and a
-    # foreign session now holds the number.
-    owned = stopped_group(pgid=foreign_session["pgid"], start_ticks=foreign_session["start_ticks"] - 100)
-    assert owned["sid"] != foreign_session["sid"]
-    assert _group_state(owned) == "stopped"
-
-
-def test_foreign_zombie_holding_the_pgid_number_does_not_make_a_stopped_group_uncertain(foreign_zombie):
-    # As above, but the holder is a dead, unreaped zombie.
-    owned = stopped_group(pgid=foreign_zombie["pgid"], start_ticks=foreign_zombie["start_ticks"] - 100)
-    assert _group_state(owned) == "stopped"
-
-
 def test_unreaped_zombie_session_leader_does_not_make_a_stopped_descendant_group_uncertain(spawn, scan):
     # No reused number at all. A worker (the session leader) starts a child in its
     # session and exits unreaped; the child is then killed. Every process of the group

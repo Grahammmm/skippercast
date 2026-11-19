@@ -12,7 +12,14 @@ Run from the pinned source checkout with the existing `survey` or `publish`
 extra (for JSON Schema validation). Paths in the release and envelope are POSIX
 and relative to `OUT/<region>`, not to the manifest containing them.
 
-1. Assemble an inventory JSON with `region`, `bounds: [west, south, east, north]`
+1. Build the inventory JSON from the current producer receipts (no hand edits, no copies):
+
+   ```sh
+   python scripts/relief/region.py digests --out OUT --region ID
+   python scripts/relief/region.py inventory --out OUT --region ID
+   ```
+
+   `OUT/ID/inventory/manifest.json` has `region`, `bounds: [west, south, east, north]`
    (WGS84, clipped to `regions/<region>/region.json`), `minzoom`, `maxzoom`,
    `sources`, `detail_summary`, `native_support_by_zoom`, and `layer_paths`.
    The metadata has the same fields and types as the pointer: sources retain
@@ -23,15 +30,20 @@ and relative to `OUT/<region>`, not to the manifest containing them.
    Use only sources with `rights_class: "public"` and a matching approved
    catalog row with `rights.public_display: "allowed"` and matching licence.
    Pending CSUMB rows are not public; MBARI is always excluded.
-2. List every intended public layer file in `layer_paths`, including
-   `layers/public/relief.pmtiles`. When the digest producer is present, include
-   `layers/public/relief.digests/root.json` and all its chunk files. Pass the
-   current producer receipts for the listed layers (repeat `--upstream`):
+2. Each producer owns its own leaf: the archive is `layers/public/tiles/relief.pmtiles`
+   (tiles), the digest index `layers/public/relief.digests/` (digests) and the zone
+   layers `layers/public/zone/` (zone). The inventory lists every file of those
+   leaves except the tiles coverage sidecar. Depth contours (`layers/contours/`) are
+   not part of the relief release; they ship through the repository contour channel.
+   Pass the current producer receipts and the inventory receipt (repeat `--upstream`):
 
    ```sh
-   python scripts/relief/region.py package --out OUT --region ID --manifest layers.json --upstream tiles:public
+   python scripts/relief/region.py package --out OUT --region ID --manifest OUT/ID/inventory/manifest.json \
+       --upstream tiles:public --upstream digests --upstream zone:public --upstream inventory
    ```
 
+   With `--upstream inventory`, package refuses a manifest that is not the
+   inventory stage's current output.
    This writes `OUT/ID/release/<gen>/release.json` (`sc-relief-release/1`), where
    `<gen>` is the package receipt's generation. It includes the exact sorted
    inventory of `{path, sha256, bytes}`, the producing `code_sha`, zooms, bounds,

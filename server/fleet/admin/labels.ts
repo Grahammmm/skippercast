@@ -9,8 +9,8 @@
 //   GET  /api/admin/fleet/trips/:id    the trip, its vessel, its segments (decoded tracks, mean SOG) and its labels
 //   POST /api/admin/fleet/trips/:id/labels   {started_at, ended_at, label, basis}: a hand label of a time range
 //   POST /api/admin/fleet/labels/:id/delete  removes one label (rejecting an agent's label is this delete)
-//   POST /api/admin/fleet/trips/:id/approve  the owner approves the trip's agent labels: labeller becomes the admin's
-//                                      users.id and basis gains "approved from agent:<name>: " (N7)
+//   POST /api/admin/fleet/trips/:id/approve  {reviewed_ids}: approve the exact agent label set the owner viewed.
+//                                      Labeller becomes the admin's users.id and basis gains "approved from agent:<name>: " (N7)
 //   POST /api/fleet/jobs/labels        {trip_id, labeller: "agent:<name>", labels: [{started_at, ended_at, label, basis}]}:
 //                                      replaces that agent's labels on the trip (N7; `python -m skippercast.fleet.ais label import`)
 //   GET  /api/fleet/jobs/labels        ?region= &cursor=   labelled trips with their labels, by trip id, for
@@ -232,14 +232,24 @@ export async function importAgentLabels(db: D1Database, input: Record<string, un
   return {status: 200, body: {ok: true, trip_id: trip.id, labeller, replaced: results[0]?.meta.changes ?? 0, labels: rows.length}};
 }
 
-/** POST /api/admin/fleet/trips/:id/approve: the trip's agent labels become the owner's, their basis keeping the agent's name. */
-export async function approveTrip(db: D1Database, tripId: string, owner: string): Promise<AdminOutcome<{approved: number; labels: LabelRow[]}>> {
+/** POST /api/admin/fleet/trips/:id/approve: approve the reviewed set or leave every row unchanged. */
+export async function approveTrip(db: D1Database, tripId: string, owner: string, reviewedIds: unknown):
+  Promise<AdminOutcome<{approved: number; labels: LabelRow[]}>> {
   if (!(await tripRow(db, tripId))) return {status: 'not-found'};
   if (!owner) return {status: 'invalid', error: 'no labeller'};
+  if (!Array.isArray(reviewedIds) || !reviewedIds.length || reviewedIds.length > MAX_LABELS ||
+    !reviewedIds.every(id => typeof id === 'string' && HEX32.test(id)) || new Set(reviewedIds).size !== reviewedIds.length) {
+    return {status: 'invalid', error: 'Review the trip’s agent labels before approving.'};
+  }
+  // Every proposal import assigns fresh ids, even for the same times. Compare the entire sorted agent set
+  // in an uncorrelated subquery of the UPDATE, so no other write can land between comparison and approval.
   const result = await db.prepare(`UPDATE fleet_segment_labels SET labeller=?,basis=?||labeller||': '||COALESCE(basis,'')
-    WHERE trip_id=? AND labeller LIKE 'agent:%'`).bind(owner, APPROVED_PREFIX, tripId).run();
+    WHERE trip_id=? AND labeller LIKE 'agent:%'
+      AND (SELECT group_concat(id) FROM (
+        SELECT id FROM fleet_segment_labels WHERE trip_id=? AND labeller LIKE 'agent:%' ORDER BY id
+      ))=?`).bind(owner, APPROVED_PREFIX, tripId, tripId, [...reviewedIds].sort().join(',')).run();
   const approved = result.meta.changes ?? 0;
-  if (!approved) return {status: 'conflict', error: 'no agent labels await approval on this trip'};
+  if (!approved) return {status: 'conflict', error: 'The agent labels changed. Reload the trip and review them again.'};
   return {status: 'ok', value: {approved, labels: await labelsOf(db, tripId)}};
 }
 

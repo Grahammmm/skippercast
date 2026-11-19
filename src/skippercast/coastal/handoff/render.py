@@ -55,17 +55,36 @@ def _facts(root, run, imagery, alignment, *, now, rights=None, minimum_valid_unt
     return facts, sorted(set(holds))
 
 
+def _reviewer_rights_holds(root, source, review_document):
+    """Holds from the reviewer's rights attestation, kept distinct from source rights.
+
+    The top-level ``rights`` of a packet is the SOURCE rights record: it is part of the
+    hashed facts and is never replaced by reviewer text. The reviewer's ``rights`` must
+    itself pass the private-use/evidence check and must agree with the source record on
+    ``private_use`` and the evidence set (order-insensitive); other annotations may
+    differ. Disagreement is a specific hold, never a silent overwrite.
+    """
+    rights = review_document.get('rights', {})
+    holds = []
+    if rights.get('private_use') is not True or not rights.get('evidence'):
+        holds.append('imagery_private_rights_missing')
+    for artifact in rights.get('evidence', []):
+        resolve(root, artifact)
+    source = source or {}
+    if (source.get('private_use') != rights.get('private_use')
+            or sorted(digest(x) for x in source.get('evidence') or [])
+            != sorted(digest(x) for x in rights.get('evidence') or [])):
+        holds.append('imagery_rights_review_mismatch')
+    return holds
+
+
 def produce(root, run_manifest, *, output_dir, now, imagery=None, alignment=None, review=None, rights=None, minimum_valid_until=None):
     run = load(root,run_manifest,contract=mapping.SCHEMA)
     facts, holds = _facts(root,run,imagery,alignment,now=now,rights=rights,minimum_valid_until=minimum_valid_until)
     review_issues = review_holds(root, review, digest(facts), now=now, minimum_valid_until=minimum_valid_until,schema='coastal-render-review-v1')
     if review is not None:
         reviewed = load(root,review,contract='coastal-render-review-v1')
-        rights = reviewed.get('rights',{})
-        if rights.get('private_use') is not True or not rights.get('evidence'):
-            review_issues.append('imagery_private_rights_missing')
-        for artifact in rights.get('evidence',[]):
-            resolve(root,artifact)
+        review_issues.extend(_reviewer_rights_holds(root, rights, reviewed))
     holds = sorted(set(holds+review_issues))
     slice_ = dict(id=run['segment_id'], terrain=facts['terrain'], mask=facts['mask'],
                   imagery=imagery, alignment=alignment, vertical=facts['vertical'],
@@ -100,11 +119,7 @@ def verify(root, manifest, *, now, purpose='private_preview', minimum_valid_unti
         minimum_valid_until=minimum_valid_until,schema='coastal-render-review-v1'))
     if doc.get('review'):
         review = load(root,doc['review'],contract='coastal-render-review-v1')
-        rights = review.get('rights',{})
-        if rights.get('private_use') is not True or not rights.get('evidence'):
-            holds.append('imagery_private_rights_missing')
-        for artifact in rights.get('evidence',[]):
-            resolve(root,artifact)
+        holds.extend(_reviewer_rights_holds(root, doc.get('rights'), review))
     holds = sorted(set(holds))
     # A previously accepted immutable packet may cease to cover a requested
     # job horizon. Preserve its scientific facts and return a typed dispatch
