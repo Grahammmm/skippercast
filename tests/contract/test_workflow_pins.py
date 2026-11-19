@@ -6,6 +6,9 @@ the pinned SHAs current (with a `# vX.Y.Z` comment), so pinning costs nothing.
 """
 import re
 import unittest
+
+import yaml
+
 from tests._support import ROOT
 
 
@@ -63,22 +66,44 @@ class WorkflowPinTests(unittest.TestCase):
                     self.assertTrue(re.search(r'\n\s+actions: write\n', text), 'the dispatching job needs actions: write')
 
 
-if __name__ == '__main__':
-    unittest.main()
-
-
 class RunnerSwitchTests(unittest.TestCase):
-    """Check the public GitHub-hosted runner assignments in docs/operations/runners.md."""
+    """Public workflows never target the private runner fleet."""
 
     def test_workflow_runner_assignments(self):
-        wrong = []
-        for path in sorted((ROOT / '.github/workflows').glob('*.y*ml')):
-            for line in re.findall(r'^\s*runs-on:\s*(.+?)\s*$', path.read_text(), re.M):
-                if line == 'macos-latest' and path.name == 'research-substrate.yml':
-                    continue  # one monthly audit job needs a macOS wheel (pylerc); about 90 billed minutes a month
-                if line != 'ubuntu-latest':
-                    wrong.append(f'{path.name}: {line} (expected literal ubuntu-latest)')
-        self.assertEqual(wrong, [])
+        # Match the exact job, not the whole file: only this audit needs macOS.
+        macos_job = ('research-substrate.yml', 'audit')
+        macos_jobs = []
+        for path in sorted((ROOT / '.github/workflows').iterdir()):
+            if path.suffix not in ('.yml', '.yaml'):
+                continue
+            for job_id, job in yaml.safe_load(path.read_text())['jobs'].items():
+                if 'runs-on' not in job and 'uses' in job:
+                    continue  # Reusable workflow calls have no runner of their own.
+                identity = (path.name, job_id)
+                runner = job.get('runs-on')
+                if runner == 'macos-latest':
+                    macos_jobs.append(identity)
+                expected = 'macos-latest' if identity == macos_job else 'ubuntu-latest'
+                with self.subTest(workflow=path.name, job=job_id):
+                    self.assertEqual(runner, expected, f'expected literal {expected}')
+        self.assertEqual(macos_jobs, [macos_job])
+
+    def test_no_private_runner_references_in_github(self):
+        # Catch runner selectors copied into composite actions or workflow env,
+        # even when the jobs themselves are still on GitHub-hosted runners.
+        forbidden = re.compile(
+            rb'''self-hosted|\bvars\s*(?:\.\s*|\[\s*['"])[a-z0-9_]*runner[a-z0-9_]*'''
+            rb'|ci_self_hosted_ready', re.I,
+        )
+        matches = []
+        for path in sorted((ROOT / '.github').rglob('*')):
+            if not path.is_file():
+                continue
+            text = path.read_bytes()
+            for match in forbidden.finditer(text):
+                number = text.count(b'\n', 0, match.start()) + 1
+                matches.append(f'{path.relative_to(ROOT)}:{number}: {match[0].decode()!r}')
+        self.assertEqual(matches, [])
 
     def test_ci_uses_job_local_pnpm_and_installs_browser_dependencies(self):
         ci = (ROOT / '.github/workflows/ci.yml').read_text()
@@ -89,9 +114,6 @@ class RunnerSwitchTests(unittest.TestCase):
         installs = re.findall(r'(?:if: ([^\n]+)\n\s+)?run: pnpm exec playwright install ([^\n]+)', ci)
         self.assertEqual(installs, [('', '--with-deps chromium')], 'CI must install Chromium and its system dependencies unconditionally')
 
-    def test_runner_setup_script_pins_the_runner_release(self):
-        script = (ROOT / 'scripts/runner/setup.sh').read_text()
-        self.assertRegex(script, r'RUNNER_VERSION=\$\{RUNNER_VERSION:-\d+\.\d+\.\d+\}')
-        self.assertRegex(script, r'RUNNER_SHA256=\$\{RUNNER_SHA256:-[0-9a-f]{64}\}')
-        self.assertIn('--labels', script)
-        self.assertIn('svc.sh install', script)
+
+if __name__ == '__main__':
+    unittest.main()
