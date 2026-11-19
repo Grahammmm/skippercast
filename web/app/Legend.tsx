@@ -56,6 +56,7 @@ import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} fr
 import {currentsState} from '../map/currents.ts';
 import {contourState} from '../map/depth-contours.ts';
 import {chartOnly, drawsIn, layerCopy, layerEntry} from '../map/layers.ts';
+import {contourCopy} from '../map/legend-model.ts';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CDFW_MPA_PAGE, TRANSIENT_DETAILS, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveySummary} from '../map/seafloor.ts';
@@ -386,19 +387,21 @@ export function DensityRow() {
 
 /** The depth contours (CI6-13): the key and surveys while they draw, or why they do not; nothing where none are published. */
 export function DepthContoursRow() {
-  const s = contourState.value, lang = language.value, entry = layerCopy('depth-contours', lang);
+  const s = contourState.value, lang = language.value, copy = contourCopy(s.set);
   if (shownPresentation.value !== 'chart' || !['drawn', 'withheld', 'failed'].includes(s.status)) return null;
   const drawn = s.status === 'drawn';
   const surveyed = (date: string) => t('legend.surveyed', lang, {date});
   return (
     <li class="app-legend-depth-contours">
-      {drawn ? <span class="app-swatch" data-layer="depth-contours" aria-hidden="true"></span> : null}{entry.label}
-      <Popover iconOnly summary={t('legend.bs.depth', lang)}>
-        <p>{entry.basis}</p>
-      </Popover>
-      {drawn ? <p class="app-legend-note" data-key="depth-contours">{entry.legend[0]?.label}</p> : null}
-      {drawn ? <p class="app-legend-note" data-key="depth-contours-edge"><span class="app-swatch" data-layer="depth-contours-edge" aria-hidden="true"></span>{entry.legend[1]?.label}</p> : null}
-      {drawn ? <p class="app-legend-note ui-mono" data-stamp="depth-contours">{[...new Set(s.sources.map(x => `${surveyed(x.survey_date)} · ${x.vertical_datum}`))].join('; ')} · {t('legend.notForNav', lang)}</p> : null}
+      {drawn ? <span class="app-swatch" data-layer="depth-contours" aria-hidden="true"></span> : null}{t(copy.label as StringId, lang)}
+      {drawn ? <>
+        <Popover iconOnly summary={t(copy.summary as StringId, lang)}>
+          <p>{t(copy.basis as StringId, lang)}</p>
+        </Popover>
+        <p class="app-legend-note" data-key="depth-contours">{t(copy.legend[0] as StringId, lang)}</p>
+        <p class="app-legend-note" data-key="depth-contours-edge"><span class="app-swatch" data-layer="depth-contours-edge" aria-hidden="true"></span>{t(copy.legend[1] as StringId, lang)}</p>
+        <p class="app-legend-note ui-mono" data-stamp="depth-contours">{[...new Set(s.sources.map(x => `${surveyed(x.survey_date)} · ${x.vertical_datum}`))].join('; ')} · {t(copy.notForNavigation, lang)}</p>
+      </> : null}
       {s.note ? <p class="app-legend-note" data-reason="depth-contours"><EnglishDetail lang={lang}>{s.note}</EnglishDetail></p> : null}
     </li>
   );
