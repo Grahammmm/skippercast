@@ -17,6 +17,7 @@ from skippercast.coastal.render import governed
 
 
 HOLD = 'render_stage_deadline_exhausted'
+NOW = 1_700_000_000
 
 
 def _preview(_root, _item, _now, _horizon, _shared_range):
@@ -60,8 +61,9 @@ def _fixture(stack, root, case):
     clock = dict(deadline_monotonic=deadline_mono)
     release = dict(child_grant=grant, grant_digest=common.digest(grant), output_root=str(output),
                    stage_clock=clock, global_clock=clock)
+    stack.enter_context(patch.object(time, 'time', return_value=NOW))
     stack.enter_context(patch.object(child_release, 'validate_child_release', return_value=release))
-    stack.enter_context(patch.object(common, 'load', return_value={'deadline_epoch': time.time() + 10}))
+    stack.enter_context(patch.object(common, 'load', return_value={'deadline_epoch': NOW + 10}))
     stack.enter_context(patch.object(governed, 'load_owner_render_plan', return_value=({}, {})))
     stack.enter_context(patch.object(governed, 'load_render_prerequisites',
                                      return_value=([{'id': 'sample'}], [1, 2], None, None)))
@@ -73,8 +75,7 @@ def _fixture(stack, root, case):
         if name == 'sample/terrain/terrain-mesh.npz':
             if case == 'expired':
                 # Wall time moves beyond the approved horizon during an actual write.
-                expired = time.time() + 60
-                stack.enter_context(patch.object(time, 'time', return_value=expired))
+                stack.enter_context(patch.object(time, 'time', return_value=NOW + 60))
             if case == 'blocked':
                 # The next real managed write must acquire this same flock via a new fd.
                 lock = stack.enter_context(manager.lock_path.open('r+b'))
@@ -106,9 +107,9 @@ def test_governed_render_deadline(tmp_path, monkeypatch, capsys, case):
     # Install the same fixture locally so this regression also runs against
     # main's original in-process implementation (except its unbounded flock).
     with ExitStack() as stack:
+        stack.enter_context(patch.object(time, 'time', return_value=NOW))
         if scenario != 'blocked':
             _fixture(stack, root, scenario)
-        now = time.time()
         started = time.monotonic()
         if case.startswith('cli-'):
             code = governed.main(['--context', str(context_path), '--source-root', str(root),
@@ -120,11 +121,11 @@ def test_governed_render_deadline(tmp_path, monkeypatch, capsys, case):
             else:
                 assert code == 0 and response['batch']['state'] == 'done'
         elif scenario == 'valid':
-            assert governed.run_governed(context, root, context_path, now=now,
-                                         horizon=now + 10)['batch']['state'] == 'done'
+            assert governed.run_governed(context, root, context_path, now=NOW,
+                                         horizon=NOW + 10)['batch']['state'] == 'done'
         else:
             with pytest.raises(TimeoutError, match=HOLD):
-                governed.run_governed(context, root, context_path, now=now, horizon=now + 10)
+                governed.run_governed(context, root, context_path, now=NOW, horizon=NOW + 10)
     # The blocked case has no cooperative return: only a hard worker deadline
     # can retain the first file and return before the longer caller horizon.
     if scenario == 'blocked':
