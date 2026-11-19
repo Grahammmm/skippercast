@@ -39,6 +39,7 @@ import {readPalette, type Palette} from './palette.ts';
 import {pair, sp, type StatusCopy} from './status-copy.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
 import {SWELL_LAYER} from './swell.ts';
+import {paintEdits} from './theme-restyle.ts';
 import {M_PER_NMI} from '../units.ts';
 
 const REGISTRY_ID = 'sst-contrast' as const;
@@ -171,13 +172,19 @@ export function contrastFeatures(d: Pick<DrawnContrast, 'cells' | 'spacingDeg'>)
 }
 
 /** The cells as one fill layer on the fixed scale, under the swell field, the depth contours and the protected areas (§ 9 order). */
-export function contrastOverlay(p: Palette): Overlay {
+function contrastLayers(p: Palette): Overlay['layers'] {
   const [low, high] = CONTRAST_SCALE;
+  return [{id: CONTRAST_LAYER, type: 'fill', source: CONTRAST_SOURCE, paint: {
+    'fill-color': ['interpolate', ['linear'], ['get', 'f'], low, p.contrast0, (low + high) / 2, p.contrast1, high, p.contrast2] as MapLibre.ExpressionSpecification,
+    'fill-opacity': CONTRAST_OPACITY, 'fill-antialias': false}}];
+}
+
+/** One shared function, so equal overlays stay equal. A live theme switch re-runs the same layer builder with the new palette; ids and sources stay. */
+const themePaint = (pal: Palette) => paintEdits(contrastLayers(pal));
+export function contrastOverlay(p: Palette): Overlay {
   return {
     sources: {[CONTRAST_SOURCE]: {type: 'geojson', data: {type: 'FeatureCollection', features: []}}},
-    layers: [{id: CONTRAST_LAYER, type: 'fill', source: CONTRAST_SOURCE, paint: {
-      'fill-color': ['interpolate', ['linear'], ['get', 'f'], low, p.contrast0, (low + high) / 2, p.contrast1, high, p.contrast2] as MapLibre.ExpressionSpecification,
-      'fill-opacity': CONTRAST_OPACITY, 'fill-antialias': false}}],
+    layers: contrastLayers(p), themePaint,
   };
 }
 
