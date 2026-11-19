@@ -72,12 +72,15 @@ const row = (id, title, status, detail, how = '') => ({id, title, status, detail
 /** The rules check: every pilot species has non-retired rows, all active, not due, reviewed within 30 days, with an https source. */
 export function judgeRules(rules, now = Date.now(), species = PILOT_SPECIES) {
   const problems = [];
-  const fresh = new Date(now - RULES_FRESH_DAYS * DAY).toISOString();
+  const cutoff = now - RULES_FRESH_DAYS * DAY;
   for (const key of species) {
     const rows = rules.filter(r => r.species_key === key && r.status !== 'retired');
     if (!rows.length) { problems.push(`${key}: no row`); continue; }
-    const bad = rows.filter(r => r.status !== 'active' || r.due || !(String(r.reviewed_at) >= fresh) || !/^https:\/\//.test(r.source_url ?? ''));
-    if (bad.length) problems.push(`${key}: ${bad.length} of ${rows.length} not active, due, older than ${RULES_FRESH_DAYS} days or without a source`);
+    const bad = rows.filter(r => {
+      const reviewed = typeof r.reviewed_at === 'string' ? Date.parse(r.reviewed_at) : NaN;
+      return r.status !== 'active' || r.due || !(reviewed >= cutoff && reviewed <= now) || !/^https:\/\//.test(r.source_url ?? '');
+    });
+    if (bad.length) problems.push(`${key}: ${bad.length} of ${rows.length} not active, due, without a valid review in the last ${RULES_FRESH_DAYS} days or without a source`);
   }
   return problems;
 }
@@ -130,9 +133,10 @@ export async function runPreflight({base, cookie = null, stage = 'live', local =
   if (ah) {
     const want = stage === 'dark' ? false : true;
     add('5', `Replies ${want ? 'on' : 'off (dark stage)'} (ADVISOR_REPLIES_ENABLED)`, ah.replies_enabled === want ? 'pass' : 'fail', `replies_enabled ${ah.replies_enabled}`);
-    const q = ah.queue ?? {};
-    add('5', 'Queue healthy (no stale queued, no held outbound)', !q.stale_queued && !q.held_outbound ? 'pass' : 'fail',
-      `stale queued ${q.stale_queued ?? '-'}, held outbound ${q.held_outbound ?? '-'}, failed today ${q.failed_today ?? '-'}`);
+    const count = value => Number.isInteger(value) && value >= 0 ? value : 'missing or invalid';
+    const {stale_queued, held_outbound, failed_today} = ah.queue ?? {};
+    add('5', 'Queue healthy (no stale queued, no held outbound)', stale_queued === 0 && held_outbound === 0 ? 'pass' : 'fail',
+      `stale queued ${count(stale_queued)}, held outbound ${count(held_outbound)}, failed today ${count(failed_today)}`);
   } else add('5', 'Replies and queue', 'fail', adminWhy);
 
   // 6. Rules.
