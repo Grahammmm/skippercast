@@ -38,20 +38,25 @@ Object.assign(everyKind.sources, {
   'additional-closures': {id: 'additional-closures', kind: 'boundaries', status: 'ok', data: {features: big(200)}},
   regulations: {id: 'regulations', kind: 'advisory', status: 'ok', data: {alerts: []}},
 });
-let briefFrom;
+let briefModule;
 async function loadBrief() {
-  if (briefFrom) return briefFrom;
+  if (briefModule) return briefModule;
   const out = join(await mkdtemp(join(tmpdir(), 'brief-part-')), 'brief.mjs');
-  await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `export {briefFrom} from './web/brief/Brief.tsx';`},
+  await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
+    export {briefFrom, BriefLinks} from './web/brief/Brief.tsx';
+    export {EvidenceSection} from './web/app/views/Reports.tsx';
+    export {evidenceFrom} from './web/reports.ts';
+    export {language, prepareCatalogue} from './web/i18n.ts';
+    export {h} from 'preact'; export {render} from 'preact-render-to-string';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
-  return (briefFrom = (await import(pathToFileURL(out).href)).briefFrom);
+  return (briefModule = await import(pathToFileURL(out).href));
 }
 const brief = (fn, feed, hour = null) => fn({info: INFO, feed, coast: null, profile: 'boat', hour}, NOW);
 const pins = feed => stationPins({region: REGION, catalog, feed, now: NOW, at: NOW});
 const viaJSON = value => JSON.parse(JSON.stringify(value));
 
 test('the brief and station pins built from the brief part equal those built from the whole feed', async () => {
-  const fn = await loadBrief();
+  const {briefFrom: fn} = await loadBrief();
   for (const [name, feed] of [['monterey', monterey], ['every kind', everyKind]]) {
     const part = viaJSON(dailyPartOf(feed, 'brief'));
     for (const hour of [null, '2026-10-09T15:00:00.000Z']) {
@@ -63,6 +68,46 @@ test('the brief and station pins built from the brief part equal those built fro
     assert.deepEqual(pins(part), pins(feed), `${name}: station pins`);
   }
   assert.equal(brief(fn, viaJSON(dailyPartOf(everyKind, 'brief'))).fleet?.count, 3, 'landing reports and names reach the brief');
+});
+
+// The old projection dropped the publisher's flag (leaving either silence or a misleading count).
+test('charter outage reaches the Brief and Reports without a boat count; verified zero stays distinct', async () => {
+  const {briefFrom, BriefLinks, evidenceFrom, EvidenceSection, h, render, language, prepareCatalogue} = await loadBrief();
+  const fresh = {...everyKind, generated_at: NOW.toISOString(), reports: [], sources: {...everyKind.sources}};
+  for (let day = 1; day <= 7; day++) fresh.sources[`catches-2026-10-0${day}`] = {kind: 'charter-reports', status: 'ok', data_retrieved_at: fresh.generated_at};
+  const briefHTML = feed => render(h(BriefLinks, {brief: brief(briefFrom, feed)}));
+  const evidence = feed => evidenceFrom(feed, INFO.id, 'lingcod', NOW.getTime());
+  const reportsHTML = feed => render(h(EvidenceSection, {evidence: evidence(feed)}));
+  const freshPart = viaJSON(dailyPartOf(fresh, 'brief'));
+  assert.equal('charter_reports' in freshPart, false);
+  assert.equal(evidence(fresh)?.reasonKind, 'none', 'seven checked pages and no reported trips');
+  assert.match(reportsHTML(fresh), /0 boats/);
+  assert.doesNotMatch(briefHTML(freshPart), /Not available|\d+ boats?/i, 'the Brief has no positive report line for an empty sample');
+
+  const trip = {date: '2026-10-07', port: 'Monterey', boat: 'Fixture Tern', catches: [{species: 'lingcod', count: 1}]};
+  assert.match(briefHTML(viaJSON(dailyPartOf({...fresh, reports: [trip]}, 'brief'))), /1 boat reported/);
+  assert.equal(evidence({...fresh, reports: [trip]})?.boats, 1, 'the retained fixture would otherwise count');
+  for (const [reports, last_source_day] of [[[], null], [[trip], '2026-10-07']]) {
+    const feed = {...fresh, reports, charter_reports: {status: 'not_available', last_source_day, reason: 'source_stale', extra: 'fixture-only'}};
+    const part = viaJSON(dailyPartOf(feed, 'brief'));
+    assert.deepEqual(part.charter_reports, {status: 'not_available', last_source_day});
+    for (const sibling of DAILY_PARTS.filter(p => p !== 'brief')) assert.equal('charter_reports' in dailyPartOf(feed, sibling), false);
+    for (const html of [briefHTML(part), briefHTML(feed), reportsHTML(feed)]) {
+      assert.match(html, /Not available\./);
+      if (last_source_day) assert.match(html, /Oct 7, 2026/);
+      else assert.match(html, /not updated recently/);
+      assert.doesNotMatch(html, /\b\d+\s+boats?\b|Fixture Tern/);
+    }
+  }
+  await prepareCatalogue('es');
+  language.value = 'es';
+  try {
+    const feed = {...fresh, reports: [trip], charter_reports: {status: 'not_available', last_source_day: trip.date}};
+    for (const html of [briefHTML(viaJSON(dailyPartOf(feed, 'brief'))), reportsHTML(feed)]) {
+      assert.match(html, /No disponible\./);
+      assert.doesNotMatch(html, /\b\d+\s+(?:boats?|barcos?)\b/);
+    }
+  } finally { language.value = 'en'; }
 });
 
 test('the brief part holds no model, grid, boundary or regulation data, and is a small share of the feed', () => {
