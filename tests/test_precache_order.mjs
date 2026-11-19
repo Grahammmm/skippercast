@@ -13,12 +13,19 @@ async function site(sw = `${BUILD_PLACEHOLDER}\nself.addEventListener('push',()=
   const dir = await mkdtemp(join(tmpdir(), 'precache-order-'));
   await mkdir(join(dir, 'assets'), {recursive: true});
   await writeFile(join(dir, `index.${BUILD}.html`), '<script type="module" src="./assets/index.0123456789.js"></script>');
-  await writeFile(join(dir, 'assets/index.0123456789.js'), "import './app.abcdef0123.js';");
+  await writeFile(join(dir, 'assets/index.0123456789.js'), 'export {};');
   await writeFile(join(dir, 'assets/app.abcdef0123.js'), "navigator.serviceWorker.register('/sw.js');");
+  await writeFile(join(dir, 'assets/early.1111111111.js'), 'export {};');
   await writeFile(join(dir, 'assets/styles.fedcba9876.css'), 'body{}');
   if (sw !== null) await writeFile(join(dir, 'sw.js'), sw);
   await writeFile(join(dir, 'manifest.webmanifest'), '{}');
   await writeFile(join(dir, 'app-icon-192.png'), 'png');
+  await mkdir(join(dir, '.vite'), {recursive: true});
+  await writeFile(join(dir, '.vite/manifest.json'), JSON.stringify({
+    'app.html': {file: 'assets/app.abcdef0123.js'},
+    'landing.html': {file: 'assets/index.0123456789.js'},
+    '../web/app/early.ts': {file: 'assets/early.1111111111.js'},
+  }));
   return dir;
 }
 

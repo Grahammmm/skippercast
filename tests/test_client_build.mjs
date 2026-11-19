@@ -20,8 +20,12 @@ const CHECK = new URL('../scripts/check_client.mjs', import.meta.url).pathname;
 const DIST = new URL('../dist/', import.meta.url).pathname;
 const SRI = 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=';
 
-async function site({app = 'export const ready = true;'} = {}) {
-  const root = await mkdtemp(join(tmpdir(), 'client-src-'));
+async function site(t, {app = 'export const ready = true;'} = {}) {
+  const fixture = await mkdtemp(join(tmpdir(), 'client-src-'));
+  t.after(() => rm(fixture, {recursive: true, force: true}));
+  const root = join(fixture, 'dist');
+  await mkdir(join(fixture, 'web/app'), {recursive: true});
+  await writeFile(join(fixture, 'web/app/early.ts'), "document.documentElement.dataset.early = 'ready';");
   await mkdir(join(root, 'vendor'), {recursive: true});
   await mkdir(join(root, 'data'), {recursive: true});
   await writeFile(join(root, 'landing.html'), `<!doctype html><html><head>
@@ -48,8 +52,8 @@ async function site({app = 'export const ready = true;'} = {}) {
   return root;
 }
 
-const built = async (options) => {
-  const root = await site(options);
+const built = async (t, options) => {
+  const root = await site(t, options);
   const out = join(root, 'client');
   return {root, out, ...(await buildClient({root, out, headers: '/*\n'}))};
 };
@@ -137,8 +141,8 @@ test('copyStatic refuses raw shore snapshots and linked assets (F20-04)', async 
   }
 });
 
-test('the build hashes scripts and styles, renames pages and keeps sw.js, vendor files and data stable', async () => {
-  const {out, buildId, shells} = await built();
+test('the build hashes scripts and styles, renames pages and keeps sw.js, vendor files and data stable', async t => {
+  const {out, buildId, shells} = await built(t);
   const top = (await readdir(out)).sort();
   assert.ok(top.includes(`landing.${buildId}.html`) && top.includes(`about.${buildId}.html`));
   assert.ok(!top.includes('landing.html') && !top.includes('app.js') && !top.includes('styles.css'), 'no authored source is published raw');
@@ -170,8 +174,8 @@ test('the build hashes scripts and styles, renames pages and keeps sw.js, vendor
   assert.ok(!JSON.stringify(precache).includes('regulations.json'), 'data is never precached; it is network-first');
 });
 
-test('the build id changes when any module changes', async () => {
-  const a = await built(), b = await built({app: 'export const ready = false;'});
+test('the build id changes when any module changes', async t => {
+  const a = await built(t), b = await built(t, {app: 'export const ready = false;'});
   assert.notEqual(a.buildId, b.buildId);
 });
 
@@ -209,8 +213,8 @@ test('R4-SC-08: the glyphs are copied under their content version, kept a year; 
   assert.equal(headerCacheControl(rules, '/assets/app.0123456789.js'), 'public, max-age=31536000, immutable');
 });
 
-test('check_client passes a good build and fails on missing chunks, raw sources, stale precache and a worker without the build id', async () => {
-  const {root, out, buildId} = await built();
+test('check_client passes a good build and fails on missing chunks, raw sources, stale precache and a worker without the build id', async t => {
+  const {root, out, buildId} = await built(t);
   const {stdout} = await run(process.execPath, [CHECK, out, root]);
   assert.match(stdout, new RegExp(`precached for build ${buildId}`));
   const precache = JSON.parse(await readFile(join(out, 'precache.json'), 'utf8'));
@@ -240,8 +244,8 @@ test('check_client passes a good build and fails on missing chunks, raw sources,
   await assert.rejects(run(process.execPath, [CHECK, out, root]), /\(missing\)/);
 });
 
-test('check_client fails a v2 page over its gzipped JavaScript or CSS budget (FE-09)', async () => {
-  const root = await site();
+test('check_client fails a v2 page over its gzipped JavaScript or CSS budget (FE-09)', async t => {
+  const root = await site(t);
   await writeFile(join(root, 'app.html'), '<!doctype html><html><head><link rel="stylesheet" href="styles.css"><script type="module" src="shell.js"></script></head><body>v2</body></html>');
   await writeFile(join(root, 'shell.js'), `import {helper} from './helper.js';\nexport const pad = ${JSON.stringify(Array.from({length: 400}, (_, i) => `${i}-${Math.sin(i)}`))};\nhelper(pad);`);
   const out = join(root, 'client');
@@ -251,11 +255,10 @@ test('check_client fails a v2 page over its gzipped JavaScript or CSS budget (FE
   assert.match(stdout, /Budgets: app\.html js \d+ B, css \d+ B gzipped/);
   await assert.rejects(check({js_gzip_max: 500}), /app\.html: initial JavaScript \d+ B gzipped exceeds its budget of 500 B/);
   await assert.rejects(check({css_gzip_max: 1}), /app\.html: initial CSS \d+ B gzipped exceeds its budget of 1 B/);
-  await rm(root, {recursive: true, force: true});
 });
 
-test('check_client passes with a WARN from 97% of a budget, and records what it measured (SC-CI-2)', async () => {
-  const root = await site();
+test('check_client passes with a WARN from 97% of a budget, and records what it measured (SC-CI-2)', async t => {
+  const root = await site(t);
   await writeFile(join(root, 'app.html'), '<!doctype html><html><head><link rel="stylesheet" href="styles.css"><script type="module" src="shell.js"></script></head><body>v2</body></html>');
   await writeFile(join(root, 'shell.js'), `import {helper} from './helper.js';\nexport const pad = ${JSON.stringify(Array.from({length: 400}, (_, i) => `${i}-${Math.sin(i)}`))};\nhelper(pad);`);
   const out = join(root, 'client'), budget = join(root, 'budget.json'), measured = join(root, 'measured.json');
@@ -269,11 +272,10 @@ test('check_client passes with a WARN from 97% of a budget, and records what it 
   assert.equal(JSON.parse(await readFile(measured, 'utf8')).bundles['app.html'].js, size);
   assert.match((await check({js_gzip_max: size + 1}, {GITHUB_ACTIONS: 'true'})).stderr, /^::warning title=Client budget near its ceiling::/m);
   await assert.rejects(check({js_gzip_max: size - 1}), /exceeds its budget of/);
-  await rm(root, {recursive: true, force: true});
 });
 
-test('check_client fails when the v2 app entry statically imports three (FE-71)', async () => {
-  const root = await site();
+test('check_client fails when the v2 app entry statically imports three (FE-71)', async t => {
+  const root = await site(t);
   const renderer = 'export const make = () => { throw new Error("THREE.WebGLRenderer: Error creating WebGL context."); };';
   await writeFile(join(root, 'renderer.js'), renderer);
   await writeFile(join(root, 'app.html'), '<!doctype html><html><head><script type="module" src="shell.js"></script></head><body>v2</body></html>');
@@ -303,7 +305,6 @@ test('check_client fails when the v2 app entry statically imports three (FE-71)'
     assert.ok(Object.entries(manifest).some(([key, e]) => key.startsWith('_') && !e.src && e.file.includes(file.replace('.js', ''))), `${file} is a shared chunk without src`);
     await assert.rejects(run(process.execPath, [CHECK, out, root]), message);
   }
-  await rm(root, {recursive: true, force: true});
 });
 
 test('the real site builds and passes the client check (static data directories skipped)', async () => {
