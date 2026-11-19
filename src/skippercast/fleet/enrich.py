@@ -97,6 +97,9 @@ def enrich_code(ctx: RunContext, sink, vessels: list[Mapping[str, Any]] | None =
                                   for b, r in report["bindings"].items()
                                   if ctx.region.binding(b).adapter == "google-places")),
     }
+    failed = sum(1 for r in report["bindings"].values() if isinstance(r, Mapping) and r.get("status") == "failed")
+    if failed:
+        counts["failed"] = failed
     report["counts"] = counts
     with _atomic_text(ctx.run_dir / "enrich-code.json") as handle:
         handle.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
