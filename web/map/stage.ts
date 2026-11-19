@@ -243,6 +243,8 @@ export const ENTRY_PITCH = 60, ENTRY_ZOOM_DROP = 0.5;
 export const MAX_PITCH = 75;
 /** The lowest map zoom at which 3D is offered, on a desktop and on a phone (MAP-DESIGN-LOCK § 2.3). */
 export const MIN_3D_ZOOM = {desktop: 11, phone: 12} as const;
+/** A phone is a viewport below 900 px (MAP-DESIGN-LOCK § 2.3), the query the host's 3D threshold follows. */
+export const PHONE_QUERY = '(max-width: 899px)';
 /** Whether the 3D choice is offered at this shared-camera zoom; with no camera yet the region's home zoom decides. */
 export const threeDOffered = (zoom: number | null | undefined, phone: boolean): boolean => (zoom ?? HOME_ZOOM) >= (phone ? MIN_3D_ZOOM.phone : MIN_3D_ZOOM.desktop);
 /** The camera a 3D choice starts from: the Chart or 2D camera pitched to ENTRY_PITCH, with the given bearing, `drop` zoom levels wider. */
@@ -396,7 +398,7 @@ export function createStage(options: StageOptions): Stage {
   let shownOptions = NATIVE_TERRAIN_DEFAULTS;
   let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined, noticeTimer: ReturnType<typeof setTimeout> | undefined;
   // MB-14: the 3D frame watch (armed once the terrain has loaded), the entry camera's bookkeeping and the theme last painted.
-  let fpsArmed = false, last3dZoom: number | undefined, lastBearing: number | undefined, lastShown = shownPresentation.peek(), painted: StageTheme | undefined = typeof document === 'undefined' ? undefined : rootTheme();
+  let fpsArmed = false, last3dZoom: number | undefined, lastBearing: number | undefined, lastShown: string | undefined, entryPending = false, painted: StageTheme | undefined = typeof document === 'undefined' ? undefined : rootTheme();
   const monitor = createFrameMonitor(() => {
     // Slow 3D goes back to 2D, with a notice. The link is rewritten in place, so Back does not return to the slow view.
     if (!alive || shownPresentation.peek() !== '3d') return;
@@ -561,9 +563,13 @@ export function createStage(options: StageOptions): Stage {
   const visibility = (): void => { pageHidden.value = !!doc.hidden; monitor.reset(); };
   // A 3D choice after Chart or 2D starts at the entry camera. Leaving 3D changes nothing (one camera for every view), so a straight
   // return to 3D, the camera still where 3D left it, is not made wider again: the half zoom level is for a view that moved.
-  const enter3d = (): void => {
+  // `opening`: the page itself opened in 3D. A link that names an orbit (bearing and pitch) is kept as shared; one that does not
+  // gets the entry pose. With no camera yet (the region's centre still arriving) the entry waits for the home camera.
+  const enter3d = (opening: boolean): void => {
     const c = camera.peek();
-    if (!c) return;
+    if (!c) { entryPending = true; return; }
+    entryPending = false;
+    if (opening && c.pitch !== undefined) return;
     const back = last3dZoom !== undefined && Math.abs(c.zoom - last3dZoom) < 0.05;
     camera.value = entryCamera(c, c.bearing ?? lastBearing ?? 0, back ? 0 : ENTRY_ZOOM_DROP);
   };
@@ -585,14 +591,15 @@ export function createStage(options: StageOptions): Stage {
   const disposers = [
     effect(() => { const c = parseCamera(view.value); if (c) camera.value = c; }),
     // A new region (or its centre arriving) moves the camera home unless the link names one.
-    effect(() => { const next = home(); if (next && !parseCamera(view.peek())) camera.value = next; }),
+    effect(() => { const next = home(); if (next && !parseCamera(view.peek())) { camera.value = next; if (entryPending) enter3d(true); } }),
     // Entering and leaving 3D (MB-14): the entry camera, the frame watch's fresh start, and the fallback notice's end.
     effect(() => {
       const now = shownPresentation.value, was = lastShown;
       lastShown = now;
       if (now === was) return;
       monitor.reset();
-      if (now === '3d') { fpsFallback.value = false; clearTimeout(noticeTimer); enter3d(); } else if (was === '3d') leave3d();
+      // The first run has no earlier view: a page opened in 3D is an entry too, kept as it is only when its link names an orbit.
+      if (now === '3d') { fpsFallback.value = false; clearTimeout(noticeTimer); enter3d(was === undefined); } else { entryPending = false; if (was === '3d') leave3d(); }
     }),
     // The first terrain choice mounts the renderer; Chart only hides it (setVisible), so switching back is instant.
     effect(() => { if (shownPresentation.value !== 'chart') void mount(); }),

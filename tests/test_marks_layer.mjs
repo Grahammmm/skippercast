@@ -241,7 +241,8 @@ function library() {
 function terrain() {
   const fake = {options: null, selected: []};
   const handle = {load: async () => true, destroy() {}, selectHabitat: id => fake.selected.push(id)};
-  for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'setVisible']) handle[name] = () => true;
+  // MB-14: the mount's first option pass sends the host's 2x relief, so the handle takes every option setter and the theme repaint.
+  for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'setVisible', 'setRelief', 'setTheme', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSunAzimuth', 'setPhotoMix', 'setFixedRamp', 'setSourceCoverage', 'setHabitatVisible']) handle[name] = () => true;
   fake.module = {styles: [], mountCoast(_host, options) { fake.options = options; return handle; }};
   return fake;
 }

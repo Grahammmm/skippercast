@@ -41,7 +41,7 @@ import {dailyFeed, verdictEpoch} from '../brief/Brief.tsx';
 import {mapFirstIdle} from '../map-ready.ts';
 import {createWind} from '../map/wind.ts';
 import type {HourClock} from '../clock.ts';
-import {camera, choosePresentation, createStage, fpsFallback, shownPresentation, terrainActions, terrainBlocked, terrainReason, threeDOffered} from '../map/stage.ts';
+import {camera, choosePresentation, createStage, fpsFallback, PHONE_QUERY, shownPresentation, terrainActions, terrainBlocked, terrainReason, threeDOffered} from '../map/stage.ts';
 import {language, t, type StringId} from '../i18n.ts';
 import {poster, posterPlacement} from '../map/poster.ts';
 import {appView, base, layers, profile, region, species} from '../state.ts';
@@ -56,8 +56,8 @@ export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> 
 const PRESENTATION_IDS: Readonly<Record<Presentation, StringId>> = {chart: 'stage.chart', '2d': 'stage.2d', '3d': 'stage.3d'};
 const NOTE_ID = 'app-stage-note';
 const ZOOM_NOTE_ID = 'app-stage-zoom-note';
-// MB-14: 3D is offered from z11, and from z12 on a phone (the renderer's own phone test is a host narrower than 600 px).
-const phoneQuery = typeof matchMedia === 'function' ? matchMedia('(max-width: 599px)') : null;
+// MB-14: 3D is offered from z11, and from z12 on a phone: a viewport below 900 px (MAP-DESIGN-LOCK § 2.3).
+const phoneQuery = typeof matchMedia === 'function' ? matchMedia(PHONE_QUERY) : null;
 const phone = signal(phoneQuery?.matches ?? false);
 phoneQuery?.addEventListener('change', event => { phone.value = event.matches; });
 

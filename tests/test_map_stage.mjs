@@ -3,10 +3,11 @@
 // so neither three nor a GPU is needed. web/map/stage.ts runs by type stripping.
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {signal} from '@preact/signals';
 import {
   ENTRY_PITCH, ENTRY_ZOOM_DROP, FPS_WINDOW_MS, HOME_ZOOM, MAX_PITCH, MIN_3D_ZOOM, NO_TERRAIN, UNAVAILABLE, UNSUPPORTED_CURRENT, camera, cameraParam, choosePresentation, coastSpecies, createStage,
   currentStatus, locationFor, parseCamera, shownPresentation, spanForZoom, terrainBlocked, terrainFailed, terrainHour, terrainMark,
-  terrainState, zoomForSpan, TERRAIN_DEFAULTS, createFrameMonitor, entryCamera, fpsFallback, setTerrainOption, threeDOffered, terrainActions, terrainCoverage, terrainOptions, terrainShading, terrainPick, terrainReading,
+  terrainState, zoomForSpan, PHONE_QUERY, TERRAIN_DEFAULTS, createFrameMonitor, entryCamera, fpsFallback, setTerrainOption, threeDOffered, terrainActions, terrainCoverage, terrainOptions, terrainShading, terrainPick, terrainReading,
 } from '../web/map/stage.ts';
 import {configureStore, navigate, setParams, syncFromURL} from '../web/state.ts';
 import {dockTime} from '../web/hour.ts';
@@ -567,6 +568,37 @@ test('MB-14 offered: 3D needs z11 on a desktop and z12 on a phone', () => {
   assert.deepEqual([10.99, 11, 11.5].map(z => threeDOffered(z, false)), [false, true, true]);
   assert.deepEqual([11.99, 12, 13].map(z => threeDOffered(z, true)), [false, true, true]);
   assert.equal(threeDOffered(null, true), true, 'no camera: the home zoom');
+  // Bug it catches: a 599 px phone cutoff, which offers 3D at z11 on an 800 px tablet-width phone viewport.
+  assert.equal(PHONE_QUERY, '(max-width: 899px)', 'phone means below 900 px');
+});
+
+// Contract: a page opened in 3D is a 3D entry too (§ 2.3), unless its link names an orbit. Bug it catches: starting the entry
+// bookkeeping already in 3D, so a link without an orbit never gets the 60° pitch and half zoom drop; or overwriting a shared orbit.
+test('MB-14 opening: a 3D link without an orbit gets the entry pose, one with an orbit keeps it, a late home waits for the centre', async t => {
+  browser(`${ORIGIN}?region=morro-bay&presentation=3d&view=35.37,-120.86,13`);
+  const plain = terrain(), first = stage(plain);
+  t.after(() => first.stage.destroy());
+  await tick();
+  assert.deepEqual(plain.options.initial.location, {latitude: 35.37, longitude: -120.86, span: spanForZoom(12.5), bearing: 0, pitch: 60}, 'unoriented 3D link: entry pose at mount');
+  assert.equal(plain.count('setLocation'), 0, 'sent once, as the initial state');
+  first.stage.destroy();
+
+  browser(`${ORIGIN}?region=morro-bay&presentation=3d&view=35.41000,-120.95000,11,-35.12,49.88`);
+  const shared = terrain(), second = stage(shared);
+  t.after(() => second.stage.destroy());
+  await tick();
+  assert.deepEqual(shared.options.initial.location, {latitude: 35.41, longitude: -120.95, span: spanForZoom(11), bearing: -35.12, pitch: 49.88}, 'shared orbit kept');
+  second.stage.destroy();
+
+  browser(`${ORIGIN}?region=morro-bay&presentation=3d`);
+  camera.value = null;
+  const centre = signal(null), third = createStage({host: {dataset: {}, shadowRoot: {children: [], replaceChildren() {}}}, load: async () => terrain().module,
+    center: () => centre.value, now: () => NOW, doc: document(), viewDelay: 0});
+  t.after(() => third.destroy());
+  await tick();
+  centre.value = [35.37, -120.86];
+  await tick();
+  assert.deepEqual(camera.value, {latitude: 35.37, longitude: -120.86, zoom: 12 - ENTRY_ZOOM_DROP, bearing: 0, pitch: ENTRY_PITCH}, 'the entry pose follows the home camera');
 });
 
 // Contract: the renderer is told the host's pitch cap and token sky at mount, and is timed through its frame callback.
