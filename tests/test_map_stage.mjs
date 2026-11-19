@@ -559,6 +559,13 @@ test('MB-14 entry: a 3D choice after Chart or 2D starts at pitch 60°, half a zo
   fake.options.onView({latitude: 35.37, longitude: -120.86, span: spanForZoom(14)});
   choosePresentation('3d');
   assert.equal(camera.value.zoom, 14 - ENTRY_ZOOM_DROP);
+  // A 2D pan at the same zoom is a moved view too. Bug it catches: a straight-return test on zoom alone skips the widening after a pan.
+  fake.options.onView({latitude: 35.37, longitude: -120.86, span: spanForZoom(13.5), bearing: 0, pitch: 60});
+  choosePresentation('2d');
+  fake.options.onView({latitude: 35.37, longitude: -120.86 + 0.05, span: spanForZoom(13.5)});
+  choosePresentation('3d');
+  assert.equal(camera.value.zoom, 13.5 - ENTRY_ZOOM_DROP, 'panned at the same zoom: widened again');
+  assert.equal(camera.value.longitude, -120.86 + 0.05);
   assert.deepEqual(entryCamera({latitude: 1, longitude: 2, zoom: 0.2}, 5), {latitude: 1, longitude: 2, zoom: 0, bearing: 5, pitch: 60}, 'the entry zoom stays on the map\'s zoom range');
 });
 

@@ -251,6 +251,10 @@ export const threeDOffered = (zoom: number | null | undefined, phone: boolean): 
 export const entryCamera = (c: Camera, bearing: number, drop = ENTRY_ZOOM_DROP): Camera =>
   ({latitude: c.latitude, longitude: c.longitude, zoom: clamp(c.zoom - drop, 0, 22), bearing, pitch: ENTRY_PITCH});
 
+/** Whether the camera is still where 3D left it: the same zoom (0.05) and the same centre, within 2 screen pixels (360° of longitude is 256 px at zoom 0). */
+export const sameSpot = (a: Camera, b: Camera): boolean =>
+  Math.abs(a.zoom - b.zoom) < 0.05 && Math.max(Math.abs(a.latitude - b.latitude), Math.abs(a.longitude - b.longitude)) <= 2 * 360 / (256 * 2 ** b.zoom);
+
 /** A 3D view that holds under this many frames a second for the whole window goes back to 2D. */
 export const MIN_FPS = 24, FPS_WINDOW_MS = 2000;
 /**
@@ -398,7 +402,7 @@ export function createStage(options: StageOptions): Stage {
   let shownOptions = NATIVE_TERRAIN_DEFAULTS;
   let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined, noticeTimer: ReturnType<typeof setTimeout> | undefined;
   // MB-14: the 3D frame watch (armed once the terrain has loaded), the entry camera's bookkeeping and the theme last painted.
-  let fpsArmed = false, last3dZoom: number | undefined, lastBearing: number | undefined, lastShown: string | undefined, entryPending = false, painted: StageTheme | undefined = typeof document === 'undefined' ? undefined : rootTheme();
+  let fpsArmed = false, last3d: Camera | undefined, lastBearing: number | undefined, lastShown: string | undefined, entryPending = false, painted: StageTheme | undefined = typeof document === 'undefined' ? undefined : rootTheme();
   const monitor = createFrameMonitor(() => {
     // Slow 3D goes back to 2D, with a notice. The link is rewritten in place, so Back does not return to the slow view.
     if (!alive || shownPresentation.peek() !== '3d') return;
@@ -570,12 +574,12 @@ export function createStage(options: StageOptions): Stage {
     if (!c) { entryPending = true; return; }
     entryPending = false;
     if (opening && c.pitch !== undefined) return;
-    const back = last3dZoom !== undefined && Math.abs(c.zoom - last3dZoom) < 0.05;
+    const back = last3d !== undefined && sameSpot(c, last3d);
     camera.value = entryCamera(c, c.bearing ?? lastBearing ?? 0, back ? 0 : ENTRY_ZOOM_DROP);
   };
   const leave3d = (): void => {
     const c = camera.peek();
-    if (c) { last3dZoom = c.zoom; lastBearing = c.bearing ?? lastBearing; }
+    if (c) { last3d = c; lastBearing = c.bearing ?? lastBearing; }
   };
   // The repaint for a theme switch: sky, fog and draped colours change in place; the stage keeps the palette its next drape reads.
   const paintTheme = (theme: StageTheme): void => {
