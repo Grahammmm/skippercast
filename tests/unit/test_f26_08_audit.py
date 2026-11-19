@@ -4,13 +4,10 @@ import sys
 
 import pytest
 
-pytest.importorskip('lerc')
-pytest.importorskip('numpy')
+lerc = pytest.importorskip('lerc')
+np = pytest.importorskip('numpy')
 pytest.importorskip('pyproj')
 pytestmark = pytest.mark.gis
-
-import lerc  # noqa: E402
-import numpy as np  # noqa: E402
 
 from research.scripts import audit_cdfw_substrate_tiles as m  # noqa: E402
 
