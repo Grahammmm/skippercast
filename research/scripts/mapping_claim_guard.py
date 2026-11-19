@@ -12,6 +12,7 @@ import fcntl
 import json
 import os
 import math
+import re
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
@@ -91,6 +92,8 @@ def _overlaps(left: dict[str, Any], right: dict[str, Any]) -> bool:
 
 EXECUTION_FIELDS = ("id", "owner", "attempt", "dispatch_id", "process_id")
 CLAIM_FIELDS = ("region", "reach", "method", "source_ids", "native_window", "output_path")
+PUBLICATION_KINDS = {"rights", "restriction", "live_readback"}
+PUBLICATION_RECEIPT_SCHEMA = "sc-mapping-publication-receipt/1"
 
 
 def _execution_identity(job: dict[str, Any]) -> dict[str, Any]:
@@ -192,27 +195,63 @@ def validate_checkpoint(checkpoint: dict[str, Any], *, base_dir: Path | None = N
     _ = coordinator
 
 
+def _pinned_publication_file(ref: Any, root: Path, label: str, *, receipt: bool = False) -> bytes | None:
+    """Verify an exact {path, sha256} reference; parse only bytes we verified."""
+    if (not isinstance(ref, dict) or ref.keys() != {"path", "sha256"}
+            or not isinstance(ref["path"], str) or not ref["path"].strip()
+            or not isinstance(ref["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", ref["sha256"])):
+        raise GuardError(f"{label} needs a path and SHA-256")
+    path = root / ref["path"]
+    try:
+        if not path.is_file():
+            raise GuardError(f"{label} is not a regular file")
+        with path.open("rb") as stream:
+            if not stream.read(1):
+                raise GuardError(f"{label} is empty")
+            stream.seek(0)
+            raw = stream.read() if receipt else None
+            digest = hashlib.sha256(raw) if raw is not None else hashlib.file_digest(stream, "sha256")
+    except OSError as exc:
+        raise GuardError(f"cannot read {label}") from exc
+    if digest.hexdigest() != ref["sha256"]:
+        raise GuardError(f"{label} SHA-256 does not match")
+    return raw
+
+
 def _require_publication_receipts(job: dict[str, Any], base_dir: Path | None) -> None:
-    receipts = job.get("receipt_paths")
-    if not isinstance(receipts, list):
-        raise GuardError(f"published job {job['id']} needs rights, restriction, and live-readback receipts")
-    resolved = []
-    for item in receipts:
-        if not isinstance(item, str) or not item:
-            continue
-        path = Path(item)
-        resolved.append((path if path.is_absolute() else (base_dir or Path.cwd()) / path).resolve())
-    required = {"rights", "restriction", "live_readback"}
-    found: set[str] = set()
-    for path in resolved:
-        name = path.name.lower()
-        if path.is_file():
-            if "rights" in name: found.add("rights")
-            if "restriction" in name or "mpa" in name: found.add("restriction")
-            if "live" in name and ("readback" in name or "read-back" in name): found.add("live_readback")
-    missing = sorted(required - found)
-    if missing:
-        raise GuardError(f"published job {job['id']} missing existing receipt(s): {', '.join(missing)}")
+    """Check coordinator attestations of existing producer evidence, not approval.
+
+    Pin the exact artifact (or complete release manifest) in publication_artifact
+    before the transition. publication_receipts maps each kind to {path, sha256}.
+    Each v1 JSON receipt records a PASS for that job, attempt and artifact, and
+    pins the underlying producer output with evidence={path, sha256}. Paths are
+    checkpoint-relative or absolute. Generic receipt_paths are not proof.
+    The coordinator still interprets producer output and checks currency through
+    the existing review/release route; this guard does not contact live services.
+    """
+    refs = job.get("publication_receipts")
+    if not isinstance(refs, dict) or refs.keys() != PUBLICATION_KINDS:
+        raise GuardError("publication evidence needs rights, restriction, and live-readback receipts")
+    attempt = job.get("attempt")
+    if type(attempt) is not int or attempt < 1:
+        raise GuardError("publication evidence requires a positive job attempt")
+    root = base_dir or Path.cwd()
+    artifact = _required(job, "publication_artifact")
+    _pinned_publication_file(artifact, root, "publication artifact")
+    for kind in sorted(PUBLICATION_KINDS):
+        label = f"{kind} receipt"
+        raw = _pinned_publication_file(refs[kind], root, label, receipt=True)
+        try:
+            content = json.loads(raw or b"")
+        except (ValueError, RecursionError) as exc:
+            raise GuardError(f"{label} must be valid JSON") from exc
+        expected = {"schema": PUBLICATION_RECEIPT_SCHEMA, "kind": kind, "status": "PASS",
+                    "job_id": job["id"], "attempt": attempt, "artifact_sha256": artifact["sha256"]}
+        if (not isinstance(content, dict) or type(content.get("attempt")) is not int
+                or not isinstance(content.get("job_id"), str) or not content["job_id"].strip()
+                or any(content.get(k) != v for k, v in expected.items())):
+            raise GuardError(f"{label} does not attest PASS for this job, attempt and artifact")
+        _pinned_publication_file(content.get("evidence"), root, f"{kind} producer evidence")
 
 
 @contextmanager
@@ -278,6 +317,10 @@ def update_job(path: str | Path, job_id: str, patch: dict[str, Any], *, actor: s
             if any(patch.get(k, job.get(k)) != job.get(k) for k in CLAIM_FIELDS):
                 raise GuardError("occupied claim scope cannot change before stopped-process reconciliation")
         candidate = dict(job, **patch)
+        if new == "published" and any(
+                type(candidate.get(k)) is not type(job.get(k)) or candidate.get(k) != job.get(k)
+                for k in ("attempt", "publication_artifact")):
+            raise GuardError("cannot change the recorded attempt or artifact when recording publication")
         if owner_changed:
             if candidate.get("dispatch_state") == "dispatching":
                 raise GuardError("stopped claim must leave dispatching before reassignment")
