@@ -94,6 +94,21 @@ def test_corrupt_or_global_details_refuse_before_any_tick(world, synthetic_dispa
     refused(edited, "per-window details digest mismatch")
     refused(dict(first, store_status=driver.queue_status(w.root / driver.DATABASE)), "run-scoped store counts required")
     refused({k: v for k, v in first.items() if k != "windows_sha256"}, "per-window details digest mismatch")
+    # Contract: the nested scope must be the exact count-only object. Believable bug: validating only the
+    # outer keys + marker lets a detail-bearing/global nested scope (foreign job rows) through to a tick.
+    def scoped(**change):
+        return dict(first, store_status=dict(first["store_status"], **change))
+    foreign_rows = dict(first["store_status"]["foreign"], job_details=[{"job_id": "synthetic-foreign-row"}])
+    for bad in (scoped(foreign=foreign_rows),
+                scoped(foreign=dict(first["store_status"]["foreign"], jobs=[{"job_id": "x"}])),
+                scoped(foreign={"jobs": 2}),
+                scoped(lineage_jobs={"done": [{"job_id": "x"}]}),
+                scoped(lineage_jobs={"done": True}),
+                scoped(lineage_charges=dict(first["store_status"]["lineage_charges"], rows="6")),
+                scoped(lineage_charges={"rows": 1}),
+                scoped(store="elsewhere"), scoped(events=-1), scoped(events=[]), scoped(last_tick_epoch="now"),
+                scoped(lineage_jobs=[], foreign=[]), scoped(foreign=None)):
+        refused(bad, "run-scoped store counts required")
     # A changed detail file refuses even when the summary itself is intact.
     rewrite(path, first)
     target = w.root / products[0]["path"]

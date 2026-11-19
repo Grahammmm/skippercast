@@ -680,11 +680,29 @@ def _bounded(problems):
     return problems[:MAX_PROBLEMS] + [f"{len(problems) - MAX_PROBLEMS} further problems omitted from the bounded run summary"]
 
 
+def _count(value):
+    return type(value) is int and value >= 0
+
+
+def _scope_valid(scope):
+    """The exact count-only scope _scope() writes: no extra keys, no nested rows or details, only counts."""
+    if not isinstance(scope, dict) or scope.get("schema") != SCOPE or set(scope) != SCOPE_KEYS:
+        return False
+    jobs, charges, foreign = scope["lineage_jobs"], scope["lineage_charges"], scope["foreign"]
+    tick = scope["last_tick_epoch"]
+    return (scope["store"] in ("present", "uninitialized")
+            and isinstance(jobs, dict) and all(isinstance(k, str) and _count(v) for k, v in jobs.items())
+            and isinstance(charges, dict) and set(charges) == {"rows", "requests", "bytes"} and all(map(_count, charges.values()))
+            and isinstance(foreign, dict) and set(foreign) == {"jobs", "queued_jobs", "charges"} and all(map(_count, foreign.values()))
+            and _count(scope["events"])
+            and (tick is None or (type(tick) in (int, float) and math.isfinite(tick))))
+
+
 def _check_details(root, previous, receipt, namespace):
     """A v3 predecessor's scoped counts and per-window details must still verify before any tick."""
     try:
         scope, windows = previous["store_status"], previous["windows"]
-        if not isinstance(scope, dict) or scope.get("schema") != SCOPE or set(scope) != SCOPE_KEYS:
+        if not _scope_valid(scope):
             raise ValueError("run-scoped store counts required")
         if previous.get("windows_sha256") != digest(windows):
             raise ValueError("per-window details digest mismatch")
