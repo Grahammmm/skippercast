@@ -151,9 +151,9 @@ and gzipped page bundle numbers in `scripts/startup-budget.json`):
 * Every six hours at :17 UTC (or when an operator runs it manually), `.github/workflows/budget-drift.yml` builds main
   and runs `scripts/budget_drift.py`. Every budget at or above 97% (or over) gets the ceiling **measured x 1.05, rounded
   up to 1,000 bytes** (the rule this file's history already used). One signed-off bot pull request (`bot/budget-drift`)
-  carries the new numbers, with the measured size, old ceiling, and main commit measured as the reason. Offline checks
-  run on each new or updated bot PR head. The pull request is reviewed and merged like any other; the bot never pushes
-  to main.
+  carries the new numbers, with the measured size, old ceiling, and main commit measured as the reason. Each create or
+  update dispatches Offline checks and the required DCO `sign-off` check. DCO checks the PR commits against the exact
+  refreshed head and fails if the branch moved. The bot never pushes to main or merges the PR.
 * The reasons go in `history` for `perf-budget.json` (as before) and in the new `drift_history` list for
   `startup-budget.json` (which has no per-number history). `python3 scripts/budget_drift.py --check` (run in the Size
   budget step) fails if a budget with a `drift_history` entry was hand-edited without a new entry.
@@ -189,9 +189,9 @@ and gzipped page bundle numbers in `scripts/startup-budget.json`):
 * Every six hours at :17 UTC (or when an operator runs it manually), `.github/workflows/budget-drift.yml` builds main
   and runs `scripts/budget_drift.py`. Every budget at or above 97% (or over) gets the ceiling **measured x 1.05, rounded
   up to 1,000 bytes** (the rule this file's history already used). One signed-off bot pull request (`bot/budget-drift`)
-  carries the new numbers, with the measured size, old ceiling, and main commit measured as the reason. Offline checks
-  run on each new or updated bot PR head. The pull request is reviewed and merged like any other; the bot never pushes
-  to main.
+  carries the new numbers, with the measured size, old ceiling, and main commit measured as the reason. Each create or
+  update dispatches Offline checks and the required DCO `sign-off` check. DCO checks the PR commits against the exact
+  refreshed head and fails if the branch moved. The bot never pushes to main or merges the PR.
 * The reasons go in `history` for `perf-budget.json` (as before) and in the new `drift_history` list for
   `startup-budget.json` (which has no per-number history). `python3 scripts/budget_drift.py --check` (run in the Size
   budget step) fails if a budget with a `drift_history` entry was hand-edited without a new entry.
