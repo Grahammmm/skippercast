@@ -34,7 +34,7 @@ Exit status: 0 when every file is valid, 1 when any is not, 2 when the optional
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -306,7 +306,23 @@ def _trip(trip: dict) -> tuple[Fact, Offering, list[str]] | None:
     value = {key: prov["value"] for key, prov in parts.items() if prov is not None}
     if species:
         value["target_species"] = [p["value"] for p in species]
-    fact = _combined("trip_types[]", value, [p for p in parts.values() if p is not None] + species)
+    observations = [p for p in parts.values() if p is not None] + species
+
+    def citation(prov: dict) -> dict[str, str]:
+        return {"source_url": prov["source_url"], "retrieved_at": prov["retrieved_at"]}
+
+    # Keep the name's citation as the row citation. When it cannot stand for the
+    # entire offering, record each component's citation in the linked fact value.
+    # Species citations follow the raw target_species list in the same order.
+    anchor = citation(name)
+    if any(citation(p) != anchor for p in observations):
+        sources: dict[str, dict[str, str] | list[dict[str, str]]] = {
+            key: citation(prov) for key, prov in parts.items() if prov is not None
+        }
+        if species:
+            sources["target_species"] = [citation(p) for p in species]
+        value["component_sources"] = sources
+    fact = replace(_combined("trip_types[]", value, observations), retrieved_at=name["retrieved_at"])
     label = name["value"].strip()[:120].strip()
     price, duration, departs = value.get("price_usd"), value.get("duration_h"), value.get("departs")
     season = season_range(value["season"]) if isinstance(value.get("season"), str) else None
