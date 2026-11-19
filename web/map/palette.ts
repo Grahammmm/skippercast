@@ -23,7 +23,7 @@ export const PALETTE_TOKENS = {
   mapWater: 'map-water', mapLand: 'map-land', mapPark: 'map-park', mapRoad: 'map-road', mapRoadMinor: 'map-road-minor', mapBoundary: 'map-boundary',
   mapLabel: 'map-label', mapHalo: 'map-halo', mapInk: 'map-ink', mapInkHalo: 'map-ink-halo', mapCoast: 'map-coast', mapContour: 'map-contour',
   mapContourShallow: 'map-contour-shallow', mapContourShallowHalo: 'map-contour-shallow-halo', mapContourDeep: 'map-contour-deep', mapContourDeepHalo: 'map-contour-deep-halo', mapNosurvey: 'map-nosurvey',
-  mapSurveyInk: 'map-survey-ink', mapSurveyHalo: 'map-survey-halo',
+  mapSurveyInk: 'map-survey-ink', mapSurveyHalo: 'map-survey-halo', mapSky: 'map-sky', mapHorizon: 'map-horizon', mapFog: 'map-fog',
   mapSurveyTint1: 'map-survey-tint-1', mapSurveyTint2: 'map-survey-tint-2', mapSurveyTint5: 'map-survey-tint-5',
   habRock: 'hab-rock', habMixed: 'hab-mixed', habSoft: 'hab-soft', habKelp: 'hab-kelp', markRing: 'mark-ring',
   mapLabelOpacity: 'map-label-opacity', mapRoadOpacity: 'map-road-opacity', mapHabitatOpacity: 'map-habitat-opacity', mapContourWidth: 'map-contour-width',
@@ -57,6 +57,11 @@ export function readPalette(read: TokenReader = cssTokenReader()): Palette {
 export function ramps(p: Palette): {depth: string[]; sst: string[]; swell: string[]; current: string[]} {
   return {depth: [p.depth0, p.depth1, p.depth2, p.depth3], sst: [p.sst0, p.sst1, p.sst2, p.sst3, p.sst4, p.sst5], swell: [p.swell0, p.swell1, p.swell2, p.swell3],
     current: [p.current0, p.current1, p.current2, p.current3, p.current4, p.current5]};
+}
+
+/** The 3D view's sky, horizon, fog and clear colours (MAP-DESIGN-LOCK 10.2) for the coast embed's `sky` option and `setTheme`. */
+export function coastSky(p: Palette): {sky: string; horizon: string; fog: string; ground: string} {
+  return {sky: p.mapSky, horizon: p.mapHorizon, fog: p.mapFog, ground: p.bg};
 }
 
 /**

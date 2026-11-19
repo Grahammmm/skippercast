@@ -2697,6 +2697,8 @@
 "a11y.basis.run":"Cómo se calcula: tiempo de recorrido",
 "stage.unavailable":"Los gráficos costeros no están disponibles. La carta, los pronósticos y las herramientas de viaje siguen funcionando.",
 "stage.noTerrain":"Aún no hay terreno costero revisado que cubra esta región.",
+"stage.fpsFallback":"El 3D iba lento en este dispositivo, así que el mapa volvió a 2D.",
+"stage.zoomFor3d":"Acerca el mapa para usar el 3D.",
 "savedSpots.status.signedOut":"Inicia sesión para mostrar tus lugares guardados.",
 "savedSpots.status.loadingAccount":"Comprobando tu cuenta…",
 "savedSpots.status.offline":"Las cuentas necesitan conexión.",

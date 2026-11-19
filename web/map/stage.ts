@@ -21,11 +21,15 @@
 // keys the legend; terrainActions gives the stage's zoom, reset and top-view
 // buttons and the sources sheet behind the basis links.
 //
+// MB-14: the 3D view enters at a 60° pitch (bearing kept, half a zoom wider), is offered from z11 (z12 on a phone),
+// caps its pitch at 75°, and drops back to 2D with a notice when it holds under 24 fps for 2 s. A live theme
+// switch repaints its sky, fog and drapes in place through the handle's setTheme (createThemeWatcher, no rebuild).
+//
 // Erasable syntax only: tests/test_map_stage.mjs imports this file by type
 // stripping and passes a fake terrain module, so no GPU or three is needed.
 import {computed, effect, signal} from '@preact/signals';
 import type {
-  CoastHabitat, CoastHandle, CoastLocation, CoastMountOptions, CoastPerspective, CoastReading, CoastSelection, CoastShading, CoastSourceCoverage, CoastTargetDetail,
+  CoastHabitat, CoastHandle, CoastLocation, CoastMountOptions, CoastPerspective, CoastReading, CoastSelection, CoastShading, CoastSky, CoastSourceCoverage, CoastTargetDetail,
 } from '../../packages/coast/src/embed-types.ts';
 import type {CoastPalette} from '../../packages/coast/src/palette.ts';
 import type {ChartMark} from './coastline.ts';
@@ -42,6 +46,9 @@ import {
   stagePresentation, UNSUPPORTED, view, withParams, type AppView, type CurrentChoice,
 } from '../state.ts';
 import {markMapIdle} from '../map-ready.ts';
+import {lightScheme} from '../theme-boot.ts';
+import {themeChoice} from '../theme-choice.ts';
+import {createThemeWatcher} from './theme-restyle.ts';
 import {C2_ENABLED, C2_RELEASES} from './c2-releases.ts';
 import type {C2View} from './terrain.js';
 
@@ -165,6 +172,10 @@ export interface StageOptions {
   palette?: () => Partial<CoastPalette> | undefined;
   /** The token palette the registry's terrain overlays resolve their roles from (FE-82); without it nothing drapes. */
   overlayPalette?: () => Palette | undefined;
+  /** The 3D sky, horizon, fog and clear colours from the tokens (MB-14); read at mount and again on a theme switch. Without it the renderer keeps its own. */
+  sky?: () => CoastSky | undefined;
+  /** Test seam: how the stage hears the effective theme change. Hosts never pass it; the default follows the theme choice and the OS scheme. */
+  theme?: ThemeSubscribe;
   /** The region's centre; a signal read here is followed. */
   center?: () => readonly [number, number] | null;
   /** The hour clock the terrain follows; the app shares one with the dock (web/clock.ts). Without it, `now` or the app's clock. */
@@ -207,6 +218,62 @@ export const terrainDetail = signal<CoastTargetDetail | null>(null);
 /** The card for a registry overlay picked on the terrain (a protected area, a charter ground); a reef mark selects `?spot=` instead. */
 export const terrainPick = signal<ChartMark | null>(null);
 const pageHidden = signal(false);
+
+/** The effective theme the map follows: the root's `data-theme` (set by web/theme-boot.ts), light or dark. */
+export type StageTheme = 'light' | 'dark';
+/** How a stage hears a theme change: the notify returns once the repaint settled; the result stops listening. */
+export type ThemeSubscribe = (notify: (theme: StageTheme) => Promise<void>) => () => void;
+const rootTheme = (): StageTheme => typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+/**
+ * The default subscription: the Settings choice (themeChoice) and the OS scheme while Auto is chosen. Both write the root's
+ * `data-theme` before they notify, so the theme read here is already the effective one. No observer of the attribute itself.
+ */
+const followTheme: ThemeSubscribe = notify => {
+  const fire = (): void => { notify(rootTheme()).catch(() => { /* a failed repaint was already logged by the stage */ }); };
+  let first = true;
+  const stop = effect(() => { themeChoice.value; if (first) first = false; else fire(); });
+  const scheme = lightScheme();
+  scheme?.addEventListener('change', fire);
+  return () => { stop(); scheme?.removeEventListener('change', fire); };
+};
+
+/** MB-14 (MAP-DESIGN-LOCK § 2.3): the 3D entry camera is pitched 60° from straight down, keeps the bearing, and is half a zoom level wider. */
+export const ENTRY_PITCH = 60, ENTRY_ZOOM_DROP = 0.5;
+/** The 3D pitch cap handed to the renderer, in degrees (its own default is about 82.8°). */
+export const MAX_PITCH = 75;
+/** The lowest map zoom at which 3D is offered, on a desktop and on a phone (MAP-DESIGN-LOCK § 2.3). */
+export const MIN_3D_ZOOM = {desktop: 11, phone: 12} as const;
+/** Whether the 3D choice is offered at this shared-camera zoom; with no camera yet the region's home zoom decides. */
+export const threeDOffered = (zoom: number | null | undefined, phone: boolean): boolean => (zoom ?? HOME_ZOOM) >= (phone ? MIN_3D_ZOOM.phone : MIN_3D_ZOOM.desktop);
+/** The camera a 3D choice starts from: the Chart or 2D camera pitched to ENTRY_PITCH, with the given bearing, `drop` zoom levels wider. */
+export const entryCamera = (c: Camera, bearing: number, drop = ENTRY_ZOOM_DROP): Camera =>
+  ({latitude: c.latitude, longitude: c.longitude, zoom: clamp(c.zoom - drop, 0, 22), bearing, pitch: ENTRY_PITCH});
+
+/** A 3D view that holds under this many frames a second for the whole window goes back to 2D. */
+export const MIN_FPS = 24, FPS_WINDOW_MS = 2000;
+/**
+ * Frame-rate watch on a clock the caller feeds (the renderer's frame times, or a fake clock in tests). It judges the latest
+ * `windowMs` of frames once a full window has been seen: fewer than `minFps` frames a second across it calls `onSlow`, and the
+ * watch starts over. A gap of several windows (a throttled or backgrounded page) is not judged; `reset` drops what it has seen.
+ */
+export function createFrameMonitor(onSlow: () => void, minFps = MIN_FPS, windowMs = FPS_WINDOW_MS): {frame(at: number): void; reset(): void} {
+  // Frame stamps, the first at or before the window's start (the anchor); the frames inside the window follow it.
+  const stamps: number[] = [];
+  return {
+    frame(at) {
+      if (stamps.length && at - stamps[stamps.length - 1]! > 4 * windowMs) stamps.length = 0;
+      stamps.push(at);
+      const start = at - windowMs;
+      if (stamps[0]! > start) return;
+      while (stamps.length > 1 && stamps[1]! <= start) stamps.shift();
+      if ((stamps.length - 1) * 1000 / (at - stamps[0]!) < minFps) { stamps.length = 0; onSlow(); }
+    },
+    reset() { stamps.length = 0; },
+  };
+}
+/** True after the stage left 3D for speed; the stage note says so until the next 3D choice or a few seconds pass. */
+export const fpsFallback = signal(false);
+const FALLBACK_NOTICE_MS = 10_000;
 
 /** The terrain's display options (FE-80), starting from the native panel's defaults; the Seafloor rail entry sets them. */
 export interface TerrainOptions {
@@ -327,7 +394,15 @@ export function createStage(options: StageOptions): Stage {
     if (ids.length !== shown.length || ids.some((id, i) => id !== shown[i])) terrainCoarsened.value = ids;
   };
   let shownOptions = NATIVE_TERRAIN_DEFAULTS;
-  let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined;
+  let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined, noticeTimer: ReturnType<typeof setTimeout> | undefined;
+  // MB-14: the 3D frame watch (armed once the terrain has loaded), the entry camera's bookkeeping and the theme last painted.
+  let fpsArmed = false, last3dZoom: number | undefined, lastBearing: number | undefined, lastShown = shownPresentation.peek(), painted: StageTheme | undefined = typeof document === 'undefined' ? undefined : rootTheme();
+  const monitor = createFrameMonitor(() => {
+    // Slow 3D goes back to 2D, with a notice. The link is rewritten in place, so Back does not return to the slow view.
+    if (!alive || shownPresentation.peek() !== '3d') return;
+    fpsFallback.value = true; clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { fpsFallback.value = false; }, FALLBACK_NOTICE_MS);
+    setParams({presentation: '2d'});
+  });
   // Without ?hour= the terrain shows the current whole hour; the shared clock moves it on at each hour boundary, with the dock.
   const clock = options.clock ?? (options.now ? createHourClock({read: options.now, doc}) : appClock);
   const releaseClock = clock.retain();
@@ -363,6 +438,7 @@ export function createStage(options: StageOptions): Stage {
   const release = (): void => {
     const h = handle.peek();
     handle.value = null; applied = {}; draped = new Map(); coarsened.clear(); if (terrainCoarsened.peek().length) terrainCoarsened.value = []; terrainMark.value = null; terrainDetail.value = null; terrainPick.value = null;
+    fpsArmed = false; monitor.reset();
     shownOptions = NATIVE_TERRAIN_DEFAULTS; terrainReading.value = null; terrainActions.value = null; terrainShading.value = null;
     terrainHabitat.value = null; rankedReefs = null;
     h?.destroy();
@@ -404,7 +480,9 @@ export function createStage(options: StageOptions): Stage {
       const state = wanted.peek();
       overlayPalette = options.overlayPalette?.();
       const h = terrain.mountCoast(host, {
-        styles: terrain.styles, chrome: 'host', hostCurrents: true, palette: options.palette?.(), overlayPalette,
+        styles: terrain.styles, chrome: 'host', hostCurrents: true, palette: options.palette?.(), overlayPalette, maxPitch: MAX_PITCH, sky: options.sky?.(),
+        // Only a loaded, shown, visible 3D view is timed; anything else drops the open window.
+        onFrame: at => { if (fpsArmed && shownPresentation.peek() === '3d' && !pageHidden.peek() && appView.peek() === 'coast') monitor.frame(at); else monitor.reset(); },
         // A registry overlay's pick is the Chart's pick of the same feature (one selection at a time).
         onOverlayPick: ({overlay, feature}) => {
           const layer = terrainLayers.peek()[overlay];
@@ -438,6 +516,7 @@ export function createStage(options: StageOptions): Stage {
           if (appView.peek() !== 'coast') return;
           // Only a shown 3D orbit has an orientation to keep; 2D and old emitters report the three-field form.
           const orbit = shownPresentation.peek() === '3d' && seen.bearing !== undefined && seen.pitch !== undefined ? {bearing: seen.bearing, pitch: seen.pitch} : {};
+          if ('bearing' in orbit) lastBearing = orbit.bearing;
           const next = parseCamera(cameraParam({latitude: seen.latitude, longitude: seen.longitude, zoom: zoomForSpan(seen.span), ...orbit}));
           if (!next) return;
           // The renderer is already there: mark its location applied so the camera is not sent back.
@@ -469,6 +548,7 @@ export function createStage(options: StageOptions): Stage {
       };
       const ready = await h.load();
       if (alive && handle.peek() === h && !ready) fail(new Error('Coastal terrain did not load'));
+      else if (alive && handle.peek() === h) { fpsArmed = true; monitor.reset(); }
     } catch (error) {
       if (alive) fail(error);
     } finally {
@@ -478,13 +558,42 @@ export function createStage(options: StageOptions): Stage {
     }
   }
 
-  const visibility = (): void => { pageHidden.value = !!doc.hidden; };
+  const visibility = (): void => { pageHidden.value = !!doc.hidden; monitor.reset(); };
+  // A 3D choice after Chart or 2D starts at the entry camera. Leaving 3D changes nothing (one camera for every view), so a straight
+  // return to 3D, the camera still where 3D left it, is not made wider again: the half zoom level is for a view that moved.
+  const enter3d = (): void => {
+    const c = camera.peek();
+    if (!c) return;
+    const back = last3dZoom !== undefined && Math.abs(c.zoom - last3dZoom) < 0.05;
+    camera.value = entryCamera(c, c.bearing ?? lastBearing ?? 0, back ? 0 : ENTRY_ZOOM_DROP);
+  };
+  const leave3d = (): void => {
+    const c = camera.peek();
+    if (c) { last3dZoom = c.zoom; lastBearing = c.bearing ?? lastBearing; }
+  };
+  // The repaint for a theme switch: sky, fog and draped colours change in place; the stage keeps the palette its next drape reads.
+  const paintTheme = (theme: StageTheme): void => {
+    if (!alive || theme === painted) return;
+    painted = theme;
+    const p = options.overlayPalette?.();
+    if (p) overlayPalette = p;
+    try { handle.peek()?.setTheme({sky: options.sky?.(), overlayPalette: p}); } catch (error) { console.warn('Terrain theme repaint refused', error); }
+  };
+  const stopTheme = createThemeWatcher<StageTheme>(options.theme ?? followTheme, paintTheme);
   visibility();
   doc.addEventListener('visibilitychange', visibility);
   const disposers = [
     effect(() => { const c = parseCamera(view.value); if (c) camera.value = c; }),
     // A new region (or its centre arriving) moves the camera home unless the link names one.
     effect(() => { const next = home(); if (next && !parseCamera(view.peek())) camera.value = next; }),
+    // Entering and leaving 3D (MB-14): the entry camera, the frame watch's fresh start, and the fallback notice's end.
+    effect(() => {
+      const now = shownPresentation.value, was = lastShown;
+      lastShown = now;
+      if (now === was) return;
+      monitor.reset();
+      if (now === '3d') { fpsFallback.value = false; clearTimeout(noticeTimer); enter3d(); } else if (was === '3d') leave3d();
+    }),
     // The first terrain choice mounts the renderer; Chart only hides it (setVisible), so switching back is instant.
     effect(() => { if (shownPresentation.value !== 'chart') void mount(); }),
     effect(() => { const h = handle.value, state = wanted.value; if (h) apply(h, state); }),
@@ -512,7 +621,7 @@ export function createStage(options: StageOptions): Stage {
     destroy() {
       if (!alive) return;
       alive = false;
-      clearTimeout(viewTimer); releaseClock();
+      clearTimeout(viewTimer); clearTimeout(noticeTimer); fpsFallback.value = false; stopTheme(); releaseClock();
       for (const dispose of disposers) dispose();
       for (const renderer of renderers) renderer.destroy();
       doc.removeEventListener('visibilitychange', visibility);

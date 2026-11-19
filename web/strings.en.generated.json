@@ -2697,6 +2697,8 @@
 "a11y.basis.run":{"en":"How this is worked out: run time"},
 "stage.unavailable":{"en":"Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable."},
 "stage.noTerrain":{"en":"No reviewed coastal terrain covers this region yet."},
+"stage.fpsFallback":{"en":"3D was running slowly on this device, so the map is back in 2D."},
+"stage.zoomFor3d":{"en":"Zoom in to use 3D."},
 "savedSpots.status.signedOut":{"en":"Sign in to show your saved spots."},
 "savedSpots.status.loadingAccount":{"en":"Checking your account…"},
 "savedSpots.status.offline":{"en":"Accounts need a connection."},

@@ -4,9 +4,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  HOME_ZOOM, NO_TERRAIN, UNAVAILABLE, UNSUPPORTED_CURRENT, camera, cameraParam, choosePresentation, coastSpecies, createStage,
+  ENTRY_PITCH, ENTRY_ZOOM_DROP, FPS_WINDOW_MS, HOME_ZOOM, MAX_PITCH, MIN_3D_ZOOM, NO_TERRAIN, UNAVAILABLE, UNSUPPORTED_CURRENT, camera, cameraParam, choosePresentation, coastSpecies, createStage,
   currentStatus, locationFor, parseCamera, shownPresentation, spanForZoom, terrainBlocked, terrainFailed, terrainHour, terrainMark,
-  terrainState, zoomForSpan, TERRAIN_DEFAULTS, setTerrainOption, terrainActions, terrainCoverage, terrainOptions, terrainShading, terrainPick, terrainReading,
+  terrainState, zoomForSpan, TERRAIN_DEFAULTS, createFrameMonitor, entryCamera, fpsFallback, setTerrainOption, threeDOffered, terrainActions, terrainCoverage, terrainOptions, terrainShading, terrainPick, terrainReading,
 } from '../web/map/stage.ts';
 import {configureStore, navigate, setParams, syncFromURL} from '../web/state.ts';
 import {dockTime} from '../web/hour.ts';
@@ -40,7 +40,7 @@ function terrain({ready = true, throws = false, hold = false} = {}) {
   const fake = {calls: [], mounts: 0, destroyed: 0, options: null};
   const handle = {};
   for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'selectHabitat', 'setVisible',
-    'setRelief', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSunAzimuth', 'setPhotoMix', 'setFixedRamp', 'setSourceCoverage', 'setHabitatVisible', 'zoom', 'resetView', 'topView', 'openSources']) {
+    'setRelief', 'setTheme', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSunAzimuth', 'setPhotoMix', 'setFixedRamp', 'setSourceCoverage', 'setHabitatVisible', 'zoom', 'resetView', 'topView', 'openSources']) {
     handle[name] = value => { fake.calls.push([name, value]); return true; };
   }
   // As packages/coast's viewer does: setPerspective reports the new mode through onPerspective, synchronously.
@@ -48,6 +48,8 @@ function terrain({ready = true, throws = false, hold = false} = {}) {
   // `hold`: the coast data never answers, so load() stays pending until fake.settle(ready) is called.
   handle.load = hold ? () => new Promise(resolve => { fake.settle = resolve; }) : async () => ready;
   handle.destroy = () => { fake.destroyed++; };
+  // A repaint the renderer refuses (an unusable overlay palette) throws; `fake.refuseTheme` turns that on.
+  handle.setTheme = value => { fake.calls.push(['setTheme', value]); if (fake.refuseTheme) throw new TypeError('refused'); return true; };
   fake.module = {
     styles: ['coast.css'],
     mountCoast(host, options) {
@@ -75,11 +77,11 @@ function document() {
   };
 }
 
-function stage(fake, {center = [35.37, -120.86], doc = document(), now = () => NOW, clock} = {}) {
+function stage(fake, {center = [35.37, -120.86], doc = document(), now = () => NOW, clock, ...extra} = {}) {
   const host = {dataset: {}, shadowRoot: {children: [], replaceChildren() { this.children = []; }}};
   terrainFailed.value = false;
   terrainMark.value = null;
-  const s = createStage({host, load: async () => fake.module, center: () => center, now, clock, doc, viewDelay: 0});
+  const s = createStage({host, load: async () => fake.module, center: () => center, now, clock, doc, viewDelay: 0, ...extra});
   return {stage: s, host, doc};
 }
 
@@ -125,10 +127,11 @@ test('the flow table: profile sets the depth limit, target the species, hour, ca
   assert.equal(terrainState({...base, hidden: true}).visible, false, 'a hidden page hides it');
 });
 
-test('the first terrain choice mounts the renderer once with the store\'s state; later changes reach the handle', async () => {
+test('the first terrain choice mounts the renderer once with the store\'s state; later changes reach the handle', async t => {
   const nav = browser(`${ORIGIN}?region=morro-bay&profile=spear&target=rockfish&hour=2026-10-06T03:00Z&current=hfr-6&habitat=reef:r1`);
   const fake = terrain();
   const {stage: s} = stage(fake);
+  t.after(() => s.destroy());
   await tick();
   assert.equal(fake.mounts, 0, 'Chart (the default) loads no terrain');
   assert.deepEqual(camera.value, {latitude: 35.37, longitude: -120.86, zoom: HOME_ZOOM}, 'no ?view=: the region centre');
@@ -139,7 +142,8 @@ test('the first terrain choice mounts the renderer once with the store\'s state;
   assert.deepEqual(fake.options.styles, ['coast.css']);
   assert.equal(fake.options.hostCurrents, true, 'the rail owns the surface-current choice');
   assert.deepEqual(fake.options.initial, {
-    currentLayer: 'hfr-6', species: 'rockfish-reef', depthLimit: 60, location: {latitude: 35.37, longitude: -120.86, span: 7300},
+    // MB-14: a 3D choice made from Chart starts at the entry camera: pitched 60°, half a zoom level wider (bearing 0: no 3D view to keep).
+    currentLayer: 'hfr-6', species: 'rockfish-reef', depthLimit: 60, location: {latitude: 35.37, longitude: -120.86, span: spanForZoom(HOME_ZOOM - ENTRY_ZOOM_DROP), bearing: 0, pitch: ENTRY_PITCH},
     hour: new Date('2026-10-06T03:00:00Z'), perspective: '3d', habitat: 'reef:r1', visible: true,
   });
   assert.deepEqual(fake.calls.filter(([name]) => name !== 'setRelief'), [], 'the initial state is not sent twice');
@@ -530,4 +534,127 @@ test('stage_orbit_share_reopen_has_no_echo: a 3D orbit report becomes the five-f
     ['rockfish-reef', 'reef:r1', 300, new Date('2026-10-06T03:00:00Z'), '3d']);
   assert.equal(again.count('setLocation'), 0, 'the initial location is not sent twice');
   second.stage.destroy();
+});
+
+// MB-14. Contract: the 3D entry camera (§ 2.3). Bug it catches: entering 3D at the Chart's flat camera, forgetting the 3D bearing,
+// or widening the view by half a zoom level again on every 2D/3D round trip.
+test('MB-14 entry: a 3D choice after Chart or 2D starts at pitch 60°, half a zoom wider, keeping the 3D bearing, without drifting on a straight return', async t => {
+  browser(`${ORIGIN}?region=morro-bay&presentation=2d&view=35.37,-120.86,13`);
+  const fake = terrain(), {stage: s} = stage(fake);
+  t.after(() => s.destroy());
+  await tick();
+  assert.equal(fake.count('setLocation'), 0, 'a 2D mount carries no orientation');
+  choosePresentation('3d');
+  assert.deepEqual(camera.value, {latitude: 35.37, longitude: -120.86, zoom: 13 - ENTRY_ZOOM_DROP, bearing: 0, pitch: ENTRY_PITCH}, 'no 3D view to keep: north-up');
+  assert.deepEqual(fake.last('setLocation'), {latitude: 35.37, longitude: -120.86, span: spanForZoom(12.5), bearing: 0, pitch: 60});
+  assert.equal(fake.last('setPerspective'), '3d');
+  fake.options.onView({latitude: 35.37, longitude: -120.86, span: spanForZoom(12.5), bearing: 40, pitch: 55});
+  choosePresentation('2d');
+  fake.options.onView({latitude: 35.37, longitude: -120.86, span: spanForZoom(12.5)});
+  choosePresentation('3d');
+  assert.deepEqual(fake.last('setLocation'), {latitude: 35.37, longitude: -120.86, span: spanForZoom(12.5), bearing: 40, pitch: 60}, 'bearing kept, zoom not widened again');
+  // A 2D view that moved is a new 3D entry.
+  choosePresentation('2d');
+  fake.options.onView({latitude: 35.37, longitude: -120.86, span: spanForZoom(14)});
+  choosePresentation('3d');
+  assert.equal(camera.value.zoom, 14 - ENTRY_ZOOM_DROP);
+  assert.deepEqual(entryCamera({latitude: 1, longitude: 2, zoom: 0.2}, 5), {latitude: 1, longitude: 2, zoom: 0, bearing: 5, pitch: 60}, 'the entry zoom stays on the map\'s zoom range');
+});
+
+// Contract: 3D is offered from z11 on a desktop and z12 on a phone; no camera yet means the region's home zoom (12).
+test('MB-14 offered: 3D needs z11 on a desktop and z12 on a phone', () => {
+  assert.deepEqual([MIN_3D_ZOOM.desktop, MIN_3D_ZOOM.phone], [11, 12]);
+  assert.deepEqual([10.99, 11, 11.5].map(z => threeDOffered(z, false)), [false, true, true]);
+  assert.deepEqual([11.99, 12, 13].map(z => threeDOffered(z, true)), [false, true, true]);
+  assert.equal(threeDOffered(null, true), true, 'no camera: the home zoom');
+});
+
+// Contract: the renderer is told the host's pitch cap and token sky at mount, and is timed through its frame callback.
+test('MB-14 mount: the renderer gets the 75° pitch cap, the token sky and a frame callback', async t => {
+  browser(`${ORIGIN}?region=morro-bay&presentation=3d`);
+  const fake = terrain(), sky = {sky: '#s', horizon: '#h', fog: '#f', ground: '#g'}, {stage: s} = stage(fake, {sky: () => sky});
+  t.after(() => s.destroy());
+  await tick();
+  assert.equal(fake.options.maxPitch, MAX_PITCH); assert.equal(MAX_PITCH, 75);
+  assert.deepEqual(fake.options.sky, sky);
+  assert.equal(typeof fake.options.onFrame, 'function');
+});
+
+// Contract: "under 24 fps for 2 s". Bug it catches: judging a window by one slow frame, never judging at all, or timing a tab
+// that was in the background. The clock is the caller's, so no real time passes.
+test('MB-14 frame watch on a fake clock: a full 2 s window under 24 fps fires, a healthy, idle or restarted one does not', () => {
+  let slow = 0;
+  const monitor = createFrameMonitor(() => { slow++; });
+  const run = (fps, from, ms) => { let at = from; for (; at < from + ms; at += 1000 / fps) monitor.frame(at); return at; };
+  let at = run(30, 0, 10_000);
+  assert.equal(slow, 0, '30 fps is healthy');
+  at = run(25, at, 6000);
+  assert.equal(slow, 0, '25 fps is above the floor');
+  at = run(60, at, 1000); at = run(20, at, 1000); at = run(60, at, 1000);
+  assert.equal(slow, 0, 'one slow second between fast ones is not 2 s under the floor');
+  at = run(20, at, FPS_WINDOW_MS + 100);
+  assert.equal(slow, 1, 'a full window at 20 fps fires once, wherever the window falls');
+  at = run(20, at, 1500); monitor.reset(); at = run(20, at, 1500);
+  assert.equal(slow, 1, 'a reset drops the open window: neither half is 2 s');
+  monitor.frame(at + 60_000); run(60, at + 60_000, 3000);
+  assert.equal(slow, 1, 'a long gap (a throttled page) is not judged');
+  const freeze = at + 120_000; monitor.frame(freeze); monitor.frame(freeze + 3000);
+  assert.equal(slow, 2, 'a 3 s freeze is one frame in a full window');
+});
+
+// Contract: slow 3D returns to 2D with a notice; only a loaded, visible, shown 3D view is timed. Bug it catches: falling back during
+// the terrain's own load, while hidden or on Chart, adding a history entry Back would return to, or never clearing the notice.
+test('MB-14 fallback: 2 s under 24 fps on a loaded 3D view goes back to 2D in place with a notice', async t => {
+  const nav = browser(`${ORIGIN}?region=morro-bay&presentation=3d`);
+  const fake = terrain({hold: true}), {stage: s, doc} = stage(fake);
+  t.after(() => { s.destroy(); fpsFallback.value = false; });
+  fpsFallback.value = false;
+  await tick();
+  let at = 1000;
+  const frames = (fps, ms) => { const end = at + ms; for (; at < end; at += 1000 / fps) fake.options.onFrame(at); };
+  frames(10, 5000);
+  assert.equal(nav.params().get('presentation'), '3d', 'the terrain is still loading: nothing is timed');
+  fake.settle(true); await tick();
+  frames(60, 5000);
+  assert.equal(nav.params().get('presentation'), '3d'); assert.equal(fpsFallback.value, false);
+  doc.set(true); frames(10, 5000); doc.set(false);
+  assert.equal(nav.params().get('presentation'), '3d', 'a hidden page is not timed');
+  const entries = nav.stack.length;
+  frames(15, FPS_WINDOW_MS + 200);
+  assert.equal(nav.params().get('presentation'), '2d'); assert.equal(fpsFallback.value, true);
+  assert.equal(shownPresentation.value, '2d'); assert.equal(fake.last('setPerspective'), '2d');
+  assert.equal(nav.stack.length, entries, 'the link is rewritten in place: Back does not return to the slow view');
+  frames(10, 5000);
+  assert.equal(nav.params().get('presentation'), '2d', 'a 2D view is never timed');
+  choosePresentation('3d');
+  assert.equal(fpsFallback.value, false, 'choosing 3D again ends the notice');
+});
+
+// Contract (MB-21 follow-up): a live theme switch repaints in place. Bug it catches: remounting or re-draping on a switch (a
+// request for tiles/feeds), moving the camera, repainting twice for one theme, or one failed repaint stopping later ones.
+test('MB-14 theme: a live switch calls setTheme on the same handle with fresh tokens and nothing else', async t => {
+  browser(`${ORIGIN}?region=morro-bay&presentation=3d`);
+  const palettes = {dark: {id: 'dark-palette', mpaFillOpacity: '0.08'}, light: {id: 'light-palette', mpaFillOpacity: '0.08'}};
+  const skies = {dark: {sky: 'd1', horizon: 'd2', fog: 'd3', ground: 'd4'}, light: {sky: 'l1', horizon: 'l2', fog: 'l3', ground: 'l4'}};
+  let now = 'dark', emit;
+  const fake = terrain(), {stage: s} = stage(fake, {
+    overlayPalette: () => palettes[now], sky: () => skies[now], theme: notify => { emit = notify; return () => { emit = undefined; }; },
+  });
+  t.after(() => s.destroy());
+  await tick();
+  assert.deepEqual(fake.options.sky, skies.dark, 'mounted with the current theme');
+  const before = fake.calls.length, view = camera.value, mounts = fake.mounts;
+  now = 'light'; await emit('light');
+  assert.deepEqual(fake.calls.slice(before), [['setTheme', {sky: skies.light, overlayPalette: palettes.light}]], 'one in-place repaint, nothing else');
+  assert.equal(camera.value, view, 'camera kept'); assert.equal(fake.mounts, mounts, 'no remount');
+  await emit('light');
+  assert.equal(fake.count('setTheme'), 1, 'the same theme is not repainted');
+  now = 'dark'; await emit('dark');
+  assert.deepEqual(fake.last('setTheme'), {sky: skies.dark, overlayPalette: palettes.dark});
+  // A repaint the renderer refuses is logged, not thrown; the next switch still lands.
+  const warn = console.warn; let logged = 0; console.warn = () => { logged++; };
+  try { fake.refuseTheme = true; now = 'light'; await emit('light'); } finally { console.warn = warn; }
+  assert.equal(logged, 1, 'logged once');
+  fake.refuseTheme = false; now = 'dark'; await emit('dark');
+  assert.deepEqual(fake.last('setTheme'), {sky: skies.dark, overlayPalette: palettes.dark}, 'the next switch still lands');
 });
