@@ -136,7 +136,8 @@ def test_live_run_freezes_catalog_diff_and_receipt(tmp_path):
     assert catalog["usable_source_ids"] == ["ncei:H11952-bag"]
     assert all(c["terrain"]["accepted"] is False for c in catalog["candidates"])
     assert catalog["mapping_accepted"] is False and catalog["review_required"] is True
-    assert change["added"] == ids and change["removed"] == ["ncei:retired"]
+    assert change["added"] == ids and change["removed"] == []
+    assert change["not_rechecked"] == ["ncei:retired"]
     assert receipt["within_caps"] and receipt["network_requests"] == 2
     assert receipt["budget_charged_bytes"] == len(LISTING) + len(ARCGIS) == receipt["observed_body_bytes"]
     assert {o["path"] for o in receipt["outputs"]} == {"catalog.json", "catalog-diff.json", "receipt.json"}
@@ -158,7 +159,7 @@ def test_second_run_diff_reports_unchanged_and_changed(tmp_path):
     change = json.loads((tmp_path / "two" / "catalog-diff.json").read_text())
     assert change["added"] == [] and change["removed"] == [] and change["unchanged"] == 1
     assert change["changed"] == [dict(source_id="ncei:H11952-bag", fields=["metadata"])]
-    assert receipt["diff_summary"] == dict(added=0, removed=0, changed=1, unchanged=1)
+    assert receipt["diff_summary"] == dict(added=0, removed=0, not_rechecked=0, changed=1, unchanged=1)
 
 
 def test_access_stop_and_cutoff_skip_without_spending(tmp_path):
