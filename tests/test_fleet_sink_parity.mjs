@@ -89,12 +89,12 @@ const STEPS = [
 const TABLES = ['fleet_operators', 'fleet_vessels', 'fleet_vessel_facts', 'fleet_aliases', 'fleet_offerings', 'fleet_departures', 'fleet_reviews', 'fleet_changes'];
 const plain = value => JSON.parse(JSON.stringify(value));
 
-async function throughWorker() {
+async function throughWorker(steps = STEPS) {
   const {sql, db} = advisorDatabase(), saved = jobsDeps.now;
   jobsDeps.now = () => new Date(NOW);
   try {
     const results = [];
-    for (const [i, step] of STEPS.entries()) {
+    for (const [i, step] of steps.entries()) {
       if (step.sql) { sql.exec(step.sql); results.push(null); continue; }
       const out = await registry(db, new Request('https://skippercast.com/api/fleet/jobs/registry', {method: 'POST',
         headers: {'Content-Type': 'application/json'}, body: JSON.stringify({region: REGION, run_id: RUN, batch: i, ops: step.ops})}));
@@ -126,9 +126,9 @@ dump["fleet_runs"] = [dict(r) for r in sink.db.execute("SELECT * FROM fleet_runs
 print(json.dumps({"results": results, "dump": dump}))
 `;
 
-function throughSqliteSink() {
+function throughSqliteSink(steps = STEPS) {
   const result = spawnSync(python, ['-c', DRIVER], {cwd: ROOT, encoding: 'utf8', env: {...process.env, PYTHONPATH: ROOT + 'src'},
-    input: JSON.stringify({region: REGION, run_id: RUN, steps: STEPS, tables: TABLES})});
+    input: JSON.stringify({region: REGION, run_id: RUN, steps, tables: TABLES})});
   assert.equal(result.status, 0, result.stderr);
   return JSON.parse(result.stdout);
 }
@@ -150,4 +150,44 @@ test('SqliteSink stores and refuses exactly what the Worker registry route does'
   for (const i of [3, 4]) assert.match(JSON.stringify(worker.results[10].errors[i]), /include place_id/);
   const places = worker.dump.fleet_vessel_facts.filter(f => f.source_id === 'google-places').map(f => [f.vessel_id, f.field]).sort();
   assert.deepEqual(places, [[vid(1), 'place_id'], [vid(2), 'reputation.google_rating']].sort(), 'place_id kept; the fresh rating not yet due');
+});
+
+test('numeric fact bytes, ids and downstream references match before and after replay', {skip}, async () => {
+  // The old Python spelling (1e-05) gave the same observation a different id.
+  // Store each sink's independently derived IDs, then check all three references
+  // against the deterministic IDs, not just whether the write was accepted.
+  const field = 'sample';
+  const value = [1e-6, 9.999999999999997e-7, -1e-7, 5e-324, -0, Number.MAX_SAFE_INTEGER, -Number.MAX_SAFE_INTEGER];
+  const firstId = factId(1, field, 1e-5), latestId = factId(1, field, value);
+  const base = {ops: [
+    {op: 'vessel.upsert', id: vid(1), slug: 'test-boat-1', name: 'Test Boat 1', name_norm: 'TESTBOAT1',
+      first_seen_at: T0, last_seen_at: T0},
+    fact(1, field, 1e-5), fact(1, 'ordinary', 1.25),
+  ]};
+  const update = {ops: [
+    fact(1, field, value, {retrieved_at: T1, supersedes: [firstId]}),
+    offering(1, {source_fact_ids_json: [latestId]}),
+    review({kind: 'fact-conflict', fingerprint: `test|${latestId}`, subject_id: latestId, proposal_json: {fact_ids: [latestId]}}),
+  ]};
+  const before = await throughWorker([base, update]);
+  assert.deepEqual(throughSqliteSink([base, update]), before);
+  const refused = {ops: [2 ** 53, -(2 ** 53), 1e20, 1e21, 1e22].map(n => fact(1, field, {v: [n]}))};
+  const steps = [base, update, update, refused];
+  const after = await throughWorker(steps);
+  assert.deepEqual(throughSqliteSink(steps), after);
+  assert.equal(after.results[2].changed, 0);
+  assert.deepEqual(after.results[3].errors.map(e => e.error), Array(5).fill('value_json: not JSON'));
+  assert.deepEqual(after.dump, before.dump);
+  const {fleet_vessel_facts: facts, fleet_offerings: [trip], fleet_reviews: [check]} = after.dump;
+  assert.equal(facts.length, 3);
+  const initial = facts.find(f => f.id === firstId), latest = facts.find(f => f.id === latestId);
+  assert.equal(initial.value_json, '0.00001');
+  assert.equal(initial.value_key, sha('0.00001').slice(0, 16));
+  assert.equal(latest.value_json, '[0.000001,9.999999999999997e-7,-1e-7,5e-324,0,9007199254740991,-9007199254740991]');
+  assert.equal(latest.value_key, sha(latest.value_json).slice(0, 16));
+  assert.equal(facts.find(f => f.id === factId(1, 'ordinary', 1.25)).value_json, '1.25');
+  assert.equal(initial.superseded_by, latest.id);
+  assert.deepEqual(JSON.parse(trip.source_fact_ids_json), [latest.id]);
+  assert.equal(check.subject_id, latest.id);
+  assert.deepEqual(JSON.parse(check.proposal_json), {fact_ids: [latest.id]});
 });
