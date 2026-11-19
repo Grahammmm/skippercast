@@ -13,6 +13,8 @@ from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from skippercast.platform.contracts import atomic_json
+
 
 API = 'https://vdatum.noaa.gov/vdatumweb/api/convert'
 EXPECTED_IDS = {'csumb-scc-block04', 'csumb-scc-block05', 'csumb-scc-block06',
@@ -132,10 +134,9 @@ def main():
     args = parser.parse_args()
     result = compile_review([json.loads(args.scc_review.read_text()),
                              json.loads(args.bss_review.read_text())])
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(result, indent=2) + '\n')
     if args.verify and stable(result) != stable(json.loads(args.verify.read_text())):
         raise SystemExit('VDatum or source identity changed; review before publishing')
+    atomic_json(args.output, result, indent=2, unique_tmp=True)
     print(json.dumps({'samples': len(result['samples']),
                       'available': sum(x['status'] == 'sample_available' for x in result['samples']),
                       'depth_qualified': False}))
