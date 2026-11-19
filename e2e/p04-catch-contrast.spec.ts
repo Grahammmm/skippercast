@@ -272,13 +272,16 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // change. Rebind only MapStage.tsx.
   // MB-08: Reports/CatchCards mounts neither the Chart-only depth shading control nor its layer. Rebind only MapStage.tsx.
   // MB-14: MapStage.tsx passes the 3D sky tokens to the stage and adds a 3D-fallback status line and a zoom hint on the existing app-stage-note class; BODY09 mounts Reports/CatchCards, never MapStage. No paint, token, assertion or threshold change. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "28aba0a9760a1144d86935eeb6a054101de9d151740953ffaa217adfb7015a6b",
+  // MB-11: the Chart legend gains depth-ramp/survey-detail chips; BODY09 mounts Reports/CatchCards, never MapStage. No catch
+  // markup, paint, contrast(), assertion or threshold change. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "3b28eef0401dcfc458b2d280e73626702b100ed814a430c5915aad90407335ac",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   // MB-05: light map-only colours and habitat opacity change; Reports catch text and backing do not use these roles.
   // MB-20: only light-theme overlay roles (--flow*, --mpa-fill/line, --swell-0..3, --contrast-1/2) change; Reports catch text and backing do not use them.
   // MB-22 adds Chart-only survey ink, halo and tints; Reports catch paint is unchanged.
   // MB-14 adds the 3D view's --map-sky/--map-horizon/--map-fog in both themes (MAP-DESIGN-LOCK 10.2); Reports catch text and backing do not use them.
-  "web/tokens.css": "cf17f90e35d9ff29956a8b5605c3e6afeaa479a086f275642625c04d8c049b6b",
+  // MB-11: Chart legend colours/layout only (ramp-B chips, survey-detail chips, dim note); Reports catch text and backing do not use them. Rebind only tokens.css.
+  "web/tokens.css": "192713b6ac7bbdc472986630f7ebfb7f0f856f00f492a153d9d4010500fea16c",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   // UXFIX-05: tokens.css only turns the eight --text-* font sizes from px into the same sizes in rem (identical at a 16 px root); no colour, paint, gradient, catch markup, assertion or threshold changes, so BODY09 stays applicable. Rebind web/tokens.css and the check_contrast.mjs surface-source pin only.
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
@@ -316,7 +319,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SCB-11: app.css changes only the wide-desktop (min-width: 1280px) masthead and command bar layout (fixed two-line place name, flex order, auto margins, a time window minimum width); the Reports catch sheet mounts neither, and no colour, backing or catch paint changed. Rebound from the final bytes.
   // MAIN-RED-5: Chart loading-status hit-testing only; Reports paint/backing and thresholds unchanged.
   // MAIN-RED-7: app.css adds one landscape-phone sheet-footer link spacing rule (the Reports catch sheet mounts no sheet footer); no colour, backing or catch paint changed. Rebound from the final bytes.
-  "web/app/app.css": "ea47a308ed3ed26a56558714894a22425f65244a647fc22916e9e73bdbb92591",
+  // MB-11: adds only .legend-* / chip rules for the Chart legend; no Reports catch class, colour or backdrop changes. Rebind only app.css.
+  "web/app/app.css": "0b82fdd43853e76e54c14dc8df48094cdd012598a61157086e12cd64387ab297",
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // UXFIX-10: app.css appends only a scoped .app-account[data-top] block (the phone top-card account button: icon size, visually hidden label, open-state colour, z-index while its panel is open); the Reports catch sheet mounts no account menu, so no catch paint or backing changes. Rebound from the final bytes.
   // UXFIX-11: app.css adds only the phone sheet day-chip row pin (.app-sheet-hour); the Reports catch sheet mounts no hour sheet, so no catch paint or backing changes. Rebound from the final bytes.
@@ -420,7 +424,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SCA-317: checker only rebinds the History target-size stylesheet hash; contrast math is unchanged.
   // MB-22 rebinds only the tokensCss surface hash. BODY09 paint, contrast logic and assertions are unchanged.
   // MAP-SOURCES-PAGE-1: only the legendTsx surface hash and its comment change; contrast math and gates unchanged.
-  "scripts/check_contrast.mjs": "97be9563e47af61415678a18ddbea3519c533ae5de144d7c9d33c74648665c06",
+  // MB-11: contrast check gains the legend chip/panel pairs only; no existing pair, assertion or threshold changes. Rebind only check_contrast.mjs.
+  "scripts/check_contrast.mjs": "80418b3630bb5166f486e888fe6e1e11b725059b5baf15cae12921776700e557",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
