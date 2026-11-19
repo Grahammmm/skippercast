@@ -17,11 +17,13 @@
 // Uptime is up hours over the window's hours. Gaps are up hours whose longest silence (max_gap_s)
 // exceeds 10 minutes, over the last 7 days; down hours are listed as outages (runs of hours) instead.
 // Without ?region= every region with counters, a heartbeat or a watch list is reported.
+import {aisLastMessageCheck, STALE_S} from '../activity.ts';
+
+export {STALE_S};
 
 const REGION = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$/;
 const HOUR_MS = 3_600_000;
 export const GAP_S = 600;            // gaps over 10 minutes
-export const STALE_S = 3 * 3600;     // the fleet-health threshold (CF-45): no message for 3 h
 const GAP_DAYS = 7;
 const MAX_REGIONS = 20;
 
@@ -90,9 +92,7 @@ async function regionHealth(db: D1Database, region: string, now: number): Promis
     catch { unreadable = true; }
   }
   const lastMessage = str(doc?.last_message_at);
-  // A future message clock is unknown, not evidence of a fresh listener.
-  // Leave ageS's existing clamp unchanged for heartbeat/processor clocks.
-  const lastAge = lastMessage !== null && Date.parse(lastMessage) > now ? null : ageS(lastMessage, now);
+  const lastCheck = aisLastMessageCheck(lastMessage, now);
 
   // An unparseable processor clock is unknown (null), not a run aged zero.
   const processorAge = processed ? ageS(processed.updated_at, now) : null;
@@ -114,7 +114,7 @@ async function regionHealth(db: D1Database, region: string, now: number): Promis
     heartbeat: beat && doc ? {written_at: str(doc.written_at), pushed_at: beat.updated_at, age_s: ageS(doc.written_at, now),
       connected: typeof doc.connected === 'boolean' ? doc.connected : null, source: str(doc.source), git_sha: str(doc.git_sha)} : null,
     heartbeat_unreadable: unreadable,
-    last_message_at: lastMessage, last_message_age_s: lastAge, stale: lastAge === null || lastAge > STALE_S,
+    last_message_at: lastMessage, last_message_age_s: lastCheck.age_s, stale: lastCheck.stale,
     messages_per_min: num(doc?.messages_per_min), watched_messages_per_min: num(doc?.watched_messages_per_min),
     last_24h: hours24.reduce((s, r) => ({messages: s.messages + r.messages, reconnects: s.reconnects + r.reconnects, dropped: s.dropped + r.dropped,
       hours_reported: s.hours_reported + (r.missing ? 0 : 1)}), {messages: 0, reconnects: 0, dropped: 0, hours_reported: 0}),
