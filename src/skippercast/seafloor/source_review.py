@@ -72,9 +72,12 @@ def record(root, manifest, source_id, reach_ids, outcome, evidence, *, now, note
                         'document_sha256': digest(document), 'document': document},
            'fishing_target': False, 'exportable': False, 'coverage_credit_km2': 0}
     state = load(root)
+    # Version 1 rows already carry the full key; retain other rows and their original expiry.
     state['reviews'] = [r for r in state['reviews'] if isinstance(r, dict)
                         and isinstance(r.get('source_id'), str)
-                        and r['source_id'] != source_id] + [row]
+                        and not (r['source_id'] == source_id
+                                 and r.get('reach_ids') == row['reach_ids']
+                                 and r.get('physical_context_sha256') == row['physical_context_sha256'])] + [row]
     # Count exactly the bytes atomic_json(indent=2) writes, so load() can read them back.
     encoded = (json.dumps(state, ensure_ascii=False, allow_nan=False, indent=2) + '\n').encode()
     if len(encoded) > MAX_BYTES:
@@ -83,6 +86,21 @@ def record(root, manifest, source_id, reach_ids, outcome, evidence, *, now, note
         raise ValueError('Unsafe source-review checkpoint')
     atomic_json(root/RELATIVE, state, indent=2)
     return {key: row[key] for key in ('source_id', 'reach_ids', 'outcome', 'expires_at')}
+
+
+def _applies(row, reaches, now):
+    try:
+        reviewed = datetime.fromisoformat(row['reviewed_at'])
+        expires = datetime.fromisoformat(row['expires_at'])
+        return (row['outcome'] in OUTCOMES and reviewed <= now < expires
+                and expires-reviewed <= TTL
+                and reaches <= set(row['reach_ids'])
+                and row['evidence']['document_sha256'] == digest(row['evidence']['document'])
+                and isinstance(row['note'], str) and 1 <= len(row['note']) <= 2000
+                and row['fishing_target'] is False and row['exportable'] is False
+                and row['coverage_credit_km2'] == 0)
+    except (KeyError, ValueError, TypeError):
+        return False
 
 
 def partition(root, manifest, queue, reach_ids, *, now=None):
@@ -95,25 +113,16 @@ def partition(root, manifest, queue, reach_ids, *, now=None):
     if not state['reviews']:
         return queue, [], []
     current = context(root, manifest)
-    reviews = {r['source_id']: r for r in state['reviews']
-               if isinstance(r, dict) and isinstance(r.get('source_id'), str)}
+    reviews = {}
+    for row in reversed(state['reviews']):  # Prefer the last recorded applicable row.
+        if (isinstance(row, dict) and isinstance(row.get('source_id'), str)
+                and row.get('physical_context_sha256') == current):
+            reviews.setdefault(row['source_id'], []).append(row)
+    reaches = set(reach_ids)
     active, deferred = [], []
     for item in queue:
-        row = reviews.get(item['id'], {})
-        try:
-            reviewed = datetime.fromisoformat(row['reviewed_at'])
-            expires = datetime.fromisoformat(row['expires_at'])
-            good = (row['outcome'] in OUTCOMES and reviewed <= now < expires
-                    and expires-reviewed <= TTL
-                    and row['physical_context_sha256'] == current
-                    and set(reach_ids) <= set(row['reach_ids'])
-                    and row['evidence']['document_sha256'] == digest(row['evidence']['document'])
-                    and isinstance(row['note'], str) and 1 <= len(row['note']) <= 2000
-                    and row['fishing_target'] is False and row['exportable'] is False
-                    and row['coverage_credit_km2'] == 0)
-        except (KeyError, ValueError, TypeError):
-            good = False
-        if good:
+        row = next((r for r in reviews.get(item['id'], ()) if _applies(r, reaches, now)), None)
+        if row is not None:
             deferred.append({**item, 'review_outcome': row['outcome'],
                              'review_note': row['note'], 'expires_at': row['expires_at']})
         else:
