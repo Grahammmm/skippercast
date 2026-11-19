@@ -104,6 +104,51 @@ def test_class_fetch_holds_source_when_one_of_its_archives_failed_audit(tmp_path
     assert [(row['release_id'], row['archive_sha256']) for row in report['failures']] == [(ident, '1' * 64)]
 
 
+def test_class_fetch_holds_source_when_one_of_its_archives_was_omitted(tmp_path, monkeypatch):
+    # Contract: the native audit's `omissions` (archives never inspected for
+    # missing metadata) hold their source like a failed row does.
+    # Bug caught: one inspected archive masked a sibling omission, reporting
+    # 'complete: 1 / 1 verified'. A non-seafloor omission must not hold it.
+    ident = 'SYNTHETIC-A'
+    inventory = tmp_path / 'inventory.json'
+    inventory.write_text(json.dumps({
+        'scope': 'noaa-nbs-tiles-intersecting-displayed-usgs-hard-context',
+        'tiles': [{'source_ids': [ident]}]}))
+    cache = tmp_path / 'usgs'
+    cache.mkdir()
+    data = b'synthetic archive'
+    digest = hashlib.sha256(data).hexdigest()
+    (cache / f'{ident}-seafloor_character-{digest[:16]}.zip').write_bytes(data)
+    base = {'release_id': ident, 'kind': 'seafloor_character', 'archive_bytes': len(data),
+            'archive_url': f'https://pubs.usgs.gov/{ident}.zip', 'archive_sha256': digest}
+    omission = {'release_id': ident, 'kind': 'seafloor_character',
+                'archive_url': f'https://pubs.usgs.gov/{ident}-2.zip',
+                'metadata_url': f'https://pubs.usgs.gov/{ident}-2.xml',
+                'issue': 'No successful original metadata audit'}
+    audit = tmp_path / 'usgs.json'
+    audit.write_text(json.dumps({'products': [{**base, 'status': 'ok'}], 'omissions': [
+        omission, {**omission, 'kind': 'bathymetry'}]}))
+    output = tmp_path / 'receipt.json'
+    monkeypatch.setattr(class_fetch, 'urlopen', no_transport)
+    monkeypatch.setattr(sys, 'argv', [
+        'class-fetch', '--inventory', str(inventory), '--output', str(output),
+        '--usgs-audit', str(audit), '--usgs-cache', str(cache),
+        '--map-audit', str(tmp_path / 'absent.json'), '--map-cache', str(tmp_path / 'map')])
+    with pytest.raises(SystemExit) as exit_info:
+        class_fetch.main()
+    assert exit_info.value.code == 1
+    report = json.loads(output.read_text())
+    assert (report['status'], report['requested'], report['verified'], report['failed']) == ('partial', 1, 0, 1)
+    assert [row['archive_sha256'] for row in report['archives']] == [digest]
+    assert [(row['release_id'], 'omitted' in row['error']) for row in report['failures']] == [(ident, True)]
+
+    # Without the seafloor omission the same source verifies completely.
+    audit.write_text(json.dumps({'products': [{**base, 'status': 'ok'}],
+                                 'omissions': [{**omission, 'kind': 'bathymetry'}]}))
+    class_fetch.main()
+    assert json.loads(output.read_text())['status'] == 'complete'
+
+
 @pytest.fixture
 def raster_zip(tmp_path):
     import numpy as np
