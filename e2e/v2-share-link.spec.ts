@@ -41,28 +41,39 @@ test('round trip: a link made at San Diego opens San Diego, today and Kayak for 
   const [link, again] = await copies(page);
   expect(again, 'a second press gives the same link').toBe(link);
   const url = new URL(link!);
+  // Share uses the serving origin: the configured local origin here, the canonical site origin there.
+  const origin = new URL(baseURL!).origin;
+  expect(url.origin, 'the copied link points to the configured site').toBe(origin);
+  expect(url.pathname).toBe('/map');
   expect([...url.searchParams.keys()]).toEqual(['region', 'port', 'profile', 'day']);
   expect(url.searchParams.get('port')).toBe('san-diego');
   expect(url.searchParams.get('profile')).toBe('kayak');
 
-  const other = await browser.newContext({baseURL});
-  await other.route(u => u.origin !== new URL(baseURL!).origin, route => route.abort('blockedbyclient'));
-  await other.route('**/feeds/**', route => route.fulfill({status: 404, json: {}}));
-  await other.route('**/api/**', route => route.fulfill({status: 503, json: {}}));
-  await other.addInitScript(() => localStorage.setItem('skippercast-first-run-v1', 'done'));
-  await storage(other, 'santa-barbara', 'boat');
-  const them = await other.newPage();
-  const errors: string[] = [];
-  them.on('pageerror', e => errors.push(String(e)));
-  await them.goto(url.pathname + url.search + '&ui=v2');
-  await expect(portButton(them)).toBeVisible();
-  await expect(portButton(them)).toHaveAttribute('aria-label', 'Change port (San Diego)');
-  await expect(them.locator('[aria-label="Profile"] [aria-pressed="true"]')).toHaveText('Kayak');
-  await expect(them.locator('.app-window, [aria-label="Day"] [aria-pressed="true"]').first()).toContainText('Today');
-  expect(await saved(them), 'the recipient\'s home is untouched').toBe('santa-barbara');
-  expect(new URL(them.url()).searchParams.get('port')).toBe('san-diego');
-  expect(errors).toEqual([]);
-  await other.close();
+  const other = await browser.newContext({serviceWorkers: 'block'});
+  try {
+    await other.route('**/*', route => {
+      const request = new URL(route.request().url());
+      if (request.origin !== origin) return route.abort('blockedbyclient');
+      if (request.pathname.startsWith('/feeds/')) return route.fulfill({status: 404, json: {}});
+      if (request.pathname.startsWith('/api/')) return route.fulfill({status: 503, json: {}});
+      return route.continue();
+    });
+    await other.addInitScript(() => localStorage.setItem('skippercast-first-run-v1', 'done'));
+    await storage(other, 'santa-barbara', 'boat');
+    const them = await other.newPage();
+    const errors: string[] = [];
+    them.on('pageerror', e => errors.push(String(e)));
+    await them.goto(link!);
+    await expect(portButton(them)).toBeVisible();
+    await expect(portButton(them)).toHaveAttribute('aria-label', 'Change port (San Diego)');
+    await expect(them.locator('[aria-label="Profile"] [aria-pressed="true"]')).toHaveText('Kayak');
+    await expect(them.locator('.app-window, [aria-label="Day"] [aria-pressed="true"]').first()).toContainText('Today');
+    expect(await saved(them), 'the recipient\'s home is untouched').toBe('santa-barbara');
+    await expect(them).toHaveURL(link!);
+    expect(errors).toEqual([]);
+  } finally {
+    await other.close();
+  }
 });
 
 test('an invalid, foreign, repeated or empty port falls back to the saved port and is removed from the address', async ({page, context, pageErrors}) => {

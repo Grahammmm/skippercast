@@ -5,6 +5,7 @@
 // each object hashed against its manifest entry before any byte leaves.
 import {json} from './http.ts';
 import {releaseKey} from './feeds.ts';
+import type {WaitUntil} from './edge-cache.ts';
 import {sourceFreshness, startupAdmission, startupDeadline} from '../web/landing/region-warm.ts';
 import catalog from '../catalog/sources.json' with {type: 'json'};
 import health from '../catalog/feed-health.json' with {type: 'json'};
@@ -53,14 +54,17 @@ export function coastTarget(input: URL): {url: URL; max: number; snapshot: strin
 type Entry = {sha256: string; bytes: number; contentType: string; habitatRelease?: string; expiresAt?: string};
 type Release = {groups: string[]; objects: Record<string, Entry>};
 export type CoastStore = Pick<R2Bucket, 'get' | 'head'>;
+type VerificationContext = {binding: object; ctx: WaitUntil};
 const SHA = /^[a-f0-9]{64}$/, VERIFY_MAX = 32 * MB;
 const releases = new Map<string, Release>(); // immutable: keyed by the manifest digest
-const verified = new Map<string, string>();  // object key -> R2 etag whose full bytes matched
 // Sixteen cold whole-object reads per binding, each at most 32 MiB; same-key ranges join.
 // A viewer overlaps four tiles and three evidence assets: allow two such viewers
 // plus two spare keys without an unbounded waiting queue.
 // Abort-ignoring storage retains admission until settled, rather than building a hidden queue.
-const hashing = new WeakMap<CoastStore, ReturnType<typeof startupAdmission<Uint8Array<ArrayBuffer>>>>();
+const verification = new WeakMap<object, {
+  pool: ReturnType<typeof startupAdmission<Uint8Array<ArrayBuffer>>>;
+  verified: Map<string, string>; // object key -> R2 etag whose full bytes matched in this binding
+}>();
 const hex = async (bytes: Uint8Array<ArrayBuffer>) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
 /** Same grouping as publish_assets.py group_of: a group is served from R2 only once it is published; null stays on the bridge. */
 export const assetGroup = (asset: string) => /^\/(?:api\/habitat\/|data\/skippercast-|data\/coast-wide\/reef-context\.)/.test(asset) ? 'habitat'
@@ -100,7 +104,12 @@ async function currentRelease(store: CoastStore, signal: AbortSignal): Promise<R
 }
 
 /** Whole-object digest once per R2 object version; later reads pin that version's etag. */
-async function verifiedRead(store: CoastStore, entry: Entry, method: string, range: {start: number; end: number} | null, signal: AbortSignal): Promise<Uint8Array<ArrayBuffer> | null> {
+async function verifiedRead(store: CoastStore, entry: Entry, method: string, range: {start: number; end: number} | null,
+  signal: AbortSignal, context?: VerificationContext): Promise<Uint8Array<ArrayBuffer> | null> {
+  const identity = context?.binding ?? store;
+  let state = verification.get(identity);
+  if (!state) { state = {pool: startupAdmission(16, 20000), verified: new Map()}; verification.set(identity, state); }
+  const {pool, verified} = state;
   const key = 'coast/objects/' + entry.sha256, etag = verified.get(key);
   if (etag !== undefined) {
     if (method === 'HEAD') { const head = await store.head(key); if (head?.etag === etag && head.size === entry.bytes) return null; }
@@ -112,22 +121,29 @@ async function verifiedRead(store: CoastStore, entry: Entry, method: string, ran
     verified.delete(key);
   }
   signal.throwIfAborted();
-  let pool = hashing.get(store);
-  if (!pool) { pool = startupAdmission(16, 20000); hashing.set(store, pool); }
-  const bytes = await pool.read(key, async coldSignal => {
-    const object = await store.get(key);
-    if (!object || object.size !== entry.bytes) { await object?.body.cancel(); throw Error('Coast object identity'); }
-    const bytes = await r2Bytes(object, coldSignal);
-    if (bytes.byteLength !== entry.bytes || await hex(bytes) !== entry.sha256) throw Error('Coast object digest');
-    coldSignal.throwIfAborted();
-    if (verified.size > 20000) verified.clear();
-    verified.set(key, object.etag);
-    return bytes;
+  const bytes = await pool.read(key, coldSignal => {
+    const work = (async () => {
+      const object = await store.get(key);
+      if (!object || object.size !== entry.bytes) { await object?.body.cancel(); throw Error('Coast object identity'); }
+      const bytes = await r2Bytes(object, coldSignal);
+      if (bytes.byteLength !== entry.bytes || await hex(bytes) !== entry.sha256) throw Error('Coast object digest');
+      coldSignal.throwIfAborted();
+      if (verified.size > 20000) verified.clear();
+      verified.set(key, object.etag);
+      return bytes;
+    })();
+    // Keep the initiating Worker request's storage I/O alive for joiners even
+    // if that request disconnects. Other requests share only the verified bytes.
+    context?.ctx?.waitUntil?.(work.catch(() => {}));
+    return work;
   });
+  signal.throwIfAborted();
+  if (bytes.byteLength !== entry.bytes) throw Error('Coast object identity');
   return method === 'HEAD' ? null : range ? bytes.slice(range.start, range.end + 1) : bytes.slice();
 }
 
-async function fromStore(store: CoastStore, target: {asset: string; release: string | null; max: number}, method: string, range: {start: number; end: number} | null, signal: AbortSignal, now: number): Promise<Response | undefined> {
+async function fromStore(store: CoastStore, target: {asset: string; release: string | null; max: number}, method: string,
+  range: {start: number; end: number} | null, signal: AbortSignal, now: number, context?: VerificationContext): Promise<Response | undefined> {
   const group = assetGroup(target.asset); if (!group) return undefined;
   const release = await currentRelease(store, signal);
   if (!release || !release.groups.includes(group)) return undefined;
@@ -137,7 +153,7 @@ async function fromStore(store: CoastStore, target: {asset: string; release: str
   if (entry.expiresAt !== undefined && !(Date.parse(entry.expiresAt) > now)) return json({error: 'Coast release expired'}, 503);
   if (range && range.end >= entry.bytes) return new Response(null, {status: 416, headers: {'Content-Range': `bytes */${entry.bytes}`, 'Cache-Control': 'no-store'}});
   if (!range && method === 'GET' && entry.bytes > target.max) return json({error: 'Coast source unavailable'}, 503);
-  const bytes = await verifiedRead(store, entry, method, range, signal);
+  const bytes = await verifiedRead(store, entry, method, range, signal, context);
   const out = new Headers({'Cache-Control': 'no-store', 'Content-Type': entry.contentType, ETag: `"sha256-${entry.sha256}"`, 'Accept-Ranges': 'bytes',
     'Content-Length': String(range ? range.end - range.start + 1 : entry.bytes), 'X-Content-Type-Options': 'nosniff'});
   if (entry.habitatRelease) out.set('X-Fish-Habitat-Release', entry.habitatRelease);
@@ -284,16 +300,16 @@ async function bounded(response: Response, max: number, signal: AbortSignal): Pr
 /** Cookie/identity/auth headers never leave SkipperCast. Only bounded public GET/HEAD requests.
  * `feeds` (COAST_FEEDS) moves snapshot sources to SkipperCast's feeds; empty keeps every path as before FE-84. */
 export async function serveCoastData(request: Request, fetcher: typeof fetch = fetch, store: CoastStore | null = null,
-  feeds: ReadonlySet<CoastFeed> = new Set(), options: {timeoutMs?: number; now?: () => number} = {}): Promise<Response> {
+  feeds: ReadonlySet<CoastFeed> = new Set(), options: {timeoutMs?: number; now?: () => number; verification?: VerificationContext} = {}): Promise<Response> {
   const timeoutMs = options.timeoutMs ?? 20000, deadlineAt = performance.now() + timeoutMs;
   try {
-    return await startupDeadline(signal => serveCoastRequest(request, fetcher, store, feeds, signal, (options.now ?? Date.now)(), deadlineAt),
+    return await startupDeadline(signal => serveCoastRequest(request, fetcher, store, feeds, signal, (options.now ?? Date.now)(), deadlineAt, options.verification),
       timeoutMs, request.signal);
   } catch { return json({error: 'Coast source unavailable'}, 503); }
 }
 
 async function serveCoastRequest(request: Request, fetcher: typeof fetch, store: CoastStore | null,
-  feeds: ReadonlySet<CoastFeed>, signal: AbortSignal, now: number, deadlineAt: number): Promise<Response> {
+  feeds: ReadonlySet<CoastFeed>, signal: AbortSignal, now: number, deadlineAt: number, context?: VerificationContext): Promise<Response> {
   if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', {status: 405, headers: {Allow: 'GET, HEAD'}});
   const path = new URL(request.url).pathname;
   if (path.startsWith('/api/coast/habitat/') || path.startsWith('/coast-data/data/skippercast-')) {
@@ -313,7 +329,7 @@ async function serveCoastRequest(request: Request, fetcher: typeof fetch, store:
     try {
       const wanted = range ? /^bytes=(\d+)-(\d+)$/.exec(range)! : null;
       const local = await fromStore(store, {asset: target.asset, release: target.release, max: target.max}, request.method,
-        wanted ? {start: Number(wanted[1]), end: Number(wanted[2])} : null, signal, now);
+        wanted ? {start: Number(wanted[1]), end: Number(wanted[2])} : null, signal, now, context);
       if (local) return local;
     } catch { return json({error: 'Coast source unavailable'}, 503); }
   }
