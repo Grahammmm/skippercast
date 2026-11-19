@@ -432,8 +432,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // #2490: dependency versions and lockfile resolutions changed; BODY09 still
   // bundles and measures the real Reports paint with unchanged inputs and gates.
   // Rebind both manifests and rerun the rendered contrast and fail-closed controls.
-  "package.json": "1a0f80f659e1edda323fe90947fbd5093f1d642b484f15f8e264b23cb2b09aec",
-  "pnpm-lock.yaml": "c13839dc5adfd7fda24886a1fec77e6404c18e4dedc236a58f06caf8a542e707",
+  // SCA-026: The dev-only esbuild advisory override changes no contrast or catch-sheet inputs.
+  "package.json": "352415f5bf7a630374c314e90cb584e2348401319ac678ca531ecaf7a5791ed3",
+  // SCA-026: The dev-only esbuild lock resolution changes no contrast or catch-sheet inputs.
+  "pnpm-lock.yaml": "fc12ec668d88f564cc828f9e54e863fa990fc8e7bf7afd46923a84d5e7c53075",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {
