@@ -15,6 +15,8 @@ import {sourceLayer} from './layers.ts';
 import type {FieldTexture} from './field.ts';
 import type {ArchiveReader} from './seafloor.ts';
 import {BASEMAP_SOURCE} from './style.ts';
+import {readPalette} from './palette.ts';
+import {basemapThemePaint, restyle, type Provider, type Restylable} from './theme-restyle.ts';
 
 /** What web/map/maplibre.js provides: the ESM build, its worker's URL, the PMTiles protocol and its archive reader. */
 export interface MapLibraryModule {
@@ -84,7 +86,7 @@ export interface MapView {
 }
 
 /** A registry layer's sources and MapLibre layers added after the style (FE-22's cloud frames). */
-export interface Overlay {
+export interface Overlay extends Provider {
   readonly sources: Readonly<Record<string, MapLibre.SourceSpecification>>;
   readonly layers: readonly MapLibre.LayerSpecification[];
   readonly pattern?: {readonly id: string; readonly image: ImageData; readonly pixelRatio: number};
@@ -188,6 +190,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
 
   // The overlays drawn now, by registry layer (FE-22), so their source errors route to that layer.
   const overlays = new Map<string, Overlay>();
+  const patternIds = new Map<string, readonly string[]>();
   const controls = new Map<string, MapLibre.IControl>();
   function removeControl(layer: string): void {
     const control = controls.get(layer);
@@ -205,7 +208,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     failed.add(overlay);
     for (const l of overlay.layers) if (map.getLayer(l.id)) map.removeLayer(l.id);
     for (const id of Object.keys(overlay.sources)) { if (map.getSource(id)) map.removeSource(id); retired.add(id); }
-    if (overlay.pattern && map.hasImage(overlay.pattern.id)) map.removeImage(overlay.pattern.id);
+    removePatterns(layer);
     removeControl(layer);
     overlays.delete(layer);
   }
@@ -296,6 +299,31 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     visible: Map<string, boolean>; data: Map<string, SourceData>;
     overlays: Map<string, {overlay: Overlay | null; before?: string | readonly string[]}>; opacity: Map<string, number>; images: Map<string, FieldTexture>;
   } | null = {visible: new Map(), data: new Map(), overlays: new Map(), opacity: new Map(), images: new Map()};
+  const themeRoot = !options.still && typeof document !== 'undefined' ? document.documentElement : undefined;
+  let paintedTheme = themeRoot?.dataset.theme;
+  const restylable: Restylable = {
+    hasLayer: id => !!map.getLayer(id),
+    setPaintProperty: (id, property, value) => {
+      // The structural provider keeps this property/value pair independent of MapLibre's types.
+      map.setPaintProperty(id, property as Parameters<MapLibre.Map['setPaintProperty']>[1], value as Parameters<MapLibre.Map['setPaintProperty']>[2]);
+    },
+    hasImage: id => map.hasImage(id),
+    updateImage: (id, image) => { map.updateImage(id, image); },
+    addImage: (id, image, config) => { map.addImage(id, image, config); },
+  };
+  const applyTheme = (): void => {
+    if (!themeRoot || early || destroyed || themeRoot.dataset.theme === paintedTheme) return;
+    restyle(restylable, readPalette(), [{themePaint: basemapThemePaint}, ...overlays.values()]);
+    paintedTheme = themeRoot.dataset.theme;
+  };
+  // The effective choice lives on the root, including OS changes while Auto is selected.
+  const themeObserver = themeRoot && typeof MutationObserver === 'function' ? new MutationObserver(applyTheme) : null;
+  if (themeRoot) themeObserver?.observe(themeRoot, {attributes: true, attributeFilter: ['data-theme']});
+
+  function removePatterns(layer: string, keep: readonly string[] = []): void {
+    for (const id of patternIds.get(layer) ?? []) if (!keep.includes(id) && map.hasImage(id)) map.removeImage(id);
+    if (keep.length) patternIds.set(layer, keep); else patternIds.delete(layer);
+  }
   const show = (layerId: string, visible: boolean): void => { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); };
   const fill = (sourceId: string, data: SourceData): void => { (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data); };
   const draw = (layer: string, overlay: Overlay | null, before?: string | readonly string[]): void => {
@@ -303,13 +331,18 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     for (const id of Object.keys(overlay?.sources ?? {})) retired.delete(id);
     const old = overlays.get(layer), next = overlay ?? {sources: {}, layers: []};
     for (const l of old?.layers ?? []) if (!next.layers.some(n => n.id === l.id) && map.getLayer(l.id)) map.removeLayer(l.id);
-    if (old?.pattern && old.pattern.id !== overlay?.pattern?.id && map.hasImage(old.pattern.id)) map.removeImage(old.pattern.id);
+    // Read at installation, not when a region request (or a deferred overlay) started.
+    const palette = themeRoot && (overlay?.themePaint || overlay?.themePatterns) ? readPalette() : undefined;
+    const themed = palette ? overlay?.themePatterns?.(palette) ?? [] : [];
     const pattern = overlay?.pattern;
+    removePatterns(layer, [...pattern ? [pattern.id] : [], ...themed.map(({id}) => id)]);
     if (pattern && !map.hasImage(pattern.id)) map.addImage(pattern.id, pattern.image, {pixelRatio: pattern.pixelRatio});
+    if (palette && themed.length) restyle(restylable, palette, [{themePatterns: () => themed}]);
     for (const id of Object.keys(old?.sources ?? {})) if (!(id in next.sources) && map.getSource(id)) map.removeSource(id);
     for (const [id, source] of Object.entries(next.sources)) if (!map.getSource(id)) map.addSource(id, source);
     const under = ([] as string[]).concat(before ?? []).find(id => map.getLayer(id));
     for (const l of next.layers) if (!map.getLayer(l.id)) map.addLayer(l, under);
+    if (palette && overlay?.themePaint) restyle(restylable, palette, [{themePaint: overlay.themePaint.bind(overlay)}]);
     if (old?.control !== overlay?.control) {
       removeControl(layer);
       const element = overlay?.control;
@@ -329,6 +362,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   map.on('style.load', () => {
     const pending = early;
     early = null;
+    applyTheme();
     pending?.overlays.forEach(({overlay, before}, layer) => draw(layer, overlay, before));
     pending?.visible.forEach((visible, layerId) => show(layerId, visible));
     pending?.data.forEach((data, sourceId) => fill(sourceId, data));
@@ -403,6 +437,6 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       if (early && !map.getSource(sourceId)) early.images.set(sourceId, texture);
       else { early?.images.delete(sourceId); paint(sourceId, texture); }
     },
-    destroy() { destroyed = true; cancelPick(); retired.clear(); flight?.(); resize?.disconnect(); map.remove(); },
+    destroy() { destroyed = true; cancelPick(); retired.clear(); flight?.(); resize?.disconnect(); themeObserver?.disconnect(); map.remove(); },
   };
 }
