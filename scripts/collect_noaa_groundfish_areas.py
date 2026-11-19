@@ -10,6 +10,7 @@ import hashlib
 from itertools import combinations, groupby, pairwise
 import json
 from pathlib import Path
+import re
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 
@@ -17,6 +18,7 @@ from urllib.request import Request, urlopen
 SERVICE = ('https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/'
            'NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer')
 LAW = 'https://www.ecfr.gov/current/title-50/section-660.70'
+SCOPE = 'noaa-west-coast-groundfish-conservation-areas'
 MAX_BYTES = 5_000_000
 
 
@@ -250,7 +252,7 @@ def collect(getter=fetch_json, now=None):
                         'feature_count': count, 'count_url': count_url, 'count_sha256': count_hash,
                         'geometry_url': geo_url, 'geometry_sha256': geo_hash})
     return {'type': 'FeatureCollection', 'schema_version': 1,
-            'scope': 'noaa-west-coast-groundfish-conservation-areas',
+            'scope': SCOPE,
             'retrieved_at': now.isoformat(), 'status': 'ok', 'service_url': SERVICE,
             'service_response_sha256': service_hash, 'legal_text_url': LAW,
             'source_layers': sources, 'feature_count': len(features),
@@ -261,6 +263,54 @@ def collect(getter=fetch_json, now=None):
             'features': features}
 
 
+def _previous_inventory_error(layers, features):
+    # Reapply the fresh capture's inventory rules, including its minimums,
+    # required GEA layer, and exclusions for aggregates and transit corridors.
+    try:
+        chosen = selected_layers([{'id': row.get('layer_id'), 'name': row.get('layer_name')}
+                                  if isinstance(row, dict) else None for row in layers])
+    except ValueError:
+        return 'invalid source layer inventory'
+    if len(chosen) != len(layers):
+        return 'invalid source layer inventory'
+
+    remaining = {}
+    inventory = {}
+    for (ident, name, category), row in zip(chosen, layers):
+        count = row.get('feature_count')
+        if row.get('area_type') != category or type(count) is not int or not 1 <= count <= 100:
+            return 'invalid source layer category or count'
+        inventory[ident] = (name, category)
+        remaining[ident] = count
+
+    seen = set()
+    for feature in features:
+        if not isinstance(feature, dict) or feature.get('type') != 'Feature':
+            return 'invalid feature'
+        props, geometry = feature.get('properties'), feature.get('geometry')
+        if not isinstance(props, dict) or not isinstance(geometry, dict):
+            return 'invalid feature properties or geometry'
+        ident, key = props.get('source_layer_id'), props.get('id')
+        if type(ident) is not int or ident not in inventory:
+            return 'feature references an unknown source layer'
+        name, category = inventory[ident]
+        if (props.get('source_layer') != name or props.get('area_type') != category
+                or not isinstance(key, str) or not re.fullmatch(rf'noaa-gca-{ident}-(0|[1-9][0-9]*)', key)
+                or key in seen):
+            return 'invalid or duplicate feature identity'
+        if (props.get('groundfish_candidate_exclusion') is not (category == 'GEA')
+                or 'fishing_permission' not in props or props['fishing_permission'] is not None
+                or props.get('exportable_as_fishing_spot') is not False):
+            return 'invalid feature exclusion or permission flags'
+        if not polygon_valid(geometry, require_topology=category == 'GEA'):
+            return 'invalid feature geometry'
+        seen.add(key)
+        remaining[ident] -= 1
+    if any(remaining.values()):
+        return 'source layer feature counts do not match features'
+    return ''
+
+
 def _usable_previous(path):
     try:
         data = json.loads(path.read_text(encoding='utf-8'))
@@ -269,7 +319,7 @@ def _usable_previous(path):
     if not isinstance(data, dict):
         return None, 'not an object'
     count, features = data.get('feature_count'), data.get('features')
-    for bad, reason in ((data.get('scope') != 'noaa-west-coast-groundfish-conservation-areas', 'wrong scope'),
+    for bad, reason in ((data.get('scope') != SCOPE, 'wrong scope'),
                         (data.get('type') != 'FeatureCollection', 'not a FeatureCollection'),
                         (not isinstance(features, list), 'features is not a list'),
                         (type(count) is not int, 'feature_count is not an int'),
@@ -277,7 +327,22 @@ def _usable_previous(path):
                         (not isinstance(data.get('source_layers'), list), 'source_layers is not a list')):
         if bad:
             return None, reason
-    return data, ''
+    if (type(data.get('schema_version')) is not int or data['schema_version'] != 1
+            or data.get('service_url') != SERVICE or data.get('legal_text_url') != LAW):
+        return None, 'wrong capture identity'
+    if data.get('status') not in ('ok', 'retained'):
+        return None, 'invalid capture status'
+    timestamp = data.get('retrieved_at')
+    if not isinstance(timestamp, str):
+        return None, 'invalid retrieval time'
+    try:
+        retrieved_at = datetime.fromisoformat(timestamp)
+    except ValueError:
+        return None, 'invalid retrieval time'
+    if retrieved_at.tzinfo is None:
+        return None, 'retrieval time has no timezone'
+    reason = _previous_inventory_error(data['source_layers'], features)
+    return (None, reason) if reason else (data, '')
 
 
 def main():
