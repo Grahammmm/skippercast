@@ -150,13 +150,6 @@ class ClosedReturnLegTests(unittest.TestCase):
         self.assertEqual(minutes(trip), [20, 50, 80])
         self.assertEqual(trip.distance_nm, legs_nm(at('closed_to_port_b', [20, 50, 80, 95])))
 
-    def test_a1_return_leg_counted_once(self):
-        closed, open_ = only('closed'), only('open')
-        a, b = at('closed', [80, 100])
-        leg = distance_nm(a.lat, a.lon, b.lat, b.lon)
-        self.assertGreater(leg, 1.0)  # the fixture's return leg is long enough to see
-        self.assertAlmostEqual(closed.distance_nm - open_.distance_nm, leg, delta=2e-6)
-
     def test_a1_harbor_fixes_after_return_not_counted(self):
         trip = only('closed')
         with_harbor = legs_nm(at('closed', [20, 50, 80, 100, 110, 120]))

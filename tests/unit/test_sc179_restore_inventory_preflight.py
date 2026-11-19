@@ -370,11 +370,8 @@ class RestoreInventoryPreflightTests(unittest.TestCase):
         self.event('restored-positive')
 
     def test_preservation(self):
-        # Repeat every malformed metadata batch with all prior file/marker hashes checked.
-        for name, files, scope, include in self.bad_batches():
-            with self.subTest(case=name):
-                self.assert_rejected_without_effects(files, scope, include)
-                self.event('preserved-'+name)
+        # The malformed-batch preservation loop is test_regression's (same bad_batches, same
+        # assert_rejected_without_effects snapshot check); only the peer-state check is distinct.
         before = (dict(os.environ), socket.create_connection, subprocess.Popen, sys.path[:], sys.meta_path[:])
         root = self.child()
         with product(root):
