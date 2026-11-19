@@ -16,6 +16,7 @@ import rasterio
 from rasterio.features import geometry_mask
 
 from research.scripts.audit_point_conception_4m_access import candidate_footprints
+from research.scripts.audit_point_conception_4m_camera_gap import require_searched_zero
 from research.scripts.audit_point_conception_4m_hard_overlap import USGS_CACHE, USGS_SOURCE
 from research.lib.paths import ROOT
 from research.scripts.audit_point_conception_original_300_gap import CACHE, file_sha256
@@ -150,8 +151,8 @@ def usgs_acoustic_source(path, *, fetch):
 def audit(bag_cache, usgs_cache, report_cache, *, fetch=False):
     prior = json.loads((ROOT / "dist/data/point-conception-original-4m-rugged-overlap.json").read_text())
     camera = json.loads((ROOT / "research/receipts/point-conception-original-4m-camera-gap.json").read_text())
-    if any(row["bottom_observations_inside_component"] for row in camera["components"]):
-        raise ValueError("Direct camera evidence changed; review before asserting a gap")
+    manifest = json.loads((ROOT / "research/catalog/usgs-video-cruises.json").read_text())
+    require_searched_zero(camera, manifest)
     candidates = candidate_footprints(bag_cache, usgs_cache, prior)
     rows = []
     for survey, cells, footprint in candidates:
