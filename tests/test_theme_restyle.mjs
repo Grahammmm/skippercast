@@ -3,7 +3,9 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {themes} from '../scripts/check_contrast.mjs';
 import {readPalette} from '../web/map/palette.ts';
-import {basemapThemePaint, createThemeWatcher, restyle} from '../web/map/theme-restyle.ts';
+import {basemapStyle} from '../web/map/style.ts';
+import {basemapThemePaint, createThemeWatcher, paintEdits, restyle} from '../web/map/theme-restyle.ts';
+import {assertThemePaintOracle, runThemePaintOracle} from './theme-paint-oracle.mjs';
 
 function fakeTarget(...ids) {
   const layers = new Set(ids), edits = [], images = new Map(), imageCalls = [];
@@ -166,4 +168,69 @@ test('basemap theme edits use §10.2 light values and preserve the original dark
       ])),
     }, theme);
   }
+});
+
+// Contract: `paintEdits` is the one shared projection of built layer paints.
+// A default that drops properties, or a `keep` that is ignored, would leave
+// adopters' layers with stale paints after a theme switch.
+test('paintEdits lists every paint entry by default, filters with keep, and skips layers without paint', () => {
+  const layers = [
+    {id: 'a', type: 'fill', paint: {'fill-color': '#111', 'fill-opacity': 0.5}},
+    {id: 'b', type: 'symbol'},
+    {id: 'c', type: 'line', paint: {'line-width': 3}},
+  ];
+  assert.deepEqual(paintEdits(layers), [
+    {layer: 'a', property: 'fill-color', value: '#111'},
+    {layer: 'a', property: 'fill-opacity', value: 0.5},
+    {layer: 'c', property: 'line-width', value: 3},
+  ]);
+  assert.deepEqual(paintEdits(layers, property => property.endsWith('-color')), [{layer: 'a', property: 'fill-color', value: '#111'}]);
+  assert.deepEqual(paintEdits([]), []);
+});
+
+const tokenPalettes = () => {
+  const colours = themes(readFileSync(new URL('../web/tokens.css', import.meta.url), 'utf8'));
+  const controls = {'map-road-opacity': '0.65', 'map-label-opacity': '0.75'};
+  return Object.fromEntries(['dark', 'light'].map(theme => [theme, readPalette(name => controls[name] ?? colours[theme][name] ?? '1')]));
+};
+const basemapBuild = palette => basemapStyle(palette, {archive: '', assets: ''});
+
+// Contract: re-expressing `basemapThemePaint` through `paintEdits` changed nothing.
+// The reference below is the pre-refactor implementation, kept verbatim.
+test('basemapThemePaint output equals the pre-refactor implementation for dark and light', () => {
+  const legacy = palette => basemapBuild(palette).layers.flatMap(({id: layer, paint}) => Object.entries(paint ?? {})
+    .filter(([property]) => property.endsWith('-color') || property === 'line-opacity' || property === 'text-opacity')
+    .map(([property, value]) => ({layer, property, value})));
+  const palettes = tokenPalettes();
+  for (const theme of ['dark', 'light']) {
+    const edits = basemapThemePaint(palettes[theme]);
+    assert.ok(edits.length > 20, `${theme}: suspiciously few edits`);
+    assert.deepEqual(edits, legacy(palettes[theme]), theme);
+  }
+});
+
+// Contract: the oracle accepts a complete provider and catches an incomplete one,
+// a provider naming an absent layer, and a pattern that is re-added instead of
+// updated. Without this the oracle could pass everything.
+test('the paint oracle accepts basemapThemePaint in both directions and catches broken providers', () => {
+  const palettes = tokenPalettes();
+  const good = assertThemePaintOracle({build: basemapBuild, provider: {themePaint: basemapThemePaint}, palettes});
+  assert.deepEqual([good.addImage, good.updateImage, good.missing], [0, 0, []]);
+
+  const omits = runThemePaintOracle({
+    build: basemapBuild, palettes,
+    provider: {themePaint: p => basemapThemePaint(p).filter(({layer, property}) => !(layer === 'water' && property === 'fill-color'))},
+  });
+  assert.deepEqual(omits.steps.map(step => step.mismatches.map(({layer, property}) => `${layer}/${property}`)), [[], ['water/fill-color'], []]);
+
+  const absent = runThemePaintOracle({
+    build: basemapBuild, palettes,
+    provider: {themePaint: p => [...basemapThemePaint(p), {layer: 'no-such-layer', property: 'fill-color', value: '#000'}]},
+  });
+  assert.deepEqual(absent.missing, ['no-such-layer']);
+
+  const image = {width: 1, height: 1, data: Uint8ClampedArray.of(0, 0, 0, 255)};
+  const pattern = {themePatterns: () => [{id: 'hatch', image, pixelRatio: 2}]};
+  const hatch = assertThemePaintOracle({build: basemapBuild, palettes, provider: {themePaint: basemapThemePaint, ...pattern}});
+  assert.deepEqual([hatch.addImage, hatch.updateImage, hatch.addedIds], [1, 2, ['hatch']]);
 });
