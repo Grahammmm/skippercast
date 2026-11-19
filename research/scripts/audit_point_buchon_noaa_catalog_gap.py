@@ -28,7 +28,7 @@ def hard_rugose_envelope(bathy_zip, character_zip):
     low_x = low_y = float("inf")
     high_x = high_y = float("-inf")
     cells = 0
-    with rasterio.open(original_tiff(bathy_zip)) as bathy, rasterio.open(original_tiff(character_zip)) as character:
+    with rasterio.open(original_tiff(bathy_zip, "bathy")[0]) as bathy, rasterio.open(original_tiff(character_zip, "character")[0]) as character:
         if (bathy.shape != character.shape or bathy.transform != character.transform
                 or str(bathy.crs) != "EPSG:32610" or character.crs != bathy.crs):
             raise ValueError("Point Buchon original depth and character grids no longer align")
