@@ -71,9 +71,9 @@ def audit_depth_support(queue: list[dict], depth_cache: Path,
     """Compare original MLLW grids at references and every mapped rock cell."""
     points = [tuple(row["bbox_center_lon_lat"]) for row in queue]
     cell_ids, cell_points = native_cells
-    cell_depth = np.full(len(cell_points), np.nan)
+    cell_min_elevation = np.full(len(cell_points), np.inf)
+    cell_max_elevation = np.full(len(cell_points), -np.inf)
     cell_overlap = np.zeros(len(cell_points), dtype="uint8")
-    cell_max_disagreement = np.zeros(len(cell_points))
     matched = defaultdict(list)
     for name, (expected, _) in DEPTH_SOURCES.items():
         archive = depth_cache / f"{name}.tgz"
@@ -104,13 +104,10 @@ def audit_depth_support(queue: list[dict], depth_cache: Path,
                 values = np.fromiter((float(sample[0]) for sample in ds.sample(cell_points)),
                                      dtype="float64", count=len(cell_points))
                 valid = np.isfinite(values) & (values != ds.nodata) & (values < 0)
-                overlapping = valid & np.isfinite(cell_depth)
-                cell_max_disagreement[overlapping] = np.maximum(
-                    cell_max_disagreement[overlapping],
-                    np.abs(cell_depth[overlapping] - values[overlapping]))
+                cell_min_elevation[valid] = np.minimum(cell_min_elevation[valid], values[valid])
+                cell_max_elevation[valid] = np.maximum(cell_max_elevation[valid], values[valid])
                 cell_overlap[valid] += 1
-                new = valid & ~np.isfinite(cell_depth)
-                cell_depth[new] = values[new]
+    covered_cells = cell_overlap > 0
     footprint = []
     for row in queue:
         row["original_center_depth_samples"] = matched[row["component_id"]]
@@ -118,19 +115,21 @@ def audit_depth_support(queue: list[dict], depth_cache: Path,
         total = int(selection.sum())
         if total * 16 != row["rock_class_area_m2"]:
             raise ValueError("Rock component cell count changed during depth join")
-        values = cell_depth[selection]
-        observed = values[np.isfinite(values)]
-        feet = -observed / .3048
-        band = (feet >= 25) & (feet <= 200)
+        observed = selection & covered_cells
+        lowest, highest = cell_min_elevation[observed], cell_max_elevation[observed]
+        covered = len(lowest)
+        # Both extremes must be in band; elevation becomes positive depth below MLLW.
+        shallowest_ft, deepest_ft = -highest / .3048, -lowest / .3048
+        band = (shallowest_ft >= 25) & (deepest_ft <= 200)
         result = {"component_id": row["component_id"], "rock_cells": total,
-                  "depth_covered_cells": len(observed),
+                  "depth_covered_cells": covered,
                   "depth_cells_in_25_to_200_ft_mllw": int(band.sum()),
-                  "sampled_rock_depth_ft_range": [round(float(feet.min()), 1),
-                                                  round(float(feet.max()), 1)] if len(feet) else None,
+                  "sampled_rock_depth_ft_range": [round(float(shallowest_ft.min()), 1),
+                                                  round(float(deepest_ft.max()), 1)] if covered else None,
                   "overlapping_source_cells": int(np.count_nonzero(cell_overlap[selection] > 1)),
                   "maximum_overlapping_grid_disagreement_m": round(
-                      float(cell_max_disagreement[selection].max()), 3),
-                  "whole_footprint_depth_band_supported": bool(len(observed) == total and band.all()),
+                      float((highest - lowest).max(initial=0)), 3),
+                  "whole_footprint_depth_band_supported": bool(covered and covered == total and band.all()),
                   "fishing_target": False, "exportable": False}
         row["original_full_rock_depth_review"] = result
         footprint.append(result)

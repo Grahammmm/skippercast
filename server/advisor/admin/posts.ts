@@ -31,9 +31,9 @@
 import {adminMediaUrl} from './queue.ts';
 import {reviewId} from '../contacts.ts';
 import {consentActive} from '../intake/skippers.ts';
-import {bumpPagesVersion} from '../intake/reports.ts';
-import {requestMediaJob, videoHold} from '../media.ts';
-import {advisorLog} from '../log.ts';
+import {pagesVersionWrite} from '../intake/reports.ts';
+import {GRAPHIC_PREFIX, videoHold} from '../media.ts';
+import type {Predicate} from './review-store.ts';
 import {COLLABORATORS_MAX, HANDLE, POST_KINDS, POST_STATUSES, REVIEW_REASON, TARGETS_FOR, USER_TAGS_MAX, captionProblem, captionStats, cleanCaption} from '../social/drafts.ts';
 import type {PostKind, Target, UserTag} from '../social/drafts.ts';
 // TA-S2: publishing.
@@ -225,22 +225,19 @@ export function postPatch(kind: PostKind, patch: unknown, decision: 'approve' | 
   return {patch: out};
 }
 
-export type PostDecisionOutcome = {status: 'ok'} | {status: 'invalid'; error: string} | {status: 'conflict'; error: string};
+export type PostDecisionOutcome = {status: 'ok'; check: Predicate; effects: (won: Predicate) => D1PreparedStatement[]}
+  | {status: 'invalid'; error: string} | {status: 'conflict'; error: string};
 
-/**
- * The `post` review's effect (decideReview runs it before closing the review).
- * Idempotent: a post no longer in draft answers conflict, so a repeat of an
- * applied decision is caught by decideReview's closed review first.
- */
-export async function decidePost(env: Env, postId: string, decision: 'approve' | 'edit' | 'reject', patch: unknown, by: string | null, now: number,
-  deps: {dispatch?: (env: Env, file: string) => Promise<number>} = {}): Promise<PostDecisionOutcome> {
-  const db = env.DB!, at = new Date(now).toISOString();
+/** Prepare the post's writes for the same batch as its review and audit. */
+export async function preparePostDecision(db: D1Database, postId: string, decision: 'approve' | 'edit' | 'reject', patch: unknown,
+  by: string | null, now: number): Promise<PostDecisionOutcome> {
+  const at = new Date(now).toISOString();
   const post = await db.prepare('SELECT * FROM advisor_posts WHERE id=?').bind(postId).first<PostRow>();
   if (!post) return {status: 'conflict', error: 'the post no longer exists'};
   if (post.status !== 'draft') return {status: 'conflict', error: `the post is ${post.status}`};
   if (decision === 'reject') {
-    await db.prepare("UPDATE advisor_posts SET status='rejected',updated_at=? WHERE id=? AND status='draft'").bind(at, post.id).run();
-    return {status: 'ok'};
+    return {status: 'ok', check: {sql: "EXISTS (SELECT 1 FROM advisor_posts WHERE id=? AND status='draft')", args: [post.id]},
+      effects: won => [db.prepare(`UPDATE advisor_posts SET status='rejected',updated_at=? WHERE id=? AND ${won.sql}`).bind(at, post.id, ...won.args)]};
   }
   const checked = postPatch(post.kind, patch, decision, now);
   if ('error' in checked) return {status: 'invalid', error: checked.error};
@@ -253,18 +250,31 @@ export async function decidePost(env: Env, postId: string, decision: 'approve' |
   if (p.user_tags !== undefined) { sets.push('user_tags_json=?'); args.push(p.user_tags.length ? JSON.stringify(p.user_tags) : null); }
   if (p.scheduled_for !== undefined) { sets.push('scheduled_for=?'); args.push(p.scheduled_for); }
   const ids = mediaIdsOf(post);
-  const [approved] = await db.batch([
-    db.prepare(`UPDATE advisor_posts SET ${[...sets, "status='approved'", 'approved_by=?', 'approved_at=?', 'updated_at=?'].join(',')} WHERE id=? AND status='draft'`)
-      .bind(...args, by, at, at, post.id),
+  // approvalHold supplies the human-readable reason. The batch rechecks the
+  // same required states so a revoked consent/new hold cannot race that read.
+  const check = {sql: `EXISTS (SELECT 1 FROM advisor_posts p WHERE p.id=? AND p.status='draft'
+    AND p.kind=? AND p.boat_id IS ? AND p.media_json=? AND p.updated_at=?
+    AND NOT EXISTS (SELECT 1 FROM json_each(?) i LEFT JOIN advisor_media m ON m.id=i.value
+      WHERE m.id IS NULL OR COALESCE(m.r2_key,'')='' OR m.publish_state='rejected'
+        OR (m.has_person=1 AND m.publish_state<>'approved')
+        OR (m.kind='video' AND (NOT COALESCE(length(m.derived_at),0) OR COALESCE(length(m.derived_error),0)))
+        OR EXISTS (SELECT 1 FROM advisor_reviews r WHERE r.kind='media' AND r.ref_id=m.id AND r.status='open'))
+    AND NOT EXISTS (SELECT 1 FROM (SELECT p.boat_id AS id UNION SELECT m.boat_id FROM advisor_media m WHERE m.id IN (SELECT value FROM json_each(?))) f
+      LEFT JOIN advisor_boats b ON b.id=f.id WHERE f.id IS NOT NULL AND f.id<>''
+        AND (b.id IS NULL OR b.status<>'verified' OR COALESCE(b.consent_photos_at,'')=''
+          OR (COALESCE(b.consent_revoked_at,'')<>'' AND b.consent_revoked_at>=b.consent_photos_at)))
+    ${usesGraphic(post) ? `AND EXISTS (SELECT 1 FROM job_state WHERE key=? AND CASE WHEN json_valid(value)
+      THEN json_extract(value,'$.status')='done' AND COALESCE(length(json_extract(value,'$.keys.public')),0)>0 ELSE 0 END)` : ''})`,
+  args: [post.id, post.kind, post.boat_id, post.media_json, post.updated_at, JSON.stringify(ids), JSON.stringify(ids),
+    ...(usesGraphic(post) ? [GRAPHIC_PREFIX + post.id] : [])]};
+  return {status: 'ok', check, effects: won => [
+    db.prepare(`UPDATE advisor_posts SET ${[...sets, "status='approved'", 'approved_by=?', 'approved_at=?', 'updated_at=?'].join(',')} WHERE id=? AND ${won.sql}`)
+      .bind(...args, by, at, at, post.id, ...won.args),
     // The photos become public with the post (09 § Media that Meta fetches serves approved and posted media).
-    db.prepare(`UPDATE advisor_media SET publish_state='approved' WHERE publish_state='queued' AND id IN (${ids.map(() => '?').join(',')})`).bind(...ids),
-  ]);
-  if (approved?.meta.changes) {
-    await bumpPagesVersion(db, now);
-    await requestMediaJob(env, now, deps.dispatch ? {dispatch: deps.dispatch} : {});
-    advisorLog('info', 'advisor_post_approved', {kind: post.kind, edited: Object.keys(p).filter(k => k !== 'scheduled_for').length > 0, scheduled: Boolean(p.scheduled_for ?? post.scheduled_for)});
-  }
-  return {status: 'ok'};
+    db.prepare(`UPDATE advisor_media SET publish_state='approved' WHERE publish_state='queued' AND id IN (SELECT value FROM json_each(?)) AND ${won.sql}`)
+      .bind(JSON.stringify(ids), ...won.args),
+    pagesVersionWrite(db, now, won.sql, won.args),
+  ]};
 }
 
 // ---- TA-S2: post now, schedule, retry ------------------------------------------------------------

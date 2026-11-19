@@ -6,6 +6,7 @@ import {chlorophyllFresh, regionalChlorophyll, type ChlorophyllObservation, type
 import {layerEntry, setRailNote} from './layers.ts';
 import {MPA_FILL} from './mpa.ts';
 import {SWELL_LAYER} from './swell.ts';
+import {paintEdits} from './theme-restyle.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {sp, type StatusCopy} from './status-copy.ts';
 
@@ -35,11 +36,20 @@ export function chlorophyllCells(o: ChlorophyllObservation) {
       [lon + dx / 2, lat + dy / 2], [lon - dx / 2, lat + dy / 2], [lon - dx / 2, lat - dy / 2]]]}}))};
 }
 
-/** `cells` lets a caller that already built the collection for this observation share it (SCA-241). */
+/**
+ * `cells` lets a caller that already built the collection for this observation share it (SCA-241). A live theme switch re-runs the
+ * same layer builder with the new palette (`themePaint`, one shared function so equal overlays stay equal); ids and the source stay.
+ */
 export function chlorophyllOverlay(o: ChlorophyllObservation, p: Palette, cells = chlorophyllCells(o)): Overlay {
   return {sources: {[ID]: {type: 'geojson', data: cells, attribution: layerEntry(ID).attribution}},
-    layers: [{id: ID, type: 'fill', source: ID, paint: {'fill-antialias': false, 'fill-opacity': 0.75,
-      'fill-color': ['interpolate', ['linear'], ['log10', ['get', 'value']], -2, p.depth0, -1, p.blue, 0, p.mint, 1, p.amber, 2, p.coral]}}]};
+    layers: chlorophyllLayers(p), themePaint};
+}
+
+const themePaint = (pal: Palette) => paintEdits(chlorophyllLayers(pal));
+
+function chlorophyllLayers(p: Palette): Overlay['layers'] {
+  return [{id: ID, type: 'fill', source: ID, paint: {'fill-antialias': false, 'fill-opacity': 0.75,
+    'fill-color': ['interpolate', ['linear'], ['log10', ['get', 'value']], -2, p.depth0, -1, p.blue, 0, p.mint, 1, p.amber, 2, p.coral]}}];
 }
 
 export function createChlorophyll(o: {engine: ReadonlySignal<Engine | null>; fetchFn?: typeof fetch; page?: () => string; now?: () => Date; palette?: () => Palette}) {

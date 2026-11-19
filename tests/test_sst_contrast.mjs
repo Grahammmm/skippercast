@@ -174,7 +174,7 @@ test('the basis names product, grid and age, the support rule and what the field
   const s = contrastStatus(true, await read(feed()), AT, NOW, TZ);
   assert.equal(s.basis, 'NOAA Geo-Polar Blended night SST daily analysis on a 0.05° grid, for Oct 15 (24 h old), partly interpolated, with gaps under cloud filled. '
     + 'Drawn in °F per nautical mile only in the 6 of 9 cells where the change across neighbouring cells exceeds their summed analysis error, '
-    + 'and withheld past its 72-hour age limit. Surface water only; a contrast cell is not a fish or catch location. Credit: NOAA CoastWatch / OSPO.');
+    + 'and withheld past its 72-hour age limit. Surface water only; a contrast cell is not a fish or catch location.');
   const e = layerEntry('sst-contrast');
   for (const phrase of ['daily sea-surface temperature analysis', 'partly interpolated', 'gaps under cloud filled', 'summed analysis error', 'product, grid and age',
     '72-hour age limit', 'Surface water only', 'not a fish or catch location']) assert.ok(e.basis.includes(phrase), phrase);

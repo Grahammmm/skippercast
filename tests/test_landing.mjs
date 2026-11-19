@@ -153,7 +153,7 @@ async function load() {
       export {LandingHead, LandingApp, NAV} from './web/landing/Landing.tsx';
       export {ProfileStep, STEP_COPY} from './web/landing/ProfileStep.tsx';
       export {PROFILE_NOTES} from './web/profile.ts';
-      export {Shoreline, ShorelineCredit} from './web/landing/Shoreline.tsx';
+      export {Shoreline} from './web/landing/Shoreline.tsx';
       export {SHORELINE} from './web/landing/shoreline-path.ts';
       export {Readout} from './web/landing/Readout.tsx';
       export {LayerDots, layerURL, DOT_CURRENT, DOT_LABELS, dotLabels} from './web/landing/LayerDots.tsx';
@@ -169,15 +169,16 @@ async function load() {
 }
 
 test('the landing page holds the hero and footer statically; its parts render the nav, port question and readout; no map engine', async () => {
-  const {LandingHead, LandingApp, Shoreline, ShorelineCredit, SHORELINE, NAV, render, h} = await load();
+  const {LandingHead, LandingApp, Shoreline, SHORELINE, NAV, render, h} = await load();
   const page = readFileSync(join(ROOT, 'dist/landing.html'), 'utf8');
   assert.match(page, /<h1 class="landing-title" data-i18n="landing\.hero\.title">Know the water before you leave the dock\.<\/h1>/);
   assert.match(page, /<p class="landing-lede" data-i18n="landing\.hero\.lede">Wind, swell, water temperature and tide from fixed Central Coast buoys and a tide gauge, each with its station and age, beside the seafloor and currents on one map\.<\/p>/);
   assert.doesNotMatch(page, /your launch/, 'the readings are fixed stations, not the visitor\'s launch');
   assert.equal((page.match(/<footer/g) || []).length, 1);
   assert.match(page, /<p data-i18n="brief\.disclaimer">Forecasts, observations and habitat carry separate clocks; check the rules before you fish\.<\/p>/);
-  assert.doesNotMatch(page, /CUSP|surveyed/, 'the credit comes from the generated module, not the page');
-  assert.equal(render(h(ShorelineCredit, {})), `<p class="landing-credit">Shoreline: ${SHORELINE.attribution}, surveyed ${SHORELINE.sourceYears[0]}–${SHORELINE.sourceYears.at(-1)}.</p>`);
+  assert.doesNotMatch(page, /CUSP|surveyed/, 'no shoreline credit on the page');
+  // MAP-SOURCES-PAGE-1: the shoreline credit is gone from the landing (G 2026-11-18); the footer's How it's built link leads to the Sources page.
+  assert.doesNotMatch(readFileSync(join(ROOT, 'web/landing/Shoreline.tsx'), 'utf8'), /attribution|credit/i, 'the shoreline draws without naming its source');
   for (const id of ['landing-night', 'landing-shore', 'landing-head', 'landing-app', 'landing-dots', 'landing-credit']) assert.match(page, new RegExp(`<div id="${id}" class="landing-host">`));
   assert.ok(page.indexOf('id="landing-night"') < page.indexOf('id="landing-shore"'), 'the shoreline paints over the night map until it has drawn');
   assert.deepEqual([...page.matchAll(/<script\b[^>]*>/g)].map(m => m[0]), ['<script type="application/ld+json">', '<script type="module" src="../web/landing/main.tsx">'], 'one module and one structured-data block, no inline script');
@@ -398,7 +399,7 @@ async function loadNight() {
   const out = join(await mkdtemp(join(tmpdir(), 'night-')), 'night.mjs');
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
-      export {NIGHT_SOURCES, NightCredit, NightMap, nightCamera, nightCoastline, nightRegion, nightSource, nightState, nightStyle} from './web/landing/NightMap.tsx';
+      export {NIGHT_SOURCES, NightNote, NightMap, nightCamera, nightCoastline, nightRegion, nightSource, nightState, nightStyle} from './web/landing/NightMap.tsx';
       export {currentsState} from './web/map/currents.ts';
       export {readPalette} from './web/map/palette.ts';
       export {render} from 'preact-render-to-string';
@@ -442,8 +443,8 @@ test('the night map keeps a region only when its timezone is absent or a zone In
   for (const bad of ['Mars/Base', '', 42, null, 'A'.repeat(65)]) assert.equal(await read(bad), null, `${JSON.stringify(bad)} is refused without throwing`);
 });
 
-test('the night map draws the first listed source with a fresh frame, the night style with the landing glow, and credits both once drawn', async () => {
-  const {NIGHT_SOURCES, NightCredit, currentsState, nightSource, nightState, nightStyle, readPalette, render, h} = await loadNight();
+test('the night map draws the first listed source with a fresh frame, the night style with the landing glow, and notes the currents basis once drawn (no source credit)', async () => {
+  const {NIGHT_SOURCES, NightNote, currentsState, nightSource, nightState, nightStyle, readPalette, render, h} = await loadNight();
   const now = new Date('2026-10-07T12:20:00Z'), cells = [{lat: 35.3, lon: -121, uMs: 0.2, vMs: 0.1, speedKnots: 0.43, towardDeg: 63}];
   const field = (id, kind, extra) => ({id, kind, label: id, fetchedAt: '2026-10-07T12:00:00Z', nativeResolutionKm: kind === 'forecast' ? 4 : 6, sampleStride: 1, surfaceOnly: true, ...extra});
   const forecast = field('wcofs', 'forecast', {issuedAt: '2026-10-07T03:00:00Z', frames: [{validAt: '2026-10-07T12:00:00Z', cells}]});
@@ -466,13 +467,14 @@ test('the night map draws the first listed source with a fresh frame, the night 
 
   try {
     nightState.value = 'loading';
-    assert.equal(render(h(NightCredit, {})), '', 'no credit before the map draws');
+    assert.equal(render(h(NightNote, {})), '', 'no note before the map draws');
     nightState.value = 'ready';
-    assert.equal(render(h(NightCredit, {})), '<p class="landing-credit" data-credit="basemap">Basemap: © OpenStreetMap contributors, © Protomaps.</p>');
+    assert.equal(render(h(NightNote, {})), '', 'MAP-SOURCES-PAGE-1: no basemap credit once drawn; the Sources page names it');
     currentsState.value = {drawn: {}, note: '', reason: '', basis: 'NOAA WCOFS surface forecast, about 4 km, issued 3 h ago; arrows follow the toward-bearing and their motion is illustrative.'};
-    assert.match(render(h(NightCredit, {})), /<p class="landing-credit" data-credit="currents">Currents: NOAA WCOFS surface forecast, about 4 km, issued 3 h ago; arrows follow the toward-bearing and their motion is illustrative\.<\/p>$/);
+    assert.match(render(h(NightNote, {})), /<p class="landing-credit" data-credit="currents">Currents: NOAA WCOFS surface forecast, about 4 km, issued 3 h ago; arrows follow the toward-bearing and their motion is illustrative\.<\/p>$/);
+    assert.doesNotMatch(render(h(NightNote, {})), /OpenStreetMap|Protomaps/);
     nightState.value = 'failed';
-    assert.equal(render(h(NightCredit, {})), '', 'a failed map credits nothing');
+    assert.equal(render(h(NightNote, {})), '', 'a failed map notes nothing');
   } finally { nightState.value = 'loading'; }
 });
 
@@ -576,12 +578,13 @@ test('SC1922-05 reserved_slots: inert placeholders in the app host, the phone re
   assert.match(css, /\.landing-slot \{ display: none; \}/);
   const phone = /@media \(max-width: 599px\) \{\s*\.landing \{([\s\S]*?)\n  \}\n  \.landing-slot \{ display: block; \}([\s\S]*?)\n\}/.exec(css);
   assert.ok(phone, 'the phone block holds the reservations');
-  for (const name of ['tiles', 'foot', 'actions', 'note', 'results', 'dots', 'credit', 'readout', 'form']) assert.match(phone[1], new RegExp(`--landing-${name}-h:`), `--landing-${name}-h is defined for the phone`);
+  for (const name of ['tiles', 'foot', 'actions', 'note', 'results', 'dots', 'readout', 'form']) assert.match(phone[1], new RegExp(`--landing-${name}-h:`), `--landing-${name}-h is defined for the phone`);
+  assert.doesNotMatch(phone[1], /--landing-credit-h/, 'MAP-SOURCES-PAGE-1: no reservation for the retired shoreline credit');
   assert.match(phone[2], /\.landing-slot--readout \{ min-height: var\(--landing-readout-h\); \}/);
   assert.match(phone[2], /\.landing-slot--form \{ min-height: var\(--landing-form-h\); \}/);
   assert.match(phone[2], /\.landing-tiles \{ min-height: var\(--landing-tiles-h\); \}/);
   assert.match(phone[2], /#landing-dots \{ display: block; min-height: var\(--landing-dots-h\); \}/);
-  assert.match(phone[2], /\.landing-foot #landing-credit \{ display: block; min-height: var\(--landing-credit-h\); \}/);
+  assert.doesNotMatch(phone[2], /#landing-credit/, 'the credit slot no longer reserves height');
   assert.match(css, /#landing-app \{ display: flex; flex-direction: column; gap: var\(--space-4\); \}/);
   assert.doesNotMatch(css, /\.landing-host \{[^}]*(?:min-height|min-block-size)/, 'no blanket host sizing: the decorative night and shoreline hosts stay display: contents');
   assert.match(css, /\.landing-host \{ display: contents; \}/);

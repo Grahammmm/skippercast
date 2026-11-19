@@ -51,6 +51,7 @@ import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
 import {LABEL_FONT} from './style.ts';
 import {surfaceField, type SurfaceField} from './surface-field.js';
+import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'swell' as const;
 export const SWELL_SOURCE = 'swell';
@@ -229,8 +230,18 @@ export function directionStrokes(f: SwellFrame): {type: 'FeatureCollection'; fea
 /**
  * The texture, period isolines with their labels and the direction strokes, under the protected areas (§ 9);
  * with `rings`, the nearshore rings above them (FE-27), and without `field`, the rings alone.
+ * A live theme switch re-runs the same builder with the new palette and the same options (`themePaint`); ids and sources stay.
  */
-export function swellOverlay(p: Palette, {field = true, rings = false}: {field?: boolean; rings?: boolean} = {}): Overlay {
+export function swellOverlay(p: Palette, options: {field?: boolean; rings?: boolean} = {}): Overlay {
+  const {field = true, rings = false} = options, key = `${field}|${rings}`;
+  // One function per option set, so equal overlays stay equal.
+  let themePaint = themePaints.get(key);
+  if (!themePaint) themePaints.set(key, themePaint = (pal: Palette) => paintEdits(swellParts(pal, {field, rings}).layers));
+  return {...swellParts(p, {field, rings}), themePaint};
+}
+const themePaints = new Map<string, (pal: Palette) => ReturnType<typeof paintEdits>>();
+
+function swellParts(p: Palette, {field = true, rings = false}: {field?: boolean; rings?: boolean}): Overlay {
   const empty = {type: 'geojson' as const, data: {type: 'FeatureCollection' as const, features: []}};
   const width = (low: number, high: number): MapLibre.ExpressionSpecification => ['interpolate', ['linear'], ['zoom'], 7, low, 12, high];
   const head = (a: number, b: number): MapLibre.ExpressionSpecification => ['case', ['==', ['get', 'part'], 'head'], a, b];
@@ -361,9 +372,15 @@ export function createSwell(o: SwellOptions): {
       if (!f && !r) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
       // § 9 order: under wind, else depth contours, else protected areas.
-      e.setOverlay(REGISTRY_ID, swellOverlay(p, {field: !!f, rings: !!r}), ['wind-casing', DEPTH_BOTTOM, MPA_FILL]);
+      const overlay = swellOverlay(p, {field: !!f, rings: !!r});
+      // The texture is pixels in an image source, not a paint: a live theme switch repaints it from the same field with the new ramp
+      // (setImage sends no request and setData is not used); layer paints follow through the overlay's `themePaint`.
+      let painted = ramps(p).swell.join();
+      const texture = (ramp: string[]): void => { painted = ramp.join(); e.setImage(SWELL_SOURCE, fieldTexture(f!.field, HEIGHT_SCALE, ramp, v => v[0]!)); };
+      e.setOverlay(REGISTRY_ID, f ? {...overlay, themePaint: (pal: Palette) => { const ramp = ramps(pal).swell; if (ramp.join() !== painted) texture(ramp); return overlay.themePaint!(pal); }} : overlay,
+        ['wind-casing', DEPTH_BOTTOM, MPA_FILL]);
       if (f) {
-        e.setImage(SWELL_SOURCE, fieldTexture(f.field, HEIGHT_SCALE, ramps(p).swell, v => v[0]!));
+        texture(ramps(p).swell);
         e.setData(ISOLINE_SOURCE, periodLines(f));
         e.setData(STROKE_SOURCE, directionStrokes(f));
       }

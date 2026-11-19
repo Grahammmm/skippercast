@@ -17,10 +17,10 @@ export function resetJwksCacheForTests():void{jwksCache=undefined;lastForcedRefe
  * Which job a token may act as (TA-M1): the audience path its token was
  * requested for and the workflow files allowed to hold it. A workflow must also
  * be listed for the matching scheduler identity, so a route can narrow its
- * workflow allowlist but never widen it. Only the fleet scope opts in to the
- * second identity.
+ * workflow allowlist but never widen it. Only the fleet scope supplies a
+ * separate workflow list for the private fleet scheduler.
  */
-export interface JobScope {audiencePath:string;workflows:readonly string[];includeFleetScheduler?:true}
+export interface JobScope {audiencePath:string;workflows:readonly string[];fleetSchedulerWorkflows?:readonly string[]}
 const WORKFLOW_DIR='.github/workflows/';
 const workflowPath=(name:string):string=>name.startsWith(WORKFLOW_DIR)?name:WORKFLOW_DIR+name;
 /** The trip check's scope, the default: /api/jobs/check and scheduler.workflow (live-conditions.yml). */
@@ -53,8 +53,9 @@ export async function verifyJobToken(token:unknown,policy:JobPolicy,...rest:[Fet
     const parts=token.split('.') as [string,string,string];if(parts.length!==3)return false;
     const header=decode(parts[0]),claims=decode(parts[1]);
     if(header.alg!=='RS256'||header.typ!=='JWT'||typeof header.kid!=='string'||header.kid.length>200)return false;
-    const matches=(identity:SchedulerIdentity)=>validJobClaims(claims,policy,now,scope,identity);
-    if(!matches(policy.scheduler)&&!(scope.includeFleetScheduler&&policy.fleet_scheduler&&matches(policy.fleet_scheduler))){console.warn('Scheduler identity policy mismatch');return false;}
+    const fleetWorkflows=scope.fleetSchedulerWorkflows;
+    if(!validJobClaims(claims,policy,now,scope)&&!(fleetWorkflows&&policy.fleet_scheduler&&
+      validJobClaims(claims,policy,now,{audiencePath:scope.audiencePath,workflows:fleetWorkflows},policy.fleet_scheduler))){console.warn('Scheduler identity policy mismatch');return false;}
     // Fixed GitHub endpoint: no jku, x5u, issuer or key URL supplied by the token is fetched. Only a successful, size-checked, parsed key set is cached.
     const load=async():Promise<ExternalJSON[]|false>=>{
       stage='jwks-fetch';const response=await fetcher(issuer+'/.well-known/jwks',{signal:AbortSignal.timeout(10000),redirect:'manual'});

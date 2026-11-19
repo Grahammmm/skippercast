@@ -2,6 +2,7 @@
 import gzip
 import hashlib
 import json
+import os
 from pathlib import Path
 import struct
 import tempfile
@@ -13,6 +14,7 @@ import rasterio
 from rasterio.transform import from_origin
 
 from scripts import build_bathy_tiles as bt
+from tests._support import ROOT
 
 NODATA = -999999.0
 
@@ -1018,6 +1020,46 @@ class NativeManifestCliTests(unittest.TestCase):
             self.assertEqual(code, 2)
             self.assertIn('entry 0', err.getvalue())
             self.assertEqual(len(err.getvalue().strip().splitlines()), 1)
+
+
+STANDALONE_DRIVER = '''\
+import importlib.machinery, runpy, sys
+SRC, SCRIPT = sys.argv[1], sys.argv[2]
+
+
+class OnlyCheckoutSkippercast:
+    """Hide any installed skippercast: only SRC on sys.path may provide the package."""
+
+    @staticmethod
+    def find_spec(name, path=None, target=None):
+        if name == 'skippercast':
+            if SRC not in sys.path:
+                raise ModuleNotFoundError("No module named 'skippercast'", name='skippercast')
+            return importlib.machinery.PathFinder.find_spec(name, [SRC])
+
+
+sys.meta_path.insert(0, OnlyCheckoutSkippercast)
+sys.argv = [SCRIPT, '--help']
+runpy.run_path(SCRIPT, run_name='__main__')
+'''
+
+
+class StandaloneCliTests(unittest.TestCase):
+    def test_help_runs_without_an_installed_package(self):
+        # Contract: the documented `python scripts/build_bathy_tiles.py ...` resolves the
+        # PMTiles writer from this checkout. Bug caught: a bare `import skippercast...` in the
+        # script crashes with ModuleNotFoundError unless the src-layout package is installed.
+        import subprocess
+        import sys
+        root = ROOT
+        with tempfile.TemporaryDirectory() as tmp:
+            driver = Path(tmp) / 'driver.py'
+            driver.write_text(STANDALONE_DRIVER)
+            env = {key: value for key, value in os.environ.items() if key != 'PYTHONPATH'}
+            done = subprocess.run([sys.executable, str(driver), str(root / 'src'), str(root / 'scripts/build_bathy_tiles.py')],
+                                  capture_output=True, text=True, env=env, cwd=tmp)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertIn('--native-manifest', done.stdout)
 
 
 if __name__ == '__main__':

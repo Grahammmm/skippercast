@@ -345,7 +345,7 @@ def verify(records, observations, now, stations=None):
                                    'Restore current station/model collection before using this historical comparison.' if not fresh and status == 'descriptive' else
                                    'Verify wind sensor height before comparing 10 m model skill.' if not height_match and status == 'descriptive' else
                                    'Keep collecting matched observations across at least 7 days and 30 distinct valid times; inspect missing or distant samples.'}})
-    comparisons = _comparisons(matches)
+    comparisons = _qualify_comparisons(_comparisons(matches), result)
     eligible = sum(g['eligible_forecasts'] for g in result)
     usable = sum(g['support']['usable_for_model_comparison'] for g in result)
     valid_keys = {(r['forecast']['station'], r['forecast']['variable'], r['forecast']['time']) for r in matches}
@@ -372,6 +372,33 @@ def verify(records, observations, now, stations=None):
                        'minimum_runs': MIN_RUNS, 'minimum_coverage_fraction': MIN_COVERAGE,
                        'lead_hours': [list(b) for b in BUCKETS], 'retention_days': 30},
             'limitations': 'Descriptive errors, not calibrated forecast probabilities or catch predictions. No retrospective forecast reconstruction or automatic bias correction. Samples share weather systems and are not independent. NDBC realtime observations and derived 10 m wind estimates are provisional. Derived winds have adjustment and source rounding uncertainty; unadjusted buoy-height winds cannot establish 10 m wind skill. Grid proximity does not prove matching exposure; islands, coastal shelter and bathymetry matter. Provider run metadata is not independent per-value run certification.'}
+
+
+def _qualify_comparisons(comparisons, groups):
+    """Common-case errors describe overlap only; they must not outrun either model's own support.
+
+    The overlap denominator ``n`` and both MAEs are kept. Coverage is restated against each
+    model's eligible forecasts (matched-only denominators made a 35-of-77 model look fully
+    covered), and a lower-error model is named only when both groups are fresh, comparable and
+    supported. Neither input is changed: this only withholds the stronger conclusion.
+    """
+    by_key = {(g['station'], g['variable'], tuple(g['lead_hours']), g['model']): g for g in groups}
+    for c in comparisons:
+        bucket = tuple(c['lead_hours'])
+        pair = [by_key.get((c['station'], c['variable'], bucket, c[k])) for k in ('model_a', 'model_b')]
+        eligible = [g['eligible_forecasts'] if g else 0 for g in pair]
+        fractions = [c['n'] / e if e else 0.0 for e in eligible]
+        c['eligible_forecasts_a'], c['eligible_forecasts_b'] = eligible
+        c['common_case_fraction_a'], c['common_case_fraction_b'] = (round(f, 3) for f in fractions)
+        if c['status'] == 'descriptive' and min(fractions) < MIN_COVERAGE:
+            c['status'] = 'limited common-case coverage'
+        elif c['status'] == 'descriptive' and not all(g and g['collection']['fresh'] for g in pair):
+            c['status'] = 'stale collection'
+        elif c['status'] == 'descriptive' and not all(g and g['support']['usable_for_model_comparison'] for g in pair):
+            c['status'] = 'limited group support'
+        if c['status'] != 'descriptive':
+            c['lower_error_model'] = None
+    return comparisons
 
 
 def _comparisons(matches):

@@ -67,8 +67,16 @@ export interface LayerEntry {
 
 export const COASTLINE_SOURCE = 'coastline';
 export const ENC_SOURCE = 'enc';
-/** Owner-only Chart overlay, not the terrain's `relief` entry or the Seafloor type rail. */
+/** Chart overlay for a region whose reviewed pointer resolves `ready`; not the terrain's `relief` entry or the Seafloor type rail. */
 export const BOTTOM_RELIEF = 'bottom-relief';
+/**
+ * DATA-LIVE-9 (E2E-16): who may ask for the relief overlay. Everyone, signed out included, on the Chart in the coast view
+ * while the base map works; there is deliberately no admin or preview input. The pointer then decides: no `ready`
+ * pointer means nothing is drawn and no archive or tile is requested. The private Morro study preview and this overlay
+ * would both paint the seabed, so the study preview, when an admin turns it on, takes the Chart.
+ */
+export const reliefWanted = (s: {presentation: string; view: string; basemapAvailable: boolean; studyPreviewOn: boolean}) =>
+  s.presentation === 'chart' && s.view === 'coast' && s.basemapAvailable && !s.studyPreviewOn;
 /** The seafloor publication's admitted features (web/map/seafloor.ts, FE-14). */
 export const SEAFLOOR_SOURCE = 'seafloor';
 /** FE-18's GeoJSON sources (web/map/marks.ts): survey habitat, geology, atlas reef marks and the selection. */

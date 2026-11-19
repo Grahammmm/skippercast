@@ -1,194 +1,249 @@
-// F01-01 (SCA-539): a moderation decision and its side effects must agree.
-// decideReview() applies a post's effects (admin/posts.ts decidePost) and only
-// then closes the review with a conditional UPDATE (admin/decisions.ts), so
-// opposite decisions can both act before one loses, and an interruption between
-// the post change and the close leaves an approved post under a review that
-// stays open (a retry stops at decidePost's draft-only check).
-//
-// Offline fixture, three parts:
-//   1. one invariant checker over (review, post, media, audit lines);
-//   2. a valid control, a small model that persists ONE winning intent before
-//      any effect and resumes it idempotently: it must satisfy the invariants
-//      for every interleaving and every interruption point;
-//   3. a negative control (synthetic bad states the checker must flag), and a
-//      read-only baseline of the CURRENT code under the same scenarios. The
-//      baseline is a receipt: it is reported as test diagnostics, never
-//      asserted as desired or required behaviour, so this file passes whether
-//      or not the gap is present at the tested head.
-// Real migrations in node:sqlite; synthetic rows only; no sends, jobs or posts.
+// F01-01: only one decision may take effect; a lost acknowledgement at any
+// boundary must not strand a post review or create/lose an audit result.
+// Real migrations, in-memory SQLite, no users, network, jobs, or publication.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
 import {advisorDatabase, sqliteUnavailable} from './_advisor_d1.mjs';
-import {memoryBucket} from './_advisor_r2.mjs';
 
-const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
-globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
-globalThis.DEPLOYMENT = read('../deployments/production.json');
-globalThis.SHELLS = {'/': '/index.0123456789.html'};
-globalThis.BUILD_ID = 'build-test';
+Object.assign(globalThis, {REGIONS: {}, DEPLOYMENT: {}, SHELLS: {}, BUILD_ID: 'synthetic'});
 const {decideReview} = await import('../server/advisor/admin/decisions.ts');
-
-const dbTest = (name, fn) => test(name, {skip: sqliteUnavailable || false}, fn);
-const iso = ms => new Date(ms).toISOString();
+const {teamSender} = await import('../server/advisor/consumer.ts');
+const dbTest = (name, fn) => test(name, {skip: sqliteUnavailable || false}, async () => {
+  const {fetch} = globalThis, {log} = console;
+  globalThis.fetch = forbidden;
+  console.log = () => {};
+  try { await fn(); } finally { globalThis.fetch = fetch; console.log = log; }
+});
+const forbidden = async () => { throw new Error('unexpected real effect'); };
 const T0 = Date.parse('2026-10-04T18:00:00Z');
-const REVIEW = 'b' + 'p1'.replace(/[^0-9a-f]/g, '').padEnd(31, '0');
-const quiet = async fn => { const saved = {log: console.log, warn: console.warn, error: console.error}; console.log = console.warn = console.error = () => {}; try { return await fn(); } finally { Object.assign(console, saved); } };
+const at = new Date(T0).toISOString();
+const REVIEW = 'a'.repeat(32);
+const decided = {approve: 'approved', edit: 'edited', reject: 'rejected'};
+const cut = new Error('synthetic interruption');
 
-/** What every decision outcome must satisfy. `state` = {review, post, media, audits}. */
-export function violations({review, post, media, audits}) {
+function violations({review, post, media, audit}) {
+  const wanted = {approved: 'approved', edited: 'approved', rejected: 'rejected'}[review];
   const out = [];
-  const wanted = {approved: 'approved', edited: 'approved', rejected: 'rejected'}[review.status];
-  if (post.status === 'approved' && review.status === 'open') out.push('approved post under an open review');
-  if (post.status === 'rejected' && review.status === 'open') out.push('rejected post under an open review');
-  if (wanted && post.status !== wanted) out.push(`review ${review.status} but post ${post.status}`);
-  if (post.status === 'rejected' && media.publish_state === 'approved') out.push('rejected post published its photo');
-  if (post.status === 'approved' && media.publish_state !== 'approved') out.push('approved post without its photo approved');
-  if (review.status !== 'open' && audits.length !== 1) out.push(`${audits.length} audit results for a closed review`);
-  if (review.status === 'open' && audits.length) out.push('audit result for an open review');
-  const said = audits.map(a => ({approved: 'approved', edited: 'approved', rejected: 'rejected'}[a] ?? a));
-  if (audits.length === 1 && wanted && said[0] !== wanted) out.push(`audit says ${audits[0]}, review is ${review.status}`);
+  if (review === 'open' && post !== 'draft') out.push(`${post} post under an open review`);
+  if (wanted && post !== wanted) out.push(`review ${review} but post ${post}`);
+  if (post === 'rejected' && media === 'approved') out.push('rejected post published its photo');
+  if (post === 'approved' && media !== 'approved') out.push('approved post without its photo approved');
+  if (audit.length !== (review === 'open' ? 0 : 1)) out.push('wrong audit result count');
+  if (audit.length === 1 && audit[0] !== review) out.push('wrong audit decision');
   return out;
 }
 
-// ---- valid control: persist the winning intent first, then resume it idempotently ----
-const STAGES = ['intent', 'post', 'media', 'close', 'audit'];
-function model() {
-  const s = {intent: null, post: 'draft', media: 'queued', review: 'open', audits: [], effects: []};
-  const interrupted = new Error('interrupted');
-  /** Run (or resume) a decision; `stopAfter` interrupts once that stage has completed. */
-  function decide(decision, stopAfter) {
-    s.intent ??= decision;                       // first writer wins; later decisions adopt the stored intent
-    const win = s.intent;
-    const stop = stage => { if (stage === stopAfter) throw interrupted; };
-    stop('intent');
-    if (s.post === 'draft') { s.post = win === 'reject' ? 'rejected' : 'approved'; s.effects.push(`post:${win}`); }
-    stop('post');
-    if (win !== 'reject' && s.media !== 'approved') { s.media = 'approved'; s.effects.push('media:approved'); }
-    stop('media');
-    if (s.review === 'open') s.review = win === 'reject' ? 'rejected' : 'approved';
-    stop('close');                               // review closed, audit not yet emitted
-    if (s.review !== 'open' && !s.audits.length) s.audits.push(s.review);   // resume emits the missing audit once
-    stop('audit');
-    return s.review;
-  }
-  const view = () => ({review: {status: s.review}, post: {status: s.post}, media: {publish_state: s.media}, audits: [...s.audits]});
-  return {s, decide, view, interrupted};
-}
-
-test('F01-01 valid control: one persisted intent, resumed idempotently, passes every interleaving and interruption', () => {
-  for (const [a, b] of [['approve', 'reject'], ['reject', 'approve'], ['approve', 'approve']]) {
-    for (const stage of [undefined, ...STAGES]) {
-      const m = model();
-      try { m.decide(a, stage); } catch (e) { if (e !== m.interrupted) throw e; }
-      m.decide(b);                   // the competing / retried request
-      m.decide(a);                   // and a repeat of the first one
-      assert.deepEqual(violations(m.view()), [], `${a}/${b} interrupted after ${stage}`);
-      assert.equal(m.s.intent, a, 'the first persisted intent wins');
-      assert.equal(m.s.audits.length, 1);
-      if (a === 'reject') assert.deepEqual(m.s.effects, ['post:reject'], 'a losing decision has no effects');
-    }
-  }
-});
-
-// ---- negative control: the stated gap, synthesised ----
-test('F01-01 negative control: the checker flags the stated gaps', () => {
-  const ok = {review: {status: 'approved'}, post: {status: 'approved'}, media: {publish_state: 'approved'}, audits: ['approved']};
+test('F01-01 control: mismatched, missing or duplicate audit results and partial effects all fail', () => {
+  const ok = {review: 'approved', post: 'approved', media: 'approved', audit: ['approved']};
   assert.deepEqual(violations(ok), []);
-  // interruption after the post changed, before the review closed
-  assert.deepEqual(violations({...ok, review: {status: 'open'}, audits: []}), ['approved post under an open review']);
-  // the loser acted before it lost: review says approved, post rejected, photo published
-  assert.deepEqual(violations({...ok, post: {status: 'rejected'}}),
-    ['review approved but post rejected', 'rejected post published its photo']);
-  assert.ok(violations({...ok, audits: ['rejected']}).includes('audit says rejected, review is approved'));
-  // interruption between the review close and the audit: closed review, no audit result
-  assert.deepEqual(violations({...ok, audits: []}), ['0 audit results for a closed review']);
-  // the audit is read from the actual logged line, never inferred from the review status
-  const line = decision => JSON.stringify({level: 'info', event: 'advisor_review_decided', decision, scope: 'advisor'});
-  assert.deepEqual(parseAudits([line('approved'), 'other noise']), ['approved']);
-  assert.deepEqual(violations({...ok, audits: parseAudits([line('approved')])}), []);
-  assert.ok(violations({...ok, audits: parseAudits([line('rejected')])}).includes('audit says rejected, review is approved'), 'a mismatched logged result is detected');
-  // two audit results for one review
-  assert.ok(violations({...ok, audits: ['approved', 'rejected']}).includes('2 audit results for a closed review'));
+  assert.deepEqual(violations({...ok, review: 'open', audit: []}), ['approved post under an open review']);
+  assert.deepEqual(violations({...ok, post: 'rejected'}), ['review approved but post rejected', 'rejected post published its photo']);
+  assert.deepEqual(violations({...ok, review: 'edited'}), ['wrong audit decision']);
+  for (const audit of [[], ['approved', 'rejected']]) assert.deepEqual(violations({...ok, audit}), ['wrong audit result count']);
 });
 
-// ---- baseline: the CURRENT decideReview, read-only observations (receipt, not assertions of the gap) ----
-function setup() {
+function setup(kind = 'post') {
   const {sql, db} = advisorDatabase();
-  sql.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,role,language,boat_id,status,last_seen_at,created_at,updated_at) VALUES('c1','h-c1','ENC-c1','imessage','skipper','en','b1','active',?,?,?)`).run(iso(T0), iso(T0), iso(T0));
-  sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,instagram,owner_contact_id,status,consent_photos_at,created_at,updated_at) VALUES('b1','sea-example','Sea Example','morro-bay','morro-bay','seaexample','c1','verified',?,?,?)`).run(iso(T0 - 172800000), iso(T0), iso(T0));
-  sql.prepare(`INSERT INTO advisor_media(id,contact_id,boat_id,kind,mime,bytes,r2_key,sha256,exif_stripped,has_person,publish_state,created_at) VALUES('m1','c1','b1','image','image/jpeg',1000,'advisor/media/c1/m1.jpg','sha',1,0,'queued',?)`).run(iso(T0));
-  sql.prepare(`INSERT INTO advisor_posts(id,kind,region,boat_id,media_json,caption,targets_json,status,created_by,created_at,updated_at) VALUES('p1','photo','morro-bay','b1','["m1"]','Synthetic','["instagram"]','draft','engine',?,?)`).run(iso(T0), iso(T0));
-  sql.prepare("INSERT INTO advisor_reviews(id,kind,ref_id,reason,status,opened_at) VALUES(?,'post','p1','social_draft','open',?)").run(REVIEW, iso(T0));
-  const lines = [];
-  const env = {TEXT_ADVISOR_ENABLED: 'true', DB: db, ADVISOR_MEDIA: memoryBucket()};
-  return {sql, db, env, lines};
+  sql.prepare("INSERT INTO advisor_contacts(id,channel,web_session,role,language,status,last_seen_at,created_at,updated_at) VALUES('c1','web','fixture-session','angler','en','active',?,?,?)").run(at, at, at);
+  if (kind !== 'conversation' && kind !== 'rule') {
+    sql.prepare("INSERT INTO advisor_boats(id,slug,name,port,region,owner_contact_id,status,consent_photos_at,created_at,updated_at) VALUES('b1','fixture-boat','Fixture Boat','fixture','fixture','c1','verified',?,?,?)").run(at, at, at);
+    sql.prepare("INSERT INTO advisor_media(id,contact_id,boat_id,kind,mime,bytes,r2_key,sha256,exif_stripped,has_person,publish_state,created_at) VALUES('m1','c1','b1','image','image/jpeg',1000,'advisor/media/c1/m1.jpg','fixture-hash',1,0,'queued',?)").run(at);
+    sql.prepare(`INSERT INTO advisor_posts(id,kind,region,boat_id,media_json,caption,targets_json,status,created_by,created_at,updated_at) VALUES('p1','photo','fixture','b1','["m1"]','Original','["instagram"]','draft','engine',?,?)`).run(at, at);
+  }
+  const [ref, reason] = {post: ['p1', 'social_draft'], media: ['m1', 'has_person'], conversation: ['c1', 'refused'], rule: ['fixture', 'rule_source_changed']}[kind];
+  sql.prepare("INSERT INTO advisor_reviews(id,kind,ref_id,reason,status,opened_at) VALUES(?,?,?,?,'open',?)").run(REVIEW, kind, ref, reason, at);
+  const env = {DB: db};
+  const invoke = (decision, input = {}, deps = {}, handle = db) => decideReview({...env, DB: handle}, {reviewId: REVIEW, decision, by: null, inId: REVIEW, key: 'fixture', ...input},
+    {now: T0, send: forbidden, dispatch: forbidden, fetcher: forbidden, ...deps});
+  const audit = () => sql.prepare('SELECT id,kind,decision,actor,decided_at FROM advisor_review_events WHERE review_id=? AND decided_at IS NOT NULL').all(REVIEW).map(row => ({...row}));
+  const status = () => sql.prepare('SELECT status FROM advisor_reviews WHERE id=?').get(REVIEW).status;
+  const post = () => sql.prepare("SELECT status,caption FROM advisor_posts WHERE id='p1'").get();
+  const media = () => sql.prepare("SELECT publish_state FROM advisor_media WHERE id='m1'").get().publish_state;
+  const pages = () => sql.prepare("SELECT value FROM job_state WHERE key='advisor.pages.version'").get()?.value;
+  const view = () => ({review: status(), post: post().status, media: media(), audit: audit().map(a => a.decision)});
+  return {sql, db, env, invoke, audit, status, post, media, pages, view};
 }
-const observe = sql => ({
-  review: {...sql.prepare('SELECT status FROM advisor_reviews WHERE id=?').get(REVIEW)},
-  post: {...sql.prepare("SELECT status FROM advisor_posts WHERE id='p1'").get()},
-  media: {...sql.prepare("SELECT publish_state FROM advisor_media WHERE id='m1'").get()},
+
+// Both requests read the same open review and draft. Pause the eventual loser
+// at the database boundary, not in the fake domain logic.
+dbTest('F01-01 opposite post decisions: winner alone changes caption, media, cache, review and audit', async () => {
+  for (const [winner, loser] of [['reject', 'approve'], ['approve', 'reject'], ['edit', 'reject']]) {
+    const s = setup();
+    const reached = Promise.withResolvers(), release = Promise.withResolvers();
+    const late = {...s.db, async batch(qs) { reached.resolve(); await release.promise; return s.db.batch(qs); }};
+    const stale = s.invoke(loser, {}, {}, late);
+    try {
+      await Promise.race([reached.promise, stale.then(r => assert.fail(`loser never reached write: ${r.status}`))]);
+      assert.equal((await s.invoke(winner, {patch: winner === 'edit' ? {caption: 'Edited'} : null})).status, 'applied');
+    } finally { release.resolve(); }
+    assert.equal((await stale).status, 'repeated');
+    assert.equal(s.status(), decided[winner]);
+    assert.equal(s.post().caption, winner === 'edit' ? 'Edited' : 'Original');
+    assert.equal(s.pages(), winner === 'reject' ? undefined : '1');
+    assert.deepEqual(violations(s.view()), []);
+    s.sql.close();
+  }
 });
-const decide = (env, decision, lines, db = env.DB) => decideReview({...env, DB: db}, {reviewId: REVIEW, decision, by: 'admin-user-1', inId: 'x', key: 'admin'},
-  {now: T0, send: async () => { lines.push('send'); return 0; }, dispatch: async () => 204});
-/** The decision's audit lines: advisor_review_decided is logged once per applied close. */
-async function audited(lines, fn) {
-  const saved = console.log, log = []; console.log = (...a) => log.push(a.join(' '));
-  try { return await fn(); } finally { console.log = saved; lines.push(...log.filter(l => l.includes('advisor_review_decided'))); }
+
+dbTest('F01-01 interruption inside every post-decision write rolls back; lost commit acknowledgement resumes the winner', async () => {
+  for (const decision of ['approve', 'reject']) {
+    const s = setup();
+    const untouched = s.view();
+    let steps = 0;
+    // Stop in each write, including intent/audit, review close, post, media and
+    // cache (some don't exist for reject). The real adapter rolls back the batch.
+    for (let i = 0; ; i++) {
+      const broken = {...s.db, batch(qs) {
+        steps = qs.length;
+        return s.db.batch(qs.map((q, n) => ({async run() {
+          const result = await q.run();
+          if (i === n) throw cut;
+          return result;
+        }})));
+      }};
+      await assert.rejects(s.invoke(decision, {}, {}, broken), e => e === cut);
+      assert.deepEqual(s.view(), untouched, `interruption after statement ${i}`);
+      assert.equal(s.pages(), undefined);
+      if (i === steps - 1) break;
+    }
+    const lostAck = {...s.db, async batch(qs) { await s.db.batch(qs); throw cut; }};
+    await assert.rejects(s.invoke(decision, {}, {}, lostAck), e => e === cut);
+    const audit = s.audit();
+    assert.equal(s.status(), decided[decision]);
+    assert.deepEqual(violations(s.view()), []);
+    assert.equal((await s.invoke(decision === 'approve' ? 'reject' : 'approve')).status, 'repeated');
+    assert.equal((await s.invoke(decision)).status, 'repeated');
+    assert.deepEqual(s.audit(), audit, 'same stable event ID even after lost commit acknowledgement');
+    assert.equal(s.pages(), decision === 'approve' ? '1' : undefined);
+    s.sql.close();
+  }
+});
+
+dbTest('F01-01 consent revoked between validation and commit leaves every decision write untouched', async () => {
+  const s = setup();
+  const revoked = {...s.db, batch(qs) {
+    s.sql.prepare("UPDATE advisor_boats SET consent_revoked_at=? WHERE id='b1'").run(at);
+    return s.db.batch(qs);
+  }};
+  const initial = s.view();
+  assert.equal((await s.invoke('approve', {}, {}, revoked)).status, 'conflict');
+  assert.deepEqual(s.view(), initial);
+  assert.equal(s.pages(), undefined);
+  assert.equal((await s.invoke('reject')).status, 'applied', 'a held approval must not reserve a winning decision');
+  assert.deepEqual(violations(s.view()), []);
+  s.sql.close();
+});
+
+// Contract: a media rejection that closes related post reviews gives each of them
+// its own audit event in the same batch. Believable bugs: only the media review
+// is audited (the post reviews close with no event and a retry cannot add one), or
+// the events are written outside the batch so an interruption keeps them without the close.
+dbTest('F01-01 rejecting media audits every post review it closes, atomically, and leaves unrelated reviews open', async () => {
+  const s = setup('media');
+  const post = (id, status, media) => s.sql.prepare(`INSERT INTO advisor_posts(id,kind,region,boat_id,media_json,caption,targets_json,status,created_by,created_at,updated_at) VALUES(?,'photo','fixture','b1',?,'C','["instagram"]',?,'engine',?,?)`).run(id, media, status, at, at);
+  const open = (id, ref) => s.sql.prepare("INSERT INTO advisor_reviews(id,kind,ref_id,reason,status,opened_at) VALUES(?,'post',?,'social_draft','open',?)").run(id, ref, at);
+  post('p2', 'approved', '["m1"]'); post('p3', 'draft', '["other"]');
+  open('r1', 'p1'); open('r2', 'p2'); open('r3', 'p3');
+  const events = () => s.sql.prepare('SELECT review_id,kind,decision,actor,decided_at,followup,intent FROM advisor_review_events ORDER BY review_id').all().map(row => ({...row}));
+  const reviews = () => Object.fromEntries(s.sql.prepare("SELECT id,status,note FROM advisor_reviews WHERE id IN ('r1','r2','r3')").all().map(r => [r.id, `${r.status}/${r.note}`]));
+  const untouched = {events: events(), reviews: reviews(), view: s.view()};
+  let steps = 0;
+  for (let i = 0; ; i++) {
+    const broken = {...s.db, batch(qs) {
+      steps = qs.length;
+      return s.db.batch(qs.map((q, n) => ({async run() { const result = await q.run(); if (i === n) throw cut; return result; }})));
+    }};
+    await assert.rejects(s.invoke('reject', {}, {}, broken), e => e === cut);
+    assert.deepEqual({events: events(), reviews: reviews(), view: s.view()}, untouched, `interruption after statement ${i}`);
+    if (i === steps - 1) break;
+  }
+  assert.equal((await s.invoke('reject')).status, 'applied');
+  const wanted = (review_id, kind) => ({review_id, kind, decision: 'rejected', actor: 'text', decided_at: at, followup: null, intent: null});
+  assert.deepEqual(events(), [wanted('r1', 'post'), wanted('r2', 'post'), wanted(REVIEW, 'media')].sort((a, b) => a.review_id < b.review_id ? -1 : 1));
+  assert.deepEqual(reviews(), {r1: 'rejected/photo rejected', r2: 'rejected/photo rejected', r3: 'open/null'});
+  assert.equal((await s.invoke('reject')).status, 'repeated');
+  assert.equal(events().length, 3, 'a retry neither adds nor loses an event');
+  s.sql.close();
+});
+
+dbTest('F01-01 audit is independent of lost console telemetry; deleting a review removes its audit', async () => {
+  for (const accepts of [false, true]) {
+    const s = setup('rule'), telemetry = [];
+    console.log = line => {
+      if (accepts) telemetry.push(JSON.parse(line));
+      throw cut;
+    };
+    await assert.rejects(s.invoke('approve'), e => e === cut);
+    const audit = s.audit();
+    assert.equal(audit.length, 1);
+    assert.deepEqual({kind: audit[0].kind, actor: audit[0].actor, decision: audit[0].decision, at: audit[0].decided_at},
+      {kind: 'rule', actor: 'text', decision: 'approved', at});
+    assert.equal((await s.invoke('approve')).status, 'repeated');
+    assert.deepEqual(s.audit(), audit);
+    assert.deepEqual(telemetry.map(({kind, decision, by, sends}) => ({kind, decision, by, sends})), accepts ? [{kind: 'rule', decision: 'approved', by: 'text', sends: 0}] : []);
+    s.sql.prepare('DELETE FROM advisor_reviews WHERE id=?').run(REVIEW);
+    assert.deepEqual(s.audit(), [], 'foreign key keeps the review’s retention boundary');
+    s.sql.close();
+  }
+});
+
+function cutWrite(db, pattern, afterWrite) {
+  return {...db, prepare(q) {
+    const stmt = db.prepare(q);
+    if (!pattern.test(q)) return stmt;
+    return {bind(...args) { stmt.bind(...args); return this; }, async run() {
+      if (afterWrite) await stmt.run();
+      throw cut;
+    }};
+  }};
 }
-/** The decisions actually logged by advisor_review_decided (JSON lines), one entry per line. */
-export function parseAudits(lines) {
-  const out = [];
-  for (const l of lines) {
-    let o; try { o = JSON.parse(l); } catch { continue; }
-    if (o && o.event === 'advisor_review_decided') out.push(String(o.decision));
-  }
-  return out;
-}
-const auditsOf = lines => parseAudits(lines);
 
-dbTest('F01-01 baseline: a lone decision on a valid draft satisfies the invariants (positive control on the real code)', async () => {
-  for (const decision of ['approve', 'reject']) {
-    const {sql, env} = setup(), lines = [];
-    const outcome = await audited(lines, () => decide(env, decision, []));
-    assert.equal(outcome.status, 'applied');
-    assert.deepEqual(violations({...observe(sql), audits: auditsOf(lines)}), [], decision);
+dbTest('F01-01 the winning reply survives interruption and cannot be replaced by reject or another reply', async () => {
+  for (const stage of ['before intent', 'after intent', 'before send acknowledgement', 'after send acknowledgement']) {
+    const s = setup('conversation'), delivered = [];
+    const reply = {reply: 'Synthetic reply'};
+    const run = (decision, input = {}, db = s.db) => s.invoke(decision, input, {send: teamSender({DB: db}, {
+      channelFor: () => ({name: 'web', send: async m => { delivered.push(m.id); return {providerId: null, status: 'sent'}; }}),
+      now: () => T0,
+    })}, db);
+    const intent = stage.endsWith('intent');
+    const fail = cutWrite(s.db, intent ? /^INSERT INTO advisor_review_events/ : /^UPDATE advisor_messages SET status=\?,provider_id=/,
+      stage.startsWith('after'));
+    await assert.rejects(run('approve', reply, fail), e => e === cut);
+    assert.equal(s.status(), 'open');
+    assert.deepEqual(s.audit(), []);
+    if (stage === 'before intent') {
+      assert.equal((await run('reject')).status, 'applied');
+      assert.equal((await run('approve', reply)).status, 'repeated');
+      assert.deepEqual(delivered, []);
+      assert.deepEqual(s.audit().map(a => a.decision), ['rejected']);
+    } else {
+      assert.equal((await run('reject')).status, 'conflict');
+      assert.equal((await run('approve', {reply: 'Another reply'})).status, 'conflict');
+      const persisted = s.sql.prepare('SELECT id, intent FROM advisor_review_events WHERE decided_at IS NULL').get();
+      assert.match(persisted.intent, /^[a-f0-9]{64}$/);
+      assert.equal((await run('approve', reply)).status, 'applied');
+      assert.equal((await run('approve', reply)).status, 'repeated');
+      assert.equal(delivered.length, 1);
+      assert.deepEqual(s.audit().map(a => [a.id, a.decision]), [[persisted.id, 'approved']]);
+      assert.equal(s.sql.prepare('SELECT intent FROM advisor_review_events WHERE id=?').get(persisted.id).intent, null);
+    }
+    s.sql.close();
   }
 });
 
-dbTest('F01-01 baseline receipt: opposite decisions interleaved on the current code', async t => {
-  for (const order of [['approve', 'reject'], ['reject', 'approve']]) {
-    const {sql, env} = setup(), lines = [];
-    const results = await audited(lines, () => Promise.all(order.map(d => decide(env, d, []))));
-    const v = violations({...observe(sql), audits: auditsOf(lines)});
-    t.diagnostic(`interleave ${order.join('+')}: statuses=${results.map(r => r.status).join(',')} state=${JSON.stringify(observe(sql))} audits=${auditsOf(lines).length} violations=${JSON.stringify(v)}`);
-    assert.ok(Array.isArray(v));
-  }
-});
-
-dbTest('F01-01 baseline receipt: interruption before the review closes, then a retry, on the current code', async t => {
-  for (const decision of ['approve', 'reject']) {
-    const {sql, db, env} = setup(), lines = [];
-    // Interrupt exactly when the review's closing UPDATE is prepared, i.e. after the post's effects.
-    const cut = {prepare: q => { if (/^UPDATE advisor_reviews SET status=/.test(q)) throw new Error('interrupted before close'); return db.prepare(q); }, batch: qs => db.batch(qs)};
-    await audited(lines, () => quiet(() => decide(env, decision, [], cut)).catch(e => assert.match(e.message, /interrupted before close/)));
-    const retry = await audited(lines, () => decide(env, decision, []));
-    const v = violations({...observe(sql), audits: auditsOf(lines)});
-    t.diagnostic(`interrupt ${decision}: retry=${retry.status}${retry.error ? ` (${retry.error})` : ''} state=${JSON.stringify(observe(sql))} violations=${JSON.stringify(v)}`);
-    assert.ok(Array.isArray(v));
-  }
-});
-
-dbTest('F01-01 baseline receipt: interruption between the review close and the audit line, then a retry, on the current code', async t => {
-  for (const decision of ['approve', 'reject']) {
-    const {sql, env} = setup(), lines = [];
-    // The close commits; the process dies as the audit line is about to be written.
-    const saved = console.log; let armed = true;
-    console.log = (...a) => { const l = a.join(' '); if (armed && l.includes('advisor_review_decided')) { armed = false; throw new Error('interrupted before audit'); } };
-    try { await decide(env, decision, []); } catch (e) { assert.match(e.message, /interrupted before audit/); } finally { console.log = saved; }
-    const retry = await audited(lines, () => decide(env, decision, []));
-    const v = violations({...observe(sql), audits: auditsOf(lines)});
-    t.diagnostic(`audit-gap ${decision}: retry=${retry.status} state=${JSON.stringify(observe(sql))} audits=${auditsOf(lines).length} violations=${JSON.stringify(v)}`);
-    assert.ok(Array.isArray(v));
-  }
+dbTest('F01-01 lost acknowledgement after the winner’s job nudge cannot repeat it or its database effects', async () => {
+  const s = setup(), dispatches = [];
+  const run = (decision, db = s.db) => decideReview({DB: db, GITHUB_TOKEN: 'synthetic'}, {
+    reviewId: REVIEW, decision, by: null, inId: REVIEW, key: 'fixture',
+  }, {now: T0, send: forbidden, fetcher: forbidden, dispatch: async (_env, file) => { dispatches.push(file); return 204; }});
+  const lost = cutWrite(s.db, /^UPDATE advisor_review_events SET followup=NULL,intent=NULL WHERE id=/, false);
+  await assert.rejects(run('approve', lost), e => e === cut);
+  assert.deepEqual(violations(s.view()), []);
+  assert.equal((await run('reject')).status, 'repeated');
+  assert.equal((await run('approve')).status, 'repeated');
+  assert.deepEqual(dispatches, ['advisor-media.yml']);
+  assert.equal(s.pages(), '1');
+  assert.deepEqual(violations(s.view()), []);
+  s.sql.close();
 });

@@ -702,7 +702,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1352-07 shows the evidence layers' status lines (charter grounds, commercial AIS, temperature fronts) and the fronts basis in the page's language through the same Status wrapper (copy only, no paint); the same note text roles stay, and two lines were added above the cited rows.
   // SCFEAT-FRESH-1 adds an "Updates: cadence" line under each drawn layer row and the protected-areas row, using the existing app-legend-note text role (copy only); no backing, opacity, token or threshold changed.
   // SC1407-15: planning-route row uses existing text/muted glass roles; no paint math, thresholds or backing changed.
-  "legendTsx": "045a0f55859fc8aace47ab6b23a6ee7fed0736d41e13ee3835bc1f1215f24ce9"
+  // MAP-SOURCES-PAGE-1: source and credit lines leave the Legend (the Sources page names them); no backing, opacity, token or threshold changed.
+  "legendTsx": "b124e893f0fc80856f637afc790d4648b544187a410a494cedb3d907fd0dbfb1"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];

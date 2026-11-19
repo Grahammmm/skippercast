@@ -27,33 +27,31 @@ concurrency:
 jobs:
   sign-off:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Merge queue group (commits were checked on each pull request)
         if: github.event_name == 'merge_group'
         run: echo "::notice title=DCO::sign-off was checked on each queued pull request's head"
-      - if: github.event_name == 'pull_request'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Use the base branch's checker
-        if: github.event_name == 'pull_request'
-        # A pull request must not be able to edit its own gate. The first PR that
-        # adds the checker has no base copy, so it falls back to its own.
-        env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-        run: |
-          if git fetch --quiet --depth=1 origin "$BASE" && git cat-file -e "$BASE:scripts/check_dco.py" 2>/dev/null; then
-            git show "$BASE:scripts/check_dco.py" > "$RUNNER_TEMP/check_dco.py"
-          else
-            echo "::notice::No checker on the base branch yet; using this pull request's copy."
-            cp scripts/check_dco.py "$RUNNER_TEMP/check_dco.py"
-          fi
       - name: Check Signed-off-by on pull-request commits
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.event.pull_request.base.sha }}
           PR: ${{ github.event.pull_request.number }}
-          FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          COUNT: ${{ github.event.pull_request.commits }}
+          FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.head.repo.fork }}
         run: |
+          # No PR checkout or fallback to code from the PR. A missing base checker is red.
+          gh api -H 'Accept: application/vnd.github.raw+json' "repos/${GITHUB_REPOSITORY}/contents/scripts/check_dco.py?ref=$BASE" > "$RUNNER_TEMP/check_dco.py"
           gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/pulls/${PR}/commits?per_page=100" > "$RUNNER_TEMP/commits.json"
+          # Refuse a truncated response (the endpoint caps at 250) or a newer head.
+          if ! jq -e --arg head "$HEAD" --arg count "$COUNT" '
+            add | length > 0 and (length | tostring) == $count and .[-1].sha == $head
+          ' "$RUNNER_TEMP/commits.json" >/dev/null; then
+            echo '::error::The commit list is incomplete or does not match the event head.'
+            exit 1
+          fi
           if [ "$FORK" = "true" ]; then
             python3 "$RUNNER_TEMP/check_dco.py" --fork "$RUNNER_TEMP/commits.json"
           else

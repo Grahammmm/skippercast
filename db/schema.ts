@@ -189,6 +189,14 @@ export const advisorReviews=sqliteTable('advisor_reviews',{
   openedAt:text('opened_at').notNull(),decidedAt:text('decided_at'),decidedBy:text('decided_by'),
 },t=>[index('review_open').on(t.status,t.openedAt)]);
 
+// Private moderation audit and retry state. The audit result is present only
+// when decided_at is set; cascades follow review retention and forget-me.
+export const advisorReviewEvents=sqliteTable('advisor_review_events',{
+  id:text('id').primaryKey(),reviewId:text('review_id').notNull().references(()=>advisorReviews.id,{onDelete:'cascade'}),
+  kind:text('kind').notNull(),decision:text('decision').notNull(),actor:text('actor').notNull(),decidedAt:text('decided_at'),
+  intent:text('intent'),followup:text('followup'),
+},t=>[index('review_event_review').on(t.reviewId)]);
+
 // Text Advisor answers (docs/plans/text-advisor/02-data-model.md, migration 0008).
 // advisor_rules is the only source of regulations the advisor may quote (OP-6,
 // principle 4). Seeded by scripts/advisor/import-rules.mjs as status 'review'

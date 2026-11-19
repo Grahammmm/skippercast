@@ -56,6 +56,20 @@ def _write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
     return count
 
 
+def completed_step_counts(run_dir: Path, step: str, *, sink: str | None = None) -> dict | None:
+    """Read the latest successful step receipt without creating or resuming a run."""
+    try:
+        state = json.loads((run_dir / "state.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    match state:
+        case {"run_id": run_id, "steps": dict(steps)} if run_id == run_dir.name:
+            match steps.get(step):
+                case {"status": "done", "sink": str(name), "counts": dict(counts)} if sink is None or name == sink:
+                    return counts
+    return None
+
+
 class Run:
     """One run of one region; reopening the same run id resumes it."""
 

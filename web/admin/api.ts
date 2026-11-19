@@ -123,10 +123,21 @@ export class ApiError extends Error {
   constructor(status: number, message: string) { super(message); this.status = status; }
 }
 
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {credentials: 'same-origin', ...init});
-  const data = await response.json().catch(() => ({})) as {error?: string};
-  if (!response.ok) throw new ApiError(response.status, data.error ?? `HTTP ${response.status}`);
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message = isObject(data) && typeof data.error === 'string' ? data.error : `HTTP ${response.status}`;
+    throw new ApiError(response.status, message);
+  }
+  if (!isObject(data)) {
+    // An unreadable acknowledgement does not tell us whether a write took effect.
+    throw new ApiError(response.status, init?.method === 'POST'
+      ? 'The server did not confirm the change. Reload to check before trying again.' : 'Invalid admin response');
+  }
   return data as T;
 }
 
@@ -138,7 +149,21 @@ export function queuePath(status: string, kind: string, cursor?: string | null):
   return `/api/admin/reviews?${q}`;
 }
 
-export const getQueue = (status: string, kind: string, cursor?: string | null): Promise<QueuePage> => call(queuePath(status, kind, cursor));
+function isQueueItem(item: unknown): item is QueueItem {
+  return isObject(item) && typeof item.id === 'string' && typeof item.ref_id === 'string' &&
+    typeof item.reason === 'string' && typeof item.opened_at === 'string' && KINDS.some(kind => kind === item.kind) &&
+    STATUSES.some(status => status !== 'all' && status === item.status) &&
+    (item.note === null || typeof item.note === 'string') && (item.decided_at === null || typeof item.decided_at === 'string') &&
+    (item.detail === null || isObject(item.detail));
+}
+
+export async function getQueue(status: string, kind: string, cursor?: string | null): Promise<QueuePage> {
+  const page = await call<Record<string, unknown>>(queuePath(status, kind, cursor));
+  if (!Array.isArray(page.items) || !page.items.every(isQueueItem) || (page.next !== null && typeof page.next !== 'string')) {
+    throw new Error('Invalid admin queue response');
+  }
+  return {items: page.items, next: page.next};
+}
 export async function getHealth(): Promise<Health> {
   const health = await call<Health>('/api/admin/health', {redirect: 'error'});
   if (health?.enabled !== true || typeof health.checked_at !== 'string') throw new Error('Invalid admin health response');

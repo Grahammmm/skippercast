@@ -64,7 +64,8 @@ test('live feeds, fresh reads and failures are not shared', async () => {
     const [early, late] = await Promise.allSettled([held('data/atlas.json', {signal: quick}), held('data/atlas.json')]);
     assert.equal(early.status, 'rejected', 'the caller whose signal aborted is rejected');
     assert.equal(late.status, 'fulfilled');
-    assert.equal(calls.at(-1)[1].signal, undefined);
+    assert.notEqual(calls.at(-1)[1].signal, quick);
+    assert.equal(calls.at(-1)[1].signal?.aborted, false, 'the transfer signal was not aborted');
   } finally { delete globalThis.location; }
 });
 
