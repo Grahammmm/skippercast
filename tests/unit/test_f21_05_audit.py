@@ -1,74 +1,75 @@
-"""F21-05 offline controls, not an implementation of SCA-208.
+"""F21-05: the trip watcher checks the published generation even when it starts late.
 
-Pytest exercises the receipt-aware reference. To compare the unchanged CLI
-against the same expectations, run ``python -B -m tests.unit.test_f21_05_audit``
-from the repository root. This read-only diagnostic exits 1 on a contract gap;
-it is not a required check and its observed results are not test expectations.
+Drives the real CLI (scripts/trip_check_loop.py main) offline: the public
+latest.json receipt, the refresh-job status, the trip check and the clock are
+all synthetic, so nothing touches the network, credentials or the repository.
+``python -B -m tests.unit.test_f21_05_audit`` from the repository root prints
+MATCH/GAP per case and exits 1 on any gap.
 """
 from contextlib import redirect_stdout
 from io import StringIO
-from itertools import count
+import json
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
+from urllib.error import URLError
 
 from scripts import trip_check_loop
+from tests._support import ROOT
 
+RUN = 'run-7'
+URL = 'https://feed.invalid/feeds/conditions/latest.json'
+EARLIER = {'run_id': 'run-6', 'published_at': '2026-11-18T10:37:00Z', 'regions': []}
+GEN_A = {'run_id': RUN, 'published_at': '2026-11-18T11:07:00Z', 'regions': []}
+GEN_B = {'run_id': RUN, 'published_at': '2026-11-18T11:37:00Z', 'regions': []}
 
-# name, branch reads, completed producer receipt, last checked, expected (outcome, checks).
+# name, successive public receipt reads (a dict body or a fetch error), expected (outcome, checks).
 CASES = (
-    ('observed-change', ('gen-a', 'gen-b'), 'gen-b', 'gen-a', ('checked', 1)),
-    ('late-start', ('gen-b', 'gen-b'), 'gen-b', 'gen-a', ('checked', 1)),
-    ('true-no-change', ('gen-a', 'gen-a'), 'gen-a', 'gen-a', ('no-change', 0)),
-    ('unavailable', (None, None), None, 'gen-a', ('unknown', 0)),
+    ('observed-change', (EARLIER, GEN_A), ('checked', 1)),
+    ('late-start', (GEN_A,), ('checked', 1)),
+    ('true-no-change', (EARLIER,), ('no-change', 0)),
+    ('unavailable', (URLError('offline'),), ('unknown', 0)),
+    ('replay-is-a-no-op', (GEN_A, GEN_A, GEN_A), ('checked', 1)),
+    ('two-generations', (GEN_A, GEN_B), ('checked', 2)),
+    ('recovers-after-unknown', (OSError('reset'), GEN_A), ('checked', 1)),
+    ('unknown-after-check', (GEN_A, ValueError('bad json')), ('unknown', 1)),
+    ('receipt-without-cycle', ({'run_id': RUN},), ('unknown', 0)),
+    ('receipt-not-an-object', (['latest'],), ('unknown', 0)),
 )
 
 
-def receipt_control(receipt, last_checked, check):
-    """In-memory reference; None is unavailable, not evidence of no change."""
-    if receipt is None:
-        return 'unknown', last_checked
-    if receipt == last_checked:
-        return 'no-change', last_checked
-    check(receipt)
-    return 'checked', receipt
+class Clock:
+    def __init__(self):
+        self.now = 0.0
+
+    def sleep(self, seconds):
+        self.now += seconds
+
+    def monotonic(self):
+        return self.now
 
 
-class TestReceiptControl(unittest.TestCase):
-    def test_generation_contract_and_replay(self):
-        # Catch first-read baselining, loss of the checkpoint on replay, and
-        # calling unavailable evidence a no-op; existing watch tests only
-        # exercise branch reads, not producer receipts or a saved checkpoint.
-        for name, _, receipt, prior, expected in CASES:
-            with self.subTest(case=name):
-                checked = []
-                outcome, checkpoint = receipt_control(receipt, prior, checked.append)
-                self.assertEqual((outcome, len(checked)), expected)
-                self.assertEqual(checked, [receipt] if expected[1] else [])
-                self.assertEqual(checkpoint, receipt if expected[1] else prior)
+def run_cli(reads):
+    """Run the watcher CLI on synthetic reads; refresh has already finished (late start)."""
+    reads, clock, checked, urls = list(reads), Clock(), [], set()
 
-                # New invocation, same receipt, only the checkpoint carried over.
-                replayed = []
-                outcome, replay_checkpoint = receipt_control(receipt, checkpoint, replayed.append)
-                self.assertEqual(outcome, 'unknown' if receipt is None else 'no-change')
-                self.assertEqual(replayed, [])
-                self.assertEqual(replay_checkpoint, checkpoint)
+    def fetch(url):
+        urls.add(url)
+        item = reads.pop(0) if len(reads) > 1 else reads[0]
+        if isinstance(item, Exception):
+            raise item
+        return item
 
+    def check():
+        checked.append(clock.now)
+        return True
 
-def baseline_observation(heads):
-    """Call the real watcher CLI without network, credentials, sleep or writes."""
-    check = Mock(return_value=True)
     output = StringIO()
-    ticks = count()
-    with patch.multiple(
-        trip_check_loop,
-        remote_head=Mock(side_effect=heads),
-        refresh_finished=lambda: True,
-        check_trips=check,
-        os=SimpleNamespace(environ={}),
-        time=SimpleNamespace(monotonic=lambda: next(ticks), sleep=lambda _: None),
-    ), redirect_stdout(output):
-        code = trip_check_loop.main(['--budget-minutes', '0.05', '--poll-seconds', '0', '--settle-seconds', '0'])
+    with patch.multiple(trip_check_loop, fetch_json=fetch, refresh_finished=lambda: True, check_trips=check,
+                        time=SimpleNamespace(monotonic=clock.monotonic, sleep=clock.sleep)), \
+            patch.dict(trip_check_loop.os.environ, {'GITHUB_RUN_ID': RUN}, clear=True), redirect_stdout(output):
+        code = trip_check_loop.main(['--feed-url', URL, '--budget-minutes', '30', '--poll-seconds', '60',
+                                     '--settle-seconds', '0', '--linger-seconds', '120'])
     summary = output.getvalue().strip().splitlines()[-1]
     if code:
         outcome = 'failed'
@@ -76,23 +77,37 @@ def baseline_observation(heads):
         outcome = 'no-change'
     elif 'unknown' in summary.casefold():
         outcome = 'unknown'
-    elif check.call_count:
+    elif checked:
         outcome = 'checked'
     else:
         outcome = 'unrecognized'
-    return (outcome, check.call_count), code, summary
+    return (outcome, len(checked)), code, summary, clock.now, urls
 
 
-def report_baseline():
-    mismatches = 0
-    for name, heads, _, _, expected in CASES:
-        actual, code, summary = baseline_observation(heads)
+class LateWatcherTests(unittest.TestCase):
+    def test_published_generation_contract(self):
+        for name, reads, expected in CASES:
+            with self.subTest(case=name):
+                actual, code, summary, now, urls = run_cli(reads)
+                self.assertEqual(actual, expected, summary)
+                self.assertEqual((code, urls), (0, {URL}))
+                self.assertLessEqual(now, 120)  # stops one edge-cache window after refresh finished
+
+    def test_default_receipt_is_the_public_feed_on_the_production_origin(self):
+        origin = json.loads((ROOT / 'deployments' / 'production.json').read_text())['public_origin']
+        self.assertEqual(trip_check_loop.feed_url(), origin.rstrip('/') + '/feeds/conditions/latest.json')
+
+
+def report():
+    gaps = 0
+    for name, reads, expected in CASES:
+        actual, code, summary, _, _ = run_cli(reads)
         gap = actual != expected
-        mismatches += gap
+        gaps += gap
         print(f'{name}: {"GAP" if gap else "MATCH"} expected={expected} observed={actual} '
               f'watcher_exit={code} summary={summary!r}')
-    return int(bool(mismatches))
+    return int(bool(gaps))
 
 
 if __name__ == '__main__':
-    raise SystemExit(report_baseline())
+    raise SystemExit(report())
