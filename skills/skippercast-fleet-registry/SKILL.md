@@ -54,8 +54,10 @@ Commands marked *on the runner* need a shell as the runner user, set up as in
 [fleet-labelling.md § 1](../../docs/operations/runbooks/fleet-labelling.md),
 with `SKIPPERCAST_FLEET_VAR` pointing at the fleet data directory (the
 `fleet-staging` one for a staging region). Without such a shell, mark those
-report lines `not run (no runner shell)`. `gh` commands take
-`--repo Grahammmm/skippercast`.
+report lines `not run (no runner shell)`. The fleet jobs (`fleet-registry.yml`,
+`fleet-osint.yml`) live in the private repository: their `gh` commands take
+`--repo Grahammmm/skippercast-ops`. `fleet-health.yml` and the issues stay in
+the public repository: those `gh` commands take `--repo Grahammmm/skippercast`.
 
 ## Modes
 

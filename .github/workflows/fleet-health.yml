@@ -8,6 +8,10 @@ name: Fleet AIS health
 # the last processor run is more than 3 hours old (or the Worker cannot say), and closes
 # it on recovery, as feed-freshness.yml does. No checkout: nothing from the repository
 # runs here. Runbook: docs/operations/runbooks/fleet-ais-down.md.
+# This public monitor stays hosted here; the fleet jobs it watches (fleet-ais, fleet-osint,
+# fleet-registry, fleet-ais-listener) run from the private Grahammmm/skippercast-ops repository.
+# This repository's ENABLE_FLEET only switches this monitor; the jobs' own switch is the
+# private repository's ENABLE_FLEET.
 on:
   schedule:
     - cron: "41 * * * *"
@@ -76,13 +80,14 @@ jobs:
         run: |
           gh label create fleet-ais-stale --color B60205 --description "Charter fleet AIS listener or processor stopped" 2>/dev/null || true
           existing="$(gh issue list --label fleet-ais-stale --state open --json number --jq '.[0].number')"
-          runs="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/fleet-ais.yml"
+          # The processor runs in the private ops repository (operators only), not in this one.
+          runs="${GITHUB_SERVER_URL}/Grahammmm/skippercast-ops/actions/workflows/fleet-ais.yml"
           runbook="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/main/docs/operations/runbooks/fleet-ais-down.md"
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$MESSAGE"
           else
             gh issue create --label fleet-ais-stale --title "Fleet AIS listener or processor is stale" \
-              --body "$MESSAGE"$'\n\n'"Processor runs: $runs"$'\n\n'"Runbook: $runbook"
+              --body "$MESSAGE"$'\n\n'"Processor runs (private, operators only): $runs"$'\n\n'"Runbook: $runbook"
           fi
           exit 1
       - name: Close the fleet-ais-stale issue after recovery
