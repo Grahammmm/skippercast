@@ -1,6 +1,5 @@
-// SCA-594: a same-HEAD retry must exclude dirty bytes without losing the lease.
-// `node tests/test_f21_15_audit.mjs --baseline` exercises the unchanged load
-// and publish functions with real staging and a simulated remote ref, not a push.
+// F21-15: a same-HEAD retry must exclude dirty bytes without losing the lease.
+// Exercise the publisher with real staging and a simulated remote ref, not a push.
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from 'node:fs';
@@ -9,7 +8,7 @@ import {join} from 'node:path';
 import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 
-const baseline = process.argv.includes('--baseline');
+
 const publisher = fileURLToPath(new URL('../scripts/publish_branch_snapshot.sh', import.meta.url));
 const ref = 'refs/fixture/remote';
 // Only local object/index operations reach Git. The simulated origin is a
@@ -37,7 +36,7 @@ const shim = `git() {
 source "$@"
 `;
 
-test(`SCA-594 ${baseline ? 'baseline' : 'reference'}: dirty retry and a competing lease`, t => {
+test('F21-15: dirty same-HEAD loads refuse before a retry can stage leftovers', t => {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), 'sca-594-')));
   t.after(() => rmSync(dir, {recursive: true, force: true}));
   const cwd = join(dir, 'stage');
@@ -62,25 +61,28 @@ test(`SCA-594 ${baseline ? 'baseline' : 'reference'}: dirty retry and a competin
   const base = git('rev-parse', 'HEAD');
   git('update-ref', ref, base);
   const call = (...args) => run('bash', wrapper, publisher, ...args);
-  const load = () => {
-    // Reference policy: refuse a dirty matching baseline; never clean owned files here.
-    if (!baseline && git('rev-parse', 'HEAD') === git('rev-parse', ref) && git('status', '--porcelain')) return 1;
-    const result = call('--load', 'data', cwd);
-    assert.equal(result.status, 0, result.error?.message ?? result.stderr);
-    return result.status;
-  };
-  assert.equal(load(), 0, 'clean matching baseline loads');
-  write('sentinel.txt', 'failed attempt\n');
-  write('stable.txt', 'failed attempt tracked change\n');
-  if (load() !== 0) {
+  const load = () => call('--load', 'data', cwd);
+  const initial = load();
+  assert.equal(initial.status, 0, initial.error?.message ?? initial.stderr);
+  const assertRefused = () => {
+    const result = load();
+    assert.equal(result.status, 1, result.error?.message ?? result.stderr);
+    assert.match(result.stderr, /dirty/);
     assert.equal(git('rev-parse', ref), base, 'refusal leaves published bytes alone');
-    assert.equal(readFileSync(join(cwd, 'sentinel.txt'), 'utf8'), 'failed attempt\n');
-    assert.equal(readFileSync(join(cwd, 'stable.txt'), 'utf8'), 'failed attempt tracked change\n');
-    // Fixture owner disposes of these two known local leftovers before retrying.
-    rmSync(join(cwd, 'sentinel.txt'));
-    write('stable.txt', 'published bytes\n');
-    assert.equal(load(), 0);
-  }
+    assert.equal(git('rev-parse', 'HEAD'), base, 'refusal leaves local HEAD alone');
+  };
+  // Check each kind of residue alone so neither can hide a missed dirty check.
+  write('sentinel.txt', 'failed attempt\n');
+  assertRefused();
+  assert.equal(readFileSync(join(cwd, 'sentinel.txt'), 'utf8'), 'failed attempt\n');
+  // Only the fixture owner removes its known leftovers before retrying.
+  rmSync(join(cwd, 'sentinel.txt'));
+  write('stable.txt', 'failed attempt tracked change\n');
+  assertRefused();
+  assert.equal(readFileSync(join(cwd, 'stable.txt'), 'utf8'), 'failed attempt tracked change\n');
+  write('stable.txt', 'published bytes\n');
+  const clean = load();
+  assert.equal(clean.status, 0, clean.error?.message ?? clean.stderr);
   write('latest.json', 'retry\n');
   const retry = call('data', cwd, 'retry');
   assert.equal(retry.status, 0, retry.error?.message ?? retry.stderr);
