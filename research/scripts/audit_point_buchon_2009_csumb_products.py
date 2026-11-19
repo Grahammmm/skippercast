@@ -127,7 +127,7 @@ def audit(archive, class_zip):
     with tempfile.TemporaryDirectory() as temp:
         directory = Path(temp)
         metadata_hashes = extract_grids(archive, directory)
-        with rasterio.open(original_tiff(class_zip)) as classes:
+        with rasterio.open(original_tiff(class_zip, "character")[0]) as classes:
             if (str(classes.crs) != "EPSG:32610" or classes.res != (2.0, 2.0)
                     or sha256_file(class_zip) != EXPECTED_CLASS):
                 raise ValueError("Original USGS character grid changed")

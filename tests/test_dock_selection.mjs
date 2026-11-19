@@ -184,7 +184,7 @@ test('both repeated 1 am instants of the fall-back day settle exactly', async t 
   assert.equal(m.renderFixture(m.h(m.TimeDock, {now})).match(/class="app-dock-zone ui-mono">([^<]+)/)[1], 'PDT');
   m.requestDockHour(now, TZ, Date.parse('2026-11-01T09:00Z'));
   const dock = m.renderFixture(m.h(m.TimeDock, {now}));
-  assert.deepEqual([readout(dock), dock.match(/class="app-dock-zone ui-mono">([^<]+)/)[1]], ['Tomorrow · 1 am', 'PST']);
+  assert.deepEqual([readout(dock), dock.match(/class="app-dock-zone ui-mono">([^<]+)/)[1]], ['Tomorrow · 1 am PST', 'PST']);
   t.mock.timers.tick(100);
   assert.deepEqual([m.state.day.value, m.state.hour.value], ['2026-11-01', '2026-11-01T09:00Z']);
 });
