@@ -112,6 +112,22 @@ test('marks-availability: Morro clears before Cambria metadata resolves', async 
   assert.deepEqual(verdicts(), ['empty', 'no-product', 'no-product']);
 });
 
+// Contract: a charter file whose outline is a shell (a Polygon with no coordinates) is failed, not drawn.
+// Bug caught: validating only `!!geometry` accepted it and the ready boundary screen threw in hatchLines.
+for (const [label, geometry] of [['no coordinates', {type: 'Polygon'}], ['empty rings', {type: 'Polygon', coordinates: []}], ['non-numeric point', {type: 'Polygon', coordinates: [[[0, 0], [1, 'x'], [1, 1], [0, 0]]]}], ['not a polygon', {type: 'Point', coordinates: [0, 0]}]]) {
+  test(`marks-availability: charter ground with ${label} outline is failed`, async t => {
+    const grounds = 'test/ground.json';
+    const ground = {id: 'G', latitude: 35.5, longitude: -121.9, depth_ft: [10, 60], map_species: ['lingcod'], reports: [{species: ['lingcod']}], geometry};
+    const {overlays} = setup(t, CAMBRIA, {
+      [metaPath(CAMBRIA)]: () => json(meta(CAMBRIA, {charters: grounds})),
+      [grounds]: () => json({grounds: [ground]}),
+    });
+    await flush();
+    assert.equal(groundsAvailability.value, 'failed');
+    assert.equal(overlays.size, 0);
+  });
+}
+
 // Each public fleet loader distinguishes an inspected empty file from an unusable one; the AIS option stays lazy.
 test('marks-availability: fleet empty vs invalid, without fetching an off option', async t => {
   const grounds = 'test/ground.json', ais = 'test/cells.json';

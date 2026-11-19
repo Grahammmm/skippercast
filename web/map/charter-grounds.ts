@@ -99,6 +99,15 @@ export function shownGrounds(evidence: Evidence | null, target: string, p: Profi
     g.reports.some(r => r.species.some(id => matchesTargetSpecies(id, target))) && withinDepth(p, g.depth_ft[1]) && screened(g, g.geometry, screen));
 }
 
+const position = (p: unknown): boolean => Array.isArray(p) && p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]);
+const ringOk = (r: unknown): boolean => Array.isArray(r) && r.length >= 4 && r.every(position);
+const polygonOk = (c: unknown): boolean => Array.isArray(c) && c.length > 0 && c.every(ringOk);
+/** A ground's outline must be a Polygon or MultiPolygon with real coordinates: the hatching and the screen read them directly, so a shell is a failed file. */
+export const groundGeometryOk = (g: unknown): boolean => {
+  const {type, coordinates} = (g ?? {}) as Partial<Geometry>;
+  return type === 'Polygon' ? polygonOk(coordinates) : type === 'MultiPolygon' && Array.isArray(coordinates) && coordinates.length > 0 && coordinates.every(polygonOk);
+};
+
 const rings = (g: Geometry): number[][][] => g.type === 'Polygon' ? g.coordinates as number[][][] : g.type === 'MultiPolygon' ? (g.coordinates as number[][][][]).flat() : [];
 
 /**
@@ -220,7 +229,7 @@ export function assetLoader<T>(fetchFn: typeof fetch, page: () => string, valid:
 export function createCharterGrounds({engine, fetchFn = (...a) => fetch(...a), page = () => location.href, palette = () => readPalette()}: FleetLayerOptions) {
   const load = assetLoader<Evidence>(fetchFn, page, d => Array.isArray((d as Evidence | null)?.grounds) && (d as Evidence).grounds.every(g =>
     typeof g?.id === 'string' && Number.isFinite(g.latitude) && Number.isFinite(g.longitude) && Array.isArray(g.depth_ft)
-    && Array.isArray(g.map_species) && Array.isArray(g.reports) && g.reports.every(r => Array.isArray(r?.species)) && !!g.geometry));
+    && Array.isArray(g.map_species) && Array.isArray(g.reports) && g.reports.every(r => Array.isArray(r?.species)) && groundGeometryOk(g.geometry)));
   const loaded = signal<{binding: NonNullable<typeof markData.value>; data: Evidence | null} | null>(null);
   const on = computed(() => layers.value.includes('fleet'));
   const binding = computed(() => { const m = markData.value; return m?.region.id === region.value ? m : null; });
