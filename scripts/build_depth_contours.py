@@ -182,6 +182,7 @@ def merged_blocks(grids, lattice, offsets, keys, ecs=None):
     groups = {}
     for i, key in enumerate(keys):
         groups.setdefault(key, []).append(i)
+    prefer_complete = len(groups) > 1
     depth = np.full((height, width), np.nan, dtype='float64')
     owner = np.full((height, width), -1, dtype='int8')
     cls, reason = np.full((height, width), -1, dtype='int8'), np.full((height, width), -1, dtype='int8')
@@ -202,16 +203,23 @@ def merged_blocks(grids, lattice, offsets, keys, ecs=None):
                 values = grids[i].read(1, window=window, boundless=True, masked=True).filled(np.nan).astype('float64')
                 water = np.isfinite(values) & (values < 0) & (values >= -3000)
                 own_valid = water.reshape(rows, n, width, n).all(axis=(1, 3))
-                complete[(complete == len(grids)) & own_valid] = i
+                first_complete = (complete == len(grids)) & own_valid
+                complete[first_complete] = i
+                replace_partial = prefer_complete and first_complete.any()
                 fill = water & (source < 0)
                 codes = ecs[i] and ecs[i][0].read(1, window=window, boundless=True, fill_value=PAD)
                 if ecs[i]:
                     named.append((i, codes))
                     fill |= np.isin(codes, UNRESOLVED_CODES) & (source < 0)
-                    if not np.isin(codes[fill], list(ec.CODES.values())).all():
-                        raise SystemExit(f'{grids[i].name}: provenance code not in seafloor_ec.CODES')
-                    if len(ecs[i]) > 1:
-                        shoal[fill] = ecs[i][1].read(1, window=window, boundless=True, fill_value=np.nan)[fill]
+                # Across groups a complete grid wins as a unit: replace any earlier partial cells and their EC data.
+                if replace_partial:
+                    fill.reshape(rows, n, width, n)[:] |= first_complete[:, None, :, None]
+                if ecs[i] and not np.isin(codes[fill], list(ec.CODES.values())).all():
+                    raise SystemExit(f'{grids[i].name}: provenance code not in seafloor_ec.CODES')
+                if ecs[i] and len(ecs[i]) > 1:
+                    shoal[fill] = ecs[i][1].read(1, window=window, boundless=True, fill_value=np.nan)[fill]
+                elif replace_partial:
+                    shoal[fill] = np.nan
                 merged[fill], source[fill] = values[fill], i
                 code[fill] = codes[fill] if ecs[i] else ec.CODES['measured']
             # A no-data or masked cell its own grid names (never padding) takes what no grid gave water: in a block with
@@ -232,8 +240,6 @@ def merged_blocks(grids, lattice, offsets, keys, ecs=None):
             good = take & valid & (klass != CLASS_INDEX['unresolved'])
             depth[by:by + rows][good] = (-blocks.sum(axis=(1, 3)) / (n * n) * dc.FEET_PER_M)[good]
             credited = np.array(members)[counts.argmax(axis=0)]
-            if len(groups) > 1:
-                credited = np.where(complete < len(grids), complete, credited)
             owner[by:by + rows][take] = credited[take]
             cls[by:by + rows][take] = klass[take]
             why = np.stack([per_block(np.isin(code, c) & (source >= 0), np.sum) for c in REASON_CODES]).argmax(axis=0)
