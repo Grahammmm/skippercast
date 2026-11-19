@@ -140,7 +140,7 @@ test('without caches, or when match throws, the feed resolves and reads R2 as be
         const r = await serve();
         assert.equal(r.status, 200); assert.deepEqual(await r.json(), {cycle: 'one'}); assert.equal(r.headers.get('X-SC-Cache'), null);
       }
-      assert.equal(w.reads.length, 6);
+      assert.equal(w.reads.length, 5, 'pointer, table and object, then pointer and object (SCA-032: the verified table is reused)');
     }, caches);
   }
   await withEdge(async ({cache}) => {
@@ -149,7 +149,7 @@ test('without caches, or when match throws, the feed resolves and reads R2 as be
     cache.fail = true; w.reads.length = 0;
     const r = await serve();
     assert.equal(r.status, 200); assert.equal(r.headers.get('X-SC-Cache'), 'miss'); assert.deepEqual(await r.json(), {cycle: 'one'});
-    assert.equal(w.reads.length, 3, 'a failed lookup falls through to the resolver and object read');
+    assert.equal(w.reads.length, 2, 'a failed lookup falls through to the resolver (pointer; verified table reused) and object read');
   });
 });
 

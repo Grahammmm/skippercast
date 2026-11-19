@@ -13,24 +13,31 @@ async function site() {
   const dir = await mkdtemp(join(tmpdir(), 'precache-'));
   await mkdir(join(dir, 'assets'), {recursive: true});
   await writeFile(join(dir, `index.${BUILD}.html`), '<script type="module" src="./assets/index.0123456789.js"></script>');
-  await writeFile(join(dir, 'assets/index.0123456789.js'), "import './app.abcdef0123.js';");
+  await writeFile(join(dir, 'assets/index.0123456789.js'), 'export {};');
   await writeFile(join(dir, 'assets/app.abcdef0123.js'), "navigator.serviceWorker.register('/sw.js');");
+  await writeFile(join(dir, 'assets/early.1111111111.js'), 'export {};');
   await writeFile(join(dir, 'assets/styles.fedcba9876.css'), 'body{}');
   await writeFile(join(dir, 'assets/notes.txt'), 'not a script or style');
   await writeFile(join(dir, 'sw.js'), `${BUILD_PLACEHOLDER}\nself.addEventListener('push',()=>{});`);
   await writeFile(join(dir, 'manifest.webmanifest'), '{}');
   await writeFile(join(dir, 'app-icon-192.png'), 'png');
   await writeFile(join(dir, 'regulations.json'), '{}');
+  await mkdir(join(dir, '.vite'), {recursive: true});
+  await writeFile(join(dir, '.vite/manifest.json'), JSON.stringify({
+    'app.html': {file: 'assets/app.abcdef0123.js'},
+    'landing.html': {file: 'assets/index.0123456789.js'},
+    '../web/app/early.ts': {file: 'assets/early.1111111111.js'},
+  }));
   return dir;
 }
 
-test('precache.json lists the shell, every hashed asset of the build and the static shell files', async () => {
+test('precache.json lists the shell, its installable hashed assets and static shell files', async () => {
   const dir = await site();
   const manifest = await writePrecache(dir, BUILD);
   assert.deepEqual(JSON.parse(await readFile(join(dir, 'precache.json'), 'utf8')), manifest);
   assert.equal(manifest.build, BUILD);
   assert.deepEqual(manifest.shells, ['/'], 'FE-61: / is the landing; the v1 shell and its ?ui=v1 key are gone');
-  assert.deepEqual(manifest.assets, ['/assets/app.abcdef0123.js', '/assets/index.0123456789.js', '/assets/styles.fedcba9876.css']);
+  assert.deepEqual(manifest.assets, ['/assets/index.0123456789.js', '/assets/styles.fedcba9876.css']);
   assert.deepEqual(manifest.static, ['/app-icon-192.png', '/manifest.webmanifest']);
   assert.ok(!manifest.assets.some(a => a.endsWith('.html')), 'pages are served only from their stable paths');
   assert.ok(!JSON.stringify(manifest).includes('regulations.json'), 'data is never precached; it is network-first');
@@ -85,6 +92,7 @@ test('only-v2 files leave the install precache; the v2 list is the app graph wit
     'app.html': {file: 'assets/app.1111111111.js', isEntry: true, css: ['assets/app.2222222222.css'], assets: ['assets/font.3333333333.woff2'],
       imports: ['_shared.js'], dynamicImports: ['../web/map/maplibre.js', '../web/map/terrain.js']},
     'landing.html': {file: 'assets/landing.4444444444.js', isEntry: true},
+    '../web/app/early.ts': {file: 'assets/early.aaaaaaaaaa.js', isEntry: true},
     '_shared.js': {file: 'assets/shared.5555555555.js'},
     '../web/map/maplibre.js': {file: 'assets/maplibre.6666666666.js', assets: ['assets/maplibre-gl-worker.7777777777.js'], isDynamicEntry: true},
     '../web/map/terrain.js': {file: 'assets/terrain.8888888888.js', imports: ['three.js'], isDynamicEntry: true},
@@ -98,15 +106,15 @@ test('only-v2 files leave the install precache; the v2 list is the app graph wit
   await writeFile(join(dir, 'basemap/glyphs/DM-SANS-OFL.txt'), 'licence');
   await writeFile(join(dir, '.vite/manifest.json'), JSON.stringify(manifest));
   for (const e of Object.values(manifest)) for (const f of [e.file, ...(e.css || []), ...(e.assets || [])]) await writeFile(join(dir, f), '');
-  assert.deepEqual([...v2Only(manifest)].sort(), ['/assets/app.1111111111.js', '/assets/app.2222222222.css', '/assets/font.3333333333.woff2', '/assets/landing.4444444444.js',
+  assert.deepEqual([...v2Only(manifest)].sort(), ['/assets/app.1111111111.js', '/assets/app.2222222222.css', '/assets/early.aaaaaaaaaa.js', '/assets/font.3333333333.woff2', '/assets/landing.4444444444.js',
     '/assets/maplibre-gl-worker.7777777777.js', '/assets/maplibre.6666666666.js', '/assets/terrain.8888888888.js'], 'three is shared with v1 (its coast workspace)');
   const out = await precacheManifest(dir, BUILD);
   assert.ok(out.assets.includes('/assets/shared.5555555555.js') && out.assets.includes('/assets/three.9999999999.js') && out.assets.includes('/assets/index.0123456789.js'));
   // #497 adds back only the landing's first paint (here its entry), so '/' paints offline.
   assert.ok(!out.assets.some(a => v2Only(manifest).has(a) && !landingShell(manifest).has(a)) && out.assets.includes('/assets/app.abcdef0123.js'), 'a visitor never installs the app or MapLibre');
   assert.ok(out.assets.includes('/assets/landing.4444444444.js'));
-  assert.deepEqual(out.v2.assets, [...reachable(manifest, ['app.html'], new Set(['../web/map/terrain.js']))].sort());
-  assert.deepEqual(out.v2.assets, ['/assets/app.1111111111.js', '/assets/app.2222222222.css', '/assets/font.3333333333.woff2', '/assets/maplibre-gl-worker.7777777777.js',
+  assert.deepEqual(out.v2.assets, [...reachable(manifest, ['app.html', '../web/app/early.ts'], new Set(['../web/map/terrain.js']))].sort());
+  assert.deepEqual(out.v2.assets, ['/assets/app.1111111111.js', '/assets/app.2222222222.css', '/assets/early.aaaaaaaaaa.js', '/assets/font.3333333333.woff2', '/assets/maplibre-gl-worker.7777777777.js',
     '/assets/maplibre.6666666666.js', '/assets/shared.5555555555.js']);
   // R4-SC-08: the pack stores the content-versioned glyphs the style loads, not the unversioned copies.
   assert.deepEqual(out.v2.static, ['/basemap/glyphs/v/0123456789abcdef/dm-sans-medium/0-255.pbf']);
@@ -120,6 +128,7 @@ test('the install list holds the landing\'s first paint (static imports, styles,
     'landing.html': {file: 'assets/landing.4444444444.js', isEntry: true, css: ['assets/landing.aaaaaaaaaa.css'], assets: ['assets/font.3333333333.woff2'],
       imports: ['_shared.js', '_hooks.js'], dynamicImports: ['../web/landing/NightMap.tsx']},
     'app.html': {file: 'assets/app.1111111111.js', isEntry: true, imports: ['_shared.js', '_hooks.js'], dynamicImports: ['../web/map/maplibre.js']},
+    '../web/app/early.ts': {file: 'assets/early.aaaaaaaaaa.js', isEntry: true},
     '../web/landing/NightMap.tsx': {file: 'assets/NightMap.bbbbbbbbbb.js', isDynamicEntry: true, dynamicImports: ['../web/map/maplibre.js']},
     '../web/map/maplibre.js': {file: 'assets/maplibre.6666666666.js', assets: ['assets/maplibre-gl-worker.7777777777.js'], isDynamicEntry: true},
     '_shared.js': {file: 'assets/shared.5555555555.js'},
@@ -137,6 +146,6 @@ test('the install list holds the landing\'s first paint (static imports, styles,
     assert.ok(!out.assets.includes(f), `${f} stays out of the install list`);
   assert.deepEqual(out.assets, [...new Set(out.assets)].sort(), 'sorted, no duplicates');
   // #617: the landing warms the app page's static graph, less what the landing loaded itself; never a dynamic import.
-  assert.deepEqual(appWarm(manifest), ['/assets/app.1111111111.js']);
+  assert.deepEqual(appWarm(manifest), ['/assets/app.1111111111.js', '/assets/early.aaaaaaaaaa.js']);
   assert.deepEqual(out.warm, appWarm(manifest));
 });
