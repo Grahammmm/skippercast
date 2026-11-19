@@ -158,7 +158,7 @@ export function densityLayer(p: Palette) {
 }
 
 /** The Chart's FE-18 sources and layers, coloured from the palette: habitat fills and geology go in § 9's habitat slot, the density, marks and the selection near the top. */
-export function markStyle(p: Palette, phone = typeof matchMedia === 'function' && matchMedia('(width < 1024px)').matches) {
+export function markStyle(p: Palette, phone = typeof matchMedia === 'function' && matchMedia('(width < 900px)').matches) {
   const source = () => ({type: 'geojson', data: EMPTY});
   const kind = ['match', ['get', 'kind'], 'rock', p.habRock, 'mixed', p.habMixed, 'sediment', p.habSoft, 'kelp', p.habKelp, p.habMixed];
   // The habitat fill multiplier (1 = the ramp below as drawn), never past 0.6.

@@ -169,6 +169,21 @@ test('web/map/coast-habitat.js is packages/coast\'s resolver: an unknown species
   } finally { globalThis.fetch = original; }
 });
 
+// Contract: Design Lock § 3 makes desktop >= 900 px, so mark clustering is 50 px only below 900 px and 42 px from 900 px up.
+// Bug it catches: a phone breakpoint at 1024 px would cluster a 900-1023 px window at 50 px and change cluster membership.
+test('mark clustering uses the 50 px phone radius only below the 900 px desktop breakpoint', () => {
+  const original = globalThis.matchMedia;
+  const radiusAt = width => {
+    globalThis.matchMedia = query => ({matches: width < Number(/width < (\d+)px/.exec(query)[1])});
+    return markStyle(sentinel).sources[MARKS_SOURCE].clusterRadius;
+  };
+  try {
+    assert.deepEqual([899, 900, 1023, 1024].map(radiusAt), [50, 42, 42, 42]);
+  } finally {
+    if (original === undefined) delete globalThis.matchMedia; else globalThis.matchMedia = original;
+  }
+});
+
 test('the Chart style draws habitat in its § 9 slot and marks under the coastline, from the palette, with 44 px mark targets', () => {
   const style = chartStyle({palette: sentinel, archive: null, page: PAGE, region: 'morro-bay', base: 'night'});
   const ids = style.layers.map(l => l.id);
